@@ -395,6 +395,10 @@ ui_loop(const char* filename, const char* imfilename, yo_scene* scene, int w,
     glfwMakeContextCurrent(window);
     glfwSetWindowUserPointer(window, view);
 
+    // initialize glew
+    glewExperimental = GL_TRUE;
+    if (glewInit() != GLEW_OK) exit(EXIT_FAILURE);
+
     // callbacks
     glfwSetCharCallback(window, text_callback);
     glfwSetWindowSizeCallback(window, window_size_callback);
