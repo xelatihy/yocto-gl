@@ -1,0 +1,32 @@
+cc = clang
+cflags = -I/Users/fabio/homebrew/include/ -Ofast -ffast-math -funroll-loops -march=native -fdiagnostics-color=always -Wall -Wpedantic
+linkflags = -L/Users/fabio/homebrew/lib -lglfw3 -framework Cocoa -framework OpenGL -framework IOKit -framework CoreVideo
+
+rule cp
+    command = cp $in $out
+
+rule cc
+    depfile = $out.d
+    deps = gcc
+    command = $cc $cflags -MMD -MF $out.d -c -o $out $in
+
+rule lib
+    command = libtool -o $out $in
+
+rule link
+    depfile = $out.d
+    deps = gcc
+    command = $cc $cflags $linkflags -MMD -MF $out.d -o $out $in
+
+rule linkpp
+    depfile = $out.d
+    deps = gcc
+    command = $cc $cppflags $linkflags -MMD -MF $out.d -o $out $in
+
+build bin/render_tests.sh: cp apps/render_tests.sh
+
+build bin/yview: link apps/yview.c
+build bin/ytrace: link apps/ytrace.c
+build bin/yshade: link apps/yshade.c
+build bin/ytestgen: link apps/ytestgen.c
+build bin/yprocobj: link apps/yprocobj.c
