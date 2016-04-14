@@ -186,6 +186,9 @@ shade(yo_scene* scene, int cur_camera, int prog, int* txt, float exposure,
     for (int i = 0; i < scene->nshapes; i++) {
         yo_shape* shape = &scene->shapes[i];
 
+        // don't render single points (e.g. lights)
+        if (shape->etype == yo_etype_point) continue;
+
         ym_mat4f shape_xform =
             (shape->xform) ? *(ym_mat4f*)shape->xform : ym_identity4f();
         yg_stdshader_begin_shape(prog, shape_xform.m);
