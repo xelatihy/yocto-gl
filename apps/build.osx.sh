@@ -1,8 +1,11 @@
 mkdir -p bin
 
+brew_prefix=`brew --prefix`
+brew_prefix=${brew_prefix:-"/Users/fabio/homebrew"}
+
 cc="clang"
-cflags="-I/Users/fabio/homebrew/include/ -Ofast -ffast-math -funroll-loops -march=native -fdiagnostics-color=always -Wall -Wpedantic"
-linkflags="-L/Users/fabio/homebrew/lib -lglfw3 -framework Cocoa -framework OpenGL -framework IOKit -framework CoreVideo"
+cflags="-I$brew_prefix/include/ -Ofast -ffast-math -funroll-loops -march=native -fdiagnostics-color=always -Wall -Wpedantic"
+linkflags="-L$brew_prefix/lib -lglfw3 -framework Cocoa -framework OpenGL -framework IOKit -framework CoreVideo"
 
 cp apps/render_tests.sh bin/
 
