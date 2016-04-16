@@ -311,15 +311,12 @@ yg_stdshader_draw_elem(int prog, int num, int* elem, int etype);
 #include <stdlib.h>
 #include <string.h>
 
-#if defined(_WIN32)
-#ifndef YG_NOGLEW
-#include <GL/glew.h>
-#endif
-#elif defined(__APPLE__)
+#ifdef __APPLE__
 #include <OpenGL/gl.h>
 #else
 #ifndef YG_NOGLEW
 #include <GL/glew.h>
+#define YG_USING_GLEW
 #endif
 #endif
 
