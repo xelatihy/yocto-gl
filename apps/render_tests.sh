@@ -1,3 +1,5 @@
+#!/bin/bash
+
 mkdir -p tests
 
 for scene in "sh02" "rs01" "ls01" "ps01"
