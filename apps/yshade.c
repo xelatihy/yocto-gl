@@ -408,6 +408,10 @@ ui_loop(const char* filename, const char* imfilename, yo_scene* scene, int w,
     if (glewInit() != GLEW_OK) exit(EXIT_FAILURE);
 #endif
 
+    // initialize glew
+    glewExperimental = GL_TRUE;
+    if (glewInit() != GLEW_OK) exit(EXIT_FAILURE);
+
     // init shade state
     view->shade_prog = yg_stdshader_make_program();
     view->shade_ntxt = scene->ntextures;
