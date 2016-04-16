@@ -186,6 +186,9 @@ shade(yo_scene* scene, int cur_camera, int prog, int* txt, float exposure,
     for (int i = 0; i < scene->nshapes; i++) {
         yo_shape* shape = &scene->shapes[i];
 
+        // don't render single points (e.g. lights)
+        if (shape->etype == yo_etype_point) continue;
+
         ym_mat4f shape_xform =
             (shape->xform) ? *(ym_mat4f*)shape->xform : ym_identity4f();
         yg_stdshader_begin_shape(prog, shape_xform.m);
@@ -402,6 +405,10 @@ ui_loop(const char* filename, const char* imfilename, yo_scene* scene, int w,
     glfwSetMouseButtonCallback(window, mouse_button_callback);
     glfwSetCursorPosCallback(window, mouse_pos_callback);
     glfwSetWindowRefreshCallback(window, window_refresh_callback);
+
+    // initialize glew
+    glewExperimental = GL_TRUE;
+    if (glewInit() != GLEW_OK) exit(EXIT_FAILURE);
 
     // init shade state
     view->shade_prog = yg_stdshader_make_program();
