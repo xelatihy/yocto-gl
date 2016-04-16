@@ -402,6 +402,11 @@ ui_loop(const char* filename, const char* imfilename, yo_scene* scene, int w,
     glfwSetMouseButtonCallback(window, mouse_button_callback);
     glfwSetCursorPosCallback(window, mouse_pos_callback);
     glfwSetWindowRefreshCallback(window, window_refresh_callback);
+    
+    // init gl extensions
+#ifdef YG_USING_GLEW
+    if (glewInit() != GLEW_OK) exit(EXIT_FAILURE);
+#endif
 
     // init shade state
     view->shade_prog = yg_stdshader_make_program();
