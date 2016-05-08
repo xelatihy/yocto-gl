@@ -11,7 +11,7 @@ OSX (clang/gcc), Linux (clang/gcc) and Windows (cl).
 - **yocto_bvh.h** - Ray casting and closet point queries of points, lines and triangles accelerated by a two-level bounding volume hierarchy.
 - **yocto_shape.h** - Utilities for manipulating shapes composed of points, lines, triangles or quads. Includes parametric shape generation, uniform tesselation, normal computation, uniform shape sampling.
 - **yocto_trace.h** - Path tracer with support for point, line or triangle geometry, mesh area lights and environment maps, materials with either GGX or Phong (only opaque for now). Support both incremental and offline computation on single- or multi-core machines.
-- **yocto_rigid.h** - Rigid body solver supporting convex and concave triangle meshes based on Sequential Impulses (aka Projected Gauss-Sidel).
+- **yocto_symrigid.h** - Rigid body solver supporting convex and concave triangle meshes based on Sequential Impulses (aka Projected Gauss-Sidel).
 
 ## Support Libraries
 
