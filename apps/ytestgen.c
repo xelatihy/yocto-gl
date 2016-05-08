@@ -406,6 +406,45 @@ make_random_materials(int nshapes) {
     return materials;
 }
 
+yo_shape*
+make_random_rigid_shapes(int nshapes, int l) {
+    yo_shape* shapes = (yo_shape*)calloc(nshapes, sizeof(yo_shape));
+    shapes[0] = xform_shape(make_shape("floor", "floor", 2, ys_stype_uvcube),
+                            v(0, -0.5, 0), v(0, 0, 0), v(6, 0.5, 6));
+    ym_vec3f pos[1024];
+    float radius[1024];
+    int levels[1024];
+
+    unsigned int rn = 0;
+    for (int i = 1; i < nshapes; i++) {
+        bool done = false;
+        while (!done) {
+            radius[i] = 0.1f + 0.4f * rng_nextf(&rn);
+            pos[i] =
+                (ym_vec3f){ -2 + 4 * rng_nextf(&rn), 1 + 4 * rng_nextf(&rn),
+                            -2 + 4 * rng_nextf(&rn) };
+            levels[i] = (int)round(log2f(powf(2, l) * radius[i] / 0.5));
+            done = true;
+            for (int j = 1; j < i && done; j++) {
+                if (ym_dist3f(pos[i], pos[j]) < radius[i] + radius[j])
+                    done = false;
+            }
+        }
+    }
+
+    for (int i = 1; i < nshapes; i++) {
+        char name[1024];
+        sprintf(name, "obj%02d", i);
+        int stypes[2] = { ys_stype_uvspherecube, ys_stype_uvcube };
+        int stype = stypes[(int)(rng_nextf(&rn) * 2)];
+        shapes[i] = make_shape(name, "obj", levels[i], stype);
+        shapes[i] = xform_shape(shapes[i], pos[i], (ym_vec3f){ 0, 0, 0 },
+                                v1(radius[i]));
+    }
+
+    return shapes;
+}
+
 #define arraydup(a, n) memcpy(malloc(sizeof(*a) * n), a, sizeof(*a) * n)
 
 yo_scene
@@ -1067,6 +1106,69 @@ main(int argc, const char** argv) {
     // save scene
     save_scene("cb01.obj", dirname, make_scene(1, cb_cams, 0, 0, 8, cb_box, 4,
                                                cb_materials, 0, 0, 0));
+
+    // rigid body scenes ------------------------
+    printf("generating rigid body scenes ...\n");
+    yo_camera rb_cams[2] = {
+        make_camera("cam", v(5, 5, 5), v(0, 0.5, 0), 0.5, 0),
+        make_camera("cam_dof", v(5, 5, 5), v(0, 0.5, 0), 0.5, 0.1)
+    };
+    yo_shape rb_shapes[10] = {
+        xform_shape(make_shape("floor", "floor", 4, ys_stype_uvcube),
+                    v(0, -0.5, 0), v(0, 0, 0), v(6, 0.5, 6)),
+        xform_shape(make_shape("obj01", "obj", 2, ys_stype_uvcube),
+                    v(-1.25f, 0.5, 0), v(0, 0, 0), v1(0.5)),
+        xform_shape(make_shape("obj02", "obj", 3, ys_stype_uvspherecube),
+                    v(0, 1, 0), v(0, 0, 0), v1(0.5)),
+        xform_shape(make_shape("obj03", "obj", 2, ys_stype_uvcube),
+                    v(1.25f, 1.5, 0), v(0, 0, 0), v1(0.5)),
+        xform_shape(make_shape("obj11", "obj", 2, ys_stype_uvcube),
+                    v(-1.25f, 0.5, 1.5), v(0, 45, 0), v1(0.5)),
+        xform_shape(make_shape("obj12", "obj", 3, ys_stype_uvspherecube),
+                    v(0, 1, 1.5), v(45, 0, 0), v1(0.5)),
+        xform_shape(make_shape("obj13", "obj", 2, ys_stype_uvcube),
+                    v(1.25f, 1.5, 1.5), v(45, 0, 45), v1(0.5)),
+        xform_shape(make_shape("obj21", "obj", 2, ys_stype_uvcube),
+                    v(-1.25f, 0.5, -1.5), v(0, 0, 0), v1(0.5)),
+        xform_shape(make_shape("obj22", "obj", 3, ys_stype_uvspherecube),
+                    v(0, 1, -1.5), v(22.5, 0, 0), v1(0.5)),
+        xform_shape(make_shape("obj23", "obj", 2, ys_stype_uvcube),
+                    v(1.25f, 1.5, -1.5), v(22.5, 0, 22.5), v1(0.5))
+    };
+    yo_material rb_materials[2] = {
+        make_diffuse("floor", v(1, 1, 1), "grid.png"),
+        make_plastic("obj", v(1, 1, 1), 50, "checker.png")
+    };
+    yo_shape rb_light_shapes[2] = {
+        transform_shape(make_shape("light01", "light01", 0, ys_stype_points),
+                        v(0.7, 4, 3), v(0, 0, 0), v1(1)),
+        transform_shape(make_shape("light02", "light02", 0, ys_stype_points),
+                        v(-0.7, 4, 3), v(0, 0, 0), v1(1))
+    };
+    yo_material rb_light_materials[2] = {
+        make_emission("light01", v(100, 100, 100), 0),
+        make_emission("light02", v(100, 100, 100), 0),
+    };
+
+    yo_shape rb2_shapes[10] = {
+        xform_shape(make_shape("floor", "floor", 2, ys_stype_uvcube),
+                    v(0, -2.5, 0), v(30, 0, 0), v(6, 0.5, 6)),
+        rb_shapes[1], rb_shapes[2], rb_shapes[3], rb_shapes[4], rb_shapes[5],
+        rb_shapes[6], rb_shapes[7], rb_shapes[8], rb_shapes[9],
+    };
+
+    yo_shape* rb3_shapes = make_random_rigid_shapes(128, 1);
+
+    // save plane scenes
+    save_scene("rb01.obj", dirname,
+               make_scene(2, rb_cams, 0, 0, 10, rb_shapes, 2, rb_materials, 2,
+                          rb_light_shapes, rb_light_materials));
+    save_scene("rb02.obj", dirname,
+               make_scene(2, rb_cams, 0, 0, 10, rb2_shapes, 2, rb_materials, 2,
+                          rb_light_shapes, rb_light_materials));
+    save_scene("rb03.obj", dirname,
+               make_scene(2, rb_cams, 0, 0, 128, rb3_shapes, 2, rb_materials, 2,
+                          rb_light_shapes, rb_light_materials));
 
     // textures ---------------------------------
     printf("generating simple textures ...\n");

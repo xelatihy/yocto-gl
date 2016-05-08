@@ -126,7 +126,8 @@ typedef struct view_params view_params;
 view_params*
 init_view_params(const char* filename, const char* imfilename, yo_scene* scene,
                  yt_scene* trace_scene, int w, int h, int ns, int bs,
-                 bool camera_lights, int stype, int rtype, float amb) {
+                 bool camera_lights, int stype, int rtype, float amb,
+                 int nthreads) {
     view_params* view = (view_params*)calloc(1, sizeof(view_params));
 
     view->filename = filename;
@@ -155,7 +156,7 @@ init_view_params(const char* filename, const char* imfilename, yo_scene* scene,
 
     view->camera_lights = camera_lights;
 
-    view->nthreads = 4;
+    view->nthreads = nthreads;
     view->pool = thpool_init(view->nthreads);
 
     return view;
@@ -391,7 +392,7 @@ window_refresh_callback(GLFWwindow* window) {
     view_params* view = glfwGetWindowUserPointer(window);
 
     char title[4096];
-    sprintf(title, "mtrace | %dx%d | %d/%d  | %s", view->w, view->h, view->cs,
+    sprintf(title, "ytrace | %dx%d | %d/%d  | %s", view->w, view->h, view->cs,
             view->ns, view->filename);
     glfwSetWindowTitle(window, title);
 
@@ -516,11 +517,11 @@ render_step(view_params* view) {
 void
 ui_loop(const char* filename, const char* imfilename, yo_scene* scene,
         yt_scene* trace_scene, int w, int h, int ns, int bs, bool camera_lights,
-        int stype, int rtype, float amb) {
+        int stype, int rtype, float amb, int nthreads) {
     // view data
     view_params* view =
         init_view_params(filename, imfilename, scene, trace_scene, w, h, ns, bs,
-                         camera_lights, stype, rtype, amb);
+                         camera_lights, stype, rtype, amb, nthreads);
 
     // glfw
     if (!glfwInit()) exit(EXIT_FAILURE);
@@ -536,11 +537,11 @@ ui_loop(const char* filename, const char* imfilename, yo_scene* scene,
     glfwSetCursorPosCallback(window, mouse_pos_callback);
     glfwSetWindowRefreshCallback(window, window_refresh_callback);
 
-    // init gl extensions
+// init gl extensions
 #ifdef YG_USING_GLEW
     if (glewInit() != GLEW_OK) exit(EXIT_FAILURE);
 #endif
-    
+
     // prepare images
     resize_images(view);
     view->scene_updated = true;
@@ -660,14 +661,14 @@ init_trace_cb(const yo_scene* scene, yb_bvh* bvh, int camera) {
 
 void
 render(yt_scene* trace_scene, const char* filename, const char* imfilename,
-       int w, int h, int ns, int bs) {
+       int w, int h, int ns, int bs, int nthreads) {
     float* pixels = (float*)calloc(w * h * 4, sizeof(float));
     float* buf = (float*)calloc(w * h * 4, sizeof(float));
     int nblocks;
     int* blocks = make_image_blocks(w, h, bs, &nblocks);
     render_block_params* params =
         (render_block_params*)calloc(nblocks, sizeof(render_block_params));
-    threadpool pool = thpool_init(4);
+    threadpool pool = thpool_init(nthreads);
     printf("tracing %s to %s\n", filename, imfilename);
     printf("rendering ...");
     fflush(stdout);
@@ -703,10 +704,27 @@ load_scene(const char* filename, bool triangulate) {
     yo_scene* scene = (strcmp(ext, ".objbin"))
                           ? yo_load_obj(filename, triangulate, true)
                           : yo_load_objbin(filename, true);
-    if (!scene) return 0;
+    if (!scene) {
+        printf("unable to load scene %s\n", filename);
+        return 0;
+    }
 
     // load textures
     yo_load_textures(scene, filename, 0);
+
+    // check texture and return error if not found
+    for (int t = 0; t < scene->ntextures; t++) {
+        yo_texture* txt = &scene->textures[t];
+        if (!txt->pixels) {
+            printf("unable to load texture %s\n", txt->path);
+            txt->width = 1;
+            txt->height = 1;
+            txt->ncomp = 4;
+            ym_vec4f white = { 1, 1, 1, 1 };
+            txt->pixels = (float*)calloc(4, sizeof(float));
+            *(ym_vec4f*)txt->pixels = white;
+        }
+    }
 
     // ensure normals
     for (int s = 0; s < scene->nshapes; s++) {
@@ -778,6 +796,8 @@ main(int argc, const char** argv) {
 #ifndef YA_NOGL
     bool no_ui = yc_parse_optb(parser, "--no-ui", 0, "runs offline", false);
 #endif
+    int nthreads =
+        yc_parse_opti(parser, "--threads", "-t", "number of threads", 4);
     int block_size = yc_parse_opti(parser, "--block_size", 0, "block size", 32);
     int samples =
         yc_parse_opti(parser, "--samples", "-s", "image samples", 256);
@@ -803,17 +823,18 @@ main(int argc, const char** argv) {
                             (float[3]){ amb, amb, amb });
 
 #ifndef YA_NOGL
-    // lunching renderer
+    // launching renderer
     if (no_ui) {
         render(trace_scene, filename, imfilename, round(res * aspect), res,
-               samples, block_size);
+               samples, block_size, nthreads);
     } else {
         ui_loop(filename, imfilename, scene, trace_scene, round(res * aspect),
-                res, samples, block_size, camera_lights, stype, rtype, amb);
+                res, samples, block_size, camera_lights, stype, rtype, amb,
+                nthreads);
     }
 #else
     render(trace_scene, filename, imfilename, round(res * aspect), res, samples,
-           block_size);
+           block_size, nthreads);
 #endif
 
     // done

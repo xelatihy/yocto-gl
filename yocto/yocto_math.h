@@ -69,6 +69,7 @@ ym_fclampf(float x, float m, float M) {
 typedef struct { float x, y; } ym_vec2f;
 typedef struct { float x, y, z; } ym_vec3f;
 typedef struct { float x, y, z, w; } ym_vec4f;
+typedef struct { float m[9]; } ym_mat3f;
 typedef struct { float m[16]; } ym_mat4f;
 
 static inline ym_vec3f
@@ -89,6 +90,25 @@ ym_neg3f(const ym_vec3f a) {
 static inline ym_vec3f
 ym_sum3f(const ym_vec3f a, const ym_vec3f b) {
     return (ym_vec3f){ a.x + b.x, a.y + b.y, a.z + b.z };
+}
+
+static inline ym_vec3f
+ym_ssum3f(const ym_vec3f a, float w, const ym_vec3f b) {
+    return (ym_vec3f){ a.x + w * b.x, a.y + w * b.y, a.z + w * b.z };
+}
+
+static inline ym_vec3f
+ym_lerp3f(const ym_vec3f a, const ym_vec3f b, float u) {
+    return (ym_vec3f){ a.x * (1 - u) + b.x * u, a.y * (1 - u) + b.y * u,
+                       a.z * (1 - u) + b.z * u };
+}
+
+static inline ym_vec3f
+ym_blerp3f(const ym_vec3f a, const ym_vec3f b, const ym_vec3f c, float u,
+           float v) {
+    return (ym_vec3f){ a.x * (1 - u - v) + b.x * u + c.x * v,
+                       a.y * (1 - u - v) + b.y * u + c.y * v,
+                       a.z * (1 - u - v) + b.z * u + c.z * v };
 }
 
 static inline ym_vec3f
@@ -125,6 +145,12 @@ static inline float
 ym_dist3f(const ym_vec3f a, const ym_vec3f b) {
     return (float)sqrt((a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y) +
                        (a.z - b.z) * (a.z - b.z));
+}
+
+static inline float
+ym_distsqr3f(const ym_vec3f a, const ym_vec3f b) {
+    return ((a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y) +
+            (a.z - b.z) * (a.z - b.z));
 }
 
 static inline ym_vec3f
@@ -216,9 +242,98 @@ ym_dot4f(const ym_vec4f a, const ym_vec4f b) {
     return (a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w);
 }
 
+static inline ym_mat3f
+ym_identity3f() {
+    return (ym_mat3f){ { 1, 0, 0, 0, 1, 0, 0, 0, 1 } };
+}
+
+static inline ym_mat3f
+ym_transpose3f(const ym_mat3f a) {
+    ym_mat3f c = a;
+    for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < 3; j++) {
+            c.m[i * 3 + j] = a.m[j * 3 + i];
+        }
+    }
+    return c;
+}
+
+static inline ym_vec3f
+ym_vmul3f(const ym_mat3f a, const ym_vec3f b) {
+    const ym_vec3f* mv = (const ym_vec3f*)a.m;
+    return (ym_vec3f){
+        ym_dot3f(mv[0], b), ym_dot3f(mv[1], b), ym_dot3f(mv[2], b),
+    };
+}
+
+static inline ym_mat3f
+ym_mmul3f(const ym_mat3f a, const ym_mat3f b) {
+    ym_mat3f c = { { 0 } };
+    for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < 3; j++) {
+            c.m[i * 3 + j] = 0;
+            for (int k = 0; k < 3; k++) {
+                c.m[i * 3 + j] += a.m[i * 3 + k] * b.m[k * 3 + j];
+            }
+        }
+    }
+    return c;
+}
+
+static inline ym_mat3f
+ym_rotation3f(float a, const ym_vec3f b) {
+    float s = sinf(a), c = cosf(a);
+    ym_vec3f vv = ym_normalize3f(b);
+    return (ym_mat3f){
+        { c + (1 - c) * vv.x * vv.x, (1 - c) * vv.x * vv.y - s * vv.z,
+          (1 - c) * vv.x * vv.z + s * vv.y, (1 - c) * vv.x * vv.y + s * vv.z,
+          c + (1 - c) * vv.y * vv.y, (1 - c) * vv.y * vv.z - s * vv.x,
+          (1 - c) * vv.x * vv.z - s * vv.y, (1 - c) * vv.y * vv.z + s * vv.x,
+          c + (1 - c) * vv.z * vv.z }
+    };
+}
+
+// http://stackoverflow.com/questions/983999/simple-3x3-matrix-inverse-code-c
+static inline ym_mat3f
+ym_inverse3f(const ym_mat3f m_) {
+    float m[3][3];
+    *(ym_mat3f*)m = m_;
+
+    // computes the inverse of a matrix m
+    float det = m[0][0] * (m[1][1] * m[2][2] - m[2][1] * m[1][2]) -
+                m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0]) +
+                m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0]);
+
+    double invdet = 1 / det;
+
+    float minv[3][3];  // inverse of matrix m
+    minv[0][0] = (m[1][1] * m[2][2] - m[2][1] * m[1][2]) * invdet;
+    minv[0][1] = (m[0][2] * m[2][1] - m[0][1] * m[2][2]) * invdet;
+    minv[0][2] = (m[0][1] * m[1][2] - m[0][2] * m[1][1]) * invdet;
+    minv[1][0] = (m[1][2] * m[2][0] - m[1][0] * m[2][2]) * invdet;
+    minv[1][1] = (m[0][0] * m[2][2] - m[0][2] * m[2][0]) * invdet;
+    minv[1][2] = (m[1][0] * m[0][2] - m[0][0] * m[1][2]) * invdet;
+    minv[2][0] = (m[1][0] * m[2][1] - m[2][0] * m[1][1]) * invdet;
+    minv[2][1] = (m[2][0] * m[0][1] - m[0][0] * m[2][1]) * invdet;
+    minv[2][2] = (m[0][0] * m[1][1] - m[1][0] * m[0][1]) * invdet;
+
+    return *(ym_mat3f*)minv;
+}
+
 static inline ym_mat4f
 ym_identity4f() {
     return (ym_mat4f){ { 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1 } };
+}
+
+static inline ym_mat4f
+ym_transpose4f(const ym_mat4f a) {
+    ym_mat4f c = a;
+    for (int i = 0; i < 4; i++) {
+        for (int j = 0; j < 4; j++) {
+            c.m[i * 4 + j] = a.m[j * 4 + i];
+        }
+    }
+    return c;
 }
 
 static inline ym_vec4f

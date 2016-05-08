@@ -1031,8 +1031,7 @@ ys_make_stdshape(int stype, int level, int etype, const float* params,
 
     switch (stype) {
         case ys_stype_uvsphere:
-        case ys_stype_uvflippedsphere:
-        case ys_stype_uvquad: {
+        case ys_stype_uvflippedsphere: {
             ys_make_uvgrid(__pow2(level + 2), __pow2(level + 1), etype, nelems,
                            elem, nverts, texcoord_);
             *pos_ = (float*)calloc(*nverts * 3, sizeof(float));
@@ -1053,19 +1052,30 @@ ys_make_stdshape(int stype, int level, int etype, const float* params,
                                           sinf(a.x) * sinf(a.y), cosf(a.y) };
                     norm[i] = (ys__vec3f){ -pos[i].x, -pos[i].y, -pos[i].z };
                     texcoord[i].y = 1 - texcoord[i].y;
-                } else if (stype == ys_stype_uvquad) {
-                    pos[i] = (ys__vec3f){ -1 + uv.x * 2, -1 + uv.y * 2, 0 };
-                    norm[i] = (ys__vec3f){ 0, 0, 1 };
-                } else
+                } else {
                     assert(false);
+                }
+            }
+        } break;
+        case ys_stype_uvquad: {
+            ys_make_uvgrid(__pow2(level), __pow2(level), etype, nelems, elem,
+                           nverts, texcoord_);
+            *pos_ = (float*)calloc(*nverts * 3, sizeof(float));
+            *norm_ = (float*)calloc(*nverts * 3, sizeof(float));
+            ys__vec3f* pos = (ys__vec3f*)*pos_;
+            ys__vec3f* norm = (ys__vec3f*)*norm_;
+            ys__vec2f* texcoord = (ys__vec2f*)*texcoord_;
+            for (int i = 0; i < *nverts; i++) {
+                ys__vec2f uv = texcoord[i];
+                pos[i] = (ys__vec3f){ -1 + uv.x * 2, -1 + uv.y * 2, 0 };
+                norm[i] = (ys__vec3f){ 0, 0, 1 };
             }
         } break;
         case ys_stype_uvcube: {
             int grid_nelems, *grid_elem, grid_nverts;
             ys__vec2f* grid_uv;
-            ys_make_uvgrid(__pow2(level + 2), __pow2(level + 1), etype,
-                           &grid_nelems, &grid_elem, &grid_nverts,
-                           (float**)&grid_uv);
+            ys_make_uvgrid(__pow2(level), __pow2(level), etype, &grid_nelems,
+                           &grid_elem, &grid_nverts, (float**)&grid_uv);
             *nelems = grid_nelems * 6;
             *elem = (int*)calloc(*nelems * 6 * etype, sizeof(int));
             *nverts = grid_nverts * 6;
