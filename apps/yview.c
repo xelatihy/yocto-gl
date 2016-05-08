@@ -251,7 +251,7 @@ window_refresh_callback(GLFWwindow* window) {
     view_params* view = glfwGetWindowUserPointer(window);
 
     char title[4096];
-    sprintf(title, "imview | %s | %dx%d", view->img->filename, view->img->w,
+    sprintf(title, "yview | %s | %dx%d", view->img->filename, view->img->w,
             view->img->h);
     glfwSetWindowTitle(window, title);
 
@@ -291,11 +291,11 @@ ui_loop(int nimgs, view_img* imgs) {
     glfwSetCursorPosCallback(window, mouse_pos_callback);
     glfwSetWindowRefreshCallback(window, window_refresh_callback);
 
-    // init gl extensions
+// init gl extensions
 #ifdef YG_USING_GLEW
     if (glewInit() != GLEW_OK) exit(EXIT_FAILURE);
 #endif
-    
+
     // load textures
     for (int i = 0; i < nimgs; i++) {
         imgs[i].tex_glid = yg_make_texture(imgs[i].pixels, imgs[i].w, imgs[i].h,

@@ -32,7 +32,7 @@
 #include "../yocto/yocto_math.h"
 #include "../yocto/yocto_obj.h"
 #include "../yocto/yocto_shape.h"
-#include "../yocto/yocto_trace.h"
+#include "../yocto/yocto_symrigid.h"
 
 #include <GLFW/glfw3.h>
 
@@ -52,8 +52,7 @@ struct view_params {
     float backgrounds[16];
 
     // drawing
-    bool wireframe;
-    bool edges;
+    bool view_edges, view_hull;
 
     // mouse state
     int mouse_button;
@@ -61,8 +60,15 @@ struct view_params {
 
     // scene
     yo_scene* scene;
+    ysr_scene* rigud_scene;
     float amb[3];
     int cur_camera;
+
+    // animating
+    float time, dt;
+    int frame;
+    bool simulating;
+    ysr_scene* rigid_scene;
 
     // shading
     int shade_prog;
@@ -76,7 +82,8 @@ typedef struct view_params view_params;
 
 view_params*
 init_view_params(const char* filename, const char* imfilename, yo_scene* scene,
-                 int w, int h, bool camera_lights, float amb) {
+                 ysr_scene* rigid_scene, float dt, int w, int h,
+                 bool camera_lights, float amb) {
     view_params* view = (view_params*)calloc(1, sizeof(view_params));
 
     view->filename = filename;
@@ -92,13 +99,16 @@ init_view_params(const char* filename, const char* imfilename, yo_scene* scene,
                               0.5, 0.5, 0.5, 0, 1,    1,    1,    0 };
     memcpy(view->backgrounds, backgrounds, sizeof(view->backgrounds));
 
-    view->wireframe = false;
-    view->edges = false;
-
     view->scene = scene;
+    view->rigud_scene = rigid_scene;
     view->amb[0] = view->amb[1] = view->amb[2] = amb;
 
+    view->dt = dt;
+    view->rigid_scene = rigid_scene;
+
     view->camera_lights = camera_lights;
+
+    view->simulating = false;
 
     return view;
 }
@@ -139,12 +149,114 @@ turntable(ym_vec3f* from, ym_vec3f* to, ym_vec3f* up, const float rotate[2],
 }
 
 void
+draw_hull(ysr_scene* rigid_scene, yo_scene* scene, float dt, int cur_camera,
+          int prog) {
+    glDisable(GL_CULL_FACE);
+    glDisable(GL_DEPTH_TEST);
+
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+    yo_camera* cam = &scene->cameras[cur_camera];
+    ym_mat4f camera_xform = ym_lookat_xform4f(
+        *(ym_vec3f*)cam->from, *(ym_vec3f*)cam->to, *(ym_vec3f*)cam->up);
+    ym_mat4f camera_view = ym_lookat_view4f(
+        *(ym_vec3f*)cam->from, *(ym_vec3f*)cam->to, *(ym_vec3f*)cam->up);
+    ym_mat4f camera_proj = ym_perspective4f(
+        2 * atanf(cam->height / 2), cam->width / cam->height, 0.1f, 10000);
+
+    yg_stdshader_begin_frame(prog, true, 1, 2.2, camera_xform.m, camera_view.m,
+                             camera_proj.m);
+
+    for (int i = 0; i < scene->nshapes; i++) {
+        yo_shape* shape = &scene->shapes[i];
+        ysr__body* body = &rigid_scene->bodies[i];
+
+        ym_mat4f shape_xform =
+            (shape->xform) ? *(ym_mat4f*)shape->xform : ym_identity4f();
+        yg_stdshader_begin_shape(prog, shape_xform.m);
+
+        float zero[3] = { 0, 0, 0 };
+        float one[3] = { 1, 1, 1 };
+        yg_stdshader_set_material(prog, shape->etype, one, zero, zero, 0, 0, 0,
+                                  0, 0, false);
+
+        glLineWidth(2);
+        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        yg_stdshader_set_vert(prog, shape->pos, 0, 0, 0);
+        yg_stdshader_draw_elem(prog, body->shape.nelems, (int*)body->shape.elem,
+                               body->shape.etype);
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        glLineWidth(1);
+
+        yg_stdshader_end_shape();
+    }
+
+    static int point[] = { 0 }, line[] = { 0, 1 };
+    for (int i = 0; i < rigid_scene->ncollisions; i++) {
+        ysr__collision* col = rigid_scene->collisions + i;
+        ym_mat4f identity4f = ym_identity4f();
+        yg_stdshader_begin_shape(prog, identity4f.m);
+
+        float zero[3] = { 0, 0, 0 };
+        float red[3] = { 1, 0, 0 }, green[3] = { 0, 1, 0 },
+              cyan[3] = { 0, 1, 1 }, yellow[3] = { 1, 1, 0 };
+
+        yg_stdshader_set_material(prog, 1, red, zero, zero, 0, 0, 0, 0, 0,
+                                  false);
+
+        ym_vec3f pos[] = { col->pos,
+                           ym_ssum3f(col->pos, col->depth, col->norm) };
+        glPointSize(10);
+        glLineWidth(4);
+        yg_stdshader_set_vert(prog, &pos->x, 0, 0, 0);
+        yg_stdshader_draw_elem(prog, 1, point, 1);
+        yg_stdshader_draw_elem(prog, 1, line, 2);
+        glLineWidth(1);
+        glPointSize(1);
+
+        yg_stdshader_set_material(prog, 1, green, zero, zero, 0, 0, 0, 0, 0,
+                                  false);
+
+        ym_vec3f posi[] = { col->pos, ym_ssum3f(col->pos, 25, col->impulse) };
+        glLineWidth(4);
+        yg_stdshader_set_vert(prog, &posi->x, 0, 0, 0);
+        yg_stdshader_draw_elem(prog, 1, line, 2);
+        glLineWidth(1);
+
+        yg_stdshader_set_material(prog, 1, cyan, zero, zero, 0, 0, 0, 0, 0,
+                                  false);
+
+        ym_vec3f posj[] = { col->pos,
+                            ym_ssum3f(col->pos, dt, col->vel_before) };
+        glLineWidth(4);
+        yg_stdshader_set_vert(prog, &posj->x, 0, 0, 0);
+        yg_stdshader_draw_elem(prog, 1, line, 2);
+        glLineWidth(1);
+
+        yg_stdshader_set_material(prog, 1, yellow, zero, zero, 0, 0, 0, 0, 0,
+                                  false);
+
+        ym_vec3f posk[] = { col->pos, ym_ssum3f(col->pos, dt, col->vel_after) };
+        glLineWidth(4);
+        yg_stdshader_set_vert(prog, &posk->x, 0, 0, 0);
+        yg_stdshader_draw_elem(prog, 1, line, 2);
+        glLineWidth(1);
+
+        yg_stdshader_end_shape();
+    }
+
+    yg_stdshader_end_frame();
+
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+    glEnable(GL_DEPTH_TEST);
+}
+
+void
 shade(yo_scene* scene, int cur_camera, int prog, int* txt, float exposure,
-      float gamma_, bool wireframe, bool edges, bool camera_lights) {
+      float gamma_, bool edges, bool camera_lights) {
     glDisable(GL_CULL_FACE);
     glEnable(GL_DEPTH_TEST);
-
-    if (wireframe) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
     yo_camera* cam = &scene->cameras[cur_camera];
     ym_mat4f camera_xform = ym_lookat_xform4f(
@@ -210,7 +322,7 @@ shade(yo_scene* scene, int cur_camera, int prog, int* txt, float exposure,
 
         yg_stdshader_draw_elem(prog, shape->nelems, shape->elem, shape->etype);
 
-        if (edges && !wireframe) {
+        if (edges) {
             float zero[3] = { 0, 0, 0 };
             yg_stdshader_set_material(prog, shape->etype, zero, zero, zero, 0,
                                       0, 0, 0, 0, false);
@@ -259,17 +371,36 @@ save_screenshot(GLFWwindow* window, view_params* view) {
     free(pixels);
 }
 
+void
+simulate_step(view_params* view) {
+    ysr_advance(view->rigud_scene, view->dt);
+    for (int i = 0; i < view->scene->nshapes; i++) {
+        ysr_get_transform(view->rigud_scene, i, view->scene->shapes[i].xform);
+    }
+    view->time += view->dt;
+    view->frame += 1;
+}
+
 // text callback
 void
 text_callback(GLFWwindow* window, unsigned int key) {
     view_params* view = (view_params*)glfwGetWindowUserPointer(window);
     switch (key) {
+        case ' ': view->simulating = !view->simulating; break;
+        case '/': {
+            ym_mat4f identity = ym_identity4f();
+            for (int i = 0; i < view->scene->nshapes; i++) {
+                *(ym_mat4f*)view->scene->shapes[i].xform = identity;
+                ysr_set_transform(view->rigid_scene, i, identity.m);
+            }
+        } break;
+        case '.': simulate_step(view); break;
         case '[': view->exposure -= 1; break;
         case ']': view->exposure += 1; break;
         case '{': view->gamma -= 0.1; break;
         case '}': view->gamma += 0.1; break;
-        case 'w': view->wireframe = !view->wireframe; break;
-        case 'e': view->edges = !view->edges; break;
+        case 'e': view->view_edges = !view->view_edges; break;
+        case 'h': view->view_hull = !view->view_hull; break;
         case 'b':
             view->background += 4;
             if (view->background - view->backgrounds >= 16)
@@ -363,7 +494,9 @@ window_refresh_callback(GLFWwindow* window) {
     view_params* view = glfwGetWindowUserPointer(window);
 
     char title[4096];
-    sprintf(title, "mview | %s", view->filename);
+    sprintf(title, "ysym | %s | %.3g | %d", view->filename, view->time,
+            view->frame);
+    glfwSetWindowTitle(window, title);
 
     // begin frame
     glClearColor(view->background[0], view->background[1], view->background[2],
@@ -374,8 +507,12 @@ window_refresh_callback(GLFWwindow* window) {
 
     // draw
     shade(view->scene, view->cur_camera, view->shade_prog, view->shade_txt,
-          view->exposure, view->gamma, view->wireframe, view->edges,
-          view->camera_lights);
+          view->exposure, view->gamma, view->view_edges, view->camera_lights);
+
+    // draw hull
+    if (view->view_hull)
+        draw_hull(view->rigid_scene, view->scene, 1, view->cur_camera,
+                  view->shade_prog);
 
     // end frame
     glfwSwapBuffers(window);
@@ -383,11 +520,12 @@ window_refresh_callback(GLFWwindow* window) {
 
 // uiloop
 void
-ui_loop(const char* filename, const char* imfilename, yo_scene* scene, int w,
-        int h, int ns, bool camera_lights, float amb, bool no_ui) {
+ui_loop(const char* filename, const char* imfilename, yo_scene* scene,
+        ysr_scene* rigid_scene, float dt, int w, int h, bool camera_lights,
+        float amb, bool no_ui) {
     // view data
-    view_params* view =
-        init_view_params(filename, imfilename, scene, w, h, camera_lights, amb);
+    view_params* view = init_view_params(
+        filename, imfilename, scene, rigid_scene, dt, w, h, camera_lights, amb);
 
     // glfw
     if (!glfwInit()) exit(EXIT_FAILURE);
@@ -403,11 +541,6 @@ ui_loop(const char* filename, const char* imfilename, yo_scene* scene, int w,
     glfwSetCursorPosCallback(window, mouse_pos_callback);
     glfwSetWindowRefreshCallback(window, window_refresh_callback);
 
-// init gl extensions
-#ifdef YG_USING_GLEW
-    if (glewInit() != GLEW_OK) exit(EXIT_FAILURE);
-#endif
-
     // init shade state
     view->shade_prog = yg_stdshader_make_program();
     view->shade_ntxt = scene->ntextures;
@@ -422,13 +555,12 @@ ui_loop(const char* filename, const char* imfilename, yo_scene* scene, int w,
     while (!glfwWindowShouldClose(window)) {
         window_refresh_callback(window);
 
-        if (no_ui) {
-            printf("shading %s to %s\n", filename, imfilename);
-            save_screenshot(window, view);
-            break;
+        if (view->simulating) {
+            simulate_step(view);
+            glfwPollEvents();
+        } else {
+            glfwWaitEvents();
         }
-
-        glfwWaitEvents();
     }
 
     glfwDestroyWindow(window);
@@ -477,6 +609,14 @@ load_scene(const char* filename, bool triangulate) {
                                shape->nverts, shape->pos, shape->norm, true);
     }
 
+    // ensure xforms
+    for (int s = 0; s < scene->nshapes; s++) {
+        yo_shape* shape = &scene->shapes[s];
+        if (shape->xform) continue;
+        shape->xform = (float*)calloc(16, sizeof(float));
+        *(ym_mat4f*)shape->xform = ym_identity4f();
+    }
+
     // make camera if not there
     if (!scene->ncameras) {
         // find scene bounds
@@ -509,6 +649,72 @@ load_scene(const char* filename, bool triangulate) {
 }
 
 int
+overlap_shapes(void* ctx, int** collisions, int* ccollisions) {
+    yb_bvh* scene_bvh = (yb_bvh*)ctx;
+    return yb_overlap_shape_bounds(scene_bvh, true, collisions, ccollisions);
+}
+
+bool
+overlap_shape(void* ctx, int sid, const float pt[3], float max_dist,
+              float* dist, int* eid, float* euv) {
+    yb_bvh* scene_bvh = (yb_bvh*)ctx;
+    return yb_neighbour_bvh(scene_bvh, pt, max_dist, sid, dist, &sid, eid, euv);
+}
+
+void
+overlap_refit(void* ctx, float* xforms[16]) {
+    yb_bvh* scene_bvh = (yb_bvh*)ctx;
+    yb_refit_scene_bvh(scene_bvh, xforms);
+}
+
+ysr_scene*
+make_rigid_scene(yo_scene* scene, yb_bvh** scene_bvh) {
+    ysr_scene* rigid_scene = ysr_init_scene(scene->nshapes);
+
+    // add each shape
+    yb_bvh** shape_bvhs = (yb_bvh**)calloc(scene->nshapes, sizeof(yb_bvh*));
+    for (int i = 0; i < scene->nshapes; i++) {
+        yo_shape* shape = scene->shapes + i;
+        yo_material* mat = scene->materials + shape->matid;
+        bool simulated = i != 0 && ym_length3f(*(ym_vec3f*)mat->ke) == 0;
+        float mass = (simulated) ? 1 : 0;
+        ym_mat3f inertia = ym_identity3f();
+        if (simulated) {
+            float volume;
+            ym_vec3f center;
+            ysr_compute_moments(shape->nelems, shape->elem, shape->etype,
+                                shape->nverts, shape->pos, &volume, &center.x,
+                                inertia.m);
+            mass *= volume;
+            for (int j = 0; j < shape->nverts; j++) {
+                ym_vec3f* p = (ym_vec3f*)shape->pos + j;
+                *p = ym_sub3f(*p, center);
+            }
+        }
+        shape_bvhs[i] = yb_make_shape_bvh(shape->nelems, shape->elem,
+                                          shape->etype, shape->nverts,
+                                          shape->pos, shape->radius, 0, false);
+        ysr_set_body(rigid_scene, i, shape->xform, mass, inertia.m,
+                     shape->nelems, shape->elem, shape->etype, shape->nverts,
+                     shape->pos);
+    }
+
+    // set up final bvh
+    float** xforms = (float**)calloc(scene->nshapes, sizeof(float*));
+    for (int i = 0; i < scene->nshapes; i++) {
+        xforms[i] = scene->shapes[i].xform;
+    }
+    *scene_bvh = yb_make_scene_bvh(scene->nshapes, shape_bvhs, xforms, 0, 0);
+    free(xforms);
+
+    // setup collisions
+    ysr_set_collision(rigid_scene, *scene_bvh, overlap_shapes, overlap_shape,
+                      overlap_refit);
+
+    return rigid_scene;
+}
+
+int
 main(int argc, const char** argv) {
     // command line
     yc_parser* parser = yc_init_parser(argc, argv, "view meshes");
@@ -517,11 +723,10 @@ main(int argc, const char** argv) {
                                        "enable camera lights", false);
     int camera = yc_parse_opti(parser, "--camera", "-C", "camera", 0);
     bool no_ui = yc_parse_optb(parser, "--no-ui", 0, "runs offline", false);
-    bool triangulate =
-        yc_parse_optb(parser, "--triangulate", 0, "triangulate input", false);
-    int samples = yc_parse_opti(parser, "--samples", "-s", "image samples", 1);
     float aspect =
         yc_parse_optf(parser, "--aspect", "-a", "image aspect", 16.0f / 9.0f);
+    float dt =
+        yc_parse_optf(parser, "--delta_time", "-dt", "delta time", 1 / 60.0f);
     int res =
         yc_parse_opti(parser, "--resolution", "-r", "image resolution", 720);
     const char* imfilename =
@@ -531,14 +736,20 @@ main(int argc, const char** argv) {
     yc_done_parser(parser);
 
     // load scene
-    yo_scene* scene = load_scene(filename, triangulate);
+    yo_scene* scene = load_scene(filename, true);
     scene->cameras[camera].width = aspect * scene->cameras[camera].height;
 
+    // init rigid simulation
+    yb_bvh* scene_bvh;
+    ysr_scene* rigid_scene = make_rigid_scene(scene, &scene_bvh);
+
     // start
-    ui_loop(filename, imfilename, scene, round(res * aspect), res, samples,
-            camera_lights, amb, no_ui);
+    ui_loop(filename, imfilename, scene, rigid_scene, dt, round(res * aspect),
+            res, camera_lights, amb, no_ui);
 
     // done
+    // TODO: clean bvh
+    ysr_free_scene(rigid_scene);
     yo_free_scene(scene);
     return EXIT_SUCCESS;
 }

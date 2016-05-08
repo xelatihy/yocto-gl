@@ -9,4 +9,5 @@ $cc $cflags apps/yview.c $linkflags -o bin/yview
 $cc $cflags apps/ytrace.c $linkflags -o bin/ytrace
 $cc -DYA_NOGL $cflags apps/ytrace.c $linkflags -o bin/ytrace-cli
 $cc $cflags apps/yshade.c $linkflags -o bin/yshade
+$cc $cflags apps/ysym.c $linkflags -o bin/ysym
 $cc $cflags apps/ytestgen.c $linkflags -o bin/ytestgen

@@ -90,7 +90,14 @@
 // - to use as a .h, just #define YO_NOINLINE before including this file
 // - to use as a .c, just #define YO_IMPLEMENTATION before including this file
 // To disable texture loading code, #define YO_NOIMG (uses stb_image.h to load).
+// Internal yocto_obj uses a fixed size hash table to resolve unique vertices
+// in OBJ. Use YO_HASHSIZE to change the number of bucks.
 //
+
+//
+// HISTORY:
+// - v 0.1: handles larger files but allocates more up front memory
+// - v 0.0: initial release
 
 //
 // LICENSE:
@@ -123,7 +130,7 @@
 #define YO_API static inline
 #else
 #ifdef __cplusplus
-#define O_API extern "C"
+#define YO_API extern "C"
 #else
 #define YO_API
 #endif
@@ -358,7 +365,7 @@ yo_load_textures(yo_scene* scene, const char* filename, int req_comp);
 #include <string.h>
 
 // -----------------------------------------------------------------------------
-// LOW-LEVEL SUPPORT FOR FIXED-SIZE VECTORS AND GROWABLE ARRAYS
+// LOW-LEVEL SUPPORT FOR FIXED VECTORS AND GROWABLE ARRAYS
 // -----------------------------------------------------------------------------
 
 //
@@ -386,7 +393,7 @@ typedef struct { int pos, texcoord, norm, color, radius, vid; } yo__vert;
 //
 // Vertex hash table to avoid duplicating vertices.
 //
-#define yo__vhash_size 65536
+#define yo__vhash_size 1048576
 typedef struct yo__vhash {
     int nverts;                   // numner of vertices
     int s[yo__vhash_size];        // size of the hash buckets
@@ -991,7 +998,7 @@ yo_load_obj(const char* filename, bool triangulate, bool ext) {
     float* obj_radius = 0;
 
     // current shape scene
-    yo__vhash vhash = { 0 };
+    yo__vhash* vhash = (yo__vhash*)calloc(1, sizeof(yo__vhash));
     yo__vector_grow(yo_shape, scene->shapes, scene->nshapes, 1);
     yo_shape* shape = scene->shapes + scene->nshapes - 1;
 
@@ -1040,43 +1047,43 @@ yo_load_obj(const char* filename, bool triangulate, bool ext) {
             }
         } else if (!strcmp(tok[0], "c")) {
             if (ext) {
-                shape = yo__flush_shape(scene, &vhash);
-                yo__vert from = yo__parse_vert(tok[1], &vhash, obj_nvert);
-                yo__vert to = yo__parse_vert(tok[2], &vhash, obj_nvert);
+                shape = yo__flush_shape(scene, vhash);
+                yo__vert from = yo__parse_vert(tok[1], vhash, obj_nvert);
+                yo__vert to = yo__parse_vert(tok[2], vhash, obj_nvert);
                 yo__add_camera(scene, shape->name, from, to, obj_pos, obj_norm,
-                               obj_texcoord, &vhash);
+                               obj_texcoord, vhash);
                 shape->name = 0;
             }
         } else if (!strcmp(tok[0], "e")) {
             if (ext) {
-                shape = yo__flush_shape(scene, &vhash);
-                yo__vert from = yo__parse_vert(tok[1], &vhash, obj_nvert);
-                yo__vert to = yo__parse_vert(tok[2], &vhash, obj_nvert);
+                shape = yo__flush_shape(scene, vhash);
+                yo__vert from = yo__parse_vert(tok[1], vhash, obj_nvert);
+                yo__vert to = yo__parse_vert(tok[2], vhash, obj_nvert);
                 yo__add_env(scene, shape->name, shape->matname, from, to,
-                            obj_pos, obj_norm, &vhash);
+                            obj_pos, obj_norm, vhash);
                 shape->name = 0;
                 shape->matname = 0;
             }
         } else if (!strcmp(tok[0], "f") && !triangulate) {
             if (shape->etype != yo_etype_polygon) {
-                shape = yo__flush_shape(scene, &vhash);
+                shape = yo__flush_shape(scene, vhash);
             }
             shape->etype = yo_etype_polygon;
             yo__pushback(int, shape->elem, shape->nelems, ntok - 1);
             for (int t = 1; t < ntok; t++) {
-                yo__vert v = yo__parse_vert(tok[t], &vhash, obj_nvert);
+                yo__vert v = yo__parse_vert(tok[t], vhash, obj_nvert);
                 yo__add_shape_vert(shape, v, obj_pos, obj_norm, obj_texcoord,
                                    obj_color, obj_radius);
                 yo__pushback(int, shape->elem, shape->nelems, v.vid);
             }
         } else if (!strcmp(tok[0], "f") && triangulate) {
             if (shape->etype != yo_etype_triangle) {
-                shape = yo__flush_shape(scene, &vhash);
+                shape = yo__flush_shape(scene, vhash);
             }
             shape->etype = yo_etype_triangle;
             int vi0 = 0;
             for (int t = 1; t < ntok; t++) {
-                yo__vert v = yo__parse_vert(tok[t], &vhash, obj_nvert);
+                yo__vert v = yo__parse_vert(tok[t], vhash, obj_nvert);
                 yo__add_shape_vert(shape, v, obj_pos, obj_norm, obj_texcoord,
                                    obj_color, obj_radius);
                 if (t == 1) vi0 = v.vid;
@@ -1089,23 +1096,23 @@ yo_load_obj(const char* filename, bool triangulate, bool ext) {
             }
         } else if (!strcmp(tok[0], "l") && !triangulate) {
             if (shape->etype != yo_etype_polyline) {
-                shape = yo__flush_shape(scene, &vhash);
+                shape = yo__flush_shape(scene, vhash);
             }
             shape->etype = yo_etype_polyline;
             yo__pushback(int, shape->elem, shape->nelems, ntok - 1);
             for (int t = 1; t < ntok; t++) {
-                yo__vert v = yo__parse_vert(tok[t], &vhash, obj_nvert);
+                yo__vert v = yo__parse_vert(tok[t], vhash, obj_nvert);
                 yo__add_shape_vert(shape, v, obj_pos, obj_norm, obj_texcoord,
                                    obj_color, obj_radius);
                 yo__pushback(int, shape->elem, shape->nelems, v.vid);
             }
         } else if (!strcmp(tok[0], "l") && triangulate) {
             if (shape->etype != yo_etype_line) {
-                shape = yo__flush_shape(scene, &vhash);
+                shape = yo__flush_shape(scene, vhash);
             }
             shape->etype = yo_etype_line;
             for (int t = 1; t < ntok; t++) {
-                yo__vert v = yo__parse_vert(tok[t], &vhash, obj_nvert);
+                yo__vert v = yo__parse_vert(tok[t], vhash, obj_nvert);
                 yo__add_shape_vert(shape, v, obj_pos, obj_norm, obj_texcoord,
                                    obj_color, obj_radius);
                 if (t > 2) {
@@ -1116,23 +1123,23 @@ yo_load_obj(const char* filename, bool triangulate, bool ext) {
             }
         } else if (!strcmp(tok[0], "p")) {
             if (shape->etype != yo_etype_point) {
-                shape = yo__flush_shape(scene, &vhash);
+                shape = yo__flush_shape(scene, vhash);
             }
             shape->etype = yo_etype_point;
             for (int t = 1; t < ntok; t++) {
-                yo__vert v = yo__parse_vert(tok[t], &vhash, obj_nvert);
+                yo__vert v = yo__parse_vert(tok[t], vhash, obj_nvert);
                 yo__add_shape_vert(shape, v, obj_pos, obj_norm, obj_texcoord,
                                    obj_color, obj_radius);
                 yo__pushback(int, shape->elem, shape->nelems, v.vid);
             }
         } else if (!strcmp(tok[0], "o")) {
-            shape = yo__flush_shape(scene, &vhash);
+            shape = yo__flush_shape(scene, vhash);
             shape->name = yo__strdup((ntok > 1) ? tok[1] : 0);
         } else if (!strcmp(tok[0], "g")) {
-            shape = yo__flush_shape(scene, &vhash);
+            shape = yo__flush_shape(scene, vhash);
             shape->groupname = yo__strdup((ntok > 1) ? tok[1] : 0);
         } else if (!strcmp(tok[0], "usemtl")) {
-            shape = yo__flush_shape(scene, &vhash);
+            shape = yo__flush_shape(scene, vhash);
             shape->matname = yo__strdup((ntok > 1) ? tok[1] : 0);
         } else if (!strcmp(tok[0], "mtllib")) {
             char mfilename[4096];
@@ -1145,7 +1152,7 @@ yo_load_obj(const char* filename, bool triangulate, bool ext) {
     }
 
     // flush and cleanup empty shape if necessary
-    yo__flush_shape(scene, &vhash);
+    yo__flush_shape(scene, vhash);
     scene->nshapes -= 1;
 
     // close file
@@ -1157,8 +1164,9 @@ yo_load_obj(const char* filename, bool triangulate, bool ext) {
 
     // clear
     for (int i = 0; i < yo__vhash_size; i++) {
-        if (vhash.v[i]) free(vhash.v[i]);
+        if (vhash->v[i]) free(vhash->v[i]);
     }
+    free(vhash);
     if (obj_pos) free(obj_pos);
     if (obj_norm) free(obj_norm);
     if (obj_texcoord) free(obj_texcoord);
