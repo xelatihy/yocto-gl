@@ -1,0 +1,72 @@
+
+linkflags = opengl32.lib glu32.lib gdi32.lib user32.lib kernel32.lib shell32.lib
+
+rule c
+    deps = msvc
+    command = cl /nologo /showIncludes /Ox /c -Fo$out $in
+
+rule cpp
+    deps = msvc
+    command = cl /nologo /showIncludes /Ox /EHsc /c /Fo$out $in
+
+rule lib
+    command = lib /NOLOGO /OUT:$out $in
+
+rule app
+    command = cl /nologo /Ox /Fe$out $linkflags $in
+
+build bin/obj/context.obj: c apps/ext/glfw/context.c
+build bin/obj/init.obj: c apps/ext/glfw/init.c
+build bin/obj/input.obj: c apps/ext/glfw/input.c
+build bin/obj/monitor.obj: c apps/ext/glfw/monitor.c
+build bin/obj/window.obj: c apps/ext/glfw/window.c
+build bin/obj/win32_init.obj: c apps/ext/glfw/win32_init.c
+build bin/obj/win32_tls.obj: c apps/ext/glfw/win32_tls.c
+build bin/obj/win32_monitor.obj: c apps/ext/glfw/win32_monitor.c
+build bin/obj/win32_window.obj: c apps/ext/glfw/win32_window.c
+build bin/obj/win32_time.obj: c apps/ext/glfw/win32_time.c
+build bin/obj/wgl_context.obj: c apps/ext/glfw/wgl_context.c
+build bin/obj/winmm_joystick.obj: c apps/ext/glfw/winmm_joystick.c
+
+build bin/obj/libglfw3.lib: lib  bin/obj/context.obj bin/obj/init.obj bin/obj/input.obj bin/obj/monitor.obj bin/obj/window.obj bin/obj/win32_init.obj bin/obj/win32_tls.obj bin/obj/win32_monitor.obj bin/obj/win32_window.obj bin/obj/win32_time.obj bin/obj/wgl_context.obj bin/obj/winmm_joystick.obj
+
+
+build bin/obj/glew.obj: c apps/ext/glew/glew.c
+
+build bin/obj/libglew.lib: lib  bin/obj/glew.obj
+
+
+build bin/obj/libyocto.obj: cpp apps/libyocto.cpp
+
+build bin/obj/libyocto.lib: lib  bin/obj/libyocto.obj
+
+
+build bin/obj/yprocobj.obj: cpp apps/yprocobj.cpp
+
+build bin/yprocobj.exe: app  bin/obj/libglfw3.lib bin/obj/libglew.lib bin/obj/libyocto.lib  bin/obj/yprocobj.obj
+
+
+build bin/obj/yshade.obj: cpp apps/yshade.cpp
+
+build bin/yshade.exe: app  bin/obj/libglfw3.lib bin/obj/libglew.lib bin/obj/libyocto.lib  bin/obj/yshade.obj
+
+
+build bin/obj/ysym.obj: cpp apps/ysym.cpp
+
+build bin/ysym.exe: app  bin/obj/libglfw3.lib bin/obj/libglew.lib bin/obj/libyocto.lib  bin/obj/ysym.obj
+
+
+build bin/obj/ytestgen.obj: cpp apps/ytestgen.cpp
+
+build bin/ytestgen.exe: app  bin/obj/libglfw3.lib bin/obj/libglew.lib bin/obj/libyocto.lib  bin/obj/ytestgen.obj
+
+
+build bin/obj/ytrace.obj: cpp apps/ytrace.cpp
+
+build bin/ytrace.exe: app  bin/obj/libglfw3.lib bin/obj/libglew.lib bin/obj/libyocto.lib  bin/obj/ytrace.obj
+
+
+build bin/obj/yview.obj: cpp apps/yview.cpp
+
+build bin/yview.exe: app  bin/obj/libglfw3.lib bin/obj/libglew.lib bin/obj/libyocto.lib  bin/obj/yview.obj
+

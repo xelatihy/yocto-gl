@@ -1,0 +1,1199 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXAggregateTarget section */
+		E5DA6F7F1CC242DD00DC39DD /* all */ = {
+			isa = PBXAggregateTarget;
+			buildConfigurationList = E5DA6F801CC242DD00DC39DD /* Build configuration list for PBXAggregateTarget "all" */;
+			buildPhases = (
+			);
+			dependencies = (
+				E50FF1A11CFBF17D0005DAE8 /* PBXTargetDependency */,
+				E5BE6E4C1CEC977400BD73D2 /* PBXTargetDependency */,
+				E5CF2D331CE06EA200903654 /* PBXTargetDependency */,
+				E5DA6FBA1CC243A300DC39DD /* PBXTargetDependency */,
+				E5DA6FA81CC2434600DC39DD /* PBXTargetDependency */,
+				E5DA6F981CC2432900DC39DD /* PBXTargetDependency */,
+				E5DA6F841CC242E600DC39DD /* PBXTargetDependency */,
+				E5DA6F861CC242E600DC39DD /* PBXTargetDependency */,
+			);
+			name = all;
+			productName = all;
+		};
+/* End PBXAggregateTarget section */
+
+/* Begin PBXBuildFile section */
+		E50FF1951CFBF0B40005DAE8 /* liblibyocto.a in Frameworks */ = {isa = PBXBuildFile; fileRef = E5BE6E451CEC96F000BD73D2 /* liblibyocto.a */; };
+		E50FF1961CFBF0B40005DAE8 /* IOKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E54A474F1CC21A18006EEBD9 /* IOKit.framework */; };
+		E50FF1971CFBF0B40005DAE8 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E54A474D1CC218DD006EEBD9 /* Cocoa.framework */; };
+		E50FF1981CFBF0B40005DAE8 /* CoreVideo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E54A474B1CC218C4006EEBD9 /* CoreVideo.framework */; };
+		E50FF1991CFBF0B40005DAE8 /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E54A47491CC218B8006EEBD9 /* OpenGL.framework */; };
+		E50FF19F1CFBF0C40005DAE8 /* yprocobj.cpp in Sources */ = {isa = PBXBuildFile; fileRef = E597E2661CF59B0D000ED579 /* yprocobj.cpp */; };
+		E531C0791CECF67C00D7CB85 /* liblibyocto.a in Frameworks */ = {isa = PBXBuildFile; fileRef = E5BE6E451CEC96F000BD73D2 /* liblibyocto.a */; };
+		E531C07A1CECF70800D7CB85 /* liblibyocto.a in Frameworks */ = {isa = PBXBuildFile; fileRef = E5BE6E451CEC96F000BD73D2 /* liblibyocto.a */; };
+		E531C07B1CECF70C00D7CB85 /* liblibyocto.a in Frameworks */ = {isa = PBXBuildFile; fileRef = E5BE6E451CEC96F000BD73D2 /* liblibyocto.a */; };
+		E531C07C1CECF71000D7CB85 /* liblibyocto.a in Frameworks */ = {isa = PBXBuildFile; fileRef = E5BE6E451CEC96F000BD73D2 /* liblibyocto.a */; };
+		E531C07D1CECF71600D7CB85 /* liblibyocto.a in Frameworks */ = {isa = PBXBuildFile; fileRef = E5BE6E451CEC96F000BD73D2 /* liblibyocto.a */; };
+		E54A474A1CC218B8006EEBD9 /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E54A47491CC218B8006EEBD9 /* OpenGL.framework */; };
+		E54A474C1CC218C4006EEBD9 /* CoreVideo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E54A474B1CC218C4006EEBD9 /* CoreVideo.framework */; };
+		E54A474E1CC218DE006EEBD9 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E54A474D1CC218DD006EEBD9 /* Cocoa.framework */; };
+		E54A47501CC21A18006EEBD9 /* IOKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E54A474F1CC21A18006EEBD9 /* IOKit.framework */; };
+		E597E2921CF59B0D000ED579 /* ytrace.cpp in Sources */ = {isa = PBXBuildFile; fileRef = E597E26A1CF59B0D000ED579 /* ytrace.cpp */; };
+		E597E2941CF59B26000ED579 /* libyocto.cpp in Sources */ = {isa = PBXBuildFile; fileRef = E597E2641CF59B0D000ED579 /* libyocto.cpp */; };
+		E597E2951CF59B2B000ED579 /* yshade.cpp in Sources */ = {isa = PBXBuildFile; fileRef = E597E2671CF59B0D000ED579 /* yshade.cpp */; };
+		E597E2961CF59B2F000ED579 /* ysym.cpp in Sources */ = {isa = PBXBuildFile; fileRef = E597E2681CF59B0D000ED579 /* ysym.cpp */; };
+		E597E2971CF59B32000ED579 /* ytestgen.cpp in Sources */ = {isa = PBXBuildFile; fileRef = E597E2691CF59B0D000ED579 /* ytestgen.cpp */; };
+		E597E2981CF59B37000ED579 /* yview.cpp in Sources */ = {isa = PBXBuildFile; fileRef = E597E26B1CF59B0D000ED579 /* yview.cpp */; };
+		E597E2991CF59B4F000ED579 /* cocoa_init.m in Sources */ = {isa = PBXBuildFile; fileRef = E597E2211CF59B0C000ED579 /* cocoa_init.m */; };
+		E597E29A1CF59B53000ED579 /* cocoa_monitor.m in Sources */ = {isa = PBXBuildFile; fileRef = E597E2221CF59B0C000ED579 /* cocoa_monitor.m */; };
+		E597E29B1CF59B56000ED579 /* cocoa_window.m in Sources */ = {isa = PBXBuildFile; fileRef = E597E2241CF59B0C000ED579 /* cocoa_window.m */; };
+		E597E29C1CF59B5A000ED579 /* context.c in Sources */ = {isa = PBXBuildFile; fileRef = E597E2251CF59B0C000ED579 /* context.c */; };
+		E597E29D1CF59B63000ED579 /* input.c in Sources */ = {isa = PBXBuildFile; fileRef = E597E22E1CF59B0C000ED579 /* input.c */; };
+		E597E29E1CF59B66000ED579 /* init.c in Sources */ = {isa = PBXBuildFile; fileRef = E597E22D1CF59B0C000ED579 /* init.c */; };
+		E597E29F1CF59B6C000ED579 /* mach_time.c in Sources */ = {isa = PBXBuildFile; fileRef = E597E2341CF59B0C000ED579 /* mach_time.c */; };
+		E597E2A11CF59B72000ED579 /* monitor.c in Sources */ = {isa = PBXBuildFile; fileRef = E597E2351CF59B0C000ED579 /* monitor.c */; };
+		E597E2A21CF59B77000ED579 /* nsgl_context.m in Sources */ = {isa = PBXBuildFile; fileRef = E597E2371CF59B0C000ED579 /* nsgl_context.m */; };
+		E597E2A31CF59B7B000ED579 /* iokit_joystick.m in Sources */ = {isa = PBXBuildFile; fileRef = E597E2311CF59B0C000ED579 /* iokit_joystick.m */; };
+		E597E2A51CF59BA0000ED579 /* window.c in Sources */ = {isa = PBXBuildFile; fileRef = E597E2461CF59B0D000ED579 /* window.c */; };
+		E597E2A61CF59C55000ED579 /* posix_tls.c in Sources */ = {isa = PBXBuildFile; fileRef = E597E23A1CF59B0C000ED579 /* posix_tls.c */; };
+		E597E3CD1CE085C100FCB6B5 /* libglfw.a in Frameworks */ = {isa = PBXBuildFile; fileRef = E5CF2CE21CE06E1C00903654 /* libglfw.a */; };
+		E5CF2D591CE07E6500903654 /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E54A47491CC218B8006EEBD9 /* OpenGL.framework */; };
+		E5CF2D5C1CE07E8600903654 /* IOKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E54A474F1CC21A18006EEBD9 /* IOKit.framework */; };
+		E5CF2D5D1CE07E8D00903654 /* CoreVideo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E54A474B1CC218C4006EEBD9 /* CoreVideo.framework */; };
+		E5CF2D5E1CE07E9800903654 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E54A474D1CC218DD006EEBD9 /* Cocoa.framework */; };
+		E5DA6F741CC242AC00DC39DD /* IOKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E54A474F1CC21A18006EEBD9 /* IOKit.framework */; };
+		E5DA6F751CC242AC00DC39DD /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E54A474D1CC218DD006EEBD9 /* Cocoa.framework */; };
+		E5DA6F761CC242AC00DC39DD /* CoreVideo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E54A474B1CC218C4006EEBD9 /* CoreVideo.framework */; };
+		E5DA6F771CC242AC00DC39DD /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E54A47491CC218B8006EEBD9 /* OpenGL.framework */; };
+		E5DA6F8C1CC242FA00DC39DD /* IOKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E54A474F1CC21A18006EEBD9 /* IOKit.framework */; };
+		E5DA6F8D1CC242FA00DC39DD /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E54A474D1CC218DD006EEBD9 /* Cocoa.framework */; };
+		E5DA6F8E1CC242FA00DC39DD /* CoreVideo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E54A474B1CC218C4006EEBD9 /* CoreVideo.framework */; };
+		E5DA6F8F1CC242FA00DC39DD /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E54A47491CC218B8006EEBD9 /* OpenGL.framework */; };
+		E5DA6F9D1CC2432E00DC39DD /* IOKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E54A474F1CC21A18006EEBD9 /* IOKit.framework */; };
+		E5DA6F9E1CC2432E00DC39DD /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E54A474D1CC218DD006EEBD9 /* Cocoa.framework */; };
+		E5DA6F9F1CC2432E00DC39DD /* CoreVideo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E54A474B1CC218C4006EEBD9 /* CoreVideo.framework */; };
+		E5DA6FA01CC2432E00DC39DD /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E54A47491CC218B8006EEBD9 /* OpenGL.framework */; };
+		E5DA6FAE1CC2437700DC39DD /* IOKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E54A474F1CC21A18006EEBD9 /* IOKit.framework */; };
+		E5DA6FAF1CC2437700DC39DD /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E54A474D1CC218DD006EEBD9 /* Cocoa.framework */; };
+		E5DA6FB01CC2437700DC39DD /* CoreVideo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E54A474B1CC218C4006EEBD9 /* CoreVideo.framework */; };
+		E5DA6FB11CC2437700DC39DD /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E54A47491CC218B8006EEBD9 /* OpenGL.framework */; };
+		E5DC68F01CE0C97400167F6F /* libglfw.a in Frameworks */ = {isa = PBXBuildFile; fileRef = E5CF2CE21CE06E1C00903654 /* libglfw.a */; };
+		E5DC68F11CE0C97700167F6F /* libglfw.a in Frameworks */ = {isa = PBXBuildFile; fileRef = E5CF2CE21CE06E1C00903654 /* libglfw.a */; };
+		E5DC68F21CE0C97900167F6F /* libglfw.a in Frameworks */ = {isa = PBXBuildFile; fileRef = E5CF2CE21CE06E1C00903654 /* libglfw.a */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		E50FF1A01CFBF17D0005DAE8 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E59364A21CC214E70034617B /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = E50FF1911CFBF0B40005DAE8;
+			remoteInfo = yprocobj;
+		};
+		E5BE6E4B1CEC977400BD73D2 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E59364A21CC214E70034617B /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = E5BE6E441CEC96F000BD73D2;
+			remoteInfo = libyocto;
+		};
+		E5CF2D321CE06EA200903654 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E59364A21CC214E70034617B /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = E5CF2CE11CE06E1C00903654;
+			remoteInfo = glfw;
+		};
+		E5DA6F831CC242E600DC39DD /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E59364A21CC214E70034617B /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = E5DDE7F11CC2156800B90848;
+			remoteInfo = ytrace;
+		};
+		E5DA6F851CC242E600DC39DD /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E59364A21CC214E70034617B /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = E5DA6F6F1CC242AC00DC39DD;
+			remoteInfo = yshade;
+		};
+		E5DA6F971CC2432900DC39DD /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E59364A21CC214E70034617B /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = E5DA6F871CC242FA00DC39DD;
+			remoteInfo = yview;
+		};
+		E5DA6FA71CC2434600DC39DD /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E59364A21CC214E70034617B /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = E5DA6F991CC2432E00DC39DD;
+			remoteInfo = ytestgen;
+		};
+		E5DA6FB91CC243A300DC39DD /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E59364A21CC214E70034617B /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = E5DA6FAA1CC2437700DC39DD;
+			remoteInfo = ysym;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		E50FF19A1CFBF0B40005DAE8 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = /usr/share/man/man1/;
+			dstSubfolderSpec = 0;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 1;
+		};
+		E5DA6F791CC242AC00DC39DD /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = /usr/share/man/man1/;
+			dstSubfolderSpec = 0;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 1;
+		};
+		E5DA6F911CC242FA00DC39DD /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = /usr/share/man/man1/;
+			dstSubfolderSpec = 0;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 1;
+		};
+		E5DA6FA21CC2432E00DC39DD /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = /usr/share/man/man1/;
+			dstSubfolderSpec = 0;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 1;
+		};
+		E5DA6FB31CC2437700DC39DD /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = /usr/share/man/man1/;
+			dstSubfolderSpec = 0;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 1;
+		};
+		E5DDE7F01CC2156800B90848 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = /usr/share/man/man1/;
+			dstSubfolderSpec = 0;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 1;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		E50FF19E1CFBF0B40005DAE8 /* yprocobj */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = yprocobj; sourceTree = BUILT_PRODUCTS_DIR; };
+		E54A47491CC218B8006EEBD9 /* OpenGL.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenGL.framework; path = System/Library/Frameworks/OpenGL.framework; sourceTree = SDKROOT; };
+		E54A474B1CC218C4006EEBD9 /* CoreVideo.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreVideo.framework; path = System/Library/Frameworks/CoreVideo.framework; sourceTree = SDKROOT; };
+		E54A474D1CC218DD006EEBD9 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = System/Library/Frameworks/Cocoa.framework; sourceTree = SDKROOT; };
+		E54A474F1CC21A18006EEBD9 /* IOKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = IOKit.framework; path = System/Library/Frameworks/IOKit.framework; sourceTree = SDKROOT; };
+		E597E2101CF59B00000ED579 /* stb_image.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = stb_image.h; sourceTree = "<group>"; };
+		E597E2111CF59B00000ED579 /* yocto_bvh.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = yocto_bvh.h; sourceTree = "<group>"; };
+		E597E2121CF59B00000ED579 /* yocto_cmdline.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = yocto_cmdline.h; sourceTree = "<group>"; };
+		E597E2131CF59B00000ED579 /* yocto_glu.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = yocto_glu.h; sourceTree = "<group>"; };
+		E597E2141CF59B00000ED579 /* yocto_math.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = yocto_math.h; sourceTree = "<group>"; };
+		E597E2151CF59B00000ED579 /* yocto_obj.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = yocto_obj.h; sourceTree = "<group>"; };
+		E597E2161CF59B00000ED579 /* yocto_shape.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = yocto_shape.h; sourceTree = "<group>"; };
+		E597E2171CF59B00000ED579 /* yocto_symrigid.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = yocto_symrigid.h; sourceTree = "<group>"; };
+		E597E2181CF59B00000ED579 /* yocto_trace.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = yocto_trace.h; sourceTree = "<group>"; };
+		E597E2211CF59B0C000ED579 /* cocoa_init.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = cocoa_init.m; sourceTree = "<group>"; };
+		E597E2221CF59B0C000ED579 /* cocoa_monitor.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = cocoa_monitor.m; sourceTree = "<group>"; };
+		E597E2231CF59B0C000ED579 /* cocoa_platform.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = cocoa_platform.h; sourceTree = "<group>"; };
+		E597E2241CF59B0C000ED579 /* cocoa_window.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = cocoa_window.m; sourceTree = "<group>"; };
+		E597E2251CF59B0C000ED579 /* context.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = context.c; sourceTree = "<group>"; };
+		E597E2261CF59B0C000ED579 /* glext.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = glext.h; sourceTree = "<group>"; };
+		E597E2271CF59B0C000ED579 /* glfw3.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = glfw3.h; sourceTree = "<group>"; };
+		E597E2281CF59B0C000ED579 /* glfw3native.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = glfw3native.h; sourceTree = "<group>"; };
+		E597E2291CF59B0C000ED579 /* glfw_config.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = glfw_config.h; sourceTree = "<group>"; };
+		E597E22A1CF59B0C000ED579 /* glx_context.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = glx_context.c; sourceTree = "<group>"; };
+		E597E22B1CF59B0C000ED579 /* glx_context.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = glx_context.h; sourceTree = "<group>"; };
+		E597E22C1CF59B0C000ED579 /* glxext.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = glxext.h; sourceTree = "<group>"; };
+		E597E22D1CF59B0C000ED579 /* init.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = init.c; sourceTree = "<group>"; };
+		E597E22E1CF59B0C000ED579 /* input.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = input.c; sourceTree = "<group>"; };
+		E597E22F1CF59B0C000ED579 /* internal.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = internal.h; sourceTree = "<group>"; };
+		E597E2301CF59B0C000ED579 /* iokit_joystick.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = iokit_joystick.h; sourceTree = "<group>"; };
+		E597E2311CF59B0C000ED579 /* iokit_joystick.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = iokit_joystick.m; sourceTree = "<group>"; };
+		E597E2321CF59B0C000ED579 /* linux_joystick.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = linux_joystick.c; sourceTree = "<group>"; };
+		E597E2331CF59B0C000ED579 /* linux_joystick.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = linux_joystick.h; sourceTree = "<group>"; };
+		E597E2341CF59B0C000ED579 /* mach_time.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = mach_time.c; sourceTree = "<group>"; };
+		E597E2351CF59B0C000ED579 /* monitor.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = monitor.c; sourceTree = "<group>"; };
+		E597E2361CF59B0C000ED579 /* nsgl_context.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = nsgl_context.h; sourceTree = "<group>"; };
+		E597E2371CF59B0C000ED579 /* nsgl_context.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = nsgl_context.m; sourceTree = "<group>"; };
+		E597E2381CF59B0C000ED579 /* posix_time.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = posix_time.c; sourceTree = "<group>"; };
+		E597E2391CF59B0C000ED579 /* posix_time.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = posix_time.h; sourceTree = "<group>"; };
+		E597E23A1CF59B0C000ED579 /* posix_tls.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = posix_tls.c; sourceTree = "<group>"; };
+		E597E23B1CF59B0C000ED579 /* posix_tls.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = posix_tls.h; sourceTree = "<group>"; };
+		E597E23C1CF59B0C000ED579 /* wgl_context.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = wgl_context.c; sourceTree = "<group>"; };
+		E597E23D1CF59B0C000ED579 /* wgl_context.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = wgl_context.h; sourceTree = "<group>"; };
+		E597E23E1CF59B0C000ED579 /* wglext.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = wglext.h; sourceTree = "<group>"; };
+		E597E23F1CF59B0C000ED579 /* win32_init.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = win32_init.c; sourceTree = "<group>"; };
+		E597E2401CF59B0C000ED579 /* win32_monitor.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = win32_monitor.c; sourceTree = "<group>"; };
+		E597E2411CF59B0C000ED579 /* win32_platform.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = win32_platform.h; sourceTree = "<group>"; };
+		E597E2421CF59B0C000ED579 /* win32_time.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = win32_time.c; sourceTree = "<group>"; };
+		E597E2431CF59B0C000ED579 /* win32_tls.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = win32_tls.c; sourceTree = "<group>"; };
+		E597E2441CF59B0C000ED579 /* win32_tls.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = win32_tls.h; sourceTree = "<group>"; };
+		E597E2451CF59B0C000ED579 /* win32_window.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = win32_window.c; sourceTree = "<group>"; };
+		E597E2461CF59B0D000ED579 /* window.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = window.c; sourceTree = "<group>"; };
+		E597E2471CF59B0D000ED579 /* winmm_joystick.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = winmm_joystick.c; sourceTree = "<group>"; };
+		E597E2481CF59B0D000ED579 /* winmm_joystick.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = winmm_joystick.h; sourceTree = "<group>"; };
+		E597E2491CF59B0D000ED579 /* x11_init.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = x11_init.c; sourceTree = "<group>"; };
+		E597E24A1CF59B0D000ED579 /* x11_monitor.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = x11_monitor.c; sourceTree = "<group>"; };
+		E597E24B1CF59B0D000ED579 /* x11_platform.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = x11_platform.h; sourceTree = "<group>"; };
+		E597E24C1CF59B0D000ED579 /* x11_window.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = x11_window.c; sourceTree = "<group>"; };
+		E597E24D1CF59B0D000ED579 /* xkb_unicode.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = xkb_unicode.c; sourceTree = "<group>"; };
+		E597E24E1CF59B0D000ED579 /* xkb_unicode.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = xkb_unicode.h; sourceTree = "<group>"; };
+		E597E24F1CF59B0D000ED579 /* stb_image.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = stb_image.h; sourceTree = "<group>"; };
+		E597E2501CF59B0D000ED579 /* stb_image_write.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = stb_image_write.h; sourceTree = "<group>"; };
+		E597E2521CF59B0D000ED579 /* ArHosekSkyModel.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = ArHosekSkyModel.c; sourceTree = "<group>"; };
+		E597E2531CF59B0D000ED579 /* ArHosekSkyModel.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ArHosekSkyModel.h; sourceTree = "<group>"; };
+		E597E2541CF59B0D000ED579 /* ArHosekSkyModelData_CIEXYZ.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ArHosekSkyModelData_CIEXYZ.h; sourceTree = "<group>"; };
+		E597E2551CF59B0D000ED579 /* ArHosekSkyModelData_RGB.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ArHosekSkyModelData_RGB.h; sourceTree = "<group>"; };
+		E597E2561CF59B0D000ED579 /* ArHosekSkyModelData_Spectral.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ArHosekSkyModelData_Spectral.h; sourceTree = "<group>"; };
+		E597E2571CF59B0D000ED579 /* README.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = README.txt; sourceTree = "<group>"; };
+		E597E25B1CF59B0D000ED579 /* COPYING */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = COPYING; sourceTree = "<group>"; };
+		E597E25E1CF59B0D000ED579 /* ThreadPool.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ThreadPool.h; sourceTree = "<group>"; };
+		E597E2641CF59B0D000ED579 /* libyocto.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = libyocto.cpp; sourceTree = "<group>"; };
+		E597E2651CF59B0D000ED579 /* readme.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = readme.md; sourceTree = "<group>"; };
+		E597E2661CF59B0D000ED579 /* yprocobj.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = yprocobj.cpp; sourceTree = "<group>"; };
+		E597E2671CF59B0D000ED579 /* yshade.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = yshade.cpp; sourceTree = "<group>"; };
+		E597E2681CF59B0D000ED579 /* ysym.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ysym.cpp; sourceTree = "<group>"; };
+		E597E2691CF59B0D000ED579 /* ytestgen.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ytestgen.cpp; sourceTree = "<group>"; };
+		E597E26A1CF59B0D000ED579 /* ytrace.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ytrace.cpp; sourceTree = "<group>"; };
+		E597E26B1CF59B0D000ED579 /* yview.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = yview.cpp; sourceTree = "<group>"; };
+		E5BE6E451CEC96F000BD73D2 /* liblibyocto.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = liblibyocto.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		E5CF2CE21CE06E1C00903654 /* libglfw.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libglfw.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		E5DA6F7D1CC242AC00DC39DD /* yshade */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = yshade; sourceTree = BUILT_PRODUCTS_DIR; };
+		E5DA6F951CC242FA00DC39DD /* yview */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = yview; sourceTree = BUILT_PRODUCTS_DIR; };
+		E5DA6FA61CC2432E00DC39DD /* ytestgen */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = ytestgen; sourceTree = BUILT_PRODUCTS_DIR; };
+		E5DA6FB71CC2437700DC39DD /* ysym */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = ysym; sourceTree = BUILT_PRODUCTS_DIR; };
+		E5DDE7F21CC2156800B90848 /* ytrace */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = ytrace; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		E50FF1941CFBF0B40005DAE8 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E50FF1951CFBF0B40005DAE8 /* liblibyocto.a in Frameworks */,
+				E50FF1961CFBF0B40005DAE8 /* IOKit.framework in Frameworks */,
+				E50FF1971CFBF0B40005DAE8 /* Cocoa.framework in Frameworks */,
+				E50FF1981CFBF0B40005DAE8 /* CoreVideo.framework in Frameworks */,
+				E50FF1991CFBF0B40005DAE8 /* OpenGL.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E5BE6E421CEC96F000BD73D2 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E5CF2CDF1CE06E1C00903654 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E5CF2D5E1CE07E9800903654 /* Cocoa.framework in Frameworks */,
+				E5CF2D5D1CE07E8D00903654 /* CoreVideo.framework in Frameworks */,
+				E5CF2D5C1CE07E8600903654 /* IOKit.framework in Frameworks */,
+				E5CF2D591CE07E6500903654 /* OpenGL.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E5DA6F731CC242AC00DC39DD /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E531C0791CECF67C00D7CB85 /* liblibyocto.a in Frameworks */,
+				E5DC68F21CE0C97900167F6F /* libglfw.a in Frameworks */,
+				E5DA6F741CC242AC00DC39DD /* IOKit.framework in Frameworks */,
+				E5DA6F751CC242AC00DC39DD /* Cocoa.framework in Frameworks */,
+				E5DA6F761CC242AC00DC39DD /* CoreVideo.framework in Frameworks */,
+				E5DA6F771CC242AC00DC39DD /* OpenGL.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E5DA6F8B1CC242FA00DC39DD /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E531C07C1CECF71000D7CB85 /* liblibyocto.a in Frameworks */,
+				E5DC68F01CE0C97400167F6F /* libglfw.a in Frameworks */,
+				E5DA6F8C1CC242FA00DC39DD /* IOKit.framework in Frameworks */,
+				E5DA6F8D1CC242FA00DC39DD /* Cocoa.framework in Frameworks */,
+				E5DA6F8E1CC242FA00DC39DD /* CoreVideo.framework in Frameworks */,
+				E5DA6F8F1CC242FA00DC39DD /* OpenGL.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E5DA6F9C1CC2432E00DC39DD /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E531C07D1CECF71600D7CB85 /* liblibyocto.a in Frameworks */,
+				E5DA6F9D1CC2432E00DC39DD /* IOKit.framework in Frameworks */,
+				E5DA6F9E1CC2432E00DC39DD /* Cocoa.framework in Frameworks */,
+				E5DA6F9F1CC2432E00DC39DD /* CoreVideo.framework in Frameworks */,
+				E5DA6FA01CC2432E00DC39DD /* OpenGL.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E5DA6FAD1CC2437700DC39DD /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E531C07B1CECF70C00D7CB85 /* liblibyocto.a in Frameworks */,
+				E597E3CD1CE085C100FCB6B5 /* libglfw.a in Frameworks */,
+				E5DA6FAE1CC2437700DC39DD /* IOKit.framework in Frameworks */,
+				E5DA6FAF1CC2437700DC39DD /* Cocoa.framework in Frameworks */,
+				E5DA6FB01CC2437700DC39DD /* CoreVideo.framework in Frameworks */,
+				E5DA6FB11CC2437700DC39DD /* OpenGL.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E5DDE7EF1CC2156800B90848 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E531C07A1CECF70800D7CB85 /* liblibyocto.a in Frameworks */,
+				E5DC68F11CE0C97700167F6F /* libglfw.a in Frameworks */,
+				E54A47501CC21A18006EEBD9 /* IOKit.framework in Frameworks */,
+				E54A474E1CC218DE006EEBD9 /* Cocoa.framework in Frameworks */,
+				E54A474C1CC218C4006EEBD9 /* CoreVideo.framework in Frameworks */,
+				E54A474A1CC218B8006EEBD9 /* OpenGL.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		E59364A11CC214E70034617B = {
+			isa = PBXGroup;
+			children = (
+				E597E2191CF59B0C000ED579 /* apps */,
+				E597E20E1CF59B00000ED579 /* yocto */,
+				E54A474F1CC21A18006EEBD9 /* IOKit.framework */,
+				E54A474D1CC218DD006EEBD9 /* Cocoa.framework */,
+				E54A474B1CC218C4006EEBD9 /* CoreVideo.framework */,
+				E54A47491CC218B8006EEBD9 /* OpenGL.framework */,
+				E59364AB1CC214E70034617B /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		E59364AB1CC214E70034617B /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				E5DDE7F21CC2156800B90848 /* ytrace */,
+				E5DA6F7D1CC242AC00DC39DD /* yshade */,
+				E5DA6F951CC242FA00DC39DD /* yview */,
+				E5DA6FA61CC2432E00DC39DD /* ytestgen */,
+				E5DA6FB71CC2437700DC39DD /* ysym */,
+				E5CF2CE21CE06E1C00903654 /* libglfw.a */,
+				E5BE6E451CEC96F000BD73D2 /* liblibyocto.a */,
+				E50FF19E1CFBF0B40005DAE8 /* yprocobj */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		E597E20E1CF59B00000ED579 /* yocto */ = {
+			isa = PBXGroup;
+			children = (
+				E597E20F1CF59B00000ED579 /* ext */,
+				E597E2111CF59B00000ED579 /* yocto_bvh.h */,
+				E597E2121CF59B00000ED579 /* yocto_cmdline.h */,
+				E597E2131CF59B00000ED579 /* yocto_glu.h */,
+				E597E2141CF59B00000ED579 /* yocto_math.h */,
+				E597E2151CF59B00000ED579 /* yocto_obj.h */,
+				E597E2161CF59B00000ED579 /* yocto_shape.h */,
+				E597E2171CF59B00000ED579 /* yocto_symrigid.h */,
+				E597E2181CF59B00000ED579 /* yocto_trace.h */,
+			);
+			name = yocto;
+			path = ../yocto;
+			sourceTree = "<group>";
+		};
+		E597E20F1CF59B00000ED579 /* ext */ = {
+			isa = PBXGroup;
+			children = (
+				E597E2101CF59B00000ED579 /* stb_image.h */,
+			);
+			path = ext;
+			sourceTree = "<group>";
+		};
+		E597E2191CF59B0C000ED579 /* apps */ = {
+			isa = PBXGroup;
+			children = (
+				E597E21A1CF59B0C000ED579 /* ext */,
+				E597E2641CF59B0D000ED579 /* libyocto.cpp */,
+				E597E2651CF59B0D000ED579 /* readme.md */,
+				E597E2661CF59B0D000ED579 /* yprocobj.cpp */,
+				E597E2671CF59B0D000ED579 /* yshade.cpp */,
+				E597E2681CF59B0D000ED579 /* ysym.cpp */,
+				E597E2691CF59B0D000ED579 /* ytestgen.cpp */,
+				E597E26A1CF59B0D000ED579 /* ytrace.cpp */,
+				E597E26B1CF59B0D000ED579 /* yview.cpp */,
+			);
+			name = apps;
+			path = ../apps;
+			sourceTree = "<group>";
+		};
+		E597E21A1CF59B0C000ED579 /* ext */ = {
+			isa = PBXGroup;
+			children = (
+				E597E2201CF59B0C000ED579 /* glfw */,
+				E597E24F1CF59B0D000ED579 /* stb_image.h */,
+				E597E2501CF59B0D000ED579 /* stb_image_write.h */,
+				E597E2511CF59B0D000ED579 /* sunsky */,
+				E597E25A1CF59B0D000ED579 /* ThreadPool1 */,
+			);
+			path = ext;
+			sourceTree = "<group>";
+		};
+		E597E2201CF59B0C000ED579 /* glfw */ = {
+			isa = PBXGroup;
+			children = (
+				E597E2211CF59B0C000ED579 /* cocoa_init.m */,
+				E597E2221CF59B0C000ED579 /* cocoa_monitor.m */,
+				E597E2231CF59B0C000ED579 /* cocoa_platform.h */,
+				E597E2241CF59B0C000ED579 /* cocoa_window.m */,
+				E597E2251CF59B0C000ED579 /* context.c */,
+				E597E2261CF59B0C000ED579 /* glext.h */,
+				E597E2271CF59B0C000ED579 /* glfw3.h */,
+				E597E2281CF59B0C000ED579 /* glfw3native.h */,
+				E597E2291CF59B0C000ED579 /* glfw_config.h */,
+				E597E22A1CF59B0C000ED579 /* glx_context.c */,
+				E597E22B1CF59B0C000ED579 /* glx_context.h */,
+				E597E22C1CF59B0C000ED579 /* glxext.h */,
+				E597E22D1CF59B0C000ED579 /* init.c */,
+				E597E22E1CF59B0C000ED579 /* input.c */,
+				E597E22F1CF59B0C000ED579 /* internal.h */,
+				E597E2301CF59B0C000ED579 /* iokit_joystick.h */,
+				E597E2311CF59B0C000ED579 /* iokit_joystick.m */,
+				E597E2321CF59B0C000ED579 /* linux_joystick.c */,
+				E597E2331CF59B0C000ED579 /* linux_joystick.h */,
+				E597E2341CF59B0C000ED579 /* mach_time.c */,
+				E597E2351CF59B0C000ED579 /* monitor.c */,
+				E597E2361CF59B0C000ED579 /* nsgl_context.h */,
+				E597E2371CF59B0C000ED579 /* nsgl_context.m */,
+				E597E2381CF59B0C000ED579 /* posix_time.c */,
+				E597E2391CF59B0C000ED579 /* posix_time.h */,
+				E597E23A1CF59B0C000ED579 /* posix_tls.c */,
+				E597E23B1CF59B0C000ED579 /* posix_tls.h */,
+				E597E23C1CF59B0C000ED579 /* wgl_context.c */,
+				E597E23D1CF59B0C000ED579 /* wgl_context.h */,
+				E597E23E1CF59B0C000ED579 /* wglext.h */,
+				E597E23F1CF59B0C000ED579 /* win32_init.c */,
+				E597E2401CF59B0C000ED579 /* win32_monitor.c */,
+				E597E2411CF59B0C000ED579 /* win32_platform.h */,
+				E597E2421CF59B0C000ED579 /* win32_time.c */,
+				E597E2431CF59B0C000ED579 /* win32_tls.c */,
+				E597E2441CF59B0C000ED579 /* win32_tls.h */,
+				E597E2451CF59B0C000ED579 /* win32_window.c */,
+				E597E2461CF59B0D000ED579 /* window.c */,
+				E597E2471CF59B0D000ED579 /* winmm_joystick.c */,
+				E597E2481CF59B0D000ED579 /* winmm_joystick.h */,
+				E597E2491CF59B0D000ED579 /* x11_init.c */,
+				E597E24A1CF59B0D000ED579 /* x11_monitor.c */,
+				E597E24B1CF59B0D000ED579 /* x11_platform.h */,
+				E597E24C1CF59B0D000ED579 /* x11_window.c */,
+				E597E24D1CF59B0D000ED579 /* xkb_unicode.c */,
+				E597E24E1CF59B0D000ED579 /* xkb_unicode.h */,
+			);
+			path = glfw;
+			sourceTree = "<group>";
+		};
+		E597E2511CF59B0D000ED579 /* sunsky */ = {
+			isa = PBXGroup;
+			children = (
+				E597E2521CF59B0D000ED579 /* ArHosekSkyModel.c */,
+				E597E2531CF59B0D000ED579 /* ArHosekSkyModel.h */,
+				E597E2541CF59B0D000ED579 /* ArHosekSkyModelData_CIEXYZ.h */,
+				E597E2551CF59B0D000ED579 /* ArHosekSkyModelData_RGB.h */,
+				E597E2561CF59B0D000ED579 /* ArHosekSkyModelData_Spectral.h */,
+				E597E2571CF59B0D000ED579 /* README.txt */,
+			);
+			path = sunsky;
+			sourceTree = "<group>";
+		};
+		E597E25A1CF59B0D000ED579 /* ThreadPool1 */ = {
+			isa = PBXGroup;
+			children = (
+				E597E25B1CF59B0D000ED579 /* COPYING */,
+				E597E25E1CF59B0D000ED579 /* ThreadPool.h */,
+			);
+			path = ThreadPool1;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXHeadersBuildPhase section */
+		E5BE6E431CEC96F000BD73D2 /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E5CF2CE01CE06E1C00903654 /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXHeadersBuildPhase section */
+
+/* Begin PBXNativeTarget section */
+		E50FF1911CFBF0B40005DAE8 /* yprocobj */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = E50FF19B1CFBF0B40005DAE8 /* Build configuration list for PBXNativeTarget "yprocobj" */;
+			buildPhases = (
+				E50FF1921CFBF0B40005DAE8 /* Sources */,
+				E50FF1941CFBF0B40005DAE8 /* Frameworks */,
+				E50FF19A1CFBF0B40005DAE8 /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = yprocobj;
+			productName = ytrace;
+			productReference = E50FF19E1CFBF0B40005DAE8 /* yprocobj */;
+			productType = "com.apple.product-type.tool";
+		};
+		E5BE6E441CEC96F000BD73D2 /* libyocto */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = E5BE6E481CEC96F000BD73D2 /* Build configuration list for PBXNativeTarget "libyocto" */;
+			buildPhases = (
+				E5BE6E411CEC96F000BD73D2 /* Sources */,
+				E5BE6E421CEC96F000BD73D2 /* Frameworks */,
+				E5BE6E431CEC96F000BD73D2 /* Headers */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = libyocto;
+			productName = libyocto;
+			productReference = E5BE6E451CEC96F000BD73D2 /* liblibyocto.a */;
+			productType = "com.apple.product-type.library.static";
+		};
+		E5CF2CE11CE06E1C00903654 /* glfw */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = E5CF2CE51CE06E1C00903654 /* Build configuration list for PBXNativeTarget "glfw" */;
+			buildPhases = (
+				E5CF2CDE1CE06E1C00903654 /* Sources */,
+				E5CF2CDF1CE06E1C00903654 /* Frameworks */,
+				E5CF2CE01CE06E1C00903654 /* Headers */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = glfw;
+			productName = glfw;
+			productReference = E5CF2CE21CE06E1C00903654 /* libglfw.a */;
+			productType = "com.apple.product-type.library.static";
+		};
+		E5DA6F6F1CC242AC00DC39DD /* yshade */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = E5DA6F7A1CC242AC00DC39DD /* Build configuration list for PBXNativeTarget "yshade" */;
+			buildPhases = (
+				E5DA6F701CC242AC00DC39DD /* Sources */,
+				E5DA6F731CC242AC00DC39DD /* Frameworks */,
+				E5DA6F791CC242AC00DC39DD /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = yshade;
+			productName = ytrace;
+			productReference = E5DA6F7D1CC242AC00DC39DD /* yshade */;
+			productType = "com.apple.product-type.tool";
+		};
+		E5DA6F871CC242FA00DC39DD /* yview */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = E5DA6F921CC242FA00DC39DD /* Build configuration list for PBXNativeTarget "yview" */;
+			buildPhases = (
+				E5DA6F881CC242FA00DC39DD /* Sources */,
+				E5DA6F8B1CC242FA00DC39DD /* Frameworks */,
+				E5DA6F911CC242FA00DC39DD /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = yview;
+			productName = ytrace;
+			productReference = E5DA6F951CC242FA00DC39DD /* yview */;
+			productType = "com.apple.product-type.tool";
+		};
+		E5DA6F991CC2432E00DC39DD /* ytestgen */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = E5DA6FA31CC2432E00DC39DD /* Build configuration list for PBXNativeTarget "ytestgen" */;
+			buildPhases = (
+				E5DA6F9A1CC2432E00DC39DD /* Sources */,
+				E5DA6F9C1CC2432E00DC39DD /* Frameworks */,
+				E5DA6FA21CC2432E00DC39DD /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ytestgen;
+			productName = ytrace;
+			productReference = E5DA6FA61CC2432E00DC39DD /* ytestgen */;
+			productType = "com.apple.product-type.tool";
+		};
+		E5DA6FAA1CC2437700DC39DD /* ysym */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = E5DA6FB41CC2437700DC39DD /* Build configuration list for PBXNativeTarget "ysym" */;
+			buildPhases = (
+				E5DA6FAB1CC2437700DC39DD /* Sources */,
+				E5DA6FAD1CC2437700DC39DD /* Frameworks */,
+				E5DA6FB31CC2437700DC39DD /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ysym;
+			productName = ytrace;
+			productReference = E5DA6FB71CC2437700DC39DD /* ysym */;
+			productType = "com.apple.product-type.tool";
+		};
+		E5DDE7F11CC2156800B90848 /* ytrace */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = E5DDE7F61CC2156800B90848 /* Build configuration list for PBXNativeTarget "ytrace" */;
+			buildPhases = (
+				E5DDE7EE1CC2156800B90848 /* Sources */,
+				E5DDE7EF1CC2156800B90848 /* Frameworks */,
+				E5DDE7F01CC2156800B90848 /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ytrace;
+			productName = ytrace;
+			productReference = E5DDE7F21CC2156800B90848 /* ytrace */;
+			productType = "com.apple.product-type.tool";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		E59364A21CC214E70034617B /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 0730;
+				ORGANIZATIONNAME = "Fabio Pellacini";
+				TargetAttributes = {
+					E5BE6E441CEC96F000BD73D2 = {
+						CreatedOnToolsVersion = 7.3.1;
+					};
+					E5CF2CE11CE06E1C00903654 = {
+						CreatedOnToolsVersion = 7.3;
+					};
+					E5DA6F7F1CC242DD00DC39DD = {
+						CreatedOnToolsVersion = 7.3;
+					};
+					E5DDE7F11CC2156800B90848 = {
+						CreatedOnToolsVersion = 7.3;
+					};
+				};
+			};
+			buildConfigurationList = E59364A51CC214E70034617B /* Build configuration list for PBXProject "yocto" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = English;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+			);
+			mainGroup = E59364A11CC214E70034617B;
+			productRefGroup = E59364AB1CC214E70034617B /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				E5DDE7F11CC2156800B90848 /* ytrace */,
+				E5DA6F6F1CC242AC00DC39DD /* yshade */,
+				E5DA6FAA1CC2437700DC39DD /* ysym */,
+				E5DA6F871CC242FA00DC39DD /* yview */,
+				E5DA6F991CC2432E00DC39DD /* ytestgen */,
+				E50FF1911CFBF0B40005DAE8 /* yprocobj */,
+				E5CF2CE11CE06E1C00903654 /* glfw */,
+				E5BE6E441CEC96F000BD73D2 /* libyocto */,
+				E5DA6F7F1CC242DD00DC39DD /* all */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		E50FF1921CFBF0B40005DAE8 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E50FF19F1CFBF0C40005DAE8 /* yprocobj.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E5BE6E411CEC96F000BD73D2 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E597E2941CF59B26000ED579 /* libyocto.cpp in Sources */,
+				E597E29F1CF59B6C000ED579 /* mach_time.c in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E5CF2CDE1CE06E1C00903654 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E597E2A61CF59C55000ED579 /* posix_tls.c in Sources */,
+				E597E2A31CF59B7B000ED579 /* iokit_joystick.m in Sources */,
+				E597E2A11CF59B72000ED579 /* monitor.c in Sources */,
+				E597E2A21CF59B77000ED579 /* nsgl_context.m in Sources */,
+				E597E29A1CF59B53000ED579 /* cocoa_monitor.m in Sources */,
+				E597E29B1CF59B56000ED579 /* cocoa_window.m in Sources */,
+				E597E29D1CF59B63000ED579 /* input.c in Sources */,
+				E597E29E1CF59B66000ED579 /* init.c in Sources */,
+				E597E2991CF59B4F000ED579 /* cocoa_init.m in Sources */,
+				E597E2A51CF59BA0000ED579 /* window.c in Sources */,
+				E597E29C1CF59B5A000ED579 /* context.c in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E5DA6F701CC242AC00DC39DD /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E597E2951CF59B2B000ED579 /* yshade.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E5DA6F881CC242FA00DC39DD /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E597E2981CF59B37000ED579 /* yview.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E5DA6F9A1CC2432E00DC39DD /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E597E2971CF59B32000ED579 /* ytestgen.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E5DA6FAB1CC2437700DC39DD /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E597E2961CF59B2F000ED579 /* ysym.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E5DDE7EE1CC2156800B90848 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E597E2921CF59B0D000ED579 /* ytrace.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		E50FF1A11CFBF17D0005DAE8 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = E50FF1911CFBF0B40005DAE8 /* yprocobj */;
+			targetProxy = E50FF1A01CFBF17D0005DAE8 /* PBXContainerItemProxy */;
+		};
+		E5BE6E4C1CEC977400BD73D2 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = E5BE6E441CEC96F000BD73D2 /* libyocto */;
+			targetProxy = E5BE6E4B1CEC977400BD73D2 /* PBXContainerItemProxy */;
+		};
+		E5CF2D331CE06EA200903654 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = E5CF2CE11CE06E1C00903654 /* glfw */;
+			targetProxy = E5CF2D321CE06EA200903654 /* PBXContainerItemProxy */;
+		};
+		E5DA6F841CC242E600DC39DD /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = E5DDE7F11CC2156800B90848 /* ytrace */;
+			targetProxy = E5DA6F831CC242E600DC39DD /* PBXContainerItemProxy */;
+		};
+		E5DA6F861CC242E600DC39DD /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = E5DA6F6F1CC242AC00DC39DD /* yshade */;
+			targetProxy = E5DA6F851CC242E600DC39DD /* PBXContainerItemProxy */;
+		};
+		E5DA6F981CC2432900DC39DD /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = E5DA6F871CC242FA00DC39DD /* yview */;
+			targetProxy = E5DA6F971CC2432900DC39DD /* PBXContainerItemProxy */;
+		};
+		E5DA6FA81CC2434600DC39DD /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = E5DA6F991CC2432E00DC39DD /* ytestgen */;
+			targetProxy = E5DA6FA71CC2434600DC39DD /* PBXContainerItemProxy */;
+		};
+		E5DA6FBA1CC243A300DC39DD /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = E5DA6FAA1CC2437700DC39DD /* ysym */;
+			targetProxy = E5DA6FB91CC243A300DC39DD /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		E50FF19C1CFBF0B40005DAE8 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		E50FF19D1CFBF0B40005DAE8 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
+		E59364AF1CC214E70034617B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = NO;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "-";
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_UNROLL_LOOPS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = /Users/fabio/homebrew/include;
+				LIBRARY_SEARCH_PATHS = /Users/fabio/homebrew/lib;
+				MACOSX_DEPLOYMENT_TARGET = 10.11;
+				MTL_ENABLE_DEBUG_INFO = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				OTHER_CPLUSPLUSFLAGS = (
+					"$(OTHER_CFLAGS)",
+					"-Wc99-extensions",
+				);
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		E59364B01CC214E70034617B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = NO;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "-";
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = fast;
+				GCC_UNROLL_LOOPS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = /Users/fabio/homebrew/include;
+				LIBRARY_SEARCH_PATHS = /Users/fabio/homebrew/lib;
+				MACOSX_DEPLOYMENT_TARGET = 10.11;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				OTHER_CPLUSPLUSFLAGS = (
+					"$(OTHER_CFLAGS)",
+					"-Wc99-extensions",
+				);
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		E5BE6E461CEC96F000BD73D2 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_OBJC_ARC = YES;
+				EXECUTABLE_PREFIX = lib;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		E5BE6E471CEC96F000BD73D2 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_OBJC_ARC = YES;
+				EXECUTABLE_PREFIX = lib;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
+		E5CF2CE31CE06E1C00903654 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				EXECUTABLE_PREFIX = lib;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		E5CF2CE41CE06E1C00903654 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				EXECUTABLE_PREFIX = lib;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
+		E5DA6F7B1CC242AC00DC39DD /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		E5DA6F7C1CC242AC00DC39DD /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
+		E5DA6F811CC242DD00DC39DD /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		E5DA6F821CC242DD00DC39DD /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
+		E5DA6F931CC242FA00DC39DD /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		E5DA6F941CC242FA00DC39DD /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
+		E5DA6FA41CC2432E00DC39DD /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		E5DA6FA51CC2432E00DC39DD /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
+		E5DA6FB51CC2437700DC39DD /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		E5DA6FB61CC2437700DC39DD /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
+		E5DDE7F71CC2156800B90848 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		E5DDE7F81CC2156800B90848 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		E50FF19B1CFBF0B40005DAE8 /* Build configuration list for PBXNativeTarget "yprocobj" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E50FF19C1CFBF0B40005DAE8 /* Debug */,
+				E50FF19D1CFBF0B40005DAE8 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		E59364A51CC214E70034617B /* Build configuration list for PBXProject "yocto" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E59364AF1CC214E70034617B /* Debug */,
+				E59364B01CC214E70034617B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		E5BE6E481CEC96F000BD73D2 /* Build configuration list for PBXNativeTarget "libyocto" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E5BE6E461CEC96F000BD73D2 /* Debug */,
+				E5BE6E471CEC96F000BD73D2 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		E5CF2CE51CE06E1C00903654 /* Build configuration list for PBXNativeTarget "glfw" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E5CF2CE31CE06E1C00903654 /* Debug */,
+				E5CF2CE41CE06E1C00903654 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		E5DA6F7A1CC242AC00DC39DD /* Build configuration list for PBXNativeTarget "yshade" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E5DA6F7B1CC242AC00DC39DD /* Debug */,
+				E5DA6F7C1CC242AC00DC39DD /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		E5DA6F801CC242DD00DC39DD /* Build configuration list for PBXAggregateTarget "all" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E5DA6F811CC242DD00DC39DD /* Debug */,
+				E5DA6F821CC242DD00DC39DD /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		E5DA6F921CC242FA00DC39DD /* Build configuration list for PBXNativeTarget "yview" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E5DA6F931CC242FA00DC39DD /* Debug */,
+				E5DA6F941CC242FA00DC39DD /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		E5DA6FA31CC2432E00DC39DD /* Build configuration list for PBXNativeTarget "ytestgen" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E5DA6FA41CC2432E00DC39DD /* Debug */,
+				E5DA6FA51CC2432E00DC39DD /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		E5DA6FB41CC2437700DC39DD /* Build configuration list for PBXNativeTarget "ysym" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E5DA6FB51CC2437700DC39DD /* Debug */,
+				E5DA6FB61CC2437700DC39DD /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		E5DDE7F61CC2156800B90848 /* Build configuration list for PBXNativeTarget "ytrace" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E5DDE7F71CC2156800B90848 /* Debug */,
+				E5DDE7F81CC2156800B90848 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = E59364A21CC214E70034617B /* Project object */;
+}

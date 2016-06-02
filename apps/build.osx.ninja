@@ -1,0 +1,75 @@
+
+cflags = -Ofast -ffast-math -funroll-loops -Wno-deprecated-declarations
+linkflags = -lc++ -framework Cocoa -framework OpenGL -framework IOKit -framework CoreVideo
+
+rule c
+    depfile = $out.d
+    deps = gcc
+    command = clang $cflags -MMD -MF $out.d -c -o $out $in
+
+rule cpp
+    depfile = $out.d
+    deps = gcc
+    command = clang -std=gnu++11 -stdlib=libc++ $cflags -MMD -MF $out.d -c -o $out $in
+
+rule lib
+    command = libtool -o $out $in
+
+rule app
+    command = clang -std=gnu++11 -stdlib=libc++ $linkflags -o $out $in
+
+build bin/obj/context.o: c apps/ext/glfw/context.c
+build bin/obj/init.o: c apps/ext/glfw/init.c
+build bin/obj/input.o: c apps/ext/glfw/input.c
+build bin/obj/monitor.o: c apps/ext/glfw/monitor.c
+build bin/obj/window.o: c apps/ext/glfw/window.c
+build bin/obj/cocoa_init.o: c apps/ext/glfw/cocoa_init.m
+build bin/obj/iokit_joystick.o: c apps/ext/glfw/iokit_joystick.m
+build bin/obj/cocoa_monitor.o: c apps/ext/glfw/cocoa_monitor.m
+build bin/obj/nsgl_context.o: c apps/ext/glfw/nsgl_context.m
+build bin/obj/cocoa_window.o: c apps/ext/glfw/cocoa_window.m
+build bin/obj/posix_tls.o: c apps/ext/glfw/posix_tls.c
+build bin/obj/mach_time.o: c apps/ext/glfw/mach_time.c
+
+build bin/obj/libglfw3.a: lib  bin/obj/context.o bin/obj/init.o bin/obj/input.o bin/obj/monitor.o bin/obj/window.o bin/obj/cocoa_init.o bin/obj/iokit_joystick.o bin/obj/cocoa_monitor.o bin/obj/nsgl_context.o bin/obj/cocoa_window.o bin/obj/posix_tls.o bin/obj/mach_time.o
+
+
+build bin/obj/glew.o: c apps/ext/glew/glew.c
+
+build bin/obj/libglew.a: lib  bin/obj/glew.o
+
+
+build bin/obj/libyocto.o: cpp apps/libyocto.cpp
+
+build bin/obj/libyocto.a: lib  bin/obj/libyocto.o
+
+
+build bin/obj/yprocobj.o: cpp apps/yprocobj.cpp
+
+build bin/yprocobj: app  bin/obj/libglfw3.a bin/obj/libglew.a bin/obj/libyocto.a  bin/obj/yprocobj.o
+
+
+build bin/obj/yshade.o: cpp apps/yshade.cpp
+
+build bin/yshade: app  bin/obj/libglfw3.a bin/obj/libglew.a bin/obj/libyocto.a  bin/obj/yshade.o
+
+
+build bin/obj/ysym.o: cpp apps/ysym.cpp
+
+build bin/ysym: app  bin/obj/libglfw3.a bin/obj/libglew.a bin/obj/libyocto.a  bin/obj/ysym.o
+
+
+build bin/obj/ytestgen.o: cpp apps/ytestgen.cpp
+
+build bin/ytestgen: app  bin/obj/libglfw3.a bin/obj/libglew.a bin/obj/libyocto.a  bin/obj/ytestgen.o
+
+
+build bin/obj/ytrace.o: cpp apps/ytrace.cpp
+
+build bin/ytrace: app  bin/obj/libglfw3.a bin/obj/libglew.a bin/obj/libyocto.a  bin/obj/ytrace.o
+
+
+build bin/obj/yview.o: cpp apps/yview.cpp
+
+build bin/yview: app  bin/obj/libglfw3.a bin/obj/libglew.a bin/obj/libyocto.a  bin/obj/yview.o
+

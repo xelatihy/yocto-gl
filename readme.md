@@ -1,9 +1,9 @@
-# Yocto/GL: C99 Single File Libraries for Physically-Based Graphics
+# Yocto/GL: C/C++ Single File Libraries for Physically-Based Graphics
 
 Yocto/GL is a collection of single-file libraries for building
 physically-based graphics applications.
-Yocto/GL is written in C99 without dependencies and compiles on
-OSX (clang/gcc), Linux (clang/gcc) and Windows (cl).
+Yocto/GL is written in C++ and can be used from with C or C++ and works on
+OSX (clang), Linux (clang/gcc) and Windows (cl).
 
 ## Main Libraries
 
@@ -17,7 +17,7 @@ OSX (clang/gcc), Linux (clang/gcc) and Windows (cl).
 
 - **yocto_cmdline.h** - Utilities for writing command line applications. Includes in  particular a command line parsing library that support options and arguments of ints, floats, strings, enums.
 - **yocto_glu.h** - Quick and dirty rendering of images and shapes in OpenGL, useful to create interactive viewers.
-- **yocto_math.h** - A few vector math routines helpful to write test apps. This is not complete and not suitable for others use.
+- **yocto_math.h** - A few vector math routines used to implement Yocto/GL libraries.
 
 ## Examples
 
@@ -40,15 +40,23 @@ A screenshotted movie from **ysym** is included here for demonstration.
 
 ![](images/rb02.ysym.gif)
 
+## Old Version
+
+Yocto/GL was originally written in C99. That version is at commit
+55e2328476647fccae8eee1649f961984751ad96 in this repository for reference.  
+We moved to C++ since the lack of operator overloading made some math code
+really unreadable, defeating one of the main tenants of Yocto/GL. 
+
 ## Possible Future Development
 
-- Likely moving to C++ for internal implementation, but still maintaining C99 interfaces.
-    - While we like the pure C99 code, the lack of operator overloaing makes the code very hard to read. This is a drawback for people that want to understand the code.
-    - Also a judicious use of templates would remove a lot of redundand code.
-- Likely moving a common math library that for now is not shared between YOCTO/GL. 
-    - This is for readability, but each single YOCTO/GL library will remain independent from the others.
-- Likely removing support for quads and moving to simplex-based geometry representation.
 - Particle-based simluation coming soon.
+- Procedural grammars.
+
+## Brief Development History
+
+- Moved to C++ internals and common math library.
+- Rigid body solver.
+- Initial release. 
 
 ## License
 
