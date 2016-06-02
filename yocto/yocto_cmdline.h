@@ -41,10 +41,20 @@
 //
 // COMPILATION:
 //
-// All functions in this library are inlined by default for ease of use.
-// To use the library as a .h/.c pair do the following:
-// - to use as a .h, just #define YC_NOINLINE before including this file
-// - to use as a .c, just #define YC_IMPLEMENTATION before including this file
+// All functions in this library are inlined by default for ease of use in
+// C/C++.
+// To use the library as a .h/.cpp pair do the following:
+// - to use as a .h, just #define YGL_DECLARATION before including this file
+// - to build as a .cpp, just #define YGL_IMPLEMENTATION before including this
+// file into only one file that you can either link directly or pack as a lib.
+//
+// This file depends on yocto_math.h.
+//
+
+//
+// HISTORY:
+// - v 0.1: C++ implementation
+// - v 0.0: initial release in C99
 //
 
 //
@@ -74,17 +84,21 @@
 #ifndef _YC_H_
 #define _YC_H_
 
-#ifndef YC_NOINLINE
-#define YC_API static inline
-#else
+// compilation options
 #ifdef __cplusplus
-#define YC_API extern "C"
+#ifndef YGL_DECLARATION
+#define YGL_API inline
+#define YGLC_API inline
 #else
-#define YC_API
+#define YGL_API
+#define YGLC_API extern "C"
 #endif
 #endif
 
+#ifndef __cplusplus
+#define YGLC_API extern
 #include <stdbool.h>
+#endif
 
 // -----------------------------------------------------------------------------
 // INTERFACE
@@ -100,94 +114,88 @@ typedef struct yc_parser yc_parser;
 //
 // Inits the parser with command line arguments and a usage string.
 //
-YC_API yc_parser*
-yc_init_parser(int argc, const char** argv, const char* help);
+YGLC_API yc_parser* yc_init_parser(int argc, const char** argv,
+                                   const char* help);
 
 //
 // Finish parsing, checking for errors and rinting help if needed.
 //
-YC_API bool
-yc_done_parser(yc_parser* parser);
+YGLC_API bool yc_done_parser(yc_parser* parser);
 
 //
 // Parses an optional flag as in the intro.
 //
-YC_API bool
-yc_parse_optb(yc_parser* parser, const char* longname, const char* shortname,
-              const char* help, bool def);
+YGLC_API bool yc_parse_optb(yc_parser* parser, const char* longname,
+                            const char* shortname, const char* help, bool def);
 
 //
 // Parses an optional int as described in the intro.
 //
-YC_API int
-yc_parse_opti(yc_parser* parser, const char* longname, const char* shortnamee,
-              const char* help, int def);
+YGLC_API int yc_parse_opti(yc_parser* parser, const char* longname,
+                           const char* shortnamee, const char* help, int def);
 
 //
 // Parses an optional float as described in the intro.
 //
-YC_API float
-yc_parse_optf(yc_parser* parser, const char* longname, const char* shortname,
-              const char* help, float def);
+YGLC_API float yc_parse_optf(yc_parser* parser, const char* longname,
+                             const char* shortname, const char* help,
+                             float def);
 
 //
 // Parses an optional double as described in the intro.
 //
-YC_API double
-yc_parse_optd(yc_parser* parser, const char* longname, const char* shortname,
-              const char* help, double def);
+YGLC_API double yc_parse_optd(yc_parser* parser, const char* longname,
+                              const char* shortname, const char* help,
+                              double def);
 
 //
 // Parses an optional string with the argument described in the intro.
 // No additional memory is allocated.
 //
-YC_API const char*
-yc_parse_opts(yc_parser* parser, const char* longname, const char* shortname,
-              const char* help, const char* def);
+YGLC_API const char* yc_parse_opts(yc_parser* parser, const char* longname,
+                                   const char* shortname, const char* help,
+                                   const char* def);
 
 //
 // Parses an optional enum defined by the NULL-terminated array of strings
 // choice and returns the index of the string in that array.
 //
-YC_API int
-yc_parse_opte(yc_parser* parser, const char* longname, const char* shortnamee,
-              const char* help, int def, const char** choices);
+YGLC_API int yc_parse_opte(yc_parser* parser, const char* longname,
+                           const char* shortnamee, const char* help, int def,
+                           const char** choices);
 
 //
 // Parses an unnamed int argument as described in the intro.
 //
-YC_API int
-yc_parse_argi(yc_parser* parser, const char* longname, const char* help,
-              int def, bool required);
+YGLC_API int yc_parse_argi(yc_parser* parser, const char* longname,
+                           const char* help, int def, bool required);
 
 //
 // Parses an unnamed string argument as described in the intro.
 //
-YC_API const char*
-yc_parse_args(yc_parser* parser, const char* longname, const char* help,
-              const char* def, bool required);
+YGLC_API const char* yc_parse_args(yc_parser* parser, const char* longname,
+                                   const char* help, const char* def,
+                                   bool required);
 
 //
 // Parses an unnamed array of string argument as described in the intro.
 //
-YC_API const char**
-yc_parse_argsa(yc_parser* parser, const char* longname, const char* help,
-               const char** def, bool required, const char* values[],
-               int max_values);
+YGLC_API const char** yc_parse_argsa(yc_parser* parser, const char* longname,
+                                     const char* help, const char** def,
+                                     bool required, const char* values[],
+                                     int max_values);
 
 // FILE LOADING ----------------------------------------------------------------
 
 //
 // Loads the contents of a binary file in an in-memory array.
 //
-YC_API void*
-yc_load_binfile(const char* filename, int* size);
+YGLC_API void* yc_load_binfile(const char* filename, int* size);
 
 //
 // Loads the contents of a text file into a NULL-terminated string.
 //
-YC_API char*
-yc_load_txtfile(const char* filename);
+YGLC_API char* yc_load_txtfile(const char* filename);
 
 // PATH MANIPULATION -----------------------------------------------------------
 
@@ -197,14 +205,14 @@ yc_load_txtfile(const char* filename);
 // enough memory to contain the data (e.g. strlen(path)+1 would do).
 // If any the pointers is missing, that component will be skipped.
 //
-YC_API void
-yc_split_path(const char* filename, char* dirname, char* basename, char* ext);
+YGLC_API void yc_split_path(const char* filename, char* dirname, char* basename,
+                            char* ext);
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION
 // -----------------------------------------------------------------------------
 
-#if !defined(YC_NOINLINE) || defined(YC_IMPLEMENTATION)
+#if !defined(YGL_DECLARATION) || defined(YGL_IMPLEMENTATION)
 
 #include <assert.h>
 #include <stdbool.h>
@@ -258,10 +266,10 @@ struct yc_parser {
 //
 // Inits the parser.
 //
-YC_API yc_parser*
-yc_init_parser(int argc, const char** argv, const char* help) {
+YGLC_API yc_parser* yc_init_parser(int argc, const char** argv,
+                                   const char* help) {
     // Allocates parser and copy argument data
-    yc_parser* parser = (yc_parser*)calloc(1, sizeof(yc_parser));
+    yc_parser* parser = new yc_parser();
     assert(argc < yc__maxargs);
     parser->argc = argc - 1;
     for (int i = 0; i < parser->argc; i++) parser->argv[i] = argv[i + 1];
@@ -279,8 +287,7 @@ yc_init_parser(int argc, const char** argv, const char* help) {
 //
 // Print help based on the help lines collected during parsing.
 //
-static inline void
-yc__print_help(yc_parser* parser) {
+static inline void yc__print_help(yc_parser* parser) {
     printf("usage: %s [options] %s\n", parser->help_prog,
            strlen(parser->help_args) ? "<arguments>" : "");
     if (strlen(parser->help_usage)) printf("  %s\n", parser->help_usage);
@@ -294,8 +301,7 @@ yc__print_help(yc_parser* parser) {
 // Ends parsing checking for error for unused options or arguments.
 // Exit if needed.
 //
-YC_API bool
-yc_done_parser(yc_parser* parser) {
+YGLC_API bool yc_done_parser(yc_parser* parser) {
     // check for error
     if (!parser->error && parser->argc > 0) {
         parser->error = true;
@@ -316,9 +322,8 @@ yc_done_parser(yc_parser* parser) {
 //
 // Check if an option name is valid
 //
-static inline void
-yc__check_name(yc_parser* parser, const char* longname, const char* shortname,
-               int type) {
+static inline void yc__check_name(yc_parser* parser, const char* longname,
+                                  const char* shortname, int type) {
     // check name
     assert(longname);
     if (shortname)
@@ -336,17 +341,18 @@ yc__check_name(yc_parser* parser, const char* longname, const char* shortname,
 //
 // Add a formatted help line
 //
-static inline void
-yc__add_help(yc_parser* parser, const char* longname, const char* shortname,
-             const char* help, int type, const void* def, const void* choices) {
+static inline void yc__add_help(yc_parser* parser, const char* longname,
+                                const char* shortname, const char* help,
+                                int type, const void* def,
+                                const void* choices) {
     // get whether it is an opt
     bool opt = longname[0] == '-';
 
     // initialize help str
-    char val_str[256] = { 0 };
+    char val_str[256] = {0};
     val_str[0] = 0;
     const char* type_str = 0;
-    char choice_str[256 * 10] = { 0 };
+    char choice_str[256 * 10] = {0};
 
     // set strings
     switch (type) {
@@ -418,8 +424,8 @@ yc__add_help(yc_parser* parser, const char* longname, const char* shortname,
 //
 // Set default values for each argument type
 //
-static inline void
-yc__set_default(yc_parser* parser, int type, const void* def, void* value) {
+static inline void yc__set_default(yc_parser* parser, int type, const void* def,
+                                   void* value) {
     // if not present, set default and exit
     switch (type) {
         case yc__bool: *(bool*)value = *(bool*)def; break;
@@ -440,10 +446,10 @@ yc__set_default(yc_parser* parser, int type, const void* def, void* value) {
 //
 // Main parsing routine working in generic data.
 //
-static inline void
-yc__parse_val(yc_parser* parser, const char* longname, const char* shortname,
-              const char* help, int type, const void* def, void* value,
-              void* choices) {
+static inline void yc__parse_val(yc_parser* parser, const char* longname,
+                                 const char* shortname, const char* help,
+                                 int type, const void* def, void* value,
+                                 void* choices) {
     // check whether the name is good
     yc__check_name(parser, longname, shortname, type);
 
@@ -558,9 +564,8 @@ yc__parse_val(yc_parser* parser, const char* longname, const char* shortname,
 //
 // Just a convenience wrapper for yc__parse_val. Public interface.
 //
-YC_API bool
-yc_parse_optb(yc_parser* parser, const char* longname, const char* shortname,
-              const char* help, bool def) {
+YGLC_API bool yc_parse_optb(yc_parser* parser, const char* longname,
+                            const char* shortname, const char* help, bool def) {
     bool value = false;
     yc__parse_val(parser, longname, shortname, help, yc__bool, &def, &value, 0);
     return value;
@@ -569,9 +574,8 @@ yc_parse_optb(yc_parser* parser, const char* longname, const char* shortname,
 //
 // Just a convenience wrapper for yc__parse_val. Public interface.
 //
-YC_API int
-yc_parse_opti(yc_parser* parser, const char* longname, const char* shortname,
-              const char* help, int def) {
+YGLC_API int yc_parse_opti(yc_parser* parser, const char* longname,
+                           const char* shortname, const char* help, int def) {
     int value = 0;
     yc__parse_val(parser, longname, shortname, help, yc__int, &def, &value, 0);
     return value;
@@ -580,9 +584,9 @@ yc_parse_opti(yc_parser* parser, const char* longname, const char* shortname,
 //
 // Just a convenience wrapper for yc__parse_val. Public interface.
 //
-YC_API float
-yc_parse_optf(yc_parser* parser, const char* longname, const char* shortname,
-              const char* help, float def) {
+YGLC_API float yc_parse_optf(yc_parser* parser, const char* longname,
+                             const char* shortname, const char* help,
+                             float def) {
     float value = 0;
     yc__parse_val(parser, longname, shortname, help, yc__float, &def, &value,
                   0);
@@ -592,9 +596,9 @@ yc_parse_optf(yc_parser* parser, const char* longname, const char* shortname,
 //
 // Just a convenience wrapper for yc__parse_val. Public interface.
 //
-YC_API double
-yc_parse_optd(yc_parser* parser, const char* longname, const char* shortname,
-              const char* help, double def) {
+YGLC_API double yc_parse_optd(yc_parser* parser, const char* longname,
+                              const char* shortname, const char* help,
+                              double def) {
     double value = 0;
     yc__parse_val(parser, longname, shortname, help, yc__double, &def, &value,
                   0);
@@ -604,9 +608,9 @@ yc_parse_optd(yc_parser* parser, const char* longname, const char* shortname,
 //
 // Just a convenience wrapper for yc__parse_val. Public interface.
 //
-YC_API const char*
-yc_parse_opts(yc_parser* parser, const char* longname, const char* shortname,
-              const char* help, const char* def) {
+YGLC_API const char* yc_parse_opts(yc_parser* parser, const char* longname,
+                                   const char* shortname, const char* help,
+                                   const char* def) {
     char* value = 0;
     yc__parse_val(parser, longname, shortname, help, yc__string, &def, &value,
                   0);
@@ -616,9 +620,9 @@ yc_parse_opts(yc_parser* parser, const char* longname, const char* shortname,
 //
 // Just a convenience wrapper for yc__parse_val. Public interface.
 //
-YC_API int
-yc_parse_opte(yc_parser* parser, const char* longname, const char* shortname,
-              const char* help, int def, const char** choices) {
+YGLC_API int yc_parse_opte(yc_parser* parser, const char* longname,
+                           const char* shortname, const char* help, int def,
+                           const char** choices) {
     char* values = 0;
     yc__parse_val(parser, longname, shortname, help, yc__string,
                   &(choices[def]), &values, choices);
@@ -633,9 +637,8 @@ yc_parse_opte(yc_parser* parser, const char* longname, const char* shortname,
 //
 // Just a convenience wrapper for yc__parse_val. Public interface.
 //
-YC_API int
-yc_parse_argi(yc_parser* parser, const char* longname, const char* help,
-              int def, bool required) {
+YGLC_API int yc_parse_argi(yc_parser* parser, const char* longname,
+                           const char* help, int def, bool required) {
     int value = 0;
     yc__parse_val(parser, longname, 0, help, yc__int, (required) ? 0 : &def,
                   &value, 0);
@@ -645,9 +648,9 @@ yc_parse_argi(yc_parser* parser, const char* longname, const char* help,
 //
 // Just a convenience wrapper for yc__parse_val. Public interface.
 //
-YC_API const char*
-yc_parse_args(yc_parser* parser, const char* longname, const char* help,
-              const char* def, bool required) {
+YGLC_API const char* yc_parse_args(yc_parser* parser, const char* longname,
+                                   const char* help, const char* def,
+                                   bool required) {
     char* value = 0;
     yc__parse_val(parser, longname, 0, help, yc__string, (required) ? 0 : &def,
                   &value, 0);
@@ -657,10 +660,10 @@ yc_parse_args(yc_parser* parser, const char* longname, const char* help,
 //
 // Just a convenience wrapper for yc__parse_val. Public interface.
 //
-YC_API const char**
-yc_parse_argsa(yc_parser* parser, const char* longname, const char* help,
-               const char** def, bool required, const char* values[],
-               int max_values) {
+YGLC_API const char** yc_parse_argsa(yc_parser* parser, const char* longname,
+                                     const char* help, const char** def,
+                                     bool required, const char* values[],
+                                     int max_values) {
     yc__parse_val(parser, longname, 0, help, yc__string_array,
                   (required) ? 0 : def, parser->stras_values, 0);
     if (parser->error) return 0;
@@ -678,8 +681,7 @@ yc_parse_argsa(yc_parser* parser, const char* longname, const char* help,
 // Parse a binary file a chuck at a time and loads its content full in memory.
 // Does not attempt to determine file size upfront to handle all cases.
 //
-YC_API void*
-yc_load_binfile(const char* filename, int* size) {
+YGLC_API void* yc_load_binfile(const char* filename, int* size) {
     FILE* file = fopen(filename, "rb");
     if (!file) return 0;
     int len = 0;
@@ -699,8 +701,7 @@ yc_load_binfile(const char* filename, int* size) {
 // Parse a text file a chuck at a time and loads its content full in memory.
 // Does not attempt to determine file size upfront to handle all cases.
 //
-YC_API char*
-yc_load_txtfile(const char* filename) {
+YGLC_API char* yc_load_txtfile(const char* filename) {
     FILE* file = fopen(filename, "rt");
     if (!file) return 0;
     int len = 0;
@@ -719,8 +720,8 @@ yc_load_txtfile(const char* filename) {
 //
 // Splits a path. Public interface.
 //
-YC_API void
-yc_split_path(const char* filename, char* dirname, char* basename, char* ext) {
+YGLC_API void yc_split_path(const char* filename, char* dirname, char* basename,
+                            char* ext) {
     // walk till end keeping the position of '/', '\\' and '.'
     const char *path_sep = 0, *ext_sep = 0;
     for (const char* p = filename; *p; p++) {
@@ -759,11 +760,10 @@ yc_split_path(const char* filename, char* dirname, char* basename, char* ext) {
 #ifdef SGLC_TEST
 #include <math.h>
 
-int
-main(int argc, char** argv) {
+int main(int argc, char** argv) {
     // test empty
     int test0_argc = 1;
-    const char* test0_argv[] = { "test0" };
+    const char* test0_argv[] = {"test0"};
     yc_parser* parser0 = parser0 =
         yc_init_parser(test0_argc, test0_argv, "test0");
     parser0->exit_on_error = false;
@@ -771,7 +771,7 @@ main(int argc, char** argv) {
 
     // test exit on help
     int test1_argc = 2;
-    const char* test1_argv[] = { "test1", "-h" };
+    const char* test1_argv[] = {"test1", "-h"};
     yc_parser* parser1 = parser1 =
         yc_init_parser(test1_argc, test1_argv, "test1");
     parser1->exit_on_error = false;
@@ -779,9 +779,9 @@ main(int argc, char** argv) {
 
     // test opts
     int test2_argc = 10;
-    const char* test2_argv[] = { "test2", "--int",    "10",   "--float",
-                                 "3.14",  "--double", "6.28", "--str",
-                                 "bob",   "--flag" };
+    const char* test2_argv[] = {"test2", "--int",    "10",   "--float",
+                                "3.14",  "--double", "6.28", "--str",
+                                "bob",   "--flag"};
     yc_parser* parser2 = parser2 =
         yc_init_parser(test2_argc, test2_argv, "test2");
     parser2->exit_on_error = false;
@@ -799,7 +799,7 @@ main(int argc, char** argv) {
 
     // test args
     int test3_argc = 3;
-    const char* test3_argv[] = { "test3", "10", "bob" };
+    const char* test3_argv[] = {"test3", "10", "bob"};
     yc_parser* parser3 = yc_init_parser(test3_argc, test3_argv, "test3");
     parser3->exit_on_error = false;
     assert(yc_parse_argi(parser3, "int", "", 0, true) == 10);
@@ -808,7 +808,7 @@ main(int argc, char** argv) {
 
     // test bad opts
     int test4_argc = 3;
-    const char* test4_argv[] = { "test4", "--int", "bob" };
+    const char* test4_argv[] = {"test4", "--int", "bob"};
     yc_parser* parser4 = yc_init_parser(test4_argc, test4_argv, "test4");
     parser4->exit_on_error = false;
     assert(yc_parse_opti(parser4, "int", 0, "", 0) == 0);
