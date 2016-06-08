@@ -532,6 +532,7 @@ YGLC_API void yoc_load_textures(yoc_scene* scene, const char* filename,
 #if !defined(YGL_DECLARATION) || defined(YGL_IMPLEMENTATION)
 
 #include <cctype>
+#include <cstdio>
 
 //
 // OBJ vertex reference triplet (pos,texcoord,norm) with extension for

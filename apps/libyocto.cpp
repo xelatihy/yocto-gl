@@ -1,6 +1,8 @@
 #define YGL_DECLARATION
 #define YGL_IMPLEMENTATION
 
+// #define YGL_USESTL
+
 #ifdef __APPLE__
 #include <OpenGL/gl.h>
 #else

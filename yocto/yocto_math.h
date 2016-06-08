@@ -10,6 +10,7 @@
 // - random number generation via PCG32
 // - a few hash functions
 // - vector/string container replacement
+// - timer (depends on C++11 chrono)
 //
 // The containers are only meant to avoid using the STL in YOCTO. These
 // containers only support a subset of the members of the STL ones since they
@@ -84,6 +85,7 @@
 #include <cstring>
 #include <initializer_list>
 #include <limits>
+#include <type_traits>
 
 // -----------------------------------------------------------------------------
 // CONSTANTS
@@ -114,6 +116,16 @@ inline T ym_min(const T& x, const T& y) {
 template <typename T>
 inline T ym_max(const T& x, const T& y) {
     return (x > y) ? x : y;
+}
+
+//
+// swap utility
+//
+template <typename T>
+inline void ym_swap(T& a, T& b) {
+    T c = a;
+    a = b;
+    b = c;
 }
 
 //
@@ -679,6 +691,34 @@ inline ym_vec<T, M> ym_clamplen(const ym_vec<T, M> x, float N) {
 }
 
 //
+// Element min/max.
+//
+template <typename T, int N>
+inline int ym_min_element(const ym_vec<T, N>& a) {
+    T v = std::numeric_limits<T>::max();
+    int pos = -1;
+    for (int i = 0; i < N; i++) {
+        if (v > a.v[i]) {
+            v = a.v[i];
+            pos = i;
+        }
+    }
+    return pos;
+}
+template <typename T, int N>
+inline int ym_max_element(const ym_vec<T, N>& a) {
+    T v = -std::numeric_limits<T>::max();
+    int pos = -1;
+    for (int i = 0; i < N; i++) {
+        if (v < a.v[i]) {
+            v = a.v[i];
+            pos = i;
+        }
+    }
+    return pos;
+}
+
+//
 // Vector operations
 //
 template <typename T, int N>
@@ -1121,7 +1161,12 @@ inline ym_mat<T, 4, 4> ym_perspective_mat4(T fovy, T aspect, T near, T far) {
 //
 template <typename T>
 struct ym_range {
-    T min, max;  // bouding box min and max corners
+    union {
+        struct {
+            T min, max;
+        };  // bouding box min and max corners
+        T d[2];
+    };
 
     ym_range()
         : min(std::numeric_limits<T>::max()),
@@ -1130,6 +1175,9 @@ struct ym_range {
 
     T size() const { return max - min; }
     T center() const { return (max + min) / 2; }
+
+    T& operator[](int i) { return d[i]; }
+    const T& operator[](int i) const { return d[i]; }
 };
 
 //
@@ -1137,7 +1185,12 @@ struct ym_range {
 //
 template <typename T, int M>
 struct ym_range<ym_vec<T, M>> {
-    ym_vec<T, M> min, max;  // bouding box min and max corners
+    union {
+        struct {
+            ym_vec<T, M> min, max;
+        };  // bouding box min and max corners
+        ym_vec<T, M> d[2];
+    };
 
     ym_range()
         : min(std::numeric_limits<T>::max()),
@@ -1146,6 +1199,9 @@ struct ym_range<ym_vec<T, M>> {
 
     ym_vec<T, M> size() const { return max - min; }
     ym_vec<T, M> center() const { return (max + min) / 2; }
+
+    ym_vec<T, M>& operator[](int i) { return d[i]; }
+    const ym_vec<T, M>& operator[](int i) const { return d[i]; }
 };
 
 //
@@ -1178,6 +1234,28 @@ inline ym_range<T> ym_rexpand(const ym_range<T>& a, const T& b) {
 template <typename T>
 inline ym_range<T> ym_rexpand(const ym_range<T>& a, const ym_range<T>& b) {
     return {ym_min(a.min, b.min), ym_max(a.max, b.max)};
+}
+
+template <typename T>
+inline ym_range<T> operator+(const ym_range<T>& a, const T& b) {
+    return ym_rexpand(a, b);
+}
+
+template <typename T>
+inline ym_range<T> operator+(const ym_range<T>& a, const ym_range<T>& b) {
+    return ym_rexpand(a, b);
+}
+
+template <typename T>
+inline ym_range<T>& operator+=(ym_range<T>& a, const T& b) {
+    a = ym_rexpand(a, b);
+    return a;
+}
+
+template <typename T>
+inline ym_range<T>& operator+=(ym_range<T>& a, const ym_range<T>& b) {
+    a = ym_rexpand(a, b);
+    return a;
 }
 
 template <typename T>
@@ -1315,7 +1393,7 @@ inline ym_vec2f ym_rng_next2f(ym_rng_pcg32* rng) {
 }
 
 // -----------------------------------------------------------------------------
-// HASING
+// HASHING
 // -----------------------------------------------------------------------------
 
 //
@@ -1421,6 +1499,11 @@ struct ym_darray {
         assign(a.data(), a.data() + a.size());
     }
 
+    ym_darray(ym_darray<T>&& a) : num(a.num), cap(a.cap), d(a.d) {
+        a.num = a.cap = 0;
+        a.d = nullptr;
+    }
+
     ~ym_darray() {
         if (d) delete[] d;
     }
@@ -1428,6 +1511,17 @@ struct ym_darray {
     ym_darray<T>& operator=(const ym_darray<T>& a) {
         if (&a == this) return *this;
         assign(a.data(), a.data() + a.size());
+        return *this;
+    }
+
+    ym_darray<T>& operator=(ym_darray<T>&& a) {
+        if (&a == this) return *this;
+        if (d) delete[] d;
+        d = a.d;
+        num = a.num;
+        cap = a.cap;
+        a.num = a.cap = 0;
+        a.d = nullptr;
         return *this;
     }
 
@@ -1486,17 +1580,7 @@ struct ym_darray {
 
     void clear() { num = 0; }
 
-    void swap(ym_darray<T>& other) {
-        size_t on = other.num;
-        size_t oc = other.cap;
-        T* od = other.d;
-        other.num = num;
-        other.cap = cap;
-        other.d = d;
-        num = on;
-        cap = oc;
-        d = od;
-    }
+    void swap(ym_darray<T>& other) { _swap(other); }
 
     void shrink_to_fit() {
         if (num == cap) return;
@@ -1554,8 +1638,8 @@ struct ym_darray {
     T* begin() { return d; }
     const T* begin() const { return d; }
 
-    T* end() { return d; }
-    const T* end() const { return d; }
+    T* end() { return d + num; }
+    const T* end() const { return d + num; }
 
    private:
     size_t num = 0;
@@ -1567,7 +1651,8 @@ struct ym_darray {
         if (n) {
             T* old_d = d;
             d = new T[cap];
-            _copy(num, old_d);
+            // _copy(num, old_d);
+            _move(num, old_d);
             delete[] old_d;
         } else {
             if (d) delete[] d;
@@ -1580,7 +1665,19 @@ struct ym_darray {
     }
 
     void _copy(size_t n, const T* dta) {
-        for (size_t i = 0; i < n; i++) d[i] = dta[i];
+        if (std::is_trivially_copyable<T>::value) {
+            memcpy(d, dta, sizeof(T) * n);
+        } else {
+            for (size_t i = 0; i < n; i++) d[i] = dta[i];
+        }
+    }
+
+    void _move(size_t n, T* dta) {
+        if (std::is_trivially_copyable<T>::value) {
+            memcpy(d, dta, sizeof(T) * n);
+        } else {
+            for (size_t i = 0; i < n; i++) d[i] = std::move(dta[i]);
+        }
     }
 
     void _grow_upto(size_t n) {
@@ -1589,6 +1686,12 @@ struct ym_darray {
         int c = 1;
         while (c < n) c *= 2;
         _realloc(c);
+    }
+
+    void _swap(ym_darray<T>& a) {
+        ym_swap(d, a.d);
+        ym_swap(num, a.num);
+        ym_swap(cap, a.cap);
     }
 };
 
@@ -1604,10 +1707,16 @@ struct ym_str {
 
     ym_str(const char* ns) { assign(ns); }
 
-    ym_str(const ym_str& ns) { assign(ns); }
+    ym_str(const ym_str& ns) : _buf(ns._buf) {}
+    ym_str(ym_str&& ns) : _buf(std::move(ns._buf)) {}
 
     ym_str& operator=(const ym_str& ns) {
-        assign(ns);
+        _buf = ns._buf;
+        return *this;
+    }
+
+    ym_str& operator=(ym_str&& ns) {
+        _buf = std::move(ns._buf);
         return *this;
     }
 
@@ -1757,5 +1866,37 @@ inline ym_vector<T> operator+(const ym_vector<T>& a, const T& b) {
     c += b;
     return c;
 }
+
+// -----------------------------------------------------------------------------
+// TIMER
+// -----------------------------------------------------------------------------
+
+#include <chrono>
+
+struct ym_timer {
+    ym_timer(bool autostart = true) {
+        if (autostart) start();
+    }
+
+    void start() {
+        _start = std::chrono::steady_clock::now();
+        _started = true;
+    }
+
+    void stop() {
+        _end = std::chrono::steady_clock::now();
+        _started = false;
+    }
+
+    double elapsed() {
+        if (_started) stop();
+        std::chrono::duration<double> diff = (_end - _start);
+        return diff.count();
+    }
+
+   private:
+    bool _started = false;
+    std::chrono::time_point<std::chrono::steady_clock> _start, _end;
+};
 
 #endif

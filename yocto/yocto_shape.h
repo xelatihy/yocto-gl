@@ -1131,9 +1131,7 @@ YGLC_API ys_edge_map* ysc_make_edge_map(int nelems, const int* elem,
 //
 // Get the number of edges
 //
-YGLC_API int ysc_get_nedges(const ys_edge_map* em) {
-    return ys_get_nedges(em);
-}
+YGLC_API int ysc_get_nedges(const ys_edge_map* em) { return ys_get_nedges(em); }
 
 //
 // Get the number of edges
