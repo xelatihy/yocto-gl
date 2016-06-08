@@ -424,9 +424,7 @@ yo_scene* load_scene(const char* filename) {
         ym_range3f bbox = ym_invalid_range3f;
         for (int i = 0; i < scene->shapes.size(); i++) {
             yo_shape* shape = &scene->shapes[i];
-            for (int j = 0; j < shape->nverts; j++) {
-                bbox = ym_rexpand(bbox, shape->pos[j]);
-            }
+            for (int j = 0; j < shape->nverts; j++) bbox += shape->pos[j];
         }
         ym_vec3f bbox_center = ym_rcenter(bbox);
         ym_vec3f bbox_size = ym_rsize(bbox);

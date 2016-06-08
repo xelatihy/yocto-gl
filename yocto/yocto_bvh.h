@@ -44,6 +44,10 @@
 // the primitive type (points, lines, triangles),
 // an array of vertex positions, and an array of vertex radius
 // (for points and lines).
+//
+// Implementation notes:
+// - using high precision bvh intersection by default
+//
 
 //
 // COMPILATION:
@@ -64,6 +68,7 @@
 
 //
 // HISTORY:
+// - v 0.2: better internal intersections and cleaner bvh stats
 // - v 0.1: C++ implementation
 // - v 0.0: initial release in C99
 //
@@ -133,7 +138,9 @@ enum {
 enum {
     yb_htype_default = 0,  // default strategy (use this for ray-casting)
     yb_htype_equalnum,     // balanced binary tree
-    yb_htype_sah,          // surface area heuristic
+    yb_htype_equalsize,    // splitting space binary tree
+    yb_htype_sah,          // surface area heuristic (full sweep for accuracy)
+    yb_htype_binned_sah,   // surface area heuristic (binned for speed)
     yb_htype_max           // total number of strategies
 };
 
@@ -372,25 +379,28 @@ YGL_API void yb_interpolate_vert(const int* elem, int etype, int eid,
                                  const ym_vec2f& euv, int vsize,
                                  const float* vert, float* v);
 
-//
-// Print stats for the given BVH. Mostly useful for debugging or performance
-// analysis. Ignore for general purpose.
-//
-// Parameters:
-// - bvh: bvh to print stats for
-// - whether to print the tree structure
-//
-YGL_API void yb_print_scene_bvh_stats(const yb_scene_bvh* bvh, bool print_tree);
+// -----------------------------------------------------------------------------
+// PERFORMANCE TUNING INTERFACE
+// -----------------------------------------------------------------------------
 
 //
-// Print stats for the given BVH. Mostly useful for debugging or performance
-// analysis. Ignore for general purpose.
+// Compute BVH stats.
 //
-// Parameters:
-// - bvh: bvh to print stats for
-// - whether to print the tree structure
+YGL_API void yb_compute_scene_bvh_stats(const yb_scene_bvh* bvh,
+                                        bool include_shapes, int* nprims,
+                                        int* ninternals, int* nleaves,
+                                        int* min_depth, int* max_depth);
+YGL_API void yb_compute_shape_bvh_stats(const yb_shape_bvh* bvh, int* nprims,
+                                        int* ninternals, int* nleaves,
+                                        int* min_depth, int* max_depth);
+
 //
-YGL_API void yb_print_shape_bvh_stats(const yb_shape_bvh* bvh, bool print_tree);
+// Logging (not thread safe to avoid affecting speed)
+//
+#ifdef YGL_BVH_LOG_RAYS
+YGL_API void yb_get_ray_log(int* nrays, int* nbbox_inters, int* npoint_inters,
+                            int* nline_inters, int* ntriangle_inters);
+#endif
 
 #endif  // __cplusplus
 
@@ -456,11 +466,11 @@ YGLC_API yb_scene_bvh* ybc_init_scene_bvh(int nbvhs, int heuristic);
 // - radius: array of vertex radius
 // - heuristic: heristic use to build the bvh (0 for deafult)
 //
-YGL_API void ybc_set_shape_bvh(yb_scene_bvh* bvh, int sid,
-                               const float xform[16], int nelems,
-                               const int* elem, int etype, int nverts,
-                               const ym_vec3f* pos, const float* radius,
-                               int heuristic);
+YGLC_API void ybc_set_shape_bvh(yb_scene_bvh* bvh, int sid,
+                                const float xform[16], int nelems,
+                                const int* elem, int etype, int nverts,
+                                const float* pos, const float* radius,
+                                int heuristic);
 
 //
 // Clears BVH memory.
@@ -604,28 +614,6 @@ YGLC_API void ybc_interpolate_vert(const int* elem, int etype, int eid,
                                    const float euv[2], int vsize,
                                    const float* vert, float* v);
 
-//
-// Print stats for the given BVH. Mostly useful for debugging or performance
-// analysis. Ignore for general purpose.
-//
-// Parameters:
-// - bvh: bvh to print stats for
-// - whether to print the tree structure
-//
-YGLC_API void ybc_print_scene_bvh_stats(const yb_scene_bvh* bvh,
-                                        bool print_tree);
-
-//
-// Print stats for the given BVH. Mostly useful for debugging or performance
-// analysis. Ignore for general purpose.
-//
-// Parameters:
-// - bvh: bvh to print stats for
-// - whether to print the tree structure
-//
-YGLC_API void ybc_print_shape_bvh_stats(const yb_shape_bvh* bvh,
-                                        bool print_tree);
-
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION
 // -----------------------------------------------------------------------------
@@ -634,6 +622,7 @@ YGLC_API void ybc_print_shape_bvh_stats(const yb_shape_bvh* bvh,
 #if defined(__cplusplus) &&                                                    \
     (!defined(YGL_DECLARATION) || defined(YGL_IMPLEMENTATION))
 
+#include <algorithm>
 #include <cstdio>
 
 // -----------------------------------------------------------------------------
@@ -656,9 +645,7 @@ static inline ym_range3f yb__transform_bbox(const ym_affine3f& a,
         {bbox.max.x, bbox.max.y, bbox.max.z},
     };
     ym_range3f xformed = ym_invalid_range3f;
-    for (int j = 0; j < 8; j++) {
-        xformed = ym_rexpand(xformed, ym_transform_point(a, corners[j]));
-    }
+    for (int j = 0; j < 8; j++) xformed += ym_transform_point(a, corners[j]);
     return xformed;
 }
 
@@ -844,46 +831,6 @@ static inline bool yb__intersect_triangle(const ym_ray3f& ray,
 }
 
 //
-// Intersect a ray with a quad, represented as two triangles
-//
-// Parameters:
-// - ray: ray origin and direction, parameter min, max range
-// - v0, v1, v2, v3: quad vertices
-//
-// Out Parameters:
-// - ray_t: ray parameter at the intersection point
-// - euv: baricentric coordinates (as described above)
-//
-// Returns:
-// - whether the intersection occurred
-//
-// Notes:
-// - out parameters and only writtent o if an intersection occurs
-// - might become deprecated in the future
-//
-static inline bool yb__intersect_quad(const ym_ray3f& ray, const ym_vec3f& v0,
-                                      const ym_vec3f& v1, const ym_vec3f& v2,
-                                      const ym_vec3f& v3, float* ray_t,
-                                      ym_vec2f* euv) {
-    ym_ray3f r = ray;
-    // test first triangle
-    bool hit = false;
-    if (yb__intersect_triangle(r, v0, v1, v3, ray_t, euv)) {
-        hit = true;
-        r.tmax = *ray_t;
-    }
-
-    // test second triangle
-    if (yb__intersect_triangle(r, v2, v3, v1, ray_t, euv)) {
-        hit = true;
-        // flip coordinates to map to [0,0]x[1,1]
-        *euv = ym_vec2f{1 - euv->x, 1 - euv->y};
-    }
-
-    return hit;
-}
-
-//
 // Intersect a ray with a axis-aligned bounding box
 //
 // Parameters:
@@ -925,6 +872,54 @@ static inline bool yb__intersect_check_bbox(const ym_ray3f& ray,
 
     // passed all planes, then intersection occurred
     return true;
+}
+
+//
+// Min/max used in BVH traversal. Copied here since the traversal code relies
+// on the specific behaviour wrt NaNs.
+//
+template <typename T>
+static inline const T& yb__safemin(const T& a, const T& b) {
+    return (a < b) ? a : b;
+}
+template <typename T>
+static inline const T& yb__safemax(const T& a, const T& b) {
+    return (a > b) ? a : b;
+}
+
+//
+// Intersect a ray with a axis-aligned bounding box
+//
+// Parameters:
+// - ray_o, ray_d: ray origin and direction
+// - ray_tmin, ray_tmax: ray parameter min, max range
+// - ray_dinv: ray inverse direction
+// - ray_dsign: ray direction sign
+// - bbox_min, bbox_max: bounding box min/max bounds
+//
+// Returns:
+// - whether the intersection occurred
+//
+// Implementation Notes:
+// - based on "Robust BVH Ray Traversal" by T. Ize published at
+// http://jcgt.org/published/0002/02/02/paper.pdf
+//
+static inline bool yb__intersect_check_bbox(const ym_ray3f& ray,
+                                            const ym_vec3f& ray_dinv,
+                                            const ym_vec3i& ray_dsign,
+                                            const ym_range3f& bbox) {
+    float txmin = (bbox[ray_dsign[0]].x - ray.o.x) * ray_dinv.x;
+    float txmax = (bbox[1 - ray_dsign[0]].x - ray.o.x) * ray_dinv.x;
+    float tymin = (bbox[ray_dsign[1]].y - ray.o.y) * ray_dinv.y;
+    float tymax = (bbox[1 - ray_dsign[1]].y - ray.o.y) * ray_dinv.y;
+    float tzmin = (bbox[ray_dsign[2]].z - ray.o.z) * ray_dinv.z;
+    float tzmax = (bbox[1 - ray_dsign[2]].z - ray.o.z) * ray_dinv.z;
+    float tmin =
+        yb__safemax(tzmin, yb__safemax(tymin, yb__safemax(txmin, ray.tmin)));
+    float tmax =
+        yb__safemin(tzmax, yb__safemin(tymax, yb__safemin(txmax, ray.tmax)));
+    tmax *= 1.00000024f;  // for double: 1.0000000000000004
+    return tmin <= tmax;
 }
 
 // -----------------------------------------------------------------------------
@@ -1030,32 +1025,6 @@ static inline bool yb__distance_triangle(const ym_vec3f& pos, float dist_max,
     *dist = sqrtf(dd);
     *euv = uv;
     return true;
-}
-
-// TODO: documentation
-// TODO: radius
-static inline bool yb__distance_quad(const ym_vec3f& pos, float dist_max,
-                                     const ym_vec3f& v0, const ym_vec3f& v1,
-                                     const ym_vec3f& v2, const ym_vec3f& v3,
-                                     float r0, float r1, float r2, float r3,
-                                     float* dist, ym_vec2f* euv) {
-    // test first triangle
-    bool hit = false;
-    if (yb__distance_triangle(pos, dist_max, v0, v1, v3, r0, r1, r3, dist,
-                              euv)) {
-        hit = true;
-        dist_max = *dist;
-    }
-
-    // test second triangle
-    if (yb__distance_triangle(pos, dist_max, v2, v3, v1, r2, r3, r1, dist,
-                              euv)) {
-        hit = true;
-        // flip coordinates to map to [0,0]x[1,1]
-        *euv = ym_vec2f{1 - euv->x, 1 - euv->y};
-    }
-
-    return hit;
 }
 
 // TODO: documentation
@@ -1201,64 +1170,19 @@ struct yb__bound_prim {
 };
 
 //
-// Shell sort BVH array a of length n along the axis axis. Implementation based
-// on http://rosettacode.org/wiki/Sorting_algorithms/Shell_sort
+// Comparison function for each axis
 //
-static inline void yb__shellsort_bound_prim(yb__bound_prim* a, int n,
-                                            int axis) {
-    int h, i, j;
-    yb__bound_prim t;
-    for (h = n; h /= 2;) {
-        for (i = h; i < n; i++) {
-            t = a[i];
-            for (j = i;
-                 j >= h && (&t.center.x)[axis] < (&a[j - h].center.x)[axis];
-                 j -= h) {
-                a[j] = a[j - h];
-            }
-            a[j] = t;
-        }
+struct yb__bound_prim_comp {
+    int axis;
+    float middle;
+    yb__bound_prim_comp(int a, float m = 0) : axis(a), middle(m) {}
+    bool operator()(const yb__bound_prim& a, const yb__bound_prim& b) const {
+        return a.center[axis] < b.center[axis];
     }
-}
-
-//
-// Heap sort BVH array a of length n along the axis axis. Implementation based
-// on https://en.wikipedia.org/wiki/Heapsort
-//
-static inline void yb__heapsort_bound_prim(yb__bound_prim* arr, int count,
-                                           int axis) {
-    if (!count) return;
-
-    yb__bound_prim t;
-    unsigned int n = count, parent = count / 2, index, child;
-    while (true) {
-        if (parent > 0) {
-            t = arr[--parent];
-        } else {
-            n--;
-            if (n == 0) return;
-            t = arr[n];
-            arr[n] = arr[0];
-        }
-        index = parent;
-        child = index * 2 + 1;
-        while (child < n) {
-            if (child + 1 < n &&
-                (&arr[child + 1].center.x)[axis] > (&arr[child].center.x)[axis])
-                child++;
-            if ((&arr[child].center.x)[axis] > (&t.center.x)[axis]) {
-                arr[index] = arr[child];
-                index = child;
-                child = index * 2 + 1;
-            } else
-                break;
-        }
-        arr[index] = t;
+    bool operator()(const yb__bound_prim& a) const {
+        return a.center[axis] < middle;
     }
-}
-
-// choose a sort algorithm
-#define yb__sort_bound_prim yb__heapsort_bound_prim
+};
 
 //
 // Given an array sorted_prim of primitives to split between the elements
@@ -1266,62 +1190,79 @@ static inline void yb__heapsort_bound_prim(yb__bound_prim* arr, int count,
 // based on the heuristic heuristic. Supports balanced tree (equalnum) and
 // Surface-Area Heuristic.
 //
-static inline void yb__split_axis(yb__bound_prim* sorted_prim, int start,
-                                  int end, int* axis, int* mid, int heuristic) {
-    *axis = -1;
-    *mid = -1;
+static inline bool yb__partition_prims(yb__bound_prim* sorted_prim, int start,
+                                       int end, int* axis, int* mid,
+                                       int heuristic) {
+    const float __box_eps = 1e-12f;
+#define __bbox_area(r)                                                         \
+    (2 * ((r.x + __box_eps) * (r.y + __box_eps) +                              \
+          (r.y + __box_eps) * (r.z + __box_eps) +                              \
+          (r.z + __box_eps) * (r.x + __box_eps)))
+
+    // init to default values
+    *axis = 0;
+    *mid = (start + end) / 2;
+
+    // compute primintive bounds and size
+    ym_range3f centroid_bbox = ym_invalid_range3f;
+    for (int i = start; i < end; i++) centroid_bbox += sorted_prim[i].center;
+    ym_vec3f centroid_size = ym_rsize(centroid_bbox);
+
+    // check if it is not possible to split
+    if (centroid_size == ym_zero3f) return false;
+
+    // split along largest
+    int largest_axis = ym_max_element(centroid_size);
+
+    // check heuristic
     switch (heuristic) {
         // balanced tree split: find the largest axis of the bounding box
         // and split along this one right in the middle
         case yb_htype_equalnum: {
-            // compute primintive bounds
-            ym_range3f bbox = ym_invalid_range3f;
-            for (int i = start; i < end; i++) {
-                bbox = ym_rexpand(bbox, sorted_prim[i].center);
-            }
-            // split along largest
-            ym_vec3f bvh_size = ym_rsize(bbox);
-            if (bvh_size.x >= bvh_size.y && bvh_size.x >= bvh_size.z)
-                *axis = 0;
-            else if (bvh_size.y >= bvh_size.x && bvh_size.y >= bvh_size.z)
-                *axis = 1;
-            else if (bvh_size.z >= bvh_size.x && bvh_size.z >= bvh_size.y)
-                *axis = 2;
-            else
-                assert(false);
+            *axis = largest_axis;
             *mid = (start + end) / 2;
+            std::nth_element(sorted_prim + start, sorted_prim + (*mid),
+                             sorted_prim + end,
+                             yb__bound_prim_comp(largest_axis));
         } break;
+        // split the space in the middle along the largest axis
         case yb_htype_default:
+        case yb_htype_equalsize: {
+            *axis = largest_axis;
+            *mid = (int)(std::partition(
+                             sorted_prim + start, sorted_prim + end,
+                             yb__bound_prim_comp(
+                                 largest_axis,
+                                 ym_rcenter(centroid_bbox)[largest_axis])) -
+                         sorted_prim);
+        } break;
+        // surface area heuristic: estimate the cost of splitting
+        // along each of the axis and pick the one with best expected
+        // performance
         case yb_htype_sah: {
-            // surface area heuristic: estimate the cost of splitting
-            // along each of the axis and pick the one with best expected
-            // performance
             float min_cost = HUGE_VALF;
             int count = end - start;
             for (int a = 0; a < 3; a++) {
-                yb__sort_bound_prim(sorted_prim + start, end - start, a);
+                std::sort(sorted_prim + start, sorted_prim + end,
+                          yb__bound_prim_comp(a));
                 ym_range3f sbbox = ym_invalid_range3f;
                 // to avoid an O(n^2) computation, use sweaps to compute the
                 // cost,
                 // first smallest to largest, then largest to smallest
                 for (int i = 0; i < count; i++) {
-                    sbbox = ym_rexpand(sbbox, sorted_prim[start + i].bbox);
+                    sbbox += sorted_prim[start + i].bbox;
                     ym_vec3f sbbox_size = ym_rsize(sbbox);
                     sorted_prim[start + i].sah_cost_left =
-                        sbbox_size.x * sbbox_size.y +
-                        sbbox_size.x * sbbox_size.z +
-                        sbbox_size.y * sbbox_size.z;
+                        __bbox_area(sbbox_size);
                     sorted_prim[start + i].sah_cost_left *= i + 1;
                 }
                 // the other sweep
                 sbbox = ym_invalid_range3f;
                 for (int i = 0; i < count; i++) {
-                    sbbox = ym_rexpand(sbbox, sorted_prim[end - 1 - i].bbox);
+                    sbbox += sorted_prim[end - 1 - i].bbox;
                     ym_vec3f sbbox_size = ym_rsize(sbbox);
                     sorted_prim[end - 1 - i].sah_cost_right =
-                        sbbox_size.x * sbbox_size.y +
-                        sbbox_size.x * sbbox_size.z +
-                        sbbox_size.y * sbbox_size.z;
+                        __bbox_area(sbbox_size);
                     sorted_prim[end - 1 - i].sah_cost_right *= i + 1;
                 }
                 // find the minimum cost
@@ -1335,10 +1276,76 @@ static inline void yb__split_axis(yb__bound_prim* sorted_prim, int start,
                     }
                 }
             }
+            std::nth_element(sorted_prim + start, sorted_prim + (*mid),
+                             sorted_prim + end, yb__bound_prim_comp(*axis));
+        } break;
+        // surface area heuristic: estimate the cost of splitting
+        // along each of the axis and pick the one with best expected
+        // performance
+        case yb_htype_binned_sah: {
+            // allocate bins
+            const int nbins = 16;
+            ym_range3f bins_bbox[nbins];
+            int bins_count[nbins];
+            for (int b = 0; b < nbins; b++) {
+                bins_bbox[b] = ym_invalid_range3f;
+                // bins_bbox[b] = centroid_bbox;
+                // bins_bbox[b].min[largest_axis] += b *
+                // centroid_size[largest_axis] / nbins;
+                // bins_bbox[b].max[largest_axis] -= (nbins - 1 - b) *
+                // centroid_size[largest_axis] / nbins;
+                bins_count[b] = 0;
+            }
+            for (int i = start; i < end; i++) {
+                int b = (int)(nbins * (sorted_prim[i].center[largest_axis] -
+                                       centroid_bbox.min[largest_axis]) /
+                              centroid_size[largest_axis]);
+                b = ym_clamp(b, 0, nbins - 1);
+                bins_count[b] += 1;
+                bins_bbox[b] += sorted_prim[i].bbox;
+            }
+            float min_cost = HUGE_VALF;
+            int bin_idx = -1;
+            for (int b = 1; b < nbins; b++) {
+                if (!bins_count[b]) continue;
+                ym_range3f left_bbox = ym_invalid_range3f,
+                           right_bbox = ym_invalid_range3f;
+                int left_count = 0, right_count = 0;
+                for (int j = 0; j < b; j++) {
+                    if (!bins_count[j]) continue;
+                    left_count += bins_count[j];
+                    left_bbox += bins_bbox[j];
+                }
+                for (int j = b; j < nbins; j++) {
+                    if (!bins_count[j]) continue;
+                    right_count += bins_count[j];
+                    right_bbox += bins_bbox[j];
+                }
+                ym_vec3f left_bbox_size = ym_rsize(left_bbox);
+                ym_vec3f right_bbox_size = ym_rsize(right_bbox);
+                float cost = __bbox_area(left_bbox_size) * left_count +
+                             __bbox_area(right_bbox_size) * right_count;
+                if (min_cost > cost) {
+                    min_cost = cost;
+                    bin_idx = b;
+                }
+            }
+            assert(bin_idx >= 0);
+            *axis = largest_axis;
+            *mid = start;
+            for (int b = 0; b < bin_idx; b++) {
+                *mid += bins_count[b];
+            }
+            assert(*axis >= 0 && *mid > 0);
+            std::nth_element(sorted_prim + start, sorted_prim + (*mid),
+                             sorted_prim + end,
+                             yb__bound_prim_comp(largest_axis));
         } break;
         default: assert(false); break;
     }
     assert(*axis >= 0 && *mid > 0);
+    assert(*mid > start && *mid < end);
+    return true;
 }
 
 //
@@ -1354,7 +1361,7 @@ static inline void yb__make_node(yb__bvhn* node, int* nnodes, yb__bvhn* nodes,
     // compute node bounds
     node->bbox = ym_invalid_range3f;
     for (int i = start; i < end; i++) {
-        node->bbox = ym_rexpand(node->bbox, sorted_prims[i].bbox);
+        node->bbox += sorted_prims[i].bbox;
     }
 
     // decide whether to create a leaf
@@ -1364,23 +1371,30 @@ static inline void yb__make_node(yb__bvhn* node, int* nnodes, yb__bvhn* nodes,
         node->start = start;
         node->count = end - start;
     } else {
-        // makes an internal node
-        node->isleaf = false;
         // choose the split axis and position
         int axis, mid;
-        yb__split_axis(sorted_prims, start, end, &axis, &mid, heuristic);
-        // sort primitives along the given axis
-        yb__sort_bound_prim(sorted_prims + start, end - start, axis);
-        // perform the splits by preallocating the child nodes and recurring
-        node->axis = axis;
-        node->start = *nnodes;
-        node->count = 2;
-        *nnodes += 2;
-        // build child nodes
-        yb__make_node(nodes + node->start, nnodes, nodes, sorted_prims, start,
-                      mid, heuristic);
-        yb__make_node(nodes + node->start + 1, nnodes, nodes, sorted_prims, mid,
-                      end, heuristic);
+        bool split = yb__partition_prims(sorted_prims, start, end, &axis, &mid,
+                                         heuristic);
+        if (!split) {
+            // we failed to split for some reasons
+            node->isleaf = true;
+            node->start = start;
+            node->count = end - start;
+        } else {
+            assert(mid > start && mid < end);
+            // makes an internal node
+            node->isleaf = false;
+            // perform the splits by preallocating the child nodes and recurring
+            node->axis = axis;
+            node->start = *nnodes;
+            node->count = 2;
+            *nnodes += 2;
+            // build child nodes
+            yb__make_node(nodes + node->start, nnodes, nodes, sorted_prims,
+                          start, mid, heuristic);
+            yb__make_node(nodes + node->start + 1, nnodes, nodes, sorted_prims,
+                          mid, end, heuristic);
+        }
     }
 }
 
@@ -1420,8 +1434,8 @@ YGL_API void yb_build_shape_bvh(yb_shape_bvh* bvh) {
                 prim->pid = i;
                 prim->bbox = ym_invalid_range3f;
                 float r0 = (bvh->radius) ? bvh->radius[f] : 0;
-                prim->bbox = ym_rexpand(prim->bbox, bvh->pos[f] - ym_vec3f(r0));
-                prim->bbox = ym_rexpand(prim->bbox, bvh->pos[f] + ym_vec3f(r0));
+                prim->bbox += bvh->pos[f] - ym_vec3f(r0);
+                prim->bbox += bvh->pos[f] + ym_vec3f(r0);
                 prim->center = ym_rcenter(prim->bbox);
             }
         } break;
@@ -1435,14 +1449,10 @@ YGL_API void yb_build_shape_bvh(yb_shape_bvh* bvh) {
                 prim->bbox = ym_invalid_range3f;
                 float r0 = (bvh->radius) ? bvh->radius[f.x] : 0;
                 float r1 = (bvh->radius) ? bvh->radius[f.y] : 0;
-                prim->bbox =
-                    ym_rexpand(prim->bbox, bvh->pos[f.x] - ym_vec3f(r0));
-                prim->bbox =
-                    ym_rexpand(prim->bbox, bvh->pos[f.x] + ym_vec3f(r0));
-                prim->bbox =
-                    ym_rexpand(prim->bbox, bvh->pos[f.y] - ym_vec3f(r1));
-                prim->bbox =
-                    ym_rexpand(prim->bbox, bvh->pos[f.y] + ym_vec3f(r1));
+                prim->bbox += bvh->pos[f.x] - ym_vec3f(r0);
+                prim->bbox += bvh->pos[f.x] + ym_vec3f(r0);
+                prim->bbox += bvh->pos[f.y] - ym_vec3f(r1);
+                prim->bbox += bvh->pos[f.y] + ym_vec3f(r1);
                 prim->center = ym_rcenter(prim->bbox);
             }
         } break;
@@ -1453,9 +1463,9 @@ YGL_API void yb_build_shape_bvh(yb_shape_bvh* bvh) {
                 yb__bound_prim* prim = &bound_prims[i];
                 prim->pid = i;
                 prim->bbox = ym_invalid_range3f;
-                prim->bbox = ym_rexpand(prim->bbox, bvh->pos[f.x]);
-                prim->bbox = ym_rexpand(prim->bbox, bvh->pos[f.y]);
-                prim->bbox = ym_rexpand(prim->bbox, bvh->pos[f.z]);
+                prim->bbox += bvh->pos[f.x];
+                prim->bbox += bvh->pos[f.y];
+                prim->bbox += bvh->pos[f.z];
                 prim->center = ym_rcenter(prim->bbox);
             }
         } break;
@@ -1545,10 +1555,8 @@ YGL_API void yb_build_scene_bvh(yb_scene_bvh* bvh) {
             {prim->bbox.max.x, prim->bbox.max.y, prim->bbox.max.z},
         };
         prim->bbox = ym_invalid_range3f;
-        for (int j = 0; j < 8; j++) {
-            prim->bbox =
-                ym_rexpand(prim->bbox, ym_transform_point(xform, corners[j]));
-        }
+        for (int j = 0; j < 8; j++)
+            prim->bbox += ym_transform_point(xform, corners[j]);
         prim->center = ym_rcenter(prim->bbox);
     }
 
@@ -1593,17 +1601,14 @@ static inline void yb__recompute_scene_bounds(yb_scene_bvh* bvh, int nodeid) {
                 {bbox.max.x, bbox.max.y, bbox.min.z},
                 {bbox.max.x, bbox.max.y, bbox.max.z},
             };
-            for (int j = 0; j < 8; j++) {
-                node->bbox = ym_rexpand(node->bbox,
-                                        ym_transform_point(xform, corners[j]));
-            }
+            for (int j = 0; j < 8; j++)
+                node->bbox += ym_transform_point(xform, corners[j]);
         }
     } else {
         node->bbox = ym_invalid_range3f;
         for (int i = 0; i < node->count; i++) {
             yb__recompute_scene_bounds(bvh, node->start + i);
-            node->bbox =
-                ym_rexpand(node->bbox, bvh->nodes[node->start + i].bbox);
+            node->bbox += bvh->nodes[node->start + i].bbox;
         }
     }
 }
@@ -1639,6 +1644,26 @@ YGL_API void yb_free_shape_bvh(yb_shape_bvh* bvh) { delete bvh; }
 // -----------------------------------------------------------------------------
 
 //
+// Logging global variables
+//
+#ifdef YGL_BVH_LOG_RAYS
+int yb__log_nrays = 0;
+int yb__log_nbbox_inters = 0;
+int yb__log_npoint_inters = 0;
+int yb__log_nline_inters = 0;
+int yb__log_ntriangle_inters = 0;
+
+YGL_API void yb_get_ray_log(int* nrays, int* nbbox_inters, int* npoint_inters,
+                            int* nline_inters, int* ntriangle_inters) {
+    *nrays = yb__log_nrays;
+    *nbbox_inters = yb__log_nbbox_inters;
+    *npoint_inters = yb__log_npoint_inters;
+    *nline_inters = yb__log_nline_inters;
+    *ntriangle_inters = yb__log_ntriangle_inters;
+}
+#endif
+
+//
 // Intersect ray with a bvh. Similar to the generic public function whose
 // interface is described above. See yb_intersect_bvh for parameter docs.
 // With respect to that, only adds early_exit to decide whether we exit
@@ -1667,6 +1692,17 @@ static inline bool yb__intersect_bvh(const yb__bvh* bvh, bool early_exit,
     // init ray
     ym_ray3f ray = ray_;
 
+#ifndef YGL_BVH_LEGACY_INTERSECTION
+    // prepare ray for fast queries
+    ym_vec3f ray_dinv = {1 / ray.d.x, 1 / ray.d.y, 1 / ray.d.z};
+    ym_vec3i ray_dsign = {(ray_dinv.x < 0) ? 1 : 0, (ray_dinv.y < 0) ? 1 : 0,
+                          (ray_dinv.z < 0) ? 1 : 0};
+#endif
+
+#ifdef YGL_BVH_LOG_RAYS
+    if (bvh->ntype == yb__ntype_bvh) yb__log_nrays++;
+#endif
+
     // walking stack
     while (node_cur && !(early_exit && hit)) {
         // exit if needed
@@ -1675,8 +1711,17 @@ static inline bool yb__intersect_bvh(const yb__bvh* bvh, bool early_exit,
         // grab node
         const yb__bvhn* node = &bvh->nodes[node_stack[--node_cur]];
 
-        // intersect bbox
+#ifdef YGL_BVH_LOG_RAYS
+        yb__log_nbbox_inters++;
+#endif
+
+// intersect bbox
+#ifndef YGL_BVH_LEGACY_INTERSECTION
+        if (!yb__intersect_check_bbox(ray, ray_dinv, ray_dsign, node->bbox))
+            continue;
+#else
         if (!yb__intersect_check_bbox(ray, node->bbox)) continue;
+#endif
 
         // intersect node, switching based on node type
         // for each type, iterate over the the primitive list
@@ -1684,9 +1729,14 @@ static inline bool yb__intersect_bvh(const yb__bvh* bvh, bool early_exit,
         switch (ntype) {
             // internal node
             case yb__ntype_internal: {
-                // for internal nodes, attempts to proceed along the
-                // split axis from smallest to largest nodes
-                if ((&ray.d.x)[node->axis] >= 0) {
+// for internal nodes, attempts to proceed along the
+// split axis from smallest to largest nodes
+#ifndef YGL_BVH_LEGACY_INTERSECTION
+                bool reverse = ray_dsign[node->axis];
+#else
+                bool reverse = (&ray.d.x)[node->axis] < 0;
+#endif
+                if (reverse) {
                     for (int i = 0; i < node->count; i++) {
                         int idx = node->start + i;
                         node_stack[node_cur++] = idx;
@@ -1710,6 +1760,9 @@ static inline bool yb__intersect_bvh(const yb__bvh* bvh, bool early_exit,
                         hit = true;
                         *eid = idx;
                     }
+#ifdef YGL_BVH_LOG_RAYS
+                    yb__log_npoint_inters += node->count;
+#endif
                 }
             } break;
             case yb__ntype_line: {
@@ -1724,6 +1777,9 @@ static inline bool yb__intersect_bvh(const yb__bvh* bvh, bool early_exit,
                         *eid = idx;
                     }
                 }
+#ifdef YGL_BVH_LOG_RAYS
+                yb__log_nline_inters += node->count;
+#endif
             } break;
             case yb__ntype_triangle: {
                 const yb_shape_bvh* sbvh = (const yb_shape_bvh*)bvh;
@@ -1737,6 +1793,9 @@ static inline bool yb__intersect_bvh(const yb__bvh* bvh, bool early_exit,
                         *eid = idx;
                     }
                 }
+#ifdef YGL_BVH_LOG_RAYS
+                yb__log_ntriangle_inters += node->count;
+#endif
             } break;
             case yb__ntype_bvh: {
                 const yb_scene_bvh* sbvh = (const yb_scene_bvh*)bvh;
@@ -2068,77 +2127,94 @@ YGL_API void yb_interpolate_vert(const int* elem, int etype, int eid,
 // -----------------------------------------------------------------------------
 
 //
-// Implementation of the function below
+// Compute BVH stats.
 //
-static inline void yb__print_bvh_stats_rec(const yb__bvh* bvh,
-                                           const yb__bvhn* n, int d) {
-    for (int i = 0; i < d; i++) printf(" ");
-    printf("%s\n", (!n->isleaf) ? "-" : "*");
-    if (!n->isleaf) {
-        for (int i = 0; i < n->count; i++) {
-            int idx = n->start + i;
-            yb__print_bvh_stats_rec(bvh, &bvh->nodes[idx], d + 1);
+YGL_API void yb__compute_bvh_stats(const yb__bvh* bvh, bool include_shapes,
+                                   int depth, int* nprims, int* ninternals,
+                                   int* nleaves, int* min_depth,
+                                   int* max_depth) {
+    // node stack
+    ym_vec2i node_stack[128];  // node and depth
+    int node_cur = 0;
+    node_stack[node_cur++] = ym_vec2i{0, depth};
+
+    // walk the stack
+    while (node_cur) {
+        // get node and depth
+        ym_vec2i node_depth = node_stack[--node_cur];
+        const yb__bvhn* node = &bvh->nodes[node_depth.x];
+
+        // update stats
+        int ntype = (node->isleaf) ? bvh->ntype : yb__ntype_internal;
+        switch (ntype) {
+            case yb__ntype_internal: {
+                *ninternals += 1;
+                for (int i = 0; i < node->count; i++) {
+                    node_stack[node_cur++] =
+                        ym_vec2i(node->start + i, node_depth.y + 1);
+                }
+            } break;
+            case yb__ntype_point:
+            case yb__ntype_line:
+            case yb__ntype_triangle: {
+                *nleaves += 1;
+                *nprims += node->count;
+                *min_depth = ym_min(*min_depth, node_depth.y);
+                *max_depth = ym_max(*max_depth, node_depth.y);
+            } break;
+            case yb__ntype_bvh: {
+                if (include_shapes) {
+                    for (int i = 0; i < node->count; i++) {
+                        const yb_shape_bvh* shape_bvh =
+                            ((const yb_scene_bvh*)bvh)->shapes[node->start + i];
+                        yb__compute_bvh_stats(shape_bvh, true, node_depth.y + 1,
+                                              nprims, ninternals, nleaves,
+                                              min_depth, max_depth);
+                    }
+                } else {
+                    *nleaves += 1;
+                    *nprims += node->count;
+                    *min_depth = ym_min(*min_depth, node_depth.y);
+                    *max_depth = ym_max(*max_depth, node_depth.y);
+                }
+            };
         }
     }
 }
 
 //
-// Implementation of the function below
+// Compute BVH stats.
 //
-static inline void yb__collect_bvh_stats(const yb__bvh* bvh, const yb__bvhn* n,
-                                         int d, int* nl, int* ni, int* sump,
-                                         int* mind, int* maxd, int* sumd) {
-    if (n->isleaf) {
-        *mind = (*mind < d) ? *mind : d;
-        *maxd = (*maxd > d) ? *maxd : d;
-        *sumd += d;
-        (*nl)++;
-        (*sump) += n->count;
-    } else {
-        (*ni)++;
-        for (int i = 0; i < n->count; i++) {
-            int idx = n->start + i;
-            yb__collect_bvh_stats(bvh, &bvh->nodes[idx], d + 1, nl, ni, sump,
-                                  mind, maxd, sumd);
-        }
-    }
+YGL_API void yb_compute_scene_bvh_stats(const yb_scene_bvh* bvh,
+                                        bool include_shapes, int* nprims,
+                                        int* ninternals, int* nleaves,
+                                        int* min_depth, int* max_depth) {
+    // init out variables
+    *nprims = 0;
+    *ninternals = 0;
+    *nleaves = 0;
+    *min_depth = 10000;
+    *max_depth = -1;
+
+    yb__compute_bvh_stats(bvh, include_shapes, 0, nprims, ninternals, nleaves,
+                          min_depth, max_depth);
 }
 
 //
-// Print bvh for debugging
+// Compute BVH stats.
 //
-YGL_API void yb__print_bvh_stats(const yb__bvh* bvh, bool print_tree) {
-    printf("nodes:  %d\nprims: %d\n", (int)bvh->nodes.size(),
-           (int)bvh->sorted_prim.size());
-    int nl = 0, ni = 0, sump = 0, mind = 0, maxd = 0, sumd = 0;
-    yb__collect_bvh_stats(bvh, bvh->nodes.data(), 0, &nl, &ni, &sump, &mind,
-                          &maxd, &sumd);
-    printf("leaves:  %d\ninternal: %d\nprims per leaf: %f\n", nl, ni,
-           (float)sump / (float)nl);
-    printf("min depth:  %d\nmax depth: %d\navg depth: %f\n", mind, maxd,
-           (float)sumd / (float)nl);
-    yb__print_bvh_stats_rec(bvh, bvh->nodes.data(), 0);
-    if (bvh->ntype == yb__ntype_bvh) {
-        const yb_scene_bvh* sbvh = (const yb_scene_bvh*)bvh;
-        for (int i = 0; i < bvh->sorted_prim.size(); i++)
-            yb__print_bvh_stats(sbvh->shapes[i], print_tree);
-    }
-}
+YGL_API void yb_compute_shape_bvh_stats(const yb_shape_bvh* bvh, int* nprims,
+                                        int* ninternals, int* nleaves,
+                                        int* min_depth, int* max_depth) {
+    // init out variables
+    *nprims = 0;
+    *ninternals = 0;
+    *nleaves = 0;
+    *min_depth = 10000;
+    *max_depth = -1;
 
-//
-// Print bvh for debugging
-//
-YGL_API void yb_print_scene_bvh_stats(const yb_scene_bvh* bvh,
-                                      bool print_tree) {
-    yb__print_bvh_stats(bvh, print_tree);
-}
-
-//
-// Print bvh for debugging
-//
-YGL_API void yb_print_scene_bvh_stats(const yb_shape_bvh* bvh,
-                                      bool print_tree) {
-    yb__print_bvh_stats(bvh, print_tree);
+    yb__compute_bvh_stats(bvh, false, 0, nprims, ninternals, nleaves, min_depth,
+                          max_depth);
 }
 
 // -----------------------------------------------------------------------------
@@ -2165,11 +2241,13 @@ YGLC_API yb_scene_bvh* ybc_init_scene_bvh(int nbvhs, int heuristic) {
 //
 // Sets the BVH for a given shape.
 //
-YGLC_API void ybc_set_shape_bvh(yb_scene_bvh* bvh, int sid, float xform[16],
-                                int nelems, int* elem, int etype, int nverts,
-                                float* pos, float* radius, int heuristic) {
+YGLC_API void ybc_set_shape_bvh(yb_scene_bvh* bvh, int sid,
+                                const float xform[16], int nelems,
+                                const int* elem, int etype, int nverts,
+                                const float* pos, const float* radius,
+                                int heuristic) {
     return yb_set_shape_bvh(bvh, sid, ym_affine3f(ym_mat4f(xform)), nelems,
-                            elem, etype, nverts, (ym_vec3f*)pos, radius,
+                            elem, etype, nverts, (const ym_vec3f*)pos, radius,
                             heuristic);
 }
 
@@ -2275,13 +2353,6 @@ YGLC_API void ybc_interpolate_vert(const int* elem, int etype, int eid,
                                    const float* vert, float* v) {
     return yb_interpolate_vert(elem, etype, eid, ym_vec2f(euv), vsize, vert, v);
 }
-
-//
-// Print stats for the given BVH. Mostly useful for debugging or performance
-// analysis. Ignore for general purpose.
-//
-YGLC_API void ybc_print_scene_bvh_stats(const yb_scene_bvh* bvh,
-                                        bool print_tree);
 
 #endif
 
