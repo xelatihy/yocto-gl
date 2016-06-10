@@ -73,3 +73,13 @@ build bin/obj/yview.o: cpp apps/yview.cpp
 
 build bin/yview: app  bin/obj/libglfw3.a bin/obj/libglew.a bin/obj/libyocto.a  bin/obj/yview.o
 
+
+build bin/obj/test_bvh.o: cpp apps/test_bvh.cpp
+
+build bin/test_bvh: app  bin/obj/libglfw3.a bin/obj/libglew.a bin/obj/libyocto.a  bin/obj/test_bvh.o
+
+
+build bin/obj/test_obj.o: cpp apps/test_obj.cpp
+
+build bin/test_obj: app  bin/obj/libglfw3.a bin/obj/libglew.a bin/obj/libyocto.a  bin/obj/test_obj.o
+

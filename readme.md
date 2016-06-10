@@ -49,6 +49,9 @@ really unreadable, defeating one of the main tenants of Yocto/GL.
 
 ## Possible Future Development
 
+- Implementation Notes
+    - Quality improvements on BVH data
+    - Moving to STL containers by default
 - Particle-based simluation coming soon.
 - Procedural grammars.
 

@@ -441,36 +441,37 @@ void ui_loop(const ym_string& filename, const ym_string& imfilename,
     delete view;
 }
 
-bool intersect_ray(const void* ctx, const ym_ray3f& ray, float* ray_t, int* sid,
-                   int* eid, ym_vec2f* euv) {
-    yb_scene_bvh* bvh = (yb_scene_bvh*)ctx;
-    return yb_intersect_scene_bvh(bvh, ray, ray_t, sid, eid, euv);
+bool intersect_first(const void* ctx, const ym_ray3f& ray, float* ray_t,
+                     int* sid, int* eid, ym_vec2f* euv) {
+    const yb_scene* scene_bvh = (const yb_scene*)ctx;
+    return yb_intersect_first(scene_bvh, ray, ray_t, sid, eid, euv);
 }
 
-bool hit_ray(const void* ctx, const ym_ray3f& ray) {
-    yb_scene_bvh* bvh = (yb_scene_bvh*)ctx;
-    return yb_hit_scene_bvh(bvh, ray);
+bool intersect_any(const void* ctx, const ym_ray3f& ray) {
+    const yb_scene* scene_bvh = (const yb_scene*)ctx;
+    return yb_intersect_any(scene_bvh, ray);
 }
 
-yb_scene_bvh* make_bvh(const yo_scene* scene) {
-    yb_scene_bvh* scene_bvh = yb_init_scene_bvh((int)scene->shapes.size(), 0);
+yb_scene* make_bvh(const yo_scene* scene) {
+    yb_scene* scene_bvh = yb_init_scene((int)scene->shapes.size());
     for (int sid = 0; sid < scene->shapes.size(); sid++) {
         const yo_shape* shape = &scene->shapes[sid];
-        yb_set_shape_bvh(scene_bvh, sid, shape->xform, shape->nelems,
-                         shape->elem.data(), shape->etype, shape->nverts,
-                         shape->pos.data(), shape->radius.data(), 0);
+        yb_set_shape(scene_bvh, sid, shape->xform, shape->nelems,
+                     shape->elem.data(), shape->etype, shape->nverts,
+                     shape->pos.data(), shape->radius.data());
     }
-    yb_build_scene_bvh(scene_bvh);
+    yb_build_bvh(scene_bvh, 0);
     return scene_bvh;
 }
 
-yt_scene* init_trace_cb(const yo_scene* scene, yb_scene_bvh* bvh, int camera) {
+yt_scene* init_trace_cb(const yo_scene* scene, yb_scene* scene_bvh,
+                        int camera) {
     yt_scene* trace_scene =
         yt_make_scene((int)scene->cameras.size(), (int)scene->shapes.size(),
                       (int)scene->materials.size(), (int)scene->textures.size(),
                       (int)scene->envs.size());
 
-    yt_set_intersection(trace_scene, bvh, intersect_ray, hit_ray);
+    yt_set_intersection(trace_scene, scene_bvh, intersect_first, intersect_any);
 
     for (int sid = 0; sid < scene->envs.size(); sid++) {
         const yo_camera* cam = &scene->cameras[sid];
@@ -658,7 +659,7 @@ int main(int argc, const char** argv) {
     scene->cameras[camera].width = aspect * scene->cameras[camera].height;
 
     // preparing raytracer
-    yb_scene_bvh* scene_bvh = make_bvh(scene);
+    yb_scene* scene_bvh = make_bvh(scene);
     yt_scene* trace_scene = init_trace_cb(scene, scene_bvh, camera);
     yt_render_params params;
     params.stype = (camera_lights) ? yt_stype_eyelight : stype;
