@@ -9,20 +9,22 @@
 //
 // 0. include this file (more compilation options below)
 // 1. create the scene bvh
-//      bvh = yb_init_scene_bvh(mnshapes, heuristic)
+//      scene = yb_init_scene(mnshapes)
 // 2. for each shape, add shape data
 //     for(int i = 0; i < nshapes; i ++)
-//         yb_set_shape_bvh(bvh, pass shape data)
-// 3. build the bvh with yb_build_scene_bvh
+//         yb_set_shape(scene, pass shape data)
+// 3. build the bvh with yb_build_scene
 // 4.a. perform ray-interseciton tests
-//     - use yb_intersect_bvh if you want to know the hit point
-//         hit = yb_intersect_bvh(bvh, ray data, out primitive intersection)
-//     - use yb_hit_bvh if you only need to know whether there is a hit
-//         hit = yb_hit_bvh(bvh, ray data)
+//     - use yb_intersect_first if you want to know the hit point
+//         hit = yb_intersect_first(scene, ray data, out primitive intersection)
+//     - use yb_intersect_any if you only need to know whether there is a hit
+//         hit = yb_intersect_any(scene, ray data)
 // 4.b. perform closet-point tests
-//     - use yb_neightbor_bvh to get the closet element to a point
+//     - use yb_overlap_first to get the closet element to a point
 //       bounded by a radius
-//         hit = yb_neightbor_bvh(bvh, pos, radius, out primitive)
+//         hit = yb_overlap_first(scene, pos, radius, out primitive)
+//     - use yb_overlap_any to check whether there is an element that overlaps
+//         a point within a given radius
 // 5. use yb_interpolate_vertex to get interpolated vertex values from the
 //    intersection data
 //    yb_interpolate_vertex(intersection data, shape data, out interpolated val)
@@ -30,8 +32,7 @@
 //    rebuild the bvh for large changes)
 // 7. cleanup with yb_free_bvh
 //   - you have to do this for each shape bvh and the scene bvh
-//   yb_free_bvh(bvh)
-//   for(int i = 0; i < nshapes; i ++) yb_free_bvh(shape_bvhs[i])
+//   yb_free_scene(scene)
 //
 // The interface for each function is described in details in the interface
 // section of this file.
@@ -68,6 +69,7 @@
 
 //
 // HISTORY:
+// - v 0.3: cleaner interface based on opaque yb_scene
 // - v 0.2: better internal intersections and cleaner bvh stats
 // - v 0.1: C++ implementation
 // - v 0.0: initial release in C99
@@ -145,14 +147,9 @@ enum {
 };
 
 //
-// Scene BVH data structure. Implementation details hidden.
+// Scene data structure. Implementation details hidden.
 //
-struct yb_scene_bvh;
-
-//
-// Shape BVH data structure. Implementation details hidden.
-//
-struct yb_shape_bvh;
+struct yb_scene;
 
 //
 // Create a BVH for a collection of transformed shapes (scene).
@@ -162,9 +159,8 @@ struct yb_shape_bvh;
 //
 // Parameters:
 // - nshapes: number of shape bvhs
-// - heuristic: heristic use to build the bvh (0 for deafult)
 //
-YGL_API yb_scene_bvh* yb_init_scene_bvh(int nshapes, int heuristic);
+YGL_API yb_scene* yb_init_scene(int nshapes);
 
 //
 // Sets shape data for scene BVH. Equivalent to calling init_shape_bvh.
@@ -178,13 +174,10 @@ YGL_API yb_scene_bvh* yb_init_scene_bvh(int nshapes, int heuristic);
 // - etype: shape element type (as per previous enum)
 // - pos: array of 3D vertex positions
 // - radius: array of vertex radius
-// - heuristic: heristic use to build the bvh (0 for deafult)
 //
-YGL_API void yb_set_shape_bvh(yb_scene_bvh* bvh, int sid,
-                              const ym_affine3f& xform, int nelems,
-                              const int* elem, int etype, int nverts,
-                              const ym_vec3f* pos, const float* radius,
-                              int heuristic);
+YGL_API void yb_set_shape(yb_scene* scene, int sid, const ym_affine3f& xform,
+                          int nelems, const int* elem, int etype, int nverts,
+                          const ym_vec3f* pos, const float* radius);
 
 //
 // Builds a shape BVH.
@@ -193,7 +186,7 @@ YGL_API void yb_set_shape_bvh(yb_scene_bvh* bvh, int sid,
 // - bvh: bvh to build
 // - heuristic: heristic use to build the bvh (0 for deafult)
 //
-YGL_API void yb_build_scene_bvh(yb_scene_bvh* bvh);
+YGL_API void yb_build_bvh(yb_scene* scene, int heuristic);
 
 //
 // Clears BVH memory.
@@ -204,69 +197,26 @@ YGL_API void yb_build_scene_bvh(yb_scene_bvh* bvh);
 // Parameters:
 // - bvh: bvh to clean
 //
-YGL_API void yb_free_scene_bvh(yb_scene_bvh* bvh);
-
-//
-// Create a BVH for a given shape.
-//
-// Shapes are indexed meshes with 1, 2, 3, 4 indices respectively for points,
-// lines, triangles and quads. Vertices have positions and radius, the latter
-// required only for points and lines.
-//
-// Parameters:
-// - nelems: number of elements
-// - elem: array of vertex indices
-// - etype: shape element type (as per previous enum)
-// - pos: array of 3D vertex positions
-// - radius: array of vertex radius
-// - heuristic: heristic use to build the bvh (0 for deafult)
-//
-// Return:
-// - shape bvh
-//
-YGL_API yb_shape_bvh* yb_init_shape_bvh(int nelems, const int* elem, int etype,
-                                        int nverts, const ym_vec3f* pos,
-                                        const float* radius, int heuristic);
-
-//
-// Builds a shape BVH.
-//
-// Parameters:
-// - bvh: bvh to build
-// - heuristic: heristic use to build the bvh (0 for deafult)
-//
-YGL_API void yb_build_shape_bvh(yb_shape_bvh* bvh);
-
-//
-// Clears BVH memory.
-//
-// This will only clear the memory for the given bvh. For scene bvhs, you are
-// still responsible for clearing all shape bvhs.
-//
-// Parameters:
-// - bvh: bvh to clean
-//
-YGL_API void yb_free_shape_bvh(yb_shape_bvh* bvh);
+YGL_API void yb_free_scene(yb_scene* scene);
 
 //
 // Refit the bounds of each shape for moving objects. Use this only to avoid
 // a rebuild, but note that queries are likely slow if objects move a lot.
 //
 // Parameters:
-// - bvh: bvh to refit
+// - scene: scene to refit
 // - bvhs: array of pointers to shape bvhs
 //
-YGL_API void yb_refit_scene_bvh(yb_scene_bvh* bvh, const ym_affine3f* xforms);
+YGL_API void yb_refit_scene_bvh(yb_scene* scene, const ym_affine3f* xforms);
 
 //
 // Intersect the scene with a ray finding the closest intersection.
 //
 // Parameters:
-// - bvh: bvh to intersect (scene or shape)
-// - ray_o: ray origin
-// - ray_d: ray direction
-// - ray_o: minimal distance along the ray to consider (0 for all)
-// - ray_o: maximal distance along the ray to consider (HUGE_VALF for all)
+// - scene: scene to intersect (scene or shape)
+// - ray: ray origin, direction and min/max distance
+// - req_shape: [optional] whether to restrict to only a particular shape
+//   (-1 for all)
 //
 // Out Parameters:
 // - ray_t: hit distance
@@ -277,24 +227,25 @@ YGL_API void yb_refit_scene_bvh(yb_scene_bvh* bvh, const ym_affine3f* xforms);
 // Return:
 // - whether we intersect or not
 //
-YGL_API bool yb_intersect_scene_bvh(const yb_scene_bvh* bvh,
-                                    const ym_ray3f& ray, float* ray_t, int* sid,
-                                    int* eid, ym_vec2f* euv);
+YGL_API bool yb_intersect_first(const yb_scene* scene, const ym_ray3f& ray,
+                                float* ray_t, int* sid, int* eid, ym_vec2f* euv,
+                                int req_shape = -1);
 
 //
-// Intersect the scene with a ray finding any intersection.
+// Intersect the scene with a ray finding any intersection (good for shadow
+// rays).
 //
 // Parameters:
-// - bvh: bvh to intersect (scene or shape)
-// - ray_o: ray origin
-// - ray_d: ray direction
-// - ray_o: minimal distance along the ray to consider (0 for all)
-// - ray_o: maximal distance along the ray to consider (HUGE_VALF for all)
+// - scene: scene to intersect (scene or shape)
+// - ray: ray origin, direction and min/max distance
+// - req_shape: [optional] whether to restrict to only a particular shape
+//   (-1 for all)
 //
 // Return:
 // - whether we intersect or not
 //
-YGL_API bool yb_hit_scene_bvh(const yb_scene_bvh* bvh, const ym_ray3f& ray);
+YGL_API bool yb_intersect_any(const yb_scene* scene, const ym_ray3f& ray,
+                              int req_shape = -1);
 
 //
 // Returns a list of shape pairs that can possibly overlap by checking only they
@@ -302,7 +253,7 @@ YGL_API bool yb_hit_scene_bvh(const yb_scene_bvh* bvh, const ym_ray3f& ray);
 // detection.
 //
 // Parameters:
-// - bvh: scene bvh
+// - scene: scene
 // - exclude_self: whether to exlude self intersections
 // - overlap_cb: function called for each overlap
 //
@@ -315,7 +266,7 @@ YGL_API bool yb_hit_scene_bvh(const yb_scene_bvh* bvh, const ym_ray3f& ray);
 //   will be present; this makes it easier to apply asymmetric checks
 // - to remove symmetric checks, just skip all pairs with i > j
 //
-YGL_API int yb_overlap_shape_bounds(const yb_scene_bvh* bvh, bool exclude_self,
+YGL_API int yb_overlap_shape_bounds(const yb_scene* scene, bool exclude_self,
                                     void* overlap_ctx,
                                     void (*overlap_cb)(const ym_vec2i& v));
 
@@ -325,7 +276,7 @@ YGL_API int yb_overlap_shape_bounds(const yb_scene_bvh* bvh, bool exclude_self,
 // detection.
 //
 // Parameters:
-// - bvh: scene bvh
+// - scene: scene
 // - exclude_self: whether to exlude self intersections
 // - overlaps: possible shape overlaps
 //
@@ -334,17 +285,17 @@ YGL_API int yb_overlap_shape_bounds(const yb_scene_bvh* bvh, bool exclude_self,
 //
 // Notes: See above.
 //
-YGL_API int yb_overlap_shape_bounds(const yb_scene_bvh* bvh, bool exclude_self,
+YGL_API int yb_overlap_shape_bounds(const yb_scene* scene, bool exclude_self,
                                     ym_vector<ym_vec2i>* overlaps);
 
 //
-// Finds the closest element to a point wihtin a given radius.
+// Finds the closest element that overlaps a point within a given radius.
 //
 // Parameters:
-// - bvh: bvh to intersect (scene or shape)
+// - scene: scene to check
 // - pt: ray origin
 // - max_dist: max point distance
-// - req_sid: required shape (-1 for all)
+// - req_shape: [optional] required shape (-1 for all)
 //
 // Out Parameters:
 // - dist: distance
@@ -353,11 +304,26 @@ YGL_API int yb_overlap_shape_bounds(const yb_scene_bvh* bvh, bool exclude_self,
 // - euv: element parameters
 //
 // Return:
-// - whether we intersect or not
+// - whether we overlap or not
 //
-YGL_API bool yb_neighbour_scene_bvh(const yb_scene_bvh* bvh, const ym_vec3f& pt,
-                                    float max_dist, int req_sid, float* dist,
-                                    int* sid, int* eid, ym_vec2f* euv);
+YGL_API bool yb_overlap_first(const yb_scene* scene, const ym_vec3f& pt,
+                              float max_dist, float* dist, int* sid, int* eid,
+                              ym_vec2f* euv, int req_shape = -1);
+
+//
+// Finds any element that overlaps a point wihtin a given radius.
+//
+// Parameters:
+// - scene: scene to check
+// - pt: ray origin
+// - max_dist: max point distance
+// - req_shape: [optional] required shape (-1 for all)
+//
+// Return:
+// - whether we overlap or not
+//
+YGL_API bool yb_overlap_any(const yb_scene* scene, const ym_vec3f& pt,
+                            float max_dist, int req_shape = -1);
 
 //
 // Interpolates a vertex property from the given intersection data. Uses
@@ -386,13 +352,10 @@ YGL_API void yb_interpolate_vert(const int* elem, int etype, int eid,
 //
 // Compute BVH stats.
 //
-YGL_API void yb_compute_scene_bvh_stats(const yb_scene_bvh* bvh,
-                                        bool include_shapes, int* nprims,
-                                        int* ninternals, int* nleaves,
-                                        int* min_depth, int* max_depth);
-YGL_API void yb_compute_shape_bvh_stats(const yb_shape_bvh* bvh, int* nprims,
-                                        int* ninternals, int* nleaves,
-                                        int* min_depth, int* max_depth);
+YGL_API void yb_compute_bvh_stats(const yb_scene* scene, bool include_shapes,
+                                  int* nprims, int* ninternals, int* nleaves,
+                                  int* min_depth, int* max_depth,
+                                  int req_shape = -1);
 
 //
 // Logging (not thread safe to avoid affecting speed)
@@ -409,36 +372,9 @@ YGL_API void yb_get_ray_log(int* nrays, int* nbbox_inters, int* npoint_inters,
 // -----------------------------------------------------------------------------
 
 //
-// Scene BVH data structure. Implementation details hidden.
+// Scene data structure. Implementation details hidden.
 //
-typedef struct yb_scene_bvh yb_scene_bvh;
-
-//
-// Shape BVH data structure. Implementation details hidden.
-//
-typedef struct yb_shape_bvh yb_shape_bvh;
-
-//
-// Create a BVH for a given shape.
-//
-// Shapes are indexed meshes with 1, 2, 3, 4 indices respectively for points,
-// lines, triangles and quads. Vertices have positions and radius, the latter
-// required only for points and lines.
-//
-// Parameters:
-// - nelems: number of elements
-// - elem: array of vertex indices
-// - etype: shape element type (as per previous enum)
-// - pos: array of 3D vertex positions
-// - radius: array of vertex radius
-// - heuristic: heristic use to build the bvh (0 for deafult)
-//
-// Return:
-// - shape bvh
-//
-YGLC_API yb_shape_bvh* ybc_init_shape_bvh(int nelems, int* elem, int etype,
-                                          int nverts, float* pos, float* radius,
-                                          int heuristic);
+typedef struct yb_scene yb_scene;
 
 //
 // Create a BVH for a collection of transformed shapes (scene).
@@ -447,16 +383,15 @@ YGLC_API yb_shape_bvh* ybc_init_shape_bvh(int nelems, int* elem, int etype,
 // supports only affine transforms.
 //
 // Parameters:
-// - nbvhs: number of shape bvhs
-// - heuristic: heristic use to build the bvh (0 for deafult)
+// - nshapes: number of shapes
 //
-YGLC_API yb_scene_bvh* ybc_init_scene_bvh(int nbvhs, int heuristic);
+YGLC_API yb_scene* ybc_init_scene(int nshapes);
 
 //
 // Sets shape data for scene BVH. Equivalent to calling init_shape_bvh.
 //
 // Parameters:
-// - bvh: scene bvh
+// - scene: scene
 // - sid: shape id
 // - xform: shape transform
 // - nelems: number of elements
@@ -464,13 +399,10 @@ YGLC_API yb_scene_bvh* ybc_init_scene_bvh(int nbvhs, int heuristic);
 // - etype: shape element type (as per previous enum)
 // - pos: array of 3D vertex positions
 // - radius: array of vertex radius
-// - heuristic: heristic use to build the bvh (0 for deafult)
 //
-YGLC_API void ybc_set_shape_bvh(yb_scene_bvh* bvh, int sid,
-                                const float xform[16], int nelems,
-                                const int* elem, int etype, int nverts,
-                                const float* pos, const float* radius,
-                                int heuristic);
+YGLC_API void ybc_set_shape(yb_scene* scene, int sid, const float xform[16],
+                            int nelems, const int* elem, int etype, int nverts,
+                            const float* pos, const float* radius);
 
 //
 // Clears BVH memory.
@@ -479,40 +411,30 @@ YGLC_API void ybc_set_shape_bvh(yb_scene_bvh* bvh, int sid,
 // still responsible for clearing all shape bvhs.
 //
 // Parameters:
-// - bvh: bvh to clean
+// - scene: scene to clean
 //
-YGLC_API void ybc_free_scene_bvh(yb_scene_bvh* bvh);
-
-//
-// Clears BVH memory.
-//
-// This will only clear the memory for the given bvh. For scene bvhs, you are
-// still responsible for clearing all shape bvhs.
-//
-// Parameters:
-// - bvh: bvh to clean
-//
-YGLC_API void ybc_free_shape_bvh(yb_shape_bvh* bvh);
+YGLC_API void ybc_free_scene(yb_scene* scene);
 
 //
 // Refit the bounds of each shape for moving objects. Use this only to avoid
 // a rebuild, but note that queries are likely slow if objects move a lot.
 //
 // Parameters:
-// - bvh: bvh to refit
+// - scene: scene to refit
 // - bvhs: array of pointers to shape bvhs
 //
-YGLC_API void ybc_refit_scene_bvh(yb_scene_bvh* bvh, const float* xforms[16]);
+YGLC_API void ybc_refit_bvh(yb_scene* scene, const float* xforms[16]);
 
 //
 // Intersect the scene with a ray finding the closest intersection.
 //
 // Parameters:
-// - bvh: bvh to intersect (scene or shape)
+// - scene: scene to intersect
 // - ray_o: ray origin
 // - ray_d: ray direction
 // - ray_o: minimal distance along the ray to consider (0 for all)
 // - ray_o: maximal distance along the ray to consider (HUGE_VALF for all)
+// - req_shape: required shape (or -1 for all scene)
 //
 // Out Parameters:
 // - ray_t: hit distance
@@ -523,11 +445,10 @@ YGLC_API void ybc_refit_scene_bvh(yb_scene_bvh* bvh, const float* xforms[16]);
 // Return:
 // - whether we intersect or not
 //
-YGLC_API bool ybc_intersect_scene_bvh(const yb_scene_bvh* bvh,
-                                      const float ray_o[3],
-                                      const float ray_d[3], float ray_tmin,
-                                      float ray_tmax, float* ray_t, int* sid,
-                                      int* eid, float euv[2]);
+YGLC_API bool ybc_intersect_first(const yb_scene* scene, const float ray_o[3],
+                                  const float ray_d[3], float ray_tmin,
+                                  float ray_tmax, float* ray_t, int* sid,
+                                  int* eid, float euv[2], int req_shape);
 
 //
 // Intersect the scene with a ray finding any intersection.
@@ -538,13 +459,14 @@ YGLC_API bool ybc_intersect_scene_bvh(const yb_scene_bvh* bvh,
 // - ray_d: ray direction
 // - ray_o: minimal distance along the ray to consider (0 for all)
 // - ray_o: maximal distance along the ray to consider (HUGE_VALF for all)
+// - req_shape: required shape (or -1 for all scene)
 //
 // Return:
 // - whether we intersect or not
 //
-YGLC_API bool ybc_hit_scene_bvh(const yb_scene_bvh* bvh, const float ray_o[3],
+YGLC_API bool ybc_intersect_any(const yb_scene* scene, const float ray_o[3],
                                 const float ray_d[3], float ray_tmin,
-                                float ray_tmax);
+                                float ray_tmax, int req_shape);
 
 //
 // Returns a list of shape pairs that can possibly overlap by checking only they
@@ -566,8 +488,8 @@ YGLC_API bool ybc_hit_scene_bvh(const yb_scene_bvh* bvh, const float ray_o[3],
 //   will be present; this makes it easier to apply asymmetric checks
 // - to remove symmetric checks, just skip all pairs with i > j
 //
-YGLC_API int ybc_overlap_shape_bounds(const yb_scene_bvh* bvh,
-                                      bool exclude_self, void* overlap_ctx,
+YGLC_API int ybc_overlap_shape_bounds(const yb_scene* scene, bool exclude_self,
+                                      void* overlap_ctx,
                                       void (*overlap_cb)(void* ctx,
                                                          const int ij[2]));
 
@@ -575,10 +497,10 @@ YGLC_API int ybc_overlap_shape_bounds(const yb_scene_bvh* bvh,
 // Finds the closest element to a point wihtin a given radius.
 //
 // Parameters:
-// - bvh: bvh to intersect (scene or shape)
+// - scene: scene to overlap (scene or shape)
 // - pt: ray origin
 // - max_dist: max point distance
-// - req_sid: required shape (-1 for all)
+// - req_shape: required shape (-1 for all)
 //
 // Out Parameters:
 // - dist: distance
@@ -587,12 +509,32 @@ YGLC_API int ybc_overlap_shape_bounds(const yb_scene_bvh* bvh,
 // - euv: element parameters
 //
 // Return:
-// - whether we intersect or not
+// - whether we overlap or not
 //
-YGLC_API bool ybc_neighbour_scene_bvh(const yb_scene_bvh* bvh,
-                                      const float pt[3], float max_dist,
-                                      int req_sid, float* dist, int* sid,
-                                      int* eid, float euv[2]);
+YGLC_API bool ybc_overlap_first(const yb_scene* scene, const float pt[3],
+                                float max_dist, float* dist, int* sid, int* eid,
+                                float euv[2], int req_shape);
+
+//
+// Finds if any element overlaps a point wihtin a given radius.
+//
+// Parameters:
+// - scene: scene to overlap
+// - pt: origin
+// - max_dist: max point distance
+// - req_shape: required shape (-1 for all)
+//
+// Out Parameters:
+// - dist: distance
+// - sid: shape index
+// - eid: element index
+// - euv: element parameters
+//
+// Return:
+// - whether we overlap or not
+//
+YGLC_API bool ybc_overlap_any(const yb_scene* scene, const float pt[3],
+                              float max_dist, int req_shape);
 
 //
 // Interpolates a vertex property from the given intersection data. Uses
@@ -1115,42 +1057,39 @@ struct yb__bvhn {
 //
 struct yb__bvh {
     // bvh data
-    int ntype;                   // type of primitive data contained by bvh
-    int heuristic;               // heuristic used to build the bvh
     ym_vector<yb__bvhn> nodes;   // sorted array of internal nodes
     ym_vector<int> sorted_prim;  // sorted elements
 };
 
 //
-// Shape BVH
+// Shape Data
 //
-struct yb_shape_bvh : yb__bvh {
-    int nelems;  // shape elements
-    int etype;   // shape element type
+struct yb_shape {
+    // shape data
+    int nelems = 0;  // shape elements
+    int etype = 0;   // shape element type
     union {
-        const int* elem;  // shape elements
+        const int* elem = nullptr;  // shape elements
         const int* point;
         const ym_vec2i* line;
         const ym_vec3i* triangle;
     };
-    const ym_vec3f* pos;  // vertex pos
-    const float* radius;  // vertex radius
+    const ym_vec3f* pos = nullptr;  // vertex pos
+    const float* radius = nullptr;  // vertex radius
+    // bvh data
+    yb__bvh* bvh = nullptr;  // bvh
 };
 
 //
-// Scene BVH
+// Scene Data
 //
-struct yb_scene_bvh : yb__bvh {
-    int nshapes;                      // number of shapes
-    ym_vector<yb_shape_bvh*> shapes;  // array of shape BVHs
+struct yb_scene {
+    // scene data
+    ym_vector<yb_shape> shapes;  // shapes
     ym_vector<ym_affine3f> xforms;
     ym_vector<ym_affine3f> inv_xforms;
-
-    ~yb_scene_bvh() {
-        for (int i = 0; i < shapes.size(); i++) {
-            if (shapes[i]) delete shapes[i];
-        }
-    }
+    // bvh data
+    yb__bvh* bvh = nullptr;
 };
 
 // -----------------------------------------------------------------------------
@@ -1399,87 +1338,55 @@ static inline void yb__make_node(yb__bvhn* node, int* nnodes, yb__bvhn* nodes,
 }
 
 //
-// Makes a shape BVH. Public function whose interface is described above.
+// Makes a scene BVH. Public function whose interface is described above.
 //
-YGL_API yb_shape_bvh* yb_init_shape_bvh(int nelems, const int* elem, int etype,
-                                        int nverts, const ym_vec3f* pos,
-                                        const float* radius, int heuristic) {
+YGL_API yb_scene* yb_init_scene(int nshapes) {
     // allocates the BVH and set its primitive type
-    yb_shape_bvh* bvh = new yb_shape_bvh();
-    bvh->nelems = nelems;
-    bvh->etype = etype;
-    bvh->elem = elem;
-    bvh->ntype = etype;
-    bvh->pos = (ym_vec3f*)pos;
-    bvh->radius = radius;
-    bvh->heuristic = heuristic;
-    return bvh;
+    yb_scene* scene = new yb_scene();
+    scene->shapes.assign(nshapes, yb_shape());
+    scene->xforms.assign(nshapes, ym_identity_affine3f);
+    scene->inv_xforms.assign(nshapes, ym_identity_affine3f);
+    scene->bvh = nullptr;
+    return scene;
 }
 
 //
-// Build a shape BVH. Public function whose interface is described above.
+// Sets shape data for scene.
 //
-YGL_API void yb_build_shape_bvh(yb_shape_bvh* bvh) {
-    // create bounded primitivrs used in BVH build
-    ym_vector<yb__bound_prim> bound_prims =
-        ym_vector<yb__bound_prim>(bvh->nelems);
-    assert(bvh->pos && bvh->elem);
-    // compute bounds for each primitive type
-    switch (bvh->etype) {
-        case yb_etype_point: {
-            // point bounds are computed as small spheres
-            for (int i = 0; i < bvh->nelems; i++) {
-                const int& f = bvh->point[i];
-                yb__bound_prim* prim = &bound_prims[i];
-                prim->pid = i;
-                prim->bbox = ym_invalid_range3f;
-                float r0 = (bvh->radius) ? bvh->radius[f] : 0;
-                prim->bbox += bvh->pos[f] - ym_vec3f(r0);
-                prim->bbox += bvh->pos[f] + ym_vec3f(r0);
-                prim->center = ym_rcenter(prim->bbox);
-            }
-        } break;
-        case yb_etype_line: {
-            // line bounds are computed as thick rods
-            assert(bvh->radius);
-            for (int i = 0; i < bvh->nelems; i++) {
-                const ym_vec2i& f = bvh->line[i];
-                yb__bound_prim* prim = &bound_prims[i];
-                prim->pid = i;
-                prim->bbox = ym_invalid_range3f;
-                float r0 = (bvh->radius) ? bvh->radius[f.x] : 0;
-                float r1 = (bvh->radius) ? bvh->radius[f.y] : 0;
-                prim->bbox += bvh->pos[f.x] - ym_vec3f(r0);
-                prim->bbox += bvh->pos[f.x] + ym_vec3f(r0);
-                prim->bbox += bvh->pos[f.y] - ym_vec3f(r1);
-                prim->bbox += bvh->pos[f.y] + ym_vec3f(r1);
-                prim->center = ym_rcenter(prim->bbox);
-            }
-        } break;
-        case yb_etype_triangle: {
-            // triangle bounds are computed by including their vertices
-            for (int i = 0; i < bvh->nelems; i++) {
-                const ym_vec3i& f = bvh->triangle[i];
-                yb__bound_prim* prim = &bound_prims[i];
-                prim->pid = i;
-                prim->bbox = ym_invalid_range3f;
-                prim->bbox += bvh->pos[f.x];
-                prim->bbox += bvh->pos[f.y];
-                prim->bbox += bvh->pos[f.z];
-                prim->center = ym_rcenter(prim->bbox);
-            }
-        } break;
-        default: assert(false);
+YGL_API void yb_set_shape(yb_scene* scene, int sid, const ym_affine3f& xform,
+                          int nelems, const int* elem, int etype, int nverts,
+                          const ym_vec3f* pos, const float* radius) {
+    scene->shapes[sid].nelems = nelems;
+    scene->shapes[sid].etype = etype;
+    scene->shapes[sid].elem = elem;
+    scene->shapes[sid].pos = pos;
+    scene->shapes[sid].radius = radius;
+    scene->xforms[sid] = xform;
+    if (xform == ym_identity_affine3f) {
+        scene->inv_xforms[sid] = xform;
+    } else {
+        scene->inv_xforms[sid] = ym_inverse(xform);
     }
+    if (scene->shapes[sid].bvh) delete scene->shapes[sid].bvh;
+    scene->shapes[sid].bvh = nullptr;
+}
+
+//
+// Build a BVH from a set of primitives.
+//
+YGL_API yb__bvh* yb__build_bvh(ym_vector<yb__bound_prim>& bound_prims,
+                               int heuristic) {
+    // create bvh
+    yb__bvh* bvh = new yb__bvh();
 
     // allocate nodes (over-allocate now then shrink)
     int nnodes = 0;
-    bvh->nodes.resize(bvh->nelems * 2);
+    bvh->nodes.resize(bound_prims.size() * 2);
 
     // start recursive splitting
     nnodes = 1;
     yb__make_node(bvh->nodes.data(), &nnodes, bvh->nodes.data(),
-                  bound_prims.data(), 0, bvh->nelems, bvh->heuristic);
+                  bound_prims.data(), 0, (int)bound_prims.size(), heuristic);
 
     // shrink back
     bvh->nodes.resize(nnodes);
@@ -1488,60 +1395,92 @@ YGL_API void yb_build_shape_bvh(yb_shape_bvh* bvh) {
     // init sorted element arrays
     // for shared memory, stored pointer to the external data
     // store the sorted primitive order for BVH walk
-    bvh->sorted_prim.resize(bvh->nelems);
-    for (int i = 0; i < bvh->nelems; i++) {
+    bvh->sorted_prim.resize(bound_prims.size());
+    for (int i = 0; i < bound_prims.size(); i++) {
         bvh->sorted_prim[i] = bound_prims[i].pid;
     }
     bvh->sorted_prim.shrink_to_fit();
-}
 
-//
-// Makes a scene BVH. Public function whose interface is described above.
-//
-YGL_API yb_scene_bvh* yb_init_scene_bvh(int nshapes, int heuristic) {
-    // allocates the BVH and set its primitive type
-    yb_scene_bvh* bvh = new yb_scene_bvh();
-    bvh->nshapes = nshapes;
-    bvh->ntype = yb__ntype_bvh;
-    bvh->shapes.assign(nshapes, nullptr);
-    bvh->xforms.assign(nshapes, ym_identity_affine3f);
-    bvh->inv_xforms.assign(nshapes, ym_identity_affine3f);
+    // done
     return bvh;
 }
 
 //
-// Sets shape data for scene BVH. Equivalent to calling init_shape_bvh.
+// Build a shape BVH by creating a bound_prims array for all prims and
+// passing it to the bvh building code.
 //
-YGL_API void yb_set_shape_bvh(yb_scene_bvh* bvh, int sid,
-                              const ym_affine3f& xform, int nelems,
-                              const int* elem, int etype, int nverts,
-                              const ym_vec3f* pos, const float* radius,
-                              int heuristic) {
-    if (bvh->shapes[sid]) delete bvh->shapes[sid];
-    bvh->shapes[sid] =
-        yb_init_shape_bvh(nelems, elem, etype, nverts, pos, radius, heuristic);
-    bvh->xforms[sid] = xform;
-    bvh->inv_xforms[sid] = ym_inverse(xform);
+YGL_API void yb__build_shape_bvh(yb_shape* shape, int heuristic) {
+    // create bounded primitivrs used in BVH build
+    ym_vector<yb__bound_prim> bound_prims =
+        ym_vector<yb__bound_prim>(shape->nelems);
+    assert(shape->pos && shape->elem);
+    // compute bounds for each primitive type
+    switch (shape->etype) {
+        case yb_etype_point: {
+            // point bounds are computed as small spheres
+            for (int i = 0; i < shape->nelems; i++) {
+                const int& f = shape->point[i];
+                yb__bound_prim* prim = &bound_prims[i];
+                prim->pid = i;
+                prim->bbox = ym_invalid_range3f;
+                float r0 = (shape->radius) ? shape->radius[f] : 0;
+                prim->bbox += shape->pos[f] - ym_vec3f(r0);
+                prim->bbox += shape->pos[f] + ym_vec3f(r0);
+                prim->center = ym_rcenter(prim->bbox);
+            }
+        } break;
+        case yb_etype_line: {
+            // line bounds are computed as thick rods
+            assert(shape->radius);
+            for (int i = 0; i < shape->nelems; i++) {
+                const ym_vec2i& f = shape->line[i];
+                yb__bound_prim* prim = &bound_prims[i];
+                prim->pid = i;
+                prim->bbox = ym_invalid_range3f;
+                float r0 = (shape->radius) ? shape->radius[f.x] : 0;
+                float r1 = (shape->radius) ? shape->radius[f.y] : 0;
+                prim->bbox += shape->pos[f.x] - ym_vec3f(r0);
+                prim->bbox += shape->pos[f.x] + ym_vec3f(r0);
+                prim->bbox += shape->pos[f.y] - ym_vec3f(r1);
+                prim->bbox += shape->pos[f.y] + ym_vec3f(r1);
+                prim->center = ym_rcenter(prim->bbox);
+            }
+        } break;
+        case yb_etype_triangle: {
+            // triangle bounds are computed by including their vertices
+            for (int i = 0; i < shape->nelems; i++) {
+                const ym_vec3i& f = shape->triangle[i];
+                yb__bound_prim* prim = &bound_prims[i];
+                prim->pid = i;
+                prim->bbox = ym_invalid_range3f;
+                prim->bbox += shape->pos[f.x];
+                prim->bbox += shape->pos[f.y];
+                prim->bbox += shape->pos[f.z];
+                prim->center = ym_rcenter(prim->bbox);
+            }
+        } break;
+        default: assert(false);
+    }
+
+    // build bvh
+    shape->bvh = yb__build_bvh(bound_prims, heuristic);
 }
 
 //
-// Build a scene BVH. Public function whose interface is described above.
+// Build a scene BVH by wrapping each shape into a bounding box, transforming it
+// and creating a bvh of these.
 //
-YGL_API void yb_build_scene_bvh(yb_scene_bvh* bvh) {
-    // recursively build
-    for (int sid = 0; sid < bvh->nshapes; sid++) {
-        yb_build_shape_bvh((yb_shape_bvh*)bvh->shapes[sid]);
-    }
-
+YGL_API yb__bvh* yb__build_scene_bvh(const ym_vector<ym_range3f>& bboxes,
+                                     const ym_vector<ym_affine3f>& xforms,
+                                     int heuristic) {
     // compute bounds for all transformed shape bvhs
     ym_vector<yb__bound_prim> bound_prims =
-        ym_vector<yb__bound_prim>(bvh->nshapes);
-    for (int i = 0; i < bvh->nshapes; i++) {
+        ym_vector<yb__bound_prim>(bboxes.size());
+    for (int i = 0; i < bboxes.size(); i++) {
         yb__bound_prim* prim = &bound_prims[i];
-        const yb_shape_bvh* sbvh = bvh->shapes[i];
-        ym_affine3f xform = bvh->xforms[i];
+        ym_affine3f xform = xforms[i];
         prim->pid = i;
-        prim->bbox = sbvh->nodes[0].bbox;
+        prim->bbox = bboxes[i];
         // apply transformations if needed (estimate trasform BVH bounds as
         // corners bounds, overestimate, but best effort for now)
         ym_vec3f corners[8] = {
@@ -1560,37 +1499,37 @@ YGL_API void yb_build_scene_bvh(yb_scene_bvh* bvh) {
         prim->center = ym_rcenter(prim->bbox);
     }
 
-    // allocate nodes (over-allocate now then shrink)
-    int nnodes = 0;
-    bvh->nodes.resize(bvh->nshapes * 2);
+    // make bvh
+    return yb__build_bvh(bound_prims, heuristic);
+}
 
-    // start recursive splitting
-    nnodes = 1;
-    yb__make_node(bvh->nodes.data(), &nnodes, bvh->nodes.data(),
-                  bound_prims.data(), 0, bvh->nshapes, bvh->heuristic);
-
-    // shrink back
-    bvh->nodes.resize(nnodes);
-    bvh->nodes.shrink_to_fit();
-
-    // pack sorted primimitives in the internal bvhs array
-    bvh->sorted_prim.resize(bvh->nshapes);
-    for (int i = 0; i < bvh->nshapes; i++) {
-        bvh->sorted_prim[i] = bound_prims[i].pid;
+//
+// Build a scene BVH. Public function whose interface is described above.
+//
+YGL_API void yb_build_bvh(yb_scene* scene, int heuristic) {
+    // recursively build shape bvhs
+    ym_vector<ym_range3f> shape_bounds(scene->shapes.size());
+    for (int sid = 0; sid < scene->shapes.size(); sid++) {
+        yb__build_shape_bvh(&scene->shapes[sid], heuristic);
+        shape_bounds[sid] = scene->shapes[sid].bvh->nodes[0].bbox;
     }
+
+    // build scene bvh
+    scene->bvh = yb__build_scene_bvh(shape_bounds, scene->xforms, heuristic);
 }
 
 //
 // Recursively recomputes the node bounds for a scene bvh
 //
-static inline void yb__recompute_scene_bounds(yb_scene_bvh* bvh, int nodeid) {
+static inline void yb__recompute_scene_bounds(yb_scene* scene, int nodeid) {
+    yb__bvh* bvh = scene->bvh;
     yb__bvhn* node = &bvh->nodes[nodeid];
     if (node->isleaf) {
         node->bbox = ym_invalid_range3f;
         for (int i = 0; i < node->count; i++) {
             int idx = bvh->sorted_prim[node->start + i];
-            ym_range3f bbox = bvh->shapes[0]->nodes[0].bbox;
-            ym_affine3f xform = bvh->xforms[idx];
+            ym_range3f bbox = scene->shapes[idx].bvh->nodes[0].bbox;
+            ym_affine3f xform = scene->xforms[idx];
             ym_vec3f corners[8] = {
                 {bbox.min.x, bbox.min.y, bbox.min.z},
                 {bbox.min.x, bbox.min.y, bbox.max.z},
@@ -1607,7 +1546,7 @@ static inline void yb__recompute_scene_bounds(yb_scene_bvh* bvh, int nodeid) {
     } else {
         node->bbox = ym_invalid_range3f;
         for (int i = 0; i < node->count; i++) {
-            yb__recompute_scene_bounds(bvh, node->start + i);
+            yb__recompute_scene_bounds(scene, node->start + i);
             node->bbox += bvh->nodes[node->start + i].bbox;
         }
     }
@@ -1616,28 +1555,25 @@ static inline void yb__recompute_scene_bounds(yb_scene_bvh* bvh, int nodeid) {
 //
 // Refits a scene BVH. Public function whose interface is described above.
 //
-YGL_API void yb_refit_scene_bvh(yb_scene_bvh* bvh, const ym_affine3f* xforms) {
-    assert(bvh->ntype == yb__ntype_bvh);
-
+YGL_API void yb_refit_scene_bvh(yb_scene* scene, const ym_affine3f* xforms) {
     // updated xforms
-    for (int i = 0; i < bvh->nshapes; i++) {
-        bvh->xforms[i] = xforms[i];
-        bvh->inv_xforms[i] = ym_inverse(xforms[i]);
+    for (int i = 0; i < scene->shapes.size(); i++) {
+        scene->xforms[i] = xforms[i];
+        if (xforms[i] == ym_identity_affine3f) {
+            scene->inv_xforms[i] = ym_identity_affine3f;
+        } else {
+            scene->inv_xforms[i] = ym_inverse(xforms[i]);
+        }
     }
 
     // recompute bvh bounds
-    yb__recompute_scene_bounds(bvh, 0);
+    yb__recompute_scene_bounds(scene, 0);
 }
 
 //
-// FreeBVH data.
+// Free BVH data.
 //
-YGL_API void yb_free_scene_bvh(yb_scene_bvh* bvh) { delete bvh; }
-
-//
-// FreeBVH data.
-//
-YGL_API void yb_free_shape_bvh(yb_shape_bvh* bvh) { delete bvh; }
+YGL_API void yb_free_scene(yb_scene* scene) { delete scene; }
 
 // -----------------------------------------------------------------------------
 // BVH INTERSECTION FUNCTIONS
@@ -1678,9 +1614,12 @@ YGL_API void yb_get_ray_log(int* nrays, int* nbbox_inters, int* npoint_inters,
 // the code; note in fact that all subsequence farthest iterations will be
 // rejected in the tmax tests
 //
-static inline bool yb__intersect_bvh(const yb__bvh* bvh, bool early_exit,
-                                     const ym_ray3f& ray_, float* ray_t,
-                                     int* sid, int* eid, ym_vec2f* euv) {
+// TODO: update doc
+//
+static inline bool yb__intersect_bvh(const yb_scene* scene, int shape_id,
+                                     bool early_exit, const ym_ray3f& ray_,
+                                     float* ray_t, int* sid, int* eid,
+                                     ym_vec2f* euv) {
     // node stack
     int node_stack[64];
     int node_cur = 0;
@@ -1689,8 +1628,17 @@ static inline bool yb__intersect_bvh(const yb__bvh* bvh, bool early_exit,
     // shared variables
     bool hit = false;
 
+    // init shape and bvh
+    const yb_shape* shape =
+        (shape_id >= 0) ? &scene->shapes[shape_id] : nullptr;
+    const yb__bvh* bvh = (shape) ? shape->bvh : scene->bvh;
+
     // init ray
     ym_ray3f ray = ray_;
+    if (shape) {
+        ray.o = ym_transform_point(scene->inv_xforms[shape_id], ray.o);
+        ray.d = ym_transform_vector(scene->inv_xforms[shape_id], ray.d);
+    }
 
 #ifndef YGL_BVH_LEGACY_INTERSECTION
     // prepare ray for fast queries
@@ -1700,7 +1648,7 @@ static inline bool yb__intersect_bvh(const yb__bvh* bvh, bool early_exit,
 #endif
 
 #ifdef YGL_BVH_LOG_RAYS
-    if (bvh->ntype == yb__ntype_bvh) yb__log_nrays++;
+    if (!shape) yb__log_nrays++;
 #endif
 
     // walking stack
@@ -1725,93 +1673,85 @@ static inline bool yb__intersect_bvh(const yb__bvh* bvh, bool early_exit,
 
         // intersect node, switching based on node type
         // for each type, iterate over the the primitive list
-        int ntype = (node->isleaf) ? bvh->ntype : yb__ntype_internal;
-        switch (ntype) {
-            // internal node
-            case yb__ntype_internal: {
+        if (!node->isleaf) {
 // for internal nodes, attempts to proceed along the
 // split axis from smallest to largest nodes
 #ifndef YGL_BVH_LEGACY_INTERSECTION
-                bool reverse = ray_dsign[node->axis];
+            bool reverse = ray_dsign[node->axis];
 #else
-                bool reverse = (&ray.d.x)[node->axis] < 0;
+            bool reverse = (&ray.d.x)[node->axis] < 0;
 #endif
-                if (reverse) {
-                    for (int i = 0; i < node->count; i++) {
-                        int idx = node->start + i;
-                        node_stack[node_cur++] = idx;
-                        assert(node_cur < 64);
-                    }
-                } else {
-                    for (int i = node->count - 1; i >= 0; i--) {
-                        int idx = node->start + i;
-                        node_stack[node_cur++] = idx;
-                        assert(node_cur < 64);
-                    }
+            if (reverse) {
+                for (int i = 0; i < node->count; i++) {
+                    int idx = node->start + i;
+                    node_stack[node_cur++] = idx;
+                    assert(node_cur < 64);
                 }
-            } break;
-            case yb__ntype_point: {
-                const yb_shape_bvh* sbvh = (const yb_shape_bvh*)bvh;
+            } else {
+                for (int i = node->count - 1; i >= 0; i--) {
+                    int idx = node->start + i;
+                    node_stack[node_cur++] = idx;
+                    assert(node_cur < 64);
+                }
+            }
+        } else if (shape) {
+            if (shape->etype == yb_etype_triangle) {
                 for (int i = 0; i < node->count; i++) {
                     int idx = bvh->sorted_prim[node->start + i];
-                    const int& f = sbvh->point[idx];
-                    if (yb__intersect_point(ray, sbvh->pos[f], sbvh->radius[f],
-                                            &ray.tmax, euv)) {
-                        hit = true;
-                        *eid = idx;
-                    }
-#ifdef YGL_BVH_LOG_RAYS
-                    yb__log_npoint_inters += node->count;
-#endif
-                }
-            } break;
-            case yb__ntype_line: {
-                const yb_shape_bvh* sbvh = (const yb_shape_bvh*)bvh;
-                for (int i = 0; i < node->count; i++) {
-                    int idx = bvh->sorted_prim[node->start + i];
-                    const ym_vec2i& f = sbvh->line[idx];
-                    if (yb__intersect_line(ray, sbvh->pos[f.x], sbvh->pos[f.y],
-                                           sbvh->radius[f.x], sbvh->radius[f.y],
-                                           &ray.tmax, euv)) {
-                        hit = true;
-                        *eid = idx;
-                    }
-                }
-#ifdef YGL_BVH_LOG_RAYS
-                yb__log_nline_inters += node->count;
-#endif
-            } break;
-            case yb__ntype_triangle: {
-                const yb_shape_bvh* sbvh = (const yb_shape_bvh*)bvh;
-                for (int i = 0; i < node->count; i++) {
-                    int idx = bvh->sorted_prim[node->start + i];
-                    const ym_vec3i& f = sbvh->triangle[idx];
-                    if (yb__intersect_triangle(ray, sbvh->pos[f.x],
-                                               sbvh->pos[f.y], sbvh->pos[f.z],
+                    const ym_vec3i& f = shape->triangle[idx];
+                    if (yb__intersect_triangle(ray, shape->pos[f.x],
+                                               shape->pos[f.y], shape->pos[f.z],
                                                &ray.tmax, euv)) {
                         hit = true;
                         *eid = idx;
+                        *sid = shape_id;
                     }
                 }
 #ifdef YGL_BVH_LOG_RAYS
                 yb__log_ntriangle_inters += node->count;
 #endif
-            } break;
-            case yb__ntype_bvh: {
-                const yb_scene_bvh* sbvh = (const yb_scene_bvh*)bvh;
+
+            } else if (shape->etype == yb_etype_line) {
                 for (int i = 0; i < node->count; i++) {
                     int idx = bvh->sorted_prim[node->start + i];
-                    ym_ray3f tray = ray;
-                    tray.o = ym_transform_point(sbvh->inv_xforms[idx], ray.o);
-                    tray.d = ym_transform_vector(sbvh->inv_xforms[idx], ray.d);
-                    if (yb__intersect_bvh(sbvh->shapes[idx], early_exit, tray,
-                                          &ray.tmax, sid, eid, euv)) {
+                    const ym_vec2i& f = shape->line[idx];
+                    if (yb__intersect_line(ray, shape->pos[f.x],
+                                           shape->pos[f.y], shape->radius[f.x],
+                                           shape->radius[f.y], &ray.tmax,
+                                           euv)) {
                         hit = true;
-                        *sid = idx;
+                        *eid = idx;
+                        *sid = shape_id;
                     }
                 }
-            } break;
-            default: { assert(false); } break;
+#ifdef YGL_BVH_LOG_RAYS
+                yb__log_nline_inters += node->count;
+#endif
+            } else if (shape->etype == yb_etype_point) {
+                for (int i = 0; i < node->count; i++) {
+                    int idx = bvh->sorted_prim[node->start + i];
+                    const int& f = shape->point[idx];
+                    if (yb__intersect_point(ray, shape->pos[f],
+                                            shape->radius[f], &ray.tmax, euv)) {
+                        hit = true;
+                        *eid = idx;
+                        *sid = shape_id;
+                    }
+#ifdef YGL_BVH_LOG_RAYS
+                    yb__log_npoint_inters += node->count;
+#endif
+                }
+            } else {
+                assert(false);
+            }
+        } else {
+            for (int i = 0; i < node->count; i++) {
+                int idx = bvh->sorted_prim[node->start + i];
+                if (yb__intersect_bvh(scene, idx, early_exit, ray, &ray.tmax,
+                                      sid, eid, euv)) {
+                    hit = true;
+                }
+            }
         }
     }
 
@@ -1825,22 +1765,24 @@ static inline bool yb__intersect_bvh(const yb__bvh* bvh, bool early_exit,
 // Find closest ray-scene intersection. A convenient wrapper for the above func.
 // Public function whose interface is described above.
 //
-YGL_API bool yb_intersect_scene_bvh(const yb_scene_bvh* bvh,
-                                    const ym_ray3f& ray, float* ray_t, int* sid,
-                                    int* eid, ym_vec2f* euv) {
-    return yb__intersect_bvh(bvh, false, ray, ray_t, sid, eid, (ym_vec2f*)euv);
+YGL_API bool yb_intersect_first(const yb_scene* scene, const ym_ray3f& ray,
+                                float* ray_t, int* sid, int* eid, ym_vec2f* euv,
+                                int req_shape) {
+    return yb__intersect_bvh(scene, req_shape, false, ray, ray_t, sid, eid,
+                             euv);
 }
 
 //
-// Find any ray-scene intersection. A convenient wrapper for the above func.
+// Find closest ray-scene intersection. A convenient wrapper for the above func.
 // Public function whose interface is described above.
 //
-YGL_API bool yb_hit_scene_bvh(const yb_scene_bvh* bvh, const ym_ray3f& ray) {
-    // check intersection
+YGL_API bool yb_intersect_any(const yb_scene* scene, const ym_ray3f& ray,
+                              int req_shape) {
     int sid, eid;
     float ray_t;
     ym_vec2f euv;
-    return yb__intersect_bvh(bvh, true, ray, &ray_t, &sid, &eid, &euv);
+    return yb__intersect_bvh(scene, req_shape, true, ray, &ray_t, &sid, &eid,
+                             &euv);
 }
 
 // -----------------------------------------------------------------------------
@@ -1863,10 +1805,10 @@ YGL_API bool yb_hit_scene_bvh(const yb_scene_bvh* bvh, const ym_ray3f& ray) {
 // the code; note in fact that all subsequent farthest iterations will be
 // rejected in the tmax tests
 //
-static inline bool yb__neighbour_bvh(const yb__bvh* bvh, bool early_exit,
-                                     const ym_vec3f pt, float dist_max,
-                                     float* dist, int* sid, int* eid,
-                                     ym_vec2f* euv) {
+static inline bool yb__overlap_bvh(const yb_scene* scene, int shape_id,
+                                   bool early_exit, const ym_vec3f& pt_,
+                                   float dist_max, float* dist, int* sid,
+                                   int* eid, ym_vec2f* euv) {
     // node stack
     int node_stack[64];
     int node_cur = 0;
@@ -1874,6 +1816,17 @@ static inline bool yb__neighbour_bvh(const yb__bvh* bvh, bool early_exit,
 
     // shared variables
     bool hit = false;
+
+    // init shape and bvh
+    const yb_shape* shape =
+        (shape_id >= 0) ? &scene->shapes[shape_id] : nullptr;
+    const yb__bvh* bvh = (shape) ? shape->bvh : scene->bvh;
+
+    // init ray
+    ym_vec3f pt = pt_;
+    if (shape) {
+        pt = ym_transform_point(scene->inv_xforms[shape_id], pt);
+    }
 
     // walking stack
     while (node_cur && !(early_exit && hit)) {
@@ -1890,75 +1843,69 @@ static inline bool yb__neighbour_bvh(const yb__bvh* bvh, bool early_exit,
 
         // intersect node, switching based on node type
         // for each type, iterate over the the primitive list
-        int ntype = (node->isleaf) ? bvh->ntype : yb__ntype_internal;
-        switch (ntype) {
+        if (!node->isleaf) {
             // internal node
-            case yb__ntype_internal: {
-                for (int i = 0; i < node->count; i++) {
-                    int idx = node->start + i;
-                    node_stack[node_cur++] = idx;
-                    assert(node_cur < 64);
-                }
-            } break;
-            case yb__ntype_point: {
-                const yb_shape_bvh* sbvh = (const yb_shape_bvh*)bvh;
+            for (int i = 0; i < node->count; i++) {
+                int idx = node->start + i;
+                node_stack[node_cur++] = idx;
+                assert(node_cur < 64);
+            }
+        } else if (shape) {
+            if (shape->etype == yb_etype_triangle) {
                 for (int i = 0; i < node->count; i++) {
                     int idx = bvh->sorted_prim[node->start + i];
-                    const int& f = sbvh->point[idx];
-                    if (yb__distance_point(pt, dist_max, sbvh->pos[f],
-                                           (sbvh->radius) ? sbvh->radius[f] : 0,
+                    const ym_vec3i& f = shape->triangle[idx];
+                    if (yb__distance_triangle(
+                            pt, dist_max, shape->pos[f.x], shape->pos[f.y],
+                            shape->pos[f.z],
+                            (shape->radius) ? shape->radius[f.x] : 0,
+                            (shape->radius) ? shape->radius[f.y] : 0,
+                            (shape->radius) ? shape->radius[f.z] : 0, &dist_max,
+                            euv)) {
+                        hit = true;
+                        *eid = idx;
+                        *sid = shape_id;
+                    }
+                }
+            } else if (shape->etype == yb_etype_line) {
+                for (int i = 0; i < node->count; i++) {
+                    int idx = bvh->sorted_prim[node->start + i];
+                    const ym_vec2i& f = shape->line[idx];
+                    if (yb__distance_line(
+                            pt, dist_max, shape->pos[f.x], shape->pos[f.y],
+                            (shape->radius) ? shape->radius[f.x] : 0,
+                            (shape->radius) ? shape->radius[f.y] : 0, &dist_max,
+                            euv)) {
+                        hit = true;
+                        *eid = idx;
+                        *sid = shape_id;
+                    }
+                }
+            } else if (shape->etype == yb_etype_point) {
+                for (int i = 0; i < node->count; i++) {
+                    int idx = bvh->sorted_prim[node->start + i];
+                    const int& f = shape->point[idx];
+                    if (yb__distance_point(pt, dist_max, shape->pos[f],
+                                           (shape->radius) ? shape->radius[f]
+                                                           : 0,
                                            &dist_max, euv)) {
                         hit = true;
                         *eid = idx;
+                        *sid = shape_id;
                     }
                 }
-            } break;
-            case yb__ntype_line: {
-                const yb_shape_bvh* sbvh = (const yb_shape_bvh*)bvh;
-                for (int i = 0; i < node->count; i++) {
-                    int idx = bvh->sorted_prim[node->start + i];
-                    const ym_vec2i& f = sbvh->line[idx];
-                    if (yb__distance_line(
-                            pt, dist_max, sbvh->pos[f.x], sbvh->pos[f.y],
-                            (sbvh->radius) ? sbvh->radius[f.x] : 0,
-                            (sbvh->radius) ? sbvh->radius[f.y] : 0, &dist_max,
-                            euv)) {
-                        hit = true;
-                        *eid = idx;
-                    }
+
+            } else {
+                assert(false);
+            }
+        } else {
+            for (int i = 0; i < node->count; i++) {
+                int idx = bvh->sorted_prim[node->start + i];
+                if (yb__overlap_bvh(scene, idx, early_exit, pt, dist_max,
+                                    &dist_max, sid, eid, euv)) {
+                    hit = true;
                 }
-            } break;
-            case yb__ntype_triangle: {
-                const yb_shape_bvh* sbvh = (const yb_shape_bvh*)bvh;
-                for (int i = 0; i < node->count; i++) {
-                    int idx = bvh->sorted_prim[node->start + i];
-                    const ym_vec3i& f = sbvh->triangle[idx];
-                    if (yb__distance_triangle(
-                            pt, dist_max, sbvh->pos[f.x], sbvh->pos[f.y],
-                            sbvh->pos[f.z],
-                            (sbvh->radius) ? sbvh->radius[f.x] : 0,
-                            (sbvh->radius) ? sbvh->radius[f.y] : 0,
-                            (sbvh->radius) ? sbvh->radius[f.z] : 0, &dist_max,
-                            euv)) {
-                        hit = true;
-                        *eid = idx;
-                    }
-                }
-            } break;
-            case yb__ntype_bvh: {
-                const yb_scene_bvh* sbvh = (const yb_scene_bvh*)bvh;
-                for (int i = 0; i < node->count; i++) {
-                    int idx = bvh->sorted_prim[node->start + i];
-                    ym_vec3f tpt =
-                        ym_transform_point(sbvh->inv_xforms[idx], pt);
-                    if (yb__neighbour_bvh(sbvh->shapes[idx], early_exit, tpt,
-                                          dist_max, &dist_max, sid, eid, euv)) {
-                        hit = true;
-                        *sid = idx;
-                    }
-                }
-            } break;
-            default: { assert(false); } break;
+            }
         }
     }
 
@@ -1973,29 +1920,32 @@ static inline bool yb__neighbour_bvh(const yb__bvh* bvh, bool early_exit,
 // A convenient wrapper for the above func.
 // Public function whose interface is described above.
 //
-YGL_API bool yb_neighbour_scene_bvh(const yb_scene_bvh* bvh, const ym_vec3f& pt,
-                                    float max_dist, int req_sid, float* dist,
-                                    int* sid, int* eid, ym_vec2f* euv) {
-    // check correctness
-    assert(bvh->ntype == yb__ntype_bvh);
+YGL_API bool yb_overlap_first(const yb_scene* scene, const ym_vec3f& pt,
+                              float max_dist, float* dist, int* sid, int* eid,
+                              ym_vec2f* euv, int req_shape) {
+    return yb__overlap_bvh(scene, req_shape, false, pt, max_dist, dist, sid,
+                           eid, euv);
+}
 
-    // handle specialized shapes
-    if (req_sid >= 0) {
-        ym_vec3f tpt = ym_transform_point(bvh->inv_xforms[req_sid], pt);
-        bool hit = yb__neighbour_bvh(bvh->shapes[req_sid], false, tpt, max_dist,
-                                     dist, sid, eid, euv);
-        if (hit) *sid = req_sid;
-        return hit;
-    } else {
-        return yb__neighbour_bvh(bvh, false, pt, max_dist, dist, sid, eid, euv);
-    }
+//
+// Find if any element overlaps given point within a maximum distance.
+// A convenient wrapper for the above func.
+// Public function whose interface is described above.
+//
+YGL_API bool yb_overlap_any(const yb_scene* scene, const ym_vec3f& pt,
+                            float max_dist, int req_shape) {
+    float dist;
+    int sid, eid;
+    ym_vec2f euv;
+    return yb__overlap_bvh(scene, req_shape, true, pt, max_dist, &dist, &sid,
+                           &eid, &euv);
 }
 
 //
 // Find the list of overlaps between shape bounds.
 // Public function whose interface is described above.
 //
-YGL_API int yb_overlap_shape_bounds(const yb_scene_bvh* bvh, bool exclude_self,
+YGL_API int yb_overlap_shape_bounds(const yb_scene* scene, bool exclude_self,
                                     void* overlap_ctx,
                                     void (*overlap_cb)(void* ctx,
                                                        const ym_vec2i& v)) {
@@ -2007,6 +1957,9 @@ YGL_API int yb_overlap_shape_bounds(const yb_scene_bvh* bvh, bool exclude_self,
 
     // shared variables
     int hits = 0;
+
+    // init shape and bvh
+    const yb__bvh* bvh = scene->bvh;
 
     // walking stack
     while (node_cur) {
@@ -2030,9 +1983,11 @@ YGL_API int yb_overlap_shape_bounds(const yb_scene_bvh* bvh, bool exclude_self,
                     int idx2 = bvh->sorted_prim[node2->start + i2];
                     if (exclude_self && idx1 == idx2) continue;
                     const ym_range3f bbox1 = yb__transform_bbox(
-                        bvh->xforms[idx1], bvh->shapes[idx1]->nodes[0].bbox);
+                        scene->xforms[idx1],
+                        scene->shapes[idx1].bvh->nodes[0].bbox);
                     const ym_range3f bbox2 = yb__transform_bbox(
-                        bvh->xforms[idx2], bvh->shapes[idx1]->nodes[0].bbox);
+                        scene->xforms[idx2],
+                        scene->shapes[idx2].bvh->nodes[0].bbox);
                     if (!yb__overlap_bbox(bbox1.min, bbox1.max, bbox2.min,
                                           bbox2.max))
                         continue;
@@ -2076,10 +2031,10 @@ static inline void yb__overlap_cb_vector(void* ctx, const ym_vec2i& v) {
 // Find the list of overlaps between shape bounds.
 // Public function whose interface is described above.
 //
-YGL_API int yb_overlap_shape_bounds(const yb_scene_bvh* bvh, bool exclude_self,
+YGL_API int yb_overlap_shape_bounds(const yb_scene* scene, bool exclude_self,
                                     ym_vector<ym_vec2i>* overlaps) {
     overlaps->clear();
-    return yb_overlap_shape_bounds(bvh, exclude_self, overlaps,
+    return yb_overlap_shape_bounds(scene, exclude_self, overlaps,
                                    yb__overlap_cb_vector);
 }
 
@@ -2129,10 +2084,14 @@ YGL_API void yb_interpolate_vert(const int* elem, int etype, int eid,
 //
 // Compute BVH stats.
 //
-YGL_API void yb__compute_bvh_stats(const yb__bvh* bvh, bool include_shapes,
-                                   int depth, int* nprims, int* ninternals,
-                                   int* nleaves, int* min_depth,
-                                   int* max_depth) {
+YGL_API void yb__compute_bvh_stats(const yb_scene* scene, int shape_id,
+                                   bool include_shapes, int depth, int* nprims,
+                                   int* ninternals, int* nleaves,
+                                   int* min_depth, int* max_depth) {
+    // get bvh
+    const yb__bvh* bvh =
+        (shape_id >= 0) ? scene->shapes[shape_id].bvh : scene->bvh;
+
     // node stack
     ym_vec2i node_stack[128];  // node and depth
     int node_cur = 0;
@@ -2145,39 +2104,31 @@ YGL_API void yb__compute_bvh_stats(const yb__bvh* bvh, bool include_shapes,
         const yb__bvhn* node = &bvh->nodes[node_depth.x];
 
         // update stats
-        int ntype = (node->isleaf) ? bvh->ntype : yb__ntype_internal;
-        switch (ntype) {
-            case yb__ntype_internal: {
-                *ninternals += 1;
+        if (!node->isleaf) {
+            *ninternals += 1;
+            for (int i = 0; i < node->count; i++) {
+                node_stack[node_cur++] =
+                    ym_vec2i(node->start + i, node_depth.y + 1);
+            }
+        } else if (shape_id >= 0) {
+            *nleaves += 1;
+            *nprims += node->count;
+            *min_depth = ym_min(*min_depth, node_depth.y);
+            *max_depth = ym_max(*max_depth, node_depth.y);
+        } else {
+            if (include_shapes) {
                 for (int i = 0; i < node->count; i++) {
-                    node_stack[node_cur++] =
-                        ym_vec2i(node->start + i, node_depth.y + 1);
+                    int idx = bvh->sorted_prim[node->start + i];
+                    yb__compute_bvh_stats(scene, idx, true, node_depth.y + 1,
+                                          nprims, ninternals, nleaves,
+                                          min_depth, max_depth);
                 }
-            } break;
-            case yb__ntype_point:
-            case yb__ntype_line:
-            case yb__ntype_triangle: {
+            } else {
                 *nleaves += 1;
                 *nprims += node->count;
                 *min_depth = ym_min(*min_depth, node_depth.y);
                 *max_depth = ym_max(*max_depth, node_depth.y);
-            } break;
-            case yb__ntype_bvh: {
-                if (include_shapes) {
-                    for (int i = 0; i < node->count; i++) {
-                        const yb_shape_bvh* shape_bvh =
-                            ((const yb_scene_bvh*)bvh)->shapes[node->start + i];
-                        yb__compute_bvh_stats(shape_bvh, true, node_depth.y + 1,
-                                              nprims, ninternals, nleaves,
-                                              min_depth, max_depth);
-                    }
-                } else {
-                    *nleaves += 1;
-                    *nprims += node->count;
-                    *min_depth = ym_min(*min_depth, node_depth.y);
-                    *max_depth = ym_max(*max_depth, node_depth.y);
-                }
-            };
+            }
         }
     }
 }
@@ -2185,10 +2136,10 @@ YGL_API void yb__compute_bvh_stats(const yb__bvh* bvh, bool include_shapes,
 //
 // Compute BVH stats.
 //
-YGL_API void yb_compute_scene_bvh_stats(const yb_scene_bvh* bvh,
-                                        bool include_shapes, int* nprims,
-                                        int* ninternals, int* nleaves,
-                                        int* min_depth, int* max_depth) {
+YGL_API void yb_compute_bvh_stats(const yb_scene* scene, bool include_shapes,
+                                  int* nprims, int* ninternals, int* nleaves,
+                                  int* min_depth, int* max_depth,
+                                  int req_shape) {
     // init out variables
     *nprims = 0;
     *ninternals = 0;
@@ -2196,25 +2147,8 @@ YGL_API void yb_compute_scene_bvh_stats(const yb_scene_bvh* bvh,
     *min_depth = 10000;
     *max_depth = -1;
 
-    yb__compute_bvh_stats(bvh, include_shapes, 0, nprims, ninternals, nleaves,
-                          min_depth, max_depth);
-}
-
-//
-// Compute BVH stats.
-//
-YGL_API void yb_compute_shape_bvh_stats(const yb_shape_bvh* bvh, int* nprims,
-                                        int* ninternals, int* nleaves,
-                                        int* min_depth, int* max_depth) {
-    // init out variables
-    *nprims = 0;
-    *ninternals = 0;
-    *nleaves = 0;
-    *min_depth = 10000;
-    *max_depth = -1;
-
-    yb__compute_bvh_stats(bvh, false, 0, nprims, ninternals, nleaves, min_depth,
-                          max_depth);
+    yb__compute_bvh_stats(scene, req_shape, include_shapes, 0, nprims,
+                          ninternals, nleaves, min_depth, max_depth);
 }
 
 // -----------------------------------------------------------------------------
@@ -2222,98 +2156,69 @@ YGL_API void yb_compute_shape_bvh_stats(const yb_shape_bvh* bvh, int* nprims,
 // -----------------------------------------------------------------------------
 
 //
-// Create a BVH for a given shape.
-//
-YGLC_API yb_shape_bvh* ybc_init_shape_bvh(int nelems, int* elem, int etype,
-                                          int nverts, float* pos, float* radius,
-                                          int heuristic) {
-    return yb_init_shape_bvh(nelems, elem, etype, nverts, (ym_vec3f*)pos,
-                             radius, heuristic);
-}
-
-//
 // Create a BVH for a collection of transformed shapes (scene).
 //
-YGLC_API yb_scene_bvh* ybc_init_scene_bvh(int nbvhs, int heuristic) {
-    return yb_init_scene_bvh(nbvhs, heuristic);
+YGLC_API yb_scene* ybc_init_scene(int nshapes) {
+    return yb_init_scene(nshapes);
 }
 
 //
-// Sets the BVH for a given shape.
+// Sets the data for a given shape.
 //
-YGLC_API void ybc_set_shape_bvh(yb_scene_bvh* bvh, int sid,
-                                const float xform[16], int nelems,
-                                const int* elem, int etype, int nverts,
-                                const float* pos, const float* radius,
-                                int heuristic) {
-    return yb_set_shape_bvh(bvh, sid, ym_affine3f(ym_mat4f(xform)), nelems,
-                            elem, etype, nverts, (const ym_vec3f*)pos, radius,
-                            heuristic);
-}
-
-//
-// Builds a shape BVH.
-//
-YGLC_API void ybc_build_shape_bvh(yb_shape_bvh* bvh) {
-    return yb_build_shape_bvh(bvh);
+YGLC_API void ybc_set_shape(yb_scene* scene, int sid, const float xform[16],
+                            int nelems, const int* elem, int etype, int nverts,
+                            const float* pos, const float* radius) {
+    return yb_set_shape(scene, sid, ym_affine3f(ym_mat4f(xform)), nelems, elem,
+                        etype, nverts, (const ym_vec3f*)pos, radius);
 }
 
 //
 // Builds a scene BVH.
 //
-YGLC_API void ybc_build_scene_bvh(yb_scene_bvh* bvh) {
-    return yb_build_scene_bvh(bvh);
+YGLC_API void ybc_build_bvh(yb_scene* scene, int heuristic) {
+    return yb_build_bvh(scene, heuristic);
 }
 
 //
 // Clears BVH memory.
 //
-YGLC_API void ybc_free_scene_bvh(yb_scene_bvh* bvh) {
-    return yb_free_scene_bvh(bvh);
-}
-
-//
-// Clears BVH memory.
-//
-YGLC_API void ybc_free_shape_bvh(yb_shape_bvh* bvh) {
-    return yb_free_shape_bvh(bvh);
-}
+YGLC_API void ybc_free_scene(yb_scene* scene) { return yb_free_scene(scene); }
 
 //
 // Refit the bounds of each shape for moving objects. Use this only to avoid
 // a rebuild, but note that queries are likely slow if objects move a lot.
 //
-YGLC_API void ybc_refit_scene_bvh(yb_scene_bvh* bvh, const float* xforms[16]) {
+YGLC_API void ybc_refit_scene_bvh(yb_scene* scene, const float* xforms[16]) {
     ym_vector<ym_affine3f> affines;
     if (xforms) {
-        affines.resize(bvh->nshapes);
-        for (int i = 0; i < bvh->nshapes; i++)
+        affines.resize(scene->shapes.size());
+        for (int i = 0; i < affines.size(); i++)
             affines[i] = ym_affine3f(ym_mat4f(xforms[i]));
     }
-    yb_refit_scene_bvh(bvh, affines.data());
+    yb_refit_scene_bvh(scene, affines.data());
 }
 
 //
 // Intersect the scene with a ray finding the closest intersection.
 //
-YGLC_API bool ybc_intersect_scene_bvh(const yb_scene_bvh* bvh,
-                                      const float ray_o[3],
-                                      const float ray_d[3], float ray_tmin,
-                                      float ray_tmax, float* ray_t, int* sid,
-                                      int* eid, float euv[2]) {
-    return yb_intersect_scene_bvh(
-        bvh, ym_ray3f(ym_vec3f(ray_o), ym_vec3f(ray_d), ray_tmin, ray_tmax),
-        ray_t, sid, eid, (ym_vec2f*)euv);
+YGLC_API bool ybc_intersect_first(const yb_scene* scene, const float ray_o[3],
+                                  const float ray_d[3], float ray_tmin,
+                                  float ray_tmax, float* ray_t, int* sid,
+                                  int* eid, float euv[2], int req_shape) {
+    return yb_intersect_first(
+        scene, ym_ray3f(ym_vec3f(ray_o), ym_vec3f(ray_d), ray_tmin, ray_tmax),
+        ray_t, sid, eid, (ym_vec2f*)euv, req_shape);
 }
 
 //
 // Intersect the scene with a ray finding any intersection.
 //
-YGLC_API bool ybc_hit_scene_bvh(const yb_scene_bvh* bvh, const float ray_o[3],
+YGLC_API bool ybc_intersect_any(const yb_scene* scene, const float ray_o[3],
                                 const float ray_d[3], float ray_tmin,
-                                float ray_tmax) {
-    return yb_hit_scene_bvh(
-        bvh, ym_ray3f(ym_vec3f(ray_o), ym_vec3f(ray_d), ray_tmin, ray_tmax));
+                                float ray_tmax, int req_shape) {
+    return yb_intersect_any(
+        scene, ym_ray3f(ym_vec3f(ray_o), ym_vec3f(ray_d), ray_tmin, ray_tmax),
+        req_shape);
 }
 
 //
@@ -2321,8 +2226,8 @@ YGLC_API bool ybc_hit_scene_bvh(const yb_scene_bvh* bvh, const float ray_o[3],
 // axis aligned bouds. This is only a conservative check useful for collision
 // detection.
 //
-YGLC_API int ybc_overlap_shape_bounds(const yb_scene_bvh* bvh,
-                                      bool exclude_self, void* overlap_ctx,
+YGLC_API int ybc_overlap_shape_bounds(const yb_scene* scene, bool exclude_self,
+                                      void* overlap_ctx,
                                       void (*overlap_cb)(void* ctx,
                                                          const int ij[2])) {
     return 0;
@@ -2335,12 +2240,19 @@ YGLC_API int ybc_overlap_shape_bounds(const yb_scene_bvh* bvh,
 //
 // Finds the closest element to a point wihtin a given radius.
 //
-YGLC_API bool ybc_neighbour_scene_bvh(const yb_scene_bvh* bvh,
-                                      const float pt[3], float max_dist,
-                                      int req_sid, float* dist, int* sid,
-                                      int* eid, float euv[2]) {
-    return yb_neighbour_scene_bvh(bvh, ym_vec3f(pt), max_dist, req_sid, dist,
-                                  sid, eid, (ym_vec2f*)euv);
+YGLC_API bool ybc_overlap_first(const yb_scene* scene, const float pt[3],
+                                float max_dist, float* dist, int* sid, int* eid,
+                                float euv[2], int req_shape) {
+    return yb_overlap_first(scene, ym_vec3f(pt), max_dist, dist, sid, eid,
+                            (ym_vec2f*)euv, req_shape);
+}
+
+//
+// Finds if any element overlaps a point wihtin a given radius.
+//
+YGLC_API bool ybc_overlap_any(const yb_scene* scene, const float pt[3],
+                              float max_dist, int req_shape) {
+    return yb_overlap_any(scene, ym_vec3f(pt), max_dist, req_shape);
 }
 
 //

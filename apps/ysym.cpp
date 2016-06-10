@@ -580,23 +580,22 @@ yo_scene* load_scene(const char* filename) {
 }
 
 int overlap_shapes(void* ctx, ym_vector<ym_vec2i>* overlaps) {
-    yb_scene_bvh* scene_bvh = (yb_scene_bvh*)ctx;
+    yb_scene* scene_bvh = (yb_scene*)ctx;
     return yb_overlap_shape_bounds(scene_bvh, true, overlaps);
 }
 
 bool overlap_shape(void* ctx, int sid, const ym_vec3f& pt, float max_dist,
                    float* dist, int* eid, ym_vec2f* euv) {
-    yb_scene_bvh* scene_bvh = (yb_scene_bvh*)ctx;
-    return yb_neighbour_scene_bvh(scene_bvh, pt, max_dist, sid, dist, &sid, eid,
-                                  euv);
+    yb_scene* scene_bvh = (yb_scene*)ctx;
+    return yb_overlap_first(scene_bvh, pt, max_dist, dist, &sid, eid, euv, sid);
 }
 
 void overlap_refit(void* ctx, const ym_frame3f* xforms) {
-    yb_scene_bvh* scene_bvh = (yb_scene_bvh*)ctx;
+    yb_scene* scene_bvh = (yb_scene*)ctx;
     yb_refit_scene_bvh(scene_bvh, (const ym_affine3f*)xforms);
 }
 
-ysr_scene* make_rigid_scene(yo_scene* scene, yb_scene_bvh** scene_bvh) {
+ysr_scene* make_rigid_scene(yo_scene* scene, yb_scene** scene_bvh) {
     ysr_scene* rigid_scene = ysr_init_scene((int)scene->shapes.size());
 
     // add each shape
@@ -621,14 +620,14 @@ ysr_scene* make_rigid_scene(yo_scene* scene, yb_scene_bvh** scene_bvh) {
     }
 
     // set up final bvh
-    *scene_bvh = yb_init_scene_bvh((int)scene->shapes.size(), 0);
+    *scene_bvh = yb_init_scene((int)scene->shapes.size());
     for (int i = 0; i < scene->shapes.size(); i++) {
         yo_shape* shape = &scene->shapes[i];
-        yb_set_shape_bvh(*scene_bvh, i, shape->xform, shape->nelems,
-                         shape->elem.data(), shape->etype, shape->nverts,
-                         shape->pos.data(), shape->radius.data(), 0);
+        yb_set_shape(*scene_bvh, i, shape->xform, shape->nelems,
+                     shape->elem.data(), shape->etype, shape->nverts,
+                     shape->pos.data(), shape->radius.data());
     }
-    yb_build_scene_bvh(*scene_bvh);
+    yb_build_bvh(*scene_bvh, 0);
 
     // setup collisions
     ysr_set_collision(rigid_scene, *scene_bvh, overlap_shapes, overlap_shape,
@@ -662,7 +661,7 @@ int main(int argc, const char** argv) {
     scene->cameras[camera].width = aspect * scene->cameras[camera].height;
 
     // init rigid simulation
-    yb_scene_bvh* scene_bvh;
+    yb_scene* scene_bvh;
     ysr_scene* rigid_scene = make_rigid_scene(scene, &scene_bvh);
 
     // start

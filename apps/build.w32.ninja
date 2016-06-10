@@ -70,3 +70,13 @@ build bin/obj/yview.obj: cpp apps/yview.cpp
 
 build bin/yview.exe: app  bin/obj/libglfw3.lib bin/obj/libglew.lib bin/obj/libyocto.lib  bin/obj/yview.obj
 
+
+build bin/obj/test_bvh.obj: cpp apps/test_bvh.cpp
+
+build bin/test_bvh.exe: app  bin/obj/libglfw3.lib bin/obj/libglew.lib bin/obj/libyocto.lib  bin/obj/test_bvh.obj
+
+
+build bin/obj/test_obj.obj: cpp apps/test_obj.cpp
+
+build bin/test_obj.exe: app  bin/obj/libglfw3.lib bin/obj/libglew.lib bin/obj/libyocto.lib  bin/obj/test_obj.obj
+
