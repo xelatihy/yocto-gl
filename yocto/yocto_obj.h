@@ -79,11 +79,6 @@
 //
 // COMPILATION:
 //
-// The library has two APIs. The default one is usable directly from C++,
-// while the other is usable from both C and C++. To use from C, compile the
-// library into a static or dynamic lib using a C++ and then include/link from
-// C using the C API.
-//
 // All functions in this library are inlined by default for ease of use in C++.
 // To use the library as a .h/.cpp pair do the following:
 // - to use as a .h, just #define YGL_DECLARATION before including this file
@@ -95,6 +90,7 @@
 
 //
 // HISTORY:
+// - v 0.2: removal of C interface
 // - v 0.1: C++ implementation
 // - v 0.0: initial release in C99
 //
@@ -127,21 +123,13 @@
 #define _YO_H_
 
 // compilation options
-#ifdef __cplusplus
 #ifndef YGL_DECLARATION
 #define YGL_API inline
-#define YGLC_API inline
 #else
 #define YGL_API
-#define YGLC_API extern "C"
-#endif
-#include "yocto_math.h"
 #endif
 
-#ifndef __cplusplus
-#define YGLC_API extern
-#include <stdbool.h>
-#endif
+#include "yocto_math.h"
 
 // -----------------------------------------------------------------------------
 // C++ INTERFACE
@@ -170,17 +158,17 @@ struct yo_shape {
     int matid = -1;       // index in the material array (-1 if not found)
 
     // shape elements
-    int nelems = 0;       // number of elements (point, lines, triangles, etc.)
-    ym_vector<int> elem;  // per-element vertex indices
-    int etype = 0;        // element type from the above enum
+    int nelems = 0;  // number of elements (point, lines, triangles, etc.)
+    std::vector<int> elem;  // per-element vertex indices
+    int etype = 0;          // element type from the above enum
 
     // vertex data
-    int nverts = 0;                // number of vertices
-    ym_vector<ym_vec3f> pos;       // per-vertex position (3 float)
-    ym_vector<ym_vec3f> norm;      // per-vertex normals (3 float)
-    ym_vector<ym_vec2f> texcoord;  // per-vertex texcoord (2 float)
-    ym_vector<ym_vec3f> color;     // [extension] per-vertex color (3 float)
-    ym_vector<float> radius;       // [extension] per-vertex radius (1 float)
+    int nverts = 0;                  // number of vertices
+    std::vector<ym_vec3f> pos;       // per-vertex position (3 float)
+    std::vector<ym_vec3f> norm;      // per-vertex normals (3 float)
+    std::vector<ym_vec2f> texcoord;  // per-vertex texcoord (2 float)
+    std::vector<ym_vec3f> color;     // [extension] per-vertex color (3 float)
+    std::vector<float> radius;       // [extension] per-vertex radius (1 float)
 
     // transform
     bool xformed = false;  // [extension] whether a transform is present
@@ -242,7 +230,7 @@ struct yo_texture {
     ym_string path;             // path
     int width = 0, height = 0;  // if loaded, image width and hieght
     int ncomp = 0;              // if loaded, number of component (1-4)
-    ym_vector<float> pixels;    // if loaded, pixel data
+    std::vector<float> pixels;  // if loaded, pixel data
 };
 
 //
@@ -272,11 +260,11 @@ struct yo_env {
 // Scene
 //
 struct yo_scene {
-    ym_vector<yo_shape> shapes;        // shape array
-    ym_vector<yo_material> materials;  // material array
-    ym_vector<yo_texture> textures;    // texture array
-    ym_vector<yo_camera> cameras;      // camera array
-    ym_vector<yo_env> envs;            // environment array
+    std::vector<yo_shape> shapes;        // shape array
+    std::vector<yo_material> materials;  // material array
+    std::vector<yo_texture> textures;    // texture array
+    std::vector<yo_camera> cameras;      // camera array
+    std::vector<yo_env> envs;            // environment array
 };
 
 //
@@ -351,181 +339,6 @@ YGL_API void yo_load_textures(yo_scene* scene, const char* filename,
 #endif
 
 // -----------------------------------------------------------------------------
-// C/C++ INTERFACE
-// -----------------------------------------------------------------------------
-
-//
-// Geometric shape
-//
-struct yoc_shape {
-    // whole shape data
-    char* name;       // shape name
-    char* groupname;  // groupname (unique group for each shape object)
-    char* matname;    // material name
-    int matid;        // index in the material array (-1 if not found)
-
-    // shape elements
-    int nelems;  // number of elements (point, lines, triangles, etc.)
-    int* elem;   // per-element vertex indices
-    int etype;   // element type from the above enum
-
-    // vertex data
-    int nverts;       // number of vertices
-    float* pos;       // per-vertex position (3 float)
-    float* norm;      // per-vertex normals (3 float)
-    float* texcoord;  // per-vertex texcoord (2 float)
-    float* color;     // [extension] per-vertex color (3 float)
-    float* radius;    // [extension] per-vertex radius (1 float)
-
-    // transform
-    bool xformed;  // [extension] whether a transform is present
-    float* xform;  // [extension] 3x4 affine
-    // transform matrix (column
-    // major)
-};
-
-//
-// Material
-//
-struct yoc_material {
-    // whole material data
-    char* name;  // material name
-    int illum;   // MTL illum mode
-
-    // color information
-    float ke[3];  // emission color
-    float ka[3];  // ambient color
-    float kd[3];  // diffuse color
-    float ks[3];  // specular color
-    float kr[3];  // reflection color
-    float kt[3];  // transmision color
-    float ns;     // phong exponent for ks
-    float ior;    // index of refraction
-    float op;     // opacity
-
-    // texture names for the above properties
-    char* ke_txt;
-    char* ka_txt;
-    char* kd_txt;
-    char* ks_txt;
-    char* kr_txt;
-    char* kt_txt;
-    char* ns_txt;
-    char* op_txt;
-    char* ior_txt;
-    char* bump_txt;  // bump map texture (heighfield)
-    char* disp_txt;  // displacement map texture (heighfield)
-
-    // indices in the texture array (-1 if not found)
-    int ke_txtid;
-    int ka_txtid;
-    int kd_txtid;
-    int ks_txtid;
-    int kr_txtid;
-    int kt_txtid;
-    int ns_txtid;
-    int op_txtid;
-    int ior_txtid;
-    int bump_txtid;
-    int disp_txtid;
-};
-
-//
-// [Extension] Texture
-//
-struct yoc_texture {
-    char* path;         // path
-    int width, height;  // if loaded, image width and hieght
-    int ncomp;          // if loaded, number of component (1-4)
-    float* pixels;      // if loaded, pixel data
-};
-
-//
-// [Extension] Camera represented as a lookat.
-//
-struct yoc_camera {
-    char* name;           // name
-    float from[3];        // camera position
-    float to[3];          // camera focus location
-    float up[3];          // camera up vector
-    float width, height;  // image plane width and height
-    float aperture;       // lens aperture
-};
-
-//
-// [Extension] Envinonment map in latlong format
-//
-struct yoc_env {
-    char* name;     // name
-    char* matname;  // material name (where only ke, ke_txt are valid)
-    int matid;      // index of material in material array (-1 if not found)
-    float from[3], to[3], up[3];  // lookat transform data as in yo_camera
-};
-
-//
-// Scene
-//
-struct yoc_scene {
-    int nshapes;
-    yoc_shape* shapes;  // shape array
-    int nmaterials;
-    yoc_material* materials;  // material array
-    int ntextures;
-    yoc_texture* textures;  // texture array
-    int ncameras;
-    yoc_camera* cameras;  // camera array
-    int nenvs;
-    yoc_env* envs;  // environment array
-};
-
-//
-// Loads a scene from disk
-//
-// Parameters:
-// - filename: scene filename
-// - truangulate: whether to triagulate on load (fan-style)
-// - ext: enable extensions
-//
-// Returns:
-// - loaded scene or NULL for error
-//
-YGLC_API yoc_scene* yoc_load_obj(const char* filename, bool triangulate,
-                                 bool ext);
-
-//
-// Saves a scene to disk
-//
-// Parameters:
-// - filename: scene filename
-// - scene: scene to save
-// - ext: enable extensions
-//
-// Returns:
-// - true if ok
-//
-YGLC_API bool yoc_save_obj(const char* filename, const yoc_scene* scene,
-                           bool ext);
-
-//
-// Free scene data.
-//
-YGLC_API void yoc_free_scene(yoc_scene* scene);
-
-//
-// Loads textures.
-//
-// Parameters:
-// - scene: scene to load into
-// - filename: scene filename, used to resolve path references
-// - req_comp: 0 for default or 1-4 to force all textures to have the given
-//    number of components
-//
-#ifndef YO_NOIMG
-YGLC_API void yoc_load_textures(yoc_scene* scene, const char* filename,
-                                int req_comp);
-#endif
-
-// -----------------------------------------------------------------------------
 // IMPLEMENTATION
 // -----------------------------------------------------------------------------
 
@@ -547,11 +360,11 @@ struct yo__vert {
 // OBJ vertex data
 //
 struct yo__vertdata {
-    ym_vector<ym_vec3f> pos;
-    ym_vector<ym_vec2f> texcoord;
-    ym_vector<ym_vec3f> norm;
-    ym_vector<ym_vec3f> color;
-    ym_vector<float> radius;
+    std::vector<ym_vec3f> pos;
+    std::vector<ym_vec2f> texcoord;
+    std::vector<ym_vec3f> norm;
+    std::vector<ym_vec3f> color;
+    std::vector<float> radius;
 };
 
 //
@@ -559,7 +372,7 @@ struct yo__vertdata {
 //
 struct yo__elemdata {
     int etype;
-    ym_vector<int> elem;
+    std::vector<int> elem;
 };
 
 //
@@ -567,8 +380,8 @@ struct yo__elemdata {
 //
 #define yo__vhash_size 1048576
 struct yo__vhash {
-    int nverts;                             // numner of vertices
-    ym_vector<yo__vert> v[yo__vhash_size];  // bucket data (one vertex for
+    int nverts;                               // numner of vertices
+    std::vector<yo__vert> v[yo__vhash_size];  // bucket data (one vertex for
     // each unique face index)
 };
 
@@ -594,8 +407,8 @@ YGL_API void yo_free_scene(yo_scene* scene) { delete scene; }
 //
 // During parsing, flashes a shape into the scene if elements are present.
 //
-YGL_API void yo__add_shape(ym_vector<yo_shape>& shapes,
-                           const ym_vector<yo_material>& materials,
+YGL_API void yo__add_shape(std::vector<yo_shape>& shapes,
+                           const std::vector<yo_material>& materials,
                            const ym_string& name, const ym_string& matname,
                            const ym_string& groupname, const ym_affine3f& xform,
                            yo__elemdata& elem, yo__vertdata& vert,
@@ -711,7 +524,7 @@ static inline int yo__splitws(char* str, char** splits, int maxsplits) {
 //
 // Add an empty material.
 //
-static inline void yo__add_empty_material(ym_vector<yo_material>& materials,
+static inline void yo__add_empty_material(std::vector<yo_material>& materials,
                                           const ym_string& name) {
     materials.push_back(yo_material());
     yo_material* mat = &materials[materials.size() - 1];
@@ -721,7 +534,7 @@ static inline void yo__add_empty_material(ym_vector<yo_material>& materials,
 //
 // Add a camera from OBJ vertices.
 //
-static inline void yo__add_camera(ym_vector<yo_camera>& cameras,
+static inline void yo__add_camera(std::vector<yo_camera>& cameras,
                                   const ym_string& name, const yo__vert& from,
                                   const yo__vert& to,
                                   const yo__vertdata& obj_vert,
@@ -746,7 +559,7 @@ static inline void yo__add_camera(ym_vector<yo_camera>& cameras,
 //
 // Add an environment map from OBJ vertices.
 //
-static inline void yo__add_env(ym_vector<yo_env>& envs, const ym_string& name,
+static inline void yo__add_env(std::vector<yo_env>& envs, const ym_string& name,
                                const ym_string& matname, const yo__vert& from,
                                const yo__vert& to, const yo__vertdata& obj_vert,
                                yo__vhash* vhash) {
@@ -855,7 +668,7 @@ static inline void yo__add_shape_vert(yo__vertdata* vert, const yo__vert& v,
 //
 // add a unique texture
 //
-static inline int yo__add_unique_texture(ym_vector<yo_texture>& textures,
+static inline int yo__add_unique_texture(std::vector<yo_texture>& textures,
                                          const ym_string& path) {
     if (path.empty()) return -1;
     int pos = -1;
@@ -870,8 +683,8 @@ static inline int yo__add_unique_texture(ym_vector<yo_texture>& textures,
 //
 // loads an MTL file
 //
-static inline bool yo__load_mtl(ym_vector<yo_material>& materials,
-                                ym_vector<yo_texture>& textures,
+static inline bool yo__load_mtl(std::vector<yo_material>& materials,
+                                std::vector<yo_texture>& textures,
                                 const char* filename) {
     FILE* mfile = fopen(filename, "rt");
     if (!mfile) return false;
@@ -1011,11 +824,11 @@ YGL_API yo_scene* yo_load_obj(const char* filename, bool triangulate,
     yo__vertdata obj_vert;
 
     // current scene objects
-    ym_vector<yo_shape> shapes;
-    ym_vector<yo_material> materials;
-    ym_vector<yo_texture> textures;
-    ym_vector<yo_camera> cameras;
-    ym_vector<yo_env> envs;
+    std::vector<yo_shape> shapes;
+    std::vector<yo_material> materials;
+    std::vector<yo_texture> textures;
+    std::vector<yo_camera> cameras;
+    std::vector<yo_env> envs;
 
     // current shape scene
     yo__vhash* vhash = new yo__vhash();
@@ -1434,7 +1247,7 @@ static inline bool yo__fread_binvalue(FILE* file, T* v) {
 
 // binary dump vector of values
 template <typename T>
-static inline bool yo__fread_binvector(FILE* file, ym_vector<T>* v) {
+static inline bool yo__fread_binvector(FILE* file, std::vector<T>* v) {
     int num = 0;
     if (fread(&num, sizeof(int), 1, file) != 1) return false;
     v->resize(num);
@@ -1589,7 +1402,7 @@ static inline bool yo__fwrite_binvalue(FILE* file, const T& v) {
 
 // binary dump vector of values
 template <typename T>
-static inline bool yo__fwrite_binvector(FILE* file, const ym_vector<T>& v) {
+static inline bool yo__fwrite_binvector(FILE* file, const std::vector<T>& v) {
     int num = (int)v.size();
     if (fwrite(&num, sizeof(int), 1, file) != 1) return false;
     if (fwrite(v.data(), sizeof(T), num, file) != num) return false;
@@ -1690,8 +1503,8 @@ YGL_API bool yo_save_objbin(const char* filename, const yo_scene* scene,
             yo__fwrite_binvector(file, shape->color);
             yo__fwrite_binvector(file, shape->radius);
         } else {
-            ym_vector<float> r;
-            ym_vector<ym_vec3f> c;
+            std::vector<float> r;
+            std::vector<ym_vec3f> c;
             yo__fwrite_binvector(file, c);
             yo__fwrite_binvector(file, r);
         }
@@ -1748,7 +1561,7 @@ YGL_API void yo_load_textures(yo_scene* scene, const char* filename,
         float* d = stbi_loadf(fullname, &scene->textures[i].width,
                               &scene->textures[i].height,
                               &scene->textures[i].ncomp, req_comp);
-        scene->textures[i].pixels = ym_vector<float>(
+        scene->textures[i].pixels = std::vector<float>(
             d, d +
                    scene->textures[i].width * scene->textures[i].height *
                        scene->textures[i].ncomp);
@@ -1757,370 +1570,6 @@ YGL_API void yo_load_textures(yo_scene* scene, const char* filename,
     stbi_set_flip_vertically_on_load(0);
 }
 
-#endif
-
-// -----------------------------------------------------------------------------
-// C/C++ INTERFACE
-// -----------------------------------------------------------------------------
-
-//
-// Copies a string safely
-//
-static inline char* yoc__strcopy(const ym_string& str) {
-    if (str.empty()) return 0;
-    char* buf = new char[str.length() + 1];
-    strcpy(buf, str.c_str());
-    return buf;
-}
-
-//
-// Copies an array safely
-//
-template <typename T>
-static inline T* yoc__arraycopy(const ym_vector<T>& v) {
-    if (v.empty()) return 0;
-    T* r = new T[v.size()];
-    for (int i = 0; i < v.size(); i++) r[i] = v[i];
-    return r;
-}
-
-//
-// Loads a scene from disk
-//
-YGLC_API yoc_scene* yoc_load_obj(const char* filename, bool triangulate,
-                                 bool ext) {
-    yo_scene* scene = yo_load_obj(filename, triangulate, ext);
-    yoc_scene* cscene = new yoc_scene();
-
-    cscene->ncameras = (int)scene->cameras.size();
-    cscene->cameras =
-        (cscene->ncameras)
-            ? (yoc_camera*)calloc(cscene->ncameras, sizeof(yoc_camera))
-            : 0;
-    for (int i = 0; i < cscene->ncameras; i++) {
-        yo_camera* cam = &scene->cameras[i];
-        yoc_camera* ccam = &cscene->cameras[i];
-        ccam->name = yoc__strcopy(cam->name);
-        *(ym_vec3f*)ccam->from = cam->from;
-        *(ym_vec3f*)ccam->to = cam->to;
-        *(ym_vec3f*)ccam->up = cam->up;
-        ccam->width = cam->width;
-        ccam->height = cam->height;
-        ccam->aperture = cam->aperture;
-    }
-
-    cscene->nenvs = (int)scene->envs.size();
-    cscene->envs =
-        (cscene->nenvs) ? (yoc_env*)calloc(cscene->nenvs, sizeof(yoc_env)) : 0;
-    for (int i = 0; i < cscene->nenvs; i++) {
-        yo_env* env = &scene->envs[i];
-        yoc_env* cenv = &cscene->envs[i];
-        cenv->name = yoc__strcopy(env->name);
-        cenv->matname = yoc__strcopy(env->matname);
-        cenv->matid = env->matid;
-        *(ym_vec3f*)cenv->from = env->from;
-        *(ym_vec3f*)cenv->to = env->to;
-        *(ym_vec3f*)cenv->up = env->up;
-    }
-
-    cscene->ntextures = (int)scene->textures.size();
-    cscene->textures =
-        (cscene->ntextures)
-            ? (yoc_texture*)calloc(cscene->ntextures, sizeof(yoc_texture))
-            : 0;
-    for (int i = 0; i < cscene->ntextures; i++) {
-        yo_texture* txt = &scene->textures[i];
-        yoc_texture* ctxt = &cscene->textures[i];
-        ctxt->path = yoc__strcopy(txt->path);
-        ctxt->width = txt->width;
-        ctxt->height = txt->height;
-        ctxt->ncomp = txt->ncomp;
-        ctxt->pixels = (float*)yoc__arraycopy(txt->pixels);
-    }
-
-    cscene->nmaterials = (int)scene->materials.size();
-    cscene->materials =
-        (cscene->nmaterials)
-            ? (yoc_material*)calloc(cscene->nmaterials, sizeof(yoc_material))
-            : 0;
-    for (int i = 0; i < cscene->nmaterials; i++) {
-        yo_material* mat = &scene->materials[i];
-        yoc_material* cmat = &cscene->materials[i];
-        cmat->name = yoc__strcopy(mat->name);
-        cmat->illum = mat->illum;
-        *(ym_vec3f*)cmat->ke = mat->ke;
-        *(ym_vec3f*)cmat->ka = mat->ka;
-        *(ym_vec3f*)cmat->kd = mat->kd;
-        *(ym_vec3f*)cmat->ks = mat->ks;
-        *(ym_vec3f*)cmat->kr = mat->kr;
-        *(ym_vec3f*)cmat->kt = mat->kt;
-        cmat->ns = mat->ns;
-        cmat->ior = mat->ior;
-        cmat->op = mat->op;
-        cmat->ke_txt = yoc__strcopy(mat->ke_txt);
-        cmat->ka_txt = yoc__strcopy(mat->ka_txt);
-        cmat->kd_txt = yoc__strcopy(mat->kd_txt);
-        cmat->ks_txt = yoc__strcopy(mat->ks_txt);
-        cmat->kr_txt = yoc__strcopy(mat->kr_txt);
-        cmat->kt_txt = yoc__strcopy(mat->kt_txt);
-        cmat->ns_txt = yoc__strcopy(mat->ns_txt);
-        cmat->op_txt = yoc__strcopy(mat->op_txt);
-        cmat->ior_txt = yoc__strcopy(mat->ior_txt);
-        cmat->bump_txt = yoc__strcopy(mat->bump_txt);
-        cmat->disp_txt = yoc__strcopy(mat->disp_txt);
-        cmat->ke_txtid = mat->ke_txtid;
-        cmat->ka_txtid = mat->ka_txtid;
-        cmat->kd_txtid = mat->kd_txtid;
-        cmat->ks_txtid = mat->ks_txtid;
-        cmat->kr_txtid = mat->kr_txtid;
-        cmat->kt_txtid = mat->kt_txtid;
-        cmat->ns_txtid = mat->ns_txtid;
-        cmat->op_txtid = mat->op_txtid;
-        cmat->ior_txtid = mat->ior_txtid;
-        cmat->bump_txtid = mat->bump_txtid;
-        cmat->disp_txtid = mat->disp_txtid;
-    }
-
-    cscene->nshapes = (int)scene->shapes.size();
-    cscene->shapes = (cscene->nshapes) ? (yoc_shape*)calloc(cscene->nshapes,
-                                                            sizeof(yoc_shape))
-                                       : 0;
-    for (int i = 0; i < cscene->nshapes; i++) {
-        yo_shape* shape = &scene->shapes[i];
-        yoc_shape* cshape = &cscene->shapes[i];
-        cshape->name = yoc__strcopy(shape->name);
-        cshape->matname = yoc__strcopy(shape->matname);
-        cshape->groupname = yoc__strcopy(shape->groupname);
-        cshape->matid = shape->matid;
-        cshape->nelems = shape->nelems;
-        cshape->elem = yoc__arraycopy(shape->elem);
-        cshape->etype = shape->etype;
-        cshape->nverts = shape->nverts;
-        cshape->pos = (float*)yoc__arraycopy(shape->pos);
-        cshape->norm = (float*)yoc__arraycopy(shape->norm);
-        cshape->texcoord = (float*)yoc__arraycopy(shape->texcoord);
-        cshape->color = (float*)yoc__arraycopy(shape->color);
-        cshape->radius = yoc__arraycopy(shape->radius);
-    }
-
-    yo_free_scene(scene);
-    return cscene;
-}
-
-//
-// Saves a scene to disk
-//
-YGLC_API bool yoc_save_obj(const char* filename, const yoc_scene* cscene,
-                           bool ext) {
-    yo_scene* scene = new yo_scene();
-
-    scene->cameras.resize(cscene->ncameras);
-    for (int i = 0; i < cscene->ncameras; i++) {
-        yo_camera* cam = &scene->cameras[i];
-        yoc_camera* ccam = &cscene->cameras[i];
-        cam->name = ccam->name;
-        cam->from = ym_vec3f(ccam->from);
-        cam->to = ym_vec3f(ccam->to);
-        cam->up = ym_vec3f(ccam->up);
-        cam->width = ccam->width;
-        cam->height = ccam->height;
-        cam->aperture = ccam->aperture;
-    }
-
-    scene->envs.resize(cscene->nenvs);
-    for (int i = 0; i < cscene->nenvs; i++) {
-        yo_env* env = &scene->envs[i];
-        yoc_env* cenv = &cscene->envs[i];
-        env->name = yoc__strcopy(cenv->name);
-        env->matname = yoc__strcopy(cenv->matname);
-        env->matid = env->matid;
-        env->from = ym_vec3f(cenv->from);
-        env->to = ym_vec3f(cenv->to);
-        env->up = ym_vec3f(cenv->up);
-    }
-
-    scene->textures.resize(cscene->ntextures);
-    for (int i = 0; i < cscene->ntextures; i++) {
-        yo_texture* txt = &scene->textures[i];
-        yoc_texture* ctxt = &cscene->textures[i];
-        txt->path = ctxt->path;
-        txt->width = ctxt->width;
-        txt->height = ctxt->height;
-        txt->ncomp = ctxt->ncomp;
-        txt->pixels =
-            (ctxt->pixels)
-                ? ym_vector<float>{ctxt->pixels,
-                                   ctxt->pixels +
-                                       ctxt->width * ctxt->height * ctxt->ncomp}
-                : ym_vector<float>();
-    }
-
-    scene->materials.resize(cscene->nmaterials);
-    for (int i = 0; i < cscene->nmaterials; i++) {
-        yo_material* mat = &scene->materials[i];
-        yoc_material* cmat = &cscene->materials[i];
-        mat->name = cmat->name;
-        mat->illum = cmat->illum;
-        mat->ke = ym_vec3f(cmat->ke);
-        mat->ka = ym_vec3f(cmat->ka);
-        mat->kd = ym_vec3f(cmat->kd);
-        mat->ks = ym_vec3f(cmat->ks);
-        mat->kr = ym_vec3f(cmat->kr);
-        mat->kt = ym_vec3f(cmat->kt);
-        mat->ns = cmat->ns;
-        mat->ior = cmat->ior;
-        mat->op = cmat->op;
-        mat->ke_txt = cmat->ke_txt;
-        mat->ka_txt = cmat->ka_txt;
-        mat->kd_txt = cmat->kd_txt;
-        mat->ks_txt = cmat->ks_txt;
-        mat->kr_txt = cmat->kr_txt;
-        mat->kt_txt = cmat->kt_txt;
-        mat->ns_txt = cmat->ns_txt;
-        mat->op_txt = cmat->op_txt;
-        mat->ior_txt = cmat->ior_txt;
-        mat->bump_txt = cmat->bump_txt;
-        mat->disp_txt = cmat->disp_txt;
-        mat->ke_txtid = cmat->ke_txtid;
-        mat->ka_txtid = cmat->ka_txtid;
-        mat->kd_txtid = cmat->kd_txtid;
-        mat->ks_txtid = cmat->ks_txtid;
-        mat->kr_txtid = cmat->kr_txtid;
-        mat->kt_txtid = cmat->kt_txtid;
-        mat->ns_txtid = cmat->ns_txtid;
-        mat->op_txtid = cmat->op_txtid;
-        mat->ior_txtid = cmat->ior_txtid;
-        mat->bump_txtid = cmat->bump_txtid;
-        mat->disp_txtid = cmat->disp_txtid;
-    }
-
-    scene->shapes.resize(cscene->nshapes);
-    for (int i = 0; i < cscene->nshapes; i++) {
-        yo_shape* shape = &scene->shapes[i];
-        yoc_shape* cshape = &cscene->shapes[i];
-        shape->name = cshape->name;
-        shape->matname = cshape->matname;
-        shape->groupname = cshape->groupname;
-        shape->matid = cshape->matid;
-        shape->nelems = cshape->nelems;
-        shape->elem =
-            (cshape->elem)
-                ? ym_vector<int>{cshape->elem, cshape->elem + cshape->nelems}
-                : ym_vector<int>{};
-        shape->etype = cshape->etype;
-        shape->nverts = cshape->nverts;
-        shape->pos =
-            (cshape->pos)
-                ? ym_vector<ym_vec3f>{(ym_vec3f*)cshape->pos,
-                                      (ym_vec3f*)cshape->pos + cshape->nverts}
-                : ym_vector<ym_vec3f>{};
-        shape->norm =
-            (cshape->norm)
-                ? ym_vector<ym_vec3f>{(ym_vec3f*)cshape->norm,
-                                      (ym_vec3f*)cshape->norm + cshape->nverts}
-                : ym_vector<ym_vec3f>{};
-        shape->texcoord =
-            (cshape->texcoord)
-                ? ym_vector<ym_vec2f>{(ym_vec2f*)cshape->texcoord,
-                                      (ym_vec2f*)cshape->texcoord +
-                                          cshape->nverts}
-                : ym_vector<ym_vec2f>{};
-        shape->color =
-            (cshape->color)
-                ? ym_vector<ym_vec3f>{(ym_vec3f*)cshape->color,
-                                      (ym_vec3f*)cshape->color + cshape->nverts}
-                : ym_vector<ym_vec3f>{};
-        shape->radius = (cshape->radius)
-                            ? ym_vector<float>{cshape->radius,
-                                               cshape->radius + cshape->nverts}
-                            : ym_vector<float>{};
-    }
-
-    bool ok = yo_save_obj(filename, scene, ext);
-
-    yo_free_scene(scene);
-
-    return ok;
-}
-
-//
-// Free scene data.
-//
-YGLC_API void yoc_free_scene(yoc_scene* scene) {
-#define __freeobj(x)                                                           \
-    if (x) delete x;
-#define __freestr(x)                                                           \
-    if (x) delete x;
-#define __freearray(x)                                                         \
-    if (x) delete[] x;
-    for (int i = 0; i < scene->ncameras; i++) {
-        yoc_camera* cam = &scene->cameras[i];
-        __freestr(cam->name);
-    }
-    for (int i = 0; i < scene->nenvs; i++) {
-        yoc_env* env = &scene->envs[i];
-        __freestr(env->name);
-        __freestr(env->matname);
-    }
-    for (int i = 0; i < scene->ntextures; i++) {
-        yoc_texture* txt = &scene->textures[i];
-        __freestr(txt->path);
-    }
-    for (int i = 0; i < scene->nmaterials; i++) {
-        yoc_material* mat = &scene->materials[i];
-        __freestr(mat->name);
-        __freestr(mat->ke_txt);
-        __freestr(mat->ka_txt);
-        __freestr(mat->kd_txt);
-        __freestr(mat->ks_txt);
-        __freestr(mat->kr_txt);
-        __freestr(mat->kt_txt);
-        __freestr(mat->ns_txt);
-        __freestr(mat->op_txt);
-        __freestr(mat->ior_txt);
-        __freestr(mat->bump_txt);
-        __freestr(mat->disp_txt);
-    }
-    for (int i = 0; i < scene->nshapes; i++) {
-        yoc_shape* shape = &scene->shapes[i];
-        __freestr(shape->name);
-        __freestr(shape->matname);
-        __freestr(shape->groupname);
-        __freearray(shape->elem);
-        __freearray(shape->pos);
-        __freearray(shape->norm);
-        __freearray(shape->texcoord);
-        __freearray(shape->color);
-        __freearray(shape->radius);
-    }
-    __freearray(scene->cameras);
-    __freearray(scene->envs);
-    __freearray(scene->textures);
-    __freearray(scene->materials);
-    __freearray(scene->shapes);
-    __freeobj(scene);
-#undef __freearray
-#undef __freeobj
-#undef __freestr
-}
-
-//
-// Loads textures.
-//
-#ifndef YO_NOIMG
-YGLC_API void yoc_load_textures(yoc_scene* scene, const char* filename,
-                                int req_comp) {
-    stbi_set_flip_vertically_on_load(1);
-    char fullname[4096];
-    for (int i = 0; i < scene->ntextures; i++) {
-        yo__split_path(filename, fullname, 0, 0);
-        strcat(fullname, scene->textures[i].path);
-        scene->textures[i].pixels = stbi_loadf(
-            fullname, &scene->textures[i].width, &scene->textures[i].height,
-            &scene->textures[i].ncomp, req_comp);
-    }
-    stbi_set_flip_vertically_on_load(0);
-}
 #endif
 
 #endif

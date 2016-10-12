@@ -202,8 +202,8 @@ yo_shape make_lines(const char* name, const char* matname, int num, int n,
     shape.etype = yo_etype_line;
 
     ym_rng_pcg32 rn;
-    ym_vector<ym_vec3f> base(num + 1), dir(num + 1);
-    ym_vector<float> ln(num + 1);
+    std::vector<ym_vec3f> base(num + 1), dir(num + 1);
+    std::vector<float> ln(num + 1);
     for (int i = 0; i <= num; i++) {
         float z = -1 + 2 * ym_rng_nextf(&rn);
         float r = sqrtf(ym_clamp(1 - z * z, 0, 1));
@@ -262,8 +262,8 @@ yo_shape make_lines(const char* name, const char* matname, int num, int n,
     return shape;
 }
 
-ym_vector<yo_shape> make_random_shapes(int nshapes, int l, bool use_xform) {
-    ym_vector<yo_shape> shapes(nshapes);
+std::vector<yo_shape> make_random_shapes(int nshapes, int l, bool use_xform) {
+    std::vector<yo_shape> shapes(nshapes);
     shapes[0] = transform_shape(make_floor("floor", "floor", 6, 4, 6),
                                 {0, 0, -4}, ym_zero3f, 6);
     ym_vec3f pos[1024];
@@ -308,8 +308,8 @@ ym_vector<yo_shape> make_random_shapes(int nshapes, int l, bool use_xform) {
     return shapes;
 }
 
-ym_vector<yo_material> make_random_materials(int nshapes) {
-    ym_vector<yo_material> materials(nshapes);
+std::vector<yo_material> make_random_materials(int nshapes) {
+    std::vector<yo_material> materials(nshapes);
     materials[0] = make_diffuse("floor", {1, 1, 1}, "grid.png");
 
     const char* txts[6] = {0,
@@ -345,8 +345,8 @@ ym_vector<yo_material> make_random_materials(int nshapes) {
     return materials;
 }
 
-ym_vector<yo_shape> make_random_rigid_shapes(int nshapes, int l) {
-    ym_vector<yo_shape> shapes(nshapes);
+std::vector<yo_shape> make_random_rigid_shapes(int nshapes, int l) {
+    std::vector<yo_shape> shapes(nshapes);
     shapes[0] = xform_shape(make_shape("floor", "floor", 2, ys_stype_uvcube),
                             {0, -0.5, 0}, ym_zero3f, {6, 0.5, 6});
     ym_vec3f pos[1024];
@@ -382,10 +382,10 @@ ym_vector<yo_shape> make_random_rigid_shapes(int nshapes, int l) {
     return shapes;
 }
 
-yo_scene make_scene(const ym_vector<yo_camera>& cameras,
-                    const ym_vector<yo_shape>& shapes,
-                    const ym_vector<yo_material>& materials,
-                    const ym_vector<yo_env>& envs = {}) {
+yo_scene make_scene(const std::vector<yo_camera>& cameras,
+                    const std::vector<yo_shape>& shapes,
+                    const std::vector<yo_material>& materials,
+                    const std::vector<yo_env>& envs = {}) {
     yo_scene scene;
     scene.cameras = cameras;
     scene.shapes = shapes;
@@ -397,8 +397,8 @@ yo_scene make_scene(const ym_vector<yo_camera>& cameras,
 typedef unsigned char ubyte;
 typedef struct { ubyte r, g, b, a; } rgba;
 
-ym_vector<rgba> make_grid(int s) {
-    ym_vector<rgba> pixels(s * s);
+std::vector<rgba> make_grid(int s) {
+    std::vector<rgba> pixels(s * s);
     int g = 64;
     for (int j = 0; j < s; j++) {
         for (int i = 0; i < s; i++) {
@@ -411,8 +411,8 @@ ym_vector<rgba> make_grid(int s) {
     return pixels;
 }
 
-ym_vector<rgba> make_checker(int s) {
-    ym_vector<rgba> pixels(s * s);
+std::vector<rgba> make_checker(int s) {
+    std::vector<rgba> pixels(s * s);
     for (int j = 0; j < s; j++) {
         for (int i = 0; i < s; i++) {
             if ((i / 64 + j / 64) % 2)
@@ -479,8 +479,8 @@ rgba hsv_to_rgb(ubyte h, ubyte s, ubyte v) {
     return rgb;
 }
 
-ym_vector<rgba> make_rcolored(int s) {
-    ym_vector<rgba> pixels(s * s);
+std::vector<rgba> make_rcolored(int s) {
+    std::vector<rgba> pixels(s * s);
     for (int j = 0; j < s; j++) {
         for (int i = 0; i < s; i++) {
             ubyte ph = 32 * (i / (s / 8));
@@ -509,8 +509,8 @@ ym_vector<rgba> make_rcolored(int s) {
     return pixels;
 }
 
-ym_vector<rgba> make_colored(int s) {
-    ym_vector<rgba> pixels(s * s);
+std::vector<rgba> make_colored(int s) {
+    std::vector<rgba> pixels(s * s);
     for (int j = 0; j < s; j++) {
         for (int i = 0; i < s; i++) {
             ubyte ph = 32 * (i / (s / 8));
@@ -531,8 +531,8 @@ ym_vector<rgba> make_colored(int s) {
     return pixels;
 }
 
-ym_vector<rgba> make_rchecker(int s) {
-    ym_vector<rgba> pixels(s * s);
+std::vector<rgba> make_rchecker(int s) {
+    std::vector<rgba> pixels(s * s);
     for (int j = 0; j < s; j++) {
         for (int i = 0; i < s; i++) {
             ubyte pv = 128;
@@ -560,10 +560,10 @@ ym_vector<rgba> make_rchecker(int s) {
 
 #define sqr(x) ((x) * (x))
 
-ym_vector<ym_vec4f> make_sunsky_hdr(int w, int h, float sun_theta,
-                                    float turbidity, ym_vec3f ground,
-                                    float scale, bool include_ground) {
-    ym_vector<ym_vec4f> rgba(w * h);
+std::vector<ym_vec4f> make_sunsky_hdr(int w, int h, float sun_theta,
+                                      float turbidity, ym_vec3f ground,
+                                      float scale, bool include_ground) {
+    std::vector<ym_vec4f> rgba(w * h);
     ArHosekSkyModelState* skymodel_state[3] = {
         arhosek_rgb_skymodelstate_alloc_init(turbidity, ground.x, sun_theta),
         arhosek_rgb_skymodelstate_alloc_init(turbidity, ground.x, sun_theta),
@@ -632,10 +632,10 @@ int main(int argc, const char** argv) {
 
     // floor scene ------------------------------
     printf("generating simple scenes ...\n");
-    ym_vector<yo_camera> sh_cams = {
+    std::vector<yo_camera> sh_cams = {
         make_camera("cam", {0, 1.5f, 5}, {0, 0.5f, 0}, 0.5f, 0),
         make_camera("cam_dof", {0, 1.5f, 5}, {0, 0.5, 0}, 0.5f, 0.1f)};
-    ym_vector<yo_shape> sh_shapes = {
+    std::vector<yo_shape> sh_shapes = {
         transform_shape(make_floor("floor", "floor", 6, 4, 6), {0, 0, -4},
                         ym_zero3f, 6),
         transform_shape(
@@ -646,46 +646,46 @@ int main(int argc, const char** argv) {
             {0, 0.5f, 0}, ym_zero3f, 0.5),
         transform_shape(make_shape("obj03", "obj03", 4, ys_stype_uvspherecube),
                         {1.25f, 0.5f, 0}, ym_zero3f, 0.5)};
-    ym_vector<yo_material> sh_materials = {
+    std::vector<yo_material> sh_materials = {
         make_diffuse("floor", {0.2f, 0.2f, 0.2f}, 0),
         make_plastic("obj01", {0.5f, 0.2f, 0.2f}, 50, 0),
         make_plastic("obj02", {0.2f, 0.5f, 0.2f}, 100, 0),
         make_plastic("obj03", {0.2f, 0.2f, 0.5f}, 500, 0)};
-    ym_vector<yo_shape> sh_light_shapes = {
+    std::vector<yo_shape> sh_light_shapes = {
         transform_shape(make_shape("light01", "light01", 0, ys_stype_points),
                         {0.7f, 4, 3}, ym_zero3f, 1),
         transform_shape(make_shape("light02", "light02", 0, ys_stype_points),
                         {-0.7f, 4, 3}, ym_zero3f, 1)};
-    ym_vector<yo_material> sh_light_materials = {
+    std::vector<yo_material> sh_light_materials = {
         make_emission("light01", {100, 100, 100}, 0),
         make_emission("light02", {100, 100, 100}, 0),
     };
 
     // textures
-    ym_vector<yo_material> sh_textured_materials = {
+    std::vector<yo_material> sh_textured_materials = {
         make_diffuse("floor", {1, 1, 1}, "grid.png"),
         make_plastic("obj01", {1, 1, 1}, 50, "rcolored.png"),
         make_plastic("obj02", {1, 1, 1}, 100, "checker.png"),
         make_plastic("obj03", {1, 1, 1}, 500, "colored.png")};
 
     // area lights
-    ym_vector<yo_shape> sh_area_shapes = {
+    std::vector<yo_shape> sh_area_shapes = {
         transform_shape(make_shape("light01", "light01", 0, ys_stype_uvquad),
                         {4, 2, 4}, {0, 180 + 45, 0}, 2),
         transform_shape(make_shape("light02", "light02", 0, ys_stype_uvquad),
                         {-4, 2, 4}, {0, 180 - 45, 0}, 2)};
-    ym_vector<yo_material> sh_area_materials = {
+    std::vector<yo_material> sh_area_materials = {
         make_emission("light01", {10, 10, 10}, 0),
         make_emission("light02", {10, 10, 10}, 0),
     };
 
     // colored area lights
-    ym_vector<yo_shape> sh_area1_shapes = {
+    std::vector<yo_shape> sh_area1_shapes = {
         transform_shape(make_shape("light01", "light01", 0, ys_stype_uvquad),
                         {4, 2, 4}, {0, 180 + 45, 0}, 2),
         transform_shape(make_shape("light02", "light02", 0, ys_stype_uvquad),
                         {-4, 2, 4}, {0, 180 - 45, 0}, 2)};
-    ym_vector<yo_material> sh_area1_materials = {
+    std::vector<yo_material> sh_area1_materials = {
         make_emission("light01", {10, 6, 3}, 0),
         make_emission("light02", {3, 6, 10}, 0),
     };
@@ -706,12 +706,12 @@ int main(int argc, const char** argv) {
 
     // point and lines scene ------------------------------
     printf("generating points and lines scenes ...\n");
-    ym_vector<yo_shape> ps_shapes = {
+    std::vector<yo_shape> ps_shapes = {
         transform_shape(make_floor("floor", "floor", 6, 4, 6), {0, 0, -4},
                         {0, 0, 0}, 6),
         transform_shape(make_shape("points01", "points", 18, ys_stype_rnpoints),
                         {0, 0.5f, 0}, ym_zero3f, 0.5)};
-    ym_vector<yo_shape> ls_shapes = {
+    std::vector<yo_shape> ls_shapes = {
         transform_shape(make_floor("floor", "floor", 6, 4, 6), {0, 0, -4},
                         ym_zero3f, 6),
         transform_shape(make_shape("obj01", "obj", 6, ys_stype_uvsphere),
@@ -729,7 +729,7 @@ int main(int argc, const char** argv) {
         transform_shape(
             make_lines("lines03", "lines", 64 * 64 * 16, 4, 0, 0, 0.5f),
             {-1.25f, 0.5f, 0}, ym_zero3f, 0.5)};
-    ym_vector<yo_material> pl_materials = {
+    std::vector<yo_material> pl_materials = {
         make_diffuse("floor", {0.2f, 0.2f, 0.2f}, 0),
         make_diffuse("obj", {0.2f, 0.2f, 0.2f}, 0),
         make_diffuse("points", {0.2f, 0.2f, 0.2f}, 0),
@@ -757,8 +757,8 @@ int main(int argc, const char** argv) {
 
     // random obj scene --------------------------
     printf("generating random shapes scenes ...\n");
-    ym_vector<yo_shape> rsh_shapes = make_random_shapes(32, 5, false);
-    ym_vector<yo_material> rsh_materials = make_random_materials(32);
+    std::vector<yo_shape> rsh_shapes = make_random_shapes(32, 5, false);
+    std::vector<yo_material> rsh_materials = make_random_materials(32);
 
     // save plane scenes
     save_scene("rs01.obj", dirname,
@@ -773,13 +773,13 @@ int main(int argc, const char** argv) {
 
     // xform obj scene ---------------------------
     printf("generating transform tests scenes ...\n");
-    ym_vector<yo_shape> xsh_shapes = make_random_shapes(32, 5, true);
-    ym_vector<yo_shape> xsh_light_shapes = {
+    std::vector<yo_shape> xsh_shapes = make_random_shapes(32, 5, true);
+    std::vector<yo_shape> xsh_light_shapes = {
         xform_shape(make_shape("light01", "light01", 0, ys_stype_points),
                     {0.7f, 4, 3}, ym_zero3f, 1),
         xform_shape(make_shape("light02", "light02", 0, ys_stype_points),
                     {-0.7f, 4, 3}, ym_zero3f, 1)};
-    ym_vector<yo_shape> xsh_area_shapes = {
+    std::vector<yo_shape> xsh_area_shapes = {
         xform_shape(make_shape("light01", "light01", 0, ys_stype_uvquad),
                     {4, 2, 4}, {0, 180 + 45, 0}, 2),
         xform_shape(make_shape("light02", "light02", 0, ys_stype_uvquad),
@@ -795,14 +795,14 @@ int main(int argc, const char** argv) {
 
     // env scene ------------------------------
     printf("generating envmaps scenes ...\n");
-    ym_vector<yo_camera> env_cams = {
+    std::vector<yo_camera> env_cams = {
         make_camera("cam", {0, 1.5f, 5}, {0, 0.5f, 0}, 0.5f, 0),
         make_camera("cam_dof", {0, 1.5f, 5}, {0, 0.5f, 0}, 0.5f, 0.1f)};
-    ym_vector<yo_env> env_envs = {
+    std::vector<yo_env> env_envs = {
         make_env("env", "env", {0, 0.5f, 0}, {0, 1.5f, 0})};
-    ym_vector<yo_env> env_txt_envs = {
+    std::vector<yo_env> env_txt_envs = {
         make_env("env", "env_txt", {0, 0.5f, 0}, {-1.5f, 0.5f, 0})};
-    ym_vector<yo_shape> env_shapes = {
+    std::vector<yo_shape> env_shapes = {
         transform_shape(make_floor("floor", "floor", 6, 4, 6), {0, 0, -4},
                         ym_zero3f, 6),
         transform_shape(
@@ -813,22 +813,22 @@ int main(int argc, const char** argv) {
             {0, 0.5f, 0}, ym_zero3f, 0.5f),
         transform_shape(make_shape("obj03", "obj03", 4, ys_stype_uvspherecube),
                         {1.25f, 0.5f, 0}, ym_zero3f, 0.5f)};
-    ym_vector<yo_material> env_materials = {
+    std::vector<yo_material> env_materials = {
         make_diffuse("floor", {0.2f, 0.2f, 0.2f}, 0),
         make_plastic("obj01", {0.5f, 0.2f, 0.2f}, 50, 0),
         make_plastic("obj02", {0.2f, 0.5f, 0.2f}, 100, 0),
         make_plastic("obj03", {0.2f, 0.2f, 0.5f}, 500, 0),
         make_emission("env", {1, 1, 1}, 0),
         make_emission("env_txt", {1, 1, 1}, "env.hdr")};
-    ym_vector<yo_shape> env_light_shapes = {transform_shape(
+    std::vector<yo_shape> env_light_shapes = {transform_shape(
         make_shape("env_sphere", "env", 6, ys_stype_uvflippedsphere),
         {0, 0.5f, 0}, {-90, 0, 0}, 10000)};
-    ym_vector<yo_material> env_light_materials = {
+    std::vector<yo_material> env_light_materials = {
         make_emission("env", {1, 1, 1}, 0)};
-    ym_vector<yo_shape> env_txt_light_shapes = {transform_shape(
+    std::vector<yo_shape> env_txt_light_shapes = {transform_shape(
         make_shape("env_sphere", "env_txt", 6, ys_stype_uvflippedsphere),
         {0, 0.5f, 0}, {-90, 0, 0}, 10000)};
-    ym_vector<yo_material> env_txt_light_materials = {
+    std::vector<yo_material> env_txt_light_materials = {
         make_emission("env_txt", {1, 1, 1}, "env.hdr")};
 
     // save plane scenes
@@ -847,9 +847,9 @@ int main(int argc, const char** argv) {
     // http://graphics.cs.williams.edu/data
     // http://www.graphics.cornell.edu/online/box/data.html
     printf("generating cornell box scenes ...\n");
-    ym_vector<yo_camera> cb_cams = {
+    std::vector<yo_camera> cb_cams = {
         make_camera("cam", {0, 1, 4}, {0, 1, 0}, 0.7f, 0)};
-    ym_vector<yo_shape> cb_box = {
+    std::vector<yo_shape> cb_box = {
         transform_shape(make_shape("floor", "white", 0, ys_stype_uvquad),
                         ym_zero3f, {-90, 0, 0}, 1),
         transform_shape(make_shape("ceiling", "white", 0, ys_stype_uvquad),
@@ -866,7 +866,7 @@ int main(int argc, const char** argv) {
                         {0.33f, 0.3f, 0.33f}, {0, -15, 0}, {0.3f, 0.3f, 0.3f}),
         transform_shape(make_shape("light", "light", 0, ys_stype_uvquad),
                         {0, 1.999f, 0}, {90, 0, 0}, {0.25f, 0.25f, 0.25f})};
-    ym_vector<yo_material> cb_materials = {
+    std::vector<yo_material> cb_materials = {
         make_diffuse("white", {0.725f, 0.71f, 0.68f}, 0),
         make_diffuse("red", {0.63f, 0.065f, 0.05f}, 0),
         make_diffuse("green", {0.14f, 0.45f, 0.091f}, 0),
@@ -878,10 +878,10 @@ int main(int argc, const char** argv) {
 
     // rigid body scenes ------------------------
     printf("generating rigid body scenes ...\n");
-    ym_vector<yo_camera> rb_cams = {
+    std::vector<yo_camera> rb_cams = {
         make_camera("cam", {5, 5, 5}, {0, 0.5f, 0}, 0.5f, 0),
         make_camera("cam_dof", {5, 5, 5}, {0, 0.5f, 0}, 0.5f, 0.1f)};
-    ym_vector<yo_shape> rb_shapes = {
+    std::vector<yo_shape> rb_shapes = {
         xform_shape(make_shape("floor", "floor", 4, ys_stype_uvcube),
                     {0, -0.5f, 0}, {0, 0, 0}, {6, 0.5f, 6}),
         xform_shape(make_shape("obj01", "obj", 2, ys_stype_uvcube),
@@ -902,27 +902,27 @@ int main(int argc, const char** argv) {
                     {0, 1, -1.5f}, {22.5, 0, 0}, 0.5),
         xform_shape(make_shape("obj23", "obj", 2, ys_stype_uvcube),
                     {1.25f, 1.5f, -1.5f}, {22.5f, 0, 22.5f}, 0.5f)};
-    ym_vector<yo_material> rb_materials = {
+    std::vector<yo_material> rb_materials = {
         make_diffuse("floor", {1, 1, 1}, "grid.png"),
         make_plastic("obj", {1, 1, 1}, 50, "checker.png")};
-    ym_vector<yo_shape> rb_light_shapes = {
+    std::vector<yo_shape> rb_light_shapes = {
         transform_shape(make_shape("light01", "light01", 0, ys_stype_points),
                         {0.7f, 4, 3}, {0, 0, 0}, 1),
         transform_shape(make_shape("light02", "light02", 0, ys_stype_points),
                         {-0.7f, 4, 3}, {0, 0, 0}, 1)};
-    ym_vector<yo_material> rb_light_materials = {
+    std::vector<yo_material> rb_light_materials = {
         make_emission("light01", {100, 100, 100}, 0),
         make_emission("light02", {100, 100, 100}, 0),
     };
 
-    ym_vector<yo_shape> rb2_shapes = {
+    std::vector<yo_shape> rb2_shapes = {
         xform_shape(make_shape("floor", "floor", 2, ys_stype_uvcube),
                     {0, -2.5, 0}, {30, 0, 0}, {6, 0.5f, 6}),
         rb_shapes[1], rb_shapes[2], rb_shapes[3], rb_shapes[4], rb_shapes[5],
         rb_shapes[6], rb_shapes[7], rb_shapes[8], rb_shapes[9],
     };
 
-    ym_vector<yo_shape> rb3_shapes = make_random_rigid_shapes(128, 1);
+    std::vector<yo_shape> rb3_shapes = make_random_rigid_shapes(128, 1);
 
     // save plane scenes
     save_scene("rb01.obj", dirname,

@@ -64,6 +64,8 @@
 
 //
 // HISTORY:
+// - v 0.3: removal of C interface
+// - v 0.2: use of STL containers
 // - v 0.1: C++ implementation
 // - v 0.0: initial release in C99
 //
@@ -96,27 +98,17 @@
 #define _YS_H_
 
 // compilation options
-#ifdef __cplusplus
 #ifndef YGL_DECLARATION
 #define YGL_API inline
-#define YGLC_API inline
 #else
 #define YGL_API
-#define YGLC_API extern "C"
-#endif
-#include "yocto_math.h"
 #endif
 
-#ifndef __cplusplus
-#define YGLC_API extern
-#include <stdbool.h>
-#endif
+#include "yocto_math.h"
 
 // -----------------------------------------------------------------------------
 // C++ INTERFACE
 // -----------------------------------------------------------------------------
-
-#ifdef __cplusplus
 
 //
 // Element types
@@ -204,12 +196,13 @@ YGL_API void ys_tesselate_shape(int nelems, const int* elem, int etype,
 // - texcoord: vertex texcoord
 // - color: vertex color
 //
-YGL_API void ys_tesselate_stdshape(int* nelems, ym_vector<int>* elem, int etype,
-                                   int* nverts, ym_vector<ym_vec3f>* pos,
-                                   ym_vector<ym_vec3f>* norm,
-                                   ym_vector<ym_vec2f>* texcoord,
-                                   ym_vector<ym_vec3f>* color,
-                                   ym_vector<float>* radius);
+YGL_API void ys_tesselate_stdshape(int* nelems, std::vector<int>* elem,
+                                   int etype, int* nverts,
+                                   std::vector<ym_vec3f>* pos,
+                                   std::vector<ym_vec3f>* norm,
+                                   std::vector<ym_vec2f>* texcoord,
+                                   std::vector<ym_vec3f>* color,
+                                   std::vector<float>* radius);
 
 //
 // Makes a parametric uv grid in [0-1]x[0-1] helpful to generate
@@ -312,11 +305,11 @@ YGL_API T ys_interpolate_vertex(const int* elem, int etype, const T* vert,
 //
 YGL_API void ys_make_stdshape(int stype, int level, int etype,
                               const ym_vec4f& params, int* nelems,
-                              ym_vector<int>* elem, int* nverts,
-                              ym_vector<ym_vec3f>* pos,
-                              ym_vector<ym_vec3f>* norm,
-                              ym_vector<ym_vec2f>* texcoord,
-                              ym_vector<float>* radius);
+                              std::vector<int>* elem, int* nverts,
+                              std::vector<ym_vec3f>* pos,
+                              std::vector<ym_vec3f>* norm,
+                              std::vector<ym_vec2f>* texcoord,
+                              std::vector<float>* radius);
 
 //
 // Dictionary from directed edges to undirected edges implemented as a hashmap
@@ -348,93 +341,6 @@ YGL_API const ym_vec2i* ys_get_edges(const ys_edge_map* em);
 //
 YGL_API void ys_free_edge_map(ys_edge_map* em);
 
-#endif
-
-// -----------------------------------------------------------------------------
-// C/C++ INTERFACE
-// -----------------------------------------------------------------------------
-
-//
-// Compute smoothed normals or tangents (for lines).
-//
-YGLC_API float* ysc_compute_normals(int nelems, const int* elem, int etype,
-                                    int nverts, const float* pos, float* norm,
-                                    bool weighted);
-
-//
-// Tesselates a mesh by subdiving along element edges.
-//
-YGLC_API void ysc_tesselate_shape(int nelems, const int* elem, int etype,
-                                  int nverts, int* tess_nelems, int* tess_elem,
-                                  int* nedges, int* edges);
-
-//
-// Makes a parametric uv grid in [0-1]x[0-1] helpful to generate
-// parametric surfaces.
-//
-YGLC_API void ysc_make_uvgrid(int usteps, int vsteps, int etype, int* elem,
-                              float* uv);
-
-//
-// Gets the size of a parametric uv grid.
-//
-YGLC_API void ysc_get_uvgrid_size(int usteps, int vsteps, int etype,
-                                  int* nelems, int* nverts);
-
-//
-// Computes the distribution of area of a shape element for sampling. This is
-// needed to sample a shape.
-//
-YGLC_API void ysc_sample_shape_cdf(int nelems, const int* elem, int etype,
-                                   const float* pos, float* ecdf, float* area);
-
-//
-// Sampels a shape element.
-//
-YGLC_API void ysc_sample_shape(int nelems, const float* ecdf, int etype,
-                               float ern, const float uvrn[2], int* eid,
-                               float euv[2]);
-
-//
-// Baricentric interpolation of vertex values.
-//
-YGLC_API void ysc_interpolate_vertex(const int* elem, int etype,
-                                     const float* vert, int eid,
-                                     const float euv[2], int vsize, float* v);
-
-//
-// Dictionary from directed edges to undirected edges implemented as a hashmap
-//
-struct ys_edge_map {
-    ym_vector<ym_vector<ym_vec3i>> hedges;  // map buckets of directed edges
-    ym_vector<ym_vec2i> edges;              // array of undirected edges
-};
-
-//
-// Build an edge map
-//
-YGLC_API ys_edge_map* ysc_make_edge_map(int nelems, const int* elem, int etype);
-
-//
-// Get the number of edges
-//
-YGLC_API int ysc_get_nedges(const ys_edge_map* em);
-
-//
-// Get the number of edges
-//
-YGLC_API const int* ysc_get_edges(const ys_edge_map* em);
-
-//
-// Get a unique edge index from the indices defining a directed edge
-//
-YGLC_API int ysc_get_edge_index(const ys_edge_map* em, int v0, int v1);
-
-//
-// Free edge map memory
-//
-YGLC_API void ysc_free_edge_map(ys_edge_map* em);
-
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION
 // -----------------------------------------------------------------------------
@@ -444,8 +350,6 @@ YGLC_API void ysc_free_edge_map(ys_edge_map* em);
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
-
-#include "yocto_math.h"
 
 // -----------------------------------------------------------------------------
 // NORMAL COMPUTATION
@@ -574,16 +478,17 @@ YGL_API void ys_tesselate_shape(int nelems, const int* elem, int etype,
 //
 // Tesselate a shape inplace.
 //
-YGL_API void ys_tesselate_stdshape(int* nelems, ym_vector<int>* elem, int etype,
-                                   int* nverts, ym_vector<ym_vec3f>* pos,
-                                   ym_vector<ym_vec3f>* norm,
-                                   ym_vector<ym_vec2f>* texcoord,
-                                   ym_vector<ym_vec3f>* color,
-                                   ym_vector<float>* radius) {
+YGL_API void ys_tesselate_stdshape(int* nelems, std::vector<int>* elem,
+                                   int etype, int* nverts,
+                                   std::vector<ym_vec3f>* pos,
+                                   std::vector<ym_vec3f>* norm,
+                                   std::vector<ym_vec2f>* texcoord,
+                                   std::vector<ym_vec3f>* color,
+                                   std::vector<float>* radius) {
     // prepare edges and elements
     int tess_nelems, tess_nedges, tess_nverts;
-    ym_vector<int> tess_elem(*nelems * 4 * etype);
-    ym_vector<ym_vec2i> tess_edges(*nelems * 4);
+    std::vector<int> tess_elem(*nelems * 4 * etype);
+    std::vector<ym_vec2i> tess_edges(*nelems * 4);
     ys_tesselate_shape(*nelems, elem->data(), etype, *nverts, &tess_nelems,
                        tess_elem.data(), &tess_nedges, tess_edges.data());
     tess_elem.resize(tess_nelems * etype);
@@ -791,21 +696,21 @@ YGL_API void ys_sample_shape(int nelems, const float* cdf, int etype, float ern,
 //
 YGL_API void ys_make_stdshape(int stype, int level, int etype,
                               const ym_vec4f& params, int* nelems_,
-                              ym_vector<int>* elem_, int* nverts_,
-                              ym_vector<ym_vec3f>* pos_,
-                              ym_vector<ym_vec3f>* norm_,
-                              ym_vector<ym_vec2f>* texcoord_,
-                              ym_vector<float>* radius_) {
+                              std::vector<int>* elem_, int* nverts_,
+                              std::vector<ym_vec3f>* pos_,
+                              std::vector<ym_vec3f>* norm_,
+                              std::vector<ym_vec2f>* texcoord_,
+                              std::vector<float>* radius_) {
     static const ym_vec3f px = {1, 0, 0}, py = {0, 1, 0}, pz = {0, 0, 1},
                           nx = {-1, 0, 0}, ny = {0, -1, 0}, nz = {0, 0, -1};
 
     int& nverts = *nverts_;
     int& nelems = *nelems_;
-    ym_vector<int>& elem = *elem_;
-    ym_vector<ym_vec3f>& pos = *pos_;
-    ym_vector<ym_vec3f>& norm = *norm_;
-    ym_vector<ym_vec2f>& texcoord = *texcoord_;
-    ym_vector<float>& radius = *radius_;
+    std::vector<int>& elem = *elem_;
+    std::vector<ym_vec3f>& pos = *pos_;
+    std::vector<ym_vec3f>& norm = *norm_;
+    std::vector<ym_vec2f>& texcoord = *texcoord_;
+    std::vector<float>& radius = *radius_;
 
 #define __pow2(x) (1 << (x))
 #define __make_shape()                                                         \
@@ -857,8 +762,8 @@ YGL_API void ys_make_stdshape(int stype, int level, int etype,
             int grid_nelems, grid_nverts;
             ys_get_uvgrid_size(usteps, vsteps, etype, &grid_nelems,
                                &grid_nverts);
-            ym_vector<int> grid_elem(grid_nelems * etype);
-            ym_vector<ym_vec2f> grid_uv(grid_nverts);
+            std::vector<int> grid_elem(grid_nelems * etype);
+            std::vector<ym_vec2f> grid_uv(grid_nverts);
             ys_make_uvgrid(usteps, vsteps, etype, grid_elem.data(),
                            grid_uv.data());
             nelems = grid_nelems * 6;
@@ -960,6 +865,14 @@ YGL_API void ys_make_stdshape(int stype, int level, int etype,
 }
 
 //
+// Dictionary from directed edges to undirected edges implemented as a hashmap
+//
+struct ys_edge_map {
+    std::vector<std::vector<ym_vec3i>> hedges;  // map buckets of directed edges
+    std::vector<ym_vec2i> edges;                // array of undirected edges
+};
+
+//
 // Make edge map. Public API described above.
 //
 YGL_API ys_edge_map* ys_make_edge_map(int nelems, const int* elem, int etype) {
@@ -1029,130 +942,6 @@ YGL_API int ys_get_edge_index(const ys_edge_map* em, int v0, int v1) {
 // Free edge map. Public API described above.
 //
 YGL_API void ys_free_edge_map(ys_edge_map* em) { delete em; }
-
-// -----------------------------------------------------------------------------
-// C API IMPLEMENTATION
-// -----------------------------------------------------------------------------
-
-//
-// Compute smoothed normals or tangents (for lines).
-//
-YGLC_API float* ysc_compute_normals(int nelems, const int* elem, int etype,
-                                    int nverts, const float* pos, float* norm,
-                                    bool weighted) {
-    return (float*)ys_compute_normals(nelems, elem, etype, nverts,
-                                      (const ym_vec3f*)pos, (ym_vec3f*)norm,
-                                      weighted);
-}
-
-//
-// Tesselates a mesh by subdiving along element edges.
-//
-YGLC_API void ysc_tesselate_shape(int nelems, const int* elem, int etype,
-                                  int nverts, int* tess_nelems, int* tess_elem,
-                                  int* nedges, int* edges) {
-    ys_tesselate_shape(nelems, elem, etype, nverts, tess_nelems, tess_elem,
-                       nedges, (ym_vec2i*)edges);
-}
-
-//
-// Makes a parametric uv grid in [0-1]x[0-1] helpful to generate
-// parametric surfaces.
-//
-YGLC_API void ysc_make_uvgrid(int usteps, int vsteps, int etype, int* elem,
-                              float* uv) {
-    ys_make_uvgrid(usteps, vsteps, etype, elem, (ym_vec2f*)uv);
-}
-
-//
-// Gets the size of a parametric uv grid.
-//
-YGLC_API void ysc_get_uvgrid_size(int usteps, int vsteps, int etype,
-                                  int* nelems, int* nverts) {
-    ys_get_uvgrid_size(usteps, vsteps, etype, nelems, nverts);
-}
-
-//
-// Computes the distribution of area of a shape element for sampling. This is
-// needed to sample a shape.
-//
-YGLC_API void ysc_sample_shape_cdf(int nelems, const int* elem, int etype,
-                                   const float* pos, float* ecdf, float* area) {
-    ys_sample_shape_cdf(nelems, elem, etype, (ym_vec3f*)pos, ecdf, area);
-}
-
-//
-// Sampels a shape element.
-//
-YGLC_API void ysc_sample_shape(int nelems, const float* ecdf, int etype,
-                               float ern, const float uvrn[2], int* eid,
-                               float euv[2]) {
-    ys_sample_shape(nelems, ecdf, etype, ern, ym_vec2f(uvrn), eid,
-                    (ym_vec2f*)euv);
-}
-
-//
-// Baricentric interpolation of vertex values.
-//
-YGLC_API void ysc_interpolate_vertex(const int* elem, int etype,
-                                     const float* vert, int eid,
-                                     const float euv[2], int vsize, float* v) {
-    switch (vsize) {
-        case 1: {
-            v[0] = ys_interpolate_vertex(elem, etype, vert, eid, ym_vec2f(euv));
-        } break;
-        case 2: {
-            *(ym_vec2f*)v = ys_interpolate_vertex(
-                elem, etype, (const ym_vec2f*)vert, eid, ym_vec2f(euv));
-        } break;
-        case 3: {
-            *(ym_vec3f*)v = ys_interpolate_vertex(
-                elem, etype, (const ym_vec3f*)vert, eid, ym_vec2f(euv));
-        } break;
-        case 4: {
-            *(ym_vec4f*)v = ys_interpolate_vertex(
-                elem, etype, (const ym_vec4f*)vert, eid, ym_vec2f(euv));
-        } break;
-        default: {
-            assert(false);
-            break;
-        }
-    }
-}
-
-//
-// Build an edge map
-//
-YGLC_API ys_edge_map* ysc_make_edge_map(int nelems, const int* elem,
-                                        int etype) {
-    return ys_make_edge_map(nelems, elem, etype);
-}
-
-//
-// Get the number of edges
-//
-YGLC_API int ysc_get_nedges(const ys_edge_map* em) { return ys_get_nedges(em); }
-
-//
-// Get the number of edges
-//
-YGLC_API const int* ysc_get_edges(const ys_edge_map* em) {
-    return (const int*)ys_get_edges(em);
-}
-
-//
-// Get a unique edge index from the indices defining a directed edge
-//
-YGLC_API int ysc_get_edge_index(const ys_edge_map* em, int v0, int v1) {
-    return ys_get_edge_index(em, v0, v1);
-}
-
-//
-// Free edge map memory
-//
-YGLC_API void ysc_free_edge_map(ys_edge_map* em) {
-    return ys_free_edge_map(em);
-}
 
 #endif
 

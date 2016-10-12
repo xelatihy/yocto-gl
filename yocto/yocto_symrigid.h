@@ -61,6 +61,8 @@
 
 //
 // HISTORY:
+// - v 0.3: removal of C interface
+// - v 0.2: use of STL containers
 // - v 0.1: C++ implementation
 // - v 0.0: initial release in C99
 //
@@ -93,27 +95,17 @@
 #define _YSR_H_
 
 // compilation options
-#ifdef __cplusplus
 #ifndef YGL_DECLARATION
 #define YGL_API inline
-#define YGLC_API inline
 #else
 #define YGL_API
-#define YGLC_API extern "C"
-#endif
-#include "yocto_math.h"
 #endif
 
-#ifndef __cplusplus
-#define YGLC_API extern
-#include <stdbool.h>
-#endif
+#include "yocto_math.h"
 
 // -----------------------------------------------------------------------------
 // C++ INTERFACE
 // -----------------------------------------------------------------------------
-
-#ifdef __cplusplus
 
 //
 // Shape element types
@@ -138,7 +130,7 @@ enum {
 // Return:
 // - number of intersections
 //
-typedef int (*ysr_overlap_shapes)(void* ctx, ym_vector<ym_vec2i>* overlaps);
+typedef int (*ysr_overlap_shapes)(void* ctx, std::vector<ym_vec2i>* overlaps);
 
 //
 // Closest element intersection callback
@@ -277,166 +269,11 @@ YGL_API void ysr_set_collision(ysr_scene* scene, void* ctx,
 //
 YGL_API void ysr_advance(ysr_scene* scene, float dt);
 
-#endif
-
-// -----------------------------------------------------------------------------
-// C/C++ INTERFACE
-// -----------------------------------------------------------------------------
-
-//
-// Shape-shape intersection (conservative)
-//
-// Parameters:
-// - ctx: pointer to an object passed back to the function
-//
-// Out Parameters:
-// - overlaps: overlaps array
-// - overlap capacity
-//
-// Return:
-// - number of intersections
-//
-typedef int (*ysrc_overlap_shapes)(void* ctx, int** overlaps, int* ocapacity);
-
-//
-// Closest element intersection callback
-//
-// Parameters:
-// - ctx: pointer to an object passed back to the function
-// - sid: shape to check
-// - pt: point
-// - max_dist: maximum distance
-//
-// Out Parameters:
-// - dist: distance
-// - eid: element id
-// - euv: element uv
-//
-// Return:
-// - whether we intersect or not
-//
-typedef bool (*ysrc_overlap_shape)(void* ctx, int sid, const float pt[3],
-                                   float max_dist, float* dist, int* eid,
-                                   float* euv);
-
-//
-// Refit data structure after transform updates
-//
-// Parameters:
-// - ctx: pointer to an object passed back to the function
-// - xform: transform array
-//
-typedef void (*ysrc_overlap_refit)(void* ctx, const float* xform[16]);
-
-//
-// Initialize a scene.
-//
-// Parameters:
-// - nbodies: number of rigid bodies
-//
-// Return:
-// - scene
-//
-YGLC_API ysr_scene* ysrc_init_scene(int nbodies);
-
-//
-// Free a scene.
-//
-// Parameters:
-// - scene: scene to clear
-//
-YGLC_API void ysrc_free_scene(ysr_scene* scene);
-
-//
-// Computes the moments of a shape.
-//
-// Parameters:
-// - nelems: number of elements
-// - elem: elements
-// - etype: element type
-// - nverts: number of vertices
-// - pos: vertex positions
-//
-// Output parameters:
-// - volume: volume
-// - center: center of mass
-// - inertia: inertia tensore (wrt center of mass)
-//
-YGLC_API void ysrc_compute_moments(int nelems, const int* elem, int etype,
-                                   int nverts, const float* pos, float* volume,
-                                   float center[3], float inertia[3]);
-
-//
-// Set rigid body shape.
-//
-// Parameters:
-// - scene: scene
-// - bid: body to set
-// - xform: transform
-// - mass: mass (0 to not simulate object)
-// - inertia: interia tensor wrt center of mass
-// - nelems: number of elements
-// - elem: elements
-// - etype: element type
-// - nverts: number of vertices
-// - pos: vertex position wrt center of mass
-//
-YGLC_API void ysrc_set_body(ysr_scene* scene, int bid, const float xform[16],
-                            float mass, const float inertia[9], int nelems,
-                            const int* elem, int etype, int nverts,
-                            const float* pos);
-
-//
-// Get rigib body transform.
-//
-// Paramaters:
-// - scene: rigib body scene
-// - bid: body index
-//
-// Output parameters:
-// - xform: transform
-//
-YGLC_API void ysrc_get_transform(const ysr_scene* scene, int bid,
-                                 float xform[16]);
-
-//
-// Set body transform.
-//
-// Paramaters:
-// - scene: rigib body scene
-// - bid: body index
-// - xform: transform
-//
-YGLC_API void ysrc_set_transform(ysr_scene* scene, int bid,
-                                 const float xform[16]);
-
-//
-// Set collision callbacks.
-//
-// Paramaters:
-// - scene: rigib body scene
-// - dt: time step
-//
-YGLC_API void ysrc_set_collision(ysr_scene* scene, void* ctx,
-                                 ysr_overlap_shapes overlaps,
-                                 ysr_overlap_shape overlap,
-                                 ysr_overlap_refit refit);
-
-//
-// Advance the simulation one step at a time.
-//
-// Paramaters:
-// - scene: rigib body scene
-// - dt: time step
-//
-YGLC_API void ysrc_advance(ysr_scene* scene, float dt);
-
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION
 // -----------------------------------------------------------------------------
 
-#if defined(__cplusplus) &&                                                    \
-    (!defined(YGL_DECLARATION) || defined(YGL_IMPLEMENTATION))
+#if (!defined(YGL_DECLARATION) || defined(YGL_IMPLEMENTATION))
 
 //
 // Rigid body properties
@@ -477,20 +314,20 @@ struct ysr__collision {
 // Rigid body scene
 //
 struct ysr_scene {
-    ym_vector<ym_frame3f> frame;  // rigid body rigid transform
-    ym_vector<ym_vec3f> lin_vel;  // linear velocity
-    ym_vector<ym_vec3f> ang_vel;  // angular velocity
+    std::vector<ym_frame3f> frame;  // rigid body rigid transform
+    std::vector<ym_vec3f> lin_vel;  // linear velocity
+    std::vector<ym_vec3f> ang_vel;  // angular velocity
 
-    ym_vector<ysr__body> bodies;           // bodies
-    ym_vector<ysr__collision> collisions;  // collisions
-    ym_vector<ym_vec2i> shapecollisions;   // shape collisions
-    ym_vec3f gravity;                      // gravity
-    float lin_drag, ang_drag;              // linear and angular drag
-    int iterations;                        // solver iterations
-    ysr_overlap_shapes overlap_shapes;     // overlap callbacks
-    ysr_overlap_shape overlap_shape;       // overlap callbacks
-    ysr_overlap_refit overlap_refit;       // overlap callbacks
-    void* overlap_ctx;                     // overlap callbacks
+    std::vector<ysr__body> bodies;           // bodies
+    std::vector<ysr__collision> collisions;  // collisions
+    std::vector<ym_vec2i> shapecollisions;   // shape collisions
+    ym_vec3f gravity;                        // gravity
+    float lin_drag, ang_drag;                // linear and angular drag
+    int iterations;                          // solver iterations
+    ysr_overlap_shapes overlap_shapes;       // overlap callbacks
+    ysr_overlap_shape overlap_shape;         // overlap callbacks
+    ysr_overlap_refit overlap_refit;         // overlap callbacks
+    void* overlap_ctx;                       // overlap callbacks
 };
 
 //
@@ -883,84 +720,6 @@ YGL_API void ysr_advance(ysr_scene* scene, float dt) {
 
     // update acceleartion for collisions
     scene->overlap_refit(scene->overlap_ctx, scene->frame.data());
-}
-
-// -----------------------------------------------------------------------------
-// C API IMPLEMENTATION
-// -----------------------------------------------------------------------------
-
-//
-// Initialize a scene.
-//
-YGLC_API ysr_scene* ysrc_init_scene(int nbodies) {
-    return ysr_init_scene(nbodies);
-}
-
-//
-// Free a scene.
-//
-// Parameters:
-// - scene: scene to clear
-//
-YGLC_API void ysrc_free_scene(ysr_scene* scene) {
-    return ysr_free_scene(scene);
-}
-
-//
-// Computes the moments of a shape.
-//
-YGLC_API void ysrc_compute_moments(int nelems, const int* elem, int etype,
-                                   int nverts, const float* pos, float* volume,
-                                   float center[3], float inertia[3]) {
-    return ysr_compute_moments(nelems, elem, etype, nverts,
-                               (const ym_vec3f*)pos, volume, (ym_vec3f*)center,
-                               (ym_mat3f*)inertia);
-}
-
-//
-// Set rigid body shape.
-//
-YGL_API void ysrc_set_body(ysr_scene* scene, int bid, const float xform[16],
-                           float mass, const float inertia[9], int nelems,
-                           const int* elem, int etype, int nverts,
-                           const float* pos) {
-    return ysr_set_body(scene, bid, ym_frame3f(ym_mat4f(xform)), mass,
-                        ym_mat3f(inertia), nelems, elem, etype, nverts,
-                        (const ym_vec3f*)pos);
-}
-
-//
-// Get rigib body transform.
-//
-YGLC_API void ysrc_get_transform(const ysr_scene* scene, int bid,
-                                 float xform[16]) {
-    ym_frame3f frame = ysr_get_transform(scene, bid);
-    *(ym_mat4f*)xform = ym_mat4f(frame);
-}
-
-//
-// Set body transform.
-//
-YGLC_API void ysrc_set_transform(ysr_scene* scene, int bid,
-                                 const float xform[16]) {
-    return ysr_set_transform(scene, bid, ym_frame3f(ym_mat4f(xform)));
-}
-
-//
-// Set collision callbacks.
-//
-YGLC_API void ysrc_set_collision(ysr_scene* scene, void* ctx,
-                                 ysr_overlap_shapes overlaps,
-                                 ysr_overlap_shape overlap,
-                                 ysr_overlap_refit refit) {
-    return ysr_set_collision(scene, ctx, overlaps, overlap, refit);
-}
-
-//
-// Advance the simulation one step at a time.
-//
-YGLC_API void ysrc_advance(ysr_scene* scene, float dt) {
-    return ysr_advance(scene, dt);
 }
 
 #endif

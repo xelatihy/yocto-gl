@@ -9,13 +9,7 @@
 // - rays
 // - random number generation via PCG32
 // - a few hash functions
-// - vector/string container replacement
 // - timer (depends on C++11 chrono)
-//
-// The containers are only meant to avoid using the STL in YOCTO. These
-// containers only support a subset of the members of the STL ones since they
-// are meant to be simple replacement rather than complete "Reinvent-The-Wheel"
-// efforts.
 //
 // While we tested this library in the implementation of our other ones, we
 // consider this code incomplete and remommend to use a more complete math
@@ -37,6 +31,7 @@
 
 //
 // HISTORY:
+// - v 0.2: use of STL containers; removal of yocto containers
 // - v 0.1: C++ only implementation
 // - v 0.0: initial release in C99
 //
@@ -77,9 +72,9 @@
 #ifndef _YM_H_
 #define _YM_H_
 
+#include <algorithm>
 #include <cassert>
 #include <cmath>
-#include <cstdint>
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
@@ -1476,343 +1471,13 @@ static inline uint32_t ym_hash_uint64_32(uint64_t a) {
 }
 
 // -----------------------------------------------------------------------------
-// SIMPLE CONTAINERS
-// -----------------------------------------------------------------------------
-
-//
-// Dynamic array with semantic similar to std::vector but only a subset of the
-// operations. See std::vector for the individual functions.
-//
-template <typename T>
-struct ym_darray {
-    ym_darray() : num(0), cap(0), d(0) {}
-
-    ym_darray(size_t n) : num(0), cap(0), d(0) { resize(n); }
-
-    ym_darray(T* start, T* end) : num(0), cap(0), d(0) { assign(start, end); }
-
-    ym_darray(const std::initializer_list<T>& lst) : num(0), cap(0), d(0) {
-        assign(lst);
-    }
-
-    ym_darray(const ym_darray<T>& a) : num(0), cap(0), d(0) {
-        assign(a.data(), a.data() + a.size());
-    }
-
-    ym_darray(ym_darray<T>&& a) : num(a.num), cap(a.cap), d(a.d) {
-        a.num = a.cap = 0;
-        a.d = nullptr;
-    }
-
-    ~ym_darray() {
-        if (d) delete[] d;
-    }
-
-    ym_darray<T>& operator=(const ym_darray<T>& a) {
-        if (&a == this) return *this;
-        assign(a.data(), a.data() + a.size());
-        return *this;
-    }
-
-    ym_darray<T>& operator=(ym_darray<T>&& a) {
-        if (&a == this) return *this;
-        if (d) delete[] d;
-        d = a.d;
-        num = a.num;
-        cap = a.cap;
-        a.num = a.cap = 0;
-        a.d = nullptr;
-        return *this;
-    }
-
-    bool operator==(const ym_darray<T>& b) const {
-        if (size() != b.size()) return false;
-        for (size_t i = 0; i < size(); i++) {
-            if (d[i] != b.d[i]) return false;
-        }
-        return true;
-    }
-
-    bool operator<(const ym_darray<T>& b) const {
-        for (size_t i = 0; i < ym_min(size(), b.size()); i++) {
-            if (d[i] >= b.d[i]) return false;
-        }
-        if (size() >= b.size()) return false;
-        return true;
-    }
-
-    void assign(size_t n, const T& v) {
-        resize(n);
-        _set(v);
-    }
-
-    void assign(const T* start, const T* end) {
-        resize(end - start);
-        _copy(end - start, start);
-    }
-
-    void assign(const std::initializer_list<T>& lst) {
-        resize(lst.size());
-        size_t c = 0;
-        for (auto&& v : lst) d[c++] = v;
-    }
-
-    void push_back(const T& v) {
-        _grow_upto(num + 1);
-        d[num++] = v;
-    }
-
-    void resize(size_t n) {
-        if (n > cap) _realloc(n);
-        num = n;
-    }
-
-    void reserve(size_t n) {
-        if (n > cap) _realloc(n);
-    }
-
-    void pop_back() { num--; }
-
-    void append(size_t n, const T* dta) {
-        reserve(size() + n);
-        for (int i = 0; i < n; i++) d[num++] = dta[i];
-    }
-
-    void clear() { num = 0; }
-
-    void swap(ym_darray<T>& other) { _swap(other); }
-
-    void shrink_to_fit() {
-        if (num == cap) return;
-        if (num == 0) {
-            if (d) delete[] d;
-            d = nullptr;
-            cap = 0;
-        } else {
-            _realloc(num);
-        }
-    }
-
-    bool empty() const { return num == 0; }
-
-    size_t size() const { return num; }
-
-    int findpos(const T& v) const {
-        for (int i = 0; i < num; i++)
-            if (d[i] == v) return (int)i;
-        return -1;
-    }
-
-    T& at(int i) {
-        assert(i >= 0 && i < num);
-        return d[i];
-    }
-
-    const T& at(size_t i) const {
-        assert(i >= 0 && i < num);
-        return d[i];
-    }
-
-    T& operator[](size_t i) { return d[i]; }
-    const T& operator[](size_t i) const { return d[i]; }
-
-    T& front() { return d[0]; }
-    const T& front() const { return d[0]; }
-
-    T& back() { return d[num - 1]; }
-    const T& back() const { return d[num - 1]; }
-
-    T* data() {
-        if (num)
-            return d;
-        else
-            return nullptr;
-    }
-    const T* data() const {
-        if (num)
-            return d;
-        else
-            return nullptr;
-    }
-
-    T* begin() { return d; }
-    const T* begin() const { return d; }
-
-    T* end() { return d + num; }
-    const T* end() const { return d + num; }
-
-   private:
-    size_t num = 0;
-    size_t cap = 0;
-    T* d = nullptr;
-
-    void _realloc(size_t n) {
-        cap = n;
-        if (n) {
-            T* old_d = d;
-            d = new T[cap];
-            // _copy(num, old_d);
-            _move(num, old_d);
-            delete[] old_d;
-        } else {
-            if (d) delete[] d;
-            d = nullptr;
-        }
-    }
-
-    void _set(const T& v) {
-        for (size_t i = 0; i < num; i++) d[i] = v;
-    }
-
-    void _copy(size_t n, const T* dta) {
-        if (std::is_trivially_copyable<T>::value) {
-            memcpy(d, dta, sizeof(T) * n);
-        } else {
-            for (size_t i = 0; i < n; i++) d[i] = dta[i];
-        }
-    }
-
-    void _move(size_t n, T* dta) {
-        if (std::is_trivially_copyable<T>::value) {
-            memcpy(d, dta, sizeof(T) * n);
-        } else {
-            for (size_t i = 0; i < n; i++) d[i] = std::move(dta[i]);
-        }
-    }
-
-    void _grow_upto(size_t n) {
-        if (n == 0) return;
-        if (n <= cap) return;
-        int c = 1;
-        while (c < n) c *= 2;
-        _realloc(c);
-    }
-
-    void _swap(ym_darray<T>& a) {
-        ym_swap(d, a.d);
-        ym_swap(num, a.num);
-        ym_swap(cap, a.cap);
-    }
-};
-
-//
-// Dynamic string with std::string like semantic. See std::string for member
-// documentation.
-//
-struct ym_str {
-    ym_str() {
-        _buf.resize(1);
-        _buf[0] = 0;
-    }
-
-    ym_str(const char* ns) { assign(ns); }
-
-    ym_str(const ym_str& ns) : _buf(ns._buf) {}
-    ym_str(ym_str&& ns) : _buf(std::move(ns._buf)) {}
-
-    ym_str& operator=(const ym_str& ns) {
-        _buf = ns._buf;
-        return *this;
-    }
-
-    ym_str& operator=(ym_str&& ns) {
-        _buf = std::move(ns._buf);
-        return *this;
-    }
-
-    bool operator==(const ym_str& ns) { return !strcmp(c_str(), ns.c_str()); }
-
-    bool operator==(const char* ns) { return !strcmp(c_str(), ns); }
-
-    bool operator<(const ym_str& ns) { return strcmp(c_str(), ns.c_str()) < 0; }
-
-    bool empty() const { return _buf.size() < 2; }
-    size_t size() const { return _buf.size() - 1; }
-    size_t length() const { return _buf.size() - 1; }
-
-    void assign(size_t n, const char* ns) {
-        _buf.assign(ns, ns + n);
-        _buf.push_back(0);
-    }
-
-    void assign(const char* ns) { assign(strlen(ns), ns); }
-
-    void assign(const ym_str& ns) { assign(ns.size(), ns.data()); }
-
-    void append(size_t n, const char* ns) {
-        _buf.pop_back();
-        _buf.append(n, ns);
-        _buf.push_back(0);
-    }
-
-    void append(const ym_str& ns) { append(ns.size(), ns.data()); }
-
-    void append(const char* ns) { append(strlen(ns), ns); }
-
-    const char* c_str() const { return _buf.data(); }
-
-    char* data() { return _buf.data(); }
-    const char* data() const { return _buf.data(); }
-
-   private:
-    ym_darray<char> _buf;
-};
-
-//
-// Key-value pair for std::pair substitution.
-//
-template <typename TK, typename TV>
-struct ym_keyvalue {
-    union {
-        TK key;
-        TK first;
-    };
-    union {
-        TV value;
-        TV second;
-    };
-};
-
-// -----------------------------------------------------------------------------
-// CONTAINER OPERATIONS
-// -----------------------------------------------------------------------------
-
-//
-// String append operations
-//
-
-inline ym_str& operator+=(ym_str& a, const char* b) {
-    a.append(b);
-    return a;
-}
-
-inline ym_str& operator+=(ym_str& a, const ym_str& b) {
-    a.append(b);
-    return a;
-}
-
-inline ym_str operator+(const ym_str& a, const ym_str& b) {
-    ym_str c = a;
-    c += b;
-    return c;
-}
-
-inline ym_str operator+(const ym_str& a, const char* b) {
-    ym_str c = a;
-    c += b;
-    return c;
-}
-
-// -----------------------------------------------------------------------------
 // CONTAINER TYPEDEFS
 // -----------------------------------------------------------------------------
 
 //
-// This code selects whether to use the builtin YOCTO containers os the STL
-// ones.
+// Sets up typedefs for backwards compatibility with older versions.
+// These typedefs are DEPRECATED and will be removed eventually.
 //
-
-#ifdef YGL_USESTL
 
 #include <string>
 #include <vector>
@@ -1823,16 +1488,6 @@ using ym_vector = std::vector<T>;
 template <typename TK, typename TV>
 using ym_pair = std::pair<TK, TV>;
 
-#else
-
-using ym_string = ym_str;
-template <typename T>
-using ym_vector = ym_darray<T>;
-template <typename TK, typename TV>
-using ym_pair = ym_keyvalue<TK, TV>;
-
-#endif
-
 // -----------------------------------------------------------------------------
 // CONTAINER OPERATIONS
 // -----------------------------------------------------------------------------
@@ -1842,27 +1497,28 @@ using ym_pair = ym_keyvalue<TK, TV>;
 //
 
 template <typename T>
-inline ym_vector<T>& operator+=(ym_vector<T>& a, const T& b) {
+inline std::vector<T>& operator+=(std::vector<T>& a, const T& b) {
     a.push_back(b);
     return a;
 }
 
 template <typename T>
-inline ym_vector<T>& operator+=(ym_vector<T>& a, const ym_vector<T>& b) {
+inline std::vector<T>& operator+=(std::vector<T>& a, const std::vector<T>& b) {
     for (int i = 0; i < b.size(); i++) a.push_back(b[i]);
     return a;
 }
 
 template <typename T>
-inline ym_vector<T> operator+(const ym_vector<T>& a, const ym_vector<T>& b) {
+inline std::vector<T> operator+(const std::vector<T>& a,
+                                const std::vector<T>& b) {
     ym_vector<T> c = a;
     c += b;
     return c;
 }
 
 template <typename T>
-inline ym_vector<T> operator+(const ym_vector<T>& a, const T& b) {
-    ym_vector<T> c = a;
+inline std::vector<T> operator+(const std::vector<T>& a, const T& b) {
+    std::vector<T> c = a;
     c += b;
     return c;
 }
