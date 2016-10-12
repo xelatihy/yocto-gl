@@ -76,6 +76,8 @@
 
 //
 // HISTORY:
+// - v 0.3: removal of C interface
+// - v 0.2: use of STL containers
 // - v 0.1: C++ implementation
 // - v 0.0: initial release in C99
 //
@@ -106,27 +108,17 @@
 #ifndef _YT_H_
 #define _YT_H_
 
-#ifdef __cplusplus
 #ifndef YGL_DECLARATION
 #define YGL_API inline
-#define YGLC_API inline
 #else
 #define YGL_API
-#define YGLC_API extern "C"
-#endif
-#include "yocto_math.h"
 #endif
 
-#ifndef __cplusplus
-#define YGLC_API extern
-#include <stdbool.h>
-#endif
+#include "yocto_math.h"
 
 // -----------------------------------------------------------------------------
 // C++ INTERFACE
 // -----------------------------------------------------------------------------
-
-#ifdef __cplusplus
 
 //
 // Shape element types
@@ -379,244 +371,11 @@ YGL_API void yt_trace_image(const yt_scene* scene, int cid, ym_vec4f* pixels,
                             int w, int h, int ns,
                             const yt_render_params& params);
 
-#endif  // __cplusplus
-
-// -----------------------------------------------------------------------------
-// C/C++ INTERFACE
-// -----------------------------------------------------------------------------
-
-//
-// Rendering params
-//
-typedef struct ytc_render_params {
-    int stype;          // sampler type
-    int rtype;          // random type
-    float amb[3];       // ambient lighting
-    int min_depth;      // min ray depth
-    int max_depth;      // mas ray depth
-    float pixel_clamp;  // final pixel clamping
-    float ray_eps;      // ray intersection epsilon
-} ytc_render_params;
-
-//
-// Ray-scene closest intersection callback
-//
-// Parameters:
-// - ctx: pointer to an object passed back to the function
-// - ray_o: ray origin
-// - ray_d: ray direction
-// - ray_o: minimal distance along the ray to consider (0 for all)
-// - ray_o: maximal distance along the ray to consider (HUGE_VALF for all)
-// - ray_mask: ray mask for use (0 for no mask); see yb_make_scene_bvh
-//
-// Out Parameters:
-// - ray_t: hit distance
-// - sid: hit shape index
-// - eid: hit element index
-// - euv: hit element parameters
-//
-// Return:
-// - whether we intersect or not
-//
-typedef bool (*ytc_intersect_ray)(void* ctx, const float ray_o[3],
-                                  const float ray_d[3], float ray_min,
-                                  float ray_max, int ray_mask, float* ray_t,
-                                  int* sid, int* eid, float* euv);
-
-//
-// Ray-scene closest intersection callback
-//
-// Parameters:
-// - ctx: pointer to an object passed back to the function
-// - ray_o: ray origin
-// - ray_d: ray direction
-// - ray_o: minimal distance along the ray to consider (0 for all)
-// - ray_o: maximal distance along the ray to consider (HUGE_VALF for all)
-// - ray_mask: ray mask for use (0 for no mask); see yb_make_scene_bvh
-//
-// Return:
-// - whether we intersect or not
-//
-typedef bool (*ytc_hit_ray)(void* ctx, const float ray_o[3],
-                            const float ray_d[3], float ray_min, float ray_max,
-                            int ray_mask);
-
-//
-// Initialize the scene data with nshapes, nmaterials, ntextures.
-//
-YGLC_API yt_scene* ytc_make_scene(int ncameras, int nshapes, int nmaterials,
-                                  int ntextures, int nenvs);
-
-//
-// Cleanup scene data
-//
-YGLC_API void ytc_free_scene(yt_scene* scene);
-
-//
-// Set intersection callback. See callback description above.
-//
-YGLC_API void ytc_set_intersection(yt_scene* scene, void* ray_ctx,
-                                   yt_intersect_ray intersect_ray,
-                                   yt_hit_ray hit_ray);
-
-//
-// Set rendering camera.
-//
-// Parameters:
-// - scene: trace scene
-// - cid: camera id
-// - xform: camera local to world **rigid** transform
-// - width, height: width and height of image plane
-// - aperture: aperture
-// - focus: focus distance
-//
-YGLC_API void ytc_set_camera(yt_scene* scene, int cid, float xform[16],
-                             float width, float height, float aperture,
-                             float focus);
-
-//
-// Set rendering environment map.
-//
-// Parameters:
-// - scene: trace scene
-// - eid: envmap id
-// - xform: env local to world **rigid** transform
-// - ke: emission
-// - ke_txt: ke texture index (-1 for no texture)
-//
-YGL_API void ytc_set_env(yt_scene* scene, int eid, float xform[16], float ke[3],
-                         int ke_txt);
-
-//
-// Set rendering camera.
-//
-// Parameters:
-// - scene: trace scene
-// - xform: camera local to world **rigid** transform
-// - width, height: width and height of image plane
-// - aperture: aperture
-// - focus: focus distance
-//
-YGL_API void ytc_init_lights(yt_scene* scene);
-
-//
-// Set a shape.
-//
-// Parameters:
-// - scene: trace scene
-// - sid: shape index
-// - mid: material index for this shape
-// - xform: shape local to world **rigid** transform
-// - nelems: number of elements
-// - elem: array of vertex indices
-// - etype: shape element type (as per previous enum)
-// - nverts: number of vertices
-// - pos: array of vertex positions
-// - norm: array of vertex normals
-// - texcoord: optional array of vertex texture coordinates
-// - color: optional array of vertex colors (rgb)
-// - radius: optional array of vertex radius
-//
-YGL_API void ytc_set_shape(yt_scene* scene, int sid, int mid, float xform[16],
-                           int nelems, int* elem, int etype, int nverts,
-                           float* pos, float* norm, float* texcoord,
-                           float* color, float* radius);
-
-//
-// Set a material.
-//
-// Parameters:
-// - scene: trace scene
-// - mid: material index for this shape
-// - ke: emission
-// - kd: diffuse
-// - ks: specular
-// - rs: specular roughness
-// - es: optional index of refraction (eta) that controls the fresnel term;
-// NULL to disable fresnel; for materals use eta[0-2] for real part and
-// eta[3-5] for complex part; for dielectics use eta[0-2] for ior and eta[3-5]=0
-// - ke_txt: ke texture index (-1 for no texture)
-// - kd_txt: kd texture index (-1 for no texture)
-// - ks_txt: ks texture index (-1 for no texture)
-// - rs_txt: rs texture index (-1 for no texture)
-// - use_phong: whether to use Phong (normaly use false here)
-//
-YGL_API void ytc_set_material(yt_scene* scene, int mid, float ke[3],
-                              float kd[3], float ks[3], float rs, float es[3],
-                              float esk[3], int ke_txt, int kd_txt, int ks_txt,
-                              int rs_txt, bool use_phong);
-
-//
-// Convert a Phong exponent to GGX/Phong roughness
-//
-YGL_API float ytc_specular_exponent_to_roughness(float n);
-
-//
-// Estimates the fresnel coefficient es from ks at normal incidence
-//
-YGL_API void ytc_specular_fresnel_from_ks(const float ks[3], float es[3],
-                                          float esk[3]);
-
-//
-// Set a texture.
-//
-// Parameters:
-// - scene: trace scene
-// - tid: texture id
-// - pixel: pixel data
-// - w, h: width and height
-// - nc: number of components (3-4 supported for now)
-//
-YGL_API void ytc_set_texture(yt_scene* scene, int tid, float* pixels, int w,
-                             int h, int nc);
-
-//
-// Set rendering parameters
-//
-// Parameters:
-// - scene: trace scene
-// - stype: rendering algorithm type
-// - rtype: random number generator type
-// - amb: ambient lighting for direct rendering algorithm
-//
-YGL_API ytc_render_params ytc_make_rendering_params();
-
-//
-// Renders a block of sample
-//
-// Parameters:
-// - scene: trace scene
-// - camera: camera id
-// - pixels: pixel data in RGBA format
-// - w, h: image width and height
-// - ns: number of samples
-// - block: image block to render [xmin, xmax, ymin, ymax];
-// max values are excluded
-// - sampples: sample block to render [sample_min, sample_max];
-// max values are excluded
-//
-// Notes: It is safe to call the function in parallel one different blocks.
-// But two threads should not access the same pixels at the same time.
-// Also blocks with different samples should be called sequentially.
-//
-YGL_API void ytc_trace_block(const yt_scene* scene, int cid, float* pixels,
-                             int w, int h, int ns, const int block[4],
-                             const int samples[2],
-                             const ytc_render_params* params);
-
-//
-// Convenience function to call yt_trace_block with all sample at once.
-//
-YGL_API void ytc_trace_image(const yt_scene* scene, int cid, float* pixels,
-                             int w, int h, int ns,
-                             const ytc_render_params* params);
-
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION
 // -----------------------------------------------------------------------------
 
-#if defined(__cplusplus) &&                                                    \
-    (!defined(YGL_DECLARATION) || defined(YGL_IMPLEMENTATION))
+#if (!defined(YGL_DECLARATION) || defined(YGL_IMPLEMENTATION))
 
 #include <cassert>
 #include <cfloat>
@@ -691,8 +450,8 @@ struct yt__env {
 struct yt__light {
     yt__shape* shape = nullptr;  // shape
     yt__env* env = nullptr;      // environment
-    ym_vector<float> cdf;  // for shape, cdf of shape elements for sampling
-    float area = 0;        // for shape, shape area
+    std::vector<float> cdf;  // for shape, cdf of shape elements for sampling
+    float area = 0;          // for shape, shape area
 };
 
 //
@@ -703,13 +462,13 @@ struct yt_scene {
     yt_intersect_ray intersect_ray = nullptr;  // ray intersection callback
     yt_hit_ray hit_ray = nullptr;              // ray hit callback
 
-    ym_vector<yt__camera> camera;       // camera
-    ym_vector<yt__env> env;             // env
-    ym_vector<yt__shape> shapes;        // shapes
-    ym_vector<yt__material> materials;  // materials
-    ym_vector<yt__texture> textures;    // textures
+    std::vector<yt__camera> camera;       // camera
+    std::vector<yt__env> env;             // env
+    std::vector<yt__shape> shapes;        // shapes
+    std::vector<yt__material> materials;  // materials
+    std::vector<yt__texture> textures;    // textures
 
-    ym_vector<yt__light> lights;  // lights
+    std::vector<yt__light> lights;  // lights
 };
 
 //
@@ -1947,135 +1706,6 @@ YGL_API void yt_trace_image(const yt_scene* scene, int cid,
                             const yt_render_params& params) {
     yt_trace_block(scene, cid, img_pixels, img_w, img_h, ns,
                    {{0, 0}, {img_w, img_h}}, {0, ns}, params);
-}
-
-// -----------------------------------------------------------------------------
-// C API IMPLEMENTATION
-// -----------------------------------------------------------------------------
-
-//
-// Initialize the scene data with nshapes, nmaterials, ntextures.
-//
-YGLC_API yt_scene* ytc_make_scene(int ncameras, int nshapes, int nmaterials,
-                                  int ntextures, int nenvs) {
-    return yt_make_scene(ncameras, nshapes, nmaterials, ntextures, nenvs);
-}
-
-//
-// Cleanup scene data
-//
-YGLC_API void ytc_free_scene(yt_scene* scene) { return yt_free_scene(scene); }
-
-//
-// Set intersection callback. See callback description above.
-//
-YGLC_API void ytc_set_intersection(yt_scene* scene, void* ray_ctx,
-                                   yt_intersect_ray intersect_ray,
-                                   yt_hit_ray hit_ray);
-
-//
-// Set rendering camera.
-//
-YGLC_API void ytc_set_camera(yt_scene* scene, int cid, float xform[16],
-                             float width, float height, float aperture,
-                             float focus) {
-    return yt_set_camera(scene, cid, ym_frame3f((ym_mat4f)xform), width, height,
-                         aperture, focus);
-}
-
-//
-// Set rendering environment map.
-//
-YGL_API void ytc_set_env(yt_scene* scene, int eid, float xform[16], float ke[3],
-                         int ke_txt) {
-    return yt_set_env(scene, eid, ym_frame3f((ym_mat4f)xform), (ym_vec3f)ke,
-                      ke_txt);
-}
-
-//
-// Set rendering camera.
-//
-YGL_API void ytc_init_lights(yt_scene* scene) { return yt_init_lights(scene); }
-
-//
-// Set a shape.
-//
-YGL_API void ytc_set_shape(yt_scene* scene, int sid, int mid, float xform[16],
-                           int nelems, int* elem, int etype, int nverts,
-                           float* pos, float* norm, float* texcoord,
-                           float* color, float* radius) {
-    return yt_set_shape(scene, sid, mid, ym_frame3f(*(ym_mat4f*)xform), nelems,
-                        elem, etype, nverts, (ym_vec3f*)pos, (ym_vec3f*)norm,
-                        (ym_vec2f*)texcoord, (ym_vec3f*)color, radius);
-}
-
-//
-// Set a material.
-//
-YGL_API void ytc_set_material(yt_scene* scene, int mid, float ke[3],
-                              float kd[3], float ks[3], float rs, float es[3],
-                              float esk[3], int ke_txt, int kd_txt, int ks_txt,
-                              int rs_txt, bool use_phong) {
-    return yt_set_material(scene, mid, *(ym_vec3f*)ke, *(ym_vec3f*)kd,
-                           *(ym_vec3f*)ks, rs, *(ym_vec3f*)es, *(ym_vec3f*)esk,
-                           ke_txt, kd_txt, ks_txt, rs_txt, use_phong);
-}
-
-//
-// Convert a Phong exponent to GGX/Phong roughness
-//
-YGL_API float ytc_specular_exponent_to_roughness(float n) {
-    return yt_specular_exponent_to_roughness(n);
-}
-
-//
-// Estimates the fresnel coefficient es from ks at normal incidence
-//
-YGL_API void ytc_specular_fresnel_from_ks(const float ks[3], float es[3],
-                                          float esk[3]) {
-    return yt_specular_fresnel_from_ks(*(ym_vec3f*)ks, (ym_vec3f*)es,
-                                       (ym_vec3f*)esk);
-}
-
-//
-// Set a texture.
-//
-YGL_API void ytc_set_texture(yt_scene* scene, int tid, float* pixels, int w,
-                             int h, int nc) {
-    return yt_set_texture(scene, tid, pixels, w, h, nc);
-}
-
-//
-// Set rendering parameters
-//
-YGL_API ytc_render_params ytc_make_rendering_params() {
-    yt_render_params cpp_params;
-    ytc_render_params params;
-    memcpy(&params, &cpp_params, sizeof(params));
-    return params;
-}
-
-//
-// Renders a block of sample
-//
-YGL_API void ytc_trace_block(const yt_scene* scene, int cid, float* pixels,
-                             int w, int h, int ns, const int block[4],
-                             const int samples[2],
-                             const ytc_render_params* params) {
-    return yt_trace_block(scene, cid, (ym_vec4f*)pixels, w, h, ns,
-                          {{block[0], block[1]}, {block[2], block[3]}},
-                          {samples[0], samples[1]},
-                          *(const yt_render_params*)params);
-}
-
-//
-// Convenience function to call yt_trace_block with all sample at once.
-//
-YGL_API void ytc_trace_image(const yt_scene* scene, int cid, float* pixels,
-                             int w, int h, int ns,
-                             const ytc_render_params* params) {
-    return yt_trace_image(scene, cid, (ym_vec4f*)pixels, w, h, ns,
-                          *(const yt_render_params*)params);
 }
 
 #endif

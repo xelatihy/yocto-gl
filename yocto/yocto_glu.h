@@ -43,17 +43,15 @@
 // COMPILATION:
 //
 // All functions in this library are inlined by default for ease of use in
-// C/C++.
-// To use the library as a .h/.cpp pair do the following:
+// C++. To use the library as a .h/.cpp pair do the following:
 // - to use as a .h, just #define YGL_DECLARATION before including this file
 // - to build as a .cpp, just #define YGL_IMPLEMENTATION before including this
 // file into only one file that you can either link directly or pack as a lib.
 //
-// This file depends on yocto_math.h.
-//
 
 //
 // HISTORY:
+// - v 0.5: removal of C interface
 // - v 0.1: C/C++ implementation
 // - v 0.0: initial release in C99
 //
@@ -86,19 +84,10 @@
 #define _YG_H_
 
 // compilation options
-#ifdef __cplusplus
 #ifndef YGL_DECLARATION
 #define YGL_API inline
-#define YGLC_API inline
 #else
 #define YGL_API
-#define YGLC_API extern "C"
-#endif
-#endif
-
-#ifndef __cplusplus
-#define YGLC_API extern
-#include <stdbool.h>
 #endif
 
 // -----------------------------------------------------------------------------
@@ -129,20 +118,20 @@ enum {
 // Draw an texture tid of size img_w, img_h on a window of size win_w, win_h
 // with top-left corner at ox, oy with a zoom zoom.
 //
-YGLC_API void yg_draw_image(int tid, int img_w, int img_h, int win_w, int win_h,
-                            float ox, float oy, float zoom);
+YGL_API void yg_draw_image(int tid, int img_w, int img_h, int win_w, int win_h,
+                           float ox, float oy, float zoom);
 
 //
 // As above but includes an exposure/gamma correction.
 //
-YGLC_API void yg_shade_image(int tid, int img_w, int img_h, int win_w,
-                             int win_h, float ox, float oy, float zoom,
-                             float exposure, float gamma_);
+YGL_API void yg_shade_image(int tid, int img_w, int img_h, int win_w, int win_h,
+                            float ox, float oy, float zoom, float exposure,
+                            float gamma_);
 
 //
 // Reads an image back to memory.
 //
-YGLC_API void yg_read_imagef(float* pixels, int w, int h, int nc);
+YGL_API void yg_read_imagef(float* pixels, int w, int h, int nc);
 
 // TEXTURE FUNCTIONS -----------------------------------------------------------
 
@@ -151,19 +140,19 @@ YGLC_API void yg_read_imagef(float* pixels, int w, int h, int nc);
 // components (1-4). Internall use float if as_float and filtering if filter.
 // Returns the texture id.
 //
-YGLC_API int yg_make_texture(const float* pixels, int w, int h, int nc,
-                             bool as_float, bool filter);
+YGL_API int yg_make_texture(const float* pixels, int w, int h, int nc,
+                            bool as_float, bool filter);
 
 //
 // Updates the texture tid with new image data.
 //
-YGLC_API int yg_update_texture(int tid, const float* pixels, int w, int h,
-                               int nc);
+YGL_API int yg_update_texture(int tid, const float* pixels, int w, int h,
+                              int nc);
 
 //
 // Destroys the texture tid.
 //
-YGLC_API void yg_clear_texture(int* tid);
+YGL_API void yg_clear_texture(int* tid);
 
 // PROGRAM FUNCTIONS -----------------------------------------------------------
 
@@ -171,104 +160,104 @@ YGLC_API void yg_clear_texture(int* tid);
 // Creates and OpenGL program from vertex and fragment code. Returns the
 // program id. Optionally return vertex and fragment shader ids.
 //
-YGLC_API int yg_make_program(const char* vertex, const char* fragment, int* vid,
-                             int* fid);
+YGL_API int yg_make_program(const char* vertex, const char* fragment, int* vid,
+                            int* fid);
 
 //
 // Destroys the program pid and optionally the sahders vid and fid.
 //
-YGLC_API void yg_clear_program(int* pid, int* vid, int* fid);
+YGL_API void yg_clear_program(int* pid, int* vid, int* fid);
 
 //
 // Set uniform integer values val for program prog and variable var.
 // The values have nc number of components (1-4) and count elements
 // (for arrays).
 //
-YGLC_API int yg_set_uniformi(int prog, const char* var, const int* val, int nc,
-                             int count);
+YGL_API int yg_set_uniformi(int prog, const char* var, const int* val, int nc,
+                            int count);
 
 //
 // Set uniform float values val for program prog and variable var.
 // The values have nc number of components (1-4) and count elements
 // (for arrays).
 //
-YGLC_API int yg_set_uniformf(int prog, const char* var, const float* val,
-                             int nc, int count);
+YGL_API int yg_set_uniformf(int prog, const char* var, const float* val, int nc,
+                            int count);
 
 //
 // Set uniform texture id tid and unit tunit for program prog and variable var.
 // Optionally sets the int variable varon to 0/1 whether the texture is enable
 // on not.
 //
-YGLC_API int yg_set_uniformt(int prog, const char* var, const char* varon,
-                             int tid, int tunit);
+YGL_API int yg_set_uniformt(int prog, const char* var, const char* varon,
+                            int tid, int tunit);
 
 //
 // Sets a vartex attribute pointer for program prog and variable var.
 // The attribute has nc components and per-vertex values values.
 //
-YGLC_API int yg_set_vertattr_ptr(int prog, const char* var, const float* value,
-                                 int nc);
+YGL_API int yg_set_vertattr_ptr(int prog, const char* var, const float* value,
+                                int nc);
 
 //
 // Sets a constant value for a vertex attribute for program prog and
 // variable var. The attribute has nc components.
 //
-YGLC_API int yg_set_vertattr_val(int prog, const char* var, const float* value,
-                                 int nc);
+YGL_API int yg_set_vertattr_val(int prog, const char* var, const float* value,
+                                int nc);
 
 //
 // Sets a vartex attribute for program prog and variable var. The attribute
 // has nc components and either per-vertex values value or a single value def
 // (if value is NULL). Convenience wraper to above functions.
 //
-YGLC_API int yg_set_vertattr(int prog, const char* var, const float* value,
-                             int nc, const float* def);
+YGL_API int yg_set_vertattr(int prog, const char* var, const float* value,
+                            int nc, const float* def);
 
 //
 // Draws nelems elements elem of type etype.
 //
-YGLC_API int yg_draw_elems(int nelems, const int* elem, int etype);
+YGL_API int yg_draw_elems(int nelems, const int* elem, int etype);
 
 // STANDARD SHADER FUNCTIONS ---------------------------------------------------
 
 //
 // Initialize a standard shader.
 //
-YGLC_API int yg_stdshader_make_program();
+YGL_API int yg_stdshader_make_program();
 
 //
 // Starts a frame by setting exposure/gamma values, camera transforms and
 // projection. Sets also whether to use full shading or a quick eyelight
 // preview.
 //
-YGLC_API void yg_stdshader_begin_frame(int prog, bool shade_eyelight,
-                                       float img_exposure, float img_gamma,
-                                       const float camera_xform[16],
-                                       const float camera_xform_inv[16],
-                                       const float camera_proj[16]);
+YGL_API void yg_stdshader_begin_frame(int prog, bool shade_eyelight,
+                                      float img_exposure, float img_gamma,
+                                      const float camera_xform[16],
+                                      const float camera_xform_inv[16],
+                                      const float camera_proj[16]);
 
 //
 // Ends a frame.
 //
-YGLC_API void yg_stdshader_end_frame();
+YGL_API void yg_stdshader_end_frame();
 
 //
 // Set num lights with position pos, color ke, type ltype. Also set the ambient
 // illumination amb.
 //
-YGLC_API void yg_stdshader_set_lights(int prog, const float amb[3], int num,
-                                      float* pos, float* ke, int* ltype);
+YGL_API void yg_stdshader_set_lights(int prog, const float amb[3], int num,
+                                     float* pos, float* ke, int* ltype);
 
 //
 // Begins drawing a shape with transform xform.
 //
-YGLC_API void yg_stdshader_begin_shape(int prog, const float xform[16]);
+YGL_API void yg_stdshader_begin_shape(int prog, const float xform[16]);
 
 //
 // End shade drawing.
 //
-YGLC_API void yg_stdshader_end_shape();
+YGL_API void yg_stdshader_end_shape();
 
 //
 // Set material values with emission ke, diffuse kd, specular ks and
@@ -276,27 +265,27 @@ YGLC_API void yg_stdshader_end_shape();
 // variables. Uses GGX by default, but can switch to Phong is needed. Works
 // for points, lines and triangle/quads based on etype.
 //
-YGLC_API void yg_stdshader_set_material(int prog, int etype, float ke[3],
-                                        float kd[3], float ks[3], float rs,
-                                        int ke_txt, int kd_txt, int ks_txt,
-                                        int rs_txt, bool use_phong);
+YGL_API void yg_stdshader_set_material(int prog, int etype, float ke[3],
+                                       float kd[3], float ks[3], float rs,
+                                       int ke_txt, int kd_txt, int ks_txt,
+                                       int rs_txt, bool use_phong);
 
 //
 // Convertes a phong exponent to roughness.
 //
-YGLC_API float yg_specular_exponent_to_roughness(float n);
+YGL_API float yg_specular_exponent_to_roughness(float n);
 
 //
 // Set vertex data with position pos, normals norm, texture coordinates texcoord
 // and per-vertex color color.
 //
-YGLC_API void yg_stdshader_set_vert(int prog, float* pos, float* norm,
-                                    float* texcoord, float* color);
+YGL_API void yg_stdshader_set_vert(int prog, float* pos, float* norm,
+                                   float* texcoord, float* color);
 
 //
 // Draw num elements elem of type etype.
 //
-YGLC_API void yg_stdshader_draw_elem(int prog, int num, int* elem, int etype);
+YGL_API void yg_stdshader_draw_elem(int prog, int num, int* elem, int etype);
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION
@@ -318,8 +307,8 @@ YGLC_API void yg_stdshader_draw_elem(int prog, int num, int* elem, int etype);
 //
 // This is a public API. See above for documentation.
 //
-YGLC_API void yg_draw_image(int tid, int img_w, int img_h, int win_w, int win_h,
-                            float ox, float oy, float zoom) {
+YGL_API void yg_draw_image(int tid, int img_w, int img_h, int win_w, int win_h,
+                           float ox, float oy, float zoom) {
     assert(tid != 0);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -348,9 +337,9 @@ YGLC_API void yg_draw_image(int tid, int img_w, int img_h, int win_w, int win_h,
 //
 // This is a public API. See above for documentation.
 //
-YGLC_API void yg_shade_image(int tid, int img_w, int img_h, int win_w,
-                             int win_h, float ox, float oy, float zoom,
-                             float exposure, float gamma_) {
+YGL_API void yg_shade_image(int tid, int img_w, int img_h, int win_w, int win_h,
+                            float ox, float oy, float zoom, float exposure,
+                            float gamma_) {
     static const char* vert =
         ""
         "#version 120\n"
@@ -416,7 +405,7 @@ YGLC_API void yg_shade_image(int tid, int img_w, int img_h, int win_w,
 //
 // This is a public API. See above for documentation.
 //
-YGLC_API void yg_read_imagef(float* pixels, int w, int h, int nc) {
+YGL_API void yg_read_imagef(float* pixels, int w, int h, int nc) {
     int formats[4] = {GL_LUMINANCE, GL_LUMINANCE_ALPHA, GL_RGB, GL_RGBA};
     glReadPixels(0, 0, w, h, formats[nc - 1], GL_FLOAT, pixels);
 }
@@ -424,8 +413,8 @@ YGLC_API void yg_read_imagef(float* pixels, int w, int h, int nc) {
 //
 // This is a public API. See above for documentation.
 //
-YGLC_API int yg_make_texture(const float* pixels, int w, int h, int nc,
-                             bool as_float, bool filter) {
+YGL_API int yg_make_texture(const float* pixels, int w, int h, int nc,
+                            bool as_float, bool filter) {
     int formats_ub[4] = {GL_LUMINANCE, GL_LUMINANCE_ALPHA, GL_RGB, GL_RGBA};
     int formats_f[4] = {GL_LUMINANCE32F_ARB, GL_LUMINANCE_ALPHA32F_ARB,
                         GL_RGB32F_ARB, GL_RGBA32F_ARB};
@@ -451,8 +440,8 @@ YGLC_API int yg_make_texture(const float* pixels, int w, int h, int nc,
 //
 // This is a public API. See above for documentation.
 //
-YGLC_API int yg_update_texture(int id, const float* pixels, int w, int h,
-                               int nc) {
+YGL_API int yg_update_texture(int id, const float* pixels, int w, int h,
+                              int nc) {
     int formats[4] = {GL_LUMINANCE, GL_LUMINANCE_ALPHA, GL_RGB, GL_RGBA};
     glBindTexture(GL_TEXTURE_2D, id);
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, w, h, formats[nc - 1], GL_FLOAT,
@@ -463,7 +452,7 @@ YGLC_API int yg_update_texture(int id, const float* pixels, int w, int h,
 //
 // This is a public API. See above for documentation.
 //
-YGLC_API void yg_clear_texture(int* tid) {
+YGL_API void yg_clear_texture(int* tid) {
     glDeleteTextures(1, (GLuint*)tid);
     *tid = 0;
 }
@@ -471,8 +460,8 @@ YGLC_API void yg_clear_texture(int* tid) {
 //
 // This is a public API. See above for documentation.
 //
-YGLC_API int yg_make_program(const char* vertex, const char* fragment, int* vid,
-                             int* fid) {
+YGL_API int yg_make_program(const char* vertex, const char* fragment, int* vid,
+                            int* fid) {
     int errflags[2];
     char errbuf[10000];
     int gl_shader[2] = {0, 0};
@@ -517,7 +506,7 @@ YGLC_API int yg_make_program(const char* vertex, const char* fragment, int* vid,
 //
 // This is a public API. See above for documentation.
 //
-YGLC_API void yg_clear_program(int* pid, int* vid, int* fid) {
+YGL_API void yg_clear_program(int* pid, int* vid, int* fid) {
     if (vid) {
         glDetachShader(*pid, *vid);
         glDeleteShader(*vid);
@@ -537,8 +526,8 @@ YGLC_API void yg_clear_program(int* pid, int* vid, int* fid) {
 //
 // This is a public API. See above for documentation.
 //
-YGLC_API int yg_set_uniformi(int prog, const char* var, const int* val, int nc,
-                             int count) {
+YGL_API int yg_set_uniformi(int prog, const char* var, const int* val, int nc,
+                            int count) {
     assert(nc >= 1 && nc <= 4);
     int pos = glGetUniformLocation(prog, var);
     if (pos < 0) return 0;
@@ -555,8 +544,8 @@ YGLC_API int yg_set_uniformi(int prog, const char* var, const int* val, int nc,
 //
 // This is a public API. See above for documentation.
 //
-YGLC_API int yg_set_uniformf(int prog, const char* var, const float* val,
-                             int nc, int count) {
+YGL_API int yg_set_uniformf(int prog, const char* var, const float* val, int nc,
+                            int count) {
     assert((nc >= 1 && nc <= 4) || (nc == 16) || (nc == 12));
     int pos = glGetUniformLocation(prog, var);
     if (pos < 0) return 0;
@@ -575,8 +564,8 @@ YGLC_API int yg_set_uniformf(int prog, const char* var, const float* val,
 //
 // This is a public API. See above for documentation.
 //
-YGLC_API int yg_set_uniformt(int prog, const char* var, const char* varon,
-                             int tid, int tunit) {
+YGL_API int yg_set_uniformt(int prog, const char* var, const char* varon,
+                            int tid, int tunit) {
     int pos = glGetUniformLocation(prog, var);
     int onpos = (varon) ? glGetUniformLocation(prog, varon) : -1;
     if (pos < 0) return 0;
@@ -597,8 +586,8 @@ YGLC_API int yg_set_uniformt(int prog, const char* var, const char* varon,
 //
 // This is a public API. See above for documentation.
 //
-YGLC_API int yg_set_vertattr_ptr(int prog, const char* var, const float* value,
-                                 int nc) {
+YGL_API int yg_set_vertattr_ptr(int prog, const char* var, const float* value,
+                                int nc) {
     assert(nc >= 1 && nc <= 4);
     int pos = glGetAttribLocation(prog, var);
     if (pos < 0) return 0;
@@ -614,8 +603,8 @@ YGLC_API int yg_set_vertattr_ptr(int prog, const char* var, const float* value,
 //
 // This is a public API. See above for documentation.
 //
-YGLC_API int yg_set_vertattr_val(int prog, const char* var, const float* value,
-                                 int nc) {
+YGL_API int yg_set_vertattr_val(int prog, const char* var, const float* value,
+                                int nc) {
     assert(nc >= 1 && nc <= 4);
     int pos = glGetAttribLocation(prog, var);
     if (pos < 0) return 0;
@@ -633,8 +622,8 @@ YGLC_API int yg_set_vertattr_val(int prog, const char* var, const float* value,
 //
 // This is a public API. See above for documentation.
 //
-YGLC_API int yg_set_vertattr(int prog, const char* var, const float* value,
-                             int nc, const float* def) {
+YGL_API int yg_set_vertattr(int prog, const char* var, const float* value,
+                            int nc, const float* def) {
     assert(nc >= 1 && nc <= 4);
     int pos = glGetAttribLocation(prog, var);
     if (pos < 0) return 0;
@@ -659,7 +648,7 @@ YGLC_API int yg_set_vertattr(int prog, const char* var, const float* value,
 //
 // This is a public API. See above for documentation.
 //
-YGLC_API int yg_draw_elems(int nelems, const int* elem, int etype) {
+YGL_API int yg_draw_elems(int nelems, const int* elem, int etype) {
     int mode = 0;
     switch (etype) {
         case yg_etype_point: mode = GL_POINTS; break;
@@ -675,7 +664,7 @@ YGLC_API int yg_draw_elems(int nelems, const int* elem, int etype) {
 //
 // This is a public API. See above for documentation.
 //
-YGLC_API int yg_stdshader_make_program() {
+YGL_API int yg_stdshader_make_program() {
 #ifndef _WIN32
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Woverlength-strings"
@@ -876,11 +865,11 @@ YGLC_API int yg_stdshader_make_program() {
 //
 // This is a public API. See above for documentation.
 //
-YGLC_API void yg_stdshader_begin_frame(int prog, bool shade_eyelight,
-                                       float img_exposure, float img_gamma,
-                                       const float camera_xform[16],
-                                       const float camera_xform_inv[16],
-                                       const float camera_proj[16]) {
+YGL_API void yg_stdshader_begin_frame(int prog, bool shade_eyelight,
+                                      float img_exposure, float img_gamma,
+                                      const float camera_xform[16],
+                                      const float camera_xform_inv[16],
+                                      const float camera_proj[16]) {
     glUseProgram(prog);
     int shade_eyelighti = (shade_eyelight) ? 1 : 0;
     yg_set_uniformi(prog, "shade_eyelight", &shade_eyelighti, 1, 1);
@@ -894,13 +883,13 @@ YGLC_API void yg_stdshader_begin_frame(int prog, bool shade_eyelight,
 //
 // This is a public API. See above for documentation.
 //
-YGLC_API void yg_stdshader_end_frame() { glUseProgram(0); }
+YGL_API void yg_stdshader_end_frame() { glUseProgram(0); }
 
 //
 // This is a public API. See above for documentation.
 //
-YGLC_API void yg_stdshader_set_lights(int prog, const float amb[3], int num,
-                                      float* pos, float* ke, int* type) {
+YGL_API void yg_stdshader_set_lights(int prog, const float amb[3], int num,
+                                     float* pos, float* ke, int* type) {
     yg_set_uniformf(prog, "light_amb", amb, 3, 1);
     yg_set_uniformi(prog, "light_num", &num, 1, 1);
     yg_set_uniformf(prog, "light_pos", pos, 3, num);
@@ -911,24 +900,24 @@ YGLC_API void yg_stdshader_set_lights(int prog, const float amb[3], int num,
 //
 // This is a public API. See above for documentation.
 //
-YGLC_API void yg_stdshader_begin_shape(int prog, const float* xform) {
+YGL_API void yg_stdshader_begin_shape(int prog, const float* xform) {
     yg_set_uniformf(prog, "shape_xform", xform, 16, 1);
 }
 
 //
 // This is a public API. See above for documentation.
 //
-YGLC_API void yg_stdshader_end_shape() {
+YGL_API void yg_stdshader_end_shape() {
     for (int i = 0; i < 16; i++) glEnableVertexAttribArray(i);
 }
 
 //
 // This is a public API. See above for documentation.
 //
-YGLC_API void yg_stdshader_set_material(int prog, int etype, float ke[3],
-                                        float kd[3], float ks[3], float rs,
-                                        int ke_txt, int kd_txt, int ks_txt,
-                                        int rs_txt, bool use_phong) {
+YGL_API void yg_stdshader_set_material(int prog, int etype, float ke[3],
+                                       float kd[3], float ks[3], float rs,
+                                       int ke_txt, int kd_txt, int ks_txt,
+                                       int rs_txt, bool use_phong) {
     yg_set_uniformi(prog, "material_etype", &etype, 1, 1);
     yg_set_uniformf(prog, "material_ke", ke, 3, 1);
     yg_set_uniformf(prog, "material_kd", kd, 3, 1);
@@ -945,15 +934,15 @@ YGLC_API void yg_stdshader_set_material(int prog, int etype, float ke[3],
 //
 // This is a public API. See above for documentation.
 //
-YGLC_API float yg_specular_exponent_to_roughness(float n) {
+YGL_API float yg_specular_exponent_to_roughness(float n) {
     return sqrtf(2 / (n + 2));
 }
 
 //
 // This is a public API. See above for documentation.
 //
-YGLC_API void yg_stdshader_set_vert(int prog, float* pos, float* norm,
-                                    float* texcoord, float* color) {
+YGL_API void yg_stdshader_set_vert(int prog, float* pos, float* norm,
+                                   float* texcoord, float* color) {
     float white[3] = {1, 1, 1};
     float zero[3] = {0, 0, 0};
     yg_set_vertattr(prog, "vert_pos", pos, 3, 0);
@@ -965,7 +954,7 @@ YGLC_API void yg_stdshader_set_vert(int prog, float* pos, float* norm,
 //
 // This is a public API. See above for documentation.
 //
-YGLC_API void yg_stdshader_draw_elem(int prog, int num, int* elem, int etype) {
+YGL_API void yg_stdshader_draw_elem(int prog, int num, int* elem, int etype) {
     yg_draw_elems(num, elem, etype);
 }
 

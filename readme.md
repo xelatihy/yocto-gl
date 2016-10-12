@@ -57,6 +57,10 @@ really unreadable, defeating one of the main tenants of Yocto/GL.
 
 ## Brief Development History
 
+- Moving to modern C++
+    - Removed old C API
+    - Use STL containers by default
+- Switched 
 - Moved to C++ internals and common math library.
 - Rigid body solver.
 - Initial release. 

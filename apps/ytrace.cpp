@@ -71,7 +71,7 @@ struct view_params {
     int ns = 0, nb = 0;
     int bs = 0, ss = 0;  // block size and step size
     yt_render_params params;
-    ym_vector<ym_range2i> blocks;
+    std::vector<ym_range2i> blocks;
 
     // current image step
     int cb = 0, cs = 0;
@@ -86,7 +86,7 @@ struct view_params {
     int cur_camera = 0;
 
     // images
-    ym_vector<ym_vec4f> img, buf, preview;
+    std::vector<ym_vec4f> img, buf, preview;
 
     // texture id
     int tid = 0;
@@ -133,8 +133,8 @@ view_params* init_view_params(const ym_string& filename,
     return view;
 }
 
-ym_vector<ym_range2i> make_image_blocks(int w, int h, int bs) {
-    ym_vector<ym_range2i> blocks;
+std::vector<ym_range2i> make_image_blocks(int w, int h, int bs) {
+    std::vector<ym_range2i> blocks;
     for (int j = 0, cb = 0; j < h; j += bs) {
         for (int i = 0; i < w; i += bs, cb++) {
             blocks.push_back({{i, j}, {ym_min(i + bs, w), ym_min(j + bs, h)}});
@@ -149,7 +149,7 @@ void save_image(const ym_string& filename, ym_vec4f* pixels, int w, int h) {
     if (!strcmp(ext, ".hdr")) {
         stbi_write_hdr(filename.c_str(), w, h, 4, (float*)pixels);
     } else if (!strcmp(ext, ".png")) {
-        ym_vector<ym_vec4b> pixels_ub = ym_vector<ym_vec4b>(w * h);
+        std::vector<ym_vec4b> pixels_ub = std::vector<ym_vec4b>(w * h);
         for (int i = 0; i < w * h; i++) {
             ym_vec4f p = pixels[i];
             ym_vec4b& pub = pixels_ub[i];
@@ -520,11 +520,11 @@ yt_scene* init_trace_cb(const yo_scene* scene, yb_scene* scene_bvh,
 void render(yt_scene* trace_scene, const char* filename, const char* imfilename,
             int cid, int w, int h, int ns, const yt_render_params& params,
             int bs, int nthreads) {
-    ym_vector<ym_vec4f> pixels = ym_vector<ym_vec4f>(w * h);
-    ym_vector<ym_vec4f> buf = ym_vector<ym_vec4f>(w * h);
-    ym_vector<ym_range2i> blocks = make_image_blocks(w, h, bs);
-    ym_vector<render_block_params> block_params =
-        ym_vector<render_block_params>(blocks.size());
+    std::vector<ym_vec4f> pixels = std::vector<ym_vec4f>(w * h);
+    std::vector<ym_vec4f> buf = std::vector<ym_vec4f>(w * h);
+    std::vector<ym_range2i> blocks = make_image_blocks(w, h, bs);
+    std::vector<render_block_params> block_params =
+        std::vector<render_block_params>(blocks.size());
     ThreadPool pool(nthreads);
     std::vector<std::future<void>> futures;
     printf("tracing %s to %s\n", filename, imfilename);

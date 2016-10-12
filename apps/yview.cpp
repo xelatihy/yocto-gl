@@ -66,7 +66,7 @@
 
 struct view_img {
     ym_string filename;
-    ym_vector<float> pixels;
+    std::vector<float> pixels;
     int w, h, nc;
     int tex_glid;
 };
@@ -321,8 +321,8 @@ void ui_loop(int nimgs, view_img* imgs) {
     free(view);
 }
 
-ym_vector<view_img> load_images(const char** img_filenames) {
-    ym_vector<view_img> imgs;
+std::vector<view_img> load_images(const char** img_filenames) {
+    std::vector<view_img> imgs;
     for (const char** filename = img_filenames; *filename; filename++) {
         imgs.push_back(view_img());
         view_img* img = &imgs[imgs.size() - 1];
@@ -330,7 +330,7 @@ ym_vector<view_img> load_images(const char** img_filenames) {
         float* pixels =
             stbi_loadf(img->filename.c_str(), &img->w, &img->h, &img->nc, 0);
         img->pixels =
-            ym_vector<float>(pixels, pixels + img->w * img->h * img->nc);
+            std::vector<float>(pixels, pixels + img->w * img->h * img->nc);
         free(pixels);
         if (img->pixels.empty()) {
             printf("cannot load image %s\n", img->filename.c_str());
@@ -350,7 +350,7 @@ int main(int argc, const char** argv) {
     yc_done_parser(parser);
 
     // loading images
-    ym_vector<view_img> imgs = load_images(filenames);
+    std::vector<view_img> imgs = load_images(filenames);
 
     // start ui loop
     ui_loop((int)imgs.size(), imgs.data());

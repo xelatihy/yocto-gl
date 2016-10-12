@@ -41,7 +41,7 @@
 #include "../yocto/yocto_obj.h"
 
 void collect_boxes(yb_scene* scene, int shape_id, int nodeid, int max_depth,
-                   int depth, ym_vector<ym_range3f>& bbox) {
+                   int depth, std::vector<ym_range3f>& bbox) {
     yb__bvh* bvh = (shape_id >= 0) ? scene->shapes[shape_id].bvh : scene->bvh;
     if (depth > max_depth) return;
     yb__bvhn* node = &bvh->nodes[nodeid];
@@ -62,7 +62,7 @@ void collect_boxes(yb_scene* scene, int shape_id, int nodeid, int max_depth,
 }
 
 void collect_boxes(nanort::BVHAccel* bvh, int nodeid, int max_depth, int depth,
-                   ym_vector<ym_range3f>& bbox) {
+                   std::vector<ym_range3f>& bbox) {
     if (depth > max_depth) return;
     const nanort::BVHNode* node = &bvh->GetNodes()[nodeid];
     bbox += {ym_vec3f(node->bmin), ym_vec3f(node->bmax)};
@@ -72,19 +72,19 @@ void collect_boxes(nanort::BVHAccel* bvh, int nodeid, int max_depth, int depth,
     }
 }
 
-ym_vector<ym_range3f> collect_boxes(yb_scene* scene, int max_depth) {
-    ym_vector<ym_range3f> boxes;
+std::vector<ym_range3f> collect_boxes(yb_scene* scene, int max_depth) {
+    std::vector<ym_range3f> boxes;
     collect_boxes(scene, -1, 0, max_depth, 0, boxes);
     return boxes;
 }
 
-ym_vector<ym_range3f> collect_boxes(nanort::BVHAccel* bvh, int max_depth) {
-    ym_vector<ym_range3f> boxes;
+std::vector<ym_range3f> collect_boxes(nanort::BVHAccel* bvh, int max_depth) {
+    std::vector<ym_range3f> boxes;
     collect_boxes(bvh, 0, max_depth, 0, boxes);
     return boxes;
 }
 
-void save_bvh_obj(const char* filename, const ym_vector<ym_range3f>& bboxes) {
+void save_bvh_obj(const char* filename, const std::vector<ym_range3f>& bboxes) {
     yo_scene* scene = new yo_scene();
     for (auto&& bbox : bboxes) {
         scene->shapes.push_back(yo_shape());
@@ -264,8 +264,8 @@ int main(int argc, const char** argv) {
     ym_timer nanort_bvh_timer = ym_timer();
     nanort::BVHBuildOptions nanort_options;
     nanort::BVHAccel nanort_bvh;
-    ym_vector<ym_vec3f> nanort_pos;
-    ym_vector<ym_vec3i> nanort_elem;
+    std::vector<ym_vec3f> nanort_pos;
+    std::vector<ym_vec3i> nanort_elem;
     for (int i = 0; i < scene->shapes.size(); i++) {
         int offset = (int)nanort_pos.size();
         yo_shape* shape = &scene->shapes[i];
@@ -299,7 +299,7 @@ int main(int argc, const char** argv) {
 
     // raycast
     ym_timer yocto_render_timer = ym_timer();
-    ym_vector<ym_vec3f> img(w * h);
+    std::vector<ym_vec3f> img(w * h);
     for (int j = 0; j < h; j++) {
         for (int i = 0; i < w; i++) {
             ym_vec3f c = ym_zero3f;
@@ -330,7 +330,7 @@ int main(int argc, const char** argv) {
 
     // nanort --- raycast
     ym_timer nanort_render_timer = ym_timer();
-    ym_vector<ym_vec3f> nanort_img(w * h);
+    std::vector<ym_vec3f> nanort_img(w * h);
     for (int j = 0; j < h; j++) {
         for (int i = 0; i < w; i++) {
             ym_vec3f c = ym_zero3f;

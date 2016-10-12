@@ -77,7 +77,7 @@ struct view_params {
 
     // shading
     int shade_prog = 0;
-    ym_vector<int> shade_txt;
+    std::vector<int> shade_txt;
 
     // lighting
     bool camera_lights = false;
@@ -207,10 +207,10 @@ void save_screenshot(GLFWwindow* window, view_params* view) {
 
     int w, h;
     glfwGetFramebufferSize(window, &w, &h);
-    ym_vector<unsigned char> pixels = ym_vector<unsigned char>(w * h * 4);
+    std::vector<unsigned char> pixels = std::vector<unsigned char>(w * h * 4);
     glReadBuffer(GL_FRONT);
     glReadPixels(0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
-    ym_vector<unsigned char> line(w * 4);
+    std::vector<unsigned char> line(w * 4);
     for (int j = 0; j < h / 2; j++) {
         memcpy(line.data(), pixels.data() + j * w * 4, w * 4);
         memcpy(pixels.data() + j * w * 4, pixels.data() + (h - 1 - j) * w * 4,
