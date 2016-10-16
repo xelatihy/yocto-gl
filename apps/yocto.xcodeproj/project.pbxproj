@@ -13,6 +13,7 @@
 			buildPhases = (
 			);
 			dependencies = (
+				E5EA751F1DB334DA004050A1 /* PBXTargetDependency */,
 				E59E63B01D0497860045D035 /* PBXTargetDependency */,
 				E518B27E1D049701006A2D73 /* PBXTargetDependency */,
 				E50FF1A11CFBF17D0005DAE8 /* PBXTargetDependency */,
@@ -99,6 +100,12 @@
 		E5DC68F01CE0C97400167F6F /* libglfw.a in Frameworks */ = {isa = PBXBuildFile; fileRef = E5CF2CE21CE06E1C00903654 /* libglfw.a */; };
 		E5DC68F11CE0C97700167F6F /* libglfw.a in Frameworks */ = {isa = PBXBuildFile; fileRef = E5CF2CE21CE06E1C00903654 /* libglfw.a */; };
 		E5DC68F21CE0C97900167F6F /* libglfw.a in Frameworks */ = {isa = PBXBuildFile; fileRef = E5CF2CE21CE06E1C00903654 /* libglfw.a */; };
+		E5EA75111DB333E5004050A1 /* liblibyocto.a in Frameworks */ = {isa = PBXBuildFile; fileRef = E5BE6E451CEC96F000BD73D2 /* liblibyocto.a */; };
+		E5EA75121DB333E5004050A1 /* IOKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E54A474F1CC21A18006EEBD9 /* IOKit.framework */; };
+		E5EA75131DB333E5004050A1 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E54A474D1CC218DD006EEBD9 /* Cocoa.framework */; };
+		E5EA75141DB333E5004050A1 /* CoreVideo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E54A474B1CC218C4006EEBD9 /* CoreVideo.framework */; };
+		E5EA75151DB333E5004050A1 /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E54A47491CC218B8006EEBD9 /* OpenGL.framework */; };
+		E5EA751D1DB3340C004050A1 /* test_cmdline.cpp in Sources */ = {isa = PBXBuildFile; fileRef = E5EA751B1DB33404004050A1 /* test_cmdline.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -172,6 +179,13 @@
 			remoteGlobalIDString = E5DA6FAA1CC2437700DC39DD;
 			remoteInfo = ysym;
 		};
+		E5EA751E1DB334DA004050A1 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E59364A21CC214E70034617B /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = E5EA750D1DB333E5004050A1;
+			remoteInfo = test_utils;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -239,6 +253,15 @@
 			runOnlyForDeploymentPostprocessing = 1;
 		};
 		E5DDE7F01CC2156800B90848 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = /usr/share/man/man1/;
+			dstSubfolderSpec = 0;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 1;
+		};
+		E5EA75161DB333E5004050A1 /* CopyFiles */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
 			dstPath = /usr/share/man/man1/;
@@ -341,6 +364,8 @@
 		E5DA6FA61CC2432E00DC39DD /* ytestgen */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = ytestgen; sourceTree = BUILT_PRODUCTS_DIR; };
 		E5DA6FB71CC2437700DC39DD /* ysym */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = ysym; sourceTree = BUILT_PRODUCTS_DIR; };
 		E5DDE7F21CC2156800B90848 /* ytrace */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = ytrace; sourceTree = BUILT_PRODUCTS_DIR; };
+		E5EA751A1DB333E5004050A1 /* test_cmdline */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = test_cmdline; sourceTree = BUILT_PRODUCTS_DIR; };
+		E5EA751B1DB33404004050A1 /* test_cmdline.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = test_cmdline.cpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -462,6 +487,18 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		E5EA75101DB333E5004050A1 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E5EA75111DB333E5004050A1 /* liblibyocto.a in Frameworks */,
+				E5EA75121DB333E5004050A1 /* IOKit.framework in Frameworks */,
+				E5EA75131DB333E5004050A1 /* Cocoa.framework in Frameworks */,
+				E5EA75141DB333E5004050A1 /* CoreVideo.framework in Frameworks */,
+				E5EA75151DB333E5004050A1 /* OpenGL.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -491,6 +528,7 @@
 				E50FF19E1CFBF0B40005DAE8 /* yprocobj */,
 				E518B2771D0496D0006A2D73 /* test_obj */,
 				E59E63AE1D04975E0045D035 /* test_bvh */,
+				E5EA751A1DB333E5004050A1 /* test_cmdline */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -523,6 +561,7 @@
 		E597E2191CF59B0C000ED579 /* apps */ = {
 			isa = PBXGroup;
 			children = (
+				E5EA751B1DB33404004050A1 /* test_cmdline.cpp */,
 				E518B2781D0496E6006A2D73 /* test_bvh.cpp */,
 				E518B2791D0496E6006A2D73 /* test_obj.cpp */,
 				E597E21A1CF59B0C000ED579 /* ext */,
@@ -818,6 +857,23 @@
 			productReference = E5DDE7F21CC2156800B90848 /* ytrace */;
 			productType = "com.apple.product-type.tool";
 		};
+		E5EA750D1DB333E5004050A1 /* test_cmdline */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = E5EA75171DB333E5004050A1 /* Build configuration list for PBXNativeTarget "test_cmdline" */;
+			buildPhases = (
+				E5EA750E1DB333E5004050A1 /* Sources */,
+				E5EA75101DB333E5004050A1 /* Frameworks */,
+				E5EA75161DB333E5004050A1 /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = test_cmdline;
+			productName = ytrace;
+			productReference = E5EA751A1DB333E5004050A1 /* test_cmdline */;
+			productType = "com.apple.product-type.tool";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -861,6 +917,7 @@
 				E50FF1911CFBF0B40005DAE8 /* yprocobj */,
 				E518B26A1D0496D0006A2D73 /* test_obj */,
 				E59E63A11D04975E0045D035 /* test_bvh */,
+				E5EA750D1DB333E5004050A1 /* test_cmdline */,
 				E5CF2CE11CE06E1C00903654 /* glfw */,
 				E5BE6E441CEC96F000BD73D2 /* libyocto */,
 				E5DA6F7F1CC242DD00DC39DD /* all */,
@@ -960,6 +1017,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		E5EA750E1DB333E5004050A1 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E5EA751D1DB3340C004050A1 /* test_cmdline.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -1013,6 +1078,11 @@
 			target = E5DA6FAA1CC2437700DC39DD /* ysym */;
 			targetProxy = E5DA6FB91CC243A300DC39DD /* PBXContainerItemProxy */;
 		};
+		E5EA751F1DB334DA004050A1 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = E5EA750D1DB333E5004050A1 /* test_cmdline */;
+			targetProxy = E5EA751E1DB334DA004050A1 /* PBXContainerItemProxy */;
+		};
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
@@ -1049,7 +1119,7 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LANGUAGE_STANDARD = "c++0x";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = NO;
@@ -1100,7 +1170,7 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LANGUAGE_STANDARD = "c++0x";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = NO;
@@ -1272,6 +1342,20 @@
 			};
 			name = Release;
 		};
+		E5EA75181DB333E5004050A1 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		E5EA75191DB333E5004050A1 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -1379,6 +1463,15 @@
 			buildConfigurations = (
 				E5DDE7F71CC2156800B90848 /* Debug */,
 				E5DDE7F81CC2156800B90848 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		E5EA75171DB333E5004050A1 /* Build configuration list for PBXNativeTarget "test_cmdline" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E5EA75181DB333E5004050A1 /* Debug */,
+				E5EA75191DB333E5004050A1 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

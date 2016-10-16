@@ -515,15 +515,14 @@ void ui_loop(const ym_string& filename, const ym_string& imfilename,
 }
 
 // load scene and make intersect state
-yo_scene* load_scene(const char* filename) {
+yo_scene* load_scene(const std::string& filename) {
     // load scenes and merge
-    char ext[16];
-    yc_split_path(filename, 0, 0, ext);
-    yo_scene* scene = (strcmp(ext, ".objbin"))
-                          ? yo_load_obj(filename, true, true)
-                          : yo_load_objbin(filename, true);
+    std::string ext;
+    yc_split_path(filename, nullptr, nullptr, &ext);
+    auto scene = (ext != ".objbin") ? yo_load_obj(filename, true, true)
+                                    : yo_load_objbin(filename, true);
     if (!scene) {
-        printf("unable to load scene %s\n", filename);
+        printf("unable to load scene %s\n", filename.c_str());
         return 0;
     }
 
@@ -636,33 +635,34 @@ ysr_scene* make_rigid_scene(yo_scene* scene, yb_scene** scene_bvh) {
     return rigid_scene;
 }
 
-int main(int argc, const char** argv) {
+int main(int argc, char* argv[]) {
     // command line
-    yc_parser* parser = yc_init_parser(argc, argv, "view meshes");
-    float amb = yc_parse_optf(parser, "--ambient", 0, "ambient factor", 0);
-    bool camera_lights = yc_parse_optb(parser, "--camera_lights", "-c",
+    auto parser = yc_init_parser(argc, argv, "view meshes");
+    auto amb =
+        yc_parse_opt<float>(parser, "--ambient", "", "ambient factor", 0);
+    auto camera_lights = yc_parse_flag(parser, "--camera_lights", "-c",
                                        "enable camera lights", false);
-    int camera = yc_parse_opti(parser, "--camera", "-C", "camera", 0);
-    bool no_ui = yc_parse_optb(parser, "--no-ui", 0, "runs offline", false);
-    float aspect =
-        yc_parse_optf(parser, "--aspect", "-a", "image aspect", 16.0f / 9.0f);
-    float dt =
-        yc_parse_optf(parser, "--delta_time", "-dt", "delta time", 1 / 60.0f);
-    int res =
-        yc_parse_opti(parser, "--resolution", "-r", "image resolution", 720);
-    const char* imfilename =
-        yc_parse_opts(parser, "--output", "-o", "image filename", "out.png");
-    const char* filename =
-        yc_parse_args(parser, "scene", "scene filename", 0, true);
+    auto camera = yc_parse_opt<int>(parser, "--camera", "-C", "camera", 0);
+    auto no_ui = yc_parse_flag(parser, "--no-ui", "", "runs offline", false);
+    auto aspect = yc_parse_opt<float>(parser, "--aspect", "-a", "image aspect",
+                                      16.0f / 9.0f);
+    auto dt = yc_parse_opt<float>(parser, "--delta_time", "-dt", "delta time",
+                                  1 / 60.0f);
+    auto res = yc_parse_opt<int>(parser, "--resolution", "-r",
+                                 "image resolution", 720);
+    auto imfilename = yc_parse_opt<std::string>(parser, "--output", "-o",
+                                                "image filename", "out.png");
+    auto filename =
+        yc_parse_arg<std::string>(parser, "scene", "scene filename", "", true);
     yc_done_parser(parser);
 
     // load scene
-    yo_scene* scene = load_scene(filename);
+    auto scene = load_scene(filename);
     scene->cameras[camera].width = aspect * scene->cameras[camera].height;
 
     // init rigid simulation
-    yb_scene* scene_bvh;
-    ysr_scene* rigid_scene = make_rigid_scene(scene, &scene_bvh);
+    yb_scene* scene_bvh = nullptr;
+    auto rigid_scene = make_rigid_scene(scene, &scene_bvh);
 
     // start
     ui_loop(filename, imfilename, scene, rigid_scene, dt,

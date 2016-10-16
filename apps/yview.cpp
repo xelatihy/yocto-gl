@@ -321,13 +321,14 @@ void ui_loop(int nimgs, view_img* imgs) {
     free(view);
 }
 
-std::vector<view_img> load_images(const char** img_filenames) {
-    std::vector<view_img> imgs;
-    for (const char** filename = img_filenames; *filename; filename++) {
+std::vector<view_img> load_images(
+    const std::vector<std::string>& img_filenames) {
+    auto imgs = std::vector<view_img>();
+    for (auto filename : img_filenames) {
         imgs.push_back(view_img());
         view_img* img = &imgs[imgs.size() - 1];
-        img->filename = *filename;
-        float* pixels =
+        img->filename = filename;
+        auto pixels =
             stbi_loadf(img->filename.c_str(), &img->w, &img->h, &img->nc, 0);
         img->pixels =
             std::vector<float>(pixels, pixels + img->w * img->h * img->nc);
@@ -341,16 +342,15 @@ std::vector<view_img> load_images(const char** img_filenames) {
     return imgs;
 }
 
-int main(int argc, const char** argv) {
-    const char* filenames[4096];
-
+int main(int argc, char* argv[]) {
     // command line params
-    yc_parser* parser = yc_init_parser(argc, argv, "view images");
-    yc_parse_argsa(parser, "image", "image filename", 0, true, filenames, 4096);
+    auto parser = yc_init_parser(argc, argv, "view images");
+    auto filenames =
+        yc_parse_arga<std::string>(parser, "image", "image filename", {}, true);
     yc_done_parser(parser);
 
     // loading images
-    std::vector<view_img> imgs = load_images(filenames);
+    auto imgs = load_images(filenames);
 
     // start ui loop
     ui_loop((int)imgs.size(), imgs.data());

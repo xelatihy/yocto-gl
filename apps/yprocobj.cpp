@@ -30,34 +30,33 @@
 #include "../yocto/yocto_math.h"
 #include "../yocto/yocto_obj.h"
 
-yo_scene* load(const char* filename) {
-    char ext[16];
-    yc_split_path(filename, 0, 0, ext);
-    if (!strcmp(ext, ".obj")) return yo_load_obj(filename, false, true);
-    if (!strcmp(ext, ".objbin")) return yo_load_objbin(filename, true);
+yo_scene* load(const std::string& filename) {
+    auto ext = std::string();
+    yc_split_path(filename, nullptr, nullptr, &ext);
+    if (ext == ".obj") return yo_load_obj(filename, false, true);
+    if (ext == ".objbin") return yo_load_objbin(filename, true);
     assert(false);
     return nullptr;
 }
 
-bool save(const char* filename, const yo_scene* scene) {
-    char ext[16];
-    yc_split_path(filename, 0, 0, ext);
-    if (!strcmp(ext, ".obj")) return yo_save_obj(filename, scene, true);
-    if (!strcmp(ext, ".objbin")) return yo_save_objbin(filename, scene, true);
+bool save(const std::string& filename, const yo_scene* scene) {
+    auto ext = std::string();
+    yc_split_path(filename, nullptr, nullptr, &ext);
+    if (ext == ".obj") return yo_save_obj(filename, scene, true);
+    if (ext == ".objbin") return yo_save_objbin(filename, scene, true);
     assert(false);
     return false;
 }
 
-int main(int argc, const char** argv) {
+int main(int argc, char* argv[]) {
     // command line params
-    yc_parser* parser = yc_init_parser(argc, argv, "make tests");
-    const char* filename_in =
-        yc_parse_args(parser, "filename_in", "input filename", 0, true);
-    const char* filename_out =
-        yc_parse_args(parser, "filename_out", "output filename", 0, true);
+    auto parser = yc_init_parser(argc, argv, "make tests");
+    auto filename_in = yc_parse_arg<std::string>(parser, "filename_in",
+                                                 "input filename", "", true);
+    auto filename_out = yc_parse_arg<std::string>(parser, "filename_out",
+                                                  "output filename", "", true);
     yc_done_parser(parser);
 
-    yo_scene* scene = load(filename_in);
-
+    auto scene = load(filename_in);
     save(filename_out, scene);
 }

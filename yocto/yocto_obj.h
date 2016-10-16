@@ -129,10 +129,13 @@
 #define YGL_API
 #endif
 
+#include <string>
+#include <vector>
+
 #include "yocto_math.h"
 
 // -----------------------------------------------------------------------------
-// C++ INTERFACE
+// INTERFACE
 // -----------------------------------------------------------------------------
 
 //
@@ -278,7 +281,8 @@ struct yo_scene {
 // Returns:
 // - loaded scene or NULL for error
 //
-YGL_API yo_scene* yo_load_obj(const char* filename, bool triangulate, bool ext);
+YGL_API yo_scene* yo_load_obj(const std::string& filename, bool triangulate,
+                              bool ext);
 
 //
 // Loads a binary scene dump from disk
@@ -290,7 +294,7 @@ YGL_API yo_scene* yo_load_obj(const char* filename, bool triangulate, bool ext);
 // Returns:
 // - loaded scene or NULL for error
 //
-YGL_API yo_scene* yo_load_objbin(const char* filename, bool ext);
+YGL_API yo_scene* yo_load_objbin(const std::string& filename, bool ext);
 
 //
 // Saves a scene to disk
@@ -303,7 +307,8 @@ YGL_API yo_scene* yo_load_objbin(const char* filename, bool ext);
 // Returns:
 // - true if ok
 //
-YGL_API bool yo_save_obj(const char* filename, const yo_scene* scene, bool ext);
+YGL_API bool yo_save_obj(const std::string& filename, const yo_scene* scene,
+                         bool ext);
 
 //
 // Saves a binary scene dump to disk
@@ -316,7 +321,7 @@ YGL_API bool yo_save_obj(const char* filename, const yo_scene* scene, bool ext);
 // Returns:
 // - true if ok
 //
-YGL_API bool yo_save_objbin(const char* filename, const yo_scene* scene,
+YGL_API bool yo_save_objbin(const std::string& filename, const yo_scene* scene,
                             bool ext);
 
 //
@@ -332,6 +337,39 @@ YGL_API void yo_free_scene(yo_scene* scene);
 // - filename: scene filename, used to resolve path references
 // - req_comp: 0 for default or 1-4 to force all textures to have the given
 //    number of components
+//
+#ifndef YO_NOIMG
+YGL_API void yo_load_textures(yo_scene* scene, const std::string& filename,
+                              int req_comp);
+#endif
+
+// -----------------------------------------------------------------------------
+// DEPRECATED INTERFACE
+// -----------------------------------------------------------------------------
+
+//
+// Wrapper. See above.
+//
+YGL_API yo_scene* yo_load_obj(const char* filename, bool triangulate, bool ext);
+
+//
+// Wrapper. See above.
+//
+YGL_API yo_scene* yo_load_objbin(const char* filename, bool ext);
+
+//
+// Wrapper. See above.
+//
+YGL_API bool yo_save_obj(const char* filename, const yo_scene* scene, bool ext);
+
+//
+// Wrapper. See above.
+//
+YGL_API bool yo_save_objbin(const char* filename, const yo_scene* scene,
+                            bool ext);
+
+//
+// Wrapper. See above.
 //
 #ifndef YO_NOIMG
 YGL_API void yo_load_textures(yo_scene* scene, const char* filename,
@@ -685,8 +723,8 @@ static inline int yo__add_unique_texture(std::vector<yo_texture>& textures,
 //
 static inline bool yo__load_mtl(std::vector<yo_material>& materials,
                                 std::vector<yo_texture>& textures,
-                                const char* filename) {
-    FILE* mfile = fopen(filename, "rt");
+                                const std::string& filename) {
+    FILE* mfile = fopen(filename.c_str(), "rt");
     if (!mfile) return false;
 
     char mline[4096];
@@ -779,43 +817,45 @@ static inline bool yo__load_mtl(std::vector<yo_material>& materials,
 //
 // Splits a path into component to get directory name
 //
-static inline void yo__split_path(const char* filename, char* dirname,
-                                  char* basename, char* ext) {
+static inline void yo__split_path(const std::string& filename,
+                                  std::string* dirname, std::string* basename,
+                                  std::string* ext) {
     // walk till end keeping the position of '/', '\\' and '.'
-    const char *path_sep = 0, *ext_sep = 0;
-    for (const char* p = filename; *p; p++) {
-        if (*p == '/' || *p == '\\') path_sep = p;
-        if (*p == '.') ext_sep = p;
+    auto path_sep = -1, ext_sep = -1;
+    for (auto i = 0; i < filename.length(); i++) {
+        if (filename[i] == '/' || filename[i] == '\\') path_sep = i;
+        if (filename[i] == '.') ext_sep = i;
     }
 
     // copy strings
     if (dirname) {
-        if (path_sep) {
-            strncpy(dirname, filename, 1 + path_sep - filename);
-            if (path_sep) dirname[1 + path_sep - filename] = 0;
-        } else
-            strcpy(dirname, "");
+        if (path_sep >= 0) {
+            *dirname = filename.substr(0, path_sep + 1);
+        } else {
+            *dirname = "";
+        }
     }
     if (basename) {
-        const char* start = (path_sep) ? path_sep + 1 : filename;
-        if (ext_sep) {
-            strncpy(basename, start, ext_sep - filename);
-            if (ext_sep) basename[ext_sep - start] = 0;
-        } else
-            strcpy(basename, start);
+        auto start = (path_sep >= 0) ? path_sep + 1 : 0;
+        if (ext_sep >= 0) {
+            *basename = filename.substr(start, ext_sep);
+        } else {
+            *basename = filename.substr(start);
+        }
     }
     if (ext) {
-        if (ext_sep)
-            strcpy(ext, ext_sep);
-        else
-            strcpy(ext, "");
+        if (ext_sep) {
+            *ext = filename.substr(ext_sep);
+        } else {
+            *ext = "";
+        }
     }
 }
 
 //
 // Loads an OBJ file
 //
-YGL_API yo_scene* yo_load_obj(const char* filename, bool triangulate,
+YGL_API yo_scene* yo_load_obj(const std::string& filename, bool triangulate,
                               bool ext) {
     // prepare scene
     yo_scene* scene = new yo_scene();
@@ -838,7 +878,7 @@ YGL_API yo_scene* yo_load_obj(const char* filename, bool triangulate,
     yo__vertdata vert;
 
     // start
-    FILE* file = fopen(filename, "rt");
+    FILE* file = fopen(filename.c_str(), "rt");
     if (!file) return 0;
 
     // foreach line, splits the line by whitespaces and parses the data
@@ -979,9 +1019,9 @@ YGL_API yo_scene* yo_load_obj(const char* filename, bool triangulate,
                           elem, vert, vhash);
             matname = ym_string((ntok > 1) ? tok[1] : 0);
         } else if (!strcmp(tok[0], "mtllib")) {
-            char mfilename[4096];
-            yo__split_path(filename, mfilename, 0, 0);
-            strcat(mfilename, tok[1]);
+            std::string dirname;
+            yo__split_path(filename, &dirname, nullptr, nullptr);
+            auto mfilename = dirname + tok[1];
             if (!yo__load_mtl(materials, textures, mfilename)) return 0;
         } else {
             // TODO: explicit skips
@@ -1049,9 +1089,10 @@ static inline void yo__fwrite_str(FILE* file, const char* str,
 //
 // save MTL file
 //
-static inline bool yo__save_mtl(const char* filename, const yo_scene* scene) {
+static inline bool yo__save_mtl(const std::string& filename,
+                                const yo_scene* scene) {
     // TODO: failure
-    FILE* mfile = fopen(filename, "wt");
+    FILE* mfile = fopen(filename.c_str(), "wt");
     if (!mfile) return false;
 
     // for each material, dump all the values
@@ -1105,27 +1146,27 @@ static inline void yo__fwrite_objverts(FILE* file, const char* str, int nv,
 //
 // save OBJ
 //
-YGL_API bool yo_save_obj(const char* filename, const yo_scene* scene,
+YGL_API bool yo_save_obj(const std::string& filename, const yo_scene* scene,
                          bool ext) {
-    char dirname[4096], mfilename[4096];
-    yo__split_path(filename, dirname, mfilename, 0);
-    strcat(mfilename, ".mtl");
+    std::string dirname, mfilename;
+    yo__split_path(filename.c_str(), &dirname, &mfilename, nullptr);
+    mfilename += ".mtl";
 
     // write material file
     if (!scene->materials.empty()) {
-        char fullname[4096];
-        if (strlen(dirname))
-            sprintf(fullname, "%s%s", dirname, mfilename);
+        std::string fullname;
+        if (dirname.length())
+            fullname = dirname + mfilename;
         else
-            sprintf(fullname, "%s", mfilename);
+            fullname = mfilename;
         if (!yo__save_mtl(fullname, scene)) return false;
     }
 
-    FILE* file = fopen(filename, "wt");
+    FILE* file = fopen(filename.c_str(), "wt");
     if (!file) return false;
 
     if (!scene->materials.empty()) {
-        fprintf(file, "mtllib %s\n", mfilename);
+        fprintf(file, "mtllib %s\n", mfilename.c_str());
     }
 
     yo__vert voffset = {1, 1, 1, 1, 1};
@@ -1273,8 +1314,8 @@ static inline bool yo__fread_binstr(FILE* file, ym_string* s) {
 //
 // binary dump OBJ (note that material data is dumped in the same file)
 //
-YGL_API yo_scene* yo_load_objbin(const char* filename, bool ext) {
-    FILE* file = fopen(filename, "rb");
+YGL_API yo_scene* yo_load_objbin(const std::string& filename, bool ext) {
+    FILE* file = fopen(filename.c_str(), "rb");
     if (!file) return 0;
 
     // TODO: ids
@@ -1420,9 +1461,9 @@ static inline bool yo__fwrite_binstr(FILE* file, const ym_string& s) {
 //
 // load binary obj dump
 //
-YGL_API bool yo_save_objbin(const char* filename, const yo_scene* scene,
+YGL_API bool yo_save_objbin(const std::string& filename, const yo_scene* scene,
                             bool ext) {
-    FILE* file = fopen(filename, "wb");
+    FILE* file = fopen(filename.c_str(), "wb");
     if (!file) return false;
 
     int magic = yo__binmagic;
@@ -1551,14 +1592,14 @@ YGL_API bool yo_save_objbin(const char* filename, const yo_scene* scene,
 //
 // load texture data
 //
-YGL_API void yo_load_textures(yo_scene* scene, const char* filename,
+YGL_API void yo_load_textures(yo_scene* scene, const std::string& filename,
                               int req_comp) {
     stbi_set_flip_vertically_on_load(1);
-    char fullname[4096];
+    auto dirname = std::string();
+    yo__split_path(filename, &dirname, nullptr, nullptr);
     for (int i = 0; i < scene->textures.size(); i++) {
-        yo__split_path(filename, fullname, 0, 0);
-        strcat(fullname, scene->textures[i].path.c_str());
-        float* d = stbi_loadf(fullname, &scene->textures[i].width,
+        auto fullname = dirname + scene->textures[i].path;
+        float* d = stbi_loadf(fullname.c_str(), &scene->textures[i].width,
                               &scene->textures[i].height,
                               &scene->textures[i].ncomp, req_comp);
         scene->textures[i].pixels = std::vector<float>(
@@ -1570,6 +1611,51 @@ YGL_API void yo_load_textures(yo_scene* scene, const char* filename,
     stbi_set_flip_vertically_on_load(0);
 }
 
+#endif
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION OF DEPRECATED INTERFACE
+// -----------------------------------------------------------------------------
+
+//
+// Wrapper. See above.
+//
+YGL_API yo_scene* yo_load_obj(const char* filename, bool triangulate,
+                              bool ext) {
+    return yo_load_obj(std::string(filename), triangulate, ext);
+}
+
+//
+// Wrapper. See above.
+//
+YGL_API yo_scene* yo_load_objbin(const char* filename, bool ext) {
+    return yo_load_objbin(std::string(filename), ext);
+}
+
+//
+// Wrapper. See above.
+//
+YGL_API bool yo_save_obj(const char* filename, const yo_scene* scene,
+                         bool ext) {
+    return yo_save_obj(std::string(filename), scene, ext);
+}
+
+//
+// Wrapper. See above.
+//
+YGL_API bool yo_save_objbin(const char* filename, const yo_scene* scene,
+                            bool ext) {
+    return yo_save_objbin(std::string(filename), scene, ext);
+}
+
+//
+// Wrapper. See above.
+//
+#ifndef YO_NOIMG
+YGL_API void yo_load_textures(yo_scene* scene, const char* filename,
+                              int req_comp) {
+    yo_load_textures(scene, std::string(filename), req_comp);
+}
 #endif
 
 #endif
