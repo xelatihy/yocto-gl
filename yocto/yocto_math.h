@@ -31,6 +31,7 @@
 
 //
 // HISTORY:
+// - v 0.3: internal C++ refactoring
 // - v 0.2: use of STL containers; removal of yocto containers
 // - v 0.1: C++ only implementation
 // - v 0.0: initial release in C99
@@ -169,13 +170,13 @@ struct ym_vec {
     T v[N];  // elements
 
     ym_vec() {
-        for (int i = 0; i < N; i++) v[i] = 0;
+        for (auto i = 0; i < N; i++) v[i] = 0;
     }
     explicit ym_vec(T x) {
-        for (int i = 0; i < N; i++) v[i] = x;
+        for (auto i = 0; i < N; i++) v[i] = x;
     }
     explicit ym_vec(const T* vv) {
-        for (int i = 0; i < N; i++) v[i] = vv[i];
+        for (auto i = 0; i < N; i++) v[i] = vv[i];
     }
 
     const T& operator[](int i) const { return v[i]; }
@@ -277,20 +278,20 @@ struct ym_mat {
     }
 
     explicit ym_mat(const T* vv) {
-        for (int j = 0; j < N; j++) {
-            for (int i = 0; i < N; i++) v[j][i] = vv[j * N + i];
+        for (auto j = 0; j < N; j++) {
+            for (auto i = 0; i < N; i++) v[j][i] = vv[j * N + i];
         }
     }
 
     ym_mat(const std::initializer_list<V>& cols) {
         assert(cols.size() == M);
-        int j = 0;
+        auto j = 0;
         for (auto&& c : cols) v[j++] = c;
     }
 
     explicit ym_mat(const ym_mat<T, N - 1, M - 1>& m,
                     const ym_vec<T, N - 1>& t) {
-        for (int j = 0; j < M - 1; j++) {
+        for (auto j = 0; j < M - 1; j++) {
             v[j] = V{m.v[j], 0};
         }
         v[M - 1] = V{t, 1};
@@ -298,7 +299,7 @@ struct ym_mat {
 
     explicit operator ym_mat<T, N - 1, M - 1>() const {
         ym_mat<T, N - 1, M - 1> m;
-        for (int j = 0; j < M - 1; j++) m.v[j] = (ym_vec<T, N - 1>)v[j];
+        for (auto j = 0; j < M - 1; j++) m.v[j] = (ym_vec<T, N - 1>)v[j];
         return m;
     }
 
@@ -333,7 +334,7 @@ struct ym_affine {
     ym_affine(const M& m, const V& t) : m(m), t(t) {}
 
     explicit ym_affine(const ym_mat<T, N + 1, N + 1>& mat) {
-        for (int j = 0; j < N; j++) m.v[j] = V(mat.v[j]);
+        for (auto j = 0; j < N; j++) m.v[j] = V(mat.v[j]);
         m.t = V(mat.v[N]);
     }
     operator ym_mat<T, N + 1, N + 1>() const {
@@ -507,28 +508,28 @@ const ym_frame3f ym_identity_frame3f =
 
 template <typename T, int N>
 inline bool ym_iszero(const ym_vec<T, N>& a) {
-    for (int i = 0; i < N; i++)
+    for (auto i = 0; i < N; i++)
         if (a.v[i] != 0) return false;
     return true;
 }
 
 template <typename T, int N>
 inline bool ym_isfinite(const ym_vec<T, N>& a) {
-    for (int i = 0; i < N; i++)
+    for (auto i = 0; i < N; i++)
         if (!ym_isfinite(a.v[i])) return false;
     return true;
 }
 
 template <typename T, int N>
 inline bool operator==(const ym_vec<T, N>& a, const ym_vec<T, N>& b) {
-    for (int i = 0; i < N; i++)
+    for (auto i = 0; i < N; i++)
         if (a.v[i] != b.v[i]) return false;
     return true;
 }
 
 template <typename T, int N>
 inline bool operator<(const ym_vec<T, N>& a, const ym_vec<T, N>& b) {
-    for (int i = 0; i < N; i++)
+    for (auto i = 0; i < N; i++)
         if (a.v[i] >= b.v[i]) return false;
     return true;
 }
@@ -540,63 +541,63 @@ inline bool operator<(const ym_vec<T, N>& a, const ym_vec<T, N>& b) {
 template <typename T, int N>
 inline ym_vec<T, N> operator-(const ym_vec<T, N>& a) {
     ym_vec<T, N> c;
-    for (int i = 0; i < N; i++) c.v[i] = -a.v[i];
+    for (auto i = 0; i < N; i++) c.v[i] = -a.v[i];
     return c;
 }
 
 template <typename T, int N>
 inline ym_vec<T, N> operator+(const ym_vec<T, N>& a, const ym_vec<T, N>& b) {
     ym_vec<T, N> c;
-    for (int i = 0; i < N; i++) c.v[i] = a.v[i] + b.v[i];
+    for (auto i = 0; i < N; i++) c.v[i] = a.v[i] + b.v[i];
     return c;
 }
 
 template <typename T, int N>
 inline ym_vec<T, N> operator-(const ym_vec<T, N>& a, const ym_vec<T, N>& b) {
     ym_vec<T, N> c;
-    for (int i = 0; i < N; i++) c.v[i] = a.v[i] - b.v[i];
+    for (auto i = 0; i < N; i++) c.v[i] = a.v[i] - b.v[i];
     return c;
 }
 
 template <typename T, int N>
 inline ym_vec<T, N> operator*(const ym_vec<T, N>& a, const ym_vec<T, N>& b) {
     ym_vec<T, N> c;
-    for (int i = 0; i < N; i++) c.v[i] = a.v[i] * b.v[i];
+    for (auto i = 0; i < N; i++) c.v[i] = a.v[i] * b.v[i];
     return c;
 }
 
 template <typename T, int N, typename T1>
 inline ym_vec<T, N> operator*(const ym_vec<T, N>& a, const T1& b) {
     ym_vec<T, N> c;
-    for (int i = 0; i < N; i++) c.v[i] = a.v[i] * b;
+    for (auto i = 0; i < N; i++) c.v[i] = a.v[i] * b;
     return c;
 }
 
 template <typename T1, typename T, int N>
 inline ym_vec<T, N> operator*(const T1& a, const ym_vec<T, N>& b) {
     ym_vec<T, N> c;
-    for (int i = 0; i < N; i++) c.v[i] = a * b.v[i];
+    for (auto i = 0; i < N; i++) c.v[i] = a * b.v[i];
     return c;
 }
 
 template <typename T, int N>
 inline ym_vec<T, N> operator/(const ym_vec<T, N>& a, const ym_vec<T, N>& b) {
     ym_vec<T, N> c;
-    for (int i = 0; i < N; i++) c.v[i] = a.v[i] / b.v[i];
+    for (auto i = 0; i < N; i++) c.v[i] = a.v[i] / b.v[i];
     return c;
 }
 
 template <typename T, int N, typename T1>
 inline ym_vec<T, N> operator/(const ym_vec<T, N>& a, const T1 b) {
     ym_vec<T, N> c;
-    for (int i = 0; i < N; i++) c.v[i] = a.v[i] / b;
+    for (auto i = 0; i < N; i++) c.v[i] = a.v[i] / b;
     return c;
 }
 
 template <typename T1, typename T, int N>
 inline ym_vec<T, N> operator/(const T1& a, const ym_vec<T, N>& b) {
     ym_vec<T, N> c;
-    for (int i = 0; i < N; i++) c.v[i] = a / b.v[i];
+    for (auto i = 0; i < N; i++) c.v[i] = a / b.v[i];
     return c;
 }
 
@@ -647,35 +648,35 @@ inline ym_vec<T, N>& operator/=(ym_vec<T, N>& a, const T1 b) {
 template <typename T, int N>
 inline ym_vec<T, N> ym_min(const ym_vec<T, N>& a, const ym_vec<T, N>& b) {
     ym_vec<T, N> c;
-    for (int i = 0; i < N; i++) c.v[i] = ym_min(a.v[i], b.v[i]);
+    for (auto i = 0; i < N; i++) c.v[i] = ym_min(a.v[i], b.v[i]);
     return c;
 }
 
 template <typename T, int N>
 inline ym_vec<T, N> ym_max(const ym_vec<T, N>& a, const ym_vec<T, N>& b) {
     ym_vec<T, N> c;
-    for (int i = 0; i < N; i++) c.v[i] = ym_max(a.v[i], b.v[i]);
+    for (auto i = 0; i < N; i++) c.v[i] = ym_max(a.v[i], b.v[i]);
     return c;
 }
 
 template <typename T, int N>
 inline ym_vec<T, N> ym_min(const ym_vec<T, N>& a, const T& b) {
     ym_vec<T, N> c;
-    for (int i = 0; i < N; i++) c.v[i] = ym_min(a.v[i], b);
+    for (auto i = 0; i < N; i++) c.v[i] = ym_min(a.v[i], b);
     return c;
 }
 
 template <typename T, int N>
 inline ym_vec<T, N> ym_max(const ym_vec<T, N>& a, const T& b) {
     ym_vec<T, N> c;
-    for (int i = 0; i < N; i++) c.v[i] = ym_max(a.v[i], b);
+    for (auto i = 0; i < N; i++) c.v[i] = ym_max(a.v[i], b);
     return c;
 }
 
 template <typename T, int M>
 inline ym_vec<T, M> ym_clamp(const ym_vec<T, M>& x, const T& m, const T& N) {
     ym_vec<T, M> c;
-    for (int i = 0; i < M; i++) c.v[i] = ym_clamp(x.v[i], m, N);
+    for (auto i = 0; i < M; i++) c.v[i] = ym_clamp(x.v[i], m, N);
     return c;
 }
 
@@ -690,9 +691,9 @@ inline ym_vec<T, M> ym_clamplen(const ym_vec<T, M> x, float N) {
 //
 template <typename T, int N>
 inline int ym_min_element(const ym_vec<T, N>& a) {
-    T v = std::numeric_limits<T>::max();
-    int pos = -1;
-    for (int i = 0; i < N; i++) {
+    auto v = std::numeric_limits<T>::max();
+    auto pos = -1;
+    for (auto i = 0; i < N; i++) {
         if (v > a.v[i]) {
             v = a.v[i];
             pos = i;
@@ -702,9 +703,9 @@ inline int ym_min_element(const ym_vec<T, N>& a) {
 }
 template <typename T, int N>
 inline int ym_max_element(const ym_vec<T, N>& a) {
-    T v = -std::numeric_limits<T>::max();
-    int pos = -1;
-    for (int i = 0; i < N; i++) {
+    auto v = -std::numeric_limits<T>::max();
+    auto pos = -1;
+    for (auto i = 0; i < N; i++) {
         if (v < a.v[i]) {
             v = a.v[i];
             pos = i;
@@ -718,14 +719,14 @@ inline int ym_max_element(const ym_vec<T, N>& a) {
 //
 template <typename T, int N>
 inline T ym_dot(const ym_vec<T, N>& a, const ym_vec<T, N>& b) {
-    float c = 0;
-    for (int i = 0; i < N; i++) c += a.v[i] * b.v[i];
+    auto c = T(0);
+    for (auto i = 0; i < N; i++) c += a.v[i] * b.v[i];
     return c;
 }
 
 template <typename T, int N>
 inline T ym_length(const ym_vec<T, N>& a) {
-    return sqrt(ym_dot(a, a));
+    return std::sqrt(ym_dot(a, a));
 }
 
 template <typename T, int N>
@@ -735,7 +736,7 @@ inline T ym_lengthsqr(const ym_vec<T, N>& a) {
 
 template <typename T, int N>
 inline ym_vec<T, N> ym_normalize(const ym_vec<T, N>& a) {
-    T l = ym_length(a);
+    auto l = ym_length(a);
     if (l == 0) return a;
     return a * (1 / l);
 }
@@ -764,7 +765,7 @@ inline ym_vec<T, 3> ym_cross(const ym_vec<T, 3>& a, const ym_vec<T, 3>& b) {
 // http://lolengine.net/blog/2013/09/21/picking-orthogonal-vector-combing-coconuts)
 template <typename T>
 inline ym_vec<T, 3> ym_orthogonal(const ym_vec<T, 3>& v) {
-    return fabs(v.x) > fabs(v.z) ? ym_vec3f{-v.y, v.x, 0}
+    return std::abs(v.x) > std::abs(v.z) ? ym_vec3f{-v.y, v.x, 0}
                                  : ym_vec3f{0, -v.z, v.y};
 }
 
@@ -779,8 +780,8 @@ inline ym_vec<T, 3> ym_orthonormalize(const ym_vec<T, 3>& a,
 //
 template <typename T, int M>
 inline T ym_sum(const ym_vec<T, M>& a) {
-    T s = 0;
-    for (int i = 0; i < M; i++) s += a.v[i];
+    auto s = T(0);
+    for (auto i = 0; i < M; i++) s += a.v[i];
     return s;
 }
 template <typename T, int M>
@@ -794,7 +795,7 @@ inline T ym_mean(const ym_vec<T, M>& a) {
 
 template <typename T, int N, int M>
 inline bool operator==(const ym_mat<T, N, M>& a, const ym_mat<T, N, M>& b) {
-    for (int i = 0; i < M; i++)
+    for (auto i = 0; i < M; i++)
         if (!(a.v[i] == b.v[i])) return false;
     return true;
 }
@@ -806,7 +807,7 @@ inline bool operator==(const ym_mat<T, N, M>& a, const ym_mat<T, N, M>& b) {
 template <typename T, int N, int M>
 inline ym_mat<T, M, N> operator-(const ym_mat<T, N, M>& a) {
     ym_mat<T, N, M> c;
-    for (int i = 0; i < M; i++) c.v[i] = -a.v[i];
+    for (auto i = 0; i < M; i++) c.v[i] = -a.v[i];
     return c;
 }
 
@@ -814,7 +815,7 @@ template <typename T, int N, int M>
 inline ym_mat<T, M, N> operator+(const ym_mat<T, N, M>& a,
                                  const ym_mat<T, N, M>& b) {
     ym_mat<T, N, M> c;
-    for (int i = 0; i < M; i++) c.v[i] = a.v[i] + b.v[i];
+    for (auto i = 0; i < M; i++) c.v[i] = a.v[i] + b.v[i];
     return c;
 }
 
@@ -825,8 +826,8 @@ inline ym_mat<T, M, N> operator+(const ym_mat<T, N, M>& a,
 template <typename T, int N, int M>
 inline ym_mat<T, M, N> ym_transpose(const ym_mat<T, N, M>& a) {
     ym_mat<T, M, N> c;
-    for (int j = 0; j < M; j++) {
-        for (int i = 0; i < N; i++) {
+    for (auto j = 0; j < M; j++) {
+        for (auto i = 0; i < N; i++) {
             c.v[i][j] = a.v[j][i];
         }
     }
@@ -840,11 +841,11 @@ inline ym_mat<T, 3, 3> ym_inverse(const ym_mat<T, 3, 3>& m_) {
     *(ym_mat<T, 3, 3>*)m = m_;
 
     // computes the inverse of a matrix m
-    T det = m[0][0] * (m[1][1] * m[2][2] - m[2][1] * m[1][2]) -
+    auto det = m[0][0] * (m[1][1] * m[2][2] - m[2][1] * m[1][2]) -
             m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0]) +
             m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0]);
 
-    T invdet = 1 / det;
+    auto invdet = 1 / det;
 
     T minv[3][3];  // inverse of matrix m
     minv[0][0] = (m[1][1] * m[2][2] - m[2][1] * m[1][2]) * invdet;
@@ -866,23 +867,23 @@ inline ym_mat<T, 4, 4> ym_inverse(const ym_mat<T, 4, 4>& m) {
     T a[4][4];
     *(ym_mat<T, 4, 4>*)a = m;
 
-    T s0 = a[0][0] * a[1][1] - a[1][0] * a[0][1];
-    T s1 = a[0][0] * a[1][2] - a[1][0] * a[0][2];
-    T s2 = a[0][0] * a[1][3] - a[1][0] * a[0][3];
-    T s3 = a[0][1] * a[1][2] - a[1][1] * a[0][2];
-    T s4 = a[0][1] * a[1][3] - a[1][1] * a[0][3];
-    T s5 = a[0][2] * a[1][3] - a[1][2] * a[0][3];
+    auto s0 = a[0][0] * a[1][1] - a[1][0] * a[0][1];
+    auto s1 = a[0][0] * a[1][2] - a[1][0] * a[0][2];
+    auto s2 = a[0][0] * a[1][3] - a[1][0] * a[0][3];
+    auto s3 = a[0][1] * a[1][2] - a[1][1] * a[0][2];
+    auto s4 = a[0][1] * a[1][3] - a[1][1] * a[0][3];
+    auto s5 = a[0][2] * a[1][3] - a[1][2] * a[0][3];
 
-    T c5 = a[2][2] * a[3][3] - a[3][2] * a[2][3];
-    T c4 = a[2][1] * a[3][3] - a[3][1] * a[2][3];
-    T c3 = a[2][1] * a[3][2] - a[3][1] * a[2][2];
-    T c2 = a[2][0] * a[3][3] - a[3][0] * a[2][3];
-    T c1 = a[2][0] * a[3][2] - a[3][0] * a[2][2];
-    T c0 = a[2][0] * a[3][1] - a[3][0] * a[2][1];
+    auto c5 = a[2][2] * a[3][3] - a[3][2] * a[2][3];
+    auto c4 = a[2][1] * a[3][3] - a[3][1] * a[2][3];
+    auto c3 = a[2][1] * a[3][2] - a[3][1] * a[2][2];
+    auto c2 = a[2][0] * a[3][3] - a[3][0] * a[2][3];
+    auto c1 = a[2][0] * a[3][2] - a[3][0] * a[2][2];
+    auto c0 = a[2][0] * a[3][1] - a[3][0] * a[2][1];
 
     // TODO: Should check for 0 determinant
-    T invdet =
-        1.0f / (s0 * c5 - s1 * c4 + s2 * c3 + s3 * c2 - s4 * c1 + s5 * c0);
+    auto invdet =
+        T(1) / (s0 * c5 - s1 * c4 + s2 * c3 + s3 * c2 - s4 * c1 + s5 * c0);
 
     T b[4][4];
 
@@ -916,14 +917,14 @@ inline ym_mat<T, 4, 4> ym_inverse(const ym_mat<T, 4, 4>& m) {
 template <typename T, int N, int M>
 inline ym_mat<T, M, N> operator*(const ym_mat<T, N, M>& a, T b) {
     ym_mat<T, N, M> c;
-    for (int i = 0; i < M; i++) c.v[i] = a.v[i] * b;
+    for (auto i = 0; i < M; i++) c.v[i] = a.v[i] * b;
     return c;
 }
 
 template <typename T, int N, int M>
 inline ym_vec<T, N> operator*(const ym_mat<T, N, M>& a, const ym_vec<T, M>& b) {
     ym_vec<T, N> c;
-    for (int j = 0; j < M; j++) c += a.v[j] * b.v[j];
+    for (auto j = 0; j < M; j++) c += a.v[j] * b.v[j];
     return c;
 }
 
@@ -931,7 +932,7 @@ template <typename T, int N, int M, int K>
 inline ym_mat<T, N, M> operator*(const ym_mat<T, N, K>& a,
                                  const ym_mat<T, K, M>& b) {
     ym_mat<T, N, M> c;
-    for (int j = 0; j < M; j++) c.v[j] = a * b.v[j];
+    for (auto j = 0; j < M; j++) c.v[j] = a * b.v[j];
     return c;
 }
 
@@ -971,13 +972,13 @@ inline ym_affine<T, N, ortho> operator*(const ym_affine<T, N, ortho>& a,
 
 template <typename T, int N>
 inline ym_affine<T, N, false> ym_inverse(const ym_affine<T, N, false>& a) {
-    ym_mat<T, N, N> minv = ym_inverse(a.m);
+    auto minv = ym_inverse(a.m);
     return {minv, -(minv * a.t)};
 }
 
 template <typename T, int N>
 inline ym_affine<T, N, true> ym_inverse(const ym_affine<T, N, true>& a) {
-    ym_mat<T, N, N> minv = ym_inverse(a.m);
+    auto minv = ym_inverse(a.m);
     return {minv, -(minv * a.t)};
 }
 
@@ -985,8 +986,8 @@ template <typename T, int N>
 inline ym_vec<T, N> ym_transform_point(const ym_mat<T, N + 1, N + 1>& a,
                                        const ym_vec<T, N>& b) {
     // make it generic
-    ym_vec<T, N + 1> vb = {b, 1};
-    ym_vec<T, N + 1> tvb = a * vb;
+    auto vb = ym_vec<T, N + 1>{b, 1};
+    auto tvb = a * vb;
     return ym_vec<T, N>(tvb) / tvb.w;
 }
 
@@ -994,8 +995,8 @@ template <typename T, int N>
 inline ym_vec<T, N> ym_transform_vector(const ym_mat<T, N + 1, N + 1>& a,
                                         const ym_vec<T, N>& b) {
     // make it generic
-    ym_vec<T, N + 1> vb = {b, 0};
-    ym_vec<T, N + 1> tvb = a * vb;
+    auto vb = ym_vec<T, N + 1>{b, 0};
+    auto tvb = a * vb;
     return ym_vec<T, N>(tvb);
 }
 
@@ -1038,8 +1039,8 @@ inline ym_vec<T, N> ym_transform_direction(const ym_affine<T, N, true>& a,
 //
 template <typename T>
 inline ym_mat<T, 3, 3> ym_rotation_mat3(const ym_vec<T, 3>& axis, T angle) {
-    float s = sin(angle), c = cos(angle);
-    ym_vec<T, 3> vv = ym_normalize(axis);
+    auto s = std::sin(angle), c = std::cos(angle);
+    auto vv = ym_normalize(axis);
     return ym_transpose(ym_mat<T, 3, 3>{
         {c + (1 - c) * vv.x * vv.x, (1 - c) * vv.x * vv.y - s * vv.z,
          (1 - c) * vv.x * vv.z + s * vv.y},
@@ -1081,9 +1082,9 @@ template <typename T>
 inline ym_affine<T, 3, true> ym_lookat_xform3(const ym_vec<T, 3>& eye,
                                               const ym_vec<T, 3>& center,
                                               const ym_vec<T, 3>& up) {
-    ym_vec<T, 3> w = ym_normalize(eye - center);
-    ym_vec<T, 3> u = ym_normalize(ym_cross(up, w));
-    ym_vec<T, 3> v = ym_normalize(ym_cross(w, u));
+    auto w = ym_normalize(eye - center);
+    auto u = ym_normalize(ym_cross(up, w));
+    auto v = ym_normalize(ym_cross(w, u));
     return {u, v, w, eye};
 }
 
@@ -1093,9 +1094,9 @@ inline ym_affine<T, 3, true> ym_lookat_xform3(const ym_vec<T, 3>& eye,
 template <typename T>
 inline ym_affine<T, 3, true> ym_make_frame(const ym_vec<T, 3>& o,
                                            const ym_vec<T, 3>& z_) {
-    ym_vec<T, 3> z = ym_normalize(z_);
-    ym_vec<T, 3> x = ym_normalize(ym_orthogonal(z));
-    ym_vec<T, 3> y = ym_normalize(ym_cross(z, x));
+    auto z = ym_normalize(z_);
+    auto x = ym_normalize(ym_orthogonal(z));
+    auto y = ym_normalize(ym_cross(z, x));
     return {x, y, z, o};
 }
 
@@ -1139,7 +1140,7 @@ inline ym_mat<T, 4, 4> ym_ortho2d_mat4(T l, T r, T b, T t) {
 //
 template <typename T>
 inline ym_mat<T, 4, 4> ym_perspective_mat4(T fovy, T aspect, T near, T far) {
-    T f = 1 / tanf(fovy / 2);
+    auto f = 1 / std::tan(fovy / 2);
     return ym_transpose(ym_mat<T, 4, 4>{
         {f / aspect, 0, 0, 0},
         {0, f, 0, 0},
@@ -1299,35 +1300,36 @@ typedef ym_ray<float, 3> ym_ray3f;
 //
 // Turntable for UI navigation from a from/to/up parametrization of the camera.
 //
-static inline void ym_turntable(ym_vec3f* from, ym_vec3f* to, ym_vec3f* up,
-                                const ym_vec2f& rotate, float dolly,
-                                const ym_vec2f& pan) {
+template<typename T>
+static inline void ym_turntable(ym_vec<T, 3>* from, ym_vec<T, 3>* to, ym_vec<T, 3>* up,
+                                const ym_vec<T, 2>& rotate, T dolly,
+                                const ym_vec<T, 2>& pan) {
     // rotate if necessary
     if (rotate[0] || rotate[1]) {
-        ym_vec3f z = ym_normalize(*to - *from);
-        float lz = ym_dist(*to, *from);
-        float phi = atan2f(z.z, z.x) + rotate[0];
-        float theta = acosf(z.y) + rotate[1];
-        theta = fmax(0.001f, fmin(theta, ym_pif - 0.001f));
-        ym_vec3f nz = {sinf(theta) * cosf(phi) * lz, cosf(theta) * lz,
-                       sinf(theta) * sinf(phi) * lz};
+        auto z = ym_normalize(*to - *from);
+        auto lz = ym_dist(*to, *from);
+        auto phi = std::atan2(z.z, z.x) + rotate[0];
+        auto theta = std::acos(z.y) + rotate[1];
+        theta = ym_max(T(0.001), ym_min(theta, T(ym_pi - 0.001)));
+        auto nz = ym_vec3f{std::sin(theta) * std::cos(phi) * lz, std::cos(theta) * lz,
+            std::sin(theta) * std::sin(phi) * lz};
         *from = *to - nz;
     }
 
     // dolly if necessary
     if (dolly) {
-        ym_vec3f z = ym_normalize(*to - *from);
-        float lz = fmaxf(0.001f, ym_dist(*to, *from) * (1 + dolly));
+        auto z = ym_normalize(*to - *from);
+        auto lz = ym_max(T(0.001), ym_dist(*to, *from) * (1 + dolly));
         z *= lz;
         *from = *to - z;
     }
 
     // pan if necessary
     if (pan[0] || pan[1]) {
-        ym_vec3f z = ym_normalize(*to - *from);
-        ym_vec3f x = ym_normalize(ym_cross(*up, z));
-        ym_vec3f y = ym_normalize(ym_cross(z, x));
-        ym_vec3f t = {pan[0] * x.x + pan[1] * y.x, pan[0] * x.y + pan[1] * y.y,
+        auto z = ym_normalize(*to - *from);
+        auto x = ym_normalize(ym_cross(*up, z));
+        auto y = ym_normalize(ym_cross(z, x));
+        auto t = ym_vec<T, 3>{pan[0] * x.x + pan[1] * y.x, pan[0] * x.y + pan[1] * y.y,
                       pan[0] * x.z + pan[1] * y.z};
         *from += t;
         *to += t;
