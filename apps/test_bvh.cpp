@@ -172,7 +172,7 @@ void print_bvh(yb_scene* scene, int sid, int nid, int d) {
     }
 }
 
-int main(int argc, const char** argv) {
+int main(int argc, char* argv[]) {
     // command line
     yc_parser* parser = yc_init_parser(argc, argv, "test obj");
     bool flatten = yc_parse_optb(parser, "--flatten", "-f",

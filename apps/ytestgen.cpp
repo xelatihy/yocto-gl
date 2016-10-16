@@ -596,37 +596,36 @@ std::vector<ym_vec4f> make_sunsky_hdr(int w, int h, float sun_theta,
     return rgba;
 }
 
-void save_image(const char* filename, const char* dirname, const rgba* pixels,
-                int s) {
+void save_image(const std::string& filename, const std::string& dirname,
+                const rgba* pixels, int s) {
     ym_string path = ym_string(dirname) + "/" + ym_string(filename);
     stbi_write_png(path.c_str(), s, s, 4, pixels, s * 4);
 }
 
-void save_image_hdr(const char* filename, const char* dirname,
+void save_image_hdr(const std::string& filename, const std::string& dirname,
                     const ym_vec4f* pixels, int w, int h) {
     ym_string path = ym_string(dirname) + "/" + ym_string(filename);
     stbi_write_hdr(path.c_str(), w, h, 4, (float*)pixels);
 }
 
-void save_scene(const char* filename, const char* dirname,
+void save_scene(const std::string& filename, const std::string& dirname,
                 const yo_scene scene) {
     ym_string path = ym_string(dirname) + "/" + ym_string(filename);
     yo_save_obj(path.c_str(), &scene, true);
 }
 
-int main(int argc, const char** argv) {
+int main(int argc, char* argv[]) {
     // command line params
-    yc_parser* parser = yc_init_parser(argc, argv, "make tests");
-    const char* dirname =
-        yc_parse_args(parser, "dirname", "directory name", ".", true);
+    auto parser = yc_init_parser(argc, argv, "make tests");
+    auto dirname = yc_parse_arg<std::string>(parser, "dirname",
+                                             "directory name", ".", true);
     yc_done_parser(parser);
 
-    // make directories
-    ym_string cmd;
+// make directories
 #ifndef _MSC_VER
-    cmd = ym_string("mkdir -p ") + ym_string(dirname);
+    auto cmd = "mkdir -p " + dirname;
 #else
-    cmd = ym_string("mkdir ") + ym_string(dirname);
+    auto cmd = "mkdir " + dirname;
 #endif
     system(cmd.c_str());
 

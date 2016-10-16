@@ -517,9 +517,9 @@ yt_scene* init_trace_cb(const yo_scene* scene, yb_scene* scene_bvh,
     return trace_scene;
 }
 
-void render(yt_scene* trace_scene, const char* filename, const char* imfilename,
-            int cid, int w, int h, int ns, const yt_render_params& params,
-            int bs, int nthreads) {
+void render(yt_scene* trace_scene, const std::string& filename,
+            const std::string& imfilename, int cid, int w, int h, int ns,
+            const yt_render_params& params, int bs, int nthreads) {
     std::vector<ym_vec4f> pixels = std::vector<ym_vec4f>(w * h);
     std::vector<ym_vec4f> buf = std::vector<ym_vec4f>(w * h);
     std::vector<ym_range2i> blocks = make_image_blocks(w, h, bs);
@@ -527,7 +527,7 @@ void render(yt_scene* trace_scene, const char* filename, const char* imfilename,
         std::vector<render_block_params>(blocks.size());
     ThreadPool pool(nthreads);
     std::vector<std::future<void>> futures;
-    printf("tracing %s to %s\n", filename, imfilename);
+    printf("tracing %s to %s\n", filename.c_str(), imfilename.c_str());
     printf("rendering ...");
     fflush(stdout);
     for (int s = 0; s < ns; s++) {
@@ -548,15 +548,14 @@ void render(yt_scene* trace_scene, const char* filename, const char* imfilename,
 }
 
 // load scene and make intersect state
-yo_scene* load_scene(const char* filename) {
+yo_scene* load_scene(const std::string& filename) {
     // load scenes and merge
-    char ext[16];
-    yc_split_path(filename, 0, 0, ext);
-    yo_scene* scene = (strcmp(ext, ".objbin"))
-                          ? yo_load_obj(filename, true, true)
-                          : yo_load_objbin(filename, true);
+    std::string ext;
+    yc_split_path(filename, nullptr, nullptr, &ext);
+    auto scene = (ext != ".objbin") ? yo_load_obj(filename, true, true)
+                                    : yo_load_objbin(filename, true);
     if (!scene) {
-        printf("unable to load scene %s\n", filename);
+        printf("unable to load scene %s\n", filename.c_str());
         return 0;
     }
 
@@ -622,45 +621,49 @@ yo_scene* load_scene(const char* filename) {
     return scene;
 }
 
-int main(int argc, const char** argv) {
-    const char* rtype_names[] = {"default", "uniform", "stratified", "cmjs", 0};
-    const char* stype_names[] = {"default", "eye", "direct", "path", 0};
+int main(int argc, char* argv[]) {
+    auto rtype_names = std::unordered_map<std::string, int>{
+        {"default", 0}, {"uniform", 1}, {"stratified", 2}, {"cmjs", 3}};
+    auto stype_names = std::unordered_map<std::string, int>{
+        {"default", 0}, {"eye", 1}, {"direct", 2}, {"path", 3}};
     // params
-    yc_parser* parser = yc_init_parser(argc, argv, "trace meshes");
-    int rtype =
-        yc_parse_opte(parser, "--random", 0, "random type", 0, rtype_names);
-    int stype = yc_parse_opte(parser, "--integrator", "-i", "integrator type",
-                              0, stype_names);
-    float amb = yc_parse_optf(parser, "--ambient", 0, "ambient factor", 0);
-    bool camera_lights = yc_parse_optb(parser, "--camera_lights", "-c",
+    auto parser = yc_init_parser(argc, argv, "trace meshes");
+    auto rtype = yc_parse_opte<int>(parser, "--random", "", "random type", 0,
+                                    rtype_names);
+    auto stype = yc_parse_opte<int>(parser, "--integrator", "-i",
+                                    "integrator type", 0, stype_names);
+    auto amb =
+        yc_parse_opt<float>(parser, "--ambient", "", "ambient factor", 0);
+    auto camera_lights = yc_parse_flag(parser, "--camera_lights", "-c",
                                        "enable camera lights", false);
-    int camera = yc_parse_opti(parser, "--camera", "-C", "camera", 0);
-    bool no_ui = yc_parse_optb(parser, "--no-ui", 0, "runs offline", false);
-    int nthreads = yc_parse_opti(parser, "--threads", "-t",
-                                 "number of threads [0 for default]", 0);
-    int block_size = yc_parse_opti(parser, "--block_size", 0, "block size", 32);
-    int samples =
-        yc_parse_opti(parser, "--samples", "-s", "image samples", 256);
-    float aspect =
-        yc_parse_optf(parser, "--aspect", "-a", "image aspect", 16.0f / 9.0f);
-    int res =
-        yc_parse_opti(parser, "--resolution", "-r", "image resolution", 720);
-    const char* imfilename =
-        yc_parse_opts(parser, "--output", "-o", "image filename", "out.hdr");
-    const char* filename =
-        yc_parse_args(parser, "scene", "scene filename", 0, true);
+    auto camera = yc_parse_opt<int>(parser, "--camera", "-C", "camera", 0);
+    auto no_ui = yc_parse_flag(parser, "--no-ui", "", "runs offline", false);
+    auto nthreads = yc_parse_opt<int>(parser, "--threads", "-t",
+                                      "number of threads [0 for default]", 0);
+    auto block_size =
+        yc_parse_opt<int>(parser, "--block_size", "", "block size", 32);
+    auto samples =
+        yc_parse_opt<int>(parser, "--samples", "-s", "image samples", 256);
+    auto aspect = yc_parse_opt<float>(parser, "--aspect", "-a", "image aspect",
+                                      16.0f / 9.0f);
+    int res = yc_parse_opt<int>(parser, "--resolution", "-r",
+                                "image resolution", 720);
+    auto imfilename = yc_parse_opt<std::string>(parser, "--output", "-o",
+                                                "image filename", "out.hdr");
+    auto filename =
+        yc_parse_arg<std::string>(parser, "scene", "scene filename", "", true);
     yc_done_parser(parser);
 
     // setting up multithreading
     if (!nthreads) nthreads = std::thread::hardware_concurrency();
 
     // loading scene
-    yo_scene* scene = load_scene(filename);
+    auto scene = load_scene(filename);
     scene->cameras[camera].width = aspect * scene->cameras[camera].height;
 
     // preparing raytracer
-    yb_scene* scene_bvh = make_bvh(scene);
-    yt_scene* trace_scene = init_trace_cb(scene, scene_bvh, camera);
+    auto scene_bvh = make_bvh(scene);
+    auto trace_scene = init_trace_cb(scene, scene_bvh, camera);
     yt_render_params params;
     params.stype = (camera_lights) ? yt_stype_eyelight : stype;
     params.rtype = rtype;

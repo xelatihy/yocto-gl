@@ -1470,6 +1470,13 @@ static inline uint32_t ym_hash_uint64_32(uint64_t a) {
     return (uint32_t)a;
 }
 
+//
+// A function to combine 64 bit hashes with semantics as boost::hash_combine
+//
+static inline size_t ym_hash_combine(size_t a, size_t b) {
+    return a ^ (b + 0x9e3779b9 + (a << 6) + (a >> 2));
+}
+
 // -----------------------------------------------------------------------------
 // CONTAINER TYPEDEFS
 // -----------------------------------------------------------------------------
