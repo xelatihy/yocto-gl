@@ -172,15 +172,11 @@ inline bool isfinite(const T& v) {
 inline int pow2(int x) { return 1 << x; }
 
 //
-// Linear/baricentric/bilinear interpolation.
+// Linear interpolation.
 //
 template <typename T, typename T1>
 inline T lerp(const T& a, const T& b, T1 t) {
     return a * (1 - t) + b * t;
-}
-template <typename T, typename T1>
-inline T blerp(const T& a, const T& b, const T& c, T1 u, T1 v) {
-    return a * (1 - u - v) + b * u + c * v;
 }
 
 // -----------------------------------------------------------------------------
@@ -287,11 +283,11 @@ struct vec {
         static_assert(N > 3, "length");
         return v[3];
     }
-    constexpr const vec<T,3>& xyz() const {
+    constexpr const vec<T, 3>& xyz() const {
         static_assert(N > 3, "length");
         return *(vec<T, 3>*)v;
     }
-    constexpr vec<T,3>& xyz() {
+    constexpr vec<T, 3>& xyz() {
         static_assert(N > 3, "length");
         return *(vec<T, 3>*)v;
     }
@@ -1275,6 +1271,224 @@ const vec<T, N>* end(const frame<T, N>& a) {
 }
 
 // -----------------------------------------------------------------------------
+// QUATERNIONS
+// -----------------------------------------------------------------------------
+
+//
+// Quaternions implemented as a vec4. Data access via operator[].
+// Quaterions are xi + yj + zk + w
+//
+template <typename T, int N>
+struct quat : vec<T, 4> {
+    // elements
+    T v[N];
+
+    // default constructor
+    constexpr quat() {
+        for (auto i = 0; i < N; i++) v[i] = T();
+    }
+
+    // member constructor
+    template <typename... Args,
+              typename = std::enable_if_t<sizeof...(Args) == N>>
+    constexpr quat(Args... vv) : v{T(vv)...} {}
+
+    // list constructor
+    constexpr quat(std::initializer_list<T> vv) {
+        assert(N == vv.size());
+        auto i = 0;
+        for (auto&& e : vv) v[i++] = e;
+    }
+
+    // conversions
+    operator mat<T, 3, 3>() {
+        return {
+            {v[3] * v[3] + v[0] * v[0] - v[1] * v[1] - v[2] * v[2],
+             (v[0] * v[1] + v[2] * v[3]) * 2, (v[2] * v[0] - v[1] * v[3]) * 2},
+            {(v[0] * v[1] - v[2] * v[3]) * 2,
+             v[3] * v[3] - v[0] * v[0] + v[1] * v[1] - v[2] * v[2],
+             (v[1] * v[2] + v[0] * v[3]) * 2},
+            {(v[2] * v[0] + v[1] * v[3]) * 2, (v[1] * v[2] - v[0] * v[3]) * 2,
+             v[3] * v[3] - v[0] * v[0] - v[1] * v[1] + v[2] * v[2]}};
+    }
+
+    // axis angle access
+    constexpr T angle() const { return std::acos(v[2]) * 2; }
+    constexpr vec<T, 3> axis() {
+        return normalize(vec<T, 3>(v[0], v[1], v[2]));
+    }
+
+    // raw data access
+    constexpr T* data() { return v; }
+    constexpr const T* data() const { return v; }
+};
+
+//
+// Typedef for quaterions.
+//
+
+using quat4f = quat<float, 4>;
+
+//
+// Support for quaternion algebra using 4D vectors.
+//
+
+template <typename T>
+constexpr quat<T, 4> conjugate(const quat<T, 4>& v) {
+    return {-v[0], -v[1], -v[2], v[3]};
+}
+
+template <typename T>
+quat<T, 4> inverse(const quat<T, 4>& v) {
+    return qconj(v) / lengthsqr(vec<T, 4>(v));
+}
+
+template <typename T>
+constexpr quat<T, 4> operator*(const quat<T, 4>& a, const quat<T, 4>& b) {
+    return {a[0] * b[3] + a[3] * b[0] + a[1] * b[3] - a[2] * b[1],
+            a[1] * b[3] + a[3] * b[1] + a[2] * b[0] - a[0] * b[2],
+            a[2] * b[3] + a[3] * b[2] + a[0] * b[1] - a[1] * b[0],
+            a[3] * b[3] - a[0] * b[0] - a[1] * b[1] - a[2] * b[2]};
+}
+
+template <typename T>
+quat<T, 4> nlerp(const quat<T, 4>& a, const quat<T, 4>& b, T t) {
+    return nlerp(
+        vec<T, 4>(a),
+        dot(vec<T, 4>(a), vec<T, 4>(b)) < 0 ? -vec<T, 4>(b) : vec<T, 4>(b), t);
+}
+
+template <typename T>
+quat<T, 4> slerp(const quat<T, 4>& a, const quat<T, 4>& b, T t) {
+    return slerp(
+        vec<T, 4>(a),
+        dot(vec<T, 4>(a), vec<T, 4>(b)) < 0 ? -vec<T, 4>(b) : vec<T, 4>(b), t);
+}
+
+// -----------------------------------------------------------------------------
+// AXIS ALIGNED BOUNDING BOXES
+// -----------------------------------------------------------------------------
+
+//
+// Axis aligned bounding box.
+//
+template <typename T>
+struct range {
+    T min, max;
+
+    constexpr range()
+        : min(std::numeric_limits<T>::max()),
+          max(std::numeric_limits<T>::lowest()) {}
+
+    constexpr range(const T& m, const T& M) : min(m), max(M) {}
+
+    constexpr T size() const { return max - min; }
+    constexpr T center() const { return (max + min) / 2; }
+
+    constexpr T& operator[](int i) { return (&min)[i]; }
+    constexpr const T& operator[](int i) const { return (&min)[i]; }
+};
+
+//
+// Axis aligned bounding box usings.
+//
+
+using range1f = range<float>;
+using range2f = range<vec2f>;
+using range3f = range<vec3f>;
+
+using range1i = range<int>;
+using range2i = range<vec2i>;
+using range3i = range<vec3i>;
+
+//
+// Axis aligned bounding box constants.
+//
+
+const auto invalid_range2f = range2f();
+const auto invalid_range3f = range3f();
+
+//
+// Axis aligned bounding box operations.
+//
+
+template <typename T>
+inline range<T> make_range(const std::initializer_list<T>& v) {
+    auto r = range<T>();
+    for (auto&& vv : v) r += vv;
+    return r;
+}
+
+template <typename T>
+inline range<T> rexpand(const range<T>& a, const T& b) {
+    return {min(a.min, b), max(a.max, b)};
+}
+
+template <typename T>
+inline range<T> rexpand(const range<T>& a, const range<T>& b) {
+    return {min(a.min, b.min), max(a.max, b.max)};
+}
+
+template <typename T>
+inline range<T> operator+(const range<T>& a, const T& b) {
+    return rexpand(a, b);
+}
+
+template <typename T>
+inline range<T> operator+(const range<T>& a, const range<T>& b) {
+    return rexpand(a, b);
+}
+
+template <typename T>
+inline range<T>& operator+=(range<T>& a, const T& b) {
+    return a = rexpand(a, b);
+}
+
+template <typename T>
+inline range<T>& operator+=(range<T>& a, const range<T>& b) {
+    return a = rexpand(a, b);
+}
+
+template <typename T>
+inline T rcenter(const range<T>& a) {
+    return (a.min + a.max) / 2;
+}
+
+template <typename T>
+inline T rsize(const range<T>& a) {
+    return a.max - a.min;
+}
+
+// -----------------------------------------------------------------------------
+// RAYS
+// -----------------------------------------------------------------------------
+
+//
+// Rays with origin, direction and min/max t value.
+//
+template <typename T, int N>
+struct ray {
+    vec<T, N> o;
+    vec<T, N> d;
+    T tmin;
+    T tmax;
+
+    ray() : o(), d(0, 0, 1), tmin(0), tmax(std::numeric_limits<T>::max()) {}
+    ray(const vec<T, N>& o, const vec<T, N>& d, T tmin = 0,
+        T tmax = std::numeric_limits<T>::max())
+        : o(o), d(d), tmin(tmin), tmax(tmax) {}
+
+    vec<T, N> eval(T t) const { return o + t * d; }
+};
+
+//
+// Rays usings.
+//
+
+using ray2f = ray<float, 2>;
+using ray3f = ray<float, 3>;
+
+// -----------------------------------------------------------------------------
 // TRANSFORMS
 // -----------------------------------------------------------------------------
 
@@ -1319,6 +1533,60 @@ inline vec<T, N> transform_vector(const frame<T, N>& a, const vec<T, N>& b) {
 template <typename T, int N>
 inline vec<T, N> transform_direction(const frame<T, N>& a, const vec<T, N>& b) {
     return a.m() * b;
+}
+
+template <typename T, int N>
+inline frame<T, N> transform_frame(const frame<T, N>& a, const frame<T, N>& b) {
+    return {a.m() * b.m(), a.m() * b.o() + a.o()};
+}
+
+template <typename T, int N>
+inline ray<T, N> transform_ray(const frame<T, N>& a, const ray<T, N>& b) {
+    return {transform_point(a, b.o), transform_direction(a, b.d), b.tmin,
+            b.tmax};
+}
+
+template <typename T, int N>
+inline ray<T, N> transform_ray(const mat<T, N + 1, N + 1>& a,
+                               const ray<T, N>& b) {
+    return {transform_point(a, b.o), transform_direction(a, b.d), b.tmin,
+            b.tmax};
+}
+
+template <typename T>
+inline range<vec<T, 3>> transform_bbox(const frame<T, 3>& xform,
+                                       const range<vec<T, 3>>& bbox) {
+    vec<T, 3> corners[8] = {
+        {bbox.min.x(), bbox.min.y(), bbox.min.z()},
+        {bbox.min.x(), bbox.min.y(), bbox.max.z()},
+        {bbox.min.x(), bbox.max.y(), bbox.min.z()},
+        {bbox.min.x(), bbox.max.y(), bbox.max.z()},
+        {bbox.max.x(), bbox.min.y(), bbox.min.z()},
+        {bbox.max.x(), bbox.min.y(), bbox.max.z()},
+        {bbox.max.x(), bbox.max.y(), bbox.min.z()},
+        {bbox.max.x(), bbox.max.y(), bbox.max.z()},
+    };
+    auto xformed = range<vec<T, 3>>();
+    for (auto j = 0; j < 8; j++) xformed += transform_point(xform, corners[j]);
+    return xformed;
+}
+
+template <typename T>
+inline range<vec<T, 3>> transform_bbox(const mat<T, 4, 4>& xform,
+                                       const range<vec<T, 3>>& bbox) {
+    vec<T, 3> corners[8] = {
+        {bbox.min.x(), bbox.min.y(), bbox.min.z()},
+        {bbox.min.x(), bbox.min.y(), bbox.max.z()},
+        {bbox.min.x(), bbox.max.y(), bbox.min.z()},
+        {bbox.min.x(), bbox.max.y(), bbox.max.z()},
+        {bbox.max.x(), bbox.min.y(), bbox.min.z()},
+        {bbox.max.x(), bbox.min.y(), bbox.max.z()},
+        {bbox.max.x(), bbox.max.y(), bbox.min.z()},
+        {bbox.max.x(), bbox.max.y(), bbox.max.z()},
+    };
+    auto xformed = range<vec<T, 3>>();
+    for (auto j = 0; j < 8; j++) xformed += transform_point(xform, corners[j]);
+    return xformed;
 }
 
 //
@@ -1446,286 +1714,27 @@ inline mat<T, 4, 4> perspective_mat4(T fovy, T aspect, T near, T far) {
 }
 
 // -----------------------------------------------------------------------------
-// QUATERNIONS
-// -----------------------------------------------------------------------------
-
-//
-// Quaternions implemented as a vec4. Data access via operator[].
-// Quaterions are xi + yj + zk + w
-//
-template <typename T, int N>
-struct quat : vec<T, 4> {
-    // elements
-    T v[N];
-
-    // default constructor
-    constexpr quat() {
-        for (auto i = 0; i < N; i++) v[i] = T();
-    }
-
-    // member constructor
-    template <typename... Args,
-              typename = std::enable_if_t<sizeof...(Args) == N>>
-    constexpr quat(Args... vv) : v{T(vv)...} {}
-
-    // list constructor
-    constexpr quat(std::initializer_list<T> vv) {
-        assert(N == vv.size());
-        auto i = 0;
-        for (auto&& e : vv) v[i++] = e;
-    }
-
-    // conversions
-    operator mat<T, 3, 3>() {
-        return {
-            {v[3] * v[3] + v[0] * v[0] - v[1] * v[1] - v[2] * v[2],
-             (v[0] * v[1] + v[2] * v[3]) * 2, (v[2] * v[0] - v[1] * v[3]) * 2},
-            {(v[0] * v[1] - v[2] * v[3]) * 2,
-             v[3] * v[3] - v[0] * v[0] + v[1] * v[1] - v[2] * v[2],
-             (v[1] * v[2] + v[0] * v[3]) * 2},
-            {(v[2] * v[0] + v[1] * v[3]) * 2, (v[1] * v[2] - v[0] * v[3]) * 2,
-             v[3] * v[3] - v[0] * v[0] - v[1] * v[1] + v[2] * v[2]}};
-    }
-
-    // axis angle access
-    constexpr T angle() const { return std::acos(v[2]) * 2; }
-    constexpr vec<T, 3> axis() {
-        return normalize(vec<T, 3>(v[0], v[1], v[2]));
-    }
-
-    // raw data access
-    constexpr T* data() { return v; }
-    constexpr const T* data() const { return v; }
-};
-
-//
-// Typedef for quaterions.
-//
-
-using quat4f = quat<float, 4>;
-
-//
-// Support for quaternion algebra using 4D vectors.
-//
-
-template <typename T>
-constexpr quat<T, 4> conjugate(const quat<T, 4>& v) {
-    return {-v[0], -v[1], -v[2], v[3]};
-}
-
-template <typename T>
-quat<T, 4> inverse(const quat<T, 4>& v) {
-    return qconj(v) / lengthsqr(vec<T, 4>(v));
-}
-
-template <typename T>
-constexpr quat<T, 4> operator*(const quat<T, 4>& a, const quat<T, 4>& b) {
-    return {a[0] * b[3] + a[3] * b[0] + a[1] * b[3] - a[2] * b[1],
-            a[1] * b[3] + a[3] * b[1] + a[2] * b[0] - a[0] * b[2],
-            a[2] * b[3] + a[3] * b[2] + a[0] * b[1] - a[1] * b[0],
-            a[3] * b[3] - a[0] * b[0] - a[1] * b[1] - a[2] * b[2]};
-}
-
-template <typename T>
-quat<T, 4> nlerp(const quat<T, 4>& a, const quat<T, 4>& b, T t) {
-    return nlerp(
-        vec<T, 4>(a),
-        dot(vec<T, 4>(a), vec<T, 4>(b)) < 0 ? -vec<T, 4>(b) : vec<T, 4>(b), t);
-}
-
-template <typename T>
-quat<T, 4> slerp(const quat<T, 4>& a, const quat<T, 4>& b, T t) {
-    return slerp(
-        vec<T, 4>(a),
-        dot(vec<T, 4>(a), vec<T, 4>(b)) < 0 ? -vec<T, 4>(b) : vec<T, 4>(b), t);
-}
-
-// -----------------------------------------------------------------------------
 // GEOMETRY UTILITIES
 // -----------------------------------------------------------------------------
 
-template<typename T>
-inline vec<T, 3> triangle_normal(const vec<T, 3>& v0, const vec<T, 3>& v1, const vec<T, 3>& v2) {
-    return normalize(cross(v1-v0, v2-v0));
-}
-
-template<typename T>
-inline T triangle_area(const vec<T, 3>& v0, const vec<T, 3>& v1, const vec<T, 3>& v2) {
-    return length(cross(v1-v0, v2-v0)) / 2;
-}
-
-// -----------------------------------------------------------------------------
-// AXIS ALIGNED BOUNDING BOXES
-// -----------------------------------------------------------------------------
-
-//
-// Axis aligned bounding box.
-//
 template <typename T>
-struct range {
-    T min, max;
-
-    constexpr range()
-        : min(std::numeric_limits<T>::max()),
-          max(std::numeric_limits<T>::lowest()) {}
-
-    constexpr range(const T& m, const T& M) : min(m), max(M) {}
-
-    constexpr T size() const { return max - min; }
-    constexpr T center() const { return (max + min) / 2; }
-
-    constexpr T& operator[](int i) { return (&min)[i]; }
-    constexpr const T& operator[](int i) const { return (&min)[i]; }
-};
-
-//
-// Axis aligned bounding box usings.
-//
-
-using range1f = range<float>;
-using range2f = range<vec2f>;
-using range3f = range<vec3f>;
-
-using range1i = range<int>;
-using range2i = range<vec2i>;
-using range3i = range<vec3i>;
-
-//
-// Axis aligned bounding box constants.
-//
-
-const auto invalid_range2f = range2f();
-const auto invalid_range3f = range3f();
-
-//
-// Axis aligned bounding box operations.
-//
-
-template <typename T>
-inline range<T> make_range(const std::initializer_list<T>& v) {
-    auto r = range<T>();
-    for (auto&& vv : v) r += vv;
-    return r;
+inline vec<T, 3> triangle_normal(const vec<T, 3>& v0, const vec<T, 3>& v1,
+                                 const vec<T, 3>& v2) {
+    return normalize(cross(v1 - v0, v2 - v0));
 }
 
 template <typename T>
-inline range<T> rexpand(const range<T>& a, const T& b) {
-    return {min(a.min, b), max(a.max, b)};
+inline T triangle_area(const vec<T, 3>& v0, const vec<T, 3>& v1,
+                       const vec<T, 3>& v2) {
+    return length(cross(v1 - v0, v2 - v0)) / 2;
 }
-
-template <typename T>
-inline range<T> rexpand(const range<T>& a, const range<T>& b) {
-    return {min(a.min, b.min), max(a.max, b.max)};
-}
-
-template <typename T>
-inline range<T> operator+(const range<T>& a, const T& b) {
-    return rexpand(a, b);
-}
-
-template <typename T>
-inline range<T> operator+(const range<T>& a, const range<T>& b) {
-    return rexpand(a, b);
-}
-
-template <typename T>
-inline range<T>& operator+=(range<T>& a, const T& b) {
-    return a = rexpand(a, b);
-}
-
-template <typename T>
-inline range<T>& operator+=(range<T>& a, const range<T>& b) {
-    return a = rexpand(a, b);
-}
-
-template <typename T>
-inline T rcenter(const range<T>& a) {
-    return (a.min + a.max) / 2;
-}
-
-template <typename T>
-inline T rsize(const range<T>& a) {
-    return a.max - a.min;
-}
-
-template <typename T>
-inline range<vec<T, 3>> transform_bbox(const frame<T, 3>& xform,
-                                       const range<vec<T, 3>>& bbox) {
-    vec<T, 3> corners[8] = {
-        {bbox.min.x(), bbox.min.y(), bbox.min.z()},
-        {bbox.min.x(), bbox.min.y(), bbox.max.z()},
-        {bbox.min.x(), bbox.max.y(), bbox.min.z()},
-        {bbox.min.x(), bbox.max.y(), bbox.max.z()},
-        {bbox.max.x(), bbox.min.y(), bbox.min.z()},
-        {bbox.max.x(), bbox.min.y(), bbox.max.z()},
-        {bbox.max.x(), bbox.max.y(), bbox.min.z()},
-        {bbox.max.x(), bbox.max.y(), bbox.max.z()},
-    };
-    auto xformed = range<vec<T, 3>>();
-    for (auto j = 0; j < 8; j++) xformed += transform_point(xform, corners[j]);
-    return xformed;
-}
-
-template <typename T>
-inline range<vec<T, 3>> transform_bbox(const mat<T, 4, 4>& xform,
-                                       const range<vec<T, 3>>& bbox) {
-    vec<T, 3> corners[8] = {
-        {bbox.min.x(), bbox.min.y(), bbox.min.z()},
-        {bbox.min.x(), bbox.min.y(), bbox.max.z()},
-        {bbox.min.x(), bbox.max.y(), bbox.min.z()},
-        {bbox.min.x(), bbox.max.y(), bbox.max.z()},
-        {bbox.max.x(), bbox.min.y(), bbox.min.z()},
-        {bbox.max.x(), bbox.min.y(), bbox.max.z()},
-        {bbox.max.x(), bbox.max.y(), bbox.min.z()},
-        {bbox.max.x(), bbox.max.y(), bbox.max.z()},
-    };
-    auto xformed = range<vec<T, 3>>();
-    for (auto j = 0; j < 8; j++) xformed += transform_point(xform, corners[j]);
-    return xformed;
-}
-
-// -----------------------------------------------------------------------------
-// RAYS
-// -----------------------------------------------------------------------------
 
 //
-// Rays with origin, direction and min/max t value.
+// Baricentric interpolation
 //
-template <typename T, int N>
-struct ray {
-    vec<T, N> o;
-    vec<T, N> d;
-    T tmin;
-    T tmax;
-
-    ray() : o(), d(0, 0, 1), tmin(0), tmax(std::numeric_limits<T>::max()) {}
-    ray(const vec<T, N>& o, const vec<T, N>& d, T tmin = 0,
-        T tmax = std::numeric_limits<T>::max())
-        : o(o), d(d), tmin(tmin), tmax(tmax) {}
-
-    vec<T, N> eval(T t) const { return o + t * d; }
-};
-
-//
-// Rays usings.
-//
-
-using ray2f = ray<float, 2>;
-using ray3f = ray<float, 3>;
-
-//
-// Ray operations.
-//
-template <typename T, int N>
-inline ray<T, N> transform_ray(const frame<T, N>& a, const ray<T, N>& b) {
-    return {transform_point(a, b.o), transform_direction(a, b.d), b.tmin,
-            b.tmax};
-}
-template <typename T, int N>
-inline ray<T, N> transform_ray(const mat<T, N + 1, N + 1>& a,
-                               const ray<T, N>& b) {
-    return {transform_point(a, b.o), transform_direction(a, b.d), b.tmin,
-            b.tmax};
+template <typename T, typename T1>
+inline T blerp(const T& a, const T& b, const T& c, const T1& w) {
+    return a * w[0] + b * w[1] + c * w[2];
 }
 
 // -----------------------------------------------------------------------------

@@ -385,8 +385,14 @@ int main(int argc, char* argv[]) {
             std::function<void(const yui::info& info, unsigned int)>(
                 [&](const yui::info& info, unsigned int key) {
                     switch (key) {
-                        case '1': exposure = 1; gamma = 1; break;
-                        case '2': exposure = 1; gamma = 2.2f; break;
+                        case '1':
+                            exposure = 1;
+                            gamma = 1;
+                            break;
+                        case '2':
+                            exposure = 1;
+                            gamma = 2.2f;
+                            break;
                         case '[': exposure -= 1; break;
                         case ']': exposure += 1; break;
                         case '{': gamma -= 0.1f; break;

@@ -232,7 +232,7 @@ struct point {
     float dist = 0;              // distance
     int sid = -1;                // shape index
     int eid = -1;                // element index
-    ym::vec2f euv = ym::zero2f;  // element baricentric coordinates
+    ym::vec3f euv = ym::zero3f;  // element baricentric coordinates
     bool hit = false;            // hit
 
     // check whether it was a hit
@@ -465,7 +465,7 @@ static inline ym::range3f _bound_triangle(const ym::vec3f& v0,
 // - based on http://geomalgorithms.com/a02-lines.html.
 //
 static inline bool _intersect_point(const ym::ray3f& ray, const ym::vec3f& p,
-                                    float r, float& ray_t, ym::vec2f& euv) {
+                                    float r, float& ray_t, ym::vec3f& euv) {
     // find parameter for line-point minimum distance
     auto w = p - ray.o;
     auto t = ym::dot(w, ray.d) / ym::dot(ray.d, ray.d);
@@ -480,7 +480,7 @@ static inline bool _intersect_point(const ym::ray3f& ray, const ym::vec3f& p,
 
     // intersection occurred: set params and exit
     ray_t = t;
-    euv = ym::vec2f{0, 0};
+    euv = {1, 0, 0};
 
     return true;
 }
@@ -510,7 +510,7 @@ static inline bool _intersect_point(const ym::ray3f& ray, const ym::vec3f& p,
 //
 static inline bool _intersect_line(const ym::ray3f& ray, const ym::vec3f& v0,
                                    const ym::vec3f& v1, float r0, float r1,
-                                   float& ray_t, ym::vec2f& euv) {
+                                   float& ray_t, ym::vec3f& euv) {
     // setup intersection params
     auto u = ray.d;
     auto v = v1 - v0;
@@ -549,7 +549,7 @@ static inline bool _intersect_line(const ym::ray3f& ray, const ym::vec3f& v0,
 
     // intersection occurred: set params and exit
     ray_t = t;
-    euv = ym::vec2f{s, 0};
+    euv = {1 - s, s, 0};
 
     return true;
 }
@@ -575,7 +575,7 @@ static inline bool _intersect_line(const ym::ray3f& ray, const ym::vec3f& v0,
 static inline bool _intersect_triangle(const ym::ray3f& ray,
                                        const ym::vec3f& v0, const ym::vec3f& v1,
                                        const ym::vec3f& v2, float& ray_t,
-                                       ym::vec2f& euv) {
+                                       ym::vec3f& euv) {
     // compute triangle edges
     auto edge1 = v1 - v0;
     auto edge2 = v2 - v0;
@@ -605,7 +605,7 @@ static inline bool _intersect_triangle(const ym::ray3f& ray,
 
     // intersection occurred: set params and exit
     ray_t = t;
-    euv = ym::vec2f{u, v};
+    euv = {1 - u - v, u, v};
 
     return true;
 }
@@ -624,10 +624,10 @@ static inline bool _intersect_triangle(const ym::ray3f& ray,
 static inline bool _intersect_check_bbox(const ym::ray3f& ray,
                                          const ym::range3f& bbox) {
     // set up convenient pointers for looping over axes
-    auto _ray_o = &ray.o.x();
-    auto _ray_d = &ray.d.x();
-    auto _bbox_min = &bbox.min.x();
-    auto _bbox_max = &bbox.max.x();
+    auto _ray_o = &ray.o[0];
+    auto _ray_d = &ray.d[0];
+    auto _bbox_min = &bbox.min[0];
+    auto _bbox_max = &bbox.max[0];
 
     auto tmin = ray.tmin, tmax = ray.tmax;
 
@@ -688,12 +688,12 @@ static inline bool _intersect_check_bbox(const ym::ray3f& ray,
                                          const ym::vec3f& ray_dinv,
                                          const ym::vec3i& ray_dsign,
                                          const ym::range3f& bbox) {
-    auto txmin = (bbox[ray_dsign[0]].x() - ray.o.x()) * ray_dinv.x();
-    auto txmax = (bbox[1 - ray_dsign[0]].x() - ray.o.x()) * ray_dinv.x();
-    auto tymin = (bbox[ray_dsign[1]].y() - ray.o.y()) * ray_dinv.y();
-    auto tymax = (bbox[1 - ray_dsign[1]].y() - ray.o.y()) * ray_dinv.y();
-    auto tzmin = (bbox[ray_dsign[2]].z() - ray.o.z()) * ray_dinv.z();
-    auto tzmax = (bbox[1 - ray_dsign[2]].z() - ray.o.z()) * ray_dinv.z();
+    auto txmin = (bbox[ray_dsign[0]][0] - ray.o[0]) * ray_dinv[0];
+    auto txmax = (bbox[1 - ray_dsign[0]][0] - ray.o[0]) * ray_dinv[0];
+    auto tymin = (bbox[ray_dsign[1]][1] - ray.o[1]) * ray_dinv[1];
+    auto tymax = (bbox[1 - ray_dsign[1]][1] - ray.o[1]) * ray_dinv[1];
+    auto tzmin = (bbox[ray_dsign[2]][2] - ray.o[2]) * ray_dinv[2];
+    auto tzmax = (bbox[1 - ray_dsign[2]][2] - ray.o[2]) * ray_dinv[2];
     auto tmin = _safemax(tzmin, _safemax(tymin, _safemax(txmin, ray.tmin)));
     auto tmax = _safemin(tzmax, _safemin(tymax, _safemin(txmax, ray.tmax)));
     tmax *= 1.00000024f;  // for double: 1.0000000000000004
@@ -707,11 +707,11 @@ static inline bool _intersect_check_bbox(const ym::ray3f& ray,
 // TODO: documentation
 static inline bool _overlap_point(const ym::vec3f& pos, float dist_max,
                                   const ym::vec3f& p, float r, float& dist,
-                                  ym::vec2f& euv) {
+                                  ym::vec3f& euv) {
     auto d2 = ym::distsqr(pos, p);
     if (d2 > (dist_max + r) * (dist_max + r)) return false;
     dist = std::sqrt(d2);
-    euv = ym::vec2f{0, 0};
+    euv = {1, 0, 0};
     return true;
 }
 
@@ -730,7 +730,7 @@ static inline float _closestuv_line(const ym::vec3f& pos, const ym::vec3f& v0,
 static inline bool _overlap_line(const ym::vec3f& pos, float dist_max,
                                  const ym::vec3f& v0, const ym::vec3f& v1,
                                  float r0, float r1, float& dist,
-                                 ym::vec2f& euv) {
+                                 ym::vec3f& euv) {
     auto u = _closestuv_line(pos, v0, v1);
     // Compute projected position from the clamped t d = a + t * ab;
     auto p = ym::lerp(v0, v1, u);
@@ -740,7 +740,7 @@ static inline bool _overlap_line(const ym::vec3f& pos, float dist_max,
     if (d2 > (dist_max + r) * (dist_max + r)) return false;
     // done
     dist = std::sqrt(d2);
-    euv = ym::vec2f{u, 0};
+    euv = {1 - u, u, 0};
     return true;
 }
 
@@ -796,14 +796,14 @@ static inline ym::vec2f _closestuv_triangle(const ym::vec3f& pos,
 static inline bool _overlap_triangle(const ym::vec3f& pos, float dist_max,
                                      const ym::vec3f& v0, const ym::vec3f& v1,
                                      const ym::vec3f& v2, float r0, float r1,
-                                     float r2, float& dist, ym::vec2f& euv) {
+                                     float r2, float& dist, ym::vec3f& euv) {
     auto uv = _closestuv_triangle(pos, v0, v1, v2);
-    auto p = ym::blerp(v0, v1, v2, uv.x(), uv.y());
-    auto r = ym::blerp(r0, r1, r2, uv.x(), uv.y());
+    auto p = ym::blerp(v0, v1, v2, ym::vec3f{1 - uv[0] - uv[1], uv[0], uv[1]});
+    auto r = ym::blerp(r0, r1, r2, ym::vec3f{1 - uv[0] - uv[1], uv[0], uv[1]});
     auto dd = ym::distsqr(p, pos);
     if (dd > (dist_max + r) * (dist_max + r)) return false;
     dist = std::sqrt(dd);
-    euv = uv;
+    euv = {1 - uv[0] - uv[1], uv[0], uv[1]};
     return true;
 }
 
@@ -811,18 +811,13 @@ static inline bool _overlap_triangle(const ym::vec3f& pos, float dist_max,
 static inline bool _distance_check_bbox(const ym::vec3f pos, float dist_max,
                                         const ym::vec3f bbox_min,
                                         const ym::vec3f bbox_max) {
-    // set up convenient pointers for looping over axes
-    auto _pos = &pos.x();
-    auto _bbox_min = &bbox_min.x();
-    auto _bbox_max = &bbox_max.x();
-
     // computing distance
     auto dd = 0.0f;
     // For each axis count any excess distance outside box extents
     for (int i = 0; i < 3; i++) {
-        auto v = _pos[i];
-        if (v < _bbox_min[i]) dd += (_bbox_min[i] - v) * (_bbox_min[i] - v);
-        if (v > _bbox_max[i]) dd += (v - _bbox_max[i]) * (v - _bbox_max[i]);
+        auto v = pos[i];
+        if (v < bbox_min[i]) dd += (bbox_min[i] - v) * (bbox_min[i] - v);
+        if (v > bbox_max[i]) dd += (v - bbox_max[i]) * (v - bbox_max[i]);
     }
 
     // check distance
@@ -834,11 +829,11 @@ static inline bool _overlap_bbox(const ym::vec3f bbox1_min,
                                  const ym::vec3f bbox1_max,
                                  const ym::vec3f bbox2_min,
                                  const ym::vec3f bbox2_max) {
-    if (bbox1_max.x() < bbox2_min.x() || bbox1_min.x() > bbox2_max.x())
+    if (bbox1_max[0] < bbox2_min[0] || bbox1_min[0] > bbox2_max[0])
         return false;
-    if (bbox1_max.y() < bbox2_min.y() || bbox1_min.y() > bbox2_max.y())
+    if (bbox1_max[1] < bbox2_min[1] || bbox1_min[1] > bbox2_max[1])
         return false;
-    if (bbox1_max.z() < bbox2_min.z() || bbox1_min.z() > bbox2_max.z())
+    if (bbox1_max[2] < bbox2_min[2] || bbox1_min[2] > bbox2_max[2])
         return false;
     return true;
 }
@@ -895,9 +890,9 @@ static inline bool _partition_prims(ym::array_view<_bound_prim> sorted_prim,
                                     htype heuristic) {
     const auto __box_eps = 1e-12f;
 #define __bbox_area(r)                                                         \
-    (2 * ((r.x() + __box_eps) * (r.y() + __box_eps) +                          \
-          (r.y() + __box_eps) * (r.z() + __box_eps) +                          \
-          (r.z() + __box_eps) * (r.x() + __box_eps)))
+    (2 * ((r[0] + __box_eps) * (r[1] + __box_eps) +                            \
+          (r[1] + __box_eps) * (r[2] + __box_eps) +                            \
+          (r[2] + __box_eps) * (r[0] + __box_eps)))
 
     // init to default values
     axis = 0;
@@ -1292,8 +1287,8 @@ static inline bool _intersect_bvh(const _bvh& bvh, const ym::ray3f& ray_,
     // prepare ray for fast queries
     auto ray_dinv = ym::one3f / ray.d;
     auto ray_dsign =
-        ym::vec3i{(ray_dinv.x() < 0) ? 1 : 0, (ray_dinv.y() < 0) ? 1 : 0,
-                  (ray_dinv.z() < 0) ? 1 : 0};
+        ym::vec3i{(ray_dinv[0] < 0) ? 1 : 0, (ray_dinv[1] < 0) ? 1 : 0,
+                  (ray_dinv[2] < 0) ? 1 : 0};
     auto ray_reverse = ym::vec<bool, 4>{(bool)ray_dsign[0], (bool)ray_dsign[1],
                                         (bool)ray_dsign[2], false};
 
@@ -1347,7 +1342,7 @@ static inline bool _intersect_bvh(const _bvh& bvh, const ym::ray3f& ray_,
 //
 static inline bool _intersect_shape(const shape& shape, const ym::ray3f& ray,
                                     bool early_exit, float& ray_t, int& eid,
-                                    ym::vec2f& euv) {
+                                    ym::vec3f& euv) {
     auto tray = transform_ray(shape.inv_xform, ray);
     if (!shape.triangles.empty()) {
         return _intersect_bvh(shape.bvh, tray, early_exit, ray_t, eid,
@@ -1384,7 +1379,7 @@ static inline bool _intersect_shape(const shape& shape, const ym::ray3f& ray,
 //
 static inline bool _intersect_scene(const scene& scene, const ym::ray3f& ray,
                                     bool early_exit, float& ray_t, int& sid,
-                                    int& eid, ym::vec2f& euv) {
+                                    int& eid, ym::vec3f& euv) {
     return _intersect_bvh(scene.bvh, ray, early_exit, ray_t, sid,
                           [&](int idx, ym::ray3f& ray, float& ray_t) {
                               return _intersect_shape(scene.shapes[idx], ray,
@@ -1506,7 +1501,7 @@ static inline bool _overlap_bvh(const _bvh& bvh, const ym::vec3f& pt,
 //
 static inline bool _overlap_bvh(const shape& shape, const ym::vec3f& pt,
                                 float max_dist, bool early_exit, float& dist,
-                                int& eid, ym::vec2f& euv) {
+                                int& eid, ym::vec3f& euv) {
     auto tpt = transform_point(shape.inv_xform, pt);
     if (!shape.triangles.empty()) {
         return _overlap_bvh(
@@ -1547,7 +1542,7 @@ static inline bool _overlap_bvh(const shape& shape, const ym::vec3f& pt,
 //
 static inline bool _overlap_bvh(const scene& scene, const ym::vec3f& pt,
                                 float max_dist, bool early_exit, float& dist,
-                                int& sid, int& eid, ym::vec2f& euv) {
+                                int& sid, int& eid, ym::vec3f& euv) {
     return _overlap_bvh(
         scene.bvh, pt, max_dist, early_exit, dist, sid,
         [&](int idx, const ym::vec3f& pt, float max_dist, float& dist) {
@@ -1757,33 +1752,33 @@ YGL_API void _compute_bvh_stats(const scene& scene, int shape_id,
     while (node_cur) {
         // get node and depth
         auto node_depth = node_stack[--node_cur];
-        auto& node = bvh.nodes[node_depth.x()];
+        auto& node = bvh.nodes[node_depth[0]];
 
         // update stats
         if (!node.isleaf) {
             ninternals += 1;
             for (auto i = 0; i < node.count; i++) {
                 node_stack[node_cur++] =
-                    ym::vec2i(node.start + i, node_depth.y() + 1);
+                    ym::vec2i(node.start + i, node_depth[1] + 1);
             }
         } else if (shape_id >= 0) {
             nleaves += 1;
             nprims += node.count;
-            min_depth = ym::min(min_depth, node_depth.y());
-            max_depth = ym::max(max_depth, node_depth.y());
+            min_depth = ym::min(min_depth, node_depth[1]);
+            max_depth = ym::max(max_depth, node_depth[1]);
         } else {
             if (include_shapes) {
                 for (auto i = 0; i < node.count; i++) {
                     auto idx = bvh.sorted_prim[node.start + i];
-                    _compute_bvh_stats(scene, idx, true, node_depth.y() + 1,
+                    _compute_bvh_stats(scene, idx, true, node_depth[1] + 1,
                                        nprims, ninternals, nleaves, min_depth,
                                        max_depth);
                 }
             } else {
                 nleaves += 1;
                 nprims += node.count;
-                min_depth = ym::min(min_depth, node_depth.y());
-                max_depth = ym::max(max_depth, node_depth.y());
+                min_depth = ym::min(min_depth, node_depth[1]);
+                max_depth = ym::max(max_depth, node_depth[1]);
             }
         }
     }

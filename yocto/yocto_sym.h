@@ -155,7 +155,7 @@ struct overlap_point {
     float dist = 0;              // ray distance
     int sid = -1;                // shape index
     int eid = -1;                // element index
-    ym::vec2f euv = ym::zero2f;  // element baricentric coordinates
+    ym::vec3f euv = ym::zero3f;  // element baricentric coordinates
     bool hit = false;            // whether we hit
 
     // check whether it was a hit
@@ -377,9 +377,8 @@ static inline void _compute_collision(scene& scene, const ym::vec2i& shapes) {
         auto triangle = shape1.triangles[overlap.eid];
         auto v0 = shape1.pos[triangle[0]], v1 = shape1.pos[triangle[1]],
              v2 = shape1.pos[triangle[2]];
-        auto tp = ym::transform_point(
-            shape1.frame,
-            ym::blerp(v0, v1, v2, overlap.euv[0], overlap.euv[1]));
+        auto tp = ym::transform_point(shape1.frame,
+                                      ym::blerp(v0, v1, v2, overlap.euv));
         auto n =
             ym::transform_direction(shape1.frame, ym::cross(v1 - v0, v2 - v0));
         const auto eps = -0.01f;

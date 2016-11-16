@@ -228,7 +228,7 @@ struct intersect_point {
     float dist = 0;              // ray distance
     int sid = -1;                // shape index
     int eid = -1;                // element index
-    ym::vec2f euv = ym::zero2f;  // element baricentric coordinates
+    ym::vec3f euv = ym::zero3f;  // element baricentric coordinates
     bool hit = false;            // whether we hit
 
     // check whether it was a hit
@@ -374,14 +374,14 @@ namespace ytrace {
 //
 // Compute shape element cdf for shape sampling.
 //
-template<typename T, typename Weight_callback>
+template <typename T, typename Weight_callback>
 static inline std::vector<float> _compute_weight_cdf(
-        const ym::array_view<T>& elem,
-        float& total_weight, const Weight_callback& weight_cb) {
+    const ym::array_view<T>& elem, float& total_weight,
+    const Weight_callback& weight_cb) {
     // prepare return
     auto cdf = std::vector<float>();
     cdf.reserve(elem.size());
-    
+
     // compute weights
     total_weight = 0;
     for (auto&& e : elem) {
@@ -389,10 +389,10 @@ static inline std::vector<float> _compute_weight_cdf(
         total_weight += w;
         cdf.push_back(total_weight);
     }
-    
+
     // normalize
     for (auto& c : cdf) c /= total_weight;
-    
+
     // done
     return cdf;
 }
@@ -413,13 +413,18 @@ YGL_API void init_lights(scene& scene) {
         light.shape_id = sid;
         if (!shape.points.empty()) {
             light.cdf = _compute_weight_cdf(shape.points, light.area,
-                                           [&shape](auto e){return 1;});
+                                            [&shape](auto e) { return 1; });
         } else if (!shape.lines.empty()) {
-            light.cdf = _compute_weight_cdf(shape.lines, light.area,
-                                          [&shape](auto e){return ym::length(shape.pos[e[1]]-shape.pos[e[0]]);});
+            light.cdf =
+                _compute_weight_cdf(shape.lines, light.area, [&shape](auto e) {
+                    return ym::length(shape.pos[e[1]] - shape.pos[e[0]]);
+                });
         } else if (!shape.triangles.empty()) {
-            light.cdf = _compute_weight_cdf(shape.triangles, light.area,
-                [&shape](auto e){return ym::triangle_area(shape.pos[e[0]], shape.pos[e[1]], shape.pos[e[2]]);});
+            light.cdf = _compute_weight_cdf(
+                shape.triangles, light.area, [&shape](auto e) {
+                    return ym::triangle_area(shape.pos[e[0]], shape.pos[e[1]],
+                                             shape.pos[e[2]]);
+                });
         }
     }
 
@@ -597,13 +602,13 @@ struct _point {
     ym::frame3f frame = ym::identity_frame3f;  // local frame
 
     // shading ------------------------------
-    ym::vec3f ke = ym::zero3f;  // material values
-    ym::vec3f kd = ym::zero3f;  // material values
-    ym::vec3f ks = ym::zero3f;  // material values
-    float rs = 0;              // material values
-    ym::vec3f es = ym::zero3f; // material values
-    ym::vec3f eks = ym::zero3f; // material values
-    bool use_phong = false;        // material values
+    ym::vec3f ke = ym::zero3f;   // material values
+    ym::vec3f kd = ym::zero3f;   // material values
+    ym::vec3f ks = ym::zero3f;   // material values
+    float rs = 0;                // material values
+    ym::vec3f es = ym::zero3f;   // material values
+    ym::vec3f eks = ym::zero3f;  // material values
+    bool use_phong = false;      // material values
 };
 
 //
@@ -627,20 +632,21 @@ static inline ym::ray3f _eval_camera(const camera& cam, const ym::vec2f& uv,
 static inline ym::vec4f _eval_texture(const texture& txt,
                                       const ym::vec2f& texcoord) {
     assert(!txt.hdr.empty() || !txt.ldr.empty());
-    
+
     // get image width/height
     auto wh = (!txt.ldr.empty()) ? txt.ldr.size() : txt.hdr.size();
-    
+
     // get coordinates normalized for tiling
-    auto st = ym::vec2f{std::fmod(texcoord[0], 1.0f), std::fmod(texcoord[1], 1.0f)} *
-              ym::vec2f(wh);
+    auto st =
+        ym::vec2f{std::fmod(texcoord[0], 1.0f), std::fmod(texcoord[1], 1.0f)} *
+        ym::vec2f(wh);
     if (st[0] < 0) st[0] += wh[0];
     if (st[1] < 0) st[1] += wh[1];
-    
+
     // get image coordinates and residuals
     auto ij = ym::clamp(ym::vec2i(st), {0, 0}, wh);
     auto uv = st - ym::vec2f(ij);
-    
+
     // get interpolation weights and indices
     ym::vec2i idx[4] = {ij,
                         {ij[0], (ij[1] + 1) % wh[1]},
@@ -648,7 +654,7 @@ static inline ym::vec4f _eval_texture(const texture& txt,
                         {(ij[0] + 1) % wh[0], (ij[1] + 1) % wh[1]}};
     float w[4] = {(1 - uv[0]) * (1 - uv[1]), (1 - uv[0]) * uv[1],
                   uv[0] * (1 - uv[1]), uv[0] * uv[1]};
-    
+
     // handle interpolation
     if (!txt.ldr.empty()) {
         return (ym::srgb_to_linear(txt.ldr[idx[0]]) * w[0] +
@@ -661,7 +667,7 @@ static inline ym::vec4f _eval_texture(const texture& txt,
     } else {
         assert(false);
     }
-    
+
     // should not have gotten here
     return ym::zero4f;
 }
@@ -688,7 +694,8 @@ static inline ym::vec3f _eval_emission(const _point& pt) {
 // Compute the fresnel term for dielectrics. Implementation from
 // https://seblagarde.wordpress.com/2013/04/29/memo-on-fresnel-equations/
 //
-static inline ym::vec3f _eval_fresnel_dielectric(float cosw, const ym::vec3f& eta_) {
+static inline ym::vec3f _eval_fresnel_dielectric(float cosw,
+                                                 const ym::vec3f& eta_) {
     auto eta = eta_;
     if (cosw < 0) {
         eta = 1 / eta;
@@ -715,7 +722,8 @@ static inline ym::vec3f _eval_fresnel_dielectric(float cosw, const ym::vec3f& et
 // Compute the fresnel term for metals. Implementation from
 // https://seblagarde.wordpress.com/2013/04/29/memo-on-fresnel-equations/
 //
-static inline ym::vec3f _eval_fresnel_metal(float cosw, const ym::vec3f& eta, const ym::vec3f& etak) {
+static inline ym::vec3f _eval_fresnel_metal(float cosw, const ym::vec3f& eta,
+                                            const ym::vec3f& etak) {
     if (etak == ym::zero3f) return _eval_fresnel_dielectric(cosw, eta);
 
     cosw = ym::clamp(cosw, -1, 1);
@@ -1037,7 +1045,7 @@ static inline _point _eval_envpoint(const scene& scene, int env_id,
 template <typename T, int N>
 static inline T _interpolate_value(const ym::array_view<T>& vals,
                                    const ym::array_view<ym::vec<int, N>>& elems,
-                                   int eid, const ym::vec<float, N>& euv) {
+                                   int eid, const ym::vec3f& euv) {
     auto ret = T();
     if (vals.empty()) return ret;
     auto& elem = elems[eid];
@@ -1049,7 +1057,7 @@ static inline T _interpolate_value(const ym::array_view<T>& vals,
 // Create a point for a shape. Resolves geometry and material with textures.
 //
 static inline _point _eval_shapepoint(const scene& scene, int shape_id, int eid,
-                                      const ym::vec2f& euv,
+                                      const ym::vec3f& euv,
                                       const ym::vec3f& wo) {
     // set shape data
     auto pt = _point();
@@ -1066,29 +1074,25 @@ static inline _point _eval_shapepoint(const scene& scene, int shape_id, int eid,
     auto texcoord = ym::zero2f;
     if (!shape.points.empty()) {
         pt.ptype = _point::type::point;
-        auto weight = ym::vec1f(1);
-        pos = _interpolate_value(shape.pos, shape.points, eid, weight);
+        pos = _interpolate_value(shape.pos, shape.points, eid, euv);
         norm = ym::normalize(
-            _interpolate_value(shape.norm, shape.points, eid, weight));
-        texcoord =
-            _interpolate_value(shape.texcoord, shape.points, eid, weight);
-        color = _interpolate_value(shape.color, shape.points, eid, weight);
+            _interpolate_value(shape.norm, shape.points, eid, euv));
+        texcoord = _interpolate_value(shape.texcoord, shape.points, eid, euv);
+        color = _interpolate_value(shape.color, shape.points, eid, euv);
     } else if (!shape.lines.empty()) {
         pt.ptype = _point::type::line;
-        auto weight = ym::vec2f(1 - euv[0], euv[0]);
-        pos = _interpolate_value(shape.pos, shape.lines, eid, weight);
+        pos = _interpolate_value(shape.pos, shape.lines, eid, euv);
         norm = ym::normalize(
-            _interpolate_value(shape.norm, shape.lines, eid, weight));
-        texcoord = _interpolate_value(shape.texcoord, shape.lines, eid, weight);
-        color = _interpolate_value(shape.color, shape.lines, eid, weight);
+            _interpolate_value(shape.norm, shape.lines, eid, euv));
+        texcoord = _interpolate_value(shape.texcoord, shape.lines, eid, euv);
+        color = _interpolate_value(shape.color, shape.lines, eid, euv);
     } else if (!shape.triangles.empty()) {
         pt.ptype = _point::type::triangle;
-        auto weight = ym::vec3f(1 - euv[0] - euv[1], euv[0], euv[1]);
-        pos = _interpolate_value(shape.pos, shape.triangles, eid, weight);
-        norm = _interpolate_value(shape.norm, shape.triangles, eid, weight);
+        pos = _interpolate_value(shape.pos, shape.triangles, eid, euv);
+        norm = _interpolate_value(shape.norm, shape.triangles, eid, euv);
         texcoord =
-            _interpolate_value(shape.texcoord, shape.triangles, eid, weight);
-        color = _interpolate_value(shape.color, shape.triangles, eid, weight);
+            _interpolate_value(shape.texcoord, shape.triangles, eid, euv);
+        color = _interpolate_value(shape.color, shape.triangles, eid, euv);
     }
 
     // creating frame
@@ -1119,15 +1123,15 @@ static inline _point _eval_shapepoint(const scene& scene, int shape_id, int eid,
     if (!shape.texcoord.empty()) {
         if (mat.ke_txt >= 0) {
             auto txt = _eval_texture(scene.textures[mat.ke_txt], texcoord);
-            pt.ke = ym::lerp(pt.ke, {txt[0],txt[1],txt[2]}, txt[3]);
+            pt.ke = ym::lerp(pt.ke, {txt[0], txt[1], txt[2]}, txt[3]);
         }
         if (mat.kd_txt >= 0) {
             auto txt = _eval_texture(scene.textures[mat.kd_txt], texcoord);
-            pt.kd = ym::lerp(pt.kd, {txt[0],txt[1],txt[2]}, txt[3]);
+            pt.kd = ym::lerp(pt.kd, {txt[0], txt[1], txt[2]}, txt[3]);
         }
         if (mat.ks_txt >= 0) {
             auto txt = _eval_texture(scene.textures[mat.ks_txt], texcoord);
-            pt.ks = ym::lerp(pt.ks, {txt[0],txt[1],txt[2]}, txt[3]);
+            pt.ks = ym::lerp(pt.ks, {txt[0], txt[1], txt[2]}, txt[3]);
         }
         if (mat.rs_txt >= 0) {
             auto txt = _eval_texture(scene.textures[mat.rs_txt], texcoord);
@@ -1176,17 +1180,23 @@ static inline _point _sample_light(const scene& scene, int lid,
                                    const ym::vec2f& rn) {
     auto& light = scene._lights[lid];
     if (light.shape_id >= 0) {
+        auto& shape = scene.shapes[light.shape_id];
         auto eid =
             (int)(std::lower_bound(light.cdf.begin(), light.cdf.end(), rne) -
                   light.cdf.begin());
         if (eid > light.cdf.size() - 1) eid = (int)light.cdf.size() - 1;
-        
-        auto euv = rn;
-        if (!scene.shapes[light.shape_id].triangles.empty()) {
-            euv[0] = 1 - sqrt(rn[0]);
-            euv[1] = rn[1] * sqrt(rn[0]);
-        }
-        
+
+        auto euv = ym::zero3f;
+        if (!shape.triangles.empty()) {
+            euv = {std::sqrt(rn[0]) * (1 - rn[1]), 1 - std::sqrt(rn[0]),
+                   rn[1] * std::sqrt(rn[0])};
+        } else if (!shape.lines.empty()) {
+            euv = {1 - rn[0], rn[0], 0};
+        } else if (!shape.points.empty()) {
+            euv = {1, 0, 0};
+        } else
+            assert(false);
+
         auto lpt =
             _eval_shapepoint(scene, light.shape_id, eid, euv, ym::zero3f);
         lpt.wo = ym::normalize(pt.frame.o() - lpt.frame.o());
@@ -1237,7 +1247,7 @@ static inline _point _intersect_scene(const scene& scene,
     auto isec = scene.intersect_first(ray);
     if (isec) {
         return _eval_shapepoint(scene, isec.sid, isec.eid, isec.euv, -ray.d);
-    } else if(!scene.environments.empty()) {
+    } else if (!scene.environments.empty()) {
         return _eval_envpoint(scene, 0, -ray.d);
     } else {
         return {};
@@ -1323,18 +1333,17 @@ static inline ym::vec3f _eval_direct(const scene& scene, int lid,
 //
 static inline ym::vec4f _shade_pathtrace_recd(const scene& scene,
                                               const ym::ray3f& ray,
-                                              _sampler& sampler,
-                                              int ray_depth,
+                                              _sampler& sampler, int ray_depth,
                                               const render_params& params) {
     // scene intersection
     auto pt = _intersect_scene(scene, ray);
-    if(pt.ptype == _point::type::none) return ym::zero4f;
+    if (pt.ptype == _point::type::none) return ym::zero4f;
 
     // init
-    auto l = ym::vec4f(0,0,0,1);
-    
+    auto l = ym::vec4f(0, 0, 0, 1);
+
     // emission
-    if(ray_depth == 0) l.xyz() += _eval_emission(pt);
+    if (ray_depth == 0) l.xyz() += _eval_emission(pt);
     if (pt.ptype == _point::type::env) return l;
 
     // check early exit
@@ -1386,11 +1395,11 @@ static inline ym::vec4f _shade_direct(const scene& scene, const ym::ray3f& ray,
                                       const render_params& params) {
     // scene intersection
     auto pt = _intersect_scene(scene, ray);
-    if(pt.ptype == _point::type::none) return ym::zero4f;
+    if (pt.ptype == _point::type::none) return ym::zero4f;
 
     // init
-    auto l = ym::vec4f(0,0,0,1);
-    
+    auto l = ym::vec4f(0, 0, 0, 1);
+
     // emission
     l.xyz() += _eval_emission(pt);
     if (pt.ptype == _point::type::env) return l;
@@ -1418,11 +1427,11 @@ static inline ym::vec4f _shade_eyelight(const scene& scene,
                                         const render_params& params) {
     // intersection
     _point pt = _intersect_scene(scene, ray);
-    if(pt.ptype == _point::type::none) return ym::zero4f;
+    if (pt.ptype == _point::type::none) return ym::zero4f;
 
     // init
-    auto l = ym::vec4f(0,0,0,1);
-    
+    auto l = ym::vec4f(0, 0, 0, 1);
+
     // emission
     l.xyz() += _eval_emission(pt);
     if (pt.ptype == _point::type::env) return l;
@@ -1436,9 +1445,9 @@ static inline ym::vec4f _shade_eyelight(const scene& scene,
 //
 // Shader function callback.
 //
-using shade_fn = std::function<ym::vec4f(
-    const scene& scene, const ym::ray3f& ray, _sampler& sampler,
-    const render_params& params)>;
+using shade_fn =
+    std::function<ym::vec4f(const scene& scene, const ym::ray3f& ray,
+                            _sampler& sampler, const render_params& params)>;
 
 //
 // Renders a block of pixels. Public API, see above.
@@ -1458,7 +1467,7 @@ YGL_API void trace_block(const scene& scene, int cid,
     }
     for (auto j = block.min[1]; j < block.max[1]; j++) {
         for (auto i = block.min[0]; i < block.max[0]; i++) {
-            auto ij = ym::vec2i(i,j);
+            auto ij = ym::vec2i(i, j);
             auto saved = img[ij];
             img[ij] = ym::zero4f;
             for (auto s = samples.min; s < samples.max; s++) {
@@ -1469,7 +1478,8 @@ YGL_API void trace_block(const scene& scene, int cid,
                 auto ray = _eval_camera(cam, uv, _sample_next2f(sampler));
                 auto l = shade(scene, ray, sampler, params);
                 if (!ym::isfinite(l)) continue;
-                if (params.pixel_clamp > 0) l.xyz() = ym::clamplen(l.xyz(), params.pixel_clamp);
+                if (params.pixel_clamp > 0)
+                    l.xyz() = ym::clamplen(l.xyz(), params.pixel_clamp);
                 img[ij] += l;
             }
             if (accumulate && samples.min) {
