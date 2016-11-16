@@ -38,6 +38,19 @@
 //
 
 //
+// ACKNOLEDGEMENTS
+//
+// This library includes code from the PCG random number generator,
+// boost hash_combine, Pixar multijittered sampling
+// and public domain code from
+// - https://github.com/sgorsten/linalg
+// - https://gist.github.com/badboy/6267743
+//
+// For design ideas of a modern math library, it was very helpful to look at
+// - https://github.com/sgorsten/linalg
+//
+
+//
 // LICENSE:
 //
 // Copyright (c) 2016 Fabio Pellacini
@@ -70,33 +83,42 @@
 // Licensed under Apache License 2.0 (NO WARRANTY, etc. see website)
 //
 
-#ifndef _YM_H_
-#define _YM_H_
+//
+//
+//
+
+#ifndef _YMATH_H_
+#define _YMATH_H_
 
 #include <algorithm>
 #include <cassert>
+#include <chrono>
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
 #include <initializer_list>
 #include <limits>
+#include <string>
 #include <type_traits>
+#include <vector>
 
 // -----------------------------------------------------------------------------
 // CONSTANTS
 // -----------------------------------------------------------------------------
 
+namespace ym {
+
 //
 // pi
 //
-const float ym_pif = 3.14159265f;
-const double ym_pi = 3.1415926535897932384626433832795;
+const float pif = 3.14159265f;
+const double pi = 3.1415926535897932384626433832795;
 
 //
 // shortcut for numeric limits
 //
-const float ym_max_float = std::numeric_limits<float>::max();
+const float max_float = std::numeric_limits<float>::max();
 
 // -----------------------------------------------------------------------------
 // BASIC MATH FUNCTIONS
@@ -106,11 +128,11 @@ const float ym_max_float = std::numeric_limits<float>::max();
 // min/max
 //
 template <typename T>
-inline T ym_min(const T& x, const T& y) {
+inline T min(const T& x, const T& y) {
     return (x < y) ? x : y;
 }
 template <typename T>
-inline T ym_max(const T& x, const T& y) {
+inline T max(const T& x, const T& y) {
     return (x > y) ? x : y;
 }
 
@@ -118,7 +140,7 @@ inline T ym_max(const T& x, const T& y) {
 // swap utility
 //
 template <typename T>
-inline void ym_swap(T& a, T& b) {
+inline void swap(T& a, T& b) {
     T c = a;
     a = b;
     b = c;
@@ -128,31 +150,36 @@ inline void ym_swap(T& a, T& b) {
 // Clamp a value between a min and max values
 //
 template <typename T>
-inline T ym_clamp(const T& x, const T& min, const T& max) {
-    return ym_min(ym_max(x, min), max);
+inline T clamp(const T& x, const T& min_, const T& max_) {
+    return min(max(x, min_), max_);
 }
 template <typename T, typename T1>
-inline T ym_clamp(const T& x, const T1& min, const T1& max) {
-    return ym_min(ym_max(x, (T)min), (T)max);
+inline T clamp(const T& x, const T1& min_, const T1& max_) {
+    return min(max(x, (T)min_), (T)max_);
 }
 
 //
 // Check if a value if finite (will then be specialized on vectors)
 //
 template <typename T>
-inline bool ym_isfinite(const T& v) {
+inline bool isfinite(const T& v) {
     return std::isfinite(v);
 }
 
 //
-// Linear interpolation and triangle baricentric interpolation.
+// Integer power of two
+//
+inline int pow2(int x) { return 1 << x; }
+
+//
+// Linear/baricentric/bilinear interpolation.
 //
 template <typename T, typename T1>
-inline T ym_lerp(const T& a, const T& b, T1 t) {
+inline T lerp(const T& a, const T& b, T1 t) {
     return a * (1 - t) + b * t;
 }
 template <typename T, typename T1>
-inline T ym_blerp(const T& a, const T& b, const T& c, T1 u, T1 v) {
+inline T blerp(const T& a, const T& b, const T& c, T1 u, T1 v) {
     return a * (1 - u - v) + b * u + c * v;
 }
 
@@ -166,100 +193,154 @@ inline T ym_blerp(const T& a, const T& b, const T& c, T1 u, T1 v) {
 // via operator[].
 //
 template <typename T, int N>
-struct ym_vec {
-    T v[N];  // elements
+struct vec {
+    // elements
+    T v[N];
 
-    ym_vec() {
-        for (auto i = 0; i < N; i++) v[i] = 0;
+    // default constructor
+    vec() {
+        for (auto i = 0; i < N; i++) v[i] = T();
     }
-    explicit ym_vec(T x) {
+
+    // member constructor
+    template <typename... Args,
+              typename = std::enable_if_t<sizeof...(Args) == N>>
+    constexpr vec(Args... vv) : v{T(vv)...} {}
+
+    // list constructor
+    constexpr vec(std::initializer_list<T> vv) {
+        assert(N == vv.size());
+        auto i = 0;
+        for (auto&& e : vv) v[i++] = e;
+    }
+
+    // one-member constructor
+    constexpr explicit vec(T x) {
         for (auto i = 0; i < N; i++) v[i] = x;
     }
-    explicit ym_vec(const T* vv) {
+
+    // constructor from shorter vector
+    constexpr vec(const vec<T, N - 1>& va, const T& vb) {
+        for (auto i = 0; i < N - 1; i++) v[i] = va.v[i];
+        v[N - 1] = vb;
+    }
+
+    // conversion to shorter vector (ignore last value)
+    explicit operator vec<T, N - 1>() {
+        vec<T, N - 1> vv;
+        for (auto i = 0; i < N - 1; i++) vv.v[i] = v[i];
+        return vv;
+    }
+
+    // conversion from different types
+    template <typename T1>
+    constexpr explicit vec(const vec<T1, N>& vv) {
+        for (auto i = 0; i < N; i++) v[i] = T(vv[i]);
+    }
+
+    // convert from STL
+    constexpr vec(const std::array<T, N>& vv) {
         for (auto i = 0; i < N; i++) v[i] = vv[i];
     }
 
-    const T& operator[](int i) const { return v[i]; }
-    T& operator[](int i) { return v[i]; }
+    // convert to STL
+    constexpr operator std::array<T, N>() const {
+        std::array<T, N> vv;
+        for (auto i = 0; i < N; i++) vv[i] = v[i];
+        return vv;
+    }
+
+    // element access
+    constexpr const T& operator[](int i) const { return v[i]; }
+    constexpr T& operator[](int i) { return v[i]; }
+
+    // named element access
+    constexpr const T& x() const {
+        static_assert(N > 0, "length");
+        return v[0];
+    }
+    constexpr T& x() {
+        static_assert(N > 0, "length");
+        return v[0];
+    }
+    constexpr const T& y() const {
+        static_assert(N > 1, "length");
+        return v[1];
+    }
+    constexpr T& y() {
+        static_assert(N > 1, "length");
+        return v[1];
+    }
+    constexpr const T& z() const {
+        static_assert(N > 2, "length");
+        return v[2];
+    }
+    constexpr T& z() {
+        static_assert(N > 2, "length");
+        return v[2];
+    }
+    constexpr const T& w() const {
+        static_assert(N > 3, "length");
+        return v[3];
+    }
+    constexpr T& w() {
+        static_assert(N > 3, "length");
+        return v[3];
+    }
+    constexpr const vec<T,3>& xyz() const {
+        static_assert(N > 3, "length");
+        return *(vec<T, 3>*)v;
+    }
+    constexpr vec<T,3>& xyz() {
+        static_assert(N > 3, "length");
+        return *(vec<T, 3>*)v;
+    }
+
+    // raw data access
+    constexpr T* data() { return v; }
+    constexpr const T* data() const { return v; }
 };
 
 //
-// Specialization of ym_vec template to allow data access also via named
-// members (x, y). Also allow constraction to/from vector of length-1.
+// Typedef for standard vectors.
 //
-template <typename T>
-struct ym_vec<T, 2> {
-    union {
-        struct {
-            T x, y;
-        };
-        T v[2];
-    };
 
-    ym_vec() : x(), y() {}
-    ym_vec(T x, T y) : x(x), y(y) {}
-    explicit ym_vec(T s) : x(s), y(s) {}
-    explicit ym_vec(const T* vv) : x(vv[0]), y(vv[1]) {}
-    template <class U>
-    explicit ym_vec(const ym_vec<U, 2>& v) : x(v.x), y(v.y) {}
+using vec1f = vec<float, 1>;
+using vec2f = vec<float, 2>;
+using vec3f = vec<float, 3>;
+using vec4f = vec<float, 4>;
 
-    const T& operator[](int i) const { return v[i]; }
-    T& operator[](int i) { return v[i]; }
-};
+using vec1i = vec<int, 1>;
+using vec2i = vec<int, 2>;
+using vec3i = vec<int, 3>;
+using vec4i = vec<int, 4>;
+
+using vec2b = vec<unsigned char, 2>;
+using vec3b = vec<unsigned char, 3>;
+using vec4b = vec<unsigned char, 4>;
 
 //
-// Specialization of ym_vec template to allow data access also via named
-// members (x, y, z). Also allow constraction to/from vector of length-1.
+// Vector Constants.
 //
-template <typename T>
-struct ym_vec<T, 3> {
-    union {
-        struct {
-            T x, y, z;
-        };
-        T v[3];
-    };
 
-    ym_vec() : x(), y(), z() {}
-    ym_vec(T x, T y, T z) : x(x), y(y), z(z) {}
-    explicit ym_vec(T s) : x(s), y(s), z(s) {}
-    explicit ym_vec(const T* vv) : x(vv[0]), y(vv[1]), z(vv[2]) {}
-    template <class U>
-    explicit ym_vec(const ym_vec<U, 3>& v) : x(v.x), y(v.y), z(v.z) {}
+const auto zero2f = vec2f();
+const auto zero3f = vec3f();
+const auto zero4f = vec4f();
 
-    explicit ym_vec(const ym_vec<T, 2>& sv, T z) : ym_vec(sv.x, sv.y, z) {}
-    explicit operator ym_vec<T, 2>() const { return ym_vec<T, 2>(x, y); }
+const auto zero2i = vec2i();
+const auto zero3i = vec3i();
+const auto zero4i = vec4i();
 
-    const T& operator[](int i) const { return v[i]; }
-    T& operator[](int i) { return v[i]; }
-};
+const auto one2f = vec2f(1, 1);
+const auto one3f = vec3f(1, 1, 1);
+const auto one4f = vec4f(1, 1, 1, 1);
 
-//
-// Specialization of ym_vec template to allow data access also via named
-// members (x, y, z, w). Also allow constraction to/from vector of length-1.
-//
-template <typename T>
-struct ym_vec<T, 4> {
-    union {
-        struct {
-            T x, y, z, w;
-        };
-        T v[4];
-    };
+const auto x2f = vec2f(1, 0);
+const auto y2f = vec2f(0, 1);
 
-    ym_vec() : x(), y(), z(), w() {}
-    ym_vec(T x, T y, T z, T w) : x(x), y(y), z(z), w(w) {}
-    explicit ym_vec(T s) : x(s), y(s), z(s), w(s) {}
-    explicit ym_vec(const T* vv) : x(vv[0]), y(vv[1]), z(vv[2]), w(vv[3]) {}
-    template <class U>
-    explicit ym_vec(const ym_vec<U, 4>& v) : x(v.x), y(v.y), z(v.z), w(v.w) {}
-
-    ym_vec(const ym_vec<T, 3>& sv, T w) : ym_vec(sv.x, sv.y, sv.z, w) {}
-    explicit operator ym_vec<T, 3>() const { return ym_vec<T, 3>(x, y, z); }
-
-    const T& operator[](int i) const { return v[i]; }
-    T& operator[](int i) { return v[i]; }
-};
+const auto x3f = vec3f(1, 0, 0);
+const auto y3f = vec3f(0, 1, 0);
+const auto z3f = vec3f(0, 0, 1);
 
 //
 // Matrix of element of compile time dimensions stored in column major format.
@@ -268,267 +349,145 @@ struct ym_vec<T, 4> {
 // Access to columns via operator [] and raw data pointer data().
 //
 template <typename T, int N, int M>
-struct ym_mat {
-    typedef ym_vec<T, N> V;
+struct mat {
+    using V = vec<T, N>;
 
     V v[M];
 
-    ym_mat() {
+    constexpr mat() {
         for (int j = 0; j < M; j++) v[j] = V();
     }
 
-    explicit ym_mat(const T* vv) {
-        for (auto j = 0; j < N; j++) {
-            for (auto i = 0; i < N; i++) v[j][i] = vv[j * N + i];
+    // member constructor
+    template <typename... Args,
+              typename = std::enable_if_t<sizeof...(Args) == M>>
+    constexpr mat(Args... args) : v{V(args)...} {}
+
+    // list constructor
+    constexpr mat(std::initializer_list<V> vv) {
+        assert(M == vv.size());
+        auto i = 0;
+        for (auto&& e : vv) v[i++] = e;
+    }
+
+    // convert from STL
+    constexpr mat(const std::array<V, M>& vv) {
+        for (auto j = 0; j < M; j++) v[j] = vv[j];
+    }
+    constexpr mat(const std::array<std::array<T, N>, M>& vv) {
+        for (auto j = 0; j < M; j++) v[j] = vv[j];
+    }
+    constexpr mat(const std::array<T, N * M>& vv) {
+        for (auto j = 0; j < M; j++) {
+            for (auto i = 0; i < N; i++) {
+                v[j][i] = vv[j * N + i];
+            }
         }
     }
 
-    ym_mat(const std::initializer_list<V>& cols) {
-        assert(cols.size() == M);
-        auto j = 0;
-        for (auto&& c : cols) v[j++] = c;
+    // convert to STL
+    constexpr operator std::array<V, M>() {
+        std::array<V, M> vv;
+        for (auto j = 0; j < M; j++) vv[j] = v[j];
+        return vv;
+    }
+    constexpr operator std::array<std::array<T, N>, M>() {
+        std::array<std::array<T, N>, M> vv;
+        for (auto j = 0; j < M; j++) vv[j] = v[j];
+        return vv;
+    }
+    constexpr operator std::array<T, N * M>() {
+        std::array<T, N * M> vv;
+        for (auto j = 0; j < M; j++)
+            for (auto i = 0; i < N; i++) vv[j * N + i] = v[j][i];
+        return vv;
     }
 
-    explicit ym_mat(const ym_mat<T, N - 1, M - 1>& m,
-                    const ym_vec<T, N - 1>& t) {
-        for (auto j = 0; j < M - 1; j++) {
-            v[j] = V{m.v[j], 0};
-        }
-        v[M - 1] = V{t, 1};
+    // element access
+    constexpr const V& operator[](int i) const { return v[i]; }
+    constexpr V& operator[](int i) { return v[i]; }
+
+    // named element access
+    constexpr const T& x() const {
+        static_assert(N > 0, "length");
+        return v[0];
+    }
+    constexpr T& x() {
+        static_assert(N > 0, "length");
+        return v[0];
+    }
+    constexpr const T& y() const {
+        static_assert(N > 1, "length");
+        return v[1];
+    }
+    constexpr T& y() {
+        static_assert(N > 1, "length");
+        return v[1];
+    }
+    constexpr const T& z() const {
+        static_assert(N > 2, "length");
+        return v[2];
+    }
+    constexpr T& z() {
+        static_assert(N > 2, "length");
+        return v[2];
+    }
+    constexpr const T& w() const {
+        static_assert(N > 3, "length");
+        return v[3];
+    }
+    constexpr T& w() {
+        static_assert(N > 3, "length");
+        return v[3];
     }
 
-    explicit operator ym_mat<T, N - 1, M - 1>() const {
-        ym_mat<T, N - 1, M - 1> m;
-        for (auto j = 0; j < M - 1; j++) m.v[j] = (ym_vec<T, N - 1>)v[j];
-        return m;
-    }
-
-    const V& operator[](int i) const { return v[i]; }
-    V& operator[](int i) { return v[i]; }
-
-    T* data() { return &v[0].x; }
-    const T* data() const { return &v[0].x; }
+    // raw element access
+    constexpr V* data() { return v; }
+    constexpr const V* data() const { return v; }
 };
-
-// -----------------------------------------------------------------------------
-// AFFINE AND RIGID TRANSFORMS
-// -----------------------------------------------------------------------------
-
-//
-// Affine matrix stored as a linear tranform NxN-matrix m and a translation
-// N-vector t. Provides converion to/from (N+1)x(N+1) matrices. Can also
-// specify whether the matrix is orthonormal at compile time (this in turns
-// speeds up inversion and transforms). If orthonormal, than the matrix
-// columns are the axis of the coordinate system, while the translation is
-// its origin.
-//
-template <typename T, int N, bool orthonormal>
-struct ym_affine {
-    typedef ym_vec<T, N> V;
-    typedef ym_mat<T, N, N> M;
-
-    M m;
-    V t;
-
-    ym_affine() : m(), t() {}
-    ym_affine(const M& m, const V& t) : m(m), t(t) {}
-
-    explicit ym_affine(const ym_mat<T, N + 1, N + 1>& mat) {
-        for (auto j = 0; j < N; j++) m.v[j] = V(mat.v[j]);
-        m.t = V(mat.v[N]);
-    }
-    operator ym_mat<T, N + 1, N + 1>() const {
-        return ym_mat<T, N + 1, N + 1>{m, t};
-    }
-};
-
-//
-// Specializaiton of affine matrix with esplicit access to thr rigid frame
-// with origin o and axis x, y. Also support a rotation/position names for
-// elements.
-//
-template <typename T, bool orthonormal>
-struct ym_affine<T, 2, orthonormal> {
-    typedef ym_vec<T, 2> V;
-    typedef ym_mat<T, 2, 2> M;
-
-    union {
-        struct {
-            M m;
-            V t;
-        };
-        struct {
-            M rot;
-            V pos;
-        };
-        struct {
-            V x, y, o;
-        };
-    };
-
-    ym_affine() : x(1, 0), y(0, 1), o(0, 0) {}
-    ym_affine(const M& m, const V& t) : m(m), t(t) {}
-    ym_affine(const V& x, const V& y, const V& o) : x(x), y(y), o(o) {}
-
-    explicit ym_affine(const ym_mat<T, 3, 3>& mat)
-        : x(mat[0]), y(mat[1]), o(mat[2]) {}
-    operator ym_mat<T, 3, 3>() const { return ym_mat<T, 3, 3>{m, t}; }
-};
-
-//
-// Specializaiton of affine matrix with esplicit access to thr rigid frame
-// with origin o and axis x, y, z. Also support a rotation/position names for
-// elements.
-//
-template <typename T, bool orthonormal>
-struct ym_affine<T, 3, orthonormal> {
-    typedef ym_vec<T, 3> V;
-    typedef ym_mat<T, 3, 3> M;
-
-    union {
-        struct {
-            M m;
-            V t;
-        };
-        struct {
-            M rot;
-            V pos;
-        };
-        struct {
-            V x, y, z, o;
-        };
-        struct {
-            V tangu, tangv, norm, pt;
-        };
-    };
-
-    ym_affine() : x(1, 0, 0), y(0, 1, 0), z(0, 0, 1), o(0, 0, 0) {}
-    ym_affine(const M& m, const V& t) : m(m), t(t) {}
-    ym_affine(const V& x, const V& y, const V& z, const V& o)
-        : x(x), y(y), z(z), o(o) {}
-
-    explicit ym_affine(const ym_mat<T, 4, 4>& mat)
-        : x(mat[0]), y(mat[1]), z(mat[2]), o(mat[3]) {}
-    explicit operator ym_mat<T, 4, 4>() const { return ym_mat<T, 4, 4>{m, t}; }
-
-    explicit ym_affine(const ym_affine<T, 3, !orthonormal>& af)
-        : m(af.m), t(af.t) {}
-    explicit operator ym_affine<T, 3, !orthonormal>() { return {m, t}; }
-};
-
-// -----------------------------------------------------------------------------
-// LINEAR ALGEBRA TYPEDEFS AND CONSTANTS
-// -----------------------------------------------------------------------------
-
-//
-// Typedef for standard vectors.
-//
-
-typedef ym_vec<float, 2> ym_vec2f;
-typedef ym_vec<float, 3> ym_vec3f;
-typedef ym_vec<float, 4> ym_vec4f;
-
-typedef ym_vec<int, 2> ym_vec2i;
-typedef ym_vec<int, 3> ym_vec3i;
-typedef ym_vec<int, 4> ym_vec4i;
-
-typedef ym_vec<unsigned char, 2> ym_vec2b;
-typedef ym_vec<unsigned char, 3> ym_vec3b;
-typedef ym_vec<unsigned char, 4> ym_vec4b;
-
-//
-// Vector Constants.
-//
-
-const ym_vec2f ym_zero2f = ym_vec2f();
-const ym_vec3f ym_zero3f = ym_vec3f();
-const ym_vec4f ym_zero4f = ym_vec4f();
-
-const ym_vec2f ym_x2f = ym_vec2f(1, 0);
-const ym_vec2f ym_y2f = ym_vec2f(0, 1);
-
-const ym_vec3f ym_x3f = ym_vec3f(1, 0, 0);
-const ym_vec3f ym_y3f = ym_vec3f(0, 1, 0);
-const ym_vec3f ym_z3f = ym_vec3f(0, 0, 1);
 
 //
 // Typedef for standard matrices.
 //
 
-typedef ym_mat<float, 2, 2> ym_mat2f;
-typedef ym_mat<float, 3, 3> ym_mat3f;
-typedef ym_mat<float, 4, 4> ym_mat4f;
+using mat2f = mat<float, 2, 2>;
+using mat3f = mat<float, 3, 3>;
+using mat4f = mat<float, 4, 4>;
 
 //
 // Matrix Constants.
 //
 
-const ym_mat2f ym_identity_mat2f = ym_mat2f{{1, 0}, {0, 1}};
-const ym_mat3f ym_identity_mat3f = ym_mat3f{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
-const ym_mat4f ym_identity_mat4f =
-    ym_mat4f{{1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
-
-//
-// Typedef for standard affine matrices.
-//
-
-typedef ym_affine<float, 2, false> ym_affine2f;
-typedef ym_affine<float, 3, false> ym_affine3f;
-
-//
-// Affine Transforms Constants.
-//
-
-const ym_affine2f ym_identity_affine2f = ym_affine2f{{1, 0}, {0, 1}, {0, 0}};
-const ym_affine3f ym_identity_affine3f =
-    ym_affine3f{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}};
-
-//
-// Typedef for standard rigid transforms / frames.
-//
-
-typedef ym_affine<float, 2, true> ym_frame2f;
-typedef ym_affine<float, 3, true> ym_frame3f;
-
-//
-// Rigid Transforms/Frames Constants.
-//
-
-const ym_frame2f ym_identity_frame2f = ym_frame2f{{1, 0}, {0, 1}, {0, 0}};
-const ym_frame3f ym_identity_frame3f =
-    ym_frame3f{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}};
-
-// -----------------------------------------------------------------------------
-// LINEAR ALGEBRA OPERATIONS
-// -----------------------------------------------------------------------------
+const auto identity_mat2f = mat2f{{1, 0}, {0, 1}};
+const auto identity_mat3f = mat3f{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
+const auto identity_mat4f =
+    mat4f{{1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
 
 //
 // Components-wise comparison
 //
 
 template <typename T, int N>
-inline bool ym_iszero(const ym_vec<T, N>& a) {
+inline bool isfinite(const vec<T, N>& a) {
     for (auto i = 0; i < N; i++)
-        if (a.v[i] != 0) return false;
+        if (!isfinite(a.v[i])) return false;
     return true;
 }
 
 template <typename T, int N>
-inline bool ym_isfinite(const ym_vec<T, N>& a) {
-    for (auto i = 0; i < N; i++)
-        if (!ym_isfinite(a.v[i])) return false;
-    return true;
-}
-
-template <typename T, int N>
-inline bool operator==(const ym_vec<T, N>& a, const ym_vec<T, N>& b) {
+inline bool operator==(const vec<T, N>& a, const vec<T, N>& b) {
     for (auto i = 0; i < N; i++)
         if (a.v[i] != b.v[i]) return false;
     return true;
 }
 
 template <typename T, int N>
-inline bool operator<(const ym_vec<T, N>& a, const ym_vec<T, N>& b) {
+inline bool operator!=(const vec<T, N>& a, const vec<T, N>& b) {
+    return !operator==(a, b);
+}
+
+template <typename T, int N>
+inline bool operator<(const vec<T, N>& a, const vec<T, N>& b) {
     for (auto i = 0; i < N; i++)
         if (a.v[i] >= b.v[i]) return false;
     return true;
@@ -539,64 +498,64 @@ inline bool operator<(const ym_vec<T, N>& a, const ym_vec<T, N>& b) {
 //
 
 template <typename T, int N>
-inline ym_vec<T, N> operator-(const ym_vec<T, N>& a) {
-    ym_vec<T, N> c;
+inline vec<T, N> operator-(const vec<T, N>& a) {
+    vec<T, N> c;
     for (auto i = 0; i < N; i++) c.v[i] = -a.v[i];
     return c;
 }
 
 template <typename T, int N>
-inline ym_vec<T, N> operator+(const ym_vec<T, N>& a, const ym_vec<T, N>& b) {
-    ym_vec<T, N> c;
+inline vec<T, N> operator+(const vec<T, N>& a, const vec<T, N>& b) {
+    vec<T, N> c;
     for (auto i = 0; i < N; i++) c.v[i] = a.v[i] + b.v[i];
     return c;
 }
 
 template <typename T, int N>
-inline ym_vec<T, N> operator-(const ym_vec<T, N>& a, const ym_vec<T, N>& b) {
-    ym_vec<T, N> c;
+inline vec<T, N> operator-(const vec<T, N>& a, const vec<T, N>& b) {
+    vec<T, N> c;
     for (auto i = 0; i < N; i++) c.v[i] = a.v[i] - b.v[i];
     return c;
 }
 
 template <typename T, int N>
-inline ym_vec<T, N> operator*(const ym_vec<T, N>& a, const ym_vec<T, N>& b) {
-    ym_vec<T, N> c;
+inline vec<T, N> operator*(const vec<T, N>& a, const vec<T, N>& b) {
+    vec<T, N> c;
     for (auto i = 0; i < N; i++) c.v[i] = a.v[i] * b.v[i];
     return c;
 }
 
 template <typename T, int N, typename T1>
-inline ym_vec<T, N> operator*(const ym_vec<T, N>& a, const T1& b) {
-    ym_vec<T, N> c;
+inline vec<T, N> operator*(const vec<T, N>& a, const T1& b) {
+    vec<T, N> c;
     for (auto i = 0; i < N; i++) c.v[i] = a.v[i] * b;
     return c;
 }
 
 template <typename T1, typename T, int N>
-inline ym_vec<T, N> operator*(const T1& a, const ym_vec<T, N>& b) {
-    ym_vec<T, N> c;
+inline vec<T, N> operator*(const T1& a, const vec<T, N>& b) {
+    vec<T, N> c;
     for (auto i = 0; i < N; i++) c.v[i] = a * b.v[i];
     return c;
 }
 
 template <typename T, int N>
-inline ym_vec<T, N> operator/(const ym_vec<T, N>& a, const ym_vec<T, N>& b) {
-    ym_vec<T, N> c;
+inline vec<T, N> operator/(const vec<T, N>& a, const vec<T, N>& b) {
+    vec<T, N> c;
     for (auto i = 0; i < N; i++) c.v[i] = a.v[i] / b.v[i];
     return c;
 }
 
 template <typename T, int N, typename T1>
-inline ym_vec<T, N> operator/(const ym_vec<T, N>& a, const T1 b) {
-    ym_vec<T, N> c;
+inline vec<T, N> operator/(const vec<T, N>& a, const T1 b) {
+    vec<T, N> c;
     for (auto i = 0; i < N; i++) c.v[i] = a.v[i] / b;
     return c;
 }
 
 template <typename T1, typename T, int N>
-inline ym_vec<T, N> operator/(const T1& a, const ym_vec<T, N>& b) {
-    ym_vec<T, N> c;
+inline vec<T, N> operator/(const T1& a, const vec<T, N>& b) {
+    vec<T, N> c;
     for (auto i = 0; i < N; i++) c.v[i] = a / b.v[i];
     return c;
 }
@@ -606,39 +565,33 @@ inline ym_vec<T, N> operator/(const T1& a, const ym_vec<T, N>& b) {
 //
 
 template <typename T, int N>
-inline ym_vec<T, N>& operator+=(ym_vec<T, N>& a, const ym_vec<T, N>& b) {
-    a = a + b;
-    return a;
+inline vec<T, N>& operator+=(vec<T, N>& a, const vec<T, N>& b) {
+    return a = a + b;
 }
 
 template <typename T, int N>
-inline ym_vec<T, N>& operator-=(ym_vec<T, N>& a, const ym_vec<T, N>& b) {
-    a = a - b;
-    return a;
+inline vec<T, N>& operator-=(vec<T, N>& a, const vec<T, N>& b) {
+    return a = a - b;
 }
 
 template <typename T, int N>
-inline ym_vec<T, N>& operator*=(ym_vec<T, N>& a, const ym_vec<T, N>& b) {
-    a = a * b;
-    return a;
+inline vec<T, N>& operator*=(vec<T, N>& a, const vec<T, N>& b) {
+    return a = a * b;
 }
 
 template <typename T, int N, typename T1>
-inline ym_vec<T, N>& operator*=(ym_vec<T, N>& a, const T1& b) {
-    a = a * b;
-    return a;
+inline vec<T, N>& operator*=(vec<T, N>& a, const T1& b) {
+    return a = a * b;
 }
 
 template <typename T, int N>
-inline ym_vec<T, N>& operator/=(ym_vec<T, N>& a, const ym_vec<T, N>& b) {
-    a = a / b;
-    return a;
+inline vec<T, N>& operator/=(vec<T, N>& a, const vec<T, N>& b) {
+    return a = a / b;
 }
 
 template <typename T, int N, typename T1>
-inline ym_vec<T, N>& operator/=(ym_vec<T, N>& a, const T1 b) {
-    a = a / b;
-    return a;
+inline vec<T, N>& operator/=(vec<T, N>& a, const T1 b) {
+    return a = a / b;
 }
 
 //
@@ -646,51 +599,59 @@ inline ym_vec<T, N>& operator/=(ym_vec<T, N>& a, const T1 b) {
 //
 
 template <typename T, int N>
-inline ym_vec<T, N> ym_min(const ym_vec<T, N>& a, const ym_vec<T, N>& b) {
-    ym_vec<T, N> c;
-    for (auto i = 0; i < N; i++) c.v[i] = ym_min(a.v[i], b.v[i]);
+inline vec<T, N> min(const vec<T, N>& a, const vec<T, N>& b) {
+    vec<T, N> c;
+    for (auto i = 0; i < N; i++) c.v[i] = min(a.v[i], b.v[i]);
     return c;
 }
 
 template <typename T, int N>
-inline ym_vec<T, N> ym_max(const ym_vec<T, N>& a, const ym_vec<T, N>& b) {
-    ym_vec<T, N> c;
-    for (auto i = 0; i < N; i++) c.v[i] = ym_max(a.v[i], b.v[i]);
+inline vec<T, N> max(const vec<T, N>& a, const vec<T, N>& b) {
+    vec<T, N> c;
+    for (auto i = 0; i < N; i++) c.v[i] = max(a.v[i], b.v[i]);
     return c;
 }
 
 template <typename T, int N>
-inline ym_vec<T, N> ym_min(const ym_vec<T, N>& a, const T& b) {
-    ym_vec<T, N> c;
-    for (auto i = 0; i < N; i++) c.v[i] = ym_min(a.v[i], b);
+inline vec<T, N> min(const vec<T, N>& a, const T& b) {
+    vec<T, N> c;
+    for (auto i = 0; i < N; i++) c.v[i] = min(a.v[i], b);
     return c;
 }
 
 template <typename T, int N>
-inline ym_vec<T, N> ym_max(const ym_vec<T, N>& a, const T& b) {
-    ym_vec<T, N> c;
-    for (auto i = 0; i < N; i++) c.v[i] = ym_max(a.v[i], b);
+inline vec<T, N> max(const vec<T, N>& a, const T& b) {
+    vec<T, N> c;
+    for (auto i = 0; i < N; i++) c.v[i] = max(a.v[i], b);
     return c;
 }
 
-template <typename T, int M>
-inline ym_vec<T, M> ym_clamp(const ym_vec<T, M>& x, const T& m, const T& N) {
-    ym_vec<T, M> c;
-    for (auto i = 0; i < M; i++) c.v[i] = ym_clamp(x.v[i], m, N);
+template <typename T, int N>
+inline vec<T, N> clamp(const vec<T, N>& x, const T& min, const T& max) {
+    vec<T, N> c;
+    for (auto i = 0; i < N; i++) c.v[i] = clamp(x.v[i], min, max);
     return c;
 }
 
-template <typename T, int M>
-inline ym_vec<T, M> ym_clamplen(const ym_vec<T, M> x, float N) {
-    float l = ym_length(x);
-    return (l > N) ? x * N / l : x;
+template <typename T, int N>
+inline vec<T, N> clamp(const vec<T, N>& x, const vec<T, N>& min,
+                       const vec<T, N>& max) {
+    vec<T, N> c;
+    for (auto i = 0; i < N; i++) c.v[i] = clamp(x.v[i], min.v[i], max.v[i]);
+    return c;
+}
+
+template <typename T, int N>
+inline vec<T, N> clamplen(const vec<T, N> x, float max) {
+    auto l = length(x);
+    return (l > max) ? x * max / l : x;
 }
 
 //
 // Element min/max.
 //
 template <typename T, int N>
-inline int ym_min_element(const ym_vec<T, N>& a) {
+inline int min_element(const vec<T, N>& a) {
     auto v = std::numeric_limits<T>::max();
     auto pos = -1;
     for (auto i = 0; i < N; i++) {
@@ -702,7 +663,7 @@ inline int ym_min_element(const ym_vec<T, N>& a) {
     return pos;
 }
 template <typename T, int N>
-inline int ym_max_element(const ym_vec<T, N>& a) {
+inline int max_element(const vec<T, N>& a) {
     auto v = -std::numeric_limits<T>::max();
     auto pos = -1;
     for (auto i = 0; i < N; i++) {
@@ -715,63 +676,125 @@ inline int ym_max_element(const ym_vec<T, N>& a) {
 }
 
 //
+// Component-wise functions.
+//
+template <typename T, int N>
+inline vec<T, N> sqrt(const vec<T, N>& a) {
+    vec<T, N> c;
+    for (auto i = 0; i < N; i++) c.v[i] = std::sqrt(a.v[i]);
+    return c;
+}
+
+template <typename T, int N>
+inline vec<T, N> pow(const vec<T, N>& a, const vec<T, N>& b) {
+    vec<T, N> c;
+    for (auto i = 0; i < N; i++) c.v[i] = std::pow(a.v[i], b.v[i]);
+    return c;
+}
+
+template <typename T, int N>
+inline vec<T, N> pow(const vec<T, N>& a, const T& b) {
+    vec<T, N> c;
+    for (auto i = 0; i < N; i++) c.v[i] = std::pow(a.v[i], b);
+    return c;
+}
+
+template <typename T, int N>
+inline vec<T, N> fmod(const vec<T, N>& a, const vec<T, N>& b) {
+    vec<T, N> c;
+    for (auto i = 0; i < N; i++) c.v[i] = std::fmod(a.v[i], b.v[i]);
+    return c;
+}
+
+template <typename T, int N>
+inline vec<T, N> round(const vec<T, N>& a) {
+    vec<T, N> c;
+    for (auto i = 0; i < N; i++) c.v[i] = std::round(a.v[i]);
+    return c;
+}
+
+//
 // Vector operations
 //
 template <typename T, int N>
-inline T ym_dot(const ym_vec<T, N>& a, const ym_vec<T, N>& b) {
+inline T dot(const vec<T, N>& a, const vec<T, N>& b) {
     auto c = T(0);
     for (auto i = 0; i < N; i++) c += a.v[i] * b.v[i];
     return c;
 }
 
 template <typename T, int N>
-inline T ym_length(const ym_vec<T, N>& a) {
-    return std::sqrt(ym_dot(a, a));
+inline T length(const vec<T, N>& a) {
+    return std::sqrt(dot(a, a));
 }
 
 template <typename T, int N>
-inline T ym_lengthsqr(const ym_vec<T, N>& a) {
-    return ym_dot(a, a);
+inline T lengthsqr(const vec<T, N>& a) {
+    return dot(a, a);
 }
 
 template <typename T, int N>
-inline ym_vec<T, N> ym_normalize(const ym_vec<T, N>& a) {
-    auto l = ym_length(a);
+inline vec<T, N> normalize(const vec<T, N>& a) {
+    auto l = length(a);
     if (l == 0) return a;
     return a * (1 / l);
 }
 
 template <typename T, int N>
-inline T ym_dist(const ym_vec<T, N>& a, const ym_vec<T, N>& b) {
-    return ym_length(a - b);
+inline T dist(const vec<T, N>& a, const vec<T, N>& b) {
+    return length(a - b);
 }
 
 template <typename T, int N>
-inline T ym_distsqr(const ym_vec<T, N>& a, const ym_vec<T, N>& b) {
-    return ym_lengthsqr(a - b);
+inline T distsqr(const vec<T, N>& a, const vec<T, N>& b) {
+    return lengthsqr(a - b);
 }
 
 template <typename T>
-inline T ym_cross(const ym_vec<T, 2>& a, const ym_vec<T, 2>& b) {
-    return a.x * b.y - a.y * b.x;
+inline T cross(const vec<T, 2>& a, const vec<T, 2>& b) {
+    return a.v[0] * b.v[1] - a.v[1] * b.v[0];
 }
 
 template <typename T>
-inline ym_vec<T, 3> ym_cross(const ym_vec<T, 3>& a, const ym_vec<T, 3>& b) {
-    return {a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z,
-            a.x * b.y - a.y * b.x};
+inline vec<T, 3> cross(const vec<T, 3>& a, const vec<T, 3>& b) {
+    return {a.v[1] * b.v[2] - a.v[2] * b.v[1],
+            a.v[2] * b.v[0] - a.v[0] * b.v[2],
+            a.v[0] * b.v[1] - a.v[1] * b.v[0]};
+}
+
+template <typename T, int N>
+T uangle(const vec<T, N>& a, const vec<T, N>& b) {
+    auto d = dot(a, b);
+    return d > 1 ? 0 : std::acos(d < -1 ? -1 : d);
+}
+
+template <typename T, int N>
+T angle(const vec<T, N>& a, const vec<T, N>& b) {
+    return uangle(normalize(a), normalize(b));
+}
+
+template <typename T, int N>
+inline vec<T, N> nlerp(const vec<T, N>& a, const vec<T, N>& b, T t) {
+    return normalize(lerp(a, b, t));
+}
+
+template <typename T, int N>
+inline vec<T, N> slerp(const vec<T, N>& a, const vec<T, N>& b, T t) {
+    auto th = uangle(a, b);
+    return th == 0 ? a
+                   : a * (std::sin(th * (1 - t)) / std::sin(th)) +
+                         b * (std::sin(th * t) / std::sin(th));
 }
 
 // http://lolengine.net/blog/2013/09/21/picking-orthogonal-vector-combing-coconuts)
 template <typename T>
-inline ym_vec<T, 3> ym_orthogonal(const ym_vec<T, 3>& v) {
-    return std::abs(v.x) > std::abs(v.z) ? ym_vec3f{-v.y, v.x, 0}
-                                 : ym_vec3f{0, -v.z, v.y};
+inline vec<T, 3> orthogonal(const vec<T, 3>& v) {
+    return std::abs(v[0]) > std::abs(v[2]) ? vec<T, 3>{-v[1], v[0], 0}
+                                           : vec<T, 3>{0, -v[2], v[1]};
 }
 
 template <typename T>
-inline ym_vec<T, 3> ym_orthonormalize(const ym_vec<T, 3>& a,
-                                      const ym_vec<T, 3>& b) {
+inline vec<T, 3> orthonormalize(const vec<T, 3>& a, const vec<T, 3>& b) {
     return ym_normalize(a - b * ym_dot(a, b));
 }
 
@@ -779,14 +802,15 @@ inline ym_vec<T, 3> ym_orthonormalize(const ym_vec<T, 3>& a,
 // Aggregate operations.
 //
 template <typename T, int M>
-inline T ym_sum(const ym_vec<T, M>& a) {
+inline T sum(const vec<T, M>& a) {
     auto s = T(0);
     for (auto i = 0; i < M; i++) s += a.v[i];
     return s;
 }
+
 template <typename T, int M>
-inline T ym_mean(const ym_vec<T, M>& a) {
-    return ym_sum(a) / M;
+inline T mean(const vec<T, M>& a) {
+    return sum(a) / M;
 }
 
 //
@@ -794,7 +818,7 @@ inline T ym_mean(const ym_vec<T, M>& a) {
 //
 
 template <typename T, int N, int M>
-inline bool operator==(const ym_mat<T, N, M>& a, const ym_mat<T, N, M>& b) {
+inline bool operator==(const mat<T, N, M>& a, const mat<T, N, M>& b) {
     for (auto i = 0; i < M; i++)
         if (!(a.v[i] == b.v[i])) return false;
     return true;
@@ -805,17 +829,48 @@ inline bool operator==(const ym_mat<T, N, M>& a, const ym_mat<T, N, M>& b) {
 //
 
 template <typename T, int N, int M>
-inline ym_mat<T, M, N> operator-(const ym_mat<T, N, M>& a) {
-    ym_mat<T, N, M> c;
+inline mat<T, M, N> operator-(const mat<T, N, M>& a) {
+    mat<T, N, M> c;
     for (auto i = 0; i < M; i++) c.v[i] = -a.v[i];
     return c;
 }
 
 template <typename T, int N, int M>
-inline ym_mat<T, M, N> operator+(const ym_mat<T, N, M>& a,
-                                 const ym_mat<T, N, M>& b) {
-    ym_mat<T, N, M> c;
+inline mat<T, M, N> operator+(const mat<T, N, M>& a, const mat<T, N, M>& b) {
+    mat<T, N, M> c;
     for (auto i = 0; i < M; i++) c.v[i] = a.v[i] + b.v[i];
+    return c;
+}
+
+//
+// Vector/Matrix multiplies
+//
+
+template <typename T, int N, int M>
+inline mat<T, M, N> operator*(const mat<T, N, M>& a, T b) {
+    mat<T, N, M> c;
+    for (auto i = 0; i < M; i++) c.v[i] = a.v[i] * b;
+    return c;
+}
+
+template <typename T, int N, int M>
+inline mat<T, M, N> operator/(const mat<T, N, M>& a, T b) {
+    mat<T, N, M> c;
+    for (auto i = 0; i < M; i++) c.v[i] = a.v[i] / b;
+    return c;
+}
+
+template <typename T, int N, int M>
+inline vec<T, N> operator*(const mat<T, N, M>& a, const vec<T, M>& b) {
+    vec<T, N> c;
+    for (auto j = 0; j < M; j++) c += a.v[j] * b.v[j];
+    return c;
+}
+
+template <typename T, int N, int M, int K>
+inline mat<T, N, M> operator*(const mat<T, N, K>& a, const mat<T, K, M>& b) {
+    mat<T, N, M> c;
+    for (auto j = 0; j < M; j++) c.v[j] = a * b.v[j];
     return c;
 }
 
@@ -823,9 +878,16 @@ inline ym_mat<T, M, N> operator+(const ym_mat<T, N, M>& a,
 // Linear Algebra operations.
 //
 
+template <typename T, int N>
+vec<T, N> diagonal(const mat<T, N, N>& a) {
+    vec<T, N> d;
+    for (auto i = 0; i < N; i++) d[i] = a[i][i];
+    return d;
+}
+
 template <typename T, int N, int M>
-inline ym_mat<T, M, N> ym_transpose(const ym_mat<T, N, M>& a) {
-    ym_mat<T, M, N> c;
+inline mat<T, M, N> transpose(const mat<T, N, M>& a) {
+    mat<T, M, N> c;
     for (auto j = 0; j < M; j++) {
         for (auto i = 0; i < N; i++) {
             c.v[i][j] = a.v[j][i];
@@ -834,269 +896,511 @@ inline ym_mat<T, M, N> ym_transpose(const ym_mat<T, N, M>& a) {
     return c;
 }
 
-// http://stackoverflow.com/questions/983999/simple-3x3-matrix-inverse-code-c
 template <typename T>
-inline ym_mat<T, 3, 3> ym_inverse(const ym_mat<T, 3, 3>& m_) {
-    T m[3][3];
-    *(ym_mat<T, 3, 3>*)m = m_;
-
-    // computes the inverse of a matrix m
-    auto det = m[0][0] * (m[1][1] * m[2][2] - m[2][1] * m[1][2]) -
-            m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0]) +
-            m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0]);
-
-    auto invdet = 1 / det;
-
-    T minv[3][3];  // inverse of matrix m
-    minv[0][0] = (m[1][1] * m[2][2] - m[2][1] * m[1][2]) * invdet;
-    minv[0][1] = (m[0][2] * m[2][1] - m[0][1] * m[2][2]) * invdet;
-    minv[0][2] = (m[0][1] * m[1][2] - m[0][2] * m[1][1]) * invdet;
-    minv[1][0] = (m[1][2] * m[2][0] - m[1][0] * m[2][2]) * invdet;
-    minv[1][1] = (m[0][0] * m[2][2] - m[0][2] * m[2][0]) * invdet;
-    minv[1][2] = (m[1][0] * m[0][2] - m[0][0] * m[1][2]) * invdet;
-    minv[2][0] = (m[1][0] * m[2][1] - m[2][0] * m[1][1]) * invdet;
-    minv[2][1] = (m[2][0] * m[0][1] - m[0][0] * m[2][1]) * invdet;
-    minv[2][2] = (m[0][0] * m[1][1] - m[1][0] * m[0][1]) * invdet;
-
-    return *(ym_mat<T, 3, 3>*)minv;
+inline mat<T, 2, 2> adjugate(const mat<T, 2, 2>& a) {
+    return {{a[1][1], -a[0][1]}, {-a[1][0], a[0][0]}};
 }
 
-// http://stackoverflow.com/questions/2624422/efficient-4x4-matrix-inverse-affine-transform
 template <typename T>
-inline ym_mat<T, 4, 4> ym_inverse(const ym_mat<T, 4, 4>& m) {
-    T a[4][4];
-    *(ym_mat<T, 4, 4>*)a = m;
+inline mat<T, 3, 3> adjugate(const mat<T, 3, 3>& a) {
+    return {{a[1][1] * a[2][2] - a[2][1] * a[1][2],
+             a[2][1] * a[0][2] - a[0][1] * a[2][2],
+             a[0][1] * a[1][2] - a[1][1] * a[0][2]},
+            {a[1][2] * a[2][0] - a[2][2] * a[1][0],
+             a[2][2] * a[0][0] - a[0][2] * a[2][0],
+             a[0][2] * a[1][0] - a[1][2] * a[0][0]},
+            {a[1][0] * a[2][1] - a[2][0] * a[1][1],
+             a[2][0] * a[0][1] - a[0][0] * a[2][1],
+             a[0][0] * a[1][1] - a[1][0] * a[0][1]}};
+}
 
-    auto s0 = a[0][0] * a[1][1] - a[1][0] * a[0][1];
-    auto s1 = a[0][0] * a[1][2] - a[1][0] * a[0][2];
-    auto s2 = a[0][0] * a[1][3] - a[1][0] * a[0][3];
-    auto s3 = a[0][1] * a[1][2] - a[1][1] * a[0][2];
-    auto s4 = a[0][1] * a[1][3] - a[1][1] * a[0][3];
-    auto s5 = a[0][2] * a[1][3] - a[1][2] * a[0][3];
+template <typename T>
+inline mat<T, 4, 4> adjugate(const mat<T, 4, 4>& a) {
+    return {{a[1][1] * a[2][2] * a[3][3] + a[3][1] * a[1][2] * a[2][3] +
+                 a[2][1] * a[3][2] * a[1][3] - a[1][1] * a[3][2] * a[2][3] -
+                 a[2][1] * a[1][2] * a[3][3] - a[3][1] * a[2][2] * a[1][3],
+             a[0][1] * a[3][2] * a[2][3] + a[2][1] * a[0][2] * a[3][3] +
+                 a[3][1] * a[2][2] * a[0][3] - a[3][1] * a[0][2] * a[2][3] -
+                 a[2][1] * a[3][2] * a[0][3] - a[0][1] * a[2][2] * a[3][3],
+             a[0][1] * a[1][2] * a[3][3] + a[3][1] * a[0][2] * a[1][3] +
+                 a[1][1] * a[3][2] * a[0][3] - a[0][1] * a[3][2] * a[1][3] -
+                 a[1][1] * a[0][2] * a[3][3] - a[3][1] * a[1][2] * a[0][3],
+             a[0][1] * a[2][2] * a[1][3] + a[1][1] * a[0][2] * a[2][3] +
+                 a[2][1] * a[1][2] * a[0][3] - a[0][1] * a[1][2] * a[2][3] -
+                 a[2][1] * a[0][2] * a[1][3] - a[1][1] * a[2][2] * a[0][3]},
+            {a[1][2] * a[3][3] * a[2][0] + a[2][2] * a[1][3] * a[3][0] +
+                 a[3][2] * a[2][3] * a[1][0] - a[1][2] * a[2][3] * a[3][0] -
+                 a[3][2] * a[1][3] * a[2][0] - a[2][2] * a[3][3] * a[1][0],
+             a[0][2] * a[2][3] * a[3][0] + a[3][2] * a[0][3] * a[2][0] +
+                 a[2][2] * a[3][3] * a[0][0] - a[0][2] * a[3][3] * a[2][0] -
+                 a[2][2] * a[0][3] * a[3][0] - a[3][2] * a[2][3] * a[0][0],
+             a[0][2] * a[3][3] * a[1][0] + a[1][2] * a[0][3] * a[3][0] +
+                 a[3][2] * a[1][3] * a[0][0] - a[0][2] * a[1][3] * a[3][0] -
+                 a[3][2] * a[0][3] * a[1][0] - a[1][2] * a[3][3] * a[0][0],
+             a[0][2] * a[1][3] * a[2][0] + a[2][2] * a[0][3] * a[1][0] +
+                 a[1][2] * a[2][3] * a[0][0] - a[0][2] * a[2][3] * a[1][0] -
+                 a[1][2] * a[0][3] * a[2][0] - a[2][2] * a[1][3] * a[0][0]},
+            {a[1][3] * a[2][0] * a[3][1] + a[3][3] * a[1][0] * a[2][1] +
+                 a[2][3] * a[3][0] * a[1][1] - a[1][3] * a[3][0] * a[2][1] -
+                 a[2][3] * a[1][0] * a[3][1] - a[3][3] * a[2][0] * a[1][1],
+             a[0][3] * a[3][0] * a[2][1] + a[2][3] * a[0][0] * a[3][1] +
+                 a[3][3] * a[2][0] * a[0][1] - a[0][3] * a[2][0] * a[3][1] -
+                 a[3][3] * a[0][0] * a[2][1] - a[2][3] * a[3][0] * a[0][1],
+             a[0][3] * a[1][0] * a[3][1] + a[3][3] * a[0][0] * a[1][1] +
+                 a[1][3] * a[3][0] * a[0][1] - a[0][3] * a[3][0] * a[1][1] -
+                 a[1][3] * a[0][0] * a[3][1] - a[3][3] * a[1][0] * a[0][1],
+             a[0][3] * a[2][0] * a[1][1] + a[1][3] * a[0][0] * a[2][1] +
+                 a[2][3] * a[1][0] * a[0][1] - a[0][3] * a[1][0] * a[2][1] -
+                 a[2][3] * a[0][0] * a[1][1] - a[1][3] * a[2][0] * a[0][1]},
+            {a[1][0] * a[3][1] * a[2][2] + a[2][0] * a[1][1] * a[3][2] +
+                 a[3][0] * a[2][1] * a[1][2] - a[1][0] * a[2][1] * a[3][2] -
+                 a[3][0] * a[1][1] * a[2][2] - a[2][0] * a[3][1] * a[1][2],
+             a[0][0] * a[2][1] * a[3][2] + a[3][0] * a[0][1] * a[2][2] +
+                 a[2][0] * a[3][1] * a[0][2] - a[0][0] * a[3][1] * a[2][2] -
+                 a[2][0] * a[0][1] * a[3][2] - a[3][0] * a[2][1] * a[0][2],
+             a[0][0] * a[3][1] * a[1][2] + a[1][0] * a[0][1] * a[3][2] +
+                 a[3][0] * a[1][1] * a[0][2] - a[0][0] * a[1][1] * a[3][2] -
+                 a[3][0] * a[0][1] * a[1][2] - a[1][0] * a[3][1] * a[0][2],
+             a[0][0] * a[1][1] * a[2][2] + a[2][0] * a[0][1] * a[1][2] +
+                 a[1][0] * a[2][1] * a[0][2] - a[0][0] * a[2][1] * a[1][2] -
+                 a[1][0] * a[0][1] * a[2][2] - a[2][0] * a[1][1] * a[0][2]}};
+}
 
-    auto c5 = a[2][2] * a[3][3] - a[3][2] * a[2][3];
-    auto c4 = a[2][1] * a[3][3] - a[3][1] * a[2][3];
-    auto c3 = a[2][1] * a[3][2] - a[3][1] * a[2][2];
-    auto c2 = a[2][0] * a[3][3] - a[3][0] * a[2][3];
-    auto c1 = a[2][0] * a[3][2] - a[3][0] * a[2][2];
-    auto c0 = a[2][0] * a[3][1] - a[3][0] * a[2][1];
+template <typename T>
+inline T determinant(const mat<T, 2, 2>& a) {
+    return a[0][0] * a[1][1] - a[0][1] * a[1][0];
+}
 
-    // TODO: Should check for 0 determinant
-    auto invdet =
-        T(1) / (s0 * c5 - s1 * c4 + s2 * c3 + s3 * c2 - s4 * c1 + s5 * c0);
+template <typename T>
+inline T determinant(const mat<T, 3, 3>& a) {
+    return a[0][0] * (a[1][1] * a[2][2] - a[2][1] * a[1][2]) +
+           a[0][1] * (a[1][2] * a[2][0] - a[2][2] * a[1][0]) +
+           a[0][2] * (a[1][0] * a[2][1] - a[2][0] * a[1][1]);
+}
 
-    T b[4][4];
+template <typename T>
+inline T determinant(const mat<T, 4, 4>& a) {
+    return a[0][0] *
+               (a[1][1] * a[2][2] * a[3][3] + a[3][1] * a[1][2] * a[2][3] +
+                a[2][1] * a[3][2] * a[1][3] - a[1][1] * a[3][2] * a[2][3] -
+                a[2][1] * a[1][2] * a[3][3] - a[3][1] * a[2][2] * a[1][3]) +
+           a[0][1] *
+               (a[1][2] * a[3][3] * a[2][0] + a[2][2] * a[1][3] * a[3][0] +
+                a[3][2] * a[2][3] * a[1][0] - a[1][2] * a[2][3] * a[3][0] -
+                a[3][2] * a[1][3] * a[2][0] - a[2][2] * a[3][3] * a[1][0]) +
+           a[0][2] *
+               (a[1][3] * a[2][0] * a[3][1] + a[3][3] * a[1][0] * a[2][1] +
+                a[2][3] * a[3][0] * a[1][1] - a[1][3] * a[3][0] * a[2][1] -
+                a[2][3] * a[1][0] * a[3][1] - a[3][3] * a[2][0] * a[1][1]) +
+           a[0][3] *
+               (a[1][0] * a[3][1] * a[2][2] + a[2][0] * a[1][1] * a[3][2] +
+                a[3][0] * a[2][1] * a[1][2] - a[1][0] * a[2][1] * a[3][2] -
+                a[3][0] * a[1][1] * a[2][2] - a[2][0] * a[3][1] * a[1][2]);
+}
 
-    b[0][0] = (a[1][1] * c5 - a[1][2] * c4 + a[1][3] * c3) * invdet;
-    b[0][1] = (-a[0][1] * c5 + a[0][2] * c4 - a[0][3] * c3) * invdet;
-    b[0][2] = (a[3][1] * s5 - a[3][2] * s4 + a[3][3] * s3) * invdet;
-    b[0][3] = (-a[2][1] * s5 + a[2][2] * s4 - a[2][3] * s3) * invdet;
-
-    b[1][0] = (-a[1][0] * c5 + a[1][2] * c2 - a[1][3] * c1) * invdet;
-    b[1][1] = (a[0][0] * c5 - a[0][2] * c2 + a[0][3] * c1) * invdet;
-    b[1][2] = (-a[3][0] * s5 + a[3][2] * s2 - a[3][3] * s1) * invdet;
-    b[1][3] = (a[2][0] * s5 - a[2][2] * s2 + a[2][3] * s1) * invdet;
-
-    b[2][0] = (a[1][0] * c4 - a[1][1] * c2 + a[1][3] * c0) * invdet;
-    b[2][1] = (-a[0][0] * c4 + a[0][1] * c2 - a[0][3] * c0) * invdet;
-    b[2][2] = (a[3][0] * s4 - a[3][1] * s2 + a[3][3] * s0) * invdet;
-    b[2][3] = (-a[2][0] * s4 + a[2][1] * s2 - a[2][3] * s0) * invdet;
-
-    b[3][0] = (-a[1][0] * c3 + a[1][1] * c1 - a[1][2] * c0) * invdet;
-    b[3][1] = (a[0][0] * c3 - a[0][1] * c1 + a[0][2] * c0) * invdet;
-    b[3][2] = (-a[3][0] * s3 + a[3][1] * s1 - a[3][2] * s0) * invdet;
-    b[3][3] = (a[2][0] * s3 - a[2][1] * s1 + a[2][2] * s0) * invdet;
-
-    return *(ym_mat<T, 4, 4>*)b;
+template <typename T, int N>
+inline mat<T, N, N> inverse(const mat<T, N, N>& a) {
+    return adjugate(a) / determinant(a);
 }
 
 //
-// Vector/Matrix multiplies
+// Support for iteration
 //
 
-template <typename T, int N, int M>
-inline ym_mat<T, M, N> operator*(const ym_mat<T, N, M>& a, T b) {
-    ym_mat<T, N, M> c;
-    for (auto i = 0; i < M; i++) c.v[i] = a.v[i] * b;
-    return c;
+template <typename T, int N>
+T* begin(vec<T, N>& a) {
+    return a.v;
+}
+
+template <typename T, int N>
+const T* begin(const vec<T, N>& a) {
+    return a.v;
+}
+
+template <typename T, int N>
+T* end(vec<T, N>& a) {
+    return a.v + N;
+}
+
+template <typename T, int N>
+const T* end(const vec<T, N>& a) {
+    return a.v + N;
 }
 
 template <typename T, int N, int M>
-inline ym_vec<T, N> operator*(const ym_mat<T, N, M>& a, const ym_vec<T, M>& b) {
-    ym_vec<T, N> c;
-    for (auto j = 0; j < M; j++) c += a.v[j] * b.v[j];
-    return c;
+vec<T, M>* begin(mat<T, M, N>& a) {
+    return a.v;
 }
 
-template <typename T, int N, int M, int K>
-inline ym_mat<T, N, M> operator*(const ym_mat<T, N, K>& a,
-                                 const ym_mat<T, K, M>& b) {
-    ym_mat<T, N, M> c;
-    for (auto j = 0; j < M; j++) c.v[j] = a * b.v[j];
-    return c;
+template <typename T, int N, int M>
+const vec<T, N>* begin(const mat<T, M, N>& a) {
+    return a.v;
 }
 
+template <typename T, int N, int M>
+vec<T, N>* end(mat<T, M, N>& a) {
+    return a.v + M;
+}
+
+template <typename T, int N, int M>
+const vec<T, N>* end(const mat<T, M, N>& a) {
+    return a.v + M;
+}
+
+};  // namespace
+
 // -----------------------------------------------------------------------------
-// TRANSFORM OPERATIONS
+// SPECIALIZATIONS FOR STD
 // -----------------------------------------------------------------------------
+
+namespace std {
+
+//
+// Min/max type extents
+//
+
+template <typename T, int N>
+struct std::numeric_limits<ym::vec<T, N>> {
+    using V = ym::vec<T, N>;
+    static constexpr bool is_specialized = true;
+    static constexpr bool is_signed = std::numeric_limits<T>::is_signed;
+    static constexpr bool is_integer = std::numeric_limits<T>::is_integer;
+    static constexpr bool is_exact = std::numeric_limits<T>::is_exact;
+    static constexpr bool has_infinity = std::numeric_limits<T>::has_infinity;
+    constexpr static V lowest() { return V(std::numeric_limits<T>::lowest()); }
+    constexpr static V max() { return V(std::numeric_limits<T>::max()); }
+    constexpr static V min() { return V(std::numeric_limits<T>::min()); }
+    constexpr static V epsilon() {
+        return V(std::numeric_limits<T>::epsilon());
+    }
+    constexpr static V round_arror() {
+        return V(std::numeric_limits<T>::round_arror());
+    }
+    constexpr static V infinity() {
+        return V(std::numeric_limits<T>::infinity());
+    }
+    constexpr static V quite_NaN() {
+        return V(std::numeric_limits<T>::quite_NaN());
+    }
+    constexpr static V signaling_NaN() {
+        return V(std::numeric_limits<T>::signaling_NaN());
+    }
+    constexpr static V denorm_min() {
+        return V(std::numeric_limits<T>::denorm_min());
+    }
+};
+
+//
+// A hash function for vecs
+//
+template <typename T, int N>
+struct hash<ym::vec<T, N>> {
+    using V = ym::vec<T, N>;
+    std::hash<T> Th;
+    constexpr size_t operator()(const V& v) const {
+        size_t h = 0;
+        for (auto i = 0; i < N; i++) {
+            // embads hash_combine below
+            h ^= (Th(v[i]) + 0x9e3779b9 + (h << 6) + (h >> 2));
+        }
+        return h;
+    }
+};
+
+}  // namepace
+
+namespace ym {
+
+// -----------------------------------------------------------------------------
+// RIGID TRANSFORMS
+// -----------------------------------------------------------------------------
+
+//
+// Rigid transforms stored as a linear tranform NxN-matrix m and a translation
+// N-vector t. This is a special case of an affine matrix.
+// Provides converion to/from (N+1)x(N+1) matrices. The matrix
+// columns are the axis of the coordinate system, while the translation is
+// its origin.
+//
+template <typename T, int N>
+struct frame {
+    using V = vec<T, N>;
+    using M = mat<T, N, N>;
+
+    V v[N + 1];
+
+    constexpr frame() {
+        for (auto i = 0; i < N + 1; i++) v[i] = V();
+    }
+
+    constexpr frame(const M& m, const V& t) {
+        for (auto i = 0; i < N; i++) v[i] = m.v[i];
+        v[N] = t;
+    }
+
+    // member constructor
+    template <typename... Args,
+              typename = std::enable_if_t<sizeof...(Args) == N + 1>>
+    constexpr frame(Args... args) : v{V(args)...} {}
+
+    // list constructor
+    constexpr frame(std::initializer_list<V> vv) {
+        assert(N + 1 == vv.size());
+        auto i = 0;
+        for (auto&& e : vv) v[i++] = e;
+    }
+
+    constexpr explicit frame(const mat<T, N + 1, N + 1>& mat) {
+        for (auto j = 0; j < N + 1; j++)
+            for (auto i = 0; i < N; i++) v[j][i] = mat.v[j][i];
+    }
+
+    constexpr explicit operator mat<T, N + 1, N + 1>() const {
+        mat<T, N + 1, N + 1> m;
+        for (auto j = 0; j < N; j++) {
+            m[j] = {v[j], 0};
+        }
+        m[N] = {v[N], 1};
+        return m;
+    }
+
+    // element access
+    constexpr const V& operator[](int i) const { return v[i]; }
+    constexpr V& operator[](int i) { return v[i]; }
+
+    // named element access
+    constexpr const V& x() const {
+        static_assert(N > 0, "length");
+        return v[0];
+    }
+    constexpr V& x() {
+        static_assert(N > 0, "length");
+        return v[0];
+    }
+    constexpr const V& y() const {
+        static_assert(N > 1, "length");
+        return v[1];
+    }
+    constexpr V& y() {
+        static_assert(N > 1, "length");
+        return v[1];
+    }
+    constexpr const V& z() const {
+        static_assert(N > 2, "length");
+        return v[2];
+    }
+    constexpr V& z() {
+        static_assert(N > 2, "length");
+        return v[2];
+    }
+    constexpr const V& o() const {
+        static_assert(N > 1, "length");
+        return v[N];
+    }
+    constexpr V& o() {
+        static_assert(N > 1, "length");
+        return v[N];
+    }
+    constexpr const M& m() const {
+        static_assert(N > 1, "length");
+        return *(M*)v;
+    }
+    constexpr M& m() {
+        static_assert(N > 1, "length");
+        return *(M*)v;
+    }
+
+    // raw element access
+    constexpr V* data() { return v; }
+    constexpr const V* data() const { return v; }
+};
+
+//
+// Typedef for standard rigid transforms / frames.
+//
+
+using frame2f = frame<float, 2>;
+using frame3f = frame<float, 3>;
+
+//
+// Rigid Transforms/Frames Constants.
+//
+
+const auto identity_frame2f = frame2f{{1, 0}, {0, 1}, {0, 0}};
+const auto identity_frame3f =
+    frame3f{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}};
 
 //
 // Component-wise comparisons
 //
 
-template <typename T, int N, bool ortho>
-inline bool operator==(const ym_affine<T, N, ortho>& a,
-                       const ym_affine<T, N, ortho>& b) {
-    return a.m == b.m && a.t == b.t;
+template <typename T, int N>
+inline bool operator==(const frame<T, N>& a, const frame<T, N>& b) {
+    return a.m() == b.m() && a.o() == b.o();
 }
 
 //
-// Vector/matrix multiplies for transforms.
+// Matrix operations for transforms.
 //
 
-template <typename T, int N, bool ortho>
-inline ym_vec<T, N> operator*(const ym_affine<T, N, ortho>& a,
-                              const ym_vec<T, N>& b) {
-    return a.m * b + a.t;
+template <typename T, int N>
+inline frame<T, N> operator*(const frame<T, N>& a, const frame<T, N>& b) {
+    return {a.m() * b.m(), a.m() * b.o() + a.o()};
 }
 
-template <typename T, int N, bool ortho>
-inline ym_affine<T, N, ortho> operator*(const ym_affine<T, N, ortho>& a,
-                                        const ym_affine<T, N, ortho>& b) {
-    return {a.m * b.m, a.m * b.t + a.t};
+template <typename T, int N>
+inline frame<T, N> inverse(const frame<T, N>& a) {
+    auto minv = transpose(a.m());
+    return {minv, -(minv * a.o())};
 }
+
+template <typename T, int N>
+vec<T, N>* begin(frame<T, N>& a) {
+    return a.v;
+}
+
+template <typename T, int N>
+const vec<T, N>* begin(const frame<T, N>& a) {
+    return a.v;
+}
+
+template <typename T, int N>
+vec<T, N>* end(frame<T, N>& a) {
+    return a.v + N + 1;
+}
+
+template <typename T, int N>
+const vec<T, N>* end(const frame<T, N>& a) {
+    return a.v + N + 1;
+}
+
+// -----------------------------------------------------------------------------
+// TRANSFORMS
+// -----------------------------------------------------------------------------
 
 //
 // Tranform operations.
 //
 
 template <typename T, int N>
-inline ym_affine<T, N, false> ym_inverse(const ym_affine<T, N, false>& a) {
-    auto minv = ym_inverse(a.m);
-    return {minv, -(minv * a.t)};
-}
-
-template <typename T, int N>
-inline ym_affine<T, N, true> ym_inverse(const ym_affine<T, N, true>& a) {
-    auto minv = ym_inverse(a.m);
-    return {minv, -(minv * a.t)};
-}
-
-template <typename T, int N>
-inline ym_vec<T, N> ym_transform_point(const ym_mat<T, N + 1, N + 1>& a,
-                                       const ym_vec<T, N>& b) {
+inline vec<T, N> transform_point(const mat<T, N + 1, N + 1>& a,
+                                 const vec<T, N>& b) {
     // make it generic
-    auto vb = ym_vec<T, N + 1>{b, 1};
+    auto vb = vec<T, N + 1>{b, 1};
     auto tvb = a * vb;
-    return ym_vec<T, N>(tvb) / tvb.w;
+    return vec<T, N>(tvb) / tvb[3];
 }
 
 template <typename T, int N>
-inline ym_vec<T, N> ym_transform_vector(const ym_mat<T, N + 1, N + 1>& a,
-                                        const ym_vec<T, N>& b) {
+inline vec<T, N> transform_vector(const mat<T, N + 1, N + 1>& a,
+                                  const vec<T, N>& b) {
     // make it generic
-    auto vb = ym_vec<T, N + 1>{b, 0};
+    auto vb = vec<T, N + 1>{b, 0};
     auto tvb = a * vb;
-    return ym_vec<T, N>(tvb);
+    return vec<T, N>(tvb);
 }
 
 template <typename T, int N>
-inline ym_vec<T, N> ym_transform_direction(const ym_mat<T, N + 1, N + 1>& a,
-                                           const ym_vec<T, N>& b) {
-    return ym_normalize(ym_transform_vector(a, b));
-}
-
-template <typename T, int N, bool ortho>
-inline ym_vec<T, N> ym_transform_point(const ym_affine<T, N, ortho>& a,
-                                       const ym_vec<T, N>& b) {
-    return a * b;
-}
-
-template <typename T, int N, bool ortho>
-inline ym_vec<T, N> ym_transform_vector(const ym_affine<T, N, ortho>& a,
-                                        const ym_vec<T, N>& b) {
-    return a.m * b;
+inline vec<T, N> transform_direction(const mat<T, N + 1, N + 1>& a,
+                                     const vec<T, N>& b) {
+    return normalize(transform_vector(a, b));
 }
 
 template <typename T, int N>
-inline ym_vec<T, N> ym_transform_direction(const ym_affine<T, N, false>& a,
-                                           const ym_vec<T, N>& b) {
-    return ym_normalize(a.m * b);
+inline vec<T, N> transform_point(const frame<T, N>& a, const vec<T, N>& b) {
+    return a.m() * b + a.o();
 }
 
 template <typename T, int N>
-inline ym_vec<T, N> ym_transform_direction(const ym_affine<T, N, true>& a,
-                                           const ym_vec<T, N>& b) {
-    return a.m * b;
+inline vec<T, N> transform_vector(const frame<T, N>& a, const vec<T, N>& b) {
+    return a.m() * b;
 }
 
-// -----------------------------------------------------------------------------
-// TRANSFORM MATRICES
-// -----------------------------------------------------------------------------
+template <typename T, int N>
+inline vec<T, N> transform_direction(const frame<T, N>& a, const vec<T, N>& b) {
+    return a.m() * b;
+}
 
 //
 // Rotation matrix crom axis/angle
 //
 template <typename T>
-inline ym_mat<T, 3, 3> ym_rotation_mat3(const ym_vec<T, 3>& axis, T angle) {
+inline mat<T, 3, 3> rotation_mat3(const vec<T, 3>& axis, T angle) {
     auto s = std::sin(angle), c = std::cos(angle);
-    auto vv = ym_normalize(axis);
-    return ym_transpose(ym_mat<T, 3, 3>{
-        {c + (1 - c) * vv.x * vv.x, (1 - c) * vv.x * vv.y - s * vv.z,
-         (1 - c) * vv.x * vv.z + s * vv.y},
-        {(1 - c) * vv.x * vv.y + s * vv.z, c + (1 - c) * vv.y * vv.y,
-         (1 - c) * vv.y * vv.z - s * vv.x},
-        {(1 - c) * vv.x * vv.z - s * vv.y, (1 - c) * vv.y * vv.z + s * vv.x,
-         c + (1 - c) * vv.z * vv.z}});
+    auto vv = normalize(axis);
+    return {{c + (1 - c) * vv[0] * vv[0], (1 - c) * vv[0] * vv[1] + s * vv[2],
+             (1 - c) * vv[0] * vv[2] - s * vv[1]},
+            {(1 - c) * vv[0] * vv[1] - s * vv[2], c + (1 - c) * vv[1] * vv[1],
+             (1 - c) * vv[1] * vv[2] + s * vv[0]},
+            {(1 - c) * vv[0] * vv[2] + s * vv[1],
+             (1 - c) * vv[1] * vv[2] - s * vv[0], c + (1 - c) * vv[2] * vv[2]}};
 }
 
 //
 // Translation transform
 //
 template <typename T>
-inline ym_affine<T, 3, true> ym_translation_xform3(const ym_vec<T, 3>& a) {
+inline frame<T, 3> translation_frame3(const vec<T, 3>& a) {
     return {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, a};
 }
 
+template <typename T>
+inline mat<T, 4, 4> translation_mat4(const vec<T, 3>& a) {
+    return (mat<T, 4, 4>)translation_frame3(a);
+}
+
 //
-// Scaling transform
+// Scaling transform (in this case the frame is broken and used only as affine)
 //
 template <typename T>
-inline ym_affine<T, 3, false> ym_scaling_xform3(const ym_vec<T, 3>& a) {
-    return {{a.x, 0, 0}, {0, a.y, 0}, {0, 0, a.z}, {0, 0, 0}};
+inline frame<T, 3> scaling_frame3(const vec<T, 3>& a) {
+    return {{a[0], 0, 0}, {0, a[1], 0}, {0, 0, a[2]}, {0, 0, 0}};
+}
+
+template <typename T>
+inline mat<T, 4, 4> scaling_mat4(const vec<T, 3>& a) {
+    return (mat<T, 4, 4>)scaling_frame3(a);
 }
 
 //
 // Rotation transform
 //
 template <typename T>
-inline ym_affine<T, 3, true> ym_rotation_xform3(const ym_vec<T, 3>& axis,
-                                                T angle) {
-    return ym_affine<T, 3, true>{ym_rotation_mat3(axis, angle), {0, 0, 0}};
+inline frame<T, 3> rotation_frame3(const vec<T, 3>& axis, T angle) {
+    return frame<T, 3>{rotation_mat3(axis, angle), {0, 0, 0}};
+}
+
+template <typename T>
+inline mat<T, 4, 4> rotation_mat4(const vec<T, 3>& axis, T angle) {
+    return (mat<T, 4, 4>)rotation_frame3(axis, angle);
 }
 
 //
 // Lookat tranform
 //
 template <typename T>
-inline ym_affine<T, 3, true> ym_lookat_xform3(const ym_vec<T, 3>& eye,
-                                              const ym_vec<T, 3>& center,
-                                              const ym_vec<T, 3>& up) {
-    auto w = ym_normalize(eye - center);
-    auto u = ym_normalize(ym_cross(up, w));
-    auto v = ym_normalize(ym_cross(w, u));
+inline frame<T, 3> lookat_frame3(const vec<T, 3>& eye, const vec<T, 3>& center,
+                                 const vec<T, 3>& up) {
+    auto w = normalize(eye - center);
+    auto u = normalize(cross(up, w));
+    auto v = normalize(cross(w, u));
     return {u, v, w, eye};
+}
+
+template <typename T>
+inline mat<T, 4, 4> lookat_mat4(const vec<T, 3>& eye, const vec<T, 3>& center,
+                                const vec<T, 3>& up) {
+    return (mat<T, 4, 4>)lookat_frame3(eye, center, up);
 }
 
 //
 // Frame/transform for origin and z.
 //
 template <typename T>
-inline ym_affine<T, 3, true> ym_make_frame(const ym_vec<T, 3>& o,
-                                           const ym_vec<T, 3>& z_) {
-    auto z = ym_normalize(z_);
-    auto x = ym_normalize(ym_orthogonal(z));
-    auto y = ym_normalize(ym_cross(z, x));
+inline frame<T, 3> make_frame3(const vec<T, 3>& o, const vec<T, 3>& z_) {
+    auto z = normalize(z_);
+    auto x = normalize(orthogonal(z));
+    auto y = normalize(cross(z, x));
     return {x, y, z, o};
 }
 
@@ -1104,48 +1408,150 @@ inline ym_affine<T, 3, true> ym_make_frame(const ym_vec<T, 3>& o,
 // OpenGL perspective frustum matrix
 //
 template <typename T>
-inline ym_mat<T, 4, 4> ym_frustum_mat4(T l, T r, T b, T t, T n, T f) {
-    return ym_transpose(
-        ym_mat<T, 4, 4>{{2 * n / (r - l), 0, (r + l) / (r - l), 0},
-                        {0, 2 * n / (t - b), (t + b) / (t - b), 0},
-                        {0, 0, -(f + n) / (f - n), -2 * f * n / (f - n)},
-                        {0, 0, -1, 0}});
+inline mat<T, 4, 4> frustum_mat4(T l, T r, T b, T t, T n, T f) {
+    return {{2 * n / (r - l), 0, 0, 0},
+            {0, 2 * n / (t - b), 0, 0},
+            {(r + l) / (r - l), (t + b) / (t - b), -(f + n) / (f - n), -1},
+            {0, 0, -2 * f * n / (f - n), 0}};
 }
 
 //
 // OpenGL orthographic matrix
 //
 template <typename T>
-inline ym_mat<T, 4, 4> ym_ortho_mat4(T l, T r, T b, T t, T n, T f) {
-    return ym_transpose(
-        ym_mat<T, 4, 4>{{2 / (r - l), 0, 0, -(r + l) / (r - l)},
-                        {0, 2 / (t - b), 0, -(t + b) / (t - b)},
-                        {0, 0, -2 / (f - n), -(f + n) / (f - n)},
-                        {0, 0, 0, 1}});
+inline mat<T, 4, 4> ortho_mat4(T l, T r, T b, T t, T n, T f) {
+    return {{2 / (r - l), 0, 0, 0},
+            {0, 2 / (t - b), 0, 0},
+            {0, 0, -2 / (f - n), 0},
+            {-(r + l) / (r - l), -(t + b) / (t - b), -2 / (f - n),
+             -(f + n) / (f - n), 1}};
 }
 
 //
 // OpenGL orthographic 2D matrix
 //
 template <typename T>
-inline ym_mat<T, 4, 4> ym_ortho2d_mat4(T l, T r, T b, T t) {
-    return ym_transpose(ym_mat<T, 4, 4>{{2 / (r - l), 0, 0, -(r + l) / (r - l)},
-                                        {0, 2 / (t - b), 0, -(t + b) / (t - b)},
-                                        {0, 0, -1, 0},
-                                        {0, 0, 0, 1}});
+inline mat<T, 4, 4> ortho2d_mat4(T l, T r, T b, T t) {
+    return ortho_mat4(l, r, b, t, -1, 1);
 }
 
 //
 // OpenGL perspective matrix
 //
 template <typename T>
-inline ym_mat<T, 4, 4> ym_perspective_mat4(T fovy, T aspect, T near, T far) {
-    auto f = 1 / std::tan(fovy / 2);
-    return ym_transpose(ym_mat<T, 4, 4>{
-        {f / aspect, 0, 0, 0},
-        {0, f, 0, 0},
-        {0, 0, (far + near) / (near - far), 2 * far * near / (near - far)},
-        {0, 0, -1, 0}});
+inline mat<T, 4, 4> perspective_mat4(T fovy, T aspect, T near, T far) {
+    auto y = near * std::tan(fovy / 2);
+    auto x = y * aspect;
+    return frustum_mat4<T>(-x, x, -y, y, near, far);
+}
+
+// -----------------------------------------------------------------------------
+// QUATERNIONS
+// -----------------------------------------------------------------------------
+
+//
+// Quaternions implemented as a vec4. Data access via operator[].
+// Quaterions are xi + yj + zk + w
+//
+template <typename T, int N>
+struct quat : vec<T, 4> {
+    // elements
+    T v[N];
+
+    // default constructor
+    constexpr quat() {
+        for (auto i = 0; i < N; i++) v[i] = T();
+    }
+
+    // member constructor
+    template <typename... Args,
+              typename = std::enable_if_t<sizeof...(Args) == N>>
+    constexpr quat(Args... vv) : v{T(vv)...} {}
+
+    // list constructor
+    constexpr quat(std::initializer_list<T> vv) {
+        assert(N == vv.size());
+        auto i = 0;
+        for (auto&& e : vv) v[i++] = e;
+    }
+
+    // conversions
+    operator mat<T, 3, 3>() {
+        return {
+            {v[3] * v[3] + v[0] * v[0] - v[1] * v[1] - v[2] * v[2],
+             (v[0] * v[1] + v[2] * v[3]) * 2, (v[2] * v[0] - v[1] * v[3]) * 2},
+            {(v[0] * v[1] - v[2] * v[3]) * 2,
+             v[3] * v[3] - v[0] * v[0] + v[1] * v[1] - v[2] * v[2],
+             (v[1] * v[2] + v[0] * v[3]) * 2},
+            {(v[2] * v[0] + v[1] * v[3]) * 2, (v[1] * v[2] - v[0] * v[3]) * 2,
+             v[3] * v[3] - v[0] * v[0] - v[1] * v[1] + v[2] * v[2]}};
+    }
+
+    // axis angle access
+    constexpr T angle() const { return std::acos(v[2]) * 2; }
+    constexpr vec<T, 3> axis() {
+        return normalize(vec<T, 3>(v[0], v[1], v[2]));
+    }
+
+    // raw data access
+    constexpr T* data() { return v; }
+    constexpr const T* data() const { return v; }
+};
+
+//
+// Typedef for quaterions.
+//
+
+using quat4f = quat<float, 4>;
+
+//
+// Support for quaternion algebra using 4D vectors.
+//
+
+template <typename T>
+constexpr quat<T, 4> conjugate(const quat<T, 4>& v) {
+    return {-v[0], -v[1], -v[2], v[3]};
+}
+
+template <typename T>
+quat<T, 4> inverse(const quat<T, 4>& v) {
+    return qconj(v) / lengthsqr(vec<T, 4>(v));
+}
+
+template <typename T>
+constexpr quat<T, 4> operator*(const quat<T, 4>& a, const quat<T, 4>& b) {
+    return {a[0] * b[3] + a[3] * b[0] + a[1] * b[3] - a[2] * b[1],
+            a[1] * b[3] + a[3] * b[1] + a[2] * b[0] - a[0] * b[2],
+            a[2] * b[3] + a[3] * b[2] + a[0] * b[1] - a[1] * b[0],
+            a[3] * b[3] - a[0] * b[0] - a[1] * b[1] - a[2] * b[2]};
+}
+
+template <typename T>
+quat<T, 4> nlerp(const quat<T, 4>& a, const quat<T, 4>& b, T t) {
+    return nlerp(
+        vec<T, 4>(a),
+        dot(vec<T, 4>(a), vec<T, 4>(b)) < 0 ? -vec<T, 4>(b) : vec<T, 4>(b), t);
+}
+
+template <typename T>
+quat<T, 4> slerp(const quat<T, 4>& a, const quat<T, 4>& b, T t) {
+    return slerp(
+        vec<T, 4>(a),
+        dot(vec<T, 4>(a), vec<T, 4>(b)) < 0 ? -vec<T, 4>(b) : vec<T, 4>(b), t);
+}
+
+// -----------------------------------------------------------------------------
+// GEOMETRY UTILITIES
+// -----------------------------------------------------------------------------
+
+template<typename T>
+inline vec<T, 3> triangle_normal(const vec<T, 3>& v0, const vec<T, 3>& v1, const vec<T, 3>& v2) {
+    return normalize(cross(v1-v0, v2-v0));
+}
+
+template<typename T>
+inline T triangle_area(const vec<T, 3>& v0, const vec<T, 3>& v1, const vec<T, 3>& v2) {
+    return length(cross(v1-v0, v2-v0)) / 2;
 }
 
 // -----------------------------------------------------------------------------
@@ -1156,112 +1562,126 @@ inline ym_mat<T, 4, 4> ym_perspective_mat4(T fovy, T aspect, T near, T far) {
 // Axis aligned bounding box.
 //
 template <typename T>
-struct ym_range {
-    union {
-        struct {
-            T min, max;
-        };  // bouding box min and max corners
-        T d[2];
-    };
+struct range {
+    T min, max;
 
-    ym_range()
+    constexpr range()
         : min(std::numeric_limits<T>::max()),
           max(std::numeric_limits<T>::lowest()) {}
-    ym_range(const T& m, const T& N) : min(m), max(N) {}
 
-    T size() const { return max - min; }
-    T center() const { return (max + min) / 2; }
+    constexpr range(const T& m, const T& M) : min(m), max(M) {}
 
-    T& operator[](int i) { return d[i]; }
-    const T& operator[](int i) const { return d[i]; }
+    constexpr T size() const { return max - min; }
+    constexpr T center() const { return (max + min) / 2; }
+
+    constexpr T& operator[](int i) { return (&min)[i]; }
+    constexpr const T& operator[](int i) const { return (&min)[i]; }
 };
 
 //
-// Axis aligned bounding box for vec spaces.
-//
-template <typename T, int M>
-struct ym_range<ym_vec<T, M>> {
-    union {
-        struct {
-            ym_vec<T, M> min, max;
-        };  // bouding box min and max corners
-        ym_vec<T, M> d[2];
-    };
-
-    ym_range()
-        : min(std::numeric_limits<T>::max()),
-          max(std::numeric_limits<T>::lowest()) {}
-    ym_range(const ym_vec<T, M>& m, const ym_vec<T, M>& N) : min(m), max(N) {}
-
-    ym_vec<T, M> size() const { return max - min; }
-    ym_vec<T, M> center() const { return (max + min) / 2; }
-
-    ym_vec<T, M>& operator[](int i) { return d[i]; }
-    const ym_vec<T, M>& operator[](int i) const { return d[i]; }
-};
-
-//
-// Axis aligned bounding box typedefs.
+// Axis aligned bounding box usings.
 //
 
-typedef ym_range<ym_vec2f> ym_range2f;
-typedef ym_range<ym_vec3f> ym_range3f;
+using range1f = range<float>;
+using range2f = range<vec2f>;
+using range3f = range<vec3f>;
 
-typedef ym_range<int> ym_range1i;
-typedef ym_range<ym_vec2i> ym_range2i;
-typedef ym_range<ym_vec3i> ym_range3i;
+using range1i = range<int>;
+using range2i = range<vec2i>;
+using range3i = range<vec3i>;
 
 //
 // Axis aligned bounding box constants.
 //
 
-const ym_range2f ym_invalid_range2f = ym_range2f();
-const ym_range3f ym_invalid_range3f = ym_range3f();
+const auto invalid_range2f = range2f();
+const auto invalid_range3f = range3f();
 
 //
 // Axis aligned bounding box operations.
 //
 
 template <typename T>
-inline ym_range<T> ym_rexpand(const ym_range<T>& a, const T& b) {
-    return {ym_min(a.min, b), ym_max(a.max, b)};
+inline range<T> make_range(const std::initializer_list<T>& v) {
+    auto r = range<T>();
+    for (auto&& vv : v) r += vv;
+    return r;
 }
 
 template <typename T>
-inline ym_range<T> ym_rexpand(const ym_range<T>& a, const ym_range<T>& b) {
-    return {ym_min(a.min, b.min), ym_max(a.max, b.max)};
+inline range<T> rexpand(const range<T>& a, const T& b) {
+    return {min(a.min, b), max(a.max, b)};
 }
 
 template <typename T>
-inline ym_range<T> operator+(const ym_range<T>& a, const T& b) {
-    return ym_rexpand(a, b);
+inline range<T> rexpand(const range<T>& a, const range<T>& b) {
+    return {min(a.min, b.min), max(a.max, b.max)};
 }
 
 template <typename T>
-inline ym_range<T> operator+(const ym_range<T>& a, const ym_range<T>& b) {
-    return ym_rexpand(a, b);
+inline range<T> operator+(const range<T>& a, const T& b) {
+    return rexpand(a, b);
 }
 
 template <typename T>
-inline ym_range<T>& operator+=(ym_range<T>& a, const T& b) {
-    a = ym_rexpand(a, b);
-    return a;
+inline range<T> operator+(const range<T>& a, const range<T>& b) {
+    return rexpand(a, b);
 }
 
 template <typename T>
-inline ym_range<T>& operator+=(ym_range<T>& a, const ym_range<T>& b) {
-    a = ym_rexpand(a, b);
-    return a;
+inline range<T>& operator+=(range<T>& a, const T& b) {
+    return a = rexpand(a, b);
 }
 
 template <typename T>
-inline T ym_rcenter(const ym_range<T>& a) {
+inline range<T>& operator+=(range<T>& a, const range<T>& b) {
+    return a = rexpand(a, b);
+}
+
+template <typename T>
+inline T rcenter(const range<T>& a) {
     return (a.min + a.max) / 2;
 }
 
 template <typename T>
-inline T ym_rsize(const ym_range<T>& a) {
+inline T rsize(const range<T>& a) {
     return a.max - a.min;
+}
+
+template <typename T>
+inline range<vec<T, 3>> transform_bbox(const frame<T, 3>& xform,
+                                       const range<vec<T, 3>>& bbox) {
+    vec<T, 3> corners[8] = {
+        {bbox.min.x(), bbox.min.y(), bbox.min.z()},
+        {bbox.min.x(), bbox.min.y(), bbox.max.z()},
+        {bbox.min.x(), bbox.max.y(), bbox.min.z()},
+        {bbox.min.x(), bbox.max.y(), bbox.max.z()},
+        {bbox.max.x(), bbox.min.y(), bbox.min.z()},
+        {bbox.max.x(), bbox.min.y(), bbox.max.z()},
+        {bbox.max.x(), bbox.max.y(), bbox.min.z()},
+        {bbox.max.x(), bbox.max.y(), bbox.max.z()},
+    };
+    auto xformed = range<vec<T, 3>>();
+    for (auto j = 0; j < 8; j++) xformed += transform_point(xform, corners[j]);
+    return xformed;
+}
+
+template <typename T>
+inline range<vec<T, 3>> transform_bbox(const mat<T, 4, 4>& xform,
+                                       const range<vec<T, 3>>& bbox) {
+    vec<T, 3> corners[8] = {
+        {bbox.min.x(), bbox.min.y(), bbox.min.z()},
+        {bbox.min.x(), bbox.min.y(), bbox.max.z()},
+        {bbox.min.x(), bbox.max.y(), bbox.min.z()},
+        {bbox.min.x(), bbox.max.y(), bbox.max.z()},
+        {bbox.max.x(), bbox.min.y(), bbox.min.z()},
+        {bbox.max.x(), bbox.min.y(), bbox.max.z()},
+        {bbox.max.x(), bbox.max.y(), bbox.min.z()},
+        {bbox.max.x(), bbox.max.y(), bbox.max.z()},
+    };
+    auto xformed = range<vec<T, 3>>();
+    for (auto j = 0; j < 8; j++) xformed += transform_point(xform, corners[j]);
+    return xformed;
 }
 
 // -----------------------------------------------------------------------------
@@ -1271,27 +1691,42 @@ inline T ym_rsize(const ym_range<T>& a) {
 //
 // Rays with origin, direction and min/max t value.
 //
-template <typename T, int M>
-struct ym_ray {
-    ym_vec<T, M> o;
-    ym_vec<T, M> d;
+template <typename T, int N>
+struct ray {
+    vec<T, N> o;
+    vec<T, N> d;
     T tmin;
     T tmax;
 
-    ym_ray() : o(), d(0, 0, 1), tmin(0), tmax(std::numeric_limits<T>::max()) {}
-    ym_ray(const ym_vec<T, M>& o, const ym_vec<T, M>& d, T tmin = 0,
-           T tmax = std::numeric_limits<T>::max())
+    ray() : o(), d(0, 0, 1), tmin(0), tmax(std::numeric_limits<T>::max()) {}
+    ray(const vec<T, N>& o, const vec<T, N>& d, T tmin = 0,
+        T tmax = std::numeric_limits<T>::max())
         : o(o), d(d), tmin(tmin), tmax(tmax) {}
 
-    ym_vec<T, M> eval(T t) const { return o + t * d; }
+    vec<T, N> eval(T t) const { return o + t * d; }
 };
 
 //
-// Rays typedefs.
+// Rays usings.
 //
 
-typedef ym_ray<float, 2> ym_ray2f;
-typedef ym_ray<float, 3> ym_ray3f;
+using ray2f = ray<float, 2>;
+using ray3f = ray<float, 3>;
+
+//
+// Ray operations.
+//
+template <typename T, int N>
+inline ray<T, N> transform_ray(const frame<T, N>& a, const ray<T, N>& b) {
+    return {transform_point(a, b.o), transform_direction(a, b.d), b.tmin,
+            b.tmax};
+}
+template <typename T, int N>
+inline ray<T, N> transform_ray(const mat<T, N + 1, N + 1>& a,
+                               const ray<T, N>& b) {
+    return {transform_point(a, b.o), transform_direction(a, b.d), b.tmin,
+            b.tmax};
+}
 
 // -----------------------------------------------------------------------------
 // UI UTILITIES
@@ -1300,19 +1735,19 @@ typedef ym_ray<float, 3> ym_ray3f;
 //
 // Turntable for UI navigation from a from/to/up parametrization of the camera.
 //
-template<typename T>
-static inline void ym_turntable(ym_vec<T, 3>* from, ym_vec<T, 3>* to, ym_vec<T, 3>* up,
-                                const ym_vec<T, 2>& rotate, T dolly,
-                                const ym_vec<T, 2>& pan) {
+template <typename T>
+inline void turntable(vec<T, 3>& from, vec<T, 3>& to, vec<T, 3>& up,
+                      const vec<T, 2>& rotate, T dolly, const vec<T, 2>& pan) {
     // rotate if necessary
     if (rotate[0] || rotate[1]) {
         auto z = ym_normalize(*to - *from);
         auto lz = ym_dist(*to, *from);
-        auto phi = std::atan2(z.z, z.x) + rotate[0];
-        auto theta = std::acos(z.y) + rotate[1];
-        theta = ym_max(T(0.001), ym_min(theta, T(ym_pi - 0.001)));
-        auto nz = ym_vec3f{std::sin(theta) * std::cos(phi) * lz, std::cos(theta) * lz,
-            std::sin(theta) * std::sin(phi) * lz};
+        auto phi = std::atan2(z[2], z[0]) + rotate[0];
+        auto theta = std::acos(z[1]) + rotate[1];
+        theta = max(T(0.001), min(theta, T(pi - 0.001)));
+        auto nz = vec<T, 3>{std::sin(theta) * std::cos(phi) * lz,
+                            std::cos(theta) * lz,
+                            std::sin(theta) * std::sin(phi) * lz};
         *from = *to - nz;
     }
 
@@ -1329,10 +1764,44 @@ static inline void ym_turntable(ym_vec<T, 3>* from, ym_vec<T, 3>* to, ym_vec<T, 
         auto z = ym_normalize(*to - *from);
         auto x = ym_normalize(ym_cross(*up, z));
         auto y = ym_normalize(ym_cross(z, x));
-        auto t = ym_vec<T, 3>{pan[0] * x.x + pan[1] * y.x, pan[0] * x.y + pan[1] * y.y,
-                      pan[0] * x.z + pan[1] * y.z};
+        auto t = vec<T, 3>{pan[0] * x[0] + pan[1] * y[0],
+                           pan[0] * x[1] + pan[1] * y[1],
+                           pan[0] * x[2] + pan[1] * y[2]};
         *from += t;
         *to += t;
+    }
+}
+
+//
+// Turntable for UI navigation for a frame/distance parametrization of the
+// camera.
+//
+template <typename T>
+inline void turntable(frame<T, 3>& frame, float& focus, const vec<T, 2>& rotate,
+                      T dolly, const vec<T, 2>& pan) {
+    // rotate if necessary
+    if (rotate[0] || rotate[1]) {
+        auto phi = std::atan2(frame[2][2], frame[2][0]) + rotate[0];
+        auto theta = std::acos(frame[2][1]) + rotate[1];
+        theta = max(T(0.001), min(theta, T(pi - 0.001)));
+        auto new_z = vec<T, 3>(std::sin(theta) * std::cos(phi), std::cos(theta),
+                               std::sin(theta) * std::sin(phi));
+        auto new_center = frame.o() - frame[2] * focus;
+        auto new_o = new_center + new_z * focus;
+        frame = lookat_frame3(new_o, new_center, {0, 1, 0});
+        focus = dist(new_o, new_center);
+    }
+
+    // pan if necessary
+    if (dolly) {
+        auto c = frame.o() - frame[2] * focus;
+        focus = max(focus + dolly, T(0.001));
+        frame.o() = c + frame[2] * focus;
+    }
+
+    // pan if necessary
+    if (pan[0] || pan[1]) {
+        frame.o() += frame[0] * pan[0] + frame[1] * pan[1];
     }
 }
 
@@ -1349,16 +1818,16 @@ static inline void ym_turntable(ym_vec<T, 3>* from, ym_vec<T, 3>* to, ym_vec<T, 
 //
 // Random number state (PCG32)
 //
-struct ym_rng_pcg32 {
+struct rng_pcg32 {
     uint64_t state, inc;
 };
 
 //
 // Next random number
 //
-inline uint32_t ym_rng_next(ym_rng_pcg32* rng) {
-    uint64_t oldstate = rng->state;
-    rng->state = oldstate * 6364136223846793005ull + (rng->inc | 1u);
+inline uint32_t rng_next(rng_pcg32& rng) {
+    uint64_t oldstate = rng.state;
+    rng.state = oldstate * 6364136223846793005ull + (rng.inc | 1u);
     uint32_t xorshifted = (uint32_t)(((oldstate >> 18u) ^ oldstate) >> 27u);
     uint32_t rot = oldstate >> 59u;
     return (xorshifted >> rot) | (xorshifted << ((-((int32_t)rot)) & 31));
@@ -1367,26 +1836,26 @@ inline uint32_t ym_rng_next(ym_rng_pcg32* rng) {
 //
 // Init a random number generator with a state state from the sequence seq.
 //
-inline void ym_rng_init(ym_rng_pcg32* rng, uint64_t state, uint64_t seq) {
-    rng->state = 0U;
-    rng->inc = (seq << 1u) | 1u;
-    ym_rng_next(rng);
-    rng->state += state;
-    ym_rng_next(rng);
+inline void rng_init(rng_pcg32& rng, uint64_t state, uint64_t seq) {
+    rng.state = 0U;
+    rng.inc = (seq << 1u) | 1u;
+    rng_next(rng);
+    rng.state += state;
+    rng_next(rng);
 }
 
 //
 // Next random float in [0,1).
 //
-inline float ym_rng_nextf(ym_rng_pcg32* rng) {
-    return (float)ldexp(ym_rng_next(rng), -32);
+inline float rng_nextf(rng_pcg32& rng) {
+    return (float)ldexp(rng_next(rng), -32);
 }
 
 //
 // Next random float in [0,1)x[0,1).
 //
-inline ym_vec2f ym_rng_next2f(ym_rng_pcg32* rng) {
-    return {ym_rng_nextf(rng), ym_rng_nextf(rng)};
+inline vec2f rng_next2f(rng_pcg32& rng) {
+    return {rng_nextf(rng), rng_nextf(rng)};
 }
 
 // -----------------------------------------------------------------------------
@@ -1397,7 +1866,7 @@ inline ym_vec2f ym_rng_next2f(ym_rng_pcg32* rng) {
 // Computes the i-th term of a permutation of l values keyed by p.
 // From Correlated Multi-Jittered Sampling by Kensler @ Pixar
 //
-inline uint32_t ym_hash_permute(uint32_t i, uint32_t n, uint32_t key) {
+inline uint32_t hash_permute(uint32_t i, uint32_t n, uint32_t key) {
     uint32_t w = n - 1;
     w |= w >> 1;
     w |= w >> 2;
@@ -1431,7 +1900,7 @@ inline uint32_t ym_hash_permute(uint32_t i, uint32_t n, uint32_t key) {
 // Computes a float value by hashing i with a key p.
 // From Correlated Multi-Jittered Sampling by Kensler @ Pixar
 //
-inline float ym_hash_randfloat(uint32_t i, uint32_t key) {
+inline float hash_randfloat(uint32_t i, uint32_t key) {
     i ^= key;
     i ^= i >> 17;
     i ^= i >> 10;
@@ -1448,7 +1917,7 @@ inline float ym_hash_randfloat(uint32_t i, uint32_t key) {
 //
 // 64 bit integer hash. Public domain code.
 //
-inline uint64_t ym_hash_uint64(uint64_t a) {
+inline uint64_t hash_uint64(uint64_t a) {
     a = (~a) + (a << 21);  // a = (a << 21) - a - 1;
     a ^= (a >> 24);
     a += (a << 3) + (a << 8);  // a * 265
@@ -1462,7 +1931,7 @@ inline uint64_t ym_hash_uint64(uint64_t a) {
 //
 // 64-to-32 bit integer hash. Public domain code.
 //
-static inline uint32_t ym_hash_uint64_32(uint64_t a) {
+inline uint32_t hash_uint64_32(uint64_t a) {
     a = (~a) + (a << 18);  // a = (a << 18) - a - 1;
     a ^= (a >> 31);
     a *= 21;  // a = (a + (a << 2)) + (a << 4);
@@ -1475,31 +1944,78 @@ static inline uint32_t ym_hash_uint64_32(uint64_t a) {
 //
 // A function to combine 64 bit hashes with semantics as boost::hash_combine
 //
-static inline size_t ym_hash_combine(size_t a, size_t b) {
+inline size_t hash_combine(size_t a, size_t b) {
     return a ^ (b + 0x9e3779b9 + (a << 6) + (a >> 2));
 }
 
+}  // namespace
+
 // -----------------------------------------------------------------------------
-// CONTAINER TYPEDEFS
+// VIEW CONTAINERS
 // -----------------------------------------------------------------------------
+
+namespace ym {
 
 //
-// Sets up typedefs for backwards compatibility with older versions.
-// These typedefs are DEPRECATED and will be removed eventually.
+// An array_view is a non-owining reference to an array with an API similar
+// to a std::vector/std::array containers, but without reallocation.
+// This is inspired, but significantly simpler than
+// gsl::span https://github.com/Microsoft/GSL or std::array_view.
 //
-
-#include <string>
-#include <vector>
-
-using ym_string = std::string;
 template <typename T>
-using ym_vector = std::vector<T>;
-template <typename TK, typename TV>
-using ym_pair = std::pair<TK, TV>;
+struct array_view {
+    // constructors
+    constexpr array_view() noexcept : _num(0), _data(nullptr) {}
+    constexpr array_view(int num, T* data) noexcept : _num(num), _data(data) {}
+    constexpr array_view(T* begin, T* end) noexcept
+        : _num((int)(end - begin)), _data(begin) {}
+    constexpr array_view(const array_view<std::add_const_t<T>>& av)
+        : _num(av._num), _data(av._data) {}
+    constexpr array_view(std::vector<T>& av)
+        : _num((int)av.size()), _data(av.data()) {}
+    constexpr array_view(const std::vector<T>& av)
+        : _num((int)av.size()), _data((T*)av.data()) {}
+
+    // size
+    constexpr int size() const noexcept { return _num; }
+    constexpr bool empty() const noexcept { return _num == 0; }
+
+    // raw data access
+    constexpr T* data() noexcept { return _data; }
+    constexpr const T* data() const noexcept { return _data; }
+
+    // iterators
+    constexpr T* begin() noexcept { return _data; }
+    constexpr T* end() noexcept { return _data + _num; }
+    constexpr const T* begin() const noexcept { return _data; }
+    constexpr const T* end() const noexcept { return _data + _num; }
+
+    // elements access
+    constexpr T& operator[](int i) noexcept { return _data[i]; }
+    constexpr const T& operator[](int i) const noexcept { return _data[i]; }
+
+    constexpr T& at(int i) { return _data[i]; }
+    constexpr const T& at(int i) const { return _data[i]; }
+
+    constexpr T& front() { return _data[0]; }
+    constexpr const T& front() const { return _data[0]; }
+    constexpr T& back() { return _data[_num - 1]; }
+    constexpr const T& back() const { return _data[_num - 1]; }
+
+   private:
+    int _num;
+    T* _data;
+};
+
+}  // namesapce
 
 // -----------------------------------------------------------------------------
 // CONTAINER OPERATIONS
 // -----------------------------------------------------------------------------
+
+#include <array>
+#include <string>
+#include <vector>
 
 //
 // Vector append operations using operators (Python-like).
@@ -1520,7 +2036,7 @@ inline std::vector<T>& operator+=(std::vector<T>& a, const std::vector<T>& b) {
 template <typename T>
 inline std::vector<T> operator+(const std::vector<T>& a,
                                 const std::vector<T>& b) {
-    ym_vector<T> c = a;
+    std::vector<T> c = a;
     c += b;
     return c;
 }
@@ -1533,13 +2049,156 @@ inline std::vector<T> operator+(const std::vector<T>& a, const T& b) {
 }
 
 // -----------------------------------------------------------------------------
+// IMAGES
+// -----------------------------------------------------------------------------
+
+namespace ym {
+
+//
+// An image_view is a non-owining reference to an array that allows to access it
+// as a row-major image, but without reallocation.
+// This is inspired, but significantly simpler than
+// gsl::multi_span https://github.com/Microsoft/GSL or std::array_view.
+//
+template <typename T>
+struct image_view {
+    // constructors
+    constexpr image_view() noexcept : _size(0, 0), _data(nullptr) {}
+    constexpr image_view(const vec2i& size, T* data) noexcept
+        : _size(size), _data(data) {}
+
+    // size
+    constexpr vec2i size() const noexcept { return _size; }
+    constexpr bool empty() const noexcept {
+        return _size[0] == 0 || _size[1] == 0;
+    }
+
+    // raw data access
+    constexpr T* data() noexcept { return _data; }
+    constexpr const T* data() const noexcept { return _data; }
+
+    // iterators
+    constexpr T* begin() noexcept { return _data; }
+    constexpr T* end() noexcept { return _data + _size[0] * _size[1]; }
+    constexpr const T* begin() const noexcept { return _data; }
+    constexpr const T* end() const noexcept {
+        return _data + _size[0] * _size[1];
+    }
+
+    // elements access
+    constexpr T& operator[](const vec<int, 2>& ij) noexcept {
+        return _data[ij[1] * _size[0] + ij[0]];
+    }
+    constexpr const T& operator[](const vec<int, 2>& ij) const noexcept {
+        return _data[ij[1] * _size[0] + ij[0]];
+    }
+
+    constexpr T& at(const vec<int, 2>& ij) {
+        return _data[ij[1] * _size[0] + ij[0]];
+    }
+    constexpr const T& at(const vec<int, 2>& ij) const {
+        return _data[ij[1] * _size[0] + ij[0]];
+    }
+
+   private:
+    vec2i _size;
+    T* _data;
+};
+
+//
+// Generic image with pixels stored as a vector. For operations use image_views.
+//
+template <typename T>
+struct image {
+    // constructors
+    constexpr image() : _size(0, 0), _data() {}
+    constexpr image(const vec2i& size, const T& v = T()) noexcept
+        : _size(size), _data(size[0] * size[1], v) {}
+    constexpr image(const vec2i& size, const T* v) noexcept
+        : _size(size), _data(v, v + size[0] * size[1]) {}
+
+    // access via image_view
+    constexpr operator const image_view<T>() const {
+        return image_view<T>(_size, _data.data());
+    }
+    constexpr operator image_view<T>() {
+        return image_view<T>(_size, _data.data());
+    }
+
+    // size
+    constexpr vec2i size() const noexcept { return _size; }
+    constexpr bool empty() const noexcept {
+        return _size[0] == 0 || _size[0] == 0;
+    }
+
+    // modify
+    constexpr void resize(const vec2i& size) {
+        _size = size;
+        _data.resize(size[0] * size[1]);
+    }
+
+    constexpr void clear() {
+        _size = {0, 0};
+        _data.clear();
+    }
+
+    // raw data access
+    constexpr T* data() noexcept { return _data.data(); }
+    constexpr const T* data() const noexcept { return _data.data(); }
+
+    // iterators
+    constexpr T* begin() noexcept { return _data; }
+    constexpr T* end() noexcept { return _data + _size[0] * _size[1]; }
+    constexpr const T* begin() const noexcept { return _data; }
+    constexpr const T* end() const noexcept {
+        return _data + _size[0] * _size[1];
+    }
+
+    // elements access
+    constexpr T& operator[](const vec<int, 2>& ij) noexcept {
+        return _data[ij[1] * _size[0] + ij[0]];
+    }
+    constexpr const T& operator[](const vec<int, 2>& ij) const noexcept {
+        return _data[ij[1] * _size[0] + ij[0]];
+    }
+
+    constexpr T& at(const vec<int, 2>& ij) {
+        return _data[ij[1] * _size[0] + ij[0]];
+    }
+    constexpr const T& at(const vec<int, 2>& ij) const {
+        return _data[ij[1] * _size[0] + ij[0]];
+    }
+
+   private:
+    vec2i _size;
+    std::vector<T> _data;
+};
+
+//
+// Conversion from srgb.
+//
+inline vec3f srgb_to_linear(const vec3f& srgb) { return pow(srgb, 1 / 2.2f); }
+inline vec4f srgb_to_linear(const vec4f& srgb) {
+    auto rgb = pow(vec3f{srgb[0], srgb[1], srgb[2]}, 2.2f);
+    return vec4f(rgb[0], rgb[1], rgb[2], srgb[3]);
+}
+inline vec3f srgb_to_linear(const vec3b& srgb) {
+    return srgb_to_linear(vec3f(srgb) / 255.0f);
+}
+inline vec4f srgb_to_linear(const vec4b& srgb) {
+    return srgb_to_linear(vec4f(srgb) / 255.0f);
+}
+
+}  // namespace
+
+// -----------------------------------------------------------------------------
 // TIMER
 // -----------------------------------------------------------------------------
 
-#include <chrono>
+namespace ym {
 
-struct ym_timer {
-    ym_timer(bool autostart = true) {
+struct timer {
+    timer(bool autostart = true) {
         if (autostart) start();
     }
 
@@ -1563,5 +2222,7 @@ struct ym_timer {
     bool _started = false;
     std::chrono::time_point<std::chrono::steady_clock> _start, _end;
 };
+
+}  // namespace
 
 #endif
