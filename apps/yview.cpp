@@ -26,92 +26,22 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-// clang-format off
-#ifndef __APPLE__
-#include "ext/glew/glew.h"
-#else
-#include "OpenGL/gl.h"
-#endif
-#include "ext/glfw/glfw3.h"
-// clang-format on
+#include "yui.h"
 
-#define YGL_DECLARATION
-
-#include "../yocto/yocto_cmdline.h"
+#include "../yocto/yocto_cmd.h"
 #include "../yocto/yocto_glu.h"
 #include "../yocto/yocto_math.h"
 
-#ifndef STBI_INCLUDE_STB_IMAGE_H
-
 #define STB_IMAGE_IMPLEMENTATION
-#define STB_IMAGE_STATIC
-
-#ifndef _WIN32
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-function"
-
-#ifndef __clang__
-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
-#pragma GCC diagnostic ignored "-Wmisleading-indentation"
-#endif
-#endif
-
-#include "ext/stb_image.h"
-
-#ifndef _WIN32
-#pragma GCC diagnostic pop
-#endif
-
-#endif
+#include "../yocto/stb_image.h"
 
 struct view_img {
-    ym_string filename;
-    std::vector<float> pixels;
+    std::string filename;
+    std::vector<float> pixelf;
+    std::vector<unsigned char> pixelb;
     int w, h, nc;
     int tex_glid;
 };
-typedef struct view_img view_img;
-
-struct view_params {
-    int w, h, fw, fh;
-    float zoom, ox, oy;
-    float exposure, gamma;
-    float* background;
-    float backgrounds[16];
-
-    bool hud_print;
-
-    int mouse_button;
-    float mouse_x, mouse_y;
-
-    int nimgs;
-    view_img* imgs;
-    view_img* img;
-};
-typedef struct view_params view_params;
-
-view_params* init_view_params(int nimgs, view_img* imgs) {
-    view_params* view = new view_params();
-
-    view->w = imgs[0].w;
-    view->h = imgs[0].h;
-    view->imgs = imgs;
-    view->nimgs = nimgs;
-    view->img = view->imgs;
-
-    view->zoom = 1;
-    view->gamma = 2.2f;
-    view->exposure = 0;
-    view->background = view->backgrounds;
-
-    float backgrounds[16] = {0,    0,    0,    0, 0.18f, 0.18f, 0.18f, 0,
-                             0.5f, 0.5f, 0.5f, 0, 1,     1,     1,     0};
-    memcpy(view->backgrounds, backgrounds, sizeof(view->backgrounds));
-
-    view->hud_print = false;
-
-    return view;
-}
 
 // inspect string
 #define strcatf(str, fmt, ...)                                                 \
@@ -121,204 +51,41 @@ view_params* init_view_params(int nimgs, view_img* imgs) {
         strcat(str, __buf);                                                    \
     }
 
-void inspect_str(char* buf, view_params* view) {
-    view_img* img = view->img;
+std::string inspect_str(const view_img& img, const ym::vec2f& offset,
+                        float zoom, const ym::vec2f& pos, float exposure,
+                        float gamma) {
+    static const std::string labels[] = {"r", "g", "b", "a"};
 
-    int ix = (int)round(((int)view->mouse_x - view->ox) / view->zoom);
-    int iy = (int)round(((int)view->mouse_y - view->oy) / view->zoom);
+    auto ij = ym::vec2i(round((pos - offset) / zoom));
 
-    strcpy(buf, "");
-    strcatf(buf, "img: %d x %d @ %d\n", img->w, img->h, img->nc);
-    strcatf(buf, "mouse: %4d %4d\n", ix, iy);
-    if (ix >= 0 && ix < img->w && iy >= 0 && iy < img->h) {
-        float c[4] = {0, 0, 0, 1};
-        int cb[4] = {0, 0, 0, 255};
-        memcpy(c, img->pixels.data() + (iy * img->w + ix) * img->nc,
-               sizeof(float) * img->nc);
-        cb[0] = ym_clamp(
-            (int)(255 * pow(2, view->exposure) * pow(c[0], 1 / view->gamma)), 0,
-            255);
-        cb[1] = ym_clamp(
-            (int)(255 * pow(2, view->exposure) * pow(c[1], 1 / view->gamma)), 0,
-            255);
-        cb[2] = ym_clamp(
-            (int)(255 * pow(2, view->exposure) * pow(c[2], 1 / view->gamma)), 0,
-            255);
-        cb[3] = ym_clamp((int)(255 * c[3]), 0, 255);
-        strcatf(buf, "r: %10.4f %3d\n", c[0], cb[0]);
-        strcatf(buf, "g: %10.4f %3d\n", c[1], cb[1]);
-        strcatf(buf, "b: %10.4f %3d\n", c[2], cb[2]);
-        strcatf(buf, "a: %10.4f %3d\n", c[3], cb[3]);
+    auto buf = std::string();
+    buf += "img: " + std::to_string(img.w) + " x " + std::to_string(img.h) +
+           " @ " + std::to_string(img.nc) + "\n";
+    buf +=
+        "mouse: " + std::to_string(ij[0]) + " " + std::to_string(ij[1]) + "\n";
+    if (ij[0] >= 0 && ij[0] < img.w && ij[1] >= 0 && ij[1] < img.h) {
+        auto cf = ym::vec4f(0, 0, 0, 1);
+        auto cb = ym::vec4b(0, 0, 0, 255);
+        if (img.pixelf.empty()) {
+            for (auto i = 0; i < img.nc; i++) {
+                cf[i] = img.pixelf[(ij[1] * img.w + ij[0]) * img.nc + i];
+                cb[i] = ym::clamp(int(cf[i] * 256), 0, 255);
+            }
+        } else if (img.pixelb.empty()) {
+            for (auto i = 0; i < img.nc; i++) {
+                cb[i] = img.pixelb[(ij[1] * img.w + ij[0]) * img.nc + i];
+                cf[i] = std::pow(cb[i] / 255.0f, 1 / 2.2f);
+            }
+        } else
+            assert(false);
+        for (auto i = 0; i < 4; i++) {
+            buf += labels[i] + ": " + std::to_string(cb[i]) + " " +
+                   std::to_string(cf[i]) + "\n";
+        }
     } else {
-        strcatf(buf, "r: %s\n", "-");
-        strcatf(buf, "g: %s\n", "-");
-        strcatf(buf, "b: %s\n", "-");
-        strcatf(buf, "a: %s\n", "-");
+        for (auto i = 0; i < 4; i++) buf += labels[i] + ": -\n";
     }
-}
-
-// text callback
-void text_callback(GLFWwindow* window, unsigned int key) {
-    view_params* view = (view_params*)glfwGetWindowUserPointer(window);
-    switch (key) {
-        case ' ':
-        case '.':
-            view->img++;
-            if (view->img >= view->imgs + view->nimgs) view->img = view->imgs;
-            break;
-        case ',':
-            view->img--;
-            if (view->img < view->imgs)
-                view->img = view->imgs + view->nimgs - 1;
-            break;
-        case '-':
-        case '_': view->zoom /= 2; break;
-        case '+':
-        case '=': view->zoom *= 2; break;
-        case '[': view->exposure -= 1; break;
-        case ']': view->exposure += 1; break;
-        case '{': view->gamma -= 0.1f; break;
-        case '}': view->gamma += 0.1f; break;
-        case '1':
-            view->exposure = 0;
-            view->gamma = 1;
-            break;
-        case '2':
-            view->exposure = 0;
-            view->gamma = 2.2f;
-            break;
-        case 'z': view->zoom = 1; break;
-        case 'b':
-            view->background += 4;
-            if (view->background - view->backgrounds >= 16)
-                view->background = view->backgrounds;
-            break;
-        case 'h':
-            // TODO: hud
-            break;
-        case 'p': view->hud_print = !view->hud_print; break;
-        default: printf("unsupported key\n"); break;
-    }
-}
-
-void window_size_callback(GLFWwindow* window, int w, int h) {
-    view_params* view = (view_params*)glfwGetWindowUserPointer(window);
-    view->w = w;
-    view->h = h;
-}
-
-void framebuffer_size_callback(GLFWwindow* window, int w, int h) {
-    glViewport(0, 0, w, h);
-}
-
-void mouse_button_callback(GLFWwindow* window, int button, int action,
-                           int mods) {
-    view_params* view = (view_params*)glfwGetWindowUserPointer(window);
-    if (action == GLFW_RELEASE) {
-        view->mouse_button = 0;
-    } else if (button == GLFW_MOUSE_BUTTON_1 && !mods) {
-        view->mouse_button = 1;
-    } else if (button == GLFW_MOUSE_BUTTON_1 && (mods & GLFW_MOD_CONTROL)) {
-        view->mouse_button = 2;
-    } else if (button == GLFW_MOUSE_BUTTON_1 && (mods & GLFW_MOD_SHIFT)) {
-        view->mouse_button = 3;
-    } else if (button == GLFW_MOUSE_BUTTON_2) {
-        view->mouse_button = 2;
-    } else {
-        view->mouse_button = 0;
-    }
-}
-
-void mouse_pos_callback(GLFWwindow* window, double x, double y) {
-    view_params* view = (view_params*)glfwGetWindowUserPointer(window);
-
-    switch (view->mouse_button) {
-        case 1:
-            view->ox += (float)x - view->mouse_x;
-            view->oy += (float)y - view->mouse_y;
-            break;
-        case 2:
-            view->zoom *= powf(2, (view->mouse_x - (float)x) * 0.001f);
-            break;
-        default: break;
-    }
-
-    view->mouse_x = (float)x;
-    view->mouse_y = (float)y;
-
-    // draw inspector
-    if (view->hud_print) {
-        char buf[4096];
-        inspect_str(buf, view);
-        printf("\033[2J\033[1;1H");
-        printf("%s", buf);
-    }
-}
-
-void window_refresh_callback(GLFWwindow* window) {
-    view_params* view = (view_params*)glfwGetWindowUserPointer(window);
-
-    char title[4096];
-    sprintf(title, "yview | %s | %dx%d", view->img->filename.c_str(),
-            view->img->w, view->img->h);
-    glfwSetWindowTitle(window, title);
-
-    // grab selected image
-    view_img* img = view->img;
-
-    // begin frame
-    glClearColor(view->background[0], view->background[1], view->background[2],
-                 view->background[3]);
-    glDisable(GL_DEPTH_TEST);
-    glClear(GL_COLOR_BUFFER_BIT);
-
-    // draw image
-    yg_shade_image(img->tex_glid, img->w, img->h, view->w, view->h, view->ox,
-                   view->oy, view->zoom, view->exposure, view->gamma);
-
-    glfwSwapBuffers(window);
-}
-
-// uiloop
-void ui_loop(int nimgs, view_img* imgs) {
-    // view params
-    view_params* view = init_view_params(nimgs, imgs);
-
-    // window
-    if (!glfwInit()) exit(EXIT_FAILURE);
-    GLFWwindow* window = glfwCreateWindow(view->w, view->h, "imview", 0, 0);
-    glfwMakeContextCurrent(window);
-    glfwSetWindowUserPointer(window, view);
-
-    // callbacks
-    glfwSetCharCallback(window, text_callback);
-    glfwSetWindowSizeCallback(window, window_size_callback);
-    glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
-    glfwSetMouseButtonCallback(window, mouse_button_callback);
-    glfwSetCursorPosCallback(window, mouse_pos_callback);
-    glfwSetWindowRefreshCallback(window, window_refresh_callback);
-
-// init gl extensions
-#ifndef __APPLE__
-    if (glewInit() != GLEW_OK) exit(EXIT_FAILURE);
-#endif
-
-    // load textures
-    for (int i = 0; i < nimgs; i++) {
-        imgs[i].tex_glid = yg_make_texture(imgs[i].pixels.data(), imgs[i].w,
-                                           imgs[i].h, imgs[i].nc, true, false);
-    }
-
-    // ui loop
-    while (!glfwWindowShouldClose(window)) {
-        window_refresh_callback(window);
-        glfwWaitEvents();
-    }
-
-    glfwDestroyWindow(window);
-    glfwTerminate();
-
-    free(view);
+    return buf;
 }
 
 std::vector<view_img> load_images(
@@ -326,34 +93,151 @@ std::vector<view_img> load_images(
     auto imgs = std::vector<view_img>();
     for (auto filename : img_filenames) {
         imgs.push_back(view_img());
-        view_img* img = &imgs[imgs.size() - 1];
-        img->filename = filename;
-        auto pixels =
-            stbi_loadf(img->filename.c_str(), &img->w, &img->h, &img->nc, 0);
-        img->pixels =
-            std::vector<float>(pixels, pixels + img->w * img->h * img->nc);
-        free(pixels);
-        if (img->pixels.empty()) {
-            printf("cannot load image %s\n", img->filename.c_str());
+        auto& img = imgs.back();
+        img.filename = filename;
+        auto ext = ycmd::get_extension(filename);
+        if (ext == ".hdr") {
+            auto pixels =
+                stbi_loadf(filename.c_str(), &img.w, &img.h, &img.nc, 0);
+            img.pixelf =
+                std::vector<float>(pixels, pixels + img.w * img.h * img.nc);
+            free(pixels);
+        } else {
+            auto pixels =
+                stbi_load(filename.c_str(), &img.w, &img.h, &img.nc, 0);
+            img.pixelb = std::vector<unsigned char>(
+                pixels, pixels + img.w * img.h * img.nc);
+            free(pixels);
+        }
+        if (img.pixelf.empty() && img.pixelb.empty()) {
+            printf("cannot load image %s\n", img.filename.c_str());
             exit(1);
         }
-        img->tex_glid = 0;
+        img.tex_glid = 0;
     }
     return imgs;
 }
 
 int main(int argc, char* argv[]) {
     // command line params
-    auto parser = yc_init_parser(argc, argv, "view images");
-    auto filenames =
-        yc_parse_arga<std::string>(parser, "image", "image filename", {}, true);
-    yc_done_parser(parser);
+    auto parser = ycmd::make_parser(argc, argv, "view images");
+    auto exposure =
+        ycmd::parse_opt<float>(parser, "--exposure", "-e", "image exposure", 0);
+    auto gamma =
+        ycmd::parse_opt<float>(parser, "--gamma", "-g", "image gamma", 2.2);
+    auto filenames = ycmd::parse_arga<std::string>(parser, "image",
+                                                   "image filename", {}, true);
+    ycmd::check_parser(parser);
 
     // loading images
     auto imgs = load_images(filenames);
 
-    // start ui loop
-    ui_loop((int)imgs.size(), imgs.data());
+    // view parameters
+    int cur_img = 0;
+    int cur_background = 0;
+    float zoom = 1;
+    ym::vec2f offset = ym::vec2f();
+    bool hud_print = false;
+    const std::array<ym::vec4f, 4> backgrounds = {{{0.0f, 0.0f, 0.0f, 0.0f},
+                                                   {0.18f, 0.18f, 0.18f, 0.0f},
+                                                   {0.5f, 0.5f, 0.5f, 0.0f},
+                                                   {1.0f, 1.0f, 1.0f, 0.0f}}};
+
+    // prepare ui context
+    auto context = yui::context();
+
+    // init callback
+    context.init += std::function<void(const yui::info& info)>(
+        [&](const yui::info& info) {  // load textures
+            for (auto& img : imgs) {
+                if (!img.pixelf.empty()) {
+                    img.tex_glid = yglu::make_texture(
+                        img.w, img.h, img.nc, img.pixelf.data(), false, true);
+                } else if (!img.pixelb.empty()) {
+                    img.tex_glid = yglu::make_texture(
+                        img.w, img.h, img.nc, img.pixelb.data(), false, true);
+                } else
+                    assert(false);
+            }
+        });
+
+    // window refresh callback
+    context.window_refresh +=
+        std::function<void(const yui::info& info)>([&](const yui::info& info) {
+            auto& img = imgs[cur_img];
+
+            // begin frame
+            auto background = backgrounds[cur_background];
+            glClearColor(background[0], background[1], background[2],
+                         background[3]);
+            glDisable(GL_DEPTH_TEST);
+            glClear(GL_COLOR_BUFFER_BIT);
+
+            // draw image
+            yglu::shade_image(img.tex_glid, img.w, img.h, img.w, img.h,
+                              offset.x(), offset.y(), zoom, exposure, gamma);
+        });
+
+    // text callback
+    context.text += std::function<void(const yui::info& info, unsigned int)>(
+        [&](const yui::info& info, unsigned int key) {
+            switch (key) {
+                case ' ':
+                case '.': cur_img = (cur_img + 1) % imgs.size(); break;
+                case ',':
+                    cur_img = (cur_img - 1 + (int)imgs.size()) % imgs.size();
+                    break;
+                case '-':
+                case '_': zoom /= 2; break;
+                case '+':
+                case '=': zoom *= 2; break;
+                case '[': exposure -= 1; break;
+                case ']': exposure += 1; break;
+                case '{': gamma -= 0.1f; break;
+                case '}': gamma += 0.1f; break;
+                case '1':
+                    exposure = 0;
+                    gamma = 1;
+                    break;
+                case '2':
+                    exposure = 0;
+                    gamma = 2.2f;
+                    break;
+                case 'z': zoom = 1; break;
+                case 'b':
+                    cur_background = (cur_background + 1) % backgrounds.size();
+                    break;
+                case 'h':
+                    // TODO: hud
+                    break;
+                case 'p': hud_print = !hud_print; break;
+                default: printf("unsupported key\n"); break;
+            }
+        });
+
+    // mouse position callback
+    context.mouse_pos +=
+        std::function<void(const yui::info& info)>([&](const yui::info& info) {
+            switch (info.mouse_button) {
+                case 1: offset += info.mouse_pos - info.mouse_last; break;
+                case 2:
+                    zoom *= powf(2, (info.mouse_pos.x() - info.mouse_last.x()) *
+                                        0.001f);
+                    break;
+                default: break;
+            }
+
+            // draw inspector
+            if (hud_print) {
+                auto str = inspect_str(imgs[cur_img], offset, zoom,
+                                       info.mouse_pos, exposure, gamma);
+                printf("\033[2J\033[1;1H");
+                printf("%s", str.c_str());
+            }
+        });
+
+    // run ui
+    yui::ui_loop(context, imgs[0].w, imgs[0].h, "yview");
 
     // done
     return EXIT_SUCCESS;

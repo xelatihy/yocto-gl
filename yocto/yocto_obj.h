@@ -2,49 +2,39 @@
 // YOCTO_OBJ: Wavefront OBJ/MTL loader and writer with support for points,
 // lines, triangles and general polygons and all materials properties.
 // Contains also a few extension to eqasily create demos such as per-vertex
-// color and radius, cameras and envmaps.
+// color and radius, cameras and envmaps. Can use either a low-level OBJ
+// representation or a high level flattened representation.
 //
 
 //
 // USAGE FOR READING:
 //
 // 0. include this file (more compilation options below)
-// 1. load an obj with yo_load_obj
+// 1. load an obj with load_obj
+//       ok = load_obj(filename, obj, error message)
 //   - loads an obj from disk including its associate mtl files
 //   - returns a parsed scene data structure described below
-//   - optionally support triangulation on loads that makes the loader
-//     faster (use it alwayd if you do not need quads/polys/polylines)
-//   - extension can be optionally enabled
-//   scene = yo_load_obj(filename, triangulate, enable_extensions)
-//   1.a. optionally load textures data as float arrays with
-//   yo_load_textures(scene, scene_filename, req_comp)
-// 2. access the data directly from the returned scene object
-//   - has five main arrays: shapes, materials, textures, cameras, envmaps
-//   e.g. for(int i = 0; i < scene->nshapes; i ++) scene->shapes[i].XXX
-// 3. cleanup with yo_free_scene
-//   - you have to do this for each shape bvh and the scene bvh
-//   yb_free_bvh(bvh)
+// 2. [LOW-LEVEL INTERFACE] access the data directly from the returned object
+//   - the data is documented below and matches the OBJ file structure exactly
+// 3. [HIGH-LEVEL INTERFACE] optionally flatten the data as a more friendly
+//    representation where shapes are index meshes, supporting points, lines and
+//    triangle primitives
+//       scene = flatten_obj(obj)
+//   - the flattened data, documented below, can be use to draw directly on
+//   the GPU or in a raytracer
+//   - vertices are duplicated as needed to support GPU friendly access
+//   - optionally load textures data as float arrays with
+//       load_fl_textures(scene, dirname, required components, load as float)
 //
 // The interface for each function is described in details in the interface
 // section of this file.
 //
-// Shapes are indexed meshes and are described by their
-// number of elements, an array of vertex indices,
-// the primitive type (points, lines, triangles, quads),
-// and arrays for vertex positions, normals, texcoords, color and radius.
-// The latter two as extensions.
-//
-// Faces in the scene have the same number of elements for points (1),
-// lines (2), triangles (3). We also
-// support general polygons and polines with arbitrary number of faces.
-// To avdoi wasting memory, these are saved sequentially where the first int
-// in the element is the number od vertices. While this does not allow
-// random access, it saves significant memory and avoid pointer chasing.
-//
-// Since OBJ is a complex formats that does not match well with current
-// GPU rendering / path tracing algorithms, we adopt a simplification similar
-// to other single file libraries.
-//
+// In the high level interface, shapes are indexed meshes and are described
+// by arrays of vertex indices for points/lines/triangles and arrays for vertex
+// positions, normals, texcoords, color and radius. The latter two as
+// extensions. Since OBJ is a complex formats that does not match well with
+// current GPU rendering / path tracing algorithms, we adopt a simplification
+// similar to other single file libraries:
 // 1. vertex indices are unique, as in OpenGL and al standard indexed triangle
 //   meshes data structures, and not OBJ triplets; YOCTO_OBJ ensures that no
 //   vertex dusplication happens thought for same triplets
@@ -58,22 +48,14 @@
 // USAGE FOR WRITING:
 //
 // 0. include this file (more compilation options below)
-// 1. fill a yo_scene data with your scene data
-//    - note that if your shape data is layed out in memore as ours,
-//    - then no copy is needed, just set the pointers
-// 2. save the obj/mtl pair with yo_load_obj
-//    yo_save_obj(filename, scene, enable_extensions)
-// 3. If you copies memory over, clear it with yo_free_scene
+// 1. [LOW-LEVEL INTERFACE] fill an obj object with your scene data and save
+//    the obj/mtl pair with save_obj
+//    ok = save_obj(filename, obj, error message)
+// 3. [HIGH_LEVEL INTERFACE] create a flattened scene object and turn into an
+//    obj with unflatten_obj(scene, obj)
 //
-
-//
-// USAGE FOR BINARY DUMPS:
-//
-// 1. you can also have binary dumps used for fast data access with
-//    scene = yo_load_objbin(filename, enable_extensions) and
-//    yo_save_objbin(filename, scene, ext)
-// 2. These files are just binary dumps, so should not be used for
-//    archival but as a speed up to avoid ASCII serializatiion/deserialization
+// The interface for each function is described in details in the interface
+// section of this file.
 //
 
 //
@@ -85,11 +67,11 @@
 // - to build as a .cpp, just #define YGL_IMPLEMENTATION before including this
 // file into only one file that you can either link directly or pack as a lib.
 //
-// This file depends on yocto_math.h.
-//
 
 //
 // HISTORY:
+// - v 0.4: [major API change] move to modern C++ interface
+// - v 0.3: new API internals and C++ interface
 // - v 0.2: removal of C interface
 // - v 0.1: C++ implementation
 // - v 0.0: initial release in C99
@@ -119,8 +101,8 @@
 // SOFTWARE.
 //
 
-#ifndef _YO_H_
-#define _YO_H_
+#ifndef _YOBJ_H_
+#define _YOBJ_H_
 
 // compilation options
 #ifndef YGL_DECLARATION
@@ -129,252 +111,344 @@
 #define YGL_API
 #endif
 
+#include <array>
 #include <string>
 #include <vector>
 
-#include "yocto_math.h"
-
 // -----------------------------------------------------------------------------
-// INTERFACE
+// LOW-LEVEL INTERFACE
 // -----------------------------------------------------------------------------
 
+namespace yobj {
+
 //
-// Types of geometric primitives
+// Typedefs for floatXXX types
 //
-enum {
-    yo_etype_null = 0,       // invalid prim to indicate parsing erros
-    yo_etype_point = 1,      // points
-    yo_etype_line = 2,       // lines
-    yo_etype_triangle = 3,   // triangles
-    yo_etype_polyline = 12,  // polylines
-    yo_etype_polygon = 13    // polygons
+using float2 = std::array<float, 2>;
+using float3 = std::array<float, 3>;
+using float4x4 = std::array<std::array<float, 4>, 4>;
+using int2 = std::array<int, 2>;
+using int3 = std::array<int, 3>;
+
+//
+// Face vertex
+//
+struct vert {
+    int pos;       // position
+    int texcoord;  // texcoord
+    int norm;      // normal
+    int color;     // color [extension]
+    int radius;    // radius [extension]
+
+    // constructor
+    vert(int pos = -1, int texcoord = -1, int norm = -1, int color = -1,
+         int radius = -1)
+        : pos(pos), texcoord(texcoord), norm(norm), color(color),
+          radius(radius) {}
 };
 
 //
-// Geometric shape
+// Elelemnt vertex indices
 //
-struct yo_shape {
-    // whole shape data
-    ym_string name;       // shape name
-    ym_string groupname;  // groupname (unique group for each shape object)
-    ym_string matname;    // material name
-    int matid = -1;       // index in the material array (-1 if not found)
+struct elem {
+    // element type
+    enum struct type : uint16_t { point = 1, line = 2, face = 3 };
 
-    // shape elements
-    int nelems = 0;  // number of elements (point, lines, triangles, etc.)
-    std::vector<int> elem;  // per-element vertex indices
-    int etype = 0;          // element type from the above enum
-
-    // vertex data
-    int nverts = 0;                  // number of vertices
-    std::vector<ym_vec3f> pos;       // per-vertex position (3 float)
-    std::vector<ym_vec3f> norm;      // per-vertex normals (3 float)
-    std::vector<ym_vec2f> texcoord;  // per-vertex texcoord (2 float)
-    std::vector<ym_vec3f> color;     // [extension] per-vertex color (3 float)
-    std::vector<float> radius;       // [extension] per-vertex radius (1 float)
-
-    // transform
-    bool xformed = false;  // [extension] whether a transform is present
-    ym_affine3f xform = ym_identity_affine3f;  // [extension] 3x4 affine
-                                               // transform matrix (column
-                                               // major)
+    uint32_t start;  // starting vertex index
+    type type;       // element type
+    uint16_t size;   // number of vertices
 };
 
 //
-// Material
+// Element group
 //
-struct yo_material {
+struct elem_group {
+    // group data
+    std::string matname;    // material name
+    std::string groupname;  // group name
+
+    // element data
+    std::vector<vert> verts;  // element vertices
+    std::vector<elem> elems;  // element faces
+};
+
+//
+// Obj object
+//
+struct object {
+    // object data
+    std::string name;  // obj name
+
+    // element data
+    std::vector<elem_group> elems;  // element groups
+};
+
+//
+// OBJ material
+//
+struct material {
     // whole material data
-    ym_string name;  // material name
-    int illum = 0;   // MTL illum mode
+    std::string name;  // material name
+    int illum = 0;     // MTL illum mode
 
     // color information
-    ym_vec3f ke = ym_zero3f;  // emission color
-    ym_vec3f ka = ym_zero3f;  // ambient color
-    ym_vec3f kd = ym_zero3f;  // diffuse color
-    ym_vec3f ks = ym_zero3f;  // specular color
-    ym_vec3f kr = ym_zero3f;  // reflection color
-    ym_vec3f kt = ym_zero3f;  // transmision color
-    float ns = 1;             // phong exponent for ks
-    float ior = 1;            // index of refraction
-    float op = 1;             // opacity
+    float3 ke = {0, 0, 0};  // emission color
+    float3 ka = {0, 0, 0};  // ambient color
+    float3 kd = {0, 0, 0};  // diffuse color
+    float3 ks = {0, 0, 0};  // specular color
+    float3 kr = {0, 0, 0};  // reflection color
+    float3 kt = {0, 0, 0};  // transmision color
+    float ns = 1;           // phong exponent for ks
+    float ior = 1;          // index of refraction
+    float op = 1;           // opacity
 
     // texture names for the above properties
-    ym_string ke_txt;
-    ym_string ka_txt;
-    ym_string kd_txt;
-    ym_string ks_txt;
-    ym_string kr_txt;
-    ym_string kt_txt;
-    ym_string ns_txt;
-    ym_string op_txt;
-    ym_string ior_txt;
-    ym_string bump_txt;  // bump map texture (heighfield)
-    ym_string disp_txt;  // displacement map texture (heighfield)
+    std::string ke_txt;
+    std::string ka_txt;
+    std::string kd_txt;
+    std::string ks_txt;
+    std::string kr_txt;
+    std::string kt_txt;
+    std::string ns_txt;
+    std::string op_txt;
+    std::string ior_txt;
+    std::string bump_txt;  // bump map texture (heighfield)
+    std::string disp_txt;  // displacement map texture (heighfield)
+    std::string norm_txt;  // normal map texture
+};
+
+//
+// Camera [extension]
+//
+struct camera {
+    std::string name;  // name
+    float4x4 xform = {1, 0, 0, 0, 0, 1, 0, 0,
+                      0, 0, 1, 0, 0, 0, 0, 1};  // transform
+    bool ortho = false;                         // ortho
+    float yfov = 2 * std::atan(0.5f);           // vertical field of view
+    float aspect = 16.0f / 9.0f;                // aspect ratio
+    float aperture = 0;                         // lens aperture
+    float focus = 1;                            // focus distance
+};
+
+//
+// Environment [extension]
+//
+struct environment {
+    std::string name;  // name
+    float4x4 xform = {1, 0, 0, 0, 0, 1, 0, 0,
+                      0, 0, 1, 0, 0, 0, 0, 1};  // transform
+    std::string matname;                        // material name
+};
+
+//
+// OBJ asset
+//
+struct obj {
+    // vertex data
+    std::vector<float3> pos;       // vertex positions
+    std::vector<float3> norm;      // vertex normals
+    std::vector<float2> texcoord;  // vertex texcoord
+    std::vector<float3> color;     // vertex color [extension]
+    std::vector<float> radius;     // vertex radius [extension]
+
+    // scene objects
+    std::vector<object> objects;            // objects
+    std::vector<material> materials;        // materials
+    std::vector<camera> cameras;            // cameras [extension]
+    std::vector<environment> environments;  // env maps [extension]
+};
+
+//
+// Load OBJ
+//
+// Parameters:
+// - filename: filename
+//
+// Out Parameters:
+// - asset: obj data
+// - errmsg: error message
+//
+// Return:
+// - true if loading was ok
+//
+YGL_API bool load_obj(const std::string& filename, obj& obj,
+                      std::string& errmsg);
+
+//
+// Load MTL
+//
+// Parameters:
+// - filename: filename
+//
+// Out Parameters:
+// - materials: materials data
+// - errmsg: error message
+//
+// Return:
+// - true if loading was ok
+//
+YGL_API bool load_mtl(const std::string& filename,
+                      std::vector<material>& materials, std::string& errmsg);
+
+//
+// Save OBJ
+//
+// Parameters:
+// - filename: filename
+// - asset: obj data to save
+//
+// Out Parameters:
+// - errmsg: error
+//
+// Return:
+// - true if saving was ok
+//
+YGL_API bool save_obj(const std::string& filename, const obj& obj,
+                      std::string& errmsg);
+
+//
+// Save MTL
+//
+// Return:
+// whether or not an error occurred
+//
+YGL_API bool save_mtl(const std::string& filename,
+                      const std::vector<material>& materials,
+                      std::string& errmsg);
+
+// -----------------------------------------------------------------------------
+// HIGH-LEVEL INTERFACE
+// -----------------------------------------------------------------------------
+
+//
+// Scene geometry
+//
+struct fl_shape {
+    // whole shape data
+    std::string name;  // shape name
+    int matid = -1;    // index in the material array (-1 if not found)
+
+    // shape elements
+    std::vector<int> points;      // points
+    std::vector<int2> lines;      // lines
+    std::vector<int3> triangles;  // triangles
+
+    // vertex data
+    std::vector<float3> pos;       // per-vertex position (3 float)
+    std::vector<float3> norm;      // per-vertex normals (3 float)
+    std::vector<float2> texcoord;  // per-vertex texcoord (2 float)
+    std::vector<float3> color;     // [extension] per-vertex color (3 float)
+    std::vector<float> radius;     // [extension] per-vertex radius (1 float)
+};
+
+//
+// Scene Material
+//
+struct fl_material {
+    // whole material data
+    std::string name;  // material name
+
+    // color information
+    float3 ke = {0, 0, 0};  // emission color
+    float3 kd = {0, 0, 0};  // diffuse color
+    float3 ks = {0, 0, 0};  // specular color
+    float rs = 0.0001;      // roughness
 
     // indices in the texture array (-1 if not found)
-    int ke_txtid = -1;
-    int ka_txtid = -1;
-    int kd_txtid = -1;
-    int ks_txtid = -1;
-    int kr_txtid = -1;
-    int kt_txtid = -1;
-    int ns_txtid = -1;
-    int op_txtid = -1;
-    int ior_txtid = -1;
-    int bump_txtid = -1;
-    int disp_txtid = -1;
+    int ke_txt = -1;
+    int kd_txt = -1;
+    int ks_txt = -1;
+    int rs_txt = -1;
 };
 
 //
-// [Extension] Texture
+// Scene Texture
 //
-struct yo_texture {
-    ym_string path;             // path
-    int width = 0, height = 0;  // if loaded, image width and hieght
-    int ncomp = 0;              // if loaded, number of component (1-4)
-    std::vector<float> pixels;  // if loaded, pixel data
+struct fl_texture {
+    std::string path;                  // path
+    int width = 0, height = 0;         // if loaded, image width and hieght
+    int ncomp = 0;                     // if loaded, number of component (1-4)
+    std::vector<float> dataf;          // if loaded, pixel data for HDRs
+    std::vector<unsigned char> datab;  // if loaded, pixel data for LDRs
 };
 
 //
-// [Extension] Camera represented as a lookat.
+// Scene Camera
 //
-struct yo_camera {
-    ym_string name;               // name
-    ym_vec3f from = ym_zero3f;    // camera position
-    ym_vec3f to = ym_z3f;         // camera focus location
-    ym_vec3f up = ym_y3f;         // camera up vector
-    float width = 1, height = 1;  // image plane width and height
-    float aperture = 0;           // lens aperture
+struct fl_camera {
+    std::string name;  // name
+    float4x4 xform = {1, 0, 0, 0, 0, 1, 0, 0,
+                      0, 0, 1, 0, 0, 0, 0, 1};  // transform
+    bool ortho = false;                         // ortho cam
+    float yfov = 2;                             // vertical field of view
+    float aspect = 16.0f / 9.0f;                // aspect ratio
+    float aperture = 0;                         // lens aperture
+    float focus = 1;                            // focus distance
 };
 
 //
-// [Extension] Envinonment map in latlong format
+// Envinonment map
 //
-struct yo_env {
-    ym_string name;     // name
-    ym_string matname;  // material name (where only ke, ke_txt are valid)
-    int matid = -1;     // index of material in material array (-1 if not found)
-    ym_vec3f from = ym_zero3f, to = ym_z3f,
-             up = ym_y3f;  // lookat transform data as in yo_camera
+struct fl_environment {
+    std::string name;  // name
+    int matid = -1;    // index of material in material array (-1 if not found)
+    float4x4 xform = {1, 0, 0, 0, 0, 1, 0, 0,
+                      0, 0, 1, 0, 0, 0, 0, 1};  // transform
 };
 
 //
-// Scene
+// Asset
 //
-struct yo_scene {
-    std::vector<yo_shape> shapes;        // shape array
-    std::vector<yo_material> materials;  // material array
-    std::vector<yo_texture> textures;    // texture array
-    std::vector<yo_camera> cameras;      // camera array
-    std::vector<yo_env> envs;            // environment array
+struct fl_obj {
+    std::vector<fl_shape> shapes;              // shape array
+    std::vector<fl_material> materials;        // material array
+    std::vector<fl_texture> textures;          // texture array
+    std::vector<fl_camera> cameras;            // camera array
+    std::vector<fl_environment> environments;  // environment array
 };
 
 //
-// Loads a scene from disk
+// Load an asset
 //
 // Parameters:
-// - filename: scene filename
-// - truangulate: whether to triagulate on load (fan-style)
-// - ext: enable extensions
+// - obj: obj to be flattened
 //
-// Returns:
-// - loaded scene or NULL for error
+// Out Parameters:
+// - scene: scene to output
 //
-YGL_API yo_scene* yo_load_obj(const std::string& filename, bool triangulate,
-                              bool ext);
+YGL_API fl_obj flatten_obj(const obj& obj);
 
 //
-// Loads a binary scene dump from disk
+// Save an asset
 //
 // Parameters:
-// - filename: scene filename
-// - ext: enable extensions
+// - scene: scene to unflatten
 //
-// Returns:
-// - loaded scene or NULL for error
+// Out Parameters:
+// - obj: obj
 //
-YGL_API yo_scene* yo_load_objbin(const std::string& filename, bool ext);
+YGL_API obj unflatten_obj(const fl_obj& scene);
 
 //
-// Saves a scene to disk
+// Loads textures for an scene.
 //
 // Parameters:
-// - filename: scene filename
-// - scene: scene to save
-// - ext: enable extensions
+// - scene: scene to load textures into
+// - dirname: base directory name for texture files
+// - req_comp: required number of components (or 0 for default)
 //
-// Returns:
-// - true if ok
+// Out Parameters:
+// - errmsg: error message
 //
-YGL_API bool yo_save_obj(const std::string& filename, const yo_scene* scene,
-                         bool ext);
+// Return:
+// - true if loading was ok
+//
+YGL_API bool load_textures(fl_obj& scene, const std::string& dirname,
+                           std::string& errmsg, int req_comp = 0,
+                           bool force_float = false);
 
-//
-// Saves a binary scene dump to disk
-//
-// Parameters:
-// - filename: scene filename
-// - scene: scene to save
-// - ext: enable extensions
-//
-// Returns:
-// - true if ok
-//
-YGL_API bool yo_save_objbin(const std::string& filename, const yo_scene* scene,
-                            bool ext);
-
-//
-// Free scene data.
-//
-YGL_API void yo_free_scene(yo_scene* scene);
-
-//
-// Loads textures.
-//
-// Parameters:
-// - scene: scene to load into
-// - filename: scene filename, used to resolve path references
-// - req_comp: 0 for default or 1-4 to force all textures to have the given
-//    number of components
-//
-#ifndef YO_NOIMG
-YGL_API void yo_load_textures(yo_scene* scene, const std::string& filename,
-                              int req_comp);
-#endif
-
-// -----------------------------------------------------------------------------
-// DEPRECATED INTERFACE
-// -----------------------------------------------------------------------------
-
-//
-// Wrapper. See above.
-//
-YGL_API yo_scene* yo_load_obj(const char* filename, bool triangulate, bool ext);
-
-//
-// Wrapper. See above.
-//
-YGL_API yo_scene* yo_load_objbin(const char* filename, bool ext);
-
-//
-// Wrapper. See above.
-//
-YGL_API bool yo_save_obj(const char* filename, const yo_scene* scene, bool ext);
-
-//
-// Wrapper. See above.
-//
-YGL_API bool yo_save_objbin(const char* filename, const yo_scene* scene,
-                            bool ext);
-
-//
-// Wrapper. See above.
-//
-#ifndef YO_NOIMG
-YGL_API void yo_load_textures(yo_scene* scene, const char* filename,
-                              int req_comp);
-#endif
+}  // namespace
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION
@@ -382,168 +456,67 @@ YGL_API void yo_load_textures(yo_scene* scene, const char* filename,
 
 #if !defined(YGL_DECLARATION) || defined(YGL_IMPLEMENTATION)
 
-#include <cctype>
 #include <cstdio>
+#include <cstdlib>
+#include <memory>
+#include <unordered_map>
+
+namespace yobj {
 
 //
-// OBJ vertex reference triplet (pos,texcoord,norm) with extension for
-// color and radius indices. Contains also the vertex unique index in the
-// flattened array.
+// Get directory name (including '/').
 //
-struct yo__vert {
-    int pos, texcoord, norm, color, radius, vid;
-};
-
-//
-// OBJ vertex data
-//
-struct yo__vertdata {
-    std::vector<ym_vec3f> pos;
-    std::vector<ym_vec2f> texcoord;
-    std::vector<ym_vec3f> norm;
-    std::vector<ym_vec3f> color;
-    std::vector<float> radius;
-};
-
-//
-// OBJ element data
-//
-struct yo__elemdata {
-    int etype;
-    std::vector<int> elem;
-};
-
-//
-// Vertex hash table to avoid duplicating vertices.
-//
-#define yo__vhash_size 1048576
-struct yo__vhash {
-    int nverts;                               // numner of vertices
-    std::vector<yo__vert> v[yo__vhash_size];  // bucket data (one vertex for
-    // each unique face index)
-};
-
-//
-// String comparison without case.
-// modified from http://clc-wiki.net/wiki/C_standard_library%3astring.h%3astrcmp
-//
-static inline int yo__stricmp(const char* s1, const char* s2) {
-    while (*s1 && (tolower(*s1) == tolower(*s2))) s1++, s2++;
-    return tolower(*(const unsigned char*)s1) -
-           tolower(*(const unsigned char*)s2);
+static inline std::string _get_dirname(const std::string& filename) {
+    auto pos = filename.rfind('/');
+    if (pos == std::string::npos) pos = filename.rfind('\\');
+    if (pos == std::string::npos) return "";
+    return filename.substr(0, pos + 1);
 }
 
-// -----------------------------------------------------------------------------
-// OBJ LOADING
-// -----------------------------------------------------------------------------
+//
+// Get extension (including '.').
+//
+static inline std::string _get_extension(const std::string& filename) {
+    auto pos = filename.rfind('.');
+    if (pos == std::string::npos) return "";
+    return filename.substr(pos);
+}
 
 //
-// Free scene memory.
+// Parse element buffer
 //
-YGL_API void yo_free_scene(yo_scene* scene) { delete scene; }
-
-//
-// During parsing, flashes a shape into the scene if elements are present.
-//
-YGL_API void yo__add_shape(std::vector<yo_shape>& shapes,
-                           const std::vector<yo_material>& materials,
-                           const ym_string& name, const ym_string& matname,
-                           const ym_string& groupname, const ym_affine3f& xform,
-                           yo__elemdata& elem, yo__vertdata& vert,
-                           yo__vhash* vhash) {
-    // exit if nothing to do
-    if (!elem.elem.size()) return;
-
-    // add shape
-    shapes.push_back(yo_shape());
-    yo_shape* shape = &shapes[shapes.size() - 1];
-
-    // set name
-    shape->name = name;
-    shape->matname = matname;
-    shape->groupname = groupname;
-
-    // set material id
-    shape->matid = -1;
-    for (int i = 0; i < materials.size() && shape->matid < 0; i++) {
-        if (!yo__stricmp(shape->matname.c_str(), materials[i].name.c_str()))
-            shape->matid = i;
-    }
-
-    // set xform
-    shape->xformed = !(xform == ym_identity_affine3f);
-    shape->xform = xform;
-
-    // set nverts and check vertex lengths
-    shape->nverts = (int)vert.pos.size();
-    assert(shape->nverts == vert.pos.size() || !vert.pos.size());
-    assert(shape->nverts == vert.norm.size() || !vert.norm.size());
-    assert(shape->nverts == vert.texcoord.size() || !vert.texcoord.size());
-    assert(shape->nverts == vert.color.size() || !vert.color.size());
-    assert(shape->nverts == vert.radius.size() || !vert.radius.size());
-
-    // copy vertices
-    shape->pos = vert.pos;
-    shape->norm = vert.norm;
-    shape->texcoord = vert.texcoord;
-    shape->color = vert.color;
-    shape->radius = vert.radius;
-
-    // handle simple cases for elements
-    if (elem.etype == yo_etype_point || elem.etype == yo_etype_line ||
-        elem.etype == yo_etype_triangle) {
-        shape->etype = elem.etype;
-        shape->nelems = (int)elem.elem.size() / elem.etype;
-        shape->elem = elem.elem;
-    } else if (elem.etype == yo_etype_polygon ||
-               elem.etype == yo_etype_polyline) {
-        // tries to compress generic polygon and polylines
-        // find size
-        int nelems = (int)elem.elem.size();
-        int* elemd = elem.elem.data();
-        shape->nelems = 0;
-        int maxf = -1, minf = 1000000;
-        for (int f = 0; f < nelems;) {
-            int nf = elemd[f];
-            if (nf > maxf) maxf = nf;
-            if (nf < minf) minf = nf;
-            f += nf + 1;
-            shape->nelems++;
+static inline void _parse_vert_array(char* line_parse,
+                                     std::vector<vert>& element_buffer,
+                                     const vert& vert_size) {
+    element_buffer.clear();
+    char vert_buf[2048];
+    int advance = 0;
+    while (line_parse[0] && sscanf(line_parse, "%s%n", vert_buf, &advance)) {
+        line_parse += advance;
+        auto v = vert(-1, -1, -1, -1, -1);
+        auto vp = &v.pos;
+        auto sp = &v.pos;
+        auto vert_parse = vert_buf;
+        for (auto i = 0; i < 5; i++) {
+            if (!vert_parse[0]) break;
+            if (vert_parse[0] == '/') {
+                vert_parse++;
+                continue;
+            }
+            sscanf(vert_parse, "%d%n", vp + i, &advance);
+            vert_parse += advance;
+            vp[i] = (vp[i] < 0) ? sp[i] + vp[i] : vp[i] - 1;
+            if (vert_parse[0] == '/') vert_parse += 1;
         }
-        assert(minf > 0);
-
-        // make lines and triangles
-        if (minf == maxf && maxf < 4) {
-            shape->etype = maxf;
-            shape->elem.resize(shape->nelems * shape->etype);
-            for (int e = 0; e < shape->nelems; e++)
-                memcpy(shape->elem.data() + e * maxf,
-                       elemd + e * (maxf + 1) + 1, sizeof(int) * maxf);
-        } else {
-            shape->etype = elem.etype;
-            shape->elem = elem.elem;
-        }
-    } else {
-        assert(false);
+        element_buffer.push_back(v);
     }
-
-    // clear buffers
-    vhash->nverts = 0;
-    for (int i = 0; i < yo__vhash_size; i++) vhash->v[i].resize(0);
-    vert.pos.resize(0);
-    vert.norm.resize(0);
-    vert.texcoord.resize(0);
-    vert.color.resize(0);
-    vert.radius.resize(0);
-    elem.elem.resize(0);
-    elem.etype = 0;
 }
 
 //
 // Splits a string into an array of strings on whitespace with Python split
 // semantic. Modifies original string to avoid allocation.
 //
-static inline int yo__splitws(char* str, char** splits, int maxsplits) {
+static inline int _splitws(char* str, char** splits, int maxsplits) {
     int n = 0;
     while (*str && n < maxsplits) {
         if (isspace(*str)) {
@@ -556,716 +529,494 @@ static inline int yo__splitws(char* str, char** splits, int maxsplits) {
         }
         str++;
     }
+    splits[n] = nullptr;
     return n;
 }
 
 //
-// Add an empty material.
+// Parses one int.
 //
-static inline void yo__add_empty_material(std::vector<yo_material>& materials,
-                                          const ym_string& name) {
-    materials.push_back(yo_material());
-    yo_material* mat = &materials[materials.size() - 1];
-    mat->name = name;
+static inline int _parse_int(char** tok) { return atoi(tok[0]); }
+
+//
+// Parses one float.
+//
+static inline float _parse_float(char** tok) { return atof(tok[0]); }
+
+//
+// Parses two floats.
+//
+static inline float2 _parse_float2(char** tok) {
+    return float2{(float)atof(tok[0]), (float)atof(tok[1])};
 }
 
 //
-// Add a camera from OBJ vertices.
+// Parses three floats.
 //
-static inline void yo__add_camera(std::vector<yo_camera>& cameras,
-                                  const ym_string& name, const yo__vert& from,
-                                  const yo__vert& to,
-                                  const yo__vertdata& obj_vert,
-                                  yo__vhash* vhash) {
-    cameras.push_back(yo_camera());
-    yo_camera* cam = &cameras[cameras.size() - 1];
-
-    cam->name = name;
-    cam->from = obj_vert.pos[from.pos];
-    cam->to = obj_vert.pos[to.pos];
-    cam->up = (from.norm >= 0) ? obj_vert.norm[from.norm] : ym_vec3f{0, 1, 0};
-    cam->width = (to.texcoord >= 0) ? obj_vert.texcoord[to.texcoord].x : 1;
-    cam->height = (to.texcoord >= 0) ? obj_vert.texcoord[to.texcoord].y : 1;
-    cam->aperture =
-        (from.texcoord >= 0) ? obj_vert.texcoord[from.texcoord].x : 0;
-
-    // clear buffers
-    vhash->nverts = 0;
-    for (int i = 0; i < yo__vhash_size; i++) vhash->v[i].resize(0);
+static inline float3 _parse_float3(char** tok) {
+    return float3{(float)atof(tok[0]), (float)atof(tok[1]),
+                  (float)atof(tok[2])};
 }
 
 //
-// Add an environment map from OBJ vertices.
+// Parses 12 floats.
 //
-static inline void yo__add_env(std::vector<yo_env>& envs, const ym_string& name,
-                               const ym_string& matname, const yo__vert& from,
-                               const yo__vert& to, const yo__vertdata& obj_vert,
-                               yo__vhash* vhash) {
-    envs.push_back(yo_env());
-    yo_env* env = &envs[envs.size() - 1];
-
-    env->name = name;
-    env->matname = matname;
-    env->from = obj_vert.pos[from.pos];
-    env->to = obj_vert.pos[to.pos];
-    env->up = (from.norm >= 0) ? obj_vert.norm[from.norm] : ym_vec3f{0, 1, 0};
-
-    // clear buffers
-    vhash->nverts = 0;
-    for (int i = 0; i < yo__vhash_size; i++) vhash->v[i].resize(0);
-}
-
-// parses one float
-static inline float yo__parse_float(char** tok) { return atof(tok[0]); }
-
-// parses two floats
-static inline ym_vec2f yo__parse_float2(char** tok) {
-    return ym_vec2f{(float)atof(tok[0]), (float)atof(tok[1])};
-}
-
-// parses three floats
-static inline ym_vec3f yo__parse_float3(char** tok) {
-    return ym_vec3f{(float)atof(tok[0]), (float)atof(tok[1]),
-                    (float)atof(tok[2])};
-}
-
-// parses 12 floats
-static inline ym_affine3f yo__parse_affine3f(char** tok) {
-    ym_affine3f m;
-    float* mm = (float*)&m;
-    for (int i = 0; i < 12; i++) mm[i] = (float)atof(tok[i]);
+static inline float4x4 _parse_float4x4(char** tok) {
+    float4x4 m;
+    auto mm = (float*)&m;
+    for (auto i = 0; i < 16; i++) mm[i] = (float)atof(tok[i]);
     return m;
 }
 
-// parses an OBJ vertex triplet (or quintuplet with extensions); handle
-// nagative indices directly
-static inline yo__vert yo__parse_vert(char* str, yo__vhash* vhash,
-                                      const yo__vertdata& obj_vert) {
-    // parse triplet
-    char* splits[] = {str, 0, 0, 0, 0};
-    int ns = 1;
-    yo__vert v = {-1, -1, -1, -1, -1};
-    while (*str) {
-        if (*str == '/') {
-            *str = 0;
-            if (ns < 5) splits[ns++] = str + 1;
-        }
-        str++;
-    }
-    int* f = &v.pos;
-    yo__vert vl = {(int)obj_vert.pos.size(),    (int)obj_vert.texcoord.size(),
-                   (int)obj_vert.norm.size(),   (int)obj_vert.color.size(),
-                   (int)obj_vert.radius.size(), 0};
-    int* l = &vl.pos;
-    for (int i = 0; i < 5; i++) {
-        if (!splits[i]) {
-            f[i] = -1;
-            continue;
-        }
-        f[i] = (int)atoi(splits[i]);
-        f[i] = (f[i] < 0) ? l[i] + f[i] : f[i] - 1;
-    }
-
-    // determine position vid using vertex hash
-    int pos = -1;
-    int hidx = v.pos % yo__vhash_size;
-    for (int i = 0; i < vhash->v[hidx].size() && pos < 0; i++) {
-        if (v.pos == vhash->v[hidx][i].pos &&
-            v.texcoord == vhash->v[hidx][i].texcoord &&
-            v.norm == vhash->v[hidx][i].norm &&
-            v.color == vhash->v[hidx][i].color &&
-            v.radius == vhash->v[hidx][i].radius)
-            pos = i;
-    }
-
-    // found, can exit
-    if (pos >= 0) return vhash->v[hidx][pos];
-
-    // insert in vhash
-    v.vid = vhash->nverts;
-    vhash->v[hidx].push_back(v);
-    vhash->nverts++;
-
-    return v;
-}
-
-// add a unique vertex to a parsed shape
-static inline void yo__add_shape_vert(yo__vertdata* vert, const yo__vert& v,
-                                      const yo__vertdata& obj_vert) {
-    // check already added
-    if (v.vid < vert->pos.size()) return;
-    // TODO: assert for malformed stuff
-    if (v.pos >= 0) vert->pos.push_back(obj_vert.pos[v.pos]);
-    if (v.norm >= 0) vert->norm.push_back(obj_vert.norm[v.norm]);
-    if (v.texcoord >= 0)
-        vert->texcoord.push_back(obj_vert.texcoord[v.texcoord]);
-    if (v.color >= 0) vert->color.push_back(obj_vert.color[v.color]);
-    if (v.radius >= 0) vert->radius.push_back(obj_vert.radius[v.radius]);
-}
-
 //
-// add a unique texture
+// Parses an OBJ vertex list. Handles negative values.
 //
-static inline int yo__add_unique_texture(std::vector<yo_texture>& textures,
-                                         const ym_string& path) {
-    if (path.empty()) return -1;
-    int pos = -1;
-    for (int i = 0; i < textures.size() && pos < 0; i++)
-        if (textures[i].path == path) pos = i;
-    if (pos >= 0) return pos;
-    textures.push_back(yo_texture());
-    textures[textures.size() - 1].path = path;
-    return (int)textures.size() - 1;
-}
-
-//
-// loads an MTL file
-//
-static inline bool yo__load_mtl(std::vector<yo_material>& materials,
-                                std::vector<yo_texture>& textures,
-                                const std::string& filename) {
-    FILE* mfile = fopen(filename.c_str(), "rt");
-    if (!mfile) return false;
-
-    char mline[4096];
-    char* mtok[10];
-    int mlinenum = 0;
-
-    yo_material* mat = 0;
-
-    // foreach line, splits the line by whitespaces and parses the data
-    // directly in the material
-    while (fgets(mline, 4096, mfile)) {
-        mlinenum += 1;
-        int mntok = yo__splitws(mline, mtok, 10);
-
-        if (!mntok) {
-            continue;
-        } else if (mtok[0][0] == '#' || mtok[0][0] == '/') {
-            continue;
-        } else if (!strcmp(mtok[0], "newmtl")) {
-            yo__add_empty_material(materials, ym_string(mtok[1]));
-            mat = &materials[materials.size() - 1];
-        } else if (!strcmp(mtok[0], "illum")) {
-            mat->illum = atoi(mtok[1]);
-        } else if (!strcmp(mtok[0], "Ke")) {
-            mat->ke = yo__parse_float3(mtok + 1);
-        } else if (!strcmp(mtok[0], "Ka")) {
-            mat->ka = yo__parse_float3(mtok + 1);
-        } else if (!strcmp(mtok[0], "Kd")) {
-            mat->kd = yo__parse_float3(mtok + 1);
-        } else if (!strcmp(mtok[0], "Ks")) {
-            mat->ks = yo__parse_float3(mtok + 1);
-        } else if (!strcmp(mtok[0], "Kr")) {
-            mat->kr = yo__parse_float3(mtok + 1);
-        } else if (!strcmp(mtok[0], "Tr")) {
-            mat->kt = yo__parse_float3(mtok + 1);
-        } else if (!strcmp(mtok[0], "Ns")) {
-            mat->ns = yo__parse_float(mtok + 1);
-        } else if (!strcmp(mtok[0], "d")) {
-            mat->op = yo__parse_float(mtok + 1);
-        } else if (!strcmp(mtok[0], "Tr")) {
-            mat->op = yo__parse_float(mtok + 1);
-        } else if (!strcmp(mtok[0], "Ni")) {
-            mat->ior = yo__parse_float(mtok + 1);
-        } else if (!strcmp(mtok[0], "map_Ke")) {
-            mat->ke_txt = mtok[1];
-            mat->ke_txtid = yo__add_unique_texture(textures, mat->ke_txt);
-        } else if (!strcmp(mtok[0], "map_Ka")) {
-            mat->ka_txt = mtok[1];
-            mat->ka_txtid = yo__add_unique_texture(textures, mat->ka_txt);
-        } else if (!strcmp(mtok[0], "map_Kd")) {
-            mat->kd_txt = mtok[1];
-            mat->kd_txtid = yo__add_unique_texture(textures, mat->kd_txt);
-        } else if (!strcmp(mtok[0], "map_Ks")) {
-            mat->ks_txt = mtok[1];
-            mat->ks_txtid = yo__add_unique_texture(textures, mat->ks_txt);
-        } else if (!strcmp(mtok[0], "map_Kr")) {
-            mat->kr_txt = mtok[1];
-            mat->kr_txtid = yo__add_unique_texture(textures, mat->kr_txt);
-        } else if (!strcmp(mtok[0], "map_Tr")) {
-            mat->kt_txt = mtok[1];
-            mat->kt_txtid = yo__add_unique_texture(textures, mat->kt_txt);
-        } else if (!strcmp(mtok[0], "map_Ns")) {
-            mat->ns_txt = mtok[1];
-            mat->ns_txtid = yo__add_unique_texture(textures, mat->ns_txt);
-        } else if (!strcmp(mtok[0], "map_d")) {
-            mat->op_txt = mtok[1];
-            mat->op_txtid = yo__add_unique_texture(textures, mat->op_txt);
-        } else if (!strcmp(mtok[0], "map_Tr")) {
-            mat->op_txt = mtok[1];
-            mat->op_txtid = yo__add_unique_texture(textures, mat->op_txt);
-        } else if (!strcmp(mtok[0], "map_Ni")) {
-            mat->ior_txt = mtok[1];
-            mat->ior_txtid = yo__add_unique_texture(textures, mat->ior_txt);
-        } else if (!strcmp(mtok[0], "map_bump")) {
-            mat->bump_txt = mtok[1];
-            mat->bump_txtid = yo__add_unique_texture(textures, mat->bump_txt);
-        } else if (!strcmp(mtok[0], "map_disp")) {
-            mat->disp_txt = mtok[1];
-            mat->disp_txtid = yo__add_unique_texture(textures, mat->disp_txt);
-        } else {
-            // printf("ignoring value for %s\n", mtok[0]);
+static inline void _parse_vertlist(char** tok, int ntoks,
+                                   std::vector<vert>& elems,
+                                   const vert& vert_size) {
+    elems.clear();
+    for (auto i = 0; i < ntoks; i++) {
+        // parse triplet
+        char* splits[] = {tok[i], 0, 0, 0, 0};
+        auto ns = 1;
+        while (*tok[i]) {
+            if (*tok[i] == '/') {
+                *tok[i] = 0;
+                if (ns < 5) splits[ns++] = tok[i] + 1;
+            }
+            tok[i]++;
         }
-    }
-
-    fclose(mfile);
-
-    return true;
-}
-
-//
-// Splits a path into component to get directory name
-//
-static inline void yo__split_path(const std::string& filename,
-                                  std::string* dirname, std::string* basename,
-                                  std::string* ext) {
-    // walk till end keeping the position of '/', '\\' and '.'
-    auto path_sep = -1, ext_sep = -1;
-    for (auto i = 0; i < filename.length(); i++) {
-        if (filename[i] == '/' || filename[i] == '\\') path_sep = i;
-        if (filename[i] == '.') ext_sep = i;
-    }
-
-    // copy strings
-    if (dirname) {
-        if (path_sep >= 0) {
-            *dirname = filename.substr(0, path_sep + 1);
-        } else {
-            *dirname = "";
+        auto v = vert{-1, -1, -1, -1, -1};
+        auto v_ptr = &v.pos;
+        auto vs_ptr = &vert_size.pos;
+        for (auto i = 0; i < 5; i++) {
+            if (!splits[i]) {
+                v_ptr[i] = -1;
+                continue;
+            }
+            v_ptr[i] = (int)atoi(splits[i]);
+            v_ptr[i] = (v_ptr[i] < 0) ? vs_ptr[i] + v_ptr[i] : v_ptr[i] - 1;
         }
-    }
-    if (basename) {
-        auto start = (path_sep >= 0) ? path_sep + 1 : 0;
-        if (ext_sep >= 0) {
-            *basename = filename.substr(start, ext_sep);
-        } else {
-            *basename = filename.substr(start);
-        }
-    }
-    if (ext) {
-        if (ext_sep) {
-            *ext = filename.substr(ext_sep);
-        } else {
-            *ext = "";
-        }
+        elems.push_back(v);
     }
 }
 
 //
-// Loads an OBJ file
+// Flattens an OBJ
 //
-YGL_API yo_scene* yo_load_obj(const std::string& filename, bool triangulate,
-                              bool ext) {
-    // prepare scene
-    yo_scene* scene = new yo_scene();
+YGL_API bool load_obj(const std::string& filename, obj& ob,
+                      std::string& errmsg) {
+    // clear obj
+    ob = obj();
 
-    // vertex scene
-    yo__vertdata obj_vert;
+    // open file
+    auto file = fopen(filename.c_str(), "rt");
+    if (!file) {
+        errmsg = "cannot open filename " + filename;
+        return false;
+    }
 
-    // current scene objects
-    std::vector<yo_shape> shapes;
-    std::vector<yo_material> materials;
-    std::vector<yo_texture> textures;
-    std::vector<yo_camera> cameras;
-    std::vector<yo_env> envs;
+    // initializing obj
+    ob.objects.push_back({});
+    ob.objects.back().elems.push_back({});
 
-    // current shape scene
-    yo__vhash* vhash = new yo__vhash();
-    ym_string name, matname, groupname;
-    ym_affine3f xform = ym_identity_affine3f;
-    yo__elemdata elem;
-    yo__vertdata vert;
+    // allocate buffers to avoid re-allocing
+    auto cur_elems = std::vector<vert>();
+    auto cur_matname = std::string();
+    auto cur_mtllibs = std::vector<std::string>();
 
-    // start
-    FILE* file = fopen(filename.c_str(), "rt");
-    if (!file) return 0;
+    // keep track of array lengths
+    auto vert_size = vert{0, 0, 0, 0, 0};
 
-    // foreach line, splits the line by whitespaces and parses the data
-    // directly in the current shape, emitting shapes when either name,
-    // material name, group name or shape element type changes
+    // read the file line by line
     char line[4096];
-    char* tok[1024];
-    int linenum = 0;
+    char* toks[1024];
+    auto linenum = 0;
     while (fgets(line, 4096, file)) {
         linenum += 1;
-        int ntok = yo__splitws(line, tok, 1024);
+        int ntok = _splitws(line, toks, 1024);
 
-        if (!ntok) {
-            continue;
-        } else if (tok[0][0] == '#') {
-            continue;
-        } else if (!strcmp(tok[0], "v")) {
-            obj_vert.pos.push_back(yo__parse_float3(tok + 1));
-        } else if (!strcmp(tok[0], "vt")) {
-            obj_vert.texcoord.push_back(yo__parse_float2(tok + 1));
-        } else if (!strcmp(tok[0], "vn")) {
-            obj_vert.norm.push_back(yo__parse_float3(tok + 1));
-        } else if (!strcmp(tok[0], "vc")) {
-            if (ext) {
-                obj_vert.norm.push_back(yo__parse_float3(tok + 1));
-            }
-        } else if (!strcmp(tok[0], "vr")) {
-            if (ext) {
-                obj_vert.radius.push_back(yo__parse_float(tok + 1));
-            }
-        } else if (!strcmp(tok[0], "xf")) {
-            if (ext) {
-                xform = yo__parse_affine3f(tok + 1);
-            }
-        } else if (!strcmp(tok[0], "c")) {
-            if (ext) {
-                yo__add_shape(shapes, materials, name, matname, groupname,
-                              xform, elem, vert, vhash);
-                yo__vert from = yo__parse_vert(tok[1], vhash, obj_vert);
-                yo__vert to = yo__parse_vert(tok[2], vhash, obj_vert);
-                yo__add_camera(cameras, name, from, to, obj_vert, vhash);
-                name = {};
-                matname = {};
-                xform = ym_identity_affine3f;
-            }
-        } else if (!strcmp(tok[0], "e")) {
-            if (ext) {
-                yo__add_shape(shapes, materials, name, matname, groupname,
-                              xform, elem, vert, vhash);
-                yo__vert from = yo__parse_vert(tok[1], vhash, obj_vert);
-                yo__vert to = yo__parse_vert(tok[2], vhash, obj_vert);
-                yo__add_env(envs, name, matname, from, to, obj_vert, vhash);
-                name = {};
-                matname = {};
-                xform = ym_identity_affine3f;
-            }
-        } else if (!strcmp(tok[0], "f") && !triangulate) {
-            if (elem.etype != yo_etype_polygon) {
-                yo__add_shape(shapes, materials, name, matname, groupname,
-                              xform, elem, vert, vhash);
-            }
-            elem.etype = yo_etype_polygon;
-            elem.elem.push_back(ntok - 1);
-            for (int t = 1; t < ntok; t++) {
-                yo__vert v = yo__parse_vert(tok[t], vhash, obj_vert);
-                yo__add_shape_vert(&vert, v, obj_vert);
-                elem.elem.push_back(v.vid);
-            }
-        } else if (!strcmp(tok[0], "f") && triangulate) {
-            if (elem.etype != yo_etype_triangle) {
-                yo__add_shape(shapes, materials, name, matname, groupname,
-                              xform, elem, vert, vhash);
-            }
-            elem.etype = yo_etype_triangle;
-            int vi0 = 0;
-            for (int t = 1; t < ntok; t++) {
-                yo__vert v = yo__parse_vert(tok[t], vhash, obj_vert);
-                yo__add_shape_vert(&vert, v, obj_vert);
-                if (t == 1) vi0 = v.vid;
-                if (t > 3) {
-                    int vil = elem.elem[elem.elem.size() - 1];
-                    elem.elem.push_back(vi0);
-                    elem.elem.push_back(vil);
-                }
-                elem.elem.push_back(v.vid);
-            }
-        } else if (!strcmp(tok[0], "l") && !triangulate) {
-            if (elem.etype != yo_etype_polyline) {
-                yo__add_shape(shapes, materials, name, matname, groupname,
-                              xform, elem, vert, vhash);
-            }
-            elem.etype = yo_etype_polyline;
-            elem.elem.push_back(ntok - 1);
-            for (int t = 1; t < ntok; t++) {
-                yo__vert v = yo__parse_vert(tok[t], vhash, obj_vert);
-                yo__add_shape_vert(&vert, v, obj_vert);
-                elem.elem.push_back(v.vid);
-            }
-        } else if (!strcmp(tok[0], "l") && triangulate) {
-            if (elem.etype != yo_etype_line) {
-                yo__add_shape(shapes, materials, name, matname, groupname,
-                              xform, elem, vert, vhash);
-            }
-            elem.etype = yo_etype_line;
-            for (int t = 1; t < ntok; t++) {
-                yo__vert v = yo__parse_vert(tok[t], vhash, obj_vert);
-                yo__add_shape_vert(&vert, v, obj_vert);
-                if (t > 2) {
-                    int vil = elem.elem[elem.elem.size() - 1];
-                    elem.elem.push_back(vil);
-                }
-                elem.elem.push_back(v.vid);
-            }
-        } else if (!strcmp(tok[0], "p")) {
-            if (elem.etype != yo_etype_point) {
-                yo__add_shape(shapes, materials, name, matname, groupname,
-                              xform, elem, vert, vhash);
-            }
-            elem.etype = yo_etype_point;
-            for (int t = 1; t < ntok; t++) {
-                yo__vert v = yo__parse_vert(tok[t], vhash, obj_vert);
-                yo__add_shape_vert(&vert, v, obj_vert);
-                elem.elem.push_back(v.vid);
-            }
-        } else if (!strcmp(tok[0], "o")) {
-            yo__add_shape(shapes, materials, name, matname, groupname, xform,
-                          elem, vert, vhash);
-            name = ym_string((ntok > 1) ? tok[1] : 0);
-            matname = {};
-            groupname = {};
-            xform = ym_identity_affine3f;
-        } else if (!strcmp(tok[0], "g")) {
-            yo__add_shape(shapes, materials, name, matname, groupname, xform,
-                          elem, vert, vhash);
-            groupname = ym_string((ntok > 1) ? tok[1] : 0);
-        } else if (!strcmp(tok[0], "usemtl")) {
-            yo__add_shape(shapes, materials, name, matname, groupname, xform,
-                          elem, vert, vhash);
-            matname = ym_string((ntok > 1) ? tok[1] : 0);
-        } else if (!strcmp(tok[0], "mtllib")) {
-            std::string dirname;
-            yo__split_path(filename, &dirname, nullptr, nullptr);
-            auto mfilename = dirname + tok[1];
-            if (!yo__load_mtl(materials, textures, mfilename)) return 0;
+        // skip empty and comments
+        if (!ntok) continue;
+        if (toks[0][0] == '#') continue;
+
+        // set up code
+        auto tok_s = std::string(toks[0]);
+        auto cur_tok = toks + 1;
+        auto cur_ntok = ntok - 1;
+
+        // possible token values
+        if (tok_s == "v") {
+            vert_size.pos += 1;
+            ob.pos.push_back(_parse_float3(cur_tok));
+        } else if (tok_s == "vn") {
+            vert_size.norm += 1;
+            ob.norm.push_back(_parse_float3(cur_tok));
+        } else if (tok_s == "vt") {
+            vert_size.texcoord += 1;
+            ob.texcoord.push_back(_parse_float2(cur_tok));
+        } else if (tok_s == "vc") {
+            vert_size.color += 1;
+            ob.color.push_back(_parse_float3(cur_tok));
+        } else if (tok_s == "vr") {
+            vert_size.radius += 1;
+            ob.radius.push_back(_parse_float(cur_tok));
+        } else if (tok_s == "f") {
+            _parse_vertlist(cur_tok, cur_ntok, cur_elems, vert_size);
+            auto& g = ob.objects.back().elems.back();
+            g.elems.push_back({(uint32_t)g.verts.size(), elem::type::face,
+                               (uint16_t)cur_elems.size()});
+            g.verts.insert(g.verts.end(), cur_elems.begin(), cur_elems.end());
+        } else if (tok_s == "l") {
+            _parse_vertlist(cur_tok, cur_ntok, cur_elems, vert_size);
+            auto& g = ob.objects.back().elems.back();
+            g.elems.push_back({(uint32_t)g.verts.size(), elem::type::line,
+                               (uint16_t)cur_elems.size()});
+            g.verts.insert(g.verts.end(), cur_elems.begin(), cur_elems.end());
+        } else if (tok_s == "p") {
+            _parse_vertlist(cur_tok, cur_ntok, cur_elems, vert_size);
+            auto& g = ob.objects.back().elems.back();
+            g.elems.push_back({(uint32_t)g.verts.size(), elem::type::point,
+                               (uint16_t)cur_elems.size()});
+            g.verts.insert(g.verts.end(), cur_elems.begin(), cur_elems.end());
+        } else if (tok_s == "o") {
+            auto name = (cur_ntok) ? cur_tok[0] : "";
+            ob.objects.push_back({name});
+            ob.objects.back().elems.push_back({cur_matname, ""});
+        } else if (tok_s == "usemtl") {
+            auto name = (cur_ntok) ? cur_tok[0] : "";
+            cur_matname = name;
+            ob.objects.back().elems.push_back({cur_matname, ""});
+        } else if (tok_s == "g") {
+            auto name = (cur_ntok) ? cur_tok[0] : "";
+            ob.objects.back().elems.push_back({cur_matname, name});
+        } else if (tok_s == "mtllib") {
+            auto name = (cur_ntok) ? cur_tok[0] : "";
+            cur_mtllibs.push_back(name);
+        } else if (tok_s == "c") {
+            ob.cameras.push_back({});
+            auto& cam = ob.cameras.back();
+            cam.name = (cur_ntok) ? cur_tok[0] : "";
+            cam.ortho = _parse_int(cur_tok + 1);
+            cam.yfov = _parse_float(cur_tok + 2);
+            cam.aspect = _parse_float(cur_tok + 3);
+            cam.aperture = _parse_float(cur_tok + 4);
+            cam.focus = _parse_float(cur_tok + 5);
+            cam.xform = _parse_float4x4(cur_tok + 6);
+        } else if (tok_s == "e") {
+            ob.environments.push_back({});
+            auto& env = ob.environments.back();
+            env.name = (cur_ntok) ? cur_tok[0] : "";
+            env.matname = (cur_ntok - 1) ? cur_tok[1] : "";
+            env.xform = _parse_float4x4(cur_tok + 2);
         } else {
-            // TODO: explicit skips
+            // unused
         }
     }
 
-    // flush and cleanup empty shape if necessary
-    yo__add_shape(shapes, materials, name, matname, groupname, xform, elem,
-                  vert, vhash);
+    // cleanup unused
+    for (auto&& o : ob.objects) {
+        auto end =
+            std::remove_if(o.elems.begin(), o.elems.end(),
+                           [](const elem_group& x) { return x.verts.empty(); });
+        o.elems.erase(end, o.elems.end());
+    }
+    auto end = std::remove_if(ob.objects.begin(), ob.objects.end(),
+                              [](const object& x) { return x.elems.empty(); });
+    ob.objects.erase(end, ob.objects.end());
 
-    // close file
-    fclose(file);
+    // parse materials
+    for (auto mtllib : cur_mtllibs) {
+        auto mtlname = _get_dirname(filename) + mtllib;
+        std::vector<material> materials;
+        if (!load_mtl(mtlname, materials, errmsg)) return false;
+        ob.materials.insert(ob.materials.end(), materials.begin(),
+                            materials.end());
+    }
 
-    // add data to scene
-    scene->shapes = shapes;
-    scene->materials = materials;
-    scene->textures = textures;
-    scene->cameras = cameras;
-    scene->envs = envs;
-
-    return scene;
+    // done
+    return true;
 }
 
-// -----------------------------------------------------------------------------
-// OBJ SAVING
-// -----------------------------------------------------------------------------
+//
+// Load MTL
+//
+YGL_API bool load_mtl(const std::string& filename,
+                      std::vector<material>& materials, std::string& errmsg) {
+    // clear materials
+    materials.clear();
 
+    // open file
+    auto file = fopen(filename.c_str(), "rt");
+    if (!file) {
+        errmsg = "cannot open filename " + filename;
+        return false;
+    }
+
+    // read the file line by line
+    char line[4096];
+    char* toks[1024];
+    auto linenum = 0;
+    while (fgets(line, 4096, file)) {
+        linenum += 1;
+        int ntok = _splitws(line, toks, 1024);
+
+        // skip empty and comments
+        if (!ntok) continue;
+        if (toks[0][0] == '#') continue;
+
+        // set up code
+        auto tok_s = std::string(toks[0]);
+        auto cur_tok = toks + 1;
+        auto cur_ntok = ntok - 1;
+
+        // possible token values
+        if (tok_s == "newmtl") {
+            materials.push_back({});
+            materials.back().name = (cur_ntok) ? cur_tok[0] : "";
+        } else if (tok_s == "illum") {
+            materials.back().illum = _parse_int(cur_tok);
+        } else if (tok_s == "Ke") {
+            materials.back().ke = _parse_float3(cur_tok);
+        } else if (tok_s == "Ka") {
+            materials.back().ka = _parse_float3(cur_tok);
+        } else if (tok_s == "Kd") {
+            materials.back().kd = _parse_float3(cur_tok);
+        } else if (tok_s == "Ks") {
+            materials.back().ks = _parse_float3(cur_tok);
+        } else if (tok_s == "Kr") {
+            materials.back().kr = _parse_float3(cur_tok);
+        } else if (tok_s == "Tr") {
+            materials.back().kt = _parse_float3(cur_tok);
+        } else if (tok_s == "Ns") {
+            materials.back().ns = _parse_float(cur_tok);
+        } else if (tok_s == "d" || tok_s == "Tr") {
+            materials.back().op = _parse_float(cur_tok);
+        } else if (tok_s == "Ni") {
+            materials.back().ior = _parse_float(cur_tok);
+        } else if (tok_s == "map_Ke") {
+            materials.back().ke_txt = (cur_ntok) ? cur_tok[0] : "";
+        } else if (tok_s == "map_Ka") {
+            materials.back().ka_txt = (cur_ntok) ? cur_tok[0] : "";
+        } else if (tok_s == "map_Kd") {
+            materials.back().kd_txt = (cur_ntok) ? cur_tok[0] : "";
+        } else if (tok_s == "map_Ks") {
+            materials.back().ks_txt = (cur_ntok) ? cur_tok[0] : "";
+        } else if (tok_s == "map_Kr") {
+            materials.back().ke_txt = (cur_ntok) ? cur_tok[0] : "";
+        } else if (tok_s == "map_Tr") {
+            materials.back().kt_txt = (cur_ntok) ? cur_tok[0] : "";
+        } else if (tok_s == "map_Ns") {
+            materials.back().ns_txt = (cur_ntok) ? cur_tok[0] : "";
+        } else if (tok_s == "map_d") {
+            materials.back().op_txt = (cur_ntok) ? cur_tok[0] : "";
+        } else if (tok_s == "map_Ni") {
+            materials.back().ior_txt = (cur_ntok) ? cur_tok[0] : "";
+        } else if (tok_s == "map_bump") {
+            materials.back().bump_txt = (cur_ntok) ? cur_tok[0] : "";
+        } else if (tok_s == "map_disp") {
+            materials.back().disp_txt = (cur_ntok) ? cur_tok[0] : "";
+        } else if (tok_s == "map_norm") {
+            materials.back().norm_txt = (cur_ntok) ? cur_tok[0] : "";
+        } else {
+            // unused
+        }
+    }
+
+    // done
+    return true;
+}
+
+//
 // write one float prepended by a string
-static inline void yo__fwrite_float(FILE* file, const char* str, float v) {
-    fprintf(file, "%s %.6g\n", str, v);
+//
+static inline void _fwrite_float(FILE* file, const char* str, float v,
+                                 bool newline = true) {
+    fprintf(file, "%s %.6g", str, v);
+    if (newline) fprintf(file, "\n");
 }
 
+//
 // write one float prepended by a string
-static inline void yo__fwrite_int(FILE* file, const char* str, int v) {
-    fprintf(file, "%s %d\n", str, v);
+//
+static inline void _fwrite_int(FILE* file, const char* str, int v,
+                               bool newline = true) {
+    fprintf(file, "%s %d", str, v);
+    if (newline) fprintf(file, "\n");
 }
 
+//
 // write two floats prepended by a string
-static inline void yo__fwrite_float2(FILE* file, const char* str,
-                                     const ym_vec2f& v) {
-    fprintf(file, "%s %.6g %.6g\n", str, v[0], v[1]);
+//
+static inline void _fwrite_float2(FILE* file, const char* str, const float2& v,
+                                  bool newline = true) {
+    fprintf(file, "%s %.6g %.6g", str, v[0], v[1]);
+    if (newline) fprintf(file, "\n");
 }
 
+//
 // write three floats prepended by a string
-static inline void yo__fwrite_float3(FILE* file, const char* str,
-                                     const ym_vec3f& v) {
-    fprintf(file, "%s %.6g %.6g %.6g\n", str, v[0], v[1], v[2]);
+//
+static inline void _fwrite_float3(FILE* file, const char* str, const float3& v,
+                                  bool newline = true) {
+    fprintf(file, "%s %.6g %.6g %.6g", str, v[0], v[1], v[2]);
+    if (newline) fprintf(file, "\n");
 }
 
+//
 // write 16 floats prepended by a string
-static inline void yo__fwrite_float12(FILE* file, const char* str,
-                                      const ym_affine3f& v) {
+//
+static inline void _fwrite_float4x4(FILE* file, const char* str,
+                                    const float4x4& v, bool newline = true) {
     const float* vf = (float*)&v;
     fprintf(file, "%s", str);
-    for (int i = 0; i < 12; i++) fprintf(file, " %.6g", vf[i]);
+    for (int i = 0; i < 16; i++) fprintf(file, " %.6g", vf[i]);
+    if (newline) fprintf(file, "\n");
+}
+
+//
+// write a string prepended by another if the string is not NULL
+//
+static inline void _fwrite_str(FILE* file, const char* str,
+                               const std::string& s, bool force = false,
+                               bool newline = true) {
+    if (s.empty() && !force) return;
+    fprintf(file, "%s %s", str, s.c_str());
+    if (newline) fprintf(file, "\n");
+}
+
+//
+// write an OBJ vertex triplet using only the indices that are active
+//
+static inline void _fwrite_objverts(FILE* file, const char* str, int nv,
+                                    const vert* verts, bool newline = true) {
+    fprintf(file, "%s", str);
+    for (auto v = 0; v < nv; v++) {
+        auto vert = verts[v];
+        auto vert_ptr = &vert.pos;
+        auto nto_write = 0;
+        for (auto i = 0; i < 5; i++) {
+            if (vert_ptr[i] >= 0) nto_write = i;
+        }
+        for (auto i = 0; i < nto_write; i++) {
+            if (vert_ptr[i] >= 0) {
+                fprintf(file, "%c%d", ((i == 0) ? ' ' : '/'), vert_ptr[i] + 1);
+            } else {
+                fprintf(file, "%c", '/');
+            }
+        }
+    }
     fprintf(file, "\n");
 }
 
-// write a string prepended by another if the string is not NULL
-static inline void yo__fwrite_str(FILE* file, const char* str,
-                                  const ym_string& s, bool force = false) {
-    if (!s.empty() || force) fprintf(file, "%s %s\n", str, s.c_str());
+//
+// Save an OBJ
+//
+YGL_API bool save_obj(const std::string& filename, const obj& obj,
+                      std::string& errmsg) {
+    // open file
+    auto file = std::fopen(filename.c_str(), "wt");
+    if (!file) {
+        errmsg = "could not open filename " + filename;
+        return false;
+    }
+
+    // linkup to mtl
+    auto dirname = _get_dirname(filename);
+    auto basename = filename.substr(dirname.length());
+    basename = basename.substr(0, basename.length() - 4);
+    if (!obj.materials.empty()) {
+        _fwrite_str(file, "mtllib", basename + ".mtl");
+    }
+
+    // save cameras
+    for (auto& cam : obj.cameras) {
+        _fwrite_str(file, "c", cam.name, true, false);
+        _fwrite_int(file, " ", cam.ortho, false);
+        _fwrite_float(file, " ", cam.yfov, false);
+        _fwrite_float(file, " ", cam.aspect, false);
+        _fwrite_float(file, " ", cam.aperture, false);
+        _fwrite_float(file, " ", cam.focus, false);
+        _fwrite_float4x4(file, " ", cam.xform, true);
+    }
+
+    // save envs
+    for (auto& env : obj.environments) {
+        _fwrite_str(file, "e", env.name, true, false);
+        _fwrite_str(file, " ", env.matname, true, false);
+        _fwrite_float4x4(file, " ", env.xform, true);
+    }
+
+    // save all vertex data
+    for (auto v : obj.pos) _fwrite_float3(file, "v", v);
+    for (auto v : obj.texcoord) _fwrite_float2(file, "vt", v);
+    for (auto v : obj.norm) _fwrite_float3(file, "vn", v);
+    for (auto v : obj.color) _fwrite_float3(file, "vc", v);
+    for (auto v : obj.radius) _fwrite_float(file, "vr", v);
+
+    // save element data
+    const char* elem_labels[] = {"", "p", "l", "f"};
+    for (auto& object : obj.objects) {
+        _fwrite_str(file, "o", object.name, true);
+        for (auto& elems : object.elems) {
+            _fwrite_str(file, "usemtl", elems.matname);
+            _fwrite_str(file, "g", elems.groupname);
+            for (auto elem : elems.elems) {
+                _fwrite_objverts(file, elem_labels[(int)elem.type], elem.size,
+                                 elems.verts.data() + elem.start);
+            }
+        }
+    }
+
+    fclose(file);
+
+    // save materials
+    if (!obj.materials.empty()) {
+        if (!save_mtl(dirname + basename + ".mtl", obj.materials, errmsg))
+            return false;
+    }
+
+    return true;
 }
 
 //
-// save MTL file
+// Save an MTL file
 //
-static inline bool yo__save_mtl(const std::string& filename,
-                                const yo_scene* scene) {
-    // TODO: failure
-    FILE* mfile = fopen(filename.c_str(), "wt");
-    if (!mfile) return false;
+YGL_API bool save_mtl(const std::string& filename,
+                      const std::vector<material>& materials,
+                      std::string& errmsg) {
+    auto file = std::fopen(filename.c_str(), "wt");
+    if (!file) {
+        errmsg = "could not open filename " + filename;
+        return false;
+    }
 
     // for each material, dump all the values
-    for (int i = 0; i < scene->materials.size(); i++) {
-        const yo_material* mat = &scene->materials[i];
-        yo__fwrite_str(mfile, "newmtl", mat->name, true);
-        yo__fwrite_int(mfile, "  illum", mat->illum);
-        yo__fwrite_float3(mfile, "  Ke", mat->ke);
-        yo__fwrite_float3(mfile, "  Kd", mat->kd);
-        yo__fwrite_float3(mfile, "  Ks", mat->ks);
-        yo__fwrite_float3(mfile, "  Kr", mat->kr);
-        yo__fwrite_float3(mfile, "  Kt", mat->kt);
-        yo__fwrite_float(mfile, "  Ns", mat->ns);
-        yo__fwrite_float(mfile, "  d", mat->op);
-        yo__fwrite_float(mfile, "  Ni", mat->ior);
-        yo__fwrite_str(mfile, "  map_Ke", mat->ke_txt);
-        yo__fwrite_str(mfile, "  map_Kd", mat->kd_txt);
-        yo__fwrite_str(mfile, "  map_Ks", mat->ks_txt);
-        yo__fwrite_str(mfile, "  map_Kr", mat->kr_txt);
-        yo__fwrite_str(mfile, "  map_Kt", mat->kt_txt);
-        yo__fwrite_str(mfile, "  map_Ns", mat->ns_txt);
-        yo__fwrite_str(mfile, "  map_d", mat->op_txt);
-        yo__fwrite_str(mfile, "  map_Ni", mat->ior_txt);
-        yo__fwrite_str(mfile, "  map_bump", mat->bump_txt);
-        yo__fwrite_str(mfile, "  map_disp", mat->disp_txt);
-        fprintf(mfile, "\n");
-    }
-
-    fclose(mfile);
-
-    return true;
-}
-
-// write an OBJ vertex triplet using only the indices that are active
-static inline void yo__fwrite_objverts(FILE* file, const char* str, int nv,
-                                       const int* vid, yo__vert voffset,
-                                       int nto_write, yo__vert to_write) {
-    fprintf(file, "%s", str);
-    for (int v = 0; v < nv; v++) {
-        for (int i = 0; i < nto_write; i++) {
-            if ((&to_write.pos)[i])
-                fprintf(file, "%c%d", ((i == 0) ? ' ' : '/'),
-                        (&voffset.pos)[i] + vid[v]);
-            else
-                fprintf(file, "%c", '/');
-        }
-    }
-    fprintf(file, "\n");
-}
-
-//
-// save OBJ
-//
-YGL_API bool yo_save_obj(const std::string& filename, const yo_scene* scene,
-                         bool ext) {
-    std::string dirname, mfilename;
-    yo__split_path(filename.c_str(), &dirname, &mfilename, nullptr);
-    mfilename += ".mtl";
-
-    // write material file
-    if (!scene->materials.empty()) {
-        std::string fullname;
-        if (dirname.length())
-            fullname = dirname + mfilename;
-        else
-            fullname = mfilename;
-        if (!yo__save_mtl(fullname, scene)) return false;
-    }
-
-    FILE* file = fopen(filename.c_str(), "wt");
-    if (!file) return false;
-
-    if (!scene->materials.empty()) {
-        fprintf(file, "mtllib %s\n", mfilename.c_str());
-    }
-
-    yo__vert voffset = {1, 1, 1, 1, 1};
-
-    // write cameras and environments if extensions are enabled
-    if (ext) {
-        for (int cid = 0; cid < scene->cameras.size(); cid++) {
-            const yo_camera* cam = &scene->cameras[cid];
-            yo__fwrite_str(file, "o", cam->name);
-            yo__fwrite_float3(file, "v", cam->from);
-            yo__fwrite_float3(file, "v", cam->to);
-            yo__fwrite_float3(file, "vn", cam->up);
-            yo__fwrite_float3(file, "vn", cam->up);
-            yo__fwrite_float2(file, "vt", {cam->aperture, cam->aperture});
-            yo__fwrite_float2(file, "vt", {cam->width, cam->height});
-            int vid[2] = {0, 1};
-            yo__fwrite_objverts(file, "c", 2, vid, voffset, 3,
-                                yo__vert{1, 1, 1, 0, 0, 0});
-            voffset.pos += 2;
-            voffset.norm += 2;
-            voffset.texcoord += 2;
-        }
-        for (int cid = 0; cid < scene->envs.size(); cid++) {
-            const yo_env* env = &scene->envs[cid];
-            yo__fwrite_str(file, "o", env->name);
-            yo__fwrite_str(file, "usemtl", env->matname);
-            yo__fwrite_float3(file, "v", env->from);
-            yo__fwrite_float3(file, "v", env->to);
-            yo__fwrite_float3(file, "vn", env->up);
-            yo__fwrite_float3(file, "vn", env->up);
-            int vid[2] = {0, 1};
-            yo__fwrite_float2(file, "vt", ym_zero2f);
-            yo__fwrite_float2(file, "vt", ym_zero2f);
-            yo__fwrite_objverts(file, "e", 2, vid, voffset, 3,
-                                yo__vert{1, 1, 1, 0, 0, 0});
-            voffset.pos += 2;
-            voffset.norm += 2;
-            voffset.texcoord += 2;
-        }
-    }
-
-    // write all shape data
-    for (int sid = 0; sid < scene->shapes.size(); sid++) {
-        const yo_shape* shape = &scene->shapes[sid];
-        // shape header (name, material)
-        yo__fwrite_str(file, "o", shape->name);
-        yo__fwrite_str(file, "usemtl", shape->matname);
-        if (ext && shape->xformed) yo__fwrite_float12(file, "xf", shape->xform);
-
-        // shape vertices
-        yo__vert vto_write = {(!shape->pos.empty()) ? 1 : 0,
-                              (!shape->texcoord.empty()) ? 1 : 0,
-                              (!shape->norm.empty()) ? 1 : 0,
-                              ((ext && !shape->color.empty()) ? 1 : 0),
-                              ((ext && !shape->radius.empty()) ? 1 : 0),
-                              0};
-        int nto_write = 0;
-        for (int i = 0; i < ((ext) ? 5 : 3); i++)
-            nto_write = (&vto_write.pos)[i] ? i + 1 : nto_write;
-        for (int j = 0; j < shape->nverts; j++) {
-            yo__fwrite_float3(file, "v ", shape->pos[j]);
-            if (vto_write.norm) yo__fwrite_float3(file, "vn", shape->norm[j]);
-            if (vto_write.texcoord)
-                yo__fwrite_float2(file, "vt", shape->texcoord[j]);
-            if (ext && vto_write.color)
-                yo__fwrite_float3(file, "vc", shape->color[j]);
-            if (ext && vto_write.radius)
-                yo__fwrite_float(file, "vr", shape->radius[j]);
-        }
-
-        // shape elements
-        switch (shape->etype) {
-            case yo_etype_point:
-            case yo_etype_line:
-            case yo_etype_triangle: {
-                const char* labels[4] = {0, "p", "l", "f"};
-                int esize = shape->etype;
-                const char* label = labels[shape->etype];
-                for (int j = 0; j < shape->nelems; j++) {
-                    const int* f = &shape->elem[j * esize];
-                    yo__fwrite_objverts(file, label, esize, f, voffset,
-                                        nto_write, vto_write);
-                }
-            } break;
-            case yo_etype_polyline:
-            case yo_etype_polygon: {
-                const char* label =
-                    (shape->etype == yo_etype_polyline) ? "l" : "f";
-                for (int j = 0, e = 0; j < shape->nelems; j++) {
-                    int esize = shape->elem[e++];
-                    const int* f = &shape->elem[e];
-                    yo__fwrite_objverts(file, label, esize, f, voffset,
-                                        nto_write, vto_write);
-                }
-            } break;
-            default: { assert(false); } break;
-        }
-        for (int i = 0; i < 5; i++)
-            (&voffset.pos)[i] += ((&vto_write.pos)[i]) ? shape->nverts : 0;
+    for (auto& mat : materials) {
+        _fwrite_str(file, "newmtl", mat.name, true);
+        _fwrite_int(file, "  illum", mat.illum);
+        _fwrite_float3(file, "  Ke", mat.ke);
+        _fwrite_float3(file, "  Ka", mat.ka);
+        _fwrite_float3(file, "  Kd", mat.kd);
+        _fwrite_float3(file, "  Ks", mat.ks);
+        _fwrite_float3(file, "  Kr", mat.kr);
+        _fwrite_float3(file, "  Kt", mat.kt);
+        _fwrite_float(file, "  Ns", mat.ns);
+        _fwrite_float(file, "  d", mat.op);
+        _fwrite_float(file, "  Ni", mat.ior);
+        _fwrite_str(file, "  map_Ke", mat.ke_txt);
+        _fwrite_str(file, "  map_Ka", mat.ke_txt);
+        _fwrite_str(file, "  map_Kd", mat.kd_txt);
+        _fwrite_str(file, "  map_Ks", mat.ks_txt);
+        _fwrite_str(file, "  map_Kr", mat.kr_txt);
+        _fwrite_str(file, "  map_Kt", mat.kt_txt);
+        _fwrite_str(file, "  map_Ns", mat.ns_txt);
+        _fwrite_str(file, "  map_d", mat.op_txt);
+        _fwrite_str(file, "  map_Ni", mat.ior_txt);
+        _fwrite_str(file, "  map_bump", mat.bump_txt);
+        _fwrite_str(file, "  map_disp", mat.disp_txt);
+        _fwrite_str(file, "  map_norm", mat.norm_txt);
+        fprintf(file, "\n");
     }
 
     fclose(file);
@@ -1273,297 +1024,305 @@ YGL_API bool yo_save_obj(const std::string& filename, const yo_scene* scene,
     return true;
 }
 
-// -----------------------------------------------------------------------------
-// BINARY DUMP LOADING
-// -----------------------------------------------------------------------------
-
-// magic code fron binary dump
-#define yo__binmagic 0xaf45e782
-
-// binary dump values
-template <typename T>
-static inline bool yo__fread_binvalue(FILE* file, T* v) {
-    return fread(v, sizeof(T), 1, file) == 1;
-}
-
-// binary dump vector of values
-template <typename T>
-static inline bool yo__fread_binvector(FILE* file, std::vector<T>* v) {
-    int num = 0;
-    if (fread(&num, sizeof(int), 1, file) != 1) return false;
-    v->resize(num);
-    if (fread(v->data(), sizeof(T), num, file) != num) return false;
-    return true;
-}
-
-// binary dump strings
-static inline bool yo__fread_binstr(FILE* file, ym_string* s) {
-    char buf[4096];
-    int num = 0;
-    if (fread(&num, sizeof(int), 1, file) != 1) return false;
-    assert(num < sizeof(buf) - 1);
-    if (num) {
-        if (fread(buf, 1, num, file) != num) return false;
-        *s = buf;
-    } else {
-        *s = "";
+//
+// Loads a textures and saves into an array
+//
+static inline int _add_texture(const std::string& filename,
+                               std::vector<fl_texture>& txts) {
+    if (filename.empty()) return -1;
+    for (auto i = 0; i < txts.size(); i++) {
+        if (txts[i].path == filename) return i;
     }
-    return true;
+    txts.push_back({});
+    auto& txt = txts.back();
+    txt.path = filename;
+    return (int)txts.size() - 1;
 }
 
 //
-// binary dump OBJ (note that material data is dumped in the same file)
+// A hash function for vecs
 //
-YGL_API yo_scene* yo_load_objbin(const std::string& filename, bool ext) {
-    FILE* file = fopen(filename.c_str(), "rb");
-    if (!file) return 0;
-
-    // TODO: ids
-
-    int magic = 0;
-    yo__fread_binvalue(file, &magic);
-    if (magic != yo__binmagic) return 0;
-
-    yo_scene* scene = new yo_scene();
-
-    int ncameras = 0;
-    yo__fread_binvalue(file, &ncameras);
-    scene->cameras.resize(ncameras);
-    for (int i = 0; i < ncameras; i++) {
-        yo_camera* cam = &scene->cameras[i];
-        yo__fread_binstr(file, &cam->name);
-        yo__fread_binvalue(file, &cam->from);
-        yo__fread_binvalue(file, &cam->to);
-        yo__fread_binvalue(file, &cam->up);
-        yo__fread_binvalue(file, &cam->width);
-        yo__fread_binvalue(file, &cam->height);
-        yo__fread_binvalue(file, &cam->aperture);
-    }
-
-    int nenvs = 0;
-    yo__fread_binvalue(file, &nenvs);
-    scene->envs.resize(nenvs);
-    for (int i = 0; i < nenvs; i++) {
-        yo_env* env = &scene->envs[i];
-        yo__fread_binstr(file, &env->name);
-        yo__fread_binstr(file, &env->matname);
-        yo__fread_binvalue(file, &env->from);
-        yo__fread_binvalue(file, &env->to);
-        yo__fread_binvalue(file, &env->up);
-    }
-
-    if (!ext) {
-        scene->cameras.clear();
-        scene->envs.clear();
-    }
-
-    int nmaterials = 0;
-    yo__fread_binvalue(file, &nmaterials);
-    scene->materials.resize(nmaterials);
-    for (int i = 0; i < nmaterials; i++) {
-        yo_material* mat = &scene->materials[i];
-        yo__fread_binstr(file, &mat->name);
-        yo__fread_binvalue(file, &mat->illum);
-        yo__fread_binvalue(file, &mat->ke);
-        yo__fread_binvalue(file, &mat->ka);
-        yo__fread_binvalue(file, &mat->kd);
-        yo__fread_binvalue(file, &mat->ks);
-        yo__fread_binvalue(file, &mat->kr);
-        yo__fread_binvalue(file, &mat->kt);
-        yo__fread_binvalue(file, &mat->ns);
-        yo__fread_binvalue(file, &mat->ior);
-        yo__fread_binvalue(file, &mat->op);
-        yo__fread_binstr(file, &mat->ke_txt);
-        yo__fread_binstr(file, &mat->ka_txt);
-        yo__fread_binstr(file, &mat->kd_txt);
-        yo__fread_binstr(file, &mat->ks_txt);
-        yo__fread_binstr(file, &mat->kr_txt);
-        yo__fread_binstr(file, &mat->kt_txt);
-        yo__fread_binstr(file, &mat->ns_txt);
-        yo__fread_binstr(file, &mat->op_txt);
-        yo__fread_binstr(file, &mat->ior_txt);
-        yo__fread_binstr(file, &mat->bump_txt);
-        yo__fread_binstr(file, &mat->disp_txt);
-        mat->ke_txtid = yo__add_unique_texture(scene->textures, mat->ke_txt);
-        mat->ka_txtid = yo__add_unique_texture(scene->textures, mat->ka_txt);
-        mat->kd_txtid = yo__add_unique_texture(scene->textures, mat->kd_txt);
-        mat->ks_txtid = yo__add_unique_texture(scene->textures, mat->ks_txt);
-        mat->kr_txtid = yo__add_unique_texture(scene->textures, mat->kr_txt);
-        mat->kt_txtid = yo__add_unique_texture(scene->textures, mat->kt_txt);
-        mat->ns_txtid = yo__add_unique_texture(scene->textures, mat->ns_txt);
-        mat->op_txtid = yo__add_unique_texture(scene->textures, mat->op_txt);
-        mat->ior_txtid = yo__add_unique_texture(scene->textures, mat->ior_txt);
-        mat->bump_txtid =
-            yo__add_unique_texture(scene->textures, mat->bump_txt);
-        mat->disp_txtid =
-            yo__add_unique_texture(scene->textures, mat->disp_txt);
-    }
-
-    int nshapes = 0;
-    yo__fread_binvalue(file, &nshapes);
-    scene->shapes.resize(nshapes);
-    for (int i = 0; i < nshapes; i++) {
-        yo_shape* shape = &scene->shapes[i];
-        yo__fread_binstr(file, &shape->name);
-        yo__fread_binstr(file, &shape->groupname);
-        yo__fread_binstr(file, &shape->matname);
-        yo__fread_binvalue(file, &shape->nelems);
-        yo__fread_binvector(file, &shape->elem);
-        yo__fread_binvalue(file, &shape->etype);
-        yo__fread_binvalue(file, &shape->nverts);
-        yo__fread_binvector(file, &shape->pos);
-        yo__fread_binvector(file, &shape->norm);
-        yo__fread_binvector(file, &shape->texcoord);
-        yo__fread_binvector(file, &shape->color);
-        yo__fread_binvector(file, &shape->radius);
-        if (ext) {
-            shape->color.clear();
-            shape->radius.clear();
+struct _vert_hash {
+    std::hash<int> Th;
+    size_t operator()(const vert& vv) const {
+        auto v = (const int*)&vv;
+        size_t h = 0;
+        for (auto i = 0; i < sizeof(vert) / sizeof(int); i++) {
+            // embads hash_combine below
+            h ^= (Th(v[i]) + 0x9e3779b9 + (h << 6) + (h >> 2));
         }
-        shape->matid = -1;
-        for (int j = 0; j < scene->materials.size() && shape->matid < 0; j++) {
-            if (shape->matname == scene->materials[j].name) shape->matid = j;
+        return h;
+    }
+};
+
+//
+// Comparison for unordred_map
+//
+static inline bool operator==(const vert& a, const vert& b) {
+    return a.pos == b.pos && a.texcoord == b.texcoord && a.norm == b.norm &&
+           a.color == b.color && a.radius == b.radius;
+}
+
+//
+// Flattens an scene
+//
+YGL_API fl_obj flatten_obj(const obj& obj) {
+    // clear scene
+    auto scene = fl_obj();
+
+    // convert materials and build textures
+    for (auto& omat : obj.materials) {
+        scene.materials.push_back({});
+        auto& mat = scene.materials.back();
+        mat.name = omat.name;
+        mat.ke = omat.ke;
+        mat.kd = omat.kd;
+        mat.ks = omat.ks;
+        mat.rs = std::sqrt(2 / (omat.ns + 2));  // TODO: fixme
+        mat.ke_txt = _add_texture(omat.ke_txt, scene.textures);
+        mat.kd_txt = _add_texture(omat.kd_txt, scene.textures);
+        mat.ks_txt = _add_texture(omat.ks_txt, scene.textures);
+        mat.rs_txt = _add_texture(omat.ns_txt, scene.textures);
+    }
+
+    // convert shapes
+    std::unordered_map<vert, int, _vert_hash> vert_map;
+    std::vector<int> vert_ids;
+    for (auto& oshape : obj.objects) {
+        for (auto& elem_group : oshape.elems) {
+            if (elem_group.verts.empty()) continue;
+            if (elem_group.elems.empty()) continue;
+            auto shape = fl_shape();
+            shape.name = oshape.name;
+            shape.matid = -1;
+            for (auto i = 0; i < obj.materials.size() && shape.matid < 0; i++) {
+                if (obj.materials[i].name == elem_group.matname)
+                    shape.matid = i;
+            }
+
+            // insert all vertices
+            vert_map.clear();
+            vert_ids.clear();
+            for (auto& vert : elem_group.verts) {
+                if (vert_map.find(vert) == vert_map.end()) {
+                    vert_map[vert] = (int)vert_map.size();
+                }
+                vert_ids.push_back(vert_map[vert]);
+            }
+
+            // covert elements
+            for (auto& elem : elem_group.elems) {
+                switch (elem.type) {
+                    case elem::type::point: {
+                        for (auto i = elem.start; i < elem.start + elem.size;
+                             i++) {
+                            shape.points.push_back(vert_ids[i]);
+                        }
+                    } break;
+                    case elem::type::line: {
+                        for (auto i = elem.start;
+                             i < elem.start + elem.size - 1; i++) {
+                            shape.lines.push_back(
+                                {vert_ids[i], vert_ids[i + 1]});
+                        }
+                    } break;
+                    case elem::type::face: {
+                        for (auto i = elem.start + 2;
+                             i < elem.start + elem.size; i++) {
+                            shape.triangles.push_back({vert_ids[elem.start],
+                                                       vert_ids[i - 1],
+                                                       vert_ids[i]});
+                        }
+                    } break;
+                    default: { assert(false); }
+                }
+            }
+
+            // copy vertex data
+            auto v = elem_group.verts[0];
+            if (v.pos >= 0) shape.pos.resize(vert_map.size());
+            if (v.texcoord >= 0) shape.texcoord.resize(vert_map.size());
+            if (v.norm >= 0) shape.norm.resize(vert_map.size());
+            if (v.color >= 0) shape.color.resize(vert_map.size());
+            if (v.radius >= 0) shape.radius.resize(vert_map.size());
+            for (auto& kv : vert_map) {
+                if (v.pos >= 0 && kv.first.pos >= 0) {
+                    shape.pos[kv.second] = obj.pos[kv.first.pos];
+                }
+                if (v.texcoord >= 0 && kv.first.texcoord >= 0) {
+                    shape.texcoord[kv.second] = obj.texcoord[kv.first.texcoord];
+                }
+                if (v.norm >= 0 && kv.first.norm >= 0) {
+                    shape.norm[kv.second] = obj.norm[kv.first.norm];
+                }
+                if (v.color >= 0 && kv.first.color >= 0) {
+                    shape.color[kv.second] = obj.color[kv.first.color];
+                }
+                if (v.radius >= 0 && kv.first.radius >= 0) {
+                    shape.radius[kv.second] = obj.radius[kv.first.radius];
+                }
+            }
+
+            // done, add it
+            scene.shapes.push_back(shape);
         }
     }
 
-    fclose(file);
+    // convert cameras
+    for (auto& ocam : obj.cameras) {
+        scene.cameras.push_back({});
+        auto& cam = scene.cameras.back();
+        cam.name = ocam.name;
+        cam.ortho = ocam.ortho;
+        cam.yfov = ocam.yfov;
+        cam.aspect = ocam.aspect;
+        cam.aperture = ocam.aperture;
+        cam.focus = ocam.focus;
+        cam.xform = ocam.xform;
+    }
 
+    // convert envs
+    for (auto& oenv : obj.environments) {
+        scene.environments.push_back({});
+        auto& env = scene.environments.back();
+        env.name = oenv.name;
+        env.matid = -1;
+        for (auto i = 0; i < obj.materials.size() && env.matid < 0; i++) {
+            if (obj.materials[i].name == oenv.matname) env.matid = i;
+        }
+        env.xform = env.xform;
+    }
+
+    // done
     return scene;
 }
 
-// -----------------------------------------------------------------------------
-// BINARY DUMP SAVING
-// -----------------------------------------------------------------------------
-
-// binary dump values
-template <typename T>
-static inline bool yo__fwrite_binvalue(FILE* file, const T& v) {
-    return fwrite(&v, sizeof(T), 1, file) == 1;
-}
-
-// binary dump vector of values
-template <typename T>
-static inline bool yo__fwrite_binvector(FILE* file, const std::vector<T>& v) {
-    int num = (int)v.size();
-    if (fwrite(&num, sizeof(int), 1, file) != 1) return false;
-    if (fwrite(v.data(), sizeof(T), num, file) != num) return false;
-    return true;
-}
-
-// binary dump strings
-static inline bool yo__fwrite_binstr(FILE* file, const ym_string& s) {
-    int num = (int)s.length() + 1;
-    if (fwrite(&num, sizeof(int), 1, file) != 1) return false;
-    if (fwrite(s.c_str(), 1, num, file) != num) return false;
-    return true;
-}
-
 //
-// load binary obj dump
+// Save an scene
 //
-YGL_API bool yo_save_objbin(const std::string& filename, const yo_scene* scene,
-                            bool ext) {
-    FILE* file = fopen(filename.c_str(), "wb");
-    if (!file) return false;
+YGL_API obj unflatten_obj(const fl_obj& scene) {
+    auto obj = yobj::obj();
 
-    int magic = yo__binmagic;
-    yo__fwrite_binvalue(file, magic);
+    // get texture name helper
+    auto txt = [](const fl_obj& scene, int id) {
+        if (id < 0) return std::string();
+        return scene.textures[id].path;
+    };
 
-    if (ext) {
-        int ncameras = (int)scene->cameras.size();
-        yo__fwrite_binvalue(file, ncameras);
-        for (int i = 0; i < ncameras; i++) {
-            const yo_camera* cam = &scene->cameras[i];
-            yo__fwrite_binstr(file, cam->name);
-            yo__fwrite_binvalue(file, cam->from);
-            yo__fwrite_binvalue(file, cam->to);
-            yo__fwrite_binvalue(file, cam->up);
-            yo__fwrite_binvalue(file, cam->width);
-            yo__fwrite_binvalue(file, cam->height);
-            yo__fwrite_binvalue(file, cam->aperture);
-        }
-        int nenvs = (int)scene->envs.size();
-        yo__fwrite_binvalue(file, nenvs);
-        for (int i = 0; i < nenvs; i++) {
-            const yo_env* env = &scene->envs[i];
-            yo__fwrite_binstr(file, env->name);
-            yo__fwrite_binstr(file, env->matname);
-            yo__fwrite_binvalue(file, env->from);
-            yo__fwrite_binvalue(file, env->to);
-            yo__fwrite_binvalue(file, env->up);
-        }
-    } else {
-        int zero = 0;
-        yo__fwrite_binvalue(file, zero);
-        yo__fwrite_binvalue(file, zero);
+    // convert materials
+    for (auto& fl_mat : scene.materials) {
+        obj.materials.push_back({});
+        auto& mat = obj.materials.back();
+        mat.name = fl_mat.name;
+        mat.ke = fl_mat.ke;
+        mat.kd = fl_mat.kd;
+        mat.ks = fl_mat.ks;
+        mat.ns = fl_mat.rs;  // TODO: phong conversion
+        mat.ke_txt = txt(scene, fl_mat.ke_txt);
+        mat.kd_txt = txt(scene, fl_mat.kd_txt);
+        mat.ks_txt = txt(scene, fl_mat.ks_txt);
+        mat.ns_txt = txt(scene, fl_mat.rs_txt);
     }
 
-    int nmaterials = (int)scene->materials.size();
-    yo__fwrite_binvalue(file, nmaterials);
-    for (int i = 0; i < nmaterials; i++) {
-        const yo_material* mat = &scene->materials[i];
-        yo__fwrite_binstr(file, mat->name);
-        yo__fwrite_binvalue(file, mat->illum);
-        yo__fwrite_binvalue(file, mat->ke);
-        yo__fwrite_binvalue(file, mat->ka);
-        yo__fwrite_binvalue(file, mat->kd);
-        yo__fwrite_binvalue(file, mat->ks);
-        yo__fwrite_binvalue(file, mat->kr);
-        yo__fwrite_binvalue(file, mat->kt);
-        yo__fwrite_binvalue(file, mat->ns);
-        yo__fwrite_binvalue(file, mat->ior);
-        yo__fwrite_binvalue(file, mat->op);
-        yo__fwrite_binstr(file, mat->ke_txt);
-        yo__fwrite_binstr(file, mat->ka_txt);
-        yo__fwrite_binstr(file, mat->kd_txt);
-        yo__fwrite_binstr(file, mat->ks_txt);
-        yo__fwrite_binstr(file, mat->kr_txt);
-        yo__fwrite_binstr(file, mat->kt_txt);
-        yo__fwrite_binstr(file, mat->ns_txt);
-        yo__fwrite_binstr(file, mat->op_txt);
-        yo__fwrite_binstr(file, mat->ior_txt);
-        yo__fwrite_binstr(file, mat->bump_txt);
-        yo__fwrite_binstr(file, mat->disp_txt);
-    }
-
-    int nshapes = (int)scene->shapes.size();
-    yo__fwrite_binvalue(file, nshapes);
-    for (int i = 0; i < nshapes; i++) {
-        const yo_shape* shape = &scene->shapes[i];
-        yo__fwrite_binstr(file, shape->name);
-        yo__fwrite_binstr(file, shape->groupname);
-        yo__fwrite_binstr(file, shape->matname);
-        yo__fwrite_binvalue(file, shape->nelems);
-        yo__fwrite_binvector(file, shape->elem);
-        yo__fwrite_binvalue(file, shape->etype);
-        yo__fwrite_binvalue(file, shape->nverts);
-        yo__fwrite_binvector(file, shape->pos);
-        yo__fwrite_binvector(file, shape->norm);
-        yo__fwrite_binvector(file, shape->texcoord);
-        if (ext) {
-            yo__fwrite_binvector(file, shape->color);
-            yo__fwrite_binvector(file, shape->radius);
-        } else {
-            std::vector<float> r;
-            std::vector<ym_vec3f> c;
-            yo__fwrite_binvector(file, c);
-            yo__fwrite_binvector(file, r);
+    // convert shapes
+    for (auto& fl_shape : scene.shapes) {
+        obj.objects.push_back({});
+        auto& object = obj.objects.back();
+        object.name = fl_shape.name;
+        auto offset = vert{(int)obj.pos.size(), (int)obj.texcoord.size(),
+                           (int)obj.norm.size(), (int)obj.color.size(),
+                           (int)obj.radius.size()};
+        for (auto& v : fl_shape.pos) obj.pos.push_back(v);
+        for (auto& v : fl_shape.norm) obj.norm.push_back(v);
+        for (auto& v : fl_shape.texcoord) obj.texcoord.push_back(v);
+        for (auto& v : fl_shape.color) obj.color.push_back(v);
+        for (auto& v : fl_shape.radius) obj.radius.push_back(v);
+        object.elems.push_back({});
+        auto& elems = object.elems.back();
+        elems.matname =
+            (fl_shape.matid < 0) ? "" : scene.materials[fl_shape.matid].name;
+        for (auto point : fl_shape.points) {
+            elems.elems.push_back(
+                {(uint32_t)elems.verts.size(), elem::type::point, 1});
+            elems.verts.push_back(
+                {(fl_shape.pos.empty()) ? -1 : offset.pos + point,
+                 (fl_shape.texcoord.empty()) ? -1 : offset.texcoord + point,
+                 (fl_shape.norm.empty()) ? -1 : offset.norm + point,
+                 (fl_shape.color.empty()) ? -1 : offset.color + point,
+                 (fl_shape.radius.empty()) ? -1 : offset.radius + point});
+        }
+        for (auto line : fl_shape.lines) {
+            elems.elems.push_back(
+                {(uint32_t)elems.verts.size(), elem::type::line, 2});
+            elems.verts.push_back(
+                {(fl_shape.pos.empty()) ? -1 : offset.pos + line[0],
+                 (fl_shape.texcoord.empty()) ? -1 : offset.texcoord + line[0],
+                 (fl_shape.norm.empty()) ? -1 : offset.norm + line[0],
+                 (fl_shape.color.empty()) ? -1 : offset.color + line[0],
+                 (fl_shape.radius.empty()) ? -1 : offset.radius + line[0]});
+            elems.verts.push_back(
+                {(fl_shape.pos.empty()) ? -1 : offset.pos + line[1],
+                 (fl_shape.texcoord.empty()) ? -1 : offset.texcoord + line[1],
+                 (fl_shape.norm.empty()) ? -1 : offset.norm + line[1],
+                 (fl_shape.color.empty()) ? -1 : offset.color + line[1],
+                 (fl_shape.radius.empty()) ? -1 : offset.radius + line[1]});
+        }
+        for (auto triangle : fl_shape.triangles) {
+            elems.elems.push_back(
+                {(uint32_t)elems.verts.size(), elem::type::face, 3});
+            elems.verts.push_back(
+                {(fl_shape.pos.empty()) ? -1 : offset.pos + triangle[0],
+                 (fl_shape.texcoord.empty()) ? -1
+                                             : offset.texcoord + triangle[0],
+                 (fl_shape.norm.empty()) ? -1 : offset.norm + triangle[0],
+                 (fl_shape.color.empty()) ? -1 : offset.color + triangle[0],
+                 (fl_shape.radius.empty()) ? -1 : offset.radius + triangle[0]});
+            elems.verts.push_back(
+                {(fl_shape.pos.empty()) ? -1 : offset.pos + triangle[1],
+                 (fl_shape.texcoord.empty()) ? -1
+                                             : offset.texcoord + triangle[1],
+                 (fl_shape.norm.empty()) ? -1 : offset.norm + triangle[1],
+                 (fl_shape.color.empty()) ? -1 : offset.color + triangle[1],
+                 (fl_shape.radius.empty()) ? -1 : offset.radius + triangle[1]});
+            elems.verts.push_back(
+                {(fl_shape.pos.empty()) ? -1 : offset.pos + triangle[2],
+                 (fl_shape.texcoord.empty()) ? -1
+                                             : offset.texcoord + triangle[2],
+                 (fl_shape.norm.empty()) ? -1 : offset.norm + triangle[2],
+                 (fl_shape.color.empty()) ? -1 : offset.color + triangle[2],
+                 (fl_shape.radius.empty()) ? -1 : offset.radius + triangle[2]});
         }
     }
 
-    fclose(file);
+    // convert cameras
+    for (auto& fl_cam : scene.cameras) {
+        obj.cameras.push_back({});
+        auto& cam = obj.cameras.back();
+        cam.name = fl_cam.name;
+        cam.ortho = fl_cam.ortho;
+        cam.yfov = fl_cam.yfov;
+        cam.aspect = fl_cam.aspect;
+        cam.focus = fl_cam.focus;
+        cam.aperture = fl_cam.aperture;
+        cam.xform = fl_cam.xform;
+    }
 
-    return true;
+    // convert envs
+    for (auto& fl_env : scene.environments) {
+        obj.environments.push_back({});
+        auto& env = obj.environments.back();
+        env.name = fl_env.name;
+        env.matname =
+            (fl_env.matid < 0) ? "" : scene.materials[fl_env.matid].name;
+        env.xform = fl_env.xform;
+    }
+
+    return obj;
 }
-
-// -----------------------------------------------------------------------------
-// TEXTURE HANDLING
-// -----------------------------------------------------------------------------
 
 //
 // handles texture loading using stb_image.h
 //
-#ifndef YO_NOIMG
 
 // stb_images causes a lot of warning and issues when including,
 // try to reduce them using pragmas
@@ -1581,7 +1340,7 @@ YGL_API bool yo_save_objbin(const std::string& filename, const yo_scene* scene,
 #endif
 #endif
 
-#include "../yocto/ext/stb_image.h"
+#include "stb_image.h"
 
 #ifndef _WIN32
 #pragma GCC diagnostic pop
@@ -1590,73 +1349,42 @@ YGL_API bool yo_save_objbin(const std::string& filename, const yo_scene* scene,
 #endif
 
 //
-// load texture data
+// Loads textures for an scene.
 //
-YGL_API void yo_load_textures(yo_scene* scene, const std::string& filename,
-                              int req_comp) {
+YGL_API bool load_textures(fl_obj& scene, const std::string& dirname,
+                           std::string& errmsg, int req_comp,
+                           bool force_float) {
     stbi_set_flip_vertically_on_load(1);
-    auto dirname = std::string();
-    yo__split_path(filename, &dirname, nullptr, nullptr);
-    for (int i = 0; i < scene->textures.size(); i++) {
-        auto fullname = dirname + scene->textures[i].path;
-        float* d = stbi_loadf(fullname.c_str(), &scene->textures[i].width,
-                              &scene->textures[i].height,
-                              &scene->textures[i].ncomp, req_comp);
-        scene->textures[i].pixels = std::vector<float>(
-            d, d +
-                   scene->textures[i].width * scene->textures[i].height *
-                       scene->textures[i].ncomp);
-        free(d);
+    for (auto& txt : scene.textures) {
+        auto filename = dirname + txt.path;
+        auto ext = _get_extension(filename);
+        if (force_float || ext == ".hdr") {
+            auto d = stbi_loadf(filename.c_str(), &txt.width, &txt.height,
+                                &txt.ncomp, req_comp);
+            if (!d) {
+                errmsg = "could not load texture " + filename;
+                return false;
+            }
+            txt.dataf =
+                std::vector<float>(d, d + txt.width * txt.height * txt.ncomp);
+            free(d);
+        } else {
+            auto d = stbi_load(filename.c_str(), &txt.width, &txt.height,
+                               &txt.ncomp, req_comp);
+            if (!d) {
+                errmsg = "could not load texture " + filename;
+                return false;
+            }
+            txt.datab = std::vector<unsigned char>(
+                d, d + txt.width * txt.height * txt.ncomp);
+            free(d);
+        }
     }
     stbi_set_flip_vertically_on_load(0);
+    return true;
 }
 
-#endif
-
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION OF DEPRECATED INTERFACE
-// -----------------------------------------------------------------------------
-
-//
-// Wrapper. See above.
-//
-YGL_API yo_scene* yo_load_obj(const char* filename, bool triangulate,
-                              bool ext) {
-    return yo_load_obj(std::string(filename), triangulate, ext);
-}
-
-//
-// Wrapper. See above.
-//
-YGL_API yo_scene* yo_load_objbin(const char* filename, bool ext) {
-    return yo_load_objbin(std::string(filename), ext);
-}
-
-//
-// Wrapper. See above.
-//
-YGL_API bool yo_save_obj(const char* filename, const yo_scene* scene,
-                         bool ext) {
-    return yo_save_obj(std::string(filename), scene, ext);
-}
-
-//
-// Wrapper. See above.
-//
-YGL_API bool yo_save_objbin(const char* filename, const yo_scene* scene,
-                            bool ext) {
-    return yo_save_objbin(std::string(filename), scene, ext);
-}
-
-//
-// Wrapper. See above.
-//
-#ifndef YO_NOIMG
-YGL_API void yo_load_textures(yo_scene* scene, const char* filename,
-                              int req_comp) {
-    yo_load_textures(scene, std::string(filename), req_comp);
-}
-#endif
+}  // namespace
 
 #endif
 
