@@ -11,11 +11,11 @@ OSX (clang), Linux (clang/gcc) and Windows (cl).
 - **yocto_bvh.h** - Ray casting and closet point queries of points, lines and triangles accelerated by a two-level bounding volume hierarchy.
 - **yocto_shape.h** - Utilities for manipulating shapes composed of points, lines, triangles or quads. Includes parametric shape generation, uniform tesselation, normal computation, uniform shape sampling.
 - **yocto_trace.h** - Path tracer with support for point, line or triangle geometry, mesh area lights and environment maps, materials with either GGX or Phong (only opaque for now). Support both incremental and offline computation on single- or multi-core machines.
-- **yocto_symrigid.h** - Rigid body solver supporting convex and concave triangle meshes based on Sequential Impulses (aka Projected Gauss-Sidel).
+- **yocto_sym.h** - Rigid body solver supporting convex and concave triangle meshes based on Sequential Impulses (aka Projected Gauss-Sidel).
 
 ## Support Libraries
 
-- **yocto_cmdline.h** - Utilities for writing command line applications. Includes in  particular a command line parsing library that support options and arguments of ints, floats, strings, enums.
+- **yocto_cmd.h** - Utilities for writing command line applications. Includes in  particular a command line parsing library that support options and arguments of ints, floats, strings, enums.
 - **yocto_glu.h** - Quick and dirty rendering of images and shapes in OpenGL, useful to create interactive viewers.
 - **yocto_math.h** - A few vector math routines used to implement Yocto/GL libraries.
 
@@ -23,11 +23,11 @@ OSX (clang), Linux (clang/gcc) and Windows (cl).
 
 This repository contains Yocto/GL applications written to test the libraries.
 
-- **ytestgen.c**: Creates various test cases for the path tracer and GL viewer.
-- **yview.c**: HDR/PNG/JPG image viewer with exposure/gamma tone mapping.
-- **yshade.c**: OpenGL viewer.
-- **ytrace.c**: Interactive path-tracer, that can also run in offline mode.
-- **ytrace.c**: Simple rigid body demo code. Does not work on offline mode.
+- **ytestgen.cpp**: Creates various test cases for the path tracer and GL viewer.
+- **yview.cpp**: HDR/PNG/JPG image viewer with exposure/gamma tone mapping.
+- **yshade.cpp**: OpenGL viewer.
+- **ytrace.cpp**: Interactive path-tracer, that can also run in offline mode.
+- **ysym.cpp**: Simple rigid body demo code. Does not work in offline mode.
 
 A few screenshots from **ytrace** are included here for demonstration.
 
@@ -57,7 +57,11 @@ really unreadable, defeating one of the main tenants of Yocto/GL.
 
 ## Brief Development History
 
-- Moving to modern C++
+- Modern C++ API
+    - Using references to avoid pointer chasing and memory management
+    - OBJ loading conforms better to raw file format
+    - significantly reduce code length, but maintaining same features
+- Moving to C++
     - Removed old C API
     - Use STL containers by default
 - Switched 
