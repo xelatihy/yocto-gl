@@ -35,9 +35,6 @@
 #include "../yocto/yocto_shape.h"
 #include "../yocto/yocto_trace.h"
 
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "../yocto/stb_image_write.h"
-
 #include "ThreadPool.h"
 
 #define MAX_BLOCKS_PER_STEP 4096
@@ -445,6 +442,5 @@ int main(int argc, char* argv[]) {
     }
 
     // done
-    // TODO: free bvh
     return EXIT_SUCCESS;
 }

@@ -67,9 +67,15 @@
 // - to build as a .cpp, just #define YGL_IMPLEMENTATION before including this
 // file into only one file that you can either link directly or pack as a lib.
 //
+// Texture loading depends on stb_image.h.
+//
+// If the texture loading dependency is not desired, it can be disabled by
+// #define YGL_NO_STBIMAGE before including this file.
+//
 
 //
 // HISTORY:
+// - v 0.5: removed options to force image formats (image library not reliable)
 // - v 0.4: [major API change] move to modern C++ interface
 // - v 0.3: new API internals and C++ interface
 // - v 0.2: removal of C interface
@@ -445,8 +451,7 @@ YGL_API obj unflatten_obj(const fl_obj& scene);
 // - true if loading was ok
 //
 YGL_API bool load_textures(fl_obj& scene, const std::string& dirname,
-                           std::string& errmsg, int req_comp = 0,
-                           bool force_float = false);
+                           std::string& errmsg);
 
 }  // namespace
 
@@ -460,6 +465,34 @@ YGL_API bool load_textures(fl_obj& scene, const std::string& dirname,
 #include <cstdlib>
 #include <memory>
 #include <unordered_map>
+
+#ifndef YGL_NO_STBIMAGE
+
+// stb_images causes a lot of warning and issues when including,
+// try to reduce them using pragmas
+#ifndef STBI_INCLUDE_STB_IMAGE_H
+
+#define STB_IMAGE_IMPLEMENTATION
+#define STB_IMAGE_STATIC
+
+#ifndef _WIN32
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
+#ifndef __clang__
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#pragma GCC diagnostic ignored "-Wmisleading-indentation"
+#endif
+#endif
+
+#include "stb_image.h"
+
+#ifndef _WIN32
+#pragma GCC diagnostic pop
+#endif
+
+#endif
+
+#endif
 
 namespace yobj {
 
@@ -1078,7 +1111,8 @@ YGL_API fl_obj flatten_obj(const obj& obj) {
         mat.ke = omat.ke;
         mat.kd = omat.kd;
         mat.ks = omat.ks;
-        mat.rs = std::sqrt(2 / (omat.ns + 2));  // TODO: fixme
+        mat.rs = (mat.rs >= 1) ? std::sqrt(2 / (omat.ns + 2))
+                               : 1000000;  // TODO: fixme
         mat.ke_txt = _add_texture(omat.ke_txt, scene.textures);
         mat.kd_txt = _add_texture(omat.kd_txt, scene.textures);
         mat.ks_txt = _add_texture(omat.ks_txt, scene.textures);
@@ -1217,7 +1251,7 @@ YGL_API obj unflatten_obj(const fl_obj& scene) {
         mat.ke = fl_mat.ke;
         mat.kd = fl_mat.kd;
         mat.ks = fl_mat.ks;
-        mat.ns = fl_mat.rs;  // TODO: phong conversion
+        mat.ns = (fl_mat.rs) ? 2 / (fl_mat.rs * fl_mat.rs) - 2 : 1e6;
         mat.ke_txt = txt(scene, fl_mat.ke_txt);
         mat.kd_txt = txt(scene, fl_mat.kd_txt);
         mat.ks_txt = txt(scene, fl_mat.ks_txt);
@@ -1321,46 +1355,19 @@ YGL_API obj unflatten_obj(const fl_obj& scene) {
 }
 
 //
-// handles texture loading using stb_image.h
-//
-
-// stb_images causes a lot of warning and issues when including,
-// try to reduce them using pragmas
-#ifndef STBI_INCLUDE_STB_IMAGE_H
-
-#define STB_IMAGE_IMPLEMENTATION
-#define STB_IMAGE_STATIC
-
-#ifndef _WIN32
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-function"
-#ifndef __clang__
-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
-#pragma GCC diagnostic ignored "-Wmisleading-indentation"
-#endif
-#endif
-
-#include "stb_image.h"
-
-#ifndef _WIN32
-#pragma GCC diagnostic pop
-#endif
-
-#endif
-
-//
 // Loads textures for an scene.
 //
 YGL_API bool load_textures(fl_obj& scene, const std::string& dirname,
-                           std::string& errmsg, int req_comp,
-                           bool force_float) {
+                           std::string& errmsg) {
+#ifndef YGL_NO_STBIMAGE
     stbi_set_flip_vertically_on_load(1);
+
     for (auto& txt : scene.textures) {
         auto filename = dirname + txt.path;
-        auto ext = _get_extension(filename);
-        if (force_float || ext == ".hdr") {
+        auto ext = _get_extension(filename).substr(1);
+        if (ext == "hdr") {
             auto d = stbi_loadf(filename.c_str(), &txt.width, &txt.height,
-                                &txt.ncomp, req_comp);
+                                &txt.ncomp, 0);
             if (!d) {
                 errmsg = "could not load texture " + filename;
                 return false;
@@ -1370,7 +1377,7 @@ YGL_API bool load_textures(fl_obj& scene, const std::string& dirname,
             free(d);
         } else {
             auto d = stbi_load(filename.c_str(), &txt.width, &txt.height,
-                               &txt.ncomp, req_comp);
+                               &txt.ncomp, 0);
             if (!d) {
                 errmsg = "could not load texture " + filename;
                 return false;
@@ -1380,7 +1387,10 @@ YGL_API bool load_textures(fl_obj& scene, const std::string& dirname,
             free(d);
         }
     }
+
     stbi_set_flip_vertically_on_load(0);
+#endif
+
     return true;
 }
 

@@ -33,9 +33,6 @@
 #include "../yocto/yocto_math.h"
 #include "../yocto/yocto_shape.h"
 
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "../yocto/stb_image_write.h"
-
 void save_screenshot(const yui::info& info, const std::string& imfilename) {
     if (ycmd::get_extension(imfilename) != ".png") {
         printf("supports only png screenshots");

@@ -39,10 +39,11 @@
 #else
 #include "OpenGL/gl.h"
 #endif
-#include "glfw/glfw3.h"
+#include "GLFW/glfw3.h"
 // clang-format on
 
 #include "../yocto/yocto_cmd.h"
+#include "../yocto/yocto_gltf.h"
 #include "../yocto/yocto_obj.h"
 #include "../yocto/yocto_shape.h"
 #include "../yocto/yocto_glu.h"
@@ -167,6 +168,22 @@ inline const int* get_elems(const shape& shape) {
     return nullptr;
 }
 
+inline ym::image<ym::vec4b> make_image4b(int w, int h, int nc, const unsigned char* d) {
+    auto img = ym::image<ym::vec4b>({w,h},ym::vec4b(0,0,0,255));
+    for(auto i = 0; i < w*h; i ++) {
+        for(auto c = 0; c < nc; c ++) img.data()[i][c] = d[i*nc+c];
+    }
+    return img;
+}
+
+inline ym::image<ym::vec4f> make_image4f(int w, int h, int nc, const float* d) {
+    auto img = ym::image<ym::vec4f>({w,h},ym::vec4f(0,0,0,1));
+    for(auto i = 0; i < w*h; i ++) {
+        for(auto c = 0; c < nc; c ++) img.data()[i][c] = d[i*nc+c];
+    }
+    return img;
+}
+    
 //
 // Loads a scene from obj.
 //
@@ -182,7 +199,7 @@ inline bool load_obj_scene(const std::string& filename, scene& scene, std::strin
     auto fl_scene = yobj::flatten_obj(obj);
     
     // load textures
-    if(!yobj::load_textures(fl_scene, ycmd::get_dirname(filename), errmsg, 4)) {
+    if(!yobj::load_textures(fl_scene, ycmd::get_dirname(filename), errmsg)) {
         printf("%s", errmsg.c_str());
         return false;
     }
@@ -237,8 +254,8 @@ inline bool load_obj_scene(const std::string& filename, scene& scene, std::strin
         scene.textures.push_back({});
         auto& txt = scene.textures.back();
         txt.path = fl_txt.path;
-        if(!fl_txt.datab.empty()) txt.ldr = ym::image<ym::vec4b>({fl_txt.width, fl_txt.height}, (ym::vec4b*)fl_txt.datab.data());
-        if(!fl_txt.dataf.empty()) txt.hdr = ym::image<ym::vec4f>({fl_txt.width, fl_txt.height}, (ym::vec4f*)fl_txt.dataf.data());
+        if(!fl_txt.datab.empty()) txt.ldr = make_image4b(fl_txt.width, fl_txt.height, fl_txt.ncomp, fl_txt.datab.data());
+        if(!fl_txt.dataf.empty()) txt.hdr = make_image4f(fl_txt.width, fl_txt.height, fl_txt.ncomp, fl_txt.dataf.data());
     }
     
     // convert envs
@@ -329,6 +346,154 @@ inline bool save_obj_scene(const std::string& filename, const scene& scene, std:
     // done
     return true;
 }
+  
+//
+// Saves a scene to gltf.
+//
+inline bool save_gltf_scene(const std::string& filename, const scene& scene, std::string& errmsg) {
+    // flatten to scene
+    auto fl_scene = ygltf::fl_gltf();
+    
+    // convert cameras
+    for(auto& cam : scene.cameras) {
+        fl_scene.cameras.push_back({});
+        auto& fl_cam = fl_scene.cameras.back();
+        fl_cam.name = cam.name;
+        fl_cam.xform = ym::mat4f(cam.frame);
+        fl_cam.ortho = cam.ortho;
+        fl_cam.yfov = cam.yfov;
+        fl_cam.aspect = cam.aspect;
+    }
+    
+    // convert shapes
+    for(auto& shape : scene.shapes) {
+        fl_scene.meshes.push_back({});
+        auto& fl_mesh = fl_scene.meshes.back();
+        fl_mesh.name = shape.name;
+        fl_mesh.xform = ym::mat4f(shape.frame);
+        fl_mesh.primitives.push_back((int)fl_scene.primitives.size());
+        fl_scene.primitives.push_back({});
+        auto& fl_shape = fl_scene.primitives.back();
+        fl_shape.material = shape.matid;
+        fl_shape.pos.assign(shape.pos.begin(), shape.pos.end());
+        fl_shape.norm.assign(shape.norm.begin(), shape.norm.end());
+        fl_shape.texcoord.assign(shape.texcoord.begin(), shape.texcoord.end());
+        fl_shape.color.assign(shape.color.begin(), shape.color.end());
+        fl_shape.radius.assign(shape.radius.begin(), shape.radius.end());
+        fl_shape.points = shape.points;
+        fl_shape.lines.assign(shape.lines.begin(), shape.lines.end());
+        fl_shape.triangles.assign(shape.triangles.begin(), shape.triangles.end());
+    }
+    
+    // convert materials
+    for(auto& mat : scene.materials) {
+        fl_scene.materials.push_back({});
+        auto& fl_mat = fl_scene.materials.back();
+        fl_mat.name = mat.name;
+        fl_mat.ke = mat.ke;
+        fl_mat.kd = mat.kd;
+        fl_mat.ks = mat.ks;
+        fl_mat.rs = mat.rs;
+        fl_mat.ke_txt = mat.ke_txt;
+        fl_mat.kd_txt = mat.kd_txt;
+        fl_mat.ks_txt = mat.ks_txt;
+        fl_mat.rs_txt = mat.rs_txt;
+    }
+    
+    // convert textures
+    for(auto& txt : scene.textures) {
+        fl_scene.textures.push_back({});
+        auto& fl_txt = fl_scene.textures.back();
+        fl_txt.path = txt.path;
+    }
+    
+    // save gltf
+    auto gltf = ygltf::unflatten_gltf(fl_scene, ycmd::get_filename(filename)+".bin");
+    if(!ygltf::save_gltf(filename, gltf, errmsg, true, false, false)) return false;
+    
+    // done
+    return true;
+}
+
+
+//
+// Load gltf scene
+//
+inline bool load_gltf_scene(const std::string& filename, scene& scene, bool binary, std::string& errmsg) {
+    // clear scene
+    scene = yapp::scene();
+    
+    // load scene
+    ygltf::glTF_t gltf;
+    if(binary) {
+        if(!ygltf::load_binary_gltf(filename, gltf, errmsg, true, false)) return false;
+    } else {
+        if(!ygltf::load_gltf(filename, gltf, errmsg, true, false)) return false;
+    }
+    
+    // flatten to scene
+    auto fl_scene = ygltf::flatten_gltf(gltf, gltf.scene);
+    
+    // convert cameras
+    for(auto& fl_cam : fl_scene.cameras) {
+        scene.cameras.push_back({});
+        auto& cam = scene.cameras.back();
+        cam.name = fl_cam.name;
+        cam.frame = ym::frame3f(ym::mat4f(fl_cam.xform));
+        cam.ortho = fl_cam.ortho;
+        cam.yfov = fl_cam.yfov;
+        cam.aspect = fl_cam.aspect;
+        cam.aperture = 0;
+        cam.focus = 1;
+    }
+    
+    // convert shapes
+    for(auto& fl_mesh : fl_scene.meshes) {
+        for(auto& fl_shape_id : fl_mesh.primitives) {
+            auto& fl_shape = fl_scene.primitives.at(fl_shape_id);
+            scene.shapes.push_back({});
+            auto& sh = scene.shapes.back();
+            sh.name = fl_mesh.name;
+            sh.frame = ym::frame3f(ym::mat4f(fl_mesh.xform));
+            sh.matid = fl_shape.material;
+            sh.pos.assign(fl_shape.pos.begin(), fl_shape.pos.end());
+            sh.norm.assign(fl_shape.norm.begin(), fl_shape.norm.end());
+            sh.texcoord.assign(fl_shape.texcoord.begin(), fl_shape.texcoord.end());
+            sh.color.assign(fl_shape.color.begin(), fl_shape.color.end());
+            sh.radius = fl_shape.radius;
+            sh.points = fl_shape.points;
+            sh.lines.assign(fl_shape.lines.begin(),fl_shape.lines.end());
+            sh.triangles.assign(fl_shape.triangles.begin(), fl_shape.triangles.end());
+        }
+    }
+    
+    // convert materials
+    for(auto& fl_mat : fl_scene.materials) {
+        scene.materials.push_back({});
+        auto& mat = scene.materials.back();
+        mat.name = fl_mat.name;
+        mat.ke = fl_mat.ke;
+        mat.kd = fl_mat.kd;
+        mat.ks = fl_mat.ks;
+        mat.rs = fl_mat.rs;
+        mat.ke_txt = fl_mat.ke_txt;
+        mat.kd_txt = fl_mat.kd_txt;
+        mat.ks_txt = fl_mat.ks_txt;
+        mat.rs_txt = fl_mat.rs_txt;
+    }
+    
+    // convert textures
+    for(auto& fl_txt : fl_scene.textures) {
+        scene.textures.push_back({});
+        auto& txt = scene.textures.back();
+        txt.path = fl_txt.path;
+        if(!fl_txt.datab.empty()) txt.ldr = make_image4b(fl_txt.width, fl_txt.height, fl_txt.ncomp, fl_txt.datab.data());
+        if(!fl_txt.dataf.empty()) txt.hdr = make_image4f(fl_txt.width, fl_txt.height, fl_txt.ncomp, fl_txt.dataf.data());
+    }
+    
+    // done
+    return true;
+}
 
 //
 // Load scene
@@ -337,8 +502,21 @@ inline bool load_scene(const std::string& filename, scene& scene, std::string& e
     // clear scene
     scene = yapp::scene();
     
-    // load obj
-    if(!load_obj_scene(filename, scene, errmsg)) return false;
+    // get extension
+    auto ext = ycmd::get_extension(filename);
+    if(ext == ".obj") {
+        // load obj
+        if(!load_obj_scene(filename, scene, errmsg)) return false;
+    } else if(ext == ".gltf") {
+        // load obj
+        if(!load_gltf_scene(filename, scene, false, errmsg)) return false;
+    } else if(ext == ".glb") {
+        // load obj
+        if(!load_gltf_scene(filename, scene, true, errmsg)) return false;
+    } else {
+        errmsg = "unknown file type";
+        return false;
+    }
 
     // check textures and patch them up if needed
     for (auto& txt : scene.textures) {

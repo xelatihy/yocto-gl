@@ -1,6 +1,7 @@
 //
-// YOCTO_CMDLINE: utilities for writing command line applications, mostly
-// a simple to use command line parser.
+// YOCTO_CMD: utilities for writing command line applications, mostly
+// a simple to use command line parser and a few string, path and file
+// functions.
 //
 
 //
@@ -52,15 +53,12 @@
 //
 // COMPILATION:
 //
-// All functions in this library are inlined by default for ease of use in
-// C++. To use the library as a .h/.cpp pair do the following:
-// - to use as a .h, just #define YGL_DECLARATION before including this file
-// - to build as a .cpp, just #define YGL_IMPLEMENTATION before including this
-// file into only one file that you can either link directly or pack as a lib.
+// All functions in this library are inlined, so just inlucde the header.
 //
 
 //
 // HISTORY:
+// - v 0.5: added a few python-like string manipulation functions.
 // - v 0.4: [major API change] move to modern C++ interface
 // - v 0.3: adding a few functions for path splitting.
 // - v 0.2: [API change] C++ API
@@ -212,10 +210,41 @@ inline std::string get_basename(const std::string& filename);
 inline std::string get_extension(const std::string& filename);
 
 //
+// Get filename without directory (equiv to get_basename() + get_dirname().
+//
+inline std::string get_filename(const std::string& filename);
+
+//
 // Splits a path calling the above functions.
 //
 inline void split_path(const std::string& filename, std::string& dirname,
                        std::string& basename, std::string& ext);
+
+// STRING UTILITIES ------------------------------------------------------------
+
+//
+// Checks if a string starts with a prefix.
+//
+inline bool starts_with(const std::string& str, const std::string& substr);
+
+//
+// Checks if a string ends with a prefix.
+//
+inline bool ends_with(const std::string& str, const std::string& substr);
+
+//
+// Splits a string into lines at the '\n' character. The line terminator
+// is kept if keep_newline. This function does not work on Window if
+// keep_newline is true.
+//
+inline std::vector<std::string> split_lines(const std::string& str,
+                                            bool keep_newline = false);
+
+//
+// Joins a list of string with a string as separator.
+//
+inline std::string join_strings(const std::vector<std::string>& strs,
+                                const std::string& sep);
 
 }  // namespace
 
@@ -709,6 +738,13 @@ inline std::string get_extension(const std::string& filename) {
 }
 
 //
+// Get filename without directory (equiv to get_basename() + get_dirname().
+//
+inline std::string get_filename(const std::string& filename) {
+    return get_basename(filename) + get_extension(filename);
+}
+
+//
 // Splits a path. Public interface.
 //
 inline void split_path(const std::string& filename, std::string& dirname,
@@ -716,6 +752,59 @@ inline void split_path(const std::string& filename, std::string& dirname,
     dirname = get_dirname(filename);
     basename = get_basename(filename);
     ext = get_extension(filename);
+}
+
+//
+// Checks if a string starts with a prefix.
+//
+inline bool starts_with(const std::string& str, const std::string& substr) {
+    if (str.length() < substr.length()) return false;
+    for (auto i = 0; i < substr.length(); i++)
+        if (str[i] != substr[i]) return false;
+    return true;
+}
+
+//
+// Checks if a string ends with a prefix.
+//
+inline bool ends_with(const std::string& str, const std::string& substr) {
+    if (str.length() < substr.length()) return false;
+    auto offset = str.length() - substr.length();
+    for (auto i = 0; i < substr.length(); i++)
+        if (str[i + offset] != substr[i]) return false;
+    return true;
+}
+
+//
+// Splits a string into lines at the '\n' character.
+//
+inline std::vector<std::string> split_lines(const std::string& str,
+                                            bool keep_newline) {
+    if (str.empty()) return {};
+    auto lines = std::vector<std::string>();
+    auto last = 0;
+    auto pos = str.find('\n');
+    while (pos != str.npos) {
+        lines.push_back(str.substr(last, pos + ((keep_newline) ? 1 : 0)));
+        last = (int)pos + 1;
+        pos = str.find('\n', last + 1);
+    }
+    return lines;
+}
+
+//
+// Joins a list of string with a string as separator.
+//
+inline std::string join_strings(const std::vector<std::string>& strs,
+                                const std::string& sep) {
+    auto ret = std::string();
+    auto first = true;
+    for (auto& str : strs) {
+        if (!first) ret += sep;
+        ret += str;
+        first = false;
+    }
+    return ret;
 }
 
 }  // namespace
