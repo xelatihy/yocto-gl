@@ -34,9 +34,6 @@
 #include "../yocto/yocto_shape.h"
 #include "../yocto/yocto_sym.h"
 
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "../yocto/stb_image_write.h"
-
 // view data
 struct view_params {
     // filenames

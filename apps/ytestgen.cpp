@@ -36,9 +36,6 @@
 #include "../yocto/yocto_obj.h"
 #include "../yocto/yocto_shape.h"
 
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "../yocto/stb_image_write.h"
-
 #include "sunsky/ArHosekSkyModel.c"
 #include "sunsky/ArHosekSkyModel.h"
 
@@ -119,14 +116,14 @@ yapp::shape make_floor(const std::string& name, int matid, float s, float p,
 }
 
 yapp::material make_material(const std::string& name, const ym::vec3f& ke,
-                             const ym::vec3f& kd, const ym::vec3f& ks, float rs,
+                             const ym::vec3f& kd, const ym::vec3f& ks, float n,
                              int ke_txt, int kd_txt, int ks_txt) {
     yapp::material mat;
     mat.name = name;
     mat.ke = ke;
     mat.kd = kd;
     mat.ks = ks;
-    mat.rs = rs;
+    mat.rs = sqrtf(2 / (n + 2));
     mat.ke_txt = ke_txt;
     mat.kd_txt = kd_txt;
     mat.ks_txt = ks_txt;
@@ -622,9 +619,10 @@ void save_image_hdr(const std::string& filename, const std::string& dirname,
 
 void save_scene(const std::string& filename, const std::string& dirname,
                 const yapp::scene& scene) {
-    std::string path = std::string(dirname) + "/" + std::string(filename);
     std::string errmsg;
-    yapp::save_obj_scene(path, scene, errmsg);
+    yapp::save_obj_scene(dirname + "/" + filename, scene, errmsg);
+    yapp::save_gltf_scene(
+        dirname + "/" + ycmd::get_basename(filename) + ".gltf", scene, errmsg);
 }
 
 yapp::texture make_texture(const std::string& path) {
