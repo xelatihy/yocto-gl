@@ -952,14 +952,14 @@ YGL_API void make_stdsurface(stype stype, int level, const ym::vec4f& params,
                             norm, texcoord);
             if (params[0] != 1) {
                 for (auto i = 0; i < pos.size(); i++) {
-                    if (pos[i].z() > params[0]) {
-                        pos[i].z() = 2 * params[0] - pos[i].z();
-                        norm[i].x() = -norm[i].x();
-                        norm[i].y() = -norm[i].y();
-                    } else if (pos[i].z() < -params[0]) {
-                        pos[i].z() = -2 * params[0] - pos[i].z();
-                        norm[i].x() = -norm[i].x();
-                        norm[i].y() = -norm[i].y();
+                    if (pos[i][2] > params[0]) {
+                        pos[i][2] = 2 * params[0] - pos[i][2];
+                        norm[i][0] = -norm[i][0];
+                        norm[i][1] = -norm[i][1];
+                    } else if (pos[i][2] < -params[0]) {
+                        pos[i][2] = -2 * params[0] - pos[i][2];
+                        norm[i][0] = -norm[i][0];
+                        norm[i][1] = -norm[i][1];
                     }
                 }
             }

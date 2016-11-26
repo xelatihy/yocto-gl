@@ -41,9 +41,9 @@
 
 ym::frame3f xform(const ym::vec3f& pos, const ym::vec3f& rot) {
     ym::frame3f xf = ym::identity_frame3f;
-    xf = ym::rotation_frame3(ym::vec3f(1, 0, 0), rot.x() * ym::pif / 180) * xf;
-    xf = ym::rotation_frame3(ym::vec3f(0, 1, 0), rot.y() * ym::pif / 180) * xf;
-    xf = ym::rotation_frame3(ym::vec3f(0, 0, 1), rot.z() * ym::pif / 180) * xf;
+    xf = ym::rotation_frame3(ym::vec3f(1, 0, 0), rot[0] * ym::pif / 180) * xf;
+    xf = ym::rotation_frame3(ym::vec3f(0, 1, 0), rot[1] * ym::pif / 180) * xf;
+    xf = ym::rotation_frame3(ym::vec3f(0, 0, 1), rot[2] * ym::pif / 180) * xf;
     xf = ym::translation_frame3(pos) * xf;
     return xf;
 }
@@ -71,8 +71,8 @@ yapp::shape lookat_shape(const yapp::shape& shape, const ym::vec3f& pos,
                          const ym::vec3f& to = {0, 0, 0},
                          const ym::vec3f& s = ym::one3f) {
     auto xf = ym::lookat_frame3(pos, to, {0, 1, 0});
-    xf.z() = -xf.z();
-    xf.x() = -xf.x();
+    xf[2] = -xf[2];
+    xf[0] = -xf[0];
     return transform_shape(shape, xf, s);
 }
 
@@ -572,9 +572,9 @@ std::vector<ym::vec4f> make_sunsky_hdr(int w, int h, float sun_theta,
                                        float scale, bool include_ground) {
     std::vector<ym::vec4f> rgba(w * h);
     ArHosekSkyModelState* skymodel_state[3] = {
-        arhosek_rgb_skymodelstate_alloc_init(turbidity, ground.x(), sun_theta),
-        arhosek_rgb_skymodelstate_alloc_init(turbidity, ground.x(), sun_theta),
-        arhosek_rgb_skymodelstate_alloc_init(turbidity, ground.x(), sun_theta),
+        arhosek_rgb_skymodelstate_alloc_init(turbidity, ground[0], sun_theta),
+        arhosek_rgb_skymodelstate_alloc_init(turbidity, ground[0], sun_theta),
+        arhosek_rgb_skymodelstate_alloc_init(turbidity, ground[0], sun_theta),
     };
     float sun_phi = ym::pif;
     ym::vec3f sun_w =
@@ -595,8 +595,8 @@ std::vector<ym::vec4f> make_sunsky_hdr(int w, int h, float sun_theta,
                                  skymodel_state[1], theta, gamma, 1)),
                              (float)(arhosek_tristim_skymodel_radiance(
                                  skymodel_state[2], theta, gamma, 2))};
-            rgba[j * w + i] = {scale * sky.x(), scale * sky.y(),
-                               scale * sky.z(), 1};
+            rgba[j * w + i] = {scale * sky[0], scale * sky[1], scale * sky[2],
+                               1};
         }
     }
     arhosekskymodelstate_free(skymodel_state[0]);

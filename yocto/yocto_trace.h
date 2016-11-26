@@ -682,7 +682,7 @@ static inline ym::vec3f _eval_emission(const _point& pt) {
         case _point::type::point: return pt.ke;
         case _point::type::line: return pt.ke;
         case _point::type::triangle:
-            return (ym::dot(pt.frame.z(), pt.wo) > 0) ? pt.ke : ym::zero3f;
+            return (ym::dot(pt.frame[2], pt.wo) > 0) ? pt.ke : ym::zero3f;
         default: {
             assert(false);
             return ym::zero3f;
@@ -772,8 +772,8 @@ static inline ym::vec3f _eval_brdfcos(const _point& pt, const ym::vec3f& wi) {
     auto wh = ym::normalize(wo + wi);
 
     // compute dot products
-    auto ndo = ym::dot(pt.frame.z(), wo), ndi = ym::dot(pt.frame.z(), wi),
-         ndh = ym::clamp(ym::dot(wh, pt.frame.z()), 0, 1);
+    auto ndo = ym::dot(pt.frame[2], wo), ndi = ym::dot(pt.frame[2], wi),
+         ndh = ym::clamp(ym::dot(wh, pt.frame[2]), 0, 1);
 
     switch (pt.ptype) {
         case _point::type::point: {
@@ -859,8 +859,8 @@ static inline float _weight_brdfcos(const _point& pt, const ym::vec3f& wi) {
     auto wh = ym::normalize(wi + wo);
 
     // compute dot products
-    auto ndo = ym::dot(pt.frame.z(), wo), ndi = ym::dot(pt.frame.z(), wi),
-         ndh = ym::dot(pt.frame.z(), wh);
+    auto ndo = ym::dot(pt.frame[2], wo), ndi = ym::dot(pt.frame[2], wi),
+         ndh = ym::dot(pt.frame[2], wh);
 
     // check to make sure we are above the surface
     // updated this for refraction
@@ -907,7 +907,7 @@ static inline float _weight_brdfcos(const _point& pt, const ym::vec3f& wi) {
                     auto ns = 2 / (pt.rs * pt.rs) - 2;
                     // compute wh
                     auto wh = ym::normalize(wi + wo);
-                    auto ndh = ym::dot(pt.frame.z(), wh);
+                    auto ndh = ym::dot(pt.frame[2], wh);
                     // homerispherical cosine power probability
                     pdf += ws * powf(ndh, ns) * (ns + 1) / (2 * ym::pif);
                 }
@@ -932,7 +932,7 @@ static inline ym::vec3f _sample_brdfcos(const _point& pt, float rnl,
     auto wo = pt.wo;
 
     // compute cosine
-    auto ndo = ym::dot(pt.frame.z(), wo);
+    auto ndo = ym::dot(pt.frame[2], wo);
 
     // check to make sure we are above the surface
     // update this for refraction
@@ -1027,7 +1027,7 @@ static inline _point _eval_envpoint(const scene& scene, int env_id,
     if (env.ke_txt >= 0) {
         auto w = ym::transform_direction(ym::inverse(env.xform), -wo);
         auto theta = 1 - (acosf(ym::clamp(w[1], -1, 1)) / ym::pif);
-        auto phi = atan2f(w.z(), w.x()) / (2 * ym::pif);
+        auto phi = atan2f(w[2], w[0]) / (2 * ym::pif);
         auto texcoord = ym::vec2f{phi, theta};
         if (env.ke_txt >= 0) {
             auto txt = _eval_texture(scene.textures[env.ke_txt], texcoord);
@@ -1100,9 +1100,9 @@ static inline _point _eval_shapepoint(const scene& scene, int shape_id, int eid,
 
     // transform to world space
     pt.frame.o() = ym::transform_point(shape.xform, pt.frame.o());
-    pt.frame.z() = ym::transform_direction(shape.xform, pt.frame.z());
-    pt.frame.x() = ym::transform_direction(shape.xform, pt.frame.x());
-    pt.frame.y() = ym::transform_direction(shape.xform, pt.frame.y());
+    pt.frame[2] = ym::transform_direction(shape.xform, pt.frame[2]);
+    pt.frame[0] = ym::transform_direction(shape.xform, pt.frame[0]);
+    pt.frame[1] = ym::transform_direction(shape.xform, pt.frame[1]);
 
     // sample material data
     auto& mat = scene.materials[shape.matid];
@@ -1163,7 +1163,7 @@ static inline float _weight_light(const scene& scene, int light_id,
         case _point::type::triangle: {
             auto& light = scene._lights[light_id];
             auto d = ym::dist(lpt.frame.o(), pt.frame.o());
-            return light.area * fabsf(ym::dot(lpt.frame.z(), lpt.wo)) / (d * d);
+            return light.area * fabsf(ym::dot(lpt.frame[2], lpt.wo)) / (d * d);
         } break;
         default: {
             assert(false);
@@ -1222,7 +1222,7 @@ static inline _point _sample_light(const scene& scene, int lid,
 static inline ym::ray3f _offset_ray(const scene& scene, const _point& pt,
                                     const ym::vec3f& w,
                                     const render_params& params) {
-    return ym::ray3f(pt.frame.o() + pt.frame.z() * params.ray_eps, w,
+    return ym::ray3f(pt.frame.o() + pt.frame[2] * params.ray_eps, w,
                      params.ray_eps);
 }
 
@@ -1235,7 +1235,7 @@ static inline ym::ray3f _offset_ray(const scene& scene, const _point& pt,
     auto ray_dist = (pt2.ptype != _point::type::env)
                         ? ym::dist(pt.frame.o(), pt2.frame.o())
                         : FLT_MAX;
-    return ym::ray3f(pt.frame.o() + pt.frame.z() * params.ray_eps, -pt2.wo,
+    return ym::ray3f(pt.frame.o() + pt.frame[2] * params.ray_eps, -pt2.wo,
                      params.ray_eps, ray_dist - 2 * params.ray_eps);
 }
 
@@ -1340,41 +1340,41 @@ static inline ym::vec4f _shade_pathtrace_recd(const scene& scene,
     if (pt.ptype == _point::type::none) return ym::zero4f;
 
     // init
-    auto l = ym::vec4f(0, 0, 0, 1);
+    auto l = ym::zero3f;
 
     // emission
-    if (ray_depth == 0) l.xyz() += _eval_emission(pt);
-    if (pt.ptype == _point::type::env) return l;
+    if (ray_depth == 0) l += _eval_emission(pt);
+    if (pt.ptype == _point::type::env) return {l, 1};
 
     // check early exit
-    if (pt.kd == ym::zero3f && pt.ks == ym::zero3f) return l;
+    if (pt.kd == ym::zero3f && pt.ks == ym::zero3f) return {l, 1};
 
     // direct
-    l.xyz() += _eval_direct(scene, 0, pt, sampler, params);
+    l += _eval_direct(scene, 0, pt, sampler, params);
 
     // roussian roulette
-    if (ray_depth >= params.max_depth) return l;
+    if (ray_depth >= params.max_depth) return {l, 1};
     auto rrweight = 1.0f;
     if (ray_depth >= params.min_depth) {
         auto rrrn = _sample_next1f(sampler);
         auto wrr = std::min(ym::mean(pt.kd) + ym::mean(pt.ks), 0.95f);
-        if (rrrn >= wrr) return l;
+        if (rrrn >= wrr) return {l, 1};
         rrweight /= wrr;
     }
 
     // continue path
     auto bwi =
         _sample_brdfcos(pt, _sample_next1f(sampler), _sample_next2f(sampler));
-    if (bwi == ym::zero3f) return l;
+    if (bwi == ym::zero3f) return {l, 1};
     auto bweight = _weight_brdfcos(pt, bwi);
-    if (!bweight) return l;
+    if (!bweight) return {l, 1};
     auto bbrdfcos = _eval_brdfcos(pt, bwi);
-    if (bbrdfcos == ym::zero3f) return l;
+    if (bbrdfcos == ym::zero3f) return {l, 1};
     auto ble = _shade_pathtrace_recd(scene, _offset_ray(scene, pt, bwi, params),
                                      sampler, ray_depth + 1, params);
-    l.xyz() += ble.xyz() * bbrdfcos * rrweight;
+    l += ym::vec3f{ble[0], ble[1], ble[2]} * bbrdfcos * rrweight;
 
-    return l;
+    return {l, 1};
 }
 
 //
@@ -1398,25 +1398,25 @@ static inline ym::vec4f _shade_direct(const scene& scene, const ym::ray3f& ray,
     if (pt.ptype == _point::type::none) return ym::zero4f;
 
     // init
-    auto l = ym::vec4f(0, 0, 0, 1);
+    auto l = ym::zero3f;
 
     // emission
-    l.xyz() += _eval_emission(pt);
-    if (pt.ptype == _point::type::env) return l;
+    l += _eval_emission(pt);
+    if (pt.ptype == _point::type::env) return {l, 1};
 
     // early exit
-    if (pt.kd == ym::zero3f && pt.ks == ym::zero3f) return l;
+    if (pt.kd == ym::zero3f && pt.ks == ym::zero3f) return {l, 1};
 
     // ambient
-    l.xyz() += params.amb * pt.kd;
+    l += params.amb * pt.kd;
 
     // direct
     for (int lid = 0; lid < scene._lights.size(); lid++) {
-        l.xyz() += _eval_direct(scene, lid, pt, sampler, params);
+        l += _eval_direct(scene, lid, pt, sampler, params);
     }
 
     // done
-    return l;
+    return {l, 1};
 }
 
 //
@@ -1430,16 +1430,16 @@ static inline ym::vec4f _shade_eyelight(const scene& scene,
     if (pt.ptype == _point::type::none) return ym::zero4f;
 
     // init
-    auto l = ym::vec4f(0, 0, 0, 1);
+    auto l = ym::zero3f;
 
     // emission
-    l.xyz() += _eval_emission(pt);
-    if (pt.ptype == _point::type::env) return l;
+    l += _eval_emission(pt);
+    if (pt.ptype == _point::type::env) return {l, 1};
 
     // brdf*light
-    l.xyz() += _eval_brdfcos(pt, pt.wo) * ym::pif;
+    l += _eval_brdfcos(pt, pt.wo) * ym::pif;
 
-    return l;
+    return {l, 1};
 }
 
 //
@@ -1479,7 +1479,8 @@ YGL_API void trace_block(const scene& scene, int cid,
                 auto l = shade(scene, ray, sampler, params);
                 if (!ym::isfinite(l)) continue;
                 if (params.pixel_clamp > 0)
-                    l.xyz() = ym::clamplen(l.xyz(), params.pixel_clamp);
+                    *(ym::vec3f*)&l =
+                        ym::clamplen(*(ym::vec3f*)&l, params.pixel_clamp);
                 img[ij] += l;
             }
             if (accumulate && samples.min) {
