@@ -175,7 +175,7 @@ int main(int argc, char* argv[]) {
 
             // draw image
             yglu::shade_image(img.tex_glid, img.w, img.h, img.w, img.h,
-                              offset.x(), offset.y(), zoom, exposure, gamma);
+                              offset[0], offset[1], zoom, exposure, gamma);
         });
 
     // text callback
@@ -221,7 +221,7 @@ int main(int argc, char* argv[]) {
             switch (info.mouse_button) {
                 case 1: offset += info.mouse_pos - info.mouse_last; break;
                 case 2:
-                    zoom *= powf(2, (info.mouse_pos.x() - info.mouse_last.x()) *
+                    zoom *= powf(2, (info.mouse_pos[0] - info.mouse_last[0]) *
                                         0.001f);
                     break;
                 default: break;

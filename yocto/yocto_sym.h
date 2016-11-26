@@ -439,19 +439,19 @@ YGL_API void _solve_constraints(scene& scene, float dt) {
         auto r1 = col.frame.o() - shape1._centroid_world,
              r2 = col.frame.o() - shape2._centroid_world;
         col.meff_inv = {1 / (shape1._mass_inv + shape2._mass_inv +
-                             _muldot(ym::cross(r1, col.frame.x()),
+                             _muldot(ym::cross(r1, col.frame[0]),
                                      shape1._inertia_inv_world) +
-                             _muldot(ym::cross(r2, col.frame.x()),
+                             _muldot(ym::cross(r2, col.frame[0]),
                                      shape2._inertia_inv_world)),
                         1 / (shape1._mass_inv + shape2._mass_inv +
-                             _muldot(ym::cross(r1, col.frame.y()),
+                             _muldot(ym::cross(r1, col.frame[1]),
                                      shape1._inertia_inv_world) +
-                             _muldot(ym::cross(r2, col.frame.y()),
+                             _muldot(ym::cross(r2, col.frame[1]),
                                      shape2._inertia_inv_world)),
                         1 / (shape1._mass_inv + shape2._mass_inv +
-                             _muldot(ym::cross(r1, col.frame.z()),
+                             _muldot(ym::cross(r1, col.frame[2]),
                                      shape1._inertia_inv_world) +
-                             _muldot(ym::cross(r2, col.frame.z()),
+                             _muldot(ym::cross(r2, col.frame[2]),
                                      shape2._inertia_inv_world))};
     }
 
@@ -481,9 +481,9 @@ YGL_API void _solve_constraints(scene& scene, float dt) {
             // float offset = col.depth*0.8f/dt;
             auto offset = 0.0f;
             ym::vec3f local_impulse =
-                col.meff_inv * ym::vec3f{-ym::dot(col.frame.x(), vr),
-                                         -ym::dot(col.frame.y(), vr),
-                                         -ym::dot(col.frame.z(), vr) + offset};
+                col.meff_inv * ym::vec3f{-ym::dot(col.frame[0], vr),
+                                         -ym::dot(col.frame[1], vr),
+                                         -ym::dot(col.frame[2], vr) + offset};
             col.local_impulse += local_impulse;
             col.local_impulse[2] =
                 ym::clamp(col.local_impulse[2], 0.0f, ym::max_float);
@@ -493,9 +493,9 @@ YGL_API void _solve_constraints(scene& scene, float dt) {
             col.local_impulse[1] =
                 ym::clamp(col.local_impulse[1], -col.local_impulse[2] * 0.6f,
                           col.local_impulse[2] - offset * 0.6f);
-            col.impulse = col.local_impulse[2] * col.frame.z() +
-                          col.local_impulse[0] * col.frame.x() +
-                          col.local_impulse[1] * col.frame.y();
+            col.impulse = col.local_impulse[2] * col.frame[2] +
+                          col.local_impulse[0] * col.frame[0] +
+                          col.local_impulse[1] * col.frame[1];
             _apply_rel_impulse(shape1, -col.impulse, r1);
             _apply_rel_impulse(shape2, col.impulse, r2);
         }
@@ -514,9 +514,9 @@ YGL_API void _solve_constraints(scene& scene, float dt) {
 
     // recompute total impulse and velocity for visualization
     for (auto& col : scene._collisions) {
-        col.impulse = col.local_impulse[2] * col.frame.z() +
-                      col.local_impulse[0] * col.frame.x() +
-                      col.local_impulse[1] * col.frame.y();
+        col.impulse = col.local_impulse[2] * col.frame[2] +
+                      col.local_impulse[0] * col.frame[0] +
+                      col.local_impulse[1] * col.frame[1];
     }
 }
 
