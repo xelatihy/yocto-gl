@@ -215,9 +215,9 @@ ysym::scene make_rigid_scene(yapp::scene& scene, ybvh::scene& scene_bvh) {
         auto simulated =
             !first_hack && ym::length(mat.ke) == 0 && !shape.triangles.empty();
         auto density = (simulated) ? 1.0f : 0.0f;
-        rigid_scene.shapes +=
-            {shape.frame, ym::zero3f,      ym::zero3f, density,
-             simulated,   shape.triangles, shape.pos};
+        rigid_scene.shapes.push_back({shape.frame, ym::zero3f, ym::zero3f,
+                                      density, simulated, shape.triangles,
+                                      shape.pos});
         first_hack = false;
     }
 
@@ -227,13 +227,10 @@ ysym::scene make_rigid_scene(yapp::scene& scene, ybvh::scene& scene_bvh) {
         auto& shape = scene.shapes[i];
         assert(!shape.points.empty() || !shape.lines.empty() ||
                !shape.triangles.empty());
-        scene_bvh.shapes += {(ym::mat4f)shape.frame,
-                             (ym::mat4f)ym::inverse(shape.frame),
-                             shape.points,
-                             shape.lines,
-                             shape.triangles,
-                             shape.pos,
-                             shape.radius};
+        scene_bvh.shapes.push_back({ym::to_mat(shape.frame),
+                                    ym::to_mat(ym::inverse(shape.frame)),
+                                    shape.points, shape.lines, shape.triangles,
+                                    shape.pos, shape.radius});
     }
     ybvh::build_bvh(scene_bvh);
 
@@ -250,9 +247,9 @@ ysym::scene make_rigid_scene(yapp::scene& scene, ybvh::scene& scene_bvh) {
     rigid_scene.overlap_refit = [&scene_bvh, &rigid_scene]() {
         for (auto sid = 0; sid < rigid_scene.shapes.size(); sid++) {
             scene_bvh.shapes[sid].xform =
-                (ym::mat4f)rigid_scene.shapes[sid].frame;
+                ym::to_mat(rigid_scene.shapes[sid].frame);
             scene_bvh.shapes[sid].inv_xform =
-                (ym::mat4f)ym::inverse(rigid_scene.shapes[sid].frame);
+                ym::to_mat(ym::inverse(rigid_scene.shapes[sid].frame));
         }
         ybvh::refit_bvh(scene_bvh);
     };
@@ -323,20 +320,20 @@ int main(int argc, char* argv[]) {
     auto context = yui::context();
 
     // init callback
-    context.init += std::function<void(const yui::info& info)>(
+    context.init.push_back(std::function<void(const yui::info& info)>(
         [&](const yui::info& info) {  // load textures
             yapp::init_shade(scene, shade_prog, shade_txt);
-        });
+        }));
 
     // window size callback
-    context.window_size +=
+    context.window_size.push_back(
         std::function<void(const yui::info& info)>([&](const yui::info& info) {
             auto& cam = scene.cameras[camera];
             cam.aspect = (float)info.win_size[0] / (float)info.win_size[1];
-        });
+        }));
 
     // window refresh callback
-    context.window_refresh +=
+    context.window_refresh.push_back(
         std::function<void(const yui::info& info)>([&](const yui::info& info) {
             // draw
             yapp::shade(scene, camera, shade_prog, shade_txt,
@@ -344,10 +341,10 @@ int main(int argc, char* argv[]) {
                         edges, camera_lights);
             // draw hull
             if (view_hull) draw_hull(rigid_scene, scene, 1, camera, shade_prog);
-        });
+        }));
 
     // check continue callback
-    context.update +=
+    context.update.push_back(
         std::function<int(const yui::info& info)>([&](const yui::info& info) {
             // advance if simulating
             if (simulating) {
@@ -357,11 +354,12 @@ int main(int argc, char* argv[]) {
 
             // continue as usual
             return 0;
-        });
+        }));
 
     // text callback
-    context.text += std::function<void(const yui::info& info, unsigned int)>(
-        [&](const yui::info& info, unsigned int key) {
+    context.text.push_back(
+        std::function<void(const yui::info& info, unsigned int)>([&](
+            const yui::info& info, unsigned int key) {
             switch (key) {
                 case ' ': simulating = !simulating; break;
                 case '/': {
@@ -385,10 +383,10 @@ int main(int argc, char* argv[]) {
                 case 'C': camera = (camera + 1) % scene.cameras.size(); break;
                 default: printf("unsupported key\n"); break;
             }
-        });
+        }));
 
     // mouse position callback
-    context.mouse_pos +=
+    context.mouse_pos.push_back(
         std::function<void(const yui::info& info)>([&](const yui::info& info) {
             if (info.mouse_button) {
                 auto dolly = 0.0f;
@@ -411,7 +409,7 @@ int main(int argc, char* argv[]) {
                 auto& cam = scene.cameras[camera];
                 ym::turntable(cam.frame, cam.focus, rotate, dolly, pan);
             }
-        });
+        }));
 
     // run ui
     yui::ui_loop(context, (int)std::round(aspect * res), res, "yview");

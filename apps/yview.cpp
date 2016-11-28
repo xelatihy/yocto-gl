@@ -56,7 +56,8 @@ std::string inspect_str(const view_img& img, const ym::vec2f& offset,
                         float gamma) {
     static const std::string labels[] = {"r", "g", "b", "a"};
 
-    auto ij = ym::vec2i(round((pos - offset) / zoom));
+    auto xy = round((pos - offset) / zoom);
+    auto ij = ym::vec2i(xy[0], xy[1]);
 
     auto buf = std::string();
     buf += "img: " + std::to_string(img.w) + " x " + std::to_string(img.h) +
@@ -147,7 +148,7 @@ int main(int argc, char* argv[]) {
     auto context = yui::context();
 
     // init callback
-    context.init += std::function<void(const yui::info& info)>(
+    context.init.push_back(std::function<void(const yui::info& info)>(
         [&](const yui::info& info) {  // load textures
             for (auto& img : imgs) {
                 if (!img.pixelf.empty()) {
@@ -159,10 +160,10 @@ int main(int argc, char* argv[]) {
                 } else
                     assert(false);
             }
-        });
+        }));
 
     // window refresh callback
-    context.window_refresh +=
+    context.window_refresh.push_back(
         std::function<void(const yui::info& info)>([&](const yui::info& info) {
             auto& img = imgs[cur_img];
 
@@ -176,11 +177,12 @@ int main(int argc, char* argv[]) {
             // draw image
             yglu::shade_image(img.tex_glid, img.w, img.h, img.w, img.h,
                               offset[0], offset[1], zoom, exposure, gamma);
-        });
+        }));
 
     // text callback
-    context.text += std::function<void(const yui::info& info, unsigned int)>(
-        [&](const yui::info& info, unsigned int key) {
+    context.text.push_back(
+        std::function<void(const yui::info& info, unsigned int)>([&](
+            const yui::info& info, unsigned int key) {
             switch (key) {
                 case ' ':
                 case '.': cur_img = (cur_img + 1) % imgs.size(); break;
@@ -213,10 +215,10 @@ int main(int argc, char* argv[]) {
                 case 'p': hud_print = !hud_print; break;
                 default: printf("unsupported key\n"); break;
             }
-        });
+        }));
 
     // mouse position callback
-    context.mouse_pos +=
+    context.mouse_pos.push_back(
         std::function<void(const yui::info& info)>([&](const yui::info& info) {
             switch (info.mouse_button) {
                 case 1: offset += info.mouse_pos - info.mouse_last; break;
@@ -234,7 +236,7 @@ int main(int argc, char* argv[]) {
                 printf("\033[2J\033[1;1H");
                 printf("%s", str.c_str());
             }
-        });
+        }));
 
     // run ui
     yui::ui_loop(context, imgs[0].w, imgs[0].h, "yview");

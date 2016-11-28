@@ -98,29 +98,29 @@ int main(int argc, char* argv[]) {
     auto context = yui::context();
 
     // init callback
-    context.init += std::function<void(const yui::info& info)>(
+    context.init.push_back(std::function<void(const yui::info& info)>(
         [&](const yui::info& info) {  // load textures
             yapp::init_shade(scene, shade_prog, shade_txt);
-        });
+        }));
 
     // window size callback
-    context.window_size +=
+    context.window_size.push_back(
         std::function<void(const yui::info& info)>([&](const yui::info& info) {
             auto& cam = scene.cameras[camera];
             cam.aspect = (float)info.win_size[0] / (float)info.win_size[1];
-        });
+        }));
 
     // window refresh callback
-    context.window_refresh +=
+    context.window_refresh.push_back(
         std::function<void(const yui::info& info)>([&](const yui::info& info) {
             // draw
             yapp::shade(scene, camera, shade_prog, shade_txt,
                         backgrounds[cur_background], exposure, gamma, wireframe,
                         edges, camera_lights);
-        });
+        }));
 
     // check continue callback
-    context.update +=
+    context.update.push_back(
         std::function<int(const yui::info& info)>([&](const yui::info& info) {
             // check for screenshot
             if (no_ui) {
@@ -130,11 +130,12 @@ int main(int argc, char* argv[]) {
 
             // continue as usual
             return 0;
-        });
+        }));
 
     // text callback
-    context.text += std::function<void(const yui::info& info, unsigned int)>(
-        [&](const yui::info& info, unsigned int key) {
+    context.text.push_back(
+        std::function<void(const yui::info& info, unsigned int)>([&](
+            const yui::info& info, unsigned int key) {
             switch (key) {
                 case '[': exposure -= 1; break;
                 case ']': exposure += 1; break;
@@ -164,10 +165,10 @@ int main(int argc, char* argv[]) {
                 } break;
                 default: printf("unsupported key\n"); break;
             }
-        });
+        }));
 
     // mouse position callback
-    context.mouse_pos +=
+    context.mouse_pos.push_back(
         std::function<void(const yui::info& info)>([&](const yui::info& info) {
             if (info.mouse_button) {
                 auto dolly = 0.0f;
@@ -190,7 +191,7 @@ int main(int argc, char* argv[]) {
                 auto& cam = scene.cameras[camera];
                 ym::turntable(cam.frame, cam.focus, rotate, dolly, pan);
             }
-        });
+        }));
 
     // run ui
     yui::ui_loop(context, (int)std::round(aspect * res), res, "yview");

@@ -372,7 +372,8 @@ static inline void _compute_collision(scene& scene, const ym::vec2i& shapes) {
     auto& shape2 = scene.shapes[shapes[1]];
     for (auto& p2 : shape2.pos) {
         auto p = ym::transform_point(shape2.frame, p2);
-        auto overlap = scene.overlap_shape(shapes[0], p, ym::max_float);
+        auto overlap = scene.overlap_shape(shapes[0], p,
+                                           std::numeric_limits<float>::max());
         if (!overlap) continue;
         auto triangle = shape1.triangles[overlap.eid];
         auto v0 = shape1.pos[triangle[0]], v1 = shape1.pos[triangle[1]],
@@ -485,8 +486,8 @@ YGL_API void _solve_constraints(scene& scene, float dt) {
                                          -ym::dot(col.frame[1], vr),
                                          -ym::dot(col.frame[2], vr) + offset};
             col.local_impulse += local_impulse;
-            col.local_impulse[2] =
-                ym::clamp(col.local_impulse[2], 0.0f, ym::max_float);
+            col.local_impulse[2] = ym::clamp(col.local_impulse[2], 0.0f,
+                                             std::numeric_limits<float>::max());
             col.local_impulse[0] =
                 ym::clamp(col.local_impulse[0], -col.local_impulse[2] * 0.6f,
                           col.local_impulse[2] * 0.6f);
