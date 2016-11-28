@@ -146,11 +146,11 @@ enum struct htype {
 // - Padded to 32 bytes for cache fiendly access
 //
 struct _bvhn {
-    ym::range3f bbox;  // bounding box
-    uint32_t start;    // index to the first sorted primitive/node
-    uint16_t count;    // number of primitives/nodes
-    uint8_t isleaf;    // whether it is a leaf
-    uint8_t axis;      // slit axis
+    ym::bbox3f bbox;  // bounding box
+    uint32_t start;   // index to the first sorted primitive/node
+    uint16_t count;   // number of primitives/nodes
+    uint8_t isleaf;   // whether it is a leaf
+    uint8_t axis;     // slit axis
 };
 
 //
@@ -417,26 +417,25 @@ namespace ybvh {
 //
 // Point bounds
 //
-static inline ym::range3f _bound_point(const ym::vec3f& p, float r = 0) {
-    return ym::make_range({p - ym::vec3f(r), p - ym::vec3f(r)});
+static inline ym::bbox3f _bound_point(const ym::vec3f& p, float r = 0) {
+    return ym::make_bbox({p - r, p - r});
 }
 
 //
 // Line bounds
 //
-static inline ym::range3f _bound_line(const ym::vec3f& v0, const ym::vec3f& v1,
-                                      float r0 = 0, float r1 = 0) {
-    return ym::make_range({v0 - ym::vec3f(r0), v0 + ym::vec3f(r0),
-                           v1 - ym::vec3f(r1), v1 + ym::vec3f(r1)});
+static inline ym::bbox3f _bound_line(const ym::vec3f& v0, const ym::vec3f& v1,
+                                     float r0 = 0, float r1 = 0) {
+    return ym::make_bbox({v0 - r0, v0 + r0, v1 - r1, v1 + r1});
 }
 
 //
 // Triangle bounds
 //
-static inline ym::range3f _bound_triangle(const ym::vec3f& v0,
-                                          const ym::vec3f& v1,
-                                          const ym::vec3f& v2) {
-    return ym::make_range({v0, v1, v2});
+static inline ym::bbox3f _bound_triangle(const ym::vec3f& v0,
+                                         const ym::vec3f& v1,
+                                         const ym::vec3f& v2) {
+    return ym::make_bbox({v0, v1, v2});
 }
 
 // -----------------------------------------------------------------------------
@@ -622,21 +621,16 @@ static inline bool _intersect_triangle(const ym::ray3f& ray,
 // - whether the intersection occurred
 //
 static inline bool _intersect_check_bbox(const ym::ray3f& ray,
-                                         const ym::range3f& bbox) {
+                                         const ym::bbox3f& bbox) {
     // set up convenient pointers for looping over axes
-    auto _ray_o = &ray.o[0];
-    auto _ray_d = &ray.d[0];
-    auto _bbox_min = &bbox.min[0];
-    auto _bbox_max = &bbox.max[0];
-
     auto tmin = ray.tmin, tmax = ray.tmax;
 
     // for each axis, clip intersection against the bounding planes
     for (int i = 0; i < 3; i++) {
         // determine intersection ranges
-        auto invd = 1.0f / _ray_d[i];
-        auto t0 = (_bbox_min[i] - _ray_o[i]) * invd;
-        auto t1 = (_bbox_max[i] - _ray_o[i]) * invd;
+        auto invd = 1.0f / ray.d[i];
+        auto t0 = (bbox[0][i] - ray.o[i]) * invd;
+        auto t1 = (bbox[1][i] - ray.o[i]) * invd;
         // flip based on range directions
         if (invd < 0.0f) {
             float a = t0;
@@ -687,7 +681,7 @@ static inline const T& _safemax(const T& a, const T& b) {
 static inline bool _intersect_check_bbox(const ym::ray3f& ray,
                                          const ym::vec3f& ray_dinv,
                                          const ym::vec3i& ray_dsign,
-                                         const ym::range3f& bbox) {
+                                         const ym::bbox3f& bbox) {
     auto txmin = (bbox[ray_dsign[0]][0] - ray.o[0]) * ray_dinv[0];
     auto txmax = (bbox[1 - ray_dsign[0]][0] - ray.o[0]) * ray_dinv[0];
     auto tymin = (bbox[ray_dsign[1]][1] - ray.o[1]) * ray_dinv[1];
@@ -854,7 +848,7 @@ static inline bool _overlap_bbox(const ym::vec3f bbox1_min,
 // data for faster hierarchy build.
 //
 struct _bound_prim {
-    ym::range3f bbox;      // bounding box
+    ym::bbox3f bbox;       // bounding box
     ym::vec3f center;      // bounding box center (for faster sort)
     int pid;               // primitive id
     float sah_cost_left;   // buffer for sah heuristic costs
@@ -899,9 +893,9 @@ static inline bool _partition_prims(ym::array_view<_bound_prim> sorted_prim,
     mid = (start + end) / 2;
 
     // compute primintive bounds and size
-    auto centroid_bbox = ym::invalid_range3f;
+    auto centroid_bbox = ym::invalid_bbox3f;
     for (auto i = start; i < end; i++) centroid_bbox += sorted_prim[i].center;
-    auto centroid_size = ym::rsize(centroid_bbox);
+    auto centroid_size = ym::diagonal(centroid_bbox);
 
     // check if it is not possible to split
     if (centroid_size == ym::zero3f) return false;
@@ -929,7 +923,7 @@ static inline bool _partition_prims(ym::array_view<_bound_prim> sorted_prim,
                           sorted_prim.data() + start, sorted_prim.data() + end,
                           _bound_prim_comp(
                               largest_axis,
-                              ym::rcenter(centroid_bbox)[largest_axis])) -
+                              ym::center(centroid_bbox)[largest_axis])) -
                       sorted_prim.data());
         } break;
         // surface area heuristic: estimate the cost of splitting
@@ -941,22 +935,22 @@ static inline bool _partition_prims(ym::array_view<_bound_prim> sorted_prim,
             for (auto a = 0; a < 3; a++) {
                 std::sort(sorted_prim.data() + start, sorted_prim.data() + end,
                           _bound_prim_comp(a));
-                auto sbbox = ym::invalid_range3f;
+                auto sbbox = ym::invalid_bbox3f;
                 // to avoid an O(n^2) computation, use sweaps to compute the
                 // cost,
                 // first smallest to largest, then largest to smallest
                 for (auto i = 0; i < count; i++) {
                     sbbox += sorted_prim[start + i].bbox;
-                    auto sbbox_size = ym::rsize(sbbox);
+                    auto sbbox_size = ym::diagonal(sbbox);
                     sorted_prim[start + i].sah_cost_left =
                         __bbox_area(sbbox_size);
                     sorted_prim[start + i].sah_cost_left *= i + 1;
                 }
                 // the other sweep
-                sbbox = ym::invalid_range3f;
+                sbbox = ym::invalid_bbox3f;
                 for (auto i = 0; i < count; i++) {
                     sbbox += sorted_prim[end - 1 - i].bbox;
-                    auto sbbox_size = ym::rsize(sbbox);
+                    auto sbbox_size = ym::diagonal(sbbox);
                     sorted_prim[end - 1 - i].sah_cost_right =
                         __bbox_area(sbbox_size);
                     sorted_prim[end - 1 - i].sah_cost_right *= i + 1;
@@ -982,10 +976,10 @@ static inline bool _partition_prims(ym::array_view<_bound_prim> sorted_prim,
         case htype::binned_sah: {
             // allocate bins
             const auto nbins = 16;
-            ym::range3f bins_bbox[nbins];
+            ym::bbox3f bins_bbox[nbins];
             int bins_count[nbins];
             for (int b = 0; b < nbins; b++) {
-                bins_bbox[b] = ym::invalid_range3f;
+                bins_bbox[b] = ym::invalid_bbox3f;
                 // bins_bbox[b] = centroid_bbox;
                 // bins_bbox[b].min[largest_axis] += b *
                 // centroid_size[largest_axis] / nbins;
@@ -995,7 +989,7 @@ static inline bool _partition_prims(ym::array_view<_bound_prim> sorted_prim,
             }
             for (int i = start; i < end; i++) {
                 auto b = (int)(nbins * (sorted_prim[i].center[largest_axis] -
-                                        centroid_bbox.min[largest_axis]) /
+                                        centroid_bbox[0][largest_axis]) /
                                centroid_size[largest_axis]);
                 b = ym::clamp(b, 0, nbins - 1);
                 bins_count[b] += 1;
@@ -1005,8 +999,8 @@ static inline bool _partition_prims(ym::array_view<_bound_prim> sorted_prim,
             int bin_idx = -1;
             for (int b = 1; b < nbins; b++) {
                 if (!bins_count[b]) continue;
-                auto left_bbox = ym::invalid_range3f,
-                     right_bbox = ym::invalid_range3f;
+                auto left_bbox = ym::invalid_bbox3f,
+                     right_bbox = ym::invalid_bbox3f;
                 auto left_count = 0, right_count = 0;
                 for (int j = 0; j < b; j++) {
                     if (!bins_count[j]) continue;
@@ -1018,8 +1012,8 @@ static inline bool _partition_prims(ym::array_view<_bound_prim> sorted_prim,
                     right_count += bins_count[j];
                     right_bbox += bins_bbox[j];
                 }
-                auto left_bbox_size = ym::rsize(left_bbox);
-                auto right_bbox_size = ym::rsize(right_bbox);
+                auto left_bbox_size = ym::diagonal(left_bbox);
+                auto right_bbox_size = ym::diagonal(right_bbox);
                 auto cost = __bbox_area(left_bbox_size) * left_count +
                             __bbox_area(right_bbox_size) * right_count;
                 if (min_cost > cost) {
@@ -1056,7 +1050,7 @@ static inline void _make_node(_bvhn& node, std::vector<_bvhn>& nodes,
                               ym::array_view<_bound_prim> sorted_prims,
                               int start, int end, htype heuristic) {
     // compute node bounds
-    node.bbox = ym::invalid_range3f;
+    node.bbox = ym::invalid_bbox3f;
     for (auto i = start; i < end; i++) node.bbox += sorted_prims[i].bbox;
 
     // decide whether to create a leaf
@@ -1106,8 +1100,8 @@ YGL_API void _build_bvh(_bvh& bvh, const ym::array_view<T>& prims,
         auto prim = _bound_prim();
         prim.pid = (int)bound_prims.size();
         prim.bbox = bbox(f);
-        prim.center = ym::rcenter(prim.bbox);
-        bound_prims += prim;
+        prim.center = ym::center(prim.bbox);
+        bound_prims.push_back(prim);
     }
 
     // clear bvh
@@ -1191,13 +1185,13 @@ template <typename T, typename bbox_func>
 static inline void _refit_bvh(_bvh& bvh, const std::vector<T>& prims,
                               _bvhn& node, const bbox_func& bbox) {
     if (node.isleaf) {
-        node.bbox = ym::invalid_range3f;
+        node.bbox = ym::invalid_bbox3f;
         for (auto i = node.start; i < node.start + node.count; i++) {
             auto idx = bvh.sorted_prim[i];
             node.bbox += bbox(prims[idx]);
         }
     } else {
-        node.bbox = ym::invalid_range3f;
+        node.bbox = ym::invalid_bbox3f;
         for (auto i = node.start; i < node.start + node.count; i++) {
             _refit_bvh(bvh, prims, bvh.nodes[i], bbox);
             node.bbox += bvh.nodes[i].bbox;
@@ -1285,7 +1279,7 @@ static inline bool _intersect_bvh(const _bvh& bvh, const ym::ray3f& ray_,
     auto hit = false;
 
     // prepare ray for fast queries
-    auto ray_dinv = ym::one3f / ray.d;
+    auto ray_dinv = ym::vec3f{1, 1, 1} / ray.d;
     auto ray_dsign =
         ym::vec3i{(ray_dinv[0] < 0) ? 1 : 0, (ray_dinv[1] < 0) ? 1 : 0,
                   (ray_dinv[2] < 0) ? 1 : 0};
@@ -1370,8 +1364,10 @@ static inline bool _intersect_shape(const shape& shape, const ym::ray3f& ray,
                 auto r = (!shape.radius.empty()) ? shape.radius[f] : 0;
                 return _intersect_point(ray, shape.pos[f], r, ray_t, euv);
             });
-    } else
+    } else {
         assert(false);
+        return false;
+    }
 }
 
 //
@@ -1470,7 +1466,7 @@ static inline bool _overlap_bvh(const _bvh& bvh, const ym::vec3f& pt,
         auto& node = bvh.nodes[node_stack[--node_cur]];
 
         // intersect bbox
-        if (!_distance_check_bbox(pt, max_dist, node.bbox.min, node.bbox.max))
+        if (!_distance_check_bbox(pt, max_dist, node.bbox[0], node.bbox[1]))
             continue;
 
         // intersect node, switching based on node type
@@ -1533,8 +1529,10 @@ static inline bool _overlap_bvh(const shape& shape, const ym::vec3f& pt,
                 auto r = (!shape.radius.empty()) ? shape.radius[f] : 0;
                 return _overlap_point(pt, max_dist, shape.pos[f], r, dist, euv);
             });
-    } else
+    } else {
         assert(false);
+        return false;
+    }
 }
 
 //
@@ -1612,8 +1610,8 @@ YGL_API int _overlap_bounds(const _bvh& bvh, bool exclude_self,
         auto node2 = &bvh.nodes[node_idx[1]];
 
         // intersect bbox
-        if (!_overlap_bbox(node1->bbox.min, node1->bbox.max, node2->bbox.min,
-                           node2->bbox.max))
+        if (!_overlap_bbox(node1->bbox[0], node1->bbox[1], node2->bbox[0],
+                           node2->bbox[1]))
             continue;
 
         // check for leaves
@@ -1663,8 +1661,7 @@ YGL_API int overlap_shape_bounds(
         auto& shape2 = scene.shapes[idx[1]];
         auto bbox1 = ym::transform_bbox(shape1.xform, shape1.bvh.nodes[0].bbox);
         auto bbox2 = ym::transform_bbox(shape2.xform, shape2.bvh.nodes[0].bbox);
-        if (!_overlap_bbox(bbox1.min, bbox1.max, bbox2.min, bbox2.max))
-            return 0;
+        if (!_overlap_bbox(bbox1[0], bbox1[1], bbox2[0], bbox2[1])) return 0;
         overlap_cb(idx);
         return 1;
     });

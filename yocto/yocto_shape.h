@@ -146,8 +146,14 @@ YGL_API std::vector<ym::vec3f> compute_normals(
 // To insert values into the data structure use insert. To access elements use
 // the overloaded operators [] and at. For convenience, use make_edge_map.
 //
-struct edge_map {  // underlying map type
-    using map_t = std::unordered_map<ym::vec2i, int>;
+struct edge_map {
+    // hash type
+    struct _hash {
+        size_t operator()(const ym::vec2i& v) const { return ym::hash_vec(v); }
+    };
+
+    // underlying map type
+    using map_t = std::unordered_map<ym::vec2i, int, _hash>;
 
     // size and iteration
     size_t size() const { return _map.size(); }
@@ -155,9 +161,6 @@ struct edge_map {  // underlying map type
     // edge insertion
     void insert(const ym::vec2i& e) {
         if (!has_edge(e)) _map[_edge(e)] = (int)_map.size();
-        if (!has_edge(e)) {
-            assert(false);
-        }
     }
 
     // edge check
@@ -509,18 +512,19 @@ YGL_API void split_edges(int nverts, const std::vector<ym::vec2i>& lines,
     tess_lines.clear();
     tess_lines.reserve(lines.size() * 2);
     for (auto l : lines) {
-        tess_lines += {l[0], nverts + em[l]};
-        tess_lines += {nverts + em[l], l[1]};
+        tess_lines.push_back({l[0], nverts + em[l]});
+        tess_lines.push_back({nverts + em[l], l[1]});
     }
     tess_triangles.clear();
     tess_triangles.reserve(triangles.size() * 4);
     for (auto t : triangles) {
         for (auto i = 0; i < 3; i++) {
-            tess_triangles += {t[i], nverts + em[{t[i], t[(i + 1) % 3]}],
-                               nverts + em[{t[i], t[(i + 2) % 3]}]};
+            tess_triangles.push_back({t[i], nverts + em[{t[i], t[(i + 1) % 3]}],
+                                      nverts + em[{t[i], t[(i + 2) % 3]}]});
         }
-        tess_triangles += {nverts + em[{t[0], t[1]}], nverts + em[{t[1], t[2]}],
-                           nverts + em[{t[2], t[0]}]};
+        tess_triangles.push_back({nverts + em[{t[0], t[1]}],
+                                  nverts + em[{t[1], t[2]}],
+                                  nverts + em[{t[2], t[0]}]});
     }
 
     // returned edges
@@ -920,10 +924,10 @@ YGL_API void make_stdsurface(stype stype, int level, const ym::vec4f& params,
                 make_stdsurface(stype::uvquad, level, params, quad_triangles,
                                 quad_pos, quad_norm, quad_texcoord, frame,
                                 scale);
-                pos += quad_pos;
-                norm += quad_norm;
-                texcoord += quad_texcoord;
-                for (auto t : quad_triangles) triangles += t + offset;
+                for (auto p : quad_pos) pos.push_back(p);
+                for (auto n : quad_norm) norm.push_back(n);
+                for (auto t : quad_texcoord) texcoord.push_back(t);
+                for (auto t : quad_triangles) triangles.push_back(t + offset);
             }
         } break;
         case stype::uvspherecube: {

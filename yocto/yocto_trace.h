@@ -70,6 +70,7 @@
 
 //
 // HISTORY:
+// - v 0.6: minor API change for blocks
 // - v 0.5: [major API change] move to modern C++ interface
 // - v 0.4: C++ API
 // - v 0.3: removal of C interface
@@ -100,6 +101,11 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
+//
+
+//
+// TODO: change interface for trace_block to avoid ranges.
+//
 
 #ifndef _YTRACE_H_
 #define _YTRACE_H_
@@ -343,8 +349,9 @@ YGL_API void init_lights(scene& scene);
 //
 YGL_API void trace_block(const scene& scene, int cid,
                          ym::image_view<ym::vec4f> img, int ns,
-                         const ym::range2i& block, const ym::range1i& samples,
-                         const render_params& params, bool accumulate = false);
+                         const ym::vec2i& xy, const ym::vec2i& wh,
+                         const ym::vec2i& samples, const render_params& params,
+                         bool accumulate = false);
 
 //
 // Convenience function to call trace_block with all sample at once.
@@ -449,7 +456,8 @@ YGL_API float specular_exponent_to_roughness(float n) {
 //
 YGL_API void specular_fresnel_from_ks(const ym::vec3f& ks, ym::vec3f& es,
                                       ym::vec3f& esk) {
-    es = (ym::one3f + ym::sqrt(ks)) / (ym::one3f - ym::sqrt(ks));
+    es = (ym::vec3f{1, 1, 1} + ym::sqrt(ks)) /
+         (ym::vec3f{1, 1, 1} - ym::sqrt(ks));
     esk = ym::zero3f;
 }
 
@@ -639,13 +647,13 @@ static inline ym::vec4f _eval_texture(const texture& txt,
     // get coordinates normalized for tiling
     auto st =
         ym::vec2f{std::fmod(texcoord[0], 1.0f), std::fmod(texcoord[1], 1.0f)} *
-        ym::vec2f(wh);
+        ym::vec2f(wh[0], wh[1]);
     if (st[0] < 0) st[0] += wh[0];
     if (st[1] < 0) st[1] += wh[1];
 
     // get image coordinates and residuals
-    auto ij = ym::clamp(ym::vec2i(st), {0, 0}, wh);
-    auto uv = st - ym::vec2f(ij);
+    auto ij = ym::clamp(ym::vec2i(st[0], st[1]), {0, 0}, wh);
+    auto uv = st - ym::vec2f(ij[0], ij[1]);
 
     // get interpolation weights and indices
     ym::vec2i idx[4] = {ij,
@@ -702,17 +710,18 @@ static inline ym::vec3f _eval_fresnel_dielectric(float cosw,
         cosw = -cosw;
     }
 
-    auto sin2 = ym::vec3f(1 - cosw * cosw);
+    auto sin2 = 1 - cosw * cosw;
     auto eta2 = eta * eta;
 
-    auto cos2t = ym::one3f - sin2 / eta2;
-    if (cos2t[0] < 0 || cos2t[1] < 0 || cos2t[2] < 0) return ym::one3f;  // tir
+    auto cos2t = 1 - sin2 / eta2;
+    if (cos2t[0] < 0 || cos2t[1] < 0 || cos2t[2] < 0)
+        return ym::vec3f{1, 1, 1};  // tir
 
-    auto t0 = sqrt(cos2t);
+    auto t0 = ym::sqrt(cos2t);
     auto t1 = eta * t0;
     auto t2 = eta * cosw;
 
-    auto rs = (ym::vec3f(cosw) - t1) / (ym::vec3f(cosw) + t1);
+    auto rs = (cosw - t1) / (cosw + t1);
     auto rp = (t0 - t2) / (t0 + t2);
 
     return (rs * rs + rp * rp) / 2;
@@ -727,8 +736,8 @@ static inline ym::vec3f _eval_fresnel_metal(float cosw, const ym::vec3f& eta,
     if (etak == ym::zero3f) return _eval_fresnel_dielectric(cosw, eta);
 
     cosw = ym::clamp(cosw, -1, 1);
-    auto cos2 = ym::vec3f(cosw * cosw);
-    auto sin2 = ym::clamp(ym::one3f - cos2, 0, 1);
+    auto cos2 = cosw * cosw;
+    auto sin2 = ym::clamp(ym::vec3f{1, 1, 1} - cos2, 0, 1);
     auto eta2 = eta * eta;
     auto etak2 = etak * etak;
 
@@ -739,7 +748,7 @@ static inline ym::vec3f _eval_fresnel_metal(float cosw, const ym::vec3f& eta,
     auto t2 = 2 * a * cosw;
     auto rs = (t1 - t2) / (t1 + t2);
 
-    auto t3 = ym::vec3f(cos2) * a2plusb2 + sin2 * sin2;
+    auto t3 = cos2 * a2plusb2 + sin2 * sin2;
     auto t4 = t2 * sin2;
     auto rp = rs * (t3 - t4) / (t3 + t4);
 
@@ -1340,41 +1349,42 @@ static inline ym::vec4f _shade_pathtrace_recd(const scene& scene,
     if (pt.ptype == _point::type::none) return ym::zero4f;
 
     // init
-    auto l = ym::zero3f;
+    auto la = ym::vec4f{0, 0, 0, 1};
+    auto& l = *(ym::vec3f*)la.data();
 
     // emission
     if (ray_depth == 0) l += _eval_emission(pt);
-    if (pt.ptype == _point::type::env) return {l, 1};
+    if (pt.ptype == _point::type::env) return la;
 
     // check early exit
-    if (pt.kd == ym::zero3f && pt.ks == ym::zero3f) return {l, 1};
+    if (pt.kd == ym::zero3f && pt.ks == ym::zero3f) return la;
 
     // direct
     l += _eval_direct(scene, 0, pt, sampler, params);
 
     // roussian roulette
-    if (ray_depth >= params.max_depth) return {l, 1};
+    if (ray_depth >= params.max_depth) return la;
     auto rrweight = 1.0f;
     if (ray_depth >= params.min_depth) {
         auto rrrn = _sample_next1f(sampler);
         auto wrr = std::min(ym::mean(pt.kd) + ym::mean(pt.ks), 0.95f);
-        if (rrrn >= wrr) return {l, 1};
+        if (rrrn >= wrr) return {l[0], l[1], l[2], 1};
         rrweight /= wrr;
     }
 
     // continue path
     auto bwi =
         _sample_brdfcos(pt, _sample_next1f(sampler), _sample_next2f(sampler));
-    if (bwi == ym::zero3f) return {l, 1};
+    if (bwi == ym::zero3f) return la;
     auto bweight = _weight_brdfcos(pt, bwi);
-    if (!bweight) return {l, 1};
+    if (!bweight) return la;
     auto bbrdfcos = _eval_brdfcos(pt, bwi);
-    if (bbrdfcos == ym::zero3f) return {l, 1};
+    if (bbrdfcos == ym::zero3f) return la;
     auto ble = _shade_pathtrace_recd(scene, _offset_ray(scene, pt, bwi, params),
                                      sampler, ray_depth + 1, params);
     l += ym::vec3f{ble[0], ble[1], ble[2]} * bbrdfcos * rrweight;
 
-    return {l, 1};
+    return la;
 }
 
 //
@@ -1398,14 +1408,15 @@ static inline ym::vec4f _shade_direct(const scene& scene, const ym::ray3f& ray,
     if (pt.ptype == _point::type::none) return ym::zero4f;
 
     // init
-    auto l = ym::zero3f;
+    auto la = ym::vec4f{0, 0, 0, 1};
+    auto& l = *(ym::vec3f*)la.data();
 
     // emission
     l += _eval_emission(pt);
-    if (pt.ptype == _point::type::env) return {l, 1};
+    if (pt.ptype == _point::type::env) return la;
 
     // early exit
-    if (pt.kd == ym::zero3f && pt.ks == ym::zero3f) return {l, 1};
+    if (pt.kd == ym::zero3f && pt.ks == ym::zero3f) return la;
 
     // ambient
     l += params.amb * pt.kd;
@@ -1416,7 +1427,7 @@ static inline ym::vec4f _shade_direct(const scene& scene, const ym::ray3f& ray,
     }
 
     // done
-    return {l, 1};
+    return la;
 }
 
 //
@@ -1430,16 +1441,17 @@ static inline ym::vec4f _shade_eyelight(const scene& scene,
     if (pt.ptype == _point::type::none) return ym::zero4f;
 
     // init
-    auto l = ym::zero3f;
+    auto la = ym::vec4f{0, 0, 0, 1};
+    auto& l = *(ym::vec3f*)la.data();
 
     // emission
     l += _eval_emission(pt);
-    if (pt.ptype == _point::type::env) return {l, 1};
+    if (pt.ptype == _point::type::env) return la;
 
     // brdf*light
     l += _eval_brdfcos(pt, pt.wo) * ym::pif;
 
-    return {l, 1};
+    return la;
 }
 
 //
@@ -1454,8 +1466,9 @@ using shade_fn =
 //
 YGL_API void trace_block(const scene& scene, int cid,
                          ym::image_view<ym::vec4f> img, int ns,
-                         const ym::range2i& block, const ym::range1i& samples,
-                         const render_params& params, bool accumulate) {
+                         const ym::vec2i& xy, const ym::vec2i& wh,
+                         const ym::vec2i& samples, const render_params& params,
+                         bool accumulate) {
     auto& cam = scene.cameras[cid];
     shade_fn shade;
     switch (params.stype) {
@@ -1465,12 +1478,12 @@ YGL_API void trace_block(const scene& scene, int cid,
         case stype::pathtrace: shade = _shade_pathtrace; break;
         default: assert(false); return;
     }
-    for (auto j = block.min[1]; j < block.max[1]; j++) {
-        for (auto i = block.min[0]; i < block.max[0]; i++) {
+    for (auto j = xy[1]; j < xy[1] + wh[1]; j++) {
+        for (auto i = xy[0]; i < xy[0] + wh[0]; i++) {
             auto ij = ym::vec2i(i, j);
             auto saved = img[ij];
             img[ij] = ym::zero4f;
-            for (auto s = samples.min; s < samples.max; s++) {
+            for (auto s = samples[0]; s < samples[1]; s++) {
                 auto sampler = _make_sampler(i, j, s, ns, params.rtype);
                 auto rn = _sample_next2f(sampler);
                 auto uv = ym::vec2f{(i + rn[0]) / img.size()[0],
@@ -1483,11 +1496,11 @@ YGL_API void trace_block(const scene& scene, int cid,
                         ym::clamplen(*(ym::vec3f*)&l, params.pixel_clamp);
                 img[ij] += l;
             }
-            if (accumulate && samples.min) {
-                img[ij] += saved * samples.min;
-                img[ij] /= samples.max;
+            if (accumulate && samples[0]) {
+                img[ij] += saved * samples[0];
+                img[ij] /= samples[1];
             } else {
-                img[ij] /= (float)samples.size();
+                img[ij] /= samples[1] - samples[0];
             }
         }
     }
@@ -1499,8 +1512,7 @@ YGL_API void trace_block(const scene& scene, int cid,
 YGL_API void trace_image(const scene& scene, int cid,
                          ym::image_view<ym::vec4f> img, int ns,
                          const render_params& params) {
-    trace_block(scene, cid, img, ns, {{0, 0}, {img.size()[0], img.size()[1]}},
-                {0, ns}, params);
+    trace_block(scene, cid, img, ns, {0, 0}, img.size(), {0, ns}, params);
 }
 
 }  // namespace

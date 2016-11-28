@@ -39,12 +39,13 @@
 
 #define MAX_BLOCKS_PER_STEP 4096
 
-std::vector<ym::range2i> make_image_blocks(int w, int h, int bs) {
-    std::vector<ym::range2i> blocks;
-    for (int j = 0, cb = 0; j < h; j += bs) {
-        for (int i = 0; i < w; i += bs, cb++) {
+std::vector<std::pair<ym::vec2i, ym::vec2i>> make_image_blocks(int w, int h,
+                                                               int bs) {
+    std::vector<std::pair<ym::vec2i, ym::vec2i>> blocks;
+    for (int j = 0; j < h; j += bs) {
+        for (int i = 0; i < w; i += bs) {
             blocks.push_back(
-                {{i, j}, {ym::min(i + bs, w), ym::min(j + bs, h)}});
+                {{i, j}, {ym::min(bs, w - i), ym::min(bs, h - j)}});
         }
     }
     return blocks;
@@ -79,31 +80,6 @@ void save_image(const std::string& filename,
     }
 }
 
-struct render_block_params {
-    int cur_camera;
-    ym::vec4f *img, *buf;
-    int w, h, ns;
-    ym::range2i window;
-    ym::range1i samples;
-    ytrace::render_params params;
-    ytrace::scene* scene;
-};
-
-void accumulate_block(ym::vec4f* img, ym::vec4f* buf, int w, int h,
-                      const ym::range2i& window, const ym::range1i& samples) {
-    for (int jj = window.min[1]; jj < window.max[1]; jj++) {
-        for (int ii = window.min[0]; ii < window.max[0]; ii++) {
-            int off = (jj * w + ii);
-            ym::vec4f *pixel = img + off, *bpixel = buf + off;
-            if (samples.min) {
-                *pixel = (*pixel * samples.min + *bpixel) / samples.max;
-            } else {
-                *pixel = *bpixel;
-            }
-        }
-    }
-}
-
 ytrace::scene init_trace_cb(yapp::scene& scene, ybvh::scene& scene_bvh,
                             int camera) {
     auto trace_scene = ytrace::scene();
@@ -117,17 +93,17 @@ ytrace::scene init_trace_cb(yapp::scene& scene, ybvh::scene& scene_bvh,
     };
 
     for (auto& cam : scene.cameras) {
-        trace_scene.cameras +=
-            {cam.frame, cam.yfov, cam.aspect, cam.aperture, cam.focus};
+        trace_scene.cameras.push_back(
+            {cam.frame, cam.yfov, cam.aspect, cam.aperture, cam.focus});
     }
 
     for (auto& env : scene.environments) {
         auto& mat = scene.materials[env.matid];
-        trace_scene.environments += {env.frame, mat.ke, mat.ke_txt};
+        trace_scene.environments.push_back({env.frame, mat.ke, mat.ke_txt});
     }
 
     for (auto& shape : scene.shapes) {
-        trace_scene.shapes +=
+        trace_scene.shapes.push_back(
             {shape.frame,
              shape.matid,
              {(int)shape.points.size(), (ym::vec1i*)shape.points.data()},
@@ -137,20 +113,22 @@ ytrace::scene init_trace_cb(yapp::scene& scene, ybvh::scene& scene_bvh,
              shape.norm,
              shape.texcoord,
              shape.color,
-             shape.radius};
+             shape.radius});
     }
 
     for (auto& mat : scene.materials) {
-        trace_scene.materials +=
-            {mat.ke,     mat.kd,     mat.ks,     mat.rs, ym::zero3f, ym::zero3f,
-             mat.ke_txt, mat.kd_txt, mat.ks_txt, -1,     false};
+        trace_scene.materials.push_back({mat.ke, mat.kd, mat.ks, mat.rs,
+                                         ym::zero3f, ym::zero3f, mat.ke_txt,
+                                         mat.kd_txt, mat.ks_txt, -1, false});
     }
 
     for (auto& txt : scene.textures) {
         if (!txt.hdr.empty()) {
-            trace_scene.textures += {ym::image_view<ym::vec4f>(txt.hdr), {}};
+            trace_scene.textures.push_back(
+                {ym::image_view<ym::vec4f>(txt.hdr), {}});
         } else if (!txt.ldr.empty()) {
-            trace_scene.textures += {{}, ym::image_view<ym::vec4b>{txt.ldr}};
+            trace_scene.textures.push_back(
+                {{}, ym::image_view<ym::vec4b>{txt.ldr}});
         } else
             assert(false);
     }
@@ -240,10 +218,10 @@ int main(int argc, char* argv[]) {
             for (auto cur_block = 0; cur_block < blocks.size(); cur_block++) {
                 futures.push_back(
                     pool.enqueue([=, &trace_scene, &img, &blocks]() {
-                        ytrace::trace_block(trace_scene, camera, img, samples,
-                                            blocks[cur_block],
-                                            {cur_sample, cur_sample + 1},
-                                            params, true);
+                        ytrace::trace_block(
+                            trace_scene, camera, img, samples,
+                            blocks[cur_block].first, blocks[cur_block].second,
+                            {cur_sample, cur_sample + 1}, params, true);
                     }));
             }
             for (auto& future : futures) future.wait();
@@ -273,55 +251,58 @@ int main(int argc, char* argv[]) {
         auto blocks_per_update = 8;
 
         // init callback
-        context.init += std::function<void(const yui::info& info)>(
+        context.init.push_back(std::function<void(const yui::info& info)>(
             [&](const yui::info& info) {
                 texture_id = yglu::make_texture(
                     width, height, 4, (float*)img.data(), false, true);
-            });
+            }));
 
         // window size callback
-        context.window_size += std::function<void(const yui::info& info)>(
-            [&](const yui::info& info) {
-                auto& cam = scene.cameras[camera];
-                width = info.win_size[0];
-                height = info.win_size[1];
-                cam.aspect = (float)width / (float)height;
-                // updated images
-                img.resize({width, height});
-                buf.resize({width, height});
-                preview.resize({width / block_size, height / block_size});
+        context.window_size.push_back(
+            std::function<void(const yui::info& info)>(
+                [&](const yui::info& info) {
+                    auto& cam = scene.cameras[camera];
+                    width = info.win_size[0];
+                    height = info.win_size[1];
+                    cam.aspect = (float)width / (float)height;
+                    // updated images
+                    img.resize({width, height});
+                    buf.resize({width, height});
+                    preview.resize({width / block_size, height / block_size});
 
-                // update texture
-                if (texture_id) yglu::clear_texture(&texture_id);
-                texture_id = yglu::make_texture(
-                    width, height, 4, (float*)img.data(), false, true);
+                    // update texture
+                    if (texture_id) yglu::clear_texture(&texture_id);
+                    texture_id = yglu::make_texture(
+                        width, height, 4, (float*)img.data(), false, true);
 
-                // updated blocks
-                blocks = make_image_blocks(width, height, block_size);
-                scene_updated = true;
-            });
+                    // updated blocks
+                    blocks = make_image_blocks(width, height, block_size);
+                    scene_updated = true;
+                }));
 
         // window refresh callback
-        context.window_refresh += std::function<void(const yui::info& info)>(
-            [&](const yui::info& info) {
-                //                char title[4096];
-                //                sprintf(title, "ytrace | %dx%d | %d/%d  | %s",
-                //                width, height, cur_sample,
-                //                        view->ns, view->filename.c_str());
-                //                glfwSetWindowTitle(window, title);
+        context.window_refresh.push_back(
+            std::function<void(const yui::info& info)>(
+                [&](const yui::info& info) {
+                    //                char title[4096];
+                    //                sprintf(title, "ytrace | %dx%d | %d/%d  |
+                    //                %s",
+                    //                width, height, cur_sample,
+                    //                        view->ns, view->filename.c_str());
+                    //                glfwSetWindowTitle(window, title);
 
-                auto background = backgrounds[cur_background];
-                glClearColor(background[0], background[1], background[2],
-                             background[3]);
-                glDisable(GL_DEPTH_TEST);
-                glClear(GL_COLOR_BUFFER_BIT);
+                    auto background = backgrounds[cur_background];
+                    glClearColor(background[0], background[1], background[2],
+                                 background[3]);
+                    glDisable(GL_DEPTH_TEST);
+                    glClear(GL_COLOR_BUFFER_BIT);
 
-                yglu::shade_image(texture_id, width, height, width, height, 0,
-                                  0, 1, exposure, gamma);
-            });
+                    yglu::shade_image(texture_id, width, height, width, height,
+                                      0, 0, 1, exposure, gamma);
+                }));
 
         // check continue callback
-        context.update += std::function<int(const yui::info& info)>([&](
+        context.update.push_back(std::function<int(const yui::info& info)>([&](
             const yui::info& info) {
             if (scene_updated) {
                 // update camera
@@ -357,13 +338,13 @@ int main(int argc, char* argv[]) {
                 for (auto b = 0;
                      cur_block < blocks.size() && b < blocks_per_update;
                      cur_block++, b++) {
-                    futures.push_back(
-                        pool.enqueue([=, &trace_scene, &img, &blocks]() {
-                            ytrace::trace_block(trace_scene, camera, img,
-                                                samples, blocks[cur_block],
-                                                {cur_sample, cur_sample + 1},
-                                                params, true);
-                        }));
+                    futures.push_back(pool.enqueue([=, &trace_scene, &img,
+                                                    &blocks]() {
+                        ytrace::trace_block(
+                            trace_scene, camera, img, samples,
+                            blocks[cur_block].first, blocks[cur_block].second,
+                            {cur_sample, cur_sample + 1}, params, true);
+                    }));
                 }
                 for (auto& future : futures) future.wait();
                 yglu::update_texture(texture_id, width, height, 4,
@@ -375,10 +356,10 @@ int main(int argc, char* argv[]) {
             }
 
             return 1;
-        });
+        }));
 
         // text callback
-        context.text +=
+        context.text.push_back(
             std::function<void(const yui::info& info, unsigned int)>(
                 [&](const yui::info& info, unsigned int key) {
                     switch (key) {
@@ -407,10 +388,10 @@ int main(int argc, char* argv[]) {
                             break;
                         default: printf("unsupported key\n"); break;
                     }
-                });
+                }));
 
         // mouse position callback
-        context.mouse_pos += std::function<void(const yui::info& info)>(
+        context.mouse_pos.push_back(std::function<void(const yui::info& info)>(
             [&](const yui::info& info) {
                 if (info.mouse_button) {
                     auto dolly = 0.0f;
@@ -435,7 +416,7 @@ int main(int argc, char* argv[]) {
 
                     scene_updated = true;
                 }
-            });
+            }));
 
         // run ui
         yui::ui_loop(context, (int)std::round(aspect * res), res, "yview");
