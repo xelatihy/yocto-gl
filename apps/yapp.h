@@ -188,19 +188,19 @@ inline ym::image<ym::vec4f> make_image4f(int w, int h, int nc, const float* d) {
 //
 // Conversions
 //
-template <typename T, unsigned long N, unsigned long M>
+template <typename T, size_t N, unsigned long M>
 inline ym::mat<T, N, M> vcast(const std::array<std::array<T, N>, M>& v) {
     return *reinterpret_cast<const ym::mat<T, N, M>*>(&v);
 }
-template <typename T, int N, int M>
+template <typename T, size_t N, size_t M>
 inline std::array<std::array<T, N>, M> vcast(const ym::mat<T, N, M>& v) {
     return *reinterpret_cast<const std::array<std::array<T, N>, M>*>(&v);
 }
-template <typename T, unsigned long N, unsigned long M>
+template <typename T, size_t N, size_t M>
 inline ym::mat<T, N, M> fvcast(const std::array<T, N * M>& v) {
     return *reinterpret_cast<const ym::mat<T, N, M>*>(&v);
 }
-template <typename T, int N, int M>
+template <typename T, size_t N, size_t M>
 inline std::array<T, N * M> fvcast(const ym::mat<T, N, M>& v) {
     return *reinterpret_cast<const std::array<T, N * M>*>(&v);
 }

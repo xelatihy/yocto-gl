@@ -56,8 +56,8 @@ std::string inspect_str(const view_img& img, const ym::vec2f& offset,
                         float gamma) {
     static const std::string labels[] = {"r", "g", "b", "a"};
 
-    auto xy = round((pos - offset) / zoom);
-    auto ij = ym::vec2i(xy[0], xy[1]);
+    auto xy = (pos - offset) / zoom;
+    auto ij = ym::vec2i(round(xy[0]), round(xy[1]));
 
     auto buf = std::string();
     buf += "img: " + std::to_string(img.w) + " x " + std::to_string(img.h) +

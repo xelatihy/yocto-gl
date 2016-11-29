@@ -106,7 +106,7 @@ ytrace::scene init_trace_cb(yapp::scene& scene, ybvh::scene& scene_bvh,
         trace_scene.shapes.push_back(
             {shape.frame,
              shape.matid,
-             {(int)shape.points.size(), (ym::vec1i*)shape.points.data()},
+             {shape.points.size(), (ym::vec1i*)shape.points.data()},
              shape.lines,
              shape.triangles,
              shape.pos,
