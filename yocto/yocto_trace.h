@@ -456,8 +456,9 @@ YGL_API float specular_exponent_to_roughness(float n) {
 //
 YGL_API void specular_fresnel_from_ks(const ym::vec3f& ks, ym::vec3f& es,
                                       ym::vec3f& esk) {
-    es = (ym::vec3f{1, 1, 1} + ym::sqrt(ks)) /
-         (ym::vec3f{1, 1, 1} - ym::sqrt(ks));
+    es = {(1 + std::sqrt(ks[0])) / (1 - std::sqrt(ks[0])),
+          (1 + std::sqrt(ks[1])) / (1 - std::sqrt(ks[1])),
+          (1 + std::sqrt(ks[2])) / (1 - std::sqrt(ks[2]))};
     esk = ym::zero3f;
 }
 
@@ -717,7 +718,8 @@ static inline ym::vec3f _eval_fresnel_dielectric(float cosw,
     if (cos2t[0] < 0 || cos2t[1] < 0 || cos2t[2] < 0)
         return ym::vec3f{1, 1, 1};  // tir
 
-    auto t0 = ym::sqrt(cos2t);
+    auto t0 = ym::vec3f{std::sqrt(cos2t[0]), std::sqrt(cos2t[1]),
+                        std::sqrt(cos2t[2])};
     auto t1 = eta * t0;
     auto t2 = eta * cosw;
 
@@ -737,14 +739,18 @@ static inline ym::vec3f _eval_fresnel_metal(float cosw, const ym::vec3f& eta,
 
     cosw = ym::clamp(cosw, -1, 1);
     auto cos2 = cosw * cosw;
-    auto sin2 = ym::clamp(ym::vec3f{1, 1, 1} - cos2, 0, 1);
+    auto sin2 = ym::clamp(1 - cos2, 0, 1);
     auto eta2 = eta * eta;
     auto etak2 = etak * etak;
 
     auto t0 = eta2 - etak2 - sin2;
-    auto a2plusb2 = sqrt(t0 * t0 + 4 * eta2 * etak2);
+    auto a2plusb2_2 = t0 * t0 + 4 * eta2 * etak2;
+    auto a2plusb2 =
+        ym::vec3f{std::sqrt(a2plusb2_2[0]), std::sqrt(a2plusb2_2[1]),
+                  std::sqrt(a2plusb2_2[2])};
     auto t1 = a2plusb2 + cos2;
-    auto a = sqrt(0.5f * (a2plusb2 + t0));
+    auto a_2 = (a2plusb2 + t0) / 2;
+    auto a = ym::vec3f{std::sqrt(a_2[0]), std::sqrt(a_2[1]), std::sqrt(a_2[2])};
     auto t2 = 2 * a * cosw;
     auto rs = (t1 - t2) / (t1 + t2);
 
@@ -1051,7 +1057,7 @@ static inline _point _eval_envpoint(const scene& scene, int env_id,
 //
 // Interpolate a value over an element
 //
-template <typename T, int N>
+template <typename T, size_t N>
 static inline T _interpolate_value(const ym::array_view<T>& vals,
                                    const ym::array_view<ym::vec<int, N>>& elems,
                                    int eid, const ym::vec3f& euv) {
@@ -1490,7 +1496,9 @@ YGL_API void trace_block(const scene& scene, int cid,
                                     1 - (j + rn[1]) / img.size()[1]};
                 auto ray = _eval_camera(cam, uv, _sample_next2f(sampler));
                 auto l = shade(scene, ray, sampler, params);
-                if (!ym::isfinite(l)) continue;
+                if (!std::isfinite(l[0]) || !std::isfinite(l[1]) ||
+                    !std::isfinite(l[2]))
+                    continue;
                 if (params.pixel_clamp > 0)
                     *(ym::vec3f*)&l =
                         ym::clamplen(*(ym::vec3f*)&l, params.pixel_clamp);

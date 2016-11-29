@@ -746,10 +746,10 @@ YGL_API void sample_shape_cdf(const ym::array_view<int>& points,
 // finds the first array element smaller than the given one
 // http://stackoverflow.com/questions/6553970/
 // find-the-first-element-in-an-array-that-is-greater-than-the-target
-static inline int _bsearch_smaller(float x, const float a[], int n) {
-    int low = 0, high = n;
+static inline size_t _bsearch_smaller(float x, const float a[], size_t n) {
+    size_t low = 0, high = n;
     while (low != high) {
-        int mid = (low + high) / 2;
+        size_t mid = (low + high) / 2;
         if (a[mid] < x)
             low = mid + 1;
         else
@@ -763,18 +763,18 @@ static inline int _bsearch_smaller(float x, const float a[], int n) {
 //
 YGL_API void sample_shape(const ym::array_view<float>& cdf, float ern,
                           int& eid) {
-    eid = _bsearch_smaller(ern, cdf.data(), cdf.size());
+    eid = (int)_bsearch_smaller(ern, cdf.data(), cdf.size());
 }
 
 YGL_API void sample_shape(const ym::array_view<float>& cdf, float ern,
                           float uvrn, int& eid, float& euv) {
-    eid = _bsearch_smaller(ern, cdf.data(), cdf.size());
+    eid = (int)_bsearch_smaller(ern, cdf.data(), cdf.size());
     euv = uvrn;
 }
 
 YGL_API void sample_shape(const ym::array_view<float>& cdf, float ern,
                           const ym::vec2f& uvrn, int& eid, ym::vec2f& euv) {
-    eid = _bsearch_smaller(ern, cdf.data(), cdf.size());
+    eid = (int)_bsearch_smaller(ern, cdf.data(), cdf.size());
     euv = {1 - sqrtf(uvrn[0]), uvrn[1] * sqrtf(uvrn[0])};
 }
 

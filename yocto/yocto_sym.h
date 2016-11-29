@@ -549,6 +549,13 @@ YGL_API void init_simulation(scene& scene) {
 }
 
 //
+// Check function for numerical problems
+//
+inline bool _isfinite(const ym::vec3f& v) {
+    return std::isfinite(v[0]) && std::isfinite(v[1]) && std::isfinite(v[2]);
+}
+
+//
 // Advance simulation. Public API, see above.
 //
 YGL_API void advance_simulation(scene& scene, float dt) {
@@ -586,9 +593,9 @@ YGL_API void advance_simulation(scene& scene, float dt) {
         if (!shape.simulated) continue;
 
         // check for nans
-        if (!ym::isfinite(shape.frame.o())) printf("nan detected\n");
-        if (!ym::isfinite(shape.lin_vel)) printf("nan detected\n");
-        if (!ym::isfinite(shape.ang_vel)) printf("nan detected\n");
+        if (!_isfinite(shape.frame.o())) printf("nan detected\n");
+        if (!_isfinite(shape.lin_vel)) printf("nan detected\n");
+        if (!_isfinite(shape.ang_vel)) printf("nan detected\n");
 
         // translate the frame to the centroid
         auto centroid =
