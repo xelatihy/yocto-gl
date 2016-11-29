@@ -835,8 +835,8 @@ inline mat<T, N + 1, N + 1> to_mat(const frame<T, N>& a) {
 template <typename T, size_t N>
 inline frame<T, N - 1> to_frame(const mat<T, N, N>& a) {
     auto f = frame<T, N - 1>();
-    for (auto j = 0; j < N + 1; j++) {
-        for (auto i = 0; i < N; i++) {
+    for (auto j = 0; j < N; j++) {
+        for (auto i = 0; i < N - 1; i++) {
             f[j][i] = a[j][i];
         }
     }
