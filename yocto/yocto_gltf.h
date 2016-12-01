@@ -535,10 +535,21 @@ struct material_KHR_materials_common_t {
 };
 
 //
+// Array values. Only one vector will be full at any one time.
+//
+struct arrayValues_t {
+    // number items
+    std::vector<float> items_number;
+    // string items
+    std::vector<std::string> items_string;
+    // boolean items
+    std::vector<bool> items_boolean;
+};
+//
 // A dictionary object of parameter values.  Parameters with the same name as
 // the technique's parameter override the technique's parameter value.
 //
-using material_values_t = json;
+using material_values_t = arrayValues_t;
 
 //
 // The material appearance of a primitive.
@@ -761,6 +772,11 @@ struct skin_t : glTFChildOfRootProperty_t {
 using technique_attribute_t = std::string;
 
 //
+// Parameter values.
+//
+using technique_parameters_values_t = arrayValues_t;
+
+//
 // An attribute or uniform input to a technique, and an optional semantic and
 // value.
 //
@@ -800,7 +816,7 @@ struct technique_parameters_t : glTFProperty_t {
     // [required] The datatype.
     type_t type;
     // The value of the parameter.
-    json value;
+    technique_parameters_values_t value;
 };
 
 //
@@ -1581,7 +1597,10 @@ static inline bool _parse(std::vector<T>& vals, const json& js,
     if (!js.is_array()) return false;
     vals.resize(js.size());
     for (auto i = 0; i < js.size(); i++) {
-        _parse(vals[i], js[i], err);
+        // this is contrived to support for vector<bool>
+        auto v = T();
+        _parse(v, js[i], err);
+        vals[i] = v;
     }
     return true;
 }
@@ -2860,6 +2879,65 @@ static inline bool _dump(const material_KHR_materials_common_t& val, json& js,
     if (!_dump_attr(val.values, "values", defval.values, false, js, err))
         return false;
     if (!_dump_end_obj(js, err)) return false;
+    return true;
+}
+
+//
+// Parses a arrayValues object
+//
+static inline bool _parse(arrayValues_t& val, const json& js,
+                          _parse_stack& err) {
+    // alsp support constants
+    if (_parse(val.items_number, js, err)) return true;
+    if (_parse(val.items_string, js, err)) return true;
+    if (_parse(val.items_boolean, js, err)) return true;
+    {
+        float v;
+        if (_parse(v, js, err)) {
+            val.items_number.push_back(v);
+            return true;
+        }
+    }
+    {
+        std::string v;
+        if (_parse(v, js, err)) {
+            val.items_string.push_back(v);
+            return true;
+        }
+    }
+    {
+        bool v;
+        if (_parse(v, js, err)) {
+            val.items_boolean.push_back(v);
+            return true;
+        }
+    }
+    return false;
+}
+
+//
+// Equality check
+//
+static inline bool operator==(const arrayValues_t& a, const arrayValues_t& b) {
+    return a.items_number == b.items_number &&
+           a.items_string == b.items_string &&
+           a.items_boolean == b.items_boolean;
+}
+
+//
+// Converts a arrayValues object to JSON
+//
+static inline bool _dump(const arrayValues_t& val, json& js,
+                         _parse_stack& err) {
+    if (!val.items_number.empty()) {
+        if (_dump(val.items_number, js, err)) return false;
+    } else if (!val.items_string.empty()) {
+        if (_dump(val.items_string, js, err)) return false;
+    } else if (!val.items_boolean.empty()) {
+        if (_dump(val.items_boolean, js, err)) return false;
+    } else {
+        if (_dump(std::vector<int>(), js, err)) return false;
+    }
     return true;
 }
 

@@ -608,7 +608,7 @@ inline bool load_scene(const std::string& filename, scene& scene,
         // find scene bounds
         auto bbox = ym::invalid_bbox3f;
         for (auto& shape : scene.shapes) {
-            for (auto& p : shape.pos) bbox += p;
+            for (auto& p : shape.pos) bbox += ym::transform_point(shape.frame,p);
         }
         auto bbox_center = ym::center(bbox);
         auto bbox_size = ym::diagonal(bbox);
@@ -627,6 +627,14 @@ inline bool load_scene(const std::string& filename, scene& scene,
         cam.aperture = 0;
         cam.focus = ym::length(to - from);
         scene.cameras.push_back(cam);
+    } else {
+        auto bbox = ym::invalid_bbox3f;
+        for (auto& shape : scene.shapes) {
+            for (auto& p : shape.pos) bbox += ym::transform_point(shape.frame,p);
+        }
+        for(auto& cam : scene.cameras) {
+            if(!cam.focus) cam.focus = ym::length(cam.frame.o() - bbox.center());
+        }
     }
 
     return true;
@@ -668,7 +676,7 @@ inline void init_shade(const yapp::scene& scene, int& shade_prog,
 //
 // Makes a BVH from a scene
 //
-ybvh::scene make_bvh(const yapp::scene& scene) {
+inline ybvh::scene make_bvh(const yapp::scene& scene) {
     auto scene_bvh = ybvh::scene();
     for (auto& shape : scene.shapes) {
         scene_bvh.shapes.push_back({ym::to_mat(shape.frame),
