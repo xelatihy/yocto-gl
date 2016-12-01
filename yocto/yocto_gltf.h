@@ -272,11 +272,6 @@ struct accessor_t : glTFChildOfRootProperty_t {
 };
 
 //
-// The ID of the accessor containing keyframes for this parameter.
-//
-using animation_parameter_t = std::string;
-
-//
 // The ID of the node and TRS property that an animation channel targets.
 //
 struct animation_channel_target_t : glTFProperty_t {
@@ -333,7 +328,7 @@ struct animation_t : glTFChildOfRootProperty_t {
     std::vector<animation_channel_t> channels;
     // A dictionary object of strings whose values are IDs of accessors with
     // keyframe data, e.g., time, translation, rotation, etc.
-    std::map<std::string, animation_parameter_t> parameters;
+    std::map<std::string, std::string> parameters;
     // A dictionary object of samplers that combines input and output parameters
     // with an interpolation algorithm to define a keyframe graph (but not its
     // target).
@@ -546,28 +541,16 @@ struct arrayValues_t {
     std::vector<bool> items_boolean;
 };
 //
-// A dictionary object of parameter values.  Parameters with the same name as
-// the technique's parameter override the technique's parameter value.
-//
-using material_values_t = arrayValues_t;
-
-//
 // The material appearance of a primitive.
 //
 struct material_t : glTFChildOfRootProperty_t {
     // The ID of the technique.
     std::string technique;
     // A dictionary object of parameter values.
-    std::map<std::string, material_values_t> values;
+    std::map<std::string, arrayValues_t> values;
     // [extension] See material_KHR_materials_common_t
     optional<material_KHR_materials_common_t> KHR_materials_common;
 };
-
-//
-// A dictionary object of strings, where each string is the ID of the accessor
-// containing an attribute.
-//
-using mesh_primitive_attribute_t = std::string;
 
 //
 // Geometry to be rendered with the given material.
@@ -586,7 +569,7 @@ struct mesh_primitive_t : glTFProperty_t {
 
     // A dictionary object of strings, where each string is the ID of the
     // accessor containing an attribute.
-    std::map<std::string, mesh_primitive_attribute_t> attributes;
+    std::map<std::string, std::string> attributes;
     // The ID of the accessor that contains the indices.
     std::string indices;
     // [required] The ID of the material to apply to this primitive when
@@ -766,17 +749,6 @@ struct skin_t : glTFChildOfRootProperty_t {
 };
 
 //
-// A dictionary object of strings that maps GLSL attribute names to technique
-// parameter IDs.
-//
-using technique_attribute_t = std::string;
-
-//
-// Parameter values.
-//
-using technique_parameters_values_t = arrayValues_t;
-
-//
 // An attribute or uniform input to a technique, and an optional semantic and
 // value.
 //
@@ -816,7 +788,7 @@ struct technique_parameters_t : glTFProperty_t {
     // [required] The datatype.
     type_t type;
     // The value of the parameter.
-    technique_parameters_values_t value;
+    arrayValues_t value;
 };
 
 //
@@ -926,18 +898,12 @@ struct technique_states_t : glTFProperty_t {
 };
 
 //
-// A dictionary object of strings that maps GLSL uniform names to technique
-// parameter IDs.
-//
-using technique_uniform_t = std::string;
-
-//
 // A template for material appearances.
 //
 struct technique_t : glTFChildOfRootProperty_t {
     // A dictionary object of strings that maps GLSL attribute names to
     // technique parameter IDs.
-    std::map<std::string, technique_attribute_t> attributes;
+    std::map<std::string, std::string> attributes;
     // A dictionary object of technique.parameters objects.
     std::map<std::string, technique_parameters_t> parameters;
     // [required] The ID of the program.
@@ -946,7 +912,7 @@ struct technique_t : glTFChildOfRootProperty_t {
     technique_states_t states;
     // A dictionary object of strings that maps GLSL uniform names to technique
     // parameter IDs.
-    std::map<std::string, technique_uniform_t> uniforms;
+    std::map<std::string, std::string> uniforms;
 };
 
 //
