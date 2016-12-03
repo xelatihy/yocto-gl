@@ -317,7 +317,7 @@ int main(int argc, char* argv[]) {
     // shading
     auto shade_prog = (yglu::uint)0, shade_vao = (yglu::uint)0;
     std::vector<yglu::uint> shade_txt;
-    std::vector<std::array<yglu::uint,7>> shade_vbo;
+    std::vector<std::array<yglu::uint, 7>> shade_vbo;
 
     // prepare ui context
     auto context = yui::context();
@@ -329,7 +329,8 @@ int main(int argc, char* argv[]) {
             if (legacy_gl) {
                 yapp::init_draw(scene, shade_txt);
             } else {
-                yapp::init_shade(scene, shade_prog, shade_vao, shade_txt, shade_vbo);
+                yapp::init_shade(scene, shade_prog, shade_vao, shade_txt,
+                                 shade_vbo);
             }
         }));
 
@@ -349,9 +350,10 @@ int main(int argc, char* argv[]) {
                            backgrounds[cur_background], exposure, gamma,
                            wireframe, edges, camera_lights, {amb, amb, amb});
             } else {
-                yapp::shade(scene, camera, shade_prog, shade_vao, shade_txt, shade_vbo,
-                            backgrounds[cur_background], exposure, gamma,
-                            wireframe, edges, camera_lights, {amb, amb, amb});
+                yapp::shade(scene, camera, shade_prog, shade_vao, shade_txt,
+                            shade_vbo, backgrounds[cur_background], exposure,
+                            gamma, wireframe, edges, camera_lights,
+                            {amb, amb, amb});
             }
             // draw hull
             if (view_hull) draw_hull(rigid_scene, scene, 1, camera, shade_prog);
@@ -426,7 +428,8 @@ int main(int argc, char* argv[]) {
         }));
 
     // run ui
-    yui::ui_loop(context, (int)std::round(aspect * res), res, "yview", !legacy_gl);
+    yui::ui_loop(context, (int)std::round(aspect * res), res, "yview",
+                 !legacy_gl);
 
     // done
     return 0;
