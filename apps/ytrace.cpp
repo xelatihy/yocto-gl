@@ -248,39 +248,43 @@ int main(int argc, char* argv[]) {
                     width, height, 4, (unsigned char*)ldr.data(), false, false);
             } else {
                 texture_id = yglu::modern::make_texture(
-                    width, height, 4, (unsigned char*)ldr.data(), false, false, false);
+                    width, height, 4, (unsigned char*)ldr.data(), false, false,
+                    false);
             }
         }));
 
         // window size callback
         context.window_size.push_back(
-            std::function<void(const yui::info& info)>([&](
-                const yui::info& info) {
-                auto& cam = scene.cameras[camera];
-                width = info.win_size[0];
-                height = info.win_size[1];
-                cam.aspect = (float)width / (float)height;
-                // updated images
-                hdr.resize({width, height});
-                ldr.resize({width, height});
-                preview.resize({width / block_size, height / block_size});
+            std::function<void(const yui::info& info)>(
+                [&](const yui::info& info) {
+                    auto& cam = scene.cameras[camera];
+                    width = info.win_size[0];
+                    height = info.win_size[1];
+                    cam.aspect = (float)width / (float)height;
+                    // updated images
+                    hdr.resize({width, height});
+                    ldr.resize({width, height});
+                    preview.resize({width / block_size, height / block_size});
 
-                // update texture
-                if (legacy_gl) {
-                    if (texture_id) yglu::legacy::clear_texture(&texture_id);
-                    texture_id = yglu::legacy::make_texture(
-                        width, height, 4, (unsigned char*)ldr.data(), false, false);
-                } else {
-                    if (texture_id) yglu::legacy::clear_texture(&texture_id);
-                    texture_id = yglu::modern::make_texture(
-                        width, height, 4, (unsigned char*)ldr.data(), false,
-                        false, false);
-                }
+                    // update texture
+                    if (legacy_gl) {
+                        if (texture_id)
+                            yglu::legacy::clear_texture(&texture_id);
+                        texture_id = yglu::legacy::make_texture(
+                            width, height, 4, (unsigned char*)ldr.data(), false,
+                            false);
+                    } else {
+                        if (texture_id)
+                            yglu::legacy::clear_texture(&texture_id);
+                        texture_id = yglu::modern::make_texture(
+                            width, height, 4, (unsigned char*)ldr.data(), false,
+                            false, false);
+                    }
 
-                // updated blocks
-                blocks = make_image_blocks(width, height, block_size);
-                scene_updated = true;
-            }));
+                    // updated blocks
+                    blocks = make_image_blocks(width, height, block_size);
+                    scene_updated = true;
+                }));
 
         // window refresh callback
         context.window_refresh.push_back(
@@ -328,10 +332,12 @@ int main(int argc, char* argv[]) {
                 ym::exposure_gamma(hdr, ldr, exposure, gamma);
                 if (legacy_gl) {
                     yglu::legacy::update_texture(texture_id, width, height, 4,
-                                                 (unsigned char*)ldr.data(), false);
+                                                 (unsigned char*)ldr.data(),
+                                                 false);
                 } else {
                     yglu::modern::update_texture(texture_id, width, height, 4,
-                                                 (unsigned char*)ldr.data(), false);
+                                                 (unsigned char*)ldr.data(),
+                                                 false);
                 }
 
                 // reset current counters
@@ -363,10 +369,12 @@ int main(int argc, char* argv[]) {
                 }
                 if (legacy_gl) {
                     yglu::legacy::update_texture(texture_id, width, height, 4,
-                                                 (unsigned char*)ldr.data(), false);
+                                                 (unsigned char*)ldr.data(),
+                                                 false);
                 } else {
                     yglu::modern::update_texture(texture_id, width, height, 4,
-                                                 (unsigned char*)ldr.data(), false);
+                                                 (unsigned char*)ldr.data(),
+                                                 false);
                 }
                 if (cur_block == blocks.size()) {
                     cur_block = 0;
@@ -438,7 +446,8 @@ int main(int argc, char* argv[]) {
             }));
 
         // run ui
-        yui::ui_loop(context, (int)std::round(aspect * res), res, "yview", !legacy_gl);
+        yui::ui_loop(context, (int)std::round(aspect * res), res, "yview",
+                     !legacy_gl);
     }
 
     // done
