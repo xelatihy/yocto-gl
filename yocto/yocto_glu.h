@@ -1,7 +1,9 @@
 //
 // YOCTO_GLU: a set of utilities to draw on screen with OpenGL 2.1. Mostly
 // used to make quick viewers. Not sure it is helpful to others (OpenGL is
-// really a portability mess, but there is nothing else).
+// really a portability mess, but there is nothing else). The library is split
+// into two namespaces, legacy and modern, to indicate functions for fixed
+// function pipeline and for modern shaders.
 //
 
 //
@@ -55,6 +57,7 @@
 
 //
 // HISTORY:
+// - v 0.4: support for legacy OpenGL
 // - v 0.3: [major API change] move to modern C++ interface
 // - v 0.2: removal of C interface
 // - v 0.1: C/C++ implementation
