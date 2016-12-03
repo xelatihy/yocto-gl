@@ -1111,8 +1111,7 @@ YGL_API fl_obj flatten_obj(const obj& obj) {
         mat.ke = omat.ke;
         mat.kd = omat.kd;
         mat.ks = omat.ks;
-        mat.rs = (mat.rs >= 1) ? std::sqrt(2 / (omat.ns + 2))
-                               : 1000000;  // TODO: fixme
+        mat.rs = std::sqrt(2 / (omat.ns + 2));
         mat.ke_txt = _add_texture(omat.ke_txt, scene.textures);
         mat.kd_txt = _add_texture(omat.kd_txt, scene.textures);
         mat.ks_txt = _add_texture(omat.ks_txt, scene.textures);
