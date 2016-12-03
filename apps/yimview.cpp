@@ -180,11 +180,11 @@ int main(int argc, char* argv[]) {
                 if (legacy_gl) {
                     img.tex_glid = yglu::legacy::make_texture(
                         img.width, img.height, 4,
-                        (unsigned char*)img.ldr.data(), false);
+                        (unsigned char*)img.ldr.data(), false, false);
                 } else {
                     img.tex_glid = yglu::modern::make_texture(
                         img.width, img.height, 4,
-                        (unsigned char*)img.ldr.data(), false, false);
+                        (unsigned char*)img.ldr.data(), false, false, false);
                 }
             }
         }));
@@ -203,11 +203,11 @@ int main(int argc, char* argv[]) {
                 if (legacy_gl) {
                     yglu::legacy::update_texture(img.tex_glid, img.width,
                                                  img.height, 4,
-                                                 img.ldr.data()->data());
+                                                 img.ldr.data()->data(), false);
                 } else {
                     yglu::modern::update_texture(img.tex_glid, img.width,
                                                  img.height, 4,
-                                                 img.ldr.data()->data());
+                                                 img.ldr.data()->data(), false);
                 }
             }
 
@@ -290,7 +290,7 @@ int main(int argc, char* argv[]) {
         }));
 
     // run ui
-    yui::ui_loop(context, imgs[0].width, imgs[0].height, "yimview");
+    yui::ui_loop(context, imgs[0].width, imgs[0].height, "yimview", !legacy_gl);
 
     // done
     return EXIT_SUCCESS;

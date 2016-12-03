@@ -163,9 +163,18 @@ static inline void _print_gamma_ramp() {
 }
 
 inline bool ui_loop(context& context, int width, int height,
-                    const std::string& title) {
+                    const std::string& title, bool modern = false) {
     // window
     if (!glfwInit()) return false;
+    
+    // profile creation
+    if(modern) {
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
+        glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+        glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    }
+    
     auto window = glfwCreateWindow(width, height, title.c_str(), 0, 0);
     glfwMakeContextCurrent(window);
     glfwSetWindowUserPointer(window, &context);
