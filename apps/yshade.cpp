@@ -67,6 +67,8 @@ int main(int argc, char* argv[]) {
                                           "enable camera lights", false);
     auto camera = ycmd::parse_opt<int>(parser, "--camera", "-C", "camera", 0);
     auto no_ui = ycmd::parse_flag(parser, "--no-ui", "", "runs offline", false);
+    auto legacy_gl = ycmd::parse_flag(parser, "--legacy_opengl", "-L",
+                                      "uses legacy OpenGL", false);
     auto aspect = ycmd::parse_opt<float>(parser, "--aspect", "-a",
                                          "image aspect", 16.0f / 9.0f);
     auto res = ycmd::parse_opt<int>(parser, "--resolution", "-r",
@@ -98,9 +100,14 @@ int main(int argc, char* argv[]) {
     auto context = yui::context();
 
     // init callback
-    context.init.push_back(std::function<void(const yui::info& info)>(
-        [&](const yui::info& info) {  // load textures
-            yapp::init_shade(scene, shade_prog, shade_txt);
+    context.init.push_back(
+        std::function<void(const yui::info& info)>([&](const yui::info& info) {
+            // load textures
+            if (legacy_gl) {
+                yapp::init_draw(scene, shade_txt);
+            } else {
+                yapp::init_shade(scene, shade_prog, shade_txt);
+            }
         }));
 
     // window size callback
@@ -114,9 +121,15 @@ int main(int argc, char* argv[]) {
     context.window_refresh.push_back(
         std::function<void(const yui::info& info)>([&](const yui::info& info) {
             // draw
-            yapp::shade(scene, camera, shade_prog, shade_txt,
-                        backgrounds[cur_background], exposure, gamma, wireframe,
-                        edges, camera_lights);
+            if (legacy_gl) {
+                yapp::draw(scene, camera, shade_txt,
+                           backgrounds[cur_background], exposure, gamma,
+                           wireframe, edges, camera_lights, {amb, amb, amb});
+            } else {
+                yapp::shade(scene, camera, shade_prog, shade_txt,
+                            backgrounds[cur_background], exposure, gamma,
+                            wireframe, edges, camera_lights, {amb, amb, amb});
+            }
         }));
 
     // check continue callback

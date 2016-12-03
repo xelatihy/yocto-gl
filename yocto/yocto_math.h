@@ -113,44 +113,48 @@ const float pif = 3.14159265f;
 // pi (double)
 const double pi = 3.1415926535897932384626433832795;
 
+// shortcat for max values
+const auto maxf = std::numeric_limits<float>::max();
+const auto maxi = std::numeric_limits<int>::max();
+
 // -----------------------------------------------------------------------------
 // BASIC MATH FUNCTIONS
 // -----------------------------------------------------------------------------
 
 // Safe minimum value.
 template <typename T>
-inline T min(const T& x, const T& y) {
+constexpr inline T min(const T& x, const T& y) {
     return (x < y) ? x : y;
 }
 
 // Safe maximum value.
 template <typename T>
-inline T max(const T& x, const T& y) {
+constexpr inline T max(const T& x, const T& y) {
     return (x > y) ? x : y;
 }
 
 // Swap values.
 template <typename T>
-inline void swap(T& a, T& b) {
+constexpr inline void swap(T& a, T& b) {
     T c = a;
     a = b;
     b = c;
 }
 
 // Clamp a value between a minimum and a maximum.
-template <typename T, typename T1>
-inline T clamp(const T& x, const T1& min_, const T1& max_) {
-    return min(max(x, (T)min_), (T)max_);
+template <typename T>
+constexpr inline T clamp(const T& x, const T& min_, const T& max_) {
+    return min(max(x, min_), max_);
 }
 
 // Linear interpolation.
 template <typename T, typename T1>
-inline T lerp(const T& a, const T& b, T1 t) {
+constexpr inline T lerp(const T& a, const T& b, T1 t) {
     return a * (1 - t) + b * t;
 }
 
 // Integer power of two
-inline int pow2(int x) { return 1 << x; }
+constexpr inline int pow2(int x) { return 1 << x; }
 
 // -----------------------------------------------------------------------------
 // VECTORS
@@ -479,10 +483,10 @@ inline vec<T, N> max(const vec<T, N>& a, const T& b) {
     return c;
 }
 
-template <typename T, size_t N, typename T1>
-inline vec<T, N> clamp(const vec<T, N>& x, const T1& min, const T1& max) {
+template <typename T, size_t N>
+inline vec<T, N> clamp(const vec<T, N>& x, const T& min, const T& max) {
     vec<T, N> c;
-    for (auto i = 0; i < N; i++) c[i] = clamp(x[i], (T)min, (T)max);
+    for (auto i = 0; i < N; i++) c[i] = clamp(x[i], min, max);
     return c;
 }
 
@@ -1664,7 +1668,7 @@ struct image {
 
     // access via image_view
     constexpr operator const image_view<T>() const {
-        return image_view<T>(_size, _data.data());
+        return image_view<T>(_size, const_cast<T*>(_data.data()));
     }
     constexpr operator image_view<T>() {
         return image_view<T>(_size, _data.data());
@@ -1720,6 +1724,28 @@ struct image {
 };
 
 //
+// Creates an image with 4 components
+//
+template <typename T>
+inline image<vec<T, 4>> make_image4(int width, int height, int ncomp,
+                                    const T* data, T alpha) {
+    assert(ncomp >= 1 && ncomp <= 4);
+    auto img = image<vec<T, 4>>{{width, height}};
+    for (auto j = 0; j < height; j++) {
+        for (auto i = 0; i < width; i++) {
+            auto d = data + (j * width + i) * ncomp;
+            switch (ncomp) {
+                case 1: img[{i, j}] = {d[0], d[0], d[0], alpha}; break;
+                case 2: img[{i, j}] = {d[0], d[1], 0, alpha}; break;
+                case 3: img[{i, j}] = {d[0], d[1], d[2], alpha}; break;
+                case 4: img[{i, j}] = {d[0], d[1], d[2], d[3]}; break;
+            }
+        }
+    }
+    return img;
+}
+
+//
 // Conversion from srgb.
 //
 inline vec3f srgb_to_linear(const vec3f& srgb) {
@@ -1735,6 +1761,49 @@ inline vec3f srgb_to_linear(const vec3b& srgb) {
 }
 inline vec4f srgb_to_linear(const vec4b& srgb) {
     return srgb_to_linear(vec4f(srgb[0], srgb[1], srgb[2], srgb[3]) / 255.0f);
+}
+
+//
+// Exposure/gamma correction
+//
+inline void exposure_gamma(const image_view<vec4f>& hdr, image_view<vec4f> ldr,
+                           float exposure, float gamma) {
+    assert(hdr.size() == ldr.size());
+    auto s = std::pow(2.0f, exposure);
+    for (auto j = 0; j < hdr.size()[1]; j++) {
+        for (auto i = 0; i < hdr.size()[0]; i++) {
+            auto v = hdr[{i, j}];
+            v = {std::pow(s * v[0], 1 / gamma), std::pow(s * v[1], 1 / gamma),
+                 std::pow(s * v[2], 1 / gamma), v[3]};
+            ldr[{i, j}] = {
+                (float)clamp(v[0], 0.0f, 1.0f), (float)clamp(v[1], 0.0f, 1.0f),
+                (float)clamp(v[2], 0.0f, 1.0f), (float)clamp(v[3], 0.0f, 1.0f),
+            };
+        }
+    }
+}
+
+inline void exposure_gamma(const image_view<vec4f>& hdr, image_view<vec4b> ldr,
+                           float exposure, float gamma,
+                           const vec2i& xy = {0, 0},
+                           const vec2i& wh = {-1, -1}) {
+    assert(hdr.size() == ldr.size());
+    auto s = std::pow(2.0f, exposure);
+    auto wh_ = vec2i{(wh[0] < 0) ? hdr.size()[0] - xy[0] : wh[0],
+                     (wh[1] < 0) ? hdr.size()[1] - xy[1] : wh[1]};
+    for (auto j = xy[1]; j < xy[1] + wh_[1]; j++) {
+        for (auto i = xy[0]; i < xy[0] + wh_[0]; i++) {
+            auto v = hdr[{i, j}];
+            v = {std::pow(s * v[0], 1 / gamma), std::pow(s * v[1], 1 / gamma),
+                 std::pow(s * v[2], 1 / gamma), v[3]};
+            ldr[{i, j}] = {
+                (unsigned char)(clamp(v[0], 0.0f, 1.0f) * 255),
+                (unsigned char)(clamp(v[1], 0.0f, 1.0f) * 255),
+                (unsigned char)(clamp(v[2], 0.0f, 1.0f) * 255),
+                (unsigned char)(clamp(v[3], 0.0f, 1.0f) * 255),
+            };
+        }
+    }
 }
 
 // -----------------------------------------------------------------------------

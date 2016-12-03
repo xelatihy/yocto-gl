@@ -25,7 +25,7 @@ OSX (clang), Linux (clang/gcc) and Windows (cl).
 This repository contains Yocto/GL applications written to test the libraries.
 
 - **ytestgen.cpp**: Creates various test cases for the path tracer and GL viewer.
-- **yview.cpp**: HDR/PNG/JPG image viewer with exposure/gamma tone mapping.
+- **yimview.cpp**: HDR/PNG/JPG image viewer with exposure/gamma tone mapping.
 - **yshade.cpp**: OpenGL viewer.
 - **ytrace.cpp**: Interactive path-tracer, that can also run in offline mode.
 - **ysym.cpp**: Simple rigid body demo code. Does not work in offline mode.
@@ -44,9 +44,9 @@ A screenshotted movie from **ysym** is included here for demonstration.
 ## Old Version
 
 Yocto/GL was originally written in C99. That version is at commit
-55e2328476647fccae8eee1649f961984751ad96 in this repository for reference.  
+55e2328476647fccae8eee1649f961984751ad96 in this repository for reference.
 We moved to C++ since the lack of operator overloading made some math code
-really unreadable, defeating one of the main tenants of Yocto/GL. 
+really unreadable, defeating one of the main tenants of Yocto/GL.
 
 ## Possible Future Development
 
@@ -66,10 +66,10 @@ really unreadable, defeating one of the main tenants of Yocto/GL.
 - Moving to C++
     - Removed old C API
     - Use STL containers by default
-- Switched 
+- Switched
 - Moved to C++ internals and common math library.
 - Rigid body solver.
-- Initial release. 
+- Initial release.
 
 ## License
 

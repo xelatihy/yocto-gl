@@ -608,7 +608,8 @@ inline bool load_scene(const std::string& filename, scene& scene,
         // find scene bounds
         auto bbox = ym::invalid_bbox3f;
         for (auto& shape : scene.shapes) {
-            for (auto& p : shape.pos) bbox += ym::transform_point(shape.frame,p);
+            for (auto& p : shape.pos)
+                bbox += ym::transform_point(shape.frame, p);
         }
         auto bbox_center = ym::center(bbox);
         auto bbox_size = ym::diagonal(bbox);
@@ -630,10 +631,12 @@ inline bool load_scene(const std::string& filename, scene& scene,
     } else {
         auto bbox = ym::invalid_bbox3f;
         for (auto& shape : scene.shapes) {
-            for (auto& p : shape.pos) bbox += ym::transform_point(shape.frame,p);
+            for (auto& p : shape.pos)
+                bbox += ym::transform_point(shape.frame, p);
         }
-        for(auto& cam : scene.cameras) {
-            if(!cam.focus) cam.focus = ym::length(cam.frame.o() - bbox.center());
+        for (auto& cam : scene.cameras) {
+            if (!cam.focus)
+                cam.focus = ym::length(cam.frame.o() - bbox.center());
         }
     }
 
@@ -654,26 +657,6 @@ inline scene load_scene(const std::string& filename) {
 }
 
 //
-// Init shading
-//
-inline void init_shade(const yapp::scene& scene, int& shade_prog,
-                       std::vector<int>& shade_txt) {
-    shade_prog = yglu::stdshader_make_program();
-    for (auto& txt : scene.textures) {
-        if (!txt.hdr.empty()) {
-            shade_txt.push_back(
-                yglu::make_texture(txt.hdr.size()[0], txt.hdr.size()[1], 4,
-                                   (float*)txt.hdr.data(), true, true));
-        } else if (!txt.ldr.empty()) {
-            shade_txt.push_back(
-                yglu::make_texture(txt.ldr.size()[0], txt.ldr.size()[1], 4,
-                                   (unsigned char*)txt.ldr.data(), true, true));
-        } else
-            assert(false);
-    }
-}
-
-//
 // Makes a BVH from a scene
 //
 inline ybvh::scene make_bvh(const yapp::scene& scene) {
@@ -689,12 +672,32 @@ inline ybvh::scene make_bvh(const yapp::scene& scene) {
 }
 
 //
+// Init shading
+//
+inline void init_shade(const yapp::scene& scene, int& shade_prog,
+                       std::vector<int>& shade_txt) {
+    shade_prog = yglu::modern::stdshader_make_program();
+    for (auto& txt : scene.textures) {
+        if (!txt.hdr.empty()) {
+            shade_txt.push_back(yglu::modern::make_texture(
+                txt.hdr.size()[0], txt.hdr.size()[1], 4, (float*)txt.hdr.data(),
+                true, true));
+        } else if (!txt.ldr.empty()) {
+            shade_txt.push_back(yglu::modern::make_texture(
+                txt.ldr.size()[0], txt.ldr.size()[1], 4,
+                (unsigned char*)txt.ldr.data(), true, true));
+        } else
+            assert(false);
+    }
+}
+
+//
 // Display a scene
 //
 inline void shade(const yapp::scene& scene, int cur_camera, int prog,
                   const std::vector<int>& txt, const ym::vec4f& background,
                   float exposure, float gamma_, bool wireframe, bool edges,
-                  bool camera_lights) {
+                  bool camera_lights, const ym::vec3f& amb) {
     // begin frame
     glEnable(GL_DEPTH_TEST);
     glClearDepth(1);
@@ -710,9 +713,9 @@ inline void shade(const yapp::scene& scene, int cur_camera, int prog,
     auto camera_proj =
         ym::perspective_mat4(cam.yfov, cam.aspect, 0.1f, 10000.0f);
 
-    yglu::stdshader_begin_frame(prog, camera_lights, exposure, gamma_,
-                                vcast(camera_xform), vcast(camera_view),
-                                vcast(camera_proj));
+    yglu::modern::stdshader_begin_frame(prog, camera_lights, exposure, gamma_,
+                                        vcast(camera_xform), vcast(camera_view),
+                                        vcast(camera_proj));
 
     if (!camera_lights) {
         auto nlights = 0;
@@ -732,56 +735,185 @@ inline void shade(const yapp::scene& scene, int cur_camera, int prog,
                 nlights++;
             }
         }
-        yglu::stdshader_set_lights(
-            prog, {0, 0, 0}, nlights, (yglu::float3*)light_pos.data(),
+        yglu::modern::stdshader_set_lights(
+            prog, amb, nlights, (yglu::float3*)light_pos.data(),
             (yglu::float3*)light_ke.data(), light_type.data());
     }
 
     for (auto&& shape : scene.shapes) {
-        yglu::stdshader_begin_shape(prog, vcast(ym::to_mat(shape.frame)));
+        yglu::modern::stdshader_begin_shape(prog,
+                                            vcast(ym::to_mat(shape.frame)));
 
         if (shape.matid >= 0) {
             auto&& mat = scene.materials[shape.matid];
 
 #define __txt(i) ((i >= 0) ? txt[i] : 0)
-            yglu::stdshader_set_material(
+            yglu::modern::stdshader_set_material(
                 prog, mat.ke, mat.kd, mat.ks, mat.rs, __txt(mat.ke_txt),
                 __txt(mat.kd_txt), __txt(mat.ks_txt), __txt(mat.rs_txt), false);
         } else {
             auto kd = ym::vec3f{0.8f, 0.8f, 0.8f};
-            yglu::stdshader_set_material(prog, {0, 0, 0}, kd, {0, 0, 0}, 0, 0,
-                                         0, 0, 0, false);
+            yglu::modern::stdshader_set_material(prog, {0, 0, 0}, kd, {0, 0, 0},
+                                                 0, 0, 0, 0, 0, false);
         }
 
-        yglu::stdshader_set_vert(prog, (yglu::float3*)shape.pos.data(),
-                                 (yglu::float3*)shape.norm.data(),
-                                 (yglu::float2*)shape.texcoord.data(), 0);
+        yglu::modern::stdshader_set_vert(prog, (yglu::float3*)shape.pos.data(),
+                                         (yglu::float3*)shape.norm.data(),
+                                         (yglu::float2*)shape.texcoord.data(),
+                                         (yglu::float3*)shape.color.data());
 
-        yglu::stdshader_draw_points(prog, (int)shape.points.size(),
-                                    shape.points.data());
-        yglu::stdshader_draw_lines(prog, (int)shape.lines.size(),
-                                   (yglu::int2*)shape.lines.data());
-        yglu::stdshader_draw_triangles(prog, (int)shape.triangles.size(),
-                                       (yglu::int3*)shape.triangles.data());
+        yglu::modern::stdshader_draw_points(prog, (int)shape.points.size(),
+                                            shape.points.data());
+        yglu::modern::stdshader_draw_lines(prog, (int)shape.lines.size(),
+                                           (yglu::int2*)shape.lines.data());
+        yglu::modern::stdshader_draw_triangles(
+            prog, (int)shape.triangles.size(),
+            (yglu::int3*)shape.triangles.data());
 
         if (edges && !wireframe) {
-            yglu::stdshader_set_material(prog, {0, 0, 0}, {0, 0, 0}, {0, 0, 0},
-                                         0, 0, 0, 0, 0, false);
+            yglu::modern::stdshader_set_material(
+                prog, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}, 0, 0, 0, 0, 0, false);
 
             glLineWidth(2);
             glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
             glDepthRange(0, 0.999999);
-            yglu::stdshader_draw_triangles(prog, (int)shape.triangles.size(),
-                                           (yglu::int3*)shape.triangles.data());
+            yglu::modern::stdshader_draw_triangles(
+                prog, (int)shape.triangles.size(),
+                (yglu::int3*)shape.triangles.data());
             glDepthRange(0, 1);
             glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
             glLineWidth(1);
         }
 
-        yglu::stdshader_end_shape();
+        yglu::modern::stdshader_end_shape();
     }
 
-    yglu::stdshader_end_frame();
+    yglu::modern::stdshader_end_frame();
+
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+}
+
+//
+// Init shading
+//
+inline void init_draw(const yapp::scene& scene, std::vector<int>& shade_txt) {
+    for (auto& txt : scene.textures) {
+        if (!txt.hdr.empty()) {
+            shade_txt.push_back(
+                yglu::legacy::make_texture(txt.hdr.size()[0], txt.hdr.size()[1],
+                                           4, (float*)txt.hdr.data(), true));
+        } else if (!txt.ldr.empty()) {
+            shade_txt.push_back(yglu::legacy::make_texture(
+                txt.ldr.size()[0], txt.ldr.size()[1], 4,
+                (unsigned char*)txt.ldr.data(), true));
+        } else
+            assert(false);
+    }
+}
+
+//
+// Draw a scene
+//
+inline void draw(const yapp::scene& scene, int cur_camera,
+                 const std::vector<int>& txt, const ym::vec4f& background,
+                 float exposure, float gamma_, bool wireframe, bool edges,
+                 bool camera_lights, const ym::vec3f& amb) {
+    // begin frame
+    glEnable(GL_DEPTH_TEST);
+    glClearDepth(1);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    glDisable(GL_CULL_FACE);
+
+    if (wireframe) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+    auto& cam = scene.cameras[cur_camera];
+    auto camera_xform = ym::to_mat(cam.frame);
+    auto camera_view = ym::to_mat(ym::inverse(cam.frame));
+    auto camera_proj =
+        ym::perspective_mat4(cam.yfov, cam.aspect, 0.1f, 10000.0f);
+
+    auto nlights = 0;
+    std::array<ym::vec3f, 16> light_pos, light_ke;
+    std::array<yglu::ltype, 16> light_type;
+
+    yglu::legacy::begin_frame(vcast(camera_xform), vcast(camera_view),
+                              vcast(camera_proj), camera_lights, true);
+
+    if (!camera_lights) {
+        for (auto&& shape : scene.shapes) {
+            if (shape.matid < 0) continue;
+            auto&& mat = scene.materials[shape.matid];
+            if (mat.ke == ym::zero3f) continue;
+            for (auto p : shape.points) {
+                if (nlights >= 16) continue;
+                light_pos[nlights] = shape.pos[p];
+                light_pos[nlights] =
+                    ym::transform_point(shape.frame, light_pos[nlights]);
+                light_ke[nlights] = mat.ke;
+                light_type[nlights] = yglu::ltype::point;
+                nlights++;
+            }
+        }
+        yglu::legacy::set_lights(amb, nlights, (yglu::float3*)light_pos.data(),
+                                 (yglu::float3*)light_ke.data(),
+                                 light_type.data());
+    }
+
+    for (auto&& shape : scene.shapes) {
+        yglu::legacy::begin_shape(vcast(ym::to_mat(shape.frame)));
+
+        if (shape.matid >= 0) {
+            auto&& mat = scene.materials[shape.matid];
+
+#define __txt(i) ((i >= 0) ? txt[i] : 0)
+            yglu::legacy::set_material(
+                mat.ke, mat.kd, mat.ks,
+                yglu::legacy::specular_roughness_to_exponent(mat.rs),
+                __txt(mat.kd_txt), true);
+        } else {
+            auto kd = ym::vec3f{0.8f, 0.8f, 0.8f};
+            yglu::legacy::set_material({0, 0, 0}, kd, {0, 0, 0}, 0, 0, true);
+        }
+
+        yglu::legacy::draw_points((int)shape.points.size(), shape.points.data(),
+                                  (yglu::float3*)shape.pos.data(),
+                                  (yglu::float3*)shape.norm.data(),
+                                  (yglu::float2*)shape.texcoord.data(),
+                                  (yglu::float3*)shape.color.data());
+        yglu::legacy::draw_lines(
+            (int)shape.lines.size(), (yglu::int2*)shape.lines.data(),
+            (yglu::float3*)shape.pos.data(), (yglu::float3*)shape.norm.data(),
+            (yglu::float2*)shape.texcoord.data(),
+            (yglu::float3*)shape.color.data());
+        yglu::legacy::draw_triangles(
+            (int)shape.triangles.size(), (yglu::int3*)shape.triangles.data(),
+            (yglu::float3*)shape.pos.data(), (yglu::float3*)shape.norm.data(),
+            (yglu::float2*)shape.texcoord.data(),
+            (yglu::float3*)shape.color.data());
+
+        if (edges && !wireframe) {
+            yglu::legacy::set_material({0, 0, 0}, {0, 0, 0}, {0, 0, 0}, 0, 0,
+                                       true);
+
+            glLineWidth(2);
+            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+            glDepthRange(0, 0.999999);
+            yglu::legacy::draw_triangles((int)shape.triangles.size(),
+                                         (yglu::int3*)shape.triangles.data(),
+                                         (yglu::float3*)shape.pos.data(),
+                                         (yglu::float3*)shape.norm.data(),
+                                         (yglu::float2*)shape.texcoord.data(),
+                                         (yglu::float3*)shape.color.data());
+            glDepthRange(0, 1);
+            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+            glLineWidth(1);
+        }
+
+        yglu::legacy::end_shape();
+    }
+
+    yglu::legacy::end_frame();
 
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }

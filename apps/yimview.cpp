@@ -36,11 +36,27 @@
 #include "../yocto/stb_image.h"
 
 struct view_img {
+    // image path
     std::string filename;
-    std::vector<float> pixelf;
-    std::vector<unsigned char> pixelb;
-    int w, h, nc;
-    int tex_glid;
+
+    // original image data size
+    int width = 0;
+    int height = 0;
+    int ncomp = 0;
+
+    // pixel data in RGBA format
+    ym::image<ym::vec4f> hdr;
+    ym::image<ym::vec4b> ldr;
+
+    // opengl texture
+    int tex_glid = 0;
+
+    // hdr controls
+    float hdr_exposure = 0;
+    float hdr_gamma = 2.2f;
+
+    // check hdr
+    bool is_hdr() const { return !hdr.empty(); }
 };
 
 // inspect string
@@ -54,27 +70,29 @@ struct view_img {
 std::string inspect_str(const view_img& img, const ym::vec2f& offset,
                         float zoom, const ym::vec2f& pos, float exposure,
                         float gamma) {
+#if 0
     static const std::string labels[] = {"r", "g", "b", "a"};
 
     auto xy = (pos - offset) / zoom;
     auto ij = ym::vec2i(round(xy[0]), round(xy[1]));
 
     auto buf = std::string();
-    buf += "img: " + std::to_string(img.w) + " x " + std::to_string(img.h) +
-           " @ " + std::to_string(img.nc) + "\n";
+    buf += "img: " + std::to_string(img.width) + " x " +
+                    std::to_string(img.height) +
+           " @ " + std::to_string(img.ncomp) + "\n";
     buf +=
         "mouse: " + std::to_string(ij[0]) + " " + std::to_string(ij[1]) + "\n";
-    if (ij[0] >= 0 && ij[0] < img.w && ij[1] >= 0 && ij[1] < img.h) {
-        auto cf = ym::vec4f(0, 0, 0, 1);
-        auto cb = ym::vec4b(0, 0, 0, 255);
-        if (img.pixelf.empty()) {
-            for (auto i = 0; i < img.nc; i++) {
-                cf[i] = img.pixelf[(ij[1] * img.w + ij[0]) * img.nc + i];
+    if (ij[0] >= 0 && ij[0] < img.width && ij[1] >= 0 && ij[1] < img.height) {
+        auto cf = ym::vec4f();
+        auto cb = ym::vec4b();
+        if (img.hdr.empty()) {
+            for (auto i = 0; i < img.ncomp; i++) {
+                cf[i] = img.hdr[(ij[1] * img.width + ij[0]) * img.ncomp + i];
                 cb[i] = ym::clamp(int(cf[i] * 256), 0, 255);
             }
-        } else if (img.pixelb.empty()) {
-            for (auto i = 0; i < img.nc; i++) {
-                cb[i] = img.pixelb[(ij[1] * img.w + ij[0]) * img.nc + i];
+        } else if (img.ldr.empty()) {
+            for (auto i = 0; i < img.ncomp; i++) {
+                cb[i] = img.ldr[(ij[1] * img.width + ij[0]) * img.ncomp + i];
                 cf[i] = std::pow(cb[i] / 255.0f, 1 / 2.2f);
             }
         } else
@@ -87,10 +105,12 @@ std::string inspect_str(const view_img& img, const ym::vec2f& offset,
         for (auto i = 0; i < 4; i++) buf += labels[i] + ": -\n";
     }
     return buf;
+#endif
+    return {};
 }
 
-std::vector<view_img> load_images(
-    const std::vector<std::string>& img_filenames) {
+std::vector<view_img> load_images(const std::vector<std::string>& img_filenames,
+                                  float exposure, float gamma) {
     auto imgs = std::vector<view_img>();
     for (auto filename : img_filenames) {
         imgs.push_back(view_img());
@@ -98,19 +118,23 @@ std::vector<view_img> load_images(
         img.filename = filename;
         auto ext = ycmd::get_extension(filename);
         if (ext == ".hdr") {
-            auto pixels =
-                stbi_loadf(filename.c_str(), &img.w, &img.h, &img.nc, 0);
-            img.pixelf =
-                std::vector<float>(pixels, pixels + img.w * img.h * img.nc);
+            auto pixels = stbi_loadf(filename.c_str(), &img.width, &img.height,
+                                     &img.ncomp, 0);
+            img.hdr =
+                ym::make_image4(img.width, img.height, img.ncomp, pixels, 1.0f);
+            img.ldr.resize(img.hdr.size());
+            ym::exposure_gamma(img.hdr, img.ldr, exposure, gamma);
+            img.hdr_exposure = exposure;
+            img.hdr_gamma = gamma;
             free(pixels);
         } else {
-            auto pixels =
-                stbi_load(filename.c_str(), &img.w, &img.h, &img.nc, 0);
-            img.pixelb = std::vector<unsigned char>(
-                pixels, pixels + img.w * img.h * img.nc);
+            auto pixels = stbi_load(filename.c_str(), &img.width, &img.height,
+                                    &img.ncomp, 0);
+            img.ldr = ym::make_image4(img.width, img.height, img.ncomp, pixels,
+                                      (unsigned char)255);
             free(pixels);
         }
-        if (img.pixelf.empty() && img.pixelb.empty()) {
+        if (img.hdr.empty() && img.ldr.empty()) {
             printf("cannot load image %s\n", img.filename.c_str());
             exit(1);
         }
@@ -126,12 +150,14 @@ int main(int argc, char* argv[]) {
         ycmd::parse_opt<float>(parser, "--exposure", "-e", "image exposure", 0);
     auto gamma =
         ycmd::parse_opt<float>(parser, "--gamma", "-g", "image gamma", 2.2);
+    auto legacy_gl = ycmd::parse_flag(parser, "--legacy_opengl", "-L",
+                                      "uses legacy OpenGL", false);
     auto filenames = ycmd::parse_arga<std::string>(parser, "image",
                                                    "image filename", {}, true);
     ycmd::check_parser(parser);
 
     // loading images
-    auto imgs = load_images(filenames);
+    auto imgs = load_images(filenames, exposure, gamma);
 
     // view parameters
     int cur_img = 0;
@@ -151,14 +177,15 @@ int main(int argc, char* argv[]) {
     context.init.push_back(std::function<void(const yui::info& info)>(
         [&](const yui::info& info) {  // load textures
             for (auto& img : imgs) {
-                if (!img.pixelf.empty()) {
-                    img.tex_glid = yglu::make_texture(
-                        img.w, img.h, img.nc, img.pixelf.data(), false, true);
-                } else if (!img.pixelb.empty()) {
-                    img.tex_glid = yglu::make_texture(
-                        img.w, img.h, img.nc, img.pixelb.data(), false, true);
-                } else
-                    assert(false);
+                if (legacy_gl) {
+                    img.tex_glid = yglu::legacy::make_texture(
+                        img.width, img.height, 4,
+                        (unsigned char*)img.ldr.data(), false);
+                } else {
+                    img.tex_glid = yglu::modern::make_texture(
+                        img.width, img.height, 4,
+                        (unsigned char*)img.ldr.data(), false, false);
+                }
             }
         }));
 
@@ -166,6 +193,23 @@ int main(int argc, char* argv[]) {
     context.window_refresh.push_back(
         std::function<void(const yui::info& info)>([&](const yui::info& info) {
             auto& img = imgs[cur_img];
+
+            // refresh hdr
+            if (img.is_hdr() &&
+                (exposure != img.hdr_exposure || gamma != img.hdr_gamma)) {
+                ym::exposure_gamma(img.hdr, img.ldr, exposure, gamma);
+                img.hdr_exposure = exposure;
+                img.hdr_gamma = gamma;
+                if (legacy_gl) {
+                    yglu::legacy::update_texture(img.tex_glid, img.width,
+                                                 img.height, 4,
+                                                 img.ldr.data()->data());
+                } else {
+                    yglu::modern::update_texture(img.tex_glid, img.width,
+                                                 img.height, 4,
+                                                 img.ldr.data()->data());
+                }
+            }
 
             // begin frame
             auto background = backgrounds[cur_background];
@@ -175,8 +219,15 @@ int main(int argc, char* argv[]) {
             glClear(GL_COLOR_BUFFER_BIT);
 
             // draw image
-            yglu::shade_image(img.tex_glid, img.w, img.h, img.w, img.h,
-                              offset[0], offset[1], zoom, exposure, gamma);
+            if (legacy_gl) {
+                yglu::legacy::draw_image(img.tex_glid, img.width, img.height,
+                                         info.win_size[0], info.win_size[1],
+                                         offset[0], offset[1], zoom);
+            } else {
+                yglu::modern::shade_image(img.tex_glid, img.width, img.height,
+                                          info.win_size[0], info.win_size[1],
+                                          offset[0], offset[1], zoom);
+            }
         }));
 
     // text callback
@@ -239,7 +290,7 @@ int main(int argc, char* argv[]) {
         }));
 
     // run ui
-    yui::ui_loop(context, imgs[0].w, imgs[0].h, "yview");
+    yui::ui_loop(context, imgs[0].width, imgs[0].height, "yimview");
 
     // done
     return EXIT_SUCCESS;
