@@ -154,6 +154,14 @@ static inline void _error_callback(int error, const char* description) {
     printf("GLFW error: %s\n", description);
 }
 
+static inline void _print_gamma_ramp() {
+    auto& ramp = *glfwGetGammaRamp(glfwGetPrimaryMonitor());
+    for (auto i = 0; i < ramp.size; i++) {
+        printf("%03d %3.3f %3.3f %3.3f\n", i, ramp.red[i] / 65535.0f,
+               ramp.green[i] / 65535.0f, ramp.blue[i] / 65535.0f);
+    }
+}
+
 inline bool ui_loop(context& context, int width, int height,
                     const std::string& title) {
     // window
@@ -170,6 +178,13 @@ inline bool ui_loop(context& context, int width, int height,
     glfwSetMouseButtonCallback(window, _mouse_button_callback);
     glfwSetCursorPosCallback(window, _mouse_pos_callback);
     glfwSetWindowRefreshCallback(window, _window_refresh_callback);
+
+    // get initial values
+    int w, h;
+    glfwGetWindowSize(window, &w, &h);
+    context._info.win_size = {w, h};
+    glfwGetFramebufferSize(window, &w, &h);
+    context._info.framebuffer_size = {w, h};
 
 // init gl extensions
 #ifndef __APPLE__

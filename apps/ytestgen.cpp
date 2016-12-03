@@ -206,7 +206,7 @@ yapp::shape make_lines(const std::string& name, int matid, int num, int n,
     std::vector<float> ln(num + 1);
     for (auto i = 0; i <= num; i++) {
         auto z = -1 + 2 * ym::rng_nextf(rn);
-        auto r = sqrtf(ym::clamp(1 - z * z, 0, 1));
+        auto r = std::sqrt(ym::clamp(1 - z * z, (float)0, (float)1));
         auto phi = 2 * ym::pif * ym::rng_nextf(rn);
         base[i] = ym::vec3f{r * cosf(phi), r * sinf(phi), z};
         dir[i] = base[i];
@@ -521,6 +521,33 @@ std::vector<rgba> make_rcolored(int s) {
     return pixels;
 }
 
+std::vector<rgba> make_gammaramp(int s) {
+    std::vector<rgba> pixels(s * s);
+    for (int j = 0; j < s; j++) {
+        for (int i = 0; i < s; i++) {
+            auto u = j / float(s - 1);
+            if (i < s / 3) u = std::pow(u, 2.2f);
+            if (i > (s * 2) / 3) u = std::pow(u, 1 / 2.2f);
+            auto c = (unsigned char)(u * 255);
+            pixels[j * s + i] = {c, c, c, 255};
+        }
+    }
+    return pixels;
+}
+
+std::vector<ym::vec4f> make_gammarampf(int s) {
+    std::vector<ym::vec4f> pixels(s * s);
+    for (int j = 0; j < s; j++) {
+        for (int i = 0; i < s; i++) {
+            auto u = j / float(s - 1);
+            if (i < s / 3) u = std::pow(u, 2.2f);
+            if (i > (s * 2) / 3) u = std::pow(u, 1 / 2.2f);
+            pixels[j * s + i] = {u, u, u, 1};
+        }
+    }
+    return pixels;
+}
+
 std::vector<rgba> make_colored(int s) {
     std::vector<rgba> pixels(s * s);
     for (int j = 0; j < s; j++) {
@@ -581,25 +608,25 @@ std::vector<ym::vec4f> make_sunsky_hdr(int w, int h, float sun_theta,
         arhosek_rgb_skymodelstate_alloc_init(turbidity, ground[0], sun_theta),
         arhosek_rgb_skymodelstate_alloc_init(turbidity, ground[0], sun_theta),
     };
-    float sun_phi = ym::pif;
-    ym::vec3f sun_w =
-        ym::vec3f{cosf(sun_phi) * sinf(sun_theta),
-                  sinf(sun_phi) * sinf(sun_theta), cosf(sun_theta)};
+    auto sun_phi = ym::pif;
+    auto sun_w = ym::vec3f{cosf(sun_phi) * sinf(sun_theta),
+                           sinf(sun_phi) * sinf(sun_theta), cosf(sun_theta)};
     for (int j = 0; j < h; j++) {
         for (int i = 0; i < w; i++) {
-            float theta = ym::pif * (j + 0.5f) / h;
-            float phi = 2 * ym::pif * (i + 0.5f) / w;
+            auto theta = ym::pif * (j + 0.5f) / h;
+            auto phi = 2 * ym::pif * (i + 0.5f) / w;
             if (include_ground)
                 theta = ym::clamp(theta, 0.0f, ym::pif / 2 - 0.001f);
-            ym::vec3f pw = ym::vec3f{cosf(phi) * sinf(theta),
-                                     sinf(phi) * sinf(theta), cosf(theta)};
-            float gamma = acosf(ym::clamp(ym::dot(sun_w, pw), -1, 1));
-            ym::vec3f sky = {(float)(arhosek_tristim_skymodel_radiance(
-                                 skymodel_state[0], theta, gamma, 0)),
-                             (float)(arhosek_tristim_skymodel_radiance(
-                                 skymodel_state[1], theta, gamma, 1)),
-                             (float)(arhosek_tristim_skymodel_radiance(
-                                 skymodel_state[2], theta, gamma, 2))};
+            auto pw = ym::vec3f{cosf(phi) * sinf(theta),
+                                sinf(phi) * sinf(theta), cosf(theta)};
+            auto gamma =
+                std::acos(ym::clamp(ym::dot(sun_w, pw), (float)-1, (float)1));
+            auto sky = ym::vec3f{(float)(arhosek_tristim_skymodel_radiance(
+                                     skymodel_state[0], theta, gamma, 0)),
+                                 (float)(arhosek_tristim_skymodel_radiance(
+                                     skymodel_state[1], theta, gamma, 1)),
+                                 (float)(arhosek_tristim_skymodel_radiance(
+                                     skymodel_state[2], theta, gamma, 2))};
             rgba[j * w + i] = {scale * sky[0], scale * sky[1], scale * sky[2],
                                1};
         }
@@ -965,6 +992,8 @@ int main(int argc, char* argv[]) {
     save_image("rchecker.png", dirname, make_rchecker(512).data(), 512);
     save_image("colored.png", dirname, make_colored(512).data(), 512);
     save_image("rcolored.png", dirname, make_rcolored(512).data(), 512);
+    save_image("gamma.png", dirname, make_gammaramp(512).data(), 512);
+    save_image_hdr("gamma.hdr", dirname, make_gammarampf(512).data(), 512, 512);
     printf("generating envmaps textures ...\n");
     save_image_hdr("env.hdr", dirname,
                    make_sunsky_hdr(1024, 512, 0.8f, 8,

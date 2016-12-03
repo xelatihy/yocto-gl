@@ -535,7 +535,7 @@ static inline bool _intersect_line(const ym::ray3f& ray, const ym::vec3f& v0,
     if (t < ray.tmin || t > ray.tmax) return false;
 
     // clamp segment param to segment corners
-    s = ym::clamp(s, 0, 1);
+    s = ym::clamp(s, (float)0, (float)1);
 
     // compute segment-segment distance on the closest points
     auto p0 = ray.eval(t);
@@ -716,7 +716,7 @@ static inline float _closestuv_line(const ym::vec3f& pos, const ym::vec3f& v0,
     auto d = ym::dot(ab, ab);
     // Project c onto ab, computing parameterized position d(t) = a + t*(b – a)
     auto u = ym::dot(pos - v0, ab) / d;
-    u = ym::clamp(u, 0, 1);
+    u = ym::clamp(u, (float)0, (float)1);
     return u;
 }
 

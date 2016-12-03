@@ -5,5 +5,5 @@ libraries needs to be made available for the build, by changing the paths in the
 
 To make a set of simple tests scenes, use `./bin/ytestgen tests`.
 Then you can run `ytrace` for path tracing, `yshade` for quick OpenGL viewing,
-`yview` for HDR image viewing or `ysym` for rigid body simulation. 
+`yimview` for HDR image viewing or `ysym` for rigid body simulation. 
 Run the executable with `-h` to get help.

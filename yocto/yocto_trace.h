@@ -737,9 +737,9 @@ static inline ym::vec3f _eval_fresnel_metal(float cosw, const ym::vec3f& eta,
                                             const ym::vec3f& etak) {
     if (etak == ym::zero3f) return _eval_fresnel_dielectric(cosw, eta);
 
-    cosw = ym::clamp(cosw, -1, 1);
+    cosw = ym::clamp(cosw, (float)-1, (float)1);
     auto cos2 = cosw * cosw;
-    auto sin2 = ym::clamp(1 - cos2, 0, 1);
+    auto sin2 = ym::clamp(1 - cos2, (float)0, (float)1);
     auto eta2 = eta * eta;
     auto etak2 = etak * etak;
 
@@ -788,7 +788,7 @@ static inline ym::vec3f _eval_brdfcos(const _point& pt, const ym::vec3f& wi) {
 
     // compute dot products
     auto ndo = ym::dot(pt.frame[2], wo), ndi = ym::dot(pt.frame[2], wi),
-         ndh = ym::clamp(ym::dot(wh, pt.frame[2]), 0, 1);
+         ndh = ym::clamp(ym::dot(wh, pt.frame[2]), (float)0, (float)1);
 
     switch (pt.ptype) {
         case _point::type::point: {
@@ -801,9 +801,9 @@ static inline ym::vec3f _eval_brdfcos(const _point& pt, const ym::vec3f& wi) {
         } break;
         case _point::type::line: {
             // take sines
-            auto so = sqrtf(ym::clamp(1 - ndo * ndo, 0, 1)),
-                 si = sqrtf(ym::clamp(1 - ndi * ndi, 0, 1)),
-                 sh = sqrtf(ym::clamp(1 - ndh * ndh, 0, 1));
+            auto so = std::sqrt(ym::clamp(1 - ndo * ndo, (float)0, (float)1)),
+                 si = std::sqrt(ym::clamp(1 - ndi * ndi, (float)0, (float)1)),
+                 sh = std::sqrt(ym::clamp(1 - ndh * ndh, (float)0, (float)1));
 
             // diffuse term (Kajiya-Kay)
             if (si > 0 && so > 0 && pt.kd != ym::zero3f) {
@@ -814,7 +814,7 @@ static inline ym::vec3f _eval_brdfcos(const _point& pt, const ym::vec3f& wi) {
             // specular term (Kajiya-Kay)
             if (si > 0 && so > 0 && sh > 0 && pt.ks != ym::zero3f) {
                 auto ns = 2 / (pt.rs * pt.rs) - 2;
-                auto d = (ns + 2) * powf(sh, ns) / (2 + ym::pif);
+                auto d = (ns + 2) * std::pow(sh, ns) / (2 + ym::pif);
                 auto spec = pt.ks * si * d / (4 * si * so);
                 brdfcos += spec;
             }
@@ -1041,7 +1041,8 @@ static inline _point _eval_envpoint(const scene& scene, int env_id,
     // textures
     if (env.ke_txt >= 0) {
         auto w = ym::transform_direction(ym::inverse(env.xform), -wo);
-        auto theta = 1 - (acosf(ym::clamp(w[1], -1, 1)) / ym::pif);
+        auto theta =
+            1 - (std::acos(ym::clamp(w[1], (float)-1, (float)1)) / ym::pif);
         auto phi = atan2f(w[2], w[0]) / (2 * ym::pif);
         auto texcoord = ym::vec2f{phi, theta};
         if (env.ke_txt >= 0) {
@@ -1219,7 +1220,7 @@ static inline _point _sample_light(const scene& scene, int lid,
         return lpt;
     } else if (light.env_id >= 0) {
         auto z = -1 + 2 * rn[1];
-        auto rr = sqrtf(ym::clamp(1 - z * z, 0, 1));
+        auto rr = std::sqrt(ym::clamp(1 - z * z, (float)0, (float)1));
         auto phi = 2 * ym::pif * rn[0];
         auto wo = ym::vec3f{cosf(phi) * rr, z, sinf(phi) * rr};
         auto lpt = _eval_envpoint(scene, light.env_id, wo);

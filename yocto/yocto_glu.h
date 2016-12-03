@@ -132,6 +132,12 @@ enum struct ltype : int {
     directional = 1  // directional lights
 };
 
+// -----------------------------------------------------------------------------
+// LEGACY FUNCTIONS
+// -----------------------------------------------------------------------------
+
+namespace legacy {
+
 // IMAGE FUNCTIONS -------------------------------------------------------------
 
 //
@@ -142,16 +148,126 @@ YGL_API void draw_image(int tid, int img_w, int img_h, int win_w, int win_h,
                         float ox, float oy, float zoom);
 
 //
+// Reads an image back to memory.
+//
+YGL_API void read_imagef(float* pixels, int w, int h, int nc);
+
+//
+// Creates a texture with pixels values of size w, h with nc number of
+// components (1-4).
+// Internally use filtering if filter.
+// Returns the texture id.
+//
+YGL_API int make_texture(int w, int h, int nc, const float* pixels,
+                         bool filter);
+
+//
+// Creates a texture with pixels values of size w, h with nc number of
+// components (1-4).
+// Internally use filtering if filter.
+// Returns the texture id.
+//
+YGL_API int make_texture(int w, int h, int nc, const unsigned char* pixels,
+                         bool filter);
+
+//
+// Updates the texture tid with new image data.
+//
+YGL_API int update_texture(int tid, int w, int h, int nc, const float* pixels);
+YGL_API int update_texture(int tid, int w, int h, int nc,
+                           const unsigned char* pixels);
+
+//
+// Destroys the texture tid.
+//
+YGL_API void clear_texture(int* tid);
+
+//
+// Starts a frame by setting exposure/gamma values, camera transforms and
+// projection. Sets also whether to use full shading or a quick eyelight
+// preview.
+// If eyelight is disabled, sets num lights with position pos,
+// color ke, type ltype. Also set the ambient illumination amb.
+//
+YGL_API void begin_frame(const float4x4& camera_xform,
+                         const float4x4& camera_xform_inv,
+                         const float4x4& camera_proj, bool eyelight,
+                         bool scale_kx);
+
+//
+// Ends a frame.
+//
+YGL_API void end_frame();
+
+//
+// Set num lights with position pos, color ke, type ltype. Also set the ambient
+// illumination amb.
+//
+YGL_API void set_lights(const float3& amb, int num, const float3* pos,
+                        const float3* ke, const ltype* ltype, bool scale_kx);
+
+//
+// Begins drawing a shape with transform xform.
+//
+YGL_API void begin_shape(const float4x4& xform);
+
+//
+// End shade drawing.
+//
+YGL_API void end_shape();
+
+//
+// Set material values with emission ke, diffuse kd, specular ks and
+// specular exponent ns. Indicates textures ids with the correspoinding XXX_txt
+// variables.
+//
+YGL_API void set_material(const float3& ke, const float3& kd, const float3& ks,
+                          float ns, int kd_txt, bool scale_kx);
+
+//
+// Convertes a phong exponent to roughness.
+//
+YGL_API float specular_roughness_to_exponent(float r);
+
+//
+// Draw num elements elem of type etype.
+//
+YGL_API void draw_elem(int num, const int* elem, etype etype, const float3* pos,
+                       const float3* norm, const float2* texcoord,
+                       const float3* color);
+YGL_API void draw_points(int num, const int* elem, const float3* pos,
+                         const float3* norm, const float2* texcoord,
+                         const float3* color);
+YGL_API void draw_lines(int num, const int2* elem, const float3* pos,
+                        const float3* norm, const float2* texcoord,
+                        const float3* color);
+YGL_API void draw_triangles(int num, const int3* elem, const float3* pos,
+                            const float3* norm, const float2* texcoord,
+                            const float3* color);
+
+}  // namespace
+
+// -----------------------------------------------------------------------------
+// MODERN FUNCTIONS
+// -----------------------------------------------------------------------------
+
+namespace modern {
+
+// IMAGE FUNCTIONS -------------------------------------------------------------
+
+//
+// Draw an texture tid of size img_w, img_h on a window of size win_w, win_h
+// with top-left corner at ox, oy with a zoom zoom.
+//
+YGL_API void shade_image(int tid, int img_w, int img_h, int win_w, int win_h,
+                         float ox, float oy, float zoom);
+
+//
 // As above but includes an exposure/gamma correction.
 //
 YGL_API void shade_image(int tid, int img_w, int img_h, int win_w, int win_h,
                          float ox, float oy, float zoom, float exposure,
                          float gamma_);
-
-//
-// Reads an image back to memory.
-//
-YGL_API void read_imagef(float* pixels, int w, int h, int nc);
 
 // TEXTURE FUNCTIONS -----------------------------------------------------------
 
@@ -324,6 +440,8 @@ YGL_API void stdshader_draw_triangles(int prog, int num, const int3* elem);
 
 }  // namespace
 
+}  // namespace
+
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION
 // -----------------------------------------------------------------------------
@@ -341,6 +459,7 @@ YGL_API void stdshader_draw_triangles(int prog, int num, const int3* elem);
 
 namespace yglu {
 
+namespace legacy {
 //
 // This is a public API. See above for documentation.
 //
@@ -369,6 +488,306 @@ YGL_API void draw_image(int tid, int img_w, int img_h, int win_w, int win_h,
     glEnd();
     glDisable(GL_TEXTURE_2D);
     glDisable(GL_BLEND);
+}
+
+//
+// This is a public API. See above for documentation.
+//
+YGL_API void read_imagef(float* pixels, int w, int h, int nc) {
+    int formats[4] = {GL_LUMINANCE, GL_LUMINANCE_ALPHA, GL_RGB, GL_RGBA};
+    glReadPixels(0, 0, w, h, formats[nc - 1], GL_FLOAT, pixels);
+}
+
+//
+// Implementation of make_texture.
+//
+YGL_API int _make_texture(int w, int h, int nc, const void* pixels, GLuint type,
+                          bool filter) {
+    int formats[4] = {GL_LUMINANCE, GL_LUMINANCE_ALPHA, GL_RGB, GL_RGBA};
+    GLuint id;
+    glGenTextures(1, &id);
+    glBindTexture(GL_TEXTURE_2D, id);
+    if (filter) {
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
+                        GL_LINEAR_MIPMAP_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_TRUE);
+    } else {
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    }
+    glTexImage2D(GL_TEXTURE_2D, 0, formats[nc - 1], w, h, 0, formats[nc - 1],
+                 type, pixels);
+    assert(glGetError() == GL_NO_ERROR);
+    return id;
+}
+
+//
+// This is a public API. See above for documentation.
+//
+YGL_API int make_texture(int w, int h, int nc, const float* pixels,
+                         bool filter) {
+    return _make_texture(w, h, nc, pixels, GL_FLOAT, filter);
+}
+
+//
+// This is a public API. See above for documentation.
+//
+YGL_API int make_texture(int w, int h, int nc, const unsigned char* pixels,
+                         bool filter) {
+    return _make_texture(w, h, nc, pixels, GL_UNSIGNED_BYTE, filter);
+}
+
+//
+// Implementation of update_texture.
+//
+static inline int _update_texture(int id, int w, int h, int nc,
+                                  const void* pixels, GLuint type) {
+    int formats[4] = {GL_LUMINANCE, GL_LUMINANCE_ALPHA, GL_RGB, GL_RGBA};
+    glBindTexture(GL_TEXTURE_2D, id);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, w, h, formats[nc - 1], type,
+                    pixels);
+    return id;
+}
+
+//
+// This is a public API. See above for documentation.
+//
+YGL_API int update_texture(int id, int w, int h, int nc, const float* pixels) {
+    return _update_texture(id, w, h, nc, pixels, GL_FLOAT);
+}
+
+//
+// This is a public API. See above for documentation.
+//
+YGL_API int update_texture(int id, int w, int h, int nc,
+                           const unsigned char* pixels) {
+    return _update_texture(id, w, h, nc, pixels, GL_UNSIGNED_BYTE);
+}
+
+//
+// This is a public API. See above for documentation.
+//
+YGL_API void clear_texture(int* tid) {
+    glDeleteTextures(1, (GLuint*)tid);
+    *tid = 0;
+}
+
+//
+// This is a public API. See above for documentation.
+//
+YGL_API void begin_frame(const float4x4& camera_xform,
+                         const float4x4& camera_xform_inv,
+                         const float4x4& camera_proj, bool eyelight,
+                         bool scale_kx) {
+    glPushMatrix();
+    glPushAttrib(GL_LIGHTING_BIT);
+
+    glEnable(GL_LIGHTING);
+
+    glLightModeli(GL_LIGHT_MODEL_LOCAL_VIEWER, 1);
+    // glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, 1);
+    glLightModeli(GL_LIGHT_MODEL_COLOR_CONTROL, GL_SEPARATE_SPECULAR_COLOR);
+
+#if 0
+    if (light_amb != float3{0, 0, 0}) {
+        float amb[] = {light_amb[0], light_amb[1], light_amb[2], 1};
+        glLightModelfv(GL_LIGHT_MODEL_AMBIENT, amb);
+    }
+#endif
+
+    if (eyelight) {
+        glEnable(GL_LIGHTING);
+        glEnable(GL_LIGHT0);
+        float ke[] = {(scale_kx) ? 3.1415926536f : 1,
+                      (scale_kx) ? 3.1415926536f : 1,
+                      (scale_kx) ? 3.1415926536f : 1, 1};
+        float pos[] = {0, 0, 1, 0};
+        glLightfv(GL_LIGHT0, GL_DIFFUSE, ke);
+        glLightfv(GL_LIGHT0, GL_SPECULAR, ke);
+        glLightfv(GL_LIGHT0, GL_POSITION, pos);
+    }
+
+    glMatrixMode(GL_PROJECTION);
+    glLoadMatrixf(&camera_proj[0][0]);
+    glMatrixMode(GL_MODELVIEW);
+    glLoadMatrixf(&camera_xform_inv[0][0]);
+}
+
+//
+// Ends a frame.
+//
+YGL_API void end_frame() {
+    glPopAttrib();
+    glPopMatrix();
+}
+
+//
+// This is a public API. See above for documentation.
+//
+YGL_API void set_lights(const float3& amb, int num, const float3* pos,
+                        const float3* ke, const ltype* ltype) {
+    if (amb != float3{0, 0, 0}) {
+        float amb_[] = {amb[0], amb[1], amb[2], 1};
+        glLightModelfv(GL_LIGHT_MODEL_AMBIENT, amb_);
+    }
+
+    for (auto i = 0; i < std::min(num, 16); i++) {
+        glEnable(GL_LIGHT0 + i);
+        float ke_[] = {ke[i][0], ke[i][1], ke[i][2], 1};
+        float pos_[] = {pos[i][0], pos[i][1], pos[i][2],
+                        (ltype[i] == ltype::point) ? 1.0f : 0.0f};
+        glLightfv(GL_LIGHT0 + i, GL_DIFFUSE, ke_);
+        glLightfv(GL_LIGHT0 + i, GL_SPECULAR, ke_);
+        glLightfv(GL_LIGHT0 + i, GL_POSITION, pos_);
+        if (ltype[i] == ltype::point) {
+            glLightf(GL_LIGHT0 + i, GL_CONSTANT_ATTENUATION, 0);
+            glLightf(GL_LIGHT0 + i, GL_LINEAR_ATTENUATION, 0);
+            glLightf(GL_LIGHT0 + i, GL_QUADRATIC_ATTENUATION, 1);
+        } else {
+            glLightf(GL_LIGHT0 + i, GL_CONSTANT_ATTENUATION, 1);
+            glLightf(GL_LIGHT0 + i, GL_LINEAR_ATTENUATION, 0);
+            glLightf(GL_LIGHT0 + i, GL_QUADRATIC_ATTENUATION, 0);
+        }
+    }
+    for (auto i = num; i < 16; i++) {
+        glDisable(GL_LIGHT0 + i);
+    }
+
+#if 0
+    if(light_amb != float3{0,0,0}) {
+        glEnable(GL_LIGHT0);
+        float amb[] = {light_amb[0], light_amb[1], light_amb[2], 1};
+        glLightfv(GL_LIGHT0, GL_AMBIENT, amb);
+    }
+#endif
+}
+
+//
+// This is a public API. See above for documentation.
+//
+YGL_API void begin_shape(const float4x4& xform) {
+    glPushMatrix();
+    glMatrixMode(GL_MODELVIEW);
+    glMultMatrixf((float*)xform.data());
+}
+
+//
+// This is a public API. See above for documentation.
+//
+YGL_API void end_shape() {
+    glDisable(GL_TEXTURE_2D);
+    glPopMatrix();
+}
+
+//
+// This is a public API. See above for documentation.
+//
+YGL_API float specular_roughness_to_exponent(float rs) {
+    return (rs) ? 2 / (rs * rs) - 2 : 1e6;
+}
+
+//
+// This is a public API. See above for documentation.
+//
+YGL_API void set_material(const float3& ke, const float3& kd, const float3& ks,
+                          float ns, int kd_txt, bool scale_kx) {
+    float kds = (scale_kx) ? 1 / 3.1415926536f : 1;
+    float kss = (scale_kx) ? (ns + 2) / (2 * 3.1415926536f) : 1;
+    // float kss = (scale_kx) ? 1 / 3.1415926536f : 1;
+    float ke_[] = {ke[0], ke[1], ke[2], 1};
+    float kd_[] = {kd[0] * kds, kd[1] * kds, kd[2] * kds, 1};
+    float ks_[] = {ks[0] * kss, ks[1] * kss, ks[2] * kss, 1};
+    glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, ke_);
+    glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, kd_);
+    glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, ks_);
+    glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, ns);
+    if (kd_txt >= 0) {
+        glEnable(GL_TEXTURE_2D);
+        glBindTexture(GL_TEXTURE_2D, kd_txt);
+    } else {
+        glDisable(GL_TEXTURE_2D);
+    }
+}
+
+//
+// This is a public API. See above for documentation.
+//
+YGL_API float specular_roughness_to_exponent(float r);
+
+//
+// This is a public API. See above for documentation.
+//
+YGL_API void draw_elem(int num, const int* elem, etype etype, const float3* pos,
+                       const float3* norm, const float2* texcoord,
+                       const float3* color) {
+    auto nc = 0;
+    switch (etype) {
+        case etype::point:
+            glBegin(GL_POINTS);
+            nc = 1;
+            break;
+        case etype::line:
+            glBegin(GL_LINES);
+            nc = 2;
+            break;
+        case etype::triangle:
+            glBegin(GL_TRIANGLES);
+            nc = 3;
+            break;
+        case etype::quad:
+            glBegin(GL_QUADS);
+            nc = 4;
+            break;
+    }
+    for (auto j = 0; j < num; j++) {
+        auto e = elem + j * nc;
+        for (auto i = 0; i < nc; i++) {
+            if (norm)
+                glNormal3fv((float*)norm + e[i] * 3);
+            else
+                glNormal3f(0, 0, 1);
+            if (texcoord)
+                glTexCoord2fv((float*)texcoord + e[i] * 2);
+            else
+                glTexCoord2f(0, 0);
+            if (color)
+                glColor3fv((float*)color + e[i] * 3);
+            else
+                glColor3f(1, 1, 1);
+            glVertex3fv((float*)pos + e[i] * 3);
+        }
+    }
+    glEnd();
+}
+YGL_API void draw_points(int num, const int* elem, const float3* pos,
+                         const float3* norm, const float2* texcoord,
+                         const float3* color) {
+    return draw_elem(num, elem, etype::point, pos, norm, texcoord, color);
+}
+YGL_API void draw_lines(int num, const int2* elem, const float3* pos,
+                        const float3* norm, const float2* texcoord,
+                        const float3* color) {
+    return draw_elem(num, (const int*)elem, etype::line, pos, norm, texcoord,
+                     color);
+}
+YGL_API void draw_triangles(int num, const int3* elem, const float3* pos,
+                            const float3* norm, const float2* texcoord,
+                            const float3* color) {
+    return draw_elem(num, (const int*)elem, etype::triangle, pos, norm,
+                     texcoord, color);
+}
+
+}  // namespace
+
+namespace modern {
+
+//
+// This is a public API. See above for documentation.
+//
+YGL_API void shade_image(int tid, int img_w, int img_h, int win_w, int win_h,
+                         float ox, float oy, float zoom) {
+    shade_image(tid, img_w, img_h, win_w, win_h, ox, oy, zoom, 0, 1);
 }
 
 //
@@ -528,6 +947,28 @@ YGL_API int update_texture(int id, int w, int h, int nc,
 YGL_API void clear_texture(int* tid) {
     glDeleteTextures(1, (GLuint*)tid);
     *tid = 0;
+}
+
+//
+// This is a public API. See above for documentation.
+//
+YGL_API void draw_mesh_gl1(int nverts, const float* pos, const float* norm,
+                           const float* texcoord, const float* color,
+                           etype etype, int nelems, const int* elem) {
+    switch (etype) {
+        case etype::point: glBegin(GL_POINTS); break;
+        case etype::line: glBegin(GL_LINES); break;
+        case etype::triangle: glBegin(GL_TRIANGLES); break;
+        case etype::quad: glBegin(GL_QUADS); break;
+    }
+    for (auto i = 0; i < nelems * (int)etype; i++) {
+        if (color)
+            glColor3f(color[i * 3 + 0], color[i * 3 + 1], color[i * 3 + 2]);
+        if (texcoord) glTexCoord2f(texcoord[i * 2 + 0], texcoord[i * 2 + 1]);
+        if (norm) glNormal3f(norm[i * 3 + 0], norm[i * 3 + 1], norm[i * 3 + 2]);
+        glVertex3f(pos[i * 3 + 0], pos[i * 3 + 1], pos[i * 3 + 2]);
+    }
+    glEnd();
 }
 
 //
@@ -1050,6 +1491,8 @@ YGL_API void stdshader_draw_lines(int prog, int num, const int2* elem) {
 YGL_API void stdshader_draw_triangles(int prog, int num, const int3* elem) {
     stdshader_draw_elem(prog, num, (int*)elem, etype::triangle);
 }
+
+}  // namespace
 
 }  // namespace
 
