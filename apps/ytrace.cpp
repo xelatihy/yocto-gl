@@ -37,7 +37,69 @@
 
 #include "ThreadPool.h"
 
-#define MAX_BLOCKS_PER_STEP 4096
+// scene
+std::string filename;
+std::string imfilename;
+yapp::scene scene;
+
+// rendered image
+ym::image<ym::vec4f> hdr;
+ym::image<ym::vec4b> ldr;
+
+// rendering scene
+ybvh::scene scene_bvh;
+ytrace::scene trace_scene;
+
+// rendering parameters
+int samples = 256;
+ytrace::render_params params;
+int block_size = 32;
+int nthreads = 0;
+
+// lighting
+float hdr_exposure = 0;
+float hdr_gamma = 2.2;
+bool camera_lights = false;
+
+// camera
+int camera = 0;
+float aspect = 16.0f / 9.0f;
+int res = 720;
+
+// gl
+bool no_ui = false;
+bool legacy_gl = false;
+
+// progressive rendering
+ym::image<ym::vec4f> preview;
+int cur_sample = 0, cur_block = 0;
+int blocks_per_update = 8;
+
+// view variables
+int cur_background = 0;
+const std::array<ym::vec4f, 4> backgrounds = {{{0.0f, 0.0f, 0.0f, 0.0f},
+                                               {0.18f, 0.18f, 0.18f, 0.0f},
+                                               {0.5f, 0.5f, 0.5f, 0.0f},
+                                               {1.0f, 1.0f, 1.0f, 0.0f}}};
+bool wireframe = false;
+bool edges = false;
+
+// shading
+bool scene_updated = true;
+yglu::uint texture_id = 0;
+float texture_exposure, texture_gamma;
+
+// cacahed rendering values
+std::vector<std::pair<ym::vec2i, ym::vec2i>> blocks;
+ThreadPool* pool = nullptr;
+std::vector<std::future<void>> futures;
+
+// widget
+GLFWwindow* window = nullptr;
+
+// nuklear
+nk_context* nuklear_ctx = nullptr;
+int hud_width = 256;
 
 std::vector<std::pair<ym::vec2i, ym::vec2i>> make_image_blocks(int w, int h,
                                                                int bs) {
@@ -125,6 +187,310 @@ ytrace::scene init_trace_cb(yapp::scene& scene, ybvh::scene& scene_bvh,
     return trace_scene;
 }
 
+void text_callback(GLFWwindow* window, unsigned int key) {
+    nk_glfw3_gl3_char_callback(window, key);
+    if (nk_item_is_any_active(nuklear_ctx)) return;
+    switch (key) {
+        case '[': hdr_exposure -= 1; break;
+        case ']': hdr_exposure += 1; break;
+        case '{': hdr_gamma -= 0.1f; break;
+        case '}': hdr_gamma += 0.1f; break;
+        case '1':
+            hdr_exposure = 0;
+            hdr_gamma = 1;
+            break;
+        case '2':
+            hdr_exposure = 0;
+            hdr_gamma = 2.2f;
+            break;
+        case 'b':
+            cur_background = (cur_background + 1) % backgrounds.size();
+            break;
+        case 's': save_image(imfilename.c_str(), hdr, ldr); break;
+        default: printf("unsupported key\n"); break;
+    }
+}
+
+void draw_image() {
+    auto framebuffer_size = yui::framebuffer_size(window);
+    glViewport(0, 0, framebuffer_size[0], framebuffer_size[1]);
+
+    // begin frame
+    auto background = backgrounds[cur_background];
+    glClearColor(background[0], background[1], background[2], background[3]);
+    glDisable(GL_DEPTH_TEST);
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    // draw image
+    auto window_size = yui::window_size(window);
+    if (legacy_gl) {
+        yglu::legacy::draw_image(texture_id, ldr.size()[0], ldr.size()[1],
+                                 window_size[0], window_size[1], 0, 0, 1);
+    } else {
+        yglu::modern::shade_image(texture_id, ldr.size()[0], ldr.size()[1],
+                                  window_size[0], window_size[1], 0, 0, 1);
+    }
+}
+
+void draw_widgets() {
+    auto window_size = yui::window_size(window);
+    if (legacy_gl) {
+        nk_glfw3_gl2_new_frame();
+    } else {
+        nk_glfw3_gl3_new_frame();
+    }
+    if (nk_begin(nuklear_ctx, "ytrace", nk_rect(window_size[0] - hud_width, 0,
+                                                hud_width, window_size[1]),
+                 NK_WINDOW_BORDER | NK_WINDOW_MOVABLE | NK_WINDOW_SCALABLE |
+                     NK_WINDOW_MINIMIZABLE | NK_WINDOW_TITLE)) {
+        nk_layout_row_dynamic(nuklear_ctx, 30, 1);
+        nk_label(nuklear_ctx, filename.c_str(), NK_TEXT_LEFT);
+        nk_layout_row_dynamic(nuklear_ctx, 30, 3);
+        nk_value_int(nuklear_ctx, "w", hdr.size()[0]);
+        nk_value_int(nuklear_ctx, "h", hdr.size()[1]);
+        nk_value_int(nuklear_ctx, "s", cur_sample);
+        nk_layout_row_dynamic(nuklear_ctx, 30, 1);
+        nk_property_int(nuklear_ctx, "samples", 0, &samples, 1000000, 1, 1);
+        nk_layout_row_dynamic(nuklear_ctx, 30, 2);
+        nk_property_int(nuklear_ctx, "camera", 0, &camera,
+                        (int)scene.cameras.size() - 1, 1, 1);
+        camera_lights = nk_check_label(nuklear_ctx, "eyelight", camera_lights);
+        nk_layout_row_dynamic(nuklear_ctx, 30, 1);
+        nk_property_float(nuklear_ctx, "exposure", -20, &hdr_exposure, 20, 1,
+                          1);
+        nk_property_float(nuklear_ctx, "gamma", 0.1, &hdr_gamma, 5, 0.1, 0.1);
+    }
+    nk_end(nuklear_ctx);
+
+    if (legacy_gl) {
+        nk_glfw3_gl2_render(NK_ANTI_ALIASING_ON, 512 * 1024, 128 * 1024);
+    } else {
+        nk_glfw3_gl3_render(NK_ANTI_ALIASING_ON, 512 * 1024, 128 * 1024);
+    }
+}
+
+void window_refresh_callback(GLFWwindow* window) {
+    draw_image();
+    draw_widgets();
+    glfwSwapBuffers(window);
+}
+
+bool update() {
+    if (scene_updated) {
+        // update camera
+        auto& cam = scene.cameras[camera];
+        auto& trace_cam = trace_scene.cameras[camera];
+        trace_cam = {cam.frame, cam.yfov, cam.aspect, cam.aperture, cam.focus};
+
+        // render preview
+        preview.resize(hdr.size() / block_size);
+        ytrace::trace_image(trace_scene, camera, preview, 1, params);
+        for (auto qj = 0; qj < preview.size()[1]; qj++) {
+            for (auto qi = 0; qi < preview.size()[0]; qi++) {
+                for (auto j = qj * block_size;
+                     j < ym::min((qj + 1) * block_size, hdr.size()[1]); j++) {
+                    for (auto i = qi * block_size;
+                         i < ym::min((qi + 1) * block_size, hdr.size()[0]);
+                         i++) {
+                        hdr[{i, j}] = preview[{qi, qj}];
+                    }
+                }
+            }
+        }
+        ym::exposure_gamma(hdr, ldr, hdr_exposure, hdr_gamma);
+        if (legacy_gl) {
+            yglu::legacy::update_texture(texture_id, hdr.size()[0],
+                                         hdr.size()[1], 4,
+                                         (unsigned char*)ldr.data(), false);
+        } else {
+            yglu::modern::update_texture(texture_id, hdr.size()[0],
+                                         hdr.size()[1], 4,
+                                         (unsigned char*)ldr.data(), false);
+        }
+
+        // reset current counters
+        cur_sample = 0;
+        cur_block = 0;
+        scene_updated = false;
+    } else {
+        if (cur_sample == samples) return false;
+        futures.clear();
+        for (auto b = 0; cur_block < blocks.size() && b < blocks_per_update;
+             cur_block++, b++) {
+            auto block = blocks[cur_block];
+            futures.push_back(pool->enqueue([block]() {
+                ytrace::trace_block(trace_scene, camera, hdr, samples,
+                                    block.first, block.second,
+                                    {cur_sample, cur_sample + 1}, params, true);
+                ym::exposure_gamma(hdr, ldr, hdr_exposure, hdr_gamma,
+                                   block.first, block.second);
+            }));
+        }
+        for (auto& future : futures) future.wait();
+        if (texture_exposure != hdr_exposure || texture_gamma != hdr_gamma) {
+            ym::exposure_gamma(hdr, ldr, hdr_exposure, hdr_gamma);
+            texture_exposure = hdr_exposure;
+            texture_gamma = hdr_gamma;
+        }
+        if (legacy_gl) {
+            yglu::legacy::update_texture(texture_id, ldr.size()[0],
+                                         ldr.size()[1], 4,
+                                         (unsigned char*)ldr.data(), false);
+        } else {
+            yglu::modern::update_texture(texture_id, ldr.size()[0],
+                                         ldr.size()[1], 4,
+                                         (unsigned char*)ldr.data(), false);
+        }
+        if (cur_block == blocks.size()) {
+            cur_block = 0;
+            cur_sample++;
+        }
+    }
+
+    return true;
+}
+
+void run_ui() {
+    // window
+    window = yui::init_glfw({(int)(res * aspect), res}, "ytrace", legacy_gl,
+                            nullptr, text_callback);
+
+    // callbacks
+    glfwSetWindowRefreshCallback(window, window_refresh_callback);
+    glfwSetScrollCallback(window, nk_gflw3_scroll_callback);
+
+    // window values
+    int mouse_button = 0;
+    ym::vec2f mouse_pos, mouse_last;
+    ym::vec2i window_size, framebuffer_size;
+
+// init gl extensions
+#ifndef __APPLE__
+    if (glewInit() != GLEW_OK) exit(EXIT_FAILURE);
+#endif
+
+    nuklear_ctx = yui::init_nuklear(window, legacy_gl);
+
+    if (legacy_gl) {
+        texture_id = yglu::legacy::make_texture(hdr.size()[0], hdr.size()[1], 4,
+                                                (unsigned char*)ldr.data(),
+                                                false, false);
+    } else {
+        texture_id = yglu::modern::make_texture(hdr.size()[0], hdr.size()[1], 4,
+                                                (unsigned char*)ldr.data(),
+                                                false, false, false);
+    }
+
+    while (!glfwWindowShouldClose(window)) {
+        glfwGetWindowSize(window, &window_size[0], &window_size[1]);
+        glfwGetFramebufferSize(window, &framebuffer_size[0],
+                               &framebuffer_size[1]);
+
+        mouse_last = mouse_pos;
+        mouse_pos = yui::mouse_pos(window);
+        mouse_button = yui::mouse_button(window);
+
+        // check for window size
+        auto window_size = yui::window_size(window);
+        if (window_size != hdr.size()) {
+            auto& cam = scene.cameras[camera];
+            cam.aspect = (float)window_size[0] / (float)window_size[1];
+            // updated images
+            hdr.resize(window_size);
+            ldr.resize(window_size);
+            preview.resize(
+                {window_size[0] / block_size, window_size[1] / block_size});
+
+            // update texture
+            if (legacy_gl) {
+                if (texture_id) yglu::legacy::clear_texture(&texture_id);
+                texture_id = yglu::legacy::make_texture(
+                    hdr.size()[0], hdr.size()[1], 4, (unsigned char*)ldr.data(),
+                    false, false);
+            } else {
+                if (texture_id) yglu::legacy::clear_texture(&texture_id);
+                texture_id = yglu::modern::make_texture(
+                    hdr.size()[0], hdr.size()[1], 4, (unsigned char*)ldr.data(),
+                    false, false, false);
+            }
+
+            // updated blocks
+            blocks =
+                make_image_blocks(hdr.size()[0], hdr.size()[1], block_size);
+            scene_updated = true;
+        }
+
+        glfwSetWindowTitle(window, ("ytrace | " + filename + " | " +
+                                    std::to_string(hdr.size()[0]) + "x" +
+                                    std::to_string(hdr.size()[1]) + "@" +
+                                    std::to_string(cur_sample))
+                                       .c_str());
+
+        // handle mouse
+        if (mouse_button && mouse_pos != mouse_last &&
+            !nk_item_is_any_active(nuklear_ctx)) {
+            auto dolly = 0.0f;
+            auto pan = ym::zero2f;
+            auto rotate = ym::zero2f;
+            switch (mouse_button) {
+                case 1: rotate = (mouse_pos - mouse_last) / 100; break;
+                case 2: dolly = (mouse_pos[0] - mouse_last[0]) / 100.0f; break;
+                case 3: pan = (mouse_pos - mouse_last) / 100; break;
+                default: break;
+            }
+
+            auto& cam = scene.cameras[camera];
+            ym::turntable(cam.frame, cam.focus, rotate, dolly, pan);
+            scene_updated = true;
+        }
+
+        // update
+        auto updated = update();
+
+        // draw
+        draw_image();
+
+        // make ui
+        draw_widgets();
+
+        // swap buffers
+        glfwSwapBuffers(window);
+
+        // event hadling
+        if (updated)
+            glfwPollEvents();
+        else
+            glfwWaitEvents();
+    }
+
+    yui::clear_nuklear(nuklear_ctx, legacy_gl);
+    yui::clear_glfw(window);
+}
+
+void render_offline() {
+    printf("tracing %s to %s\n", filename.c_str(), imfilename.c_str());
+    printf("rendering ...");
+    fflush(stdout);
+    for (auto cur_sample = 0; cur_sample < samples; cur_sample++) {
+        printf("\rrendering sample %d/%d", cur_sample + 1, samples);
+        fflush(stdout);
+        futures.clear();
+        for (auto cur_block = 0; cur_block < blocks.size(); cur_block++) {
+            auto block = blocks[cur_block];
+            futures.push_back(pool->enqueue([=, &block]() {
+                ytrace::trace_block(trace_scene, camera, hdr, samples,
+                                    block.first, block.second,
+                                    {cur_sample, cur_sample + 1}, params, true);
+            }));
+        }
+        for (auto& future : futures) future.wait();
+    }
+    printf("\rrendering done\n");
+    fflush(stdout);
+    ym::exposure_gamma(hdr, ldr, hdr_exposure, hdr_gamma);
+    save_image(imfilename, hdr, ldr);
+}
+
 int main(int argc, char* argv[]) {
     auto rtype_names = std::unordered_map<std::string, ytrace::rtype>{
         {"default", ytrace::rtype::def},
@@ -139,315 +505,64 @@ int main(int argc, char* argv[]) {
 
     // params
     auto parser = ycmd::make_parser(argc, argv, "trace meshes");
-    auto exposure =
+    hdr_exposure =
         ycmd::parse_opt<float>(parser, "--exposure", "-e", "image exposure", 0);
-    auto gamma =
+    hdr_gamma =
         ycmd::parse_opt<float>(parser, "--gamma", "-g", "image gamma", 2.2);
-    auto rtype = ycmd::parse_opte<ytrace::rtype>(
+    params.rtype = ycmd::parse_opte<ytrace::rtype>(
         parser, "--random", "", "random type", ytrace::rtype::def, rtype_names);
-    auto stype = ycmd::parse_opte<ytrace::stype>(
+    params.stype = ycmd::parse_opte<ytrace::stype>(
         parser, "--integrator", "-i", "integrator type", ytrace::stype::def,
         stype_names);
-    auto amb =
-        ycmd::parse_opt<float>(parser, "--ambient", "", "ambient factor", 0);
-    auto camera_lights = ycmd::parse_flag(parser, "--camera_lights", "-c",
-                                          "enable camera lights", false);
-    auto camera = ycmd::parse_opt<int>(parser, "--camera", "-C", "camera", 0);
-    auto no_ui = ycmd::parse_flag(parser, "--no-ui", "", "runs offline", false);
-    auto legacy_gl = ycmd::parse_flag(parser, "--legacy_opengl", "-L",
-                                      "uses legacy OpenGL", false);
-    auto nthreads = ycmd::parse_opt<int>(
-        parser, "--threads", "-t", "number of threads [0 for default]", 0);
-    auto block_size =
+    camera_lights = ycmd::parse_flag(parser, "--camera_lights", "-c",
+                                     "enable camera lights", false);
+    camera = ycmd::parse_opt<int>(parser, "--camera", "-C", "camera", 0);
+    no_ui = ycmd::parse_flag(parser, "--no-ui", "", "runs offline", false);
+    legacy_gl = ycmd::parse_flag(parser, "--legacy_opengl", "-L",
+                                 "uses legacy OpenGL", false);
+    nthreads = ycmd::parse_opt<int>(parser, "--threads", "-t",
+                                    "number of threads [0 for default]", 0);
+    block_size =
         ycmd::parse_opt<int>(parser, "--block_size", "", "block size", 32);
-    auto samples =
+    samples =
         ycmd::parse_opt<int>(parser, "--samples", "-s", "image samples", 256);
-    auto aspect = ycmd::parse_opt<float>(parser, "--aspect", "-a",
-                                         "image aspect", 16.0f / 9.0f);
-    auto res = ycmd::parse_opt<int>(parser, "--resolution", "-r",
-                                    "image resolution", 720);
-    auto imfilename = ycmd::parse_opt<std::string>(parser, "--output", "-o",
-                                                   "image filename", "out.hdr");
-    auto filename = ycmd::parse_arg<std::string>(parser, "scene",
-                                                 "scene filename", "", true);
+    aspect = ycmd::parse_opt<float>(parser, "--aspect", "-a", "image aspect",
+                                    16.0f / 9.0f);
+    res = ycmd::parse_opt<int>(parser, "--resolution", "-r", "image resolution",
+                               720);
+    imfilename = ycmd::parse_opt<std::string>(parser, "--output", "-o",
+                                              "image filename", "out.hdr");
+    filename = ycmd::parse_arg<std::string>(parser, "scene", "scene filename",
+                                            "", true);
     ycmd::check_parser(parser);
 
     // setting up multithreading
     if (!nthreads) nthreads = std::thread::hardware_concurrency();
-    ThreadPool pool(nthreads);
-    std::vector<std::future<void>> futures;
+    pool = new ThreadPool(nthreads);
 
     // loading scene
-    auto scene = yapp::load_scene(filename);
+    scene = yapp::load_scene(filename);
     scene.cameras[camera].aspect = aspect;
 
     // preparing raytracer
-    auto scene_bvh = yapp::make_bvh(scene);
-    auto trace_scene = init_trace_cb(scene, scene_bvh, camera);
-    ytrace::render_params params;
-    params.stype = (camera_lights) ? ytrace::stype::eyelight : stype;
-    params.rtype = rtype;
-    params.amb = {amb, amb, amb};
+    scene_bvh = yapp::make_bvh(scene);
+    trace_scene = init_trace_cb(scene, scene_bvh, camera);
+    params.stype = (camera_lights) ? ytrace::stype::eyelight : params.stype;
 
     // image rendering params
     auto width = (int)std::round(aspect * res), height = res;
-    auto blocks = make_image_blocks(width, height, block_size);
-    auto hdr = ym::image<ym::vec4f>({width, height}, ym::zero4f);
-    auto ldr = ym::image<ym::vec4b>({width, height});
-    auto hdr_exposure = exposure, hdr_gamma = gamma;
+    hdr = ym::image<ym::vec4f>({width, height}, ym::zero4f);
+    ldr = ym::image<ym::vec4b>({width, height});
+    blocks = make_image_blocks(width, height, block_size);
+    texture_exposure = hdr_exposure;
+    texture_gamma = hdr_gamma;
 
     // launching renderer
     if (no_ui) {
-        printf("tracing %s to %s\n", filename.c_str(), imfilename.c_str());
-        printf("rendering ...");
-        fflush(stdout);
-        for (auto cur_sample = 0; cur_sample < samples; cur_sample++) {
-            printf("\rrendering sample %d/%d", cur_sample + 1, samples);
-            fflush(stdout);
-            futures.clear();
-            for (auto cur_block = 0; cur_block < blocks.size(); cur_block++) {
-                futures.push_back(
-                    pool.enqueue([=, &trace_scene, &hdr, &blocks]() {
-                        ytrace::trace_block(
-                            trace_scene, camera, hdr, samples,
-                            blocks[cur_block].first, blocks[cur_block].second,
-                            {cur_sample, cur_sample + 1}, params, true);
-                    }));
-            }
-            for (auto& future : futures) future.wait();
-        }
-        printf("\rrendering done\n");
-        fflush(stdout);
-        ym::exposure_gamma(hdr, ldr, exposure, gamma);
-        save_image(imfilename, hdr, ldr);
+        render_offline();
     } else {
-        // prepare ui context
-        auto context = yui::context();
-
-        // view data
-        auto scene_updated = true;
-        auto cur_background = 0;
-        const std::array<ym::vec4f, 4> backgrounds = {
-            {{0.0f, 0.0f, 0.0f, 0.0f},
-             {0.18f, 0.18f, 0.18f, 0.0f},
-             {0.5f, 0.5f, 0.5f, 0.0f},
-             {1.0f, 1.0f, 1.0f, 0.0f}}};
-        auto texture_id = (yglu::uint)0;
-
-        // progressize rendering data
-        auto preview = ym::image<ym::vec4f>(
-            {width / block_size, height / block_size}, ym::zero4f);
-        auto cur_sample = 0, cur_block = 0;
-        auto blocks_per_update = 8;
-
-        // init callback
-        context.init.push_back(std::function<void(const yui::info& info)>([&](
-            const yui::info& info) {
-            if (legacy_gl) {
-                texture_id = yglu::legacy::make_texture(
-                    width, height, 4, (unsigned char*)ldr.data(), false, false);
-            } else {
-                texture_id = yglu::modern::make_texture(
-                    width, height, 4, (unsigned char*)ldr.data(), false, false,
-                    false);
-            }
-        }));
-
-        // window size callback
-        context.window_size.push_back(
-            std::function<void(const yui::info& info)>(
-                [&](const yui::info& info) {
-                    auto& cam = scene.cameras[camera];
-                    width = info.win_size[0];
-                    height = info.win_size[1];
-                    cam.aspect = (float)width / (float)height;
-                    // updated images
-                    hdr.resize({width, height});
-                    ldr.resize({width, height});
-                    preview.resize({width / block_size, height / block_size});
-
-                    // update texture
-                    if (legacy_gl) {
-                        if (texture_id)
-                            yglu::legacy::clear_texture(&texture_id);
-                        texture_id = yglu::legacy::make_texture(
-                            width, height, 4, (unsigned char*)ldr.data(), false,
-                            false);
-                    } else {
-                        if (texture_id)
-                            yglu::legacy::clear_texture(&texture_id);
-                        texture_id = yglu::modern::make_texture(
-                            width, height, 4, (unsigned char*)ldr.data(), false,
-                            false, false);
-                    }
-
-                    // updated blocks
-                    blocks = make_image_blocks(width, height, block_size);
-                    scene_updated = true;
-                }));
-
-        // window refresh callback
-        context.window_refresh.push_back(
-            std::function<void(const yui::info& info)>(
-                [&](const yui::info& info) {
-                    auto background = backgrounds[cur_background];
-                    glClearColor(background[0], background[1], background[2],
-                                 background[3]);
-                    glDisable(GL_DEPTH_TEST);
-                    glClear(GL_COLOR_BUFFER_BIT);
-
-                    if (legacy_gl) {
-                        yglu::legacy::draw_image(texture_id, width, height,
-                                                 width, height, 0, 0, 1);
-                    } else {
-                        yglu::modern::shade_image(texture_id, width, height,
-                                                  width, height, 0, 0, 1);
-                    }
-                }));
-
-        // check continue callback
-        context.update.push_back(std::function<int(const yui::info& info)>([&](
-            const yui::info& info) {
-            if (scene_updated) {
-                // update camera
-                auto& cam = scene.cameras[camera];
-                auto& trace_cam = trace_scene.cameras[camera];
-                trace_cam = {cam.frame, cam.yfov, cam.aspect, cam.aperture,
-                             cam.focus};
-
-                // render preview
-                ytrace::trace_image(trace_scene, camera, preview, 1, params);
-                for (auto qj = 0; qj < height / block_size; qj++) {
-                    for (auto qi = 0; qi < width / block_size; qi++) {
-                        for (auto j = qj * block_size;
-                             j < ym::min((qj + 1) * block_size, height); j++) {
-                            for (auto i = qi * block_size;
-                                 i < ym::min((qi + 1) * block_size, width);
-                                 i++) {
-                                hdr[{i, j}] = preview[{qi, qj}];
-                            }
-                        }
-                    }
-                }
-                ym::exposure_gamma(hdr, ldr, exposure, gamma);
-                if (legacy_gl) {
-                    yglu::legacy::update_texture(texture_id, width, height, 4,
-                                                 (unsigned char*)ldr.data(),
-                                                 false);
-                } else {
-                    yglu::modern::update_texture(texture_id, width, height, 4,
-                                                 (unsigned char*)ldr.data(),
-                                                 false);
-                }
-
-                // reset current counters
-                cur_sample = 0;
-                cur_block = 0;
-                scene_updated = false;
-            } else {
-                if (cur_sample == samples) return 0;
-                futures.clear();
-                for (auto b = 0;
-                     cur_block < blocks.size() && b < blocks_per_update;
-                     cur_block++, b++) {
-                    futures.push_back(pool.enqueue([=, &trace_scene, &hdr, &ldr,
-                                                    &blocks]() {
-                        ytrace::trace_block(
-                            trace_scene, camera, hdr, samples,
-                            blocks[cur_block].first, blocks[cur_block].second,
-                            {cur_sample, cur_sample + 1}, params, true);
-                        ym::exposure_gamma(hdr, ldr, exposure, gamma,
-                                           blocks[cur_block].first,
-                                           blocks[cur_block].second);
-                    }));
-                }
-                for (auto& future : futures) future.wait();
-                if (hdr_exposure != exposure || hdr_gamma != gamma) {
-                    ym::exposure_gamma(hdr, ldr, exposure, gamma);
-                    hdr_exposure = exposure;
-                    hdr_gamma = gamma;
-                }
-                if (legacy_gl) {
-                    yglu::legacy::update_texture(texture_id, width, height, 4,
-                                                 (unsigned char*)ldr.data(),
-                                                 false);
-                } else {
-                    yglu::modern::update_texture(texture_id, width, height, 4,
-                                                 (unsigned char*)ldr.data(),
-                                                 false);
-                }
-                if (cur_block == blocks.size()) {
-                    cur_block = 0;
-                    cur_sample++;
-                }
-            }
-
-            return 1;
-        }));
-
-        // text callback
-        context.text.push_back(
-            std::function<void(const yui::info& info, unsigned int)>(
-                [&](const yui::info& info, unsigned int key) {
-                    switch (key) {
-                        case '1':
-                            exposure = 1;
-                            gamma = 1;
-                            break;
-                        case '2':
-                            exposure = 1;
-                            gamma = 2.2f;
-                            break;
-                        case '[': exposure -= 1; break;
-                        case ']': exposure += 1; break;
-                        case '{': gamma -= 0.1f; break;
-                        case '}': gamma += 0.1f; break;
-                        case 's': {
-                            save_image(imfilename.c_str(), hdr, ldr);
-                        } break;
-                        case 'C': {
-                            camera = (camera + 1) % scene.cameras.size();
-                            scene_updated = true;
-                        } break;
-                        case 'b':
-                            cur_background =
-                                (cur_background + 1) % backgrounds.size();
-                            break;
-                        default: printf("unsupported key\n"); break;
-                    }
-                }));
-
-        // mouse position callback
-        context.mouse_pos.push_back(std::function<void(const yui::info& info)>(
-            [&](const yui::info& info) {
-                if (info.mouse_button) {
-                    auto dolly = 0.0f;
-                    auto pan = ym::zero2f;
-                    auto rotate = ym::zero2f;
-                    switch (info.mouse_button) {
-                        case 1:
-                            rotate = (info.mouse_pos - info.mouse_last) / 100;
-                            break;
-                        case 2:
-                            dolly = (info.mouse_pos[0] - info.mouse_last[0]) /
-                                    100.0f;
-                            break;
-                        case 3:
-                            pan = (info.mouse_pos - info.mouse_last) / 100;
-                            break;
-                        default: break;
-                    }
-
-                    auto& cam = scene.cameras[camera];
-                    ym::turntable(cam.frame, cam.focus, rotate, dolly, pan);
-
-                    scene_updated = true;
-                }
-            }));
-
         // run ui
-        yui::ui_loop(context, (int)std::round(aspect * res), res, "yview",
-                     !legacy_gl);
+        run_ui();
     }
 
     // done

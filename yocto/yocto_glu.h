@@ -1719,6 +1719,7 @@ YGL_API void set_vert(uint prog, uint pos, uint norm, uint texcoord,
 //
 YGL_API void draw_elem(uint prog, int num, uint bid, etype etype) {
     assert(check_error());
+    if (num <= 0) return;
     auto etypei = (int)etype;
     modern::set_uniform(prog, "material_etype", &etypei, 1, 1);
     modern::draw_elems(num, bid, etype);
