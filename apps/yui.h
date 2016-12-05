@@ -1,5 +1,5 @@
 //
-// YUI: helpers to define a user interface with GLFW.
+// YGLFW: helper for GLFW code.
 //
 
 //
@@ -38,186 +38,157 @@
 #include <GL/glew.h>
 #else
 #include <OpenGL/gl.h>
+#include <OpenGL/gl3.h>
 #endif
 #include <GLFW/glfw3.h>
 // clang-format on
 
-#include "../yocto/yocto_math.h"
-#include <functional>
+#include <cstring>
 #include <string>
 
+#define NK_INCLUDE_FIXED_TYPES
+#define NK_INCLUDE_STANDARD_IO
+#define NK_INCLUDE_STANDARD_VARARGS
+#define NK_INCLUDE_DEFAULT_ALLOCATOR
+#define NK_INCLUDE_VERTEX_BUFFER_OUTPUT
+#define NK_INCLUDE_FONT_BAKING
+#define NK_INCLUDE_DEFAULT_FONT
+#define NK_IMPLEMENTATION
+#define NK_GLFW_GL3_IMPLEMENTATION
+#define NK_GLFW_GL2_IMPLEMENTATION
+#include "nuklear/nuklear.h"
+#include "nuklear/nuklear_glfw_gl3.h"
+#include "nuklear/nuklear_glfw_gl2.h"
+
+#include "../yocto/yocto_math.h"
+
 namespace yui {
-
-struct info {
-    ym::vec2i win_size;                 // window size
-    ym::vec2i framebuffer_size;         // framebuffer size
-    int mouse_button = 0;               // mouse button
-    ym::vec2f mouse_pos = ym::zero2f;   // mouse position
-    ym::vec2f mouse_last = ym::zero2f;  // last mouse position
-};
-
-using init_cb = std::function<void(const info& info)>;
-using text_cb = std::function<void(const info& info, unsigned int key)>;
-using window_size_cb = std::function<void(const info& info)>;
-using framebuffer_size_cb = std::function<void(const info& info)>;
-using mouse_button_cb = std::function<void(const info& info)>;
-using mouse_pos_cb = std::function<void(const info& info)>;
-using window_refresh_cb = std::function<void(const info& info)>;
-using update_cb = std::function<int(const info& info)>;
-
-struct context {
-    // configuring options
-    std::vector<init_cb> init;
-    std::vector<text_cb> text;
-    std::vector<window_size_cb> window_size;
-    std::vector<framebuffer_size_cb> framebuffer_size;
-    std::vector<mouse_button_cb> mouse_button;
-    std::vector<mouse_pos_cb> mouse_pos;
-    std::vector<window_refresh_cb> window_refresh;
-    std::vector<update_cb> update;
-
-    // information
-    info _info;  // current info
-};
-
-// callbacks
-static inline void _init_callback(GLFWwindow* window) {
-    auto& ctx = *(context*)glfwGetWindowUserPointer(window);
-    for (auto& cb : ctx.init) cb(ctx._info);
-}
-
-static inline void _text_callback(GLFWwindow* window, unsigned int key) {
-    auto& ctx = *(context*)glfwGetWindowUserPointer(window);
-    for (auto& cb : ctx.text) cb(ctx._info, key);
-}
-
-static inline void _window_size_callback(GLFWwindow* window, int w, int h) {
-    auto& ctx = *(context*)glfwGetWindowUserPointer(window);
-    ctx._info.win_size = {w, h};
-    for (auto& cb : ctx.window_size) cb(ctx._info);
-}
-
-static inline void _framebuffer_size_callback(GLFWwindow* window, int w,
-                                              int h) {
-    auto& ctx = *(context*)glfwGetWindowUserPointer(window);
-    glViewport(0, 0, w, h);
-    ctx._info.framebuffer_size = {w, h};
-    for (auto& cb : ctx.framebuffer_size) cb(ctx._info);
-}
-
-static inline void _mouse_button_callback(GLFWwindow* window, int button,
-                                          int action, int mods) {
-    auto& ctx = *(context*)glfwGetWindowUserPointer(window);
-    if (action == GLFW_RELEASE) {
-        ctx._info.mouse_button = 0;
-    } else if (button == GLFW_MOUSE_BUTTON_1 && !mods) {
-        ctx._info.mouse_button = 1;
-    } else if (button == GLFW_MOUSE_BUTTON_1 && (mods & GLFW_MOD_CONTROL)) {
-        ctx._info.mouse_button = 2;
-    } else if (button == GLFW_MOUSE_BUTTON_1 && (mods & GLFW_MOD_SHIFT)) {
-        ctx._info.mouse_button = 3;
-    } else if (button == GLFW_MOUSE_BUTTON_2) {
-        ctx._info.mouse_button = 2;
-    } else {
-        ctx._info.mouse_button = 0;
-    }
-    for (auto& cb : ctx.mouse_button) cb(ctx._info);
-}
-
-static inline void _mouse_pos_callback(GLFWwindow* window, double x, double y) {
-    auto& ctx = *(context*)glfwGetWindowUserPointer(window);
-    ctx._info.mouse_last = ctx._info.mouse_pos;
-    ctx._info.mouse_pos = {(float)x, (float)y};
-    for (auto& cb : ctx.mouse_pos) cb(ctx._info);
-}
-
-static inline void _window_refresh_callback(GLFWwindow* window) {
-    auto& ctx = *(context*)glfwGetWindowUserPointer(window);
-    for (auto& cb : ctx.window_refresh) cb(ctx._info);
-    glfwSwapBuffers(window);
-}
-
-static inline int _update_callback(GLFWwindow* window) {
-    auto& ctx = *(context*)glfwGetWindowUserPointer(window);
-    auto action = 0;
-    for (auto& cb : ctx.update) {
-        auto up = cb(ctx._info);
-        if (up < 0)
-            action = -1;
-        else
-            action = ym::max(action, up);
-    }
-    return action;
-}
-
-static inline void _error_callback(int error, const char* description) {
+//
+// Support
+//
+static inline void _glfw_error_callback(int error, const char* description) {
     printf("GLFW error: %s\n", description);
 }
 
-static inline void _print_gamma_ramp() {
-    auto& ramp = *glfwGetGammaRamp(glfwGetPrimaryMonitor());
-    for (auto i = 0; i < ramp.size; i++) {
-        printf("%03d %3.3f %3.3f %3.3f\n", i, ramp.red[i] / 65535.0f,
-               ramp.green[i] / 65535.0f, ramp.blue[i] / 65535.0f);
-    }
-}
-
-inline bool ui_loop(context& context, int width, int height,
-                    const std::string& title, bool modern = false) {
+//
+// initialize glfw
+//
+inline GLFWwindow* init_glfw(const ym::vec2i& size, const std::string& title,
+                             bool legacy_gl, void* ctx = nullptr,
+                             GLFWcharfun text_callback = nullptr) {
     // window
-    if (!glfwInit()) return false;
+    if (!glfwInit()) return nullptr;
 
     // profile creation
-    if (modern) {
+    if (!legacy_gl) {
         glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+#if __APPLE__
         glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+#endif
         glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     }
 
-    auto window = glfwCreateWindow(width, height, title.c_str(), 0, 0);
+    auto window = glfwCreateWindow(size[0], size[1], title.c_str(), 0, 0);
     glfwMakeContextCurrent(window);
-    glfwSetWindowUserPointer(window, &context);
+    glfwSetWindowUserPointer(window, ctx);
 
-    // callbacks
-    glfwSetErrorCallback(_error_callback);
-    glfwSetCharCallback(window, _text_callback);
-    glfwSetWindowSizeCallback(window, _window_size_callback);
-    glfwSetFramebufferSizeCallback(window, _framebuffer_size_callback);
-    glfwSetMouseButtonCallback(window, _mouse_button_callback);
-    glfwSetCursorPosCallback(window, _mouse_pos_callback);
-    glfwSetWindowRefreshCallback(window, _window_refresh_callback);
+    glfwSetErrorCallback(_glfw_error_callback);
+    if (text_callback) glfwSetCharCallback(window, text_callback);
 
-    // get initial values
-    int w, h;
-    glfwGetWindowSize(window, &w, &h);
-    context._info.win_size = {w, h};
-    glfwGetFramebufferSize(window, &w, &h);
-    context._info.framebuffer_size = {w, h};
+    return window;
+}
 
-// init gl extensions
-#ifndef __APPLE__
-    if (glewInit() != GLEW_OK) exit(EXIT_FAILURE);
-#endif
-
-    // load textures
-    _init_callback(window);
-
-    // ui loop
-    while (!glfwWindowShouldClose(window)) {
-        _window_refresh_callback(window);
-        auto update = _update_callback(window);
-        if (update < 0) break;
-        if (update > 0)
-            glfwPollEvents();
-        else
-            glfwWaitEvents();
-    }
-
+//
+// Clear glfw
+//
+inline void clear_glfw(GLFWwindow* window) {
     glfwDestroyWindow(window);
     glfwTerminate();
+}
 
-    return true;
+//
+// Mouse button
+//
+inline int mouse_button(GLFWwindow* window) {
+    auto mouse1 = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_1) == GLFW_PRESS;
+    auto mouse2 = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_2) == GLFW_PRESS;
+    auto mouse3 = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_3) == GLFW_PRESS;
+    if (mouse1) return 1;
+    if (mouse2) return 2;
+    if (mouse3) return 3;
+#if 0
+        if (action == GLFW_RELEASE) {
+            vparams.mouse_button = 0;
+        } else if (button == GLFW_MOUSE_BUTTON_1 && !mods) {
+            vparams.mouse_button = 1;
+        } else if (button == GLFW_MOUSE_BUTTON_1 && (mods & GLFW_MOD_CONTROL)) {
+            vparams.mouse_button = 2;
+        } else if (button == GLFW_MOUSE_BUTTON_1 && (mods & GLFW_MOD_SHIFT)) {
+            vparams.mouse_button = 3;
+        } else if (button == GLFW_MOUSE_BUTTON_2) {
+            vparams.mouse_button = 2;
+        } else {
+            vparams.mouse_button = 0;
+        }
+#endif
+    return 0;
+}
+
+//
+// Mouse position
+//
+inline ym::vec2f mouse_pos(GLFWwindow* window) {
+    double x, y;
+    glfwGetCursorPos(window, &x, &y);
+    return {(float)x, (float)y};
+}
+
+//
+// Window size
+//
+inline ym::vec2i window_size(GLFWwindow* window) {
+    auto ret = ym::zero2i;
+    glfwGetWindowSize(window, &ret[0], &ret[1]);
+    return ret;
+}
+
+//
+// Framebuffer size
+//
+inline ym::vec2i framebuffer_size(GLFWwindow* window) {
+    auto ret = ym::zero2i;
+    glfwGetFramebufferSize(window, &ret[0], &ret[1]);
+    return ret;
+}
+
+//
+// Nuklear
+//
+inline nk_context* init_nuklear(GLFWwindow* window, bool legacy_gl) {
+    if (legacy_gl) {
+        auto nuklear_ctx = nk_glfw3_gl2_init(window, NK_GLFW3_GL2_DEFAULT);
+        nk_font_atlas* atlas;
+        nk_glfw3_gl2_font_stash_begin(&atlas);
+        nk_glfw3_gl2_font_stash_end();
+        return nuklear_ctx;
+    } else {
+        auto nuklear_ctx = nk_glfw3_gl3_init(window, NK_GLFW3_GL3_DEFAULT);
+        nk_font_atlas* atlas;
+        nk_glfw3_gl3_font_stash_begin(&atlas);
+        nk_glfw3_gl3_font_stash_end();
+        return nuklear_ctx;
+    }
+}
+
+//
+// Nuklear
+//
+inline void clear_nuklear(nk_context* ctx, bool legacy_gl) {
+    if (legacy_gl) {
+    } else {
+        nk_glfw3_gl3_shutdown();
+    }
 }
 
 }  // namespace
