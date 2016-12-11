@@ -30,8 +30,6 @@
 #include "yui.h"
 
 #include "../yocto/yocto_cmd.h"
-#include "../yocto/yocto_math.h"
-#include "../yocto/yocto_shape.h"
 
 // scene
 std::string filename;

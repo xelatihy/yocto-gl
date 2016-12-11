@@ -47,30 +47,35 @@
 #include "../yocto/yocto_obj.h"
 #include "../yocto/yocto_shape.h"
 #include "../yocto/yocto_glu.h"
-#include "../yocto/yocto_bvh.h"
 
 namespace yapp {
+
+//
+// Using directives
+//
+using namespace ym;
+using std::string;
 
 //
 // Scene geometry
 //
 struct shape {
     // whole shape data
-    std::string name;  // shape name
-    int matid = -1;    // index in the material array (-1 if not found)
-    ym::frame3f frame = ym::identity_frame3f;  // frame
+    string name;     // shape name
+    int matid = -1;  // index in the material array (-1 if not found)
+    frame3f frame = identity_frame3f;  // frame
 
     // shape elements
-    std::vector<int> points;           // points
-    std::vector<ym::vec2i> lines;      // lines
-    std::vector<ym::vec3i> triangles;  // triangles
+    vector<int> points;       // points
+    vector<vec2i> lines;      // lines
+    vector<vec3i> triangles;  // triangles
 
     // vertex data
-    std::vector<ym::vec3f> pos;       // per-vertex position (3 float)
-    std::vector<ym::vec3f> norm;      // per-vertex normals (3 float)
-    std::vector<ym::vec2f> texcoord;  // per-vertex texcoord (2 float)
-    std::vector<ym::vec3f> color;     // [extension] per-vertex color (3 float)
-    std::vector<float> radius;        // [extension] per-vertex radius (1 float)
+    vector<vec3f> pos;       // per-vertex position (3 float)
+    vector<vec3f> norm;      // per-vertex normals (3 float)
+    vector<vec2f> texcoord;  // per-vertex texcoord (2 float)
+    vector<vec3f> color;     // [extension] per-vertex color (3 float)
+    vector<float> radius;    // [extension] per-vertex radius (1 float)
 };
 
 //
@@ -78,13 +83,13 @@ struct shape {
 //
 struct material {
     // whole material data
-    std::string name;  // material name
+    string name;  // material name
 
     // color information
-    ym::vec3f ke = ym::zero3f;  // emission color
-    ym::vec3f kd = ym::zero3f;  // diffuse color
-    ym::vec3f ks = ym::zero3f;  // specular color
-    float rs = 0.0001;          // roughness
+    vec3f ke = zero3f;  // emission color
+    vec3f kd = zero3f;  // diffuse color
+    vec3f ks = zero3f;  // specular color
+    float rs = 0.0001;  // roughness
 
     // indices in the texture array (-1 if not found)
     int ke_txt = -1;
@@ -97,42 +102,42 @@ struct material {
 // Scene Texture
 //
 struct texture {
-    std::string path;          // path
-    ym::image<ym::vec4f> hdr;  // if loaded, hdr data
-    ym::image<ym::vec4b> ldr;  // if loaded, ldr data
+    string path;       // path
+    image<vec4f> hdr;  // if loaded, hdr data
+    image<vec4b> ldr;  // if loaded, ldr data
 };
 
 //
 // Scene Camera
 //
 struct camera {
-    std::string name;                          // name
-    ym::frame3f frame = ym::identity_frame3f;  // frame
-    bool ortho = false;                        // ortho camera
-    float yfov = std::tan(ym::pif / 3);        // vertical field of view
-    float aspect = 16.0f / 9.0f;               // aspect ratio
-    float aperture = 0;                        // lens aperture
-    float focus = 1;                           // focus distance
+    string name;                       // name
+    frame3f frame = identity_frame3f;  // frame
+    bool ortho = false;                // ortho camera
+    float yfov = tan(pif / 3);         // vertical field of view
+    float aspect = 16.0f / 9.0f;       // aspect ratio
+    float aperture = 0;                // lens aperture
+    float focus = 1;                   // focus distance
 };
 
 //
 // Envinonment map
 //
 struct environment {
-    std::string name;  // name
-    int matid = -1;    // index of material in material array (-1 if not found)
-    ym::frame3f frame = ym::identity_frame3f;  // frame
+    string name;     // name
+    int matid = -1;  // index of material in material array (-1 if not found)
+    frame3f frame = identity_frame3f;  // frame
 };
 
 //
 // Asset
 //
 struct scene {
-    std::vector<shape> shapes;              // shape array
-    std::vector<material> materials;        // material array
-    std::vector<texture> textures;          // texture array
-    std::vector<camera> cameras;            // camera array
-    std::vector<environment> environments;  // environment array
+    vector<shape> shapes;              // shape array
+    vector<material> materials;        // material array
+    vector<texture> textures;          // texture array
+    vector<camera> cameras;            // camera array
+    vector<environment> environments;  // environment array
 };
 
 //
@@ -168,17 +173,16 @@ inline const int* get_elems(const shape& shape) {
     return nullptr;
 }
 
-inline ym::image<ym::vec4b> make_image4b(int w, int h, int nc,
-                                         const unsigned char* d) {
-    auto img = ym::image<ym::vec4b>({w, h}, ym::vec4b(0, 0, 0, 255));
+inline image<vec4b> make_image4b(int w, int h, int nc, const unsigned char* d) {
+    auto img = image<vec4b>({w, h}, vec4b(0, 0, 0, 255));
     for (auto i = 0; i < w * h; i++) {
         for (auto c = 0; c < nc; c++) img.data()[i][c] = d[i * nc + c];
     }
     return img;
 }
 
-inline ym::image<ym::vec4f> make_image4f(int w, int h, int nc, const float* d) {
-    auto img = ym::image<ym::vec4f>({w, h}, ym::vec4f(0, 0, 0, 1));
+inline image<vec4f> make_image4f(int w, int h, int nc, const float* d) {
+    auto img = image<vec4f>({w, h}, vec4f(0, 0, 0, 1));
     for (auto i = 0; i < w * h; i++) {
         for (auto c = 0; c < nc; c++) img.data()[i][c] = d[i * nc + c];
     }
@@ -189,27 +193,27 @@ inline ym::image<ym::vec4f> make_image4f(int w, int h, int nc, const float* d) {
 // Conversions
 //
 template <typename T, size_t N, unsigned long M>
-inline ym::mat<T, N, M> vcast(const std::array<std::array<T, N>, M>& v) {
-    return *reinterpret_cast<const ym::mat<T, N, M>*>(&v);
+inline mat<T, N, M> vcast(const array<array<T, N>, M>& v) {
+    return *reinterpret_cast<const mat<T, N, M>*>(&v);
 }
 template <typename T, size_t N, size_t M>
-inline std::array<std::array<T, N>, M> vcast(const ym::mat<T, N, M>& v) {
-    return *reinterpret_cast<const std::array<std::array<T, N>, M>*>(&v);
+inline array<array<T, N>, M> vcast(const mat<T, N, M>& v) {
+    return *reinterpret_cast<const array<array<T, N>, M>*>(&v);
 }
 template <typename T, size_t N, size_t M>
-inline ym::mat<T, N, M> fvcast(const std::array<T, N * M>& v) {
-    return *reinterpret_cast<const ym::mat<T, N, M>*>(&v);
+inline mat<T, N, M> fvcast(const array<T, N * M>& v) {
+    return *reinterpret_cast<const mat<T, N, M>*>(&v);
 }
 template <typename T, size_t N, size_t M>
-inline std::array<T, N * M> fvcast(const ym::mat<T, N, M>& v) {
-    return *reinterpret_cast<const std::array<T, N * M>*>(&v);
+inline array<T, N * M> fvcast(const mat<T, N, M>& v) {
+    return *reinterpret_cast<const array<T, N * M>*>(&v);
 }
 
 //
 // Loads a scene from obj.
 //
-inline bool load_obj_scene(const std::string& filename, scene& scene,
-                           std::string& errmsg) {
+inline bool load_obj_scene(const string& filename, scene& scene,
+                           string& errmsg) {
     // clear scene
     scene = yapp::scene();
 
@@ -228,10 +232,10 @@ inline bool load_obj_scene(const std::string& filename, scene& scene,
 
     // convert cameras
     for (auto& fl_cam : fl_scene.cameras) {
-        scene.cameras.push_back({});
+        scene.cameras.emplace_back();
         auto& cam = scene.cameras.back();
         cam.name = fl_cam.name;
-        cam.frame = ym::to_frame(vcast(fl_cam.xform));
+        cam.frame = to_frame(vcast(fl_cam.xform));
         cam.ortho = fl_cam.ortho;
         cam.yfov = fl_cam.yfov;
         cam.aspect = fl_cam.aspect;
@@ -241,30 +245,26 @@ inline bool load_obj_scene(const std::string& filename, scene& scene,
 
     // convert shapes
     for (auto& fl_shape : fl_scene.shapes) {
-        scene.shapes.push_back({});
+        scene.shapes.emplace_back();
         auto& sh = scene.shapes.back();
         sh.name = fl_shape.name;
-        sh.frame = ym::identity_frame3f;
+        sh.frame = identity_frame3f;
         sh.matid = fl_shape.matid;
-        sh.pos =
-            std::vector<ym::vec3f>(fl_shape.pos.begin(), fl_shape.pos.end());
-        sh.norm =
-            std::vector<ym::vec3f>(fl_shape.norm.begin(), fl_shape.norm.end());
-        sh.texcoord = std::vector<ym::vec2f>(fl_shape.texcoord.begin(),
-                                             fl_shape.texcoord.end());
-        sh.color = std::vector<ym::vec3f>(fl_shape.color.begin(),
-                                          fl_shape.color.end());
+        sh.pos = vector<vec3f>(fl_shape.pos.begin(), fl_shape.pos.end());
+        sh.norm = vector<vec3f>(fl_shape.norm.begin(), fl_shape.norm.end());
+        sh.texcoord =
+            vector<vec2f>(fl_shape.texcoord.begin(), fl_shape.texcoord.end());
+        sh.color = vector<vec3f>(fl_shape.color.begin(), fl_shape.color.end());
         sh.radius = fl_shape.radius;
         sh.points = fl_shape.points;
-        sh.lines = std::vector<ym::vec2i>(fl_shape.lines.begin(),
-                                          fl_shape.lines.end());
-        sh.triangles = std::vector<ym::vec3i>(fl_shape.triangles.begin(),
-                                              fl_shape.triangles.end());
+        sh.lines = vector<vec2i>(fl_shape.lines.begin(), fl_shape.lines.end());
+        sh.triangles =
+            vector<vec3i>(fl_shape.triangles.begin(), fl_shape.triangles.end());
     }
 
     // convert materials
     for (auto& fl_mat : fl_scene.materials) {
-        scene.materials.push_back({});
+        scene.materials.emplace_back();
         auto& mat = scene.materials.back();
         mat.name = fl_mat.name;
         mat.ke = fl_mat.ke;
@@ -279,7 +279,7 @@ inline bool load_obj_scene(const std::string& filename, scene& scene,
 
     // convert textures
     for (auto& fl_txt : fl_scene.textures) {
-        scene.textures.push_back({});
+        scene.textures.emplace_back();
         auto& txt = scene.textures.back();
         txt.path = fl_txt.path;
         if (!fl_txt.datab.empty())
@@ -292,10 +292,10 @@ inline bool load_obj_scene(const std::string& filename, scene& scene,
 
     // convert envs
     for (auto& fl_env : fl_scene.environments) {
-        scene.environments.push_back({});
+        scene.environments.emplace_back();
         auto& env = scene.environments.back();
         env.name = fl_env.name;
-        env.frame = ym::to_frame(vcast(fl_env.xform));
+        env.frame = to_frame(vcast(fl_env.xform));
         env.matid = fl_env.matid;
     }
 
@@ -306,17 +306,17 @@ inline bool load_obj_scene(const std::string& filename, scene& scene,
 //
 // Saves a scene to obj.
 //
-inline bool save_obj_scene(const std::string& filename, const scene& scene,
-                           std::string& errmsg) {
+inline bool save_obj_scene(const string& filename, const scene& scene,
+                           string& errmsg) {
     // flatten to scene
-    auto fl_scene = yobj::fl_obj();
+    auto fl_scene = yobj::fl_scene();
 
     // convert cameras
     for (auto& cam : scene.cameras) {
-        fl_scene.cameras.push_back({});
+        fl_scene.cameras.emplace_back();
         auto& fl_cam = fl_scene.cameras.back();
         fl_cam.name = cam.name;
-        fl_cam.xform = vcast(ym::to_mat(cam.frame));
+        fl_cam.xform = vcast(to_mat(cam.frame));
         fl_cam.ortho = cam.ortho;
         fl_cam.yfov = cam.yfov;
         fl_cam.aspect = cam.aspect;
@@ -326,30 +326,30 @@ inline bool save_obj_scene(const std::string& filename, const scene& scene,
 
     // convert shapes
     for (auto& shape : scene.shapes) {
-        fl_scene.shapes.push_back({});
+        fl_scene.shapes.emplace_back();
         auto& fl_shape = fl_scene.shapes.back();
         fl_shape.name = shape.name;
-        assert(shape.frame == ym::identity_frame3f);
+        assert(shape.frame == identity_frame3f);
         fl_shape.matid = shape.matid;
-        fl_shape.pos = std::vector<std::array<float, 3>>(shape.pos.begin(),
-                                                         shape.pos.end());
-        fl_shape.norm = std::vector<std::array<float, 3>>(shape.norm.begin(),
-                                                          shape.norm.end());
-        fl_shape.texcoord = std::vector<std::array<float, 2>>(
-            shape.texcoord.begin(), shape.texcoord.end());
-        fl_shape.color = std::vector<std::array<float, 3>>(shape.color.begin(),
-                                                           shape.color.end());
+        fl_shape.pos =
+            vector<array<float, 3>>(shape.pos.begin(), shape.pos.end());
+        fl_shape.norm =
+            vector<array<float, 3>>(shape.norm.begin(), shape.norm.end());
+        fl_shape.texcoord = vector<array<float, 2>>(shape.texcoord.begin(),
+                                                    shape.texcoord.end());
+        fl_shape.color =
+            vector<array<float, 3>>(shape.color.begin(), shape.color.end());
         fl_shape.radius = shape.radius;
         fl_shape.points = shape.points;
-        fl_shape.lines = std::vector<std::array<int, 2>>(shape.lines.begin(),
-                                                         shape.lines.end());
-        fl_shape.triangles = std::vector<std::array<int, 3>>(
-            shape.triangles.begin(), shape.triangles.end());
+        fl_shape.lines =
+            vector<array<int, 2>>(shape.lines.begin(), shape.lines.end());
+        fl_shape.triangles = vector<array<int, 3>>(shape.triangles.begin(),
+                                                   shape.triangles.end());
     }
 
     // convert materials
     for (auto& mat : scene.materials) {
-        fl_scene.materials.push_back({});
+        fl_scene.materials.emplace_back();
         auto& fl_mat = fl_scene.materials.back();
         fl_mat.name = mat.name;
         fl_mat.ke = mat.ke;
@@ -364,17 +364,17 @@ inline bool save_obj_scene(const std::string& filename, const scene& scene,
 
     // convert textures
     for (auto& txt : scene.textures) {
-        fl_scene.textures.push_back({});
+        fl_scene.textures.emplace_back();
         auto& fl_txt = fl_scene.textures.back();
         fl_txt.path = txt.path;
     }
 
     // convert envs
     for (auto& env : scene.environments) {
-        fl_scene.environments.push_back({});
+        fl_scene.environments.emplace_back();
         auto& fl_env = fl_scene.environments.back();
         fl_env.name = env.name;
-        fl_env.xform = vcast(ym::to_mat(env.frame));
+        fl_env.xform = vcast(to_mat(env.frame));
         fl_env.matid = env.matid;
     }
 
@@ -389,17 +389,17 @@ inline bool save_obj_scene(const std::string& filename, const scene& scene,
 //
 // Saves a scene to gltf.
 //
-inline bool save_gltf_scene(const std::string& filename, const scene& scene,
-                            std::string& errmsg) {
+inline bool save_gltf_scene(const string& filename, const scene& scene,
+                            string& errmsg) {
     // flatten to scene
     auto fl_scene = ygltf::fl_gltf();
 
     // convert cameras
     for (auto& cam : scene.cameras) {
-        fl_scene.cameras.push_back({});
+        fl_scene.cameras.emplace_back();
         auto& fl_cam = fl_scene.cameras.back();
         fl_cam.name = cam.name;
-        fl_cam.xform = fvcast(ym::to_mat(cam.frame));
+        fl_cam.xform = fvcast(to_mat(cam.frame));
         fl_cam.ortho = cam.ortho;
         fl_cam.yfov = cam.yfov;
         fl_cam.aspect = cam.aspect;
@@ -407,33 +407,33 @@ inline bool save_gltf_scene(const std::string& filename, const scene& scene,
 
     // convert shapes
     for (auto& shape : scene.shapes) {
-        fl_scene.meshes.push_back({});
+        fl_scene.meshes.emplace_back();
         auto& fl_mesh = fl_scene.meshes.back();
         fl_mesh.name = shape.name;
-        fl_mesh.xform = fvcast(ym::to_mat(shape.frame));
+        fl_mesh.xform = fvcast(to_mat(shape.frame));
         fl_mesh.primitives.push_back((int)fl_scene.primitives.size());
-        fl_scene.primitives.push_back({});
+        fl_scene.primitives.emplace_back();
         auto& fl_shape = fl_scene.primitives.back();
         fl_shape.material = shape.matid;
-        fl_shape.pos = std::vector<std::array<float, 3>>(shape.pos.begin(),
-                                                         shape.pos.end());
-        fl_shape.norm = std::vector<std::array<float, 3>>(shape.norm.begin(),
-                                                          shape.norm.end());
-        fl_shape.texcoord = std::vector<std::array<float, 2>>(
-            shape.texcoord.begin(), shape.texcoord.end());
-        fl_shape.color = std::vector<std::array<float, 3>>(shape.color.begin(),
-                                                           shape.color.end());
+        fl_shape.pos =
+            vector<array<float, 3>>(shape.pos.begin(), shape.pos.end());
+        fl_shape.norm =
+            vector<array<float, 3>>(shape.norm.begin(), shape.norm.end());
+        fl_shape.texcoord = vector<array<float, 2>>(shape.texcoord.begin(),
+                                                    shape.texcoord.end());
+        fl_shape.color =
+            vector<array<float, 3>>(shape.color.begin(), shape.color.end());
         fl_shape.radius = shape.radius;
         fl_shape.points = shape.points;
-        fl_shape.lines = std::vector<std::array<int, 2>>(shape.lines.begin(),
-                                                         shape.lines.end());
-        fl_shape.triangles = std::vector<std::array<int, 3>>(
-            shape.triangles.begin(), shape.triangles.end());
+        fl_shape.lines =
+            vector<array<int, 2>>(shape.lines.begin(), shape.lines.end());
+        fl_shape.triangles = vector<array<int, 3>>(shape.triangles.begin(),
+                                                   shape.triangles.end());
     }
 
     // convert materials
     for (auto& mat : scene.materials) {
-        fl_scene.materials.push_back({});
+        fl_scene.materials.emplace_back();
         auto& fl_mat = fl_scene.materials.back();
         fl_mat.name = mat.name;
         fl_mat.ke = mat.ke;
@@ -448,7 +448,7 @@ inline bool save_gltf_scene(const std::string& filename, const scene& scene,
 
     // convert textures
     for (auto& txt : scene.textures) {
-        fl_scene.textures.push_back({});
+        fl_scene.textures.emplace_back();
         auto& fl_txt = fl_scene.textures.back();
         fl_txt.path = txt.path;
     }
@@ -466,8 +466,8 @@ inline bool save_gltf_scene(const std::string& filename, const scene& scene,
 //
 // Load gltf scene
 //
-inline bool load_gltf_scene(const std::string& filename, scene& scene,
-                            bool binary, std::string& errmsg) {
+inline bool load_gltf_scene(const string& filename, scene& scene, bool binary,
+                            string& errmsg) {
     // clear scene
     scene = yapp::scene();
 
@@ -486,10 +486,10 @@ inline bool load_gltf_scene(const std::string& filename, scene& scene,
 
     // convert cameras
     for (auto& fl_cam : fl_scene.cameras) {
-        scene.cameras.push_back({});
+        scene.cameras.emplace_back();
         auto& cam = scene.cameras.back();
         cam.name = fl_cam.name;
-        cam.frame = ym::to_frame(fvcast<float, 4, 4>(fl_cam.xform));
+        cam.frame = to_frame(fvcast<float, 4, 4>(fl_cam.xform));
         cam.ortho = fl_cam.ortho;
         cam.yfov = fl_cam.yfov;
         cam.aspect = fl_cam.aspect;
@@ -501,31 +501,29 @@ inline bool load_gltf_scene(const std::string& filename, scene& scene,
     for (auto& fl_mesh : fl_scene.meshes) {
         for (auto& fl_shape_id : fl_mesh.primitives) {
             auto& fl_shape = fl_scene.primitives.at(fl_shape_id);
-            scene.shapes.push_back({});
+            scene.shapes.emplace_back();
             auto& sh = scene.shapes.back();
             sh.name = fl_mesh.name;
-            sh.frame = ym::to_frame(fvcast<float, 4, 4>(fl_mesh.xform));
+            sh.frame = to_frame(fvcast<float, 4, 4>(fl_mesh.xform));
             sh.matid = fl_shape.material;
-            sh.pos = std::vector<ym::vec3f>(fl_shape.pos.begin(),
-                                            fl_shape.pos.end());
-            sh.norm = std::vector<ym::vec3f>(fl_shape.norm.begin(),
-                                             fl_shape.norm.end());
-            sh.texcoord = std::vector<ym::vec2f>(fl_shape.texcoord.begin(),
-                                                 fl_shape.texcoord.end());
-            sh.color = std::vector<ym::vec3f>(fl_shape.color.begin(),
-                                              fl_shape.color.end());
+            sh.pos = vector<vec3f>(fl_shape.pos.begin(), fl_shape.pos.end());
+            sh.norm = vector<vec3f>(fl_shape.norm.begin(), fl_shape.norm.end());
+            sh.texcoord = vector<vec2f>(fl_shape.texcoord.begin(),
+                                        fl_shape.texcoord.end());
+            sh.color =
+                vector<vec3f>(fl_shape.color.begin(), fl_shape.color.end());
             sh.radius = fl_shape.radius;
             sh.points = fl_shape.points;
-            sh.lines = std::vector<ym::vec2i>(fl_shape.lines.begin(),
-                                              fl_shape.lines.end());
-            sh.triangles = std::vector<ym::vec3i>(fl_shape.triangles.begin(),
-                                                  fl_shape.triangles.end());
+            sh.lines =
+                vector<vec2i>(fl_shape.lines.begin(), fl_shape.lines.end());
+            sh.triangles = vector<vec3i>(fl_shape.triangles.begin(),
+                                         fl_shape.triangles.end());
         }
     }
 
     // convert materials
     for (auto& fl_mat : fl_scene.materials) {
-        scene.materials.push_back({});
+        scene.materials.emplace_back();
         auto& mat = scene.materials.back();
         mat.name = fl_mat.name;
         mat.ke = fl_mat.ke;
@@ -540,7 +538,7 @@ inline bool load_gltf_scene(const std::string& filename, scene& scene,
 
     // convert textures
     for (auto& fl_txt : fl_scene.textures) {
-        scene.textures.push_back({});
+        scene.textures.emplace_back();
         auto& txt = scene.textures.back();
         txt.path = fl_txt.path;
         if (!fl_txt.datab.empty())
@@ -558,8 +556,7 @@ inline bool load_gltf_scene(const std::string& filename, scene& scene,
 //
 // Load scene
 //
-inline bool load_scene(const std::string& filename, scene& scene,
-                       std::string& errmsg) {
+inline bool load_scene(const string& filename, scene& scene, string& errmsg) {
     // clear scene
     scene = yapp::scene();
 
@@ -583,8 +580,7 @@ inline bool load_scene(const std::string& filename, scene& scene,
     for (auto& txt : scene.textures) {
         if (txt.hdr.empty() && txt.ldr.empty()) {
             printf("unable to load texture %s\n", txt.path.c_str());
-            txt.ldr =
-                ym::image<ym::vec4b>({1, 1}, ym::vec4b(255, 255, 255, 255));
+            txt.ldr = image<vec4b>({1, 1}, vec4b(255, 255, 255, 255));
         }
     }
 
@@ -606,37 +602,34 @@ inline bool load_scene(const std::string& filename, scene& scene,
     // make camera if not there
     if (!scene.cameras.size()) {
         // find scene bounds
-        auto bbox = ym::invalid_bbox3f;
+        auto bbox = invalid_bbox3f;
         for (auto& shape : scene.shapes) {
-            for (auto& p : shape.pos)
-                bbox += ym::transform_point(shape.frame, p);
+            for (auto& p : shape.pos) bbox += transform_point(shape.frame, p);
         }
-        auto bbox_center = ym::center(bbox);
-        auto bbox_size = ym::diagonal(bbox);
+        auto bbox_center = center(bbox);
+        auto bbox_size = diagonal(bbox);
         auto bbox_msize = fmax(bbox_size[0], fmax(bbox_size[1], bbox_size[2]));
         // create camera
         auto cam = yapp::camera();
         // set up camera
-        auto camera_dir = ym::vec3f{1, 0.4f, 1};
+        auto camera_dir = vec3f{1, 0.4f, 1};
         auto from = camera_dir * bbox_msize + bbox_center;
         auto to = bbox_center;
-        auto up = ym::vec3f{0, 1, 0};
-        cam.frame = ym::lookat_frame3(from, to, up);
+        auto up = vec3f{0, 1, 0};
+        cam.frame = lookat_frame3(from, to, up);
         cam.ortho = false;
         cam.aspect = 16.0f / 9.0f;
-        cam.yfov = 2 * std::atan(0.5f);
+        cam.yfov = 2 * atan(0.5f);
         cam.aperture = 0;
-        cam.focus = ym::length(to - from);
+        cam.focus = length(to - from);
         scene.cameras.push_back(cam);
     } else {
-        auto bbox = ym::invalid_bbox3f;
+        auto bbox = invalid_bbox3f;
         for (auto& shape : scene.shapes) {
-            for (auto& p : shape.pos)
-                bbox += ym::transform_point(shape.frame, p);
+            for (auto& p : shape.pos) bbox += transform_point(shape.frame, p);
         }
         for (auto& cam : scene.cameras) {
-            if (!cam.focus)
-                cam.focus = ym::length(cam.frame.o() - bbox.center());
+            if (!cam.focus) cam.focus = length(cam.frame.o() - bbox.center());
         }
     }
 
@@ -646,8 +639,8 @@ inline bool load_scene(const std::string& filename, scene& scene,
 //
 // Load scene
 //
-inline scene load_scene(const std::string& filename) {
-    std::string errmsg;
+inline scene load_scene(const string& filename) {
+    string errmsg;
     auto sc = scene();
     if (!load_scene(filename, sc, errmsg)) {
         printf("error loading scene: %s\n", errmsg.c_str());
@@ -657,27 +650,11 @@ inline scene load_scene(const std::string& filename) {
 }
 
 //
-// Makes a BVH from a scene
-//
-inline ybvh::scene make_bvh(const yapp::scene& scene) {
-    auto scene_bvh = ybvh::scene();
-    for (auto& shape : scene.shapes) {
-        scene_bvh.shapes.push_back({ym::to_mat(shape.frame),
-                                    ym::to_mat(ym::inverse(shape.frame)),
-                                    shape.points, shape.lines, shape.triangles,
-                                    shape.pos, shape.radius});
-    }
-    ybvh::build_bvh(scene_bvh);
-    return scene_bvh;
-}
-
-//
 // Init shading
 //
 inline void init_shade(const yapp::scene& scene, yglu::uint& shade_prog,
-                       yglu::uint& shade_vao,
-                       std::vector<yglu::uint>& shade_txt,
-                       std::vector<std::array<yglu::uint, 7>>& shade_vbo) {
+                       yglu::uint& shade_vao, vector<yglu::uint>& shade_txt,
+                       vector<array<yglu::uint, 7>>& shade_vbo) {
     yglu::stdshader::make_program(&shade_prog, &shade_vao);
     for (auto& txt : scene.textures) {
         if (!txt.hdr.empty()) {
@@ -729,11 +706,10 @@ inline void init_shade(const yapp::scene& scene, yglu::uint& shade_prog,
 // Display a scene
 //
 inline void shade(const yapp::scene& scene, int cur_camera, yglu::uint prog,
-                  yglu::uint vao, const std::vector<yglu::uint>& txt,
-                  std::vector<std::array<yglu::uint, 7>>& vbo,
-                  const ym::vec4f& background, float exposure, float gamma_,
-                  bool wireframe, bool edges, bool camera_lights,
-                  const ym::vec3f& amb) {
+                  yglu::uint vao, const vector<yglu::uint>& txt,
+                  vector<array<yglu::uint, 7>>& vbo, const vec4f& background,
+                  float exposure, float gamma_, bool wireframe, bool edges,
+                  bool camera_lights, const vec3f& amb) {
     // begin frame
     glEnable(GL_DEPTH_TEST);
     glClearDepth(1);
@@ -744,10 +720,9 @@ inline void shade(const yapp::scene& scene, int cur_camera, yglu::uint prog,
     if (wireframe) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
     auto& cam = scene.cameras[cur_camera];
-    auto camera_xform = ym::to_mat(cam.frame);
-    auto camera_view = ym::to_mat(ym::inverse(cam.frame));
-    auto camera_proj =
-        ym::perspective_mat4(cam.yfov, cam.aspect, 0.1f, 10000.0f);
+    auto camera_xform = to_mat(cam.frame);
+    auto camera_view = to_mat(inverse(cam.frame));
+    auto camera_proj = perspective_mat4(cam.yfov, cam.aspect, 0.1f, 10000.0f);
 
     yglu::stdshader::begin_frame(prog, vao, camera_lights, exposure, gamma_,
                                  vcast(camera_xform), vcast(camera_view),
@@ -755,17 +730,17 @@ inline void shade(const yapp::scene& scene, int cur_camera, yglu::uint prog,
 
     if (!camera_lights) {
         auto nlights = 0;
-        std::array<ym::vec3f, 16> light_pos, light_ke;
-        std::array<yglu::ltype, 16> light_type;
+        array<vec3f, 16> light_pos, light_ke;
+        array<yglu::ltype, 16> light_type;
         for (auto&& shape : scene.shapes) {
             if (shape.matid < 0) continue;
             auto&& mat = scene.materials[shape.matid];
-            if (mat.ke == ym::zero3f) continue;
+            if (mat.ke == zero3f) continue;
             for (auto p : shape.points) {
                 if (nlights >= 16) continue;
                 light_pos[nlights] = shape.pos[p];
                 light_pos[nlights] =
-                    ym::transform_point(shape.frame, light_pos[nlights]);
+                    transform_point(shape.frame, light_pos[nlights]);
                 light_ke[nlights] = mat.ke;
                 light_type[nlights] = yglu::ltype::point;
                 nlights++;
@@ -778,7 +753,7 @@ inline void shade(const yapp::scene& scene, int cur_camera, yglu::uint prog,
 
     for (auto sid = 0; sid < scene.shapes.size(); sid++) {
         auto&& shape = scene.shapes[sid];
-        yglu::stdshader::begin_shape(prog, vcast(ym::to_mat(shape.frame)));
+        yglu::stdshader::begin_shape(prog, vcast(to_mat(shape.frame)));
 
         if (shape.matid >= 0) {
             auto&& mat = scene.materials[shape.matid];
@@ -788,7 +763,7 @@ inline void shade(const yapp::scene& scene, int cur_camera, yglu::uint prog,
                 prog, mat.ke, mat.kd, mat.ks, mat.rs, __txt(mat.ke_txt),
                 __txt(mat.kd_txt), __txt(mat.ks_txt), __txt(mat.rs_txt), false);
         } else {
-            auto kd = ym::vec3f{0.8f, 0.8f, 0.8f};
+            auto kd = vec3f{0.8f, 0.8f, 0.8f};
             yglu::stdshader::set_material(prog, {0, 0, 0}, kd, {0, 0, 0}, 0, 0,
                                           0, 0, 0, false);
         }
@@ -826,8 +801,7 @@ inline void shade(const yapp::scene& scene, int cur_camera, yglu::uint prog,
 //
 // Init shading
 //
-inline void init_draw(const yapp::scene& scene,
-                      std::vector<yglu::uint>& shade_txt) {
+inline void init_draw(const yapp::scene& scene, vector<yglu::uint>& shade_txt) {
     for (auto& txt : scene.textures) {
         if (!txt.hdr.empty()) {
             shade_txt.push_back(yglu::legacy::make_texture(
@@ -846,10 +820,9 @@ inline void init_draw(const yapp::scene& scene,
 // Draw a scene
 //
 inline void draw(const yapp::scene& scene, int cur_camera,
-                 const std::vector<yglu::uint>& txt,
-                 const ym::vec4f& background, float exposure, float gamma_,
-                 bool wireframe, bool edges, bool camera_lights,
-                 const ym::vec3f& amb) {
+                 const vector<yglu::uint>& txt, const vec4f& background,
+                 float exposure, float gamma_, bool wireframe, bool edges,
+                 bool camera_lights, const vec3f& amb) {
     // begin frame
     glEnable(GL_DEPTH_TEST);
     glClearDepth(1);
@@ -860,14 +833,13 @@ inline void draw(const yapp::scene& scene, int cur_camera,
     if (wireframe) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
     auto& cam = scene.cameras[cur_camera];
-    auto camera_xform = ym::to_mat(cam.frame);
-    auto camera_view = ym::to_mat(ym::inverse(cam.frame));
-    auto camera_proj =
-        ym::perspective_mat4(cam.yfov, cam.aspect, 0.1f, 10000.0f);
+    auto camera_xform = to_mat(cam.frame);
+    auto camera_view = to_mat(inverse(cam.frame));
+    auto camera_proj = perspective_mat4(cam.yfov, cam.aspect, 0.1f, 10000.0f);
 
     auto nlights = 0;
-    std::array<ym::vec3f, 16> light_pos, light_ke;
-    std::array<yglu::ltype, 16> light_type;
+    array<vec3f, 16> light_pos, light_ke;
+    array<yglu::ltype, 16> light_type;
 
     yglu::legacy::begin_frame(vcast(camera_xform), vcast(camera_view),
                               vcast(camera_proj), camera_lights, true);
@@ -876,12 +848,12 @@ inline void draw(const yapp::scene& scene, int cur_camera,
         for (auto&& shape : scene.shapes) {
             if (shape.matid < 0) continue;
             auto&& mat = scene.materials[shape.matid];
-            if (mat.ke == ym::zero3f) continue;
+            if (mat.ke == zero3f) continue;
             for (auto p : shape.points) {
                 if (nlights >= 16) continue;
                 light_pos[nlights] = shape.pos[p];
                 light_pos[nlights] =
-                    ym::transform_point(shape.frame, light_pos[nlights]);
+                    transform_point(shape.frame, light_pos[nlights]);
                 light_ke[nlights] = mat.ke;
                 light_type[nlights] = yglu::ltype::point;
                 nlights++;
@@ -893,7 +865,7 @@ inline void draw(const yapp::scene& scene, int cur_camera,
     }
 
     for (auto&& shape : scene.shapes) {
-        yglu::legacy::begin_shape(vcast(ym::to_mat(shape.frame)));
+        yglu::legacy::begin_shape(vcast(to_mat(shape.frame)));
 
         if (shape.matid >= 0) {
             auto&& mat = scene.materials[shape.matid];
@@ -904,7 +876,7 @@ inline void draw(const yapp::scene& scene, int cur_camera,
                 yglu::legacy::specular_roughness_to_exponent(mat.rs),
                 __txt(mat.kd_txt), true);
         } else {
-            auto kd = ym::vec3f{0.8f, 0.8f, 0.8f};
+            auto kd = vec3f{0.8f, 0.8f, 0.8f};
             yglu::legacy::set_material({0, 0, 0}, kd, {0, 0, 0}, 0, 0, true);
         }
 

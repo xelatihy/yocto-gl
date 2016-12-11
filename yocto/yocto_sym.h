@@ -107,59 +107,62 @@
 namespace ysym {
 
 //
+// Using directives
+//
+using namespace ym;
+
+//
 // Rigid shape
 //
 struct shape {
     // shape configuration ------------------------
-    ym::frame3f frame;  // rigid transform
-    ym::vec3f lin_vel;  // linear velocity
-    ym::vec3f ang_vel;  // angular velocity
+    frame3f frame;  // rigid transform
+    vec3f lin_vel;  // linear velocity
+    vec3f ang_vel;  // angular velocity
 
     // physical properties ------------------------
     float density = 1;      // density
     bool simulated = true;  // simulated
 
     // shape data ----------------------------------
-    ym::array_view<ym::vec3i> triangles;  // triangles
-    ym::array_view<ym::vec3f> pos;        // vertex positions
+    array_view<vec3i> triangles;  // triangles
+    array_view<vec3f> pos;        // vertex positions
 
     // [private] computed values ------------------
-    float _mass = 1;                                // mass
-    ym::mat3f _inertia_local = ym::identity_mat3f;  // shape inertia
-    ym::vec3f _centroid_local = ym::zero3f;         // shape center
-    ym::vec3f _centroid_world = ym::zero3f;         // shape center
-    float _mass_inv = 1;                            // mass inverse
-    ym::mat3f _inertia_inv_world =
-        ym::identity_mat3f;  // inverse of inertia tensor (world-space)
-    ym::mat3f _inertia_inv_local =
-        ym::identity_mat3f;  // inverse of inertia tensor (local-space)
+    float _mass = 1;                        // mass
+    mat3f _inertia_local = identity_mat3f;  // shape inertia
+    vec3f _centroid_local = zero3f;         // shape center
+    vec3f _centroid_world = zero3f;         // shape center
+    float _mass_inv = 1;                    // mass inverse
+    mat3f _inertia_inv_world =
+        identity_mat3f;  // inverse of inertia tensor (world-space)
+    mat3f _inertia_inv_local =
+        identity_mat3f;  // inverse of inertia tensor (local-space)
 };
 
 //
 // Collision point and response [private]
 //
 struct _collision {
-    ym::vec2i shapes = ym::zero2i;             // shapes
-    ym::frame3f frame = ym::identity_frame3f;  // collision frame
-    ym::vec3f impulse = ym::zero3f, local_impulse = ym::zero3f;  // impulses
-    ym::vec3f vel_before = ym::zero3f,
-              vel_after = ym::zero3f;  // velocities (for viz)
-    ym::vec3f meff_inv = ym::zero3f;   // effective mass
-    float depth = 0;                   // penetration depth
+    vec2i shapes = zero2i;                           // shapes
+    frame3f frame = identity_frame3f;                // collision frame
+    vec3f impulse = zero3f, local_impulse = zero3f;  // impulses
+    vec3f vel_before = zero3f, vel_after = zero3f;   // velocities (for viz)
+    vec3f meff_inv = zero3f;                         // effective mass
+    float depth = 0;                                 // penetration depth
 };
 
 //
 // Point-scene overlap.
 //
 struct overlap_point {
-    float dist = 0;              // ray distance
-    int sid = -1;                // shape index
-    int eid = -1;                // element index
-    ym::vec3f euv = ym::zero3f;  // element baricentric coordinates
-    bool hit = false;            // whether we hit
+    float dist = 0;      // ray distance
+    int sid = -1;        // shape index
+    int eid = -1;        // element index
+    vec3f euv = zero3f;  // element baricentric coordinates
 
     // check whether it was a hit
-    operator bool() const { return hit; }
+    operator bool() const { return eid >= 0; }
 };
 
 //
@@ -171,7 +174,7 @@ struct overlap_point {
 // Return:
 // - number of intersections
 //
-using overlap_shapes_cb = std::function<int(std::vector<ym::vec2i>& overlaps)>;
+using overlap_shapes_cb = function<vector<vec2i>()>;
 
 //
 // Closest element intersection callback
@@ -190,7 +193,7 @@ using overlap_shapes_cb = std::function<int(std::vector<ym::vec2i>& overlaps)>;
 // - whether we intersect or not
 //
 using overlap_shape_cb =
-    std::function<overlap_point(int sid, const ym::vec3f& pt, float max_dist)>;
+    function<overlap_point(int sid, const vec3f& pt, float max_dist)>;
 
 //
 // Refit data structure after transform updates
@@ -198,20 +201,20 @@ using overlap_shape_cb =
 // Parameters:
 // - xform: transform array
 //
-using overlap_refit_cb = std::function<void()>;
+using overlap_refit_cb = function<void()>;
 
 //
 // Rigid body scene
 //
 struct scene {
     // simulation shapes -----------------------
-    std::vector<shape> shapes;  // shapes
+    vector<shape> shapes;  // shapes
 
     // global simulation values ----------------
-    ym::vec3f gravity = {0.f, -9.82f, 0.f};  // gravity
-    float lin_drag = 0.01;                   // linear drag
-    float ang_drag = 0.01;                   // angular drag
-    int iterations = 20;                     // solver iterations
+    vec3f gravity = {0.f, -9.82f, 0.f};  // gravity
+    float lin_drag = 0.01;               // linear drag
+    float ang_drag = 0.01;               // angular drag
+    int iterations = 20;                 // solver iterations
 
     // overlap callbacks -----------------------
     overlap_shapes_cb overlap_shapes;  // overlap callbacks
@@ -219,14 +222,9 @@ struct scene {
     overlap_refit_cb overlap_refit;    // overlap callbacks
 
     // [private] collision data ----------------
-    std::vector<_collision> _collisions;      // [private] collisions
-    std::vector<ym::vec2i> _shapecollisions;  // [private] shape collisions
+    vector<_collision> _collisions;  // [private] collisions
+    vector<vec2i> _shapecollisions;  // [private] shape collisions
 };
-
-//
-// Scene forward declaration
-//
-struct scene;
 
 //
 // Computes the moments of a shape.
@@ -243,10 +241,9 @@ struct scene;
 // - center: center of mass
 // - inertia: inertia tensore (wrt center of mass)
 //
-YGL_API void compute_moments(const ym::array_view<ym::vec3i>& triangles,
-                             const ym::array_view<ym::vec3f>& pos,
-                             float& volume, ym::vec3f& center,
-                             ym::mat3f& inertia);
+YGL_API void compute_moments(const array_view<vec3i>& triangles,
+                             const array_view<vec3f>& pos, float& volume,
+                             vec3f& center, mat3f& inertia);
 
 //
 // Initialize the simulation
@@ -254,7 +251,7 @@ YGL_API void compute_moments(const ym::array_view<ym::vec3i>& triangles,
 // Paramaters:
 // - scene: rigib body scene
 //
-YGL_API void init_simulation(scene& scene);
+YGL_API void init_simulation(scene& scn);
 
 //
 // Advance the simulation one step at a time.
@@ -263,7 +260,7 @@ YGL_API void init_simulation(scene& scene);
 // - scene: rigib body scene
 // - dt: time step
 //
-YGL_API void advance_simulation(scene& scene, float dt);
+YGL_API void advance_simulation(scene& scn, float dt);
 
 }  // namespace
 
@@ -284,10 +281,9 @@ namespace ysym {
 // - re-implement this using
 // https://github.com/melax/sandbox/blob/master/include/geometric.h
 //
-YGL_API void compute_moments(const ym::array_view<ym::vec3i>& triangles,
-                             const ym::array_view<ym::vec3f>& pos,
-                             float& volume, ym::vec3f& center,
-                             ym::mat3f& inertia) {
+YGL_API void compute_moments(const array_view<vec3i>& triangles,
+                             const array_view<vec3f>& pos, float& volume,
+                             vec3f& center, mat3f& inertia) {
     // order:  1, x, y, z, x^2, y^2, z^2, xy, yz, zx
     float integral[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
 
@@ -297,7 +293,7 @@ YGL_API void compute_moments(const ym::array_view<ym::vec3i>& triangles,
         // Get cross product of edges and normal vector.
         auto V1mV0 = v1 - v0;
         auto V2mV0 = v2 - v0;
-        ym::vec3f N = ym::cross(V1mV0, V2mV0);
+        vec3f N = cross(V1mV0, V2mV0);
 
         // Compute integral terms.
         auto tmp0 = v0[0] + v1[0];
@@ -347,7 +343,7 @@ YGL_API void compute_moments(const ym::array_view<ym::vec3i>& triangles,
     volume = integral[0];
 
     // center of mass
-    center = ym::vec3f(integral[1], integral[2], integral[3]) / volume;
+    center = vec3f(integral[1], integral[2], integral[3]) / volume;
 
     // inertia relative to center
     inertia[0][0] = integral[5] + integral[6] -
@@ -367,29 +363,27 @@ YGL_API void compute_moments(const ym::array_view<ym::vec3i>& triangles,
 //
 // Compute collisions.
 //
-static inline void _compute_collision(scene& scene, const ym::vec2i& shapes) {
-    auto& shape1 = scene.shapes[shapes[0]];
-    auto& shape2 = scene.shapes[shapes[1]];
+static inline void _compute_collision(scene& scn, const vec2i& shapes) {
+    auto& shape1 = scn.shapes[shapes[0]];
+    auto& shape2 = scn.shapes[shapes[1]];
     for (auto& p2 : shape2.pos) {
-        auto p = ym::transform_point(shape2.frame, p2);
-        auto overlap = scene.overlap_shape(shapes[0], p,
-                                           std::numeric_limits<float>::max());
+        auto p = transform_point(shape2.frame, p2);
+        auto overlap =
+            scn.overlap_shape(shapes[0], p, std::numeric_limits<float>::max());
         if (!overlap) continue;
         auto triangle = shape1.triangles[overlap.eid];
         auto v0 = shape1.pos[triangle[0]], v1 = shape1.pos[triangle[1]],
              v2 = shape1.pos[triangle[2]];
-        auto tp = ym::transform_point(shape1.frame,
-                                      ym::blerp(v0, v1, v2, overlap.euv));
-        auto n =
-            ym::transform_direction(shape1.frame, ym::cross(v1 - v0, v2 - v0));
+        auto tp = transform_point(shape1.frame, blerp(v0, v1, v2, overlap.euv));
+        auto n = transform_direction(shape1.frame, cross(v1 - v0, v2 - v0));
         const auto eps = -0.01f;
-        auto ptp = ym::normalize(p - tp);
-        if (ym::dot(n, ptp) > eps) continue;
-        scene._collisions.push_back(_collision());
-        auto& col = scene._collisions.back();
+        auto ptp = normalize(p - tp);
+        if (dot(n, ptp) > eps) continue;
+        scn._collisions.push_back(_collision());
+        auto& col = scn._collisions.back();
         col.shapes = shapes;
         col.depth = overlap.dist;
-        col.frame = ym::make_frame3(p, n);
+        col.frame = make_frame3(p, n);
     }
 }
 
@@ -398,7 +392,7 @@ static inline void _compute_collision(scene& scene, const ym::vec2i& shapes) {
 //
 static inline void _compute_collisions(scene& scene) {
     // check which shapes might overlap
-    scene.overlap_shapes(scene._shapecollisions);
+    scene._shapecollisions = scene.overlap_shapes();
     // test all pair-wise objects
     scene._collisions.resize(0);
     for (auto& sc : scene._shapecollisions) {
@@ -413,87 +407,82 @@ static inline void _compute_collisions(scene& scene) {
 //
 // Apply an impulse where the position is relative to the center of mass.
 //
-static inline void _apply_rel_impulse(shape& shape, const ym::vec3f impulse,
-                                      const ym::vec3f rel_pos) {
-    if (!shape.simulated) return;
-    shape.lin_vel += impulse * shape._mass_inv;
-    shape.ang_vel += shape._inertia_inv_world * ym::cross(rel_pos, impulse);
+static inline void _apply_rel_impulse(shape& shp, const vec3f impulse,
+                                      const vec3f rel_pos) {
+    if (!shp.simulated) return;
+    shp.lin_vel += impulse * shp._mass_inv;
+    shp.ang_vel += shp._inertia_inv_world * cross(rel_pos, impulse);
 }
 
 //
 // Shortcut math function.
 //
-static inline float _muldot(const ym::vec3f& v, const ym::mat3f& m) {
-    return ym::dot(v, m * v);
+static inline float _muldot(const vec3f& v, const mat3f& m) {
+    return dot(v, m * v);
 }
 
 //
 // Solve constraints with PGS.
 //
-YGL_API void _solve_constraints(scene& scene, float dt) {
+YGL_API void _solve_constraints(scene& scn, float dt) {
     // initialize computation
-    for (auto& col : scene._collisions) {
-        col.local_impulse = ym::zero3f;
-        col.impulse = ym::zero3f;
-        auto& shape1 = scene.shapes[col.shapes[0]];
-        auto& shape2 = scene.shapes[col.shapes[1]];
+    for (auto& col : scn._collisions) {
+        col.local_impulse = zero3f;
+        col.impulse = zero3f;
+        auto& shape1 = scn.shapes[col.shapes[0]];
+        auto& shape2 = scn.shapes[col.shapes[1]];
         auto r1 = col.frame.o() - shape1._centroid_world,
              r2 = col.frame.o() - shape2._centroid_world;
-        col.meff_inv = {1 / (shape1._mass_inv + shape2._mass_inv +
-                             _muldot(ym::cross(r1, col.frame[0]),
-                                     shape1._inertia_inv_world) +
-                             _muldot(ym::cross(r2, col.frame[0]),
-                                     shape2._inertia_inv_world)),
-                        1 / (shape1._mass_inv + shape2._mass_inv +
-                             _muldot(ym::cross(r1, col.frame[1]),
-                                     shape1._inertia_inv_world) +
-                             _muldot(ym::cross(r2, col.frame[1]),
-                                     shape2._inertia_inv_world)),
-                        1 / (shape1._mass_inv + shape2._mass_inv +
-                             _muldot(ym::cross(r1, col.frame[2]),
-                                     shape1._inertia_inv_world) +
-                             _muldot(ym::cross(r2, col.frame[2]),
-                                     shape2._inertia_inv_world))};
+        col.meff_inv = {
+            1 / (shape1._mass_inv + shape2._mass_inv +
+                 _muldot(cross(r1, col.frame[0]), shape1._inertia_inv_world) +
+                 _muldot(cross(r2, col.frame[0]), shape2._inertia_inv_world)),
+            1 / (shape1._mass_inv + shape2._mass_inv +
+                 _muldot(cross(r1, col.frame[1]), shape1._inertia_inv_world) +
+                 _muldot(cross(r2, col.frame[1]), shape2._inertia_inv_world)),
+            1 / (shape1._mass_inv + shape2._mass_inv +
+                 _muldot(cross(r1, col.frame[2]), shape1._inertia_inv_world) +
+                 _muldot(cross(r2, col.frame[2]), shape2._inertia_inv_world))};
     }
 
     // compute relative velocity for visualization
-    for (auto& col : scene._collisions) {
-        auto& shape1 = scene.shapes[col.shapes[0]];
-        auto& shape2 = scene.shapes[col.shapes[1]];
+    for (auto& col : scn._collisions) {
+        auto& shape1 = scn.shapes[col.shapes[0]];
+        auto& shape2 = scn.shapes[col.shapes[1]];
         auto r1 = col.frame.o() - shape1._centroid_world,
              r2 = col.frame.o() - shape2._centroid_world;
-        auto v1 = shape1.lin_vel + ym::cross(shape1.ang_vel, r1),
-             v2 = shape2.lin_vel + ym::cross(shape2.ang_vel, r2);
+        auto v1 = shape1.lin_vel + cross(shape1.ang_vel, r1),
+             v2 = shape2.lin_vel + cross(shape2.ang_vel, r2);
         col.vel_before = v2 - v1;
     }
 
     // solve constraints
-    for (int i = 0; i < scene.iterations; i++) {
-        for (auto& col : scene._collisions) {
-            auto& shape1 = scene.shapes[col.shapes[0]];
-            auto& shape2 = scene.shapes[col.shapes[1]];
+    for (int i = 0; i < scn.iterations; i++) {
+        for (auto& col : scn._collisions) {
+            auto& shape1 = scn.shapes[col.shapes[0]];
+            auto& shape2 = scn.shapes[col.shapes[1]];
             auto r1 = col.frame.o() - shape1._centroid_world,
                  r2 = col.frame.o() - shape2._centroid_world;
-            auto v1 = shape1.lin_vel + ym::cross(shape1.ang_vel, r1),
-                 v2 = shape2.lin_vel + ym::cross(shape2.ang_vel, r2);
+            auto v1 = shape1.lin_vel + cross(shape1.ang_vel, r1),
+                 v2 = shape2.lin_vel + cross(shape2.ang_vel, r2);
             auto vr = v2 - v1;
             _apply_rel_impulse(shape1, col.impulse, r1);
             _apply_rel_impulse(shape2, -col.impulse, r2);
             // float offset = col.depth*0.8f/dt;
             auto offset = 0.0f;
-            ym::vec3f local_impulse =
-                col.meff_inv * ym::vec3f{-ym::dot(col.frame[0], vr),
-                                         -ym::dot(col.frame[1], vr),
-                                         -ym::dot(col.frame[2], vr) + offset};
+            vec3f local_impulse =
+                col.meff_inv * vec3f{-dot(col.frame[0], vr),
+                                     -dot(col.frame[1], vr),
+                                     -dot(col.frame[2], vr) + offset};
             col.local_impulse += local_impulse;
-            col.local_impulse[2] = ym::clamp(col.local_impulse[2], 0.0f,
-                                             std::numeric_limits<float>::max());
+            col.local_impulse[2] = clamp(col.local_impulse[2], 0.0f,
+                                         std::numeric_limits<float>::max());
             col.local_impulse[0] =
-                ym::clamp(col.local_impulse[0], -col.local_impulse[2] * 0.6f,
-                          col.local_impulse[2] * 0.6f);
+                clamp(col.local_impulse[0], -col.local_impulse[2] * 0.6f,
+                      col.local_impulse[2] * 0.6f);
             col.local_impulse[1] =
-                ym::clamp(col.local_impulse[1], -col.local_impulse[2] * 0.6f,
-                          col.local_impulse[2] - offset * 0.6f);
+                clamp(col.local_impulse[1], -col.local_impulse[2] * 0.6f,
+                      col.local_impulse[2] - offset * 0.6f);
             col.impulse = col.local_impulse[2] * col.frame[2] +
                           col.local_impulse[0] * col.frame[0] +
                           col.local_impulse[1] * col.frame[1];
@@ -503,18 +492,18 @@ YGL_API void _solve_constraints(scene& scene, float dt) {
     }
 
     // compute relative velocity for visualization
-    for (auto& col : scene._collisions) {
-        auto& shape1 = scene.shapes[col.shapes[0]];
-        auto& shape2 = scene.shapes[col.shapes[1]];
+    for (auto& col : scn._collisions) {
+        auto& shape1 = scn.shapes[col.shapes[0]];
+        auto& shape2 = scn.shapes[col.shapes[1]];
         auto r1 = col.frame.o() - shape1._centroid_world,
              r2 = col.frame.o() - shape2._centroid_world;
-        auto v1 = shape1.lin_vel + ym::cross(shape1.ang_vel, r1),
-             v2 = shape2.lin_vel + ym::cross(shape2.ang_vel, r2);
+        auto v1 = shape1.lin_vel + cross(shape1.ang_vel, r1),
+             v2 = shape2.lin_vel + cross(shape2.ang_vel, r2);
         col.vel_after = v2 - v1;
     }
 
     // recompute total impulse and velocity for visualization
-    for (auto& col : scene._collisions) {
+    for (auto& col : scn._collisions) {
         col.impulse = col.local_impulse[2] * col.frame[2] +
                       col.local_impulse[0] * col.frame[0] +
                       col.local_impulse[1] * col.frame[1];
@@ -524,26 +513,24 @@ YGL_API void _solve_constraints(scene& scene, float dt) {
 //
 // Initialize the simulation
 //
-YGL_API void init_simulation(scene& scene) {
-    for (auto& shape : scene.shapes) {
-        if (shape.simulated) {
+YGL_API void init_simulation(scene& scn) {
+    for (auto& shp : scn.shapes) {
+        if (shp.simulated) {
             float volume = 1;
-            ysym::compute_moments(shape.triangles, shape.pos, volume,
-                                  shape._centroid_local, shape._inertia_local);
-            shape._mass = shape.density * volume;
-            shape._centroid_world =
-                ym::transform_point(shape.frame, shape._centroid_local);
-            shape._mass_inv = 1 / shape._mass;
-            shape._inertia_inv_local = ym::inverse(shape._inertia_local);
+            ysym::compute_moments(shp.triangles, shp.pos, volume,
+                                  shp._centroid_local, shp._inertia_local);
+            shp._mass = shp.density * volume;
+            shp._centroid_world =
+                transform_point(shp.frame, shp._centroid_local);
+            shp._mass_inv = 1 / shp._mass;
+            shp._inertia_inv_local = inverse(shp._inertia_local);
         } else {
-            shape._mass = 0;
-            shape._mass_inv = 0;
-            shape._centroid_local = ym::zero3f;
-            shape._centroid_world = ym::zero3f;
-            shape._inertia_local =
-                ym::mat3f(ym::zero3f, ym::zero3f, ym::zero3f);
-            shape._inertia_inv_local =
-                ym::mat3f(ym::zero3f, ym::zero3f, ym::zero3f);
+            shp._mass = 0;
+            shp._mass_inv = 0;
+            shp._centroid_local = zero3f;
+            shp._centroid_world = zero3f;
+            shp._inertia_local = mat3f(zero3f, zero3f, zero3f);
+            shp._inertia_inv_local = mat3f(zero3f, zero3f, zero3f);
         }
     }
 }
@@ -551,69 +538,67 @@ YGL_API void init_simulation(scene& scene) {
 //
 // Check function for numerical problems
 //
-inline bool _isfinite(const ym::vec3f& v) {
-    return std::isfinite(v[0]) && std::isfinite(v[1]) && std::isfinite(v[2]);
+inline bool _isfinite(const vec3f& v) {
+    return isfinite(v[0]) && isfinite(v[1]) && isfinite(v[2]);
 }
 
 //
 // Advance simulation. Public API, see above.
 //
-YGL_API void advance_simulation(scene& scene, float dt) {
+YGL_API void advance_simulation(scene& scn, float dt) {
     // update centroid and inertia
-    for (auto& shape : scene.shapes) {
-        if (!shape.simulated) continue;
-        shape._centroid_world =
-            ym::transform_point(shape.frame, shape._centroid_local);
-        shape._inertia_inv_world = shape.frame.m() * shape._inertia_inv_local *
-                                   ym::transpose(shape.frame.m());
+    for (auto& shp : scn.shapes) {
+        if (!shp.simulated) continue;
+        shp._centroid_world = transform_point(shp.frame, shp._centroid_local);
+        shp._inertia_inv_world =
+            shp.frame.m() * shp._inertia_inv_local * transpose(shp.frame.m());
     }
 
     // compute collisions
-    _compute_collisions(scene);
+    _compute_collisions(scn);
 
     // apply external forces
-    ym::vec3f gravity_impulse = scene.gravity * dt;
-    for (auto& shape : scene.shapes) {
-        if (!shape.simulated) continue;
-        shape.lin_vel += gravity_impulse;
+    vec3f gravity_impulse = scn.gravity * dt;
+    for (auto& shp : scn.shapes) {
+        if (!shp.simulated) continue;
+        shp.lin_vel += gravity_impulse;
     }
 
     // solve constraints
-    _solve_constraints(scene, dt);
+    _solve_constraints(scn, dt);
 
     // apply drag
-    for (auto& shape : scene.shapes) {
-        if (!shape.simulated) continue;
-        shape.lin_vel *= 1 - scene.lin_drag;
-        shape.ang_vel *= 1 - scene.ang_drag;
+    for (auto& shp : scn.shapes) {
+        if (!shp.simulated) continue;
+        shp.lin_vel *= 1 - scn.lin_drag;
+        shp.ang_vel *= 1 - scn.ang_drag;
     }
 
     // update position and velocity
-    for (auto& shape : scene.shapes) {
-        if (!shape.simulated) continue;
+    for (auto& shp : scn.shapes) {
+        if (!shp.simulated) continue;
 
         // check for nans
-        if (!_isfinite(shape.frame.o())) printf("nan detected\n");
-        if (!_isfinite(shape.lin_vel)) printf("nan detected\n");
-        if (!_isfinite(shape.ang_vel)) printf("nan detected\n");
+        if (!_isfinite(shp.frame.o())) printf("nan detected\n");
+        if (!_isfinite(shp.lin_vel)) printf("nan detected\n");
+        if (!_isfinite(shp.ang_vel)) printf("nan detected\n");
 
         // translate the frame to the centroid
-        auto centroid =
-            shape.frame.m() * shape._centroid_local + shape.frame.o();
+        auto centroid = shp.frame.m() * shp._centroid_local + shp.frame.o();
         // update centroid
-        centroid += shape.lin_vel * dt;
-        float angle = ym::length(shape.ang_vel) * dt;
+        centroid += shp.lin_vel * dt;
+        float angle = length(shp.ang_vel) * dt;
         if (angle) {
-            ym::vec3f axis = ym::normalize(shape.ang_vel);
-            shape.frame.m() = ym::rotation_mat3(axis, angle) * shape.frame.m();
+            vec3f axis = normalize(shp.ang_vel);
+            shp.frame.m() = rotation_mat3(axis, angle) * shp.frame.m();
             // TODO: if using matrices, I gotta orthonormalize them
         }
         // translate the frame back
-        shape.frame.o() = centroid - shape.frame.m() * shape._centroid_local;
+        shp.frame.o() = centroid - shp.frame.m() * shp._centroid_local;
     }
 
     // update acceleartion for collisions
-    scene.overlap_refit();
+    scn.overlap_refit();
 }
 
 }  // namespace

@@ -122,6 +122,7 @@ using float3 = std::array<float, 3>;
 using float4x4 = std::array<std::array<float, 4>, 4>;
 using int2 = std::array<int, 2>;
 using int3 = std::array<int, 3>;
+using string = std::string;
 
 //
 // Shape types
@@ -142,9 +143,10 @@ enum struct ltype : int {
 };
 
 //
-// Setup a convenint shortcut
+// Setup a convenint shortcut. Should be better to use GLuint but this avoids
+// #include issues with the GL libraries.
 //
-using uint = GLuint;
+using uint = unsigned int;
 
 //
 // Checks for GL error and then prints
@@ -360,8 +362,8 @@ YGL_API void clear_vertex_arrays(uint* aid);
 // program id. Optionally return vertex and fragment shader ids. A VAO has to be
 // bound before this.
 //
-YGL_API uint make_program(const std::string& vertex,
-                          const std::string& fragment, uint* vid, uint* fid);
+YGL_API uint make_program(const string& vertex, const string& fragment,
+                          uint* vid, uint* fid);
 
 //
 // Destroys the program pid and optionally the sahders vid and fid.
@@ -373,38 +375,37 @@ YGL_API void clear_program(uint* pid, uint* vid, uint* fid);
 // The values have nc number of components (1-4) and count elements
 // (for arrays).
 //
-YGL_API bool set_uniform(uint prog, const std::string& var, const int* val,
-                         int nc, int count);
+YGL_API bool set_uniform(uint prog, const string& var, const int* val, int nc,
+                         int count);
 
 //
 // Set uniform float values val for program prog and variable var.
 // The values have nc number of components (1-4) and count elements
 // (for arrays).
 //
-YGL_API bool set_uniform(uint prog, const std::string& var, const float* val,
-                         int nc, int count);
+YGL_API bool set_uniform(uint prog, const string& var, const float* val, int nc,
+                         int count);
 
 //
 // Set uniform texture id tid and unit tunit for program prog and variable var.
 // Optionally sets the int variable varon to 0/1 whether the texture is enable
 // on not.
 //
-YGL_API bool set_uniform_texture(uint prog, const std::string& var,
-                                 const std::string& varon, uint tid,
-                                 uint tunit);
+YGL_API bool set_uniform_texture(uint prog, const string& var,
+                                 const string& varon, uint tid, uint tunit);
 
 //
 // Sets a constant value for a vertex attribute for program prog and
 // variable var. The attribute has nc components.
 //
-YGL_API bool set_vertattr_val(uint prog, const std::string& var,
-                              const float* value, int nc);
+YGL_API bool set_vertattr_val(uint prog, const string& var, const float* value,
+                              int nc);
 
 //
 // Sets a vartex attribute for program prog and variable var to the buffer bid.
 // The attribute has nc components and per-vertex values values.
 //
-YGL_API bool set_vertattr_buffer(uint prog, const std::string& var, uint bid,
+YGL_API bool set_vertattr_buffer(uint prog, const string& var, uint bid,
                                  int nc);
 
 //
@@ -412,7 +413,7 @@ YGL_API bool set_vertattr_buffer(uint prog, const std::string& var, uint bid,
 // has nc components and either buffer bid or a single value def
 // (if bid is zero). Convenience wrapper to above functions.
 //
-YGL_API bool set_vertattr(uint prog, const std::string& var, uint bid, int nc,
+YGL_API bool set_vertattr(uint prog, const string& var, uint bid, int nc,
                           const float* def);
 
 //
@@ -511,6 +512,7 @@ YGL_API void draw_triangles(uint prog, int num, uint bid);
 #if !defined(YGL_DECLARATION) || defined(YGL_IMPLEMENTATION)
 
 #include <cassert>
+#include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -885,7 +887,7 @@ YGL_API void shade_image(uint tid, int img_w, int img_h, int win_w, int win_h,
 YGL_API void shade_image(uint tid, int img_w, int img_h, int win_w, int win_h,
                          float ox, float oy, float zoom, float exposure,
                          float gamma_) {
-    static const std::string& vert =
+    static const string& vert =
         ""
         "#version 330\n"
         "\n"
@@ -904,7 +906,7 @@ YGL_API void shade_image(uint tid, int img_w, int img_h, int win_w, int win_h,
         "    gl_Position = vec4(upos.x, upos.y, 0, 1);\n"
         "}\n"
         "";
-    static const std::string& frag =
+    static const string& frag =
         ""
         "#version 330\n"
         "\n"
@@ -1148,12 +1150,12 @@ YGL_API void clear_vertex_arrays(uint* aid) {
 //
 // This is a public API. See above for documentation.
 //
-YGL_API uint make_program(const std::string& vertex,
-                          const std::string& fragment, uint* vid, uint* fid) {
+YGL_API uint make_program(const string& vertex, const string& fragment,
+                          uint* vid, uint* fid) {
     int errflags[2];
     char errbuf[10000];
     int gl_shader[2] = {0, 0};
-    std::string code[2] = {vertex, fragment};
+    string code[2] = {vertex, fragment};
     int type[2] = {GL_VERTEX_SHADER, GL_FRAGMENT_SHADER};
     for (int i = 0; i < 2; i++) {
         gl_shader[i] = glCreateShader(type[i]);
@@ -1215,8 +1217,8 @@ YGL_API void clear_program(uint* pid, uint* vid, uint* fid) {
 //
 // This is a public API. See above for documentation.
 //
-YGL_API bool set_uniform(uint prog, const std::string& var, const int* val,
-                         int nc, int count) {
+YGL_API bool set_uniform(uint prog, const string& var, const int* val, int nc,
+                         int count) {
     assert(nc >= 1 && nc <= 4);
     int pos = glGetUniformLocation(prog, var.c_str());
     if (pos < 0) return false;
@@ -1233,8 +1235,8 @@ YGL_API bool set_uniform(uint prog, const std::string& var, const int* val,
 //
 // This is a public API. See above for documentation.
 //
-YGL_API bool set_uniform(uint prog, const std::string& var, const float* val,
-                         int nc, int count) {
+YGL_API bool set_uniform(uint prog, const string& var, const float* val, int nc,
+                         int count) {
     assert((nc >= 1 && nc <= 4) || (nc == 16) || (nc == 12));
     int pos = glGetUniformLocation(prog, var.c_str());
     if (pos < 0) return false;
@@ -1253,9 +1255,8 @@ YGL_API bool set_uniform(uint prog, const std::string& var, const float* val,
 //
 // This is a public API. See above for documentation.
 //
-YGL_API bool set_uniform_texture(uint prog, const std::string& var,
-                                 const std::string& varon, uint tid,
-                                 uint tunit) {
+YGL_API bool set_uniform_texture(uint prog, const string& var,
+                                 const string& varon, uint tid, uint tunit) {
     int pos = glGetUniformLocation(prog, var.c_str());
     int onpos =
         (!varon.empty()) ? glGetUniformLocation(prog, varon.c_str()) : -1;
@@ -1277,8 +1278,8 @@ YGL_API bool set_uniform_texture(uint prog, const std::string& var,
 //
 // This is a public API. See above for documentation.
 //
-YGL_API bool set_vertattr_ptr(uint prog, const std::string& var,
-                              const float* value, int nc) {
+YGL_API bool set_vertattr_ptr(uint prog, const string& var, const float* value,
+                              int nc) {
     assert(nc >= 1 && nc <= 4);
     int pos = glGetAttribLocation(prog, var.c_str());
     if (pos < 0) return false;
@@ -1294,7 +1295,7 @@ YGL_API bool set_vertattr_ptr(uint prog, const std::string& var,
 //
 // This is a public API. See above for documentation.
 //
-YGL_API bool set_vertattr_buffer(uint prog, const std::string& var, uint bid,
+YGL_API bool set_vertattr_buffer(uint prog, const string& var, uint bid,
                                  int nc) {
     assert(nc >= 1 && nc <= 4);
     int pos = glGetAttribLocation(prog, var.c_str());
@@ -1313,8 +1314,8 @@ YGL_API bool set_vertattr_buffer(uint prog, const std::string& var, uint bid,
 //
 // This is a public API. See above for documentation.
 //
-YGL_API bool set_vertattr_val(uint prog, const std::string& var,
-                              const float* value, int nc) {
+YGL_API bool set_vertattr_val(uint prog, const string& var, const float* value,
+                              int nc) {
     assert(nc >= 1 && nc <= 4);
     int pos = glGetAttribLocation(prog, var.c_str());
     if (pos < 0) return false;
@@ -1332,7 +1333,7 @@ YGL_API bool set_vertattr_val(uint prog, const std::string& var,
 //
 // This is a public API. See above for documentation.
 //
-YGL_API bool set_vertattr(uint prog, const std::string& var, uint bid, int nc,
+YGL_API bool set_vertattr(uint prog, const string& var, uint bid, int nc,
                           const float* def) {
     assert(nc >= 1 && nc <= 4);
     int pos = glGetAttribLocation(prog, var.c_str());
@@ -1402,7 +1403,7 @@ YGL_API void make_program(uint* pid, uint* aid) {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Woverlength-strings"
 #endif
-    static const std::string& _vert_shader =
+    static const string& _vert_shader =
         "#version 330\n"
         "\n"
         "layout(location = 0) in vec3 vert_pos;            // vertex position "
@@ -1442,7 +1443,7 @@ YGL_API void make_program(uint* pid, uint* aid) {
         "}\n"
         "";
 
-    static const std::string& _frag_shader =
+    static const string& _frag_shader =
         "#version 330\n"
         "\n"
         "#define pi 3.14159265\n"
@@ -1696,7 +1697,7 @@ YGL_API void set_material(uint prog, const float3& ke, const float3& kd,
 // This is a public API. See above for documentation.
 //
 YGL_API float specular_exponent_to_roughness(float n) {
-    return sqrtf(2 / (n + 2));
+    return std::sqrt(2 / (n + 2));
 }
 
 //

@@ -29,9 +29,7 @@
 #include "yapp.h"
 #include "yui.h"
 
-#include "../yocto/yocto_cmd.h"
-#include "../yocto/yocto_math.h"
-#include "../yocto/yocto_shape.h"
+#include "../yocto/yocto_bvh.h"
 #include "../yocto/yocto_sym.h"
 
 // scene
@@ -252,21 +250,26 @@ void make_rigid_scene(yapp::scene& scene, ysym::scene& rigid_scene,
         auto& shape = scene.shapes[i];
         assert(!shape.points.empty() || !shape.lines.empty() ||
                !shape.triangles.empty());
-        scene_bvh.shapes.push_back({ym::to_mat(shape.frame),
+        scene_bvh.shapes.push_back({i,
+                                    ym::to_mat(shape.frame),
                                     ym::to_mat(ym::inverse(shape.frame)),
-                                    shape.points, shape.lines, shape.triangles,
-                                    shape.pos, shape.radius});
+                                    shape.points,
+                                    shape.lines,
+                                    shape.triangles,
+                                    {},
+                                    shape.pos,
+                                    shape.radius});
     }
     ybvh::build_bvh(scene_bvh);
 
     // setup collisions
-    rigid_scene.overlap_shapes =
-        [&scene_bvh](std::vector<ym::vec2i>& overlaps) {
-            return ybvh::overlap_shape_bounds(scene_bvh, true, overlaps);
-        };
+    rigid_scene.overlap_shapes = [&scene_bvh]() {
+        return ybvh::overlap_shape_bounds(scene_bvh, scene_bvh, true);
+    };
     rigid_scene.overlap_shape = [&scene_bvh](int sid, const ym::vec3f& pt,
                                              float max_dist) {
-        auto overlap = ybvh::overlap_first(scene_bvh.shapes[sid], pt, max_dist);
+        auto overlap =
+            ybvh::overlap_point(scene_bvh.shapes[sid], pt, max_dist, false);
         return *(ysym::overlap_point*)&overlap;
     };
     rigid_scene.overlap_refit = [&scene_bvh, &rigid_scene]() {

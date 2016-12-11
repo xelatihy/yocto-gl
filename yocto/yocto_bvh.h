@@ -1,6 +1,6 @@
 //
 // YOCTO_BVH: ray-intersection and closet-point routines supporting points,
-// lines, triangles accelerated by a two-level bounding volume
+// lines, triangles and tetrahedra accelerated by a two-level bounding volume
 // hierarchy (BVH)
 //
 
@@ -25,12 +25,17 @@
 //         hit = intersect_first(scene, ray data, out primitive intersection)
 //     - use intersect_any if you only need to know whether there is a hit
 //         hit = intersect_any(scene, ray data)
+//     - for points and lines, a radius is required
+//     - for triangle and tetrahedra, the radius is ignored
 // 4.b. perform closet-point tests
 //     - use overlap_first to get the closet element to a point
 //       bounded by a radius
 //         hit = overlap_first(scene, pos, radius, out primitive)
 //     - use overlap_any to check whether there is an element that overlaps
 //         a point within a given radius
+//     - for all primitives, a radius is used if defined, but should
+//       be very small compared to the size of the primitive since the radius
+//       overlap is approximate
 // 4.c perform shape overlap queries with overlap_shape_bounds
 // 4.d can restrict computation to only one shape if desired
 // 5. use interpolate_shape_vert to get interpolated vertex values from the
@@ -46,7 +51,7 @@
 // number of elements, an array of vertex indices,
 // the primitive type (points, lines, triangles),
 // an array of vertex positions, and an array of vertex radius
-// (for points and lines). Use ym::array_view to pass shared data
+// (for points and lines). Use array_view to pass shared data
 // without copying.
 //
 // Implementation notes:
@@ -67,6 +72,7 @@
 
 //
 // HISTORY:
+// - v 0.8: [API change] added support for tetrahdedra and explicit shape ids
 // - v 0.7: [major API change] move to modern C++ interface
 // - v 0.6: internal refactoring
 // - v 0.5: removal of C interface
@@ -113,18 +119,20 @@
 
 #include "yocto_math.h"
 
-#include <functional>
-
 // -----------------------------------------------------------------------------
 // INTERFACE
 // -----------------------------------------------------------------------------
 
 namespace ybvh {
+//
+// Using directives
+//
+using namespace ym;
 
 //
 // Heuristic strategy for bvh build
 //
-enum struct htype {
+enum struct heuristic_type {
     def = 0,     // default strategy
     equalnum,    // balanced binary tree
     equalsize,   // splitting space binary tree
@@ -145,12 +153,12 @@ enum struct htype {
 // Implemenetation Notes:
 // - Padded to 32 bytes for cache fiendly access
 //
-struct _bvhn {
-    ym::bbox3f bbox;  // bounding box
-    uint32_t start;   // index to the first sorted primitive/node
-    uint16_t count;   // number of primitives/nodes
-    uint8_t isleaf;   // whether it is a leaf
-    uint8_t axis;     // slit axis
+struct bvhn {
+    bbox3f bbox;     // bounding box
+    uint32_t start;  // index to the first sorted primitive/node
+    uint16_t count;  // number of primitives/nodes
+    uint8_t isleaf;  // whether it is a leaf
+    uint8_t axis;    // slit axis
 };
 
 //
@@ -165,31 +173,44 @@ struct _bvhn {
 //
 // This is not part of the public interface.
 //
-struct _bvh {
+struct bvh {
     // bvh data
-    std::vector<_bvhn> nodes;      // sorted array of internal nodes
-    std::vector<int> sorted_prim;  // sorted elements
+    vector<bvhn> nodes;       // sorted array of internal nodes
+    vector<int> sorted_prim;  // sorted elements
 };
 
 //
 // Shape Data as index mesh. Only one element type is supported at one time.
 //
 struct shape {
+    // shape id ---------------------------
+    int sid = -1;  // shape id
+
     // shape transform --------------------
-    ym::mat4f xform;      // shape transform
-    ym::mat4f inv_xform;  // shape inverse transforms
+    mat4f xform;      // shape transform
+    mat4f inv_xform;  // shape inverse transforms
 
     // elements data ----------------------
-    ym::array_view<int> points;           // point indices
-    ym::array_view<ym::vec2i> lines;      // line indices
-    ym::array_view<ym::vec3i> triangles;  // triangle indices
+    array_view<int> point;       // point indices
+    array_view<vec2i> line;      // line indices
+    array_view<vec3i> triangle;  // triangle indices
+    array_view<vec4i> tetra;     // tetrahedra indices
 
     // vertex data ------------------------
-    ym::array_view<ym::vec3f> pos;  // vertex pos
-    ym::array_view<float> radius;   // vertex radius
+    array_view<vec3f> pos;     // vertex pos
+    array_view<float> radius;  // vertex radius
 
     // [private] bvh data -----------------
-    _bvh bvh;  // bvh [private]
+    bvh _bvh;  // bvh [private]
+
+    // [private] methods ------------------
+    float _radius(int i) const {
+        if (radius.empty())
+            return 0;
+        else
+            return radius[i];
+    }
+    bbox3f _bbox() const { return transform_bbox(xform, _bvh.nodes[0].bbox); }
 };
 
 //
@@ -197,10 +218,10 @@ struct shape {
 //
 struct scene {
     // scene data -------------------------
-    std::vector<shape> shapes;  // shapes
+    vector<shape> shapes;  // shapes
 
     // bvh private data -------------------
-    _bvh bvh;  // bvh [private]
+    bvh _bvh;  // bvh [private]
 };
 
 //
@@ -210,9 +231,9 @@ struct scene {
 // - shape/scene: object to build the bvh for
 // - heuristic: heristic use to build the bvh (htype::none for default)
 //
-YGL_API void build_bvh(scene& scene, htype heuristic = htype::def,
+YGL_API void build_bvh(scene& scn, heuristic_type htype = heuristic_type::def,
                        bool do_shapes = true);
-YGL_API void build_bvh(shape& shape, htype heuristic = htype::def);
+YGL_API void build_bvh(shape& shp, heuristic_type htype = heuristic_type::def);
 
 //
 // Refit the bounds of each shape for moving objects. Use this only to avoid
@@ -222,49 +243,38 @@ YGL_API void build_bvh(shape& shape, htype heuristic = htype::def);
 // Parameters:
 // - scene/shape: scene to refit
 //
-YGL_API void refit_bvh(scene& scene, bool do_shapes = false);
-YGL_API void refit_bvh(shape& shape);
+YGL_API void refit_bvh(scene& scn, bool do_shapes = false);
+YGL_API void refit_bvh(shape& shp);
 
 //
 // BVH intersection.
 //
 struct point {
-    float dist = 0;              // distance
-    int sid = -1;                // shape index
-    int eid = -1;                // element index
-    ym::vec3f euv = ym::zero3f;  // element baricentric coordinates
-    bool hit = false;            // hit
+    float dist = 0;      // distance
+    int sid = -1;        // shape index
+    int eid = -1;        // element index
+    vec4f euv = zero4f;  // element baricentric coordinates
 
     // check whether it was a hit
-    operator bool() const { return hit; }
+    operator bool() const { return eid >= 0; }
 };
 
 //
-// Intersect the scene with a ray finding the closest intersection.
+// Intersect the scene with a ray. Find any interstion if early_exit, otherwise
+// find first intersection.
 //
 // Parameters:
 // - scene/shape: scene/shape to intersect
 // - ray: ray
+// - early_exit: whether to stop at the first found hit
 //
 // Return:
 // - intersection point
 //
-YGL_API point intersect_first(const scene& scene, const ym::ray3f& ray);
-YGL_API point intersect_first(const shape& shape, const ym::ray3f& ray);
-
-//
-// Intersect the scene with a ray finding any intersection (good for shadow
-// rays).
-//
-// Parameters:
-// - scene/shape: scene/shape to intersect
-// - ray: ray
-//
-// Return:
-// - whether we intersect or not
-//
-YGL_API bool intersect_any(const scene& scene, const ym::ray3f& ray);
-YGL_API bool intersect_any(const shape& shape, const ym::ray3f& ray);
+YGL_API point intersect_ray(const scene& scn, const ray3f& ray,
+                            bool early_exit);
+YGL_API point intersect_ray(const shape& shp, const ray3f& ray,
+                            bool early_exit);
 
 //
 // Returns a list of shape pairs that can possibly overlap by checking only they
@@ -272,12 +282,9 @@ YGL_API bool intersect_any(const shape& shape, const ym::ray3f& ray);
 // detection.
 //
 // Parameters:
-// - scene: scene
+// - scene1, scene2: scenes to overlap
 // - exclude_self: whether to exlude self intersections
-// - overlap_cb: function called for each overlap
-//
-// Return:
-// - number of overlaps
+// - overlaps: vectors of shape overlaps
 //
 // Notes:
 // - intersections are duplicated, so if (i,j) overlaps than both (i,j) and
@@ -285,27 +292,30 @@ YGL_API bool intersect_any(const shape& shape, const ym::ray3f& ray);
 //   will be present; this makes it easier to apply asymmetric checks
 // - to remove symmetric checks, just skip all pairs with i > j
 //
-YGL_API int overlap_shape_bounds(
-    const scene& scene, bool exclude_self,
-    std::function<void(const ym::vec2i& v)> overlap_cb);
+YGL_API vector<vec2i> overlap_shape_bounds(const scene& scn1, const scene& scn2,
+                                           bool exclude_self);
 
 //
-// Returns a list of shape pairs that can possibly overlap by checking only they
-// axis aligned bouds. This is only a conservative check useful for collision
-// detection.
+// Returns a list of element pairs that overlap. For now, only points are
+// supported in the second group.
 //
 // Parameters:
-// - scene: scene
+// - scene1, scene2 / shape1, shape2: scenes/shapes to overlap
 // - exclude_self: whether to exlude self intersections
-// - overlaps: possible shape overlaps
+// - overlaps: vectors of shape overlaps
 //
-// Return:
-// - number of overlaps
+// Notes:
+// - intersections are duplicated, so if (i,j) overlaps than both (i,j) and
+// (j,i)
+//   will be present; this makes it easier to apply asymmetric checks
+// - to remove symmetric checks, just skip all pairs with i > j
 //
-// Notes: See above.
-//
-YGL_API int overlap_shape_bounds(const scene& scene, bool exclude_self,
-                                 std::vector<ym::vec2i>& overlaps);
+YGL_API vector<pair<point, point>> overlap_elems(const scene& scn1,
+                                                 const scene& scn2,
+                                                 bool exclude_self);
+YGL_API vector<pair<point, point>> overlap_elems(const shape& shp1,
+                                                 const shape& shp2,
+                                                 bool exclude_self);
 
 //
 // Finds the closest element that overlaps a point within a given radius.
@@ -314,38 +324,15 @@ YGL_API int overlap_shape_bounds(const scene& scene, bool exclude_self,
 // - scene: scene to check
 // - pt: ray origin
 // - max_dist: max point distance
-// - req_shape: [optional] required shape (-1 for all)
-//
-// Out Parameters:
-// - dist: distance
-// - sid: shape index
-// - eid: element index
-// - euv: element parameters
+// - early_exit: whether to stop at the first found hit
 //
 // Return:
-// - whether we overlap or not
+// - overlap point
 //
-YGL_API point overlap_first(const scene& scene, const ym::vec3f& pt,
-                            float max_dist);
-YGL_API point overlap_first(const shape& shape, const ym::vec3f& pt,
-                            float max_dist);
-
-//
-// Finds any element that overlaps a point wihtin a given radius.
-//
-// Parameters:
-// - scene: scene to check
-// - pt: ray origin
-// - max_dist: max point distance
-// - req_shape: [optional] required shape (-1 for all)
-//
-// Return:
-// - whether we overlap or not
-//
-YGL_API bool overlap_any(const scene& scene, const ym::vec3f& pt,
-                         float max_dist, int req_shape = -1);
-YGL_API bool overlap_any(const shape& shape, const ym::vec3f& pt,
-                         float max_dist);
+YGL_API point overlap_point(const scene& scn, const vec3f& pt, float max_dist,
+                            bool early_exit);
+YGL_API point overlap_point(const shape& shp, const vec3f& pt, float max_dist,
+                            bool early_exit);
 
 //
 // Interpolates a vertex property from the given intersection data. Uses
@@ -362,19 +349,12 @@ YGL_API bool overlap_any(const shape& shape, const ym::vec3f& pt,
 // - interpolated vertex data
 //
 template <typename T>
-YGL_API T interpolate_shape_vert(const ym::array_view<int>& points,
-                                 const ym::array_view<ym::vec2i>& lines,
-                                 const ym::array_view<ym::vec3i>& triangles,
-                                 const ym::array_view<T>& vert, int eid,
-                                 const ym::vec2f& euv);
-template <typename T>
-YGL_API T interpolate_shape_vert(const ym::array_view<ym::vec2i>& lines,
-                                 const ym::array_view<T>& vert, int eid,
-                                 const ym::vec2f& euv);
-template <typename T>
-YGL_API T interpolate_shape_vert(const ym::array_view<ym::vec3i>& triangles,
-                                 const ym::array_view<T>& vert, int eid,
-                                 const ym::vec2f& euv);
+YGL_API T interpolate_shape_vert(const array_view<int>& points,
+                                 const array_view<vec2i>& lines,
+                                 const array_view<vec3i>& triangles,
+                                 const array_view<vec4i>& tetrahedrons,
+                                 const array_view<T>& vert, int eid,
+                                 const vec4f& euv);
 
 // -----------------------------------------------------------------------------
 // PERFORMANCE TUNING INTERFACE
@@ -383,18 +363,10 @@ YGL_API T interpolate_shape_vert(const ym::array_view<ym::vec3i>& triangles,
 //
 // Compute BVH stats.
 //
-YGL_API void compute_bvh_stats(const scene& scene, bool include_shapes,
+YGL_API void compute_bvh_stats(const scene& scn, bool include_shapes,
                                int& nprims, int& ninternals, int& nleaves,
                                int& min_depth, int& max_depth,
                                int req_shape = -1);
-
-//
-// Logging (not thread safe to avoid affecting speed)
-//
-#ifdef YGL_BVH_LOG_RAYS
-YGL_API void get_ray_log(int& nrays, int& nbbox_inters, int& npoint_inters,
-                         int& nline_inters, int& ntriangle_inters);
-#endif
 
 }  // namespace
 
@@ -417,25 +389,32 @@ namespace ybvh {
 //
 // Point bounds
 //
-static inline ym::bbox3f _bound_point(const ym::vec3f& p, float r = 0) {
-    return ym::make_bbox({p - r, p - r});
+static inline bbox3f _bound_point(const vec3f& p, float r = 0) {
+    return bbox3f{p - r, p + r};
 }
 
 //
 // Line bounds
 //
-static inline ym::bbox3f _bound_line(const ym::vec3f& v0, const ym::vec3f& v1,
-                                     float r0 = 0, float r1 = 0) {
-    return ym::make_bbox({v0 - r0, v0 + r0, v1 - r1, v1 + r1});
+static inline bbox3f _bound_line(const vec3f& v0, const vec3f& v1, float r0 = 0,
+                                 float r1 = 0) {
+    return bbox3f{v0 - r0, v0 + r0, v1 - r1, v1 + r1};
 }
 
 //
 // Triangle bounds
 //
-static inline ym::bbox3f _bound_triangle(const ym::vec3f& v0,
-                                         const ym::vec3f& v1,
-                                         const ym::vec3f& v2) {
-    return ym::make_bbox({v0, v1, v2});
+static inline bbox3f _bound_triangle(const vec3f& v0, const vec3f& v1,
+                                     const vec3f& v2) {
+    return bbox3f{v0, v1, v2};
+}
+
+//
+// Triangle bounds
+//
+static inline bbox3f _bound_tetrahedron(const vec3f& v0, const vec3f& v1,
+                                        const vec3f& v2, const vec3f& v3) {
+    return bbox3f{v0, v1, v2, v3};
 }
 
 // -----------------------------------------------------------------------------
@@ -463,11 +442,11 @@ static inline ym::bbox3f _bound_triangle(const ym::vec3f& v0,
 //    test their distance with the point radius
 // - based on http://geomalgorithms.com/a02-lines.html.
 //
-static inline bool _intersect_point(const ym::ray3f& ray, const ym::vec3f& p,
-                                    float r, float& ray_t, ym::vec3f& euv) {
+static inline bool _intersect_point(const ray3f& ray, const vec3f& p, float r,
+                                    float& ray_t) {
     // find parameter for line-point minimum distance
     auto w = p - ray.o;
-    auto t = ym::dot(w, ray.d) / ym::dot(ray.d, ray.d);
+    auto t = dot(w, ray.d) / dot(ray.d, ray.d);
 
     // exit if not within bounds
     if (t < ray.tmin || t > ray.tmax) return false;
@@ -475,11 +454,10 @@ static inline bool _intersect_point(const ym::ray3f& ray, const ym::vec3f& p,
     // test for line-point distance vs point radius
     auto rp = ray.eval(t);
     auto prp = p - rp;
-    if (ym::dot(prp, prp) > r * r) return false;
+    if (dot(prp, prp) > r * r) return false;
 
     // intersection occurred: set params and exit
     ray_t = t;
-    euv = {1, 0, 0};
 
     return true;
 }
@@ -507,20 +485,20 @@ static inline bool _intersect_point(const ym::ray3f& ray, const ym::vec3f& p,
 // - based on http://geomalgorithms.com/a07-distance.html#
 //     dist3D_Segment_to_Segment
 //
-static inline bool _intersect_line(const ym::ray3f& ray, const ym::vec3f& v0,
-                                   const ym::vec3f& v1, float r0, float r1,
-                                   float& ray_t, ym::vec3f& euv) {
+static inline bool _intersect_line(const ray3f& ray, const vec3f& v0,
+                                   const vec3f& v1, float r0, float r1,
+                                   float& ray_t, vec2f& euv) {
     // setup intersection params
     auto u = ray.d;
     auto v = v1 - v0;
     auto w = ray.o - v0;
 
     // compute values to solve a linear system
-    auto a = ym::dot(u, u);
-    auto b = ym::dot(u, v);
-    auto c = ym::dot(v, v);
-    auto d = ym::dot(u, w);
-    auto e = ym::dot(v, w);
+    auto a = dot(u, u);
+    auto b = dot(u, v);
+    auto c = dot(v, v);
+    auto d = dot(u, w);
+    auto e = dot(v, w);
     auto det = a * c - b * b;
 
     // check determinant and exit if lines are parallel
@@ -535,20 +513,20 @@ static inline bool _intersect_line(const ym::ray3f& ray, const ym::vec3f& v0,
     if (t < ray.tmin || t > ray.tmax) return false;
 
     // clamp segment param to segment corners
-    s = ym::clamp(s, (float)0, (float)1);
+    s = clamp(s, (float)0, (float)1);
 
     // compute segment-segment distance on the closest points
     auto p0 = ray.eval(t);
-    auto p1 = ym::ray3f(v0, v1 - v0).eval(s);
+    auto p1 = ray3f(v0, v1 - v0).eval(s);
     auto p01 = p0 - p1;
 
     // check with the line radius at the same point
     auto r = r0 * (1 - s) + r1 * s;
-    if (ym::dot(p01, p01) > r * r) return false;
+    if (dot(p01, p01) > r * r) return false;
 
     // intersection occurred: set params and exit
     ray_t = t;
-    euv = {1 - s, s, 0};
+    euv = {1 - s, s};
 
     return true;
 }
@@ -571,17 +549,16 @@ static inline bool _intersect_line(const ym::ray3f& ray, const ym::vec3f& v0,
 // - out parameters and only writtent o if an intersection occurs
 // - algorithm based on Muller-Trombone intersection test
 //
-static inline bool _intersect_triangle(const ym::ray3f& ray,
-                                       const ym::vec3f& v0, const ym::vec3f& v1,
-                                       const ym::vec3f& v2, float& ray_t,
-                                       ym::vec3f& euv) {
+static inline bool _intersect_triangle(const ray3f& ray, const vec3f& v0,
+                                       const vec3f& v1, const vec3f& v2,
+                                       float& ray_t, vec3f& euv) {
     // compute triangle edges
     auto edge1 = v1 - v0;
     auto edge2 = v2 - v0;
 
     // compute determinant to solve a linear system
-    auto pvec = ym::cross(ray.d, edge2);
-    auto det = ym::dot(edge1, pvec);
+    auto pvec = cross(ray.d, edge2);
+    auto det = dot(edge1, pvec);
 
     // check determinant and exit if triangle and ray are parallel
     // (could use EPSILONS if desired)
@@ -590,16 +567,16 @@ static inline bool _intersect_triangle(const ym::ray3f& ray,
 
     // compute and check first bricentric coordinated
     auto tvec = ray.o - v0;
-    auto u = ym::dot(tvec, pvec) * inv_det;
+    auto u = dot(tvec, pvec) * inv_det;
     if (u < 0 || u > 1) return false;
 
     // compute and check second bricentric coordinated
-    auto qvec = ym::cross(tvec, edge1);
-    auto v = ym::dot(ray.d, qvec) * inv_det;
+    auto qvec = cross(tvec, edge1);
+    auto v = dot(ray.d, qvec) * inv_det;
     if (v < 0 || u + v > 1) return false;
 
     // compute and check ray parameter
-    auto t = ym::dot(edge2, qvec) * inv_det;
+    auto t = dot(edge2, qvec) * inv_det;
     if (t < ray.tmin || t > ray.tmax) return false;
 
     // intersection occurred: set params and exit
@@ -607,6 +584,52 @@ static inline bool _intersect_triangle(const ym::ray3f& ray,
     euv = {1 - u - v, u, v};
 
     return true;
+}
+
+//
+// Intersect a ray with a tetrahedron. Note that we consider only intersection
+// wiht the tetrahedra surface and discount intersction with the interior.
+//
+// Parameters:
+// - ray: ray origin and direction, parameter min, max range
+// - v0, v1, v2: triangle vertices
+//
+// Out Parameters:
+// - ray_t: ray parameter at the intersection point
+// - euv: baricentric coordinates of the intersection
+//
+// Returns:
+// - whether the intersection occurred
+//
+// TODO: check order
+// TODO: uv
+//
+static inline bool _intersect_tetrahedron(const ray3f& ray_, const vec3f& v0,
+                                          const vec3f& v1, const vec3f& v2,
+                                          const vec3f& v3, float& ray_t,
+                                          vec4f& euv) {
+    // check intersction for each face
+    auto hit = false;
+    auto ray = ray_;
+    auto tuv = zero3f;
+    if (_intersect_triangle(ray, v0, v1, v2, ray_t, tuv)) {
+        hit = true;
+        ray.tmax = ray_t;
+    }
+    if (_intersect_triangle(ray, v0, v1, v3, ray_t, tuv)) {
+        hit = true;
+        ray.tmax = ray_t;
+    }
+    if (_intersect_triangle(ray, v0, v2, v3, ray_t, tuv)) {
+        hit = true;
+        ray.tmax = ray_t;
+    }
+    if (_intersect_triangle(ray, v1, v2, v3, ray_t, tuv)) {
+        hit = true;
+        ray.tmax = ray_t;
+    }
+
+    return hit;
 }
 
 //
@@ -620,8 +643,7 @@ static inline bool _intersect_triangle(const ym::ray3f& ray,
 // Returns:
 // - whether the intersection occurred
 //
-static inline bool _intersect_check_bbox(const ym::ray3f& ray,
-                                         const ym::bbox3f& bbox) {
+static inline bool _intersect_check_bbox(const ray3f& ray, const bbox3f& bbox) {
     // set up convenient pointers for looping over axes
     auto tmin = ray.tmin, tmax = ray.tmax;
 
@@ -678,10 +700,10 @@ static inline const T& _safemax(const T& a, const T& b) {
 // - based on "Robust BVH Ray Traversal" by T. Ize published at
 // http://jcgt.org/published/0002/02/02/paper.pdf
 //
-static inline bool _intersect_check_bbox(const ym::ray3f& ray,
-                                         const ym::vec3f& ray_dinv,
-                                         const ym::vec3i& ray_dsign,
-                                         const ym::bbox3f& bbox) {
+static inline bool _intersect_check_bbox(const ray3f& ray,
+                                         const vec3f& ray_dinv,
+                                         const vec3i& ray_dsign,
+                                         const bbox3f& bbox) {
     auto txmin = (bbox[ray_dsign[0]][0] - ray.o[0]) * ray_dinv[0];
     auto txmax = (bbox[1 - ray_dsign[0]][0] - ray.o[0]) * ray_dinv[0];
     auto tymin = (bbox[ray_dsign[1]][1] - ray.o[1]) * ray_dinv[1];
@@ -699,112 +721,156 @@ static inline bool _intersect_check_bbox(const ym::ray3f& ray,
 // -----------------------------------------------------------------------------
 
 // TODO: documentation
-static inline bool _overlap_point(const ym::vec3f& pos, float dist_max,
-                                  const ym::vec3f& p, float r, float& dist,
-                                  ym::vec3f& euv) {
-    auto d2 = ym::distsqr(pos, p);
+static inline bool _overlap_point(const vec3f& pos, float dist_max,
+                                  const vec3f& p, float r, float& dist) {
+    auto d2 = distsqr(pos, p);
     if (d2 > (dist_max + r) * (dist_max + r)) return false;
-    dist = std::sqrt(d2);
-    euv = {1, 0, 0};
+    dist = sqrt(d2);
     return true;
 }
 
 // TODO: documentation
-static inline float _closestuv_line(const ym::vec3f& pos, const ym::vec3f& v0,
-                                    const ym::vec3f& v1) {
+static inline float _closestuv_line(const vec3f& pos, const vec3f& v0,
+                                    const vec3f& v1) {
     auto ab = v1 - v0;
-    auto d = ym::dot(ab, ab);
+    auto d = dot(ab, ab);
     // Project c onto ab, computing parameterized position d(t) = a + t*(b – a)
-    auto u = ym::dot(pos - v0, ab) / d;
-    u = ym::clamp(u, (float)0, (float)1);
+    auto u = dot(pos - v0, ab) / d;
+    u = clamp(u, (float)0, (float)1);
     return u;
 }
 
 // TODO: documentation
-static inline bool _overlap_line(const ym::vec3f& pos, float dist_max,
-                                 const ym::vec3f& v0, const ym::vec3f& v1,
-                                 float r0, float r1, float& dist,
-                                 ym::vec3f& euv) {
+static inline bool _overlap_line(const vec3f& pos, float dist_max,
+                                 const vec3f& v0, const vec3f& v1, float r0,
+                                 float r1, float& dist, vec2f& euv) {
     auto u = _closestuv_line(pos, v0, v1);
     // Compute projected position from the clamped t d = a + t * ab;
-    auto p = ym::lerp(v0, v1, u);
-    auto r = ym::lerp(r0, r1, u);
-    auto d2 = ym::distsqr(pos, p);
+    auto p = lerp(v0, v1, u);
+    auto r = lerp(r0, r1, u);
+    auto d2 = distsqr(pos, p);
     // check distance
     if (d2 > (dist_max + r) * (dist_max + r)) return false;
     // done
-    dist = std::sqrt(d2);
-    euv = {1 - u, u, 0};
+    dist = sqrt(d2);
+    euv = {1 - u, u};
     return true;
 }
 
 // TODO: documentation
 // this is a complicated test -> I probably prefer to use a sequence of test
 // (triangle body, and 3 edges)
-static inline ym::vec2f _closestuv_triangle(const ym::vec3f& pos,
-                                            const ym::vec3f& v0,
-                                            const ym::vec3f& v1,
-                                            const ym::vec3f& v2) {
+static inline vec2f _closestuv_triangle(const vec3f& pos, const vec3f& v0,
+                                        const vec3f& v1, const vec3f& v2) {
     auto ab = v1 - v0;
     auto ac = v2 - v0;
     auto ap = pos - v0;
 
-    auto d1 = ym::dot(ab, ap);
-    auto d2 = ym::dot(ac, ap);
+    auto d1 = dot(ab, ap);
+    auto d2 = dot(ac, ap);
 
     // corner and edge cases
-    if (d1 <= 0 && d2 <= 0) return ym::vec2f{0, 0};
+    if (d1 <= 0 && d2 <= 0) return vec2f{0, 0};
 
     auto bp = pos - v1;
-    auto d3 = ym::dot(ab, bp);
-    auto d4 = ym::dot(ac, bp);
-    if (d3 >= 0 && d4 <= d3) return ym::vec2f{1, 0};
+    auto d3 = dot(ab, bp);
+    auto d4 = dot(ac, bp);
+    if (d3 >= 0 && d4 <= d3) return vec2f{1, 0};
 
     auto vc = d1 * d4 - d3 * d2;
-    if ((vc <= 0) && (d1 >= 0) && (d3 <= 0))
-        return ym::vec2f{d1 / (d1 - d3), 0};
+    if ((vc <= 0) && (d1 >= 0) && (d3 <= 0)) return vec2f{d1 / (d1 - d3), 0};
 
     auto cp = pos - v2;
-    auto d5 = ym::dot(ab, cp);
-    auto d6 = ym::dot(ac, cp);
-    if (d6 >= 0 && d5 <= d6) return ym::vec2f{0, 1};
+    auto d5 = dot(ab, cp);
+    auto d6 = dot(ac, cp);
+    if (d6 >= 0 && d5 <= d6) return vec2f{0, 1};
 
     auto vb = d5 * d2 - d1 * d6;
-    if ((vb <= 0) && (d2 >= 0) && (d6 <= 0))
-        return ym::vec2f{0, d2 / (d2 - d6)};
+    if ((vb <= 0) && (d2 >= 0) && (d6 <= 0)) return vec2f{0, d2 / (d2 - d6)};
 
     auto va = d3 * d6 - d5 * d4;
     if ((va <= 0) && (d4 - d3 >= 0) && (d5 - d6 >= 0)) {
         auto w = (d4 - d3) / ((d4 - d3) + (d5 - d6));
-        return ym::vec2f{1 - w, w};
+        return vec2f{1 - w, w};
     }
 
     // face case
     auto denom = 1 / (va + vb + vc);
     auto v = vb * denom;
     auto w = vc * denom;
-    return ym::vec2f{v, w};
+    return vec2f{v, w};
 }
 
 // TODO: documentation
-static inline bool _overlap_triangle(const ym::vec3f& pos, float dist_max,
-                                     const ym::vec3f& v0, const ym::vec3f& v1,
-                                     const ym::vec3f& v2, float r0, float r1,
-                                     float r2, float& dist, ym::vec3f& euv) {
+static inline bool _overlap_triangle(const vec3f& pos, float dist_max,
+                                     const vec3f& v0, const vec3f& v1,
+                                     const vec3f& v2, float r0, float r1,
+                                     float r2, float& dist, vec3f& euv) {
     auto uv = _closestuv_triangle(pos, v0, v1, v2);
-    auto p = ym::blerp(v0, v1, v2, ym::vec3f{1 - uv[0] - uv[1], uv[0], uv[1]});
-    auto r = ym::blerp(r0, r1, r2, ym::vec3f{1 - uv[0] - uv[1], uv[0], uv[1]});
-    auto dd = ym::distsqr(p, pos);
+    auto p = blerp(v0, v1, v2, vec3f{1 - uv[0] - uv[1], uv[0], uv[1]});
+    auto r = blerp(r0, r1, r2, vec3f{1 - uv[0] - uv[1], uv[0], uv[1]});
+    auto dd = distsqr(p, pos);
     if (dd > (dist_max + r) * (dist_max + r)) return false;
-    dist = std::sqrt(dd);
+    dist = sqrt(dd);
     euv = {1 - uv[0] - uv[1], uv[0], uv[1]};
     return true;
 }
 
 // TODO: documentation
-static inline bool _distance_check_bbox(const ym::vec3f pos, float dist_max,
-                                        const ym::vec3f bbox_min,
-                                        const ym::vec3f bbox_max) {
+static inline bool _overlap_tetrahedron(const vec3f& pos, const vec3f& v0,
+                                        const vec3f& v1, const vec3f& v2,
+                                        const vec3f& v3, vec4f& euv) {
+    auto vol = dot(v3 - v0, cross(v3 - v1, v3 - v0));
+    if (vol == 0) return false;
+    auto u = dot(v3 - v0, cross(v3 - v1, v3 - v0)) / vol;
+    if (u < 0 || u > 1) return false;
+    auto v = dot(v3 - v0, cross(v3 - v1, v3 - v0)) / vol;
+    if (v < 0 || v > 1 || u + v > 1) return false;
+    auto w = dot(v3 - v0, cross(v3 - v1, v3 - v0)) / vol;
+    if (w < 0 || w > 1 || u + v + w > 1) return false;
+    euv = {u, v, w, 1 - u - v - w};
+    return true;
+}
+
+// TODO: documentation
+static inline bool _overlap_tetrahedron(const vec3f& pos, float dist_max,
+                                        const vec3f& v0, const vec3f& v1,
+                                        const vec3f& v2, const vec3f& v3,
+                                        float r0, float r1, float r2, float r3,
+                                        float& dist, vec4f& euv) {
+    // check interior
+    if (_overlap_tetrahedron(pos, v0, v1, v2, v3, euv)) {
+        dist = 0;
+        return true;
+    }
+
+    // check faces
+    auto hit = false;
+    auto tuv = zero3f;
+    if (_overlap_triangle(pos, dist_max, v0, v1, v2, r0, r1, r2, dist, tuv)) {
+        hit = true;
+        dist_max = dist;
+    }
+    if (_overlap_triangle(pos, dist_max, v0, v1, v3, r0, r1, r3, dist, tuv)) {
+        hit = true;
+        dist_max = dist;
+    }
+    if (_overlap_triangle(pos, dist_max, v0, v2, v3, r0, r2, r3, dist, tuv)) {
+        hit = true;
+        dist_max = dist;
+    }
+    if (_overlap_triangle(pos, dist_max, v1, v2, v3, r1, r2, r3, dist, tuv)) {
+        hit = true;
+        dist_max = dist;
+    }
+
+    return hit;
+}
+
+// TODO: documentation
+static inline bool _distance_check_bbox(const vec3f pos, float dist_max,
+                                        const vec3f bbox_min,
+                                        const vec3f bbox_max) {
     // computing distance
     auto dd = 0.0f;
     // For each axis count any excess distance outside box extents
@@ -819,10 +885,8 @@ static inline bool _distance_check_bbox(const ym::vec3f pos, float dist_max,
 }
 
 // TODO: doc
-static inline bool _overlap_bbox(const ym::vec3f bbox1_min,
-                                 const ym::vec3f bbox1_max,
-                                 const ym::vec3f bbox2_min,
-                                 const ym::vec3f bbox2_max) {
+static inline bool _overlap_bbox(const vec3f bbox1_min, const vec3f bbox1_max,
+                                 const vec3f bbox2_min, const vec3f bbox2_max) {
     if (bbox1_max[0] < bbox2_min[0] || bbox1_min[0] > bbox2_max[0])
         return false;
     if (bbox1_max[1] < bbox2_min[1] || bbox1_min[1] > bbox2_max[1])
@@ -837,7 +901,7 @@ static inline bool _overlap_bbox(const ym::vec3f bbox1_min,
 // -----------------------------------------------------------------------------
 
 // number of primitives to avoid splitting on
-#define YB__BVH_MINPRIMS 4
+#define YBVH__MINPRIMS 4
 
 // -----------------------------------------------------------------------------
 // BVH BUILD FUNCTIONS
@@ -848,8 +912,8 @@ static inline bool _overlap_bbox(const ym::vec3f bbox1_min,
 // data for faster hierarchy build.
 //
 struct _bound_prim {
-    ym::bbox3f bbox;       // bounding box
-    ym::vec3f center;      // bounding box center (for faster sort)
+    bbox3f bbox;           // bounding box
+    vec3f center;          // bounding box center (for faster sort)
     int pid;               // primitive id
     float sah_cost_left;   // buffer for sah heuristic costs
     float sah_cost_right;  // buffer for sah heuristic costs
@@ -879,9 +943,9 @@ struct _bound_prim_comp {
 // based on the heuristic heuristic. Supports balanced tree (equalnum) and
 // Surface-Area Heuristic.
 //
-static inline bool _partition_prims(ym::array_view<_bound_prim> sorted_prim,
+static inline bool _partition_prims(array_view<_bound_prim> sorted_prim,
                                     int start, int end, int& axis, int& mid,
-                                    htype heuristic) {
+                                    heuristic_type htype) {
     const auto __box_eps = 1e-12f;
 #define __bbox_area(r)                                                         \
     (2 * ((r[0] + __box_eps) * (r[1] + __box_eps) +                            \
@@ -893,21 +957,21 @@ static inline bool _partition_prims(ym::array_view<_bound_prim> sorted_prim,
     mid = (start + end) / 2;
 
     // compute primintive bounds and size
-    auto centroid_bbox = ym::invalid_bbox3f;
+    auto centroid_bbox = invalid_bbox3f;
     for (auto i = start; i < end; i++) centroid_bbox += sorted_prim[i].center;
-    auto centroid_size = ym::diagonal(centroid_bbox);
+    auto centroid_size = diagonal(centroid_bbox);
 
     // check if it is not possible to split
-    if (centroid_size == ym::zero3f) return false;
+    if (centroid_size == zero3f) return false;
 
     // split along largest
-    auto largest_axis = ym::max_element(centroid_size);
+    auto largest_axis = max_element(centroid_size);
 
     // check heuristic
-    switch (heuristic) {
+    switch (htype) {
         // balanced tree split: find the largest axis of the bounding box
         // and split along this one right in the middle
-        case htype::equalnum: {
+        case heuristic_type::equalnum: {
             axis = largest_axis;
             mid = (start + end) / 2;
             std::nth_element(sorted_prim.data() + start,
@@ -915,42 +979,42 @@ static inline bool _partition_prims(ym::array_view<_bound_prim> sorted_prim,
                              _bound_prim_comp(largest_axis));
         } break;
         // split the space in the middle along the largest axis
-        case htype::def:
-        case htype::equalsize: {
+        case heuristic_type::def:
+        case heuristic_type::equalsize: {
             axis = largest_axis;
             mid =
-                (int)(std::partition(
-                          sorted_prim.data() + start, sorted_prim.data() + end,
-                          _bound_prim_comp(
-                              largest_axis,
-                              ym::center(centroid_bbox)[largest_axis])) -
+                (int)(std::partition(sorted_prim.data() + start,
+                                     sorted_prim.data() + end,
+                                     _bound_prim_comp(
+                                         largest_axis,
+                                         center(centroid_bbox)[largest_axis])) -
                       sorted_prim.data());
         } break;
         // surface area heuristic: estimate the cost of splitting
         // along each of the axis and pick the one with best expected
         // performance
-        case htype::sah: {
+        case heuristic_type::sah: {
             auto min_cost = HUGE_VALF;
             auto count = end - start;
             for (auto a = 0; a < 3; a++) {
                 std::sort(sorted_prim.data() + start, sorted_prim.data() + end,
                           _bound_prim_comp(a));
-                auto sbbox = ym::invalid_bbox3f;
+                auto sbbox = invalid_bbox3f;
                 // to avoid an O(n^2) computation, use sweaps to compute the
                 // cost,
                 // first smallest to largest, then largest to smallest
                 for (auto i = 0; i < count; i++) {
                     sbbox += sorted_prim[start + i].bbox;
-                    auto sbbox_size = ym::diagonal(sbbox);
+                    auto sbbox_size = diagonal(sbbox);
                     sorted_prim[start + i].sah_cost_left =
                         __bbox_area(sbbox_size);
                     sorted_prim[start + i].sah_cost_left *= i + 1;
                 }
                 // the other sweep
-                sbbox = ym::invalid_bbox3f;
+                sbbox = invalid_bbox3f;
                 for (auto i = 0; i < count; i++) {
                     sbbox += sorted_prim[end - 1 - i].bbox;
-                    auto sbbox_size = ym::diagonal(sbbox);
+                    auto sbbox_size = diagonal(sbbox);
                     sorted_prim[end - 1 - i].sah_cost_right =
                         __bbox_area(sbbox_size);
                     sorted_prim[end - 1 - i].sah_cost_right *= i + 1;
@@ -973,13 +1037,13 @@ static inline bool _partition_prims(ym::array_view<_bound_prim> sorted_prim,
         // surface area heuristic: estimate the cost of splitting
         // along each of the axis and pick the one with best expected
         // performance
-        case htype::binned_sah: {
+        case heuristic_type::binned_sah: {
             // allocate bins
             const auto nbins = 16;
-            ym::bbox3f bins_bbox[nbins];
+            bbox3f bins_bbox[nbins];
             int bins_count[nbins];
             for (int b = 0; b < nbins; b++) {
-                bins_bbox[b] = ym::invalid_bbox3f;
+                bins_bbox[b] = invalid_bbox3f;
                 // bins_bbox[b] = centroid_bbox;
                 // bins_bbox[b].min[largest_axis] += b *
                 // centroid_size[largest_axis] / nbins;
@@ -991,7 +1055,7 @@ static inline bool _partition_prims(ym::array_view<_bound_prim> sorted_prim,
                 auto b = (int)(nbins * (sorted_prim[i].center[largest_axis] -
                                         centroid_bbox[0][largest_axis]) /
                                centroid_size[largest_axis]);
-                b = ym::clamp(b, 0, nbins - 1);
+                b = clamp(b, 0, nbins - 1);
                 bins_count[b] += 1;
                 bins_bbox[b] += sorted_prim[i].bbox;
             }
@@ -999,8 +1063,7 @@ static inline bool _partition_prims(ym::array_view<_bound_prim> sorted_prim,
             int bin_idx = -1;
             for (int b = 1; b < nbins; b++) {
                 if (!bins_count[b]) continue;
-                auto left_bbox = ym::invalid_bbox3f,
-                     right_bbox = ym::invalid_bbox3f;
+                auto left_bbox = invalid_bbox3f, right_bbox = invalid_bbox3f;
                 auto left_count = 0, right_count = 0;
                 for (int j = 0; j < b; j++) {
                     if (!bins_count[j]) continue;
@@ -1012,8 +1075,8 @@ static inline bool _partition_prims(ym::array_view<_bound_prim> sorted_prim,
                     right_count += bins_count[j];
                     right_bbox += bins_bbox[j];
                 }
-                auto left_bbox_size = ym::diagonal(left_bbox);
-                auto right_bbox_size = ym::diagonal(right_bbox);
+                auto left_bbox_size = diagonal(left_bbox);
+                auto right_bbox_size = diagonal(right_bbox);
                 auto cost = __bbox_area(left_bbox_size) * left_count +
                             __bbox_area(right_bbox_size) * right_count;
                 if (min_cost > cost) {
@@ -1046,15 +1109,15 @@ static inline bool _partition_prims(ym::array_view<_bound_prim> sorted_prim,
 // used and nodes added sequentially in the preallocated nodes array and
 // the number of nodes nnodes is updated.
 //
-static inline void _make_node(_bvhn& node, std::vector<_bvhn>& nodes,
-                              ym::array_view<_bound_prim> sorted_prims,
-                              int start, int end, htype heuristic) {
+static inline void _make_node(bvhn& node, vector<bvhn>& nodes,
+                              array_view<_bound_prim> sorted_prims, int start,
+                              int end, heuristic_type htype) {
     // compute node bounds
-    node.bbox = ym::invalid_bbox3f;
+    node.bbox = invalid_bbox3f;
     for (auto i = start; i < end; i++) node.bbox += sorted_prims[i].bbox;
 
     // decide whether to create a leaf
-    if (end - start <= YB__BVH_MINPRIMS) {
+    if (end - start <= YBVH__MINPRIMS) {
         // makes a leaf node
         node.isleaf = true;
         node.start = start;
@@ -1063,7 +1126,7 @@ static inline void _make_node(_bvhn& node, std::vector<_bvhn>& nodes,
         // choose the split axis and position
         int axis, mid;
         auto split =
-            _partition_prims(sorted_prims, start, end, axis, mid, heuristic);
+            _partition_prims(sorted_prims, start, end, axis, mid, htype);
         if (!split) {
             // we failed to split for some reasons
             node.isleaf = true;
@@ -1077,13 +1140,13 @@ static inline void _make_node(_bvhn& node, std::vector<_bvhn>& nodes,
             node.axis = axis;
             node.start = (int)nodes.size();
             node.count = 2;
-            nodes.push_back({});
-            nodes.push_back({});
+            nodes.emplace_back();
+            nodes.emplace_back();
             // build child nodes
             _make_node(nodes[node.start], nodes, sorted_prims, start, mid,
-                       heuristic);
+                       htype);
             _make_node(nodes[node.start + 1], nodes, sorted_prims, mid, end,
-                       heuristic);
+                       htype);
         }
     }
 }
@@ -1091,19 +1154,8 @@ static inline void _make_node(_bvhn& node, std::vector<_bvhn>& nodes,
 //
 // Build a BVH from a set of primitives.
 //
-template <typename T, typename bbox_func>
-YGL_API void _build_bvh(_bvh& bvh, const ym::array_view<T>& prims,
-                        htype heuristic, const bbox_func& bbox) {
-    // create bounded primitives used in BVH build
-    auto bound_prims = std::vector<_bound_prim>();
-    for (auto& f : prims) {
-        auto prim = _bound_prim();
-        prim.pid = (int)bound_prims.size();
-        prim.bbox = bbox(f);
-        prim.center = ym::center(prim.bbox);
-        bound_prims.push_back(prim);
-    }
-
+YGL_API void _build_bvh(bvh& bvh, const vector<_bound_prim>& bound_prims,
+                        heuristic_type htype) {
     // clear bvh
     bvh.nodes.clear();
     bvh.sorted_prim.clear();
@@ -1112,9 +1164,9 @@ YGL_API void _build_bvh(_bvh& bvh, const ym::array_view<T>& prims,
     bvh.nodes.reserve(bound_prims.size() * 2);
 
     // start recursive splitting
-    bvh.nodes.push_back({});
+    bvh.nodes.emplace_back();
     _make_node(bvh.nodes[0], bvh.nodes, bound_prims, 0, (int)bound_prims.size(),
-               heuristic);
+               htype);
 
     // shrink back
     bvh.nodes.shrink_to_fit();
@@ -1126,98 +1178,128 @@ YGL_API void _build_bvh(_bvh& bvh, const ym::array_view<T>& prims,
     for (int i = 0; i < bound_prims.size(); i++) {
         bvh.sorted_prim[i] = bound_prims[i].pid;
     }
-    bvh.sorted_prim.shrink_to_fit();
+}
+
+//
+// Gets the bbox of a shape element
+//
+static inline bbox3f _bound_elem(const shape& shp, int eid) {
+    if (!shp.point.empty()) {
+        auto f = shp.point[eid];
+        return _bound_point(shp.pos[f], shp._radius(f));
+    } else if (!shp.line.empty()) {
+        auto f = shp.line[eid];
+        return _bound_line(shp.pos[f[0]], shp.pos[f[1]], shp._radius(f[0]),
+                           shp._radius(f[1]));
+    } else if (!shp.triangle.empty()) {
+        auto f = shp.triangle[eid];
+        return _bound_triangle(shp.pos[f[0]], shp.pos[f[1]], shp.pos[f[2]]);
+    } else if (!shp.tetra.empty()) {
+        auto f = shp.tetra[eid];
+        return _bound_tetrahedron(shp.pos[f[0]], shp.pos[f[1]], shp.pos[f[2]],
+                                  shp.pos[f[3]]);
+    } else {
+        return _bound_point(shp.pos[eid], shp._radius(eid));
+    }
+}
+
+//
+// Bound a scene elem
+//
+static inline bbox3f _bound_elem(const scene& scn, int idx) {
+    return scn.shapes[idx]._bbox();
+}
+
+//
+// Gets the number of elements of a shape
+//
+static inline int _shape_nelems(const shape& shp) {
+    if (!shp.point.empty())
+        return (int)shp.point.size();
+    else if (!shp.line.empty())
+        return (int)shp.line.size();
+    else if (!shp.triangle.empty())
+        return (int)shp.triangle.size();
+    else if (!shp.tetra.empty())
+        return (int)shp.tetra.size();
+    else {
+        return (int)shp.pos.size();
+    }
 }
 
 //
 // Build a shape BVH. Public function whose interface is described above.
 //
-// TODO: move to simpler interface in loops
-YGL_API void build_bvh(shape& shape, htype heuristic) {
-    // compute bounds for each primitive type
-    if (!shape.points.empty()) {
-        // point bounds are computed as little spheres
-        _build_bvh(shape.bvh, shape.points, heuristic, [&shape](const int f) {
-            auto r = (!shape.radius.empty()) ? shape.radius[f] : 0;
-            return _bound_point(shape.pos[f], r);
-        });
-    } else if (!shape.lines.empty()) {
-        // line bounds are computed as thick rods
-        _build_bvh(
-            shape.bvh, shape.lines, heuristic, [&shape](const ym::vec2i& f) {
-                auto r0 = (!shape.radius.empty()) ? shape.radius[f[0]] : 0;
-                auto r1 = (!shape.radius.empty()) ? shape.radius[f[1]] : 0;
-                return _bound_line(shape.pos[f[0]], shape.pos[f[1]], r0, r1);
-            });
-    } else if (!shape.triangles.empty()) {
-        // triangle bounds are computed by including their vertices
-        _build_bvh(shape.bvh, shape.triangles, heuristic,
-                   [&shape](const ym::vec3i& f) {
-                       return _bound_triangle(shape.pos[f[0]], shape.pos[f[1]],
-                                              shape.pos[f[2]]);
-                   });
-    } else {
-        assert(false);
+YGL_API void build_bvh(shape& shp, heuristic_type htype) {
+    // create bounded primitives used in BVH build
+    auto bound_prims = vector<_bound_prim>(_shape_nelems(shp));
+    for (auto i = 0; i < bound_prims.size(); i++) {
+        bound_prims[i].pid = i;
+        bound_prims[i].bbox = _bound_elem(shp, i);
+        bound_prims[i].center = center(bound_prims[i].bbox);
     }
+
+    // tree bvh
+    return _build_bvh(shp._bvh, bound_prims, htype);
 }
 
 //
 // Build a scene BVH. Public function whose interface is described above.
 //
-YGL_API void build_bvh(scene& scene, htype heuristic, bool do_shapes) {
-    // recursively build shape bvhs
-    if (do_shapes) {
-        for (auto& shape : scene.shapes) build_bvh(shape, heuristic);
-    }
-
-    // build scene bvh
-    _build_bvh(scene.bvh, ym::array_view<shape>(scene.shapes), heuristic,
-               [](const shape& shape) {
-                   return ym::transform_bbox(shape.xform,
-                                             shape.bvh.nodes[0].bbox);
-               });
-}
-
-//
-// Recursively recomputes the node bounds for a scene bvh
-//
-template <typename T, typename bbox_func>
-static inline void _refit_bvh(_bvh& bvh, const std::vector<T>& prims,
-                              _bvhn& node, const bbox_func& bbox) {
-    if (node.isleaf) {
-        node.bbox = ym::invalid_bbox3f;
-        for (auto i = node.start; i < node.start + node.count; i++) {
-            auto idx = bvh.sorted_prim[i];
-            node.bbox += bbox(prims[idx]);
-        }
-    } else {
-        node.bbox = ym::invalid_bbox3f;
-        for (auto i = node.start; i < node.start + node.count; i++) {
-            _refit_bvh(bvh, prims, bvh.nodes[i], bbox);
-            node.bbox += bvh.nodes[i].bbox;
-        }
-    }
-}
-
-//
-// Refits a scene BVH. Public function whose interface is described above.
-//
-YGL_API void refit_bvh(shape& shape) {}
-
-//
-// Refits a scene BVH. Public function whose interface is described above.
-//
-YGL_API void refit_bvh(scene& scene, bool do_shapes) {
+YGL_API void build_bvh(scene& scn, heuristic_type htype, bool do_shapes) {
     // do shapes
     if (do_shapes) {
-        for (auto& shape : scene.shapes) refit_bvh(shape);
+        for (auto& shp : scn.shapes) build_bvh(shp, htype);
+    }
+
+    // create bounded primitives used in BVH build
+    auto bound_prims = vector<_bound_prim>(scn.shapes.size());
+    for (auto i = 0; i < bound_prims.size(); i++) {
+        bound_prims[i].pid = i;
+        bound_prims[i].bbox = _bound_elem(scn, i);
+        bound_prims[i].center = center(bound_prims[i].bbox);
+    }
+
+    // tree bvh
+    _build_bvh(scn._bvh, bound_prims, htype);
+}
+
+//
+// Recursively recomputes the node bounds for a shape bvh
+//
+template <typename T>
+static inline void _refit_bvh(T& obj, int nodeid) {
+    auto& node = obj._bvh.nodes[nodeid];
+    if (node.isleaf) {
+        node.bbox = invalid_bbox3f;
+        for (auto i = node.start; i < node.start + node.count; i++) {
+            node.bbox += _bound_elem(obj, i);
+        }
+    } else {
+        node.bbox = invalid_bbox3f;
+        for (auto i = node.start; i < node.start + node.count; i++) {
+            _refit_bvh(obj, i);
+            node.bbox += obj._bvh.nodes[i].bbox;
+        }
+    }
+}
+
+//
+// Refits a scene BVH. Public function whose interface is described above.
+//
+YGL_API void refit_bvh(shape& shp) { return _refit_bvh(shp, 0); }
+
+//
+// Refits a scene BVH. Public function whose interface is described above.
+//
+YGL_API void refit_bvh(scene& scn, bool do_shapes) {
+    // do shapes
+    if (do_shapes) {
+        for (auto& shp : scn.shapes) refit_bvh(shp);
     }
 
     // recompute bvh bounds
-    _refit_bvh(
-        scene.bvh, scene.shapes, scene.bvh.nodes[0], [](const shape& shape) {
-            return ym::transform_bbox(shape.xform, shape.bvh.nodes[0].bbox);
-        });
+    _refit_bvh(scn, 0);
 }
 
 // -----------------------------------------------------------------------------
@@ -1249,8 +1331,64 @@ YGL_API void get_ray_log(int& nrays, int& nbbox_inters, int& npoint_inters,
 #endif
 
 //
+// Intersect a scene primitive. Used in the templated function below.
+//
+static inline point _intersect_ray(const scene& scn, int idx, const ray3f& ray,
+                                   bool early_exit) {
+    return intersect_ray(scn.shapes[idx], ray, early_exit);
+}
+
+//
+// Intersect a shape element. Used in the templated function below.
+//
+static inline point _intersect_ray(const shape& shp, int idx, const ray3f& ray,
+                                   bool early_exit) {
+    // initialize point
+    auto pt = point();
+
+    // switch over shape type
+    if (!shp.triangle.empty()) {
+        auto f = shp.triangle[idx];
+        if (!_intersect_triangle(ray, shp.pos[f[0]], shp.pos[f[1]],
+                                 shp.pos[f[2]], pt.dist, (vec3f&)pt.euv))
+            return {};
+        pt.euv = {pt.euv[0], pt.euv[1], pt.euv[2], 0};
+    } else if (!shp.line.empty()) {
+        assert(!shp.radius.empty());
+        auto f = shp.line[idx];
+        if (!_intersect_line(ray, shp.pos[f[0]], shp.pos[f[1]],
+                             shp.radius[f[0]], shp.radius[f[1]], pt.dist,
+                             (vec2f&)pt.euv))
+            return point{};
+        pt.euv = {pt.euv[0], pt.euv[1], 0, 0};
+    } else if (!shp.point.empty()) {
+        assert(!shp.radius.empty());
+        auto f = shp.point[idx];
+        if (!_intersect_point(ray, shp.pos[f], shp.radius[f], pt.dist))
+            return {};
+        pt.euv = {1, 0, 0, 0};
+    } else if (!shp.tetra.empty()) {
+        auto f = shp.tetra[idx];
+        if (!_intersect_tetrahedron(ray, shp.pos[f[0]], shp.pos[f[1]],
+                                    shp.pos[f[2]], shp.pos[f[3]], pt.dist,
+                                    pt.euv))
+            return {};
+    } else {
+        assert(!shp.radius.empty());
+        if (!_intersect_point(ray, shp.pos[idx], shp.radius[idx], pt.dist))
+            return {};
+        pt.euv = {1, 0, 0, 0};
+    }
+
+    // finilize point
+    pt.eid = idx;
+    pt.sid = shp.sid;
+    return pt;
+}
+
+//
 // Intersect ray with a bvh. Similar to the generic public function whose
-// interface is described above. See intersect_bvh for parameter docs.
+// interface is described above. See intersect_ray for parameter docs.
 // With respect to that, only adds early_exit to decide whether we exit
 // at the first primitive hit or we find the closest hit.
 //
@@ -1263,10 +1401,12 @@ YGL_API void get_ray_log(int& nrays, int& nbbox_inters, int& npoint_inters,
 // the code; note in fact that all subsequence farthest iterations will be
 // rejected in the tmax tests
 //
-template <typename Isec_func>
-static inline bool _intersect_bvh(const _bvh& bvh, const ym::ray3f& ray_,
-                                  bool early_exit, float& ray_t, int& id,
-                                  const Isec_func& intersect_prim) {
+template <typename T>
+static inline point _intersect_ray(const T& obj, const ray3f& ray_,
+                                   bool early_exit) {
+    // get bvh
+    auto& bvh = obj._bvh;
+
     // node stack
     int node_stack[64];
     auto node_cur = 0;
@@ -1276,21 +1416,17 @@ static inline bool _intersect_bvh(const _bvh& bvh, const ym::ray3f& ray_,
     auto ray = ray_;
 
     // shared variables
-    auto hit = false;
+    auto pt = point();
 
     // prepare ray for fast queries
-    auto ray_dinv = ym::vec3f{1, 1, 1} / ray.d;
-    auto ray_dsign =
-        ym::vec3i{(ray_dinv[0] < 0) ? 1 : 0, (ray_dinv[1] < 0) ? 1 : 0,
-                  (ray_dinv[2] < 0) ? 1 : 0};
-    auto ray_reverse = ym::vec<bool, 4>{(bool)ray_dsign[0], (bool)ray_dsign[1],
-                                        (bool)ray_dsign[2], false};
+    auto ray_dinv = vec3f{1, 1, 1} / ray.d;
+    auto ray_dsign = vec3i{(ray_dinv[0] < 0) ? 1 : 0, (ray_dinv[1] < 0) ? 1 : 0,
+                           (ray_dinv[2] < 0) ? 1 : 0};
+    auto ray_reverse = vec<bool, 4>{(bool)ray_dsign[0], (bool)ray_dsign[1],
+                                    (bool)ray_dsign[2], false};
 
     // walking stack
-    while (node_cur && !(early_exit && hit)) {
-        // exit if needed
-        if (early_exit && hit) return hit;
-
+    while (node_cur) {
         // grab node
         auto& node = bvh.nodes[node_stack[--node_cur]];
 
@@ -1319,115 +1455,95 @@ static inline bool _intersect_bvh(const _bvh& bvh, const ym::ray3f& ray_,
         } else {
             for (auto i = 0; i < node.count; i++) {
                 auto idx = bvh.sorted_prim[node.start + i];
-                if (intersect_prim(idx, ray, ray_t)) {
-                    hit = true;
-                    id = idx;
-                    ray.tmax = ray_t;
+                auto pp = point();
+                if ((pp = _intersect_ray(obj, idx, ray, early_exit))) {
+                    if (early_exit) return pp;
+                    pt = pp;
+                    ray.tmax = pt.dist;
                 }
             }
         }
     }
 
-    return hit;
+    return pt;
 }
 
 //
 // Shape intersection
 //
-static inline bool _intersect_shape(const shape& shape, const ym::ray3f& ray,
-                                    bool early_exit, float& ray_t, int& eid,
-                                    ym::vec3f& euv) {
-    auto tray = transform_ray(shape.inv_xform, ray);
-    if (!shape.triangles.empty()) {
-        return _intersect_bvh(shape.bvh, tray, early_exit, ray_t, eid,
-                              [&](int idx, const ym::ray3f& ray, float& ray_t) {
-                                  auto f = shape.triangles[idx];
-                                  return _intersect_triangle(
-                                      ray, shape.pos[f[0]], shape.pos[f[1]],
-                                      shape.pos[f[2]], ray_t, euv);
-                              });
-    } else if (!shape.lines.empty()) {
-        return _intersect_bvh(
-            shape.bvh, tray, early_exit, ray_t, eid,
-            [&](int idx, const ym::ray3f& ray, float& ray_t) {
-                auto f = shape.lines[idx];
-                auto r0 = (!shape.radius.empty()) ? shape.radius[f[0]] : 0;
-                auto r1 = (!shape.radius.empty()) ? shape.radius[f[1]] : 0;
-                return _intersect_line(ray, shape.pos[f[0]], shape.pos[f[1]],
-                                       r0, r1, ray_t, euv);
-            });
-    } else if (!shape.points.empty()) {
-        return _intersect_bvh(
-            shape.bvh, tray, early_exit, ray_t, eid,
-            [&](int idx, const ym::ray3f& ray, float& ray_t) {
-                auto f = shape.points[idx];
-                auto r = (!shape.radius.empty()) ? shape.radius[f] : 0;
-                return _intersect_point(ray, shape.pos[f], r, ray_t, euv);
-            });
-    } else {
-        assert(false);
-        return false;
-    }
+YGL_API point intersect_ray(const shape& shp, const ray3f& ray,
+                            bool early_exit) {
+    return _intersect_ray(shp, transform_ray(shp.inv_xform, ray), early_exit);
 }
 
 //
 // Scene intersection
 //
-static inline bool _intersect_scene(const scene& scene, const ym::ray3f& ray,
-                                    bool early_exit, float& ray_t, int& sid,
-                                    int& eid, ym::vec3f& euv) {
-    return _intersect_bvh(scene.bvh, ray, early_exit, ray_t, sid,
-                          [&](int idx, ym::ray3f& ray, float& ray_t) {
-                              return _intersect_shape(scene.shapes[idx], ray,
-                                                      early_exit, ray_t, eid,
-                                                      euv);
-                          });
-}
-
-//
-// Find closest ray-scene intersection. A convenient wrapper for the above func.
-// Public function whose interface is described above.
-//
-YGL_API point intersect_first(const scene& scene, const ym::ray3f& ray) {
-    auto isec = point();
-    isec.hit = _intersect_scene(scene, ray, false, isec.dist, isec.sid,
-                                isec.eid, isec.euv);
-    return isec;
-}
-
-//
-// Find closest ray-scene intersection. A convenient wrapper for the above func.
-// Public function whose interface is described above.
-//
-YGL_API point intersect_first(const shape& shape, const ym::ray3f& ray) {
-    auto isec = point();
-    isec.hit =
-        _intersect_shape(shape, ray, false, isec.dist, isec.eid, isec.euv);
-    return isec;
-}
-
-//
-// Find closest ray-scene intersection. A convenient wrapper for the above func.
-// Public function whose interface is described above.
-//
-YGL_API bool intersect_any(const scene& scene, const ym::ray3f& ray) {
-    auto isec = point();
-    return _intersect_scene(scene, ray, true, isec.dist, isec.sid, isec.eid,
-                            isec.euv);
-}
-
-//
-// Find closest ray-scene intersection. A convenient wrapper for the above func.
-// Public function whose interface is described above.
-//
-YGL_API bool intersect_any(const shape& shape, const ym::ray3f& ray) {
-    auto isec = point();
-    return _intersect_shape(shape, ray, true, isec.dist, isec.eid, isec.euv);
+YGL_API point intersect_ray(const scene& scn, const ray3f& ray,
+                            bool early_exit) {
+    return _intersect_ray(scn, ray, early_exit);
 }
 
 // -----------------------------------------------------------------------------
 // BVH CLOSEST ELEMENT LOOKUP
 // -----------------------------------------------------------------------------
+
+//
+// Find point overlap for scene elements.
+//
+static inline point _overlap_point(const scene& scn, int idx, const vec3f& pos,
+                                   float max_dist, bool early_exit) {
+    return overlap_point(scn.shapes[idx], pos, max_dist, early_exit);
+}
+
+//
+// Find point overlap for shape elements.
+//
+static inline point _overlap_point(const shape& shp, int idx, const vec3f& pos,
+                                   float max_dist, bool early_exit) {
+    // initialize point
+    auto pt = point();
+
+    // switch over elemenet type
+    if (!shp.triangle.empty()) {
+        auto f = shp.triangle[idx];
+        if (!_overlap_triangle(pos, max_dist, shp.pos[f[0]], shp.pos[f[1]],
+                               shp.pos[f[2]], shp._radius(f[0]),
+                               shp._radius(f[1]), shp._radius(f[2]), pt.dist,
+                               (vec3f&)pt.euv))
+            return {};
+        pt.euv = {pt.euv[0], pt.euv[1], pt.euv[2], 0};
+    } else if (!shp.line.empty()) {
+        auto f = shp.line[idx];
+        if (!_overlap_line(pos, max_dist, shp.pos[f[0]], shp.pos[f[1]],
+                           shp._radius(f[0]), shp._radius(f[1]), pt.dist,
+                           (vec2f&)pt.euv))
+            return {};
+        pt.euv = {pt.euv[0], pt.euv[1], 0, 0};
+    } else if (!shp.point.empty()) {
+        auto f = shp.point[idx];
+        if (!_overlap_point(pos, max_dist, shp.pos[f], shp._radius(f), pt.dist))
+            return {};
+        pt.euv = {1, 0, 0, 0};
+    } else if (!shp.tetra.empty()) {
+        auto f = shp.tetra[idx];
+        if (!_overlap_tetrahedron(
+                pos, max_dist, shp.pos[f[0]], shp.pos[f[1]], shp.pos[f[2]],
+                shp.pos[f[3]], shp._radius(f[0]), shp._radius(f[1]),
+                shp._radius(f[2]), shp._radius(f[3]), pt.dist, pt.euv))
+            return {};
+    } else {
+        if (!_overlap_point(pos, max_dist, shp.pos[idx], shp._radius(idx),
+                            pt.dist))
+            return {};
+        pt.euv = {1, 0, 0, 0};
+    };
+
+    // wrap up point
+    pt.eid = idx;
+    pt.sid = shp.sid;
+    return pt;
+}
 
 //
 // Finds the closest element with a bvh. Similar to the generic public function
@@ -1445,28 +1561,27 @@ YGL_API bool intersect_any(const shape& shape, const ym::ray3f& ray) {
 // the code; note in fact that all subsequent farthest iterations will be
 // rejected in the tmax tests
 //
-template <typename Overlap_func>
-static inline bool _overlap_bvh(const _bvh& bvh, const ym::vec3f& pt,
-                                float max_dist, bool early_exit, float& dist,
-                                int& id, const Overlap_func& overlap_prim) {
+template <typename T>
+static inline point _overlap_point(const T& obj, const vec3f& pos,
+                                   float max_dist, bool early_exit) {
+    // get bvh
+    auto& bvh = obj._bvh;
+
     // node stack
     int node_stack[64];
     auto node_cur = 0;
     node_stack[node_cur++] = 0;
 
     // shared variables
-    auto hit = false;
+    auto pt = point();
 
     // walking stack
-    while (node_cur && !(early_exit && hit)) {
-        // exit if needed
-        if (early_exit && hit) return hit;
-
+    while (node_cur) {
         // grab node
         auto& node = bvh.nodes[node_stack[--node_cur]];
 
         // intersect bbox
-        if (!_distance_check_bbox(pt, max_dist, node.bbox[0], node.bbox[1]))
+        if (!_distance_check_bbox(pos, max_dist, node.bbox[0], node.bbox[1]))
             continue;
 
         // intersect node, switching based on node type
@@ -1480,203 +1595,242 @@ static inline bool _overlap_bvh(const _bvh& bvh, const ym::vec3f& pt,
         } else {
             for (auto i = 0; i < node.count; i++) {
                 auto idx = bvh.sorted_prim[node.start + i];
-                if (overlap_prim(idx, pt, max_dist, dist)) {
-                    hit = true;
-                    id = idx;
-                    max_dist = dist;
+                auto pp = point();
+                if ((pp =
+                         _overlap_point(obj, idx, pos, max_dist, early_exit))) {
+                    if (early_exit) return pp;
+                    pt = pp;
+                    max_dist = pt.dist;
                 }
             }
         }
     }
 
-    return hit;
+    return pt;
 }
 
 //
 // Shape overlap
 //
-static inline bool _overlap_bvh(const shape& shape, const ym::vec3f& pt,
-                                float max_dist, bool early_exit, float& dist,
-                                int& eid, ym::vec3f& euv) {
-    auto tpt = transform_point(shape.inv_xform, pt);
-    if (!shape.triangles.empty()) {
-        return _overlap_bvh(
-            shape.bvh, tpt, max_dist, early_exit, dist, eid,
-            [&](int idx, const ym::vec3f& pt, float max_dist, float& dist) {
-                auto f = shape.triangles[idx];
-                auto r0 = (!shape.radius.empty()) ? shape.radius[f[0]] : 0;
-                auto r1 = (!shape.radius.empty()) ? shape.radius[f[1]] : 0;
-                auto r2 = (!shape.radius.empty()) ? shape.radius[f[2]] : 0;
-                return _overlap_triangle(pt, max_dist, shape.pos[f[0]],
-                                         shape.pos[f[1]], shape.pos[f[2]], r0,
-                                         r1, r2, dist, euv);
-            });
-    } else if (!shape.lines.empty()) {
-        return _overlap_bvh(
-            shape.bvh, tpt, max_dist, early_exit, dist, eid,
-            [&](int idx, const ym::vec3f& pt, float max_dist, float& dist) {
-                auto f = shape.lines[idx];
-                auto r0 = (!shape.radius.empty()) ? shape.radius[f[0]] : 0;
-                auto r1 = (!shape.radius.empty()) ? shape.radius[f[1]] : 0;
-                return _overlap_line(pt, max_dist, shape.pos[f[0]],
-                                     shape.pos[f[1]], r0, r1, dist, euv);
-            });
-    } else if (!shape.points.empty()) {
-        return _overlap_bvh(
-            shape.bvh, tpt, max_dist, early_exit, dist, eid,
-            [&](int idx, const ym::vec3f& pt, float max_dist, float& dist) {
-                auto f = shape.points[idx];
-                auto r = (!shape.radius.empty()) ? shape.radius[f] : 0;
-                return _overlap_point(pt, max_dist, shape.pos[f], r, dist, euv);
-            });
-    } else {
-        assert(false);
-        return false;
-    }
+YGL_API point overlap_point(const shape& shp, const vec3f& pos, float max_dist,
+                            bool early_exit) {
+    return _overlap_point(shp, transform_point(shp.inv_xform, pos), max_dist,
+                          early_exit);
 }
 
 //
 // Scene overlap
 //
-static inline bool _overlap_bvh(const scene& scene, const ym::vec3f& pt,
-                                float max_dist, bool early_exit, float& dist,
-                                int& sid, int& eid, ym::vec3f& euv) {
-    return _overlap_bvh(
-        scene.bvh, pt, max_dist, early_exit, dist, sid,
-        [&](int idx, const ym::vec3f& pt, float max_dist, float& dist) {
-            return _overlap_bvh(scene.shapes[idx], pt, max_dist, early_exit,
-                                dist, eid, euv);
-        });
+YGL_API point overlap_point(const scene& scn, const vec3f& pos, float max_dist,
+                            bool early_exit) {
+    return _overlap_point(scn, pos, max_dist, early_exit);
+}
+
+// -----------------------------------------------------------------------------
+// BVH CLOSEST ELEMENT LOOKUP FOR INTERNAL ELEMENTS
+// -----------------------------------------------------------------------------
+
+//
+// Shape elements overlap
+//
+static inline vector<pair<point, point>> _overlap_elems(const shape& shp1,
+                                                        const shape& shp2,
+                                                        int idx1, int idx2,
+                                                        bool exclude_self,
+                                                        bool early_exit) {
+    // prepare point
+    auto p = shp2.point[idx2];
+    auto pt = point();
+
+    // switch over shape type
+    if (!shp1.triangle.empty()) {
+        auto f = shp1.triangle[idx1];
+        if (!_overlap_triangle(shp2.pos[p], shp2._radius(p), shp1.pos[f[0]],
+                               shp1.pos[f[1]], shp1.pos[f[2]],
+                               shp1._radius(f[0]), shp1._radius(f[1]),
+                               shp1._radius(f[2]), pt.dist, (vec3f&)pt.euv))
+            return {};
+        pt.euv = {pt.euv[0], pt.euv[1], pt.euv[2], 0};
+    } else if (!shp1.line.empty()) {
+        auto f = shp1.line[idx1];
+        if (!_overlap_line(shp2.pos[p], shp2._radius(p), shp1.pos[f[0]],
+                           shp1.pos[f[1]], shp1._radius(f[0]),
+                           shp1._radius(f[1]), pt.dist, (vec2f&)pt.euv))
+            return {};
+        pt.euv = {pt.euv[0], pt.euv[1], 0, 0};
+    } else if (!shp1.point.empty()) {
+        auto f = shp1.point[idx1];
+        if (!_overlap_point(shp2.pos[p], shp2._radius(p), shp1.pos[f],
+                            shp1._radius(f), pt.dist))
+            return {};
+        pt.euv = {1, 0, 0, 0};
+    } else if (!shp1.tetra.empty()) {
+        auto f = shp1.tetra[idx1];
+        if (!_overlap_tetrahedron(shp2.pos[p], shp2._radius(p), shp1.pos[f[0]],
+                                  shp1.pos[f[1]], shp1.pos[f[2]],
+                                  shp1.pos[f[3]], shp1._radius(f[0]),
+                                  shp1._radius(f[1]), shp1._radius(f[2]),
+                                  shp1._radius(f[3]), pt.dist, pt.euv))
+            return {};
+    } else {
+        if (!_overlap_point(shp2.pos[p], shp2._radius(p), shp1.pos[idx1],
+                            shp1._radius(idx1), pt.dist))
+            return {};
+        pt.euv = {1, 0, 0, 0};
+    }
+
+    // wrap up
+    pt.sid = shp1.sid;
+    pt.eid = idx1;
+    return {{pt, {pt.dist, shp2.sid, idx2, {1, 0, 0, 0}}}};
 }
 
 //
-// Find the closest element to a given point within a maximum distance.
-// A convenient wrapper for the above func.
-// Public function whose interface is described above.
+// Scene elements overlap
 //
-YGL_API point overlap_first(const scene& scene, const ym::vec3f& pt,
-                            float max_dist) {
-    auto overlap = point();
-    overlap.hit = _overlap_bvh(scene, pt, max_dist, false, overlap.dist,
-                               overlap.sid, overlap.eid, overlap.euv);
-    return overlap;
-}
-YGL_API point overlap_first(const shape& shape, const ym::vec3f& pt,
-                            float max_dist) {
-    auto overlap = point();
-    overlap.hit = _overlap_bvh(shape, pt, max_dist, false, overlap.dist,
-                               overlap.eid, overlap.euv);
-    return overlap;
-}
-
-//
-// Find if any element overlaps given point within a maximum distance.
-// A convenient wrapper for the above func.
-// Public function whose interface is described above.
-//
-YGL_API bool overlap_any(const scene& scene, const ym::vec3f& pt,
-                         float max_dist, int req_shape) {
-    auto overlap = point();
-    return _overlap_bvh(scene, pt, max_dist, true, overlap.dist, overlap.sid,
-                        overlap.eid, overlap.euv);
-}
-YGL_API bool overlap_any(const shape& shape, const ym::vec3f& pt,
-                         float max_dist, int req_shape) {
-    auto overlap = point();
-    return _overlap_bvh(shape, pt, max_dist, true, overlap.dist, overlap.eid,
-                        overlap.euv);
+static inline vector<pair<point, point>> _overlap_elems(const scene& scn1,
+                                                        const scene& scn2,
+                                                        int idx1, int idx2,
+                                                        bool exclude_self,
+                                                        bool early_exit) {
+    if (early_exit) {
+        auto bbox1 = scn1.shapes[idx1]._bbox();
+        auto bbox2 = scn1.shapes[idx2]._bbox();
+        if (!_overlap_bbox(bbox1[0], bbox1[1], bbox2[0], bbox2[1])) return {};
+        return {{{0, scn1.shapes[idx1].sid, 0, {}},
+                 {0, scn2.shapes[idx2].sid, 0, {}}}};
+    } else {
+        return overlap_elems(scn1.shapes[idx1], scn2.shapes[idx2],
+                             exclude_self);
+    }
 }
 
 //
-// Find the list of overlaps between shape bounds.
-// Public function whose interface is described above.
+// Finds the closest element for all pairs of vertices.
+// Similar to the generic public function whose
+// interface is described above. See nightbor_bvh for parameter docs.
+// With respect to that, only adds early_exit to decide whether we exit
+// at the first primitive hit or we find the closest hit.
 //
-template <typename Overlap_func>
-YGL_API int _overlap_bounds(const _bvh& bvh, bool exclude_self,
-                            const Overlap_func& overlap_prims) {
+// Implementation Notes:
+// - Walks the BVH using an internal stack to avoid the slowness of
+// recursive
+// calls; this follows general conventions and stragely makes the code
+// shorter
+// - The walk is simplified for first hit by obeserving that if we update
+// the dist_max limit with the closest intersection distance during
+// traversal, we will speed up computation significantly while simplifying
+// the code; note in fact that all subsequent farthest iterations will be
+// rejected in the tmax tests
+//
+template <typename T>
+static inline vector<pair<point, point>> _overlap_elems(const T& obj1,
+                                                        const T& obj2,
+                                                        bool exclude_self,
+                                                        bool early_exit) {
+    // get bvhs
+    auto& bvh1 = obj1._bvh;
+    auto& bvh2 = obj2._bvh;
+
     // node stack
-    ym::vec2i node_stack[128];
+    vec2i node_stack[128];
     auto node_cur = 0;
     node_stack[node_cur++] = {0, 0};
 
     // shared variables
-    auto hits = 0;
+    vector<pair<point, point>> overlaps;
 
     // walking stack
     while (node_cur) {
         // grab node
         auto node_idx = node_stack[--node_cur];
-        auto node1 = &bvh.nodes[node_idx[0]];
-        auto node2 = &bvh.nodes[node_idx[1]];
+        auto& node1 = bvh1.nodes[node_idx[0]];
+        auto& node2 = bvh2.nodes[node_idx[1]];
 
         // intersect bbox
-        if (!_overlap_bbox(node1->bbox[0], node1->bbox[1], node2->bbox[0],
-                           node2->bbox[1]))
+        if (!_overlap_bbox(node1.bbox[0], node1.bbox[1], node2.bbox[0],
+                           node2.bbox[1]))
             continue;
 
         // check for leaves
-        if (node1->isleaf && node2->isleaf) {
+        if (node1.isleaf && node2.isleaf) {
             // collide primitives
-            for (auto i1 = node1->start; i1 < node1->start + node1->count;
-                 i1++) {
-                for (auto i2 = node2->start; i2 < node2->start + node2->count;
+            for (auto i1 = node1.start; i1 < node1.start + node1.count; i1++) {
+                for (auto i2 = node2.start; i2 < node2.start + node2.count;
                      i2++) {
-                    auto idx =
-                        ym::vec2i{bvh.sorted_prim[i1], bvh.sorted_prim[i2]};
-                    if (exclude_self && idx[0] == idx[1]) continue;
-                    hits += overlap_prims(idx);
+                    auto idx1 = bvh1.sorted_prim[i1];
+                    auto idx2 = bvh2.sorted_prim[i2];
+                    if (exclude_self && idx1 == idx2) continue;
+                    auto overlaps_p = _overlap_elems(obj1, obj2, idx1, idx2,
+                                                     exclude_self, early_exit);
+                    if (overlaps_p.empty()) continue;
+                    overlaps.insert(overlaps.end(), overlaps_p.begin(),
+                                    overlaps_p.end());
                 }
             }
         } else {
             // descend
-            if (node1->isleaf) {
-                for (auto idx = node2->start; idx < node2->start + node2->count;
-                     idx++) {
-                    node_stack[node_cur++] = {node_idx[0], (int)idx};
+            if (node1.isleaf) {
+                for (auto idx2 = node2.start; idx2 < node2.start + node2.count;
+                     idx2++) {
+                    node_stack[node_cur++] = {node_idx[0], (int)idx2};
+                    assert(node_cur < 128);
+                }
+            } else if (node2.isleaf) {
+                for (auto idx1 = node1.start; idx1 < node1.start + node1.count;
+                     idx1++) {
+                    node_stack[node_cur++] = {(int)idx1, node_idx[1]};
                     assert(node_cur < 128);
                 }
             } else {
-                for (auto idx = node1->start; idx < node1->start + node1->count;
-                     idx++) {
-                    node_stack[node_cur++] = {(int)idx, node_idx[1]};
-                    assert(node_cur < 128);
+                for (auto idx2 = node2.start; idx2 < node2.start + node2.count;
+                     idx2++) {
+                    for (auto idx1 = node1.start;
+                         idx1 < node1.start + node1.count; idx1++) {
+                        node_stack[node_cur++] = {(int)idx1, (int)idx2};
+                        assert(node_cur < 128);
+                    }
                 }
             }
         }
     }
 
-    // done
-    return hits;
+    return overlaps;
+}
+
+//
+// Find the list of overlaps between shapes.
+// Public function whose interface is described above.
+//
+YGL_API vector<pair<point, point>> overlap_elems(const shape& shp1,
+                                                 const shape& shp2,
+                                                 bool exclude_self) {
+    return _overlap_elems(shp1, shp2, exclude_self, false);
+}
+
+//
+// Find the list of overlaps between scenes.
+// Public function whose interface is described above.
+//
+YGL_API vector<pair<point, point>> overlap_elems(const scene& scn1,
+                                                 const scene& scn2,
+                                                 bool exclude_self) {
+    return _overlap_elems(scn1, scn2, exclude_self, false);
 }
 
 //
 // Find the list of overlaps between shape bounds.
 // Public function whose interface is described above.
 //
-YGL_API int overlap_shape_bounds(
-    const scene& scene, bool exclude_self,
-    std::function<void(const ym::vec2i& v)> overlap_cb) {
-    return _overlap_bounds(scene.bvh, exclude_self, [&](const ym::vec2i& idx) {
-        auto& shape1 = scene.shapes[idx[0]];
-        auto& shape2 = scene.shapes[idx[1]];
-        auto bbox1 = ym::transform_bbox(shape1.xform, shape1.bvh.nodes[0].bbox);
-        auto bbox2 = ym::transform_bbox(shape2.xform, shape2.bvh.nodes[0].bbox);
-        if (!_overlap_bbox(bbox1[0], bbox1[1], bbox2[0], bbox2[1])) return 0;
-        overlap_cb(idx);
-        return 1;
-    });
-}
-
-//
-// Find the list of overlaps between shape bounds.
-// Public function whose interface is described above.
-//
-YGL_API int overlap_shape_bounds(const scene& scene, bool exclude_self,
-                                 std::vector<ym::vec2i>& overlaps) {
-    overlaps.clear();
-    return overlap_shape_bounds(
-        scene, exclude_self,
-        [&overlaps](const ym::vec2i& v) { overlaps.push_back(v); });
+YGL_API vector<vec2i> overlap_shape_bounds(const scene& scn1, const scene& scn2,
+                                           bool exclude_self) {
+    auto overlaps_pt = _overlap_elems(scn1, scn2, exclude_self, true);
+    if (overlaps_pt.empty()) return {};
+    auto overlaps = vector<vec2i>();
+    overlaps.reserve(overlaps_pt.size());
+    for (auto& pt : overlaps_pt)
+        overlaps.push_back({pt.first.sid, pt.second.sid});
+    return overlaps;
 }
 
 // -----------------------------------------------------------------------------
@@ -1687,43 +1841,27 @@ YGL_API int overlap_shape_bounds(const scene& scene, bool exclude_self,
 // Interpolate vertex properties at the intersection. Public API.
 //
 template <typename T>
-YGL_API T interpolate_shape_vert(const ym::array_view<int>& points,
-                                 const ym::array_view<ym::vec2i>& lines,
-                                 const ym::array_view<ym::vec3i>& triangles,
-                                 const ym::array_view<T>& vert, int eid,
-                                 const ym::vec2f& euv) {
+YGL_API T interpolate_shape_vert(const array_view<int>& points,
+                                 const array_view<vec2i>& lines,
+                                 const array_view<vec3i>& triangles,
+                                 const array_view<vec4i>& tetrahedrons,
+                                 const array_view<T>& vert, int eid,
+                                 const vec4f& euv) {
     if (!points.empty())
         return vert[points[eid]];
     else if (!lines.empty())
-        return vert[lines[eid][0]] * (1 - euv[0]) +
-               vert[lines[eid][1]] * euv[1];
+        return vert[lines[eid][0]] * euv[0] + vert[lines[eid][1]] * euv[1];
     else if (!triangles.empty())
-        return vert[triangles[eid][0]] * (1 - euv[0] - euv[1]) +
-               vert[triangles[eid][1]] * euv[0] +
-               vert[triangles[eid][2]] * euv[1];
+        return vert[triangles[eid][0]] * euv[0] +
+               vert[triangles[eid][1]] * euv[1] +
+               vert[triangles[eid][2]] * euv[2];
+    else if (!tetrahedrons.empty())
+        return vert[tetrahedrons[eid][0]] * euv[0] +
+               vert[tetrahedrons[eid][1]] * euv[1] +
+               vert[tetrahedrons[eid][2]] * euv[2] +
+               vert[tetrahedrons[eid][3]] * euv[3];
     assert(false);
     return T();
-}
-
-//
-// Interpolate vertex properties at the intersection. Public API.
-//
-template <typename T>
-YGL_API T interpolate_shape_vert(const ym::array_view<ym::vec2i>& lines,
-                                 const ym::array_view<T>& vert, int eid,
-                                 const ym::vec2f& euv) {
-    return vert[lines[eid][0]] * (1 - euv[0]) + vert[lines[eid][1]] * euv[1];
-}
-
-//
-// Interpolate vertex properties at the intersection. Public API.
-//
-template <typename T>
-YGL_API T interpolate_shape_vert(const ym::array_view<ym::vec3i>& triangles,
-                                 const ym::array_view<T>& vert, int eid,
-                                 const ym::vec2f& euv) {
-    return vert[triangles[eid][0]] * (1 - euv[0] - euv[1]) +
-           vert[triangles[eid][1]] * euv[0] + vert[triangles[eid][2]] * euv[1];
 }
 
 // -----------------------------------------------------------------------------
@@ -1733,17 +1871,17 @@ YGL_API T interpolate_shape_vert(const ym::array_view<ym::vec3i>& triangles,
 //
 // Compute BVH stats.
 //
-YGL_API void _compute_bvh_stats(const scene& scene, int shape_id,
+YGL_API void _compute_bvh_stats(const scene& scn, int shape_id,
                                 bool include_shapes, int depth, int& nprims,
                                 int& ninternals, int& nleaves, int& min_depth,
                                 int& max_depth) {
     // get bvh
-    auto bvh = (shape_id >= 0) ? scene.shapes[shape_id].bvh : scene.bvh;
+    auto bvh = (shape_id >= 0) ? scn.shapes[shape_id]._bvh : scn._bvh;
 
     // node stack
-    ym::vec2i node_stack[128];  // node and depth
+    vec2i node_stack[128];  // node and depth
     auto node_cur = 0;
-    node_stack[node_cur++] = ym::vec2i{0, depth};
+    node_stack[node_cur++] = vec2i{0, depth};
 
     // walk the stack
     while (node_cur) {
@@ -1756,26 +1894,26 @@ YGL_API void _compute_bvh_stats(const scene& scene, int shape_id,
             ninternals += 1;
             for (auto i = 0; i < node.count; i++) {
                 node_stack[node_cur++] =
-                    ym::vec2i(node.start + i, node_depth[1] + 1);
+                    vec2i(node.start + i, node_depth[1] + 1);
             }
         } else if (shape_id >= 0) {
             nleaves += 1;
             nprims += node.count;
-            min_depth = ym::min(min_depth, node_depth[1]);
-            max_depth = ym::max(max_depth, node_depth[1]);
+            min_depth = min(min_depth, node_depth[1]);
+            max_depth = max(max_depth, node_depth[1]);
         } else {
             if (include_shapes) {
                 for (auto i = 0; i < node.count; i++) {
                     auto idx = bvh.sorted_prim[node.start + i];
-                    _compute_bvh_stats(scene, idx, true, node_depth[1] + 1,
+                    _compute_bvh_stats(scn, idx, true, node_depth[1] + 1,
                                        nprims, ninternals, nleaves, min_depth,
                                        max_depth);
                 }
             } else {
                 nleaves += 1;
                 nprims += node.count;
-                min_depth = ym::min(min_depth, node_depth[1]);
-                max_depth = ym::max(max_depth, node_depth[1]);
+                min_depth = min(min_depth, node_depth[1]);
+                max_depth = max(max_depth, node_depth[1]);
             }
         }
     }
@@ -1784,7 +1922,7 @@ YGL_API void _compute_bvh_stats(const scene& scene, int shape_id,
 //
 // Compute BVH stats.
 //
-YGL_API void compute_bvh_stats(const scene& scene, bool include_shapes,
+YGL_API void compute_bvh_stats(const scene& scn, bool include_shapes,
                                int& nprims, int& ninternals, int& nleaves,
                                int& min_depth, int& max_depth, int req_shape) {
     // init out variables
@@ -1794,7 +1932,7 @@ YGL_API void compute_bvh_stats(const scene& scene, bool include_shapes,
     min_depth = 10000;
     max_depth = -1;
 
-    _compute_bvh_stats(scene, req_shape, include_shapes, 0, nprims, ninternals,
+    _compute_bvh_stats(scn, req_shape, include_shapes, 0, nprims, ninternals,
                        nleaves, min_depth, max_depth);
 }
 

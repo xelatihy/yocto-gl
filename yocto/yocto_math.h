@@ -94,6 +94,7 @@
 #include <chrono>
 #include <cmath>
 #include <cstdint>
+#include <functional>
 #include <initializer_list>
 #include <limits>
 #include <type_traits>
@@ -105,8 +106,30 @@
 
 namespace ym {
 
+//
+// Using directives
+//
+using std::fmod;
+using std::sin;
+using std::cos;
+using std::tan;
+using std::asin;
+using std::acos;
+using std::atan;
+using std::atan2;
+using std::sqrt;
+using std::pow;
+using std::abs;
+
 // types from the standard library for consistency
 using size_t = std::size_t;
+
+// standard containers
+using std::vector;
+using std::array;
+using std::initializer_list;
+using std::function;
+using std::pair;
 
 // pi (float)
 const float pif = 3.14159265f;
@@ -166,24 +189,24 @@ constexpr inline int pow2(int x) { return 1 << x; }
 // via operator[].
 //
 template <typename T, size_t N>
-struct vec : std::array<T, N> {
+struct vec : array<T, N> {
     // default constructor
-    vec() : std::array<T, N>{} {}
+    vec() : array<T, N>{} {}
 
     // member constructor
     template <typename... Args,
               typename = std::enable_if_t<sizeof...(Args) == N>>
-    constexpr vec(Args... vv) : std::array<T, N>{T(vv)...} {}
+    constexpr vec(Args... vv) : array<T, N>{T(vv)...} {}
 
     // list constructor
-    constexpr vec(std::initializer_list<T> vv) {
+    constexpr vec(initializer_list<T> vv) {
         assert(N == vv.size());
         auto i = 0;
         for (auto&& e : vv) (*this)[i++] = e;
     }
 
     // copy constructor form array
-    constexpr vec(const std::array<T, N>& vv) : std::array<T, N>{vv} {}
+    constexpr vec(const array<T, N>& vv) : array<T, N>{vv} {}
 };
 
 //
@@ -364,7 +387,7 @@ inline T dot(const vec<T, N>& a, const vec<T, N>& b) {
 
 template <typename T, size_t N>
 inline T length(const vec<T, N>& a) {
-    return std::sqrt(dot(a, a));
+    return sqrt(dot(a, a));
 }
 
 template <typename T, size_t N>
@@ -403,7 +426,7 @@ inline vec<T, 3> cross(const vec<T, 3>& a, const vec<T, 3>& b) {
 template <typename T, size_t N>
 T uangle(const vec<T, N>& a, const vec<T, N>& b) {
     auto d = dot(a, b);
-    return d > 1 ? 0 : std::acos(d < -1 ? -1 : d);
+    return d > 1 ? 0 : acos(d < -1 ? -1 : d);
 }
 
 template <typename T, size_t N>
@@ -420,15 +443,15 @@ template <typename T, size_t N>
 inline vec<T, N> slerp(const vec<T, N>& a, const vec<T, N>& b, T t) {
     auto th = uangle(a, b);
     return th == 0 ? a
-                   : a * (std::sin(th * (1 - t)) / std::sin(th)) +
-                         b * (std::sin(th * t) / std::sin(th));
+                   : a * (sin(th * (1 - t)) / sin(th)) +
+                         b * (sin(th * t) / sin(th));
 }
 
 // http://lolengine.net/blog/2013/09/21/picking-orthogonal-vector-combing-coconuts)
 template <typename T>
 inline vec<T, 3> orthogonal(const vec<T, 3>& v) {
-    return std::abs(v[0]) > std::abs(v[2]) ? vec<T, 3>{-v[1], v[0], 0}
-                                           : vec<T, 3>{0, -v[2], v[1]};
+    return abs(v[0]) > abs(v[2]) ? vec<T, 3>{-v[1], v[0], 0}
+                                 : vec<T, 3>{0, -v[2], v[1]};
 }
 
 template <typename T>
@@ -543,18 +566,18 @@ inline int max_element(const vec<T, N>& a) {
 // Access to columns via operator [] and raw data pointer data().
 //
 template <typename T, size_t N, size_t M>
-struct mat : std::array<vec<T, N>, M> {
+struct mat : array<vec<T, N>, M> {
     using V = vec<T, N>;
 
-    constexpr mat() : std::array<vec<T, N>, M>{} {}
+    constexpr mat() : array<vec<T, N>, M>{} {}
 
     // member constructor
     template <typename... Args,
               typename = std::enable_if_t<sizeof...(Args) == M>>
-    constexpr mat(Args... args) : std::array<vec<T, N>, M>{V(args)...} {}
+    constexpr mat(Args... args) : array<vec<T, N>, M>{V(args)...} {}
 
     // list constructor
-    constexpr mat(std::initializer_list<V> vv) {
+    constexpr mat(initializer_list<V> vv) {
         assert(M == vv.size());
         auto i = 0;
         for (auto&& e : vv) (*this)[i++] = e;
@@ -776,11 +799,11 @@ inline mat<T, N, N> inverse(const mat<T, N, N>& a) {
 // its origin.
 //
 template <typename T, size_t N>
-struct frame : std::array<vec<T, N>, N + 1> {
+struct frame : array<vec<T, N>, N + 1> {
     using V = vec<T, N>;
     using M = mat<T, N, N>;
 
-    constexpr frame() : std::array<vec<T, N>, N + 1>{} {}
+    constexpr frame() : array<vec<T, N>, N + 1>{} {}
 
     constexpr frame(const M& m, const V& t) {
         for (auto i = 0; i < N; i++) (*this)[i] = m[i];
@@ -790,10 +813,10 @@ struct frame : std::array<vec<T, N>, N + 1> {
     // member constructor
     template <typename... Args,
               typename = std::enable_if_t<sizeof...(Args) == N + 1>>
-    constexpr frame(Args... args) : std::array<vec<T, N>, N + 1>{V(args)...} {}
+    constexpr frame(Args... args) : array<vec<T, N>, N + 1>{V(args)...} {}
 
     // list constructor
-    constexpr frame(std::initializer_list<V> vv) {
+    constexpr frame(initializer_list<V> vv) {
         assert(N + 1 == vv.size());
         auto i = 0;
         for (auto&& e : vv) (*this)[i++] = e;
@@ -871,24 +894,24 @@ inline frame<T, N> inverse(const frame<T, N>& a) {
 // Quaterions are xi + yj + zk + w
 //
 template <typename T, size_t N>
-struct quat : std::array<T, N> {
+struct quat : array<T, N> {
     // default constructor
-    constexpr quat() : std::array<T, 4>{} {}
+    constexpr quat() : array<T, 4>{} {}
 
     // member constructor
     template <typename... Args,
               typename = std::enable_if_t<sizeof...(Args) == N>>
-    constexpr quat(Args... vv) : std::array<T, 4>{T(vv)...} {}
+    constexpr quat(Args... vv) : array<T, 4>{T(vv)...} {}
 
     // list constructor
-    constexpr quat(std::initializer_list<T> vv) {
+    constexpr quat(initializer_list<T> vv) {
         assert(N == vv.size());
         auto i = 0;
         for (auto&& e : vv) (*this)[i++] = e;
     }
 
     // axis angle access
-    constexpr T angle() const { return std::acos((*this)[2]) * 2; }
+    constexpr T angle() const { return acos((*this)[2]) * 2; }
     constexpr vec<T, 3> axis() {
         return normalize(vec<T, 3>((*this)[0], (*this)[1], (*this)[2]));
     }
@@ -958,7 +981,7 @@ quat<T, 4> slerp(const quat<T, 4>& a, const quat<T, 4>& b, T t) {
 // Axis aligned bounding box.
 //
 template <typename T, size_t N>
-struct bbox : std::array<vec<T, N>, 2> {
+struct bbox : array<vec<T, N>, 2> {
     constexpr bbox() {
         for (auto i = 0; i < N; i++) {
             (*this)[0][i] = std::numeric_limits<T>::max();
@@ -967,10 +990,19 @@ struct bbox : std::array<vec<T, N>, 2> {
     }
 
     constexpr bbox(const vec<T, N>& m, const vec<T, N>& M)
-        : std::array<vec<T, N>, 2>{m, M} {}
+        : array<vec<T, N>, 2>{m, M} {}
+
+    constexpr bbox(const initializer_list<vec<T, N>>& v) : bbox() {
+        for (auto&& vv : v) expand(vv);
+    }
 
     constexpr vec<T, N> diagonal() const { return (*this)[1] - (*this)[0]; }
     constexpr vec<T, N> center() const { return ((*this)[1] + (*this)[0]) / 2; }
+
+    constexpr void expand(const vec<T, N>& b) {
+        (*this)[0] = min((*this)[0], b);
+        (*this)[1] = max((*this)[1], b);
+    }
 };
 
 //
@@ -990,13 +1022,6 @@ const auto invalid_bbox3f = bbox3f();
 //
 // Axis aligned bounding box operations.
 //
-
-template <typename T, size_t N>
-inline bbox<T, N> make_bbox(const std::initializer_list<vec<T, N>>& v) {
-    auto r = bbox<T, N>();
-    for (auto&& vv : v) r += vv;
-    return r;
-}
 
 template <typename T, size_t N>
 inline bbox<T, N> expand(const bbox<T, N>& a, const vec<T, N>& b) {
@@ -1167,7 +1192,7 @@ inline bbox<T, 3> transform_bbox(const mat<T, 4, 4>& a, const bbox<T, 3>& b) {
 //
 template <typename T>
 inline mat<T, 3, 3> rotation_mat3(const vec<T, 3>& axis, T angle) {
-    auto s = std::sin(angle), c = std::cos(angle);
+    auto s = sin(angle), c = cos(angle);
     auto vv = normalize(axis);
     return {{c + (1 - c) * vv[0] * vv[0], (1 - c) * vv[0] * vv[1] + s * vv[2],
              (1 - c) * vv[0] * vv[2] - s * vv[1]},
@@ -1191,7 +1216,8 @@ inline mat<T, 4, 4> translation_mat4(const vec<T, 3>& a) {
 }
 
 //
-// Scaling transform (in this case the frame is broken and used only as affine)
+// Scaling transform (in this case the frame is broken and used only as
+// affine)
 //
 template <typename T>
 inline frame<T, 3> scaling_frame3(const vec<T, 3>& a) {
@@ -1281,7 +1307,7 @@ inline mat<T, 4, 4> ortho2d_mat4(T l, T r, T b, T t) {
 //
 template <typename T>
 inline mat<T, 4, 4> perspective_mat4(T fovy, T aspect, T near, T far) {
-    auto y = near * std::tan(fovy / 2);
+    auto y = near * tan(fovy / 2);
     auto x = y * aspect;
     return frustum_mat4<T>(-x, x, -y, y, near, far);
 }
@@ -1315,7 +1341,8 @@ inline T blerp(const T& a, const T& b, const T& c, const T1& w) {
 // -----------------------------------------------------------------------------
 
 //
-// Turntable for UI navigation from a from/to/up parametrization of the camera.
+// Turntable for UI navigation from a from/to/up parametrization of the
+// camera.
 //
 template <typename T>
 inline void turntable(vec<T, 3>& from, vec<T, 3>& to, vec<T, 3>& up,
@@ -1324,12 +1351,11 @@ inline void turntable(vec<T, 3>& from, vec<T, 3>& to, vec<T, 3>& up,
     if (rotate[0] || rotate[1]) {
         auto z = ym_normalize(*to - *from);
         auto lz = ym_dist(*to, *from);
-        auto phi = std::atan2(z[2], z[0]) + rotate[0];
-        auto theta = std::acos(z[1]) + rotate[1];
+        auto phi = atan2(z[2], z[0]) + rotate[0];
+        auto theta = acos(z[1]) + rotate[1];
         theta = max(T(0.001), min(theta, T(pi - 0.001)));
-        auto nz = vec<T, 3>{std::sin(theta) * std::cos(phi) * lz,
-                            std::cos(theta) * lz,
-                            std::sin(theta) * std::sin(phi) * lz};
+        auto nz = vec<T, 3>{sin(theta) * cos(phi) * lz, cos(theta) * lz,
+                            sin(theta) * sin(phi) * lz};
         *from = *to - nz;
     }
 
@@ -1363,11 +1389,11 @@ inline void turntable(frame<T, 3>& frame, float& focus, const vec<T, 2>& rotate,
                       T dolly, const vec<T, 2>& pan) {
     // rotate if necessary
     if (rotate[0] || rotate[1]) {
-        auto phi = std::atan2(frame[2][2], frame[2][0]) + rotate[0];
-        auto theta = std::acos(frame[2][1]) + rotate[1];
+        auto phi = atan2(frame[2][2], frame[2][0]) + rotate[0];
+        auto theta = acos(frame[2][1]) + rotate[1];
         theta = max(T(0.001), min(theta, T(pi - 0.001)));
-        auto new_z = vec<T, 3>(std::sin(theta) * std::cos(phi), std::cos(theta),
-                               std::sin(theta) * std::sin(phi));
+        auto new_z =
+            vec<T, 3>(sin(theta) * cos(phi), cos(theta), sin(theta) * sin(phi));
         auto new_center = frame.o() - frame[2] * focus;
         auto new_o = new_center + new_z * focus;
         frame = lookat_frame3(new_o, new_center, {0, 1, 0});
@@ -1393,7 +1419,8 @@ inline void turntable(frame<T, 3>& frame, float& focus, const vec<T, 2>& rotate,
 
 //
 // PCG random numbers. A family of random number generators that supports
-// multiple sequences. In our code, we allocate one sequence for each sample.
+// multiple sequences. In our code, we allocate one sequence for each
+// sample.
 // PCG32 from http://www.pcg-random.org/
 //
 
@@ -1549,9 +1576,9 @@ inline size_t hash_vec(const vec<T, N>& v) {
 
 //
 // An array_view is a non-owining reference to an array with an API similar
-// to a std::vector/std::array containers, but without reallocation.
+// to a vector/array containers, but without reallocation.
 // This is inspired, but significantly simpler than
-// gsl::span https://github.com/Microsoft/GSL or std::array_view.
+// gsl::span https://github.com/Microsoft/GSL or array_view.
 //
 template <typename T>
 struct array_view {
@@ -1563,9 +1590,8 @@ struct array_view {
         : _num((end - begin)), _data(begin) {}
     constexpr array_view(const array_view<std::add_const_t<T>>& av)
         : _num(av._num), _data(av._data) {}
-    constexpr array_view(std::vector<T>& av)
-        : _num(av.size()), _data(av.data()) {}
-    constexpr array_view(const std::vector<T>& av)
+    constexpr array_view(vector<T>& av) : _num(av.size()), _data(av.data()) {}
+    constexpr array_view(const vector<T>& av)
         : _num(av.size()), _data((T*)av.data()) {}
 
     // size
@@ -1604,10 +1630,11 @@ struct array_view {
 // -----------------------------------------------------------------------------
 
 //
-// An image_view is a non-owining reference to an array that allows to access it
+// An image_view is a non-owining reference to an array that allows to
+// access it
 // as a row-major image, but without reallocation.
 // This is inspired, but significantly simpler than
-// gsl::multi_span https://github.com/Microsoft/GSL or std::array_view.
+// gsl::multi_span https://github.com/Microsoft/GSL or array_view.
 //
 template <typename T>
 struct image_view {
@@ -1655,7 +1682,8 @@ struct image_view {
 };
 
 //
-// Generic image with pixels stored as a vector. For operations use image_views.
+// Generic image with pixels stored as a vector. For operations use
+// image_views.
 //
 template <typename T>
 struct image {
@@ -1720,7 +1748,7 @@ struct image {
 
    private:
     vec2i _size;
-    std::vector<T> _data;
+    vector<T> _data;
 };
 
 //
@@ -1749,12 +1777,11 @@ inline image<vec<T, 4>> make_image4(int width, int height, int ncomp,
 // Conversion from srgb.
 //
 inline vec3f srgb_to_linear(const vec3f& srgb) {
-    return {std::pow(srgb[0], 2.2f), std::pow(srgb[1], 2.2f),
-            std::pow(srgb[2], 2.2f)};
+    return {pow(srgb[0], 2.2f), pow(srgb[1], 2.2f), pow(srgb[2], 2.2f)};
 }
 inline vec4f srgb_to_linear(const vec4f& srgb) {
-    return {std::pow(srgb[0], 2.2f), std::pow(srgb[1], 2.2f),
-            std::pow(srgb[2], 2.2f), srgb[3]};
+    return {pow(srgb[0], 2.2f), pow(srgb[1], 2.2f), pow(srgb[2], 2.2f),
+            srgb[3]};
 }
 inline vec3f srgb_to_linear(const vec3b& srgb) {
     return srgb_to_linear(vec3f(srgb[0], srgb[1], srgb[2]) / 255.0f);
@@ -1769,12 +1796,12 @@ inline vec4f srgb_to_linear(const vec4b& srgb) {
 inline void exposure_gamma(const image_view<vec4f>& hdr, image_view<vec4f> ldr,
                            float exposure, float gamma) {
     assert(hdr.size() == ldr.size());
-    auto s = std::pow(2.0f, exposure);
+    auto s = pow(2.0f, exposure);
     for (auto j = 0; j < hdr.size()[1]; j++) {
         for (auto i = 0; i < hdr.size()[0]; i++) {
             auto v = hdr[{i, j}];
-            v = {std::pow(s * v[0], 1 / gamma), std::pow(s * v[1], 1 / gamma),
-                 std::pow(s * v[2], 1 / gamma), v[3]};
+            v = {pow(s * v[0], 1 / gamma), pow(s * v[1], 1 / gamma),
+                 pow(s * v[2], 1 / gamma), v[3]};
             ldr[{i, j}] = {
                 (float)clamp(v[0], 0.0f, 1.0f), (float)clamp(v[1], 0.0f, 1.0f),
                 (float)clamp(v[2], 0.0f, 1.0f), (float)clamp(v[3], 0.0f, 1.0f),
@@ -1788,14 +1815,14 @@ inline void exposure_gamma(const image_view<vec4f>& hdr, image_view<vec4b> ldr,
                            const vec2i& xy = {0, 0},
                            const vec2i& wh = {-1, -1}) {
     assert(hdr.size() == ldr.size());
-    auto s = std::pow(2.0f, exposure);
+    auto s = pow(2.0f, exposure);
     auto wh_ = vec2i{(wh[0] < 0) ? hdr.size()[0] - xy[0] : wh[0],
                      (wh[1] < 0) ? hdr.size()[1] - xy[1] : wh[1]};
     for (auto j = xy[1]; j < xy[1] + wh_[1]; j++) {
         for (auto i = xy[0]; i < xy[0] + wh_[0]; i++) {
             auto v = hdr[{i, j}];
-            v = {std::pow(s * v[0], 1 / gamma), std::pow(s * v[1], 1 / gamma),
-                 std::pow(s * v[2], 1 / gamma), v[3]};
+            v = {pow(s * v[0], 1 / gamma), pow(s * v[1], 1 / gamma),
+                 pow(s * v[2], 1 / gamma), v[3]};
             ldr[{i, j}] = {
                 (unsigned char)(clamp(v[0], 0.0f, 1.0f) * 255),
                 (unsigned char)(clamp(v[1], 0.0f, 1.0f) * 255),
