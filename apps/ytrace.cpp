@@ -31,8 +31,6 @@
 
 #include "../yocto/yocto_bvh.h"
 #include "../yocto/yocto_cmd.h"
-#include "../yocto/yocto_math.h"
-#include "../yocto/yocto_shape.h"
 #include "../yocto/yocto_trace.h"
 
 #include "ThreadPool.h"
@@ -129,16 +127,34 @@ void save_image(const std::string& filename,
     }
 }
 
-ytrace::scene init_trace_cb(yapp::scene& scene, ybvh::scene& scene_bvh,
-                            int camera) {
+ybvh::scene make_bvh(const yapp::scene& scene) {
+    auto scene_bvh = ybvh::scene();
+    auto sid = 0;
+    for (auto& shape : scene.shapes) {
+        scene_bvh.shapes.push_back({sid++,
+                                    ym::to_mat(shape.frame),
+                                    ym::to_mat(ym::inverse(shape.frame)),
+                                    shape.points,
+                                    shape.lines,
+                                    shape.triangles,
+                                    {},
+                                    shape.pos,
+                                    shape.radius});
+    }
+    ybvh::build_bvh(scene_bvh);
+    return scene_bvh;
+}
+
+ytrace::scene make_trace_scene(yapp::scene& scene, ybvh::scene& scene_bvh,
+                               int camera) {
     auto trace_scene = ytrace::scene();
 
     trace_scene.intersect_first = [&scene_bvh](const ym::ray3f& ray) {
-        auto isec = ybvh::intersect_first(scene_bvh, ray);
+        auto isec = ybvh::intersect_ray(scene_bvh, ray, false);
         return reinterpret_cast<ytrace::intersect_point&>(isec);
     };
     trace_scene.intersect_any = [&scene_bvh](const ym::ray3f& ray) {
-        return ybvh::intersect_any(scene_bvh, ray);
+        return ybvh::intersect_ray(scene_bvh, ray, false);
     };
 
     for (auto& cam : scene.cameras) {
@@ -492,16 +508,16 @@ void render_offline() {
 }
 
 int main(int argc, char* argv[]) {
-    auto rtype_names = std::unordered_map<std::string, ytrace::rtype>{
-        {"default", ytrace::rtype::def},
-        {"uniform", ytrace::rtype::uniform},
-        {"stratified", ytrace::rtype::stratified},
-        {"cmjs", ytrace::rtype::cmjs}};
-    auto stype_names = std::unordered_map<std::string, ytrace::stype>{
-        {"default", ytrace::stype::def},
-        {"eye", ytrace::stype::eyelight},
-        {"direct", ytrace::stype::direct},
-        {"path", ytrace::stype::pathtrace}};
+    auto rtype_names = std::unordered_map<std::string, ytrace::rng_type>{
+        {"default", ytrace::rng_type::def},
+        {"uniform", ytrace::rng_type::uniform},
+        {"stratified", ytrace::rng_type::stratified},
+        {"cmjs", ytrace::rng_type::cmjs}};
+    auto stype_names = std::unordered_map<std::string, ytrace::shader_type>{
+        {"default", ytrace::shader_type::def},
+        {"eye", ytrace::shader_type::eyelight},
+        {"direct", ytrace::shader_type::direct},
+        {"path", ytrace::shader_type::pathtrace}};
 
     // params
     auto parser = ycmd::make_parser(argc, argv, "trace meshes");
@@ -509,11 +525,12 @@ int main(int argc, char* argv[]) {
         ycmd::parse_opt<float>(parser, "--exposure", "-e", "image exposure", 0);
     hdr_gamma =
         ycmd::parse_opt<float>(parser, "--gamma", "-g", "image gamma", 2.2);
-    params.rtype = ycmd::parse_opte<ytrace::rtype>(
-        parser, "--random", "", "random type", ytrace::rtype::def, rtype_names);
-    params.stype = ycmd::parse_opte<ytrace::stype>(
-        parser, "--integrator", "-i", "integrator type", ytrace::stype::def,
-        stype_names);
+    params.rtype = ycmd::parse_opte<ytrace::rng_type>(
+        parser, "--random", "", "random type", ytrace::rng_type::def,
+        rtype_names);
+    params.stype = ycmd::parse_opte<ytrace::shader_type>(
+        parser, "--integrator", "-i", "integrator type",
+        ytrace::shader_type::def, stype_names);
     camera_lights = ycmd::parse_flag(parser, "--camera_lights", "-c",
                                      "enable camera lights", false);
     camera = ycmd::parse_opt<int>(parser, "--camera", "-C", "camera", 0);
@@ -545,9 +562,10 @@ int main(int argc, char* argv[]) {
     scene.cameras[camera].aspect = aspect;
 
     // preparing raytracer
-    scene_bvh = yapp::make_bvh(scene);
-    trace_scene = init_trace_cb(scene, scene_bvh, camera);
-    params.stype = (camera_lights) ? ytrace::stype::eyelight : params.stype;
+    scene_bvh = make_bvh(scene);
+    trace_scene = make_trace_scene(scene, scene_bvh, camera);
+    params.stype =
+        (camera_lights) ? ytrace::shader_type::eyelight : params.stype;
 
     // image rendering params
     auto width = (int)std::round(aspect * res), height = res;

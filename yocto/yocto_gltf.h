@@ -1451,7 +1451,6 @@ YGL_API glTF_t unflatten_gltf(const fl_gltf& fl_gltf,
 #pragma GCC diagnostic ignored "-Wunused-function"
 #ifndef __clang__
 #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
-#pragma GCC diagnostic ignored "-Wmisleading-indentation"
 #endif
 #endif
 
@@ -1475,7 +1474,6 @@ YGL_API glTF_t unflatten_gltf(const fl_gltf& fl_gltf,
 #pragma GCC diagnostic ignored "-Wunused-function"
 #ifndef __clang__
 #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
-#pragma GCC diagnostic ignored "-Wmisleading-indentation"
 #endif
 #endif
 
@@ -5737,11 +5735,13 @@ YGL_API fl_gltf flatten_gltf(const glTF_t& gltf,
     for (auto& txt_kv : gltf.textures) {
         auto&& name = txt_kv.first;
         auto&& tf_txt = txt_kv.second;
-        fl_gltf.textures.push_back({});
+        fl_gltf.textures.emplace_back();
         auto&& txt = fl_gltf.textures.back();
         textures[name] = (int)fl_gltf.textures.size() - 1;
         txt.name = tf_txt.name;
         auto&& tf_img = gltf.images.at(tf_txt.source);
+        txt.path = (_startsiwith(tf_img.uri, "data:")) ? std::string("inlines")
+                                                       : tf_img.uri;
         txt.width = tf_img.data.width;
         txt.height = tf_img.data.height;
         txt.ncomp = tf_img.data.ncomp;
@@ -5754,7 +5754,7 @@ YGL_API fl_gltf flatten_gltf(const glTF_t& gltf,
     for (auto& mat_kv : gltf.materials) {
         auto&& name = mat_kv.first;
         auto&& tf_mat = mat_kv.second;
-        fl_gltf.materials.push_back({});
+        fl_gltf.materials.emplace_back();
         auto&& mat = fl_gltf.materials.back();
         materials[name] = (int)fl_gltf.materials.size() - 1;
         mat.name = tf_mat.name;
@@ -5802,7 +5802,7 @@ YGL_API fl_gltf flatten_gltf(const glTF_t& gltf,
         auto&& mesh = meshes[name];
         // primitives
         for (auto&& tf_primitives : tf_mesh.primitives) {
-            fl_gltf.primitives.push_back({});
+            fl_gltf.primitives.emplace_back();
             auto& prim = fl_gltf.primitives.back();
             mesh.push_back((int)fl_gltf.primitives.size() - 1);
             if (materials.find(tf_primitives.material) != materials.end())
@@ -5966,7 +5966,7 @@ YGL_API fl_gltf flatten_gltf(const glTF_t& gltf,
     // walk the scenes and add objects
     for (auto& scene_name : scenes) {
         auto& scene = gltf.scenes.at(scene_name);
-        fl_gltf.scenes.push_back({});
+        fl_gltf.scenes.emplace_back();
         auto& fl_scene = fl_gltf.scenes.back();
         auto stack =
             std::vector<std::tuple<std::string, std::array<float, 16>>>();
@@ -6090,7 +6090,7 @@ YGL_API glTF_t unflatten_gltf(const fl_gltf& fl_gltf,
             // TODO: remove this hack, put some error message code
             if (fl_prim.pos.size() > std::numeric_limits<unsigned short>::max())
                 continue;
-            mesh.primitives.push_back({});
+            mesh.primitives.emplace_back();
             auto& prim = mesh.primitives.back();
             prim.material = "material" + std::to_string(fl_prim.material);
             if (!fl_prim.pos.empty())
