@@ -72,6 +72,7 @@
 
 //
 // HISTORY:
+// - v 0.9: [API change] use rigid frames rather than linear transforms
 // - v 0.8: [API change] added support for tetrahdedra and explicit shape ids
 // - v 0.7: [major API change] move to modern C++ interface
 // - v 0.6: internal refactoring
@@ -81,6 +82,13 @@
 // - v 0.2: better internal intersections and cleaner bvh stats
 // - v 0.1: C++ implementation
 // - v 0.0: initial release in C99
+//
+
+//
+// ACKNOLEDGEMENTS
+//
+// This library includes code from "Real-Time Collision Detection"
+// by Christer Ericson and from the Journal of Graphics Techniques.
 //
 
 //
@@ -187,8 +195,7 @@ struct shape {
     int sid = -1;  // shape id
 
     // shape transform --------------------
-    mat4f xform;      // shape transform
-    mat4f inv_xform;  // shape inverse transforms
+    frame3f frame;  // shape transform
 
     // elements data ----------------------
     array_view<int> point;       // point indices
@@ -210,7 +217,7 @@ struct shape {
         else
             return radius[i];
     }
-    bbox3f _bbox() const { return transform_bbox(xform, _bvh.nodes[0].bbox); }
+    bbox3f _bbox() const { return _bvh.nodes[0].bbox; }
 };
 
 //
@@ -591,7 +598,7 @@ static inline bool _intersect_triangle(const ray3f& ray, const vec3f& v0,
 // wiht the tetrahedra surface and discount intersction with the interior.
 //
 // Parameters:
-// - ray: ray origin and direction, parameter min, max range
+// - ray: ray to intersect with
 // - v0, v1, v2: triangle vertices
 //
 // Out Parameters:
@@ -636,9 +643,8 @@ static inline bool _intersect_tetrahedron(const ray3f& ray_, const vec3f& v0,
 // Intersect a ray with a axis-aligned bounding box
 //
 // Parameters:
-// - ray_o, ray_d: ray origin and direction
-// - ray_tmin, ray_tmax: ray parameter min, max range
-// - bbox_min, bbox_max: bounding box min/max bounds
+// - ray: ray to intersect with
+// - bbox: bounding box min/max bounds
 //
 // Returns:
 // - whether the intersection occurred
@@ -868,16 +874,16 @@ static inline bool _overlap_tetrahedron(const vec3f& pos, float dist_max,
 }
 
 // TODO: documentation
-static inline bool _distance_check_bbox(const vec3f pos, float dist_max,
-                                        const vec3f bbox_min,
-                                        const vec3f bbox_max) {
+static inline bool _distance_check_bbox(const vec3f& pos, float dist_max,
+                                        const bbox3f& bbox) {
     // computing distance
     auto dd = 0.0f;
+
     // For each axis count any excess distance outside box extents
     for (int i = 0; i < 3; i++) {
         auto v = pos[i];
-        if (v < bbox_min[i]) dd += (bbox_min[i] - v) * (bbox_min[i] - v);
-        if (v > bbox_max[i]) dd += (v - bbox_max[i]) * (v - bbox_max[i]);
+        if (v < bbox[0][i]) dd += (bbox[0][i] - v) * (bbox[0][i] - v);
+        if (v > bbox[1][i]) dd += (v - bbox[1][i]) * (v - bbox[1][i]);
     }
 
     // check distance
@@ -885,15 +891,120 @@ static inline bool _distance_check_bbox(const vec3f pos, float dist_max,
 }
 
 // TODO: doc
-static inline bool _overlap_bbox(const vec3f bbox1_min, const vec3f bbox1_max,
-                                 const vec3f bbox2_min, const vec3f bbox2_max) {
-    if (bbox1_max[0] < bbox2_min[0] || bbox1_min[0] > bbox2_max[0])
-        return false;
-    if (bbox1_max[1] < bbox2_min[1] || bbox1_min[1] > bbox2_max[1])
-        return false;
-    if (bbox1_max[2] < bbox2_min[2] || bbox1_min[2] > bbox2_max[2])
-        return false;
+static inline bool _overlap_bbox(const bbox3f& bbox1, const bbox3f& bbox2) {
+    if (bbox1[1][0] < bbox2[0][0] || bbox1[0][0] > bbox2[1][0]) return false;
+    if (bbox1[1][1] < bbox2[0][1] || bbox1[0][1] > bbox2[1][1]) return false;
+    if (bbox1[1][2] < bbox2[0][2] || bbox1[0][2] > bbox2[1][2]) return false;
     return true;
+}
+
+// TODO: doc
+// from "Real-Time Collision Detection" by Christer Ericson, Sect. 4.4.1
+static inline bool _overlap_bbox(const bbox3f& bbox1, const bbox3f& bbox2,
+                                 const frame3f& frame1, const frame3f& frame2) {
+#define __YBVH_EPSILON__ 1e-5f
+    // compute centered frames and extents
+    auto cframe1 = frame3f{frame1.m(), transform_point(frame1, bbox1.center())};
+    auto cframe2 = frame3f{frame2.m(), transform_point(frame2, bbox2.center())};
+    auto ext1 = bbox1.diagonal() / 2, ext2 = bbox2.diagonal() / 2;
+
+    // compute frame from 2 to 1
+    auto cframe2to1 = inverse(cframe1) * cframe2;
+
+    // split frame components and move to row-major
+    auto rot = transpose(cframe2to1.m());
+    auto t = cframe2to1.o();
+
+    // Compute common subexpressions. Add in an epsilon term to
+    // counteract arithmetic errors when two edges are parallel and
+    // their cross product is (near) null (see text for details)
+    mat3f absrot;
+    auto parallel_axis = false;
+    for (int i = 0; i < 3; i++)
+        for (int j = 0; j < 3; j++) {
+            absrot[i][j] = abs(rot[i][j]) + __YBVH_EPSILON__;
+            if (absrot[i][j] > 1) parallel_axis = true;
+        }
+
+    // Test axes L = A0, L = A1, L = A2
+    for (int i = 0; i < 3; i++) {
+        auto rb = ext2[0] * absrot[i][0] + ext2[1] * absrot[i][1] +
+                  ext2[2] * absrot[i][2];
+        if (std::abs(t[i]) > ext1[i] + dot(ext2, absrot[i])) return false;
+    }
+
+    // Test axes L = B0, L = B1, L = B2
+    for (int i = 0; i < 3; i++) {
+        auto ra = ext1[0] * absrot[0][i] + ext1[1] * absrot[1][i] +
+                  ext1[2] * absrot[2][i];
+        auto rb = ext2[i];
+        if (std::abs(t[0] * rot[0][i] + t[1] * rot[1][i] + t[2] * rot[2][i]) >
+            ra + rb)
+            return false;
+    }
+
+    // if axis were nearly parallel, can exit here
+    if (parallel_axis) return true;
+
+    // Test axis L = A0 x B0
+    auto ra = ext1[1] * absrot[2][0] + ext1[2] * absrot[1][0];
+    auto rb = ext2[1] * absrot[0][2] + ext2[2] * absrot[0][1];
+    if (abs(t[2] * rot[1][0] - t[1] * rot[2][0]) > ra + rb) return false;
+
+    // Test axis L = A0 x B1
+    ra = ext1[1] * absrot[2][1] + ext1[2] * absrot[1][1];
+    rb = ext2[0] * absrot[0][2] + ext2[2] * absrot[0][0];
+    if (abs(t[2] * rot[1][1] - t[1] * rot[2][1]) > ra + rb) return false;
+
+    // Test axis L = A0 x B2
+    ra = ext1[1] * absrot[2][2] + ext1[2] * absrot[1][2];
+    rb = ext2[0] * absrot[0][1] + ext2[1] * absrot[0][0];
+    if (abs(t[2] * rot[1][2] - t[1] * rot[2][2]) > ra + rb) return false;
+
+    // Test axis L = A1 x B0
+    ra = ext1[0] * absrot[2][0] + ext1[2] * absrot[0][0];
+    rb = ext2[1] * absrot[1][2] + ext2[2] * absrot[1][1];
+    if (abs(t[0] * rot[2][0] - t[2] * rot[0][0]) > ra + rb) return false;
+
+    // Test axis L = A1 x B1
+    ra = ext1[0] * absrot[2][1] + ext1[2] * absrot[0][1];
+    rb = ext2[0] * absrot[1][2] + ext2[2] * absrot[1][0];
+    if (abs(t[0] * rot[2][1] - t[2] * rot[0][1]) > ra + rb) return false;
+
+    // Test axis L = A1 x B2
+    ra = ext1[0] * absrot[2][2] + ext1[2] * absrot[0][2];
+    rb = ext2[0] * absrot[1][1] + ext2[1] * absrot[1][0];
+    if (abs(t[0] * rot[2][2] - t[2] * rot[0][2]) > ra + rb) return false;
+
+    // Test axis L = A2 x B0
+    ra = ext1[0] * absrot[1][0] + ext1[1] * absrot[0][0];
+    rb = ext2[1] * absrot[2][2] + ext2[2] * absrot[2][1];
+    if (abs(t[1] * rot[0][0] - t[0] * rot[1][0]) > ra + rb) return false;
+
+    // Test axis L = A2 x B1
+    ra = ext1[0] * absrot[1][1] + ext1[1] * absrot[0][1];
+    rb = ext2[0] * absrot[2][2] + ext2[2] * absrot[2][0];
+    if (abs(t[1] * rot[0][1] - t[0] * rot[1][1]) > ra + rb) return false;
+
+    // Test axis L = A2 x B2
+    ra = ext1[0] * absrot[1][2] + ext1[1] * absrot[0][2];
+    rb = ext2[0] * absrot[2][1] + ext2[1] * absrot[2][0];
+    if (abs(t[1] * rot[0][2] - t[0] * rot[1][2]) > ra + rb) return false;
+
+    // Since no separating axis is found, the OBBs must be intersecting
+    return true;
+#undef __YBVH_EPSILON__
+}
+
+// this is only a conservative test!
+// TODO: rename to something more clear
+// TODO: doc
+static inline bool _overlap_bbox_conservative(const bbox3f& bbox1,
+                                              const bbox3f& bbox2,
+                                              const frame3f& frame1,
+                                              const frame3f& frame2) {
+    return _overlap_bbox(bbox1,
+                         transform_bbox(inverse(frame1) * frame2, bbox2));
 }
 
 // -----------------------------------------------------------------------------
@@ -946,11 +1057,13 @@ struct _bound_prim_comp {
 static inline bool _partition_prims(array_view<_bound_prim> sorted_prim,
                                     int start, int end, int& axis, int& mid,
                                     heuristic_type htype) {
-    const auto __box_eps = 1e-12f;
-#define __bbox_area(r)                                                         \
-    (2 * ((r[0] + __box_eps) * (r[1] + __box_eps) +                            \
-          (r[1] + __box_eps) * (r[2] + __box_eps) +                            \
-          (r[2] + __box_eps) * (r[0] + __box_eps)))
+    // internal function
+    auto bbox_area = [](auto r) {
+        const auto __box_eps = 1e-12f;
+        return (2 * ((r[0] + __box_eps) * (r[1] + __box_eps) +
+                     (r[1] + __box_eps) * (r[2] + __box_eps) +
+                     (r[2] + __box_eps) * (r[0] + __box_eps)));
+    };
 
     // init to default values
     axis = 0;
@@ -1007,7 +1120,7 @@ static inline bool _partition_prims(array_view<_bound_prim> sorted_prim,
                     sbbox += sorted_prim[start + i].bbox;
                     auto sbbox_size = diagonal(sbbox);
                     sorted_prim[start + i].sah_cost_left =
-                        __bbox_area(sbbox_size);
+                        bbox_area(sbbox_size);
                     sorted_prim[start + i].sah_cost_left *= i + 1;
                 }
                 // the other sweep
@@ -1016,7 +1129,7 @@ static inline bool _partition_prims(array_view<_bound_prim> sorted_prim,
                     sbbox += sorted_prim[end - 1 - i].bbox;
                     auto sbbox_size = diagonal(sbbox);
                     sorted_prim[end - 1 - i].sah_cost_right =
-                        __bbox_area(sbbox_size);
+                        bbox_area(sbbox_size);
                     sorted_prim[end - 1 - i].sah_cost_right *= i + 1;
                 }
                 // find the minimum cost
@@ -1077,8 +1190,8 @@ static inline bool _partition_prims(array_view<_bound_prim> sorted_prim,
                 }
                 auto left_bbox_size = diagonal(left_bbox);
                 auto right_bbox_size = diagonal(right_bbox);
-                auto cost = __bbox_area(left_bbox_size) * left_count +
-                            __bbox_area(right_bbox_size) * right_count;
+                auto cost = bbox_area(left_bbox_size) * left_count +
+                            bbox_area(right_bbox_size) * right_count;
                 if (min_cost > cost) {
                     min_cost = cost;
                     bin_idx = b;
@@ -1207,7 +1320,7 @@ static inline bbox3f _bound_elem(const shape& shp, int eid) {
 // Bound a scene elem
 //
 static inline bbox3f _bound_elem(const scene& scn, int idx) {
-    return scn.shapes[idx]._bbox();
+    return transform_bbox(scn.shapes[idx].frame, scn.shapes[idx]._bbox());
 }
 
 //
@@ -1473,7 +1586,8 @@ static inline point _intersect_ray(const T& obj, const ray3f& ray_,
 //
 YGL_API point intersect_ray(const shape& shp, const ray3f& ray,
                             bool early_exit) {
-    return _intersect_ray(shp, transform_ray(shp.inv_xform, ray), early_exit);
+    return _intersect_ray(shp, transform_ray_inverse(shp.frame, ray),
+                          early_exit);
 }
 
 //
@@ -1581,8 +1695,7 @@ static inline point _overlap_point(const T& obj, const vec3f& pos,
         auto& node = bvh.nodes[node_stack[--node_cur]];
 
         // intersect bbox
-        if (!_distance_check_bbox(pos, max_dist, node.bbox[0], node.bbox[1]))
-            continue;
+        if (!_distance_check_bbox(pos, max_dist, node.bbox)) continue;
 
         // intersect node, switching based on node type
         // for each type, iterate over the the primitive list
@@ -1614,8 +1727,8 @@ static inline point _overlap_point(const T& obj, const vec3f& pos,
 //
 YGL_API point overlap_point(const shape& shp, const vec3f& pos, float max_dist,
                             bool early_exit) {
-    return _overlap_point(shp, transform_point(shp.inv_xform, pos), max_dist,
-                          early_exit);
+    return _overlap_point(shp, transform_point_inverse(shp.frame, pos),
+                          max_dist, early_exit);
 }
 
 //
@@ -1694,9 +1807,9 @@ static inline vector<pair<point, point>> _overlap_elems(const scene& scn1,
                                                         bool exclude_self,
                                                         bool early_exit) {
     if (early_exit) {
-        auto bbox1 = scn1.shapes[idx1]._bbox();
-        auto bbox2 = scn1.shapes[idx2]._bbox();
-        if (!_overlap_bbox(bbox1[0], bbox1[1], bbox2[0], bbox2[1])) return {};
+        if (!_overlap_bbox(scn1.shapes[idx1]._bbox(), scn2.shapes[idx2]._bbox(),
+                           scn1.shapes[idx1].frame, scn2.shapes[idx2].frame))
+            return {};
         return {{{0, scn1.shapes[idx1].sid, 0, {}},
                  {0, scn2.shapes[idx2].sid, 0, {}}}};
     } else {
@@ -1724,10 +1837,9 @@ static inline vector<pair<point, point>> _overlap_elems(const scene& scn1,
 // rejected in the tmax tests
 //
 template <typename T>
-static inline vector<pair<point, point>> _overlap_elems(const T& obj1,
-                                                        const T& obj2,
-                                                        bool exclude_self,
-                                                        bool early_exit) {
+static inline vector<pair<point, point>> _overlap_elems(
+    const T& obj1, const T& obj2, const frame3f& frame1, const frame3f& frame2,
+    bool exclude_self, bool early_exit) {
     // get bvhs
     auto& bvh1 = obj1._bvh;
     auto& bvh2 = obj2._bvh;
@@ -1740,6 +1852,9 @@ static inline vector<pair<point, point>> _overlap_elems(const T& obj1,
     // shared variables
     vector<pair<point, point>> overlaps;
 
+    // check if a trasformed test is needed
+    auto xformed = frame1 != frame2;
+
     // walking stack
     while (node_cur) {
         // grab node
@@ -1748,9 +1863,12 @@ static inline vector<pair<point, point>> _overlap_elems(const T& obj1,
         auto& node2 = bvh2.nodes[node_idx[1]];
 
         // intersect bbox
-        if (!_overlap_bbox(node1.bbox[0], node1.bbox[1], node2.bbox[0],
-                           node2.bbox[1]))
-            continue;
+        if (xformed) {
+            if (!_overlap_bbox(node1.bbox, node2.bbox, frame1, frame2))
+                continue;
+        } else {
+            if (!_overlap_bbox(node1.bbox, node2.bbox)) continue;
+        }
 
         // check for leaves
         if (node1.isleaf && node2.isleaf) {
@@ -1805,7 +1923,8 @@ static inline vector<pair<point, point>> _overlap_elems(const T& obj1,
 YGL_API vector<pair<point, point>> overlap_elems(const shape& shp1,
                                                  const shape& shp2,
                                                  bool exclude_self) {
-    return _overlap_elems(shp1, shp2, exclude_self, false);
+    return _overlap_elems(shp1, shp2, shp1.frame, shp2.frame, exclude_self,
+                          false);
 }
 
 //
@@ -1815,7 +1934,8 @@ YGL_API vector<pair<point, point>> overlap_elems(const shape& shp1,
 YGL_API vector<pair<point, point>> overlap_elems(const scene& scn1,
                                                  const scene& scn2,
                                                  bool exclude_self) {
-    return _overlap_elems(scn1, scn2, exclude_self, false);
+    return _overlap_elems(scn1, scn2, identity_frame3f, identity_frame3f,
+                          exclude_self, false);
 }
 
 //
@@ -1824,7 +1944,8 @@ YGL_API vector<pair<point, point>> overlap_elems(const scene& scn1,
 //
 YGL_API vector<vec2i> overlap_shape_bounds(const scene& scn1, const scene& scn2,
                                            bool exclude_self) {
-    auto overlaps_pt = _overlap_elems(scn1, scn2, exclude_self, true);
+    auto overlaps_pt = _overlap_elems(scn1, scn2, identity_frame3f,
+                                      identity_frame3f, exclude_self, true);
     if (overlaps_pt.empty()) return {};
     auto overlaps = vector<vec2i>();
     overlaps.reserve(overlaps_pt.size());

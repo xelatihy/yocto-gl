@@ -132,8 +132,7 @@ ybvh::scene make_bvh(const yapp::scene& scene) {
     auto sid = 0;
     for (auto& shape : scene.shapes) {
         scene_bvh.shapes.push_back({sid++,
-                                    ym::to_mat(shape.frame),
-                                    ym::to_mat(ym::inverse(shape.frame)),
+                                    shape.frame,
                                     shape.points,
                                     shape.lines,
                                     shape.triangles,

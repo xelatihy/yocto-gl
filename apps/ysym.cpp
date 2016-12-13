@@ -251,8 +251,7 @@ void make_rigid_scene(yapp::scene& scene, ysym::scene& rigid_scene,
         assert(!shape.points.empty() || !shape.lines.empty() ||
                !shape.triangles.empty());
         scene_bvh.shapes.push_back({i,
-                                    ym::to_mat(shape.frame),
-                                    ym::to_mat(ym::inverse(shape.frame)),
+                                    shape.frame,
                                     shape.points,
                                     shape.lines,
                                     shape.triangles,
@@ -274,10 +273,7 @@ void make_rigid_scene(yapp::scene& scene, ysym::scene& rigid_scene,
     };
     rigid_scene.overlap_refit = [&scene_bvh, &rigid_scene]() {
         for (auto sid = 0; sid < rigid_scene.shapes.size(); sid++) {
-            scene_bvh.shapes[sid].xform =
-                ym::to_mat(rigid_scene.shapes[sid].frame);
-            scene_bvh.shapes[sid].inv_xform =
-                ym::to_mat(ym::inverse(rigid_scene.shapes[sid].frame));
+            scene_bvh.shapes[sid].frame = rigid_scene.shapes[sid].frame;
         }
         ybvh::refit_bvh(scene_bvh);
     };
