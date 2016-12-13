@@ -43,8 +43,8 @@
 // ACKNOLEDGEMENTS
 //
 // This library includes code from the PCG random number generator,
-// boost hash_combine, Pixar multijittered sampling
-// and public domain code from
+// boost hash_combine, Pixar multijittered sampling, code from "Real-Time
+// Collision Detection" by Christer Ericson and public domain code from
 // - https://github.com/sgorsten/linalg
 // - https://gist.github.com/badboy/6267743
 //
@@ -1155,12 +1155,38 @@ inline ray<T, N> transform_ray(const frame<T, N>& a, const ray<T, N>& b) {
 }
 
 template <typename T, size_t N>
+inline vec<T, N> transform_point_inverse(const frame<T, N>& a,
+                                         const vec<T, N>& b) {
+    return (b - a.o()) * a.m();
+}
+
+template <typename T, size_t N>
+inline vec<T, N> transform_vector_inverse(const frame<T, N>& a,
+                                          const vec<T, N>& b) {
+    return b * a.m();
+}
+
+template <typename T, size_t N>
+inline vec<T, N> transform_direction_inverse(const frame<T, N>& a,
+                                             const vec<T, N>& b) {
+    return b * a.m();
+}
+
+template <typename T, size_t N>
+inline ray<T, N> transform_ray_inverse(const frame<T, N>& a,
+                                       const ray<T, N>& b) {
+    return {transform_point_inverse(a, b.o),
+            transform_direction_inverse(a, b.d), b.tmin, b.tmax};
+}
+
+template <typename T, size_t N>
 inline ray<T, N> transform_ray(const mat<T, N + 1, N + 1>& a,
                                const ray<T, N>& b) {
     return {transform_point(a, b.o), transform_direction(a, b.d), b.tmin,
             b.tmax};
 }
 
+#if 0
 template <typename T>
 inline bbox<T, 3> transform_bbox(const frame<T, 3>& a, const bbox<T, 3>& b) {
     vec<T, 3> corners[8] = {
@@ -1172,6 +1198,40 @@ inline bbox<T, 3> transform_bbox(const frame<T, 3>& a, const bbox<T, 3>& b) {
     auto xformed = bbox<T, 3>();
     for (auto j = 0; j < 8; j++) xformed += transform_point(a, corners[j]);
     return xformed;
+}
+#else
+// Code from Real-time Collision Detection by Christer Ericson Sect. 4.2.6
+// Transform AABB a by the matrix m and translation t,
+// find maximum extents, and store result into AABB b.
+template <typename T>
+inline bbox<T, 3> transform_bbox(const frame<T, 3>& a, const bbox<T, 3>& b) {
+    // start by adding in translation
+    auto c = bbox<T, 3>(a.o(), a.o());
+    // compute extent
+    auto e = a.m() * b[0], f = a.m() * b[1];
+    // for all three axes
+    for (auto i = 0; i < 3; i++) {
+        // form extent by summing smaller and larger terms respectively
+        for (auto j = 0; j < 3; j++) {
+            auto e = a.m()[j][i] * b[0][j];
+            auto f = a.m()[j][i] * b[1][j];
+            if (e < f) {
+                c[0][i] += e;
+                c[1][i] += f;
+            } else {
+                c[0][i] += f;
+                c[1][i] += e;
+            }
+        }
+    }
+    return c;
+}
+#endif
+
+template <typename T>
+inline bbox<T, 3> transform_bbox_inverse(const frame<T, 3>& a,
+                                         const bbox<T, 3>& b) {
+    return transform_bbox(inverse(a), b);
 }
 
 template <typename T>
@@ -1216,7 +1276,8 @@ inline mat<T, 4, 4> translation_mat4(const vec<T, 3>& a) {
 }
 
 //
-// Scaling transform (in this case the frame is broken and used only as
+// Scaling transform (in this case the frame is broken and used only
+// as
 // affine)
 //
 template <typename T>
@@ -1341,7 +1402,8 @@ inline T blerp(const T& a, const T& b, const T& c, const T1& w) {
 // -----------------------------------------------------------------------------
 
 //
-// Turntable for UI navigation from a from/to/up parametrization of the
+// Turntable for UI navigation from a from/to/up parametrization of
+// the
 // camera.
 //
 template <typename T>
@@ -1381,7 +1443,8 @@ inline void turntable(vec<T, 3>& from, vec<T, 3>& to, vec<T, 3>& up,
 }
 
 //
-// Turntable for UI navigation for a frame/distance parametrization of the
+// Turntable for UI navigation for a frame/distance parametrization
+// of the
 // camera.
 //
 template <typename T>
@@ -1418,8 +1481,10 @@ inline void turntable(frame<T, 3>& frame, float& focus, const vec<T, 2>& rotate,
 // -----------------------------------------------------------------------------
 
 //
-// PCG random numbers. A family of random number generators that supports
-// multiple sequences. In our code, we allocate one sequence for each
+// PCG random numbers. A family of random number generators that
+// supports
+// multiple sequences. In our code, we allocate one sequence for
+// each
 // sample.
 // PCG32 from http://www.pcg-random.org/
 //
@@ -1443,7 +1508,8 @@ inline uint32_t rng_next(rng_pcg32& rng) {
 }
 
 //
-// Init a random number generator with a state state from the sequence seq.
+// Init a random number generator with a state state from the
+// sequence seq.
 //
 inline void rng_init(rng_pcg32& rng, uint64_t state, uint64_t seq) {
     rng.state = 0U;
@@ -1551,7 +1617,8 @@ inline uint32_t hash_uint64_32(uint64_t a) {
 }
 
 //
-// A function to combine 64 bit hashes with semantics as boost::hash_combine
+// A function to combine 64 bit hashes with semantics as
+// boost::hash_combine
 //
 inline size_t hash_combine(size_t a, size_t b) {
     return a ^ (b + 0x9e3779b9 + (a << 6) + (a >> 2));
@@ -1575,7 +1642,8 @@ inline size_t hash_vec(const vec<T, N>& v) {
 // -----------------------------------------------------------------------------
 
 //
-// An array_view is a non-owining reference to an array with an API similar
+// An array_view is a non-owining reference to an array with an API
+// similar
 // to a vector/array containers, but without reallocation.
 // This is inspired, but significantly simpler than
 // gsl::span https://github.com/Microsoft/GSL or array_view.
@@ -1630,7 +1698,8 @@ struct array_view {
 // -----------------------------------------------------------------------------
 
 //
-// An image_view is a non-owining reference to an array that allows to
+// An image_view is a non-owining reference to an array that allows
+// to
 // access it
 // as a row-major image, but without reallocation.
 // This is inspired, but significantly simpler than

@@ -38,6 +38,7 @@
 #include <GL/glew.h>
 #else
 #include <OpenGL/gl.h>
+#include <OpenGL/gl3.h>
 #endif
 #include <GLFW/glfw3.h>
 // clang-format on

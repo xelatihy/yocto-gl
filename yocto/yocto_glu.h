@@ -1017,8 +1017,7 @@ YGL_API uint _make_texture(int w, int h, int nc, const void* pixels,
     int formats_ub[4] = {GL_LUMINANCE, GL_LUMINANCE_ALPHA, GL_RGB, GL_RGBA};
     int formats_sub[4] = {GL_SLUMINANCE, GL_SLUMINANCE_ALPHA, GL_SRGB,
                           GL_SRGB_ALPHA};
-    int formats_f[4] = {GL_LUMINANCE32F_ARB, GL_LUMINANCE_ALPHA32F_ARB,
-                        GL_RGB32F_ARB, GL_RGBA32F_ARB};
+    int formats_f[4] = {GL_R32F, GL_RG32F, GL_RGB32F, GL_RGBA32F};
     int* formats =
         (as_float) ? formats_f : ((as_srgb) ? formats_sub : formats_ub);
     uint id;
