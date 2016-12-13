@@ -66,6 +66,7 @@
 
 //
 // HISTORY:
+// - v 0.1: bug fix when writing names
 // - v 0.0: initial release
 //
 
@@ -1749,7 +1750,7 @@ static inline bool _dump_attr(const T& val, const char* name, const T& defval,
 // Parse support function.
 //
 static inline bool _dump_begin_obj(json& js, _parse_stack& err) {
-    js = json::object();
+    if (!js.is_object()) js = json::object();
     return true;
 }
 
@@ -5407,9 +5408,10 @@ YGL_API bool load_images(glTF_t& asset, const std::string& dirname,
                     &image.data.width, &image.data.height, &image.data.ncomp,
                     0);
                 image.data.dataf = std::vector<float>(
-                    d, d +
-                           image.data.width * image.data.height *
-                               image.data.ncomp);
+                    d,
+                    d +
+                        image.data.width * image.data.height *
+                            image.data.ncomp);
                 free(d);
             } else {
                 auto d = stbi_load_from_memory(
@@ -5417,9 +5419,10 @@ YGL_API bool load_images(glTF_t& asset, const std::string& dirname,
                     &image.data.width, &image.data.height, &image.data.ncomp,
                     0);
                 image.data.datab = std::vector<unsigned char>(
-                    d, d +
-                           image.data.width * image.data.height *
-                               image.data.ncomp);
+                    d,
+                    d +
+                        image.data.width * image.data.height *
+                            image.data.ncomp);
                 free(d);
             }
         } else {
@@ -5430,18 +5433,20 @@ YGL_API bool load_images(glTF_t& asset, const std::string& dirname,
                     stbi_loadf((dirname + image.uri).c_str(), &image.data.width,
                                &image.data.height, &image.data.ncomp, 0);
                 image.data.dataf = std::vector<float>(
-                    d, d +
-                           image.data.width * image.data.height *
-                               image.data.ncomp);
+                    d,
+                    d +
+                        image.data.width * image.data.height *
+                            image.data.ncomp);
                 free(d);
             } else {
                 auto d =
                     stbi_load((dirname + image.uri).c_str(), &image.data.width,
                               &image.data.height, &image.data.ncomp, 0);
                 image.data.datab = std::vector<unsigned char>(
-                    d, d +
-                           image.data.width * image.data.height *
-                               image.data.ncomp);
+                    d,
+                    d +
+                        image.data.width * image.data.height *
+                            image.data.ncomp);
                 free(d);
             }
         }
@@ -5986,7 +5991,8 @@ YGL_API fl_gltf flatten_gltf(const glTF_t& gltf,
                 fl_scene.cameras.push_back((int)fl_gltf.cameras.size() - 1);
             }
             for (auto& mesh_name : node.meshes) {
-                fl_gltf.meshes.push_back({mesh_name, xf, meshes.at(mesh_name)});
+                fl_gltf.meshes.push_back(
+                    {gltf.meshes.at(mesh_name).name, xf, meshes.at(mesh_name)});
                 fl_scene.meshes.push_back((int)fl_gltf.meshes.size() - 1);
             }
             for (auto& child : node.children) {

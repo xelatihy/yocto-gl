@@ -51,53 +51,41 @@ frame3f xform(const vec3f& pos, const vec3f& rot) {
     return xf;
 }
 
-shape transform_shape(const shape& shape_, const frame3f& xf,
-                      const vec3f& s = vec3f{1, 1, 1}) {
-    auto shape = shape_;
-    for (auto& p : shape.pos) p = transform_point(xf, s * p);
-    for (auto& n : shape.norm) n = transform_direction(xf, s * n);
-    return shape;
-}
-
-shape transform_shape(const shape& shape_, const vec3f& pos,
-                      const vec3f& rot = zero3f,
-                      const vec3f& s = vec3f{1, 1, 1}) {
-    return transform_shape(shape_, xform(pos, rot), s);
-}
-
-shape xform_shape(const shape& shape_, const vec3f& pos, const vec3f& rot,
-                  const vec3f& s = vec3f{1, 1, 1}) {
-    return transform_shape(shape_, xform(pos, rot), s);
-}
-
-shape lookat_shape(const shape& shape, const vec3f& pos,
-                   const vec3f& to = {0, 0, 0},
-                   const vec3f& s = vec3f{1, 1, 1}) {
+frame3f lookat_xform(const vec3f& pos, const vec3f& to) {
     auto xf = lookat_frame3(pos, to, {0, 1, 0});
     xf[2] = -xf[2];
     xf[0] = -xf[0];
-    return transform_shape(shape, xf, s);
+    return xf;
 }
 
 shape make_shape(const string& name, int matid, int l,
-                 yshape::stdsurface_type stype) {
+                 yshape::stdsurface_type stype, const vec3f& pos,
+                 const vec3f& rot, const vec3f& scale = {1, 1, 1},
+                 bool lookat = false) {
     vec4f params = {0.75f, 0.75f, 0, 0};
     shape shape;
     shape.name = name;
     shape.matid = matid;
     yshape::make_stdsurface(stype, l, params, shape.triangles, shape.pos,
                             shape.norm, shape.texcoord);
+    for (auto& p : shape.pos) p *= scale;
+    if (lookat)
+        shape.frame = lookat_xform(pos, rot);
+    else
+        shape.frame = xform(pos, rot);
     return shape;
 }
 
-shape make_floor(const string& name, int matid, float s, float p, int l) {
+shape make_floor(const string& name, int matid, float s, float p, int l,
+                 const vec3f& pos = {0, 0, 0}, const vec3f& rot = {0, 0, 0},
+                 const vec3f& scale = {1, 1, 1}) {
     auto n = (int)round(powf(2, (float)l));
     shape shape;
     shape.name = name;
     shape.matid = matid;
     yshape::make_uvsurface(n, n, shape.triangles, shape.pos, shape.norm,
                            shape.texcoord,
-                           [p](const vec2f& uv) {
+                           [p, scale](const vec2f& uv) {
                                auto pos = zero3f;
                                auto x = 2 * uv[0] - 1;
                                auto y = 2 * (1 - uv[1]) - 1;
@@ -106,7 +94,7 @@ shape make_floor(const string& name, int matid, float s, float p, int l) {
                                } else {
                                    pos = {x, pow(-y, p), y};
                                }
-                               return pos;
+                               return scale * pos;
                            },
                            [](const vec2f& uv) { return vec3f(0, 1, 0); },
                            [s](const vec2f& uv) { return uv * s; });
@@ -114,6 +102,7 @@ shape make_floor(const string& name, int matid, float s, float p, int l) {
         yshape::compute_normals(shape.points, shape.lines, shape.triangles,
                                 shape.pos, shape.norm);
     }
+    shape.frame = xform(pos, rot);
     return shape;
 }
 
@@ -172,7 +161,8 @@ environment make_env(const string& name, int matid, const vec3f& from,
     return env;
 }
 
-shape make_points(const string& name, int matid, int num) {
+shape make_points(const string& name, int matid, int num, const vec3f& pos,
+                  const vec3f& rot, const vec3f& scale) {
     shape shape;
     shape.name = name;
     shape.matid = matid;
@@ -180,8 +170,8 @@ shape make_points(const string& name, int matid, int num) {
     rng_pcg32 rn;
     yshape::make_points(
         num, shape.points, shape.pos, shape.norm, shape.texcoord, shape.radius,
-        [&rn](float u) {
-            return vec3f(rng_nextf(rn), rng_nextf(rn), rng_nextf(rn));
+        [&rn, scale](float u) {
+            return scale * vec3f(rng_nextf(rn), rng_nextf(rn), rng_nextf(rn));
         },
         [](float u) {
             return vec3f{0, 0, 1};
@@ -190,11 +180,13 @@ shape make_points(const string& name, int matid, int num) {
             return vec2f{u, 0};
         },
         [](float u) { return 0.0025f; });
+    shape.frame = xform(pos, rot);
     return shape;
 }
 
 shape make_lines(const string& name, int matid, int num, int n, float r,
-                 float c, float s) {
+                 float c, float s, const vec3f& pos, const vec3f& rot,
+                 const vec3f& scale) {
     shape shape;
     shape.name = name;
     shape.matid = matid;
@@ -214,7 +206,7 @@ shape make_lines(const string& name, int matid, int num, int n, float r,
     yshape::make_lines(
         n, num, shape.lines, shape.pos, shape.norm, shape.texcoord,
         shape.radius,
-        [num, base, dir, ln, r, s, c, &rn](const vec2f& uv) {
+        [num, base, dir, ln, r, s, c, &rn, scale](const vec2f& uv) {
             auto i = clamp((int)(uv[1] * (num + 1)), 0, num);
             auto pos = base[i] * (1 + uv[0] * ln[i]);
             if (r) {
@@ -242,7 +234,7 @@ shape make_lines(const string& name, int matid, int num, int n, float r,
                 pos =
                     pos * (1 - c * uv[0] * uv[0]) + cpos * (c * uv[0] * uv[0]);
             }
-            return pos;
+            return scale * pos;
         },
         [](const vec2f& uv) {
             return vec3f{0, 0, 1};
@@ -252,14 +244,14 @@ shape make_lines(const string& name, int matid, int num, int n, float r,
 
     yshape::compute_normals(shape.points, shape.lines, shape.triangles,
                             shape.pos, shape.norm);
-
+    shape.frame = xform(pos, rot);
     return shape;
 }
 
-vector<shape> make_random_shapes(int nshapes, int l, bool use_xform) {
+vector<shape> make_random_shapes(int nshapes, int l) {
     vector<shape> shapes(nshapes);
-    shapes[0] = transform_shape(make_floor("floor", 0, 6, 4, 6), {0, 0, -4},
-                                zero3f, {6, 6, 6});
+    shapes[0] = make_floor("floor", 0, 6, 4, 6, {0, 0, -4}, zero3f, {6, 6, 6});
+
     vec3f pos[1024];
     float radius[1024];
     int levels[1024];
@@ -290,14 +282,8 @@ vector<shape> make_random_shapes(int nshapes, int l, bool use_xform) {
         };
         auto stype = stypes[(int)(rng_nextf(rn) * 3)];
         if (stype == yshape::stdsurface_type::uvflipcapsphere) levels[i]++;
-        shapes[i] = make_shape(name, i, levels[i], stype);
-        if (use_xform) {
-            shapes[i] = xform_shape(shapes[i], pos[i], zero3f,
-                                    {radius[i], radius[i], radius[i]});
-        } else {
-            shapes[i] = transform_shape(shapes[i], pos[i], zero3f,
-                                        {radius[i], radius[i], radius[i]});
-        }
+        shapes[i] = make_shape(name, i, levels[i], stype, pos[i], zero3f,
+                               {radius[i], radius[i], radius[i]});
     }
 
     return shapes;
@@ -347,9 +333,8 @@ vector<material> make_random_materials(int nshapes) {
 
 vector<shape> make_random_rigid_shapes(int nshapes, int l) {
     vector<shape> shapes(nshapes);
-    shapes[0] =
-        xform_shape(make_shape("floor", 0, 2, yshape::stdsurface_type::uvcube),
-                    {0, -0.5, 0}, zero3f, {6, 0.5, 6});
+    shapes[0] = make_shape("floor", 0, 2, yshape::stdsurface_type::uvcube,
+                           {0, -0.5, 0}, zero3f, {6, 0.5, 6});
     vec3f pos[1024];
     float radius[1024];
     int levels[1024];
@@ -375,9 +360,8 @@ vector<shape> make_random_rigid_shapes(int nshapes, int l) {
             yshape::stdsurface_type::uvspherecube,
             yshape::stdsurface_type::uvcube};
         auto stype = stypes[(int)(rng_nextf(rn) * 2)];
-        shapes[i] = make_shape(name, i, levels[i], stype);
-        shapes[i] = xform_shape(shapes[i], pos[i], zero3f,
-                                {radius[i], radius[i], radius[i]});
+        shapes[i] = make_shape(name, i, levels[i], stype, pos[i], zero3f,
+                               {radius[i], radius[i], radius[i]});
     }
 
     return shapes;
@@ -675,17 +659,15 @@ vector<camera> make_simple_cameras() {
 
 vector<shape> make_simple_lightshapes(int matoffset, bool arealights) {
     if (!arealights) {
-        return {
-            transform_shape(make_point("light01", matoffset + 0), {0.7f, 4, 3}),
-            transform_shape(make_point("light02", matoffset + 1),
-                            {-0.7f, 4, 3})};
+        return {make_point("light01", matoffset + 0, {0.7f, 4, 3}),
+                make_point("light02", matoffset + 1, {-0.7f, 4, 3})};
     } else {
-        return {lookat_shape(make_shape("light01", matoffset + 0, 0,
-                                        yshape::stdsurface_type::uvquad),
-                             {2, 2, 4}, {0, 1, 0}),
-                lookat_shape(make_shape("light02", matoffset + 1, 0,
-                                        yshape::stdsurface_type::uvquad),
-                             {-2, 2, 4}, {0, 1, 0})};
+        return {make_shape("light01", matoffset + 0, 0,
+                           yshape::stdsurface_type::uvquad, {2, 2, 4},
+                           {0, 1, 0}, {1, 1, 1}, true),
+                make_shape("light02", matoffset + 1, 0,
+                           yshape::stdsurface_type::uvquad, {-2, 2, 4},
+                           {0, 1, 0}, {1, 1, 1}, true)};
     }
 }
 
@@ -705,17 +687,13 @@ vector<material> make_simple_lightmaterials(bool arealights) {
 
 scene make_simple_scene(bool textured, bool arealights) {
     vector<shape> shapes = {
-        transform_shape(make_floor("floor", 0, 6, 4, 6), {0, 0, -4}, zero3f,
-                        {6, 6, 6}),
-        transform_shape(
-            make_shape("obj01", 1, 5, yshape::stdsurface_type::uvflipcapsphere),
-            {-1.25f, 0.5f, 0}, zero3f, {0.5f, 0.5f, 0.5f}),
-        transform_shape(
-            make_shape("obj02", 2, 4, yshape::stdsurface_type::uvspherizedcube),
-            {0, 0.5f, 0}, zero3f, {0.5f, 0.5f, 0.5f}),
-        transform_shape(
-            make_shape("obj03", 2, 4, yshape::stdsurface_type::uvspherecube),
-            {1.25f, 0.5f, 0}, zero3f, {0.5f, 0.5f, 0.5f})};
+        make_floor("floor", 0, 6, 4, 6, {0, 0, -4}, zero3f, {6, 6, 6}),
+        make_shape("obj01", 1, 5, yshape::stdsurface_type::uvflipcapsphere,
+                   {-1.25f, 0.5f, 0}, zero3f, {0.5f, 0.5f, 0.5f}),
+        make_shape("obj02", 2, 4, yshape::stdsurface_type::uvspherizedcube,
+                   {0, 0.5f, 0}, zero3f, {0.5f, 0.5f, 0.5f}),
+        make_shape("obj03", 2, 4, yshape::stdsurface_type::uvspherecube,
+                   {1.25f, 0.5f, 0}, zero3f, {0.5f, 0.5f, 0.5f})};
     vector<material> materials;
     vector<texture> textures;
     if (!textured) {
@@ -744,35 +722,33 @@ scene make_pointslines_scene(bool lines, bool arealights) {
     vector<shape> shapes;
     vector<material> materials;
     vector<texture> textures;
-    shapes.push_back(transform_shape(make_floor("floor", 0, 6, 4, 6),
-                                     {0, 0, -4}, zero3f, {6, 6, 6}));
+    shapes.push_back(
+        make_floor("floor", 0, 6, 4, 6, {0, 0, -4}, zero3f, {6, 6, 6}));
     materials = vector<material>{make_diffuse("floor", {0.2f, 0.2f, 0.2f}),
                                  make_diffuse("obj", {0.2f, 0.2f, 0.2f}),
                                  make_diffuse("points", {0.2f, 0.2f, 0.2f}),
                                  make_diffuse("lines", {0.2f, 0.2f, 0.2f})};
     if (!lines) {
-        shapes.push_back(
-            transform_shape(make_points("points01", 2, 64 * 64 * 16),
-                            {0, 0.5f, 0}, zero3f, {0.5f, 0.5f, 0.5f}));
+        shapes.push_back(make_points("points01", 2, 64 * 64 * 16, {0, 0.5f, 0},
+                                     zero3f, {0.5f, 0.5f, 0.5f}));
     } else {
-        shapes.push_back(transform_shape(
-            make_shape("obj01", 1, 6, yshape::stdsurface_type::uvsphere),
-            {1.25f, 0.5f, 0}, zero3f, {0.5f, 0.5f, 0.5f}));
-        shapes.push_back(transform_shape(
-            make_lines("lines01", 3, 64 * 64 * 16, 4, 0.1f, 0, 0),
-            {1.25f, 0.5f, 0}, zero3f, {0.5f, 0.5f, 0.5f}));
-        shapes.push_back(transform_shape(
-            make_shape("obj02", 1, 6, yshape::stdsurface_type::uvsphere),
-            {0, 0.5f, 0}, zero3f, {0.5f, 0.5f, 0.5f}));
-        shapes.push_back(transform_shape(
-            make_lines("lines02", 3, 64 * 64 * 16, 4, 0, 0.75f, 0),
-            {0, 0.5f, 0}, zero3f, {0.5f, 0.5f, 0.5f}));
-        shapes.push_back(transform_shape(
-            make_shape("obj03", 1, 6, yshape::stdsurface_type::uvsphere),
-            {-1.25f, 0.5f, 0}, zero3f, {0.5f, 0.5f, 0.5f}));
-        shapes.push_back(transform_shape(
-            make_lines("lines03", 3, 64 * 64 * 16, 4, 0, 0, 0.5f),
-            {-1.25f, 0.5f, 0}, zero3f, {0.5f, 0.5f, 0.5f}));
+        shapes.push_back(
+            make_shape("obj01", 1, 6, yshape::stdsurface_type::uvsphere,
+                       {1.25f, 0.5f, 0}, zero3f, {0.5f, 0.5f, 0.5f}));
+        shapes.push_back(make_lines("lines01", 3, 64 * 64 * 16, 4, 0.1f, 0, 0,
+                                    {1.25f, 0.5f, 0}, zero3f,
+                                    {0.5f, 0.5f, 0.5f}));
+        shapes.push_back(make_shape("obj02", 1, 6,
+                                    yshape::stdsurface_type::uvsphere,
+                                    {0, 0.5f, 0}, zero3f, {0.5f, 0.5f, 0.5f}));
+        shapes.push_back(make_lines("lines02", 3, 64 * 64 * 16, 4, 0, 0.75f, 0,
+                                    {0, 0.5f, 0}, zero3f, {0.5f, 0.5f, 0.5f}));
+        shapes.push_back(
+            make_shape("obj03", 1, 6, yshape::stdsurface_type::uvsphere,
+                       {-1.25f, 0.5f, 0}, zero3f, {0.5f, 0.5f, 0.5f}));
+        shapes.push_back(make_lines("lines03", 3, 64 * 64 * 16, 4, 0, 0, 0.5f,
+                                    {-1.25f, 0.5f, 0}, zero3f,
+                                    {0.5f, 0.5f, 0.5f}));
     }
 
     return make_scene(
@@ -785,7 +761,7 @@ scene make_random_scene(int nshapes, bool arealights) {
     vector<camera> cameras = {
         make_camera("cam", {0, 1.5f, 5}, {0, 0.5f, 0}, 0.5f, 0),
         make_camera("cam_dof", {0, 1.5f, 5}, {0, 0.5, 0}, 0.5f, 0.1f)};
-    vector<shape> shapes = make_random_shapes(nshapes, 5, false);
+    vector<shape> shapes = make_random_shapes(nshapes, 5);
     vector<material> materials = make_random_materials(nshapes);
     vector<texture> textures = make_random_textures();
     return make_scene(
@@ -800,30 +776,22 @@ scene make_cornell_box_scene() {
     vector<camera> cameras = {
         make_camera("cam", {0, 1, 4}, {0, 1, 0}, 0.7f, 0)};
     vector<shape> shapes = {
-        transform_shape(
-            make_shape("floor", 0, 0, yshape::stdsurface_type::uvquad), zero3f,
-            {-90, 0, 0}),
-        transform_shape(
-            make_shape("ceiling", 0, 0, yshape::stdsurface_type::uvquad),
-            {0, 2, 0}, {90, 0, 0}),
-        transform_shape(
-            make_shape("back", 0, 0, yshape::stdsurface_type::uvquad),
-            {0, 1, -1}, zero3f),
-        transform_shape(
-            make_shape("back", 2, 0, yshape::stdsurface_type::uvquad),
-            {+1, 1, 0}, {0, -90, 0}),
-        transform_shape(
-            make_shape("back", 1, 0, yshape::stdsurface_type::uvquad),
-            {-1, 1, 0}, {0, 90, 0}),
-        transform_shape(
-            make_shape("tallbox", 0, 0, yshape::stdsurface_type::uvcube),
-            {-0.33f, 0.6f, -0.29f}, {0, 15, 0}, {0.3f, 0.6f, 0.3f}),
-        transform_shape(
-            make_shape("shortbox", 0, 0, yshape::stdsurface_type::uvcube),
-            {0.33f, 0.3f, 0.33f}, {0, -15, 0}, {0.3f, 0.3f, 0.3f}),
-        transform_shape(
-            make_shape("light", 3, 0, yshape::stdsurface_type::uvquad),
-            {0, 1.999f, 0}, {90, 0, 0}, {0.25f, 0.25f, 0.25f})};
+        make_shape("floor", 0, 0, yshape::stdsurface_type::uvquad, zero3f,
+                   {-90, 0, 0}),
+        make_shape("ceiling", 0, 0, yshape::stdsurface_type::uvquad, {0, 2, 0},
+                   {90, 0, 0}),
+        make_shape("back", 0, 0, yshape::stdsurface_type::uvquad, {0, 1, -1},
+                   zero3f),
+        make_shape("back", 2, 0, yshape::stdsurface_type::uvquad, {+1, 1, 0},
+                   {0, -90, 0}),
+        make_shape("back", 1, 0, yshape::stdsurface_type::uvquad, {-1, 1, 0},
+                   {0, 90, 0}),
+        make_shape("tallbox", 0, 0, yshape::stdsurface_type::uvcube,
+                   {-0.33f, 0.6f, -0.29f}, {0, 15, 0}, {0.3f, 0.6f, 0.3f}),
+        make_shape("shortbox", 0, 0, yshape::stdsurface_type::uvcube,
+                   {0.33f, 0.3f, 0.33f}, {0, -15, 0}, {0.3f, 0.3f, 0.3f}),
+        make_shape("light", 3, 0, yshape::stdsurface_type::uvquad,
+                   {0, 1.999f, 0}, {90, 0, 0}, {0.25f, 0.25f, 0.25f})};
     vector<material> materials = {
         make_diffuse("white", {0.725f, 0.71f, 0.68f}),
         make_diffuse("red", {0.63f, 0.065f, 0.05f}),
@@ -838,17 +806,13 @@ scene make_envmap_scene(bool as_shape, bool use_map) {
         make_camera("cam", {0, 1.5f, 5}, {0, 0.5f, 0}, 0.5f, 0),
         make_camera("cam_dof", {0, 1.5f, 5}, {0, 0.5f, 0}, 0.5f, 0.1f)};
     vector<shape> shapes = {
-        transform_shape(make_floor("floor", 0, 6, 4, 6), {0, 0, -4}, zero3f,
-                        {6, 6, 6}),
-        transform_shape(
-            make_shape("obj01", 1, 5, yshape::stdsurface_type::uvflipcapsphere),
-            {-1.25f, 0.5f, 0}, zero3f, {0.5f, 0.5f, 0.5f}),
-        transform_shape(
-            make_shape("obj02", 2, 4, yshape::stdsurface_type::uvspherizedcube),
-            {0, 0.5f, 0}, zero3f, {0.5f, 0.5f, 0.5f}),
-        transform_shape(
-            make_shape("obj03", 3, 4, yshape::stdsurface_type::uvspherecube),
-            {1.25f, 0.5f, 0}, zero3f, {0.5f, 0.5f, 0.5f})};
+        make_floor("floor", 0, 6, 4, 6, {0, 0, -4}, zero3f, {6, 6, 6}),
+        make_shape("obj01", 1, 5, yshape::stdsurface_type::uvflipcapsphere,
+                   {-1.25f, 0.5f, 0}, zero3f, {0.5f, 0.5f, 0.5f}),
+        make_shape("obj02", 2, 4, yshape::stdsurface_type::uvspherizedcube,
+                   {0, 0.5f, 0}, zero3f, {0.5f, 0.5f, 0.5f}),
+        make_shape("obj03", 3, 4, yshape::stdsurface_type::uvspherecube,
+                   {1.25f, 0.5f, 0}, zero3f, {0.5f, 0.5f, 0.5f})};
     vector<material> materials = {
         make_diffuse("floor", {0.2f, 0.2f, 0.2f}),
         make_plastic("obj01", {0.5f, 0.2f, 0.2f}, 50),
@@ -858,9 +822,8 @@ scene make_envmap_scene(bool as_shape, bool use_map) {
     vector<texture> textures;
     vector<environment> environments;
     if (as_shape) {
-        shapes.push_back(transform_shape(
-            make_shape("env_sphere", 4, 6,
-                       yshape::stdsurface_type::uvflippedsphere),
+        shapes.push_back(make_shape(
+            "env_sphere", 4, 6, yshape::stdsurface_type::uvflippedsphere,
             {0, 0.5f, 0}, {-90, 0, 0}, {10000, 10000, 10000}));
     } else {
         environments.push_back(
@@ -886,49 +849,38 @@ scene make_rigid_scene(int config) {
 
     if (config == 0 || config == 1) {
         shapes = {
-            (config) ? xform_shape(make_shape("floor", 0, 2,
-                                              yshape::stdsurface_type::uvcube),
-                                   {0, -2.5, 0}, {30, 0, 0}, {6, 0.5f, 6})
-                     : xform_shape(make_shape("floor", 0, 4,
-                                              yshape::stdsurface_type::uvcube),
-                                   {0, -0.5f, 0}, {0, 0, 0}, {6, 0.5f, 6}),
-            xform_shape(
-                make_shape("obj01", 1, 2, yshape::stdsurface_type::uvcube),
-                {-1.25f, 0.5f, 0}, {0, 0, 0}, {0.5f, 0.5f, 0.5f}),
-            xform_shape(make_shape("obj02", 1, 3,
-                                   yshape::stdsurface_type::uvspherecube),
-                        {0, 1, 0}, {0, 0, 0}, {0.5f, 0.5f, 0.5f}),
-            xform_shape(
-                make_shape("obj03", 1, 2, yshape::stdsurface_type::uvcube),
-                {1.25f, 1.5f, 0}, {0, 0, 0}, {0.5f, 0.5f, 0.5f}),
-            xform_shape(
-                make_shape("obj11", 1, 2, yshape::stdsurface_type::uvcube),
-                {-1.25f, 0.5f, 1.5f}, {0, 45, 0}, {0.5f, 0.5f, 0.5f}),
-            xform_shape(make_shape("obj12", 1, 3,
-                                   yshape::stdsurface_type::uvspherecube),
-                        {0, 1, 1.5f}, {45, 0, 0}, {0.5f, 0.5f, 0.5f}),
-            xform_shape(
-                make_shape("obj13", 1, 2, yshape::stdsurface_type::uvcube),
-                {1.25f, 1.5f, 1.5f}, {45, 0, 45}, {0.5f, 0.5f, 0.5f}),
-            xform_shape(
-                make_shape("obj21", 1, 2, yshape::stdsurface_type::uvcube),
-                {-1.25f, 0.5f, -1.5f}, {0, 0, 0}, {0.5f, 0.5f, 0.5f}),
-            xform_shape(make_shape("obj22", 1, 3,
-                                   yshape::stdsurface_type::uvspherecube),
-                        {0, 1, -1.5f}, {22.5, 0, 0}, {0.5f, 0.5f, 0.5f}),
-            xform_shape(
-                make_shape("obj23", 1, 2, yshape::stdsurface_type::uvcube),
-                {1.25f, 1.5f, -1.5f}, {22.5f, 0, 22.5f}, {0.5f, 0.5f, 0.5f})};
+            (config)
+                ? make_shape("floor", 0, 2, yshape::stdsurface_type::uvcube,
+                             {0, -2.5, 0}, {30, 0, 0}, {6, 0.5f, 6})
+                : make_shape("floor", 0, 4, yshape::stdsurface_type::uvcube,
+                             {0, -0.5f, 0}, {0, 0, 0}, {6, 0.5f, 6}),
+            make_shape("obj01", 1, 2, yshape::stdsurface_type::uvcube,
+                       {-1.25f, 0.5f, 0}, {0, 0, 0}, {0.5f, 0.5f, 0.5f}),
+            make_shape("obj02", 1, 3, yshape::stdsurface_type::uvspherecube,
+                       {0, 1, 0}, {0, 0, 0}, {0.5f, 0.5f, 0.5f}),
+            make_shape("obj03", 1, 2, yshape::stdsurface_type::uvcube,
+                       {1.25f, 1.5f, 0}, {0, 0, 0}, {0.5f, 0.5f, 0.5f}),
+            make_shape("obj11", 1, 2, yshape::stdsurface_type::uvcube,
+                       {-1.25f, 0.5f, 1.5f}, {0, 45, 0}, {0.5f, 0.5f, 0.5f}),
+            make_shape("obj12", 1, 3, yshape::stdsurface_type::uvspherecube,
+                       {0, 1, 1.5f}, {45, 0, 0}, {0.5f, 0.5f, 0.5f}),
+            make_shape("obj13", 1, 2, yshape::stdsurface_type::uvcube,
+                       {1.25f, 1.5f, 1.5f}, {45, 0, 45}, {0.5f, 0.5f, 0.5f}),
+            make_shape("obj21", 1, 2, yshape::stdsurface_type::uvcube,
+                       {-1.25f, 0.5f, -1.5f}, {0, 0, 0}, {0.5f, 0.5f, 0.5f}),
+            make_shape("obj22", 1, 3, yshape::stdsurface_type::uvspherecube,
+                       {0, 1, -1.5f}, {22.5, 0, 0}, {0.5f, 0.5f, 0.5f}),
+            make_shape("obj23", 1, 2, yshape::stdsurface_type::uvcube,
+                       {1.25f, 1.5f, -1.5f}, {22.5f, 0, 22.5f},
+                       {0.5f, 0.5f, 0.5f})};
     } else if (config == 2) {
         shapes = make_random_rigid_shapes(128, 1);
     } else {
         assert(false);
     }
 
-    shapes.push_back(transform_shape(make_point("light01", 2), {0.7f, 4, 3},
-                                     {0, 0, 0}, {1, 1, 1}));
-    shapes.push_back(transform_shape(make_point("light02", 3), {-0.7f, 4, 3},
-                                     {0, 0, 0}, {1, 1, 1}));
+    shapes.push_back(make_point("light01", 2, {0.7f, 4, 3}));
+    shapes.push_back(make_point("light02", 3, {-0.7f, 4, 3}));
     materials.push_back(make_emission("light01", {100, 100, 100}));
     materials.push_back(make_emission("light02", {100, 100, 100}));
 

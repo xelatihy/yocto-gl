@@ -330,12 +330,15 @@ inline bool save_obj_scene(const string& filename, const scene& scene,
         fl_scene.shapes.emplace_back();
         auto& fl_shape = fl_scene.shapes.back();
         fl_shape.name = shape.name;
-        assert(shape.frame == identity_frame3f);
         fl_shape.matid = shape.matid;
-        fl_shape.pos =
-            vector<array<float, 3>>(shape.pos.begin(), shape.pos.end());
-        fl_shape.norm =
-            vector<array<float, 3>>(shape.norm.begin(), shape.norm.end());
+        fl_shape.pos.resize(shape.pos.size());
+        for (auto i = 0; i < shape.pos.size(); i++) {
+            fl_shape.pos[i] = transform_point(shape.frame, shape.pos[i]);
+        }
+        fl_shape.norm.resize(shape.norm.size());
+        for (auto i = 0; i < shape.pos.size(); i++) {
+            fl_shape.norm[i] = transform_direction(shape.frame, shape.norm[i]);
+        }
         fl_shape.texcoord = vector<array<float, 2>>(shape.texcoord.begin(),
                                                     shape.texcoord.end());
         fl_shape.color =

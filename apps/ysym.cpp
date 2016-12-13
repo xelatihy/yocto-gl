@@ -232,16 +232,15 @@ void draw_hull(const ysym::scene& rigid_scene, const yapp::scene& scene,
 void make_rigid_scene(yapp::scene& scene, ysym::scene& rigid_scene,
                       ybvh::scene& scene_bvh) {
     // add each shape
-    auto first_hack = true;
     for (auto& shape : scene.shapes) {
         auto& mat = scene.materials[shape.matid];
-        auto simulated =
-            !first_hack && ym::length(mat.ke) == 0 && !shape.triangles.empty();
+        auto simulated = shape.name != "floor" && ym::length(mat.ke) == 0 &&
+                         !shape.triangles.empty();
         auto density = (simulated) ? 1.0f : 0.0f;
         rigid_scene.shapes.push_back({shape.frame, ym::zero3f, ym::zero3f,
                                       density, simulated, shape.triangles,
                                       shape.pos});
-        first_hack = false;
+        if (shape.name == "floor") printf("floor found\n");
     }
 
     // set up final bvh
