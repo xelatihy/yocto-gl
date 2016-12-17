@@ -43,6 +43,7 @@ ybvh::scene scene_bvh;
 bool simulating = false;
 float dt = 1 / 60.f;
 int frame = 0;
+std::vector<ym::frame3f> initial_state;
 
 // lighting
 float hdr_exposure = 0;
@@ -67,6 +68,7 @@ const std::array<ym::vec4f, 4> backgrounds = {{{0.0f, 0.0f, 0.0f, 0.0f},
                                                {1.0f, 1.0f, 1.0f, 0.0f}}};
 bool wireframe = false;
 bool edges = false;
+bool show_hud = false;
 
 // shading
 yglu::uint shade_prog = 0;
@@ -116,52 +118,121 @@ void draw_scene() {
                     backgrounds[cur_background], hdr_exposure, hdr_gamma,
                     wireframe, edges, camera_lights, {amb, amb, amb});
     }
-    // draw hull
-    // if (hull) draw_hull(rigid_scene, scene, 1, camera, shade_prog);
 }
 
 // deprecated function removed from build
-#if 0
-void draw_hull(ysym::scene* rigid_scene, yapp::scene* scene, float dt,
-               int cur_camera, int prog) {
+void draw_hud(const ysym::scene& rigid_scene, const yapp::scene& scene,
+              float dt, int cur_camera) {
+    // begin frame
     glDisable(GL_CULL_FACE);
     glDisable(GL_DEPTH_TEST);
-
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
-    yo_camera* cam = &scene->cameras[cur_camera];
-    yocto::ym::frame3f camera_frame = yocto::ym::lookat_xform3(
-        *(yocto::ym::vec3f*)cam->from, *(yocto::ym::vec3f*)cam->to, *(yocto::ym::vec3f*)cam->up);
-    yocto::ym::mat4f camera_xform = yocto::ym::mat4f(camera_frame);
-    yocto::ym::mat4f camera_view = yocto::ym::mat4f(yocto::ym::inverse(camera_frame));
-    yocto::ym::mat4f camera_proj = yocto::ym::perspective_mat4(
-        2 * atanf(cam->height / 2), cam->width / cam->height, 0.1f, 10000.0f);
+    auto& cam = scene.cameras[cur_camera];
+    auto camera_xform = to_mat(cam.frame);
+    auto camera_view = to_mat(inverse(cam.frame));
+    auto camera_proj =
+        ym::perspective_mat4(cam.yfov, cam.aspect, 0.1f, 10000.0f);
 
-    yglu::stdshader_begin_frame(prog, true, 1, 2.2, camera_xform.data(),
-                             camera_view.data(), camera_proj.data());
+    yglu::legacy::begin_frame(*(yglu::float4x4*)&camera_xform,
+                              *(yglu::float4x4*)&camera_view,
+                              *(yglu::float4x4*)&camera_proj, false, true);
 
-    for (int i = 0; i < scene->nshapes; i++) {
-        yo_shape* shape = &scene->shapes[i];
-        ysym::_body* body = &rigid_scene->bodies[i];
+    for (auto i = 0; i < scene.shapes.size(); i++) {
+        auto& shape = scene.shapes[i];
+        // auto& body = rigid_scene.shapes[i];
 
-        yglu::stdshader_begin_shape(prog, shape->xform);
+        auto xform = to_mat(shape.frame);
+        yglu::legacy::begin_shape(*(yglu::float4x4*)&xform);
 
-        float zero[3] = {0, 0, 0};
-        float one[3] = {1, 1, 1};
-        yglu::stdshader_set_material(prog, shape->etype, one, zero, zero, 0, 0, 0,
-                                  0, 0, false);
+        yglu::legacy::set_material({0, 0, 0}, {0, 0, 0}, {0, 0, 0}, 1, 0, true);
 
         glLineWidth(2);
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-        yglu::stdshader_set_vert(prog, shape->pos, 0, 0, 0);
-        yglu::stdshader_draw_elem(prog, body->shape.nelems, (int*)body->shape.elem,
-                               body->shape.etype);
+        if (!shape.points.empty()) {
+            yglu::legacy::draw_elems((int)shape.points.size(),
+                                     shape.points.data(), yglu::etype::point,
+                                     shape.pos.data(), nullptr, nullptr,
+                                     nullptr);
+        } else if (!shape.lines.empty()) {
+            yglu::legacy::draw_elems(
+                (int)shape.lines.size(), (int*)shape.lines.data(),
+                yglu::etype::line, shape.pos.data(), nullptr, nullptr, nullptr);
+        } else if (!shape.triangles.empty()) {
+            yglu::legacy::draw_elems((int)shape.triangles.size(),
+                                     (int*)shape.triangles.data(),
+                                     yglu::etype::triangle, shape.pos.data(),
+                                     nullptr, nullptr, nullptr);
+        }
+
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
         glLineWidth(1);
 
-        yglu::stdshader_end_shape();
+        yglu::legacy::end_shape();
     }
 
+    for (auto collision : rigid_scene.__collisions) {
+        int point[] = {0}, line[] = {0, 1};
+        yglu::legacy::begin_shape(*(yglu::float4x4*)&ym::identity_mat4f);
+
+        yglu::legacy::set_material({1, 0, 0}, {0, 0, 0}, {0, 0, 0}, 1, 0,
+                                   false);
+
+        ym::vec3f pos[] = {collision.frame.o(),
+                           collision.frame.o() +
+                               collision.depth * collision.frame[2]};
+
+        glPointSize(10);
+        glLineWidth(4);
+        yglu::legacy::draw_elems(1, point, yglu::etype::point,
+                                 (yglu::float3*)pos, nullptr, nullptr, nullptr);
+        yglu::legacy::draw_elems(1, line, yglu::etype::line, (yglu::float3*)pos,
+                                 nullptr, nullptr, nullptr);
+        glLineWidth(1);
+        glPointSize(1);
+
+        yglu::legacy::set_material({0, 1, 0}, {0, 0, 0}, {0, 0, 0}, 1, 0,
+                                   false);
+
+        ym::vec3f posi[] = {collision.frame.o(),
+                            collision.frame.o() + collision.impulse * 10};
+        glLineWidth(4);
+        yglu::legacy::draw_elems(1, line, yglu::etype::line,
+                                 (yglu::float3*)posi, nullptr, nullptr,
+                                 nullptr);
+        glLineWidth(1);
+
+        yglu::legacy::set_material({0.5, 0.5, 1}, {0, 0, 0}, {0, 0, 0}, 1, 0,
+                                   false);
+
+        ym::vec3f posj[] = {collision.frame.o(),
+                            collision.frame.o() + dt * collision.vel_before};
+        glLineWidth(4);
+        yglu::legacy::draw_elems(1, line, yglu::etype::line,
+                                 (yglu::float3*)posj, nullptr, nullptr,
+                                 nullptr);
+        glLineWidth(1);
+
+        yglu::legacy::set_material({0, 1, 1}, {0, 0, 0}, {0, 0, 0}, 1, 0,
+                                   false);
+
+        ym::vec3f posk[] = {collision.frame.o(),
+                            collision.frame.o() + dt * collision.vel_after};
+        glLineWidth(4);
+        yglu::legacy::draw_elems(1, line, yglu::etype::line,
+                                 (yglu::float3*)posk, nullptr, nullptr,
+                                 nullptr);
+        glLineWidth(1);
+
+        yglu::legacy::end_shape();
+    }
+
+    yglu::legacy::end_frame();
+
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    glEnable(GL_DEPTH_TEST);
+
+#if 0
     static int point[] = {0}, line[] = {0, 1};
     for (int i = 0; i < rigid_scene->ncollisions; i++) {
         ysym::_collision* col = rigid_scene->collisions + i;
@@ -173,10 +244,10 @@ void draw_hull(ysym::scene* rigid_scene, yapp::scene* scene, float dt,
               yellow[3] = {1, 1, 0};
 
         yglu::stdshader_set_material(prog, 1, red, zero, zero, 0, 0, 0, 0, 0,
-                                  false);
+                                     false);
 
-        yocto::ym::vec3f pos[] = {col->frame.pos,
-                          col->frame.pos + col->depth * col->frame.norm};
+        yocto::ym::vec3f pos[] = {
+            col->frame.pos, col->frame.pos + col->depth * col->frame.norm};
         glPointSize(10);
         glLineWidth(4);
         yglu::stdshader_set_vert(prog, &pos->x, 0, 0, 0);
@@ -186,30 +257,30 @@ void draw_hull(ysym::scene* rigid_scene, yapp::scene* scene, float dt,
         glPointSize(1);
 
         yglu::stdshader_set_material(prog, 1, green, zero, zero, 0, 0, 0, 0, 0,
-                                  false);
+                                     false);
 
         yocto::ym::vec3f posi[] = {col->frame.pos,
-                           col->frame.pos + 25.0f * col->impulse};
+                                   col->frame.pos + 25.0f * col->impulse};
         glLineWidth(4);
         yglu::stdshader_set_vert(prog, &posi->x, 0, 0, 0);
         yglu::stdshader_draw_elem(prog, 1, line, 2);
         glLineWidth(1);
 
         yglu::stdshader_set_material(prog, 1, cyan, zero, zero, 0, 0, 0, 0, 0,
-                                  false);
+                                     false);
 
         yocto::ym::vec3f posj[] = {col->frame.pos,
-                           col->frame.pos + dt * col->vel_before};
+                                   col->frame.pos + dt * col->vel_before};
         glLineWidth(4);
         yglu::stdshader_set_vert(prog, &posj->x, 0, 0, 0);
         yglu::stdshader_draw_elem(prog, 1, line, 2);
         glLineWidth(1);
 
         yglu::stdshader_set_material(prog, 1, yellow, zero, zero, 0, 0, 0, 0, 0,
-                                  false);
+                                     false);
 
         yocto::ym::vec3f posk[] = {col->frame.pos,
-                           col->frame.pos + dt * col->vel_after};
+                                   col->frame.pos + dt * col->vel_after};
         glLineWidth(4);
         yglu::stdshader_set_vert(prog, &posk->x, 0, 0, 0);
         yglu::stdshader_draw_elem(prog, 1, line, 2);
@@ -218,16 +289,8 @@ void draw_hull(ysym::scene* rigid_scene, yapp::scene* scene, float dt,
         yglu::stdshader_end_shape();
     }
 
-    yglu::stdshader_end_frame();
-
-    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-
-    glEnable(GL_DEPTH_TEST);
-}
-#else
-void draw_hull(const ysym::scene& rigid_scene, const yapp::scene& scene,
-               float dt, int cur_camera, int prog) {}
 #endif
+}
 
 void make_rigid_scene(yapp::scene& scene, ysym::scene& rigid_scene,
                       ybvh::scene& scene_bvh) {
@@ -240,7 +303,6 @@ void make_rigid_scene(yapp::scene& scene, ysym::scene& rigid_scene,
         rigid_scene.shapes.push_back({shape.frame, ym::zero3f, ym::zero3f,
                                       density, simulated, shape.triangles,
                                       shape.pos});
-        if (shape.name == "floor") printf("floor found\n");
     }
 
     // set up final bvh
@@ -261,14 +323,24 @@ void make_rigid_scene(yapp::scene& scene, ysym::scene& rigid_scene,
     ybvh::build_bvh(scene_bvh);
 
     // setup collisions
-    rigid_scene.overlap_shapes = [&scene_bvh]() {
-        return ybvh::overlap_shape_bounds(scene_bvh, scene_bvh, true);
-    };
+    rigid_scene.overlap_shapes =
+        [&scene_bvh](std::vector<ym::vec2i>& overlaps) {
+            ybvh::overlap_shape_bounds(scene_bvh, scene_bvh, false, true, true,
+                                       overlaps);
+        };
     rigid_scene.overlap_shape = [&scene_bvh](int sid, const ym::vec3f& pt,
                                              float max_dist) {
         auto overlap =
             ybvh::overlap_point(scene_bvh.shapes[sid], pt, max_dist, false);
         return *(ysym::overlap_point*)&overlap;
+    };
+    rigid_scene.overlap_verts = [&scene_bvh](
+        int sid1, int sid2, float max_dist,
+        std::vector<std::pair<ysym::overlap_point, ym::vec2i>>& overlaps_) {
+        auto& overlaps =
+            (std::vector<std::pair<ybvh::point, ym::vec2i>>&)overlaps_;
+        ybvh::overlap_verts(scene_bvh.shapes[sid1], scene_bvh.shapes[sid2],
+                            true, max_dist, true, overlaps);
     };
     rigid_scene.overlap_refit = [&scene_bvh, &rigid_scene]() {
         for (auto sid = 0; sid < rigid_scene.shapes.size(); sid++) {
@@ -295,8 +367,8 @@ void text_callback(GLFWwindow* window, unsigned int key) {
         case ' ': simulating = !simulating; break;
         case '/': {
             for (int sid = 0; sid < scene.shapes.size(); sid++) {
-                scene.shapes[sid].frame = ym::identity_frame3f;
-                rigid_scene.shapes[sid].frame = ym::identity_frame3f;
+                scene.shapes[sid].frame = initial_state[sid];
+                rigid_scene.shapes[sid].frame = initial_state[sid];
             }
             frame = 0;
         } break;
@@ -316,6 +388,7 @@ void text_callback(GLFWwindow* window, unsigned int key) {
         case 's': save_screenshot(window, imfilename); break;
         case 'c': camera_lights = !camera_lights; break;
         case 'C': camera = (camera + 1) % scene.cameras.size(); break;
+        case 'h': show_hud = !show_hud; break;
         default: printf("unsupported key\n"); break;
     }
 }
@@ -344,8 +417,8 @@ void draw_widgets() {
         }
         if (nk_button_label(nuklear_ctx, "reset")) {
             for (int sid = 0; sid < scene.shapes.size(); sid++) {
-                scene.shapes[sid].frame = ym::identity_frame3f;
-                rigid_scene.shapes[sid].frame = ym::identity_frame3f;
+                scene.shapes[sid].frame = initial_state[sid];
+                rigid_scene.shapes[sid].frame = initial_state[sid];
             }
             frame = 0;
         }
@@ -377,6 +450,7 @@ void draw_widgets() {
 
 void window_refresh_callback(GLFWwindow* window) {
     draw_scene();
+    if (show_hud) draw_hud(rigid_scene, scene, dt, camera);
     draw_widgets();
     glfwSwapBuffers(window);
 }
@@ -439,6 +513,7 @@ void run_ui() {
 
         // draw
         draw_scene();
+        if (show_hud) draw_hud(rigid_scene, scene, dt, camera);
 
         // make ui
         draw_widgets();
@@ -500,6 +575,11 @@ int main(int argc, char* argv[]) {
 
     // init rigid simulation
     make_rigid_scene(scene, rigid_scene, scene_bvh);
+
+    // save out init state
+    initial_state.resize(scene.shapes.size());
+    for (auto i = 0; i < initial_state.size(); i++)
+        initial_state[i] = scene.shapes[i].frame;
 
     // run ui
     run_ui();

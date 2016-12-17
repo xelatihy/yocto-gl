@@ -53,6 +53,7 @@
 
 //
 // HISTORY:
+// - v 0.5: faster collision detection
 // - v 0.4: [major API change] move to modern C++ interface
 // - v 0.3: removal of C interface
 // - v 0.2: use of STL containers
@@ -141,25 +142,13 @@ struct shape {
 };
 
 //
-// Collision point and response [private]
-//
-struct _collision {
-    vec2i shapes = zero2i;                           // shapes
-    frame3f frame = identity_frame3f;                // collision frame
-    vec3f impulse = zero3f, local_impulse = zero3f;  // impulses
-    vec3f vel_before = zero3f, vel_after = zero3f;   // velocities (for viz)
-    vec3f meff_inv = zero3f;                         // effective mass
-    float depth = 0;                                 // penetration depth
-};
-
-//
 // Point-scene overlap.
 //
 struct overlap_point {
     float dist = 0;      // ray distance
     int sid = -1;        // shape index
     int eid = -1;        // element index
-    vec3f euv = zero3f;  // element baricentric coordinates
+    vec4f euv = zero4f;  // element baricentric coordinates
 
     // check whether it was a hit
     operator bool() const { return eid >= 0; }
@@ -171,10 +160,7 @@ struct overlap_point {
 // Out Parameters:
 // - overlaps: overlaps array
 //
-// Return:
-// - number of intersections
-//
-using overlap_shapes_cb = function<vector<vec2i>()>;
+using overlap_shapes_cb = function<void(vector<vec2i>&)>;
 
 //
 // Closest element intersection callback
@@ -184,16 +170,26 @@ using overlap_shapes_cb = function<vector<vec2i>()>;
 // - pt: point
 // - max_dist: maximum distance
 //
-// Out Parameters:
-// - dist: distance
-// - eid: element id
-// - euv: element uv
-//
 // Return:
-// - whether we intersect or not
+// - overlap point
 //
 using overlap_shape_cb =
     function<overlap_point(int sid, const vec3f& pt, float max_dist)>;
+
+//
+// Closest vertex-to-element overlap
+//
+// Parameters:
+// - sid1: element shape to check
+// - sid2: vertex shape to check
+// - max_dist: maximum distance from each vert
+//
+// Out Params:
+// - overlaps: overlapping elements
+//
+using overlap_verts_cb =
+    function<void(int sid1, int sid2, float max_dist,
+                  vector<pair<overlap_point, vec2i>>& overlaps)>;
 
 //
 // Refit data structure after transform updates
@@ -202,6 +198,18 @@ using overlap_shape_cb =
 // - xform: transform array
 //
 using overlap_refit_cb = function<void()>;
+
+//
+// Collision point and response [private]
+//
+struct collision {
+    vec2i shapes = zero2i;                           // shapes
+    frame3f frame = identity_frame3f;                // collision frame
+    vec3f impulse = zero3f, local_impulse = zero3f;  // impulses
+    vec3f vel_before = zero3f, vel_after = zero3f;   // velocities (for viz)
+    vec3f meff_inv = zero3f;                         // effective mass
+    float depth = 0;                                 // penetration depth
+};
 
 //
 // Rigid body scene
@@ -217,13 +225,14 @@ struct scene {
     int iterations = 20;                 // solver iterations
 
     // overlap callbacks -----------------------
+    float overlap_max_radius = 0.25;   // maximum vertex overlap distance
     overlap_shapes_cb overlap_shapes;  // overlap callbacks
     overlap_shape_cb overlap_shape;    // overlap callbacks
+    overlap_verts_cb overlap_verts;    // overlap callbacks
     overlap_refit_cb overlap_refit;    // overlap callbacks
 
-    // [private] collision data ----------------
-    vector<_collision> _collisions;  // [private] collisions
-    vector<vec2i> _shapecollisions;  // [private] shape collisions
+    // overlap data used for visualization [private] ----
+    vector<collision> __collisions;
 };
 
 //
@@ -363,44 +372,75 @@ YGL_API void compute_moments(const array_view<vec3i>& triangles,
 //
 // Compute collisions.
 //
-static inline void _compute_collision(scene& scn, const vec2i& shapes) {
+#if 1
+static inline void _compute_collision(scene& scn, const vec2i& shapes,
+                                      vector<collision>& collisions) {
+    vector<pair<overlap_point, vec2i>> overlaps;
+    scn.overlap_verts(shapes[0], shapes[1], scn.overlap_max_radius, overlaps);
+    if (overlaps.empty()) return;
+    auto& shape1 = scn.shapes[shapes[0]];
+    auto& shape2 = scn.shapes[shapes[1]];
+    for (auto& overlap : overlaps) {
+        auto p = transform_point(shape2.frame, shape2.pos[overlap.second[1]]);
+        auto triangle = shape1.triangles[overlap.first.eid];
+        auto v0 = shape1.pos[triangle[0]], v1 = shape1.pos[triangle[1]],
+             v2 = shape1.pos[triangle[2]];
+        auto tp =
+            transform_point(shape1.frame, blerp(v0, v1, v2, overlap.first.euv));
+        auto n = transform_direction(shape1.frame, triangle_normal(v0, v1, v2));
+        const auto eps = -0.01f;
+        auto ptp = normalize(p - tp);
+        if (dot(n, ptp) > eps) continue;
+        collisions.push_back(collision());
+        auto& col = collisions.back();
+        col.shapes = shapes;
+        col.depth = overlap.first.dist;
+        col.frame = make_frame3(p, n);
+    }
+}
+#else
+static inline void _compute_collision(scene& scn, const vec2i& shapes,
+                                      vector<collision>& collisions) {
     auto& shape1 = scn.shapes[shapes[0]];
     auto& shape2 = scn.shapes[shapes[1]];
     for (auto& p2 : shape2.pos) {
         auto p = transform_point(shape2.frame, p2);
-        auto overlap =
-            scn.overlap_shape(shapes[0], p, std::numeric_limits<float>::max());
+        auto overlap = scn.overlap_shape(shapes[0], p, scn.overlap_max_radius);
         if (!overlap) continue;
         auto triangle = shape1.triangles[overlap.eid];
         auto v0 = shape1.pos[triangle[0]], v1 = shape1.pos[triangle[1]],
              v2 = shape1.pos[triangle[2]];
         auto tp = transform_point(shape1.frame, blerp(v0, v1, v2, overlap.euv));
-        auto n = transform_direction(shape1.frame, cross(v1 - v0, v2 - v0));
+        auto n = transform_direction(shape1.frame, triangle_normal(v0, v1, v2));
         const auto eps = -0.01f;
         auto ptp = normalize(p - tp);
         if (dot(n, ptp) > eps) continue;
-        scn._collisions.push_back(_collision());
-        auto& col = scn._collisions.back();
+        collisions.push_back(collision());
+        auto& col = collisions.back();
         col.shapes = shapes;
         col.depth = overlap.dist;
         col.frame = make_frame3(p, n);
     }
 }
+#endif
 
 //
 // Compute collisions.
 //
-static inline void _compute_collisions(scene& scene) {
+static inline void _compute_collisions(scene& scene,
+                                       vector<collision>& collisions) {
     // check which shapes might overlap
-    scene._shapecollisions = scene.overlap_shapes();
+    auto shapecollisions = vector<vec2i>();
+    scene.overlap_shapes(shapecollisions);
     // test all pair-wise objects
-    scene._collisions.resize(0);
-    for (auto& sc : scene._shapecollisions) {
+    collisions.clear();
+    for (auto& sc : shapecollisions) {
         if (!scene.shapes[sc[0]].simulated && !scene.shapes[sc[1]].simulated)
             continue;
         if (scene.shapes[sc[0]].triangles.empty()) continue;
         if (scene.shapes[sc[1]].triangles.empty()) continue;
-        _compute_collision(scene, sc);
+        _compute_collision(scene, sc, collisions);
+        _compute_collision(scene, {sc[1], sc[0]}, collisions);
     }
 }
 
@@ -424,9 +464,10 @@ static inline float _muldot(const vec3f& v, const mat3f& m) {
 //
 // Solve constraints with PGS.
 //
-YGL_API void _solve_constraints(scene& scn, float dt) {
+YGL_API void _solve_constraints(scene& scn, vector<collision>& collisions,
+                                float dt) {
     // initialize computation
-    for (auto& col : scn._collisions) {
+    for (auto& col : collisions) {
         col.local_impulse = zero3f;
         col.impulse = zero3f;
         auto& shape1 = scn.shapes[col.shapes[0]];
@@ -446,7 +487,7 @@ YGL_API void _solve_constraints(scene& scn, float dt) {
     }
 
     // compute relative velocity for visualization
-    for (auto& col : scn._collisions) {
+    for (auto& col : collisions) {
         auto& shape1 = scn.shapes[col.shapes[0]];
         auto& shape2 = scn.shapes[col.shapes[1]];
         auto r1 = col.frame.o() - shape1._centroid_world,
@@ -458,7 +499,7 @@ YGL_API void _solve_constraints(scene& scn, float dt) {
 
     // solve constraints
     for (int i = 0; i < scn.iterations; i++) {
-        for (auto& col : scn._collisions) {
+        for (auto& col : collisions) {
             auto& shape1 = scn.shapes[col.shapes[0]];
             auto& shape2 = scn.shapes[col.shapes[1]];
             auto r1 = col.frame.o() - shape1._centroid_world,
@@ -492,7 +533,7 @@ YGL_API void _solve_constraints(scene& scn, float dt) {
     }
 
     // compute relative velocity for visualization
-    for (auto& col : scn._collisions) {
+    for (auto& col : collisions) {
         auto& shape1 = scn.shapes[col.shapes[0]];
         auto& shape2 = scn.shapes[col.shapes[1]];
         auto r1 = col.frame.o() - shape1._centroid_world,
@@ -503,7 +544,7 @@ YGL_API void _solve_constraints(scene& scn, float dt) {
     }
 
     // recompute total impulse and velocity for visualization
-    for (auto& col : scn._collisions) {
+    for (auto& col : collisions) {
         col.impulse = col.local_impulse[2] * col.frame[2] +
                       col.local_impulse[0] * col.frame[0] +
                       col.local_impulse[1] * col.frame[1];
@@ -555,7 +596,8 @@ YGL_API void advance_simulation(scene& scn, float dt) {
     }
 
     // compute collisions
-    _compute_collisions(scn);
+    auto collisions = vector<collision>();
+    _compute_collisions(scn, collisions);
 
     // apply external forces
     vec3f gravity_impulse = scn.gravity * dt;
@@ -565,7 +607,10 @@ YGL_API void advance_simulation(scene& scn, float dt) {
     }
 
     // solve constraints
-    _solve_constraints(scn, dt);
+    _solve_constraints(scn, collisions, dt);
+
+    // copy for visualization
+    scn.__collisions = collisions;
 
     // apply drag
     for (auto& shp : scn.shapes) {

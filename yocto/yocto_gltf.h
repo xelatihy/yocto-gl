@@ -5408,10 +5408,9 @@ YGL_API bool load_images(glTF_t& asset, const std::string& dirname,
                     &image.data.width, &image.data.height, &image.data.ncomp,
                     0);
                 image.data.dataf = std::vector<float>(
-                    d,
-                    d +
-                        image.data.width * image.data.height *
-                            image.data.ncomp);
+                    d, d +
+                           image.data.width * image.data.height *
+                               image.data.ncomp);
                 free(d);
             } else {
                 auto d = stbi_load_from_memory(
@@ -5419,10 +5418,9 @@ YGL_API bool load_images(glTF_t& asset, const std::string& dirname,
                     &image.data.width, &image.data.height, &image.data.ncomp,
                     0);
                 image.data.datab = std::vector<unsigned char>(
-                    d,
-                    d +
-                        image.data.width * image.data.height *
-                            image.data.ncomp);
+                    d, d +
+                           image.data.width * image.data.height *
+                               image.data.ncomp);
                 free(d);
             }
         } else {
@@ -5433,20 +5431,18 @@ YGL_API bool load_images(glTF_t& asset, const std::string& dirname,
                     stbi_loadf((dirname + image.uri).c_str(), &image.data.width,
                                &image.data.height, &image.data.ncomp, 0);
                 image.data.dataf = std::vector<float>(
-                    d,
-                    d +
-                        image.data.width * image.data.height *
-                            image.data.ncomp);
+                    d, d +
+                           image.data.width * image.data.height *
+                               image.data.ncomp);
                 free(d);
             } else {
                 auto d =
                     stbi_load((dirname + image.uri).c_str(), &image.data.width,
                               &image.data.height, &image.data.ncomp, 0);
                 image.data.datab = std::vector<unsigned char>(
-                    d,
-                    d +
-                        image.data.width * image.data.height *
-                            image.data.ncomp);
+                    d, d +
+                           image.data.width * image.data.height *
+                               image.data.ncomp);
                 free(d);
             }
         }

@@ -98,6 +98,7 @@
 #include <initializer_list>
 #include <limits>
 #include <type_traits>
+#include <unordered_map>
 #include <vector>
 
 // -----------------------------------------------------------------------------
@@ -130,6 +131,7 @@ using std::array;
 using std::initializer_list;
 using std::function;
 using std::pair;
+using std::unordered_map;
 
 // pi (float)
 const float pif = 3.14159265f;
@@ -581,6 +583,21 @@ struct mat : array<vec<T, N>, M> {
         assert(M == vv.size());
         auto i = 0;
         for (auto&& e : vv) (*this)[i++] = e;
+    }
+
+    // conversions
+    constexpr mat(const array<array<float, N>, M>& v) {
+        *this = *(mat<T, N, M>*)&v;
+    }
+
+    constexpr operator array<array<T, N>, M>() const {
+        return *(array<array<T, N>, M>*)this;
+    }
+
+    constexpr mat(const array<float, N * M>& v) { *this = *(mat<T, N, M>*)&v; }
+
+    constexpr operator array<T, N * M>() const {
+        return *(array<T, N * M>*)this;
     }
 };
 

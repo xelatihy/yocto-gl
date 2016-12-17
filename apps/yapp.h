@@ -191,26 +191,6 @@ inline image<vec4f> make_image4f(int w, int h, int nc, const float* d) {
 }
 
 //
-// Conversions
-//
-template <typename T, size_t N, unsigned long M>
-inline mat<T, N, M> vcast(const array<array<T, N>, M>& v) {
-    return *reinterpret_cast<const mat<T, N, M>*>(&v);
-}
-template <typename T, size_t N, size_t M>
-inline array<array<T, N>, M> vcast(const mat<T, N, M>& v) {
-    return *reinterpret_cast<const array<array<T, N>, M>*>(&v);
-}
-template <typename T, size_t N, size_t M>
-inline mat<T, N, M> fvcast(const array<T, N * M>& v) {
-    return *reinterpret_cast<const mat<T, N, M>*>(&v);
-}
-template <typename T, size_t N, size_t M>
-inline array<T, N * M> fvcast(const mat<T, N, M>& v) {
-    return *reinterpret_cast<const array<T, N * M>*>(&v);
-}
-
-//
 // Loads a scene from obj.
 //
 inline bool load_obj_scene(const string& filename, scene& scene,
@@ -236,7 +216,7 @@ inline bool load_obj_scene(const string& filename, scene& scene,
         scene.cameras.emplace_back();
         auto& cam = scene.cameras.back();
         cam.name = fl_cam.name;
-        cam.frame = to_frame(vcast(fl_cam.xform));
+        cam.frame = to_frame(mat4f(fl_cam.xform));
         cam.ortho = fl_cam.ortho;
         cam.yfov = fl_cam.yfov;
         cam.aspect = fl_cam.aspect;
@@ -296,7 +276,7 @@ inline bool load_obj_scene(const string& filename, scene& scene,
         scene.environments.emplace_back();
         auto& env = scene.environments.back();
         env.name = fl_env.name;
-        env.frame = to_frame(vcast(fl_env.xform));
+        env.frame = to_frame(mat4f(fl_env.xform));
         env.matid = fl_env.matid;
     }
 
@@ -317,7 +297,7 @@ inline bool save_obj_scene(const string& filename, const scene& scene,
         fl_scene.cameras.emplace_back();
         auto& fl_cam = fl_scene.cameras.back();
         fl_cam.name = cam.name;
-        fl_cam.xform = vcast(to_mat(cam.frame));
+        fl_cam.xform = to_mat(cam.frame);
         fl_cam.ortho = cam.ortho;
         fl_cam.yfov = cam.yfov;
         fl_cam.aspect = cam.aspect;
@@ -378,7 +358,7 @@ inline bool save_obj_scene(const string& filename, const scene& scene,
         fl_scene.environments.emplace_back();
         auto& fl_env = fl_scene.environments.back();
         fl_env.name = env.name;
-        fl_env.xform = vcast(to_mat(env.frame));
+        fl_env.xform = to_mat(env.frame);
         fl_env.matid = env.matid;
     }
 
@@ -403,7 +383,7 @@ inline bool save_gltf_scene(const string& filename, const scene& scene,
         fl_scene.cameras.emplace_back();
         auto& fl_cam = fl_scene.cameras.back();
         fl_cam.name = cam.name;
-        fl_cam.xform = fvcast(to_mat(cam.frame));
+        fl_cam.xform = to_mat(cam.frame);
         fl_cam.ortho = cam.ortho;
         fl_cam.yfov = cam.yfov;
         fl_cam.aspect = cam.aspect;
@@ -414,7 +394,7 @@ inline bool save_gltf_scene(const string& filename, const scene& scene,
         fl_scene.meshes.emplace_back();
         auto& fl_mesh = fl_scene.meshes.back();
         fl_mesh.name = shape.name;
-        fl_mesh.xform = fvcast(to_mat(shape.frame));
+        fl_mesh.xform = to_mat(shape.frame);
         fl_mesh.primitives.push_back((int)fl_scene.primitives.size());
         fl_scene.primitives.emplace_back();
         auto& fl_shape = fl_scene.primitives.back();
@@ -493,7 +473,7 @@ inline bool load_gltf_scene(const string& filename, scene& scene, bool binary,
         scene.cameras.emplace_back();
         auto& cam = scene.cameras.back();
         cam.name = fl_cam.name;
-        cam.frame = to_frame(fvcast<float, 4, 4>(fl_cam.xform));
+        cam.frame = to_frame(mat4f(fl_cam.xform));
         cam.ortho = fl_cam.ortho;
         cam.yfov = fl_cam.yfov;
         cam.aspect = fl_cam.aspect;
@@ -508,7 +488,7 @@ inline bool load_gltf_scene(const string& filename, scene& scene, bool binary,
             scene.shapes.emplace_back();
             auto& sh = scene.shapes.back();
             sh.name = fl_mesh.name;
-            sh.frame = to_frame(fvcast<float, 4, 4>(fl_mesh.xform));
+            sh.frame = to_frame(mat4f(fl_mesh.xform));
             sh.matid = fl_shape.material;
             sh.pos = vector<vec3f>(fl_shape.pos.begin(), fl_shape.pos.end());
             sh.norm = vector<vec3f>(fl_shape.norm.begin(), fl_shape.norm.end());
@@ -633,7 +613,10 @@ inline bool load_scene(const string& filename, scene& scene, string& errmsg) {
             for (auto& p : shape.pos) bbox += transform_point(shape.frame, p);
         }
         for (auto& cam : scene.cameras) {
-            if (!cam.focus) cam.focus = length(cam.frame.o() - bbox.center());
+            if (!cam.focus) {
+                auto ddir = dot(cam.frame[2], bbox.center() - cam.frame.o());
+                cam.focus = (ddir > 0) ? 1 : -ddir;
+            }
         }
     }
 
@@ -729,8 +712,7 @@ inline void shade(const yapp::scene& scene, int cur_camera, yglu::uint prog,
     auto camera_proj = perspective_mat4(cam.yfov, cam.aspect, 0.1f, 10000.0f);
 
     yglu::stdshader::begin_frame(prog, vao, camera_lights, exposure, gamma_,
-                                 vcast(camera_xform), vcast(camera_view),
-                                 vcast(camera_proj));
+                                 camera_xform, camera_view, camera_proj);
 
     if (!camera_lights) {
         auto nlights = 0;
@@ -757,7 +739,7 @@ inline void shade(const yapp::scene& scene, int cur_camera, yglu::uint prog,
 
     for (auto sid = 0; sid < scene.shapes.size(); sid++) {
         auto&& shape = scene.shapes[sid];
-        yglu::stdshader::begin_shape(prog, vcast(to_mat(shape.frame)));
+        yglu::stdshader::begin_shape(prog, to_mat(shape.frame));
 
         if (shape.matid >= 0) {
             auto&& mat = scene.materials[shape.matid];
@@ -845,8 +827,8 @@ inline void draw(const yapp::scene& scene, int cur_camera,
     array<vec3f, 16> light_pos, light_ke;
     array<yglu::ltype, 16> light_type;
 
-    yglu::legacy::begin_frame(vcast(camera_xform), vcast(camera_view),
-                              vcast(camera_proj), camera_lights, true);
+    yglu::legacy::begin_frame(camera_xform, camera_view, camera_proj,
+                              camera_lights, true);
 
     if (!camera_lights) {
         for (auto&& shape : scene.shapes) {
@@ -869,7 +851,7 @@ inline void draw(const yapp::scene& scene, int cur_camera,
     }
 
     for (auto&& shape : scene.shapes) {
-        yglu::legacy::begin_shape(vcast(to_mat(shape.frame)));
+        yglu::legacy::begin_shape(to_mat(shape.frame));
 
         if (shape.matid >= 0) {
             auto&& mat = scene.materials[shape.matid];
