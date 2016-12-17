@@ -1,7 +1,7 @@
 //
 // YOCTO_BVH: ray-intersection and closet-point routines supporting points,
 // lines, triangles and tetrahedra accelerated by a two-level bounding volume
-// hierarchy (BVH)
+// hierarchy (BVH). Tetrahedra support is still a work in progress.
 //
 
 //
@@ -289,40 +289,40 @@ YGL_API point intersect_ray(const shape& shp, const ray3f& ray,
 // detection.
 //
 // Parameters:
-// - scene1, scene2: scenes to overlap
-// - exclude_self: whether to exlude self intersections
+// - scn1, scn2: scenes to overlap
+// - conservative: use conservative checks
+// - skip_self: exlude self intersections
+// - skip_duplicates: exlude intersections (s1,s2) if (s2,s1) is already present
+//
+// Out Parameters:
 // - overlaps: vectors of shape overlaps
 //
-// Notes:
-// - intersections are duplicated, so if (i,j) overlaps than both (i,j) and
-// (j,i)
-//   will be present; this makes it easier to apply asymmetric checks
-// - to remove symmetric checks, just skip all pairs with i > j
-//
-YGL_API vector<vec2i> overlap_shape_bounds(const scene& scn1, const scene& scn2,
-                                           bool exclude_self);
+YGL_API void overlap_shape_bounds(const scene& scn1, const scene& scn2,
+                                  bool conservative, bool exclude_duplicates,
+                                  bool exclude_self, vector<vec2i>& overlaps);
 
 //
-// Returns a list of element pairs that overlap. For now, only points are
-// supported in the second group.
+// Returns a list of all elements of scene1/shape1 that overlap with the
+// vectices of scene2/shape2 within the give radius. Has the option of filtering
+// only the closest intersection.
 //
 // Parameters:
-// - scene1, scene2 / shape1, shape2: scenes/shapes to overlap
+// - scn1, scn2 / shape1, shape2: scenes/shapes to overlap
 // - exclude_self: whether to exlude self intersections
-// - overlaps: vectors of shape overlaps
+// - radius: radius of the distance query (see below)
+// - first_only: finds only the closest overlap for each vertex
 //
-// Notes:
-// - intersections are duplicated, so if (i,j) overlaps than both (i,j) and
-// (j,i)
-//   will be present; this makes it easier to apply asymmetric checks
-// - to remove symmetric checks, just skip all pairs with i > j
+// Out Parameters:
+// - overlaps: vectors of element overlaps (the second argument is (sid,eid))
+// - soverlaps: vectors of shape overlaps
 //
-YGL_API vector<pair<point, point>> overlap_elems(const scene& scn1,
-                                                 const scene& scn2,
-                                                 bool exclude_self);
-YGL_API vector<pair<point, point>> overlap_elems(const shape& shp1,
-                                                 const shape& shp2,
-                                                 bool exclude_self);
+YGL_API void overlap_verts(const scene& scn1, const scene& scn2,
+                           bool exclude_self, float radius, bool first_only,
+                           vector<vec2i>& soverlaps,
+                           vector<pair<point, vec2i>>& overlaps);
+YGL_API void overlap_verts(const shape& shp1, const shape& shp2,
+                           bool exclude_self, float radius, bool first_only,
+                           vector<pair<point, vec2i>>& overlaps);
 
 //
 // Finds the closest element that overlaps a point within a given radius.
@@ -343,7 +343,8 @@ YGL_API point overlap_point(const shape& shp, const vec3f& pt, float max_dist,
 
 //
 // Interpolates a vertex property from the given intersection data. Uses
-// linear interpolation for lines, baricentric for triangles and copies values
+// linear interpolation for lines, baricentric for triangles and copies
+// values
 // for points.
 //
 // Parameters:
@@ -1746,75 +1747,90 @@ YGL_API point overlap_point(const scene& scn, const vec3f& pos, float max_dist,
 //
 // Shape elements overlap
 //
-static inline vector<pair<point, point>> _overlap_elems(const shape& shp1,
-                                                        const shape& shp2,
-                                                        int idx1, int idx2,
-                                                        bool exclude_self,
-                                                        bool early_exit) {
+// TODO: avoid duplicate elements
+//
+static inline void _overlap_verts(const shape& shp1, const shape& shp2,
+                                  int idx1, int idx2, bool exclude_self,
+                                  float radius, bool first_only,
+                                  vector<pair<point, vec2i>>& overlaps,
+                                  unordered_map<int, int>& closest) {
     // prepare point
-    auto p = shp2.point[idx2];
-    auto pt = point();
-
-    // switch over shape type
-    if (!shp1.triangle.empty()) {
-        auto f = shp1.triangle[idx1];
-        if (!_overlap_triangle(shp2.pos[p], shp2._radius(p), shp1.pos[f[0]],
-                               shp1.pos[f[1]], shp1.pos[f[2]],
-                               shp1._radius(f[0]), shp1._radius(f[1]),
-                               shp1._radius(f[2]), pt.dist, (vec3f&)pt.euv))
-            return {};
-        pt.euv = {pt.euv[0], pt.euv[1], pt.euv[2], 0};
-    } else if (!shp1.line.empty()) {
-        auto f = shp1.line[idx1];
-        if (!_overlap_line(shp2.pos[p], shp2._radius(p), shp1.pos[f[0]],
-                           shp1.pos[f[1]], shp1._radius(f[0]),
-                           shp1._radius(f[1]), pt.dist, (vec2f&)pt.euv))
-            return {};
-        pt.euv = {pt.euv[0], pt.euv[1], 0, 0};
-    } else if (!shp1.point.empty()) {
-        auto f = shp1.point[idx1];
-        if (!_overlap_point(shp2.pos[p], shp2._radius(p), shp1.pos[f],
-                            shp1._radius(f), pt.dist))
-            return {};
-        pt.euv = {1, 0, 0, 0};
-    } else if (!shp1.tetra.empty()) {
-        auto f = shp1.tetra[idx1];
-        if (!_overlap_tetrahedron(shp2.pos[p], shp2._radius(p), shp1.pos[f[0]],
-                                  shp1.pos[f[1]], shp1.pos[f[2]],
-                                  shp1.pos[f[3]], shp1._radius(f[0]),
-                                  shp1._radius(f[1]), shp1._radius(f[2]),
-                                  shp1._radius(f[3]), pt.dist, pt.euv))
-            return {};
+    vec4i verts;
+    if (!shp2.triangle.empty()) {
+        verts = {shp2.triangle[idx2][0], shp2.triangle[idx2][1],
+                 shp2.triangle[idx2][2], -1};
+    } else if (!shp2.line.empty()) {
+        verts = {shp2.line[idx2][0], shp2.line[idx2][1], -1, -1};
+    } else if (!shp2.point.empty()) {
+        verts = {shp2.point[idx2], -1, -1, -1};
+    } else if (!shp2.tetra.empty()) {
+        verts = shp2.tetra[idx2];
     } else {
-        if (!_overlap_point(shp2.pos[p], shp2._radius(p), shp1.pos[idx1],
-                            shp1._radius(idx1), pt.dist))
-            return {};
-        pt.euv = {1, 0, 0, 0};
+        verts = {idx2, -1, -1, -1};
     }
 
-    // wrap up
-    pt.sid = shp1.sid;
-    pt.eid = idx1;
-    return {{pt, {pt.dist, shp2.sid, idx2, {1, 0, 0, 0}}}};
-}
+    // loop over vertices
+    for (auto vid : verts) {
+        if (vid < 0) continue;
 
-//
-// Scene elements overlap
-//
-static inline vector<pair<point, point>> _overlap_elems(const scene& scn1,
-                                                        const scene& scn2,
-                                                        int idx1, int idx2,
-                                                        bool exclude_self,
-                                                        bool early_exit) {
-    if (early_exit) {
-        if (!_overlap_bbox(scn1.shapes[idx1]._bbox(), scn2.shapes[idx2]._bbox(),
-                           scn1.shapes[idx1].frame, scn2.shapes[idx2].frame))
-            return {};
-        return {{{0, scn1.shapes[idx1].sid, 0, {}},
-                 {0, scn2.shapes[idx2].sid, 0, {}}}};
-    } else {
-        return overlap_elems(scn1.shapes[idx1], scn2.shapes[idx2],
-                             exclude_self);
+        // transform point
+        auto pos = transform_point_inverse(
+            shp1.frame, transform_point(shp2.frame, shp2.pos[vid]));
+        auto rad = shp2._radius(vid) + radius;
+        auto pt = point();
+
+        // switch over shape type
+        if (!shp1.triangle.empty()) {
+            auto f = shp1.triangle[idx1];
+            if (!_overlap_triangle(pos, rad, shp1.pos[f[0]], shp1.pos[f[1]],
+                                   shp1.pos[f[2]], shp1._radius(f[0]),
+                                   shp1._radius(f[1]), shp1._radius(f[2]),
+                                   pt.dist, (vec3f&)pt.euv))
+                return;
+            pt.euv = {pt.euv[0], pt.euv[1], pt.euv[2], 0};
+        } else if (!shp1.line.empty()) {
+            auto f = shp1.line[idx1];
+            if (!_overlap_line(pos, rad, shp1.pos[f[0]], shp1.pos[f[1]],
+                               shp1._radius(f[0]), shp1._radius(f[1]), pt.dist,
+                               (vec2f&)pt.euv))
+                return;
+            pt.euv = {pt.euv[0], pt.euv[1], 0, 0};
+        } else if (!shp1.point.empty()) {
+            auto f = shp1.point[idx1];
+            if (!_overlap_point(pos, rad, shp1.pos[f], shp1._radius(f),
+                                pt.dist))
+                return;
+            pt.euv = {1, 0, 0, 0};
+        } else if (!shp1.tetra.empty()) {
+            auto f = shp1.tetra[idx1];
+            if (!_overlap_tetrahedron(
+                    pos, rad, shp1.pos[f[0]], shp1.pos[f[1]], shp1.pos[f[2]],
+                    shp1.pos[f[3]], shp1._radius(f[0]), shp1._radius(f[1]),
+                    shp1._radius(f[2]), shp1._radius(f[3]), pt.dist, pt.euv))
+                return;
+        } else {
+            if (!_overlap_point(pos, rad, shp1.pos[idx1], shp1._radius(idx1),
+                                pt.dist))
+                return;
+            pt.euv = {1, 0, 0, 0};
+        }
+
+        // wrap up
+        pt.sid = shp1.sid;
+        pt.eid = idx1;
+        if (first_only) {
+            if (closest.find(vid) == closest.end()) {
+                overlaps.push_back({pt, {shp2.sid, vid}});
+                closest[vid] = (int)overlaps.size() - 1;
+            } else {
+                auto& overlap = overlaps[closest[vid]];
+                if (overlap.first.dist > pt.dist) {
+                    overlap = {pt, {shp2.sid, vid}};
+                }
+            }
+        } else {
+            overlaps.push_back({pt, {shp2.sid, vid}});
+        }
     }
 }
 
@@ -1837,9 +1853,12 @@ static inline vector<pair<point, point>> _overlap_elems(const scene& scn1,
 // rejected in the tmax tests
 //
 template <typename T>
-static inline vector<pair<point, point>> _overlap_elems(
-    const T& obj1, const T& obj2, const frame3f& frame1, const frame3f& frame2,
-    bool exclude_self, bool early_exit) {
+static inline void _overlap_verts(const T& obj1, const T& obj2,
+                                  const frame3f& frame1, const frame3f& frame2,
+                                  bool exclude_self, float radius,
+                                  bool first_only,
+                                  vector<pair<point, vec2i>>& overlaps,
+                                  unordered_map<int, int>& closest) {
     // get bvhs
     auto& bvh1 = obj1._bvh;
     auto& bvh2 = obj2._bvh;
@@ -1848,9 +1867,6 @@ static inline vector<pair<point, point>> _overlap_elems(
     vec2i node_stack[128];
     auto node_cur = 0;
     node_stack[node_cur++] = {0, 0};
-
-    // shared variables
-    vector<pair<point, point>> overlaps;
 
     // check if a trasformed test is needed
     auto xformed = frame1 != frame2;
@@ -1864,10 +1880,14 @@ static inline vector<pair<point, point>> _overlap_elems(
 
         // intersect bbox
         if (xformed) {
-            if (!_overlap_bbox(node1.bbox, node2.bbox, frame1, frame2))
+            if (!_overlap_bbox(node1.bbox,
+                               {node2.bbox[0] - radius, node2.bbox[1] + radius},
+                               frame1, frame2))
                 continue;
         } else {
-            if (!_overlap_bbox(node1.bbox, node2.bbox)) continue;
+            if (!_overlap_bbox(node1.bbox, {node2.bbox[0] - radius,
+                                            node2.bbox[1] + radius}))
+                continue;
         }
 
         // check for leaves
@@ -1879,11 +1899,8 @@ static inline vector<pair<point, point>> _overlap_elems(
                     auto idx1 = bvh1.sorted_prim[i1];
                     auto idx2 = bvh2.sorted_prim[i2];
                     if (exclude_self && idx1 == idx2) continue;
-                    auto overlaps_p = _overlap_elems(obj1, obj2, idx1, idx2,
-                                                     exclude_self, early_exit);
-                    if (overlaps_p.empty()) continue;
-                    overlaps.insert(overlaps.end(), overlaps_p.begin(),
-                                    overlaps_p.end());
+                    _overlap_verts(obj1, obj2, idx1, idx2, exclude_self, radius,
+                                   first_only, overlaps, closest);
                 }
             }
         } else {
@@ -1912,46 +1929,124 @@ static inline vector<pair<point, point>> _overlap_elems(
             }
         }
     }
-
-    return overlaps;
 }
 
 //
 // Find the list of overlaps between shapes.
 // Public function whose interface is described above.
 //
-YGL_API vector<pair<point, point>> overlap_elems(const shape& shp1,
-                                                 const shape& shp2,
-                                                 bool exclude_self) {
-    return _overlap_elems(shp1, shp2, shp1.frame, shp2.frame, exclude_self,
-                          false);
+YGL_API void overlap_verts(const shape& shp1, const shape& shp2,
+                           bool exclude_self, float radius, bool first_only,
+                           vector<pair<point, vec2i>>& overlaps) {
+    unordered_map<int, int> closest;
+    _overlap_verts(shp1, shp2, shp1.frame, shp2.frame, false, radius,
+                   first_only, overlaps, closest);
 }
 
 //
 // Find the list of overlaps between scenes.
 // Public function whose interface is described above.
 //
-YGL_API vector<pair<point, point>> overlap_elems(const scene& scn1,
-                                                 const scene& scn2,
-                                                 bool exclude_self) {
-    return _overlap_elems(scn1, scn2, identity_frame3f, identity_frame3f,
-                          exclude_self, false);
+YGL_API void overlap_verts(const scene& scn1, const scene& scn2,
+                           bool exclude_self, float radius, bool first_only,
+                           vector<vec2i>& soverlaps,
+                           vector<pair<point, vec2i>>& overlaps) {
+    overlap_shape_bounds(scn1, scn2, false, false, exclude_self, soverlaps);
+    for (auto& sh : soverlaps) {
+        overlap_verts(scn1.shapes[sh[0]], scn2.shapes[sh[1]], exclude_self,
+                      radius, first_only, overlaps);
+    }
+}
+
+//
+// Finds the overlap between shape bounds.
+// Similat interface as the public function.
+//
+static inline void _overlap_shape_bounds(const scene& scn1, const scene& scn2,
+                                         bool conservative,
+                                         bool skip_duplicates, bool skip_self,
+                                         vector<vec2i>& overlaps) {
+    // get bvhs
+    auto& bvh1 = scn1._bvh;
+    auto& bvh2 = scn2._bvh;
+
+    // node stack
+    vec2i node_stack[128];
+    auto node_cur = 0;
+    node_stack[node_cur++] = {0, 0};
+
+    // walking stack
+    while (node_cur) {
+        // grab node
+        auto node_idx = node_stack[--node_cur];
+        auto& node1 = bvh1.nodes[node_idx[0]];
+        auto& node2 = bvh2.nodes[node_idx[1]];
+
+        // intersect bbox
+        if (!_overlap_bbox(node1.bbox, node2.bbox)) continue;
+
+        // check for leaves
+        if (node1.isleaf && node2.isleaf) {
+            // collide primitives
+            for (auto i1 = node1.start; i1 < node1.start + node1.count; i1++) {
+                for (auto i2 = node2.start; i2 < node2.start + node2.count;
+                     i2++) {
+                    auto idx1 = bvh1.sorted_prim[i1];
+                    auto idx2 = bvh2.sorted_prim[i2];
+                    auto& shp1 = scn1.shapes[idx1];
+                    auto& shp2 = scn2.shapes[idx2];
+                    if (skip_duplicates && shp1.sid > shp2.sid) continue;
+                    if (skip_self && shp1.sid == shp2.sid) continue;
+                    if (conservative) {
+                        if (_overlap_bbox(
+                                transform_bbox(shp1.frame, shp1._bbox()),
+                                transform_bbox(shp2.frame, shp2._bbox())))
+                            overlaps.push_back({shp1.sid, shp2.sid});
+                    } else {
+                        if (_overlap_bbox(shp1._bbox(), shp2._bbox(),
+                                          shp1.frame, shp2.frame))
+                            overlaps.push_back({shp1.sid, shp2.sid});
+                    }
+                }
+            }
+        } else {
+            // descend
+            if (node1.isleaf) {
+                for (auto idx2 = node2.start; idx2 < node2.start + node2.count;
+                     idx2++) {
+                    node_stack[node_cur++] = {node_idx[0], (int)idx2};
+                    assert(node_cur < 128);
+                }
+            } else if (node2.isleaf) {
+                for (auto idx1 = node1.start; idx1 < node1.start + node1.count;
+                     idx1++) {
+                    node_stack[node_cur++] = {(int)idx1, node_idx[1]};
+                    assert(node_cur < 128);
+                }
+            } else {
+                for (auto idx2 = node2.start; idx2 < node2.start + node2.count;
+                     idx2++) {
+                    for (auto idx1 = node1.start;
+                         idx1 < node1.start + node1.count; idx1++) {
+                        node_stack[node_cur++] = {(int)idx1, (int)idx2};
+                        assert(node_cur < 128);
+                    }
+                }
+            }
+        }
+    }
 }
 
 //
 // Find the list of overlaps between shape bounds.
 // Public function whose interface is described above.
 //
-YGL_API vector<vec2i> overlap_shape_bounds(const scene& scn1, const scene& scn2,
-                                           bool exclude_self) {
-    auto overlaps_pt = _overlap_elems(scn1, scn2, identity_frame3f,
-                                      identity_frame3f, exclude_self, true);
-    if (overlaps_pt.empty()) return {};
-    auto overlaps = vector<vec2i>();
-    overlaps.reserve(overlaps_pt.size());
-    for (auto& pt : overlaps_pt)
-        overlaps.push_back({pt.first.sid, pt.second.sid});
-    return overlaps;
+YGL_API void overlap_shape_bounds(const scene& scn1, const scene& scn2,
+                                  bool conservative, bool skip_duplicates,
+                                  bool skip_self, vector<vec2i>& overlaps) {
+    overlaps.clear();
+    _overlap_shape_bounds(scn1, scn2, conservative, skip_duplicates, skip_self,
+                          overlaps);
 }
 
 // -----------------------------------------------------------------------------

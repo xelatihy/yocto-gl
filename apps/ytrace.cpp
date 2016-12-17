@@ -150,7 +150,10 @@ ytrace::scene make_trace_scene(yapp::scene& scene, ybvh::scene& scene_bvh,
 
     trace_scene.intersect_first = [&scene_bvh](const ym::ray3f& ray) {
         auto isec = ybvh::intersect_ray(scene_bvh, ray, false);
-        return reinterpret_cast<ytrace::intersect_point&>(isec);
+        return ytrace::intersect_point{isec.dist,
+                                       isec.sid,
+                                       isec.eid,
+                                       {isec.euv[0], isec.euv[1], isec.euv[2]}};
     };
     trace_scene.intersect_any = [&scene_bvh](const ym::ray3f& ray) {
         return ybvh::intersect_ray(scene_bvh, ray, false);
