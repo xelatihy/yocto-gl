@@ -675,6 +675,26 @@ inline mat<T, N, M> operator*(const mat<T, N, K>& a, const mat<T, K, M>& b) {
     return c;
 }
 
+template <typename T, size_t N, size_t M>
+inline mat<T, M, N>& operator+=(mat<T, N, M>& a, const mat<T, N, M>& b) {
+    return a = a + b;
+}
+
+template <typename T, size_t N, size_t M>
+inline mat<T, M, N>& operator*=(mat<T, N, M>& a, const mat<T, N, M>& b) {
+    return a = a * b;
+}
+
+template <typename T, size_t N, size_t M>
+inline mat<T, M, N>& operator*=(mat<T, N, M>& a, const T& b) {
+    return a = a * b;
+}
+
+template <typename T, size_t N, size_t M>
+inline mat<T, M, N>& operator/=(mat<T, N, M>& a, const T& b) {
+    return a = a / b;
+}
+
 //
 // Linear Algebra operations.
 //
@@ -1404,6 +1424,12 @@ template <typename T>
 inline T triangle_area(const vec<T, 3>& v0, const vec<T, 3>& v1,
                        const vec<T, 3>& v2) {
     return length(cross(v1 - v0, v2 - v0)) / 2;
+}
+
+template <typename T>
+inline T tetrahedron_volume(const vec<T, 3>& v0, const vec<T, 3>& v1,
+                            const vec<T, 3>& v2, const vec<T, 3>& v3) {
+    return dot(cross(v1 - v0, v2 - v0), v3 - v0) / 6;
 }
 
 //

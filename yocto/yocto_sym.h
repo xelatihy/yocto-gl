@@ -53,6 +53,7 @@
 
 //
 // HISTORY:
+// - v 0.6: new formulation for moment computation (and bug fixes)
 // - v 0.5: faster collision detection
 // - v 0.4: [major API change] move to modern C++ interface
 // - v 0.3: removal of C interface
@@ -113,7 +114,7 @@ namespace ysym {
 using namespace ym;
 
 //
-// Rigid shape
+// Rigid shape.
 //
 struct shape {
     // shape configuration ------------------------
@@ -239,10 +240,7 @@ struct scene {
 // Computes the moments of a shape.
 //
 // Parameters:
-// - nelems: number of elements
-// - elem: elements
-// - etype: element type
-// - nverts: number of vertices
+// - triangles: triangle indices
 // - pos: vertex positions
 //
 // Output parameters:
@@ -251,6 +249,22 @@ struct scene {
 // - inertia: inertia tensore (wrt center of mass)
 //
 YGL_API void compute_moments(const array_view<vec3i>& triangles,
+                             const array_view<vec3f>& pos, float& volume,
+                             vec3f& center, mat3f& inertia);
+
+//
+// Computes the moments of a shape.
+//
+// Parameters:
+// - tetra: tetrahedra indices
+// - pos: vertex positions
+//
+// Output parameters:
+// - volume: volume
+// - center: center of mass
+// - inertia: inertia tensore (wrt center of mass)
+//
+YGL_API void compute_moments(const array_view<vec4i>& tetra,
                              const array_view<vec3f>& pos, float& volume,
                              vec3f& center, mat3f& inertia);
 
@@ -279,94 +293,103 @@ YGL_API void advance_simulation(scene& scn, float dt);
 
 #if (!defined(YGL_DECLARATION) || defined(YGL_IMPLEMENTATION))
 
+#include <iostream>
+
 namespace ysym {
+
+//
+// Computes the tetrahedra moment of inertia
+//
+// Notes:
+// - from "Explicit Exact Formulas for the 3-D Tetrahedron Inertia Tensor
+// in Terms of its Vertex Coordinates" by F. Tonon published in Journal of
+// Mathematics and Statistics 1 (1), 2004.
+// - implemented similarly to
+// https://github.com/melax/sandbox/blob/master/include/geometric.h
+//
+static inline mat3f _compute_tetra_inertia(const vec3f& v0, const vec3f& v1,
+                                           const vec3f& v2, const vec3f& v3,
+                                           const vec3f& center) {
+    // volume
+    auto volume = tetrahedron_volume(v0, v1, v2, v3);
+    // relative vertices
+    auto vr0 = v0 - center, vr1 = v1 - center, vr2 = v2 - center,
+         vr3 = v3 - center;
+    // diagonal elements
+    auto diag = zero3f;  // x^2, y^2, z^2
+    for (auto j = 0; j < 3; j++) {
+        diag[j] = (vr0[j] * vr0[j] + vr1[j] * vr1[j] + vr2[j] * vr2[j] +
+                   vr3[j] * vr3[j] + vr0[j] * vr1[j] + vr0[j] * vr2[j] +
+                   vr0[j] * vr3[j] + vr1[j] * vr2[j] + vr1[j] * vr3[j] +
+                   vr2[j] * vr3[j]) *
+                  6 * volume / 60;
+    }
+    // off-diagonal elements
+    auto offd = zero3f;  // x*y, x*z, y*z
+    for (auto j = 0; j < 3; j++) {
+        auto j1 = (j + 1) % 3, j2 = (j + 2) % 3;
+        offd[j] = (2 * vr0[j1] * vr0[j2] + 2 * vr1[j1] * vr1[j2] +
+                   2 * vr2[j1] * vr2[j2] + 2 * vr3[j1] * vr3[j2] +
+                   vr1[j1] * vr0[j2] + vr2[j1] * vr0[j2] + vr3[j1] * vr0[j2] +
+                   vr0[j1] * vr1[j2] + vr2[j1] * vr1[j2] + vr3[j1] * vr1[j2] +
+                   vr0[j1] * vr2[j2] + vr1[j1] * vr2[j2] + vr3[j1] * vr2[j2] +
+                   vr0[j1] * vr3[j2] + vr1[j1] * vr3[j2] + vr2[j1] * vr3[j2]) *
+                  6 * volume / 120;
+    }
+    // setup inertia
+    return {{diag[1] + diag[2], -offd[2], -offd[1]},
+            {-offd[2], diag[0] + diag[2], -offd[0]},
+            {-offd[1], -offd[0], diag[0] + diag[1]}};
+}
 
 //
 // Compute moments. Public API, see above.
 //
-// Implementation notes:
-// - follow eberly
-// http://www.geometrictools.com/Documentation/PolyhedralMassProperties.pdf
-// - re-implement this using
-// https://github.com/melax/sandbox/blob/master/include/geometric.h
-//
 YGL_API void compute_moments(const array_view<vec3i>& triangles,
                              const array_view<vec3f>& pos, float& volume,
                              vec3f& center, mat3f& inertia) {
-    // order:  1, x, y, z, x^2, y^2, z^2, xy, yz, zx
-    float integral[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
-
-    for (auto f : triangles) {
-        auto v0 = pos[f[0]], v1 = pos[f[1]], v2 = pos[f[2]];
-
-        // Get cross product of edges and normal vector.
-        auto V1mV0 = v1 - v0;
-        auto V2mV0 = v2 - v0;
-        vec3f N = cross(V1mV0, V2mV0);
-
-        // Compute integral terms.
-        auto tmp0 = v0[0] + v1[0];
-        auto f1x = tmp0 + v2[0];
-        auto tmp1 = v0[0] * v0[0];
-        auto tmp2 = tmp1 + v1[0] * tmp0;
-        auto f2x = tmp2 + v2[0] * f1x;
-        auto f3x = v0[0] * tmp1 + v1[0] * tmp2 + v2[0] * f2x;
-        auto g0x = f2x + v0[0] * (f1x + v0[0]);
-        auto g1x = f2x + v1[0] * (f1x + v1[0]);
-        auto g2x = f2x + v2[0] * (f1x + v2[0]);
-
-        tmp0 = v0[1] + v1[1];
-        auto f1y = tmp0 + v2[1];
-        tmp1 = v0[1] * v0[1];
-        tmp2 = tmp1 + v1[1] * tmp0;
-        auto f2y = tmp2 + v2[1] * f1y;
-        auto f3y = v0[1] * tmp1 + v1[1] * tmp2 + v2[1] * f2y;
-        auto g0y = f2y + v0[1] * (f1y + v0[1]);
-        auto g1y = f2y + v1[1] * (f1y + v1[1]);
-        auto g2y = f2y + v2[1] * (f1y + v2[1]);
-
-        tmp0 = v0[2] + v1[2];
-        auto f1z = tmp0 + v2[2];
-        tmp1 = v0[2] * v0[2];
-        tmp2 = tmp1 + v1[2] * tmp0;
-        auto f2z = tmp2 + v2[2] * f1z;
-        auto f3z = v0[2] * tmp1 + v1[2] * tmp2 + v2[2] * f2z;
-        auto g0z = f2z + v0[2] * (f1z + v0[2]);
-        auto g1z = f2z + v1[2] * (f1z + v1[2]);
-        auto g2z = f2z + v2[2] * (f1z + v2[2]);
-
-        // Update integrals.
-        integral[0] += N[0] * f1x / 6;
-        integral[1] += N[0] * f2x / 24;
-        integral[2] += N[1] * f2y / 24;
-        integral[3] += N[2] * f2z / 24;
-        integral[4] += N[0] * f3x / 60;
-        integral[5] += N[1] * f3y / 60;
-        integral[6] += N[2] * f3z / 60;
-        integral[7] += N[0] * (v0[1] * g0x + v1[1] * g1x + v2[1] * g2x) / 120;
-        integral[8] += N[1] * (v0[2] * g0y + v1[2] * g1y + v2[2] * g2y) / 120;
-        integral[9] += N[2] * (v0[0] * g0z + v1[0] * g1z + v2[0] * g2z) / 120;
+    // volume and center
+    volume = 0;
+    center = zero3f;
+    for (auto t : triangles) {
+        auto tvolume =
+            tetrahedron_volume(zero3f, pos[t[0]], pos[t[1]], pos[t[2]]);
+        volume += tvolume;
+        center += tvolume * (zero3f + pos[t[0]] + pos[t[1]] + pos[t[2]]) / 4;
     }
+    center /= volume;
+    // inertia
+    inertia = {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}};
+    for (auto t : triangles) {
+        inertia += _compute_tetra_inertia(zero3f, pos[t[0]], pos[t[1]],
+                                          pos[t[2]], center);
+    }
+    inertia /= volume;
+}
 
-    // mass
-    volume = integral[0];
-
-    // center of mass
-    center = vec3f(integral[1], integral[2], integral[3]) / volume;
-
-    // inertia relative to center
-    inertia[0][0] = integral[5] + integral[6] -
-                    volume * (center[1] * center[1] + center[2] * center[2]);
-    inertia[0][1] = -integral[7] + volume * center[0] * center[1];
-    inertia[0][2] = -integral[9] + volume * center[2] * center[0];
-    inertia[1][0] = inertia[0][1];
-    inertia[1][1] = integral[4] + integral[6] -
-                    volume * (center[2] * center[2] + center[0] * center[0]);
-    inertia[1][2] = -integral[8] + volume * center[1] * center[2];
-    inertia[2][0] = inertia[0][2];
-    inertia[2][1] = inertia[1][1];
-    inertia[2][2] = integral[4] + integral[5] -
-                    volume * (center[0] * center[0] + center[1] * center[1]);
+//
+// Compute moments. Public API, see above.
+//
+YGL_API void compute_moments(const array_view<vec4i>& tetra,
+                             const array_view<vec3f>& pos, float& volume,
+                             vec3f& center, mat3f& inertia) {
+    // volume and center
+    volume = 0;
+    center = zero3f;
+    for (auto t : tetra) {
+        auto tvolume =
+            tetrahedron_volume(pos[t[0]], pos[t[1]], pos[t[2]], pos[t[3]]);
+        volume += tvolume;
+        center += tvolume * (pos[t[0]] + pos[t[1]] + pos[t[2]] + pos[t[3]]) / 4;
+    }
+    center /= volume;
+    // inertia
+    inertia = {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}};
+    for (auto t : tetra) {
+        inertia += _compute_tetra_inertia(pos[t[0]], pos[t[1]], pos[t[2]],
+                                          pos[t[3]], center);
+    }
+    inertia /= volume;
 }
 
 //
