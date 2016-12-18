@@ -300,8 +300,13 @@ void make_rigid_scene(yapp::scene& scene, ysym::scene& rigid_scene,
         auto simulated = shape.name != "floor" && ym::length(mat.ke) == 0 &&
                          !shape.triangles.empty();
         auto density = (simulated) ? 1.0f : 0.0f;
-        rigid_scene.shapes.push_back({shape.frame, ym::zero3f, ym::zero3f,
-                                      density, simulated, shape.triangles,
+        rigid_scene.shapes.push_back({shape.frame,
+                                      ym::zero3f,
+                                      ym::zero3f,
+                                      density,
+                                      simulated,
+                                      shape.triangles,
+                                      {},
                                       shape.pos});
     }
 

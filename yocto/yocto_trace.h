@@ -572,7 +572,7 @@ static inline vec2f _sample_next2f(_sampler& smp) {
 // Surface point with geometry and material data. Supports point on envmap too.
 // This is the key data manipulated in the path tracer.
 //
-struct _point {
+struct point {
     // point type -----------------------------------
     enum struct type {
         none = -1,     // invalid
@@ -664,13 +664,13 @@ static inline vec4f _eval_texture(const texture& txt, const vec2f& texcoord) {
 //
 // Evaluates emission.
 //
-static inline vec3f _eval_emission(const _point& pt) {
+static inline vec3f _eval_emission(const point& pt) {
     if (pt.ke == zero3f) return zero3f;
     switch (pt.ptype) {
-        case _point::type::env: return pt.ke;
-        case _point::type::point: return pt.ke;
-        case _point::type::line: return pt.ke;
-        case _point::type::triangle:
+        case point::type::env: return pt.ke;
+        case point::type::point: return pt.ke;
+        case point::type::line: return pt.ke;
+        case point::type::triangle:
             return (dot(pt.frame[2], pt.wo) > 0) ? pt.ke : zero3f;
         default: {
             assert(false);
@@ -750,7 +750,7 @@ static inline vec3f _eval_fresnel_metal(float cosw, const vec3f& eta,
 // - uses Kajiya-Kay for hair
 // - uses a hack for points
 //
-static inline vec3f _eval_brdfcos(const _point& pt, const vec3f& wi) {
+static inline vec3f _eval_brdfcos(const point& pt, const vec3f& wi) {
     // summation over multiple terms
     auto brdfcos = zero3f;
 
@@ -768,7 +768,7 @@ static inline vec3f _eval_brdfcos(const _point& pt, const vec3f& wi) {
          ndh = clamp(dot(wh, pt.frame[2]), (float)0, (float)1);
 
     switch (pt.ptype) {
-        case _point::type::point: {
+        case point::type::point: {
             // diffuse term (hack for now)
             if (pt.kd != zero3f) {
                 auto ido = dot(wo, wi);
@@ -776,7 +776,7 @@ static inline vec3f _eval_brdfcos(const _point& pt, const vec3f& wi) {
                 brdfcos += diff;
             }
         } break;
-        case _point::type::line: {
+        case point::type::line: {
             // take sines
             auto so = sqrt(clamp(1 - ndo * ndo, (float)0, (float)1)),
                  si = sqrt(clamp(1 - ndi * ndi, (float)0, (float)1)),
@@ -796,7 +796,7 @@ static inline vec3f _eval_brdfcos(const _point& pt, const vec3f& wi) {
                 brdfcos += spec;
             }
         } break;
-        case _point::type::triangle: {
+        case point::type::triangle: {
             // diffuse term
             if (ndi > 0 && ndo && pt.kd != zero3f) {
                 auto diff = pt.kd * ndi / pif;
@@ -840,7 +840,7 @@ static inline vec3f _eval_brdfcos(const _point& pt, const vec3f& wi) {
 //
 // Compute the weight for sampling the BRDF
 //
-static inline float _weight_brdfcos(const _point& pt, const vec3f& wi) {
+static inline float _weight_brdfcos(const point& pt, const vec3f& wi) {
     // skip if no component
     if (pt.kd == zero3f && pt.ks == zero3f) return 0;
 
@@ -867,16 +867,16 @@ static inline float _weight_brdfcos(const _point& pt, const vec3f& wi) {
     auto pdf = 0.0f;
 
     switch (pt.ptype) {
-        case _point::type::point: {
+        case point::type::point: {
         } break;
-        case _point::type::line: {
+        case point::type::line: {
             // diffuse term
             if (wall) {
                 // homepherical cosine probability
                 pdf += 1 / (4 * pif);
             }
         } break;
-        case _point::type::triangle: {
+        case point::type::triangle: {
             // diffuse term
             if (wd && ndi > 0) {
                 // homepherical cosine probability
@@ -915,7 +915,7 @@ static inline float _weight_brdfcos(const _point& pt, const vec3f& wi) {
 //
 // Picks a direction based on the BRDF
 //
-static inline vec3f _sample_brdfcos(const _point& pt, float rnl,
+static inline vec3f _sample_brdfcos(const point& pt, float rnl,
                                     const vec2f& rn) {
     // skip if no component
     if (pt.kd == zero3f && pt.ks == zero3f) return zero3f;
@@ -937,8 +937,8 @@ static inline vec3f _sample_brdfcos(const _point& pt, float rnl,
 
     switch (pt.ptype) {
         // TODO: point color
-        case _point::type::point:
-        case _point::type::line: {
+        case point::type::point:
+        case point::type::line: {
             if (wall > 0) {
                 // sample wi with uniform spherical distribution
                 auto rz = rn[1], rr = sqrtf(1 - rz * rz),
@@ -947,7 +947,7 @@ static inline vec3f _sample_brdfcos(const _point& pt, float rnl,
                 return transform_direction(pt.frame, wi_local);
             }
         } break;
-        case _point::type::triangle: {
+        case point::type::triangle: {
             // sample according to diffuse
             if (rnl < wd) {
                 // sample wi with hemispherical cosine distribution
@@ -995,17 +995,17 @@ static inline vec3f _sample_brdfcos(const _point& pt, float rnl,
 //
 // Create a point for an environment map. Resolves material with textures.
 //
-static inline _point _eval_envpoint(const scene& scn, int env_id,
-                                    const vec3f& wo) {
+static inline point _eval_envpoint(const scene& scn, int env_id,
+                                   const vec3f& wo) {
     // set shape data
-    auto pt = _point();
+    auto pt = point();
 
     // check if null point
     if (env_id < 0) return pt;
     auto& env = scn.environments[env_id];
 
     // env params
-    pt.ptype = _point::type::env;
+    pt.ptype = point::type::env;
 
     // direction
     pt.wo = wo;
@@ -1046,10 +1046,10 @@ static inline T _interpolate_value(const array_view<T>& vals,
 //
 // Create a point for a shape. Resolves geometry and material with textures.
 //
-static inline _point _eval_shapepoint(const scene& scn, int shape_id, int eid,
-                                      const vec3f& euv, const vec3f& wo) {
+static inline point _eval_shapepoint(const scene& scn, int shape_id, int eid,
+                                     const vec3f& euv, const vec3f& wo) {
     // set shape data
-    auto pt = _point();
+    auto pt = point();
 
     // check if null point
     if (shape_id < 0) return pt;
@@ -1062,19 +1062,19 @@ static inline _point _eval_shapepoint(const scene& scn, int shape_id, int eid,
     auto pos = zero3f, norm = zero3f, color = zero3f;
     auto texcoord = zero2f;
     if (!shp.points.empty()) {
-        pt.ptype = _point::type::point;
+        pt.ptype = point::type::point;
         pos = _interpolate_value(shp.pos, shp.points, eid, euv);
         norm = normalize(_interpolate_value(shp.norm, shp.points, eid, euv));
         texcoord = _interpolate_value(shp.texcoord, shp.points, eid, euv);
         color = _interpolate_value(shp.color, shp.points, eid, euv);
     } else if (!shp.lines.empty()) {
-        pt.ptype = _point::type::line;
+        pt.ptype = point::type::line;
         pos = _interpolate_value(shp.pos, shp.lines, eid, euv);
         norm = normalize(_interpolate_value(shp.norm, shp.lines, eid, euv));
         texcoord = _interpolate_value(shp.texcoord, shp.lines, eid, euv);
         color = _interpolate_value(shp.color, shp.lines, eid, euv);
     } else if (!shp.triangles.empty()) {
-        pt.ptype = _point::type::triangle;
+        pt.ptype = point::type::triangle;
         pos = _interpolate_value(shp.pos, shp.triangles, eid, euv);
         norm = _interpolate_value(shp.norm, shp.triangles, eid, euv);
         texcoord = _interpolate_value(shp.texcoord, shp.triangles, eid, euv);
@@ -1132,21 +1132,21 @@ static inline _point _eval_shapepoint(const scene& scn, int shape_id, int eid,
 // Sample weight for a light point.
 //
 static inline float _weight_light(const scene& scn, int light_id,
-                                  const _point& lpt, const _point& pt) {
+                                  const point& lpt, const point& pt) {
     switch (lpt.ptype) {
-        case _point::type::env: {
+        case point::type::env: {
             return 4 * pif;
         } break;
-        case _point::type::point: {
+        case point::type::point: {
             auto& light = scn._lights[light_id];
             auto d = dist(lpt.frame.o(), pt.frame.o());
             return light.area / (d * d);
         } break;
-        case _point::type::line: {
+        case point::type::line: {
             assert(false);
             return 0;
         } break;
-        case _point::type::triangle: {
+        case point::type::triangle: {
             auto& light = scn._lights[light_id];
             auto d = dist(lpt.frame.o(), pt.frame.o());
             return light.area * fabsf(dot(lpt.frame[2], lpt.wo)) / (d * d);
@@ -1161,8 +1161,8 @@ static inline float _weight_light(const scene& scn, int light_id,
 //
 // Picks a point on a light.
 //
-static inline _point _sample_light(const scene& scn, int lid, const _point& pt,
-                                   float rne, const vec2f& rn) {
+static inline point _sample_light(const scene& scn, int lid, const point& pt,
+                                  float rne, const vec2f& rn) {
     auto& light = scn._lights[lid];
     if (light.shape_id >= 0) {
         auto& shp = scn.shapes[light.shape_id];
@@ -1196,13 +1196,13 @@ static inline _point _sample_light(const scene& scn, int lid, const _point& pt,
     } else {
         assert(false);
     }
-    return _point();
+    return point();
 }
 
 //
 // Offsets a ray origin to avoid self-intersection.
 //
-static inline ray3f _offset_ray(const scene& scn, const _point& pt,
+static inline ray3f _offset_ray(const scene& scn, const point& pt,
                                 const vec3f& w, const render_params& params) {
     return ray3f(pt.frame.o() + pt.frame[2] * params.ray_eps, w,
                  params.ray_eps);
@@ -1211,10 +1211,9 @@ static inline ray3f _offset_ray(const scene& scn, const _point& pt,
 //
 // Offsets a ray origin to avoid self-intersection.
 //
-static inline ray3f _offset_ray(const scene& scn, const _point& pt,
-                                const _point& pt2,
-                                const render_params& params) {
-    auto ray_dist = (pt2.ptype != _point::type::env)
+static inline ray3f _offset_ray(const scene& scn, const point& pt,
+                                const point& pt2, const render_params& params) {
+    auto ray_dist = (pt2.ptype != point::type::env)
                         ? dist(pt.frame.o(), pt2.frame.o())
                         : FLT_MAX;
     return ray3f(pt.frame.o() + pt.frame[2] * params.ray_eps, -pt2.wo,
@@ -1224,7 +1223,7 @@ static inline ray3f _offset_ray(const scene& scn, const _point& pt,
 //
 // Intersects a ray with the scn and return the point (or env point).
 //
-static inline _point _intersect_scene(const scene& scn, const ray3f& ray) {
+static inline point _intersect_scene(const scene& scn, const ray3f& ray) {
     auto isec = scn.intersect_first(ray);
     if (isec) {
         return _eval_shapepoint(scn, isec.sid, isec.eid, isec.euv, -ray.d);
@@ -1238,7 +1237,7 @@ static inline _point _intersect_scene(const scene& scn, const ray3f& ray) {
 //
 // Evalutes direct illumination using MIS.
 //
-static inline vec3f _eval_direct(const scene& scn, int lid, const _point& pt,
+static inline vec3f _eval_direct(const scene& scn, int lid, const point& pt,
                                  _sampler& smp, const render_params& params) {
     // select whether it goes in all light mode
     auto all_lights = (lid < 0);
@@ -1265,13 +1264,13 @@ static inline vec3f _eval_direct(const scene& scn, int lid, const _point& pt,
     }
 
     // check if mis is necessary
-    if (pt.ptype == _point::type::point || pt.ptype == _point::type::line)
+    if (pt.ptype == point::type::point || pt.ptype == point::type::line)
         return lld;
 
     // check if mis is necessary
     auto& light = scn._lights[lid];
     if (light.shape_id < 0) return lld;
-    if (lpt.ptype == _point::type::point || lpt.ptype == _point::type::line) {
+    if (lpt.ptype == point::type::point || lpt.ptype == point::type::line) {
         return lld;
     }
 
@@ -1315,7 +1314,7 @@ static inline vec4f _shade_pathtrace_recd(const scene& scn, const ray3f& ray,
                                           const render_params& params) {
     // scn intersection
     auto pt = _intersect_scene(scn, ray);
-    if (pt.ptype == _point::type::none) return zero4f;
+    if (pt.ptype == point::type::none) return zero4f;
 
     // init
     auto la = vec4f{0, 0, 0, 1};
@@ -1323,7 +1322,7 @@ static inline vec4f _shade_pathtrace_recd(const scene& scn, const ray3f& ray,
 
     // emission
     if (ray_depth == 0) l += _eval_emission(pt);
-    if (pt.ptype == _point::type::env) return la;
+    if (pt.ptype == point::type::env) return la;
 
     // check early exit
     if (pt.kd == zero3f && pt.ks == zero3f) return la;
@@ -1371,7 +1370,7 @@ static inline vec4f _shade_direct(const scene& scn, const ray3f& ray,
                                   _sampler& smp, const render_params& params) {
     // scn intersection
     auto pt = _intersect_scene(scn, ray);
-    if (pt.ptype == _point::type::none) return zero4f;
+    if (pt.ptype == point::type::none) return zero4f;
 
     // init
     auto la = vec4f{0, 0, 0, 1};
@@ -1379,7 +1378,7 @@ static inline vec4f _shade_direct(const scene& scn, const ray3f& ray,
 
     // emission
     l += _eval_emission(pt);
-    if (pt.ptype == _point::type::env) return la;
+    if (pt.ptype == point::type::env) return la;
 
     // early exit
     if (pt.kd == zero3f && pt.ks == zero3f) return la;
@@ -1403,8 +1402,8 @@ static inline vec4f _shade_eyelight(const scene& scn, const ray3f& ray,
                                     _sampler& smp,
                                     const render_params& params) {
     // intersection
-    _point pt = _intersect_scene(scn, ray);
-    if (pt.ptype == _point::type::none) return zero4f;
+    point pt = _intersect_scene(scn, ray);
+    if (pt.ptype == point::type::none) return zero4f;
 
     // init
     auto la = vec4f{0, 0, 0, 1};
@@ -1412,7 +1411,7 @@ static inline vec4f _shade_eyelight(const scene& scn, const ray3f& ray,
 
     // emission
     l += _eval_emission(pt);
-    if (pt.ptype == _point::type::env) return la;
+    if (pt.ptype == point::type::env) return la;
 
     // brdf*light
     l += _eval_brdfcos(pt, pt.wo) * pif;
