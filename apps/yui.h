@@ -73,7 +73,7 @@ static inline void _glfw_error_callback(int error, const char* description) {
 //
 // initialize glfw
 //
-inline GLFWwindow* init_glfw(const ym::vec2i& size, const std::string& title,
+inline GLFWwindow* init_glfw(int width, int height, const std::string& title,
                              bool legacy_gl, void* ctx = nullptr,
                              GLFWcharfun text_callback = nullptr) {
     // window
@@ -89,7 +89,7 @@ inline GLFWwindow* init_glfw(const ym::vec2i& size, const std::string& title,
         glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     }
 
-    auto window = glfwCreateWindow(size[0], size[1], title.c_str(), 0, 0);
+    auto window = glfwCreateWindow(width, height, title.c_str(), 0, 0);
     glfwMakeContextCurrent(window);
     glfwSetWindowUserPointer(window, ctx);
 

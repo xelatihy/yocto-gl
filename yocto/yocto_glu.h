@@ -1,74 +1,61 @@
-//
-// YOCTO_GLU: a set of utilities to draw on screen with OpenGL 2.1. Mostly
-// used to make quick viewers. Not sure it is helpful to others (OpenGL is
-// really a portability mess, but there is nothing else). The library is split
-// into two namespaces, legacy and modern, to indicate functions for fixed
-// function pipeline and for modern shaders.
-//
-
-//
-// FEATURES:
-//
-// 0. include this file (more compilation options below)
-// 1. different OpenGL versions are supported in the legacy and modern
-// namespaces, resectively 1.X and 3.X
-// 2. image viewing
-// - legacy::draw_image(textureid, image size, window size, offset, zoom)
-// - modern::shade_image(textureid, image size, window size, offset, zoom)
-// - with exposure/gamma modern::shade_image(as above, exposure, gamma)
-// 3. texture utilies to quickly create/update textures
-// - for floats
-//     - textureid = make_texture(image data, filter on/off, load as floats)
-//     - update_texture(textureid, image data)
-// - for bytes
-//     - textureid = make_texture(image data, filter on/off, load as srgb)
-//     - update_texture(textureid, image data)
-// - clear_texture(textureid)
-// 4. program utilities in modern namespace
-// - make_program(vertex code, fragment code, output ids)
-// - clear_program(ids)
-// - set_uniformi(progid, varname, int values, counts)
-// - set_uniformf(progid, varname, float values, counts)
-// - set_uniformt(progid, varname, textureid, textureunit)
-// - set_vertattr(progid, varname, values, count)
-// - set_vertattr_ptr(progid, varname, values, count)
-// - set_vertattr_val(progid, varname, values, count)
-// - draw_elems(element data)
-// 5. a standard shader for GGX fragment shading and multiple lights in
-// stdshader namespace
-// - make_program()
-// - begin_frame(image and camera params)
-// - set_lights(light params)
-// - begin_shape(shape xform)
-// - end_shape()
-// - set_material(material and texture data)
-// - set_vert(vertex data)
-// - draw_elem(element data)
-// - end_frame()
-// 6. standard drawing methods legacy namespace with interfaces as in 5.
-//
-// The interface for each function is described in details in the interface
-// section of this file.
-
-//
-// COMPILATION:
-//
-// All functions in this library are inlined by default for ease of use in
-// C++. To use the library as a .h/.cpp pair do the following:
-// - to use as a .h, just #define YGL_DECLARATION before including this file
-// - to build as a .cpp, just #define YGL_IMPLEMENTATION before including this
-// file into only one file that you can either link directly or pack as a lib.
-//
-
-//
-// HISTORY:
-// - v 0.5: support for OpenGL 3.2
-// - v 0.4: support for legacy OpenGL
-// - v 0.3: [major API change] move to modern C++ interface
-// - v 0.2: removal of C interface
-// - v 0.1: C/C++ implementation
-// - v 0.0: initial release in C99
-//
+///
+/// YOCTO_GLU: a set of utilities to draw on screen with OpenGL 2.1. Mostly
+/// used to make quick viewers. Not sure it is helpful to others (OpenGL is
+/// really a portability mess, but there is nothing else). The library is split
+/// into two namespaces, legacy and modern, to indicate functions for fixed
+/// function pipeline and for modern shaders.
+///
+///
+/// FEATURES:
+///
+/// 1. include this file (more compilation options below)
+/// 2. different OpenGL versions are supported in the legacy and modern
+/// namespaces, resectively 1.X and 3.X
+/// 3. image viewing with legacy::draw_image() or modern::shade_image()
+/// - the modern interface supports exposure/gamma correction
+/// 4. texture utilies to quickly create/update textures
+/// - create textures with legacy::make_texture() or modern::make_texture()
+/// - create textures with legacy::make_texture() or modern::update_texture()
+/// - delete textures with legacy::clear_texture() or monder::clear_texture()
+/// 5. program utilities in modern namespace
+/// - buffer objects with create_buffer(), update_buffer()
+/// - program creation/cleaning with make_program(), clear_program()
+/// - uniforms with set_uniform()
+/// - vertex attrib with set_vertattr() and set_vertattr_buff()
+/// - draw_elems()
+/// 6. a standard shader for GGX fragment shading and multiple lights in
+/// the stdshader namespace
+/// - initialize the shaders with make_program()
+/// - start/end each frame with begin_frame(), end_frame()
+/// - define lights with set_lights(light params)
+/// - start/end each shape with begin_shape(), end_shape()
+/// - define material parameters with set_material()
+/// - define vertices with set_vert()
+/// - draw elements with draw_elem(element data)
+/// 7. standard drawing methods legacy namespace with interfaces as in 6.
+///
+/// The interface for each function is described in details in the interface
+/// section of this file.
+///
+/// COMPILATION:
+///
+/// All functions in this library are inlined by default for ease of use in
+/// C++. To use the library as a .h/.cpp pair do the following:
+/// - to use as a .h, just define YGL_DECLARATION before including this file
+/// - to build as a .cpp, just define YGL_IMPLEMENTATION before including this
+/// file into only one file that you can either link directly or pack as a lib.
+///
+///
+/// HISTORY:
+/// - v 0.6: doxygen comments
+/// - v 0.5: support for OpenGL 3.2
+/// - v 0.4: support for legacy OpenGL
+/// - v 0.3: [major API change] move to modern C++ interface
+/// - v 0.2: removal of C interface
+/// - v 0.1: C/C++ implementation
+/// - v 0.0: initial release in C99
+///
+namespace yglu {}
 
 //
 // LICENSE:
@@ -115,154 +102,178 @@
 namespace yglu {
 
 //
-// Typedefs for floatXXX and intXXX
+// Typedefs for vec/mat types
 //
 using float2 = std::array<float, 2>;
 using float3 = std::array<float, 3>;
 using float4x4 = std::array<std::array<float, 4>, 4>;
 using int2 = std::array<int, 2>;
 using int3 = std::array<int, 3>;
-using string = std::string;
 
-//
-// Shape types
-//
+///
+/// Shape types
+///
 enum struct etype : int {
-    point = 1,     // points
-    line = 2,      // lines
-    triangle = 3,  // triangles
-    quad = 4       // quads
+    /// points
+    point = 1,
+    /// lines
+    line = 2,
+    /// triangles
+    triangle = 3,
+    /// quads
+    quad = 4
 };
 
-//
-// Light types
-//
+///
+/// Light types
+///
 enum struct ltype : int {
-    point = 0,       // point lights
-    directional = 1  // directional lights
+    point = 0,       ///< point lights
+    directional = 1  ///< directional lights
 };
 
-//
-// Setup a convenint shortcut. Should be better to use GLuint but this avoids
-// #include issues with the GL libraries.
-//
+///
+/// Shortcut for GLuint.
+///
+/// Would be better to use GLuint but this avoids issues with including GL
+/// headers.
+///
 using uint = unsigned int;
 
-//
-// Checks for GL error and then prints
-//
+///
+/// Checks for GL error and then prints
+///
 YGL_API bool check_error(bool print = true);
 
 // -----------------------------------------------------------------------------
 // LEGACY FUNCTIONS
 // -----------------------------------------------------------------------------
 
+///
+/// Legacy Functions (OpenGL 1.X)
+///
 namespace legacy {
 
 // IMAGE FUNCTIONS -------------------------------------------------------------
 
-//
-// Draw an texture tid of size img_w, img_h on a window of size win_w, win_h
-// with top-left corner at ox, oy with a zoom zoom.
-//
+///
+/// Draw an texture tid of size img_w, img_h on a window of size win_w, win_h
+/// with top-left corner at ox, oy with a zoom zoom.
+///
 YGL_API void draw_image(uint tid, int img_w, int img_h, int win_w, int win_h,
                         float ox, float oy, float zoom);
 
-//
-// Reads an image back to memory.
-//
+///
+/// Reads an image back to memory.
+///
 YGL_API void read_imagef(float* pixels, int w, int h, int nc);
 
-//
-// Creates a texture with pixels values of size w, h with nc number of
-// components (1-4).
-// Internally use filtering if filter.
-// Returns the texture id.
-//
+///
+/// Creates a texture with pixels values of size w, h with nc number of
+/// components (1-4).
+/// Internally use filtering if filter.
+/// Returns the texture id.
+///
 YGL_API uint make_texture(int w, int h, int nc, const float* pixels,
                           bool linear, bool mipmap);
 
-//
-// Creates a texture with pixels values of size w, h with nc number of
-// components (1-4).
-// Internally use filtering if filter.
-// Returns the texture id.
-//
+///
+/// Creates a texture with pixels values of size w, h with nc number of
+/// components (1-4).
+/// Internally use filtering if filter.
+/// Returns the texture id.
+///
 YGL_API uint make_texture(int w, int h, int nc, const unsigned char* pixels,
                           bool linear, bool mipmap);
 
-//
-// Updates the texture tid with new image data.
-//
+///
+/// Updates the texture tid with new image data.
+///
 YGL_API void update_texture(uint tid, int w, int h, int nc, const float* pixels,
                             bool mipmap);
+
+///
+/// Updates the texture tid with new image data.
+///
 YGL_API void update_texture(uint tid, int w, int h, int nc,
                             const unsigned char* pixels, bool mipmap);
 
-//
-// Destroys the texture tid.
-//
+///
+/// Destroys the texture tid.
+///
 YGL_API void clear_texture(uint* tid);
 
-//
-// Starts a frame by setting exposure/gamma values, camera transforms and
-// projection. Sets also whether to use full shading or a quick eyelight
-// preview.
-// If eyelight is disabled, sets num lights with position pos,
-// color ke, type ltype. Also set the ambient illumination amb.
-//
+///
+/// Starts a frame by setting exposure/gamma values, camera transforms and
+/// projection. Sets also whether to use full shading or a quick eyelight
+/// preview.
+/// If eyelight is disabled, sets num lights with position pos,
+/// color ke, type ltype. Also set the ambient illumination amb.
+///
 YGL_API void begin_frame(const float4x4& camera_xform,
                          const float4x4& camera_xform_inv,
                          const float4x4& camera_proj, bool eyelight,
                          bool scale_kx);
 
-//
-// Ends a frame.
-//
+///
+/// Ends a frame.
+///
 YGL_API void end_frame();
 
-//
-// Set num lights with position pos, color ke, type ltype. Also set the ambient
-// illumination amb.
-//
+///
+/// Set num lights with position pos, color ke, type ltype. Also set the ambient
+/// illumination amb.
+///
 YGL_API void set_lights(const float3& amb, int num, const float3* pos,
                         const float3* ke, const ltype* ltype, bool scale_kx);
 
-//
-// Begins drawing a shape with transform xform.
-//
+///
+/// Begins drawing a shape with transform xform.
+///
 YGL_API void begin_shape(const float4x4& xform);
 
-//
-// End shade drawing.
-//
+///
+/// End shade drawing.
+///
 YGL_API void end_shape();
 
-//
-// Set material values with emission ke, diffuse kd, specular ks and
-// specular exponent ns. Indicates textures ids with the correspoinding XXX_txt
-// variables.
-//
+///
+/// Set material values with emission ke, diffuse kd, specular ks and
+/// specular exponent ns. Indicates textures ids with the correspoinding XXX_txt
+/// variables.
+///
 YGL_API void set_material(const float3& ke, const float3& kd, const float3& ks,
                           float ns, int kd_txt, bool scale_kx);
 
-//
-// Convertes a phong exponent to roughness.
-//
+///
+/// Convertes a phong exponent to roughness.
+///
 YGL_API float specular_roughness_to_exponent(float r);
 
-//
-// Draw num elements elem of type etype.
-//
+///
+/// Draw num elements elem of type etype.
+///
 YGL_API void draw_elem(int num, const int* elem, etype etype, const float3* pos,
                        const float3* norm, const float2* texcoord,
                        const float3* color);
+
+///
+/// Draw num elements elem of type etype.
+///
 YGL_API void draw_points(int num, const int* elem, const float3* pos,
                          const float3* norm, const float2* texcoord,
                          const float3* color);
+
+///
+/// Draw num elements elem of type etype.
+///
 YGL_API void draw_lines(int num, const int2* elem, const float3* pos,
                         const float3* norm, const float2* texcoord,
                         const float3* color);
+
+///
+/// Draw num elements elem of type etype.
+///
 YGL_API void draw_triangles(int num, const int3* elem, const float3* pos,
                             const float3* norm, const float2* texcoord,
                             const float3* color);
@@ -273,232 +284,258 @@ YGL_API void draw_triangles(int num, const int3* elem, const float3* pos,
 // MODERN FUNCTIONS
 // -----------------------------------------------------------------------------
 
+///
+/// Modern OpenGL (OpenGL > 3.2)
+///
 namespace modern {
 
 // IMAGE FUNCTIONS -------------------------------------------------------------
 
-//
-// Draw an texture tid of size img_w, img_h on a window of size win_w, win_h
-// with top-left corner at ox, oy with a zoom zoom.
-//
+///
+/// Draw an texture tid of size img_w, img_h on a window of size win_w, win_h
+/// with top-left corner at ox, oy with a zoom zoom.
+///
 YGL_API void shade_image(uint tid, int img_w, int img_h, int win_w, int win_h,
                          float ox, float oy, float zoom);
 
-//
-// As above but includes an exposure/gamma correction.
-//
+///
+/// As above but includes an exposure/gamma correction.
+///
 YGL_API void shade_image(uint tid, int img_w, int img_h, int win_w, int win_h,
                          float ox, float oy, float zoom, float exposure,
                          float gamma_);
 
 // TEXTURE FUNCTIONS -----------------------------------------------------------
 
-//
-// Creates a texture with pixels values of size w, h with nc number of
-// components (1-4).
-// Internally use float if as_float and filtering if filter.
-// Returns the texture id.
-//
+///
+/// Creates a texture with pixels values of size w, h with nc number of
+/// components (1-4).
+/// Internally use float if as_float and filtering if filter.
+/// Returns the texture id.
+///
 YGL_API uint make_texture(int w, int h, int nc, const float* pixels,
                           bool linear, bool mipmap, bool as_float);
 
-//
-// Creates a texture with pixels values of size w, h with nc number of
-// components (1-4).
-// Internally use srgb lookup if as_srgb and filtering if filter.
-// Returns the texture id.
-//
+///
+/// Creates a texture with pixels values of size w, h with nc number of
+/// components (1-4).
+/// Internally use srgb lookup if as_srgb and filtering if filter.
+/// Returns the texture id.
+///
 YGL_API uint make_texture(int w, int h, int nc, const unsigned char* pixels,
                           bool linear, bool mipmap, bool as_srgb);
 
-//
-// Updates the texture tid with new image data.
-//
+///
+/// Updates the texture tid with new image data.
+///
 YGL_API void update_texture(uint tid, int w, int h, int nc, const float* pixels,
                             bool mipmap);
+
+///
+/// Updates the texture tid with new image data.
+///
 YGL_API void update_texture(uint tid, int w, int h, int nc,
                             const unsigned char* pixels, bool mipmap);
 
-//
-// Destroys the texture tid.
-//
+///
+/// Destroys the texture tid.
+///
 YGL_API void clear_texture(uint* tid);
 
 // BUFFER FUNCTIONS -----------------------------------------------------------
 
-//
-// Creates a buffer with num elements of size size stored in values, where
-// content is dyanamic if dynamic.
-// Returns the buffer id.
-//
+///
+/// Creates a buffer with num elements of size size stored in values, where
+/// content is dyanamic if dynamic.
+/// Returns the buffer id.
+///
 YGL_API uint make_buffer(int num, int size, const void* values, bool elements,
                          bool dynamic);
 
-//
-// Updates the buffer bid with new data.
-//
+///
+/// Updates the buffer bid with new data.
+///
 YGL_API void update_buffer(uint bid, int num, int size, const void* values,
                            bool elements, bool dynamic);
 
-//
-// Destroys the buffer bid.
-//
+///
+/// Destroys the buffer bid.
+///
 YGL_API void clear_buffer(uint* bid);
 
 // PROGRAM FUNCTIONS -----------------------------------------------------------
 
-//
-// Creates and OpenGL vertex array object.
-//
+///
+/// Creates and OpenGL vertex array object.
+///
 YGL_API uint make_vertex_arrays();
 
-//
-// Destroys the program pid and optionally the sahders vid and fid.
-//
+///
+/// Destroys the program pid and optionally the sahders vid and fid.
+///
 YGL_API void clear_vertex_arrays(uint* aid);
 
-//
-// Creates and OpenGL program from vertex and fragment code. Returns the
-// program id. Optionally return vertex and fragment shader ids. A VAO has to be
-// bound before this.
-//
-YGL_API uint make_program(const string& vertex, const string& fragment,
-                          uint* vid, uint* fid);
+///
+/// Creates and OpenGL program from vertex and fragment code. Returns the
+/// program id. Optionally return vertex and fragment shader ids. A VAO has to
+/// be
+/// bound before this.
+///
+YGL_API uint make_program(const std::string& vertex,
+                          const std::string& fragment, uint* vid, uint* fid);
 
-//
-// Destroys the program pid and optionally the sahders vid and fid.
-//
+///
+/// Destroys the program pid and optionally the sahders vid and fid.
+///
 YGL_API void clear_program(uint* pid, uint* vid, uint* fid);
 
-//
-// Set uniform integer values val for program prog and variable var.
-// The values have nc number of components (1-4) and count elements
-// (for arrays).
-//
-YGL_API bool set_uniform(uint prog, const string& var, const int* val, int nc,
-                         int count);
+///
+/// Set uniform integer values val for program prog and variable var.
+/// The values have nc number of components (1-4) and count elements
+/// (for arrays).
+///
+YGL_API bool set_uniform(uint prog, const std::string& var, const int* val,
+                         int nc, int count);
 
-//
-// Set uniform float values val for program prog and variable var.
-// The values have nc number of components (1-4) and count elements
-// (for arrays).
-//
-YGL_API bool set_uniform(uint prog, const string& var, const float* val, int nc,
-                         int count);
+///
+/// Set uniform float values val for program prog and variable var.
+/// The values have nc number of components (1-4) and count elements
+/// (for arrays).
+///
+YGL_API bool set_uniform(uint prog, const std::string& var, const float* val,
+                         int nc, int count);
 
-//
-// Set uniform texture id tid and unit tunit for program prog and variable var.
-// Optionally sets the int variable varon to 0/1 whether the texture is enable
-// on not.
-//
-YGL_API bool set_uniform_texture(uint prog, const string& var,
-                                 const string& varon, uint tid, uint tunit);
+///
+/// Set uniform texture id tid and unit tunit for program prog and variable var.
+/// Optionally sets the int variable varon to 0/1 whether the texture is enable
+/// on not.
+///
+YGL_API bool set_uniform_texture(uint prog, const std::string& var,
+                                 const std::string& varon, uint tid,
+                                 uint tunit);
 
-//
-// Sets a constant value for a vertex attribute for program prog and
-// variable var. The attribute has nc components.
-//
-YGL_API bool set_vertattr_val(uint prog, const string& var, const float* value,
-                              int nc);
+///
+/// Sets a constant value for a vertex attribute for program prog and
+/// variable var. The attribute has nc components.
+///
+YGL_API bool set_vertattr_val(uint prog, const std::string& var,
+                              const float* value, int nc);
 
-//
-// Sets a vartex attribute for program prog and variable var to the buffer bid.
-// The attribute has nc components and per-vertex values values.
-//
-YGL_API bool set_vertattr_buffer(uint prog, const string& var, uint bid,
+///
+/// Sets a vartex attribute for program prog and variable var to the buffer bid.
+/// The attribute has nc components and per-vertex values values.
+///
+YGL_API bool set_vertattr_buffer(uint prog, const std::string& var, uint bid,
                                  int nc);
 
-//
-// Sets a vartex attribute for program prog and variable var. The attribute
-// has nc components and either buffer bid or a single value def
-// (if bid is zero). Convenience wrapper to above functions.
-//
-YGL_API bool set_vertattr(uint prog, const string& var, uint bid, int nc,
+///
+/// Sets a vartex attribute for program prog and variable var. The attribute
+/// has nc components and either buffer bid or a single value def
+/// (if bid is zero). Convenience wrapper to above functions.
+///
+YGL_API bool set_vertattr(uint prog, const std::string& var, uint bid, int nc,
                           const float* def);
 
-//
-// Draws nelems elements elem of type etype.
-//
+///
+/// Draws nelems elements elem of type etype.
+///
 YGL_API bool draw_elems(int nelems, uint bid, etype etype);
 
 }  // namespace
 
 // STANDARD SHADER FUNCTIONS ---------------------------------------------------
 
+///
+/// Shade with a physically-based standard shader based on Phong/GGX.
+///
 namespace stdshader {
 
-//
-// Initialize a standard shader.
-//
+///
+/// Initialize a standard shader.
+///
 YGL_API void make_program(uint* pid, uint* vao);
 
-//
-// Starts a frame by setting exposure/gamma values, camera transforms and
-// projection. Sets also whether to use full shading or a quick eyelight
-// preview.
-//
+///
+/// Starts a frame by setting exposure/gamma values, camera transforms and
+/// projection. Sets also whether to use full shading or a quick eyelight
+/// preview.
+///
 YGL_API void begin_frame(uint prog, bool shade_eyelight, float img_exposure,
                          float img_gamma, const float4x4& camera_xform,
                          const float4x4& camera_xform_inv,
                          const float4x4& camera_proj);
 
-//
-// Ends a frame.
-//
+///
+/// Ends a frame.
+///
 YGL_API void end_frame();
 
-//
-// Set num lights with position pos, color ke, type ltype. Also set the ambient
-// illumination amb.
-//
+///
+/// Set num lights with position pos, color ke, type ltype. Also set the ambient
+/// illumination amb.
+///
 YGL_API void set_lights(uint prog, const float3& amb, int num, float3* pos,
                         float3* ke, ltype* ltype);
 
-//
-// Begins drawing a shape with transform xform.
-//
+///
+/// Begins drawing a shape with transform xform.
+///
 YGL_API void begin_shape(uint prog, const float4x4& xform);
 
-//
-// End shade drawing.
-//
+///
+/// End shade drawing.
+///
 YGL_API void end_shape();
 
-//
-// Set material values with emission ke, diffuse kd, specular ks and
-// specular roughness rs. Indicates textures ids with the correspoinding XXX_txt
-// variables. Uses GGX by default, but can switch to Phong is needed. Works
-// for points, lines and triangle/quads based on etype.
-//
+///
+/// Set material values with emission ke, diffuse kd, specular ks and
+/// specular roughness rs. Indicates textures ids with the correspoinding
+/// XXX_txt
+/// variables. Uses GGX by default, but can switch to Phong is needed. Works
+/// for points, lines and triangle/quads based on etype.
+///
 YGL_API void set_material(uint prog, const float3& ke, const float3& kd,
                           const float3& ks, float rs, int ke_txt, int kd_txt,
                           int ks_txt, int rs_txt, bool use_phong);
 
-//
-// Convertes a phong exponent to roughness.
-//
+///
+/// Convertes a phong exponent to roughness.
+///
 YGL_API float specular_exponent_to_roughness(float n);
 
-//
-// Set vertex data with position pos, normals norm, texture coordinates texcoord
-// and per-vertex color color.
-//
+///
+/// Set vertex data with position pos, normals norm, texture coordinates
+/// texcoord
+/// and per-vertex color color.
+///
 YGL_API void set_vert(uint prog, const float3* pos, const float3* norm,
                       const float2* texcoord, const float3* color);
 
-//
-// Set vertex data with buffers for position pos, normals norm, texture
-// coordinates texcoord and per-vertex color color.
-//
+///
+/// Set vertex data with buffers for position pos, normals norm, texture
+/// coordinates texcoord and per-vertex color color.
+///
 YGL_API void set_vert(uint prog, uint pos, uint norm, uint texcoord,
                       uint color);
 
-//
-// Draw num elements elem of type etype.
-//
+///
+/// Draw num elements elem of type etype.
+///
 YGL_API void draw_elems(uint prog, int num, uint bid, etype etype);
+
+///
+/// Draw num elements elem of type etype.
+///
 YGL_API void draw_points(uint prog, int num, uint bid);
+
+///
+/// Draw num elements elem of type etype.
+///
 YGL_API void draw_lines(uint prog, int num, uint bid);
+
+///
+/// Draw num elements elem of type etype.
+///
 YGL_API void draw_triangles(uint prog, int num, uint bid);
 
 }  // namespace
@@ -887,7 +924,7 @@ YGL_API void shade_image(uint tid, int img_w, int img_h, int win_w, int win_h,
 YGL_API void shade_image(uint tid, int img_w, int img_h, int win_w, int win_h,
                          float ox, float oy, float zoom, float exposure,
                          float gamma_) {
-    static const string& vert =
+    static const std::string& vert =
         ""
         "#version 330\n"
         "\n"
@@ -906,7 +943,7 @@ YGL_API void shade_image(uint tid, int img_w, int img_h, int win_w, int win_h,
         "    gl_Position = vec4(upos.x, upos.y, 0, 1);\n"
         "}\n"
         "";
-    static const string& frag =
+    static const std::string& frag =
         ""
         "#version 330\n"
         "\n"
@@ -1149,12 +1186,12 @@ YGL_API void clear_vertex_arrays(uint* aid) {
 //
 // This is a public API. See above for documentation.
 //
-YGL_API uint make_program(const string& vertex, const string& fragment,
-                          uint* vid, uint* fid) {
+YGL_API uint make_program(const std::string& vertex,
+                          const std::string& fragment, uint* vid, uint* fid) {
     int errflags[2];
     char errbuf[10000];
     int gl_shader[2] = {0, 0};
-    string code[2] = {vertex, fragment};
+    std::string code[2] = {vertex, fragment};
     int type[2] = {GL_VERTEX_SHADER, GL_FRAGMENT_SHADER};
     for (int i = 0; i < 2; i++) {
         gl_shader[i] = glCreateShader(type[i]);
@@ -1216,8 +1253,8 @@ YGL_API void clear_program(uint* pid, uint* vid, uint* fid) {
 //
 // This is a public API. See above for documentation.
 //
-YGL_API bool set_uniform(uint prog, const string& var, const int* val, int nc,
-                         int count) {
+YGL_API bool set_uniform(uint prog, const std::string& var, const int* val,
+                         int nc, int count) {
     assert(nc >= 1 && nc <= 4);
     int pos = glGetUniformLocation(prog, var.c_str());
     if (pos < 0) return false;
@@ -1234,8 +1271,8 @@ YGL_API bool set_uniform(uint prog, const string& var, const int* val, int nc,
 //
 // This is a public API. See above for documentation.
 //
-YGL_API bool set_uniform(uint prog, const string& var, const float* val, int nc,
-                         int count) {
+YGL_API bool set_uniform(uint prog, const std::string& var, const float* val,
+                         int nc, int count) {
     assert((nc >= 1 && nc <= 4) || (nc == 16) || (nc == 12));
     int pos = glGetUniformLocation(prog, var.c_str());
     if (pos < 0) return false;
@@ -1254,8 +1291,9 @@ YGL_API bool set_uniform(uint prog, const string& var, const float* val, int nc,
 //
 // This is a public API. See above for documentation.
 //
-YGL_API bool set_uniform_texture(uint prog, const string& var,
-                                 const string& varon, uint tid, uint tunit) {
+YGL_API bool set_uniform_texture(uint prog, const std::string& var,
+                                 const std::string& varon, uint tid,
+                                 uint tunit) {
     int pos = glGetUniformLocation(prog, var.c_str());
     int onpos =
         (!varon.empty()) ? glGetUniformLocation(prog, varon.c_str()) : -1;
@@ -1277,8 +1315,8 @@ YGL_API bool set_uniform_texture(uint prog, const string& var,
 //
 // This is a public API. See above for documentation.
 //
-YGL_API bool set_vertattr_ptr(uint prog, const string& var, const float* value,
-                              int nc) {
+YGL_API bool set_vertattr_ptr(uint prog, const std::string& var,
+                              const float* value, int nc) {
     assert(nc >= 1 && nc <= 4);
     int pos = glGetAttribLocation(prog, var.c_str());
     if (pos < 0) return false;
@@ -1294,7 +1332,7 @@ YGL_API bool set_vertattr_ptr(uint prog, const string& var, const float* value,
 //
 // This is a public API. See above for documentation.
 //
-YGL_API bool set_vertattr_buffer(uint prog, const string& var, uint bid,
+YGL_API bool set_vertattr_buffer(uint prog, const std::string& var, uint bid,
                                  int nc) {
     assert(nc >= 1 && nc <= 4);
     int pos = glGetAttribLocation(prog, var.c_str());
@@ -1313,8 +1351,8 @@ YGL_API bool set_vertattr_buffer(uint prog, const string& var, uint bid,
 //
 // This is a public API. See above for documentation.
 //
-YGL_API bool set_vertattr_val(uint prog, const string& var, const float* value,
-                              int nc) {
+YGL_API bool set_vertattr_val(uint prog, const std::string& var,
+                              const float* value, int nc) {
     assert(nc >= 1 && nc <= 4);
     int pos = glGetAttribLocation(prog, var.c_str());
     if (pos < 0) return false;
@@ -1332,7 +1370,7 @@ YGL_API bool set_vertattr_val(uint prog, const string& var, const float* value,
 //
 // This is a public API. See above for documentation.
 //
-YGL_API bool set_vertattr(uint prog, const string& var, uint bid, int nc,
+YGL_API bool set_vertattr(uint prog, const std::string& var, uint bid, int nc,
                           const float* def) {
     assert(nc >= 1 && nc <= 4);
     int pos = glGetAttribLocation(prog, var.c_str());
@@ -1402,7 +1440,7 @@ YGL_API void make_program(uint* pid, uint* aid) {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Woverlength-strings"
 #endif
-    static const string& _vert_shader =
+    static const std::string& _vert_shader =
         "#version 330\n"
         "\n"
         "layout(location = 0) in vec3 vert_pos;            // vertex position "
@@ -1442,7 +1480,7 @@ YGL_API void make_program(uint* pid, uint* aid) {
         "}\n"
         "";
 
-    static const string& _frag_shader =
+    static const std::string& _frag_shader =
         "#version 330\n"
         "\n"
         "#define pi 3.14159265\n"
