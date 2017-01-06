@@ -50,19 +50,34 @@ inline std::vector<ym::vec4i> make_image_blocks(int w, int h, int bs) {
 }
 
 inline void save_image(const std::string& filename, int width, int height,
-                       const ym::vec4f* hdr, float exposure, float gamma) {
+                       const ym::vec4f* hdr, float exposure, float gamma,
+                       bool srgb_output) {
     auto ext = ycmd::get_extension(filename);
+    auto tone_mapped = (const ym::vec4f*)nullptr;
+    auto tone_mapped_buffer = std::vector<ym::vec4f>();
+    if (exposure != 0 || gamma != 1) {
+        tone_mapped_buffer =
+            std::vector<ym::vec4f>(width * height, {0, 0, 0, 0});
+        ym::exposure_gamma(width, height, 4, (const float*)hdr,
+                           (float*)tone_mapped_buffer.data(), exposure, gamma,
+                           false);
+        tone_mapped = tone_mapped_buffer.data();
+    } else {
+        tone_mapped = hdr;
+    }
     if (ext == ".hdr") {
-        auto tone_mapped = std::vector<ym::vec4f>(width * height, {0, 0, 0, 0});
-        ym::exposure_gamma(width, height, 4, (const float*)hdr,
-                           (float*)tone_mapped.data(), exposure, gamma, false);
         stbi_write_hdr(filename.c_str(), width, height, 4,
-                       (float*)tone_mapped.data());
+                       (float*)tone_mapped->data());
     } else if (ext == ".png") {
-        auto tone_mapped = std::vector<ym::vec4b>(width * height, {0, 0, 0, 0});
-        ym::exposure_gamma(width, height, 4, (const float*)hdr,
-                           (unsigned char*)tone_mapped.data(), exposure, gamma);
-        stbi_write_png(filename.c_str(), width, height, 4, tone_mapped.data(),
+        auto ldr = std::vector<ym::vec4b>(width * height, {0, 0, 0, 0});
+        if (srgb_output) {
+            ym::linear_to_srgb(width, height, 4, (const float*)tone_mapped,
+                               (unsigned char*)ldr.data());
+        } else {
+            ym::linear_to_byte(width, height, 4, (const float*)tone_mapped,
+                               (unsigned char*)ldr.data());
+        }
+        stbi_write_png(filename.c_str(), width, height, 4, ldr.data(),
                        width * 4);
     } else {
         printf("supports only hdr and png for image writing\n");
@@ -204,7 +219,9 @@ struct params : virtual yapp::params {
     std::vector<ym::vec4i> blocks;
     ThreadPool* pool;
 
-    float exposure, gamma;
+    float exposure = 0;
+    float gamma = 1;
+    bool srgb = true;
 
     ~params() {
         if (scene_bvh) delete scene_bvh;
@@ -225,10 +242,12 @@ inline void init_params(params* pars, ycmd::parser* parser) {
         {"path", ytrace::shader_type::pathtrace}};
 
     // params
-    auto exposure =
-        ycmd::parse_opt<float>(parser, "--exposure", "-e", "image exposure", 0);
+    auto exposure = ycmd::parse_opt<float>(parser, "--exposure", "-e",
+                                           "hdr image exposure", 0);
     auto gamma =
-        ycmd::parse_opt<float>(parser, "--gamma", "-g", "image gamma", 2.2f);
+        ycmd::parse_opt<float>(parser, "--gamma", "-g", "hdr image gamma", 1);
+    auto srgb =
+        ycmd::parse_opt<bool>(parser, "--srgb", "", "hdr srgb output", true);
     auto rtype = ycmd::parse_opte<ytrace::rng_type>(
         parser, "--random", "", "random type", ytrace::rng_type::def,
         rtype_names);
@@ -276,6 +295,7 @@ inline void init_params(params* pars, ycmd::parser* parser) {
     pars->blocks = make_image_blocks(pars->width, pars->height, block_size);
     pars->exposure = exposure;
     pars->gamma = gamma;
+    pars->srgb = srgb;
 }
 
 inline void render(params* pars) {
@@ -305,7 +325,7 @@ inline void render(params* pars) {
     printf("\rrendering done\n");
     fflush(stdout);
     save_image(pars->imfilename, pars->width, pars->height, pars->hdr.data(),
-               pars->exposure, pars->gamma);
+               pars->exposure, pars->gamma, pars->srgb);
 }
 
 }  // namespace

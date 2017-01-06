@@ -105,7 +105,7 @@ inline void shade(const yapp::scene* sc, int cur_camera, yglu::uint prog,
                   yglu::uint vao, const std::vector<yglu::uint>& txt,
                   std::vector<std::array<yglu::uint, 7>>& vbo,
                   const ym::vec4f& background, float exposure, float gamma_,
-                  bool wireframe, bool edges, bool camera_lights,
+                  bool srgb, bool wireframe, bool edges, bool camera_lights,
                   const ym::vec3f& amb) {
     // begin frame
     glEnable(GL_DEPTH_TEST);
@@ -123,7 +123,7 @@ inline void shade(const yapp::scene* sc, int cur_camera, yglu::uint prog,
         ym::perspective_mat4(cam->yfov, cam->aspect, 0.1f, 10000.0f);
 
     yglu::stdshader::begin_frame(prog, vao, camera_lights, exposure, gamma_,
-                                 camera_xform, camera_view, camera_proj);
+                                 srgb, camera_xform, camera_view, camera_proj);
 
     if (!camera_lights) {
         auto nlights = 0;
@@ -335,6 +335,7 @@ struct params : virtual yapp::params {
     int camera_id;
     float background, amb;
     float exposure, gamma;
+    bool srgb;
 
     bool wireframe, edges;
     bool camera_lights;
@@ -352,7 +353,9 @@ inline void init_params(params* pars, ycmd::parser* parser) {
     pars->exposure =
         ycmd::parse_opt<float>(parser, "--exposure", "-e", "image exposure", 0);
     pars->gamma =
-        ycmd::parse_opt<float>(parser, "--gamma", "-g", "image gamma", 2.2);
+        ycmd::parse_opt<float>(parser, "--gamma", "-g", "image gamma", 1);
+    pars->srgb =
+        ycmd::parse_opt<bool>(parser, "--srgb", "", "image srgb", true);
     pars->amb =
         ycmd::parse_opt<float>(parser, "--ambient", "", "ambient factor", 0);
     pars->camera_lights = ycmd::parse_flag(parser, "--camera_lights", "-c",
@@ -399,8 +402,9 @@ inline void render(params* pars) {
         shade(pars->scene, pars->camera_id, pars->shade_prog, pars->shade_vao,
               pars->shade_txt, pars->shade_vbo,
               {pars->background, pars->background, pars->background, 0},
-              pars->exposure, pars->gamma, pars->wireframe, pars->edges,
-              pars->camera_lights, {pars->amb, pars->amb, pars->amb});
+              pars->exposure, pars->gamma, pars->srgb, pars->wireframe,
+              pars->edges, pars->camera_lights,
+              {pars->amb, pars->amb, pars->amb});
     }
 }
 

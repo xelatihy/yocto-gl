@@ -71,6 +71,7 @@ void text_callback(GLFWwindow* window, unsigned int key) {
         case ']': pars->exposure += 1; break;
         case '{': pars->gamma -= 0.1f; break;
         case '}': pars->gamma += 0.1f; break;
+        case '\\': pars->srgb = !pars->srgb; break;
         case 'w': pars->wireframe = !pars->wireframe; break;
         case 'e': pars->edges = !pars->edges; break;
         case 's': save_screenshot(window, pars->imfilename); break;
@@ -121,6 +122,7 @@ void draw_widgets(GLFWwindow* window) {
         nk_property_float(nuklear_ctx, "exposure", -20, &pars->exposure, 20, 1,
                           1);
         nk_property_float(nuklear_ctx, "gamma", 0.1, &pars->gamma, 5, 0.1, 0.1);
+        pars->srgb = nk_check_label(nuklear_ctx, "srgb output", pars->srgb);
         if (nk_button_label(nuklear_ctx, "tesselate")) {
             for (auto shape : pars->scene->shapes) {
                 yshape::tesselate_stdshape(
