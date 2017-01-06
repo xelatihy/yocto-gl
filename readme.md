@@ -1,9 +1,8 @@
 # Yocto/GL: C/C++ Single File Libraries for Physically-Based Graphics
 
-Yocto/GL is a collection of single-file libraries for building
-physically-based graphics applications.
-Yocto/GL is written in C++ and can be used from with C or C++ and works on
-OSX (clang), Linux (clang/gcc) and Windows (cl).
+Yocto/GL is a collection of single-file libraries for building physically-based
+graphics applications. Yocto/GL is written in C++ and can be used from with C or
+C++ and works on OSX (clang), Linux (clang/gcc) and Windows (cl).
 
 ## Main Libraries
 
@@ -26,9 +25,11 @@ This repository contains Yocto/GL applications written to test the libraries.
 
 - **ytestgen.cpp**: Creates various test cases for the path tracer and GL viewer.
 - **yimview.cpp**: HDR/PNG/JPG image viewer with exposure/gamma tone mapping.
-- **yshade.cpp**: OpenGL viewer.
-- **ytrace.cpp**: Interactive path-tracer, that can also run in offline mode.
-- **ysym.cpp**: Simple rigid body demo code. Does not work in offline mode.
+- **yshade.cpp**: Simple OpenGL viewer.
+- **yitrace.cpp**: Interactive path-tracer.
+- **ytrace.cpp**: Offline path-tracer.
+- **ysym.cpp**: Interactive rigid body demo code.
+- **ysym.cpp**: Offline rigid body demo.
 
 A few screenshots from **ytrace** are included here for demonstration.
 
@@ -48,16 +49,10 @@ Yocto/GL was originally written in C99. That version is at commit
 We moved to C++ since the lack of operator overloading made some math code
 really unreadable, defeating one of the main tenants of Yocto/GL.
 
-## Possible Future Development
-
-- Implementation Notes
-    - Quality improvements on BVH data
-    - Moving to STL containers by default
-- Particle-based simluation coming soon.
-- Procedural grammars.
-
 ## Brief Development History
 
+- Doxygen documentation
+- Internal speedup using raw pointers
 - Khronos glTF support
 - Modern C++ API
     - Using references to avoid pointer chasing and memory management
