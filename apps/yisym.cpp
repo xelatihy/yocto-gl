@@ -43,6 +43,7 @@ void init_params(params* pars, ycmd::parser* parser) {
     // init params
     ysym_app::init_params(pars, parser);
     yshade_app::init_params(pars, parser);
+    if (!pars->scene) return;
 
     // init values
     // save out init state

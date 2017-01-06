@@ -370,6 +370,7 @@ inline void init_params(params* pars, ycmd::parser* parser) {
 
     // check up
     if (!pars->scene) yapp::init_params(pars, parser);
+    if (!pars->scene) return;
 
     // fixing scene
     for (auto cam : pars->scene->cameras) cam->aspect = aspect;
