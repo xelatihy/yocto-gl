@@ -1,56 +1,55 @@
-//
-// YOCTO_MATH: a collection of vector math functions and simple containers
-// used to implement YOCTO. Features include
-// - static length float vectors, with specialization for 2, 3, 4 length
-// - static length matrices, with specialization for 2x2, 3x3, 4x4
-// - affine and rigid transforms
-// - linear algebra operations and transforms for fixed length matrices/vecs
-// - axis aligned bounding boxes
-// - rays
-// - random number generation via PCG32
-// - a few hash functions
-// - timer (depends on C++11 chrono)
-//
-// While we tested this library in the implementation of our other ones, we
-// consider this code incomplete and remommend to use a more complete math
-// library. So use it at your own peril.
-//
-// We developed our own library since we felt that all existing ones are either
-// complete, but unreadable or with lots of dependencies, or just as incomplete
-// and untested as ours.
-//
-
-//
-// COMPILATION:
-//
-// This library can only be used as a header only library in C++ since it uses
-// templates for its basic types. To use STL containers in YOCTO, instead of
-// the built in ones, #define YGL_USESTL before including this file or any
-// other YOCTO file that dependes on this.
-//
-
-//
-// HISTORY:
-// - v 0.5: simplification of constructors, raname bbox -> bbox
-// - v 0.4: overall type simplification
-// - v 0.3: internal C++ refactoring
-// - v 0.2: use of STL containers; removal of yocto containers
-// - v 0.1: C++ only implementation
-// - v 0.0: initial release in C99
-//
-
-//
-// ACKNOLEDGEMENTS
-//
-// This library includes code from the PCG random number generator,
-// boost hash_combine, Pixar multijittered sampling, code from "Real-Time
-// Collision Detection" by Christer Ericson and public domain code from
-// - https://github.com/sgorsten/linalg
-// - https://gist.github.com/badboy/6267743
-//
-// For design ideas of a modern math library, it was very helpful to look at
-// - https://github.com/sgorsten/linalg
-//
+///
+/// YOCTO_MATH: a collection of vector math functions and simple containers
+/// used to implement YOCTO. Features include
+/// - static length float vectors, with specialization for 2, 3, 4 length
+/// - static length matrices, with specialization for 2x2, 3x3, 4x4
+/// - affine and rigid transforms
+/// - linear algebra operations and transforms for fixed length matrices/vecs
+/// - axis aligned bounding boxes
+/// - rays
+/// - random number generation via PCG32
+/// - a few hash functions
+/// - timer (depends on C++11 chrono)
+///
+/// While we tested this library in the implementation of our other ones, we
+/// consider this code incomplete and remommend to use a more complete math
+/// library. So use it at your own peril.
+///
+/// We developed our own library since we felt that all existing ones are either
+/// complete, but unreadable or with lots of dependencies, or just as incomplete
+/// and untested as ours.
+///
+///
+/// COMPILATION:
+///
+/// This library can only be used as a header only library in C++ since it uses
+/// templates for its basic types.
+///
+///
+/// HISTORY:
+/// - v 0.7: doxygen comments
+/// - v 0.6: uniformed internal names
+/// - v 0.5: simplification of constructors, raname bbox -> bbox
+/// - v 0.4: overall type simplification
+/// - v 0.3: internal C++ refactoring
+/// - v 0.2: use of STL containers; removal of yocto containers
+/// - v 0.1: C++ only implementation
+/// - v 0.0: initial release in C99
+///
+///
+///
+/// ACKNOLEDGEMENTS
+///
+/// This library includes code from the PCG random number generator,
+/// boost hash_combine, Pixar multijittered sampling, code from "Real-Time
+/// Collision Detection" by Christer Ericson and public domain code from
+/// - https://github.com/sgorsten/linalg
+/// - https://gist.github.com/badboy/6267743
+///
+/// For design ideas of a modern math library, it was very helpful to look at
+/// - https://github.com/sgorsten/linalg
+///
+namespace ym {}
 
 //
 // LICENSE:
@@ -97,68 +96,62 @@
 #include <functional>
 #include <initializer_list>
 #include <limits>
-#include <type_traits>
-#include <unordered_map>
 #include <vector>
-
-// -----------------------------------------------------------------------------
-// CONSTANTS
-// -----------------------------------------------------------------------------
 
 namespace ym {
 
-//
-// Using directives
-//
-using std::fmod;
-using std::sin;
-using std::cos;
-using std::tan;
-using std::asin;
-using std::acos;
-using std::atan;
-using std::atan2;
-using std::sqrt;
-using std::pow;
-using std::abs;
+// -----------------------------------------------------------------------------
+// BASIC TYPEDEFS
+// -----------------------------------------------------------------------------
+
+/// @name basic typedefs
+/// @{
 
 // types from the standard library for consistency
 using size_t = std::size_t;
+using byte = unsigned char;
 
-// standard containers
-using std::vector;
-using std::array;
-using std::initializer_list;
-using std::function;
-using std::pair;
-using std::unordered_map;
+/// @}
 
-// pi (float)
+// -----------------------------------------------------------------------------
+// MATH CONSTANTS
+// -----------------------------------------------------------------------------
+
+/// @name main constants
+/// @{
+
+/// pi (float)
 const float pif = 3.14159265f;
-// pi (double)
+/// pi (double)
 const double pi = 3.1415926535897932384626433832795;
 
-// shortcat for max values
+/// shortcat for float max value
 const auto maxf = std::numeric_limits<float>::max();
+/// shortcat for int max value
 const auto maxi = std::numeric_limits<int>::max();
+
+/// @}
 
 // -----------------------------------------------------------------------------
 // BASIC MATH FUNCTIONS
 // -----------------------------------------------------------------------------
 
-// Safe minimum value.
+/// @name basic math functions
+/// @{
+
+/// Safe minimum value.
 template <typename T>
-constexpr inline T min(const T& x, const T& y) {
+constexpr inline T min(T x, T y) {
     return (x < y) ? x : y;
 }
 
-// Safe maximum value.
+/// Safe maximum value.
 template <typename T>
-constexpr inline T max(const T& x, const T& y) {
+constexpr inline T max(T x, T y) {
     return (x > y) ? x : y;
 }
 
-// Swap values.
+/// Swap values.
 template <typename T>
 constexpr inline void swap(T& a, T& b) {
     T c = a;
@@ -166,374 +159,415 @@ constexpr inline void swap(T& a, T& b) {
     b = c;
 }
 
-// Clamp a value between a minimum and a maximum.
+/// Clamp a value between a minimum and a maximum.
 template <typename T>
-constexpr inline T clamp(const T& x, const T& min_, const T& max_) {
+constexpr inline T clamp(T x, T min_, T max_) {
     return min(max(x, min_), max_);
 }
 
-// Linear interpolation.
-template <typename T, typename T1>
-constexpr inline T lerp(const T& a, const T& b, T1 t) {
+/// Linear interpolation.
+template <typename T>
+constexpr inline T lerp(T a, T b, T t) {
     return a * (1 - t) + b * t;
 }
 
-// Integer power of two
+/// Integer power of two
 constexpr inline int pow2(int x) { return 1 << x; }
+
+/// @}
 
 // -----------------------------------------------------------------------------
 // VECTORS
 // -----------------------------------------------------------------------------
 
-//
-// Vector of element of compile time length with default initializer,
-// constant initialization and initialization from a C array. Data access
-// via operator[].
-//
+/// @name vectors
+/// @{
+
+///
+/// Vector of elements of compile time dimension with default initializer,
+/// and conversione to/from std::array. Element access via operator[]. Supports
+/// all std::array operations.
+///
 template <typename T, size_t N>
-struct vec : array<T, N> {
-    // default constructor
-    vec() : array<T, N>{} {}
+struct vec : std::array<T, N> {
+    /// default constructor
+    constexpr vec() {}
 
-    // member constructor
-    template <typename... Args,
-              typename = std::enable_if_t<sizeof...(Args) == N>>
-    constexpr vec(Args... vv) : array<T, N>{T(vv)...} {}
-
-    // list constructor
-    constexpr vec(initializer_list<T> vv) {
+    /// list constructor
+    constexpr vec(std::initializer_list<T> vv) {
         assert(N == vv.size());
         auto i = 0;
         for (auto&& e : vv) (*this)[i++] = e;
     }
 
-    // copy constructor form array
-    constexpr vec(const array<T, N>& vv) : array<T, N>{vv} {}
+    /// copy constructor form array
+    constexpr vec(const std::array<T, N>& vv) : std::array<T, N>{vv} {}
 };
 
-//
-// Typedef for standard vectors.
-//
+/// @}
 
+/// @name vector typedefs
+
+/// 1-dimensional float vector
 using vec1f = vec<float, 1>;
+/// 2-dimensional float vector
 using vec2f = vec<float, 2>;
+/// 3-dimensional float vector
 using vec3f = vec<float, 3>;
+/// 4-dimensional float vector
 using vec4f = vec<float, 4>;
 
+/// 1-dimensional int vector
 using vec1i = vec<int, 1>;
+/// 2-dimensional int vector
 using vec2i = vec<int, 2>;
+/// 3-dimensional int vector
 using vec3i = vec<int, 3>;
+/// 4-dimensional int vector
 using vec4i = vec<int, 4>;
 
-using vec2b = vec<unsigned char, 2>;
-using vec3b = vec<unsigned char, 3>;
-using vec4b = vec<unsigned char, 4>;
+/// 1-dimensional byte vector
+using vec1b = vec<byte, 1>;
+/// 2-dimensional byte vector
+using vec2b = vec<byte, 2>;
+/// 3-dimensional byte vector
+using vec3b = vec<byte, 3>;
+/// 4-dimensional byte vector
+using vec4b = vec<byte, 4>;
 
-//
-// Vector Constants.
-//
+/// @}
 
-const auto zero2f = vec2f();
-const auto zero3f = vec3f();
-const auto zero4f = vec4f();
+/// @name vector initializations
+/// @{
 
-const auto zero2i = vec2i();
-const auto zero3i = vec3i();
-const auto zero4i = vec4i();
-
-//
-// Component-wise arithmentic.
-//
-
+/// Initialize a zero vector.
 template <typename T, size_t N>
-inline vec<T, N> operator+(const vec<T, N>& a) {
+constexpr inline vec<T, N> zero_vec() {
+    vec<T, N> c;
+    for (auto i = 0; i < N; i++) c[i] = 0;
+    return c;
+}
+
+/// @}
+
+/// @name vector constants
+/// @{
+
+/// 1-dimensional float zero vector
+const auto zero1f = zero_vec<float, 1>();
+/// 2-dimensional float zero vector
+const auto zero2f = zero_vec<float, 2>();
+/// 3-dimensional float zero vector
+const auto zero3f = zero_vec<float, 3>();
+/// 4-dimensional float zero vector
+const auto zero4f = zero_vec<float, 4>();
+
+/// 1-dimensional int zero vector
+const auto zero1i = zero_vec<int, 1>();
+/// 2-dimensional int zero vector
+const auto zero2i = zero_vec<int, 2>();
+/// 3-dimensional int zero vector
+const auto zero3i = zero_vec<int, 3>();
+/// 4-dimensional int zero vector
+const auto zero4i = zero_vec<int, 4>();
+
+/// @}
+
+/// @name vector operations
+/// @{
+
+/// vector operator +
+template <typename T, size_t N>
+constexpr inline vec<T, N> operator+(const vec<T, N>& a) {
     vec<T, N> c;
     for (auto i = 0; i < N; i++) c[i] = +a[i];
     return c;
 }
 
+/// vector operator -
 template <typename T, size_t N>
-inline vec<T, N> operator-(const vec<T, N>& a) {
+constexpr inline vec<T, N> operator-(const vec<T, N>& a) {
     vec<T, N> c;
     for (auto i = 0; i < N; i++) c[i] = -a[i];
     return c;
 }
 
+/// vector operator +
 template <typename T, size_t N>
-inline vec<T, N> operator+(const vec<T, N>& a, const vec<T, N>& b) {
+constexpr inline vec<T, N> operator+(const vec<T, N>& a, const vec<T, N>& b) {
     vec<T, N> c;
     for (auto i = 0; i < N; i++) c[i] = a[i] + b[i];
     return c;
 }
 
-template <typename T, size_t N, typename T1>
-inline vec<T, N> operator+(const vec<T, N>& a, const T1& b) {
-    vec<T, N> c;
-    for (auto i = 0; i < N; i++) c[i] = a[i] + b;
-    return c;
-}
-
-template <typename T, size_t N, typename T1>
-inline vec<T, N> operator+(const T1& a, const vec<T, N>& b) {
-    vec<T, N> c;
-    for (auto i = 0; i < N; i++) c[i] = a + b[i];
-    return c;
-}
-
+/// vector operator -
 template <typename T, size_t N>
-inline vec<T, N> operator-(const vec<T, N>& a, const vec<T, N>& b) {
+constexpr inline vec<T, N> operator-(const vec<T, N>& a, const vec<T, N>& b) {
     vec<T, N> c;
     for (auto i = 0; i < N; i++) c[i] = a[i] - b[i];
     return c;
 }
 
-template <typename T, size_t N, typename T1>
-inline vec<T, N> operator-(const vec<T, N>& a, const T1& b) {
-    vec<T, N> c;
-    for (auto i = 0; i < N; i++) c[i] = a[i] - b;
-    return c;
-}
-
-template <typename T, size_t N, typename T1>
-inline vec<T, N> operator-(const T1& a, const vec<T, N>& b) {
-    vec<T, N> c;
-    for (auto i = 0; i < N; i++) c[i] = a - b[i];
-    return c;
-}
-
+/// vector operator *
 template <typename T, size_t N>
-inline vec<T, N> operator*(const vec<T, N>& a, const vec<T, N>& b) {
+constexpr inline vec<T, N> operator*(const vec<T, N>& a, const vec<T, N>& b) {
     vec<T, N> c;
     for (auto i = 0; i < N; i++) c[i] = a[i] * b[i];
     return c;
 }
 
-template <typename T, size_t N, typename T1>
-inline vec<T, N> operator*(const vec<T, N>& a, const T1& b) {
+/// vector operator *
+template <typename T, size_t N>
+constexpr inline vec<T, N> operator*(const vec<T, N>& a, const T b) {
     vec<T, N> c;
     for (auto i = 0; i < N; i++) c[i] = a[i] * b;
     return c;
 }
 
-template <typename T1, typename T, size_t N>
-inline vec<T, N> operator*(const T1& a, const vec<T, N>& b) {
+/// vector operator *
+template <typename T, size_t N>
+constexpr inline vec<T, N> operator*(const T a, const vec<T, N>& b) {
     vec<T, N> c;
     for (auto i = 0; i < N; i++) c[i] = a * b[i];
     return c;
 }
 
+/// vector operator /
 template <typename T, size_t N>
-inline vec<T, N> operator/(const vec<T, N>& a, const vec<T, N>& b) {
+constexpr inline vec<T, N> operator/(const vec<T, N>& a, const vec<T, N>& b) {
     vec<T, N> c;
     for (auto i = 0; i < N; i++) c[i] = a[i] / b[i];
     return c;
 }
 
-template <typename T, size_t N, typename T1>
-inline vec<T, N> operator/(const vec<T, N>& a, const T1 b) {
+/// vector operator /
+template <typename T, size_t N>
+constexpr inline vec<T, N> operator/(const vec<T, N>& a, const T b) {
     vec<T, N> c;
     for (auto i = 0; i < N; i++) c[i] = a[i] / b;
     return c;
 }
 
+/// vector operator /
 template <typename T1, typename T, size_t N>
-inline vec<T, N> operator/(const T1& a, const vec<T, N>& b) {
+constexpr inline vec<T, N> operator/(const T1& a, const vec<T, N>& b) {
     vec<T, N> c;
     for (auto i = 0; i < N; i++) c[i] = a / b[i];
     return c;
 }
 
-//
-// Component-wise assignment arithmentic.
-//
-
+/// vector operator +=
 template <typename T, size_t N>
-inline vec<T, N>& operator+=(vec<T, N>& a, const vec<T, N>& b) {
+constexpr inline vec<T, N>& operator+=(vec<T, N>& a, const vec<T, N>& b) {
     return a = a + b;
 }
 
+/// vector operator -=
 template <typename T, size_t N>
-inline vec<T, N>& operator-=(vec<T, N>& a, const vec<T, N>& b) {
+constexpr inline vec<T, N>& operator-=(vec<T, N>& a, const vec<T, N>& b) {
     return a = a - b;
 }
 
+/// vector operator *=
 template <typename T, size_t N>
-inline vec<T, N>& operator*=(vec<T, N>& a, const vec<T, N>& b) {
+constexpr inline vec<T, N>& operator*=(vec<T, N>& a, const vec<T, N>& b) {
     return a = a * b;
 }
 
-template <typename T, size_t N, typename T1>
-inline vec<T, N>& operator*=(vec<T, N>& a, const T1& b) {
+/// vector operator *=
+template <typename T, size_t N>
+constexpr inline vec<T, N>& operator*=(vec<T, N>& a, const T b) {
     return a = a * b;
 }
 
+/// vector operator /=
 template <typename T, size_t N>
-inline vec<T, N>& operator/=(vec<T, N>& a, const vec<T, N>& b) {
+constexpr inline vec<T, N>& operator/=(vec<T, N>& a, const vec<T, N>& b) {
     return a = a / b;
 }
 
-template <typename T, size_t N, typename T1>
-inline vec<T, N>& operator/=(vec<T, N>& a, const T1 b) {
+/// vector operator /=
+template <typename T, size_t N>
+constexpr inline vec<T, N>& operator/=(vec<T, N>& a, const T b) {
     return a = a / b;
 }
 
-//
-// Vector operations
-//
+/// vector dot product
 template <typename T, size_t N>
-inline T dot(const vec<T, N>& a, const vec<T, N>& b) {
+constexpr inline T dot(const vec<T, N>& a, const vec<T, N>& b) {
     auto c = T(0);
     for (auto i = 0; i < N; i++) c += a[i] * b[i];
     return c;
 }
 
+/// vector length
 template <typename T, size_t N>
-inline T length(const vec<T, N>& a) {
+constexpr inline T length(const vec<T, N>& a) {
     return sqrt(dot(a, a));
 }
 
+/// vector length squared
 template <typename T, size_t N>
-inline T lengthsqr(const vec<T, N>& a) {
+constexpr inline T lengthsqr(const vec<T, N>& a) {
     return dot(a, a);
 }
 
+/// vector normalization
 template <typename T, size_t N>
-inline vec<T, N> normalize(const vec<T, N>& a) {
+constexpr inline vec<T, N> normalize(const vec<T, N>& a) {
     auto l = length(a);
     if (l == 0) return a;
     return a * (1 / l);
 }
 
+/// point distance
 template <typename T, size_t N>
-inline T dist(const vec<T, N>& a, const vec<T, N>& b) {
+constexpr inline T dist(const vec<T, N>& a, const vec<T, N>& b) {
     return length(a - b);
 }
 
+/// point distance squared
 template <typename T, size_t N>
-inline T distsqr(const vec<T, N>& a, const vec<T, N>& b) {
+constexpr inline T distsqr(const vec<T, N>& a, const vec<T, N>& b) {
     return lengthsqr(a - b);
 }
 
+/// vector cross product (2d)
 template <typename T>
-inline T cross(const vec<T, 2>& a, const vec<T, 2>& b) {
+constexpr inline T cross(const vec<T, 2>& a, const vec<T, 2>& b) {
     return a[0] * b[1] - a[1] * b[0];
 }
 
+/// vector cross product (3d)
 template <typename T>
-inline vec<T, 3> cross(const vec<T, 3>& a, const vec<T, 3>& b) {
+constexpr inline vec<T, 3> cross(const vec<T, 3>& a, const vec<T, 3>& b) {
     return {a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2],
             a[0] * b[1] - a[1] * b[0]};
 }
 
+/// angle between normalized vectors
 template <typename T, size_t N>
-T uangle(const vec<T, N>& a, const vec<T, N>& b) {
+constexpr inline T uangle(const vec<T, N>& a, const vec<T, N>& b) {
     auto d = dot(a, b);
-    return d > 1 ? 0 : acos(d < -1 ? -1 : d);
+    return d > 1 ? 0 : std::acos(d < -1 ? -1 : d);
 }
 
+/// angle between vectors
 template <typename T, size_t N>
-T angle(const vec<T, N>& a, const vec<T, N>& b) {
+constexpr inline T angle(const vec<T, N>& a, const vec<T, N>& b) {
     return uangle(normalize(a), normalize(b));
 }
 
+/// vector linear interpolation
 template <typename T, size_t N>
-inline vec<T, N> nlerp(const vec<T, N>& a, const vec<T, N>& b, T t) {
+constexpr inline vec<T, N> lerp(const vec<T, N>& a, const vec<T, N>& b, T t) {
+    return a * (1 - t) + b * t;
+}
+
+/// vector normalized linear interpolation
+template <typename T, size_t N>
+constexpr inline vec<T, N> nlerp(const vec<T, N>& a, const vec<T, N>& b, T t) {
     return normalize(lerp(a, b, t));
 }
 
+/// vector spherical linear interpolation (vectors have to be normalized)
 template <typename T, size_t N>
-inline vec<T, N> slerp(const vec<T, N>& a, const vec<T, N>& b, T t) {
+constexpr inline vec<T, N> slerp(const vec<T, N>& a, const vec<T, N>& b, T t) {
     auto th = uangle(a, b);
     return th == 0 ? a
-                   : a * (sin(th * (1 - t)) / sin(th)) +
-                         b * (sin(th * t) / sin(th));
+                   : a * (std::sin(th * (1 - t)) / std::sin(th)) +
+                         b * (std::sin(th * t) / std::sin(th));
 }
 
+/// orthogonal vector
 // http://lolengine.net/blog/2013/09/21/picking-orthogonal-vector-combing-coconuts)
 template <typename T>
-inline vec<T, 3> orthogonal(const vec<T, 3>& v) {
-    return abs(v[0]) > abs(v[2]) ? vec<T, 3>{-v[1], v[0], 0}
-                                 : vec<T, 3>{0, -v[2], v[1]};
+constexpr inline vec<T, 3> orthogonal(const vec<T, 3>& v) {
+    return std::abs(v[0]) > std::abs(v[2]) ? vec<T, 3>{-v[1], v[0], 0}
+                                           : vec<T, 3>{0, -v[2], v[1]};
 }
 
+/// orthonormalize two vectors
 template <typename T>
-inline vec<T, 3> orthonormalize(const vec<T, 3>& a, const vec<T, 3>& b) {
+constexpr inline vec<T, 3> orthonormalize(const vec<T, 3>& a,
+                                          const vec<T, 3>& b) {
     return normalize(a - b * ym_dot(a, b));
 }
 
-//
-// Aggregate operations.
-//
-template <typename T, size_t M>
-inline T sum(const vec<T, M>& a) {
-    auto s = T(0);
-    for (auto i = 0; i < M; i++) s += a[i];
+/// sum of vector elements
+template <typename T, size_t N>
+constexpr inline T sum(const vec<T, N>& a) {
+    auto s = T{0};
+    for (auto i = 0; i < N; i++) s += a[i];
     return s;
 }
 
-template <typename T, size_t M>
-inline T mean(const vec<T, M>& a) {
-    return sum(a) / M;
+/// mean of vector elements
+template <typename T, size_t N>
+constexpr inline T mean(const vec<T, N>& a) {
+    return sum(a) / N;
 }
 
-//
-// Component-wise min/max and clamping.
-//
-
+/// vector component-wise mim
 template <typename T, size_t N>
-inline vec<T, N> min(const vec<T, N>& a, const vec<T, N>& b) {
+constexpr inline vec<T, N> min(const vec<T, N>& a, const vec<T, N>& b) {
     vec<T, N> c;
     for (auto i = 0; i < N; i++) c[i] = min(a[i], b[i]);
     return c;
 }
 
+/// vector component-wise max
 template <typename T, size_t N>
-inline vec<T, N> max(const vec<T, N>& a, const vec<T, N>& b) {
+constexpr inline vec<T, N> max(const vec<T, N>& a, const vec<T, N>& b) {
     vec<T, N> c;
     for (auto i = 0; i < N; i++) c[i] = max(a[i], b[i]);
     return c;
 }
 
+/// vector component-wise mim
 template <typename T, size_t N>
-inline vec<T, N> min(const vec<T, N>& a, const T& b) {
+constexpr inline vec<T, N> min(const vec<T, N>& a, const T& b) {
     vec<T, N> c;
     for (auto i = 0; i < N; i++) c[i] = min(a[i], b);
     return c;
 }
 
+/// vector component-wise mim
 template <typename T, size_t N>
-inline vec<T, N> max(const vec<T, N>& a, const T& b) {
+constexpr inline vec<T, N> max(const vec<T, N>& a, const T& b) {
     vec<T, N> c;
     for (auto i = 0; i < N; i++) c[i] = max(a[i], b);
     return c;
 }
 
+/// vector component-wise clamp
 template <typename T, size_t N>
-inline vec<T, N> clamp(const vec<T, N>& x, const T& min, const T& max) {
+constexpr inline vec<T, N> clamp(const vec<T, N>& x, const T& min,
+                                 const T& max) {
     vec<T, N> c;
     for (auto i = 0; i < N; i++) c[i] = clamp(x[i], min, max);
     return c;
 }
 
+/// vector component-wise clamp
 template <typename T, size_t N>
-inline vec<T, N> clamp(const vec<T, N>& x, const vec<T, N>& min,
-                       const vec<T, N>& max) {
+constexpr inline vec<T, N> clamp(const vec<T, N>& x, const vec<T, N>& min,
+                                 const vec<T, N>& max) {
     vec<T, N> c;
     for (auto i = 0; i < N; i++) c[i] = clamp(x[i], min[i], max[i]);
     return c;
 }
 
+/// clamp the length of a vector
 template <typename T, size_t N, typename T1>
-inline vec<T, N> clamplen(const vec<T, N> x, T1 max) {
+constexpr inline vec<T, N> clamplen(const vec<T, N> x, T1 max) {
     auto l = length(x);
     return (l > (T)max) ? x * (T)max / l : x;
 }
 
-//
-// Element min/max.
-//
+/// index of the min vector element
 template <typename T, size_t N>
-inline int min_element(const vec<T, N>& a) {
+constexpr inline int min_element(const vec<T, N>& a) {
     auto v = std::numeric_limits<T>::max();
     auto pos = -1;
     for (auto i = 0; i < N; i++) {
@@ -544,8 +578,10 @@ inline int min_element(const vec<T, N>& a) {
     }
     return pos;
 }
+
+/// index of the max vector element
 template <typename T, size_t N>
-inline int max_element(const vec<T, N>& a) {
+constexpr inline int max_element(const vec<T, N>& a) {
     auto v = -std::numeric_limits<T>::max();
     auto pos = -1;
     for (auto i = 0; i < N; i++) {
@@ -557,157 +593,198 @@ inline int max_element(const vec<T, N>& a) {
     return pos;
 }
 
+// @}
+
 // -----------------------------------------------------------------------------
 // MATRICES
 // -----------------------------------------------------------------------------
 
-//
-// Matrix of element of compile time dimensions stored in column major format.
-// Allows for default initializer, initalization with columns and to/from
-// smaller matrices.
-// Access to columns via operator [] and raw data pointer data().
-//
+/// @name matrices
+/// @{
+
+///
+/// Matrix of elements of compile time dimensions, stored in column major
+/// format, with default initializer, and conversions to/from std::array.
+/// Colums access via operator[]. Supports all std::array operations.
+///
 template <typename T, size_t N, size_t M>
-struct mat : array<vec<T, N>, M> {
+struct mat : std::array<vec<T, N>, M> {
     using V = vec<T, N>;
 
-    constexpr mat() : array<vec<T, N>, M>{} {}
+    /// default constructor
+    constexpr mat() : std::array<vec<T, N>, M>{} {}
 
-    // member constructor
-    template <typename... Args,
-              typename = std::enable_if_t<sizeof...(Args) == M>>
-    constexpr mat(Args... args) : array<vec<T, N>, M>{V(args)...} {}
-
-    // list constructor
-    constexpr mat(initializer_list<V> vv) {
+    /// list constructor
+    constexpr mat(std::initializer_list<V> vv) {
         assert(M == vv.size());
         auto i = 0;
         for (auto&& e : vv) (*this)[i++] = e;
     }
 
-    // conversions
-    constexpr mat(const array<array<float, N>, M>& v) {
+    /// conversion from std::array
+    constexpr mat(const std::array<std::array<float, N>, M>& v) {
         *this = *(mat<T, N, M>*)&v;
     }
 
-    constexpr operator array<array<T, N>, M>() const {
-        return *(array<array<T, N>, M>*)this;
+    /// conversion to std::array
+    constexpr operator std::array<std::array<T, N>, M>() const {
+        return *(std::array<std::array<T, N>, M>*)this;
     }
 
-    constexpr mat(const array<float, N * M>& v) { *this = *(mat<T, N, M>*)&v; }
+    /// conversion from flattened std::array
+    constexpr mat(const std::array<float, N * M>& v) {
+        *this = *(mat<T, N, M>*)&v;
+    }
 
-    constexpr operator array<T, N * M>() const {
-        return *(array<T, N * M>*)this;
+    /// conversion to flattened std::array
+    constexpr operator std::array<T, N * M>() const {
+        return *(std::array<T, N * M>*)this;
     }
 };
 
-//
-// Typedef for standard matrices.
-//
+/// @}
 
+/// @name matrix typedefs
+/// @{
+
+/// 1-dimensional float matrix
+using mat1f = mat<float, 1, 1>;
+/// 2-dimensional float matrix
 using mat2f = mat<float, 2, 2>;
+/// 3-dimensional float matrix
 using mat3f = mat<float, 3, 3>;
+/// 4-dimensional float matrix
 using mat4f = mat<float, 4, 4>;
 
-//
-// Matrix Constants.
-//
+/// @}
 
-const auto identity_mat2f = mat2f{{1, 0}, {0, 1}};
-const auto identity_mat3f = mat3f{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
-const auto identity_mat4f =
-    mat4f{{1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
+/// @name matrix initializations
 
-//
-// Components-wise arithmetic
-//
+/// Initialize an identity matrix.
+template <typename T, size_t N>
+constexpr inline mat<T, N, N> identity_mat() {
+    mat<T, N, N> c;
+    for (auto j = 0; j < N; j++)
+        for (auto i = 0; i < N; i++) c[j][i] = (i == j) ? 1 : 0;
+    return c;
+}
 
+/// @}
+
+/// @name matrix constants
+/// @{
+
+/// 1-dimensional float identity matrix
+const auto identity_mat1f = identity_mat<float, 1>();
+/// 2-dimensional float identity matrix
+const auto identity_mat2f = identity_mat<float, 2>();
+/// 3-dimensional float identity matrix
+const auto identity_mat3f = identity_mat<float, 3>();
+/// 4-dimensional float identity matrix
+const auto identity_mat4f = identity_mat<float, 4>();
+
+/// @}
+
+/// @name matrix operations
+/// @{
+
+/// matrix operator -
 template <typename T, size_t N, size_t M>
-inline mat<T, M, N> operator-(const mat<T, N, M>& a) {
+constexpr inline mat<T, M, N> operator-(const mat<T, N, M>& a) {
     mat<T, N, M> c;
     for (auto i = 0; i < M; i++) c[i] = -a[i];
     return c;
 }
 
+/// matrix operator +
 template <typename T, size_t N, size_t M>
-inline mat<T, M, N> operator+(const mat<T, N, M>& a, const mat<T, N, M>& b) {
+constexpr inline mat<T, M, N> operator+(const mat<T, N, M>& a,
+                                        const mat<T, N, M>& b) {
     mat<T, N, M> c;
     for (auto i = 0; i < M; i++) c[i] = a[i] + b[i];
     return c;
 }
 
-//
-// Vector/Matrix multiplies
-//
-
+/// matrix scalar multiply
 template <typename T, size_t N, size_t M>
-inline mat<T, M, N> operator*(const mat<T, N, M>& a, T b) {
+constexpr inline mat<T, M, N> operator*(const mat<T, N, M>& a, T b) {
     mat<T, N, M> c;
     for (auto i = 0; i < M; i++) c[i] = a[i] * b;
     return c;
 }
 
+/// matrix scalar division
 template <typename T, size_t N, size_t M>
-inline mat<T, M, N> operator/(const mat<T, N, M>& a, T b) {
+constexpr inline mat<T, M, N> operator/(const mat<T, N, M>& a, T b) {
     mat<T, N, M> c;
     for (auto i = 0; i < M; i++) c[i] = a[i] / b;
     return c;
 }
 
+/// matrix-vector right multiply
 template <typename T, size_t N, size_t M>
-inline vec<T, N> operator*(const mat<T, N, M>& a, const vec<T, M>& b) {
-    vec<T, N> c;
+constexpr inline vec<T, N> operator*(const mat<T, N, M>& a,
+                                     const vec<T, M>& b) {
+    vec<T, N> c = zero_vec<T, N>();
     for (auto j = 0; j < M; j++) c += a[j] * b[j];
     return c;
 }
 
+/// matrix-vector left multiply
 template <typename T, size_t N, size_t M>
-inline vec<T, M> operator*(const vec<T, N>& a, const mat<T, N, M>& b) {
+constexpr inline vec<T, M> operator*(const vec<T, N>& a,
+                                     const mat<T, N, M>& b) {
     vec<T, M> c;
     for (auto j = 0; j < M; j++) c[j] = dot(a, b[j]);
     return c;
 }
 
+/// matrix-matrix multiply
 template <typename T, size_t N, size_t M, size_t K>
-inline mat<T, N, M> operator*(const mat<T, N, K>& a, const mat<T, K, M>& b) {
+constexpr inline mat<T, N, M> operator*(const mat<T, N, K>& a,
+                                        const mat<T, K, M>& b) {
     mat<T, N, M> c;
     for (auto j = 0; j < M; j++) c[j] = a * b[j];
     return c;
 }
 
+/// matrix sum assignment
 template <typename T, size_t N, size_t M>
-inline mat<T, M, N>& operator+=(mat<T, N, M>& a, const mat<T, N, M>& b) {
+constexpr inline mat<T, M, N>& operator+=(mat<T, N, M>& a,
+                                          const mat<T, N, M>& b) {
     return a = a + b;
 }
 
+/// matrix-matrix multiply assignment
 template <typename T, size_t N, size_t M>
-inline mat<T, M, N>& operator*=(mat<T, N, M>& a, const mat<T, N, M>& b) {
+constexpr inline mat<T, M, N>& operator*=(mat<T, N, M>& a,
+                                          const mat<T, N, M>& b) {
     return a = a * b;
 }
 
+/// matrix scaling assignment
 template <typename T, size_t N, size_t M>
-inline mat<T, M, N>& operator*=(mat<T, N, M>& a, const T& b) {
+constexpr inline mat<T, M, N>& operator*=(mat<T, N, M>& a, const T& b) {
     return a = a * b;
 }
 
+/// matrix scaling assignment
 template <typename T, size_t N, size_t M>
-inline mat<T, M, N>& operator/=(mat<T, N, M>& a, const T& b) {
+constexpr inline mat<T, M, N>& operator/=(mat<T, N, M>& a, const T& b) {
     return a = a / b;
 }
 
-//
-// Linear Algebra operations.
-//
-
+/// matrix diagonal
 template <typename T, size_t N>
-vec<T, N> diagonal(const mat<T, N, N>& a) {
+constexpr vec<T, N> mat_diagonal(const mat<T, N, N>& a) {
     vec<T, N> d;
     for (auto i = 0; i < N; i++) d[i] = a[i][i];
     return d;
 }
 
+/// matrix transpose
 template <typename T, size_t N, size_t M>
-inline mat<T, M, N> transpose(const mat<T, N, M>& a) {
+constexpr inline mat<T, M, N> transpose(const mat<T, N, M>& a) {
     mat<T, M, N> c;
     for (auto j = 0; j < M; j++) {
         for (auto i = 0; i < N; i++) {
@@ -717,13 +794,15 @@ inline mat<T, M, N> transpose(const mat<T, N, M>& a) {
     return c;
 }
 
+/// matrix adjugate (2x2)
 template <typename T>
-inline mat<T, 2, 2> adjugate(const mat<T, 2, 2>& a) {
+constexpr inline mat<T, 2, 2> adjugate(const mat<T, 2, 2>& a) {
     return {{a[1][1], -a[0][1]}, {-a[1][0], a[0][0]}};
 }
 
+/// matrix adjugate (3x3)
 template <typename T>
-inline mat<T, 3, 3> adjugate(const mat<T, 3, 3>& a) {
+constexpr inline mat<T, 3, 3> adjugate(const mat<T, 3, 3>& a) {
     return {{a[1][1] * a[2][2] - a[2][1] * a[1][2],
              a[2][1] * a[0][2] - a[0][1] * a[2][2],
              a[0][1] * a[1][2] - a[1][1] * a[0][2]},
@@ -735,8 +814,9 @@ inline mat<T, 3, 3> adjugate(const mat<T, 3, 3>& a) {
              a[0][0] * a[1][1] - a[1][0] * a[0][1]}};
 }
 
+/// matrix adjugate (4x4)
 template <typename T>
-inline mat<T, 4, 4> adjugate(const mat<T, 4, 4>& a) {
+constexpr inline mat<T, 4, 4> adjugate(const mat<T, 4, 4>& a) {
     return {{a[1][1] * a[2][2] * a[3][3] + a[3][1] * a[1][2] * a[2][3] +
                  a[2][1] * a[3][2] * a[1][3] - a[1][1] * a[3][2] * a[2][3] -
                  a[2][1] * a[1][2] * a[3][3] - a[3][1] * a[2][2] * a[1][3],
@@ -787,20 +867,23 @@ inline mat<T, 4, 4> adjugate(const mat<T, 4, 4>& a) {
                  a[1][0] * a[0][1] * a[2][2] - a[2][0] * a[1][1] * a[0][2]}};
 }
 
+/// matrix determinant (2x2)
 template <typename T>
-inline T determinant(const mat<T, 2, 2>& a) {
+constexpr inline T determinant(const mat<T, 2, 2>& a) {
     return a[0][0] * a[1][1] - a[0][1] * a[1][0];
 }
 
+/// matrix determinant (3x3)
 template <typename T>
-inline T determinant(const mat<T, 3, 3>& a) {
+constexpr inline T determinant(const mat<T, 3, 3>& a) {
     return a[0][0] * (a[1][1] * a[2][2] - a[2][1] * a[1][2]) +
            a[0][1] * (a[1][2] * a[2][0] - a[2][2] * a[1][0]) +
            a[0][2] * (a[1][0] * a[2][1] - a[2][0] * a[1][1]);
 }
 
+/// matrix determinant (4x4)
 template <typename T>
-inline T determinant(const mat<T, 4, 4>& a) {
+constexpr inline T determinant(const mat<T, 4, 4>& a) {
     return a[0][0] *
                (a[1][1] * a[2][2] * a[3][3] + a[3][1] * a[1][2] * a[2][3] +
                 a[2][1] * a[3][2] * a[1][3] - a[1][1] * a[3][2] * a[2][3] -
@@ -819,73 +902,162 @@ inline T determinant(const mat<T, 4, 4>& a) {
                 a[3][0] * a[1][1] * a[2][2] - a[2][0] * a[3][1] * a[1][2]);
 }
 
+/// matrix inverse (uses adjugate and determinant)
 template <typename T, size_t N>
-inline mat<T, N, N> inverse(const mat<T, N, N>& a) {
+constexpr inline mat<T, N, N> inverse(const mat<T, N, N>& a) {
     return adjugate(a) / determinant(a);
 }
 
+/// @}
+
 // -----------------------------------------------------------------------------
-// RIGID TRANSFORMS
+// RIGID BODY TRANSFORMS/FRAMES
 // -----------------------------------------------------------------------------
 
-//
-// Rigid transforms stored as a linear tranform NxN-matrix m and a translation
-// N-vector t. This is a special case of an affine matrix.
-// Provides converion to/from (N+1)x(N+1) matrices. The matrix
-// columns are the axis of the coordinate system, while the translation is
-// its origin.
-//
+/// @name frames
+/// @{
+
+///
+/// Rigid transforms stored as a column-major affine matrix Nx(N+1).
+/// In memory, this representation is equivalent to storing an NxN rotation
+/// followed by a Nx1 translation. Viewed this way, the representation allows
+/// also to retrive the axis of the coordinate frame as the first N column and
+/// the translation as the N+1 column.
+/// Colums access via operator[]. Supports all std::array operations.
+///
 template <typename T, size_t N>
-struct frame : array<vec<T, N>, N + 1> {
-    using V = vec<T, N>;
-    using M = mat<T, N, N>;
+struct frame : std::array<vec<T, N>, N + 1> {
+    /// default constructor
+    constexpr frame() : std::array<vec<T, N>, N + 1>{} {}
 
-    constexpr frame() : array<vec<T, N>, N + 1>{} {}
-
-    constexpr frame(const M& m, const V& t) {
-        for (auto i = 0; i < N; i++) (*this)[i] = m[i];
-        (*this)[N] = t;
-    }
-
-    // member constructor
-    template <typename... Args,
-              typename = std::enable_if_t<sizeof...(Args) == N + 1>>
-    constexpr frame(Args... args) : array<vec<T, N>, N + 1>{V(args)...} {}
-
-    // list constructor
-    constexpr frame(initializer_list<V> vv) {
+    /// list constructor
+    constexpr frame(std::initializer_list<vec<T, N>> vv) {
         assert(N + 1 == vv.size());
         auto i = 0;
         for (auto&& e : vv) (*this)[i++] = e;
     }
 
-    // view as linear + translation
-    constexpr const V& o() const { return (*this)[N]; }
-    constexpr V& o() { return (*this)[N]; }
-    constexpr const M& m() const { return *(M*)this; }
-    constexpr M& m() { return *(M*)this; }
+    /// conversion from std::array
+    constexpr frame(const std::array<std::array<float, N>, N + 1>& v) {
+        *this = *(frame<T, N>*)&v;
+    }
+
+    /// conversion to std::array
+    constexpr operator std::array<std::array<T, N>, N + 1>() const {
+        return *(std::array<std::array<T, N>, N + 1>*)this;
+    }
+
+    /// conversion from flattened std::array
+    constexpr frame(const std::array<float, N*(N + 1)>& v) {
+        *this = *(frame<T, N>*)&v;
+    }
+
+    /// conversion to flattened std::array
+    constexpr operator std::array<T, N*(N + 1)>() const {
+        return *(std::array<T, N*(N + 1)>*)this;
+    }
 };
 
-//
-// Typedef for standard rigid transforms / frames.
-//
+/// @}
 
+/// @name frame typedefs
+/// @{
+
+/// 1-dimensional float frame
+using frame1f = frame<float, 1>;
+/// 2-dimensional float frame
 using frame2f = frame<float, 2>;
+/// 3-dimensional float frame
 using frame3f = frame<float, 3>;
+/// 4-dimensional float frame
+using frame4f = frame<float, 4>;
 
-//
-// Rigid Transforms/Frames Constants.
-//
+/// @}
 
-const auto identity_frame2f = frame2f{{1, 0}, {0, 1}, {0, 0}};
-const auto identity_frame3f =
-    frame3f{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}};
+/// @name frame initializations
+/// @{
 
-//
-// Conversions
-//
+/// Initialize an identity frame.
 template <typename T, size_t N>
-inline mat<T, N + 1, N + 1> to_mat(const frame<T, N>& a) {
+constexpr inline frame<T, N> identity_frame() {
+    frame<T, N> c;
+    for (auto j = 0; j < N; j++)
+        for (auto i = 0; i < N; i++) c[j][i] = (i == j) ? 1 : 0;
+    for (auto i = 0; i < N; i++) c[N][i] = 0;
+    return c;
+}
+
+/// initializes a frame from a rotation and translation
+template <typename T, size_t N>
+constexpr inline frame<T, N> make_frame(const mat<T, N, N>& m,
+                                        const vec<T, N>& v) {
+    frame<T, N> f;
+    for (auto i = 0; i < N; i++) f[i] = m[i];
+    f[N] = v;
+    return f;
+}
+
+// initializes a frame3 from origin and z.
+template <typename T>
+constexpr inline frame<T, 3> make_frame3_fromz(const vec<T, 3>& o,
+                                               const vec<T, 3>& z_) {
+    auto z = normalize(z_);
+    auto x = normalize(orthogonal(z));
+    auto y = normalize(cross(z, x));
+    return {x, y, z, o};
+}
+
+/// @}
+
+/// @name frame constants
+/// @{
+
+/// 1-dimensional float identity frame
+const auto identity_frame1f = identity_frame<float, 1>();
+/// 2-dimensional float identity frame
+const auto identity_frame2f = identity_frame<float, 2>();
+/// 3-dimensional float identity frame
+const auto identity_frame3f = identity_frame<float, 3>();
+/// 4-dimensional float identity frame
+const auto identity_frame4f = identity_frame<float, 4>();
+
+/// @}
+
+/// @name frame element access
+/// @{
+
+/// frame position const access
+template <typename T, size_t N>
+constexpr inline const vec<T, N>& pos(const frame<T, N>& f) {
+    return f[N];
+}
+
+/// frame rotation const access
+template <typename T, size_t N>
+constexpr inline const mat<T, N, N>& rot(const frame<T, N>& f) {
+    return *(mat<T, N, N>*)&f;
+}
+
+/// frame position reference
+template <typename T, size_t N>
+constexpr inline vec<T, N>& pos(frame<T, N>& f) {
+    return f[N];
+}
+
+/// frame rotation reference
+template <typename T, size_t N>
+constexpr inline mat<T, N, N>& rot(frame<T, N>& f) {
+    return *(mat<T, N, N>*)&f;
+}
+
+/// @}
+
+/// @name frame operations
+/// @{
+
+/// frame to matrix conversion
+template <typename T, size_t N>
+constexpr inline mat<T, N + 1, N + 1> to_mat(const frame<T, N>& a) {
     auto m = mat<T, N + 1, N + 1>();
     for (auto j = 0; j < N; j++) {
         (vec<T, N>&)m[j] = a[j];
@@ -896,8 +1068,9 @@ inline mat<T, N + 1, N + 1> to_mat(const frame<T, N>& a) {
     return m;
 }
 
+/// matrix to frame conversion
 template <typename T, size_t N>
-inline frame<T, N - 1> to_frame(const mat<T, N, N>& a) {
+constexpr inline frame<T, N - 1> to_frame(const mat<T, N, N>& a) {
     auto f = frame<T, N - 1>();
     for (auto j = 0; j < N; j++) {
         for (auto i = 0; i < N - 1; i++) {
@@ -907,58 +1080,80 @@ inline frame<T, N - 1> to_frame(const mat<T, N, N>& a) {
     return f;
 }
 
-//
-// Matrix operations for transforms.
-//
-
+/// frame composition (equivalent to affine matrix multiply)
 template <typename T, size_t N>
-inline frame<T, N> operator*(const frame<T, N>& a, const frame<T, N>& b) {
-    return {a.m() * b.m(), a.m() * b.o() + a.o()};
+constexpr inline frame<T, N> operator*(const frame<T, N>& a,
+                                       const frame<T, N>& b) {
+    return make_frame(ym::rot(a) * ym::rot(b),
+                      ym::rot(a) * ym::pos(b) + ym::pos(a));
 }
 
+/// frame inverse (equivalent to rigid affine inverse)
 template <typename T, size_t N>
-inline frame<T, N> inverse(const frame<T, N>& a) {
-    auto minv = transpose(a.m());
-    return {minv, -(minv * a.o())};
+constexpr inline frame<T, N> inverse(const frame<T, N>& a) {
+    auto minv = transpose(ym::rot(a));
+    return make_frame(minv, -(minv * ym::pos(a)));
 }
+
+/// @}
 
 // -----------------------------------------------------------------------------
 // QUATERNIONS
 // -----------------------------------------------------------------------------
 
-//
-// Quaternions implemented as a vec4. Data access via operator[].
-// Quaterions are xi + yj + zk + w
-//
-template <typename T, size_t N>
-struct quat : array<T, N> {
-    // default constructor
-    constexpr quat() : array<T, 4>{} {}
+/// @name quaterions
+/// @{
 
-    // member constructor
-    template <typename... Args,
-              typename = std::enable_if_t<sizeof...(Args) == N>>
-    constexpr quat(Args... vv) : array<T, 4>{T(vv)...} {}
+///
+/// Quaternions implemented as a vec<T,4>. Data access via operator[].
+/// Quaterions are xi + yj + zk + w.
+///
+template <typename T>
+struct quat : std::array<T, 4> {
+    /// default constructor
+    constexpr quat() : std::array<T, 4>{} {}
 
     // list constructor
-    constexpr quat(initializer_list<T> vv) {
-        assert(N == vv.size());
+    constexpr quat(std::initializer_list<T> vv) {
+        assert(4 == vv.size());
         auto i = 0;
         for (auto&& e : vv) (*this)[i++] = e;
     }
-
-    // axis angle access
-    constexpr T angle() const { return acos((*this)[2]) * 2; }
-    constexpr vec<T, 3> axis() {
-        return normalize(vec<T, 3>((*this)[0], (*this)[1], (*this)[2]));
-    }
 };
 
-//
-// Conversions
-//
+/// @}
+
+/// @name quaterion typedefs
+/// @{
+
+/// float quaterion
+using quat4f = quat<float>;
+
+/// @}
+
+/// @name quaterion element access
+/// @{
+
+/// quaternion angle const access
 template <typename T>
-inline mat<T, 4, 4> to_mat(const quat<T, 4>& v) {
+constexpr inline T angle(const quat<T>& a) {
+    return std::acos(a[3]) * 2;
+}
+
+/// quaternion axis const access
+template <typename T>
+constexpr inline vec<T, 3> angle(const quat<T>& a) {
+    return {a[0], a[1], a[2]};
+}
+
+/// @}
+
+/// @name quaterion operations
+/// @{
+
+/// quaterion to matrix conversion
+template <typename T>
+constexpr inline mat<T, 4, 4> quat_to_mat(const quat<T>& v) {
     return {{v[3] * v[3] + v[0] * v[0] - v[1] * v[1] - v[2] * v[2],
              (v[0] * v[1] + v[2] * v[3]) * 2, (v[2] * v[0] - v[1] * v[3]) * 2},
             {(v[0] * v[1] - v[2] * v[3]) * 2,
@@ -968,57 +1163,59 @@ inline mat<T, 4, 4> to_mat(const quat<T, 4>& v) {
              v[3] * v[3] - v[0] * v[0] - v[1] * v[1] + v[2] * v[2]}};
 }
 
-//
-// Typedef for quaterions.
-//
-
-using quat4f = quat<float, 4>;
-
-//
-// Support for quaternion algebra using 4D vectors.
-//
-
+/// quaterion multiply
 template <typename T>
-constexpr quat<T, 4> conjugate(const quat<T, 4>& v) {
-    return {-v[0], -v[1], -v[2], v[3]};
-}
-
-template <typename T>
-quat<T, 4> inverse(const quat<T, 4>& v) {
-    return qconj(v) / lengthsqr(vec<T, 4>(v));
-}
-
-template <typename T>
-constexpr quat<T, 4> operator*(const quat<T, 4>& a, const quat<T, 4>& b) {
+constexpr quat<T> operator*(const quat<T>& a, const quat<T>& b) {
     return {a[0] * b[3] + a[3] * b[0] + a[1] * b[3] - a[2] * b[1],
             a[1] * b[3] + a[3] * b[1] + a[2] * b[0] - a[0] * b[2],
             a[2] * b[3] + a[3] * b[2] + a[0] * b[1] - a[1] * b[0],
             a[3] * b[3] - a[0] * b[0] - a[1] * b[1] - a[2] * b[2]};
 }
 
+/// quaterion conjugate
 template <typename T>
-quat<T, 4> nlerp(const quat<T, 4>& a, const quat<T, 4>& b, T t) {
+constexpr quat<T> conjugate(const quat<T>& v) {
+    return {-v[0], -v[1], -v[2], v[3]};
+}
+
+/// quaterion inverse
+template <typename T>
+constexpr quat<T> inverse(const quat<T>& v) {
+    return qconj(v) / lengthsqr(vec<T, 4>(v));
+}
+
+/// quaterion normalized linear interpolation
+template <typename T>
+constexpr quat<T> nlerp(const quat<T>& a, const quat<T>& b, T t) {
     return nlerp(
         vec<T, 4>(a),
         dot(vec<T, 4>(a), vec<T, 4>(b)) < 0 ? -vec<T, 4>(b) : vec<T, 4>(b), t);
 }
 
+/// quaterion spherical linear interpolation
 template <typename T>
-quat<T, 4> slerp(const quat<T, 4>& a, const quat<T, 4>& b, T t) {
+constexpr quat<T> slerp(const quat<T>& a, const quat<T>& b, T t) {
     return slerp(
         vec<T, 4>(a),
         dot(vec<T, 4>(a), vec<T, 4>(b)) < 0 ? -vec<T, 4>(b) : vec<T, 4>(b), t);
 }
 
+/// @}
+
 // -----------------------------------------------------------------------------
 // AXIS ALIGNED BOUNDING BOXES
 // -----------------------------------------------------------------------------
 
-//
-// Axis aligned bounding box.
-//
+/// @name axis-aligned bounding boxes
+/// @{
+
+///
+/// Axis aligned bounding box represented as a min/max vector pair.
+/// Access min/max with operator[]. Suppofrt all std::array operations.
+///
 template <typename T, size_t N>
-struct bbox : array<vec<T, N>, 2> {
+struct bbox : std::array<vec<T, N>, 2> {
+    /// initializes an invalid bbox
     constexpr bbox() {
         for (auto i = 0; i < N; i++) {
             (*this)[0][i] = std::numeric_limits<T>::max();
@@ -1026,120 +1223,199 @@ struct bbox : array<vec<T, N>, 2> {
         }
     }
 
-    constexpr bbox(const vec<T, N>& m, const vec<T, N>& M)
-        : array<vec<T, N>, 2>{m, M} {}
-
-    constexpr bbox(const initializer_list<vec<T, N>>& v) : bbox() {
-        for (auto&& vv : v) expand(vv);
-    }
-
-    constexpr vec<T, N> diagonal() const { return (*this)[1] - (*this)[0]; }
-    constexpr vec<T, N> center() const { return ((*this)[1] + (*this)[0]) / 2; }
-
-    constexpr void expand(const vec<T, N>& b) {
-        (*this)[0] = min((*this)[0], b);
-        (*this)[1] = max((*this)[1], b);
+    /// list constructor
+    constexpr bbox(std::initializer_list<vec<T, N>> v) {
+        assert(2 == v.size());
+        auto i = 0;
+        for (auto&& e : v) (*this)[i++] = e;
     }
 };
 
-//
-// Axis aligned bounding box usings.
-//
+/// @}
 
+/// @name axis-aligned bounding box typedefs
+/// @{
+
+/// 1-dimensional float bbox
+using bbox1f = bbox<float, 1>;
+/// 2-dimensional float bbox
 using bbox2f = bbox<float, 2>;
+/// 3-dimensional float bbox
 using bbox3f = bbox<float, 3>;
+/// 4-dimensional float bbox
+using bbox4f = bbox<float, 4>;
 
-//
-// Axis aligned bounding box constants.
-//
+/// @}
 
-const auto invalid_bbox2f = bbox2f();
-const auto invalid_bbox3f = bbox3f();
+/// @name axis-aligned bounding box initializations
+/// @{
 
-//
-// Axis aligned bounding box operations.
-//
-
+/// initializes an empty bbox
 template <typename T, size_t N>
-inline bbox<T, N> expand(const bbox<T, N>& a, const vec<T, N>& b) {
+constexpr inline bbox<T, N> invalid_bbox() {
+    auto a = bbox<T, N>();
+    for (auto i = 0; i < N; i++) {
+        a[0][i] = std::numeric_limits<T>::max();
+        a[1][i] = std::numeric_limits<T>::lowest();
+    }
+    return a;
+}
+
+/// initialize a bonding box from a list of points
+template <typename T, size_t N>
+constexpr inline bbox<T, N> make_bbox(
+    const std::initializer_list<vec<T, N>>& v) {
+    auto a = invalid_bbox<T, N>();
+    for (auto&& vv : v) {
+        a[0] = min(a[0], vv);
+        a[1] = max(a[1], vv);
+    }
+    return a;
+}
+
+/// @}
+
+/// @name axis-aligned bounding box constants
+/// @{
+
+/// 1-dimensional float empty bbox
+const auto invalid_bbox1f = bbox1f();
+/// 2-dimensional float empty bbox
+const auto invalid_bbox2f = bbox2f();
+/// 3-dimensional float empty bbox
+const auto invalid_bbox3f = bbox3f();
+/// 4-dimensional float empty bbox
+const auto invalid_bbox4f = bbox4f();
+
+/// @}
+
+/// @name axis-aligned bounding element access
+/// @{
+
+/// computes the center of a bbox
+template <typename T, size_t N>
+constexpr inline vec<T, N> center(const bbox<T, N>& a) {
+    return (a[0] + a[1]) / (T)2;
+}
+
+/// computes the diagonal of a bbox
+template <typename T, size_t N>
+constexpr inline vec<T, N> diagonal(const bbox<T, N>& a) {
+    return a[1] - a[0];
+}
+
+/// @}
+
+/// @name axis-aligned bounding box operations
+/// @{
+
+/// expands a bounding box with a point
+template <typename T, size_t N>
+constexpr inline bbox<T, N> expand(const bbox<T, N>& a, const vec<T, N>& b) {
     return {min(a[0], b), max(a[1], b)};
 }
 
+/// expands a bounding box with a bounding box
 template <typename T, size_t N>
-inline bbox<T, N> expand(const bbox<T, N>& a, const bbox<T, N>& b) {
+constexpr inline bbox<T, N> expand(const bbox<T, N>& a, const bbox<T, N>& b) {
     return {min(a[0], b[0]), max(a[1], b[1])};
 }
 
+/// same as expand()
 template <typename T, size_t N>
-inline bbox<T, N> operator+(const bbox<T, N>& a, const T& b) {
+constexpr inline bbox<T, N> operator+(const bbox<T, N>& a, const T& b) {
     return expand(a, b);
 }
 
+/// same as expand()
 template <typename T, size_t N>
-inline bbox<T, N> operator+(const bbox<T, N>& a, const bbox<T, N>& b) {
+constexpr inline bbox<T, N> operator+(const bbox<T, N>& a,
+                                      const bbox<T, N>& b) {
     return expand(a, b);
 }
 
+/// assign to expand()
 template <typename T, size_t N>
-inline bbox<T, N>& operator+=(bbox<T, N>& a, const vec<T, N>& b) {
+constexpr inline bbox<T, N>& operator+=(bbox<T, N>& a, const vec<T, N>& b) {
     return a = expand(a, b);
 }
 
+/// assign to expand()
 template <typename T, size_t N>
-inline bbox<T, N>& operator+=(bbox<T, N>& a, const bbox<T, N>& b) {
+constexpr inline bbox<T, N>& operator+=(bbox<T, N>& a, const bbox<T, N>& b) {
     return a = expand(a, b);
 }
 
-template <typename T, size_t N>
-inline vec<T, N> center(const bbox<T, N>& a) {
-    return (a[0] + a[1]) / 2;
-}
-
-template <typename T, size_t N>
-inline vec<T, N> diagonal(const bbox<T, N>& a) {
-    return a[1] - a[0];
-}
+/// @}
 
 // -----------------------------------------------------------------------------
 // RAYS
 // -----------------------------------------------------------------------------
 
-//
-// Rays with origin, direction and min/max t value.
-//
+/// @name rays
+/// @{
+
+///
+/// Rays with origin, direction and min/max t value.
+///
 template <typename T, size_t N>
 struct ray {
+    /// origin
     vec<T, N> o;
+    /// direction
     vec<T, N> d;
+    /// minimum distance
     T tmin;
+    /// maximum distance
     T tmax;
 
-    ray() : o(), d(0, 0, 1), tmin(0), tmax(std::numeric_limits<T>::max()) {}
-    ray(const vec<T, N>& o, const vec<T, N>& d, T tmin = 0,
-        T tmax = std::numeric_limits<T>::max())
+    /// default constructor
+    constexpr ray()
+        : o(), d(0, 0, 1), tmin(0), tmax(std::numeric_limits<T>::max()) {}
+    /// initializes a ray from its elements
+    constexpr ray(const vec<T, N>& o, const vec<T, N>& d, T tmin = 0,
+                  T tmax = std::numeric_limits<T>::max())
         : o(o), d(d), tmin(tmin), tmax(tmax) {}
-
-    vec<T, N> eval(T t) const { return o + t * d; }
 };
 
-//
-// Rays usings.
-//
+/// @}
 
+/// @name ray typedefs
+/// @{
+
+/// 1-dimensional float ray
+using ray1f = ray<float, 1>;
+/// 2-dimensional float ray
 using ray2f = ray<float, 2>;
+/// 3-dimensional float ray
 using ray3f = ray<float, 3>;
+/// 4-dimensional float ray
+using ray4f = ray<float, 4>;
+
+/// @}
+
+/// @name ray operations
+/// @{
+
+/// evalutes the position along the ray
+template <typename T, size_t N>
+constexpr inline vec<T, N> eval(const ray<T, N>& ray, T t) {
+    return ray.o + t * ray.d;
+}
+
+/// @}
 
 // -----------------------------------------------------------------------------
 // TRANSFORMS
 // -----------------------------------------------------------------------------
 
-//
-// Tranform operations.
-//
+/// @name transforms
+/// @{
 
+/// transforms a point by a matrix
 template <typename T, size_t N>
-inline vec<T, N> transform_point(const mat<T, N + 1, N + 1>& a,
-                                 const vec<T, N>& b) {
+constexpr inline vec<T, N> transform_point(const mat<T, N + 1, N + 1>& a,
+                                           const vec<T, N>& b) {
     // make it generic
     auto vb = vec<T, N + 1>();
     (vec<T, N>&)vb = b;
@@ -1148,9 +1424,10 @@ inline vec<T, N> transform_point(const mat<T, N + 1, N + 1>& a,
     return *(vec<T, N>*)(&tvb) / tvb[N];
 }
 
+/// transforms a vector by a matrix
 template <typename T, size_t N>
-inline vec<T, N> transform_vector(const mat<T, N + 1, N + 1>& a,
-                                  const vec<T, N>& b) {
+constexpr inline vec<T, N> transform_vector(const mat<T, N + 1, N + 1>& a,
+                                            const vec<T, N>& b) {
     // make it generic
     auto vb = vec<T, N + 1>();
     (vec<T, N>&)vb = b;
@@ -1159,73 +1436,25 @@ inline vec<T, N> transform_vector(const mat<T, N + 1, N + 1>& a,
     return *(vec<T, N>*)(&tvb);
 }
 
+/// transforms a direction by a matrix
 template <typename T, size_t N>
-inline vec<T, N> transform_direction(const mat<T, N + 1, N + 1>& a,
-                                     const vec<T, N>& b) {
+constexpr inline vec<T, N> transform_direction(const mat<T, N + 1, N + 1>& a,
+                                               const vec<T, N>& b) {
     return normalize(transform_vector(a, b));
 }
 
+/// transforms a ray by a matrix
 template <typename T, size_t N>
-inline vec<T, N> transform_point(const frame<T, N>& a, const vec<T, N>& b) {
-    return a.m() * b + a.o();
-}
-
-template <typename T, size_t N>
-inline vec<T, N> transform_vector(const frame<T, N>& a, const vec<T, N>& b) {
-    return a.m() * b;
-}
-
-template <typename T, size_t N>
-inline vec<T, N> transform_direction(const frame<T, N>& a, const vec<T, N>& b) {
-    return a.m() * b;
-}
-
-template <typename T, size_t N>
-inline frame<T, N> transform_frame(const frame<T, N>& a, const frame<T, N>& b) {
-    return {a.m() * b.m(), a.m() * b.o() + a.o()};
-}
-
-template <typename T, size_t N>
-inline ray<T, N> transform_ray(const frame<T, N>& a, const ray<T, N>& b) {
+constexpr inline ray<T, N> transform_ray(const mat<T, N + 1, N + 1>& a,
+                                         const ray<T, N>& b) {
     return {transform_point(a, b.o), transform_direction(a, b.d), b.tmin,
             b.tmax};
 }
 
-template <typename T, size_t N>
-inline vec<T, N> transform_point_inverse(const frame<T, N>& a,
-                                         const vec<T, N>& b) {
-    return (b - a.o()) * a.m();
-}
-
-template <typename T, size_t N>
-inline vec<T, N> transform_vector_inverse(const frame<T, N>& a,
-                                          const vec<T, N>& b) {
-    return b * a.m();
-}
-
-template <typename T, size_t N>
-inline vec<T, N> transform_direction_inverse(const frame<T, N>& a,
-                                             const vec<T, N>& b) {
-    return b * a.m();
-}
-
-template <typename T, size_t N>
-inline ray<T, N> transform_ray_inverse(const frame<T, N>& a,
-                                       const ray<T, N>& b) {
-    return {transform_point_inverse(a, b.o),
-            transform_direction_inverse(a, b.d), b.tmin, b.tmax};
-}
-
-template <typename T, size_t N>
-inline ray<T, N> transform_ray(const mat<T, N + 1, N + 1>& a,
-                               const ray<T, N>& b) {
-    return {transform_point(a, b.o), transform_direction(a, b.d), b.tmin,
-            b.tmax};
-}
-
-#if 0
+/// transforms a bbox by a matrix
 template <typename T>
-inline bbox<T, 3> transform_bbox(const frame<T, 3>& a, const bbox<T, 3>& b) {
+constexpr inline bbox<T, 3> transform_bbox(const mat<T, 4, 4>& a,
+                                           const bbox<T, 3>& b) {
     vec<T, 3> corners[8] = {
         {b[0][0], b[0][1], b[0][2]}, {b[0][0], b[0][1], b[1][2]},
         {b[0][0], b[1][1], b[0][2]}, {b[0][0], b[1][1], b[1][2]},
@@ -1236,22 +1465,69 @@ inline bbox<T, 3> transform_bbox(const frame<T, 3>& a, const bbox<T, 3>& b) {
     for (auto j = 0; j < 8; j++) xformed += transform_point(a, corners[j]);
     return xformed;
 }
-#else
-// Code from Real-time Collision Detection by Christer Ericson Sect. 4.2.6
-// Transform AABB a by the matrix m and translation t,
-// find maximum extents, and store result into AABB b.
+
+/// transforms a point by a frame (rigid affine transform)
+template <typename T, size_t N>
+constexpr inline vec<T, N> transform_point(const frame<T, N>& a,
+                                           const vec<T, N>& b) {
+    return ym::rot(a) * b + ym::pos(a);
+}
+
+/// transforms a vector by a frame (rigid affine transform)
+template <typename T, size_t N>
+constexpr inline vec<T, N> transform_vector(const frame<T, N>& a,
+                                            const vec<T, N>& b) {
+    return ym::rot(a) * b;
+}
+
+/// transforms a direction by a frame (rigid affine transform)
+template <typename T, size_t N>
+constexpr inline vec<T, N> transform_direction(const frame<T, N>& a,
+                                               const vec<T, N>& b) {
+    return ym::rot(a) * b;
+}
+
+/// transforms a frame by a frame (rigid affine transform)
+template <typename T, size_t N>
+constexpr inline frame<T, N> transform_frame(const frame<T, N>& a,
+                                             const frame<T, N>& b) {
+    return {ym::rot(a) * ym::rot(b), ym::pos(a) * ym::pos(b) + ym::pos(a)};
+}
+
+/// transforms a ray by a frame (rigid affine transform)
+template <typename T, size_t N>
+constexpr inline ray<T, N> transform_ray(const frame<T, N>& a,
+                                         const ray<T, N>& b) {
+    return {transform_point(a, b.o), transform_direction(a, b.d), b.tmin,
+            b.tmax};
+}
+
+/// transforms a bbox by a frame (rigid affine transform)
 template <typename T>
-inline bbox<T, 3> transform_bbox(const frame<T, 3>& a, const bbox<T, 3>& b) {
+constexpr inline bbox<T, 3> transform_bbox(const frame<T, 3>& a,
+                                           const bbox<T, 3>& b) {
+#if 0
+    vec<T, 3> corners[8] = {
+        {b[0][0], b[0][1], b[0][2]}, {b[0][0], b[0][1], b[1][2]},
+        {b[0][0], b[1][1], b[0][2]}, {b[0][0], b[1][1], b[1][2]},
+        {b[1][0], b[0][1], b[0][2]}, {b[1][0], b[0][1], b[1][2]},
+        {b[1][0], b[1][1], b[0][2]}, {b[1][0], b[1][1], b[1][2]},
+    };
+    auto xformed = bbox<T, 3>();
+    for (auto j = 0; j < 8; j++) xformed += transform_point(a, corners[j]);
+    return xformed;
+#else
+    // Code from Real-time Collision Detection by Christer Ericson Sect. 4.2.6
+    // Transform AABB a by the matrix m and translation t,
+    // find maximum extents, and store result into AABB b.
     // start by adding in translation
-    auto c = bbox<T, 3>(a.o(), a.o());
-    // compute extent
-    auto e = a.m() * b[0], f = a.m() * b[1];
+    auto c = bbox<T, 3>{ym::pos(a), ym::pos(a)};
     // for all three axes
     for (auto i = 0; i < 3; i++) {
         // form extent by summing smaller and larger terms respectively
         for (auto j = 0; j < 3; j++) {
-            auto e = a.m()[j][i] * b[0][j];
-            auto f = a.m()[j][i] * b[1][j];
+            auto e = ym::rot(a)[j][i] * b[0][j];
+            auto f = ym::rot(a)[j][i] * b[1][j];
             if (e < f) {
                 c[0][i] += e;
                 c[1][i] += f;
@@ -1262,34 +1538,49 @@ inline bbox<T, 3> transform_bbox(const frame<T, 3>& a, const bbox<T, 3>& b) {
         }
     }
     return c;
-}
 #endif
+}
 
+/// inverse transforms a point by a frame (rigid affine transform)
+template <typename T, size_t N>
+constexpr inline vec<T, N> transform_point_inverse(const frame<T, N>& a,
+                                                   const vec<T, N>& b) {
+    return (b - ym::pos(a)) * ym::rot(a);
+}
+
+/// inverse transforms a vector by a frame (rigid affine transform)
+template <typename T, size_t N>
+constexpr inline vec<T, N> transform_vector_inverse(const frame<T, N>& a,
+                                                    const vec<T, N>& b) {
+    return b * ym::rot(a);
+}
+
+/// inverse transforms a direction by a frame (rigid affine transform)
+template <typename T, size_t N>
+constexpr inline vec<T, N> transform_direction_inverse(const frame<T, N>& a,
+                                                       const vec<T, N>& b) {
+    return b * ym::rot(a);
+}
+
+/// inverse transforms a ray by a frame (rigid affine transform)
+template <typename T, size_t N>
+constexpr inline ray<T, N> transform_ray_inverse(const frame<T, N>& a,
+                                                 const ray<T, N>& b) {
+    return {transform_point_inverse(a, b.o),
+            transform_direction_inverse(a, b.d), b.tmin, b.tmax};
+}
+
+/// inverse transforms a bbox by a frame (rigid affine transform)
 template <typename T>
-inline bbox<T, 3> transform_bbox_inverse(const frame<T, 3>& a,
-                                         const bbox<T, 3>& b) {
+constexpr inline bbox<T, 3> transform_bbox_inverse(const frame<T, 3>& a,
+                                                   const bbox<T, 3>& b) {
     return transform_bbox(inverse(a), b);
 }
 
+/// rotation matrix from axis-angle
 template <typename T>
-inline bbox<T, 3> transform_bbox(const mat<T, 4, 4>& a, const bbox<T, 3>& b) {
-    vec<T, 3> corners[8] = {
-        {b[0][0], b[0][1], b[0][2]}, {b[0][0], b[0][1], b[1][2]},
-        {b[0][0], b[1][1], b[0][2]}, {b[0][0], b[1][1], b[1][2]},
-        {b[1][0], b[0][1], b[0][2]}, {b[1][0], b[0][1], b[1][2]},
-        {b[1][0], b[1][1], b[0][2]}, {b[1][0], b[1][1], b[1][2]},
-    };
-    auto xformed = bbox<T, 3>();
-    for (auto j = 0; j < 8; j++) xformed += transform_point(a, corners[j]);
-    return xformed;
-}
-
-//
-// Rotation matrix crom axis/angle
-//
-template <typename T>
-inline mat<T, 3, 3> rotation_mat3(const vec<T, 3>& axis, T angle) {
-    auto s = sin(angle), c = cos(angle);
+constexpr inline mat<T, 3, 3> rotation_mat3(const vec<T, 3>& axis, T angle) {
+    auto s = std::sin(angle), c = std::cos(angle);
     auto vv = normalize(axis);
     return {{c + (1 - c) * vv[0] * vv[0], (1 - c) * vv[0] * vv[1] + s * vv[2],
              (1 - c) * vv[0] * vv[2] - s * vv[1]},
@@ -1299,92 +1590,74 @@ inline mat<T, 3, 3> rotation_mat3(const vec<T, 3>& axis, T angle) {
              (1 - c) * vv[1] * vv[2] - s * vv[0], c + (1 - c) * vv[2] * vv[2]}};
 }
 
-//
-// Translation transform
-//
+/// translation frame
 template <typename T>
-inline frame<T, 3> translation_frame3(const vec<T, 3>& a) {
+constexpr inline frame<T, 3> translation_frame3(const vec<T, 3>& a) {
     return {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, a};
 }
 
+/// translation matrix
 template <typename T>
-inline mat<T, 4, 4> translation_mat4(const vec<T, 3>& a) {
+constexpr inline mat<T, 4, 4> translation_mat4(const vec<T, 3>& a) {
     return (mat<T, 4, 4>)translation_frame3(a);
 }
 
-//
-// Scaling transform (in this case the frame is broken and used only
-// as
-// affine)
-//
+/// scaling frame (this is not rigid and it is only here for symmatry of
+/// API)
 template <typename T>
-inline frame<T, 3> scaling_frame3(const vec<T, 3>& a) {
+constexpr inline frame<T, 3> scaling_frame3(const vec<T, 3>& a) {
     return {{a[0], 0, 0}, {0, a[1], 0}, {0, 0, a[2]}, {0, 0, 0}};
 }
 
+/// scaling matrix
 template <typename T>
-inline mat<T, 4, 4> scaling_mat4(const vec<T, 3>& a) {
+constexpr inline mat<T, 4, 4> scaling_mat4(const vec<T, 3>& a) {
     return (mat<T, 4, 4>)scaling_frame3(a);
 }
 
-//
-// Rotation transform
-//
+/// rotation frame
 template <typename T>
-inline frame<T, 3> rotation_frame3(const vec<T, 3>& axis, T angle) {
-    return frame<T, 3>{rotation_mat3(axis, angle), {0, 0, 0}};
+constexpr inline frame<T, 3> rotation_frame3(const vec<T, 3>& axis, T angle) {
+    return make_frame(rotation_mat3(axis, angle), {0, 0, 0});
 }
 
+/// rotation matrix
 template <typename T>
-inline mat<T, 4, 4> rotation_mat4(const vec<T, 3>& axis, T angle) {
+constexpr inline mat<T, 4, 4> rotation_mat4(const vec<T, 3>& axis, T angle) {
     return (mat<T, 4, 4>)rotation_frame3(axis, angle);
 }
 
-//
-// Lookat tranform
-//
+/// OpenGL lookat frame
 template <typename T>
-inline frame<T, 3> lookat_frame3(const vec<T, 3>& eye, const vec<T, 3>& center,
-                                 const vec<T, 3>& up) {
+constexpr inline frame<T, 3> lookat_frame3(const vec<T, 3>& eye,
+                                           const vec<T, 3>& center,
+                                           const vec<T, 3>& up) {
     auto w = normalize(eye - center);
     auto u = normalize(cross(up, w));
     auto v = normalize(cross(w, u));
     return {u, v, w, eye};
 }
 
+/// OpenGL lookat matrix
 template <typename T>
-inline mat<T, 4, 4> lookat_mat4(const vec<T, 3>& eye, const vec<T, 3>& center,
-                                const vec<T, 3>& up) {
+constexpr inline mat<T, 4, 4> lookat_mat4(const vec<T, 3>& eye,
+                                          const vec<T, 3>& center,
+                                          const vec<T, 3>& up) {
     return to_mat(lookat_frame3(eye, center, up));
 }
 
-//
-// Frame/transform for origin and z.
-//
+/// OpenGL frustum matrix
 template <typename T>
-inline frame<T, 3> make_frame3(const vec<T, 3>& o, const vec<T, 3>& z_) {
-    auto z = normalize(z_);
-    auto x = normalize(orthogonal(z));
-    auto y = normalize(cross(z, x));
-    return {x, y, z, o};
-}
-
-//
-// OpenGL perspective frustum matrix
-//
-template <typename T>
-inline mat<T, 4, 4> frustum_mat4(T l, T r, T b, T t, T n, T f) {
+constexpr inline mat<T, 4, 4> frustum_mat4(T l, T r, T b, T t, T n, T f) {
     return {{2 * n / (r - l), 0, 0, 0},
             {0, 2 * n / (t - b), 0, 0},
             {(r + l) / (r - l), (t + b) / (t - b), -(f + n) / (f - n), -1},
             {0, 0, -2 * f * n / (f - n), 0}};
 }
 
-//
-// OpenGL orthographic matrix
-//
+/// OpenGL orthographic matrix
 template <typename T>
-inline mat<T, 4, 4> ortho_mat4(T l, T r, T b, T t, T n, T f) {
+constexpr inline mat<T, 4, 4> ortho_mat4(T l, T r, T b, T t, T n, T f) {
     return {{2 / (r - l), 0, 0, 0},
             {0, 2 / (t - b), 0, 0},
             {0, 0, -2 / (f - n), 0},
@@ -1392,66 +1665,73 @@ inline mat<T, 4, 4> ortho_mat4(T l, T r, T b, T t, T n, T f) {
              -(f + n) / (f - n), 1}};
 }
 
-//
-// OpenGL orthographic 2D matrix
-//
+/// OpenGL orthographic 2D matrix
 template <typename T>
-inline mat<T, 4, 4> ortho2d_mat4(T l, T r, T b, T t) {
+constexpr inline mat<T, 4, 4> ortho2d_mat4(T l, T r, T b, T t) {
     return ortho_mat4(l, r, b, t, -1, 1);
 }
 
-//
-// OpenGL perspective matrix
-//
+/// OpenGL perspective matrix
 template <typename T>
-inline mat<T, 4, 4> perspective_mat4(T fovy, T aspect, T near, T far) {
+constexpr inline mat<T, 4, 4> perspective_mat4(T fovy, T aspect, T near,
+                                               T far) {
     auto y = near * tan(fovy / 2);
     auto x = y * aspect;
     return frustum_mat4<T>(-x, x, -y, y, near, far);
 }
 
+/// @}
+
 // -----------------------------------------------------------------------------
 // GEOMETRY UTILITIES
 // -----------------------------------------------------------------------------
 
+/// @name geometry utlities
+/// @{
+
+/// triangle normal
 template <typename T>
-inline vec<T, 3> triangle_normal(const vec<T, 3>& v0, const vec<T, 3>& v1,
-                                 const vec<T, 3>& v2) {
+constexpr inline vec<T, 3> triangle_normal(const vec<T, 3>& v0,
+                                           const vec<T, 3>& v1,
+                                           const vec<T, 3>& v2) {
     return normalize(cross(v1 - v0, v2 - v0));
 }
 
+/// triangle area
 template <typename T>
-inline T triangle_area(const vec<T, 3>& v0, const vec<T, 3>& v1,
-                       const vec<T, 3>& v2) {
+constexpr inline T triangle_area(const vec<T, 3>& v0, const vec<T, 3>& v1,
+                                 const vec<T, 3>& v2) {
     return length(cross(v1 - v0, v2 - v0)) / 2;
 }
 
+/// tetrahedron volume
 template <typename T>
-inline T tetrahedron_volume(const vec<T, 3>& v0, const vec<T, 3>& v1,
-                            const vec<T, 3>& v2, const vec<T, 3>& v3) {
+constexpr inline T tetrahedron_volume(const vec<T, 3>& v0, const vec<T, 3>& v1,
+                                      const vec<T, 3>& v2,
+                                      const vec<T, 3>& v3) {
     return dot(cross(v1 - v0, v2 - v0), v3 - v0) / 6;
 }
 
-//
-// Baricentric interpolation
-//
+/// triangle baricentric interpolation
 template <typename T, typename T1>
-inline T blerp(const T& a, const T& b, const T& c, const T1& w) {
+constexpr inline T blerp(const T& a, const T& b, const T& c, const T1& w) {
     return a * w[0] + b * w[1] + c * w[2];
 }
+
+/// @}
 
 // -----------------------------------------------------------------------------
 // UI UTILITIES
 // -----------------------------------------------------------------------------
 
-//
-// Turntable for UI navigation from a from/to/up parametrization of
-// the
-// camera.
-//
+/// @name ui utilities
+/// @{
+
+/// Turntable for UI navigation from a from/to/up parametrization of the camera.
 template <typename T>
-inline void turntable(vec<T, 3>& from, vec<T, 3>& to, vec<T, 3>& up,
-                      const vec<T, 2>& rotate, T dolly, const vec<T, 2>& pan) {
+constexpr inline void turntable(vec<T, 3>& from, vec<T, 3>& to, vec<T, 3>& up,
+                                const vec<T, 2>& rotate, T dolly,
+                                const vec<T, 2>& pan) {
     // rotate if necessary
     if (rotate[0] || rotate[1]) {
         auto z = ym_normalize(*to - *from);
@@ -1485,22 +1765,20 @@ inline void turntable(vec<T, 3>& from, vec<T, 3>& to, vec<T, 3>& up,
     }
 }
 
-//
-// Turntable for UI navigation for a frame/distance parametrization
-// of the
-// camera.
-//
+/// Turntable for UI navigation for a frame/distance parametrization of the
+/// camera.
 template <typename T>
-inline void turntable(frame<T, 3>& frame, float& focus, const vec<T, 2>& rotate,
-                      T dolly, const vec<T, 2>& pan) {
+constexpr inline void turntable(frame<T, 3>& frame, float& focus,
+                                const vec<T, 2>& rotate, T dolly,
+                                const vec<T, 2>& pan) {
     // rotate if necessary
     if (rotate[0] || rotate[1]) {
-        auto phi = atan2(frame[2][2], frame[2][0]) + rotate[0];
-        auto theta = acos(frame[2][1]) + rotate[1];
+        auto phi = std::atan2(frame[2][2], frame[2][0]) + rotate[0];
+        auto theta = std::acos(frame[2][1]) + rotate[1];
         theta = max(T(0.001), min(theta, T(pi - 0.001)));
-        auto new_z =
-            vec<T, 3>(sin(theta) * cos(phi), cos(theta), sin(theta) * sin(phi));
-        auto new_center = frame.o() - frame[2] * focus;
+        auto new_z = vec<T, 3>{std::sin(theta) * std::cos(phi), std::cos(theta),
+                               std::sin(theta) * std::sin(phi)};
+        auto new_center = pos(frame) - frame[2] * focus;
         auto new_o = new_center + new_z * focus;
         frame = lookat_frame3(new_o, new_center, {0, 1, 0});
         focus = dist(new_o, new_center);
@@ -1508,83 +1786,71 @@ inline void turntable(frame<T, 3>& frame, float& focus, const vec<T, 2>& rotate,
 
     // pan if necessary
     if (dolly) {
-        auto c = frame.o() - frame[2] * focus;
+        auto c = pos(frame) - frame[2] * focus;
         focus = max(focus + dolly, T(0.001));
-        frame.o() = c + frame[2] * focus;
+        pos(frame) = c + frame[2] * focus;
     }
 
     // pan if necessary
     if (pan[0] || pan[1]) {
-        frame.o() += frame[0] * pan[0] + frame[1] * pan[1];
+        pos(frame) += frame[0] * pan[0] + frame[1] * pan[1];
     }
 }
+
+/// @}
 
 // -----------------------------------------------------------------------------
 // RANDOM NUMBER GENERATION
 // -----------------------------------------------------------------------------
 
-//
-// PCG random numbers. A family of random number generators that
-// supports
-// multiple sequences. In our code, we allocate one sequence for
-// each
-// sample.
-// PCG32 from http://www.pcg-random.org/
-//
+/// @name random numbers
+/// @{
 
-//
-// Random number state (PCG32)
-//
+///
+/// PCG random numbers. A family of random number generators that supports
+/// multiple sequences. In our code, we allocate one sequence for each sample.
+/// PCG32 from http://www.pcg-random.org/
+///
 struct rng_pcg32 {
     uint64_t state, inc;
 };
 
-//
-// Next random number
-//
-inline uint32_t rng_next(rng_pcg32& rng) {
-    uint64_t oldstate = rng.state;
-    rng.state = oldstate * 6364136223846793005ull + (rng.inc | 1u);
+/// Next random number
+constexpr inline uint32_t next(rng_pcg32* rng) {
+    uint64_t oldstate = rng->state;
+    rng->state = oldstate * 6364136223846793005ull + (rng->inc | 1u);
     uint32_t xorshifted = (uint32_t)(((oldstate >> 18u) ^ oldstate) >> 27u);
     uint32_t rot = oldstate >> 59u;
     return (xorshifted >> rot) | (xorshifted << ((-((int32_t)rot)) & 31));
 }
 
-//
-// Init a random number generator with a state state from the
-// sequence seq.
-//
-inline void rng_init(rng_pcg32& rng, uint64_t state, uint64_t seq) {
-    rng.state = 0U;
-    rng.inc = (seq << 1u) | 1u;
-    rng_next(rng);
-    rng.state += state;
-    rng_next(rng);
+/// Init a random number generator with a state state from the sequence seq.
+constexpr inline void init(rng_pcg32* rng, uint64_t state, uint64_t seq) {
+    rng->state = 0U;
+    rng->inc = (seq << 1u) | 1u;
+    next(rng);
+    rng->state += state;
+    next(rng);
 }
 
-//
-// Next random float in [0,1).
-//
-inline float rng_nextf(rng_pcg32& rng) {
-    return (float)ldexp(rng_next(rng), -32);
-}
+/// Next random float in [0,1).
+inline float next1f(rng_pcg32* rng) { return (float)ldexp(next(rng), -32); }
 
-//
-// Next random float in [0,1)x[0,1).
-//
-inline vec2f rng_next2f(rng_pcg32& rng) {
-    return {rng_nextf(rng), rng_nextf(rng)};
-}
+/// Next random float in [0,1)x[0,1).
+inline vec2f next2f(rng_pcg32* rng) { return {next1f(rng), next1f(rng)}; }
+
+/// @}
 
 // -----------------------------------------------------------------------------
 // HASHING
 // -----------------------------------------------------------------------------
 
-//
-// Computes the i-th term of a permutation of l values keyed by p.
-// From Correlated Multi-Jittered Sampling by Kensler @ Pixar
-//
-inline uint32_t hash_permute(uint32_t i, uint32_t n, uint32_t key) {
+/// @name hashing
+/// @{
+
+/// Computes the i-th term of a permutation of l values keyed by p.
+/// From Correlated Multi-Jittered Sampling by Kensler @ Pixar
+constexpr inline uint32_t hash_permute(uint32_t i, uint32_t n, uint32_t key) {
     uint32_t w = n - 1;
     w |= w >> 1;
     w |= w >> 2;
@@ -1614,11 +1880,9 @@ inline uint32_t hash_permute(uint32_t i, uint32_t n, uint32_t key) {
     return (i + key) % n;
 }
 
-//
-// Computes a float value by hashing i with a key p.
-// From Correlated Multi-Jittered Sampling by Kensler @ Pixar
-//
-inline float hash_randfloat(uint32_t i, uint32_t key) {
+/// Computes a float value by hashing i with a key p.
+/// From Correlated Multi-Jittered Sampling by Kensler @ Pixar
+constexpr inline float hash_randfloat(uint32_t i, uint32_t key) {
     i ^= key;
     i ^= i >> 17;
     i ^= i >> 10;
@@ -1632,10 +1896,8 @@ inline float hash_randfloat(uint32_t i, uint32_t key) {
     return i * (1.0f / 4294967808.0f);
 }
 
-//
-// 64 bit integer hash. Public domain code.
-//
-inline uint64_t hash_uint64(uint64_t a) {
+/// 64 bit integer hash. Public domain code.
+constexpr inline uint64_t hash_uint64(uint64_t a) {
     a = (~a) + (a << 21);  // a = (a << 21) - a - 1;
     a ^= (a >> 24);
     a += (a << 3) + (a << 8);  // a * 265
@@ -1646,10 +1908,8 @@ inline uint64_t hash_uint64(uint64_t a) {
     return a;
 }
 
-//
-// 64-to-32 bit integer hash. Public domain code.
-//
-inline uint32_t hash_uint64_32(uint64_t a) {
+/// 64-to-32 bit integer hash. Public domain code.
+constexpr inline uint32_t hash_uint64_32(uint64_t a) {
     a = (~a) + (a << 18);  // a = (a << 18) - a - 1;
     a ^= (a >> 31);
     a *= 21;  // a = (a + (a << 2)) + (a << 4);
@@ -1659,19 +1919,14 @@ inline uint32_t hash_uint64_32(uint64_t a) {
     return (uint32_t)a;
 }
 
-//
-// A function to combine 64 bit hashes with semantics as
-// boost::hash_combine
-//
-inline size_t hash_combine(size_t a, size_t b) {
+/// Combines two 64 bit hashes as in boost::hash_combine
+constexpr inline size_t hash_combine(size_t a, size_t b) {
     return a ^ (b + 0x9e3779b9 + (a << 6) + (a >> 2));
 }
 
-//
-// Hash a vector for std
-//
+/// Hash a vector with hash_combine() and std::hash
 template <typename T, size_t N>
-inline size_t hash_vec(const vec<T, N>& v) {
+constexpr inline size_t hash_vec(const vec<T, N>& v) {
     std::hash<T> Th;
     size_t h = 0;
     for (auto i = 0; i < N; i++) {
@@ -1680,34 +1935,46 @@ inline size_t hash_vec(const vec<T, N>& v) {
     return h;
 }
 
+/// @}
+
 // -----------------------------------------------------------------------------
 // VIEW CONTAINERS
 // -----------------------------------------------------------------------------
 
-//
-// An array_view is a non-owining reference to an array with an API
-// similar
-// to a vector/array containers, but without reallocation.
-// This is inspired, but significantly simpler than
-// gsl::span https://github.com/Microsoft/GSL or array_view.
-//
+/// @name view containers
+/// @{
+
+///
+/// An array_view is a non-owining reference to an array with an API
+/// similar
+/// to a vector/array containers, but without reallocation.
+/// This is inspired, but significantly simpler than
+/// gsl::span https://github.com/Microsoft/GSL or array_view.
+///
 template <typename T>
 struct array_view {
     // constructors
     constexpr array_view() noexcept : _num(0), _data(nullptr) {}
     constexpr array_view(size_t num, T* data) noexcept
-        : _num(num), _data(data) {}
+        : _num((data) ? num : 0), _data(data) {}
+    template <typename T1>
+    explicit constexpr array_view(size_t num, T1* data) noexcept
+        : _num((data) ? num : 0), _data(data) {}
     constexpr array_view(T* begin, T* end) noexcept
         : _num((end - begin)), _data(begin) {}
     constexpr array_view(const array_view<std::add_const_t<T>>& av)
-        : _num(av._num), _data(av._data) {}
-    constexpr array_view(vector<T>& av) : _num(av.size()), _data(av.data()) {}
-    constexpr array_view(const vector<T>& av)
-        : _num(av.size()), _data((T*)av.data()) {}
+        : _num(av.size()), _data(av.data()) {}
+    template <typename T1>
+    constexpr array_view(std::vector<T1>& av)
+        : _num(av.size()), _data(av.data()) {}
+    template <typename T1>
+    constexpr array_view(const std::vector<T1>& av)
+        : _num(av.size()), _data(av.data()) {}
 
     // size
     constexpr size_t size() const noexcept { return _num; }
     constexpr bool empty() const noexcept { return _num == 0; }
+    constexpr operator bool() const noexcept { return !empty(); }
 
     // raw data access
     constexpr T* data() noexcept { return _data; }
@@ -1736,30 +2003,25 @@ struct array_view {
     T* _data;
 };
 
-// -----------------------------------------------------------------------------
-// IMAGES
-// -----------------------------------------------------------------------------
-
-//
-// An image_view is a non-owining reference to an array that allows
-// to
-// access it
-// as a row-major image, but without reallocation.
-// This is inspired, but significantly simpler than
-// gsl::multi_span https://github.com/Microsoft/GSL or array_view.
-//
+///
+/// An image_view is a non-owining reference to an array that allows
+/// to access it as a row-major image. This is inspired, but significantly
+/// simpler than gsl::multi_span https://github.com/Microsoft/GSL or
+/// array_view.
+///
 template <typename T>
 struct image_view {
     // constructors
-    constexpr image_view() noexcept : _size(0, 0), _data(nullptr) {}
+    constexpr image_view() noexcept : _size{0, 0}, _data(nullptr) {}
     constexpr image_view(const vec2i& size, T* data) noexcept
-        : _size(size), _data(data) {}
+        : _size((data) ? size : vec2i{0, 0}), _data(data) {}
 
     // size
     constexpr vec2i size() const noexcept { return _size; }
     constexpr bool empty() const noexcept {
         return _size[0] == 0 || _size[1] == 0;
     }
+    constexpr operator bool() const noexcept { return !empty(); }
 
     // raw data access
     constexpr T* data() noexcept { return _data; }
@@ -1793,178 +2055,189 @@ struct image_view {
     T* _data;
 };
 
-//
-// Generic image with pixels stored as a vector. For operations use
-// image_views.
-//
+/// @}
+
+// -----------------------------------------------------------------------------
+// IMAGE OPERATIONS
+// -----------------------------------------------------------------------------
+
+/// @name image operations
+/// @{
+
+/// Lookup an image value from a generic image
 template <typename T>
-struct image {
-    // constructors
-    constexpr image() : _size(0, 0), _data() {}
-    constexpr image(const vec2i& size, const T& v = T()) noexcept
-        : _size(size), _data(size[0] * size[1], v) {}
-    constexpr image(const vec2i& size, const T* v) noexcept
-        : _size(size), _data(v, v + size[0] * size[1]) {}
-
-    // access via image_view
-    constexpr operator const image_view<T>() const {
-        return image_view<T>(_size, const_cast<T*>(_data.data()));
+constexpr inline vec<T, 4> image_lookup(int width, int height, int ncomp,
+                                        const T* img, int x, int y,
+                                        T alpha = 0) {
+    auto v = img + (y * width + x) * ncomp;
+    switch (ncomp) {
+        case 1: return {v[0], 0, 0, alpha};
+        case 2: return {v[0], v[1], 0, alpha};
+        case 3: return {v[0], v[1], v[2], alpha};
+        case 4: return {v[0], v[1], v[2], v[3]};
+        default: assert(false);
     }
-    constexpr operator image_view<T>() {
-        return image_view<T>(_size, _data.data());
-    }
-
-    // size
-    constexpr vec2i size() const noexcept { return _size; }
-    constexpr bool empty() const noexcept {
-        return _size[0] == 0 || _size[0] == 0;
-    }
-
-    // modify
-    constexpr void resize(const vec2i& size) {
-        _size = size;
-        _data.resize(size[0] * size[1]);
-    }
-
-    constexpr void clear() {
-        _size = {0, 0};
-        _data.clear();
-    }
-
-    // raw data access
-    constexpr T* data() noexcept { return _data.data(); }
-    constexpr const T* data() const noexcept { return _data.data(); }
-
-    // iterators
-    constexpr T* begin() noexcept { return _data; }
-    constexpr T* end() noexcept { return _data + _size[0] * _size[1]; }
-    constexpr const T* begin() const noexcept { return _data; }
-    constexpr const T* end() const noexcept {
-        return _data + _size[0] * _size[1];
-    }
-
-    // elements access
-    constexpr T& operator[](const vec<int, 2>& ij) noexcept {
-        return _data[ij[1] * _size[0] + ij[0]];
-    }
-    constexpr const T& operator[](const vec<int, 2>& ij) const noexcept {
-        return _data[ij[1] * _size[0] + ij[0]];
-    }
-
-    constexpr T& at(const vec<int, 2>& ij) {
-        return _data[ij[1] * _size[0] + ij[0]];
-    }
-    constexpr const T& at(const vec<int, 2>& ij) const {
-        return _data[ij[1] * _size[0] + ij[0]];
-    }
-
-   private:
-    vec2i _size;
-    vector<T> _data;
-};
-
-//
-// Creates an image with 4 components
-//
-template <typename T>
-inline image<vec<T, 4>> make_image4(int width, int height, int ncomp,
-                                    const T* data, T alpha) {
-    assert(ncomp >= 1 && ncomp <= 4);
-    auto img = image<vec<T, 4>>{{width, height}};
-    for (auto j = 0; j < height; j++) {
-        for (auto i = 0; i < width; i++) {
-            auto d = data + (j * width + i) * ncomp;
-            switch (ncomp) {
-                case 1: img[{i, j}] = {d[0], d[0], d[0], alpha}; break;
-                case 2: img[{i, j}] = {d[0], d[1], 0, alpha}; break;
-                case 3: img[{i, j}] = {d[0], d[1], d[2], alpha}; break;
-                case 4: img[{i, j}] = {d[0], d[1], d[2], d[3]}; break;
-            }
-        }
-    }
-    return img;
 }
 
-//
-// Conversion from srgb.
-//
+/// Set an image value for a generic image
+template <typename T>
+constexpr inline void image_set(int width, int height, int ncomp, T* img, int x,
+                                int y, const vec<T, 4>& vv) {
+    auto v = img + (y * width + x) * ncomp;
+    switch (ncomp) {
+        case 1: v[0] = vv[0]; break;
+        case 2:
+            v[0] = vv[0];
+            v[1] = vv[1];
+            break;
+        case 3:
+            v[0] = vv[0];
+            v[1] = vv[1];
+            v[2] = vv[2];
+            break;
+        case 4:
+            v[0] = vv[0];
+            v[1] = vv[1];
+            v[2] = vv[2];
+            v[3] = vv[3];
+            break;
+        default: assert(false);
+    }
+}
+
+/// Conversion from srgb.
 inline vec3f srgb_to_linear(const vec3f& srgb) {
-    return {pow(srgb[0], 2.2f), pow(srgb[1], 2.2f), pow(srgb[2], 2.2f)};
+    return {std::pow(srgb[0], 2.2f), std::pow(srgb[1], 2.2f),
+            std::pow(srgb[2], 2.2f)};
 }
+/// Conversion from srgb.
 inline vec4f srgb_to_linear(const vec4f& srgb) {
-    return {pow(srgb[0], 2.2f), pow(srgb[1], 2.2f), pow(srgb[2], 2.2f),
-            srgb[3]};
+    return {std::pow(srgb[0], 2.2f), std::pow(srgb[1], 2.2f),
+            std::pow(srgb[2], 2.2f), srgb[3]};
 }
+/// Conversion from srgb.
 inline vec3f srgb_to_linear(const vec3b& srgb) {
-    return srgb_to_linear(vec3f(srgb[0], srgb[1], srgb[2]) / 255.0f);
+    return srgb_to_linear(
+        vec3f{(float)srgb[0], (float)srgb[1], (float)srgb[2]} / 255.0f);
 }
+/// Conversion from srgb.
 inline vec4f srgb_to_linear(const vec4b& srgb) {
-    return srgb_to_linear(vec4f(srgb[0], srgb[1], srgb[2], srgb[3]) / 255.0f);
+    return srgb_to_linear(
+        vec4f{(float)srgb[0], (float)srgb[1], (float)srgb[2], (float)srgb[3]} /
+        255.0f);
 }
 
-//
-// Exposure/gamma correction
-//
-inline void exposure_gamma(const image_view<vec4f>& hdr, image_view<vec4f> ldr,
-                           float exposure, float gamma) {
+/// Exposure/gamma correction
+inline void exposure_gamma(image_view<const vec4f> hdr, image_view<vec4f> ldr,
+                           float exposure, float gamma, bool clamped) {
     assert(hdr.size() == ldr.size());
-    auto s = pow(2.0f, exposure);
+    auto s = std::pow(2.0f, exposure);
     for (auto j = 0; j < hdr.size()[1]; j++) {
         for (auto i = 0; i < hdr.size()[0]; i++) {
             auto v = hdr[{i, j}];
-            v = {pow(s * v[0], 1 / gamma), pow(s * v[1], 1 / gamma),
-                 pow(s * v[2], 1 / gamma), v[3]};
-            ldr[{i, j}] = {
-                (float)clamp(v[0], 0.0f, 1.0f), (float)clamp(v[1], 0.0f, 1.0f),
-                (float)clamp(v[2], 0.0f, 1.0f), (float)clamp(v[3], 0.0f, 1.0f),
-            };
+            v = {std::pow(s * v[0], 1 / gamma), std::pow(s * v[1], 1 / gamma),
+                 std::pow(s * v[2], 1 / gamma), v[3]};
+            if (clamped) {
+                ldr[{i, j}] = {
+                    (float)clamp(v[0], 0.0f, 1.0f),
+                    (float)clamp(v[1], 0.0f, 1.0f),
+                    (float)clamp(v[2], 0.0f, 1.0f),
+                    (float)clamp(v[3], 0.0f, 1.0f),
+                };
+            } else {
+                ldr[{i, j}] = v;
+            }
         }
     }
 }
 
-inline void exposure_gamma(const image_view<vec4f>& hdr, image_view<vec4b> ldr,
-                           float exposure, float gamma,
-                           const vec2i& xy = {0, 0},
-                           const vec2i& wh = {-1, -1}) {
-    assert(hdr.size() == ldr.size());
-    auto s = pow(2.0f, exposure);
-    auto wh_ = vec2i{(wh[0] < 0) ? hdr.size()[0] - xy[0] : wh[0],
-                     (wh[1] < 0) ? hdr.size()[1] - xy[1] : wh[1]};
-    for (auto j = xy[1]; j < xy[1] + wh_[1]; j++) {
-        for (auto i = xy[0]; i < xy[0] + wh_[0]; i++) {
-            auto v = hdr[{i, j}];
-            v = {pow(s * v[0], 1 / gamma), pow(s * v[1], 1 / gamma),
-                 pow(s * v[2], 1 / gamma), v[3]};
-            ldr[{i, j}] = {
-                (unsigned char)(clamp(v[0], 0.0f, 1.0f) * 255),
-                (unsigned char)(clamp(v[1], 0.0f, 1.0f) * 255),
-                (unsigned char)(clamp(v[2], 0.0f, 1.0f) * 255),
-                (unsigned char)(clamp(v[3], 0.0f, 1.0f) * 255),
-            };
+/// Exposure/gamma correction
+inline void exposure_gamma(int width, int height, int ncomp, const float* hdr,
+                           float* ldr, float exposure, float gamma,
+                           bool clamped) {
+    auto s = std::pow(2.0f, exposure);
+    for (auto j = 0; j < height; j++) {
+        for (auto i = 0; i < width; i++) {
+            auto v = image_lookup(width, height, ncomp, hdr, i, j);
+            v = {std::pow(s * v[0], 1 / gamma), std::pow(s * v[1], 1 / gamma),
+                 std::pow(s * v[2], 1 / gamma), v[3]};
+            if (clamped) v = clamp(v, 0.0f, 1.0f);
+            image_set(width, height, ncomp, ldr, i, j, v);
         }
     }
 }
+
+/// Exposure/gamma correction
+inline void exposure_gamma(int width, int height, int ncomp, const float* hdr,
+                           byte* ldr, float exposure, float gamma) {
+    auto s = std::pow(2.0f, exposure);
+    for (auto j = 0; j < height; j++) {
+        for (auto i = 0; i < width; i++) {
+            auto v = image_lookup(width, height, ncomp, hdr, i, j);
+            v = {std::pow(s * v[0], 1 / gamma), std::pow(s * v[1], 1 / gamma),
+                 std::pow(s * v[2], 1 / gamma), v[3]};
+            image_set(width, height, ncomp, ldr, i, j,
+                      {
+                          (unsigned char)(clamp(v[0], 0.0f, 1.0f) * 255),
+                          (unsigned char)(clamp(v[1], 0.0f, 1.0f) * 255),
+                          (unsigned char)(clamp(v[2], 0.0f, 1.0f) * 255),
+                          (unsigned char)(clamp(v[3], 0.0f, 1.0f) * 255),
+                      });
+        }
+    }
+}
+
+/// Exposure/gamma correction
+inline void exposure_gamma(int width, int height, int ncomp, const float* hdr,
+                           byte* ldr, float exposure, float gamma, int x, int y,
+                           int w, int h) {
+    auto s = std::pow(2.0f, exposure);
+    for (auto j = y; j < y + h; j++) {
+        for (auto i = x; i < x + w; i++) {
+            auto v = image_lookup(width, height, ncomp, hdr, i, j);
+            v = {std::pow(s * v[0], 1 / gamma), std::pow(s * v[1], 1 / gamma),
+                 std::pow(s * v[2], 1 / gamma), v[3]};
+            image_set(width, height, ncomp, ldr, i, j,
+                      {
+                          (unsigned char)(clamp(v[0], 0.0f, 1.0f) * 255),
+                          (unsigned char)(clamp(v[1], 0.0f, 1.0f) * 255),
+                          (unsigned char)(clamp(v[2], 0.0f, 1.0f) * 255),
+                          (unsigned char)(clamp(v[3], 0.0f, 1.0f) * 255),
+                      });
+        }
+    }
+}
+
+/// @}
 
 // -----------------------------------------------------------------------------
 // TIMER
 // -----------------------------------------------------------------------------
 
+/// @name timer
+/// @{
+
+/// A simple wrapper for std::chrono.
 struct timer {
-    timer(bool autostart = true) {
+    /// initialize a timer and start it if necessary
+    constexpr timer(bool autostart = true) {
         if (autostart) start();
     }
 
-    void start() {
+    /// start a timer
+    constexpr void start() {
         _start = std::chrono::steady_clock::now();
         _started = true;
     }
 
-    void stop() {
+    /// stops a timer
+    constexpr void stop() {
         _end = std::chrono::steady_clock::now();
         _started = false;
     }
 
-    double elapsed() {
+    /// elapsed time
+    constexpr double elapsed() {
         if (_started) stop();
         std::chrono::duration<double> diff = (_end - _start);
         return diff.count();
@@ -1974,6 +2247,8 @@ struct timer {
     bool _started = false;
     std::chrono::time_point<std::chrono::steady_clock> _start, _end;
 };
+
+/// @}
 
 }  // namespace
 
