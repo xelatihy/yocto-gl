@@ -71,6 +71,7 @@ void init_params(yitrace_app::params* pars, ycmd::parser* parser) {
 
     // init params
     ytrace_app::init_params(pars, parser);
+    if (!pars->scene) return;
 
     // image rendering params
     pars->ldr.resize(pars->width * pars->height, {0, 0, 0, 0});

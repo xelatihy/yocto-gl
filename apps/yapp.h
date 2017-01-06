@@ -645,6 +645,7 @@ inline void init_params(params* pars, ycmd::parser* parser) {
     pars->imfilename = imfilename;
 
     // loading scene
+    if (filename.empty()) return;
     pars->scene = yapp::load_scene(filename);
 }
 
