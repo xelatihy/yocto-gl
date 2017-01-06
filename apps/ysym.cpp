@@ -36,13 +36,21 @@ int main(int argc, char* argv[]) {
     ycmd::check_parser(parser);
 
     // simulate each frame and save the results to a new scene
+    printf("rigid body simulation for %s to %s\n", pars->filename.c_str(),
+           pars->outfilename.c_str());
+    printf("simulating ...");
+    fflush(stdout);
     for (auto i = 0; i < pars->nframes; i++) {
+        printf("\rsimulating frame %d/%d", i, pars->nframes);
+        fflush(stdout);
         ysym_app::simulate_step(pars->scene, pars->rigid_scene, pars->dt);
         std::string errmsg;
         char frame_filename[4096];
         sprintf(frame_filename, pars->outfilename.c_str(), i);
         yapp::save_scene(frame_filename, pars->scene);
     }
+    printf("\rsimulating done\n");
+    fflush(stdout);
 
     // done
     delete pars;
