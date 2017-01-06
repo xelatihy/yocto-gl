@@ -54,8 +54,9 @@ struct img {
     yglu::uint tex_glid = 0;
 
     // hdr controls
-    float hdr_exposure = 0;
-    float hdr_gamma = 2.2f;
+    float exposure = 0;
+    float gamma = 2.2f;
+    bool srgb = true;
 
     // check hdr
     bool is_hdr() const { return !hdr.empty(); }
@@ -66,7 +67,8 @@ struct params {
     std::vector<img*> imgs;
 
     float exposure = 0;
-    float gamma = 2.2;
+    float gamma = 1;
+    bool srgb = true;
 
     bool legacy_gl = false;
 
@@ -85,7 +87,7 @@ struct params {
 };
 
 std::vector<img*> load_images(const std::vector<std::string>& img_filenames,
-                              float exposure, float gamma) {
+                              float exposure, float gamma, bool srgb) {
     auto imgs = std::vector<img*>();
     for (auto filename : img_filenames) {
         imgs.push_back(new img());
@@ -100,9 +102,9 @@ std::vector<img*> load_images(const std::vector<std::string>& img_filenames,
             img->ldr.resize(img->hdr.size());
             ym::exposure_gamma(img->width, img->height, img->ncomp,
                                img->hdr.data(), img->ldr.data(), exposure,
-                               gamma);
-            img->hdr_exposure = exposure;
-            img->hdr_gamma = gamma;
+                               gamma, srgb);
+            img->exposure = exposure;
+            img->gamma = gamma;
             free(pixels);
         } else {
             auto pixels = stbi_load(filename.c_str(), &img->width, &img->height,
@@ -121,17 +123,20 @@ std::vector<img*> load_images(const std::vector<std::string>& img_filenames,
 }
 
 void init_params(params* pars, ycmd::parser* parser) {
-    pars->exposure =
-        ycmd::parse_opt<float>(parser, "--exposure", "-e", "image exposure", 0);
+    pars->exposure = ycmd::parse_opt<float>(parser, "--exposure", "-e",
+                                            "hdr image exposure", 0);
     pars->gamma =
-        ycmd::parse_opt<float>(parser, "--gamma", "-g", "image gamma", 2.2);
+        ycmd::parse_opt<float>(parser, "--gamma", "-g", "hdr image gamma", 1);
+    pars->srgb = ycmd::parse_opt<bool>(parser, "--srgb", "",
+                                       "hdr image srgb output", true);
     pars->legacy_gl = ycmd::parse_flag(parser, "--legacy_opengl", "-L",
                                        "uses legacy OpenGL", false);
     auto filenames = ycmd::parse_arga<std::string>(parser, "image",
                                                    "image filename", {}, true);
 
     // loading images
-    pars->imgs = load_images(filenames, pars->exposure, pars->gamma);
+    pars->imgs =
+        load_images(filenames, pars->exposure, pars->gamma, pars->srgb);
 }
 }  // namespace
 
@@ -159,13 +164,16 @@ void text_callback(GLFWwindow* window, unsigned int key) {
         case ']': pars->exposure += 1; break;
         case '{': pars->gamma -= 0.1f; break;
         case '}': pars->gamma += 0.1f; break;
+        case '\\': pars->srgb = pars->srgb; break;
         case '1':
             pars->exposure = 0;
             pars->gamma = 1;
+            pars->srgb = true;
             break;
         case '2':
             pars->exposure = 0;
             pars->gamma = 2.2f;
+            pars->srgb = true;
             break;
         case 'z': pars->zoom = 1; break;
         case 'h':
@@ -258,10 +266,12 @@ void draw_widgets(GLFWwindow* window) {
             nk_value_float(nuklear_ctx, "b", (inside) ? hdrp[2] : 0);
             nk_value_float(nuklear_ctx, "a", (inside) ? hdrp[3] : 0);
             nk_layout_row_dynamic(nuklear_ctx, 30, 1);
-            nk_property_float(nuklear_ctx, "exposure", -20, &pars->exposure, 20,
-                              1, 1);
-            nk_property_float(nuklear_ctx, "gamma", 0.1, &pars->gamma, 5, 0.1,
-                              0.1);
+            nk_property_float(nuklear_ctx, "hdr exposure", -20, &pars->exposure,
+                              20, 1, 1);
+            nk_property_float(nuklear_ctx, "hdr gamma", 0.1, &pars->gamma, 5,
+                              0.1, 0.1);
+            pars->srgb =
+                nk_check_label(nuklear_ctx, "hdr srgb output", pars->srgb);
         }
     }
     nk_end(nuklear_ctx);
@@ -344,13 +354,15 @@ void run_ui(yimview_app::params* pars) {
         }
 
         // refresh hdr
-        if (img->is_hdr() && (pars->exposure != img->hdr_exposure ||
-                              pars->gamma != img->hdr_gamma)) {
+        if (img->is_hdr() &&
+            (pars->exposure != img->exposure || pars->gamma != img->gamma ||
+             pars->srgb != img->srgb)) {
             ym::exposure_gamma(img->width, img->height, img->ncomp,
                                img->hdr.data(), img->ldr.data(), pars->exposure,
-                               pars->gamma);
-            img->hdr_exposure = pars->exposure;
-            img->hdr_gamma = pars->gamma;
+                               pars->gamma, pars->srgb);
+            img->exposure = pars->exposure;
+            img->gamma = pars->gamma;
+            img->srgb = pars->srgb;
             if (pars->legacy_gl) {
                 yglu::legacy::update_texture(img->tex_glid, img->width,
                                              img->height, img->ncomp,

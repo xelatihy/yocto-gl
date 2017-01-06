@@ -2106,49 +2106,28 @@ constexpr inline void image_set(int width, int height, int ncomp, T* img, int x,
 }
 
 /// Conversion from srgb.
-inline vec3f srgb_to_linear(const vec3f& srgb) {
-    return {std::pow(srgb[0], 2.2f), std::pow(srgb[1], 2.2f),
-            std::pow(srgb[2], 2.2f)};
-}
-/// Conversion from srgb.
-inline vec4f srgb_to_linear(const vec4f& srgb) {
-    return {std::pow(srgb[0], 2.2f), std::pow(srgb[1], 2.2f),
-            std::pow(srgb[2], 2.2f), srgb[3]};
-}
-/// Conversion from srgb.
-inline vec3f srgb_to_linear(const vec3b& srgb) {
-    return srgb_to_linear(
-        vec3f{(float)srgb[0], (float)srgb[1], (float)srgb[2]} / 255.0f);
-}
-/// Conversion from srgb.
 inline vec4f srgb_to_linear(const vec4b& srgb) {
-    return srgb_to_linear(
-        vec4f{(float)srgb[0], (float)srgb[1], (float)srgb[2], (float)srgb[3]} /
-        255.0f);
+    return {std::pow((float)srgb[0] / 255.0f, 2.2f),
+            std::pow((float)srgb[1] / 255.0f, 2.2f),
+            std::pow((float)srgb[2] / 255.0f, 2.2f), (float)srgb[3] / 255.0f};
 }
 
-/// Exposure/gamma correction
-inline void exposure_gamma(image_view<const vec4f> hdr, image_view<vec4f> ldr,
-                           float exposure, float gamma, bool clamped) {
-    assert(hdr.size() == ldr.size());
-    auto s = std::pow(2.0f, exposure);
-    for (auto j = 0; j < hdr.size()[1]; j++) {
-        for (auto i = 0; i < hdr.size()[0]; i++) {
-            auto v = hdr[{i, j}];
-            v = {std::pow(s * v[0], 1 / gamma), std::pow(s * v[1], 1 / gamma),
-                 std::pow(s * v[2], 1 / gamma), v[3]};
-            if (clamped) {
-                ldr[{i, j}] = {
-                    (float)clamp(v[0], 0.0f, 1.0f),
-                    (float)clamp(v[1], 0.0f, 1.0f),
-                    (float)clamp(v[2], 0.0f, 1.0f),
-                    (float)clamp(v[3], 0.0f, 1.0f),
-                };
-            } else {
-                ldr[{i, j}] = v;
-            }
-        }
-    }
+/// Conversion to srgb.
+inline vec4b linear_to_srgb(const vec4f& srgb) {
+    auto v = vec4f{std::pow(srgb[0], 1 / 2.2f), std::pow(srgb[1], 1 / 2.2f),
+                   std::pow(srgb[2], 1 / 2.2f), srgb[3]};
+    return {(unsigned char)(clamp(v[0], 0.0f, 1.0f) * 255),
+            (unsigned char)(clamp(v[1], 0.0f, 1.0f) * 255),
+            (unsigned char)(clamp(v[2], 0.0f, 1.0f) * 255),
+            (unsigned char)(clamp(v[3], 0.0f, 1.0f) * 255)};
+}
+
+/// Conversion to clamped bytes.
+inline vec4b linear_to_byte(const vec4f& v) {
+    return {(unsigned char)(clamp(v[0], 0.0f, 1.0f) * 255),
+            (unsigned char)(clamp(v[1], 0.0f, 1.0f) * 255),
+            (unsigned char)(clamp(v[2], 0.0f, 1.0f) * 255),
+            (unsigned char)(clamp(v[3], 0.0f, 1.0f) * 255)};
 }
 
 /// Exposure/gamma correction
@@ -2169,41 +2148,58 @@ inline void exposure_gamma(int width, int height, int ncomp, const float* hdr,
 
 /// Exposure/gamma correction
 inline void exposure_gamma(int width, int height, int ncomp, const float* hdr,
-                           byte* ldr, float exposure, float gamma) {
+                           byte* ldr, float exposure, float gamma,
+                           bool srgb_output) {
     auto s = std::pow(2.0f, exposure);
     for (auto j = 0; j < height; j++) {
         for (auto i = 0; i < width; i++) {
             auto v = image_lookup(width, height, ncomp, hdr, i, j);
             v = {std::pow(s * v[0], 1 / gamma), std::pow(s * v[1], 1 / gamma),
                  std::pow(s * v[2], 1 / gamma), v[3]};
-            image_set(width, height, ncomp, ldr, i, j,
-                      {
-                          (unsigned char)(clamp(v[0], 0.0f, 1.0f) * 255),
-                          (unsigned char)(clamp(v[1], 0.0f, 1.0f) * 255),
-                          (unsigned char)(clamp(v[2], 0.0f, 1.0f) * 255),
-                          (unsigned char)(clamp(v[3], 0.0f, 1.0f) * 255),
-                      });
+            if (srgb_output)
+                image_set(width, height, ncomp, ldr, i, j, linear_to_srgb(v));
+            else
+                image_set(width, height, ncomp, ldr, i, j, linear_to_byte(v));
         }
     }
 }
 
 /// Exposure/gamma correction
 inline void exposure_gamma(int width, int height, int ncomp, const float* hdr,
-                           byte* ldr, float exposure, float gamma, int x, int y,
-                           int w, int h) {
+                           byte* ldr, float exposure, float gamma,
+                           bool srgb_output, int x, int y, int w, int h) {
     auto s = std::pow(2.0f, exposure);
     for (auto j = y; j < y + h; j++) {
         for (auto i = x; i < x + w; i++) {
             auto v = image_lookup(width, height, ncomp, hdr, i, j);
             v = {std::pow(s * v[0], 1 / gamma), std::pow(s * v[1], 1 / gamma),
                  std::pow(s * v[2], 1 / gamma), v[3]};
-            image_set(width, height, ncomp, ldr, i, j,
-                      {
-                          (unsigned char)(clamp(v[0], 0.0f, 1.0f) * 255),
-                          (unsigned char)(clamp(v[1], 0.0f, 1.0f) * 255),
-                          (unsigned char)(clamp(v[2], 0.0f, 1.0f) * 255),
-                          (unsigned char)(clamp(v[3], 0.0f, 1.0f) * 255),
-                      });
+            if (srgb_output)
+                image_set(width, height, ncomp, ldr, i, j, linear_to_srgb(v));
+            else
+                image_set(width, height, ncomp, ldr, i, j, linear_to_byte(v));
+        }
+    }
+}
+
+/// linear to srgb correction
+inline void linear_to_srgb(int width, int height, int ncomp, const float* hdr,
+                           byte* ldr) {
+    for (auto j = 0; j < height; j++) {
+        for (auto i = 0; i < width; i++) {
+            auto v = image_lookup(width, height, ncomp, hdr, i, j);
+            image_set(width, height, ncomp, ldr, i, j, linear_to_srgb(v));
+        }
+    }
+}
+
+/// linear to byte conversion
+inline void linear_to_byte(int width, int height, int ncomp, const float* hdr,
+                           byte* ldr) {
+    for (auto j = 0; j < height; j++) {
+        for (auto i = 0; i < width; i++) {
+            auto v = image_lookup(width, height, ncomp, hdr, i, j);
+            image_set(width, height, ncomp, ldr, i, j, linear_to_byte(v));
         }
     }
 }

@@ -47,6 +47,7 @@
 ///
 ///
 /// HISTORY:
+/// - v 0.7: cleaner srgb support for stdshader
 /// - v 0.6: doxygen comments
 /// - v 0.5: support for OpenGL 3.2
 /// - v 0.4: support for legacy OpenGL
@@ -460,8 +461,9 @@ YGL_API void make_program(uint* pid, uint* vao);
 /// projection. Sets also whether to use full shading or a quick eyelight
 /// preview.
 ///
-YGL_API void begin_frame(uint prog, bool shade_eyelight, float img_exposure,
-                         float img_gamma, const float4x4& camera_xform,
+YGL_API void begin_frame(uint prog, uint vao, bool shade_eyelight,
+                         float img_exposure, float img_gamma, bool img_srgb,
+                         const float4x4& camera_xform,
                          const float4x4& camera_xform_inv,
                          const float4x4& camera_proj);
 
@@ -1520,6 +1522,7 @@ YGL_API void make_program(uint* pid, uint* aid) {
         "\n"
         "uniform float img_exposure;         // image exposure\n"
         "uniform float img_gamma;            // image gamma\n"
+        "uniform bool img_srgb;              // image srgb correction\n"
         "\n"
         "uniform bool shade_eyelight;        // eyelight shading\n"
         "\n"
@@ -1626,8 +1629,10 @@ YGL_API void make_program(uint* pid, uint* aid) {
         "        }\n"
         "    }\n"
         "\n"
-        "    //final color correction\n"
+        "    // final color correction\n"
         "    c = pow(c*pow(2,img_exposure),vec3(1/img_gamma));\n"
+        "    // srgb output\n"
+        "    if(img_srgb) c = pow(c,vec3(1/2.2));\n"
         "    // output final color by setting gl_FragColor\n"
         "    frag_color = vec4(c,1);\n"
         "}\n"
@@ -1648,7 +1653,7 @@ YGL_API void make_program(uint* pid, uint* aid) {
 // This is a public API. See above for documentation.
 //
 YGL_API void begin_frame(uint prog, uint vao, bool shade_eyelight,
-                         float img_exposure, float img_gamma,
+                         float img_exposure, float img_gamma, bool img_srgb,
                          const float4x4& camera_xform,
                          const float4x4& camera_xform_inv,
                          const float4x4& camera_proj) {
@@ -1659,6 +1664,8 @@ YGL_API void begin_frame(uint prog, uint vao, bool shade_eyelight,
     modern::set_uniform(prog, "shade_eyelight", &shade_eyelighti, 1, 1);
     modern::set_uniform(prog, "img_exposure", &img_exposure, 1, 1);
     modern::set_uniform(prog, "img_gamma", &img_gamma, 1, 1);
+    auto img_isrgb = (int)img_srgb;
+    modern::set_uniform(prog, "img_srgb", &img_isrgb, 1, 1);
     modern::set_uniform(prog, "camera_xform", &camera_xform[0][0], 16, 1);
     modern::set_uniform(prog, "camera_xform_inv", &camera_xform_inv[0][0], 16,
                         1);

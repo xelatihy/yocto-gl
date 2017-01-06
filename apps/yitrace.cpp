@@ -56,6 +56,7 @@ struct params : virtual ytrace_app::params {
     bool scene_updated = true;
     yglu::uint texture_id = 0;
     float texture_exposure, texture_gamma;
+    bool texture_srgb;
 
     // widgets
     void* widget_ctx = nullptr;
@@ -81,6 +82,7 @@ void init_params(yitrace_app::params* pars, ycmd::parser* parser) {
                          {0, 0, 0, 0});
     pars->texture_exposure = pars->exposure;
     pars->texture_gamma = pars->gamma;
+    pars->texture_srgb = pars->srgb;
 }
 };
 
@@ -98,18 +100,26 @@ void text_callback(GLFWwindow* window, unsigned int key) {
         case ']': pars->exposure += 1; break;
         case '{': pars->gamma -= 0.1f; break;
         case '}': pars->gamma += 0.1f; break;
+        case '\\': pars->srgb = !pars->srgb; break;
+        case '0':
+            pars->exposure = 0;
+            pars->gamma = 1;
+            pars->srgb = false;
+            break;
         case '1':
             pars->exposure = 0;
             pars->gamma = 1;
+            pars->srgb = true;
             break;
         case '2':
             pars->exposure = 0;
             pars->gamma = 2.2f;
+            pars->srgb = true;
             break;
         case 's':
             ytrace_app::save_image(pars->imfilename, pars->width, pars->height,
                                    pars->hdr.data(), pars->exposure,
-                                   pars->gamma);
+                                   pars->gamma, pars->srgb);
             break;
         default: printf("unsupported key\n"); break;
     }
@@ -163,9 +173,11 @@ void draw_widgets(GLFWwindow* window) {
                         &pars->render_params.camera_id,
                         (int)pars->scene->cameras.size() - 1, 1, 1);
         nk_layout_row_dynamic(nuklear_ctx, 30, 1);
-        nk_property_float(nuklear_ctx, "exposure", -20, &pars->exposure, 20, 1,
-                          1);
-        nk_property_float(nuklear_ctx, "gamma", 0.1, &pars->gamma, 5, 0.1, 0.1);
+        nk_property_float(nuklear_ctx, "hdr exposure", -20, &pars->exposure, 20,
+                          1, 1);
+        nk_property_float(nuklear_ctx, "hdr gamma", 0.1, &pars->gamma, 5, 0.1,
+                          0.1);
+        pars->srgb = nk_check_label(nuklear_ctx, "hdr srgb output", pars->srgb);
     }
     nk_end(nuklear_ctx);
 
@@ -211,9 +223,10 @@ bool update(yitrace_app::params* pars) {
                 }
             }
         }
-        ym::exposure_gamma(
-            pars->width, pars->height, 4, (const float*)pars->hdr.data(),
-            (unsigned char*)pars->ldr.data(), pars->exposure, pars->gamma);
+        ym::exposure_gamma(pars->width, pars->height, 4,
+                           (const float*)pars->hdr.data(),
+                           (unsigned char*)pars->ldr.data(), pars->exposure,
+                           pars->gamma, pars->srgb);
         if (pars->legacy_gl) {
             yglu::legacy::update_texture(
                 pars->texture_id, pars->width, pars->height, 4,
@@ -244,18 +257,21 @@ bool update(yitrace_app::params* pars) {
                 ym::exposure_gamma(pars->width, pars->height, 4,
                                    (const float*)pars->hdr.data(),
                                    (unsigned char*)pars->ldr.data(),
-                                   pars->exposure, pars->gamma, block[0],
-                                   block[1], block[2], block[3]);
+                                   pars->exposure, pars->gamma, pars->srgb,
+                                   block[0], block[1], block[2], block[3]);
             }));
         }
         for (auto& future : futures) future.wait();
         if (pars->texture_exposure != pars->exposure ||
-            pars->texture_gamma != pars->gamma) {
-            ym::exposure_gamma(
-                pars->width, pars->height, 4, (const float*)pars->hdr.data(),
-                (unsigned char*)pars->ldr.data(), pars->exposure, pars->gamma);
+            pars->texture_gamma != pars->gamma ||
+            pars->texture_srgb != pars->srgb) {
+            ym::exposure_gamma(pars->width, pars->height, 4,
+                               (const float*)pars->hdr.data(),
+                               (unsigned char*)pars->ldr.data(), pars->exposure,
+                               pars->gamma, pars->srgb);
             pars->texture_exposure = pars->exposure;
             pars->texture_gamma = pars->gamma;
+            pars->texture_srgb = pars->srgb;
         }
         if (pars->legacy_gl) {
             yglu::legacy::update_texture(
