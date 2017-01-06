@@ -19,6 +19,10 @@ C++ and works on OSX (clang), Linux (clang/gcc) and Windows (cl).
 - **yocto_glu.h** - Quick and dirty rendering of images and shapes in OpenGL, useful to create interactive viewers.
 - **yocto_math.h** - A few vector math routines used to implement Yocto/GL libraries.
 
+## Documentation
+
+All documentation is included in each library file in plain ASCII. If desired, runs `doxygen` in the root directory to get html formatted documentation.
+
 ## Examples
 
 This repository contains Yocto/GL applications written to test the libraries.
