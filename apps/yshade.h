@@ -120,7 +120,7 @@ inline void shade(const yapp::scene* sc, int cur_camera, yglu::uint prog,
     auto camera_xform = ym::to_mat((ym::frame3f)cam->frame);
     auto camera_view = ym::to_mat(ym::inverse((ym::frame3f)cam->frame));
     auto camera_proj =
-        ym::perspective_mat4(cam->yfov, cam->aspect, 0.1f, 10000.0f);
+        ym::perspective_mat4(cam->yfov, cam->aspect, 0.1f, 100000.0f);
 
     yglu::stdshader::begin_frame(prog, vao, camera_lights, exposure, gamma_,
                                  srgb, camera_xform, camera_view, camera_proj);
@@ -237,7 +237,7 @@ inline void draw(const yapp::scene* sc, int cur_camera,
     auto camera_xform = ym::to_mat((ym::frame3f)cam->frame);
     auto camera_view = ym::to_mat(ym::inverse((ym::frame3f)cam->frame));
     auto camera_proj =
-        ym::perspective_mat4(cam->yfov, cam->aspect, 0.1f, 10000.0f);
+        ym::perspective_mat4(cam->yfov, cam->aspect, 0.1f, 100000.0f);
 
     auto nlights = 0;
     std::array<ym::vec3f, 16> light_pos, light_ke;
