@@ -533,7 +533,7 @@ inline void save_scene(const std::string& filename, const scene* sc) {
 //
 // Load scene
 //
-inline scene* load_scene(const std::string& filename) {
+inline scene* load_scene(const std::string& filename, float scale) {
     // declare scene
     auto sc = std::unique_ptr<scene>();
 
@@ -560,6 +560,15 @@ inline scene* load_scene(const std::string& filename) {
             txt->height = 1;
             txt->ncomp = 4;
             txt->ldr = {255, 255, 255, 255};
+        }
+    }
+
+    // scale if necessary
+    if (scale != 1.0f) {
+        if (scale != 1.0f) {
+            for (auto sh : sc->shapes) {
+                for (auto& p : sh->pos) (ym::vec3f&)p *= scale;
+            }
         }
     }
 
@@ -640,6 +649,8 @@ struct params {
 
 inline void init_params(params* pars, ycmd::parser* parser) {
     // params
+    auto scale =
+        ycmd::parse_opt<float>(parser, "--scale", "", "scale scene", 1.0f);
     auto imfilename = ycmd::parse_opt<std::string>(parser, "--output", "-o",
                                                    "image filename", "out.hdr");
     auto filename = ycmd::parse_arg<std::string>(parser, "scene",
@@ -651,7 +662,7 @@ inline void init_params(params* pars, ycmd::parser* parser) {
 
     // loading scene
     if (filename.empty()) return;
-    pars->scene = yapp::load_scene(filename);
+    pars->scene = yapp::load_scene(filename, scale);
 }
 
 }  // namespace
