@@ -824,10 +824,12 @@ YGL_API std::vector<material> load_mtl(const std::string& filename) {
         } else if (tok_s == "Kr") {
             materials.back().kr = _parse_float3(cur_tok);
         } else if (tok_s == "Tr") {
+            // TODO only for float3 otherwise parse as d
             materials.back().kt = _parse_float3(cur_tok);
         } else if (tok_s == "Ns") {
             materials.back().ns = _parse_float(cur_tok);
         } else if (tok_s == "d" || tok_s == "Tr") {
+            // TODO parse Tr as 1-d if Tr has 1 float only
             materials.back().op = _parse_float(cur_tok);
         } else if (tok_s == "Ni") {
             materials.back().ior = _parse_float(cur_tok);
@@ -849,11 +851,11 @@ YGL_API std::vector<material> load_mtl(const std::string& filename) {
             materials.back().op_txt = (cur_ntok) ? cur_tok[0] : "";
         } else if (tok_s == "map_Ni") {
             materials.back().ior_txt = (cur_ntok) ? cur_tok[0] : "";
-        } else if (tok_s == "map_bump") {
+        } else if (tok_s == "map_bump" || tok_s == "bump") {
             materials.back().bump_txt = (cur_ntok) ? cur_tok[0] : "";
-        } else if (tok_s == "map_disp") {
+        } else if (tok_s == "map_disp" || tok_s == "disp") {
             materials.back().disp_txt = (cur_ntok) ? cur_tok[0] : "";
-        } else if (tok_s == "map_norm") {
+        } else if (tok_s == "map_norm" || tok_s == "norm") {
             materials.back().norm_txt = (cur_ntok) ? cur_tok[0] : "";
         } else {
             // unused
