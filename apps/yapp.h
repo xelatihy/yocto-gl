@@ -197,7 +197,7 @@ inline scene* load_obj_scene(const std::string& filename) {
     obj.reset(nullptr);
 
     // load textures
-    yobj::load_textures(fl_scene.get(), ycmd::get_dirname(filename));
+    yobj::load_textures(fl_scene.get(), ycmd::get_dirname(filename), true);
 
     // init scene
     auto sc = std::unique_ptr<scene>(new scene());

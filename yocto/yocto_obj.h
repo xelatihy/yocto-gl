@@ -69,6 +69,7 @@
 ///
 ///
 /// HISTORY:
+/// - v 0.9: bug fixes and optionally texture skipping
 /// - v 0.8: high level interface uses grouping
 /// - v 0.7: doxygen comments
 /// - v 0.6: bug fixes
@@ -475,9 +476,13 @@ YGL_API obj* unflatten_obj(const fl_obj* scene);
 /// Parameters:
 /// - scene: scene to load textures into
 /// - dirname: base directory name for texture files
+/// - skip_missing: whether to skip missing textures or throw an expection
 ///
+/// Throws:
+/// - obj_exception
 ///
-YGL_API void load_textures(fl_obj* scene, const std::string& dirname);
+YGL_API void load_textures(fl_obj* scene, const std::string& dirname,
+                           bool skip_missing = false);
 
 /// @}
 
@@ -838,12 +843,15 @@ YGL_API std::vector<material> load_mtl(const std::string& filename) {
         } else if (tok_s == "Kr") {
             materials.back().kr = _parse_float3(cur_tok);
         } else if (tok_s == "Tr") {
-            // TODO only for float3 otherwise parse as d
-            materials.back().kt = _parse_float3(cur_tok);
+            if (cur_ntok >= 3) {
+                materials.back().kt = _parse_float3(cur_tok);
+            } else {
+                // as tinyobjreader
+                materials.back().op = 1 - _parse_float(cur_tok);
+            }
         } else if (tok_s == "Ns") {
             materials.back().ns = _parse_float(cur_tok);
-        } else if (tok_s == "d" || tok_s == "Tr") {
-            // TODO parse Tr as 1-d if Tr has 1 float only
+        } else if (tok_s == "d") {
             materials.back().op = _parse_float(cur_tok);
         } else if (tok_s == "Ni") {
             materials.back().ior = _parse_float(cur_tok);
@@ -1399,24 +1407,33 @@ YGL_API obj* unflatten_obj(const fl_obj* scene) {
 //
 // Loads textures for an scene.
 //
-YGL_API void load_textures(fl_obj* scene, const std::string& dirname) {
+YGL_API void load_textures(fl_obj* scene, const std::string& dirname,
+                           bool skip_missing) {
 #ifndef YGL_NO_STBIMAGE
     stbi_set_flip_vertically_on_load(1);
 
     for (auto txt : scene->textures) {
         auto filename = dirname + txt->path;
+        for (auto& c : filename)
+            if (c == '\\') c = '/';
         auto ext = _get_extension(filename).substr(1);
         if (ext == "hdr") {
             auto d = stbi_loadf(filename.c_str(), &txt->width, &txt->height,
                                 &txt->ncomp, 0);
-            if (!d) throw(obj_exception("could not load texture " + filename));
+            if (!d) {
+                if (skip_missing) continue;
+                throw(obj_exception("could not load texture " + filename));
+            }
             txt->dataf = std::vector<float>(
                 d, d + txt->width * txt->height * txt->ncomp);
             free(d);
         } else {
             auto d = stbi_load(filename.c_str(), &txt->width, &txt->height,
                                &txt->ncomp, 0);
-            if (!d) throw(obj_exception("could not load texture " + filename));
+            if (!d) {
+                if (skip_missing) continue;
+                throw(obj_exception("could not load texture " + filename));
+            }
             txt->datab = std::vector<unsigned char>(
                 d, d + txt->width * txt->height * txt->ncomp);
             free(d);
