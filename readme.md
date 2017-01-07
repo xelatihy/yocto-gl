@@ -27,12 +27,13 @@ All documentation is included in each library file in plain ASCII. If desired, r
 
 This repository contains Yocto/GL applications written to test the libraries.
 
+- **yobj2gltf.cpp**: Converts Wavefront OBJ to glTF 1.1.
 - **ytestgen.cpp**: Creates various test cases for the path tracer and GL viewer.
 - **yimview.cpp**: HDR/PNG/JPG image viewer with exposure/gamma tone mapping.
 - **yshade.cpp**: Simple OpenGL viewer.
 - **yitrace.cpp**: Interactive path-tracer.
 - **ytrace.cpp**: Offline path-tracer.
-- **ysym.cpp**: Interactive rigid body demo code.
+- **yisym.cpp**: Interactive rigid body demo code.
 - **ysym.cpp**: Offline rigid body demo.
 
 A few screenshots from **ytrace** are included here for demonstration.
