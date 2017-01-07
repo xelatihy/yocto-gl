@@ -5,3 +5,4 @@ clang++ -MMD -MF bin/ytestgen.d -std=c++14 -stdlib=libc++ -O3 -g -fcolor-diagnos
 clang++ -MMD -MF bin/ytrace.d -std=c++14 -stdlib=libc++ -O3 -g -fcolor-diagnostics -I/usr/local/include -o bin/ytrace apps/ytrace.cpp
 clang++ -MMD -MF bin/yitrace.d -std=c++14 -stdlib=libc++ -O3 -g -fcolor-diagnostics -I/usr/local/include -framework Cocoa -framework OpenGL -framework IOKit -framework CoreVideo -L/usr/local/lib -lglfw3 -o bin/yitrace apps/yitrace.cpp
 clang++ -MMD -MF bin/yimview.d -std=c++14 -stdlib=libc++ -O3 -g -fcolor-diagnostics -I/usr/local/include -framework Cocoa -framework OpenGL -framework IOKit -framework CoreVideo -L/usr/local/lib -lglfw3 -o bin/yimview apps/yimview.cpp
+clang++ -MMD -MF bin/yobj2gltf.d -std=c++14 -stdlib=libc++ -O3 -g -fcolor-diagnostics -I/usr/local/include -o bin/yobj2gltf apps/yobj2gltf.cpp
