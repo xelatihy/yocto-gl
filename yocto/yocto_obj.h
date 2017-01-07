@@ -69,6 +69,7 @@
 ///
 ///
 /// HISTORY:
+/// - v 0.8: high level interface uses grouping
 /// - v 0.7: doxygen comments
 /// - v 0.6: bug fixes
 /// - v 0.5: removed options to force image formats (image library not reliable)
@@ -83,7 +84,7 @@ namespace yobj {}
 //
 // LICENSE:
 //
-// Copyright (c) 2016 Fabio Pellacini
+// Copyright (c) 2016 -- 2017 Fabio Pellacini
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -130,7 +131,7 @@ namespace yobj {
 //
 using float2 = std::array<float, 2>;
 using float3 = std::array<float, 3>;
-using float4x4 = std::array<std::array<float, 4>, 4>;
+using float16 = std::array<float, 16>;
 using int2 = std::array<int, 2>;
 using int3 = std::array<int, 3>;
 
@@ -235,13 +236,13 @@ struct material {
 ///
 struct camera {
     std::string name;  ///< camera name
-    float4x4 xform = {1, 0, 0, 0, 0, 1, 0, 0,
-                      0, 0, 1, 0, 0, 0, 0, 1};  ///< camera transform
-    bool ortho = false;                         ///< orthografic camera
-    float yfov = 2 * std::atan(0.5f);           ///< vertical field of view
-    float aspect = 16.0f / 9.0f;                ///< aspect ratio
-    float aperture = 0;                         ///< lens aperture
-    float focus = 1;                            ///< focus distance
+    float16 xform = {1, 0, 0, 0, 0, 1, 0, 0,
+                     0, 0, 1, 0, 0, 0, 0, 1};  ///< camera transform
+    bool ortho = false;                        ///< orthografic camera
+    float yfov = 2 * std::atan(0.5f);          ///< vertical field of view
+    float aspect = 16.0f / 9.0f;               ///< aspect ratio
+    float aperture = 0;                        ///< lens aperture
+    float focus = 1;                           ///< focus distance
 };
 
 ///
@@ -249,9 +250,9 @@ struct camera {
 ///
 struct environment {
     std::string name;  ///< environment name
-    float4x4 xform = {1, 0, 0, 0, 0, 1, 0, 0,
-                      0, 0, 1, 0, 0, 0, 0, 1};  /// transform
-    std::string matname;                        /// material name
+    float16 xform = {1, 0, 0, 0, 0, 1, 0, 0,
+                     0, 0, 1, 0, 0, 0, 0, 1};  /// transform
+    std::string matname;                       /// material name
 };
 
 ///
@@ -345,12 +346,13 @@ YGL_API void save_mtl(const std::string& filename,
 /// @{
 
 ///
-/// Scene geometry
+/// Mesh primitives. May contain only one of the points/lines/triangles.
 ///
-struct fl_shape {
-    // whole shape data
-    std::string name;  ///< shape name
-    int matid = -1;    ///< index in the material array (-1 if not found)
+struct fl_primitives {
+    /// name of the group that enclosed it
+    std::string name = "";
+    /// material id (-1 if not found)
+    int material = -1;
 
     // shape elements
     std::vector<int> points;      ///< points
@@ -363,6 +365,17 @@ struct fl_shape {
     std::vector<float2> texcoord;  ///< per-vertex texcoord (2 float)
     std::vector<float3> color;     ///< [extension] per-vertex color (3 float)
     std::vector<float> radius;     ///< [extension] per-vertex radius (1 float)
+};
+
+///
+/// Scene geometry
+///
+struct fl_mesh {
+    // name
+    std::string name;
+
+    /// primitives
+    std::vector<int> primitives;
 };
 
 ///
@@ -401,13 +414,13 @@ struct fl_texture {
 ///
 struct fl_camera {
     std::string name;  ///< name
-    float4x4 xform = {1, 0, 0, 0, 0, 1, 0, 0,
-                      0, 0, 1, 0, 0, 0, 0, 1};  ///< transform
-    bool ortho = false;                         ///< ortho cam
-    float yfov = 2;                             ///< vertical field of view
-    float aspect = 16.0f / 9.0f;                ///< aspect ratio
-    float aperture = 0;                         ///< lens aperture
-    float focus = 1;                            ///< focus distance
+    float16 xform = {1, 0, 0, 0, 0, 1, 0, 0,
+                     0, 0, 1, 0, 0, 0, 0, 1};  ///< transform
+    bool ortho = false;                        ///< ortho cam
+    float yfov = 2;                            ///< vertical field of view
+    float aspect = 16.0f / 9.0f;               ///< aspect ratio
+    float aperture = 0;                        ///< lens aperture
+    float focus = 1;                           ///< focus distance
 };
 
 ///
@@ -416,21 +429,22 @@ struct fl_camera {
 struct fl_environment {
     std::string name;  ///< name
     int matid = -1;  ///< index of material in material array (-1 if not found)
-    float4x4 xform = {1, 0, 0, 0, 0, 1, 0, 0,
-                      0, 0, 1, 0, 0, 0, 0, 1};  ///< transform
+    float16 xform = {1, 0, 0, 0, 0, 1, 0, 0,
+                     0, 0, 1, 0, 0, 0, 0, 1};  ///< transform
 };
 
 ///
 /// Scene
 ///
-struct fl_scene {
-    std::vector<fl_shape*> shapes;              ///< shape array
+struct fl_obj {
+    std::vector<fl_primitives*> primitives;     ///< shape primitives
+    std::vector<fl_mesh*> meshes;               ///< mesh array
     std::vector<fl_material*> materials;        ///< material array
     std::vector<fl_texture*> textures;          ///< texture array
     std::vector<fl_camera*> cameras;            ///< camera array
     std::vector<fl_environment*> environments;  ///< environment array
 
-    ~fl_scene();
+    ~fl_obj();
 };
 
 ///
@@ -442,7 +456,7 @@ struct fl_scene {
 /// Returns:
 /// - flattened scene
 ///
-YGL_API fl_scene* flatten_obj(const obj* asset);
+YGL_API fl_obj* flatten_obj(const obj* asset);
 
 ///
 /// Save an asset
@@ -453,7 +467,7 @@ YGL_API fl_scene* flatten_obj(const obj* asset);
 /// Returns:
 /// - obj
 ///
-YGL_API obj* unflatten_obj(const fl_scene* scene);
+YGL_API obj* unflatten_obj(const fl_obj* scene);
 
 ///
 /// Loads textures for an scene.
@@ -463,7 +477,7 @@ YGL_API obj* unflatten_obj(const fl_scene* scene);
 /// - dirname: base directory name for texture files
 ///
 ///
-YGL_API void load_textures(fl_scene* scene, const std::string& dirname);
+YGL_API void load_textures(fl_obj* scene, const std::string& dirname);
 
 /// @}
 
@@ -605,10 +619,10 @@ static inline float3 _parse_float3(char** tok) {
 }
 
 //
-// Parses 12 floats.
+// Parses 16 floats.
 //
-static inline float4x4 _parse_float4x4(char** tok) {
-    float4x4 m;
+static inline float16 _parse_float16(char** tok) {
+    float16 m;
     auto mm = (float*)&m;
     for (auto i = 0; i < 16; i++) mm[i] = (float)atof(tok[i]);
     return m;
@@ -744,13 +758,13 @@ YGL_API obj* load_obj(const std::string& filename) {
             cam.aspect = _parse_float(cur_tok + 3);
             cam.aperture = _parse_float(cur_tok + 4);
             cam.focus = _parse_float(cur_tok + 5);
-            cam.xform = _parse_float4x4(cur_tok + 6);
+            cam.xform = _parse_float16(cur_tok + 6);
         } else if (tok_s == "e") {
             asset->environments.emplace_back();
             auto& env = asset->environments.back();
             env.name = (cur_ntok) ? cur_tok[0] : "";
             env.matname = (cur_ntok - 1) ? cur_tok[1] : "";
-            env.xform = _parse_float4x4(cur_tok + 2);
+            env.xform = _parse_float16(cur_tok + 2);
         } else {
             // unused
         }
@@ -905,8 +919,8 @@ static inline void _fwrite_float3(FILE* file, const char* str, const float3& v,
 //
 // write 16 floats prepended by a std::string
 //
-static inline void _fwrite_float4x4(FILE* file, const char* str,
-                                    const float4x4& v, bool newline = true) {
+static inline void _fwrite_float16(FILE* file, const char* str,
+                                   const float16& v, bool newline = true) {
     const float* vf = (float*)&v;
     fprintf(file, "%s", str);
     for (int i = 0; i < 16; i++) fprintf(file, " %.6g", vf[i]);
@@ -972,14 +986,14 @@ YGL_API void save_obj(const std::string& filename, const obj* asset) {
         _fwrite_float(file, " ", cam.aspect, false);
         _fwrite_float(file, " ", cam.aperture, false);
         _fwrite_float(file, " ", cam.focus, false);
-        _fwrite_float4x4(file, " ", cam.xform, true);
+        _fwrite_float16(file, " ", cam.xform, true);
     }
 
     // save envs
     for (auto& env : asset->environments) {
         _fwrite_str(file, "e", env.name, true, false);
         _fwrite_str(file, " ", env.matname, true, false);
-        _fwrite_float4x4(file, " ", env.xform, true);
+        _fwrite_float16(file, " ", env.xform, true);
     }
 
     // save all vertex data
@@ -1053,8 +1067,10 @@ YGL_API void save_mtl(const std::string& filename,
 //
 // Cleanup memory
 //
-YGL_API fl_scene::~fl_scene() {
-    for (auto v : shapes)
+YGL_API fl_obj::~fl_obj() {
+    for (auto v : primitives)
+        if (v) delete v;
+    for (auto v : meshes)
         if (v) delete v;
     for (auto v : materials)
         if (v) delete v;
@@ -1108,9 +1124,9 @@ static inline bool operator==(const vert& a, const vert& b) {
 //
 // Flattens an scene
 //
-YGL_API fl_scene* flatten_obj(const obj* asset) {
+YGL_API fl_obj* flatten_obj(const obj* asset) {
     // clear scene
-    auto scene = new fl_scene();
+    auto scene = new fl_obj();
 
     // convert materials and build textures
     for (auto& omat : asset->materials) {
@@ -1131,16 +1147,18 @@ YGL_API fl_scene* flatten_obj(const obj* asset) {
     std::unordered_map<vert, int, _vert_hash> vert_map;
     std::vector<int> vert_ids;
     for (auto& oshape : asset->objects) {
+        auto mesh = new fl_mesh();
+        mesh->name = oshape.name;
         for (auto& elem_group : oshape.elems) {
             if (elem_group.verts.empty()) continue;
             if (elem_group.elems.empty()) continue;
-            auto shape = new fl_shape();
-            shape->name = oshape.name;
-            shape->matid = -1;
-            for (auto i = 0; i < asset->materials.size() && shape->matid < 0;
+            auto prim = new fl_primitives();
+            prim->name = elem_group.groupname;
+            prim->material = -1;
+            for (auto i = 0; i < asset->materials.size() && prim->material < 0;
                  i++) {
                 if (asset->materials[i].name == elem_group.matname)
-                    shape->matid = i;
+                    prim->material = i;
             }
 
             // insert all vertices
@@ -1159,22 +1177,22 @@ YGL_API fl_scene* flatten_obj(const obj* asset) {
                     case elem::type::point: {
                         for (auto i = elem.start; i < elem.start + elem.size;
                              i++) {
-                            shape->points.push_back(vert_ids[i]);
+                            prim->points.push_back(vert_ids[i]);
                         }
                     } break;
                     case elem::type::line: {
                         for (auto i = elem.start;
                              i < elem.start + elem.size - 1; i++) {
-                            shape->lines.push_back(
+                            prim->lines.push_back(
                                 {vert_ids[i], vert_ids[i + 1]});
                         }
                     } break;
                     case elem::type::face: {
                         for (auto i = elem.start + 2;
                              i < elem.start + elem.size; i++) {
-                            shape->triangles.push_back({vert_ids[elem.start],
-                                                        vert_ids[i - 1],
-                                                        vert_ids[i]});
+                            prim->triangles.push_back({vert_ids[elem.start],
+                                                       vert_ids[i - 1],
+                                                       vert_ids[i]});
                         }
                     } break;
                     default: { assert(false); }
@@ -1183,31 +1201,33 @@ YGL_API fl_scene* flatten_obj(const obj* asset) {
 
             // copy vertex data
             auto v = elem_group.verts[0];
-            if (v.pos >= 0) shape->pos.resize(vert_map.size());
-            if (v.texcoord >= 0) shape->texcoord.resize(vert_map.size());
-            if (v.norm >= 0) shape->norm.resize(vert_map.size());
-            if (v.color >= 0) shape->color.resize(vert_map.size());
-            if (v.radius >= 0) shape->radius.resize(vert_map.size());
+            if (v.pos >= 0) prim->pos.resize(vert_map.size());
+            if (v.texcoord >= 0) prim->texcoord.resize(vert_map.size());
+            if (v.norm >= 0) prim->norm.resize(vert_map.size());
+            if (v.color >= 0) prim->color.resize(vert_map.size());
+            if (v.radius >= 0) prim->radius.resize(vert_map.size());
             for (auto& kv : vert_map) {
                 if (v.pos >= 0 && kv.first.pos >= 0) {
-                    shape->pos[kv.second] = asset->pos[kv.first.pos];
+                    prim->pos[kv.second] = asset->pos[kv.first.pos];
                 }
                 if (v.texcoord >= 0 && kv.first.texcoord >= 0) {
-                    shape->texcoord[kv.second] =
+                    prim->texcoord[kv.second] =
                         asset->texcoord[kv.first.texcoord];
                 }
                 if (v.norm >= 0 && kv.first.norm >= 0) {
-                    shape->norm[kv.second] = asset->norm[kv.first.norm];
+                    prim->norm[kv.second] = asset->norm[kv.first.norm];
                 }
                 if (v.color >= 0 && kv.first.color >= 0) {
-                    shape->color[kv.second] = asset->color[kv.first.color];
+                    prim->color[kv.second] = asset->color[kv.first.color];
                 }
                 if (v.radius >= 0 && kv.first.radius >= 0) {
-                    shape->radius[kv.second] = asset->radius[kv.first.radius];
+                    prim->radius[kv.second] = asset->radius[kv.first.radius];
                 }
             }
-            scene->shapes.push_back(shape);
+            scene->primitives.push_back(prim);
+            mesh->primitives.push_back((int)scene->primitives.size() - 1);
         }
+        scene->meshes.push_back(mesh);
     }
 
     // convert cameras
@@ -1242,11 +1262,11 @@ YGL_API fl_scene* flatten_obj(const obj* asset) {
 //
 // Save an scene
 //
-YGL_API obj* unflatten_obj(const fl_scene* scene) {
+YGL_API obj* unflatten_obj(const fl_obj* scene) {
     auto asset = new obj();
 
     // get texture name helper
-    auto txt = [](const fl_scene* scene, int id) {
+    auto txt = [](const fl_obj* scene, int id) {
         if (id < 0) return std::string();
         return scene->textures[id]->path;
     };
@@ -1254,113 +1274,123 @@ YGL_API obj* unflatten_obj(const fl_scene* scene) {
     // convert materials
     for (auto fl_mat : scene->materials) {
         asset->materials.emplace_back();
-        auto& mat = asset->materials.back();
-        mat.name = fl_mat->name;
-        mat.ke = fl_mat->ke;
-        mat.kd = fl_mat->kd;
-        mat.ks = fl_mat->ks;
-        mat.ns = (fl_mat->rs) ? 2 / (fl_mat->rs * fl_mat->rs) - 2 : 1e6;
-        mat.ke_txt = txt(scene, fl_mat->ke_txt);
-        mat.kd_txt = txt(scene, fl_mat->kd_txt);
-        mat.ks_txt = txt(scene, fl_mat->ks_txt);
-        mat.ns_txt = txt(scene, fl_mat->rs_txt);
+        auto mat = &asset->materials.back();
+        mat->name = fl_mat->name;
+        mat->ke = fl_mat->ke;
+        mat->kd = fl_mat->kd;
+        mat->ks = fl_mat->ks;
+        mat->ns = (fl_mat->rs) ? 2 / (fl_mat->rs * fl_mat->rs) - 2 : 1e6;
+        mat->ke_txt = txt(scene, fl_mat->ke_txt);
+        mat->kd_txt = txt(scene, fl_mat->kd_txt);
+        mat->ks_txt = txt(scene, fl_mat->ks_txt);
+        mat->ns_txt = txt(scene, fl_mat->rs_txt);
     }
 
     // convert shapes
-    for (auto fl_shape : scene->shapes) {
+    for (auto fl_mesh : scene->meshes) {
         asset->objects.emplace_back();
-        auto& object = asset->objects.back();
-        object.name = fl_shape->name;
-        auto offset = vert{(int)asset->pos.size(), (int)asset->texcoord.size(),
-                           (int)asset->norm.size(), (int)asset->color.size(),
-                           (int)asset->radius.size()};
-        for (auto& v : fl_shape->pos) asset->pos.push_back(v);
-        for (auto& v : fl_shape->norm) asset->norm.push_back(v);
-        for (auto& v : fl_shape->texcoord) asset->texcoord.push_back(v);
-        for (auto& v : fl_shape->color) asset->color.push_back(v);
-        for (auto& v : fl_shape->radius) asset->radius.push_back(v);
-        object.elems.emplace_back();
-        auto& elems = object.elems.back();
-        elems.matname = (fl_shape->matid < 0)
-                            ? ""
-                            : scene->materials[fl_shape->matid]->name;
-        for (auto point : fl_shape->points) {
-            elems.elems.push_back(
-                {(uint32_t)elems.verts.size(), elem::type::point, 1});
-            elems.verts.push_back(
-                {(fl_shape->pos.empty()) ? -1 : offset.pos + point,
-                 (fl_shape->texcoord.empty()) ? -1 : offset.texcoord + point,
-                 (fl_shape->norm.empty()) ? -1 : offset.norm + point,
-                 (fl_shape->color.empty()) ? -1 : offset.color + point,
-                 (fl_shape->radius.empty()) ? -1 : offset.radius + point});
-        }
-        for (auto line : fl_shape->lines) {
-            elems.elems.push_back(
-                {(uint32_t)elems.verts.size(), elem::type::line, 2});
-            elems.verts.push_back(
-                {(fl_shape->pos.empty()) ? -1 : offset.pos + line[0],
-                 (fl_shape->texcoord.empty()) ? -1 : offset.texcoord + line[0],
-                 (fl_shape->norm.empty()) ? -1 : offset.norm + line[0],
-                 (fl_shape->color.empty()) ? -1 : offset.color + line[0],
-                 (fl_shape->radius.empty()) ? -1 : offset.radius + line[0]});
-            elems.verts.push_back(
-                {(fl_shape->pos.empty()) ? -1 : offset.pos + line[1],
-                 (fl_shape->texcoord.empty()) ? -1 : offset.texcoord + line[1],
-                 (fl_shape->norm.empty()) ? -1 : offset.norm + line[1],
-                 (fl_shape->color.empty()) ? -1 : offset.color + line[1],
-                 (fl_shape->radius.empty()) ? -1 : offset.radius + line[1]});
-        }
-        for (auto triangle : fl_shape->triangles) {
-            elems.elems.push_back(
-                {(uint32_t)elems.verts.size(), elem::type::face, 3});
-            elems.verts.push_back(
-                {(fl_shape->pos.empty()) ? -1 : offset.pos + triangle[0],
-                 (fl_shape->texcoord.empty()) ? -1
-                                              : offset.texcoord + triangle[0],
-                 (fl_shape->norm.empty()) ? -1 : offset.norm + triangle[0],
-                 (fl_shape->color.empty()) ? -1 : offset.color + triangle[0],
-                 (fl_shape->radius.empty()) ? -1
-                                            : offset.radius + triangle[0]});
-            elems.verts.push_back(
-                {(fl_shape->pos.empty()) ? -1 : offset.pos + triangle[1],
-                 (fl_shape->texcoord.empty()) ? -1
-                                              : offset.texcoord + triangle[1],
-                 (fl_shape->norm.empty()) ? -1 : offset.norm + triangle[1],
-                 (fl_shape->color.empty()) ? -1 : offset.color + triangle[1],
-                 (fl_shape->radius.empty()) ? -1
-                                            : offset.radius + triangle[1]});
-            elems.verts.push_back(
-                {(fl_shape->pos.empty()) ? -1 : offset.pos + triangle[2],
-                 (fl_shape->texcoord.empty()) ? -1
-                                              : offset.texcoord + triangle[2],
-                 (fl_shape->norm.empty()) ? -1 : offset.norm + triangle[2],
-                 (fl_shape->color.empty()) ? -1 : offset.color + triangle[2],
-                 (fl_shape->radius.empty()) ? -1
-                                            : offset.radius + triangle[2]});
+        auto object = &asset->objects.back();
+        object->name = fl_mesh->name;
+        for (auto fl_prim_id : fl_mesh->primitives) {
+            auto fl_prim = scene->primitives[fl_prim_id];
+            auto offset =
+                vert{(int)asset->pos.size(), (int)asset->texcoord.size(),
+                     (int)asset->norm.size(), (int)asset->color.size(),
+                     (int)asset->radius.size()};
+            for (auto& v : fl_prim->pos) asset->pos.push_back(v);
+            for (auto& v : fl_prim->norm) asset->norm.push_back(v);
+            for (auto& v : fl_prim->texcoord) asset->texcoord.push_back(v);
+            for (auto& v : fl_prim->color) asset->color.push_back(v);
+            for (auto& v : fl_prim->radius) asset->radius.push_back(v);
+            object->elems.emplace_back();
+            auto elems = &object->elems.back();
+            elems->groupname = fl_prim->name;
+            elems->matname = (fl_prim->material < 0)
+                                 ? ""
+                                 : scene->materials[fl_prim->material]->name;
+            for (auto point : fl_prim->points) {
+                elems->elems.push_back(
+                    {(uint32_t)elems->verts.size(), elem::type::point, 1});
+                elems->verts.push_back(
+                    {(fl_prim->pos.empty()) ? -1 : offset.pos + point,
+                     (fl_prim->texcoord.empty()) ? -1 : offset.texcoord + point,
+                     (fl_prim->norm.empty()) ? -1 : offset.norm + point,
+                     (fl_prim->color.empty()) ? -1 : offset.color + point,
+                     (fl_prim->radius.empty()) ? -1 : offset.radius + point});
+            }
+            for (auto line : fl_prim->lines) {
+                elems->elems.push_back(
+                    {(uint32_t)elems->verts.size(), elem::type::line, 2});
+                elems->verts.push_back(
+                    {(fl_prim->pos.empty()) ? -1 : offset.pos + line[0],
+                     (fl_prim->texcoord.empty()) ? -1
+                                                 : offset.texcoord + line[0],
+                     (fl_prim->norm.empty()) ? -1 : offset.norm + line[0],
+                     (fl_prim->color.empty()) ? -1 : offset.color + line[0],
+                     (fl_prim->radius.empty()) ? -1 : offset.radius + line[0]});
+                elems->verts.push_back(
+                    {(fl_prim->pos.empty()) ? -1 : offset.pos + line[1],
+                     (fl_prim->texcoord.empty()) ? -1
+                                                 : offset.texcoord + line[1],
+                     (fl_prim->norm.empty()) ? -1 : offset.norm + line[1],
+                     (fl_prim->color.empty()) ? -1 : offset.color + line[1],
+                     (fl_prim->radius.empty()) ? -1 : offset.radius + line[1]});
+            }
+            for (auto triangle : fl_prim->triangles) {
+                elems->elems.push_back(
+                    {(uint32_t)elems->verts.size(), elem::type::face, 3});
+                elems->verts.push_back(
+                    {(fl_prim->pos.empty()) ? -1 : offset.pos + triangle[0],
+                     (fl_prim->texcoord.empty())
+                         ? -1
+                         : offset.texcoord + triangle[0],
+                     (fl_prim->norm.empty()) ? -1 : offset.norm + triangle[0],
+                     (fl_prim->color.empty()) ? -1 : offset.color + triangle[0],
+                     (fl_prim->radius.empty()) ? -1
+                                               : offset.radius + triangle[0]});
+                elems->verts.push_back(
+                    {(fl_prim->pos.empty()) ? -1 : offset.pos + triangle[1],
+                     (fl_prim->texcoord.empty())
+                         ? -1
+                         : offset.texcoord + triangle[1],
+                     (fl_prim->norm.empty()) ? -1 : offset.norm + triangle[1],
+                     (fl_prim->color.empty()) ? -1 : offset.color + triangle[1],
+                     (fl_prim->radius.empty()) ? -1
+                                               : offset.radius + triangle[1]});
+                elems->verts.push_back(
+                    {(fl_prim->pos.empty()) ? -1 : offset.pos + triangle[2],
+                     (fl_prim->texcoord.empty())
+                         ? -1
+                         : offset.texcoord + triangle[2],
+                     (fl_prim->norm.empty()) ? -1 : offset.norm + triangle[2],
+                     (fl_prim->color.empty()) ? -1 : offset.color + triangle[2],
+                     (fl_prim->radius.empty()) ? -1
+                                               : offset.radius + triangle[2]});
+            }
         }
     }
 
     // convert cameras
     for (auto fl_cam : scene->cameras) {
         asset->cameras.emplace_back();
-        auto& cam = asset->cameras.back();
-        cam.name = fl_cam->name;
-        cam.ortho = fl_cam->ortho;
-        cam.yfov = fl_cam->yfov;
-        cam.aspect = fl_cam->aspect;
-        cam.focus = fl_cam->focus;
-        cam.aperture = fl_cam->aperture;
-        cam.xform = fl_cam->xform;
+        auto cam = &asset->cameras.back();
+        cam->name = fl_cam->name;
+        cam->ortho = fl_cam->ortho;
+        cam->yfov = fl_cam->yfov;
+        cam->aspect = fl_cam->aspect;
+        cam->focus = fl_cam->focus;
+        cam->aperture = fl_cam->aperture;
+        cam->xform = fl_cam->xform;
     }
 
     // convert envs
     for (auto fl_env : scene->environments) {
         asset->environments.emplace_back();
-        auto& env = asset->environments.back();
-        env.name = fl_env->name;
-        env.matname =
+        auto env = &asset->environments.back();
+        env->name = fl_env->name;
+        env->matname =
             (fl_env->matid < 0) ? "" : scene->materials[fl_env->matid]->name;
-        env.xform = fl_env->xform;
+        env->xform = fl_env->xform;
     }
 
     return asset;
@@ -1369,7 +1399,7 @@ YGL_API obj* unflatten_obj(const fl_scene* scene) {
 //
 // Loads textures for an scene.
 //
-YGL_API void load_textures(fl_scene* scene, const std::string& dirname) {
+YGL_API void load_textures(fl_obj* scene, const std::string& dirname) {
 #ifndef YGL_NO_STBIMAGE
     stbi_set_flip_vertically_on_load(1);
 

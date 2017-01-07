@@ -71,7 +71,7 @@ namespace ygltf {}
 //
 // LICENSE:
 //
-// Copyright (c) 2016 Fabio Pellacini
+// Copyright (c) 2016 -- 2017 Fabio Pellacini
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -1638,10 +1638,10 @@ YGL_API fl_gltf* flatten_gltf(const glTF_t* gltf,
                               const std::string& scene_name = "");
 
 ///
-/// Convert a gltf asset to flattened scenes.
+/// Convert a flattened gltf to a raw one.
 ///
 YGL_API glTF_t* unflatten_gltf(const fl_gltf* fl_gltf,
-                               const std::string& scene_name = "");
+                               const std::string& buffer_uri);
 
 ///
 /// Convert a gltf asset to flattened scenes.
@@ -1652,8 +1652,8 @@ YGL_DEPRECATED YGL_API fl_gltf flatten_gltf(const glTF_t& gltf,
 ///
 /// Convert a gltf asset to flattened scenes.
 ///
-YGL_DEPRECATED YGL_API glTF_t
-unflatten_gltf(const fl_gltf& fl_gltf, const std::string& scene_name = "");
+YGL_DEPRECATED YGL_API glTF_t unflatten_gltf(const fl_gltf& fl_gltf,
+                                             const std::string& buffer_uri);
 }  // namespace
 
 // -----------------------------------------------------------------------------
@@ -5261,10 +5261,9 @@ YGL_API void load_images(glTF_t* gltf, const std::string& dirname) {
                     &image->data.width, &image->data.height, &image->data.ncomp,
                     0);
                 image->data.dataf = std::vector<float>(
-                    d,
-                    d +
-                        image->data.width * image->data.height *
-                            image->data.ncomp);
+                    d, d +
+                           image->data.width * image->data.height *
+                               image->data.ncomp);
                 free(d);
             } else {
                 auto d = stbi_load_from_memory(
@@ -5272,10 +5271,9 @@ YGL_API void load_images(glTF_t* gltf, const std::string& dirname) {
                     &image->data.width, &image->data.height, &image->data.ncomp,
                     0);
                 image->data.datab = std::vector<unsigned char>(
-                    d,
-                    d +
-                        image->data.width * image->data.height *
-                            image->data.ncomp);
+                    d, d +
+                           image->data.width * image->data.height *
+                               image->data.ncomp);
                 free(d);
             }
         } else {
@@ -5286,20 +5284,18 @@ YGL_API void load_images(glTF_t* gltf, const std::string& dirname) {
                                     &image->data.width, &image->data.height,
                                     &image->data.ncomp, 0);
                 image->data.dataf = std::vector<float>(
-                    d,
-                    d +
-                        image->data.width * image->data.height *
-                            image->data.ncomp);
+                    d, d +
+                           image->data.width * image->data.height *
+                               image->data.ncomp);
                 free(d);
             } else {
                 auto d = stbi_load((dirname + image->uri).c_str(),
                                    &image->data.width, &image->data.height,
                                    &image->data.ncomp, 0);
                 image->data.datab = std::vector<unsigned char>(
-                    d,
-                    d +
-                        image->data.width * image->data.height *
-                            image->data.ncomp);
+                    d, d +
+                           image->data.width * image->data.height *
+                               image->data.ncomp);
                 free(d);
             }
         }

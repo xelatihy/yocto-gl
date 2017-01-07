@@ -5,7 +5,7 @@
 //
 // LICENSE:
 //
-// Copyright (c) 2016 Fabio Pellacini
+// Copyright (c) 2016 -- 2017 Fabio Pellacini
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
@@ -191,8 +191,7 @@ inline scene* load_obj_scene(const std::string& filename) {
     auto obj = std::unique_ptr<yobj::obj>(yobj::load_obj(filename));
 
     // flatten to scene
-    auto fl_scene =
-        std::unique_ptr<yobj::fl_scene>(yobj::flatten_obj(obj.get()));
+    auto fl_scene = std::unique_ptr<yobj::fl_obj>(yobj::flatten_obj(obj.get()));
 
     // cleanup
     obj.reset(nullptr);
@@ -217,20 +216,23 @@ inline scene* load_obj_scene(const std::string& filename) {
     }
 
     // convert shapes
-    for (auto fl_shape : fl_scene->shapes) {
-        auto sh = new shape();
-        sh->name = fl_shape->name;
-        sh->frame = ym::identity_frame3f;
-        sh->matid = fl_shape->matid;
-        sh->pos = fl_shape->pos;
-        sh->norm = fl_shape->norm;
-        sh->texcoord = fl_shape->texcoord;
-        sh->color = fl_shape->color;
-        sh->radius = fl_shape->radius;
-        sh->points = fl_shape->points;
-        sh->lines = fl_shape->lines;
-        sh->triangles = fl_shape->triangles;
-        sc->shapes.push_back(sh);
+    for (auto fl_mesh : fl_scene->meshes) {
+        for (auto prim_id : fl_mesh->primitives) {
+            auto fl_prim = fl_scene->primitives[prim_id];
+            auto sh = new shape();
+            sh->name = fl_mesh->name;
+            sh->frame = ym::identity_frame3f;
+            sh->matid = fl_prim->material;
+            sh->pos = fl_prim->pos;
+            sh->norm = fl_prim->norm;
+            sh->texcoord = fl_prim->texcoord;
+            sh->color = fl_prim->color;
+            sh->radius = fl_prim->radius;
+            sh->points = fl_prim->points;
+            sh->lines = fl_prim->lines;
+            sh->triangles = fl_prim->triangles;
+            sc->shapes.push_back(sh);
+        }
     }
 
     // convert materials
@@ -278,7 +280,7 @@ inline scene* load_obj_scene(const std::string& filename) {
 //
 inline void save_obj_scene(const std::string& filename, const scene* sc) {
     // flatten to scene
-    auto fl_scene = std::unique_ptr<yobj::fl_scene>(new yobj::fl_scene());
+    auto fl_scene = std::unique_ptr<yobj::fl_obj>(new yobj::fl_obj);
 
     // convert cameras
     for (auto cam : sc->cameras) {
@@ -295,30 +297,33 @@ inline void save_obj_scene(const std::string& filename, const scene* sc) {
 
     // convert shapes
     for (auto shape : sc->shapes) {
-        auto fl_shape = new yobj::fl_shape();
-        fl_shape->name = shape->name;
-        fl_shape->matid = shape->matid;
-        fl_shape->pos.resize(shape->pos.size());
+        auto fl_mesh = new yobj::fl_mesh();
+        fl_mesh->name = shape->name;
+        fl_mesh->primitives.push_back((int)fl_scene->primitives.size());
+        auto fl_prim = new yobj::fl_primitives();
+        fl_prim->material = shape->matid;
+        fl_prim->pos.resize(shape->pos.size());
         for (auto i = 0; i < shape->pos.size(); i++) {
-            fl_shape->pos[i] = ym::transform_point((ym::frame3f)shape->frame,
-                                                   (ym::vec3f)shape->pos[i]);
+            fl_prim->pos[i] = ym::transform_point((ym::frame3f)shape->frame,
+                                                  (ym::vec3f)shape->pos[i]);
         }
-        fl_shape->norm.resize(shape->norm.size());
+        fl_prim->norm.resize(shape->norm.size());
         for (auto i = 0; i < shape->pos.size(); i++) {
-            fl_shape->norm[i] = ym::transform_direction(
+            fl_prim->norm[i] = ym::transform_direction(
                 (ym::frame3f)shape->frame, (ym::vec3f)shape->norm[i]);
         }
-        fl_shape->texcoord = std::vector<std::array<float, 2>>(
+        fl_prim->texcoord = std::vector<std::array<float, 2>>(
             shape->texcoord.begin(), shape->texcoord.end());
-        fl_shape->color = std::vector<std::array<float, 3>>(
-            shape->color.begin(), shape->color.end());
-        fl_shape->radius = shape->radius;
-        fl_shape->points = shape->points;
-        fl_shape->lines = std::vector<std::array<int, 2>>(shape->lines.begin(),
-                                                          shape->lines.end());
-        fl_shape->triangles = std::vector<std::array<int, 3>>(
+        fl_prim->color = std::vector<std::array<float, 3>>(shape->color.begin(),
+                                                           shape->color.end());
+        fl_prim->radius = shape->radius;
+        fl_prim->points = shape->points;
+        fl_prim->lines = std::vector<std::array<int, 2>>(shape->lines.begin(),
+                                                         shape->lines.end());
+        fl_prim->triangles = std::vector<std::array<int, 3>>(
             shape->triangles.begin(), shape->triangles.end());
-        fl_scene->shapes.push_back(fl_shape);
+        fl_scene->primitives.push_back(fl_prim);
+        fl_scene->meshes.push_back(fl_mesh);
     }
 
     // convert materials
@@ -381,23 +386,23 @@ inline void save_gltf_scene(const std::string& filename, const scene* sc) {
         fl_mesh->name = shape->name;
         fl_mesh->xform = ym::to_mat((ym::frame3f)shape->frame);
         fl_mesh->primitives.push_back((int)fl_scene->primitives.size());
-        auto fl_shape = new ygltf::fl_primitives();
-        fl_shape->material = shape->matid;
-        fl_shape->pos = std::vector<std::array<float, 3>>(shape->pos.begin(),
-                                                          shape->pos.end());
-        fl_shape->norm = std::vector<std::array<float, 3>>(shape->norm.begin(),
-                                                           shape->norm.end());
-        fl_shape->texcoord = std::vector<std::array<float, 2>>(
+        auto fl_prim = new ygltf::fl_primitives();
+        fl_prim->material = shape->matid;
+        fl_prim->pos = std::vector<std::array<float, 3>>(shape->pos.begin(),
+                                                         shape->pos.end());
+        fl_prim->norm = std::vector<std::array<float, 3>>(shape->norm.begin(),
+                                                          shape->norm.end());
+        fl_prim->texcoord = std::vector<std::array<float, 2>>(
             shape->texcoord.begin(), shape->texcoord.end());
-        fl_shape->color = std::vector<std::array<float, 3>>(
-            shape->color.begin(), shape->color.end());
-        fl_shape->radius = shape->radius;
-        fl_shape->points = shape->points;
-        fl_shape->lines = std::vector<std::array<int, 2>>(shape->lines.begin(),
-                                                          shape->lines.end());
-        fl_shape->triangles = std::vector<std::array<int, 3>>(
+        fl_prim->color = std::vector<std::array<float, 3>>(shape->color.begin(),
+                                                           shape->color.end());
+        fl_prim->radius = shape->radius;
+        fl_prim->points = shape->points;
+        fl_prim->lines = std::vector<std::array<int, 2>>(shape->lines.begin(),
+                                                         shape->lines.end());
+        fl_prim->triangles = std::vector<std::array<int, 3>>(
             shape->triangles.begin(), shape->triangles.end());
-        fl_scene->primitives.push_back(fl_shape);
+        fl_scene->primitives.push_back(fl_prim);
         fl_scene->meshes.push_back(fl_mesh);
     }
 
@@ -425,7 +430,7 @@ inline void save_gltf_scene(const std::string& filename, const scene* sc) {
 
     // save gltf
     auto gltf = std::unique_ptr<ygltf::glTF_t>(ygltf::unflatten_gltf(
-        fl_scene.get(), ycmd::get_filename(filename) + ".bin"));
+        fl_scene.get(), ycmd::get_basename(filename) + ".bin"));
     ygltf::save_gltf(filename, gltf.get(), true, false, false);
 }
 
@@ -460,20 +465,20 @@ inline scene* load_gltf_scene(const std::string& filename, bool binary) {
 
     // convert shapes
     for (auto fl_mesh : fl_scene->meshes) {
-        for (auto& fl_shape_id : fl_mesh->primitives) {
-            auto fl_shape = fl_scene->primitives.at(fl_shape_id);
+        for (auto fl_prim_id : fl_mesh->primitives) {
+            auto fl_prim = fl_scene->primitives.at(fl_prim_id);
             auto sh = new shape();
             sh->name = fl_mesh->name;
             sh->frame = ym::to_frame(ym::mat4f(fl_mesh->xform));
-            sh->matid = fl_shape->material;
-            sh->pos = fl_shape->pos;
-            sh->norm = fl_shape->norm;
-            sh->texcoord = fl_shape->texcoord;
-            sh->color = fl_shape->color;
-            sh->radius = fl_shape->radius;
-            sh->points = fl_shape->points;
-            sh->lines = fl_shape->lines;
-            sh->triangles = fl_shape->triangles;
+            sh->matid = fl_prim->material;
+            sh->pos = fl_prim->pos;
+            sh->norm = fl_prim->norm;
+            sh->texcoord = fl_prim->texcoord;
+            sh->color = fl_prim->color;
+            sh->radius = fl_prim->radius;
+            sh->points = fl_prim->points;
+            sh->lines = fl_prim->lines;
+            sh->triangles = fl_prim->triangles;
             sc->shapes.push_back(sh);
         }
     }
