@@ -59,6 +59,7 @@
 ///
 ///
 /// HISTORY:
+/// - v 0.5: bug fixes and added checks for missing files
 /// - v 0.4: internally use pointers for performance transaprency
 /// - v 0.4: doxygen documentation
 /// - v 0.3: load/write interface with exceptions
@@ -1125,6 +1126,7 @@ struct gltf_exception : std::exception {
 /// Parameters:
 /// - filename: scene filename
 /// - load_bin/load_shaders/load_img: load binary data
+/// - skip_missing: do not throw an exception if a file is missing
 ///
 /// Returns:
 /// - gltf data loaded
@@ -1133,7 +1135,8 @@ struct gltf_exception : std::exception {
 /// - io_exception: on read/write error
 ///
 YGL_API glTF_t* load_gltf(const std::string& filename, bool load_bin = true,
-                          bool load_shaders = true, bool load_img = true);
+                          bool load_shaders = true, bool load_img = true,
+                          bool skip_missing = false);
 
 ///
 /// Loads a binary gltf file from disk
@@ -1150,7 +1153,8 @@ YGL_API glTF_t* load_gltf(const std::string& filename, bool load_bin = true,
 ///
 YGL_API glTF_t* load_binary_gltf(const std::string& filename,
                                  bool load_bin = true, bool load_shaders = true,
-                                 bool load_img = true);
+                                 bool load_img = true,
+                                 bool skip_missing = false);
 
 ///
 /// Saves a scene to disk
@@ -1187,6 +1191,7 @@ YGL_API void save_binary_gltf(const std::string& filename, const glTF_t* gltf,
 ///
 /// Parameters:
 /// - dirname: directory used to resolve path references
+/// - skip_missing: do not throw an exception if a file is missing
 ///
 /// Out Parameters:
 /// - gltf: data to data
@@ -1194,13 +1199,15 @@ YGL_API void save_binary_gltf(const std::string& filename, const glTF_t* gltf,
 /// Throw:
 /// - io_exception: on read/write error
 ///
-YGL_API void load_buffers(glTF_t* gltf, const std::string& dirname);
+YGL_API void load_buffers(glTF_t* gltf, const std::string& dirname,
+                          bool skip_missing = false);
 
 ///
 /// Load shaders data.
 ///
 /// Parameters:
 /// - dirname: directory used to resolve path references
+/// - skip_missing: do not throw an exception if a file is missing
 ///
 /// Out Parameters:
 /// - gltf: data to data
@@ -1208,14 +1215,15 @@ YGL_API void load_buffers(glTF_t* gltf, const std::string& dirname);
 /// Throw:
 /// - io_exception: on read/write error
 ///
-YGL_API void load_shaders(glTF_t* asset, const std::string& dirname);
+YGL_API void load_shaders(glTF_t* asset, const std::string& dirname,
+                          bool skip_missing = false);
 
 ///
 /// Loads images.
 ///
 /// Parameters:
 /// - dirname: directory used to resolve path references
-/// - whether to force loading float images
+/// - skip_missing: do not throw an exception if a file is missing
 ///
 /// Out Parameters:
 /// - gltf: data to data
@@ -1223,7 +1231,8 @@ YGL_API void load_shaders(glTF_t* asset, const std::string& dirname);
 /// Throw:
 /// - io_exception: on read/write error
 ///
-YGL_API void load_images(glTF_t* asset, const std::string& dirname);
+YGL_API void load_images(glTF_t* asset, const std::string& dirname,
+                         bool skip_missing = false);
 
 ///
 /// Save buffer data.
@@ -1267,6 +1276,7 @@ YGL_API void save_images(const glTF_t* asset, const std::string& dirname);
 /// Parameters:
 /// - filename: scene filename
 /// - load_bin/load_shaders/load_img: load binary data
+/// - skip_missing: do not throw an exception if a file is missing
 ///
 /// Out Parameters:
 /// - gltf data loaded
@@ -1278,7 +1288,8 @@ YGL_API void save_images(const glTF_t* asset, const std::string& dirname);
 YGL_DEPRECATED YGL_API bool load_gltf(const std::string& filename, glTF_t& gltf,
                                       std::string& errmsg, bool load_bin = true,
                                       bool load_shaders = true,
-                                      bool load_img = true);
+                                      bool load_img = true,
+                                      bool skip_missing = false);
 
 ///
 /// Loads a binary gltf asset from disk
@@ -1298,7 +1309,8 @@ YGL_DEPRECATED YGL_API bool load_binary_gltf(const std::string& filename,
                                              glTF_t& gltf, std::string& errmsg,
                                              bool load_bin = true,
                                              bool load_shaders = true,
-                                             bool load_img = true);
+                                             bool load_img = true,
+                                             bool skip_missing = false);
 
 ///
 /// Saves a scene to disk
@@ -1345,13 +1357,15 @@ YGL_DEPRECATED YGL_API bool save_binary_gltf(
 /// Out Parameters:
 /// - asset: gltf data
 /// - errmsg: if set, holds an error message upon error
+/// - skip_missing: do not throw an exception if a file is missing
 ///
 /// Returns:
 /// - true if ok
 ///
 YGL_DEPRECATED YGL_API bool load_buffers(glTF_t& gltf,
                                          const std::string& dirname,
-                                         std::string& errmsg);
+                                         std::string& errmsg,
+                                         bool skip_missing = false);
 
 ///
 /// Load shaders data.
@@ -1362,20 +1376,23 @@ YGL_DEPRECATED YGL_API bool load_buffers(glTF_t& gltf,
 /// Out Parameters:
 /// - asset: gltf data
 /// - errmsg: if set, holds an error message upon error
+/// - skip_missing: do not throw an exception if a file is missing
 ///
 /// Returns:
 /// - true if ok
 ///
 YGL_DEPRECATED YGL_API bool load_shaders(glTF_t& asset,
                                          const std::string& dirname,
-                                         std::string& errmsg);
+                                         std::string& errmsg,
+                                         bool skip_missing = false);
 
 ///
 /// Loads images.
 ///
 /// Parameters:
 /// - dirname: directory used to resolve path references
-/// - whether to force loading float images
+/// - errmsg: if set, holds an error message upon error
+/// - skip_missing: do not throw an exception if a file is missing
 ///
 /// Out Parameters:
 /// - asset: gltf data
@@ -1386,7 +1403,8 @@ YGL_DEPRECATED YGL_API bool load_shaders(glTF_t& asset,
 ///
 YGL_DEPRECATED YGL_API bool load_images(glTF_t& asset,
                                         const std::string& dirname,
-                                        std::string& errmsg);
+                                        std::string& errmsg,
+                                        bool skip_missing = false);
 
 ///
 /// Save buffer data.
@@ -4702,14 +4720,27 @@ inline std::string _get_dirname(const std::string& filename) {
 }
 
 //
+// Fix path
+//
+inline std::string _fix_path(const std::string& path_) {
+    auto path = path_;
+    for (auto& c : path)
+        if (c == '\\') c = '/';
+    return path;
+}
+
+//
 // Load a binary file in memory
 // http://stackoverflow.com/questions/116038/what-is-the-best-way-to-read-an-entire-file-into-a-stdstring-in-c
 //
 static inline std::vector<unsigned char> _load_binfile(
-    const std::string& filename) {
+    const std::string& filename, bool skip_missing) {
     std::ifstream ifs(filename.c_str(),
                       std::ios::in | std::ios::binary | std::ios::ate);
-    if (!ifs) throw gltf_exception("could not open file " + filename);
+    if (!ifs) {
+        if (skip_missing) return {};
+        throw gltf_exception("could not open file " + filename);
+    }
     std::ifstream::pos_type fileSize = ifs.tellg();
     ifs.seekg(0, std::ios::beg);
     std::vector<unsigned char> bytes(fileSize);
@@ -4721,9 +4752,13 @@ static inline std::vector<unsigned char> _load_binfile(
 // Load a text file in memory
 // http://stackoverflow.com/questions/116038/what-is-the-best-way-to-read-an-entire-file-into-a-stdstring-in-c
 //
-static inline std::string _load_textfile(const std::string& filename) {
+static inline std::string _load_textfile(const std::string& filename,
+                                         bool skip_missing) {
     std::ifstream stream(filename);
-    if (!stream) throw gltf_exception("could not open file " + filename);
+    if (!stream) {
+        if (skip_missing) return "";
+        throw gltf_exception("could not open file " + filename);
+    }
     std::stringstream sstr;
     sstr << stream.rdbuf();
     return sstr.str();
@@ -4792,7 +4827,8 @@ static inline std::string _get_extname(const std::string& filename) {
 // Loads a gltf.
 //
 YGL_API glTF_t* load_gltf(const std::string& filename, bool load_bin,
-                          bool load_shader, bool load_image) {
+                          bool load_shader, bool load_image,
+                          bool skip_missing) {
     // clear data
     auto gltf = std::unique_ptr<glTF_t>(new glTF_t());
 
@@ -4813,9 +4849,9 @@ YGL_API glTF_t* load_gltf(const std::string& filename, bool load_bin,
 
     // load external resources
     auto dirname = _get_dirname(filename);
-    if (load_bin) load_buffers(gltf.get(), dirname);
-    if (load_shader) load_shaders(gltf.get(), dirname);
-    if (load_image) load_images(gltf.get(), dirname);
+    if (load_bin) load_buffers(gltf.get(), dirname, skip_missing);
+    if (load_shader) load_shaders(gltf.get(), dirname, skip_missing);
+    if (load_image) load_images(gltf.get(), dirname, skip_missing);
     // done
     return gltf.release();
 }
@@ -4825,9 +4861,10 @@ YGL_API glTF_t* load_gltf(const std::string& filename, bool load_bin,
 //
 YGL_API bool load_gltf(const std::string& filename, glTF_t& asset,
                        std::string& errmsg, bool load_bin, bool load_shader,
-                       bool load_image) {
+                       bool load_image, bool skip_missing) {
     try {
-        auto gltf = load_gltf(filename, load_bin, load_shader, load_image);
+        auto gltf = load_gltf(filename, load_bin, load_shader, load_image,
+                              skip_missing);
         asset = *gltf;
         delete gltf;
         return true;
@@ -4911,7 +4948,8 @@ static inline void _fwrite(FILE* f, const T* v, int count) {
 // Loads a binary gltf.
 //
 YGL_API glTF_t* load_binary_gltf(const std::string& filename, bool load_bin,
-                                 bool load_shader, bool load_image) {
+                                 bool load_shader, bool load_image,
+                                 bool skip_missing) {
     // clear data
     auto gltf = std::unique_ptr<glTF_t>(new glTF_t());
 
@@ -4948,9 +4986,9 @@ YGL_API glTF_t* load_binary_gltf(const std::string& filename, bool load_bin,
 
     // load external resources
     auto dirname = _get_dirname(filename);
-    if (load_bin) load_buffers(gltf.get(), dirname);
-    if (load_shader) load_shaders(gltf.get(), dirname);
-    if (load_image) load_images(gltf.get(), dirname);
+    if (load_bin) load_buffers(gltf.get(), dirname, skip_missing);
+    if (load_shader) load_shaders(gltf.get(), dirname, skip_missing);
+    if (load_image) load_images(gltf.get(), dirname, skip_missing);
 
     // load internal buffer
     if (load_bin) {
@@ -5166,7 +5204,8 @@ static inline bool _startsiwith(const std::string& str,
 //
 // Load buffer data.
 //
-YGL_API void load_buffers(glTF_t* gltf, const std::string& dirname) {
+YGL_API void load_buffers(glTF_t* gltf, const std::string& dirname,
+                          bool skip_missing) {
     for (auto&& kv : gltf->buffers) {
         auto buffer = &kv.second;
         if (_startsiwith(buffer->uri, "data:")) {
@@ -5180,7 +5219,8 @@ YGL_API void load_buffers(glTF_t* gltf, const std::string& dirname) {
                 (unsigned char*)data.c_str(),
                 (unsigned char*)data.c_str() + data.length());
         } else {
-            buffer->data = _load_binfile(dirname + buffer->uri);
+            buffer->data =
+                _load_binfile(_fix_path(dirname + buffer->uri), skip_missing);
         }
     }
 }
@@ -5189,9 +5229,9 @@ YGL_API void load_buffers(glTF_t* gltf, const std::string& dirname) {
 // Load buffer data.
 //
 YGL_API bool load_buffers(glTF_t& gltf, const std::string& dirname,
-                          std::string& errmsg) {
+                          std::string& errmsg, bool skip_missing) {
     try {
-        load_buffers(&gltf, dirname);
+        load_buffers(&gltf, dirname, skip_missing);
         return true;
     } catch (const std::exception& e) {
         errmsg = e.what();
@@ -5202,7 +5242,8 @@ YGL_API bool load_buffers(glTF_t& gltf, const std::string& dirname,
 //
 // Load shaders data.
 //
-YGL_API void load_shaders(glTF_t* gltf, const std::string& dirname) {
+YGL_API void load_shaders(glTF_t* gltf, const std::string& dirname,
+                          bool skip_missing) {
     for (auto&& kv : gltf->shaders) {
         auto shader = &kv.second;
         if (_startsiwith(shader->uri, "data:")) {
@@ -5213,7 +5254,8 @@ YGL_API void load_shaders(glTF_t* gltf, const std::string& dirname) {
             // decode
             shader->data = _base64::base64_decode(shader->uri.substr(pos + 1));
         } else {
-            shader->data = _load_textfile(dirname + shader->uri);
+            shader->data =
+                _load_textfile(_fix_path(dirname + shader->uri), skip_missing);
         }
     }
 }
@@ -5222,9 +5264,9 @@ YGL_API void load_shaders(glTF_t* gltf, const std::string& dirname) {
 // Load buffer data.
 //
 YGL_API bool load_shaders(glTF_t& gltf, const std::string& dirname,
-                          std::string& errmsg) {
+                          std::string& errmsg, bool skip_missing) {
     try {
-        load_shaders(&gltf, dirname);
+        load_shaders(&gltf, dirname, skip_missing);
         return true;
     } catch (const std::exception& e) {
         errmsg = e.what();
@@ -5235,7 +5277,8 @@ YGL_API bool load_shaders(glTF_t& gltf, const std::string& dirname,
 //
 // Loads images.
 //
-YGL_API void load_images(glTF_t* gltf, const std::string& dirname) {
+YGL_API void load_images(glTF_t* gltf, const std::string& dirname,
+                         bool skip_missing) {
 #ifndef YGL_NO_STBIMAGE
 
     for (auto&& kv : gltf->images) {
@@ -5280,18 +5323,28 @@ YGL_API void load_images(glTF_t* gltf, const std::string& dirname) {
             image->data = image_data_t();
             auto ext = _get_extname(image->uri).substr(1);
             if (ext == "hdr") {
-                auto d = stbi_loadf((dirname + image->uri).c_str(),
+                auto d = stbi_loadf(_fix_path(dirname + image->uri).c_str(),
                                     &image->data.width, &image->data.height,
                                     &image->data.ncomp, 0);
+                if (!d) {
+                    if (skip_missing) continue;
+                    throw gltf_exception("could not load image " + dirname +
+                                         image->uri);
+                }
                 image->data.dataf = std::vector<float>(
                     d, d +
                            image->data.width * image->data.height *
                                image->data.ncomp);
                 free(d);
             } else {
-                auto d = stbi_load((dirname + image->uri).c_str(),
+                auto d = stbi_load(_fix_path(dirname + image->uri).c_str(),
                                    &image->data.width, &image->data.height,
                                    &image->data.ncomp, 0);
+                if (!d) {
+                    if (skip_missing) continue;
+                    throw gltf_exception("could not load image " + dirname +
+                                         image->uri);
+                }
                 image->data.datab = std::vector<unsigned char>(
                     d, d +
                            image->data.width * image->data.height *
@@ -5308,9 +5361,9 @@ YGL_API void load_images(glTF_t* gltf, const std::string& dirname) {
 // Load buffer data.
 //
 YGL_API bool load_images(glTF_t& gltf, const std::string& dirname,
-                         std::string& errmsg) {
+                         std::string& errmsg, bool skip_missing) {
     try {
-        load_images(&gltf, dirname);
+        load_images(&gltf, dirname, skip_missing);
         return true;
     } catch (const std::exception& e) {
         errmsg = e.what();
@@ -6041,41 +6094,43 @@ YGL_API glTF_t* unflatten_gltf(const fl_gltf* fl_gltf,
         auto mesh = &gltf->meshes[gid];
         mesh->name = fl_mesh->name;
         for (auto j = 0; j < fl_mesh->primitives.size(); j++) {
-            auto& fl_prim = fl_gltf->primitives[fl_mesh->primitives[j]];
+            auto fl_prim = fl_gltf->primitives[fl_mesh->primitives[j]];
+            auto pid = std::to_string(j);
             mesh->primitives.emplace_back();
             auto prim = &mesh->primitives.back();
             prim->material = "material" + std::to_string(fl_prim->material);
             if (!fl_prim->pos.empty())
-                prim->attributes["POSITION"] =
-                    add_array_accessor(gid + "_pos", (int)fl_prim->pos.size(),
-                                       3, (float*)fl_prim->pos.data());
+                prim->attributes["POSITION"] = add_array_accessor(
+                    gid + pid + "_pos", (int)fl_prim->pos.size(), 3,
+                    (float*)fl_prim->pos.data());
             if (!fl_prim->norm.empty())
-                prim->attributes["NORMAL"] =
-                    add_array_accessor(gid + "_norm", (int)fl_prim->norm.size(),
-                                       3, (float*)fl_prim->norm.data());
+                prim->attributes["NORMAL"] = add_array_accessor(
+                    gid + pid + "_norm", (int)fl_prim->norm.size(), 3,
+                    (float*)fl_prim->norm.data());
             if (!fl_prim->texcoord.empty())
                 prim->attributes["TEXCOORD_0"] = add_array_accessor(
-                    gid + "_texcoord", (int)fl_prim->texcoord.size(), 2,
+                    gid + pid + "_texcoord", (int)fl_prim->texcoord.size(), 2,
                     (float*)fl_prim->texcoord.data());
             if (!fl_prim->color.empty())
                 prim->attributes["COLOR"] = add_array_accessor(
-                    gid + "_color", (int)fl_prim->color.size(), 3,
+                    gid + pid + "_color", (int)fl_prim->color.size(), 3,
                     (float*)fl_prim->color.data());
             auto elem_as_uint = fl_prim->pos.size() >
                                 std::numeric_limits<unsigned short>::max();
             if (!fl_prim->points.empty()) {
                 prim->indices = add_element_accessor(
-                    gid + "_points", (int)fl_prim->points.size(),
+                    gid + pid + "_points", (int)fl_prim->points.size(),
                     (int*)fl_prim->points.data(), elem_as_uint);
                 prim->mode = mesh_primitive_t::mode_t::points_t;
             } else if (!fl_prim->lines.empty()) {
                 prim->indices = add_element_accessor(
-                    gid + "_lines", (int)fl_prim->lines.size() * 2,
+                    gid + pid + "_lines", (int)fl_prim->lines.size() * 2,
                     (int*)fl_prim->lines.data(), elem_as_uint);
                 prim->mode = mesh_primitive_t::mode_t::lines_t;
             } else if (!fl_prim->triangles.empty()) {
                 prim->indices = add_element_accessor(
-                    gid + "_triangles", (int)fl_prim->triangles.size() * 3,
+                    gid + pid + "_triangles",
+                    (int)fl_prim->triangles.size() * 3,
                     (int*)fl_prim->triangles.data(), elem_as_uint);
                 prim->mode = mesh_primitive_t::mode_t::triangles_t;
             } else

@@ -34,6 +34,8 @@
 #include <array>
 #include <memory>
 
+#define YOBJ2GLTF_VERBOSE
+
 using float3 = std::array<float, 3>;
 using float3x2 = std::array<std::array<float, 3>, 2>;
 
@@ -104,7 +106,8 @@ ygltf::fl_gltf* convert(const yobj::fl_obj* obj) {
     return gltf;
 }
 
-float3x2 compute_bounds(const yobj::fl_obj* obj) {
+template <typename T>
+float3x2 compute_bounds(const T* obj) {
     auto bbox = float3x2();
     if (obj->primitives.empty()) return bbox;
     bbox[0] = obj->primitives[0]->pos[0];
@@ -120,7 +123,8 @@ float3x2 compute_bounds(const yobj::fl_obj* obj) {
     return bbox;
 }
 
-void print_obj_info(const yobj::fl_obj* obj) {
+template <typename T>
+void print_xxx_info(const T* obj) {
     auto nobjs = (int)obj->meshes.size();
     auto ngroups = (int)obj->primitives.size();
     auto nverts = 0, nnorms = 0, ntexcoords = 0, npoints = 0, nlines = 0,
@@ -160,7 +164,24 @@ void print_obj_info(const yobj::fl_obj* obj) {
     printf("bbox center: %g %g %g\n", bboxc[0], bboxc[1], bboxc[2]);
     printf("bbox size:   %g %g %g\n", bboxs[0], bboxs[1], bboxs[2]);
     printf("\n");
+
+#ifdef YOBJ2GLTF_VERBOSE
+    auto pid = 0;
+    for (auto prim : obj->primitives) {
+        printf("primitive:            %d\n", pid++);
+        printf("number of vertices:   %d\n", (int)prim->pos.size());
+        printf("number of normals:    %d\n", (int)prim->norm.size());
+        printf("number of texcoords:  %d\n", (int)prim->texcoord.size());
+        printf("number of points:     %d\n", (int)prim->points.size());
+        printf("number of lines:      %d\n", (int)prim->lines.size());
+        printf("number of triangles:  %d\n", (int)prim->triangles.size());
+        printf("\n");
+    }
+#endif
 }
+
+void print_obj_info(const yobj::fl_obj* obj) { print_xxx_info(obj); }
+void print_gltf_info(const ygltf::fl_gltf* gltf) { print_xxx_info(gltf); }
 
 void scale_obj(yobj::fl_obj* obj, float scale) {
     for (auto prim : obj->primitives) {
@@ -172,13 +193,34 @@ void scale_obj(yobj::fl_obj* obj, float scale) {
     }
 }
 
+void flipy_texcoord_obj(yobj::fl_obj* obj) {
+    for (auto prim : obj->primitives) {
+        if (prim->texcoord.empty()) continue;
+        auto tmin = prim->texcoord[0][1], tmax = prim->texcoord[0][1];
+        for (auto t : prim->texcoord) {
+            tmin = std::min(tmin, t[1]);
+            tmax = std::min(tmax, t[1]);
+        }
+        if (tmin >= 0 && tmax <= 1) {
+            for (auto& t : prim->texcoord) t[1] = 1 - t[1];
+        } else {
+            for (auto& t : prim->texcoord) t[1] = 1 - t[1];
+        }
+    }
+}
+
 int main(int argc, char** argv) {
     // command line params
     auto parser = ycmd::make_parser(argc, argv, "converts obj to gltf");
+    auto no_flipy_texcoord =
+        ycmd::parse_flag(parser, "--no_flipy_texcoord", "",
+                         "disable texcoord vertical flipping");
     auto scale =
         ycmd::parse_opt<float>(parser, "--scale", "", "scale the model", 1.0f);
     auto print_info = ycmd::parse_flag(parser, "--print_info", "-i",
                                        "print information", false);
+    auto validate = ycmd::parse_flag(parser, "--validate", "",
+                                     "validate after saving", false);
     auto no_save = ycmd::parse_flag(parser, "--no_save", "-e",
                                     "exit without saving", false);
     auto filename_in = ycmd::parse_arg<std::string>(parser, "filename_in",
@@ -189,7 +231,8 @@ int main(int argc, char** argv) {
 
     // set output filename if not present
     if (filename_out.empty()) {
-        filename_out = ycmd::get_basename(filename_in) + ".gltf";
+        filename_out = ycmd::get_dirname(filename_in) +
+                       ycmd::get_basename(filename_in) + ".gltf";
     }
 
     // load obj
@@ -198,16 +241,29 @@ int main(int argc, char** argv) {
     delete obj_;
 
     // print information
-    if (print_info) print_obj_info(obj);
+    if (print_info) {
+        printf("OBJ information ------------------------\n");
+        print_obj_info(obj);
+    }
 
     // scale
     if (scale != 1.0f) scale_obj(obj, scale);
+    if (!no_flipy_texcoord) flipy_texcoord_obj(obj);
 
     // print infomation again if needed
-    if (print_info and (scale != 1.0f)) print_obj_info(obj);
+    if (print_info and (scale != 1.0f || !no_flipy_texcoord)) {
+        printf("OBJ post-correction information -------\n");
+        print_obj_info(obj);
+    }
 
     // convert
     auto gltf = convert(obj);
+
+    // print information
+    if (print_info) {
+        printf("glTF information ---------------------\n");
+        print_gltf_info(gltf);
+    }
 
     // exit without saving
     if (no_save) return 0;
@@ -217,6 +273,16 @@ int main(int argc, char** argv) {
         ygltf::unflatten_gltf(gltf, ycmd::get_basename(filename_out) + ".bin");
     ygltf::save_gltf(filename_out, gltf_, true, false, false);
     delete gltf_;
+
+    // validate
+    if (validate) {
+        auto vgltf_ = ygltf::load_gltf(filename_out, true, false, false);
+        auto vgltf = ygltf::flatten_gltf(vgltf_);
+        if (print_info) {
+            printf("glTF validate information -----------------\n");
+            print_gltf_info(vgltf);
+        }
+    }
 
     // cleanup
     delete gltf;
