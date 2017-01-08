@@ -189,11 +189,12 @@ inline ytrace::scene* make_trace_scene(const yapp::scene* scene,
         [](auto ctx, auto o, auto d, auto tmin, auto tmax) {
             auto scene_bvh = (ybvh::scene*)ctx;
             auto isec = ybvh::intersect_ray(scene_bvh, o, d, tmin, tmax, false);
-            return ytrace::intersect_point{
-                isec.dist,
-                isec.sid,
-                isec.eid,
-                {isec.euv[0], isec.euv[1], isec.euv[2]}};
+            auto ipt = ytrace::intersect_point();
+            ipt.dist = isec.dist;
+            ipt.sid = isec.sid;
+            ipt.eid = isec.eid;
+            ipt.euv = {isec.euv[0], isec.euv[1], isec.euv[2]};
+            return ipt;
         },
         [](auto ctx, auto o, auto d, auto tmin, auto tmax) {
             auto scene_bvh = (ybvh::scene*)ctx;
@@ -285,7 +286,11 @@ inline void init_params(params* pars, ycmd::parser* parser) {
     pars->trace_scene = make_trace_scene(pars->scene, pars->scene_bvh, camera);
 
     // rendering params
-    pars->render_params = ytrace::render_params{camera, samples, stype, rtype};
+    pars->render_params = ytrace::render_params();
+    pars->render_params.camera_id = camera;
+    pars->render_params.nsamples = samples;
+    pars->render_params.stype = stype;
+    pars->render_params.rtype = rtype;
     pars->width = (int)std::round(aspect * res);
     pars->height = res;
     pars->samples = samples;

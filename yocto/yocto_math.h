@@ -98,6 +98,11 @@ namespace ym {}
 #include <limits>
 #include <vector>
 
+// HACK to avoid compilation with MSVC2015 without dirtying code
+#ifdef _WIN32
+#define constexpr
+#endif
+
 namespace ym {
 
 // -----------------------------------------------------------------------------
@@ -107,8 +112,7 @@ namespace ym {
 /// @name basic typedefs
 /// @{
 
-// types from the standard library for consistency
-using size_t = std::size_t;
+/// convenient typedef for bytes
 using byte = unsigned char;
 
 /// @}
@@ -149,14 +153,6 @@ constexpr inline T min(T x, T y) {
 template <typename T>
 constexpr inline T max(T x, T y) {
     return (x > y) ? x : y;
-}
-
-/// Swap values.
-template <typename T>
-constexpr inline void swap(T& a, T& b) {
-    T c = a;
-    a = b;
-    b = c;
 }
 
 /// Clamp a value between a minimum and a maximum.
@@ -2075,7 +2071,7 @@ constexpr inline vec<T, 4> image_lookup(int width, int height, int ncomp,
         case 2: return {v[0], v[1], 0, alpha};
         case 3: return {v[0], v[1], v[2], alpha};
         case 4: return {v[0], v[1], v[2], v[3]};
-        default: assert(false);
+        default: assert(false); return {0,0,0,0};
     }
 }
 
@@ -2247,5 +2243,10 @@ struct timer {
 /// @}
 
 }  // namespace
+
+// HACK to avoid compilation with MSVC2015 without dirtying code
+#ifdef _WIN32
+#undef constexpr
+#endif
 
 #endif

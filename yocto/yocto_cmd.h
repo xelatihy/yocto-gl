@@ -306,8 +306,8 @@ inline parser* make_parser(int argc, char* argv[], const char* help) {
 static inline void _print_help(parser* par) {
     auto help = std::string();
     help += "usage: " + par->help_prog;
-    if (not par->help_opts.empty()) help += "[options] ";
-    if (not par->help_args.empty()) help += "<arguments> ";
+    if (!par->help_opts.empty()) help += "[options] ";
+    if (!par->help_args.empty()) help += "<arguments> ";
     help += "\n    " + par->help_usage + "\n\n";
     if (!par->help_opts.empty()) {
         help += "options:\n";

@@ -1215,10 +1215,17 @@ YGL_API shape::~shape() {
 YGL_API void set_point_shape(scene* scn, int sid, const float3x4& frame,
                              int npoints, const int* point, int nverts,
                              const float3* pos, const float* radius) {
-    *scn->shapes[sid] = {
-        sid,     frame,   npoints, (const int*)point,     nullptr,
-        nullptr, nullptr, nverts,  (const ym::vec3f*)pos, (const float*)radius,
-    };
+    scn->shapes[sid]->sid = sid;
+    scn->shapes[sid]->frame = frame;
+    scn->shapes[sid]->nelems = npoints;
+    scn->shapes[sid]->point = (const int*)point;
+    scn->shapes[sid]->line = nullptr;
+    scn->shapes[sid]->triangle = nullptr;
+    scn->shapes[sid]->tetra = nullptr;
+    scn->shapes[sid]->nverts = nverts;
+    scn->shapes[sid]->pos = (const ym::vec3f*)pos;
+    scn->shapes[sid]->radius = radius;
+    if (scn->shapes[sid]->_bvh) delete scn->shapes[sid]->_bvh;
 }
 
 //
@@ -1227,18 +1234,17 @@ YGL_API void set_point_shape(scene* scn, int sid, const float3x4& frame,
 YGL_API void set_line_shape(scene* scn, int sid, const float3x4& frame,
                             int nlines, const int2* lines, int nverts,
                             const float3* pos, const float* radius) {
-    *scn->shapes[sid] = {
-        sid,
-        frame,
-        nlines,
-        nullptr,
-        (const ym::vec2i*)lines,
-        nullptr,
-        nullptr,
-        nverts,
-        (const ym::vec3f*)pos,
-        (const float*)radius,
-    };
+    scn->shapes[sid]->sid = sid;
+    scn->shapes[sid]->frame = frame;
+    scn->shapes[sid]->nelems = nlines;
+    scn->shapes[sid]->point = nullptr;
+    scn->shapes[sid]->line = (const ym::vec2i*)lines;
+    scn->shapes[sid]->triangle = nullptr;
+    scn->shapes[sid]->tetra = nullptr;
+    scn->shapes[sid]->nverts = nverts;
+    scn->shapes[sid]->pos = (const ym::vec3f*)pos;
+    scn->shapes[sid]->radius = radius;
+    if (scn->shapes[sid]->_bvh) delete scn->shapes[sid]->_bvh;
 }
 
 //
@@ -1248,18 +1254,17 @@ YGL_API void set_triangle_shape(scene* scn, int sid, const float3x4& frame,
                                 int ntriangles, const int3* triangles,
                                 int nverts, const float3* pos,
                                 const float* radius) {
-    *scn->shapes[sid] = {
-        sid,
-        frame,
-        ntriangles,
-        nullptr,
-        nullptr,
-        (const ym::vec3i*)triangles,
-        nullptr,
-        nverts,
-        (const ym::vec3f*)pos,
-        (const float*)radius,
-    };
+    scn->shapes[sid]->sid = sid;
+    scn->shapes[sid]->frame = frame;
+    scn->shapes[sid]->nelems = ntriangles;
+    scn->shapes[sid]->point = nullptr;
+    scn->shapes[sid]->line = nullptr;
+    scn->shapes[sid]->triangle = (const ym::vec3i*)triangles;
+    scn->shapes[sid]->tetra = nullptr;
+    scn->shapes[sid]->nverts = nverts;
+    scn->shapes[sid]->pos = (const ym::vec3f*)pos;
+    scn->shapes[sid]->radius = radius;
+    if (scn->shapes[sid]->_bvh) delete scn->shapes[sid]->_bvh;
 }
 
 //
@@ -1268,18 +1273,17 @@ YGL_API void set_triangle_shape(scene* scn, int sid, const float3x4& frame,
 YGL_API void set_tetra_shape(scene* scn, int sid, const float3x4& frame,
                              int ntetra, const int4* tetra, int nverts,
                              const float3* pos, const float* radius) {
-    *scn->shapes[sid] = {
-        sid,
-        frame,
-        ntetra,
-        nullptr,
-        nullptr,
-        nullptr,
-        (const ym::vec4i*)tetra,
-        nverts,
-        (const ym::vec3f*)pos,
-        (const float*)radius,
-    };
+    scn->shapes[sid]->sid = sid;
+    scn->shapes[sid]->frame = frame;
+    scn->shapes[sid]->nelems = ntetra;
+    scn->shapes[sid]->point = nullptr;
+    scn->shapes[sid]->line = nullptr;
+    scn->shapes[sid]->triangle = nullptr;
+    scn->shapes[sid]->tetra = (const ym::vec4i*)tetra;
+    scn->shapes[sid]->nverts = nverts;
+    scn->shapes[sid]->pos = (const ym::vec3f*)pos;
+    scn->shapes[sid]->radius = radius;
+    if (scn->shapes[sid]->_bvh) delete scn->shapes[sid]->_bvh;
 }
 
 //
@@ -1288,18 +1292,17 @@ YGL_API void set_tetra_shape(scene* scn, int sid, const float3x4& frame,
 YGL_API void set_point_shape(scene* scn, int sid, const float3x4& frame,
                              int nverts, const float3* pos,
                              const float* radius) {
-    *scn->shapes[sid] = {
-        sid,
-        frame,
-        nverts,
-        nullptr,
-        nullptr,
-        nullptr,
-        nullptr,
-        nverts,
-        (const ym::vec3f*)pos,
-        (const float*)radius,
-    };
+    scn->shapes[sid]->sid = sid;
+    scn->shapes[sid]->frame = frame;
+    scn->shapes[sid]->nelems = nverts;
+    scn->shapes[sid]->point = nullptr;
+    scn->shapes[sid]->line = nullptr;
+    scn->shapes[sid]->triangle = nullptr;
+    scn->shapes[sid]->tetra = nullptr;
+    scn->shapes[sid]->nverts = nverts;
+    scn->shapes[sid]->pos = (const ym::vec3f*)pos;
+    scn->shapes[sid]->radius = radius;
+    if (scn->shapes[sid]->_bvh) delete scn->shapes[sid]->_bvh;
 }
 
 //
