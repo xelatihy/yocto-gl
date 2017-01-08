@@ -2071,7 +2071,7 @@ constexpr inline vec<T, 4> image_lookup(int width, int height, int ncomp,
         case 2: return {v[0], v[1], 0, alpha};
         case 3: return {v[0], v[1], v[2], alpha};
         case 4: return {v[0], v[1], v[2], v[3]};
-        default: assert(false); return {0,0,0,0};
+        default: assert(false); return {0, 0, 0, 0};
     }
 }
 
@@ -2212,24 +2212,24 @@ inline void linear_to_byte(int width, int height, int ncomp, const float* hdr,
 /// A simple wrapper for std::chrono.
 struct timer {
     /// initialize a timer and start it if necessary
-    constexpr timer(bool autostart = true) {
+    timer(bool autostart = true) {
         if (autostart) start();
     }
 
     /// start a timer
-    constexpr void start() {
+    void start() {
         _start = std::chrono::steady_clock::now();
         _started = true;
     }
 
     /// stops a timer
-    constexpr void stop() {
+    void stop() {
         _end = std::chrono::steady_clock::now();
         _started = false;
     }
 
     /// elapsed time
-    constexpr double elapsed() {
+    double elapsed() {
         if (_started) stop();
         std::chrono::duration<double> diff = (_end - _start);
         return diff.count();

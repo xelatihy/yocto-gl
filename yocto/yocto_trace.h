@@ -1406,7 +1406,7 @@ static inline ym::vec3f _sample_brdfcos(const point& pt, float rnl,
                     auto ns = 2 / (pt.rs * pt.rs) - 2;
                     // sample wh with hemispherical cosine power distribution
                     auto rz = std::pow(rn[1], 1 / (ns + 1)),
-                         rr = std::sqrtf(1 - rz * rz),
+                         rr = std::sqrt(1 - rz * rz),
                          rphi = 2 * ym::pif * rn[0];
                     // set to wh
                     auto wh_local =
