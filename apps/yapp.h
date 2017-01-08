@@ -440,8 +440,8 @@ inline void save_gltf_scene(const std::string& filename, const scene* sc) {
 inline scene* load_gltf_scene(const std::string& filename, bool binary) {
     // load scene
     auto gltf = std::unique_ptr<ygltf::glTF_t>(
-        (binary) ? ygltf::load_binary_gltf(filename, true, false)
-                 : ygltf::load_gltf(filename, true, false));
+        (binary) ? ygltf::load_binary_gltf(filename, true, false, true, true)
+                 : ygltf::load_gltf(filename, true, false, true, true));
 
     // flatten to scene
     auto fl_scene = std::unique_ptr<ygltf::fl_gltf>(
