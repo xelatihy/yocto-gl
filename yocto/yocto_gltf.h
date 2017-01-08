@@ -489,48 +489,53 @@ struct image_t : glTFChildOfRootProperty_t {
 };
 
 ///
-/// Description not available in the schema.
-///
-struct material_values_texturecolor_KHR_materials_common_t {
-    std::array<float, 4> color = {0, 0, 0, 1};
-    std::string texture;
-};
-///
 /// No description in schema.
 ///
 struct material_values_KHR_materials_common_t {
-    /// RGBA value for ambient light reflected from the surface of the object.
-    material_values_texturecolor_KHR_materials_common_t ambient;
-    /// RGBA value or texture ID defining the amount of light diffusely
-    /// reflected from the surface of the object.
-    material_values_texturecolor_KHR_materials_common_t diffuse;
-    /// Declares whether backface culling should be disabled for this visual.
-    /// Corresponds to disabling the CULL_FACE render state.
-    bool doubleSided = false;
-    /// RGBA value or texture ID for light emitted by the surface of the object.
-    material_values_texturecolor_KHR_materials_common_t emission;
-    /// Defines the specularity or roughness of the specular reflection lobe of
-    /// the object.
+    /// Per-component factors to apply to values of ambientTexture.
+    std::array<float, 3> ambientFactor = {0, 0, 0};
+    /// ID of RGB texture defining the amount of ambient light reflected from
+    /// the surface of the object.
+    std::string ambientTexture = "";
+    /// Per-component factors to apply to values of diffuseTexture.
+    std::array<float, 4> diffuseFactor = {0, 0, 0, 1};
+    /// ID of RGBA texture defining the amount of light diffusely reflected from
+    /// the surface of the object.
+    std::string diffuseTexture = "";
+    /// Per-component factors to apply to values of emissionTexture.
+    std::array<float, 3> emissionFactor = {0, 0, 0};
+    /// ID of RGB texture for defining the amount of light emitted by the
+    /// surface of the object.
+    std::string emissionTexture = "";
+    /// Specularity or roughness of the specular reflection lobe of the object.
     float shininess = 0;
-    /// RGBA value or texture ID defining the color of light specularly
-    /// reflected from the surface of the object.
-    material_values_texturecolor_KHR_materials_common_t specular;
-    /// Declares the amount of transparency as an opacity value between 0.0 and
-    /// 1.0.
+    /// Per-component factors to apply to values of specularTexture.
+    std::array<float, 3> specularFactor = {0, 0, 0};
+    /// ID of RGB texture defining the amount of light specularly reflected from
+    /// the surface of the object.
+    std::string specularTexture = "";
+    /// Amount of transparency as an opacity value between 0.0 and 1.0.
     float transparency = 1;
-    /// Declares whether the visual should be rendered using alpha blending.
-    /// Corresponds to enabling the BLEND render state, setting the depthMask
-    /// property to false, and defining blend equations and blend functions as
-    /// described in the implementation note.
-    bool transparent = false;
 };
 
 ///
 /// KHR_materials_common material extension.
 ///
 struct material_KHR_materials_common_t {
+    /// Declares whether backface culling should be disabled for this visual.
+    /// Corresponds to disabling the CULL_FACE render state.
+    bool doubleSided = false;
+    /// Declares maximum number of joints used by meshes which use this
+    /// material. This allows to pre-generate vertex shader skinning code before
+    /// mesh loading.
+    int jointCount = 0;
     /// Specifies the material type. [required]
     std::string technique;
+    /// Declares whether the visual should be rendered using alpha blending.
+    /// Corresponds to enabling the BLEND render state, setting the depthMask
+    /// property to false, and defining blend equations and blend functions as
+    /// described in the implementation note.
+    bool transparent = false;
     /// A dictionary object of parameter values.
     material_values_KHR_materials_common_t values;
 };
@@ -2759,48 +2764,19 @@ static inline bool _dump(const image_t& val, json& js, _parse_stack& err) {
     return true;
 }
 
-// Parses a material.values.texturecolor.KHR_materials_common object
-
-static inline bool _parse(
-    material_values_texturecolor_KHR_materials_common_t& val, const json& js,
-    _parse_stack& err) {
-    if (_parse(val.color, js, err)) return true;
-    if (_parse(val.texture, js, err)) return true;
-    return false;
-}
-
-// Equality check
-
-static inline bool operator==(
-    const material_values_texturecolor_KHR_materials_common_t& a,
-    const material_values_texturecolor_KHR_materials_common_t& b) {
-    return a.color == b.color && a.texture == b.texture;
-}
-
-// Converts a material.values.texturecolor.KHR_materials_common object to JSON
-
-static inline bool _dump(
-    const material_values_texturecolor_KHR_materials_common_t& val, json& js,
-    _parse_stack& err) {
-    if (!val.texture.empty()) {
-        if (_dump(val.texture, js, err)) return false;
-    } else {
-        if (!_dump(val.color, js, err)) return false;
-    }
-    return true;
-}
-
 // Equality check for defaults (might go away in the future)
 static inline bool operator==(const material_values_KHR_materials_common_t& a,
                               const material_values_KHR_materials_common_t& b) {
-    if (!(a.ambient == b.ambient)) return false;
-    if (!(a.diffuse == b.diffuse)) return false;
-    if (!(a.doubleSided == b.doubleSided)) return false;
-    if (!(a.emission == b.emission)) return false;
+    if (!(a.ambientFactor == b.ambientFactor)) return false;
+    if (!(a.ambientTexture == b.ambientTexture)) return false;
+    if (!(a.diffuseFactor == b.diffuseFactor)) return false;
+    if (!(a.diffuseTexture == b.diffuseTexture)) return false;
+    if (!(a.emissionFactor == b.emissionFactor)) return false;
+    if (!(a.emissionTexture == b.emissionTexture)) return false;
     if (!(a.shininess == b.shininess)) return false;
-    if (!(a.specular == b.specular)) return false;
+    if (!(a.specularFactor == b.specularFactor)) return false;
+    if (!(a.specularTexture == b.specularTexture)) return false;
     if (!(a.transparency == b.transparency)) return false;
-    if (!(a.transparent == b.transparent)) return false;
     return true;
 }
 
@@ -2808,16 +2784,24 @@ static inline bool operator==(const material_values_KHR_materials_common_t& a,
 static inline bool _parse(material_values_KHR_materials_common_t& val,
                           const json& js, _parse_stack& err) {
     if (!_parse_begin_obj(js, err)) return false;
-    if (!_parse_attr(val.ambient, "ambient", false, js, err)) return false;
-    if (!_parse_attr(val.diffuse, "diffuse", false, js, err)) return false;
-    if (!_parse_attr(val.doubleSided, "doubleSided", false, js, err))
+    if (!_parse_attr(val.ambientFactor, "ambientFactor", false, js, err))
         return false;
-    if (!_parse_attr(val.emission, "emission", false, js, err)) return false;
+    if (!_parse_attr(val.ambientTexture, "ambientTexture", false, js, err))
+        return false;
+    if (!_parse_attr(val.diffuseFactor, "diffuseFactor", false, js, err))
+        return false;
+    if (!_parse_attr(val.diffuseTexture, "diffuseTexture", false, js, err))
+        return false;
+    if (!_parse_attr(val.emissionFactor, "emissionFactor", false, js, err))
+        return false;
+    if (!_parse_attr(val.emissionTexture, "emissionTexture", false, js, err))
+        return false;
     if (!_parse_attr(val.shininess, "shininess", false, js, err)) return false;
-    if (!_parse_attr(val.specular, "specular", false, js, err)) return false;
-    if (!_parse_attr(val.transparency, "transparency", false, js, err))
+    if (!_parse_attr(val.specularFactor, "specularFactor", false, js, err))
         return false;
-    if (!_parse_attr(val.transparent, "transparent", false, js, err))
+    if (!_parse_attr(val.specularTexture, "specularTexture", false, js, err))
+        return false;
+    if (!_parse_attr(val.transparency, "transparency", false, js, err))
         return false;
     if (!_parse_end_obj(js, err)) return false;
     return true;
@@ -2828,25 +2812,35 @@ static inline bool _dump(const material_values_KHR_materials_common_t& val,
                          json& js, _parse_stack& err) {
     static const auto defval = material_values_KHR_materials_common_t();
     if (!_dump_begin_obj(js, err)) return false;
-    if (!_dump_attr(val.ambient, "ambient", defval.ambient, false, js, err))
+    if (!_dump_attr(val.ambientFactor, "ambientFactor", defval.ambientFactor,
+                    false, js, err))
         return false;
-    if (!_dump_attr(val.diffuse, "diffuse", defval.diffuse, false, js, err))
+    if (!_dump_attr(val.ambientTexture, "ambientTexture", defval.ambientTexture,
+                    false, js, err))
         return false;
-    if (!_dump_attr(val.doubleSided, "doubleSided", defval.doubleSided, false,
-                    js, err))
+    if (!_dump_attr(val.diffuseFactor, "diffuseFactor", defval.diffuseFactor,
+                    false, js, err))
         return false;
-    if (!_dump_attr(val.emission, "emission", defval.emission, false, js, err))
+    if (!_dump_attr(val.diffuseTexture, "diffuseTexture", defval.diffuseTexture,
+                    false, js, err))
+        return false;
+    if (!_dump_attr(val.emissionFactor, "emissionFactor", defval.emissionFactor,
+                    false, js, err))
+        return false;
+    if (!_dump_attr(val.emissionTexture, "emissionTexture",
+                    defval.emissionTexture, false, js, err))
         return false;
     if (!_dump_attr(val.shininess, "shininess", defval.shininess, false, js,
                     err))
         return false;
-    if (!_dump_attr(val.specular, "specular", defval.specular, false, js, err))
+    if (!_dump_attr(val.specularFactor, "specularFactor", defval.specularFactor,
+                    false, js, err))
+        return false;
+    if (!_dump_attr(val.specularTexture, "specularTexture",
+                    defval.specularTexture, false, js, err))
         return false;
     if (!_dump_attr(val.transparency, "transparency", defval.transparency,
                     false, js, err))
-        return false;
-    if (!_dump_attr(val.transparent, "transparent", defval.transparent, false,
-                    js, err))
         return false;
     if (!_dump_end_obj(js, err)) return false;
     return true;
@@ -2855,7 +2849,10 @@ static inline bool _dump(const material_values_KHR_materials_common_t& val,
 // Equality check for defaults (might go away in the future)
 static inline bool operator==(const material_KHR_materials_common_t& a,
                               const material_KHR_materials_common_t& b) {
+    if (!(a.doubleSided == b.doubleSided)) return false;
+    if (!(a.jointCount == b.jointCount)) return false;
     if (!(a.technique == b.technique)) return false;
+    if (!(a.transparent == b.transparent)) return false;
     if (!(a.values == b.values)) return false;
     return true;
 }
@@ -2864,7 +2861,13 @@ static inline bool operator==(const material_KHR_materials_common_t& a,
 static inline bool _parse(material_KHR_materials_common_t& val, const json& js,
                           _parse_stack& err) {
     if (!_parse_begin_obj(js, err)) return false;
+    if (!_parse_attr(val.doubleSided, "doubleSided", false, js, err))
+        return false;
+    if (!_parse_attr(val.jointCount, "jointCount", false, js, err))
+        return false;
     if (!_parse_attr(val.technique, "technique", true, js, err)) return false;
+    if (!_parse_attr(val.transparent, "transparent", false, js, err))
+        return false;
     if (!_parse_attr(val.values, "values", false, js, err)) return false;
     if (!_parse_end_obj(js, err)) return false;
     return true;
@@ -2875,8 +2878,17 @@ static inline bool _dump(const material_KHR_materials_common_t& val, json& js,
                          _parse_stack& err) {
     static const auto defval = material_KHR_materials_common_t();
     if (!_dump_begin_obj(js, err)) return false;
+    if (!_dump_attr(val.doubleSided, "doubleSided", defval.doubleSided, false,
+                    js, err))
+        return false;
+    if (!_dump_attr(val.jointCount, "jointCount", defval.jointCount, false, js,
+                    err))
+        return false;
     if (!_dump_attr(val.technique, "technique", defval.technique, true, js,
                     err))
+        return false;
+    if (!_dump_attr(val.transparent, "transparent", defval.transparent, false,
+                    js, err))
         return false;
     if (!_dump_attr(val.values, "values", defval.values, false, js, err))
         return false;
@@ -5575,6 +5587,7 @@ inline int vec_array_view::_ctype_size(
         case accessor_t::componentType_t::unsigned_short_t: return 2;
         case accessor_t::componentType_t::unsigned_int_t: return 4;
         case accessor_t::componentType_t::float_t: return 4;
+        default: assert(false); return 0;
     }
 }
 
@@ -5624,6 +5637,7 @@ inline int element_array_view::_ctype_size(
         case accessor_t::componentType_t::unsigned_short_t: return 2;
         case accessor_t::componentType_t::unsigned_int_t: return 4;
         case accessor_t::componentType_t::float_t: assert(false); return 0;
+        default: assert(false); return 0;
     }
 }
 
@@ -5733,36 +5747,23 @@ YGL_API fl_gltf* flatten_gltf(const glTF_t* gltf,
         mat->name = tf_mat->name;
         if (tf_mat->KHR_materials_common) {
             auto mat_val = &tf_mat->KHR_materials_common.value;
-            auto ke = mat_val->values.emission;
-            auto kd = mat_val->values.diffuse;
-            auto ks = mat_val->values.specular;
-            if (ke.texture.empty()) {
-                mat->ke = {ke.color[0], ke.color[1], ke.color[2]};
-            } else {
-                mat->ke = {1, 1, 1};
-                if (textures.find(ke.texture) != textures.end())
-                    mat->ke_txt = textures[ke.texture];
-            }
-            if (kd.texture.empty()) {
-                mat->kd = {kd.color[0], kd.color[1], kd.color[2]};
-            } else {
-                mat->kd = {1, 1, 1};
-                if (textures.find(kd.texture) != textures.end())
-                    mat->kd_txt = textures[kd.texture];
-            }
-            if (ks.texture.empty()) {
-                mat->ks = {ks.color[0], ks.color[1], ks.color[2]};
-            } else {
-                mat->ks = {1, 1, 1};
-                if (textures.find(ks.texture) != textures.end())
-                    mat->ks_txt = textures[ks.texture];
-            }
+            mat->ke = mat_val->values.emissionFactor;
+            mat->kd = *(std::array<float, 3>*)&mat_val->values.diffuseFactor;
+            mat->ks = mat_val->values.specularFactor;
+            if (textures.find(mat_val->values.emissionTexture) !=
+                textures.end())
+                mat->ke_txt = textures[mat_val->values.emissionTexture];
+            if (textures.find(mat_val->values.diffuseTexture) != textures.end())
+                mat->kd_txt = textures[mat_val->values.diffuseTexture];
+            if (textures.find(mat_val->values.specularTexture) !=
+                textures.end())
+                mat->ks_txt = textures[mat_val->values.specularTexture];
             mat->rs =
                 std::sqrt(2 / (mat_val->values.shininess + 2));  // TODO: fixme
         } else {
             mat->ke = {0, 0, 0};
-            mat->kd = {0.7, 0.7, 0.7};
-            mat->ks = {0.04, 0.04, 0.04};
+            mat->kd = {0.7f, 0.7f, 0.7f};
+            mat->ks = {0.04f, 0.04f, 0.04f};
             mat->rs = 1;
         }
         fl_gltf->materials.push_back(mat);
@@ -5961,8 +5962,15 @@ YGL_API fl_gltf* flatten_gltf(const glTF_t* gltf,
                 fl_scn->cameras.push_back((int)fl_gltf->cameras.size() - 1);
             }
             for (auto& mesh_name : node->meshes) {
+#ifdef _WIN32
+                auto fm = new fl_mesh();
+                fm->name = gltf->meshes.at(mesh_name).name;
+                fm->xform = xf;
+                fm->primitives = meshes.at(mesh_name);
+#else
                 fl_gltf->meshes.push_back(new fl_mesh{
                     gltf->meshes.at(mesh_name).name, xf, meshes.at(mesh_name)});
+#endif
                 fl_scn->meshes.push_back((int)fl_gltf->meshes.size() - 1);
             }
             for (auto& child : node->children) {
@@ -6150,22 +6158,22 @@ YGL_API glTF_t* unflatten_gltf(const fl_gltf* fl_gltf,
         mat->KHR_materials_common.valid = true;
         auto matv = &mat->KHR_materials_common.value;
         matv->technique = "BLINN";
-        matv->values.emission.color = {fl_mat->ke[0], fl_mat->ke[1],
-                                       fl_mat->ke[2], 1};
-        matv->values.diffuse.color = {fl_mat->kd[0], fl_mat->kd[1],
+        matv->values.emissionFactor = {fl_mat->ke[0], fl_mat->ke[1],
+                                       fl_mat->ke[2]};
+        matv->values.diffuseFactor = {fl_mat->kd[0], fl_mat->kd[1],
                                       fl_mat->kd[2], 1};
-        matv->values.specular.color = {fl_mat->ks[0], fl_mat->ks[1],
-                                       fl_mat->ks[2], 1};
+        matv->values.specularFactor = {fl_mat->ks[0], fl_mat->ks[1],
+                                       fl_mat->ks[2]};
         matv->values.shininess =
             (fl_mat->rs) ? 2 / (fl_mat->rs * fl_mat->rs) - 2 : 1e6;
         if (fl_mat->ke_txt >= 0)
-            matv->values.emission.texture =
+            matv->values.emissionTexture =
                 "texture" + std::to_string(fl_mat->ke_txt);
         if (fl_mat->kd_txt >= 0)
-            matv->values.diffuse.texture =
+            matv->values.diffuseTexture =
                 "texture" + std::to_string(fl_mat->kd_txt);
         if (fl_mat->ks_txt >= 0)
-            matv->values.specular.texture =
+            matv->values.specularTexture =
                 "texture" + std::to_string(fl_mat->ks_txt);
     }
 

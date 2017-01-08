@@ -442,15 +442,15 @@ YGL_API void set_body(scene* scn, int bid, const float3x4& frame,
                       const float3& lin_vel, const float3& ang_vel,
                       float density, int ntriangles, const int3* triangles,
                       int nverts, const float3* pos) {
-    *scn->shapes[bid] = {frame,
-                         lin_vel,
-                         ang_vel,
-                         density,
-                         density > 0,
-                         ntriangles,
-                         (const ym::vec3i*)triangles,
-                         nverts,
-                         (const ym::vec3f*)pos};
+    scn->shapes[bid]->frame = frame;
+    scn->shapes[bid]->lin_vel = lin_vel;
+    scn->shapes[bid]->ang_vel = ang_vel;
+    scn->shapes[bid]->density = density;
+    scn->shapes[bid]->simulated = density > 0;
+    scn->shapes[bid]->nelems = ntriangles;
+    scn->shapes[bid]->triangles = (const ym::vec3i*)triangles;
+    scn->shapes[bid]->nverts = nverts;
+    scn->shapes[bid]->pos = (const ym::vec3f*)pos;
 }
 
 //

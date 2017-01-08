@@ -631,7 +631,11 @@ YGL_API scene* make_scene(int ncameras, int nshapes, int nmaterials,
 //
 YGL_API void set_camera(scene* scn, int cid, const float3x4& frame, float yfov,
                         float aspect, float aperture, float focus) {
-    *scn->cameras[cid] = {frame, yfov, aspect, aperture, focus};
+    scn->cameras[cid]->frame = frame;
+    scn->cameras[cid]->yfov = yfov;
+    scn->cameras[cid]->aspect = aspect;
+    scn->cameras[cid]->aperture = aperture;
+    scn->cameras[cid]->focus = focus;
 }
 
 //
@@ -665,17 +669,21 @@ YGL_API void set_material(scene* scn, int mid, const float3& ke,
                           const float3& kd, const float3& ks, float rs,
                           int ke_txt, int kd_txt, int ks_txt, int rs_txt,
                           const float3& es, const float3& eks, bool use_phong) {
-    *scn->materials[mid] = {ke,
-                            kd,
-                            ks,
-                            rs,
-                            (ke_txt >= 0) ? scn->textures[ke_txt] : nullptr,
-                            (kd_txt >= 0) ? scn->textures[kd_txt] : nullptr,
-                            (ks_txt >= 0) ? scn->textures[ks_txt] : nullptr,
-                            (rs_txt >= 0) ? scn->textures[rs_txt] : nullptr,
-                            es,
-                            eks,
-                            use_phong};
+    scn->materials[mid]->ke = ke;
+    scn->materials[mid]->kd = kd;
+    scn->materials[mid]->ks = ks;
+    scn->materials[mid]->rs = rs;
+    scn->materials[mid]->ke_txt =
+        (ke_txt >= 0) ? scn->textures[ke_txt] : nullptr;
+    scn->materials[mid]->kd_txt =
+        (kd_txt >= 0) ? scn->textures[kd_txt] : nullptr;
+    scn->materials[mid]->ks_txt =
+        (ks_txt >= 0) ? scn->textures[ks_txt] : nullptr;
+    scn->materials[mid]->rs_txt =
+        (rs_txt >= 0) ? scn->textures[rs_txt] : nullptr;
+    scn->materials[mid]->es = es;
+    scn->materials[mid]->eks = eks;
+    scn->materials[mid]->use_phong = use_phong;
 }
 
 //
@@ -683,8 +691,10 @@ YGL_API void set_material(scene* scn, int mid, const float3& ke,
 //
 YGL_API void set_environment(scene* scn, int eid, const float3x4& frame,
                              const float3& ke, int txt_id) {
-    *scn->environments[eid] = {frame, ke,
-                               (txt_id >= 0) ? scn->textures[txt_id] : nullptr};
+    scn->environments[eid]->frame = frame;
+    scn->environments[eid]->ke = ke;
+    scn->environments[eid]->ke_txt =
+        (txt_id >= 0) ? scn->textures[txt_id] : nullptr;
 }
 
 //
@@ -1032,8 +1042,10 @@ static inline ym::vec4f _lookup_texture(const texture* txt,
     } else if (txt->hdr) {
         return ym::image_lookup(txt->width, txt->height, txt->ncomp, txt->hdr,
                                 ij[0], ij[1], 1.0f);
-    } else
+    } else {
         assert(false);
+        return {};
+    }
 }
 
 //

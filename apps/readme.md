@@ -1,15 +1,5 @@
 # Example applications for YOCTO/GL.
 
-1. Make a set of simple tests scenes using `./bin/ytestgen tests`.
-2. Convert Wavefront OBJ models to glTF 1.1.
-3. Render the scene with path tracing with `ytrace` for offline rendering or
-   `yitrace` for interactive path tracing.
-4. Quickly view your scenes with `yshade`.
-5. View rendered images with `yimview` with support for HDR image viewing.
-6. Runs rigid body demo with `ysym` for offline simulation or `yisym` for interactive one.
-
-Run the executable with `-h` to get help.
-
-Some of the examples depend on GLFW v3 on all platforms and GLEW on Window/Linux.
-The libraries needs to be made available for the build, by changing the paths
-in the build files. To build, use the included .sh/.bat files.
+Compile the applications with `apps/build.osx.sh`, `apps/build.windows.sh` or `apps/build.linux.sh`.
+For now, only non-interactive applications are built on Windows and Linux.
+For a complete list of example applications, see the [main readme](../readme.md).

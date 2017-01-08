@@ -149,9 +149,7 @@ struct vert {
     int color;     ///< color [extension]
     int radius;    ///< radius [extension]
 
-    ///
     /// Constructor (copies members initializing missing ones to -1)
-    ///
     vert(int pos = -1, int texcoord = -1, int norm = -1, int color = -1,
          int radius = -1)
         : pos(pos), texcoord(texcoord), norm(norm), color(color),
@@ -163,15 +161,20 @@ struct vert {
 ///
 struct elem {
     /// element type
-    enum struct type : uint16_t {
+    enum struct etype : uint16_t {
         point = 1,  ///< lists of points
         line = 2,   ///< polylines
         face = 3    ///< polygon faces
     };
 
     uint32_t start;  ///< starting vertex index
-    type type;       ///< element type
+    etype type;      ///< element type
     uint16_t size;   ///< number of vertices
+
+#ifdef _WIN32
+    elem(uint32_t start_, etype type_, uint16_t size_)
+        : start(start_), type(type_), size(size_) {}
+#endif
 };
 
 ///
@@ -725,19 +728,19 @@ YGL_API obj* load_obj(const std::string& filename) {
         } else if (tok_s == "f") {
             _parse_vertlist(cur_tok, cur_ntok, cur_elems, vert_size);
             auto& g = asset->objects.back().elems.back();
-            g.elems.push_back({(uint32_t)g.verts.size(), elem::type::face,
+            g.elems.push_back({(uint32_t)g.verts.size(), elem::etype::face,
                                (uint16_t)cur_elems.size()});
             g.verts.insert(g.verts.end(), cur_elems.begin(), cur_elems.end());
         } else if (tok_s == "l") {
             _parse_vertlist(cur_tok, cur_ntok, cur_elems, vert_size);
             auto& g = asset->objects.back().elems.back();
-            g.elems.push_back({(uint32_t)g.verts.size(), elem::type::line,
+            g.elems.push_back({(uint32_t)g.verts.size(), elem::etype::line,
                                (uint16_t)cur_elems.size()});
             g.verts.insert(g.verts.end(), cur_elems.begin(), cur_elems.end());
         } else if (tok_s == "p") {
             _parse_vertlist(cur_tok, cur_ntok, cur_elems, vert_size);
             auto& g = asset->objects.back().elems.back();
-            g.elems.push_back({(uint32_t)g.verts.size(), elem::type::point,
+            g.elems.push_back({(uint32_t)g.verts.size(), elem::etype::point,
                                (uint16_t)cur_elems.size()});
             g.verts.insert(g.verts.end(), cur_elems.begin(), cur_elems.end());
         } else if (tok_s == "o") {
@@ -1182,20 +1185,20 @@ YGL_API fl_obj* flatten_obj(const obj* asset) {
             // covert elements
             for (auto& elem : elem_group.elems) {
                 switch (elem.type) {
-                    case elem::type::point: {
+                    case elem::etype::point: {
                         for (auto i = elem.start; i < elem.start + elem.size;
                              i++) {
                             prim->points.push_back(vert_ids[i]);
                         }
                     } break;
-                    case elem::type::line: {
+                    case elem::etype::line: {
                         for (auto i = elem.start;
                              i < elem.start + elem.size - 1; i++) {
                             prim->lines.push_back(
                                 {vert_ids[i], vert_ids[i + 1]});
                         }
                     } break;
-                    case elem::type::face: {
+                    case elem::etype::face: {
                         for (auto i = elem.start + 2;
                              i < elem.start + elem.size; i++) {
                             prim->triangles.push_back({vert_ids[elem.start],
@@ -1318,7 +1321,7 @@ YGL_API obj* unflatten_obj(const fl_obj* scene) {
                                  : scene->materials[fl_prim->material]->name;
             for (auto point : fl_prim->points) {
                 elems->elems.push_back(
-                    {(uint32_t)elems->verts.size(), elem::type::point, 1});
+                    {(uint32_t)elems->verts.size(), elem::etype::point, 1});
                 elems->verts.push_back(
                     {(fl_prim->pos.empty()) ? -1 : offset.pos + point,
                      (fl_prim->texcoord.empty()) ? -1 : offset.texcoord + point,
@@ -1328,7 +1331,7 @@ YGL_API obj* unflatten_obj(const fl_obj* scene) {
             }
             for (auto line : fl_prim->lines) {
                 elems->elems.push_back(
-                    {(uint32_t)elems->verts.size(), elem::type::line, 2});
+                    {(uint32_t)elems->verts.size(), elem::etype::line, 2});
                 elems->verts.push_back(
                     {(fl_prim->pos.empty()) ? -1 : offset.pos + line[0],
                      (fl_prim->texcoord.empty()) ? -1
@@ -1346,7 +1349,7 @@ YGL_API obj* unflatten_obj(const fl_obj* scene) {
             }
             for (auto triangle : fl_prim->triangles) {
                 elems->elems.push_back(
-                    {(uint32_t)elems->verts.size(), elem::type::face, 3});
+                    {(uint32_t)elems->verts.size(), elem::etype::face, 3});
                 elems->verts.push_back(
                     {(fl_prim->pos.empty()) ? -1 : offset.pos + triangle[0],
                      (fl_prim->texcoord.empty())
