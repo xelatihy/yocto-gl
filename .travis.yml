@@ -2,7 +2,7 @@ language: cpp
 sudo: required
 before_install:
   - sudo apt-get -qq update
-  - sudo apt-get install gcc-6
+  - sudo apt-get install gcc-6-base
 compiler:
     - gcc
 install: true
