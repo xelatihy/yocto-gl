@@ -304,11 +304,6 @@ void run_ui(yimview_app::params* pars) {
     ym::vec2f mouse_pos, mouse_last;
     ym::vec2i window_size, framebuffer_size;
 
-// init gl extensions
-#ifndef __APPLE__
-    if (glewInit() != GLEW_OK) exit(EXIT_FAILURE);
-#endif
-
     pars->widget_ctx = yui::init_nuklear(window, pars->legacy_gl);
 
     // load textures

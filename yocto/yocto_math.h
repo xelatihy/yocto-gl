@@ -1671,7 +1671,7 @@ constexpr inline mat<T, 4, 4> ortho2d_mat4(T l, T r, T b, T t) {
 template <typename T>
 constexpr inline mat<T, 4, 4> perspective_mat4(T fovy, T aspect, T near,
                                                T far) {
-    auto y = near * tan(fovy / 2);
+    auto y = near * std::tan(fovy / 2);
     auto x = y * aspect;
     return frustum_mat4<T>(-x, x, -y, y, near, far);
 }

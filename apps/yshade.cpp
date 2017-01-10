@@ -164,11 +164,6 @@ void run_ui(yshade_app::params* pars) {
     ym::vec2f mouse_pos, mouse_last;
     ym::vec2i window_size, framebuffer_size;
 
-// init gl extensions
-#ifndef __APPLE__
-    if (glewInit() != GLEW_OK) exit(EXIT_FAILURE);
-#endif
-
     // load textures
     yshade_app::init(pars);
 
