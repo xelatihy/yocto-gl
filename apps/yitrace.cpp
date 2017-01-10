@@ -200,8 +200,11 @@ bool update(yitrace_app::params* pars) {
         auto cam = pars->scene->cameras[pars->render_params.camera_id];
         auto trace_cam =
             pars->trace_scene->cameras[pars->render_params.camera_id];
-        *trace_cam = {cam->frame, cam->yfov, cam->aspect, cam->aperture,
-                      cam->focus};
+        trace_cam->frame = cam->frame;
+        trace_cam->yfov = cam->yfov;
+        trace_cam->aspect = cam->aspect;
+        trace_cam->aperture = cam->aperture;
+        trace_cam->focus = cam->focus;
 
         // render preview
         auto pparams = pars->render_params;
@@ -304,11 +307,6 @@ void run_ui(yitrace_app::params* pars) {
     int mouse_button = 0;
     ym::vec2f mouse_pos, mouse_last;
     ym::vec2i window_size, framebuffer_size;
-
-// init gl extensions
-#ifndef __APPLE__
-    if (glewInit() != GLEW_OK) exit(EXIT_FAILURE);
-#endif
 
     pars->widget_ctx = yui::init_nuklear(window, pars->legacy_gl);
 

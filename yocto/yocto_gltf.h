@@ -4850,7 +4850,7 @@ YGL_API glTF_t* load_gltf(const std::string& filename, bool load_bin,
         std::ifstream stream(filename.c_str());
         if (!stream) throw gltf_exception("could not load json");
         stream >> js;
-    } catch (const std::exception& e) {
+    } catch (const std::exception&) {
         throw gltf_exception("could not load json");
     }
 
@@ -4987,7 +4987,7 @@ YGL_API glTF_t* load_binary_gltf(const std::string& filename, bool load_bin,
     auto js = json();
     try {
         js = json::parse(json_vec.data());
-    } catch (const std::exception& e) {
+    } catch (const std::exception&) {
         throw gltf_exception("could not load json");
     }
 

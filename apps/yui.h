@@ -96,6 +96,11 @@ inline GLFWwindow* init_glfw(int width, int height, const std::string& title,
     glfwSetErrorCallback(_glfw_error_callback);
     if (text_callback) glfwSetCharCallback(window, text_callback);
 
+// init gl extensions
+#ifndef __APPLE__
+    if (!glewInit()) return nullptr;
+#endif
+
     return window;
 }
 

@@ -39,8 +39,8 @@
 #include <GLFW/glfw3.h>
 // clang-format on
 
-#include "yapp.h"
 #include "../yocto/yocto_glu.h"
+#include "yapp.h"
 
 namespace yshade_app {
 
