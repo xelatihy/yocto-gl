@@ -1,2 +1,5 @@
-- language: cpp
-- script: ./apps/build.linux.sh
+language: cpp
+compiler:
+    - gcc
+script:
+    - ./apps/build.linux.sh
