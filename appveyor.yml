@@ -1,0 +1,5 @@
+version: 1.0.{build}
+shallow_clone: true
+build_script:
+  - call "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat"
+  - call ./apps/build.windows.bat
