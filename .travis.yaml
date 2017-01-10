@@ -1,0 +1,2 @@
+- language: cpp
+- script: ./apps/build.linux.sh
