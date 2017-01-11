@@ -1,7 +1,34 @@
 language: cpp
+
+addons:
+  apt:
+    sources:
+    - ubuntu-toolchain-r-test
+    packages:
+    - gcc-6
+    - g++-6
+    - clang-3.8
+
+compiler:
+  - clang
+  - gcc
+
 os:
-    - osx
+  - osx
+  - linux
+
 install: true
+
 osx_image: xcode8.2
+
+dist: trusty
+sudo: required
+
+matrix:
+  exclude:
+  - os: osx
+    compiler: gcc
+
 script:
-    - ./apps/build.osx.sh
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then ./apps/build.linux.sh; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then ./apps/build.osx.sh; fi
