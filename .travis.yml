@@ -7,7 +7,6 @@ addons:
     packages:
     - gcc-6
     - g++-6
-    - clang-3.8
 
 compiler:
   - clang
@@ -28,7 +27,6 @@ matrix:
   exclude:
   - os: osx
     compiler: gcc
-  exclude:
   - os: linux
     compiler: clang
 
