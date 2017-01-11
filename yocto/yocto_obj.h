@@ -1155,8 +1155,6 @@ YGL_API fl_obj* flatten_obj(const obj* asset) {
     }
 
     // convert shapes
-    std::unordered_map<vert, int, _vert_hash> vert_map;
-    std::vector<int> vert_ids;
     for (auto& oshape : asset->objects) {
         auto mesh = new fl_mesh();
         mesh->name = oshape.name;
@@ -1173,13 +1171,15 @@ YGL_API fl_obj* flatten_obj(const obj* asset) {
             }
 
             // insert all vertices
-            vert_map.clear();
-            vert_ids.clear();
+            std::unordered_map<vert, int, _vert_hash> vert_map;
+            std::vector<int> vert_ids;
+            // vert_map.clear();
+            // vert_ids.clear();
             for (auto& vert : elem_group.verts) {
                 if (vert_map.find(vert) == vert_map.end()) {
                     vert_map[vert] = (int)vert_map.size();
                 }
-                vert_ids.push_back(vert_map[vert]);
+                vert_ids.push_back(vert_map.at(vert));
             }
 
             // covert elements
@@ -1210,6 +1210,7 @@ YGL_API fl_obj* flatten_obj(const obj* asset) {
                 }
             }
 
+            // check for errors
             // copy vertex data
             auto v = elem_group.verts[0];
             if (v.pos >= 0) prim->pos.resize(vert_map.size());

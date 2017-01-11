@@ -1,15 +1,10 @@
-CXX=g++
-CXXFLAGS='-std=c++14 -O3 -g -pthread'
-OPENGL_LFLAGS='-I/usr/local/include -L/usr/local/lib -L/usr/lib/x86_64-linux-gnu -lglfw -lGLEW -lGL -lm'
-
 mkdir -p bin
 
-$CXX $CXXFLAGS -o bin/ysym apps/ysym.cpp
-$CXX $CXXFLAGS -o bin/ytestgen apps/ytestgen.cpp
-$CXX $CXXFLAGS -o bin/ytrace apps/ytrace.cpp
-$CXX $CXXFLAGS -o bin/yobj2gltf apps/yobj2gltf.cpp
-
-$CXX $CXXFLAGS $OPENGL_LFLAGS -o bin/yshade apps/yshade.cpp
-$CXX $CXXFLAGS $OPENGL_LFLAGS -o bin/yisym apps/yisym.cpp
-$CXX $CXXFLAGS $OPENGL_LFLAGS -o bin/yitrace apps/yitrace.cpp
-$CXX $CXXFLAGS $OPENGL_LFLAGS -o bin/yimview apps/yimview.cpp
+g++ -MMD -MF bin/ysym.o.d -std=c++14 -O3 -g -pthread -I/usr/include -c -o bin/ysym.o apps/ysym.cpp
+g++ -o bin/ysym bin/ysym.o --std=c++14 -pthread
+g++ -MMD -MF bin/ytestgen.o.d -std=c++14 -O3 -g -pthread -I/usr/include -c -o bin/ytestgen.o apps/ytestgen.cpp
+g++ -o bin/ytestgen bin/ytestgen.o --std=c++14 -pthread
+g++ -MMD -MF bin/ytrace.o.d -std=c++14 -O3 -g -pthread -I/usr/include -c -o bin/ytrace.o apps/ytrace.cpp
+g++ -o bin/ytrace bin/ytrace.o --std=c++14 -pthread
+g++ -MMD -MF bin/yobj2gltf.o.d -std=c++14 -O3 -g -pthread -I/usr/include -c -o bin/yobj2gltf.o apps/yobj2gltf.cpp
+g++ -o bin/yobj2gltf bin/yobj2gltf.o --std=c++14 -pthread

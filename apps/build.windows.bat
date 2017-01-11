@@ -1,15 +1,10 @@
 mkdir bin
 
-set CXX=cl
-set CXXFLAGS=/Od /Zi /Fdbin\ /Fobin\ /Febin\ /EHsc /bigobj
-set OPENGL_LFLAGS=/Iapps/w32/include opengl32.lib apps/w32/lib-vc2015/glew32.lib apps/w32/lib-vc2015/glfw3dll.lib
-
-%CXX% %CXXFLAGS% apps/ysym.cpp
-%CXX% %CXXFLAGS% apps/ytrace.cpp
-%CXX% %CXXFLAGS% apps/ytestgen.cpp
-%CXX% %CXXFLAGS% apps/yobj2gltf.cpp
-
-%CXX% %CXXFLAGS% %OPENGL_LFLAGS% apps/yshade.cpp
-%CXX% %CXXFLAGS% %OPENGL_LFLAGS% apps/yisym.cpp
-%CXX% %CXXFLAGS% %OPENGL_LFLAGS% apps/yitrace.cpp
-%CXX% %CXXFLAGS% %OPENGL_LFLAGS% apps/yimview.cpp
+cl  /O2 /Zi /EHsc /bigobj /Iapps/w32/include /c /Fdbin/ysym.obj.pdb /Fobin/ysym.obj apps/ysym.cpp
+cl /Febin/ysym.exe /Fdbin/ysym.exe.pdb bin/ysym.obj /Zi
+cl  /O2 /Zi /EHsc /bigobj /Iapps/w32/include /c /Fdbin/ytestgen.obj.pdb /Fobin/ytestgen.obj apps/ytestgen.cpp
+cl /Febin/ytestgen.exe /Fdbin/ytestgen.exe.pdb bin/ytestgen.obj /Zi
+cl  /O2 /Zi /EHsc /bigobj /Iapps/w32/include /c /Fdbin/ytrace.obj.pdb /Fobin/ytrace.obj apps/ytrace.cpp
+cl /Febin/ytrace.exe /Fdbin/ytrace.exe.pdb bin/ytrace.obj /Zi
+cl  /O2 /Zi /EHsc /bigobj /Iapps/w32/include /c /Fdbin/yobj2gltf.obj.pdb /Fobin/yobj2gltf.obj apps/yobj2gltf.cpp
+cl /Febin/yobj2gltf.exe /Fdbin/yobj2gltf.exe.pdb bin/yobj2gltf.obj /Zi
