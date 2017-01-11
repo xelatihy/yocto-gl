@@ -1,0 +1,7 @@
+language: cpp
+os:
+    - osx
+install: true
+osx_image: xcode8.2
+script:
+    - ./apps/build.osx.sh
