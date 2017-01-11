@@ -5967,6 +5967,7 @@ YGL_API fl_gltf* flatten_gltf(const glTF_t* gltf,
                 fm->name = gltf->meshes.at(mesh_name).name;
                 fm->xform = xf;
                 fm->primitives = meshes.at(mesh_name);
+				fl_gltf->meshes.push_back(fm);
 #else
                 fl_gltf->meshes.push_back(new fl_mesh{
                     gltf->meshes.at(mesh_name).name, xf, meshes.at(mesh_name)});
