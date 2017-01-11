@@ -28,6 +28,9 @@ matrix:
   exclude:
   - os: osx
     compiler: gcc
+  exclude:
+  - os: linux
+    compiler: clang
 
 script:
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then ./apps/build.linux.sh; fi
