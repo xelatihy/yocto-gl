@@ -66,6 +66,8 @@ set(yocto_files
 set(app_files
     ../apps/yapp.h
     ../apps/yapp.cpp
+    ../apps/tinyply.h
+    ../apps/tinyply.cpp
 )
 
 if(BUILD_OPENGL_APPS)
