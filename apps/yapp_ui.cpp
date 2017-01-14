@@ -26,31 +26,23 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#ifndef _YSHADE_APP_H_
-#define _YSHADE_APP_H_
+//
+// YAPP OPENGL IMPLEMENTATION
+//
 
-// clang-format off
-#ifndef __APPLE__
-#include <GL/glew.h>
-#else
-#include <OpenGL/gl.h>
-#include <OpenGL/gl3.h>
-#endif
-#include <GLFW/glfw3.h>
-// clang-format on
+#include "yapp.h"
+#include "yui.h"
 
 #include "../yocto/yocto_glu.h"
-#include "yapp.h"
 
-namespace yshade_app {
+namespace yapp {
 
 //
 // Init shading
 //
-inline void init_shade(const yapp::scene* sc, yglu::uint& shade_prog,
-                       yglu::uint& shade_vao,
-                       std::vector<yglu::uint>& shade_txt,
-                       std::vector<std::array<yglu::uint, 7>>& shade_vbo) {
+void init_shade_state(const yapp::scene* sc, yglu::uint& shade_prog,
+                      yglu::uint& shade_vao, std::vector<yglu::uint>& shade_txt,
+                      std::vector<std::array<yglu::uint, 7>>& shade_vbo) {
     yglu::stdshader::make_program(&shade_prog, &shade_vao);
     for (auto txt : sc->textures) {
         if (!txt->hdr.empty()) {
@@ -101,12 +93,12 @@ inline void init_shade(const yapp::scene* sc, yglu::uint& shade_prog,
 //
 // Display a scene
 //
-inline void shade(const yapp::scene* sc, int cur_camera, yglu::uint prog,
-                  yglu::uint vao, const std::vector<yglu::uint>& txt,
-                  std::vector<std::array<yglu::uint, 7>>& vbo,
-                  const ym::vec4f& background, float exposure, float gamma_,
-                  bool srgb, bool wireframe, bool edges, bool camera_lights,
-                  const ym::vec3f& amb) {
+void shade_scene(const yapp::scene* sc, int cur_camera, uint prog, uint vao,
+                 const std::vector<uint>& txt,
+                 std::vector<std::array<uint, 7>>& vbo,
+                 const float4& background, float exposure, float gamma_,
+                 bool srgb, bool wireframe, bool edges, bool camera_lights,
+                 const float3& amb) {
     // begin frame
     glEnable(GL_DEPTH_TEST);
     glClearDepth(1);
@@ -200,8 +192,8 @@ inline void shade(const yapp::scene* sc, int cur_camera, yglu::uint prog,
 //
 // Init shading
 //
-inline void init_draw(const yapp::scene* sc,
-                      std::vector<yglu::uint>& shade_txt) {
+void init_draw_state(const yapp::scene* sc,
+                     std::vector<yglu::uint>& shade_txt) {
     for (auto txt : sc->textures) {
         if (!txt->hdr.empty()) {
             shade_txt.push_back(
@@ -219,11 +211,10 @@ inline void init_draw(const yapp::scene* sc,
 //
 // Draw a sc
 //
-inline void draw(const yapp::scene* sc, int cur_camera,
-                 const std::vector<yglu::uint>& txt,
-                 const ym::vec4f& background, float exposure, float gamma_,
-                 bool wireframe, bool edges, bool camera_lights,
-                 const ym::vec3f& amb) {
+void draw_scene(const yapp::scene* sc, int cur_camera,
+                const std::vector<yglu::uint>& txt, const ym::vec4f& background,
+                float exposure, float gamma_, bool wireframe, bool edges,
+                bool camera_lights, const ym::vec3f& amb) {
     // begin frame
     glEnable(GL_DEPTH_TEST);
     glClearDepth(1);
@@ -325,89 +316,46 @@ inline void draw(const yapp::scene* sc, int cur_camera,
 }
 
 //
-// Shade state
+// OpenGL view
 //
-struct params : virtual yapp::params {
-    bool legacy_gl, no_ui;
-
-    int width, height;
-
-    int camera_id;
-    float background, amb;
-    float exposure, gamma;
-    bool srgb;
-
-    bool wireframe, edges;
-    bool camera_lights;
-
-    yglu::uint shade_prog = 0;
-    yglu::uint shade_vao = 0;
-    std::vector<yglu::uint> shade_txt;
-    std::vector<std::array<yglu::uint, 7>> shade_vbo;
-
-    void* widget_ctx = nullptr;
+struct shade_state {
+    // shade state
+    uint shade_prog = 0;
+    uint shade_vao = 0;
+    std::vector<uint> shade_txt;
+    std::vector<std::array<uint, 7>> shade_vbo;
 };
 
-inline void init_params(params* pars, ycmd::parser* parser) {
-    // parse cmdline
-    pars->exposure =
-        ycmd::parse_opt<float>(parser, "--exposure", "-e", "image exposure", 0);
-    pars->gamma =
-        ycmd::parse_opt<float>(parser, "--gamma", "-g", "image gamma", 1);
-    pars->srgb =
-        ycmd::parse_opt<bool>(parser, "--srgb", "", "image srgb", true);
-    pars->amb =
-        ycmd::parse_opt<float>(parser, "--ambient", "", "ambient factor", 0);
-    pars->camera_lights = ycmd::parse_flag(parser, "--camera_lights", "-c",
-                                           "enable camera lights", false);
-    pars->camera_id =
-        ycmd::parse_opt<int>(parser, "--camera", "-C", "camera", 0);
-    pars->no_ui =
-        ycmd::parse_flag(parser, "--no-ui", "", "runs offline", false);
-    pars->legacy_gl = ycmd::parse_flag(parser, "--legacy_opengl", "-L",
-                                       "uses legacy OpenGL", false);
-    auto aspect = ycmd::parse_opt<float>(parser, "--aspect", "-a",
-                                         "image aspect", 16.0f / 9.0f);
-    auto res = ycmd::parse_opt<int>(parser, "--resolution", "-r",
-                                    "image resolution", 720);
-
-    // check up
-    if (!pars->scene) yapp::init_params(pars, parser);
-    if (!pars->scene) return;
-
-    // fixing scene
-    for (auto cam : pars->scene->cameras) cam->aspect = aspect;
-
-    // rendering params
-    pars->width = (int)std::round(aspect * res);
-    pars->height = res;
-}
-
-inline void init(params* pars) {
+shade_state* init_shade_state(const yapp::scene* scn, const params* pars) {
+    auto st = new shade_state();
     if (pars->legacy_gl) {
-        init_draw(pars->scene, pars->shade_txt);
+        init_draw_state(scn, st->shade_txt);
     } else {
-        init_shade(pars->scene, pars->shade_prog, pars->shade_vao,
-                   pars->shade_txt, pars->shade_vbo);
+        init_shade_state(scn, st->shade_prog, st->shade_vao, st->shade_txt,
+                         st->shade_vbo);
     }
+    return st;
 }
 
-inline void render(params* pars) {
+void init_shade(shade_state* st) {
+    if (st) delete st;
+}
+
+void shade_scene(const yapp::scene* scn, const params* pars, shade_state* st) {
     if (pars->legacy_gl) {
-        draw(pars->scene, pars->camera_id, pars->shade_txt,
-             {pars->background, pars->background, pars->background, 0},
-             pars->exposure, pars->gamma, pars->wireframe, pars->edges,
-             pars->camera_lights, {pars->amb, pars->amb, pars->amb});
+        draw_scene(scn, pars->render_params.camera_id, st->shade_txt,
+                   pars->background, pars->exposure, pars->gamma,
+                   pars->wireframe, pars->edges,
+                   pars->render_params.stype == ytrace::shader_type::eyelight,
+                   pars->render_params.amb);
     } else {
-        shade(pars->scene, pars->camera_id, pars->shade_prog, pars->shade_vao,
-              pars->shade_txt, pars->shade_vbo,
-              {pars->background, pars->background, pars->background, 0},
-              pars->exposure, pars->gamma, pars->srgb, pars->wireframe,
-              pars->edges, pars->camera_lights,
-              {pars->amb, pars->amb, pars->amb});
+        shade_scene(scn, pars->render_params.camera_id, st->shade_prog,
+                    st->shade_vao, st->shade_txt, st->shade_vbo,
+                    pars->background, pars->exposure, pars->gamma, pars->srgb,
+                    pars->wireframe, pars->edges,
+                    pars->render_params.stype == ytrace::shader_type::eyelight,
+                    pars->render_params.amb);
     }
 }
 
 }  // namespace
-
-#endif

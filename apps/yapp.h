@@ -33,22 +33,30 @@
 #ifndef _YAPP_H_
 #define _YAPP_H_
 
+#include "../yocto/yocto_bvh.h"
 #include "../yocto/yocto_cmd.h"
 #include "../yocto/yocto_gltf.h"
 #include "../yocto/yocto_obj.h"
 #include "../yocto/yocto_shape.h"
+#include "../yocto/yocto_sym.h"
+#include "../yocto/yocto_trace.h"
+
+#include "../yocto/stb_image_write.h"
 
 namespace yapp {
 
 //
 // Typedefs for vec/mat types
 //
+using uint = unsigned int;
 using float2 = std::array<float, 2>;
 using float3 = std::array<float, 3>;
+using float4 = std::array<float, 4>;
 using float3x4 = std::array<std::array<float, 3>, 4>;
 using float4x4 = std::array<std::array<float, 4>, 4>;
 using int2 = std::array<int, 2>;
 using int3 = std::array<int, 3>;
+using int4 = std::array<int, 4>;
 
 //
 // Scene geometry
@@ -139,531 +147,108 @@ struct scene {
     ~scene();
 };
 
-//
-// Destructor
-//
-inline scene::~scene() {
-    for (auto v : shapes) delete v;
-    for (auto v : materials) delete v;
-    for (auto v : textures) delete v;
-    for (auto v : cameras) delete v;
-    for (auto v : environments) delete v;
-}
-
-//
-// backward compatible calls
-//
-inline int get_etype(const shape& shape) {
-    if (!shape.points.empty()) {
-        assert(shape.lines.empty() && shape.triangles.empty());
-        return 1;
-    } else if (!shape.lines.empty()) {
-        assert(shape.points.empty() && shape.triangles.empty());
-        return 2;
-    } else if (!shape.triangles.empty()) {
-        assert(shape.points.empty() && shape.lines.empty());
-        return 3;
-    } else
-        return 0;
-}
-
-inline int get_nelems(const shape& shape) {
-    auto et = get_etype(shape);
-    if (et == 1) return (int)shape.points.size();
-    if (et == 2) return (int)shape.lines.size();
-    if (et == 3) return (int)shape.triangles.size();
-    return 0;
-}
-
-inline const int* get_elems(const shape& shape) {
-    auto et = get_etype(shape);
-    if (et == 1) return shape.points.data();
-    if (et == 2) return (int*)shape.lines.data();
-    if (et == 3) return (int*)shape.triangles.data();
-    return nullptr;
-}
-
-//
-// Loads a scene from obj.
-//
-inline scene* load_obj_scene(const std::string& filename) {
-    // load scene
-    auto obj = std::unique_ptr<yobj::obj>(yobj::load_obj(filename));
-
-    // flatten to scene
-    auto fl_scene = std::unique_ptr<yobj::fl_obj>(yobj::flatten_obj(obj.get()));
-
-    // cleanup
-    obj.reset(nullptr);
-
-    // load textures
-    yobj::load_textures(fl_scene.get(), ycmd::get_dirname(filename), true);
-
-    // init scene
-    auto sc = std::unique_ptr<scene>(new scene());
-
-    // convert cameras
-    for (auto fl_cam : fl_scene->cameras) {
-        auto cam = new camera();
-        cam->name = fl_cam->name;
-        cam->frame = ym::to_frame(ym::mat4f(fl_cam->xform));
-        cam->ortho = fl_cam->ortho;
-        cam->yfov = fl_cam->yfov;
-        cam->aspect = fl_cam->aspect;
-        cam->aperture = fl_cam->aperture;
-        cam->focus = fl_cam->focus;
-        sc->cameras.push_back(cam);
-    }
-
-    // convert shapes
-    for (auto fl_mesh : fl_scene->meshes) {
-        for (auto prim_id : fl_mesh->primitives) {
-            auto fl_prim = fl_scene->primitives[prim_id];
-            auto sh = new shape();
-            sh->name = fl_mesh->name;
-            sh->frame = ym::identity_frame3f;
-            sh->matid = fl_prim->material;
-            sh->pos = fl_prim->pos;
-            sh->norm = fl_prim->norm;
-            sh->texcoord = fl_prim->texcoord;
-            sh->color = fl_prim->color;
-            sh->radius = fl_prim->radius;
-            sh->points = fl_prim->points;
-            sh->lines = fl_prim->lines;
-            sh->triangles = fl_prim->triangles;
-            sc->shapes.push_back(sh);
-        }
-    }
-
-    // convert materials
-    for (auto fl_mat : fl_scene->materials) {
-        auto mat = new material();
-        mat->name = fl_mat->name;
-        mat->ke = fl_mat->ke;
-        mat->kd = fl_mat->kd;
-        mat->ks = fl_mat->ks;
-        mat->rs = fl_mat->rs;
-        mat->ke_txt = fl_mat->ke_txt;
-        mat->kd_txt = fl_mat->kd_txt;
-        mat->ks_txt = fl_mat->ks_txt;
-        mat->rs_txt = fl_mat->rs_txt;
-        sc->materials.push_back(mat);
-    }
-
-    // convert textures
-    for (auto fl_txt : fl_scene->textures) {
-        auto txt = new texture();
-        txt->path = fl_txt->path;
-        txt->width = fl_txt->width;
-        txt->height = fl_txt->height;
-        txt->ncomp = fl_txt->ncomp;
-        txt->ldr = fl_txt->datab;
-        txt->hdr = fl_txt->dataf;
-        sc->textures.push_back(txt);
-    }
-
-    // convert envs
-    for (auto fl_env : fl_scene->environments) {
-        auto env = new environment();
-        env->name = fl_env->name;
-        env->frame = ym::to_frame(ym::mat4f(fl_env->xform));
-        env->matid = fl_env->matid;
-        sc->environments.push_back(env);
-    }
-
-    // done
-    return sc.release();
-}
-
-//
-// Saves a scene to obj.
-//
-inline void save_obj_scene(const std::string& filename, const scene* sc) {
-    // flatten to scene
-    auto fl_scene = std::unique_ptr<yobj::fl_obj>(new yobj::fl_obj);
-
-    // convert cameras
-    for (auto cam : sc->cameras) {
-        auto fl_cam = new yobj::fl_camera();
-        fl_cam->name = cam->name;
-        fl_cam->xform = ym::to_mat((ym::frame3f)cam->frame);
-        fl_cam->ortho = cam->ortho;
-        fl_cam->yfov = cam->yfov;
-        fl_cam->aspect = cam->aspect;
-        fl_cam->aperture = cam->aperture;
-        fl_cam->focus = cam->focus;
-        fl_scene->cameras.push_back(fl_cam);
-    }
-
-    // convert shapes
-    for (auto shape : sc->shapes) {
-        auto fl_mesh = new yobj::fl_mesh();
-        fl_mesh->name = shape->name;
-        fl_mesh->primitives.push_back((int)fl_scene->primitives.size());
-        auto fl_prim = new yobj::fl_primitives();
-        fl_prim->material = shape->matid;
-        fl_prim->pos.resize(shape->pos.size());
-        for (auto i = 0; i < shape->pos.size(); i++) {
-            fl_prim->pos[i] = ym::transform_point((ym::frame3f)shape->frame,
-                                                  (ym::vec3f)shape->pos[i]);
-        }
-        fl_prim->norm.resize(shape->norm.size());
-        for (auto i = 0; i < shape->pos.size(); i++) {
-            fl_prim->norm[i] = ym::transform_direction(
-                (ym::frame3f)shape->frame, (ym::vec3f)shape->norm[i]);
-        }
-        fl_prim->texcoord = std::vector<std::array<float, 2>>(
-            shape->texcoord.begin(), shape->texcoord.end());
-        fl_prim->color = std::vector<std::array<float, 3>>(shape->color.begin(),
-                                                           shape->color.end());
-        fl_prim->radius = shape->radius;
-        fl_prim->points = shape->points;
-        fl_prim->lines = std::vector<std::array<int, 2>>(shape->lines.begin(),
-                                                         shape->lines.end());
-        fl_prim->triangles = std::vector<std::array<int, 3>>(
-            shape->triangles.begin(), shape->triangles.end());
-        fl_scene->primitives.push_back(fl_prim);
-        fl_scene->meshes.push_back(fl_mesh);
-    }
-
-    // convert materials
-    for (auto mat : sc->materials) {
-        auto fl_mat = new yobj::fl_material();
-        fl_mat->name = mat->name;
-        fl_mat->ke = mat->ke;
-        fl_mat->kd = mat->kd;
-        fl_mat->ks = mat->ks;
-        fl_mat->rs = mat->rs;
-        fl_mat->ke_txt = mat->ke_txt;
-        fl_mat->kd_txt = mat->kd_txt;
-        fl_mat->ks_txt = mat->ks_txt;
-        fl_mat->rs_txt = mat->rs_txt;
-        fl_scene->materials.push_back(fl_mat);
-    }
-
-    // convert textures
-    for (auto txt : sc->textures) {
-        auto fl_txt = new yobj::fl_texture();
-        fl_txt->path = txt->path;
-        fl_scene->textures.push_back(fl_txt);
-    }
-
-    // convert envs
-    for (auto env : sc->environments) {
-        auto fl_env = new yobj::fl_environment();
-        fl_env->name = env->name;
-        fl_env->xform = ym::to_mat((ym::frame3f)env->frame);
-        fl_env->matid = env->matid;
-        fl_scene->environments.push_back(fl_env);
-    }
-
-    // save obj
-    auto obj = std::unique_ptr<yobj::obj>(yobj::unflatten_obj(fl_scene.get()));
-    yobj::save_obj(filename, obj.get());
-}
-
-//
-// Saves a scene to gltf.
-//
-inline void save_gltf_scene(const std::string& filename, const scene* sc) {
-    // flatten to scene
-    auto fl_scene = std::unique_ptr<ygltf::fl_gltf>(new ygltf::fl_gltf());
-
-    // convert cameras
-    for (auto cam : sc->cameras) {
-        auto fl_cam = new ygltf::fl_camera();
-        fl_cam->name = cam->name;
-        fl_cam->xform = ym::to_mat((ym::frame3f)cam->frame);
-        fl_cam->ortho = cam->ortho;
-        fl_cam->yfov = cam->yfov;
-        fl_cam->aspect = cam->aspect;
-        fl_scene->cameras.push_back(fl_cam);
-    }
-
-    // convert shapes
-    for (auto shape : sc->shapes) {
-        auto fl_mesh = new ygltf::fl_mesh();
-        fl_mesh->name = shape->name;
-        fl_mesh->xform = ym::to_mat((ym::frame3f)shape->frame);
-        fl_mesh->primitives.push_back((int)fl_scene->primitives.size());
-        auto fl_prim = new ygltf::fl_primitives();
-        fl_prim->material = shape->matid;
-        fl_prim->pos = std::vector<std::array<float, 3>>(shape->pos.begin(),
-                                                         shape->pos.end());
-        fl_prim->norm = std::vector<std::array<float, 3>>(shape->norm.begin(),
-                                                          shape->norm.end());
-        fl_prim->texcoord = std::vector<std::array<float, 2>>(
-            shape->texcoord.begin(), shape->texcoord.end());
-        fl_prim->color = std::vector<std::array<float, 3>>(shape->color.begin(),
-                                                           shape->color.end());
-        fl_prim->radius = shape->radius;
-        fl_prim->points = shape->points;
-        fl_prim->lines = std::vector<std::array<int, 2>>(shape->lines.begin(),
-                                                         shape->lines.end());
-        fl_prim->triangles = std::vector<std::array<int, 3>>(
-            shape->triangles.begin(), shape->triangles.end());
-        fl_scene->primitives.push_back(fl_prim);
-        fl_scene->meshes.push_back(fl_mesh);
-    }
-
-    // convert materials
-    for (auto mat : sc->materials) {
-        auto fl_mat = new ygltf::fl_material();
-        fl_mat->name = mat->name;
-        fl_mat->ke = mat->ke;
-        fl_mat->kd = mat->kd;
-        fl_mat->ks = mat->ks;
-        fl_mat->rs = mat->rs;
-        fl_mat->ke_txt = mat->ke_txt;
-        fl_mat->kd_txt = mat->kd_txt;
-        fl_mat->ks_txt = mat->ks_txt;
-        fl_mat->rs_txt = mat->rs_txt;
-        fl_scene->materials.push_back(fl_mat);
-    }
-
-    // convert textures
-    for (auto txt : sc->textures) {
-        auto fl_txt = new ygltf::fl_texture();
-        fl_txt->path = txt->path;
-        fl_scene->textures.push_back(fl_txt);
-    }
-
-    // save gltf
-    auto gltf = std::unique_ptr<ygltf::glTF_t>(ygltf::unflatten_gltf(
-        fl_scene.get(), ycmd::get_basename(filename) + ".bin"));
-    ygltf::save_gltf(filename, gltf.get(), true, false, false);
-}
-
-//
-// Load gltf scene
-//
-inline scene* load_gltf_scene(const std::string& filename, bool binary) {
-    // load scene
-    auto gltf = std::unique_ptr<ygltf::glTF_t>(
-        (binary) ? ygltf::load_binary_gltf(filename, true, false, true, true)
-                 : ygltf::load_gltf(filename, true, false, true, true));
-
-    // flatten to scene
-    auto fl_scene = std::unique_ptr<ygltf::fl_gltf>(
-        ygltf::flatten_gltf(gltf.get(), gltf->scene));
-
-    // init scene
-    auto sc = std::unique_ptr<scene>(new scene());
-
-    // convert cameras
-    for (auto fl_cam : fl_scene->cameras) {
-        auto cam = new camera();
-        cam->name = fl_cam->name;
-        cam->frame = ym::to_frame(ym::mat4f(fl_cam->xform));
-        cam->ortho = fl_cam->ortho;
-        cam->yfov = fl_cam->yfov;
-        cam->aspect = fl_cam->aspect;
-        cam->aperture = 0;
-        cam->focus = 1;
-        sc->cameras.push_back(cam);
-    }
-
-    // convert shapes
-    for (auto fl_mesh : fl_scene->meshes) {
-        for (auto fl_prim_id : fl_mesh->primitives) {
-            auto fl_prim = fl_scene->primitives.at(fl_prim_id);
-            auto sh = new shape();
-            sh->name = fl_mesh->name;
-            sh->frame = ym::to_frame(ym::mat4f(fl_mesh->xform));
-            sh->matid = fl_prim->material;
-            sh->pos = fl_prim->pos;
-            sh->norm = fl_prim->norm;
-            sh->texcoord = fl_prim->texcoord;
-            sh->color = fl_prim->color;
-            sh->radius = fl_prim->radius;
-            sh->points = fl_prim->points;
-            sh->lines = fl_prim->lines;
-            sh->triangles = fl_prim->triangles;
-            sc->shapes.push_back(sh);
-        }
-    }
-
-    // convert materials
-    for (auto fl_mat : fl_scene->materials) {
-        auto mat = new material();
-        mat->name = fl_mat->name;
-        mat->ke = fl_mat->ke;
-        mat->kd = fl_mat->kd;
-        mat->ks = fl_mat->ks;
-        mat->rs = fl_mat->rs;
-        mat->ke_txt = fl_mat->ke_txt;
-        mat->kd_txt = fl_mat->kd_txt;
-        mat->ks_txt = fl_mat->ks_txt;
-        mat->rs_txt = fl_mat->rs_txt;
-        sc->materials.push_back(mat);
-    }
-
-    // convert textures
-    for (auto fl_txt : fl_scene->textures) {
-        auto txt = new texture();
-        txt->path = fl_txt->path;
-        txt->width = fl_txt->width;
-        txt->height = fl_txt->height;
-        txt->width = fl_txt->width;
-        txt->height = fl_txt->height;
-        txt->ncomp = fl_txt->ncomp;
-        txt->ldr = fl_txt->datab;
-        txt->hdr = fl_txt->dataf;
-        sc->textures.push_back(txt);
-    }
-
-    // done
-    return sc.release();
-}
-
-//
-// Save scene
-//
-inline void save_scene(const std::string& filename, const scene* sc) {
-    auto ext = ycmd::get_extension(filename);
-    if (ext == ".obj") {
-        save_obj_scene(filename, sc);
-    } else if (ext == ".gltf") {
-        save_gltf_scene(filename, sc);
-    } else {
-        throw std::invalid_argument("unknown file type");
-    }
-}
+int get_etype(const shape& shape);
+int get_nelems(const shape& shape);
+const int* get_elems(const shape& shape);
 
 //
 // Load scene
 //
-inline scene* load_scene(const std::string& filename, float scale) {
-    // declare scene
-    auto sc = std::unique_ptr<scene>();
+scene* load_scene(const std::string& filename, float scale);
 
-    // get extension
-    auto ext = ycmd::get_extension(filename);
-    if (ext == ".obj") {
-        // load obj
-        sc = std::unique_ptr<scene>(load_obj_scene(filename));
-    } else if (ext == ".gltf") {
-        // load obj
-        sc = std::unique_ptr<scene>(load_gltf_scene(filename, false));
-    } else if (ext == ".glb") {
-        // load obj
-        sc = std::unique_ptr<scene>(load_gltf_scene(filename, true));
-    } else {
-        throw std::invalid_argument("unknown file type");
-    }
+//
+// Save scene
+//
+void save_scene(const std::string& filename, const scene* sc);
 
-    // check textures and patch them up if needed
-    for (auto txt : sc->textures) {
-        if (txt->hdr.empty() && txt->ldr.empty()) {
-            printf("unable to load texture %s\n", txt->path.c_str());
-            txt->width = 1;
-            txt->height = 1;
-            txt->ncomp = 4;
-            txt->ldr = {255, 255, 255, 255};
-        }
-    }
+//
+// Make trace blocks
+//
+std::vector<int4> make_trace_blocks(int w, int h, int bs);
 
-    // scale if necessary
-    if (scale != 1.0f) {
-        if (scale != 1.0f) {
-            for (auto sh : sc->shapes) {
-                for (auto& p : sh->pos) (ym::vec3f&)p *= scale;
-            }
-        }
-    }
+//
+// Save image
+//
+void save_image(const std::string& filename, int width, int height,
+                const float4* hdr, float exposure, float gamma,
+                bool srgb_output);
 
-    // ensure normals
-    for (auto sh : sc->shapes) {
-        if (!sh->norm.empty()) continue;
-        sh->norm.resize(sh->pos.size());
-        yshape::compute_normals(
-            (int)sh->points.size(), sh->points.data(), (int)sh->lines.size(),
-            sh->lines.data(), (int)sh->triangles.size(), sh->triangles.data(),
-            (int)sh->pos.size(), sh->pos.data(), sh->norm.data());
-    }
+//
+// Make a BVH
+//
+ybvh::scene* make_bvh(const scene* scene);
 
-    // ensure radius is necessary
-    for (auto sh : sc->shapes) {
-        if (sh->points.empty() && sh->lines.empty()) continue;
-        if (!sh->radius.empty()) continue;
-        sh->radius.resize(sh->pos.size(), 0.001f);
-    }
+//
+// Initialize scene for rendering
+//
+ytrace::scene* make_trace_scene(const yapp::scene* scene,
+                                const ybvh::scene* scene_bvh, int camera);
 
-    // make camera if not there
-    if (!sc->cameras.size()) {
-        // find scene bounds
-        auto bbox = ym::invalid_bbox3f;
-        for (auto sh : sc->shapes) {
-            for (auto p : sh->pos)
-                bbox +=
-                    ym::transform_point((ym::frame3f)sh->frame, (ym::vec3f)p);
-        }
-        auto center = ym::center(bbox);
-        auto bbox_size = ym::diagonal(bbox);
-        auto bbox_msize =
-            ym::max(bbox_size[0], ym::max(bbox_size[1], bbox_size[2]));
-        // create camera
-        auto cam = new yapp::camera();
-        // set up camera
-        auto camera_dir = ym::vec3f{1, 0.4f, 1};
-        auto from = camera_dir * bbox_msize + center;
-        auto to = center;
-        auto up = ym::vec3f{0, 1, 0};
-        cam->frame = ym::lookat_frame3(from, to, up);
-        cam->ortho = false;
-        cam->aspect = 16.0f / 9.0f;
-        cam->yfov = 2 * atan(0.5f);
-        cam->aperture = 0;
-        cam->focus = ym::length(to - from);
-        sc->cameras.push_back(cam);
-    } else {
-        auto bbox = ym::invalid_bbox3f;
-        for (auto sh : sc->shapes) {
-            for (auto p : sh->pos)
-                bbox +=
-                    ym::transform_point((ym::frame3f)sh->frame, (ym::vec3f)p);
-        }
-        for (auto cam : sc->cameras) {
-            if (!cam->focus) {
-                auto ddir = ym::dot((ym::vec3f)cam->frame[2],
-                                    ym::center(bbox) -
-                                        ym::pos((ym::frame3f)cam->frame));
-                cam->focus = (ddir > 0) ? 1 : -ddir;
-            }
-        }
-    }
+//
+// Initialize a rigid body scene
+//
+ysym::scene* make_rigid_scene(const yapp::scene* scene, ybvh::scene* scene_bvh);
 
-    return sc.release();
-}
+//
+// Step one time
+//
+void simulate_step(yapp::scene* scene, ysym::scene* rigid_scene, float dt);
 
 struct params {
+    // scene/image
     std::string filename;
+    float scene_scale = 1;
+
+    // render
     std::string imfilename;
+    int width = 0, height = 0;
+    float exposure = 0;
+    float gamma = 1;
+    bool srgb = true;
+    float4 background = {0, 0, 0, 0};
 
-    yapp::scene* scene;
+    // trace
+    ytrace::render_params render_params;
+    int block_size = 32;
+    int nthreads = 0;
 
-    ~params() {
-        if (scene) delete scene;
-    }
+    // rigid
+    std::string outfilename;
+    float dt = 1 / 60.0f;
+    int nframes = 1000;
+
+    // ui
+    bool legacy_gl = false;
+    bool no_ui = false;
+
+    // shade
+    bool wireframe = false, edges = false;
 };
 
-inline void init_params(params* pars, ycmd::parser* parser) {
-    // params
-    auto scale =
-        ycmd::parse_opt<float>(parser, "--scale", "", "scale scene", 1.0f);
-    auto imfilename = ycmd::parse_opt<std::string>(parser, "--output", "-o",
-                                                   "image filename", "out.hdr");
-    auto filename = ycmd::parse_arg<std::string>(parser, "scene",
-                                                 "scene filename", "", true);
+//
+// Load parameters
+//
+params* init_params(const std::string& help, int argc, char** argv,
+                    bool trace_params, bool sym_params, bool shade_params,
+                    bool ui_params);
 
-    // filenames
-    pars->filename = filename;
-    pars->imfilename = imfilename;
+// Forward declaration
+struct shade_state;
 
-    // loading scene
-    if (filename.empty()) return;
-    pars->scene = yapp::load_scene(filename, scale);
-}
+//
+// Init OpenGL render
+//
+shade_state* init_shade_state(const yapp::scene* scn, const params* pars);
+
+//
+// Clear OpenGL renderer
+//
+void free_shade_state(shade_state* state);
+
+//
+// OpenGL render
+//
+void shade_scene(const yapp::scene* scn, const params* pars, shade_state* st);
 
 }  // namespace
 
