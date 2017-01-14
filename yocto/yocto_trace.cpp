@@ -110,6 +110,12 @@ struct shape {
     const ym::vec2f* texcoord = nullptr;  // vertex data
     const ym::vec3f* color = nullptr;     // vertex data
     const ym::vec1f* radius = nullptr;    // vertex data
+
+    // per-vertex material
+    const ym::vec3f* ke = nullptr;  // vertex data
+    const ym::vec3f* kd = nullptr;  // vertex data
+    const ym::vec3f* ks = nullptr;  // vertex data
+    const ym::vec1f* rs = nullptr;  // vertex data
 };
 
 //
@@ -337,6 +343,18 @@ YTRACE_API void set_line_shape(scene* scn, int sid, const float3x4& frame,
     scn->shapes[sid]->texcoord = (const ym::vec2f*)texcoord;
     scn->shapes[sid]->color = (const ym::vec3f*)color;
     scn->shapes[sid]->radius = (const ym::vec1f*)radius;
+}
+
+//
+// Sets per-vertex material properties.
+//
+YTRACE_API void set_vert_material(scene* scn, int sid, const float3* ke,
+                                  const float3* kd, const float3* ks,
+                                  const float* rs) {
+    scn->shapes[sid]->ke = (const ym::vec3f*)ke;
+    scn->shapes[sid]->kd = (const ym::vec3f*)kd;
+    scn->shapes[sid]->ks = (const ym::vec3f*)ks;
+    scn->shapes[sid]->rs = (const ym::vec1f*)rs;
 }
 
 //
@@ -1027,7 +1045,7 @@ static inline point _eval_envpoint(const environment* env,
         auto texcoord = ym::vec2f{phi, theta};
         if (env->ke_txt) {
             auto txt = _eval_texture(env->ke_txt, texcoord);
-            pt.ke = ym::lerp({txt[0], txt[1], txt[2]}, pt.ke, txt[3]);
+            pt.ke = ym::lerp(pt.ke, {txt[0], txt[1], txt[2]}, txt[3]);
         }
     }
 
@@ -1062,8 +1080,10 @@ static inline point _eval_shapepoint(const shape* shp, int eid,
     pt.wo = wo;
 
     // compute points and weights
-    auto pos = ym::zero3f, norm = ym::zero3f, color = ym::zero3f;
+    auto pos = ym::zero3f, norm = ym::zero3f, color = ym::zero3f,
+         ke = ym::zero3f, kd = ym::zero3f, ks = ym::zero3f;
     auto texcoord = ym::zero2f;
+    auto rs = ym::zero1f;
     if (shp->points) {
         pt.ptype = point::type::point;
         pos = _interpolate_value(shp->pos, shp->points, eid, euv);
@@ -1071,6 +1091,10 @@ static inline point _eval_shapepoint(const shape* shp, int eid,
             ym::normalize(_interpolate_value(shp->norm, shp->points, eid, euv));
         texcoord = _interpolate_value(shp->texcoord, shp->points, eid, euv);
         color = _interpolate_value(shp->color, shp->points, eid, euv);
+        ke = _interpolate_value(shp->ke, shp->points, eid, euv);
+        kd = _interpolate_value(shp->kd, shp->points, eid, euv);
+        ks = _interpolate_value(shp->ks, shp->points, eid, euv);
+        rs = _interpolate_value(shp->rs, shp->points, eid, euv);
     } else if (shp->lines) {
         pt.ptype = point::type::line;
         pos = _interpolate_value(shp->pos, shp->lines, eid, euv);
@@ -1078,12 +1102,20 @@ static inline point _eval_shapepoint(const shape* shp, int eid,
             ym::normalize(_interpolate_value(shp->norm, shp->lines, eid, euv));
         texcoord = _interpolate_value(shp->texcoord, shp->lines, eid, euv);
         color = _interpolate_value(shp->color, shp->lines, eid, euv);
+        ke = _interpolate_value(shp->ke, shp->lines, eid, euv);
+        kd = _interpolate_value(shp->kd, shp->lines, eid, euv);
+        ks = _interpolate_value(shp->ks, shp->lines, eid, euv);
+        rs = _interpolate_value(shp->rs, shp->lines, eid, euv);
     } else if (shp->triangles) {
         pt.ptype = point::type::triangle;
         pos = _interpolate_value(shp->pos, shp->triangles, eid, euv);
         norm = _interpolate_value(shp->norm, shp->triangles, eid, euv);
         texcoord = _interpolate_value(shp->texcoord, shp->triangles, eid, euv);
         color = _interpolate_value(shp->color, shp->triangles, eid, euv);
+        ke = _interpolate_value(shp->ke, shp->triangles, eid, euv);
+        kd = _interpolate_value(shp->kd, shp->triangles, eid, euv);
+        ks = _interpolate_value(shp->ks, shp->triangles, eid, euv);
+        rs = _interpolate_value(shp->rs, shp->triangles, eid, euv);
     }
 
     // creating frame
@@ -1108,6 +1140,12 @@ static inline point _eval_shapepoint(const shape* shp, int eid,
         pt.kd *= color;
         pt.ks *= color;
     }
+
+    // handle per-vertex material
+    if (shp->ke) pt.ke *= kd;
+    if (shp->kd) pt.kd *= kd;
+    if (shp->ks) pt.ks *= ks;
+    if (shp->rs) pt.rs *= rs[0];
 
     // handle textures
     if (shp->texcoord) {

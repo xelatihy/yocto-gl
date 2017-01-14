@@ -37,6 +37,13 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "../yocto/stb_image_write.h"
 
+#define STB_IMAGE_IMPLEMENTATION
+#include "../yocto/stb_image.h"
+
+#include "tinyply.h"
+
+#include <fstream>
+
 namespace yapp {
 
 //
@@ -417,6 +424,87 @@ inline scene* load_gltf_scene(const std::string& filename, bool binary) {
 }
 
 //
+// Loads a scene from ply.
+//
+inline scene* load_ply_scene(const std::string& filename) {
+    // preallocate vertex and element data
+    auto sh = std::unique_ptr<shape>(new shape());
+    sh->matid = 0;
+
+    // Tinyply can and will throw exceptions at you!
+    try {
+        // Read the file and create a std::istringstream suitable
+        std::ifstream ss(filename, std::ios::binary);
+
+        // Parse the ASCII header fields
+        tinyply::PlyFile file(ss);
+
+        // vertex data
+        auto pos = std::vector<float>();
+        auto npos = file.request_properties_from_element("vertex",
+                                                         {"x", "y", "z"}, pos);
+        auto norm = std::vector<float>();
+        auto nnorm = file.request_properties_from_element(
+            "vertex", {"nx", "ny", "nz"}, norm);
+
+        auto kd = std::vector<float>();
+        auto nkd = file.request_properties_from_element(
+            "vertex", {"kdr", "kdg", "kdb"}, kd);
+
+        auto ks = std::vector<float>();
+        auto nks = file.request_properties_from_element(
+            "vertex", {"ksr", "ksg", "ksb"}, ks);
+
+        auto rs = std::vector<float>();
+        auto nrs = file.request_properties_from_element("vertex", {"rs"}, rs);
+
+        // load triangle data
+        std::vector<uint32_t> faces;
+        auto ntriangle = file.request_properties_from_element(
+            "face", {"vertex_indices"}, faces, 3);
+
+        // Now populate the vectors...
+        file.read(ss);
+
+        // Set vertex data
+        if (npos)
+            sh->pos.assign((float3*)pos.data(), (float3*)pos.data() + npos);
+        if (nnorm)
+            sh->norm.assign((float3*)norm.data(), (float3*)norm.data() + nnorm);
+        if (nkd) sh->kd.assign((float3*)kd.data(), (float3*)kd.data() + nkd);
+        if (nks) sh->ks.assign((float3*)ks.data(), (float3*)ks.data() + nks);
+        if (nrs) sh->rs.assign(rs.data(), rs.data() + nrs);
+        if (ntriangle)
+            sh->triangles.assign((int3*)faces.data(),
+                                 (int3*)faces.data() + ntriangle);
+    } catch (const std::exception& e) {
+        throw;
+    }
+
+    // init scene
+    auto sc = std::unique_ptr<scene>(new scene());
+
+    // set shape
+    sc->shapes.push_back(sh.release());
+
+    // create material
+    auto mat = new material();
+    mat->name = "default";
+    mat->ke = {0, 0, 0};
+    mat->kd = {1, 1, 1};
+    mat->ks = {1, 1, 1};
+    mat->rs = 0.1f;
+    mat->ke_txt = -1;
+    mat->kd_txt = -1;
+    mat->ks_txt = -1;
+    mat->rs_txt = -1;
+    sc->materials.push_back(mat);
+
+    // done
+    return sc.release();
+}
+
+//
 // Save scene
 //
 void save_scene(const std::string& filename, const scene* sc) {
@@ -448,6 +536,9 @@ scene* load_scene(const std::string& filename, float scale) {
     } else if (ext == ".glb") {
         // load obj
         sc = std::unique_ptr<scene>(load_gltf_scene(filename, true));
+    } else if (ext == ".ply") {
+        // load ply
+        sc = std::unique_ptr<scene>(load_ply_scene(filename));
     } else {
         throw std::invalid_argument("unknown file type");
     }
@@ -534,6 +625,34 @@ scene* load_scene(const std::string& filename, float scale) {
     }
 
     return sc.release();
+}
+
+//
+// Load env map
+//
+void load_envmap(scene* scn, const std::string& filename, float scale) {
+    if (filename.empty()) return;
+    // texture
+    auto txt = new texture();
+    txt->path = filename;
+    auto pixels =
+        stbi_loadf(filename.c_str(), &txt->width, &txt->height, &txt->ncomp, 0);
+    txt->hdr.assign(pixels, pixels + txt->width * txt->height * txt->ncomp);
+    free(pixels);
+    scn->textures.push_back(txt);
+    // material
+    auto mat = new material();
+    mat->name = "env_mat";
+    mat->ke = {scale, scale, scale};
+    mat->ke_txt = (int)scn->textures.size() - 1;
+    scn->materials.push_back(mat);
+    // environment
+    auto env = new environment();
+    env->name = "env";
+    env->matid = (int)scn->materials.size() - 1;
+    env->frame = ym::lookat_frame3(ym::vec3f{0, 0, 1}, ym::vec3f{0, 0, 0},
+                                   ym::vec3f{0, 1, 0});
+    scn->environments.push_back(env);
 }
 
 std::vector<int4> make_trace_blocks(int w, int h, int bs) {
@@ -677,6 +796,12 @@ ytrace::scene* make_trace_scene(const yapp::scene* scene,
                 shape->texcoord.data(), shape->color.data());
 
         } else {
+        }
+        if (!shape->ke.empty() || !shape->kd.empty() || !shape->ks.empty() ||
+            !shape->rs.empty()) {
+            ytrace::set_vert_material(trace_scene, sid - 1, shape->ke.data(),
+                                      shape->kd.data(), shape->ks.data(),
+                                      shape->rs.data());
         }
     }
 
@@ -835,18 +960,23 @@ params* init_params(const std::string& help, int argc, char** argv,
                                              "image aspect", 16.0f / 9.0f);
         auto res = ycmd::parse_opt<int>(parser, "--resolution", "-r",
                                         "image resolution", 720);
-        auto camera_lights = ycmd::parse_flag(parser, "--camera_lights", "-c",
-                                              "enable camera lights", false);
         pars->render_params.camera_id =
             ycmd::parse_opt<int>(parser, "--camera", "-C", "camera", 0);
-
+        pars->envmap_filename = ycmd::parse_opt<std::string>(
+            parser, "--envmap_filename", "", "environment map", "");
+        pars->envmap_scale = ycmd::parse_opt<float>(
+            parser, "--envmap_scale", "", "environment map scale", 1);
         auto amb = ycmd::parse_opt<float>(parser, "--ambient", "",
                                           "ambient factor", 0);
 
         pars->width = (int)std::round(aspect * res);
         pars->height = res;
         pars->render_params.amb = {amb, amb, amb};
+    }
 
+    if (shade_params) {
+        auto camera_lights = ycmd::parse_flag(parser, "--camera_lights", "-c",
+                                              "enable camera lights", false);
         pars->render_params.stype = (camera_lights)
                                         ? ytrace::shader_type::eyelight
                                         : ytrace::shader_type::direct;
@@ -868,6 +998,10 @@ params* init_params(const std::string& help, int argc, char** argv,
             ycmd::parse_opt<int>(parser, "--block_size", "", "block size", 32);
         pars->render_params.nsamples = ycmd::parse_opt<int>(
             parser, "--samples", "-s", "image samples", 256);
+
+        if (camera_lights) {
+            pars->render_params.stype = ytrace::shader_type::eyelight;
+        }
     }
 
     if (sym_params) {

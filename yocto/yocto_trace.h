@@ -301,6 +301,21 @@ YTRACE_API void set_line_shape(scene* scn, int sid, const float3x4& frame,
                                const float* radius = nullptr);
 
 ///
+/// Sets per-vertex material properties.
+///
+/// Parameters:
+/// - scn: scene
+/// - sid: shape id
+/// - ke: per-vertex emission
+/// - kd: per-vertex diffuse
+/// - ks: per-vertex specular
+/// - rs: per-vertex roughness
+///
+YTRACE_API void set_vert_material(scene* scn, int sid, const float3* ke,
+                                  const float3* kd, const float3* ks,
+                                  const float* rs);
+
+///
 /// Convert a Phong exponent to GGX/Phong roughness
 ///
 YTRACE_API float specular_exponent_to_roughness(float n);

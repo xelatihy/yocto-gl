@@ -375,6 +375,8 @@ int main(int argc, char* argv[]) {
 
     // setting up rendering
     st->scene = yapp::load_scene(pars->filename, pars->scene_scale);
+    if (!pars->envmap_filename.empty())
+        yapp::load_envmap(st->scene, pars->envmap_filename, pars->envmap_scale);
     st->scene_bvh = yapp::make_bvh(st->scene);
     st->trace_scene = yapp::make_trace_scene(st->scene, st->scene_bvh,
                                              pars->render_params.camera_id);

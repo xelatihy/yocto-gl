@@ -41,6 +41,7 @@
 #include "../yocto/yocto_sym.h"
 #include "../yocto/yocto_trace.h"
 
+#include "../yocto/stb_image.h"
 #include "../yocto/stb_image_write.h"
 
 namespace yapp {
@@ -78,6 +79,12 @@ struct shape {
     std::vector<float2> texcoord;  // per-vertex texcoord (2 float)
     std::vector<float3> color;     // [extension] per-vertex color (3 float)
     std::vector<float> radius;     // [extension] per-vertex radius (1 float)
+
+    // additional vertex data
+    std::vector<float3> ke;  // per-vertex emission
+    std::vector<float3> kd;  // per-vertex diffuse
+    std::vector<float3> ks;  // per-vertex specular
+    std::vector<float> rs;   // per-vertex exponent
 };
 
 //
@@ -157,6 +164,11 @@ const int* get_elems(const shape& shape);
 scene* load_scene(const std::string& filename, float scale);
 
 //
+// Loads an envmap for the scene
+//
+void load_envmap(scene* scn, const std::string& filename, float scale);
+
+//
 // Save scene
 //
 void save_scene(const std::string& filename, const scene* sc);
@@ -198,6 +210,10 @@ struct params {
     // scene/image
     std::string filename;
     float scene_scale = 1;
+
+    // lighting params
+    std::string envmap_filename;
+    float envmap_scale = 0;
 
     // render
     std::string imfilename;

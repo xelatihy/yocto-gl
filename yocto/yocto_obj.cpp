@@ -783,7 +783,7 @@ YOBJ_API fl_obj* flatten_obj(const obj* asset) {
 
     // convert envs
     for (auto& oenv : asset->environments) {
-        auto& env = scene->environments.back();
+        auto env = new fl_environment();
         env->name = oenv.name;
         env->matid = -1;
         for (auto i = 0; i < asset->materials.size() && env->matid < 0; i++) {
