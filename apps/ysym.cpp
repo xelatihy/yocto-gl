@@ -26,33 +26,39 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "ysym.h"
+#include "yapp.h"
 
 int main(int argc, char* argv[]) {
     // command line
-    auto pars = new ysym_app::params();
-    auto parser = ycmd::make_parser(argc, argv, "rigid body simulation");
-    ysym_app::init_params(pars, parser);
-    ycmd::check_parser(parser);
+    auto pars = yapp::init_params("rigid body simulation of a scene", argc,
+                                  argv, false, true, false, false);
+
+    // setting up rendering
+    auto scene = yapp::load_scene(pars->filename, pars->scene_scale);
+    auto scene_bvh = yapp::make_bvh(scene);
+    auto rigid_scene = yapp::make_rigid_scene(scene, scene_bvh);
+
+    // initialize simulation
+    ysym::init_simulation(rigid_scene);
 
     // simulate each frame and save the results to a new scene
     printf("rigid body simulation for %s to %s\n", pars->filename.c_str(),
            pars->outfilename.c_str());
     printf("simulating ...");
-    fflush(stdout);
     for (auto i = 0; i < pars->nframes; i++) {
         printf("\rsimulating frame %d/%d", i, pars->nframes);
-        fflush(stdout);
-        ysym_app::simulate_step(pars->scene, pars->rigid_scene, pars->dt);
+        yapp::simulate_step(scene, rigid_scene, pars->dt);
         std::string errmsg;
         char frame_filename[4096];
         sprintf(frame_filename, pars->outfilename.c_str(), i);
-        yapp::save_scene(frame_filename, pars->scene);
+        yapp::save_scene(frame_filename, scene);
     }
     printf("\rsimulating done\n");
-    fflush(stdout);
 
     // done
     delete pars;
+    delete scene;
+    ybvh::free_scene(scene_bvh);
+    ysym::free_scene(rigid_scene);
     return 0;
 }

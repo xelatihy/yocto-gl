@@ -26,19 +26,69 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "ytrace.h"
+#include "yapp.h"
+
+#include "ThreadPool.h"
 
 int main(int argc, char* argv[]) {
     // params
-    auto pars = new ytrace_app::params();
-    auto parser = ycmd::make_parser(argc, argv, "trace scene");
-    ytrace_app::init_params(pars, parser);
-    ycmd::check_parser(parser);
+    auto pars = yapp::init_params("render scene with path tracing", argc, argv,
+                                  true, false, false, false);
 
-    // launching renderer
-    ytrace_app::render(pars);
+    // setting up rendering
+    auto scene = yapp::load_scene(pars->filename, pars->scene_scale);
+    auto scene_bvh = yapp::make_bvh(scene);
+    auto trace_scene =
+        yapp::make_trace_scene(scene, scene_bvh, pars->render_params.camera_id);
+
+    // fixing camera
+    for (auto cam : scene->cameras)
+        cam->aspect = (float)pars->width / (float)pars->height;
+
+    // init renderer
+    ytrace::init_lights(trace_scene);
+
+    // allocate image
+    auto hdr = new std::array<float, 4>[ pars->width * pars->height ];
+    for (auto i = 0; i < pars->width * pars->height; i++) hdr[i] = {0, 0, 0, 0};
+
+    // render
+    printf("tracing %s to %s\n", pars->filename.c_str(),
+           pars->imfilename.c_str());
+    auto blocks =
+        yapp::make_trace_blocks(pars->width, pars->height, pars->block_size);
+    auto pool =
+        new ThreadPool((pars->nthreads) ? pars->nthreads
+                                        : std::thread::hardware_concurrency());
+    std::vector<std::future<void>> futures;
+    printf("rendering ...");
+    for (auto cur_sample = 0; cur_sample < pars->render_params.nsamples;
+         cur_sample++) {
+        printf("\rrendering sample %d/%d", cur_sample + 1,
+               pars->render_params.nsamples);
+        futures.clear();
+        for (auto cur_block = 0; cur_block < blocks.size(); cur_block++) {
+            auto block = blocks[cur_block];
+            futures.push_back(pool->enqueue([=]() {
+                ytrace::trace_block(trace_scene, pars->width, pars->height,
+                                    (ytrace::float4*)hdr, block[0], block[1],
+                                    block[2], block[3], cur_sample,
+                                    cur_sample + 1, pars->render_params, true);
+            }));
+        }
+        for (auto& future : futures) future.wait();
+    }
+    printf("\rrendering done\n");
+
+    // save image
+    yapp::save_image(pars->imfilename, pars->width, pars->height, hdr,
+                     pars->exposure, pars->gamma, pars->srgb);
 
     // done
+    delete[] hdr;
     delete pars;
+    delete scene;
+    ybvh::free_scene(scene_bvh);
+    ytrace::free_scene(trace_scene);
     return EXIT_SUCCESS;
 }

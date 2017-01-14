@@ -26,21 +26,30 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "ytrace.h"
+#include "yapp.h"
 #include "yui.h"
 
 #include "../yocto/yocto_glu.h"
 
-namespace yitrace_app {
+#include "ThreadPool.h"
 
-// interative params
-struct params : virtual ytrace_app::params {
+// interative state
+struct state {
+    // params
+    yapp::params* pars = nullptr;
+
+    // scene
+    yapp::scene* scene = nullptr;
+    ybvh::scene* scene_bvh = nullptr;
+    ytrace::scene* trace_scene = nullptr;
+
     // rendered image
+    std::vector<ym::vec4f> hdr;
     std::vector<ym::vec4b> ldr;
 
-    // gl
-    bool no_ui = false;
-    bool legacy_gl = false;
+    // rendering aids
+    ThreadPool* pool = nullptr;
+    std::vector<yapp::int4> blocks;
 
     // progressive rendering
     int preview_width = 0;
@@ -62,36 +71,13 @@ struct params : virtual ytrace_app::params {
     void* widget_ctx = nullptr;
 };
 
-// init params
-void init_params(yitrace_app::params* pars, ycmd::parser* parser) {
-    // parse cmdline
-    pars->no_ui =
-        ycmd::parse_flag(parser, "--no-ui", "", "runs offline", false);
-    pars->legacy_gl = ycmd::parse_flag(parser, "--legacy_opengl", "-L",
-                                       "uses legacy OpenGL", false);
-
-    // init params
-    ytrace_app::init_params(pars, parser);
-    if (!pars->scene) return;
-
-    // image rendering params
-    pars->ldr.resize(pars->width * pars->height, {0, 0, 0, 0});
-    pars->preview_width = pars->width / pars->block_size;
-    pars->preview_height = pars->height / pars->block_size;
-    pars->preview.resize(pars->preview_width * pars->preview_height,
-                         {0, 0, 0, 0});
-    pars->texture_exposure = pars->exposure;
-    pars->texture_gamma = pars->gamma;
-    pars->texture_srgb = pars->srgb;
-}
-};
-
 // nuklear
 const int hud_width = 256;
 
 void text_callback(GLFWwindow* window, unsigned int key) {
-    auto pars = (yitrace_app::params*)glfwGetWindowUserPointer(window);
-    auto nuklear_ctx = (nk_context*)pars->widget_ctx;
+    auto st = (state*)glfwGetWindowUserPointer(window);
+    auto pars = st->pars;
+    auto nuklear_ctx = (nk_context*)st->widget_ctx;
 
     nk_glfw3_gl3_char_callback(window, key);
     if (nk_item_is_any_active(nuklear_ctx)) return;
@@ -117,38 +103,41 @@ void text_callback(GLFWwindow* window, unsigned int key) {
             pars->srgb = true;
             break;
         case 's':
-            ytrace_app::save_image(pars->imfilename, pars->width, pars->height,
-                                   pars->hdr.data(), pars->exposure,
-                                   pars->gamma, pars->srgb);
+            yapp::save_image(pars->imfilename, pars->width, pars->height,
+                             st->hdr.data(), pars->exposure, pars->gamma,
+                             pars->srgb);
             break;
         default: printf("unsupported key\n"); break;
     }
 }
 
 void draw_image(GLFWwindow* window) {
-    auto pars = (yitrace_app::params*)glfwGetWindowUserPointer(window);
+    auto st = (state*)glfwGetWindowUserPointer(window);
+    auto pars = st->pars;
     auto framebuffer_size = yui::framebuffer_size(window);
     glViewport(0, 0, framebuffer_size[0], framebuffer_size[1]);
 
     // begin frame
-    glClearColor(pars->background, pars->background, pars->background, 0);
+    glClearColor(pars->background[0], pars->background[1], pars->background[2],
+                 pars->background[3]);
     glDisable(GL_DEPTH_TEST);
     glClear(GL_COLOR_BUFFER_BIT);
 
     // draw image
     auto window_size = yui::window_size(window);
     if (pars->legacy_gl) {
-        yglu::legacy::draw_image(pars->texture_id, pars->width, pars->height,
+        yglu::legacy::draw_image(st->texture_id, pars->width, pars->height,
                                  window_size[0], window_size[1], 0, 0, 1);
     } else {
-        yglu::modern::shade_image(pars->texture_id, pars->width, pars->height,
+        yglu::modern::shade_image(st->texture_id, pars->width, pars->height,
                                   window_size[0], window_size[1], 0, 0, 1);
     }
 }
 
 void draw_widgets(GLFWwindow* window) {
-    auto pars = (yitrace_app::params*)glfwGetWindowUserPointer(window);
-    auto nuklear_ctx = (nk_context*)pars->widget_ctx;
+    auto st = (state*)glfwGetWindowUserPointer(window);
+    auto pars = st->pars;
+    auto nuklear_ctx = (nk_context*)st->widget_ctx;
     auto window_size = yui::window_size(window);
     if (pars->legacy_gl) {
         nk_glfw3_gl2_new_frame();
@@ -164,14 +153,14 @@ void draw_widgets(GLFWwindow* window) {
         nk_layout_row_dynamic(nuklear_ctx, 30, 3);
         nk_value_int(nuklear_ctx, "w", pars->width);
         nk_value_int(nuklear_ctx, "h", pars->height);
-        nk_value_int(nuklear_ctx, "s", pars->cur_sample);
+        nk_value_int(nuklear_ctx, "s", st->cur_sample);
         nk_layout_row_dynamic(nuklear_ctx, 30, 1);
         nk_property_int(nuklear_ctx, "samples", 0,
                         &pars->render_params.nsamples, 1000000, 1, 1);
         nk_layout_row_dynamic(nuklear_ctx, 30, 2);
         nk_property_int(nuklear_ctx, "camera", 0,
                         &pars->render_params.camera_id,
-                        (int)pars->scene->cameras.size() - 1, 1, 1);
+                        (int)st->scene->cameras.size() - 1, 1, 1);
         nk_layout_row_dynamic(nuklear_ctx, 30, 1);
         nk_property_float(nuklear_ctx, "hdr exposure", -20, &pars->exposure, 20,
                           1, 1);
@@ -194,110 +183,108 @@ void window_refresh_callback(GLFWwindow* window) {
     glfwSwapBuffers(window);
 }
 
-bool update(yitrace_app::params* pars) {
-    if (pars->scene_updated) {
+bool update(state* st) {
+    auto pars = st->pars;
+    if (st->scene_updated) {
         // update camera
-        auto cam = pars->scene->cameras[pars->render_params.camera_id];
-        auto trace_cam =
-            pars->trace_scene->cameras[pars->render_params.camera_id];
-        trace_cam->frame = cam->frame;
-        trace_cam->yfov = cam->yfov;
-        trace_cam->aspect = cam->aspect;
-        trace_cam->aperture = cam->aperture;
-        trace_cam->focus = cam->focus;
+        auto cam = st->scene->cameras[pars->render_params.camera_id];
+        ytrace::set_camera(st->trace_scene, pars->render_params.camera_id,
+                           cam->frame, cam->yfov, cam->aspect, cam->aperture,
+                           cam->focus);
 
         // render preview
         auto pparams = pars->render_params;
         pparams.nsamples = 1;
-        ytrace::trace_image(pars->trace_scene, pars->preview_width,
-                            pars->preview_height,
-                            (ytrace::float4*)pars->preview.data(), pparams);
-        for (auto qj = 0; qj < pars->preview_height; qj++) {
-            for (auto qi = 0; qi < pars->preview_width; qi++) {
+        ytrace::trace_image(st->trace_scene, st->preview_width,
+                            st->preview_height,
+                            (ytrace::float4*)st->preview.data(), pparams);
+        for (auto qj = 0; qj < st->preview_height; qj++) {
+            for (auto qi = 0; qi < st->preview_width; qi++) {
                 for (auto j = qj * pars->block_size;
                      j < ym::min((qj + 1) * pars->block_size, pars->height);
                      j++) {
                     for (auto i = qi * pars->block_size;
                          i < ym::min((qi + 1) * pars->block_size, pars->width);
                          i++) {
-                        pars->hdr[j * pars->width + i] =
-                            pars->preview[qj * pars->preview_width + qi];
+                        st->hdr[j * pars->width + i] =
+                            st->preview[qj * st->preview_width + qi];
                     }
                 }
             }
         }
         ym::exposure_gamma(pars->width, pars->height, 4,
-                           (const float*)pars->hdr.data(),
-                           (unsigned char*)pars->ldr.data(), pars->exposure,
+                           (const float*)st->hdr.data(),
+                           (unsigned char*)st->ldr.data(), pars->exposure,
                            pars->gamma, pars->srgb);
         if (pars->legacy_gl) {
-            yglu::legacy::update_texture(
-                pars->texture_id, pars->width, pars->height, 4,
-                (unsigned char*)pars->ldr.data(), false);
+            yglu::legacy::update_texture(st->texture_id, pars->width,
+                                         pars->height, 4,
+                                         (unsigned char*)st->ldr.data(), false);
         } else {
-            yglu::modern::update_texture(
-                pars->texture_id, pars->width, pars->height, 4,
-                (unsigned char*)pars->ldr.data(), false);
+            yglu::modern::update_texture(st->texture_id, pars->width,
+                                         pars->height, 4,
+                                         (unsigned char*)st->ldr.data(), false);
         }
 
         // reset current counters
-        pars->cur_sample = 0;
-        pars->cur_block = 0;
-        pars->scene_updated = false;
+        st->cur_sample = 0;
+        st->cur_block = 0;
+        st->scene_updated = false;
     } else {
-        if (pars->cur_sample == pars->render_params.nsamples) return false;
+        if (st->cur_sample == pars->render_params.nsamples) return false;
         std::vector<std::future<void>> futures;
-        for (auto b = 0; pars->cur_block < pars->blocks.size() &&
-                         b < pars->blocks_per_update;
-             pars->cur_block++, b++) {
-            auto block = pars->blocks[pars->cur_block];
-            futures.push_back(pars->pool->enqueue([block, pars]() {
-                ytrace::trace_block(
-                    pars->trace_scene, pars->width, pars->height,
-                    (ytrace::float4*)pars->hdr.data(), block[0], block[1],
-                    block[2], block[3], pars->cur_sample, pars->cur_sample + 1,
-                    pars->render_params, true);
-                ym::exposure_gamma(pars->width, pars->height, 4,
-                                   (const float*)pars->hdr.data(),
-                                   (unsigned char*)pars->ldr.data(),
-                                   pars->exposure, pars->gamma, pars->srgb,
-                                   block[0], block[1], block[2], block[3]);
+        for (auto b = 0;
+             st->cur_block < st->blocks.size() && b < st->blocks_per_update;
+             st->cur_block++, b++) {
+            auto block = st->blocks[st->cur_block];
+            futures.push_back(st->pool->enqueue([st, block, pars]() {
+                ytrace::trace_block(st->trace_scene, pars->width, pars->height,
+                                    (ytrace::float4*)st->hdr.data(), block[0],
+                                    block[1], block[2], block[3],
+                                    st->cur_sample, st->cur_sample + 1,
+                                    pars->render_params, true);
+                ym::exposure_gamma(
+                    pars->width, pars->height, 4, (const float*)st->hdr.data(),
+                    (unsigned char*)st->ldr.data(), pars->exposure, pars->gamma,
+                    pars->srgb, block[0], block[1], block[2], block[3]);
             }));
         }
         for (auto& future : futures) future.wait();
-        if (pars->texture_exposure != pars->exposure ||
-            pars->texture_gamma != pars->gamma ||
-            pars->texture_srgb != pars->srgb) {
+        if (st->texture_exposure != pars->exposure ||
+            st->texture_gamma != pars->gamma ||
+            st->texture_srgb != pars->srgb) {
             ym::exposure_gamma(pars->width, pars->height, 4,
-                               (const float*)pars->hdr.data(),
-                               (unsigned char*)pars->ldr.data(), pars->exposure,
+                               (const float*)st->hdr.data(),
+                               (unsigned char*)st->ldr.data(), pars->exposure,
                                pars->gamma, pars->srgb);
-            pars->texture_exposure = pars->exposure;
-            pars->texture_gamma = pars->gamma;
-            pars->texture_srgb = pars->srgb;
+            st->texture_exposure = pars->exposure;
+            st->texture_gamma = pars->gamma;
+            st->texture_srgb = pars->srgb;
         }
         if (pars->legacy_gl) {
-            yglu::legacy::update_texture(
-                pars->texture_id, pars->width, pars->height, 4,
-                (unsigned char*)pars->ldr.data(), false);
+            yglu::legacy::update_texture(st->texture_id, pars->width,
+                                         pars->height, 4,
+                                         (unsigned char*)st->ldr.data(), false);
         } else {
-            yglu::modern::update_texture(
-                pars->texture_id, pars->width, pars->height, 4,
-                (unsigned char*)pars->ldr.data(), false);
+            yglu::modern::update_texture(st->texture_id, pars->width,
+                                         pars->height, 4,
+                                         (unsigned char*)st->ldr.data(), false);
         }
-        if (pars->cur_block == pars->blocks.size()) {
-            pars->cur_block = 0;
-            pars->cur_sample++;
+        if (st->cur_block == st->blocks.size()) {
+            st->cur_block = 0;
+            st->cur_sample++;
         }
     }
 
     return true;
 }
 
-void run_ui(yitrace_app::params* pars) {
+void run_ui(state* st) {
+    auto pars = st->pars;
+
     // window
     auto window = yui::init_glfw(pars->width, pars->height, "ytrace",
-                                 pars->legacy_gl, pars, text_callback);
+                                 pars->legacy_gl, st, text_callback);
 
     // callbacks
     glfwSetWindowRefreshCallback(window, window_refresh_callback);
@@ -308,16 +295,16 @@ void run_ui(yitrace_app::params* pars) {
     ym::vec2f mouse_pos, mouse_last;
     ym::vec2i window_size, framebuffer_size;
 
-    pars->widget_ctx = yui::init_nuklear(window, pars->legacy_gl);
+    st->widget_ctx = yui::init_nuklear(window, pars->legacy_gl);
 
     if (pars->legacy_gl) {
-        pars->texture_id = yglu::legacy::make_texture(
-            pars->width, pars->height, 4, (unsigned char*)pars->ldr.data(),
-            false, false);
+        st->texture_id = yglu::legacy::make_texture(
+            pars->width, pars->height, 4, (unsigned char*)st->ldr.data(), false,
+            false);
     } else {
-        pars->texture_id = yglu::modern::make_texture(
-            pars->width, pars->height, 4, (unsigned char*)pars->ldr.data(),
-            false, false, false);
+        st->texture_id = yglu::modern::make_texture(
+            pars->width, pars->height, 4, (unsigned char*)st->ldr.data(), false,
+            false, false);
     }
 
     while (!glfwWindowShouldClose(window)) {
@@ -332,12 +319,12 @@ void run_ui(yitrace_app::params* pars) {
         glfwSetWindowTitle(window, ("ytrace | " + pars->filename + " | " +
                                     std::to_string(pars->width) + "x" +
                                     std::to_string(pars->height) + "@" +
-                                    std::to_string(pars->cur_sample))
+                                    std::to_string(st->cur_sample))
                                        .c_str());
 
         // handle mouse
         if (mouse_button && mouse_pos != mouse_last &&
-            !nk_item_is_any_active((nk_context*)pars->widget_ctx)) {
+            !nk_item_is_any_active((nk_context*)st->widget_ctx)) {
             auto dolly = 0.0f;
             auto pan = ym::zero2f;
             auto rotate = ym::zero2f;
@@ -348,14 +335,14 @@ void run_ui(yitrace_app::params* pars) {
                 default: break;
             }
 
-            auto cam = pars->scene->cameras[pars->render_params.camera_id];
+            auto cam = st->scene->cameras[pars->render_params.camera_id];
             ym::turntable((ym::frame3f&)cam->frame, cam->focus, rotate, dolly,
                           pan);
-            pars->scene_updated = true;
+            st->scene_updated = true;
         }
 
         // update
-        auto updated = update(pars);
+        auto updated = update(st);
 
         // draw
         draw_image(window);
@@ -373,26 +360,57 @@ void run_ui(yitrace_app::params* pars) {
             glfwWaitEvents();
     }
 
-    yui::clear_nuklear((nk_context*)pars->widget_ctx, pars->legacy_gl);
+    yui::clear_nuklear((nk_context*)st->widget_ctx, pars->legacy_gl);
     yui::clear_glfw(window);
 }
 
 int main(int argc, char* argv[]) {
     // params
-    auto pars = new yitrace_app::params();
-    auto parser = ycmd::make_parser(argc, argv, "trace meshes");
-    yitrace_app::init_params(pars, parser);
-    ycmd::check_parser(parser);
+    auto pars = yapp::init_params("render scene with path tracing", argc, argv,
+                                  true, false, false, false);
 
-    // launching renderer
-    if (pars->no_ui) {
-        ytrace_app::render(pars);
-    } else {
-        // run ui
-        run_ui(pars);
-    }
+    // init state
+    auto st = new state();
+    st->pars = pars;
+
+    // setting up rendering
+    st->scene = yapp::load_scene(pars->filename, pars->scene_scale);
+    st->scene_bvh = yapp::make_bvh(st->scene);
+    st->trace_scene = yapp::make_trace_scene(st->scene, st->scene_bvh,
+                                             pars->render_params.camera_id);
+
+    // image rendering params
+    st->hdr.resize(pars->width * pars->height, {0, 0, 0, 0});
+    st->ldr.resize(pars->width * pars->height, {0, 0, 0, 0});
+    st->preview_width = pars->width / pars->block_size;
+    st->preview_height = pars->height / pars->block_size;
+    st->preview.resize(st->preview_width * st->preview_height, {0, 0, 0, 0});
+    st->texture_exposure = pars->exposure;
+    st->texture_gamma = pars->gamma;
+    st->texture_srgb = pars->srgb;
+    st->scene_updated = true;
+
+    // progressive rendering
+    if (!pars->nthreads) pars->nthreads = std::thread::hardware_concurrency();
+    st->blocks =
+        yapp::make_trace_blocks(pars->width, pars->height, pars->block_size);
+    st->pool = new ThreadPool(pars->nthreads);
+
+    // fixing camera
+    for (auto cam : st->scene->cameras)
+        cam->aspect = (float)pars->width / (float)pars->height;
+
+    // init renderer
+    ytrace::init_lights(st->trace_scene);
+
+    // run ui
+    run_ui(st);
 
     // done
+    delete st->scene;
+    ybvh::free_scene(st->scene_bvh);
+    ytrace::free_scene(st->trace_scene);
+    delete st;
     delete pars;
-    return EXIT_SUCCESS;
+    return 0;
 }
