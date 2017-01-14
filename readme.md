@@ -1,5 +1,8 @@
 # Yocto/GL: C/C++ Single File Libraries for Physically-Based Graphics
 
+![Travis Build Status](https://travis-ci.org/xelatihy/yocto-gl.svg?branch=master)
+![AppVeyor Build status](https://ci.appveyor.com/api/projects/status/4ac90yy5q4a0a9fg?svg=true)
+
 Yocto/GL is a collection of single-file libraries, or single .h/.cpp pairs,
 for building physically-based graphics applications.
 Yocto/GL is written in C++ and compiles on OSX (clang), Linux (clang/gcc)
