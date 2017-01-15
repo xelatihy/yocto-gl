@@ -930,17 +930,16 @@ void simulate_step(yapp::scene* scene, ysym::scene* rigid_scene, float dt) {
 params* init_params(const std::string& help, int argc, char** argv,
                     bool trace_params, bool sym_params, bool shade_params,
                     bool ui_params) {
-    static auto rtype_names = std::unordered_map<std::string, ytrace::rng_type>{
-        {"default", ytrace::rng_type::def},
-        {"uniform", ytrace::rng_type::uniform},
-        {"stratified", ytrace::rng_type::stratified},
-        {"cmjs", ytrace::rng_type::cmjs}};
-    static auto stype_names =
-        std::unordered_map<std::string, ytrace::shader_type>{
-            {"default", ytrace::shader_type::def},
-            {"eye", ytrace::shader_type::eyelight},
-            {"direct", ytrace::shader_type::direct},
-            {"path", ytrace::shader_type::pathtrace}};
+    static auto rtype_names = std::vector<std::pair<std::string, int>>{
+        {"default", (int)ytrace::rng_type::def},
+        {"uniform", (int)ytrace::rng_type::uniform},
+        {"stratified", (int)ytrace::rng_type::stratified},
+        {"cmjs", (int)ytrace::rng_type::cmjs}};
+    static auto stype_names = std::vector<std::pair<std::string, int>>{
+        {"default", (int)ytrace::shader_type::def},
+        {"eye", (int)ytrace::shader_type::eyelight},
+        {"direct", (int)ytrace::shader_type::direct},
+        {"path", (int)ytrace::shader_type::pathtrace}};
 
     // parser
     auto parser = ycmd::make_parser(argc, argv, help.c_str());
@@ -950,24 +949,24 @@ params* init_params(const std::string& help, int argc, char** argv,
 
     // render
     if (trace_params || shade_params) {
-        pars->exposure = ycmd::parse_opt<float>(parser, "--exposure", "-e",
-                                                "hdr image exposure", 0);
-        pars->gamma = ycmd::parse_opt<float>(parser, "--gamma", "-g",
-                                             "hdr image gamma", 1);
-        pars->srgb = ycmd::parse_opt<bool>(parser, "--srgb", "",
-                                           "hdr srgb output", true);
-        auto aspect = ycmd::parse_opt<float>(parser, "--aspect", "-a",
-                                             "image aspect", 16.0f / 9.0f);
-        auto res = ycmd::parse_opt<int>(parser, "--resolution", "-r",
-                                        "image resolution", 720);
+        pars->exposure = ycmd::parse_optf(parser, "--exposure", "-e",
+                                          "hdr image exposure", 0);
+        pars->gamma =
+            ycmd::parse_optf(parser, "--gamma", "-g", "hdr image gamma", 1);
+        pars->srgb =
+            ycmd::parse_optb(parser, "--srgb", "", "hdr srgb output", true);
+        auto aspect = ycmd::parse_optf(parser, "--aspect", "-a", "image aspect",
+                                       16.0f / 9.0f);
+        auto res = ycmd::parse_opti(parser, "--resolution", "-r",
+                                    "image resolution", 720);
         pars->render_params.camera_id =
-            ycmd::parse_opt<int>(parser, "--camera", "-C", "camera", 0);
-        pars->envmap_filename = ycmd::parse_opt<std::string>(
-            parser, "--envmap_filename", "", "environment map", "");
-        pars->envmap_scale = ycmd::parse_opt<float>(
-            parser, "--envmap_scale", "", "environment map scale", 1);
-        auto amb = ycmd::parse_opt<float>(parser, "--ambient", "",
-                                          "ambient factor", 0);
+            ycmd::parse_opti(parser, "--camera", "-C", "camera", 0);
+        pars->envmap_filename = ycmd::parse_opts(parser, "--envmap_filename",
+                                                 "", "environment map", "");
+        pars->envmap_scale = ycmd::parse_optf(parser, "--envmap_scale", "",
+                                              "environment map scale", 1);
+        auto amb =
+            ycmd::parse_optf(parser, "--ambient", "", "ambient factor", 0);
 
         pars->width = (int)std::round(aspect * res);
         pars->height = res;
@@ -984,20 +983,20 @@ params* init_params(const std::string& help, int argc, char** argv,
 
     // params
     if (trace_params) {
-        pars->render_params.rtype = ycmd::parse_opte<ytrace::rng_type>(
-            parser, "--random", "", "random type", ytrace::rng_type::def,
+        pars->render_params.rtype = (ytrace::rng_type)ycmd::parse_opte(
+            parser, "--random", "", "random type", (int)ytrace::rng_type::def,
             rtype_names);
-        pars->render_params.stype = ycmd::parse_opte<ytrace::shader_type>(
+        pars->render_params.stype = (ytrace::shader_type)ycmd::parse_opte(
             parser, "--integrator", "-i", "integrator type",
-            ytrace::shader_type::def, stype_names);
+            (int)ytrace::shader_type::def, stype_names);
         auto camera_lights = ycmd::parse_flag(parser, "--camera_lights", "-c",
                                               "enable camera lights", false);
-        pars->nthreads = ycmd::parse_opt<int>(
+        pars->nthreads = ycmd::parse_opti(
             parser, "--threads", "-t", "number of threads [0 for default]", 0);
         pars->block_size =
             ycmd::parse_opt<int>(parser, "--block_size", "", "block size", 32);
-        pars->render_params.nsamples = ycmd::parse_opt<int>(
-            parser, "--samples", "-s", "image samples", 256);
+        pars->render_params.nsamples =
+            ycmd::parse_opti(parser, "--samples", "-s", "image samples", 256);
 
         if (camera_lights) {
             pars->render_params.stype = ytrace::shader_type::eyelight;
@@ -1005,12 +1004,12 @@ params* init_params(const std::string& help, int argc, char** argv,
     }
 
     if (sym_params) {
-        pars->dt = ycmd::parse_opt<float>(parser, "--delta_time", "-dt",
-                                          "delta time", 1 / 60.0f);
-        pars->nframes = ycmd::parse_opt<int>(parser, "--nframes", "-n",
-                                             "number of frames", 1000);
-        pars->outfilename = ycmd::parse_opt<std::string>(
-            parser, "--output", "-o", "output filename", "out.%04d.obj");
+        pars->dt = ycmd::parse_optf(parser, "--delta_time", "-dt", "delta time",
+                                    1 / 60.0f);
+        pars->nframes = ycmd::parse_opti(parser, "--nframes", "-n",
+                                         "number of frames", 1000);
+        pars->outfilename = ycmd::parse_opts(parser, "--output", "-o",
+                                             "output filename", "out.%04d.obj");
     }
 
     if (ui_params) {
@@ -1022,17 +1021,26 @@ params* init_params(const std::string& help, int argc, char** argv,
 
     // params
     pars->scene_scale =
-        ycmd::parse_opt<float>(parser, "--scale", "", "scale scene", 1.0f);
-    pars->imfilename = ycmd::parse_opt<std::string>(
-        parser, "--output", "-o", "image filename", "out.hdr");
-    pars->filename = ycmd::parse_arg<std::string>(parser, "scene",
-                                                  "scene filename", "", true);
+        ycmd::parse_optf(parser, "--scale", "", "scale scene", 1.0f);
+    pars->imfilename =
+        ycmd::parse_opts(parser, "--output", "-o", "image filename", "out.hdr");
+    pars->filename =
+        ycmd::parse_args(parser, "scene", "scene filename", "", true);
 
     // check parsing
     ycmd::check_parser(parser);
 
     // done
     return pars;
+}
+
+//
+// Logging
+//
+void set_default_loggers() {
+    auto loggers = ycmd::get_default_loggers();
+    loggers->push_back(
+        ycmd::make_file_logger("yocto.log", true, ycmd::log_level_verbose));
 }
 
 }  // namespace

@@ -47,7 +47,7 @@ endif(BUILD_OPENGL_APPS)
 
 set(yocto_files
     ../yocto/yocto_cmd.h
-    ../yocto/yocto_shape.h
+    ../yocto/yocto_cmd.cpp
     ../yocto/yocto_obj.h
     ../yocto/yocto_obj.cpp
     ../yocto/yocto_gltf.h
@@ -106,7 +106,7 @@ if(BUILD_OPENGL_APPS)
     add_executable(yisym ../apps/yisym.cpp ../apps/yapp_ui.cpp ${yall_glfiles})
     add_executable(yshade ../apps/yshade.cpp ../apps/yapp_ui.cpp ${yall_glfiles})
     add_executable(yitrace ../apps/yitrace.cpp ../apps/yapp_ui.cpp ${yall_glfiles})
-    add_executable(yimview ../apps/yimview.cpp ../apps/yui.h ../apps/yui.cpp ../yocto/yocto_cmd.h ../yocto/yocto_math.h ../yocto/yocto_glu.h ../yocto/yocto_glu.cpp)
+    add_executable(yimview ../apps/yimview.cpp ../apps/yui.h ../apps/yui.cpp ../yocto/yocto_cmd.h ../yocto/yocto_cmd.cpp ../yocto/yocto_math.h ../yocto/yocto_glu.h ../yocto/yocto_glu.cpp)
 
     target_link_libraries(yisym yocto app ${OPENGL_gl_LIBRARY} ${GLFW_LIBRARY} ${GLEW_LIBRARIES})
     target_link_libraries(yshade yocto app ${OPENGL_gl_LIBRARY} ${GLFW_LIBRARY} ${GLEW_LIBRARIES})

@@ -31,6 +31,9 @@
 #include "ThreadPool.h"
 
 int main(int argc, char* argv[]) {
+    // logging
+    yapp::set_default_loggers();
+
     // params
     auto pars = yapp::init_params("render scene with path tracing", argc, argv,
                                   true, false, false, false);
@@ -55,19 +58,18 @@ int main(int argc, char* argv[]) {
     for (auto i = 0; i < pars->width * pars->height; i++) hdr[i] = {0, 0, 0, 0};
 
     // render
-    printf("tracing %s to %s\n", pars->filename.c_str(),
-           pars->imfilename.c_str());
+    ycmd::log_msgf(ycmd::log_level_info, "ytrace", "tracing %s to %s",
+                   pars->filename.c_str(), pars->imfilename.c_str());
     auto blocks =
         yapp::make_trace_blocks(pars->width, pars->height, pars->block_size);
     auto pool =
         new ThreadPool((pars->nthreads) ? pars->nthreads
                                         : std::thread::hardware_concurrency());
     std::vector<std::future<void>> futures;
-    printf("rendering ...");
     for (auto cur_sample = 0; cur_sample < pars->render_params.nsamples;
          cur_sample++) {
-        printf("\rrendering sample %d/%d", cur_sample + 1,
-               pars->render_params.nsamples);
+        ycmd::log_msgf(ycmd::log_level_info, "ytrace", "rendering sample %d/%d",
+                       cur_sample + 1, pars->render_params.nsamples);
         futures.clear();
         for (auto cur_block = 0; cur_block < blocks.size(); cur_block++) {
             auto block = blocks[cur_block];
@@ -80,7 +82,7 @@ int main(int argc, char* argv[]) {
         }
         for (auto& future : futures) future.wait();
     }
-    printf("\rrendering done\n");
+    ycmd::log_msgf(ycmd::log_level_info, "ytrace", "rendering done");
 
     // save image
     yapp::save_image(pars->imfilename, pars->width, pars->height, hdr,

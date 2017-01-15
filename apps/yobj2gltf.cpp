@@ -216,17 +216,17 @@ int main(int argc, char** argv) {
         ycmd::parse_flag(parser, "--no_flipy_texcoord", "",
                          "disable texcoord vertical flipping");
     auto scale =
-        ycmd::parse_opt<float>(parser, "--scale", "", "scale the model", 1.0f);
+        ycmd::parse_optf(parser, "--scale", "", "scale the model", 1.0f);
     auto print_info = ycmd::parse_flag(parser, "--print_info", "-i",
                                        "print information", false);
     auto validate = ycmd::parse_flag(parser, "--validate", "",
                                      "validate after saving", false);
     auto no_save = ycmd::parse_flag(parser, "--no_save", "-e",
                                     "exit without saving", false);
-    auto filename_in = ycmd::parse_arg<std::string>(parser, "filename_in",
-                                                    "input filename", "", true);
-    auto filename_out = ycmd::parse_arg<std::string>(
-        parser, "filename_out", "output filename", "", false);
+    auto filename_in =
+        ycmd::parse_args(parser, "filename_in", "input filename", "", true);
+    auto filename_out =
+        ycmd::parse_args(parser, "filename_out", "output filename", "", false);
     ycmd::check_parser(parser);
 
     // set output filename if not present
