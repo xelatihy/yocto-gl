@@ -248,6 +248,11 @@ params* init_params(const std::string& help, int argc, char** argv,
                     bool trace_params, bool sym_params, bool shade_params,
                     bool ui_params);
 
+//
+// Logging
+//
+void set_default_loggers();
+
 // Forward declaration
 struct shade_state;
 

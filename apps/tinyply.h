@@ -287,7 +287,7 @@ namespace tinyply
 
 			for (auto key : propertyKeys)
 			{
-				if (int instanceCount = instance_counter(elementKey, key))
+				if (int instanceCount = (int)instance_counter(elementKey, key))
 				{
 					instanceCounts.push_back(instanceCount);
 					auto result = userDataTable.insert(std::pair<std::string, std::shared_ptr<DataCursor>>(make_key(elementKey, key), cursor));

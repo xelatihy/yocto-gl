@@ -9,7 +9,8 @@ clang++ -MMD -MF bin/yocto_obj.o.d -std=c++14 -stdlib=libc++ -O3 -g -fcolor-diag
 clang++ -MMD -MF bin/yocto_trace.o.d -std=c++14 -stdlib=libc++ -O3 -g -fcolor-diagnostics -I/usr/local/include -c -o bin/yocto_trace.o yocto/yocto_trace.cpp
 clang++ -MMD -MF bin/yocto_sym.o.d -std=c++14 -stdlib=libc++ -O3 -g -fcolor-diagnostics -I/usr/local/include -c -o bin/yocto_sym.o yocto/yocto_sym.cpp
 clang++ -MMD -MF bin/yocto_shape.o.d -std=c++14 -stdlib=libc++ -O3 -g -fcolor-diagnostics -I/usr/local/include -c -o bin/yocto_shape.o yocto/yocto_shape.cpp
-libtool -static bin/yocto_bvh.o bin/yocto_gltf.o bin/yocto_obj.o bin/yocto_trace.o bin/yocto_sym.o bin/yocto_shape.o -o bin/yocto.a
+clang++ -MMD -MF bin/yocto_cmd.o.d -std=c++14 -stdlib=libc++ -O3 -g -fcolor-diagnostics -I/usr/local/include -c -o bin/yocto_cmd.o yocto/yocto_cmd.cpp
+libtool -static bin/yocto_bvh.o bin/yocto_gltf.o bin/yocto_obj.o bin/yocto_trace.o bin/yocto_sym.o bin/yocto_shape.o bin/yocto_cmd.o -o bin/yocto.a
 clang++ -o bin/ysym bin/ysym.o bin/yapp.o bin/tinyply.o bin/yocto.a -std=c++14
 clang++ -MMD -MF bin/ytestgen.o.d -std=c++14 -stdlib=libc++ -O3 -g -fcolor-diagnostics -I/usr/local/include -c -o bin/ytestgen.o apps/ytestgen.cpp
 clang++ -o bin/ytestgen bin/ytestgen.o bin/yapp.o bin/tinyply.o bin/yocto.a -std=c++14

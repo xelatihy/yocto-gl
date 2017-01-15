@@ -9,7 +9,8 @@ g++ -MMD -MF bin/yocto_obj.o.d -std=c++14 -O3 -g -pthread -I/usr/include -c -o b
 g++ -MMD -MF bin/yocto_trace.o.d -std=c++14 -O3 -g -pthread -I/usr/include -c -o bin/yocto_trace.o yocto/yocto_trace.cpp
 g++ -MMD -MF bin/yocto_sym.o.d -std=c++14 -O3 -g -pthread -I/usr/include -c -o bin/yocto_sym.o yocto/yocto_sym.cpp
 g++ -MMD -MF bin/yocto_shape.o.d -std=c++14 -O3 -g -pthread -I/usr/include -c -o bin/yocto_shape.o yocto/yocto_shape.cpp
-ar rcs bin/yocto.a bin/yocto_bvh.o bin/yocto_gltf.o bin/yocto_obj.o bin/yocto_trace.o bin/yocto_sym.o bin/yocto_shape.o
+g++ -MMD -MF bin/yocto_cmd.o.d -std=c++14 -O3 -g -pthread -I/usr/include -c -o bin/yocto_cmd.o yocto/yocto_cmd.cpp
+ar rcs bin/yocto.a bin/yocto_bvh.o bin/yocto_gltf.o bin/yocto_obj.o bin/yocto_trace.o bin/yocto_sym.o bin/yocto_shape.o bin/yocto_cmd.o
 g++ -o bin/ysym bin/ysym.o bin/yapp.o bin/tinyply.o bin/yocto.a --std=c++14 -pthread
 g++ -MMD -MF bin/ytestgen.o.d -std=c++14 -O3 -g -pthread -I/usr/include -c -o bin/ytestgen.o apps/ytestgen.cpp
 g++ -o bin/ytestgen bin/ytestgen.o bin/yapp.o bin/tinyply.o bin/yocto.a --std=c++14 -pthread

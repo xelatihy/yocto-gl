@@ -7,7 +7,8 @@ cl  /O2 /Zi /EHsc /bigobj /Iapps/w32/include /c /Fdbin/yocto_obj.obj.pdb /Fobin/
 cl  /O2 /Zi /EHsc /bigobj /Iapps/w32/include /c /Fdbin/yocto_trace.obj.pdb /Fobin/yocto_trace.obj yocto/yocto_trace.cpp
 cl  /O2 /Zi /EHsc /bigobj /Iapps/w32/include /c /Fdbin/yocto_sym.obj.pdb /Fobin/yocto_sym.obj yocto/yocto_sym.cpp
 cl  /O2 /Zi /EHsc /bigobj /Iapps/w32/include /c /Fdbin/yocto_shape.obj.pdb /Fobin/yocto_shape.obj yocto/yocto_shape.cpp
-lib bin/yocto_bvh.obj bin/yocto_gltf.obj bin/yocto_obj.obj bin/yocto_trace.obj bin/yocto_sym.obj bin/yocto_shape.obj /OUT:bin/yocto.lib
+cl  /O2 /Zi /EHsc /bigobj /Iapps/w32/include /c /Fdbin/yocto_cmd.obj.pdb /Fobin/yocto_cmd.obj yocto/yocto_cmd.cpp
+lib bin/yocto_bvh.obj bin/yocto_gltf.obj bin/yocto_obj.obj bin/yocto_trace.obj bin/yocto_sym.obj bin/yocto_shape.obj bin/yocto_cmd.obj /OUT:bin/yocto.lib
 cl  /O2 /Zi /EHsc /bigobj /Iapps/w32/include /c /Fdbin/yapp.obj.pdb /Fobin/yapp.obj apps/yapp.cpp
 cl  /O2 /Zi /EHsc /bigobj /Iapps/w32/include /c /Fdbin/tinyply.obj.pdb /Fobin/tinyply.obj apps/tinyply.cpp
 cl /Febin/ysym.exe /Fdbin/ysym.exe.pdb bin/ysym.obj bin/yocto.lib bin/yapp.obj bin/tinyply.obj /Zi

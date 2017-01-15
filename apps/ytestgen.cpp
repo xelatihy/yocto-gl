@@ -912,8 +912,8 @@ yapp::scene* make_rigid_scene(int config) {
 int main(int argc, char* argv[]) {
     // command line params
     auto parser = ycmd::make_parser(argc, argv, "make tests");
-    auto dirname = ycmd::parse_arg<std::string>(parser, "dirname",
-                                                "directory name", ".", true);
+    auto dirname =
+        ycmd::parse_args(parser, "dirname", "directory name", ".", true);
     ycmd::check_parser(parser);
 
 // make directories

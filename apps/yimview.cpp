@@ -123,16 +123,16 @@ std::vector<img*> load_images(const std::vector<std::string>& img_filenames,
 }
 
 void init_params(params* pars, ycmd::parser* parser) {
-    pars->exposure = ycmd::parse_opt<float>(parser, "--exposure", "-e",
-                                            "hdr image exposure", 0);
+    pars->exposure =
+        ycmd::parse_optf(parser, "--exposure", "-e", "hdr image exposure", 0);
     pars->gamma =
-        ycmd::parse_opt<float>(parser, "--gamma", "-g", "hdr image gamma", 1);
-    pars->srgb = ycmd::parse_opt<bool>(parser, "--srgb", "",
-                                       "hdr image srgb output", true);
+        ycmd::parse_optf(parser, "--gamma", "-g", "hdr image gamma", 1);
+    pars->srgb =
+        ycmd::parse_optb(parser, "--srgb", "", "hdr image srgb output", true);
     pars->legacy_gl = ycmd::parse_flag(parser, "--legacy_opengl", "-L",
                                        "uses legacy OpenGL", false);
-    auto filenames = ycmd::parse_arga<std::string>(parser, "image",
-                                                   "image filename", {}, true);
+    auto filenames =
+        ycmd::parse_argas(parser, "image", "image filename", {}, true);
 
     // loading images
     pars->imgs =
