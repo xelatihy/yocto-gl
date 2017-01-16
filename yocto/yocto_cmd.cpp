@@ -816,17 +816,6 @@ YCMD_API std::string format_str(const char* fmt, ...) {
 }
 
 //
-// C-like string formatting
-//
-YCMD_API std::string format_str(const std::string& fmt, ...) {
-    va_list args;
-    va_start(args, fmt);
-    auto s = format_str(fmt.c_str(), args);
-    va_end(args);
-    return s;
-}
-
-//
 // Logger
 //
 struct logger {

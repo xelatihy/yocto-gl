@@ -368,12 +368,7 @@ YCMD_API std::string join_strings(const std::vector<std::string>& strs,
 /// C-like string formatting. This is only meant for short strings with max
 /// length 10000 chars. Memory corruption will happen for longer strings.
 ///
-YCMD_API std::string format_str(const std::string& fmt, va_list args);
-
-///
-/// C-like string formatting. See format_str(fmt,args);
-///
-YCMD_API std::string format_str(const std::string& fmt, ...);
+YCMD_API std::string format_str(const char* fmt, va_list args);
 
 ///
 /// C-like string formatting. See format_str(fmt,args);
