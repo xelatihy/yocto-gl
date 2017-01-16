@@ -822,6 +822,8 @@ ytrace::scene* make_trace_scene(const yapp::scene* scene,
             return (bool)ybvh::intersect_ray(scene_bvh, o, d, tmin, tmax, true);
         });
 
+    ytrace::set_logging_callbacks(trace_scene, nullptr, ycmd::log_msgfv);
+
     ytrace::init_lights(trace_scene);
 
     return trace_scene;
@@ -965,6 +967,9 @@ params* init_params(const std::string& help, int argc, char** argv,
                                                  "", "environment map", "");
         pars->envmap_scale = ycmd::parse_optf(parser, "--envmap_scale", "",
                                               "environment map scale", 1);
+        pars->save_progressive =
+            ycmd::parse_opti(parser, "--save_progressive", "",
+                             "frames to save progressive images", 0);
         auto amb =
             ycmd::parse_optf(parser, "--ambient", "", "ambient factor", 0);
 
@@ -1039,6 +1044,7 @@ params* init_params(const std::string& help, int argc, char** argv,
 //
 void set_default_loggers() {
     auto loggers = ycmd::get_default_loggers();
+    loggers->push_back(ycmd::make_stdout_logger());
     loggers->push_back(
         ycmd::make_file_logger("yocto.log", true, ycmd::log_level_verbose));
 }

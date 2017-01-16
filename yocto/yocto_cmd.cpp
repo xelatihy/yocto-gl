@@ -796,6 +796,37 @@ YCMD_API std::string join_strings(const std::vector<std::string>& strs,
 }
 
 //
+// C-like string formatting
+//
+YCMD_API std::string format_str(const char* fmt, va_list args) {
+    char buffer[1024 * 16];
+    vsprintf(buffer, fmt, args);
+    return buffer;
+}
+
+//
+// C-like string formatting
+//
+YCMD_API std::string format_str(const char* fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+    auto s = format_str(fmt, args);
+    va_end(args);
+    return s;
+}
+
+//
+// C-like string formatting
+//
+YCMD_API std::string format_str(const std::string& fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+    auto s = format_str(fmt.c_str(), args);
+    va_end(args);
+    return s;
+}
+
+//
 // Logger
 //
 struct logger {
@@ -825,7 +856,7 @@ static inline bool _log_skip(logger* lgr, int level) {
 // Get default logger
 //
 YCMD_API std::vector<logger*>* get_default_loggers() {
-    static std::vector<logger*> lgrs = {make_stderr_logger()};
+    static std::vector<logger*> lgrs = {};
     return &lgrs;
 }
 
@@ -857,6 +888,13 @@ YCMD_API logger* make_file_logger(const std::string& filename, bool append,
 //
 YCMD_API logger* make_stderr_logger(int output_level, int flush_level) {
     return _make_stream_logger(stderr, output_level, flush_level);
+}
+
+//
+// Create a stderr logger
+//
+YCMD_API logger* make_stdout_logger(int output_level, int flush_level) {
+    return _make_stream_logger(stdout, output_level, flush_level);
 }
 
 //
@@ -946,6 +984,16 @@ YCMD_API void log_msgf(logger* lgr, int level, const char* name,
 YCMD_API void log_msg(int level, const char* name, const char* msg) {
     for (auto lgr : *get_default_loggers()) {
         log_msg(lgr, level, name, msg);
+    }
+}
+
+//
+// Log a message to the default logger
+//
+YCMD_API void log_msgfv(int level, const char* name, const char* msg,
+                        va_list args) {
+    for (auto lgr : *get_default_loggers()) {
+        log_msgfv(lgr, level, name, msg, args);
     }
 }
 

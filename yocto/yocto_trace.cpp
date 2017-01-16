@@ -154,6 +154,10 @@ struct scene {
     std::vector<material*> materials;        // materials
     std::vector<texture*> textures;          // textures
 
+    // logging callback
+    void* logging_ctx = nullptr;           // logging callback
+    logging_msg_cb logging_msg = nullptr;  // logging message
+
     // destructor
     ~scene();
 
@@ -177,6 +181,17 @@ YTRACE_API scene::~scene() {
         if (env) delete env;
     for (auto light : _lights)
         if (light) delete light;
+}
+
+//
+// Logging shortcut
+//
+static inline void _log(const scene* scn, int level, const char* msg, ...) {
+    if (!scn->logging_msg) return;
+    va_list args;
+    va_start(args, msg);
+    scn->logging_msg(level, "yocto_trace", msg, args);
+    va_end(args);
 }
 
 //
@@ -366,6 +381,15 @@ YTRACE_API void set_intersection_callbacks(scene* scn, void* ctx,
     scn->intersect_ctx = ctx;
     scn->intersect_first = intersect_first;
     scn->intersect_any = intersect_any;
+}
+
+//
+// Sets the logging callbacks
+//
+YTRACE_API void set_logging_callbacks(scene* scn, void* ctx,
+                                      logging_msg_cb logging_msg) {
+    scn->logging_ctx = ctx;
+    scn->logging_msg = logging_msg;
 }
 
 //
@@ -1480,8 +1504,7 @@ using shade_fn = ym::vec4f (*)(const scene* scn, const ym::ray3f& ray,
 YTRACE_API void _trace_block(const scene* scn, int width, int height,
                              ym::vec4f* img, int block_x, int block_y,
                              int block_width, int block_height, int samples_min,
-                             int samples_max, const render_params& params,
-                             bool accumulate) {
+                             int samples_max, const render_params& params) {
     auto cam = scn->cameras[params.camera_id];
     shade_fn shade;
     switch (params.stype) {
@@ -1503,14 +1526,16 @@ YTRACE_API void _trace_block(const scene* scn, int width, int height,
                 auto ray = _eval_camera(cam, uv, _sample_next2f(&smp));
                 auto l = shade(scn, ray, &smp, params);
                 if (!std::isfinite(l[0]) || !std::isfinite(l[1]) ||
-                    !std::isfinite(l[2]))
+                    !std::isfinite(l[2])) {
+                    _log(scn, 2, "NaN detected");
                     continue;
+                }
                 if (params.pixel_clamp > 0)
                     *(ym::vec3f*)&l =
                         ym::clamplen(*(ym::vec3f*)&l, params.pixel_clamp);
                 lp += l;
             }
-            if (accumulate && samples_min > 0) {
+            if (params.progressive && samples_min > 0) {
                 img[j * width + i] =
                     (img[j * width + i] * (float)samples_min + lp) /
                     (float)samples_max;
@@ -1527,11 +1552,9 @@ YTRACE_API void _trace_block(const scene* scn, int width, int height,
 YTRACE_API void trace_block(const scene* scn, int width, int height,
                             float4* pixels, int block_x, int block_y,
                             int block_width, int block_height, int samples_min,
-                            int samples_max, const render_params& params,
-                            bool accumulate) {
+                            int samples_max, const render_params& params) {
     _trace_block(scn, width, height, (ym::vec4f*)pixels, block_x, block_y,
-                 block_width, block_height, samples_min, samples_max, params,
-                 accumulate);
+                 block_width, block_height, samples_min, samples_max, params);
 }
 
 //

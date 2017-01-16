@@ -35,8 +35,10 @@
 ///
 /// USAGE FOR COMMAND LINE PARSING:
 ///
-/// 1. create loggers with make_file_logger() or make_stderr_logger()
-/// 2. you can set default loggers with get_default_loggers()
+/// 1. create loggers with make_file_logger(), make_stderr_logger() ,
+///    make_stdout_logger()
+/// 2. you can set default loggers with get_default_loggers(); note that none
+///    are set by default
 /// 3. write log messages with log_msg() and its variants.
 ///
 /// UTILITIES
@@ -56,6 +58,7 @@
 ///
 ///
 /// HISTORY:
+/// - v 0.9: C-like string formatting
 /// - v 0.8: switch to .h/.cpp pair (templated functions are specialized)
 /// - v 0.7: logging
 /// - v 0.6: doxygen comments
@@ -325,7 +328,7 @@ YCMD_API std::string get_basename(const std::string& filename);
 YCMD_API std::string get_extension(const std::string& filename);
 
 ///
-/// Get filename without directory (equiv to get_basename() + get_dirname().
+/// Get filename without directory (equiv to get_dirname() + get_basename()).
 ///
 YCMD_API std::string get_filename(const std::string& filename);
 
@@ -360,6 +363,22 @@ YCMD_API std::vector<std::string> split_lines(const std::string& str,
 ///
 YCMD_API std::string join_strings(const std::vector<std::string>& strs,
                                   const std::string& sep);
+
+///
+/// C-like string formatting. This is only meant for short strings with max
+/// length 10000 chars. Memory corruption will happen for longer strings.
+///
+YCMD_API std::string format_str(const std::string& fmt, va_list args);
+
+///
+/// C-like string formatting. See format_str(fmt,args);
+///
+YCMD_API std::string format_str(const std::string& fmt, ...);
+
+///
+/// C-like string formatting. See format_str(fmt,args);
+///
+YCMD_API std::string format_str(const char* fmt, ...);
 
 // SIMPLE LOGGING --------------------------------------------------------------
 
@@ -398,14 +417,19 @@ struct logger;
 ///
 YCMD_API logger* make_file_logger(const std::string& filename, bool append,
                                   int output_level = log_level_info,
-                                  int flush_level = log_level_error);
+                                  int flush_level = log_level_info);
 
 ///
 /// Make a stderr logger. See set_logger() for parameters.
 ///
 YCMD_API logger* make_stderr_logger(int output_level = log_level_info,
-                                    int flush_level = log_level_error);
+                                    int flush_level = log_level_info);
 
+///
+/// Make a stderr logger. See set_logger() for parameters.
+///
+YCMD_API logger* make_stdout_logger(int output_level = log_level_info,
+                                    int flush_level = log_level_info);
 ///
 /// Clear a logger
 ///
@@ -467,6 +491,12 @@ YCMD_API void log_msgf(logger* lgr, int level, const char* name,
 ///
 /// Logs a message to the default loggers
 ///
+YCMD_API void log_msgfv(logger* lgr, int level, const char* name,
+                        const char* msg, va_list args);
+
+///
+/// Logs a message to the default loggers
+///
 YCMD_API void log_msg(int level, const std::string& name,
                       const std::string& msg);
 
@@ -474,6 +504,12 @@ YCMD_API void log_msg(int level, const std::string& name,
 /// Logs a message to the default loggers
 ///
 YCMD_API void log_msgf(int level, const char* name, const char* msg, ...);
+
+///
+/// Logs a message to the default loggers
+///
+YCMD_API void log_msgfv(int level, const char* name, const char* msg,
+                        va_list args);
 
 }  // namespace
 
