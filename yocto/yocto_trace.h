@@ -58,6 +58,7 @@
 ///
 ///
 /// HISTORY:
+/// - v 1.11: add progressive sampling to rendering params
 /// - v 0.10: switch to .h/.cpp pair
 /// - v 0.9: doxygen comments
 /// - v 0.8: opaque API (allows for changing internals without altering API)
@@ -106,6 +107,7 @@ namespace ytrace {}
 #endif
 
 #include <array>
+#include <cstdarg>
 #include <functional>
 #include <vector>
 
@@ -382,6 +384,18 @@ YTRACE_API void set_intersection_callbacks(scene* scn, void* ctx,
                                            intersect_any_cb intersect_any);
 
 ///
+/// Logger callback
+///
+using logging_msg_cb = void (*)(int level, const char* name, const char* msg,
+                                va_list args);
+
+///
+/// Logger
+///
+YTRACE_API void set_logging_callbacks(scene* scn, void* ctx,
+                                      logging_msg_cb log);
+
+///
 /// Initialize rendering.
 ///
 /// Parameters:
@@ -425,6 +439,8 @@ struct render_params {
     int camera_id = 0;
     /// number of samples
     int nsamples = 256;
+    /// progressive rendering
+    bool progressive = true;
     /// sampler type
     shader_type stype = shader_type::def;
     /// random number generation type
@@ -455,7 +471,6 @@ struct render_params {
 /// - block_width, block_height: block width and height
 /// - samples_min, samples_max: sample block to render [sample_min, sample_max];
 /// max values are excluded
-/// - accumulate: whether to accumulate the results of subsequent calls.
 ///
 /// Notes: It is safe to call the function in parallel one different blocks.
 /// But two threads should not access the same pixels at the same time.
@@ -465,8 +480,7 @@ struct render_params {
 YTRACE_API void trace_block(const scene* scn, int width, int height,
                             float4* img, int block_x, int block_y,
                             int block_width, int block_height, int samples_min,
-                            int samples_max, const render_params& params,
-                            bool accumulate = false);
+                            int samples_max, const render_params& params);
 
 ///
 /// Convenience function to call trace_block with all sample at once.

@@ -225,6 +225,7 @@ struct params {
 
     // trace
     ytrace::render_params render_params;
+    int save_progressive = 0;  // number of frames at which to save
     int block_size = 32;
     int nthreads = 0;
 

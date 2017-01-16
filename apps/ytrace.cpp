@@ -39,10 +39,16 @@ int main(int argc, char* argv[]) {
                                   true, false, false, false);
 
     // setting up rendering
+    ycmd::log_msgf(ycmd::log_level_info, "ytrace", "loading scene %s",
+                   pars->filename.c_str());
     auto scene = yapp::load_scene(pars->filename, pars->scene_scale);
     if (!pars->envmap_filename.empty())
         yapp::load_envmap(scene, pars->envmap_filename, pars->envmap_scale);
+    ycmd::log_msgf(ycmd::log_level_info, "ytrace", "building bvh",
+                   pars->filename.c_str());
     auto scene_bvh = yapp::make_bvh(scene);
+    ycmd::log_msgf(ycmd::log_level_info, "ytrace", "setting up tracer",
+                   pars->filename.c_str());
     auto trace_scene =
         yapp::make_trace_scene(scene, scene_bvh, pars->render_params.camera_id);
 
@@ -51,6 +57,8 @@ int main(int argc, char* argv[]) {
         cam->aspect = (float)pars->width / (float)pars->height;
 
     // init renderer
+    ycmd::log_msgf(ycmd::log_level_info, "ytrace", "initializing tracer",
+                   pars->filename.c_str());
     ytrace::init_lights(trace_scene);
 
     // allocate image
@@ -58,7 +66,7 @@ int main(int argc, char* argv[]) {
     for (auto i = 0; i < pars->width * pars->height; i++) hdr[i] = {0, 0, 0, 0};
 
     // render
-    ycmd::log_msgf(ycmd::log_level_info, "ytrace", "tracing %s to %s",
+    ycmd::log_msgf(ycmd::log_level_info, "ytrace", "starting renderer",
                    pars->filename.c_str(), pars->imfilename.c_str());
     auto blocks =
         yapp::make_trace_blocks(pars->width, pars->height, pars->block_size);
@@ -68,8 +76,9 @@ int main(int argc, char* argv[]) {
     std::vector<std::future<void>> futures;
     for (auto cur_sample = 0; cur_sample < pars->render_params.nsamples;
          cur_sample++) {
-        ycmd::log_msgf(ycmd::log_level_info, "ytrace", "rendering sample %d/%d",
-                       cur_sample + 1, pars->render_params.nsamples);
+        ycmd::log_msgf(ycmd::log_level_info, "ytrace",
+                       "rendering sample %4d/%d", cur_sample + 1,
+                       pars->render_params.nsamples);
         futures.clear();
         for (auto cur_block = 0; cur_block < blocks.size(); cur_block++) {
             auto block = blocks[cur_block];
@@ -77,14 +86,27 @@ int main(int argc, char* argv[]) {
                 ytrace::trace_block(trace_scene, pars->width, pars->height,
                                     (ytrace::float4*)hdr, block[0], block[1],
                                     block[2], block[3], cur_sample,
-                                    cur_sample + 1, pars->render_params, true);
+                                    cur_sample + 1, pars->render_params);
             }));
         }
         for (auto& future : futures) future.wait();
+        if (pars->save_progressive &&
+            (cur_sample + 1) % pars->save_progressive == 0) {
+            auto imfilename = ycmd::get_dirname(pars->imfilename) +
+                              ycmd::get_basename(pars->imfilename) +
+                              ycmd::format_str(".%04d", cur_sample + 1) +
+                              ycmd::get_extension(pars->imfilename);
+            ycmd::log_msgf(ycmd::log_level_info, "ytrace", "saving image %s",
+                           imfilename.c_str());
+            yapp::save_image(imfilename, pars->width, pars->height, hdr,
+                             pars->exposure, pars->gamma, pars->srgb);
+        }
     }
     ycmd::log_msgf(ycmd::log_level_info, "ytrace", "rendering done");
 
     // save image
+    ycmd::log_msgf(ycmd::log_level_info, "ytrace", "saving image %s",
+                   pars->imfilename.c_str());
     yapp::save_image(pars->imfilename, pars->width, pars->height, hdr,
                      pars->exposure, pars->gamma, pars->srgb);
 

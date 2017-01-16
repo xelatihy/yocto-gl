@@ -242,7 +242,7 @@ bool update(state* st) {
                                     (ytrace::float4*)st->hdr.data(), block[0],
                                     block[1], block[2], block[3],
                                     st->cur_sample, st->cur_sample + 1,
-                                    pars->render_params, true);
+                                    pars->render_params);
                 ym::exposure_gamma(
                     pars->width, pars->height, 4, (const float*)st->hdr.data(),
                     (unsigned char*)st->ldr.data(), pars->exposure, pars->gamma,
@@ -272,6 +272,19 @@ bool update(state* st) {
         }
         if (st->cur_block == st->blocks.size()) {
             st->cur_block = 0;
+            if (st->pars->save_progressive &&
+                (st->cur_sample + 1) % pars->save_progressive == 0) {
+                auto imfilename =
+                    ycmd::get_dirname(pars->imfilename) +
+                    ycmd::get_basename(pars->imfilename) +
+                    ycmd::format_str(".%04d", st->cur_sample + 1) +
+                    ycmd::get_extension(pars->imfilename);
+                ycmd::log_msgf(ycmd::log_level_info, "ytrace",
+                               "saving image %s", imfilename.c_str());
+                yapp::save_image(imfilename, pars->width, pars->height,
+                                 st->hdr.data(), pars->exposure, pars->gamma,
+                                 pars->srgb);
+            }
             st->cur_sample++;
         }
     }
