@@ -149,7 +149,7 @@ void draw_widgets(GLFWwindow* window) {
                  NK_WINDOW_BORDER | NK_WINDOW_MOVABLE | NK_WINDOW_SCALABLE |
                      NK_WINDOW_MINIMIZABLE | NK_WINDOW_TITLE)) {
         nk_layout_row_dynamic(nuklear_ctx, 30, 1);
-        nk_label(nuklear_ctx, pars->filename.c_str(), NK_TEXT_LEFT);
+        nk_label(nuklear_ctx, pars->filenames[0].c_str(), NK_TEXT_LEFT);
         nk_layout_row_dynamic(nuklear_ctx, 30, 3);
         nk_value_int(nuklear_ctx, "w", pars->width);
         nk_value_int(nuklear_ctx, "h", pars->height);
@@ -329,7 +329,7 @@ void run_ui(state* st) {
         mouse_pos = yui::mouse_pos(window);
         mouse_button = yui::mouse_button(window);
 
-        glfwSetWindowTitle(window, ("ytrace | " + pars->filename + " | " +
+        glfwSetWindowTitle(window, ("ytrace | " + pars->filenames[0] + " | " +
                                     std::to_string(pars->width) + "x" +
                                     std::to_string(pars->height) + "@" +
                                     std::to_string(st->cur_sample))
@@ -387,9 +387,7 @@ int main(int argc, char* argv[]) {
     st->pars = pars;
 
     // setting up rendering
-    st->scene = yapp::load_scene(pars->filename, pars->scene_scale);
-    if (!pars->envmap_filename.empty())
-        yapp::load_envmap(st->scene, pars->envmap_filename, pars->envmap_scale);
+    st->scene = yapp::load_scenes(pars->filenames, pars->scene_scale);
     st->scene_bvh = yapp::make_bvh(st->scene);
     st->trace_scene = yapp::make_trace_scene(st->scene, st->scene_bvh,
                                              pars->render_params.camera_id);

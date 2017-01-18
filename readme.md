@@ -1,12 +1,11 @@
 # Yocto/GL: C/C++ Single File Libraries for Physically-Based Graphics
 
-![Travis Build Status](https://travis-ci.org/xelatihy/yocto-gl.svg?branch=master)
-![AppVeyor Build status](https://ci.appveyor.com/api/projects/status/4ac90yy5q4a0a9fg?svg=true)
-
 Yocto/GL is a collection of single-file libraries, or single .h/.cpp pairs,
 for building physically-based graphics applications.
 Yocto/GL is written in C++ and compiles on OSX (clang), Linux (clang/gcc)
 and Windows (cl).
+You can use Yocto/GL as either a header-only library, for simplicity, or
+.h/.cpp pairs, to rduce code bloat and compile time.
 
 ## Main Libraries
 
@@ -50,6 +49,25 @@ A few screenshots from **ytrace** are included here for demonstration.
 A screenshotted movie from **ysym** is included here for demonstration.
 
 ![](images/rb02.ysym.gif)
+
+### Building
+
+You can build the non-interactive example apps using [cmake](http://cmake.org)
+with
+
+    mkdir cmake
+    cd cmake
+    cmake ..\apps
+    make -j4        # linux/OSX
+    msbuild         # Windows
+
+The interactive apps use OpenGL, GLFW and GLEW. We include binaries for Windows,
+but you have to install the libraries youself on Linux (we use `apt-get`)
+and OSX (we use [homebrew](http://brew.sh)). After installing these libraries,
+you can include these examples in the build by changing the cmake line above
+with
+
+    cmake -DBUILD_OPENGL_APPS=ON ..\apps
 
 ## Brief Development History
 

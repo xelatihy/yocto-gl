@@ -481,23 +481,24 @@ inline scene* load_ply_scene(const std::string& filename) {
         throw;
     }
 
+    // create material
+    auto mat = new material();
+    mat->name = "default";
+    mat->ke = {0, 0, 0};
+    mat->kd = (sh->kd.empty()) ? float3{0.8f, 0.8f, 0.8f} : float3{1, 1, 1};
+    mat->ks = (sh->ks.empty()) ? float3{0.04f, 0.04f, 0.04f} : float3{1, 1, 1};
+    mat->rs = (sh->rs.empty()) ? 0.1f : 1.0f;
+    mat->ke_txt = -1;
+    mat->kd_txt = -1;
+    mat->ks_txt = -1;
+    mat->rs_txt = -1;
+
     // init scene
     auto sc = std::unique_ptr<scene>(new scene());
 
     // set shape
     sc->shapes.push_back(sh.release());
-
-    // create material
-    auto mat = new material();
-    mat->name = "default";
-    mat->ke = {0, 0, 0};
-    mat->kd = {1, 1, 1};
-    mat->ks = {1, 1, 1};
-    mat->rs = 0.1f;
-    mat->ke_txt = -1;
-    mat->kd_txt = -1;
-    mat->ks_txt = -1;
-    mat->rs_txt = -1;
+    // set material
     sc->materials.push_back(mat);
 
     // done
@@ -519,9 +520,90 @@ void save_scene(const std::string& filename, const scene* sc) {
 }
 
 //
+// Create a default camera
+//
+void add_default_camera(scene* sc) {
+    // find scene bounds
+    auto bbox = ym::invalid_bbox3f;
+    for (auto sh : sc->shapes) {
+        for (auto p : sh->pos)
+            bbox += ym::transform_point((ym::frame3f)sh->frame, (ym::vec3f)p);
+    }
+    auto center = ym::center(bbox);
+    auto bbox_size = ym::diagonal(bbox);
+    auto bbox_msize =
+        ym::max(bbox_size[0], ym::max(bbox_size[1], bbox_size[2]));
+    // create camera
+    auto cam = new yapp::camera();
+    // set up camera
+    auto camera_dir = ym::vec3f{1, 0.4f, 1};
+    auto from = camera_dir * bbox_msize + center;
+    auto to = center;
+    auto up = ym::vec3f{0, 1, 0};
+    cam->frame = ym::lookat_frame3(from, to, up);
+    cam->ortho = false;
+    cam->aspect = 16.0f / 9.0f;
+    cam->yfov = 2 * atan(0.5f);
+    cam->aperture = 0;
+    cam->focus = ym::length(to - from);
+    sc->cameras.push_back(cam);
+}
+
+void fix_cameras(scene* sc) {
+    if (sc->cameras.empty()) return;
+    auto bbox = ym::invalid_bbox3f;
+    for (auto sh : sc->shapes) {
+        for (auto p : sh->pos)
+            bbox += ym::transform_point((ym::frame3f)sh->frame, (ym::vec3f)p);
+    }
+    for (auto cam : sc->cameras) {
+        if (!cam->focus) {
+            auto ddir =
+                ym::dot((ym::vec3f)cam->frame[2],
+                        ym::center(bbox) - ym::pos((ym::frame3f)cam->frame));
+            cam->focus = (ddir > 0) ? 1 : -ddir;
+        }
+    }
+}
+
+//
+// Merge a scene into another
+//
+void merge_scenes(scene* sc, const scene* sc1) {
+    for (auto cam : sc1->cameras) {
+        sc->cameras.push_back(new camera(*cam));
+    }
+    auto txtoff = (int)sc->textures.size();
+    for (auto txt : sc1->textures) {
+        sc->textures.push_back(new texture(*txt));
+    }
+    auto matoff = (int)sc->materials.size();
+    for (auto mat : sc1->materials) {
+        sc->materials.push_back(new material(*mat));
+        if (sc->materials.back()->ke_txt >= 0)
+            sc->materials.back()->ke_txt += txtoff;
+        if (sc->materials.back()->kd_txt >= 0)
+            sc->materials.back()->kd_txt += txtoff;
+        if (sc->materials.back()->ks_txt >= 0)
+            sc->materials.back()->ks_txt += txtoff;
+        if (sc->materials.back()->rs_txt >= 0)
+            sc->materials.back()->rs_txt += txtoff;
+    }
+    for (auto shp : sc1->shapes) {
+        sc->shapes.push_back(new shape(*shp));
+        if (sc->shapes.back()->matid >= 0) sc->shapes.back()->matid += matoff;
+    }
+    for (auto env : sc1->environments) {
+        sc->environments.push_back(new environment(*env));
+        if (sc->environments.back()->matid >= 0)
+            sc->environments.back()->matid += matoff;
+    }
+}
+
+//
 // Load scene
 //
-scene* load_scene(const std::string& filename, float scale) {
+scene* load_scene(const std::string& filename, float scale, bool add_camera) {
     // declare scene
     auto sc = std::unique_ptr<scene>();
 
@@ -581,48 +663,46 @@ scene* load_scene(const std::string& filename, float scale) {
     }
 
     // make camera if not there
-    if (!sc->cameras.size()) {
-        // find scene bounds
-        auto bbox = ym::invalid_bbox3f;
-        for (auto sh : sc->shapes) {
-            for (auto p : sh->pos)
-                bbox +=
-                    ym::transform_point((ym::frame3f)sh->frame, (ym::vec3f)p);
+    if (add_camera && sc->cameras.empty()) add_default_camera(sc.get());
+
+    // fix cameras
+    fix_cameras(sc.get());
+
+    return sc.release();
+}
+
+//
+// Load multiple scenes
+//
+scene* load_scenes(const std::vector<std::string>& filenames, float scale,
+                   bool add_camera) {
+    // skip if not necessary
+    if (filenames.size() == 0) return nullptr;
+    if (filenames.size() == 1)
+        return load_scene(filenames[0], scale, add_camera);
+
+    // declare scene
+    auto sc = std::unique_ptr<scene>(load_scene(filenames[0], scale, false));
+
+    // merge each scene
+    auto first = true;
+    for (auto filename : filenames) {
+        // check first
+        if (first) {
+            first = false;
+            continue;
         }
-        auto center = ym::center(bbox);
-        auto bbox_size = ym::diagonal(bbox);
-        auto bbox_msize =
-            ym::max(bbox_size[0], ym::max(bbox_size[1], bbox_size[2]));
-        // create camera
-        auto cam = new yapp::camera();
-        // set up camera
-        auto camera_dir = ym::vec3f{1, 0.4f, 1};
-        auto from = camera_dir * bbox_msize + center;
-        auto to = center;
-        auto up = ym::vec3f{0, 1, 0};
-        cam->frame = ym::lookat_frame3(from, to, up);
-        cam->ortho = false;
-        cam->aspect = 16.0f / 9.0f;
-        cam->yfov = 2 * atan(0.5f);
-        cam->aperture = 0;
-        cam->focus = ym::length(to - from);
-        sc->cameras.push_back(cam);
-    } else {
-        auto bbox = ym::invalid_bbox3f;
-        for (auto sh : sc->shapes) {
-            for (auto p : sh->pos)
-                bbox +=
-                    ym::transform_point((ym::frame3f)sh->frame, (ym::vec3f)p);
-        }
-        for (auto cam : sc->cameras) {
-            if (!cam->focus) {
-                auto ddir = ym::dot((ym::vec3f)cam->frame[2],
-                                    ym::center(bbox) -
-                                        ym::pos((ym::frame3f)cam->frame));
-                cam->focus = (ddir > 0) ? 1 : -ddir;
-            }
-        }
+        // load scene
+        auto sc1 = std::unique_ptr<scene>(load_scene(filename, scale, false));
+        // merge it
+        merge_scenes(sc.get(), sc1.get());
     }
+
+    // make camera if not there
+    if (add_camera && sc->cameras.empty()) add_default_camera(sc.get());
+
+    // fix cameras
+    fix_cameras(sc.get());
 
     return sc.release();
 }
@@ -635,8 +715,10 @@ void load_envmap(scene* scn, const std::string& filename, float scale) {
     // texture
     auto txt = new texture();
     txt->path = filename;
+    stbi_set_flip_vertically_on_load(1);
     auto pixels =
         stbi_loadf(filename.c_str(), &txt->width, &txt->height, &txt->ncomp, 0);
+    stbi_set_flip_vertically_on_load(0);
     txt->hdr.assign(pixels, pixels + txt->width * txt->height * txt->ncomp);
     free(pixels);
     scn->textures.push_back(txt);
@@ -829,39 +911,6 @@ ytrace::scene* make_trace_scene(const yapp::scene* scene,
     return trace_scene;
 }
 
-#if 0
-ybvh::scene* make_bvh(const yapp::scene* scene) {
-    auto scene_bvh = ybvh::make_scene((int)scene->shapes.size());
-    auto sid = 0;
-    for (auto shape : scene->shapes) {
-        if (!shape->points.empty()) {
-            ybvh::set_point_shape(scene_bvh, sid++, shape->frame,
-                                  (int)shape->points.size(),
-                                  shape->points.data(), (int)shape->pos.size(),
-                                  shape->pos.data(), shape->radius.data());
-        } else if (!shape->lines.empty()) {
-            ybvh::set_line_shape(scene_bvh, sid++, shape->frame,
-                                 (int)shape->lines.size(), shape->lines.data(),
-                                 (int)shape->pos.size(), shape->pos.data(),
-                                 shape->radius.data());
-
-        } else if (!shape->triangles.empty()) {
-            ybvh::set_triangle_shape(
-                scene_bvh, sid++, shape->frame, (int)shape->triangles.size(),
-                shape->triangles.data(), (int)shape->pos.size(),
-                shape->pos.data(), shape->radius.data());
-
-        } else {
-            ybvh::set_point_shape(scene_bvh, sid++, shape->frame,
-                                  (int)shape->pos.size(), shape->pos.data(),
-                                  shape->radius.data());
-        }
-    }
-    ybvh::build_bvh(scene_bvh);
-    return scene_bvh;
-}
-#endif
-
 ysym::scene* make_rigid_scene(const yapp::scene* scene,
                               ybvh::scene* scene_bvh) {
     // allocate scene
@@ -941,6 +990,7 @@ params* init_params(const std::string& help, int argc, char** argv,
         {"default", (int)ytrace::shader_type::def},
         {"eye", (int)ytrace::shader_type::eyelight},
         {"direct", (int)ytrace::shader_type::direct},
+        {"direct_ao", (int)ytrace::shader_type::direct_ao},
         {"path", (int)ytrace::shader_type::pathtrace}};
 
     // parser
@@ -963,10 +1013,6 @@ params* init_params(const std::string& help, int argc, char** argv,
                                     "image resolution", 720);
         pars->render_params.camera_id =
             ycmd::parse_opti(parser, "--camera", "-C", "camera", 0);
-        pars->envmap_filename = ycmd::parse_opts(parser, "--envmap_filename",
-                                                 "", "environment map", "");
-        pars->envmap_scale = ycmd::parse_optf(parser, "--envmap_scale", "",
-                                              "environment map scale", 1);
         pars->save_progressive =
             ycmd::parse_opti(parser, "--save_progressive", "",
                              "frames to save progressive images", 0);
@@ -994,6 +1040,8 @@ params* init_params(const std::string& help, int argc, char** argv,
         pars->render_params.stype = (ytrace::shader_type)ycmd::parse_opte(
             parser, "--integrator", "-i", "integrator type",
             (int)ytrace::shader_type::def, stype_names);
+        pars->render_params.envmap_invisible = ycmd::parse_flag(
+            parser, "--envmap_invisible", "", "envmap invisible");
         auto camera_lights = ycmd::parse_flag(parser, "--camera_lights", "-c",
                                               "enable camera lights", false);
         pars->nthreads = ycmd::parse_opti(
@@ -1029,8 +1077,8 @@ params* init_params(const std::string& help, int argc, char** argv,
         ycmd::parse_optf(parser, "--scale", "", "scale scene", 1.0f);
     pars->imfilename =
         ycmd::parse_opts(parser, "--output", "-o", "image filename", "out.hdr");
-    pars->filename =
-        ycmd::parse_args(parser, "scene", "scene filename", "", true);
+    pars->filenames =
+        ycmd::parse_argas(parser, "scene", "scene filename", {}, -1, true);
 
     // check parsing
     ycmd::check_parser(parser);

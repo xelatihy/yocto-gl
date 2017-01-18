@@ -40,15 +40,10 @@ int main(int argc, char* argv[]) {
 
     // setting up rendering
     ycmd::log_msgf(ycmd::log_level_info, "ytrace", "loading scene %s",
-                   pars->filename.c_str());
-    auto scene = yapp::load_scene(pars->filename, pars->scene_scale);
-    if (!pars->envmap_filename.empty())
-        yapp::load_envmap(scene, pars->envmap_filename, pars->envmap_scale);
-    ycmd::log_msgf(ycmd::log_level_info, "ytrace", "building bvh",
-                   pars->filename.c_str());
+                   pars->filenames[0].c_str());
+    auto scene = yapp::load_scenes(pars->filenames, pars->scene_scale);
     auto scene_bvh = yapp::make_bvh(scene);
-    ycmd::log_msgf(ycmd::log_level_info, "ytrace", "setting up tracer",
-                   pars->filename.c_str());
+    ycmd::log_msgf(ycmd::log_level_info, "ytrace", "setting up tracer");
     auto trace_scene =
         yapp::make_trace_scene(scene, scene_bvh, pars->render_params.camera_id);
 
@@ -57,8 +52,7 @@ int main(int argc, char* argv[]) {
         cam->aspect = (float)pars->width / (float)pars->height;
 
     // init renderer
-    ycmd::log_msgf(ycmd::log_level_info, "ytrace", "initializing tracer",
-                   pars->filename.c_str());
+    ycmd::log_msgf(ycmd::log_level_info, "ytrace", "initializing tracer");
     ytrace::init_lights(trace_scene);
 
     // allocate image
@@ -66,8 +60,7 @@ int main(int argc, char* argv[]) {
     for (auto i = 0; i < pars->width * pars->height; i++) hdr[i] = {0, 0, 0, 0};
 
     // render
-    ycmd::log_msgf(ycmd::log_level_info, "ytrace", "starting renderer",
-                   pars->filename.c_str(), pars->imfilename.c_str());
+    ycmd::log_msgf(ycmd::log_level_info, "ytrace", "starting renderer");
     auto blocks =
         yapp::make_trace_blocks(pars->width, pars->height, pars->block_size);
     auto pool =

@@ -2,7 +2,7 @@ cmake_minimum_required (VERSION 3.5)
 
 project (yocto)
 
-option(BUILD_OPENGL_APPS "Build OpenGL apps" ON)
+option(BUILD_OPENGL_APPS "Build OpenGL apps" OFF)
 
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED on)
