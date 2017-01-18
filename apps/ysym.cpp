@@ -34,7 +34,7 @@ int main(int argc, char* argv[]) {
                                   argv, false, true, false, false);
 
     // setting up rendering
-    auto scene = yapp::load_scene(pars->filename, pars->scene_scale);
+    auto scene = yapp::load_scenes(pars->filenames, pars->scene_scale);
     auto scene_bvh = yapp::make_bvh(scene);
     auto rigid_scene = yapp::make_rigid_scene(scene, scene_bvh);
 
@@ -42,7 +42,7 @@ int main(int argc, char* argv[]) {
     ysym::init_simulation(rigid_scene);
 
     // simulate each frame and save the results to a new scene
-    printf("rigid body simulation for %s to %s\n", pars->filename.c_str(),
+    printf("rigid body simulation for %s to %s\n", pars->filenames[0].c_str(),
            pars->outfilename.c_str());
     printf("simulating ...");
     for (auto i = 0; i < pars->nframes; i++) {

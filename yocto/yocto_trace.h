@@ -413,6 +413,8 @@ enum struct shader_type {
     eyelight,
     /// direct illumination
     direct,
+    /// direct illumination with ambient occlusion
+    direct_ao,
     /// pathtrace
     pathtrace,
 };
@@ -447,6 +449,8 @@ struct render_params {
     rng_type rtype = rng_type::def;
     /// ambient lighting
     float3 amb = {0, 0, 0};
+    /// view environment map
+    bool envmap_invisible = false;
     /// minimum ray depth
     int min_depth = 3;
     /// maximum ray depth
@@ -454,7 +458,7 @@ struct render_params {
     /// final pixel clamping
     float pixel_clamp = 100;
     /// ray intersection epsilon
-    float ray_eps = 1e-2f;
+    float ray_eps = 1e-4f;
 };
 
 ///

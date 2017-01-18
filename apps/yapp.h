@@ -161,7 +161,14 @@ const int* get_elems(const shape& shape);
 //
 // Load scene
 //
-scene* load_scene(const std::string& filename, float scale);
+scene* load_scene(const std::string& filename, float scale,
+                  bool add_camera = true);
+
+//
+// Load scene
+//
+scene* load_scenes(const std::vector<std::string>& filenames, float scale,
+                   bool add_camera = true);
 
 //
 // Loads an envmap for the scene
@@ -208,12 +215,8 @@ void simulate_step(yapp::scene* scene, ysym::scene* rigid_scene, float dt);
 
 struct params {
     // scene/image
-    std::string filename;
+    std::vector<std::string> filenames;
     float scene_scale = 1;
-
-    // lighting params
-    std::string envmap_filename;
-    float envmap_scale = 0;
 
     // render
     std::string imfilename;

@@ -33,6 +33,8 @@
 // TODO: consider removing std::vector and using a simple array
 // TODO: check MIS skip
 // TODO: add non-MIS option for direct illumination
+// BUG: check recursive pathtraced environment map
+// BUG: check __sample_brdf at if (rnl >= wd && rnl < wd + ws) {
 //
 
 #include <cassert>
@@ -1006,7 +1008,8 @@ static inline ym::vec3f _sample_brdfcos(const point& pt, float rnl,
             }
 
             // sample according to specular (GGX or Phong)
-            if (rnl >= wd && rnl < wd + ws) {
+            else {
+                // if (rnl >= wd && rnl < wd + ws) {
                 if (!pt.use_phong) {
                     // sample wh with ggx distribution
                     auto tan2 = pt.rs * pt.rs * rn[1] / (1 - rn[1]);
@@ -1034,6 +1037,8 @@ static inline ym::vec3f _sample_brdfcos(const point& pt, float rnl,
                     return ym::normalize(wh * 2.0f * ym::dot(wo, wh) - wo);
                 }
             }
+
+            assert(false);
         } break;
         default: { assert(false); }
     }
@@ -1387,6 +1392,8 @@ static inline ym::vec4f _shade_pathtrace_recd(const scene* scn,
     // scn intersection
     auto pt = _intersect_scene(scn, ray);
     if (pt.ptype == point::type::none) return ym::zero4f;
+    if (pt.ptype == point::type::env && params.envmap_invisible)
+        return ym::zero4f;
 
     // init
     auto la = ym::vec4f{0, 0, 0, 1};
@@ -1444,6 +1451,8 @@ static inline ym::vec4f _shade_direct(const scene* scn, const ym::ray3f& ray,
     // scn intersection
     auto pt = _intersect_scene(scn, ray);
     if (pt.ptype == point::type::none) return ym::zero4f;
+    if (pt.ptype == point::type::env && params.envmap_invisible)
+        return ym::zero4f;
 
     // init
     auto la = ym::vec4f{0, 0, 0, 1};
@@ -1469,6 +1478,54 @@ static inline ym::vec4f _shade_direct(const scene* scn, const ym::ray3f& ray,
 }
 
 //
+// Direct illuination.
+//
+static inline ym::vec4f _shade_direct_ao(const scene* scn, const ym::ray3f& ray,
+                                         _sampler* smp,
+                                         const render_params& params) {
+    // scn intersection
+    auto pt = _intersect_scene(scn, ray);
+    if (pt.ptype == point::type::none) return ym::zero4f;
+    if (pt.ptype == point::type::env && params.envmap_invisible)
+        return ym::zero4f;
+
+    // init
+    auto la = ym::vec4f{0, 0, 0, 1};
+    auto& l = *(ym::vec3f*)la.data();
+
+    // emission
+    l += _eval_emission(pt);
+    if (pt.ptype == point::type::env) return la;
+
+    // early exit
+    if (pt.kd == ym::zero3f && pt.ks == ym::zero3f) return la;
+
+    // ambient with ao
+    if (!(params.amb == ym::zero3f)) {
+        // sample wi with hemispherical cosine distribution
+        auto rn = _sample_next2f(smp);
+        auto rz = std::sqrt(rn[1]), rr = std::sqrt(1 - rz * rz),
+             rphi = 2 * ym::pif * rn[0];
+        // set to wi
+        auto wi_local = ym::vec3f{rr * std::cos(rphi), rr * std::sin(rphi), rz};
+        auto w = transform_direction(pt.frame, wi_local);
+        auto shadow_ray = ym::ray3f(pt.frame[3] + pt.frame[2] * params.ray_eps,
+                                    w, params.ray_eps);
+        if (!scn->intersect_any(scn->intersect_ctx, shadow_ray.o, shadow_ray.d,
+                                shadow_ray.tmin, shadow_ray.tmax))
+            l += (ym::vec3f)params.amb * pt.kd;
+    }
+
+    // direct
+    for (int lid = 0; lid < scn->_lights.size(); lid++) {
+        l += _eval_direct(scn, lid, pt, smp, params);
+    }
+
+    // done
+    return la;
+}
+
+//
 // Eyelight for quick previewing.
 //
 static inline ym::vec4f _shade_eyelight(const scene* scn, const ym::ray3f& ray,
@@ -1477,6 +1534,8 @@ static inline ym::vec4f _shade_eyelight(const scene* scn, const ym::ray3f& ray,
     // intersection
     point pt = _intersect_scene(scn, ray);
     if (pt.ptype == point::type::none) return ym::zero4f;
+    if (pt.ptype == point::type::env && params.envmap_invisible)
+        return ym::zero4f;
 
     // init
     auto la = ym::vec4f{0, 0, 0, 1};
@@ -1512,6 +1571,7 @@ YTRACE_API void _trace_block(const scene* scn, int width, int height,
         case shader_type::def:
         case shader_type::direct: shade = _shade_direct; break;
         case shader_type::pathtrace: shade = _shade_pathtrace; break;
+        case shader_type::direct_ao: shade = _shade_direct_ao; break;
         default: assert(false); return;
     }
     for (auto j = block_y; j < block_y + block_height; j++) {

@@ -314,7 +314,7 @@ void draw_widgets(GLFWwindow* window) {
                  NK_WINDOW_BORDER | NK_WINDOW_MOVABLE | NK_WINDOW_SCALABLE |
                      NK_WINDOW_MINIMIZABLE | NK_WINDOW_TITLE)) {
         nk_layout_row_dynamic(nuklear_ctx, 30, 1);
-        nk_label(nuklear_ctx, pars->filename.c_str(), NK_TEXT_LEFT);
+        nk_label(nuklear_ctx, pars->filenames[0].c_str(), NK_TEXT_LEFT);
         nk_layout_row_dynamic(nuklear_ctx, 30, 2);
         nk_value_int(nuklear_ctx, "frame", st->frame);
         nk_property_float(nuklear_ctx, "dt", 0, &pars->dt, 1, 1 / 240.0f,
@@ -403,7 +403,7 @@ void run_ui(state* st) {
         mouse_pos = yui::mouse_pos(window);
         mouse_button = yui::mouse_button(window);
 
-        glfwSetWindowTitle(window, ("yshade | " + pars->filename).c_str());
+        glfwSetWindowTitle(window, ("yshade | " + pars->filenames[0]).c_str());
 
         // handle mouse
         if (mouse_button && mouse_pos != mouse_last &&
@@ -464,7 +464,7 @@ int main(int argc, char* argv[]) {
     st->pars = pars;
 
     // setting up rendering
-    st->scene = yapp::load_scene(pars->filename, pars->scene_scale);
+    st->scene = yapp::load_scenes(pars->filenames, pars->scene_scale);
     st->scene_bvh = yapp::make_bvh(st->scene);
     st->rigid_scene = yapp::make_rigid_scene(st->scene, st->scene_bvh);
 
