@@ -8,6 +8,11 @@
 /// - KHR_materials_common (draft); this will be updated to the new draft soon
 /// - KHR_binary_glTF
 ///
+/// This library will track the spec which is not only a draft. So expect
+/// incompatibilities as the draft evolves. For example, top level dictionaries
+/// have move to arrays and PBR is in the core. The library gets updated every
+/// time a new draft is avaiable.
+///
 ///
 /// USAGE FOR READING:
 ///
