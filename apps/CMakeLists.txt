@@ -93,6 +93,8 @@ add_executable(ytestgen ../apps/ytestgen.cpp)
 add_executable(ytrace ../apps/ytrace.cpp)
 add_executable(yobj2gltf ../apps/yobj2gltf.cpp)
 
+add_executable(yimproc ../apps/yimproc.cpp)
+
 target_link_libraries(ysym yocto app)
 target_link_libraries(ytestgen yocto app)
 target_link_libraries(ytrace yocto app)
