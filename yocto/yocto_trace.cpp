@@ -1066,16 +1066,14 @@ static inline point _eval_envpoint(const environment* env,
     pt.ke = env->ke;
 
     // textures
-    if (env->ke_txt >= 0) {
+    if (env->ke_txt) {
         auto w = ym::transform_direction(ym::inverse(env->frame), -wo);
         auto theta =
             1 - (std::acos(ym::clamp(w[1], (float)-1, (float)1)) / ym::pif);
         auto phi = std::atan2(w[2], w[0]) / (2 * ym::pif);
         auto texcoord = ym::vec2f{phi, theta};
-        if (env->ke_txt) {
-            auto txt = _eval_texture(env->ke_txt, texcoord);
-            pt.ke = ym::lerp(pt.ke, {txt[0], txt[1], txt[2]}, txt[3]);
-        }
+        auto txt = _eval_texture(env->ke_txt, texcoord);
+        pt.ke = ym::lerp(pt.ke, {txt[0], txt[1], txt[2]}, txt[3]);
     }
 
     // done
@@ -1428,7 +1426,7 @@ static inline ym::vec4f _shade_pathtrace_recd(const scene* scn,
     if (bbrdfcos == ym::zero3f) return la;
     auto ble = _shade_pathtrace_recd(scn, _offset_ray(scn, pt, bwi, params),
                                      smp, ray_depth + 1, params);
-    l += ym::vec3f{ble[0], ble[1], ble[2]} * bbrdfcos * rrweight;
+    l += ym::vec3f{ble[0], ble[1], ble[2]} * bbrdfcos * bweight * rrweight;
 
     return la;
 }

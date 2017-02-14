@@ -72,7 +72,7 @@ YCMD_API parser* make_parser(const std::vector<std::string>& args,
     par->exit_on_error = true;
     par->help_prog = args[0];
     par->help_usage += help;
-    par->print_help = parse_flag(par, "--help", "-h", "print help", false);
+    par->print_help = parse_flag(par, "--help", "-?", "print help", false);
     return par;
 }
 
@@ -161,30 +161,15 @@ static inline void _check_name(parser* par, const std::string& longname,
 //
 // Convert a type to std::string
 //
-template <typename T>
-static inline std::string _typename() {
-    return "";
-}
-template <>
-inline std::string _typename<bool>() {
-    return "bool";
-}
-template <>
-inline std::string _typename<int>() {
-    return "int";
-}
-template <>
-inline std::string _typename<float>() {
-    return "float";
-}
-template <>
-inline std::string _typename<double>() {
-    return "double";
-}
-template <>
-inline std::string _typename<std::string>() {
-    return "std::string";
-}
+static inline std::string _typename(bool) { return "bool"; }
+static inline std::string _typename(int) { return "int"; }
+static inline std::string _typename(float) { return "float"; }
+static inline std::string _typename(double) { return "double"; }
+static inline std::string _typename(const std::string&) { return "string"; }
+// template <typename T>
+// static inline std::string _typename(const std::vector<T>&) {
+//     return "";
+// }
 
 //
 // Converts a value to a std::string
@@ -209,10 +194,13 @@ static inline void _add_help(parser* par, const std::string& longname,
                              const std::string& help, bool opt, bool req,
                              int nargs, const std::vector<T>& def,
                              const std::vector<T>& choices = {}) {
+    // dummy variable for function overload
+    T _dummy = {};
+
     // full name
     auto help_fullname = longname;
     if (!shortname.empty()) help_fullname += "/" + shortname;
-    if (nargs != 0) help_fullname += " " + _typename<T>();
+    if (nargs != 0) help_fullname += " " + _typename(_dummy);
 
     // default
     auto help_def = std::string();
@@ -733,6 +721,23 @@ YCMD_API std::string get_filename(const std::string& filename) {
 }
 
 //
+// Replace extension.
+//
+YCMD_API std::string replace_extension(const std::string& filename,
+                                       const std::string& ext) {
+    return get_dirname(filename) + get_basename(filename) + ext;
+}
+
+///
+/// Prepend a string to the extension.
+///
+YCMD_API std::string prepend_extension(const std::string& filename,
+                                       const std::string& prep) {
+    return get_dirname(filename) + get_basename(filename) + prep +
+           get_extension(filename);
+}
+
+//
 // Splits a path. Public interface.
 //
 YCMD_API void split_path(const std::string& filename, std::string& dirname,
@@ -1025,7 +1030,7 @@ YCMD_API void run_test() {
 
     // test exit on help
     auto test1_argc = 2;
-    const char* test1_argv[] = {"test1", "-h"};
+    const char* test1_argv[] = {"test1", "--help"};
     auto par1 = ycmd::make_parser(test1_argc, (char**)test1_argv, "test1");
     par1->exit_on_error = false;
     assert(check_parser(par1) == true);

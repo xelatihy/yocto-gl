@@ -43,7 +43,8 @@
 ///
 /// UTILITIES
 ///
-/// 1. filename splitting with get_dirname(), get_basename(), get_extension()
+/// 1. filename splitting with get_dirname(), get_basename(), get_extension(),
+///    split_path(), replace_extension(), prepend_extension()
 /// 2. loading entire files with load_txtfile() and load_binfile()
 /// 3. string manipulation with split_lines()
 ///
@@ -58,6 +59,8 @@
 ///
 ///
 /// HISTORY:
+/// - v 0.11: added a few more path utilities
+/// - v 0.10: changed default name for help option; better help printing
 /// - v 0.9: C-like string formatting
 /// - v 0.8: switch to .h/.cpp pair (templated functions are specialized)
 /// - v 0.7: logging
@@ -328,9 +331,21 @@ YCMD_API std::string get_basename(const std::string& filename);
 YCMD_API std::string get_extension(const std::string& filename);
 
 ///
-/// Get filename without directory (equiv to get_dirname() + get_basename()).
+/// Get filename without directory (equiv to get_basename() + get_extension()).
 ///
 YCMD_API std::string get_filename(const std::string& filename);
+
+///
+/// Replace extension.
+///
+YCMD_API std::string replace_extension(const std::string& filename,
+                                       const std::string& ext);
+
+///
+/// Prepend a string to the extension.
+///
+YCMD_API std::string prepend_extension(const std::string& filename,
+                                       const std::string& prep);
 
 ///
 /// Splits a path calling the above functions.
