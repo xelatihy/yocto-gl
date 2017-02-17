@@ -124,7 +124,7 @@ void shade_scene(const yapp::scene* sc, int cur_camera, uint prog, uint vao,
         for (auto shape : sc->shapes) {
             if (shape->matid < 0) continue;
             auto mat = sc->materials[shape->matid];
-            if (mat->ke == ym::zero3f) continue;
+            if (mat->ke == std::array<float, 3>{0, 0, 0}) continue;
             for (auto p : shape->points) {
                 if (nlights >= 16) continue;
                 light_pos[nlights] = shape->pos[p];
@@ -241,7 +241,7 @@ void draw_scene(const yapp::scene* sc, int cur_camera,
         for (auto shape : sc->shapes) {
             if (shape->matid < 0) continue;
             auto mat = sc->materials[shape->matid];
-            if (mat->ke == ym::zero3f) continue;
+            if (mat->ke == std::array<float, 3>{0, 0, 0}) continue;
             for (auto p : shape->points) {
                 if (nlights >= 16) continue;
                 light_pos[nlights] = shape->pos[p];

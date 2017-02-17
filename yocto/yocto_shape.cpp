@@ -147,11 +147,12 @@ YSHAPE_API void compute_normals(int npoints, const int* points, int nlines,
                                 const int3* triangles, int nverts,
                                 const float3* pos, float3* norm,
                                 bool weighted) {
-    return _compute_normals({(size_t)npoints, points},
-                            {(size_t)nlines, (const ym::vec2i*)lines},
-                            {(size_t)ntriangles, (const ym::vec3i*)triangles},
-                            {(size_t)nverts, (const ym::vec3f*)pos},
-                            {(size_t)nverts, (ym::vec3f*)norm}, weighted);
+    return _compute_normals(
+        {static_cast<int>((size_t)npoints), points},
+        {static_cast<int>((size_t)nlines), (const ym::vec2i*)lines},
+        {static_cast<int>((size_t)ntriangles), (const ym::vec3i*)triangles},
+        {static_cast<int>((size_t)nverts), (const ym::vec3f*)pos},
+        {static_cast<int>((size_t)nverts), (ym::vec3f*)norm}, weighted);
 }
 
 //
@@ -199,11 +200,12 @@ YSHAPE_API void split_edges(int nverts, int nlines, const int2* lines,
                             std::vector<int2>& tess_lines,
                             std::vector<int3>& tess_triangles,
                             std::vector<int2>& tess_edges) {
-    return _split_edges(nverts, {(size_t)nlines, (const ym::vec2i*)lines},
-                        {(size_t)ntriangles, (const ym::vec3i*)triangles},
-                        (std::vector<ym::vec2i>&)tess_lines,
-                        (std::vector<ym::vec3i>&)tess_triangles,
-                        (std::vector<ym::vec2i>&)tess_edges);
+    return _split_edges(
+        nverts, {static_cast<int>((size_t)nlines), (const ym::vec2i*)lines},
+        {static_cast<int>((size_t)ntriangles), (const ym::vec3i*)triangles},
+        (std::vector<ym::vec2i>&)tess_lines,
+        (std::vector<ym::vec3i>&)tess_triangles,
+        (std::vector<ym::vec2i>&)tess_edges);
 }
 
 //
