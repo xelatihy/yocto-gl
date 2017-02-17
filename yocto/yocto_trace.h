@@ -58,6 +58,7 @@
 ///
 ///
 /// HISTORY:
+/// - v 1.13: simpler Fresnel handling
 /// - v 1.12: significantly better path tracing
 /// - v 1.11: add progressive sampling to rendering params
 /// - v 0.10: switch to .h/.cpp pair
@@ -204,17 +205,13 @@ YTRACE_API void set_texture(scene* scn, int tid, int width, int height,
 /// - kd: diffuse term
 /// - ks: specular term
 /// - rs: specular roughness
-/// - es: fresnel eta
-/// - eks: fresnel etak (metals only)
 /// - ke_txt, kd_txt, ks_txt, rs_txt: texture indices (-1 for none)
 /// - use_phong: whether to use phong
 ///
 YTRACE_API void set_material(scene* scn, int mid, const float3& ke,
                              const float3& kd, const float3& ks, float rs = 0.1,
                              int ke_txt = -1, int kd_txt = -1, int ks_txt = -1,
-                             int rs_txt = -1, const float3& es = {0, 0, 0},
-                             const float3& eks = {0, 0, 0},
-                             bool use_phong = false);
+                             int rs_txt = -1, bool use_phong = false);
 
 ///
 /// Sets an environment in the scene.
