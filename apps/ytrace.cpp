@@ -56,7 +56,7 @@ int main(int argc, char* argv[]) {
     ytrace::init_lights(trace_scene);
 
     // allocate image
-    auto hdr = new std::array<float, 4>[ pars->width * pars->height ];
+    auto hdr = new std::array<float, 4>[pars->width * pars->height];
     for (auto i = 0; i < pars->width * pars->height; i++) hdr[i] = {0, 0, 0, 0};
 
     // render

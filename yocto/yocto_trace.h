@@ -58,6 +58,7 @@
 ///
 ///
 /// HISTORY:
+/// - v 1.12: significantly better path tracing
 /// - v 1.11: add progressive sampling to rendering params
 /// - v 0.10: switch to .h/.cpp pair
 /// - v 0.9: doxygen comments

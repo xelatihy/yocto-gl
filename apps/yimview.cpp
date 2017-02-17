@@ -329,11 +329,12 @@ void run_ui(yimview_app::params* pars) {
         mouse_button = yui::mouse_button(window);
 
         auto& img = pars->imgs[pars->cur_img];
-        glfwSetWindowTitle(window, ("yimview | " + img->filename + " | " +
-                                    std::to_string(img->width) + "x" +
-                                    std::to_string(img->height) + "@" +
-                                    std::to_string(img->ncomp))
-                                       .c_str());
+        glfwSetWindowTitle(window,
+                           ("yimview | " + img->filename + " | " +
+                            std::to_string(img->width) + "x" +
+                            std::to_string(img->height) + "@" +
+                            std::to_string(img->ncomp))
+                               .c_str());
 
         // handle mouse
         if (mouse_button && mouse_pos != mouse_last &&

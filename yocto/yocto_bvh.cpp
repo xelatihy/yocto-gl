@@ -959,7 +959,7 @@ static inline bool _partition_prims(_bound_prim* sorted_prim, int start,
     if (centroid_size == ym::zero3f) return false;
 
     // split along largest
-    auto largest_axis = ym::max_element(centroid_size);
+    auto largest_axis = ym::max_element_idx(centroid_size);
 
     // check heuristic
     switch (htype) {
