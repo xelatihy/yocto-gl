@@ -759,7 +759,7 @@ void save_image(const std::string& filename, int width, int height,
         ym::exposure_gamma(width, height, 4, (const float*)hdr,
                            (float*)tone_mapped_buffer.data(), exposure, gamma,
                            false);
-        tone_mapped = tone_mapped_buffer.data();
+        tone_mapped = (const float4*)tone_mapped_buffer.data();
     } else {
         tone_mapped = hdr;
     }

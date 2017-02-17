@@ -410,7 +410,7 @@ YTRACE_API void specular_fresnel_from_ks(const float3& ks, float3& es,
     es = {(1 + std::sqrt(ks[0])) / (1 - std::sqrt(ks[0])),
           (1 + std::sqrt(ks[1])) / (1 - std::sqrt(ks[1])),
           (1 + std::sqrt(ks[2])) / (1 - std::sqrt(ks[2]))};
-    esk = ym::zero3f;
+    esk = {0, 0, 0};
 }
 
 //
@@ -1097,7 +1097,7 @@ static inline point _eval_envpoint(const environment* env,
 //
 // Interpolate a value over an element
 //
-template <size_t N, size_t M>
+template <int N, int M>
 static inline ym::vec<float, N> _interpolate_value(
     const ym::vec<float, N>* vals, const ym::vec<int, M>* elems, int eid,
     const ym::vec3f& euv) {

@@ -104,8 +104,8 @@ void text_callback(GLFWwindow* window, unsigned int key) {
             break;
         case 's':
             yapp::save_image(pars->imfilename, pars->width, pars->height,
-                             st->hdr.data(), pars->exposure, pars->gamma,
-                             pars->srgb);
+                             (const yapp::float4*)st->hdr.data(),
+                             pars->exposure, pars->gamma, pars->srgb);
             break;
         default: printf("unsupported key\n"); break;
     }
@@ -282,8 +282,8 @@ bool update(state* st) {
                 ycmd::log_msgf(ycmd::log_level_info, "ytrace",
                                "saving image %s", imfilename.c_str());
                 yapp::save_image(imfilename, pars->width, pars->height,
-                                 st->hdr.data(), pars->exposure, pars->gamma,
-                                 pars->srgb);
+                                 (const yapp::float4*)st->hdr.data(),
+                                 pars->exposure, pars->gamma, pars->srgb);
             }
             st->cur_sample++;
         }
