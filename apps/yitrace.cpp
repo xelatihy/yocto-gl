@@ -329,11 +329,12 @@ void run_ui(state* st) {
         mouse_pos = yui::mouse_pos(window);
         mouse_button = yui::mouse_button(window);
 
-        glfwSetWindowTitle(window, ("ytrace | " + pars->filenames[0] + " | " +
-                                    std::to_string(pars->width) + "x" +
-                                    std::to_string(pars->height) + "@" +
-                                    std::to_string(st->cur_sample))
-                                       .c_str());
+        glfwSetWindowTitle(window,
+                           ("ytrace | " + pars->filenames[0] + " | " +
+                            std::to_string(pars->width) + "x" +
+                            std::to_string(pars->height) + "@" +
+                            std::to_string(st->cur_sample))
+                               .c_str());
 
         // handle mouse
         if (mouse_button && mouse_pos != mouse_last &&

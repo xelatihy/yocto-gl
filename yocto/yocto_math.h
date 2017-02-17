@@ -563,7 +563,7 @@ constexpr inline vec<T, N> clamplen(const vec<T, N> x, T1 max) {
 
 /// index of the min vector element
 template <typename T, size_t N>
-constexpr inline int min_element(const vec<T, N>& a) {
+constexpr inline int min_element_idx(const vec<T, N>& a) {
     auto v = std::numeric_limits<T>::max();
     auto pos = -1;
     for (auto i = 0; i < N; i++) {
@@ -577,7 +577,7 @@ constexpr inline int min_element(const vec<T, N>& a) {
 
 /// index of the max vector element
 template <typename T, size_t N>
-constexpr inline int max_element(const vec<T, N>& a) {
+constexpr inline int max_element_idx(const vec<T, N>& a) {
     auto v = -std::numeric_limits<T>::max();
     auto pos = -1;
     for (auto i = 0; i < N; i++) {
@@ -587,6 +587,26 @@ constexpr inline int max_element(const vec<T, N>& a) {
         }
     }
     return pos;
+}
+
+/// index of the min vector element
+template <typename T, size_t N>
+constexpr inline T min_element_val(const vec<T, N>& a) {
+    auto v = std::numeric_limits<T>::max();
+    for (auto i = 0; i < N; i++) {
+        if (v > a[i]) v = a[i];
+    }
+    return v;
+}
+
+/// index of the max vector element
+template <typename T, size_t N>
+constexpr inline T max_element_val(const vec<T, N>& a) {
+    auto v = -std::numeric_limits<T>::max();
+    for (auto i = 0; i < N; i++) {
+        if (v < a[i]) v = a[i];
+    }
+    return v;
 }
 
 // @}

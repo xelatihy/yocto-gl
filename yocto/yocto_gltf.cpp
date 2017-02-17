@@ -3677,9 +3677,10 @@ YGLTF_API void load_images(glTF_t* gltf, const std::string& dirname,
                     &image->data.width, &image->data.height, &image->data.ncomp,
                     0);
                 image->data.dataf = std::vector<float>(
-                    d, d +
-                           image->data.width * image->data.height *
-                               image->data.ncomp);
+                    d,
+                    d +
+                        image->data.width * image->data.height *
+                            image->data.ncomp);
                 free(d);
             } else {
                 auto d = stbi_load_from_memory(
@@ -3687,9 +3688,10 @@ YGLTF_API void load_images(glTF_t* gltf, const std::string& dirname,
                     &image->data.width, &image->data.height, &image->data.ncomp,
                     0);
                 image->data.datab = std::vector<unsigned char>(
-                    d, d +
-                           image->data.width * image->data.height *
-                               image->data.ncomp);
+                    d,
+                    d +
+                        image->data.width * image->data.height *
+                            image->data.ncomp);
                 free(d);
             }
         } else {
@@ -3705,9 +3707,10 @@ YGLTF_API void load_images(glTF_t* gltf, const std::string& dirname,
                                          image->uri);
                 }
                 image->data.dataf = std::vector<float>(
-                    d, d +
-                           image->data.width * image->data.height *
-                               image->data.ncomp);
+                    d,
+                    d +
+                        image->data.width * image->data.height *
+                            image->data.ncomp);
                 free(d);
             } else {
                 auto d = stbi_load(_fix_path(dirname + image->uri).c_str(),
@@ -3719,9 +3722,10 @@ YGLTF_API void load_images(glTF_t* gltf, const std::string& dirname,
                                          image->uri);
                 }
                 image->data.datab = std::vector<unsigned char>(
-                    d, d +
-                           image->data.width * image->data.height *
-                               image->data.ncomp);
+                    d,
+                    d +
+                        image->data.width * image->data.height *
+                            image->data.ncomp);
                 free(d);
             }
         }
