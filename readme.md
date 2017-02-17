@@ -38,6 +38,7 @@ This repository contains Yocto/GL applications written to test the libraries.
 - **ytrace.cpp**: Offline path-tracer.
 - **yisym.cpp**: Interactive rigid body demo code.
 - **ysym.cpp**: Offline rigid body demo.
+- **yimproc.cpp**: Offline image manipulation.
 
 A few screenshots from **ytrace** are included here for demonstration.
 

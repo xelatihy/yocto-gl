@@ -75,17 +75,13 @@ struct material {
     ym::vec3f ke = ym::zero3f;  // emission, term
     ym::vec3f kd = ym::zero3f;  // diffuse term
     ym::vec3f ks = ym::zero3f;  // specular term
-    float rs = 0.1;             // specular roughness API
+    float rs = 0.1;             // specular roughness
 
     // textures
     texture* ke_txt = nullptr;
     texture* kd_txt = nullptr;
     texture* ks_txt = nullptr;
     texture* rs_txt = nullptr;
-
-    // fresnel
-    ym::vec3f es = ym::zero3f;   // eta
-    ym::vec3f eks = ym::zero3f;  // etak (metals only)
 
     // material flags
     bool use_phong = false;  // whether to use phong
@@ -266,7 +262,6 @@ YTRACE_API void set_texture(scene* scn, int tid, int width, int height,
 YTRACE_API void set_material(scene* scn, int mid, const float3& ke,
                              const float3& kd, const float3& ks, float rs,
                              int ke_txt, int kd_txt, int ks_txt, int rs_txt,
-                             const float3& es, const float3& eks,
                              bool use_phong) {
     scn->materials[mid]->ke = ke;
     scn->materials[mid]->kd = kd;
@@ -280,8 +275,6 @@ YTRACE_API void set_material(scene* scn, int mid, const float3& ke,
         (ks_txt >= 0) ? scn->textures[ks_txt] : nullptr;
     scn->materials[mid]->rs_txt =
         (rs_txt >= 0) ? scn->textures[rs_txt] : nullptr;
-    scn->materials[mid]->es = es;
-    scn->materials[mid]->eks = eks;
     scn->materials[mid]->use_phong = use_phong;
 }
 
@@ -634,13 +627,11 @@ struct point {
     ym::frame3f frame = ym::identity_frame3f;  // local frame
 
     // shading ------------------------------
-    ym::vec3f ke = ym::zero3f;   // material values
-    ym::vec3f kd = ym::zero3f;   // material values
-    ym::vec3f ks = ym::zero3f;   // material values
-    float rs = 0;                // material values
-    ym::vec3f es = ym::zero3f;   // material values
-    ym::vec3f eks = ym::zero3f;  // material values
-    bool use_phong = false;      // material values
+    ym::vec3f ke = ym::zero3f;  // material values
+    ym::vec3f kd = ym::zero3f;  // material values
+    ym::vec3f ks = ym::zero3f;  // material values
+    float rs = 0;               // material values
+    bool use_phong = false;     // material values
 
     // helpers ------------------------------
     bool emission_only() const {
@@ -802,10 +793,19 @@ static inline ym::vec3f _eval_fresnel_metal(float cosw, const ym::vec3f& eta,
 }
 
 //
+// Schlick approximation of Fresnel term
+//
+static inline ym::vec3f _eval_fresnel_schlick(const ym::vec3f& ks, float cosw) {
+    return ks +
+           (ym::vec3f{1, 1, 1} - ks) *
+               std::pow(ym::clamp(1.0f - cosw, 0.0f, 1.0f), 5.0f);
+}
+
+//
 // Evaluates the BRDF scaled by the cosine of the incoming direction.
 //
 // Implementation notes:
-// - ggx from [Heitz 2014] and [Walter 2007]
+// - ggx from [Heitz 2014] and [Walter 2007] and [Lagarde 2014]
 // "Understanding the Masking-Shadowing Function in Microfacet-Based BRDFs"
 // http://jcgt.org/published/0003/02/03/
 // - "Microfacet Models for Refraction through Rough Surfaces" EGSR 07
@@ -843,17 +843,18 @@ static inline ym::vec3f _eval_brdfcos(const point& pt, const ym::vec3f& wi) {
             if (si <= 0 || so <= 0) return ym::zero3f;
 
             // diffuse term (Kajiya-Kay)
-            auto brdfcos = pt.kd * si / ym::pif;
+            auto diff = pt.kd * si / ym::pif;
 
             // specular term (Kajiya-Kay)
+            auto spec = ym::zero3f;
             if (sh > 0 && pt.ks != ym::zero3f) {
                 auto ns = 2 / (pt.rs * pt.rs) - 2;
                 auto d = (ns + 2) * std::pow(sh, ns) / (2 + ym::pif);
-                brdfcos += pt.ks * si * d / (4.0f * si * so);
+                spec = pt.ks * si * d / (4.0f * si * so);
             }
 
             // done
-            return brdfcos;
+            return diff + spec;
         } break;
         case point::type::triangle: {
             // compute wh
@@ -867,38 +868,49 @@ static inline ym::vec3f _eval_brdfcos(const point& pt, const ym::vec3f& wi) {
             if (ndi <= 0 || ndo <= 0) return ym::zero3f;
 
             // diffuse term
-            auto brdfcos = pt.kd * ndi / ym::pif;
+            auto diff = pt.kd * ndi / ym::pif;
 
             // specular term (GGX)
+            auto spec = ym::zero3f;
             if (ndh > 0 && pt.ks != ym::zero3f) {
+                // microfacet term
+                auto dg = 0.0f;
+
                 if (!pt.use_phong) {
                     // evaluate GGX
                     auto cos2 = ndh * ndh;
                     auto tan2 = (1 - cos2) / cos2;
                     auto alpha2 = pt.rs * pt.rs;
-                    auto d = alpha2 / (ym::pif * cos2 * cos2 * (alpha2 + tan2) *
-                                       (alpha2 + tan2));
+                    // auto d = alpha2 / (ym::pif * cos2 * cos2 * (alpha2 +
+                    // tan2) * (alpha2 + tan2));
+                    auto di = (ndh * alpha2 - ndh) * ndh + 1;
+                    auto d = alpha2 / (ym::pif * di * di);
                     auto lambda_o =
-                        (-1 + sqrtf(1 + (1 - ndo * ndo) / (ndo * ndo))) / 2;
+                        (-1 + std::sqrt(
+                                  1 + alpha2 * (1 - ndo * ndo) / (ndo * ndo))) /
+                        2;
                     auto lambda_i =
-                        (-1 + sqrtf(1 + (1 - ndi * ndi) / (ndi * ndi))) / 2;
+                        (-1 +
+                         sqrtf(1 + alpha2 * (1 - ndi * ndi) / (ndi * ndi))) /
+                        2;
                     auto g = 1 / (1 + lambda_o + lambda_i);
-                    auto spec = pt.ks * ndi * d * g / (4 * ndi * ndo);
-                    if (pt.es != ym::zero3f) {
-                        spec *= _eval_fresnel_metal(ndh, pt.es, pt.eks);
-                    }
-                    brdfcos += spec;
+                    dg = d * g;
                 } else {
                     // evaluate Blinn-Phong
                     auto ns = 2 / (pt.rs * pt.rs) - 2;
-                    auto d = (ns + 2) * std::pow(ndh, ns) / (2 + ym::pif);
-                    auto spec = pt.ks * ndi * d / (4 * ndi * ndo);
-                    brdfcos += spec;
+                    dg = (ns + 2) * std::pow(ndh, ns) / (2 + ym::pif);
                 }
+
+                // handle fresnel
+                auto odh = ym::clamp(dot(wo, wh), 0.0f, 1.0f);
+                auto ks = _eval_fresnel_schlick(pt.ks, ndo);
+
+                // sum up
+                spec = ks * ndi * dg / (4 * ndi * ndo);
             }
 
             // done
-            return brdfcos;
+            return diff + spec;
         } break;
         default: {
             assert(false);
