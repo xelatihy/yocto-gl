@@ -41,18 +41,19 @@ namespace yapp {
 // Init shading
 //
 void init_shade_state(const yapp::scene* sc, yglu::uint& shade_prog,
-                      yglu::uint& shade_vao, std::vector<yglu::uint>& shade_txt,
+                      yglu::uint& shade_vao,
+                      std::map<texture*, yglu::uint>& shade_txt,
                       std::vector<std::array<yglu::uint, 7>>& shade_vbo) {
     yglu::stdshader::make_program(&shade_prog, &shade_vao);
     for (auto txt : sc->textures) {
         if (!txt->hdr.empty()) {
-            shade_txt.push_back(
+            shade_txt[txt] =
                 yglu::modern::make_texture(txt->width, txt->height, txt->ncomp,
-                                           txt->hdr.data(), true, true, true));
+                                           txt->hdr.data(), true, true, true);
         } else if (!txt->ldr.empty()) {
-            shade_txt.push_back(
+            shade_txt[txt] =
                 yglu::modern::make_texture(txt->width, txt->height, txt->ncomp,
-                                           txt->ldr.data(), true, true, true));
+                                           txt->ldr.data(), true, true, true);
         } else
             assert(false);
     }
@@ -94,7 +95,7 @@ void init_shade_state(const yapp::scene* sc, yglu::uint& shade_prog,
 // Display a scene
 //
 void shade_scene(const yapp::scene* sc, int cur_camera, uint prog, uint vao,
-                 const std::vector<uint>& txt,
+                 const std::map<texture*, uint>& txts,
                  std::vector<std::array<uint, 7>>& vbo,
                  const float4& background, float exposure, float gamma_,
                  bool srgb, bool wireframe, bool edges, bool camera_lights,
@@ -122,8 +123,8 @@ void shade_scene(const yapp::scene* sc, int cur_camera, uint prog, uint vao,
         std::array<ym::vec3f, 16> light_pos, light_ke;
         std::array<yglu::ltype, 16> light_type;
         for (auto shape : sc->shapes) {
-            if (shape->matid < 0) continue;
-            auto mat = sc->materials[shape->matid];
+            if (!shape->mat) continue;
+            auto mat = shape->mat;
             if (mat->ke == std::array<float, 3>{0, 0, 0}) continue;
             for (auto p : shape->points) {
                 if (nlights >= 16) continue;
@@ -145,10 +146,10 @@ void shade_scene(const yapp::scene* sc, int cur_camera, uint prog, uint vao,
         yglu::stdshader::begin_shape(prog,
                                      ym::to_mat((ym::frame3f)shape->frame));
 
-        if (shape->matid >= 0) {
-            auto mat = sc->materials[shape->matid];
+        if (shape->mat) {
+            auto mat = shape->mat;
 
-#define __txt(i) ((i >= 0) ? txt[i] : 0)
+#define __txt(txt) ((txt) ? txts.at(txt) : 0)
             yglu::stdshader::set_material(
                 prog, mat->ke, mat->kd, mat->ks, mat->rs, __txt(mat->ke_txt),
                 __txt(mat->kd_txt), __txt(mat->ks_txt), __txt(mat->rs_txt),
@@ -193,16 +194,16 @@ void shade_scene(const yapp::scene* sc, int cur_camera, uint prog, uint vao,
 // Init shading
 //
 void init_draw_state(const yapp::scene* sc,
-                     std::vector<yglu::uint>& shade_txt) {
+                     std::map<texture*, yglu::uint>& shade_txt) {
     for (auto txt : sc->textures) {
         if (!txt->hdr.empty()) {
-            shade_txt.push_back(
+            shade_txt[txt] =
                 yglu::legacy::make_texture(txt->width, txt->height, txt->ncomp,
-                                           txt->hdr.data(), true, true));
+                                           txt->hdr.data(), true, true);
         } else if (!txt->ldr.empty()) {
-            shade_txt.push_back(
+            shade_txt[txt] =
                 yglu::legacy::make_texture(txt->width, txt->height, txt->ncomp,
-                                           txt->ldr.data(), true, true));
+                                           txt->ldr.data(), true, true);
         } else
             assert(false);
     }
@@ -212,9 +213,10 @@ void init_draw_state(const yapp::scene* sc,
 // Draw a sc
 //
 void draw_scene(const yapp::scene* sc, int cur_camera,
-                const std::vector<yglu::uint>& txt, const ym::vec4f& background,
-                float exposure, float gamma_, bool wireframe, bool edges,
-                bool camera_lights, const ym::vec3f& amb) {
+                const std::map<texture*, yglu::uint>& txts,
+                const ym::vec4f& background, float exposure, float gamma_,
+                bool wireframe, bool edges, bool camera_lights,
+                const ym::vec3f& amb) {
     // begin frame
     glEnable(GL_DEPTH_TEST);
     glClearDepth(1);
@@ -239,8 +241,8 @@ void draw_scene(const yapp::scene* sc, int cur_camera,
 
     if (!camera_lights) {
         for (auto shape : sc->shapes) {
-            if (shape->matid < 0) continue;
-            auto mat = sc->materials[shape->matid];
+            if (!shape->mat) continue;
+            auto mat = shape->mat;
             if (mat->ke == std::array<float, 3>{0, 0, 0}) continue;
             for (auto p : shape->points) {
                 if (nlights >= 16) continue;
@@ -260,10 +262,10 @@ void draw_scene(const yapp::scene* sc, int cur_camera,
     for (auto shape : sc->shapes) {
         yglu::legacy::begin_shape(ym::to_mat((ym::frame3f)shape->frame));
 
-        if (shape->matid >= 0) {
-            auto mat = sc->materials[shape->matid];
+        if (shape->mat) {
+            auto mat = shape->mat;
 
-#define __txt(i) ((i >= 0) ? txt[i] : 0)
+#define __txt(txt) ((txt) ? txts.at(txt) : 0)
             yglu::legacy::set_material(
                 mat->ke, mat->kd, mat->ks,
                 yglu::legacy::specular_roughness_to_exponent(mat->rs),
@@ -322,7 +324,7 @@ struct shade_state {
     // shade state
     uint shade_prog = 0;
     uint shade_vao = 0;
-    std::vector<uint> shade_txt;
+    std::map<texture*, uint> shade_txt;
     std::vector<std::array<uint, 7>> shade_vbo;
 };
 
