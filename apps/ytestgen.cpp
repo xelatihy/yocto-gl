@@ -30,6 +30,7 @@
 #include "yapp.h"
 
 #include <map>
+#include <set>
 
 #include "../yocto/yocto_cmd.h"
 #include "../yocto/yocto_math.h"
@@ -38,6 +39,14 @@
 
 #include "sunsky/ArHosekSkyModel.c"
 #include "sunsky/ArHosekSkyModel.h"
+
+template <typename T>
+std::vector<T*> concat(const std::vector<T*>& a, const std::vector<T*>& b) {
+    std::vector<T*> c;
+    for (auto aa : a) c.push_back(aa);
+    for (auto bb : b) c.push_back(bb);
+    return c;
+}
 
 ym::frame3f xform(const ym::vec3f& pos, const ym::vec3f& rot) {
     ym::frame3f xf = ym::identity_frame3f;
@@ -55,7 +64,7 @@ ym::frame3f lookat_xform(const ym::vec3f& pos, const ym::vec3f& to) {
     return xf;
 }
 
-yapp::shape* make_shape(const std::string& name, int matid, int l,
+yapp::shape* make_shape(const std::string& name, yapp::material* mat, int l,
                         yshape::stdsurface_type stype, const ym::vec3f& pos,
                         const ym::vec3f& rot,
                         const ym::vec3f& scale = {1, 1, 1},
@@ -63,7 +72,7 @@ yapp::shape* make_shape(const std::string& name, int matid, int l,
     ym::vec4f params = {0.75f, 0.75f, 0, 0};
     auto shape = new yapp::shape();
     shape->name = name;
-    shape->matid = matid;
+    shape->mat = mat;
     yshape::make_stdsurface(stype, l, params, shape->triangles, shape->pos,
                             shape->norm, shape->texcoord);
     for (auto& p : shape->pos) (ym::vec3f&)p *= scale;
@@ -74,14 +83,14 @@ yapp::shape* make_shape(const std::string& name, int matid, int l,
     return shape;
 }
 
-yapp::shape* make_floor(const std::string& name, int matid, float s, float p,
-                        int l, const ym::vec3f& pos = {0, 0, 0},
+yapp::shape* make_floor(const std::string& name, yapp::material* mat, float s,
+                        float p, int l, const ym::vec3f& pos = {0, 0, 0},
                         const ym::vec3f& rot = {0, 0, 0},
                         const ym::vec3f& scale = {1, 1, 1}) {
     auto n = (int)round(powf(2, (float)l));
     auto shape = new yapp::shape();
     shape->name = name;
-    shape->matid = matid;
+    shape->mat = mat;
     yshape::make_uvsurface(n, n, shape->triangles, shape->pos, shape->norm,
                            shape->texcoord,
                            [p, scale](const ym::vec2f& uv) {
@@ -112,8 +121,9 @@ yapp::shape* make_floor(const std::string& name, int matid, float s, float p,
 
 yapp::material* make_material(const std::string& name, const ym::vec3f& ke,
                               const ym::vec3f& kd, const ym::vec3f& ks,
-                              const ym::vec3f& kt, float rs, int ke_txt,
-                              int kd_txt, int ks_txt, int kt_txt) {
+                              const ym::vec3f& kt, float rs,
+                              yapp::texture* ke_txt, yapp::texture* kd_txt,
+                              yapp::texture* ks_txt, yapp::texture* kt_txt) {
     auto mat = new yapp::material();
     mat->name = name;
     mat->ke = ke;
@@ -129,33 +139,33 @@ yapp::material* make_material(const std::string& name, const ym::vec3f& ke,
 }
 
 yapp::material* make_emission(const std::string& name, const ym::vec3f& ke,
-                              int txt = -1) {
+                              yapp::texture* txt = nullptr) {
     return make_material(name, ke, ym::zero3f, ym::zero3f, ym::zero3f, 0, txt,
-                         -1, -1, -1);
+                         nullptr, nullptr, nullptr);
 }
 
 yapp::material* make_diffuse(const std::string& name, const ym::vec3f& kd,
-                             int txt = -1) {
-    return make_material(name, ym::zero3f, kd, ym::zero3f, ym::zero3f, 0, -1,
-                         txt, -1, -1);
+                             yapp::texture* txt = nullptr) {
+    return make_material(name, ym::zero3f, kd, ym::zero3f, ym::zero3f, 0,
+                         nullptr, txt, nullptr, nullptr);
 }
 
 yapp::material* make_plastic(const std::string& name, const ym::vec3f& kd,
-                             float rs, int txt = -1) {
+                             float rs, yapp::texture* txt = nullptr) {
     return make_material(name, ym::zero3f, kd, {0.04f, 0.04f, 0.04f},
-                         ym::zero3f, rs, -1, txt, -1, -1);
+                         ym::zero3f, rs, nullptr, txt, nullptr, nullptr);
 }
 
 yapp::material* make_metal(const std::string& name, const ym::vec3f& kd,
-                           float rs, int txt = -1) {
-    return make_material(name, ym::zero3f, ym::zero3f, kd, ym::zero3f, rs, -1,
-                         -1, txt, -1);
+                           float rs, yapp::texture* txt = nullptr) {
+    return make_material(name, ym::zero3f, ym::zero3f, kd, ym::zero3f, rs,
+                         nullptr, nullptr, txt, nullptr);
 }
 
 yapp::material* make_glass(const std::string& name, const ym::vec3f& kd,
-                           float rs, int txt = -1) {
+                           float rs, yapp::texture* txt = nullptr) {
     return make_material(name, ym::zero3f, ym::zero3f, {0.04f, 0.04f, 0.04f},
-                         kd, rs, -1, -1, txt, -1);
+                         kd, rs, nullptr, nullptr, txt, nullptr);
 }
 
 yapp::camera* make_camera(const std::string& name, const ym::vec3f& from,
@@ -170,21 +180,21 @@ yapp::camera* make_camera(const std::string& name, const ym::vec3f& from,
     return cam;
 }
 
-yapp::environment* make_env(const std::string& name, int matid,
+yapp::environment* make_env(const std::string& name, yapp::material* mat,
                             const ym::vec3f& from, const ym::vec3f& to) {
     auto env = new yapp::environment();
     env->name = name;
-    env->matid = matid;
+    env->mat = mat;
     env->frame = lookat_frame3(from, to, {0, 1, 0});
     return env;
 }
 
-yapp::shape* make_points(const std::string& name, int matid, int num,
+yapp::shape* make_points(const std::string& name, yapp::material* mat, int num,
                          const ym::vec3f& pos, const ym::vec3f& rot,
                          const ym::vec3f& scale) {
     auto shape = new yapp::shape();
     shape->name = name;
-    shape->matid = matid;
+    shape->mat = mat;
 
     ym::rng_pcg32 rn;
     yshape::make_points(
@@ -204,12 +214,12 @@ yapp::shape* make_points(const std::string& name, int matid, int num,
     return shape;
 }
 
-yapp::shape* make_lines(const std::string& name, int matid, int num, int n,
-                        float r, float c, float s, const ym::vec3f& pos,
+yapp::shape* make_lines(const std::string& name, yapp::material* mat, int num,
+                        int n, float r, float c, float s, const ym::vec3f& pos,
                         const ym::vec3f& rot, const ym::vec3f& scale) {
     auto shape = new yapp::shape();
     shape->name = name;
-    shape->matid = matid;
+    shape->mat = mat;
 
     ym::rng_pcg32 rn;
     std::vector<ym::vec3f> base(num + 1), dir(num + 1);
@@ -271,10 +281,56 @@ yapp::shape* make_lines(const std::string& name, int matid, int num, int n,
     return shape;
 }
 
+std::vector<yapp::texture*> make_random_textures() {
+    const std::string txts[5] = {"grid.png", "checker.png", "rchecker.png",
+                                 "colored.png", "rcolored.png"};
+    std::vector<yapp::texture*> textures;
+    for (auto txt : txts) {
+        textures.push_back(new yapp::texture());
+        textures.back()->path = txt;
+    }
+    return textures;
+}
+
+std::vector<yapp::material*> make_random_materials(int nshapes) {
+    auto textures = make_random_textures();
+    std::vector<yapp::material*> materials(nshapes);
+    materials[0] = make_diffuse("floor", {1, 1, 1}, textures[0]);
+
+    ym::rng_pcg32 rn;
+    for (auto i = 1; i < nshapes; i++) {
+        char name[1024];
+        sprintf(name, "obj%02d", i);
+        auto txt = -1;
+        if (next1f(&rn) < 0.5f) {
+            txt = (int)(next1f(&rn) * 6) - 1;
+        }
+        auto c = (txt >= 0) ? ym::vec3f{1, 1, 1}
+                            : ym::vec3f{0.2f + 0.3f * next1f(&rn),
+                                        0.2f + 0.3f * next1f(&rn),
+                                        0.2f + 0.3f * next1f(&rn)};
+        auto rs = 0.01f + 0.25f * next1f(&rn);
+        auto mt = (int)(next1f(&rn) * 4);
+        if (mt == 0) {
+            materials[i] =
+                make_diffuse(name, c, (txt < 0) ? nullptr : textures[txt]);
+        } else if (mt == 1) {
+            materials[i] =
+                make_metal(name, c, rs, (txt < 0) ? nullptr : textures[txt]);
+        } else {
+            materials[i] =
+                make_plastic(name, c, rs, (txt < 0) ? nullptr : textures[txt]);
+        }
+    }
+
+    return materials;
+}
+
 std::vector<yapp::shape*> make_random_shapes(int nshapes, int l) {
+    auto materials = make_random_materials(nshapes);
     std::vector<yapp::shape*> shapes(nshapes);
-    shapes[0] =
-        make_floor("floor", 0, 6, 4, 6, {0, 0, -4}, ym::zero3f, {6, 6, 6});
+    shapes[0] = make_floor("floor", materials[0], 6, 4, 6, {0, 0, -4},
+                           ym::zero3f, {6, 6, 6});
 
     ym::vec3f pos[1024];
     float radius[1024];
@@ -306,58 +362,19 @@ std::vector<yapp::shape*> make_random_shapes(int nshapes, int l) {
         };
         auto stype = stypes[(int)(next1f(&rn) * 3)];
         if (stype == yshape::stdsurface_type::uvflipcapsphere) levels[i]++;
-        shapes[i] = make_shape(name, i, levels[i], stype, pos[i], ym::zero3f,
-                               {radius[i], radius[i], radius[i]});
+        shapes[i] = make_shape(name, materials[0], levels[i], stype, pos[i],
+                               ym::zero3f, {radius[i], radius[i], radius[i]});
     }
 
     return shapes;
 }
 
-std::vector<yapp::texture*> make_random_textures() {
-    const std::string txts[5] = {"grid.png", "checker.png", "rchecker.png",
-                                 "colored.png", "rcolored.png"};
-    std::vector<yapp::texture*> textures;
-    for (auto txt : txts) {
-        textures.push_back(new yapp::texture());
-        textures.back()->path = txt;
-    }
-    return textures;
-}
-
-std::vector<yapp::material*> make_random_materials(int nshapes) {
-    std::vector<yapp::material*> materials(nshapes);
-    materials[0] = make_diffuse("floor", {1, 1, 1}, 0);
-
-    ym::rng_pcg32 rn;
-    for (auto i = 1; i < nshapes; i++) {
-        char name[1024];
-        sprintf(name, "obj%02d", i);
-        auto txt = -1;
-        if (next1f(&rn) < 0.5f) {
-            txt = (int)(next1f(&rn) * 6) - 1;
-        }
-        auto c = (txt >= 0) ? ym::vec3f{1, 1, 1}
-                            : ym::vec3f{0.2f + 0.3f * next1f(&rn),
-                                        0.2f + 0.3f * next1f(&rn),
-                                        0.2f + 0.3f * next1f(&rn)};
-        auto rs = 0.01f + 0.25f * next1f(&rn);
-        auto mt = (int)(next1f(&rn) * 4);
-        if (mt == 0) {
-            materials[i] = make_diffuse(name, c, txt);
-        } else if (mt == 1) {
-            materials[i] = make_metal(name, c, rs, txt);
-        } else {
-            materials[i] = make_plastic(name, c, rs, txt);
-        }
-    }
-
-    return materials;
-}
-
-std::vector<yapp::shape*> make_random_rigid_shapes(int nshapes, int l) {
+std::vector<yapp::shape*> make_random_rigid_shapes(
+    int nshapes, int l, const std::vector<yapp::material*>& materials) {
     std::vector<yapp::shape*> shapes(nshapes);
-    shapes[0] = make_shape("floor", 0, 2, yshape::stdsurface_type::uvcube,
-                           {0, -0.5, 0}, ym::zero3f, {6, 0.5, 6});
+    shapes[0] =
+        make_shape("floor", materials[0], 2, yshape::stdsurface_type::uvcube,
+                   {0, -0.5, 0}, ym::zero3f, {6, 0.5, 6});
     ym::vec3f pos[1024];
     float radius[1024];
     int levels[1024];
@@ -383,28 +400,42 @@ std::vector<yapp::shape*> make_random_rigid_shapes(int nshapes, int l) {
             yshape::stdsurface_type::uvspherecube,
             yshape::stdsurface_type::uvcube};
         auto stype = stypes[(int)(next1f(&rn) * 2)];
-        shapes[i] = make_shape(name, i, levels[i], stype, pos[i], ym::zero3f,
-                               {radius[i], radius[i], radius[i]});
+        shapes[i] = make_shape(name, materials[i], levels[i], stype, pos[i],
+                               ym::zero3f, {radius[i], radius[i], radius[i]});
     }
 
     return shapes;
 }
 
 yapp::scene* make_scene(const std::vector<yapp::camera*>& cameras,
-                        const std::vector<yapp::shape*>& shapes0,
-                        const std::vector<yapp::shape*>& shapes1,
-                        const std::vector<yapp::material*>& materials0,
-                        const std::vector<yapp::material*>& materials1,
-                        const std::vector<yapp::texture*>& textures,
+                        const std::vector<yapp::shape*>& shapes,
                         const std::vector<yapp::environment*>& envs = {}) {
     auto scene = new yapp::scene();
     scene->cameras = cameras;
-    scene->shapes = shapes0;
-    for (auto s : shapes1) scene->shapes.push_back(s);
-    scene->materials = materials0;
-    for (auto m : materials1) scene->materials.push_back(m);
-    scene->textures = textures;
-    scene->environments = envs;
+    auto materials = std::set<yapp::material*>();
+    auto textures = std::set<yapp::texture*>();
+    for (auto shp : shapes) {
+        scene->shapes.push_back(shp);
+        assert(shp->mat);
+        materials.insert(shp->mat);
+    }
+    for (auto env : envs) {
+        scene->environments.push_back(env);
+        assert(env->mat);
+        materials.insert(env->mat);
+    }
+    for (auto mat : materials) {
+        scene->materials.push_back(mat);
+        textures.insert(mat->ke_txt);
+        textures.insert(mat->kd_txt);
+        textures.insert(mat->ks_txt);
+        textures.insert(mat->kt_txt);
+        textures.insert(mat->rs_txt);
+    }
+    textures.erase(nullptr);
+    for (auto txt : textures) {
+        scene->textures.push_back(txt);
+    }
     return scene;
 }
 
@@ -667,12 +698,12 @@ yapp::texture* make_texture(const std::string& path) {
     return txt;
 }
 
-yapp::shape* make_point(const std::string& name, int matid,
+yapp::shape* make_point(const std::string& name, yapp::material* mat,
                         const ym::vec3f& pos = {0, 0, 0},
                         float radius = 0.001f) {
     auto shape = new yapp::shape();
     shape->name = name;
-    shape->matid = matid;
+    shape->mat = mat;
     shape->points.push_back(0);
     shape->pos.push_back(pos);
     shape->norm.push_back({0, 0, 1});
@@ -683,21 +714,6 @@ yapp::shape* make_point(const std::string& name, int matid,
 std::vector<yapp::camera*> make_simple_cameras() {
     return {make_camera("cam", {0, 1.5f, 5}, {0, 0.5f, 0}, 0.5f, 0),
             make_camera("cam_dof", {0, 1.5f, 5}, {0, 0.5, 0}, 0.5f, 0.1f)};
-}
-
-std::vector<yapp::shape*> make_simple_lightshapes(int matoffset,
-                                                  bool arealights) {
-    if (!arealights) {
-        return {make_point("light01", matoffset + 0, {0.7f, 4, 3}),
-                make_point("light02", matoffset + 1, {-0.7f, 4, 3})};
-    } else {
-        return {make_shape("light01", matoffset + 0, 0,
-                           yshape::stdsurface_type::uvquad, {2, 2, 4},
-                           {0, 1, 0}, {1, 1, 1}, true),
-                make_shape("light02", matoffset + 1, 0,
-                           yshape::stdsurface_type::uvquad, {-2, 2, 4},
-                           {0, 1, 0}, {1, 1, 1}, true)};
-    }
 }
 
 std::vector<yapp::material*> make_simple_lightmaterials(bool arealights) {
@@ -714,79 +730,94 @@ std::vector<yapp::material*> make_simple_lightmaterials(bool arealights) {
     }
 }
 
+std::vector<yapp::shape*> make_simple_lights(bool arealights) {
+    auto materials = make_simple_lightmaterials(arealights);
+    if (!arealights) {
+        return {make_point("light01", materials[0], {0.7f, 4, 3}),
+                make_point("light02", materials[1], {-0.7f, 4, 3})};
+    } else {
+        return {make_shape("light01", materials[0], 0,
+                           yshape::stdsurface_type::uvquad, {2, 2, 4},
+                           {0, 1, 0}, {1, 1, 1}, true),
+                make_shape("light02", materials[1], 0,
+                           yshape::stdsurface_type::uvquad, {-2, 2, 4},
+                           {0, 1, 0}, {1, 1, 1}, true)};
+    }
+}
+
 yapp::scene* make_simple_scene(bool textured, bool arealights) {
-    std::vector<yapp::shape*> shapes = {
-        make_floor("floor", 0, 6, 4, 6, {0, 0, -4}, ym::zero3f, {6, 6, 6}),
-        make_shape("obj01", 1, 5, yshape::stdsurface_type::uvflipcapsphere,
-                   {-1.25f, 0.5f, 0}, ym::zero3f, {0.5f, 0.5f, 0.5f}),
-        make_shape("obj02", 2, 4, yshape::stdsurface_type::uvspherizedcube,
-                   {0, 0.5f, 0}, ym::zero3f, {0.5f, 0.5f, 0.5f}),
-        make_shape("obj03", 2, 4, yshape::stdsurface_type::uvspherecube,
-                   {1.25f, 0.5f, 0}, ym::zero3f, {0.5f, 0.5f, 0.5f})};
     std::vector<yapp::material*> materials;
-    std::vector<yapp::texture*> textures;
     if (!textured) {
         materials = std::vector<yapp::material*>{
-            make_diffuse("floor", {0.2f, 0.2f, 0.2f}, -1),
-            make_plastic("obj01", {0.5f, 0.2f, 0.2f}, 0.1f, -1),
-            make_plastic("obj02", {0.2f, 0.5f, 0.2f}, 0.05f, -1),
-            make_plastic("obj03", {0.2f, 0.2f, 0.5f}, 0.01f, -1)};
+            make_diffuse("floor", {0.2f, 0.2f, 0.2f}),
+            make_plastic("obj01", {0.5f, 0.2f, 0.2f}, 0.1f),
+            make_plastic("obj02", {0.2f, 0.5f, 0.2f}, 0.05f),
+            make_plastic("obj03", {0.2f, 0.2f, 0.5f}, 0.01f)};
     } else {
-        materials = std::vector<yapp::material*>{
-            make_diffuse("floor", {1, 1, 1}, 0),
-            make_plastic("obj01", {1, 1, 1}, 0.1f, 1),
-            make_plastic("obj02", {1, 1, 1}, 0.05f, 2),
-            make_plastic("obj03", {1, 1, 1}, 0.01f, 3)};
-        textures = std::vector<yapp::texture*>{
+        auto textures = std::vector<yapp::texture*>{
             make_texture("grid.png"), make_texture("rcolored.png"),
             make_texture("checker.png"), make_texture("colored.png"),
         };
+        materials = std::vector<yapp::material*>{
+            make_diffuse("floor", {1, 1, 1}, textures[0]),
+            make_plastic("obj01", {1, 1, 1}, 0.1f, textures[1]),
+            make_plastic("obj02", {1, 1, 1}, 0.05f, textures[2]),
+            make_plastic("obj03", {1, 1, 1}, 0.01f, textures[3])};
     }
-    return make_scene(
-        make_simple_cameras(), shapes,
-        make_simple_lightshapes((int)materials.size(), arealights), materials,
-        make_simple_lightmaterials(arealights), textures);
+    std::vector<yapp::shape*> shapes = {
+        make_floor("floor", materials[0], 6, 4, 6, {0, 0, -4}, ym::zero3f,
+                   {6, 6, 6}),
+        make_shape("obj01", materials[1], 5,
+                   yshape::stdsurface_type::uvflipcapsphere, {-1.25f, 0.5f, 0},
+                   ym::zero3f, {0.5f, 0.5f, 0.5f}),
+        make_shape("obj02", materials[2], 4,
+                   yshape::stdsurface_type::uvspherizedcube, {0, 0.5f, 0},
+                   ym::zero3f, {0.5f, 0.5f, 0.5f}),
+        make_shape("obj03", materials[3], 4,
+                   yshape::stdsurface_type::uvspherecube, {1.25f, 0.5f, 0},
+                   ym::zero3f, {0.5f, 0.5f, 0.5f})};
+    return make_scene(make_simple_cameras(),
+                      concat(shapes, make_simple_lights(arealights)));
 }
 
 yapp::scene* make_pointslines_scene(bool lines, bool arealights) {
     std::vector<yapp::shape*> shapes;
     std::vector<yapp::material*> materials;
     std::vector<yapp::texture*> textures;
-    shapes.push_back(
-        make_floor("floor", 0, 6, 4, 6, {0, 0, -4}, ym::zero3f, {6, 6, 6}));
     materials =
         std::vector<yapp::material*>{make_diffuse("floor", {0.2f, 0.2f, 0.2f}),
                                      make_diffuse("obj", {0.2f, 0.2f, 0.2f}),
                                      make_diffuse("points", {0.2f, 0.2f, 0.2f}),
                                      make_diffuse("lines", {0.2f, 0.2f, 0.2f})};
+    shapes.push_back(make_floor("floor", materials[0], 6, 4, 6, {0, 0, -4},
+                                ym::zero3f, {6, 6, 6}));
     if (!lines) {
-        shapes.push_back(make_points("points01", 2, 64 * 64 * 16, {0, 0.5f, 0},
-                                     ym::zero3f, {0.5f, 0.5f, 0.5f}));
+        shapes.push_back(make_points("points01", materials[2], 64 * 64 * 16,
+                                     {0, 0.5f, 0}, ym::zero3f,
+                                     {0.5f, 0.5f, 0.5f}));
     } else {
-        shapes.push_back(
-            make_shape("obj01", 1, 6, yshape::stdsurface_type::uvsphere,
-                       {1.25f, 0.5f, 0}, ym::zero3f, {0.5f, 0.5f, 0.5f}));
-        shapes.push_back(make_lines("lines01", 3, 64 * 64 * 16, 4, 0.1f, 0, 0,
-                                    {1.25f, 0.5f, 0}, ym::zero3f,
+        shapes.push_back(make_shape(
+            "obj01", materials[1], 6, yshape::stdsurface_type::uvsphere,
+            {1.25f, 0.5f, 0}, ym::zero3f, {0.5f, 0.5f, 0.5f}));
+        shapes.push_back(make_lines("lines01", materials[3], 64 * 64 * 16, 4,
+                                    0.1f, 0, 0, {1.25f, 0.5f, 0}, ym::zero3f,
                                     {0.5f, 0.5f, 0.5f}));
-        shapes.push_back(
-            make_shape("obj02", 1, 6, yshape::stdsurface_type::uvsphere,
-                       {0, 0.5f, 0}, ym::zero3f, {0.5f, 0.5f, 0.5f}));
-        shapes.push_back(make_lines("lines02", 3, 64 * 64 * 16, 4, 0, 0.75f, 0,
-                                    {0, 0.5f, 0}, ym::zero3f,
+        shapes.push_back(make_shape(
+            "obj02", materials[1], 6, yshape::stdsurface_type::uvsphere,
+            {0, 0.5f, 0}, ym::zero3f, {0.5f, 0.5f, 0.5f}));
+        shapes.push_back(make_lines("lines02", materials[3], 64 * 64 * 16, 4, 0,
+                                    0.75f, 0, {0, 0.5f, 0}, ym::zero3f,
                                     {0.5f, 0.5f, 0.5f}));
-        shapes.push_back(
-            make_shape("obj03", 1, 6, yshape::stdsurface_type::uvsphere,
-                       {-1.25f, 0.5f, 0}, ym::zero3f, {0.5f, 0.5f, 0.5f}));
-        shapes.push_back(make_lines("lines03", 3, 64 * 64 * 16, 4, 0, 0, 0.5f,
-                                    {-1.25f, 0.5f, 0}, ym::zero3f,
+        shapes.push_back(make_shape(
+            "obj03", materials[1], 6, yshape::stdsurface_type::uvsphere,
+            {-1.25f, 0.5f, 0}, ym::zero3f, {0.5f, 0.5f, 0.5f}));
+        shapes.push_back(make_lines("lines03", materials[3], 64 * 64 * 16, 4, 0,
+                                    0, 0.5f, {-1.25f, 0.5f, 0}, ym::zero3f,
                                     {0.5f, 0.5f, 0.5f}));
     }
 
-    return make_scene(
-        make_simple_cameras(), shapes,
-        make_simple_lightshapes((int)materials.size(), arealights), materials,
-        make_simple_lightmaterials(arealights), textures);
+    return make_scene(make_simple_cameras(),
+                      concat(shapes, make_simple_lights(arealights)));
 }
 
 yapp::scene* make_random_scene(int nshapes, bool arealights) {
@@ -794,12 +825,7 @@ yapp::scene* make_random_scene(int nshapes, bool arealights) {
         make_camera("cam", {0, 1.5f, 5}, {0, 0.5f, 0}, 0.5f, 0),
         make_camera("cam_dof", {0, 1.5f, 5}, {0, 0.5, 0}, 0.5f, 0.1f)};
     std::vector<yapp::shape*> shapes = make_random_shapes(nshapes, 5);
-    std::vector<yapp::material*> materials = make_random_materials(nshapes);
-    std::vector<yapp::texture*> textures = make_random_textures();
-    return make_scene(
-        cameras, shapes,
-        make_simple_lightshapes((int)materials.size(), arealights), materials,
-        make_simple_lightmaterials(arealights), textures);
+    return make_scene(cameras, concat(shapes, make_simple_lights(arealights)));
 }
 
 // http://graphics.cs.williams.edu/data
@@ -807,106 +833,92 @@ yapp::scene* make_random_scene(int nshapes, bool arealights) {
 yapp::scene* make_cornell_box_scene() {
     std::vector<yapp::camera*> cameras = {
         make_camera("cam", {0, 1, 4}, {0, 1, 0}, 0.7f, 0)};
-    std::vector<yapp::shape*> shapes = {
-        make_shape("floor", 0, 0, yshape::stdsurface_type::uvquad, ym::zero3f,
-                   {-90, 0, 0}),
-        make_shape("ceiling", 0, 0, yshape::stdsurface_type::uvquad, {0, 2, 0},
-                   {90, 0, 0}),
-        make_shape("back", 0, 0, yshape::stdsurface_type::uvquad, {0, 1, -1},
-                   ym::zero3f),
-        make_shape("back", 2, 0, yshape::stdsurface_type::uvquad, {+1, 1, 0},
-                   {0, -90, 0}),
-        make_shape("back", 1, 0, yshape::stdsurface_type::uvquad, {-1, 1, 0},
-                   {0, 90, 0}),
-        make_shape("tallbox", 0, 0, yshape::stdsurface_type::uvcube,
-                   {-0.33f, 0.6f, -0.29f}, {0, 15, 0}, {0.3f, 0.6f, 0.3f}),
-        make_shape("shortbox", 0, 0, yshape::stdsurface_type::uvcube,
-                   {0.33f, 0.3f, 0.33f}, {0, -15, 0}, {0.3f, 0.3f, 0.3f}),
-        make_shape("light", 3, 0, yshape::stdsurface_type::uvquad,
-                   {0, 1.999f, 0}, {90, 0, 0}, {0.25f, 0.25f, 0.25f})};
     std::vector<yapp::material*> materials = {
         make_diffuse("white", {0.725f, 0.71f, 0.68f}),
         make_diffuse("red", {0.63f, 0.065f, 0.05f}),
         make_diffuse("green", {0.14f, 0.45f, 0.091f}),
         make_emission("light", {17, 12, 4}),
     };
-    return make_scene(cameras, shapes, {}, materials, {}, {});
+    std::vector<yapp::shape*> shapes = {
+        make_shape("floor", materials[0], 0, yshape::stdsurface_type::uvquad,
+                   ym::zero3f, {-90, 0, 0}),
+        make_shape("ceiling", materials[0], 0, yshape::stdsurface_type::uvquad,
+                   {0, 2, 0}, {90, 0, 0}),
+        make_shape("back", materials[0], 0, yshape::stdsurface_type::uvquad,
+                   {0, 1, -1}, ym::zero3f),
+        make_shape("back", materials[2], 0, yshape::stdsurface_type::uvquad,
+                   {+1, 1, 0}, {0, -90, 0}),
+        make_shape("back", materials[1], 0, yshape::stdsurface_type::uvquad,
+                   {-1, 1, 0}, {0, 90, 0}),
+        make_shape("tallbox", materials[0], 0, yshape::stdsurface_type::uvcube,
+                   {-0.33f, 0.6f, -0.29f}, {0, 15, 0}, {0.3f, 0.6f, 0.3f}),
+        make_shape("shortbox", materials[0], 0, yshape::stdsurface_type::uvcube,
+                   {0.33f, 0.3f, 0.33f}, {0, -15, 0}, {0.3f, 0.3f, 0.3f}),
+        make_shape("light", materials[3], 0, yshape::stdsurface_type::uvquad,
+                   {0, 1.999f, 0}, {90, 0, 0}, {0.25f, 0.25f, 0.25f})};
+    return make_scene(cameras, shapes, {});
 }
 
 yapp::scene* make_envmap_scene(bool as_shape, bool use_map) {
     std::vector<yapp::camera*> cameras = {
         make_camera("cam", {0, 1.5f, 5}, {0, 0.5f, 0}, 0.5f, 0),
         make_camera("cam_dof", {0, 1.5f, 5}, {0, 0.5f, 0}, 0.5f, 0.1f)};
-    std::vector<yapp::shape*> shapes = {
-        make_floor("floor", 0, 6, 4, 6, {0, 0, -4}, ym::zero3f, {6, 6, 6}),
-        make_shape("obj01", 1, 5, yshape::stdsurface_type::uvflipcapsphere,
-                   {-1.25f, 0.5f, 0}, ym::zero3f, {0.5f, 0.5f, 0.5f}),
-        make_shape("obj02", 2, 4, yshape::stdsurface_type::uvspherizedcube,
-                   {0, 0.5f, 0}, ym::zero3f, {0.5f, 0.5f, 0.5f}),
-        make_shape("obj03", 3, 4, yshape::stdsurface_type::uvspherecube,
-                   {1.25f, 0.5f, 0}, ym::zero3f, {0.5f, 0.5f, 0.5f})};
     std::vector<yapp::material*> materials = {
         make_diffuse("floor", {0.2f, 0.2f, 0.2f}),
         make_plastic("obj01", {0.5f, 0.2f, 0.2f}, 0.1f),
         make_plastic("obj02", {0.2f, 0.5f, 0.2f}, 0.05f),
         make_plastic("obj03", {0.2f, 0.2f, 0.5f}, 0.01f),
-        make_emission("env", {1, 1, 1}, (use_map) ? 0 : -1)};
-    std::vector<yapp::texture*> textures;
+        make_emission("env", {1, 1, 1},
+                      (use_map) ? make_texture("env.hdr") : nullptr)};
+    std::vector<yapp::shape*> shapes = {
+        make_floor("floor", materials[0], 6, 4, 6, {0, 0, -4}, ym::zero3f,
+                   {6, 6, 6}),
+        make_shape("obj01", materials[1], 5,
+                   yshape::stdsurface_type::uvflipcapsphere, {-1.25f, 0.5f, 0},
+                   ym::zero3f, {0.5f, 0.5f, 0.5f}),
+        make_shape("obj02", materials[2], 4,
+                   yshape::stdsurface_type::uvspherizedcube, {0, 0.5f, 0},
+                   ym::zero3f, {0.5f, 0.5f, 0.5f}),
+        make_shape("obj03", materials[3], 4,
+                   yshape::stdsurface_type::uvspherecube, {1.25f, 0.5f, 0},
+                   ym::zero3f, {0.5f, 0.5f, 0.5f})};
     std::vector<yapp::environment*> environments;
     if (as_shape) {
-        shapes.push_back(make_shape(
-            "env_sphere", 4, 6, yshape::stdsurface_type::uvflippedsphere,
-            {0, 0.5f, 0}, {-90, 0, 0}, {10000, 10000, 10000}));
+        shapes.push_back(make_shape("env_sphere", materials[4], 6,
+                                    yshape::stdsurface_type::uvflippedsphere,
+                                    {0, 0.5f, 0}, {-90, 0, 0},
+                                    {10000, 10000, 10000}));
     } else {
         environments.push_back(
-            make_env("env", 4, {0, 0.5f, 0}, {-1.5f, 0.5f, 0}));
-    }
-    if (use_map) {
-        textures.push_back(make_texture("env.hdr"));
+            make_env("env", materials[4], {0, 0.5f, 0}, {-1.5f, 0.5f, 0}));
     }
 
-    return make_scene(cameras, shapes, {}, materials, {}, textures,
-                      environments);
+    return make_scene(cameras, shapes, environments);
 }
 
 yapp::scene* make_mat_scene(int mat, bool use_map) {
     std::vector<yapp::camera*> cameras = {
         make_camera("cam", {0, 1.5f, 5}, {0, 0.5f, 0}, 0.5f, 0),
         make_camera("cam_dof", {0, 1.5f, 5}, {0, 0.5f, 0}, 0.5f, 0.1f)};
-    std::vector<yapp::shape*> shapes = {
-        make_floor("floor", 0, 6, 4, 6, {0, 0, -4}, ym::zero3f, {6, 6, 6}),
-        make_shape("int01", 1, 5, yshape::stdsurface_type::uvsphere,
-                   {-1.25f, 0.5f, 0}, ym::zero3f, {0.4f, 0.4f, 0.4f}),
-        make_shape("int02", 1, 5, yshape::stdsurface_type::uvsphere,
-                   {0, 0.5f, 0}, ym::zero3f, {0.4f, 0.4f, 0.4f}),
-        make_shape("int03", 1, 5, yshape::stdsurface_type::uvsphere,
-                   {1.25f, 0.5f, 0}, ym::zero3f, {0.4f, 0.4f, 0.4f}),
-        make_shape("obj01", 2, 5, yshape::stdsurface_type::uvflipcapsphere,
-                   {-1.25f, 0.5f, 0}, {0, 35, 45}, {0.5f, 0.5f, 0.5f}),
-        make_shape("obj02", 3, 4, yshape::stdsurface_type::uvflipcapsphere,
-                   {0, 0.5f, 0}, {0, 35, 45}, {0.5f, 0.5f, 0.5f}),
-        make_shape("obj03", 4, 4, yshape::stdsurface_type::uvflipcapsphere,
-                   {1.25f, 0.5f, 0}, {0, 35, 45}, {0.5f, 0.5f, 0.5f})};
     std::vector<yapp::material*> materials;
-    std::vector<yapp::texture*> textures;
-    textures.push_back(make_texture("grid.png"));
+    std::vector<yapp::texture*> textures = {make_texture("grid.png")};
     switch (mat) {
         case 0: {
-            materials = {make_diffuse("floor", {0.1f, 0.1f, 0.1f}, 0),
+            materials = {make_diffuse("floor", {0.1f, 0.1f, 0.1f}, textures[0]),
                          make_diffuse("int", {0.2f, 0.2f, 0.2f}),
                          make_plastic("obj01", {0.5f, 0.2f, 0.2f}, 0.1f),
                          make_plastic("obj02", {0.2f, 0.5f, 0.2f}, 0.05f),
                          make_plastic("obj03", {0.2f, 0.2f, 0.5f}, 0.01f)};
         } break;
         case 1: {
-            materials = {make_diffuse("floor", {0.1f, 0.1f, 0.1f}, 0),
+            materials = {make_diffuse("floor", {0.1f, 0.1f, 0.1f}, textures[0]),
                          make_diffuse("int", {0.2f, 0.2f, 0.2f}),
                          make_metal("obj01", {0.9f, 0.9f, 0.9f}, 0.0f),
                          make_metal("obj02", {0.9f, 0.9f, 0.9f}, 0.05f),
                          make_plastic("obj03", {0.2f, 0.2f, 0.2f}, 0.01f)};
         } break;
         case 2: {
-            materials = {make_diffuse("floor", {0.1f, 0.1f, 0.1f}, 0),
+            materials = {make_diffuse("floor", {0.1f, 0.1f, 0.1f}, textures[0]),
                          make_diffuse("int", {0.2f, 0.2f, 0.2f}),
                          make_glass("obj01", {0.8f, 0.8f, 0.8f}, 0.0f),
                          make_plastic("obj02", {0.2f, 0.5f, 0.2f}, 0.05f),
@@ -914,19 +926,32 @@ yapp::scene* make_mat_scene(int mat, bool use_map) {
         } break;
         default: assert(false);
     }
-    std::vector<yapp::environment*> environments;
+    std::vector<yapp::shape*> shapes = {
+        make_floor("floor", materials[0], 6, 4, 6, {0, 0, -4}, ym::zero3f,
+                   {6, 6, 6}),
+        make_shape("int01", materials[1], 5, yshape::stdsurface_type::uvsphere,
+                   {-1.25f, 0.5f, 0}, ym::zero3f, {0.4f, 0.4f, 0.4f}),
+        make_shape("int02", materials[1], 5, yshape::stdsurface_type::uvsphere,
+                   {0, 0.5f, 0}, ym::zero3f, {0.4f, 0.4f, 0.4f}),
+        make_shape("int03", materials[1], 5, yshape::stdsurface_type::uvsphere,
+                   {1.25f, 0.5f, 0}, ym::zero3f, {0.4f, 0.4f, 0.4f}),
+        make_shape("obj01", materials[2], 5,
+                   yshape::stdsurface_type::uvflipcapsphere, {-1.25f, 0.5f, 0},
+                   {0, 35, 45}, {0.5f, 0.5f, 0.5f}),
+        make_shape("obj02", materials[3], 4,
+                   yshape::stdsurface_type::uvflipcapsphere, {0, 0.5f, 0},
+                   {0, 35, 45}, {0.5f, 0.5f, 0.5f}),
+        make_shape("obj03", materials[4], 4,
+                   yshape::stdsurface_type::uvflipcapsphere, {1.25f, 0.5f, 0},
+                   {0, 35, 45}, {0.5f, 0.5f, 0.5f})};
     if (use_map) {
-        materials.push_back(make_emission("env", {1, 1, 1}, 1));
-        environments.push_back(
-            make_env("env", 5, {0, 0.5f, 0}, {-1.5f, 0.5f, 0}));
-        textures.push_back(make_texture("env.hdr"));
-        return make_scene(cameras, shapes, {}, materials, {}, textures,
-                          environments);
+        std::vector<yapp::environment*> environments;
+        environments.push_back(make_env(
+            "env", make_emission("env", {1, 1, 1}, make_texture("env.hdr")),
+            {0, 0.5f, 0}, {-1.5f, 0.5f, 0}));
+        return make_scene(cameras, shapes, environments);
     } else {
-        return make_scene(cameras, shapes,
-                          make_simple_lightshapes(materials.size(), true),
-                          materials, make_simple_lightmaterials(true), textures,
-                          environments);
+        return make_scene(cameras, concat(shapes, make_simple_lights(true)));
     }
 }
 
@@ -934,21 +959,6 @@ yapp::scene* make_trans_scene(int mat, bool use_map) {
     std::vector<yapp::camera*> cameras = {
         make_camera("cam", {0, 1.5f, 5}, {0, 0.5f, 0}, 0.5f, 0),
         make_camera("cam_dof", {0, 1.5f, 5}, {0, 0.5f, 0}, 0.5f, 0.1f)};
-    std::vector<yapp::shape*> shapes = {
-        make_floor("floor", 0, 6, 4, 6, {0, 0, -4}, ym::zero3f, {6, 6, 6}),
-        //        make_shape("int01", 1, 5, yshape::stdsurface_type::uvsphere,
-        //                    {-1.25f, 0.5f, 0}, ym::zero3f, {0.4f, 0.4f,
-        //                    0.4f}),
-        //        make_shape("int02", 1, 5, yshape::stdsurface_type::uvsphere,
-        //                   {0, 0.5f, 0}, ym::zero3f, {0.4f, 0.4f, 0.4f}),
-        //        make_shape("int03", 1, 5, yshape::stdsurface_type::uvsphere,
-        //                   {1.25f, 0.5f, 0}, ym::zero3f, {0.4f, 0.4f, 0.4f}),
-        make_shape("obj01", 2, 5, yshape::stdsurface_type::uvflipcapsphere,
-                   {-1.25f, 0.5f, 0}, {0, 35, 45}, {0.5f, 0.5f, 0.5f}),
-        make_shape("obj02", 3, 4, yshape::stdsurface_type::uvsphere,
-                   {0, 0.5f, 0}, {0, 35, 45}, {0.5f, 0.5f, 0.5f}),
-        make_shape("obj03", 4, 4, yshape::stdsurface_type::uvquad,
-                   {1.25f, 0.5f, 0}, {0, 35, 45}, {0.5f, 0.5f, 0.5f})};
     std::vector<yapp::material*> materials;
     std::vector<yapp::texture*> textures;
     textures.push_back(make_texture("grid.png"));
@@ -976,19 +986,32 @@ yapp::scene* make_trans_scene(int mat, bool use_map) {
         //        } break;
         default: assert(false);
     }
-    std::vector<yapp::environment*> environments;
+    std::vector<yapp::shape*> shapes = {
+        make_floor("floor", materials[0], 6, 4, 6, {0, 0, -4}, ym::zero3f,
+                   {6, 6, 6}),
+        //        make_shape("int01", 1, 5, yshape::stdsurface_type::uvsphere,
+        //                    {-1.25f, 0.5f, 0}, ym::zero3f, {0.4f, 0.4f,
+        //                    0.4f}),
+        //        make_shape("int02", 1, 5, yshape::stdsurface_type::uvsphere,
+        //                   {0, 0.5f, 0}, ym::zero3f, {0.4f, 0.4f, 0.4f}),
+        //        make_shape("int03", 1, 5, yshape::stdsurface_type::uvsphere,
+        //                   {1.25f, 0.5f, 0}, ym::zero3f, {0.4f, 0.4f, 0.4f}),
+        make_shape("obj01", materials[2], 5,
+                   yshape::stdsurface_type::uvflipcapsphere, {-1.25f, 0.5f, 0},
+                   {0, 35, 45}, {0.5f, 0.5f, 0.5f}),
+        make_shape("obj02", materials[3], 4, yshape::stdsurface_type::uvsphere,
+                   {0, 0.5f, 0}, {0, 35, 45}, {0.5f, 0.5f, 0.5f}),
+        make_shape("obj03", materials[4], 4, yshape::stdsurface_type::uvquad,
+                   {1.25f, 0.5f, 0}, {0, 35, 45}, {0.5f, 0.5f, 0.5f})};
     if (use_map) {
-        materials.push_back(make_emission("env", {1, 1, 1}, 1));
+        std::vector<yapp::environment*> environments;
+        materials.push_back(
+            make_emission("env", {1, 1, 1}, make_texture("env.hdr")));
         environments.push_back(
-            make_env("env", 5, {0, 0.5f, 0}, {-1.5f, 0.5f, 0}));
-        textures.push_back(make_texture("env.hdr"));
-        return make_scene(cameras, shapes, {}, materials, {}, textures,
-                          environments);
+            make_env("env", materials[5], {0, 0.5f, 0}, {-1.5f, 0.5f, 0}));
+        return make_scene(cameras, shapes, environments);
     } else {
-        return make_scene(cameras, shapes,
-                          make_simple_lightshapes(materials.size(), true),
-                          materials, make_simple_lightmaterials(true), textures,
-                          environments);
+        return make_scene(cameras, concat(shapes, make_simple_lights(true)));
     }
 }
 
@@ -997,50 +1020,60 @@ yapp::scene* make_rigid_scene(int config) {
         make_camera("cam", {5, 5, 5}, {0, 0.5f, 0}, 0.5f, 0),
         make_camera("cam_dof", {5, 5, 5}, {0, 0.5f, 0}, 0.5f, 0.1f)};
     std::vector<yapp::shape*> shapes;
-    std::vector<yapp::material*> materials = {
-        make_diffuse("floor", {1, 1, 1}, 0),
-        make_plastic("obj", {1, 1, 1}, 0.1f, 1)};
+
     std::vector<yapp::texture*> textures = {make_texture("grid.png"),
                                             make_texture("checker.png")};
 
     if (config == 0 || config == 1) {
+        std::vector<yapp::material*> materials = {
+            make_diffuse("floor", {1, 1, 1}, 0),
+            make_plastic("obj", {1, 1, 1}, 0.1f, textures[1])};
         shapes = {
-            (config)
-                ? make_shape("floor", 0, 2, yshape::stdsurface_type::uvcube,
-                             {0, -2.5, 0}, {30, 0, 0}, {6, 0.5f, 6})
-                : make_shape("floor", 0, 4, yshape::stdsurface_type::uvcube,
-                             {0, -0.5f, 0}, {0, 0, 0}, {6, 0.5f, 6}),
-            make_shape("obj01", 1, 2, yshape::stdsurface_type::uvcube,
-                       {-1.25f, 0.5f, 0}, {0, 0, 0}, {0.5f, 0.5f, 0.5f}),
-            make_shape("obj02", 1, 3, yshape::stdsurface_type::uvspherecube,
-                       {0, 1, 0}, {0, 0, 0}, {0.5f, 0.5f, 0.5f}),
-            make_shape("obj03", 1, 2, yshape::stdsurface_type::uvcube,
-                       {1.25f, 1.5f, 0}, {0, 0, 0}, {0.5f, 0.5f, 0.5f}),
-            make_shape("obj11", 1, 2, yshape::stdsurface_type::uvcube,
-                       {-1.25f, 0.5f, 1.5f}, {0, 45, 0}, {0.5f, 0.5f, 0.5f}),
-            make_shape("obj12", 1, 3, yshape::stdsurface_type::uvspherecube,
-                       {0, 1, 1.5f}, {45, 0, 0}, {0.5f, 0.5f, 0.5f}),
-            make_shape("obj13", 1, 2, yshape::stdsurface_type::uvcube,
-                       {1.25f, 1.5f, 1.5f}, {45, 0, 45}, {0.5f, 0.5f, 0.5f}),
-            make_shape("obj21", 1, 2, yshape::stdsurface_type::uvcube,
-                       {-1.25f, 0.5f, -1.5f}, {0, 0, 0}, {0.5f, 0.5f, 0.5f}),
-            make_shape("obj22", 1, 3, yshape::stdsurface_type::uvspherecube,
-                       {0, 1, -1.5f}, {22.5, 0, 0}, {0.5f, 0.5f, 0.5f}),
-            make_shape("obj23", 1, 2, yshape::stdsurface_type::uvcube,
-                       {1.25f, 1.5f, -1.5f}, {22.5f, 0, 22.5f},
-                       {0.5f, 0.5f, 0.5f})};
+            (config) ? make_shape("floor", materials[0], 2,
+                                  yshape::stdsurface_type::uvcube, {0, -2.5, 0},
+                                  {30, 0, 0}, {6, 0.5f, 6})
+                     : make_shape("floor", materials[0], 4,
+                                  yshape::stdsurface_type::uvcube,
+                                  {0, -0.5f, 0}, {0, 0, 0}, {6, 0.5f, 6}),
+            make_shape("obj01", materials[1], 2,
+                       yshape::stdsurface_type::uvcube, {-1.25f, 0.5f, 0},
+                       {0, 0, 0}, {0.5f, 0.5f, 0.5f}),
+            make_shape("obj02", materials[1], 3,
+                       yshape::stdsurface_type::uvspherecube, {0, 1, 0},
+                       {0, 0, 0}, {0.5f, 0.5f, 0.5f}),
+            make_shape("obj03", materials[1], 2,
+                       yshape::stdsurface_type::uvcube, {1.25f, 1.5f, 0},
+                       {0, 0, 0}, {0.5f, 0.5f, 0.5f}),
+            make_shape("obj11", materials[1], 2,
+                       yshape::stdsurface_type::uvcube, {-1.25f, 0.5f, 1.5f},
+                       {0, 45, 0}, {0.5f, 0.5f, 0.5f}),
+            make_shape("obj12", materials[1], 3,
+                       yshape::stdsurface_type::uvspherecube, {0, 1, 1.5f},
+                       {45, 0, 0}, {0.5f, 0.5f, 0.5f}),
+            make_shape("obj13", materials[1], 2,
+                       yshape::stdsurface_type::uvcube, {1.25f, 1.5f, 1.5f},
+                       {45, 0, 45}, {0.5f, 0.5f, 0.5f}),
+            make_shape("obj21", materials[1], 2,
+                       yshape::stdsurface_type::uvcube, {-1.25f, 0.5f, -1.5f},
+                       {0, 0, 0}, {0.5f, 0.5f, 0.5f}),
+            make_shape("obj22", materials[1], 3,
+                       yshape::stdsurface_type::uvspherecube, {0, 1, -1.5f},
+                       {22.5, 0, 0}, {0.5f, 0.5f, 0.5f}),
+            make_shape("obj23", materials[1], 2,
+                       yshape::stdsurface_type::uvcube, {1.25f, 1.5f, -1.5f},
+                       {22.5f, 0, 22.5f}, {0.5f, 0.5f, 0.5f})};
     } else if (config == 2) {
-        shapes = make_random_rigid_shapes(128, 1);
+        shapes = make_random_rigid_shapes(128, 1, make_random_materials(128));
     } else {
         assert(false);
     }
 
-    shapes.push_back(make_point("light01", 2, {0.7f, 4, 3}));
-    shapes.push_back(make_point("light02", 3, {-0.7f, 4, 3}));
-    materials.push_back(make_emission("light01", {100, 100, 100}));
-    materials.push_back(make_emission("light02", {100, 100, 100}));
+    shapes.push_back(make_point(
+        "light01", make_emission("light01", {100, 100, 100}), {0.7f, 4, 3}));
+    shapes.push_back(make_point(
+        "light02", make_emission("light02", {100, 100, 100}), {-0.7f, 4, 3}));
 
-    return make_scene(cameras, shapes, {}, materials, {}, textures);
+    return make_scene(cameras, shapes);
 }
 
 int main(int argc, char* argv[]) {

@@ -58,6 +58,26 @@ scene::~scene() {
 }
 
 //
+// Gets material index
+//
+int get_material_idx(const scene* scn, const material* mat) {
+    if (!mat) return -1;
+    for (auto i = 0; i < scn->materials.size(); i++)
+        if (scn->materials[i] == mat) return i;
+    return -1;
+}
+
+//
+// Gets texture index
+//
+int get_texture_idx(const scene* scn, const texture* txt) {
+    if (!txt) return -1;
+    for (auto i = 0; i < scn->textures.size(); i++)
+        if (scn->textures[i] == txt) return i;
+    return -1;
+}
+
+//
 // backward compatible calls
 //
 int get_etype(const shape& shape) {
@@ -122,43 +142,6 @@ inline scene* load_obj_scene(const std::string& filename) {
         sc->cameras.push_back(cam);
     }
 
-    // convert shapes
-    for (auto fl_mesh : fl_scene->meshes) {
-        for (auto prim_id : fl_mesh->primitives) {
-            auto fl_prim = fl_scene->primitives[prim_id];
-            auto sh = new shape();
-            sh->name = fl_mesh->name;
-            sh->frame = ym::identity_frame3f;
-            sh->matid = fl_prim->material;
-            sh->pos = fl_prim->pos;
-            sh->norm = fl_prim->norm;
-            sh->texcoord = fl_prim->texcoord;
-            sh->color = fl_prim->color;
-            sh->radius = fl_prim->radius;
-            sh->points = fl_prim->points;
-            sh->lines = fl_prim->lines;
-            sh->triangles = fl_prim->triangles;
-            sc->shapes.push_back(sh);
-        }
-    }
-
-    // convert materials
-    for (auto fl_mat : fl_scene->materials) {
-        auto mat = new material();
-        mat->name = fl_mat->name;
-        mat->ke = fl_mat->ke;
-        mat->kd = fl_mat->kd;
-        mat->ks = fl_mat->ks;
-        mat->kt = fl_mat->kt;
-        mat->rs = fl_mat->rs;
-        mat->ke_txt = fl_mat->ke_txt;
-        mat->kd_txt = fl_mat->kd_txt;
-        mat->ks_txt = fl_mat->ks_txt;
-        mat->kt_txt = fl_mat->kt_txt;
-        mat->rs_txt = fl_mat->rs_txt;
-        sc->materials.push_back(mat);
-    }
-
     // convert textures
     for (auto fl_txt : fl_scene->textures) {
         auto txt = new texture();
@@ -171,12 +154,56 @@ inline scene* load_obj_scene(const std::string& filename) {
         sc->textures.push_back(txt);
     }
 
+    // convert materials
+    for (auto fl_mat : fl_scene->materials) {
+        auto mat = new material();
+        mat->name = fl_mat->name;
+        mat->ke = fl_mat->ke;
+        mat->kd = fl_mat->kd;
+        mat->ks = fl_mat->ks;
+        mat->kt = fl_mat->kt;
+        mat->rs = fl_mat->rs;
+        mat->ke_txt =
+            (fl_mat->ke_txt < 0) ? nullptr : sc->textures[fl_mat->ke_txt];
+        mat->kd_txt =
+            (fl_mat->kd_txt < 0) ? nullptr : sc->textures[fl_mat->kd_txt];
+        mat->ks_txt =
+            (fl_mat->ks_txt < 0) ? nullptr : sc->textures[fl_mat->ks_txt];
+        mat->kt_txt =
+            (fl_mat->kt_txt < 0) ? nullptr : sc->textures[fl_mat->kt_txt];
+        mat->rs_txt =
+            (fl_mat->rs_txt < 0) ? nullptr : sc->textures[fl_mat->rs_txt];
+        sc->materials.push_back(mat);
+    }
+
+    // convert shapes
+    for (auto fl_mesh : fl_scene->meshes) {
+        for (auto prim_id : fl_mesh->primitives) {
+            auto fl_prim = fl_scene->primitives[prim_id];
+            auto sh = new shape();
+            sh->name = fl_mesh->name;
+            sh->frame = ym::identity_frame3f;
+            sh->mat = (fl_prim->material < 0)
+                          ? nullptr
+                          : sc->materials[fl_prim->material];
+            sh->pos = fl_prim->pos;
+            sh->norm = fl_prim->norm;
+            sh->texcoord = fl_prim->texcoord;
+            sh->color = fl_prim->color;
+            sh->radius = fl_prim->radius;
+            sh->points = fl_prim->points;
+            sh->lines = fl_prim->lines;
+            sh->triangles = fl_prim->triangles;
+            sc->shapes.push_back(sh);
+        }
+    }
+
     // convert envs
     for (auto fl_env : fl_scene->environments) {
         auto env = new environment();
         env->name = fl_env->name;
         env->frame = ym::to_frame(ym::mat4f(fl_env->xform));
-        env->matid = fl_env->matid;
+        env->mat = (fl_env->matid < 0) ? nullptr : sc->materials[fl_env->matid];
         sc->environments.push_back(env);
     }
 
@@ -210,7 +237,7 @@ inline void save_obj_scene(const std::string& filename, const scene* sc) {
         fl_mesh->name = shape->name;
         fl_mesh->primitives.push_back((int)fl_scene->primitives.size());
         auto fl_prim = new yobj::fl_primitives();
-        fl_prim->material = shape->matid;
+        fl_prim->material = get_material_idx(sc, shape->mat);
         fl_prim->pos.resize(shape->pos.size());
         for (auto i = 0; i < shape->pos.size(); i++) {
             fl_prim->pos[i] = ym::transform_point((ym::frame3f)shape->frame,
@@ -235,6 +262,13 @@ inline void save_obj_scene(const std::string& filename, const scene* sc) {
         fl_scene->meshes.push_back(fl_mesh);
     }
 
+    // convert textures
+    for (auto txt : sc->textures) {
+        auto fl_txt = new yobj::fl_texture();
+        fl_txt->path = txt->path;
+        fl_scene->textures.push_back(fl_txt);
+    }
+
     // convert materials
     for (auto mat : sc->materials) {
         auto fl_mat = new yobj::fl_material();
@@ -244,19 +278,12 @@ inline void save_obj_scene(const std::string& filename, const scene* sc) {
         fl_mat->ks = mat->ks;
         fl_mat->kt = mat->kt;
         fl_mat->rs = mat->rs;
-        fl_mat->ke_txt = mat->ke_txt;
-        fl_mat->kd_txt = mat->kd_txt;
-        fl_mat->ks_txt = mat->ks_txt;
-        fl_mat->kt_txt = mat->kt_txt;
-        fl_mat->rs_txt = mat->rs_txt;
+        fl_mat->ke_txt = get_texture_idx(sc, mat->ke_txt);
+        fl_mat->kd_txt = get_texture_idx(sc, mat->kd_txt);
+        fl_mat->ks_txt = get_texture_idx(sc, mat->ks_txt);
+        fl_mat->kt_txt = get_texture_idx(sc, mat->kt_txt);
+        fl_mat->rs_txt = get_texture_idx(sc, mat->rs_txt);
         fl_scene->materials.push_back(fl_mat);
-    }
-
-    // convert textures
-    for (auto txt : sc->textures) {
-        auto fl_txt = new yobj::fl_texture();
-        fl_txt->path = txt->path;
-        fl_scene->textures.push_back(fl_txt);
     }
 
     // convert envs
@@ -264,7 +291,7 @@ inline void save_obj_scene(const std::string& filename, const scene* sc) {
         auto fl_env = new yobj::fl_environment();
         fl_env->name = env->name;
         fl_env->xform = ym::to_mat((ym::frame3f)env->frame);
-        fl_env->matid = env->matid;
+        fl_env->matid = get_material_idx(sc, env->mat);
         fl_scene->environments.push_back(fl_env);
     }
 
@@ -298,7 +325,7 @@ inline void save_gltf_scene(const std::string& filename, const scene* sc) {
         fl_mesh->xform = ym::to_mat((ym::frame3f)shape->frame);
         fl_mesh->primitives.push_back((int)fl_scene->primitives.size());
         auto fl_prim = new ygltf::fl_primitives();
-        fl_prim->material = shape->matid;
+        fl_prim->material = get_material_idx(sc, shape->mat);
         fl_prim->pos = std::vector<std::array<float, 3>>(shape->pos.begin(),
                                                          shape->pos.end());
         fl_prim->norm = std::vector<std::array<float, 3>>(shape->norm.begin(),
@@ -325,10 +352,10 @@ inline void save_gltf_scene(const std::string& filename, const scene* sc) {
         fl_mat->kd = mat->kd;
         fl_mat->ks = mat->ks;
         fl_mat->rs = mat->rs;
-        fl_mat->ke_txt = mat->ke_txt;
-        fl_mat->kd_txt = mat->kd_txt;
-        fl_mat->ks_txt = mat->ks_txt;
-        fl_mat->rs_txt = mat->rs_txt;
+        fl_mat->ke_txt = get_texture_idx(sc, mat->ke_txt);
+        fl_mat->kd_txt = get_texture_idx(sc, mat->kd_txt);
+        fl_mat->ks_txt = get_texture_idx(sc, mat->ks_txt);
+        fl_mat->rs_txt = get_texture_idx(sc, mat->rs_txt);
         fl_scene->materials.push_back(fl_mat);
     }
 
@@ -374,41 +401,6 @@ inline scene* load_gltf_scene(const std::string& filename, bool binary) {
         sc->cameras.push_back(cam);
     }
 
-    // convert shapes
-    for (auto fl_mesh : fl_scene->meshes) {
-        for (auto fl_prim_id : fl_mesh->primitives) {
-            auto fl_prim = fl_scene->primitives.at(fl_prim_id);
-            auto sh = new shape();
-            sh->name = fl_mesh->name;
-            sh->frame = ym::to_frame(ym::mat4f(fl_mesh->xform));
-            sh->matid = fl_prim->material;
-            sh->pos = fl_prim->pos;
-            sh->norm = fl_prim->norm;
-            sh->texcoord = fl_prim->texcoord;
-            sh->color = fl_prim->color;
-            sh->radius = fl_prim->radius;
-            sh->points = fl_prim->points;
-            sh->lines = fl_prim->lines;
-            sh->triangles = fl_prim->triangles;
-            sc->shapes.push_back(sh);
-        }
-    }
-
-    // convert materials
-    for (auto fl_mat : fl_scene->materials) {
-        auto mat = new material();
-        mat->name = fl_mat->name;
-        mat->ke = fl_mat->ke;
-        mat->kd = fl_mat->kd;
-        mat->ks = fl_mat->ks;
-        mat->rs = fl_mat->rs;
-        mat->ke_txt = fl_mat->ke_txt;
-        mat->kd_txt = fl_mat->kd_txt;
-        mat->ks_txt = fl_mat->ks_txt;
-        mat->rs_txt = fl_mat->rs_txt;
-        sc->materials.push_back(mat);
-    }
-
     // convert textures
     for (auto fl_txt : fl_scene->textures) {
         auto txt = new texture();
@@ -423,6 +415,47 @@ inline scene* load_gltf_scene(const std::string& filename, bool binary) {
         sc->textures.push_back(txt);
     }
 
+    // convert materials
+    for (auto fl_mat : fl_scene->materials) {
+        auto mat = new material();
+        mat->name = fl_mat->name;
+        mat->ke = fl_mat->ke;
+        mat->kd = fl_mat->kd;
+        mat->ks = fl_mat->ks;
+        mat->rs = fl_mat->rs;
+        mat->ke_txt =
+            (fl_mat->ke_txt < 0) ? nullptr : sc->textures[fl_mat->ke_txt];
+        mat->kd_txt =
+            (fl_mat->kd_txt < 0) ? nullptr : sc->textures[fl_mat->kd_txt];
+        mat->ks_txt =
+            (fl_mat->ks_txt < 0) ? nullptr : sc->textures[fl_mat->ks_txt];
+        mat->rs_txt =
+            (fl_mat->rs_txt < 0) ? nullptr : sc->textures[fl_mat->rs_txt];
+        sc->materials.push_back(mat);
+    }
+
+    // convert shapes
+    for (auto fl_mesh : fl_scene->meshes) {
+        for (auto fl_prim_id : fl_mesh->primitives) {
+            auto fl_prim = fl_scene->primitives.at(fl_prim_id);
+            auto sh = new shape();
+            sh->name = fl_mesh->name;
+            sh->frame = ym::to_frame(ym::mat4f(fl_mesh->xform));
+            sh->mat = (fl_prim->material < 0)
+                          ? nullptr
+                          : sc->materials[fl_prim->material];
+            sh->pos = fl_prim->pos;
+            sh->norm = fl_prim->norm;
+            sh->texcoord = fl_prim->texcoord;
+            sh->color = fl_prim->color;
+            sh->radius = fl_prim->radius;
+            sh->points = fl_prim->points;
+            sh->lines = fl_prim->lines;
+            sh->triangles = fl_prim->triangles;
+            sc->shapes.push_back(sh);
+        }
+    }
+
     // done
     return sc.release();
 }
@@ -433,7 +466,6 @@ inline scene* load_gltf_scene(const std::string& filename, bool binary) {
 inline scene* load_ply_scene(const std::string& filename) {
     // preallocate vertex and element data
     auto sh = std::unique_ptr<shape>(new shape());
-    sh->matid = 0;
 
     // Tinyply can and will throw exceptions at you!
     try {
@@ -492,10 +524,11 @@ inline scene* load_ply_scene(const std::string& filename) {
     mat->kd = (sh->kd.empty()) ? float3{0.8f, 0.8f, 0.8f} : float3{1, 1, 1};
     mat->ks = (sh->ks.empty()) ? float3{0.04f, 0.04f, 0.04f} : float3{1, 1, 1};
     mat->rs = (sh->rs.empty()) ? 0.1f : 1.0f;
-    mat->ke_txt = -1;
-    mat->kd_txt = -1;
-    mat->ks_txt = -1;
-    mat->rs_txt = -1;
+    mat->ke_txt = nullptr;
+    mat->kd_txt = nullptr;
+    mat->ks_txt = nullptr;
+    mat->rs_txt = nullptr;
+    sh->mat = mat;
 
     // init scene
     auto sc = std::unique_ptr<scene>(new scene());
@@ -595,12 +628,15 @@ void merge_scenes(scene* sc, const scene* sc1) {
     }
     for (auto shp : sc1->shapes) {
         sc->shapes.push_back(new shape(*shp));
-        if (sc->shapes.back()->matid >= 0) sc->shapes.back()->matid += matoff;
+        if (sc->shapes.back()->mat)
+            sc->shapes.back()->mat =
+                sc->materials[get_material_idx(sc1, shp->mat) + matoff];
     }
     for (auto env : sc1->environments) {
         sc->environments.push_back(new environment(*env));
-        if (sc->environments.back()->matid >= 0)
-            sc->environments.back()->matid += matoff;
+        if (sc->environments.back()->mat)
+            sc->environments.back()->mat =
+                sc->materials[get_material_idx(sc1, env->mat) + matoff];
     }
 }
 
@@ -730,12 +766,12 @@ void load_envmap(scene* scn, const std::string& filename, float scale) {
     auto mat = new material();
     mat->name = "env_mat";
     mat->ke = {scale, scale, scale};
-    mat->ke_txt = (int)scn->textures.size() - 1;
+    mat->ke_txt = txt;
     scn->materials.push_back(mat);
     // environment
     auto env = new environment();
     env->name = "env";
-    env->matid = (int)scn->materials.size() - 1;
+    env->mat = mat;
     env->frame = ym::lookat_frame3(ym::vec3f{0, 0, 1}, ym::vec3f{0, 0, 0},
                                    ym::vec3f{0, 1, 0});
     scn->environments.push_back(env);
@@ -845,38 +881,43 @@ ytrace::scene* make_trace_scene(const yapp::scene* scene,
 
     auto eid = 0;
     for (auto env : scene->environments) {
-        auto mat = scene->materials[env->matid];
+        auto mat = env->mat;
         ytrace::set_environment(trace_scene, eid++, env->frame, mat->ke,
-                                mat->ke_txt);
+                                get_texture_idx(scene, mat->ke_txt));
     }
 
     auto mid = 0;
     for (auto mat : scene->materials) {
         ytrace::set_material(trace_scene, mid++, mat->ke, mat->kd, mat->ks,
-                             mat->kt, mat->rs, mat->ke_txt, mat->kd_txt,
-                             mat->ks_txt, mat->kt_txt, mat->rs_txt);
+                             mat->kt, mat->rs,
+                             get_texture_idx(scene, mat->ke_txt),
+                             get_texture_idx(scene, mat->kd_txt),
+                             get_texture_idx(scene, mat->ks_txt),
+                             get_texture_idx(scene, mat->kt_txt),
+                             get_texture_idx(scene, mat->rs_txt));
     }
 
     auto sid = 0;
     for (auto shape : scene->shapes) {
         if (!shape->points.empty()) {
-            ytrace::set_point_shape(trace_scene, sid++, shape->frame,
-                                    shape->matid, (int)shape->points.size(),
-                                    shape->points.data(),
-                                    (int)shape->pos.size(), shape->pos.data(),
-                                    shape->norm.data(), shape->texcoord.data(),
-                                    shape->color.data(), shape->radius.data());
+            ytrace::set_point_shape(
+                trace_scene, sid++, shape->frame,
+                get_material_idx(scene, shape->mat), (int)shape->points.size(),
+                shape->points.data(), (int)shape->pos.size(), shape->pos.data(),
+                shape->norm.data(), shape->texcoord.data(), shape->color.data(),
+                shape->radius.data());
         } else if (!shape->lines.empty()) {
-            ytrace::set_line_shape(trace_scene, sid++, shape->frame,
-                                   shape->matid, (int)shape->lines.size(),
-                                   shape->lines.data(), (int)shape->pos.size(),
-                                   shape->pos.data(), shape->norm.data(),
-                                   shape->texcoord.data(), shape->color.data(),
-                                   shape->radius.data());
+            ytrace::set_line_shape(
+                trace_scene, sid++, shape->frame,
+                get_material_idx(scene, shape->mat), (int)shape->lines.size(),
+                shape->lines.data(), (int)shape->pos.size(), shape->pos.data(),
+                shape->norm.data(), shape->texcoord.data(), shape->color.data(),
+                shape->radius.data());
 
         } else if (!shape->triangles.empty()) {
             ytrace::set_triangle_shape(
-                trace_scene, sid++, shape->frame, shape->matid,
+                trace_scene, sid++, shape->frame,
+                get_material_idx(scene, shape->mat),
                 (int)shape->triangles.size(), shape->triangles.data(),
                 (int)shape->pos.size(), shape->pos.data(), shape->norm.data(),
                 shape->texcoord.data(), shape->color.data());
@@ -923,7 +964,7 @@ ysym::scene* make_rigid_scene(const yapp::scene* scene,
     // add each shape
     auto sid = 0;
     for (auto shape : scene->shapes) {
-        auto mat = scene->materials[shape->matid];
+        auto mat = shape->mat;
         auto density =
             (shape->name != "floor" && ym::length((ym::vec3f)mat->ke) == 0 &&
              !shape->triangles.empty())

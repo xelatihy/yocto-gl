@@ -60,12 +60,46 @@ using int3 = std::array<int, 3>;
 using int4 = std::array<int, 4>;
 
 //
+// Scene Texture
+//
+struct texture {
+    std::string path;                // path
+    int width = 0;                   // width
+    int height = 0;                  // height
+    int ncomp = 0;                   // number of components
+    std::vector<float> hdr;          // if loaded, hdr data
+    std::vector<unsigned char> ldr;  // if loaded, ldr data
+};
+
+//
+// Scene Material
+//
+struct material {
+    // whole material data
+    std::string name;  // material name
+
+    // color information
+    float3 ke = {0, 0, 0};  // emission color
+    float3 kd = {0, 0, 0};  // diffuse color
+    float3 ks = {0, 0, 0};  // specular color
+    float3 kt = {0, 0, 0};  // transmittance color
+    float rs = 0.0001;      // roughness
+
+    // indices in the texture array (-1 if not found)
+    texture* ke_txt = nullptr;
+    texture* kd_txt = nullptr;
+    texture* ks_txt = nullptr;
+    texture* kt_txt = nullptr;
+    texture* rs_txt = nullptr;
+};
+
+//
 // Scene geometry
 //
 struct shape {
     // whole shape data
-    std::string name;  // shape name
-    int matid = -1;    // index in the material array (-1 if not found)
+    std::string name;         // shape name
+    material* mat = nullptr;  // material pointer
     float3x4 frame = {{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}}};  // frame
 
     // shape elements
@@ -89,40 +123,6 @@ struct shape {
 };
 
 //
-// Scene Material
-//
-struct material {
-    // whole material data
-    std::string name;  // material name
-
-    // color information
-    float3 ke = {0, 0, 0};  // emission color
-    float3 kd = {0, 0, 0};  // diffuse color
-    float3 ks = {0, 0, 0};  // specular color
-    float3 kt = {0, 0, 0};  // transmittance color
-    float rs = 0.0001;      // roughness
-
-    // indices in the texture array (-1 if not found)
-    int ke_txt = -1;
-    int kd_txt = -1;
-    int ks_txt = -1;
-    int kt_txt = -1;
-    int rs_txt = -1;
-};
-
-//
-// Scene Texture
-//
-struct texture {
-    std::string path;                // path
-    int width = 0;                   // width
-    int height = 0;                  // height
-    int ncomp = 0;                   // number of components
-    std::vector<float> hdr;          // if loaded, hdr data
-    std::vector<unsigned char> ldr;  // if loaded, ldr data
-};
-
-//
 // Scene Camera
 //
 struct camera {
@@ -139,8 +139,8 @@ struct camera {
 // Envinonment map
 //
 struct environment {
-    std::string name;  // name
-    int matid = -1;    // index of material in material array (-1 if not found)
+    std::string name;         // name
+    material* mat = nullptr;  // material pointer
     float3x4 frame = {{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}}};  // frame
 };
 
@@ -156,6 +156,11 @@ struct scene {
 
     ~scene();
 };
+
+//
+// Gets material index
+//
+int get_material_idx(const scene* scn, const material* mat);
 
 int get_etype(const shape& shape);
 int get_nelems(const shape& shape);
