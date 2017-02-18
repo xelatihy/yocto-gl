@@ -390,12 +390,14 @@ struct fl_material {
     float3 ke = {0, 0, 0};  ///< emission color
     float3 kd = {0, 0, 0};  ///< diffuse color
     float3 ks = {0, 0, 0};  ///< specular color
+    float3 kt = {0, 0, 0};  ///< transmission color
     float rs = 0.0001;      ///< roughness
 
     // indices in the texture array (-1 if not found)
     int ke_txt = -1;  ///< emission texture index
     int kd_txt = -1;  ///< diffuse texture index
     int ks_txt = -1;  ///< specular texture index
+    int kt_txt = -1;  ///< transmission texture index
     int rs_txt = -1;  ///< roughness texture index
 };
 

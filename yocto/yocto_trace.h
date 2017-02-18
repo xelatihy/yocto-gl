@@ -209,8 +209,9 @@ YTRACE_API void set_texture(scene* scn, int tid, int width, int height,
 /// - use_phong: whether to use phong
 ///
 YTRACE_API void set_material(scene* scn, int mid, const float3& ke,
-                             const float3& kd, const float3& ks, float rs = 0.1,
-                             int ke_txt = -1, int kd_txt = -1, int ks_txt = -1,
+                             const float3& kd, const float3& ks,
+                             const float3& kt, float rs = 0.1, int ke_txt = -1,
+                             int kd_txt = -1, int ks_txt = -1, int kt_txt = -1,
                              int rs_txt = -1, bool use_phong = false);
 
 ///
