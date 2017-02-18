@@ -149,10 +149,12 @@ inline scene* load_obj_scene(const std::string& filename) {
         mat->ke = fl_mat->ke;
         mat->kd = fl_mat->kd;
         mat->ks = fl_mat->ks;
+        mat->kt = fl_mat->kt;
         mat->rs = fl_mat->rs;
         mat->ke_txt = fl_mat->ke_txt;
         mat->kd_txt = fl_mat->kd_txt;
         mat->ks_txt = fl_mat->ks_txt;
+        mat->kt_txt = fl_mat->kt_txt;
         mat->rs_txt = fl_mat->rs_txt;
         sc->materials.push_back(mat);
     }
@@ -240,10 +242,12 @@ inline void save_obj_scene(const std::string& filename, const scene* sc) {
         fl_mat->ke = mat->ke;
         fl_mat->kd = mat->kd;
         fl_mat->ks = mat->ks;
+        fl_mat->kt = mat->kt;
         fl_mat->rs = mat->rs;
         fl_mat->ke_txt = mat->ke_txt;
         fl_mat->kd_txt = mat->kd_txt;
         fl_mat->ks_txt = mat->ks_txt;
+        fl_mat->kt_txt = mat->kt_txt;
         fl_mat->rs_txt = mat->rs_txt;
         fl_scene->materials.push_back(fl_mat);
     }
@@ -849,8 +853,8 @@ ytrace::scene* make_trace_scene(const yapp::scene* scene,
     auto mid = 0;
     for (auto mat : scene->materials) {
         ytrace::set_material(trace_scene, mid++, mat->ke, mat->kd, mat->ks,
-                             mat->rs, mat->ke_txt, mat->kd_txt, mat->ks_txt,
-                             mat->ks_txt);
+                             mat->kt, mat->rs, mat->ke_txt, mat->kd_txt,
+                             mat->ks_txt, mat->kt_txt, mat->rs_txt);
     }
 
     auto sid = 0;

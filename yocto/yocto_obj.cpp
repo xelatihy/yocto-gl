@@ -371,6 +371,8 @@ YOBJ_API std::vector<material> load_mtl(const std::string& filename) {
             materials.back().ks = _parse_float3(cur_tok);
         } else if (tok_s == "Kr") {
             materials.back().kr = _parse_float3(cur_tok);
+        } else if (tok_s == "Kt" || tok_s == "Tf") {
+            materials.back().kt = _parse_float3(cur_tok);
         } else if (tok_s == "Tr") {
             if (cur_ntok >= 3) {
                 materials.back().kt = _parse_float3(cur_tok);
@@ -672,10 +674,12 @@ YOBJ_API fl_obj* flatten_obj(const obj* asset) {
         mat->ke = omat.ke;
         mat->kd = omat.kd;
         mat->ks = omat.ks;
+        mat->kt = omat.kt;
         mat->rs = sqrt(2 / (omat.ns + 2));
         mat->ke_txt = _add_texture(omat.ke_txt, scene->textures);
         mat->kd_txt = _add_texture(omat.kd_txt, scene->textures);
         mat->ks_txt = _add_texture(omat.ks_txt, scene->textures);
+        mat->kt_txt = _add_texture(omat.kt_txt, scene->textures);
         mat->rs_txt = _add_texture(omat.ns_txt, scene->textures);
         scene->materials.push_back(mat);
     }
@@ -817,10 +821,12 @@ YOBJ_API obj* unflatten_obj(const fl_obj* scene) {
         mat->ke = fl_mat->ke;
         mat->kd = fl_mat->kd;
         mat->ks = fl_mat->ks;
+        mat->kt = fl_mat->kt;
         mat->ns = (fl_mat->rs) ? 2 / (fl_mat->rs * fl_mat->rs) - 2 : 1e6;
         mat->ke_txt = txt(scene, fl_mat->ke_txt);
         mat->kd_txt = txt(scene, fl_mat->kd_txt);
         mat->ks_txt = txt(scene, fl_mat->ks_txt);
+        mat->kt_txt = txt(scene, fl_mat->kt_txt);
         mat->ns_txt = txt(scene, fl_mat->rs_txt);
     }
 

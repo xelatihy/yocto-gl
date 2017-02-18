@@ -75,12 +75,14 @@ struct material {
     ym::vec3f ke = ym::zero3f;  // emission, term
     ym::vec3f kd = ym::zero3f;  // diffuse term
     ym::vec3f ks = ym::zero3f;  // specular term
+    ym::vec3f kt = ym::zero3f;  // transmittance term
     float rs = 0.1;             // specular roughness
 
     // textures
     texture* ke_txt = nullptr;
     texture* kd_txt = nullptr;
     texture* ks_txt = nullptr;
+    texture* kt_txt = nullptr;
     texture* rs_txt = nullptr;
 
     // material flags
@@ -112,6 +114,7 @@ struct shape {
     const ym::vec3f* ke = nullptr;  // vertex data
     const ym::vec3f* kd = nullptr;  // vertex data
     const ym::vec3f* ks = nullptr;  // vertex data
+    const ym::vec3f* kt = nullptr;  // vertex data
     const ym::vec1f* rs = nullptr;  // vertex data
 
     // sampling data
@@ -161,7 +164,8 @@ struct scene {
     ~scene();
 
     // [private] light sources
-    std::vector<light*> lights;  // lights [private]
+    std::vector<light*> lights;        // lights [private]
+    bool shadow_transmission = false;  // wheter to test transmission
 };
 
 //
@@ -260,12 +264,14 @@ YTRACE_API void set_texture(scene* scn, int tid, int width, int height,
 // Public API. See above.
 //
 YTRACE_API void set_material(scene* scn, int mid, const float3& ke,
-                             const float3& kd, const float3& ks, float rs,
-                             int ke_txt, int kd_txt, int ks_txt, int rs_txt,
+                             const float3& kd, const float3& ks,
+                             const float3& kt, float rs, int ke_txt, int kd_txt,
+                             int ks_txt, int kt_txt, int rs_txt,
                              bool use_phong) {
     scn->materials[mid]->ke = ke;
     scn->materials[mid]->kd = kd;
     scn->materials[mid]->ks = ks;
+    scn->materials[mid]->kt = kt;
     scn->materials[mid]->rs = rs;
     scn->materials[mid]->ke_txt =
         (ke_txt >= 0) ? scn->textures[ke_txt] : nullptr;
@@ -273,6 +279,8 @@ YTRACE_API void set_material(scene* scn, int mid, const float3& ke,
         (kd_txt >= 0) ? scn->textures[kd_txt] : nullptr;
     scn->materials[mid]->ks_txt =
         (ks_txt >= 0) ? scn->textures[ks_txt] : nullptr;
+    scn->materials[mid]->kt_txt =
+        (kt_txt >= 0) ? scn->textures[kt_txt] : nullptr;
     scn->materials[mid]->rs_txt =
         (rs_txt >= 0) ? scn->textures[rs_txt] : nullptr;
     scn->materials[mid]->use_phong = use_phong;
@@ -439,8 +447,10 @@ YTRACE_API void init_lights(scene* scn) {
     // clear old lights
     for (auto lgt : scn->lights) delete lgt;
     scn->lights.clear();
+    scn->shadow_transmission = false;
 
     for (auto shp : scn->shapes) {
+        if (shp->mat->kt != ym::zero3f) scn->shadow_transmission = true;
         if (shp->mat->ke == ym::zero3f) continue;
         auto lgt = new light();
         lgt->shp = shp;
@@ -630,6 +640,7 @@ struct point {
     ym::vec3f ke = ym::zero3f;  // material values
     ym::vec3f kd = ym::zero3f;  // material values
     ym::vec3f ks = ym::zero3f;  // material values
+    ym::vec3f kt = ym::zero3f;  // material values
     float rs = 0;               // material values
     bool use_phong = false;     // material values
 
@@ -1137,7 +1148,7 @@ static inline point _eval_shapepoint(const shape* shp, int eid,
 
     // compute points and weights
     auto pos = ym::zero3f, norm = ym::zero3f, color = ym::zero3f,
-         ke = ym::zero3f, kd = ym::zero3f, ks = ym::zero3f;
+         ke = ym::zero3f, kd = ym::zero3f, ks = ym::zero3f, kt = ym::zero3f;
     auto texcoord = ym::zero2f;
     auto rs = ym::zero1f;
     if (shp->points) {
@@ -1150,6 +1161,7 @@ static inline point _eval_shapepoint(const shape* shp, int eid,
         ke = _interpolate_value(shp->ke, shp->points, eid, euv);
         kd = _interpolate_value(shp->kd, shp->points, eid, euv);
         ks = _interpolate_value(shp->ks, shp->points, eid, euv);
+        kt = _interpolate_value(shp->kt, shp->points, eid, euv);
         rs = _interpolate_value(shp->rs, shp->points, eid, euv);
     } else if (shp->lines) {
         pt.ptype = point::type::line;
@@ -1161,6 +1173,7 @@ static inline point _eval_shapepoint(const shape* shp, int eid,
         ke = _interpolate_value(shp->ke, shp->lines, eid, euv);
         kd = _interpolate_value(shp->kd, shp->lines, eid, euv);
         ks = _interpolate_value(shp->ks, shp->lines, eid, euv);
+        kt = _interpolate_value(shp->kt, shp->lines, eid, euv);
         rs = _interpolate_value(shp->rs, shp->lines, eid, euv);
     } else if (shp->triangles) {
         pt.ptype = point::type::triangle;
@@ -1171,6 +1184,7 @@ static inline point _eval_shapepoint(const shape* shp, int eid,
         ke = _interpolate_value(shp->ke, shp->triangles, eid, euv);
         kd = _interpolate_value(shp->kd, shp->triangles, eid, euv);
         ks = _interpolate_value(shp->ks, shp->triangles, eid, euv);
+        kt = _interpolate_value(shp->kt, shp->triangles, eid, euv);
         rs = _interpolate_value(shp->rs, shp->triangles, eid, euv);
     }
 
@@ -1187,6 +1201,7 @@ static inline point _eval_shapepoint(const shape* shp, int eid,
     pt.ke = shp->mat->ke;
     pt.kd = shp->mat->kd;
     pt.ks = shp->mat->ks;
+    pt.kt = shp->mat->kt;
     pt.rs = shp->mat->rs;
     pt.use_phong = shp->mat->use_phong;
 
@@ -1195,12 +1210,14 @@ static inline point _eval_shapepoint(const shape* shp, int eid,
         pt.ke *= color;
         pt.kd *= color;
         pt.ks *= color;
+        pt.kt *= color;
     }
 
     // handle per-vertex material
     if (shp->ke) pt.ke *= kd;
     if (shp->kd) pt.kd *= kd;
     if (shp->ks) pt.ks *= ks;
+    if (shp->kt) pt.kt *= kt;
     if (shp->rs) pt.rs *= rs[0];
 
     // handle textures
@@ -1216,6 +1233,10 @@ static inline point _eval_shapepoint(const shape* shp, int eid,
         if (shp->mat->ks_txt) {
             auto txt = _eval_texture(shp->mat->ks_txt, texcoord);
             pt.ks = ym::lerp(pt.ks, {txt[0], txt[1], txt[2]}, txt[3]);
+        }
+        if (shp->mat->kt_txt) {
+            auto txt = _eval_texture(shp->mat->kt_txt, texcoord);
+            pt.kt = ym::lerp(pt.kt, {txt[0], txt[1], txt[2]}, txt[3]);
         }
         if (shp->mat->rs_txt) {
             auto txt = _eval_texture(shp->mat->rs_txt, texcoord);
@@ -1297,8 +1318,13 @@ static inline point _sample_light(const light* lgt, const point& pt, float rne,
 //
 static inline ym::ray3f _offset_ray(const point& pt, const ym::vec3f& w,
                                     const render_params& params) {
-    return ym::ray3f(pt.frame[3] + pt.frame[2] * params.ray_eps, w,
-                     params.ray_eps);
+    if (dot(w, pt.frame[2]) > 0) {
+        return ym::ray3f(pt.frame[3] + pt.frame[2] * params.ray_eps, w,
+                         params.ray_eps);
+    } else {
+        return ym::ray3f(pt.frame[3] - pt.frame[2] * params.ray_eps, w,
+                         params.ray_eps);
+    }
 }
 
 //
@@ -1339,6 +1365,47 @@ static inline point _intersect_scene(const scene* scn, const point& pt,
 }
 
 //
+// Intersects a scene and offsets the ray
+//
+static inline point _intersect_scene(const scene* scn, const point& pt,
+                                     const point& lpt,
+                                     const render_params& params) {
+    return _intersect_scene(scn, _offset_ray(pt, lpt, params));
+}
+
+//
+// Transparecy
+//
+static inline ym::vec3f _eval_transparency(const point& pt) { return pt.kt; }
+
+//
+// Test occlusion
+//
+static inline ym::vec3f _eval_transmission(const scene* scn, const point& pt,
+                                           const point& lpt,
+                                           const render_params& params) {
+    if (scn->shadow_transmission) {
+        auto cpt = pt;
+        auto weight = ym::vec3f{1, 1, 1};
+        for (auto bounce = 0; bounce < params.max_depth; bounce++) {
+            cpt = _intersect_scene(scn, cpt, lpt, params);
+            if (cpt.ptype == point::type::none || cpt.ptype == point::type::env)
+                break;
+            weight *= _eval_transparency(cpt);
+            if (weight == ym::zero3f) break;
+        }
+        return weight;
+    } else {
+        auto shadow_ray = _offset_ray(pt, lpt, params);
+        return (scn->intersect_any(scn->intersect_ctx, shadow_ray.o,
+                                   shadow_ray.d, shadow_ray.tmin,
+                                   shadow_ray.tmax))
+                   ? ym::zero3f
+                   : ym::vec3f{1, 1, 1};
+    }
+}
+
+//
 // Mis weight
 //
 static inline float _weight_mis(float w0, float w1) {
@@ -1364,7 +1431,23 @@ static inline ym::vec4f _shade_pathtrace(const scene* scn, const ym::ray3f& ray,
 
     // trace path
     auto weight = ym::vec3f{1, 1, 1};
+    auto emission = false;
     for (auto bounce = 0; bounce < params.max_depth; bounce++) {
+        // handle transparency
+        auto kt = _eval_transparency(pt);
+        if (kt != ym::zero3f) {
+            auto tprob = ym::max_element_val(kt);
+            if (_sample_next1f(smp) < tprob) {
+                weight *= kt;
+                pt = _intersect_scene(scn, pt, -pt.wo, params);
+                emission = true;
+                continue;
+            }
+        }
+
+        // emission
+        if (emission) l += weight * _eval_emission(pt);
+
         // direct – light
         auto lgt = scn->lights[_sample_next1i(smp, scn->lights.size())];
         auto lpt =
@@ -1372,12 +1455,7 @@ static inline ym::vec4f _shade_pathtrace(const scene* scn, const ym::ray3f& ray,
         auto lld = _eval_emission(lpt) * _eval_brdfcos(pt, -lpt.wo) *
                    _weight_light(lpt, pt) * (float)scn->lights.size();
         if (lld != ym::zero3f) {
-            auto shadow_ray = _offset_ray(pt, lpt, params);
-            if (!scn->intersect_any(scn->intersect_ctx, shadow_ray.o,
-                                    shadow_ray.d, shadow_ray.tmin,
-                                    shadow_ray.tmax))
-                l += weight * lld * _weight_mis(_weight_light(lpt, pt),
-                                                _weight_brdfcos(pt, -lpt.wo));
+            l += weight * lld * _eval_transmission(scn, pt, lpt, params);
         }
 
         // direct – brdf
@@ -1412,6 +1490,7 @@ static inline ym::vec4f _shade_pathtrace(const scene* scn, const ym::ray3f& ray,
 
         // continue path
         pt = bpt;
+        emission = false;
     }
 
     return {l[0], l[1], l[2], 1};
@@ -1436,7 +1515,111 @@ static inline ym::vec4f _shade_pathtrace_std(const scene* scn,
 
     // trace path
     auto weight = ym::vec3f{1, 1, 1};
+    auto emission = false;
     for (auto bounce = 0; bounce < params.max_depth; bounce++) {
+        // handle transparency
+        auto kt = _eval_transparency(pt);
+        if (kt != ym::zero3f) {
+            auto tprob = ym::max_element_val(kt);
+            if (_sample_next1f(smp) < tprob) {
+                weight *= kt;
+                pt = _intersect_scene(scn, pt, -pt.wo, params);
+                emission = true;
+                continue;
+            }
+        }
+
+        // emission
+        if (emission) l += weight * _eval_emission(pt);
+        // direct
+        auto lgt = scn->lights[_sample_next1i(smp, scn->lights.size())];
+        auto lpt =
+            _sample_light(lgt, pt, _sample_next1f(smp), _sample_next2f(smp));
+        auto ld = _eval_emission(lpt) * _eval_brdfcos(pt, -lpt.wo) *
+                  _weight_light(lpt, pt) * (float)scn->lights.size();
+        if (ld != ym::zero3f) {
+            auto shadow_ray = _offset_ray(pt, lpt, params);
+            if (!scn->intersect_any(scn->intersect_ctx, shadow_ray.o,
+                                    shadow_ray.d, shadow_ray.tmin,
+                                    shadow_ray.tmax))
+                l += weight * ld;
+        }
+
+        // skip recursion if path ends
+        if (bounce == params.max_depth - 1) break;
+
+        // roussian roulette
+        if (bounce > 2) {
+            auto rho = pt.kd + pt.ks;
+            auto rrprob =
+                1.0f -
+                std::min(std::max(std::max(rho[0], rho[1]), rho[2]), 0.95f);
+            if (_sample_next1f(smp) < rrprob) break;
+            weight *= 1 / (1 - rrprob);
+        }
+
+        // continue path
+        {
+            auto wi =
+                _sample_brdfcos(pt, _sample_next1f(smp), _sample_next2f(smp));
+            weight *= _eval_brdfcos(pt, wi) * _weight_brdfcos(pt, wi);
+            if (weight == ym::zero3f) break;
+
+            pt = _intersect_scene(scn, pt, wi, params);
+            emission = false;
+            if (pt.emission_only()) break;
+        }
+    }
+
+    return {l[0], l[1], l[2], 1};
+}
+
+//
+// Recursive path tracing.
+//
+static inline ym::vec4f _shade_pathtrace_hack(const scene* scn,
+                                              const ym::ray3f& ray,
+                                              _sampler* smp,
+                                              const render_params& params) {
+    // scn intersection
+    auto pt = _intersect_scene(scn, ray);
+    if (pt.ptype == point::type::none ||
+        (pt.ptype == point::type::env && params.envmap_invisible))
+        return ym::zero4f;
+
+    // emission
+    auto l = _eval_emission(pt);
+    if (pt.emission_only()) return {l[0], l[1], l[2], 1};
+
+    // trace path
+    auto weight = ym::vec3f{1, 1, 1};
+    for (auto bounce = 0; bounce < params.max_depth; bounce++) {
+        // transmission
+        if (pt.kt != ym::zero3f) {
+            auto wi = -pt.wo;
+            auto ior = 1.4f;
+            if (dot(pt.wo, pt.frame[2]) > 0) {
+                auto n = pt.frame[2], w = pt.wo;
+                auto eta = 1 / ior;
+                auto cosi = dot(n, w);
+                auto k = 1 - eta * eta * (1 - cosi * cosi);
+                assert(k > 0);
+                wi = -eta * w + n * (eta * cosi - std::sqrt(k));
+                wi = normalize(wi);
+            } else {
+                auto n = -pt.frame[2], w = pt.wo;
+                auto eta = ior;
+                auto cosi = dot(n, w);
+                auto k = 1 - eta * eta * (1 - cosi * cosi);
+                if (k <= 0) break;
+                wi = -eta * w + n * (eta * cosi - std::sqrt(k));
+                wi = normalize(wi);
+            }
+            weight *= pt.kt;
+            pt = _intersect_scene(scn, pt, wi, params);
+            continue;
+        }
+
         // direct
         auto lgt = scn->lights[_sample_next1i(smp, scn->lights.size())];
         auto lpt =
