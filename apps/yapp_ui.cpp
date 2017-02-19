@@ -31,9 +31,9 @@
 //
 
 #include "yapp.h"
-#include "yui.h"
 
 #include "../yocto/yocto_glu.h"
+#include "../yocto/yocto_math.h"
 
 namespace yapp {
 
@@ -101,13 +101,11 @@ void shade_scene(const std::shared_ptr<yapp::scene>& sc, int cur_camera,
                  bool srgb, bool wireframe, bool edges, bool camera_lights,
                  const float3& amb) {
     // begin frame
-    glEnable(GL_DEPTH_TEST);
-    glClearDepth(1);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    yglu::enable_depth_test(true);
+    yglu::enable_culling(false);
+    yglu::clear_buffers();
 
-    glDisable(GL_CULL_FACE);
-
-    if (wireframe) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    yglu::enable_wireframe(wireframe);
 
     auto cam = sc->cameras[cur_camera];
     auto camera_xform = ym::to_mat((ym::frame3f)cam->frame);
@@ -172,14 +170,16 @@ void shade_scene(const std::shared_ptr<yapp::scene>& sc, int cur_camera,
             yglu::stdshader::set_material(prog, {0, 0, 0}, {0, 0, 0}, {0, 0, 0},
                                           0, 0, 0, 0, 0, false);
 
-            glLineWidth(2);
-            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-            glDepthRange(0, 0.999999);
+            yglu::line_width(2);
+            yglu::enable_edges(true);
+            yglu::stdshader::draw_points(prog, (int)shape->points.size(),
+                                         bids[4]);
+            yglu::stdshader::draw_lines(prog, (int)shape->lines.size(),
+                                        bids[5]);
             yglu::stdshader::draw_triangles(prog, (int)shape->triangles.size(),
                                             bids[6]);
-            glDepthRange(0, 1);
-            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-            glLineWidth(1);
+            yglu::enable_edges(false);
+            yglu::line_width(1);
         }
 
         yglu::stdshader::end_shape();
@@ -187,7 +187,7 @@ void shade_scene(const std::shared_ptr<yapp::scene>& sc, int cur_camera,
 
     yglu::stdshader::end_frame();
 
-    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    yglu::enable_wireframe(false);
 }
 
 //
@@ -218,13 +218,10 @@ void draw_scene(const std::shared_ptr<yapp::scene>& sc, int cur_camera,
                 bool wireframe, bool edges, bool camera_lights,
                 const ym::vec3f& amb) {
     // begin frame
-    glEnable(GL_DEPTH_TEST);
-    glClearDepth(1);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-    glDisable(GL_CULL_FACE);
-
-    if (wireframe) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    yglu::enable_depth_test(true);
+    yglu::enable_culling(false);
+    yglu::clear_buffers();
+    yglu::enable_wireframe(wireframe);
 
     auto cam = sc->cameras[cur_camera];
     auto camera_xform = ym::to_mat((ym::frame3f)cam->frame);
@@ -295,18 +292,16 @@ void draw_scene(const std::shared_ptr<yapp::scene>& sc, int cur_camera,
             yglu::legacy::set_material({0, 0, 0}, {0, 0, 0}, {0, 0, 0}, 0, 0,
                                        true);
 
-            glLineWidth(2);
-            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-            glDepthRange(0, 0.999999);
+            yglu::line_width(2);
+            yglu::enable_edges(true);
             yglu::legacy::draw_triangles((int)shape->triangles.size(),
                                          (yglu::int3*)shape->triangles.data(),
                                          (yglu::float3*)shape->pos.data(),
                                          (yglu::float3*)shape->norm.data(),
                                          (yglu::float2*)shape->texcoord.data(),
                                          (yglu::float3*)shape->color.data());
-            glDepthRange(0, 1);
-            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-            glLineWidth(1);
+            yglu::line_width(1);
+            yglu::enable_edges(false);
         }
 
         yglu::legacy::end_shape();
@@ -314,7 +309,7 @@ void draw_scene(const std::shared_ptr<yapp::scene>& sc, int cur_camera,
 
     yglu::legacy::end_frame();
 
-    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    yglu::enable_wireframe(false);
 }
 
 //

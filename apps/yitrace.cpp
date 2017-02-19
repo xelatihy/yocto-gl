@@ -27,9 +27,9 @@
 //
 
 #include "yapp.h"
-#include "yui.h"
 
 #include "../yocto/yocto_glu.h"
+#include "../yocto/yocto_math.h"
 
 #include "ThreadPool.h"
 
@@ -74,13 +74,9 @@ struct state {
 // nuklear
 const int hud_width = 256;
 
-void text_callback(GLFWwindow* window, unsigned int key) {
-    auto st = (state*)glfwGetWindowUserPointer(window);
+void text_callback(yglu::ui::window* win, unsigned int key) {
+    auto st = (state*)yglu::ui::get_user_pointer(win);
     auto pars = st->pars;
-    auto nuklear_ctx = (nk_context*)st->widget_ctx;
-
-    nk_glfw3_gl3_char_callback(window, key);
-    if (nk_item_is_any_active(nuklear_ctx)) return;
     switch (key) {
         case '[': pars->exposure -= 1; break;
         case ']': pars->exposure += 1; break;
@@ -111,20 +107,17 @@ void text_callback(GLFWwindow* window, unsigned int key) {
     }
 }
 
-void draw_image(GLFWwindow* window) {
-    auto st = (state*)glfwGetWindowUserPointer(window);
+void draw_image(yglu::ui::window* win) {
+    auto st = (state*)yglu::ui::get_user_pointer(win);
     auto pars = st->pars;
-    auto framebuffer_size = yui::framebuffer_size(window);
-    glViewport(0, 0, framebuffer_size[0], framebuffer_size[1]);
+    auto framebuffer_size = yglu::ui::get_framebuffer_size(win);
+    yglu::set_viewport({0, 0, framebuffer_size[0], framebuffer_size[1]});
 
     // begin frame
-    glClearColor(pars->background[0], pars->background[1], pars->background[2],
-                 pars->background[3]);
-    glDisable(GL_DEPTH_TEST);
-    glClear(GL_COLOR_BUFFER_BIT);
+    yglu::clear_buffers(pars->background);
 
     // draw image
-    auto window_size = yui::window_size(window);
+    auto window_size = yglu::ui::get_window_size(win);
     if (pars->legacy_gl) {
         yglu::legacy::draw_image(st->texture_id, pars->width, pars->height,
                                  window_size[0], window_size[1], 0, 0, 1);
@@ -134,53 +127,35 @@ void draw_image(GLFWwindow* window) {
     }
 }
 
-void draw_widgets(GLFWwindow* window) {
-    auto st = (state*)glfwGetWindowUserPointer(window);
+void draw_widgets(yglu::ui::window* win) {
+    auto st = (state*)yglu::ui::get_user_pointer(win);
     auto pars = st->pars;
-    auto nuklear_ctx = (nk_context*)st->widget_ctx;
-    auto window_size = yui::window_size(window);
-    if (pars->legacy_gl) {
-        nk_glfw3_gl2_new_frame();
-    } else {
-        nk_glfw3_gl3_new_frame();
+    if (yglu::ui::begin_widgets(win)) {
+        yglu::ui::dynamic_widget_layout(win, 1);
+        yglu::ui::label_widget(win, pars->filenames[0]);
+        yglu::ui::dynamic_widget_layout(win, 3);
+        yglu::ui::int_label_widget(win, "w", pars->width);
+        yglu::ui::int_label_widget(win, "h", pars->height);
+        yglu::ui::int_label_widget(win, "s", st->cur_sample);
+        yglu::ui::dynamic_widget_layout(win, 1);
+        yglu::ui::int_widget(win, "samples", &pars->render_params.nsamples, 0,
+                             1000000, 1);
+        yglu::ui::dynamic_widget_layout(win, 2);
+        yglu::ui::int_widget(win, "camera", &pars->render_params.camera_id, 0,
+                             (int)st->scene->cameras.size() - 1, 1);
+        yglu::ui::dynamic_widget_layout(win, 1);
+        yglu::ui::float_widget(win, "hdr exposure", &pars->exposure, -20, 20,
+                               1);
+        yglu::ui::float_widget(win, "hdr gamma", &pars->gamma, 0.1, 5, 0.1);
+        yglu::ui::bool_widget(win, "hdr srgb output", &pars->srgb);
     }
-    if (nk_begin(nuklear_ctx, "ytrace", nk_rect(window_size[0] - hud_width, 0,
-                                                hud_width, window_size[1]),
-                 NK_WINDOW_BORDER | NK_WINDOW_MOVABLE | NK_WINDOW_SCALABLE |
-                     NK_WINDOW_MINIMIZABLE | NK_WINDOW_TITLE)) {
-        nk_layout_row_dynamic(nuklear_ctx, 30, 1);
-        nk_label(nuklear_ctx, pars->filenames[0].c_str(), NK_TEXT_LEFT);
-        nk_layout_row_dynamic(nuklear_ctx, 30, 3);
-        nk_value_int(nuklear_ctx, "w", pars->width);
-        nk_value_int(nuklear_ctx, "h", pars->height);
-        nk_value_int(nuklear_ctx, "s", st->cur_sample);
-        nk_layout_row_dynamic(nuklear_ctx, 30, 1);
-        nk_property_int(nuklear_ctx, "samples", 0,
-                        &pars->render_params.nsamples, 1000000, 1, 1);
-        nk_layout_row_dynamic(nuklear_ctx, 30, 2);
-        nk_property_int(nuklear_ctx, "camera", 0,
-                        &pars->render_params.camera_id,
-                        (int)st->scene->cameras.size() - 1, 1, 1);
-        nk_layout_row_dynamic(nuklear_ctx, 30, 1);
-        nk_property_float(nuklear_ctx, "hdr exposure", -20, &pars->exposure, 20,
-                          1, 1);
-        nk_property_float(nuklear_ctx, "hdr gamma", 0.1, &pars->gamma, 5, 0.1,
-                          0.1);
-        pars->srgb = nk_check_label(nuklear_ctx, "hdr srgb output", pars->srgb);
-    }
-    nk_end(nuklear_ctx);
-
-    if (pars->legacy_gl) {
-        nk_glfw3_gl2_render(NK_ANTI_ALIASING_ON, 512 * 1024, 128 * 1024);
-    } else {
-        nk_glfw3_gl3_render(NK_ANTI_ALIASING_ON, 512 * 1024, 128 * 1024);
-    }
+    yglu::ui::end_widgets(win);
 }
 
-void window_refresh_callback(GLFWwindow* window) {
-    draw_image(window);
-    draw_widgets(window);
-    glfwSwapBuffers(window);
+void window_refresh_callback(yglu::ui::window* win) {
+    draw_image(win);
+    draw_widgets(win);
+    yglu::ui::swap_buffers(win);
 }
 
 bool update(const std::shared_ptr<state>& st) {
@@ -296,19 +271,17 @@ void run_ui(const std::shared_ptr<state>& st) {
     auto pars = st->pars;
 
     // window
-    auto window = yui::init_glfw(pars->width, pars->height, "ytrace",
-                                 pars->legacy_gl, st.get(), text_callback);
+    auto win = yglu::ui::init_window(pars->width, pars->height, "ytrace",
+                                     pars->legacy_gl, st.get());
 
     // callbacks
-    glfwSetWindowRefreshCallback(window, window_refresh_callback);
-    glfwSetScrollCallback(window, nk_gflw3_scroll_callback);
+    yglu::ui::set_callbacks(win, text_callback, window_refresh_callback);
 
     // window values
     int mouse_button = 0;
     ym::vec2f mouse_pos, mouse_last;
-    ym::vec2i window_size, framebuffer_size;
 
-    st->widget_ctx = yui::init_nuklear(window, pars->legacy_gl);
+    yglu::ui::init_widgets(win);
 
     if (pars->legacy_gl) {
         st->texture_id = yglu::legacy::make_texture(
@@ -320,25 +293,21 @@ void run_ui(const std::shared_ptr<state>& st) {
             false, false);
     }
 
-    while (!glfwWindowShouldClose(window)) {
-        glfwGetWindowSize(window, &window_size[0], &window_size[1]);
-        glfwGetFramebufferSize(window, &framebuffer_size[0],
-                               &framebuffer_size[1]);
-
+    while (!yglu::ui::should_close(win)) {
         mouse_last = mouse_pos;
-        mouse_pos = yui::mouse_pos(window);
-        mouse_button = yui::mouse_button(window);
+        mouse_pos = yglu::ui::get_mouse_posf(win);
+        mouse_button = yglu::ui::get_mouse_button(win);
 
-        glfwSetWindowTitle(window,
-                           ("ytrace | " + pars->filenames[0] + " | " +
-                            std::to_string(pars->width) + "x" +
-                            std::to_string(pars->height) + "@" +
-                            std::to_string(st->cur_sample))
-                               .c_str());
+        yglu::ui::set_window_title(win,
+                                   ("ytrace | " + pars->filenames[0] + " | " +
+                                    std::to_string(pars->width) + "x" +
+                                    std::to_string(pars->height) + "@" +
+                                    std::to_string(st->cur_sample))
+                                       .c_str());
 
         // handle mouse
         if (mouse_button && mouse_pos != mouse_last &&
-            !nk_item_is_any_active((nk_context*)st->widget_ctx)) {
+            !yglu::ui::get_widget_active(win)) {
             auto dolly = 0.0f;
             auto pan = ym::zero2f;
             auto rotate = ym::zero2f;
@@ -359,23 +328,23 @@ void run_ui(const std::shared_ptr<state>& st) {
         auto updated = update(st);
 
         // draw
-        draw_image(window);
+        draw_image(win);
 
         // make ui
-        draw_widgets(window);
+        draw_widgets(win);
 
         // swap buffers
-        glfwSwapBuffers(window);
+        yglu::ui::swap_buffers(win);
 
         // event hadling
         if (updated)
-            glfwPollEvents();
+            yglu::ui::poll_events(win);
         else
-            glfwWaitEvents();
+            yglu::ui::wait_events(win);
     }
 
-    yui::clear_nuklear((nk_context*)st->widget_ctx, pars->legacy_gl);
-    yui::clear_glfw(window);
+    yglu::ui::clear_widgets(win);
+    yglu::ui::clear_window(win);
 }
 
 int main(int argc, char* argv[]) {

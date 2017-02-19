@@ -27,7 +27,9 @@
 //
 
 #include "yapp.h"
-#include "yui.h"
+
+#include "../yocto/yocto_glu.h"
+#include "../yocto/yocto_math.h"
 
 struct state {
     // params
@@ -45,43 +47,30 @@ struct state {
 
 const int hud_width = 256;
 
-void save_screenshot(GLFWwindow* window, const std::string& imfilename) {
+void save_screenshot(yglu::ui::window* win, const std::string& imfilename) {
     if (ycmd::get_extension(imfilename) != ".png") {
         printf("supports only png screenshots");
         return;
     }
 
-    auto wh = yui::framebuffer_size(window);
-    auto pixels = std::vector<unsigned char>(wh[0] * wh[1] * 4);
-    glReadBuffer(GL_FRONT);
-    glReadPixels(0, 0, wh[0], wh[1], GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
-    std::vector<unsigned char> line(wh[0] * 4);
-    for (int j = 0; j < wh[1] / 2; j++) {
-        memcpy(line.data(), pixels.data() + j * wh[0] * 4, wh[0] * 4);
-        memcpy(pixels.data() + j * wh[0] * 4,
-               pixels.data() + (wh[1] - 1 - j) * wh[0] * 4, wh[0] * 4);
-        memcpy(pixels.data() + (wh[1] - 1 - j) * wh[0] * 4, line.data(),
-               wh[0] * 4);
-    }
+    auto wh = yapp::int2{0, 0};
+    auto pixels = yglu::ui::get_screenshot(win, wh);
     stbi_write_png(imfilename.c_str(), wh[0], wh[1], 4, pixels.data(),
                    wh[0] * 4);
 }
 
-void draw_scene(GLFWwindow* window) {
-    auto st = (state*)glfwGetWindowUserPointer(window);
+void draw_scene(yglu::ui::window* win) {
+    auto st = (state*)yglu::ui::get_user_pointer(win);
     auto pars = st->pars;
-    auto window_size = yui::window_size(window);
+    auto window_size = yglu::ui::get_window_size(win);
     st->scene->cameras[pars->render_params.camera_id]->aspect =
         (float)window_size[0] / (float)window_size[1];
     yapp::shade_scene(st->scene, pars, st->shst);
 }
 
-void text_callback(GLFWwindow* window, unsigned int key) {
-    auto st = (state*)glfwGetWindowUserPointer(window);
+void text_callback(yglu::ui::window* win, unsigned int key) {
+    auto st = (state*)yglu::ui::get_user_pointer(win);
     auto pars = st->pars;
-    auto nuklear_ctx = (nk_context*)st->widget_ctx;
-    nk_glfw3_gl3_char_callback(window, key);
-    if (nk_item_is_any_active(nuklear_ctx)) return;
     switch (key) {
         case '[': pars->exposure -= 1; break;
         case ']': pars->exposure += 1; break;
@@ -90,7 +79,7 @@ void text_callback(GLFWwindow* window, unsigned int key) {
         case '\\': pars->srgb = !pars->srgb; break;
         case 'w': pars->wireframe = !pars->wireframe; break;
         case 'e': pars->edges = !pars->edges; break;
-        case 's': save_screenshot(window, pars->imfilename); break;
+        case 's': save_screenshot(win, pars->imfilename); break;
         case 'C':
             pars->render_params.camera_id =
                 (pars->render_params.camera_id + 1) % st->scene->cameras.size();
@@ -110,35 +99,22 @@ void text_callback(GLFWwindow* window, unsigned int key) {
     }
 }
 
-void draw_widgets(GLFWwindow* window) {
-    auto st = (state*)glfwGetWindowUserPointer(window);
+void draw_widgets(yglu::ui::window* win) {
+    auto st = (state*)yglu::ui::get_user_pointer(win);
     auto pars = st->pars;
-    auto nuklear_ctx = (nk_context*)st->widget_ctx;
-    auto window_size = yui::window_size(window);
-    if (pars->legacy_gl) {
-        nk_glfw3_gl2_new_frame();
-    } else {
-        nk_glfw3_gl3_new_frame();
-    }
-    if (nk_begin(nuklear_ctx, "yshade", nk_rect(window_size[0] - hud_width, 0,
-                                                hud_width, window_size[1]),
-                 NK_WINDOW_BORDER | NK_WINDOW_MOVABLE | NK_WINDOW_SCALABLE |
-                     NK_WINDOW_MINIMIZABLE | NK_WINDOW_TITLE)) {
-        nk_layout_row_dynamic(nuklear_ctx, 30, 1);
-        nk_label(nuklear_ctx, pars->filenames[0].c_str(), NK_TEXT_LEFT);
-        nk_layout_row_dynamic(nuklear_ctx, 30, 2);
-        nk_property_int(nuklear_ctx, "camera", 0,
-                        &pars->render_params.camera_id,
-                        (int)st->scene->cameras.size() - 1, 1, 1);
-        pars->wireframe =
-            nk_check_label(nuklear_ctx, "wireframe", pars->wireframe);
-        pars->edges = nk_check_label(nuklear_ctx, "edges", pars->edges);
-        nk_layout_row_dynamic(nuklear_ctx, 30, 1);
-        nk_property_float(nuklear_ctx, "exposure", -20, &pars->exposure, 20, 1,
-                          1);
-        nk_property_float(nuklear_ctx, "gamma", 0.1, &pars->gamma, 5, 0.1, 0.1);
-        pars->srgb = nk_check_label(nuklear_ctx, "srgb output", pars->srgb);
-        if (nk_button_label(nuklear_ctx, "tesselate")) {
+    if (yglu::ui::begin_widgets(win)) {
+        yglu::ui::dynamic_widget_layout(win, 1);
+        yglu::ui::label_widget(win, pars->filenames[0]);
+        yglu::ui::dynamic_widget_layout(win, 2);
+        yglu::ui::int_widget(win, "camera", &pars->render_params.camera_id, 0,
+                             (int)st->scene->cameras.size() - 1);
+        yglu::ui::bool_widget(win, "wireframe", &pars->wireframe);
+        yglu::ui::bool_widget(win, "edges", &pars->edges);
+        yglu::ui::dynamic_widget_layout(win, 1);
+        yglu::ui::float_widget(win, "exposure", &pars->exposure, -20, 20, 1);
+        yglu::ui::float_widget(win, "gamma", &pars->gamma, 0.1, 5, 0.1);
+        yglu::ui::bool_widget(win, "srgb output", &pars->srgb);
+        if (yglu::ui::button_widget(win, "tesselate")) {
             for (auto shape : st->scene->shapes) {
                 yshape::tesselate_stdshape(
                     (std::vector<yshape::int2>&)shape->lines,
@@ -150,56 +126,44 @@ void draw_widgets(GLFWwindow* window) {
             }
         }
     }
-    nk_end(nuklear_ctx);
-
-    if (pars->legacy_gl) {
-        nk_glfw3_gl2_render(NK_ANTI_ALIASING_ON, 512 * 1024, 128 * 1024);
-    } else {
-        nk_glfw3_gl3_render(NK_ANTI_ALIASING_ON, 512 * 1024, 128 * 1024);
-    }
+    yglu::ui::end_widgets(win);
 }
 
-void window_refresh_callback(GLFWwindow* window) {
-    draw_scene(window);
-    draw_widgets(window);
-    glfwSwapBuffers(window);
+void window_refresh_callback(yglu::ui::window* win) {
+    draw_scene(win);
+    draw_widgets(win);
+    yglu::ui::swap_buffers(win);
 }
 
 void run_ui(const std::shared_ptr<state>& st) {
     auto pars = st->pars;
 
     // window
-    auto window = yui::init_glfw(pars->width, pars->height, "yimview",
-                                 pars->legacy_gl, st.get(), text_callback);
-
-    // callbacks
-    glfwSetWindowRefreshCallback(window, window_refresh_callback);
-    glfwSetScrollCallback(window, nk_gflw3_scroll_callback);
+    auto win = yglu::ui::init_window(pars->width, pars->height, "yshade",
+                                     pars->legacy_gl, st.get());
+    yglu::ui::set_callbacks(win, text_callback, window_refresh_callback);
 
     // window values
     int mouse_button = 0;
     ym::vec2f mouse_pos, mouse_last;
-    ym::vec2i window_size, framebuffer_size;
 
     // load textures
     st->shst = yapp::init_shade_state(st->scene, pars);
 
-    st->widget_ctx = yui::init_nuklear(window, pars->legacy_gl);
+    // init widget
+    yglu::ui::init_widgets(win);
 
-    while (!glfwWindowShouldClose(window)) {
-        glfwGetWindowSize(window, &window_size[0], &window_size[1]);
-        glfwGetFramebufferSize(window, &framebuffer_size[0],
-                               &framebuffer_size[1]);
-
+    // loop
+    while (!yglu::ui::should_close(win)) {
         mouse_last = mouse_pos;
-        mouse_pos = yui::mouse_pos(window);
-        mouse_button = yui::mouse_button(window);
+        mouse_pos = yglu::ui::get_mouse_posf(win);
+        mouse_button = yglu::ui::get_mouse_button(win);
 
-        glfwSetWindowTitle(window, ("yshade | " + pars->filenames[0]).c_str());
+        yglu::ui::set_window_title(win, ("yshade | " + pars->filenames[0]));
 
         // handle mouse
         if (mouse_button && mouse_pos != mouse_last &&
-            !nk_item_is_any_active((nk_context*)st->widget_ctx)) {
+            !yglu::ui::get_widget_active(win)) {
             auto dolly = 0.0f;
             auto pan = ym::zero2f;
             auto rotate = ym::zero2f;
@@ -216,26 +180,26 @@ void run_ui(const std::shared_ptr<state>& st) {
         }
 
         // draw
-        draw_scene(window);
+        draw_scene(win);
 
         // make ui
-        draw_widgets(window);
+        draw_widgets(win);
 
         // swap buffers
-        glfwSwapBuffers(window);
+        yglu::ui::swap_buffers(win);
 
         // check for screenshot
         if (pars->no_ui) {
-            save_screenshot(window, pars->imfilename);
+            save_screenshot(win, pars->imfilename);
             break;
         }
 
         // event hadling
-        glfwWaitEvents();
+        yglu::ui::wait_events(win);
     }
 
-    yui::clear_nuklear((nk_context*)st->widget_ctx, pars->legacy_gl);
-    yui::clear_glfw(window);
+    yglu::ui::clear_widgets(win);
+    yglu::ui::clear_window(win);
 }
 
 int main(int argc, char* argv[]) {

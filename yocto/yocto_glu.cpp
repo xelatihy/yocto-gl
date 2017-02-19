@@ -41,6 +41,9 @@
 #include <OpenGL/gl.h>
 #include <OpenGL/gl3.h>
 #endif
+#ifndef YGLU_NO_GLFW
+#include <GLFW/glfw3.h>
+#endif
 // clang-format on
 
 namespace yglu {
@@ -66,6 +69,71 @@ YGLU_API bool check_error(bool print) {
         default: printf("<UNKNOWN GL ERROR>\n"); break;
     }
     return false;
+}
+
+//
+// Clear window
+//
+YGLU_API void clear_buffers(const float4& background) {
+    glClearColor(background[0], background[1], background[2], background[3]);
+    glClearDepth(1);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+}
+
+//
+// Enable/disable depth test
+//
+YGLU_API void enable_depth_test(bool enabled) {
+    if (enabled)
+        glEnable(GL_DEPTH_TEST);
+    else
+        glDisable(GL_DEPTH_TEST);
+}
+
+//
+// Enable/disable culling
+//
+YGLU_API void enable_culling(bool enabled) {
+    if (enabled)
+        glEnable(GL_CULL_FACE);
+    else
+        glDisable(GL_CULL_FACE);
+}
+
+//
+// Enable/disable wireframe
+//
+YGLU_API void enable_wireframe(bool enabled) {
+    if (enabled)
+        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    else
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+}
+
+//
+// Enable/disable edges. Attempts to avoid z-fighting but the method is not
+// robust.
+//
+YGLU_API void enable_edges(bool enabled, float tolerance) {
+    if (enabled) {
+        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        glDepthRange(0, tolerance);
+    } else {
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        glDepthRange(0, 1);
+    }
+}
+
+//
+// Line width
+//
+YGLU_API void line_width(float w) { glLineWidth(w); }
+
+//
+// Set viewport
+//
+YGLU_API void set_viewport(const int4& v) {
+    glViewport(v[0], v[1], v[2], v[3]);
 }
 
 namespace legacy {
@@ -1268,3 +1336,381 @@ YGLU_API void draw_triangles(uint prog, int num, uint bid) {
 }  // namespace
 
 }  // namespace
+
+#ifndef YGLU_NO_GLFW
+
+#include <GLFW/glfw3.h>
+
+#ifndef YGLU_NO_NUKLEAR
+#define NK_INCLUDE_FIXED_TYPES
+#define NK_INCLUDE_STANDARD_IO
+#define NK_INCLUDE_STANDARD_VARARGS
+#define NK_INCLUDE_DEFAULT_ALLOCATOR
+#define NK_INCLUDE_VERTEX_BUFFER_OUTPUT
+#define NK_INCLUDE_FONT_BAKING
+#define NK_INCLUDE_DEFAULT_FONT
+#define NK_IMPLEMENTATION
+#define NK_GLFW_GL3_IMPLEMENTATION
+#define NK_GLFW_GL2_IMPLEMENTATION
+#include "nuklear/nuklear.h"
+#include "nuklear/nuklear_glfw_gl2.h"
+#include "nuklear/nuklear_glfw_gl3.h"
+#endif
+
+namespace yglu {
+
+namespace ui {
+//
+// Window
+//
+struct window {
+    GLFWwindow* win = nullptr;
+    bool legacy_gl = false;
+    void* user_pointer = nullptr;
+    nk_context* nk_ctx = nullptr;
+
+    int widget_width = 256;
+
+    text_callback text_cb = nullptr;
+    refresh_callback refresh_cb = nullptr;
+};
+
+//
+// Support
+//
+static inline void _glfw_error_cb(int error, const char* description) {
+    printf("GLFW error: %s\n", description);
+}
+
+//
+// Support
+//
+static inline void _glfw_text_cb(GLFWwindow* gwin, unsigned key) {
+    auto win = (window*)glfwGetWindowUserPointer(gwin);
+    if (win->nk_ctx) {
+        nk_glfw3_gl3_char_callback(win->win, key);
+        if (nk_item_is_any_active(win->nk_ctx)) return;
+    }
+    if (win->text_cb) win->text_cb(win, key);
+}
+
+//
+// Support
+//
+static inline void _glfw_refresh_cb(GLFWwindow* gwin, unsigned key) {
+    auto win = (window*)glfwGetWindowUserPointer(gwin);
+    if (win->refresh_cb) win->refresh_cb(win);
+}
+
+//
+// initialize glfw
+//
+window* init_window(int width, int height, const std::string& title,
+                    bool legacy_gl, void* user_pointer) {
+    // window
+    auto win = new window();
+    win->user_pointer = user_pointer;
+    win->legacy_gl = legacy_gl;
+
+    // window
+    if (!glfwInit()) return nullptr;
+
+    // profile creation
+    if (!legacy_gl) {
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+#if __APPLE__
+        glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+#endif
+        glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    }
+
+    win->win = glfwCreateWindow(width, height, title.c_str(), 0, 0);
+    glfwMakeContextCurrent(win->win);
+    glfwSetWindowUserPointer(win->win, win);
+
+    glfwSetErrorCallback(_glfw_error_cb);
+
+// init gl extensions
+#ifndef __APPLE__
+    if (!glewInit()) return nullptr;
+#endif
+
+    return win;
+}
+
+//
+// initialize glfw
+//
+void set_callbacks(window* win, text_callback text_cb,
+                   refresh_callback refresh_cb) {
+    win->text_cb = text_cb;
+    win->refresh_cb = refresh_cb;
+    if (text_cb) glfwSetCharCallback(win->win, _glfw_text_cb);
+}
+
+//
+// Clear glfw
+//
+void clear_window(window* win) {
+    glfwDestroyWindow(win->win);
+    glfwTerminate();
+}
+
+//
+// Gets the user poiner
+void* get_user_pointer(window* win) { return win->user_pointer; }
+//
+
+//
+// Set window title
+//
+void set_window_title(window* win, const std::string& title) {
+    glfwSetWindowTitle(win->win, title.c_str());
+}
+
+//
+// Wait events
+//
+void wait_events(window* win) { glfwWaitEvents(); }
+
+//
+// Poll events
+//
+void poll_events(window* win) { glfwPollEvents(); }
+
+//
+// Swap buffers
+//
+void swap_buffers(window* win) { glfwSwapBuffers(win->win); }
+
+//
+// Should close
+//
+bool should_close(window* win) { return glfwWindowShouldClose(win->win); }
+
+//
+// Mouse button
+//
+int get_mouse_button(window* win) {
+    auto mouse1 =
+        glfwGetMouseButton(win->win, GLFW_MOUSE_BUTTON_1) == GLFW_PRESS;
+    auto mouse2 =
+        glfwGetMouseButton(win->win, GLFW_MOUSE_BUTTON_2) == GLFW_PRESS;
+    auto mouse3 =
+        glfwGetMouseButton(win->win, GLFW_MOUSE_BUTTON_3) == GLFW_PRESS;
+    if (mouse1) return 1;
+    if (mouse2) return 2;
+    if (mouse3) return 3;
+#if 0
+            if (action == GLFW_RELEASE) {
+                vparams.mouse_button = 0;
+            } else if (button == GLFW_MOUSE_BUTTON_1 && !mods) {
+                vparams.mouse_button = 1;
+            } else if (button == GLFW_MOUSE_BUTTON_1 && (mods & GLFW_MOD_CONTROL)) {
+                vparams.mouse_button = 2;
+            } else if (button == GLFW_MOUSE_BUTTON_1 && (mods & GLFW_MOD_SHIFT)) {
+                vparams.mouse_button = 3;
+            } else if (button == GLFW_MOUSE_BUTTON_2) {
+                vparams.mouse_button = 2;
+            } else {
+                vparams.mouse_button = 0;
+            }
+#endif
+    return 0;
+}
+
+//
+// Mouse position
+//
+int2 get_mouse_pos(window* win) {
+    double x, y;
+    glfwGetCursorPos(win->win, &x, &y);
+    return {(int)x, (int)y};
+}
+
+//
+// Mouse position
+//
+float2 get_mouse_posf(window* win) {
+    double x, y;
+    glfwGetCursorPos(win->win, &x, &y);
+    return {(float)x, (float)y};
+}
+
+//
+// Window size
+//
+int2 get_window_size(window* win) {
+    auto ret = int2{0, 0};
+    glfwGetWindowSize(win->win, &ret[0], &ret[1]);
+    return ret;
+}
+
+//
+// Framebuffer size
+//
+int2 get_framebuffer_size(window* win) {
+    auto ret = int2{0, 0};
+    glfwGetFramebufferSize(win->win, &ret[0], &ret[1]);
+    return ret;
+}
+
+//
+// Read pixels
+//
+std::vector<byte4> get_screenshot(window* win, int2& wh, bool flipy,
+                                  bool back) {
+    wh = get_framebuffer_size(win);
+    auto pixels = std::vector<byte4>(wh[0] * wh[1]);
+    glReadBuffer((back) ? GL_BACK : GL_FRONT);
+    glReadPixels(0, 0, wh[0], wh[1], GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
+    if (flipy) {
+        std::vector<byte4> line(wh[0]);
+        for (int j = 0; j < wh[1] / 2; j++) {
+            memcpy(line.data(), pixels.data() + j * wh[0] * 4, wh[0] * 4);
+            memcpy(pixels.data() + j * wh[0] * 4,
+                   pixels.data() + (wh[1] - 1 - j) * wh[0] * 4, wh[0] * 4);
+            memcpy(pixels.data() + (wh[1] - 1 - j) * wh[0] * 4, line.data(),
+                   wh[0] * 4);
+        }
+    }
+    return pixels;
+}
+
+#ifndef YGLU_NO_NUKLEAR
+
+//
+// Nuklear
+//
+void init_widgets(window* win) {
+    glfwSetScrollCallback(win->win, nk_gflw3_scroll_callback);
+    if (win->legacy_gl) {
+        win->nk_ctx = nk_glfw3_gl2_init(win->win, NK_GLFW3_GL2_DEFAULT);
+        nk_font_atlas* atlas;
+        nk_glfw3_gl2_font_stash_begin(&atlas);
+        nk_glfw3_gl2_font_stash_end();
+    } else {
+        win->nk_ctx = nk_glfw3_gl3_init(win->win, NK_GLFW3_GL3_DEFAULT);
+        nk_font_atlas* atlas;
+        nk_glfw3_gl3_font_stash_begin(&atlas);
+        nk_glfw3_gl3_font_stash_end();
+    }
+}
+
+//
+// Nuklear
+//
+void clear_widgets(window* win) {
+    if (win->legacy_gl) {
+        nk_glfw3_gl2_shutdown();
+    } else {
+        nk_glfw3_gl3_shutdown();
+    }
+}
+
+//
+// Begin draw widget
+//
+bool begin_widgets(window* win) {
+    if (!win->nk_ctx) return false;
+    auto window_size = get_window_size(win);
+    if (win->legacy_gl) {
+        nk_glfw3_gl2_new_frame();
+    } else {
+        nk_glfw3_gl3_new_frame();
+    }
+    auto visible = nk_begin(
+        win->nk_ctx, "yshade", nk_rect(window_size[0] - win->widget_width, 0,
+                                       win->widget_width, window_size[1]),
+        NK_WINDOW_BORDER | NK_WINDOW_MOVABLE | NK_WINDOW_SCALABLE |
+            NK_WINDOW_MINIMIZABLE | NK_WINDOW_TITLE);
+    // if(visible) dynamic_widget_layout(win, 1);
+    return visible;
+}
+
+//
+// Dynamic layout for next widgets
+//
+void dynamic_widget_layout(window* win, int n) {
+    nk_layout_row_dynamic(win->nk_ctx, 30, n);
+}
+
+//
+// End draw widget
+//
+void end_widgets(window* win) {
+    nk_end(win->nk_ctx);
+
+    if (win->legacy_gl) {
+        nk_glfw3_gl2_render(NK_ANTI_ALIASING_ON, 512 * 1024, 128 * 1024);
+    } else {
+        nk_glfw3_gl3_render(NK_ANTI_ALIASING_ON, 512 * 1024, 128 * 1024);
+    }
+}
+
+//
+// Label widget
+//
+void label_widget(window* win, const std::string& lbl) {
+    nk_label(win->nk_ctx, lbl.c_str(), NK_TEXT_LEFT);
+}
+
+//
+// Label and int widget
+//
+void int_label_widget(window* win, const std::string& lbl, int val) {
+    nk_value_int(win->nk_ctx, lbl.c_str(), val);
+}
+
+//
+// Label and float widget
+//
+void float_label_widget(window* win, const std::string& lbl, float val) {
+    nk_value_float(win->nk_ctx, lbl.c_str(), val);
+}
+
+//
+// Label widget
+//
+void int_widget(window* win, const std::string& lbl, int* val, int min, int max,
+                int incr) {
+    nk_property_int(win->nk_ctx, lbl.c_str(), min, val, max, incr, incr);
+}
+
+//
+// Label widget
+//
+void float_widget(window* win, const std::string& lbl, float* val, float min,
+                  float max, float incr) {
+    nk_property_float(win->nk_ctx, "exposure", min, val, max, incr, incr);
+}
+
+//
+// Bool widget
+//
+void bool_widget(window* win, const std::string& lbl, bool* val) {
+    *val = nk_check_label(win->nk_ctx, lbl.c_str(), *val);
+}
+
+//
+// Button widget
+//
+bool button_widget(window* win, const std::string& lbl) {
+    return nk_button_label(win->nk_ctx, lbl.c_str());
+}
+
+//
+// Whether widget are active
+//
+bool get_widget_active(window* win) {
+    if (!win->nk_ctx) return false;
+    return nk_item_is_any_active(win->nk_ctx);
+}
+#endif
+
+}  // namespace
+
+}  // namespace
+
+#endif

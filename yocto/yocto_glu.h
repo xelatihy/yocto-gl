@@ -32,6 +32,7 @@
 /// - define vertices with set_vert()
 /// - draw elements with draw_elems(element data)
 /// 6. standard drawing methods legacy namespace with interfaces as in 6.
+/// 7. user interface functions based on GLFW/Nuklear
 ///
 /// The interface for each function is described in details in the interface
 /// section of this file.
@@ -40,9 +41,13 @@
 ///
 /// To use the library include the .h and compile the .cpp. To use this library
 /// as a header-only library, define YBVH_INLINE before including this file.
+/// The library depends on GLEW for OpenGL functions, GLFW and Nuklear for UI
+/// function. The latter needed to be avilable locally. To disable compilation
+/// of UI function use YGLU_NO_GLFW and YGLU_NO_NUKLEAR.
 ///
 ///
 /// HISTORY:
+/// - v 0.9: user interface with GLFW and NUKLEAR
 /// - v 0.8: switch to .h/.cpp pair
 /// - v 0.7: cleaner srgb support for stdshader
 /// - v 0.6: doxygen comments
@@ -91,6 +96,7 @@ namespace yglu {}
 
 #include <array>
 #include <string>
+#include <vector>
 
 // -----------------------------------------------------------------------------
 // INTERFACE
@@ -103,9 +109,12 @@ namespace yglu {
 //
 using float2 = std::array<float, 2>;
 using float3 = std::array<float, 3>;
+using float4 = std::array<float, 4>;
 using float4x4 = std::array<std::array<float, 4>, 4>;
 using int2 = std::array<int, 2>;
 using int3 = std::array<int, 3>;
+using int4 = std::array<int, 4>;
+using byte4 = std::array<unsigned char, 4>;
 
 ///
 /// Shape types
@@ -141,6 +150,42 @@ using uint = unsigned int;
 /// Checks for GL error and then prints
 ///
 YGLU_API bool check_error(bool print = true);
+
+///
+/// Clear window
+///
+YGLU_API void clear_buffers(const float4& background = {0, 0, 0, 0});
+
+///
+/// Enable/disable depth test
+///
+YGLU_API void enable_depth_test(bool enabled);
+
+///
+/// Enable/disable culling
+///
+YGLU_API void enable_culling(bool enabled);
+
+///
+/// Enable/disable wireframe
+///
+YGLU_API void enable_wireframe(bool enabled);
+
+///
+/// Enable/disable edges. Attempts to avoid z-fighting but the method is not
+/// robust.
+///
+YGLU_API void enable_edges(bool enabled, float tolerance = 0.9999f);
+
+///
+/// Line width
+///
+YGLU_API void line_width(float w);
+
+///
+/// Set viewport
+///
+YGLU_API void set_viewport(const int4& v);
 
 // -----------------------------------------------------------------------------
 // LEGACY FUNCTIONS
@@ -537,6 +582,183 @@ YGLU_API void draw_lines(uint prog, int num, uint bid);
 YGLU_API void draw_triangles(uint prog, int num, uint bid);
 
 }  // namespace
+
+// -----------------------------------------------------------------------------
+// USER INTERFACE FUNCTIONS
+// -----------------------------------------------------------------------------
+
+#ifndef YGLU_NO_GLFW
+
+///
+/// Modern OpenGL (OpenGL > 3.2)
+///
+namespace ui {
+///
+/// Forward declaration of window
+///
+struct window;
+
+///
+/// Key callback
+///
+typedef void (*text_callback)(window*, unsigned int);
+
+///
+/// Window refresh callback
+///
+typedef void (*refresh_callback)(window*);
+
+///
+/// initialize glfw
+///
+window* init_window(int width, int height, const std::string& title,
+                    bool legacy_gl, void* user_pointer = nullptr);
+
+///
+/// Clear glfw
+///
+void clear_window(window* window);
+
+///
+/// initialize glfw
+///
+void set_callbacks(window* win, text_callback text_cb,
+                   refresh_callback refresh_cb = nullptr);
+
+///
+/// Set window title
+///
+void set_window_title(window* win, const std::string& title);
+
+///
+/// Wait events
+///
+void wait_events(window* win);
+
+///
+/// Poll events
+///
+void poll_events(window* win);
+
+///
+/// Swap buffers
+///
+void swap_buffers(window* win);
+
+///
+/// Should close
+///
+bool should_close(window* win);
+
+///
+/// User pointer
+///
+void* get_user_pointer(window* window);
+
+///
+/// Mouse button
+///
+int get_mouse_button(window* window);
+
+///
+/// Mouse position
+///
+int2 get_mouse_posi(window* window);
+
+///
+/// Mouse position
+///
+float2 get_mouse_posf(window* window);
+
+///
+/// Window size
+///
+int2 get_window_size(window* window);
+
+///
+/// Framebuffer size
+///
+int2 get_framebuffer_size(window* window);
+
+///
+/// Read pixels
+///
+std::vector<byte4> get_screenshot(window* win, int2& wh, bool flipy = true,
+                                  bool back = false);
+
+#ifndef YGLU_NO_NUKLEAR
+
+///
+/// Init ui
+///
+void init_widgets(window* win);
+
+///
+/// Clear ui
+///
+void clear_widgets(window* win);
+
+///
+/// Begin draw widget
+///
+bool begin_widgets(window* win);
+
+///
+/// End draw widget
+///
+void end_widgets(window* win);
+
+///
+/// Dynamic layout for next widgets
+///
+void dynamic_widget_layout(window* win, int n);
+
+///
+/// Label widget
+///
+void label_widget(window* win, const std::string& lbl);
+
+///
+/// Label and int widget
+///
+void int_label_widget(window* win, const std::string& lbl, int val);
+
+///
+/// Label and float widget
+///
+void float_label_widget(window* win, const std::string& lbl, float val);
+
+///
+/// Label widget
+///
+void int_widget(window* win, const std::string& lbl, int* val, int min, int max,
+                int incr = 1);
+
+///
+/// Label widget
+///
+void float_widget(window* win, const std::string& lbl, float* val, float min,
+                  float max, float incr = 1.0f);
+
+///
+/// Bool widget
+///
+void bool_widget(window* win, const std::string& lbl, bool* val);
+
+///
+/// Button widget
+///
+bool button_widget(window* win, const std::string& lbl);
+
+///
+/// Whether widget are active
+///
+bool get_widget_active(window* win);
+
+#endif
+}  // namespace
+
+#endif
 
 }  // namespace
 
