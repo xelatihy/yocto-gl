@@ -1352,9 +1352,9 @@ YGLU_API void draw_triangles(uint prog, int num, uint bid) {
 #define NK_IMPLEMENTATION
 #define NK_GLFW_GL3_IMPLEMENTATION
 #define NK_GLFW_GL2_IMPLEMENTATION
-#include "nuklear/nuklear.h"
-#include "nuklear/nuklear_glfw_gl2.h"
-#include "nuklear/nuklear_glfw_gl3.h"
+#include "ext/nuklear.h"
+#include "ext/nuklear_glfw_gl2.h"
+#include "ext/nuklear_glfw_gl3.h"
 #endif
 
 namespace yglu {

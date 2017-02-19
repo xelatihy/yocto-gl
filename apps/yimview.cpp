@@ -28,10 +28,8 @@
 
 #include "../yocto/yocto_cmd.h"
 #include "../yocto/yocto_glu.h"
+#include "../yocto/yocto_img.h"
 #include "../yocto/yocto_math.h"
-
-#define STB_IMAGE_IMPLEMENTATION
-#include "../yocto/stb_image.h"
 
 namespace yimview_app {
 
@@ -91,25 +89,24 @@ std::vector<img*> load_images(const std::vector<std::string>& img_filenames,
         imgs.push_back(new img());
         auto img = imgs.back();
         img->filename = filename;
-        auto ext = ycmd::get_extension(filename);
-        if (ext == ".hdr") {
-            auto pixels = stbi_loadf(filename.c_str(), &img->width,
-                                     &img->height, &img->ncomp, 0);
+        auto yim = yimg::load_image(filename);
+        img->width = yim->width;
+        img->height = yim->height;
+        img->ncomp = yim->ncomp;
+        if (yim->hdr)
             img->hdr = std::vector<float>(
-                pixels, pixels + img->width * img->height * img->ncomp);
+                yim->hdr, yim->hdr + yim->width * yim->height * yim->ncomp);
+        if (yim->ldr)
+            img->ldr = std::vector<unsigned char>(
+                yim->ldr, yim->ldr + yim->width * yim->height * yim->ncomp);
+        delete yim;
+        if (!img->hdr.empty()) {
             img->ldr.resize(img->hdr.size());
             ym::exposure_gamma(img->width, img->height, img->ncomp,
                                img->hdr.data(), img->ldr.data(), exposure,
                                gamma, srgb);
             img->exposure = exposure;
             img->gamma = gamma;
-            free(pixels);
-        } else {
-            auto pixels = stbi_load(filename.c_str(), &img->width, &img->height,
-                                    &img->ncomp, 0);
-            img->ldr = std::vector<unsigned char>(
-                pixels, pixels + img->width * img->height * img->ncomp);
-            free(pixels);
         }
         if (img->hdr.empty() && img->ldr.empty()) {
             printf("cannot load image %s\n", img->filename.c_str());

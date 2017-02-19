@@ -33,6 +33,7 @@
 #include <set>
 
 #include "../yocto/yocto_cmd.h"
+#include "../yocto/yocto_img.h"
 #include "../yocto/yocto_math.h"
 #include "../yocto/yocto_obj.h"
 #include "../yocto/yocto_shape.h"
@@ -1099,13 +1100,13 @@ std::vector<ym::vec4f> make_sunsky_hdr(int w, int h, float sun_theta,
 void save_image(const std::string& filename, const std::string& dirname,
                 const rgba* pixels, int s) {
     std::string path = std::string(dirname) + "/" + std::string(filename);
-    stbi_write_png(path.c_str(), s, s, 4, pixels, s * 4);
+    yimg::save_image(path, s, s, 4, nullptr, (unsigned char*)pixels);
 }
 
 void save_image_hdr(const std::string& filename, const std::string& dirname,
                     const ym::vec4f* pixels, int w, int h) {
     std::string path = std::string(dirname) + "/" + std::string(filename);
-    stbi_write_hdr(path.c_str(), w, h, 4, (float*)pixels);
+    yimg::save_image(path, w, h, 4, (float*)pixels, nullptr);
 }
 
 void save_scene(const std::string& filename, const std::string& dirname,

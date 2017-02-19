@@ -58,13 +58,14 @@
 /// To use the library include the .h and compile the .cpp. To use this library
 /// as a header-only library, define YBVH_INLINE before including this file.
 ///
-/// Texture loading depends on stb_image.h.
+/// Texture loading depends on yocto_image.h.
 ///
 /// If the texture loading dependency is not desired, it can be disabled by
-/// defining YOBJ_NO_STBIMAGE before including this file.
+/// defining YOBJ_NO_IMAGE before including this file.
 ///
 ///
 /// HISTORY:
+/// - v 0.11: use yocto_image for texture handling.
 /// - v 0.10: switch to .h/.cpp pair
 /// - v 0.9: bug fixes and optionally texture skipping
 /// - v 0.8: high level interface uses grouping

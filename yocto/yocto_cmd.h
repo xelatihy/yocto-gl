@@ -55,7 +55,8 @@
 ///
 /// COMPILATION:
 ///
-/// All functions in this library are inlined, so just inlucde the header.
+/// To use the library include the .h and compile the .cpp. To use this library
+/// as a header-only library, define YCMD_INLINE before including this file.
 ///
 ///
 /// HISTORY:

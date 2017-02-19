@@ -53,10 +53,10 @@
 /// as a header-only library, define YGLTF_INLINE before including this file.
 ///
 /// JSON loading depends on json.hpp.
-/// Texture loading/writing depends on stb_image.h and stb_image_write.h.
+/// Texture loading/saving depends on yocto_image.h.
 ///
-/// If the texture loading/writing dependency is not desired, it can be disabled
-/// by definining YGLTF_NO_STBIMAGE before compiling the .cpp file.
+/// If the texture loading/saving dependency is not desired, it can be disabled
+/// by defining YGLTF_NO_IMAGE before including this file.
 ///
 ///
 /// HISTORY:
@@ -140,7 +140,7 @@ namespace ygltf {}
 #include <tuple>
 #include <vector>
 
-#include "json.hpp"
+#include "ext/json.hpp"
 
 // -----------------------------------------------------------------------------
 // LOW-LEVEL INTERFACE

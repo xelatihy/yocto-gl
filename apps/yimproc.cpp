@@ -26,98 +26,14 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#define YCMD_INLINE
 #include "../yocto/yocto_cmd.h"
+#include "../yocto/yocto_img.h"
 #include "../yocto/yocto_math.h"
 
-#define STB_IMAGE_IMPLEMENTATION
-#include "../yocto/stb_image.h"
-
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "../yocto/stb_image_write.h"
-
-#define STB_IMAGE_RESIZE_IMPLEMENTATION
-#include "../yocto/stb_image_resize.h"
-
-using byte = unsigned char;
-
-struct image {
-    int width = 0, height = 0, ncomp = 0;
-    float *hdr = nullptr;
-    byte *ldr = nullptr;
-
-    ~image() {
-        if (ldr) delete ldr;
-        if (hdr) delete hdr;
-    }
-};
-
-std::shared_ptr<image> load_image(const std::string &filename) {
-    auto img = std::make_shared<image>();
-    if (ycmd::get_extension(filename) == ".hdr") {
-        img->hdr = stbi_loadf(filename.c_str(), &img->width, &img->height,
-                              &img->ncomp, 0);
-    } else {
-        img->ldr = stbi_load(filename.c_str(), &img->width, &img->height,
-                             &img->ncomp, 0);
-    }
-    if (!img->ldr && !img->hdr)
-        throw std::runtime_error("cannot load image " + filename);
-    return img;
-}
-
-void save_image(const std::string &filename,
-                const std::shared_ptr<image> &img) {
-    if (ycmd::get_extension(filename) == ".hdr") {
-        if (!img->hdr) throw std::invalid_argument("hdr data required");
-        stbi_write_hdr(filename.c_str(), img->width, img->height, img->ncomp,
-                       img->hdr);
-    } else if (ycmd::get_extension(filename) == ".png") {
-        if (!img->ldr) throw std::invalid_argument("ldr data required");
-        stbi_write_png(filename.c_str(), img->width, img->height, img->ncomp,
-                       img->ldr, img->width * img->ncomp);
-    } else {
-        throw std::invalid_argument("unsupported output extension " + filename);
-    }
-}
-
-std::shared_ptr<image> resize_image(const std::shared_ptr<image> &img,
-                                    int width, int height) {
-    if (width < 0 && height < 0)
-        throw std::invalid_argument("at least argument should be >0");
-    auto res = std::make_shared<image>();
-    res->width =
-        (width > 0)
-            ? width
-            : (int)std::round(img->width * (height / (float)img->height));
-    res->height =
-        (height < 0)
-            ? (int)std::round(img->height * (width / (float)img->width))
-            : height;
-    res->ncomp = img->ncomp;
-    if (img->hdr) {
-        res->hdr = new float[img->width * img->height * img->ncomp];
-        auto img_stride = sizeof(float) * img->width * img->ncomp;
-        auto res_stride = sizeof(float) * res->width * res->ncomp;
-        stbir_resize_float(img->hdr, img->width, img->height, img_stride,
-                           res->hdr, res->width, res->height, res_stride,
-                           img->ncomp);
-    } else {
-        res->ldr = new byte[img->width * img->height * img->ncomp];
-        auto img_stride = sizeof(byte) * img->width * img->ncomp;
-        auto res_stride = sizeof(byte) * res->width * res->ncomp;
-        stbir_resize_uint8_srgb(
-            img->ldr, img->width, img->height, img_stride, res->ldr, res->width,
-            res->height, res_stride, img->ncomp,
-            (img->ncomp == 4) ? 3 : STBIR_ALPHA_CHANNEL_NONE, 0);
-    }
-    return res;
-}
-
-std::shared_ptr<image> make_image_grid(
-    const std::vector<std::shared_ptr<image>> &imgs, int tilex) {
+yimg::simage *make_image_grid(const std::vector<yimg::simage *> &imgs,
+                              int tilex) {
     auto nimgs = (int)imgs.size();
-    auto ret = std::make_shared<image>();
+    auto ret = new yimg::simage();
     ret->width = imgs[0]->width * tilex;
     ret->height = imgs[0]->height * (nimgs / tilex + ((nimgs % tilex) ? 1 : 0));
     ret->ncomp = imgs[0]->ncomp;
@@ -126,8 +42,8 @@ std::shared_ptr<image> make_image_grid(
         ret->hdr = new float[nvalues];
         memset(ret->hdr, 0, sizeof(float) * nvalues);
     } else {
-        ret->ldr = new byte[nvalues];
-        memset(ret->ldr, 0, sizeof(byte) * nvalues);
+        ret->ldr = new yimg::byte[nvalues];
+        memset(ret->ldr, 0, sizeof(yimg::byte) * nvalues);
     }
     auto img_idx = 0;
     for (auto img : imgs) {
@@ -161,10 +77,9 @@ std::shared_ptr<image> make_image_grid(
     return ret;
 }
 
-std::shared_ptr<image> make_image_grid(
-    const std::vector<std::shared_ptr<image>> &imgs, int tilex, int width,
-    int height) {
-    auto resized = std::vector<std::shared_ptr<image>>();
+yimg::simage *make_image_grid(const std::vector<yimg::simage *> &imgs,
+                              int tilex, int width, int height) {
+    auto resized = std::vector<yimg::simage *>();
     for (auto img : imgs) resized.push_back(resize_image(img, width, height));
     return make_image_grid(resized, tilex);
 }
@@ -187,11 +102,11 @@ int main(int argc, char *argv[]) {
     ycmd::check_parser(parser);
 
     // load images
-    std::vector<std::shared_ptr<image>> imgs;
-    for (auto filename : filenames) imgs.push_back(load_image(filename));
+    std::vector<yimg::simage *> imgs;
+    for (auto filename : filenames) imgs.push_back(yimg::load_image(filename));
 
     // decalre output
-    auto out = std::shared_ptr<image>();
+    auto out = (yimg::simage *)nullptr;
 
     // switch on commands
     if (command == "resize") {
@@ -200,6 +115,10 @@ int main(int argc, char *argv[]) {
 
     // save output
     save_image(output, out);
+
+    // cleanup
+    for (auto img : imgs) delete img;
+    delete out;
 
     // done
     return 0;

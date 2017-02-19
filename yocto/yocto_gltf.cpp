@@ -69,42 +69,8 @@
 #include <sstream>
 #include <vector>
 
-#ifndef YGLTF_NO_STBIMAGE
-
-#define STB_IMAGE_IMPLEMENTATION
-#define STB_IMAGE_STATIC
-
-#ifndef _WIN32
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-function"
-#ifndef __clang__
-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
-#endif
-#endif
-
-#include "stb_image.h"
-
-#ifndef _WIN32
-#pragma GCC diagnostic pop
-#endif
-
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-#define STB_IMAGE_WRITE_STATIC
-
-#ifndef _WIN32
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-function"
-#ifndef __clang__
-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
-#endif
-#endif
-
-#include "stb_image_write.h"
-
-#ifndef _WIN32
-#pragma GCC diagnostic pop
-#endif
-
+#ifndef YGLTF_NO_IMAGE
+#include "yocto_img.h"
 #endif
 
 namespace ygltf {
@@ -3656,6 +3622,8 @@ YGLTF_API void load_images(glTF_t* gltf, const std::string& dirname,
 
     for (auto&& kv : gltf->images) {
         auto image = &kv.second;
+        image->data = image_data_t();
+        auto img = (yimg::simage*)nullptr;
         if (_startsiwith(image->uri, "data:")) {
             // assume it is base64 and find ','
             auto pos = image->uri.find(',');
@@ -3669,66 +3637,23 @@ YGLTF_API void load_images(glTF_t* gltf, const std::string& dirname,
                 throw gltf_exception("unsupported embedded image format " +
                                      header.substr(0, pos));
             // decode
-            image->data = image_data_t();
             auto data = _base64::base64_decode(image->uri.substr(pos + 1));
-            if (ext == "hdr") {
-                auto d = stbi_loadf_from_memory(
-                    (unsigned char*)data.c_str(), (int)data.length(),
-                    &image->data.width, &image->data.height, &image->data.ncomp,
-                    0);
-                image->data.dataf = std::vector<float>(
-                    d,
-                    d +
-                        image->data.width * image->data.height *
-                            image->data.ncomp);
-                free(d);
-            } else {
-                auto d = stbi_load_from_memory(
-                    (unsigned char*)data.c_str(), (int)data.length(),
-                    &image->data.width, &image->data.height, &image->data.ncomp,
-                    0);
-                image->data.datab = std::vector<unsigned char>(
-                    d,
-                    d +
-                        image->data.width * image->data.height *
-                            image->data.ncomp);
-                free(d);
-            }
+            img = yimg::load_image_from_memory(
+                ext, (unsigned char*)data.c_str(), (int)data.length());
         } else {
-            image->data = image_data_t();
-            auto ext = _get_extname(image->uri).substr(1);
-            if (ext == "hdr") {
-                auto d = stbi_loadf(_fix_path(dirname + image->uri).c_str(),
-                                    &image->data.width, &image->data.height,
-                                    &image->data.ncomp, 0);
-                if (!d) {
-                    if (skip_missing) continue;
-                    throw gltf_exception("could not load image " + dirname +
-                                         image->uri);
-                }
-                image->data.dataf = std::vector<float>(
-                    d,
-                    d +
-                        image->data.width * image->data.height *
-                            image->data.ncomp);
-                free(d);
-            } else {
-                auto d = stbi_load(_fix_path(dirname + image->uri).c_str(),
-                                   &image->data.width, &image->data.height,
-                                   &image->data.ncomp, 0);
-                if (!d) {
-                    if (skip_missing) continue;
-                    throw gltf_exception("could not load image " + dirname +
-                                         image->uri);
-                }
-                image->data.datab = std::vector<unsigned char>(
-                    d,
-                    d +
-                        image->data.width * image->data.height *
-                            image->data.ncomp);
-                free(d);
-            }
+            img = yimg::load_image(_fix_path(dirname + image->uri));
         }
+        if (!img) throw gltf_exception("problem loading image");
+        image->data.width = img->width;
+        image->data.height = img->height;
+        image->data.ncomp = img->ncomp;
+        if (img->hdr)
+            image->data.dataf = std::vector<float>(
+                img->hdr, img->hdr + img->width * img->height * img->ncomp);
+        if (img->ldr)
+            image->data.datab = std::vector<unsigned char>(
+                img->ldr, img->ldr + img->width * img->height * img->ncomp);
+        delete img;
     }
 
 #endif
@@ -3810,25 +3735,9 @@ YGLTF_API void save_images(const glTF_t* gltf, const std::string& dirname) {
         auto image = &kv.second;
         if (_startsiwith(image->uri, "data:"))
             throw gltf_exception("saving of embedded data not supported");
-        auto ext = _get_extname(image->uri).substr(1);
-        if (ext == "hdr") {
-            stbi_write_hdr((dirname + image->uri).c_str(), image->data.width,
-                           image->data.height, image->data.ncomp,
-                           image->data.dataf.data());
-        } else if (ext == "png") {
-            stbi_write_png((dirname + image->uri).c_str(), image->data.width,
-                           image->data.height, image->data.ncomp,
-                           image->data.datab.data(), image->data.width);
-        } else if (ext == "bmp") {
-            stbi_write_bmp((dirname + image->uri).c_str(), image->data.width,
-                           image->data.height, image->data.ncomp,
-                           image->data.datab.data());
-        } else if (ext == "tga") {
-            stbi_write_tga((dirname + image->uri).c_str(), image->data.width,
-                           image->data.height, image->data.ncomp,
-                           image->data.datab.data());
-        } else
-            throw gltf_exception("unsupported image format " + ext);
+        yimg::save_image(dirname + image->uri, image->data.width,
+                         image->data.height, image->data.ncomp,
+                         image->data.dataf.data(), image->data.datab.data());
     }
 
 #endif

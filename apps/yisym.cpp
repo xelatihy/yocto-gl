@@ -29,6 +29,7 @@
 #include "yapp.h"
 
 #include "../yocto/yocto_glu.h"
+#include "../yocto/yocto_img.h"
 #include "../yocto/yocto_math.h"
 
 struct state {
@@ -63,8 +64,8 @@ void save_screenshot(yglu::ui::window* win, const std::string& imfilename) {
 
     auto wh = yglu::int2{0, 0};
     auto pixels = yglu::ui::get_screenshot(win, wh);
-    stbi_write_png(imfilename.c_str(), wh[0], wh[1], 4, pixels.data(),
-                   wh[0] * 4);
+    yimg::save_image(imfilename, wh[0], wh[1], 4, nullptr,
+                     (unsigned char*)pixels.data());
 }
 
 void draw_scene(yglu::ui::window* win) {

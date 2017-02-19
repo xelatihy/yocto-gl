@@ -32,13 +32,8 @@
 
 #include "yapp.h"
 
+#include "../yocto/yocto_img.h"
 #include "../yocto/yocto_math.h"
-
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "../yocto/stb_image_write.h"
-
-#define STB_IMAGE_IMPLEMENTATION
-#include "../yocto/stb_image.h"
 
 #include "tinyply.h"
 
@@ -735,12 +730,12 @@ void load_envmap(scene* scn, const std::string& filename, float scale) {
     // texture
     auto txt = std::make_shared<texture>();
     txt->path = filename;
-    stbi_set_flip_vertically_on_load(1);
-    auto pixels =
-        stbi_loadf(filename.c_str(), &txt->width, &txt->height, &txt->ncomp, 0);
-    stbi_set_flip_vertically_on_load(0);
-    txt->hdr.assign(pixels, pixels + txt->width * txt->height * txt->ncomp);
-    free(pixels);
+    auto img = yimg::load_image(filename);
+    txt->width = img->width;
+    txt->height = img->height;
+    txt->ncomp = img->ncomp;
+    txt->hdr.assign(img->hdr, img->hdr + txt->width * txt->height * txt->ncomp);
+    delete img;
     scn->textures.push_back(txt);
     // material
     auto mat = std::make_shared<material>();
@@ -784,8 +779,8 @@ void save_image(const std::string& filename, int width, int height,
         tone_mapped = hdr;
     }
     if (ext == ".hdr") {
-        stbi_write_hdr(filename.c_str(), width, height, 4,
-                       (float*)tone_mapped->data());
+        yimg::save_image(filename, width, height, 4,
+                         (float*)tone_mapped->data(), nullptr);
     } else if (ext == ".png") {
         auto ldr = std::vector<ym::vec4b>(width * height, {0, 0, 0, 0});
         if (srgb_output) {
@@ -795,8 +790,8 @@ void save_image(const std::string& filename, int width, int height,
             ym::linear_to_byte(width, height, 4, (const float*)tone_mapped,
                                (unsigned char*)ldr.data());
         }
-        stbi_write_png(filename.c_str(), width, height, 4, ldr.data(),
-                       width * 4);
+        yimg::save_image(filename, width, height, 4, nullptr,
+                         (unsigned char*)ldr.data());
     } else {
         printf("supports only hdr and png for image writing\n");
         return;

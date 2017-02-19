@@ -61,6 +61,8 @@ set(yocto_files
     ../yocto/yocto_bvh.cpp
     ../yocto/yocto_shape.h
     ../yocto/yocto_shape.cpp
+    ../yocto/yocto_img.h
+    ../yocto/yocto_img.cpp
 )
 
 set(app_files
@@ -95,13 +97,13 @@ add_executable(ysym ../apps/ysym.cpp)
 add_executable(ytestgen ../apps/ytestgen.cpp)
 add_executable(ytrace ../apps/ytrace.cpp)
 add_executable(yobj2gltf ../apps/yobj2gltf.cpp)
-
 add_executable(yimproc ../apps/yimproc.cpp)
 
 target_link_libraries(ysym yocto app)
 target_link_libraries(ytestgen yocto app)
 target_link_libraries(ytrace yocto app)
 target_link_libraries(yobj2gltf yocto)
+target_link_libraries(yimproc yocto)
 
 if(UNIX AND NOT APPLE)
     set_target_properties(ytrace PROPERTIES COMPILE_FLAGS -pthread LINK_FLAGS -pthread)
