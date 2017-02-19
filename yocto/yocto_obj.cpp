@@ -29,30 +29,14 @@
 #include "yocto_obj.h"
 
 #include <algorithm>
+#include <cassert>
 #include <cstdio>
 #include <cstdlib>
 #include <memory>
 #include <unordered_map>
 
-#ifndef YOBJ_NO_STBIMAGE
-
-#define STB_IMAGE_IMPLEMENTATION
-#define STB_IMAGE_STATIC
-
-#ifndef _WIN32
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-function"
-#ifndef __clang__
-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
-#endif
-#endif
-
-#include "stb_image.h"
-
-#ifndef _WIN32
-#pragma GCC diagnostic pop
-#endif
-
+#ifndef YOBJ_NO_IMAGE
+#include "yocto_img.h"
 #endif
 
 namespace yobj {
@@ -946,37 +930,22 @@ YOBJ_API obj* unflatten_obj(const fl_obj* scene) {
 YOBJ_API void load_textures(fl_obj* scene, const std::string& dirname,
                             bool skip_missing) {
 #ifndef YGL_NO_STBIMAGE
-    stbi_set_flip_vertically_on_load(1);
-
     for (auto txt : scene->textures) {
         auto filename = dirname + txt->path;
         for (auto& c : filename)
             if (c == '\\') c = '/';
-        auto ext = _get_extension(filename).substr(1);
-        if (ext == "hdr") {
-            auto d = stbi_loadf(filename.c_str(), &txt->width, &txt->height,
-                                &txt->ncomp, 0);
-            if (!d) {
-                if (skip_missing) continue;
-                throw(obj_exception("could not load texture " + filename));
-            }
+        auto img = yimg::load_image_flipy(filename);
+        txt->width = img->width;
+        txt->height = img->height;
+        txt->ncomp = img->ncomp;
+        if (img->hdr)
             txt->dataf = std::vector<float>(
-                d, d + txt->width * txt->height * txt->ncomp);
-            free(d);
-        } else {
-            auto d = stbi_load(filename.c_str(), &txt->width, &txt->height,
-                               &txt->ncomp, 0);
-            if (!d) {
-                if (skip_missing) continue;
-                throw(obj_exception("could not load texture " + filename));
-            }
+                img->hdr, img->hdr + img->width * img->height * img->ncomp);
+        if (img->ldr)
             txt->datab = std::vector<unsigned char>(
-                d, d + txt->width * txt->height * txt->ncomp);
-            free(d);
-        }
+                img->ldr, img->ldr + img->width * img->height * img->ncomp);
+        delete img;
     }
-
-    stbi_set_flip_vertically_on_load(0);
 #endif
 }
 

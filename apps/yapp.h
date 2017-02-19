@@ -41,9 +41,6 @@
 #include "../yocto/yocto_sym.h"
 #include "../yocto/yocto_trace.h"
 
-#include "../yocto/stb_image.h"
-#include "../yocto/stb_image_write.h"
-
 namespace yapp {
 
 //
