@@ -34,16 +34,23 @@
 
 struct state {
     // params
-    std::shared_ptr<yapp::params> pars = nullptr;
+    yapp::params* pars = nullptr;
 
     // scene
-    std::shared_ptr<yapp::scene> scene = nullptr;
+    yapp::scene* scene = nullptr;
 
     // shade state
-    std::shared_ptr<yapp::shade_state> shst = nullptr;
+    yapp::shade_state* shst = nullptr;
 
     // widgets
     void* widget_ctx = nullptr;
+
+    // clear
+    ~state() {
+        if (pars) delete pars;
+        if (scene) delete scene;
+        if (shst) yapp::free_shade_state(shst);
+    }
 };
 
 const int hud_width = 256;
@@ -136,12 +143,12 @@ void window_refresh_callback(yglu::ui::window* win) {
     yglu::ui::swap_buffers(win);
 }
 
-void run_ui(const std::shared_ptr<state>& st) {
+void run_ui(state* st) {
     auto pars = st->pars;
 
     // window
     auto win = yglu::ui::init_window(pars->width, pars->height, "yshade",
-                                     pars->legacy_gl, st.get());
+                                     pars->legacy_gl, st);
     yglu::ui::set_callbacks(win, text_callback, window_refresh_callback);
 
     // window values
@@ -209,7 +216,7 @@ int main(int argc, char* argv[]) {
                                   false, false, true, true);
 
     // init state
-    auto st = std::make_shared<state>();
+    auto st = new state();
     st->pars = pars;
 
     // setting up rendering
@@ -217,6 +224,9 @@ int main(int argc, char* argv[]) {
 
     // run ui
     run_ui(st);
+
+    // clear
+    delete st;
 
     // done
     return 0;

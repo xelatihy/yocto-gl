@@ -51,7 +51,7 @@ int main(int argc, char* argv[]) {
 
     // init renderer
     ycmd::log_msgf(ycmd::log_level_info, "ytrace", "initializing tracer");
-    ytrace::init_lights(trace_scene.get());
+    ytrace::init_lights(trace_scene);
 
     // allocate image
     auto hdr = new std::array<float, 4>[pars->width * pars->height];
@@ -72,10 +72,10 @@ int main(int argc, char* argv[]) {
         for (auto cur_block = 0; cur_block < blocks.size(); cur_block++) {
             auto block = blocks[cur_block];
             futures.push_back(ycmd::pool_enqueue(pool, [=]() {
-                ytrace::trace_block(
-                    trace_scene.get(), pars->width, pars->height,
-                    (ytrace::float4*)hdr, block[0], block[1], block[2],
-                    block[3], cur_sample, cur_sample + 1, pars->render_params);
+                ytrace::trace_block(trace_scene, pars->width, pars->height,
+                                    (ytrace::float4*)hdr, block[0], block[1],
+                                    block[2], block[3], cur_sample,
+                                    cur_sample + 1, pars->render_params);
             }));
         }
         for (auto& future : futures) future.wait();
@@ -100,6 +100,10 @@ int main(int argc, char* argv[]) {
                      pars->exposure, pars->gamma, pars->srgb);
 
     // done
+    // cleanup
+    delete scene;
+    ybvh::free_scene(scene_bvh);
+    ytrace::free_scene(trace_scene);
     delete[] hdr;
     return EXIT_SUCCESS;
 }

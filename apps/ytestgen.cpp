@@ -91,20 +91,18 @@ ym::frame3f make_lookat_frame(const ym::vec3f& pos, const ym::vec3f& to) {
     return xf;
 }
 
-std::shared_ptr<yapp::texture> make_texture(const std::string& path) {
-    auto txt = std::make_shared<yapp::texture>();
+yapp::texture* make_texture(const std::string& path) {
+    auto txt = new yapp::texture();
     txt->path = path;
     return txt;
 }
 
-std::shared_ptr<yapp::material> make_material(
-    const std::string& name, const ym::vec3f& ke, const ym::vec3f& kd,
-    const ym::vec3f& ks, const ym::vec3f& kt, float rs,
-    std::shared_ptr<yapp::texture> ke_txt,
-    std::shared_ptr<yapp::texture> kd_txt,
-    std::shared_ptr<yapp::texture> ks_txt,
-    std::shared_ptr<yapp::texture> kt_txt) {
-    auto mat = std::make_shared<yapp::material>();
+yapp::material* make_material(const std::string& name, const ym::vec3f& ke,
+                              const ym::vec3f& kd, const ym::vec3f& ks,
+                              const ym::vec3f& kt, float rs,
+                              yapp::texture* ke_txt, yapp::texture* kd_txt,
+                              yapp::texture* ks_txt, yapp::texture* kt_txt) {
+    auto mat = new yapp::material();
     mat->name = name;
     mat->ke = ke;
     mat->kd = kd;
@@ -118,37 +116,32 @@ std::shared_ptr<yapp::material> make_material(
     return mat;
 }
 
-std::shared_ptr<yapp::material> make_emission(
-    const std::string& name, const ym::vec3f& ke,
-    std::shared_ptr<yapp::texture> txt = nullptr) {
+yapp::material* make_emission(const std::string& name, const ym::vec3f& ke,
+                              yapp::texture* txt = nullptr) {
     return make_material(name, ke, ym::zero3f, ym::zero3f, ym::zero3f, 0, txt,
                          nullptr, nullptr, nullptr);
 }
 
-std::shared_ptr<yapp::material> make_diffuse(
-    const std::string& name, const ym::vec3f& kd,
-    std::shared_ptr<yapp::texture> txt = nullptr) {
+yapp::material* make_diffuse(const std::string& name, const ym::vec3f& kd,
+                             yapp::texture* txt = nullptr) {
     return make_material(name, ym::zero3f, kd, ym::zero3f, ym::zero3f, 0,
                          nullptr, txt, nullptr, nullptr);
 }
 
-std::shared_ptr<yapp::material> make_plastic(
-    const std::string& name, const ym::vec3f& kd, float rs,
-    std::shared_ptr<yapp::texture> txt = nullptr) {
+yapp::material* make_plastic(const std::string& name, const ym::vec3f& kd,
+                             float rs, yapp::texture* txt = nullptr) {
     return make_material(name, ym::zero3f, kd, {0.04f, 0.04f, 0.04f},
                          ym::zero3f, rs, nullptr, txt, nullptr, nullptr);
 }
 
-std::shared_ptr<yapp::material> make_metal(
-    const std::string& name, const ym::vec3f& kd, float rs,
-    std::shared_ptr<yapp::texture> txt = nullptr) {
+yapp::material* make_metal(const std::string& name, const ym::vec3f& kd,
+                           float rs, yapp::texture* txt = nullptr) {
     return make_material(name, ym::zero3f, ym::zero3f, kd, ym::zero3f, rs,
                          nullptr, nullptr, txt, nullptr);
 }
 
-std::shared_ptr<yapp::material> make_glass(
-    const std::string& name, const ym::vec3f& kd, float rs,
-    std::shared_ptr<yapp::texture> txt = nullptr) {
+yapp::material* make_glass(const std::string& name, const ym::vec3f& kd,
+                           float rs, yapp::texture* txt = nullptr) {
     return make_material(name, ym::zero3f, ym::zero3f, {0.04f, 0.04f, 0.04f},
                          kd, rs, nullptr, nullptr, txt, nullptr);
 }
@@ -193,7 +186,7 @@ enum struct mtype {
     env01
 };
 
-std::shared_ptr<yapp::material> make_material(mtype type) {
+yapp::material* make_material(mtype type) {
     switch (type) {
         case mtype::def:
         case mtype::matte: return make_diffuse("gray", {0.2f, 0.2f, 0.2f});
@@ -270,13 +263,12 @@ std::shared_ptr<yapp::material> make_material(mtype type) {
     }
 }
 
-std::shared_ptr<yapp::shape> make_shape(
-    const std::string& name, std::shared_ptr<yapp::material> mat, int l,
-    yshape::stdsurface_type stype,
-    const ym::frame3f& frame = ym::identity_frame3f,
-    const ym::vec3f& scale = {1, 1, 1}) {
+yapp::shape* make_shape(const std::string& name, yapp::material* mat, int l,
+                        yshape::stdsurface_type stype,
+                        const ym::frame3f& frame = ym::identity_frame3f,
+                        const ym::vec3f& scale = {1, 1, 1}) {
     ym::vec4f params = {0.75f, 0.75f, 0, 0};
-    auto shape = std::make_shared<yapp::shape>();
+    auto shape = new yapp::shape();
     shape->name = name;
     shape->mat = mat;
     yshape::make_stdsurface(stype, l, params, shape->triangles, shape->pos,
@@ -286,19 +278,19 @@ std::shared_ptr<yapp::shape> make_shape(
     return shape;
 }
 
-std::shared_ptr<yapp::shape> make_shape(
-    const std::string& name, mtype mtype, int l, yshape::stdsurface_type stype,
-    const ym::frame3f& frame = ym::identity_frame3f,
-    const ym::vec3f& scale = {1, 1, 1}) {
+yapp::shape* make_shape(const std::string& name, mtype mtype, int l,
+                        yshape::stdsurface_type stype,
+                        const ym::frame3f& frame = ym::identity_frame3f,
+                        const ym::vec3f& scale = {1, 1, 1}) {
     return make_shape(name, make_material(mtype), l, stype, frame, scale);
 }
 
-std::shared_ptr<yapp::shape> _make_floor(
-    const std::string& name, std::shared_ptr<yapp::material> mat, float s = 6,
-    float p = 4, int l = 6, const ym::frame3f& frame = make_frame({0, 0, -4}),
-    const ym::vec3f& scale = {6, 6, 6}) {
+yapp::shape* _make_floor(const std::string& name, yapp::material* mat,
+                         float s = 6, float p = 4, int l = 6,
+                         const ym::frame3f& frame = make_frame({0, 0, -4}),
+                         const ym::vec3f& scale = {6, 6, 6}) {
     auto n = (int)round(powf(2, (float)l));
-    auto shape = std::make_shared<yapp::shape>();
+    auto shape = new yapp::shape();
     shape->name = name;
     shape->mat = mat;
     yshape::make_uvsurface(n, n, shape->triangles, shape->pos, shape->norm,
@@ -329,12 +321,10 @@ std::shared_ptr<yapp::shape> _make_floor(
     return shape;
 }
 
-std::shared_ptr<yapp::shape> make_lines(const std::string& name,
-                                        std::shared_ptr<yapp::material> mat,
-                                        int num, int n, float r, float c,
-                                        float s, const ym::frame3f& frame,
-                                        const ym::vec3f& scale) {
-    auto shape = std::make_shared<yapp::shape>();
+yapp::shape* make_lines(const std::string& name, yapp::material* mat, int num,
+                        int n, float r, float c, float s,
+                        const ym::frame3f& frame, const ym::vec3f& scale) {
+    auto shape = new yapp::shape();
     shape->name = name;
     shape->mat = mat;
 
@@ -398,11 +388,9 @@ std::shared_ptr<yapp::shape> make_lines(const std::string& name,
     return shape;
 }
 
-std::shared_ptr<yapp::shape> make_points(const std::string& name,
-                                         std::shared_ptr<yapp::material> mat,
-                                         int num, const ym::frame3f& frame,
-                                         const ym::vec3f& scale) {
-    auto shape = std::make_shared<yapp::shape>();
+yapp::shape* make_points(const std::string& name, yapp::material* mat, int num,
+                         const ym::frame3f& frame, const ym::vec3f& scale) {
+    auto shape = new yapp::shape();
     shape->name = name;
     shape->mat = mat;
 
@@ -424,11 +412,9 @@ std::shared_ptr<yapp::shape> make_points(const std::string& name,
     return shape;
 }
 
-std::shared_ptr<yapp::shape> make_point(const std::string& name,
-                                        std::shared_ptr<yapp::material> mat,
-                                        const ym::frame3f& frame,
-                                        float radius = 0.001f) {
-    auto shape = std::make_shared<yapp::shape>();
+yapp::shape* make_point(const std::string& name, yapp::material* mat,
+                        const ym::frame3f& frame, float radius = 0.001f) {
+    auto shape = new yapp::shape();
     shape->name = name;
     shape->mat = mat;
     shape->points.push_back(0);
@@ -438,8 +424,7 @@ std::shared_ptr<yapp::shape> make_point(const std::string& name,
     return shape;
 }
 
-std::vector<std::shared_ptr<yapp::shape>> make_random_shapes(int nshapes,
-                                                             int l);
+std::vector<yapp::shape*> make_random_shapes(int nshapes, int l);
 
 enum struct stype {
     floor02,
@@ -468,7 +453,7 @@ enum struct stype {
     simple_random32,
 };
 
-std::vector<std::shared_ptr<yapp::shape>> make_shapes(
+std::vector<yapp::shape*> make_shapes(
     stype st, mtype mt = mtype::def,
     const ym::frame3f& frame = ym::identity_frame3f,
     const ym::vec3f& scale = ym::vec3f{1, 1, 1}) {
@@ -653,8 +638,7 @@ std::vector<std::shared_ptr<yapp::shape>> make_shapes(
     return {};
 }
 
-std::vector<std::shared_ptr<yapp::shape>> make_random_shapes(int nshapes,
-                                                             int l) {
+std::vector<yapp::shape*> make_random_shapes(int nshapes, int l) {
     ym::vec3f pos[1024];
     float radius[1024];
     int levels[1024];
@@ -685,7 +669,7 @@ std::vector<std::shared_ptr<yapp::shape>> make_random_shapes(int nshapes,
         mtype::plastic02_txt, mtype::plastic03_txt, mtype::metal01,
         mtype::metal02,       mtype::metal03};
 
-    std::vector<std::shared_ptr<yapp::shape>> shapes;
+    std::vector<yapp::shape*> shapes;
     for (auto i = 0; i < nshapes; i++) {
         char name[1024];
         sprintf(name, "obj%02d", i);
@@ -698,11 +682,10 @@ std::vector<std::shared_ptr<yapp::shape>> make_random_shapes(int nshapes,
     return shapes;
 }
 
-std::shared_ptr<yapp::environment> make_env(
-    const std::string& name, std::shared_ptr<yapp::material> mat,
-    const ym::frame3f& frame = make_lookat_frame({0, 0.5f, 0},
-                                                 {-1.5f, 0.5f, 0})) {
-    auto env = std::make_shared<yapp::environment>();
+yapp::environment* make_env(const std::string& name, yapp::material* mat,
+                            const ym::frame3f& frame = make_lookat_frame(
+                                {0, 0.5f, 0}, {-1.5f, 0.5f, 0})) {
+    auto env = new yapp::environment();
     env->name = name;
     env->mat = mat;
     env->frame = frame;
@@ -711,7 +694,7 @@ std::shared_ptr<yapp::environment> make_env(
 
 enum struct etype { env00, env01 };
 
-std::vector<std::shared_ptr<yapp::environment>> make_environments(
+std::vector<yapp::environment*> make_environments(
     etype et, mtype mt = mtype::def,
     const ym::frame3f& frame = make_lookat_frame({0, 0.5f, 0},
                                                  {-1.5f, 0.5f, 0})) {
@@ -730,11 +713,9 @@ std::vector<std::shared_ptr<yapp::environment>> make_environments(
     return {};
 }
 
-std::shared_ptr<yapp::camera> make_camera(const std::string& name,
-                                          const ym::vec3f& from,
-                                          const ym::vec3f& to, float h,
-                                          float a) {
-    auto cam = std::make_shared<yapp::camera>();
+yapp::camera* make_camera(const std::string& name, const ym::vec3f& from,
+                          const ym::vec3f& to, float h, float a) {
+    auto cam = new yapp::camera();
     cam->name = name;
     cam->frame = lookat_frame3(from, to, {0, 1, 0});
     cam->aperture = a;
@@ -744,21 +725,20 @@ std::shared_ptr<yapp::camera> make_camera(const std::string& name,
     return cam;
 }
 
-std::vector<std::shared_ptr<yapp::texture>> make_random_textures() {
+std::vector<yapp::texture*> make_random_textures() {
     const std::string txts[5] = {"grid.png", "checker.png", "rchecker.png",
                                  "colored.png", "rcolored.png"};
-    std::vector<std::shared_ptr<yapp::texture>> textures;
+    std::vector<yapp::texture*> textures;
     for (auto txt : txts) {
-        textures.push_back(std::make_shared<yapp::texture>());
+        textures.push_back(new yapp::texture());
         textures.back()->path = txt;
     }
     return textures;
 }
 
-std::vector<std::shared_ptr<yapp::material>> make_random_materials(
-    int nshapes) {
+std::vector<yapp::material*> make_random_materials(int nshapes) {
     auto textures = make_random_textures();
-    std::vector<std::shared_ptr<yapp::material>> materials(nshapes);
+    std::vector<yapp::material*> materials(nshapes);
     materials[0] = make_diffuse("floor", {1, 1, 1}, textures[0]);
 
     ym::rng_pcg32 rn;
@@ -790,10 +770,9 @@ std::vector<std::shared_ptr<yapp::material>> make_random_materials(
     return materials;
 }
 
-std::vector<std::shared_ptr<yapp::shape>> make_random_rigid_shapes(
-    int nshapes, int l,
-    const std::vector<std::shared_ptr<yapp::material>>& materials) {
-    std::vector<std::shared_ptr<yapp::shape>> shapes(nshapes);
+std::vector<yapp::shape*> make_random_rigid_shapes(
+    int nshapes, int l, const std::vector<yapp::material*>& materials) {
+    std::vector<yapp::shape*> shapes(nshapes);
     shapes[0] =
         make_shape("floor", materials[0], 2, yshape::stdsurface_type::uvcube,
                    make_frame({0, -0.5, 0}), {6, 0.5, 6});
@@ -830,14 +809,13 @@ std::vector<std::shared_ptr<yapp::shape>> make_random_rigid_shapes(
     return shapes;
 }
 
-std::shared_ptr<yapp::scene> make_scene(
-    const std::vector<std::shared_ptr<yapp::camera>>& cameras,
-    const std::vector<std::shared_ptr<yapp::shape>>& shapes,
-    const std::vector<std::shared_ptr<yapp::environment>>& envs = {}) {
-    auto scene = std::make_shared<yapp::scene>();
+yapp::scene* make_scene(const std::vector<yapp::camera*>& cameras,
+                        const std::vector<yapp::shape*>& shapes,
+                        const std::vector<yapp::environment*>& envs = {}) {
+    auto scene = new yapp::scene();
     scene->cameras = cameras;
-    auto materials = std::set<std::shared_ptr<yapp::material>>();
-    auto textures = std::set<std::shared_ptr<yapp::texture>>();
+    auto materials = std::set<yapp::material*>();
+    auto textures = std::set<yapp::texture*>();
     for (auto shp : shapes) {
         scene->shapes.push_back(shp);
         assert(shp->mat);
@@ -1110,29 +1088,30 @@ void save_image_hdr(const std::string& filename, const std::string& dirname,
 }
 
 void save_scene(const std::string& filename, const std::string& dirname,
-                const std::shared_ptr<yapp::scene>& scn) {
+                yapp::scene* scn) {
     yapp::save_scene(dirname + "/" + filename, scn);
     yapp::save_scene(dirname + "/" + ycmd::get_basename(filename) + ".gltf",
                      scn);
+    delete scn;
 }
 
-std::vector<std::shared_ptr<yapp::camera>> make_simple_cameras() {
+std::vector<yapp::camera*> make_simple_cameras() {
     return {make_camera("cam", {0, 1.5f, 5}, {0, 0.5f, 0}, 0.5f, 0),
             make_camera("cam_dof", {0, 1.5f, 5}, {0, 0.5, 0}, 0.5f, 0.1f)};
 }
 
 // http://graphics.cs.williams.edu/data
 // http://www.graphics.cornell.edu/online/box/data.html
-std::shared_ptr<yapp::scene> make_cornell_box_scene() {
-    std::vector<std::shared_ptr<yapp::camera>> cameras = {
+yapp::scene* make_cornell_box_scene() {
+    std::vector<yapp::camera*> cameras = {
         make_camera("cb_cam", {0, 1, 4}, {0, 1, 0}, 0.7f, 0)};
-    std::vector<std::shared_ptr<yapp::material>> materials = {
+    std::vector<yapp::material*> materials = {
         make_diffuse("cb_white", {0.725f, 0.71f, 0.68f}),
         make_diffuse("cb_red", {0.63f, 0.065f, 0.05f}),
         make_diffuse("cb_green", {0.14f, 0.45f, 0.091f}),
         make_emission("cb_light", {17, 12, 4}),
     };
-    std::vector<std::shared_ptr<yapp::shape>> shapes = {
+    std::vector<yapp::shape*> shapes = {
         make_shape("cb_floor", materials[0], 0, yshape::stdsurface_type::uvquad,
                    make_frame(ym::zero3f, {-90, 0, 0})),
         make_shape("cb_ceiling", materials[0], 0,
@@ -1156,7 +1135,7 @@ std::shared_ptr<yapp::scene> make_cornell_box_scene() {
     return make_scene(cameras, shapes);
 }
 
-std::shared_ptr<yapp::scene> make_envmap_scene(bool as_shape, bool use_map) {
+yapp::scene* make_envmap_scene(bool as_shape, bool use_map) {
     if (!as_shape) {
         if (use_map) {
             return make_scene(make_simple_cameras(),
@@ -1184,17 +1163,17 @@ std::shared_ptr<yapp::scene> make_envmap_scene(bool as_shape, bool use_map) {
     }
 }
 
-std::shared_ptr<yapp::scene> make_rigid_scene(int config) {
-    std::vector<std::shared_ptr<yapp::camera>> cameras = {
+yapp::scene* make_rigid_scene(int config) {
+    std::vector<yapp::camera*> cameras = {
         make_camera("cam", {5, 5, 5}, {0, 0.5f, 0}, 0.5f, 0),
         make_camera("cam_dof", {5, 5, 5}, {0, 0.5f, 0}, 0.5f, 0.1f)};
-    std::vector<std::shared_ptr<yapp::shape>> shapes;
+    std::vector<yapp::shape*> shapes;
 
-    std::vector<std::shared_ptr<yapp::texture>> textures = {
-        make_texture("grid.png"), make_texture("checker.png")};
+    std::vector<yapp::texture*> textures = {make_texture("grid.png"),
+                                            make_texture("checker.png")};
 
     if (config == 0 || config == 1) {
-        std::vector<std::shared_ptr<yapp::material>> materials = {
+        std::vector<yapp::material*> materials = {
             make_diffuse("floor", {1, 1, 1}, 0),
             make_plastic("obj", {1, 1, 1}, 0.1f, textures[1])};
         shapes = {

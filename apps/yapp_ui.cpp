@@ -40,18 +40,18 @@ namespace yapp {
 //
 // Init shading
 //
-void init_shade_state(const std::shared_ptr<yapp::scene>& sc,
-                      yglu::uint& shade_prog, yglu::uint& shade_vao,
+void init_shade_state(const yapp::scene* sc, yglu::uint& shade_prog,
+                      yglu::uint& shade_vao,
                       std::map<texture*, yglu::uint>& shade_txt,
                       std::vector<std::array<yglu::uint, 7>>& shade_vbo) {
     yglu::stdshader::make_program(&shade_prog, &shade_vao);
     for (auto txt : sc->textures) {
         if (!txt->hdr.empty()) {
-            shade_txt[txt.get()] =
+            shade_txt[txt] =
                 yglu::modern::make_texture(txt->width, txt->height, txt->ncomp,
                                            txt->hdr.data(), true, true, true);
         } else if (!txt->ldr.empty()) {
-            shade_txt[txt.get()] =
+            shade_txt[txt] =
                 yglu::modern::make_texture(txt->width, txt->height, txt->ncomp,
                                            txt->ldr.data(), true, true, true);
         } else
@@ -94,9 +94,9 @@ void init_shade_state(const std::shared_ptr<yapp::scene>& sc,
 //
 // Display a scene
 //
-void shade_scene(const std::shared_ptr<yapp::scene>& sc, int cur_camera,
-                 uint prog, uint vao, const std::map<texture*, uint>& txts,
-                 std::vector<std::array<uint, 7>>& vbo,
+void shade_scene(const yapp::scene* sc, int cur_camera, uint prog, uint vao,
+                 const std::map<texture*, uint>& txts,
+                 const std::vector<std::array<uint, 7>>& vbo,
                  const float4& background, float exposure, float gamma_,
                  bool srgb, bool wireframe, bool edges, bool camera_lights,
                  const float3& amb) {
@@ -147,7 +147,7 @@ void shade_scene(const std::shared_ptr<yapp::scene>& sc, int cur_camera,
         if (shape->mat) {
             auto mat = shape->mat;
 
-#define __txt(txt) ((txt) ? txts.at(txt.get()) : 0)
+#define __txt(txt) ((txt) ? txts.at(txt) : 0)
             yglu::stdshader::set_material(
                 prog, mat->ke, mat->kd, mat->ks, mat->rs, __txt(mat->ke_txt),
                 __txt(mat->kd_txt), __txt(mat->ks_txt), __txt(mat->rs_txt),
@@ -193,15 +193,15 @@ void shade_scene(const std::shared_ptr<yapp::scene>& sc, int cur_camera,
 //
 // Init shading
 //
-void init_draw_state(const std::shared_ptr<yapp::scene>& sc,
+void init_draw_state(const yapp::scene* sc,
                      std::map<texture*, yglu::uint>& shade_txt) {
     for (auto txt : sc->textures) {
         if (!txt->hdr.empty()) {
-            shade_txt[txt.get()] =
+            shade_txt[txt] =
                 yglu::legacy::make_texture(txt->width, txt->height, txt->ncomp,
                                            txt->hdr.data(), true, true);
         } else if (!txt->ldr.empty()) {
-            shade_txt[txt.get()] =
+            shade_txt[txt] =
                 yglu::legacy::make_texture(txt->width, txt->height, txt->ncomp,
                                            txt->ldr.data(), true, true);
         } else
@@ -212,7 +212,7 @@ void init_draw_state(const std::shared_ptr<yapp::scene>& sc,
 //
 // Draw a sc
 //
-void draw_scene(const std::shared_ptr<yapp::scene>& sc, int cur_camera,
+void draw_scene(const yapp::scene* sc, int cur_camera,
                 const std::map<texture*, yglu::uint>& txts,
                 const ym::vec4f& background, float exposure, float gamma_,
                 bool wireframe, bool edges, bool camera_lights,
@@ -262,7 +262,7 @@ void draw_scene(const std::shared_ptr<yapp::scene>& sc, int cur_camera,
         if (shape->mat) {
             auto mat = shape->mat;
 
-#define __txt(txt) ((txt) ? txts.at(txt.get()) : 0)
+#define __txt(txt) ((txt) ? txts.at(txt) : 0)
             yglu::legacy::set_material(
                 mat->ke, mat->kd, mat->ks,
                 yglu::legacy::specular_roughness_to_exponent(mat->rs),
@@ -323,10 +323,8 @@ struct shade_state {
     std::vector<std::array<uint, 7>> shade_vbo;
 };
 
-std::shared_ptr<shade_state> init_shade_state(
-    const std::shared_ptr<yapp::scene>& scn,
-    const std::shared_ptr<params>& pars) {
-    auto st = std::make_shared<shade_state>();
+shade_state* init_shade_state(const yapp::scene* scn, const params* pars) {
+    auto st = new shade_state();
     if (pars->legacy_gl) {
         init_draw_state(scn, st->shade_txt);
     } else {
@@ -336,13 +334,14 @@ std::shared_ptr<shade_state> init_shade_state(
     return st;
 }
 
-void init_shade(shade_state* st) {
+//
+// Cleanup state
+//
+void free_shade_state(shade_state* st) {
     if (st) delete st;
 }
 
-void shade_scene(const std::shared_ptr<yapp::scene>& scn,
-                 const std::shared_ptr<params>& pars,
-                 const std::shared_ptr<shade_state>& st) {
+void shade_scene(const scene* scn, const params* pars, const shade_state* st) {
     if (pars->legacy_gl) {
         draw_scene(scn, pars->render_params.camera_id, st->shade_txt,
                    pars->background, pars->exposure, pars->gamma,

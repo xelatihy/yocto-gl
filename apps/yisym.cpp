@@ -34,12 +34,12 @@
 
 struct state {
     // params
-    std::shared_ptr<yapp::params> pars = nullptr;
+    yapp::params* pars = nullptr;
 
     // scene
-    std::shared_ptr<yapp::scene> scene = nullptr;
-    std::shared_ptr<ybvh::scene> scene_bvh = nullptr;
-    std::shared_ptr<ysym::scene> rigid_scene = nullptr;
+    yapp::scene* scene = nullptr;
+    ybvh::scene* scene_bvh = nullptr;
+    ysym::scene* rigid_scene = nullptr;
 
     // animation state
     bool simulating = false;
@@ -48,10 +48,19 @@ struct state {
     bool show_debug = false;
 
     // shade state
-    std::shared_ptr<yapp::shade_state> shst = nullptr;
+    yapp::shade_state* shst = nullptr;
 
     // widgets
     void* widget_ctx = nullptr;
+
+    // clear
+    ~state() {
+        if (pars) delete pars;
+        if (scene) delete scene;
+        if (scene_bvh) ybvh::free_scene(scene_bvh);
+        if (rigid_scene) ysym::free_scene(rigid_scene);
+        if (shst) yapp::free_shade_state(shst);
+    }
 };
 
 const int hud_width = 256;
@@ -263,7 +272,7 @@ void text_callback(yglu::ui::window* win, unsigned int key) {
         case '/': {
             for (int sid = 0; sid < st->scene->shapes.size(); sid++) {
                 st->scene->shapes[sid]->frame = st->initial_state[sid];
-                ysym::set_body_frame(st->rigid_scene.get(), sid,
+                ysym::set_body_frame(st->rigid_scene, sid,
                                      st->initial_state[sid]);
             }
             st->frame = 0;
@@ -306,9 +315,9 @@ void draw_widgets(yglu::ui::window* win) {
         if (yglu::ui::button_widget(win, "reset")) {
             for (int sid = 0; sid < st->scene->shapes.size(); sid++) {
                 st->scene->shapes[sid]->frame = st->initial_state[sid];
-                ysym::set_body_frame(st->rigid_scene.get(), sid,
+                ysym::set_body_frame(st->rigid_scene, sid,
                                      st->initial_state[sid]);
-                ybvh::set_shape_frame(st->scene_bvh.get(), sid,
+                ybvh::set_shape_frame(st->scene_bvh, sid,
                                       st->initial_state[sid]);
             }
             st->frame = 0;
@@ -342,12 +351,12 @@ void window_refresh_callback(yglu::ui::window* win) {
     yglu::ui::swap_buffers(win);
 }
 
-void run_ui(const std::shared_ptr<state>& st) {
+void run_ui(state* st) {
     auto pars = st->pars;
 
     // window
     auto win = yglu::ui::init_window(pars->width, pars->height, "ysym",
-                                     pars->legacy_gl, st.get());
+                                     pars->legacy_gl, st);
     yglu::ui::set_callbacks(win, text_callback, window_refresh_callback);
 
     // window values
@@ -421,7 +430,7 @@ int main(int argc, char* argv[]) {
                                   false, true, true, true);
 
     // init state
-    auto st = std::make_shared<state>();
+    auto st = new state();
     st->pars = pars;
 
     // setting up rendering
@@ -430,7 +439,7 @@ int main(int argc, char* argv[]) {
     st->rigid_scene = yapp::make_rigid_scene(st->scene, st->scene_bvh);
 
     // initialize simulation
-    ysym::init_simulation(st->rigid_scene.get());
+    ysym::init_simulation(st->rigid_scene);
 
     // save init values
     st->initial_state.resize(st->scene->shapes.size());
@@ -439,6 +448,9 @@ int main(int argc, char* argv[]) {
 
     // run ui
     run_ui(st);
+
+    // cleanup
+    delete st;
 
     // done
     return 0;
