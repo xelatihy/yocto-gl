@@ -52,8 +52,8 @@ struct image {
     }
 };
 
-image *load_image(const std::string &filename) {
-    auto img = new image();
+std::shared_ptr<image> load_image(const std::string &filename) {
+    auto img = std::make_shared<image>();
     if (ycmd::get_extension(filename) == ".hdr") {
         img->hdr = stbi_loadf(filename.c_str(), &img->width, &img->height,
                               &img->ncomp, 0);
@@ -66,7 +66,8 @@ image *load_image(const std::string &filename) {
     return img;
 }
 
-void save_image(const std::string &filename, image *img) {
+void save_image(const std::string &filename,
+                const std::shared_ptr<image> &img) {
     if (ycmd::get_extension(filename) == ".hdr") {
         if (!img->hdr) throw std::invalid_argument("hdr data required");
         stbi_write_hdr(filename.c_str(), img->width, img->height, img->ncomp,
@@ -80,10 +81,11 @@ void save_image(const std::string &filename, image *img) {
     }
 }
 
-image *resize_image(const image *img, int width, int height) {
+std::shared_ptr<image> resize_image(const std::shared_ptr<image> &img,
+                                    int width, int height) {
     if (width < 0 && height < 0)
         throw std::invalid_argument("at least argument should be >0");
-    auto res = new image();
+    auto res = std::make_shared<image>();
     res->width =
         (width > 0)
             ? width
@@ -112,9 +114,10 @@ image *resize_image(const image *img, int width, int height) {
     return res;
 }
 
-image *make_image_grid(const std::vector<image *> &imgs, int tilex) {
+std::shared_ptr<image> make_image_grid(
+    const std::vector<std::shared_ptr<image>> &imgs, int tilex) {
     auto nimgs = (int)imgs.size();
-    auto ret = new image();
+    auto ret = std::make_shared<image>();
     ret->width = imgs[0]->width * tilex;
     ret->height = imgs[0]->height * (nimgs / tilex + ((nimgs % tilex) ? 1 : 0));
     ret->ncomp = imgs[0]->ncomp;
@@ -158,13 +161,12 @@ image *make_image_grid(const std::vector<image *> &imgs, int tilex) {
     return ret;
 }
 
-image *make_image_grid(const std::vector<image *> &imgs, int tilex, int width,
-                       int height) {
-    auto resized = std::vector<image *>();
+std::shared_ptr<image> make_image_grid(
+    const std::vector<std::shared_ptr<image>> &imgs, int tilex, int width,
+    int height) {
+    auto resized = std::vector<std::shared_ptr<image>>();
     for (auto img : imgs) resized.push_back(resize_image(img, width, height));
-    auto res = make_image_grid(resized, tilex);
-    for (auto img : resized) delete img;
-    return res;
+    return make_image_grid(resized, tilex);
 }
 
 int main(int argc, char *argv[]) {
@@ -185,11 +187,11 @@ int main(int argc, char *argv[]) {
     ycmd::check_parser(parser);
 
     // load images
-    std::vector<image *> imgs;
+    std::vector<std::shared_ptr<image>> imgs;
     for (auto filename : filenames) imgs.push_back(load_image(filename));
 
     // decalre output
-    auto out = (image *)nullptr;
+    auto out = std::shared_ptr<image>();
 
     // switch on commands
     if (command == "resize") {
@@ -198,10 +200,6 @@ int main(int argc, char *argv[]) {
 
     // save output
     save_image(output, out);
-
-    // clear
-    for (auto img : imgs) delete img;
-    delete out;
 
     // done
     return 0;
