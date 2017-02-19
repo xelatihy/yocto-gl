@@ -39,7 +39,7 @@ int main(int argc, char* argv[]) {
     auto rigid_scene = yapp::make_rigid_scene(scene, scene_bvh);
 
     // initialize simulation
-    ysym::init_simulation(rigid_scene.get());
+    ysym::init_simulation(rigid_scene);
 
     // simulate each frame and save the results to a new scene
     printf("rigid body simulation for %s to %s\n", pars->filenames[0].c_str(),
@@ -54,6 +54,11 @@ int main(int argc, char* argv[]) {
         yapp::save_scene(frame_filename, scene);
     }
     printf("\rsimulating done\n");
+
+    // cleanup
+    delete scene;
+    ybvh::free_scene(scene_bvh);
+    ysym::free_scene(rigid_scene);
 
     // done
     return 0;
