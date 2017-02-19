@@ -31,8 +31,6 @@
 #include "../yocto/yocto_glu.h"
 #include "../yocto/yocto_math.h"
 
-#include "ThreadPool.h"
-
 // interative state
 struct state {
     // params
@@ -48,7 +46,7 @@ struct state {
     std::vector<ym::vec4b> ldr;
 
     // rendering aids
-    ThreadPool* pool = nullptr;
+    ycmd::thread_pool* pool = nullptr;
     std::vector<yapp::int4> blocks;
 
     // progressive rendering
@@ -212,7 +210,7 @@ bool update(const std::shared_ptr<state>& st) {
              st->cur_block < st->blocks.size() && b < st->blocks_per_update;
              st->cur_block++, b++) {
             auto block = st->blocks[st->cur_block];
-            futures.push_back(st->pool->enqueue([st, block, pars]() {
+            futures.push_back(ycmd::pool_enqueue(st->pool, [st, block, pars]() {
                 ytrace::trace_block(
                     st->trace_scene.get(), pars->width, pars->height,
                     (ytrace::float4*)st->hdr.data(), block[0], block[1],
@@ -377,7 +375,7 @@ int main(int argc, char* argv[]) {
     if (!pars->nthreads) pars->nthreads = std::thread::hardware_concurrency();
     st->blocks =
         yapp::make_trace_blocks(pars->width, pars->height, pars->block_size);
-    st->pool = new ThreadPool(pars->nthreads);
+    st->pool = ycmd::make_thread_pool(pars->nthreads);
 
     // fixing camera
     for (auto cam : st->scene->cameras)

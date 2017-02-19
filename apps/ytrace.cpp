@@ -28,8 +28,6 @@
 
 #include "yapp.h"
 
-#include "ThreadPool.h"
-
 int main(int argc, char* argv[]) {
     // logging
     yapp::set_default_loggers();
@@ -63,9 +61,7 @@ int main(int argc, char* argv[]) {
     ycmd::log_msgf(ycmd::log_level_info, "ytrace", "starting renderer");
     auto blocks =
         yapp::make_trace_blocks(pars->width, pars->height, pars->block_size);
-    auto pool =
-        new ThreadPool((pars->nthreads) ? pars->nthreads
-                                        : std::thread::hardware_concurrency());
+    auto pool = ycmd::make_thread_pool(pars->nthreads);
     std::vector<std::future<void>> futures;
     for (auto cur_sample = 0; cur_sample < pars->render_params.nsamples;
          cur_sample++) {
@@ -75,7 +71,7 @@ int main(int argc, char* argv[]) {
         futures.clear();
         for (auto cur_block = 0; cur_block < blocks.size(); cur_block++) {
             auto block = blocks[cur_block];
-            futures.push_back(pool->enqueue([=]() {
+            futures.push_back(ycmd::pool_enqueue(pool, [=]() {
                 ytrace::trace_block(
                     trace_scene.get(), pars->width, pars->height,
                     (ytrace::float4*)hdr, block[0], block[1], block[2],
