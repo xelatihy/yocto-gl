@@ -31,13 +31,13 @@
 
 struct state {
     // params
-    yapp::params* pars = nullptr;
+    std::shared_ptr<yapp::params> pars = nullptr;
 
     // scene
-    yapp::scene* scene = nullptr;
+    std::shared_ptr<yapp::scene> scene = nullptr;
 
     // shade state
-    yapp::shade_state* shst = nullptr;
+    std::shared_ptr<yapp::shade_state> shst = nullptr;
 
     // widgets
     void* widget_ctx = nullptr;
@@ -165,12 +165,12 @@ void window_refresh_callback(GLFWwindow* window) {
     glfwSwapBuffers(window);
 }
 
-void run_ui(state* st) {
+void run_ui(const std::shared_ptr<state>& st) {
     auto pars = st->pars;
 
     // window
     auto window = yui::init_glfw(pars->width, pars->height, "yimview",
-                                 pars->legacy_gl, st, text_callback);
+                                 pars->legacy_gl, st.get(), text_callback);
 
     // callbacks
     glfwSetWindowRefreshCallback(window, window_refresh_callback);
@@ -244,7 +244,7 @@ int main(int argc, char* argv[]) {
                                   false, false, true, true);
 
     // init state
-    auto st = new state();
+    auto st = std::make_shared<state>();
     st->pars = pars;
 
     // setting up rendering
@@ -254,8 +254,5 @@ int main(int argc, char* argv[]) {
     run_ui(st);
 
     // done
-    delete st->scene;
-    delete st;
-    delete pars;
     return 0;
 }

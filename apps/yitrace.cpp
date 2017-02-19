@@ -36,12 +36,12 @@
 // interative state
 struct state {
     // params
-    yapp::params* pars = nullptr;
+    std::shared_ptr<yapp::params> pars = nullptr;
 
     // scene
-    yapp::scene* scene = nullptr;
-    ybvh::scene* scene_bvh = nullptr;
-    ytrace::scene* trace_scene = nullptr;
+    std::shared_ptr<yapp::scene> scene = nullptr;
+    std::shared_ptr<ybvh::scene> scene_bvh = nullptr;
+    std::shared_ptr<ytrace::scene> trace_scene = nullptr;
 
     // rendered image
     std::vector<ym::vec4f> hdr;
@@ -183,19 +183,19 @@ void window_refresh_callback(GLFWwindow* window) {
     glfwSwapBuffers(window);
 }
 
-bool update(state* st) {
+bool update(const std::shared_ptr<state>& st) {
     auto pars = st->pars;
     if (st->scene_updated) {
         // update camera
         auto cam = st->scene->cameras[pars->render_params.camera_id];
-        ytrace::set_camera(st->trace_scene, pars->render_params.camera_id,
+        ytrace::set_camera(st->trace_scene.get(), pars->render_params.camera_id,
                            cam->frame, cam->yfov, cam->aspect, cam->aperture,
                            cam->focus);
 
         // render preview
         auto pparams = pars->render_params;
         pparams.nsamples = 1;
-        ytrace::trace_image(st->trace_scene, st->preview_width,
+        ytrace::trace_image(st->trace_scene.get(), st->preview_width,
                             st->preview_height,
                             (ytrace::float4*)st->preview.data(), pparams);
         for (auto qj = 0; qj < st->preview_height; qj++) {
@@ -238,11 +238,11 @@ bool update(state* st) {
              st->cur_block++, b++) {
             auto block = st->blocks[st->cur_block];
             futures.push_back(st->pool->enqueue([st, block, pars]() {
-                ytrace::trace_block(st->trace_scene, pars->width, pars->height,
-                                    (ytrace::float4*)st->hdr.data(), block[0],
-                                    block[1], block[2], block[3],
-                                    st->cur_sample, st->cur_sample + 1,
-                                    pars->render_params);
+                ytrace::trace_block(
+                    st->trace_scene.get(), pars->width, pars->height,
+                    (ytrace::float4*)st->hdr.data(), block[0], block[1],
+                    block[2], block[3], st->cur_sample, st->cur_sample + 1,
+                    pars->render_params);
                 ym::exposure_gamma(
                     pars->width, pars->height, 4, (const float*)st->hdr.data(),
                     (unsigned char*)st->ldr.data(), pars->exposure, pars->gamma,
@@ -292,12 +292,12 @@ bool update(state* st) {
     return true;
 }
 
-void run_ui(state* st) {
+void run_ui(const std::shared_ptr<state>& st) {
     auto pars = st->pars;
 
     // window
     auto window = yui::init_glfw(pars->width, pars->height, "ytrace",
-                                 pars->legacy_gl, st, text_callback);
+                                 pars->legacy_gl, st.get(), text_callback);
 
     // callbacks
     glfwSetWindowRefreshCallback(window, window_refresh_callback);
@@ -384,7 +384,7 @@ int main(int argc, char* argv[]) {
                                   true, false, false, false);
 
     // init state
-    auto st = new state();
+    auto st = std::make_shared<state>();
     st->pars = pars;
 
     // setting up rendering
@@ -415,16 +415,11 @@ int main(int argc, char* argv[]) {
         cam->aspect = (float)pars->width / (float)pars->height;
 
     // init renderer
-    ytrace::init_lights(st->trace_scene);
+    ytrace::init_lights(st->trace_scene.get());
 
     // run ui
     run_ui(st);
 
     // done
-    delete st->scene;
-    ybvh::free_scene(st->scene_bvh);
-    ytrace::free_scene(st->trace_scene);
-    delete st;
-    delete pars;
     return 0;
 }
