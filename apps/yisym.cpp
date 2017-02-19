@@ -31,12 +31,12 @@
 
 struct state {
     // params
-    yapp::params* pars = nullptr;
+    std::shared_ptr<yapp::params> pars = nullptr;
 
     // scene
-    yapp::scene* scene = nullptr;
-    ybvh::scene* scene_bvh = nullptr;
-    ysym::scene* rigid_scene = nullptr;
+    std::shared_ptr<yapp::scene> scene = nullptr;
+    std::shared_ptr<ybvh::scene> scene_bvh = nullptr;
+    std::shared_ptr<ysym::scene> rigid_scene = nullptr;
 
     // animation state
     bool simulating = false;
@@ -45,7 +45,7 @@ struct state {
     bool show_debug = false;
 
     // shade state
-    yapp::shade_state* shst = nullptr;
+    std::shared_ptr<yapp::shade_state> shst = nullptr;
 
     // widgets
     void* widget_ctx = nullptr;
@@ -274,7 +274,7 @@ void text_callback(GLFWwindow* window, unsigned int key) {
         case '/': {
             for (int sid = 0; sid < st->scene->shapes.size(); sid++) {
                 st->scene->shapes[sid]->frame = st->initial_state[sid];
-                ysym::set_body_frame(st->rigid_scene, sid,
+                ysym::set_body_frame(st->rigid_scene.get(), sid,
                                      st->initial_state[sid]);
             }
             st->frame = 0;
@@ -328,9 +328,9 @@ void draw_widgets(GLFWwindow* window) {
         if (nk_button_label(nuklear_ctx, "reset")) {
             for (int sid = 0; sid < st->scene->shapes.size(); sid++) {
                 st->scene->shapes[sid]->frame = st->initial_state[sid];
-                ysym::set_body_frame(st->rigid_scene, sid,
+                ysym::set_body_frame(st->rigid_scene.get(), sid,
                                      st->initial_state[sid]);
-                ybvh::set_shape_frame(st->scene_bvh, sid,
+                ybvh::set_shape_frame(st->scene_bvh.get(), sid,
                                       st->initial_state[sid]);
             }
             st->frame = 0;
@@ -373,12 +373,12 @@ void window_refresh_callback(GLFWwindow* window) {
     glfwSwapBuffers(window);
 }
 
-void run_ui(state* st) {
+void run_ui(const std::shared_ptr<state>& st) {
     auto pars = st->pars;
 
     // window
     auto window = yui::init_glfw(pars->width, pars->height, "ysym",
-                                 pars->legacy_gl, st, text_callback);
+                                 pars->legacy_gl, st.get(), text_callback);
 
     // callbacks
     glfwSetWindowRefreshCallback(window, window_refresh_callback);
@@ -460,7 +460,7 @@ int main(int argc, char* argv[]) {
                                   false, true, true, true);
 
     // init state
-    auto st = new state();
+    auto st = std::make_shared<state>();
     st->pars = pars;
 
     // setting up rendering
@@ -469,7 +469,7 @@ int main(int argc, char* argv[]) {
     st->rigid_scene = yapp::make_rigid_scene(st->scene, st->scene_bvh);
 
     // initialize simulation
-    ysym::init_simulation(st->rigid_scene);
+    ysym::init_simulation(st->rigid_scene.get());
 
     // save init values
     st->initial_state.resize(st->scene->shapes.size());
@@ -480,10 +480,5 @@ int main(int argc, char* argv[]) {
     run_ui(st);
 
     // done
-    ybvh::free_scene(st->scene_bvh);
-    ysym::free_scene(st->rigid_scene);
-    delete st->scene;
-    delete st;
-    delete pars;
     return 0;
 }

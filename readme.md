@@ -1,11 +1,6 @@
 # Yocto/GL: C/C++ Single File Libraries for Physically-Based Graphics
 
-Yocto/GL is a collection of single-file libraries, or single .h/.cpp pairs,
-for building physically-based graphics applications.
-Yocto/GL is written in C++ and compiles on OSX (clang), Linux (clang/gcc)
-and Windows (cl).
-You can use Yocto/GL as either a header-only library, for simplicity, or
-.h/.cpp pairs, to rduce code bloat and compile time.
+Yocto/GL is a collection of single-file libraries, or single .h/.cpp pairs, for building physically-based graphics applications. Yocto/GL is written in C++ and compiles on OSX (clang), Linux (clang/gcc) and Windows (cl). You can use Yocto/GL as either header-only libraries, for simplicity, or .h/.cpp pairs, to rduce code bloat and compile time.
 
 ## Main Libraries
 
@@ -62,11 +57,7 @@ with
     make -j4        # linux/OSX
     msbuild         # Windows
 
-The interactive apps use OpenGL, GLFW and GLEW. We include binaries for Windows,
-but you have to install the libraries youself on Linux (we use `apt-get`)
-and OSX (we use [homebrew](http://brew.sh)). After installing these libraries,
-you can include these examples in the build by changing the cmake line above
-with
+The interactive apps use OpenGL, GLFW and GLEW. We include binaries for Windows, but you have to install the libraries youself on Linux (we use `apt-get`) and OSX (we use [homebrew](http://brew.sh)). After installing these libraries, you can include these examples in the build by changing the cmake line above with
 
     cmake -DBUILD_OPENGL_APPS=ON ..\apps
 
@@ -92,5 +83,4 @@ with
 
 ## License
 
-Yocto/GL libraries are released under the permissive MIT license, while the
-example apps are released under the 2-clause BSD (to include warranty for binary distribution).
+Yocto/GL libraries are released under the permissive MIT license, while the example apps are released under the 2-clause BSD (to include warranty for binary distribution).

@@ -47,20 +47,10 @@
 namespace yapp {
 
 //
-// Destructor
-//
-scene::~scene() {
-    for (auto v : shapes) delete v;
-    for (auto v : materials) delete v;
-    for (auto v : textures) delete v;
-    for (auto v : cameras) delete v;
-    for (auto v : environments) delete v;
-}
-
-//
 // Gets material index
 //
-int get_material_idx(const scene* scn, const material* mat) {
+int get_material_idx(const std::shared_ptr<scene>& scn,
+                     const std::shared_ptr<material>& mat) {
     if (!mat) return -1;
     for (auto i = 0; i < scn->materials.size(); i++)
         if (scn->materials[i] == mat) return i;
@@ -70,7 +60,8 @@ int get_material_idx(const scene* scn, const material* mat) {
 //
 // Gets texture index
 //
-int get_texture_idx(const scene* scn, const texture* txt) {
+int get_texture_idx(const std::shared_ptr<scene>& scn,
+                    const std::shared_ptr<texture>& txt) {
     if (!txt) return -1;
     for (auto i = 0; i < scn->textures.size(); i++)
         if (scn->textures[i] == txt) return i;
@@ -113,7 +104,7 @@ const int* get_elems(const shape& shape) {
 //
 // Loads a scene from obj.
 //
-inline scene* load_obj_scene(const std::string& filename) {
+inline std::shared_ptr<scene> load_obj_scene(const std::string& filename) {
     // load scene
     auto obj = std::unique_ptr<yobj::obj>(yobj::load_obj(filename));
 
@@ -127,11 +118,11 @@ inline scene* load_obj_scene(const std::string& filename) {
     yobj::load_textures(fl_scene.get(), ycmd::get_dirname(filename), true);
 
     // init scene
-    auto sc = std::unique_ptr<scene>(new scene());
+    auto sc = std::make_shared<scene>();
 
     // convert cameras
     for (auto fl_cam : fl_scene->cameras) {
-        auto cam = new camera();
+        auto cam = std::make_shared<camera>();
         cam->name = fl_cam->name;
         cam->frame = ym::to_frame(ym::mat4f(fl_cam->xform));
         cam->ortho = fl_cam->ortho;
@@ -144,7 +135,7 @@ inline scene* load_obj_scene(const std::string& filename) {
 
     // convert textures
     for (auto fl_txt : fl_scene->textures) {
-        auto txt = new texture();
+        auto txt = std::make_shared<texture>();
         txt->path = fl_txt->path;
         txt->width = fl_txt->width;
         txt->height = fl_txt->height;
@@ -156,7 +147,7 @@ inline scene* load_obj_scene(const std::string& filename) {
 
     // convert materials
     for (auto fl_mat : fl_scene->materials) {
-        auto mat = new material();
+        auto mat = std::make_shared<material>();
         mat->name = fl_mat->name;
         mat->ke = fl_mat->ke;
         mat->kd = fl_mat->kd;
@@ -180,11 +171,11 @@ inline scene* load_obj_scene(const std::string& filename) {
     for (auto fl_mesh : fl_scene->meshes) {
         for (auto prim_id : fl_mesh->primitives) {
             auto fl_prim = fl_scene->primitives[prim_id];
-            auto sh = new shape();
+            auto sh = std::make_shared<shape>();
             sh->name = fl_mesh->name;
             sh->frame = ym::identity_frame3f;
             sh->mat = (fl_prim->material < 0)
-                          ? nullptr
+                          ? std::shared_ptr<material>()
                           : sc->materials[fl_prim->material];
             sh->pos = fl_prim->pos;
             sh->norm = fl_prim->norm;
@@ -200,7 +191,7 @@ inline scene* load_obj_scene(const std::string& filename) {
 
     // convert envs
     for (auto fl_env : fl_scene->environments) {
-        auto env = new environment();
+        auto env = std::make_shared<environment>();
         env->name = fl_env->name;
         env->frame = ym::to_frame(ym::mat4f(fl_env->xform));
         env->mat = (fl_env->matid < 0) ? nullptr : sc->materials[fl_env->matid];
@@ -208,13 +199,14 @@ inline scene* load_obj_scene(const std::string& filename) {
     }
 
     // done
-    return sc.release();
+    return sc;
 }
 
 //
 // Saves a scene to obj.
 //
-inline void save_obj_scene(const std::string& filename, const scene* sc) {
+inline void save_obj_scene(const std::string& filename,
+                           const std::shared_ptr<scene>& sc) {
     // flatten to scene
     auto fl_scene = std::unique_ptr<yobj::fl_obj>(new yobj::fl_obj);
 
@@ -303,7 +295,8 @@ inline void save_obj_scene(const std::string& filename, const scene* sc) {
 //
 // Saves a scene to gltf.
 //
-inline void save_gltf_scene(const std::string& filename, const scene* sc) {
+inline void save_gltf_scene(const std::string& filename,
+                            const std::shared_ptr<scene>& sc) {
     // flatten to scene
     auto fl_scene = std::unique_ptr<ygltf::fl_gltf>(new ygltf::fl_gltf());
 
@@ -375,7 +368,8 @@ inline void save_gltf_scene(const std::string& filename, const scene* sc) {
 //
 // Load gltf scene
 //
-inline scene* load_gltf_scene(const std::string& filename, bool binary) {
+inline std::shared_ptr<scene> load_gltf_scene(const std::string& filename,
+                                              bool binary) {
     // load scene
     auto gltf = std::unique_ptr<ygltf::glTF_t>(
         (binary) ? ygltf::load_binary_gltf(filename, true, false, true, true)
@@ -386,11 +380,11 @@ inline scene* load_gltf_scene(const std::string& filename, bool binary) {
         ygltf::flatten_gltf(gltf.get(), gltf->scene));
 
     // init scene
-    auto sc = std::unique_ptr<scene>(new scene());
+    auto sc = std::make_shared<scene>();
 
     // convert cameras
     for (auto fl_cam : fl_scene->cameras) {
-        auto cam = new camera();
+        auto cam = std::make_shared<camera>();
         cam->name = fl_cam->name;
         cam->frame = ym::to_frame(ym::mat4f(fl_cam->xform));
         cam->ortho = fl_cam->ortho;
@@ -403,7 +397,7 @@ inline scene* load_gltf_scene(const std::string& filename, bool binary) {
 
     // convert textures
     for (auto fl_txt : fl_scene->textures) {
-        auto txt = new texture();
+        auto txt = std::make_shared<texture>();
         txt->path = fl_txt->path;
         txt->width = fl_txt->width;
         txt->height = fl_txt->height;
@@ -417,7 +411,7 @@ inline scene* load_gltf_scene(const std::string& filename, bool binary) {
 
     // convert materials
     for (auto fl_mat : fl_scene->materials) {
-        auto mat = new material();
+        auto mat = std::make_shared<material>();
         mat->name = fl_mat->name;
         mat->ke = fl_mat->ke;
         mat->kd = fl_mat->kd;
@@ -438,7 +432,7 @@ inline scene* load_gltf_scene(const std::string& filename, bool binary) {
     for (auto fl_mesh : fl_scene->meshes) {
         for (auto fl_prim_id : fl_mesh->primitives) {
             auto fl_prim = fl_scene->primitives.at(fl_prim_id);
-            auto sh = new shape();
+            auto sh = std::make_shared<shape>();
             sh->name = fl_mesh->name;
             sh->frame = ym::to_frame(ym::mat4f(fl_mesh->xform));
             sh->mat = (fl_prim->material < 0)
@@ -457,15 +451,15 @@ inline scene* load_gltf_scene(const std::string& filename, bool binary) {
     }
 
     // done
-    return sc.release();
+    return sc;
 }
 
 //
 // Loads a scene from ply.
 //
-inline scene* load_ply_scene(const std::string& filename) {
+inline std::shared_ptr<scene> load_ply_scene(const std::string& filename) {
     // preallocate vertex and element data
-    auto sh = std::unique_ptr<shape>(new shape());
+    auto sh = std::make_shared<shape>();
 
     // Tinyply can and will throw exceptions at you!
     try {
@@ -518,7 +512,7 @@ inline scene* load_ply_scene(const std::string& filename) {
     }
 
     // create material
-    auto mat = new material();
+    auto mat = std::make_shared<material>();
     mat->name = "default";
     mat->ke = {0, 0, 0};
     mat->kd = (sh->kd.empty()) ? float3{0.8f, 0.8f, 0.8f} : float3{1, 1, 1};
@@ -531,21 +525,21 @@ inline scene* load_ply_scene(const std::string& filename) {
     sh->mat = mat;
 
     // init scene
-    auto sc = std::unique_ptr<scene>(new scene());
+    auto sc = std::make_shared<scene>();
 
     // set shape
-    sc->shapes.push_back(sh.release());
+    sc->shapes.push_back(sh);
     // set material
     sc->materials.push_back(mat);
 
     // done
-    return sc.release();
+    return sc;
 }
 
 //
 // Save scene
 //
-void save_scene(const std::string& filename, const scene* sc) {
+void save_scene(const std::string& filename, const std::shared_ptr<scene>& sc) {
     auto ext = ycmd::get_extension(filename);
     if (ext == ".obj") {
         save_obj_scene(filename, sc);
@@ -559,7 +553,7 @@ void save_scene(const std::string& filename, const scene* sc) {
 //
 // Create a default camera
 //
-void add_default_camera(scene* sc) {
+void add_default_camera(const std::shared_ptr<scene>& sc) {
     // find scene bounds
     auto bbox = ym::invalid_bbox3f;
     for (auto sh : sc->shapes) {
@@ -571,7 +565,7 @@ void add_default_camera(scene* sc) {
     auto bbox_msize =
         ym::max(bbox_size[0], ym::max(bbox_size[1], bbox_size[2]));
     // create camera
-    auto cam = new yapp::camera();
+    auto cam = std::make_shared<yapp::camera>();
     // set up camera
     auto camera_dir = ym::vec3f{1, 0.4f, 1};
     auto from = camera_dir * bbox_msize + center;
@@ -586,7 +580,7 @@ void add_default_camera(scene* sc) {
     sc->cameras.push_back(cam);
 }
 
-void fix_cameras(scene* sc) {
+void fix_cameras(const std::shared_ptr<scene>& sc) {
     if (sc->cameras.empty()) return;
     auto bbox = ym::invalid_bbox3f;
     for (auto sh : sc->shapes) {
@@ -606,61 +600,47 @@ void fix_cameras(scene* sc) {
 //
 // Merge a scene into another
 //
-void merge_scenes(scene* sc, const scene* sc1) {
+void merge_scenes(const std::shared_ptr<scene>& sc,
+                  const std::shared_ptr<scene>& sc1) {
     for (auto cam : sc1->cameras) {
-        sc->cameras.push_back(new camera(*cam));
+        sc->cameras.push_back(cam);
     }
-    auto txtoff = (int)sc->textures.size();
     for (auto txt : sc1->textures) {
-        sc->textures.push_back(new texture(*txt));
+        sc->textures.push_back(txt);
     }
-    auto matoff = (int)sc->materials.size();
     for (auto mat : sc1->materials) {
-        sc->materials.push_back(new material(*mat));
-        if (sc->materials.back()->ke_txt >= 0)
-            sc->materials.back()->ke_txt += txtoff;
-        if (sc->materials.back()->kd_txt >= 0)
-            sc->materials.back()->kd_txt += txtoff;
-        if (sc->materials.back()->ks_txt >= 0)
-            sc->materials.back()->ks_txt += txtoff;
-        if (sc->materials.back()->rs_txt >= 0)
-            sc->materials.back()->rs_txt += txtoff;
+        sc->materials.push_back(mat);
     }
     for (auto shp : sc1->shapes) {
-        sc->shapes.push_back(new shape(*shp));
-        if (sc->shapes.back()->mat)
-            sc->shapes.back()->mat =
-                sc->materials[get_material_idx(sc1, shp->mat) + matoff];
+        sc->shapes.push_back(shp);
     }
     for (auto env : sc1->environments) {
-        sc->environments.push_back(new environment(*env));
-        if (sc->environments.back()->mat)
-            sc->environments.back()->mat =
-                sc->materials[get_material_idx(sc1, env->mat) + matoff];
+        sc->environments.push_back(env);
     }
 }
 
 //
 // Load scene
 //
-scene* load_scene(const std::string& filename, float scale, bool add_camera) {
+std::shared_ptr<scene> load_scene(const std::string& filename, float scale,
+                                  bool add_camera) {
     // declare scene
-    auto sc = std::unique_ptr<scene>();
+    auto sc = std::shared_ptr<scene>();
 
     // get extension
     auto ext = ycmd::get_extension(filename);
     if (ext == ".obj") {
         // load obj
-        sc = std::unique_ptr<scene>(load_obj_scene(filename));
+        sc = load_obj_scene(filename);
     } else if (ext == ".gltf") {
         // load obj
-        sc = std::unique_ptr<scene>(load_gltf_scene(filename, false));
+        sc = load_gltf_scene(filename, false);
     } else if (ext == ".glb") {
         // load obj
-        sc = std::unique_ptr<scene>(load_gltf_scene(filename, true));
+        sc = load_gltf_scene(filename, true);
     } else if (ext == ".ply") {
         // load ply
-        sc = std::unique_ptr<scene>(load_ply_scene(filename));
+        sc = load_ply_scene(filename);
     } else {
         throw std::invalid_argument("unknown file type");
     }
@@ -703,26 +683,26 @@ scene* load_scene(const std::string& filename, float scale, bool add_camera) {
     }
 
     // make camera if not there
-    if (add_camera && sc->cameras.empty()) add_default_camera(sc.get());
+    if (add_camera && sc->cameras.empty()) add_default_camera(sc);
 
     // fix cameras
-    fix_cameras(sc.get());
+    fix_cameras(sc);
 
-    return sc.release();
+    return sc;
 }
 
 //
 // Load multiple scenes
 //
-scene* load_scenes(const std::vector<std::string>& filenames, float scale,
-                   bool add_camera) {
+std::shared_ptr<scene> load_scenes(const std::vector<std::string>& filenames,
+                                   float scale, bool add_camera) {
     // skip if not necessary
     if (filenames.size() == 0) return nullptr;
     if (filenames.size() == 1)
         return load_scene(filenames[0], scale, add_camera);
 
     // declare scene
-    auto sc = std::unique_ptr<scene>(load_scene(filenames[0], scale, false));
+    auto sc = load_scene(filenames[0], scale, false);
 
     // merge each scene
     auto first = true;
@@ -733,18 +713,18 @@ scene* load_scenes(const std::vector<std::string>& filenames, float scale,
             continue;
         }
         // load scene
-        auto sc1 = std::unique_ptr<scene>(load_scene(filename, scale, false));
+        auto sc1 = load_scene(filename, scale, false);
         // merge it
-        merge_scenes(sc.get(), sc1.get());
+        merge_scenes(sc, sc1);
     }
 
     // make camera if not there
-    if (add_camera && sc->cameras.empty()) add_default_camera(sc.get());
+    if (add_camera && sc->cameras.empty()) add_default_camera(sc);
 
     // fix cameras
-    fix_cameras(sc.get());
+    fix_cameras(sc);
 
-    return sc.release();
+    return sc;
 }
 
 //
@@ -753,7 +733,7 @@ scene* load_scenes(const std::vector<std::string>& filenames, float scale,
 void load_envmap(scene* scn, const std::string& filename, float scale) {
     if (filename.empty()) return;
     // texture
-    auto txt = new texture();
+    auto txt = std::make_shared<texture>();
     txt->path = filename;
     stbi_set_flip_vertically_on_load(1);
     auto pixels =
@@ -763,13 +743,13 @@ void load_envmap(scene* scn, const std::string& filename, float scale) {
     free(pixels);
     scn->textures.push_back(txt);
     // material
-    auto mat = new material();
+    auto mat = std::make_shared<material>();
     mat->name = "env_mat";
     mat->ke = {scale, scale, scale};
     mat->ke_txt = txt;
     scn->materials.push_back(mat);
     // environment
-    auto env = new environment();
+    auto env = std::make_shared<environment>();
     env->name = "env";
     env->mat = mat;
     env->frame = ym::lookat_frame3(ym::vec3f{0, 0, 1}, ym::vec3f{0, 0, 0},
@@ -823,58 +803,63 @@ void save_image(const std::string& filename, int width, int height,
     }
 }
 
-ybvh::scene* make_bvh(const yapp::scene* scene) {
-    auto scene_bvh = ybvh::make_scene((int)scene->shapes.size());
+std::shared_ptr<ybvh::scene> make_bvh(const std::shared_ptr<scene>& scene) {
+    auto scene_bvh = std::shared_ptr<ybvh::scene>(
+        ybvh::make_scene((int)scene->shapes.size()), ybvh::free_scene);
     auto sid = 0;
     for (auto shape : scene->shapes) {
         if (!shape->points.empty()) {
-            ybvh::set_point_shape(scene_bvh, sid++, shape->frame,
+            ybvh::set_point_shape(scene_bvh.get(), sid++, shape->frame,
                                   (int)shape->points.size(),
                                   shape->points.data(), (int)shape->pos.size(),
                                   shape->pos.data(), shape->radius.data());
         } else if (!shape->lines.empty()) {
-            ybvh::set_line_shape(scene_bvh, sid++, shape->frame,
+            ybvh::set_line_shape(scene_bvh.get(), sid++, shape->frame,
                                  (int)shape->lines.size(), shape->lines.data(),
                                  (int)shape->pos.size(), shape->pos.data(),
                                  shape->radius.data());
 
         } else if (!shape->triangles.empty()) {
-            ybvh::set_triangle_shape(
-                scene_bvh, sid++, shape->frame, (int)shape->triangles.size(),
-                shape->triangles.data(), (int)shape->pos.size(),
-                shape->pos.data(), shape->radius.data());
+            ybvh::set_triangle_shape(scene_bvh.get(), sid++, shape->frame,
+                                     (int)shape->triangles.size(),
+                                     shape->triangles.data(),
+                                     (int)shape->pos.size(), shape->pos.data(),
+                                     shape->radius.data());
 
         } else {
-            ybvh::set_point_shape(scene_bvh, sid++, shape->frame,
+            ybvh::set_point_shape(scene_bvh.get(), sid++, shape->frame,
                                   (int)shape->pos.size(), shape->pos.data(),
                                   shape->radius.data());
         }
     }
-    ybvh::build_bvh(scene_bvh);
+    ybvh::build_bvh(scene_bvh.get());
     return scene_bvh;
 }
 
-ytrace::scene* make_trace_scene(const yapp::scene* scene,
-                                const ybvh::scene* scene_bvh, int camera) {
-    auto trace_scene = ytrace::make_scene(
-        (int)scene->cameras.size(), (int)scene->shapes.size(),
-        (int)scene->materials.size(), (int)scene->textures.size(),
-        (int)scene->environments.size());
+std::shared_ptr<ytrace::scene> make_trace_scene(
+    const std::shared_ptr<scene>& scene,
+    const std::shared_ptr<ybvh::scene>& scene_bvh, int camera) {
+    auto trace_scene = std::shared_ptr<ytrace::scene>(
+        ytrace::make_scene(
+            (int)scene->cameras.size(), (int)scene->shapes.size(),
+            (int)scene->materials.size(), (int)scene->textures.size(),
+            (int)scene->environments.size()),
+        ytrace::free_scene);
 
     auto cid = 0;
     for (auto cam : scene->cameras) {
-        ytrace::set_camera(trace_scene, cid++, cam->frame, cam->yfov,
+        ytrace::set_camera(trace_scene.get(), cid++, cam->frame, cam->yfov,
                            cam->aspect, cam->aperture, cam->focus);
     }
 
     auto tid = 0;
     for (auto txt : scene->textures) {
         if (!txt->hdr.empty()) {
-            ytrace::set_texture(trace_scene, tid++, txt->width, txt->height,
-                                txt->ncomp, txt->hdr.data());
+            ytrace::set_texture(trace_scene.get(), tid++, txt->width,
+                                txt->height, txt->ncomp, txt->hdr.data());
         } else if (!txt->ldr.empty()) {
-            ytrace::set_texture(trace_scene, tid++, txt->width, txt->height,
-                                txt->ncomp, txt->ldr.data());
+            ytrace::set_texture(trace_scene.get(), tid++, txt->width,
+                                txt->height, txt->ncomp, txt->ldr.data());
         } else
             assert(false);
     }
@@ -882,14 +867,14 @@ ytrace::scene* make_trace_scene(const yapp::scene* scene,
     auto eid = 0;
     for (auto env : scene->environments) {
         auto mat = env->mat;
-        ytrace::set_environment(trace_scene, eid++, env->frame, mat->ke,
+        ytrace::set_environment(trace_scene.get(), eid++, env->frame, mat->ke,
                                 get_texture_idx(scene, mat->ke_txt));
     }
 
     auto mid = 0;
     for (auto mat : scene->materials) {
-        ytrace::set_material(trace_scene, mid++, mat->ke, mat->kd, mat->ks,
-                             mat->kt, mat->rs,
+        ytrace::set_material(trace_scene.get(), mid++, mat->ke, mat->kd,
+                             mat->ks, mat->kt, mat->rs,
                              get_texture_idx(scene, mat->ke_txt),
                              get_texture_idx(scene, mat->kd_txt),
                              get_texture_idx(scene, mat->ks_txt),
@@ -901,14 +886,14 @@ ytrace::scene* make_trace_scene(const yapp::scene* scene,
     for (auto shape : scene->shapes) {
         if (!shape->points.empty()) {
             ytrace::set_point_shape(
-                trace_scene, sid++, shape->frame,
+                trace_scene.get(), sid++, shape->frame,
                 get_material_idx(scene, shape->mat), (int)shape->points.size(),
                 shape->points.data(), (int)shape->pos.size(), shape->pos.data(),
                 shape->norm.data(), shape->texcoord.data(), shape->color.data(),
                 shape->radius.data());
         } else if (!shape->lines.empty()) {
             ytrace::set_line_shape(
-                trace_scene, sid++, shape->frame,
+                trace_scene.get(), sid++, shape->frame,
                 get_material_idx(scene, shape->mat), (int)shape->lines.size(),
                 shape->lines.data(), (int)shape->pos.size(), shape->pos.data(),
                 shape->norm.data(), shape->texcoord.data(), shape->color.data(),
@@ -916,7 +901,7 @@ ytrace::scene* make_trace_scene(const yapp::scene* scene,
 
         } else if (!shape->triangles.empty()) {
             ytrace::set_triangle_shape(
-                trace_scene, sid++, shape->frame,
+                trace_scene.get(), sid++, shape->frame,
                 get_material_idx(scene, shape->mat),
                 (int)shape->triangles.size(), shape->triangles.data(),
                 (int)shape->pos.size(), shape->pos.data(), shape->norm.data(),
@@ -926,14 +911,14 @@ ytrace::scene* make_trace_scene(const yapp::scene* scene,
         }
         if (!shape->ke.empty() || !shape->kd.empty() || !shape->ks.empty() ||
             !shape->rs.empty()) {
-            ytrace::set_vert_material(trace_scene, sid - 1, shape->ke.data(),
-                                      shape->kd.data(), shape->ks.data(),
-                                      shape->rs.data());
+            ytrace::set_vert_material(trace_scene.get(), sid - 1,
+                                      shape->ke.data(), shape->kd.data(),
+                                      shape->ks.data(), shape->rs.data());
         }
     }
 
     ytrace::set_intersection_callbacks(
-        trace_scene, (void*)scene_bvh,
+        trace_scene.get(), (void*)scene_bvh.get(),
         [](auto ctx, auto o, auto d, auto tmin, auto tmax) {
             auto scene_bvh = (ybvh::scene*)ctx;
             auto isec = ybvh::intersect_ray(scene_bvh, o, d, tmin, tmax, false);
@@ -949,17 +934,19 @@ ytrace::scene* make_trace_scene(const yapp::scene* scene,
             return (bool)ybvh::intersect_ray(scene_bvh, o, d, tmin, tmax, true);
         });
 
-    ytrace::set_logging_callbacks(trace_scene, nullptr, ycmd::log_msgfv);
+    ytrace::set_logging_callbacks(trace_scene.get(), nullptr, ycmd::log_msgfv);
 
-    ytrace::init_lights(trace_scene);
+    ytrace::init_lights(trace_scene.get());
 
     return trace_scene;
 }
 
-ysym::scene* make_rigid_scene(const yapp::scene* scene,
-                              ybvh::scene* scene_bvh) {
+std::shared_ptr<ysym::scene> make_rigid_scene(
+    const std::shared_ptr<scene>& scene,
+    std::shared_ptr<ybvh::scene>& scene_bvh) {
     // allocate scene
-    auto rigid_scene = ysym::make_scene((int)scene->shapes.size());
+    auto rigid_scene = std::shared_ptr<ysym::scene>(
+        ysym::make_scene((int)scene->shapes.size()), ysym::free_scene);
 
     // add each shape
     auto sid = 0;
@@ -970,8 +957,8 @@ ysym::scene* make_rigid_scene(const yapp::scene* scene,
              !shape->triangles.empty())
                 ? 1.0f
                 : 0.0f;
-        ysym::set_body(rigid_scene, sid++, shape->frame, {0, 0, 0}, {0, 0, 0},
-                       density, (int)shape->triangles.size(),
+        ysym::set_body(rigid_scene.get(), sid++, shape->frame, {0, 0, 0},
+                       {0, 0, 0}, density, (int)shape->triangles.size(),
                        shape->triangles.data(), (int)shape->pos.size(),
                        shape->pos.data());
     }
@@ -981,7 +968,7 @@ ysym::scene* make_rigid_scene(const yapp::scene* scene,
 
     // setup collisions
     ysym::set_overlap_callbacks(
-        rigid_scene, scene_bvh,
+        rigid_scene.get(), scene_bvh.get(),
         [](auto ctx, std::vector<ysym::int2>* overlaps) {
             auto scene_bvh = (ybvh::scene*)ctx;
             ybvh::overlap_shape_bounds(scene_bvh, scene_bvh, false, true, true,
@@ -1011,21 +998,24 @@ ysym::scene* make_rigid_scene(const yapp::scene* scene,
         });
 
     // initialize
-    ysym::init_simulation(rigid_scene);
+    ysym::init_simulation(rigid_scene.get());
 
     return rigid_scene;
 }
 
-void simulate_step(yapp::scene* scene, ysym::scene* rigid_scene, float dt) {
-    ysym::advance_simulation(rigid_scene, dt);
+void simulate_step(const std::shared_ptr<scene>& scene,
+                   const std::shared_ptr<ysym::scene>& rigid_scene, float dt) {
+    ysym::advance_simulation(rigid_scene.get(), dt);
     for (auto sid = 0; sid < scene->shapes.size(); sid++) {
-        scene->shapes[sid]->frame = ysym::get_body_frame(rigid_scene, sid);
+        scene->shapes[sid]->frame =
+            ysym::get_body_frame(rigid_scene.get(), sid);
     }
 }
 
-params* init_params(const std::string& help, int argc, char** argv,
-                    bool trace_params, bool sym_params, bool shade_params,
-                    bool ui_params) {
+std::shared_ptr<params> init_params(const std::string& help, int argc,
+                                    char** argv, bool trace_params,
+                                    bool sym_params, bool shade_params,
+                                    bool ui_params) {
     static auto rtype_names = std::vector<std::pair<std::string, int>>{
         {"default", (int)ytrace::rng_type::def},
         {"uniform", (int)ytrace::rng_type::uniform},
@@ -1042,7 +1032,7 @@ params* init_params(const std::string& help, int argc, char** argv,
     auto parser = ycmd::make_parser(argc, argv, help.c_str());
 
     // parameters
-    auto pars = new params();
+    auto pars = std::make_shared<params>();
 
     // render
     if (trace_params || shade_params) {

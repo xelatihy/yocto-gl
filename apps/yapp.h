@@ -86,11 +86,11 @@ struct material {
     float rs = 0.0001;      // roughness
 
     // indices in the texture array (-1 if not found)
-    texture* ke_txt = nullptr;
-    texture* kd_txt = nullptr;
-    texture* ks_txt = nullptr;
-    texture* kt_txt = nullptr;
-    texture* rs_txt = nullptr;
+    std::shared_ptr<texture> ke_txt = nullptr;
+    std::shared_ptr<texture> kd_txt = nullptr;
+    std::shared_ptr<texture> ks_txt = nullptr;
+    std::shared_ptr<texture> kt_txt = nullptr;
+    std::shared_ptr<texture> rs_txt = nullptr;
 };
 
 //
@@ -98,8 +98,8 @@ struct material {
 //
 struct shape {
     // whole shape data
-    std::string name;         // shape name
-    material* mat = nullptr;  // material pointer
+    std::string name;                         // shape name
+    std::shared_ptr<material> mat = nullptr;  // material pointer
     float3x4 frame = {{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}}};  // frame
 
     // shape elements
@@ -139,8 +139,8 @@ struct camera {
 // Envinonment map
 //
 struct environment {
-    std::string name;         // name
-    material* mat = nullptr;  // material pointer
+    std::string name;                         // name
+    std::shared_ptr<material> mat = nullptr;  // material pointer
     float3x4 frame = {{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}}};  // frame
 };
 
@@ -148,19 +148,19 @@ struct environment {
 // Asset
 //
 struct scene {
-    std::vector<shape*> shapes;              // shape array
-    std::vector<material*> materials;        // material array
-    std::vector<texture*> textures;          // texture array
-    std::vector<camera*> cameras;            // camera array
-    std::vector<environment*> environments;  // environment array
-
-    ~scene();
+    std::vector<std::shared_ptr<shape>> shapes;        // shape array
+    std::vector<std::shared_ptr<material>> materials;  // material array
+    std::vector<std::shared_ptr<texture>> textures;    // texture array
+    std::vector<std::shared_ptr<camera>> cameras;      // camera array
+    std::vector<std::shared_ptr<environment>>
+        environments;  // environment array
 };
 
 //
 // Gets material index
 //
-int get_material_idx(const scene* scn, const material* mat);
+int get_material_idx(const std::shared_ptr<scene>& scn,
+                     const std::shared_ptr<material>& mat);
 
 int get_etype(const shape& shape);
 int get_nelems(const shape& shape);
@@ -169,24 +169,25 @@ const int* get_elems(const shape& shape);
 //
 // Load scene
 //
-scene* load_scene(const std::string& filename, float scale,
-                  bool add_camera = true);
+std::shared_ptr<scene> load_scene(const std::string& filename, float scale,
+                                  bool add_camera = true);
 
 //
 // Load scene
 //
-scene* load_scenes(const std::vector<std::string>& filenames, float scale,
-                   bool add_camera = true);
+std::shared_ptr<scene> load_scenes(const std::vector<std::string>& filenames,
+                                   float scale, bool add_camera = true);
 
 //
 // Loads an envmap for the scene
 //
-void load_envmap(scene* scn, const std::string& filename, float scale);
+void load_envmap(const std::shared_ptr<scene>& scn, const std::string& filename,
+                 float scale);
 
 //
 // Save scene
 //
-void save_scene(const std::string& filename, const scene* sc);
+void save_scene(const std::string& filename, const std::shared_ptr<scene>& sc);
 
 //
 // Make trace blocks
@@ -203,23 +204,27 @@ void save_image(const std::string& filename, int width, int height,
 //
 // Make a BVH
 //
-ybvh::scene* make_bvh(const scene* scene);
+std::shared_ptr<ybvh::scene> make_bvh(const std::shared_ptr<scene>& scene);
 
 //
 // Initialize scene for rendering
 //
-ytrace::scene* make_trace_scene(const yapp::scene* scene,
-                                const ybvh::scene* scene_bvh, int camera);
+std::shared_ptr<ytrace::scene> make_trace_scene(
+    const std::shared_ptr<scene>& scene,
+    const std::shared_ptr<ybvh::scene>& scene_bvh, int camera);
 
 //
 // Initialize a rigid body scene
 //
-ysym::scene* make_rigid_scene(const yapp::scene* scene, ybvh::scene* scene_bvh);
+std::shared_ptr<ysym::scene> make_rigid_scene(
+    const std::shared_ptr<scene>& scene,
+    std::shared_ptr<ybvh::scene>& scene_bvh);
 
 //
 // Step one time
 //
-void simulate_step(yapp::scene* scene, ysym::scene* rigid_scene, float dt);
+void simulate_step(const std::shared_ptr<scene>& scene,
+                   const std::shared_ptr<ysym::scene>& rigid_scene, float dt);
 
 struct params {
     // scene/image
@@ -256,9 +261,10 @@ struct params {
 //
 // Load parameters
 //
-params* init_params(const std::string& help, int argc, char** argv,
-                    bool trace_params, bool sym_params, bool shade_params,
-                    bool ui_params);
+std::shared_ptr<params> init_params(const std::string& help, int argc,
+                                    char** argv, bool trace_params,
+                                    bool sym_params, bool shade_params,
+                                    bool ui_params);
 
 //
 // Logging
@@ -271,17 +277,16 @@ struct shade_state;
 //
 // Init OpenGL render
 //
-shade_state* init_shade_state(const yapp::scene* scn, const params* pars);
-
-//
-// Clear OpenGL renderer
-//
-void free_shade_state(shade_state* state);
+std::shared_ptr<shade_state> init_shade_state(
+    const std::shared_ptr<yapp::scene>& scn,
+    const std::shared_ptr<params>& pars);
 
 //
 // OpenGL render
 //
-void shade_scene(const yapp::scene* scn, const params* pars, shade_state* st);
+void shade_scene(const std::shared_ptr<yapp::scene>& scn,
+                 const std::shared_ptr<params>& pars,
+                 const std::shared_ptr<shade_state>& st);
 
 }  // namespace
 
