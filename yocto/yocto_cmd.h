@@ -99,6 +99,31 @@ namespace ycmd {}
 // SOFTWARE.
 //
 
+//
+// LICENSE OF INCLUDED SOFTWARE for ThreadPool code.
+//
+// Copyright (c) 2012 Jakob Progsch, Václav Zeman
+//
+// This software is provided 'as-is', without any express or implied
+// warranty. In no event will the authors be held liable for any damages
+// arising from the use of this software.
+//
+// Permission is granted to anyone to use this software for any purpose,
+// including commercial applications, and to alter it and redistribute it
+// freely, subject to the following restrictions:
+//
+// 1. The origin of this software must not be misrepresented; you must not
+// claim that you wrote the original software. If you use this software
+// in a product, an acknowledgment in the product documentation would be
+// appreciated but is not required.
+//
+// 2. Altered source versions must be plainly marked as such, and must not be
+// misrepresented as being the original software.
+//
+// 3. This notice may not be removed or altered from any source
+// distribution.
+//
+
 #ifndef _YCMD_H_
 #define _YCMD_H_
 
@@ -109,6 +134,8 @@ namespace ycmd {}
 #define YCMD_API
 #endif
 
+#include <functional>
+#include <future>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -521,6 +548,29 @@ YCMD_API void log_msgf(int level, const char* name, const char* msg, ...);
 ///
 YCMD_API void log_msgfv(int level, const char* name, const char* msg,
                         va_list args);
+
+// THREAD POOL -----------------------------------------------------------------
+
+///
+/// Forward declaration of thread pool.
+///
+struct thread_pool;
+
+///
+/// Initialize a thread pool with a certain number of threads (0 for defatul).
+///
+YCMD_API thread_pool* make_thread_pool(int nthread = 0);
+
+///
+/// Clear thread pool
+///
+YCMD_API void clear_thread_pool(thread_pool* pool);
+
+///
+/// Enqueue a job
+///
+YCMD_API std::future<void> pool_enqueue(thread_pool* pool,
+                                        const std::function<void()>& task);
 
 }  // namespace
 
