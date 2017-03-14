@@ -85,16 +85,29 @@ yimg::simage *make_image_grid(const std::vector<yimg::simage *> &imgs,
 }
 
 int main(int argc, char *argv[]) {
+    static auto tmtype_names = std::vector<std::pair<std::string, int>>{
+        {"default", (int)yimg::tonemap_type::def},
+        {"linear", (int)yimg::tonemap_type::linear},
+        {"srgb", (int)yimg::tonemap_type::srgb},
+        {"gamma", (int)yimg::tonemap_type::gamma},
+        {"filmic", (int)yimg::tonemap_type::filmic}};
+
     // command line params
     auto parser = ycmd::make_parser(argc, argv, "process images");
     auto command = ycmd::parse_args(parser, "command", "command to execute", "",
-                                    true, {"resize"});
+                                    true, {"resize", "tonemap"});
     auto output = ycmd::parse_opts(parser, "--output", "-o",
                                    "output image filename", "", true);
-    auto width = ycmd::parse_opti(parser, "--width", "",
+    auto width = ycmd::parse_opti(parser, "--width", "-w",
                                   "width (-1 to maintain aspect)", -1);
-    auto height = ycmd::parse_opti(parser, "--height", "",
+    auto height = ycmd::parse_opti(parser, "--height", "-h",
                                    "height (-1 to maintain aspect)", -1);
+    auto exposure =
+        ycmd::parse_optf(parser, "--exposure", "-e", "hdr exposure", 0);
+    auto gamma = ycmd::parse_optf(parser, "--gamma", "-g", "hdr gamma", 2.2f);
+    auto tonemap = (yimg::tonemap_type)ycmd::parse_opte(
+        parser, "--tonemap", "-t", "hdr tonemap", (int)yimg::tonemap_type::srgb,
+        tmtype_names);
     auto filenames = ycmd::parse_argas(
         parser, "filenames", "input image filenames", {}, true, -1, {});
 
@@ -111,6 +124,9 @@ int main(int argc, char *argv[]) {
     // switch on commands
     if (command == "resize") {
         out = resize_image(imgs[0], width, height);
+    }
+    if (command == "tonemap") {
+        out = yimg::tonemap_image(imgs[0], exposure, tonemap, gamma);
     }
 
     // save output

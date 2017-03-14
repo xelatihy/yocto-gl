@@ -97,8 +97,9 @@ void init_shade_state(const yapp::scene* sc, yglu::uint& shade_prog,
 void shade_scene(const yapp::scene* sc, int cur_camera, uint prog, uint vao,
                  const std::map<texture*, uint>& txts,
                  const std::vector<std::array<uint, 7>>& vbo,
-                 const float4& background, float exposure, float gamma_,
-                 bool srgb, bool wireframe, bool edges, bool camera_lights,
+                 const float4& background, float exposure,
+                 yglu::stdshader::tonemap_type tmtype, float gamma,
+                 bool wireframe, bool edges, bool camera_lights,
                  const float3& amb) {
     // begin frame
     yglu::enable_depth_test(true);
@@ -113,8 +114,8 @@ void shade_scene(const yapp::scene* sc, int cur_camera, uint prog, uint vao,
     auto camera_proj =
         ym::perspective_mat4(cam->yfov, cam->aspect, 0.1f, 100000.0f);
 
-    yglu::stdshader::begin_frame(prog, vao, camera_lights, exposure, gamma_,
-                                 srgb, camera_xform, camera_view, camera_proj);
+    yglu::stdshader::begin_frame(prog, vao, camera_lights, exposure, tmtype,
+                                 gamma, camera_xform, camera_view, camera_proj);
 
     if (!camera_lights) {
         auto nlights = 0;
@@ -214,9 +215,8 @@ void init_draw_state(const yapp::scene* sc,
 //
 void draw_scene(const yapp::scene* sc, int cur_camera,
                 const std::map<texture*, yglu::uint>& txts,
-                const ym::vec4f& background, float exposure, float gamma_,
-                bool wireframe, bool edges, bool camera_lights,
-                const ym::vec3f& amb) {
+                const ym::vec4f& background, bool wireframe, bool edges,
+                bool camera_lights, const ym::vec3f& amb) {
     // begin frame
     yglu::enable_depth_test(true);
     yglu::enable_culling(false);
@@ -344,14 +344,14 @@ void free_shade_state(shade_state* st) {
 void shade_scene(const scene* scn, const params* pars, const shade_state* st) {
     if (pars->legacy_gl) {
         draw_scene(scn, pars->render_params.camera_id, st->shade_txt,
-                   pars->background, pars->exposure, pars->gamma,
-                   pars->wireframe, pars->edges,
+                   pars->background, pars->wireframe, pars->edges,
                    pars->render_params.stype == ytrace::shader_type::eyelight,
                    pars->render_params.amb);
     } else {
         shade_scene(scn, pars->render_params.camera_id, st->shade_prog,
                     st->shade_vao, st->shade_txt, st->shade_vbo,
-                    pars->background, pars->exposure, pars->gamma, pars->srgb,
+                    pars->background, pars->exposure,
+                    (yglu::stdshader::tonemap_type)pars->tonemap, pars->gamma,
                     pars->wireframe, pars->edges,
                     pars->render_params.stype == ytrace::shader_type::eyelight,
                     pars->render_params.amb);

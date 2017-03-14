@@ -987,6 +987,9 @@ namespace stdshader {
 //
 // This is a public API. See above for documentation.
 //
+// Filmic tone mapping from
+// https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/
+//
 YGLU_API void make_program(uint* pid, uint* aid) {
 #ifndef _WIN32
 #pragma GCC diagnostic push
@@ -1035,6 +1038,12 @@ YGLU_API void make_program(uint* pid, uint* aid) {
     static const std::string& _frag_shader =
         "#version 330\n"
         "\n"
+        "#define TM_DEF 0\n"
+        "#define TM_LINEAR 1\n"
+        "#define TM_SRGB 2\n"
+        "#define TM_GAMMA 3\n"
+        "#define TM_FILMIC 4\n"
+        "\n"
         "#define pi 3.14159265\n"
         "\n"
         "in vec3 pos;                   // [from vertex shader] position "
@@ -1072,7 +1081,7 @@ YGLU_API void make_program(uint* pid, uint* aid) {
         "\n"
         "uniform float img_exposure;         // image exposure\n"
         "uniform float img_gamma;            // image gamma\n"
-        "uniform bool img_srgb;              // image srgb correction\n"
+        "uniform int img_tonemap;            // image tonemap preset\n"
         "\n"
         "uniform bool shade_eyelight;        // eyelight shading\n"
         "\n"
@@ -1121,6 +1130,15 @@ YGLU_API void make_program(uint* pid, uint* aid) {
         "    }\n"
         "}\n"
         "\n"
+        "vec3 tm_filmic(vec3 x) {"
+        "    float a = 2.51f;\n"
+        "    float b = 0.03f;\n"
+        "    float c = 2.43f;\n"
+        "    float d = 0.59f;\n"
+        "    float e = 0.14f;\n"
+        "    return clamp((x*(a*x+b))/(x*(c*x+d)+e),0,1);\n"
+        "}\n"
+        "\n"
         "// main\n"
         "void main() {\n"
         "    // view vector\n"
@@ -1141,11 +1159,7 @@ YGLU_API void make_program(uint* pid, uint* aid) {
         "    // emission\n"
         "    vec3 c = ke;\n"
         "    // check early exit\n"
-        "    if(kd == vec3(0,0,0) && ks == vec3(0,0,0)) {\n"
-        "        c = pow(c*pow(2,img_exposure),vec3(1/img_gamma));\n"
-        "        frag_color = vec4(c,1);\n"
-        "        return;\n"
-        "    }\n"
+        "    if(kd != vec3(0,0,0) || ks != vec3(0,0,0)) {\n"
         "\n"
         "    if(shade_eyelight) {\n"
         "        vec3 wi = wo;\n"
@@ -1178,11 +1192,16 @@ YGLU_API void make_program(uint* pid, uint* aid) {
         "brdfcos(material_etype,kd,ks,rs,n,wi,wo,material_use_phong);\n"
         "        }\n"
         "    }\n"
+        "    }\n"
         "\n"
         "    // final color correction\n"
-        "    c = pow(c*pow(2,img_exposure),vec3(1/img_gamma));\n"
-        "    // srgb output\n"
-        "    if(img_srgb) c = pow(c,vec3(1/2.2));\n"
+        "    c = c*pow(2,img_exposure);\n"
+        "    if(img_tonemap == TM_SRGB || img_tonemap == TM_DEF)"
+        "        c = pow(c,vec3(1/2.2));\n"
+        "    if(img_tonemap == TM_GAMMA)"
+        "        c = pow(c,vec3(1/img_gamma));\n"
+        "    if(img_tonemap == TM_FILMIC)"
+        "        c = tm_filmic(c);\n"
         "    // output final color by setting gl_FragColor\n"
         "    frag_color = vec4(c,1);\n"
         "}\n"
@@ -1203,8 +1222,8 @@ YGLU_API void make_program(uint* pid, uint* aid) {
 // This is a public API. See above for documentation.
 //
 YGLU_API void begin_frame(uint prog, uint vao, bool shade_eyelight,
-                          float img_exposure, float img_gamma, bool img_srgb,
-                          const float4x4& camera_xform,
+                          float img_exposure, tonemap_type img_tonemap,
+                          float img_gamma, const float4x4& camera_xform,
                           const float4x4& camera_xform_inv,
                           const float4x4& camera_proj) {
     assert(check_error());
@@ -1214,8 +1233,8 @@ YGLU_API void begin_frame(uint prog, uint vao, bool shade_eyelight,
     modern::set_uniform(prog, "shade_eyelight", &shade_eyelighti, 1, 1);
     modern::set_uniform(prog, "img_exposure", &img_exposure, 1, 1);
     modern::set_uniform(prog, "img_gamma", &img_gamma, 1, 1);
-    auto img_isrgb = (int)img_srgb;
-    modern::set_uniform(prog, "img_srgb", &img_isrgb, 1, 1);
+    auto img_tonemap_int = (int)img_tonemap;
+    modern::set_uniform(prog, "img_tonemap", &img_tonemap_int, 1, 1);
     modern::set_uniform(prog, "camera_xform", &camera_xform[0][0], 16, 1);
     modern::set_uniform(prog, "camera_xform_inv", &camera_xform_inv[0][0], 16,
                         1);
@@ -1683,7 +1702,22 @@ void int_widget(window* win, const std::string& lbl, int* val, int min, int max,
 //
 void float_widget(window* win, const std::string& lbl, float* val, float min,
                   float max, float incr) {
-    nk_property_float(win->nk_ctx, "exposure", min, val, max, incr, incr);
+    nk_property_float(win->nk_ctx, lbl.c_str(), min, val, max, incr, incr);
+}
+
+//
+// Enum widget
+//
+void enum_widget(window* win, const std::string& lbl, int* val,
+                 const std::vector<std::pair<std::string, int>>& labels) {
+    const char* items[100];
+    auto pos = -1;
+    for (auto i = 0; i < labels.size(); i++) {
+        items[i] = labels[i].first.c_str();
+        if (labels[i].second == *val) pos = i;
+    }
+    nk_combobox(win->nk_ctx, items, (int)labels.size(), &pos, 20, {100, 100});
+    *val = labels[pos].second;
 }
 
 //

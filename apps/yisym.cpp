@@ -283,8 +283,6 @@ void text_callback(yglu::ui::window* win, unsigned int key) {
             break;
         case '[': pars->exposure -= 1; break;
         case ']': pars->exposure += 1; break;
-        case '{': pars->gamma -= 0.1f; break;
-        case '}': pars->gamma += 0.1f; break;
         case 'e': pars->edges = !pars->edges; break;
         case 'w': pars->wireframe = !pars->wireframe; break;
         case 's': save_screenshot(win, pars->imfilename); break;
@@ -298,6 +296,13 @@ void text_callback(yglu::ui::window* win, unsigned int key) {
 }
 
 void draw_widgets(yglu::ui::window* win) {
+    static auto tmtype_names = std::vector<std::pair<std::string, int>>{
+        {"default", (int)yimg::tonemap_type::def},
+        {"linear", (int)yimg::tonemap_type::linear},
+        {"srgb", (int)yimg::tonemap_type::srgb},
+        {"gamma", (int)yimg::tonemap_type::gamma},
+        {"filmic", (int)yimg::tonemap_type::filmic}};
+
     auto st = (state*)yglu::ui::get_user_pointer(win);
     auto pars = st->pars;
     if (yglu::ui::begin_widgets(win)) {
@@ -327,8 +332,11 @@ void draw_widgets(yglu::ui::window* win) {
         yglu::ui::bool_widget(win, "wireframe", &pars->wireframe);
         yglu::ui::bool_widget(win, "edges", &pars->edges);
         yglu::ui::dynamic_widget_layout(win, 1);
-        yglu::ui::float_widget(win, "exposure", &pars->exposure, -20, 20, 1);
-        yglu::ui::float_widget(win, "gamma", &pars->gamma, 0.1, 5, 0.1);
+        yglu::ui::float_widget(win, "hdr exposure", &pars->exposure, -20, 20,
+                               1);
+        yglu::ui::float_widget(win, "hdr gamma", &pars->gamma, 0.1, 5, 0.1);
+        yglu::ui::enum_widget(win, "hdr tonemap", (int*)&pars->tonemap,
+                              tmtype_names);
         if (yglu::ui::button_widget(win, "tesselate")) {
             for (auto shape : st->scene->shapes) {
                 yshape::tesselate_stdshape(

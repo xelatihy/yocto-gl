@@ -498,13 +498,29 @@ namespace stdshader {
 YGLU_API void make_program(uint* pid, uint* vao);
 
 ///
+/// Tone mapping presets
+///
+enum struct tonemap_type {
+    /// default
+    def = 0,
+    /// linear
+    linear = 1,
+    /// srgb
+    srgb = 2,
+    /// linear
+    gamma = 3,
+    /// filmic
+    filmic = 4
+};
+
+///
 /// Starts a frame by setting exposure/gamma values, camera transforms and
 /// projection. Sets also whether to use full shading or a quick eyelight
 /// preview.
 ///
 YGLU_API void begin_frame(uint prog, uint vao, bool shade_eyelight,
-                          float img_exposure, float img_gamma, bool img_srgb,
-                          const float4x4& camera_xform,
+                          float img_exposure, tonemap_type img_tonemap,
+                          float img_gamma, const float4x4& camera_xform,
                           const float4x4& camera_xform_inv,
                           const float4x4& camera_proj);
 
@@ -729,13 +745,13 @@ void int_label_widget(window* win, const std::string& lbl, int val);
 void float_label_widget(window* win, const std::string& lbl, float val);
 
 ///
-/// Label widget
+/// Int widget
 ///
 void int_widget(window* win, const std::string& lbl, int* val, int min, int max,
                 int incr = 1);
 
 ///
-/// Label widget
+/// Float widget
 ///
 void float_widget(window* win, const std::string& lbl, float* val, float min,
                   float max, float incr = 1.0f);
@@ -744,6 +760,12 @@ void float_widget(window* win, const std::string& lbl, float* val, float min,
 /// Bool widget
 ///
 void bool_widget(window* win, const std::string& lbl, bool* val);
+
+///
+/// Enum widget
+///
+void enum_widget(window* win, const std::string& lbl, int* val,
+                 const std::vector<std::pair<std::string, int>>& labels);
 
 ///
 /// Button widget

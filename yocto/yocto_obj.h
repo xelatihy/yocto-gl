@@ -22,6 +22,12 @@
 ///   - optionally load textures data as float arrays with
 ///       load_fl_textures()
 ///
+/// Both in reading and writing, OBJ has no clear convention on the orientation
+/// of textures Y axis. So in many cases textures appears flipped. To handle
+/// that, use the option to flip textures coordinates on either saving or
+/// loading. By default texture coordinates are flipped since this seems
+/// the convention found on test cases collected on the web.
+///
 /// The interface for each function is described in details in the interface
 /// section of this file.
 ///
@@ -65,6 +71,7 @@
 ///
 ///
 /// HISTORY:
+/// - v 0.12: change texture loading by flipping uvs rather than images
 /// - v 0.11: use yocto_image for texture handling.
 /// - v 0.10: switch to .h/.cpp pair
 /// - v 0.9: bug fixes and optionally texture skipping
@@ -294,6 +301,7 @@ struct obj_exception : std::exception {
 ///
 /// Parameters:
 /// - filename: filename
+/// - flip_texcoord: whether to flip the v coordinate
 ///
 /// Return:
 /// - obj
@@ -301,7 +309,7 @@ struct obj_exception : std::exception {
 /// Throws:
 /// - io_exception: read/write exception
 ///
-YOBJ_API obj* load_obj(const std::string& filename);
+YOBJ_API obj* load_obj(const std::string& filename, bool flip_texcoord = true);
 
 ///
 /// Load MTL
@@ -323,11 +331,13 @@ YOBJ_API std::vector<material> load_mtl(const std::string& filename);
 /// Parameters:
 /// - filename: filename
 /// - asset: obj data to save
+/// - flip_texcoord: whether to flip the v coordinate
 ///
 /// Throws:
 /// - io_exception: read/write exception
 ///
-YOBJ_API void save_obj(const std::string& filename, const obj* asset);
+YOBJ_API void save_obj(const std::string& filename, const obj* asset,
+                       bool flip_texcoord = true);
 
 ///
 /// Save MTL (@deprecated interface)

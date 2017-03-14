@@ -455,7 +455,7 @@ struct render_params {
     /// maximum ray depth
     int max_depth = 8;
     /// final pixel clamping
-    float pixel_clamp = 100;
+    float pixel_clamp = 10;
     /// ray intersection epsilon
     float ray_eps = 1e-4f;
 };

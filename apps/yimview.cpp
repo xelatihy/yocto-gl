@@ -53,6 +53,7 @@ struct img {
     float exposure = 0;
     float gamma = 2.2f;
     bool srgb = true;
+    yimg::tonemap_type tonemap = yimg::tonemap_type::srgb;
 
     // check hdr
     bool is_hdr() const { return !hdr.empty(); }
@@ -64,7 +65,7 @@ struct params {
 
     float exposure = 0;
     float gamma = 1;
-    bool srgb = true;
+    yimg::tonemap_type tonemap = yimg::tonemap_type::gamma;
 
     bool legacy_gl = false;
 
@@ -83,7 +84,8 @@ struct params {
 };
 
 std::vector<img*> load_images(const std::vector<std::string>& img_filenames,
-                              float exposure, float gamma, bool srgb) {
+                              float exposure, yimg::tonemap_type tonemap,
+                              float gamma) {
     auto imgs = std::vector<img*>();
     for (auto filename : img_filenames) {
         imgs.push_back(new img());
@@ -102,11 +104,12 @@ std::vector<img*> load_images(const std::vector<std::string>& img_filenames,
         delete yim;
         if (!img->hdr.empty()) {
             img->ldr.resize(img->hdr.size());
-            ym::exposure_gamma(img->width, img->height, img->ncomp,
-                               img->hdr.data(), img->ldr.data(), exposure,
-                               gamma, srgb);
+            yimg::tonemap_image(img->width, img->height, img->ncomp,
+                                img->hdr.data(), img->ldr.data(), img->exposure,
+                                img->tonemap, img->gamma);
             img->exposure = exposure;
             img->gamma = gamma;
+            img->tonemap = tonemap;
         }
         if (img->hdr.empty() && img->ldr.empty()) {
             printf("cannot load image %s\n", img->filename.c_str());
@@ -118,12 +121,20 @@ std::vector<img*> load_images(const std::vector<std::string>& img_filenames,
 }
 
 void init_params(params* pars, ycmd::parser* parser) {
+    static auto tmtype_names = std::vector<std::pair<std::string, int>>{
+        {"default", (int)yimg::tonemap_type::def},
+        {"linear", (int)yimg::tonemap_type::linear},
+        {"srgb", (int)yimg::tonemap_type::srgb},
+        {"gamma", (int)yimg::tonemap_type::gamma},
+        {"filmic", (int)yimg::tonemap_type::filmic}};
+
     pars->exposure =
         ycmd::parse_optf(parser, "--exposure", "-e", "hdr image exposure", 0);
     pars->gamma =
-        ycmd::parse_optf(parser, "--gamma", "-g", "hdr image gamma", 1);
-    pars->srgb =
-        ycmd::parse_optb(parser, "--srgb", "", "hdr image srgb output", true);
+        ycmd::parse_optf(parser, "--gamma", "-g", "hdr image gamma", 2.2f);
+    pars->tonemap = (yimg::tonemap_type)ycmd::parse_opte(
+        parser, "--tonemap", "-t", "hdr image tonemap",
+        (int)yimg::tonemap_type::srgb, tmtype_names);
     pars->legacy_gl = ycmd::parse_flag(parser, "--legacy_opengl", "-L",
                                        "uses legacy OpenGL", false);
     auto filenames =
@@ -131,7 +142,7 @@ void init_params(params* pars, ycmd::parser* parser) {
 
     // loading images
     pars->imgs =
-        load_images(filenames, pars->exposure, pars->gamma, pars->srgb);
+        load_images(filenames, pars->exposure, pars->tonemap, pars->gamma);
 }
 }  // namespace
 
@@ -156,16 +167,13 @@ void text_callback(yglu::ui::window* win, unsigned int key) {
         case ']': pars->exposure += 1; break;
         case '{': pars->gamma -= 0.1f; break;
         case '}': pars->gamma += 0.1f; break;
-        case '\\': pars->srgb = pars->srgb; break;
         case '1':
             pars->exposure = 0;
             pars->gamma = 1;
-            pars->srgb = true;
             break;
         case '2':
             pars->exposure = 0;
             pars->gamma = 2.2f;
-            pars->srgb = true;
             break;
         case 'z': pars->zoom = 1; break;
         case 'h':
@@ -216,10 +224,16 @@ ym::vec<T, 4> lookup_image(int w, int h, int nc, const T* pixels, int x, int y,
 }
 
 void draw_widgets(yglu::ui::window* win) {
+    static auto tmtype_names = std::vector<std::pair<std::string, int>>{
+        {"default", (int)yimg::tonemap_type::def},
+        {"linear", (int)yimg::tonemap_type::linear},
+        {"srgb", (int)yimg::tonemap_type::srgb},
+        {"gamma", (int)yimg::tonemap_type::gamma},
+        {"filmic", (int)yimg::tonemap_type::filmic}};
+
     auto pars = (yimview_app::params*)get_user_pointer(win);
     auto& img = pars->imgs[pars->cur_img];
     auto mouse_pos = (ym::vec2f)get_mouse_posf(win);
-    auto window_size = get_window_size(win);
     if (begin_widgets(win)) {
         dynamic_widget_layout(win, 1);
         label_widget(win, img->filename);
@@ -248,9 +262,9 @@ void draw_widgets(yglu::ui::window* win) {
             float_label_widget(win, "b", (inside) ? hdrp[2] : 0);
             float_label_widget(win, "a", (inside) ? hdrp[3] : 0);
             dynamic_widget_layout(win, 1);
-            float_widget(win, "hdr exposure", &pars->exposure, -20, 20, 1);
-            float_widget(win, "hdr gamma", &pars->gamma, 0.1, 5, 0.1);
-            bool_widget(win, "hdr srgb output", &pars->srgb);
+            float_widget(win, "exposure", &pars->exposure, -20, 20, 1);
+            float_widget(win, "gamma", &pars->gamma, 0.1, 5, 0.1);
+            enum_widget(win, "tonemap", (int*)&pars->tonemap, tmtype_names);
         }
     }
     end_widgets(win);
@@ -317,13 +331,13 @@ void run_ui(yimview_app::params* pars) {
         // refresh hdr
         if (img->is_hdr() &&
             (pars->exposure != img->exposure || pars->gamma != img->gamma ||
-             pars->srgb != img->srgb)) {
-            ym::exposure_gamma(img->width, img->height, img->ncomp,
-                               img->hdr.data(), img->ldr.data(), pars->exposure,
-                               pars->gamma, pars->srgb);
+             pars->tonemap != img->tonemap)) {
+            yimg::tonemap_image(img->width, img->height, img->ncomp,
+                                img->hdr.data(), img->ldr.data(),
+                                pars->exposure, pars->tonemap, pars->gamma);
             img->exposure = pars->exposure;
             img->gamma = pars->gamma;
-            img->srgb = pars->srgb;
+            img->tonemap = pars->tonemap;
             if (pars->legacy_gl) {
                 yglu::legacy::update_texture(img->tex_glid, img->width,
                                              img->height, img->ncomp,
