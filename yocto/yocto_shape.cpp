@@ -528,12 +528,57 @@ static inline void _make_stdsurface(stdsurface_type stype, int level,
                 },
                 [](const auto uv) { return uv; });
         } break;
+        case stdsurface_type::uvhemisphere: {
+            auto usteps = ym::pow2(level + 2), vsteps = ym::pow2(level + 1);
+            return _make_uvsurface(
+                usteps, vsteps, triangles, pos, norm, texcoord,
+                [frame, scale](const auto uv) {
+                    auto a = ym::vec2f{2 * ym::pif * uv[0],
+                                       ym::pif * 0.5f * (1 - uv[1])};
+                    return transform_point(
+                        frame, {scale * std::cos(a[0]) * std::sin(a[1]),
+                                scale * std::sin(a[0]) * std::sin(a[1]),
+                                scale * std::cos(a[1])});
+                },
+                [frame](const auto uv) {
+                    auto a = ym::vec2f{2 * ym::pif * uv[0],
+                                       ym::pif * 0.5f * (1 - uv[1])};
+                    return transform_direction(frame,
+                                               {std::cos(a[0]) * std::sin(a[1]),
+                                                std::sin(a[0]) * std::sin(a[1]),
+                                                std::cos(a[1])});
+                },
+                [](const auto uv) { return uv; });
+        } break;
         case stdsurface_type::uvflippedsphere: {
             auto usteps = ym::pow2(level + 2), vsteps = ym::pow2(level + 1);
             return _make_uvsurface(
                 usteps, vsteps, triangles, pos, norm, texcoord,
                 [frame, scale](const auto uv) {
                     auto a = ym::vec2f{2 * ym::pif * uv[0], ym::pif * uv[1]};
+                    return transform_point(
+                        frame, {scale * std::cos(a[0]) * std::sin(a[1]),
+                                scale * std::sin(a[0]) * std::sin(a[1]),
+                                scale * std::cos(a[1])});
+                },
+                [frame](const auto uv) {
+                    auto a = ym::vec2f{2 * ym::pif * uv[0], ym::pif * uv[1]};
+                    return transform_direction(
+                        frame,
+                        {-std::cos(a[0]) * std::sin(a[1]),
+                         -std::sin(a[0]) * std::sin(a[1]), -std::cos(a[1])});
+                },
+                [](const auto uv) {
+                    return ym::vec2f{uv[0], 1 - uv[1]};
+                });
+        } break;
+        case stdsurface_type::uvflippedhemisphere: {
+            auto usteps = ym::pow2(level + 2), vsteps = ym::pow2(level + 1);
+            return _make_uvsurface(
+                usteps, vsteps, triangles, pos, norm, texcoord,
+                [frame, scale](const auto uv) {
+                    auto a = ym::vec2f{2 * ym::pif * uv[0],
+                                       ym::pif * (0.5f + 0.5f * uv[1])};
                     return transform_point(
                         frame, {scale * std::cos(a[0]) * std::sin(a[1]),
                                 scale * std::sin(a[0]) * std::sin(a[1]),

@@ -36,6 +36,7 @@
 #include "../yocto/yocto_bvh.h"
 #include "../yocto/yocto_cmd.h"
 #include "../yocto/yocto_gltf.h"
+#include "../yocto/yocto_img.h"
 #include "../yocto/yocto_obj.h"
 #include "../yocto/yocto_shape.h"
 #include "../yocto/yocto_sym.h"
@@ -194,8 +195,8 @@ std::vector<int4> make_trace_blocks(int w, int h, int bs);
 // Save image
 //
 void save_image(const std::string& filename, int width, int height,
-                const float4* hdr, float exposure, float gamma,
-                bool srgb_output);
+                const float4* hdr, float exposure, yimg::tonemap_type tonemap,
+                float gamma);
 
 //
 // Make a BVH
@@ -226,9 +227,8 @@ struct params {
     // render
     std::string imfilename;
     int width = 0, height = 0;
-    float exposure = 0;
-    float gamma = 1;
-    bool srgb = true;
+    float exposure = 0, gamma = 2.2f;
+    yimg::tonemap_type tonemap = yimg::tonemap_type::def;
     float4 background = {0, 0, 0, 0};
 
     // trace

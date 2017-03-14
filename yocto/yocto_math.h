@@ -1802,8 +1802,7 @@ constexpr inline mat<T, 4, 4> ortho_mat4(T l, T r, T b, T t, T n, T f) {
     return {{2 / (r - l), 0, 0, 0},
             {0, 2 / (t - b), 0, 0},
             {0, 0, -2 / (f - n), 0},
-            {-(r + l) / (r - l), -(t + b) / (t - b), -2 / (f - n),
-             -(f + n) / (f - n), 1}};
+            {-(r + l) / (r - l), -(t + b) / (t - b), -(f + n) / (f - n), 1}};
 }
 
 /// OpenGL orthographic 2D matrix

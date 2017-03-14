@@ -892,10 +892,9 @@ static inline ym::vec3f _eval_brdfcos(const point& pt, const ym::vec3f& wi) {
                     auto cos2 = ndh * ndh;
                     auto tan2 = (1 - cos2) / cos2;
                     auto alpha2 = pt.rs * pt.rs;
-                    // auto d = alpha2 / (ym::pif * cos2 * cos2 * (alpha2 +
-                    // tan2) * (alpha2 + tan2));
-                    auto di = (ndh * alpha2 - ndh) * ndh + 1;
+                    auto di = (ndh * ndh) * (alpha2 - 1) + 1;
                     auto d = alpha2 / (ym::pif * di * di);
+#ifndef YTRACE_GGX_SMITH
                     auto lambda_o =
                         (-1 + std::sqrt(
                                   1 + alpha2 * (1 - ndo * ndo) / (ndo * ndo))) /
@@ -905,6 +904,15 @@ static inline ym::vec3f _eval_brdfcos(const point& pt, const ym::vec3f& wi) {
                          sqrtf(1 + alpha2 * (1 - ndi * ndi) / (ndi * ndi))) /
                         2;
                     auto g = 1 / (1 + lambda_o + lambda_i);
+#else
+                    auto go =
+                        (2 * ndo) /
+                        (ndo + std::sqrt(alpha2 + (1 - alpha2) * ndo * ndo));
+                    auto gi =
+                        (2 * ndi) /
+                        (ndi + std::sqrt(alpha2 + (1 - alpha2) * ndi * ndi));
+                    auto g = go * gi;
+#endif
                     dg = d * g;
                 } else {
                     // evaluate Blinn-Phong

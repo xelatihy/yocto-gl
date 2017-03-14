@@ -164,6 +164,14 @@ enum struct mtype {
     metal01,
     metal02,
     metal03,
+    gold01,
+    gold02,
+    silver01,
+    silver02,
+    iron01,
+    iron02,
+    copper01,
+    copper02,
     glass00,
     glass01,
     glass02,
@@ -185,6 +193,11 @@ enum struct mtype {
     env00,
     env01
 };
+
+ym::vec3f srgb(const ym::vec3f& k) {
+    return {std::pow(k[0] / 255.0f, 2.2f), std::pow(k[1] / 255.0f, 2.2f),
+            std::pow(k[2] / 255.0f, 2.2f)};
+}
 
 yapp::material* make_material(mtype type) {
     switch (type) {
@@ -225,6 +238,22 @@ yapp::material* make_material(mtype type) {
             return make_metal("metal02", {0.8f, 0.8f, 0.8f}, 0.01f);
         case mtype::metal03:
             return make_metal("metal03", {0.8f, 0.8f, 0.8f}, 0.05f);
+        case mtype::gold01:
+            return make_metal("gold01", srgb({245, 215, 121}), 0.01f);
+        case mtype::gold02:
+            return make_metal("gold02", srgb({245, 215, 121}), 0.05f);
+        case mtype::silver01:
+            return make_metal("silver01", srgb({252, 250, 246}), 0.01f);
+        case mtype::silver02:
+            return make_metal("silver02", srgb({252, 250, 246}), 0.05f);
+        case mtype::iron01:
+            return make_metal("iron01", srgb({195, 199, 199}), 0.01f);
+        case mtype::iron02:
+            return make_metal("iron02", srgb({195, 199, 199}), 0.05f);
+        case mtype::copper01:
+            return make_metal("copper01", srgb({250, 190, 160}), 0.01f);
+        case mtype::copper02:
+            return make_metal("copper02", srgb({250, 190, 160}), 0.05f);
         case mtype::glass00:
             return make_glass("glass00", {0.8f, 0.8f, 0.8f}, 0);
         case mtype::glass01:
@@ -256,7 +285,7 @@ yapp::material* make_material(mtype type) {
         case mtype::arealight01:
             return make_emission("arealight01", {40, 40, 40});
         case mtype::arealight02:
-            return make_emission("arealight02", {40, 40, 40});
+            return make_emission("arealight02", {16, 16, 16});
         case mtype::env00: return make_emission("env00", {1, 1, 1});
         case mtype::env01:
             return make_emission("env01", {1, 1, 1}, make_texture("env.hdr"));
@@ -438,19 +467,24 @@ enum struct stype {
     points01,
     pointlight01,
     arealight01,
+    arealight02,
     envsphere00,
     envsphere01,
+    envhemisphere00,
+    envhemisphere01,
     simple_objs,
     simple_objs_notxt,
     simple_lines,
     simple_points,
     simple_pointlights,
-    simple_arealights,
+    simple_arealights01,
+    simple_arealights02,
     simple_matballs01,
     simple_matballs02,
     simple_matballs03,
     simple_matballs04,
     simple_random32,
+    matball_floor02
 };
 
 std::vector<yapp::shape*> make_shapes(
@@ -563,7 +597,13 @@ std::vector<yapp::shape*> make_shapes(
                                yshape::stdsurface_type::uvquad, frame,
                                ym::vec3f{0.5f, 0.5f, 0.5f} * scale)};
         } break;
-        case stype::simple_arealights: {
+        case stype::arealight02: {
+            auto mat = (mt == mtype::def) ? make_material(mtype::arealight02)
+                                          : make_material(mt);
+            return {make_shape("arealight02_" + mat->name, mat, 0,
+                               yshape::stdsurface_type::uvquad, frame, scale)};
+        } break;
+        case stype::simple_arealights01: {
             return make_shapes(stype::arealight01, mtype::arealight01,
                                make_lookat_frame({-2, 2, 4}, {0, 1, 0}),
                                ym::vec3f{2, 2, 2} * scale) +
@@ -571,12 +611,20 @@ std::vector<yapp::shape*> make_shapes(
                                make_lookat_frame({2, 2, 4}, {0, 1, 0}),
                                ym::vec3f{2, 2, 2} * scale);
         } break;
+        case stype::simple_arealights02: {
+            return make_shapes(stype::arealight01, mtype::arealight01,
+                               make_lookat_frame({-4, 3, 1}, {0, 0.5, 0}),
+                               ym::vec3f{2, 2, 2} * scale) +
+                   make_shapes(stype::arealight01, mtype::arealight02,
+                               make_lookat_frame({3, 2, 3}, {0, 0.5, 0}),
+                               ym::vec3f{2, 2, 2} * scale);
+        } break;
         case stype::envsphere00: {
             auto mat = (mt == mtype::def) ? make_material(mtype::env00)
                                           : make_material(mt);
             return {make_shape("envsphere00_" + mat->name, mat, 6,
                                yshape::stdsurface_type::uvflippedsphere,
-                               make_frame({0, 0.5f, 0}, {-90, 0, 0}),
+                               make_frame({0, 0.5f, 0}, {90, 0, 0}),
                                ym::vec3f{10000, 10000, 10000} * scale)};
         } break;
         case stype::envsphere01: {
@@ -584,7 +632,23 @@ std::vector<yapp::shape*> make_shapes(
                                           : make_material(mt);
             return {make_shape("envsphere01_" + mat->name, mat, 6,
                                yshape::stdsurface_type::uvflippedsphere,
-                               make_frame({0, 0.5f, 0}, {-90, 0, 0}),
+                               make_frame({0, 0.5f, 0}, {90, 0, 0}),
+                               ym::vec3f{10000, 10000, 10000} * scale)};
+        } break;
+        case stype::envhemisphere00: {
+            auto mat = (mt == mtype::def) ? make_material(mtype::env00)
+                                          : make_material(mt);
+            return {make_shape("envhemisphere00_" + mat->name, mat, 6,
+                               yshape::stdsurface_type::uvflippedhemisphere,
+                               make_frame({0, 0.5f, 0}, {90, 0, 0}),
+                               ym::vec3f{10000, 10000, 10000} * scale)};
+        } break;
+        case stype::envhemisphere01: {
+            auto mat = (mt == mtype::def) ? make_material(mtype::env01)
+                                          : make_material(mt);
+            return {make_shape("envhemisphere01_" + mat->name, mat, 6,
+                               yshape::stdsurface_type::uvflippedhemisphere,
+                               make_frame({0, 0.5f, 0}, {90, 0, 0}),
                                ym::vec3f{10000, 10000, 10000} * scale)};
         } break;
         case stype::matball01: {
@@ -633,6 +697,11 @@ std::vector<yapp::shape*> make_shapes(
         } break;
         case stype::simple_random32: {
             return make_random_shapes(32, 5);
+        } break;
+        case stype::matball_floor02: {
+            return make_shapes(stype::floor02) +
+                   make_shapes(stype::matball01, mt, make_frame({0, 0.5f, 0}),
+                               scale);
         } break;
     }
     return {};
@@ -697,7 +766,7 @@ enum struct etype { env00, env01 };
 std::vector<yapp::environment*> make_environments(
     etype et, mtype mt = mtype::def,
     const ym::frame3f& frame = make_lookat_frame({0, 0.5f, 0},
-                                                 {-1.5f, 0.5f, 0})) {
+                                                 {1.5f, 0.5f, 0})) {
     switch (et) {
         case etype::env00: {
             auto mat = (mt == mtype::def) ? make_material(mtype::env00)
@@ -714,14 +783,15 @@ std::vector<yapp::environment*> make_environments(
 }
 
 yapp::camera* make_camera(const std::string& name, const ym::vec3f& from,
-                          const ym::vec3f& to, float h, float a) {
+                          const ym::vec3f& to, float h, float a,
+                          float r = 16.0f / 9.0f) {
     auto cam = new yapp::camera();
     cam->name = name;
     cam->frame = lookat_frame3(from, to, {0, 1, 0});
     cam->aperture = a;
     cam->focus = dist(from, to);
     cam->yfov = 2 * atan(h / 2);
-    cam->aspect = 16.0f / 9.0f;
+    cam->aspect = r;
     return cam;
 }
 
@@ -1100,11 +1170,15 @@ std::vector<yapp::camera*> make_simple_cameras() {
             make_camera("cam_dof", {0, 1.5f, 5}, {0, 0.5, 0}, 0.5f, 0.1f)};
 }
 
+std::vector<yapp::camera*> make_matball_cameras() {
+    return {make_camera("cam_close", {0, 1.5f, 5}, {0, 0.5f, 0}, 0.25f, 0, 1)};
+}
+
 // http://graphics.cs.williams.edu/data
 // http://www.graphics.cornell.edu/online/box/data.html
 yapp::scene* make_cornell_box_scene() {
     std::vector<yapp::camera*> cameras = {
-        make_camera("cb_cam", {0, 1, 4}, {0, 1, 0}, 0.7f, 0)};
+        make_camera("cb_cam", {0, 1, 4}, {0, 1, 0}, 0.7f, 0, 1)};
     std::vector<yapp::material*> materials = {
         make_diffuse("cb_white", {0.725f, 0.71f, 0.68f}),
         make_diffuse("cb_red", {0.63f, 0.065f, 0.05f}),
@@ -1268,10 +1342,48 @@ int main(int argc, char* argv[]) {
         save_scene(stype.first + "_arealight.obj", dirname,
                    make_scene(make_simple_cameras(),
                               make_shapes(ftype) + make_shapes(stype.second) +
-                                  make_shapes(stype::simple_arealights)));
+                                  make_shapes(stype::simple_arealights01)));
         save_scene(stype.first + "_envlight.obj", dirname,
                    make_scene(make_simple_cameras(),
                               make_shapes(ftype) + make_shapes(stype.second),
+                              make_environments(etype::env01)));
+    }
+
+    // matball scene --------------------------
+    auto mtypes = std::vector<std::pair<std::string, mtype>>{
+        {"matte", mtype::matte},         {"plastic00", mtype::plastic00},
+        {"plastic01", mtype::plastic01}, {"plastic02", mtype::plastic02},
+        {"plastic03", mtype::plastic03}, {"gold01", mtype::gold01},
+        {"gold02", mtype::gold02},       {"copper01", mtype::copper01},
+        {"copper02", mtype::copper02},   {"silver01", mtype::silver01},
+        {"silver02", mtype::silver02}};
+    for (auto mtype : mtypes) {
+        printf("generating matball_%s scenes ...\n", mtype.first.c_str());
+        save_scene(
+            "matball_" + mtype.first + "_pointlight.obj", dirname,
+            make_scene(make_matball_cameras(),
+                       make_shapes(stype::matball_floor02, mtype.second) +
+                           make_shapes(stype::simple_pointlights)));
+        save_scene(
+            "matball_" + mtype.first + "_arealight.obj", dirname,
+            make_scene(make_matball_cameras(),
+                       make_shapes(stype::matball_floor02, mtype.second) +
+                           make_shapes(stype::simple_arealights02)));
+        save_scene(
+            "matball_" + mtype.first + "_envslight.obj", dirname,
+            make_scene(make_matball_cameras(),
+                       make_shapes(stype::matball_floor02, mtype.second) +
+                           make_shapes(stype::envsphere01),
+                       make_environments(etype::env01)));
+        save_scene(
+            "matball_" + mtype.first + "_envhlight.obj", dirname,
+            make_scene(make_matball_cameras(),
+                       make_shapes(stype::matball_floor02, mtype.second) +
+                           make_shapes(stype::envhemisphere01),
+                       make_environments(etype::env01)));
+        save_scene("matball_" + mtype.first + "_envlight.obj", dirname,
+                   make_scene(make_matball_cameras(),
+                              make_shapes(stype::matball_floor02, mtype.second),
                               make_environments(etype::env01)));
     }
 

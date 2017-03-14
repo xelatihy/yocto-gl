@@ -772,33 +772,16 @@ std::vector<int4> make_trace_blocks(int w, int h, int bs) {
 }
 
 void save_image(const std::string& filename, int width, int height,
-                const float4* hdr, float exposure, float gamma,
-                bool srgb_output) {
+                const float4* hdr, float exposure, yimg::tonemap_type tonemap,
+                float gamma) {
     auto ext = ycmd::get_extension(filename);
-    auto tone_mapped = (const float4*)nullptr;
-    auto tone_mapped_buffer = std::vector<ym::vec4f>();
-    if (exposure != 0 || gamma != 1) {
-        tone_mapped_buffer =
-            std::vector<ym::vec4f>(width * height, {0, 0, 0, 0});
-        ym::exposure_gamma(width, height, 4, (const float*)hdr,
-                           (float*)tone_mapped_buffer.data(), exposure, gamma,
-                           false);
-        tone_mapped = (const float4*)tone_mapped_buffer.data();
-    } else {
-        tone_mapped = hdr;
-    }
     if (ext == ".hdr") {
-        yimg::save_image(filename, width, height, 4,
-                         (float*)tone_mapped->data(), nullptr);
+        yimg::save_image(filename, width, height, 4, (float*)hdr, nullptr);
     } else if (ext == ".png") {
         auto ldr = std::vector<ym::vec4b>(width * height, {0, 0, 0, 0});
-        if (srgb_output) {
-            ym::linear_to_srgb(width, height, 4, (const float*)tone_mapped,
-                               (unsigned char*)ldr.data());
-        } else {
-            ym::linear_to_byte(width, height, 4, (const float*)tone_mapped,
-                               (unsigned char*)ldr.data());
-        }
+        yimg::tonemap_image(width, height, 4, (float*)hdr,
+                            (unsigned char*)ldr.data(), exposure, tonemap,
+                            gamma);
         yimg::save_image(filename, width, height, 4, nullptr,
                          (unsigned char*)ldr.data());
     } else {
@@ -1020,6 +1003,12 @@ params* init_params(const std::string& help, int argc, char** argv,
         {"direct", (int)ytrace::shader_type::direct},
         {"direct_ao", (int)ytrace::shader_type::direct_ao},
         {"path", (int)ytrace::shader_type::pathtrace}};
+    static auto tmtype_names = std::vector<std::pair<std::string, int>>{
+        {"default", (int)yimg::tonemap_type::def},
+        {"linear", (int)yimg::tonemap_type::linear},
+        {"srgb", (int)yimg::tonemap_type::srgb},
+        {"gamma", (int)yimg::tonemap_type::gamma},
+        {"filmic", (int)yimg::tonemap_type::filmic}};
 
     // parser
     auto parser = ycmd::make_parser(argc, argv, help.c_str());
@@ -1032,9 +1021,10 @@ params* init_params(const std::string& help, int argc, char** argv,
         pars->exposure = ycmd::parse_optf(parser, "--exposure", "-e",
                                           "hdr image exposure", 0);
         pars->gamma =
-            ycmd::parse_optf(parser, "--gamma", "-g", "hdr image gamma", 1);
-        pars->srgb =
-            ycmd::parse_optb(parser, "--srgb", "", "hdr srgb output", true);
+            ycmd::parse_optf(parser, "--gamma", "-g", "hdr image gamma", 2.2f);
+        pars->tonemap = (yimg::tonemap_type)ycmd::parse_opte(
+            parser, "--tonemap", "-t", "hdr tonemap output",
+            (int)yimg::tonemap_type::def, tmtype_names);
         auto aspect = ycmd::parse_optf(parser, "--aspect", "-a", "image aspect",
                                        16.0f / 9.0f);
         auto res = ycmd::parse_opti(parser, "--resolution", "-r",

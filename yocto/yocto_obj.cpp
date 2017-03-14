@@ -182,7 +182,7 @@ static inline void _parse_vertlist(char** tok, int ntoks,
 //
 // Loads an OBJ
 //
-YOBJ_API obj* load_obj(const std::string& filename) {
+YOBJ_API obj* load_obj(const std::string& filename, bool flip_texcoord) {
     // clear obj
     auto asset = std::make_unique<obj>();
 
@@ -229,6 +229,8 @@ YOBJ_API obj* load_obj(const std::string& filename) {
         } else if (tok_s == "vt") {
             vert_size.texcoord += 1;
             asset->texcoord.push_back(_parse_float2(cur_tok));
+            if (flip_texcoord)
+                asset->texcoord.back()[1] = 1 - asset->texcoord.back()[1];
         } else if (tok_s == "vc") {
             vert_size.color += 1;
             asset->color.push_back(_parse_float3(cur_tok));
@@ -488,7 +490,8 @@ static inline void _fwrite_objverts(FILE* file, const char* str, int nv,
 //
 // Save an OBJ
 //
-YOBJ_API void save_obj(const std::string& filename, const obj* asset) {
+YOBJ_API void save_obj(const std::string& filename, const obj* asset,
+                       bool flip_texcoord) {
     // open file
     auto file = fopen(filename.c_str(), "wt");
     if (!file) throw(obj_exception("could not open filename " + filename));
@@ -521,7 +524,12 @@ YOBJ_API void save_obj(const std::string& filename, const obj* asset) {
 
     // save all vertex data
     for (auto& v : asset->pos) _fwrite_float3(file, "v", v);
-    for (auto& v : asset->texcoord) _fwrite_float2(file, "vt", v);
+    if (flip_texcoord) {
+        for (auto& v : asset->texcoord)
+            _fwrite_float2(file, "vt", {v[0], 1 - v[1]});
+    } else {
+        for (auto& v : asset->texcoord) _fwrite_float2(file, "vt", v);
+    }
     for (auto& v : asset->norm) _fwrite_float3(file, "vn", v);
     for (auto& v : asset->color) _fwrite_float3(file, "vc", v);
     for (auto& v : asset->radius) _fwrite_float(file, "vr", v);
@@ -934,7 +942,7 @@ YOBJ_API void load_textures(fl_obj* scene, const std::string& dirname,
         auto filename = dirname + txt->path;
         for (auto& c : filename)
             if (c == '\\') c = '/';
-        auto img = yimg::load_image_flipy(filename);
+        auto img = yimg::load_image(filename);
         txt->width = img->width;
         txt->height = img->height;
         txt->ncomp = img->ncomp;

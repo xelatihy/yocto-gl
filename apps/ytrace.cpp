@@ -88,7 +88,7 @@ int main(int argc, char* argv[]) {
             ycmd::log_msgf(ycmd::log_level_info, "ytrace", "saving image %s",
                            imfilename.c_str());
             yapp::save_image(imfilename, pars->width, pars->height, hdr,
-                             pars->exposure, pars->gamma, pars->srgb);
+                             pars->exposure, pars->tonemap, pars->gamma);
         }
     }
     ycmd::log_msgf(ycmd::log_level_info, "ytrace", "rendering done");
@@ -97,7 +97,7 @@ int main(int argc, char* argv[]) {
     ycmd::log_msgf(ycmd::log_level_info, "ytrace", "saving image %s",
                    pars->imfilename.c_str());
     yapp::save_image(pars->imfilename, pars->width, pars->height, hdr,
-                     pars->exposure, pars->gamma, pars->srgb);
+                     pars->exposure, pars->tonemap, pars->gamma);
 
     // done
     // cleanup

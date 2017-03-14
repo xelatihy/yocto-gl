@@ -61,6 +61,7 @@ namespace ycmd {}
 #define YIMG_API
 #endif
 
+#include <array>
 #include <string>
 #include <vector>
 
@@ -74,6 +75,10 @@ namespace yimg {
 /// Typedefs
 ///
 using byte = unsigned char;
+using float3 = std::array<float, 3>;
+using byte3 = std::array<byte, 3>;
+using float4 = std::array<float, 4>;
+using byte4 = std::array<byte, 4>;
 
 ///
 /// Simple image structure to ease the passing of parameters. Memory is not
@@ -95,12 +100,26 @@ struct simage {
     /// char data for ldr images if loaded
     byte* ldr = nullptr;
 
+    /// default constructor
+    simage() {}
+
+    /// allocating constructor
+    simage(int width, int height, int ncomp, bool ishdr)
+        : width(width), height(height), ncomp(ncomp),
+          hdr((ishdr) ? new float[width * height * ncomp] : nullptr),
+          ldr((ishdr) ? nullptr : new byte[width * height * ncomp]) {}
+
     /// destructor
     ~simage() {
-        if (ldr) delete ldr;
-        if (hdr) delete hdr;
+        if (ldr) delete[] ldr;
+        if (hdr) delete[] hdr;
     }
 };
+
+///
+/// Initializes an image
+///
+YIMG_API simage* make_image(int width, int height, int ncomp, bool hdr);
 
 ///
 /// Removes the hdr buffer from the image.
@@ -160,6 +179,35 @@ YIMG_API void resize_image(int width, int height, int ncomp, const float* hdr,
                            const byte* ldr, int& res_width, int& res_height,
                            float*& res_hdr, byte*& res_ldr);
 
+//
+// Tone mapping configurations
+//
+enum struct tonemap_type { def = 0, linear, srgb, gamma, filmic };
+
+///
+/// Apply tone mapping operator to a pixel.
+///
+YIMG_API byte3 tonemap_pixel(const float3& hdr, float exposure, tonemap_type tm,
+                             float gamma);
+
+///
+/// Apply tone mapping operator to a pixel.
+///
+YIMG_API byte4 tonemap_pixel(const float4& hdr, float exposure, tonemap_type tm,
+                             float gamma);
+
+///
+/// Tone mapping HDR to LDR images.
+///
+YIMG_API simage* tonemap_image(simage* img, float exposure, tonemap_type tm,
+                               float gamma);
+
+///
+/// Tone mapping HDR to LDR images.
+///
+YIMG_API void tonemap_image(int width, int height, int ncomp, const float* hdr,
+                            byte* ldr, float exposure, tonemap_type tm,
+                            float gamma);
 }  // namespace
 
 // -----------------------------------------------------------------------------

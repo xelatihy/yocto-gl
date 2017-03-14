@@ -234,13 +234,15 @@ YSHAPE_API void make_points(int num, std::vector<int>& points,
 /// Test shapes (this is mostly used to create tests)
 ///
 enum struct stdsurface_type {
-    uvsphere,         ///< uv sphere
-    uvquad,           ///< quad
-    uvcube,           ///< cube
-    uvflippedsphere,  ///< uv sphere flipped inside/out
-    uvspherecube,     ///< sphere obtained by a cube tesselation
-    uvspherizedcube,  ///< cube tesselation spherized by a radius
-    uvflipcapsphere   ///< us sphere with flipped poles
+    uvsphere,             ///< uv sphere
+    uvhemisphere,         ///< uv hemisphere
+    uvquad,               ///< quad
+    uvcube,               ///< cube
+    uvflippedsphere,      ///< uv sphere flipped inside/out
+    uvflippedhemisphere,  ///< uv hemisphere flipped inside/out
+    uvspherecube,         ///< sphere obtained by a cube tesselation
+    uvspherizedcube,      ///< cube tesselation spherized by a radius
+    uvflipcapsphere       ///< us sphere with flipped poles
 };
 
 ///

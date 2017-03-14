@@ -62,7 +62,9 @@ struct state {
     // shading
     bool scene_updated = true;
     yglu::uint texture_id = 0;
-    float texture_exposure, texture_gamma;
+    float texture_exposure;
+    float texture_gamma;
+    yimg::tonemap_type texture_tonemap;
     bool texture_srgb;
 
     // widgets
@@ -86,28 +88,10 @@ void text_callback(yglu::ui::window* win, unsigned int key) {
     switch (key) {
         case '[': pars->exposure -= 1; break;
         case ']': pars->exposure += 1; break;
-        case '{': pars->gamma -= 0.1f; break;
-        case '}': pars->gamma += 0.1f; break;
-        case '\\': pars->srgb = !pars->srgb; break;
-        case '0':
-            pars->exposure = 0;
-            pars->gamma = 1;
-            pars->srgb = false;
-            break;
-        case '1':
-            pars->exposure = 0;
-            pars->gamma = 1;
-            pars->srgb = true;
-            break;
-        case '2':
-            pars->exposure = 0;
-            pars->gamma = 2.2f;
-            pars->srgb = true;
-            break;
         case 's':
             yapp::save_image(pars->imfilename, pars->width, pars->height,
                              (const yapp::float4*)st->hdr.data(),
-                             pars->exposure, pars->gamma, pars->srgb);
+                             pars->exposure, pars->tonemap, pars->gamma);
             break;
         default: printf("unsupported key\n"); break;
     }
@@ -134,6 +118,13 @@ void draw_image(yglu::ui::window* win) {
 }
 
 void draw_widgets(yglu::ui::window* win) {
+    static auto tmtype_names = std::vector<std::pair<std::string, int>>{
+        {"default", (int)yimg::tonemap_type::def},
+        {"linear", (int)yimg::tonemap_type::linear},
+        {"srgb", (int)yimg::tonemap_type::srgb},
+        {"gamma", (int)yimg::tonemap_type::gamma},
+        {"filmic", (int)yimg::tonemap_type::filmic}};
+
     auto st = (state*)yglu::ui::get_user_pointer(win);
     auto pars = st->pars;
     if (yglu::ui::begin_widgets(win)) {
@@ -153,7 +144,8 @@ void draw_widgets(yglu::ui::window* win) {
         yglu::ui::float_widget(win, "hdr exposure", &pars->exposure, -20, 20,
                                1);
         yglu::ui::float_widget(win, "hdr gamma", &pars->gamma, 0.1, 5, 0.1);
-        yglu::ui::bool_widget(win, "hdr srgb output", &pars->srgb);
+        yglu::ui::enum_widget(win, "hdr tonemap", (int*)&pars->tonemap,
+                              tmtype_names);
     }
     yglu::ui::end_widgets(win);
 }
@@ -193,10 +185,10 @@ bool update(state* st) {
                 }
             }
         }
-        ym::exposure_gamma(pars->width, pars->height, 4,
-                           (const float*)st->hdr.data(),
-                           (unsigned char*)st->ldr.data(), pars->exposure,
-                           pars->gamma, pars->srgb);
+        yimg::tonemap_image(pars->width, pars->height, 4,
+                            (const float*)st->hdr.data(),
+                            (unsigned char*)st->ldr.data(), pars->exposure,
+                            pars->tonemap, pars->gamma);
         if (pars->legacy_gl) {
             yglu::legacy::update_texture(st->texture_id, pars->width,
                                          pars->height, 4,
@@ -224,23 +216,26 @@ bool update(state* st) {
                                     block[1], block[2], block[3],
                                     st->cur_sample, st->cur_sample + 1,
                                     pars->render_params);
-                ym::exposure_gamma(
-                    pars->width, pars->height, 4, (const float*)st->hdr.data(),
-                    (unsigned char*)st->ldr.data(), pars->exposure, pars->gamma,
-                    pars->srgb, block[0], block[1], block[2], block[3]);
+                for (auto j = block[1]; j < block[1] + block[3]; j++) {
+                    for (auto i = block[0]; i < block[0] + block[2]; i++) {
+                        st->ldr[j * pars->width + i] = yimg::tonemap_pixel(
+                            st->hdr[j * pars->width + i], pars->exposure,
+                            pars->tonemap, pars->gamma);
+                    }
+                }
             }));
         }
         for (auto& future : futures) future.wait();
         if (st->texture_exposure != pars->exposure ||
             st->texture_gamma != pars->gamma ||
-            st->texture_srgb != pars->srgb) {
-            ym::exposure_gamma(pars->width, pars->height, 4,
-                               (const float*)st->hdr.data(),
-                               (unsigned char*)st->ldr.data(), pars->exposure,
-                               pars->gamma, pars->srgb);
+            st->texture_tonemap != pars->tonemap) {
+            yimg::tonemap_image(pars->width, pars->height, 4,
+                                (const float*)st->hdr.data(),
+                                (unsigned char*)st->ldr.data(), pars->exposure,
+                                pars->tonemap, pars->gamma);
             st->texture_exposure = pars->exposure;
             st->texture_gamma = pars->gamma;
-            st->texture_srgb = pars->srgb;
+            st->texture_tonemap = pars->tonemap;
         }
         if (pars->legacy_gl) {
             yglu::legacy::update_texture(st->texture_id, pars->width,
@@ -264,7 +259,7 @@ bool update(state* st) {
                                "saving image %s", imfilename.c_str());
                 yapp::save_image(imfilename, pars->width, pars->height,
                                  (const yapp::float4*)st->hdr.data(),
-                                 pars->exposure, pars->gamma, pars->srgb);
+                                 pars->exposure, pars->tonemap, pars->gamma);
             }
             st->cur_sample++;
         }
@@ -375,8 +370,7 @@ int main(int argc, char* argv[]) {
     st->preview_height = pars->height / pars->block_size;
     st->preview.resize(st->preview_width * st->preview_height, {0, 0, 0, 0});
     st->texture_exposure = pars->exposure;
-    st->texture_gamma = pars->gamma;
-    st->texture_srgb = pars->srgb;
+    st->texture_tonemap = pars->tonemap;
     st->scene_updated = true;
 
     // progressive rendering
