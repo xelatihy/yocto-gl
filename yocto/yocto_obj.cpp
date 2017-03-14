@@ -937,7 +937,7 @@ YOBJ_API obj* unflatten_obj(const fl_obj* scene) {
 //
 YOBJ_API void load_textures(fl_obj* scene, const std::string& dirname,
                             bool skip_missing) {
-#ifndef YGL_NO_STBIMAGE
+#ifndef YOBJ_NO_IMAGE
     for (auto txt : scene->textures) {
         auto filename = dirname + txt->path;
         for (auto& c : filename)

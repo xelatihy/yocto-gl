@@ -1114,7 +1114,7 @@ static inline point _eval_envpoint(const environment* env,
     if (env->ke_txt) {
         auto w = ym::transform_direction(ym::inverse(env->frame), -wo);
         auto theta =
-            1 - (std::acos(ym::clamp(w[1], (float)-1, (float)1)) / ym::pif);
+            (std::acos(ym::clamp(w[1], (float)-1, (float)1)) / ym::pif);
         auto phi = std::atan2(w[2], w[0]) / (2 * ym::pif);
         auto texcoord = ym::vec2f{phi, theta};
         auto txt = _eval_texture(env->ke_txt, texcoord);
