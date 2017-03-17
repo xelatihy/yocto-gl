@@ -1435,7 +1435,7 @@ static inline ym::vec4f _shade_pathtrace(const scene* scn, const ym::ray3f& ray,
 
     // emission
     auto l = _eval_emission(pt);
-    if (pt.emission_only()) return {l[0], l[1], l[2], 1};
+    if (pt.emission_only() || scn->lights.empty()) return {l[0], l[1], l[2], 1};
 
     // trace path
     auto weight = ym::vec3f{1, 1, 1};
