@@ -461,6 +461,7 @@ enum struct stype {
     obj02,
     obj03,
     matball01,
+    matball02,
     lines01,
     lines02,
     lines03,
@@ -484,7 +485,8 @@ enum struct stype {
     simple_matballs03,
     simple_matballs04,
     simple_random32,
-    matball_floor02
+    matball01_floor02,
+    matball02_floor02,
 };
 
 std::vector<yapp::shape*> make_shapes(
@@ -663,6 +665,18 @@ std::vector<yapp::shape*> make_shapes(
                                frame * make_frame({0, 0, 0}, {0, 35, 45}),
                                ym::vec3f{0.5f, 0.5f, 0.5f} * scale)};
         } break;
+        case stype::matball02: {
+            auto mat = (mt == mtype::def) ? make_material(mtype::plastic00)
+                                          : make_material(mt);
+            return {make_shape("intmatball01_" + mat->name,
+                               make_material(mtype::matte), 5,
+                               yshape::stdsurface_type::uvsphere, frame,
+                               ym::vec3f{0.4f, 0.4f, 0.4f} * scale),
+                    make_shape("matball01_" + mat->name, mat, 5,
+                               yshape::stdsurface_type::uvhollowcutsphere1,
+                               frame * make_frame({0, 0, 0}, {0, 35, 45}),
+                               ym::vec3f{0.5f, 0.5f, 0.5f} * scale)};
+        } break;
         case stype::simple_matballs01: {
             return make_shapes(stype::matball01, mtype::plastic01,
                                make_frame({-1.25f, 0.5f, 0}), scale) +
@@ -698,9 +712,14 @@ std::vector<yapp::shape*> make_shapes(
         case stype::simple_random32: {
             return make_random_shapes(32, 5);
         } break;
-        case stype::matball_floor02: {
+        case stype::matball01_floor02: {
             return make_shapes(stype::floor02) +
                    make_shapes(stype::matball01, mt, make_frame({0, 0.5f, 0}),
+                               scale);
+        } break;
+        case stype::matball02_floor02: {
+            return make_shapes(stype::floor02) +
+                   make_shapes(stype::matball02, mt, make_frame({0, 0.5f, 0}),
                                scale);
         } break;
     }
@@ -1306,21 +1325,7 @@ yapp::scene* make_rigid_scene(int config) {
 }
 
 int main(int argc, char* argv[]) {
-    // command line params
-    auto parser = ycmd::make_parser(argc, argv, "make tests");
-    auto dirname =
-        ycmd::parse_args(parser, "dirname", "directory name", ".", true);
-    ycmd::check_parser(parser);
-
-// make directories
-#ifndef _MSC_VER
-    auto cmd = "mkdir -p " + dirname;
-#else
-    auto cmd = "mkdir " + dirname;
-#endif
-    system(cmd.c_str());
-
-    // simple scene ------------------------------
+    // simple scenes ----------------------------
     auto stypes = std::vector<std::pair<std::string, stype>>{
         {"basic", stype::simple_objs_notxt},
         {"simple", stype::simple_objs},
@@ -1332,8 +1337,48 @@ int main(int argc, char* argv[]) {
         {"lines", stype::simple_lines},
         {"points", stype::simple_points},
     };
+
+    // matball scenes --------------------------
+    auto mbtypes = std::vector<std::pair<std::string, stype>>{
+        {"matball01", stype::matball01_floor02},
+        {"matball02", stype::matball02_floor02}};
+    auto mtypes = std::vector<std::pair<std::string, mtype>>{
+        {"matte", mtype::matte},         {"plastic00", mtype::plastic00},
+        {"plastic01", mtype::plastic01}, {"plastic02", mtype::plastic02},
+        {"plastic03", mtype::plastic03}, {"gold01", mtype::gold01},
+        {"gold02", mtype::gold02},       {"copper01", mtype::copper01},
+        {"copper02", mtype::copper02},   {"silver01", mtype::silver01},
+        {"silver02", mtype::silver02}};
+
+    // put together scene names
+    auto scene_names = std::vector<std::string>{"all"};
+    for (auto stype : stypes) scene_names += stype.first;
+    for (auto mbtype : mbtypes)
+        for (auto mtype : mtypes)
+            scene_names += mbtype.first + "_" + mtype.first;
+    scene_names +=
+        {"envmap", "cornell_box", "rigid", "textures", "matball_test"};
+
+    // command line params
+    auto parser = ycmd::make_parser(argc, argv, "make tests");
+    auto scene = ycmd::parse_opts(parser, "--scene", "-s", "scene name", "all",
+                                  false, scene_names);
+    auto dirname =
+        ycmd::parse_opts(parser, "--dirname", "-d", "directory name", "tests");
+    ycmd::check_parser(parser);
+
+// make directories
+#ifndef _MSC_VER
+    auto cmd = "mkdir -p " + dirname;
+#else
+    auto cmd = "mkdir " + dirname;
+#endif
+    system(cmd.c_str());
+
+    // simple scene ------------------------------
     auto ftype = stype::floor02;
     for (auto stype : stypes) {
+        if (scene != "all" && scene != stype.first) continue;
         printf("generating %s scenes ...\n", stype.first.c_str());
         save_scene(stype.first + "_pointlight.obj", dirname,
                    make_scene(make_simple_cameras(),
@@ -1350,80 +1395,96 @@ int main(int argc, char* argv[]) {
     }
 
     // matball scene --------------------------
-    auto mtypes = std::vector<std::pair<std::string, mtype>>{
-        {"matte", mtype::matte},         {"plastic00", mtype::plastic00},
-        {"plastic01", mtype::plastic01}, {"plastic02", mtype::plastic02},
-        {"plastic03", mtype::plastic03}, {"gold01", mtype::gold01},
-        {"gold02", mtype::gold02},       {"copper01", mtype::copper01},
-        {"copper02", mtype::copper02},   {"silver01", mtype::silver01},
-        {"silver02", mtype::silver02}};
-    for (auto mtype : mtypes) {
-        printf("generating matball_%s scenes ...\n", mtype.first.c_str());
+    for (auto mbtype : mbtypes) {
+        for (auto mtype : mtypes) {
+            auto sname = mbtype.first + "_" + mtype.first;
+            if (scene != "all" && scene != sname) continue;
+            printf("generating %s scenes ...\n", sname.c_str());
+            save_scene(sname + "_pointlight.obj", dirname,
+                       make_scene(make_matball_cameras(),
+                                  make_shapes(mbtype.second, mtype.second) +
+                                      make_shapes(stype::simple_pointlights)));
+            save_scene(sname + "_arealight.obj", dirname,
+                       make_scene(make_matball_cameras(),
+                                  make_shapes(mbtype.second, mtype.second) +
+                                      make_shapes(stype::simple_arealights02)));
+            save_scene(sname + "_envslight.obj", dirname,
+                       make_scene(make_matball_cameras(),
+                                  make_shapes(mbtype.second, mtype.second) +
+                                      make_shapes(stype::envsphere01),
+                                  make_environments(etype::env01)));
+            save_scene(sname + "_envhlight.obj", dirname,
+                       make_scene(make_matball_cameras(),
+                                  make_shapes(mbtype.second, mtype.second) +
+                                      make_shapes(stype::envhemisphere01),
+                                  make_environments(etype::env01)));
+            save_scene(sname + "_envlight.obj", dirname,
+                       make_scene(make_matball_cameras(),
+                                  make_shapes(mbtype.second, mtype.second),
+                                  make_environments(etype::env01)));
+        }
+    }
+
+    // matball ------------------------------
+    if (scene == "matball_test" || scene == "all") {
+        printf("generating matball_test scenes ...\n");
         save_scene(
-            "matball_" + mtype.first + "_pointlight.obj", dirname,
+            "matball_test_arealight.obj", dirname,
             make_scene(make_matball_cameras(),
-                       make_shapes(stype::matball_floor02, mtype.second) +
-                           make_shapes(stype::simple_pointlights)));
-        save_scene(
-            "matball_" + mtype.first + "_arealight.obj", dirname,
-            make_scene(make_matball_cameras(),
-                       make_shapes(stype::matball_floor02, mtype.second) +
+                       make_shapes(stype::matball02, mtype::plastic00_txt) +
                            make_shapes(stype::simple_arealights02)));
-        save_scene(
-            "matball_" + mtype.first + "_envslight.obj", dirname,
-            make_scene(make_matball_cameras(),
-                       make_shapes(stype::matball_floor02, mtype.second) +
-                           make_shapes(stype::envsphere01),
-                       make_environments(etype::env01)));
-        save_scene(
-            "matball_" + mtype.first + "_envhlight.obj", dirname,
-            make_scene(make_matball_cameras(),
-                       make_shapes(stype::matball_floor02, mtype.second) +
-                           make_shapes(stype::envhemisphere01),
-                       make_environments(etype::env01)));
-        save_scene("matball_" + mtype.first + "_envlight.obj", dirname,
-                   make_scene(make_matball_cameras(),
-                              make_shapes(stype::matball_floor02, mtype.second),
-                              make_environments(etype::env01)));
     }
 
     // env scene ------------------------------
-    printf("generating envmaps scenes ...\n");
-    save_scene("env_shape_const.obj", dirname, make_envmap_scene(true, false));
-    save_scene("env_shape_map.obj", dirname, make_envmap_scene(true, true));
-    save_scene("env_inf_const.obj", dirname, make_envmap_scene(false, false));
-    save_scene("env_inf_map.obj", dirname, make_envmap_scene(false, true));
+    if (scene == "envmap" || scene == "all") {
+        printf("generating envmap scenes ...\n");
+        save_scene("envmap_shape_const.obj", dirname,
+                   make_envmap_scene(true, false));
+        save_scene("envmap_shape_map.obj", dirname,
+                   make_envmap_scene(true, true));
+        save_scene("envmap_inf_const.obj", dirname,
+                   make_envmap_scene(false, false));
+        save_scene("envmap_inf_map.obj", dirname,
+                   make_envmap_scene(false, true));
+    }
 
     // cornell box ------------------------------
-    printf("generating cornell box scenes ...\n");
-    save_scene("cornell_box.obj", dirname, make_cornell_box_scene());
+    if (scene == "cornell_box" || scene == "all") {
+        printf("generating cornell box scenes ...\n");
+        save_scene("cornell_box.obj", dirname, make_cornell_box_scene());
+    }
 
     // rigid body scenes ------------------------
-    printf("generating rigid body scenes ...\n");
-    save_scene("rigid_01.obj", dirname, make_rigid_scene(0));
-    save_scene("rigid_02.obj", dirname, make_rigid_scene(1));
-    // save_scene("rigid_03.obj", dirname, make_rigid_scene(2));
+    if (scene == "rigid" || scene == "all") {
+        printf("generating rigid body scenes ...\n");
+        save_scene("rigid_01.obj", dirname, make_rigid_scene(0));
+        save_scene("rigid_02.obj", dirname, make_rigid_scene(1));
+        // save_scene("rigid_03.obj", dirname, make_rigid_scene(2));
+    }
 
     // textures ---------------------------------
-    printf("generating simple textures ...\n");
-    save_image("grid.png", dirname, make_grid(512).data(), 512);
-    save_image("checker.png", dirname, make_checker(512).data(), 512);
-    save_image("rchecker.png", dirname, make_rchecker(512).data(), 512);
-    save_image("colored.png", dirname, make_colored(512).data(), 512);
-    save_image("rcolored.png", dirname, make_rcolored(512).data(), 512);
-    save_image("gamma.png", dirname, make_gammaramp(512).data(), 512);
-    save_image_hdr("gamma.hdr", dirname, make_gammarampf(512).data(), 512, 512);
-    printf("generating envmaps textures ...\n");
-    save_image_hdr("env.hdr", dirname,
-                   make_sunsky_hdr(1024, 512, 0.8f, 8,
-                                   ym::vec3f{0.2f, 0.2f, 0.2f}, 1 / powf(2, 6),
-                                   true)
-                       .data(),
-                   1024, 512);
-    save_image_hdr("env01.hdr", dirname,
-                   make_sunsky_hdr(1024, 512, 0.8f, 8,
-                                   ym::vec3f{0.2f, 0.2f, 0.2f}, 1 / powf(2, 6),
-                                   true)
-                       .data(),
-                   1024, 512);
+    if (scene == "textures" || scene == "all") {
+        printf("generating simple textures ...\n");
+        save_image("grid.png", dirname, make_grid(512).data(), 512);
+        save_image("checker.png", dirname, make_checker(512).data(), 512);
+        save_image("rchecker.png", dirname, make_rchecker(512).data(), 512);
+        save_image("colored.png", dirname, make_colored(512).data(), 512);
+        save_image("rcolored.png", dirname, make_rcolored(512).data(), 512);
+        save_image("gamma.png", dirname, make_gammaramp(512).data(), 512);
+        save_image_hdr("gamma.hdr", dirname, make_gammarampf(512).data(), 512,
+                       512);
+        printf("generating envmaps textures ...\n");
+        save_image_hdr("env.hdr", dirname,
+                       make_sunsky_hdr(1024, 512, 0.8f, 8,
+                                       ym::vec3f{0.2f, 0.2f, 0.2f},
+                                       1 / powf(2, 6), true)
+                           .data(),
+                       1024, 512);
+        save_image_hdr("env01.hdr", dirname,
+                       make_sunsky_hdr(1024, 512, 0.8f, 8,
+                                       ym::vec3f{0.2f, 0.2f, 0.2f},
+                                       1 / powf(2, 6), true)
+                           .data(),
+                       1024, 512);
+    }
 }

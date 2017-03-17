@@ -242,7 +242,11 @@ enum struct stdsurface_type {
     uvflippedhemisphere,  ///< uv hemisphere flipped inside/out
     uvspherecube,         ///< sphere obtained by a cube tesselation
     uvspherizedcube,      ///< cube tesselation spherized by a radius
-    uvflipcapsphere       ///< us sphere with flipped poles
+    uvflipcapsphere,      ///< uv sphere with flipped poles
+    uvhollowcutsphere,    ///< uv hollow sphere and cut at the top
+    uvhollowcutsphere1,   ///< uv hollow sphere and cut at the top
+    uvcutsphere,          ///< uv sphere cut at the top
+    uvflippedcutsphere,   ///< uv sphere flipped and cut at the top
 };
 
 ///
@@ -254,6 +258,7 @@ enum struct stdsurface_type {
 /// - params: shape params for sample shapes (see code for documentation)
 /// - frame: frame
 /// - scale: scale
+/// - urange, vrange: texture coordinates range
 ///
 /// Out Parameters:
 /// - triangles: element array
@@ -266,7 +271,29 @@ YSHAPE_API void make_stdsurface(
     std::vector<int3>& triangles, std::vector<float3>& pos,
     std::vector<float3>& norm, std::vector<float2>& texcoord,
     const float3x4& frame = {{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}}},
-    float scale = 1);
+    float scale = 1, const float2& urange = {0, 1},
+    const float2& vrange = {0, 1});
+
+///
+/// Merge a standard shapes elements into an existing shape.
+///
+/// In/Out Parameters:
+/// - triangles: element array
+/// - pos: vertex positions
+/// - norm: vertex normals
+/// - texcoord: vertex texture coordinates
+///
+/// Parameters:
+/// - mtriangles: element array
+/// - mpos: vertex positions
+/// - mnorm: vertex normals
+/// - mtexcoord: vertex texture coordinates
+///
+YSHAPE_API void merge_stdsurface(
+    std::vector<int3>& triangles, std::vector<float3>& pos,
+    std::vector<float3>& norm, std::vector<float2>& texcoord,
+    const std::vector<int3>& mtriangles, const std::vector<float3>& mpos,
+    const std::vector<float3>& mnorm, const std::vector<float2>& mtexcoord);
 
 ///
 /// Computes the distribution of area of a shape element for sampling. This is
