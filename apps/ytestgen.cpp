@@ -1190,7 +1190,8 @@ std::vector<yapp::camera*> make_simple_cameras() {
 }
 
 std::vector<yapp::camera*> make_matball_cameras() {
-    return {make_camera("cam_close", {0, 1.5f, 5}, {0, 0.5f, 0}, 0.25f, 0, 1)};
+    return {make_camera("cam_close", {0, 1.5f, 5}, {0, 0.5f, 0}, 0.25f, 0, 1),
+            make_camera("cam_close", {0, 4, 4}, {0, 0.5f, 0}, 0.25f, 0, 1)};
 }
 
 // http://graphics.cs.williams.edu/data
