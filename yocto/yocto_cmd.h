@@ -60,6 +60,7 @@
 ///
 ///
 /// HISTORY:
+/// - v 0.12: better thread pool implementation
 /// - v 0.11: added a few more path utilities
 /// - v 0.10: changed default name for help option; better help printing
 /// - v 0.9: C-like string formatting
@@ -100,29 +101,46 @@ namespace ycmd {}
 //
 
 //
-// LICENSE OF INCLUDED SOFTWARE for ThreadPool code.
+// LICENSE OF INCLUDED SOFTWARE for ThreadPool code from LLVM code base
 //
-// Copyright (c) 2012 Jakob Progsch, Václav Zeman
+// Copyright (c) 2003-2016 University of Illinois at Urbana-Champaign.
+// All rights reserved.
 //
-// This software is provided 'as-is', without any express or implied
-// warranty. In no event will the authors be held liable for any damages
-// arising from the use of this software.
+// Developed by:
 //
-// Permission is granted to anyone to use this software for any purpose,
-// including commercial applications, and to alter it and redistribute it
-// freely, subject to the following restrictions:
+//     LLVM Team
 //
-// 1. The origin of this software must not be misrepresented; you must not
-// claim that you wrote the original software. If you use this software
-// in a product, an acknowledgment in the product documentation would be
-// appreciated but is not required.
+//     University of Illinois at Urbana-Champaign
 //
-// 2. Altered source versions must be plainly marked as such, and must not be
-// misrepresented as being the original software.
+//     http://llvm.org
 //
-// 3. This notice may not be removed or altered from any source
-// distribution.
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// with the Software without restriction, including without limitation the
+// rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+// sell copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
 //
+//     * Redistributions of source code must retain the above copyright notice,
+//       this list of conditions and the following disclaimers.
+//
+//     * Redistributions in binary form must reproduce the above copyright
+//     notice,
+//       this list of conditions and the following disclaimers in the
+//       documentation and/or other materials provided with the distribution.
+//
+//     * Neither the names of the LLVM Team, University of Illinois at
+//       Urbana-Champaign, nor the names of its contributors may be used to
+//       endorse or promote products derived from this Software without specific
+//       prior written permission.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+// CONTRIBUTORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS WITH
+// THE SOFTWARE.
 
 #ifndef _YCMD_H_
 #define _YCMD_H_
@@ -146,7 +164,8 @@ namespace ycmd {}
 
 namespace ycmd {
 
-// COMMAND LINE PARSING --------------------------------------------------------
+// COMMAND LINE PARSING
+// --------------------------------------------------------
 
 ///
 /// Command line parser.
@@ -329,7 +348,8 @@ YCMD_API std::vector<double> parse_argad(
     const std::vector<double>& def, int nargs = -1, bool required = false,
     const std::vector<double>& choices = {});
 
-// FILE LOADING ----------------------------------------------------------------
+// FILE LOADING
+// ----------------------------------------------------------------
 
 ///
 /// Loads the contents of a binary file in an in-memory array.
@@ -341,7 +361,8 @@ YCMD_API std::vector<unsigned char> load_binfile(const std::string& filename);
 ///
 YCMD_API std::string load_txtfile(const std::string& filename);
 
-// PATH MANIPULATION -----------------------------------------------------------
+// PATH MANIPULATION
+// -----------------------------------------------------------
 
 ///
 /// Get directory name (including '/').
@@ -359,7 +380,8 @@ YCMD_API std::string get_basename(const std::string& filename);
 YCMD_API std::string get_extension(const std::string& filename);
 
 ///
-/// Get filename without directory (equiv to get_basename() + get_extension()).
+/// Get filename without directory (equiv to get_basename() +
+/// get_extension()).
 ///
 YCMD_API std::string get_filename(const std::string& filename);
 
@@ -381,7 +403,8 @@ YCMD_API std::string prepend_extension(const std::string& filename,
 YCMD_API void split_path(const std::string& filename, std::string& dirname,
                          std::string& basename, std::string& ext);
 
-// STRING UTILITIES ------------------------------------------------------------
+// STRING UTILITIES
+// ------------------------------------------------------------
 
 ///
 /// Checks if a std::string starts with a prefix.
@@ -394,9 +417,9 @@ YCMD_API bool starts_with(const std::string& str, const std::string& substr);
 YCMD_API bool ends_with(const std::string& str, const std::string& substr);
 
 ///
-/// Splits a std::string into lines at the '\n' character. The line terminator
-/// is kept if keep_newline. This function does not work on Window if
-/// keep_newline is true.
+/// Splits a std::string into lines at the '\n' character. The line
+/// terminator is kept if keep_newline. This function does not work on
+/// Window if keep_newline is true.
 ///
 YCMD_API std::vector<std::string> split_lines(const std::string& str,
                                               bool keep_newline = false);
@@ -418,7 +441,8 @@ YCMD_API std::string format_str(const char* fmt, va_list args);
 ///
 YCMD_API std::string format_str(const char* fmt, ...);
 
-// SIMPLE LOGGING --------------------------------------------------------------
+// SIMPLE LOGGING
+// --------------------------------------------------------------
 
 ///
 /// Logging level
@@ -549,7 +573,8 @@ YCMD_API void log_msgf(int level, const char* name, const char* msg, ...);
 YCMD_API void log_msgfv(int level, const char* name, const char* msg,
                         va_list args);
 
-// THREAD POOL -----------------------------------------------------------------
+// THREAD POOL
+// -----------------------------------------------------------------
 
 ///
 /// Forward declaration of thread pool.
@@ -557,7 +582,8 @@ YCMD_API void log_msgfv(int level, const char* name, const char* msg,
 struct thread_pool;
 
 ///
-/// Initialize a thread pool with a certain number of threads (0 for defatul).
+/// Initialize a thread pool with a certain number of threads (0 for
+/// defatul).
 ///
 YCMD_API thread_pool* make_thread_pool(int nthread = 0);
 
@@ -567,10 +593,38 @@ YCMD_API thread_pool* make_thread_pool(int nthread = 0);
 YCMD_API void clear_thread_pool(thread_pool* pool);
 
 ///
-/// Enqueue a job
+/// Wait for all jobs to finish
 ///
-YCMD_API std::future<void> pool_enqueue(thread_pool* pool,
-                                        const std::function<void()>& task);
+YCMD_API void thread_pool_wait(thread_pool* pool);
+
+///
+/// Parallel for implementation
+///
+YCMD_API void thread_pool_for(thread_pool* pool, int count,
+                              const std::function<void(int idx)>& task);
+
+///
+/// Runs a task asynchronously onto a thread pool
+///
+YCMD_API std::shared_future<void> thread_pool_async(
+    thread_pool* pool, const std::function<void()>& task);
+
+///
+/// Wait for all jobs to finish on a global thread pool
+///
+YCMD_API void thread_pool_wait();
+
+///
+/// Runs a task asynchronously onto a global thread pool
+///
+YCMD_API std::shared_future<void> thread_pool_async(
+    const std::function<void()>& task);
+
+///
+/// Parallel for implementation on a global thread pool
+///
+YCMD_API void thread_pool_for(int count,
+                              const std::function<void(int idx)>& task);
 
 }  // namespace
 

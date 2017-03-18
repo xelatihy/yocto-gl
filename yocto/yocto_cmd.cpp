@@ -23,29 +23,46 @@
 //
 
 //
-// LICENSE OF INCLUDED SOFTWARE for ThreadPool code.
+// LICENSE OF INCLUDED SOFTWARE for ThreadPool code from LLVM code base
 //
-// Copyright (c) 2012 Jakob Progsch, Václav Zeman
+// Copyright (c) 2003-2016 University of Illinois at Urbana-Champaign.
+// All rights reserved.
 //
-// This software is provided 'as-is', without any express or implied
-// warranty. In no event will the authors be held liable for any damages
-// arising from the use of this software.
+// Developed by:
 //
-// Permission is granted to anyone to use this software for any purpose,
-// including commercial applications, and to alter it and redistribute it
-// freely, subject to the following restrictions:
+//     LLVM Team
 //
-// 1. The origin of this software must not be misrepresented; you must not
-// claim that you wrote the original software. If you use this software
-// in a product, an acknowledgment in the product documentation would be
-// appreciated but is not required.
+//     University of Illinois at Urbana-Champaign
 //
-// 2. Altered source versions must be plainly marked as such, and must not be
-// misrepresented as being the original software.
+//     http://llvm.org
 //
-// 3. This notice may not be removed or altered from any source
-// distribution.
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// with the Software without restriction, including without limitation the
+// rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+// sell copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
 //
+//     * Redistributions of source code must retain the above copyright notice,
+//       this list of conditions and the following disclaimers.
+//
+//     * Redistributions in binary form must reproduce the above copyright
+//     notice,
+//       this list of conditions and the following disclaimers in the
+//       documentation and/or other materials provided with the distribution.
+//
+//     * Neither the names of the LLVM Team, University of Illinois at
+//       Urbana-Champaign, nor the names of its contributors may be used to
+//       endorse or promote products derived from this Software without specific
+//       prior written permission.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+// CONTRIBUTORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS WITH
+// THE SOFTWARE.
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF YOCTO_CMD
@@ -68,85 +85,91 @@
 #include <thread>
 
 //
-// From https://github.com/progschj/ThreadPool
+// Thread pool code derived from LLVM codebase
 //
 
-class ThreadPool {
-   public:
-    ThreadPool(size_t);
-    template <class F, class... Args>
-    auto enqueue(F&& f, Args&&... args)
-        -> std::future<typename std::result_of<F(Args...)>::type>;
-    ~ThreadPool();
+// thread pool
+struct ThreadPool {
+    ThreadPool(int nthreads = std::thread::hardware_concurrency())
+        : working_threads(0), stop_flag(false) {
+        threads.reserve(nthreads);
+        for (auto tid = 0; tid < nthreads; tid++) {
+            threads.emplace_back([&] {
+                while (true) {
+                    std::packaged_task<void()> task;
+                    {
+                        std::unique_lock<std::mutex> lock_guard(queue_lock);
+                        queue_condition.wait(lock_guard, [&] {
+                            return stop_flag || !tasks.empty();
+                        });
 
-   private:
-    // need to keep track of threads so we can join them
-    std::vector<std::thread> workers;
-    // the task queue
-    std::queue<std::function<void()>> tasks;
+                        if (stop_flag && tasks.empty()) return;
 
-    // synchronization
-    std::mutex queue_mutex;
-    std::condition_variable condition;
-    bool stop;
+                        {
+                            working_threads++;
+                            std::unique_lock<std::mutex> LockGuard(
+                                completion_lock);
+                        }
+                        task = std::move(tasks.front());
+                        tasks.pop();
+                    }
+
+                    task();
+
+                    {
+                        std::unique_lock<std::mutex> LockGuard(completion_lock);
+                        working_threads--;
+                    }
+
+                    completion_condition.notify_all();
+                }
+            });
+        }
+    }
+
+    ~ThreadPool() {
+        {
+            std::unique_lock<std::mutex> lock_guard(queue_lock);
+            stop_flag = true;
+        }
+        queue_condition.notify_all();
+        for (auto& Worker : threads) Worker.join();
+    }
+
+    std::shared_future<void> async(std::function<void()> task) {
+        // Wrap the Task in a packaged_task to return a future object.
+        std::packaged_task<void()> packaged_task(std::move(task));
+        auto future = packaged_task.get_future();
+        {
+            std::unique_lock<std::mutex> lock_guard(queue_lock);
+
+            assert(!stop_flag &&
+                   "Queuing a thread during ThreadPool destruction");
+
+            tasks.push(std::move(packaged_task));
+        }
+        queue_condition.notify_one();
+        return future.share();
+    }
+
+    void wait() {
+        std::unique_lock<std::mutex> lock_guard(completion_lock);
+        completion_condition.wait(
+            lock_guard, [&] { return tasks.empty() && !working_threads; });
+    }
+
+    std::vector<std::thread> threads;
+    std::queue<std::packaged_task<void()>> tasks;
+    std::mutex queue_lock;
+    std::condition_variable queue_condition;
+    std::mutex completion_lock;
+    std::condition_variable completion_condition;
+    std::atomic<unsigned> working_threads;
+    bool stop_flag = false;
 };
 
-// the constructor just launches some amount of workers
-inline ThreadPool::ThreadPool(size_t threads) : stop(false) {
-    for (size_t i = 0; i < threads; ++i)
-        workers.emplace_back([this] {
-            for (;;) {
-                std::function<void()> task;
-
-                {
-                    std::unique_lock<std::mutex> lock(this->queue_mutex);
-                    this->condition.wait(lock, [this] {
-                        return this->stop || !this->tasks.empty();
-                    });
-                    if (this->stop && this->tasks.empty()) return;
-                    task = std::move(this->tasks.front());
-                    this->tasks.pop();
-                }
-
-                task();
-            }
-        });
-}
-
-// add new work item to the pool
-template <class F, class... Args>
-auto ThreadPool::enqueue(F&& f, Args&&... args)
-    -> std::future<typename std::result_of<F(Args...)>::type> {
-    using return_type = typename std::result_of<F(Args...)>::type;
-
-    auto task = std::make_shared<std::packaged_task<return_type()>>(
-        std::bind(std::forward<F>(f), std::forward<Args>(args)...));
-
-    std::future<return_type> res = task->get_future();
-    {
-        std::unique_lock<std::mutex> lock(queue_mutex);
-
-        // don't allow enqueueing after stopping the pool
-        if (stop) throw std::runtime_error("enqueue on stopped ThreadPool");
-
-        tasks.emplace([task]() { (*task)(); });
-    }
-    condition.notify_one();
-    return res;
-}
-
-// the destructor joins all threads
-inline ThreadPool::~ThreadPool() {
-    {
-        std::unique_lock<std::mutex> lock(queue_mutex);
-        stop = true;
-    }
-    condition.notify_all();
-    for (std::thread& worker : workers) worker.join();
-}
-
 //
-// End From https://github.com/progschj/ThreadPool
+// End of thread pool code derived from LLVM codebase
 //
 
 namespace ycmd {
@@ -1156,9 +1179,62 @@ YCMD_API void clear_thread_pool(thread_pool* pool) {
 //
 // Enqueue a job
 //
-YCMD_API std::future<void> pool_enqueue(thread_pool* pool,
-                                        const std::function<void()>& task) {
-    return pool->tp->enqueue(task);
+YCMD_API std::shared_future<void> thread_pool_async(
+    thread_pool* pool, const std::function<void()>& task) {
+    return pool->tp->async(task);
+}
+
+//
+// Wait for jobs to finish
+//
+YCMD_API void thread_pool_wait(thread_pool* pool) { pool->tp->wait(); }
+
+//
+// Parallel for implementation
+//
+YCMD_API void thread_pool_for(thread_pool* pool, int count,
+                              const std::function<void(int idx)>& task) {
+    for (auto idx = 0; idx < count; idx++) {
+        thread_pool_async(pool, [&task, idx]() { task(idx); });
+    }
+    thread_pool_wait(pool);
+}
+
+//
+// Global pool
+//
+static auto global_pool = (thread_pool*)nullptr;
+
+//
+// Make the global thread pool
+//
+void make_global_thread_pool() {
+    if (!global_pool) global_pool = make_thread_pool();
+}
+
+//
+// Enqueue a job
+//
+YCMD_API std::shared_future<void> thread_pool_async(
+    const std::function<void()>& task) {
+    if (!global_pool) make_global_thread_pool();
+    thread_pool_async(global_pool, task);
+}
+
+//
+// Wait for jobs to finish
+//
+YCMD_API void thread_pool_wait() {
+    if (global_pool) global_pool->tp->wait();
+}
+
+//
+// Parallel for implementation
+//
+YCMD_API void thread_pool_for(int count,
+                              const std::function<void(int idx)>& task) {
+    if (!global_pool) make_global_thread_pool();
+    thread_pool_for(global_pool, count, task);
 }
 
 }  // namespace

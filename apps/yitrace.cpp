@@ -205,12 +205,11 @@ bool update(state* st) {
         st->scene_updated = false;
     } else {
         if (st->cur_sample == pars->render_params.nsamples) return false;
-        std::vector<std::future<void>> futures;
         for (auto b = 0;
              st->cur_block < st->blocks.size() && b < st->blocks_per_update;
              st->cur_block++, b++) {
             auto block = st->blocks[st->cur_block];
-            futures.push_back(ycmd::pool_enqueue(st->pool, [st, block, pars]() {
+            ycmd::thread_pool_async(st->pool, [st, block, pars]() {
                 ytrace::trace_block(st->trace_scene, pars->width, pars->height,
                                     (ytrace::float4*)st->hdr.data(), block[0],
                                     block[1], block[2], block[3],
@@ -223,9 +222,9 @@ bool update(state* st) {
                             pars->tonemap, pars->gamma);
                     }
                 }
-            }));
+            });
         }
-        for (auto& future : futures) future.wait();
+        ycmd::thread_pool_wait(st->pool);
         if (st->texture_exposure != pars->exposure ||
             st->texture_gamma != pars->gamma ||
             st->texture_tonemap != pars->tonemap) {
@@ -359,6 +358,12 @@ int main(int argc, char* argv[]) {
 
     // setting up rendering
     st->scene = yapp::load_scenes(pars->filenames, pars->scene_scale);
+
+    // fixing camera
+    for (auto cam : st->scene->cameras)
+        cam->aspect = (float)pars->width / (float)pars->height;
+
+    // building bvh and trace scene
     st->scene_bvh = yapp::make_bvh(st->scene);
     st->trace_scene = yapp::make_trace_scene(st->scene, st->scene_bvh,
                                              pars->render_params.camera_id);
@@ -378,10 +383,6 @@ int main(int argc, char* argv[]) {
     st->blocks =
         yapp::make_trace_blocks(pars->width, pars->height, pars->block_size);
     st->pool = ycmd::make_thread_pool(pars->nthreads);
-
-    // fixing camera
-    for (auto cam : st->scene->cameras)
-        cam->aspect = (float)pars->width / (float)pars->height;
 
     // init renderer
     ytrace::init_lights(st->trace_scene);
