@@ -1031,9 +1031,8 @@ params* init_params(const std::string& help, int argc, char** argv,
                                     "image resolution", 720);
         pars->render_params.camera_id =
             ycmd::parse_opti(parser, "--camera", "-C", "camera", 0);
-        pars->save_progressive =
-            ycmd::parse_opti(parser, "--save_progressive", "",
-                             "frames to save progressive images", 0);
+        pars->save_progressive = ycmd::parse_flag(
+            parser, "--save_progressive", "", "save progressive images");
         auto amb =
             ycmd::parse_optf(parser, "--ambient", "", "ambient factor", 0);
 
@@ -1066,6 +1065,8 @@ params* init_params(const std::string& help, int argc, char** argv,
             parser, "--threads", "-t", "number of threads [0 for default]", 0);
         pars->block_size =
             ycmd::parse_opt<int>(parser, "--block_size", "", "block size", 32);
+        pars->batch_size =
+            ycmd::parse_opt<int>(parser, "--batch_size", "", "batch size", 16);
         pars->render_params.nsamples =
             ycmd::parse_opti(parser, "--samples", "-s", "image samples", 256);
 

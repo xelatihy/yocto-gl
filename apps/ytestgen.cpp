@@ -456,6 +456,7 @@ yapp::shape* make_point(const std::string& name, yapp::material* mat,
 std::vector<yapp::shape*> make_random_shapes(int nshapes, int l);
 
 enum struct stype {
+    floor01,
     floor02,
     obj01,
     obj02,
@@ -494,6 +495,12 @@ std::vector<yapp::shape*> make_shapes(
     const ym::frame3f& frame = ym::identity_frame3f,
     const ym::vec3f& scale = ym::vec3f{1, 1, 1}) {
     switch (st) {
+        case stype::floor01: {
+            auto mat = (mt == mtype::def) ? make_material(mtype::floor_txt)
+                                          : make_material(mt);
+            return {_make_floor("floor01_" + mat->name, mat, 6, 0, 6, frame,
+                                scale * ym::vec3f{6, 6, 6})};
+        } break;
         case stype::floor02: {
             auto mat = (mt == mtype::def) ? make_material(mtype::floor_txt)
                                           : make_material(mt);
@@ -718,7 +725,7 @@ std::vector<yapp::shape*> make_shapes(
                                scale);
         } break;
         case stype::matball02_floor02: {
-            return make_shapes(stype::floor02) +
+            return make_shapes(stype::floor01) +
                    make_shapes(stype::matball02, mt, make_frame({0, 0.5f, 0}),
                                scale);
         } break;
@@ -1190,8 +1197,8 @@ std::vector<yapp::camera*> make_simple_cameras() {
 }
 
 std::vector<yapp::camera*> make_matball_cameras() {
-    return {make_camera("cam_close", {0, 1.5f, 5}, {0, 0.5f, 0}, 0.25f, 0, 1),
-            make_camera("cam_close", {0, 4, 4}, {0, 0.5f, 0}, 0.25f, 0, 1)};
+    return {make_camera("cam_close", {0, 2.5f, 5}, {0, 0.5f, 0}, 0.25f, 0, 1),
+            make_camera("cam_close", {0, 1.5f, 5}, {0, 0.5f, 0}, 0.25f, 0, 1)};
 }
 
 // http://graphics.cs.williams.edu/data
