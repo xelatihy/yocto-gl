@@ -66,28 +66,29 @@ int main(int argc, char* argv[]) {
         yapp::make_trace_blocks(pars->width, pars->height, pars->block_size);
     auto pool = ycmd::make_thread_pool(pars->nthreads);
     for (auto cur_sample = 0; cur_sample < pars->render_params.nsamples;
-         cur_sample++) {
-        ycmd::log_msgf(ycmd::log_level_info, "ytrace",
-                       "rendering sample %4d/%d", cur_sample + 1,
-                       pars->render_params.nsamples);
-        ycmd::thread_pool_for(blocks.size(), [=](auto cur_block) {
-            auto block = blocks[cur_block];
-            ytrace::trace_block(trace_scene, pars->width, pars->height,
-                                (ytrace::float4*)hdr, block[0], block[1],
-                                block[2], block[3], cur_sample, cur_sample + 1,
-                                pars->render_params);
-        });
-        if (pars->save_progressive &&
-            (cur_sample + 1) % pars->save_progressive == 0) {
+         cur_sample += pars->batch_size) {
+        if (pars->save_progressive && cur_sample) {
             auto imfilename = ycmd::get_dirname(pars->imfilename) +
                               ycmd::get_basename(pars->imfilename) +
-                              ycmd::format_str(".%04d", cur_sample + 1) +
+                              ycmd::format_str(".%04d", cur_sample) +
                               ycmd::get_extension(pars->imfilename);
             ycmd::log_msgf(ycmd::log_level_info, "ytrace", "saving image %s",
                            imfilename.c_str());
             yapp::save_image(imfilename, pars->width, pars->height, hdr,
                              pars->exposure, pars->tonemap, pars->gamma);
         }
+        ycmd::log_msgf(ycmd::log_level_info, "ytrace",
+                       "rendering sample %4d/%d", cur_sample,
+                       pars->render_params.nsamples);
+        ycmd::thread_pool_for(blocks.size(), [=](auto cur_block) {
+            auto block = blocks[cur_block];
+            ytrace::trace_block(trace_scene, pars->width, pars->height,
+                                (ytrace::float4*)hdr, block[0], block[1],
+                                block[2], block[3], cur_sample,
+                                std::min(cur_sample + pars->batch_size,
+                                         pars->render_params.nsamples),
+                                pars->render_params);
+        });
     }
     ycmd::log_msgf(ycmd::log_level_info, "ytrace", "rendering done");
 

@@ -900,8 +900,8 @@ static inline ym::vec3f _eval_brdfcos(const point& pt, const ym::vec3f& wi) {
                                   1 + alpha2 * (1 - ndo * ndo) / (ndo * ndo))) /
                         2;
                     auto lambda_i =
-                        (-1 +
-                         sqrtf(1 + alpha2 * (1 - ndi * ndi) / (ndi * ndi))) /
+                        (-1 + std::sqrt(
+                                  1 + alpha2 * (1 - ndi * ndi) / (ndi * ndi))) /
                         2;
                     auto g = 1 / (1 + lambda_o + lambda_i);
 #else
@@ -922,7 +922,7 @@ static inline ym::vec3f _eval_brdfcos(const point& pt, const ym::vec3f& wi) {
 
                 // handle fresnel
                 auto odh = ym::clamp(dot(wo, wh), 0.0f, 1.0f);
-                auto ks = _eval_fresnel_schlick(pt.ks, ndo);
+                auto ks = _eval_fresnel_schlick(pt.ks, odh);
 
                 // sum up
                 spec = ks * ndi * dg / (4 * ndi * ndo);
