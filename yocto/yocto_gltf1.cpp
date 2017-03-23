@@ -130,8 +130,8 @@ static inline bool _parse(json& val, const json& js, _parse_stack& err) {
 
 // Parse support function.
 template <typename T>
-static inline bool _parse(std::vector<T>& vals, const json& js,
-                          _parse_stack& err) {
+static inline bool _parse(
+    std::vector<T>& vals, const json& js, _parse_stack& err) {
     if (!js.is_array()) return false;
     vals.resize(js.size());
     for (auto i = 0; i < js.size(); i++) {
@@ -145,20 +145,18 @@ static inline bool _parse(std::vector<T>& vals, const json& js,
 
 // Parse support function.
 template <typename T, std::size_t N>
-static inline bool _parse(std::array<T, N>& vals, const json& js,
-                          _parse_stack& err) {
+static inline bool _parse(
+    std::array<T, N>& vals, const json& js, _parse_stack& err) {
     if (!js.is_array()) return false;
     if (N != js.size()) return false;
-    for (auto i = 0; i < N; i++) {
-        _parse(vals[i], js[i], err);
-    }
+    for (auto i = 0; i < N; i++) { _parse(vals[i], js[i], err); }
     return true;
 }
 
 // Parse support function.
 template <typename T>
-static inline bool _parse(std::map<std::string, T>& vals, const json& js,
-                          _parse_stack& err) {
+static inline bool _parse(
+    std::map<std::string, T>& vals, const json& js, _parse_stack& err) {
     if (!js.is_object()) return false;
     for (auto kv = js.begin(); kv != js.end(); ++kv) {
         _parse(vals[kv.key()], kv.value(), err);
@@ -176,7 +174,7 @@ static inline bool _parse(optional<T>& val, const json& js, _parse_stack& err) {
 // Parse support function.
 template <typename T>
 static inline bool _parse_attr(T& val, const char* name, bool required,
-                               const json& js, _parse_stack& err) {
+    const json& js, _parse_stack& err) {
     auto exists = js.find(name) != js.end();
     err.path.push_back(name);
     if (required && !exists) return false;
@@ -234,34 +232,28 @@ static inline bool _dump(const json& val, json& js, _parse_stack& err) {
 
 // Parse support function.
 template <typename T>
-static inline bool _dump(const std::vector<T>& vals, json& js,
-                         _parse_stack& err) {
+static inline bool _dump(
+    const std::vector<T>& vals, json& js, _parse_stack& err) {
     js = json::array();
-    for (auto i = 0; i < vals.size(); i++) {
-        _dump(vals[i], js[i], err);
-    }
+    for (auto i = 0; i < vals.size(); i++) { _dump(vals[i], js[i], err); }
     return true;
 }
 
 // Parse support function.
 template <typename T, std::size_t N>
-static inline bool _dump(const std::array<T, N>& vals, json& js,
-                         _parse_stack& err) {
+static inline bool _dump(
+    const std::array<T, N>& vals, json& js, _parse_stack& err) {
     js = json::array();
-    for (auto i = 0; i < N; i++) {
-        _dump(vals[i], js[i], err);
-    }
+    for (auto i = 0; i < N; i++) { _dump(vals[i], js[i], err); }
     return true;
 }
 
 // Parse support function.
 template <typename T>
-static inline bool _dump(const std::map<std::string, T>& vals, json& js,
-                         _parse_stack& err) {
+static inline bool _dump(
+    const std::map<std::string, T>& vals, json& js, _parse_stack& err) {
     js = json::object();
-    for (auto&& kv : vals) {
-        _dump(kv.second, js[kv.first], err);
-    }
+    for (auto&& kv : vals) { _dump(kv.second, js[kv.first], err); }
     return true;
 }
 
@@ -276,11 +268,9 @@ static inline bool _dump(const optional<T>& val, json& js, _parse_stack& err) {
 // Parse support function.
 template <typename T>
 static inline bool _dump_attr(const T& val, const char* name, const T& defval,
-                              bool required, json& js, _parse_stack& err) {
+    bool required, json& js, _parse_stack& err) {
     err.path.push_back(name);
-    if (required || !(val == defval)) {
-        _dump(val, js[name], err);
-    }
+    if (required || !(val == defval)) { _dump(val, js[name], err); }
     err.path.pop_back();
     return true;
 }
@@ -295,16 +285,16 @@ static inline bool _dump_begin_obj(json& js, _parse_stack& err) {
 static inline bool _dump_end_obj(json& js, _parse_stack& err) { return true; }
 
 // Equality check for defaults (might go away in the future)
-static inline bool operator==(const glTFProperty_t& a,
-                              const glTFProperty_t& b) {
+static inline bool operator==(
+    const glTFProperty_t& a, const glTFProperty_t& b) {
     if (!(a.extensions == b.extensions)) return false;
     if (!(a.extras == b.extras)) return false;
     return true;
 }
 
 // Parses a glTFProperty_t object
-static inline bool _parse(glTFProperty_t& val, const json& js,
-                          _parse_stack& err) {
+static inline bool _parse(
+    glTFProperty_t& val, const json& js, _parse_stack& err) {
     if (!_parse_begin_obj(js, err)) return false;
     if (!_parse_attr(val.extensions, "extensions", false, js, err))
         return false;
@@ -314,12 +304,12 @@ static inline bool _parse(glTFProperty_t& val, const json& js,
 }
 
 // Converts a glTFProperty_t object to JSON
-static inline bool _dump(const glTFProperty_t& val, json& js,
-                         _parse_stack& err) {
+static inline bool _dump(
+    const glTFProperty_t& val, json& js, _parse_stack& err) {
     static const auto defval = glTFProperty_t();
     if (!_dump_begin_obj(js, err)) return false;
-    if (!_dump_attr(val.extensions, "extensions", defval.extensions, false, js,
-                    err))
+    if (!_dump_attr(
+            val.extensions, "extensions", defval.extensions, false, js, err))
         return false;
     if (!_dump_attr(val.extras, "extras", defval.extras, false, js, err))
         return false;
@@ -328,16 +318,16 @@ static inline bool _dump(const glTFProperty_t& val, json& js,
 }
 
 // Equality check for defaults (might go away in the future)
-static inline bool operator==(const glTFChildOfRootProperty_t& a,
-                              const glTFChildOfRootProperty_t& b) {
+static inline bool operator==(
+    const glTFChildOfRootProperty_t& a, const glTFChildOfRootProperty_t& b) {
     if (!((glTFProperty_t&)a == (glTFProperty_t&)b)) return false;
     if (!(a.name == b.name)) return false;
     return true;
 }
 
 // Parses a glTFChildOfRootProperty_t object
-static inline bool _parse(glTFChildOfRootProperty_t& val, const json& js,
-                          _parse_stack& err) {
+static inline bool _parse(
+    glTFChildOfRootProperty_t& val, const json& js, _parse_stack& err) {
     if (!_parse((glTFProperty_t&)val, js, err)) return false;
     if (!_parse_begin_obj(js, err)) return false;
     if (!_parse_attr(val.name, "name", false, js, err)) return false;
@@ -346,8 +336,8 @@ static inline bool _parse(glTFChildOfRootProperty_t& val, const json& js,
 }
 
 // Converts a glTFChildOfRootProperty_t object to JSON
-static inline bool _dump(const glTFChildOfRootProperty_t& val, json& js,
-                         _parse_stack& err) {
+static inline bool _dump(
+    const glTFChildOfRootProperty_t& val, json& js, _parse_stack& err) {
     static const auto defval = glTFChildOfRootProperty_t();
     if (!_dump((glTFProperty_t&)val, js, err)) return false;
     if (!_dump_begin_obj(js, err)) return false;
@@ -374,8 +364,8 @@ static inline bool operator==(const accessor_t& a, const accessor_t& b) {
 }
 
 // Parse a componentType_t enum
-static inline bool _parse(accessor_t::componentType_t& val, const json& js,
-                          _parse_stack& err) {
+static inline bool _parse(
+    accessor_t::componentType_t& val, const json& js, _parse_stack& err) {
     static std::map<int, accessor_t::componentType_t> table = {
         {5120, accessor_t::componentType_t::byte_t},
         {5121, accessor_t::componentType_t::unsigned_byte_t},
@@ -392,8 +382,8 @@ static inline bool _parse(accessor_t::componentType_t& val, const json& js,
 }
 
 // Parse a type_t enum
-static inline bool _parse(accessor_t::type_t& val, const json& js,
-                          _parse_stack& err) {
+static inline bool _parse(
+    accessor_t::type_t& val, const json& js, _parse_stack& err) {
     static std::map<std::string, accessor_t::type_t> table = {
         {"SCALAR", accessor_t::type_t::scalar_t},
         {"VEC2", accessor_t::type_t::vec2_t},
@@ -431,8 +421,8 @@ static inline bool _parse(accessor_t& val, const json& js, _parse_stack& err) {
 }
 
 // Converts a componentType_t enum to JSON
-static inline bool _dump(const accessor_t::componentType_t& val, json& js,
-                         _parse_stack& err) {
+static inline bool _dump(
+    const accessor_t::componentType_t& val, json& js, _parse_stack& err) {
     static std::map<accessor_t::componentType_t, int> table = {
         {accessor_t::componentType_t::byte_t, 5120},
         {accessor_t::componentType_t::unsigned_byte_t, 5121},
@@ -447,8 +437,8 @@ static inline bool _dump(const accessor_t::componentType_t& val, json& js,
 }
 
 // Converts a type_t enum to JSON
-static inline bool _dump(const accessor_t::type_t& val, json& js,
-                         _parse_stack& err) {
+static inline bool _dump(
+    const accessor_t::type_t& val, json& js, _parse_stack& err) {
     static std::map<accessor_t::type_t, std::string> table = {
         {accessor_t::type_t::scalar_t, "SCALAR"},
         {accessor_t::type_t::vec2_t, "VEC2"},
@@ -468,24 +458,24 @@ static inline bool _dump(const accessor_t& val, json& js, _parse_stack& err) {
     static const auto defval = accessor_t();
     if (!_dump((glTFChildOfRootProperty_t&)val, js, err)) return false;
     if (!_dump_begin_obj(js, err)) return false;
-    if (!_dump_attr(val.bufferView, "bufferView", defval.bufferView, true, js,
-                    err))
+    if (!_dump_attr(
+            val.bufferView, "bufferView", defval.bufferView, true, js, err))
         return false;
-    if (!_dump_attr(val.byteOffset, "byteOffset", defval.byteOffset, true, js,
-                    err))
+    if (!_dump_attr(
+            val.byteOffset, "byteOffset", defval.byteOffset, true, js, err))
         return false;
-    if (!_dump_attr(val.byteStride, "byteStride", defval.byteStride, false, js,
-                    err))
+    if (!_dump_attr(
+            val.byteStride, "byteStride", defval.byteStride, false, js, err))
         return false;
     if (!_dump_attr(val.componentType, "componentType", defval.componentType,
-                    true, js, err))
+            true, js, err))
         return false;
     if (!_dump_attr(val.count, "count", defval.count, true, js, err))
         return false;
     if (!_dump_attr(val.max, "max", defval.max, true, js, err)) return false;
     if (!_dump_attr(val.min, "min", defval.min, true, js, err)) return false;
-    if (!_dump_attr(val.normalized, "normalized", defval.normalized, false, js,
-                    err))
+    if (!_dump_attr(
+            val.normalized, "normalized", defval.normalized, false, js, err))
         return false;
     if (!_dump_attr(val.type, "type", defval.type, true, js, err)) return false;
     if (!_dump_end_obj(js, err)) return false;
@@ -493,8 +483,8 @@ static inline bool _dump(const accessor_t& val, json& js, _parse_stack& err) {
 }
 
 // Equality check for defaults (might go away in the future)
-static inline bool operator==(const animation_channel_target_t& a,
-                              const animation_channel_target_t& b) {
+static inline bool operator==(
+    const animation_channel_target_t& a, const animation_channel_target_t& b) {
     if (!((glTFProperty_t&)a == (glTFProperty_t&)b)) return false;
     if (!(a.id == b.id)) return false;
     if (!(a.path == b.path)) return false;
@@ -503,7 +493,7 @@ static inline bool operator==(const animation_channel_target_t& a,
 
 // Parse a path_t enum
 static inline bool _parse(animation_channel_target_t::path_t& val,
-                          const json& js, _parse_stack& err) {
+    const json& js, _parse_stack& err) {
     static std::map<std::string, animation_channel_target_t::path_t> table = {
         {"translation", animation_channel_target_t::path_t::translation_t},
         {"rotation", animation_channel_target_t::path_t::rotation_t},
@@ -517,8 +507,8 @@ static inline bool _parse(animation_channel_target_t::path_t& val,
 }
 
 // Parses a animation_channel_target_t object
-static inline bool _parse(animation_channel_target_t& val, const json& js,
-                          _parse_stack& err) {
+static inline bool _parse(
+    animation_channel_target_t& val, const json& js, _parse_stack& err) {
     if (!_parse((glTFProperty_t&)val, js, err)) return false;
     if (!_parse_begin_obj(js, err)) return false;
     if (!_parse_attr(val.id, "id", true, js, err)) return false;
@@ -529,7 +519,7 @@ static inline bool _parse(animation_channel_target_t& val, const json& js,
 
 // Converts a path_t enum to JSON
 static inline bool _dump(const animation_channel_target_t::path_t& val,
-                         json& js, _parse_stack& err) {
+    json& js, _parse_stack& err) {
     static std::map<animation_channel_target_t::path_t, std::string> table = {
         {animation_channel_target_t::path_t::translation_t, "translation"},
         {animation_channel_target_t::path_t::rotation_t, "rotation"},
@@ -541,8 +531,8 @@ static inline bool _dump(const animation_channel_target_t::path_t& val,
 }
 
 // Converts a animation_channel_target_t object to JSON
-static inline bool _dump(const animation_channel_target_t& val, json& js,
-                         _parse_stack& err) {
+static inline bool _dump(
+    const animation_channel_target_t& val, json& js, _parse_stack& err) {
     static const auto defval = animation_channel_target_t();
     if (!_dump((glTFProperty_t&)val, js, err)) return false;
     if (!_dump_begin_obj(js, err)) return false;
@@ -553,8 +543,8 @@ static inline bool _dump(const animation_channel_target_t& val, json& js,
 }
 
 // Equality check for defaults (might go away in the future)
-static inline bool operator==(const animation_channel_t& a,
-                              const animation_channel_t& b) {
+static inline bool operator==(
+    const animation_channel_t& a, const animation_channel_t& b) {
     if (!((glTFProperty_t&)a == (glTFProperty_t&)b)) return false;
     if (!(a.sampler == b.sampler)) return false;
     if (!(a.target == b.target)) return false;
@@ -562,8 +552,8 @@ static inline bool operator==(const animation_channel_t& a,
 }
 
 // Parses a animation_channel_t object
-static inline bool _parse(animation_channel_t& val, const json& js,
-                          _parse_stack& err) {
+static inline bool _parse(
+    animation_channel_t& val, const json& js, _parse_stack& err) {
     if (!_parse((glTFProperty_t&)val, js, err)) return false;
     if (!_parse_begin_obj(js, err)) return false;
     if (!_parse_attr(val.sampler, "sampler", true, js, err)) return false;
@@ -573,8 +563,8 @@ static inline bool _parse(animation_channel_t& val, const json& js,
 }
 
 // Converts a animation_channel_t object to JSON
-static inline bool _dump(const animation_channel_t& val, json& js,
-                         _parse_stack& err) {
+static inline bool _dump(
+    const animation_channel_t& val, json& js, _parse_stack& err) {
     static const auto defval = animation_channel_t();
     if (!_dump((glTFProperty_t&)val, js, err)) return false;
     if (!_dump_begin_obj(js, err)) return false;
@@ -587,8 +577,8 @@ static inline bool _dump(const animation_channel_t& val, json& js,
 }
 
 // Equality check for defaults (might go away in the future)
-static inline bool operator==(const animation_sampler_t& a,
-                              const animation_sampler_t& b) {
+static inline bool operator==(
+    const animation_sampler_t& a, const animation_sampler_t& b) {
     if (!((glTFProperty_t&)a == (glTFProperty_t&)b)) return false;
     if (!(a.input == b.input)) return false;
     if (!(a.interpolation == b.interpolation)) return false;
@@ -598,7 +588,7 @@ static inline bool operator==(const animation_sampler_t& a,
 
 // Parse a interpolation_t enum
 static inline bool _parse(animation_sampler_t::interpolation_t& val,
-                          const json& js, _parse_stack& err) {
+    const json& js, _parse_stack& err) {
     static std::map<std::string, animation_sampler_t::interpolation_t> table = {
         {"LINEAR", animation_sampler_t::interpolation_t::linear_t},
         {"STEP", animation_sampler_t::interpolation_t::step_t},
@@ -611,8 +601,8 @@ static inline bool _parse(animation_sampler_t::interpolation_t& val,
 }
 
 // Parses a animation_sampler_t object
-static inline bool _parse(animation_sampler_t& val, const json& js,
-                          _parse_stack& err) {
+static inline bool _parse(
+    animation_sampler_t& val, const json& js, _parse_stack& err) {
     if (!_parse((glTFProperty_t&)val, js, err)) return false;
     if (!_parse_begin_obj(js, err)) return false;
     if (!_parse_attr(val.input, "input", true, js, err)) return false;
@@ -625,7 +615,7 @@ static inline bool _parse(animation_sampler_t& val, const json& js,
 
 // Converts a interpolation_t enum to JSON
 static inline bool _dump(const animation_sampler_t::interpolation_t& val,
-                         json& js, _parse_stack& err) {
+    json& js, _parse_stack& err) {
     static std::map<animation_sampler_t::interpolation_t, std::string> table = {
         {animation_sampler_t::interpolation_t::linear_t, "LINEAR"},
         {animation_sampler_t::interpolation_t::step_t, "STEP"},
@@ -636,15 +626,15 @@ static inline bool _dump(const animation_sampler_t::interpolation_t& val,
 }
 
 // Converts a animation_sampler_t object to JSON
-static inline bool _dump(const animation_sampler_t& val, json& js,
-                         _parse_stack& err) {
+static inline bool _dump(
+    const animation_sampler_t& val, json& js, _parse_stack& err) {
     static const auto defval = animation_sampler_t();
     if (!_dump((glTFProperty_t&)val, js, err)) return false;
     if (!_dump_begin_obj(js, err)) return false;
     if (!_dump_attr(val.input, "input", defval.input, true, js, err))
         return false;
     if (!_dump_attr(val.interpolation, "interpolation", defval.interpolation,
-                    false, js, err))
+            false, js, err))
         return false;
     if (!_dump_attr(val.output, "output", defval.output, true, js, err))
         return false;
@@ -685,8 +675,8 @@ static inline bool _dump(const animation_t& val, json& js, _parse_stack& err) {
 }
 
 // Equality check for defaults (might go away in the future)
-static inline bool operator==(const asset_profile_t& a,
-                              const asset_profile_t& b) {
+static inline bool operator==(
+    const asset_profile_t& a, const asset_profile_t& b) {
     if (!((glTFProperty_t&)a == (glTFProperty_t&)b)) return false;
     if (!(a.api == b.api)) return false;
     if (!(a.version == b.version)) return false;
@@ -694,8 +684,8 @@ static inline bool operator==(const asset_profile_t& a,
 }
 
 // Parses a asset_profile_t object
-static inline bool _parse(asset_profile_t& val, const json& js,
-                          _parse_stack& err) {
+static inline bool _parse(
+    asset_profile_t& val, const json& js, _parse_stack& err) {
     if (!_parse((glTFProperty_t&)val, js, err)) return false;
     if (!_parse_begin_obj(js, err)) return false;
     if (!_parse_attr(val.api, "api", false, js, err)) return false;
@@ -705,8 +695,8 @@ static inline bool _parse(asset_profile_t& val, const json& js,
 }
 
 // Converts a asset_profile_t object to JSON
-static inline bool _dump(const asset_profile_t& val, json& js,
-                         _parse_stack& err) {
+static inline bool _dump(
+    const asset_profile_t& val, json& js, _parse_stack& err) {
     static const auto defval = asset_profile_t();
     if (!_dump((glTFProperty_t&)val, js, err)) return false;
     if (!_dump_begin_obj(js, err)) return false;
@@ -734,8 +724,8 @@ static inline bool _parse(asset_t& val, const json& js, _parse_stack& err) {
     if (!_parse_begin_obj(js, err)) return false;
     if (!_parse_attr(val.copyright, "copyright", false, js, err)) return false;
     if (!_parse_attr(val.generator, "generator", false, js, err)) return false;
-    if (!_parse_attr(val.premultipliedAlpha, "premultipliedAlpha", false, js,
-                     err))
+    if (!_parse_attr(
+            val.premultipliedAlpha, "premultipliedAlpha", false, js, err))
         return false;
     if (!_parse_attr(val.profile, "profile", false, js, err)) return false;
     if (!_parse_attr(val.version, "version", true, js, err)) return false;
@@ -748,14 +738,14 @@ static inline bool _dump(const asset_t& val, json& js, _parse_stack& err) {
     static const auto defval = asset_t();
     if (!_dump((glTFProperty_t&)val, js, err)) return false;
     if (!_dump_begin_obj(js, err)) return false;
-    if (!_dump_attr(val.copyright, "copyright", defval.copyright, false, js,
-                    err))
+    if (!_dump_attr(
+            val.copyright, "copyright", defval.copyright, false, js, err))
         return false;
-    if (!_dump_attr(val.generator, "generator", defval.generator, false, js,
-                    err))
+    if (!_dump_attr(
+            val.generator, "generator", defval.generator, false, js, err))
         return false;
     if (!_dump_attr(val.premultipliedAlpha, "premultipliedAlpha",
-                    defval.premultipliedAlpha, false, js, err))
+            defval.premultipliedAlpha, false, js, err))
         return false;
     if (!_dump_attr(val.profile, "profile", defval.profile, false, js, err))
         return false;
@@ -789,8 +779,8 @@ static inline bool _dump(const buffer_t& val, json& js, _parse_stack& err) {
     static const auto defval = buffer_t();
     if (!_dump((glTFChildOfRootProperty_t&)val, js, err)) return false;
     if (!_dump_begin_obj(js, err)) return false;
-    if (!_dump_attr(val.byteLength, "byteLength", defval.byteLength, true, js,
-                    err))
+    if (!_dump_attr(
+            val.byteLength, "byteLength", defval.byteLength, true, js, err))
         return false;
     if (!_dump_attr(val.uri, "uri", defval.uri, true, js, err)) return false;
     if (!_dump_end_obj(js, err)) return false;
@@ -809,8 +799,8 @@ static inline bool operator==(const bufferView_t& a, const bufferView_t& b) {
 }
 
 // Parse a target_t enum
-static inline bool _parse(bufferView_t::target_t& val, const json& js,
-                          _parse_stack& err) {
+static inline bool _parse(
+    bufferView_t::target_t& val, const json& js, _parse_stack& err) {
     static std::map<int, bufferView_t::target_t> table = {
         {34962, bufferView_t::target_t::array_buffer_t},
         {34963, bufferView_t::target_t::element_array_buffer_t},
@@ -823,8 +813,8 @@ static inline bool _parse(bufferView_t::target_t& val, const json& js,
 }
 
 // Parses a bufferView_t object
-static inline bool _parse(bufferView_t& val, const json& js,
-                          _parse_stack& err) {
+static inline bool _parse(
+    bufferView_t& val, const json& js, _parse_stack& err) {
     if (!_parse((glTFChildOfRootProperty_t&)val, js, err)) return false;
     if (!_parse_begin_obj(js, err)) return false;
     if (!_parse_attr(val.buffer, "buffer", true, js, err)) return false;
@@ -836,8 +826,8 @@ static inline bool _parse(bufferView_t& val, const json& js,
 }
 
 // Converts a target_t enum to JSON
-static inline bool _dump(const bufferView_t::target_t& val, json& js,
-                         _parse_stack& err) {
+static inline bool _dump(
+    const bufferView_t::target_t& val, json& js, _parse_stack& err) {
     static std::map<bufferView_t::target_t, int> table = {
         {bufferView_t::target_t::array_buffer_t, 34962},
         {bufferView_t::target_t::element_array_buffer_t, 34963},
@@ -854,11 +844,11 @@ static inline bool _dump(const bufferView_t& val, json& js, _parse_stack& err) {
     if (!_dump_begin_obj(js, err)) return false;
     if (!_dump_attr(val.buffer, "buffer", defval.buffer, true, js, err))
         return false;
-    if (!_dump_attr(val.byteLength, "byteLength", defval.byteLength, true, js,
-                    err))
+    if (!_dump_attr(
+            val.byteLength, "byteLength", defval.byteLength, true, js, err))
         return false;
-    if (!_dump_attr(val.byteOffset, "byteOffset", defval.byteOffset, true, js,
-                    err))
+    if (!_dump_attr(
+            val.byteOffset, "byteOffset", defval.byteOffset, true, js, err))
         return false;
     if (!_dump_attr(val.target, "target", defval.target, false, js, err))
         return false;
@@ -867,8 +857,8 @@ static inline bool _dump(const bufferView_t& val, json& js, _parse_stack& err) {
 }
 
 // Equality check for defaults (might go away in the future)
-static inline bool operator==(const camera_orthographic_t& a,
-                              const camera_orthographic_t& b) {
+static inline bool operator==(
+    const camera_orthographic_t& a, const camera_orthographic_t& b) {
     if (!((glTFProperty_t&)a == (glTFProperty_t&)b)) return false;
     if (!(a.xmag == b.xmag)) return false;
     if (!(a.ymag == b.ymag)) return false;
@@ -878,8 +868,8 @@ static inline bool operator==(const camera_orthographic_t& a,
 }
 
 // Parses a camera_orthographic_t object
-static inline bool _parse(camera_orthographic_t& val, const json& js,
-                          _parse_stack& err) {
+static inline bool _parse(
+    camera_orthographic_t& val, const json& js, _parse_stack& err) {
     if (!_parse((glTFProperty_t&)val, js, err)) return false;
     if (!_parse_begin_obj(js, err)) return false;
     if (!_parse_attr(val.xmag, "xmag", true, js, err)) return false;
@@ -891,8 +881,8 @@ static inline bool _parse(camera_orthographic_t& val, const json& js,
 }
 
 // Converts a camera_orthographic_t object to JSON
-static inline bool _dump(const camera_orthographic_t& val, json& js,
-                         _parse_stack& err) {
+static inline bool _dump(
+    const camera_orthographic_t& val, json& js, _parse_stack& err) {
     static const auto defval = camera_orthographic_t();
     if (!_dump((glTFProperty_t&)val, js, err)) return false;
     if (!_dump_begin_obj(js, err)) return false;
@@ -906,8 +896,8 @@ static inline bool _dump(const camera_orthographic_t& val, json& js,
 }
 
 // Equality check for defaults (might go away in the future)
-static inline bool operator==(const camera_perspective_t& a,
-                              const camera_perspective_t& b) {
+static inline bool operator==(
+    const camera_perspective_t& a, const camera_perspective_t& b) {
     if (!((glTFProperty_t&)a == (glTFProperty_t&)b)) return false;
     if (!(a.aspectRatio == b.aspectRatio)) return false;
     if (!(a.yfov == b.yfov)) return false;
@@ -917,8 +907,8 @@ static inline bool operator==(const camera_perspective_t& a,
 }
 
 // Parses a camera_perspective_t object
-static inline bool _parse(camera_perspective_t& val, const json& js,
-                          _parse_stack& err) {
+static inline bool _parse(
+    camera_perspective_t& val, const json& js, _parse_stack& err) {
     if (!_parse((glTFProperty_t&)val, js, err)) return false;
     if (!_parse_begin_obj(js, err)) return false;
     if (!_parse_attr(val.aspectRatio, "aspectRatio", false, js, err))
@@ -931,13 +921,13 @@ static inline bool _parse(camera_perspective_t& val, const json& js,
 }
 
 // Converts a camera_perspective_t object to JSON
-static inline bool _dump(const camera_perspective_t& val, json& js,
-                         _parse_stack& err) {
+static inline bool _dump(
+    const camera_perspective_t& val, json& js, _parse_stack& err) {
     static const auto defval = camera_perspective_t();
     if (!_dump((glTFProperty_t&)val, js, err)) return false;
     if (!_dump_begin_obj(js, err)) return false;
-    if (!_dump_attr(val.aspectRatio, "aspectRatio", defval.aspectRatio, false,
-                    js, err))
+    if (!_dump_attr(
+            val.aspectRatio, "aspectRatio", defval.aspectRatio, false, js, err))
         return false;
     if (!_dump_attr(val.yfov, "yfov", defval.yfov, true, js, err)) return false;
     if (!_dump_attr(val.zfar, "zfar", defval.zfar, false, js, err))
@@ -959,8 +949,8 @@ static inline bool operator==(const camera_t& a, const camera_t& b) {
 }
 
 // Parse a type_t enum
-static inline bool _parse(camera_t::type_t& val, const json& js,
-                          _parse_stack& err) {
+static inline bool _parse(
+    camera_t::type_t& val, const json& js, _parse_stack& err) {
     static std::map<std::string, camera_t::type_t> table = {
         {"perspective", camera_t::type_t::perspective_t},
         {"orthographic", camera_t::type_t::orthographic_t},
@@ -986,8 +976,8 @@ static inline bool _parse(camera_t& val, const json& js, _parse_stack& err) {
 }
 
 // Converts a type_t enum to JSON
-static inline bool _dump(const camera_t::type_t& val, json& js,
-                         _parse_stack& err) {
+static inline bool _dump(
+    const camera_t::type_t& val, json& js, _parse_stack& err) {
     static std::map<camera_t::type_t, std::string> table = {
         {camera_t::type_t::perspective_t, "perspective"},
         {camera_t::type_t::orthographic_t, "orthographic"},
@@ -1003,10 +993,10 @@ static inline bool _dump(const camera_t& val, json& js, _parse_stack& err) {
     if (!_dump((glTFChildOfRootProperty_t&)val, js, err)) return false;
     if (!_dump_begin_obj(js, err)) return false;
     if (!_dump_attr(val.orthographic, "orthographic", defval.orthographic,
-                    false, js, err))
+            false, js, err))
         return false;
-    if (!_dump_attr(val.perspective, "perspective", defval.perspective, false,
-                    js, err))
+    if (!_dump_attr(
+            val.perspective, "perspective", defval.perspective, false, js, err))
         return false;
     if (!_dump_attr(val.type, "type", defval.type, true, js, err)) return false;
     if (!_dump_end_obj(js, err)) return false;
@@ -1014,8 +1004,8 @@ static inline bool _dump(const camera_t& val, json& js, _parse_stack& err) {
 }
 
 // Equality check for defaults (might go away in the future)
-static inline bool operator==(const image_KHR_binary_glTF_t& a,
-                              const image_KHR_binary_glTF_t& b) {
+static inline bool operator==(
+    const image_KHR_binary_glTF_t& a, const image_KHR_binary_glTF_t& b) {
     if (!(a.bufferView == b.bufferView)) return false;
     if (!(a.height == b.height)) return false;
     if (!(a.mimeType == b.mimeType)) return false;
@@ -1024,8 +1014,8 @@ static inline bool operator==(const image_KHR_binary_glTF_t& a,
 }
 
 // Parses a image_KHR_binary_glTF_t object
-static inline bool _parse(image_KHR_binary_glTF_t& val, const json& js,
-                          _parse_stack& err) {
+static inline bool _parse(
+    image_KHR_binary_glTF_t& val, const json& js, _parse_stack& err) {
     if (!_parse_begin_obj(js, err)) return false;
     if (!_parse_attr(val.bufferView, "bufferView", true, js, err)) return false;
     if (!_parse_attr(val.height, "height", true, js, err)) return false;
@@ -1036,12 +1026,12 @@ static inline bool _parse(image_KHR_binary_glTF_t& val, const json& js,
 }
 
 // Converts a image_KHR_binary_glTF_t object to JSON
-static inline bool _dump(const image_KHR_binary_glTF_t& val, json& js,
-                         _parse_stack& err) {
+static inline bool _dump(
+    const image_KHR_binary_glTF_t& val, json& js, _parse_stack& err) {
     static const auto defval = image_KHR_binary_glTF_t();
     if (!_dump_begin_obj(js, err)) return false;
-    if (!_dump_attr(val.bufferView, "bufferView", defval.bufferView, true, js,
-                    err))
+    if (!_dump_attr(
+            val.bufferView, "bufferView", defval.bufferView, true, js, err))
         return false;
     if (!_dump_attr(val.height, "height", defval.height, true, js, err))
         return false;
@@ -1069,7 +1059,7 @@ static inline bool _parse(image_t& val, const json& js, _parse_stack& err) {
     if (!_parse_attr(val.uri, "uri", true, js, err)) return false;
     if (js.find("extensions") != js.end()) {
         if (!_parse_attr(val.KHR_binary_glTF, "KHR_binary_glTF", false,
-                         js["extensions"], err))
+                js["extensions"], err))
             return false;
     };
     if (!_parse_end_obj(js, err)) return false;
@@ -1084,7 +1074,7 @@ static inline bool _dump(const image_t& val, json& js, _parse_stack& err) {
     if (!_dump_attr(val.uri, "uri", defval.uri, true, js, err)) return false;
     if (val.KHR_binary_glTF) {
         if (!_dump_attr(val.KHR_binary_glTF, "KHR_binary_glTF",
-                        defval.KHR_binary_glTF, false, js["extensions"], err))
+                defval.KHR_binary_glTF, false, js["extensions"], err))
             return false;
     };
     if (!_dump_end_obj(js, err)) return false;
@@ -1093,7 +1083,7 @@ static inline bool _dump(const image_t& val, json& js, _parse_stack& err) {
 
 // Equality check for defaults (might go away in the future)
 static inline bool operator==(const material_values_KHR_materials_common_t& a,
-                              const material_values_KHR_materials_common_t& b) {
+    const material_values_KHR_materials_common_t& b) {
     if (!(a.ambientFactor == b.ambientFactor)) return false;
     if (!(a.ambientTexture == b.ambientTexture)) return false;
     if (!(a.diffuseFactor == b.diffuseFactor)) return false;
@@ -1109,7 +1099,7 @@ static inline bool operator==(const material_values_KHR_materials_common_t& a,
 
 // Parses a material_values_KHR_materials_common_t object
 static inline bool _parse(material_values_KHR_materials_common_t& val,
-                          const json& js, _parse_stack& err) {
+    const json& js, _parse_stack& err) {
     if (!_parse_begin_obj(js, err)) return false;
     if (!_parse_attr(val.ambientFactor, "ambientFactor", false, js, err))
         return false;
@@ -1136,38 +1126,38 @@ static inline bool _parse(material_values_KHR_materials_common_t& val,
 
 // Converts a material_values_KHR_materials_common_t object to JSON
 static inline bool _dump(const material_values_KHR_materials_common_t& val,
-                         json& js, _parse_stack& err) {
+    json& js, _parse_stack& err) {
     static const auto defval = material_values_KHR_materials_common_t();
     if (!_dump_begin_obj(js, err)) return false;
     if (!_dump_attr(val.ambientFactor, "ambientFactor", defval.ambientFactor,
-                    false, js, err))
+            false, js, err))
         return false;
     if (!_dump_attr(val.ambientTexture, "ambientTexture", defval.ambientTexture,
-                    false, js, err))
+            false, js, err))
         return false;
     if (!_dump_attr(val.diffuseFactor, "diffuseFactor", defval.diffuseFactor,
-                    false, js, err))
+            false, js, err))
         return false;
     if (!_dump_attr(val.diffuseTexture, "diffuseTexture", defval.diffuseTexture,
-                    false, js, err))
+            false, js, err))
         return false;
     if (!_dump_attr(val.emissionFactor, "emissionFactor", defval.emissionFactor,
-                    false, js, err))
+            false, js, err))
         return false;
     if (!_dump_attr(val.emissionTexture, "emissionTexture",
-                    defval.emissionTexture, false, js, err))
+            defval.emissionTexture, false, js, err))
         return false;
-    if (!_dump_attr(val.shininess, "shininess", defval.shininess, false, js,
-                    err))
+    if (!_dump_attr(
+            val.shininess, "shininess", defval.shininess, false, js, err))
         return false;
     if (!_dump_attr(val.specularFactor, "specularFactor", defval.specularFactor,
-                    false, js, err))
+            false, js, err))
         return false;
     if (!_dump_attr(val.specularTexture, "specularTexture",
-                    defval.specularTexture, false, js, err))
+            defval.specularTexture, false, js, err))
         return false;
     if (!_dump_attr(val.transparency, "transparency", defval.transparency,
-                    false, js, err))
+            false, js, err))
         return false;
     if (!_dump_end_obj(js, err)) return false;
     return true;
@@ -1175,7 +1165,7 @@ static inline bool _dump(const material_values_KHR_materials_common_t& val,
 
 // Equality check for defaults (might go away in the future)
 static inline bool operator==(const material_KHR_materials_common_t& a,
-                              const material_KHR_materials_common_t& b) {
+    const material_KHR_materials_common_t& b) {
     if (!(a.doubleSided == b.doubleSided)) return false;
     if (!(a.jointCount == b.jointCount)) return false;
     if (!(a.technique == b.technique)) return false;
@@ -1185,8 +1175,8 @@ static inline bool operator==(const material_KHR_materials_common_t& a,
 }
 
 // Parses a material_KHR_materials_common_t object
-static inline bool _parse(material_KHR_materials_common_t& val, const json& js,
-                          _parse_stack& err) {
+static inline bool _parse(
+    material_KHR_materials_common_t& val, const json& js, _parse_stack& err) {
     if (!_parse_begin_obj(js, err)) return false;
     if (!_parse_attr(val.doubleSided, "doubleSided", false, js, err))
         return false;
@@ -1201,21 +1191,21 @@ static inline bool _parse(material_KHR_materials_common_t& val, const json& js,
 }
 
 // Converts a material_KHR_materials_common_t object to JSON
-static inline bool _dump(const material_KHR_materials_common_t& val, json& js,
-                         _parse_stack& err) {
+static inline bool _dump(
+    const material_KHR_materials_common_t& val, json& js, _parse_stack& err) {
     static const auto defval = material_KHR_materials_common_t();
     if (!_dump_begin_obj(js, err)) return false;
-    if (!_dump_attr(val.doubleSided, "doubleSided", defval.doubleSided, false,
-                    js, err))
+    if (!_dump_attr(
+            val.doubleSided, "doubleSided", defval.doubleSided, false, js, err))
         return false;
-    if (!_dump_attr(val.jointCount, "jointCount", defval.jointCount, false, js,
-                    err))
+    if (!_dump_attr(
+            val.jointCount, "jointCount", defval.jointCount, false, js, err))
         return false;
-    if (!_dump_attr(val.technique, "technique", defval.technique, true, js,
-                    err))
+    if (!_dump_attr(
+            val.technique, "technique", defval.technique, true, js, err))
         return false;
-    if (!_dump_attr(val.transparent, "transparent", defval.transparent, false,
-                    js, err))
+    if (!_dump_attr(
+            val.transparent, "transparent", defval.transparent, false, js, err))
         return false;
     if (!_dump_attr(val.values, "values", defval.values, false, js, err))
         return false;
@@ -1225,8 +1215,8 @@ static inline bool _dump(const material_KHR_materials_common_t& val, json& js,
 
 // Parses a arrayValues object
 
-static inline bool _parse(arrayValues_t& val, const json& js,
-                          _parse_stack& err) {
+static inline bool _parse(
+    arrayValues_t& val, const json& js, _parse_stack& err) {
     // alsp support constants
     if (_parse(val.items_number, js, err)) return true;
     if (_parse(val.items_string, js, err)) return true;
@@ -1265,8 +1255,8 @@ static inline bool operator==(const arrayValues_t& a, const arrayValues_t& b) {
 
 // Converts a arrayValues object to JSON
 
-static inline bool _dump(const arrayValues_t& val, json& js,
-                         _parse_stack& err) {
+static inline bool _dump(
+    const arrayValues_t& val, json& js, _parse_stack& err) {
     if (!val.items_number.empty()) {
         if (_dump(val.items_number, js, err)) return false;
     } else if (!val.items_string.empty()) {
@@ -1297,7 +1287,7 @@ static inline bool _parse(material_t& val, const json& js, _parse_stack& err) {
     if (!_parse_attr(val.values, "values", false, js, err)) return false;
     if (js.find("extensions") != js.end()) {
         if (!_parse_attr(val.KHR_materials_common, "KHR_materials_common",
-                         false, js["extensions"], err))
+                false, js["extensions"], err))
             return false;
     };
     if (!_parse_end_obj(js, err)) return false;
@@ -1309,15 +1299,14 @@ static inline bool _dump(const material_t& val, json& js, _parse_stack& err) {
     static const auto defval = material_t();
     if (!_dump((glTFChildOfRootProperty_t&)val, js, err)) return false;
     if (!_dump_begin_obj(js, err)) return false;
-    if (!_dump_attr(val.technique, "technique", defval.technique, false, js,
-                    err))
+    if (!_dump_attr(
+            val.technique, "technique", defval.technique, false, js, err))
         return false;
     if (!_dump_attr(val.values, "values", defval.values, false, js, err))
         return false;
     if (val.KHR_materials_common) {
         if (!_dump_attr(val.KHR_materials_common, "KHR_materials_common",
-                        defval.KHR_materials_common, false, js["extensions"],
-                        err))
+                defval.KHR_materials_common, false, js["extensions"], err))
             return false;
     };
     if (!_dump_end_obj(js, err)) return false;
@@ -1325,8 +1314,8 @@ static inline bool _dump(const material_t& val, json& js, _parse_stack& err) {
 }
 
 // Equality check for defaults (might go away in the future)
-static inline bool operator==(const mesh_primitive_t& a,
-                              const mesh_primitive_t& b) {
+static inline bool operator==(
+    const mesh_primitive_t& a, const mesh_primitive_t& b) {
     if (!((glTFProperty_t&)a == (glTFProperty_t&)b)) return false;
     if (!(a.attributes == b.attributes)) return false;
     if (!(a.indices == b.indices)) return false;
@@ -1336,8 +1325,8 @@ static inline bool operator==(const mesh_primitive_t& a,
 }
 
 // Parse a mode_t enum
-static inline bool _parse(mesh_primitive_t::mode_t& val, const json& js,
-                          _parse_stack& err) {
+static inline bool _parse(
+    mesh_primitive_t::mode_t& val, const json& js, _parse_stack& err) {
     static std::map<int, mesh_primitive_t::mode_t> table = {
         {0, mesh_primitive_t::mode_t::points_t},
         {1, mesh_primitive_t::mode_t::lines_t},
@@ -1355,8 +1344,8 @@ static inline bool _parse(mesh_primitive_t::mode_t& val, const json& js,
 }
 
 // Parses a mesh_primitive_t object
-static inline bool _parse(mesh_primitive_t& val, const json& js,
-                          _parse_stack& err) {
+static inline bool _parse(
+    mesh_primitive_t& val, const json& js, _parse_stack& err) {
     if (!_parse((glTFProperty_t&)val, js, err)) return false;
     if (!_parse_begin_obj(js, err)) return false;
     if (!_parse_attr(val.attributes, "attributes", true, js, err)) return false;
@@ -1368,8 +1357,8 @@ static inline bool _parse(mesh_primitive_t& val, const json& js,
 }
 
 // Converts a mode_t enum to JSON
-static inline bool _dump(const mesh_primitive_t::mode_t& val, json& js,
-                         _parse_stack& err) {
+static inline bool _dump(
+    const mesh_primitive_t::mode_t& val, json& js, _parse_stack& err) {
     static std::map<mesh_primitive_t::mode_t, int> table = {
         {mesh_primitive_t::mode_t::points_t, 0},
         {mesh_primitive_t::mode_t::lines_t, 1},
@@ -1385,13 +1374,13 @@ static inline bool _dump(const mesh_primitive_t::mode_t& val, json& js,
 }
 
 // Converts a mesh_primitive_t object to JSON
-static inline bool _dump(const mesh_primitive_t& val, json& js,
-                         _parse_stack& err) {
+static inline bool _dump(
+    const mesh_primitive_t& val, json& js, _parse_stack& err) {
     static const auto defval = mesh_primitive_t();
     if (!_dump((glTFProperty_t&)val, js, err)) return false;
     if (!_dump_begin_obj(js, err)) return false;
-    if (!_dump_attr(val.attributes, "attributes", defval.attributes, true, js,
-                    err))
+    if (!_dump_attr(
+            val.attributes, "attributes", defval.attributes, true, js, err))
         return false;
     if (!_dump_attr(val.indices, "indices", defval.indices, false, js, err))
         return false;
@@ -1425,8 +1414,8 @@ static inline bool _dump(const mesh_t& val, json& js, _parse_stack& err) {
     static const auto defval = mesh_t();
     if (!_dump((glTFChildOfRootProperty_t&)val, js, err)) return false;
     if (!_dump_begin_obj(js, err)) return false;
-    if (!_dump_attr(val.primitives, "primitives", defval.primitives, true, js,
-                    err))
+    if (!_dump_attr(
+            val.primitives, "primitives", defval.primitives, true, js, err))
         return false;
     if (!_dump_end_obj(js, err)) return false;
     return true;
@@ -1434,14 +1423,14 @@ static inline bool _dump(const mesh_t& val, json& js, _parse_stack& err) {
 
 // Equality check for defaults (might go away in the future)
 static inline bool operator==(const node_KHR_materials_common_t& a,
-                              const node_KHR_materials_common_t& b) {
+    const node_KHR_materials_common_t& b) {
     if (!(a.light == b.light)) return false;
     return true;
 }
 
 // Parses a node_KHR_materials_common_t object
-static inline bool _parse(node_KHR_materials_common_t& val, const json& js,
-                          _parse_stack& err) {
+static inline bool _parse(
+    node_KHR_materials_common_t& val, const json& js, _parse_stack& err) {
     if (!_parse_begin_obj(js, err)) return false;
     if (!_parse_attr(val.light, "light", false, js, err)) return false;
     if (!_parse_end_obj(js, err)) return false;
@@ -1449,8 +1438,8 @@ static inline bool _parse(node_KHR_materials_common_t& val, const json& js,
 }
 
 // Converts a node_KHR_materials_common_t object to JSON
-static inline bool _dump(const node_KHR_materials_common_t& val, json& js,
-                         _parse_stack& err) {
+static inline bool _dump(
+    const node_KHR_materials_common_t& val, json& js, _parse_stack& err) {
     static const auto defval = node_KHR_materials_common_t();
     if (!_dump_begin_obj(js, err)) return false;
     if (!_dump_attr(val.light, "light", defval.light, false, js, err))
@@ -1494,7 +1483,7 @@ static inline bool _parse(node_t& val, const json& js, _parse_stack& err) {
         return false;
     if (js.find("extensions") != js.end()) {
         if (!_parse_attr(val.KHR_materials_common, "KHR_materials_common",
-                         false, js["extensions"], err))
+                false, js["extensions"], err))
             return false;
     };
     if (!_parse_end_obj(js, err)) return false;
@@ -1510,8 +1499,8 @@ static inline bool _dump(const node_t& val, json& js, _parse_stack& err) {
         return false;
     if (!_dump_attr(val.children, "children", defval.children, false, js, err))
         return false;
-    if (!_dump_attr(val.jointName, "jointName", defval.jointName, false, js,
-                    err))
+    if (!_dump_attr(
+            val.jointName, "jointName", defval.jointName, false, js, err))
         return false;
     if (!_dump_attr(val.matrix, "matrix", defval.matrix, false, js, err))
         return false;
@@ -1521,18 +1510,17 @@ static inline bool _dump(const node_t& val, json& js, _parse_stack& err) {
         return false;
     if (!_dump_attr(val.scale, "scale", defval.scale, false, js, err))
         return false;
-    if (!_dump_attr(val.skeletons, "skeletons", defval.skeletons, false, js,
-                    err))
+    if (!_dump_attr(
+            val.skeletons, "skeletons", defval.skeletons, false, js, err))
         return false;
     if (!_dump_attr(val.skin, "skin", defval.skin, false, js, err))
         return false;
-    if (!_dump_attr(val.translation, "translation", defval.translation, false,
-                    js, err))
+    if (!_dump_attr(
+            val.translation, "translation", defval.translation, false, js, err))
         return false;
     if (val.KHR_materials_common) {
         if (!_dump_attr(val.KHR_materials_common, "KHR_materials_common",
-                        defval.KHR_materials_common, false, js["extensions"],
-                        err))
+                defval.KHR_materials_common, false, js["extensions"], err))
             return false;
     };
     if (!_dump_end_obj(js, err)) return false;
@@ -1568,14 +1556,14 @@ static inline bool _dump(const program_t& val, json& js, _parse_stack& err) {
     static const auto defval = program_t();
     if (!_dump((glTFChildOfRootProperty_t&)val, js, err)) return false;
     if (!_dump_begin_obj(js, err)) return false;
-    if (!_dump_attr(val.attributes, "attributes", defval.attributes, false, js,
-                    err))
+    if (!_dump_attr(
+            val.attributes, "attributes", defval.attributes, false, js, err))
         return false;
     if (!_dump_attr(val.fragmentShader, "fragmentShader", defval.fragmentShader,
-                    true, js, err))
+            true, js, err))
         return false;
     if (!_dump_attr(val.vertexShader, "vertexShader", defval.vertexShader, true,
-                    js, err))
+            js, err))
         return false;
     if (!_dump_end_obj(js, err)) return false;
     return true;
@@ -1593,8 +1581,8 @@ static inline bool operator==(const sampler_t& a, const sampler_t& b) {
 }
 
 // Parse a magFilter_t enum
-static inline bool _parse(sampler_t::magFilter_t& val, const json& js,
-                          _parse_stack& err) {
+static inline bool _parse(
+    sampler_t::magFilter_t& val, const json& js, _parse_stack& err) {
     static std::map<int, sampler_t::magFilter_t> table = {
         {9728, sampler_t::magFilter_t::nearest_t},
         {9729, sampler_t::magFilter_t::linear_t},
@@ -1607,8 +1595,8 @@ static inline bool _parse(sampler_t::magFilter_t& val, const json& js,
 }
 
 // Parse a minFilter_t enum
-static inline bool _parse(sampler_t::minFilter_t& val, const json& js,
-                          _parse_stack& err) {
+static inline bool _parse(
+    sampler_t::minFilter_t& val, const json& js, _parse_stack& err) {
     static std::map<int, sampler_t::minFilter_t> table = {
         {9728, sampler_t::minFilter_t::nearest_t},
         {9729, sampler_t::minFilter_t::linear_t},
@@ -1625,8 +1613,8 @@ static inline bool _parse(sampler_t::minFilter_t& val, const json& js,
 }
 
 // Parse a wrapS_t enum
-static inline bool _parse(sampler_t::wrapS_t& val, const json& js,
-                          _parse_stack& err) {
+static inline bool _parse(
+    sampler_t::wrapS_t& val, const json& js, _parse_stack& err) {
     static std::map<int, sampler_t::wrapS_t> table = {
         {33071, sampler_t::wrapS_t::clamp_to_edge_t},
         {33648, sampler_t::wrapS_t::mirrored_repeat_t},
@@ -1640,8 +1628,8 @@ static inline bool _parse(sampler_t::wrapS_t& val, const json& js,
 }
 
 // Parse a wrapT_t enum
-static inline bool _parse(sampler_t::wrapT_t& val, const json& js,
-                          _parse_stack& err) {
+static inline bool _parse(
+    sampler_t::wrapT_t& val, const json& js, _parse_stack& err) {
     static std::map<int, sampler_t::wrapT_t> table = {
         {33071, sampler_t::wrapT_t::clamp_to_edge_t},
         {33648, sampler_t::wrapT_t::mirrored_repeat_t},
@@ -1667,8 +1655,8 @@ static inline bool _parse(sampler_t& val, const json& js, _parse_stack& err) {
 }
 
 // Converts a magFilter_t enum to JSON
-static inline bool _dump(const sampler_t::magFilter_t& val, json& js,
-                         _parse_stack& err) {
+static inline bool _dump(
+    const sampler_t::magFilter_t& val, json& js, _parse_stack& err) {
     static std::map<sampler_t::magFilter_t, int> table = {
         {sampler_t::magFilter_t::nearest_t, 9728},
         {sampler_t::magFilter_t::linear_t, 9729},
@@ -1679,8 +1667,8 @@ static inline bool _dump(const sampler_t::magFilter_t& val, json& js,
 }
 
 // Converts a minFilter_t enum to JSON
-static inline bool _dump(const sampler_t::minFilter_t& val, json& js,
-                         _parse_stack& err) {
+static inline bool _dump(
+    const sampler_t::minFilter_t& val, json& js, _parse_stack& err) {
     static std::map<sampler_t::minFilter_t, int> table = {
         {sampler_t::minFilter_t::nearest_t, 9728},
         {sampler_t::minFilter_t::linear_t, 9729},
@@ -1695,8 +1683,8 @@ static inline bool _dump(const sampler_t::minFilter_t& val, json& js,
 }
 
 // Converts a wrapS_t enum to JSON
-static inline bool _dump(const sampler_t::wrapS_t& val, json& js,
-                         _parse_stack& err) {
+static inline bool _dump(
+    const sampler_t::wrapS_t& val, json& js, _parse_stack& err) {
     static std::map<sampler_t::wrapS_t, int> table = {
         {sampler_t::wrapS_t::clamp_to_edge_t, 33071},
         {sampler_t::wrapS_t::mirrored_repeat_t, 33648},
@@ -1708,8 +1696,8 @@ static inline bool _dump(const sampler_t::wrapS_t& val, json& js,
 }
 
 // Converts a wrapT_t enum to JSON
-static inline bool _dump(const sampler_t::wrapT_t& val, json& js,
-                         _parse_stack& err) {
+static inline bool _dump(
+    const sampler_t::wrapT_t& val, json& js, _parse_stack& err) {
     static std::map<sampler_t::wrapT_t, int> table = {
         {sampler_t::wrapT_t::clamp_to_edge_t, 33071},
         {sampler_t::wrapT_t::mirrored_repeat_t, 33648},
@@ -1725,11 +1713,11 @@ static inline bool _dump(const sampler_t& val, json& js, _parse_stack& err) {
     static const auto defval = sampler_t();
     if (!_dump((glTFChildOfRootProperty_t&)val, js, err)) return false;
     if (!_dump_begin_obj(js, err)) return false;
-    if (!_dump_attr(val.magFilter, "magFilter", defval.magFilter, false, js,
-                    err))
+    if (!_dump_attr(
+            val.magFilter, "magFilter", defval.magFilter, false, js, err))
         return false;
-    if (!_dump_attr(val.minFilter, "minFilter", defval.minFilter, false, js,
-                    err))
+    if (!_dump_attr(
+            val.minFilter, "minFilter", defval.minFilter, false, js, err))
         return false;
     if (!_dump_attr(val.wrapS, "wrapS", defval.wrapS, false, js, err))
         return false;
@@ -1768,15 +1756,15 @@ static inline bool _dump(const scene_t& val, json& js, _parse_stack& err) {
 }
 
 // Equality check for defaults (might go away in the future)
-static inline bool operator==(const shader_KHR_binary_glTF_t& a,
-                              const shader_KHR_binary_glTF_t& b) {
+static inline bool operator==(
+    const shader_KHR_binary_glTF_t& a, const shader_KHR_binary_glTF_t& b) {
     if (!(a.bufferView == b.bufferView)) return false;
     return true;
 }
 
 // Parses a shader_KHR_binary_glTF_t object
-static inline bool _parse(shader_KHR_binary_glTF_t& val, const json& js,
-                          _parse_stack& err) {
+static inline bool _parse(
+    shader_KHR_binary_glTF_t& val, const json& js, _parse_stack& err) {
     if (!_parse_begin_obj(js, err)) return false;
     if (!_parse_attr(val.bufferView, "bufferView", true, js, err)) return false;
     if (!_parse_end_obj(js, err)) return false;
@@ -1784,12 +1772,12 @@ static inline bool _parse(shader_KHR_binary_glTF_t& val, const json& js,
 }
 
 // Converts a shader_KHR_binary_glTF_t object to JSON
-static inline bool _dump(const shader_KHR_binary_glTF_t& val, json& js,
-                         _parse_stack& err) {
+static inline bool _dump(
+    const shader_KHR_binary_glTF_t& val, json& js, _parse_stack& err) {
     static const auto defval = shader_KHR_binary_glTF_t();
     if (!_dump_begin_obj(js, err)) return false;
-    if (!_dump_attr(val.bufferView, "bufferView", defval.bufferView, true, js,
-                    err))
+    if (!_dump_attr(
+            val.bufferView, "bufferView", defval.bufferView, true, js, err))
         return false;
     if (!_dump_end_obj(js, err)) return false;
     return true;
@@ -1806,8 +1794,8 @@ static inline bool operator==(const shader_t& a, const shader_t& b) {
 }
 
 // Parse a type_t enum
-static inline bool _parse(shader_t::type_t& val, const json& js,
-                          _parse_stack& err) {
+static inline bool _parse(
+    shader_t::type_t& val, const json& js, _parse_stack& err) {
     static std::map<int, shader_t::type_t> table = {
         {35632, shader_t::type_t::fragment_shader_t},
         {35633, shader_t::type_t::vertex_shader_t},
@@ -1827,7 +1815,7 @@ static inline bool _parse(shader_t& val, const json& js, _parse_stack& err) {
     if (!_parse_attr(val.uri, "uri", true, js, err)) return false;
     if (js.find("extensions") != js.end()) {
         if (!_parse_attr(val.KHR_binary_glTF, "KHR_binary_glTF", false,
-                         js["extensions"], err))
+                js["extensions"], err))
             return false;
     };
     if (!_parse_end_obj(js, err)) return false;
@@ -1835,8 +1823,8 @@ static inline bool _parse(shader_t& val, const json& js, _parse_stack& err) {
 }
 
 // Converts a type_t enum to JSON
-static inline bool _dump(const shader_t::type_t& val, json& js,
-                         _parse_stack& err) {
+static inline bool _dump(
+    const shader_t::type_t& val, json& js, _parse_stack& err) {
     static std::map<shader_t::type_t, int> table = {
         {shader_t::type_t::fragment_shader_t, 35632},
         {shader_t::type_t::vertex_shader_t, 35633},
@@ -1855,7 +1843,7 @@ static inline bool _dump(const shader_t& val, json& js, _parse_stack& err) {
     if (!_dump_attr(val.uri, "uri", defval.uri, true, js, err)) return false;
     if (val.KHR_binary_glTF) {
         if (!_dump_attr(val.KHR_binary_glTF, "KHR_binary_glTF",
-                        defval.KHR_binary_glTF, false, js["extensions"], err))
+                defval.KHR_binary_glTF, false, js["extensions"], err))
             return false;
     };
     if (!_dump_end_obj(js, err)) return false;
@@ -1878,8 +1866,8 @@ static inline bool _parse(skin_t& val, const json& js, _parse_stack& err) {
     if (!_parse_begin_obj(js, err)) return false;
     if (!_parse_attr(val.bindShapeMatrix, "bindShapeMatrix", false, js, err))
         return false;
-    if (!_parse_attr(val.inverseBindMatrices, "inverseBindMatrices", false, js,
-                     err))
+    if (!_parse_attr(
+            val.inverseBindMatrices, "inverseBindMatrices", false, js, err))
         return false;
     if (!_parse_attr(val.jointNames, "jointNames", true, js, err)) return false;
     if (!_parse_end_obj(js, err)) return false;
@@ -1892,21 +1880,21 @@ static inline bool _dump(const skin_t& val, json& js, _parse_stack& err) {
     if (!_dump((glTFChildOfRootProperty_t&)val, js, err)) return false;
     if (!_dump_begin_obj(js, err)) return false;
     if (!_dump_attr(val.bindShapeMatrix, "bindShapeMatrix",
-                    defval.bindShapeMatrix, false, js, err))
+            defval.bindShapeMatrix, false, js, err))
         return false;
     if (!_dump_attr(val.inverseBindMatrices, "inverseBindMatrices",
-                    defval.inverseBindMatrices, false, js, err))
+            defval.inverseBindMatrices, false, js, err))
         return false;
-    if (!_dump_attr(val.jointNames, "jointNames", defval.jointNames, true, js,
-                    err))
+    if (!_dump_attr(
+            val.jointNames, "jointNames", defval.jointNames, true, js, err))
         return false;
     if (!_dump_end_obj(js, err)) return false;
     return true;
 }
 
 // Equality check for defaults (might go away in the future)
-static inline bool operator==(const technique_parameters_t& a,
-                              const technique_parameters_t& b) {
+static inline bool operator==(
+    const technique_parameters_t& a, const technique_parameters_t& b) {
     if (!((glTFProperty_t&)a == (glTFProperty_t&)b)) return false;
     if (!(a.count == b.count)) return false;
     if (!(a.node == b.node)) return false;
@@ -1917,8 +1905,8 @@ static inline bool operator==(const technique_parameters_t& a,
 }
 
 // Parse a type_t enum
-static inline bool _parse(technique_parameters_t::type_t& val, const json& js,
-                          _parse_stack& err) {
+static inline bool _parse(
+    technique_parameters_t::type_t& val, const json& js, _parse_stack& err) {
     static std::map<int, technique_parameters_t::type_t> table = {
         {5120, technique_parameters_t::type_t::byte_t},
         {5121, technique_parameters_t::type_t::unsigned_byte_t},
@@ -1950,8 +1938,8 @@ static inline bool _parse(technique_parameters_t::type_t& val, const json& js,
 }
 
 // Parses a technique_parameters_t object
-static inline bool _parse(technique_parameters_t& val, const json& js,
-                          _parse_stack& err) {
+static inline bool _parse(
+    technique_parameters_t& val, const json& js, _parse_stack& err) {
     if (!_parse((glTFProperty_t&)val, js, err)) return false;
     if (!_parse_begin_obj(js, err)) return false;
     if (!_parse_attr(val.count, "count", false, js, err)) return false;
@@ -1964,8 +1952,8 @@ static inline bool _parse(technique_parameters_t& val, const json& js,
 }
 
 // Converts a type_t enum to JSON
-static inline bool _dump(const technique_parameters_t::type_t& val, json& js,
-                         _parse_stack& err) {
+static inline bool _dump(
+    const technique_parameters_t::type_t& val, json& js, _parse_stack& err) {
     static std::map<technique_parameters_t::type_t, int> table = {
         {technique_parameters_t::type_t::byte_t, 5120},
         {technique_parameters_t::type_t::unsigned_byte_t, 5121},
@@ -1995,8 +1983,8 @@ static inline bool _dump(const technique_parameters_t::type_t& val, json& js,
 }
 
 // Converts a technique_parameters_t object to JSON
-static inline bool _dump(const technique_parameters_t& val, json& js,
-                         _parse_stack& err) {
+static inline bool _dump(
+    const technique_parameters_t& val, json& js, _parse_stack& err) {
     static const auto defval = technique_parameters_t();
     if (!_dump((glTFProperty_t&)val, js, err)) return false;
     if (!_dump_begin_obj(js, err)) return false;
@@ -2015,7 +2003,7 @@ static inline bool _dump(const technique_parameters_t& val, json& js,
 
 // Equality check for defaults (might go away in the future)
 static inline bool operator==(const technique_states_functions_t& a,
-                              const technique_states_functions_t& b) {
+    const technique_states_functions_t& b) {
     if (!((glTFProperty_t&)a == (glTFProperty_t&)b)) return false;
     if (!(a.blendColor == b.blendColor)) return false;
     if (!(a.blendEquationSeparate == b.blendEquationSeparate)) return false;
@@ -2037,8 +2025,8 @@ static inline bool _parse(
     _parse_stack& err) {
     static std::map<int, technique_states_functions_t::blendEquationSeparate_t>
         table = {
-            {32774,
-             technique_states_functions_t::blendEquationSeparate_t::func_add_t},
+            {32774, technique_states_functions_t::blendEquationSeparate_t::
+                        func_add_t},
             {32778, technique_states_functions_t::blendEquationSeparate_t::
                         func_subtract_t},
             {32779, technique_states_functions_t::blendEquationSeparate_t::
@@ -2060,19 +2048,19 @@ static inline bool _parse(
             {0, technique_states_functions_t::blendFuncSeparate_t::zero_t},
             {1, technique_states_functions_t::blendFuncSeparate_t::one_t},
             {768,
-             technique_states_functions_t::blendFuncSeparate_t::src_color_t},
+                technique_states_functions_t::blendFuncSeparate_t::src_color_t},
             {769, technique_states_functions_t::blendFuncSeparate_t::
                       one_minus_src_color_t},
             {774,
-             technique_states_functions_t::blendFuncSeparate_t::dst_color_t},
+                technique_states_functions_t::blendFuncSeparate_t::dst_color_t},
             {775, technique_states_functions_t::blendFuncSeparate_t::
                       one_minus_dst_color_t},
             {770,
-             technique_states_functions_t::blendFuncSeparate_t::src_alpha_t},
+                technique_states_functions_t::blendFuncSeparate_t::src_alpha_t},
             {771, technique_states_functions_t::blendFuncSeparate_t::
                       one_minus_src_alpha_t},
             {772,
-             technique_states_functions_t::blendFuncSeparate_t::dst_alpha_t},
+                technique_states_functions_t::blendFuncSeparate_t::dst_alpha_t},
             {773, technique_states_functions_t::blendFuncSeparate_t::
                       one_minus_dst_alpha_t},
             {32769, technique_states_functions_t::blendFuncSeparate_t::
@@ -2095,7 +2083,7 @@ static inline bool _parse(
 
 // Parse a cullFace_t enum
 static inline bool _parse(technique_states_functions_t::cullFace_t& val,
-                          const json& js, _parse_stack& err) {
+    const json& js, _parse_stack& err) {
     static std::map<int, technique_states_functions_t::cullFace_t> table = {
         {1028, technique_states_functions_t::cullFace_t::front_t},
         {1029, technique_states_functions_t::cullFace_t::back_t},
@@ -2110,7 +2098,7 @@ static inline bool _parse(technique_states_functions_t::cullFace_t& val,
 
 // Parse a depthFunc_t enum
 static inline bool _parse(technique_states_functions_t::depthFunc_t& val,
-                          const json& js, _parse_stack& err) {
+    const json& js, _parse_stack& err) {
     static std::map<int, technique_states_functions_t::depthFunc_t> table = {
         {512, technique_states_functions_t::depthFunc_t::never_t},
         {513, technique_states_functions_t::depthFunc_t::less_t},
@@ -2130,7 +2118,7 @@ static inline bool _parse(technique_states_functions_t::depthFunc_t& val,
 
 // Parse a frontFace_t enum
 static inline bool _parse(technique_states_functions_t::frontFace_t& val,
-                          const json& js, _parse_stack& err) {
+    const json& js, _parse_stack& err) {
     static std::map<int, technique_states_functions_t::frontFace_t> table = {
         {2304, technique_states_functions_t::frontFace_t::cw_t},
         {2305, technique_states_functions_t::frontFace_t::ccw_t},
@@ -2143,17 +2131,17 @@ static inline bool _parse(technique_states_functions_t::frontFace_t& val,
 }
 
 // Parses a technique_states_functions_t object
-static inline bool _parse(technique_states_functions_t& val, const json& js,
-                          _parse_stack& err) {
+static inline bool _parse(
+    technique_states_functions_t& val, const json& js, _parse_stack& err) {
     if (!_parse((glTFProperty_t&)val, js, err)) return false;
     if (!_parse_begin_obj(js, err)) return false;
     if (!_parse_attr(val.blendColor, "blendColor", false, js, err))
         return false;
-    if (!_parse_attr(val.blendEquationSeparate, "blendEquationSeparate", false,
-                     js, err))
+    if (!_parse_attr(
+            val.blendEquationSeparate, "blendEquationSeparate", false, js, err))
         return false;
-    if (!_parse_attr(val.blendFuncSeparate, "blendFuncSeparate", false, js,
-                     err))
+    if (!_parse_attr(
+            val.blendFuncSeparate, "blendFuncSeparate", false, js, err))
         return false;
     if (!_parse_attr(val.colorMask, "colorMask", false, js, err)) return false;
     if (!_parse_attr(val.cullFace, "cullFace", false, js, err)) return false;
@@ -2176,13 +2164,13 @@ static inline bool _dump(
     static std::map<technique_states_functions_t::blendEquationSeparate_t, int>
         table = {
             {technique_states_functions_t::blendEquationSeparate_t::func_add_t,
-             32774},
+                32774},
             {technique_states_functions_t::blendEquationSeparate_t::
-                 func_subtract_t,
-             32778},
+                    func_subtract_t,
+                32778},
             {technique_states_functions_t::blendEquationSeparate_t::
-                 func_reverse_subtract_t,
-             32779},
+                    func_reverse_subtract_t,
+                32779},
         };
     auto v = table[val];
     if (!_dump(v, js, err)) return false;
@@ -2198,40 +2186,40 @@ static inline bool _dump(
             {technique_states_functions_t::blendFuncSeparate_t::zero_t, 0},
             {technique_states_functions_t::blendFuncSeparate_t::one_t, 1},
             {technique_states_functions_t::blendFuncSeparate_t::src_color_t,
-             768},
+                768},
             {technique_states_functions_t::blendFuncSeparate_t::
-                 one_minus_src_color_t,
-             769},
+                    one_minus_src_color_t,
+                769},
             {technique_states_functions_t::blendFuncSeparate_t::dst_color_t,
-             774},
+                774},
             {technique_states_functions_t::blendFuncSeparate_t::
-                 one_minus_dst_color_t,
-             775},
+                    one_minus_dst_color_t,
+                775},
             {technique_states_functions_t::blendFuncSeparate_t::src_alpha_t,
-             770},
+                770},
             {technique_states_functions_t::blendFuncSeparate_t::
-                 one_minus_src_alpha_t,
-             771},
+                    one_minus_src_alpha_t,
+                771},
             {technique_states_functions_t::blendFuncSeparate_t::dst_alpha_t,
-             772},
+                772},
             {technique_states_functions_t::blendFuncSeparate_t::
-                 one_minus_dst_alpha_t,
-             773},
+                    one_minus_dst_alpha_t,
+                773},
             {technique_states_functions_t::blendFuncSeparate_t::
-                 constant_color_t,
-             32769},
+                    constant_color_t,
+                32769},
             {technique_states_functions_t::blendFuncSeparate_t::
-                 one_minus_constant_color_t,
-             32770},
+                    one_minus_constant_color_t,
+                32770},
             {technique_states_functions_t::blendFuncSeparate_t::
-                 constant_alpha_t,
-             32771},
+                    constant_alpha_t,
+                32771},
             {technique_states_functions_t::blendFuncSeparate_t::
-                 one_minus_constant_alpha_t,
-             32772},
+                    one_minus_constant_alpha_t,
+                32772},
             {technique_states_functions_t::blendFuncSeparate_t::
-                 src_alpha_saturate_t,
-             776},
+                    src_alpha_saturate_t,
+                776},
         };
     auto v = table[val];
     if (!_dump(v, js, err)) return false;
@@ -2240,7 +2228,7 @@ static inline bool _dump(
 
 // Converts a cullFace_t enum to JSON
 static inline bool _dump(const technique_states_functions_t::cullFace_t& val,
-                         json& js, _parse_stack& err) {
+    json& js, _parse_stack& err) {
     static std::map<technique_states_functions_t::cullFace_t, int> table = {
         {technique_states_functions_t::cullFace_t::front_t, 1028},
         {technique_states_functions_t::cullFace_t::back_t, 1029},
@@ -2253,7 +2241,7 @@ static inline bool _dump(const technique_states_functions_t::cullFace_t& val,
 
 // Converts a depthFunc_t enum to JSON
 static inline bool _dump(const technique_states_functions_t::depthFunc_t& val,
-                         json& js, _parse_stack& err) {
+    json& js, _parse_stack& err) {
     static std::map<technique_states_functions_t::depthFunc_t, int> table = {
         {technique_states_functions_t::depthFunc_t::never_t, 512},
         {technique_states_functions_t::depthFunc_t::less_t, 513},
@@ -2271,7 +2259,7 @@ static inline bool _dump(const technique_states_functions_t::depthFunc_t& val,
 
 // Converts a frontFace_t enum to JSON
 static inline bool _dump(const technique_states_functions_t::frontFace_t& val,
-                         json& js, _parse_stack& err) {
+    json& js, _parse_stack& err) {
     static std::map<technique_states_functions_t::frontFace_t, int> table = {
         {technique_states_functions_t::frontFace_t::cw_t, 2304},
         {technique_states_functions_t::frontFace_t::ccw_t, 2305},
@@ -2282,50 +2270,50 @@ static inline bool _dump(const technique_states_functions_t::frontFace_t& val,
 }
 
 // Converts a technique_states_functions_t object to JSON
-static inline bool _dump(const technique_states_functions_t& val, json& js,
-                         _parse_stack& err) {
+static inline bool _dump(
+    const technique_states_functions_t& val, json& js, _parse_stack& err) {
     static const auto defval = technique_states_functions_t();
     if (!_dump((glTFProperty_t&)val, js, err)) return false;
     if (!_dump_begin_obj(js, err)) return false;
-    if (!_dump_attr(val.blendColor, "blendColor", defval.blendColor, false, js,
-                    err))
+    if (!_dump_attr(
+            val.blendColor, "blendColor", defval.blendColor, false, js, err))
         return false;
     if (!_dump_attr(val.blendEquationSeparate, "blendEquationSeparate",
-                    defval.blendEquationSeparate, false, js, err))
+            defval.blendEquationSeparate, false, js, err))
         return false;
     if (!_dump_attr(val.blendFuncSeparate, "blendFuncSeparate",
-                    defval.blendFuncSeparate, false, js, err))
+            defval.blendFuncSeparate, false, js, err))
         return false;
-    if (!_dump_attr(val.colorMask, "colorMask", defval.colorMask, false, js,
-                    err))
+    if (!_dump_attr(
+            val.colorMask, "colorMask", defval.colorMask, false, js, err))
         return false;
     if (!_dump_attr(val.cullFace, "cullFace", defval.cullFace, false, js, err))
         return false;
-    if (!_dump_attr(val.depthFunc, "depthFunc", defval.depthFunc, false, js,
-                    err))
+    if (!_dump_attr(
+            val.depthFunc, "depthFunc", defval.depthFunc, false, js, err))
         return false;
-    if (!_dump_attr(val.depthMask, "depthMask", defval.depthMask, false, js,
-                    err))
+    if (!_dump_attr(
+            val.depthMask, "depthMask", defval.depthMask, false, js, err))
         return false;
-    if (!_dump_attr(val.depthRange, "depthRange", defval.depthRange, false, js,
-                    err))
+    if (!_dump_attr(
+            val.depthRange, "depthRange", defval.depthRange, false, js, err))
         return false;
-    if (!_dump_attr(val.frontFace, "frontFace", defval.frontFace, false, js,
-                    err))
+    if (!_dump_attr(
+            val.frontFace, "frontFace", defval.frontFace, false, js, err))
         return false;
-    if (!_dump_attr(val.lineWidth, "lineWidth", defval.lineWidth, false, js,
-                    err))
+    if (!_dump_attr(
+            val.lineWidth, "lineWidth", defval.lineWidth, false, js, err))
         return false;
     if (!_dump_attr(val.polygonOffset, "polygonOffset", defval.polygonOffset,
-                    false, js, err))
+            false, js, err))
         return false;
     if (!_dump_end_obj(js, err)) return false;
     return true;
 }
 
 // Equality check for defaults (might go away in the future)
-static inline bool operator==(const technique_states_t& a,
-                              const technique_states_t& b) {
+static inline bool operator==(
+    const technique_states_t& a, const technique_states_t& b) {
     if (!((glTFProperty_t&)a == (glTFProperty_t&)b)) return false;
     if (!(a.enable == b.enable)) return false;
     if (!(a.functions == b.functions)) return false;
@@ -2333,8 +2321,8 @@ static inline bool operator==(const technique_states_t& a,
 }
 
 // Parse a enable_t enum
-static inline bool _parse(technique_states_t::enable_t& val, const json& js,
-                          _parse_stack& err) {
+static inline bool _parse(
+    technique_states_t::enable_t& val, const json& js, _parse_stack& err) {
     static std::map<int, technique_states_t::enable_t> table = {
         {3042, technique_states_t::enable_t::blend_t},
         {2884, technique_states_t::enable_t::cull_face_t},
@@ -2350,8 +2338,8 @@ static inline bool _parse(technique_states_t::enable_t& val, const json& js,
 }
 
 // Parses a technique_states_t object
-static inline bool _parse(technique_states_t& val, const json& js,
-                          _parse_stack& err) {
+static inline bool _parse(
+    technique_states_t& val, const json& js, _parse_stack& err) {
     if (!_parse((glTFProperty_t&)val, js, err)) return false;
     if (!_parse_begin_obj(js, err)) return false;
     if (!_parse_attr(val.enable, "enable", false, js, err)) return false;
@@ -2361,8 +2349,8 @@ static inline bool _parse(technique_states_t& val, const json& js,
 }
 
 // Converts a enable_t enum to JSON
-static inline bool _dump(const technique_states_t::enable_t& val, json& js,
-                         _parse_stack& err) {
+static inline bool _dump(
+    const technique_states_t::enable_t& val, json& js, _parse_stack& err) {
     static std::map<technique_states_t::enable_t, int> table = {
         {technique_states_t::enable_t::blend_t, 3042},
         {technique_states_t::enable_t::cull_face_t, 2884},
@@ -2376,15 +2364,15 @@ static inline bool _dump(const technique_states_t::enable_t& val, json& js,
 }
 
 // Converts a technique_states_t object to JSON
-static inline bool _dump(const technique_states_t& val, json& js,
-                         _parse_stack& err) {
+static inline bool _dump(
+    const technique_states_t& val, json& js, _parse_stack& err) {
     static const auto defval = technique_states_t();
     if (!_dump((glTFProperty_t&)val, js, err)) return false;
     if (!_dump_begin_obj(js, err)) return false;
     if (!_dump_attr(val.enable, "enable", defval.enable, false, js, err))
         return false;
-    if (!_dump_attr(val.functions, "functions", defval.functions, false, js,
-                    err))
+    if (!_dump_attr(
+            val.functions, "functions", defval.functions, false, js, err))
         return false;
     if (!_dump_end_obj(js, err)) return false;
     return true;
@@ -2422,11 +2410,11 @@ static inline bool _dump(const technique_t& val, json& js, _parse_stack& err) {
     static const auto defval = technique_t();
     if (!_dump((glTFChildOfRootProperty_t&)val, js, err)) return false;
     if (!_dump_begin_obj(js, err)) return false;
-    if (!_dump_attr(val.attributes, "attributes", defval.attributes, false, js,
-                    err))
+    if (!_dump_attr(
+            val.attributes, "attributes", defval.attributes, false, js, err))
         return false;
-    if (!_dump_attr(val.parameters, "parameters", defval.parameters, false, js,
-                    err))
+    if (!_dump_attr(
+            val.parameters, "parameters", defval.parameters, false, js, err))
         return false;
     if (!_dump_attr(val.program, "program", defval.program, true, js, err))
         return false;
@@ -2452,12 +2440,11 @@ static inline bool operator==(const texture_t& a, const texture_t& b) {
 }
 
 // Parse a format_t enum
-static inline bool _parse(texture_t::format_t& val, const json& js,
-                          _parse_stack& err) {
+static inline bool _parse(
+    texture_t::format_t& val, const json& js, _parse_stack& err) {
     static std::map<int, texture_t::format_t> table = {
         {6406, texture_t::format_t::alpha_t},
-        {6407, texture_t::format_t::rgb_t},
-        {6408, texture_t::format_t::rgba_t},
+        {6407, texture_t::format_t::rgb_t}, {6408, texture_t::format_t::rgba_t},
         {6409, texture_t::format_t::luminance_t},
         {6410, texture_t::format_t::luminance_alpha_t},
     };
@@ -2469,8 +2456,8 @@ static inline bool _parse(texture_t::format_t& val, const json& js,
 }
 
 // Parse a internalFormat_t enum
-static inline bool _parse(texture_t::internalFormat_t& val, const json& js,
-                          _parse_stack& err) {
+static inline bool _parse(
+    texture_t::internalFormat_t& val, const json& js, _parse_stack& err) {
     static std::map<int, texture_t::internalFormat_t> table = {
         {6406, texture_t::internalFormat_t::alpha_t},
         {6407, texture_t::internalFormat_t::rgb_t},
@@ -2486,8 +2473,8 @@ static inline bool _parse(texture_t::internalFormat_t& val, const json& js,
 }
 
 // Parse a target_t enum
-static inline bool _parse(texture_t::target_t& val, const json& js,
-                          _parse_stack& err) {
+static inline bool _parse(
+    texture_t::target_t& val, const json& js, _parse_stack& err) {
     static std::map<int, texture_t::target_t> table = {
         {3553, texture_t::target_t::texture_2d_t},
     };
@@ -2499,8 +2486,8 @@ static inline bool _parse(texture_t::target_t& val, const json& js,
 }
 
 // Parse a type_t enum
-static inline bool _parse(texture_t::type_t& val, const json& js,
-                          _parse_stack& err) {
+static inline bool _parse(
+    texture_t::type_t& val, const json& js, _parse_stack& err) {
     static std::map<int, texture_t::type_t> table = {
         {5121, texture_t::type_t::unsigned_byte_t},
         {33635, texture_t::type_t::unsigned_short_5_6_5_t},
@@ -2530,12 +2517,11 @@ static inline bool _parse(texture_t& val, const json& js, _parse_stack& err) {
 }
 
 // Converts a format_t enum to JSON
-static inline bool _dump(const texture_t::format_t& val, json& js,
-                         _parse_stack& err) {
+static inline bool _dump(
+    const texture_t::format_t& val, json& js, _parse_stack& err) {
     static std::map<texture_t::format_t, int> table = {
         {texture_t::format_t::alpha_t, 6406},
-        {texture_t::format_t::rgb_t, 6407},
-        {texture_t::format_t::rgba_t, 6408},
+        {texture_t::format_t::rgb_t, 6407}, {texture_t::format_t::rgba_t, 6408},
         {texture_t::format_t::luminance_t, 6409},
         {texture_t::format_t::luminance_alpha_t, 6410},
     };
@@ -2545,8 +2531,8 @@ static inline bool _dump(const texture_t::format_t& val, json& js,
 }
 
 // Converts a internalFormat_t enum to JSON
-static inline bool _dump(const texture_t::internalFormat_t& val, json& js,
-                         _parse_stack& err) {
+static inline bool _dump(
+    const texture_t::internalFormat_t& val, json& js, _parse_stack& err) {
     static std::map<texture_t::internalFormat_t, int> table = {
         {texture_t::internalFormat_t::alpha_t, 6406},
         {texture_t::internalFormat_t::rgb_t, 6407},
@@ -2560,8 +2546,8 @@ static inline bool _dump(const texture_t::internalFormat_t& val, json& js,
 }
 
 // Converts a target_t enum to JSON
-static inline bool _dump(const texture_t::target_t& val, json& js,
-                         _parse_stack& err) {
+static inline bool _dump(
+    const texture_t::target_t& val, json& js, _parse_stack& err) {
     static std::map<texture_t::target_t, int> table = {
         {texture_t::target_t::texture_2d_t, 3553},
     };
@@ -2571,8 +2557,8 @@ static inline bool _dump(const texture_t::target_t& val, json& js,
 }
 
 // Converts a type_t enum to JSON
-static inline bool _dump(const texture_t::type_t& val, json& js,
-                         _parse_stack& err) {
+static inline bool _dump(
+    const texture_t::type_t& val, json& js, _parse_stack& err) {
     static std::map<texture_t::type_t, int> table = {
         {texture_t::type_t::unsigned_byte_t, 5121},
         {texture_t::type_t::unsigned_short_5_6_5_t, 33635},
@@ -2592,7 +2578,7 @@ static inline bool _dump(const texture_t& val, json& js, _parse_stack& err) {
     if (!_dump_attr(val.format, "format", defval.format, false, js, err))
         return false;
     if (!_dump_attr(val.internalFormat, "internalFormat", defval.internalFormat,
-                    false, js, err))
+            false, js, err))
         return false;
     if (!_dump_attr(val.sampler, "sampler", defval.sampler, true, js, err))
         return false;
@@ -2608,7 +2594,7 @@ static inline bool _dump(const texture_t& val, json& js, _parse_stack& err) {
 
 // Equality check for defaults (might go away in the future)
 static inline bool operator==(const light_ambient_KHR_materials_common_t& a,
-                              const light_ambient_KHR_materials_common_t& b) {
+    const light_ambient_KHR_materials_common_t& b) {
     if (!((glTFProperty_t&)a == (glTFProperty_t&)b)) return false;
     if (!(a.color == b.color)) return false;
     return true;
@@ -2616,7 +2602,7 @@ static inline bool operator==(const light_ambient_KHR_materials_common_t& a,
 
 // Parses a light_ambient_KHR_materials_common_t object
 static inline bool _parse(light_ambient_KHR_materials_common_t& val,
-                          const json& js, _parse_stack& err) {
+    const json& js, _parse_stack& err) {
     if (!_parse((glTFProperty_t&)val, js, err)) return false;
     if (!_parse_begin_obj(js, err)) return false;
     if (!_parse_attr(val.color, "color", false, js, err)) return false;
@@ -2626,7 +2612,7 @@ static inline bool _parse(light_ambient_KHR_materials_common_t& val,
 
 // Converts a light_ambient_KHR_materials_common_t object to JSON
 static inline bool _dump(const light_ambient_KHR_materials_common_t& val,
-                         json& js, _parse_stack& err) {
+    json& js, _parse_stack& err) {
     static const auto defval = light_ambient_KHR_materials_common_t();
     if (!_dump((glTFProperty_t&)val, js, err)) return false;
     if (!_dump_begin_obj(js, err)) return false;
@@ -2637,8 +2623,7 @@ static inline bool _dump(const light_ambient_KHR_materials_common_t& val,
 }
 
 // Equality check for defaults (might go away in the future)
-static inline bool operator==(
-    const light_directional_KHR_materials_common_t& a,
+static inline bool operator==(const light_directional_KHR_materials_common_t& a,
     const light_directional_KHR_materials_common_t& b) {
     if (!((glTFProperty_t&)a == (glTFProperty_t&)b)) return false;
     if (!(a.color == b.color)) return false;
@@ -2647,7 +2632,7 @@ static inline bool operator==(
 
 // Parses a light_directional_KHR_materials_common_t object
 static inline bool _parse(light_directional_KHR_materials_common_t& val,
-                          const json& js, _parse_stack& err) {
+    const json& js, _parse_stack& err) {
     if (!_parse((glTFProperty_t&)val, js, err)) return false;
     if (!_parse_begin_obj(js, err)) return false;
     if (!_parse_attr(val.color, "color", false, js, err)) return false;
@@ -2657,7 +2642,7 @@ static inline bool _parse(light_directional_KHR_materials_common_t& val,
 
 // Converts a light_directional_KHR_materials_common_t object to JSON
 static inline bool _dump(const light_directional_KHR_materials_common_t& val,
-                         json& js, _parse_stack& err) {
+    json& js, _parse_stack& err) {
     static const auto defval = light_directional_KHR_materials_common_t();
     if (!_dump((glTFProperty_t&)val, js, err)) return false;
     if (!_dump_begin_obj(js, err)) return false;
@@ -2669,7 +2654,7 @@ static inline bool _dump(const light_directional_KHR_materials_common_t& val,
 
 // Equality check for defaults (might go away in the future)
 static inline bool operator==(const light_point_KHR_materials_common_t& a,
-                              const light_point_KHR_materials_common_t& b) {
+    const light_point_KHR_materials_common_t& b) {
     if (!((glTFProperty_t&)a == (glTFProperty_t&)b)) return false;
     if (!(a.color == b.color)) return false;
     if (!(a.constantAttenuation == b.constantAttenuation)) return false;
@@ -2680,18 +2665,18 @@ static inline bool operator==(const light_point_KHR_materials_common_t& a,
 
 // Parses a light_point_KHR_materials_common_t object
 static inline bool _parse(light_point_KHR_materials_common_t& val,
-                          const json& js, _parse_stack& err) {
+    const json& js, _parse_stack& err) {
     if (!_parse((glTFProperty_t&)val, js, err)) return false;
     if (!_parse_begin_obj(js, err)) return false;
     if (!_parse_attr(val.color, "color", false, js, err)) return false;
-    if (!_parse_attr(val.constantAttenuation, "constantAttenuation", false, js,
-                     err))
+    if (!_parse_attr(
+            val.constantAttenuation, "constantAttenuation", false, js, err))
         return false;
-    if (!_parse_attr(val.linearAttenuation, "linearAttenuation", false, js,
-                     err))
+    if (!_parse_attr(
+            val.linearAttenuation, "linearAttenuation", false, js, err))
         return false;
-    if (!_parse_attr(val.quadraticAttenuation, "quadraticAttenuation", false,
-                     js, err))
+    if (!_parse_attr(
+            val.quadraticAttenuation, "quadraticAttenuation", false, js, err))
         return false;
     if (!_parse_end_obj(js, err)) return false;
     return true;
@@ -2699,20 +2684,20 @@ static inline bool _parse(light_point_KHR_materials_common_t& val,
 
 // Converts a light_point_KHR_materials_common_t object to JSON
 static inline bool _dump(const light_point_KHR_materials_common_t& val,
-                         json& js, _parse_stack& err) {
+    json& js, _parse_stack& err) {
     static const auto defval = light_point_KHR_materials_common_t();
     if (!_dump((glTFProperty_t&)val, js, err)) return false;
     if (!_dump_begin_obj(js, err)) return false;
     if (!_dump_attr(val.color, "color", defval.color, false, js, err))
         return false;
     if (!_dump_attr(val.constantAttenuation, "constantAttenuation",
-                    defval.constantAttenuation, false, js, err))
+            defval.constantAttenuation, false, js, err))
         return false;
     if (!_dump_attr(val.linearAttenuation, "linearAttenuation",
-                    defval.linearAttenuation, false, js, err))
+            defval.linearAttenuation, false, js, err))
         return false;
     if (!_dump_attr(val.quadraticAttenuation, "quadraticAttenuation",
-                    defval.quadraticAttenuation, false, js, err))
+            defval.quadraticAttenuation, false, js, err))
         return false;
     if (!_dump_end_obj(js, err)) return false;
     return true;
@@ -2720,7 +2705,7 @@ static inline bool _dump(const light_point_KHR_materials_common_t& val,
 
 // Equality check for defaults (might go away in the future)
 static inline bool operator==(const light_spot_KHR_materials_common_t& a,
-                              const light_spot_KHR_materials_common_t& b) {
+    const light_spot_KHR_materials_common_t& b) {
     if (!((glTFProperty_t&)a == (glTFProperty_t&)b)) return false;
     if (!(a.color == b.color)) return false;
     if (!(a.constantAttenuation == b.constantAttenuation)) return false;
@@ -2732,50 +2717,50 @@ static inline bool operator==(const light_spot_KHR_materials_common_t& a,
 }
 
 // Parses a light_spot_KHR_materials_common_t object
-static inline bool _parse(light_spot_KHR_materials_common_t& val,
-                          const json& js, _parse_stack& err) {
+static inline bool _parse(
+    light_spot_KHR_materials_common_t& val, const json& js, _parse_stack& err) {
     if (!_parse((glTFProperty_t&)val, js, err)) return false;
     if (!_parse_begin_obj(js, err)) return false;
     if (!_parse_attr(val.color, "color", false, js, err)) return false;
-    if (!_parse_attr(val.constantAttenuation, "constantAttenuation", false, js,
-                     err))
+    if (!_parse_attr(
+            val.constantAttenuation, "constantAttenuation", false, js, err))
         return false;
     if (!_parse_attr(val.fallOffAngle, "fallOffAngle", false, js, err))
         return false;
     if (!_parse_attr(val.fallOffExponent, "fallOffExponent", false, js, err))
         return false;
-    if (!_parse_attr(val.linearAttenuation, "linearAttenuation", false, js,
-                     err))
+    if (!_parse_attr(
+            val.linearAttenuation, "linearAttenuation", false, js, err))
         return false;
-    if (!_parse_attr(val.quadraticAttenuation, "quadraticAttenuation", false,
-                     js, err))
+    if (!_parse_attr(
+            val.quadraticAttenuation, "quadraticAttenuation", false, js, err))
         return false;
     if (!_parse_end_obj(js, err)) return false;
     return true;
 }
 
 // Converts a light_spot_KHR_materials_common_t object to JSON
-static inline bool _dump(const light_spot_KHR_materials_common_t& val, json& js,
-                         _parse_stack& err) {
+static inline bool _dump(
+    const light_spot_KHR_materials_common_t& val, json& js, _parse_stack& err) {
     static const auto defval = light_spot_KHR_materials_common_t();
     if (!_dump((glTFProperty_t&)val, js, err)) return false;
     if (!_dump_begin_obj(js, err)) return false;
     if (!_dump_attr(val.color, "color", defval.color, false, js, err))
         return false;
     if (!_dump_attr(val.constantAttenuation, "constantAttenuation",
-                    defval.constantAttenuation, false, js, err))
+            defval.constantAttenuation, false, js, err))
         return false;
     if (!_dump_attr(val.fallOffAngle, "fallOffAngle", defval.fallOffAngle,
-                    false, js, err))
+            false, js, err))
         return false;
     if (!_dump_attr(val.fallOffExponent, "fallOffExponent",
-                    defval.fallOffExponent, false, js, err))
+            defval.fallOffExponent, false, js, err))
         return false;
     if (!_dump_attr(val.linearAttenuation, "linearAttenuation",
-                    defval.linearAttenuation, false, js, err))
+            defval.linearAttenuation, false, js, err))
         return false;
     if (!_dump_attr(val.quadraticAttenuation, "quadraticAttenuation",
-                    defval.quadraticAttenuation, false, js, err))
+            defval.quadraticAttenuation, false, js, err))
         return false;
     if (!_dump_end_obj(js, err)) return false;
     return true;
@@ -2783,7 +2768,7 @@ static inline bool _dump(const light_spot_KHR_materials_common_t& val, json& js,
 
 // Equality check for defaults (might go away in the future)
 static inline bool operator==(const light_KHR_materials_common_t& a,
-                              const light_KHR_materials_common_t& b) {
+    const light_KHR_materials_common_t& b) {
     if (!((glTFChildOfRootProperty_t&)a == (glTFChildOfRootProperty_t&)b))
         return false;
     if (!(a.ambient == b.ambient)) return false;
@@ -2796,7 +2781,7 @@ static inline bool operator==(const light_KHR_materials_common_t& a,
 
 // Parse a type_t enum
 static inline bool _parse(light_KHR_materials_common_t::type_t& val,
-                          const json& js, _parse_stack& err) {
+    const json& js, _parse_stack& err) {
     static std::map<std::string, light_KHR_materials_common_t::type_t> table = {
         {"ambient", light_KHR_materials_common_t::type_t::ambient_t},
         {"directional", light_KHR_materials_common_t::type_t::directional_t},
@@ -2811,8 +2796,8 @@ static inline bool _parse(light_KHR_materials_common_t::type_t& val,
 }
 
 // Parses a light_KHR_materials_common_t object
-static inline bool _parse(light_KHR_materials_common_t& val, const json& js,
-                          _parse_stack& err) {
+static inline bool _parse(
+    light_KHR_materials_common_t& val, const json& js, _parse_stack& err) {
     if (!_parse((glTFChildOfRootProperty_t&)val, js, err)) return false;
     if (!_parse_begin_obj(js, err)) return false;
     if (!_parse_attr(val.ambient, "ambient", false, js, err)) return false;
@@ -2827,7 +2812,7 @@ static inline bool _parse(light_KHR_materials_common_t& val, const json& js,
 
 // Converts a type_t enum to JSON
 static inline bool _dump(const light_KHR_materials_common_t::type_t& val,
-                         json& js, _parse_stack& err) {
+    json& js, _parse_stack& err) {
     static std::map<light_KHR_materials_common_t::type_t, std::string> table = {
         {light_KHR_materials_common_t::type_t::ambient_t, "ambient"},
         {light_KHR_materials_common_t::type_t::directional_t, "directional"},
@@ -2840,15 +2825,15 @@ static inline bool _dump(const light_KHR_materials_common_t::type_t& val,
 }
 
 // Converts a light_KHR_materials_common_t object to JSON
-static inline bool _dump(const light_KHR_materials_common_t& val, json& js,
-                         _parse_stack& err) {
+static inline bool _dump(
+    const light_KHR_materials_common_t& val, json& js, _parse_stack& err) {
     static const auto defval = light_KHR_materials_common_t();
     if (!_dump((glTFChildOfRootProperty_t&)val, js, err)) return false;
     if (!_dump_begin_obj(js, err)) return false;
     if (!_dump_attr(val.ambient, "ambient", defval.ambient, false, js, err))
         return false;
-    if (!_dump_attr(val.directional, "directional", defval.directional, false,
-                    js, err))
+    if (!_dump_attr(
+            val.directional, "directional", defval.directional, false, js, err))
         return false;
     if (!_dump_attr(val.point, "point", defval.point, false, js, err))
         return false;
@@ -2861,14 +2846,14 @@ static inline bool _dump(const light_KHR_materials_common_t& val, json& js,
 
 // Equality check for defaults (might go away in the future)
 static inline bool operator==(const glTF_KHR_materials_common_t& a,
-                              const glTF_KHR_materials_common_t& b) {
+    const glTF_KHR_materials_common_t& b) {
     if (!(a.lights == b.lights)) return false;
     return true;
 }
 
 // Parses a glTF_KHR_materials_common_t object
-static inline bool _parse(glTF_KHR_materials_common_t& val, const json& js,
-                          _parse_stack& err) {
+static inline bool _parse(
+    glTF_KHR_materials_common_t& val, const json& js, _parse_stack& err) {
     if (!_parse_begin_obj(js, err)) return false;
     if (!_parse_attr(val.lights, "lights", false, js, err)) return false;
     if (!_parse_end_obj(js, err)) return false;
@@ -2876,8 +2861,8 @@ static inline bool _parse(glTF_KHR_materials_common_t& val, const json& js,
 }
 
 // Converts a glTF_KHR_materials_common_t object to JSON
-static inline bool _dump(const glTF_KHR_materials_common_t& val, json& js,
-                         _parse_stack& err) {
+static inline bool _dump(
+    const glTF_KHR_materials_common_t& val, json& js, _parse_stack& err) {
     static const auto defval = glTF_KHR_materials_common_t();
     if (!_dump_begin_obj(js, err)) return false;
     if (!_dump_attr(val.lights, "lights", defval.lights, false, js, err))
@@ -2915,11 +2900,11 @@ static inline bool operator==(const glTF_t& a, const glTF_t& b) {
 }
 
 // Parse a glExtensionsUsed_t enum
-static inline bool _parse(glTF_t::glExtensionsUsed_t& val, const json& js,
-                          _parse_stack& err) {
+static inline bool _parse(
+    glTF_t::glExtensionsUsed_t& val, const json& js, _parse_stack& err) {
     static std::map<std::string, glTF_t::glExtensionsUsed_t> table = {
         {"OES_element_index_uint",
-         glTF_t::glExtensionsUsed_t::oes_element_index_uint_t},
+            glTF_t::glExtensionsUsed_t::oes_element_index_uint_t},
     };
     auto v = std::string();
     if (!_parse(v, js, err)) return false;
@@ -2940,8 +2925,8 @@ static inline bool _parse(glTF_t& val, const json& js, _parse_stack& err) {
         return false;
     if (!_parse_attr(val.buffers, "buffers", true, js, err)) return false;
     if (!_parse_attr(val.cameras, "cameras", false, js, err)) return false;
-    if (!_parse_attr(val.extensionsRequired, "extensionsRequired", false, js,
-                     err))
+    if (!_parse_attr(
+            val.extensionsRequired, "extensionsRequired", false, js, err))
         return false;
     if (!_parse_attr(val.extensionsUsed, "extensionsUsed", false, js, err))
         return false;
@@ -2962,7 +2947,7 @@ static inline bool _parse(glTF_t& val, const json& js, _parse_stack& err) {
     if (!_parse_attr(val.textures, "textures", false, js, err)) return false;
     if (js.find("extensions") != js.end()) {
         if (!_parse_attr(val.KHR_materials_common, "KHR_materials_common",
-                         false, js["extensions"], err))
+                false, js["extensions"], err))
             return false;
     };
     if (!_parse_end_obj(js, err)) return false;
@@ -2970,11 +2955,11 @@ static inline bool _parse(glTF_t& val, const json& js, _parse_stack& err) {
 }
 
 // Converts a glExtensionsUsed_t enum to JSON
-static inline bool _dump(const glTF_t::glExtensionsUsed_t& val, json& js,
-                         _parse_stack& err) {
+static inline bool _dump(
+    const glTF_t::glExtensionsUsed_t& val, json& js, _parse_stack& err) {
     static std::map<glTF_t::glExtensionsUsed_t, std::string> table = {
         {glTF_t::glExtensionsUsed_t::oes_element_index_uint_t,
-         "OES_element_index_uint"},
+            "OES_element_index_uint"},
     };
     auto v = table[val];
     if (!_dump(v, js, err)) return false;
@@ -2986,34 +2971,34 @@ static inline bool _dump(const glTF_t& val, json& js, _parse_stack& err) {
     static const auto defval = glTF_t();
     if (!_dump((glTFProperty_t&)val, js, err)) return false;
     if (!_dump_begin_obj(js, err)) return false;
-    if (!_dump_attr(val.accessors, "accessors", defval.accessors, true, js,
-                    err))
+    if (!_dump_attr(
+            val.accessors, "accessors", defval.accessors, true, js, err))
         return false;
-    if (!_dump_attr(val.animations, "animations", defval.animations, false, js,
-                    err))
+    if (!_dump_attr(
+            val.animations, "animations", defval.animations, false, js, err))
         return false;
     if (!_dump_attr(val.asset, "asset", defval.asset, true, js, err))
         return false;
-    if (!_dump_attr(val.bufferViews, "bufferViews", defval.bufferViews, true,
-                    js, err))
+    if (!_dump_attr(
+            val.bufferViews, "bufferViews", defval.bufferViews, true, js, err))
         return false;
     if (!_dump_attr(val.buffers, "buffers", defval.buffers, true, js, err))
         return false;
     if (!_dump_attr(val.cameras, "cameras", defval.cameras, false, js, err))
         return false;
     if (!_dump_attr(val.extensionsRequired, "extensionsRequired",
-                    defval.extensionsRequired, false, js, err))
+            defval.extensionsRequired, false, js, err))
         return false;
     if (!_dump_attr(val.extensionsUsed, "extensionsUsed", defval.extensionsUsed,
-                    false, js, err))
+            false, js, err))
         return false;
     if (!_dump_attr(val.glExtensionsUsed, "glExtensionsUsed",
-                    defval.glExtensionsUsed, false, js, err))
+            defval.glExtensionsUsed, false, js, err))
         return false;
     if (!_dump_attr(val.images, "images", defval.images, false, js, err))
         return false;
-    if (!_dump_attr(val.materials, "materials", defval.materials, false, js,
-                    err))
+    if (!_dump_attr(
+            val.materials, "materials", defval.materials, false, js, err))
         return false;
     if (!_dump_attr(val.meshes, "meshes", defval.meshes, true, js, err))
         return false;
@@ -3031,15 +3016,14 @@ static inline bool _dump(const glTF_t& val, json& js, _parse_stack& err) {
         return false;
     if (!_dump_attr(val.skins, "skins", defval.skins, false, js, err))
         return false;
-    if (!_dump_attr(val.techniques, "techniques", defval.techniques, false, js,
-                    err))
+    if (!_dump_attr(
+            val.techniques, "techniques", defval.techniques, false, js, err))
         return false;
     if (!_dump_attr(val.textures, "textures", defval.textures, false, js, err))
         return false;
     if (val.KHR_materials_common) {
         if (!_dump_attr(val.KHR_materials_common, "KHR_materials_common",
-                        defval.KHR_materials_common, false, js["extensions"],
-                        err))
+                defval.KHR_materials_common, false, js["extensions"], err))
             return false;
     };
     if (!_dump_end_obj(js, err)) return false;
@@ -3074,8 +3058,8 @@ inline std::string _fix_path(const std::string& path_) {
 //
 static inline std::vector<unsigned char> _load_binfile(
     const std::string& filename, bool skip_missing) {
-    std::ifstream ifs(filename.c_str(),
-                      std::ios::in | std::ios::binary | std::ios::ate);
+    std::ifstream ifs(
+        filename.c_str(), std::ios::in | std::ios::binary | std::ios::ate);
     if (!ifs) {
         if (skip_missing) return {};
         throw gltf_exception("could not open file " + filename);
@@ -3091,8 +3075,8 @@ static inline std::vector<unsigned char> _load_binfile(
 // Load a text file in memory
 // http://stackoverflow.com/questions/116038/what-is-the-best-way-to-read-an-entire-file-into-a-stdstring-in-c
 //
-static inline std::string _load_textfile(const std::string& filename,
-                                         bool skip_missing) {
+static inline std::string _load_textfile(
+    const std::string& filename, bool skip_missing) {
     std::ifstream stream(filename);
     if (!stream) {
         if (skip_missing) return "";
@@ -3106,8 +3090,8 @@ static inline std::string _load_textfile(const std::string& filename,
 //
 // Saves text.
 //
-static inline bool _save_textfile(const std::string& filename,
-                                  const std::string& txt, std::string& errmsg) {
+static inline bool _save_textfile(
+    const std::string& filename, const std::string& txt, std::string& errmsg) {
     auto f = fopen(filename.c_str(), "wt");
     if (!f) {
         errmsg = "cannot write file " + filename;
@@ -3121,8 +3105,8 @@ static inline bool _save_textfile(const std::string& filename,
 //
 // Saves text.
 //
-static inline void _save_textfile(const std::string& filename,
-                                  const std::string& txt) {
+static inline void _save_textfile(
+    const std::string& filename, const std::string& txt) {
     std::string errmsg;
     auto ok = _save_textfile(filename, txt, errmsg);
     if (!ok) throw gltf_exception(errmsg);
@@ -3132,8 +3116,7 @@ static inline void _save_textfile(const std::string& filename,
 // Saves binary.
 //
 static inline bool _save_binfile(const std::string& filename,
-                                 const std::vector<unsigned char>& bin,
-                                 std::string& errmsg) {
+    const std::vector<unsigned char>& bin, std::string& errmsg) {
     auto f = fopen(filename.c_str(), "wt");
     if (!f) {
         errmsg = "cannot write file " + filename;
@@ -3147,8 +3130,8 @@ static inline bool _save_binfile(const std::string& filename,
 //
 // Saves binary.
 //
-static inline void _save_binfile(const std::string& filename,
-                                 const std::vector<unsigned char>& bin) {
+static inline void _save_binfile(
+    const std::string& filename, const std::vector<unsigned char>& bin) {
     std::string errmsg;
     auto ok = _save_binfile(filename, bin, errmsg);
     if (!ok) throw gltf_exception(errmsg);
@@ -3166,8 +3149,7 @@ static inline std::string _get_extname(const std::string& filename) {
 // Loads a gltf.
 //
 YGLTF_API glTF_t* load_gltf(const std::string& filename, bool load_bin,
-                            bool load_shader, bool load_image,
-                            bool skip_missing) {
+    bool load_shader, bool load_image, bool skip_missing) {
     // clear data
     auto gltf = std::unique_ptr<glTF_t>(new glTF_t());
 
@@ -3199,11 +3181,11 @@ YGLTF_API glTF_t* load_gltf(const std::string& filename, bool load_bin,
 // Loads a gltf.
 //
 YGLTF_API bool load_gltf(const std::string& filename, glTF_t& asset,
-                         std::string& errmsg, bool load_bin, bool load_shader,
-                         bool load_image, bool skip_missing) {
+    std::string& errmsg, bool load_bin, bool load_shader, bool load_image,
+    bool skip_missing) {
     try {
-        auto gltf = load_gltf(filename, load_bin, load_shader, load_image,
-                              skip_missing);
+        auto gltf = load_gltf(
+            filename, load_bin, load_shader, load_image, skip_missing);
         asset = *gltf;
         delete gltf;
         return true;
@@ -3217,7 +3199,7 @@ YGLTF_API bool load_gltf(const std::string& filename, glTF_t& asset,
 // Saves a gltf.
 //
 YGLTF_API void save_gltf(const std::string& filename, const glTF_t* gltf,
-                         bool save_bin, bool save_shader, bool save_image) {
+    bool save_bin, bool save_shader, bool save_image) {
     // dumps json
     auto js = json();
     auto err = _parse_stack();
@@ -3238,8 +3220,7 @@ YGLTF_API void save_gltf(const std::string& filename, const glTF_t* gltf,
 // Saves a gltf.
 //
 YGLTF_API bool save_gltf(const std::string& filename, const glTF_t& gltf,
-                         std::string& errmsg, bool save_bin, bool save_shader,
-                         bool save_image) {
+    std::string& errmsg, bool save_bin, bool save_shader, bool save_image) {
     try {
         save_gltf(filename, &gltf, save_bin, save_shader, save_image);
         return true;
@@ -3287,8 +3268,7 @@ static inline void _fwrite(FILE* f, const T* v, int count) {
 // Loads a binary gltf.
 //
 YGLTF_API glTF_t* load_binary_gltf(const std::string& filename, bool load_bin,
-                                   bool load_shader, bool load_image,
-                                   bool skip_missing) {
+    bool load_shader, bool load_image, bool skip_missing) {
     // clear data
     auto gltf = std::unique_ptr<glTF_t>(new glTF_t());
 
@@ -3332,8 +3312,8 @@ YGLTF_API glTF_t* load_binary_gltf(const std::string& filename, bool load_bin,
     // load internal buffer
     if (load_bin) {
         auto buffer = &gltf->buffers["binary_glTF"];
-        buffer->data.resize(header.length - header.contentLength -
-                            sizeof(header));
+        buffer->data.resize(
+            header.length - header.contentLength - sizeof(header));
         if (buffer->data.size() != buffer->byteLength)
             throw gltf_exception("corrupt binary gltf");
         _fread(f, buffer->data.data(), (int)buffer->data.size());
@@ -3350,8 +3330,7 @@ YGLTF_API glTF_t* load_binary_gltf(const std::string& filename, bool load_bin,
 // Loads a binary gltf.
 //
 YGLTF_API bool load_binary_gltf(const std::string& filename, glTF_t& gltf,
-                                std::string& errmsg, bool load_bin,
-                                bool load_shader, bool load_image) {
+    std::string& errmsg, bool load_bin, bool load_shader, bool load_image) {
     try {
         auto gltf_ =
             load_binary_gltf(filename, load_bin, load_shader, load_image);
@@ -3368,8 +3347,7 @@ YGLTF_API bool load_binary_gltf(const std::string& filename, glTF_t& gltf,
 // Saves a binary gltf.
 //
 YGLTF_API void save_binary_gltf(const std::string& filename, const glTF_t* gltf,
-                                bool save_bin, bool save_shader,
-                                bool save_image) {
+    bool save_bin, bool save_shader, bool save_image) {
     // opens binary file
     auto f = std::fopen(filename.c_str(), "wb");
     if (!f) throw gltf_exception("could not write binary file");
@@ -3419,8 +3397,7 @@ YGLTF_API void save_binary_gltf(const std::string& filename, const glTF_t* gltf,
 // Saves a binary gltf.
 //
 YGLTF_API bool save_binary_gltf(const std::string& filename, const glTF_t& gltf,
-                                std::string& errmsg, bool save_bin,
-                                bool save_shader, bool save_image) {
+    std::string& errmsg, bool save_bin, bool save_shader, bool save_image) {
     try {
         save_binary_gltf(filename, &gltf, save_bin, save_shader, save_image);
         return true;
@@ -3443,8 +3420,8 @@ static inline bool is_base64(unsigned char c) {
     return (isalnum(c) || (c == '+') || (c == '/'));
 }
 
-static inline std::string base64_encode(unsigned char const* bytes_to_encode,
-                                        unsigned int in_len) {
+static inline std::string base64_encode(
+    unsigned char const* bytes_to_encode, unsigned int in_len) {
     std::string ret;
     int i = 0;
     int j = 0;
@@ -3534,8 +3511,8 @@ std::string base64_decode(std::string const& encoded_string) {
 //
 // Check if a string starts with a prefix
 //
-static inline bool _startsiwith(const std::string& str,
-                                const std::string& prefix) {
+static inline bool _startsiwith(
+    const std::string& str, const std::string& prefix) {
     if (str.length() < prefix.length()) return false;
     return str.substr(0, prefix.length()) == prefix;
 }
@@ -3543,8 +3520,8 @@ static inline bool _startsiwith(const std::string& str,
 //
 // Load buffer data.
 //
-YGLTF_API void load_buffers(glTF_t* gltf, const std::string& dirname,
-                            bool skip_missing) {
+YGLTF_API void load_buffers(
+    glTF_t* gltf, const std::string& dirname, bool skip_missing) {
     for (auto&& kv : gltf->buffers) {
         auto buffer = &kv.second;
         if (_startsiwith(buffer->uri, "data:")) {
@@ -3554,9 +3531,9 @@ YGLTF_API void load_buffers(glTF_t* gltf, const std::string& dirname,
                 throw gltf_exception("could not decode base64 data");
             // decode
             auto data = _base64::base64_decode(buffer->uri.substr(pos + 1));
-            buffer->data = std::vector<unsigned char>(
-                (unsigned char*)data.c_str(),
-                (unsigned char*)data.c_str() + data.length());
+            buffer->data =
+                std::vector<unsigned char>((unsigned char*)data.c_str(),
+                    (unsigned char*)data.c_str() + data.length());
         } else {
             buffer->data =
                 _load_binfile(_fix_path(dirname + buffer->uri), skip_missing);
@@ -3568,7 +3545,7 @@ YGLTF_API void load_buffers(glTF_t* gltf, const std::string& dirname,
 // Load buffer data.
 //
 YGLTF_API bool load_buffers(glTF_t& gltf, const std::string& dirname,
-                            std::string& errmsg, bool skip_missing) {
+    std::string& errmsg, bool skip_missing) {
     try {
         load_buffers(&gltf, dirname, skip_missing);
         return true;
@@ -3581,8 +3558,8 @@ YGLTF_API bool load_buffers(glTF_t& gltf, const std::string& dirname,
 //
 // Load shaders data.
 //
-YGLTF_API void load_shaders(glTF_t* gltf, const std::string& dirname,
-                            bool skip_missing) {
+YGLTF_API void load_shaders(
+    glTF_t* gltf, const std::string& dirname, bool skip_missing) {
     for (auto&& kv : gltf->shaders) {
         auto shader = &kv.second;
         if (_startsiwith(shader->uri, "data:")) {
@@ -3603,7 +3580,7 @@ YGLTF_API void load_shaders(glTF_t* gltf, const std::string& dirname,
 // Load buffer data.
 //
 YGLTF_API bool load_shaders(glTF_t& gltf, const std::string& dirname,
-                            std::string& errmsg, bool skip_missing) {
+    std::string& errmsg, bool skip_missing) {
     try {
         load_shaders(&gltf, dirname, skip_missing);
         return true;
@@ -3616,8 +3593,8 @@ YGLTF_API bool load_shaders(glTF_t& gltf, const std::string& dirname,
 //
 // Loads images.
 //
-YGLTF_API void load_images(glTF_t* gltf, const std::string& dirname,
-                           bool skip_missing) {
+YGLTF_API void load_images(
+    glTF_t* gltf, const std::string& dirname, bool skip_missing) {
 #ifndef YGL_NO_STBIMAGE
 
     for (auto&& kv : gltf->images) {
@@ -3663,7 +3640,7 @@ YGLTF_API void load_images(glTF_t* gltf, const std::string& dirname,
 // Load buffer data.
 //
 YGLTF_API bool load_images(glTF_t& gltf, const std::string& dirname,
-                           std::string& errmsg, bool skip_missing) {
+    std::string& errmsg, bool skip_missing) {
     try {
         load_images(&gltf, dirname, skip_missing);
         return true;
@@ -3688,8 +3665,8 @@ YGLTF_API void save_buffers(const glTF_t* gltf, const std::string& dirname) {
 //
 // Load buffer data.
 //
-YGLTF_API bool save_buffers(const glTF_t& gltf, const std::string& dirname,
-                            std::string& errmsg) {
+YGLTF_API bool save_buffers(
+    const glTF_t& gltf, const std::string& dirname, std::string& errmsg) {
     try {
         save_buffers(&gltf, dirname);
         return true;
@@ -3714,8 +3691,8 @@ YGLTF_API void save_shaders(const glTF_t* gltf, const std::string& dirname) {
 //
 // Save shaders data.
 //
-YGLTF_API bool save_shaders(const glTF_t& gltf, const std::string& dirname,
-                            std::string& errmsg) {
+YGLTF_API bool save_shaders(
+    const glTF_t& gltf, const std::string& dirname, std::string& errmsg) {
     try {
         save_shaders(&gltf, dirname);
         return true;
@@ -3736,8 +3713,8 @@ YGLTF_API void save_images(const glTF_t* gltf, const std::string& dirname) {
         if (_startsiwith(image->uri, "data:"))
             throw gltf_exception("saving of embedded data not supported");
         yimg::save_image(dirname + image->uri, image->data.width,
-                         image->data.height, image->data.ncomp,
-                         image->data.dataf.data(), image->data.datab.data());
+            image->data.height, image->data.ncomp, image->data.dataf.data(),
+            image->data.datab.data());
     }
 
 #endif
@@ -3746,8 +3723,8 @@ YGLTF_API void save_images(const glTF_t* gltf, const std::string& dirname) {
 //
 // Save image data.
 //
-YGLTF_API bool save_images(const glTF_t& gltf, const std::string& dirname,
-                           std::string& errmsg) {
+YGLTF_API bool save_images(
+    const glTF_t& gltf, const std::string& dirname, std::string& errmsg) {
     try {
         save_images(&gltf, dirname);
         return true;
@@ -3773,13 +3750,13 @@ static inline std::array<float, 16> _float4x4_mul(
     return c;
 }
 
-inline vec_array_view::vec_array_view(const glTF_t* gltf,
-                                      const accessor_t& accessor) {
+inline vec_array_view::vec_array_view(
+    const glTF_t* gltf, const accessor_t& accessor) {
     _size = accessor.count;
     _ncomp = _num_components(accessor.type);
     _ctype = accessor.componentType;
-    _stride = (accessor.byteStride) ? accessor.byteStride
-                                    : (_ctype_size(_ctype) * _ncomp);
+    _stride = (accessor.byteStride) ? accessor.byteStride :
+                                      (_ctype_size(_ctype) * _ncomp);
     _normalize = accessor.normalized;
     auto buffer_view = &gltf->bufferViews.at(accessor.bufferView);
     auto buffer = &gltf->buffers.at(buffer_view->buffer);
@@ -3868,16 +3845,16 @@ inline int vec_array_view::_ctype_size(
 //
 // element_attay_view implementation
 //
-inline element_array_view::element_array_view(const glTF_t* gltf,
-                                              const accessor_t& accessor) {
+inline element_array_view::element_array_view(
+    const glTF_t* gltf, const accessor_t& accessor) {
     _size = accessor.count;
     _ctype = accessor.componentType;
     _stride = (accessor.byteStride) ? accessor.byteStride : _ctype_size(_ctype);
     auto& buffer_view = gltf->bufferViews.at(accessor.bufferView);
     auto& buffer = gltf->buffers.at(buffer_view.buffer);
     _data = buffer.data.data() + accessor.byteOffset + buffer_view.byteOffset;
-    assert(buffer_view.target ==
-           bufferView_t::target_t::element_array_buffer_t);
+    assert(
+        buffer_view.target == bufferView_t::target_t::element_array_buffer_t);
     assert(accessor.type == accessor_t::type_t::scalar_t);
 }
 
@@ -3918,8 +3895,8 @@ inline int element_array_view::_ctype_size(
 //
 // Identity matrix
 //
-const std::array<float, 16> _identity_float4x4 = {1, 0, 0, 0, 0, 1, 0, 0,
-                                                  0, 0, 1, 0, 0, 0, 0, 1};
+const std::array<float, 16> _identity_float4x4 = {
+    1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};
 
 //
 // Math support
@@ -3934,10 +3911,10 @@ YGLTF_API std::array<float, 16> node_transform(const node_t* node) {
 
     // scale
     if (node->scale != std::array<float, 3>{1, 1, 1}) {
-        xf = _float4x4_mul(std::array<float, 16>{node->scale[0], 0, 0, 0, 0,
-                                                 node->scale[1], 0, 0, 0, 0,
-                                                 node->scale[2], 0, 0, 0, 0, 1},
-                           xf);
+        xf = _float4x4_mul(
+            std::array<float, 16>{node->scale[0], 0, 0, 0, 0, node->scale[1], 0,
+                0, 0, 0, node->scale[2], 0, 0, 0, 0, 1},
+            xf);
     }
 
     // rotation
@@ -3949,25 +3926,22 @@ YGLTF_API std::array<float, 16> node_transform(const node_t* node) {
             q[3] * q[3] + q[0] * q[0] - q[1] * q[1] - q[2] * q[2],
             (q[0] * q[1] + q[2] * q[3]) * 2, (q[2] * q[0] - q[1] * q[3]) * 2};
         std::array<float, 3> qy = {(q[0] * q[1] - q[2] * q[3]) * 2,
-                                   q[3] * q[3] - q[0] * q[0] + q[1] * q[1] -
-                                       q[2] * q[2],
-                                   (q[1] * q[2] + q[0] * q[3]) * 2};
-        std::array<float, 3> qz = {
-            (q[2] * q[0] + q[1] * q[3]) * 2, (q[1] * q[2] - q[0] * q[3]) * 2,
+            q[3] * q[3] - q[0] * q[0] + q[1] * q[1] - q[2] * q[2],
+            (q[1] * q[2] + q[0] * q[3]) * 2};
+        std::array<float, 3> qz = {(q[2] * q[0] + q[1] * q[3]) * 2,
+            (q[1] * q[2] - q[0] * q[3]) * 2,
             q[3] * q[3] - q[0] * q[0] - q[1] * q[1] + q[2] * q[2]};
-        std::array<float, 16> r = {qx[0], qx[1], qx[2], 0,     qy[0], qy[1],
-                                   qy[2], 0,     qz[0], qz[1], qz[2], 0,
-                                   0,     0,     0,     1};
+        std::array<float, 16> r = {qx[0], qx[1], qx[2], 0, qy[0], qy[1], qy[2],
+            0, qz[0], qz[1], qz[2], 0, 0, 0, 0, 1};
         xf = _float4x4_mul(r, xf);
     }
 
     // translation
     if (node->translation != std::array<float, 3>{0, 0, 0}) {
         xf = _float4x4_mul(std::array<float, 16>{1, 0, 0, 0, 0, 1, 0, 0, 0, 0,
-                                                 1, 0, node->translation[0],
-                                                 node->translation[1],
-                                                 node->translation[2], 1},
-                           xf);
+                               1, 0, node->translation[0], node->translation[1],
+                               node->translation[2], 1},
+            xf);
     }
 
     return xf;
@@ -3976,8 +3950,8 @@ YGLTF_API std::array<float, 16> node_transform(const node_t* node) {
 //
 // Flattens a gltf file into a flattened asset.
 //
-YGLTF_API fl_gltf* flatten_gltf(const glTF_t* gltf,
-                                const std::string& scene_name) {
+YGLTF_API fl_gltf* flatten_gltf(
+    const glTF_t* gltf, const std::string& scene_name) {
     // clear asset
     auto fl_gltf = std::unique_ptr<ygltf::fl_gltf>(new ygltf::fl_gltf());
 
@@ -4000,9 +3974,9 @@ YGLTF_API fl_gltf* flatten_gltf(const glTF_t* gltf,
         textures[name] = (int)fl_gltf->textures.size();
         txt->name = tf_txt->name;
         auto tf_img = &gltf->images.at(tf_txt->source);
-        txt->path = (_startsiwith(tf_img->uri, "data:"))
-                        ? std::string("inlines")
-                        : tf_img->uri;
+        txt->path = (_startsiwith(tf_img->uri, "data:")) ?
+                        std::string("inlines") :
+                        tf_img->uri;
         txt->width = tf_img->data.width;
         txt->height = tf_img->data.height;
         txt->ncomp = tf_img->data.ncomp;
@@ -4144,8 +4118,7 @@ YGLTF_API fl_gltf* flatten_gltf(const glTF_t* gltf,
                         prim->triangles.reserve(indices.size());
                         for (auto i = 0; i < indices.size() / 3; i++) {
                             prim->triangles.push_back({indices[i * 3 + 0],
-                                                       indices[i * 3 + 1],
-                                                       indices[i * 3 + 2]});
+                                indices[i * 3 + 1], indices[i * 3 + 2]});
                         }
                     } break;
                     case mesh_primitive_t::mode_t::triangle_fan_t: {
@@ -4174,8 +4147,8 @@ YGLTF_API fl_gltf* flatten_gltf(const glTF_t* gltf,
                         for (auto i = 1; i < indices.size(); i++) {
                             prim->lines.push_back({indices[i - 1], indices[i]});
                         }
-                        prim->lines.back() = {indices[indices.size() - 1],
-                                              indices[0]};
+                        prim->lines.back() = {
+                            indices[indices.size() - 1], indices[0]};
                     } break;
                     case mesh_primitive_t::mode_t::line_strip_t: {
                         prim->lines.reserve(indices.size() - 1);
@@ -4248,9 +4221,7 @@ YGLTF_API fl_gltf* flatten_gltf(const glTF_t* gltf,
 #endif
                 fl_scn->meshes.push_back((int)fl_gltf->meshes.size() - 1);
             }
-            for (auto& child : node->children) {
-                stack.push_back({child, xf});
-            }
+            for (auto& child : node->children) { stack.push_back({child, xf}); }
             fl_gltf->scenes.push_back(fl_scn);
         }
     }
@@ -4260,8 +4231,8 @@ YGLTF_API fl_gltf* flatten_gltf(const glTF_t* gltf,
 
 // Flattens a gltf file into a flattened asset.
 //
-YGLTF_API fl_gltf flatten_gltf(const glTF_t& gltf,
-                               const std::string& scene_name) {
+YGLTF_API fl_gltf flatten_gltf(
+    const glTF_t& gltf, const std::string& scene_name) {
     auto fl_scene = std::unique_ptr<fl_gltf>(flatten_gltf(&gltf, scene_name));
     return *fl_scene;
 }
@@ -4269,8 +4240,8 @@ YGLTF_API fl_gltf flatten_gltf(const glTF_t& gltf,
 //
 // Unflattnes gltf
 //
-YGLTF_API glTF_t* unflatten_gltf(const fl_gltf* fl_gltf,
-                                 const std::string& buffer_uri) {
+YGLTF_API glTF_t* unflatten_gltf(
+    const fl_gltf* fl_gltf, const std::string& buffer_uri) {
     auto gltf = std::unique_ptr<glTF_t>(new glTF_t());
 
     // convert cameras
@@ -4279,8 +4250,8 @@ YGLTF_API glTF_t* unflatten_gltf(const fl_gltf* fl_gltf,
         auto gid = "camera" + std::to_string(i);
         auto cam = &gltf->cameras[gid];
         cam->name = fl_cam->name;
-        cam->type = (fl_cam->ortho) ? camera_t::type_t::orthographic_t
-                                    : camera_t::type_t::perspective_t;
+        cam->type = (fl_cam->ortho) ? camera_t::type_t::orthographic_t :
+                                      camera_t::type_t::perspective_t;
         if (fl_cam->ortho) {
             cam->orthographic.ymag = fl_cam->yfov;
             cam->orthographic.xmag = fl_cam->aspect * fl_cam->yfov;
@@ -4303,8 +4274,8 @@ YGLTF_API glTF_t* unflatten_gltf(const fl_gltf* fl_gltf,
     buffer->uri = buffer_uri;
 
     // attribute handling
-    auto add_array_accessor = [&](const std::string& name, int count, int nc,
-                                  const float* df) {
+    auto add_array_accessor = [&](
+        const std::string& name, int count, int nc, const float* df) {
         auto aid = "a_" + name;
         auto vid = "v_" + name;
         auto bufferView = &gltf->bufferViews[vid];
@@ -4333,15 +4304,15 @@ YGLTF_API glTF_t* unflatten_gltf(const fl_gltf* fl_gltf,
     };
 
     // attribute handling
-    auto add_element_accessor = [&](const std::string& name, int count,
-                                    const int* di, bool use_uint) {
+    auto add_element_accessor = [&](
+        const std::string& name, int count, const int* di, bool use_uint) {
         auto aid = "a_" + name;
         auto vid = "v_" + name;
         auto bufferView = &gltf->bufferViews[vid];
         bufferView->buffer = bid;
         bufferView->byteOffset = (int)buffer->data.size();
-        bufferView->byteLength = (use_uint) ? count * sizeof(unsigned int)
-                                            : count * sizeof(unsigned short);
+        bufferView->byteLength = (use_uint) ? count * sizeof(unsigned int) :
+                                              count * sizeof(unsigned short);
         buffer->data.resize(buffer->data.size() + bufferView->byteLength);
         buffer->byteLength += bufferView->byteLength;
         auto ptr =
@@ -4354,7 +4325,7 @@ YGLTF_API glTF_t* unflatten_gltf(const fl_gltf* fl_gltf,
                 assert(di[i] < std::numeric_limits<unsigned short>::max());
                 auto s = (unsigned short)di[i];
                 memcpy(ptr + i * sizeof(unsigned short), &s,
-                       sizeof(unsigned short));
+                    sizeof(unsigned short));
             }
         }
         auto accessor = &gltf->accessors[aid];
@@ -4363,8 +4334,8 @@ YGLTF_API glTF_t* unflatten_gltf(const fl_gltf* fl_gltf,
         accessor->byteStride =
             (use_uint) ? sizeof(unsigned int) : sizeof(unsigned short);
         accessor->componentType =
-            (use_uint) ? accessor_t::componentType_t::unsigned_int_t
-                       : accessor_t::componentType_t::unsigned_short_t;
+            (use_uint) ? accessor_t::componentType_t::unsigned_int_t :
+                         accessor_t::componentType_t::unsigned_short_t;
         accessor->count = count;
         accessor->type = accessor_t::type_t::scalar_t;
         return aid;
@@ -4401,18 +4372,17 @@ YGLTF_API glTF_t* unflatten_gltf(const fl_gltf* fl_gltf,
             auto elem_as_uint = fl_prim->pos.size() >
                                 std::numeric_limits<unsigned short>::max();
             if (!fl_prim->points.empty()) {
-                prim->indices = add_element_accessor(
-                    gid + pid + "_points", (int)fl_prim->points.size(),
-                    (int*)fl_prim->points.data(), elem_as_uint);
+                prim->indices = add_element_accessor(gid + pid + "_points",
+                    (int)fl_prim->points.size(), (int*)fl_prim->points.data(),
+                    elem_as_uint);
                 prim->mode = mesh_primitive_t::mode_t::points_t;
             } else if (!fl_prim->lines.empty()) {
-                prim->indices = add_element_accessor(
-                    gid + pid + "_lines", (int)fl_prim->lines.size() * 2,
-                    (int*)fl_prim->lines.data(), elem_as_uint);
+                prim->indices = add_element_accessor(gid + pid + "_lines",
+                    (int)fl_prim->lines.size() * 2, (int*)fl_prim->lines.data(),
+                    elem_as_uint);
                 prim->mode = mesh_primitive_t::mode_t::lines_t;
             } else if (!fl_prim->triangles.empty()) {
-                prim->indices = add_element_accessor(
-                    gid + pid + "_triangles",
+                prim->indices = add_element_accessor(gid + pid + "_triangles",
                     (int)fl_prim->triangles.size() * 3,
                     (int*)fl_prim->triangles.data(), elem_as_uint);
                 prim->mode = mesh_primitive_t::mode_t::triangles_t;
@@ -4433,12 +4403,12 @@ YGLTF_API glTF_t* unflatten_gltf(const fl_gltf* fl_gltf,
         mat->KHR_materials_common.valid = true;
         auto matv = &mat->KHR_materials_common.value;
         matv->technique = "BLINN";
-        matv->values.emissionFactor = {fl_mat->ke[0], fl_mat->ke[1],
-                                       fl_mat->ke[2]};
-        matv->values.diffuseFactor = {fl_mat->kd[0], fl_mat->kd[1],
-                                      fl_mat->kd[2], 1};
-        matv->values.specularFactor = {fl_mat->ks[0], fl_mat->ks[1],
-                                       fl_mat->ks[2]};
+        matv->values.emissionFactor = {
+            fl_mat->ke[0], fl_mat->ke[1], fl_mat->ke[2]};
+        matv->values.diffuseFactor = {
+            fl_mat->kd[0], fl_mat->kd[1], fl_mat->kd[2], 1};
+        matv->values.specularFactor = {
+            fl_mat->ks[0], fl_mat->ks[1], fl_mat->ks[2]};
         matv->values.shininess =
             (fl_mat->rs) ? 2 / (fl_mat->rs * fl_mat->rs) - 2 : 1e6;
         if (fl_mat->ke_txt >= 0)
@@ -4514,8 +4484,8 @@ YGLTF_API glTF_t* unflatten_gltf(const fl_gltf* fl_gltf,
 //
 // Unflattnes gltf
 //
-YGLTF_API glTF_t unflatten_gltf(const fl_gltf& fl_gltf,
-                                const std::string& buffer_uri) {
+YGLTF_API glTF_t unflatten_gltf(
+    const fl_gltf& fl_gltf, const std::string& buffer_uri) {
     auto gltf = std::unique_ptr<glTF_t>(unflatten_gltf(&fl_gltf, buffer_uri));
     return *gltf;
 }

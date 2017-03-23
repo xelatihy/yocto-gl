@@ -168,6 +168,8 @@ inline scene* load_obj_scene(const std::string& filename) {
             (fl_mat->kt_txt < 0) ? nullptr : sc->textures[fl_mat->kt_txt];
         mat->rs_txt =
             (fl_mat->rs_txt < 0) ? nullptr : sc->textures[fl_mat->rs_txt];
+        mat->norm_txt =
+            (fl_mat->norm_txt < 0) ? nullptr : sc->textures[fl_mat->norm_txt];
         sc->materials.push_back(mat);
     }
 
@@ -178,9 +180,9 @@ inline scene* load_obj_scene(const std::string& filename) {
             auto sh = new shape();
             sh->name = fl_mesh->name;
             sh->frame = ym::identity_frame3f;
-            sh->mat = (fl_prim->material < 0)
-                          ? nullptr
-                          : sc->materials[fl_prim->material];
+            sh->mat = (fl_prim->material < 0) ?
+                          nullptr :
+                          sc->materials[fl_prim->material];
             sh->pos = fl_prim->pos;
             sh->norm = fl_prim->norm;
             sh->texcoord = fl_prim->texcoord;
@@ -235,8 +237,8 @@ inline void save_obj_scene(const std::string& filename, const scene* sc) {
         fl_prim->material = get_material_idx(sc, shape->mat);
         fl_prim->pos.resize(shape->pos.size());
         for (auto i = 0; i < shape->pos.size(); i++) {
-            fl_prim->pos[i] = ym::transform_point((ym::frame3f)shape->frame,
-                                                  (ym::vec3f)shape->pos[i]);
+            fl_prim->pos[i] = ym::transform_point(
+                (ym::frame3f)shape->frame, (ym::vec3f)shape->pos[i]);
         }
         fl_prim->norm.resize(shape->norm.size());
         for (auto i = 0; i < shape->pos.size(); i++) {
@@ -245,12 +247,12 @@ inline void save_obj_scene(const std::string& filename, const scene* sc) {
         }
         fl_prim->texcoord = std::vector<std::array<float, 2>>(
             shape->texcoord.begin(), shape->texcoord.end());
-        fl_prim->color = std::vector<std::array<float, 3>>(shape->color.begin(),
-                                                           shape->color.end());
+        fl_prim->color = std::vector<std::array<float, 3>>(
+            shape->color.begin(), shape->color.end());
         fl_prim->radius = shape->radius;
         fl_prim->points = shape->points;
-        fl_prim->lines = std::vector<std::array<int, 2>>(shape->lines.begin(),
-                                                         shape->lines.end());
+        fl_prim->lines = std::vector<std::array<int, 2>>(
+            shape->lines.begin(), shape->lines.end());
         fl_prim->triangles = std::vector<std::array<int, 3>>(
             shape->triangles.begin(), shape->triangles.end());
         fl_scene->primitives.push_back(fl_prim);
@@ -278,6 +280,7 @@ inline void save_obj_scene(const std::string& filename, const scene* sc) {
         fl_mat->ks_txt = get_texture_idx(sc, mat->ks_txt);
         fl_mat->kt_txt = get_texture_idx(sc, mat->kt_txt);
         fl_mat->rs_txt = get_texture_idx(sc, mat->rs_txt);
+        fl_mat->norm_txt = get_texture_idx(sc, mat->norm_txt);
         fl_scene->materials.push_back(fl_mat);
     }
 
@@ -321,18 +324,18 @@ inline void save_gltf_scene(const std::string& filename, const scene* sc) {
         fl_mesh->primitives.push_back((int)fl_scene->primitives.size());
         auto fl_prim = new ygltf::fl_primitives();
         fl_prim->material = get_material_idx(sc, shape->mat);
-        fl_prim->pos = std::vector<std::array<float, 3>>(shape->pos.begin(),
-                                                         shape->pos.end());
-        fl_prim->norm = std::vector<std::array<float, 3>>(shape->norm.begin(),
-                                                          shape->norm.end());
+        fl_prim->pos = std::vector<std::array<float, 3>>(
+            shape->pos.begin(), shape->pos.end());
+        fl_prim->norm = std::vector<std::array<float, 3>>(
+            shape->norm.begin(), shape->norm.end());
         fl_prim->texcoord = std::vector<std::array<float, 2>>(
             shape->texcoord.begin(), shape->texcoord.end());
-        fl_prim->color = std::vector<std::array<float, 3>>(shape->color.begin(),
-                                                           shape->color.end());
+        fl_prim->color = std::vector<std::array<float, 3>>(
+            shape->color.begin(), shape->color.end());
         fl_prim->radius = shape->radius;
         fl_prim->points = shape->points;
-        fl_prim->lines = std::vector<std::array<int, 2>>(shape->lines.begin(),
-                                                         shape->lines.end());
+        fl_prim->lines = std::vector<std::array<int, 2>>(
+            shape->lines.begin(), shape->lines.end());
         fl_prim->triangles = std::vector<std::array<int, 3>>(
             shape->triangles.begin(), shape->triangles.end());
         fl_scene->primitives.push_back(fl_prim);
@@ -373,8 +376,8 @@ inline void save_gltf_scene(const std::string& filename, const scene* sc) {
 inline scene* load_gltf_scene(const std::string& filename, bool binary) {
     // load scene
     auto gltf = std::unique_ptr<ygltf::glTF_t>(
-        (binary) ? ygltf::load_binary_gltf(filename, true, false, true, true)
-                 : ygltf::load_gltf(filename, true, false, true, true));
+        (binary) ? ygltf::load_binary_gltf(filename, true, false, true, true) :
+                   ygltf::load_gltf(filename, true, false, true, true));
 
     // flatten to scene
     auto fl_scene = std::unique_ptr<ygltf::fl_gltf>(
@@ -436,9 +439,9 @@ inline scene* load_gltf_scene(const std::string& filename, bool binary) {
             auto sh = new shape();
             sh->name = fl_mesh->name;
             sh->frame = ym::to_frame(ym::mat4f(fl_mesh->xform));
-            sh->mat = (fl_prim->material < 0)
-                          ? nullptr
-                          : sc->materials[fl_prim->material];
+            sh->mat = (fl_prim->material < 0) ?
+                          nullptr :
+                          sc->materials[fl_prim->material];
             sh->pos = fl_prim->pos;
             sh->norm = fl_prim->norm;
             sh->texcoord = fl_prim->texcoord;
@@ -472,8 +475,8 @@ inline scene* load_ply_scene(const std::string& filename) {
 
         // vertex data
         auto pos = std::vector<float>();
-        auto npos = file.request_properties_from_element("vertex",
-                                                         {"x", "y", "z"}, pos);
+        auto npos = file.request_properties_from_element(
+            "vertex", {"x", "y", "z"}, pos);
         auto norm = std::vector<float>();
         auto nnorm = file.request_properties_from_element(
             "vertex", {"nx", "ny", "nz"}, norm);
@@ -506,11 +509,9 @@ inline scene* load_ply_scene(const std::string& filename) {
         if (nks) sh->ks.assign((float3*)ks.data(), (float3*)ks.data() + nks);
         if (nrs) sh->rs.assign(rs.data(), rs.data() + nrs);
         if (ntriangle)
-            sh->triangles.assign((int3*)faces.data(),
-                                 (int3*)faces.data() + ntriangle);
-    } catch (const std::exception& e) {
-        throw;
-    }
+            sh->triangles.assign(
+                (int3*)faces.data(), (int3*)faces.data() + ntriangle);
+    } catch (const std::exception& e) { throw; }
 
     // create material
     auto mat = new material();
@@ -590,9 +591,8 @@ void fix_cameras(const scene* sc) {
     }
     for (auto cam : sc->cameras) {
         if (!cam->focus) {
-            auto ddir =
-                ym::dot((ym::vec3f)cam->frame[2],
-                        ym::center(bbox) - ym::pos((ym::frame3f)cam->frame));
+            auto ddir = ym::dot((ym::vec3f)cam->frame[2],
+                ym::center(bbox) - ym::pos((ym::frame3f)cam->frame));
             cam->focus = (ddir > 0) ? 1 : -ddir;
         }
     }
@@ -602,21 +602,11 @@ void fix_cameras(const scene* sc) {
 // Merge a scene into another
 //
 void merge_scenes(scene* sc, scene* sc1) {
-    for (auto cam : sc1->cameras) {
-        sc->cameras.push_back(cam);
-    }
-    for (auto txt : sc1->textures) {
-        sc->textures.push_back(txt);
-    }
-    for (auto mat : sc1->materials) {
-        sc->materials.push_back(mat);
-    }
-    for (auto shp : sc1->shapes) {
-        sc->shapes.push_back(shp);
-    }
-    for (auto env : sc1->environments) {
-        sc->environments.push_back(env);
-    }
+    for (auto cam : sc1->cameras) { sc->cameras.push_back(cam); }
+    for (auto txt : sc1->textures) { sc->textures.push_back(txt); }
+    for (auto mat : sc1->materials) { sc->materials.push_back(mat); }
+    for (auto shp : sc1->shapes) { sc->shapes.push_back(shp); }
+    for (auto env : sc1->environments) { sc->environments.push_back(env); }
     sc1->cameras.clear();
     sc1->textures.clear();
     sc1->materials.clear();
@@ -670,20 +660,32 @@ scene* load_scene(const std::string& filename, float scale, bool add_camera) {
     }
 
     // ensure normals
-    for (auto sh : sc->shapes) {
-        if (!sh->norm.empty()) continue;
-        sh->norm.resize(sh->pos.size());
-        yshape::compute_normals(
-            (int)sh->points.size(), sh->points.data(), (int)sh->lines.size(),
-            sh->lines.data(), (int)sh->triangles.size(), sh->triangles.data(),
-            (int)sh->pos.size(), sh->pos.data(), sh->norm.data());
+    for (auto shp : sc->shapes) {
+        if (!shp->norm.empty()) continue;
+        shp->norm.resize(shp->pos.size());
+        yshape::compute_normals((int)shp->points.size(), shp->points.data(),
+            (int)shp->lines.size(), shp->lines.data(),
+            (int)shp->triangles.size(), shp->triangles.data(),
+            (int)shp->pos.size(), shp->pos.data(), shp->norm.data());
+    }
+
+    // ensure tangent space
+    for (auto shp : sc->shapes) {
+        if (shp->triangles.empty()) continue;
+        if (!shp->tangsp.empty() || shp->texcoord.empty() ||
+            !shp->mat->norm_txt)
+            continue;
+        shp->tangsp.resize(shp->pos.size());
+        yshape::compute_tangent_frame((int)shp->triangles.size(),
+            shp->triangles.data(), (int)shp->pos.size(), shp->pos.data(),
+            shp->norm.data(), shp->texcoord.data(), shp->tangsp.data());
     }
 
     // ensure radius is necessary
-    for (auto sh : sc->shapes) {
-        if (sh->points.empty() && sh->lines.empty()) continue;
-        if (!sh->radius.empty()) continue;
-        sh->radius.resize(sh->pos.size(), 0.001f);
+    for (auto shp : sc->shapes) {
+        if (shp->points.empty() && shp->lines.empty()) continue;
+        if (!shp->radius.empty()) continue;
+        shp->radius.resize(shp->pos.size(), 0.001f);
     }
 
     // make camera if not there
@@ -698,8 +700,8 @@ scene* load_scene(const std::string& filename, float scale, bool add_camera) {
 //
 // Load multiple scenes
 //
-scene* load_scenes(const std::vector<std::string>& filenames, float scale,
-                   bool add_camera) {
+scene* load_scenes(
+    const std::vector<std::string>& filenames, float scale, bool add_camera) {
     // skip if not necessary
     if (filenames.size() == 0) return nullptr;
     if (filenames.size() == 1)
@@ -756,8 +758,8 @@ void load_envmap(scene* scn, const std::string& filename, float scale) {
     auto env = new environment();
     env->name = "env";
     env->mat = mat;
-    env->frame = ym::lookat_frame3(ym::vec3f{0, 0, 1}, ym::vec3f{0, 0, 0},
-                                   ym::vec3f{0, 1, 0});
+    env->frame = ym::lookat_frame3(
+        ym::vec3f{0, 0, 1}, ym::vec3f{0, 0, 0}, ym::vec3f{0, 1, 0});
     scn->environments.push_back(env);
 }
 
@@ -772,18 +774,17 @@ std::vector<int4> make_trace_blocks(int w, int h, int bs) {
 }
 
 void save_image(const std::string& filename, int width, int height,
-                const float4* hdr, float exposure, yimg::tonemap_type tonemap,
-                float gamma) {
+    const float4* hdr, float exposure, yimg::tonemap_type tonemap,
+    float gamma) {
     auto ext = ycmd::get_extension(filename);
     if (ext == ".hdr") {
         yimg::save_image(filename, width, height, 4, (float*)hdr, nullptr);
     } else if (ext == ".png") {
         auto ldr = std::vector<ym::vec4b>(width * height, {0, 0, 0, 0});
         yimg::tonemap_image(width, height, 4, (float*)hdr,
-                            (unsigned char*)ldr.data(), exposure, tonemap,
-                            gamma);
-        yimg::save_image(filename, width, height, 4, nullptr,
-                         (unsigned char*)ldr.data());
+            (unsigned char*)ldr.data(), exposure, tonemap, gamma);
+        yimg::save_image(
+            filename, width, height, 4, nullptr, (unsigned char*)ldr.data());
     } else {
         printf("supports only hdr and png for image writing\n");
         return;
@@ -796,52 +797,51 @@ ybvh::scene* make_bvh(const scene* scene) {
     for (auto shape : scene->shapes) {
         if (!shape->points.empty()) {
             ybvh::set_point_shape(scene_bvh, sid++, shape->frame,
-                                  (int)shape->points.size(),
-                                  shape->points.data(), (int)shape->pos.size(),
-                                  shape->pos.data(), shape->radius.data());
+                (int)shape->points.size(), shape->points.data(),
+                (int)shape->pos.size(), shape->pos.data(),
+                shape->radius.data());
         } else if (!shape->lines.empty()) {
             ybvh::set_line_shape(scene_bvh, sid++, shape->frame,
-                                 (int)shape->lines.size(), shape->lines.data(),
-                                 (int)shape->pos.size(), shape->pos.data(),
-                                 shape->radius.data());
+                (int)shape->lines.size(), shape->lines.data(),
+                (int)shape->pos.size(), shape->pos.data(),
+                shape->radius.data());
 
         } else if (!shape->triangles.empty()) {
-            ybvh::set_triangle_shape(
-                scene_bvh, sid++, shape->frame, (int)shape->triangles.size(),
-                shape->triangles.data(), (int)shape->pos.size(),
-                shape->pos.data(), shape->radius.data());
+            ybvh::set_triangle_shape(scene_bvh, sid++, shape->frame,
+                (int)shape->triangles.size(), shape->triangles.data(),
+                (int)shape->pos.size(), shape->pos.data(),
+                shape->radius.data());
 
         } else {
             ybvh::set_point_shape(scene_bvh, sid++, shape->frame,
-                                  (int)shape->pos.size(), shape->pos.data(),
-                                  shape->radius.data());
+                (int)shape->pos.size(), shape->pos.data(),
+                shape->radius.data());
         }
     }
     ybvh::build_bvh(scene_bvh);
     return scene_bvh;
 }
 
-ytrace::scene* make_trace_scene(const scene* scene,
-                                const ybvh::scene* scene_bvh, int camera) {
-    auto trace_scene = ytrace::make_scene(
-        (int)scene->cameras.size(), (int)scene->shapes.size(),
-        (int)scene->materials.size(), (int)scene->textures.size(),
-        (int)scene->environments.size());
+ytrace::scene* make_trace_scene(
+    const scene* scene, const ybvh::scene* scene_bvh, int camera) {
+    auto trace_scene = ytrace::make_scene((int)scene->cameras.size(),
+        (int)scene->shapes.size(), (int)scene->materials.size(),
+        (int)scene->textures.size(), (int)scene->environments.size());
 
     auto cid = 0;
     for (auto cam : scene->cameras) {
         ytrace::set_camera(trace_scene, cid++, cam->frame, cam->yfov,
-                           cam->aspect, cam->aperture, cam->focus);
+            cam->aspect, cam->aperture, cam->focus);
     }
 
     auto tid = 0;
     for (auto txt : scene->textures) {
         if (!txt->hdr.empty()) {
             ytrace::set_texture(trace_scene, tid++, txt->width, txt->height,
-                                txt->ncomp, txt->hdr.data());
+                txt->ncomp, txt->hdr.data());
         } else if (!txt->ldr.empty()) {
             ytrace::set_texture(trace_scene, tid++, txt->width, txt->height,
-                                txt->ncomp, txt->ldr.data());
+                txt->ncomp, txt->ldr.data());
         } else
             assert(false);
     }
@@ -850,57 +850,53 @@ ytrace::scene* make_trace_scene(const scene* scene,
     for (auto env : scene->environments) {
         auto mat = env->mat;
         ytrace::set_environment(trace_scene, eid++, env->frame, mat->ke,
-                                get_texture_idx(scene, mat->ke_txt));
+            get_texture_idx(scene, mat->ke_txt));
     }
 
     auto mid = 0;
     for (auto mat : scene->materials) {
         ytrace::set_material(trace_scene, mid++, mat->ke, mat->kd, mat->ks,
-                             mat->kt, mat->rs,
-                             get_texture_idx(scene, mat->ke_txt),
-                             get_texture_idx(scene, mat->kd_txt),
-                             get_texture_idx(scene, mat->ks_txt),
-                             get_texture_idx(scene, mat->kt_txt),
-                             get_texture_idx(scene, mat->rs_txt));
+            mat->kt, mat->rs, get_texture_idx(scene, mat->ke_txt),
+            get_texture_idx(scene, mat->kd_txt),
+            get_texture_idx(scene, mat->ks_txt),
+            get_texture_idx(scene, mat->kt_txt),
+            get_texture_idx(scene, mat->rs_txt),
+            get_texture_idx(scene, mat->norm_txt));
     }
 
     auto sid = 0;
     for (auto shape : scene->shapes) {
         if (!shape->points.empty()) {
-            ytrace::set_point_shape(
-                trace_scene, sid++, shape->frame,
+            ytrace::set_point_shape(trace_scene, sid++, shape->frame,
                 get_material_idx(scene, shape->mat), (int)shape->points.size(),
                 shape->points.data(), (int)shape->pos.size(), shape->pos.data(),
                 shape->norm.data(), shape->texcoord.data(), shape->color.data(),
                 shape->radius.data());
         } else if (!shape->lines.empty()) {
-            ytrace::set_line_shape(
-                trace_scene, sid++, shape->frame,
+            ytrace::set_line_shape(trace_scene, sid++, shape->frame,
                 get_material_idx(scene, shape->mat), (int)shape->lines.size(),
                 shape->lines.data(), (int)shape->pos.size(), shape->pos.data(),
                 shape->norm.data(), shape->texcoord.data(), shape->color.data(),
                 shape->radius.data());
 
         } else if (!shape->triangles.empty()) {
-            ytrace::set_triangle_shape(
-                trace_scene, sid++, shape->frame,
+            ytrace::set_triangle_shape(trace_scene, sid++, shape->frame,
                 get_material_idx(scene, shape->mat),
                 (int)shape->triangles.size(), shape->triangles.data(),
                 (int)shape->pos.size(), shape->pos.data(), shape->norm.data(),
-                shape->texcoord.data(), shape->color.data());
+                shape->texcoord.data(), shape->color.data(),
+                shape->tangsp.data());
 
         } else {
         }
         if (!shape->ke.empty() || !shape->kd.empty() || !shape->ks.empty() ||
             !shape->rs.empty()) {
             ytrace::set_vert_material(trace_scene, sid - 1, shape->ke.data(),
-                                      shape->kd.data(), shape->ks.data(),
-                                      shape->rs.data());
+                shape->kd.data(), shape->ks.data(), shape->rs.data());
         }
     }
 
-    ytrace::set_intersection_callbacks(
-        trace_scene, (void*)scene_bvh,
+    ytrace::set_intersection_callbacks(trace_scene, (void*)scene_bvh,
         [](auto ctx, auto o, auto d, auto tmin, auto tmax) {
             auto scene_bvh = (ybvh::scene*)ctx;
             auto isec = ybvh::intersect_ray(scene_bvh, o, d, tmin, tmax, false);
@@ -933,25 +929,23 @@ ysym::scene* make_rigid_scene(const scene* scene, ybvh::scene*& scene_bvh) {
         auto mat = shape->mat;
         auto density =
             (shape->name != "floor" && ym::length((ym::vec3f)mat->ke) == 0 &&
-             !shape->triangles.empty())
-                ? 1.0f
-                : 0.0f;
+                !shape->triangles.empty()) ?
+                1.0f :
+                0.0f;
         ysym::set_body(rigid_scene, sid++, shape->frame, {0, 0, 0}, {0, 0, 0},
-                       density, (int)shape->triangles.size(),
-                       shape->triangles.data(), (int)shape->pos.size(),
-                       shape->pos.data());
+            density, (int)shape->triangles.size(), shape->triangles.data(),
+            (int)shape->pos.size(), shape->pos.data());
     }
 
     // set up final bvh
     scene_bvh = make_bvh(scene);
 
     // setup collisions
-    ysym::set_overlap_callbacks(
-        rigid_scene, scene_bvh,
+    ysym::set_overlap_callbacks(rigid_scene, scene_bvh,
         [](auto ctx, std::vector<ysym::int2>* overlaps) {
             auto scene_bvh = (ybvh::scene*)ctx;
-            ybvh::overlap_shape_bounds(scene_bvh, scene_bvh, false, true, true,
-                                       overlaps);
+            ybvh::overlap_shape_bounds(
+                scene_bvh, scene_bvh, false, true, true, overlaps);
         },
         [](auto ctx, int sid, const ysym::float3& pt, float max_dist) {
             auto scene_bvh = (ybvh::scene*)ctx;
@@ -960,18 +954,19 @@ ysym::scene* make_rigid_scene(const scene* scene, ybvh::scene*& scene_bvh) {
             return *(ysym::overlap_point*)&overlap;
         },
         [](auto ctx, int sid1, int sid2, float max_dist,
-           std::vector<std::pair<ysym::overlap_point, ysym::int2>>* overlaps_) {
+            std::vector<std::pair<ysym::overlap_point, ysym::int2>>*
+                overlaps_) {
             auto scene_bvh = (ybvh::scene*)ctx;
             auto overlaps =
                 (std::vector<std::pair<ybvh::point, ybvh::int2>>*)overlaps_;
             ybvh::overlap_verts(scene_bvh, scene_bvh, sid1, sid2, true,
-                                max_dist, true, overlaps);
+                max_dist, true, overlaps);
         },
         [](auto ctx, auto rigid_scene, int nshapes) {
             auto scene_bvh = (ybvh::scene*)ctx;
             for (auto sid = 0; sid < nshapes; sid++) {
-                ybvh::set_shape_frame(scene_bvh, sid,
-                                      ysym::get_body_frame(rigid_scene, sid));
+                ybvh::set_shape_frame(
+                    scene_bvh, sid, ysym::get_body_frame(rigid_scene, sid));
             }
             ybvh::refit_bvh(scene_bvh);
         });
@@ -990,8 +985,7 @@ void simulate_step(scene* scene, ysym::scene* rigid_scene, float dt) {
 }
 
 params* init_params(const std::string& help, int argc, char** argv,
-                    bool trace_params, bool sym_params, bool shade_params,
-                    bool ui_params) {
+    bool trace_params, bool sym_params, bool shade_params, bool ui_params) {
     static auto rtype_names = std::vector<std::pair<std::string, int>>{
         {"default", (int)ytrace::rng_type::def},
         {"uniform", (int)ytrace::rng_type::uniform},
@@ -1018,17 +1012,17 @@ params* init_params(const std::string& help, int argc, char** argv,
 
     // render
     if (trace_params || shade_params) {
-        pars->exposure = ycmd::parse_optf(parser, "--exposure", "-e",
-                                          "hdr image exposure", 0);
+        pars->exposure = ycmd::parse_optf(
+            parser, "--exposure", "-e", "hdr image exposure", 0);
         pars->gamma =
             ycmd::parse_optf(parser, "--gamma", "-g", "hdr image gamma", 2.2f);
-        pars->tonemap = (yimg::tonemap_type)ycmd::parse_opte(
-            parser, "--tonemap", "-t", "hdr tonemap output",
+        pars->tonemap = (yimg::tonemap_type)ycmd::parse_opte(parser,
+            "--tonemap", "-t", "hdr tonemap output",
             (int)yimg::tonemap_type::def, tmtype_names);
-        auto aspect = ycmd::parse_optf(parser, "--aspect", "-a", "image aspect",
-                                       16.0f / 9.0f);
-        auto res = ycmd::parse_opti(parser, "--resolution", "-r",
-                                    "image resolution", 720);
+        auto aspect = ycmd::parse_optf(
+            parser, "--aspect", "-a", "image aspect", 16.0f / 9.0f);
+        auto res = ycmd::parse_opti(
+            parser, "--resolution", "-r", "image resolution", 720);
         pars->render_params.camera_id =
             ycmd::parse_opti(parser, "--camera", "-C", "camera", 0);
         pars->save_progressive = ycmd::parse_flag(
@@ -1042,25 +1036,25 @@ params* init_params(const std::string& help, int argc, char** argv,
     }
 
     if (shade_params) {
-        auto camera_lights = ycmd::parse_flag(parser, "--camera_lights", "-c",
-                                              "enable camera lights", false);
-        pars->render_params.stype = (camera_lights)
-                                        ? ytrace::shader_type::eyelight
-                                        : ytrace::shader_type::direct;
+        auto camera_lights = ycmd::parse_flag(
+            parser, "--camera_lights", "-c", "enable camera lights", false);
+        pars->render_params.stype = (camera_lights) ?
+                                        ytrace::shader_type::eyelight :
+                                        ytrace::shader_type::direct;
     }
 
     // params
     if (trace_params) {
-        pars->render_params.rtype = (ytrace::rng_type)ycmd::parse_opte(
-            parser, "--random", "", "random type", (int)ytrace::rng_type::def,
-            rtype_names);
-        pars->render_params.stype = (ytrace::shader_type)ycmd::parse_opte(
-            parser, "--integrator", "-i", "integrator type",
-            (int)ytrace::shader_type::def, stype_names);
+        pars->render_params.rtype =
+            (ytrace::rng_type)ycmd::parse_opte(parser, "--random", "",
+                "random type", (int)ytrace::rng_type::def, rtype_names);
+        pars->render_params.stype =
+            (ytrace::shader_type)ycmd::parse_opte(parser, "--integrator", "-i",
+                "integrator type", (int)ytrace::shader_type::def, stype_names);
         pars->render_params.envmap_invisible = ycmd::parse_flag(
             parser, "--envmap_invisible", "", "envmap invisible");
-        auto camera_lights = ycmd::parse_flag(parser, "--camera_lights", "-c",
-                                              "enable camera lights", false);
+        auto camera_lights = ycmd::parse_flag(
+            parser, "--camera_lights", "-c", "enable camera lights", false);
         pars->nthreads = ycmd::parse_opti(
             parser, "--threads", "-t", "number of threads [0 for default]", 0);
         pars->block_size =
@@ -1076,19 +1070,19 @@ params* init_params(const std::string& help, int argc, char** argv,
     }
 
     if (sym_params) {
-        pars->dt = ycmd::parse_optf(parser, "--delta_time", "-dt", "delta time",
-                                    1 / 60.0f);
-        pars->nframes = ycmd::parse_opti(parser, "--nframes", "-n",
-                                         "number of frames", 1000);
-        pars->outfilename = ycmd::parse_opts(parser, "--output", "-o",
-                                             "output filename", "out.%04d.obj");
+        pars->dt = ycmd::parse_optf(
+            parser, "--delta_time", "-dt", "delta time", 1 / 60.0f);
+        pars->nframes = ycmd::parse_opti(
+            parser, "--nframes", "-n", "number of frames", 1000);
+        pars->outfilename = ycmd::parse_opts(
+            parser, "--output", "-o", "output filename", "out.%04d.obj");
     }
 
     if (ui_params) {
         pars->no_ui =
             ycmd::parse_flag(parser, "--no-ui", "", "run without ui", false);
-        pars->legacy_gl = ycmd::parse_flag(parser, "--legacy_opengl", "-L",
-                                           "uses legacy OpenGL", false);
+        pars->legacy_gl = ycmd::parse_flag(
+            parser, "--legacy_opengl", "-L", "uses legacy OpenGL", false);
     }
 
     // params

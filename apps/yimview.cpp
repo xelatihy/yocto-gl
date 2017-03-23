@@ -84,8 +84,7 @@ struct params {
 };
 
 std::vector<img*> load_images(const std::vector<std::string>& img_filenames,
-                              float exposure, yimg::tonemap_type tonemap,
-                              float gamma) {
+    float exposure, yimg::tonemap_type tonemap, float gamma) {
     auto imgs = std::vector<img*>();
     for (auto filename : img_filenames) {
         imgs.push_back(new img());
@@ -105,8 +104,8 @@ std::vector<img*> load_images(const std::vector<std::string>& img_filenames,
         if (!img->hdr.empty()) {
             img->ldr.resize(img->hdr.size());
             yimg::tonemap_image(img->width, img->height, img->ncomp,
-                                img->hdr.data(), img->ldr.data(), img->exposure,
-                                img->tonemap, img->gamma);
+                img->hdr.data(), img->ldr.data(), img->exposure, img->tonemap,
+                img->gamma);
             img->exposure = exposure;
             img->gamma = gamma;
             img->tonemap = tonemap;
@@ -132,11 +131,10 @@ void init_params(params* pars, ycmd::parser* parser) {
         ycmd::parse_optf(parser, "--exposure", "-e", "hdr image exposure", 0);
     pars->gamma =
         ycmd::parse_optf(parser, "--gamma", "-g", "hdr image gamma", 2.2f);
-    pars->tonemap = (yimg::tonemap_type)ycmd::parse_opte(
-        parser, "--tonemap", "-t", "hdr image tonemap",
-        (int)yimg::tonemap_type::srgb, tmtype_names);
-    pars->legacy_gl = ycmd::parse_flag(parser, "--legacy_opengl", "-L",
-                                       "uses legacy OpenGL", false);
+    pars->tonemap = (yimg::tonemap_type)ycmd::parse_opte(parser, "--tonemap",
+        "-t", "hdr image tonemap", (int)yimg::tonemap_type::srgb, tmtype_names);
+    pars->legacy_gl = ycmd::parse_flag(
+        parser, "--legacy_opengl", "-L", "uses legacy OpenGL", false);
     auto filenames =
         ycmd::parse_argas(parser, "image", "image filename", {}, true);
 
@@ -198,18 +196,18 @@ void draw_image(yglu::ui::window* win) {
     auto window_size = get_window_size(win);
     if (pars->legacy_gl) {
         yglu::legacy::draw_image(img->tex_glid, img->width, img->height,
-                                 window_size[0], window_size[1],
-                                 pars->offset[0], pars->offset[1], pars->zoom);
+            window_size[0], window_size[1], pars->offset[0], pars->offset[1],
+            pars->zoom);
     } else {
         yglu::modern::shade_image(img->tex_glid, img->width, img->height,
-                                  window_size[0], window_size[1],
-                                  pars->offset[0], pars->offset[1], pars->zoom);
+            window_size[0], window_size[1], pars->offset[0], pars->offset[1],
+            pars->zoom);
     }
 }
 
 template <typename T>
-ym::vec<T, 4> lookup_image(int w, int h, int nc, const T* pixels, int x, int y,
-                           T one) {
+ym::vec<T, 4> lookup_image(
+    int w, int h, int nc, const T* pixels, int x, int y, T one) {
     if (x < 0 || y < 0 || x > w - 1 || y > h - 1) return {0, 0, 0, 0};
     auto v = ym::vec<T, 4>{0, 0, 0, 0};
     auto vv = pixels + ((w * y) + x) * nc;
@@ -246,16 +244,15 @@ void draw_widgets(yglu::ui::window* win) {
         auto inside = ij[0] >= 0 && ij[1] >= 0 && ij[0] < img->width &&
                       ij[1] < img->height;
         dynamic_widget_layout(win, 4);
-        auto ldrp =
-            lookup_image(img->width, img->height, img->ncomp, img->ldr.data(),
-                         ij[0], ij[1], (unsigned char)255);
+        auto ldrp = lookup_image(img->width, img->height, img->ncomp,
+            img->ldr.data(), ij[0], ij[1], (unsigned char)255);
         int_label_widget(win, "r", (inside) ? ldrp[0] : 0);
         int_label_widget(win, "g", (inside) ? ldrp[1] : 0);
         int_label_widget(win, "b", (inside) ? ldrp[2] : 0);
         int_label_widget(win, "a", (inside) ? ldrp[3] : 0);
         if (img->is_hdr()) {
             auto hdrp = lookup_image(img->width, img->height, img->ncomp,
-                                     img->hdr.data(), ij[0], ij[1], 1.0f);
+                img->hdr.data(), ij[0], ij[1], 1.0f);
             dynamic_widget_layout(win, 2);
             float_label_widget(win, "r", (inside) ? hdrp[0] : 0);
             float_label_widget(win, "g", (inside) ? hdrp[1] : 0);
@@ -279,8 +276,7 @@ void window_refresh_callback(yglu::ui::window* win) {
 void run_ui(yimview_app::params* pars) {
     // window
     auto win = yglu::ui::init_window(pars->imgs[0]->width + hud_width,
-                                     pars->imgs[0]->height, "yimview",
-                                     pars->legacy_gl, pars);
+        pars->imgs[0]->height, "yimview", pars->legacy_gl, pars);
     set_callbacks(win, text_callback, window_refresh_callback);
 
     // window values
@@ -292,13 +288,12 @@ void run_ui(yimview_app::params* pars) {
     // load textures
     for (auto& img : pars->imgs) {
         if (pars->legacy_gl) {
-            img->tex_glid = yglu::legacy::make_texture(
-                img->width, img->height, img->ncomp,
-                (unsigned char*)img->ldr.data(), false, false);
+            img->tex_glid = yglu::legacy::make_texture(img->width, img->height,
+                img->ncomp, (unsigned char*)img->ldr.data(), false, false);
         } else {
-            img->tex_glid = yglu::modern::make_texture(
-                img->width, img->height, img->ncomp,
-                (unsigned char*)img->ldr.data(), false, false, false);
+            img->tex_glid =
+                yglu::modern::make_texture(img->width, img->height, img->ncomp,
+                    (unsigned char*)img->ldr.data(), false, false, false);
         }
     }
 
@@ -309,11 +304,10 @@ void run_ui(yimview_app::params* pars) {
 
         auto& img = pars->imgs[pars->cur_img];
         set_window_title(win,
-                         ("yimview | " + img->filename + " | " +
-                          std::to_string(img->width) + "x" +
-                          std::to_string(img->height) + "@" +
-                          std::to_string(img->ncomp))
-                             .c_str());
+            ("yimview | " + img->filename + " | " + std::to_string(img->width) +
+                "x" + std::to_string(img->height) + "@" +
+                std::to_string(img->ncomp))
+                .c_str());
 
         // handle mouse
         if (mouse_button && mouse_pos != mouse_last &&
@@ -331,21 +325,19 @@ void run_ui(yimview_app::params* pars) {
         // refresh hdr
         if (img->is_hdr() &&
             (pars->exposure != img->exposure || pars->gamma != img->gamma ||
-             pars->tonemap != img->tonemap)) {
+                pars->tonemap != img->tonemap)) {
             yimg::tonemap_image(img->width, img->height, img->ncomp,
-                                img->hdr.data(), img->ldr.data(),
-                                pars->exposure, pars->tonemap, pars->gamma);
+                img->hdr.data(), img->ldr.data(), pars->exposure, pars->tonemap,
+                pars->gamma);
             img->exposure = pars->exposure;
             img->gamma = pars->gamma;
             img->tonemap = pars->tonemap;
             if (pars->legacy_gl) {
                 yglu::legacy::update_texture(img->tex_glid, img->width,
-                                             img->height, img->ncomp,
-                                             img->ldr.data(), false);
+                    img->height, img->ncomp, img->ldr.data(), false);
             } else {
                 yglu::modern::update_texture(img->tex_glid, img->width,
-                                             img->height, img->ncomp,
-                                             img->ldr.data(), false);
+                    img->height, img->ncomp, img->ldr.data(), false);
             }
         }
 

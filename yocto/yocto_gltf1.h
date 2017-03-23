@@ -632,8 +632,8 @@ struct node_t : glTFChildOfRootProperty_t {
     /// Name used when this node is a joint in a skin.
     std::string jointName;
     /// A floating-point 4x4 transformation matrix stored in column-major order.
-    std::array<float, 16> matrix = {1, 0, 0, 0, 0, 1, 0, 0,
-                                    0, 0, 1, 0, 0, 0, 0, 1};
+    std::array<float, 16> matrix = {
+        1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};
     /// The IDs of the meshes in this node.
     std::vector<std::string> meshes;
     /// The node's unit quaternion rotation in the order (x, y, z, w), where w
@@ -751,8 +751,8 @@ struct shader_t : glTFChildOfRootProperty_t {
 ///
 struct skin_t : glTFChildOfRootProperty_t {
     /// Floating-point 4x4 transformation matrix stored in column-major order.
-    std::array<float, 16> bindShapeMatrix = {1, 0, 0, 0, 0, 1, 0, 0,
-                                             0, 0, 1, 0, 0, 0, 0, 1};
+    std::array<float, 16> bindShapeMatrix = {
+        1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};
     /// The ID of the accessor containing the floating-point 4x4 inverse-bind
     /// matrices.  The default is that each matrix is a 4x4 identity matrix,
     /// which implies that inverse-bind matrices were pre-applied.
@@ -1142,8 +1142,7 @@ struct gltf_exception : std::exception {
 /// - io_exception: on read/write error
 ///
 YGLTF_API glTF_t* load_gltf(const std::string& filename, bool load_bin = true,
-                            bool load_shaders = true, bool load_img = true,
-                            bool skip_missing = false);
+    bool load_shaders = true, bool load_img = true, bool skip_missing = false);
 
 ///
 /// Loads a binary gltf file from disk
@@ -1159,10 +1158,8 @@ YGLTF_API glTF_t* load_gltf(const std::string& filename, bool load_bin = true,
 /// - io_exception: on read/write error
 ///
 YGLTF_API glTF_t* load_binary_gltf(const std::string& filename,
-                                   bool load_bin = true,
-                                   bool load_shaders = true,
-                                   bool load_img = true,
-                                   bool skip_missing = false);
+    bool load_bin = true, bool load_shaders = true, bool load_img = true,
+    bool skip_missing = false);
 
 ///
 /// Saves a scene to disk
@@ -1176,8 +1173,7 @@ YGLTF_API glTF_t* load_binary_gltf(const std::string& filename,
 /// - io_exception: on read/write error
 ///
 YGLTF_API void save_gltf(const std::string& filename, const glTF_t* gltf,
-                         bool save_bin = true, bool save_shaders = true,
-                         bool save_images = true);
+    bool save_bin = true, bool save_shaders = true, bool save_images = true);
 
 ///
 /// Saves a scene to disk
@@ -1191,8 +1187,7 @@ YGLTF_API void save_gltf(const std::string& filename, const glTF_t* gltf,
 /// - io_exception: on read/write error
 ///
 YGLTF_API void save_binary_gltf(const std::string& filename, const glTF_t* gltf,
-                                bool save_bin = true, bool save_shaders = true,
-                                bool save_images = true);
+    bool save_bin = true, bool save_shaders = true, bool save_images = true);
 
 ///
 /// Load buffer data.
@@ -1207,8 +1202,8 @@ YGLTF_API void save_binary_gltf(const std::string& filename, const glTF_t* gltf,
 /// Throw:
 /// - io_exception: on read/write error
 ///
-YGLTF_API void load_buffers(glTF_t* gltf, const std::string& dirname,
-                            bool skip_missing = false);
+YGLTF_API void load_buffers(
+    glTF_t* gltf, const std::string& dirname, bool skip_missing = false);
 
 ///
 /// Load shaders data.
@@ -1223,8 +1218,8 @@ YGLTF_API void load_buffers(glTF_t* gltf, const std::string& dirname,
 /// Throw:
 /// - io_exception: on read/write error
 ///
-YGLTF_API void load_shaders(glTF_t* asset, const std::string& dirname,
-                            bool skip_missing = false);
+YGLTF_API void load_shaders(
+    glTF_t* asset, const std::string& dirname, bool skip_missing = false);
 
 ///
 /// Loads images.
@@ -1239,8 +1234,8 @@ YGLTF_API void load_shaders(glTF_t* asset, const std::string& dirname,
 /// Throw:
 /// - io_exception: on read/write error
 ///
-YGLTF_API void load_images(glTF_t* asset, const std::string& dirname,
-                           bool skip_missing = false);
+YGLTF_API void load_images(
+    glTF_t* asset, const std::string& dirname, bool skip_missing = false);
 
 ///
 /// Save buffer data.
@@ -1294,11 +1289,8 @@ YGLTF_API void save_images(const glTF_t* asset, const std::string& dirname);
 /// - true if ok
 ///
 YGL_DEPRECATED YGLTF_API bool load_gltf(const std::string& filename,
-                                        glTF_t& gltf, std::string& errmsg,
-                                        bool load_bin = true,
-                                        bool load_shaders = true,
-                                        bool load_img = true,
-                                        bool skip_missing = false);
+    glTF_t& gltf, std::string& errmsg, bool load_bin = true,
+    bool load_shaders = true, bool load_img = true, bool skip_missing = false);
 
 ///
 /// Loads a binary gltf asset from disk
@@ -1314,10 +1306,9 @@ YGL_DEPRECATED YGLTF_API bool load_gltf(const std::string& filename,
 /// Returns:
 /// - true if ok
 ///
-YGL_DEPRECATED YGLTF_API bool load_binary_gltf(
-    const std::string& filename, glTF_t& gltf, std::string& errmsg,
-    bool load_bin = true, bool load_shaders = true, bool load_img = true,
-    bool skip_missing = false);
+YGL_DEPRECATED YGLTF_API bool load_binary_gltf(const std::string& filename,
+    glTF_t& gltf, std::string& errmsg, bool load_bin = true,
+    bool load_shaders = true, bool load_img = true, bool skip_missing = false);
 
 ///
 /// Saves a scene to disk
@@ -1333,10 +1324,8 @@ YGL_DEPRECATED YGLTF_API bool load_binary_gltf(
 /// - true if ok
 ///
 YGL_DEPRECATED YGLTF_API bool save_gltf(const std::string& filename,
-                                        const glTF_t& gltf, std::string& errmsg,
-                                        bool save_bin = true,
-                                        bool save_shaders = true,
-                                        bool save_images = true);
+    const glTF_t& gltf, std::string& errmsg, bool save_bin = true,
+    bool save_shaders = true, bool save_images = true);
 
 ///
 /// Saves a scene to disk
@@ -1351,9 +1340,9 @@ YGL_DEPRECATED YGLTF_API bool save_gltf(const std::string& filename,
 /// Returns:
 /// - true if ok
 ///
-YGL_DEPRECATED YGLTF_API bool save_binary_gltf(
-    const std::string& filename, const glTF_t& gltf, std::string& errmsg,
-    bool save_bin = true, bool save_shaders = true, bool save_images = true);
+YGL_DEPRECATED YGLTF_API bool save_binary_gltf(const std::string& filename,
+    const glTF_t& gltf, std::string& errmsg, bool save_bin = true,
+    bool save_shaders = true, bool save_images = true);
 
 ///
 /// Load buffer data.
@@ -1370,9 +1359,7 @@ YGL_DEPRECATED YGLTF_API bool save_binary_gltf(
 /// - true if ok
 ///
 YGL_DEPRECATED YGLTF_API bool load_buffers(glTF_t& gltf,
-                                           const std::string& dirname,
-                                           std::string& errmsg,
-                                           bool skip_missing = false);
+    const std::string& dirname, std::string& errmsg, bool skip_missing = false);
 
 ///
 /// Load shaders data.
@@ -1389,9 +1376,7 @@ YGL_DEPRECATED YGLTF_API bool load_buffers(glTF_t& gltf,
 /// - true if ok
 ///
 YGL_DEPRECATED YGLTF_API bool load_shaders(glTF_t& asset,
-                                           const std::string& dirname,
-                                           std::string& errmsg,
-                                           bool skip_missing = false);
+    const std::string& dirname, std::string& errmsg, bool skip_missing = false);
 
 ///
 /// Loads images.
@@ -1409,9 +1394,7 @@ YGL_DEPRECATED YGLTF_API bool load_shaders(glTF_t& asset,
 /// - true if ok
 ///
 YGL_DEPRECATED YGLTF_API bool load_images(glTF_t& asset,
-                                          const std::string& dirname,
-                                          std::string& errmsg,
-                                          bool skip_missing = false);
+    const std::string& dirname, std::string& errmsg, bool skip_missing = false);
 
 ///
 /// Save buffer data.
@@ -1426,9 +1409,8 @@ YGL_DEPRECATED YGLTF_API bool load_images(glTF_t& asset,
 /// Returns:
 /// - true if ok
 ///
-YGL_DEPRECATED YGLTF_API bool save_buffers(const glTF_t& gltf,
-                                           const std::string& dirname,
-                                           std::string& errmsg);
+YGL_DEPRECATED YGLTF_API bool save_buffers(
+    const glTF_t& gltf, const std::string& dirname, std::string& errmsg);
 
 ///
 /// Save shaders data.
@@ -1443,9 +1425,8 @@ YGL_DEPRECATED YGLTF_API bool save_buffers(const glTF_t& gltf,
 /// Returns:
 /// - true if ok
 ///
-YGL_DEPRECATED YGLTF_API bool save_shaders(const glTF_t& asset,
-                                           const std::string& dirname,
-                                           std::string& errmsg);
+YGL_DEPRECATED YGLTF_API bool save_shaders(
+    const glTF_t& asset, const std::string& dirname, std::string& errmsg);
 
 ///
 /// Saves images.
@@ -1461,9 +1442,8 @@ YGL_DEPRECATED YGLTF_API bool save_shaders(const glTF_t& asset,
 /// Returns:
 /// - true if ok
 ///
-YGL_DEPRECATED YGLTF_API bool save_images(const glTF_t& asset,
-                                          const std::string& dirname,
-                                          std::string& errmsg);
+YGL_DEPRECATED YGLTF_API bool save_images(
+    const glTF_t& asset, const std::string& dirname, std::string& errmsg);
 
 ///
 /// A view for gltf array buffers that allows for typed access.
@@ -1522,10 +1502,10 @@ YGLTF_API std::array<float, 16> node_transform(const node_t* node);
 ///
 struct fl_camera {
     std::string name = "";  // name
-    std::array<float, 16> xform = {1, 0, 0, 0, 0, 1, 0, 0,
-                                   0, 0, 1, 0, 0, 0, 0, 1};  // transform
-    bool ortho = false;                                      // orthographic
-    float aspect = 1;                                        // aspect ratio
+    std::array<float, 16> xform = {
+        1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};  // transform
+    bool ortho = false;                                   // orthographic
+    float aspect = 1;                                     // aspect ratio
     float yfov =
         2 *
         std::atan(0.5f);  // vertical fov (perspective) or size (orthographic)
@@ -1610,8 +1590,8 @@ struct fl_mesh {
     /// name
     std::string name = "";
     /// transform
-    std::array<float, 16> xform = {1, 0, 0, 0, 0, 1, 0, 0,
-                                   0, 0, 1, 0, 0, 0, 0, 1};
+    std::array<float, 16> xform = {
+        1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};
     /// primitives
     std::vector<int> primitives;
 };
@@ -1659,26 +1639,26 @@ struct fl_gltf {
 ///
 /// Convert a gltf asset to flattened scenes.
 ///
-YGLTF_API fl_gltf* flatten_gltf(const glTF_t* gltf,
-                                const std::string& scene_name = "");
+YGLTF_API fl_gltf* flatten_gltf(
+    const glTF_t* gltf, const std::string& scene_name = "");
 
 ///
 /// Convert a flattened gltf to a raw one.
 ///
-YGLTF_API glTF_t* unflatten_gltf(const fl_gltf* fl_gltf,
-                                 const std::string& buffer_uri);
+YGLTF_API glTF_t* unflatten_gltf(
+    const fl_gltf* fl_gltf, const std::string& buffer_uri);
 
 ///
 /// Convert a gltf asset to flattened scenes.
 ///
-YGL_DEPRECATED YGLTF_API fl_gltf
-flatten_gltf(const glTF_t& gltf, const std::string& scene_name = "");
+YGL_DEPRECATED YGLTF_API fl_gltf flatten_gltf(
+    const glTF_t& gltf, const std::string& scene_name = "");
 
 ///
 /// Convert a gltf asset to flattened scenes.
 ///
-YGL_DEPRECATED YGLTF_API glTF_t unflatten_gltf(const fl_gltf& fl_gltf,
-                                               const std::string& buffer_uri);
+YGL_DEPRECATED YGLTF_API glTF_t unflatten_gltf(
+    const fl_gltf& fl_gltf, const std::string& buffer_uri);
 }  // namespace
 
 // -----------------------------------------------------------------------------

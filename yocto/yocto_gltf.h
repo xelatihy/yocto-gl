@@ -712,8 +712,8 @@ struct node_t : glTFChildOfRootProperty_t {
     /// The indices of this node's children.
     std::vector<int> children = {};
     /// A floating-point 4x4 transformation matrix stored in column-major order.
-    std::array<float, 16> matrix = {1, 0, 0, 0, 0, 1, 0, 0,
-                                    0, 0, 1, 0, 0, 0, 0, 1};
+    std::array<float, 16> matrix = {
+        1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};
     /// The index of the mesh in this node.
     int mesh = -1;
     /// The node's unit quaternion rotation in the order (x, y, z, w), where w
@@ -868,8 +868,7 @@ struct gltf_exception : std::exception {
 /// - io_exception: on read/write error
 ///
 YGLTF_API glTF_t* load_gltf(const std::string& filename, bool load_bin = true,
-                            bool load_shaders = true, bool load_img = true,
-                            bool skip_missing = false);
+    bool load_shaders = true, bool load_img = true, bool skip_missing = false);
 
 ///
 /// Loads a binary gltf file from disk
@@ -885,10 +884,8 @@ YGLTF_API glTF_t* load_gltf(const std::string& filename, bool load_bin = true,
 /// - io_exception: on read/write error
 ///
 YGLTF_API glTF_t* load_binary_gltf(const std::string& filename,
-                                   bool load_bin = true,
-                                   bool load_shaders = true,
-                                   bool load_img = true,
-                                   bool skip_missing = false);
+    bool load_bin = true, bool load_shaders = true, bool load_img = true,
+    bool skip_missing = false);
 
 ///
 /// Saves a scene to disk
@@ -902,8 +899,7 @@ YGLTF_API glTF_t* load_binary_gltf(const std::string& filename,
 /// - io_exception: on read/write error
 ///
 YGLTF_API void save_gltf(const std::string& filename, const glTF_t* gltf,
-                         bool save_bin = true, bool save_shaders = true,
-                         bool save_images = true);
+    bool save_bin = true, bool save_shaders = true, bool save_images = true);
 
 ///
 /// Saves a scene to disk
@@ -917,8 +913,7 @@ YGLTF_API void save_gltf(const std::string& filename, const glTF_t* gltf,
 /// - io_exception: on read/write error
 ///
 YGLTF_API void save_binary_gltf(const std::string& filename, const glTF_t* gltf,
-                                bool save_bin = true, bool save_shaders = true,
-                                bool save_images = true);
+    bool save_bin = true, bool save_shaders = true, bool save_images = true);
 
 ///
 /// Load buffer data.
@@ -933,8 +928,8 @@ YGLTF_API void save_binary_gltf(const std::string& filename, const glTF_t* gltf,
 /// Throw:
 /// - io_exception: on read/write error
 ///
-YGLTF_API void load_buffers(glTF_t* gltf, const std::string& dirname,
-                            bool skip_missing = false);
+YGLTF_API void load_buffers(
+    glTF_t* gltf, const std::string& dirname, bool skip_missing = false);
 
 ///
 /// Load shaders data.
@@ -949,8 +944,8 @@ YGLTF_API void load_buffers(glTF_t* gltf, const std::string& dirname,
 /// Throw:
 /// - io_exception: on read/write error
 ///
-YGLTF_API void load_shaders(glTF_t* asset, const std::string& dirname,
-                            bool skip_missing = false);
+YGLTF_API void load_shaders(
+    glTF_t* asset, const std::string& dirname, bool skip_missing = false);
 
 ///
 /// Loads images.
@@ -965,8 +960,8 @@ YGLTF_API void load_shaders(glTF_t* asset, const std::string& dirname,
 /// Throw:
 /// - io_exception: on read/write error
 ///
-YGLTF_API void load_images(glTF_t* asset, const std::string& dirname,
-                           bool skip_missing = false);
+YGLTF_API void load_images(
+    glTF_t* asset, const std::string& dirname, bool skip_missing = false);
 
 ///
 /// Save buffer data.
@@ -1060,10 +1055,10 @@ YGLTF_API std::array<float, 16> node_transform(const node_t* node);
 ///
 struct fl_camera {
     std::string name = "";  // name
-    std::array<float, 16> xform = {1, 0, 0, 0, 0, 1, 0, 0,
-                                   0, 0, 1, 0, 0, 0, 0, 1};  // transform
-    bool ortho = false;                                      // orthographic
-    float aspect = 1;                                        // aspect ratio
+    std::array<float, 16> xform = {
+        1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};  // transform
+    bool ortho = false;                                   // orthographic
+    float aspect = 1;                                     // aspect ratio
     float yfov =
         2 *
         std::atan(0.5f);  // vertical fov (perspective) or size (orthographic)
@@ -1162,8 +1157,8 @@ struct fl_mesh {
     /// name
     std::string name = "";
     /// transform
-    std::array<float, 16> xform = {1, 0, 0, 0, 0, 1, 0, 0,
-                                   0, 0, 1, 0, 0, 0, 0, 1};
+    std::array<float, 16> xform = {
+        1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};
     /// primitives
     std::vector<int> primitives;
 };
@@ -1216,8 +1211,8 @@ YGLTF_API fl_gltf* flatten_gltf(const glTF_t* gltf, int scene_idx = -1);
 ///
 /// Convert a flattened gltf to a raw one.
 ///
-YGLTF_API glTF_t* unflatten_gltf(const fl_gltf* fl_gltf,
-                                 const std::string& buffer_uri);
+YGLTF_API glTF_t* unflatten_gltf(
+    const fl_gltf* fl_gltf, const std::string& buffer_uri);
 }  // namespace
 
 // -----------------------------------------------------------------------------

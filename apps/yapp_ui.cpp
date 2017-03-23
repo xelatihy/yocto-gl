@@ -41,19 +41,16 @@ namespace yapp {
 // Init shading
 //
 void init_shade_state(const yapp::scene* sc, yglu::uint& shade_prog,
-                      yglu::uint& shade_vao,
-                      std::map<texture*, yglu::uint>& shade_txt,
-                      std::vector<std::array<yglu::uint, 7>>& shade_vbo) {
+    yglu::uint& shade_vao, std::map<texture*, yglu::uint>& shade_txt,
+    std::vector<std::array<yglu::uint, 7>>& shade_vbo) {
     yglu::stdshader::make_program(&shade_prog, &shade_vao);
     for (auto txt : sc->textures) {
         if (!txt->hdr.empty()) {
-            shade_txt[txt] =
-                yglu::modern::make_texture(txt->width, txt->height, txt->ncomp,
-                                           txt->hdr.data(), true, true, true);
+            shade_txt[txt] = yglu::modern::make_texture(txt->width, txt->height,
+                txt->ncomp, txt->hdr.data(), true, true, true);
         } else if (!txt->ldr.empty()) {
-            shade_txt[txt] =
-                yglu::modern::make_texture(txt->width, txt->height, txt->ncomp,
-                                           txt->ldr.data(), true, true, true);
+            shade_txt[txt] = yglu::modern::make_texture(txt->width, txt->height,
+                txt->ncomp, txt->ldr.data(), true, true, true);
         } else
             assert(false);
     }
@@ -61,33 +58,26 @@ void init_shade_state(const yapp::scene* sc, yglu::uint& shade_prog,
         shade_vbo.push_back({0, 0, 0, 0});
         auto& vbos = shade_vbo.back();
         if (!shape->pos.empty())
-            vbos[0] = yglu::modern::make_buffer(
-                (int)shape->pos.size(), 3 * sizeof(float), shape->pos.data(),
-                false, false);
+            vbos[0] = yglu::modern::make_buffer((int)shape->pos.size(),
+                3 * sizeof(float), shape->pos.data(), false, false);
         if (!shape->norm.empty())
-            vbos[1] = yglu::modern::make_buffer(
-                (int)shape->norm.size(), 3 * sizeof(float), shape->norm.data(),
-                false, false);
+            vbos[1] = yglu::modern::make_buffer((int)shape->norm.size(),
+                3 * sizeof(float), shape->norm.data(), false, false);
         if (!shape->texcoord.empty())
-            vbos[2] = yglu::modern::make_buffer(
-                (int)shape->texcoord.size(), 2 * sizeof(float),
-                shape->texcoord.data(), false, false);
+            vbos[2] = yglu::modern::make_buffer((int)shape->texcoord.size(),
+                2 * sizeof(float), shape->texcoord.data(), false, false);
         if (!shape->color.empty())
-            vbos[3] = yglu::modern::make_buffer(
-                (int)shape->color.size(), 3 * sizeof(float),
-                shape->color.data(), false, false);
+            vbos[3] = yglu::modern::make_buffer((int)shape->color.size(),
+                3 * sizeof(float), shape->color.data(), false, false);
         if (!shape->points.empty())
-            vbos[4] = yglu::modern::make_buffer(
-                (int)shape->points.size(), sizeof(int), shape->points.data(),
-                true, false);
+            vbos[4] = yglu::modern::make_buffer((int)shape->points.size(),
+                sizeof(int), shape->points.data(), true, false);
         if (!shape->lines.empty())
-            vbos[5] = yglu::modern::make_buffer(
-                (int)shape->lines.size(), 2 * sizeof(int), shape->lines.data(),
-                true, false);
+            vbos[5] = yglu::modern::make_buffer((int)shape->lines.size(),
+                2 * sizeof(int), shape->lines.data(), true, false);
         if (!shape->triangles.empty())
-            vbos[6] = yglu::modern::make_buffer(
-                (int)shape->triangles.size(), 3 * sizeof(int),
-                shape->triangles.data(), true, false);
+            vbos[6] = yglu::modern::make_buffer((int)shape->triangles.size(),
+                3 * sizeof(int), shape->triangles.data(), true, false);
     }
 }
 
@@ -95,12 +85,10 @@ void init_shade_state(const yapp::scene* sc, yglu::uint& shade_prog,
 // Display a scene
 //
 void shade_scene(const yapp::scene* sc, int cur_camera, uint prog, uint vao,
-                 const std::map<texture*, uint>& txts,
-                 const std::vector<std::array<uint, 7>>& vbo,
-                 const float4& background, float exposure,
-                 yglu::stdshader::tonemap_type tmtype, float gamma,
-                 bool wireframe, bool edges, bool camera_lights,
-                 const float3& amb) {
+    const std::map<texture*, uint>& txts,
+    const std::vector<std::array<uint, 7>>& vbo, const float4& background,
+    float exposure, yglu::stdshader::tonemap_type tmtype, float gamma,
+    bool wireframe, bool edges, bool camera_lights, const float3& amb) {
     // begin frame
     yglu::enable_depth_test(true);
     yglu::enable_culling(false);
@@ -115,7 +103,7 @@ void shade_scene(const yapp::scene* sc, int cur_camera, uint prog, uint vao,
         ym::perspective_mat4(cam->yfov, cam->aspect, 0.1f, 100000.0f);
 
     yglu::stdshader::begin_frame(prog, vao, camera_lights, exposure, tmtype,
-                                 gamma, camera_xform, camera_view, camera_proj);
+        gamma, camera_xform, camera_view, camera_proj);
 
     if (!camera_lights) {
         auto nlights = 0;
@@ -135,28 +123,27 @@ void shade_scene(const yapp::scene* sc, int cur_camera, uint prog, uint vao,
                 nlights++;
             }
         }
-        yglu::stdshader::set_lights(
-            prog, amb, nlights, (yglu::float3*)light_pos.data(),
-            (yglu::float3*)light_ke.data(), light_type.data());
+        yglu::stdshader::set_lights(prog, amb, nlights,
+            (yglu::float3*)light_pos.data(), (yglu::float3*)light_ke.data(),
+            light_type.data());
     }
 
     for (auto sid = 0; sid < sc->shapes.size(); sid++) {
         auto shape = sc->shapes[sid];
-        yglu::stdshader::begin_shape(prog,
-                                     ym::to_mat((ym::frame3f)shape->frame));
+        yglu::stdshader::begin_shape(
+            prog, ym::to_mat((ym::frame3f)shape->frame));
 
         if (shape->mat) {
             auto mat = shape->mat;
 
 #define __txt(txt) ((txt) ? txts.at(txt) : 0)
-            yglu::stdshader::set_material(
-                prog, mat->ke, mat->kd, mat->ks, mat->rs, __txt(mat->ke_txt),
-                __txt(mat->kd_txt), __txt(mat->ks_txt), __txt(mat->rs_txt),
-                false);
+            yglu::stdshader::set_material(prog, mat->ke, mat->kd, mat->ks,
+                mat->rs, __txt(mat->ke_txt), __txt(mat->kd_txt),
+                __txt(mat->ks_txt), __txt(mat->rs_txt), false);
         } else {
             auto kd = ym::vec3f{0.8f, 0.8f, 0.8f};
-            yglu::stdshader::set_material(prog, {0, 0, 0}, kd, {0, 0, 0}, 0, 0,
-                                          0, 0, 0, false);
+            yglu::stdshader::set_material(
+                prog, {0, 0, 0}, kd, {0, 0, 0}, 0, 0, 0, 0, 0, false);
         }
 
         auto bids = vbo[sid];
@@ -164,21 +151,21 @@ void shade_scene(const yapp::scene* sc, int cur_camera, uint prog, uint vao,
 
         yglu::stdshader::draw_points(prog, (int)shape->points.size(), bids[4]);
         yglu::stdshader::draw_lines(prog, (int)shape->lines.size(), bids[5]);
-        yglu::stdshader::draw_triangles(prog, (int)shape->triangles.size(),
-                                        bids[6]);
+        yglu::stdshader::draw_triangles(
+            prog, (int)shape->triangles.size(), bids[6]);
 
         if (edges && !wireframe) {
-            yglu::stdshader::set_material(prog, {0, 0, 0}, {0, 0, 0}, {0, 0, 0},
-                                          0, 0, 0, 0, 0, false);
+            yglu::stdshader::set_material(
+                prog, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}, 0, 0, 0, 0, 0, false);
 
             yglu::line_width(2);
             yglu::enable_edges(true);
-            yglu::stdshader::draw_points(prog, (int)shape->points.size(),
-                                         bids[4]);
-            yglu::stdshader::draw_lines(prog, (int)shape->lines.size(),
-                                        bids[5]);
-            yglu::stdshader::draw_triangles(prog, (int)shape->triangles.size(),
-                                            bids[6]);
+            yglu::stdshader::draw_points(
+                prog, (int)shape->points.size(), bids[4]);
+            yglu::stdshader::draw_lines(
+                prog, (int)shape->lines.size(), bids[5]);
+            yglu::stdshader::draw_triangles(
+                prog, (int)shape->triangles.size(), bids[6]);
             yglu::enable_edges(false);
             yglu::line_width(1);
         }
@@ -194,17 +181,15 @@ void shade_scene(const yapp::scene* sc, int cur_camera, uint prog, uint vao,
 //
 // Init shading
 //
-void init_draw_state(const yapp::scene* sc,
-                     std::map<texture*, yglu::uint>& shade_txt) {
+void init_draw_state(
+    const yapp::scene* sc, std::map<texture*, yglu::uint>& shade_txt) {
     for (auto txt : sc->textures) {
         if (!txt->hdr.empty()) {
-            shade_txt[txt] =
-                yglu::legacy::make_texture(txt->width, txt->height, txt->ncomp,
-                                           txt->hdr.data(), true, true);
+            shade_txt[txt] = yglu::legacy::make_texture(txt->width, txt->height,
+                txt->ncomp, txt->hdr.data(), true, true);
         } else if (!txt->ldr.empty()) {
-            shade_txt[txt] =
-                yglu::legacy::make_texture(txt->width, txt->height, txt->ncomp,
-                                           txt->ldr.data(), true, true);
+            shade_txt[txt] = yglu::legacy::make_texture(txt->width, txt->height,
+                txt->ncomp, txt->ldr.data(), true, true);
         } else
             assert(false);
     }
@@ -214,9 +199,8 @@ void init_draw_state(const yapp::scene* sc,
 // Draw a sc
 //
 void draw_scene(const yapp::scene* sc, int cur_camera,
-                const std::map<texture*, yglu::uint>& txts,
-                const ym::vec4f& background, bool wireframe, bool edges,
-                bool camera_lights, const ym::vec3f& amb) {
+    const std::map<texture*, yglu::uint>& txts, const ym::vec4f& background,
+    bool wireframe, bool edges, bool camera_lights, const ym::vec3f& amb) {
     // begin frame
     yglu::enable_depth_test(true);
     yglu::enable_culling(false);
@@ -233,8 +217,8 @@ void draw_scene(const yapp::scene* sc, int cur_camera,
     std::array<ym::vec3f, 16> light_pos, light_ke;
     std::array<yglu::ltype, 16> light_type;
 
-    yglu::legacy::begin_frame(camera_xform, camera_view, camera_proj,
-                              camera_lights, true);
+    yglu::legacy::begin_frame(
+        camera_xform, camera_view, camera_proj, camera_lights, true);
 
     if (!camera_lights) {
         for (auto shape : sc->shapes) {
@@ -252,8 +236,7 @@ void draw_scene(const yapp::scene* sc, int cur_camera,
             }
         }
         yglu::legacy::set_lights(amb, nlights, (yglu::float3*)light_pos.data(),
-                                 (yglu::float3*)light_ke.data(),
-                                 light_type.data());
+            (yglu::float3*)light_ke.data(), light_type.data());
     }
 
     for (auto shape : sc->shapes) {
@@ -263,8 +246,7 @@ void draw_scene(const yapp::scene* sc, int cur_camera,
             auto mat = shape->mat;
 
 #define __txt(txt) ((txt) ? txts.at(txt) : 0)
-            yglu::legacy::set_material(
-                mat->ke, mat->kd, mat->ks,
+            yglu::legacy::set_material(mat->ke, mat->kd, mat->ks,
                 yglu::legacy::specular_roughness_to_exponent(mat->rs),
                 __txt(mat->kd_txt), true);
         } else {
@@ -272,34 +254,34 @@ void draw_scene(const yapp::scene* sc, int cur_camera,
             yglu::legacy::set_material({0, 0, 0}, kd, {0, 0, 0}, 0, 0, true);
         }
 
-        yglu::legacy::draw_points(
-            (int)shape->points.size(), shape->points.data(),
-            (yglu::float3*)shape->pos.data(), (yglu::float3*)shape->norm.data(),
+        yglu::legacy::draw_points((int)shape->points.size(),
+            shape->points.data(), (yglu::float3*)shape->pos.data(),
+            (yglu::float3*)shape->norm.data(),
             (yglu::float2*)shape->texcoord.data(),
             (yglu::float3*)shape->color.data());
-        yglu::legacy::draw_lines(
-            (int)shape->lines.size(), (yglu::int2*)shape->lines.data(),
-            (yglu::float3*)shape->pos.data(), (yglu::float3*)shape->norm.data(),
+        yglu::legacy::draw_lines((int)shape->lines.size(),
+            (yglu::int2*)shape->lines.data(), (yglu::float3*)shape->pos.data(),
+            (yglu::float3*)shape->norm.data(),
             (yglu::float2*)shape->texcoord.data(),
             (yglu::float3*)shape->color.data());
-        yglu::legacy::draw_triangles(
-            (int)shape->triangles.size(), (yglu::int3*)shape->triangles.data(),
+        yglu::legacy::draw_triangles((int)shape->triangles.size(),
+            (yglu::int3*)shape->triangles.data(),
             (yglu::float3*)shape->pos.data(), (yglu::float3*)shape->norm.data(),
             (yglu::float2*)shape->texcoord.data(),
             (yglu::float3*)shape->color.data());
 
         if (edges && !wireframe) {
-            yglu::legacy::set_material({0, 0, 0}, {0, 0, 0}, {0, 0, 0}, 0, 0,
-                                       true);
+            yglu::legacy::set_material(
+                {0, 0, 0}, {0, 0, 0}, {0, 0, 0}, 0, 0, true);
 
             yglu::line_width(2);
             yglu::enable_edges(true);
             yglu::legacy::draw_triangles((int)shape->triangles.size(),
-                                         (yglu::int3*)shape->triangles.data(),
-                                         (yglu::float3*)shape->pos.data(),
-                                         (yglu::float3*)shape->norm.data(),
-                                         (yglu::float2*)shape->texcoord.data(),
-                                         (yglu::float3*)shape->color.data());
+                (yglu::int3*)shape->triangles.data(),
+                (yglu::float3*)shape->pos.data(),
+                (yglu::float3*)shape->norm.data(),
+                (yglu::float2*)shape->texcoord.data(),
+                (yglu::float3*)shape->color.data());
             yglu::line_width(1);
             yglu::enable_edges(false);
         }
@@ -328,8 +310,8 @@ shade_state* init_shade_state(const yapp::scene* scn, const params* pars) {
     if (pars->legacy_gl) {
         init_draw_state(scn, st->shade_txt);
     } else {
-        init_shade_state(scn, st->shade_prog, st->shade_vao, st->shade_txt,
-                         st->shade_vbo);
+        init_shade_state(
+            scn, st->shade_prog, st->shade_vao, st->shade_txt, st->shade_vbo);
     }
     return st;
 }
@@ -344,17 +326,16 @@ void free_shade_state(shade_state* st) {
 void shade_scene(const scene* scn, const params* pars, const shade_state* st) {
     if (pars->legacy_gl) {
         draw_scene(scn, pars->render_params.camera_id, st->shade_txt,
-                   pars->background, pars->wireframe, pars->edges,
-                   pars->render_params.stype == ytrace::shader_type::eyelight,
-                   pars->render_params.amb);
+            pars->background, pars->wireframe, pars->edges,
+            pars->render_params.stype == ytrace::shader_type::eyelight,
+            pars->render_params.amb);
     } else {
         shade_scene(scn, pars->render_params.camera_id, st->shade_prog,
-                    st->shade_vao, st->shade_txt, st->shade_vbo,
-                    pars->background, pars->exposure,
-                    (yglu::stdshader::tonemap_type)pars->tonemap, pars->gamma,
-                    pars->wireframe, pars->edges,
-                    pars->render_params.stype == ytrace::shader_type::eyelight,
-                    pars->render_params.amb);
+            st->shade_vao, st->shade_txt, st->shade_vbo, pars->background,
+            pars->exposure, (yglu::stdshader::tonemap_type)pars->tonemap,
+            pars->gamma, pars->wireframe, pars->edges,
+            pars->render_params.stype == ytrace::shader_type::eyelight,
+            pars->render_params.amb);
     }
 }
 

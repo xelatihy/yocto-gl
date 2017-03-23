@@ -158,8 +158,8 @@ YBVH_API void free_scene(scene* scn);
 ///   - pos/radius: vertex position and radius
 ///
 YBVH_API void set_point_shape(scene* scn, int sid, const float3x4& frame,
-                              int npoints, const int* point, int nverts,
-                              const float3* pos, const float* radius);
+    int npoints, const int* point, int nverts, const float3* pos,
+    const float* radius);
 
 ///
 /// Set shape
@@ -173,8 +173,8 @@ YBVH_API void set_point_shape(scene* scn, int sid, const float3x4& frame,
 ///   - pos/radius: vertex position and radius
 ///
 YBVH_API void set_line_shape(scene* scn, int sid, const float3x4& frame,
-                             int nlines, const int2* lines, int nverts,
-                             const float3* pos, const float* radius);
+    int nlines, const int2* lines, int nverts, const float3* pos,
+    const float* radius);
 
 ///
 /// Set shape
@@ -188,9 +188,8 @@ YBVH_API void set_line_shape(scene* scn, int sid, const float3x4& frame,
 ///   - pos/radius: vertex position and radius
 ///
 YBVH_API void set_triangle_shape(scene* scn, int sid, const float3x4& frame,
-                                 int ntriangles, const int3* triangles,
-                                 int nverts, const float3* pos,
-                                 const float* radius);
+    int ntriangles, const int3* triangles, int nverts, const float3* pos,
+    const float* radius);
 
 ///
 /// Set shape
@@ -205,8 +204,8 @@ YBVH_API void set_triangle_shape(scene* scn, int sid, const float3x4& frame,
 ///   - pos/radius: vertex position and radius
 ///
 YBVH_API void set_tetra_shape(scene* scn, int sid, const float3x4& frame,
-                              int ntetra, const int4* tetra, int nverts,
-                              const float3* pos, const float* radius);
+    int ntetra, const int4* tetra, int nverts, const float3* pos,
+    const float* radius);
 
 ///
 /// Set shape
@@ -219,8 +218,7 @@ YBVH_API void set_tetra_shape(scene* scn, int sid, const float3x4& frame,
 ///   - pos/radius: vertex position and radius
 ///
 YBVH_API void set_point_shape(scene* scn, int sid, const float3x4& frame,
-                              int nverts, const float3* pos,
-                              const float* radius);
+    int nverts, const float3* pos, const float* radius);
 
 ///
 /// Set a shape frame.
@@ -259,7 +257,7 @@ enum struct heuristic_type {
 ///   - do_shapes: build shapes
 ///
 YBVH_API void build_bvh(scene* scn, heuristic_type htype = heuristic_type::def,
-                        bool do_shapes = true);
+    bool do_shapes = true);
 
 ///
 /// Builds a shape BVH.
@@ -269,8 +267,8 @@ YBVH_API void build_bvh(scene* scn, heuristic_type htype = heuristic_type::def,
 ///   - sid: required shape
 ///   - heuristic: heristic use to build the bvh (htype::none for default)
 ///
-YBVH_API void build_bvh(scene* scn, int sid,
-                        heuristic_type htype = heuristic_type::def);
+YBVH_API void build_bvh(
+    scene* scn, int sid, heuristic_type htype = heuristic_type::def);
 
 ///
 /// Refit the bounds of each shape for moving objects. Use this only to avoid
@@ -325,11 +323,9 @@ struct point {
 ///   - intersection point
 ///
 YBVH_API point intersect_ray(const scene* scn, const float3& ray_o,
-                             const float3& ray_d, float ray_tmin,
-                             float ray_tmax, bool early_exit);
+    const float3& ray_d, float ray_tmin, float ray_tmax, bool early_exit);
 YBVH_API point intersect_ray(const scene* scn, int sid, const float3& ray_o,
-                             const float3& ray_d, float ray_tmin,
-                             float ray_tmax, bool early_exit);
+    const float3& ray_d, float ray_tmin, float ray_tmax, bool early_exit);
 
 ///
 /// Returns a list of shape pairs that can possibly overlap by checking only
@@ -347,9 +343,8 @@ YBVH_API point intersect_ray(const scene* scn, int sid, const float3& ray_o,
 ///   - overlaps: vectors of shape overlaps
 ///
 YBVH_API void overlap_shape_bounds(const scene* scn1, const scene* scn2,
-                                   bool conservative, bool exclude_duplicates,
-                                   bool exclude_self,
-                                   std::vector<int2>* overlaps);
+    bool conservative, bool exclude_duplicates, bool exclude_self,
+    std::vector<int2>* overlaps);
 
 ///
 /// Returns a list of all elements of scene1/shape1 that overlap with the
@@ -368,9 +363,9 @@ YBVH_API void overlap_shape_bounds(const scene* scn1, const scene* scn2,
 ///   - soverlaps: vectors of shape overlaps
 ///
 YBVH_API void overlap_verts(const scene* scn1, const scene* scn2,
-                            bool exclude_self, float radius, bool first_only,
-                            std::vector<int2>* soverlaps,
-                            std::vector<std::pair<point, int2>>* overlaps);
+    bool exclude_self, float radius, bool first_only,
+    std::vector<int2>* soverlaps,
+    std::vector<std::pair<point, int2>>* overlaps);
 
 ///
 /// Returns a list of all elements of scene1/shape1 that overlap with the
@@ -390,9 +385,8 @@ YBVH_API void overlap_verts(const scene* scn1, const scene* scn2,
 ///   - soverlaps: vectors of shape overlaps
 ///
 YBVH_API void overlap_verts(const scene* scn1, const scene* scn2, int sid1,
-                            int sid2, bool exclude_self, float radius,
-                            bool first_only,
-                            std::vector<std::pair<point, int2>>* overlaps);
+    int sid2, bool exclude_self, float radius, bool first_only,
+    std::vector<std::pair<point, int2>>* overlaps);
 
 ///
 /// Finds the closest element that overlaps a point within a given radius.
@@ -406,8 +400,8 @@ YBVH_API void overlap_verts(const scene* scn1, const scene* scn2, int sid1,
 /// - returns:
 ///   - overlap point
 ///
-YBVH_API point overlap_point(const scene* scn, const float3& pt, float max_dist,
-                             bool early_exit);
+YBVH_API point overlap_point(
+    const scene* scn, const float3& pt, float max_dist, bool early_exit);
 
 ///
 /// Finds the closest element that overlaps a point within a given radius.
@@ -422,7 +416,7 @@ YBVH_API point overlap_point(const scene* scn, const float3& pt, float max_dist,
 ///   - overlap point
 ///
 YBVH_API point overlap_point(const scene* scn, int sid, const float3& pt,
-                             float max_dist, bool early_exit);
+    float max_dist, bool early_exit);
 
 // -----------------------------------------------------------------------------
 // PERFORMANCE TUNING INTERFACE
@@ -432,9 +426,8 @@ YBVH_API point overlap_point(const scene* scn, int sid, const float3& pt,
 /// Compute BVH stats.
 ///
 YBVH_API void compute_bvh_stats(const scene* scn, bool include_shapes,
-                                int& nprims, int& ninternals, int& nleaves,
-                                int& min_depth, int& max_depth,
-                                int req_shape = -1);
+    int& nprims, int& ninternals, int& nleaves, int& min_depth, int& max_depth,
+    int req_shape = -1);
 
 }  // namespace
 

@@ -152,9 +152,8 @@ YSYM_API void free_scene(scene* scn);
 /// - pos: vertex positions
 ///
 YSYM_API void set_body(scene* scn, int bid, const float3x4& frame,
-                       const float3& lin_vel, const float3& ang_vel,
-                       float density, int ntriangles, const int3* triangles,
-                       int nverts, const float3* pos);
+    const float3& lin_vel, const float3& ang_vel, float density, int ntriangles,
+    const int3* triangles, int nverts, const float3* pos);
 
 ///
 /// Get a rigid body frame.
@@ -199,8 +198,8 @@ YSYM_API void set_body_frame(scene* scn, int bid, const float3x4& frame);
 /// - lin_vel: linear velocity
 /// - ang_vel: angular velocity
 ///
-YSYM_API void set_body_velocity(scene* scn, int bid, const float3& lin_vel,
-                                const float3& ang_vel);
+YSYM_API void set_body_velocity(
+    scene* scn, int bid, const float3& lin_vel, const float3& ang_vel);
 
 ///
 /// Point-scene overlap.
@@ -240,8 +239,8 @@ using overlap_shapes_cb = void (*)(void* ctx, std::vector<int2>*);
 /// Return:
 /// - overlap point
 ///
-using overlap_shape_cb = overlap_point (*)(void* ctx, int sid, const float3& pt,
-                                           float max_dist);
+using overlap_shape_cb = overlap_point (*)(
+    void* ctx, int sid, const float3& pt, float max_dist);
 
 ///
 /// Closest vertex-to-element overlap
@@ -255,9 +254,8 @@ using overlap_shape_cb = overlap_point (*)(void* ctx, int sid, const float3& pt,
 /// Out Params:
 /// - overlaps: overlapping elements
 ///
-using overlap_verts_cb =
-    void (*)(void* ctx, int sid1, int sid2, float max_dist,
-             std::vector<std::pair<overlap_point, int2>>* overlaps);
+using overlap_verts_cb = void (*)(void* ctx, int sid1, int sid2, float max_dist,
+    std::vector<std::pair<overlap_point, int2>>* overlaps);
 
 ///
 /// Refit data structure after transform updates
@@ -272,10 +270,8 @@ using overlap_refit_cb = void (*)(void* ctx, const scene* scn, int nshapes);
 /// Set overlap functions
 ///
 YSYM_API void set_overlap_callbacks(scene* scn, void* ctx,
-                                    overlap_shapes_cb overlap_shapes,
-                                    overlap_shape_cb overlap_shape,
-                                    overlap_verts_cb overlap_verts,
-                                    overlap_refit_cb overlap_refit);
+    overlap_shapes_cb overlap_shapes, overlap_shape_cb overlap_shape,
+    overlap_verts_cb overlap_verts, overlap_refit_cb overlap_refit);
 
 ///
 /// Computes the moments of a shape.
@@ -290,8 +286,7 @@ YSYM_API void set_overlap_callbacks(scene* scn, void* ctx,
 /// - inertia: inertia tensore (wrt center of mass)
 ///
 YSYM_API void compute_moments(int ntriangles, const int3* triangles, int nverts,
-                              const float3* pos, float* volume, float3* center,
-                              float3x3* inertia);
+    const float3* pos, float* volume, float3* center, float3x3* inertia);
 
 ///
 /// Computes the moments of a shape.
@@ -306,8 +301,7 @@ YSYM_API void compute_moments(int ntriangles, const int3* triangles, int nverts,
 /// - inertia: inertia tensore (wrt center of mass)
 ///
 YSYM_API void compute_moments(int ntetra, const int4* tetra, int nverts,
-                              const float3* pos, float* volume, float3* center,
-                              float3x3* inertia);
+    const float3* pos, float* volume, float3* center, float3x3* inertia);
 
 ///
 /// Initialize the simulation

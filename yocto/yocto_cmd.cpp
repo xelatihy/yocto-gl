@@ -90,73 +90,13 @@
 
 // thread pool
 struct ThreadPool {
-    ThreadPool(int nthreads = std::thread::hardware_concurrency())
-        : working_threads(0), stop_flag(false) {
-        threads.reserve(nthreads);
-        for (auto tid = 0; tid < nthreads; tid++) {
-            threads.emplace_back([&] {
-                while (true) {
-                    std::packaged_task<void()> task;
-                    {
-                        std::unique_lock<std::mutex> lock_guard(queue_lock);
-                        queue_condition.wait(lock_guard, [&] {
-                            return stop_flag || !tasks.empty();
-                        });
+    ThreadPool(int nthreads = std::thread::hardware_concurrency());
+    ~ThreadPool();
 
-                        if (stop_flag && tasks.empty()) return;
+    std::shared_future<void> async(std::function<void()> task);
+    void wait();
 
-                        {
-                            working_threads++;
-                            std::unique_lock<std::mutex> LockGuard(
-                                completion_lock);
-                        }
-                        task = std::move(tasks.front());
-                        tasks.pop();
-                    }
-
-                    task();
-
-                    {
-                        std::unique_lock<std::mutex> LockGuard(completion_lock);
-                        working_threads--;
-                    }
-
-                    completion_condition.notify_all();
-                }
-            });
-        }
-    }
-
-    ~ThreadPool() {
-        {
-            std::unique_lock<std::mutex> lock_guard(queue_lock);
-            stop_flag = true;
-        }
-        queue_condition.notify_all();
-        for (auto& Worker : threads) Worker.join();
-    }
-
-    std::shared_future<void> async(std::function<void()> task) {
-        // Wrap the Task in a packaged_task to return a future object.
-        std::packaged_task<void()> packaged_task(std::move(task));
-        auto future = packaged_task.get_future();
-        {
-            std::unique_lock<std::mutex> lock_guard(queue_lock);
-
-            assert(!stop_flag &&
-                   "Queuing a thread during ThreadPool destruction");
-
-            tasks.push(std::move(packaged_task));
-        }
-        queue_condition.notify_one();
-        return future.share();
-    }
-
-    void wait() {
-        std::unique_lock<std::mutex> lock_guard(completion_lock);
-        completion_condition.wait(
-            lock_guard, [&] { return tasks.empty() && !working_threads; });
-    }
+    void _thread_proc();
 
     std::vector<std::thread> threads;
     std::queue<std::packaged_task<void()>> tasks;
@@ -167,6 +107,70 @@ struct ThreadPool {
     std::atomic<unsigned> working_threads;
     bool stop_flag = false;
 };
+
+ThreadPool::ThreadPool(int nthreads) : working_threads(0), stop_flag(false) {
+    threads.reserve(nthreads);
+    for (auto tid = 0; tid < nthreads; tid++) {
+        threads.emplace_back([this] { _thread_proc(); });
+    }
+}
+
+void ThreadPool::_thread_proc() {
+    while (true) {
+        std::packaged_task<void()> task;
+        {
+            std::unique_lock<std::mutex> lock_guard(queue_lock);
+            queue_condition.wait(
+                lock_guard, [&] { return stop_flag || !tasks.empty(); });
+
+            if (stop_flag && tasks.empty()) return;
+
+            {
+                working_threads++;
+                std::unique_lock<std::mutex> lock_guard(completion_lock);
+            }
+            task = std::move(tasks.front());
+            tasks.pop();
+        }
+
+        task();
+
+        {
+            std::unique_lock<std::mutex> lock_guard(completion_lock);
+            working_threads--;
+        }
+
+        completion_condition.notify_all();
+    }
+}
+
+ThreadPool::~ThreadPool() {
+    {
+        std::unique_lock<std::mutex> lock_guard(queue_lock);
+        stop_flag = true;
+    }
+    queue_condition.notify_all();
+    for (auto& Worker : threads) Worker.join();
+}
+
+std::shared_future<void> ThreadPool::async(std::function<void()> task) {
+    // Wrap the Task in a packaged_task to return a future object.
+    std::packaged_task<void()> packaged_task(std::move(task));
+    auto future = packaged_task.get_future();
+    {
+        std::unique_lock<std::mutex> lock_guard(queue_lock);
+        assert(!stop_flag && "Queuing a thread during ThreadPool destruction");
+        tasks.push(std::move(packaged_task));
+    }
+    queue_condition.notify_one();
+    return future.share();
+}
+
+void ThreadPool::wait() {
+    std::unique_lock<std::mutex> lock_guard(completion_lock);
+    completion_condition.wait(
+        lock_guard, [&] { return tasks.empty() && !working_threads; });
+}
 
 //
 // End of thread pool code derived from LLVM codebase
@@ -197,8 +201,8 @@ struct parser {
 //
 // Inits the parser.
 //
-YCMD_API parser* make_parser(const std::vector<std::string>& args,
-                             const std::string& help) {
+YCMD_API parser* make_parser(
+    const std::vector<std::string>& args, const std::string& help) {
     // clears parser and copy argument data
     auto par = new parser();
     par->args = std::vector<std::string>(args.begin() + 1, args.end());
@@ -264,8 +268,8 @@ YCMD_API bool check_parser(parser* par) {
 //
 // Check if a std::string starts with another.
 //
-static inline bool _startswith(const std::string& str,
-                               const std::string& start) {
+static inline bool _startswith(
+    const std::string& str, const std::string& start) {
     if (str.length() < start.length()) return false;
     for (auto i = 0; i < start.length(); i++) {
         if (str[i] != start[i]) return false;
@@ -277,8 +281,7 @@ static inline bool _startswith(const std::string& str,
 // Check if an option name is valid
 //
 static inline void _check_name(parser* par, const std::string& longname,
-                               const std::string& shortname, bool opt,
-                               int nargs) {
+    const std::string& shortname, bool opt, int nargs) {
     // check name
     assert(!longname.empty());
     if (opt) {
@@ -324,10 +327,8 @@ inline std::string _tostring<bool>(const bool& val) {
 //
 template <typename T>
 static inline void _add_help(parser* par, const std::string& longname,
-                             const std::string& shortname,
-                             const std::string& help, bool opt, bool req,
-                             int nargs, const std::vector<T>& def,
-                             const std::vector<T>& choices = {}) {
+    const std::string& shortname, const std::string& help, bool opt, bool req,
+    int nargs, const std::vector<T>& def, const std::vector<T>& choices = {}) {
     // dummy variable for function overload
     T _dummy = {};
 
@@ -368,7 +369,7 @@ static inline void _add_help(parser* par, const std::string& longname,
     // print help line
     char buf[10000] = {0};
     sprintf(buf, "  %-24s  %s %s\n", help_fullname.c_str(), help.c_str(),
-            help_def.c_str());
+        help_def.c_str());
     auto help_line = std::string(buf);
     if (!help_choice.empty()) {
         sprintf(buf, "  %-24s  %s\n", "", help_choice.c_str());
@@ -386,8 +387,8 @@ static inline void _add_help(parser* par, const std::string& longname,
 // Parsing routine for arrays of values
 //
 template <typename T>
-static inline std::vector<T> _parse_vals(
-    parser* par, const std::string& longname, const std::string& shortname,
+static inline std::vector<T> _parse_vals(parser* par,
+    const std::string& longname, const std::string& shortname,
     const std::string& help, bool opt, bool req, int nargs,
     const std::vector<T>& def, const std::vector<T>& choices = {}) {
     // prepare default empty vec
@@ -412,15 +413,11 @@ static inline std::vector<T> _parse_vals(
         }
 
         // remove the option name
-        if (val_pos >= 0) {
-            par->args.erase(par->args.begin() + val_pos);
-        }
+        if (val_pos >= 0) { par->args.erase(par->args.begin() + val_pos); }
     } else {
         // check if arg is present
         if (!par->args.empty()) {
-            if (par->args[0][0] != '-') {
-                val_pos = 0;
-            }
+            if (par->args[0][0] != '-') { val_pos = 0; }
         }
     }
 
@@ -482,12 +479,11 @@ static inline std::vector<T> _parse_vals(
 //
 template <typename T>
 static inline T _parse_val(parser* par, const std::string& longname,
-                           const std::string& shortname,
-                           const std::string& help, bool opt, const T& def,
-                           bool req, const std::vector<T>& choices = {}) {
+    const std::string& shortname, const std::string& help, bool opt,
+    const T& def, bool req, const std::vector<T>& choices = {}) {
     // parse values
-    auto vals = _parse_vals(par, longname, shortname, help, opt, req, 1, {def},
-                            choices);
+    auto vals = _parse_vals(
+        par, longname, shortname, help, opt, req, 1, {def}, choices);
 
     // return value if present
     if (vals.size())
@@ -500,11 +496,10 @@ static inline T _parse_val(parser* par, const std::string& longname,
 // Parses an optional flag as described in the intro.
 //
 YCMD_API bool parse_flag(parser* par, const std::string& longname,
-                         const std::string& shortname, const std::string& help,
-                         bool def) {
+    const std::string& shortname, const std::string& help, bool def) {
     // parse values
-    auto vals = _parse_vals<bool>(par, longname, shortname, help, true, false,
-                                  0, {def});
+    auto vals = _parse_vals<bool>(
+        par, longname, shortname, help, true, false, 0, {def});
 
     // return value if present
     if (vals.size())
@@ -518,10 +513,10 @@ YCMD_API bool parse_flag(parser* par, const std::string& longname,
 //
 template <typename T>
 YCMD_API T parse_opt(parser* par, const std::string& longname,
-                     const std::string& shortname, const std::string& help,
-                     const T& def, bool req, const std::vector<T>& choices) {
-    return _parse_val<T>(par, longname, shortname, help, true, def, req,
-                         choices);
+    const std::string& shortname, const std::string& help, const T& def,
+    bool req, const std::vector<T>& choices) {
+    return _parse_val<T>(
+        par, longname, shortname, help, true, def, req, choices);
 }
 
 //
@@ -529,72 +524,65 @@ YCMD_API T parse_opt(parser* par, const std::string& longname,
 //
 #ifndef YCMD_INLINE
 template YCMD_API int parse_opt(parser*, const std::string&, const std::string&,
-                                const std::string&, const int&, bool,
-                                const std::vector<int>&);
+    const std::string&, const int&, bool, const std::vector<int>&);
 template YCMD_API bool parse_opt(parser*, const std::string&,
-                                 const std::string&, const std::string&,
-                                 const bool&, bool, const std::vector<bool>&);
+    const std::string&, const std::string&, const bool&, bool,
+    const std::vector<bool>&);
 template YCMD_API float parse_opt(parser*, const std::string&,
-                                  const std::string&, const std::string&,
-                                  const float&, bool,
-                                  const std::vector<float>&);
+    const std::string&, const std::string&, const float&, bool,
+    const std::vector<float>&);
 template YCMD_API std::string parse_opt(parser*, const std::string&,
-                                        const std::string&, const std::string&,
-                                        const std::string&, bool,
-                                        const std::vector<std::string>&);
+    const std::string&, const std::string&, const std::string&, bool,
+    const std::vector<std::string>&);
 #endif
 
 //
 // Specialization of parse_opt()
 //
 YCMD_API std::string parse_opts(parser* par, const std::string& longname,
-                                const std::string& shortname,
-                                const std::string& help, const std::string& def,
-                                bool required,
-                                const std::vector<std::string>& choices) {
-    return parse_opt<std::string>(par, longname, shortname, help, def, required,
-                                  choices);
+    const std::string& shortname, const std::string& help,
+    const std::string& def, bool required,
+    const std::vector<std::string>& choices) {
+    return parse_opt<std::string>(
+        par, longname, shortname, help, def, required, choices);
 }
 
 //
 // Specialization of parse_opt()
 //
 YCMD_API int parse_opti(parser* par, const std::string& longname,
-                        const std::string& shortname, const std::string& help,
-                        int def, bool required,
-                        const std::vector<int>& choices) {
-    return parse_opt<int>(par, longname, shortname, help, def, required,
-                          choices);
+    const std::string& shortname, const std::string& help, int def,
+    bool required, const std::vector<int>& choices) {
+    return parse_opt<int>(
+        par, longname, shortname, help, def, required, choices);
 }
 
 //
 // Specialization of parse_opt()
 //
 YCMD_API float parse_optf(parser* par, const std::string& longname,
-                          const std::string& shortname, const std::string& help,
-                          float def, bool required,
-                          const std::vector<float>& choices) {
-    return parse_opt<float>(par, longname, shortname, help, def, required,
-                            choices);
+    const std::string& shortname, const std::string& help, float def,
+    bool required, const std::vector<float>& choices) {
+    return parse_opt<float>(
+        par, longname, shortname, help, def, required, choices);
 }
 
 //
 // Specialization of parse_opt()
 //
 YCMD_API double parse_optd(parser* par, const std::string& longname,
-                           const std::string& shortname,
-                           const std::string& help, double def, bool required,
-                           const std::vector<double>& choices) {
-    return parse_opt<double>(par, longname, shortname, help, def, required,
-                             choices);
+    const std::string& shortname, const std::string& help, double def,
+    bool required, const std::vector<double>& choices) {
+    return parse_opt<double>(
+        par, longname, shortname, help, def, required, choices);
 }
 
 //
 // Specialization of parse_opt()
 //
 YCMD_API bool parse_optb(parser* par, const std::string& longname,
-                         const std::string& shortname, const std::string& help,
-                         bool def, bool required) {
+    const std::string& shortname, const std::string& help, bool def,
+    bool required) {
     return parse_opt<bool>(par, longname, shortname, help, def, required);
 }
 
@@ -603,8 +591,8 @@ YCMD_API bool parse_optb(parser* par, const std::string& longname,
 //
 template <typename T>
 YCMD_API T parse_arg(parser* par, const std::string& longname,
-                     const std::string& help, const T& def, bool req,
-                     const std::vector<T>& choices) {
+    const std::string& help, const T& def, bool req,
+    const std::vector<T>& choices) {
     return _parse_val<T>(par, longname, "", help, false, def, req, choices);
 }
 
@@ -613,16 +601,16 @@ YCMD_API T parse_arg(parser* par, const std::string& longname,
 //
 #ifndef YCMD_INLINE
 template YCMD_API int parse_arg(parser* par, const std::string& longname,
-                                const std::string& help, const int& def,
-                                bool req, const std::vector<int>& choices);
+    const std::string& help, const int& def, bool req,
+    const std::vector<int>& choices);
 template YCMD_API bool parse_arg(parser* par, const std::string& longname,
-                                 const std::string& help, const bool& def,
-                                 bool req, const std::vector<bool>& choices);
+    const std::string& help, const bool& def, bool req,
+    const std::vector<bool>& choices);
 template YCMD_API float parse_arg(parser* par, const std::string& longname,
-                                  const std::string& help, const float& def,
-                                  bool req, const std::vector<float>& choices);
-template YCMD_API std::string parse_arg(
-    parser* par, const std::string& longname, const std::string& help,
+    const std::string& help, const float& def, bool req,
+    const std::vector<float>& choices);
+template YCMD_API std::string parse_arg(parser* par,
+    const std::string& longname, const std::string& help,
     const std::string& def, bool req, const std::vector<std::string>& choices);
 #endif
 
@@ -630,9 +618,8 @@ template YCMD_API std::string parse_arg(
 // Parses an argument as described in the intro.
 //
 YCMD_API std::string parse_args(parser* par, const std::string& longname,
-                                const std::string& help, const std::string& def,
-                                bool required,
-                                const std::vector<std::string>& choices) {
+    const std::string& help, const std::string& def, bool required,
+    const std::vector<std::string>& choices) {
     return parse_arg<std::string>(par, longname, help, def, required, choices);
 }
 
@@ -640,8 +627,8 @@ YCMD_API std::string parse_args(parser* par, const std::string& longname,
 // Parses an argument as described in the intro.
 //
 YCMD_API int parse_argi(parser* par, const std::string& longname,
-                        const std::string& help, int def, bool required,
-                        const std::vector<int>& choices) {
+    const std::string& help, int def, bool required,
+    const std::vector<int>& choices) {
     return parse_arg<int>(par, longname, help, def, required, choices);
 }
 
@@ -649,8 +636,8 @@ YCMD_API int parse_argi(parser* par, const std::string& longname,
 // Parses an argument as described in the intro.
 //
 YCMD_API float parse_argf(parser* par, const std::string& longname,
-                          const std::string& help, float def, bool required,
-                          const std::vector<float>& choices) {
+    const std::string& help, float def, bool required,
+    const std::vector<float>& choices) {
     return parse_arg<float>(par, longname, help, def, required, choices);
 }
 
@@ -658,8 +645,8 @@ YCMD_API float parse_argf(parser* par, const std::string& longname,
 // Parses an argument as described in the intro.
 //
 YCMD_API double parse_argd(parser* par, const std::string& longname,
-                           const std::string& help, double def, bool required,
-                           const std::vector<double>& choices) {
+    const std::string& help, double def, bool required,
+    const std::vector<double>& choices) {
     return parse_arg<double>(par, longname, help, def, required, choices);
 }
 
@@ -668,12 +655,10 @@ YCMD_API double parse_argd(parser* par, const std::string& longname,
 //
 template <typename T>
 YCMD_API std::vector<T> parse_opta(parser* par, const std::string& longname,
-                                   const std::string& help,
-                                   const std::vector<T>& def, int nargs,
-                                   bool required,
-                                   const std::vector<T>& choices) {
-    return _parse_vals(par, longname, "", help, true, required, nargs, def,
-                       choices);
+    const std::string& help, const std::vector<T>& def, int nargs,
+    bool required, const std::vector<T>& choices) {
+    return _parse_vals(
+        par, longname, "", help, true, required, nargs, def, choices);
 }
 
 //
@@ -681,21 +666,19 @@ YCMD_API std::vector<T> parse_opta(parser* par, const std::string& longname,
 //
 #ifndef YCMD_INLINE
 template YCMD_API std::vector<int> parse_opta(parser* par,
-                                              const std::string& longname,
-                                              const std::string& help,
-                                              const std::vector<int>& def,
-                                              int nargs, bool required,
-                                              const std::vector<int>& choices);
-template YCMD_API std::vector<bool> parse_opta(
-    parser* par, const std::string& longname, const std::string& help,
+    const std::string& longname, const std::string& help,
+    const std::vector<int>& def, int nargs, bool required,
+    const std::vector<int>& choices);
+template YCMD_API std::vector<bool> parse_opta(parser* par,
+    const std::string& longname, const std::string& help,
     const std::vector<bool>& def, int nargs, bool required,
     const std::vector<bool>& choices);
-template YCMD_API std::vector<float> parse_opta(
-    parser* par, const std::string& longname, const std::string& help,
+template YCMD_API std::vector<float> parse_opta(parser* par,
+    const std::string& longname, const std::string& help,
     const std::vector<float>& def, int nargs, bool required,
     const std::vector<float>& choices);
-template YCMD_API std::vector<std::string> parse_opta(
-    parser* par, const std::string& longname, const std::string& help,
+template YCMD_API std::vector<std::string> parse_opta(parser* par,
+    const std::string& longname, const std::string& help,
     const std::vector<std::string>& def, int nargs, bool required,
     const std::vector<std::string>& choices);
 #endif
@@ -705,33 +688,29 @@ template YCMD_API std::vector<std::string> parse_opta(
 //
 template <typename T>
 YCMD_API std::vector<T> parse_arga(parser* par, const std::string& longname,
-                                   const std::string& help,
-                                   const std::vector<T>& def, int nargs,
-                                   bool required,
-                                   const std::vector<T>& choices) {
-    return _parse_vals(par, longname, "", help, false, required, nargs, def,
-                       choices);
+    const std::string& help, const std::vector<T>& def, int nargs,
+    bool required, const std::vector<T>& choices) {
+    return _parse_vals(
+        par, longname, "", help, false, required, nargs, def, choices);
 }
 
 //
 // Specialization of parse_arga()
 //
-YCMD_API std::vector<std::string> parse_argas(
-    parser* par, const std::string& longname, const std::string& help,
+YCMD_API std::vector<std::string> parse_argas(parser* par,
+    const std::string& longname, const std::string& help,
     const std::vector<std::string>& def, int nargs, bool required,
     const std::vector<std::string>& choices) {
-    return parse_arga<std::string>(par, longname, help, def, nargs, required,
-                                   choices);
+    return parse_arga<std::string>(
+        par, longname, help, def, nargs, required, choices);
 }
 
 //
 // Specialization of parse_arga()
 //
 YCMD_API std::vector<int> parse_argai(parser* par, const std::string& longname,
-                                      const std::string& help,
-                                      const std::vector<int>& def, int nargs,
-                                      bool required,
-                                      const std::vector<int>& choices) {
+    const std::string& help, const std::vector<int>& def, int nargs,
+    bool required, const std::vector<int>& choices) {
     return parse_arga<int>(par, longname, help, def, nargs, required, choices);
 }
 
@@ -739,36 +718,30 @@ YCMD_API std::vector<int> parse_argai(parser* par, const std::string& longname,
 // Specialization of parse_arga()
 //
 YCMD_API std::vector<float> parse_argaf(parser* par,
-                                        const std::string& longname,
-                                        const std::string& help,
-                                        const std::vector<float>& def,
-                                        int nargs, bool required,
-                                        const std::vector<float>& choices) {
-    return parse_arga<float>(par, longname, help, def, nargs, required,
-                             choices);
+    const std::string& longname, const std::string& help,
+    const std::vector<float>& def, int nargs, bool required,
+    const std::vector<float>& choices) {
+    return parse_arga<float>(
+        par, longname, help, def, nargs, required, choices);
 }
 
 //
 // Specialization of parse_arga()
 //
 YCMD_API std::vector<double> parse_argad(parser* par,
-                                         const std::string& longname,
-                                         const std::string& help,
-                                         const std::vector<double>& def,
-                                         int nargs, bool required,
-                                         const std::vector<double>& choices) {
-    return parse_arga<double>(par, longname, help, def, nargs, required,
-                              choices);
+    const std::string& longname, const std::string& help,
+    const std::vector<double>& def, int nargs, bool required,
+    const std::vector<double>& choices) {
+    return parse_arga<double>(
+        par, longname, help, def, nargs, required, choices);
 }
 
 //
 // Parses an option enum as described in the intro.
 //
 YCMD_API int parse_opte(parser* par, const std::string& longname,
-                        const std::string& shortname, const std::string& help,
-                        int def,
-                        const std::vector<std::pair<std::string, int>>& vals,
-                        bool required) {
+    const std::string& shortname, const std::string& help, int def,
+    const std::vector<std::pair<std::string, int>>& vals, bool required) {
     auto choices = std::vector<std::string>();
     auto def_s = std::string();
     for (auto&& kv : vals) {
@@ -834,8 +807,8 @@ YCMD_API std::string get_dirname(const std::string& filename) {
 YCMD_API std::string get_basename(const std::string& filename) {
     auto dirname = get_dirname(filename);
     auto extension = get_extension(filename);
-    return filename.substr(dirname.size(),
-                           filename.size() - dirname.size() - extension.size());
+    return filename.substr(
+        dirname.size(), filename.size() - dirname.size() - extension.size());
 }
 
 //
@@ -857,16 +830,16 @@ YCMD_API std::string get_filename(const std::string& filename) {
 //
 // Replace extension.
 //
-YCMD_API std::string replace_extension(const std::string& filename,
-                                       const std::string& ext) {
+YCMD_API std::string replace_extension(
+    const std::string& filename, const std::string& ext) {
     return get_dirname(filename) + get_basename(filename) + ext;
 }
 
 ///
 /// Prepend a string to the extension.
 ///
-YCMD_API std::string prepend_extension(const std::string& filename,
-                                       const std::string& prep) {
+YCMD_API std::string prepend_extension(
+    const std::string& filename, const std::string& prep) {
     return get_dirname(filename) + get_basename(filename) + prep +
            get_extension(filename);
 }
@@ -875,7 +848,7 @@ YCMD_API std::string prepend_extension(const std::string& filename,
 // Splits a path. Public interface.
 //
 YCMD_API void split_path(const std::string& filename, std::string& dirname,
-                         std::string& basename, std::string& ext) {
+    std::string& basename, std::string& ext) {
     dirname = get_dirname(filename);
     basename = get_basename(filename);
     ext = get_extension(filename);
@@ -905,8 +878,8 @@ YCMD_API bool ends_with(const std::string& str, const std::string& substr) {
 //
 // Splits a std::string into lines at the '\n' character.
 //
-YCMD_API std::vector<std::string> split_lines(const std::string& str,
-                                              bool keep_newline) {
+YCMD_API std::vector<std::string> split_lines(
+    const std::string& str, bool keep_newline) {
     if (str.empty()) return {};
     auto lines = std::vector<std::string>();
     auto last = 0;
@@ -922,8 +895,8 @@ YCMD_API std::vector<std::string> split_lines(const std::string& str,
 //
 // Joins a list of std::string with a std::string as separator.
 //
-YCMD_API std::string join_strings(const std::vector<std::string>& strs,
-                                  const std::string& sep) {
+YCMD_API std::string join_strings(
+    const std::vector<std::string>& strs, const std::string& sep) {
     auto ret = std::string();
     auto first = true;
     for (auto& str : strs) {
@@ -991,8 +964,8 @@ YCMD_API std::vector<logger*>* get_default_loggers() {
 //
 // Create a stream logger
 //
-inline logger* _make_stream_logger(FILE* file, int output_level,
-                                   int flush_level) {
+inline logger* _make_stream_logger(
+    FILE* file, int output_level, int flush_level) {
     auto lgr = new logger();
     lgr->file = file;
     set_logger(lgr, output_level, flush_level);
@@ -1003,11 +976,9 @@ inline logger* _make_stream_logger(FILE* file, int output_level,
 // Create a file logger
 //
 YCMD_API logger* make_file_logger(const std::string& filename, bool append,
-                                  int output_level, int flush_level) {
+    int output_level, int flush_level) {
     auto file = fopen(filename.c_str(), (append) ? "at" : "wt");
-    if (!file) {
-        throw std::runtime_error("cannot open log file " + filename);
-    }
+    if (!file) { throw std::runtime_error("cannot open log file " + filename); }
     return _make_stream_logger(file, output_level, flush_level);
 }
 
@@ -1043,16 +1014,16 @@ YCMD_API void set_logger(logger* lgr, int output_level, int flush_level) {
 //
 // Log a message
 //
-YCMD_API void log_msg(logger* lgr, int level, const std::string& name,
-                      const std::string& msg) {
+YCMD_API void log_msg(
+    logger* lgr, int level, const std::string& name, const std::string& msg) {
     log_msg(lgr, level, name.c_str(), msg.c_str());
 }
 
 //
 // Log a message
 //
-YCMD_API void log_msg(logger* lgr, int level, const char* name,
-                      const char* msg) {
+YCMD_API void log_msg(
+    logger* lgr, int level, const char* name, const char* msg) {
     // skip if not needed
     if (_log_skip(lgr, level)) return;
 
@@ -1068,7 +1039,7 @@ YCMD_API void log_msg(logger* lgr, int level, const char* name,
 
     // output message
     fprintf(lgr->file, "%s %s %4x %-16s %s\n", time_buf, type, lgr->guid, name,
-            msg);
+        msg);
 
     // flush if needed
     if (level < lgr->flush_level) return;
@@ -1078,8 +1049,8 @@ YCMD_API void log_msg(logger* lgr, int level, const char* name,
 //
 // Log a message formatted
 //
-YCMD_API void log_msgfv(logger* lgr, int level, const char* name,
-                        const char* msg, va_list args) {
+YCMD_API void log_msgfv(
+    logger* lgr, int level, const char* name, const char* msg, va_list args) {
     // skip if not needed
     if (_log_skip(lgr, level)) return;
 
@@ -1094,8 +1065,8 @@ YCMD_API void log_msgfv(logger* lgr, int level, const char* name,
 //
 // Log a message formatted
 //
-YCMD_API void log_msgf(logger* lgr, int level, const char* name,
-                       const char* msg, ...) {
+YCMD_API void log_msgf(
+    logger* lgr, int level, const char* name, const char* msg, ...) {
     // skip if not needed
     if (_log_skip(lgr, level)) return;
 
@@ -1110,16 +1081,14 @@ YCMD_API void log_msgf(logger* lgr, int level, const char* name,
 // Log a message to the default logger
 //
 YCMD_API void log_msg(int level, const char* name, const char* msg) {
-    for (auto lgr : *get_default_loggers()) {
-        log_msg(lgr, level, name, msg);
-    }
+    for (auto lgr : *get_default_loggers()) { log_msg(lgr, level, name, msg); }
 }
 
 //
 // Log a message to the default logger
 //
-YCMD_API void log_msgfv(int level, const char* name, const char* msg,
-                        va_list args) {
+YCMD_API void log_msgfv(
+    int level, const char* name, const char* msg, va_list args) {
     for (auto lgr : *get_default_loggers()) {
         log_msgfv(lgr, level, name, msg, args);
     }
@@ -1142,8 +1111,8 @@ YCMD_API void log_msgf(int level, const char* name, const char* msg, ...) {
 //
 // Log a message to the default logger
 //
-YCMD_API void log_msg(int level, const std::string& name,
-                      const std::string& msg) {
+YCMD_API void log_msg(
+    int level, const std::string& name, const std::string& msg) {
     for (auto lgr : *get_default_loggers()) {
         log_msg(lgr, level, name.c_str(), msg.c_str());
     }
@@ -1192,8 +1161,8 @@ YCMD_API void thread_pool_wait(thread_pool* pool) { pool->tp->wait(); }
 //
 // Parallel for implementation
 //
-YCMD_API void thread_pool_for(thread_pool* pool, int count,
-                              const std::function<void(int idx)>& task) {
+YCMD_API void thread_pool_for(
+    thread_pool* pool, int count, const std::function<void(int idx)>& task) {
     for (auto idx = 0; idx < count; idx++) {
         thread_pool_async(pool, [&task, idx]() { task(idx); });
     }
@@ -1218,7 +1187,7 @@ void make_global_thread_pool() {
 YCMD_API std::shared_future<void> thread_pool_async(
     const std::function<void()>& task) {
     if (!global_pool) make_global_thread_pool();
-    thread_pool_async(global_pool, task);
+    return thread_pool_async(global_pool, task);
 }
 
 //
@@ -1231,8 +1200,8 @@ YCMD_API void thread_pool_wait() {
 //
 // Parallel for implementation
 //
-YCMD_API void thread_pool_for(int count,
-                              const std::function<void(int idx)>& task) {
+YCMD_API void thread_pool_for(
+    int count, const std::function<void(int idx)>& task) {
     if (!global_pool) make_global_thread_pool();
     thread_pool_for(global_pool, count, task);
 }
@@ -1259,9 +1228,8 @@ YCMD_API void run_test() {
 
     // test opts
     auto test2_argc = 10;
-    const char* test2_argv[] = {"test2", "--int",    "10",   "--float",
-                                "3.14",  "--double", "6.28", "--str",
-                                "bob",   "--flag"};
+    const char* test2_argv[] = {"test2", "--int", "10", "--float", "3.14",
+        "--double", "6.28", "--str", "bob", "--flag"};
     auto par2 = ycmd::make_parser(test2_argc, (char**)test2_argv, "test2");
     par2->exit_on_error = false;
     assert(parse_flag(par2, "--flag", "", "", false) == true);
@@ -1270,8 +1238,8 @@ YCMD_API void run_test() {
            0.01);
     assert(fabs(ycmd::parse_opt<double>(par2, "--double", "", "", 0) - 6.28) <
            0.01);
-    assert(ycmd::parse_opt<std::string>(par2, "--str", "", "", "mike") ==
-           "bob");
+    assert(
+        ycmd::parse_opt<std::string>(par2, "--str", "", "", "mike") == "bob");
     assert(parse_flag(par2, "--flag_def", "", "", false) == false);
     assert(ycmd::parse_opt<int>(par2, "--int_def", "", "", 5) == 5);
     assert(ycmd::parse_opt<float>(par2, "--float_def", "", "", 2.67f) == 2.67f);
@@ -1286,8 +1254,8 @@ YCMD_API void run_test() {
     auto par3 = ycmd::make_parser(test3_argc, (char**)test3_argv, "test3");
     par3->exit_on_error = false;
     assert(ycmd::parse_arg<int>(par3, "int", "", 0, true) == 10);
-    assert(ycmd::parse_arg<std::string>(par3, "str", "", "mike", true) ==
-           "bob");
+    assert(
+        ycmd::parse_arg<std::string>(par3, "str", "", "mike", true) == "bob");
     assert(check_parser(par3) == true);
 
     // test bad opts

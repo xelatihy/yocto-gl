@@ -140,9 +140,8 @@ YSYM_API scene::~scene() {
 // Public API.
 //
 YSYM_API void set_body(scene* scn, int bid, const float3x4& frame,
-                       const float3& lin_vel, const float3& ang_vel,
-                       float density, int ntriangles, const int3* triangles,
-                       int nverts, const float3* pos) {
+    const float3& lin_vel, const float3& ang_vel, float density, int ntriangles,
+    const int3* triangles, int nverts, const float3* pos) {
     scn->shapes[bid]->frame = frame;
     scn->shapes[bid]->lin_vel = lin_vel;
     scn->shapes[bid]->ang_vel = ang_vel;
@@ -178,8 +177,8 @@ YSYM_API void set_body_frame(scene* scn, int bid, const float3x4& frame) {
 //
 // Public API.
 //
-YSYM_API void set_body_velocity(scene* scn, int bid, const float3& lin_vel,
-                                const float3& ang_vel) {
+YSYM_API void set_body_velocity(
+    scene* scn, int bid, const float3& lin_vel, const float3& ang_vel) {
     scn->shapes[bid]->lin_vel = lin_vel;
     scn->shapes[bid]->ang_vel = ang_vel;
 }
@@ -188,10 +187,8 @@ YSYM_API void set_body_velocity(scene* scn, int bid, const float3& lin_vel,
 // Public API.
 //
 YSYM_API void set_overlap_callbacks(scene* scn, void* ctx,
-                                    overlap_shapes_cb overlap_shapes,
-                                    overlap_shape_cb overlap_shape,
-                                    overlap_verts_cb overlap_verts,
-                                    overlap_refit_cb overlap_refit) {
+    overlap_shapes_cb overlap_shapes, overlap_shape_cb overlap_shape,
+    overlap_verts_cb overlap_verts, overlap_refit_cb overlap_refit) {
     scn->overlap_ctx = ctx;
     scn->overlap_shapes = overlap_shapes;
     scn->overlap_shape = overlap_shape;
@@ -210,10 +207,8 @@ YSYM_API void set_overlap_callbacks(scene* scn, void* ctx,
 // https://github.com/melax/sandbox/blob/master/include/geometric.h
 //
 static inline ym::mat3f _compute_tetra_inertia(const ym::vec3f& v0,
-                                               const ym::vec3f& v1,
-                                               const ym::vec3f& v2,
-                                               const ym::vec3f& v3,
-                                               const ym::vec3f& center) {
+    const ym::vec3f& v1, const ym::vec3f& v2, const ym::vec3f& v3,
+    const ym::vec3f& center) {
     // volume
     auto volume = ym::tetrahedron_volume(v0, v1, v2, v3);
     // relative vertices
@@ -223,27 +218,28 @@ static inline ym::mat3f _compute_tetra_inertia(const ym::vec3f& v0,
     auto diag = ym::zero3f;  // x^2, y^2, z^2
     for (auto j = 0; j < 3; j++) {
         diag[j] = (vr0[j] * vr0[j] + vr1[j] * vr1[j] + vr2[j] * vr2[j] +
-                   vr3[j] * vr3[j] + vr0[j] * vr1[j] + vr0[j] * vr2[j] +
-                   vr0[j] * vr3[j] + vr1[j] * vr2[j] + vr1[j] * vr3[j] +
-                   vr2[j] * vr3[j]) *
+                      vr3[j] * vr3[j] + vr0[j] * vr1[j] + vr0[j] * vr2[j] +
+                      vr0[j] * vr3[j] + vr1[j] * vr2[j] + vr1[j] * vr3[j] +
+                      vr2[j] * vr3[j]) *
                   6 * volume / 60;
     }
     // off-diagonal elements
     auto offd = ym::zero3f;  // x*y, x*z, y*z
     for (auto j = 0; j < 3; j++) {
         auto j1 = (j + 1) % 3, j2 = (j + 2) % 3;
-        offd[j] = (2 * vr0[j1] * vr0[j2] + 2 * vr1[j1] * vr1[j2] +
-                   2 * vr2[j1] * vr2[j2] + 2 * vr3[j1] * vr3[j2] +
-                   vr1[j1] * vr0[j2] + vr2[j1] * vr0[j2] + vr3[j1] * vr0[j2] +
-                   vr0[j1] * vr1[j2] + vr2[j1] * vr1[j2] + vr3[j1] * vr1[j2] +
-                   vr0[j1] * vr2[j2] + vr1[j1] * vr2[j2] + vr3[j1] * vr2[j2] +
-                   vr0[j1] * vr3[j2] + vr1[j1] * vr3[j2] + vr2[j1] * vr3[j2]) *
-                  6 * volume / 120;
+        offd[j] =
+            (2 * vr0[j1] * vr0[j2] + 2 * vr1[j1] * vr1[j2] +
+                2 * vr2[j1] * vr2[j2] + 2 * vr3[j1] * vr3[j2] +
+                vr1[j1] * vr0[j2] + vr2[j1] * vr0[j2] + vr3[j1] * vr0[j2] +
+                vr0[j1] * vr1[j2] + vr2[j1] * vr1[j2] + vr3[j1] * vr1[j2] +
+                vr0[j1] * vr2[j2] + vr1[j1] * vr2[j2] + vr3[j1] * vr2[j2] +
+                vr0[j1] * vr3[j2] + vr1[j1] * vr3[j2] + vr2[j1] * vr3[j2]) *
+            6 * volume / 120;
     }
     // setup inertia
     return {{diag[1] + diag[2], -offd[2], -offd[1]},
-            {-offd[2], diag[0] + diag[2], -offd[0]},
-            {-offd[1], -offd[0], diag[0] + diag[1]}};
+        {-offd[2], diag[0] + diag[2], -offd[0]},
+        {-offd[1], -offd[0], diag[0] + diag[1]}};
 }
 
 //
@@ -268,8 +264,8 @@ YSYM_API std::tuple<float, ym::vec3f, ym::mat3f> _compute_moments(
     auto inertia = ym::mat3f{{0, 0, 0}, {0, 0, 0}, {0, 0, 0}};
     for (auto i = 0; i < ntriangles; i++) {
         auto t = triangles[i];
-        inertia += _compute_tetra_inertia(ym::zero3f, pos[t[0]], pos[t[1]],
-                                          pos[t[2]], center);
+        inertia += _compute_tetra_inertia(
+            ym::zero3f, pos[t[0]], pos[t[1]], pos[t[2]], center);
     }
     inertia /= volume;
     return std::make_tuple(volume, center, inertia);
@@ -296,8 +292,8 @@ YSYM_API std::tuple<float, ym::vec3f, ym::mat3f> _compute_moments(
     auto inertia = ym::mat3f{{0, 0, 0}, {0, 0, 0}, {0, 0, 0}};
     for (auto i = 0; i < ntetra; i++) {
         auto t = tetra[i];
-        inertia += _compute_tetra_inertia(pos[t[0]], pos[t[1]], pos[t[2]],
-                                          pos[t[3]], center);
+        inertia += _compute_tetra_inertia(
+            pos[t[0]], pos[t[1]], pos[t[2]], pos[t[3]], center);
     }
     inertia /= volume;
     return std::make_tuple(volume, center, inertia);
@@ -308,8 +304,8 @@ YSYM_API std::tuple<float, ym::vec3f, ym::mat3f> _compute_moments(
 //
 YSYM_API std::tuple<float, float3, float3x3> compute_moments(
     int ntriangles, const int3* triangles, int nverts, const float3* pos) {
-    return _compute_moments(ntriangles, (const ym::vec3i*)triangles, nverts,
-                            (const ym::vec3f*)pos);
+    return _compute_moments(
+        ntriangles, (const ym::vec3i*)triangles, nverts, (const ym::vec3f*)pos);
 }
 
 //
@@ -317,8 +313,8 @@ YSYM_API std::tuple<float, float3, float3x3> compute_moments(
 //
 YSYM_API std::tuple<float, float3, float3x3> compute_moments(
     int ntetra, const int4* tetra, int nverts, const float3* pos) {
-    return _compute_moments(ntetra, (const ym::vec4i*)tetra, nverts,
-                            (const ym::vec3f*)pos);
+    return _compute_moments(
+        ntetra, (const ym::vec4i*)tetra, nverts, (const ym::vec3f*)pos);
 }
 
 //
@@ -326,10 +322,10 @@ YSYM_API std::tuple<float, float3, float3x3> compute_moments(
 //
 #if 1
 static inline void _compute_collision(const scene* scn, const ym::vec2i& sids,
-                                      std::vector<collision>* collisions) {
+    std::vector<collision>* collisions) {
     std::vector<std::pair<overlap_point, int2>> overlaps;
-    scn->overlap_verts(scn->overlap_ctx, sids[0], sids[1],
-                       scn->overlap_max_radius, &overlaps);
+    scn->overlap_verts(
+        scn->overlap_ctx, sids[0], sids[1], scn->overlap_max_radius, &overlaps);
     if (overlaps.empty()) return;
     auto shape1 = scn->shapes[sids[0]];
     auto shape2 = scn->shapes[sids[1]];
@@ -338,8 +334,8 @@ static inline void _compute_collision(const scene* scn, const ym::vec2i& sids,
         auto triangle = shape1->triangles[overlap.first.eid];
         auto v0 = shape1->pos[triangle[0]], v1 = shape1->pos[triangle[1]],
              v2 = shape1->pos[triangle[2]];
-        auto tp = transform_point(shape1->frame,
-                                  ym::blerp(v0, v1, v2, overlap.first.euv));
+        auto tp = transform_point(
+            shape1->frame, ym::blerp(v0, v1, v2, overlap.first.euv));
         auto n =
             transform_direction(shape1->frame, ym::triangle_normal(v0, v1, v2));
         const auto eps = -0.01f;
@@ -354,7 +350,7 @@ static inline void _compute_collision(const scene* scn, const ym::vec2i& sids,
 }
 #else
 static inline void _compute_collision(const scene* scn, const ym::vec2i& sids,
-                                      std::vector<collision>* collisions) {
+    std::vector<collision>* collisions) {
     auto shape1 = scn->shapes[sids[0]];
     auto shape2 = scn->shapes[sids[1]];
     for (auto& p2 : shape2->pos) {
@@ -383,8 +379,8 @@ static inline void _compute_collision(const scene* scn, const ym::vec2i& sids,
 //
 // Compute collisions.
 //
-static inline void _compute_collisions(scene* scene,
-                                       std::vector<collision>* collisions) {
+static inline void _compute_collisions(
+    scene* scene, std::vector<collision>* collisions) {
     // check which shapes might overlap
     auto shapecollisions = std::vector<int2>();
     scene->overlap_shapes(scene->overlap_ctx, &shapecollisions);
@@ -404,8 +400,8 @@ static inline void _compute_collisions(scene* scene,
 //
 // Apply an impulse where the position is relative to the center of mass.
 //
-static inline void _apply_rel_impulse(shape* shp, const ym::vec3f impulse,
-                                      const ym::vec3f rel_pos) {
+static inline void _apply_rel_impulse(
+    shape* shp, const ym::vec3f impulse, const ym::vec3f rel_pos) {
     if (!shp->simulated) return;
     shp->lin_vel += impulse * shp->_mass_inv;
     shp->ang_vel += shp->_inertia_inv_world * ym::cross(rel_pos, impulse);
@@ -421,8 +417,8 @@ static inline float _muldot(const ym::vec3f& v, const ym::mat3f& m) {
 //
 // Solve constraints with PGS.
 //
-YSYM_API void _solve_constraints(scene* scn, std::vector<collision>& collisions,
-                                 float dt) {
+YSYM_API void _solve_constraints(
+    scene* scn, std::vector<collision>& collisions, float dt) {
     // initialize computation
     for (auto& col : collisions) {
         col.local_impulse = ym::zero3f;
@@ -432,20 +428,20 @@ YSYM_API void _solve_constraints(scene* scn, std::vector<collision>& collisions,
         auto r1 = ym::pos(col.frame) - shape1->_centroid_world,
              r2 = ym::pos(col.frame) - shape2->_centroid_world;
         col.meff_inv = {1 / (shape1->_mass_inv + shape2->_mass_inv +
-                             _muldot(ym::cross(r1, col.frame[0]),
-                                     shape1->_inertia_inv_world) +
-                             _muldot(ym::cross(r2, col.frame[0]),
-                                     shape2->_inertia_inv_world)),
-                        1 / (shape1->_mass_inv + shape2->_mass_inv +
-                             _muldot(ym::cross(r1, col.frame[1]),
-                                     shape1->_inertia_inv_world) +
-                             _muldot(ym::cross(r2, col.frame[1]),
-                                     shape2->_inertia_inv_world)),
-                        1 / (shape1->_mass_inv + shape2->_mass_inv +
-                             _muldot(ym::cross(r1, col.frame[2]),
-                                     shape1->_inertia_inv_world) +
-                             _muldot(ym::cross(r2, col.frame[2]),
-                                     shape2->_inertia_inv_world))};
+                                _muldot(ym::cross(r1, col.frame[0]),
+                                    shape1->_inertia_inv_world) +
+                                _muldot(ym::cross(r2, col.frame[0]),
+                                    shape2->_inertia_inv_world)),
+            1 / (shape1->_mass_inv + shape2->_mass_inv +
+                    _muldot(ym::cross(r1, col.frame[1]),
+                        shape1->_inertia_inv_world) +
+                    _muldot(ym::cross(r2, col.frame[1]),
+                        shape2->_inertia_inv_world)),
+            1 / (shape1->_mass_inv + shape2->_mass_inv +
+                    _muldot(ym::cross(r1, col.frame[2]),
+                        shape1->_inertia_inv_world) +
+                    _muldot(ym::cross(r2, col.frame[2]),
+                        shape2->_inertia_inv_world))};
     }
 
     // compute relative velocity for visualization
@@ -475,17 +471,16 @@ YSYM_API void _solve_constraints(scene* scn, std::vector<collision>& collisions,
             auto offset = 0.0f;
             ym::vec3f local_impulse =
                 col.meff_inv * ym::vec3f{-ym::dot(col.frame[0], vr),
-                                         -ym::dot(col.frame[1], vr),
-                                         -ym::dot(col.frame[2], vr) + offset};
+                                   -ym::dot(col.frame[1], vr),
+                                   -ym::dot(col.frame[2], vr) + offset};
             col.local_impulse += local_impulse;
-            col.local_impulse[2] = ym::clamp(col.local_impulse[2], 0.0f,
-                                             std::numeric_limits<float>::max());
-            col.local_impulse[0] =
-                ym::clamp(col.local_impulse[0], -col.local_impulse[2] * 0.6f,
-                          col.local_impulse[2] * 0.6f);
+            col.local_impulse[2] = ym::clamp(
+                col.local_impulse[2], 0.0f, std::numeric_limits<float>::max());
+            col.local_impulse[0] = ym::clamp(col.local_impulse[0],
+                -col.local_impulse[2] * 0.6f, col.local_impulse[2] * 0.6f);
             col.local_impulse[1] =
                 ym::clamp(col.local_impulse[1], -col.local_impulse[2] * 0.6f,
-                          col.local_impulse[2] - offset * 0.6f);
+                    col.local_impulse[2] - offset * 0.6f);
             col.impulse = col.local_impulse[2] * col.frame[2] +
                           col.local_impulse[0] * col.frame[0] +
                           col.local_impulse[1] * col.frame[1];
@@ -521,8 +516,8 @@ YSYM_API void init_simulation(scene* scn) {
         if (shp->simulated) {
             float volume = 1;
             std::tie(volume, shp->_centroid_local, shp->_inertia_local) =
-                ysym::_compute_moments(shp->nelems, shp->triangles, shp->nverts,
-                                       shp->pos);
+                ysym::_compute_moments(
+                    shp->nelems, shp->triangles, shp->nverts, shp->pos);
             shp->_mass = shp->density * volume;
             shp->_centroid_world =
                 transform_point(shp->frame, shp->_centroid_local);

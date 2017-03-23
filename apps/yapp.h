@@ -83,12 +83,17 @@ struct material {
     float3 kt = {0, 0, 0};  // transmittance color
     float rs = 0.0001;      // roughness
 
-    // indices in the texture array (-1 if not found)
+    // texture pointers
     texture* ke_txt = nullptr;
     texture* kd_txt = nullptr;
     texture* ks_txt = nullptr;
     texture* kt_txt = nullptr;
     texture* rs_txt = nullptr;
+
+    // bump and normal map
+    float bump_scale = 1;
+    texture* norm_txt = nullptr;
+    texture* bump_txt = nullptr;
 };
 
 //
@@ -111,6 +116,7 @@ struct shape {
     std::vector<float2> texcoord;  // per-vertex texcoord (2 float)
     std::vector<float3> color;     // [extension] per-vertex color (3 float)
     std::vector<float> radius;     // [extension] per-vertex radius (1 float)
+    std::vector<float4> tangsp;    // per-vertex tangent space (4 float)
 
     // additional vertex data
     std::vector<float3> ke;  // per-vertex emission
@@ -167,14 +173,14 @@ const int* get_elems(const shape& shape);
 //
 // Load scene
 //
-scene* load_scene(const std::string& filename, float scale,
-                  bool add_camera = true);
+scene* load_scene(
+    const std::string& filename, float scale, bool add_camera = true);
 
 //
 // Load scene
 //
 scene* load_scenes(const std::vector<std::string>& filenames, float scale,
-                   bool add_camera = true);
+    bool add_camera = true);
 
 //
 // Loads an envmap for the scene
@@ -195,8 +201,7 @@ std::vector<int4> make_trace_blocks(int w, int h, int bs);
 // Save image
 //
 void save_image(const std::string& filename, int width, int height,
-                const float4* hdr, float exposure, yimg::tonemap_type tonemap,
-                float gamma);
+    const float4* hdr, float exposure, yimg::tonemap_type tonemap, float gamma);
 
 //
 // Make a BVH
@@ -206,8 +211,8 @@ ybvh::scene* make_bvh(const scene* scene);
 //
 // Initialize scene for rendering
 //
-ytrace::scene* make_trace_scene(const scene* scene,
-                                const ybvh::scene* scene_bvh, int camera);
+ytrace::scene* make_trace_scene(
+    const scene* scene, const ybvh::scene* scene_bvh, int camera);
 
 //
 // Initialize a rigid body scene
@@ -255,8 +260,7 @@ struct params {
 // Load parameters
 //
 params* init_params(const std::string& help, int argc, char** argv,
-                    bool trace_params, bool sym_params, bool shade_params,
-                    bool ui_params);
+    bool trace_params, bool sym_params, bool shade_params, bool ui_params);
 
 //
 // Logging
@@ -279,8 +283,8 @@ void free_shade_state(shade_state* state);
 //
 // OpenGL render
 //
-void shade_scene(const yapp::scene* scn, const params* pars,
-                 const shade_state* st);
+void shade_scene(
+    const yapp::scene* scn, const params* pars, const shade_state* st);
 
 }  // namespace
 

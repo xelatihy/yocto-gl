@@ -482,7 +482,7 @@ constexpr inline T cross(const vec<T, 2>& a, const vec<T, 2>& b) {
 template <typename T>
 constexpr inline vec<T, 3> cross(const vec<T, 3>& a, const vec<T, 3>& b) {
     return {a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2],
-            a[0] * b[1] - a[1] * b[0]};
+        a[0] * b[1] - a[1] * b[0]};
 }
 
 /// angle between normalized vectors
@@ -514,8 +514,8 @@ constexpr inline vec<T, N> nlerp(const vec<T, N>& a, const vec<T, N>& b, T t) {
 template <typename T, int N>
 constexpr inline vec<T, N> slerp(const vec<T, N>& a, const vec<T, N>& b, T t) {
     auto th = uangle(a, b);
-    return th == 0 ? a
-                   : a * (std::sin(th * (1 - t)) / std::sin(th)) +
+    return th == 0 ? a :
+                     a * (std::sin(th * (1 - t)) / std::sin(th)) +
                          b * (std::sin(th * t) / std::sin(th));
 }
 
@@ -523,21 +523,21 @@ constexpr inline vec<T, N> slerp(const vec<T, N>& a, const vec<T, N>& b, T t) {
 // http://lolengine.net/blog/2013/09/21/picking-orthogonal-vector-combing-coconuts)
 template <typename T>
 constexpr inline vec<T, 3> orthogonal(const vec<T, 3>& v) {
-    return std::abs(v[0]) > std::abs(v[2]) ? vec<T, 3>{-v[1], v[0], 0}
-                                           : vec<T, 3>{0, -v[2], v[1]};
+    return std::abs(v[0]) > std::abs(v[2]) ? vec<T, 3>{-v[1], v[0], 0} :
+                                             vec<T, 3>{0, -v[2], v[1]};
 }
 
 /// orthonormalize two vectors
 template <typename T>
-constexpr inline vec<T, 3> orthonormalize(const vec<T, 3>& a,
-                                          const vec<T, 3>& b) {
-    return normalize(a - b * ym_dot(a, b));
+constexpr inline vec<T, 3> orthonormalize(
+    const vec<T, 3>& a, const vec<T, 3>& b) {
+    return normalize(a - b * dot(a, b));
 }
 
 /// vector component-wise clamp
 template <typename T, int N>
-constexpr inline vec<T, N> clamp(const vec<T, N>& x, const T& min,
-                                 const T& max) {
+constexpr inline vec<T, N> clamp(
+    const vec<T, N>& x, const T& min, const T& max) {
     vec<T, N> c;
     for (auto i = 0; i < N; i++) c[i] = clamp(x[i], min, max);
     return c;
@@ -545,8 +545,8 @@ constexpr inline vec<T, N> clamp(const vec<T, N>& x, const T& min,
 
 /// vector component-wise clamp
 template <typename T, int N>
-constexpr inline vec<T, N> clamp(const vec<T, N>& x, const vec<T, N>& min,
-                                 const vec<T, N>& max) {
+constexpr inline vec<T, N> clamp(
+    const vec<T, N>& x, const vec<T, N>& min, const vec<T, N>& max) {
     vec<T, N> c;
     for (auto i = 0; i < N; i++) c[i] = clamp(x[i], min[i], max[i]);
     return c;
@@ -747,8 +747,8 @@ constexpr inline mat<T, M, N> operator-(const mat<T, N, M>& a) {
 
 /// matrix operator +
 template <typename T, int N, int M>
-constexpr inline mat<T, M, N> operator+(const mat<T, N, M>& a,
-                                        const mat<T, N, M>& b) {
+constexpr inline mat<T, M, N> operator+(
+    const mat<T, N, M>& a, const mat<T, N, M>& b) {
     mat<T, N, M> c;
     for (auto i = 0; i < M; i++) c[i] = a[i] + b[i];
     return c;
@@ -772,8 +772,8 @@ constexpr inline mat<T, M, N> operator/(const mat<T, N, M>& a, T b) {
 
 /// matrix-vector right multiply
 template <typename T, int N, int M>
-constexpr inline vec<T, N> operator*(const mat<T, N, M>& a,
-                                     const vec<T, M>& b) {
+constexpr inline vec<T, N> operator*(
+    const mat<T, N, M>& a, const vec<T, M>& b) {
     vec<T, N> c = zero_vec<T, N>();
     for (auto j = 0; j < M; j++) c += a[j] * b[j];
     return c;
@@ -781,8 +781,8 @@ constexpr inline vec<T, N> operator*(const mat<T, N, M>& a,
 
 /// matrix-vector left multiply
 template <typename T, int N, int M>
-constexpr inline vec<T, M> operator*(const vec<T, N>& a,
-                                     const mat<T, N, M>& b) {
+constexpr inline vec<T, M> operator*(
+    const vec<T, N>& a, const mat<T, N, M>& b) {
     vec<T, M> c;
     for (auto j = 0; j < M; j++) c[j] = dot(a, b[j]);
     return c;
@@ -790,8 +790,8 @@ constexpr inline vec<T, M> operator*(const vec<T, N>& a,
 
 /// matrix-matrix multiply
 template <typename T, int N, int M, int K>
-constexpr inline mat<T, N, M> operator*(const mat<T, N, K>& a,
-                                        const mat<T, K, M>& b) {
+constexpr inline mat<T, N, M> operator*(
+    const mat<T, N, K>& a, const mat<T, K, M>& b) {
     mat<T, N, M> c;
     for (auto j = 0; j < M; j++) c[j] = a * b[j];
     return c;
@@ -799,15 +799,15 @@ constexpr inline mat<T, N, M> operator*(const mat<T, N, K>& a,
 
 /// matrix sum assignment
 template <typename T, int N, int M>
-constexpr inline mat<T, M, N>& operator+=(mat<T, N, M>& a,
-                                          const mat<T, N, M>& b) {
+constexpr inline mat<T, M, N>& operator+=(
+    mat<T, N, M>& a, const mat<T, N, M>& b) {
     return a = a + b;
 }
 
 /// matrix-matrix multiply assignment
 template <typename T, int N, int M>
-constexpr inline mat<T, M, N>& operator*=(mat<T, N, M>& a,
-                                          const mat<T, N, M>& b) {
+constexpr inline mat<T, M, N>& operator*=(
+    mat<T, N, M>& a, const mat<T, N, M>& b) {
     return a = a * b;
 }
 
@@ -836,9 +836,7 @@ template <typename T, int N, int M>
 constexpr inline mat<T, M, N> transpose(const mat<T, N, M>& a) {
     mat<T, M, N> c;
     for (auto j = 0; j < M; j++) {
-        for (auto i = 0; i < N; i++) {
-            c[i][j] = a[j][i];
-        }
+        for (auto i = 0; i < N; i++) { c[i][j] = a[j][i]; }
     }
     return c;
 }
@@ -853,67 +851,67 @@ constexpr inline mat<T, 2, 2> adjugate(const mat<T, 2, 2>& a) {
 template <typename T>
 constexpr inline mat<T, 3, 3> adjugate(const mat<T, 3, 3>& a) {
     return {{a[1][1] * a[2][2] - a[2][1] * a[1][2],
-             a[2][1] * a[0][2] - a[0][1] * a[2][2],
-             a[0][1] * a[1][2] - a[1][1] * a[0][2]},
-            {a[1][2] * a[2][0] - a[2][2] * a[1][0],
-             a[2][2] * a[0][0] - a[0][2] * a[2][0],
-             a[0][2] * a[1][0] - a[1][2] * a[0][0]},
-            {a[1][0] * a[2][1] - a[2][0] * a[1][1],
-             a[2][0] * a[0][1] - a[0][0] * a[2][1],
-             a[0][0] * a[1][1] - a[1][0] * a[0][1]}};
+                a[2][1] * a[0][2] - a[0][1] * a[2][2],
+                a[0][1] * a[1][2] - a[1][1] * a[0][2]},
+        {a[1][2] * a[2][0] - a[2][2] * a[1][0],
+            a[2][2] * a[0][0] - a[0][2] * a[2][0],
+            a[0][2] * a[1][0] - a[1][2] * a[0][0]},
+        {a[1][0] * a[2][1] - a[2][0] * a[1][1],
+            a[2][0] * a[0][1] - a[0][0] * a[2][1],
+            a[0][0] * a[1][1] - a[1][0] * a[0][1]}};
 }
 
 /// matrix adjugate (4x4)
 template <typename T>
 constexpr inline mat<T, 4, 4> adjugate(const mat<T, 4, 4>& a) {
     return {{a[1][1] * a[2][2] * a[3][3] + a[3][1] * a[1][2] * a[2][3] +
-                 a[2][1] * a[3][2] * a[1][3] - a[1][1] * a[3][2] * a[2][3] -
-                 a[2][1] * a[1][2] * a[3][3] - a[3][1] * a[2][2] * a[1][3],
-             a[0][1] * a[3][2] * a[2][3] + a[2][1] * a[0][2] * a[3][3] +
-                 a[3][1] * a[2][2] * a[0][3] - a[3][1] * a[0][2] * a[2][3] -
-                 a[2][1] * a[3][2] * a[0][3] - a[0][1] * a[2][2] * a[3][3],
-             a[0][1] * a[1][2] * a[3][3] + a[3][1] * a[0][2] * a[1][3] +
-                 a[1][1] * a[3][2] * a[0][3] - a[0][1] * a[3][2] * a[1][3] -
-                 a[1][1] * a[0][2] * a[3][3] - a[3][1] * a[1][2] * a[0][3],
-             a[0][1] * a[2][2] * a[1][3] + a[1][1] * a[0][2] * a[2][3] +
-                 a[2][1] * a[1][2] * a[0][3] - a[0][1] * a[1][2] * a[2][3] -
-                 a[2][1] * a[0][2] * a[1][3] - a[1][1] * a[2][2] * a[0][3]},
-            {a[1][2] * a[3][3] * a[2][0] + a[2][2] * a[1][3] * a[3][0] +
-                 a[3][2] * a[2][3] * a[1][0] - a[1][2] * a[2][3] * a[3][0] -
-                 a[3][2] * a[1][3] * a[2][0] - a[2][2] * a[3][3] * a[1][0],
-             a[0][2] * a[2][3] * a[3][0] + a[3][2] * a[0][3] * a[2][0] +
-                 a[2][2] * a[3][3] * a[0][0] - a[0][2] * a[3][3] * a[2][0] -
-                 a[2][2] * a[0][3] * a[3][0] - a[3][2] * a[2][3] * a[0][0],
-             a[0][2] * a[3][3] * a[1][0] + a[1][2] * a[0][3] * a[3][0] +
-                 a[3][2] * a[1][3] * a[0][0] - a[0][2] * a[1][3] * a[3][0] -
-                 a[3][2] * a[0][3] * a[1][0] - a[1][2] * a[3][3] * a[0][0],
-             a[0][2] * a[1][3] * a[2][0] + a[2][2] * a[0][3] * a[1][0] +
-                 a[1][2] * a[2][3] * a[0][0] - a[0][2] * a[2][3] * a[1][0] -
-                 a[1][2] * a[0][3] * a[2][0] - a[2][2] * a[1][3] * a[0][0]},
-            {a[1][3] * a[2][0] * a[3][1] + a[3][3] * a[1][0] * a[2][1] +
-                 a[2][3] * a[3][0] * a[1][1] - a[1][3] * a[3][0] * a[2][1] -
-                 a[2][3] * a[1][0] * a[3][1] - a[3][3] * a[2][0] * a[1][1],
-             a[0][3] * a[3][0] * a[2][1] + a[2][3] * a[0][0] * a[3][1] +
-                 a[3][3] * a[2][0] * a[0][1] - a[0][3] * a[2][0] * a[3][1] -
-                 a[3][3] * a[0][0] * a[2][1] - a[2][3] * a[3][0] * a[0][1],
-             a[0][3] * a[1][0] * a[3][1] + a[3][3] * a[0][0] * a[1][1] +
-                 a[1][3] * a[3][0] * a[0][1] - a[0][3] * a[3][0] * a[1][1] -
-                 a[1][3] * a[0][0] * a[3][1] - a[3][3] * a[1][0] * a[0][1],
-             a[0][3] * a[2][0] * a[1][1] + a[1][3] * a[0][0] * a[2][1] +
-                 a[2][3] * a[1][0] * a[0][1] - a[0][3] * a[1][0] * a[2][1] -
-                 a[2][3] * a[0][0] * a[1][1] - a[1][3] * a[2][0] * a[0][1]},
-            {a[1][0] * a[3][1] * a[2][2] + a[2][0] * a[1][1] * a[3][2] +
-                 a[3][0] * a[2][1] * a[1][2] - a[1][0] * a[2][1] * a[3][2] -
-                 a[3][0] * a[1][1] * a[2][2] - a[2][0] * a[3][1] * a[1][2],
-             a[0][0] * a[2][1] * a[3][2] + a[3][0] * a[0][1] * a[2][2] +
-                 a[2][0] * a[3][1] * a[0][2] - a[0][0] * a[3][1] * a[2][2] -
-                 a[2][0] * a[0][1] * a[3][2] - a[3][0] * a[2][1] * a[0][2],
-             a[0][0] * a[3][1] * a[1][2] + a[1][0] * a[0][1] * a[3][2] +
-                 a[3][0] * a[1][1] * a[0][2] - a[0][0] * a[1][1] * a[3][2] -
-                 a[3][0] * a[0][1] * a[1][2] - a[1][0] * a[3][1] * a[0][2],
-             a[0][0] * a[1][1] * a[2][2] + a[2][0] * a[0][1] * a[1][2] +
-                 a[1][0] * a[2][1] * a[0][2] - a[0][0] * a[2][1] * a[1][2] -
-                 a[1][0] * a[0][1] * a[2][2] - a[2][0] * a[1][1] * a[0][2]}};
+                    a[2][1] * a[3][2] * a[1][3] - a[1][1] * a[3][2] * a[2][3] -
+                    a[2][1] * a[1][2] * a[3][3] - a[3][1] * a[2][2] * a[1][3],
+                a[0][1] * a[3][2] * a[2][3] + a[2][1] * a[0][2] * a[3][3] +
+                    a[3][1] * a[2][2] * a[0][3] - a[3][1] * a[0][2] * a[2][3] -
+                    a[2][1] * a[3][2] * a[0][3] - a[0][1] * a[2][2] * a[3][3],
+                a[0][1] * a[1][2] * a[3][3] + a[3][1] * a[0][2] * a[1][3] +
+                    a[1][1] * a[3][2] * a[0][3] - a[0][1] * a[3][2] * a[1][3] -
+                    a[1][1] * a[0][2] * a[3][3] - a[3][1] * a[1][2] * a[0][3],
+                a[0][1] * a[2][2] * a[1][3] + a[1][1] * a[0][2] * a[2][3] +
+                    a[2][1] * a[1][2] * a[0][3] - a[0][1] * a[1][2] * a[2][3] -
+                    a[2][1] * a[0][2] * a[1][3] - a[1][1] * a[2][2] * a[0][3]},
+        {a[1][2] * a[3][3] * a[2][0] + a[2][2] * a[1][3] * a[3][0] +
+                a[3][2] * a[2][3] * a[1][0] - a[1][2] * a[2][3] * a[3][0] -
+                a[3][2] * a[1][3] * a[2][0] - a[2][2] * a[3][3] * a[1][0],
+            a[0][2] * a[2][3] * a[3][0] + a[3][2] * a[0][3] * a[2][0] +
+                a[2][2] * a[3][3] * a[0][0] - a[0][2] * a[3][3] * a[2][0] -
+                a[2][2] * a[0][3] * a[3][0] - a[3][2] * a[2][3] * a[0][0],
+            a[0][2] * a[3][3] * a[1][0] + a[1][2] * a[0][3] * a[3][0] +
+                a[3][2] * a[1][3] * a[0][0] - a[0][2] * a[1][3] * a[3][0] -
+                a[3][2] * a[0][3] * a[1][0] - a[1][2] * a[3][3] * a[0][0],
+            a[0][2] * a[1][3] * a[2][0] + a[2][2] * a[0][3] * a[1][0] +
+                a[1][2] * a[2][3] * a[0][0] - a[0][2] * a[2][3] * a[1][0] -
+                a[1][2] * a[0][3] * a[2][0] - a[2][2] * a[1][3] * a[0][0]},
+        {a[1][3] * a[2][0] * a[3][1] + a[3][3] * a[1][0] * a[2][1] +
+                a[2][3] * a[3][0] * a[1][1] - a[1][3] * a[3][0] * a[2][1] -
+                a[2][3] * a[1][0] * a[3][1] - a[3][3] * a[2][0] * a[1][1],
+            a[0][3] * a[3][0] * a[2][1] + a[2][3] * a[0][0] * a[3][1] +
+                a[3][3] * a[2][0] * a[0][1] - a[0][3] * a[2][0] * a[3][1] -
+                a[3][3] * a[0][0] * a[2][1] - a[2][3] * a[3][0] * a[0][1],
+            a[0][3] * a[1][0] * a[3][1] + a[3][3] * a[0][0] * a[1][1] +
+                a[1][3] * a[3][0] * a[0][1] - a[0][3] * a[3][0] * a[1][1] -
+                a[1][3] * a[0][0] * a[3][1] - a[3][3] * a[1][0] * a[0][1],
+            a[0][3] * a[2][0] * a[1][1] + a[1][3] * a[0][0] * a[2][1] +
+                a[2][3] * a[1][0] * a[0][1] - a[0][3] * a[1][0] * a[2][1] -
+                a[2][3] * a[0][0] * a[1][1] - a[1][3] * a[2][0] * a[0][1]},
+        {a[1][0] * a[3][1] * a[2][2] + a[2][0] * a[1][1] * a[3][2] +
+                a[3][0] * a[2][1] * a[1][2] - a[1][0] * a[2][1] * a[3][2] -
+                a[3][0] * a[1][1] * a[2][2] - a[2][0] * a[3][1] * a[1][2],
+            a[0][0] * a[2][1] * a[3][2] + a[3][0] * a[0][1] * a[2][2] +
+                a[2][0] * a[3][1] * a[0][2] - a[0][0] * a[3][1] * a[2][2] -
+                a[2][0] * a[0][1] * a[3][2] - a[3][0] * a[2][1] * a[0][2],
+            a[0][0] * a[3][1] * a[1][2] + a[1][0] * a[0][1] * a[3][2] +
+                a[3][0] * a[1][1] * a[0][2] - a[0][0] * a[1][1] * a[3][2] -
+                a[3][0] * a[0][1] * a[1][2] - a[1][0] * a[3][1] * a[0][2],
+            a[0][0] * a[1][1] * a[2][2] + a[2][0] * a[0][1] * a[1][2] +
+                a[1][0] * a[2][1] * a[0][2] - a[0][0] * a[2][1] * a[1][2] -
+                a[1][0] * a[0][1] * a[2][2] - a[2][0] * a[1][1] * a[0][2]}};
 }
 
 /// matrix determinant (2x2)
@@ -935,20 +933,20 @@ template <typename T>
 constexpr inline T determinant(const mat<T, 4, 4>& a) {
     return a[0][0] *
                (a[1][1] * a[2][2] * a[3][3] + a[3][1] * a[1][2] * a[2][3] +
-                a[2][1] * a[3][2] * a[1][3] - a[1][1] * a[3][2] * a[2][3] -
-                a[2][1] * a[1][2] * a[3][3] - a[3][1] * a[2][2] * a[1][3]) +
+                   a[2][1] * a[3][2] * a[1][3] - a[1][1] * a[3][2] * a[2][3] -
+                   a[2][1] * a[1][2] * a[3][3] - a[3][1] * a[2][2] * a[1][3]) +
            a[0][1] *
                (a[1][2] * a[3][3] * a[2][0] + a[2][2] * a[1][3] * a[3][0] +
-                a[3][2] * a[2][3] * a[1][0] - a[1][2] * a[2][3] * a[3][0] -
-                a[3][2] * a[1][3] * a[2][0] - a[2][2] * a[3][3] * a[1][0]) +
+                   a[3][2] * a[2][3] * a[1][0] - a[1][2] * a[2][3] * a[3][0] -
+                   a[3][2] * a[1][3] * a[2][0] - a[2][2] * a[3][3] * a[1][0]) +
            a[0][2] *
                (a[1][3] * a[2][0] * a[3][1] + a[3][3] * a[1][0] * a[2][1] +
-                a[2][3] * a[3][0] * a[1][1] - a[1][3] * a[3][0] * a[2][1] -
-                a[2][3] * a[1][0] * a[3][1] - a[3][3] * a[2][0] * a[1][1]) +
+                   a[2][3] * a[3][0] * a[1][1] - a[1][3] * a[3][0] * a[2][1] -
+                   a[2][3] * a[1][0] * a[3][1] - a[3][3] * a[2][0] * a[1][1]) +
            a[0][3] *
                (a[1][0] * a[3][1] * a[2][2] + a[2][0] * a[1][1] * a[3][2] +
-                a[3][0] * a[2][1] * a[1][2] - a[1][0] * a[2][1] * a[3][2] -
-                a[3][0] * a[1][1] * a[2][2] - a[2][0] * a[3][1] * a[1][2]);
+                   a[3][0] * a[2][1] * a[1][2] - a[1][0] * a[2][1] * a[3][2] -
+                   a[3][0] * a[1][1] * a[2][2] - a[2][0] * a[3][1] * a[1][2]);
 }
 
 /// matrix inverse (uses adjugate and determinant)
@@ -1075,8 +1073,8 @@ constexpr inline frame<T, N> identity_frame() {
 
 /// initializes a frame from a rotation and translation
 template <typename T, int N>
-constexpr inline frame<T, N> make_frame(const mat<T, N, N>& m,
-                                        const vec<T, N>& v) {
+constexpr inline frame<T, N> make_frame(
+    const mat<T, N, N>& m, const vec<T, N>& v) {
     frame<T, N> f;
     for (auto i = 0; i < N; i++) f[i] = m[i];
     f[N] = v;
@@ -1085,10 +1083,20 @@ constexpr inline frame<T, N> make_frame(const mat<T, N, N>& m,
 
 // initializes a frame3 from origin and z.
 template <typename T>
-constexpr inline frame<T, 3> make_frame3_fromz(const vec<T, 3>& o,
-                                               const vec<T, 3>& z_) {
+constexpr inline frame<T, 3> make_frame3_fromz(
+    const vec<T, 3>& o, const vec<T, 3>& z_) {
     auto z = normalize(z_);
     auto x = normalize(orthogonal(z));
+    auto y = normalize(cross(z, x));
+    return {x, y, z, o};
+}
+
+// initializes a frame3 from origin, z and x.
+template <typename T>
+constexpr inline frame<T, 3> make_frame3_fromzx(
+    const vec<T, 3>& o, const vec<T, 3>& z_, const vec<T, 3>& x_) {
+    auto z = normalize(z_);
+    auto x = orthonormalize(x_, z);
     auto y = normalize(cross(z, x));
     return {x, y, z, o};
 }
@@ -1159,9 +1167,7 @@ template <typename T, int N>
 constexpr inline frame<T, N - 1> to_frame(const mat<T, N, N>& a) {
     auto f = frame<T, N - 1>();
     for (auto j = 0; j < N; j++) {
-        for (auto i = 0; i < N - 1; i++) {
-            f[j][i] = a[j][i];
-        }
+        for (auto i = 0; i < N - 1; i++) { f[j][i] = a[j][i]; }
     }
     return f;
 }
@@ -1182,10 +1188,10 @@ constexpr inline bool operator!=(const frame<T, N>& a, const frame<T, N>& b) {
 
 /// frame composition (equivalent to affine matrix multiply)
 template <typename T, int N>
-constexpr inline frame<T, N> operator*(const frame<T, N>& a,
-                                       const frame<T, N>& b) {
-    return make_frame(ym::rot(a) * ym::rot(b),
-                      ym::rot(a) * ym::pos(b) + ym::pos(a));
+constexpr inline frame<T, N> operator*(
+    const frame<T, N>& a, const frame<T, N>& b) {
+    return make_frame(
+        ym::rot(a) * ym::rot(b), ym::rot(a) * ym::pos(b) + ym::pos(a));
 }
 
 /// frame inverse (equivalent to rigid affine inverse)
@@ -1267,22 +1273,23 @@ constexpr inline vec<T, 3> angle(const quat<T>& a) {
 /// quaterion to matrix conversion
 template <typename T>
 constexpr inline mat<T, 4, 4> quat_to_mat(const quat<T>& v) {
-    return {{v[3] * v[3] + v[0] * v[0] - v[1] * v[1] - v[2] * v[2],
-             (v[0] * v[1] + v[2] * v[3]) * 2, (v[2] * v[0] - v[1] * v[3]) * 2},
-            {(v[0] * v[1] - v[2] * v[3]) * 2,
-             v[3] * v[3] - v[0] * v[0] + v[1] * v[1] - v[2] * v[2],
-             (v[1] * v[2] + v[0] * v[3]) * 2},
-            {(v[2] * v[0] + v[1] * v[3]) * 2, (v[1] * v[2] - v[0] * v[3]) * 2,
-             v[3] * v[3] - v[0] * v[0] - v[1] * v[1] + v[2] * v[2]}};
+    return {
+        {v[3] * v[3] + v[0] * v[0] - v[1] * v[1] - v[2] * v[2],
+            (v[0] * v[1] + v[2] * v[3]) * 2, (v[2] * v[0] - v[1] * v[3]) * 2},
+        {(v[0] * v[1] - v[2] * v[3]) * 2,
+            v[3] * v[3] - v[0] * v[0] + v[1] * v[1] - v[2] * v[2],
+            (v[1] * v[2] + v[0] * v[3]) * 2},
+        {(v[2] * v[0] + v[1] * v[3]) * 2, (v[1] * v[2] - v[0] * v[3]) * 2,
+            v[3] * v[3] - v[0] * v[0] - v[1] * v[1] + v[2] * v[2]}};
 }
 
 /// quaterion multiply
 template <typename T>
 constexpr quat<T> operator*(const quat<T>& a, const quat<T>& b) {
     return {a[0] * b[3] + a[3] * b[0] + a[1] * b[3] - a[2] * b[1],
-            a[1] * b[3] + a[3] * b[1] + a[2] * b[0] - a[0] * b[2],
-            a[2] * b[3] + a[3] * b[2] + a[0] * b[1] - a[1] * b[0],
-            a[3] * b[3] - a[0] * b[0] - a[1] * b[1] - a[2] * b[2]};
+        a[1] * b[3] + a[3] * b[1] + a[2] * b[0] - a[0] * b[2],
+        a[2] * b[3] + a[3] * b[2] + a[0] * b[1] - a[1] * b[0],
+        a[3] * b[3] - a[0] * b[0] - a[1] * b[1] - a[2] * b[2]};
 }
 
 /// quaterion conjugate
@@ -1300,16 +1307,14 @@ constexpr quat<T> inverse(const quat<T>& v) {
 /// quaterion normalized linear interpolation
 template <typename T>
 constexpr quat<T> nlerp(const quat<T>& a, const quat<T>& b, T t) {
-    return nlerp(
-        vec<T, 4>(a),
+    return nlerp(vec<T, 4>(a),
         dot(vec<T, 4>(a), vec<T, 4>(b)) < 0 ? -vec<T, 4>(b) : vec<T, 4>(b), t);
 }
 
 /// quaterion spherical linear interpolation
 template <typename T>
 constexpr quat<T> slerp(const quat<T>& a, const quat<T>& b, T t) {
-    return slerp(
-        vec<T, 4>(a),
+    return slerp(vec<T, 4>(a),
         dot(vec<T, 4>(a), vec<T, 4>(b)) < 0 ? -vec<T, 4>(b) : vec<T, 4>(b), t);
 }
 
@@ -1470,8 +1475,8 @@ constexpr inline bbox<T, N> operator+(const bbox<T, N>& a, const T& b) {
 
 /// same as expand()
 template <typename T, int N>
-constexpr inline bbox<T, N> operator+(const bbox<T, N>& a,
-                                      const bbox<T, N>& b) {
+constexpr inline bbox<T, N> operator+(
+    const bbox<T, N>& a, const bbox<T, N>& b) {
     return expand(a, b);
 }
 
@@ -1515,7 +1520,7 @@ struct ray {
         : o(), d(0, 0, 1), tmin(0), tmax(std::numeric_limits<T>::max()) {}
     /// initializes a ray from its elements
     constexpr ray(const vec<T, N>& o, const vec<T, N>& d, T tmin = 0,
-                  T tmax = std::numeric_limits<T>::max())
+        T tmax = std::numeric_limits<T>::max())
         : o(o), d(d), tmin(tmin), tmax(tmax) {}
 };
 
@@ -1555,8 +1560,8 @@ constexpr inline vec<T, N> eval(const ray<T, N>& ray, T t) {
 
 /// transforms a point by a matrix
 template <typename T, int N>
-constexpr inline vec<T, N> transform_point(const mat<T, N + 1, N + 1>& a,
-                                           const vec<T, N>& b) {
+constexpr inline vec<T, N> transform_point(
+    const mat<T, N + 1, N + 1>& a, const vec<T, N>& b) {
     // make it generic
     auto vb = vec<T, N + 1>();
     (vec<T, N>&)vb = b;
@@ -1567,8 +1572,8 @@ constexpr inline vec<T, N> transform_point(const mat<T, N + 1, N + 1>& a,
 
 /// transforms a vector by a matrix
 template <typename T, int N>
-constexpr inline vec<T, N> transform_vector(const mat<T, N + 1, N + 1>& a,
-                                            const vec<T, N>& b) {
+constexpr inline vec<T, N> transform_vector(
+    const mat<T, N + 1, N + 1>& a, const vec<T, N>& b) {
     // make it generic
     auto vb = vec<T, N + 1>();
     (vec<T, N>&)vb = b;
@@ -1579,23 +1584,23 @@ constexpr inline vec<T, N> transform_vector(const mat<T, N + 1, N + 1>& a,
 
 /// transforms a direction by a matrix
 template <typename T, int N>
-constexpr inline vec<T, N> transform_direction(const mat<T, N + 1, N + 1>& a,
-                                               const vec<T, N>& b) {
+constexpr inline vec<T, N> transform_direction(
+    const mat<T, N + 1, N + 1>& a, const vec<T, N>& b) {
     return normalize(transform_vector(a, b));
 }
 
 /// transforms a ray by a matrix
 template <typename T, int N>
-constexpr inline ray<T, N> transform_ray(const mat<T, N + 1, N + 1>& a,
-                                         const ray<T, N>& b) {
-    return {transform_point(a, b.o), transform_direction(a, b.d), b.tmin,
-            b.tmax};
+constexpr inline ray<T, N> transform_ray(
+    const mat<T, N + 1, N + 1>& a, const ray<T, N>& b) {
+    return {
+        transform_point(a, b.o), transform_direction(a, b.d), b.tmin, b.tmax};
 }
 
 /// transforms a bbox by a matrix
 template <typename T>
-constexpr inline bbox<T, 3> transform_bbox(const mat<T, 4, 4>& a,
-                                           const bbox<T, 3>& b) {
+constexpr inline bbox<T, 3> transform_bbox(
+    const mat<T, 4, 4>& a, const bbox<T, 3>& b) {
     vec<T, 3> corners[8] = {
         {b[0][0], b[0][1], b[0][2]}, {b[0][0], b[0][1], b[1][2]},
         {b[0][0], b[1][1], b[0][2]}, {b[0][0], b[1][1], b[1][2]},
@@ -1609,44 +1614,44 @@ constexpr inline bbox<T, 3> transform_bbox(const mat<T, 4, 4>& a,
 
 /// transforms a point by a frame (rigid affine transform)
 template <typename T, int N>
-constexpr inline vec<T, N> transform_point(const frame<T, N>& a,
-                                           const vec<T, N>& b) {
+constexpr inline vec<T, N> transform_point(
+    const frame<T, N>& a, const vec<T, N>& b) {
     return ym::rot(a) * b + ym::pos(a);
 }
 
 /// transforms a vector by a frame (rigid affine transform)
 template <typename T, int N>
-constexpr inline vec<T, N> transform_vector(const frame<T, N>& a,
-                                            const vec<T, N>& b) {
+constexpr inline vec<T, N> transform_vector(
+    const frame<T, N>& a, const vec<T, N>& b) {
     return ym::rot(a) * b;
 }
 
 /// transforms a direction by a frame (rigid affine transform)
 template <typename T, int N>
-constexpr inline vec<T, N> transform_direction(const frame<T, N>& a,
-                                               const vec<T, N>& b) {
+constexpr inline vec<T, N> transform_direction(
+    const frame<T, N>& a, const vec<T, N>& b) {
     return ym::rot(a) * b;
 }
 
 /// transforms a frame by a frame (rigid affine transform)
 template <typename T, int N>
-constexpr inline frame<T, N> transform_frame(const frame<T, N>& a,
-                                             const frame<T, N>& b) {
+constexpr inline frame<T, N> transform_frame(
+    const frame<T, N>& a, const frame<T, N>& b) {
     return {ym::rot(a) * ym::rot(b), ym::pos(a) * ym::pos(b) + ym::pos(a)};
 }
 
 /// transforms a ray by a frame (rigid affine transform)
 template <typename T, int N>
-constexpr inline ray<T, N> transform_ray(const frame<T, N>& a,
-                                         const ray<T, N>& b) {
-    return {transform_point(a, b.o), transform_direction(a, b.d), b.tmin,
-            b.tmax};
+constexpr inline ray<T, N> transform_ray(
+    const frame<T, N>& a, const ray<T, N>& b) {
+    return {
+        transform_point(a, b.o), transform_direction(a, b.d), b.tmin, b.tmax};
 }
 
 /// transforms a bbox by a frame (rigid affine transform)
 template <typename T>
-constexpr inline bbox<T, 3> transform_bbox(const frame<T, 3>& a,
-                                           const bbox<T, 3>& b) {
+constexpr inline bbox<T, 3> transform_bbox(
+    const frame<T, 3>& a, const bbox<T, 3>& b) {
 #if 0
     vec<T, 3> corners[8] = {
         {b[0][0], b[0][1], b[0][2]}, {b[0][0], b[0][1], b[1][2]},
@@ -1684,37 +1689,37 @@ constexpr inline bbox<T, 3> transform_bbox(const frame<T, 3>& a,
 
 /// inverse transforms a point by a frame (rigid affine transform)
 template <typename T, int N>
-constexpr inline vec<T, N> transform_point_inverse(const frame<T, N>& a,
-                                                   const vec<T, N>& b) {
+constexpr inline vec<T, N> transform_point_inverse(
+    const frame<T, N>& a, const vec<T, N>& b) {
     return (b - ym::pos(a)) * ym::rot(a);
 }
 
 /// inverse transforms a vector by a frame (rigid affine transform)
 template <typename T, int N>
-constexpr inline vec<T, N> transform_vector_inverse(const frame<T, N>& a,
-                                                    const vec<T, N>& b) {
+constexpr inline vec<T, N> transform_vector_inverse(
+    const frame<T, N>& a, const vec<T, N>& b) {
     return b * ym::rot(a);
 }
 
 /// inverse transforms a direction by a frame (rigid affine transform)
 template <typename T, int N>
-constexpr inline vec<T, N> transform_direction_inverse(const frame<T, N>& a,
-                                                       const vec<T, N>& b) {
+constexpr inline vec<T, N> transform_direction_inverse(
+    const frame<T, N>& a, const vec<T, N>& b) {
     return b * ym::rot(a);
 }
 
 /// inverse transforms a ray by a frame (rigid affine transform)
 template <typename T, int N>
-constexpr inline ray<T, N> transform_ray_inverse(const frame<T, N>& a,
-                                                 const ray<T, N>& b) {
+constexpr inline ray<T, N> transform_ray_inverse(
+    const frame<T, N>& a, const ray<T, N>& b) {
     return {transform_point_inverse(a, b.o),
-            transform_direction_inverse(a, b.d), b.tmin, b.tmax};
+        transform_direction_inverse(a, b.d), b.tmin, b.tmax};
 }
 
 /// inverse transforms a bbox by a frame (rigid affine transform)
 template <typename T>
-constexpr inline bbox<T, 3> transform_bbox_inverse(const frame<T, 3>& a,
-                                                   const bbox<T, 3>& b) {
+constexpr inline bbox<T, 3> transform_bbox_inverse(
+    const frame<T, 3>& a, const bbox<T, 3>& b) {
     return transform_bbox(inverse(a), b);
 }
 
@@ -1724,11 +1729,11 @@ constexpr inline mat<T, 3, 3> rotation_mat3(const vec<T, 3>& axis, T angle) {
     auto s = std::sin(angle), c = std::cos(angle);
     auto vv = normalize(axis);
     return {{c + (1 - c) * vv[0] * vv[0], (1 - c) * vv[0] * vv[1] + s * vv[2],
-             (1 - c) * vv[0] * vv[2] - s * vv[1]},
-            {(1 - c) * vv[0] * vv[1] - s * vv[2], c + (1 - c) * vv[1] * vv[1],
-             (1 - c) * vv[1] * vv[2] + s * vv[0]},
-            {(1 - c) * vv[0] * vv[2] + s * vv[1],
-             (1 - c) * vv[1] * vv[2] - s * vv[0], c + (1 - c) * vv[2] * vv[2]}};
+                (1 - c) * vv[0] * vv[2] - s * vv[1]},
+        {(1 - c) * vv[0] * vv[1] - s * vv[2], c + (1 - c) * vv[1] * vv[1],
+            (1 - c) * vv[1] * vv[2] + s * vv[0]},
+        {(1 - c) * vv[0] * vv[2] + s * vv[1],
+            (1 - c) * vv[1] * vv[2] - s * vv[0], c + (1 - c) * vv[2] * vv[2]}};
 }
 
 /// translation frame
@@ -1770,9 +1775,8 @@ constexpr inline mat<T, 4, 4> rotation_mat4(const vec<T, 3>& axis, T angle) {
 
 /// OpenGL lookat frame
 template <typename T>
-constexpr inline frame<T, 3> lookat_frame3(const vec<T, 3>& eye,
-                                           const vec<T, 3>& center,
-                                           const vec<T, 3>& up) {
+constexpr inline frame<T, 3> lookat_frame3(
+    const vec<T, 3>& eye, const vec<T, 3>& center, const vec<T, 3>& up) {
     auto w = normalize(eye - center);
     auto u = normalize(cross(up, w));
     auto v = normalize(cross(w, u));
@@ -1781,28 +1785,25 @@ constexpr inline frame<T, 3> lookat_frame3(const vec<T, 3>& eye,
 
 /// OpenGL lookat matrix
 template <typename T>
-constexpr inline mat<T, 4, 4> lookat_mat4(const vec<T, 3>& eye,
-                                          const vec<T, 3>& center,
-                                          const vec<T, 3>& up) {
+constexpr inline mat<T, 4, 4> lookat_mat4(
+    const vec<T, 3>& eye, const vec<T, 3>& center, const vec<T, 3>& up) {
     return to_mat(lookat_frame3(eye, center, up));
 }
 
 /// OpenGL frustum matrix
 template <typename T>
 constexpr inline mat<T, 4, 4> frustum_mat4(T l, T r, T b, T t, T n, T f) {
-    return {{2 * n / (r - l), 0, 0, 0},
-            {0, 2 * n / (t - b), 0, 0},
-            {(r + l) / (r - l), (t + b) / (t - b), -(f + n) / (f - n), -1},
-            {0, 0, -2 * f * n / (f - n), 0}};
+    return {{2 * n / (r - l), 0, 0, 0}, {0, 2 * n / (t - b), 0, 0},
+        {(r + l) / (r - l), (t + b) / (t - b), -(f + n) / (f - n), -1},
+        {0, 0, -2 * f * n / (f - n), 0}};
 }
 
 /// OpenGL orthographic matrix
 template <typename T>
 constexpr inline mat<T, 4, 4> ortho_mat4(T l, T r, T b, T t, T n, T f) {
-    return {{2 / (r - l), 0, 0, 0},
-            {0, 2 / (t - b), 0, 0},
-            {0, 0, -2 / (f - n), 0},
-            {-(r + l) / (r - l), -(t + b) / (t - b), -(f + n) / (f - n), 1}};
+    return {{2 / (r - l), 0, 0, 0}, {0, 2 / (t - b), 0, 0},
+        {0, 0, -2 / (f - n), 0},
+        {-(r + l) / (r - l), -(t + b) / (t - b), -(f + n) / (f - n), 1}};
 }
 
 /// OpenGL orthographic 2D matrix
@@ -1813,8 +1814,8 @@ constexpr inline mat<T, 4, 4> ortho2d_mat4(T l, T r, T b, T t) {
 
 /// OpenGL perspective matrix
 template <typename T>
-constexpr inline mat<T, 4, 4> perspective_mat4(T fovy, T aspect, T near,
-                                               T far) {
+constexpr inline mat<T, 4, 4> perspective_mat4(
+    T fovy, T aspect, T near, T far) {
     auto y = near * std::tan(fovy / 2);
     auto x = y * aspect;
     return frustum_mat4<T>(-x, x, -y, y, near, far);
@@ -1831,24 +1832,22 @@ constexpr inline mat<T, 4, 4> perspective_mat4(T fovy, T aspect, T near,
 
 /// triangle normal
 template <typename T>
-constexpr inline vec<T, 3> triangle_normal(const vec<T, 3>& v0,
-                                           const vec<T, 3>& v1,
-                                           const vec<T, 3>& v2) {
+constexpr inline vec<T, 3> triangle_normal(
+    const vec<T, 3>& v0, const vec<T, 3>& v1, const vec<T, 3>& v2) {
     return normalize(cross(v1 - v0, v2 - v0));
 }
 
 /// triangle area
 template <typename T>
-constexpr inline T triangle_area(const vec<T, 3>& v0, const vec<T, 3>& v1,
-                                 const vec<T, 3>& v2) {
+constexpr inline T triangle_area(
+    const vec<T, 3>& v0, const vec<T, 3>& v1, const vec<T, 3>& v2) {
     return length(cross(v1 - v0, v2 - v0)) / 2;
 }
 
 /// tetrahedron volume
 template <typename T>
 constexpr inline T tetrahedron_volume(const vec<T, 3>& v0, const vec<T, 3>& v1,
-                                      const vec<T, 3>& v2,
-                                      const vec<T, 3>& v3) {
+    const vec<T, 3>& v2, const vec<T, 3>& v3) {
     return dot(cross(v1 - v0, v2 - v0), v3 - v0) / 6;
 }
 
@@ -1870,8 +1869,7 @@ constexpr inline T blerp(const T& a, const T& b, const T& c, const T1& w) {
 /// Turntable for UI navigation from a from/to/up parametrization of the camera.
 template <typename T>
 constexpr inline void turntable(vec<T, 3>& from, vec<T, 3>& to, vec<T, 3>& up,
-                                const vec<T, 2>& rotate, T dolly,
-                                const vec<T, 2>& pan) {
+    const vec<T, 2>& rotate, T dolly, const vec<T, 2>& pan) {
     // rotate if necessary
     if (rotate[0] || rotate[1]) {
         auto z = ym_normalize(*to - *from);
@@ -1880,7 +1878,7 @@ constexpr inline void turntable(vec<T, 3>& from, vec<T, 3>& to, vec<T, 3>& up,
         auto theta = acos(z[1]) + rotate[1];
         theta = max(T(0.001), min(theta, T(pi - 0.001)));
         auto nz = vec<T, 3>{sin(theta) * cos(phi) * lz, cos(theta) * lz,
-                            sin(theta) * sin(phi) * lz};
+            sin(theta) * sin(phi) * lz};
         *from = *to - nz;
     }
 
@@ -1898,8 +1896,7 @@ constexpr inline void turntable(vec<T, 3>& from, vec<T, 3>& to, vec<T, 3>& up,
         auto x = ym_normalize(ym_cross(*up, z));
         auto y = ym_normalize(ym_cross(z, x));
         auto t = vec<T, 3>{pan[0] * x[0] + pan[1] * y[0],
-                           pan[0] * x[1] + pan[1] * y[1],
-                           pan[0] * x[2] + pan[1] * y[2]};
+            pan[0] * x[1] + pan[1] * y[1], pan[0] * x[2] + pan[1] * y[2]};
         *from += t;
         *to += t;
     }
@@ -1909,15 +1906,14 @@ constexpr inline void turntable(vec<T, 3>& from, vec<T, 3>& to, vec<T, 3>& up,
 /// camera.
 template <typename T>
 constexpr inline void turntable(frame<T, 3>& frame, float& focus,
-                                const vec<T, 2>& rotate, T dolly,
-                                const vec<T, 2>& pan) {
+    const vec<T, 2>& rotate, T dolly, const vec<T, 2>& pan) {
     // rotate if necessary
     if (rotate[0] || rotate[1]) {
         auto phi = std::atan2(frame[2][2], frame[2][0]) + rotate[0];
         auto theta = std::acos(frame[2][1]) + rotate[1];
         theta = max(T(0.001), min(theta, T(pi - 0.001)));
         auto new_z = vec<T, 3>{std::sin(theta) * std::cos(phi), std::cos(theta),
-                               std::sin(theta) * std::sin(phi)};
+            std::sin(theta) * std::sin(phi)};
         auto new_center = pos(frame) - frame[2] * focus;
         auto new_o = new_center + new_z * focus;
         frame = lookat_frame3(new_o, new_center, {0, 1, 0});
@@ -2206,9 +2202,8 @@ struct image_view {
 
 /// Lookup an image value from a generic image
 template <typename T>
-constexpr inline vec<T, 4> image_lookup(int width, int height, int ncomp,
-                                        const T* img, int x, int y,
-                                        T alpha = 0) {
+constexpr inline vec<T, 4> image_lookup(
+    int width, int height, int ncomp, const T* img, int x, int y, T alpha = 0) {
     auto v = img + (y * width + x) * ncomp;
     switch (ncomp) {
         case 1: return {v[0], 0, 0, alpha};
@@ -2222,7 +2217,7 @@ constexpr inline vec<T, 4> image_lookup(int width, int height, int ncomp,
 /// Set an image value for a generic image
 template <typename T>
 constexpr inline void image_set(int width, int height, int ncomp, T* img, int x,
-                                int y, const vec<T, 4>& vv) {
+    int y, const vec<T, 4>& vv) {
     auto v = img + (y * width + x) * ncomp;
     switch (ncomp) {
         case 1: v[0] = vv[0]; break;
@@ -2248,38 +2243,43 @@ constexpr inline void image_set(int width, int height, int ncomp, T* img, int x,
 /// Conversion from srgb.
 inline vec4f srgb_to_linear(const vec4b& srgb) {
     return {std::pow((float)srgb[0] / 255.0f, 2.2f),
-            std::pow((float)srgb[1] / 255.0f, 2.2f),
-            std::pow((float)srgb[2] / 255.0f, 2.2f), (float)srgb[3] / 255.0f};
+        std::pow((float)srgb[1] / 255.0f, 2.2f),
+        std::pow((float)srgb[2] / 255.0f, 2.2f), (float)srgb[3] / 255.0f};
 }
 
 /// Conversion to srgb.
 inline vec4b linear_to_srgb(const vec4f& srgb) {
     auto v = vec4f{std::pow(srgb[0], 1 / 2.2f), std::pow(srgb[1], 1 / 2.2f),
-                   std::pow(srgb[2], 1 / 2.2f), srgb[3]};
+        std::pow(srgb[2], 1 / 2.2f), srgb[3]};
     return {(unsigned char)(clamp(v[0], 0.0f, 1.0f) * 255),
-            (unsigned char)(clamp(v[1], 0.0f, 1.0f) * 255),
-            (unsigned char)(clamp(v[2], 0.0f, 1.0f) * 255),
-            (unsigned char)(clamp(v[3], 0.0f, 1.0f) * 255)};
+        (unsigned char)(clamp(v[1], 0.0f, 1.0f) * 255),
+        (unsigned char)(clamp(v[2], 0.0f, 1.0f) * 255),
+        (unsigned char)(clamp(v[3], 0.0f, 1.0f) * 255)};
+}
+
+/// Conversion from clamped bytes.
+inline vec4f byte_to_linear(const vec4b& v) {
+    return {(float)v[0] / 255.0f, (float)v[1] / 255.0f, (float)v[2] / 255.0f,
+        (float)v[3] / 255.0f};
 }
 
 /// Conversion to clamped bytes.
 inline vec4b linear_to_byte(const vec4f& v) {
     return {(unsigned char)(clamp(v[0], 0.0f, 1.0f) * 255),
-            (unsigned char)(clamp(v[1], 0.0f, 1.0f) * 255),
-            (unsigned char)(clamp(v[2], 0.0f, 1.0f) * 255),
-            (unsigned char)(clamp(v[3], 0.0f, 1.0f) * 255)};
+        (unsigned char)(clamp(v[1], 0.0f, 1.0f) * 255),
+        (unsigned char)(clamp(v[2], 0.0f, 1.0f) * 255),
+        (unsigned char)(clamp(v[3], 0.0f, 1.0f) * 255)};
 }
 
 /// Exposure/gamma correction
 inline void exposure_gamma(int width, int height, int ncomp, const float* hdr,
-                           float* ldr, float exposure, float gamma,
-                           bool clamped) {
+    float* ldr, float exposure, float gamma, bool clamped) {
     auto s = std::pow(2.0f, exposure);
     for (auto j = 0; j < height; j++) {
         for (auto i = 0; i < width; i++) {
             auto v = image_lookup(width, height, ncomp, hdr, i, j);
             v = {std::pow(s * v[0], 1 / gamma), std::pow(s * v[1], 1 / gamma),
-                 std::pow(s * v[2], 1 / gamma), v[3]};
+                std::pow(s * v[2], 1 / gamma), v[3]};
             if (clamped) v = clamp(v, 0.0f, 1.0f);
             image_set(width, height, ncomp, ldr, i, j, v);
         }
@@ -2288,14 +2288,13 @@ inline void exposure_gamma(int width, int height, int ncomp, const float* hdr,
 
 /// Exposure/gamma correction
 inline void exposure_gamma(int width, int height, int ncomp, const float* hdr,
-                           byte* ldr, float exposure, float gamma,
-                           bool srgb_output) {
+    byte* ldr, float exposure, float gamma, bool srgb_output) {
     auto s = std::pow(2.0f, exposure);
     for (auto j = 0; j < height; j++) {
         for (auto i = 0; i < width; i++) {
             auto v = image_lookup(width, height, ncomp, hdr, i, j);
             v = {std::pow(s * v[0], 1 / gamma), std::pow(s * v[1], 1 / gamma),
-                 std::pow(s * v[2], 1 / gamma), v[3]};
+                std::pow(s * v[2], 1 / gamma), v[3]};
             if (srgb_output)
                 image_set(width, height, ncomp, ldr, i, j, linear_to_srgb(v));
             else
@@ -2306,14 +2305,14 @@ inline void exposure_gamma(int width, int height, int ncomp, const float* hdr,
 
 /// Exposure/gamma correction
 inline void exposure_gamma(int width, int height, int ncomp, const float* hdr,
-                           byte* ldr, float exposure, float gamma,
-                           bool srgb_output, int x, int y, int w, int h) {
+    byte* ldr, float exposure, float gamma, bool srgb_output, int x, int y,
+    int w, int h) {
     auto s = std::pow(2.0f, exposure);
     for (auto j = y; j < y + h; j++) {
         for (auto i = x; i < x + w; i++) {
             auto v = image_lookup(width, height, ncomp, hdr, i, j);
             v = {std::pow(s * v[0], 1 / gamma), std::pow(s * v[1], 1 / gamma),
-                 std::pow(s * v[2], 1 / gamma), v[3]};
+                std::pow(s * v[2], 1 / gamma), v[3]};
             if (srgb_output)
                 image_set(width, height, ncomp, ldr, i, j, linear_to_srgb(v));
             else
@@ -2323,8 +2322,8 @@ inline void exposure_gamma(int width, int height, int ncomp, const float* hdr,
 }
 
 /// linear to srgb correction
-inline void linear_to_srgb(int width, int height, int ncomp, const float* hdr,
-                           byte* ldr) {
+inline void linear_to_srgb(
+    int width, int height, int ncomp, const float* hdr, byte* ldr) {
     for (auto j = 0; j < height; j++) {
         for (auto i = 0; i < width; i++) {
             auto v = image_lookup(width, height, ncomp, hdr, i, j);
@@ -2334,8 +2333,8 @@ inline void linear_to_srgb(int width, int height, int ncomp, const float* hdr,
 }
 
 /// linear to byte conversion
-inline void linear_to_byte(int width, int height, int ncomp, const float* hdr,
-                           byte* ldr) {
+inline void linear_to_byte(
+    int width, int height, int ncomp, const float* hdr, byte* ldr) {
     for (auto j = 0; j < height; j++) {
         for (auto i = 0; i < width; i++) {
             auto v = image_lookup(width, height, ncomp, hdr, i, j);
