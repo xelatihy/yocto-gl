@@ -34,11 +34,11 @@ int main(int argc, char* argv[]) {
 
     // params
     auto pars = yapp::init_params("render scene with path tracing", argc, argv,
-                                  true, false, false, false);
+        true, false, false, false);
 
     // setting up rendering
     ycmd::log_msgf(ycmd::log_level_info, "ytrace", "loading scene %s",
-                   pars->filenames[0].c_str());
+        pars->filenames[0].c_str());
     auto scene = yapp::load_scenes(pars->filenames, pars->scene_scale);
 
     // fixing camera
@@ -64,7 +64,6 @@ int main(int argc, char* argv[]) {
     ycmd::log_msgf(ycmd::log_level_info, "ytrace", "starting renderer");
     auto blocks =
         yapp::make_trace_blocks(pars->width, pars->height, pars->block_size);
-    auto pool = ycmd::make_thread_pool(pars->nthreads);
     for (auto cur_sample = 0; cur_sample < pars->render_params.nsamples;
          cur_sample += pars->batch_size) {
         if (pars->save_progressive && cur_sample) {
@@ -73,30 +72,29 @@ int main(int argc, char* argv[]) {
                               ycmd::format_str(".%04d", cur_sample) +
                               ycmd::get_extension(pars->imfilename);
             ycmd::log_msgf(ycmd::log_level_info, "ytrace", "saving image %s",
-                           imfilename.c_str());
+                imfilename.c_str());
             yapp::save_image(imfilename, pars->width, pars->height, hdr,
-                             pars->exposure, pars->tonemap, pars->gamma);
+                pars->exposure, pars->tonemap, pars->gamma);
         }
         ycmd::log_msgf(ycmd::log_level_info, "ytrace",
-                       "rendering sample %4d/%d", cur_sample,
-                       pars->render_params.nsamples);
+            "rendering sample %4d/%d", cur_sample,
+            pars->render_params.nsamples);
         ycmd::thread_pool_for(blocks.size(), [=](auto cur_block) {
             auto block = blocks[cur_block];
             ytrace::trace_block(trace_scene, pars->width, pars->height,
-                                (ytrace::float4*)hdr, block[0], block[1],
-                                block[2], block[3], cur_sample,
-                                std::min(cur_sample + pars->batch_size,
-                                         pars->render_params.nsamples),
-                                pars->render_params);
+                (ytrace::float4*)hdr, block[0], block[1], block[2], block[3],
+                cur_sample, std::min(cur_sample + pars->batch_size,
+                                pars->render_params.nsamples),
+                pars->render_params);
         });
     }
     ycmd::log_msgf(ycmd::log_level_info, "ytrace", "rendering done");
 
     // save image
     ycmd::log_msgf(ycmd::log_level_info, "ytrace", "saving image %s",
-                   pars->imfilename.c_str());
+        pars->imfilename.c_str());
     yapp::save_image(pars->imfilename, pars->width, pars->height, hdr,
-                     pars->exposure, pars->tonemap, pars->gamma);
+        pars->exposure, pars->tonemap, pars->gamma);
 
     // done
     // cleanup

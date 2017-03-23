@@ -203,7 +203,7 @@ namespace legacy {
 /// with top-left corner at ox, oy with a zoom zoom.
 ///
 YGLU_API void draw_image(uint tid, int img_w, int img_h, int win_w, int win_h,
-                         float ox, float oy, float zoom);
+    float ox, float oy, float zoom);
 
 ///
 /// Reads an image back to memory.
@@ -216,8 +216,8 @@ YGLU_API void read_imagef(float* pixels, int w, int h, int nc);
 /// Internally use filtering if filter.
 /// Returns the texture id.
 ///
-YGLU_API uint make_texture(int w, int h, int nc, const float* pixels,
-                           bool linear, bool mipmap);
+YGLU_API uint make_texture(
+    int w, int h, int nc, const float* pixels, bool linear, bool mipmap);
 
 ///
 /// Creates a texture with pixels values of size w, h with nc number of
@@ -226,19 +226,19 @@ YGLU_API uint make_texture(int w, int h, int nc, const float* pixels,
 /// Returns the texture id.
 ///
 YGLU_API uint make_texture(int w, int h, int nc, const unsigned char* pixels,
-                           bool linear, bool mipmap);
+    bool linear, bool mipmap);
 
 ///
 /// Updates the texture tid with new image data.
 ///
-YGLU_API void update_texture(uint tid, int w, int h, int nc,
-                             const float* pixels, bool mipmap);
+YGLU_API void update_texture(
+    uint tid, int w, int h, int nc, const float* pixels, bool mipmap);
 
 ///
 /// Updates the texture tid with new image data.
 ///
-YGLU_API void update_texture(uint tid, int w, int h, int nc,
-                             const unsigned char* pixels, bool mipmap);
+YGLU_API void update_texture(
+    uint tid, int w, int h, int nc, const unsigned char* pixels, bool mipmap);
 
 ///
 /// Destroys the texture tid.
@@ -253,9 +253,8 @@ YGLU_API void clear_texture(uint* tid);
 /// color ke, type ltype. Also set the ambient illumination amb.
 ///
 YGLU_API void begin_frame(const float4x4& camera_xform,
-                          const float4x4& camera_xform_inv,
-                          const float4x4& camera_proj, bool eyelight,
-                          bool scale_kx);
+    const float4x4& camera_xform_inv, const float4x4& camera_proj,
+    bool eyelight, bool scale_kx);
 
 ///
 /// Ends a frame.
@@ -267,7 +266,7 @@ YGLU_API void end_frame();
 /// illumination amb.
 ///
 YGLU_API void set_lights(const float3& amb, int num, const float3* pos,
-                         const float3* ke, const ltype* ltype);
+    const float3* ke, const ltype* ltype);
 
 ///
 /// Begins drawing a shape with transform xform.
@@ -285,7 +284,7 @@ YGLU_API void end_shape();
 /// variables.
 ///
 YGLU_API void set_material(const float3& ke, const float3& kd, const float3& ks,
-                           float ns, int kd_txt, bool scale_kx);
+    float ns, int kd_txt, bool scale_kx);
 
 ///
 /// Convertes a phong exponent to roughness.
@@ -296,29 +295,26 @@ YGLU_API float specular_roughness_to_exponent(float r);
 /// Draw num elements elem of type etype.
 ///
 YGLU_API void draw_elems(int num, const int* elem, etype etype,
-                         const float3* pos, const float3* norm,
-                         const float2* texcoord, const float3* color);
+    const float3* pos, const float3* norm, const float2* texcoord,
+    const float3* color);
 
 ///
 /// Draw num elements elem of type etype.
 ///
 YGLU_API void draw_points(int num, const int* elem, const float3* pos,
-                          const float3* norm, const float2* texcoord,
-                          const float3* color);
+    const float3* norm, const float2* texcoord, const float3* color);
 
 ///
 /// Draw num elements elem of type etype.
 ///
 YGLU_API void draw_lines(int num, const int2* elem, const float3* pos,
-                         const float3* norm, const float2* texcoord,
-                         const float3* color);
+    const float3* norm, const float2* texcoord, const float3* color);
 
 ///
 /// Draw num elements elem of type etype.
 ///
 YGLU_API void draw_triangles(int num, const int3* elem, const float3* pos,
-                             const float3* norm, const float2* texcoord,
-                             const float3* color);
+    const float3* norm, const float2* texcoord, const float3* color);
 
 }  // namespace
 
@@ -338,14 +334,13 @@ namespace modern {
 /// with top-left corner at ox, oy with a zoom zoom.
 ///
 YGLU_API void shade_image(uint tid, int img_w, int img_h, int win_w, int win_h,
-                          float ox, float oy, float zoom);
+    float ox, float oy, float zoom);
 
 ///
 /// As above but includes an exposure/gamma correction.
 ///
 YGLU_API void shade_image(uint tid, int img_w, int img_h, int win_w, int win_h,
-                          float ox, float oy, float zoom, float exposure,
-                          float gamma_);
+    float ox, float oy, float zoom, float exposure, float gamma_);
 
 // TEXTURE FUNCTIONS -----------------------------------------------------------
 
@@ -356,7 +351,7 @@ YGLU_API void shade_image(uint tid, int img_w, int img_h, int win_w, int win_h,
 /// Returns the texture id.
 ///
 YGLU_API uint make_texture(int w, int h, int nc, const float* pixels,
-                           bool linear, bool mipmap, bool as_float);
+    bool linear, bool mipmap, bool as_float);
 
 ///
 /// Creates a texture with pixels values of size w, h with nc number of
@@ -365,19 +360,19 @@ YGLU_API uint make_texture(int w, int h, int nc, const float* pixels,
 /// Returns the texture id.
 ///
 YGLU_API uint make_texture(int w, int h, int nc, const unsigned char* pixels,
-                           bool linear, bool mipmap, bool as_srgb);
+    bool linear, bool mipmap, bool as_srgb);
 
 ///
 /// Updates the texture tid with new image data.
 ///
-YGLU_API void update_texture(uint tid, int w, int h, int nc,
-                             const float* pixels, bool mipmap);
+YGLU_API void update_texture(
+    uint tid, int w, int h, int nc, const float* pixels, bool mipmap);
 
 ///
 /// Updates the texture tid with new image data.
 ///
-YGLU_API void update_texture(uint tid, int w, int h, int nc,
-                             const unsigned char* pixels, bool mipmap);
+YGLU_API void update_texture(
+    uint tid, int w, int h, int nc, const unsigned char* pixels, bool mipmap);
 
 ///
 /// Destroys the texture tid.
@@ -391,14 +386,14 @@ YGLU_API void clear_texture(uint* tid);
 /// content is dyanamic if dynamic.
 /// Returns the buffer id.
 ///
-YGLU_API uint make_buffer(int num, int size, const void* values, bool elements,
-                          bool dynamic);
+YGLU_API uint make_buffer(
+    int num, int size, const void* values, bool elements, bool dynamic);
 
 ///
 /// Updates the buffer bid with new data.
 ///
 YGLU_API void update_buffer(uint bid, int num, int size, const void* values,
-                            bool elements, bool dynamic);
+    bool elements, bool dynamic);
 
 ///
 /// Destroys the buffer bid.
@@ -424,7 +419,7 @@ YGLU_API void clear_vertex_arrays(uint* aid);
 /// bound before this.
 ///
 YGLU_API uint make_program(const std::string& vertex,
-                           const std::string& fragment, uint* vid, uint* fid);
+    const std::string& fragment, uint* vid, uint* fid);
 
 ///
 /// Destroys the program pid and optionally the sahders vid and fid.
@@ -436,16 +431,16 @@ YGLU_API void clear_program(uint* pid, uint* vid, uint* fid);
 /// The values have nc number of components (1-4) and count elements
 /// (for arrays).
 ///
-YGLU_API bool set_uniform(uint prog, const std::string& var, const int* val,
-                          int nc, int count);
+YGLU_API bool set_uniform(
+    uint prog, const std::string& var, const int* val, int nc, int count);
 
 ///
 /// Set uniform float values val for program prog and variable var.
 /// The values have nc number of components (1-4) and count elements
 /// (for arrays).
 ///
-YGLU_API bool set_uniform(uint prog, const std::string& var, const float* val,
-                          int nc, int count);
+YGLU_API bool set_uniform(
+    uint prog, const std::string& var, const float* val, int nc, int count);
 
 ///
 /// Set uniform texture id tid and unit tunit for program prog and variable var.
@@ -453,30 +448,29 @@ YGLU_API bool set_uniform(uint prog, const std::string& var, const float* val,
 /// on not.
 ///
 YGLU_API bool set_uniform_texture(uint prog, const std::string& var,
-                                  const std::string& varon, uint tid,
-                                  uint tunit);
+    const std::string& varon, uint tid, uint tunit);
 
 ///
 /// Sets a constant value for a vertex attribute for program prog and
 /// variable var. The attribute has nc components.
 ///
-YGLU_API bool set_vertattr_val(uint prog, const std::string& var,
-                               const float* value, int nc);
+YGLU_API bool set_vertattr_val(
+    uint prog, const std::string& var, const float* value, int nc);
 
 ///
 /// Sets a vartex attribute for program prog and variable var to the buffer bid.
 /// The attribute has nc components and per-vertex values values.
 ///
-YGLU_API bool set_vertattr_buffer(uint prog, const std::string& var, uint bid,
-                                  int nc);
+YGLU_API bool set_vertattr_buffer(
+    uint prog, const std::string& var, uint bid, int nc);
 
 ///
 /// Sets a vartex attribute for program prog and variable var. The attribute
 /// has nc components and either buffer bid or a single value def
 /// (if bid is zero). Convenience wrapper to above functions.
 ///
-YGLU_API bool set_vertattr(uint prog, const std::string& var, uint bid, int nc,
-                           const float* def);
+YGLU_API bool set_vertattr(
+    uint prog, const std::string& var, uint bid, int nc, const float* def);
 
 ///
 /// Draws nelems elements elem of type etype.
@@ -519,10 +513,9 @@ enum struct tonemap_type {
 /// preview.
 ///
 YGLU_API void begin_frame(uint prog, uint vao, bool shade_eyelight,
-                          float img_exposure, tonemap_type img_tonemap,
-                          float img_gamma, const float4x4& camera_xform,
-                          const float4x4& camera_xform_inv,
-                          const float4x4& camera_proj);
+    float img_exposure, tonemap_type img_tonemap, float img_gamma,
+    const float4x4& camera_xform, const float4x4& camera_xform_inv,
+    const float4x4& camera_proj);
 
 ///
 /// Ends a frame.
@@ -534,7 +527,7 @@ YGLU_API void end_frame();
 /// illumination amb.
 ///
 YGLU_API void set_lights(uint prog, const float3& amb, int num, float3* pos,
-                         float3* ke, ltype* ltype);
+    float3* ke, ltype* ltype);
 
 ///
 /// Begins drawing a shape with transform xform.
@@ -554,8 +547,8 @@ YGLU_API void end_shape();
 /// for points, lines and triangle/quads based on etype.
 ///
 YGLU_API void set_material(uint prog, const float3& ke, const float3& kd,
-                           const float3& ks, float rs, int ke_txt, int kd_txt,
-                           int ks_txt, int rs_txt, bool use_phong);
+    const float3& ks, float rs, int ke_txt, int kd_txt, int ks_txt, int rs_txt,
+    bool use_phong);
 
 ///
 /// Convertes a phong exponent to roughness.
@@ -568,14 +561,14 @@ YGLU_API float specular_exponent_to_roughness(float n);
 /// and per-vertex color color.
 ///
 YGLU_API void set_vert(uint prog, const float3* pos, const float3* norm,
-                       const float2* texcoord, const float3* color);
+    const float2* texcoord, const float3* color);
 
 ///
 /// Set vertex data with buffers for position pos, normals norm, texture
 /// coordinates texcoord and per-vertex color color.
 ///
-YGLU_API void set_vert(uint prog, uint pos, uint norm, uint texcoord,
-                       uint color);
+YGLU_API void set_vert(
+    uint prog, uint pos, uint norm, uint texcoord, uint color);
 
 ///
 /// Draw num elements elem of type etype.
@@ -628,7 +621,7 @@ typedef void (*refresh_callback)(window*);
 /// initialize glfw
 ///
 window* init_window(int width, int height, const std::string& title,
-                    bool legacy_gl, void* user_pointer = nullptr);
+    bool legacy_gl, void* user_pointer = nullptr);
 
 ///
 /// Clear glfw
@@ -638,8 +631,8 @@ void clear_window(window* window);
 ///
 /// initialize glfw
 ///
-void set_callbacks(window* win, text_callback text_cb,
-                   refresh_callback refresh_cb = nullptr);
+void set_callbacks(
+    window* win, text_callback text_cb, refresh_callback refresh_cb = nullptr);
 
 ///
 /// Set window title
@@ -699,8 +692,8 @@ int2 get_framebuffer_size(window* window);
 ///
 /// Read pixels
 ///
-std::vector<byte4> get_screenshot(window* win, int2& wh, bool flipy = true,
-                                  bool back = false);
+std::vector<byte4> get_screenshot(
+    window* win, int2& wh, bool flipy = true, bool back = false);
 
 #ifndef YGLU_NO_NUKLEAR
 
@@ -748,13 +741,13 @@ void float_label_widget(window* win, const std::string& lbl, float val);
 /// Int widget
 ///
 void int_widget(window* win, const std::string& lbl, int* val, int min, int max,
-                int incr = 1);
+    int incr = 1);
 
 ///
 /// Float widget
 ///
 void float_widget(window* win, const std::string& lbl, float* val, float min,
-                  float max, float incr = 1.0f);
+    float max, float incr = 1.0f);
 
 ///
 /// Bool widget
@@ -765,7 +758,7 @@ void bool_widget(window* win, const std::string& lbl, bool* val);
 /// Enum widget
 ///
 void enum_widget(window* win, const std::string& lbl, int* val,
-                 const std::vector<std::pair<std::string, int>>& labels);
+    const std::vector<std::pair<std::string, int>>& labels);
 
 ///
 /// Button widget

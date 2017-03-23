@@ -105,9 +105,11 @@ struct simage {
 
     /// allocating constructor
     simage(int width, int height, int ncomp, bool ishdr)
-        : width(width), height(height), ncomp(ncomp),
-          hdr((ishdr) ? new float[width * height * ncomp] : nullptr),
-          ldr((ishdr) ? nullptr : new byte[width * height * ncomp]) {}
+        : width(width)
+        , height(height)
+        , ncomp(ncomp)
+        , hdr((ishdr) ? new float[width * height * ncomp] : nullptr)
+        , ldr((ishdr) ? nullptr : new byte[width * height * ncomp]) {}
 
     /// destructor
     ~simage() {
@@ -141,7 +143,7 @@ YIMG_API simage* load_image(const std::string& filename);
 /// Loads an image. Unwrap params compared to previous one.
 ///
 YIMG_API void load_image(const std::string& filename, int& w, int& h,
-                         int& ncomp, float*& hdr, byte*& ldr);
+    int& ncomp, float*& hdr, byte*& ldr);
 
 ///
 /// Loads an image flipping Y.
@@ -151,8 +153,8 @@ YIMG_API simage* load_image_flipy(const std::string& filename);
 ///
 /// Loads an image from memory.
 ///
-YIMG_API simage* load_image_from_memory(const std::string& fmt, byte* data,
-                                        int length);
+YIMG_API simage* load_image_from_memory(
+    const std::string& fmt, byte* data, int length);
 
 ///
 /// Saves an image. Uses extension and image content to determine
@@ -164,7 +166,7 @@ YIMG_API void save_image(const std::string& filename, const simage* img);
 /// Saves an image. Unwrap params compared to previous one.
 ///
 YIMG_API void save_image(const std::string& filename, int width, int height,
-                         int ncomp, const float* hdr, const byte* ldr);
+    int ncomp, const float* hdr, const byte* ldr);
 
 //
 // Resize an image. If width or height are less than 0, they are set
@@ -176,8 +178,8 @@ YIMG_API simage* resize_image(const simage* img, int res_width, int res_height);
 // Resize image. Unwrap params compared to previous one.
 //
 YIMG_API void resize_image(int width, int height, int ncomp, const float* hdr,
-                           const byte* ldr, int& res_width, int& res_height,
-                           float*& res_hdr, byte*& res_ldr);
+    const byte* ldr, int& res_width, int& res_height, float*& res_hdr,
+    byte*& res_ldr);
 
 //
 // Tone mapping configurations
@@ -187,27 +189,26 @@ enum struct tonemap_type { def = 0, linear, srgb, gamma, filmic };
 ///
 /// Apply tone mapping operator to a pixel.
 ///
-YIMG_API byte3 tonemap_pixel(const float3& hdr, float exposure, tonemap_type tm,
-                             float gamma);
+YIMG_API byte3 tonemap_pixel(
+    const float3& hdr, float exposure, tonemap_type tm, float gamma);
 
 ///
 /// Apply tone mapping operator to a pixel.
 ///
-YIMG_API byte4 tonemap_pixel(const float4& hdr, float exposure, tonemap_type tm,
-                             float gamma);
+YIMG_API byte4 tonemap_pixel(
+    const float4& hdr, float exposure, tonemap_type tm, float gamma);
 
 ///
 /// Tone mapping HDR to LDR images.
 ///
-YIMG_API simage* tonemap_image(simage* img, float exposure, tonemap_type tm,
-                               float gamma);
+YIMG_API simage* tonemap_image(
+    simage* img, float exposure, tonemap_type tm, float gamma);
 
 ///
 /// Tone mapping HDR to LDR images.
 ///
 YIMG_API void tonemap_image(int width, int height, int ncomp, const float* hdr,
-                            byte* ldr, float exposure, tonemap_type tm,
-                            float gamma);
+    byte* ldr, float exposure, tonemap_type tm, float gamma);
 }  // namespace
 
 // -----------------------------------------------------------------------------

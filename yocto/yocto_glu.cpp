@@ -141,7 +141,7 @@ namespace legacy {
 // This is a public API. See above for documentation.
 //
 YGLU_API void draw_image(GLuint tid, int img_w, int img_h, int win_w, int win_h,
-                         float ox, float oy, float zoom) {
+    float ox, float oy, float zoom) {
     assert(tid != 0);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -179,23 +179,22 @@ YGLU_API void read_imagef(float* pixels, int w, int h, int nc) {
 // Implementation of make_texture.
 //
 YGLU_API uint _make_texture(int w, int h, int nc, const void* pixels,
-                            GLuint type, bool linear, bool mipmap) {
+    GLuint type, bool linear, bool mipmap) {
     GLuint formats[4] = {GL_LUMINANCE, GL_LUMINANCE_ALPHA, GL_RGB, GL_RGBA};
     GLuint id;
     glGenTextures(1, &id);
     glBindTexture(GL_TEXTURE_2D, id);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
-                    (linear) ? GL_LINEAR : GL_NEAREST);
+        (linear) ? GL_LINEAR : GL_NEAREST);
     if (mipmap) {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
-                        (linear) ? GL_LINEAR_MIPMAP_LINEAR
-                                 : GL_NEAREST_MIPMAP_NEAREST);
+            (linear) ? GL_LINEAR_MIPMAP_LINEAR : GL_NEAREST_MIPMAP_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_TRUE);
     } else {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     }
     glTexImage2D(GL_TEXTURE_2D, 0, formats[nc - 1], w, h, 0, formats[nc - 1],
-                 type, pixels);
+        type, pixels);
     assert(glGetError() == GL_NO_ERROR);
     return id;
 }
@@ -203,8 +202,8 @@ YGLU_API uint _make_texture(int w, int h, int nc, const void* pixels,
 //
 // This is a public API. See above for documentation.
 //
-YGLU_API uint make_texture(int w, int h, int nc, const float* pixels,
-                           bool linear, bool mipmap) {
+YGLU_API uint make_texture(
+    int w, int h, int nc, const float* pixels, bool linear, bool mipmap) {
     return _make_texture(w, h, nc, pixels, GL_FLOAT, linear, mipmap);
 }
 
@@ -212,7 +211,7 @@ YGLU_API uint make_texture(int w, int h, int nc, const float* pixels,
 // This is a public API. See above for documentation.
 //
 YGLU_API uint make_texture(int w, int h, int nc, const unsigned char* pixels,
-                           bool linear, bool mipmap) {
+    bool linear, bool mipmap) {
     return _make_texture(w, h, nc, pixels, GL_UNSIGNED_BYTE, linear, mipmap);
 }
 
@@ -220,26 +219,26 @@ YGLU_API uint make_texture(int w, int h, int nc, const unsigned char* pixels,
 // Implementation of update_texture.
 //
 static void _update_texture(uint id, int w, int h, int nc, const void* pixels,
-                            GLuint type, bool mipmap) {
+    GLuint type, bool mipmap) {
     GLuint formats[4] = {GL_LUMINANCE, GL_LUMINANCE_ALPHA, GL_RGB, GL_RGBA};
     glBindTexture(GL_TEXTURE_2D, id);
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, w, h, formats[nc - 1], type,
-                    pixels);
+    glTexSubImage2D(
+        GL_TEXTURE_2D, 0, 0, 0, w, h, formats[nc - 1], type, pixels);
 }
 
 //
 // This is a public API. See above for documentation.
 //
-YGLU_API void update_texture(uint id, int w, int h, int nc, const float* pixels,
-                             bool mipmap) {
+YGLU_API void update_texture(
+    uint id, int w, int h, int nc, const float* pixels, bool mipmap) {
     _update_texture(id, w, h, nc, pixels, GL_FLOAT, mipmap);
 }
 
 //
 // This is a public API. See above for documentation.
 //
-YGLU_API void update_texture(uint id, int w, int h, int nc,
-                             const unsigned char* pixels, bool mipmap) {
+YGLU_API void update_texture(
+    uint id, int w, int h, int nc, const unsigned char* pixels, bool mipmap) {
     _update_texture(id, w, h, nc, pixels, GL_UNSIGNED_BYTE, mipmap);
 }
 
@@ -255,9 +254,8 @@ YGLU_API void clear_texture(uint* tid) {
 // This is a public API. See above for documentation.
 //
 YGLU_API void begin_frame(const float4x4& camera_xform,
-                          const float4x4& camera_xform_inv,
-                          const float4x4& camera_proj, bool eyelight,
-                          bool scale_kx) {
+    const float4x4& camera_xform_inv, const float4x4& camera_proj,
+    bool eyelight, bool scale_kx) {
     glPushMatrix();
     glPushAttrib(GL_LIGHTING_BIT);
 
@@ -278,8 +276,7 @@ YGLU_API void begin_frame(const float4x4& camera_xform,
         glEnable(GL_LIGHTING);
         glEnable(GL_LIGHT0);
         float ke[] = {(scale_kx) ? 3.1415926536f : 1,
-                      (scale_kx) ? 3.1415926536f : 1,
-                      (scale_kx) ? 3.1415926536f : 1, 1};
+            (scale_kx) ? 3.1415926536f : 1, (scale_kx) ? 3.1415926536f : 1, 1};
         float pos[] = {0, 0, 1, 0};
         glLightfv(GL_LIGHT0, GL_DIFFUSE, ke);
         glLightfv(GL_LIGHT0, GL_SPECULAR, ke);
@@ -304,7 +301,7 @@ YGLU_API void end_frame() {
 // This is a public API. See above for documentation.
 //
 YGLU_API void set_lights(const float3& amb, int num, const float3* pos,
-                         const float3* ke, const ltype* ltype) {
+    const float3* ke, const ltype* ltype) {
     if (amb != float3{0, 0, 0}) {
         float amb_[] = {amb[0], amb[1], amb[2], 1};
         glLightModelfv(GL_LIGHT_MODEL_AMBIENT, amb_);
@@ -314,7 +311,7 @@ YGLU_API void set_lights(const float3& amb, int num, const float3* pos,
         glEnable(GL_LIGHT0 + i);
         float ke_[] = {ke[i][0], ke[i][1], ke[i][2], 1};
         float pos_[] = {pos[i][0], pos[i][1], pos[i][2],
-                        (ltype[i] == ltype::point) ? 1.0f : 0.0f};
+            (ltype[i] == ltype::point) ? 1.0f : 0.0f};
         glLightfv(GL_LIGHT0 + i, GL_DIFFUSE, ke_);
         glLightfv(GL_LIGHT0 + i, GL_SPECULAR, ke_);
         glLightfv(GL_LIGHT0 + i, GL_POSITION, pos_);
@@ -328,9 +325,7 @@ YGLU_API void set_lights(const float3& amb, int num, const float3* pos,
             glLightf(GL_LIGHT0 + i, GL_QUADRATIC_ATTENUATION, 0);
         }
     }
-    for (auto i = num; i < 16; i++) {
-        glDisable(GL_LIGHT0 + i);
-    }
+    for (auto i = num; i < 16; i++) { glDisable(GL_LIGHT0 + i); }
 
 #if 0
     if(light_amb != float3{0,0,0}) {
@@ -369,7 +364,7 @@ YGLU_API float specular_roughness_to_exponent(float rs) {
 // This is a public API. See above for documentation.
 //
 YGLU_API void set_material(const float3& ke, const float3& kd, const float3& ks,
-                           float ns, int kd_txt, bool scale_kx) {
+    float ns, int kd_txt, bool scale_kx) {
     float kds = (scale_kx) ? 1 / 3.1415926536f : 1;
     float kss = (scale_kx) ? (ns + 2) / (2 * 3.1415926536f) : 1;
     // float kss = (scale_kx) ? 1 / 3.1415926536f : 1;
@@ -397,8 +392,8 @@ YGLU_API float specular_roughness_to_exponent(float r);
 // This is a public API. See above for documentation.
 //
 YGLU_API void draw_elems(int num, const int* elem, etype etype,
-                         const float3* pos, const float3* norm,
-                         const float2* texcoord, const float3* color) {
+    const float3* pos, const float3* norm, const float2* texcoord,
+    const float3* color) {
     if (!num) return;
     assert(elem);
     auto nc = 0;
@@ -441,21 +436,18 @@ YGLU_API void draw_elems(int num, const int* elem, etype etype,
     glEnd();
 }
 YGLU_API void draw_points(int num, const int* elem, const float3* pos,
-                          const float3* norm, const float2* texcoord,
-                          const float3* color) {
+    const float3* norm, const float2* texcoord, const float3* color) {
     return draw_elems(num, elem, etype::point, pos, norm, texcoord, color);
 }
 YGLU_API void draw_lines(int num, const int2* elem, const float3* pos,
-                         const float3* norm, const float2* texcoord,
-                         const float3* color) {
-    return draw_elems(num, (const int*)elem, etype::line, pos, norm, texcoord,
-                      color);
+    const float3* norm, const float2* texcoord, const float3* color) {
+    return draw_elems(
+        num, (const int*)elem, etype::line, pos, norm, texcoord, color);
 }
 YGLU_API void draw_triangles(int num, const int3* elem, const float3* pos,
-                             const float3* norm, const float2* texcoord,
-                             const float3* color) {
-    return draw_elems(num, (const int*)elem, etype::triangle, pos, norm,
-                      texcoord, color);
+    const float3* norm, const float2* texcoord, const float3* color) {
+    return draw_elems(
+        num, (const int*)elem, etype::triangle, pos, norm, texcoord, color);
 }
 
 }  // namespace
@@ -466,7 +458,7 @@ namespace modern {
 // This is a public API. See above for documentation.
 //
 YGLU_API void shade_image(uint tid, int img_w, int img_h, int win_w, int win_h,
-                          float ox, float oy, float zoom) {
+    float ox, float oy, float zoom) {
     shade_image(tid, img_w, img_h, win_w, win_h, ox, oy, zoom, 0, 1);
 }
 
@@ -474,8 +466,7 @@ YGLU_API void shade_image(uint tid, int img_w, int img_h, int win_w, int win_h,
 // This is a public API. See above for documentation.
 //
 YGLU_API void shade_image(uint tid, int img_w, int img_h, int win_w, int win_h,
-                          float ox, float oy, float zoom, float exposure,
-                          float gamma_) {
+    float ox, float oy, float zoom, float exposure, float gamma_) {
     static const std::string& vert =
         ""
         "#version 330\n"
@@ -531,8 +522,8 @@ YGLU_API void shade_image(uint tid, int img_w, int img_h, int win_w, int win_h,
         float texcoord[] = {0, 0, 0, 1, 1, 1, 1, 0};
         glGenBuffers(1, &tvbo_id);
         glBindBuffer(GL_ARRAY_BUFFER, tvbo_id);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(texcoord), texcoord,
-                     GL_STATIC_DRAW);
+        glBufferData(
+            GL_ARRAY_BUFFER, sizeof(texcoord), texcoord, GL_STATIC_DRAW);
         glBindBuffer(GL_ARRAY_BUFFER, 0);
     }
 
@@ -543,8 +534,8 @@ YGLU_API void shade_image(uint tid, int img_w, int img_h, int win_w, int win_h,
         int elems[] = {0, 1, 2, 0, 2, 3};
         glGenBuffers(1, &evbo_id);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, evbo_id);
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(elems), elems,
-                     GL_STATIC_DRAW);
+        glBufferData(
+            GL_ELEMENT_ARRAY_BUFFER, sizeof(elems), elems, GL_STATIC_DRAW);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     }
 
@@ -600,12 +591,11 @@ YGLU_API void read_imagef(float* pixels, int w, int h, int nc) {
 // Implementation of make_texture.
 //
 YGLU_API uint _make_texture(int w, int h, int nc, const void* pixels,
-                            GLuint type, bool linear, bool mipmap,
-                            bool as_float, bool as_srgb) {
+    GLuint type, bool linear, bool mipmap, bool as_float, bool as_srgb) {
     assert(!as_srgb || !as_float);
     int formats_ub[4] = {GL_LUMINANCE, GL_LUMINANCE_ALPHA, GL_RGB, GL_RGBA};
-    int formats_sub[4] = {GL_SLUMINANCE, GL_SLUMINANCE_ALPHA, GL_SRGB,
-                          GL_SRGB_ALPHA};
+    int formats_sub[4] = {
+        GL_SLUMINANCE, GL_SLUMINANCE_ALPHA, GL_SRGB, GL_SRGB_ALPHA};
     int formats_f[4] = {GL_R32F, GL_RG32F, GL_RGB32F, GL_RGBA32F};
     int* formats =
         (as_float) ? formats_f : ((as_srgb) ? formats_sub : formats_ub);
@@ -614,13 +604,12 @@ YGLU_API uint _make_texture(int w, int h, int nc, const void* pixels,
     glGenTextures(1, &id);
     glBindTexture(GL_TEXTURE_2D, id);
     glTexImage2D(GL_TEXTURE_2D, 0, formats[nc - 1], w, h, 0, formats_ub[nc - 1],
-                 type, pixels);
+        type, pixels);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
-                    (linear) ? GL_LINEAR : GL_NEAREST);
+        (linear) ? GL_LINEAR : GL_NEAREST);
     if (mipmap) {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
-                        (linear) ? GL_LINEAR_MIPMAP_LINEAR
-                                 : GL_NEAREST_MIPMAP_NEAREST);
+            (linear) ? GL_LINEAR_MIPMAP_LINEAR : GL_NEAREST_MIPMAP_NEAREST);
         glGenerateMipmap(GL_TEXTURE_2D);
     } else {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -633,46 +622,45 @@ YGLU_API uint _make_texture(int w, int h, int nc, const void* pixels,
 // This is a public API. See above for documentation.
 //
 YGLU_API uint make_texture(int w, int h, int nc, const float* pixels,
-                           bool linear, bool mipmap, bool as_float) {
-    return _make_texture(w, h, nc, pixels, GL_FLOAT, linear, mipmap, as_float,
-                         false);
+    bool linear, bool mipmap, bool as_float) {
+    return _make_texture(
+        w, h, nc, pixels, GL_FLOAT, linear, mipmap, as_float, false);
 }
 
 //
 // This is a public API. See above for documentation.
 //
 YGLU_API uint make_texture(int w, int h, int nc, const unsigned char* pixels,
-                           bool linear, bool mipmap, bool as_srgb) {
-    return _make_texture(w, h, nc, pixels, GL_UNSIGNED_BYTE, linear, mipmap,
-                         false, as_srgb);
+    bool linear, bool mipmap, bool as_srgb) {
+    return _make_texture(
+        w, h, nc, pixels, GL_UNSIGNED_BYTE, linear, mipmap, false, as_srgb);
 }
 
 //
 // Implementation of update_texture.
 //
 static inline void _update_texture(uint id, int w, int h, int nc,
-                                   const void* pixels, GLuint type,
-                                   bool mipmap) {
+    const void* pixels, GLuint type, bool mipmap) {
     int formats[4] = {GL_LUMINANCE, GL_LUMINANCE_ALPHA, GL_RGB, GL_RGBA};
     glBindTexture(GL_TEXTURE_2D, id);
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, w, h, formats[nc - 1], type,
-                    pixels);
+    glTexSubImage2D(
+        GL_TEXTURE_2D, 0, 0, 0, w, h, formats[nc - 1], type, pixels);
     if (mipmap) glGenerateMipmap(GL_TEXTURE_2D);
 }
 
 //
 // This is a public API. See above for documentation.
 //
-YGLU_API void update_texture(uint id, int w, int h, int nc, const float* pixels,
-                             bool mipmap) {
+YGLU_API void update_texture(
+    uint id, int w, int h, int nc, const float* pixels, bool mipmap) {
     _update_texture(id, w, h, nc, pixels, GL_FLOAT, mipmap);
 }
 
 //
 // This is a public API. See above for documentation.
 //
-YGLU_API void update_texture(uint id, int w, int h, int nc,
-                             const unsigned char* pixels, bool mipmap) {
+YGLU_API void update_texture(
+    uint id, int w, int h, int nc, const unsigned char* pixels, bool mipmap) {
     _update_texture(id, w, h, nc, pixels, GL_UNSIGNED_BYTE, mipmap);
 }
 
@@ -687,14 +675,14 @@ YGLU_API void clear_texture(uint* tid) {
 //
 // This is a public API. See above for documentation.
 //
-YGLU_API uint make_buffer(int num, int size, const void* values, bool elements,
-                          bool dynamic) {
+YGLU_API uint make_buffer(
+    int num, int size, const void* values, bool elements, bool dynamic) {
     auto target = (elements) ? GL_ELEMENT_ARRAY_BUFFER : GL_ARRAY_BUFFER;
     auto bid = (GLuint)0;
     glGenBuffers(1, &bid);
     glBindBuffer(target, bid);
     glBufferData(target, size * num, values,
-                 (dynamic) ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
+        (dynamic) ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
     glBindBuffer(target, 0);
     return bid;
 }
@@ -703,7 +691,7 @@ YGLU_API uint make_buffer(int num, int size, const void* values, bool elements,
 // This is a public API. See above for documentation.
 //
 YGLU_API void update_buffer(uint bid, int num, int size, const void* values,
-                            bool elements, bool dynamic) {
+    bool elements, bool dynamic) {
     auto target = (elements) ? GL_ELEMENT_ARRAY_BUFFER : GL_ARRAY_BUFFER;
     glBindBuffer(target, bid);
     glBufferSubData(target, 0, size * num, values);
@@ -739,7 +727,7 @@ YGLU_API void clear_vertex_arrays(uint* aid) {
 // This is a public API. See above for documentation.
 //
 YGLU_API uint make_program(const std::string& vertex,
-                           const std::string& fragment, uint* vid, uint* fid) {
+    const std::string& fragment, uint* vid, uint* fid) {
     int errflags[2];
     char errbuf[10000];
     int gl_shader[2] = {0, 0};
@@ -805,8 +793,8 @@ YGLU_API void clear_program(uint* pid, uint* vid, uint* fid) {
 //
 // This is a public API. See above for documentation.
 //
-YGLU_API bool set_uniform(uint prog, const std::string& var, const int* val,
-                          int nc, int count) {
+YGLU_API bool set_uniform(
+    uint prog, const std::string& var, const int* val, int nc, int count) {
     assert(nc >= 1 && nc <= 4);
     int pos = glGetUniformLocation(prog, var.c_str());
     if (pos < 0) return false;
@@ -823,8 +811,8 @@ YGLU_API bool set_uniform(uint prog, const std::string& var, const int* val,
 //
 // This is a public API. See above for documentation.
 //
-YGLU_API bool set_uniform(uint prog, const std::string& var, const float* val,
-                          int nc, int count) {
+YGLU_API bool set_uniform(
+    uint prog, const std::string& var, const float* val, int nc, int count) {
     assert((nc >= 1 && nc <= 4) || (nc == 16) || (nc == 12));
     int pos = glGetUniformLocation(prog, var.c_str());
     if (pos < 0) return false;
@@ -844,8 +832,7 @@ YGLU_API bool set_uniform(uint prog, const std::string& var, const float* val,
 // This is a public API. See above for documentation.
 //
 YGLU_API bool set_uniform_texture(uint prog, const std::string& var,
-                                  const std::string& varon, uint tid,
-                                  uint tunit) {
+    const std::string& varon, uint tid, uint tunit) {
     int pos = glGetUniformLocation(prog, var.c_str());
     int onpos =
         (!varon.empty()) ? glGetUniformLocation(prog, varon.c_str()) : -1;
@@ -867,8 +854,8 @@ YGLU_API bool set_uniform_texture(uint prog, const std::string& var,
 //
 // This is a public API. See above for documentation.
 //
-YGLU_API bool set_vertattr_ptr(uint prog, const std::string& var,
-                               const float* value, int nc) {
+YGLU_API bool set_vertattr_ptr(
+    uint prog, const std::string& var, const float* value, int nc) {
     assert(nc >= 1 && nc <= 4);
     int pos = glGetAttribLocation(prog, var.c_str());
     if (pos < 0) return false;
@@ -884,8 +871,8 @@ YGLU_API bool set_vertattr_ptr(uint prog, const std::string& var,
 //
 // This is a public API. See above for documentation.
 //
-YGLU_API bool set_vertattr_buffer(uint prog, const std::string& var, uint bid,
-                                  int nc) {
+YGLU_API bool set_vertattr_buffer(
+    uint prog, const std::string& var, uint bid, int nc) {
     assert(nc >= 1 && nc <= 4);
     int pos = glGetAttribLocation(prog, var.c_str());
     if (pos < 0) return false;
@@ -903,8 +890,8 @@ YGLU_API bool set_vertattr_buffer(uint prog, const std::string& var, uint bid,
 //
 // This is a public API. See above for documentation.
 //
-YGLU_API bool set_vertattr_val(uint prog, const std::string& var,
-                               const float* value, int nc) {
+YGLU_API bool set_vertattr_val(
+    uint prog, const std::string& var, const float* value, int nc) {
     assert(nc >= 1 && nc <= 4);
     int pos = glGetAttribLocation(prog, var.c_str());
     if (pos < 0) return false;
@@ -922,8 +909,8 @@ YGLU_API bool set_vertattr_val(uint prog, const std::string& var,
 //
 // This is a public API. See above for documentation.
 //
-YGLU_API bool set_vertattr(uint prog, const std::string& var, uint bid, int nc,
-                           const float* def) {
+YGLU_API bool set_vertattr(
+    uint prog, const std::string& var, uint bid, int nc, const float* def) {
     assert(nc >= 1 && nc <= 4);
     int pos = glGetAttribLocation(prog, var.c_str());
     if (pos < 0) return false;
@@ -1222,10 +1209,9 @@ YGLU_API void make_program(uint* pid, uint* aid) {
 // This is a public API. See above for documentation.
 //
 YGLU_API void begin_frame(uint prog, uint vao, bool shade_eyelight,
-                          float img_exposure, tonemap_type img_tonemap,
-                          float img_gamma, const float4x4& camera_xform,
-                          const float4x4& camera_xform_inv,
-                          const float4x4& camera_proj) {
+    float img_exposure, tonemap_type img_tonemap, float img_gamma,
+    const float4x4& camera_xform, const float4x4& camera_xform_inv,
+    const float4x4& camera_proj) {
     assert(check_error());
     glUseProgram(prog);
     glBindVertexArray(vao);
@@ -1236,8 +1222,8 @@ YGLU_API void begin_frame(uint prog, uint vao, bool shade_eyelight,
     auto img_tonemap_int = (int)img_tonemap;
     modern::set_uniform(prog, "img_tonemap", &img_tonemap_int, 1, 1);
     modern::set_uniform(prog, "camera_xform", &camera_xform[0][0], 16, 1);
-    modern::set_uniform(prog, "camera_xform_inv", &camera_xform_inv[0][0], 16,
-                        1);
+    modern::set_uniform(
+        prog, "camera_xform_inv", &camera_xform_inv[0][0], 16, 1);
     modern::set_uniform(prog, "camera_proj", &camera_proj[0][0], 16, 1);
     assert(check_error());
 }
@@ -1254,7 +1240,7 @@ YGLU_API void end_frame() {
 // This is a public API. See above for documentation.
 //
 YGLU_API void set_lights(uint prog, const float3& amb, int num, float3* pos,
-                         float3* ke, ltype* type) {
+    float3* ke, ltype* type) {
     assert(check_error());
     modern::set_uniform(prog, "light_amb", &amb[0], 3, 1);
     modern::set_uniform(prog, "light_num", &num, 1, 1);
@@ -1286,21 +1272,21 @@ YGLU_API void end_shape() {
 // This is a public API. See above for documentation.
 //
 YGLU_API void set_material(uint prog, const float3& ke, const float3& kd,
-                           const float3& ks, float rs, int ke_txt, int kd_txt,
-                           int ks_txt, int rs_txt, bool use_phong) {
+    const float3& ks, float rs, int ke_txt, int kd_txt, int ks_txt, int rs_txt,
+    bool use_phong) {
     assert(check_error());
     modern::set_uniform(prog, "material_ke", &ke[0], 3, 1);
     modern::set_uniform(prog, "material_kd", &kd[0], 3, 1);
     modern::set_uniform(prog, "material_ks", &ks[0], 3, 1);
     modern::set_uniform(prog, "material_rs", &rs, 1, 1);
-    modern::set_uniform_texture(prog, "material_txt_ke", "material_txt_ke_on",
-                                ke_txt, 0);
-    modern::set_uniform_texture(prog, "material_txt_kd", "material_txt_kd_on",
-                                kd_txt, 1);
-    modern::set_uniform_texture(prog, "material_txt_ks", "material_txt_ks_on",
-                                ks_txt, 2);
-    modern::set_uniform_texture(prog, "material_txt_rs", "material_txt_rs_on",
-                                rs_txt, 4);
+    modern::set_uniform_texture(
+        prog, "material_txt_ke", "material_txt_ke_on", ke_txt, 0);
+    modern::set_uniform_texture(
+        prog, "material_txt_kd", "material_txt_kd_on", kd_txt, 1);
+    modern::set_uniform_texture(
+        prog, "material_txt_ks", "material_txt_ks_on", ks_txt, 2);
+    modern::set_uniform_texture(
+        prog, "material_txt_rs", "material_txt_rs_on", rs_txt, 4);
     int use_phongi = use_phong;
     modern::set_uniform(prog, "material_use_phong", &use_phongi, 1, 1);
     assert(check_error());
@@ -1316,8 +1302,8 @@ YGLU_API float specular_exponent_to_roughness(float n) {
 //
 // This is a public API. See above for documentation.
 //
-YGLU_API void set_vert(uint prog, uint pos, uint norm, uint texcoord,
-                       uint color) {
+YGLU_API void set_vert(
+    uint prog, uint pos, uint norm, uint texcoord, uint color) {
     assert(check_error());
     float white[3] = {1, 1, 1};
     float zero[3] = {0, 0, 0};
@@ -1425,7 +1411,7 @@ static inline void _glfw_refresh_cb(GLFWwindow* gwin, unsigned key) {
 // initialize glfw
 //
 window* init_window(int width, int height, const std::string& title,
-                    bool legacy_gl, void* user_pointer) {
+    bool legacy_gl, void* user_pointer) {
     // window
     auto win = new window();
     win->user_pointer = user_pointer;
@@ -1461,8 +1447,8 @@ window* init_window(int width, int height, const std::string& title,
 //
 // initialize glfw
 //
-void set_callbacks(window* win, text_callback text_cb,
-                   refresh_callback refresh_cb) {
+void set_callbacks(
+    window* win, text_callback text_cb, refresh_callback refresh_cb) {
     win->text_cb = text_cb;
     win->refresh_cb = refresh_cb;
     if (text_cb) glfwSetCharCallback(win->win, _glfw_text_cb);
@@ -1578,8 +1564,8 @@ int2 get_framebuffer_size(window* win) {
 //
 // Read pixels
 //
-std::vector<byte4> get_screenshot(window* win, int2& wh, bool flipy,
-                                  bool back) {
+std::vector<byte4> get_screenshot(
+    window* win, int2& wh, bool flipy, bool back) {
     wh = get_framebuffer_size(win);
     auto pixels = std::vector<byte4>(wh[0] * wh[1]);
     glReadBuffer((back) ? GL_BACK : GL_FRONT);
@@ -1589,9 +1575,9 @@ std::vector<byte4> get_screenshot(window* win, int2& wh, bool flipy,
         for (int j = 0; j < wh[1] / 2; j++) {
             memcpy(line.data(), pixels.data() + j * wh[0] * 4, wh[0] * 4);
             memcpy(pixels.data() + j * wh[0] * 4,
-                   pixels.data() + (wh[1] - 1 - j) * wh[0] * 4, wh[0] * 4);
+                pixels.data() + (wh[1] - 1 - j) * wh[0] * 4, wh[0] * 4);
             memcpy(pixels.data() + (wh[1] - 1 - j) * wh[0] * 4, line.data(),
-                   wh[0] * 4);
+                wh[0] * 4);
         }
     }
     return pixels;
@@ -1639,9 +1625,9 @@ bool begin_widgets(window* win) {
     } else {
         nk_glfw3_gl3_new_frame();
     }
-    auto visible = nk_begin(
-        win->nk_ctx, "yshade", nk_rect(window_size[0] - win->widget_width, 0,
-                                       win->widget_width, window_size[1]),
+    auto visible = nk_begin(win->nk_ctx, "yshade",
+        nk_rect(window_size[0] - win->widget_width, 0, win->widget_width,
+            window_size[1]),
         NK_WINDOW_BORDER | NK_WINDOW_MOVABLE | NK_WINDOW_SCALABLE |
             NK_WINDOW_MINIMIZABLE | NK_WINDOW_TITLE);
     // if(visible) dynamic_widget_layout(win, 1);
@@ -1692,8 +1678,8 @@ void float_label_widget(window* win, const std::string& lbl, float val) {
 //
 // Label widget
 //
-void int_widget(window* win, const std::string& lbl, int* val, int min, int max,
-                int incr) {
+void int_widget(
+    window* win, const std::string& lbl, int* val, int min, int max, int incr) {
     nk_property_int(win->nk_ctx, lbl.c_str(), min, val, max, incr, incr);
 }
 
@@ -1701,7 +1687,7 @@ void int_widget(window* win, const std::string& lbl, int* val, int min, int max,
 // Label widget
 //
 void float_widget(window* win, const std::string& lbl, float* val, float min,
-                  float max, float incr) {
+    float max, float incr) {
     nk_property_float(win->nk_ctx, lbl.c_str(), min, val, max, incr, incr);
 }
 
@@ -1709,7 +1695,7 @@ void float_widget(window* win, const std::string& lbl, float* val, float min,
 // Enum widget
 //
 void enum_widget(window* win, const std::string& lbl, int* val,
-                 const std::vector<std::pair<std::string, int>>& labels) {
+    const std::vector<std::pair<std::string, int>>& labels) {
     const char* items[100];
     auto pos = -1;
     for (auto i = 0; i < labels.size(); i++) {

@@ -31,7 +31,7 @@
 int main(int argc, char* argv[]) {
     // command line
     auto pars = yapp::init_params("rigid body simulation of a scene", argc,
-                                  argv, false, true, false, false);
+        argv, false, true, false, false);
 
     // setting up rendering
     auto scene = yapp::load_scenes(pars->filenames, pars->scene_scale);
@@ -43,7 +43,7 @@ int main(int argc, char* argv[]) {
 
     // simulate each frame and save the results to a new scene
     printf("rigid body simulation for %s to %s\n", pars->filenames[0].c_str(),
-           pars->outfilename.c_str());
+        pars->outfilename.c_str());
     printf("simulating ...");
     for (auto i = 0; i < pars->nframes; i++) {
         printf("\rsimulating frame %d/%d", i, pars->nframes);

@@ -156,9 +156,12 @@ struct vert {
 
     /// Constructor (copies members initializing missing ones to -1)
     vert(int pos = -1, int texcoord = -1, int norm = -1, int color = -1,
-         int radius = -1)
-        : pos(pos), texcoord(texcoord), norm(norm), color(color),
-          radius(radius) {}
+        int radius = -1)
+        : pos(pos)
+        , texcoord(texcoord)
+        , norm(norm)
+        , color(color)
+        , radius(radius) {}
 };
 
 ///
@@ -245,13 +248,13 @@ struct material {
 ///
 struct camera {
     std::string name;  ///< camera name
-    float16 xform = {1, 0, 0, 0, 0, 1, 0, 0,
-                     0, 0, 1, 0, 0, 0, 0, 1};  ///< camera transform
-    bool ortho = false;                        ///< orthografic camera
-    float yfov = 2 * std::atan(0.5f);          ///< vertical field of view
-    float aspect = 16.0f / 9.0f;               ///< aspect ratio
-    float aperture = 0;                        ///< lens aperture
-    float focus = 1;                           ///< focus distance
+    float16 xform = {
+        1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};  ///< camera transform
+    bool ortho = false;                ///< orthografic camera
+    float yfov = 2 * std::atan(0.5f);  ///< vertical field of view
+    float aspect = 16.0f / 9.0f;       ///< aspect ratio
+    float aperture = 0;                ///< lens aperture
+    float focus = 1;                   ///< focus distance
 };
 
 ///
@@ -259,9 +262,9 @@ struct camera {
 ///
 struct environment {
     std::string name;  ///< environment name
-    float16 xform = {1, 0, 0, 0, 0, 1, 0, 0,
-                     0, 0, 1, 0, 0, 0, 0, 1};  /// transform
-    std::string matname;                       /// material name
+    float16 xform = {
+        1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};  /// transform
+    std::string matname;                                  /// material name
 };
 
 ///
@@ -336,8 +339,8 @@ YOBJ_API std::vector<material> load_mtl(const std::string& filename);
 /// Throws:
 /// - io_exception: read/write exception
 ///
-YOBJ_API void save_obj(const std::string& filename, const obj* asset,
-                       bool flip_texcoord = true);
+YOBJ_API void save_obj(
+    const std::string& filename, const obj* asset, bool flip_texcoord = true);
 
 ///
 /// Save MTL (@deprecated interface)
@@ -345,8 +348,8 @@ YOBJ_API void save_obj(const std::string& filename, const obj* asset,
 /// Throws:
 /// - io_exception: read/write exception
 ///
-YOBJ_API void save_mtl(const std::string& filename,
-                       const std::vector<material>& materials);
+YOBJ_API void save_mtl(
+    const std::string& filename, const std::vector<material>& materials);
 
 /// @}
 
@@ -405,11 +408,12 @@ struct fl_material {
     float rs = 0.0001;      ///< roughness
 
     // indices in the texture array (-1 if not found)
-    int ke_txt = -1;  ///< emission texture index
-    int kd_txt = -1;  ///< diffuse texture index
-    int ks_txt = -1;  ///< specular texture index
-    int kt_txt = -1;  ///< transmission texture index
-    int rs_txt = -1;  ///< roughness texture index
+    int ke_txt = -1;    ///< emission texture index
+    int kd_txt = -1;    ///< diffuse texture index
+    int ks_txt = -1;    ///< specular texture index
+    int kt_txt = -1;    ///< transmission texture index
+    int rs_txt = -1;    ///< roughness texture index
+    int norm_txt = -1;  ///< normal texture index
 };
 
 ///
@@ -428,13 +432,13 @@ struct fl_texture {
 ///
 struct fl_camera {
     std::string name;  ///< name
-    float16 xform = {1, 0, 0, 0, 0, 1, 0, 0,
-                     0, 0, 1, 0, 0, 0, 0, 1};  ///< transform
-    bool ortho = false;                        ///< ortho cam
-    float yfov = 2;                            ///< vertical field of view
-    float aspect = 16.0f / 9.0f;               ///< aspect ratio
-    float aperture = 0;                        ///< lens aperture
-    float focus = 1;                           ///< focus distance
+    float16 xform = {
+        1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};  ///< transform
+    bool ortho = false;                                   ///< ortho cam
+    float yfov = 2;               ///< vertical field of view
+    float aspect = 16.0f / 9.0f;  ///< aspect ratio
+    float aperture = 0;           ///< lens aperture
+    float focus = 1;              ///< focus distance
 };
 
 ///
@@ -443,8 +447,8 @@ struct fl_camera {
 struct fl_environment {
     std::string name;  ///< name
     int matid = -1;  ///< index of material in material array (-1 if not found)
-    float16 xform = {1, 0, 0, 0, 0, 1, 0, 0,
-                     0, 0, 1, 0, 0, 0, 0, 1};  ///< transform
+    float16 xform = {
+        1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};  ///< transform
 };
 
 ///
@@ -494,8 +498,8 @@ YOBJ_API obj* unflatten_obj(const fl_obj* scene);
 /// Throws:
 /// - obj_exception
 ///
-YOBJ_API void load_textures(fl_obj* scene, const std::string& dirname,
-                            bool skip_missing = false);
+YOBJ_API void load_textures(
+    fl_obj* scene, const std::string& dirname, bool skip_missing = false);
 
 /// @}
 

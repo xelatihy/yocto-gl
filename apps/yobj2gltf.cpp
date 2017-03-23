@@ -138,16 +138,15 @@ void print_xxx_info(const T* obj) {
         nlines += prim->lines.size();
         ntriangles += prim->triangles.size();
         if (((prim->points.empty() ? 0 : 1) + (prim->lines.empty() ? 0 : 1) +
-             (prim->triangles.empty() ? 0 : 1)) <= 1)
+                (prim->triangles.empty() ? 0 : 1)) <= 1)
             unique_prim = false;
     }
 
     auto bbox = compute_bounds(obj);
-    auto bboxc =
-        float3{(bbox[1][0] + bbox[0][0]) / 2, (bbox[1][1] + bbox[0][1]) / 2,
-               (bbox[1][2] + bbox[0][2]) / 2};
+    auto bboxc = float3{(bbox[1][0] + bbox[0][0]) / 2,
+        (bbox[1][1] + bbox[0][1]) / 2, (bbox[1][2] + bbox[0][2]) / 2};
     auto bboxs = float3{bbox[1][0] - bbox[0][0], bbox[1][1] - bbox[0][1],
-                        bbox[1][2] - bbox[0][2]};
+        bbox[1][2] - bbox[0][2]};
 
     printf("number of objects:    %d\n", nobjs);
     printf("number of groups:     %d\n", ngroups);
@@ -212,17 +211,16 @@ void flipy_texcoord_obj(yobj::fl_obj* obj) {
 int main(int argc, char** argv) {
     // command line params
     auto parser = ycmd::make_parser(argc, argv, "converts obj to gltf");
-    auto no_flipy_texcoord =
-        ycmd::parse_flag(parser, "--no_flipy_texcoord", "",
-                         "disable texcoord vertical flipping");
+    auto no_flipy_texcoord = ycmd::parse_flag(parser, "--no_flipy_texcoord", "",
+        "disable texcoord vertical flipping");
     auto scale =
         ycmd::parse_optf(parser, "--scale", "", "scale the model", 1.0f);
-    auto print_info = ycmd::parse_flag(parser, "--print_info", "-i",
-                                       "print information", false);
-    auto validate = ycmd::parse_flag(parser, "--validate", "",
-                                     "validate after saving", false);
-    auto no_save = ycmd::parse_flag(parser, "--no_save", "-e",
-                                    "exit without saving", false);
+    auto print_info = ycmd::parse_flag(
+        parser, "--print_info", "-i", "print information", false);
+    auto validate = ycmd::parse_flag(
+        parser, "--validate", "", "validate after saving", false);
+    auto no_save = ycmd::parse_flag(
+        parser, "--no_save", "-e", "exit without saving", false);
     auto filename_in =
         ycmd::parse_args(parser, "filename_in", "input filename", "", true);
     auto filename_out =

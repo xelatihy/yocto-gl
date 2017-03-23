@@ -30,8 +30,8 @@
 #include "../yocto/yocto_img.h"
 #include "../yocto/yocto_math.h"
 
-yimg::simage *make_image_grid(const std::vector<yimg::simage *> &imgs,
-                              int tilex) {
+yimg::simage* make_image_grid(
+    const std::vector<yimg::simage*>& imgs, int tilex) {
     auto nimgs = (int)imgs.size();
     auto ret = new yimg::simage();
     ret->width = imgs[0]->width * tilex;
@@ -77,14 +77,14 @@ yimg::simage *make_image_grid(const std::vector<yimg::simage *> &imgs,
     return ret;
 }
 
-yimg::simage *make_image_grid(const std::vector<yimg::simage *> &imgs,
-                              int tilex, int width, int height) {
-    auto resized = std::vector<yimg::simage *>();
+yimg::simage* make_image_grid(
+    const std::vector<yimg::simage*>& imgs, int tilex, int width, int height) {
+    auto resized = std::vector<yimg::simage*>();
     for (auto img : imgs) resized.push_back(resize_image(img, width, height));
     return make_image_grid(resized, tilex);
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[]) {
     static auto tmtype_names = std::vector<std::pair<std::string, int>>{
         {"default", (int)yimg::tonemap_type::def},
         {"linear", (int)yimg::tonemap_type::linear},
@@ -95,19 +95,18 @@ int main(int argc, char *argv[]) {
     // command line params
     auto parser = ycmd::make_parser(argc, argv, "process images");
     auto command = ycmd::parse_args(parser, "command", "command to execute", "",
-                                    true, {"resize", "tonemap"});
-    auto output = ycmd::parse_opts(parser, "--output", "-o",
-                                   "output image filename", "", true);
-    auto width = ycmd::parse_opti(parser, "--width", "-w",
-                                  "width (-1 to maintain aspect)", -1);
-    auto height = ycmd::parse_opti(parser, "--height", "-h",
-                                   "height (-1 to maintain aspect)", -1);
+        true, {"resize", "tonemap"});
+    auto output = ycmd::parse_opts(
+        parser, "--output", "-o", "output image filename", "", true);
+    auto width = ycmd::parse_opti(
+        parser, "--width", "-w", "width (-1 to maintain aspect)", -1);
+    auto height = ycmd::parse_opti(
+        parser, "--height", "-h", "height (-1 to maintain aspect)", -1);
     auto exposure =
         ycmd::parse_optf(parser, "--exposure", "-e", "hdr exposure", 0);
     auto gamma = ycmd::parse_optf(parser, "--gamma", "-g", "hdr gamma", 2.2f);
-    auto tonemap = (yimg::tonemap_type)ycmd::parse_opte(
-        parser, "--tonemap", "-t", "hdr tonemap", (int)yimg::tonemap_type::srgb,
-        tmtype_names);
+    auto tonemap = (yimg::tonemap_type)ycmd::parse_opte(parser, "--tonemap",
+        "-t", "hdr tonemap", (int)yimg::tonemap_type::srgb, tmtype_names);
     auto filenames = ycmd::parse_argas(
         parser, "filenames", "input image filenames", {}, true, -1, {});
 
@@ -115,16 +114,14 @@ int main(int argc, char *argv[]) {
     ycmd::check_parser(parser);
 
     // load images
-    std::vector<yimg::simage *> imgs;
+    std::vector<yimg::simage*> imgs;
     for (auto filename : filenames) imgs.push_back(yimg::load_image(filename));
 
     // decalre output
-    auto out = (yimg::simage *)nullptr;
+    auto out = (yimg::simage*)nullptr;
 
     // switch on commands
-    if (command == "resize") {
-        out = resize_image(imgs[0], width, height);
-    }
+    if (command == "resize") { out = resize_image(imgs[0], width, height); }
     if (command == "tonemap") {
         out = yimg::tonemap_image(imgs[0], exposure, tonemap, gamma);
     }

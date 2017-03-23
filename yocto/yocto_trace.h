@@ -58,6 +58,7 @@
 ///
 ///
 /// HISTORY:
+/// - v 1.14: normal mapping
 /// - v 1.13: simpler Fresnel handling
 /// - v 1.12: significantly better path tracing
 /// - v 1.11: add progressive sampling to rendering params
@@ -142,7 +143,7 @@ struct scene;
 /// Initialize the scene with the proper number of objects.
 ///
 YTRACE_API scene* make_scene(int ncameras, int nshapes, int nmaterials,
-                             int ntextures, int nenvironments);
+    int ntextures, int nenvironments);
 
 ///
 /// Free scene.
@@ -162,8 +163,7 @@ YTRACE_API void free_scene(scene* scn);
 /// - focus: focus plane distance (cannot be zero)
 ///
 YTRACE_API void set_camera(scene* scn, int cid, const float3x4& frame,
-                           float yfov, float aspect, float aperture = 0,
-                           float focus = 1);
+    float yfov, float aspect, float aperture = 0, float focus = 1);
 
 ///
 /// Sets a texture in the scene.
@@ -177,8 +177,8 @@ YTRACE_API void set_camera(scene* scn, int cid, const float3x4& frame,
 /// - hdr: hdr pixels
 /// - ldr: ldr pixels (sRGB)
 ///
-YTRACE_API void set_texture(scene* scn, int tid, int width, int height,
-                            int ncomp, const float* hdr);
+YTRACE_API void set_texture(
+    scene* scn, int tid, int width, int height, int ncomp, const float* hdr);
 
 ///
 /// Sets a texture in the scene.
@@ -192,8 +192,8 @@ YTRACE_API void set_texture(scene* scn, int tid, int width, int height,
 /// - hdr: hdr pixels
 /// - ldr: ldr pixels (sRGB)
 ///
-YTRACE_API void set_texture(scene* scn, int tid, int width, int height,
-                            int ncomp, const byte* ldr);
+YTRACE_API void set_texture(
+    scene* scn, int tid, int width, int height, int ncomp, const byte* ldr);
 
 ///
 /// Sets a material in the scene.
@@ -205,14 +205,13 @@ YTRACE_API void set_texture(scene* scn, int tid, int width, int height,
 /// - kd: diffuse term
 /// - ks: specular term
 /// - rs: specular roughness
-/// - ke_txt, kd_txt, ks_txt, rs_txt: texture indices (-1 for none)
+/// - ke_txt, kd_txt, ks_txt, rs_txt, norm_txt: texture indices (-1 for none)
 /// - use_phong: whether to use phong
 ///
 YTRACE_API void set_material(scene* scn, int mid, const float3& ke,
-                             const float3& kd, const float3& ks,
-                             const float3& kt, float rs = 0.1, int ke_txt = -1,
-                             int kd_txt = -1, int ks_txt = -1, int kt_txt = -1,
-                             int rs_txt = -1, bool use_phong = false);
+    const float3& kd, const float3& ks, const float3& kt, float rs = 0.1,
+    int ke_txt = -1, int kd_txt = -1, int ks_txt = -1, int kt_txt = -1,
+    int rs_txt = -1, int norm_txt = -1, bool use_phong = false);
 
 ///
 /// Sets an environment in the scene.
@@ -225,7 +224,7 @@ YTRACE_API void set_material(scene* scn, int mid, const float3& ke,
 /// - ke_txt: emission texture (-1 for none)
 ///
 YTRACE_API void set_environment(scene* scn, int eid, const float3x4& frame,
-                                const float3& ke, int txt_id = -1);
+    const float3& ke, int txt_id = -1);
 
 ///
 /// Sets a shape in the scene.
@@ -242,14 +241,12 @@ YTRACE_API void set_environment(scene* scn, int eid, const float3x4& frame,
 /// - norm/tang: vertex normals/tangents
 /// - texcoord: vertex texcoord
 /// - color: vertex color
-/// - radius: vertex radius
+/// - tangsp: tangent space for normal and bump mapping
 ///
 YTRACE_API void set_triangle_shape(scene* scn, int sid, const float3x4& frame,
-                                   int mid, int ntriangles,
-                                   const int3* triangles, int nverts,
-                                   const float3* pos, const float3* norm,
-                                   const float2* texcoord = nullptr,
-                                   const float3* color = nullptr);
+    int mid, int ntriangles, const int3* triangles, int nverts,
+    const float3* pos, const float3* norm, const float2* texcoord = nullptr,
+    const float3* color = nullptr, const float4* tangsp = nullptr);
 
 ///
 /// Sets a shape in the scene.
@@ -269,12 +266,9 @@ YTRACE_API void set_triangle_shape(scene* scn, int sid, const float3x4& frame,
 /// - radius: vertex radius
 ///
 YTRACE_API void set_point_shape(scene* scn, int sid, const float3x4& frame,
-                                int mid, int npoints, const int* points,
-                                int nverts, const float3* pos,
-                                const float3* norm,
-                                const float2* texcoord = nullptr,
-                                const float3* color = nullptr,
-                                const float* radius = nullptr);
+    int mid, int npoints, const int* points, int nverts, const float3* pos,
+    const float3* norm, const float2* texcoord = nullptr,
+    const float3* color = nullptr, const float* radius = nullptr);
 
 ///
 /// Sets a shape in the scene.
@@ -294,12 +288,9 @@ YTRACE_API void set_point_shape(scene* scn, int sid, const float3x4& frame,
 /// - radius: vertex radius
 ///
 YTRACE_API void set_line_shape(scene* scn, int sid, const float3x4& frame,
-                               int mid, int nlines, const int2* lines,
-                               int nverts, const float3* pos,
-                               const float3* tang,
-                               const float2* texcoord = nullptr,
-                               const float3* color = nullptr,
-                               const float* radius = nullptr);
+    int mid, int nlines, const int2* lines, int nverts, const float3* pos,
+    const float3* tang, const float2* texcoord = nullptr,
+    const float3* color = nullptr, const float* radius = nullptr);
 
 ///
 /// Sets per-vertex material properties.
@@ -313,8 +304,7 @@ YTRACE_API void set_line_shape(scene* scn, int sid, const float3x4& frame,
 /// - rs: per-vertex roughness
 ///
 YTRACE_API void set_vert_material(scene* scn, int sid, const float3* ke,
-                                  const float3* kd, const float3* ks,
-                                  const float* rs);
+    const float3* kd, const float3* ks, const float* rs);
 
 ///
 /// Convert a Phong exponent to GGX/Phong roughness
@@ -324,8 +314,8 @@ YTRACE_API float specular_exponent_to_roughness(float n);
 ///
 /// Estimates the fresnel coefficient es from ks at normal incidence
 ///
-YTRACE_API void specular_fresnel_from_ks(const float3& ks, float3& es,
-                                         float3& esk);
+YTRACE_API void specular_fresnel_from_ks(
+    const float3& ks, float3& es, float3& esk);
 
 ///
 /// Ray-scene Intersection.
@@ -356,9 +346,8 @@ struct intersect_point {
 /// Return:
 /// - intersection point
 ///
-using intersect_first_cb = intersect_point (*)(void* ctx, const float3& o,
-                                               const float3& d, float tmin,
-                                               float tmax);
+using intersect_first_cb = intersect_point (*)(
+    void* ctx, const float3& o, const float3& d, float tmin, float tmax);
 
 ///
 /// Ray-scene intersection callback
@@ -372,27 +361,26 @@ using intersect_first_cb = intersect_point (*)(void* ctx, const float3& o,
 /// Return:
 /// - whether we intersect or not
 ///
-using intersect_any_cb = bool (*)(void* ctx, const float3& o, const float3& d,
-                                  float tmin, float tmax);
+using intersect_any_cb = bool (*)(
+    void* ctx, const float3& o, const float3& d, float tmin, float tmax);
 
 ///
 /// Sets the intersection callbacks
 ///
 YTRACE_API void set_intersection_callbacks(scene* scn, void* ctx,
-                                           intersect_first_cb intersect_first,
-                                           intersect_any_cb intersect_any);
+    intersect_first_cb intersect_first, intersect_any_cb intersect_any);
 
 ///
 /// Logger callback
 ///
-using logging_msg_cb = void (*)(int level, const char* name, const char* msg,
-                                va_list args);
+using logging_msg_cb = void (*)(
+    int level, const char* name, const char* msg, va_list args);
 
 ///
 /// Logger
 ///
-YTRACE_API void set_logging_callbacks(scene* scn, void* ctx,
-                                      logging_msg_cb log);
+YTRACE_API void set_logging_callbacks(
+    scene* scn, void* ctx, logging_msg_cb log);
 
 ///
 /// Initialize rendering.
@@ -481,15 +469,14 @@ struct render_params {
 /// accumulate is true.
 ///
 YTRACE_API void trace_block(const scene* scn, int width, int height,
-                            float4* img, int block_x, int block_y,
-                            int block_width, int block_height, int samples_min,
-                            int samples_max, const render_params& params);
+    float4* img, int block_x, int block_y, int block_width, int block_height,
+    int samples_min, int samples_max, const render_params& params);
 
 ///
 /// Convenience function to call trace_block with all sample at once.
 ///
 YTRACE_API void trace_image(const scene* scn, const int width, int height,
-                            float4* img, const render_params& params);
+    float4* img, const render_params& params);
 
 }  // namespace
 

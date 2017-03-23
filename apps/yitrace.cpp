@@ -90,8 +90,8 @@ void text_callback(yglu::ui::window* win, unsigned int key) {
         case ']': pars->exposure += 1; break;
         case 's':
             yapp::save_image(pars->imfilename, pars->width, pars->height,
-                             (const yapp::float4*)st->hdr.data(),
-                             pars->exposure, pars->tonemap, pars->gamma);
+                (const yapp::float4*)st->hdr.data(), pars->exposure,
+                pars->tonemap, pars->gamma);
             break;
         default: printf("unsupported key\n"); break;
     }
@@ -110,10 +110,10 @@ void draw_image(yglu::ui::window* win) {
     auto window_size = yglu::ui::get_window_size(win);
     if (pars->legacy_gl) {
         yglu::legacy::draw_image(st->texture_id, pars->width, pars->height,
-                                 window_size[0], window_size[1], 0, 0, 1);
+            window_size[0], window_size[1], 0, 0, 1);
     } else {
         yglu::modern::shade_image(st->texture_id, pars->width, pars->height,
-                                  window_size[0], window_size[1], 0, 0, 1);
+            window_size[0], window_size[1], 0, 0, 1);
     }
 }
 
@@ -135,17 +135,17 @@ void draw_widgets(yglu::ui::window* win) {
         yglu::ui::int_label_widget(win, "h", pars->height);
         yglu::ui::int_label_widget(win, "s", st->cur_sample);
         yglu::ui::dynamic_widget_layout(win, 1);
-        yglu::ui::int_widget(win, "samples", &pars->render_params.nsamples, 0,
-                             1000000, 1);
+        yglu::ui::int_widget(
+            win, "samples", &pars->render_params.nsamples, 0, 1000000, 1);
         yglu::ui::dynamic_widget_layout(win, 2);
         yglu::ui::int_widget(win, "camera", &pars->render_params.camera_id, 0,
-                             (int)st->scene->cameras.size() - 1, 1);
+            (int)st->scene->cameras.size() - 1, 1);
         yglu::ui::dynamic_widget_layout(win, 1);
-        yglu::ui::float_widget(win, "hdr exposure", &pars->exposure, -20, 20,
-                               1);
+        yglu::ui::float_widget(
+            win, "hdr exposure", &pars->exposure, -20, 20, 1);
         yglu::ui::float_widget(win, "hdr gamma", &pars->gamma, 0.1, 5, 0.1);
-        yglu::ui::enum_widget(win, "hdr tonemap", (int*)&pars->tonemap,
-                              tmtype_names);
+        yglu::ui::enum_widget(
+            win, "hdr tonemap", (int*)&pars->tonemap, tmtype_names);
     }
     yglu::ui::end_widgets(win);
 }
@@ -162,15 +162,13 @@ bool update(state* st) {
         // update camera
         auto cam = st->scene->cameras[pars->render_params.camera_id];
         ytrace::set_camera(st->trace_scene, pars->render_params.camera_id,
-                           cam->frame, cam->yfov, cam->aspect, cam->aperture,
-                           cam->focus);
+            cam->frame, cam->yfov, cam->aspect, cam->aperture, cam->focus);
 
         // render preview
         auto pparams = pars->render_params;
         pparams.nsamples = 1;
         ytrace::trace_image(st->trace_scene, st->preview_width,
-                            st->preview_height,
-                            (ytrace::float4*)st->preview.data(), pparams);
+            st->preview_height, (ytrace::float4*)st->preview.data(), pparams);
         for (auto qj = 0; qj < st->preview_height; qj++) {
             for (auto qi = 0; qi < st->preview_width; qi++) {
                 for (auto j = qj * pars->block_size;
@@ -186,17 +184,14 @@ bool update(state* st) {
             }
         }
         yimg::tonemap_image(pars->width, pars->height, 4,
-                            (const float*)st->hdr.data(),
-                            (unsigned char*)st->ldr.data(), pars->exposure,
-                            pars->tonemap, pars->gamma);
+            (const float*)st->hdr.data(), (unsigned char*)st->ldr.data(),
+            pars->exposure, pars->tonemap, pars->gamma);
         if (pars->legacy_gl) {
             yglu::legacy::update_texture(st->texture_id, pars->width,
-                                         pars->height, 4,
-                                         (unsigned char*)st->ldr.data(), false);
+                pars->height, 4, (unsigned char*)st->ldr.data(), false);
         } else {
             yglu::modern::update_texture(st->texture_id, pars->width,
-                                         pars->height, 4,
-                                         (unsigned char*)st->ldr.data(), false);
+                pars->height, 4, (unsigned char*)st->ldr.data(), false);
         }
 
         // reset current counters
@@ -211,15 +206,14 @@ bool update(state* st) {
             auto block = st->blocks[st->cur_block];
             ycmd::thread_pool_async(st->pool, [st, block, pars]() {
                 ytrace::trace_block(st->trace_scene, pars->width, pars->height,
-                                    (ytrace::float4*)st->hdr.data(), block[0],
-                                    block[1], block[2], block[3],
-                                    st->cur_sample, st->cur_sample + 1,
-                                    pars->render_params);
+                    (ytrace::float4*)st->hdr.data(), block[0], block[1],
+                    block[2], block[3], st->cur_sample, st->cur_sample + 1,
+                    pars->render_params);
                 for (auto j = block[1]; j < block[1] + block[3]; j++) {
                     for (auto i = block[0]; i < block[0] + block[2]; i++) {
-                        st->ldr[j * pars->width + i] = yimg::tonemap_pixel(
-                            st->hdr[j * pars->width + i], pars->exposure,
-                            pars->tonemap, pars->gamma);
+                        st->ldr[j * pars->width + i] =
+                            yimg::tonemap_pixel(st->hdr[j * pars->width + i],
+                                pars->exposure, pars->tonemap, pars->gamma);
                     }
                 }
             });
@@ -229,21 +223,18 @@ bool update(state* st) {
             st->texture_gamma != pars->gamma ||
             st->texture_tonemap != pars->tonemap) {
             yimg::tonemap_image(pars->width, pars->height, 4,
-                                (const float*)st->hdr.data(),
-                                (unsigned char*)st->ldr.data(), pars->exposure,
-                                pars->tonemap, pars->gamma);
+                (const float*)st->hdr.data(), (unsigned char*)st->ldr.data(),
+                pars->exposure, pars->tonemap, pars->gamma);
             st->texture_exposure = pars->exposure;
             st->texture_gamma = pars->gamma;
             st->texture_tonemap = pars->tonemap;
         }
         if (pars->legacy_gl) {
             yglu::legacy::update_texture(st->texture_id, pars->width,
-                                         pars->height, 4,
-                                         (unsigned char*)st->ldr.data(), false);
+                pars->height, 4, (unsigned char*)st->ldr.data(), false);
         } else {
             yglu::modern::update_texture(st->texture_id, pars->width,
-                                         pars->height, 4,
-                                         (unsigned char*)st->ldr.data(), false);
+                pars->height, 4, (unsigned char*)st->ldr.data(), false);
         }
         if (st->cur_block == st->blocks.size()) {
             st->cur_block = 0;
@@ -255,10 +246,10 @@ bool update(state* st) {
                     ycmd::format_str(".%04d", st->cur_sample + 1) +
                     ycmd::get_extension(pars->imfilename);
                 ycmd::log_msgf(ycmd::log_level_info, "ytrace",
-                               "saving image %s", imfilename.c_str());
+                    "saving image %s", imfilename.c_str());
                 yapp::save_image(imfilename, pars->width, pars->height,
-                                 (const yapp::float4*)st->hdr.data(),
-                                 pars->exposure, pars->tonemap, pars->gamma);
+                    (const yapp::float4*)st->hdr.data(), pars->exposure,
+                    pars->tonemap, pars->gamma);
             }
             st->cur_sample++;
         }
@@ -271,8 +262,8 @@ void run_ui(state* st) {
     auto pars = st->pars;
 
     // window
-    auto win = yglu::ui::init_window(pars->width, pars->height, "ytrace",
-                                     pars->legacy_gl, st);
+    auto win = yglu::ui::init_window(
+        pars->width, pars->height, "ytrace", pars->legacy_gl, st);
 
     // callbacks
     yglu::ui::set_callbacks(win, text_callback, window_refresh_callback);
@@ -284,13 +275,11 @@ void run_ui(state* st) {
     yglu::ui::init_widgets(win);
 
     if (pars->legacy_gl) {
-        st->texture_id = yglu::legacy::make_texture(
-            pars->width, pars->height, 4, (unsigned char*)st->ldr.data(), false,
-            false);
+        st->texture_id = yglu::legacy::make_texture(pars->width, pars->height,
+            4, (unsigned char*)st->ldr.data(), false, false);
     } else {
-        st->texture_id = yglu::modern::make_texture(
-            pars->width, pars->height, 4, (unsigned char*)st->ldr.data(), false,
-            false, false);
+        st->texture_id = yglu::modern::make_texture(pars->width, pars->height,
+            4, (unsigned char*)st->ldr.data(), false, false, false);
     }
 
     while (!yglu::ui::should_close(win)) {
@@ -299,11 +288,11 @@ void run_ui(state* st) {
         mouse_button = yglu::ui::get_mouse_button(win);
 
         yglu::ui::set_window_title(win,
-                                   ("ytrace | " + pars->filenames[0] + " | " +
-                                    std::to_string(pars->width) + "x" +
-                                    std::to_string(pars->height) + "@" +
-                                    std::to_string(st->cur_sample))
-                                       .c_str());
+            ("ytrace | " + pars->filenames[0] + " | " +
+                std::to_string(pars->width) + "x" +
+                std::to_string(pars->height) + "@" +
+                std::to_string(st->cur_sample))
+                .c_str());
 
         // handle mouse
         if (mouse_button && mouse_pos != mouse_last &&
@@ -319,8 +308,8 @@ void run_ui(state* st) {
             }
 
             auto cam = st->scene->cameras[pars->render_params.camera_id];
-            ym::turntable((ym::frame3f&)cam->frame, cam->focus, rotate, dolly,
-                          pan);
+            ym::turntable(
+                (ym::frame3f&)cam->frame, cam->focus, rotate, dolly, pan);
             st->scene_updated = true;
         }
 
@@ -350,7 +339,7 @@ void run_ui(state* st) {
 int main(int argc, char* argv[]) {
     // params
     auto pars = yapp::init_params("render scene with path tracing", argc, argv,
-                                  true, false, false, false);
+        true, false, false, false);
 
     // init state
     auto st = new state();
@@ -365,8 +354,8 @@ int main(int argc, char* argv[]) {
 
     // building bvh and trace scene
     st->scene_bvh = yapp::make_bvh(st->scene);
-    st->trace_scene = yapp::make_trace_scene(st->scene, st->scene_bvh,
-                                             pars->render_params.camera_id);
+    st->trace_scene = yapp::make_trace_scene(
+        st->scene, st->scene_bvh, pars->render_params.camera_id);
 
     // image rendering params
     st->hdr.resize(pars->width * pars->height, {0, 0, 0, 0});

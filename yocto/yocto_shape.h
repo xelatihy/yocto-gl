@@ -26,6 +26,7 @@
 ///      sample_shape()
 /// 7. interpolate vertex data linearly over primitives
 ///    interpolate_vert()
+/// 8. compute tangent frame with compute_tangent_frame()
 ///
 /// The interface for each function is described in details in the interface
 /// section of this file.
@@ -45,6 +46,7 @@
 ///
 ///
 /// HISTORY:
+/// - v 0.9: tangent frame
 /// - v 0.8: switch to .h/.cpp pair
 /// - v 0.7: doxygen comments
 /// - v 0.6: opaque API (allows for changing internals without altering API)
@@ -128,10 +130,26 @@ using int4 = std::array<int, 4>;
 /// - norm: preallocated array of computed normals
 ///
 YSHAPE_API void compute_normals(int npoints, const int* points, int nlines,
-                                const int2* lines, int ntriangles,
-                                const int3* triangles, int nverts,
-                                const float3* pos, float3* norm,
-                                bool weighted = true);
+    const int2* lines, int ntriangles, const int3* triangles, int nverts,
+    const float3* pos, float3* norm, bool weighted = true);
+
+///
+/// Compute tangent frame for triangle mesh. Tangent space is defined by
+/// a four component vector. The first three components are the tangent
+/// with respect to the U texcoord. The fourth component is the sign of the
+/// tangent wrt the V texcoord. Tangent frame is useful in normal mapping.
+///
+/// Parameters:
+/// - nverts/pos: array pf vertex positions
+/// - ntriangles/triangles: array of point indices
+/// - weighted: whether to use area weighting (typically true)
+///
+/// Out Parameters:
+/// - tangsp: preallocated array of computed tangent space
+///
+YSHAPE_API void compute_tangent_frame(int ntriangles, const int3* triangles,
+    int nverts, const float3* pos, const float3* norm, const float2* texcoord,
+    float4* tangsp, bool weighted = true);
 
 ///
 /// Tesselates a mesh by subdiving along element edges. Will produce a new
@@ -150,10 +168,8 @@ YSHAPE_API void compute_normals(int npoints, const int* points, int nlines,
 /// - tess_edges: edges created
 ///
 YSHAPE_API void split_edges(int nverts, int nlines, const int2* lines,
-                            int ntriangles, const int3* triangles,
-                            std::vector<int2>& tess_lines,
-                            std::vector<int3>& tess_triangles,
-                            std::vector<int2>& tess_edges);
+    int ntriangles, const int3* triangles, std::vector<int2>& tess_lines,
+    std::vector<int3>& tess_triangles, std::vector<int2>& tess_edges);
 
 ///
 /// Tesselate a shape inplace.
@@ -163,12 +179,9 @@ YSHAPE_API void split_edges(int nverts, int nlines, const int2* lines,
 /// - pos, norm, texcoord, color, radius: vertices to split
 ///
 YSHAPE_API void tesselate_stdshape(std::vector<int2>& lines,
-                                   std::vector<int3>& triangles,
-                                   std::vector<float3>& pos,
-                                   std::vector<float3>& norm,
-                                   std::vector<float2>& texcoord,
-                                   std::vector<float3>& color,
-                                   std::vector<float>& radius);
+    std::vector<int3>& triangles, std::vector<float3>& pos,
+    std::vector<float3>& norm, std::vector<float2>& texcoord,
+    std::vector<float3>& color, std::vector<float>& radius);
 
 ///
 /// Generate a parametric surface with callbacks.
@@ -182,10 +195,10 @@ YSHAPE_API void tesselate_stdshape(std::vector<int2>& lines,
 /// - triangles: element array
 /// - pos/norm/texcoord: vertex position/normal/texcoords
 ///
-YSHAPE_API void make_uvsurface(
-    int usteps, int vsteps, std::vector<int3>& triangles,
-    std::vector<float3>& pos, std::vector<float3>& norm,
-    std::vector<float2>& texcoord, std::function<float3(const float2&)> pos_fn,
+YSHAPE_API void make_uvsurface(int usteps, int vsteps,
+    std::vector<int3>& triangles, std::vector<float3>& pos,
+    std::vector<float3>& norm, std::vector<float2>& texcoord,
+    std::function<float3(const float2&)> pos_fn,
     std::function<float3(const float2&)> norm_fn,
     std::function<float2(const float2&)> texcoord_fn);
 
@@ -202,13 +215,12 @@ YSHAPE_API void make_uvsurface(
 /// - pos/tang/texcoord/radius: vertex position/tangent/texcoords/radius
 ///
 YSHAPE_API void make_lines(int usteps, int num, std::vector<int2>& lines,
-                           std::vector<float3>& pos, std::vector<float3>& tang,
-                           std::vector<float2>& texcoord,
-                           std::vector<float>& radius,
-                           std::function<float3(const float2&)> pos_fn,
-                           std::function<float3(const float2&)> tang_fn,
-                           std::function<float2(const float2&)> texcoord_fn,
-                           std::function<float(const float2&)> radius_fn);
+    std::vector<float3>& pos, std::vector<float3>& tang,
+    std::vector<float2>& texcoord, std::vector<float>& radius,
+    std::function<float3(const float2&)> pos_fn,
+    std::function<float3(const float2&)> tang_fn,
+    std::function<float2(const float2&)> texcoord_fn,
+    std::function<float(const float2&)> radius_fn);
 
 ///
 /// Generate a parametric surface with callbacks.
@@ -222,13 +234,11 @@ YSHAPE_API void make_lines(int usteps, int num, std::vector<int2>& lines,
 /// - pos/norm/texcoord/radius: vertex position/normal/texcoords/radius
 ///
 YSHAPE_API void make_points(int num, std::vector<int>& points,
-                            std::vector<float3>& pos, std::vector<float3>& norm,
-                            std::vector<float2>& texcoord,
-                            std::vector<float>& radius,
-                            std::function<float3(float)> pos_fn,
-                            std::function<float3(float)> norm_fn,
-                            std::function<float2(float)> texcoord_fn,
-                            std::function<float(float)> radius_fn);
+    std::vector<float3>& pos, std::vector<float3>& norm,
+    std::vector<float2>& texcoord, std::vector<float>& radius,
+    std::function<float3(float)> pos_fn, std::function<float3(float)> norm_fn,
+    std::function<float2(float)> texcoord_fn,
+    std::function<float(float)> radius_fn);
 
 ///
 /// Test shapes (this is mostly used to create tests)
@@ -266,10 +276,10 @@ enum struct stdsurface_type {
 /// - norm: vertex normals
 /// - texcoord: vertex texture coordinates
 ///
-YSHAPE_API void make_stdsurface(
-    stdsurface_type stype, int level, const float4& params,
-    std::vector<int3>& triangles, std::vector<float3>& pos,
-    std::vector<float3>& norm, std::vector<float2>& texcoord,
+YSHAPE_API void make_stdsurface(stdsurface_type stype, int level,
+    const float4& params, std::vector<int3>& triangles,
+    std::vector<float3>& pos, std::vector<float3>& norm,
+    std::vector<float2>& texcoord,
     const float3x4& frame = {{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}}},
     float scale = 1, const float2& urange = {0, 1},
     const float2& vrange = {0, 1});
@@ -289,11 +299,11 @@ YSHAPE_API void make_stdsurface(
 /// - mnorm: vertex normals
 /// - mtexcoord: vertex texture coordinates
 ///
-YSHAPE_API void merge_stdsurface(
-    std::vector<int3>& triangles, std::vector<float3>& pos,
-    std::vector<float3>& norm, std::vector<float2>& texcoord,
-    const std::vector<int3>& mtriangles, const std::vector<float3>& mpos,
-    const std::vector<float3>& mnorm, const std::vector<float2>& mtexcoord);
+YSHAPE_API void merge_stdsurface(std::vector<int3>& triangles,
+    std::vector<float3>& pos, std::vector<float3>& norm,
+    std::vector<float2>& texcoord, const std::vector<int3>& mtriangles,
+    const std::vector<float3>& mpos, const std::vector<float3>& mnorm,
+    const std::vector<float2>& mtexcoord);
 
 ///
 /// Computes the distribution of area of a shape element for sampling. This is
@@ -311,7 +321,7 @@ YSHAPE_API void merge_stdsurface(
 /// - area: total area of the shape (or length for lines)
 ///
 YSHAPE_API void sample_shape_cdf(int npoints, const int* points, int nverts,
-                                 const float3* pos, float* ecdf, float* num);
+    const float3* pos, float* ecdf, float* num);
 
 ///
 /// Computes the distribution of area of a shape element for sampling. This is
@@ -329,7 +339,7 @@ YSHAPE_API void sample_shape_cdf(int npoints, const int* points, int nverts,
 /// - area: total area of the shape (or length for lines)
 ///
 YSHAPE_API void sample_shape_cdf(int nlines, const int2* lines, int nverts,
-                                 const float3* pos, float* ecdf, float* length);
+    const float3* pos, float* ecdf, float* length);
 
 ///
 /// Computes the distribution of area of a shape element for sampling. This is
@@ -347,8 +357,7 @@ YSHAPE_API void sample_shape_cdf(int nlines, const int2* lines, int nverts,
 /// - area: total area of the shape (or length for lines)
 ///
 YSHAPE_API void sample_shape_cdf(int ntriangles, const int2* triangles,
-                                 int nverts, const float3* pos, float* ecdf,
-                                 float* length);
+    int nverts, const float3* pos, float* ecdf, float* length);
 
 ///
 /// Sampels a shape elements. In the case of the sample_shape version, only one
@@ -363,8 +372,8 @@ YSHAPE_API void sample_shape_cdf(int ntriangles, const int2* triangles,
 /// - eid: element index
 /// - euv: element baricentric coordinates
 ///
-YSHAPE_API void sample_shape(int npoints, const float* point_cdf, float ern,
-                             int* eid);
+YSHAPE_API void sample_shape(
+    int npoints, const float* point_cdf, float ern, int* eid);
 
 ///
 /// Sampels a shape elements. In the case of the sample_shape version, only one
@@ -380,7 +389,7 @@ YSHAPE_API void sample_shape(int npoints, const float* point_cdf, float ern,
 /// - euv: element baricentric coordinates
 ///
 YSHAPE_API void sample_shape(int nlines, const float* line_cdf, float ern,
-                             float uvrn, int* eid, float* euv);
+    float uvrn, int* eid, float* euv);
 
 ///
 /// Sampels a shape elements. In the case of the sample_shape version, only one
@@ -396,8 +405,7 @@ YSHAPE_API void sample_shape(int nlines, const float* line_cdf, float ern,
 /// - euv: element baricentric coordinates
 ///
 YSHAPE_API void sample_shape(int ntriangles, const float* triangle_cdf,
-                             float ern, const float2& uvrn, int* eid,
-                             float2* euv);
+    float ern, const float2& uvrn, int* eid, float2* euv);
 }  // namespace
 
 // -----------------------------------------------------------------------------

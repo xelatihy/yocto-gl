@@ -63,8 +63,8 @@ void save_screenshot(yglu::ui::window* win, const std::string& imfilename) {
 
     auto wh = yapp::int2{0, 0};
     auto pixels = yglu::ui::get_screenshot(win, wh);
-    yimg::save_image(imfilename, wh[0], wh[1], 4, nullptr,
-                     (unsigned char*)pixels.data());
+    yimg::save_image(
+        imfilename, wh[0], wh[1], 4, nullptr, (unsigned char*)pixels.data());
 }
 
 void draw_scene(yglu::ui::window* win) {
@@ -119,15 +119,15 @@ void draw_widgets(yglu::ui::window* win) {
         yglu::ui::label_widget(win, pars->filenames[0]);
         yglu::ui::dynamic_widget_layout(win, 2);
         yglu::ui::int_widget(win, "camera", &pars->render_params.camera_id, 0,
-                             (int)st->scene->cameras.size() - 1);
+            (int)st->scene->cameras.size() - 1);
         yglu::ui::bool_widget(win, "wireframe", &pars->wireframe);
         yglu::ui::bool_widget(win, "edges", &pars->edges);
         yglu::ui::dynamic_widget_layout(win, 1);
-        yglu::ui::float_widget(win, "hdr exposure", &pars->exposure, -20, 20,
-                               1);
+        yglu::ui::float_widget(
+            win, "hdr exposure", &pars->exposure, -20, 20, 1);
         yglu::ui::float_widget(win, "hdr gamma", &pars->gamma, 0.1, 5, 0.1);
-        yglu::ui::enum_widget(win, "hdr tonemap", (int*)&pars->tonemap,
-                              tmtype_names);
+        yglu::ui::enum_widget(
+            win, "hdr tonemap", (int*)&pars->tonemap, tmtype_names);
         if (yglu::ui::button_widget(win, "tesselate")) {
             for (auto shape : st->scene->shapes) {
                 yshape::tesselate_stdshape(
@@ -153,8 +153,8 @@ void run_ui(state* st) {
     auto pars = st->pars;
 
     // window
-    auto win = yglu::ui::init_window(pars->width, pars->height, "yshade",
-                                     pars->legacy_gl, st);
+    auto win = yglu::ui::init_window(
+        pars->width, pars->height, "yshade", pars->legacy_gl, st);
     yglu::ui::set_callbacks(win, text_callback, window_refresh_callback);
 
     // window values
@@ -189,8 +189,8 @@ void run_ui(state* st) {
             }
 
             auto cam = st->scene->cameras[pars->render_params.camera_id];
-            ym::turntable((ym::frame3f&)cam->frame, cam->focus, rotate, dolly,
-                          pan);
+            ym::turntable(
+                (ym::frame3f&)cam->frame, cam->focus, rotate, dolly, pan);
         }
 
         // draw
@@ -218,8 +218,8 @@ void run_ui(state* st) {
 
 int main(int argc, char* argv[]) {
     // params
-    auto pars = yapp::init_params("interactively view scenes", argc, argv,
-                                  false, false, true, true);
+    auto pars = yapp::init_params(
+        "interactively view scenes", argc, argv, false, false, true, true);
 
     // init state
     auto st = new state();
