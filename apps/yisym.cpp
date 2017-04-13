@@ -39,7 +39,7 @@ struct state {
     // scene
     yapp::scene* scene = nullptr;
     ybvh::scene* scene_bvh = nullptr;
-    ysym::scene* rigid_scene = nullptr;
+    ysym::scene* simulation_scene = nullptr;
 
     // animation state
     bool simulating = false;
@@ -58,7 +58,7 @@ struct state {
         if (pars) delete pars;
         if (scene) delete scene;
         if (scene_bvh) ybvh::free_scene(scene_bvh);
-        if (rigid_scene) ysym::free_scene(rigid_scene);
+        if (simulation_scene) ysym::free_scene(simulation_scene);
         if (shst) yapp::free_shade_state(shst);
     }
 };
@@ -272,13 +272,14 @@ void text_callback(yglu::ui::window* win, unsigned int key) {
         case '/': {
             for (int sid = 0; sid < st->scene->shapes.size(); sid++) {
                 st->scene->shapes[sid]->frame = st->initial_state[sid];
-                ysym::set_body_frame(
-                    st->rigid_scene, sid, st->initial_state[sid]);
+                ysym::set_rigid_body_frame(
+                    st->simulation_scene, sid, st->initial_state[sid]);
             }
             st->frame = 0;
         } break;
         case '.':
-            yapp::simulate_step(st->scene, st->rigid_scene, pars->dt);
+            yapp::simulate_step(
+                st->scene, st->simulation_scene, pars->simulation_params);
             st->frame += 1;
             break;
         case '[': pars->exposure -= 1; break;
@@ -310,18 +311,20 @@ void draw_widgets(yglu::ui::window* win) {
         yglu::ui::label_widget(win, pars->filenames[0]);
         yglu::ui::dynamic_widget_layout(win, 2);
         yglu::ui::int_label_widget(win, "frame", st->frame);
-        yglu::ui::float_widget(win, "dt", &pars->dt, 0, 1, 1 / 240.0f);
+        yglu::ui::float_widget(
+            win, "dt", &pars->simulation_params.dt, 0, 1, 1 / 240.0f);
         if (yglu::ui::button_widget(win, "start")) st->simulating = true;
         if (yglu::ui::button_widget(win, "stop")) st->simulating = false;
         if (yglu::ui::button_widget(win, "step")) {
-            yapp::simulate_step(st->scene, st->rigid_scene, pars->dt);
+            yapp::simulate_step(
+                st->scene, st->simulation_scene, pars->simulation_params);
             st->frame += 1;
         }
         if (yglu::ui::button_widget(win, "reset")) {
             for (int sid = 0; sid < st->scene->shapes.size(); sid++) {
                 st->scene->shapes[sid]->frame = st->initial_state[sid];
-                ysym::set_body_frame(
-                    st->rigid_scene, sid, st->initial_state[sid]);
+                ysym::set_rigid_body_frame(
+                    st->simulation_scene, sid, st->initial_state[sid]);
                 ybvh::set_shape_frame(
                     st->scene_bvh, sid, st->initial_state[sid]);
             }
@@ -411,7 +414,8 @@ void run_ui(state* st) {
 
         // advance if simulating
         if (st->simulating) {
-            yapp::simulate_step(st->scene, st->rigid_scene, pars->dt);
+            yapp::simulate_step(
+                st->scene, st->simulation_scene, pars->simulation_params);
             st->frame += 1;
         }
 
@@ -444,10 +448,11 @@ int main(int argc, char* argv[]) {
     // setting up rendering
     st->scene = yapp::load_scenes(pars->filenames, pars->scene_scale);
     st->scene_bvh = yapp::make_bvh(st->scene);
-    st->rigid_scene = yapp::make_rigid_scene(st->scene, st->scene_bvh);
+    st->simulation_scene =
+        yapp::make_simulation_scene(st->scene, st->scene_bvh);
 
     // initialize simulation
-    ysym::init_simulation(st->rigid_scene);
+    ysym::init_simulation(st->simulation_scene);
 
     // save init values
     st->initial_state.resize(st->scene->shapes.size());

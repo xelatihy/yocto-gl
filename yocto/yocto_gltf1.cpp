@@ -3117,7 +3117,7 @@ static inline void _save_textfile(
 //
 static inline bool _save_binfile(const std::string& filename,
     const std::vector<unsigned char>& bin, std::string& errmsg) {
-    auto f = fopen(filename.c_str(), "wt");
+    auto f = fopen(filename.c_str(), "wb");
     if (!f) {
         errmsg = "cannot write file " + filename;
         return false;

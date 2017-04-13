@@ -37,7 +37,7 @@
 /// COMPILATION:
 ///
 /// To use the library include the .h and compile the .cpp. To use this library
-/// as a header-only library, define YBVH_INLINE before including this file.
+/// as a header-only library, define YSYM_INLINE before including this file.
 ///
 /// The .cpp file depends on yocto_math.h.
 ///
@@ -151,7 +151,7 @@ YSYM_API void free_scene(scene* scn);
 /// - nverts: number of vertices
 /// - pos: vertex positions
 ///
-YSYM_API void set_body(scene* scn, int bid, const float3x4& frame,
+YSYM_API void set_rigid_body(scene* scn, int bid, const float3x4& frame,
     const float3& lin_vel, const float3& ang_vel, float density, int ntriangles,
     const int3* triangles, int nverts, const float3* pos);
 
@@ -165,7 +165,7 @@ YSYM_API void set_body(scene* scn, int bid, const float3x4& frame,
 /// Returns:
 /// - body frame
 ///
-YSYM_API float3x4 get_body_frame(const scene* scn, int bid);
+YSYM_API float3x4 get_rigid_body_frame(const scene* scn, int bid);
 
 ///
 /// Get a rigid body linear and angular velocity.
@@ -177,7 +177,7 @@ YSYM_API float3x4 get_body_frame(const scene* scn, int bid);
 /// Returns:
 /// - linear and angular velocity
 ///
-YSYM_API float3x2 get_body_velocity(const scene* scn, int bid);
+YSYM_API float3x2 get_rigid_body_velocity(const scene* scn, int bid);
 
 ///
 /// Sets a rigid body frame.
@@ -187,7 +187,7 @@ YSYM_API float3x2 get_body_velocity(const scene* scn, int bid);
 /// - bid: body index
 /// - frame: rigid body frame
 ///
-YSYM_API void set_body_frame(scene* scn, int bid, const float3x4& frame);
+YSYM_API void set_rigid_body_frame(scene* scn, int bid, const float3x4& frame);
 
 ///
 /// Sets a rigid body linear and angular velocity.
@@ -198,7 +198,7 @@ YSYM_API void set_body_frame(scene* scn, int bid, const float3x4& frame);
 /// - lin_vel: linear velocity
 /// - ang_vel: angular velocity
 ///
-YSYM_API void set_body_velocity(
+YSYM_API void set_rigid_body_velocity(
     scene* scn, int bid, const float3& lin_vel, const float3& ang_vel);
 
 ///
@@ -312,13 +312,29 @@ YSYM_API void compute_moments(int ntetra, const int4* tetra, int nverts,
 YSYM_API void init_simulation(scene* scn);
 
 ///
+/// Simulation parameters.
+///
+struct simulation_params {
+    /// delta time
+    float dt = 1 / 60.0f;
+    /// gravity
+    float3 gravity = {0.f, -9.82f, 0.f};
+    /// solver iterations
+    int solver_iterations = 20;
+    /// global linear velocity drag
+    float lin_drag = 0.01;
+    /// global angular velocity drag
+    float ang_drag = 0.01;
+};
+
+///
 /// Advance the simulation one step at a time.
 ///
 /// Paramaters:
 /// - scene: rigib body scene
 /// - dt: time step
 ///
-YSYM_API void advance_simulation(scene* scn, float dt);
+YSYM_API void advance_simulation(scene* scn, const simulation_params& params);
 
 }  // namespace
 

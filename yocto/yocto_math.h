@@ -27,6 +27,7 @@
 ///
 ///
 /// HISTORY:
+/// - v 0.9: bbox containment tests
 /// - v 0.8: remove std:array as base class for better control
 /// - v 0.7: doxygen comments
 /// - v 0.6: uniformed internal names
@@ -1465,6 +1466,24 @@ constexpr inline bbox<T, N> expand(const bbox<T, N>& a, const bbox<T, N>& b) {
         c[1][i] = max(a[1][i], b[1][i]);
     }
     return c;
+}
+
+/// check if a bounding box contains a point
+template <typename T, int N>
+constexpr inline bool contains(const bbox<T, N>& a, const vec<T, N>& b) {
+    for (auto i = 0; i < N; i++) {
+        if (a[0][i] > b[i] || a[1][i] < b[i]) return false;
+    }
+    return true;
+}
+
+/// check if a bounding box contains a bounding box
+template <typename T, int N>
+constexpr inline bool contains(const bbox<T, N>& a, const bbox<T, N>& b) {
+    for (auto i = 0; i < N; i++) {
+        if (a[0][i] > b[1][i] || a[1][i] < b[0][i]) return false;
+    }
+    return true;
 }
 
 /// same as expand()

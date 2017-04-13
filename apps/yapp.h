@@ -215,14 +215,15 @@ ytrace::scene* make_trace_scene(
     const scene* scene, const ybvh::scene* scene_bvh, int camera);
 
 //
-// Initialize a rigid body scene
+// Initialize a simulation scene
 //
-ysym::scene* make_rigid_scene(const scene* scene, ybvh::scene*& scene_bvh);
+ysym::scene* make_simulation_scene(const scene* scene, ybvh::scene*& scene_bvh);
 
 //
 // Step one time
 //
-void simulate_step(scene* scene, ysym::scene* rigid_scene, float dt);
+void simulate_step(scene* scene, ysym::scene* simulation_scene,
+    const ysym::simulation_params& params);
 
 struct params {
     // scene/image
@@ -243,9 +244,9 @@ struct params {
     int batch_size = 16;
     int nthreads = 0;
 
-    // rigid
+    // simulation
+    ysym::simulation_params simulation_params;
     std::string outfilename;
-    float dt = 1 / 60.0f;
     int nframes = 1000;
 
     // ui

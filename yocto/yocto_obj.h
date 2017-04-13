@@ -71,6 +71,8 @@
 ///
 ///
 /// HISTORY:
+/// - v 0.14: added extension to store tetrahedral meshes
+/// - v 0.13: started adding physics extension to materials
 /// - v 0.12: change texture loading by flipping uvs rather than images
 /// - v 0.11: use yocto_image for texture handling.
 /// - v 0.10: switch to .h/.cpp pair
@@ -140,6 +142,7 @@ using float3 = std::array<float, 3>;
 using float16 = std::array<float, 16>;
 using int2 = std::array<int, 2>;
 using int3 = std::array<int, 3>;
+using int4 = std::array<int, 4>;
 
 /// @name low level API
 /// @{
@@ -172,7 +175,8 @@ struct elem {
     enum struct etype : uint16_t {
         point = 1,  ///< lists of points
         line = 2,   ///< polylines
-        face = 3    ///< polygon faces
+        face = 3,   ///< polygon faces
+        tetra = 4,  ///< tetrahedrons
     };
 
     uint32_t start;  ///< starting vertex index
@@ -241,6 +245,10 @@ struct material {
     std::string bump_txt;  ///< bump map texture (heighfield)
     std::string disp_txt;  ///< displacement map texture (heighfield)
     std::string norm_txt;  ///< normal map texture
+
+    // physics extensions
+    float stiffness = 0;  ///< overall stiffness
+    float density = 0;    ///< density
 };
 
 ///
@@ -373,6 +381,7 @@ struct fl_primitives {
     std::vector<int> points;      ///< points
     std::vector<int2> lines;      ///< lines
     std::vector<int3> triangles;  ///< triangles
+    std::vector<int4> tetras;     ///< tetrahedrons
 
     // vertex data
     std::vector<float3> pos;       ///< per-vertex position (3 float)
@@ -414,6 +423,10 @@ struct fl_material {
     int kt_txt = -1;    ///< transmission texture index
     int rs_txt = -1;    ///< roughness texture index
     int norm_txt = -1;  ///< normal texture index
+
+    // physics extensions
+    float stiffness = 0.0f;  ///< stiffness
+    float density = 0.0f;    ///< density
 };
 
 ///
