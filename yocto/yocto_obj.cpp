@@ -253,6 +253,12 @@ YOBJ_API obj* load_obj(const std::string& filename, bool flip_texcoord) {
             g.elems.push_back({(uint32_t)g.verts.size(), elem::etype::point,
                 (uint16_t)cur_elems.size()});
             g.verts.insert(g.verts.end(), cur_elems.begin(), cur_elems.end());
+        } else if (tok_s == "t") {
+            _parse_vertlist(cur_tok, cur_ntok, cur_elems, vert_size);
+            auto& g = asset->objects.back().elems.back();
+            g.elems.push_back({(uint32_t)g.verts.size(), elem::etype::tetra,
+                (uint16_t)cur_elems.size()});
+            g.verts.insert(g.verts.end(), cur_elems.begin(), cur_elems.end());
         } else if (tok_s == "o") {
             auto name = (cur_ntok) ? cur_tok[0] : "";
             asset->objects.push_back({name, {}});
@@ -369,6 +375,10 @@ YOBJ_API std::vector<material> load_mtl(const std::string& filename) {
             materials.back().op = _parse_float(cur_tok);
         } else if (tok_s == "Ni") {
             materials.back().ior = _parse_float(cur_tok);
+        } else if (tok_s == "phys_stiffness") {
+            materials.back().stiffness = _parse_float(cur_tok);
+        } else if (tok_s == "phys_density") {
+            materials.back().density = _parse_float(cur_tok);
         } else if (tok_s == "map_Ke") {
             materials.back().ke_txt = (cur_ntok) ? cur_tok[0] : "";
         } else if (tok_s == "map_Ka") {
@@ -531,7 +541,7 @@ YOBJ_API void save_obj(
     for (auto& v : asset->radius) _fwrite_float(file, "vr", v);
 
     // save element data
-    const char* elem_labels[] = {"", "p", "l", "f"};
+    const char* elem_labels[] = {"", "p", "l", "f", "t"};
     for (auto& object : asset->objects) {
         _fwrite_str(file, "o", object.name, true);
         for (auto& elems : object.elems) {
@@ -573,6 +583,8 @@ YOBJ_API void save_mtl(
         _fwrite_float(file, "  Ns", mat.ns);
         _fwrite_float(file, "  d", mat.op);
         _fwrite_float(file, "  Ni", mat.ior);
+        _fwrite_float(file, "  phys_stiffness", mat.stiffness);
+        _fwrite_float(file, "  phys_density", mat.density);
         _fwrite_str(file, "  map_Ke", mat.ke_txt);
         _fwrite_str(file, "  map_Ka", mat.ke_txt);
         _fwrite_str(file, "  map_Kd", mat.kd_txt);
@@ -664,6 +676,8 @@ YOBJ_API fl_obj* flatten_obj(const obj* asset) {
         mat->ks = omat.ks;
         mat->kt = omat.kt;
         mat->rs = sqrt(2 / (omat.ns + 2));
+        mat->stiffness = omat.stiffness;
+        mat->density = omat.density;
         mat->ke_txt = _add_texture(omat.ke_txt, scene->textures);
         mat->kd_txt = _add_texture(omat.kd_txt, scene->textures);
         mat->ks_txt = _add_texture(omat.ks_txt, scene->textures);
@@ -722,6 +736,15 @@ YOBJ_API fl_obj* flatten_obj(const obj* asset) {
                              i < elem.start + elem.size; i++) {
                             prim->triangles.push_back({vert_ids[elem.start],
                                 vert_ids[i - 1], vert_ids[i]});
+                        }
+                    } break;
+                    case elem::etype::tetra: {
+                        for (auto i = elem.start; i < elem.start + elem.size;
+                             i += 4) {
+                            if (i + 3 >= vert_ids.size()) continue;
+                            prim->tetras.push_back(
+                                {vert_ids[i], vert_ids[i + 1], vert_ids[i + 2],
+                                    vert_ids[i + 3]});
                         }
                     } break;
                     default: { assert(false); }
@@ -811,6 +834,8 @@ YOBJ_API obj* unflatten_obj(const fl_obj* scene) {
         mat->ks = fl_mat->ks;
         mat->kt = fl_mat->kt;
         mat->ns = (fl_mat->rs) ? 2 / (fl_mat->rs * fl_mat->rs) - 2 : 1e6;
+        mat->stiffness = fl_mat->stiffness;
+        mat->density = fl_mat->density;
         mat->ke_txt = txt(scene, fl_mat->ke_txt);
         mat->kd_txt = txt(scene, fl_mat->kd_txt);
         mat->ks_txt = txt(scene, fl_mat->ks_txt);
@@ -854,53 +879,44 @@ YOBJ_API obj* unflatten_obj(const fl_obj* scene) {
             for (auto line : fl_prim->lines) {
                 elems->elems.push_back(
                     {(uint32_t)elems->verts.size(), elem::etype::line, 2});
-                elems->verts.push_back(
-                    {(fl_prim->pos.empty()) ? -1 : offset.pos + line[0],
-                        (fl_prim->texcoord.empty()) ? -1 :
-                                                      offset.texcoord + line[0],
-                        (fl_prim->norm.empty()) ? -1 : offset.norm + line[0],
-                        (fl_prim->color.empty()) ? -1 : offset.color + line[0],
-                        (fl_prim->radius.empty()) ? -1 :
-                                                    offset.radius + line[0]});
-                elems->verts.push_back(
-                    {(fl_prim->pos.empty()) ? -1 : offset.pos + line[1],
-                        (fl_prim->texcoord.empty()) ? -1 :
-                                                      offset.texcoord + line[1],
-                        (fl_prim->norm.empty()) ? -1 : offset.norm + line[1],
-                        (fl_prim->color.empty()) ? -1 : offset.color + line[1],
-                        (fl_prim->radius.empty()) ? -1 :
-                                                    offset.radius + line[1]});
+                for (auto vid : line) {
+                    elems->verts.push_back(
+                        {(fl_prim->pos.empty()) ? -1 : offset.pos + vid,
+                            (fl_prim->texcoord.empty()) ? -1 :
+                                                          offset.texcoord + vid,
+                            (fl_prim->norm.empty()) ? -1 : offset.norm + vid,
+                            (fl_prim->color.empty()) ? -1 : offset.color + vid,
+                            (fl_prim->radius.empty()) ? -1 :
+                                                        offset.radius + vid});
+                }
             }
             for (auto triangle : fl_prim->triangles) {
                 elems->elems.push_back(
                     {(uint32_t)elems->verts.size(), elem::etype::face, 3});
-                elems->verts.push_back({(fl_prim->pos.empty()) ?
-                                            -1 :
-                                            offset.pos + triangle[0],
-                    (fl_prim->texcoord.empty()) ? -1 :
-                                                  offset.texcoord + triangle[0],
-                    (fl_prim->norm.empty()) ? -1 : offset.norm + triangle[0],
-                    (fl_prim->color.empty()) ? -1 : offset.color + triangle[0],
-                    (fl_prim->radius.empty()) ? -1 :
-                                                offset.radius + triangle[0]});
-                elems->verts.push_back({(fl_prim->pos.empty()) ?
-                                            -1 :
-                                            offset.pos + triangle[1],
-                    (fl_prim->texcoord.empty()) ? -1 :
-                                                  offset.texcoord + triangle[1],
-                    (fl_prim->norm.empty()) ? -1 : offset.norm + triangle[1],
-                    (fl_prim->color.empty()) ? -1 : offset.color + triangle[1],
-                    (fl_prim->radius.empty()) ? -1 :
-                                                offset.radius + triangle[1]});
-                elems->verts.push_back({(fl_prim->pos.empty()) ?
-                                            -1 :
-                                            offset.pos + triangle[2],
-                    (fl_prim->texcoord.empty()) ? -1 :
-                                                  offset.texcoord + triangle[2],
-                    (fl_prim->norm.empty()) ? -1 : offset.norm + triangle[2],
-                    (fl_prim->color.empty()) ? -1 : offset.color + triangle[2],
-                    (fl_prim->radius.empty()) ? -1 :
-                                                offset.radius + triangle[2]});
+                for (auto vid : triangle) {
+                    elems->verts.push_back(
+                        {(fl_prim->pos.empty()) ? -1 : offset.pos + vid,
+                            (fl_prim->texcoord.empty()) ? -1 :
+                                                          offset.texcoord + vid,
+                            (fl_prim->norm.empty()) ? -1 : offset.norm + vid,
+                            (fl_prim->color.empty()) ? -1 : offset.color + vid,
+                            (fl_prim->radius.empty()) ? -1 :
+                                                        offset.radius + vid});
+                }
+            }
+            for (auto tet : fl_prim->tetras) {
+                elems->elems.push_back(
+                    {(uint32_t)elems->verts.size(), elem::etype::tetra, 4});
+                for (auto vid : tet) {
+                    elems->verts.push_back(
+                        {(fl_prim->pos.empty()) ? -1 : offset.pos + vid,
+                            (fl_prim->texcoord.empty()) ? -1 :
+                                                          offset.texcoord + vid,
+                            (fl_prim->norm.empty()) ? -1 : offset.norm + vid,
+                            (fl_prim->color.empty()) ? -1 : offset.color + vid,
+                            (fl_prim->radius.empty()) ? -1 :
+                                                        offset.radius + vid});
+                }
             }
         }
     }

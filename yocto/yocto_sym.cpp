@@ -89,12 +89,6 @@ struct scene {
     // simulation shapes -----------------------
     std::vector<shape*> shapes;  // shapes
 
-    // global simulation values ----------------
-    ym::vec3f gravity = {0.f, -9.82f, 0.f};  // gravity
-    float lin_drag = 0.01;                   // linear drag
-    float ang_drag = 0.01;                   // angular drag
-    int iterations = 20;                     // solver iterations
-
     // overlap callbacks -----------------------
     float overlap_max_radius = 0.25;  // maximum vertex overlap distance
     void* overlap_ctx = nullptr;      // overlap context
@@ -139,7 +133,7 @@ YSYM_API scene::~scene() {
 //
 // Public API.
 //
-YSYM_API void set_body(scene* scn, int bid, const float3x4& frame,
+YSYM_API void set_rigid_body(scene* scn, int bid, const float3x4& frame,
     const float3& lin_vel, const float3& ang_vel, float density, int ntriangles,
     const int3* triangles, int nverts, const float3* pos) {
     scn->shapes[bid]->frame = frame;
@@ -156,28 +150,28 @@ YSYM_API void set_body(scene* scn, int bid, const float3x4& frame,
 //
 // Public API.
 //
-YSYM_API float3x4 get_body_frame(const scene* scn, int bid) {
+YSYM_API float3x4 get_rigid_body_frame(const scene* scn, int bid) {
     return scn->shapes[bid]->frame;
 }
 
 //
 // Public API.
 //
-YSYM_API float3x2 get_body_velocity(const scene* scn, int bid) {
+YSYM_API float3x2 get_rigid_body_velocity(const scene* scn, int bid) {
     return {scn->shapes[bid]->lin_vel, scn->shapes[bid]->ang_vel};
 }
 
 //
 // Public API.
 //
-YSYM_API void set_body_frame(scene* scn, int bid, const float3x4& frame) {
+YSYM_API void set_rigid_body_frame(scene* scn, int bid, const float3x4& frame) {
     scn->shapes[bid]->frame = frame;
 }
 
 //
 // Public API.
 //
-YSYM_API void set_body_velocity(
+YSYM_API void set_rigid_body_velocity(
     scene* scn, int bid, const float3& lin_vel, const float3& ang_vel) {
     scn->shapes[bid]->lin_vel = lin_vel;
     scn->shapes[bid]->ang_vel = ang_vel;
@@ -417,8 +411,8 @@ static inline float _muldot(const ym::vec3f& v, const ym::mat3f& m) {
 //
 // Solve constraints with PGS.
 //
-YSYM_API void _solve_constraints(
-    scene* scn, std::vector<collision>& collisions, float dt) {
+YSYM_API void _solve_constraints(scene* scn, std::vector<collision>& collisions,
+    const simulation_params& params) {
     // initialize computation
     for (auto& col : collisions) {
         col.local_impulse = ym::zero3f;
@@ -456,7 +450,7 @@ YSYM_API void _solve_constraints(
     }
 
     // solve constraints
-    for (int i = 0; i < scn->iterations; i++) {
+    for (int i = 0; i < params.solver_iterations; i++) {
         for (auto& col : collisions) {
             auto shape1 = scn->shapes[col.shapes[0]];
             auto shape2 = scn->shapes[col.shapes[1]];
@@ -545,7 +539,7 @@ inline bool _isfinite(const ym::vec3f& v) {
 //
 // Advance simulation. Public API, see above.
 //
-YSYM_API void advance_simulation(scene* scn, float dt) {
+YSYM_API void advance_simulation(scene* scn, const simulation_params& params) {
     // update centroid and inertia
     for (auto shp : scn->shapes) {
         if (!shp->simulated) continue;
@@ -561,14 +555,14 @@ YSYM_API void advance_simulation(scene* scn, float dt) {
     _compute_collisions(scn, &collisions);
 
     // apply external forces
-    ym::vec3f gravity_impulse = scn->gravity * dt;
+    ym::vec3f gravity_impulse = ym::vec3f(params.gravity) * params.dt;
     for (auto shp : scn->shapes) {
         if (!shp->simulated) continue;
         shp->lin_vel += gravity_impulse;
     }
 
     // solve constraints
-    _solve_constraints(scn, collisions, dt);
+    _solve_constraints(scn, collisions, params);
 
     // copy for visualization
     scn->__collisions = collisions;
@@ -576,8 +570,8 @@ YSYM_API void advance_simulation(scene* scn, float dt) {
     // apply drag
     for (auto shp : scn->shapes) {
         if (!shp->simulated) continue;
-        shp->lin_vel *= 1 - scn->lin_drag;
-        shp->ang_vel *= 1 - scn->ang_drag;
+        shp->lin_vel *= 1 - params.lin_drag;
+        shp->ang_vel *= 1 - params.ang_drag;
     }
 
     // update position and velocity
@@ -593,8 +587,8 @@ YSYM_API void advance_simulation(scene* scn, float dt) {
         auto centroid =
             ym::rot(shp->frame) * shp->_centroid_local + ym::pos(shp->frame);
         // update centroid
-        centroid += shp->lin_vel * dt;
-        float angle = ym::length(shp->ang_vel) * dt;
+        centroid += shp->lin_vel * params.dt;
+        float angle = ym::length(shp->ang_vel) * params.dt;
         if (angle) {
             ym::vec3f axis = ym::normalize(shp->ang_vel);
             ym::rot(shp->frame) =

@@ -194,7 +194,10 @@ enum struct mtype {
     arealight01,
     arealight02,
     env00,
-    env01
+    env01,
+    sym_points01,
+    sym_lines01,
+    sym_cloth01,
 };
 
 ym::vec3f srgb(const ym::vec3f& k) {
@@ -302,6 +305,12 @@ yapp::material* make_material(mtype type) {
         case mtype::env00: return make_emission("env00", {1, 1, 1});
         case mtype::env01:
             return make_emission("env01", {1, 1, 1}, make_texture("env.hdr"));
+        case mtype::sym_points01:
+            return make_diffuse("sym_points01", {0.2f, 0.8f, 0.2f});
+        case mtype::sym_lines01:
+            return make_diffuse("sym_lines01", {0.2f, 0.8f, 0.2f});
+        case mtype::sym_cloth01:
+            return make_diffuse("sym_cloth01", {0.2f, 0.8f, 0.2f});
     }
 }
 
@@ -427,16 +436,18 @@ yapp::shape* make_lines(const std::string& name, yapp::material* mat, int num,
 }
 
 yapp::shape* make_points(const std::string& name, yapp::material* mat, int num,
-    const ym::frame3f& frame, const ym::vec3f& scale) {
+    int seed, const ym::frame3f& frame, const ym::vec3f& scale) {
     auto shape = new yapp::shape();
     shape->name = name;
     shape->mat = mat;
 
     ym::rng_pcg32 rn;
+    ym::init(&rn, seed, 0);
     yshape::make_points(num, shape->points, shape->pos, shape->norm,
         shape->texcoord, shape->radius,
         [&rn, scale](float u) {
-            return scale * ym::vec3f{next1f(&rn), next1f(&rn), next1f(&rn)};
+            return scale * ym::vec3f{-1 + 2 * next1f(&rn), -1 + 2 * next1f(&rn),
+                               -1 + 2 * next1f(&rn)};
         },
         [](float u) {
             return ym::vec3f{0, 0, 1};
@@ -475,6 +486,8 @@ enum struct stype {
     lines02,
     lines03,
     points01,
+    points02,
+    points03,
     pointlight01,
     arealight01,
     arealight02,
@@ -498,6 +511,11 @@ enum struct stype {
     simple_random32,
     matball01_floor02,
     matball02_floor02,
+    sym_points01,
+    sym_points02,
+    sym_quad01,
+    sym_cloth01,
+    sym_cloth02,
 };
 
 std::vector<yapp::shape*> make_shapes(stype st, mtype mt = mtype::def,
@@ -590,7 +608,19 @@ std::vector<yapp::shape*> make_shapes(stype st, mtype mt = mtype::def,
         case stype::points01: {
             auto mat = (mt == mtype::def) ? make_material(mtype::points01) :
                                             make_material(mt);
-            return {make_points("points01_" + mat->name, mat, 64 * 64 * 16,
+            return {make_points("points01_" + mat->name, mat, 64 * 64 * 16, 1,
+                frame, ym::vec3f{0.5f, 0.5f, 0.5f} * scale)};
+        } break;
+        case stype::points02: {
+            auto mat = (mt == mtype::def) ? make_material(mtype::points01) :
+                                            make_material(mt);
+            return {make_points("points01_" + mat->name, mat, 64 * 64 * 16, 17,
+                frame, ym::vec3f{0.5f, 0.5f, 0.5f} * scale)};
+        } break;
+        case stype::points03: {
+            auto mat = (mt == mtype::def) ? make_material(mtype::points01) :
+                                            make_material(mt);
+            return {make_points("points01_" + mat->name, mat, 64 * 64 * 16, 121,
                 frame, ym::vec3f{0.5f, 0.5f, 0.5f} * scale)};
         } break;
         case stype::simple_points: {
@@ -753,6 +783,51 @@ std::vector<yapp::shape*> make_shapes(stype st, mtype mt = mtype::def,
             return make_shapes(stype::floor01) +
                    make_shapes(
                        stype::matball02, mt, make_frame({0, 0.5f, 0}), scale);
+        } break;
+        case stype::sym_points01: {
+            auto mat = (mt == mtype::def) ? mtype::sym_points01 : mt;
+            return make_shapes(stype::points01, mat,
+                       make_frame({-1.25f, 0.5f, 0}), scale) +
+                   make_shapes(stype::points02, mat,
+                       make_frame({0.0f, 0.5f, 0}), scale) +
+                   make_shapes(stype::points03, mat,
+                       make_frame({1.25f, 0.5f, 0}), scale);
+        } break;
+        case stype::sym_points02: {
+            auto mat = (mt == mtype::def) ? mtype::sym_points01 : mt;
+            return make_shapes(stype::simple_objs_notxt) +
+                   make_shapes(stype::points01, mat,
+                       make_frame({-1.25f, 1.5f, 0}), scale) +
+                   make_shapes(stype::points02, mat,
+                       make_frame({0.0f, 1.5f, 0}), scale) +
+                   make_shapes(stype::points03, mat,
+                       make_frame({1.25f, 1.5f, 0}), scale);
+        } break;
+        case stype::sym_quad01: {
+            auto mat = (mt == mtype::def) ? make_material(mtype::sym_cloth01) :
+                                            make_material(mt);
+            return {make_shape("tess_quad01_" + mat->name, mat, 6,
+                yshape::stdsurface_type::uvquad, frame,
+                ym::vec3f{0.5f, 0.5f, 0.5f} * scale)};
+        } break;
+        case stype::sym_cloth01: {
+            auto mat = (mt == mtype::def) ? mtype::sym_cloth01 : mt;
+            return make_shapes(stype::sym_quad01, mat,
+                       make_frame({-1.25f, 0.5f, 0}), scale) +
+                   make_shapes(stype::sym_quad01, mat,
+                       make_frame({0.0f, 0.5f, 0}), scale) +
+                   make_shapes(stype::sym_quad01, mat,
+                       make_frame({1.25f, 0.5f, 0}), scale);
+        } break;
+        case stype::sym_cloth02: {
+            auto mat = (mt == mtype::def) ? mtype::sym_cloth01 : mt;
+            return make_shapes(stype::simple_objs_notxt) +
+                   make_shapes(stype::sym_quad01, mat,
+                       make_frame({-1.25f, 1.5f, 0}, {-90, 0, 0}), scale) +
+                   make_shapes(stype::sym_quad01, mat,
+                       make_frame({0.0f, 1.5f, 0.10f}, {-90, 0, 0}), scale) +
+                   make_shapes(stype::sym_quad01, mat,
+                       make_frame({1.25f, 1.5f, 0.15f}, {-90, 0, 0}), scale);
         } break;
     }
     return {};
@@ -1389,12 +1464,21 @@ int main(int argc, char* argv[]) {
         {"copper01", mtype::copper01}, {"copper02", mtype::copper02},
         {"silver01", mtype::silver01}, {"silver02", mtype::silver02}};
 
+    // sym scenes ------------------------------
+    auto sym_stypes = std::vector<std::pair<std::string, stype>>{
+        {"sym_points01", stype::sym_points01},
+        {"sym_points02", stype::sym_points02},
+        {"sym_cloth01", stype::sym_cloth01},
+        {"sym_cloth02", stype::sym_cloth02},
+    };
+
     // put together scene names
     auto scene_names = std::vector<std::string>{"all"};
     for (auto stype : stypes) scene_names += stype.first;
     for (auto mbtype : mbtypes)
         for (auto mtype : mtypes)
             scene_names += mbtype.first + "_" + mtype.first;
+    for (auto sym_stype : sym_stypes) scene_names += sym_stype.first;
     scene_names +=
         {"envmap", "cornell_box", "rigid", "textures", "matball_test"};
 
@@ -1509,6 +1593,27 @@ int main(int argc, char* argv[]) {
             save_scene("rigid_01.obj", dirname, make_rigid_scene(0));
             save_scene("rigid_02.obj", dirname, make_rigid_scene(1));
             // save_scene("rigid_03.obj", dirname, make_rigid_scene(2));
+        });
+    }
+
+    // simulation scenes ------------------------
+    auto sym_ftype = stype::floor02;
+    for (auto sym_stype : sym_stypes) {
+        if (scene != "all" && scene != sym_stype.first) continue;
+        ycmd::thread_pool_async([=] {
+            printf("generating %s scenes ...\n", sym_stype.first.c_str());
+            save_scene(sym_stype.first + "_pointlight.obj", dirname,
+                make_scene(make_simple_cameras(),
+                    make_shapes(sym_ftype) + make_shapes(sym_stype.second) +
+                        make_shapes(stype::simple_pointlights)));
+            save_scene(sym_stype.first + "_arealight.obj", dirname,
+                make_scene(make_simple_cameras(),
+                    make_shapes(sym_ftype) + make_shapes(sym_stype.second) +
+                        make_shapes(stype::simple_arealights01)));
+            save_scene(sym_stype.first + "_envlight.obj", dirname,
+                make_scene(make_simple_cameras(),
+                    make_shapes(sym_ftype) + make_shapes(sym_stype.second),
+                    make_environments(etype::env01)));
         });
     }
 

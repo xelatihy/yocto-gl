@@ -919,9 +919,10 @@ ytrace::scene* make_trace_scene(
     return trace_scene;
 }
 
-ysym::scene* make_rigid_scene(const scene* scene, ybvh::scene*& scene_bvh) {
+ysym::scene* make_simulation_scene(
+    const scene* scene, ybvh::scene*& scene_bvh) {
     // allocate scene
-    auto rigid_scene = ysym::make_scene((int)scene->shapes.size());
+    auto simulation_scene = ysym::make_scene((int)scene->shapes.size());
 
     // add each shape
     auto sid = 0;
@@ -932,16 +933,16 @@ ysym::scene* make_rigid_scene(const scene* scene, ybvh::scene*& scene_bvh) {
                 !shape->triangles.empty()) ?
                 1.0f :
                 0.0f;
-        ysym::set_body(rigid_scene, sid++, shape->frame, {0, 0, 0}, {0, 0, 0},
-            density, (int)shape->triangles.size(), shape->triangles.data(),
-            (int)shape->pos.size(), shape->pos.data());
+        ysym::set_rigid_body(simulation_scene, sid++, shape->frame, {0, 0, 0},
+            {0, 0, 0}, density, (int)shape->triangles.size(),
+            shape->triangles.data(), (int)shape->pos.size(), shape->pos.data());
     }
 
     // set up final bvh
     scene_bvh = make_bvh(scene);
 
     // setup collisions
-    ysym::set_overlap_callbacks(rigid_scene, scene_bvh,
+    ysym::set_overlap_callbacks(simulation_scene, scene_bvh,
         [](auto ctx, std::vector<ysym::int2>* overlaps) {
             auto scene_bvh = (ybvh::scene*)ctx;
             ybvh::overlap_shape_bounds(
@@ -965,22 +966,24 @@ ysym::scene* make_rigid_scene(const scene* scene, ybvh::scene*& scene_bvh) {
         [](auto ctx, auto rigid_scene, int nshapes) {
             auto scene_bvh = (ybvh::scene*)ctx;
             for (auto sid = 0; sid < nshapes; sid++) {
-                ybvh::set_shape_frame(
-                    scene_bvh, sid, ysym::get_body_frame(rigid_scene, sid));
+                ybvh::set_shape_frame(scene_bvh, sid,
+                    ysym::get_rigid_body_frame(rigid_scene, sid));
             }
             ybvh::refit_bvh(scene_bvh);
         });
 
     // initialize
-    ysym::init_simulation(rigid_scene);
+    ysym::init_simulation(simulation_scene);
 
-    return rigid_scene;
+    return simulation_scene;
 }
 
-void simulate_step(scene* scene, ysym::scene* rigid_scene, float dt) {
-    ysym::advance_simulation(rigid_scene, dt);
+void simulate_step(scene* scene, ysym::scene* simulation_scene,
+    const ysym::simulation_params& params) {
+    ysym::advance_simulation(simulation_scene, params);
     for (auto sid = 0; sid < scene->shapes.size(); sid++) {
-        scene->shapes[sid]->frame = ysym::get_body_frame(rigid_scene, sid);
+        scene->shapes[sid]->frame =
+            ysym::get_rigid_body_frame(simulation_scene, sid);
     }
 }
 
@@ -1070,7 +1073,7 @@ params* init_params(const std::string& help, int argc, char** argv,
     }
 
     if (sym_params) {
-        pars->dt = ycmd::parse_optf(
+        pars->simulation_params.dt = ycmd::parse_optf(
             parser, "--delta_time", "-dt", "delta time", 1 / 60.0f);
         pars->nframes = ycmd::parse_opti(
             parser, "--nframes", "-n", "number of frames", 1000);
