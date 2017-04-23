@@ -742,7 +742,7 @@ static inline ym::vec3f _eval_fresnel_dielectric(
     float cosw, const ym::vec3f& eta_) {
     auto eta = eta_;
     if (cosw < 0) {
-        eta = 1 / eta;
+        eta = 1.0f / eta;
         cosw = -cosw;
     }
 

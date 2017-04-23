@@ -23,10 +23,13 @@
 /// COMPILATION:
 ///
 /// This library can only be used as a header only library in C++ since it uses
-/// templates for its basic types.
+/// templates for its basic types. Some templated types and functions use
+/// specialization for easier access and simpler compilation. Specialization
+/// can be disabled by defining YM_NO_SPECIALIZATION.
 ///
 ///
 /// HISTORY:
+/// - v 0.10: specialize some type and functions
 /// - v 0.9: bbox containment tests
 /// - v 0.8: remove std:array as base class for better control
 /// - v 0.7: doxygen comments
@@ -132,9 +135,13 @@ const float pif = 3.14159265f;
 const double pi = 3.1415926535897932384626433832795;
 
 /// shortcat for float max value
-const auto maxf = std::numeric_limits<float>::max();
+constexpr const auto flt_max = std::numeric_limits<float>::max();
+/// shortcat for float min value
+constexpr const auto flt_min = std::numeric_limits<float>::lowest();
 /// shortcat for int max value
-const auto maxi = std::numeric_limits<int>::max();
+constexpr const auto int_max = std::numeric_limits<int>::max();
+/// shortcat for int min value
+constexpr const auto int_min = std::numeric_limits<int>::min();
 
 /// @}
 
@@ -217,19 +224,158 @@ struct vec {
     /// element access
     constexpr const T& operator[](int i) const { return v[i]; }
 
-    /// iteration
-    constexpr T* begin() { return v; };
-    /// iteration
-    constexpr const T* begin() const { return v; };
-    /// iteration
-    constexpr T* end() { return v + N; };
-    /// iteration
-    constexpr const T* end() const { return v + N; };
-
-   private:
     /// element data
     T v[N];
 };
+
+#ifndef YM_NO_SPECIALIZATION
+
+///
+/// Specialization of vectors for 1 component and float coordinates.
+///
+template <>
+struct vec<float, 1> {
+    /// size
+    constexpr static const int N = 1;
+    /// type
+    using T = float;
+
+    /// default constructor
+    constexpr vec() : x{0} {}
+    /// element constructor
+    constexpr vec(T x) : x{x} {}
+
+    /// copy constructor from std::array
+    constexpr vec(const std::array<T, N>& vv) : x{vv[0]} {}
+    /// conversion to std::array
+    constexpr operator std::array<T, N>() const { return {x}; }
+
+    /// element access
+    constexpr T& operator[](int i) { return v[i]; }
+    /// element access
+    constexpr const T& operator[](int i) const { return v[i]; }
+
+    /// element data
+    union {
+        struct {
+            T v[N];
+        };
+        struct {
+            T x;
+        };
+    };
+};
+
+///
+/// Specialization of vectors for 2 components and float coordinates.
+///
+template <>
+struct vec<float, 2> {
+    /// size
+    constexpr static const int N = 2;
+    /// type
+    using T = float;
+
+    /// default constructor
+    constexpr vec() : x{0}, y{0} {}
+    /// element constructor
+    constexpr vec(T x, T y) : x{x}, y{y} {}
+
+    /// copy constructor from std::array
+    constexpr vec(const std::array<T, N>& vv) : x{vv[0]}, y{vv[1]} {}
+    /// conversion to std::array
+    constexpr operator std::array<T, N>() const { return {x, y}; }
+
+    /// element access
+    constexpr T& operator[](int i) { return v[i]; }
+    /// element access
+    constexpr const T& operator[](int i) const { return v[i]; }
+
+    /// element data
+    union {
+        struct {
+            T v[N];
+        };
+        struct {
+            T x, y;
+        };
+    };
+};
+
+///
+/// Specialization of vectors for 3 components and float coordinates.
+///
+template <>
+struct vec<float, 3> {
+    /// size
+    constexpr static const int N = 3;
+    /// type
+    using T = float;
+
+    /// default constructor
+    constexpr vec() : x{0}, y{0}, z{0} {}
+    /// element constructor
+    constexpr vec(T x, T y, T z) : x{x}, y{y}, z{z} {}
+
+    /// copy constructor from std::array
+    constexpr vec(const std::array<T, N>& vv) : x{vv[0]}, y{vv[1]}, z{vv[2]} {}
+    /// conversion to std::array
+    constexpr operator std::array<T, N>() const { return {x, y, z}; }
+
+    /// element access
+    constexpr T& operator[](int i) { return v[i]; }
+    /// element access
+    constexpr const T& operator[](int i) const { return v[i]; }
+
+    /// element data
+    union {
+        struct {
+            T v[N];
+        };
+        struct {
+            T x, y, z;
+        };
+    };
+};
+
+///
+/// Specialization of vectors for 4 components and float coordinates.
+///
+template <>
+struct vec<float, 4> {
+    /// size
+    constexpr static const int N = 4;
+    /// type
+    using T = float;
+
+    /// default constructor
+    constexpr vec() : x{0}, y{0}, z{0}, w{0} {}
+    /// element constructor
+    constexpr vec(T x, T y, T z, T w) : x{x}, y{y}, z{z}, w{w} {}
+
+    /// copy constructor from std::array
+    constexpr vec(const std::array<T, N>& vv)
+        : x{vv[0]}, y{vv[1]}, z{vv[2]}, w{vv[3]} {}
+    /// conversion to std::array
+    constexpr operator std::array<T, N>() const { return {x, y, z, w}; }
+
+    /// element access
+    constexpr T& operator[](int i) { return v[i]; }
+    /// element access
+    constexpr const T& operator[](int i) const { return v[i]; }
+
+    /// element data
+    union {
+        struct {
+            T v[N];
+        };
+        struct {
+            T x, y, z, w;
+        };
+    };
+};
+
+#endif
 
 /// @}
 
@@ -275,6 +421,12 @@ constexpr inline vec<T, N> zero_vec() {
     return c;
 }
 
+/// Sepcialization of Initialize a zero vector.
+template <>
+constexpr inline vec3f zero_vec() {
+    return {0, 0, 0};
+}
+
 /// @}
 
 /// @name vector constants
@@ -300,7 +452,36 @@ const auto zero4i = zero_vec<int, 4>();
 
 /// @}
 
-/// @name vector operations
+/// @name vector iteration functions
+/// @{
+
+/// iteration support
+template <typename T, int N>
+constexpr inline T* begin(vec<T, N>& a) {
+    return a.v;
+}
+
+/// iteration support
+template <typename T, int N>
+constexpr inline const T* begin(const vec<T, N>& a) {
+    return a.v;
+}
+
+/// iteration support
+template <typename T, int N>
+constexpr inline T* end(vec<T, N>& a) {
+    return a.v + N;
+}
+
+/// iteration support
+template <typename T, int N>
+constexpr inline const T* end(const vec<T, N>& a) {
+    return a.v + N;
+}
+
+/// @}
+
+/// @name vector logical operations
 /// @{
 
 /// vector operator ==
@@ -317,12 +498,60 @@ constexpr inline bool operator!=(const vec<T, N>& a, const vec<T, N>& b) {
     return !(a == b);
 }
 
+/// @}
+
+#ifndef YM_NO_SPECIALIZATION
+
+/// @name specialization of vector logical operations
+/// @{
+
+/// vector operator ==
+template <>
+constexpr inline bool operator==(const vec2f& a, const vec2f& b) {
+    return a.x == b.x && a.y == b.y;
+}
+
+/// vector operator !=
+template <>
+constexpr inline bool operator!=(const vec2f& a, const vec2f& b) {
+    return a.x != b.x || a.y != b.y;
+}
+
+/// vector operator ==
+template <>
+constexpr inline bool operator==(const vec3f& a, const vec3f& b) {
+    return a.x == b.x && a.y == b.y && a.z == b.z;
+}
+
+/// vector operator !=
+template <>
+constexpr inline bool operator!=(const vec3f& a, const vec3f& b) {
+    return a.x != b.x || a.y != b.y || a.z != b.z;
+}
+
+/// vector operator ==
+template <>
+constexpr inline bool operator==(const vec4f& a, const vec4f& b) {
+    return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
+}
+
+/// vector operator !=
+template <>
+constexpr inline bool operator!=(const vec4f& a, const vec4f& b) {
+    return a.x != b.x || a.y != b.y || a.z != b.z || a.w != b.w;
+}
+
+/// @}
+
+#endif
+
+/// @name vector arithmetic operations
+/// @{
+
 /// vector operator +
 template <typename T, int N>
 constexpr inline vec<T, N> operator+(const vec<T, N>& a) {
-    vec<T, N> c;
-    for (auto i = 0; i < N; i++) c[i] = +a[i];
-    return c;
+    return a;
 }
 
 /// vector operator -
@@ -390,12 +619,206 @@ constexpr inline vec<T, N> operator/(const vec<T, N>& a, const T b) {
 }
 
 /// vector operator /
-template <typename T1, typename T, int N>
-constexpr inline vec<T, N> operator/(const T1& a, const vec<T, N>& b) {
+template <typename T, int N>
+constexpr inline vec<T, N> operator/(const T a, const vec<T, N>& b) {
     vec<T, N> c;
     for (auto i = 0; i < N; i++) c[i] = a / b[i];
     return c;
 }
+
+/// @}
+
+#ifndef YM_NO_SPECIALIZATION
+
+/// @name specialization of vector arithmetic operations
+/// @{
+
+/// vector operator +
+template <>
+constexpr inline vec2f operator+(const vec2f& a) {
+    return a;
+}
+
+/// vector operator -
+template <>
+constexpr inline vec2f operator-(const vec2f& a) {
+    return {-a.x, -a.y};
+}
+
+/// vector operator +
+template <>
+constexpr inline vec2f operator+(const vec2f& a, const vec2f& b) {
+    return {a.x + b.x, a.y + b.y};
+}
+
+/// vector operator -
+template <>
+constexpr inline vec2f operator-(const vec2f& a, const vec2f& b) {
+    return {a.x - b.x, a.y - b.y};
+}
+
+/// vector operator *
+template <>
+constexpr inline vec2f operator*(const vec2f& a, const vec2f& b) {
+    return {a.x * b.x, a.y * b.y};
+}
+
+/// vector operator *
+template <>
+constexpr inline vec2f operator*(const vec2f& a, const float b) {
+    return {a.x * b, a.y * b};
+}
+
+/// vector operator *
+template <>
+constexpr inline vec2f operator*(const float a, const vec2f& b) {
+    return {a * b.x, a * b.y};
+}
+
+/// vector operator /
+template <>
+constexpr inline vec2f operator/(const vec2f& a, const vec2f& b) {
+    return {a.x / b.x, a.y / b.y};
+}
+
+/// vector operator /
+template <>
+constexpr inline vec2f operator/(const vec2f& a, const float b) {
+    return {a.x / b, a.y / b};
+}
+
+/// vector operator /
+template <>
+constexpr inline vec2f operator/(const float a, const vec2f& b) {
+    return {a / b.x, a / b.y};
+}
+
+/// vector operator +
+template <>
+constexpr inline vec3f operator+(const vec3f& a) {
+    return a;
+}
+
+/// vector operator -
+template <>
+constexpr inline vec3f operator-(const vec3f& a) {
+    return {-a.x, -a.y, -a.z};
+}
+
+/// vector operator +
+template <>
+constexpr inline vec3f operator+(const vec3f& a, const vec3f& b) {
+    return {a.x + b.x, a.y + b.y, a.z + b.z};
+}
+
+/// vector operator -
+template <>
+constexpr inline vec3f operator-(const vec3f& a, const vec3f& b) {
+    return {a.x - b.x, a.y - b.y, a.z - b.z};
+}
+
+/// vector operator *
+template <>
+constexpr inline vec3f operator*(const vec3f& a, const vec3f& b) {
+    return {a.x * b.x, a.y * b.y, a.z * b.z};
+}
+
+/// vector operator *
+template <>
+constexpr inline vec3f operator*(const vec3f& a, const float b) {
+    return {a.x * b, a.y * b, a.z * b};
+}
+
+/// vector operator *
+template <>
+constexpr inline vec3f operator*(const float a, const vec3f& b) {
+    return {a * b.x, a * b.y, a * b.z};
+}
+
+/// vector operator /
+template <>
+constexpr inline vec3f operator/(const vec3f& a, const vec3f& b) {
+    return {a.x / b.x, a.y / b.y, a.z / b.z};
+}
+
+/// vector operator /
+template <>
+constexpr inline vec3f operator/(const vec3f& a, const float b) {
+    return {a.x / b, a.y / b, a.z / b};
+}
+
+/// vector operator /
+template <>
+constexpr inline vec3f operator/(const float a, const vec3f& b) {
+    return {a / b.x, a / b.y, a / b.z};
+}
+
+/// vector operator +
+template <>
+constexpr inline vec4f operator+(const vec4f& a) {
+    return a;
+}
+
+/// vector operator -
+template <>
+constexpr inline vec4f operator-(const vec4f& a) {
+    return {-a.x, -a.y, -a.z, -a.w};
+}
+
+/// vector operator +
+template <>
+constexpr inline vec4f operator+(const vec4f& a, const vec4f& b) {
+    return {a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w};
+}
+
+/// vector operator -
+template <>
+constexpr inline vec4f operator-(const vec4f& a, const vec4f& b) {
+    return {a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w};
+}
+
+/// vector operator *
+template <>
+constexpr inline vec4f operator*(const vec4f& a, const vec4f& b) {
+    return {a.x * b.x, a.y * b.y, a.z * b.z, a.w * b.w};
+}
+
+/// vector operator *
+template <>
+constexpr inline vec4f operator*(const vec4f& a, const float b) {
+    return {a.x * b, a.y * b, a.z * b, a.w * b};
+}
+
+/// vector operator *
+template <>
+constexpr inline vec4f operator*(const float a, const vec4f& b) {
+    return {a * b.x, a * b.y, a * b.z, a * b.w};
+}
+
+/// vector operator /
+template <>
+constexpr inline vec4f operator/(const vec4f& a, const vec4f& b) {
+    return {a.x / b.x, a.y / b.y, a.z / b.z, a.w / b.w};
+}
+
+/// vector operator /
+template <>
+constexpr inline vec4f operator/(const vec4f& a, const float b) {
+    return {a.x / b, a.y / b, a.z / b, a.w / b};
+}
+
+/// vector operator /
+template <>
+constexpr inline vec4f operator/(const float a, const vec4f& b) {
+    return {a / b.x, a / b.y, a / b.z, a / b.w};
+}
+
+/// @}
+
+#endif
+
+/// @name vector arithmetic assignment operations
+/// @{
 
 /// vector operator +=
 template <typename T, int N>
@@ -433,6 +856,11 @@ constexpr inline vec<T, N>& operator/=(vec<T, N>& a, const T b) {
     return a = a / b;
 }
 
+/// @}
+
+/// @name vector product operations
+/// @{
+
 /// vector dot product
 template <typename T, int N>
 constexpr inline T dot(const vec<T, N>& a, const vec<T, N>& b) {
@@ -441,10 +869,64 @@ constexpr inline T dot(const vec<T, N>& a, const vec<T, N>& b) {
     return c;
 }
 
+/// vector cross product (2d)
+template <typename T>
+constexpr inline T cross(const vec<T, 2>& a, const vec<T, 2>& b) {
+    return a[0] * b[1] - a[1] * b[0];
+}
+
+/// vector cross product (3d)
+template <typename T>
+constexpr inline vec<T, 3> cross(const vec<T, 3>& a, const vec<T, 3>& b) {
+    return {a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2],
+        a[0] * b[1] - a[1] * b[0]};
+}
+
+/// @}
+
+/// @name specialization of vector product operations
+/// @{
+
+/// vector dot product
+template <>
+constexpr inline float dot(const vec2f& a, const vec2f& b) {
+    return a.x * b.x + a.y * b.y;
+}
+
+/// vector dot product
+template <>
+constexpr inline float dot(const vec3f& a, const vec3f& b) {
+    return a.x * b.x + a.y * b.y + a.z * b.z;
+}
+
+/// vector dot product
+template <>
+constexpr inline float dot(const vec4f& a, const vec4f& b) {
+    return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
+}
+
+/// vector cross product (2d)
+template <>
+constexpr inline float cross(const vec2f& a, const vec2f& b) {
+    return a.x * b.y - a.y * b.x;
+}
+
+/// vector cross product (3d)
+template <>
+constexpr inline vec3f cross(const vec3f& a, const vec3f& b) {
+    return {
+        a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x};
+}
+
+/// @}
+
+/// @name vector geometric operations
+/// @{
+
 /// vector length
 template <typename T, int N>
 constexpr inline T length(const vec<T, N>& a) {
-    return sqrt(dot(a, a));
+    return std::sqrt(dot(a, a));
 }
 
 /// vector length squared
@@ -471,19 +953,6 @@ constexpr inline T dist(const vec<T, N>& a, const vec<T, N>& b) {
 template <typename T, int N>
 constexpr inline T distsqr(const vec<T, N>& a, const vec<T, N>& b) {
     return lengthsqr(a - b);
-}
-
-/// vector cross product (2d)
-template <typename T>
-constexpr inline T cross(const vec<T, 2>& a, const vec<T, 2>& b) {
-    return a[0] * b[1] - a[1] * b[0];
-}
-
-/// vector cross product (3d)
-template <typename T>
-constexpr inline vec<T, 3> cross(const vec<T, 3>& a, const vec<T, 3>& b) {
-    return {a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2],
-        a[0] * b[1] - a[1] * b[0]};
 }
 
 /// angle between normalized vectors
@@ -559,6 +1028,11 @@ constexpr inline vec<T, N> clamplen(const vec<T, N> x, T1 max) {
     auto l = length(x);
     return (l > (T)max) ? x * (T)max / l : x;
 }
+
+/// @}
+
+/// @name vector element comparison operations
+/// @{
 
 /// index of the min vector element
 template <typename T, int N>
@@ -664,19 +1138,180 @@ struct mat {
     /// element access
     constexpr const V& operator[](int i) const { return v[i]; }
 
-    /// iteration
-    constexpr V* begin() { return v; };
-    /// iteration
-    constexpr const V* begin() const { return v; };
-    /// iteration
-    constexpr V* end() { return v + N; };
-    /// iteration
-    constexpr const V* end() const { return v + N; };
-
-   private:
     /// element data
     V v[M];
 };
+
+#ifndef YM_NO_SPECIALIZATION
+
+///
+/// Specialization for 2x2 float matrices.
+///
+template <>
+struct mat<float, 2, 2> {
+    /// size
+    constexpr static const int N = 2, M = 2;
+    /// type
+    using T = float;
+
+    /// column data type
+    using V = vec<T, N>;
+
+    /// default constructor
+    constexpr mat() : x{0, 0}, y{0, 0} {}
+
+    /// list constructor
+    constexpr mat(const V& x, const V& y) : x(x), y(y) {}
+
+    /// conversion from std::array
+    constexpr mat(const std::array<std::array<T, N>, M>& vv)
+        : x{vv[0]}, y{vv[1]} {}
+
+    /// conversion to std::array
+    constexpr operator std::array<std::array<T, N>, M>() const {
+        return {x, y};
+    }
+
+    /// conversion from flattened std::array
+    constexpr mat(const std::array<T, N * M>& vv)
+        : x{vv[0], vv[1]}, y{vv[2], vv[3]} {}
+
+    /// conversion to flattened std::array
+    constexpr operator std::array<T, N * M>() const {
+        return {x.x, x.y, y.x, y.y};
+    }
+
+    /// element access
+    constexpr V& operator[](int i) { return v[i]; }
+    /// element access
+    constexpr const V& operator[](int i) const { return v[i]; }
+
+    /// element data
+    union {
+        struct {
+            V v[M];
+        };
+        struct {
+            V x, y;
+        };
+    };
+};
+
+///
+/// Specialization for 3x3 float matrices.
+///
+template <>
+struct mat<float, 3, 3> {
+    /// size
+    constexpr static const int N = 3, M = 3;
+    /// type
+    using T = float;
+
+    /// column data type
+    using V = vec<T, N>;
+
+    /// default constructor
+    constexpr mat() : x{0, 0, 0}, y{0, 0, 0}, z{0, 0, 0} {}
+
+    /// list constructor
+    constexpr mat(const V& x, const V& y, const V& z) : x(x), y(y), z(z) {}
+
+    /// conversion from std::array
+    constexpr mat(const std::array<std::array<T, N>, M>& vv)
+        : x{vv[0]}, y{vv[1]}, z{vv[2]} {}
+
+    /// conversion to std::array
+    constexpr operator std::array<std::array<T, N>, M>() const {
+        return {x, y, z};
+    }
+
+    /// conversion from flattened std::array
+    constexpr mat(const std::array<T, N * M>& vv)
+        : x{vv[0], vv[1], vv[2]}
+        , y{vv[3], vv[4], vv[5]}
+        , z{vv[6], vv[7], vv[8]} {}
+
+    /// conversion to flattened std::array
+    constexpr operator std::array<T, N * M>() const {
+        return {x.x, x.y, x.z, y.x, y.y, y.z, z.x, z.y, z.z};
+    }
+
+    /// element access
+    constexpr V& operator[](int i) { return v[i]; }
+    /// element access
+    constexpr const V& operator[](int i) const { return v[i]; }
+
+    /// element data
+    union {
+        struct {
+            V v[M];
+        };
+        struct {
+            V x, y, z;
+        };
+    };
+};
+
+///
+/// Specialization for 4x4 float matrices.
+///
+template <>
+struct mat<float, 4, 4> {
+    /// size
+    constexpr static const int N = 4, M = 4;
+    /// type
+    using T = float;
+
+    /// column data type
+    using V = vec<T, N>;
+
+    /// default constructor
+    constexpr mat()
+        : x{0, 0, 0, 0}, y{0, 0, 0, 0}, z{0, 0, 0, 0}, w{0, 0, 0, 0} {}
+
+    /// list constructor
+    constexpr mat(const V& x, const V& y, const V& z, const V& w)
+        : x(x), y(y), z(z), w(w) {}
+
+    /// conversion from std::array
+    constexpr mat(const std::array<std::array<T, N>, M>& vv)
+        : x{vv[0]}, y{vv[1]}, z{vv[2]}, w{vv[3]} {}
+
+    /// conversion to std::array
+    constexpr operator std::array<std::array<T, N>, M>() const {
+        return {x, y, z, w};
+    }
+
+    /// conversion from flattened std::array
+    constexpr mat(const std::array<T, N * M>& vv)
+        : x{vv[0], vv[1], vv[2], vv[3]}
+        , y{vv[4], vv[5], vv[6], vv[7]}
+        , z{vv[8], vv[9], vv[10], vv[11]}
+        , w{vv[12], vv[13], vv[14], vv[15]} {}
+
+    /// conversion to flattened std::array
+    constexpr operator std::array<T, N * M>() const {
+        return {x.x, x.y, x.z, x.w, y.x, y.y, y.z, y.w, z.x, z.y, z.z, z.w, w.x,
+            w.y, w.z, w.w};
+    }
+
+    /// element access
+    constexpr V& operator[](int i) { return v[i]; }
+    /// element access
+    constexpr const V& operator[](int i) const { return v[i]; }
+
+    /// element data
+    union {
+        struct {
+            V v[M];
+        };
+        struct {
+            V x, y, z, w;
+        };
+    };
+};
+
+#endif
 
 /// @}
 
@@ -705,6 +1340,22 @@ constexpr inline mat<T, N, N> identity_mat() {
     return c;
 }
 
+#ifndef YM_NO_SPECIALIZATION
+
+/// Specialization for Initialize an identity matrix.
+template <>
+constexpr inline mat3f identity_mat() {
+    return {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
+}
+
+/// Specialization for Initialize an identity matrix.
+template <>
+constexpr inline mat4f identity_mat() {
+    return {{1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
+}
+
+#endif
+
 /// @}
 
 /// @name matrix constants
@@ -721,7 +1372,36 @@ const auto identity_mat4f = identity_mat<float, 4>();
 
 /// @}
 
-/// @name matrix operations
+/// @name matrix iteration functions
+/// @{
+
+/// iteration support
+template <typename T, int N, int M>
+constexpr inline vec<T, N>* begin(mat<T, N, M>& a) {
+    return a.v;
+}
+
+/// iteration support
+template <typename T, int N, int M>
+constexpr inline const vec<T, N>* begin(const mat<T, N, M>& a) {
+    return a.v;
+}
+
+/// iteration support
+template <typename T, int N, int M>
+constexpr inline vec<T, N>* end(mat<T, N, M>& a) {
+    return a.v + M;
+}
+
+/// iteration support
+template <typename T, int N, int M>
+constexpr inline const vec<T, N>* end(const mat<T, N, M>& a) {
+    return a.v + M;
+}
+
+/// @}
+
+/// @name matrix comparison operations
 /// @{
 
 /// vector operator ==
@@ -737,6 +1417,11 @@ template <typename T, int N, int M>
 constexpr inline bool operator!=(const mat<T, N, M>& a, const mat<T, N, M>& b) {
     return !(a == b);
 }
+
+/// @}
+
+/// @name matrix arithmetic operations
+/// @{
 
 /// matrix operator -
 template <typename T, int N, int M>
@@ -798,6 +1483,74 @@ constexpr inline mat<T, N, M> operator*(
     return c;
 }
 
+/// @}
+
+#ifndef YM_NO_SPECIALIZATION
+
+/// @name specialization of matrix arithmetic operations
+/// @{
+
+/// matrix-vector right multiply
+template <>
+constexpr inline vec2f operator*(const mat2f& a, const vec2f& b) {
+    return a.x * b.x + a.y * b.y;
+}
+
+/// matrix-vector left multiply
+template <>
+constexpr inline vec2f operator*(const vec2f& a, const mat2f& b) {
+    return {dot(a, b.x), dot(a, b.y)};
+}
+
+/// matrix-matrix multiply
+template <>
+constexpr inline mat2f operator*(const mat2f& a, const mat2f& b) {
+    return {a * b.x, a * b.y};
+}
+
+/// matrix-vector right multiply
+template <>
+constexpr inline vec3f operator*(const mat3f& a, const vec3f& b) {
+    return a.x * b.x + a.y * b.y + a.z * b.z;
+}
+
+/// matrix-vector left multiply
+template <>
+constexpr inline vec3f operator*(const vec3f& a, const mat3f& b) {
+    return {dot(a, b.x), dot(a, b.y), dot(a, b.z)};
+}
+
+/// matrix-matrix multiply
+template <>
+constexpr inline mat3f operator*(const mat3f& a, const mat3f& b) {
+    return {a * b.x, a * b.y, a * b.z};
+}
+
+/// matrix-vector right multiply
+template <>
+constexpr inline vec4f operator*(const mat4f& a, const vec4f& b) {
+    return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
+}
+
+/// matrix-vector left multiply
+template <>
+constexpr inline vec4f operator*(const vec4f& a, const mat4f& b) {
+    return {dot(a, b.x), dot(a, b.y), dot(a, b.z), dot(a, b.w)};
+}
+
+/// matrix-matrix multiply
+template <>
+constexpr inline mat4f operator*(const mat4f& a, const mat4f& b) {
+    return {a * b.x, a * b.y, a * b.z, a * b.w};
+}
+
+/// @}
+
+#endif
+
+/// @name matrix arithmetic assignment operations
+/// @{
+
 /// matrix sum assignment
 template <typename T, int N, int M>
 constexpr inline mat<T, M, N>& operator+=(
@@ -823,6 +1576,11 @@ template <typename T, int N, int M>
 constexpr inline mat<T, M, N>& operator/=(mat<T, N, M>& a, const T& b) {
     return a = a / b;
 }
+
+/// @}
+
+/// @name matrix algebra operations
+/// @{
 
 /// matrix diagonal
 template <typename T, int N>
@@ -978,7 +1736,6 @@ template <typename T, int N>
 struct frame {
     /// column data type
     using V = vec<T, N>;
-
     /// rotation data type
     using M = mat<T, N, N>;
 
@@ -987,11 +1744,17 @@ struct frame {
         for (auto i = 0; i < N + 1; i++) v[i] = V{};
     }
 
-    /// list constructor
+    /// element constructor
     constexpr frame(const std::initializer_list<vec<T, N>>& vv) {
         assert(N + 1 == vv.size());
         auto i = 0;
         for (auto&& e : vv) v[i++] = e;
+    }
+
+    /// element constructor
+    constexpr frame(const M& m, const V& t) {
+        for (auto i = 0; i < N; i++) v[i] = m[i];
+        v[N + 1] = t;
     }
 
     /// conversion from std::array
@@ -1029,19 +1792,161 @@ struct frame {
     /// access rotation
     constexpr const M& rot() const { return *(M*)v; }
 
-    /// iteration
-    constexpr V* begin() { return v; };
-    /// iteration
-    constexpr const V* begin() const { return v; };
-    /// iteration
-    constexpr V* end() { return v + N; };
-    /// iteration
-    constexpr const V* end() const { return v + N; };
-
-   private:
     /// element data
     V v[N + 1];
 };
+
+#ifndef YM_NO_SPECIALIZATION
+
+///
+/// Specialization for 3D float frames.
+///
+template <>
+struct frame<float, 2> {
+    /// size
+    constexpr static const int N = 2;
+    /// type
+    using T = float;
+
+    /// column data type
+    using V = vec<T, N>;
+    /// rotation data type
+    using M = mat<T, N, N>;
+
+    /// default constructor
+    constexpr frame() : x{0, 0}, y{0, 0}, o{0, 0} {}
+
+    /// element constructor
+    constexpr frame(const V& x, const V& y, const V& o) : x(x), y(y), o(o) {}
+
+    /// element constructor
+    constexpr frame(const M& m, const V& t) : m(m), t(t) {}
+
+    /// conversion from std::array
+    constexpr frame(const std::array<std::array<float, N>, N + 1>& vv)
+        : x(vv[0]), y(vv[1]), o(vv[2]) {}
+
+    /// conversion to std::array
+    constexpr operator std::array<std::array<T, N>, N + 1>() const {
+        return {x, y, o};
+    }
+
+    /// conversion from flattened std::array
+    constexpr frame(const std::array<float, N*(N + 1)>& vv)
+        : x{vv[0], vv[1]}, y{vv[2], vv[3]}, o{vv[4], vv[5]} {}
+
+    /// conversion to flattened std::array
+    constexpr operator std::array<T, N*(N + 1)>() const {
+        return {x.x, x.y, y.x, y.y, o.x, o.y};
+    }
+
+    /// element access
+    constexpr V& operator[](int i) { return v[i]; }
+    /// element access
+    constexpr const V& operator[](int i) const { return v[i]; }
+
+    /// access position
+    constexpr V& pos() { return v[N]; }
+    /// access position
+    constexpr const V& pos() const { return v[N]; }
+
+    /// access rotation
+    constexpr M& rot() { return *(M*)v; }
+    /// access rotation
+    constexpr const M& rot() const { return *(M*)v; }
+
+    /// element data
+    union {
+        struct {
+            V v[N + 1];
+        };
+        struct {
+            V x, y, o;
+        };
+        struct {
+            M m;
+            V t;
+        };
+    };
+};
+
+///
+/// Specialization for 3D float frames.
+///
+template <>
+struct frame<float, 3> {
+    /// size
+    constexpr static const int N = 3;
+    /// type
+    using T = float;
+
+    /// column data type
+    using V = vec<T, N>;
+    /// rotation data type
+    using M = mat<T, N, N>;
+
+    /// default constructor
+    constexpr frame() : x{0, 0, 0}, y{0, 0, 0}, z{0, 0, 0}, o{0, 0, 0} {}
+
+    /// element constructor
+    constexpr frame(const V& x, const V& y, const V& z, const V& o)
+        : x(x), y(y), z(z), o(o) {}
+
+    /// element constructor
+    constexpr frame(const M& m, const V& t) : m(m), t(t) {}
+
+    /// conversion from std::array
+    constexpr frame(const std::array<std::array<float, N>, N + 1>& vv)
+        : x(vv[0]), y(vv[1]), z(vv[2]), o(vv[3]) {}
+
+    /// conversion to std::array
+    constexpr operator std::array<std::array<T, N>, N + 1>() const {
+        return {x, y, z, o};
+    }
+
+    /// conversion from flattened std::array
+    constexpr frame(const std::array<float, N*(N + 1)>& vv)
+        : x{vv[0], vv[1], vv[2]}
+        , y{vv[3], vv[4], vv[5]}
+        , z{vv[6], vv[7], vv[8]}
+        , o{vv[9], vv[10], vv[11]} {}
+
+    /// conversion to flattened std::array
+    constexpr operator std::array<T, N*(N + 1)>() const {
+        return {x.x, x.y, x.z, y.x, y.y, y.z, z.x, z.y, z.z, o.x, o.y, o.z};
+    }
+
+    /// element access
+    constexpr V& operator[](int i) { return v[i]; }
+    /// element access
+    constexpr const V& operator[](int i) const { return v[i]; }
+
+    /// access position
+    constexpr V& pos() { return v[N]; }
+    /// access position
+    constexpr const V& pos() const { return v[N]; }
+
+    /// access rotation
+    constexpr M& rot() { return *(M*)v; }
+    /// access rotation
+    constexpr const M& rot() const { return *(M*)v; }
+
+    /// element data
+    union {
+        struct {
+            V v[N + 1];
+        };
+        struct {
+            V x, y, z, o;
+        };
+        struct {
+            M m;
+            V t;
+        };
+    };
+};
+
+#endif
 
 /// @}
 
@@ -1072,16 +1977,6 @@ constexpr inline frame<T, N> identity_frame() {
     return c;
 }
 
-/// initializes a frame from a rotation and translation
-template <typename T, int N>
-constexpr inline frame<T, N> make_frame(
-    const mat<T, N, N>& m, const vec<T, N>& v) {
-    frame<T, N> f;
-    for (auto i = 0; i < N; i++) f[i] = m[i];
-    f[N] = v;
-    return f;
-}
-
 // initializes a frame3 from origin and z.
 template <typename T>
 constexpr inline frame<T, 3> make_frame3_fromz(
@@ -1104,6 +1999,46 @@ constexpr inline frame<T, 3> make_frame3_fromzx(
 
 /// @}
 
+#ifndef YM_NO_SPECIALIZATION
+
+/// @name specialization for frame initializations
+/// @{
+
+/// Initialize an identity frame.
+template <>
+constexpr inline frame2f identity_frame() {
+    return {{1, 0}, {0, 1}, {0, 0}};
+}
+
+/// Initialize an identity frame.
+template <>
+constexpr inline frame3f identity_frame() {
+    return {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}};
+}
+
+// initializes a frame3 from origin and z.
+template <>
+constexpr inline frame3f make_frame3_fromz(const vec3f& o, const vec3f& z_) {
+    auto z = normalize(z_);
+    auto x = normalize(orthogonal(z));
+    auto y = normalize(cross(z, x));
+    return {x, y, z, o};
+}
+
+// initializes a frame3 from origin, z and x.
+template <typename T>
+constexpr inline frame3f make_frame3_fromzx(
+    const vec3f& o, const vec3f& z_, const vec3f& x_) {
+    auto z = normalize(z_);
+    auto x = orthonormalize(x_, z);
+    auto y = normalize(cross(z, x));
+    return {x, y, z, o};
+}
+
+/// @}
+
+#endif
+
 /// @name frame constants
 /// @{
 
@@ -1118,7 +2053,7 @@ const auto identity_frame4f = identity_frame<float, 4>();
 
 /// @}
 
-/// @name frame element access
+/// @name frame element access functions
 /// @{
 
 /// frame position const access
@@ -1147,7 +2082,36 @@ constexpr inline mat<T, N, N>& rot(frame<T, N>& f) {
 
 /// @}
 
-/// @name frame operations
+/// @name frame iteration functions
+/// @{
+
+/// iteration support
+template <typename T, int N>
+constexpr inline vec<T, N>* begin(frame<T, N>& a) {
+    return a.v;
+}
+
+/// iteration support
+template <typename T, int N>
+constexpr inline const vec<T, N>* begin(const frame<T, N>& a) {
+    return a.v;
+}
+
+/// iteration support
+template <typename T, int N>
+constexpr inline vec<T, N>* end(frame<T, N>& a) {
+    return a.v + N + 1;
+}
+
+/// iteration support
+template <typename T, int N>
+constexpr inline const vec<T, N>* end(const frame<T, N>& a) {
+    return a.v + N + 1;
+}
+
+/// @}
+
+/// @name frame conversion operations
 /// @{
 
 /// frame to matrix conversion
@@ -1173,6 +2137,11 @@ constexpr inline frame<T, N - 1> to_frame(const mat<T, N, N>& a) {
     return f;
 }
 
+/// @}
+
+/// @name frame comparison operations
+/// @{
+
 /// vector operator ==
 template <typename T, int N>
 constexpr inline bool operator==(const frame<T, N>& a, const frame<T, N>& b) {
@@ -1186,6 +2155,11 @@ template <typename T, int N>
 constexpr inline bool operator!=(const frame<T, N>& a, const frame<T, N>& b) {
     return !(a == b);
 }
+
+/// @}
+
+/// @name frame algebra operations
+/// @{
 
 /// frame composition (equivalent to affine matrix multiply)
 template <typename T, int N>
@@ -1203,6 +2177,28 @@ constexpr inline frame<T, N> inverse(const frame<T, N>& a) {
 }
 
 /// @}
+
+#ifndef YM_NO_SPECIALIZATION
+
+/// @name specialization of frame algebra operations
+/// @{
+
+/// frame composition (equivalent to affine matrix multiply)
+template <>
+constexpr inline frame3f operator*(const frame3f& a, const frame3f& b) {
+    return {a.m * b.m, a.m * b.t + a.t};
+}
+
+/// frame inverse (equivalent to rigid affine inverse)
+template <>
+constexpr inline frame3f inverse(const frame3f& a) {
+    auto minv = transpose(a.m);
+    return {minv, -(minv * a.t)};
+}
+
+/// @}
+
+#endif
 
 // -----------------------------------------------------------------------------
 // QUATERNIONS
@@ -1262,13 +2258,13 @@ constexpr inline T angle(const quat<T>& a) {
 
 /// quaternion axis const access
 template <typename T>
-constexpr inline vec<T, 3> angle(const quat<T>& a) {
+constexpr inline vec<T, 3> axis(const quat<T>& a) {
     return {a[0], a[1], a[2]};
 }
 
 /// @}
 
-/// @name quaterion operations
+/// @name quaterion conversion operations
 /// @{
 
 /// quaterion to matrix conversion
@@ -1283,6 +2279,11 @@ constexpr inline mat<T, 4, 4> quat_to_mat(const quat<T>& v) {
         {(v[2] * v[0] + v[1] * v[3]) * 2, (v[1] * v[2] - v[0] * v[3]) * 2,
             v[3] * v[3] - v[0] * v[0] - v[1] * v[1] + v[2] * v[2]}};
 }
+
+/// @}
+
+/// @name quaterion algebra operations
+/// @{
 
 /// quaterion multiply
 template <typename T>
@@ -1352,19 +2353,152 @@ struct bbox {
     constexpr V& operator[](int i) { return v[i]; }
     constexpr const V& operator[](int i) const { return v[i]; }
 
-    /// iteration
-    constexpr V* begin() { return v; };
-    /// iteration
-    constexpr const V* begin() const { return v; };
-    /// iteration
-    constexpr V* end() { return v + 2; };
-    /// iteration
-    constexpr const V* end() const { return v + 2; };
-
-   private:
     /// element data
     V v[2];
 };
+
+#ifndef YM_NO_SPECIALIZATION
+
+///
+/// Specialization for float 3D bounding boxes.
+///
+template <>
+struct bbox<float, 1> {
+    /// size
+    constexpr static const int N = 1;
+    /// type
+    using T = float;
+
+    /// column data type
+    using V = vec<T, N>;
+
+    /// initializes an invalid bbox
+    constexpr bbox() : min{flt_max}, max{flt_min} {}
+    /// list constructor
+    constexpr bbox(const vec<T, N>& m, const vec<T, N>& M) : min{m}, max{M} {}
+
+    /// element access
+    constexpr V& operator[](int i) { return v[i]; }
+    /// element access
+    constexpr const V& operator[](int i) const { return v[i]; }
+
+    /// element data
+    union {
+        struct {
+            V v[2];
+        };
+        struct {
+            V min, max;
+        };
+    };
+};
+
+///
+/// Specialization for float 3D bounding boxes.
+///
+template <>
+struct bbox<float, 2> {
+    /// size
+    constexpr static const int N = 2;
+    /// type
+    using T = float;
+
+    /// column data type
+    using V = vec<T, N>;
+
+    /// initializes an invalid bbox
+    constexpr bbox() : min{flt_max, flt_max}, max{flt_min, flt_min} {}
+    /// list constructor
+    constexpr bbox(const vec<T, N>& m, const vec<T, N>& M) : min{m}, max{M} {}
+
+    /// element access
+    constexpr V& operator[](int i) { return v[i]; }
+    /// element access
+    constexpr const V& operator[](int i) const { return v[i]; }
+
+    /// element data
+    union {
+        struct {
+            V v[2];
+        };
+        struct {
+            V min, max;
+        };
+    };
+};
+
+///
+/// Specialization for float 3D bounding boxes.
+///
+template <>
+struct bbox<float, 3> {
+    /// size
+    constexpr static const int N = 3;
+    /// type
+    using T = float;
+
+    /// column data type
+    using V = vec<T, N>;
+
+    /// initializes an invalid bbox
+    constexpr bbox()
+        : min{flt_max, flt_max, flt_max}, max{flt_min, flt_min, flt_min} {}
+    /// list constructor
+    constexpr bbox(const vec<T, N>& m, const vec<T, N>& M) : min{m}, max{M} {}
+
+    /// element access
+    constexpr V& operator[](int i) { return v[i]; }
+    /// element access
+    constexpr const V& operator[](int i) const { return v[i]; }
+
+    /// element data
+    union {
+        struct {
+            V v[2];
+        };
+        struct {
+            V min, max;
+        };
+    };
+};
+
+///
+/// Specialization for float 3D bounding boxes.
+///
+template <>
+struct bbox<float, 4> {
+    /// size
+    constexpr static const int N = 4;
+    /// type
+    using T = float;
+
+    /// column data type
+    using V = vec<T, N>;
+
+    /// initializes an invalid bbox
+    constexpr bbox()
+        : min{flt_max, flt_max, flt_max, flt_max}
+        , max{flt_min, flt_min, flt_min, flt_min} {}
+    /// list constructor
+    constexpr bbox(const vec<T, N>& m, const vec<T, N>& M) : min{m}, max{M} {}
+
+    /// element access
+    constexpr V& operator[](int i) { return v[i]; }
+    /// element access
+    constexpr const V& operator[](int i) const { return v[i]; }
+
+    /// element data
+    union {
+        struct {
+            V v[2];
+        };
+        struct {
+            V min, max;
+        };
+    };
+};
+
+#endif
 
 /// @}
 
@@ -1443,6 +2577,35 @@ constexpr inline vec<T, N> diagonal(const bbox<T, N>& a) {
 
 /// @}
 
+/// @name frame iteration functions
+/// @{
+
+/// iteration support
+template <typename T, int N>
+constexpr inline vec<T, N>* begin(bbox<T, N>& a) {
+    return a.v;
+}
+
+/// iteration support
+template <typename T, int N>
+constexpr inline const vec<T, N>* begin(const bbox<T, N>& a) {
+    return a.v;
+}
+
+/// iteration support
+template <typename T, int N>
+constexpr inline vec<T, N>* end(bbox<T, N>& a) {
+    return a.v + 2;
+}
+
+/// iteration support
+template <typename T, int N>
+constexpr inline const vec<T, N>* end(const bbox<T, N>& a) {
+    return a.v + 2;
+}
+
+/// @}
+
 /// @name axis-aligned bounding box operations
 /// @{
 
@@ -1485,6 +2648,53 @@ constexpr inline bool contains(const bbox<T, N>& a, const bbox<T, N>& b) {
     }
     return true;
 }
+
+/// @}
+
+#ifndef YM_NO_SPECIALIZATION
+
+/// @name specialization of axis-aligned bounding box operations
+/// @{
+
+/// expands a bounding box with a point
+template <>
+constexpr inline bbox3f expand(const bbox3f& a, const vec3f& b) {
+    return {{min(a.min.x, b.x), min(a.min.y, b.y), min(a.min.z, b.z)},
+        {max(a.max.x, b.x), max(a.max.y, b.y), max(a.max.z, b.z)}};
+}
+
+/// expands a bounding box with a bounding box
+template <>
+constexpr inline bbox3f expand(const bbox3f& a, const bbox3f& b) {
+    return {
+        {min(a.min.x, b.min.x), min(a.min.y, b.min.y), min(a.min.z, b.min.z)},
+        {max(a.max.x, b.max.x), max(a.max.y, b.max.y), max(a.max.z, b.max.z)}};
+}
+
+/// check if a bounding box contains a point
+template <>
+constexpr inline bool contains(const bbox3f& a, const vec3f& b) {
+    if (a.min.x > b.x || a.max.x < b.x) return false;
+    if (a.min.y > b.y || a.max.y < b.y) return false;
+    if (a.min.z > b.z || a.max.z < b.z) return false;
+    return true;
+}
+
+/// check if a bounding box contains a bounding box
+template <>
+constexpr inline bool contains(const bbox3f& a, const bbox3f& b) {
+    if (a.min.x > b.max.x || a.max.x < b.min.x) return false;
+    if (a.min.y > b.max.y || a.max.y < b.min.y) return false;
+    if (a.min.z > b.max.z || a.max.z < b.min.z) return false;
+    return true;
+}
+
+/// @}
+
+#endif
+
+/// @name axis-aligned bounding box operations
+/// @{
 
 /// same as expand()
 template <typename T, int N>
@@ -1543,6 +2753,37 @@ struct ray {
         : o(o), d(d), tmin(tmin), tmax(tmax) {}
 };
 
+#ifndef YM_NO_SPECIALIZATION
+
+///
+/// Sepcialization for 3D float rays.
+///
+template <>
+struct ray<float, 3> {
+    /// size
+    constexpr static const int N = 3;
+    /// type
+    using T = float;
+
+    /// origin
+    vec<T, N> o;
+    /// direction
+    vec<T, N> d;
+    /// minimum distance
+    T tmin;
+    /// maximum distance
+    T tmax;
+
+    /// default constructor
+    constexpr ray() : o{0, 0, 0}, d{0, 0, 1}, tmin{0}, tmax{flt_max} {}
+    /// initializes a ray from its elements
+    constexpr ray(
+        const vec<T, N>& o, const vec<T, N>& d, T tmin = 0, T tmax = flt_max)
+        : o(o), d(d), tmin(tmin), tmax(tmax) {}
+};
+
+#endif
+
 /// @}
 
 /// @name ray typedefs
@@ -1574,7 +2815,7 @@ constexpr inline vec<T, N> eval(const ray<T, N>& ray, T t) {
 // TRANSFORMS
 // -----------------------------------------------------------------------------
 
-/// @name transforms
+/// @name transform operations
 /// @{
 
 /// transforms a point by a matrix
@@ -1608,29 +2849,6 @@ constexpr inline vec<T, N> transform_direction(
     return normalize(transform_vector(a, b));
 }
 
-/// transforms a ray by a matrix
-template <typename T, int N>
-constexpr inline ray<T, N> transform_ray(
-    const mat<T, N + 1, N + 1>& a, const ray<T, N>& b) {
-    return {
-        transform_point(a, b.o), transform_direction(a, b.d), b.tmin, b.tmax};
-}
-
-/// transforms a bbox by a matrix
-template <typename T>
-constexpr inline bbox<T, 3> transform_bbox(
-    const mat<T, 4, 4>& a, const bbox<T, 3>& b) {
-    vec<T, 3> corners[8] = {
-        {b[0][0], b[0][1], b[0][2]}, {b[0][0], b[0][1], b[1][2]},
-        {b[0][0], b[1][1], b[0][2]}, {b[0][0], b[1][1], b[1][2]},
-        {b[1][0], b[0][1], b[0][2]}, {b[1][0], b[0][1], b[1][2]},
-        {b[1][0], b[1][1], b[0][2]}, {b[1][0], b[1][1], b[1][2]},
-    };
-    auto xformed = bbox<T, 3>();
-    for (auto j = 0; j < 8; j++) xformed += transform_point(a, corners[j]);
-    return xformed;
-}
-
 /// transforms a point by a frame (rigid affine transform)
 template <typename T, int N>
 constexpr inline vec<T, N> transform_point(
@@ -1657,6 +2875,131 @@ template <typename T, int N>
 constexpr inline frame<T, N> transform_frame(
     const frame<T, N>& a, const frame<T, N>& b) {
     return {ym::rot(a) * ym::rot(b), ym::pos(a) * ym::pos(b) + ym::pos(a)};
+}
+
+/// inverse transforms a point by a frame (rigid affine transform)
+template <typename T, int N>
+constexpr inline vec<T, N> transform_point_inverse(
+    const frame<T, N>& a, const vec<T, N>& b) {
+    return (b - ym::pos(a)) * ym::rot(a);
+}
+
+/// inverse transforms a vector by a frame (rigid affine transform)
+template <typename T, int N>
+constexpr inline vec<T, N> transform_vector_inverse(
+    const frame<T, N>& a, const vec<T, N>& b) {
+    return b * ym::rot(a);
+}
+
+/// inverse transforms a direction by a frame (rigid affine transform)
+template <typename T, int N>
+constexpr inline vec<T, N> transform_direction_inverse(
+    const frame<T, N>& a, const vec<T, N>& b) {
+    return b * ym::rot(a);
+}
+
+/// @}
+
+#ifndef YM_NO_SPECIALIZATION
+
+/// @name specialization of transform operations
+/// @{
+
+/// transforms a point by a matrix
+template <>
+constexpr inline vec3f transform_point(const mat4f& a, const vec3f& b) {
+    auto vb = vec4f{b.x, b.y, b.z, 1};
+    auto tvb = a * vb;
+    return vec3f{tvb.x, tvb.y, tvb.z} / tvb.w;
+}
+
+/// transforms a vector by a matrix
+template <>
+constexpr inline vec3f transform_vector(const mat4f& a, const vec3f& b) {
+    auto vb = vec4f{b.x, b.y, b.z, 0};
+    auto tvb = a * vb;
+    return vec3f{tvb.x, tvb.y, tvb.z} / tvb.w;
+}
+
+/// transforms a direction by a matrix
+template <>
+constexpr inline vec3f transform_direction(const mat4f& a, const vec3f& b) {
+    return normalize(transform_vector(a, b));
+}
+
+/// transforms a point by a frame (rigid affine transform)
+template <>
+constexpr inline vec3f transform_point(const frame3f& a, const vec3f& b) {
+    return a.m * b + a.t;
+}
+
+/// transforms a vector by a frame (rigid affine transform)
+template <>
+constexpr inline vec3f transform_vector(const frame3f& a, const vec3f& b) {
+    return a.m * b;
+}
+
+/// transforms a direction by a frame (rigid affine transform)
+template <>
+constexpr inline vec3f transform_direction(const frame3f& a, const vec3f& b) {
+    return a.m * b;
+}
+
+/// transforms a frame by a frame (rigid affine transform)
+template <>
+constexpr inline frame3f transform_frame(const frame3f& a, const frame3f& b) {
+    return {a.m * b.m, a.m * b.t + a.t};
+}
+
+/// inverse transforms a point by a frame (rigid affine transform)
+template <>
+constexpr inline vec3f transform_point_inverse(
+    const frame3f& a, const vec3f& b) {
+    return (b - a.t) * a.m;
+}
+
+/// inverse transforms a vector by a frame (rigid affine transform)
+template <>
+constexpr inline vec3f transform_vector_inverse(
+    const frame3f& a, const vec3f& b) {
+    return b * a.m;
+}
+
+/// inverse transforms a direction by a frame (rigid affine transform)
+template <>
+constexpr inline vec3f transform_direction_inverse(
+    const frame3f& a, const vec3f& b) {
+    return b * a.m;
+}
+
+/// @}
+
+#endif
+
+/// @name specialization of transform operations
+/// @{
+
+/// transforms a ray by a matrix
+template <typename T, int N>
+constexpr inline ray<T, N> transform_ray(
+    const mat<T, N + 1, N + 1>& a, const ray<T, N>& b) {
+    return {
+        transform_point(a, b.o), transform_direction(a, b.d), b.tmin, b.tmax};
+}
+
+/// transforms a bbox by a matrix
+template <typename T>
+constexpr inline bbox<T, 3> transform_bbox(
+    const mat<T, 4, 4>& a, const bbox<T, 3>& b) {
+    vec<T, 3> corners[8] = {
+        {b[0][0], b[0][1], b[0][2]}, {b[0][0], b[0][1], b[1][2]},
+        {b[0][0], b[1][1], b[0][2]}, {b[0][0], b[1][1], b[1][2]},
+        {b[1][0], b[0][1], b[0][2]}, {b[1][0], b[0][1], b[1][2]},
+        {b[1][0], b[1][1], b[0][2]}, {b[1][0], b[1][1], b[1][2]},
+    };
+    auto xformed = bbox<T, 3>();
+    for (auto j = 0; j < 8; j++) xformed += transform_point(a, corners[j]);
+    return xformed;
 }
 
 /// transforms a ray by a frame (rigid affine transform)
@@ -1706,27 +3049,6 @@ constexpr inline bbox<T, 3> transform_bbox(
 #endif
 }
 
-/// inverse transforms a point by a frame (rigid affine transform)
-template <typename T, int N>
-constexpr inline vec<T, N> transform_point_inverse(
-    const frame<T, N>& a, const vec<T, N>& b) {
-    return (b - ym::pos(a)) * ym::rot(a);
-}
-
-/// inverse transforms a vector by a frame (rigid affine transform)
-template <typename T, int N>
-constexpr inline vec<T, N> transform_vector_inverse(
-    const frame<T, N>& a, const vec<T, N>& b) {
-    return b * ym::rot(a);
-}
-
-/// inverse transforms a direction by a frame (rigid affine transform)
-template <typename T, int N>
-constexpr inline vec<T, N> transform_direction_inverse(
-    const frame<T, N>& a, const vec<T, N>& b) {
-    return b * ym::rot(a);
-}
-
 /// inverse transforms a ray by a frame (rigid affine transform)
 template <typename T, int N>
 constexpr inline ray<T, N> transform_ray_inverse(
@@ -1741,6 +3063,11 @@ constexpr inline bbox<T, 3> transform_bbox_inverse(
     const frame<T, 3>& a, const bbox<T, 3>& b) {
     return transform_bbox(inverse(a), b);
 }
+
+/// @}
+
+/// @name transform construction operations
+/// @{
 
 /// rotation matrix from axis-angle
 template <typename T>
@@ -1783,7 +3110,7 @@ constexpr inline mat<T, 4, 4> scaling_mat4(const vec<T, 3>& a) {
 /// rotation frame
 template <typename T>
 constexpr inline frame<T, 3> rotation_frame3(const vec<T, 3>& axis, T angle) {
-    return make_frame(rotation_mat3(axis, angle), {0, 0, 0});
+    return {rotation_mat3(axis, angle), {0, 0, 0}};
 }
 
 /// rotation matrix
