@@ -148,14 +148,22 @@ yapp::material* make_glass(const std::string& name, const ym::vec3f& kd,
 
 enum struct mtype {
     def,
-    matte,
-    matte_txt,
+    matte00,
+    matte01,
+    matte02,
+    matte03,
+    matte04,
+    matte00_txt,
+    matte01_txt,
+    matte02_txt,
+    matte03_txt,
     floor,
     floor_txt,
     plastic00,
     plastic01,
     plastic02,
     plastic03,
+    plastic04,
     plastic00_txt,
     plastic01_txt,
     plastic02_txt,
@@ -208,11 +216,24 @@ ym::vec3f srgb(const ym::vec3f& k) {
 yapp::material* make_material(mtype type) {
     switch (type) {
         case mtype::def:
-        case mtype::matte: return make_diffuse("gray", {0.2f, 0.2f, 0.2f});
+        case mtype::matte00: return make_diffuse("matte00", {0.2f, 0.2f, 0.2f});
+        case mtype::matte01: return make_diffuse("matte01", {0.5f, 0.2f, 0.2f});
+        case mtype::matte02: return make_diffuse("matte02", {0.2f, 0.5f, 0.2f});
+        case mtype::matte03: return make_diffuse("matte03", {0.2f, 0.2f, 0.5f});
+        case mtype::matte04: return make_diffuse("matte04", {0.5f, 0.5f, 0.5f});
         case mtype::floor: return make_diffuse("floor", {0.2f, 0.2f, 0.2f});
-        case mtype::matte_txt:
+        case mtype::matte00_txt:
             return make_diffuse(
-                "gray_txt", {1, 1, 1}, make_texture("grid.png"));
+                "matte00_txt", {1, 1, 1}, make_texture("grid.png"));
+        case mtype::matte01_txt:
+            return make_diffuse(
+                "matte01_txt", {1, 1, 1}, make_texture("rcolored.png"));
+        case mtype::matte02_txt:
+            return make_diffuse(
+                "matte02_txt", {1, 1, 1}, make_texture("checker.png"));
+        case mtype::matte03_txt:
+            return make_diffuse(
+                "matte03_txt", {1, 1, 1}, make_texture("colored.png"));
         case mtype::floor_txt:
             return make_diffuse(
                 "floor_txt", {1, 1, 1}, make_texture("grid.png"));
@@ -224,6 +245,8 @@ yapp::material* make_material(mtype type) {
             return make_plastic("plastic02", {0.2f, 0.5f, 0.2f}, 0.05f);
         case mtype::plastic03:
             return make_plastic("plastic03", {0.2f, 0.2f, 0.5f}, 0.01f);
+        case mtype::plastic04:
+            return make_plastic("plastic04", {0.5f, 0.5f, 0.5f}, 0.01f);
         case mtype::plastic00_txt:
             return make_plastic(
                 "plastic01_txt", {1, 1, 1}, 0.1f, make_texture("grid.png"));
@@ -575,7 +598,7 @@ std::vector<yapp::shape*> make_shapes(stype st, mtype mt = mtype::def,
                                             make_material(mt);
             return {make_lines("simple_lines01_" + mat->name, mat, 64 * 64 * 16,
                         4, 0.1f, 0, 0, frame, {0.5f, 0.5f, 0.5f}),
-                make_shape("simple_interior02_", mtype::matte, 6,
+                make_shape("simple_interior02_", mtype::matte00, 6,
                     yshape::stdsurface_type::uvsphere, frame,
                     ym::vec3f{0.5f, 0.5f, 0.5f} * scale)};
         } break;
@@ -584,7 +607,7 @@ std::vector<yapp::shape*> make_shapes(stype st, mtype mt = mtype::def,
                                             make_material(mt);
             return {make_lines("simple_lines02_" + mat->name, mat, 64 * 64 * 16,
                         4, 0, 0.75f, 0, frame, {0.5f, 0.5f, 0.5f}),
-                make_shape("simple_interior02_", mtype::matte, 6,
+                make_shape("simple_interior02_", mtype::matte00, 6,
                     yshape::stdsurface_type::uvsphere, frame,
                     ym::vec3f{0.5f, 0.5f, 0.5f} * scale)};
         } break;
@@ -593,7 +616,7 @@ std::vector<yapp::shape*> make_shapes(stype st, mtype mt = mtype::def,
                                             make_material(mt);
             return {make_lines("simple_lines03_" + mat->name, mat, 64 * 64 * 16,
                         4, 0, 0, 0.5f, frame, {0.5f, 0.5f, 0.5f}),
-                make_shape("simple_interior02_", mtype::matte, 6,
+                make_shape("simple_interior02_", mtype::matte00, 6,
                     yshape::stdsurface_type::uvsphere, frame,
                     ym::vec3f{0.5f, 0.5f, 0.5f} * scale)};
         } break;
@@ -703,7 +726,7 @@ std::vector<yapp::shape*> make_shapes(stype st, mtype mt = mtype::def,
             auto mat = (mt == mtype::def) ? make_material(mtype::plastic00) :
                                             make_material(mt);
             return {make_shape("intmatball01_" + mat->name,
-                        make_material(mtype::matte), 5,
+                        make_material(mtype::matte00), 5,
                         yshape::stdsurface_type::uvsphere, frame,
                         ym::vec3f{0.4f, 0.4f, 0.4f} * scale),
                 make_shape("matball01_" + mat->name, mat, 5,
@@ -715,7 +738,7 @@ std::vector<yapp::shape*> make_shapes(stype st, mtype mt = mtype::def,
             auto mat = (mt == mtype::def) ? make_material(mtype::plastic00) :
                                             make_material(mt);
             return {make_shape("intmatball01_" + mat->name,
-                        make_material(mtype::matte), 5,
+                        make_material(mtype::matte00), 5,
                         yshape::stdsurface_type::uvsphere, frame,
                         ym::vec3f{0.4f, 0.4f, 0.4f} * scale),
                 make_shape("matball01_" + mat->name, mat, 5,
@@ -858,7 +881,7 @@ std::vector<yapp::shape*> make_random_shapes(int nshapes, int l) {
 
     std::vector<stype> stypes = {
         stype::obj01, stype::obj02, stype::obj03, stype::matball01};
-    std::vector<mtype> mtypes = {mtype::matte, mtype::matte_txt,
+    std::vector<mtype> mtypes = {mtype::matte00, mtype::matte00_txt,
         mtype::plastic01, mtype::plastic02, mtype::plastic03,
         mtype::plastic01_txt, mtype::plastic02_txt, mtype::plastic03_txt,
         mtype::metal01, mtype::metal02, mtype::metal03};
@@ -1457,12 +1480,22 @@ int main(int argc, char* argv[]) {
         {"matball01", stype::matball01_floor02},
         {"matball02", stype::matball02_floor02}};
     auto mtypes = std::vector<std::pair<std::string, mtype>>{
-        {"matte", mtype::matte}, {"plastic00", mtype::plastic00},
+        {"matte00", mtype::matte00}, {"matte01", mtype::matte01},
+        {"matte02", mtype::matte02}, {"matte03", mtype::matte03},
+        {"matte04", mtype::matte04}, {"matte00_txt", mtype::matte00_txt},
+        {"matte01_txt", mtype::matte01_txt},
+        {"matte02_txt", mtype::matte02_txt},
+        {"matte03_txt", mtype::matte03_txt}, {"plastic00", mtype::plastic00},
         {"plastic01", mtype::plastic01}, {"plastic02", mtype::plastic02},
-        {"plastic03", mtype::plastic03}, {"plastic04", mtype::plastic03},
-        {"gold01", mtype::gold01}, {"gold02", mtype::gold02},
-        {"copper01", mtype::copper01}, {"copper02", mtype::copper02},
-        {"silver01", mtype::silver01}, {"silver02", mtype::silver02}};
+        {"plastic03", mtype::plastic03}, {"plastic04", mtype::plastic04},
+        {"plastic00_txt", mtype::plastic00_txt},
+        {"plastic01_txt", mtype::plastic01_txt},
+        {"plastic02_txt", mtype::plastic02_txt},
+        {"plastic03_txt", mtype::plastic03_txt},
+        {"plastic04_txt", mtype::plastic04_txt}, {"gold01", mtype::gold01},
+        {"gold02", mtype::gold02}, {"copper01", mtype::copper01},
+        {"copper02", mtype::copper02}, {"silver01", mtype::silver01},
+        {"silver02", mtype::silver02}};
 
     // sym scenes ------------------------------
     auto sym_stypes = std::vector<std::pair<std::string, stype>>{
