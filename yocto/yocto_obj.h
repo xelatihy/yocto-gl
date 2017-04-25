@@ -71,6 +71,7 @@
 ///
 ///
 /// HISTORY:
+/// - v 0.15: added unknown properties std::map for materials
 /// - v 0.14: added extension to store tetrahedral meshes
 /// - v 0.13: started adding physics extension to materials
 /// - v 0.12: change texture loading by flipping uvs rather than images
@@ -125,6 +126,7 @@ namespace yobj {}
 
 #include <array>
 #include <cmath>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -214,6 +216,12 @@ struct object {
 };
 
 ///
+/// Property maps
+///
+template <typename T>
+using property_map = std::map<std::string, std::vector<T>>;
+
+///
 /// OBJ material
 ///
 struct material {
@@ -249,6 +257,11 @@ struct material {
     // physics extensions
     float stiffness = 0;  ///< overall stiffness
     float density = 0;    ///< density
+
+    // unknown properties
+    property_map<std::string> str_props;  ///< unknown string props
+    property_map<int> int_props;          ///< unknown int props
+    property_map<float> flt_props;        ///< unknown float props
 };
 
 ///
@@ -427,6 +440,11 @@ struct fl_material {
     // physics extensions
     float stiffness = 0.0f;  ///< stiffness
     float density = 0.0f;    ///< density
+
+    // unknown properties
+    property_map<std::string> str_props;  ///< unknown string props
+    property_map<int> int_props;          ///< unknown int props
+    property_map<float> flt_props;        ///< unknown float props
 };
 
 ///
