@@ -552,7 +552,8 @@ static inline bool _overlap_bbox(const ym::bbox3f& bbox1,
     const ym::frame3f& frame2) {
 #define __YBVH_EPSILON__ 1e-5f
     // compute centered frames and extents
-    auto cframe1 = ym::frame3f{ym::rot(frame1), transform_point(frame1, ym::center(bbox1))};
+    auto cframe1 = ym::frame3f{
+        ym::rot(frame1), transform_point(frame1, ym::center(bbox1))};
     auto cframe2 = ym::frame3f{
         ym::rot(frame2), transform_point(frame2, ym::center(bbox2))};
     auto ext1 = ym::diagonal(bbox1) / 2.0f, ext2 = ym::diagonal(bbox2) / 2.0f;

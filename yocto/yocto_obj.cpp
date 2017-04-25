@@ -404,7 +404,30 @@ YOBJ_API std::vector<material> load_mtl(const std::string& filename) {
         } else if (tok_s == "map_norm" || tok_s == "norm") {
             materials.back().norm_txt = (cur_ntok) ? cur_tok[0] : "";
         } else {
-            // unused
+            // attempt to parse as ints
+            std::vector<int> int_vals;
+            for (auto i = 0; i < cur_ntok; i++) {
+                auto val = 0;
+                if (!sscanf(cur_tok[i], "%i", &val)) break;
+                int_vals.push_back(val);
+            }
+            if (int_vals.size() == cur_ntok) {
+                materials.back().int_props[tok_s] = int_vals;
+            }
+            // attempt to parse as floats
+            std::vector<float> flt_vals;
+            for (auto i = 0; i < cur_ntok; i++) {
+                auto val = 0.0f;
+                if (!sscanf(cur_tok[i], "%f", &val)) break;
+                int_vals.push_back(val);
+            }
+            if (flt_vals.size() == cur_ntok) {
+                materials.back().flt_props[tok_s] = flt_vals;
+            }
+            // copy into strings
+            std::vector<std::string> str_vals;
+            for (auto i = 0; i < cur_ntok; i++) str_vals.push_back(cur_tok[i]);
+            materials.back().str_props[tok_s] = str_vals;
         }
     }
 
@@ -597,6 +620,11 @@ YOBJ_API void save_mtl(
         _fwrite_str(file, "  map_bump", mat.bump_txt);
         _fwrite_str(file, "  map_disp", mat.disp_txt);
         _fwrite_str(file, "  map_norm", mat.norm_txt);
+        for (auto&& p : mat.str_props) {
+            auto s = std::string();
+            for (auto&& v : p.second) s += v + " ";
+            _fwrite_str(file, p.first.c_str(), s.c_str());
+        }
         fprintf(file, "\n");
     }
 
@@ -684,6 +712,9 @@ YOBJ_API fl_obj* flatten_obj(const obj* asset) {
         mat->kt_txt = _add_texture(omat.kt_txt, scene->textures);
         mat->rs_txt = _add_texture(omat.ns_txt, scene->textures);
         mat->norm_txt = _add_texture(omat.norm_txt, scene->textures);
+        mat->str_props = omat.str_props;
+        mat->int_props = omat.int_props;
+        mat->flt_props = omat.flt_props;
         scene->materials.push_back(mat);
     }
 
@@ -842,6 +873,9 @@ YOBJ_API obj* unflatten_obj(const fl_obj* scene) {
         mat->kt_txt = txt(scene, fl_mat->kt_txt);
         mat->ns_txt = txt(scene, fl_mat->rs_txt);
         mat->norm_txt = txt(scene, fl_mat->norm_txt);
+        mat->str_props = fl_mat->str_props;
+        mat->int_props = fl_mat->int_props;
+        mat->flt_props = fl_mat->flt_props;
     }
 
     // convert shapes
