@@ -712,6 +712,8 @@ YOBJ_API fl_obj* flatten_obj(const obj* asset) {
         mat->kt_txt = _add_texture(omat.kt_txt, scene->textures);
         mat->rs_txt = _add_texture(omat.ns_txt, scene->textures);
         mat->norm_txt = _add_texture(omat.norm_txt, scene->textures);
+        mat->bump_txt = _add_texture(omat.bump_txt, scene->textures);
+        mat->disp_txt = _add_texture(omat.disp_txt, scene->textures);
         mat->str_props = omat.str_props;
         mat->int_props = omat.int_props;
         mat->flt_props = omat.flt_props;
@@ -872,6 +874,8 @@ YOBJ_API obj* unflatten_obj(const fl_obj* scene) {
         mat->ks_txt = txt(scene, fl_mat->ks_txt);
         mat->kt_txt = txt(scene, fl_mat->kt_txt);
         mat->ns_txt = txt(scene, fl_mat->rs_txt);
+        mat->bump_txt = txt(scene, fl_mat->bump_txt);
+        mat->disp_txt = txt(scene, fl_mat->disp_txt);
         mat->norm_txt = txt(scene, fl_mat->norm_txt);
         mat->str_props = fl_mat->str_props;
         mat->int_props = fl_mat->int_props;

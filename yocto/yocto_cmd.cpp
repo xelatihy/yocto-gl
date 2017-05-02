@@ -108,14 +108,15 @@ struct ThreadPool {
     bool stop_flag = false;
 };
 
-ThreadPool::ThreadPool(int nthreads) : working_threads(0), stop_flag(false) {
+inline ThreadPool::ThreadPool(int nthreads)
+    : working_threads(0), stop_flag(false) {
     threads.reserve(nthreads);
     for (auto tid = 0; tid < nthreads; tid++) {
         threads.emplace_back([this] { _thread_proc(); });
     }
 }
 
-void ThreadPool::_thread_proc() {
+inline void ThreadPool::_thread_proc() {
     while (true) {
         std::packaged_task<void()> task;
         {
@@ -144,7 +145,7 @@ void ThreadPool::_thread_proc() {
     }
 }
 
-ThreadPool::~ThreadPool() {
+inline ThreadPool::~ThreadPool() {
     {
         std::unique_lock<std::mutex> lock_guard(queue_lock);
         stop_flag = true;
@@ -153,7 +154,7 @@ ThreadPool::~ThreadPool() {
     for (auto& Worker : threads) Worker.join();
 }
 
-std::shared_future<void> ThreadPool::async(std::function<void()> task) {
+inline std::shared_future<void> ThreadPool::async(std::function<void()> task) {
     // Wrap the Task in a packaged_task to return a future object.
     std::packaged_task<void()> packaged_task(std::move(task));
     auto future = packaged_task.get_future();
@@ -166,7 +167,7 @@ std::shared_future<void> ThreadPool::async(std::function<void()> task) {
     return future.share();
 }
 
-void ThreadPool::wait() {
+inline void ThreadPool::wait() {
     std::unique_lock<std::mutex> lock_guard(completion_lock);
     completion_condition.wait(
         lock_guard, [&] { return tasks.empty() && !working_threads; });
@@ -964,7 +965,7 @@ YCMD_API std::vector<logger*>* get_default_loggers() {
 //
 // Create a stream logger
 //
-inline logger* _make_stream_logger(
+static inline logger* _make_stream_logger(
     FILE* file, int output_level, int flush_level) {
     auto lgr = new logger();
     lgr->file = file;
@@ -1177,7 +1178,7 @@ static auto global_pool = (thread_pool*)nullptr;
 //
 // Make the global thread pool
 //
-void make_global_thread_pool() {
+static inline void make_global_thread_pool() {
     if (!global_pool) global_pool = make_thread_pool();
 }
 
