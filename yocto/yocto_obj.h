@@ -435,6 +435,8 @@ struct fl_material {
     int ks_txt = -1;    ///< specular texture index
     int kt_txt = -1;    ///< transmission texture index
     int rs_txt = -1;    ///< roughness texture index
+    int bump_txt = -1;  ///< bump map texture (heighfield)
+    int disp_txt = -1;  ///< displacement map texture (heighfield)
     int norm_txt = -1;  ///< normal texture index
 
     // physics extensions
