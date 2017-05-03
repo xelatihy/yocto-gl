@@ -30,6 +30,8 @@
 #include "../yocto/yocto_img.h"
 #include "../yocto/yocto_math.h"
 
+#include "string.h"
+
 yimg::simage* make_image_grid(
     const std::vector<yimg::simage*>& imgs, int tilex) {
     auto nimgs = (int)imgs.size();
