@@ -209,7 +209,7 @@ YIMG_API simage* tonemap_image(
 ///
 YIMG_API void tonemap_image(int width, int height, int ncomp, const float* hdr,
     byte* ldr, float exposure, tonemap_type tm, float gamma);
-}  // namespace
+}  // namespace yimg
 
 // -----------------------------------------------------------------------------
 // INCLUDE FOR HEADER-ONLY MODE

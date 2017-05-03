@@ -1207,7 +1207,7 @@ YCMD_API void thread_pool_for(
     thread_pool_for(global_pool, count, task);
 }
 
-}  // namespace
+}  // namespace ycmd
 
 //
 // Test

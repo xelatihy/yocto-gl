@@ -450,7 +450,7 @@ YGLU_API void draw_triangles(int num, const int3* elem, const float3* pos,
         num, (const int*)elem, etype::triangle, pos, norm, texcoord, color);
 }
 
-}  // namespace
+}  // namespace legacy
 
 namespace modern {
 
@@ -967,7 +967,7 @@ YGLU_API bool draw_elems(int nelems, uint bid, etype etype) {
     return true;
 }
 
-}  // namespace
+}  // namespace modern
 
 namespace stdshader {
 
@@ -1338,9 +1338,9 @@ YGLU_API void draw_triangles(uint prog, int num, uint bid) {
     draw_elem(prog, num, bid, etype::triangle);
 }
 
-}  // namespace
+}  // namespace stdshader
 
-}  // namespace
+}  // namespace yglu
 
 #ifndef YGLU_NO_GLFW
 
@@ -1729,8 +1729,8 @@ bool get_widget_active(window* win) {
 }
 #endif
 
-}  // namespace
+}  // namespace ui
 
-}  // namespace
+}  // namespace yglu
 
 #endif

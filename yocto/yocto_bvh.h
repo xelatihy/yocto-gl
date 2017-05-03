@@ -429,7 +429,7 @@ YBVH_API void compute_bvh_stats(const scene* scn, bool include_shapes,
     int& nprims, int& ninternals, int& nleaves, int& min_depth, int& max_depth,
     int req_shape = -1);
 
-}  // namespace
+}  // namespace ybvh
 
 // -----------------------------------------------------------------------------
 // INCLUDE FOR HEADER-ONLY MODE

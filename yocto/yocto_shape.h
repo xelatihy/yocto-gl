@@ -406,7 +406,7 @@ YSHAPE_API void sample_shape(int nlines, const float* line_cdf, float ern,
 ///
 YSHAPE_API void sample_shape(int ntriangles, const float* triangle_cdf,
     float ern, const float2& uvrn, int* eid, float2* euv);
-}  // namespace
+}  // namespace yshape
 
 // -----------------------------------------------------------------------------
 // INCLUDE FOR HEADER-ONLY MODE

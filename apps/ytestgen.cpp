@@ -183,6 +183,10 @@ enum struct mtype {
     iron02,
     copper01,
     copper02,
+    bump00,
+    bump01,
+    bump02,
+    bump03,
     glass00,
     glass01,
     glass02,
@@ -293,6 +297,18 @@ yapp::material* make_material(mtype type) {
             return make_metal("copper01", srgb({250, 190, 160}), 0.01f);
         case mtype::copper02:
             return make_metal("copper02", srgb({250, 190, 160}), 0.05f);
+        case mtype::bump00:
+            return make_plastic("bump00", {0.5f, 0.5f, 0.5f}, 0.05f, nullptr,
+                make_texture("grid_normal.png"));
+        case mtype::bump01:
+            return make_metal("bump01", srgb({250, 190, 160}), 0.01f, nullptr,
+                make_texture("grid_normal.png"));
+        case mtype::bump02:
+            return make_plastic("bump02", {0.2f, 0.2f, 0.5f}, 0.05f, nullptr,
+                make_texture("grid_normal.png"));
+        case mtype::bump03:
+            return make_metal("bump03", srgb({250, 190, 160}), 0.05f, nullptr,
+                make_texture("grid_normal.png"));
         case mtype::glass00:
             return make_glass("glass00", {0.8f, 0.8f, 0.8f}, 0);
         case mtype::glass01:
@@ -1495,7 +1511,9 @@ int main(int argc, char* argv[]) {
         {"plastic04_txt", mtype::plastic04_txt}, {"gold01", mtype::gold01},
         {"gold02", mtype::gold02}, {"copper01", mtype::copper01},
         {"copper02", mtype::copper02}, {"silver01", mtype::silver01},
-        {"silver02", mtype::silver02}};
+        {"silver02", mtype::silver02}, {"bump00", mtype::bump00},
+        {"bump01", mtype::bump01}, {"bump02", mtype::bump02},
+        {"bump03", mtype::bump03}};
 
     // sym scenes ------------------------------
     auto sym_stypes = std::vector<std::pair<std::string, stype>>{

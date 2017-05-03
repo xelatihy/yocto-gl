@@ -478,7 +478,7 @@ YTRACE_API void trace_block(const scene* scn, int width, int height,
 YTRACE_API void trace_image(const scene* scn, const int width, int height,
     float4* img, const render_params& params);
 
-}  // namespace
+}  // namespace ytrace
 
 // -----------------------------------------------------------------------------
 // INCLUDE FOR HEADER-ONLY MODE

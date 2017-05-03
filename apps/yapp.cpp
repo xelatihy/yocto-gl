@@ -1113,4 +1113,4 @@ void set_default_loggers() {
         ycmd::make_file_logger("yocto.log", true, ycmd::log_level_verbose));
 }
 
-}  // namespace
+}  // namespace yapp

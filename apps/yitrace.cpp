@@ -287,12 +287,12 @@ void run_ui(state* st) {
         mouse_pos = yglu::ui::get_mouse_posf(win);
         mouse_button = yglu::ui::get_mouse_button(win);
 
-        yglu::ui::set_window_title(win,
-            ("ytrace | " + pars->filenames[0] + " | " +
-                std::to_string(pars->width) + "x" +
-                std::to_string(pars->height) + "@" +
-                std::to_string(st->cur_sample))
-                .c_str());
+        yglu::ui::set_window_title(
+            win, ("ytrace | " + pars->filenames[0] + " | " +
+                     std::to_string(pars->width) + "x" +
+                     std::to_string(pars->height) + "@" +
+                     std::to_string(st->cur_sample))
+                     .c_str());
 
         // handle mouse
         if (mouse_button && mouse_pos != mouse_last &&

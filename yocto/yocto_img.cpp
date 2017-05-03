@@ -328,4 +328,4 @@ YIMG_API void tonemap_image(int width, int height, int ncomp, const float* hdr,
     }
 }
 
-}  // namespace
+}  // namespace yimg

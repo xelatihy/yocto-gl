@@ -1010,4 +1010,4 @@ YOBJ_API void load_textures(
 #endif
 }
 
-}  // namespace
+}  // namespace yobj

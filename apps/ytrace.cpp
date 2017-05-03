@@ -83,8 +83,9 @@ int main(int argc, char* argv[]) {
             auto block = blocks[cur_block];
             ytrace::trace_block(trace_scene, pars->width, pars->height,
                 (ytrace::float4*)hdr, block[0], block[1], block[2], block[3],
-                cur_sample, std::min(cur_sample + pars->batch_size,
-                                pars->render_params.nsamples),
+                cur_sample,
+                std::min(cur_sample + pars->batch_size,
+                    pars->render_params.nsamples),
                 pars->render_params);
         });
     }

@@ -339,4 +339,4 @@ void shade_scene(const scene* scn, const params* pars, const shade_state* st) {
     }
 }
 
-}  // namespace
+}  // namespace yapp
