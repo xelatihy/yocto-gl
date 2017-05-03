@@ -301,7 +301,7 @@ YGLU_API void end_frame() {
 // This is a public API. See above for documentation.
 //
 YGLU_API void set_lights(const float3& amb, int num, const float3* pos,
-    const float3* ke, const ltype* ltype) {
+    const float3* ke, const ltype* type) {
     if (amb != float3{0, 0, 0}) {
         float amb_[] = {amb[0], amb[1], amb[2], 1};
         glLightModelfv(GL_LIGHT_MODEL_AMBIENT, amb_);
@@ -311,11 +311,11 @@ YGLU_API void set_lights(const float3& amb, int num, const float3* pos,
         glEnable(GL_LIGHT0 + i);
         float ke_[] = {ke[i][0], ke[i][1], ke[i][2], 1};
         float pos_[] = {pos[i][0], pos[i][1], pos[i][2],
-            (ltype[i] == ltype::point) ? 1.0f : 0.0f};
+            (type[i] == ltype::point) ? 1.0f : 0.0f};
         glLightfv(GL_LIGHT0 + i, GL_DIFFUSE, ke_);
         glLightfv(GL_LIGHT0 + i, GL_SPECULAR, ke_);
         glLightfv(GL_LIGHT0 + i, GL_POSITION, pos_);
-        if (ltype[i] == ltype::point) {
+        if (type[i] == ltype::point) {
             glLightf(GL_LIGHT0 + i, GL_CONSTANT_ATTENUATION, 0);
             glLightf(GL_LIGHT0 + i, GL_LINEAR_ATTENUATION, 0);
             glLightf(GL_LIGHT0 + i, GL_QUADRATIC_ATTENUATION, 1);
@@ -391,13 +391,13 @@ YGLU_API float specular_roughness_to_exponent(float r);
 //
 // This is a public API. See above for documentation.
 //
-YGLU_API void draw_elems(int num, const int* elem, etype etype,
+YGLU_API void draw_elems(int num, const int* elem, etype type,
     const float3* pos, const float3* norm, const float2* texcoord,
     const float3* color) {
     if (!num) return;
     assert(elem);
     auto nc = 0;
-    switch (etype) {
+    switch (type) {
         case etype::point:
             glBegin(GL_POINTS);
             nc = 1;
@@ -435,15 +435,18 @@ YGLU_API void draw_elems(int num, const int* elem, etype etype,
     }
     glEnd();
 }
+
 YGLU_API void draw_points(int num, const int* elem, const float3* pos,
     const float3* norm, const float2* texcoord, const float3* color) {
     return draw_elems(num, elem, etype::point, pos, norm, texcoord, color);
 }
+
 YGLU_API void draw_lines(int num, const int2* elem, const float3* pos,
     const float3* norm, const float2* texcoord, const float3* color) {
     return draw_elems(
         num, (const int*)elem, etype::line, pos, norm, texcoord, color);
 }
+
 YGLU_API void draw_triangles(int num, const int3* elem, const float3* pos,
     const float3* norm, const float2* texcoord, const float3* color) {
     return draw_elems(
@@ -937,12 +940,12 @@ YGLU_API bool set_vertattr(
 //
 // This is a public API. See above for documentation.
 //
-YGLU_API bool draw_elems(int nelems, uint bid, etype etype) {
+YGLU_API bool draw_elems(int nelems, uint bid, etype type) {
     if (!nelems) return true;
     assert(bid);
     assert(check_error());
     int mode = 0, nc = 0;
-    switch (etype) {
+    switch (type) {
         case etype::point:
             mode = GL_POINTS;
             nc = 1;

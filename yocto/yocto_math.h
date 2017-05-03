@@ -25,7 +25,8 @@
 /// This library can only be used as a header only library in C++ since it uses
 /// templates for its basic types. Some templated types and functions use
 /// specialization for easier access and simpler compilation. Specialization
-/// can be disabled by defining YM_NO_SPECIALIZATION.
+/// can be disabled by defining YM_NO_SPECIALIZATION. Specialization is only
+/// supported fully on clang.
 ///
 ///
 /// HISTORY:
@@ -106,6 +107,11 @@ namespace ym {}
 // HACK to avoid compilation with MSVC2015 without dirtying code
 #ifdef _WIN32
 #define constexpr
+#endif
+
+// disable spacialization with gcc
+#if defined(__GNUC__) && !defined(__clang__)
+#define YM_NO_SPECIALIZATION
 #endif
 
 namespace ym {
@@ -884,6 +890,8 @@ constexpr inline vec<T, 3> cross(const vec<T, 3>& a, const vec<T, 3>& b) {
 
 /// @}
 
+#ifndef YM_NO_SPECIALIZATION
+
 /// @name specialization of vector product operations
 /// @{
 
@@ -919,6 +927,8 @@ constexpr inline vec3f cross(const vec3f& a, const vec3f& b) {
 }
 
 /// @}
+
+#endif
 
 /// @name vector geometric operations
 /// @{
@@ -2165,15 +2175,14 @@ constexpr inline bool operator!=(const frame<T, N>& a, const frame<T, N>& b) {
 template <typename T, int N>
 constexpr inline frame<T, N> operator*(
     const frame<T, N>& a, const frame<T, N>& b) {
-    return make_frame(
-        ym::rot(a) * ym::rot(b), ym::rot(a) * ym::pos(b) + ym::pos(a));
+    return {ym::rot(a) * ym::rot(b), ym::rot(a) * ym::pos(b) + ym::pos(a)};
 }
 
 /// frame inverse (equivalent to rigid affine inverse)
 template <typename T, int N>
 constexpr inline frame<T, N> inverse(const frame<T, N>& a) {
     auto minv = transpose(ym::rot(a));
-    return make_frame(minv, -(minv * ym::pos(a)));
+    return {minv, -(minv * ym::pos(a))};
 }
 
 /// @}
