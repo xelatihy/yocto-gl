@@ -604,4 +604,4 @@ YSYM_API void advance_simulation(scene* scn, const simulation_params& params) {
     scn->overlap_refit(scn->overlap_ctx, scn, (int)scn->shapes.size());
 }
 
-}  // namespace
+}  // namespace ysym

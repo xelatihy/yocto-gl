@@ -142,7 +142,7 @@ void init_params(params* pars, ycmd::parser* parser) {
     pars->imgs =
         load_images(filenames, pars->exposure, pars->tonemap, pars->gamma);
 }
-}  // namespace
+}  // namespace yimview_app
 
 const int hud_width = 256;
 

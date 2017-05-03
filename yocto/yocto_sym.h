@@ -336,7 +336,7 @@ struct simulation_params {
 ///
 YSYM_API void advance_simulation(scene* scn, const simulation_params& params);
 
-}  // namespace
+}  // namespace ysym
 
 // -----------------------------------------------------------------------------
 // INCLUDE FOR HEADER-ONLY MODE

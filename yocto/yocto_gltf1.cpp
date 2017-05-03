@@ -3506,7 +3506,7 @@ std::string base64_decode(std::string const& encoded_string) {
     return ret;
 }
 
-}  // namespace
+}  // namespace _base64
 
 //
 // Check if a string starts with a prefix
@@ -4274,8 +4274,8 @@ YGLTF_API glTF_t* unflatten_gltf(
     buffer->uri = buffer_uri;
 
     // attribute handling
-    auto add_array_accessor = [&](
-        const std::string& name, int count, int nc, const float* df) {
+    auto add_array_accessor = [&](const std::string& name, int count, int nc,
+                                  const float* df) {
         auto aid = "a_" + name;
         auto vid = "v_" + name;
         auto bufferView = &gltf->bufferViews[vid];
@@ -4304,8 +4304,8 @@ YGLTF_API glTF_t* unflatten_gltf(
     };
 
     // attribute handling
-    auto add_element_accessor = [&](
-        const std::string& name, int count, const int* di, bool use_uint) {
+    auto add_element_accessor = [&](const std::string& name, int count,
+                                    const int* di, bool use_uint) {
         auto aid = "a_" + name;
         auto vid = "v_" + name;
         auto bufferView = &gltf->bufferViews[vid];
@@ -4490,4 +4490,4 @@ YGLTF_API glTF_t unflatten_gltf(
     return *gltf;
 }
 
-}  // namespace
+}  // namespace ygltf

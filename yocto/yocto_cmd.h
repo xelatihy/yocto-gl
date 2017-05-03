@@ -607,7 +607,7 @@ YCMD_API std::shared_future<void> thread_pool_async(
 YCMD_API void thread_pool_for(
     int count, const std::function<void(int idx)>& task);
 
-}  // namespace
+}  // namespace ycmd
 
 // -----------------------------------------------------------------------------
 // INCLUDE FOR HEADER-ONLY MODE

@@ -536,7 +536,7 @@ YOBJ_API void load_textures(
 
 /// @}
 
-}  // namespace
+}  // namespace yobj
 
 // -----------------------------------------------------------------------------
 // INCLUDE FOR HEADER-ONLY MODE

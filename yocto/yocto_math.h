@@ -3731,7 +3731,7 @@ struct timer {
 
 /// @}
 
-}  // namespace
+}  // namespace ym
 
 // HACK to avoid compilation with MSVC2015 without dirtying code
 #ifdef _WIN32

@@ -1024,8 +1024,9 @@ static inline bool _partition_prims(_bound_prim* sorted_prim, int start,
                 bins_count[b] = 0;
             }
             for (int i = start; i < end; i++) {
-                auto b = (int)(nbins * (sorted_prim[i].center[largest_axis] -
-                                           centroid_bbox[0][largest_axis]) /
+                auto b = (int)(nbins *
+                               (sorted_prim[i].center[largest_axis] -
+                                   centroid_bbox[0][largest_axis]) /
                                centroid_size[largest_axis]);
                 b = ym::clamp(b, 0, nbins - 1);
                 bins_count[b] += 1;
@@ -1988,4 +1989,4 @@ YBVH_API void compute_bvh_stats(const scene* scn, bool include_shapes,
         nleaves, min_depth, max_depth);
 }
 
-}  // namespace
+}  // namespace ybvh

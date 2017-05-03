@@ -801,9 +801,8 @@ static inline ym::vec3f _eval_fresnel_metal(
 // Schlick approximation of Fresnel term
 //
 static inline ym::vec3f _eval_fresnel_schlick(const ym::vec3f& ks, float cosw) {
-    return ks +
-           (ym::vec3f{1, 1, 1} - ks) *
-               std::pow(ym::clamp(1.0f - cosw, 0.0f, 1.0f), 5.0f);
+    return ks + (ym::vec3f{1, 1, 1} - ks) *
+                    std::pow(ym::clamp(1.0f - cosw, 0.0f, 1.0f), 5.0f);
 }
 
 //
@@ -1474,8 +1473,9 @@ static inline ym::vec4f _shade_pathtrace(const scene* scn, const ym::ray3f& ray,
         auto bld = _eval_emission(bpt) * _eval_brdfcos(pt, -bpt.wo) *
                    _weight_brdfcos(pt, -bpt.wo);
         if (bld != ym::zero3f) {
-            l += weight * bld * _weight_mis(_weight_brdfcos(pt, -bpt.wo),
-                                    _weight_light(bpt, pt));
+            l += weight * bld *
+                 _weight_mis(
+                     _weight_brdfcos(pt, -bpt.wo), _weight_light(bpt, pt));
         }
 
         // skip recursion if path ends
@@ -1793,4 +1793,4 @@ YTRACE_API void trace_image(const scene* scn, int width, int height,
         params.nsamples, params);
 }
 
-}  // namespace
+}  // namespace ytrace

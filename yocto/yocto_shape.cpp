@@ -930,4 +930,4 @@ YSHAPE_API void make_stdsurface(stdsurface_type stype, int level,
         (ym::frame3f)frame, scale, urange, vrange);
 }
 
-}  // namespace
+}  // namespace yshape

@@ -316,7 +316,7 @@ YGLU_API void draw_lines(int num, const int2* elem, const float3* pos,
 YGLU_API void draw_triangles(int num, const int3* elem, const float3* pos,
     const float3* norm, const float2* texcoord, const float3* color);
 
-}  // namespace
+}  // namespace legacy
 
 // -----------------------------------------------------------------------------
 // MODERN FUNCTIONS
@@ -477,7 +477,7 @@ YGLU_API bool set_vertattr(
 ///
 YGLU_API bool draw_elems(int nelems, uint bid, etype etype);
 
-}  // namespace
+}  // namespace modern
 
 // STANDARD SHADER FUNCTIONS ---------------------------------------------------
 
@@ -590,7 +590,7 @@ YGLU_API void draw_lines(uint prog, int num, uint bid);
 ///
 YGLU_API void draw_triangles(uint prog, int num, uint bid);
 
-}  // namespace
+}  // namespace stdshader
 
 // -----------------------------------------------------------------------------
 // USER INTERFACE FUNCTIONS
@@ -771,11 +771,11 @@ bool button_widget(window* win, const std::string& lbl);
 bool get_widget_active(window* win);
 
 #endif
-}  // namespace
+}  // namespace ui
 
 #endif
 
-}  // namespace
+}  // namespace yglu
 
 // -----------------------------------------------------------------------------
 // INCLUDE FOR HEADER-ONLY MODE

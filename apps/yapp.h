@@ -287,6 +287,6 @@ void free_shade_state(shade_state* state);
 void shade_scene(
     const yapp::scene* scn, const params* pars, const shade_state* st);
 
-}  // namespace
+}  // namespace yapp
 
 #endif
