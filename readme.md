@@ -54,16 +54,17 @@ with
 
     mkdir cmake
     cd cmake
-    cmake ..\apps
+    cmake ..
     make -j4        # linux/OSX
     msbuild         # Windows
 
 The interactive apps use OpenGL, GLFW and GLEW. We include binaries for Windows, but you have to install the libraries youself on Linux (we use `apt-get`) and OSX (we use [homebrew](http://brew.sh)). After installing these libraries, you can include these examples in the build by changing the cmake line above with
 
-    cmake -DBUILD_OPENGL_APPS=ON ..\apps
+    cmake -DINCLUDE_OPENGL_DEPS=ON ..
 
 ## Brief Development History
 
+- Split CMake builds
 - Switch to .H/.CPP pairs
     - Compilation times are three times faster for the example applications
     - Better separation of interface and implementation
