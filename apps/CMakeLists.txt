@@ -23,16 +23,16 @@ if(WIN32)
 endif(WIN32)
 
 set(app_files
-    ../apps/yapp.h
-    ../apps/yapp.cpp
-    ../apps/tinyply.h
-    ../apps/tinyply.cpp
+    yapp.h
+    yapp.cpp
+    tinyply.h
+    tinyply.cpp
 )
 
 if(INCLUDE_OPENGL_DEPS)
     set(app_files
         ${app_files}
-        ../apps/yapp_ui.cpp
+        yapp_ui.cpp
     )
 endif(INCLUDE_OPENGL_DEPS)
 
@@ -40,11 +40,11 @@ add_library(app STATIC ${app_files})
 
 target_link_libraries(app yocto)
 
-add_executable(ysym ../apps/ysym.cpp)
-add_executable(ytestgen ../apps/ytestgen.cpp)
-add_executable(ytrace ../apps/ytrace.cpp)
-add_executable(yobj2gltf ../apps/yobj2gltf.cpp)
-add_executable(yimproc ../apps/yimproc.cpp)
+add_executable(ysym ysym.cpp)
+add_executable(ytestgen ytestgen.cpp)
+add_executable(ytrace ytrace.cpp)
+add_executable(yobj2gltf yobj2gltf.cpp)
+add_executable(yimproc yimproc.cpp)
 
 target_link_libraries(ysym yocto app)
 target_link_libraries(ytestgen yocto app)
@@ -57,10 +57,10 @@ if(UNIX AND NOT APPLE)
 endif(UNIX AND NOT APPLE)
 
 if(INCLUDE_OPENGL_DEPS)
-    add_executable(yisym ../apps/yisym.cpp)
-    add_executable(yshade ../apps/yshade.cpp)
-    add_executable(yitrace ../apps/yitrace.cpp)
-    add_executable(yimview ../apps/yimview.cpp)
+    add_executable(yisym yisym.cpp)
+    add_executable(yshade yshade.cpp)
+    add_executable(yitrace yitrace.cpp)
+    add_executable(yimview yimview.cpp)
 
     target_link_libraries(yisym yocto app)
     target_link_libraries(yshade yocto app)

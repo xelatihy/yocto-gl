@@ -46,30 +46,30 @@ if(INCLUDE_OPENGL_DEPS)
 endif(INCLUDE_OPENGL_DEPS)
 
 set(yocto_files
-    ../yocto/yocto_cmd.h
-    ../yocto/yocto_cmd.cpp
-    ../yocto/yocto_obj.h
-    ../yocto/yocto_obj.cpp
-    ../yocto/yocto_gltf.h
-    ../yocto/yocto_gltf.cpp
-    ../yocto/yocto_math.h
-    ../yocto/yocto_trace.h
-    ../yocto/yocto_trace.cpp
-    ../yocto/yocto_sym.h
-    ../yocto/yocto_sym.cpp
-    ../yocto/yocto_bvh.h
-    ../yocto/yocto_bvh.cpp
-    ../yocto/yocto_shape.h
-    ../yocto/yocto_shape.cpp
-    ../yocto/yocto_img.h
-    ../yocto/yocto_img.cpp
+    yocto_cmd.h
+    yocto_cmd.cpp
+    yocto_obj.h
+    yocto_obj.cpp
+    yocto_gltf.h
+    yocto_gltf.cpp
+    yocto_math.h
+    yocto_trace.h
+    yocto_trace.cpp
+    yocto_sym.h
+    yocto_sym.cpp
+    yocto_bvh.h
+    yocto_bvh.cpp
+    yocto_shape.h
+    yocto_shape.cpp
+    yocto_img.h
+    yocto_img.cpp
 )
 
 if(INCLUDE_OPENGL_DEPS)
     set(yocto_files
         ${yocto_files}
-        ../yocto/yocto_glu.h
-        ../yocto/yocto_glu.cpp
+        yocto_glu.h
+        yocto_glu.cpp
     )
 endif(INCLUDE_OPENGL_DEPS)
 
