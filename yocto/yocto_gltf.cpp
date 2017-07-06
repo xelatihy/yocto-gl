@@ -2604,7 +2604,7 @@ YGLTF_API void load_shaders(
 //
 YGLTF_API void load_images(
     glTF_t* gltf, const std::string& dirname, bool skip_missing) {
-#ifndef YGL_NO_STBIMAGE
+#ifndef YGLTF_NO_IMAGE
 
     for (auto& image_ : gltf->images) {
         auto image = &image_;
@@ -2675,7 +2675,7 @@ YGLTF_API void save_shaders(const glTF_t* gltf, const std::string& dirname) {
 // Save images.
 //
 YGLTF_API void save_images(const glTF_t* gltf, const std::string& dirname) {
-#ifndef YGL_NO_STBIMAGE
+#ifndef YGLTF_NO_IMAGE
 
     for (auto& image_ : gltf->images) {
         auto image = &image_;
@@ -3152,9 +3152,9 @@ YGLTF_API fl_gltf* flatten_gltf(const glTF_t* gltf, int scene_idx) {
 // BUG: initialization
 #ifdef _WIN32
                 auto fm = new fl_mesh();
-                fm->name = gltf->meshes.at(mesh_name).name;
+                fm->name = gltf->meshes.at(node->mesh).name;
                 fm->xform = xf;
-                fm->primitives = meshes.at(mesh_name);
+                fm->primitives = meshes.at(node->mesh);
                 fl_gltf->meshes.push_back(fm);
 #else
                 fl_gltf->meshes.push_back(
