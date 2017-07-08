@@ -3855,6 +3855,26 @@ inline void make_uvflipcapsphere(int usteps, int vsteps, float radius,
 
 Make a quad.
 
+### Function make_uvcutsphere()
+
+~~~ .cpp
+inline void make_uvcutsphere(int usteps, int vsteps, float radius,
+    std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord);
+~~~
+
+Make a quad.
+
+### Function make_uvflippedcutsphere()
+
+~~~ .cpp
+inline void make_uvflippedcutsphere(int usteps, int vsteps, float radius,
+    std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord);
+~~~
+
+Make a quad.
+
 ### Function intersect_point()
 
 ~~~ .cpp
@@ -4205,19 +4225,6 @@ Image of a specified type
     - data():      data access
     - data():      data access
 
-
-### Struct array_view
-
-~~~ .cpp
-template <typename T>
-struct array_view {
-~~~
-
-An array_view is a non-owining reference to an array with an API
-similar
-to a vector/array containers, but without reallocation.
-This is inspired, but significantly simpler than
-gsl::span https://github.com/Microsoft/GSL or array_view.
 
 ### Function image_lookup()
 

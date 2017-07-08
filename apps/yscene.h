@@ -583,8 +583,8 @@ inline yshade_state* init_shade_state(const ygltf::scene_group* sc) {
 // Draw a mesh
 //
 inline void shade_mesh(const ygltf::mesh* msh, const ygltf::skin* sk,
-    const yshade_state* st, const ym::mat4f& xform, bool edges,
-    bool wireframe) {
+    const std::vector<float>& morph_weights, const yshade_state* st,
+    const ym::mat4f& xform, bool edges, bool wireframe) {
     static auto default_material = ygltf::material();
     default_material.metallic_roughness =
         new ygltf::material_metallic_rooughness();
@@ -654,6 +654,15 @@ inline void shade_mesh(const ygltf::mesh* msh, const ygltf::skin* sk,
             yglu::update_buffer(vert_vbo.norm, 3 * sizeof(float),
                 skinned_norm.size(), skinned_norm.data(), false, true);
 #endif
+        } else if (!morph_weights.empty() && !shp->morph_targets.empty()) {
+            std::vector<ym::vec3f> morph_pos, morph_norm;
+            std::vector<ym::vec4f> morph_tang;
+            ygltf::compute_morphing_deformation(
+                shp, morph_weights, morph_pos, morph_norm, morph_tang);
+            yglu::update_buffer(vert_vbo.pos, 3 * sizeof(float),
+                morph_pos.size(), morph_pos.data(), false, true);
+            yglu::update_buffer(vert_vbo.norm, 3 * sizeof(float),
+                morph_norm.size(), morph_norm.data(), false, true);
         } else {
             yglu::stdshader::set_vert_skinning_off(st->prog);
         }
@@ -741,11 +750,13 @@ inline void shade_scene(const ygltf::scene_group* scns, const ygltf::scene* scn,
 
     if (!instances.empty()) {
         for (auto ist : instances) {
-            shade_mesh(ist->mesh, ist->skin, st, ist->xform, edges, wireframe);
+            shade_mesh(ist->mesh, ist->skin, ist->morph_weights, st, ist->xform,
+                edges, wireframe);
         }
     } else {
         for (auto msh : scns->meshes) {
-            shade_mesh(msh, nullptr, st, ym::identity_mat4f, edges, wireframe);
+            shade_mesh(
+                msh, nullptr, {}, st, ym::identity_mat4f, edges, wireframe);
         }
     }
 

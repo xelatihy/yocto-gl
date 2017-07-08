@@ -57,6 +57,7 @@ necessary. At the same time, we do not keep track of set/unset values
 for basic types (int, float, bool) as a compromise for efficieny.</p>
 <h2>History</h2>
 <ul>
+<li>v 0.10: added moprhing to high-level interface</li>
 <li>v 0.9: use yocto_math in the interface and remove inline compilation</li>
 <li>v 0.8: API changes to match to GLTF 2</li>
 <li>v 0.7: new codegen to match to GLTF 2 (changes imposed by changing spec)</li>
@@ -288,6 +289,26 @@ avoid.</p>
 </ul>
 </li>
 </ul>
+<h3>Struct shape_morph</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">shape_morph</span> <span class="p">{</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&gt;</span> <span class="n">pos</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&gt;</span> <span class="n">norm</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&gt;</span> <span class="n">tangsp</span><span class="p">;</span>
+    <span class="kt">float</span> <span class="n">weight</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+
+<p>Morph information for shapes</p>
+<ul>
+<li>Members:<ul>
+<li>pos:      morph position</li>
+<li>norm:      morph normal</li>
+<li>tangsp:      morph tangent</li>
+<li>weight:      default weight (the same for each shape in a mesh)</li>
+</ul>
+</li>
+</ul>
 <h3>Struct shape</h3>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">shape</span> <span class="p">{</span>
     <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
@@ -304,6 +325,8 @@ avoid.</p>
     <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">points</span><span class="p">;</span>
     <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">ym</span><span class="o">::</span><span class="n">vec2i</span><span class="o">&gt;</span> <span class="n">lines</span><span class="p">;</span>
     <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">ym</span><span class="o">::</span><span class="n">vec3i</span><span class="o">&gt;</span> <span class="n">triangles</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">shape_morph</span><span class="o">*&gt;</span> <span class="n">morph_targets</span><span class="p">;</span>
+    <span class="o">~</span><span class="n">shape</span><span class="p">();</span> 
 <span class="p">}</span>
 </code></pre></div>
 
@@ -325,6 +348,8 @@ avoid.</p>
 <li>points:      point elements</li>
 <li>lines:      line elements</li>
 <li>triangles:      triangle elements</li>
+<li>morph_targets:      morph targets</li>
+<li>~shape():      cleanup</li>
 </ul>
 </li>
 </ul>
@@ -357,6 +382,7 @@ avoid.</p>
     <span class="n">ym</span><span class="o">::</span><span class="n">quat4f</span> <span class="n">rotation</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">};</span>
     <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span> <span class="n">scale</span> <span class="o">=</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">};</span>
     <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span> <span class="n">translation</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">};</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;</span> <span class="n">morph_weights</span><span class="p">;</span>
     <span class="n">ym</span><span class="o">::</span><span class="n">mat4f</span> <span class="n">xform</span> <span class="o">=</span> <span class="n">ym</span><span class="o">::</span><span class="n">identity_mat4f</span><span class="p">;</span>
     <span class="n">ym</span><span class="o">::</span><span class="n">mat4f</span> <span class="n">local_xform</span> <span class="o">=</span> <span class="n">ym</span><span class="o">::</span><span class="n">identity_mat4f</span><span class="p">;</span>
     <span class="n">ym</span><span class="o">::</span><span class="n">mat4f</span> <span class="n">skin_xform</span> <span class="o">=</span> <span class="n">ym</span><span class="o">::</span><span class="n">identity_mat4f</span><span class="p">;</span>
@@ -377,18 +403,19 @@ avoid.</p>
  is the scalar.</li>
 <li>scale:      The node's non-uniform scale.</li>
 <li>translation:      The node's translation.</li>
-<li>xform:      transform</li>
-<li>local_xform:      local transform</li>
-<li>skin_xform:      skin transform</li>
+<li>morph_weights:      morph target weights</li>
+<li>xform:      transform (computed during update)</li>
+<li>local_xform:      local transform (computed during update)</li>
+<li>skin_xform:      skin transform (computed during update)</li>
 </ul>
 </li>
 </ul>
 <h3>Enum animation_interpolation</h3>
 <div class="codehilite"><pre><code><span></span><span class="k">enum</span> <span class="k">struct</span> <span class="n">animation_interpolation</span> <span class="p">{</span>
-    <span class="n">linear</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
-    <span class="n">step</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
-    <span class="n">catmull_rom</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span>
-    <span class="n">cubic</span> <span class="o">=</span> <span class="mi">4</span><span class="p">,</span>
+    <span class="n">linear</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="n">step</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+    <span class="n">catmull_rom</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
+    <span class="n">cubic</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span>
 <span class="p">}</span>
 </code></pre></div>
 
@@ -405,10 +432,10 @@ avoid.</p>
 </ul>
 <h3>Enum animation_property</h3>
 <div class="codehilite"><pre><code><span></span><span class="k">enum</span> <span class="k">struct</span> <span class="n">animation_property</span> <span class="p">{</span>
-    <span class="n">translation</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
-    <span class="n">rotation</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
-    <span class="n">scale</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span>
-    <span class="n">weights</span> <span class="o">=</span> <span class="mi">4</span><span class="p">,</span>
+    <span class="n">translation</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="n">rotation</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+    <span class="n">scale</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
+    <span class="n">weights</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span>
 <span class="p">}</span>
 </code></pre></div>
 
@@ -600,6 +627,14 @@ Scenes and nodes are missing for mesh-only assets.</p>
 
 <p>Skin transforms (local-to-object) from the node transform that instances the
 skin</p>
+<h3>Function compute_morphing_deformation()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">compute_morphing_deformation</span><span class="p">(</span><span class="k">const</span> <span class="n">shape</span><span class="o">*</span> <span class="n">shp</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;&amp;</span> <span class="n">weights</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">pos</span><span class="p">,</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">norm</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">ym</span><span class="o">::</span><span class="n">vec4f</span><span class="o">&gt;&amp;</span> <span class="n">tangsp</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Compute shape morphing</p>
 <h3>Function compute_scene_bounds()</h3>
 <div class="codehilite"><pre><code><span></span><span class="n">ym</span><span class="o">::</span><span class="n">bbox3f</span> <span class="n">compute_scene_bounds</span><span class="p">(</span><span class="k">const</span> <span class="n">scene_group</span><span class="o">*</span> <span class="n">scn</span><span class="p">);</span>
 </code></pre></div>
@@ -761,7 +796,7 @@ skin</p>
 </ul>
 <h3>Enum glTFAccessorSparseIndicesComponentType</h3>
 <div class="codehilite"><pre><code><span></span><span class="k">enum</span> <span class="k">struct</span> <span class="n">glTFAccessorSparseIndicesComponentType</span> <span class="p">{</span>
-    <span class="n">NotSet</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="n">NotSet</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
     <span class="n">UnsignedByte</span> <span class="o">=</span> <span class="mi">5121</span><span class="p">,</span>
     <span class="n">UnsignedShort</span> <span class="o">=</span> <span class="mi">5123</span><span class="p">,</span>
     <span class="n">UnsignedInt</span> <span class="o">=</span> <span class="mi">5125</span><span class="p">,</span>
@@ -846,7 +881,7 @@ displaced accessor attributes pointed by <code>accessor.sparse.indices</code>.</
 </ul>
 <h3>Enum glTFAccessorComponentType</h3>
 <div class="codehilite"><pre><code><span></span><span class="k">enum</span> <span class="k">struct</span> <span class="n">glTFAccessorComponentType</span> <span class="p">{</span>
-    <span class="n">NotSet</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="n">NotSet</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
     <span class="n">Byte</span> <span class="o">=</span> <span class="mi">5120</span><span class="p">,</span>
     <span class="n">UnsignedByte</span> <span class="o">=</span> <span class="mi">5121</span><span class="p">,</span>
     <span class="n">Short</span> <span class="o">=</span> <span class="mi">5122</span><span class="p">,</span>
@@ -872,14 +907,14 @@ displaced accessor attributes pointed by <code>accessor.sparse.indices</code>.</
 </ul>
 <h3>Enum glTFAccessorType</h3>
 <div class="codehilite"><pre><code><span></span><span class="k">enum</span> <span class="k">struct</span> <span class="n">glTFAccessorType</span> <span class="p">{</span>
-    <span class="n">NotSet</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
-    <span class="n">Scalar</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
-    <span class="n">Vec2</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
-    <span class="n">Vec3</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span>
-    <span class="n">Vec4</span> <span class="o">=</span> <span class="mi">4</span><span class="p">,</span>
-    <span class="n">Mat2</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span>
-    <span class="n">Mat3</span> <span class="o">=</span> <span class="mi">6</span><span class="p">,</span>
-    <span class="n">Mat4</span> <span class="o">=</span> <span class="mi">7</span><span class="p">,</span>
+    <span class="n">NotSet</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">Scalar</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="n">Vec2</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+    <span class="n">Vec3</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
+    <span class="n">Vec4</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span>
+    <span class="n">Mat2</span> <span class="o">=</span> <span class="mi">4</span><span class="p">,</span>
+    <span class="n">Mat3</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span>
+    <span class="n">Mat4</span> <span class="o">=</span> <span class="mi">6</span><span class="p">,</span>
 <span class="p">}</span>
 </code></pre></div>
 
@@ -936,11 +971,11 @@ buffer.</p>
 </ul>
 <h3>Enum glTFAnimationChannelTargetPath</h3>
 <div class="codehilite"><pre><code><span></span><span class="k">enum</span> <span class="k">struct</span> <span class="n">glTFAnimationChannelTargetPath</span> <span class="p">{</span>
-    <span class="n">NotSet</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
-    <span class="n">Translation</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
-    <span class="n">Rotation</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
-    <span class="n">Scale</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span>
-    <span class="n">Weights</span> <span class="o">=</span> <span class="mi">4</span><span class="p">,</span>
+    <span class="n">NotSet</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">Translation</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="n">Rotation</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+    <span class="n">Scale</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
+    <span class="n">Weights</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span>
 <span class="p">}</span>
 </code></pre></div>
 
@@ -995,11 +1030,11 @@ buffer.</p>
 </ul>
 <h3>Enum glTFAnimationSamplerInterpolation</h3>
 <div class="codehilite"><pre><code><span></span><span class="k">enum</span> <span class="k">struct</span> <span class="n">glTFAnimationSamplerInterpolation</span> <span class="p">{</span>
-    <span class="n">NotSet</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
-    <span class="n">Linear</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
-    <span class="n">Step</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
-    <span class="n">Catmullromspline</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span>
-    <span class="n">Cubicspline</span> <span class="o">=</span> <span class="mi">4</span><span class="p">,</span>
+    <span class="n">NotSet</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">Linear</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="n">Step</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+    <span class="n">Catmullromspline</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
+    <span class="n">Cubicspline</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span>
 <span class="p">}</span>
 </code></pre></div>
 
@@ -1102,7 +1137,7 @@ define a keyframe graph (but not its target).</p>
 </ul>
 <h3>Enum glTFBufferViewTarget</h3>
 <div class="codehilite"><pre><code><span></span><span class="k">enum</span> <span class="k">struct</span> <span class="n">glTFBufferViewTarget</span> <span class="p">{</span>
-    <span class="n">NotSet</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="n">NotSet</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
     <span class="n">ArrayBuffer</span> <span class="o">=</span> <span class="mi">34962</span><span class="p">,</span>
     <span class="n">ElementArrayBuffer</span> <span class="o">=</span> <span class="mi">34963</span><span class="p">,</span>
 <span class="p">}</span>
@@ -1185,9 +1220,9 @@ projection matrix.</p>
 </ul>
 <h3>Enum glTFCameraType</h3>
 <div class="codehilite"><pre><code><span></span><span class="k">enum</span> <span class="k">struct</span> <span class="n">glTFCameraType</span> <span class="p">{</span>
-    <span class="n">NotSet</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
-    <span class="n">Perspective</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
-    <span class="n">Orthographic</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
+    <span class="n">NotSet</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">Perspective</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="n">Orthographic</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
 <span class="p">}</span>
 </code></pre></div>
 
@@ -1227,9 +1262,9 @@ to place the camera in the scene.</p>
 </ul>
 <h3>Enum glTFImageMimeType</h3>
 <div class="codehilite"><pre><code><span></span><span class="k">enum</span> <span class="k">struct</span> <span class="n">glTFImageMimeType</span> <span class="p">{</span>
-    <span class="n">NotSet</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
-    <span class="n">ImageJpeg</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
-    <span class="n">ImagePng</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
+    <span class="n">NotSet</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">ImageJpeg</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="n">ImagePng</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
 <span class="p">}</span>
 </code></pre></div>
 
@@ -1380,10 +1415,10 @@ Physically-Based Rendering (PBR) methodology.</p>
 </ul>
 <h3>Enum glTFMaterialAlphaMode</h3>
 <div class="codehilite"><pre><code><span></span><span class="k">enum</span> <span class="k">struct</span> <span class="n">glTFMaterialAlphaMode</span> <span class="p">{</span>
-    <span class="n">NotSet</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
-    <span class="n">Opaque</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
-    <span class="n">Mask</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
-    <span class="n">Blend</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span>
+    <span class="n">NotSet</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">Opaque</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="n">Mask</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+    <span class="n">Blend</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
 <span class="p">}</span>
 </code></pre></div>
 
@@ -1437,7 +1472,7 @@ Physically-Based Rendering (PBR) methodology.</p>
 </ul>
 <h3>Enum glTFMeshPrimitiveMode</h3>
 <div class="codehilite"><pre><code><span></span><span class="k">enum</span> <span class="k">struct</span> <span class="n">glTFMeshPrimitiveMode</span> <span class="p">{</span>
-    <span class="n">NotSet</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="n">NotSet</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
     <span class="n">Points</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
     <span class="n">Lines</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
     <span class="n">LineLoop</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
@@ -1552,7 +1587,7 @@ not be present.</p>
 </ul>
 <h3>Enum glTFSamplerMagFilter</h3>
 <div class="codehilite"><pre><code><span></span><span class="k">enum</span> <span class="k">struct</span> <span class="n">glTFSamplerMagFilter</span> <span class="p">{</span>
-    <span class="n">NotSet</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="n">NotSet</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
     <span class="n">Nearest</span> <span class="o">=</span> <span class="mi">9728</span><span class="p">,</span>
     <span class="n">Linear</span> <span class="o">=</span> <span class="mi">9729</span><span class="p">,</span>
 <span class="p">}</span>
@@ -1570,7 +1605,7 @@ not be present.</p>
 </ul>
 <h3>Enum glTFSamplerMinFilter</h3>
 <div class="codehilite"><pre><code><span></span><span class="k">enum</span> <span class="k">struct</span> <span class="n">glTFSamplerMinFilter</span> <span class="p">{</span>
-    <span class="n">NotSet</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="n">NotSet</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
     <span class="n">Nearest</span> <span class="o">=</span> <span class="mi">9728</span><span class="p">,</span>
     <span class="n">Linear</span> <span class="o">=</span> <span class="mi">9729</span><span class="p">,</span>
     <span class="n">NearestMipmapNearest</span> <span class="o">=</span> <span class="mi">9984</span><span class="p">,</span>
@@ -1596,7 +1631,7 @@ not be present.</p>
 </ul>
 <h3>Enum glTFSamplerWrapS</h3>
 <div class="codehilite"><pre><code><span></span><span class="k">enum</span> <span class="k">struct</span> <span class="n">glTFSamplerWrapS</span> <span class="p">{</span>
-    <span class="n">NotSet</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="n">NotSet</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
     <span class="n">ClampToEdge</span> <span class="o">=</span> <span class="mi">33071</span><span class="p">,</span>
     <span class="n">MirroredRepeat</span> <span class="o">=</span> <span class="mi">33648</span><span class="p">,</span>
     <span class="n">Repeat</span> <span class="o">=</span> <span class="mi">10497</span><span class="p">,</span>
@@ -1616,7 +1651,7 @@ not be present.</p>
 </ul>
 <h3>Enum glTFSamplerWrapT</h3>
 <div class="codehilite"><pre><code><span></span><span class="k">enum</span> <span class="k">struct</span> <span class="n">glTFSamplerWrapT</span> <span class="p">{</span>
-    <span class="n">NotSet</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="n">NotSet</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
     <span class="n">ClampToEdge</span> <span class="o">=</span> <span class="mi">33071</span><span class="p">,</span>
     <span class="n">MirroredRepeat</span> <span class="o">=</span> <span class="mi">33648</span><span class="p">,</span>
     <span class="n">Repeat</span> <span class="o">=</span> <span class="mi">10497</span><span class="p">,</span>

@@ -3170,6 +3170,22 @@ tangent wrt the V texcoord. Tangent frame is useful in normal mapping.</p>
 
 
 <p>Make a quad.</p>
+<h3>Function make_uvcutsphere()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">make_uvcutsphere</span><span class="p">(</span><span class="kt">int</span> <span class="n">usteps</span><span class="p">,</span> <span class="kt">int</span> <span class="n">vsteps</span><span class="p">,</span> <span class="kt">float</span> <span class="n">radius</span><span class="p">,</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;&amp;</span> <span class="n">triangles</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">pos</span><span class="p">,</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">norm</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;&amp;</span> <span class="n">texcoord</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Make a quad.</p>
+<h3>Function make_uvflippedcutsphere()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">make_uvflippedcutsphere</span><span class="p">(</span><span class="kt">int</span> <span class="n">usteps</span><span class="p">,</span> <span class="kt">int</span> <span class="n">vsteps</span><span class="p">,</span> <span class="kt">float</span> <span class="n">radius</span><span class="p">,</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;&amp;</span> <span class="n">triangles</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">pos</span><span class="p">,</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">norm</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;&amp;</span> <span class="n">texcoord</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Make a quad.</p>
 <h3>Function intersect_point()</h3>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">intersect_point</span><span class="p">(</span>
     <span class="k">const</span> <span class="n">ray3f</span><span class="o">&amp;</span> <span class="n">ray</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">p</span><span class="p">,</span> <span class="kt">float</span> <span class="n">r</span><span class="p">,</span> <span class="kt">float</span><span class="o">&amp;</span> <span class="n">ray_t</span><span class="p">);</span>
@@ -3450,17 +3466,6 @@ From Correlated Multi-Jittered Sampling by Kensler @ Pixar</p>
 </ul>
 </li>
 </ul>
-<h3>Struct array_view</h3>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-<span class="k">struct</span> <span class="n">array_view</span> <span class="p">{</span>
-</code></pre></div>
-
-
-<p>An array_view is a non-owining reference to an array with an API
-similar
-to a vector/array containers, but without reallocation.
-This is inspired, but significantly simpler than
-gsl::span https://github.com/Microsoft/GSL or array_view.</p>
 <h3>Function image_lookup()</h3>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
 <span class="k">constexpr</span> <span class="kr">inline</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;</span> <span class="n">image_lookup</span><span class="p">(</span>
