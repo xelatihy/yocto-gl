@@ -1,0 +1,598 @@
+
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+          <link rel="stylesheet" href="style.css">
+        </head>
+        <body>
+        <header></header>
+        <article>
+        <h1>Yocto/Glu</h1>
+<p>A set of utilities to draw on screen with OpenGL 2.1. Mostly
+used to make quick viewers. Not sure it is helpful to others (OpenGL is
+really a portability mess, but there is nothing else). The library is split
+into two namespaces, legacy and modern, to indicate functions for fixed
+function pipeline and for modern shaders.</p>
+<p>This library depends in yocto_math.h
+The library depends on GLEW for OpenGL functions on Windows and Linux.</p>
+<h2>Features</h2>
+<ol>
+<li>image viewing with <code>shade_image()</code>, with support for tone mapping.</li>
+<li>texture utilies to quickly create/update textures<ul>
+<li>create textures with <code>make_texture()</code></li>
+<li>create textures with <code>update_texture()</code></li>
+<li>delete textures with <code>clear_texture()</code></li>
+</ul>
+</li>
+<li>program utilities in modern namespace<ul>
+<li>buffer objects with <code>create_buffer()</code>, <code>update_buffer()</code></li>
+<li>program creation/cleaning with <code>make_program()</code>, <code>clear_program()</code></li>
+<li>uniforms with <code>set_uniform()</code></li>
+<li>vertex attrib with <code>set_vertattr()</code> and <code>set_vertattr_buff()</code></li>
+<li><code>draw_elems()</code></li>
+</ul>
+</li>
+<li>a standard shader for GGX fragment shading and multiple lights in
+  the <code>stdshader</code> namespace<ul>
+<li>initialize the shaders with <code>make_program()</code></li>
+<li>start/end each frame with <code>begin_frame()</code>, <code>end_frame()</code></li>
+<li>define lights with <code>set_lights()</code></li>
+<li>start/end each shape with <code>begin_shape()</code>, <code>end_shape()</code></li>
+<li>define material Parameters with <code>set_material()</code></li>
+<li>define vertices with <code>set_vert()</code></li>
+<li>draw elements with <code>draw_elems()</code></li>
+</ul>
+</li>
+</ol>
+<p>The interface for each function is described in details in the interface
+section of this file.</p>
+<h2>History</h2>
+<ul>
+<li>v 0.12: removing legacy functions</li>
+<li>v 0.11: use yocto_math in the interface and remove inline compilation</li>
+<li>v 0.10: user interface with dear ImGui</li>
+<li>v 0.9: user interface with GLFW and NUKLEAR</li>
+<li>v 0.8: switch to .h/.cpp pair</li>
+<li>v 0.7: cleaner srgb support for stdshader</li>
+<li>v 0.6: doxygen comments</li>
+<li>v 0.5: support for OpenGL 3.2</li>
+<li>v 0.4: support for legacy OpenGL</li>
+<li>v 0.3: [major API change] move to modern C++ interface</li>
+<li>v 0.2: removal of C interface</li>
+<li>v 0.1: C/C++ implementation</li>
+<li>v 0.0: initial release in C99</li>
+</ul>
+<h2>Namespace yglu</h2>
+<p>OpenGL abstraction</p>
+<h3>Typedef uint</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">using</span> <span class="n">uint</span> <span class="o">=</span> <span class="kt">unsigned</span> <span class="kt">int</span><span class="p">;</span>
+</code></pre></div>
+
+
+<p>Shortcut for GLuint.</p>
+<h3>Enum etype : int</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">enum</span> <span class="k">struct</span> <span class="nl">etype</span> <span class="p">:</span> <span class="kt">int</span> <span class="p">{</span>
+    <span class="n">point</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+    <span class="n">line</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
+    <span class="n">triangle</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span>
+    <span class="n">quad</span> <span class="o">=</span> <span class="mi">4</span><span class="p">,</span>
+<span class="p">}</span>
+</code></pre></div>
+
+
+<p>Shape types</p>
+<ul>
+<li>Values:<ul>
+<li>point:      points</li>
+<li>line:      lines</li>
+<li>triangle:      triangles</li>
+<li>quad:      quads</li>
+</ul>
+</li>
+</ul>
+<h3>Enum ltype : int</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">enum</span> <span class="k">struct</span> <span class="nl">ltype</span> <span class="p">:</span> <span class="kt">int</span> <span class="p">{</span>
+    <span class="n">point</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="n">directional</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+<span class="p">}</span>
+</code></pre></div>
+
+
+<p>Light types</p>
+<ul>
+<li>Values:<ul>
+<li>point:      point lights</li>
+<li>directional:      directional lights</li>
+</ul>
+</li>
+</ul>
+<h3>Enum tonemap_type</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">enum</span> <span class="k">struct</span> <span class="n">tonemap_type</span> <span class="p">{</span>
+    <span class="n">none</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="n">srgb</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+    <span class="n">gamma</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
+    <span class="n">filmic</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span>
+<span class="p">}</span>
+</code></pre></div>
+
+
+<p>Tone mapping presets</p>
+<ul>
+<li>Values:<ul>
+<li>none:      none</li>
+<li>srgb:      srgb</li>
+<li>gamma:      linear</li>
+<li>filmic:      filmic</li>
+</ul>
+</li>
+</ul>
+<h3>Enum texture_wrap</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">enum</span> <span class="k">struct</span> <span class="n">texture_wrap</span> <span class="p">{</span>
+    <span class="n">not_set</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="n">repeat</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+    <span class="n">clamp</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
+    <span class="n">mirror</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span>
+<span class="p">}</span>
+</code></pre></div>
+
+
+<p>Wrap values for texture</p>
+<ul>
+<li>Values:<ul>
+<li>not_set:      not set</li>
+<li>repeat:      repeat</li>
+<li>clamp:      clamp to edge</li>
+<li>mirror:      mirror</li>
+</ul>
+</li>
+</ul>
+<h3>Enum texture_filter</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">enum</span> <span class="k">struct</span> <span class="n">texture_filter</span> <span class="p">{</span>
+    <span class="n">not_set</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="n">linear</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+    <span class="n">nearest</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
+    <span class="n">linear_mipmap_linear</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span>
+    <span class="n">nearest_mipmap_nearest</span> <span class="o">=</span> <span class="mi">4</span><span class="p">,</span>
+    <span class="n">linear_mipmap_nearest</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span>
+    <span class="n">nearest_mipmap_linear</span> <span class="o">=</span> <span class="mi">6</span><span class="p">,</span>
+<span class="p">}</span>
+</code></pre></div>
+
+
+<p>Filter values for texture</p>
+<ul>
+<li>Values:<ul>
+<li>not_set:      not set</li>
+<li>linear:      linear</li>
+<li>nearest:      nearest</li>
+<li>linear_mipmap_linear:      mip-mapping</li>
+<li>nearest_mipmap_nearest:      mip-mapping</li>
+<li>linear_mipmap_nearest:      mip-mapping</li>
+<li>nearest_mipmap_linear:      mip-mapping</li>
+</ul>
+</li>
+</ul>
+<h3>Struct texture_info</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">texture_info</span> <span class="p">{</span>
+    <span class="n">uint</span> <span class="n">txt_id</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">texcoord</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="n">texture_wrap</span> <span class="n">wrap_s</span> <span class="o">=</span> <span class="n">texture_wrap</span><span class="o">::</span><span class="n">not_set</span><span class="p">;</span>
+    <span class="n">texture_wrap</span> <span class="n">wrap_t</span> <span class="o">=</span> <span class="n">texture_wrap</span><span class="o">::</span><span class="n">not_set</span><span class="p">;</span>
+    <span class="n">texture_filter</span> <span class="n">filter_mag</span> <span class="o">=</span> <span class="n">texture_filter</span><span class="o">::</span><span class="n">not_set</span><span class="p">;</span>
+    <span class="n">texture_filter</span> <span class="n">filter_min</span> <span class="o">=</span> <span class="n">texture_filter</span><span class="o">::</span><span class="n">not_set</span><span class="p">;</span>
+    <span class="n">texture_info</span><span class="p">();</span> 
+    <span class="n">texture_info</span><span class="p">(</span><span class="n">uint</span> <span class="n">tid</span><span class="p">);</span> 
+<span class="p">}</span>
+</code></pre></div>
+
+
+<p>Texture information for parameter setting.</p>
+<ul>
+<li>Members:<ul>
+<li>txt_id:      texture id</li>
+<li>texcoord:      texture coordinate set</li>
+<li>wrap_s:      wrap mode</li>
+<li>wrap_t:      wrap mode</li>
+<li>filter_mag:      filter mode</li>
+<li>filter_min:      filter mode</li>
+<li>texture_info():      default constructor</li>
+<li>texture_info():      constructor from texture id only</li>
+</ul>
+</li>
+</ul>
+<h3>Function check_error()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">check_error</span><span class="p">(</span><span class="kt">bool</span> <span class="n">print</span> <span class="o">=</span> <span class="nb">true</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Checks for GL error and then prints</p>
+<h3>Function clear_buffers()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="n">clear_buffers</span><span class="p">(</span><span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec4f</span><span class="o">&amp;</span> <span class="n">background</span> <span class="o">=</span><span class="p">;</span>
+</code></pre></div>
+
+
+<p>Clear window</p>
+<h3>Function enable_depth_test()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">enable_depth_test</span><span class="p">(</span><span class="kt">bool</span> <span class="n">enabled</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Enable/disable depth test</p>
+<h3>Function enable_culling()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">enable_culling</span><span class="p">(</span><span class="kt">bool</span> <span class="n">enabled</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Enable/disable culling</p>
+<h3>Function enable_wireframe()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">enable_wireframe</span><span class="p">(</span><span class="kt">bool</span> <span class="n">enabled</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Enable/disable wireframe</p>
+<h3>Function enable_edges()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">enable_edges</span><span class="p">(</span><span class="kt">bool</span> <span class="n">enabled</span><span class="p">,</span> <span class="kt">float</span> <span class="n">tolerance</span> <span class="o">=</span> <span class="mf">0.9999f</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Enable/disable edges. Attempts to avoid z-fighting but the method is not
+robust.</p>
+<h3>Function line_width()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">line_width</span><span class="p">(</span><span class="kt">float</span> <span class="n">w</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Line width</p>
+<h3>Function set_viewport()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_viewport</span><span class="p">(</span><span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec4i</span><span class="o">&amp;</span> <span class="n">v</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Set viewport</p>
+<h3>Function shade_image()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">shade_image</span><span class="p">(</span><span class="n">uint</span> <span class="n">tid</span><span class="p">,</span> <span class="kt">int</span> <span class="n">img_w</span><span class="p">,</span> <span class="kt">int</span> <span class="n">img_h</span><span class="p">,</span> <span class="kt">int</span> <span class="n">win_w</span><span class="p">,</span> <span class="kt">int</span> <span class="n">win_h</span><span class="p">,</span> <span class="kt">float</span> <span class="n">ox</span><span class="p">,</span>
+    <span class="kt">float</span> <span class="n">oy</span><span class="p">,</span> <span class="kt">float</span> <span class="n">zoom</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Draw an texture tid of size img_w, img_h on a window of size win_w, win_h
+with top-left corner at ox, oy with a zoom zoom.</p>
+<h3>Function shade_image()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">shade_image</span><span class="p">(</span><span class="n">uint</span> <span class="n">tid</span><span class="p">,</span> <span class="kt">int</span> <span class="n">img_w</span><span class="p">,</span> <span class="kt">int</span> <span class="n">img_h</span><span class="p">,</span> <span class="kt">int</span> <span class="n">win_w</span><span class="p">,</span> <span class="kt">int</span> <span class="n">win_h</span><span class="p">,</span> <span class="kt">float</span> <span class="n">ox</span><span class="p">,</span>
+    <span class="kt">float</span> <span class="n">oy</span><span class="p">,</span> <span class="kt">float</span> <span class="n">zoom</span><span class="p">,</span> <span class="n">tonemap_type</span> <span class="n">tmtype</span><span class="p">,</span> <span class="kt">float</span> <span class="n">exposure</span><span class="p">,</span> <span class="kt">float</span> <span class="n">gamma_</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>As above but includes an exposure/gamma correction.</p>
+<h3>Function make_texture()</h3>
+<div class="codehilite"><pre><code><span></span><span class="n">uint</span> <span class="nf">make_texture</span><span class="p">(</span><span class="kt">int</span> <span class="n">w</span><span class="p">,</span> <span class="kt">int</span> <span class="n">h</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nc</span><span class="p">,</span> <span class="k">const</span> <span class="kt">float</span><span class="o">*</span> <span class="n">pixels</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">linear</span><span class="p">,</span>
+    <span class="kt">bool</span> <span class="n">mipmap</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">as_float</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Creates a texture with pixels values of size w, h with nc number of
+components (1-4).
+Internally use float if as_float and filtering if filter.
+Returns the texture id.</p>
+<h3>Function make_texture()</h3>
+<div class="codehilite"><pre><code><span></span><span class="n">uint</span> <span class="nf">make_texture</span><span class="p">(</span><span class="kt">int</span> <span class="n">w</span><span class="p">,</span> <span class="kt">int</span> <span class="n">h</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nc</span><span class="p">,</span> <span class="k">const</span> <span class="kt">unsigned</span> <span class="kt">char</span><span class="o">*</span> <span class="n">pixels</span><span class="p">,</span>
+    <span class="kt">bool</span> <span class="n">linear</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">mipmap</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">as_srgb</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Creates a texture with pixels values of size w, h with nc number of
+components (1-4).
+Internally use srgb lookup if as_srgb and filtering if filter.
+Returns the texture id.</p>
+<h3>Function update_texture()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">update_texture</span><span class="p">(</span>
+    <span class="n">uint</span> <span class="n">tid</span><span class="p">,</span> <span class="kt">int</span> <span class="n">w</span><span class="p">,</span> <span class="kt">int</span> <span class="n">h</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nc</span><span class="p">,</span> <span class="k">const</span> <span class="kt">float</span><span class="o">*</span> <span class="n">pixels</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">mipmap</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Updates the texture tid with new image data.</p>
+<h3>Function update_texture()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">update_texture</span><span class="p">(</span>
+    <span class="n">uint</span> <span class="n">tid</span><span class="p">,</span> <span class="kt">int</span> <span class="n">w</span><span class="p">,</span> <span class="kt">int</span> <span class="n">h</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nc</span><span class="p">,</span> <span class="k">const</span> <span class="kt">unsigned</span> <span class="kt">char</span><span class="o">*</span> <span class="n">pixels</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">mipmap</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Updates the texture tid with new image data.</p>
+<h3>Function clear_texture()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">clear_texture</span><span class="p">(</span><span class="n">uint</span><span class="o">*</span> <span class="n">tid</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Destroys the texture tid.</p>
+<h3>Function make_buffer()</h3>
+<div class="codehilite"><pre><code><span></span><span class="n">uint</span> <span class="nf">make_buffer</span><span class="p">(</span>
+    <span class="kt">int</span> <span class="n">num</span><span class="p">,</span> <span class="kt">int</span> <span class="n">size</span><span class="p">,</span> <span class="k">const</span> <span class="kt">void</span><span class="o">*</span> <span class="n">values</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">elements</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">dynamic</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Creates a buffer with num elements of size size stored in values, where
+content is dyanamic if dynamic.
+Returns the buffer id.</p>
+<h3>Function update_buffer()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">update_buffer</span><span class="p">(</span><span class="n">uint</span> <span class="n">bid</span><span class="p">,</span> <span class="kt">int</span> <span class="n">num</span><span class="p">,</span> <span class="kt">int</span> <span class="n">size</span><span class="p">,</span> <span class="k">const</span> <span class="kt">void</span><span class="o">*</span> <span class="n">values</span><span class="p">,</span>
+    <span class="kt">bool</span> <span class="n">elements</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">dynamic</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Updates the buffer bid with new data.</p>
+<h3>Function clear_buffer()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">clear_buffer</span><span class="p">(</span><span class="n">uint</span><span class="o">*</span> <span class="n">bid</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Destroys the buffer bid.</p>
+<h3>Function make_vertex_arrays()</h3>
+<div class="codehilite"><pre><code><span></span><span class="n">uint</span> <span class="nf">make_vertex_arrays</span><span class="p">();</span>
+</code></pre></div>
+
+
+<p>Creates and OpenGL vertex array object.</p>
+<h3>Function clear_vertex_arrays()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">clear_vertex_arrays</span><span class="p">(</span><span class="n">uint</span><span class="o">*</span> <span class="n">aid</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Destroys the program pid and optionally the sahders vid and fid.</p>
+<h3>Function make_program()</h3>
+<div class="codehilite"><pre><code><span></span><span class="n">uint</span> <span class="nf">make_program</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">vertex</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">fragment</span><span class="p">,</span>
+    <span class="n">uint</span><span class="o">*</span> <span class="n">vid</span><span class="p">,</span> <span class="n">uint</span><span class="o">*</span> <span class="n">fid</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Creates and OpenGL program from vertex and fragment code. Returns the
+program id. Optionally return vertex and fragment shader ids. A VAO has to
+be
+bound before this.</p>
+<h3>Function clear_program()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">clear_program</span><span class="p">(</span><span class="n">uint</span><span class="o">*</span> <span class="n">pid</span><span class="p">,</span> <span class="n">uint</span><span class="o">*</span> <span class="n">vid</span><span class="p">,</span> <span class="n">uint</span><span class="o">*</span> <span class="n">fid</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Destroys the program pid and optionally the sahders vid and fid.</p>
+<h3>Function set_uniform()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">set_uniform</span><span class="p">(</span>
+    <span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">var</span><span class="p">,</span> <span class="k">const</span> <span class="kt">int</span><span class="o">*</span> <span class="n">val</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nc</span><span class="p">,</span> <span class="kt">int</span> <span class="n">count</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Set uniform integer values val for program prog and variable var.
+The values have nc number of components (1-4) and count elements
+(for arrays).</p>
+<h3>Function set_uniform()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">set_uniform</span><span class="p">(</span>
+    <span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">var</span><span class="p">,</span> <span class="k">const</span> <span class="kt">float</span><span class="o">*</span> <span class="n">val</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nc</span><span class="p">,</span> <span class="kt">int</span> <span class="n">count</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Set uniform float values val for program prog and variable var.
+The values have nc number of components (1-4) and count elements
+(for arrays).</p>
+<h3>Function set_uniform_texture()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">set_uniform_texture</span><span class="p">(</span><span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">var</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">varon</span><span class="p">,</span> <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">tinfo</span><span class="p">,</span> <span class="n">uint</span> <span class="n">tunit</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Set uniform texture id tid and unit tunit for program prog and variable var.
+Optionally sets the int variable varon to 0/1 whether the texture is enable
+on not.</p>
+<h3>Function set_vertattr_val()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">set_vertattr_val</span><span class="p">(</span>
+    <span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">var</span><span class="p">,</span> <span class="k">const</span> <span class="kt">float</span><span class="o">*</span> <span class="n">value</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nc</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Sets a constant value for a vertex attribute for program prog and
+variable var. The attribute has nc components.</p>
+<h3>Function set_vertattri_val()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">set_vertattri_val</span><span class="p">(</span>
+    <span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">var</span><span class="p">,</span> <span class="k">const</span> <span class="kt">int</span><span class="o">*</span> <span class="n">value</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nc</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Sets a constant value for a vertex attribute for program prog and
+variable var. The attribute has nc components.</p>
+<h3>Function set_vertattr_buffer()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">set_vertattr_buffer</span><span class="p">(</span><span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">var</span><span class="p">,</span> <span class="n">uint</span> <span class="n">bid</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nc</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Sets a vartex attribute for program prog and variable var to the buffer bid.
+The attribute has nc components and per-vertex values values.</p>
+<h3>Function set_vertattri_buffer()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">set_vertattri_buffer</span><span class="p">(</span><span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">var</span><span class="p">,</span> <span class="n">uint</span> <span class="n">bid</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nc</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Sets a vartex attribute for program prog and variable var to the buffer bid.
+The attribute has nc components and per-vertex values values.</p>
+<h3>Function set_vertattr()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">set_vertattr</span><span class="p">(</span>
+    <span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">var</span><span class="p">,</span> <span class="n">uint</span> <span class="n">bid</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nc</span><span class="p">,</span> <span class="k">const</span> <span class="kt">float</span><span class="o">*</span> <span class="n">def</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Sets a vartex attribute for program prog and variable var. The attribute
+has nc components and either buffer bid or a single value def
+(if bid is zero). Convenience wrapper to above functions.</p>
+<h3>Function set_vertattri()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">set_vertattri</span><span class="p">(</span>
+    <span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">var</span><span class="p">,</span> <span class="n">uint</span> <span class="n">bid</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nc</span><span class="p">,</span> <span class="k">const</span> <span class="kt">int</span><span class="o">*</span> <span class="n">def</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Sets a vartex attribute for program prog and variable var. The attribute
+has nc components and either buffer bid or a single value def
+(if bid is zero). Convenience wrapper to above functions.</p>
+<h3>Function draw_elems()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">draw_elems</span><span class="p">(</span><span class="kt">int</span> <span class="n">nelems</span><span class="p">,</span> <span class="n">uint</span> <span class="n">bid</span><span class="p">,</span> <span class="n">etype</span> <span class="n">etype</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Draws nelems elements elem of type etype.</p>
+<h2>Namespace stdshader</h2>
+<p>Shade with a physically-based standard shader based on Phong/GGX.</p>
+<h3>Function make_program()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">make_program</span><span class="p">(</span><span class="n">uint</span><span class="o">*</span> <span class="n">pid</span><span class="p">,</span> <span class="n">uint</span><span class="o">*</span> <span class="n">vao</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Initialize a standard shader.</p>
+<h3>Function begin_frame()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">begin_frame</span><span class="p">(</span><span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="n">uint</span> <span class="n">vao</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">shade_eyelight</span><span class="p">,</span> <span class="kt">float</span> <span class="n">img_exposure</span><span class="p">,</span>
+    <span class="n">tonemap_type</span> <span class="n">img_tonemap</span><span class="p">,</span> <span class="kt">float</span> <span class="n">img_gamma</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">mat4f</span><span class="o">&amp;</span> <span class="n">camera_xform</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">mat4f</span><span class="o">&amp;</span> <span class="n">camera_xform_inv</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">mat4f</span><span class="o">&amp;</span> <span class="n">camera_proj</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Starts a frame by setting exposure/gamma values, camera transforms and
+projection. Sets also whether to use full shading or a quick eyelight
+preview.</p>
+<h3>Function end_frame()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">end_frame</span><span class="p">();</span>
+</code></pre></div>
+
+
+<p>Ends a frame.</p>
+<h3>Function set_lights()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_lights</span><span class="p">(</span><span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">amb</span><span class="p">,</span> <span class="kt">int</span> <span class="n">num</span><span class="p">,</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">*</span> <span class="n">pos</span><span class="p">,</span>
+    <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">*</span> <span class="n">ke</span><span class="p">,</span> <span class="n">ltype</span><span class="o">*</span> <span class="n">ltype</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Set num lights with position pos, color ke, type ltype. Also set the ambient
+illumination amb.</p>
+<h3>Function begin_shape()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">begin_shape</span><span class="p">(</span><span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">mat4f</span><span class="o">&amp;</span> <span class="n">xform</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Begins drawing a shape with transform xform.</p>
+<h3>Function end_shape()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">end_shape</span><span class="p">();</span>
+</code></pre></div>
+
+
+<p>End shade drawing.</p>
+<h3>Function set_material_emission_only()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_material_emission_only</span><span class="p">(</span><span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">ke</span><span class="p">,</span> <span class="kt">float</span> <span class="n">op</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">ke_txt</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">double_sided</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Set material values for emission only (constant color).
+Indicates textures ids with the correspoinding XXX_txt variables.
+Works for points/lines/triangles. Element type set by draw_XXX calls.</p>
+<h3>Function set_material_generic()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_material_generic</span><span class="p">(</span><span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">ke</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">kd</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">ks</span><span class="p">,</span> <span class="kt">float</span> <span class="n">rs</span><span class="p">,</span> <span class="kt">float</span> <span class="n">op</span><span class="p">,</span> <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">ke_txt</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">kd_txt</span><span class="p">,</span> <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">ks_txt</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">rs_txt</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">use_phong</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">double_sided</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Set material values with emission ke, diffuse kd, specular ks and
+specular roughness rs, opacity op. Indicates textures ids with the
+correspoinding
+XXX_txt variables. Works for points/lines/triangles (diffuse for points,
+Kajiya-Kay for lines, GGX/Phong for triangles). Element type set by draw_XXX
+calls.</p>
+<h3>Function set_material_gltf_metallic_roughness()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_material_gltf_metallic_roughness</span><span class="p">(</span><span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">ke</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">kb</span><span class="p">,</span> <span class="kt">float</span> <span class="n">km</span><span class="p">,</span> <span class="kt">float</span> <span class="n">rs</span><span class="p">,</span> <span class="kt">float</span> <span class="n">op</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">ke_txt</span><span class="p">,</span> <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">kb_txt</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">km_txt</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">use_phong</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">double_sided</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Set material values for glTF specular-roughness PBR shader,
+with emission ke, base color kb, opacity op, metallicity km and
+specular roughness rs. Uses basecolor-opacity texture kb_txt and
+metallic-roughness texture km_txt.
+Works for points/lines/triangles (diffuse for points, Kajiya-Kay
+for lines, GGX/Phong for triangles). Element type set by draw_XXX calls.</p>
+<h3>Function set_material_gltf_specular_glossiness()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_material_gltf_specular_glossiness</span><span class="p">(</span><span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">ke</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">kd</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">ks</span><span class="p">,</span> <span class="kt">float</span> <span class="n">rs</span><span class="p">,</span> <span class="kt">float</span> <span class="n">op</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">ke_txt</span><span class="p">,</span> <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">kd_txt</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">ks_txt</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">use_phong</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">double_sided</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Set material values for glTF specular-roughness PBR shader,
+with emission ke, diffuse color kd, opacity op, specular ks and
+specular glossiness rs. Uses diffuse-opacity texture kd_txt and
+specular-glpossiness texture ks_txt.
+Works for points/lines/triangles (diffuse for points, Kajiya-Kay
+for lines, GGX/Phong for triangles). Element type set by draw_XXX calls.</p>
+<h3>Function specular_exponent_to_roughness()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">float</span> <span class="nf">specular_exponent_to_roughness</span><span class="p">(</span><span class="kt">float</span> <span class="n">n</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Convertes a phong exponent to roughness.</p>
+<h3>Function set_vert()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_vert</span><span class="p">(</span><span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">*</span> <span class="n">pos</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">*</span> <span class="n">norm</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec2f</span><span class="o">*</span> <span class="n">texcoord</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec4f</span><span class="o">*</span> <span class="n">color</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Set vertex data with position pos, normals norm, texture coordinates
+texcoord
+and per-vertex color color.</p>
+<h3>Function set_vert()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_vert</span><span class="p">(</span><span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="n">uint</span> <span class="n">pos</span><span class="p">,</span> <span class="n">uint</span> <span class="n">norm</span><span class="p">,</span> <span class="n">uint</span> <span class="n">texcoord</span><span class="p">,</span> <span class="n">uint</span> <span class="n">color</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Set vertex data with buffers for position pos, normals norm, texture
+coordinates texcoord and per-vertex color color.</p>
+<h3>Function set_vert_skinning()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_vert_skinning</span><span class="p">(</span>
+    <span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="n">uint</span> <span class="n">weights</span><span class="p">,</span> <span class="n">uint</span> <span class="n">joints</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nxforms</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">mat4f</span><span class="o">*</span> <span class="n">xforms</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Set vertex data with buffers for skinning.</p>
+<h3>Function set_vert_skinning_off()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_vert_skinning_off</span><span class="p">(</span><span class="n">uint</span> <span class="n">prog</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Disables vertex skinning.</p>
+<h3>Function draw_elems()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">draw_elems</span><span class="p">(</span><span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="kt">int</span> <span class="n">num</span><span class="p">,</span> <span class="n">uint</span> <span class="n">bid</span><span class="p">,</span> <span class="n">etype</span> <span class="n">etype</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Draw num elements elem of type etype.</p>
+<h3>Function draw_points()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">draw_points</span><span class="p">(</span><span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="kt">int</span> <span class="n">num</span><span class="p">,</span> <span class="n">uint</span> <span class="n">bid</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Draw num elements elem of type etype.</p>
+<h3>Function draw_lines()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">draw_lines</span><span class="p">(</span><span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="kt">int</span> <span class="n">num</span><span class="p">,</span> <span class="n">uint</span> <span class="n">bid</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Draw num elements elem of type etype.</p>
+<h3>Function draw_triangles()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">draw_triangles</span><span class="p">(</span><span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="kt">int</span> <span class="n">num</span><span class="p">,</span> <span class="n">uint</span> <span class="n">bid</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Draw num elements elem of type etype.</p>
+        <article>
+        <footer></footer>
+        </body>
+        </html>
+    

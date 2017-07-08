@@ -1,0 +1,735 @@
+
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+          <link rel="stylesheet" href="style.css">
+        </head>
+        <body>
+        <header></header>
+        <article>
+        <h1>Yocto/Utils</h1>
+<p>Utilities for writing command line applications, mostly
+a simple to use command line parser, a logger, a thread-pool,
+and string, path and file functions. All functions are defined
+in separate namespaces.</p>
+<h2>Usage for Command Line Parsing</h2>
+<ol>
+<li>namespace logging</li>
+<li>create a parser object<ul>
+<li>an option for printing help is automatically added
+<code>parser = make_parser(argc, argv, program description)</code></li>
+</ul>
+</li>
+<li>for each option, parse it calling the functions <code>parse_opt()</code><ul>
+<li>options are parsed on the fly and a comprehensive help is
+  automatically generated</li>
+<li>supports bool (flags), int, float, double, std::string, enums</li>
+<li>options names are "--longname" for longname and "-s" for short</li>
+<li>command line format is "--longname value", "-s v" for all but flags</li>
+<li>values are parsed with <code>iostream &lt;&lt;</code> operators</li>
+<li>for general use <code>opt = parse_opt&lt;type&gt;()</code></li>
+<li>for boolean flags is <code>parse_flag()</code></li>
+<li>for enums use <code>parse_opte()</code></li>
+</ul>
+</li>
+<li>for each unnamed argument, parse it calling the functions parse_arg()<ul>
+<li>names are only used for help</li>
+<li>supports types as above</li>
+<li>for general use <code>arg = parse_arg&lt;type&gt;()</code></li>
+<li>to parse all remaining values use args = parse_arga<type>(...)</li>
+</ul>
+</li>
+<li>end cmdline parsing with <code>check_parser()</code> to check for unsued values,
+   missing arguments and print help if needed</li>
+<li>since arguments are parsed immediately, one can easily implement
+   subcommands by just branching the command line code based on a read
+   argument without any need for complex syntax</li>
+</ol>
+<p>Notes: the end of this file contains a test function that also
+illustreates the library usage.</p>
+<h2>Usage for Logging</h2>
+<ol>
+<li>namespace logging</li>
+<li>create loggers with <code>make_file_logger()</code>, <code>make_stderr_logger()</code>,
+   <code>make_stdout_logger()</code></li>
+<li>you can set default loggers with <code>get_default_loggers()</code>; note that none
+   are set by default</li>
+<li>write log messages with <code>log_msg()</code> and its variants.</li>
+</ol>
+<h2>Usage for Concurrent Execution</h2>
+<ol>
+<li>namespace concurrent</li>
+<li>either create a thread pool <code>make_thread_pool</code> or use the global one</li>
+<li>run tasks in parallel <code>thread_pool_for()</code></li>
+<li>run tasks asynchronously `thread_pool_async()</li>
+</ol>
+<h2>Utilities</h2>
+<ol>
+<li>filename splitting functions in namespace path</li>
+<li>loading and save entire files in namespace file</li>
+<li>Python-line string manipulation in namespace string</li>
+<li>Python-like operators for standard containers in namespace stl_operators</li>
+</ol>
+<h2>History</h2>
+<ul>
+<li>v 0.17: renamed to yocto utils</li>
+<li>v 0.16: split into namespaces</li>
+<li>v 0.15: remove inline compilation</li>
+<li>v 0.14: Python-like operator for std::vector</li>
+<li>v 0.13: more file and string utilities</li>
+<li>v 0.12: better thread pool implementation</li>
+<li>v 0.11: added a few more path utilities</li>
+<li>v 0.10: changed default name for help option; better help printing</li>
+<li>v 0.9: C-like string formatting</li>
+<li>v 0.8: switch to .h/.cpp pair (templated functions are specialized)</li>
+<li>v 0.7: logging</li>
+<li>v 0.6: doxygen comments</li>
+<li>v 0.5: added a few python-like std::string manipulation functions.</li>
+<li>v 0.4: [major API change] move to modern C++ interface</li>
+<li>v 0.3: adding a few functions for path splitting.</li>
+<li>v 0.2: [API change] C++ API</li>
+<li>v 0.1: C++ implementation</li>
+<li>v 0.0: initial release in C99</li>
+</ul>
+<h2>Namespace yu</h2>
+<p>General utilities to write command line applications</p>
+<h2>Namespace cmdline</h2>
+<p>Command line parsing</p>
+<h3>Struct parser</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">parser</span><span class="p">;</span>
+</code></pre></div>
+
+
+<p>Command line parser.</p>
+<h3>Function make_parser()</h3>
+<div class="codehilite"><pre><code><span></span><span class="n">parser</span><span class="o">*</span> <span class="nf">make_parser</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;&amp;</span> <span class="n">args</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">help</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Inits a command line parser.</p>
+<h3>Function make_parser()</h3>
+<div class="codehilite"><pre><code><span></span><span class="n">parser</span><span class="o">*</span> <span class="nf">make_parser</span><span class="p">(</span><span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span><span class="o">*</span> <span class="n">argv</span><span class="p">[],</span> <span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">help</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Inits a command line parser.</p>
+<h3>Function check_parser()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">check_parser</span><span class="p">(</span><span class="n">parser</span><span class="o">*</span> <span class="n">prs</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Ends parsing checking for error for unused options or arguments.
+Exit if needed.</p>
+<h3>Function parse_flag()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">parse_flag</span><span class="p">(</span><span class="n">parser</span><span class="o">*</span> <span class="n">par</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">longname</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">shortname</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">help</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">def</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Parses an optional flag as described in the intro.</p>
+<h3>Function parse_opt()</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+<span class="n">T</span> <span class="n">parse_opt</span><span class="p">(</span><span class="n">parser</span><span class="o">*</span> <span class="n">par</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">longname</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">shortname</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">help</span><span class="p">,</span> <span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">def</span><span class="p">,</span>
+    <span class="kt">bool</span> <span class="n">required</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">choices</span> <span class="o">=</span><span class="p">;</span>
+</code></pre></div>
+
+
+<p>Parses an option as described in the intro.</p>
+<h3>Function parse_opts()</h3>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">parse_opts</span><span class="p">(</span><span class="n">parser</span><span class="o">*</span> <span class="n">par</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">longname</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">shortname</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">help</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">def</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">required</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;&amp;</span> <span class="n">choices</span> <span class="o">=</span><span class="p">;</span>
+</code></pre></div>
+
+
+<p>Specialization of parse_opt()</p>
+<h3>Function parse_opti()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">int</span> <span class="n">parse_opti</span><span class="p">(</span><span class="n">parser</span><span class="o">*</span> <span class="n">par</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">longname</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">shortname</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">help</span><span class="p">,</span> <span class="kt">int</span> <span class="n">def</span><span class="p">,</span>
+    <span class="kt">bool</span> <span class="n">required</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;&amp;</span> <span class="n">choices</span> <span class="o">=</span><span class="p">;</span>
+</code></pre></div>
+
+
+<p>Specialization of parse_opt()</p>
+<h3>Function parse_optf()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">float</span> <span class="n">parse_optf</span><span class="p">(</span><span class="n">parser</span><span class="o">*</span> <span class="n">par</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">longname</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">shortname</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">help</span><span class="p">,</span> <span class="kt">float</span> <span class="n">def</span><span class="p">,</span>
+    <span class="kt">bool</span> <span class="n">required</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;&amp;</span> <span class="n">choices</span> <span class="o">=</span><span class="p">;</span>
+</code></pre></div>
+
+
+<p>Specialization of parse_opt()</p>
+<h3>Function parse_optd()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">double</span> <span class="n">parse_optd</span><span class="p">(</span><span class="n">parser</span><span class="o">*</span> <span class="n">par</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">longname</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">shortname</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">help</span><span class="p">,</span> <span class="kt">double</span> <span class="n">def</span><span class="p">,</span>
+    <span class="kt">bool</span> <span class="n">required</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">double</span><span class="o">&gt;&amp;</span> <span class="n">choices</span> <span class="o">=</span><span class="p">;</span>
+</code></pre></div>
+
+
+<p>Specialization of parse_opt()</p>
+<h3>Function parse_optb()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">parse_optb</span><span class="p">(</span><span class="n">parser</span><span class="o">*</span> <span class="n">par</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">longname</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">shortname</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">help</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">def</span><span class="p">,</span>
+    <span class="kt">bool</span> <span class="n">required</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Specialization of parse_opt()</p>
+<h3>Function parse_opte()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">int</span> <span class="nf">parse_opte</span><span class="p">(</span><span class="n">parser</span><span class="o">*</span> <span class="n">par</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">longname</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">shortname</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">help</span><span class="p">,</span> <span class="kt">int</span> <span class="n">def</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="kt">int</span><span class="o">&gt;&gt;&amp;</span> <span class="n">vals</span><span class="p">,</span>
+    <span class="kt">bool</span> <span class="n">required</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Parses an option enum as described in the intro.</p>
+<h3>Function parse_opta()</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+<span class="n">T</span> <span class="n">parse_opta</span><span class="p">(</span><span class="n">parser</span><span class="o">*</span> <span class="n">par</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">longname</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">shortname</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">help</span><span class="p">,</span> <span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">def</span><span class="p">,</span>
+    <span class="kt">int</span> <span class="n">nargs</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">required</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">choices</span> <span class="o">=</span><span class="p">;</span>
+</code></pre></div>
+
+
+<p>Parses an option array as described in the intro.</p>
+<h3>Function parse_arg()</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+<span class="n">T</span> <span class="n">parse_arg</span><span class="p">(</span><span class="n">parser</span><span class="o">*</span> <span class="n">par</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">longname</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">help</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">def</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">required</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">choices</span> <span class="o">=</span><span class="p">;</span>
+</code></pre></div>
+
+
+<p>Parses an argument as described in the intro.</p>
+<h3>Function parse_args()</h3>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">parse_args</span><span class="p">(</span><span class="n">parser</span><span class="o">*</span> <span class="n">par</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">longname</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">help</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">def</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">required</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;&amp;</span> <span class="n">choices</span> <span class="o">=</span><span class="p">;</span>
+</code></pre></div>
+
+
+<p>Specialization of parse_arg()</p>
+<h3>Function parse_argi()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">int</span> <span class="n">parse_argi</span><span class="p">(</span><span class="n">parser</span><span class="o">*</span> <span class="n">par</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">longname</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">help</span><span class="p">,</span> <span class="kt">int</span> <span class="n">def</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">required</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;&amp;</span> <span class="n">choices</span> <span class="o">=</span><span class="p">;</span>
+</code></pre></div>
+
+
+<p>Specialization of parse_arg()</p>
+<h3>Function parse_argf()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">float</span> <span class="n">parse_argf</span><span class="p">(</span><span class="n">parser</span><span class="o">*</span> <span class="n">par</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">longname</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">help</span><span class="p">,</span> <span class="kt">float</span> <span class="n">def</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">required</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;&amp;</span> <span class="n">choices</span> <span class="o">=</span><span class="p">;</span>
+</code></pre></div>
+
+
+<p>Specialization of parse_arg()</p>
+<h3>Function parse_argd()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">double</span> <span class="n">parse_argd</span><span class="p">(</span><span class="n">parser</span><span class="o">*</span> <span class="n">par</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">longname</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">help</span><span class="p">,</span> <span class="kt">double</span> <span class="n">def</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">required</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">double</span><span class="o">&gt;&amp;</span> <span class="n">choices</span> <span class="o">=</span><span class="p">;</span>
+</code></pre></div>
+
+
+<p>Specialization of parse_arg()</p>
+<h3>Function parse_arga()</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+<span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="n">parse_arga</span><span class="p">(</span><span class="n">parser</span><span class="o">*</span> <span class="n">par</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">longname</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">help</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">def</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nargs</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+    <span class="kt">bool</span> <span class="n">required</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">choices</span> <span class="o">=</span><span class="p">;</span>
+</code></pre></div>
+
+
+<p>Parses an argument array as described in the intro.</p>
+<h3>Function parse_argas()</h3>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span> <span class="n">parse_argas</span><span class="p">(</span><span class="n">parser</span><span class="o">*</span> <span class="n">par</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">longname</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">help</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;&amp;</span> <span class="n">def</span><span class="p">,</span>
+    <span class="kt">int</span> <span class="n">nargs</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">required</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;&amp;</span> <span class="n">choices</span> <span class="o">=</span><span class="p">;</span>
+</code></pre></div>
+
+
+<p>Specialization of parse_arga()</p>
+<h3>Function parse_argai()</h3>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">parse_argai</span><span class="p">(</span><span class="n">parser</span><span class="o">*</span> <span class="n">par</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">longname</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">help</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;&amp;</span> <span class="n">def</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nargs</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+    <span class="kt">bool</span> <span class="n">required</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;&amp;</span> <span class="n">choices</span> <span class="o">=</span><span class="p">;</span>
+</code></pre></div>
+
+
+<p>Specialization of parse_arga()</p>
+<h3>Function parse_argaf()</h3>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;</span> <span class="n">parse_argaf</span><span class="p">(</span><span class="n">parser</span><span class="o">*</span> <span class="n">par</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">longname</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">help</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;&amp;</span> <span class="n">def</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nargs</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+    <span class="kt">bool</span> <span class="n">required</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;&amp;</span> <span class="n">choices</span> <span class="o">=</span><span class="p">;</span>
+</code></pre></div>
+
+
+<p>Specialization of parse_arga()</p>
+<h3>Function parse_argad()</h3>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">double</span><span class="o">&gt;</span> <span class="n">parse_argad</span><span class="p">(</span><span class="n">parser</span><span class="o">*</span> <span class="n">par</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">longname</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">help</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">double</span><span class="o">&gt;&amp;</span> <span class="n">def</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nargs</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+    <span class="kt">bool</span> <span class="n">required</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">double</span><span class="o">&gt;&amp;</span> <span class="n">choices</span> <span class="o">=</span><span class="p">;</span>
+</code></pre></div>
+
+
+<p>Specialization of parse_arga()</p>
+<h2>Namespace file</h2>
+<p>File loading and saving</p>
+<h3>Function load_binfile()</h3>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">unsigned</span> <span class="kt">char</span><span class="o">&gt;</span> <span class="n">load_binfile</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Loads the contents of a binary file in an in-memory array.</p>
+<h3>Function load_txtfile()</h3>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">load_txtfile</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Loads the contents of a text file into a std::string.</p>
+<h3>Function save_binfile()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">save_binfile</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">unsigned</span> <span class="kt">char</span><span class="o">&gt;&amp;</span> <span class="n">data</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Saves binary data to a file.</p>
+<h3>Function save_txtfile()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">save_txtfile</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">str</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Saves a string to a text file.</p>
+<h2>Namespace path</h2>
+<p>Path manipulation</p>
+<h3>Function get_dirname()</h3>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">get_dirname</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Get directory name (including '/').</p>
+<h3>Function get_basename()</h3>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">get_basename</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Get file basename.</p>
+<h3>Function get_extension()</h3>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">get_extension</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Get extension (including '.').</p>
+<h3>Function get_filename()</h3>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">get_filename</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Get filename without directory (equiv to get_basename() +
+get_extension()).</p>
+<h3>Function replace_extension()</h3>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">replace_extension</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">ext</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Replace extension.</p>
+<h3>Function prepend_extension()</h3>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">prepend_extension</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">prep</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Prepend a string to the extension.</p>
+<h3>Function split_path()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">split_path</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">dirname</span><span class="p">,</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">basename</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">ext</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Splits a path calling the above functions.</p>
+<h2>Namespace string</h2>
+<p>String manipulation</p>
+<h3>Function starts_with()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">starts_with</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">str</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">substr</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Checks if a std::string starts with a prefix.</p>
+<h3>Function ends_with()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">ends_with</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">str</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">substr</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Checks if a std::string ends with a prefix.</p>
+<h3>Function contains()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">contains</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">str</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">substr</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Check is a string contains a substring.</p>
+<h3>Function split_lines()</h3>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span> <span class="n">split_lines</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">str</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">keep_newline</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Splits a std::string into lines at the '\n' character. The line
+terminator is kept if keep_newline. This function does not work on
+Window if keep_newline is true.</p>
+<h3>Function partition_str()</h3>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span> <span class="n">partition_str</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">str</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">split</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Partition the string.</p>
+<h3>Function split_str()</h3>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span> <span class="n">split_str</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">str</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Splits the string.</p>
+<h3>Function strip_str()</h3>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">strip_str</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">str</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Strip the string.</p>
+<h3>Function rstrip_str()</h3>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">rstrip_str</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">str</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Strip the string.</p>
+<h3>Function lstrip_str()</h3>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">lstrip_str</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">str</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Strip the string.</p>
+<h3>Function join_strings()</h3>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">join_strings</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;&amp;</span> <span class="n">strs</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">sep</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Joins a list of std::string with a std::string as separator.</p>
+<h3>Function to_lower()</h3>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">to_lower</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">str</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Converts an ASCII string to lowercase.</p>
+<h3>Function to_upper()</h3>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">to_upper</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">str</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Converts an ASCII string to uppercase.</p>
+<h3>Function is_space()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">is_space</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">str</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Strung is space.</p>
+<h3>Function replace_str()</h3>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">replace_str</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">str</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">s1</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">s2</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Replace s1 with s2 in str.</p>
+<h3>Function format_str()</h3>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">format_str</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">fmt</span><span class="p">,</span> <span class="kt">va_list</span> <span class="n">args</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>C-like string formatting. This is only meant for short strings with max
+length 10000 chars. Memory corruption will happen for longer strings.</p>
+<h3>Function format_str()</h3>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">format_str</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">fmt</span><span class="p">,</span> <span class="p">...);</span>
+</code></pre></div>
+
+
+<p>C-like string formatting. See format_str(fmt,args);</p>
+<h2>Namespace operators</h2>
+<p>Python-like STL operators</p>
+<h3>Function operator+()</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="k">operator</span><span class="o">+</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">v</span><span class="p">,</span> <span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">vv</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Append an element to a vector</p>
+<h3>Function operator+=()</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="k">operator</span><span class="o">+=</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">v</span><span class="p">,</span> <span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">vv</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Append an element to a vector</p>
+<h3>Function operator+()</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="k">typename</span> <span class="n">ET</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="k">operator</span><span class="o">+</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">v</span><span class="p">,</span> <span class="k">const</span> <span class="n">ET</span><span class="o">&amp;</span> <span class="n">vv</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Append an element to a vector</p>
+<h3>Function operator+=()</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="k">typename</span> <span class="n">ET</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="k">operator</span><span class="o">+=</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">v</span><span class="p">,</span> <span class="k">const</span> <span class="n">ET</span><span class="o">&amp;</span> <span class="n">vv</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Append an element to a vector</p>
+<h3>Function operator+()</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="k">operator</span><span class="o">+</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">v</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">vv</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Append a vector to a vector</p>
+<h3>Function operator+=()</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="k">operator</span><span class="o">+=</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">v</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">vv</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Append a vector to a vector</p>
+<h2>Namespace logging</h2>
+<p>Simple Logging</p>
+<h3>Enum log_level : int</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">enum</span> <span class="k">struct</span> <span class="nl">log_level</span> <span class="p">:</span> <span class="kt">int</span> <span class="p">{</span>
+    <span class="n">verbose</span> <span class="o">=</span> <span class="o">-</span><span class="mi">3</span><span class="p">,</span>
+    <span class="n">trace</span> <span class="o">=</span> <span class="o">-</span><span class="mi">2</span><span class="p">,</span>
+    <span class="n">debug</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">info</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="n">warning</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+    <span class="n">error</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
+    <span class="n">fatal</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span>
+<span class="p">}</span>
+</code></pre></div>
+
+
+<p>Logging level</p>
+<ul>
+<li>Values:<ul>
+<li>verbose:      verbose</li>
+<li>trace:      trace</li>
+<li>debug:      debug</li>
+<li>info:      info</li>
+<li>warning:      warning</li>
+<li>error:      error</li>
+<li>fatal:      fatal</li>
+</ul>
+</li>
+</ul>
+<h3>Struct logger</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">logger</span><span class="p">;</span>
+</code></pre></div>
+
+
+<p>Logger object</p>
+<h3>Function make_file_logger()</h3>
+<div class="codehilite"><pre><code><span></span><span class="n">logger</span><span class="o">*</span> <span class="nf">make_file_logger</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">append</span><span class="p">,</span>
+    <span class="n">log_level</span> <span class="n">output_level</span> <span class="o">=</span> <span class="n">log_level</span><span class="o">::</span><span class="n">info</span><span class="p">,</span>
+    <span class="n">log_level</span> <span class="n">flush_level</span> <span class="o">=</span> <span class="n">log_level</span><span class="o">::</span><span class="n">info</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Make a file logger. See set_logger() for Parameters.</p>
+<ul>
+<li>Parameters:<ul>
+<li>filename: logger filename or stderr if empty</li>
+<li>apend: append or write open mode for file logger</li>
+</ul>
+</li>
+</ul>
+<h3>Function make_stderr_logger()</h3>
+<div class="codehilite"><pre><code><span></span><span class="n">logger</span><span class="o">*</span> <span class="nf">make_stderr_logger</span><span class="p">(</span><span class="n">log_level</span> <span class="n">output_level</span> <span class="o">=</span> <span class="n">log_level</span><span class="o">::</span><span class="n">info</span><span class="p">,</span>
+    <span class="n">log_level</span> <span class="n">flush_level</span> <span class="o">=</span> <span class="n">log_level</span><span class="o">::</span><span class="n">info</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Make a stderr logger. See set_logger() for Parameters.</p>
+<h3>Function make_stdout_logger()</h3>
+<div class="codehilite"><pre><code><span></span><span class="n">logger</span><span class="o">*</span> <span class="nf">make_stdout_logger</span><span class="p">(</span><span class="n">log_level</span> <span class="n">output_level</span> <span class="o">=</span> <span class="n">log_level</span><span class="o">::</span><span class="n">info</span><span class="p">,</span>
+    <span class="n">log_level</span> <span class="n">flush_level</span> <span class="o">=</span> <span class="n">log_level</span><span class="o">::</span><span class="n">info</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Make a stderr logger. See set_logger() for Parameters.</p>
+<h3>Function clear_logger()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">clear_logger</span><span class="p">(</span><span class="n">logger</span><span class="o">*</span> <span class="n">lgr</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Clear a logger</p>
+<h3>Function get_default_loggers()</h3>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">logger</span><span class="o">*&gt;*</span> <span class="n">get_default_loggers</span><span class="p">();</span>
+</code></pre></div>
+
+
+<p>Get default loggers. This is a modifiable reference.</p>
+<h3>Function set_logger()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_logger</span><span class="p">(</span><span class="n">logger</span><span class="o">*</span> <span class="n">lgr</span><span class="p">,</span> <span class="n">log_level</span> <span class="n">output_level</span><span class="p">,</span>
+    <span class="n">log_level</span> <span class="n">flush_level</span> <span class="o">=</span> <span class="n">log_level</span><span class="o">::</span><span class="n">error</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Set logger level</p>
+<ul>
+<li>Parameters:<ul>
+<li>lgr: logger</li>
+<li>name : logger name</li>
+<li>output_level: output level</li>
+<li>flush_level: output level</li>
+</ul>
+</li>
+</ul>
+<h3>Function log_msg()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">log_msg</span><span class="p">(</span><span class="n">logger</span><span class="o">*</span> <span class="n">lgr</span><span class="p">,</span> <span class="n">log_level</span> <span class="n">level</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">name</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">msg</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Log a message</p>
+<ul>
+<li>Parameters:<ul>
+<li>lgr: logger</li>
+<li>level: message level</li>
+<li>code: message code (5 chars)</li>
+<li>msg: message</li>
+</ul>
+</li>
+</ul>
+<h3>Function log_msg()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">log_msg</span><span class="p">(</span><span class="n">logger</span><span class="o">*</span> <span class="n">lgr</span><span class="p">,</span> <span class="n">log_level</span> <span class="n">level</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">name</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">msg</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Log a message</p>
+<ul>
+<li>Parameters:<ul>
+<li>lgr: logger</li>
+<li>level: message level</li>
+<li>code: message code (5 chars)</li>
+<li>msg: message</li>
+</ul>
+</li>
+</ul>
+<h3>Function log_msgf()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">log_msgf</span><span class="p">(</span>
+    <span class="n">logger</span><span class="o">*</span> <span class="n">lgr</span><span class="p">,</span> <span class="n">log_level</span> <span class="n">level</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">name</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">msg</span><span class="p">,</span> <span class="p">...);</span>
+</code></pre></div>
+
+
+<p>Log a message formatted ala printf.</p>
+<ul>
+<li>Parameters:<ul>
+<li>lgr: logger</li>
+<li>level: message level</li>
+<li>code: message code (5 chars)</li>
+<li>msg: message</li>
+</ul>
+</li>
+</ul>
+<h3>Function log_msgfv()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">log_msgfv</span><span class="p">(</span><span class="n">logger</span><span class="o">*</span> <span class="n">lgr</span><span class="p">,</span> <span class="n">log_level</span> <span class="n">level</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">name</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">msg</span><span class="p">,</span>
+    <span class="kt">va_list</span> <span class="n">args</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Logs a message to the default loggers</p>
+<h3>Function log_msg()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">log_msg</span><span class="p">(</span><span class="n">log_level</span> <span class="n">level</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">name</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">msg</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Logs a message to the default loggers</p>
+<h3>Function log_msgf()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">log_msgf</span><span class="p">(</span><span class="n">log_level</span> <span class="n">level</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">name</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">msg</span><span class="p">,</span> <span class="p">...);</span>
+</code></pre></div>
+
+
+<p>Logs a message to the default loggers</p>
+<h3>Function log_msgfv()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">log_msgfv</span><span class="p">(</span>
+    <span class="n">log_level</span> <span class="n">level</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">name</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">msg</span><span class="p">,</span> <span class="kt">va_list</span> <span class="n">args</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Logs a message to the default loggers</p>
+<h2>Namespace concurrent</h2>
+<p>Concurrent  and async execution based on a thread pool</p>
+<h3>Struct thread_pool</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">thread_pool</span><span class="p">;</span>
+</code></pre></div>
+
+
+<p>Forward declaration of thread pool.</p>
+<h3>Function make_pool()</h3>
+<div class="codehilite"><pre><code><span></span><span class="n">thread_pool</span><span class="o">*</span> <span class="nf">make_pool</span><span class="p">(</span><span class="kt">int</span> <span class="n">nthread</span> <span class="o">=</span> <span class="mi">0</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Initialize a thread pool with a certain number of threads (0 for
+defatul).</p>
+<h3>Function clear_pool()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">clear_pool</span><span class="p">(</span><span class="n">thread_pool</span><span class="o">*</span> <span class="n">pool</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Clear thread pool</p>
+<h3>Function wait_pool()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">wait_pool</span><span class="p">(</span><span class="n">thread_pool</span><span class="o">*</span> <span class="n">pool</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Wait for all jobs to finish</p>
+<h3>Function parallel_for()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">parallel_for</span><span class="p">(</span>
+    <span class="n">thread_pool</span><span class="o">*</span> <span class="n">pool</span><span class="p">,</span> <span class="kt">int</span> <span class="n">count</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">function</span><span class="o">&lt;</span><span class="kt">void</span><span class="p">(</span><span class="kt">int</span> <span class="n">idx</span><span class="p">)</span><span class="o">&gt;&amp;</span> <span class="n">task</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Parallel for implementation</p>
+<h3>Function run_async()</h3>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">shared_future</span><span class="o">&lt;</span><span class="kt">void</span><span class="o">&gt;</span> <span class="n">run_async</span><span class="p">(</span>
+    <span class="n">thread_pool</span><span class="o">*</span> <span class="n">pool</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">function</span><span class="o">&lt;</span><span class="kt">void</span><span class="p">()</span><span class="o">&gt;&amp;</span> <span class="n">task</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Runs a task asynchronously onto a thread pool</p>
+<h3>Function wait_pool()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">wait_pool</span><span class="p">();</span>
+</code></pre></div>
+
+
+<p>Wait for all jobs to finish on a global thread pool</p>
+<h3>Function run_async()</h3>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">shared_future</span><span class="o">&lt;</span><span class="kt">void</span><span class="o">&gt;</span> <span class="n">run_async</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">function</span><span class="o">&lt;</span><span class="kt">void</span><span class="p">()</span><span class="o">&gt;&amp;</span> <span class="n">task</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Runs a task asynchronously onto a global thread pool</p>
+<h3>Function parallel_for()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">parallel_for</span><span class="p">(</span><span class="kt">int</span> <span class="n">count</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">function</span><span class="o">&lt;</span><span class="kt">void</span><span class="p">(</span><span class="kt">int</span> <span class="n">idx</span><span class="p">)</span><span class="o">&gt;&amp;</span> <span class="n">task</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Parallel for implementation on a global thread pool</p>
+        <article>
+        <footer></footer>
+        </body>
+        </html>
+    

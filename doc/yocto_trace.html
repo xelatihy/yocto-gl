@@ -1,0 +1,677 @@
+
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+          <link rel="stylesheet" href="style.css">
+        </head>
+        <body>
+        <header></header>
+        <article>
+        <h1>Yocto/Trace</h1>
+<p>Path tracer implementation for support for textured mesh
+lights, GGX/Phong materials, environment mapping. The interface supports
+progressive parallel execution with any splitting strategy, by
+generating per-sample random number sequences or fully deterministic
+hash-based sampling.</p>
+<p>Materials are represented as sums of an emission term, a diffuse term and
+a specular microfacet term (GGX or Phong). Only opaque for now. We pick
+a proper material type for each shape element type (points, lines,
+triangles).</p>
+<p>Lights are defined as any shape with a material emission term. Additionally
+one can also add an environment map. But even if you can, you might want to
+add a large triangle mesh with inward normals instead. The latter is more
+general (you can even more an arbitrary shape sun). For now only the first
+env is used.</p>
+<p>We generate our own random numbers guarantying that there is one random
+sequence per path. This means you can rul the path tracer in any order
+serially or in parallel.</p>
+<p>For now, we support a straightforward path tracer with explicit direct
+illumination using MIS.</p>
+<p>This library depends in yocto_math.h. Optionally depend on yocto_bvh.h/.cpp
+for internal acceleration. Disable this by setting YTRACE_NO_BVH.</p>
+<h2>Usage</h2>
+<ol>
+<li>define your scene setting up only the public data<ul>
+<li>init the scene with make_scene()</li>
+<li>define cameras with set_camera()</li>
+<li>defile shapes with set set_triagle_shape(), set_line_shape(),
+set_point_shape()</li>
+<li>define materials with set_material()</li>
+<li>define textures with set_texture()</li>
+<li>define environments with set_environment()</li>
+<li>set intersection routines with set_intersection_callbacks()
+  or use the builtin intersection with init_intersection()</li>
+</ul>
+</li>
+<li>prepare for rendering with init_lights()</li>
+<li>define rendering params in render_params</li>
+<li>render blocks of samples with trace_block() or the whole image with
+    trace_image()</li>
+</ol>
+<h2>History</h2>
+<ul>
+<li>v 0.17: move to rgba per-vertex color</li>
+<li>v 0.16: use yocto_math in the interface and remove inline compilation</li>
+<li>v 0.15: move to add api</li>
+<li>v 1.16: internally use yocto_bvh if desired</li>
+<li>v 1.15: added gltf/generic material properties (deprecate old interface)</li>
+<li>v 1.14: normal mapping</li>
+<li>v 1.13: simpler Fresnel handling</li>
+<li>v 1.12: significantly better path tracing</li>
+<li>v 1.11: add progressive sampling to rendering params</li>
+<li>v 0.10: switch to .h/.cpp pair</li>
+<li>v 0.9: doxygen comments</li>
+<li>v 0.8: opaque API (allows for changing internals without altering API)</li>
+<li>v 0.7: internally use pointers for performance transparency</li>
+<li>v 0.6: minor API change for blocks</li>
+<li>v 0.5: [major API change] move to modern C++ interface</li>
+<li>v 0.4: C++ API</li>
+<li>v 0.3: removal of C interface</li>
+<li>v 0.2: use of STL containers</li>
+<li>v 0.1: C++ implementation</li>
+<li>v 0.0: initial release in C99</li>
+</ul>
+<h2>Namespace ytrace</h2>
+<p>Path tracer with MIS support.</p>
+<h3>Struct scene</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">scene</span><span class="p">;</span>
+</code></pre></div>
+
+
+<p>Trace scene.</p>
+<h3>Function make_scene()</h3>
+<div class="codehilite"><pre><code><span></span><span class="n">scene</span><span class="o">*</span> <span class="nf">make_scene</span><span class="p">();</span>
+</code></pre></div>
+
+
+<p>Initialize the scene with the proper number of objects.</p>
+<h3>Function free_scene()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">free_scene</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Free scene.</p>
+<h3>Function add_camera()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">int</span> <span class="nf">add_camera</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">frame3f</span><span class="o">&amp;</span> <span class="n">frame</span><span class="p">,</span> <span class="kt">float</span> <span class="n">yfov</span><span class="p">,</span> <span class="kt">float</span> <span class="n">aspect</span><span class="p">,</span>
+    <span class="kt">float</span> <span class="n">aperture</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="kt">float</span> <span class="n">focus</span> <span class="o">=</span> <span class="mi">1</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Adds a camera in the scene.</p>
+<ul>
+<li>Parameters:<ul>
+<li>scn: scene</li>
+<li>frame: local-to-world frame (x, y, z, o in column major order)</li>
+<li>yfov: field of view</li>
+<li>aspect: aspect ratio</li>
+<li>aperture: lens aperture</li>
+<li>focus: focus plane distance (cannot be zero)</li>
+</ul>
+</li>
+<li>Returns:<ul>
+<li>camera id</li>
+</ul>
+</li>
+</ul>
+<h3>Function set_camera()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_camera</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="kt">int</span> <span class="n">cid</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">frame3f</span><span class="o">&amp;</span> <span class="n">frame</span><span class="p">,</span> <span class="kt">float</span> <span class="n">yfov</span><span class="p">,</span>
+    <span class="kt">float</span> <span class="n">aspect</span><span class="p">,</span> <span class="kt">float</span> <span class="n">aperture</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="kt">float</span> <span class="n">focus</span> <span class="o">=</span> <span class="mi">1</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Sets a camera in the scene.</p>
+<ul>
+<li>Parameters:<ul>
+<li>scn: scene</li>
+<li>cid: camera id</li>
+<li>frame: local-to-world frame (x, y, z, o in column major order)</li>
+<li>yfov: field of view</li>
+<li>aspect: aspect ratio</li>
+<li>aperture: lens aperture</li>
+<li>focus: focus plane distance (cannot be zero)</li>
+</ul>
+</li>
+</ul>
+<h3>Function add_texture()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">int</span> <span class="nf">add_texture</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="kt">int</span> <span class="n">width</span><span class="p">,</span> <span class="kt">int</span> <span class="n">height</span><span class="p">,</span> <span class="kt">int</span> <span class="n">ncomp</span><span class="p">,</span> <span class="k">const</span> <span class="kt">float</span><span class="o">*</span> <span class="n">hdr</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Adds a texture in the scene.</p>
+<ul>
+<li>Parameters:<ul>
+<li>scn: scene</li>
+<li>tid: texture id</li>
+<li>width: width</li>
+<li>height: height</li>
+<li>ncomp: number of components (1-4)</li>
+<li>hdr: hdr pixels</li>
+<li>ldr: ldr pixels (sRGB)</li>
+</ul>
+</li>
+<li>Returns:<ul>
+<li>texture id</li>
+</ul>
+</li>
+</ul>
+<h3>Function add_texture()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">int</span> <span class="nf">add_texture</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="kt">int</span> <span class="n">width</span><span class="p">,</span> <span class="kt">int</span> <span class="n">height</span><span class="p">,</span> <span class="kt">int</span> <span class="n">ncomp</span><span class="p">,</span> <span class="k">const</span> <span class="n">byte</span><span class="o">*</span> <span class="n">ldr</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Sets a texture in the scene.</p>
+<ul>
+<li>Parameters:<ul>
+<li>scn: scene</li>
+<li>tid: texture id</li>
+<li>width: width</li>
+<li>height: height</li>
+<li>ncomp: number of components (1-4)</li>
+<li>hdr: hdr pixels</li>
+<li>ldr: ldr pixels (sRGB)</li>
+</ul>
+</li>
+<li>Returns:<ul>
+<li>texture id</li>
+</ul>
+</li>
+</ul>
+<h3>Function add_material()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">int</span> <span class="nf">add_material</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">ke</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">kd</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">ks</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">kt</span><span class="p">,</span> <span class="kt">float</span> <span class="n">rs</span> <span class="o">=</span> <span class="mf">0.1</span><span class="p">,</span> <span class="kt">int</span> <span class="n">ke_txt</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+    <span class="kt">int</span> <span class="n">kd_txt</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="kt">int</span> <span class="n">ks_txt</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="kt">int</span> <span class="n">kt_txt</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="kt">int</span> <span class="n">rs_txt</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+    <span class="kt">int</span> <span class="n">norm_txt</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">use_phong</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Sets a material in the scene. [DEPRECATED]</p>
+<ul>
+<li>Parameters:<ul>
+<li>scn: scene</li>
+<li>ke: emission, term</li>
+<li>kd: diffuse term</li>
+<li>ks: specular term</li>
+<li>rs: specular roughness</li>
+<li>ke_txt, kd_txt, ks_txt, rs_txt, norm_txt: texture indices (-1 for
+none) - use_phong: whether to use phong</li>
+</ul>
+</li>
+<li>Returns:<ul>
+<li>material id</li>
+</ul>
+</li>
+</ul>
+<h3>Function add_material_generic()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">int</span> <span class="nf">add_material_generic</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">ke</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">kd</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">ks</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">kt</span><span class="p">,</span> <span class="kt">float</span> <span class="n">rs</span><span class="p">,</span> <span class="kt">float</span> <span class="n">op</span><span class="p">,</span> <span class="kt">int</span> <span class="n">ke_txt</span><span class="p">,</span>
+    <span class="kt">int</span> <span class="n">kd_txt</span><span class="p">,</span> <span class="kt">int</span> <span class="n">ks_txt</span><span class="p">,</span> <span class="kt">int</span> <span class="n">kt_txt</span><span class="p">,</span> <span class="kt">int</span> <span class="n">rs_txt</span><span class="p">,</span> <span class="kt">int</span> <span class="n">op_txt</span><span class="p">,</span> <span class="kt">int</span> <span class="n">norm_txt</span><span class="p">,</span>
+    <span class="kt">int</span> <span class="n">occ_txt</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">use_phong</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Sets a material in the scene with the most customization possible.</p>
+<ul>
+<li>Parameters:<ul>
+<li>scn: scene</li>
+<li>ke: emission, term</li>
+<li>kd: diffuse term</li>
+<li>ks: specular term</li>
+<li>rs: specular roughness</li>
+<li>ke_txt, kd_txt, ks_txt, rs_txt, norm_txt: texture indices (-1 for
+none) - use_phong: whether to use phong</li>
+</ul>
+</li>
+<li>Returns:<ul>
+<li>material id</li>
+</ul>
+</li>
+</ul>
+<h3>Function add_material_gltf_metallic_roughness()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">int</span> <span class="nf">add_material_gltf_metallic_roughness</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">ke</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">kd</span><span class="p">,</span> <span class="kt">float</span> <span class="n">ks</span><span class="p">,</span> <span class="kt">float</span> <span class="n">rs</span><span class="p">,</span> <span class="kt">float</span> <span class="n">op</span><span class="p">,</span> <span class="kt">int</span> <span class="n">ke_txt</span><span class="p">,</span> <span class="kt">int</span> <span class="n">kd_txt</span><span class="p">,</span>
+    <span class="kt">int</span> <span class="n">ks_txt</span><span class="p">,</span> <span class="kt">int</span> <span class="n">norm_txt</span><span class="p">,</span> <span class="kt">int</span> <span class="n">occ_txt</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">use_phong</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Sets a gltf metallic roughness material.</p>
+<ul>
+<li>Parameters:<ul>
+<li>scn: scene</li>
+<li>ke: emission, term</li>
+<li>kd: diffuse term</li>
+<li>ks: specular term</li>
+<li>rs: specular roughness</li>
+<li>ke_txt, kd_txt, ks_txt, rs_txt, norm_txt: texture indices (-1 for
+none)</li>
+<li>use_phong: whether to use phong</li>
+</ul>
+</li>
+<li>Returns:<ul>
+<li>material id</li>
+</ul>
+</li>
+</ul>
+<h3>Function add_material_gltf_specular_glossiness()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">int</span> <span class="nf">add_material_gltf_specular_glossiness</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">ke</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">kd</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">ks</span><span class="p">,</span> <span class="kt">float</span> <span class="n">rs</span><span class="p">,</span> <span class="kt">float</span> <span class="n">op</span><span class="p">,</span> <span class="kt">int</span> <span class="n">ke_txt</span><span class="p">,</span>
+    <span class="kt">int</span> <span class="n">kd_txt</span><span class="p">,</span> <span class="kt">int</span> <span class="n">ks_txt</span><span class="p">,</span> <span class="kt">int</span> <span class="n">norm_txt</span><span class="p">,</span> <span class="kt">int</span> <span class="n">occ_txt</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">use_phong</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Sets a gltf metallic specular glossiness.</p>
+<ul>
+<li>Parameters:<ul>
+<li>scn: scene</li>
+<li>ke: emission, term</li>
+<li>kd: diffuse term</li>
+<li>ks: specular term</li>
+<li>rs: specular roughness</li>
+<li>ke_txt, kd_txt, ks_txt, rs_txt, norm_txt: texture indices (-1 for
+none)</li>
+</ul>
+</li>
+<li>use_phong: whether to use phong</li>
+<li>Returns:<ul>
+<li>material id</li>
+</ul>
+</li>
+</ul>
+<h3>Function add_material_emission_only()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">int</span> <span class="nf">add_material_emission_only</span><span class="p">(</span>
+    <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">ke</span><span class="p">,</span> <span class="kt">int</span> <span class="n">ke_txt</span><span class="p">,</span> <span class="kt">int</span> <span class="n">norm_txt</span><span class="p">,</span> <span class="kt">int</span> <span class="n">occ_txt</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Sets a gltf emission only material.</p>
+<ul>
+<li>Parameters:<ul>
+<li>scn: scene</li>
+<li>mid: material id</li>
+<li>ke: emission, term</li>
+<li>kd: diffuse term</li>
+<li>ks: specular term</li>
+<li>rs: specular roughness</li>
+<li>ke_txt, kd_txt, ks_txt, rs_txt, norm_txt: texture indices (-1 for
+none)</li>
+<li>use_phong: whether to use phong</li>
+</ul>
+</li>
+<li>Returns:<ul>
+<li>material id</li>
+</ul>
+</li>
+</ul>
+<h3>Function add_environment()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">int</span> <span class="nf">add_environment</span><span class="p">(</span>
+    <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">frame3f</span><span class="o">&amp;</span> <span class="n">frame</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">ke</span><span class="p">,</span> <span class="kt">int</span> <span class="n">txt_id</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Sets an environment in the scene.</p>
+<ul>
+<li>Parameters:<ul>
+<li>scn: scene</li>
+<li>frame: local-to-world frame (x, y, z, o in column major order)</li>
+<li>ke: emission</li>
+<li>ke_txt: emission texture (-1 for none)</li>
+</ul>
+</li>
+<li>Returns:<ul>
+<li>environment id</li>
+</ul>
+</li>
+</ul>
+<h3>Function add_triangle_shape()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">int</span> <span class="nf">add_triangle_shape</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="kt">int</span> <span class="n">ntriangles</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3i</span><span class="o">*</span> <span class="n">triangles</span><span class="p">,</span>
+    <span class="kt">int</span> <span class="n">nverts</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">*</span> <span class="n">pos</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">*</span> <span class="n">norm</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec2f</span><span class="o">*</span> <span class="n">texcoord</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec4f</span><span class="o">*</span> <span class="n">color</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec4f</span><span class="o">*</span> <span class="n">tangsp</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Sets a shape in the scene.</p>
+<ul>
+<li>Parameters:<ul>
+<li>scn: scene</li>
+<li>frame: local-to-world frame (x, y, z, o in column major order)</li>
+<li>mid: material id</li>
+<li>npoints/nlines/ntriangles: number of elements</li>
+<li>points/lines/tiangles: elem data</li>
+<li>nverts: number of vertices</li>
+<li>pos: vertex positions</li>
+<li>norm/tang: vertex normals/tangents</li>
+<li>texcoord: vertex texcoord</li>
+<li>color: vertex color</li>
+<li>tangsp: tangent space for normal and bump mapping</li>
+</ul>
+</li>
+<li>Returns:<ul>
+<li>shape id</li>
+</ul>
+</li>
+</ul>
+<h3>Function add_point_shape()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">int</span> <span class="nf">add_point_shape</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="kt">int</span> <span class="n">npoints</span><span class="p">,</span> <span class="k">const</span> <span class="kt">int</span><span class="o">*</span> <span class="n">points</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nverts</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">*</span> <span class="n">pos</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">*</span> <span class="n">norm</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec2f</span><span class="o">*</span> <span class="n">texcoord</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec4f</span><span class="o">*</span> <span class="n">color</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">,</span>
+    <span class="k">const</span> <span class="kt">float</span><span class="o">*</span> <span class="n">radius</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Sets a shape in the scene.</p>
+<ul>
+<li>Parameters:<ul>
+<li>scn: scene</li>
+<li>sid: shape id</li>
+<li>frame: local-to-world frame (x, y, z, o in column major order)</li>
+<li>mid: material id</li>
+<li>npoints/nlines/ntriangles: number of elements</li>
+<li>points/lines/tiangles: elem data</li>
+<li>nverts: number of vertices</li>
+<li>pos: vertex positions</li>
+<li>norm/tang: vertex normals/tangents</li>
+<li>texcoord: vertex texcoord</li>
+<li>color: vertex color</li>
+<li>radius: vertex radius</li>
+</ul>
+</li>
+<li>Returns:<ul>
+<li>shape id</li>
+</ul>
+</li>
+</ul>
+<h3>Function add_line_shape()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">int</span> <span class="nf">add_line_shape</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nlines</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec2i</span><span class="o">*</span> <span class="n">lines</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nverts</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">*</span> <span class="n">pos</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">*</span> <span class="n">tang</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec2f</span><span class="o">*</span> <span class="n">texcoord</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec4f</span><span class="o">*</span> <span class="n">color</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">,</span>
+    <span class="k">const</span> <span class="kt">float</span><span class="o">*</span> <span class="n">radius</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Sets a shape in the scene.</p>
+<ul>
+<li>Parameters:<ul>
+<li>scn: scene</li>
+<li>frame: local-to-world frame (x, y, z, o in column major order)</li>
+<li>mid: material id</li>
+<li>npoints/nlines/ntriangles: number of elements</li>
+<li>points/lines/tiangles: elem data</li>
+<li>nverts: number of vertices</li>
+<li>pos: vertex positions</li>
+<li>norm/tang: vertex normals/tangents</li>
+<li>texcoord: vertex texcoord</li>
+<li>color: vertex color</li>
+<li>radius: vertex radius</li>
+</ul>
+</li>
+<li>Returns:<ul>
+<li>shape id</li>
+</ul>
+</li>
+</ul>
+<h3>Function add_instance()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">int</span> <span class="nf">add_instance</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">frame3f</span><span class="o">&amp;</span> <span class="n">frame</span><span class="p">,</span> <span class="kt">int</span> <span class="n">sid</span><span class="p">,</span> <span class="kt">int</span> <span class="n">mid</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Adds an instance in the scene.</p>
+<ul>
+<li>Parameters:<ul>
+<li>scn: scene</li>
+<li>iid: instance id</li>
+<li>frame: local-to-world frame (x, y, z, o in column major order)</li>
+<li>sid: shape id</li>
+<li>mid: material id</li>
+</ul>
+</li>
+<li>Returns:<ul>
+<li>instance id</li>
+</ul>
+</li>
+</ul>
+<h3>Function set_vert_material()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_vert_material</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="kt">int</span> <span class="n">sid</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">*</span> <span class="n">ke</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">*</span> <span class="n">kd</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">*</span> <span class="n">ks</span><span class="p">,</span> <span class="k">const</span> <span class="kt">float</span><span class="o">*</span> <span class="n">rs</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Sets per-vertex material properties.</p>
+<ul>
+<li>Parameters:<ul>
+<li>scn: scene</li>
+<li>sid: shape id</li>
+<li>ke: per-vertex emission</li>
+<li>kd: per-vertex diffuse</li>
+<li>ks: per-vertex specular</li>
+<li>rs: per-vertex roughness</li>
+</ul>
+</li>
+</ul>
+<h3>Function specular_exponent_to_roughness()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">float</span> <span class="nf">specular_exponent_to_roughness</span><span class="p">(</span><span class="kt">float</span> <span class="n">n</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Convert a Phong exponent to GGX/Phong roughness</p>
+<h3>Function specular_fresnel_from_ks()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">specular_fresnel_from_ks</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">ks</span><span class="p">,</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">es</span><span class="p">,</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">esk</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Estimates the fresnel coefficient es from ks at normal incidence</p>
+<h3>Struct intersect_point</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">intersect_point</span> <span class="p">{</span>
+    <span class="kt">float</span> <span class="n">dist</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">iid</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">sid</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">eid</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+    <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span> <span class="n">euv</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">};</span>
+    <span class="k">operator</span> <span class="nf">bool</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span> 
+<span class="p">}</span>
+</code></pre></div>
+
+
+<p>Ray-scene Intersection.</p>
+<ul>
+<li>Members:<ul>
+<li>dist:      ray distance</li>
+<li>iid:      instance index</li>
+<li>sid:      shape index</li>
+<li>eid:      element distance</li>
+<li>euv:      element baricentric coordinates</li>
+<li>operator bool():      check whether it was a hit</li>
+</ul>
+</li>
+</ul>
+<h3>Typedef intersect_first_cb</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">using</span> <span class="n">intersect_first_cb</span> <span class="o">=</span> <span class="n">intersect_point</span> <span class="p">(</span><span class="o">*</span><span class="p">)(</span><span class="kt">void</span><span class="o">*</span> <span class="n">ctx</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">ray3f</span><span class="o">&amp;</span> <span class="n">ray</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Ray-scene closest intersection callback.</p>
+<ul>
+<li>Parameters:<ul>
+<li>ctx: context</li>
+<li>ray: ray</li>
+</ul>
+</li>
+<li>Return:<ul>
+<li>intersection point</li>
+</ul>
+</li>
+</ul>
+<h3>Typedef intersect_any_cb</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">using</span> <span class="n">intersect_any_cb</span> <span class="o">=</span> <span class="kt">bool</span> <span class="p">(</span><span class="o">*</span><span class="p">)(</span><span class="kt">void</span><span class="o">*</span> <span class="n">ctx</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">ray3f</span><span class="o">&amp;</span> <span class="n">o</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Ray-scene intersection callback</p>
+<ul>
+<li>Parameters:<ul>
+<li>ctx: context</li>
+<li>ray: ray</li>
+</ul>
+</li>
+<li>Return:<ul>
+<li>whether we intersect or not</li>
+</ul>
+</li>
+</ul>
+<h3>Function set_intersection_callbacks()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_intersection_callbacks</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="kt">void</span><span class="o">*</span> <span class="n">ctx</span><span class="p">,</span>
+    <span class="n">intersect_first_cb</span> <span class="n">intersect_first</span><span class="p">,</span> <span class="n">intersect_any_cb</span> <span class="n">intersect_any</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Sets the intersection callbacks</p>
+<h3>Function init_intersection()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">init_intersection</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Initialize acceleration structure.</p>
+<ul>
+<li>Parameters:<ul>
+<li>scn: trace scene</li>
+</ul>
+</li>
+</ul>
+<h3>Typedef logging_msg_cb</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">using</span> <span class="n">logging_msg_cb</span> <span class="o">=</span> <span class="kt">void</span> <span class="p">(</span><span class="o">*</span><span class="p">)(</span>
+    <span class="kt">int</span> <span class="n">level</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">name</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">msg</span><span class="p">,</span> <span class="kt">va_list</span> <span class="n">args</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Logger callback</p>
+<h3>Function set_logging_callbacks()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_logging_callbacks</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="kt">void</span><span class="o">*</span> <span class="n">ctx</span><span class="p">,</span> <span class="n">logging_msg_cb</span> <span class="n">log</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Logger</p>
+<h3>Function init_lights()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">init_lights</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Initialize lighting.</p>
+<ul>
+<li>Parameters:<ul>
+<li>scn: trace scene</li>
+</ul>
+</li>
+</ul>
+<h3>Enum shader_type</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">enum</span> <span class="k">struct</span> <span class="n">shader_type</span> <span class="p">{</span>
+    <span class="n">pathtrace</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="n">eyelight</span><span class="p">,</span>
+    <span class="n">direct</span><span class="p">,</span>
+    <span class="n">direct_ao</span><span class="p">,</span>
+<span class="p">}</span>
+</code></pre></div>
+
+
+<p>Type of rendering algorithm (shader)</p>
+<ul>
+<li>Values:<ul>
+<li>pathtrace:      pathtrace</li>
+<li>eyelight:      eye hight for quick previews</li>
+<li>direct:      direct illumination</li>
+<li>direct_ao:      direct illumination with ambient occlusion</li>
+</ul>
+</li>
+</ul>
+<h3>Enum rng_type</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">enum</span> <span class="k">struct</span> <span class="n">rng_type</span> <span class="p">{</span>
+    <span class="n">uniform</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="n">stratified</span><span class="p">,</span>
+    <span class="n">cmjs</span><span class="p">,</span>
+<span class="p">}</span>
+</code></pre></div>
+
+
+<p>Random number generator type</p>
+<ul>
+<li>Values:<ul>
+<li>uniform:      uniform random numbers</li>
+<li>stratified:      stratified random numbers</li>
+<li>cmjs:      correlated multi-jittered sampling</li>
+</ul>
+</li>
+</ul>
+<h3>Struct render_params</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">render_params</span> <span class="p">{</span>
+    <span class="kt">int</span> <span class="n">camera_id</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">nsamples</span> <span class="o">=</span> <span class="mi">256</span><span class="p">;</span>
+    <span class="kt">bool</span> <span class="n">progressive</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
+    <span class="n">shader_type</span> <span class="n">stype</span> <span class="o">=</span> <span class="n">shader_type</span><span class="o">::</span><span class="n">pathtrace</span><span class="p">;</span>
+    <span class="n">rng_type</span> <span class="n">rtype</span> <span class="o">=</span> <span class="n">rng_type</span><span class="o">::</span><span class="n">stratified</span><span class="p">;</span>
+    <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span> <span class="n">amb</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">};</span>
+    <span class="kt">bool</span> <span class="n">envmap_invisible</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">min_depth</span> <span class="o">=</span> <span class="mi">3</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">max_depth</span> <span class="o">=</span> <span class="mi">8</span><span class="p">;</span>
+    <span class="kt">float</span> <span class="n">pixel_clamp</span> <span class="o">=</span> <span class="mi">10</span><span class="p">;</span>
+    <span class="kt">float</span> <span class="n">ray_eps</span> <span class="o">=</span> <span class="mf">1e-4</span><span class="n">f</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+
+<p>Rendering params</p>
+<ul>
+<li>Members:<ul>
+<li>camera_id:      camera id</li>
+<li>nsamples:      number of samples</li>
+<li>progressive:      progressive rendering</li>
+<li>stype:      sampler type</li>
+<li>rtype:      random number generation type</li>
+<li>amb:      ambient lighting</li>
+<li>envmap_invisible:      view environment map</li>
+<li>min_depth:      minimum ray depth</li>
+<li>max_depth:      maximum ray depth</li>
+<li>pixel_clamp:      final pixel clamping</li>
+<li>ray_eps:      ray intersection epsilon</li>
+</ul>
+</li>
+</ul>
+<h3>Function trace_block()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">trace_block</span><span class="p">(</span><span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="kt">int</span> <span class="n">width</span><span class="p">,</span> <span class="kt">int</span> <span class="n">height</span><span class="p">,</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec4f</span><span class="o">*</span> <span class="n">img</span><span class="p">,</span>
+    <span class="kt">int</span> <span class="n">block_x</span><span class="p">,</span> <span class="kt">int</span> <span class="n">block_y</span><span class="p">,</span> <span class="kt">int</span> <span class="n">block_width</span><span class="p">,</span> <span class="kt">int</span> <span class="n">block_height</span><span class="p">,</span>
+    <span class="kt">int</span> <span class="n">samples_min</span><span class="p">,</span> <span class="kt">int</span> <span class="n">samples_max</span><span class="p">,</span> <span class="k">const</span> <span class="n">render_params</span><span class="o">&amp;</span> <span class="n">params</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Renders a block of sample</p>
+<p>Notes: It is safe to call the function in parallel one different blocks.
+But two threads should not access the same pixels at the same time.
+Also blocks with different samples should be called sequentially if
+accumulate is true.</p>
+<ul>
+<li>Parameters:<ul>
+<li>scn: trace scene</li>
+<li>cid: camera id</li>
+<li>width: image width</li>
+<li>height: image height</li>
+<li>img: pixel data in RGBA format</li>
+<li>nsamples: number of samples</li>
+<li>block_x, block_y: block corner</li>
+<li>block_width, block_height: block width and height</li>
+<li>samples_min, samples_max: sample block to render
+  [sample_min, sample_max]; max values are excluded</li>
+</ul>
+</li>
+</ul>
+<h3>Function trace_image()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">trace_image</span><span class="p">(</span><span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="k">const</span> <span class="kt">int</span> <span class="n">width</span><span class="p">,</span> <span class="kt">int</span> <span class="n">height</span><span class="p">,</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec4f</span><span class="o">*</span> <span class="n">img</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">render_params</span><span class="o">&amp;</span> <span class="n">params</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Convenience function to call trace_block with all sample at once.</p>
+        <article>
+        <footer></footer>
+        </body>
+        </html>
+    

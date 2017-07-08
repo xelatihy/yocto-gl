@@ -1,0 +1,393 @@
+
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+          <link rel="stylesheet" href="style.css">
+        </head>
+        <body>
+        <header></header>
+        <article>
+        <h1>Yocto/Sym</h1>
+<p>Simple rigib body simulator with collision support for convex and concave
+triangle meshes.</p>
+<p>The rigib body code performs collision detection and response in gravity.
+For collision detection, we use only mesh vertices, so increase object
+tesselation to make the simulation more accurate. This allows us to support
+convex and concave objects and make the simulation very stable compared to
+convex collision detection such as GJK or MPR.</p>
+<p>The solver is based on the sequential impulse techniques, more correctly
+known as Projected Guass-Sidel. Friction is grossly approximated now,
+waiting for a refactoring before getting better.</p>
+<p>This library depends in yocto_math.h Optionally depend on yocto_bvh.h/.cpp
+for internal acceleration. Disable this by setting YTRACE_NO_BVH.</p>
+<h2>Usage</h2>
+<ol>
+<li>define the rigib body scene<ul>
+<li>init the scene with make_scene()</li>
+<li>for each rigid body, set shape data with set_body()</li>
+<li>set collision callbacks with set_overlap_callbacks()</li>
+</ul>
+</li>
+<li>start tha simulation with init_simulation()</li>
+<li>for each frame, advacne the simulation with advance_simulation()</li>
+<li>after each frame, retrive or change the rigid body frame, with
+    get_body_frame() and set_body_frame(), and the rigid body velocities
+    with get_body_velocity() and set_body_velocity()</li>
+<li>if desired, you can explicitly compute rigid body moments with
+    compute_moments()</li>
+</ol>
+<h2>History</h2>
+<ul>
+<li>v 0.14: use yocto_math in the interface and remove inline compilation</li>
+<li>v 0.13: move to add api</li>
+<li>v 1.12: internally use yocto_bvh if desired</li>
+<li>v 0.11: added instances</li>
+<li>v 0.10: switch to .h/.cpp pair</li>
+<li>v 0.9: doxygen comments</li>
+<li>v 0.8: opaque API (allows for changing internals without altering API)</li>
+<li>v 0.7: internally use pointers for performance transparency</li>
+<li>v 0.6: new formulation for moment computation (and bug fixes)</li>
+<li>v 0.5: faster collision detection</li>
+<li>v 0.4: [major API change] move to modern C++ interface</li>
+<li>v 0.3: removal of C interface</li>
+<li>v 0.2: use of STL containers</li>
+<li>v 0.1: C++ implementation</li>
+<li>v 0.0: initial release in C99</li>
+</ul>
+<h2>Namespace ysym</h2>
+<p>Simple rigid body simulator</p>
+<h3>Struct scene</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">scene</span><span class="p">;</span>
+</code></pre></div>
+
+
+<p>Simulation scene.</p>
+<h3>Function make_scene()</h3>
+<div class="codehilite"><pre><code><span></span><span class="n">scene</span><span class="o">*</span> <span class="nf">make_scene</span><span class="p">();</span>
+</code></pre></div>
+
+
+<p>Initialze a scene.</p>
+<h3>Function free_scene()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">free_scene</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Free a scene.</p>
+<ul>
+<li>Parameters:<ul>
+<li>scn: rigid body scene</li>
+</ul>
+</li>
+</ul>
+<h3>Function add_rigid_shape()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">int</span> <span class="nf">add_rigid_shape</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="kt">int</span> <span class="n">ntriangles</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3i</span><span class="o">*</span> <span class="n">triangles</span><span class="p">,</span>
+    <span class="kt">int</span> <span class="n">nverts</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">*</span> <span class="n">pos</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Sets a rigid shape.</p>
+<ul>
+<li>Parameters:<ul>
+<li>scn: scene</li>
+<li>ntriangles: number of triangles</li>
+<li>triangles: triangles indices</li>
+<li>nverts: number of vertices</li>
+<li>pos: vertex positions</li>
+</ul>
+</li>
+</ul>
+<h3>Function add_rigid_material()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">int</span> <span class="nf">add_rigid_material</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="kt">float</span> <span class="n">density</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Sets a material.</p>
+<ul>
+<li>Parameters:<ul>
+<li>scn: scene</li>
+<li>density: body density (zero for not-simulated)</li>
+</ul>
+</li>
+</ul>
+<h3>Function add_rigid_body()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">int</span> <span class="n">add_rigid_body</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">frame3f</span><span class="o">&amp;</span> <span class="n">frame</span><span class="p">,</span> <span class="kt">int</span> <span class="n">sid</span><span class="p">,</span> <span class="kt">int</span> <span class="n">mid</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">lin_vel</span> <span class="o">=</span><span class="p">;</span>
+</code></pre></div>
+
+
+<p>Set a rigid body.</p>
+<ul>
+<li>Parameters:<ul>
+<li>scn: scene</li>
+<li>frame: body frame</li>
+<li>sid: shape id</li>
+<li>mid: material id</li>
+<li>lin_vel: linear velocity</li>
+<li>ang_vel: angular velocity</li>
+</ul>
+</li>
+</ul>
+<h3>Function get_rigid_body_frame()</h3>
+<div class="codehilite"><pre><code><span></span><span class="n">ym</span><span class="o">::</span><span class="n">frame3f</span> <span class="n">get_rigid_body_frame</span><span class="p">(</span><span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="kt">int</span> <span class="n">bid</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Get a rigid body frame.</p>
+<ul>
+<li>Parameters:<ul>
+<li>scn: scene</li>
+<li>bid: body index</li>
+</ul>
+</li>
+<li>Returns:<ul>
+<li>body frame</li>
+</ul>
+</li>
+</ul>
+<h3>Function get_rigid_body_velocity()</h3>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="p">,</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&gt;</span> <span class="n">get_rigid_body_velocity</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="kt">int</span> <span class="n">bid</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Get a rigid body linear and angular velocity.</p>
+<ul>
+<li>Parameters:<ul>
+<li>scn: scene</li>
+<li>bid: body index</li>
+</ul>
+</li>
+<li>Returns:<ul>
+<li>linear and angular velocity</li>
+</ul>
+</li>
+</ul>
+<h3>Function set_rigid_body_frame()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_rigid_body_frame</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="kt">int</span> <span class="n">bid</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">frame3f</span><span class="o">&amp;</span> <span class="n">frame</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Sets a rigid body frame.</p>
+<ul>
+<li>Parameters:<ul>
+<li>scn: scene</li>
+<li>bid: body index</li>
+<li>frame: rigid body frame</li>
+</ul>
+</li>
+</ul>
+<h3>Function set_rigid_body_velocity()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_rigid_body_velocity</span><span class="p">(</span>
+    <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="kt">int</span> <span class="n">bid</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">lin_vel</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">ang_vel</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Sets a rigid body linear and angular velocity.</p>
+<ul>
+<li>Parameters:<ul>
+<li>scn: scene</li>
+<li>bid: body index</li>
+<li>lin_vel: linear velocity</li>
+<li>ang_vel: angular velocity</li>
+</ul>
+</li>
+</ul>
+<h3>Struct overlap_point</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">overlap_point</span> <span class="p">{</span>
+    <span class="kt">float</span> <span class="n">dist</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">iid</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">sid</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">eid</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+    <span class="n">ym</span><span class="o">::</span><span class="n">vec4f</span> <span class="n">euv</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">};</span>
+    <span class="k">operator</span> <span class="nf">bool</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span> 
+<span class="p">}</span>
+</code></pre></div>
+
+
+<p>Point-scene overlap.</p>
+<ul>
+<li>Members:<ul>
+<li>dist:      overlap distance</li>
+<li>iid:      instance index</li>
+<li>sid:      shape index</li>
+<li>eid:      elements index</li>
+<li>euv:      element baricentric coordinates</li>
+<li>operator bool():      check whether it was a hit</li>
+</ul>
+</li>
+</ul>
+<h3>Typedef overlap_shapes_cb</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">using</span> <span class="n">overlap_shapes_cb</span> <span class="o">=</span> <span class="kt">void</span> <span class="p">(</span><span class="o">*</span><span class="p">)(</span><span class="kt">void</span><span class="o">*</span> <span class="n">ctx</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">ym</span><span class="o">::</span><span class="n">vec2i</span><span class="o">&gt;*</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Shape-shape intersection (conservative)</p>
+<ul>
+<li>Out Parameters:<ul>
+<li>ctx: context</li>
+<li>overlaps: overlaps array</li>
+</ul>
+</li>
+</ul>
+<h3>Typedef overlap_shape_cb</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">using</span> <span class="n">overlap_shape_cb</span> <span class="o">=</span> <span class="n">overlap_point</span> <span class="p">(</span><span class="o">*</span><span class="p">)(</span>
+    <span class="kt">void</span><span class="o">*</span> <span class="n">ctx</span><span class="p">,</span> <span class="kt">int</span> <span class="n">sid</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">pt</span><span class="p">,</span> <span class="kt">float</span> <span class="n">max_dist</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Closest element intersection callback</p>
+<ul>
+<li>Parameters:<ul>
+<li>ctx: context</li>
+<li>sid: shape to check</li>
+<li>pt: point</li>
+<li>max_dist: maximum distance</li>
+</ul>
+</li>
+<li>Return:<ul>
+<li>overlap point</li>
+</ul>
+</li>
+</ul>
+<h3>Typedef overlap_verts_cb</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">using</span> <span class="n">overlap_verts_cb</span> <span class="o">=</span> <span class="kt">void</span> <span class="p">(</span><span class="o">*</span><span class="p">)(</span><span class="kt">void</span><span class="o">*</span> <span class="n">ctx</span><span class="p">,</span> <span class="kt">int</span> <span class="n">sid1</span><span class="p">,</span> <span class="kt">int</span> <span class="n">sid2</span><span class="p">,</span> <span class="kt">float</span> <span class="n">max_dist</span><span class="p">,</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">overlap_point</span><span class="p">,</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec2i</span><span class="o">&gt;&gt;*</span> <span class="n">overlaps</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Closest vertex-to-element overlap</p>
+<ul>
+<li>Parameters:<ul>
+<li>ctx: context</li>
+<li>sid1: element shape to check</li>
+<li>sid2: vertex shape to check</li>
+<li>max_dist: maximum distance from each vert</li>
+</ul>
+</li>
+<li>Out Params:<ul>
+<li>overlaps: overlapping elements</li>
+</ul>
+</li>
+</ul>
+<h3>Typedef overlap_refit_cb</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">using</span> <span class="n">overlap_refit_cb</span> <span class="o">=</span> <span class="kt">void</span> <span class="p">(</span><span class="o">*</span><span class="p">)(</span><span class="kt">void</span><span class="o">*</span> <span class="n">ctx</span><span class="p">,</span> <span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nshapes</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Refit data structure after transform updates</p>
+<ul>
+<li>Parameters:<ul>
+<li>ctx: context</li>
+<li>scn: scene</li>
+</ul>
+</li>
+</ul>
+<h3>Function set_overlap_callbacks()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_overlap_callbacks</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="kt">void</span><span class="o">*</span> <span class="n">ctx</span><span class="p">,</span>
+    <span class="n">overlap_shapes_cb</span> <span class="n">overlap_shapes</span><span class="p">,</span> <span class="n">overlap_shape_cb</span> <span class="n">overlap_shape</span><span class="p">,</span>
+    <span class="n">overlap_verts_cb</span> <span class="n">overlap_verts</span><span class="p">,</span> <span class="n">overlap_refit_cb</span> <span class="n">overlap_refit</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Set overlap functions</p>
+<h3>Function init_overlap()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">init_overlap</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Initialize overlap functions using internal structures.</p>
+<h3>Function compute_moments()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">compute_moments</span><span class="p">(</span><span class="kt">int</span> <span class="n">ntriangles</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3i</span><span class="o">*</span> <span class="n">triangles</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nverts</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">*</span> <span class="n">pos</span><span class="p">,</span> <span class="kt">float</span><span class="o">*</span> <span class="n">volume</span><span class="p">,</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">*</span> <span class="n">center</span><span class="p">,</span> <span class="n">ym</span><span class="o">::</span><span class="n">mat3f</span><span class="o">*</span> <span class="n">inertia</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Computes the moments of a shape.</p>
+<ul>
+<li>Parameters:<ul>
+<li>triangles: triangle indices</li>
+<li>pos: vertex positions</li>
+</ul>
+</li>
+<li>Output Parameters:<ul>
+<li>volume: volume</li>
+<li>center: center of mass</li>
+<li>inertia: inertia tensore (wrt center of mass)</li>
+</ul>
+</li>
+</ul>
+<h3>Function compute_moments()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">compute_moments</span><span class="p">(</span><span class="kt">int</span> <span class="n">ntetra</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec4i</span><span class="o">*</span> <span class="n">tetra</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nverts</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">*</span> <span class="n">pos</span><span class="p">,</span> <span class="kt">float</span><span class="o">*</span> <span class="n">volume</span><span class="p">,</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">*</span> <span class="n">center</span><span class="p">,</span> <span class="n">ym</span><span class="o">::</span><span class="n">mat3f</span><span class="o">*</span> <span class="n">inertia</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Computes the moments of a shape.</p>
+<ul>
+<li>Parameters:<ul>
+<li>triangles: triangle indices</li>
+<li>pos: vertex positions</li>
+</ul>
+</li>
+<li>Output Parameters:<ul>
+<li>volume: volume</li>
+<li>center: center of mass</li>
+<li>inertia: inertia tensore (wrt center of mass)</li>
+</ul>
+</li>
+</ul>
+<h3>Function init_simulation()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">init_simulation</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Initialize the simulation</p>
+<ul>
+<li>Paramaters:<ul>
+<li>scene: rigib body scene</li>
+</ul>
+</li>
+</ul>
+<h3>Struct simulation_params</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">simulation_params</span> <span class="p">{</span>
+    <span class="kt">float</span> <span class="n">dt</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">/</span> <span class="mf">60.0f</span><span class="p">;</span>
+    <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span> <span class="n">gravity</span> <span class="o">=</span> <span class="p">{</span><span class="mf">0.f</span><span class="p">,</span> <span class="o">-</span><span class="mf">9.82f</span><span class="p">,</span> <span class="mf">0.f</span><span class="p">};</span>
+    <span class="kt">int</span> <span class="n">solver_iterations</span> <span class="o">=</span> <span class="mi">20</span><span class="p">;</span>
+    <span class="kt">float</span> <span class="n">lin_drag</span> <span class="o">=</span> <span class="mf">0.01</span><span class="p">;</span>
+    <span class="kt">float</span> <span class="n">ang_drag</span> <span class="o">=</span> <span class="mf">0.01</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+
+<p>Simulation Parameters.</p>
+<ul>
+<li>Members:<ul>
+<li>dt:      delta time</li>
+<li>gravity:      gravity</li>
+<li>solver_iterations:      solver iterations</li>
+<li>lin_drag:      global linear velocity drag</li>
+<li>ang_drag:      global angular velocity drag</li>
+</ul>
+</li>
+</ul>
+<h3>Function advance_simulation()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">advance_simulation</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="k">const</span> <span class="n">simulation_params</span><span class="o">&amp;</span> <span class="n">params</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Advance the simulation one step at a time.</p>
+<ul>
+<li>Paramaters:<ul>
+<li>scene: rigib body scene</li>
+<li>dt: time step</li>
+</ul>
+</li>
+</ul>
+        <article>
+        <footer></footer>
+        </body>
+        </html>
+    
