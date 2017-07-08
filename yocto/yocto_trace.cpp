@@ -777,15 +777,15 @@ void init_lights(scene* scn) {
         if (shp->cdf.empty()) {
             if (shp->points) {
                 shp->cdf = _compute_weight_cdf(shp->nelems, shp->points,
-                    &shp->area, [shp](auto e) { return 1; });
+                    &shp->area, [shp](ym::vec1i e) { return 1; });
             } else if (ist->shp->lines) {
                 shp->cdf = _compute_weight_cdf(
-                    shp->nelems, shp->lines, &shp->area, [shp](auto e) {
+                    shp->nelems, shp->lines, &shp->area, [shp](ym::vec2i e) {
                         return ym::length(shp->pos[e[1]] - shp->pos[e[0]]);
                     });
             } else if (shp->triangles) {
-                shp->cdf = _compute_weight_cdf(
-                    shp->nelems, shp->triangles, &shp->area, [shp](auto e) {
+                shp->cdf = _compute_weight_cdf(shp->nelems, shp->triangles,
+                    &shp->area, [shp](ym::vec3i e) {
                         return ym::triangle_area(
                             shp->pos[e[0]], shp->pos[e[1]], shp->pos[e[2]]);
                     });

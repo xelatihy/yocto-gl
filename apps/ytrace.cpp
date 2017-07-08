@@ -221,7 +221,7 @@ void render_offline(yscene* scn) {
         log_msgf(log_level::info, "ytrace", "rendering sample %4d/%d",
             cur_sample, scn->trace_params.nsamples);
         yu::concurrent::parallel_for(
-            (int)scn->trace_blocks.size(), [=](auto cur_block) {
+            (int)scn->trace_blocks.size(), [=](int cur_block) {
                 auto block = scn->trace_blocks[cur_block];
                 ytrace::trace_block(scn->trace_scene, scn->trace_hdr.width(),
                     scn->trace_hdr.height(), scn->trace_hdr.data(), block[0],

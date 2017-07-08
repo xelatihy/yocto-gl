@@ -66,18 +66,18 @@ void make_uvhollowcutsphere(int usteps, int vsteps, float radius,
     // dpdv = [s c0 s1, s s0 s1, s c1] === [c0 s1, s0 s1, c1]
     // n = [c0 c1, - s0 c1, s1]
     ym::make_triangles(usteps, vsteps, mtriangles, mpos, mnorm, mtexcoord,
-        [radius](const auto uv) {
+        [radius](const ym::vec2f& uv) {
             auto a = ym::vec2f{2 * ym::pif * uv[0], ym::pif * (1 - radius)};
             auto r = (1 - uv[1]) + uv[1] * radius;
             return ym::vec3f{r * std::cos(a[0]) * std::sin(a[1]),
                 r * std::sin(a[0]) * std::sin(a[1]), r * std::cos(a[1])};
         },
-        [radius](const auto uv) {
+        [radius](const ym::vec2f& uv) {
             auto a = ym::vec2f{2 * ym::pif * uv[0], ym::pif * (1 - radius)};
             return ym::vec3f{-std::cos(a[0]) * std::cos(a[1]),
                 -std::sin(a[0]) * std::cos(a[1]), std::sin(a[1])};
         },
-        [radius](const auto uv) {
+        [radius](const ym::vec2f& uv) {
             return ym::vec2f{uv[0], radius + (1 - radius) * uv[1]};
         });
     ym::merge_triangles(
@@ -111,21 +111,21 @@ void make_uvhollowcutsphere1(int usteps, int vsteps, float radius,
     ym::merge_triangles(
         triangles, pos, norm, texcoord, mtriangles, mpos, mnorm, mtexcoord);
     ym::make_triangles(usteps, vsteps / 4, mtriangles, mpos, mnorm, mtexcoord,
-        [radius](const auto uv) {
+        [radius](const ym::vec2f& uv) {
             auto p = 1 - std::acos(radius) / ym::pif;
             auto v = p + uv[1] * (1 - p);
             auto a = ym::vec2f{2 * ym::pif * uv[0], ym::pif * (1 - v)};
             return ym::vec3f{std::cos(a[0]) * std::sin(a[1]),
                 std::sin(a[0]) * std::sin(a[1]), (2 * radius - std::cos(a[1]))};
         },
-        [radius](const auto uv) {
+        [radius](const ym::vec2f& uv) {
             auto p = 1 - std::acos(radius) / ym::pif;
             auto v = p + uv[1] * (1 - p);
             auto a = ym::vec2f{2 * ym::pif * uv[0], ym::pif * (1 - v)};
             return ym::vec3f{-std::cos(a[0]) * std::sin(a[1]),
                 -std::sin(a[0]) * std::sin(a[1]), std::cos(a[1])};
         },
-        [radius](const auto uv) {
+        [radius](const ym::vec2f& uv) {
             return ym::vec2f{uv[0], radius + (1 - radius) * uv[1]};
         });
     for (auto i = 0; i < (usteps + 1); i++)

@@ -29,7 +29,6 @@
 //
 
 #include "../yocto/yocto_utils.h"
-using namespace std::string_literals;
 using namespace yu::operators;
 using namespace yu::string;
 using namespace yu::file;
@@ -94,7 +93,7 @@ std::string make_doc(const std::string& cpp) {
         }
     }
 
-    auto clean_comment = [](auto comment) {
+    auto clean_comment = [](std::string comment) {
         if (starts_with(comment, "    ")) {
             comment = replace_str(comment, "    ///", "");
             comment = replace_str(comment, "    /// ", "");
