@@ -3,8 +3,14 @@ cmake_minimum_required (VERSION 3.5)
 project (yocto-gl)
 
 option(YOCTO_NO_OPENGL "Skip OpenGL apps" OFF)
+option(YOCTO_CPP11 "Compile as C++11" OFF)
 
+if(NOT YOCTO_CPP11)
 set(CMAKE_CXX_STANDARD 14)
+else(NOT YOCTO_CPP11)
+set(CMAKE_CXX_STANDARD 11)
+endif(NOT YOCTO_CPP11)
+
 set(CMAKE_CXX_STANDARD_REQUIRED on)
 # set(CMAKE_BUILD_TYPE Debug)
 set(CMAKE_BUILD_TYPE Release)

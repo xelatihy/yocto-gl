@@ -4107,7 +4107,9 @@ std::vector<buffer_descr*> gen_buffer_descriptors(const glTF* gltf) {
     for (auto descr : descriptors) {
         std::sort(descr->sections.data(),
             descr->sections.data() + descr->sections.size(),
-            [](auto a, auto b) { return a->start < b->start; });
+            [](ygltf::buffer_section* a, ygltf::buffer_section* b) {
+                return a->start < b->start;
+            });
     }
 
     return descriptors;

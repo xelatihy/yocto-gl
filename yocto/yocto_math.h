@@ -104,8 +104,8 @@ namespace ym {}
 #include <limits>
 #include <vector>
 
-// HACK to avoid compilation with MSVC2015 without dirtying code
-#ifdef _WIN32
+// HACK to avoid compilation with MSVC2015 and C++11 without dirtying code
+#if defined(_WIN32) || __cplusplus < 201402L
 #define constexpr
 #endif
 
@@ -3433,17 +3433,17 @@ inline void make_uvsphere(int usteps, int vsteps, std::vector<vec3i>& triangles,
     std::vector<vec3f>& pos, std::vector<vec3f>& norm,
     std::vector<vec2f>& texcoord) {
     return make_triangles(usteps, vsteps, triangles, pos, norm, texcoord,
-        [](const auto uv) {
+        [](const vec2f& uv) {
             auto a = vec2f{2 * pif * uv[0], pif * (1 - uv[1])};
             return vec3f{
                 cos(a[0]) * sin(a[1]), sin(a[0]) * sin(a[1]), cos(a[1])};
         },
-        [](const auto uv) {
+        [](const vec2f& uv) {
             auto a = vec2f{2 * pif * uv[0], pif * (1 - uv[1])};
             return vec3f{
                 cos(a[0]) * sin(a[1]), sin(a[0]) * sin(a[1]), cos(a[1])};
         },
-        [](const auto uv) { return uv; });
+        [](const vec2f& uv) { return uv; });
 }
 
 ///
@@ -3453,17 +3453,17 @@ inline void make_uvhemisphere(int usteps, int vsteps,
     std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
     std::vector<vec3f>& norm, std::vector<vec2f>& texcoord) {
     return ym::make_triangles(usteps, vsteps, triangles, pos, norm, texcoord,
-        [](const auto uv) {
+        [](const vec2f& uv) {
             auto a = vec2f{2 * pif * uv[0], pif * 0.5f * (1 - uv[1])};
             return vec3f{
                 cos(a[0]) * sin(a[1]), sin(a[0]) * sin(a[1]), cos(a[1])};
         },
-        [](const auto uv) {
+        [](const vec2f& uv) {
             auto a = vec2f{2 * pif * uv[0], pif * 0.5f * (1 - uv[1])};
             return vec3f{
                 cos(a[0]) * sin(a[1]), sin(a[0]) * sin(a[1]), cos(a[1])};
         },
-        [](const auto uv) { return uv; });
+        [](const vec2f& uv) { return uv; });
 }
 
 ///
@@ -3473,17 +3473,17 @@ inline void make_uvflippedsphere(int usteps, int vsteps,
     std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
     std::vector<vec3f>& norm, std::vector<vec2f>& texcoord) {
     return ym::make_triangles(usteps, vsteps, triangles, pos, norm, texcoord,
-        [](const auto uv) {
+        [](const vec2f& uv) {
             auto a = vec2f{2 * pif * uv[0], pif * uv[1]};
             return vec3f{
                 cos(a[0]) * sin(a[1]), sin(a[0]) * sin(a[1]), cos(a[1])};
         },
-        [](const auto uv) {
+        [](const vec2f& uv) {
             auto a = vec2f{2 * pif * uv[0], pif * uv[1]};
             return vec3f{
                 -cos(a[0]) * sin(a[1]), -sin(a[0]) * sin(a[1]), -cos(a[1])};
         },
-        [](const auto uv) {
+        [](const vec2f& uv) {
             return vec2f{uv.x, 1 - uv.y};
         });
 }
@@ -3495,17 +3495,17 @@ inline void make_uvflippedhemisphere(int usteps, int vsteps,
     std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
     std::vector<vec3f>& norm, std::vector<vec2f>& texcoord) {
     return ym::make_triangles(usteps, vsteps, triangles, pos, norm, texcoord,
-        [](const auto uv) {
+        [](const vec2f& uv) {
             auto a = vec2f{2 * pif * uv[0], pif * (0.5f + 0.5f * uv[1])};
             return vec3f{
                 cos(a[0]) * sin(a[1]), sin(a[0]) * sin(a[1]), cos(a[1])};
         },
-        [](const auto uv) {
+        [](const vec2f& uv) {
             auto a = vec2f{2 * pif * uv[0], pif * uv[1]};
             return vec3f{
                 -cos(a[0]) * sin(a[1]), -sin(a[0]) * sin(a[1]), -cos(a[1])};
         },
-        [](const auto uv) {
+        [](const vec2f& uv) {
             return vec2f{uv.x, 1 - uv.y};
         });
 }
@@ -3517,13 +3517,13 @@ inline void make_uvquad(int usteps, int vsteps, std::vector<vec3i>& triangles,
     std::vector<vec3f>& pos, std::vector<vec3f>& norm,
     std::vector<vec2f>& texcoord) {
     return make_triangles(usteps, vsteps, triangles, pos, norm, texcoord,
-        [](const auto uv) {
+        [](const vec2f& uv) {
             return vec3f{(-1 + uv[0] * 2), (-1 + uv[1] * 2), 0};
         },
-        [](const auto uv) {
+        [](const vec2f& uv) {
             return vec3f{0, 0, 1};
         },
-        [](const auto uv) { return uv; });
+        [](const vec2f& uv) { return uv; });
 }
 
 ///
@@ -3621,19 +3621,19 @@ inline void make_uvcutsphere(int usteps, int vsteps, float radius,
     std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
     std::vector<vec3f>& norm, std::vector<vec2f>& texcoord) {
     return make_triangles(usteps, vsteps, triangles, pos, norm, texcoord,
-        [radius](const auto uv) {
+        [radius](const vec2f& uv) {
             auto p = 1 - std::acos(radius) / pif;
             auto a = vec2f{2 * pif * uv[0], pif * (1 - p * uv[1])};
             return vec3f{std::cos(a[0]) * std::sin(a[1]),
                 std::sin(a[0]) * std::sin(a[1]), std::cos(a[1])};
         },
-        [radius](const auto uv) {
+        [radius](const vec2f& uv) {
             auto p = 1 - std::acos(radius) / pif;
             auto a = vec2f{2 * pif * uv[0], pif * (1 - p * uv[1])};
             return vec3f{std::cos(a[0]) * std::sin(a[1]),
                 std::sin(a[0]) * std::sin(a[1]), std::cos(a[1])};
         },
-        [](const auto uv) { return uv; });
+        [](const vec2f& uv) { return uv; });
 }
 
 ///
@@ -3643,19 +3643,19 @@ inline void make_uvflippedcutsphere(int usteps, int vsteps, float radius,
     std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
     std::vector<vec3f>& norm, std::vector<vec2f>& texcoord) {
     return make_triangles(usteps, vsteps, triangles, pos, norm, texcoord,
-        [radius](const auto uv) {
+        [radius](const vec2f& uv) {
             auto p = 1 - acos(radius) / pif;
             auto a = vec2f{2 * pif * uv[0], pif * ((1 - p) + p * uv[1])};
             return vec3f{
                 cos(a[0]) * sin(a[1]), sin(a[0]) * sin(a[1]), cos(a[1])};
         },
-        [radius](const auto uv) {
+        [radius](const vec2f& uv) {
             auto p = 1 - acos(radius) / pif;
             auto a = vec2f{2 * pif * uv[0], pif * ((1 - p) + p * uv[1])};
             return vec3f{
                 -cos(a[0]) * sin(a[1]), -sin(a[0]) * sin(a[1]), -cos(a[1])};
         },
-        [](const auto uv) {
+        [](const vec2f& uv) {
             return vec2f{uv[0], (1 - uv[1])};
         });
 }
@@ -4469,7 +4469,7 @@ constexpr inline int hash_vec(const vec<T, N>& v) {
 }
 
 // -----------------------------------------------------------------------------
-// VIEW CONTAINERS
+// IMAGE CONTAINERS
 // -----------------------------------------------------------------------------
 
 ///
@@ -4520,65 +4520,6 @@ struct image {
    private:
     int _w, _h;
     std::vector<T> _d;
-};
-
-///
-/// An array_view is a non-owining reference to an array with an API
-/// similar
-/// to a vector/array containers, but without reallocation.
-/// This is inspired, but significantly simpler than
-/// gsl::span https://github.com/Microsoft/GSL or array_view.
-///
-template <typename T>
-struct array_view {
-    // constructors
-    constexpr array_view() noexcept : _num(0), _data(nullptr) {}
-    constexpr array_view(int num, T* data) noexcept
-        : _num((data) ? num : 0), _data(data) {}
-    template <typename T1>
-    explicit constexpr array_view(int num, T1* data) noexcept
-        : _num((data) ? num : 0), _data(data) {}
-    constexpr array_view(T* begin, T* end) noexcept
-        : _num((end - begin)), _data(begin) {}
-    constexpr array_view(const array_view<std::add_const_t<T>>& av)
-        : _num(av.size()), _data(av.data()) {}
-    template <typename T1>
-    constexpr array_view(std::vector<T1>& av)
-        : _num((int)av.size()), _data(av.data()) {}
-    template <typename T1>
-    constexpr array_view(const std::vector<T1>& av)
-        : _num(av.size()), _data(av.data()) {}
-
-    // size
-    constexpr int size() const noexcept { return _num; }
-    constexpr bool empty() const noexcept { return _num == 0; }
-    constexpr operator bool() const noexcept { return !empty(); }
-
-    // raw data access
-    constexpr T* data() noexcept { return _data; }
-    constexpr const T* data() const noexcept { return _data; }
-
-    // iterators
-    constexpr T* begin() noexcept { return _data; }
-    constexpr T* end() noexcept { return _data + _num; }
-    constexpr const T* begin() const noexcept { return _data; }
-    constexpr const T* end() const noexcept { return _data + _num; }
-
-    // elements access
-    constexpr T& operator[](int i) noexcept { return _data[i]; }
-    constexpr const T& operator[](int i) const noexcept { return _data[i]; }
-
-    constexpr T& at(int i) { return _data[i]; }
-    constexpr const T& at(int i) const { return _data[i]; }
-
-    constexpr T& front() { return _data[0]; }
-    constexpr const T& front() const { return _data[0]; }
-    constexpr T& back() { return _data[_num - 1]; }
-    constexpr const T& back() const { return _data[_num - 1]; }
-
-   private:
-    int _num;
-    T* _data;
 };
 
 // -----------------------------------------------------------------------------
@@ -4732,7 +4673,7 @@ struct timer {
 }  // namespace ym
 
 // HACK to avoid compilation with MSVC2015 without dirtying code
-#ifdef _WIN32
+#ifdef constexpr
 #undef constexpr
 #endif
 

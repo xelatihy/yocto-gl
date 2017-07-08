@@ -166,7 +166,7 @@ static void _parse_vertlist(char** tok, int ntoks,
 //
 obj* load_obj(const std::string& filename, bool flip_texcoord) {
     // clear obj
-    auto asset = std::make_unique<obj>();
+    auto asset = std::unique_ptr<obj>();
 
     // open file
     auto file = fopen(filename.c_str(), "rt");
