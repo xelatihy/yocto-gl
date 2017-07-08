@@ -26,14 +26,11 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "yui.h"
-
-#include "../yocto/yocto_cmd.h"
 #include "../yocto/yocto_glu.h"
+#include "../yocto/yocto_gui.h"
+#include "../yocto/yocto_img.h"
 #include "../yocto/yocto_math.h"
-
-#define STB_IMAGE_IMPLEMENTATION
-#include "../yocto/stb_image.h"
+#include "../yocto/yocto_utils.h"
 
 namespace yimview_app {
 
@@ -57,6 +54,7 @@ struct img {
     float exposure = 0;
     float gamma = 2.2f;
     bool srgb = true;
+    ym::tonemap_type tonemap = ym::tonemap_type::srgb;
 
     // check hdr
     bool is_hdr() const { return !hdr.empty(); }
@@ -68,9 +66,7 @@ struct params {
 
     float exposure = 0;
     float gamma = 1;
-    bool srgb = true;
-
-    bool legacy_gl = false;
+    ym::tonemap_type tonemap = ym::tonemap_type::gamma;
 
     int cur_img = 0;
     int cur_background = 0;
@@ -87,31 +83,22 @@ struct params {
 };
 
 std::vector<img*> load_images(const std::vector<std::string>& img_filenames,
-                              float exposure, float gamma, bool srgb) {
+    float exposure, ym::tonemap_type tonemap, float gamma) {
     auto imgs = std::vector<img*>();
     for (auto filename : img_filenames) {
         imgs.push_back(new img());
         auto img = imgs.back();
         img->filename = filename;
-        auto ext = ycmd::get_extension(filename);
-        if (ext == ".hdr") {
-            auto pixels = stbi_loadf(filename.c_str(), &img->width,
-                                     &img->height, &img->ncomp, 0);
-            img->hdr = std::vector<float>(
-                pixels, pixels + img->width * img->height * img->ncomp);
+        yimg::load_image(
+            filename, img->width, img->height, img->ncomp, img->hdr, img->ldr);
+        if (!img->hdr.empty()) {
             img->ldr.resize(img->hdr.size());
-            ym::exposure_gamma(img->width, img->height, img->ncomp,
-                               img->hdr.data(), img->ldr.data(), exposure,
-                               gamma, srgb);
+            ym::tonemap_image(img->width, img->height, img->ncomp,
+                img->hdr.data(), img->ldr.data(), img->tonemap, img->exposure,
+                img->gamma);
             img->exposure = exposure;
             img->gamma = gamma;
-            free(pixels);
-        } else {
-            auto pixels = stbi_load(filename.c_str(), &img->width, &img->height,
-                                    &img->ncomp, 0);
-            img->ldr = std::vector<unsigned char>(
-                pixels, pixels + img->width * img->height * img->ncomp);
-            free(pixels);
+            img->tonemap = tonemap;
         }
         if (img->hdr.empty() && img->ldr.empty()) {
             printf("cannot load image %s\n", img->filename.c_str());
@@ -122,31 +109,31 @@ std::vector<img*> load_images(const std::vector<std::string>& img_filenames,
     return imgs;
 }
 
-void init_params(params* pars, ycmd::parser* parser) {
+void init_params(params* pars, yu::cmdline::parser* parser) {
+    static auto tmtype_names = std::vector<std::pair<std::string, int>>{
+        {"none", (int)ym::tonemap_type::none},
+        {"srgb", (int)ym::tonemap_type::srgb},
+        {"gamma", (int)ym::tonemap_type::gamma},
+        {"filmic", (int)ym::tonemap_type::filmic}};
+
     pars->exposure =
-        ycmd::parse_optf(parser, "--exposure", "-e", "hdr image exposure", 0);
-    pars->gamma =
-        ycmd::parse_optf(parser, "--gamma", "-g", "hdr image gamma", 1);
-    pars->srgb =
-        ycmd::parse_optb(parser, "--srgb", "", "hdr image srgb output", true);
-    pars->legacy_gl = ycmd::parse_flag(parser, "--legacy_opengl", "-L",
-                                       "uses legacy OpenGL", false);
-    auto filenames =
-        ycmd::parse_argas(parser, "image", "image filename", {}, true);
+        parse_optf(parser, "--exposure", "-e", "hdr image exposure", 0);
+    pars->gamma = parse_optf(parser, "--gamma", "-g", "hdr image gamma", 2.2f);
+    pars->tonemap = (ym::tonemap_type)parse_opte(parser, "--tonemap", "-t",
+        "hdr image tonemap", (int)ym::tonemap_type::srgb, tmtype_names);
+    auto filenames = parse_argas(parser, "image", "image filename", {}, true);
 
     // loading images
     pars->imgs =
-        load_images(filenames, pars->exposure, pars->gamma, pars->srgb);
+        load_images(filenames, pars->exposure, pars->tonemap, pars->gamma);
 }
-}  // namespace
+
+}  // namespace yimview_app
 
 const int hud_width = 256;
 
-void text_callback(GLFWwindow* window, unsigned int key) {
-    auto pars = (yimview_app::params*)glfwGetWindowUserPointer(window);
-    auto nuklear_ctx = (nk_context*)pars->widget_ctx;
-    nk_glfw3_gl3_char_callback(window, key);
-    if (nk_item_is_any_active(nuklear_ctx)) return;
+void text_callback(ygui::window* win, unsigned int key) {
+    auto pars = (yimview_app::params*)get_user_pointer(win);
     switch (key) {
         case ' ':
         case '.':
@@ -164,16 +151,13 @@ void text_callback(GLFWwindow* window, unsigned int key) {
         case ']': pars->exposure += 1; break;
         case '{': pars->gamma -= 0.1f; break;
         case '}': pars->gamma += 0.1f; break;
-        case '\\': pars->srgb = pars->srgb; break;
         case '1':
             pars->exposure = 0;
             pars->gamma = 1;
-            pars->srgb = true;
             break;
         case '2':
             pars->exposure = 0;
             pars->gamma = 2.2f;
-            pars->srgb = true;
             break;
         case 'z': pars->zoom = 1; break;
         case 'h':
@@ -183,34 +167,26 @@ void text_callback(GLFWwindow* window, unsigned int key) {
     }
 }
 
-void draw_image(GLFWwindow* window) {
-    auto pars = (yimview_app::params*)glfwGetWindowUserPointer(window);
-    auto framebuffer_size = yui::framebuffer_size(window);
-    glViewport(0, 0, framebuffer_size[0], framebuffer_size[1]);
+void draw_image(ygui::window* win) {
+    auto pars = (yimview_app::params*)get_user_pointer(win);
+    auto framebuffer_size = get_framebuffer_size(win);
+    yglu::set_viewport({0, 0, framebuffer_size[0], framebuffer_size[1]});
 
     auto img = pars->imgs[pars->cur_img];
 
     // begin frame
-    glClearColor(pars->background, pars->background, pars->background, 0);
-    glDisable(GL_DEPTH_TEST);
-    glClear(GL_COLOR_BUFFER_BIT);
+    yglu::clear_buffers(
+        {pars->background, pars->background, pars->background, 0});
 
     // draw image
-    auto window_size = yui::window_size(window);
-    if (pars->legacy_gl) {
-        yglu::legacy::draw_image(img->tex_glid, img->width, img->height,
-                                 window_size[0], window_size[1],
-                                 pars->offset[0], pars->offset[1], pars->zoom);
-    } else {
-        yglu::modern::shade_image(img->tex_glid, img->width, img->height,
-                                  window_size[0], window_size[1],
-                                  pars->offset[0], pars->offset[1], pars->zoom);
-    }
+    auto window_size = get_window_size(win);
+    yglu::shade_image(img->tex_glid, img->width, img->height, window_size[0],
+        window_size[1], pars->offset[0], pars->offset[1], pars->zoom);
 }
 
 template <typename T>
-ym::vec<T, 4> lookup_image(int w, int h, int nc, const T* pixels, int x, int y,
-                           T one) {
+ym::vec<T, 4> lookup_image(
+    int w, int h, int nc, const T* pixels, int x, int y, T one) {
     if (x < 0 || y < 0 || x > w - 1 || y > h - 1) return {0, 0, 0, 0};
     auto v = ym::vec<T, 4>{0, 0, 0, 0};
     auto vv = pixels + ((w * y) + x) * nc;
@@ -224,120 +200,85 @@ ym::vec<T, 4> lookup_image(int w, int h, int nc, const T* pixels, int x, int y,
     return v;
 }
 
-void draw_widgets(GLFWwindow* window) {
-    auto pars = (yimview_app::params*)glfwGetWindowUserPointer(window);
-    auto nuklear_ctx = (nk_context*)pars->widget_ctx;
+void draw_widgets(ygui::window* win) {
+    static auto tmtype_names = std::vector<std::pair<std::string, int>>{
+        {"none", (int)ym::tonemap_type::none},
+        {"srgb", (int)ym::tonemap_type::srgb},
+        {"gamma", (int)ym::tonemap_type::gamma},
+        {"filmic", (int)ym::tonemap_type::filmic}};
+
+    auto pars = (yimview_app::params*)get_user_pointer(win);
     auto& img = pars->imgs[pars->cur_img];
-    auto mouse_pos = yui::mouse_pos(window);
-    auto window_size = yui::window_size(window);
-    if (pars->legacy_gl) {
-        nk_glfw3_gl2_new_frame();
-    } else {
-        nk_glfw3_gl3_new_frame();
-    }
-    if (nk_begin(nuklear_ctx, "yimview", nk_rect(window_size[0] - hud_width, 0,
-                                                 hud_width, window_size[1]),
-                 NK_WINDOW_BORDER | NK_WINDOW_MOVABLE | NK_WINDOW_SCALABLE |
-                     NK_WINDOW_MINIMIZABLE | NK_WINDOW_TITLE)) {
-        nk_layout_row_dynamic(nuklear_ctx, 30, 1);
-        nk_label(nuklear_ctx, img->filename.c_str(), NK_TEXT_LEFT);
-        nk_layout_row_dynamic(nuklear_ctx, 30, 3);
-        nk_value_int(nuklear_ctx, "w", img->width);
-        nk_value_int(nuklear_ctx, "h", img->height);
-        nk_value_int(nuklear_ctx, "c", img->ncomp);
+    auto mouse_pos = (ym::vec2f)get_mouse_posf(win);
+    if (begin_widgets(win, "yimview")) {
+        label_widget(win, "filename", img->filename);
+        label_widget(win, "w", img->width);
+        label_widget(win, "h", img->height);
+        label_widget(win, "c", img->ncomp);
         auto xy = (mouse_pos - pars->offset) / pars->zoom;
         auto ij = ym::vec2i{(int)round(xy[0]), (int)round(xy[1])};
         auto inside = ij[0] >= 0 && ij[1] >= 0 && ij[0] < img->width &&
                       ij[1] < img->height;
-        nk_layout_row_dynamic(nuklear_ctx, 30, 4);
-        auto ldrp =
-            lookup_image(img->width, img->height, img->ncomp, img->ldr.data(),
-                         ij[0], ij[1], (unsigned char)255);
-        nk_value_int(nuklear_ctx, "r", (inside) ? ldrp[0] : 0);
-        nk_value_int(nuklear_ctx, "g", (inside) ? ldrp[1] : 0);
-        nk_value_int(nuklear_ctx, "b", (inside) ? ldrp[2] : 0);
-        nk_value_int(nuklear_ctx, "a", (inside) ? ldrp[3] : 0);
+        auto ldrp = lookup_image(img->width, img->height, img->ncomp,
+            img->ldr.data(), ij[0], ij[1], (unsigned char)255);
+        label_widget(win, "r", (inside) ? ldrp[0] : 0);
+        label_widget(win, "g", (inside) ? ldrp[1] : 0);
+        label_widget(win, "b", (inside) ? ldrp[2] : 0);
+        label_widget(win, "a", (inside) ? ldrp[3] : 0);
         if (img->is_hdr()) {
             auto hdrp = lookup_image(img->width, img->height, img->ncomp,
-                                     img->hdr.data(), ij[0], ij[1], 1.0f);
-            nk_layout_row_dynamic(nuklear_ctx, 30, 2);
-            nk_value_float(nuklear_ctx, "r", (inside) ? hdrp[0] : 0);
-            nk_value_float(nuklear_ctx, "g", (inside) ? hdrp[1] : 0);
-            nk_value_float(nuklear_ctx, "b", (inside) ? hdrp[2] : 0);
-            nk_value_float(nuklear_ctx, "a", (inside) ? hdrp[3] : 0);
-            nk_layout_row_dynamic(nuklear_ctx, 30, 1);
-            nk_property_float(nuklear_ctx, "hdr exposure", -20, &pars->exposure,
-                              20, 1, 1);
-            nk_property_float(nuklear_ctx, "hdr gamma", 0.1, &pars->gamma, 5,
-                              0.1, 0.1);
-            pars->srgb =
-                nk_check_label(nuklear_ctx, "hdr srgb output", pars->srgb);
+                img->hdr.data(), ij[0], ij[1], 1.0f);
+            label_widget(win, "r", (inside) ? hdrp[0] : 0);
+            label_widget(win, "g", (inside) ? hdrp[1] : 0);
+            label_widget(win, "b", (inside) ? hdrp[2] : 0);
+            label_widget(win, "a", (inside) ? hdrp[3] : 0);
+            slider_widget(win, "exposure", &pars->exposure, -20, 20, 1);
+            slider_widget(win, "gamma", &pars->gamma, 0.1, 5, 0.1);
+            combo_widget(win, "tonemap", (int*)&pars->tonemap, tmtype_names);
         }
     }
-    nk_end(nuklear_ctx);
-
-    if (pars->legacy_gl) {
-        nk_glfw3_gl2_render(NK_ANTI_ALIASING_ON, 512 * 1024, 128 * 1024);
-    } else {
-        nk_glfw3_gl3_render(NK_ANTI_ALIASING_ON, 512 * 1024, 128 * 1024);
-    }
+    end_widgets(win);
 }
 
-void window_refresh_callback(GLFWwindow* window) {
-    draw_image(window);
-    draw_widgets(window);
-    glfwSwapBuffers(window);
+void window_refresh_callback(ygui::window* win) {
+    draw_image(win);
+    draw_widgets(win);
+    swap_buffers(win);
 }
 
 void run_ui(yimview_app::params* pars) {
     // window
-    auto window =
-        yui::init_glfw(pars->imgs[0]->width + hud_width, pars->imgs[0]->height,
-                       "yimview", pars->legacy_gl, pars, text_callback);
-
-    // callbacks
-    glfwSetWindowRefreshCallback(window, window_refresh_callback);
-    glfwSetScrollCallback(window, nk_gflw3_scroll_callback);
+    auto win = ygui::init_window(pars->imgs[0]->width + hud_width,
+        pars->imgs[0]->height, "yimview", pars);
+    set_callbacks(win, text_callback, nullptr, window_refresh_callback);
 
     // window values
     int mouse_button = 0;
     ym::vec2f mouse_pos, mouse_last;
-    ym::vec2i window_size, framebuffer_size;
 
-    pars->widget_ctx = yui::init_nuklear(window, pars->legacy_gl);
+    init_widgets(win);
 
     // load textures
     for (auto& img : pars->imgs) {
-        if (pars->legacy_gl) {
-            img->tex_glid = yglu::legacy::make_texture(
-                img->width, img->height, img->ncomp,
-                (unsigned char*)img->ldr.data(), false, false);
-        } else {
-            img->tex_glid = yglu::modern::make_texture(
-                img->width, img->height, img->ncomp,
-                (unsigned char*)img->ldr.data(), false, false, false);
-        }
+        img->tex_glid = yglu::make_texture(img->width, img->height, img->ncomp,
+            (unsigned char*)img->ldr.data(), false, false, false);
     }
 
-    while (!glfwWindowShouldClose(window)) {
-        glfwGetWindowSize(window, &window_size[0], &window_size[1]);
-        glfwGetFramebufferSize(window, &framebuffer_size[0],
-                               &framebuffer_size[1]);
-
+    while (!should_close(win)) {
         mouse_last = mouse_pos;
-        mouse_pos = yui::mouse_pos(window);
-        mouse_button = yui::mouse_button(window);
+        mouse_pos = get_mouse_posf(win);
+        mouse_button = get_mouse_button(win);
 
         auto& img = pars->imgs[pars->cur_img];
-        glfwSetWindowTitle(window, ("yimview | " + img->filename + " | " +
-                                    std::to_string(img->width) + "x" +
-                                    std::to_string(img->height) + "@" +
-                                    std::to_string(img->ncomp))
-                                       .c_str());
+        set_window_title(win,
+            ("yimview | " + img->filename + " | " + std::to_string(img->width) +
+                "x" + std::to_string(img->height) + "@" +
+                std::to_string(img->ncomp))
+                .c_str());
 
         // handle mouse
         if (mouse_button && mouse_pos != mouse_last &&
-            !nk_item_is_any_active((nk_context*)pars->widget_ctx)) {
+            !get_widget_active(win)) {
             switch (mouse_button) {
                 case 1: pars->offset += mouse_pos - mouse_last; break;
                 case 2:
@@ -351,45 +292,38 @@ void run_ui(yimview_app::params* pars) {
         // refresh hdr
         if (img->is_hdr() &&
             (pars->exposure != img->exposure || pars->gamma != img->gamma ||
-             pars->srgb != img->srgb)) {
-            ym::exposure_gamma(img->width, img->height, img->ncomp,
-                               img->hdr.data(), img->ldr.data(), pars->exposure,
-                               pars->gamma, pars->srgb);
+                pars->tonemap != img->tonemap)) {
+            ym::tonemap_image(img->width, img->height, img->ncomp,
+                img->hdr.data(), img->ldr.data(), pars->tonemap, pars->exposure,
+                pars->gamma);
             img->exposure = pars->exposure;
             img->gamma = pars->gamma;
-            img->srgb = pars->srgb;
-            if (pars->legacy_gl) {
-                yglu::legacy::update_texture(img->tex_glid, img->width,
-                                             img->height, img->ncomp,
-                                             img->ldr.data(), false);
-            } else {
-                yglu::modern::update_texture(img->tex_glid, img->width,
-                                             img->height, img->ncomp,
-                                             img->ldr.data(), false);
-            }
+            img->tonemap = pars->tonemap;
+            yglu::update_texture(img->tex_glid, img->width, img->height,
+                img->ncomp, img->ldr.data(), false);
         }
 
         // draw
-        draw_image(window);
-        draw_widgets(window);
+        draw_image(win);
+        draw_widgets(win);
 
         // swap buffers
-        glfwSwapBuffers(window);
+        swap_buffers(win);
 
         // event hadling
-        glfwWaitEvents();
+        wait_events(win);
     }
 
-    yui::clear_nuklear((nk_context*)pars->widget_ctx, pars->legacy_gl);
-    yui::clear_glfw(window);
+    clear_widgets(win);
+    clear_window(win);
 }
 
 int main(int argc, char* argv[]) {
     // command line params
     auto pars = new yimview_app::params();
-    auto parser = ycmd::make_parser(argc, argv, "view images");
+    auto parser = yu::cmdline::make_parser(argc, argv, "view images");
     yimview_app::init_params(pars, parser);
-    ycmd::check_parser(parser);
+    check_parser(parser);
 
     // run ui
     run_ui(pars);

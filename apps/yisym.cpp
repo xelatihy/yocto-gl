@@ -27,7 +27,10 @@
 //
 
 #include "yapp.h"
-#include "yui.h"
+
+#include "../yocto/yocto_glu.h"
+#include "../yocto/yocto_img.h"
+#include "../yocto/yocto_math.h"
 
 struct state {
     // params
@@ -36,7 +39,7 @@ struct state {
     // scene
     yapp::scene* scene = nullptr;
     ybvh::scene* scene_bvh = nullptr;
-    ysym::scene* rigid_scene = nullptr;
+    ysym::scene* simulation_scene = nullptr;
 
     // animation state
     bool simulating = false;
@@ -49,40 +52,41 @@ struct state {
 
     // widgets
     void* widget_ctx = nullptr;
+
+    // clear
+    ~state() {
+        if (pars) delete pars;
+        if (scene) delete scene;
+        if (scene_bvh) ybvh::free_scene(scene_bvh);
+        if (simulation_scene) ysym::free_scene(simulation_scene);
+        if (shst) yapp::free_shade_state(shst);
+    }
 };
 
-const int hud_width = 256;
-
-void save_screenshot(GLFWwindow* window, const std::string& imfilename) {
+void save_screenshot(yglu::ui::window* win, const std::string& imfilename) {
     if (ycmd::get_extension(imfilename) != ".png") {
         printf("supports only png screenshots");
         return;
     }
 
-    auto wh = yui::framebuffer_size(window);
-    auto pixels = std::vector<unsigned char>(wh[0] * wh[1] * 4);
-    glReadBuffer(GL_FRONT);
-    glReadPixels(0, 0, wh[0], wh[1], GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
-    std::vector<unsigned char> line(wh[0] * 4);
-    for (int j = 0; j < wh[1] / 2; j++) {
-        memcpy(line.data(), pixels.data() + j * wh[0] * 4, wh[0] * 4);
-        memcpy(pixels.data() + j * wh[0] * 4,
-               pixels.data() + (wh[1] - 1 - j) * wh[0] * 4, wh[0] * 4);
-        memcpy(pixels.data() + (wh[1] - 1 - j) * wh[0] * 4, line.data(),
-               wh[0] * 4);
-    }
-    stbi_write_png(imfilename.c_str(), wh[0], wh[1], 4, pixels.data(),
-                   wh[0] * 4);
+    auto wh = yglu::int2{0, 0};
+    auto pixels = yglu::ui::get_screenshot(win, wh);
+    yimg::save_image(
+        imfilename, wh[0], wh[1], 4, nullptr, (unsigned char*)pixels.data());
 }
 
-void draw_scene(GLFWwindow* window) {
-    auto st = (state*)glfwGetWindowUserPointer(window);
+void draw_scene(yglu::ui::window* win) {
+    auto st = (state*)yglu::ui::get_user_pointer(win);
     auto pars = st->pars;
-    yapp::shade_scene(st->scene, pars, st->shst);
+    yapp::shade_scene(st->scene, st->shst, st->pars->legacy_gl,
+        st->pars->camera_id, st->pars->background, st->pars->exposure,
+        (yglu::stdshader::tonemap_type)st->pars->tmtype, st->pars->gamma,
+        st->pars->wireframe, st->pars->edges, st->pars->camera_lights,
+        st->pars->amb);
 }
 
 // deprecated function removed from build
-void draw_debug(GLFWwindow* window) {
+void draw_debug(yglu::ui::window* win) {
 #if 0
     auto pars = (yisym_app::params*)glfwGetWindowUserPointer(window);
 
@@ -262,34 +266,29 @@ void draw_debug(GLFWwindow* window) {
 #endif
 }
 
-void text_callback(GLFWwindow* window, unsigned int key) {
-    auto st = (state*)glfwGetWindowUserPointer(window);
+void text_callback(yglu::ui::window* win, unsigned int key) {
+    auto st = (state*)yglu::ui::get_user_pointer(win);
     auto pars = st->pars;
-    auto nuklear_ctx = (nk_context*)st->widget_ctx;
-
-    nk_glfw3_gl3_char_callback(window, key);
-    if (nk_item_is_any_active(nuklear_ctx)) return;
     switch (key) {
         case ' ': st->simulating = !st->simulating; break;
         case '/': {
-            for (int sid = 0; sid < st->scene->shapes.size(); sid++) {
-                st->scene->shapes[sid]->frame = st->initial_state[sid];
-                ysym::set_body_frame(st->rigid_scene, sid,
-                                     st->initial_state[sid]);
+            for (int iid = 0; iid < st->scene->instances.size(); iid++) {
+                st->scene->instances[iid]->frame = st->initial_state[iid];
+                ysym::set_rigid_body_frame(
+                    st->simulation_scene, iid, st->initial_state[iid]);
             }
             st->frame = 0;
         } break;
         case '.':
-            yapp::simulate_step(st->scene, st->rigid_scene, pars->dt);
+            yapp::simulate_step(
+                st->scene, st->simulation_scene, pars->simulation_params);
             st->frame += 1;
             break;
         case '[': pars->exposure -= 1; break;
         case ']': pars->exposure += 1; break;
-        case '{': pars->gamma -= 0.1f; break;
-        case '}': pars->gamma += 0.1f; break;
         case 'e': pars->edges = !pars->edges; break;
         case 'w': pars->wireframe = !pars->wireframe; break;
-        case 's': save_screenshot(window, pars->imfilename); break;
+        case 's': save_screenshot(win, pars->imfilename); break;
         case 'C':
             pars->render_params.camera_id =
                 (pars->render_params.camera_id + 1) % st->scene->cameras.size();
@@ -299,53 +298,51 @@ void text_callback(GLFWwindow* window, unsigned int key) {
     }
 }
 
-void draw_widgets(GLFWwindow* window) {
-    auto st = (state*)glfwGetWindowUserPointer(window);
+void draw_widgets(yglu::ui::window* win) {
+    static auto tmtype_names = std::vector<std::pair<std::string, int>>{
+        {"default", (int)yimg::tonemap_type::def},
+        {"linear", (int)yimg::tonemap_type::linear},
+        {"srgb", (int)yimg::tonemap_type::srgb},
+        {"gamma", (int)yimg::tonemap_type::gamma},
+        {"filmic", (int)yimg::tonemap_type::filmic}};
+
+    auto st = (state*)yglu::ui::get_user_pointer(win);
     auto pars = st->pars;
-    auto nuklear_ctx = (nk_context*)st->widget_ctx;
-    auto window_size = yui::window_size(window);
-    if (pars->legacy_gl) {
-        nk_glfw3_gl2_new_frame();
-    } else {
-        nk_glfw3_gl3_new_frame();
-    }
-    if (nk_begin(nuklear_ctx, "ysym", nk_rect(window_size[0] - hud_width, 0,
-                                              hud_width, window_size[1]),
-                 NK_WINDOW_BORDER | NK_WINDOW_MOVABLE | NK_WINDOW_SCALABLE |
-                     NK_WINDOW_MINIMIZABLE | NK_WINDOW_TITLE)) {
-        nk_layout_row_dynamic(nuklear_ctx, 30, 1);
-        nk_label(nuklear_ctx, pars->filenames[0].c_str(), NK_TEXT_LEFT);
-        nk_layout_row_dynamic(nuklear_ctx, 30, 2);
-        nk_value_int(nuklear_ctx, "frame", st->frame);
-        nk_property_float(nuklear_ctx, "dt", 0, &pars->dt, 1, 1 / 240.0f,
-                          1 / 240.0f);
-        if (nk_button_label(nuklear_ctx, "start")) st->simulating = true;
-        if (nk_button_label(nuklear_ctx, "stop")) st->simulating = false;
-        if (nk_button_label(nuklear_ctx, "step")) {
-            yapp::simulate_step(st->scene, st->rigid_scene, pars->dt);
+    if (yglu::ui::begin_widgets(win)) {
+        yglu::ui::dynamic_widget_layout(win, 1);
+        yglu::ui::label_widget(win, pars->filenames[0]);
+        yglu::ui::dynamic_widget_layout(win, 2);
+        yglu::ui::int_label_widget(win, "frame", st->frame);
+        yglu::ui::float_widget(
+            win, "dt", &pars->simulation_params.dt, 0, 1, 1 / 240.0f);
+        if (yglu::ui::button_widget(win, "start")) st->simulating = true;
+        if (yglu::ui::button_widget(win, "stop")) st->simulating = false;
+        if (yglu::ui::button_widget(win, "step")) {
+            yapp::simulate_step(
+                st->scene, st->simulation_scene, pars->simulation_params);
             st->frame += 1;
         }
-        if (nk_button_label(nuklear_ctx, "reset")) {
-            for (int sid = 0; sid < st->scene->shapes.size(); sid++) {
-                st->scene->shapes[sid]->frame = st->initial_state[sid];
-                ysym::set_body_frame(st->rigid_scene, sid,
-                                     st->initial_state[sid]);
-                ybvh::set_shape_frame(st->scene_bvh, sid,
-                                      st->initial_state[sid]);
+        if (yglu::ui::button_widget(win, "reset")) {
+            for (int iid = 0; iid < st->scene->shapes.size(); iid++) {
+                st->scene->instances[iid]->frame = st->initial_state[iid];
+                ysym::set_rigid_body_frame(
+                    st->simulation_scene, iid, st->initial_state[iid]);
+                ybvh::set_instance_frame(
+                    st->scene_bvh, iid, st->initial_state[iid]);
             }
             st->frame = 0;
         }
-        nk_property_int(nuklear_ctx, "camera", 0,
-                        &pars->render_params.camera_id,
-                        (int)st->scene->cameras.size() - 1, 1, 1);
-        pars->wireframe =
-            nk_check_label(nuklear_ctx, "wireframe", pars->wireframe);
-        pars->edges = nk_check_label(nuklear_ctx, "edges", pars->edges);
-        nk_layout_row_dynamic(nuklear_ctx, 30, 1);
-        nk_property_float(nuklear_ctx, "exposure", -20, &pars->exposure, 20, 1,
-                          1);
-        nk_property_float(nuklear_ctx, "gamma", 0.1, &pars->gamma, 5, 0.1, 0.1);
-        if (nk_button_label(nuklear_ctx, "tesselate")) {
+        yglu::ui::int_widget(win, "camera", &pars->render_params.camera_id, 0,
+            (int)st->scene->cameras.size() - 1, 1);
+        yglu::ui::bool_widget(win, "wireframe", &pars->wireframe);
+        yglu::ui::bool_widget(win, "edges", &pars->edges);
+        yglu::ui::dynamic_widget_layout(win, 1);
+        yglu::ui::float_widget(
+            win, "hdr exposure", &pars->exposure, -20, 20, 1);
+        yglu::ui::float_widget(win, "hdr gamma", &pars->gamma, 0.1, 5, 0.1);
+        yglu::ui::enum_widget(
+            win, "hdr tonemap", (int*)&pars->tonemap, tmtype_names);
+        if (yglu::ui::button_widget(win, "tesselate")) {
             for (auto shape : st->scene->shapes) {
                 yshape::tesselate_stdshape(
                     (std::vector<yshape::int2>&)shape->lines,
@@ -357,57 +354,43 @@ void draw_widgets(GLFWwindow* window) {
             }
         }
     }
-    nk_end(nuklear_ctx);
-
-    if (pars->legacy_gl) {
-        nk_glfw3_gl2_render(NK_ANTI_ALIASING_ON, 512 * 1024, 128 * 1024);
-    } else {
-        nk_glfw3_gl3_render(NK_ANTI_ALIASING_ON, 512 * 1024, 128 * 1024);
-    }
+    yglu::ui::end_widgets(win);
 }
 
-void window_refresh_callback(GLFWwindow* window) {
-    draw_scene(window);
-    draw_debug(window);
-    draw_widgets(window);
-    glfwSwapBuffers(window);
+void window_refresh_callback(yglu::ui::window* win) {
+    draw_scene(win);
+    draw_debug(win);
+    draw_widgets(win);
+    yglu::ui::swap_buffers(win);
 }
 
 void run_ui(state* st) {
     auto pars = st->pars;
 
     // window
-    auto window = yui::init_glfw(pars->width, pars->height, "ysym",
-                                 pars->legacy_gl, st, text_callback);
-
-    // callbacks
-    glfwSetWindowRefreshCallback(window, window_refresh_callback);
-    glfwSetScrollCallback(window, nk_gflw3_scroll_callback);
+    auto win = yglu::ui::init_window(
+        pars->width, pars->height, "ysym", pars->legacy_gl, st);
+    yglu::ui::set_callbacks(win, text_callback, window_refresh_callback);
 
     // window values
     int mouse_button = 0;
     ym::vec2f mouse_pos, mouse_last;
-    ym::vec2i window_size, framebuffer_size;
 
     // load textures
-    st->shst = yapp::init_shade_state(st->scene, pars);
+    st->shst = yapp::init_shade_state(st->scene, pars->legacy_gl);
 
-    st->widget_ctx = yui::init_nuklear(window, pars->legacy_gl);
+    yglu::ui::init_widgets(win);
 
-    while (!glfwWindowShouldClose(window)) {
-        glfwGetWindowSize(window, &window_size[0], &window_size[1]);
-        glfwGetFramebufferSize(window, &framebuffer_size[0],
-                               &framebuffer_size[1]);
-
+    while (!yglu::ui::should_close(win)) {
         mouse_last = mouse_pos;
-        mouse_pos = yui::mouse_pos(window);
-        mouse_button = yui::mouse_button(window);
+        mouse_pos = yglu::ui::get_mouse_posf(win);
+        mouse_button = yglu::ui::get_mouse_button(win);
 
-        glfwSetWindowTitle(window, ("yshade | " + pars->filenames[0]).c_str());
+        yglu::ui::set_window_title(win, ("yshade | " + pars->filenames[0]));
 
         // handle mouse
         if (mouse_button && mouse_pos != mouse_last &&
-            !nk_item_is_any_active((nk_context*)st->widget_ctx)) {
+            !yglu::ui::get_widget_active(win)) {
             auto dolly = 0.0f;
             auto pan = ym::zero2f;
             auto rotate = ym::zero2f;
@@ -419,45 +402,46 @@ void run_ui(state* st) {
             }
 
             auto cam = st->scene->cameras[pars->render_params.camera_id];
-            ym::turntable((ym::frame3f&)cam->frame, cam->focus, rotate, dolly,
-                          pan);
+            ym::turntable(
+                (ym::frame3f&)cam->frame, cam->focus, rotate, dolly, pan);
         }
 
         // draw
-        draw_scene(window);
-        draw_debug(window);
-        draw_widgets(window);
+        draw_scene(win);
+        draw_debug(win);
+        draw_widgets(win);
 
         // swap buffers
-        glfwSwapBuffers(window);
+        yglu::ui::swap_buffers(win);
 
         // advance if simulating
         if (st->simulating) {
-            yapp::simulate_step(st->scene, st->rigid_scene, pars->dt);
+            yapp::simulate_step(
+                st->scene, st->simulation_scene, pars->simulation_params);
             st->frame += 1;
         }
 
         // check for screenshot
         if (pars->no_ui) {
-            save_screenshot(window, pars->imfilename);
+            save_screenshot(win, pars->imfilename);
             break;
         }
 
         // event hadling
         if (st->simulating)
-            glfwPollEvents();
+            yglu::ui::poll_events(win);
         else
-            glfwWaitEvents();
+            yglu::ui::wait_events(win);
     }
 
-    yui::clear_nuklear((nk_context*)st->widget_ctx, pars->legacy_gl);
-    yui::clear_glfw(window);
+    yglu::ui::clear_widgets(win);
+    yglu::ui::clear_window(win);
 }
 
 int main(int argc, char* argv[]) {
     // params
-    auto pars = yapp::init_params("interactively simulate scenes", argc, argv,
-                                  false, true, true, true);
+    auto pars = yapp::init_params(
+        "interactively simulate scenes", argc, argv, false, true, true, true);
 
     // init state
     auto st = new state();
@@ -466,24 +450,23 @@ int main(int argc, char* argv[]) {
     // setting up rendering
     st->scene = yapp::load_scenes(pars->filenames, pars->scene_scale);
     st->scene_bvh = yapp::make_bvh(st->scene);
-    st->rigid_scene = yapp::make_rigid_scene(st->scene, st->scene_bvh);
+    st->simulation_scene =
+        yapp::make_simulation_scene(st->scene, st->scene_bvh);
 
     // initialize simulation
-    ysym::init_simulation(st->rigid_scene);
+    ysym::init_simulation(st->simulation_scene);
 
     // save init values
     st->initial_state.resize(st->scene->shapes.size());
     for (auto i = 0; i < st->initial_state.size(); i++)
-        st->initial_state[i] = st->scene->shapes[i]->frame;
+        st->initial_state[i] = st->scene->instances[i]->frame;
 
     // run ui
     run_ui(st);
 
-    // done
-    ybvh::free_scene(st->scene_bvh);
-    ysym::free_scene(st->rigid_scene);
-    delete st->scene;
+    // cleanup
     delete st;
-    delete pars;
+
+    // done
     return 0;
 }

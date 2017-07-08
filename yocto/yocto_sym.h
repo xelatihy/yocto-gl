@@ -1,27 +1,8 @@
 ///
-/// YOCTO_SYM: Simple rigib body simulator with collision support
-/// for convex and concate triangle meshes.
+/// # Yocto/Sym
 ///
-///
-/// USAGE:
-///
-/// 1. define the rigib body scene
-/// - init the scene with make_scene()
-/// - for each rigid body, set shape data with set_body()
-/// - set collision callbacks with set_overlap_callbacks()
-/// 2. start tha simulation with init_simulation()
-/// 3. for each frame, advacne the simulation with advance_simulation()
-/// 4. after each frame, retrive or change the rigid body frame, with
-/// get_body_frame() and set_body_frame(), and the rigid body velocities with
-/// get_body_velocity() and set_body_velocity()
-/// 5. if desired, you can explicitly compute rigid body moments with
-/// compute_moments()
-///
-/// The interface for each function is described in details in the interface
-/// section of this file.
-///
-/// Shapes are indexed meshes and are described by array of vertex indices for
-/// triangles, and arrays of vertex data.
+/// Simple rigib body simulator with collision support for convex and concave
+/// triangle meshes.
 ///
 /// The rigib body code performs collision detection and response in gravity.
 /// For collision detection, we use only mesh vertices, so increase object
@@ -33,16 +14,30 @@
 /// known as Projected Guass-Sidel. Friction is grossly approximated now,
 /// waiting for a refactoring before getting better.
 ///
-///
-/// COMPILATION:
-///
-/// To use the library include the .h and compile the .cpp. To use this library
-/// as a header-only library, define YBVH_INLINE before including this file.
-///
-/// The .cpp file depends on yocto_math.h.
+/// This library depends in yocto_math.h Optionally depend on yocto_bvh.h/.cpp
+/// for internal acceleration. Disable this by setting YTRACE_NO_BVH.
 ///
 ///
-/// HISTORY:
+/// ## Usage
+///
+/// 1. define the rigib body scene
+///     - init the scene with make_scene()
+///     - for each rigid body, set shape data with set_body()
+///     - set collision callbacks with set_overlap_callbacks()
+/// 2. start tha simulation with init_simulation()
+/// 3. for each frame, advacne the simulation with advance_simulation()
+/// 4. after each frame, retrive or change the rigid body frame, with
+///     get_body_frame() and set_body_frame(), and the rigid body velocities
+///     with get_body_velocity() and set_body_velocity()
+/// 5. if desired, you can explicitly compute rigid body moments with
+///     compute_moments()
+///
+/// ## History
+///
+/// - v 0.14: use yocto_math in the interface and remove inline compilation
+/// - v 0.13: move to add api
+/// - v 1.12: internally use yocto_bvh if desired
+/// - v 0.11: added instances
 /// - v 0.10: switch to .h/.cpp pair
 /// - v 0.9: doxygen comments
 /// - v 0.8: opaque API (allows for changing internals without altering API)
@@ -84,36 +79,21 @@ namespace ysym {}
 #ifndef _YSYM_H_
 #define _YSYM_H_
 
-// compilation options
-#ifdef YSYM_INLINE
-#define YSYM_API inline
-#else
-#define YSYM_API
-#endif
-
 #include <array>
 #include <functional>
 #include <tuple>
 #include <vector>
 
+#include "yocto_math.h"
+
 // -----------------------------------------------------------------------------
 // INTERFACE
 // -----------------------------------------------------------------------------
 
+///
+/// Simple rigid body simulator
+///
 namespace ysym {
-
-//
-// Typedefs for vec/mat types
-//
-using float2 = std::array<float, 2>;
-using float3 = std::array<float, 3>;
-using float4 = std::array<float, 4>;
-using float3x4 = std::array<std::array<float, 3>, 4>;
-using float3x3 = std::array<std::array<float, 3>, 3>;  // column major
-using float3x2 = std::array<std::array<float, 3>, 2>;
-using int2 = std::array<int, 2>;
-using int3 = std::array<int, 3>;
-using int4 = std::array<int, 4>;
 
 ///
 /// Simulation scene.
@@ -123,84 +103,96 @@ struct scene;
 ///
 /// Initialze a scene.
 ///
-/// Parameters:
-/// - nbodies: number of rigid bodies
-///
-YSYM_API scene* make_scene(int nbodies);
+scene* make_scene();
 
 ///
 /// Free a scene.
 ///
-/// Parameters:
-/// - scn: rigid body scene
+/// - Parameters:
+///     - scn: rigid body scene
 ///
-YSYM_API void free_scene(scene* scn);
+void free_scene(scene* scn);
+
+///
+/// Sets a rigid shape.
+///
+/// - Parameters:
+///     - scn: scene
+///     - ntriangles: number of triangles
+///     - triangles: triangles indices
+///     - nverts: number of vertices
+///     - pos: vertex positions
+///
+int add_rigid_shape(scene* scn, int ntriangles, const ym::vec3i* triangles,
+    int nverts, const ym::vec3f* pos);
+
+///
+/// Sets a material.
+///
+/// - Parameters:
+///     - scn: scene
+///     - density: body density (zero for not-simulated)
+///
+int add_rigid_material(scene* scn, float density);
 
 ///
 /// Set a rigid body.
 ///
-/// Parameters:
-/// - scn: scene
-/// - bid: body index
-/// - frame: body frame
-/// - density: bidy density (zero for not-simulated)
-/// - lin_vel: linear velocity
-/// - ang_vel: angular velocity
-/// - ntriangles: number of triangles
-/// - triangles: triangles indices
-/// - nverts: number of vertices
-/// - pos: vertex positions
+/// - Parameters:
+///     - scn: scene
+///     - frame: body frame
+///     - sid: shape id
+///     - mid: material id
+///     - lin_vel: linear velocity
+///     - ang_vel: angular velocity
 ///
-YSYM_API void set_body(scene* scn, int bid, const float3x4& frame,
-                       const float3& lin_vel, const float3& ang_vel,
-                       float density, int ntriangles, const int3* triangles,
-                       int nverts, const float3* pos);
+int add_rigid_body(scene* scn, const ym::frame3f& frame, int sid, int mid,
+    const ym::vec3f& lin_vel = {0, 0, 0}, const ym::vec3f& ang_vel = {0, 0, 0});
 
 ///
 /// Get a rigid body frame.
 ///
-/// Parameters:
-/// - scn: scene
-/// - bid: body index
+/// - Parameters:
+///     - scn: scene
+///     - bid: body index
+/// - Returns:
+///     - body frame
 ///
-/// Returns:
-/// - body frame
-///
-YSYM_API float3x4 get_body_frame(const scene* scn, int bid);
+ym::frame3f get_rigid_body_frame(const scene* scn, int bid);
 
 ///
 /// Get a rigid body linear and angular velocity.
 ///
-/// Parameters:
-/// - scn: scene
-/// - bid: body index
+/// - Parameters:
+///     - scn: scene
+///     - bid: body index
+/// - Returns:
+///     - linear and angular velocity
 ///
-/// Returns:
-/// - linear and angular velocity
-///
-YSYM_API float3x2 get_body_velocity(const scene* scn, int bid);
+std::pair<ym::vec3f, ym::vec3f> get_rigid_body_velocity(
+    const scene* scn, int bid);
 
 ///
 /// Sets a rigid body frame.
 ///
-/// Parameters:
-/// - scn: scene
-/// - bid: body index
-/// - frame: rigid body frame
+/// - Parameters:
+///     - scn: scene
+///     - bid: body index
+///     - frame: rigid body frame
 ///
-YSYM_API void set_body_frame(scene* scn, int bid, const float3x4& frame);
+void set_rigid_body_frame(scene* scn, int bid, const ym::frame3f& frame);
 
 ///
 /// Sets a rigid body linear and angular velocity.
 ///
-/// Parameters:
-/// - scn: scene
-/// - bid: body index
-/// - lin_vel: linear velocity
-/// - ang_vel: angular velocity
+/// - Parameters:
+///     - scn: scene
+///     - bid: body index
+///     - lin_vel: linear velocity
+///     - ang_vel: angular velocity
 ///
-YSYM_API void set_body_velocity(scene* scn, int bid, const float3& lin_vel,
-                                const float3& ang_vel);
+void set_rigid_body_velocity(
+    scene* scn, int bid, const ym::vec3f& lin_vel, const ym::vec3f& ang_vel);
 
 ///
 /// Point-scene overlap.
@@ -208,12 +200,14 @@ YSYM_API void set_body_velocity(scene* scn, int bid, const float3& lin_vel,
 struct overlap_point {
     /// overlap distance
     float dist = 0;
+    /// instance index
+    int iid = -1;
     /// shape index
     int sid = -1;
     /// elements index
     int eid = -1;
     /// element baricentric coordinates
-    float4 euv = {0, 0, 0, 0};
+    ym::vec4f euv = {0, 0, 0, 0};
 
     /// check whether it was a hit
     operator bool() const { return eid >= 0; }
@@ -222,118 +216,122 @@ struct overlap_point {
 ///
 /// Shape-shape intersection (conservative)
 ///
-/// Out Parameters:
-/// - ctx: context
-/// - overlaps: overlaps array
+/// - Out Parameters:
+///     - ctx: context
+///     - overlaps: overlaps array
 ///
-using overlap_shapes_cb = void (*)(void* ctx, std::vector<int2>*);
+using overlap_shapes_cb = void (*)(void* ctx, std::vector<ym::vec2i>*);
 
 ///
 /// Closest element intersection callback
 ///
-/// Parameters:
-/// - ctx: context
-/// - sid: shape to check
-/// - pt: point
-/// - max_dist: maximum distance
+/// - Parameters:
+///     - ctx: context
+///     - sid: shape to check
+///     - pt: point
+///     - max_dist: maximum distance
+/// - Return:
+///     - overlap point
 ///
-/// Return:
-/// - overlap point
-///
-using overlap_shape_cb = overlap_point (*)(void* ctx, int sid, const float3& pt,
-                                           float max_dist);
+using overlap_shape_cb = overlap_point (*)(
+    void* ctx, int sid, const ym::vec3f& pt, float max_dist);
 
 ///
 /// Closest vertex-to-element overlap
 ///
-/// Parameters:
-/// - ctx: context
-/// - sid1: element shape to check
-/// - sid2: vertex shape to check
-/// - max_dist: maximum distance from each vert
+/// - Parameters:
+///     - ctx: context
+///     - sid1: element shape to check
+///     - sid2: vertex shape to check
+///     - max_dist: maximum distance from each vert
+/// - Out Params:
+///     - overlaps: overlapping elements
 ///
-/// Out Params:
-/// - overlaps: overlapping elements
-///
-using overlap_verts_cb =
-    void (*)(void* ctx, int sid1, int sid2, float max_dist,
-             std::vector<std::pair<overlap_point, int2>>* overlaps);
+using overlap_verts_cb = void (*)(void* ctx, int sid1, int sid2, float max_dist,
+    std::vector<std::pair<overlap_point, ym::vec2i>>* overlaps);
 
 ///
 /// Refit data structure after transform updates
 ///
-/// Parameters:
-/// - ctx: context
-/// - scn: scene
+/// - Parameters:
+///     - ctx: context
+///     - scn: scene
 ///
 using overlap_refit_cb = void (*)(void* ctx, const scene* scn, int nshapes);
 
 ///
 /// Set overlap functions
 ///
-YSYM_API void set_overlap_callbacks(scene* scn, void* ctx,
-                                    overlap_shapes_cb overlap_shapes,
-                                    overlap_shape_cb overlap_shape,
-                                    overlap_verts_cb overlap_verts,
-                                    overlap_refit_cb overlap_refit);
+void set_overlap_callbacks(scene* scn, void* ctx,
+    overlap_shapes_cb overlap_shapes, overlap_shape_cb overlap_shape,
+    overlap_verts_cb overlap_verts, overlap_refit_cb overlap_refit);
+
+///
+/// Initialize overlap functions using internal structures.
+///
+void init_overlap(scene* scn);
 
 ///
 /// Computes the moments of a shape.
 ///
-/// Parameters:
-/// - triangles: triangle indices
-/// - pos: vertex positions
+/// - Parameters:
+///     - triangles: triangle indices
+///     - pos: vertex positions
+/// - Output Parameters:
+///     - volume: volume
+///     - center: center of mass
+///     - inertia: inertia tensore (wrt center of mass)
 ///
-/// Output parameters:
-/// - volume: volume
-/// - center: center of mass
-/// - inertia: inertia tensore (wrt center of mass)
-///
-YSYM_API void compute_moments(int ntriangles, const int3* triangles, int nverts,
-                              const float3* pos, float* volume, float3* center,
-                              float3x3* inertia);
+void compute_moments(int ntriangles, const ym::vec3i* triangles, int nverts,
+    const ym::vec3f* pos, float* volume, ym::vec3f* center, ym::mat3f* inertia);
 
 ///
 /// Computes the moments of a shape.
 ///
-/// Parameters:
-/// - triangles: triangle indices
-/// - pos: vertex positions
+/// - Parameters:
+///     - triangles: triangle indices
+///     - pos: vertex positions
+/// - Output Parameters:
+///     - volume: volume
+///     - center: center of mass
+///     - inertia: inertia tensore (wrt center of mass)
 ///
-/// Output parameters:
-/// - volume: volume
-/// - center: center of mass
-/// - inertia: inertia tensore (wrt center of mass)
-///
-YSYM_API void compute_moments(int ntetra, const int4* tetra, int nverts,
-                              const float3* pos, float* volume, float3* center,
-                              float3x3* inertia);
+void compute_moments(int ntetra, const ym::vec4i* tetra, int nverts,
+    const ym::vec3f* pos, float* volume, ym::vec3f* center, ym::mat3f* inertia);
 
 ///
 /// Initialize the simulation
 ///
-/// Paramaters:
-/// - scene: rigib body scene
+/// - Paramaters:
+///     - scene: rigib body scene
 ///
-YSYM_API void init_simulation(scene* scn);
+void init_simulation(scene* scn);
+
+///
+/// Simulation Parameters.
+///
+struct simulation_params {
+    /// delta time
+    float dt = 1 / 60.0f;
+    /// gravity
+    ym::vec3f gravity = {0.f, -9.82f, 0.f};
+    /// solver iterations
+    int solver_iterations = 20;
+    /// global linear velocity drag
+    float lin_drag = 0.01;
+    /// global angular velocity drag
+    float ang_drag = 0.01;
+};
 
 ///
 /// Advance the simulation one step at a time.
 ///
-/// Paramaters:
-/// - scene: rigib body scene
-/// - dt: time step
+/// - Paramaters:
+///     - scene: rigib body scene
+///     - dt: time step
 ///
-YSYM_API void advance_simulation(scene* scn, float dt);
+void advance_simulation(scene* scn, const simulation_params& params);
 
-}  // namespace
-
-// -----------------------------------------------------------------------------
-// INCLUDE FOR HEADER-ONLY MODE
-// -----------------------------------------------------------------------------
-
-#ifdef YSYM_INLINE
-#include "yocto_sym.cpp"
-#endif
+}  // namespace ysym
 
 #endif
