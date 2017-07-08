@@ -47,6 +47,7 @@ for basic types (int, float, bool) as a compromise for efficieny.
 
 
 ## History
+- v 0.10: added moprhing to high-level interface
 - v 0.9: use yocto_math in the interface and remove inline compilation
 - v 0.8: API changes to match to GLTF 2
 - v 0.7: new codegen to match to GLTF 2 (changes imposed by changing spec)
@@ -281,9 +282,30 @@ avoid.
     - ~material():      cleanup
 
 
+### Struct shape_morph
+
+~~~ .cpp
+struct shape_morph {
+    std::vector<ym::vec3f> pos;
+    std::vector<ym::vec3f> norm;
+    std::vector<ym::vec3f> tangsp;
+    float weight = 0;
+}
+~~~
+
+Morph information for shapes
+
+- Members:
+    - pos:      morph position
+    - norm:      morph normal
+    - tangsp:      morph tangent
+    - weight:      default weight (the same for each shape in a mesh)
+
+
 ### Struct shape
 
 ~~~ .cpp
+
 struct shape {
     std::string name = "";
     material* material = nullptr;
@@ -299,6 +321,8 @@ struct shape {
     std::vector<int> points;
     std::vector<ym::vec2i> lines;
     std::vector<ym::vec3i> triangles;
+    std::vector<shape_morph*> morph_targets;
+    ~shape(); 
 }
 ~~~
 
@@ -319,6 +343,8 @@ Primitives
     - points:      point elements
     - lines:      line elements
     - triangles:      triangle elements
+    - morph_targets:      morph targets
+    - ~shape():      cleanup
 
 
 ### Struct mesh
@@ -352,6 +378,7 @@ struct node {
     ym::quat4f rotation = {0, 0, 0, 1};
     ym::vec3f scale = {1, 1, 1};
     ym::vec3f translation = {0, 0, 0};
+    std::vector<float> morph_weights;
     ym::mat4f xform = ym::identity_mat4f;
     ym::mat4f local_xform = ym::identity_mat4f;
     ym::mat4f skin_xform = ym::identity_mat4f;
@@ -371,19 +398,20 @@ Node in the hierarchy.
      is the scalar.
     - scale:      The node's non-uniform scale.
     - translation:      The node's translation.
-    - xform:      transform
-    - local_xform:      local transform
-    - skin_xform:      skin transform
+    - morph_weights:      morph target weights
+    - xform:      transform (computed during update)
+    - local_xform:      local transform (computed during update)
+    - skin_xform:      skin transform (computed during update)
 
 
 ### Enum animation_interpolation
 
 ~~~ .cpp
 enum struct animation_interpolation {
-    linear = 1,
-    step = 2,
-    catmull_rom = 3,
-    cubic = 4,
+    linear = 0,
+    step = 1,
+    catmull_rom = 2,
+    cubic = 3,
 }
 ~~~
 
@@ -400,10 +428,10 @@ Animation Interpolation
 
 ~~~ .cpp
 enum struct animation_property {
-    translation = 1,
-    rotation = 2,
-    scale = 3,
-    weights = 4,
+    translation = 0,
+    rotation = 1,
+    scale = 2,
+    weights = 3,
 }
 ~~~
 
@@ -599,6 +627,16 @@ std::vector<ym::mat4f> get_skin_transforms(
 Skin transforms (local-to-object) from the node transform that instances the
 skin
 
+### Function compute_morphing_deformation()
+
+~~~ .cpp
+void compute_morphing_deformation(const shape* shp,
+    const std::vector<float>& weights, std::vector<ym::vec3f>& pos,
+    std::vector<ym::vec3f>& norm, std::vector<ym::vec4f>& tangsp);
+~~~
+
+Compute shape morphing
+
 ### Function compute_scene_bounds()
 
 ~~~ .cpp
@@ -790,7 +828,7 @@ No documentation in schema.
 
 ~~~ .cpp
 enum struct glTFAccessorSparseIndicesComponentType {
-    NotSet = 0,
+    NotSet = -1,
     UnsignedByte = 5121,
     UnsignedShort = 5123,
     UnsignedInt = 5125,
@@ -875,7 +913,7 @@ Sparse storage of attributes that deviate from their initialization value.
 
 ~~~ .cpp
 enum struct glTFAccessorComponentType {
-    NotSet = 0,
+    NotSet = -1,
     Byte = 5120,
     UnsignedByte = 5121,
     Short = 5122,
@@ -901,14 +939,14 @@ Enum values for glTFAccessor::componentType.
 
 ~~~ .cpp
 enum struct glTFAccessorType {
-    NotSet = 0,
-    Scalar = 1,
-    Vec2 = 2,
-    Vec3 = 3,
-    Vec4 = 4,
-    Mat2 = 5,
-    Mat3 = 6,
-    Mat4 = 7,
+    NotSet = -1,
+    Scalar = 0,
+    Vec2 = 1,
+    Vec3 = 2,
+    Vec4 = 3,
+    Mat2 = 4,
+    Mat3 = 5,
+    Mat4 = 6,
 }
 ~~~
 
@@ -965,11 +1003,11 @@ buffer.
 
 ~~~ .cpp
 enum struct glTFAnimationChannelTargetPath {
-    NotSet = 0,
-    Translation = 1,
-    Rotation = 2,
-    Scale = 3,
-    Weights = 4,
+    NotSet = -1,
+    Translation = 0,
+    Rotation = 1,
+    Scale = 2,
+    Weights = 3,
 }
 ~~~
 
@@ -1024,11 +1062,11 @@ Targets an animation's sampler at a node's property.
 
 ~~~ .cpp
 enum struct glTFAnimationSamplerInterpolation {
-    NotSet = 0,
-    Linear = 1,
-    Step = 2,
-    Catmullromspline = 3,
-    Cubicspline = 4,
+    NotSet = -1,
+    Linear = 0,
+    Step = 1,
+    Catmullromspline = 2,
+    Cubicspline = 3,
 }
 ~~~
 
@@ -1131,7 +1169,7 @@ A buffer points to binary geometry, animation, or skins.
 
 ~~~ .cpp
 enum struct glTFBufferViewTarget {
-    NotSet = 0,
+    NotSet = -1,
     ArrayBuffer = 34962,
     ElementArrayBuffer = 34963,
 }
@@ -1214,9 +1252,9 @@ projection matrix.
 
 ~~~ .cpp
 enum struct glTFCameraType {
-    NotSet = 0,
-    Perspective = 1,
-    Orthographic = 2,
+    NotSet = -1,
+    Perspective = 0,
+    Orthographic = 1,
 }
 ~~~
 
@@ -1256,9 +1294,9 @@ to place the camera in the scene.
 
 ~~~ .cpp
 enum struct glTFImageMimeType {
-    NotSet = 0,
-    ImageJpeg = 1,
-    ImagePng = 2,
+    NotSet = -1,
+    ImageJpeg = 0,
+    ImagePng = 1,
 }
 ~~~
 
@@ -1409,10 +1447,10 @@ Physically-Based Rendering (PBR) methodology.
 
 ~~~ .cpp
 enum struct glTFMaterialAlphaMode {
-    NotSet = 0,
-    Opaque = 1,
-    Mask = 2,
-    Blend = 3,
+    NotSet = -1,
+    Opaque = 0,
+    Mask = 1,
+    Blend = 2,
 }
 ~~~
 
@@ -1466,7 +1504,7 @@ The material appearance of a primitive.
 
 ~~~ .cpp
 enum struct glTFMeshPrimitiveMode {
-    NotSet = 0,
+    NotSet = -1,
     Points = 0,
     Lines = 1,
     LineLoop = 2,
@@ -1581,7 +1619,7 @@ not be present.
 
 ~~~ .cpp
 enum struct glTFSamplerMagFilter {
-    NotSet = 0,
+    NotSet = -1,
     Nearest = 9728,
     Linear = 9729,
 }
@@ -1599,7 +1637,7 @@ Enum values for glTFSampler::magFilter.
 
 ~~~ .cpp
 enum struct glTFSamplerMinFilter {
-    NotSet = 0,
+    NotSet = -1,
     Nearest = 9728,
     Linear = 9729,
     NearestMipmapNearest = 9984,
@@ -1625,7 +1663,7 @@ Enum values for glTFSampler::minFilter.
 
 ~~~ .cpp
 enum struct glTFSamplerWrapS {
-    NotSet = 0,
+    NotSet = -1,
     ClampToEdge = 33071,
     MirroredRepeat = 33648,
     Repeat = 10497,
@@ -1645,7 +1683,7 @@ Enum values for glTFSampler::wrapS.
 
 ~~~ .cpp
 enum struct glTFSamplerWrapT {
-    NotSet = 0,
+    NotSet = -1,
     ClampToEdge = 33071,
     MirroredRepeat = 33648,
     Repeat = 10497,

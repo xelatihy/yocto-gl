@@ -48,6 +48,7 @@
 ///
 ///
 /// ## History
+/// - v 0.10: added moprhing to high-level interface
 /// - v 0.9: use yocto_math in the interface and remove inline compilation
 /// - v 0.8: API changes to match to GLTF 2
 /// - v 0.7: new codegen to match to GLTF 2 (changes imposed by changing spec)
@@ -345,8 +346,23 @@ struct material {
 };
 
 ///
+/// Morph information for shapes
+///
+struct shape_morph {
+    /// morph position
+    std::vector<ym::vec3f> pos;
+    /// morph normal
+    std::vector<ym::vec3f> norm;
+    /// morph tangent
+    std::vector<ym::vec3f> tangsp;
+    /// default weight (the same for each shape in a mesh)
+    float weight = 0;
+};
+
+///
 /// Primitives
 ///
+
 struct shape {
     /// name of the mesh that enclosed it
     std::string name = "";
@@ -379,6 +395,15 @@ struct shape {
     std::vector<ym::vec2i> lines;
     /// triangle elements
     std::vector<ym::vec3i> triangles;
+
+    /// morph targets
+    std::vector<shape_morph*> morph_targets;
+
+    /// cleanup
+    ~shape() {
+        for (auto e : morph_targets)
+            if (e) delete e;
+    }
 };
 
 ///
@@ -421,13 +446,15 @@ struct node {
     ym::vec3f scale = {1, 1, 1};
     /// The node's translation.
     ym::vec3f translation = {0, 0, 0};
+    /// morph target weights
+    std::vector<float> morph_weights;
 
     // computed properties ---------------
-    /// transform
+    /// transform (computed during update)
     ym::mat4f xform = ym::identity_mat4f;
-    /// local transform
+    /// local transform (computed during update)
     ym::mat4f local_xform = ym::identity_mat4f;
-    /// skin transform
+    /// skin transform (computed during update)
     ym::mat4f skin_xform = ym::identity_mat4f;
 };
 
@@ -599,6 +626,13 @@ ym::vec2f get_animation_bounds(const scene_group* scn);
 ///
 std::vector<ym::mat4f> get_skin_transforms(
     const skin* sk, const ym::mat4f& xform);
+
+///
+/// Compute shape morphing
+///
+void compute_morphing_deformation(const shape* shp,
+    const std::vector<float>& weights, std::vector<ym::vec3f>& pos,
+    std::vector<ym::vec3f>& norm, std::vector<ym::vec4f>& tangsp);
 
 ///
 /// Computes a scene bounding box

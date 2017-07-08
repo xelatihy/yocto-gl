@@ -433,6 +433,14 @@ void add_default_camera(scene* scn);
 
 Add a default camera that views the entire scene.
 
+### Function flatten_instances()
+
+~~~ .cpp
+void flatten_instances(scene* scn);
+~~~
+
+Flatten scene instances into separate meshes.
+
 ### Struct obj_vertex
 
 ~~~ .cpp

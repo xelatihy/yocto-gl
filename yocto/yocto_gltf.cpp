@@ -2887,6 +2887,10 @@ scene_group* gltf_to_scenes(const glTF* gltf, int scene_idx) {
                     prim->color.reserve(vals.size());
                     for (auto i = 0; i < vals.size(); i++)
                         prim->color.push_back(vals.get<4>(i, {0, 0, 0, 1}));
+                } else if (semantic == "TANGENT") {
+                    prim->tangsp.reserve(vals.size());
+                    for (auto i = 0; i < vals.size(); i++)
+                        prim->tangsp.push_back(vals.get<4>(i));
                 } else if (semantic == "WEIGHTS_0") {
                     prim->skin_weights.reserve(vals.size());
                     for (auto i = 0; i < vals.size(); i++)
@@ -3003,6 +3007,35 @@ scene_group* gltf_to_scenes(const glTF* gltf, int scene_idx) {
                     } break;
                 }
             }
+
+            // morph targets
+            int target_index = 0;
+            for (auto& gtarget : gprim->targets) {
+                auto target = new shape_morph();
+                for (auto gattr : gtarget) {
+                    auto semantic = gattr.first;
+                    auto vals = vec_array_view(gltf, gltf->get(gattr.second));
+                    if (semantic == "POSITION") {
+                        target->pos.reserve(vals.size());
+                        for (auto i = 0; i < vals.size(); i++)
+                            target->pos.push_back(vals.get<3>(i));
+                    } else if (semantic == "NORMAL") {
+                        target->norm.reserve(vals.size());
+                        for (auto i = 0; i < vals.size(); i++)
+                            target->norm.push_back(vals.get<3>(i));
+                    } else if (semantic == "TANGENT") {
+                        target->tangsp.reserve(vals.size());
+                        for (auto i = 0; i < vals.size(); i++)
+                            target->tangsp.push_back(vals.get<3>(i));
+                    } else {
+                        // ignore
+                    }
+                }
+                if (target_index < (int)gmesh->weights.size() - 1)
+                    target->weight = gmesh->weights[target_index];
+                target_index++;
+                prim->morph_targets.push_back(target);
+            }
             msh->shapes.push_back(prim);
         }
         scns->meshes.push_back(msh);
@@ -3038,6 +3071,7 @@ scene_group* gltf_to_scenes(const glTF* gltf, int scene_idx) {
         node->rotation = gnode->rotation;
         node->scale = gnode->scale;
         node->matrix = gnode->matrix;
+        node->morph_weights = gnode->weights;
         scns->nodes.push_back(node);
     }
 
@@ -3122,6 +3156,30 @@ scene_group* gltf_to_scenes(const glTF* gltf, int scene_idx) {
     for (auto nid = 0; nid < gltf->nodes.size(); nid++) {
         if (!gltf->nodes[nid]->skin) continue;
         scns->nodes[nid]->skin = scns->skins[(int)gltf->nodes[nid]->skin];
+    }
+
+    // fix node morph weights
+    for (auto node : scns->nodes) {
+        if (!node->mesh) continue;
+        for (auto shp : node->mesh->shapes) {
+            if (node->morph_weights.size() < shp->morph_targets.size()) {
+                node->morph_weights.resize(shp->morph_targets.size());
+            }
+        }
+    }
+
+    // fix morph animation number of components
+    for (auto anims : scns->animations) {
+        for (auto anim : anims->animations) {
+            if (anim->prop != animation_property::weights) continue;
+            for (auto node : anim->nodes) {
+                if (!node->mesh) continue;
+                for (auto shp : node->mesh->shapes) {
+                    anim->ncomp =
+                        ym::max(anim->ncomp, (int)shp->morph_targets.size());
+                }
+            }
+        }
     }
 
     // convert scenes
@@ -3457,6 +3515,32 @@ glTF* scenes_to_gltf(const scene_group* scns, const std::string& buffer_uri) {
             } else {
                 assert(false);
             }
+            auto target_index = 0;
+            for (auto target : gprim->morph_targets) {
+                auto mid = std::to_string(target_index++);
+                prim->targets.push_back({});
+                if (!target->pos.empty()) {
+                    prim->targets.back()["POSITION"] = add_accessor(
+                        gid + pid + "_" + mid + "_pos", glTFAccessorType::Vec3,
+                        glTFAccessorComponentType::Float,
+                        (int)target->pos.size(), sizeof(ym::vec3f),
+                        target->pos.data(), true);
+                } else if (!target->norm.empty()) {
+                    prim->targets.back()["NORMAL"] = add_accessor(
+                        gid + pid + "_" + mid + "_norm", glTFAccessorType::Vec3,
+                        glTFAccessorComponentType::Float,
+                        (int)target->norm.size(), sizeof(ym::vec3f),
+                        target->norm.data(), true);
+                } else if (!target->tangsp.empty()) {
+                    prim->targets.back()["TANGENT"] = add_accessor(
+                        gid + pid + "_" + mid + "_tang", glTFAccessorType::Vec3,
+                        glTFAccessorComponentType::Float,
+                        (int)target->tangsp.size(), sizeof(ym::vec3f),
+                        target->tangsp.data(), true);
+                } else {
+                    assert(false);
+                }
+            }
             gmesh->primitives.push_back(prim);
         }
         gltf->meshes.push_back(gmesh);
@@ -3472,6 +3556,7 @@ glTF* scenes_to_gltf(const scene_group* scns, const std::string& buffer_uri) {
         gnode->translation = node->translation;
         gnode->rotation = node->rotation;
         gnode->scale = node->scale;
+        gnode->weights = node->morph_weights;
         gltf->nodes.push_back(gnode);
     }
 
@@ -3916,6 +4001,11 @@ void update_animated_node_transforms(const animation* anim, float time) {
             for (auto node : anim->nodes) node->scale = scale;
         } break;
         case animation_property::weights: {
+            for (auto node : anim->nodes) {
+                node->morph_weights.resize(anim->ncomp);
+                node->morph_weights.assign(
+                    val.data(), val.data() + anim->ncomp);
+            }
         } break;
         default: break;
     }
@@ -3957,6 +4047,37 @@ std::vector<ym::mat4f> get_skin_transforms(
         }
     }
     return ret;
+}
+
+//
+// Compute shape morphing
+//
+void compute_morphing_deformation(const shape* shp,
+    const std::vector<float>& weights, std::vector<ym::vec3f>& pos,
+    std::vector<ym::vec3f>& norm, std::vector<ym::vec4f>& tangsp) {
+    pos = shp->pos;
+    norm = shp->norm;
+    tangsp = shp->tangsp;
+    for (auto idx = 0; idx < shp->morph_targets.size(); idx++) {
+        auto morph = shp->morph_targets[idx];
+        auto weight = (idx < weights.size()) ? weights[idx] : morph->weight;
+        if (weight == 0) continue;
+        if (!morph->pos.empty()) {
+            for (auto i = 0; i < pos.size(); i++) {
+                pos[i] += weight * morph->pos[i];
+            }
+        }
+        if (!morph->norm.empty()) {
+            for (auto i = 0; i < pos.size(); i++) {
+                norm[i] += weight * morph->norm[i];
+            }
+        }
+        if (!morph->tangsp.empty()) {
+            for (auto i = 0; i < tangsp.size(); i++) {
+                *(ym::vec3f*)(&tangsp[i]) += weight * morph->tangsp[i];
+            }
+        }
+    }
 }
 
 //
