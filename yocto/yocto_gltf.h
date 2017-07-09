@@ -22,6 +22,11 @@
 /// types. The high-level interface supports easy access to animation, skinning
 /// and morphingd data.
 ///
+/// Known limitations of the high-level interface are: (1) skinning matrices
+/// are always in world space (waiting for the spec to be updated); (2)
+/// spline based animation is not implemented properly yet (waiting for
+/// official demo models).
+///
 /// ## Usage Of High-Level Interface
 ///
 /// 1. load a group of scens with `load_scenes()`

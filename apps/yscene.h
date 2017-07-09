@@ -52,7 +52,8 @@
 //
 struct yshade_state {
     struct vert_vbo {
-        uint pos, norm, texcoord, texcoord1, color, skin_joints, skin_weights;
+        uint pos, norm, texcoord, texcoord1, color, tangsp, skin_joints,
+            skin_weights;
     };
     struct elem_vbo {
         uint points, lines, triangles;
@@ -381,11 +382,11 @@ inline void shade_mesh(const yobj::mesh* msh, const yshade_state* st,
         yglu::stdshader::set_material_generic(st->prog, mat->ke, mat->kd,
             mat->ks, mat->rs, mat->opacity, st->txt.at(mat->ke_txt),
             st->txt.at(mat->kd_txt), st->txt.at(mat->ks_txt),
-            st->txt.at(mat->rs_txt), false, true);
+            st->txt.at(mat->rs_txt), 0, 0, false, true);
 
         auto vert_vbo = st->vert.at(shp);
         yglu::stdshader::set_vert(st->prog, vert_vbo.pos, vert_vbo.norm,
-            vert_vbo.texcoord, vert_vbo.color);
+            vert_vbo.texcoord, vert_vbo.color, 0);
 
         auto velem_vbo = st->elem.at(shp);
         yglu::stdshader::draw_points(
@@ -558,6 +559,10 @@ inline yshade_state* init_shade_state(const ygltf::scene_group* sc) {
                 st->vert[shape].color =
                     yglu::make_buffer((int)shape->color.size(),
                         4 * sizeof(float), shape->color.data(), false, false);
+            if (!shape->tangsp.empty())
+                st->vert[shape].tangsp =
+                    yglu::make_buffer((int)shape->tangsp.size(),
+                        4 * sizeof(float), shape->tangsp.data(), false, false);
             if (!shape->skin_weights.empty())
                 st->vert[shape].skin_weights = yglu::make_buffer(
                     (int)shape->skin_weights.size(), 4 * sizeof(float),
@@ -623,7 +628,9 @@ inline void shade_mesh(const ygltf::mesh* msh, const ygltf::skin* sk,
                 sg->opacity,
                 txt_info(mat->emission_txt, mat->emission_txt_info),
                 txt_info(sg->diffuse_txt, sg->diffuse_txt_info),
-                txt_info(sg->specular_txt, sg->specular_txt_info), false,
+                txt_info(sg->specular_txt, sg->specular_txt_info),
+                txt_info(mat->normal_txt, mat->normal_txt_info),
+                txt_info(mat->occlusion_txt, mat->occlusion_txt_info), false,
                 mat->double_sided);
         } else if (mat->metallic_roughness) {
             auto mr = mat->metallic_roughness;
@@ -633,7 +640,9 @@ inline void shade_mesh(const ygltf::mesh* msh, const ygltf::skin* sk,
                 mr->opacity,
                 txt_info(mat->emission_txt, mat->emission_txt_info),
                 txt_info(mr->base_txt, mr->base_txt_info),
-                txt_info(mr->metallic_txt, mr->metallic_txt_info), false,
+                txt_info(mr->metallic_txt, mr->metallic_txt_info),
+                txt_info(mat->normal_txt, mat->normal_txt_info),
+                txt_info(mat->occlusion_txt, mat->occlusion_txt_info), false,
                 mat->double_sided);
 
         } else {
@@ -644,7 +653,7 @@ inline void shade_mesh(const ygltf::mesh* msh, const ygltf::skin* sk,
 
         auto vert_vbo = st->vert.at(shp);
         yglu::stdshader::set_vert(st->prog, vert_vbo.pos, vert_vbo.norm,
-            vert_vbo.texcoord, vert_vbo.color);
+            vert_vbo.texcoord, vert_vbo.color, vert_vbo.tangsp);
         if (sk) {
             auto skin_xforms = ygltf::get_skin_transforms(sk, xform);
 #if 0
@@ -1148,8 +1157,7 @@ void draw_tree_widgets(ygui::window* win, const std::string& lbl,
 
     if (ygui::tree_begin_widget(win, lbl + "nodes")) {
         for (auto node : oscn->nodes) {
-            if(!node->parent)
-                draw_tree_widgets(win, "", node, selection);
+            if (!node->parent) draw_tree_widgets(win, "", node, selection);
         }
         ygui::tree_end_widget(win);
     }

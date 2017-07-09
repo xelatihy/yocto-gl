@@ -3838,8 +3838,8 @@ void add_scene(scene_group* scn) {
     auto s = new scene();
     s->name = "scene";
     update_transforms(scn);
-    for(auto n : scn->nodes) {
-        if(!n->parent) s->nodes.push_back(n);
+    for (auto n : scn->nodes) {
+        if (!n->parent) s->nodes.push_back(n);
     }
 }
 
@@ -3932,7 +3932,7 @@ void add_default_cameras(scene_group* scns) {
 //
 void update_transforms(node* ist) {
     ist->local_xform = node_transform(ist);
-    if(ist->parent) {
+    if (ist->parent) {
         ist->xform = ist->parent->xform * ist->local_xform;
     } else {
         ist->xform = ist->local_xform;
@@ -3944,13 +3944,11 @@ void update_transforms(node* ist) {
 // Update node trasforms
 //
 void update_transforms(scene_group* scns) {
-    for(auto node : scns->nodes) node->parent = nullptr;
-    for(auto node : scns->nodes) {
-        for(auto child : node->children) child->parent = node;
-    }
+    for (auto node : scns->nodes) node->parent = nullptr;
     for (auto node : scns->nodes) {
-        update_transforms(node);
+        for (auto child : node->children) child->parent = node;
     }
+    for (auto node : scns->nodes) { update_transforms(node); }
 }
 
 //

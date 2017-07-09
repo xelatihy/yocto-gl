@@ -523,8 +523,9 @@ uint make_program(const std::string& vertex, const std::string& fragment,
     glBindAttribLocation(gl_program, 1, "vert_norm");
     glBindAttribLocation(gl_program, 2, "vert_texcoord");
     glBindAttribLocation(gl_program, 3, "vert_color");
-    glBindAttribLocation(gl_program, 4, "vert_skin_weights");
-    glBindAttribLocation(gl_program, 5, "vert_skin_joints");
+    glBindAttribLocation(gl_program, 4, "vert_tangsp");
+    glBindAttribLocation(gl_program, 5, "vert_skin_weights");
+    glBindAttribLocation(gl_program, 6, "vert_skin_joints");
     glLinkProgram(gl_program);
     glValidateProgram(gl_program);
     glGetProgramiv(gl_program, GL_LINK_STATUS, &errflags[0]);
@@ -887,8 +888,8 @@ void make_program(uint* pid, uint* aid) {
             #define SKIN_GLTF 2
     uniform int skin_type = 0;
     uniform mat4 skin_xforms[32];
-    layout(location = 4) in vec4 vert_skin_weights;            // vertex skinning weights
-    layout(location = 5) in ivec4 vert_skin_joints;            // vertex skinning joints (in mesh coordinate frame)
+    layout(location = 5) in vec4 vert_skin_weights;            // vertex skinning weights
+    layout(location = 6) in ivec4 vert_skin_joints;            // vertex skinning joints (in mesh coordinate frame)
 
     vec3 transform_point(mat4 m, vec3 p) {
         vec4 p4 = m * vec4(p,1);
@@ -932,6 +933,7 @@ void make_program(uint* pid, uint* aid) {
     layout(location = 1) in vec3 vert_norm;           // vertex normal (in mesh coordinate frame)
     layout(location = 2) in vec2 vert_texcoord;       // vertex texcoords
     layout(location = 3) in vec4 vert_color;          // vertex color
+    layout(location = 4) in vec4 vert_tangsp;         // vertex tangent space
 
     uniform mat4 shape_xform;           // shape transform
 
@@ -946,23 +948,26 @@ void make_program(uint* pid, uint* aid) {
     out vec3 norm;                  // [to fragment shader] vertex normal (in world coordinate)
     out vec2 texcoord;              // [to fragment shader] vertex texture coordinates
     out vec4 color;                 // [to fragment shader] vertex color
+    out vec4 tangsp;                // [to fragment shader] vertex tangent space
 
     // main function
     void main() {
         // copy values
         pos = vert_pos;
         norm = vert_norm;
+        tangsp = vert_tangsp;
 
         // world projection
         pos = (shape_xform * vec4(pos,1)).xyz;
         norm = (shape_xform * vec4(norm,0)).xyz;
+        tangsp.xyz = (shape_xform * vec4(tangsp.xyz,0)).xyz;
 
         // skinning
         apply_skin(pos, norm);
 
         // copy other vertex properties
-        color = vert_color;
         texcoord = vert_texcoord;
+        color = vert_color;
 
         // clip
         gl_Position = camera.proj * camera.xform_inv * vec4(pos,1);
@@ -1133,6 +1138,14 @@ void make_program(uint* pid, uint* aid) {
             bool txt_rs_on;    // material rs texture on
             sampler2D txt_rs;  // material rs texture
 
+            bool txt_norm_on;    // material norm texture on
+            sampler2D txt_norm;  // material norm texture
+            sampler2D txt_norm_scale;  // material norm scale
+
+            bool txt_occ_on;    // material occ texture on
+            sampler2D txt_occ;  // material occ texture
+            sampler2D txt_occ_scale;  // material occ scale
+
             bool use_phong;       // material use phong
             bool double_sided;    // material double sided
         };
@@ -1182,6 +1195,15 @@ void make_program(uint* pid, uint* aid) {
             }
         }
 
+        vec3 apply_normal_map(vec2 texcoord, vec3 norm, vec4 tangsp) {
+            if(!material.txt_norm_on) return norm;
+            vec3 tangu = normalize(tangsp.xyz);
+            vec3 tangv = normalize(cross(tangu, norm));
+            if(tangsp.w < 0) tangv = -tangv;
+            vec3 txt = 2 * pow(texture(material.txt_norm,texcoord).xyz, vec3(1/2.2)) - 1;
+            return normalize( tangu * txt.x + tangv * txt.y + norm * txt.z );
+        }
+
         )";
 
     static const std::string frag_main =
@@ -1190,6 +1212,7 @@ void make_program(uint* pid, uint* aid) {
         in vec3 norm;                  // [from vertex shader] normal in world space (need normalization)
         in vec2 texcoord;              // [from vertex shader] texcoord
         in vec4 color;                 // [from vertex shader] color
+        in vec4 tangsp;                // [from vertex shader] tangent space
 
         struct Camera {
             mat4 xform;          // camera xform
@@ -1207,6 +1230,9 @@ void make_program(uint* pid, uint* aid) {
 
             // re-normalize normals
             vec3 n = normalize(norm);
+
+            // apply normal map
+            n = apply_normal_map(texcoord, n, tangsp);
 
             // use faceforward to ensure the normals points toward us
             if(material.double_sided) n = faceforward(n,-wo,n);
@@ -1327,9 +1353,10 @@ void end_shape() {
 void set_material(uint prog, const ym::vec3f& ke, const ym::vec3f& kd,
     const ym::vec3f& ks, float rs, const texture_info& ke_txt,
     const texture_info& kd_txt, const texture_info& ks_txt,
-    const texture_info& rs_txt, bool use_phong, bool double_sided) {
+    const texture_info& rs_txt, const texture_info& norm_txt,
+    const texture_info& occ_txt, bool use_phong, bool double_sided) {
     set_material_generic(prog, ke, kd, ks, rs, 1, ke_txt, kd_txt, ks_txt,
-        rs_txt, use_phong, double_sided);
+        rs_txt, norm_txt, occ_txt, use_phong, double_sided);
 }
 
 //
@@ -1338,7 +1365,8 @@ void set_material(uint prog, const ym::vec3f& ke, const ym::vec3f& kd,
 static inline void _set_material_generic(uint prog, int mtype,
     const ym::vec3f& ke, const ym::vec3f& kd, const ym::vec3f& ks, float rs,
     float op, const texture_info& ke_txt, const texture_info& kd_txt,
-    const texture_info& ks_txt, const texture_info& rs_txt, bool use_phong,
+    const texture_info& ks_txt, const texture_info& rs_txt,
+    const texture_info& norm_txt, const texture_info& occ_txt, bool use_phong,
     bool double_sided) {
     assert(check_error());
     set_uniform(prog, "material.mtype", &mtype, 1, 1);
@@ -1355,6 +1383,12 @@ static inline void _set_material_generic(uint prog, int mtype,
         prog, "material.txt_ks", "material.txt_ks_on", ks_txt, 2);
     set_uniform_texture(
         prog, "material.txt_rs", "material.txt_rs_on", rs_txt, 3);
+    set_uniform_texture(
+        prog, "material.txt_norm", "material.txt_norm_on", norm_txt, 4);
+    set_uniform_texture(
+        prog, "material.txt_occ", "material.txt_occ_on", occ_txt, 5);
+    set_uniform(prog, "material.norm_scale", &norm_txt.scale, 1, 1);
+    set_uniform(prog, "material.occ_scale", &occ_txt.scale, 1, 1);
     int use_phongi = use_phong, double_sidedi = double_sided;
     set_uniform(prog, "material.use_phong", &use_phongi, 1, 1);
     set_uniform(prog, "material.double_sided", &double_sidedi, 1, 1);
@@ -1368,7 +1402,7 @@ static inline void _set_material_generic(uint prog, int mtype,
 void set_material_emission_only(uint prog, const ym::vec3f& ke, float op,
     const texture_info& ke_txt, bool double_sided) {
     _set_material_generic(prog, 0, ke, {0, 0, 0}, {0, 0, 0}, 1, op, ke_txt, 0,
-        0, 0, false, double_sided);
+        0, 0, 0, 0, false, double_sided);
 }
 
 //
@@ -1380,9 +1414,10 @@ void set_material_emission_only(uint prog, const ym::vec3f& ke, float op,
 void set_material_generic(uint prog, const ym::vec3f& ke, const ym::vec3f& kd,
     const ym::vec3f& ks, float rs, float op, const texture_info& ke_txt,
     const texture_info& kd_txt, const texture_info& ks_txt,
-    const texture_info& rs_txt, bool use_phong, bool double_sided) {
+    const texture_info& rs_txt, const texture_info& norm_txt,
+    const texture_info& occ_txt, bool use_phong, bool double_sided) {
     _set_material_generic(prog, 1, ke, kd, ks, rs, op, ke_txt, kd_txt, ks_txt,
-        rs_txt, use_phong, double_sided);
+        rs_txt, norm_txt, occ_txt, use_phong, double_sided);
 }
 
 //
@@ -1394,9 +1429,10 @@ void set_material_generic(uint prog, const ym::vec3f& ke, const ym::vec3f& kd,
 void set_material_gltf_metallic_roughness(uint prog, const ym::vec3f& ke,
     const ym::vec3f& kb, float km, float rs, float op,
     const texture_info& ke_txt, const texture_info& kb_txt,
-    const texture_info& km_txt, bool use_phong, bool double_sided) {
+    const texture_info& km_txt, const texture_info& norm_txt,
+    const texture_info& occ_txt, bool use_phong, bool double_sided) {
     _set_material_generic(prog, 2, ke, kb, {km, km, km}, rs, op, ke_txt, kb_txt,
-        km_txt, 0, use_phong, double_sided);
+        km_txt, 0, norm_txt, occ_txt, use_phong, double_sided);
 }
 
 //
@@ -1408,9 +1444,10 @@ void set_material_gltf_metallic_roughness(uint prog, const ym::vec3f& ke,
 void set_material_gltf_specular_glossiness(uint prog, const ym::vec3f& ke,
     const ym::vec3f& kd, const ym::vec3f& ks, float rs, float op,
     const texture_info& ke_txt, const texture_info& kd_txt,
-    const texture_info& ks_txt, bool use_phong, bool double_sided) {
+    const texture_info& ks_txt, const texture_info& norm_txt,
+    const texture_info& occ_txt, bool use_phong, bool double_sided) {
     _set_material_generic(prog, 3, ke, kd, ks, rs, op, ke_txt, kd_txt, ks_txt,
-        0, use_phong, double_sided);
+        0, norm_txt, occ_txt, use_phong, double_sided);
 }
 
 //
@@ -1421,7 +1458,8 @@ float specular_exponent_to_roughness(float n) { return std::sqrt(2 / (n + 2)); }
 //
 // This is a public API. See above for documentation.
 //
-void set_vert(uint prog, uint pos, uint norm, uint texcoord, uint color) {
+void set_vert(
+    uint prog, uint pos, uint norm, uint texcoord, uint color, uint tangsp) {
     assert(check_error());
     float white[4] = {1, 1, 1, 1};
     float zero[3] = {0, 0, 0};
@@ -1429,6 +1467,7 @@ void set_vert(uint prog, uint pos, uint norm, uint texcoord, uint color) {
     set_vertattr(prog, "vert_norm", norm, 3, zero);
     set_vertattr(prog, "vert_texcoord", texcoord, 2, zero);
     set_vertattr(prog, "vert_color", color, 4, white);
+    set_vertattr(prog, "vert_tangsp", tangsp, 4, white);
     assert(check_error());
 }
 
