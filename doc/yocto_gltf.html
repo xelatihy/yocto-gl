@@ -28,6 +28,10 @@ animations and does not want to deal with all the intricacies of the format.
 In particular all glTF buffers are resolved and normalized to standard C++
 types. The high-level interface supports easy access to animation, skinning
 and morphingd data.</p>
+<p>Known limitations of the high-level interface are: (1) skinning matrices
+are always in world space (waiting for the spec to be updated); (2)
+spline based animation is not implemented properly yet (waiting for
+official demo models).</p>
 <h2>Usage Of High-Level Interface</h2>
 <ol>
 <li>load a group of scens with <code>load_scenes()</code></li>

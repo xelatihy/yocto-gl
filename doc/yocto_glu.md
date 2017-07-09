@@ -171,6 +171,7 @@ Filter values for texture
 struct texture_info {
     uint txt_id = 0;
     int texcoord = 0;
+    float scale = 1;
     texture_wrap wrap_s = texture_wrap::not_set;
     texture_wrap wrap_t = texture_wrap::not_set;
     texture_filter filter_mag = texture_filter::not_set;
@@ -185,6 +186,7 @@ Texture information for parameter setting.
 - Members:
     - txt_id:      texture id
     - texcoord:      texture coordinate set
+    - scale:      texture strength/scale (used by some models)
     - wrap_s:      wrap mode
     - wrap_t:      wrap mode
     - filter_mag:      filter mode
@@ -567,13 +569,14 @@ Works for points/lines/triangles. Element type set by draw_XXX calls.
 void set_material_generic(uint prog, const ym::vec3f& ke, const ym::vec3f& kd,
     const ym::vec3f& ks, float rs, float op, const texture_info& ke_txt,
     const texture_info& kd_txt, const texture_info& ks_txt,
-    const texture_info& rs_txt, bool use_phong, bool double_sided);
+    const texture_info& rs_txt, const texture_info& norm_txt,
+    const texture_info& occ_txt, bool use_phong, bool double_sided);
 ~~~
 
 Set material values with emission ke, diffuse kd, specular ks and
 specular roughness rs, opacity op. Indicates textures ids with the
-correspoinding
-XXX_txt variables. Works for points/lines/triangles (diffuse for points,
+correspoinding XXX_txt variables. Sets also normal and occlusion
+maps. Works for points/lines/triangles (diffuse for points,
 Kajiya-Kay for lines, GGX/Phong for triangles). Element type set by draw_XXX
 calls.
 
@@ -583,14 +586,15 @@ calls.
 void set_material_gltf_metallic_roughness(uint prog, const ym::vec3f& ke,
     const ym::vec3f& kb, float km, float rs, float op,
     const texture_info& ke_txt, const texture_info& kb_txt,
-    const texture_info& km_txt, bool use_phong, bool double_sided);
+    const texture_info& km_txt, const texture_info& norm_txt,
+    const texture_info& occ_txt, bool use_phong, bool double_sided);
 ~~~
 
 Set material values for glTF specular-roughness PBR shader,
 with emission ke, base color kb, opacity op, metallicity km and
 specular roughness rs. Uses basecolor-opacity texture kb_txt and
-metallic-roughness texture km_txt.
-Works for points/lines/triangles (diffuse for points, Kajiya-Kay
+metallic-roughness texture km_txt. Sets also normal and occlusion
+maps. Works for points/lines/triangles (diffuse for points, Kajiya-Kay
 for lines, GGX/Phong for triangles). Element type set by draw_XXX calls.
 
 ### Function set_material_gltf_specular_glossiness()
@@ -599,14 +603,15 @@ for lines, GGX/Phong for triangles). Element type set by draw_XXX calls.
 void set_material_gltf_specular_glossiness(uint prog, const ym::vec3f& ke,
     const ym::vec3f& kd, const ym::vec3f& ks, float rs, float op,
     const texture_info& ke_txt, const texture_info& kd_txt,
-    const texture_info& ks_txt, bool use_phong, bool double_sided);
+    const texture_info& ks_txt, const texture_info& norm_txt,
+    const texture_info& occ_txt, bool use_phong, bool double_sided);
 ~~~
 
 Set material values for glTF specular-roughness PBR shader,
 with emission ke, diffuse color kd, opacity op, specular ks and
 specular glossiness rs. Uses diffuse-opacity texture kd_txt and
-specular-glpossiness texture ks_txt.
-Works for points/lines/triangles (diffuse for points, Kajiya-Kay
+specular-glpossiness texture ks_txt. Sets also normal and occlusion
+maps. Works for points/lines/triangles (diffuse for points, Kajiya-Kay
 for lines, GGX/Phong for triangles). Element type set by draw_XXX calls.
 
 ### Function specular_exponent_to_roughness()
@@ -621,21 +626,21 @@ Convertes a phong exponent to roughness.
 
 ~~~ .cpp
 void set_vert(uint prog, const ym::vec3f* pos, const ym::vec3f* norm,
-    const ym::vec2f* texcoord, const ym::vec4f* color);
+    const ym::vec2f* texcoord, const ym::vec4f* color, const ym::vec4f* tangsp);
 ~~~
 
 Set vertex data with position pos, normals norm, texture coordinates
-texcoord
-and per-vertex color color.
+texcoord and per-vertex color color and tangent space tangsp.
 
 ### Function set_vert()
 
 ~~~ .cpp
-void set_vert(uint prog, uint pos, uint norm, uint texcoord, uint color);
+void set_vert(
+    uint prog, uint pos, uint norm, uint texcoord, uint color, uint tangsp);
 ~~~
 
 Set vertex data with buffers for position pos, normals norm, texture
-coordinates texcoord and per-vertex color color.
+coordinates texcoord, per-vertex color color and tangent space tangsp.
 
 ### Function set_vert_skinning()
 
