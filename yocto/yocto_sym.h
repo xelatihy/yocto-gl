@@ -15,22 +15,25 @@
 /// waiting for a refactoring before getting better.
 ///
 /// This library depends in yocto_math.h Optionally depend on yocto_bvh.h/.cpp
-/// for internal acceleration. Disable this by setting YTRACE_NO_BVH.
+/// for internal acceleration. Disable this by setting YSYM_NO_BVH.
 ///
 ///
-/// ## Usage
+/// ## Usage for Scene Creation
 ///
-/// 1. define the rigib body scene
-///     - init the scene with make_scene()
-///     - for each rigid body, set shape data with set_body()
-///     - set collision callbacks with set_overlap_callbacks()
-/// 2. start tha simulation with init_simulation()
-/// 3. for each frame, advacne the simulation with advance_simulation()
-/// 4. after each frame, retrive or change the rigid body frame, with
-///     get_body_frame() and set_body_frame(), and the rigid body velocities
-///     with get_body_velocity() and set_body_velocity()
-/// 5. if desired, you can explicitly compute rigid body moments with
-///     compute_moments()
+/// 1. create a scene with `make_scene()`
+/// 2. add materials with `add_rigid_material()`
+/// 3. add shapes with `add_rigid_shape()`
+/// 4. add instances with `add_instance()`
+///
+/// ## Usage for Simulation
+///
+/// 1. either build the point-overlap acceleration structure with
+///   `init_overlap()` or supply your own with `set_overlap_callbacks()`
+/// 2. prepare simuation internal data `init_simulation()`
+/// 3. define simulation params with the `simulation_params` structure
+/// 4. advance the simiulation with `advance_simulation()`
+/// 5. set or get rigid body frames and velocities with `set_XXX()` and
+/// `get_XXX()` methods
 ///
 /// ## History
 ///

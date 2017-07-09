@@ -12,27 +12,39 @@
 /// loading/saving dependency is not desired, it can be disabled by defining
 /// YGLTF_NO_IMAGE before including this file.
 ///
-/// ## Usage For Reading
+/// The library provides two interfaces. A low-level interface is a direct
+/// C++ translation of the glTF schemas and should be used if one wants
+/// complete control over the fromat or an application wants to have their
+/// own scene code added. We also provide a high-level interface that is more
+/// useful if an aplication needs direct access to shapes, textures and
+/// animations and does not want to deal with all the intricacies of the format.
+/// In particular all glTF buffers are resolved and normalized to standard C++
+/// types. The high-level interface supports easy access to animation, skinning
+/// and morphingd data.
 ///
-/// 1. load a gltf with load_gltf() for ascii gltf or load_gltf_binary() for the
-///     binary version
-/// 2. [LOW-LEVEL INTERFACE] access the data directly from the returned object
-///     - the data is documented below and matches the GLTF file structure
-///     exactly
-/// 3. [HIGH-LEVEL INTERFACE] optionally flatten the data as a more friendly
-///     representation where shapes are index meshes, supporting points, lines
-///     and triangle primitives with flatten_gltf()
-///     - the flattened data, documented below, can be use to draw directly on
-///     the GPU or in a raytracer
+/// ## Usage Of High-Level Interface
 ///
-/// ## Usage For Writing
+/// 1. load a group of scens with `load_scenes()`
+/// 2. look at the `scene` data structures for access to individual elements
+/// 3. to support animation, use `update_animated_transforms()`
+/// 4. to support skinning, use `get_skin_transforms()`
+/// 5. for morphing, use `compute_morphing_deformation()`
+/// 6. can also manipulate the scene by adding missing data with `add_XXX()`
+///    functions
+/// 7. for rendering scenes, use `get_scene_cameras()` and
+///    `get_scene_instances()` that avoid the need for explicirtly walking
+///    the glTF node hierarchy
+/// 7. use `save_scenes()` ti write the data to disk
 ///
-/// 1. include this file (more compilation options below)
-/// 2. [LOW-LEVEL INTERFACE] fill a gltf object with your scene data and save
-///    the gltf and binary data with save_gltf()
-///    ok = save_gltf(filename, obj, error message, flags)
-/// 3. [HIGH_LEVEL INTERFACE] create a flattened scene object and turn into a
-///    gltf with unflatten_gltf()
+/// ## Usage Of Low-Level Interface
+///
+/// 1. load a glTF data with `load_gltf()`; can load also buffer and image
+///    data
+/// 2. look at the `glTFXXX` data structures for access to individual elements
+/// 3. use glTF back to disk with `save_gltf()`; can also save binary blobs
+/// 4. conversion from low- to -high-level data structures with
+///    `scenes_to_gltf()` and `gltf_to_scenes()`
+///
 ///
 /// ## Design Considerations
 ///
@@ -45,6 +57,13 @@
 /// than it might have been, glTF heavy use of optional values makes this
 /// necessary. At the same time, we do not keep track of set/unset values
 /// for basic types (int, float, bool) as a compromise for efficieny.
+///
+/// In the low level interface, glTF uses integer indices to access objects.
+/// While writing code ourselves we found that we add signiicant problems
+/// since we would use an index to access the wriong type of scene objects.
+/// For this reasons, we use an explit index `glTFid<T>` that can only access
+/// an object of type T. Internally this is just the same old glTF index. But
+/// this can used to access the scene data with `scene::get<T>(index)`.
 ///
 ///
 /// ## History

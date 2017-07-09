@@ -7,6 +7,13 @@
 /// generating per-sample random number sequences or fully deterministic
 /// hash-based sampling.
 ///
+/// The raytraced scene is a list of instances of basic shapes. Each shape
+/// is a collection of points, lines or triangles with associated normals.
+/// Shapes are instanced by creating instances with soecific local-to-world
+/// trasforms. Instancing shares memory so large scenes can be created easily.
+/// Shaope data is in fact shared with the application and not copied
+/// internally.
+///
 /// Materials are represented as sums of an emission term, a diffuse term and
 /// a specular microfacet term (GGX or Phong). Only opaque for now. We pick
 /// a proper material type for each shape element type (points, lines,
@@ -19,33 +26,41 @@
 /// env is used.
 ///
 /// We generate our own random numbers guarantying that there is one random
-/// sequence per path. This means you can rul the path tracer in any order
+/// sequence per path. This means you can run the path tracer in any order
 /// serially or in parallel.
 ///
 /// For now, we support a straightforward path tracer with explicit direct
-/// illumination using MIS.
+/// illumination using MIS. Also added simpler shaders for a quick preview
+/// and a direct-only renderer.
+///
+/// The library can support raytracing either by building an internal
+/// acceleration structure with Yocto/Bvh or with user supplied intersection
+/// routines for custom intersection.
 ///
 /// This library depends in yocto_math.h. Optionally depend on yocto_bvh.h/.cpp
 /// for internal acceleration. Disable this by setting YTRACE_NO_BVH.
 ///
 ///
-/// ## Usage
+/// ## Usage for Scene Creation
 ///
-/// 1. define your scene setting up only the public data
-///     - init the scene with make_scene()
-///     - define cameras with set_camera()
-///     - defile shapes with set set_triagle_shape(), set_line_shape(),
-/// set_point_shape()
-///     - define materials with set_material()
-///     - define textures with set_texture()
-///     - define environments with set_environment()
-///     - set intersection routines with set_intersection_callbacks()
-///   or use the builtin intersection with init_intersection()
-/// 2. prepare for rendering with init_lights()
-/// 3. define rendering params in render_params
-/// 4. render blocks of samples with trace_block() or the whole image with
-///     trace_image()
+/// 1. create a scene with `make_scene()`
+/// 2. add cameras with `add_camera()`, `set_camera()`
+/// 3. add add texture with `add_texture()`
+/// 4. create material with `add_XXX_material()`
+/// 5. add shapes with `add_XXX_shape()`
+/// 6. add instances with `add_instance()`
+/// 7. add environment maps with `add_environment()`
 ///
+/// ## Usage for Rendering
+///
+/// 1. either build the ray-tracing acceleration structure with
+///   `init_intersection()` or supply your own with
+///   `set_intersection_callbacks()`
+/// 2. if desired, add logging with `set_logging_callbacks()`
+/// 3. prepare lights for rendering `init_lights()`
+/// 4. define rendering params with the `render_params` structure
+/// 5. render blocks of samples with `trace_block()` or the whole image with
+///     `trace_image()`
 ///
 /// ## History
 ///

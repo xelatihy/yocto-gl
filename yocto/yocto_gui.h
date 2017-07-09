@@ -1,7 +1,10 @@
 ///
 /// # Yocto/Gui
 ///
-/// A set of utilities for windows and widgets using GLFW and ImGui.
+/// A set of utilities for windows= management and immediate mode widgets
+/// using GLFW and ImGui. This is just a straightfoward wrapper with the
+/// main benefit of integrating ImGui in GLFW without explicit application
+/// support by modying GLFW callbacks. Also provides easy to use ImGui wrappers.
 ///
 /// This library depends in yocto_math.h
 /// The library depends on GLEW for OpenGL functions on Windows and Linux,
@@ -10,6 +13,8 @@
 ///
 /// ## History
 ///
+/// - v 0.2: added widgets explicit IDs
+/// - v 0.1: added more widgets
 /// - v 0.0: initial release split from yocto_glu
 ///
 namespace ygui {}
@@ -224,71 +229,71 @@ void label_widget(window* win, const std::string& lbl, ym::vec4i val,
     const char* fmt = "[ %d, %d, %d, %d ]");
 
 ///
-/// Label and float widget
+/// Label widget
 ///
 void label_widget(
     window* win, const std::string& lbl, float val, const char* fmt = "%f");
 
 ///
-/// Label and float widget
+/// Label widget
 ///
 void label_widget(window* win, const std::string& lbl, ym::vec2f val,
     const char* fmt = "[ %f, %f ]");
 
 ///
-/// Label and float widget
+/// Label widget
 ///
 void label_widget(window* win, const std::string& lbl, ym::vec3f val,
     const char* fmt = "[ %f, %f, %f ]");
 
 ///
-/// Label and float widget
+/// Label widget
 ///
 void label_widget(window* win, const std::string& lbl, ym::vec4f val,
     const char* fmt = "[ %f, %f, %f ]");
 
 ///
-/// Int widget
+/// Slider widget
 ///
 bool slider_widget(window* win, const std::string& lbl, int* val, int min,
     int max, int incr = 1);
 
 ///
-/// Int widget
+/// Slider widget
 ///
 bool slider_widget(window* win, const std::string& lbl, ym::vec2i* val, int min,
     int max, int incr = 1);
 
 ///
-/// Int widget
+/// Slider widget
 ///
 bool slider_widget(window* win, const std::string& lbl, ym::vec3i* val, int min,
     int max, int incr = 1);
 
 ///
-/// Int widget
+/// Slider widget
 ///
 bool slider_widget(window* win, const std::string& lbl, ym::vec4i* val, int min,
     int max, int incr = 1);
 
 ///
-/// Float widget
+/// Slider widget
 ///
 bool slider_widget(window* win, const std::string& lbl, float* val, float min,
     float max, float incr = 1.0f);
 
 ///
-/// Float widget
+/// Slider widget
 ///
 bool slider_widget(window* win, const std::string& lbl, ym::vec2f* val,
     float min, float max, float incr = 1.0f);
 ///
-/// Float widget
+/// Slider widget
 ///
 bool slider_widget(window* win, const std::string& lbl, ym::vec3f* val,
     float min, float max, float incr = 1.0f);
 ///
-/// Float widget
+/// Slider widget
 ///
 bool slider_widget(window* win, const std::string& lbl, ym::vec4f* val,
     float min, float max, float incr = 1.0f);

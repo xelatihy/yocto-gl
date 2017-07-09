@@ -4,23 +4,20 @@
 /// A collection of vector math functions and simple containers
 /// used to implement YOCTO. Features include
 ///
+/// - a few convenience math functions
 /// - static length float vectors, with specialization for 2, 3, 4 length
 /// - static length matrices, with specialization for 2x2, 3x3, 4x4
-/// - affine and rigid transforms
+/// - static length rigid transforms (frames), specialized for 2d and 3d space
 /// - linear algebra operations and transforms for fixed length matrices/vecs
 /// - axis aligned bounding boxes
 /// - rays
 /// - ray-primitive intersection
-/// - point-primitive distance
+/// - point-primitive distance and overlap tests
 /// - normal amd tangent computation for meshes and lines
 /// - generation of tesselated meshes
 /// - random number generation via PCG32
 /// - a few hash functions
-/// - timer (depends on C++11 chrono)
-///
-/// While we tested this library in the implementation of our other ones, we
-/// consider this code incomplete and remommend to use a more complete math
-/// library. So use it at your own peril.
+/// - trivial image data structue and a few image operations
 ///
 /// We developed our own library since we felt that all existing ones are either
 /// complete, but unreadable or with lots of dependencies, or just as incomplete
@@ -40,6 +37,7 @@
 ///
 /// ## History
 ///
+/// - v 0.14: move timer to Yocto/Utils
 /// - v 0.13: more shape functions
 /// - v 0.12: documentation update
 /// - v 0.11: added more matrix and quaternion operations
@@ -96,7 +94,6 @@ namespace ym {}
 
 #include <algorithm>
 #include <cassert>
-#include <chrono>
 #include <cmath>
 #include <cstdint>
 #include <functional>
@@ -4634,41 +4631,6 @@ inline void tonemap_image(int width, int height, int ncomp, const float* hdr,
         }
     }
 }
-
-// -----------------------------------------------------------------------------
-// TIMER
-// -----------------------------------------------------------------------------
-
-/// A simple wrapper for std::chrono.
-struct timer {
-    /// initialize a timer and start it if necessary
-    timer(bool autostart = true) {
-        if (autostart) start();
-    }
-
-    /// start a timer
-    void start() {
-        _start = std::chrono::steady_clock::now();
-        _started = true;
-    }
-
-    /// stops a timer
-    void stop() {
-        _end = std::chrono::steady_clock::now();
-        _started = false;
-    }
-
-    /// elapsed time
-    double elapsed() {
-        if (_started) stop();
-        std::chrono::duration<double> diff = (_end - _start);
-        return diff.count();
-    }
-
-   private:
-    bool _started = false;
-    std::chrono::time_point<std::chrono::steady_clock> _start, _end;
-};
 
 }  // namespace ym
 
