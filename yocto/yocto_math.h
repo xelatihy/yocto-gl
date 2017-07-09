@@ -3223,10 +3223,10 @@ inline void compute_skinning(int nverts, const vec3f* pos, const vec3f* norm,
     }
     for (auto i = 0; i < nverts; i++) {
         skinned_norm[i] = normalize(
-            transform_point(xforms[joints[i].x], norm[i]) * weights[i].x +
-            transform_point(xforms[joints[i].y], norm[i]) * weights[i].y +
-            transform_point(xforms[joints[i].z], norm[i]) * weights[i].z +
-            transform_point(xforms[joints[i].w], norm[i]) * weights[i].w);
+            transform_direction(xforms[joints[i].x], norm[i]) * weights[i].x +
+            transform_direction(xforms[joints[i].y], norm[i]) * weights[i].y +
+            transform_direction(xforms[joints[i].z], norm[i]) * weights[i].z +
+            transform_direction(xforms[joints[i].w], norm[i]) * weights[i].w);
     }
 }
 
@@ -3243,10 +3243,10 @@ inline void compute_skinning(int nverts, const vec3f* pos, const vec3f* norm,
     }
     for (auto i = 0; i < nverts; i++) {
         skinned_norm[i] = normalize(
-            transform_point(xforms[joints[i].x], norm[i]) * weights[i].x +
-            transform_point(xforms[joints[i].y], norm[i]) * weights[i].y +
-            transform_point(xforms[joints[i].z], norm[i]) * weights[i].z +
-            transform_point(xforms[joints[i].w], norm[i]) * weights[i].w);
+            transform_direction(xforms[joints[i].x], norm[i]) * weights[i].x +
+            transform_direction(xforms[joints[i].y], norm[i]) * weights[i].y +
+            transform_direction(xforms[joints[i].z], norm[i]) * weights[i].z +
+            transform_direction(xforms[joints[i].w], norm[i]) * weights[i].w);
     }
 }
 
@@ -3269,6 +3269,31 @@ inline void compute_skinning(const std::vector<vec3f>& pos,
     skinned_pos.resize(pos.size());
     skinned_norm.resize(norm.size());
     compute_skinning(pos.size(), pos.data(), norm.data(), weights.data(),
+        joints.data(), xforms.data(), skinned_pos.data(), skinned_norm.data());
+}
+
+/// Apply skinning as specified in Khronos glTF
+inline void compute_matrix_skinning(int nverts, const vec3f* pos,
+    const vec3f* norm, const vec4f* weights, const vec4i* joints,
+    const mat4f* xforms, vec3f* skinned_pos, vec3f* skinned_norm) {
+    for (auto i = 0; i < nverts; i++) {
+        auto xform = xforms[joints[i].x] * weights[i].x +
+                     xforms[joints[i].y] * weights[i].y +
+                     xforms[joints[i].z] * weights[i].z +
+                     xforms[joints[i].w] * weights[i].w;
+        skinned_pos[i] = transform_point(xform, pos[i]);
+        skinned_norm[i] = normalize(transform_direction(xform, norm[i]));
+    }
+}
+
+/// Apply skinning as specified in Khronos glTF
+inline void compute_matrix_skinning(const std::vector<vec3f>& pos,
+    const std::vector<vec3f>& norm, const std::vector<vec4f>& weights,
+    const std::vector<vec4i>& joints, const std::vector<mat4f>& xforms,
+    std::vector<vec3f>& skinned_pos, std::vector<vec3f>& skinned_norm) {
+    skinned_pos.resize(pos.size());
+    skinned_norm.resize(norm.size());
+    compute_matrix_skinning(pos.size(), pos.data(), norm.data(), weights.data(),
         joints.data(), xforms.data(), skinned_pos.data(), skinned_norm.data());
 }
 
