@@ -357,14 +357,14 @@ get_extension()).</p>
 <p>Splits a path calling the above functions.</p>
 <h2>Namespace string</h2>
 <p>String manipulation</p>
-<h3>Function starts_with()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">starts_with</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">str</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">substr</span><span class="p">);</span>
+<h3>Function startswith()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">startswith</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">str</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">substr</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Checks if a std::string starts with a prefix.</p>
-<h3>Function ends_with()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">ends_with</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">str</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">substr</span><span class="p">);</span>
+<h3>Function endswith()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">endswith</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">str</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">substr</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -375,8 +375,8 @@ get_extension()).</p>
 
 
 <p>Check is a string contains a substring.</p>
-<h3>Function split_lines()</h3>
-<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span> <span class="n">split_lines</span><span class="p">(</span>
+<h3>Function splitlines()</h3>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span> <span class="n">splitlines</span><span class="p">(</span>
     <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">str</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">keep_newline</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
 </code></pre></div>
 
@@ -384,78 +384,77 @@ get_extension()).</p>
 <p>Splits a std::string into lines at the '\n' character. The line
 terminator is kept if keep_newline. This function does not work on
 Window if keep_newline is true.</p>
-<h3>Function partition_str()</h3>
-<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span> <span class="n">partition_str</span><span class="p">(</span>
+<h3>Function partition()</h3>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span> <span class="n">partition</span><span class="p">(</span>
     <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">str</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">split</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Partition the string.</p>
-<h3>Function split_str()</h3>
-<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span> <span class="n">split_str</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">str</span><span class="p">);</span>
+<h3>Function split()</h3>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span> <span class="n">split</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">str</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Splits the string.</p>
-<h3>Function strip_str()</h3>
-<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">strip_str</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">str</span><span class="p">);</span>
+<h3>Function strip()</h3>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">strip</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">str</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Strip the string.</p>
-<h3>Function rstrip_str()</h3>
-<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">rstrip_str</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">str</span><span class="p">);</span>
+<h3>Function rstrip()</h3>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">rstrip</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">str</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Strip the string.</p>
-<h3>Function lstrip_str()</h3>
-<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">lstrip_str</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">str</span><span class="p">);</span>
+<h3>Function lstrip()</h3>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">lstrip</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">str</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Strip the string.</p>
-<h3>Function join_strings()</h3>
-<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">join_strings</span><span class="p">(</span>
-    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;&amp;</span> <span class="n">strs</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">sep</span><span class="p">);</span>
+<h3>Function join()</h3>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">join</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;&amp;</span> <span class="n">strs</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">sep</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Joins a list of std::string with a std::string as separator.</p>
-<h3>Function to_lower()</h3>
-<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">to_lower</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">str</span><span class="p">);</span>
+<h3>Function lower()</h3>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">lower</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">str</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Converts an ASCII string to lowercase.</p>
-<h3>Function to_upper()</h3>
-<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">to_upper</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">str</span><span class="p">);</span>
+<h3>Function upper()</h3>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">upper</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">str</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Converts an ASCII string to uppercase.</p>
-<h3>Function is_space()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">is_space</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">str</span><span class="p">);</span>
+<h3>Function isspace()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">isspace</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">str</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Strung is space.</p>
-<h3>Function replace_str()</h3>
-<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">replace_str</span><span class="p">(</span>
+<h3>Function replace()</h3>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">replace</span><span class="p">(</span>
     <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">str</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">s1</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">s2</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Replace s1 with s2 in str.</p>
-<h3>Function format_str()</h3>
-<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">format_str</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">fmt</span><span class="p">,</span> <span class="kt">va_list</span> <span class="n">args</span><span class="p">);</span>
+<h3>Function format()</h3>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">format</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">fmt</span><span class="p">,</span> <span class="kt">va_list</span> <span class="n">args</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>C-like string formatting. This is only meant for short strings with max
 length 10000 chars. Memory corruption will happen for longer strings.</p>
-<h3>Function format_str()</h3>
-<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">format_str</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">fmt</span><span class="p">,</span> <span class="p">...);</span>
+<h3>Function format()</h3>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">format</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">fmt</span><span class="p">,</span> <span class="p">...);</span>
 </code></pre></div>
 
 

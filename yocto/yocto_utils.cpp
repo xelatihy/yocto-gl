@@ -885,7 +885,7 @@ namespace string {
 //
 // Checks if a std::string starts with a prefix.
 //
-bool starts_with(const std::string& str, const std::string& substr) {
+bool startswith(const std::string& str, const std::string& substr) {
     if (str.length() < substr.length()) return false;
     for (auto i = 0; i < substr.length(); i++)
         if (str[i] != substr[i]) return false;
@@ -895,7 +895,7 @@ bool starts_with(const std::string& str, const std::string& substr) {
 //
 // Checks if a std::string ends with a prefix.
 //
-bool ends_with(const std::string& str, const std::string& substr) {
+bool endswith(const std::string& str, const std::string& substr) {
     if (str.length() < substr.length()) return false;
     auto offset = str.length() - substr.length();
     for (auto i = 0; i < substr.length(); i++)
@@ -913,8 +913,7 @@ bool contains(const std::string& str, const std::string& substr) {
 //
 // Splits a std::string into lines at the '\n' character.
 //
-std::vector<std::string> split_lines(
-    const std::string& str, bool keep_newline) {
+std::vector<std::string> splitlines(const std::string& str, bool keep_newline) {
     if (str.empty()) return {};
     auto lines = std::vector<std::string>();
     auto line = std::vector<char>();
@@ -934,7 +933,7 @@ std::vector<std::string> split_lines(
 //
 // Partition the string.
 //
-std::vector<std::string> partition_str(
+std::vector<std::string> partition(
     const std::string& str, const std::string& split) {
     auto pos = str.find(split);
     if (pos == str.npos) return {str, "", ""};
@@ -944,7 +943,7 @@ std::vector<std::string> partition_str(
 //
 // Splits the string.
 //
-std::vector<std::string> split_str(const std::string& str) {
+std::vector<std::string> split(const std::string& str) {
     auto ret = std::vector<std::string>();
     ret.push_back("");
     for (auto c : str) {
@@ -961,7 +960,7 @@ std::vector<std::string> split_str(const std::string& str) {
 //
 // Strip the string.
 //
-std::string rstrip_str(const std::string& str) {
+std::string rstrip(const std::string& str) {
     auto pos = str.find_last_not_of(" \t\r\n");
     if (pos == str.npos) return "";
     return str.substr(0, pos + 1);
@@ -970,7 +969,7 @@ std::string rstrip_str(const std::string& str) {
 //
 // Strip the string.
 //
-std::string lstrip_str(const std::string& str) {
+std::string lstrip(const std::string& str) {
     auto pos = str.find_first_not_of(" \t\r\n");
     if (pos == str.npos) return "";
     return str.substr(pos);
@@ -979,15 +978,12 @@ std::string lstrip_str(const std::string& str) {
 //
 // Strip the string.
 //
-std::string strip_str(const std::string& str) {
-    return rstrip_str(lstrip_str(str));
-}
+std::string strip(const std::string& str) { return rstrip(lstrip(str)); }
 
 //
 // Joins a list of std::string with a std::string as separator.
 //
-std::string join_strings(
-    const std::vector<std::string>& strs, const std::string& sep) {
+std::string join(const std::vector<std::string>& strs, const std::string& sep) {
     auto ret = std::string();
     auto first = true;
     for (auto& str : strs) {
@@ -1001,7 +997,7 @@ std::string join_strings(
 //
 // Converts an ASCII string to lowercase.
 //
-std::string to_lower(const std::string& str) {
+std::string lower(const std::string& str) {
     auto s = str;
     for (auto& c : s) c = std::tolower(c);
     return s;
@@ -1010,7 +1006,7 @@ std::string to_lower(const std::string& str) {
 //
 // Converts an ASCII string to uppercase.
 //
-std::string to_upper(const std::string& str) {
+std::string upper(const std::string& str) {
     auto s = str;
     for (auto& c : s) c = std::toupper(c);
     return s;
@@ -1019,7 +1015,7 @@ std::string to_upper(const std::string& str) {
 //
 // Strung is space.
 //
-bool is_space(const std::string& str) {
+bool isspace(const std::string& str) {
     for (auto c : str) {
         if (c != ' ' && c != '\n' && c != '\t' && c != '\r') return false;
     }
@@ -1029,7 +1025,7 @@ bool is_space(const std::string& str) {
 //
 // Replace s1 with s2 in str.
 //
-std::string replace_str(
+std::string replace(
     const std::string& str, const std::string& s1, const std::string& s2) {
     auto s = std::string();
     auto last = 0;
@@ -1047,7 +1043,7 @@ std::string replace_str(
 //
 // C-like string formatting
 //
-std::string format_str(const char* fmt, va_list args) {
+std::string format(const char* fmt, va_list args) {
     char buffer[1024 * 16];
     vsprintf(buffer, fmt, args);
     return buffer;
@@ -1056,10 +1052,10 @@ std::string format_str(const char* fmt, va_list args) {
 //
 // C-like string formatting
 //
-std::string format_str(const char* fmt, ...) {
+std::string format(const char* fmt, ...) {
     va_list args;
     va_start(args, fmt);
-    auto s = format_str(fmt, args);
+    auto s = format(fmt, args);
     va_end(args);
     return s;
 }

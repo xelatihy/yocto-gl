@@ -412,12 +412,12 @@ namespace string {
 ///
 /// Checks if a std::string starts with a prefix.
 ///
-bool starts_with(const std::string& str, const std::string& substr);
+bool startswith(const std::string& str, const std::string& substr);
 
 ///
 /// Checks if a std::string ends with a prefix.
 ///
-bool ends_with(const std::string& str, const std::string& substr);
+bool endswith(const std::string& str, const std::string& substr);
 
 ///
 /// Check is a string contains a substring.
@@ -429,72 +429,71 @@ bool contains(const std::string& str, const std::string& substr);
 /// terminator is kept if keep_newline. This function does not work on
 /// Window if keep_newline is true.
 ///
-std::vector<std::string> split_lines(
+std::vector<std::string> splitlines(
     const std::string& str, bool keep_newline = false);
 
 ///
 /// Partition the string.
 ///
-std::vector<std::string> partition_str(
+std::vector<std::string> partition(
     const std::string& str, const std::string& split);
 
 ///
 /// Splits the string.
 ///
-std::vector<std::string> split_str(const std::string& str);
+std::vector<std::string> split(const std::string& str);
 
 ///
 /// Strip the string.
 ///
-std::string strip_str(const std::string& str);
+std::string strip(const std::string& str);
 
 ///
 /// Strip the string.
 ///
-std::string rstrip_str(const std::string& str);
+std::string rstrip(const std::string& str);
 
 ///
 /// Strip the string.
 ///
-std::string lstrip_str(const std::string& str);
+std::string lstrip(const std::string& str);
 
 ///
 /// Joins a list of std::string with a std::string as separator.
 ///
-std::string join_strings(
-    const std::vector<std::string>& strs, const std::string& sep);
+std::string join(const std::vector<std::string>& strs, const std::string& sep);
 
 ///
 /// Converts an ASCII string to lowercase.
 ///
-std::string to_lower(const std::string& str);
+std::string lower(const std::string& str);
 
 ///
 /// Converts an ASCII string to uppercase.
 ///
-std::string to_upper(const std::string& str);
+std::string upper(const std::string& str);
 
 ///
 /// Strung is space.
 ///
-bool is_space(const std::string& str);
+bool isspace(const std::string& str);
 
 ///
 /// Replace s1 with s2 in str.
 ///
-std::string replace_str(
+std::string replace(
     const std::string& str, const std::string& s1, const std::string& s2);
 
 ///
 /// C-like string formatting. This is only meant for short strings with max
 /// length 10000 chars. Memory corruption will happen for longer strings.
 ///
-std::string format_str(const char* fmt, va_list args);
+std::string format(const char* fmt, va_list args);
 
 ///
 /// C-like string formatting. See format_str(fmt,args);
 ///
-std::string format_str(const char* fmt, ...);
+std::string format(const char* fmt, ...);
 
 }  // namespace string
 

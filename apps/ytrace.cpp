@@ -171,7 +171,7 @@ bool update(yscene* scn) {
                 auto imfilename =
                     yu::path::get_dirname(scn->imfilename) +
                     yu::path::get_basename(scn->imfilename) +
-                    yu::string::format_str(".%04d", scn->trace_cur_sample + 1) +
+                    yu::string::format(".%04d", scn->trace_cur_sample + 1) +
                     yu::path::get_extension(scn->imfilename);
                 log_msgf(log_level::info, "ytrace", "saving image %s",
                     imfilename.c_str());
@@ -210,7 +210,7 @@ void render_offline(yscene* scn) {
         if (scn->trace_save_progressive && cur_sample) {
             auto imfilename = yu::path::get_dirname(scn->imfilename) +
                               yu::path::get_basename(scn->imfilename) +
-                              yu::string::format_str(".%04d", cur_sample) +
+                              yu::string::format(".%04d", cur_sample) +
                               yu::path::get_extension(scn->imfilename);
             log_msgf(log_level::info, "ytrace", "saving image %s",
                 imfilename.c_str());

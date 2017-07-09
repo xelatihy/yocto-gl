@@ -61,7 +61,7 @@ std::string make_doc(const std::string& cpp) {
     auto items = std::vector<item>{};
     auto cur_item = (item*)nullptr;
     bool first = true, indented = false, enum_last = false;
-    for (auto line : split_lines(cpp, true)) {
+    for (auto line : splitlines(cpp, true)) {
         if (cur_item) {
             if (contains(line, "///")) {
                 cur_item->comment += line;
@@ -77,7 +77,7 @@ std::string make_doc(const std::string& cpp) {
             }
         } else {
             if (!contains(line, "///")) continue;
-            if (starts_with(line, "    ")) {
+            if (startswith(line, "    ")) {
                 items.back().children.push_back({});
                 cur_item = &items.back().children.back();
                 cur_item->comment += line;
@@ -94,14 +94,14 @@ std::string make_doc(const std::string& cpp) {
     }
 
     auto clean_comment = [](std::string comment) {
-        if (starts_with(comment, "    ")) {
-            comment = replace_str(comment, "    ///", "");
-            comment = replace_str(comment, "    /// ", "");
-            comment = strip_str(comment);
+        if (startswith(comment, "    ")) {
+            comment = replace(comment, "    ///", "");
+            comment = replace(comment, "    /// ", "");
+            comment = strip(comment);
         } else {
-            comment = replace_str(comment, "/// ", "");
-            comment = replace_str(comment, "///", "");
-            comment = strip_str(comment);
+            comment = replace(comment, "/// ", "");
+            comment = replace(comment, "///", "");
+            comment = strip(comment);
         }
         return comment;
     };
@@ -113,45 +113,45 @@ std::string make_doc(const std::string& cpp) {
         } else if (contains(item.decl, "namespace ")) {
             item.type = "Namespace";
             item.name = item.decl;
-            item.name = replace_str(item.name, "namespace ", "");
-            item.name = replace_str(item.name, "{", "");
-            item.name = strip_str(item.name);
+            item.name = replace(item.name, "namespace ", "");
+            item.name = replace(item.name, "{", "");
+            item.name = strip(item.name);
             item.decl = "";
             item.comment = clean_comment(item.comment);
         } else if (contains(item.decl, "using ")) {
             if (contains(item.decl, " = ")) {
                 item.type = "Typedef";
                 item.name = item.decl;
-                item.name = partition_str(item.name, " = ")[0];
-                item.name = replace_str(item.name, "using ", "");
-                item.name = strip_str(item.name);
+                item.name = partition(item.name, " = ")[0];
+                item.name = replace(item.name, "using ", "");
+                item.name = strip(item.name);
                 item.comment = clean_comment(item.comment);
             } else {
                 item.type = "Function Alias";
-                item.name = partition_str(item.decl, "::")[2];
-                item.name = replace_str(item.name, ";", "");
-                item.name = strip_str(item.name);
+                item.name = partition(item.decl, "::")[2];
+                item.name = replace(item.name, ";", "");
+                item.name = strip(item.name);
                 item.name += "()";
                 item.comment = clean_comment(item.comment);
             }
         } else if (contains(item.decl, "enum ")) {
             item.type = "Enum";
             item.name = item.decl;
-            item.name = replace_str(item.name, "enum ", "");
-            item.name = replace_str(item.name, "struct ", "");
-            item.name = replace_str(item.name, "{", "");
-            item.name = strip_str(item.name);
+            item.name = replace(item.name, "enum ", "");
+            item.name = replace(item.name, "struct ", "");
+            item.name = replace(item.name, "{", "");
+            item.name = strip(item.name);
             item.comment = clean_comment(item.comment);
             if (!item.children.empty()) {
                 item.comment += "\n\n- Values:\n";
                 for (auto& child : item.children) {
-                    child.decl = replace_str(child.decl, ";", "");
-                    child.decl = replace_str(child.decl, "}", "");
+                    child.decl = replace(child.decl, ";", "");
+                    child.decl = replace(child.decl, "}", "");
                     child.name =
-                        split_str(partition_str(child.decl, "=")[0]).back();
-                    child.name = replace_str(child.name, ",", "");
+                        split(partition(child.decl, "=")[0]).back();
+                    child.name = replace(child.name, ",", "");
                     item.comment += "    - " + child.name + ": " +
-                                    replace_str(child.comment, "///", "");
+                                    replace(child.comment, "///", "");
                     item.decl += child.decl;
                 }
                 item.decl += "}\n";
@@ -160,15 +160,15 @@ std::string make_doc(const std::string& cpp) {
             item.type = "Struct";
             item.name = item.decl;
             if (contains(item.name, "template ")) {
-                item.name = partition_str(item.name, "\n")[2];
+                item.name = partition(item.name, "\n")[2];
             }
             if (contains(item.name, " : ")) {
-                item.name = partition_str(item.name, " : ")[0];
+                item.name = partition(item.name, " : ")[0];
             }
-            item.name = replace_str(item.name, "struct ", "");
-            item.name = replace_str(item.name, "{", "");
-            item.name = replace_str(item.name, ";", "");
-            item.name = strip_str(item.name);
+            item.name = replace(item.name, "struct ", "");
+            item.name = replace(item.name, "{", "");
+            item.name = replace(item.name, ";", "");
+            item.name = strip(item.name);
             item.comment = clean_comment(item.comment);
             if (!item.children.empty()) {
                 item.comment += "\n\n- Members:\n";
@@ -178,34 +178,34 @@ std::string make_doc(const std::string& cpp) {
                         (!contains(child.decl, "(") ||
                             (child.decl.find("=") < child.decl.find("(")));
                     if (isvar) {
-                        child.name = replace_str(
-                            split_str(partition_str(child.decl, "=")[0]).back(),
+                        child.name = replace(
+                            split(partition(child.decl, "=")[0]).back(),
                             ";", "");
                         item.comment += "    - " + child.name + ": " +
-                                        replace_str(child.comment, "///", "");
+                                        replace(child.comment, "///", "");
                         item.decl += child.decl;
                     } else {
                         if (contains(child.decl, "{")) {
                             child.decl =
-                                partition_str(child.decl, "{")[0] + ";\n";
+                                partition(child.decl, "{")[0] + ";\n";
                         }
                         if (contains(child.decl, " : ")) {
                             child.decl =
-                                partition_str(child.decl, " : ")[0] + ";\n";
+                                partition(child.decl, " : ")[0] + ";\n";
                         }
-                        child.decl = replace_str(child.decl, "\n", " ") + "\n";
+                        child.decl = replace(child.decl, "\n", " ") + "\n";
                         while (contains(child.decl, "  "))
-                            child.decl = replace_str(child.decl, "  ", " ");
+                            child.decl = replace(child.decl, "  ", " ");
                         child.decl = "   " + child.decl;
-                        child.decl = replace_str(child.decl, " ;", ";");
+                        child.decl = replace(child.decl, " ;", ";");
                         child.name =
-                            split_str(partition_str(child.decl, "(")[0])
+                            split(partition(child.decl, "(")[0])
                                 .back() +
                             "()";
                         if (contains(child.decl, "operator "))
                             child.name = "operator " + child.name;
                         item.comment += "    - " + child.name + ": " +
-                                        replace_str(child.comment, "///", "");
+                                        replace(child.comment, "///", "");
                         item.decl += child.decl;
                     }
                 }
@@ -221,23 +221,23 @@ std::string make_doc(const std::string& cpp) {
                 } else {
                     item.type = "Variable";
                 }
-                item.name = split_str(partition_str(item.decl, "=")[0]).back();
+                item.name = split(partition(item.decl, "=")[0]).back();
                 item.comment = clean_comment(item.comment);
             } else {
                 item.type = "Function";
                 if (contains(item.decl, "{")) {
-                    item.decl = partition_str(item.decl, "{")[0] + ";\n";
+                    item.decl = partition(item.decl, "{")[0] + ";\n";
                 }
                 if (contains(item.decl, " : ")) {
-                    item.decl = partition_str(item.decl, " : ")[0] + ";\n";
+                    item.decl = partition(item.decl, " : ")[0] + ";\n";
                 }
                 // item.decl = replace_str(item.decl, "\n", " ") + "\n";
                 // while(contains(item.decl, "  ")) item.decl =
                 // replace_str(item.decl, "  ", " ");
-                item.decl = replace_str(item.decl, "( ", "(");
-                item.decl = replace_str(item.decl, " ;", ";");
+                item.decl = replace(item.decl, "( ", "(");
+                item.decl = replace(item.decl, " ;", ";");
                 item.name =
-                    split_str(partition_str(item.decl, "(")[0]).back() + "()";
+                    split(partition(item.decl, "(")[0]).back() + "()";
                 if (contains(item.decl, "operator "))
                     item.name = "operator " + item.name;
                 item.comment = clean_comment(item.comment);
@@ -255,7 +255,7 @@ std::string make_doc(const std::string& cpp) {
                 md += "### ";
             }
             md += item.type + " ";
-            md += replace_str(replace_str(item.name, "<", " <"), ">", " \\>");
+            md += replace(replace(item.name, "<", " <"), ">", " \\>");
             // md += item.name;
             md += "\n\n";
         }
@@ -270,8 +270,8 @@ int main(int argc, char** argv) {
         auto cpp = load_txtfile(filename);
         auto md = make_doc(cpp);
         auto filename_out = filename;
-        filename_out = replace_str(filename_out, ".h", ".md");
-        filename_out = replace_str(filename_out, "yocto/", "doc/");
+        filename_out = replace(filename_out, ".h", ".md");
+        filename_out = replace(filename_out, "yocto/", "doc/");
         save_txtfile(filename_out, md);
     }
 }
