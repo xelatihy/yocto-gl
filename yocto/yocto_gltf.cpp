@@ -3093,11 +3093,6 @@ scene_group* gltf_to_scenes(const glTF* gltf, int scene_idx) {
         for (auto n : gnode->children) is_root[(int)n] = false;
     }
 
-    // set up root nodes
-    for (auto nid = 0; nid < gltf->nodes.size(); nid++) {
-        if (is_root[nid]) scns->root_nodes.push_back(scns->nodes[nid]);
-    }
-
     // convert animations
     for (auto ganim : gltf->animations) {
         auto anim_group = new animation_group();
@@ -3832,7 +3827,6 @@ void add_nodes(scene_group* scn) {
         ist->name = mesh->name;
         ist->mesh = mesh;
         scn->nodes.push_back(ist);
-        scn->root_nodes.push_back(ist);
     }
 }
 
@@ -3843,7 +3837,10 @@ void add_scene(scene_group* scn) {
     if (!scn->scenes.empty()) return;
     auto s = new scene();
     s->name = "scene";
-    s->nodes = scn->root_nodes;
+    update_transforms(scn);
+    for(auto n : scn->nodes) {
+        if(!n->parent) s->nodes.push_back(n);
+    }
 }
 
 //
@@ -3923,7 +3920,6 @@ void add_default_cameras(scene_group* scns) {
             node->name = cam->name;
             scns->cameras.push_back(cam);
             scns->nodes.push_back(node);
-            scns->root_nodes.push_back(node);
             scn->nodes.push_back(node);
         }
     }
@@ -3934,17 +3930,27 @@ void add_default_cameras(scene_group* scns) {
 //
 // Update node trasforms
 //
-void update_transforms(node* ist, node* parent) {
+void update_transforms(node* ist) {
     ist->local_xform = node_transform(ist);
-    ist->xform = (parent) ? parent->xform * ist->local_xform : ist->local_xform;
-    for (auto child : ist->children) update_transforms(child, ist);
+    if(ist->parent) {
+        ist->xform = ist->parent->xform * ist->local_xform;
+    } else {
+        ist->xform = ist->local_xform;
+    }
+    for (auto child : ist->children) update_transforms(child);
 }
 
 //
 // Update node trasforms
 //
 void update_transforms(scene_group* scns) {
-    for (auto ist : scns->root_nodes) update_transforms(ist, nullptr);
+    for(auto node : scns->nodes) node->parent = nullptr;
+    for(auto node : scns->nodes) {
+        for(auto child : node->children) child->parent = node;
+    }
+    for (auto node : scns->nodes) {
+        update_transforms(node);
+    }
 }
 
 //

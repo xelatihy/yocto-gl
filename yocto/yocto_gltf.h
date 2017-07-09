@@ -67,6 +67,7 @@
 ///
 ///
 /// ## History
+/// - v 0.12: removed explicit root nodes
 /// - v 0.11: added camera near/far to high-level interface
 /// - v 0.10: added moprhing to high-level interface
 /// - v 0.9: use yocto_math in the interface and remove inline compilation
@@ -474,12 +475,14 @@ struct node {
     std::vector<float> morph_weights;
 
     // computed properties ---------------
-    /// transform (computed during update)
+    /// transform (computed during update_transforms())
     ym::mat4f xform = ym::identity_mat4f;
-    /// local transform (computed during update)
+    /// local transform (computed during update_transforms())
     ym::mat4f local_xform = ym::identity_mat4f;
-    /// skin transform (computed during update)
+    /// skin transform (computed during update_transforms())
     ym::mat4f skin_xform = ym::identity_mat4f;
+    /// parent node (computed during update_transforms())
+    node* parent = nullptr;
 };
 
 ///
@@ -551,7 +554,7 @@ struct skin {
     std::vector<ym::mat4f> pose_matrices;
     /// joints
     std::vector<node*> joints;
-    /// root joint
+    /// skeleton root node
     node* root = nullptr;
 };
 
@@ -588,10 +591,6 @@ struct scene_group {
     std::vector<animation_group*> animations;
     /// skins
     std::vector<skin*> skins;
-
-    // computed properties -----------
-    /// root nodes
-    std::vector<node*> root_nodes;
 
     /// cleanup
     ~scene_group();

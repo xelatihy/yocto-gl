@@ -69,6 +69,7 @@ an object of type T. Internally this is just the same old glTF index. But
 this can used to access the scene data with <code>scene::get&lt;T&gt;(index)</code>.</p>
 <h2>History</h2>
 <ul>
+<li>v 0.12: removed explicit root nodes</li>
 <li>v 0.11: added camera near/far to high-level interface</li>
 <li>v 0.10: added moprhing to high-level interface</li>
 <li>v 0.9: use yocto_math in the interface and remove inline compilation</li>
@@ -403,6 +404,7 @@ avoid.</p>
     <span class="n">ym</span><span class="o">::</span><span class="n">mat4f</span> <span class="n">xform</span> <span class="o">=</span> <span class="n">ym</span><span class="o">::</span><span class="n">identity_mat4f</span><span class="p">;</span>
     <span class="n">ym</span><span class="o">::</span><span class="n">mat4f</span> <span class="n">local_xform</span> <span class="o">=</span> <span class="n">ym</span><span class="o">::</span><span class="n">identity_mat4f</span><span class="p">;</span>
     <span class="n">ym</span><span class="o">::</span><span class="n">mat4f</span> <span class="n">skin_xform</span> <span class="o">=</span> <span class="n">ym</span><span class="o">::</span><span class="n">identity_mat4f</span><span class="p">;</span>
+    <span class="n">node</span><span class="o">*</span> <span class="n">parent</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
 <span class="p">}</span>
 </code></pre></div>
 
@@ -421,9 +423,10 @@ avoid.</p>
 <li>scale:      The node's non-uniform scale.</li>
 <li>translation:      The node's translation.</li>
 <li>morph_weights:      morph target weights</li>
-<li>xform:      transform (computed during update)</li>
-<li>local_xform:      local transform (computed during update)</li>
-<li>skin_xform:      skin transform (computed during update)</li>
+<li>xform:      transform (computed during update_transforms())</li>
+<li>local_xform:      local transform (computed during update_transforms())</li>
+<li>skin_xform:      skin transform (computed during update_transforms())</li>
+<li>parent:      parent node (computed during update_transforms())</li>
 </ul>
 </li>
 </ul>
@@ -525,7 +528,7 @@ avoid.</p>
 <li>name:      name</li>
 <li>pose_matrices:      inverse bind matrix</li>
 <li>joints:      joints</li>
-<li>root:      root joint</li>
+<li>root:      skeleton root node</li>
 </ul>
 </li>
 </ul>
@@ -556,7 +559,6 @@ avoid.</p>
     <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">node</span><span class="o">*&gt;</span> <span class="n">nodes</span><span class="p">;</span>
     <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">animation_group</span><span class="o">*&gt;</span> <span class="n">animations</span><span class="p">;</span>
     <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">skin</span><span class="o">*&gt;</span> <span class="n">skins</span><span class="p">;</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">node</span><span class="o">*&gt;</span> <span class="n">root_nodes</span><span class="p">;</span>
     <span class="o">~</span><span class="n">scene_group</span><span class="p">();</span> 
 <span class="p">}</span>
 </code></pre></div>
@@ -575,7 +577,6 @@ Scenes and nodes are missing for mesh-only assets.</p>
 <li>nodes:      nodes</li>
 <li>animations:      nodes</li>
 <li>skins:      skins</li>
-<li>root_nodes:      root nodes</li>
 <li>~scene_group():      cleanup</li>
 </ul>
 </li>
