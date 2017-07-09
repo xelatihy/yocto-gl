@@ -67,6 +67,7 @@
 ///
 ///
 /// ## History
+/// - v 0.11: added camera near/far to high-level interface
 /// - v 0.10: added moprhing to high-level interface
 /// - v 0.9: use yocto_math in the interface and remove inline compilation
 /// - v 0.8: API changes to match to GLTF 2
@@ -176,6 +177,10 @@ struct camera {
     float aspect = 1;
     /// vertical fov (perspective) or size (orthographic)
     float yfov = 2 * std::atan(0.5f);
+    /// near plane (0 for default)
+    float near = 0;
+    /// far plane (0 for default)
+    float far = 0;
     /// focus distance (extension not implemented yet)
     float focus = 1;
     /// lens aperture (extension not implemented yet)

@@ -66,6 +66,7 @@ this can used to access the scene data with `scene::get<T>(index)`.
 
 
 ## History
+- v 0.11: added camera near/far to high-level interface
 - v 0.10: added moprhing to high-level interface
 - v 0.9: use yocto_math in the interface and remove inline compilation
 - v 0.8: API changes to match to GLTF 2
@@ -91,6 +92,8 @@ struct camera {
     bool ortho = false;
     float aspect = 1;
     float yfov = 2 * std::atan(0.5f);
+    float near = 0;
+    float far = 0;
     float focus = 1;
     float aperture = 0;
 }
@@ -103,6 +106,8 @@ Camera
     - ortho:      orthographic
     - aspect:      aspect ratio
     - yfov:      vertical fov (perspective) or size (orthographic)
+    - near:      near plane (0 for default)
+    - far:      far plane (0 for default)
     - focus:      focus distance (extension not implemented yet)
     - aperture:      lens aperture (extension not implemented yet)
 

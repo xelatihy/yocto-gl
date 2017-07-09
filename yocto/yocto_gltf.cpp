@@ -3054,11 +3054,15 @@ scene_group* gltf_to_scenes(const glTF* gltf, int scene_idx) {
             auto ortho = gcam->orthographic;
             cam->yfov = ortho->ymag;
             cam->aspect = ortho->xmag / ortho->ymag;
+            cam->near = ortho->znear;
+            cam->far = ortho->zfar;
         } else {
             auto persp = gcam->perspective;
             cam->yfov = persp->yfov;
             cam->aspect = persp->aspectRatio;
             if (!cam->aspect) cam->aspect = 16.0f / 9.0f;
+            cam->near = persp->znear;
+            cam->far = persp->zfar;
         }
         scns->cameras.push_back(cam);
     }
@@ -3232,15 +3236,15 @@ glTF* scenes_to_gltf(const scene_group* scns, const std::string& buffer_uri) {
             auto ortho = new glTFCameraOrthographic();
             ortho->ymag = cam->yfov;
             ortho->xmag = cam->aspect * cam->yfov;
-            ortho->znear = 0.001;
-            ortho->znear = 100000;
+            ortho->znear = cam->near;
+            ortho->znear = cam->far;
             gcam->orthographic = ortho;
         } else {
             auto persp = new glTFCameraPerspective();
             persp->yfov = cam->yfov;
             persp->aspectRatio = cam->aspect;
-            persp->znear = 0.001;
-            persp->zfar = 100000;
+            persp->znear = cam->near;
+            persp->zfar = cam->far;
             gcam->perspective = persp;
         }
         gltf->cameras.push_back(gcam);
