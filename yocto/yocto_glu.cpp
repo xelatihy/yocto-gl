@@ -882,7 +882,10 @@ void make_program(uint* pid, uint* aid) {
 
     static const std::string& vert_skinning =
         R"(
-    uniform bool skin_on = false;
+            #define SKIN_NONE 0
+            #define SKIN_STD 1
+            #define SKIN_GLTF 2
+    uniform int skin_type = 0;
     uniform mat4 skin_xforms[32];
     layout(location = 4) in vec4 vert_skin_weights;            // vertex skinning weights
     layout(location = 5) in ivec4 vert_skin_joints;            // vertex skinning joints (in mesh coordinate frame)
@@ -891,25 +894,35 @@ void make_program(uint* pid, uint* aid) {
         vec4 p4 = m * vec4(p,1);
         return p4.xyz / p4.w;
     }
-    
+
     vec3 transform_normal(mat4 m, vec3 p) {
         vec4 p4 = m * vec4(p,0);
         return p4.xyz;
     }
-    
+
     void apply_skin(inout vec3 pos, inout vec3 norm) {
-        if(!skin_on) return;
-        vec4 w = vert_skin_weights;
-        ivec4 j = ivec4(vert_skin_joints);
-        pos = transform_point( skin_xforms[j.x], pos ) * w.x +
-              transform_point( skin_xforms[j.y], pos ) * w.y +
-              transform_point( skin_xforms[j.z], pos ) * w.z +
-              transform_point( skin_xforms[j.w], pos ) * w.w;
-        norm = normalize(
-               transform_normal( skin_xforms[j.x], norm ) * w.x +
-               transform_normal( skin_xforms[j.y], norm ) * w.y +
-               transform_normal( skin_xforms[j.z], norm ) * w.z +
-               transform_normal( skin_xforms[j.w], norm ) * w.w);
+        if(skin_type == 0) {
+            return;
+        } else if(skin_type == SKIN_STD) {
+            vec4 w = vert_skin_weights;
+            ivec4 j = ivec4(vert_skin_joints);
+            pos = transform_point( skin_xforms[j.x], pos ) * w.x +
+                  transform_point( skin_xforms[j.y], pos ) * w.y +
+                  transform_point( skin_xforms[j.z], pos ) * w.z +
+                  transform_point( skin_xforms[j.w], pos ) * w.w;
+            norm = normalize(
+                   transform_normal( skin_xforms[j.x], norm ) * w.x +
+                   transform_normal( skin_xforms[j.y], norm ) * w.y +
+                   transform_normal( skin_xforms[j.z], norm ) * w.z +
+                   transform_normal( skin_xforms[j.w], norm ) * w.w);
+         } else if(skin_type == SKIN_GLTF) {
+             vec4 w = vert_skin_weights;
+             ivec4 j = ivec4(vert_skin_joints);
+             mat4 xf = skin_xforms[j.x] * w.x + skin_xforms[j.y] * w.y +
+                       skin_xforms[j.z] * w.z + skin_xforms[j.w] * w.w;
+            pos = transform_point(xf, pos);
+            norm = normalize(transform_normal(xf, norm));
+         }
     }
     )";
 
@@ -933,7 +946,7 @@ void make_program(uint* pid, uint* aid) {
     out vec3 norm;                  // [to fragment shader] vertex normal (in world coordinate)
     out vec2 texcoord;              // [to fragment shader] vertex texture coordinates
     out vec4 color;                 // [to fragment shader] vertex color
-    
+
     // main function
     void main() {
         // copy values
@@ -950,7 +963,7 @@ void make_program(uint* pid, uint* aid) {
         // copy other vertex properties
         color = vert_color;
         texcoord = vert_texcoord;
-        
+
         // clip
         gl_Position = camera.proj * camera.xform_inv * vec4(pos,1);
     }
@@ -1177,7 +1190,7 @@ void make_program(uint* pid, uint* aid) {
         in vec3 norm;                  // [from vertex shader] normal in world space (need normalization)
         in vec2 texcoord;              // [from vertex shader] texcoord
         in vec4 color;                 // [from vertex shader] color
-    
+
         struct Camera {
             mat4 xform;          // camera xform
             mat4 xform_inv;      // inverse of the camera frame (as a matrix)
@@ -1225,7 +1238,7 @@ void make_program(uint* pid, uint* aid) {
 
             // final color correction
             c = eval_tonemap(c);
-            
+
             // output final color by setting gl_FragColor
             frag_color = vec4(c,brdf.op);
         }
@@ -1424,10 +1437,24 @@ void set_vert(uint prog, uint pos, uint norm, uint texcoord, uint color) {
 //
 void set_vert_skinning(uint prog, uint weights, uint joints, int nxforms,
     const ym::mat4f* xforms) {
-    int on = 1;
+    int type = 1;
     float zero[4] = {0, 0, 0, 0};
     int zeroi[4] = {0, 0, 0, 0};
-    set_uniform(prog, "skin_on", &on, 1, 1);
+    set_uniform(prog, "skin_type", &type, 1, 1);
+    set_uniform(prog, "skin_xforms", (float*)xforms, 16, std::min(nxforms, 32));
+    set_vertattr(prog, "vert_skin_weights", weights, 4, zero);
+    set_vertattri(prog, "vert_skin_joints", joints, 4, zeroi);
+}
+
+//
+// Set vertex data with buffers for skinning.
+//
+void set_vert_gltf_skinning(uint prog, uint weights, uint joints, int nxforms,
+    const ym::mat4f* xforms) {
+    int type = 2;
+    float zero[4] = {0, 0, 0, 0};
+    int zeroi[4] = {0, 0, 0, 0};
+    set_uniform(prog, "skin_type", &type, 1, 1);
     set_uniform(prog, "skin_xforms", (float*)xforms, 16, std::min(nxforms, 32));
     set_vertattr(prog, "vert_skin_weights", weights, 4, zero);
     set_vertattri(prog, "vert_skin_joints", joints, 4, zeroi);
@@ -1437,10 +1464,10 @@ void set_vert_skinning(uint prog, uint weights, uint joints, int nxforms,
 // Disables vertex skinning.
 //
 void set_vert_skinning_off(uint prog) {
-    int on = 0;
+    int type = 0;
     float zero[4] = {0, 0, 0, 0};
     int zeroi[4] = {0, 0, 0, 0};
-    set_uniform(prog, "skin_on", &on, 1, 1);
+    set_uniform(prog, "skin_type", &type, 1, 1);
     set_vertattr(prog, "vert_skin_weights", 0, 4, zero);
     set_vertattri(prog, "vert_skin_joints", 0, 4, zeroi);
 }

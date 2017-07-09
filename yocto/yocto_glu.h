@@ -525,6 +525,12 @@ void set_vert_skinning(
     uint prog, uint weights, uint joints, int nxforms, const ym::mat4f* xforms);
 
 ///
+/// Set vertex data with buffers for skinning.
+///
+void set_vert_gltf_skinning(
+    uint prog, uint weights, uint joints, int nxforms, const ym::mat4f* xforms);
+
+///
 /// Disables vertex skinning.
 ///
 void set_vert_skinning_off(uint prog);

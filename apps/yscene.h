@@ -648,11 +648,14 @@ inline void shade_mesh(const ygltf::mesh* msh, const ygltf::skin* sk,
         if (sk) {
             auto skin_xforms = ygltf::get_skin_transforms(sk, xform);
 #if 0
-            yglu::stdshader::set_vert_skinning(st->prog, vert_vbo.skin_weights,
-                vert_vbo.skin_joints, skin_xforms.size(), skin_xforms.data());
+            yglu::stdshader::set_vert_gltf_skinning(st->prog,
+                vert_vbo.skin_weights, vert_vbo.skin_joints, skin_xforms.size(),
+                skin_xforms.data());
 #else
             std::vector<ym::vec3f> skinned_pos, skinned_norm;
-            ym::compute_skinning(shp->pos, shp->norm, shp->skin_weights,
+            // ym::compute_skinning(shp->pos, shp->norm, shp->skin_weights,
+            //     shp->skin_joints, skin_xforms, skinned_pos, skinned_norm);
+            ym::compute_matrix_skinning(shp->pos, shp->norm, shp->skin_weights,
                 shp->skin_joints, skin_xforms, skinned_pos, skinned_norm);
             yglu::update_buffer(vert_vbo.pos, 3 * sizeof(float),
                 skinned_pos.size(), skinned_pos.data(), false, true);
