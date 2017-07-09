@@ -901,8 +901,8 @@ void draw_elem_widgets(ygui::window* win, yobj::scene* oscn, yobj::texture* txt,
 
     ygui::separator_widget(win);
     ygui::label_widget(win, "path", txt->path);
-    auto str = yu::string::format_str("%d x %d @ %d  %s", txt->width,
-        txt->height, txt->ncomp, (txt->dataf.empty()) ? "byte" : "float");
+    auto str = yu::string::format("%d x %d @ %d  %s", txt->width, txt->height,
+        txt->ncomp, (txt->dataf.empty()) ? "byte" : "float");
     ygui::label_widget(win, "size", str);
     ygui::image_widget(win, state->txt.at(txt), {txt->width, txt->height});
 }
@@ -1150,8 +1150,8 @@ void draw_elem_widgets(ygui::window* win, ygltf::scene_group* gscn,
 
     ygui::separator_widget(win);
     ygui::label_widget(win, "path", txt->path);
-    auto str = yu::string::format_str("%d x %d @ %d  %s", txt->width,
-        txt->height, txt->ncomp, (txt->dataf.empty()) ? "byte" : "float");
+    auto str = yu::string::format("%d x %d @ %d  %s", txt->width, txt->height,
+        txt->ncomp, (txt->dataf.empty()) ? "byte" : "float");
     ygui::label_widget(win, "size", str);
     ygui::image_widget(win, state->txt.at(txt), {txt->width, txt->height});
 }

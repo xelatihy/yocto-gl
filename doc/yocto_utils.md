@@ -422,18 +422,18 @@ Splits a path calling the above functions.
 
 String manipulation
 
-### Function starts_with()
+### Function startswith()
 
 ~~~ .cpp
-bool starts_with(const std::string& str, const std::string& substr);
+bool startswith(const std::string& str, const std::string& substr);
 ~~~
 
 Checks if a std::string starts with a prefix.
 
-### Function ends_with()
+### Function endswith()
 
 ~~~ .cpp
-bool ends_with(const std::string& str, const std::string& substr);
+bool endswith(const std::string& str, const std::string& substr);
 ~~~
 
 Checks if a std::string ends with a prefix.
@@ -446,10 +446,10 @@ bool contains(const std::string& str, const std::string& substr);
 
 Check is a string contains a substring.
 
-### Function split_lines()
+### Function splitlines()
 
 ~~~ .cpp
-std::vector<std::string> split_lines(
+std::vector<std::string> splitlines(
     const std::string& str, bool keep_newline = false);
 ~~~
 
@@ -457,102 +457,101 @@ Splits a std::string into lines at the '\n' character. The line
 terminator is kept if keep_newline. This function does not work on
 Window if keep_newline is true.
 
-### Function partition_str()
+### Function partition()
 
 ~~~ .cpp
-std::vector<std::string> partition_str(
+std::vector<std::string> partition(
     const std::string& str, const std::string& split);
 ~~~
 
 Partition the string.
 
-### Function split_str()
+### Function split()
 
 ~~~ .cpp
-std::vector<std::string> split_str(const std::string& str);
+std::vector<std::string> split(const std::string& str);
 ~~~
 
 Splits the string.
 
-### Function strip_str()
+### Function strip()
 
 ~~~ .cpp
-std::string strip_str(const std::string& str);
+std::string strip(const std::string& str);
 ~~~
 
 Strip the string.
 
-### Function rstrip_str()
+### Function rstrip()
 
 ~~~ .cpp
-std::string rstrip_str(const std::string& str);
+std::string rstrip(const std::string& str);
 ~~~
 
 Strip the string.
 
-### Function lstrip_str()
+### Function lstrip()
 
 ~~~ .cpp
-std::string lstrip_str(const std::string& str);
+std::string lstrip(const std::string& str);
 ~~~
 
 Strip the string.
 
-### Function join_strings()
+### Function join()
 
 ~~~ .cpp
-std::string join_strings(
-    const std::vector<std::string>& strs, const std::string& sep);
+std::string join(const std::vector<std::string>& strs, const std::string& sep);
 ~~~
 
 Joins a list of std::string with a std::string as separator.
 
-### Function to_lower()
+### Function lower()
 
 ~~~ .cpp
-std::string to_lower(const std::string& str);
+std::string lower(const std::string& str);
 ~~~
 
 Converts an ASCII string to lowercase.
 
-### Function to_upper()
+### Function upper()
 
 ~~~ .cpp
-std::string to_upper(const std::string& str);
+std::string upper(const std::string& str);
 ~~~
 
 Converts an ASCII string to uppercase.
 
-### Function is_space()
+### Function isspace()
 
 ~~~ .cpp
-bool is_space(const std::string& str);
+bool isspace(const std::string& str);
 ~~~
 
 Strung is space.
 
-### Function replace_str()
+### Function replace()
 
 ~~~ .cpp
-std::string replace_str(
+std::string replace(
     const std::string& str, const std::string& s1, const std::string& s2);
 ~~~
 
 Replace s1 with s2 in str.
 
-### Function format_str()
+### Function format()
 
 ~~~ .cpp
-std::string format_str(const char* fmt, va_list args);
+std::string format(const char* fmt, va_list args);
 ~~~
 
 C-like string formatting. This is only meant for short strings with max
 length 10000 chars. Memory corruption will happen for longer strings.
 
-### Function format_str()
+### Function format()
 
 ~~~ .cpp
-std::string format_str(const char* fmt, ...);
+std::string format(const char* fmt, ...);
 ~~~
 
 C-like string formatting. See format_str(fmt,args);

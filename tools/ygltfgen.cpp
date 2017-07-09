@@ -50,8 +50,8 @@ using namespace yu::cmdline;
 
 std::string filename2schemaname(const std::string& filename) {
     auto name = filename;
-    name = replace_str(name, ".json", "");
-    name = replace_str(name, ".schema", "");
+    name = replace(name, ".json", "");
+    name = replace(name, ".schema", "");
     return name;
 }
 
@@ -63,7 +63,7 @@ std::pair<std::string, std::string> split_schemaname(
 }
 
 std::string schemaname2typename(const std::string& schemaname) {
-    if (starts_with(schemaname, "glTF")) return schemaname;
+    if (startswith(schemaname, "glTF")) return schemaname;
     auto sname = schemaname;
     auto name = std::string();
     while (!sname.empty()) {
@@ -80,7 +80,7 @@ std::string varname2enumname(const std::string& varname) {
 }
 
 std::string string2enumvalue(const std::string& str) {
-    auto name = replace_str(to_lower(str), "/", "_");
+    auto name = replace(lower(str), "/", "_");
     auto nname = std::string();
     while (!name.empty()) {
         auto pos = name.find("_");
@@ -339,7 +339,7 @@ struct BuiltinType : Type {
                 js = val;
             }
         )___";
-        return replace_str(tmp, "__TYPE__", tname());
+        return replace(tmp, "__TYPE__", tname());
     }
     virtual std::string to_validate_func() {
         auto tmp = R"___(
@@ -348,7 +348,7 @@ struct BuiltinType : Type {
                              std::vector<std::pair<std::string, std::string>>& errs) {
         }
         )___";
-        return replace_str(tmp, "__TYPE__", tname());
+        return replace(tmp, "__TYPE__", tname());
     }
 };
 
@@ -1196,7 +1196,7 @@ void schemas2types(
 
 std::string substitute(
     const std::string& txt, const std::string& code, const std::string& label) {
-    auto lines = split_lines(txt, true);
+    auto lines = splitlines(txt, true);
     auto ret = std::string();
     auto skipping = false;
     for (auto& line : lines) {
