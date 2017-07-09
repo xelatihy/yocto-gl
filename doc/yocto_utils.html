@@ -12,7 +12,7 @@
         <h1>Yocto/Utils</h1>
 <p>Utilities for writing command line applications, mostly
 a simple to use command line parser, a logger, a thread-pool,
-and string, path and file functions. All functions are defined
+and string, path and file functions, and a timer. All functions are defined
 in separate namespaces.</p>
 <h2>Usage for Command Line Parsing</h2>
 <ol>
@@ -38,7 +38,7 @@ in separate namespaces.</p>
 <li>names are only used for help</li>
 <li>supports types as above</li>
 <li>for general use <code>arg = parse_arg&lt;type&gt;()</code></li>
-<li>to parse all remaining values use args = parse_arga<type>(...)</li>
+<li>to parse all remaining values use <code>args = parse_arga&lt;type&gt;(...)</code></li>
 </ul>
 </li>
 <li>end cmdline parsing with <code>check_parser()</code> to check for unsued values,
@@ -63,17 +63,19 @@ illustreates the library usage.</p>
 <li>namespace concurrent</li>
 <li>either create a thread pool <code>make_thread_pool</code> or use the global one</li>
 <li>run tasks in parallel <code>thread_pool_for()</code></li>
-<li>run tasks asynchronously `thread_pool_async()</li>
+<li>run tasks asynchronously <code>thread_pool_async()</code></li>
 </ol>
 <h2>Utilities</h2>
 <ol>
-<li>filename splitting functions in namespace path</li>
-<li>loading and save entire files in namespace file</li>
-<li>Python-line string manipulation in namespace string</li>
-<li>Python-like operators for standard containers in namespace stl_operators</li>
+<li>filename splitting functions in namespace <code>path</code></li>
+<li>loading and save entire files in namespace <code>file</code></li>
+<li>Python-line string manipulation in namespace <code>string</code></li>
+<li>Python-like operators for standard containers in namespace <code>operators</code></li>
+<li>simple timer in namespace <code>timer</code></li>
 </ol>
 <h2>History</h2>
 <ul>
+<li>v 0.18: timer</li>
 <li>v 0.17: renamed to yocto utils</li>
 <li>v 0.16: split into namespaces</li>
 <li>v 0.15: remove inline compilation</li>
@@ -727,6 +729,28 @@ defatul).</p>
 
 
 <p>Parallel for implementation on a global thread pool</p>
+<h2>Namespace timer</h2>
+<p>Simple timer for performance measumrents.</p>
+<h3>Struct timer</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">timer</span> <span class="p">{</span>
+    <span class="n">timer</span><span class="p">(</span><span class="kt">bool</span> <span class="n">autostart</span> <span class="o">=</span> <span class="nb">true</span><span class="p">);</span> 
+    <span class="kt">void</span> <span class="nf">start</span><span class="p">();</span> 
+    <span class="kt">void</span> <span class="nf">stop</span><span class="p">();</span> 
+    <span class="kt">double</span> <span class="nf">elapsed</span><span class="p">();</span> 
+<span class="p">}</span>
+</code></pre></div>
+
+
+<p>A simple wrapper for std::chrono.</p>
+<ul>
+<li>Members:<ul>
+<li>timer():      initialize a timer and start it if necessary</li>
+<li>start():      start a timer</li>
+<li>stop():      stops a timer</li>
+<li>elapsed():      elapsed time</li>
+</ul>
+</li>
+</ul>
         <article>
         <footer></footer>
         </body>

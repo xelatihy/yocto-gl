@@ -220,7 +220,7 @@ yobj::material* add_emission(yobj::scene* scn, const std::string& name,
     yobj::texture* norm = nullptr) {
     auto mat = add_material(scn, name, ke, ym::zero3f, ym::zero3f, ym::zero3f,
         0, txt, nullptr, nullptr, nullptr, norm);
-    mat->str_props["PBR_HACK"] = {"emission"};
+    mat->unknown_props["PBR_HACK"] = {"emission"};
     return mat;
 }
 
@@ -229,7 +229,7 @@ yobj::material* add_diffuse(yobj::scene* scn, const std::string& name,
     yobj::texture* norm = nullptr) {
     auto mat = add_material(scn, name, ym::zero3f, kd, ym::zero3f, ym::zero3f,
         0, nullptr, txt, nullptr, nullptr, norm);
-    mat->str_props["PBR_HACK"] = {"diffuse"};
+    mat->unknown_props["PBR_HACK"] = {"diffuse"};
     return mat;
 }
 
@@ -238,7 +238,7 @@ yobj::material* add_plastic(yobj::scene* scn, const std::string& name,
     yobj::texture* norm = nullptr) {
     auto mat = add_material(scn, name, ym::zero3f, kd, {0.04f, 0.04f, 0.04f},
         ym::zero3f, rs, nullptr, txt, nullptr, nullptr, norm);
-    mat->str_props["PBR_HACK"] = {"plastic"};
+    mat->unknown_props["PBR_HACK"] = {"plastic"};
     return mat;
 }
 
@@ -247,7 +247,7 @@ yobj::material* add_metal(yobj::scene* scn, const std::string& name,
     yobj::texture* norm = nullptr) {
     auto mat = add_material(scn, name, ym::zero3f, ym::zero3f, kd, ym::zero3f,
         rs, nullptr, nullptr, txt, nullptr, norm);
-    mat->str_props["PBR_HACK"] = {"metal"};
+    mat->unknown_props["PBR_HACK"] = {"metal"};
     return mat;
 }
 
@@ -256,7 +256,7 @@ yobj::material* add_glass(yobj::scene* scn, const std::string& name,
     yobj::texture* norm = nullptr) {
     auto mat = add_material(scn, name, ym::zero3f, ym::zero3f,
         {0.04f, 0.04f, 0.04f}, kd, rs, nullptr, nullptr, txt, nullptr, norm);
-    mat->str_props["PBR_HACK"] = {"glass"};
+    mat->unknown_props["PBR_HACK"] = {"glass"};
     return mat;
 }
 
@@ -1277,8 +1277,8 @@ ygltf::scene_group* obj2gltf(const yobj::scene* obj, bool add_scene) {
             (index(obj->textures, omat->ke_txt) < 0) ?
                 nullptr :
                 gltf->textures[index(obj->textures, omat->ke_txt)];
-        if (!omat->str_props.at("PBR_HACK").empty()) {
-            auto mstr = omat->str_props.at("PBR_HACK").at(0);
+        if (!omat->unknown_props.at("PBR_HACK").empty()) {
+            auto mstr = omat->unknown_props.at("PBR_HACK").at(0);
             if (mstr == "emission") {
             } else if (mstr == "diffuse") {
                 gmat->metallic_roughness =

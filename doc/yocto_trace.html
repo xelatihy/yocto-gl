@@ -15,6 +15,12 @@ lights, GGX/Phong materials, environment mapping. The interface supports
 progressive parallel execution with any splitting strategy, by
 generating per-sample random number sequences or fully deterministic
 hash-based sampling.</p>
+<p>The raytraced scene is a list of instances of basic shapes. Each shape
+is a collection of points, lines or triangles with associated normals.
+Shapes are instanced by creating instances with soecific local-to-world
+trasforms. Instancing shares memory so large scenes can be created easily.
+Shaope data is in fact shared with the application and not copied
+internally.</p>
 <p>Materials are represented as sums of an emission term, a diffuse term and
 a specular microfacet term (GGX or Phong). Only opaque for now. We pick
 a proper material type for each shape element type (points, lines,
@@ -25,30 +31,36 @@ add a large triangle mesh with inward normals instead. The latter is more
 general (you can even more an arbitrary shape sun). For now only the first
 env is used.</p>
 <p>We generate our own random numbers guarantying that there is one random
-sequence per path. This means you can rul the path tracer in any order
+sequence per path. This means you can run the path tracer in any order
 serially or in parallel.</p>
 <p>For now, we support a straightforward path tracer with explicit direct
-illumination using MIS.</p>
+illumination using MIS. Also added simpler shaders for a quick preview
+and a direct-only renderer.</p>
+<p>The library can support raytracing either by building an internal
+acceleration structure with Yocto/Bvh or with user supplied intersection
+routines for custom intersection.</p>
 <p>This library depends in yocto_math.h. Optionally depend on yocto_bvh.h/.cpp
 for internal acceleration. Disable this by setting YTRACE_NO_BVH.</p>
-<h2>Usage</h2>
+<h2>Usage for Scene Creation</h2>
 <ol>
-<li>define your scene setting up only the public data<ul>
-<li>init the scene with make_scene()</li>
-<li>define cameras with set_camera()</li>
-<li>defile shapes with set set_triagle_shape(), set_line_shape(),
-set_point_shape()</li>
-<li>define materials with set_material()</li>
-<li>define textures with set_texture()</li>
-<li>define environments with set_environment()</li>
-<li>set intersection routines with set_intersection_callbacks()
-  or use the builtin intersection with init_intersection()</li>
-</ul>
-</li>
-<li>prepare for rendering with init_lights()</li>
-<li>define rendering params in render_params</li>
-<li>render blocks of samples with trace_block() or the whole image with
-    trace_image()</li>
+<li>create a scene with <code>make_scene()</code></li>
+<li>add cameras with <code>add_camera()</code>, <code>set_camera()</code></li>
+<li>add add texture with <code>add_texture()</code></li>
+<li>create material with <code>add_XXX_material()</code></li>
+<li>add shapes with <code>add_XXX_shape()</code></li>
+<li>add instances with <code>add_instance()</code></li>
+<li>add environment maps with <code>add_environment()</code></li>
+</ol>
+<h2>Usage for Rendering</h2>
+<ol>
+<li>either build the ray-tracing acceleration structure with
+  <code>init_intersection()</code> or supply your own with
+  <code>set_intersection_callbacks()</code></li>
+<li>if desired, add logging with <code>set_logging_callbacks()</code></li>
+<li>prepare lights for rendering <code>init_lights()</code></li>
+<li>define rendering params with the <code>render_params</code> structure</li>
+<li>render blocks of samples with <code>trace_block()</code> or the whole image with
+    <code>trace_image()</code></li>
 </ol>
 <h2>History</h2>
 <ul>
@@ -669,7 +681,7 @@ accumulate is true.</p>
 </code></pre></div>
 
 
-<p>Convenience function to call trace_block with all sample at once.</p>
+<p>Convenience function to call trace_block() with all samples at once.</p>
         <article>
         <footer></footer>
         </body>

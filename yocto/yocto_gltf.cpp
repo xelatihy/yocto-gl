@@ -2426,9 +2426,13 @@ void load_images(glTF* gltf, const std::string& dirname, bool skip_missing) {
                 (int)data.length(), image->data.width, image->data.height,
                 image->data.ncomp, image->data.dataf, image->data.datab);
         } else {
-            yimg::load_image(_fix_path(dirname + image->uri), image->data.width,
-                image->data.height, image->data.ncomp, image->data.dataf,
-                image->data.datab);
+            try {
+                yimg::load_image(_fix_path(dirname + image->uri),
+                    image->data.width, image->data.height, image->data.ncomp,
+                    image->data.dataf, image->data.datab);
+            } catch (...) {
+                if (!skip_missing) throw;
+            }
         }
     }
 
@@ -3699,14 +3703,16 @@ std::vector<std::pair<std::string, std::string>> validate_gltf(
 //
 // Load scene
 //
-scene_group* load_scenes(const std::string& filename, bool load_textures) {
+scene_group* load_scenes(
+    const std::string& filename, bool load_textures, bool skip_missing) {
     auto ext = _get_extension(filename);
     auto gltf = std::unique_ptr<glTF>();
     if (ext != ".glb") {
-        gltf = std::unique_ptr<glTF>(load_gltf(filename, true, load_textures));
+        gltf = std::unique_ptr<glTF>(
+            load_gltf(filename, true, load_textures, skip_missing));
     } else {
         gltf = std::unique_ptr<glTF>(
-            load_binary_gltf(filename, true, load_textures));
+            load_binary_gltf(filename, true, load_textures, skip_missing));
     }
     return gltf_to_scenes(gltf.get());
 }

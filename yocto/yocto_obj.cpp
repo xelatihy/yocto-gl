@@ -307,15 +307,45 @@ obj* load_obj(const std::string& filename, bool flip_texcoord) {
 }
 
 //
+// Parse texture options and name
+//
+static void parse_texture(char** toks, int ntoks, std::string& path,
+    property_map<std::string>& info) {
+    // texture name
+    if (ntoks > 0) path = toks[ntoks - 1];
+
+    // texture options
+    if (ntoks > 1) {
+        auto cur_ntoks = ntoks - 1;
+        auto cur_tok = toks;
+        while (cur_ntoks) {
+            if (cur_tok[0][0] != '-') break;
+            auto name = cur_tok[0];
+            info[name] = {};
+            cur_ntoks--;
+            cur_tok++;
+            while (cur_ntoks && cur_tok[0][0] != '-') {
+                info[name].push_back(cur_tok[0]);
+                cur_ntoks--;
+                cur_tok++;
+            }
+        }
+    }
+}
+
+//
 // Load MTL
 //
-std::vector<mtl_material> load_mtl(const std::string& filename) {
+std::vector<obj_material> load_mtl(const std::string& filename) {
     // clear materials
-    auto materials = std::vector<mtl_material>();
+    auto materials = std::vector<obj_material>();
 
     // open file
     auto file = fopen(filename.c_str(), "rt");
     if (!file) throw(obj_exception("cannot open filename " + filename));
+
+    // add a material preemptively to avoid crashes
+    materials.emplace_back();
 
     // read the file line by line
     char line[4096];
@@ -370,56 +400,50 @@ std::vector<mtl_material> load_mtl(const std::string& filename) {
         } else if (tok_s == "phys_density") {
             materials.back().density = _parse_float(cur_tok);
         } else if (tok_s == "map_Ke") {
-            materials.back().ke_txt = (cur_ntok) ? cur_tok[0] : "";
+            parse_texture(cur_tok, cur_ntok, materials.back().ke_txt,
+                materials.back().ke_txt_info);
         } else if (tok_s == "map_Ka") {
-            materials.back().ka_txt = (cur_ntok) ? cur_tok[0] : "";
+            parse_texture(cur_tok, cur_ntok, materials.back().ka_txt,
+                materials.back().ka_txt_info);
         } else if (tok_s == "map_Kd") {
-            materials.back().kd_txt = (cur_ntok) ? cur_tok[0] : "";
+            parse_texture(cur_tok, cur_ntok, materials.back().kd_txt,
+                materials.back().kd_txt_info);
         } else if (tok_s == "map_Ks") {
-            materials.back().ks_txt = (cur_ntok) ? cur_tok[0] : "";
+            parse_texture(cur_tok, cur_ntok, materials.back().ks_txt,
+                materials.back().ks_txt_info);
         } else if (tok_s == "map_Kr") {
-            materials.back().ke_txt = (cur_ntok) ? cur_tok[0] : "";
+            parse_texture(cur_tok, cur_ntok, materials.back().kr_txt,
+                materials.back().kr_txt_info);
         } else if (tok_s == "map_Tr") {
-            materials.back().kt_txt = (cur_ntok) ? cur_tok[0] : "";
+            parse_texture(cur_tok, cur_ntok, materials.back().kt_txt,
+                materials.back().kt_txt_info);
         } else if (tok_s == "map_Ns") {
-            materials.back().ns_txt = (cur_ntok) ? cur_tok[0] : "";
+            parse_texture(cur_tok, cur_ntok, materials.back().ns_txt,
+                materials.back().ns_txt_info);
         } else if (tok_s == "map_d") {
-            materials.back().op_txt = (cur_ntok) ? cur_tok[0] : "";
+            parse_texture(cur_tok, cur_ntok, materials.back().op_txt,
+                materials.back().op_txt_info);
         } else if (tok_s == "map_Ni") {
-            materials.back().ior_txt = (cur_ntok) ? cur_tok[0] : "";
+            parse_texture(cur_tok, cur_ntok, materials.back().ior_txt,
+                materials.back().ior_txt_info);
         } else if (tok_s == "map_bump" || tok_s == "bump") {
-            materials.back().bump_txt = (cur_ntok) ? cur_tok[0] : "";
+            parse_texture(cur_tok, cur_ntok, materials.back().bump_txt,
+                materials.back().bump_txt_info);
         } else if (tok_s == "map_disp" || tok_s == "disp") {
-            materials.back().disp_txt = (cur_ntok) ? cur_tok[0] : "";
+            parse_texture(cur_tok, cur_ntok, materials.back().disp_txt,
+                materials.back().disp_txt_info);
         } else if (tok_s == "map_norm" || tok_s == "norm") {
-            materials.back().norm_txt = (cur_ntok) ? cur_tok[0] : "";
+            parse_texture(cur_tok, cur_ntok, materials.back().norm_txt,
+                materials.back().norm_txt_info);
         } else {
-            // attempt to parse as ints
-            std::vector<int> int_vals;
-            for (auto i = 0; i < cur_ntok; i++) {
-                auto val = 0;
-                if (!sscanf(cur_tok[i], "%i", &val)) break;
-                int_vals.push_back(val);
-            }
-            if (int_vals.size() == cur_ntok) {
-                materials.back().int_props[tok_s] = int_vals;
-            }
-            // attempt to parse as floats
-            std::vector<float> flt_vals;
-            for (auto i = 0; i < cur_ntok; i++) {
-                auto val = 0.0f;
-                if (!sscanf(cur_tok[i], "%f", &val)) break;
-                int_vals.push_back(val);
-            }
-            if (flt_vals.size() == cur_ntok) {
-                materials.back().flt_props[tok_s] = flt_vals;
-            }
             // copy into strings
-            std::vector<std::string> str_vals;
-            for (auto i = 0; i < cur_ntok; i++) str_vals.push_back(cur_tok[i]);
-            materials.back().str_props[tok_s] = str_vals;
+            for (auto i = 0; i < cur_ntok; i++)
+                materials.back().unknown_props[tok_s].push_back(cur_tok[i]);
         }
     }
+
+    // remove first fake material
+    materials.erase(materials.begin());
 
     // done
     return materials;
@@ -488,6 +512,26 @@ static void _fwrite_str(FILE* file, const char* str, const std::string& s,
     bool force = false, bool newline = true) {
     if (s.empty() && !force) return;
     fprintf(file, "%s %s", str, s.c_str());
+    if (newline) fprintf(file, "\n");
+}
+
+//
+// write a std::string prepended by another if the std::string is not NULL
+//
+static void _fwrite_str_props(FILE* file, const char* str, const std::string& s,
+    const property_map<std::string>& props, bool force = false,
+    bool newline = true) {
+    if (s.empty() && !force) return;
+    if (props.empty()) {
+        fprintf(file, "%s %s", str, s.c_str());
+    } else {
+        auto props_str = std::string();
+        for (auto&& prop : props) {
+            props_str += prop.first + " ";
+            for (auto&& pp : prop.second) props_str += pp + " ";
+        }
+        fprintf(file, "%s %s %s", str, props_str.c_str(), s.c_str());
+    }
     if (newline) fprintf(file, "\n");
 }
 
@@ -595,7 +639,7 @@ void save_obj(
 // Save an MTL file
 //
 void save_mtl(
-    const std::string& filename, const std::vector<mtl_material>& materials) {
+    const std::string& filename, const std::vector<obj_material>& materials) {
     auto file = fopen(filename.c_str(), "wt");
     if (!file) throw(obj_exception("could not open filename " + filename));
 
@@ -614,19 +658,19 @@ void save_mtl(
         _fwrite_float(file, "  Ni", mat.ior);
         _fwrite_float(file, "  phys_stiffness", mat.stiffness);
         _fwrite_float(file, "  phys_density", mat.density);
-        _fwrite_str(file, "  map_Ke", mat.ke_txt);
-        _fwrite_str(file, "  map_Ka", mat.ke_txt);
-        _fwrite_str(file, "  map_Kd", mat.kd_txt);
-        _fwrite_str(file, "  map_Ks", mat.ks_txt);
-        _fwrite_str(file, "  map_Kr", mat.kr_txt);
-        _fwrite_str(file, "  map_Kt", mat.kt_txt);
-        _fwrite_str(file, "  map_Ns", mat.ns_txt);
-        _fwrite_str(file, "  map_d", mat.op_txt);
-        _fwrite_str(file, "  map_Ni", mat.ior_txt);
-        _fwrite_str(file, "  map_bump", mat.bump_txt);
-        _fwrite_str(file, "  map_disp", mat.disp_txt);
-        _fwrite_str(file, "  map_norm", mat.norm_txt);
-        for (auto&& p : mat.str_props) {
+        _fwrite_str_props(file, "  map_Ke", mat.ke_txt, mat.ke_txt_info);
+        _fwrite_str_props(file, "  map_Ka", mat.ka_txt, mat.ka_txt_info);
+        _fwrite_str_props(file, "  map_Kd", mat.kd_txt, mat.kd_txt_info);
+        _fwrite_str_props(file, "  map_Ks", mat.ks_txt, mat.ks_txt_info);
+        _fwrite_str_props(file, "  map_Kr", mat.kr_txt, mat.kr_txt_info);
+        _fwrite_str_props(file, "  map_Kt", mat.kt_txt, mat.kt_txt_info);
+        _fwrite_str_props(file, "  map_Ns", mat.ns_txt, mat.ns_txt_info);
+        _fwrite_str_props(file, "  map_d", mat.op_txt, mat.op_txt_info);
+        _fwrite_str_props(file, "  map_Ni", mat.ior_txt, mat.ior_txt_info);
+        _fwrite_str_props(file, "  map_bump", mat.bump_txt, mat.bump_txt_info);
+        _fwrite_str_props(file, "  map_disp", mat.disp_txt, mat.disp_txt_info);
+        _fwrite_str_props(file, "  map_norm", mat.norm_txt, mat.norm_txt_info);
+        for (auto&& p : mat.unknown_props) {
             auto s = std::string();
             for (auto&& v : p.second) s += v + " ";
             _fwrite_str(file, p.first.c_str(), s.c_str());
@@ -703,6 +747,21 @@ static bool operator==(const obj_vertex& a, const obj_vertex& b) {
 }
 
 //
+// Converts texture info
+//
+texture_info _convert_texture_info(const property_map<std::string>& props) {
+    auto info = texture_info();
+    if (props.find("-clamp") != props.end() && !props.at("-clamp").empty()) {
+        info.clamp =
+            props.at("-clamp")[0] == "on" || props.at("-clamp")[0] == "1";
+    }
+    if (props.find("-bm") != props.end() && !props.at("-bm").empty()) {
+        info.clamp = std::atof(props.at("-bm")[0].c_str());
+    }
+    return info;
+}
+
+//
 // Flattens an scene
 //
 scene* obj_to_scene(const obj* asset) {
@@ -729,9 +788,15 @@ scene* obj_to_scene(const obj* asset) {
         mat->norm_txt = _add_texture(omat.norm_txt, scn->textures);
         mat->bump_txt = _add_texture(omat.bump_txt, scn->textures);
         mat->disp_txt = _add_texture(omat.disp_txt, scn->textures);
-        mat->str_props = omat.str_props;
-        mat->int_props = omat.int_props;
-        mat->flt_props = omat.flt_props;
+        mat->ke_txt_info = _convert_texture_info(omat.ke_txt_info);
+        mat->kd_txt_info = _convert_texture_info(omat.kd_txt_info);
+        mat->ks_txt_info = _convert_texture_info(omat.ks_txt_info);
+        mat->kt_txt_info = _convert_texture_info(omat.kt_txt_info);
+        mat->rs_txt_info = _convert_texture_info(omat.ns_txt_info);
+        mat->norm_txt_info = _convert_texture_info(omat.norm_txt_info);
+        mat->bump_txt_info = _convert_texture_info(omat.bump_txt_info);
+        mat->disp_txt_info = _convert_texture_info(omat.disp_txt_info);
+        mat->unknown_props = omat.unknown_props;
         scn->materials.push_back(mat);
     }
 
@@ -873,6 +938,18 @@ scene* obj_to_scene(const obj* asset) {
 }
 
 //
+// Convert texture props
+//
+property_map<std::string> _texture_props(const texture_info& info) {
+    auto props = info.unknown_props;
+    if (info.clamp) { props["-clamp"] = {"on"}; }
+    if (info.bump_scale != 1) {
+        props["-bm"] = {std::to_string(info.bump_scale)};
+    }
+    return props;
+}
+
+//
 // Save an scene
 //
 obj* scene_to_obj(const scene* scn) {
@@ -899,9 +976,15 @@ obj* scene_to_obj(const scene* scn) {
         mat->bump_txt = (fl_mat->bump_txt) ? fl_mat->bump_txt->path : "";
         mat->disp_txt = (fl_mat->disp_txt) ? fl_mat->disp_txt->path : "";
         mat->norm_txt = (fl_mat->norm_txt) ? fl_mat->norm_txt->path : "";
-        mat->str_props = fl_mat->str_props;
-        mat->int_props = fl_mat->int_props;
-        mat->flt_props = fl_mat->flt_props;
+        mat->ke_txt_info = _texture_props(fl_mat->ke_txt_info);
+        mat->kd_txt_info = _texture_props(fl_mat->kd_txt_info);
+        mat->ks_txt_info = _texture_props(fl_mat->ks_txt_info);
+        mat->kt_txt_info = _texture_props(fl_mat->kt_txt_info);
+        mat->ns_txt_info = _texture_props(fl_mat->rs_txt_info);
+        mat->bump_txt_info = _texture_props(fl_mat->bump_txt_info);
+        mat->disp_txt_info = _texture_props(fl_mat->disp_txt_info);
+        mat->norm_txt_info = _texture_props(fl_mat->norm_txt_info);
+        mat->unknown_props = fl_mat->unknown_props;
     }
 
     // convert shapes
@@ -1021,8 +1104,12 @@ void load_textures(scene* scn, const std::string& dirname, bool skip_missing) {
         auto filename = dirname + txt->path;
         for (auto& c : filename)
             if (c == '\\') c = '/';
-        yimg::load_image(filename, txt->width, txt->height, txt->ncomp,
-            txt->dataf, txt->datab);
+        try {
+            yimg::load_image(filename, txt->width, txt->height, txt->ncomp,
+                txt->dataf, txt->datab);
+        } catch (...) {
+            if (!skip_missing) throw;
+        }
     }
 #endif
 }
@@ -1053,11 +1140,11 @@ void save_textures(
 //
 // Load scene
 //
-scene* load_scene(
-    const std::string& filename, bool load_txt, bool flip_texcoord) {
+scene* load_scene(const std::string& filename, bool load_txt,
+    bool flip_texcoord, bool skip_missing) {
     auto oscn = std::unique_ptr<obj>(load_obj(filename, flip_texcoord));
     auto scn = obj_to_scene(oscn.get());
-    if (load_txt) load_textures(scn, _get_dirname(filename));
+    if (load_txt) load_textures(scn, _get_dirname(filename), skip_missing);
     return scn;
 }
 

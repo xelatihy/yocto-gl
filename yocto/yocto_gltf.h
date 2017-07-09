@@ -598,10 +598,12 @@ struct scene_group {
 /// - Parameters:
 ///     - filename: filename
 ///     - load_textures: whether to load textures (default to false)
+///     - skip_missing: whether to skip missing buffers and textures
 /// - Return:
 ///     - scene
 ///
-scene_group* load_scenes(const std::string& filename, bool load_textures);
+scene_group* load_scenes(
+    const std::string& filename, bool load_textures, bool skip_missing = true);
 
 ///
 /// Save scene

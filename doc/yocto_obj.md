@@ -2,9 +2,10 @@
 
 Wavefront OBJ/MTL loader and writer with support for points,
 lines, triangles and general polygons and all materials properties.
-Contains also a few extension to eqasily create demos such as per-vertex
-color and radius, cameras and envmaps. Can use either a low-level OBJ
-representation or a high level flattened representation.
+Contains also a few extensions to easily create demos such as per-vertex
+color and radius, cameras, environment maps and instances.
+Can use either a low-level OBJ representation or a high level flattened
+representation.
 
 Both in reading and writing, OBJ has no clear convention on the orientation
 of textures Y axis. So in many cases textures appears flipped. To handle
@@ -31,35 +32,29 @@ yocto_image. If the texture loading dependency is not desired, it can be
 disabled by defining YOBJ_NO_IMAGE before including this file.
 
 
-## Usage for reading
+## Usage Of High-Level Interface
 
-1. load an obj with load_obj()
-    - loads an obj from disk including its associate mtl files
-    - returns a parsed scene data structure described below
-2. [LOW-LEVEL INTERFACE] access the data directly from the returned object
-    - the data is documented below and matches the OBJ file structure
-    exactly
-3. [HIGH-LEVEL INTERFACE] optionally flatten the data as a more friendly
-     representation where shapes are index meshes, supporting points, lines
-     and triangle primitives, with flatten_obj()
-    - the flattened data, documented below, can be use to draw directly on
-      the GPU or in a raytracer
-    - vertices are duplicated as needed to support GPU friendly access
-    - optionally load textures data as float arrays with
-      load_fl_textures()
+1. load a scene with `load_scene()`
+2. look at the `scene` data structures for access to individual elements
+3. can also manipulate the scene by adding missing data with `add_XXX()`
+   functions
+4. since OBJ does natively support mesh transfotms, which we support with
+   instances, use `flatten_instaces()` or `add_instances()` to go back
+   and fourth
+5. use `save_scene()` ti write the data to disk
 
-## Usage for Writing
+## Usage Of Low-Level Interface
 
-1. include this file (more compilation options below)
-2. [LOW-LEVEL INTERFACE] fill an obj object with your scene data and save
-   the obj/mtl pair with save_obj()
-   ok = save_obj(filename, obj, error message)
-3. [HIGH_LEVEL INTERFACE] create a flattened scene object and turn into an
-   obj with unflatten_obj()
+1. load a obj data with `load_obj()`; can load also textues
+2. look at the `obj_XXX` data structures for access to individual elements
+3. use obj back to disk with `save_obj()`; can also save textures
+4. conversion from low- to -high-level data structures with
+   `scene_to_obj()` and `obj_to_scene()`
 
 
 ## History
 
+- v 0.21: bug fixes
 - v 0.20: use yocto_math in the interface and remove inline compilation
 - v 0.19: add missing bounding box computation and missing data functions
 - v 0.18: prioritize high-level interface
@@ -120,6 +115,24 @@ Scene Texture
     - datab:      if loaded, pixel data for LDRs
 
 
+### Struct texture_info
+
+~~~ .cpp
+struct texture_info {
+    bool clamp = false;
+    float bump_scale = 1;
+    property_map<std::string> unknown_props;
+}
+~~~
+
+Scene Texture Additional Information
+
+- Members:
+    - clamp:      clamping
+    - bump_scale:      bump scale
+    - unknown_props:      unknown string props
+
+
 ### Struct material
 
 ~~~ .cpp
@@ -139,11 +152,17 @@ struct material {
     texture* bump_txt = nullptr;
     texture* disp_txt = nullptr;
     texture* norm_txt = nullptr;
+    texture_info ke_txt_info = {};
+    texture_info kd_txt_info = {};
+    texture_info ks_txt_info = {};
+    texture_info kt_txt_info = {};
+    texture_info rs_txt_info = {};
+    texture_info bump_txt_info = {};
+    texture_info disp_txt_info = {};
+    texture_info norm_txt_info = {};
     float stiffness = 0.0f;
     float density = 0.0f;
-    property_map<std::string> str_props;
-    property_map<int> int_props;
-    property_map<float> flt_props;
+    property_map<std::string> unknown_props;
 }
 ~~~
 
@@ -165,11 +184,17 @@ Scene Material
     - bump_txt:      bump map texture (heighfield)
     - disp_txt:      displacement map texture (heighfield)
     - norm_txt:      normal texture
+    - ke_txt_info:      emission texture
+    - kd_txt_info:      diffuse texture
+    - ks_txt_info:      specular texture
+    - kt_txt_info:      transmission texture
+    - rs_txt_info:      roughness texture
+    - bump_txt_info:      bump map texture (heighfield)
+    - disp_txt_info:      displacement map texture (heighfield)
+    - norm_txt_info:      normal texture
     - stiffness:      stiffness
     - density:      density
-    - str_props:      unknown string props
-    - int_props:      unknown int props
-    - flt_props:      unknown float props
+    - unknown_props:      unknown string props
 
 
 ### Struct shape
@@ -313,8 +338,8 @@ Scene
 ### Function load_scene()
 
 ~~~ .cpp
-scene* load_scene(
-    const std::string& filename, bool load_textures, bool flip_texcoord = true);
+scene* load_scene(const std::string& filename, bool load_textures,
+    bool flip_texcoord = true, bool skip_missing = true);
 ~~~
 
 Load scene
@@ -323,7 +348,8 @@ Load scene
     - filename: filename
     - load_textures: whether to load textures (default to false)
     - flip_texcoord: whether to flip the v coordinate
-- Return:
+    - skip_missing: skip missing textures
+- Returns:
     - scene
 
 ### Function save_scene()
@@ -541,10 +567,10 @@ Obj object
     - groups:      element groups
 
 
-### Struct mtl_material
+### Struct obj_material
 
 ~~~ .cpp
-struct mtl_material {
+struct obj_material {
     std::string name;
     int illum = 0;
     ym::vec3f ke = {0, 0, 0};
@@ -568,15 +594,25 @@ struct mtl_material {
     std::string bump_txt;
     std::string disp_txt;
     std::string norm_txt;
+    property_map<std::string> ke_txt_info = {};
+    property_map<std::string> ka_txt_info = {};
+    property_map<std::string> kd_txt_info = {};
+    property_map<std::string> ks_txt_info = {};
+    property_map<std::string> kr_txt_info = {};
+    property_map<std::string> kt_txt_info = {};
+    property_map<std::string> ns_txt_info = {};
+    property_map<std::string> op_txt_info = {};
+    property_map<std::string> ior_txt_info = {};
+    property_map<std::string> bump_txt_info = {};
+    property_map<std::string> disp_txt_info = {};
+    property_map<std::string> norm_txt_info = {};
     float stiffness = 0;
     float density = 0;
-    property_map<std::string> str_props;
-    property_map<int> int_props;
-    property_map<float> flt_props;
+    property_map<std::string> unknown_props;
 }
 ~~~
 
-MTL material
+OBJ material
 
 - Members:
     - name:      material name
@@ -602,11 +638,21 @@ MTL material
     - bump_txt:      bump map texture (heighfield)
     - disp_txt:      displacement map texture (heighfield)
     - norm_txt:      normal map texture
+    - ke_txt_info:      emission texture
+    - ka_txt_info:      ambient texture
+    - kd_txt_info:      diffuse texture
+    - ks_txt_info:      specular texture
+    - kr_txt_info:      reflection texture
+    - kt_txt_info:      transmission texture
+    - ns_txt_info:      specular exponent texture
+    - op_txt_info:      opacity texture
+    - ior_txt_info:      index of refraction
+    - bump_txt_info:      bump map texture (heighfield)
+    - disp_txt_info:      displacement map texture (heighfield)
+    - norm_txt_info:      normal texture
     - stiffness:      overall stiffness
     - density:      density
-    - str_props:      unknown string props
-    - int_props:      unknown int props
-    - flt_props:      unknown float props
+    - unknown_props:      unknown string props
 
 
 ### Struct obj_camera
@@ -681,7 +727,7 @@ struct obj {
     std::vector<ym::vec4f> color;
     std::vector<float> radius;
     std::vector<obj_object> objects;
-    std::vector<mtl_material> materials;
+    std::vector<obj_material> materials;
     std::vector<obj_camera> cameras;
     std::vector<obj_environment> environments;
     std::vector<obj_instance> instances;
@@ -736,7 +782,7 @@ Load OBJ
 ### Function load_mtl()
 
 ~~~ .cpp
-std::vector<mtl_material> load_mtl(const std::string& filename);
+std::vector<obj_material> load_mtl(const std::string& filename);
 ~~~
 
 Load MTL
@@ -764,7 +810,7 @@ Save OBJ
 
 ~~~ .cpp
 void save_mtl(
-    const std::string& filename, const std::vector<mtl_material>& materials);
+    const std::string& filename, const std::vector<obj_material>& materials);
 ~~~
 
 Save MTL (@deprecated interface)

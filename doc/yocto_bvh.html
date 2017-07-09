@@ -13,15 +13,29 @@
 <p>Ray-intersection and closet-point routines supporting points,
 lines, triangles and tetrahedra accelerated by a two-level bounding volume
 hierarchy (BVH). Tetrahedra support is still a work in progress.</p>
+<p>The scene model is comprised of a set of shapes, each with its own BVH.
+Shapes are collections of points, lines, triangles or tetrahedras. each
+shape may contain only one element type. Shapes are organized into a scene
+by creating shape instances, each of which with its own transform. For now,
+we only support rigid transform (translation and rotation). But eventually
+we might be able to support generic transforms. Shape data is shared with
+application and not copied to save memory. Instance data is instead
+kept internally to allow for more flexibility.</p>
+<p>The library supports two main queries. Ray-scene intersection for raytracing
+and point-scene overlap test for collision detection. Also for collision
+detection we support shape bounds overlap for broad-phase collisions.
+Queries and BVH build can be performed over the whole single or single
+shapes.</p>
 <p>This library depends in yocto_math.h</p>
 <h2>Usage</h2>
 <ol>
 <li>create a scene with <code>make_scene()</code></li>
-<li>for each shape, add shape data and transforms with <code>set_point_shape()</code>,
-   <code>set_line_shape()</code>, <code>set_triangle_shape()</code> and <code>set_tetra_shape()</code>; to
+<li>for each shape, add shape data and transforms with <code>add_point_shape()</code>,
+   <code>add_line_shape()</code>, <code>add_triangle_shape()</code> and <code>add_tetra_shape()</code>; to
    modify the frame call <code>set_shape_frame()</code></li>
-<li>build the bvh with <code>build_bvh()</code> using the specified heuristic (or
-default) 4. perform ray-interseciton tests with <code>intersect_ray()</code><ul>
+<li>add shape instances with <code>add_instance()</code></li>
+<li>build the bvh with <code>build_scene_bvh()</code></li>
+<li>perform ray-interseciton tests with <code>intersect_ray()</code><ul>
 <li>use early_exit=false if you want to know the closest hit point</li>
 <li>use early_exit=false if you only need to know whether there is a hit</li>
 <li>for points and lines, a radius is required</li>
@@ -36,10 +50,11 @@ default) 4. perform ray-interseciton tests with <code>intersect_ray()</code><ul>
   overlap is approximate</li>
 </ul>
 </li>
-<li>perform shape overlap queries with <code>overlap_shape_bounds()</code> and
-   <code>overlap_verts()</code></li>
+<li>perform shape overlap queries with <code>overlap_shape_bounds()</code></li>
 <li>use <code>refit_bvh()</code> to recompute the bvh bounds if transforms or vertices
-   are (you should rebuild the bvh for large changes)</li>
+   are (you should rebuild the bvh for large changes); update the instances'
+   transforms with <code>set_instance_frame()</code>; shapes use shared memory, so
+   no explicit update is necessary</li>
 </ol>
 <h2>History</h2>
 <ul>
