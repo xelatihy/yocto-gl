@@ -66,6 +66,7 @@ this can used to access the scene data with `scene::get<T>(index)`.
 
 
 ## History
+- v 0.12: removed explicit root nodes
 - v 0.11: added camera near/far to high-level interface
 - v 0.10: added moprhing to high-level interface
 - v 0.9: use yocto_math in the interface and remove inline compilation
@@ -406,6 +407,7 @@ struct node {
     ym::mat4f xform = ym::identity_mat4f;
     ym::mat4f local_xform = ym::identity_mat4f;
     ym::mat4f skin_xform = ym::identity_mat4f;
+    node* parent = nullptr;
 }
 ~~~
 
@@ -423,9 +425,10 @@ Node in the hierarchy.
     - scale:      The node's non-uniform scale.
     - translation:      The node's translation.
     - morph_weights:      morph target weights
-    - xform:      transform (computed during update)
-    - local_xform:      local transform (computed during update)
-    - skin_xform:      skin transform (computed during update)
+    - xform:      transform (computed during update_transforms())
+    - local_xform:      local transform (computed during update_transforms())
+    - skin_xform:      skin transform (computed during update_transforms())
+    - parent:      parent node (computed during update_transforms())
 
 
 ### Enum animation_interpolation
@@ -527,7 +530,7 @@ Skin
     - name:      name
     - pose_matrices:      inverse bind matrix
     - joints:      joints
-    - root:      root joint
+    - root:      skeleton root node
 
 
 ### Struct scene
@@ -559,7 +562,6 @@ struct scene_group {
     std::vector<node*> nodes;
     std::vector<animation_group*> animations;
     std::vector<skin*> skins;
-    std::vector<node*> root_nodes;
     ~scene_group(); 
 }
 ~~~
@@ -577,7 +579,6 @@ Scenes and nodes are missing for mesh-only assets.
     - nodes:      nodes
     - animations:      nodes
     - skins:      skins
-    - root_nodes:      root nodes
     - ~scene_group():      cleanup
 
 

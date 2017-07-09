@@ -1147,8 +1147,10 @@ void draw_tree_widgets(ygui::window* win, const std::string& lbl,
     }
 
     if (ygui::tree_begin_widget(win, lbl + "nodes")) {
-        for (auto node : oscn->root_nodes)
-            draw_tree_widgets(win, "", node, selection);
+        for (auto node : oscn->nodes) {
+            if(!node->parent)
+                draw_tree_widgets(win, "", node, selection);
+        }
         ygui::tree_end_widget(win);
     }
 

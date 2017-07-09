@@ -3024,6 +3024,23 @@ tangent wrt the V texcoord. Tangent frame is useful in normal mapping.</p>
 
 
 <p>Apply skinning</p>
+<h3>Function compute_matrix_skinning()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">compute_matrix_skinning</span><span class="p">(</span><span class="kt">int</span> <span class="n">nverts</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec3f</span><span class="o">*</span> <span class="n">pos</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">vec3f</span><span class="o">*</span> <span class="n">norm</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec4f</span><span class="o">*</span> <span class="n">weights</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec4i</span><span class="o">*</span> <span class="n">joints</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">mat4f</span><span class="o">*</span> <span class="n">xforms</span><span class="p">,</span> <span class="n">vec3f</span><span class="o">*</span> <span class="n">skinned_pos</span><span class="p">,</span> <span class="n">vec3f</span><span class="o">*</span> <span class="n">skinned_norm</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Apply skinning as specified in Khronos glTF</p>
+<h3>Function compute_matrix_skinning()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">compute_matrix_skinning</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">pos</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">norm</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4f</span><span class="o">&gt;&amp;</span> <span class="n">weights</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;&amp;</span> <span class="n">joints</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">mat4f</span><span class="o">&gt;&amp;</span> <span class="n">xforms</span><span class="p">,</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">skinned_pos</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">skinned_norm</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Apply skinning as specified in Khronos glTF</p>
 <h3>Function make_triangles()</h3>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">PosFunc</span><span class="p">,</span> <span class="k">typename</span> <span class="n">NormFunc</span><span class="p">,</span> <span class="k">typename</span> <span class="n">TexcoordFunc</span><span class="o">&gt;</span>
 <span class="kr">inline</span> <span class="kt">void</span> <span class="n">make_triangles</span><span class="p">(</span><span class="kt">int</span> <span class="n">usteps</span><span class="p">,</span> <span class="kt">int</span> <span class="n">vsteps</span><span class="p">,</span>

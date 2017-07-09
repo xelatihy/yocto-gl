@@ -3676,6 +3676,27 @@ inline void compute_skinning(const std::vector<vec3f>& pos,
 
 Apply skinning
 
+### Function compute_matrix_skinning()
+
+~~~ .cpp
+inline void compute_matrix_skinning(int nverts, const vec3f* pos,
+    const vec3f* norm, const vec4f* weights, const vec4i* joints,
+    const mat4f* xforms, vec3f* skinned_pos, vec3f* skinned_norm);
+~~~
+
+Apply skinning as specified in Khronos glTF
+
+### Function compute_matrix_skinning()
+
+~~~ .cpp
+inline void compute_matrix_skinning(const std::vector<vec3f>& pos,
+    const std::vector<vec3f>& norm, const std::vector<vec4f>& weights,
+    const std::vector<vec4i>& joints, const std::vector<mat4f>& xforms,
+    std::vector<vec3f>& skinned_pos, std::vector<vec3f>& skinned_norm);
+~~~
+
+Apply skinning as specified in Khronos glTF
+
 ### Function make_triangles()
 
 ~~~ .cpp

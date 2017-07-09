@@ -1372,7 +1372,6 @@ ygltf::scene_group* obj2gltf(const yobj::scene* obj, bool add_scene) {
                 gnode->name = msh->name;
                 gnode->mesh = msh;
                 scn->nodes.push_back(gnode);
-                gltf->root_nodes.push_back(gnode);
                 gltf->nodes.push_back(gnode);
             }
         } else {
@@ -1381,7 +1380,6 @@ ygltf::scene_group* obj2gltf(const yobj::scene* obj, bool add_scene) {
                 gnode->name = oist->name;
                 gnode->matrix = oist->xform;
                 gnode->mesh = gltf->meshes[index(obj->meshes, oist->mesh)];
-                gltf->root_nodes.push_back(gnode);
                 scn->nodes.push_back(gnode);
                 gltf->nodes.push_back(gnode);
             }
@@ -1405,7 +1403,6 @@ ygltf::scene_group* obj2gltf(const yobj::scene* obj, bool add_scene) {
                 gnode->name = ocam->name;
                 gnode->matrix = ocam->xform;
                 gnode->camera = gcam;
-                gltf->root_nodes.push_back(gnode);
                 scn->nodes.push_back(gnode);
                 gltf->nodes.push_back(gnode);
             }
