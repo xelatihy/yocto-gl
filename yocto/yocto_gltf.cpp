@@ -3189,6 +3189,7 @@ scene_group* gltf_to_scenes(const glTF* gltf, int scene_idx) {
         for (auto n : gscn->nodes) scn->nodes.push_back(scns->nodes[(int)n]);
         scns->scenes.push_back(scn);
     }
+    if (gltf->scene) { scns->default_scene = scns->scenes[(int)gltf->scene]; }
 
     // update transforms
     update_transforms(scns);

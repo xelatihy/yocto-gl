@@ -203,6 +203,9 @@ inline void load_scene(
         }
         ygltf::add_names(scn->gscn);
         scn->time_range = ygltf::get_animation_bounds(scn->gscn);
+        if (!scn->gscn->default_scene && !scn->gscn->scenes.empty()) {
+            scn->gscn->default_scene = scn->gscn->scenes[0];
+        }
         scn->gsscn = scn->gscn->default_scene;
         if (!scn->gsscn && !scn->gscn->scenes.empty()) {
             scn->gsscn = scn->gscn->scenes[0];

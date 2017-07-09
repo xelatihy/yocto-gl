@@ -166,15 +166,15 @@ static void _parse_vertlist(char** tok, int ntoks,
 //
 obj* load_obj(const std::string& filename, bool flip_texcoord) {
     // clear obj
-    auto asset = std::unique_ptr<obj>();
+    auto asset = std::unique_ptr<obj>(new obj());
 
     // open file
     auto file = fopen(filename.c_str(), "rt");
     if (!file) throw obj_exception("cannot open filename " + filename);
 
     // initializing obj
-    asset->objects.emplace_back();
-    asset->objects.back().groups.emplace_back();
+    asset->objects.push_back({});
+    asset->objects.back().groups.push_back({});
 
     // allocate buffers to avoid re-allocing
     auto cur_elems = std::vector<obj_vertex>();

@@ -340,12 +340,12 @@ ytrace::scene* make_trace_scene(const yobj::scene* scene, const ycamera* cam) {
 }
 
 ytrace::scene* make_trace_scene(
-    const ygltf::scene_group* scene, const ycamera* cam) {
+    const ygltf::scene_group* scenes, const ycamera* cam) {
     auto trace_scene = ytrace::make_scene();
 
     ytrace::add_camera(trace_scene, cam->frame, cam->yfov, cam->aspect,
         cam->aperture, cam->focus);
-    auto cameras = ygltf::get_camera_nodes(scene->default_scene);
+    auto cameras = ygltf::get_camera_nodes(scenes->default_scene);
     for (auto cam : cameras) {
         ytrace::add_camera(trace_scene, ym::to_frame(cam->xform),
             cam->camera->yfov, cam->camera->aspect, cam->camera->aperture,
@@ -353,7 +353,7 @@ ytrace::scene* make_trace_scene(
     }
 
     auto texture_map = std::map<ygltf::texture*, int>{{nullptr, -1}};
-    for (auto txt : scene->textures) {
+    for (auto txt : scenes->textures) {
         if (!txt->dataf.empty()) {
             texture_map[txt] = ytrace::add_texture(trace_scene, txt->width,
                 txt->height, txt->ncomp, txt->dataf.data());
@@ -366,7 +366,7 @@ ytrace::scene* make_trace_scene(
     }
 
     auto material_map = std::map<ygltf::material*, int>{{nullptr, -1}};
-    for (auto mat : scene->materials) {
+    for (auto mat : scenes->materials) {
         if (mat->specular_glossiness) {
             auto sg = mat->specular_glossiness;
             material_map[mat] = ytrace::add_material_gltf_specular_glossiness(
@@ -395,7 +395,7 @@ ytrace::scene* make_trace_scene(
 
     auto sid = 0;
     auto shape_map = std::map<ygltf::shape*, int>{{nullptr, -1}};
-    for (auto mesh : scene->meshes) {
+    for (auto mesh : scenes->meshes) {
         for (auto shape : mesh->shapes) {
             if (!shape->points.empty()) {
                 shape_map[shape] = ytrace::add_point_shape(trace_scene,
@@ -424,7 +424,7 @@ ytrace::scene* make_trace_scene(
         }
     }
 
-    auto instances = ygltf::get_mesh_nodes(scene->default_scene);
+    auto instances = ygltf::get_mesh_nodes(scenes->default_scene);
     if (!instances.empty()) {
         for (auto ist : instances) {
             for (auto shp : ist->mesh->shapes) {
@@ -433,7 +433,7 @@ ytrace::scene* make_trace_scene(
             }
         }
     } else {
-        for (auto msh : scene->meshes) {
+        for (auto msh : scenes->meshes) {
             for (auto shp : msh->shapes) {
                 ytrace::add_instance(trace_scene, ym::identity_frame3f,
                     shape_map.at(shp), material_map.at(shp->material));
