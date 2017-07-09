@@ -660,6 +660,7 @@ yobj::mesh* add_point(yobj::scene* scn, const std::string& name,
     yobj::material* mat, float radius = 0.001f) {
     auto shp = new yobj::shape();
     shp->mat = mat;
+    shp->name = name;
     shp->points.push_back(0);
     shp->pos.push_back({0, 0, 0});
     shp->norm.push_back({0, 0, 1});
@@ -1417,8 +1418,8 @@ ygltf::scene_group* obj2gltf(const yobj::scene* obj, bool add_scene) {
 
 void save_scene(const std::string& scenename, const std::string& dirname,
     yobj::scene* oscn, bool add_gltf_scene = true) {
-    yobj::flatten_instances(oscn);
     auto gscn = obj2gltf(oscn, add_gltf_scene);
+    yobj::flatten_instances(oscn);
 
     yobj::save_scene(dirname + "/" + scenename + ".obj", oscn, false);
     ygltf::save_scenes(dirname + "/" + scenename + ".gltf", gscn, false);
