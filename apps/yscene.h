@@ -216,6 +216,8 @@ inline void load_scene(
             scn->view_cam->frame = ym::to_frame(ym::mat4f(cam->xform));
             scn->view_cam->yfov = cam->camera->yfov;
             scn->view_cam->aspect = cam->camera->aspect;
+            scn->view_cam->near = cam->camera->near;
+            scn->view_cam->far = cam->camera->far;
             scn->view_cam->focus = cam->camera->focus;
             scn->view_cam->aperture = cam->camera->aperture;
         }
@@ -725,18 +727,31 @@ inline void shade_scene(const ygltf::scene_group* scns, const ygltf::scene* scn,
         camera_xform = ym::mat4f(gcam->xform);
         camera_view = ym::inverse(ym::mat4f(gcam->xform));
         if (gcam->camera->ortho) {
+            auto near = (gcam->camera->near) ? gcam->camera->near : 0.001f;
+            auto far = (gcam->camera->far) ? gcam->camera->far : 10000;
             camera_proj =
                 ym::ortho_mat4(gcam->camera->yfov * gcam->camera->aspect,
-                    gcam->camera->yfov, 0.01f, 100000.0f);
+                    gcam->camera->yfov, near, far);
         } else {
-            camera_proj = ym::perspective_mat4(
-                gcam->camera->yfov, gcam->camera->aspect, 0.01f, 100000.0f);
+            auto near = (gcam->camera->near) ? gcam->camera->near : 0.001f;
+            if (gcam->camera->far) {
+                camera_proj = ym::perspective_mat4(gcam->camera->yfov,
+                    gcam->camera->aspect, near, gcam->camera->far);
+            } else {
+                camera_proj = ym::perspective_mat4(
+                    gcam->camera->yfov, gcam->camera->aspect, 0.01f);
+            }
         }
     } else {
         camera_xform = ym::to_mat(ycam->frame);
         camera_view = ym::to_mat(ym::inverse(ycam->frame));
-        camera_proj = ym::perspective_mat4(
-            ycam->yfov, ycam->aspect, ycam->near, ycam->far);
+        auto near = (ycam->near) ? ycam->near : 0.001f;
+        if (ycam->far) {
+            camera_proj =
+                ym::perspective_mat4(ycam->yfov, ycam->aspect, near, ycam->far);
+        } else {
+            camera_proj = ym::perspective_mat4(ycam->yfov, ycam->aspect, near);
+        }
     }
 
     yglu::stdshader::begin_frame(st->prog, st->vao, camera_lights, exposure,

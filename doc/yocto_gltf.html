@@ -69,6 +69,7 @@ an object of type T. Internally this is just the same old glTF index. But
 this can used to access the scene data with <code>scene::get&lt;T&gt;(index)</code>.</p>
 <h2>History</h2>
 <ul>
+<li>v 0.11: added camera near/far to high-level interface</li>
 <li>v 0.10: added moprhing to high-level interface</li>
 <li>v 0.9: use yocto_math in the interface and remove inline compilation</li>
 <li>v 0.8: API changes to match to GLTF 2</li>
@@ -90,6 +91,8 @@ this can used to access the scene data with <code>scene::get&lt;T&gt;(index)</co
     <span class="kt">bool</span> <span class="n">ortho</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
     <span class="kt">float</span> <span class="n">aspect</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
     <span class="kt">float</span> <span class="n">yfov</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">std</span><span class="o">::</span><span class="n">atan</span><span class="p">(</span><span class="mf">0.5f</span><span class="p">);</span>
+    <span class="kt">float</span> <span class="n">near</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="kt">float</span> <span class="n">far</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
     <span class="kt">float</span> <span class="n">focus</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
     <span class="kt">float</span> <span class="n">aperture</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
 <span class="p">}</span>
@@ -103,6 +106,8 @@ this can used to access the scene data with <code>scene::get&lt;T&gt;(index)</co
 <li>ortho:      orthographic</li>
 <li>aspect:      aspect ratio</li>
 <li>yfov:      vertical fov (perspective) or size (orthographic)</li>
+<li>near:      near plane (0 for default)</li>
+<li>far:      far plane (0 for default)</li>
 <li>focus:      focus distance (extension not implemented yet)</li>
 <li>aperture:      lens aperture (extension not implemented yet)</li>
 </ul>
