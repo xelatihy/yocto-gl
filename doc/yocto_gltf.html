@@ -19,31 +19,37 @@ Supports glTF version 2.0 and the following extensions: <code>KHR_binary_glTF</c
 json.hpp. Texture loading/saving depends on yocto_image.h. If the texture
 loading/saving dependency is not desired, it can be disabled by defining
 YGLTF_NO_IMAGE before including this file.</p>
-<h2>Usage For Reading</h2>
+<p>The library provides two interfaces. A low-level interface is a direct
+C++ translation of the glTF schemas and should be used if one wants
+complete control over the fromat or an application wants to have their
+own scene code added. We also provide a high-level interface that is more
+useful if an aplication needs direct access to shapes, textures and
+animations and does not want to deal with all the intricacies of the format.
+In particular all glTF buffers are resolved and normalized to standard C++
+types. The high-level interface supports easy access to animation, skinning
+and morphingd data.</p>
+<h2>Usage Of High-Level Interface</h2>
 <ol>
-<li>load a gltf with load_gltf() for ascii gltf or load_gltf_binary() for the
-    binary version</li>
-<li>[LOW-LEVEL INTERFACE] access the data directly from the returned object<ul>
-<li>the data is documented below and matches the GLTF file structure
-exactly</li>
-</ul>
-</li>
-<li>[HIGH-LEVEL INTERFACE] optionally flatten the data as a more friendly
-    representation where shapes are index meshes, supporting points, lines
-    and triangle primitives with flatten_gltf()<ul>
-<li>the flattened data, documented below, can be use to draw directly on
-the GPU or in a raytracer</li>
-</ul>
-</li>
+<li>load a group of scens with <code>load_scenes()</code></li>
+<li>look at the <code>scene</code> data structures for access to individual elements</li>
+<li>to support animation, use <code>update_animated_transforms()</code></li>
+<li>to support skinning, use <code>get_skin_transforms()</code></li>
+<li>for morphing, use <code>compute_morphing_deformation()</code></li>
+<li>can also manipulate the scene by adding missing data with <code>add_XXX()</code>
+   functions</li>
+<li>for rendering scenes, use <code>get_scene_cameras()</code> and
+   <code>get_scene_instances()</code> that avoid the need for explicirtly walking
+   the glTF node hierarchy</li>
+<li>use <code>save_scenes()</code> ti write the data to disk</li>
 </ol>
-<h2>Usage For Writing</h2>
+<h2>Usage Of Low-Level Interface</h2>
 <ol>
-<li>include this file (more compilation options below)</li>
-<li>[LOW-LEVEL INTERFACE] fill a gltf object with your scene data and save
-   the gltf and binary data with save_gltf()
-   ok = save_gltf(filename, obj, error message, flags)</li>
-<li>[HIGH_LEVEL INTERFACE] create a flattened scene object and turn into a
-   gltf with unflatten_gltf()</li>
+<li>load a glTF data with <code>load_gltf()</code>; can load also buffer and image
+   data</li>
+<li>look at the <code>glTFXXX</code> data structures for access to individual elements</li>
+<li>use glTF back to disk with <code>save_gltf()</code>; can also save binary blobs</li>
+<li>conversion from low- to -high-level data structures with
+   <code>scenes_to_gltf()</code> and <code>gltf_to_scenes()</code></li>
 </ol>
 <h2>Design Considerations</h2>
 <p>glTF is a <em>very</em> complex file format and was designed mainly with untyped
@@ -55,6 +61,12 @@ pointers to reference to all glTF objects. While this makes it less effcient
 than it might have been, glTF heavy use of optional values makes this
 necessary. At the same time, we do not keep track of set/unset values
 for basic types (int, float, bool) as a compromise for efficieny.</p>
+<p>In the low level interface, glTF uses integer indices to access objects.
+While writing code ourselves we found that we add signiicant problems
+since we would use an index to access the wriong type of scene objects.
+For this reasons, we use an explit index <code>glTFid&lt;T&gt;</code> that can only access
+an object of type T. Internally this is just the same old glTF index. But
+this can used to access the scene data with <code>scene::get&lt;T&gt;(index)</code>.</p>
 <h2>History</h2>
 <ul>
 <li>v 0.10: added moprhing to high-level interface</li>
@@ -564,7 +576,8 @@ Scenes and nodes are missing for mesh-only assets.</p>
 </li>
 </ul>
 <h3>Function load_scenes()</h3>
-<div class="codehilite"><pre><code><span></span><span class="n">scene_group</span><span class="o">*</span> <span class="nf">load_scenes</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">load_textures</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="n">scene_group</span><span class="o">*</span> <span class="nf">load_scenes</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">load_textures</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">skip_missing</span> <span class="o">=</span> <span class="nb">true</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -573,6 +586,7 @@ Scenes and nodes are missing for mesh-only assets.</p>
 <li>Parameters:<ul>
 <li>filename: filename</li>
 <li>load_textures: whether to load textures (default to false)</li>
+<li>skip_missing: whether to skip missing buffers and textures</li>
 </ul>
 </li>
 <li>Return:<ul>

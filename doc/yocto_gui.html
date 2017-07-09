@@ -10,12 +10,17 @@
         <header></header>
         <article>
         <h1>Yocto/Gui</h1>
-<p>A set of utilities for windows and widgets using GLFW and ImGui.</p>
+<p>A set of utilities for windows= management and immediate mode widgets
+using GLFW and ImGui. This is just a straightfoward wrapper with the
+main benefit of integrating ImGui in GLFW without explicit application
+support by modying GLFW callbacks. Also provides easy to use ImGui wrappers.</p>
 <p>This library depends in yocto_math.h
 The library depends on GLEW for OpenGL functions on Windows and Linux,
 GLFW for window management and dear ImGui for widgets.</p>
 <h2>History</h2>
 <ul>
+<li>v 0.2: added widgets explicit IDs</li>
+<li>v 0.1: added more widgets</li>
 <li>v 0.0: initial release split from yocto_glu</li>
 </ul>
 <h2>Namespace ygui</h2>
@@ -225,84 +230,84 @@ GLFW for window management and dear ImGui for widgets.</p>
 </code></pre></div>
 
 
-<p>Label and float widget</p>
+<p>Label widget</p>
 <h3>Function label_widget()</h3>
 <div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">label_widget</span><span class="p">(</span><span class="n">window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec2f</span> <span class="n">val</span><span class="p">,</span>
     <span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">fmt</span> <span class="o">=</span> <span class="s">&quot;[ %f, %f ]&quot;</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Label and float widget</p>
+<p>Label widget</p>
 <h3>Function label_widget()</h3>
 <div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">label_widget</span><span class="p">(</span><span class="n">window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span> <span class="n">val</span><span class="p">,</span>
     <span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">fmt</span> <span class="o">=</span> <span class="s">&quot;[ %f, %f, %f ]&quot;</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Label and float widget</p>
+<p>Label widget</p>
 <h3>Function label_widget()</h3>
 <div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">label_widget</span><span class="p">(</span><span class="n">window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec4f</span> <span class="n">val</span><span class="p">,</span>
     <span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">fmt</span> <span class="o">=</span> <span class="s">&quot;[ %f, %f, %f ]&quot;</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Label and float widget</p>
+<p>Label widget</p>
 <h3>Function slider_widget()</h3>
 <div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">slider_widget</span><span class="p">(</span><span class="n">window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span> <span class="kt">int</span><span class="o">*</span> <span class="n">val</span><span class="p">,</span> <span class="kt">int</span> <span class="n">min</span><span class="p">,</span>
     <span class="kt">int</span> <span class="n">max</span><span class="p">,</span> <span class="kt">int</span> <span class="n">incr</span> <span class="o">=</span> <span class="mi">1</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Int widget</p>
+<p>Slider widget</p>
 <h3>Function slider_widget()</h3>
 <div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">slider_widget</span><span class="p">(</span><span class="n">window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec2i</span><span class="o">*</span> <span class="n">val</span><span class="p">,</span> <span class="kt">int</span> <span class="n">min</span><span class="p">,</span>
     <span class="kt">int</span> <span class="n">max</span><span class="p">,</span> <span class="kt">int</span> <span class="n">incr</span> <span class="o">=</span> <span class="mi">1</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Int widget</p>
+<p>Slider widget</p>
 <h3>Function slider_widget()</h3>
 <div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">slider_widget</span><span class="p">(</span><span class="n">window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3i</span><span class="o">*</span> <span class="n">val</span><span class="p">,</span> <span class="kt">int</span> <span class="n">min</span><span class="p">,</span>
     <span class="kt">int</span> <span class="n">max</span><span class="p">,</span> <span class="kt">int</span> <span class="n">incr</span> <span class="o">=</span> <span class="mi">1</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Int widget</p>
+<p>Slider widget</p>
 <h3>Function slider_widget()</h3>
 <div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">slider_widget</span><span class="p">(</span><span class="n">window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec4i</span><span class="o">*</span> <span class="n">val</span><span class="p">,</span> <span class="kt">int</span> <span class="n">min</span><span class="p">,</span>
     <span class="kt">int</span> <span class="n">max</span><span class="p">,</span> <span class="kt">int</span> <span class="n">incr</span> <span class="o">=</span> <span class="mi">1</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Int widget</p>
+<p>Slider widget</p>
 <h3>Function slider_widget()</h3>
 <div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">slider_widget</span><span class="p">(</span><span class="n">window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span> <span class="kt">float</span><span class="o">*</span> <span class="n">val</span><span class="p">,</span> <span class="kt">float</span> <span class="n">min</span><span class="p">,</span>
     <span class="kt">float</span> <span class="n">max</span><span class="p">,</span> <span class="kt">float</span> <span class="n">incr</span> <span class="o">=</span> <span class="mf">1.0f</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Float widget</p>
+<p>Slider widget</p>
 <h3>Function slider_widget()</h3>
 <div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">slider_widget</span><span class="p">(</span><span class="n">window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec2f</span><span class="o">*</span> <span class="n">val</span><span class="p">,</span>
     <span class="kt">float</span> <span class="n">min</span><span class="p">,</span> <span class="kt">float</span> <span class="n">max</span><span class="p">,</span> <span class="kt">float</span> <span class="n">incr</span> <span class="o">=</span> <span class="mf">1.0f</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Float widget</p>
+<p>Slider widget</p>
 <h3>Function slider_widget()</h3>
 <div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">slider_widget</span><span class="p">(</span><span class="n">window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">*</span> <span class="n">val</span><span class="p">,</span>
     <span class="kt">float</span> <span class="n">min</span><span class="p">,</span> <span class="kt">float</span> <span class="n">max</span><span class="p">,</span> <span class="kt">float</span> <span class="n">incr</span> <span class="o">=</span> <span class="mf">1.0f</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Float widget</p>
+<p>Slider widget</p>
 <h3>Function slider_widget()</h3>
 <div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">slider_widget</span><span class="p">(</span><span class="n">window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec4f</span><span class="o">*</span> <span class="n">val</span><span class="p">,</span>
     <span class="kt">float</span> <span class="n">min</span><span class="p">,</span> <span class="kt">float</span> <span class="n">max</span><span class="p">,</span> <span class="kt">float</span> <span class="n">incr</span> <span class="o">=</span> <span class="mf">1.0f</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Float widget</p>
+<p>Slider widget</p>
 <h3>Function checkbox_widget()</h3>
 <div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">checkbox_widget</span><span class="p">(</span><span class="n">window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span> <span class="kt">bool</span><span class="o">*</span> <span class="n">val</span><span class="p">);</span>
 </code></pre></div>

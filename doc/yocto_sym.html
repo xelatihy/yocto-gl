@@ -21,22 +21,23 @@ convex collision detection such as GJK or MPR.</p>
 known as Projected Guass-Sidel. Friction is grossly approximated now,
 waiting for a refactoring before getting better.</p>
 <p>This library depends in yocto_math.h Optionally depend on yocto_bvh.h/.cpp
-for internal acceleration. Disable this by setting YTRACE_NO_BVH.</p>
-<h2>Usage</h2>
+for internal acceleration. Disable this by setting YSYM_NO_BVH.</p>
+<h2>Usage for Scene Creation</h2>
 <ol>
-<li>define the rigib body scene<ul>
-<li>init the scene with make_scene()</li>
-<li>for each rigid body, set shape data with set_body()</li>
-<li>set collision callbacks with set_overlap_callbacks()</li>
-</ul>
-</li>
-<li>start tha simulation with init_simulation()</li>
-<li>for each frame, advacne the simulation with advance_simulation()</li>
-<li>after each frame, retrive or change the rigid body frame, with
-    get_body_frame() and set_body_frame(), and the rigid body velocities
-    with get_body_velocity() and set_body_velocity()</li>
-<li>if desired, you can explicitly compute rigid body moments with
-    compute_moments()</li>
+<li>create a scene with <code>make_scene()</code></li>
+<li>add materials with <code>add_rigid_material()</code></li>
+<li>add shapes with <code>add_rigid_shape()</code></li>
+<li>add instances with <code>add_instance()</code></li>
+</ol>
+<h2>Usage for Simulation</h2>
+<ol>
+<li>either build the point-overlap acceleration structure with
+  <code>init_overlap()</code> or supply your own with <code>set_overlap_callbacks()</code></li>
+<li>prepare simuation internal data <code>init_simulation()</code></li>
+<li>define simulation params with the <code>simulation_params</code> structure</li>
+<li>advance the simiulation with <code>advance_simulation()</code></li>
+<li>set or get rigid body frames and velocities with <code>set_XXX()</code> and
+<code>get_XXX()</code> methods</li>
 </ol>
 <h2>History</h2>
 <ul>

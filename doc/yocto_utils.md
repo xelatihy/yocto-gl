@@ -2,7 +2,7 @@
 
 Utilities for writing command line applications, mostly
 a simple to use command line parser, a logger, a thread-pool,
-and string, path and file functions. All functions are defined
+and string, path and file functions, and a timer. All functions are defined
 in separate namespaces.
 
 ## Usage for Command Line Parsing
@@ -25,7 +25,7 @@ in separate namespaces.
     - names are only used for help
     - supports types as above
     - for general use `arg = parse_arg<type>()`
-    - to parse all remaining values use args = parse_arga<type>(...)
+    - to parse all remaining values use `args = parse_arga<type>(...)`
 5. end cmdline parsing with `check_parser()` to check for unsued values,
    missing arguments and print help if needed
 6. since arguments are parsed immediately, one can easily implement
@@ -49,18 +49,20 @@ illustreates the library usage.
 1. namespace concurrent
 2. either create a thread pool `make_thread_pool` or use the global one
 3. run tasks in parallel `thread_pool_for()`
-4. run tasks asynchronously `thread_pool_async()
+4. run tasks asynchronously `thread_pool_async()`
 
 ## Utilities
 
-1. filename splitting functions in namespace path
-2. loading and save entire files in namespace file
-3. Python-line string manipulation in namespace string
-5. Python-like operators for standard containers in namespace stl_operators
+1. filename splitting functions in namespace `path`
+2. loading and save entire files in namespace `file`
+3. Python-line string manipulation in namespace `string`
+4. Python-like operators for standard containers in namespace `operators`
+5. simple timer in namespace `timer`
 
 
 ## History
 
+- v 0.18: timer
 - v 0.17: renamed to yocto utils
 - v 0.16: split into namespaces
 - v 0.15: remove inline compilation
@@ -872,4 +874,28 @@ void parallel_for(int count, const std::function<void(int idx)>& task);
 ~~~
 
 Parallel for implementation on a global thread pool
+
+## Namespace timer
+
+Simple timer for performance measumrents.
+
+### Struct timer
+
+~~~ .cpp
+struct timer {
+    timer(bool autostart = true); 
+    void start(); 
+    void stop(); 
+    double elapsed(); 
+}
+~~~
+
+A simple wrapper for std::chrono.
+
+- Members:
+    - timer():      initialize a timer and start it if necessary
+    - start():      start a timer
+    - stop():      stops a timer
+    - elapsed():      elapsed time
+
 

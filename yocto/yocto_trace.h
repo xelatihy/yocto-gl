@@ -582,7 +582,7 @@ void trace_block(const scene* scn, int width, int height, ym::vec4f* img,
     int samples_min, int samples_max, const render_params& params);
 
 ///
-/// Convenience function to call trace_block with all sample at once.
+/// Convenience function to call trace_block() with all samples at once.
 ///
 void trace_image(const scene* scn, const int width, int height, ym::vec4f* img,
     const render_params& params);

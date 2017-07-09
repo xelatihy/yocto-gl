@@ -55,6 +55,7 @@
 ///
 /// ## History
 ///
+/// - v 0.21: bug fixes
 /// - v 0.20: use yocto_math in the interface and remove inline compilation
 /// - v 0.19: add missing bounding box computation and missing data functions
 /// - v 0.18: prioritize high-level interface
@@ -152,6 +153,18 @@ struct texture {
 };
 
 ///
+/// Scene Texture Additional Information
+///
+struct texture_info {
+    /// clamping
+    bool clamp = false;
+    /// bump scale
+    float bump_scale = 1;
+    /// unknown string props
+    property_map<std::string> unknown_props;
+};
+
+///
 /// Scene Material
 ///
 struct material {
@@ -173,7 +186,7 @@ struct material {
     /// opacity
     float opacity = 1;
 
-    // indices in the texture array (-1 if not found)
+    // textures -------------------------------
     /// emission texture
     texture* ke_txt = nullptr;
     /// diffuse texture
@@ -191,6 +204,24 @@ struct material {
     /// normal texture
     texture* norm_txt = nullptr;
 
+    // texture information ---------------------
+    /// emission texture
+    texture_info ke_txt_info = {};
+    /// diffuse texture
+    texture_info kd_txt_info = {};
+    /// specular texture
+    texture_info ks_txt_info = {};
+    /// transmission texture
+    texture_info kt_txt_info = {};
+    /// roughness texture
+    texture_info rs_txt_info = {};
+    /// bump map texture (heighfield)
+    texture_info bump_txt_info = {};
+    /// displacement map texture (heighfield)
+    texture_info disp_txt_info = {};
+    /// normal texture
+    texture_info norm_txt_info = {};
+
     // physics extensions ---------------------
     /// stiffness
     float stiffness = 0.0f;
@@ -199,11 +230,7 @@ struct material {
 
     // unknown properties ---------------------
     /// unknown string props
-    property_map<std::string> str_props;
-    /// unknown int props
-    property_map<int> int_props;
-    /// unknown float props
-    property_map<float> flt_props;
+    property_map<std::string> unknown_props;
 };
 
 ///
@@ -325,11 +352,12 @@ struct scene {
 ///     - filename: filename
 ///     - load_textures: whether to load textures (default to false)
 ///     - flip_texcoord: whether to flip the v coordinate
-/// - Return:
+///     - skip_missing: skip missing textures
+/// - Returns:
 ///     - scene
 ///
-scene* load_scene(
-    const std::string& filename, bool load_textures, bool flip_texcoord = true);
+scene* load_scene(const std::string& filename, bool load_textures,
+    bool flip_texcoord = true, bool skip_missing = true);
 
 ///
 /// Save scene
@@ -506,9 +534,9 @@ struct obj_object {
 };
 
 ///
-/// MTL material
+/// OBJ material
 ///
-struct mtl_material {
+struct obj_material {
     // whole material data ------------------
     /// material name
     std::string name;
@@ -561,6 +589,32 @@ struct mtl_material {
     /// normal map texture
     std::string norm_txt;
 
+    // texture information ---------------------
+    /// emission texture
+    property_map<std::string> ke_txt_info = {};
+    /// ambient texture
+    property_map<std::string> ka_txt_info = {};
+    /// diffuse texture
+    property_map<std::string> kd_txt_info = {};
+    /// specular texture
+    property_map<std::string> ks_txt_info = {};
+    /// reflection texture
+    property_map<std::string> kr_txt_info = {};
+    /// transmission texture
+    property_map<std::string> kt_txt_info = {};
+    /// specular exponent texture
+    property_map<std::string> ns_txt_info = {};
+    /// opacity texture
+    property_map<std::string> op_txt_info = {};
+    /// index of refraction
+    property_map<std::string> ior_txt_info = {};
+    /// bump map texture (heighfield)
+    property_map<std::string> bump_txt_info = {};
+    /// displacement map texture (heighfield)
+    property_map<std::string> disp_txt_info = {};
+    /// normal texture
+    property_map<std::string> norm_txt_info = {};
+
     // physics extensions --------------------
     /// overall stiffness
     float stiffness = 0;
@@ -569,11 +623,7 @@ struct mtl_material {
 
     // unknown properties ---------------------
     /// unknown string props
-    property_map<std::string> str_props;
-    /// unknown int props
-    property_map<int> int_props;
-    /// unknown float props
-    property_map<float> flt_props;
+    property_map<std::string> unknown_props;
 };
 
 ///
@@ -640,7 +690,7 @@ struct obj {
     /// objects
     std::vector<obj_object> objects;
     /// materials
-    std::vector<mtl_material> materials;
+    std::vector<obj_material> materials;
     /// cameras [extension]
     std::vector<obj_camera> cameras;
     /// env maps [extension]
@@ -682,7 +732,7 @@ obj* load_obj(const std::string& filename, bool flip_texcoord = true);
 /// - Return:
 ///     - loaded materials
 ///
-std::vector<mtl_material> load_mtl(const std::string& filename);
+std::vector<obj_material> load_mtl(const std::string& filename);
 
 ///
 /// Save OBJ
@@ -700,7 +750,7 @@ void save_obj(
 ///
 ///
 void save_mtl(
-    const std::string& filename, const std::vector<mtl_material>& materials);
+    const std::string& filename, const std::vector<obj_material>& materials);
 
 ///
 /// Converts an OBJ into a scene.

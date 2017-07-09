@@ -3,23 +3,20 @@
 A collection of vector math functions and simple containers
 used to implement YOCTO. Features include
 
+- a few convenience math functions
 - static length float vectors, with specialization for 2, 3, 4 length
 - static length matrices, with specialization for 2x2, 3x3, 4x4
-- affine and rigid transforms
+- static length rigid transforms (frames), specialized for 2d and 3d space
 - linear algebra operations and transforms for fixed length matrices/vecs
 - axis aligned bounding boxes
 - rays
 - ray-primitive intersection
-- point-primitive distance
+- point-primitive distance and overlap tests
 - normal amd tangent computation for meshes and lines
 - generation of tesselated meshes
 - random number generation via PCG32
 - a few hash functions
-- timer (depends on C++11 chrono)
-
-While we tested this library in the implementation of our other ones, we
-consider this code incomplete and remommend to use a more complete math
-library. So use it at your own peril.
+- trivial image data structue and a few image operations
 
 We developed our own library since we felt that all existing ones are either
 complete, but unreadable or with lots of dependencies, or just as incomplete
@@ -39,6 +36,7 @@ Collision Detection" by Christer Ericson and public domain code from
 
 ## History
 
+- v 0.14: move timer to Yocto/Utils
 - v 0.13: more shape functions
 - v 0.12: documentation update
 - v 0.11: added more matrix and quaternion operations
@@ -4281,24 +4279,4 @@ inline void tonemap_image(int width, int height, int ncomp, const float* hdr,
 ~~~
 
 Tone mapping HDR to LDR images.
-
-### Struct timer
-
-~~~ .cpp
-struct timer {
-    timer(bool autostart = true); 
-    void start(); 
-    void stop(); 
-    double elapsed(); 
-}
-~~~
-
-A simple wrapper for std::chrono.
-
-- Members:
-    - timer():      initialize a timer and start it if necessary
-    - start():      start a timer
-    - stop():      stops a timer
-    - elapsed():      elapsed time
-
 

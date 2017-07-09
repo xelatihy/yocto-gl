@@ -4,31 +4,48 @@ Ray-intersection and closet-point routines supporting points,
 lines, triangles and tetrahedra accelerated by a two-level bounding volume
 hierarchy (BVH). Tetrahedra support is still a work in progress.
 
+The scene model is comprised of a set of shapes, each with its own BVH.
+Shapes are collections of points, lines, triangles or tetrahedras. each
+shape may contain only one element type. Shapes are organized into a scene
+by creating shape instances, each of which with its own transform. For now,
+we only support rigid transform (translation and rotation). But eventually
+we might be able to support generic transforms. Shape data is shared with
+application and not copied to save memory. Instance data is instead
+kept internally to allow for more flexibility.
+
+The library supports two main queries. Ray-scene intersection for raytracing
+and point-scene overlap test for collision detection. Also for collision
+detection we support shape bounds overlap for broad-phase collisions.
+Queries and BVH build can be performed over the whole single or single
+shapes.
+
 This library depends in yocto_math.h
 
 
 ## Usage
 
 1. create a scene with `make_scene()`
-2. for each shape, add shape data and transforms with `set_point_shape()`,
-   `set_line_shape()`, `set_triangle_shape()` and `set_tetra_shape()`; to
+2. for each shape, add shape data and transforms with `add_point_shape()`,
+   `add_line_shape()`, `add_triangle_shape()` and `add_tetra_shape()`; to
    modify the frame call `set_shape_frame()`
-3. build the bvh with `build_bvh()` using the specified heuristic (or
-default) 4. perform ray-interseciton tests with `intersect_ray()`
+3. add shape instances with `add_instance()`
+4. build the bvh with `build_scene_bvh()`
+5. perform ray-interseciton tests with `intersect_ray()`
     - use early_exit=false if you want to know the closest hit point
     - use early_exit=false if you only need to know whether there is a hit
     - for points and lines, a radius is required
     - for triangle and tetrahedra, the radius is ignored
-5. perform point overlap tests with `overlap_point()` to if a point overlaps
+6. perform point overlap tests with `overlap_point()` to if a point overlaps
       with an element within a maximum distance
     - use early_exit as above
     - for all primitives, a radius is used if defined, but should
       be very small compared to the size of the primitive since the radius
       overlap is approximate
-6. perform shape overlap queries with `overlap_shape_bounds()` and
-   `overlap_verts()`
-7. use `refit_bvh()` to recompute the bvh bounds if transforms or vertices
-   are (you should rebuild the bvh for large changes)
+7. perform shape overlap queries with `overlap_shape_bounds()`
+8. use `refit_bvh()` to recompute the bvh bounds if transforms or vertices
+   are (you should rebuild the bvh for large changes); update the instances'
+   transforms with `set_instance_frame()`; shapes use shared memory, so
+   no explicit update is necessary
 
 
 ## History

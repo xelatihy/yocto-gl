@@ -2,7 +2,7 @@
 
 Utilities for loading/saving images, mostly to avoid linking
 problems and code duplication across other yocto libraries. Functions as
-a wrapper onto other libraries.
+a wrapper to other libraries.
 
 This library depends in yocto_math.h, stb_image.h, stb_image_write.h
 stb_image_resize.h.

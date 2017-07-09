@@ -13,23 +13,21 @@
 <p>A collection of vector math functions and simple containers
 used to implement YOCTO. Features include</p>
 <ul>
+<li>a few convenience math functions</li>
 <li>static length float vectors, with specialization for 2, 3, 4 length</li>
 <li>static length matrices, with specialization for 2x2, 3x3, 4x4</li>
-<li>affine and rigid transforms</li>
+<li>static length rigid transforms (frames), specialized for 2d and 3d space</li>
 <li>linear algebra operations and transforms for fixed length matrices/vecs</li>
 <li>axis aligned bounding boxes</li>
 <li>rays</li>
 <li>ray-primitive intersection</li>
-<li>point-primitive distance</li>
+<li>point-primitive distance and overlap tests</li>
 <li>normal amd tangent computation for meshes and lines</li>
 <li>generation of tesselated meshes</li>
 <li>random number generation via PCG32</li>
 <li>a few hash functions</li>
-<li>timer (depends on C++11 chrono)</li>
+<li>trivial image data structue and a few image operations</li>
 </ul>
-<p>While we tested this library in the implementation of our other ones, we
-consider this code incomplete and remommend to use a more complete math
-library. So use it at your own peril.</p>
 <p>We developed our own library since we felt that all existing ones are either
 complete, but unreadable or with lots of dependencies, or just as incomplete
 and untested as ours.</p>
@@ -44,6 +42,7 @@ Collision Detection" by Christer Ericson and public domain code from
 - https://gist.github.com/badboy/6267743</p>
 <h2>History</h2>
 <ul>
+<li>v 0.14: move timer to Yocto/Utils</li>
 <li>v 0.13: more shape functions</li>
 <li>v 0.12: documentation update</li>
 <li>v 0.11: added more matrix and quaternion operations</li>
@@ -3509,26 +3508,6 @@ https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/</p>
 
 
 <p>Tone mapping HDR to LDR images.</p>
-<h3>Struct timer</h3>
-<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">timer</span> <span class="p">{</span>
-    <span class="n">timer</span><span class="p">(</span><span class="kt">bool</span> <span class="n">autostart</span> <span class="o">=</span> <span class="nb">true</span><span class="p">);</span> 
-    <span class="kt">void</span> <span class="nf">start</span><span class="p">();</span> 
-    <span class="kt">void</span> <span class="nf">stop</span><span class="p">();</span> 
-    <span class="kt">double</span> <span class="nf">elapsed</span><span class="p">();</span> 
-<span class="p">}</span>
-</code></pre></div>
-
-
-<p>A simple wrapper for std::chrono.</p>
-<ul>
-<li>Members:<ul>
-<li>timer():      initialize a timer and start it if necessary</li>
-<li>start():      start a timer</li>
-<li>stop():      stops a timer</li>
-<li>elapsed():      elapsed time</li>
-</ul>
-</li>
-</ul>
         <article>
         <footer></footer>
         </body>
