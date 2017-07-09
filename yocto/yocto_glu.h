@@ -1,14 +1,13 @@
 ///
 /// # Yocto/Glu
 ///
-/// A set of utilities to draw on screen with OpenGL 2.1. Mostly
+/// A set of utilities to draw on screen with OpenGL 3.3. Mostly
 /// used to make quick viewers. Not sure it is helpful to others (OpenGL is
-/// really a portability mess, but there is nothing else). The library is split
-/// into two namespaces, legacy and modern, to indicate functions for fixed
-/// function pipeline and for modern shaders.
+/// really a portability mess, but there is nothing else).
 ///
 /// This library depends in yocto_math.h
 /// The library depends on GLEW for OpenGL functions on Windows and Linux.
+/// Soon porting to glad.
 ///
 ///
 /// ## Features

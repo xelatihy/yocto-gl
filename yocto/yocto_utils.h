@@ -3,7 +3,7 @@
 ///
 /// Utilities for writing command line applications, mostly
 /// a simple to use command line parser, a logger, a thread-pool,
-/// and string, path and file functions. All functions are defined
+/// and string, path and file functions, and a timer. All functions are defined
 /// in separate namespaces.
 ///
 /// ## Usage for Command Line Parsing
@@ -26,7 +26,7 @@
 ///     - names are only used for help
 ///     - supports types as above
 ///     - for general use `arg = parse_arg<type>()`
-///     - to parse all remaining values use args = parse_arga<type>(...)
+///     - to parse all remaining values use `args = parse_arga<type>(...)`
 /// 5. end cmdline parsing with `check_parser()` to check for unsued values,
 ///    missing arguments and print help if needed
 /// 6. since arguments are parsed immediately, one can easily implement
@@ -50,18 +50,20 @@
 /// 1. namespace concurrent
 /// 2. either create a thread pool `make_thread_pool` or use the global one
 /// 3. run tasks in parallel `thread_pool_for()`
-/// 4. run tasks asynchronously `thread_pool_async()
+/// 4. run tasks asynchronously `thread_pool_async()`
 ///
 /// ## Utilities
 ///
-/// 1. filename splitting functions in namespace path
-/// 2. loading and save entire files in namespace file
-/// 3. Python-line string manipulation in namespace string
-/// 5. Python-like operators for standard containers in namespace stl_operators
+/// 1. filename splitting functions in namespace `path`
+/// 2. loading and save entire files in namespace `file`
+/// 3. Python-line string manipulation in namespace `string`
+/// 4. Python-like operators for standard containers in namespace `operators`
+/// 5. simple timer in namespace `timer`
 ///
 ///
 /// ## History
 ///
+/// - v 0.18: timer
 /// - v 0.17: renamed to yocto utils
 /// - v 0.16: split into namespaces
 /// - v 0.15: remove inline compilation
@@ -152,6 +154,7 @@ namespace yu {}
 #ifndef _YU_H_
 #define _YU_H_
 
+#include <chrono>
 #include <functional>
 #include <future>
 #include <string>
@@ -757,6 +760,50 @@ std::shared_future<void> run_async(const std::function<void()>& task);
 void parallel_for(int count, const std::function<void(int idx)>& task);
 
 }  // namespace concurrent
+
+// -----------------------------------------------------------------------------
+// TIMER
+// -----------------------------------------------------------------------------
+
+///
+/// Simple timer for performance measumrents.
+///
+namespace timer {
+
+///
+/// A simple wrapper for std::chrono.
+///
+struct timer {
+    /// initialize a timer and start it if necessary
+    timer(bool autostart = true) {
+        if (autostart) start();
+    }
+
+    /// start a timer
+    void start() {
+        _start = std::chrono::steady_clock::now();
+        _started = true;
+    }
+
+    /// stops a timer
+    void stop() {
+        _end = std::chrono::steady_clock::now();
+        _started = false;
+    }
+
+    /// elapsed time
+    double elapsed() {
+        if (_started) stop();
+        std::chrono::duration<double> diff = (_end - _start);
+        return diff.count();
+    }
+
+   private:
+    bool _started = false;
+    std::chrono::time_point<std::chrono::steady_clock> _start, _end;
+};
+
+}  // namespace timer
 
 }  // namespace yu
 
