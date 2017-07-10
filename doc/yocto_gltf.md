@@ -71,6 +71,8 @@ this can used to access the scene data with `scene::get<T>(index)`.
 
 
 ## History
+
+- v 0.13: change variable names for compilation on gcc
 - v 0.12: removed explicit root nodes
 - v 0.11: added camera near/far to high-level interface
 - v 0.10: added moprhing to high-level interface
@@ -338,7 +340,7 @@ Morph information for shapes
 
 struct shape {
     std::string name = "";
-    material* material = nullptr;
+    material* mat = nullptr;
     std::vector<ym::vec3f> pos;
     std::vector<ym::vec3f> norm;
     std::vector<ym::vec2f> texcoord;
@@ -360,7 +362,7 @@ Primitives
 
 - Members:
     - name:      name of the mesh that enclosed it
-    - material:      material reference
+    - mat:      material reference
     - pos:      vertex position
     - norm:      vertex normal
     - texcoord:      vertex texcoord
@@ -400,9 +402,9 @@ Gltf mesh.
 ~~~ .cpp
 struct node {
     std::string name = "";
-    camera* camera = nullptr;
-    mesh* mesh = nullptr;
-    skin* skin = nullptr;
+    camera* cam = nullptr;
+    mesh* msh = nullptr;
+    skin* skn = nullptr;
     std::vector<node*> children;
     ym::mat4f matrix = ym::identity_mat4f;
     ym::quat4f rotation = {0, 0, 0, 1};
@@ -420,9 +422,9 @@ Node in the hierarchy.
 
 - Members:
     - name:      name
-    - camera:      camera reference
-    - mesh:      mesh reference
-    - skin:      mesh reference
+    - cam:      camera reference
+    - msh:      mesh reference
+    - skn:      mesh reference
     - children:      children
     - matrix:      A floating-point 4x4 transformation matrix stored in column-major order.
     - rotation:      The node's unit quaternion rotation in the order (x, y, z, w), where w

@@ -85,7 +85,7 @@ ygltf::scene_group* obj2gltf(const yobj::scene* obj, bool add_scene) {
         gmesh->name = omesh->name;
         for (auto oprim : omesh->shapes) {
             auto gprim = new ygltf::shape();
-            gprim->material =
+            gprim->mat =
                 (index(obj->materials, oprim->mat) < 0) ?
                     nullptr :
                     gltf->materials[index(obj->materials, oprim->mat)];
@@ -113,7 +113,7 @@ ygltf::scene_group* obj2gltf(const yobj::scene* obj, bool add_scene) {
             for (auto msh : gltf->meshes) {
                 auto gnode = new ygltf::node();
                 gnode->name = msh->name;
-                gnode->mesh = msh;
+                gnode->msh = msh;
                 scn->nodes.push_back(gnode);
                 gltf->nodes.push_back(gnode);
             }
@@ -122,7 +122,7 @@ ygltf::scene_group* obj2gltf(const yobj::scene* obj, bool add_scene) {
                 auto gnode = new ygltf::node();
                 gnode->name = oist->name;
                 gnode->matrix = oist->xform;
-                gnode->mesh = gltf->meshes[index(obj->meshes, oist->mesh)];
+                gnode->msh = gltf->meshes[index(obj->meshes, oist->msh)];
                 scn->nodes.push_back(gnode);
                 gltf->nodes.push_back(gnode);
             }
@@ -145,7 +145,7 @@ ygltf::scene_group* obj2gltf(const yobj::scene* obj, bool add_scene) {
                 auto gnode = new ygltf::node();
                 gnode->name = ocam->name;
                 gnode->matrix = ocam->xform;
-                gnode->camera = gcam;
+                gnode->cam = gcam;
                 scn->nodes.push_back(gnode);
                 gltf->nodes.push_back(gnode);
             }

@@ -37,6 +37,7 @@
 ///
 /// ## History
 ///
+/// - v 0.15: enable specialization always
 /// - v 0.14: move timer to Yocto/Utils
 /// - v 0.13: more shape functions
 /// - v 0.12: documentation update
@@ -104,11 +105,6 @@ namespace ym {}
 // HACK to avoid compilation with MSVC2015 and C++11 without dirtying code
 #if defined(_WIN32) || __cplusplus < 201402L
 #define constexpr
-#endif
-
-// disable spacialization with gcc
-#if defined(__GNUC__) && !defined(__clang__)
-#define YM_NO_SPECIALIZATION
 #endif
 
 ///

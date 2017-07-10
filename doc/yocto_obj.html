@@ -58,6 +58,7 @@ disabled by defining YOBJ_NO_IMAGE before including this file.</p>
 </ol>
 <h2>History</h2>
 <ul>
+<li>v 0.22: change variable names for compilation on gcc</li>
 <li>v 0.21: bug fixes</li>
 <li>v 0.20: use yocto_math in the interface and remove inline compilation</li>
 <li>v 0.19: add missing bounding box computation and missing data functions</li>
@@ -252,7 +253,7 @@ disabled by defining YOBJ_NO_IMAGE before including this file.</p>
 <h3>Struct instance</h3>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">instance</span> <span class="p">{</span>
     <span class="n">ym</span><span class="o">::</span><span class="n">mat4f</span> <span class="n">xform</span> <span class="o">=</span> <span class="n">ym</span><span class="o">::</span><span class="n">identity_mat4f</span><span class="p">;</span>
-    <span class="n">mesh</span><span class="o">*</span> <span class="n">mesh</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+    <span class="n">mesh</span><span class="o">*</span> <span class="n">msh</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
 <span class="p">}</span>
 </code></pre></div>
 
@@ -261,7 +262,7 @@ disabled by defining YOBJ_NO_IMAGE before including this file.</p>
 <ul>
 <li>Members:<ul>
 <li>xform:      transform</li>
-<li>mesh:      primitives</li>
+<li>msh:      mesh instances</li>
 </ul>
 </li>
 </ul>
@@ -504,7 +505,6 @@ disabled by defining YOBJ_NO_IMAGE before including this file.</p>
     <span class="kt">uint32_t</span> <span class="n">start</span><span class="p">;</span>
     <span class="n">obj_element_type</span> <span class="n">type</span><span class="p">;</span>
     <span class="kt">uint16_t</span> <span class="n">size</span><span class="p">;</span>
-    <span class="n">obj_element</span><span class="p">(</span><span class="kt">uint32_t</span> <span class="n">start_</span><span class="p">,</span> <span class="n">etype</span> <span class="n">type_</span><span class="p">,</span> <span class="kt">uint16_t</span> <span class="n">size_</span><span class="p">);</span> 
 <span class="p">}</span>
 </code></pre></div>
 
@@ -515,7 +515,6 @@ disabled by defining YOBJ_NO_IMAGE before including this file.</p>
 <li>start:      starting vertex index</li>
 <li>type:      element type</li>
 <li>size:      number of vertices</li>
-<li>obj_element():      constructor</li>
 </ul>
 </li>
 </ul>

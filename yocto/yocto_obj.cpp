@@ -925,9 +925,9 @@ scene* obj_to_scene(const obj* asset) {
     for (auto& oist : asset->instances) {
         auto ist = new instance();
         ist->name = oist.name;
-        ist->mesh = nullptr;
+        ist->msh = nullptr;
         for (auto mesh : scn->meshes) {
-            if (mesh->name == oist.meshname) { ist->mesh = mesh; }
+            if (mesh->name == oist.meshname) { ist->msh = mesh; }
         }
         ist->xform = oist.xform;
         scn->instances.push_back(ist);
@@ -1088,7 +1088,7 @@ obj* scene_to_obj(const scene* scn) {
         asset->instances.emplace_back();
         auto ist = &asset->instances.back();
         ist->name = fl_ist->name;
-        ist->meshname = (fl_ist->mesh) ? fl_ist->mesh->name : "<undefined>";
+        ist->meshname = (fl_ist->msh) ? fl_ist->msh->name : "<undefined>";
         ist->xform = fl_ist->xform;
     }
 
@@ -1174,7 +1174,7 @@ ym::bbox3f compute_scene_bounds(const scene* scn) {
     if (!scn->instances.empty()) {
         for (auto ist : scn->instances) {
             bbox += ym::transform_bbox(
-                ym::mat4f(ist->xform), bbox_meshes[ist->mesh]);
+                ym::mat4f(ist->xform), bbox_meshes[ist->msh]);
         }
     } else {
         for (auto mesh : scn->meshes) { bbox += bbox_meshes[mesh]; }
@@ -1254,7 +1254,7 @@ void add_instances(scene* scn) {
     for (auto mesh : scn->meshes) {
         auto ist = new instance();
         ist->name = mesh->name;
-        ist->mesh = mesh;
+        ist->msh = mesh;
         scn->instances.push_back(ist);
     }
 }
@@ -1341,8 +1341,8 @@ void flatten_instances(scene* scn) {
     auto instances = scn->instances;
     scn->instances.clear();
     for (auto ist : instances) {
-        if (!ist->mesh) continue;
-        auto msh = ist->mesh;
+        if (!ist->msh) continue;
+        auto msh = ist->msh;
         auto nmsh = new mesh();
         nmsh->name = ist->name;
         for (auto shp : msh->shapes) {

@@ -216,12 +216,12 @@ inline void load_scene(
             auto cam = ygltf::get_camera_nodes(scn->gscn->default_scene)[0];
             scn->view_cam = new ycamera();
             scn->view_cam->frame = ym::to_frame(ym::mat4f(cam->xform));
-            scn->view_cam->yfov = cam->camera->yfov;
-            scn->view_cam->aspect = cam->camera->aspect;
-            scn->view_cam->near = cam->camera->near;
-            scn->view_cam->far = cam->camera->far;
-            scn->view_cam->focus = cam->camera->focus;
-            scn->view_cam->aperture = cam->camera->aperture;
+            scn->view_cam->yfov = cam->cam->yfov;
+            scn->view_cam->aspect = cam->cam->aspect;
+            scn->view_cam->near = cam->cam->near;
+            scn->view_cam->far = cam->cam->far;
+            scn->view_cam->focus = cam->cam->focus;
+            scn->view_cam->aperture = cam->cam->aperture;
         }
     }
 
@@ -284,7 +284,7 @@ inline void update_shade_lights(yshade_state* st, const yobj::scene* sc) {
 
     if (!sc->instances.empty()) {
         for (auto ist : sc->instances) {
-            for (auto shp : ist->mesh->shapes) {
+            for (auto shp : ist->msh->shapes) {
                 if (!shp->mat) continue;
                 auto mat = shp->mat;
                 if (mat->ke == ym::zero3f) continue;
@@ -466,7 +466,7 @@ inline void shade_scene(const yobj::scene* sc, yshade_state* st,
 
     if (!sc->instances.empty()) {
         for (auto ist : sc->instances) {
-            shade_mesh(ist->mesh, st, ist->xform, edges, wireframe);
+            shade_mesh(ist->msh, st, ist->xform, edges, wireframe);
         }
     } else {
         for (auto msh : sc->meshes) {
@@ -492,9 +492,9 @@ inline void update_shade_lights(
 
     if (!instances.empty()) {
         for (auto ist : instances) {
-            for (auto shp : ist->mesh->shapes) {
-                if (!shp->material) continue;
-                auto mat = shp->material;
+            for (auto shp : ist->msh->shapes) {
+                if (!shp->mat) continue;
+                auto mat = shp->mat;
                 if (mat->emission == ym::zero3f) continue;
                 for (auto p : shp->points) {
                     if (st->lights_pos.size() >= 16) break;
@@ -508,8 +508,8 @@ inline void update_shade_lights(
     } else {
         for (auto ist : scn->meshes) {
             for (auto shp : ist->shapes) {
-                if (!shp->material) continue;
-                auto mat = shp->material;
+                if (!shp->mat) continue;
+                auto mat = shp->mat;
                 if (mat->emission == ym::zero3f) continue;
                 for (auto p : shp->points) {
                     if (st->lights_pos.size() >= 16) break;
@@ -620,7 +620,7 @@ inline void shade_mesh(const ygltf::mesh* msh, const ygltf::skin* sk,
     for (auto shp : msh->shapes) {
         yglu::stdshader::begin_shape(st->prog, xform);
 
-        auto mat = (shp->material) ? shp->material : &default_material;
+        auto mat = (shp->mat) ? shp->mat : &default_material;
         float op = 1;
         if (mat->specular_glossiness) {
             auto sg = mat->specular_glossiness;
@@ -742,20 +742,20 @@ inline void shade_scene(const ygltf::scene_group* scns, yshade_state* st,
     if (gcam) {
         camera_xform = ym::mat4f(gcam->xform);
         camera_view = ym::inverse(ym::mat4f(gcam->xform));
-        if (gcam->camera->ortho) {
-            auto near = (gcam->camera->near) ? gcam->camera->near : 0.001f;
-            auto far = (gcam->camera->far) ? gcam->camera->far : 10000;
+        if (gcam->cam->ortho) {
+            auto near = (gcam->cam->near) ? gcam->cam->near : 0.001f;
+            auto far = (gcam->cam->far) ? gcam->cam->far : 10000;
             camera_proj =
-                ym::ortho_mat4(gcam->camera->yfov * gcam->camera->aspect,
-                    gcam->camera->yfov, near, far);
+                ym::ortho_mat4(gcam->cam->yfov * gcam->cam->aspect,
+                    gcam->cam->yfov, near, far);
         } else {
-            auto near = (gcam->camera->near) ? gcam->camera->near : 0.001f;
-            if (gcam->camera->far) {
-                camera_proj = ym::perspective_mat4(gcam->camera->yfov,
-                    gcam->camera->aspect, near, gcam->camera->far);
+            auto near = (gcam->cam->near) ? gcam->cam->near : 0.001f;
+            if (gcam->cam->far) {
+                camera_proj = ym::perspective_mat4(gcam->cam->yfov,
+                    gcam->cam->aspect, near, gcam->cam->far);
             } else {
                 camera_proj = ym::perspective_mat4(
-                    gcam->camera->yfov, gcam->camera->aspect, 0.01f);
+                    gcam->cam->yfov, gcam->cam->aspect, 0.01f);
             }
         }
     } else {
@@ -784,7 +784,7 @@ inline void shade_scene(const ygltf::scene_group* scns, yshade_state* st,
 
     if (!instances.empty()) {
         for (auto ist : instances) {
-            shade_mesh(ist->mesh, ist->skin, ist->morph_weights, st, ist->xform,
+            shade_mesh(ist->msh, ist->skn, ist->morph_weights, st, ist->xform,
                 edges, wireframe);
         }
     } else {
@@ -823,7 +823,7 @@ void draw_scene(ygui::window* win) {
     auto aspect = (float)window_size[0] / (float)window_size[1];
     scn->view_cam->aspect = aspect;
     if (scn->ocam) scn->ocam->aspect = aspect;
-    if (scn->gcam) scn->gcam->camera->aspect = aspect;
+    if (scn->gcam) scn->gcam->cam->aspect = aspect;
     if (scn->oscn) {
         shade_scene(scn->oscn, scn->shstate, scn->view_cam, scn->ocam,
             scn->background, scn->exposure, (yglu::tonemap_type)scn->tonemap,
@@ -891,7 +891,7 @@ void draw_tree_widgets(ygui::window* win, const std::string& lbl,
 void draw_tree_widgets(ygui::window* win, const std::string& lbl,
     yobj::instance* ist, void** selection) {
     if (ygui::tree_begin_widget(win, lbl + ist->name, selection, ist)) {
-        if (ist->mesh) draw_tree_widgets(win, "mesh: ", ist->mesh, selection);
+        if (ist->msh) draw_tree_widgets(win, "mesh: ", ist->msh, selection);
         ygui::tree_end_widget(win);
     }
 }
@@ -1017,7 +1017,7 @@ void draw_elem_widgets(ygui::window* win, yobj::scene* oscn,
     ygui::separator_widget(win);
     ygui::label_widget(win, "name", ist->name);
     draw_matrix_widgets(win, "xform", (ym::mat4f*)&ist->xform);
-    ygui::combo_widget(win, "mesh", &ist->mesh, msh_names);
+    ygui::combo_widget(win, "mesh", &ist->msh, msh_names);
 }
 
 void draw_elem_widgets(ygui::window* win, yobj::scene* oscn, void** selection,
@@ -1099,8 +1099,8 @@ void draw_tree_widgets(ygui::window* win, const std::string& lbl,
 void draw_tree_widgets(ygui::window* win, const std::string& lbl,
     ygltf::shape* shp, void** selection) {
     if (ygui::tree_begin_widget(win, lbl + shp->name, selection, shp)) {
-        if (shp->material)
-            draw_tree_widgets(win, "mat: ", shp->material, selection);
+        if (shp->mat)
+            draw_tree_widgets(win, "mat: ", shp->mat, selection);
         ygui::tree_end_widget(win);
     }
 }
@@ -1120,9 +1120,9 @@ void draw_tree_widgets(ygui::window* win, const std::string& lbl,
 void draw_tree_widgets(ygui::window* win, const std::string& lbl,
     ygltf::node* node, void** selection) {
     if (ygui::tree_begin_widget(win, lbl + node->name, selection, node)) {
-        if (node->mesh) draw_tree_widgets(win, "mesh: ", node->mesh, selection);
-        if (node->camera)
-            draw_tree_widgets(win, "cam: ", node->camera, selection);
+        if (node->msh) draw_tree_widgets(win, "mesh: ", node->msh, selection);
+        if (node->cam)
+            draw_tree_widgets(win, "cam: ", node->cam, selection);
         for (auto child : node->children)
             draw_tree_widgets(win, "", child, selection);
         ygui::tree_end_widget(win);
@@ -1360,7 +1360,7 @@ void draw_elem_widgets(ygui::window* win, ygltf::scene_group* gscn,
 
     ygui::separator_widget(win);
     ygui::label_widget(win, "name", shp->name);
-    ygui::combo_widget(win, "material", &shp->material, mat_names);
+    ygui::combo_widget(win, "material", &shp->mat, mat_names);
     ygui::label_widget(win, "verts", (int)shp->pos.size());
     if (!shp->triangles.empty())
         ygui::label_widget(win, "triangles", (int)shp->triangles.size());
@@ -1444,8 +1444,8 @@ void draw_elem_widgets(ygui::window* win, ygltf::scene_group* gscn,
 
     ygui::separator_widget(win);
     ygui::label_widget(win, "name", node->name);
-    ygui::combo_widget(win, "mesh", &node->mesh, msh_names);
-    ygui::combo_widget(win, "cam", &node->camera, cam_names);
+    ygui::combo_widget(win, "mesh", &node->msh, msh_names);
+    ygui::combo_widget(win, "cam", &node->cam, cam_names);
     ygui::slider_widget(win, "translation", &node->translation, -10, 10);
     ygui::slider_widget(win, "scale", &node->scale, 0.001, 5);
     // ygui::slider_widget(win, "rotation", &node->rotation, -1, 1);
@@ -1540,7 +1540,7 @@ inline void draw_edit_widgets(ygui::window* win, ygltf::scene_group* gscn,
                     1, 1, shp->triangles, shp->pos, shp->norm, shp->texcoord);
             } break;
         }
-        if (auto_parent && selected_node) selected_node->mesh = mesh;
+        if (auto_parent && selected_node) selected_node->msh = mesh;
         gscn->meshes.push_back(mesh);
         *selection = mesh;
     }
@@ -1550,7 +1550,7 @@ inline void draw_edit_widgets(ygui::window* win, ygltf::scene_group* gscn,
         static auto count = 0;
         auto cam = new ygltf::camera();
         cam->name = "<new camera " + std::to_string(count++) + ">";
-        if (auto_parent && selected_node) selected_node->camera = cam;
+        if (auto_parent && selected_node) selected_node->cam = cam;
         gscn->cameras.push_back(cam);
         *selection = cam;
     }
@@ -1589,14 +1589,14 @@ inline void draw_edit_widgets(ygui::window* win, ygltf::scene_group* gscn,
     if (ygui::button_widget(win, "delete")) {
         if (selected_cam) {
             for (auto node : gscn->nodes)
-                if (node->camera == selected_cam) node->camera = nullptr;
+                if (node->cam == selected_cam) node->cam = nullptr;
             remove(gscn->cameras, selected_cam);
             delete selected_cam;
             *selection = nullptr;
         }
         if (selected_mesh) {
             for (auto node : gscn->nodes)
-                if (node->mesh == selected_mesh) node->camera = nullptr;
+                if (node->msh == selected_mesh) node->cam = nullptr;
             remove(gscn->meshes, selected_mesh);
             delete selected_mesh;
             *selection = nullptr;
@@ -1604,7 +1604,7 @@ inline void draw_edit_widgets(ygui::window* win, ygltf::scene_group* gscn,
         if (selected_mat) {
             for (auto mesh : gscn->meshes)
                 for (auto shp : mesh->shapes)
-                    if (shp->material == selected_mat) shp->material = nullptr;
+                    if (shp->mat == selected_mat) shp->mat = nullptr;
             remove(gscn->materials, selected_mat);
             delete selected_mat;
             *selection = nullptr;
