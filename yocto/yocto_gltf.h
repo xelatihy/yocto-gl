@@ -505,35 +505,23 @@ enum struct animation_interpolation {
 };
 
 ///
-/// Animation property
-///
-enum struct animation_property {
-    /// translation
-    translation = 0,
-    /// rotation
-    rotation = 1,
-    /// scale
-    scale = 2,
-    /// morph weigths
-    weights = 3,
-};
-
-///
-/// Keyframe data
+/// Keyframe data.
 ///
 struct animation {
     /// Interpolation
     animation_interpolation interp = animation_interpolation::step;
-    /// Property to edit
-    animation_property prop = animation_property::translation;
     /// Target nodes
     std::vector<node*> nodes;
     /// Times
     std::vector<float> time;
-    /// Animation data
-    std::vector<float> values;
-    /// Number of component per value
-    int ncomp = 0;
+    /// Translation
+    std::vector<ym::vec3f> translation;
+    /// Rotation
+    std::vector<ym::quat4f> rotation;
+    /// Scale
+    std::vector<ym::vec3f> scale;
+    /// Weights for morphing
+    std::vector<std::vector<float>> morph_weights;
 };
 
 ///

@@ -47,6 +47,9 @@
 
 #ifndef YOCTO_NO_OPENGL
 
+// convenience typedef
+using uint = unsigned int;
+
 //
 // OpenGL state
 //
@@ -102,7 +105,6 @@ struct yscene {
     // view/scene selection
     yobj::camera* ocam = nullptr;
     ygltf::node* gcam = nullptr;
-    ygltf::scene* gsscn = nullptr;
 
     // time and animation
     float time = 0;
@@ -156,6 +158,9 @@ struct yscene {
     ym::image<ym::vec4f> trace_hdr, trace_preview;
     std::vector<ym::vec4i> trace_blocks;
 
+    // editing support
+    void* selection = nullptr;
+
     ~yscene() {
         if (oscn) delete oscn;
         if (gscn) delete gscn;
@@ -207,12 +212,8 @@ inline void load_scene(
         if (!scn->gscn->default_scene && !scn->gscn->scenes.empty()) {
             scn->gscn->default_scene = scn->gscn->scenes[0];
         }
-        scn->gsscn = scn->gscn->default_scene;
-        if (!scn->gsscn && !scn->gscn->scenes.empty()) {
-            scn->gsscn = scn->gscn->scenes[0];
-        }
-        if (!ygltf::get_camera_nodes(scn->gsscn).empty()) {
-            auto cam = ygltf::get_camera_nodes(scn->gsscn)[0];
+        if (!ygltf::get_camera_nodes(scn->gscn->default_scene).empty()) {
+            auto cam = ygltf::get_camera_nodes(scn->gscn->default_scene)[0];
             scn->view_cam = new ycamera();
             scn->view_cam->frame = ym::to_frame(ym::mat4f(cam->xform));
             scn->view_cam->yfov = cam->camera->yfov;
@@ -276,7 +277,7 @@ inline void load_scene(
 //
 // Init shading
 //
-inline void init_shade_lights(yshade_state* st, const yobj::scene* sc) {
+inline void update_shade_lights(yshade_state* st, const yobj::scene* sc) {
     st->lights_pos.clear();
     st->lights_ke.clear();
     st->lights_ltype.clear();
@@ -316,11 +317,11 @@ inline void init_shade_lights(yshade_state* st, const yobj::scene* sc) {
 //
 // Init shading
 //
-inline yshade_state* init_shade_state(const yobj::scene* sc) {
-    auto st = new yshade_state();
-    yglu::stdshader::make_program(&st->prog, &st->vao);
+inline void update_shade_state(const yobj::scene* sc, yshade_state* st) {
+    if (!st->prog) yglu::stdshader::make_program(&st->prog, &st->vao);
     st->txt[nullptr] = 0;
     for (auto txt : sc->textures) {
+        if (st->txt.find(txt) != st->txt.end()) continue;
         if (!txt->dataf.empty()) {
             st->txt[txt] = yglu::make_texture(txt->width, txt->height,
                 txt->ncomp, txt->dataf.data(), true, true, true);
@@ -332,6 +333,7 @@ inline yshade_state* init_shade_state(const yobj::scene* sc) {
     }
     for (auto mesh : sc->meshes) {
         for (auto shape : mesh->shapes) {
+            if (st->vert.find(shape) != st->vert.end()) continue;
             st->vert[shape] = {0, 0, 0, 0};
             st->elem[shape] = {0, 0, 0};
             if (!shape->pos.empty())
@@ -363,8 +365,6 @@ inline yshade_state* init_shade_state(const yobj::scene* sc) {
                         3 * sizeof(int), shape->triangles.data(), true, false);
         }
     }
-
-    return st;
 }
 
 //
@@ -373,7 +373,7 @@ inline yshade_state* init_shade_state(const yobj::scene* sc) {
 inline void shade_mesh(const yobj::mesh* msh, const yshade_state* st,
     const ym::mat4f& xform, bool edges, bool wireframe) {
     static auto default_material = yobj::material();
-    default_material.kd = {0.2, 0.2, 0.2};
+    default_material.kd = {0.2f, 0.2f, 0.2f};
 
     for (auto shp : msh->shapes) {
         yglu::stdshader::begin_shape(st->prog, ym::mat4f(xform));
@@ -426,6 +426,9 @@ inline void shade_scene(const yobj::scene* sc, yshade_state* st,
     const ycamera* ycam, const yobj::camera* ocam, const ym::vec4f& background,
     float exposure, yglu::tonemap_type tmtype, float gamma, bool wireframe,
     bool edges, bool camera_lights, const ym::vec3f& amb) {
+    // update state
+    update_shade_state(sc, st);
+
     // begin frame
     yglu::enable_depth_test(true);
     yglu::enable_culling(false);
@@ -455,7 +458,7 @@ inline void shade_scene(const yobj::scene* sc, yshade_state* st,
         tmtype, gamma, camera_xform, camera_view, camera_proj);
 
     if (!camera_lights) {
-        init_shade_lights(st, sc);
+        update_shade_lights(st, sc);
         yglu::stdshader::set_lights(st->prog, amb, st->lights_pos.size(),
             st->lights_pos.data(), st->lights_ke.data(),
             st->lights_ltype.data());
@@ -479,13 +482,13 @@ inline void shade_scene(const yobj::scene* sc, yshade_state* st,
 //
 // Init shading
 //
-inline void init_shade_lights(
-    yshade_state* st, const ygltf::scene_group* scn, const ygltf::scene* sc) {
+inline void update_shade_lights(
+    yshade_state* st, const ygltf::scene_group* scn) {
     st->lights_pos.clear();
     st->lights_ke.clear();
     st->lights_ltype.clear();
 
-    auto instances = ygltf::get_mesh_nodes(sc);
+    auto instances = ygltf::get_mesh_nodes(scn->default_scene);
 
     if (!instances.empty()) {
         for (auto ist : instances) {
@@ -522,11 +525,11 @@ inline void init_shade_lights(
 //
 // Init shading
 //
-inline yshade_state* init_shade_state(const ygltf::scene_group* sc) {
-    auto st = new yshade_state();
-    yglu::stdshader::make_program(&st->prog, &st->vao);
+inline void update_shade_state(const ygltf::scene_group* sc, yshade_state* st) {
+    if (!st->prog) yglu::stdshader::make_program(&st->prog, &st->vao);
     st->txt[nullptr] = 0;
     for (auto txt : sc->textures) {
+        if (st->txt.find(txt) != st->txt.end()) continue;
         if (!txt->dataf.empty()) {
             st->txt[txt] = yglu::make_texture(txt->width, txt->height,
                 txt->ncomp, txt->dataf.data(), true, true, true);
@@ -538,6 +541,7 @@ inline yshade_state* init_shade_state(const ygltf::scene_group* sc) {
     }
     for (auto mesh : sc->meshes) {
         for (auto shape : mesh->shapes) {
+            if (st->vert.find(shape) != st->vert.end()) continue;
             st->vert[shape] = {0, 0, 0, 0, 0, 0, 0};
             st->elem[shape] = {0, 0, 0};
             if (!shape->pos.empty())
@@ -585,8 +589,6 @@ inline yshade_state* init_shade_state(const ygltf::scene_group* sc) {
                         3 * sizeof(int), shape->triangles.data(), true, false);
         }
     }
-
-    return st;
 }
 
 //
@@ -598,7 +600,7 @@ inline void shade_mesh(const ygltf::mesh* msh, const ygltf::skin* sk,
     static auto default_material = ygltf::material();
     default_material.metallic_roughness =
         new ygltf::material_metallic_rooughness();
-    default_material.metallic_roughness->base = {0.2, 0.2, 0.2};
+    default_material.metallic_roughness->base = {0.2f, 0.2f, 0.2f};
 
     auto txt_info =
         [st](ygltf::texture* gtxt,
@@ -722,11 +724,13 @@ inline void shade_mesh(const ygltf::mesh* msh, const ygltf::skin* sk,
 //
 // Display a scene
 //
-inline void shade_scene(const ygltf::scene_group* scns, const ygltf::scene* scn,
-    yshade_state* st, const ycamera* ycam, const ygltf::node* gcam,
-    const ym::vec4f& background, float exposure, yglu::tonemap_type tmtype,
-    float gamma, bool wireframe, bool edges, bool camera_lights,
-    const ym::vec3f& amb) {
+inline void shade_scene(const ygltf::scene_group* scns, yshade_state* st,
+    const ycamera* ycam, const ygltf::node* gcam, const ym::vec4f& background,
+    float exposure, yglu::tonemap_type tmtype, float gamma, bool wireframe,
+    bool edges, bool camera_lights, const ym::vec3f& amb) {
+    // update state
+    update_shade_state(scns, st);
+
     // begin frame
     yglu::enable_depth_test(true);
     yglu::enable_culling(false);
@@ -770,13 +774,13 @@ inline void shade_scene(const ygltf::scene_group* scns, const ygltf::scene* scn,
         tmtype, gamma, camera_xform, camera_view, camera_proj);
 
     if (!camera_lights) {
-        init_shade_lights(st, scns, scn);
+        update_shade_lights(st, scns);
         yglu::stdshader::set_lights(st->prog, amb, st->lights_pos.size(),
             st->lights_pos.data(), st->lights_ke.data(),
             st->lights_ltype.data());
     }
 
-    auto instances = ygltf::get_mesh_nodes(scn);
+    auto instances = ygltf::get_mesh_nodes(scns->default_scene);
 
     if (!instances.empty()) {
         for (auto ist : instances) {
@@ -826,10 +830,10 @@ void draw_scene(ygui::window* win) {
             scn->gamma, scn->wireframe, scn->edges, scn->camera_lights,
             scn->amb);
     } else {
-        shade_scene(scn->gscn, scn->gsscn, scn->shstate, scn->view_cam,
-            scn->gcam, scn->background, scn->exposure,
-            (yglu::tonemap_type)scn->tonemap, scn->gamma, scn->wireframe,
-            scn->edges, scn->camera_lights, scn->amb);
+        shade_scene(scn->gscn, scn->shstate, scn->view_cam, scn->gcam,
+            scn->background, scn->exposure, (yglu::tonemap_type)scn->tonemap,
+            scn->gamma, scn->wireframe, scn->edges, scn->camera_lights,
+            scn->amb);
     }
 }
 
@@ -1042,13 +1046,12 @@ void draw_elem_widgets(ygui::window* win, yobj::scene* oscn, void** selection,
     }
 }
 
-void draw_scene_widgets(
-    ygui::window* win, yobj::scene* oscn, const yshade_state* state) {
-    static auto selection = (void*)nullptr;
+void draw_scene_widgets(ygui::window* win, yobj::scene* oscn, void** selection,
+    const yshade_state* state) {
     ygui::scroll_region_begin_widget(win, "model", 240, false);
-    draw_tree_widgets(win, "", oscn, &selection);
+    draw_tree_widgets(win, "", oscn, selection);
     ygui::scroll_region_end_widget(win);
-    draw_elem_widgets(win, oscn, &selection, state);
+    draw_elem_widgets(win, oscn, selection, state);
 }
 
 void draw_tree_widgets(ygui::window* win, const std::string& lbl,
@@ -1136,6 +1139,38 @@ void draw_tree_widgets(ygui::window* win, const std::string& lbl,
 }
 
 void draw_tree_widgets(ygui::window* win, const std::string& lbl,
+    ygltf::animation* anim, void** selection) {
+    if (ygui::tree_begin_widget(win, lbl, selection, anim)) {
+        auto sid = 0;
+        for (auto node : anim->nodes) {
+            draw_tree_widgets(
+                win, "node " + std::to_string(sid++) + ": ", node, selection);
+        }
+        ygui::tree_end_widget(win);
+    }
+}
+
+void draw_tree_widgets(ygui::window* win, const std::string& lbl,
+    ygltf::animation_group* anims, void** selection) {
+    if (ygui::tree_begin_widget(win, lbl + anims->name, selection, anims)) {
+        auto sid = 0;
+        for (auto anim : anims->animations) {
+            draw_tree_widgets(
+                win, "anim " + std::to_string(sid++), anim, selection);
+        }
+        ygui::tree_end_widget(win);
+    }
+}
+
+void draw_tree_widgets(ygui::window* win, const std::string& lbl,
+    ygltf::skin* skin, void** selection) {
+    if (ygui::tree_begin_widget(win, lbl + skin->name, selection, skin)) {
+        draw_tree_widgets(win, "skeleton", skin->root, selection);
+        ygui::tree_end_widget(win);
+    }
+}
+
+void draw_tree_widgets(ygui::window* win, const std::string& lbl,
     ygltf::scene_group* oscn, void** selection) {
     if (ygui::tree_begin_widget(win, lbl + "scenes")) {
         for (auto scn : oscn->scenes)
@@ -1173,6 +1208,18 @@ void draw_tree_widgets(ygui::window* win, const std::string& lbl,
             draw_tree_widgets(win, "", txt, selection);
         ygui::tree_end_widget(win);
     }
+
+    if (ygui::tree_begin_widget(win, lbl + "animations")) {
+        for (auto anim : oscn->animations)
+            draw_tree_widgets(win, "", anim, selection);
+        ygui::tree_end_widget(win);
+    }
+
+    if (ygui::tree_begin_widget(win, lbl + "skins")) {
+        for (auto skin : oscn->skins)
+            draw_tree_widgets(win, "", skin, selection);
+        ygui::tree_end_widget(win);
+    }
 }
 
 void draw_elem_widgets(ygui::window* win, ygltf::scene_group* gscn,
@@ -1184,7 +1231,9 @@ void draw_elem_widgets(ygui::window* win, ygltf::scene_group* gscn,
     auto str = yu::string::format("%d x %d @ %d  %s", txt->width, txt->height,
         txt->ncomp, (txt->dataf.empty()) ? "byte" : "float");
     ygui::label_widget(win, "size", str);
-    ygui::image_widget(win, state->txt.at(txt), {txt->width, txt->height});
+    if (state->txt.find(txt) != state->txt.end()) {
+        ygui::image_widget(win, state->txt.at(txt), {txt->width, txt->height});
+    }
 }
 
 void draw_elem_widgets(ygui::window* win, ygltf::scene_group* gscn,
@@ -1285,10 +1334,19 @@ void draw_elem_widgets(ygui::window* win, ygltf::scene_group* gscn,
     if (mat->metallic_roughness) {
         ygui::separator_widget(win);
         draw_elem_widgets(win, gscn, mat->metallic_roughness, nullptr, state);
+    } else {
+        if (ygui::button_widget(win, "add metallic roughness")) {
+            mat->metallic_roughness = new ygltf::material_metallic_rooughness();
+        }
     }
     if (mat->specular_glossiness) {
         ygui::separator_widget(win);
         draw_elem_widgets(win, gscn, mat->specular_glossiness, nullptr, state);
+    } else {
+        if (ygui::button_widget(win, "add specular glossiness")) {
+            mat->specular_glossiness =
+                new ygltf::material_specular_glossiness();
+        }
     }
 }
 
@@ -1331,6 +1389,46 @@ void draw_elem_widgets(ygui::window* win, ygltf::scene_group* gscn,
     ygui::slider_widget(win, "aspect", &cam->aspect, 0.1, 4);
     ygui::slider_widget(win, "focus", &cam->focus, 0.01, 10);
     ygui::slider_widget(win, "aperture", &cam->aperture, 0, 1);
+}
+
+void draw_elem_widgets(ygui::window* win, ygltf::scene_group* gscn,
+    ygltf::animation* anim, void** selection, const yshade_state* state) {
+    if (selection && *selection != anim) return;
+    auto interp_name = std::map<ygltf::animation_interpolation, std::string>{
+        {ygltf::animation_interpolation::step, "step"},
+        {ygltf::animation_interpolation::linear, "linear"},
+        {ygltf::animation_interpolation::catmull_rom, "catmull-rom spline"},
+        {ygltf::animation_interpolation::cubic, "cubic spline"},
+    };
+    auto node_names =
+        std::vector<std::pair<std::string, ygltf::node*>>{{"<none>", nullptr}};
+    for (auto node : gscn->nodes) node_names.push_back({node->name, node});
+    ygui::separator_widget(win);
+    ygui::label_widget(win, "interpolation", interp_name.at(anim->interp));
+    ygui::label_widget(win, "num times", (int)anim->time.size());
+    ygui::label_widget(win, "num translation", (int)anim->translation.size());
+    ygui::label_widget(win, "num rotation", (int)anim->rotation.size());
+    ygui::label_widget(win, "num scale", (int)anim->scale.size());
+    auto selected_node = (ygltf::node*)nullptr;
+    ygui::list_widget(win, "", &selected_node, node_names);
+}
+
+void draw_elem_widgets(ygui::window* win, ygltf::scene_group* gscn,
+    ygltf::animation_group* anims, void** selection,
+    const yshade_state* state) {
+    if (selection && *selection != anims) return;
+    ygui::separator_widget(win);
+    ygui::label_widget(win, "name", anims->name);
+    for (auto anim : anims->animations) {
+        draw_elem_widgets(win, gscn, anim, nullptr, state);
+    }
+}
+
+void draw_elem_widgets(ygui::window* win, ygltf::scene_group* gscn,
+    ygltf::skin* skin, void** selection, const yshade_state* state) {
+    if (selection && *selection != skin) return;
+    ygui::separator_widget(win);
+    ygui::label_widget(win, "name", skin->name);
 }
 
 void draw_elem_widgets(ygui::window* win, ygltf::scene_group* gscn,
@@ -1377,15 +1475,173 @@ void draw_elem_widgets(ygui::window* win, ygltf::scene_group* gscn,
     for (auto txt : gscn->textures) {
         draw_elem_widgets(win, gscn, txt, selection, state);
     }
+
+    for (auto anim : gscn->animations) {
+        draw_elem_widgets(win, gscn, anim, selection, state);
+    }
+
+    for (auto skin : gscn->skins) {
+        draw_elem_widgets(win, gscn, skin, selection, state);
+    }
 }
 
-void draw_scene_widgets(
-    ygui::window* win, ygltf::scene_group* gscn, const yshade_state* state) {
-    static auto selection = (void*)nullptr;
+template <typename T>
+inline void remove(std::vector<T*>& v, T* vv) {
+    auto pos = std::find(v.begin(), v.end(), vv);
+    if (pos != v.end()) v.erase(pos);
+}
+
+inline void draw_edit_widgets(ygui::window* win, ygltf::scene_group* gscn,
+    void** selection, const yshade_state* state) {
+    static auto shape_names =
+        std::vector<std::pair<std::string, int>>{{"cube", 0}, {"sphere", 1}};
+    static auto shape_type = 0;
+    static char txt_filename[1024] = "grid.png";
+
+    auto selected_node = (ygltf::node*)nullptr;
+    auto selected_scene = (ygltf::scene*)nullptr;
+    auto selected_mesh = (ygltf::mesh*)nullptr;
+    auto selected_cam = (ygltf::camera*)nullptr;
+    auto selected_txt = (ygltf::texture*)nullptr;
+    auto selected_mat = (ygltf::material*)nullptr;
+
+    if (*selection) {
+        for (auto ptr : gscn->nodes)
+            if (ptr == *selection) selected_node = ptr;
+        for (auto ptr : gscn->scenes)
+            if (ptr == *selection) selected_scene = ptr;
+        for (auto ptr : gscn->meshes)
+            if (ptr == *selection) selected_mesh = ptr;
+        for (auto ptr : gscn->cameras)
+            if (ptr == *selection) selected_cam = ptr;
+        for (auto ptr : gscn->materials)
+            if (ptr == *selection) selected_mat = ptr;
+        for (auto ptr : gscn->textures)
+            if (ptr == *selection) selected_txt = ptr;
+    }
+
+    static auto auto_parent = true;
+    ygui::checkbox_widget(win, "set parent from selection", &auto_parent);
+
+    if (ygui::button_widget(win, "add mesh")) {
+        static auto count = 0;
+        auto mesh = new ygltf::mesh();
+        mesh->name = "<new mesh " + std::to_string(count++) + ">";
+        auto shp = new ygltf::shape();
+        mesh->shapes.push_back(shp);
+        shp->name = "<new shape " + std::to_string(count - 1) + ">";
+        switch (shape_type) {
+            case 0: {
+                ym::make_uvcube(
+                    1, 1, shp->triangles, shp->pos, shp->norm, shp->texcoord);
+            } break;
+            case 1: {
+                ym::make_uvsphere(
+                    1, 1, shp->triangles, shp->pos, shp->norm, shp->texcoord);
+            } break;
+        }
+        if (auto_parent && selected_node) selected_node->mesh = mesh;
+        gscn->meshes.push_back(mesh);
+        *selection = mesh;
+    }
+    ygui::combo_widget(win, "shape type", &shape_type, shape_names);
+
+    if (ygui::button_widget(win, "add camera")) {
+        static auto count = 0;
+        auto cam = new ygltf::camera();
+        cam->name = "<new camera " + std::to_string(count++) + ">";
+        if (auto_parent && selected_node) selected_node->camera = cam;
+        gscn->cameras.push_back(cam);
+        *selection = cam;
+    }
+
+    if (ygui::button_widget(win, "add node")) {
+        static auto count = 0;
+        auto node = new ygltf::node();
+        node->name = "<new node " + std::to_string(count++) + ">";
+        if (auto_parent && selected_node)
+            selected_node->children.push_back(node);
+        gscn->nodes.push_back(node);
+        *selection = node;
+    }
+
+    if (ygui::button_widget(win, "add texture")) {
+        static auto count = 0;
+        auto txt = new ygltf::texture();
+        txt->name = "<new texture " + std::to_string(count++) + ">";
+        txt->path = txt_filename;
+        auto scn = (yscene*)ygui::get_user_pointer(win);
+        auto dirname = yu::path::get_dirname(scn->filename);
+        try {
+            yimg::load_image(dirname + txt->path, txt->width, txt->height,
+                txt->ncomp, txt->dataf, txt->datab);
+        } catch (...) {
+            txt->width = 1;
+            txt->height = 1;
+            txt->dataf = {};
+            txt->datab = {{255, 255, 255, 255}};
+        }
+        gscn->textures.push_back(txt);
+        *selection = txt;
+    }
+    ygui::text_widget(win, "texture", txt_filename, sizeof(txt_filename));
+
+    if (ygui::button_widget(win, "delete")) {
+        if (selected_cam) {
+            for (auto node : gscn->nodes)
+                if (node->camera == selected_cam) node->camera = nullptr;
+            remove(gscn->cameras, selected_cam);
+            delete selected_cam;
+            *selection = nullptr;
+        }
+        if (selected_mesh) {
+            for (auto node : gscn->nodes)
+                if (node->mesh == selected_mesh) node->camera = nullptr;
+            remove(gscn->meshes, selected_mesh);
+            delete selected_mesh;
+            *selection = nullptr;
+        }
+        if (selected_mat) {
+            for (auto mesh : gscn->meshes)
+                for (auto shp : mesh->shapes)
+                    if (shp->material == selected_mat) shp->material = nullptr;
+            remove(gscn->materials, selected_mat);
+            delete selected_mat;
+            *selection = nullptr;
+        }
+        if (selected_txt) {
+            for (auto mat : gscn->materials) {
+                if (mat->emission_txt == selected_txt)
+                    mat->emission_txt = nullptr;
+                if (mat->normal_txt == selected_txt) mat->normal_txt = nullptr;
+                if (mat->occlusion_txt == selected_txt)
+                    mat->occlusion_txt = nullptr;
+                if (mat->metallic_roughness) {
+                    if (mat->metallic_roughness->base_txt == selected_txt)
+                        mat->metallic_roughness->base_txt = nullptr;
+                    if (mat->metallic_roughness->metallic_txt == selected_txt)
+                        mat->metallic_roughness->metallic_txt = nullptr;
+                }
+                if (mat->specular_glossiness) {
+                    if (mat->specular_glossiness->diffuse_txt == selected_txt)
+                        mat->specular_glossiness->diffuse_txt = nullptr;
+                    if (mat->specular_glossiness->specular_txt == selected_txt)
+                        mat->specular_glossiness->specular_txt = nullptr;
+                }
+            }
+            remove(gscn->textures, selected_txt);
+            delete selected_txt;
+            *selection = nullptr;
+        }
+    }
+}
+
+void draw_scene_widgets(ygui::window* win, ygltf::scene_group* gscn,
+    void** selection, const yshade_state* state) {
     ygui::scroll_region_begin_widget(win, "model", 240, false);
-    draw_tree_widgets(win, "", gscn, &selection);
+    draw_tree_widgets(win, "", gscn, selection);
     ygui::scroll_region_end_widget(win);
-    draw_elem_widgets(win, gscn, &selection, state);
+    draw_elem_widgets(win, gscn, selection, state);
 }
 
 void draw_widgets(ygui::window* win) {
@@ -1437,11 +1693,11 @@ void draw_widgets(ygui::window* win) {
             for (auto cam : scn->oscn->cameras)
                 camera_names.push_back({cam->name, cam});
             ygui::combo_widget(win, "camera", &scn->ocam, camera_names);
-        } else if (scn->gscn && scn->gsscn) {
+        } else if (scn->gscn && scn->gscn->default_scene) {
             auto camera_names =
                 std::vector<std::pair<std::string, ygltf::node*>>{
                     {"<view>", nullptr}};
-            for (auto cam : ygltf::get_camera_nodes(scn->gsscn)) {
+            for (auto cam : ygltf::get_camera_nodes(scn->gscn->default_scene)) {
                 camera_names.push_back({cam->name, cam});
             }
             ygui::combo_widget(win, "camera", &scn->gcam, camera_names);
@@ -1466,9 +1722,18 @@ void draw_widgets(ygui::window* win) {
             ygui::combo_widget(
                 win, "hdr tonemap", (int*)&scn->tonemap, tmtype_names);
         }
+        if (ygui::collapsing_header_widget(win, "edit")) {
+            if (scn->gscn)
+                draw_edit_widgets(
+                    win, scn->gscn, &scn->selection, scn->shstate);
+        }
         if (ygui::collapsing_header_widget(win, "inspect")) {
-            if (scn->oscn) draw_scene_widgets(win, scn->oscn, scn->shstate);
-            if (scn->gscn) draw_scene_widgets(win, scn->gscn, scn->shstate);
+            if (scn->oscn)
+                draw_scene_widgets(
+                    win, scn->oscn, &scn->selection, scn->shstate);
+            if (scn->gscn)
+                draw_scene_widgets(
+                    win, scn->gscn, &scn->selection, scn->shstate);
         }
     }
     ygui::end_widgets(win);
@@ -1584,10 +1849,11 @@ using update_fn = bool (*)(yscene* scn);
 //
 void shade_init(ygui::window* win) {
     auto scn = (yscene*)ygui::get_user_pointer(win);
+    scn->shstate = new yshade_state();
     if (scn->oscn) {
-        scn->shstate = init_shade_state(scn->oscn);
+        update_shade_state(scn->oscn, scn->shstate);
     } else if (scn->gscn) {
-        scn->shstate = init_shade_state(scn->gscn);
+        update_shade_state(scn->gscn, scn->shstate);
     }
 }
 

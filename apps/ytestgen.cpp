@@ -1475,7 +1475,7 @@ int main(int argc, char* argv[]) {
     auto cmd = "mkdir " + dirname;
     system(cmd.c_str());
 #else
-    auto rcmd = "del " + dirname + "\*.*; rmdir " + dirname;
+    auto rcmd = "del " + dirname + "\\*.*; rmdir " + dirname;
     system(rcmd.c_str());
     auto cmd = "mkdir " + dirname;
     system(cmd.c_str());

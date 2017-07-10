@@ -454,47 +454,29 @@ avoid.</p>
 </ul>
 </li>
 </ul>
-<h3>Enum animation_property</h3>
-<div class="codehilite"><pre><code><span></span><span class="k">enum</span> <span class="k">struct</span> <span class="n">animation_property</span> <span class="p">{</span>
-    <span class="n">translation</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
-    <span class="n">rotation</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
-    <span class="n">scale</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
-    <span class="n">weights</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span>
-<span class="p">}</span>
-</code></pre></div>
-
-
-<p>Animation property</p>
-<ul>
-<li>Values:<ul>
-<li>translation:      translation</li>
-<li>rotation:      rotation</li>
-<li>scale:      scale</li>
-<li>weights:      morph weigths</li>
-</ul>
-</li>
-</ul>
 <h3>Struct animation</h3>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">animation</span> <span class="p">{</span>
     <span class="n">animation_interpolation</span> <span class="n">interp</span> <span class="o">=</span> <span class="n">animation_interpolation</span><span class="o">::</span><span class="n">step</span><span class="p">;</span>
-    <span class="n">animation_property</span> <span class="n">prop</span> <span class="o">=</span> <span class="n">animation_property</span><span class="o">::</span><span class="n">translation</span><span class="p">;</span>
     <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">node</span><span class="o">*&gt;</span> <span class="n">nodes</span><span class="p">;</span>
     <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;</span> <span class="n">time</span><span class="p">;</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;</span> <span class="n">values</span><span class="p">;</span>
-    <span class="kt">int</span> <span class="n">ncomp</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&gt;</span> <span class="n">translation</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">ym</span><span class="o">::</span><span class="n">quat4f</span><span class="o">&gt;</span> <span class="n">rotation</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&gt;</span> <span class="n">scale</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;&gt;</span> <span class="n">morph_weights</span><span class="p">;</span>
 <span class="p">}</span>
 </code></pre></div>
 
 
-<p>Keyframe data</p>
+<p>Keyframe data.</p>
 <ul>
 <li>Members:<ul>
 <li>interp:      Interpolation</li>
-<li>prop:      Property to edit</li>
 <li>nodes:      Target nodes</li>
 <li>time:      Times</li>
-<li>values:      Animation data</li>
-<li>ncomp:      Number of component per value</li>
+<li>translation:      Translation</li>
+<li>rotation:      Rotation</li>
+<li>scale:      Scale</li>
+<li>morph_weights:      Weights for morphing</li>
 </ul>
 </li>
 </ul>

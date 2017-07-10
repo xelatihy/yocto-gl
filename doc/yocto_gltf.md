@@ -456,48 +456,30 @@ Animation Interpolation
     - cubic:      cubic bezier spline
 
 
-### Enum animation_property
-
-~~~ .cpp
-enum struct animation_property {
-    translation = 0,
-    rotation = 1,
-    scale = 2,
-    weights = 3,
-}
-~~~
-
-Animation property
-
-- Values:
-    - translation:      translation
-    - rotation:      rotation
-    - scale:      scale
-    - weights:      morph weigths
-
-
 ### Struct animation
 
 ~~~ .cpp
 struct animation {
     animation_interpolation interp = animation_interpolation::step;
-    animation_property prop = animation_property::translation;
     std::vector<node*> nodes;
     std::vector<float> time;
-    std::vector<float> values;
-    int ncomp = 0;
+    std::vector<ym::vec3f> translation;
+    std::vector<ym::quat4f> rotation;
+    std::vector<ym::vec3f> scale;
+    std::vector<std::vector<float>> morph_weights;
 }
 ~~~
 
-Keyframe data
+Keyframe data.
 
 - Members:
     - interp:      Interpolation
-    - prop:      Property to edit
     - nodes:      Target nodes
     - time:      Times
-    - values:      Animation data
-    - ncomp:      Number of component per value
+    - translation:      Translation
+    - rotation:      Rotation
+    - scale:      Scale
+    - morph_weights:      Weights for morphing
 
 
 ### Struct animation_group
