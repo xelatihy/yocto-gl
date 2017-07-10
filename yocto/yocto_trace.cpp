@@ -49,6 +49,11 @@
 #include <cstdlib>
 #include <cstring>
 
+#ifndef _WIN32
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
+#endif
+
 namespace ytrace {
 
 //
@@ -2171,3 +2176,7 @@ void trace_image(const scene* scn, int width, int height, ym::vec4f* pixels,
 }
 
 }  // namespace ytrace
+
+#ifndef _WIN32
+#pragma GCC diagnostic pop
+#endif

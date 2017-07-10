@@ -57,15 +57,6 @@ static std::string _get_dirname(const std::string& filename) {
 }
 
 //
-// Get extension (including '.').
-//
-static std::string _get_extension(const std::string& filename) {
-    auto pos = filename.rfind('.');
-    if (pos == std::string::npos) return "";
-    return filename.substr(pos);
-}
-
-//
 // Splits a std::string into an array of strings on whitespace with Python split
 // semantic. Modifies original std::string to avoid allocation.
 //
