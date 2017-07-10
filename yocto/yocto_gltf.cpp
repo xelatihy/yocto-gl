@@ -3093,6 +3093,16 @@ scene_group* gltf_to_scenes(const glTF* gltf, int scene_idx) {
         for (auto n : gnode->children) is_root[(int)n] = false;
     }
 
+    // fix node morph weights
+    for (auto node : scns->nodes) {
+        if (!node->mesh) continue;
+        for (auto shp : node->mesh->shapes) {
+            if (node->morph_weights.size() < shp->morph_targets.size()) {
+                node->morph_weights.resize(shp->morph_targets.size());
+            }
+        }
+    }
+
     // convert animations
     for (auto ganim : gltf->animations) {
         auto anim_group = new animation_group();
@@ -3112,14 +3122,53 @@ scene_group* gltf_to_scenes(const glTF* gltf, int scene_idx) {
                     (animation_interpolation)gsampler->interpolation;
                 auto output_view =
                     vec_array_view(gltf, gltf->get(gsampler->output));
-                keyframes->values.resize(
-                    output_view.size() * output_view.ncomp());
-                keyframes->ncomp = output_view.ncomp();
-                keyframes->prop = (animation_property)gchannel->target->path;
-                for (auto i = 0; i < output_view.size(); i++) {
-                    for (auto j = 0; j < output_view.ncomp(); j++) {
-                        keyframes->values[i * output_view.ncomp() + j] =
-                            output_view.get(i, j);
+                switch (gchannel->target->path) {
+                    case glTFAnimationChannelTargetPath::Translation: {
+                        keyframes->translation.reserve(output_view.size());
+                        for (auto i = 0; i < output_view.size(); i++)
+                            keyframes->translation.push_back(
+                                output_view.get<3>(i));
+                    } break;
+                    case glTFAnimationChannelTargetPath::Rotation: {
+                        keyframes->rotation.reserve(output_view.size());
+                        for (auto i = 0; i < output_view.size(); i++)
+                            keyframes->rotation.push_back(
+                                (ym::quat4f)output_view.get<4>(i));
+                    } break;
+                    case glTFAnimationChannelTargetPath::Scale: {
+                        keyframes->scale.reserve(output_view.size());
+                        for (auto i = 0; i < output_view.size(); i++)
+                            keyframes->scale.push_back(output_view.get<3>(i));
+                    } break;
+                    case glTFAnimationChannelTargetPath::Weights: {
+                        // get a node that it refers to
+                        auto ncomp = 0;
+                        auto gnode = gltf->get(gchannel->target->node);
+                        auto gmesh = gltf->get(gnode->mesh);
+                        if (gmesh) {
+                            for (auto gshp : gmesh->primitives) {
+                                ncomp =
+                                    ym::max((int)gshp->targets.size(), ncomp);
+                            }
+                        }
+                        if (ncomp) {
+                            auto values = std::vector<float>();
+                            values.reserve(output_view.size());
+                            for (auto i = 0; i < output_view.size(); i++)
+                                values.push_back(output_view.get(i, 0));
+                            keyframes->morph_weights.resize(
+                                values.size() / ncomp);
+                            for (auto i = 0;
+                                 i < keyframes->morph_weights.size(); i++) {
+                                keyframes->morph_weights[i].resize(ncomp);
+                                for (auto j = 0; j < ncomp; j++)
+                                    keyframes->morph_weights[i][j] =
+                                        values[i * ncomp + j];
+                            }
+                        }
+                    } break;
+                    default: {
+                        // skip
                     }
                 }
                 sampler_map[{(int)gchannel->sampler,
@@ -3159,30 +3208,6 @@ scene_group* gltf_to_scenes(const glTF* gltf, int scene_idx) {
     for (auto nid = 0; nid < gltf->nodes.size(); nid++) {
         if (!gltf->nodes[nid]->skin) continue;
         scns->nodes[nid]->skin = scns->skins[(int)gltf->nodes[nid]->skin];
-    }
-
-    // fix node morph weights
-    for (auto node : scns->nodes) {
-        if (!node->mesh) continue;
-        for (auto shp : node->mesh->shapes) {
-            if (node->morph_weights.size() < shp->morph_targets.size()) {
-                node->morph_weights.resize(shp->morph_targets.size());
-            }
-        }
-    }
-
-    // fix morph animation number of components
-    for (auto anims : scns->animations) {
-        for (auto anim : anims->animations) {
-            if (anim->prop != animation_property::weights) continue;
-            for (auto node : anim->nodes) {
-                if (!node->mesh) continue;
-                for (auto shp : node->mesh->shapes) {
-                    anim->ncomp =
-                        ym::max(anim->ncomp, (int)shp->morph_targets.size());
-                }
-            }
-        }
     }
 
     // convert scenes
@@ -3624,39 +3649,37 @@ glTF* scenes_to_gltf(const scene_group* scns, const std::string& buffer_uri) {
                 glTFAccessorComponentType::Float, (int)anim->time.size(),
                 sizeof(float), anim->time.data(), false);
             auto path = glTFAnimationChannelTargetPath::NotSet;
-            switch (anim->prop) {
-                case animation_property::translation: {
-                    gsmp->output =
-                        add_accessor(aid + "_output", glTFAccessorType::Vec3,
-                            glTFAccessorComponentType::Float,
-                            (int)anim->values.size() / 3, sizeof(ym::vec3f),
-                            anim->values.data(), false);
-                    path = glTFAnimationChannelTargetPath::Translation;
-                } break;
-                case animation_property::rotation: {
-                    gsmp->output =
-                        add_accessor(aid + "_output", glTFAccessorType::Vec4,
-                            glTFAccessorComponentType::Float,
-                            (int)anim->values.size() / 4, sizeof(ym::vec4f),
-                            anim->values.data(), false);
-                    path = glTFAnimationChannelTargetPath::Rotation;
-                } break;
-                case animation_property::scale: {
-                    gsmp->output =
-                        add_accessor(aid + "_output", glTFAccessorType::Vec3,
-                            glTFAccessorComponentType::Float,
-                            (int)anim->values.size() / 3, sizeof(ym::vec3f),
-                            anim->values.data(), false);
-                    path = glTFAnimationChannelTargetPath::Scale;
-                } break;
-                case animation_property::weights: {
-                    gsmp->output =
-                        add_accessor(aid + "_output", glTFAccessorType::Scalar,
-                            glTFAccessorComponentType::Float,
-                            (int)anim->values.size(), sizeof(float),
-                            anim->values.data(), false);
-                    path = glTFAnimationChannelTargetPath::Weights;
-                } break;
+            if (!anim->translation.empty()) {
+                gsmp->output = add_accessor(aid + "_translation",
+                    glTFAccessorType::Vec3, glTFAccessorComponentType::Float,
+                    (int)anim->translation.size(), sizeof(ym::vec3f),
+                    anim->translation.data(), false);
+                path = glTFAnimationChannelTargetPath::Translation;
+            } else if (!anim->rotation.empty()) {
+                gsmp->output = add_accessor(aid + "_rotation",
+                    glTFAccessorType::Vec4, glTFAccessorComponentType::Float,
+                    (int)anim->rotation.size(), sizeof(ym::vec4f),
+                    anim->rotation.data(), false);
+                path = glTFAnimationChannelTargetPath::Rotation;
+            } else if (!anim->scale.empty()) {
+                gsmp->output = add_accessor(aid + "_scale",
+                    glTFAccessorType::Vec3, glTFAccessorComponentType::Float,
+                    (int)anim->scale.size(), sizeof(ym::vec3f),
+                    anim->scale.data(), false);
+                path = glTFAnimationChannelTargetPath::Scale;
+            } else if (!anim->morph_weights.empty()) {
+                auto values = std::vector<float>();
+                values.reserve(
+                    anim->morph_weights.size() * anim->morph_weights[0].size());
+                for (auto i = 0; i < anim->morph_weights.size(); i++) {
+                    values.insert(values.end(), anim->morph_weights[i].begin(),
+                        anim->morph_weights[i].end());
+                }
+                gsmp->output = add_accessor(aid + "_weights",
+                    glTFAccessorType::Scalar, glTFAccessorComponentType::Float,
+                    (int)values.size(), sizeof(float), values.data(), false);
+                path = glTFAnimationChannelTargetPath::Weights;
+            } else {
             }
             gsmp->interpolation = interpolation_map.at(anim->interp);
             for (auto node : anim->nodes) {
@@ -3973,56 +3996,77 @@ void update_animated_node_transforms(const animation* anim, float time) {
         t = (time - anim->time[i1]) / (anim->time[i2] - anim->time[i1]);
     }
 
-    // interpolation
-    auto val = ym::vec<float, 8>{0, 0, 0, 0, 0, 0, 0, 0};
-    switch (interp) {
-        case animation_interpolation::step: {
-            auto val1 = anim->values.data() + anim->ncomp * i1;
-            for (auto i = 0; i < anim->ncomp; i++) val[i] = val1[i];
-            break;
-        }
-        case animation_interpolation::linear: {
-            auto val1 = anim->values.data() + anim->ncomp * i1;
-            auto val2 = anim->values.data() + anim->ncomp * i2;
-            for (auto i = 0; i < anim->ncomp; i++)
-                val[i] = val1[i] * (1 - t) + val2[i] * t;
-            break;
-        }
-        case animation_interpolation::catmull_rom: {
-            auto val1 = anim->values.data() + anim->ncomp * i1;
-            for (auto i = 0; i < anim->ncomp; i++) val[i] = val1[i];
-            break;
-        }
-        case animation_interpolation::cubic: {
-            auto val1 = anim->values.data() + anim->ncomp * i1;
-            for (auto i = 0; i < anim->ncomp; i++) val[i] = val1[i];
-            break;
-        }
-    }
-
     // apply transforms
-    switch (anim->prop) {
-        case animation_property::translation: {
-            auto trans = ym::vec3f{val[0], val[1], val[2]};
-            for (auto node : anim->nodes) node->translation = trans;
-        } break;
-        case animation_property::rotation: {
-            auto rot =
-                ym::normalize(ym::quat4f{val[0], val[1], val[2], val[3]});
-            for (auto node : anim->nodes) node->rotation = rot;
-        } break;
-        case animation_property::scale: {
-            auto scale = ym::vec3f{val[0], val[1], val[2]};
-            for (auto node : anim->nodes) node->scale = scale;
-        } break;
-        case animation_property::weights: {
-            for (auto node : anim->nodes) {
-                node->morph_weights.resize(anim->ncomp);
-                node->morph_weights.assign(
-                    val.data(), val.data() + anim->ncomp);
-            }
-        } break;
-        default: break;
+    if (!anim->translation.empty()) {
+        auto trans = ym::vec3f{0, 0, 0};
+        switch (interp) {
+            case animation_interpolation::step: {
+                trans = anim->translation[i1];
+            } break;
+            case animation_interpolation::linear: {
+                trans =
+                    anim->translation[i1] * (1 - t) + anim->translation[i2] * t;
+            } break;
+            case animation_interpolation::catmull_rom: {
+            } break;
+            case animation_interpolation::cubic: {
+            } break;
+        }
+        for (auto node : anim->nodes) node->translation = trans;
+    } else if (!anim->rotation.empty()) {
+        auto rot = ym::quat4f{0, 0, 0, 1};
+        switch (interp) {
+            case animation_interpolation::step: {
+                rot = anim->rotation[i1];
+            } break;
+            case animation_interpolation::linear: {
+                // rot = ym::slerp(anim->rotation[i1], anim->rotation[i2], t);
+                auto rot_ = (ym::quat4f)normalize(
+                    ((ym::vec4f)anim->rotation[i1]) * (1 - t) +
+                    ((ym::vec4f)anim->rotation[i2]) * t);
+                rot = ym::quat4f{rot_.x, rot_.y, rot_.z, rot_.w};
+
+            } break;
+            case animation_interpolation::catmull_rom: {
+            } break;
+            case animation_interpolation::cubic: {
+            } break;
+        }
+        for (auto node : anim->nodes) node->rotation = rot;
+    } else if (!anim->scale.empty()) {
+        auto scale = ym::vec3f{1, 1, 1};
+        switch (interp) {
+            case animation_interpolation::step: {
+                scale = anim->scale[i1];
+            } break;
+            case animation_interpolation::linear: {
+                scale = anim->scale[i1] * (1 - t) + anim->scale[i2] * t;
+            } break;
+            case animation_interpolation::catmull_rom: {
+            } break;
+            case animation_interpolation::cubic: {
+            } break;
+        }
+        for (auto node : anim->nodes) node->scale = scale;
+    } else if (!anim->morph_weights.empty()) {
+        auto weights = std::vector<float>(anim->morph_weights[0].size());
+        switch (interp) {
+            case animation_interpolation::step: {
+                weights = anim->morph_weights[i1];
+            } break;
+            case animation_interpolation::linear: {
+                for (auto i = 0; i < weights.size(); i++) {
+                    weights[i] = anim->morph_weights[i1][i] * (1 - t) +
+                                 anim->morph_weights[i2][i] * t;
+                }
+            } break;
+            case animation_interpolation::catmull_rom: {
+            } break;
+            case animation_interpolation::cubic: {
+            } break;
+        }
+        for (auto node : anim->nodes) node->morph_weights = weights;
+    } else {
     }
 }
 

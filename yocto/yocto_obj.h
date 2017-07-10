@@ -495,12 +495,6 @@ struct obj_element {
     obj_element_type type;
     /// number of vertices
     uint16_t size;
-
-#ifdef _WIN32
-    /// constructor
-    obj_element(uint32_t start_, etype type_, uint16_t size_)
-        : start(start_), type(type_), size(size_) {}
-#endif
 };
 
 ///

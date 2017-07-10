@@ -69,14 +69,14 @@ std::string schemaname2typename(const std::string& schemaname) {
     while (!sname.empty()) {
         auto split = split_schemaname(sname);
         name =
-            (char)std::toupper(split.first[0]) + split.first.substr(1) + name;
+            (char)toupper(split.first[0]) + split.first.substr(1) + name;
         sname = split.second;
     }
     return "glTF" + name;
 }
 
 std::string varname2enumname(const std::string& varname) {
-    return (char)std::toupper(varname[0]) + varname.substr(1);
+    return (char)toupper(varname[0]) + varname.substr(1);
 }
 
 std::string string2enumvalue(const std::string& str) {
@@ -84,7 +84,7 @@ std::string string2enumvalue(const std::string& str) {
     auto nname = std::string();
     while (!name.empty()) {
         auto pos = name.find("_");
-        nname += (char)std::toupper(name[0]) + name.substr(1, pos - 1);
+        nname += (char)toupper(name[0]) + name.substr(1, pos - 1);
         name = (pos == name.npos) ? "" : name.substr(pos + 1);
     }
     name = nname;
@@ -1157,7 +1157,7 @@ void schemas2types(
         auto tname = schemaname2typename(sname);
         auto schema = load_json(schemadir + filename);
         auto type = new StructType(sname, tname);
-        if (schema.count("description")) type->help = schema.at("description");
+        if (schema.count("description")) type->help = schema["description"].get<std::string>();
         if (schema.count("allOf")) {
             auto basename = filename2schemaname(schema["allOf"][0]["$ref"]);
             auto base = (StructType*)schema2type(types, basename);
@@ -1181,11 +1181,11 @@ void schemas2types(
                 varschema2type(types, var_schema, var_it.key(), type));
             var->required = req;
             if (var_schema.count("gltf_extension"))
-                var->ext_name = var_schema["gltf_extension"];
+                var->ext_name = var_schema["gltf_extension"].get<std::string>();
             if (var_schema.count("description"))
-                var->help = var_schema.at("description");
+                var->help = var_schema["description"].get<std::string>();
             if (var_schema.count("gltf_detailedDescription"))
-                var->long_help = var_schema.at("gltf_detailedDescription");
+                var->long_help = var_schema["gltf_detailedDescription"].get<std::string>();
             if (var_schema.count("default"))
                 var->defvalue = var_schema.at("default");
             type->vars += var;

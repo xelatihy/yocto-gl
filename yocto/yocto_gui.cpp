@@ -445,6 +445,13 @@ void label_widget(
 }
 
 //
+// Text widget
+//
+bool text_widget(window* win, const std::string& lbl, char* buf, int buf_size) {
+    return ImGui::InputText(lbl.c_str(), buf, buf_size);
+}
+
+//
 // Label widget
 //
 bool slider_widget(

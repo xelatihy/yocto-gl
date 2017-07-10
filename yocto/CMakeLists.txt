@@ -39,10 +39,10 @@ if(NOT YOCTO_NO_OPENGL)
         find_library(GLFW_LIBRARY NAMES glfw3 glfw PATHS /usr/local/lib)
     endif(APPLE)
     if(WIN32)
-    	include_directories(${CMAKE_SOURCE_DIR}/w32/include)
-        link_directories(${CMAKE_SOURCE_DIR}/w32/lib/lib-vc2015)
-        find_library(GLEW_LIBRARIES NAMES glew32 PATHS ${CMAKE_SOURCE_DIR}/w32/lib-vc2015)
-        find_library(GLFW_LIBRARY NAMES glfw3dll PATHS ${CMAKE_SOURCE_DIR}/w32/lib-vc2015)
+    	include_directories(${CMAKE_SOURCE_DIR}/apps/w32/include)
+        link_directories(${CMAKE_SOURCE_DIR}/apps/w32/lib/lib-vc2015)
+        find_library(GLEW_LIBRARIES NAMES glew32 PATHS ${CMAKE_SOURCE_DIR}/apps/w32/lib-vc2015)
+        find_library(GLFW_LIBRARY NAMES glfw3dll PATHS ${CMAKE_SOURCE_DIR}/apps/w32/lib-vc2015)
     endif(WIN32)
     if(UNIX AND NOT APPLE)
         include_directories(/usr/include /usr/local/include)
@@ -91,7 +91,6 @@ if(NOT YOCTO_NO_OPENGL)
     endif(NOT APPLE)
 
 endif(NOT YOCTO_NO_OPENGL)
-
 
 add_library(yocto STATIC ${yocto_files})
 

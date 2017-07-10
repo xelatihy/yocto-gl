@@ -2053,8 +2053,9 @@ constexpr quat<T, 4> nlerp(const quat<T, 4>& a, const quat<T, 4>& b, T t) {
 /// quaterion spherical linear interpolation
 template <typename T>
 constexpr quat<T, 4> slerp(const quat<T, 4>& a, const quat<T, 4>& b, T t) {
-    return slerp(vec<T, 4>(a),
-        dot(vec<T, 4>(a), vec<T, 4>(b)) < 0 ? -vec<T, 4>(b) : vec<T, 4>(b), t);
+    auto a_ = vec<float, 4>{a.x, a.y, a.z, a.w};
+    auto b_ = vec<float, 4>{b.x, b.y, b.z, b.w};
+    return slerp(a_, dot(a_, b_) < 0 ? -b_ : b_, t);
 }
 
 // -----------------------------------------------------------------------------

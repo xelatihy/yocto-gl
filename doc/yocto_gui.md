@@ -319,6 +319,14 @@ void label_widget(window* win, const std::string& lbl, ym::vec4f val,
 
 Label widget
 
+### Function text_widget()
+
+~~~ .cpp
+bool text_widget(window* win, const std::string& lbl, char* buf, int buf_size);
+~~~
+
+Text widget
+
 ### Function slider_widget()
 
 ~~~ .cpp

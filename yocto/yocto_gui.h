@@ -253,6 +253,11 @@ void label_widget(window* win, const std::string& lbl, ym::vec4f val,
     const char* fmt = "[ %f, %f, %f ]");
 
 ///
+/// Text widget
+///
+bool text_widget(window* win, const std::string& lbl, char* buf, int buf_size);
+
+///
 /// Slider widget
 ///
 bool slider_widget(window* win, const std::string& lbl, int* val, int min,
