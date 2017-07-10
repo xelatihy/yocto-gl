@@ -46,7 +46,7 @@ target_link_libraries(ygltfproc yocto)
 target_link_libraries(yimproc yocto)
 
 if(UNIX AND NOT APPLE)
-    set_target_properties(ytrace PROPERTIES COMPILE_FLAGS -pthread LINK_FLAGS -pthread)
+    find_package(Threads REQUIRED)
 endif(UNIX AND NOT APPLE)
 
 if(NOT YOCTO_NO_OPENGL)
