@@ -30,3 +30,10 @@ endif(WIN32)
 
 add_executable(ygltfgen ygltfgen.cpp ../yocto/yocto_utils.h ../yocto/yocto_utils.cpp)
 add_executable(ydocgen ydocgen.cpp ../yocto/yocto_utils.h ../yocto/yocto_utils.cpp)
+
+if(UNIX AND NOT APPLE)
+    find_package(Threads REQUIRED)
+    target_link_libraries(ygltfgen Threads::Threads)
+    target_link_libraries(ydocgen Threads::Threads)
+endif(UNIX AND NOT APPLE)
+

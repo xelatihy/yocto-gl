@@ -94,6 +94,11 @@ endif(NOT YOCTO_NO_OPENGL)
 
 add_library(yocto STATIC ${yocto_files})
 
+if(UNIX AND NOT APPLE)
+    find_package(Threads REQUIRED)
+    target_link_libraries(yocto Threads::Threads)
+endif(UNIX AND NOT APPLE)
+
 if(NOT YOCTO_NO_OPENGL)
     target_link_libraries(yocto ${OPENGL_gl_LIBRARY} ${GLFW_LIBRARY} ${GLEW_LIBRARIES})
 endif(NOT YOCTO_NO_OPENGL)
