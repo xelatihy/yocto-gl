@@ -1,0 +1,838 @@
+
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+          <link rel="stylesheet" href="style.css">
+        </head>
+        <body>
+        <header></header>
+        <article>
+        <h1>Yocto/Obj</h1>
+<p>Wavefront OBJ/MTL loader and writer with support for points,
+lines, triangles and general polygons and all materials properties.
+Contains also a few extensions to easily create demos such as per-vertex
+color and radius, cameras, environment maps and instances.
+Can use either a low-level OBJ representation or a high level flattened
+representation.</p>
+<p>Both in reading and writing, OBJ has no clear convention on the orientation
+of textures Y axis. So in many cases textures appears flipped. To handle
+that, use the option to flip textures coordinates on either saving or
+loading. By default texture coordinates are flipped since this seems
+the convention found on test cases collected on the web.</p>
+<p>In the high level interface, shapes are indexed meshes and are described
+by arrays of vertex indices for points/lines/triangles and arrays for vertex
+positions, normals, texcoords, color and radius. The latter two as
+extensions. Since OBJ is a complex formats that does not match well with
+current GPU rendering / path tracing algorithms, we adopt a simplification
+similar to other single file libraries:
+1. vertex indices are unique, as in OpenGL and al standard indexed triangle
+  meshes data structures, and not OBJ triplets; YOCTO_OBJ ensures that no
+  vertex dusplication happens thought for same triplets
+2. we split shapes on changes to groups and materials, instead of keeping
+  per-face group/material data; this makes the data usable right away in
+  a GPU viewer; this is not a major limitation if we accept the previous
+  point that already changes shapes topology.</p>
+<p>This library depends in yocto_math.h. Texture loading depends on
+yocto_image. If the texture loading dependency is not desired, it can be
+disabled by defining YOBJ_NO_IMAGE before including this file.</p>
+<h2>Usage Of High-Level Interface</h2>
+<ol>
+<li>load a scene with <code>load_scene()</code></li>
+<li>look at the <code>scene</code> data structures for access to individual elements</li>
+<li>can also manipulate the scene by adding missing data with <code>add_XXX()</code>
+   functions</li>
+<li>since OBJ does natively support mesh transfotms, which we support with
+   instances, use <code>flatten_instaces()</code> or <code>add_instances()</code> to go back
+   and fourth</li>
+<li>use <code>save_scene()</code> ti write the data to disk</li>
+</ol>
+<h2>Usage Of Low-Level Interface</h2>
+<ol>
+<li>load a obj data with <code>load_obj()</code>; can load also textues</li>
+<li>look at the <code>obj_XXX</code> data structures for access to individual elements</li>
+<li>use obj back to disk with <code>save_obj()</code>; can also save textures</li>
+<li>conversion from low- to -high-level data structures with
+   <code>scene_to_obj()</code> and <code>obj_to_scene()</code></li>
+</ol>
+<h2>History</h2>
+<ul>
+<li>v 0.22: change variable names for compilation on gcc</li>
+<li>v 0.21: bug fixes</li>
+<li>v 0.20: use yocto_math in the interface and remove inline compilation</li>
+<li>v 0.19: add missing bounding box computation and missing data functions</li>
+<li>v 0.18: prioritize high-level interface</li>
+<li>v 0.17: name cleanup in both interface to better align with glTF</li>
+<li>v 0.16: change flattened data structure to use pointers</li>
+<li>v 0.15: added unknown properties std::map for materials</li>
+<li>v 0.14: added extension to store tetrahedral meshes</li>
+<li>v 0.13: started adding physics extension to materials</li>
+<li>v 0.12: change texture loading by flipping uvs rather than images</li>
+<li>v 0.11: use yocto_image for texture handling.</li>
+<li>v 0.10: switch to .h/.cpp pair</li>
+<li>v 0.9: bug fixes and optionally texture skipping</li>
+<li>v 0.8: high level interface uses grouping</li>
+<li>v 0.7: doxygen comments</li>
+<li>v 0.6: bug fixes</li>
+<li>v 0.5: removed options to force image formats (image library not reliable)</li>
+<li>v 0.4: [major API change] move to modern C++ interface</li>
+<li>v 0.3: new API internals and C++ interface</li>
+<li>v 0.2: removal of C interface</li>
+<li>v 0.1: C++ implementation</li>
+<li>v 0.0: initial release in C99</li>
+</ul>
+<h2>Namespace yobj</h2>
+<p>Reading and Writing support for Wavefront OBJ.</p>
+<h3>Typedef template  &lt;typename T ></h3>
+<p>property_map</p>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+<span class="k">using</span> <span class="n">property_map</span> <span class="o">=</span> <span class="n">std</span><span class="o">::</span><span class="n">map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&gt;</span><span class="p">;</span>
+</code></pre></div>
+
+
+<p>Property map</p>
+<h3>Struct texture</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">texture</span> <span class="p">{</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">path</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">width</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">height</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">ncomp</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;</span> <span class="n">dataf</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">unsigned</span> <span class="kt">char</span><span class="o">&gt;</span> <span class="n">datab</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+
+<p>Scene Texture</p>
+<ul>
+<li>Members:<ul>
+<li>path:      path</li>
+<li>width:      if loaded, image width</li>
+<li>height:      if loaded, image hieght</li>
+<li>ncomp:      if loaded, number of component (1-4)</li>
+<li>dataf:      if loaded, pixel data for HDRs</li>
+<li>datab:      if loaded, pixel data for LDRs</li>
+</ul>
+</li>
+</ul>
+<h3>Struct texture_info</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">texture_info</span> <span class="p">{</span>
+    <span class="kt">bool</span> <span class="n">clamp</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
+    <span class="kt">float</span> <span class="n">bump_scale</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+    <span class="n">property_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span> <span class="n">unknown_props</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+
+<p>Scene Texture Additional Information</p>
+<ul>
+<li>Members:<ul>
+<li>clamp:      clamping</li>
+<li>bump_scale:      bump scale</li>
+<li>unknown_props:      unknown string props</li>
+</ul>
+</li>
+</ul>
+<h3>Struct material</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">material</span> <span class="p">{</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">name</span><span class="p">;</span>
+    <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span> <span class="n">ke</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">};</span>
+    <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span> <span class="n">kd</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">};</span>
+    <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span> <span class="n">ks</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">};</span>
+    <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span> <span class="n">kt</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">};</span>
+    <span class="kt">float</span> <span class="n">rs</span> <span class="o">=</span> <span class="mf">0.0001</span><span class="p">;</span>
+    <span class="kt">float</span> <span class="n">opacity</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+    <span class="n">texture</span><span class="o">*</span> <span class="n">ke_txt</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+    <span class="n">texture</span><span class="o">*</span> <span class="n">kd_txt</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+    <span class="n">texture</span><span class="o">*</span> <span class="n">ks_txt</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+    <span class="n">texture</span><span class="o">*</span> <span class="n">kt_txt</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+    <span class="n">texture</span><span class="o">*</span> <span class="n">rs_txt</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+    <span class="n">texture</span><span class="o">*</span> <span class="n">bump_txt</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+    <span class="n">texture</span><span class="o">*</span> <span class="n">disp_txt</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+    <span class="n">texture</span><span class="o">*</span> <span class="n">norm_txt</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+    <span class="n">texture_info</span> <span class="n">ke_txt_info</span> <span class="o">=</span> <span class="p">{};</span>
+    <span class="n">texture_info</span> <span class="n">kd_txt_info</span> <span class="o">=</span> <span class="p">{};</span>
+    <span class="n">texture_info</span> <span class="n">ks_txt_info</span> <span class="o">=</span> <span class="p">{};</span>
+    <span class="n">texture_info</span> <span class="n">kt_txt_info</span> <span class="o">=</span> <span class="p">{};</span>
+    <span class="n">texture_info</span> <span class="n">rs_txt_info</span> <span class="o">=</span> <span class="p">{};</span>
+    <span class="n">texture_info</span> <span class="n">bump_txt_info</span> <span class="o">=</span> <span class="p">{};</span>
+    <span class="n">texture_info</span> <span class="n">disp_txt_info</span> <span class="o">=</span> <span class="p">{};</span>
+    <span class="n">texture_info</span> <span class="n">norm_txt_info</span> <span class="o">=</span> <span class="p">{};</span>
+    <span class="kt">float</span> <span class="n">stiffness</span> <span class="o">=</span> <span class="mf">0.0f</span><span class="p">;</span>
+    <span class="kt">float</span> <span class="n">density</span> <span class="o">=</span> <span class="mf">0.0f</span><span class="p">;</span>
+    <span class="n">property_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span> <span class="n">unknown_props</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+
+<p>Scene Material</p>
+<ul>
+<li>Members:<ul>
+<li>name:      material name</li>
+<li>ke:      emission color</li>
+<li>kd:      diffuse color</li>
+<li>ks:      specular color</li>
+<li>kt:      transmission color</li>
+<li>rs:      roughness</li>
+<li>opacity:      opacity</li>
+<li>ke_txt:      emission texture</li>
+<li>kd_txt:      diffuse texture</li>
+<li>ks_txt:      specular texture</li>
+<li>kt_txt:      transmission texture</li>
+<li>rs_txt:      roughness texture</li>
+<li>bump_txt:      bump map texture (heighfield)</li>
+<li>disp_txt:      displacement map texture (heighfield)</li>
+<li>norm_txt:      normal texture</li>
+<li>ke_txt_info:      emission texture</li>
+<li>kd_txt_info:      diffuse texture</li>
+<li>ks_txt_info:      specular texture</li>
+<li>kt_txt_info:      transmission texture</li>
+<li>rs_txt_info:      roughness texture</li>
+<li>bump_txt_info:      bump map texture (heighfield)</li>
+<li>disp_txt_info:      displacement map texture (heighfield)</li>
+<li>norm_txt_info:      normal texture</li>
+<li>stiffness:      stiffness</li>
+<li>density:      density</li>
+<li>unknown_props:      unknown string props</li>
+</ul>
+</li>
+</ul>
+<h3>Struct shape</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">shape</span> <span class="p">{</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
+    <span class="n">material</span><span class="o">*</span> <span class="n">mat</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">points</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">ym</span><span class="o">::</span><span class="n">vec2i</span><span class="o">&gt;</span> <span class="n">lines</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">ym</span><span class="o">::</span><span class="n">vec3i</span><span class="o">&gt;</span> <span class="n">triangles</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">ym</span><span class="o">::</span><span class="n">vec4i</span><span class="o">&gt;</span> <span class="n">tetras</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&gt;</span> <span class="n">pos</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&gt;</span> <span class="n">norm</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">ym</span><span class="o">::</span><span class="n">vec2f</span><span class="o">&gt;</span> <span class="n">texcoord</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">ym</span><span class="o">::</span><span class="n">vec4f</span><span class="o">&gt;</span> <span class="n">color</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;</span> <span class="n">radius</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">ym</span><span class="o">::</span><span class="n">vec4f</span><span class="o">&gt;</span> <span class="n">tangsp</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+
+<p>Shape. May contain only one of the points/lines/triangles.</p>
+<ul>
+<li>Members:<ul>
+<li>name:      name of the group that enclosed it</li>
+<li>mat:      material</li>
+<li>points:      points</li>
+<li>lines:      lines</li>
+<li>triangles:      triangles</li>
+<li>tetras:      tetrahedrons</li>
+<li>pos:      per-vertex position (3 float)</li>
+<li>norm:      per-vertex normals (3 float)</li>
+<li>texcoord:      per-vertex texcoord (2 float)</li>
+<li>color:      [extension] per-vertex color (4 float)</li>
+<li>radius:      [extension] per-vertex radius (1 float)</li>
+<li>tangsp:      [extension] per-vertex tangent space (4 float)</li>
+</ul>
+</li>
+</ul>
+<h3>Struct mesh</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">mesh</span> <span class="p">{</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">shape</span><span class="o">*&gt;</span> <span class="n">shapes</span><span class="p">;</span>
+    <span class="o">~</span><span class="n">mesh</span><span class="p">();</span> 
+<span class="p">}</span>
+</code></pre></div>
+
+
+<p>Mesh</p>
+<ul>
+<li>Members:<ul>
+<li>shapes:      primitives</li>
+<li>~mesh():      cleanup</li>
+</ul>
+</li>
+</ul>
+<h3>Struct instance</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">instance</span> <span class="p">{</span>
+    <span class="n">ym</span><span class="o">::</span><span class="n">mat4f</span> <span class="n">xform</span> <span class="o">=</span> <span class="n">ym</span><span class="o">::</span><span class="n">identity_mat4f</span><span class="p">;</span>
+    <span class="n">mesh</span><span class="o">*</span> <span class="n">msh</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+
+<p>Mesh instance.</p>
+<ul>
+<li>Members:<ul>
+<li>xform:      transform</li>
+<li>msh:      mesh instances</li>
+</ul>
+</li>
+</ul>
+<h3>Struct camera</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">camera</span> <span class="p">{</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">name</span><span class="p">;</span>
+    <span class="n">ym</span><span class="o">::</span><span class="n">mat4f</span> <span class="n">xform</span> <span class="o">=</span> <span class="n">ym</span><span class="o">::</span><span class="n">identity_mat4f</span><span class="p">;</span>
+    <span class="kt">bool</span> <span class="n">ortho</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
+    <span class="kt">float</span> <span class="n">yfov</span> <span class="o">=</span> <span class="mi">2</span><span class="p">;</span>
+    <span class="kt">float</span> <span class="n">aspect</span> <span class="o">=</span> <span class="mf">16.0f</span> <span class="o">/</span> <span class="mf">9.0f</span><span class="p">;</span>
+    <span class="kt">float</span> <span class="n">focus</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+    <span class="kt">float</span> <span class="n">aperture</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+
+<p>Scene Camera</p>
+<ul>
+<li>Members:<ul>
+<li>name:      name</li>
+<li>xform:      transform</li>
+<li>ortho:      ortho cam</li>
+<li>yfov:      vertical field of view</li>
+<li>aspect:      aspect ratio</li>
+<li>focus:      focus distance</li>
+<li>aperture:      lens aperture</li>
+</ul>
+</li>
+</ul>
+<h3>Struct environment</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">environment</span> <span class="p">{</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">name</span><span class="p">;</span>
+    <span class="n">material</span><span class="o">*</span> <span class="n">mat</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+    <span class="n">ym</span><span class="o">::</span><span class="n">mat4f</span> <span class="n">xform</span> <span class="o">=</span> <span class="n">ym</span><span class="o">::</span><span class="n">identity_mat4f</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+
+<p>Envinonment map</p>
+<ul>
+<li>Members:<ul>
+<li>name:      name</li>
+<li>mat:      index of material in material array</li>
+<li>xform:      transform</li>
+</ul>
+</li>
+</ul>
+<h3>Struct scene</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">scene</span> <span class="p">{</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">mesh</span><span class="o">*&gt;</span> <span class="n">meshes</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">instance</span><span class="o">*&gt;</span> <span class="n">instances</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">material</span><span class="o">*&gt;</span> <span class="n">materials</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">texture</span><span class="o">*&gt;</span> <span class="n">textures</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">camera</span><span class="o">*&gt;</span> <span class="n">cameras</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">environment</span><span class="o">*&gt;</span> <span class="n">environments</span><span class="p">;</span>
+    <span class="o">~</span><span class="n">scene</span><span class="p">();</span> 
+<span class="p">}</span>
+</code></pre></div>
+
+
+<p>Scene</p>
+<ul>
+<li>Members:<ul>
+<li>meshes:      shape array</li>
+<li>instances:      instance array</li>
+<li>materials:      material array</li>
+<li>textures:      texture array</li>
+<li>cameras:      camera array</li>
+<li>environments:      environment array</li>
+<li>~scene():      cleanup</li>
+</ul>
+</li>
+</ul>
+<h3>Function load_scene()</h3>
+<div class="codehilite"><pre><code><span></span><span class="n">scene</span><span class="o">*</span> <span class="nf">load_scene</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">load_textures</span><span class="p">,</span>
+    <span class="kt">bool</span> <span class="n">flip_texcoord</span> <span class="o">=</span> <span class="nb">true</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">skip_missing</span> <span class="o">=</span> <span class="nb">true</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Load scene</p>
+<ul>
+<li>Parameters:<ul>
+<li>filename: filename</li>
+<li>load_textures: whether to load textures (default to false)</li>
+<li>flip_texcoord: whether to flip the v coordinate</li>
+<li>skip_missing: skip missing textures</li>
+</ul>
+</li>
+<li>Returns:<ul>
+<li>scene</li>
+</ul>
+</li>
+</ul>
+<h3>Function save_scene()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">save_scene</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">,</span> <span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span>
+    <span class="kt">bool</span> <span class="n">save_textures</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">flip_texcoord</span> <span class="o">=</span> <span class="nb">true</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Save scene</p>
+<ul>
+<li>Parameters:<ul>
+<li>filename: filename</li>
+<li>scn: scene data to save</li>
+<li>save_textures: whether to save textures (default to false)</li>
+<li>flip_texcoord: whether to flip the v coordinate</li>
+</ul>
+</li>
+</ul>
+<h3>Function load_textures()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">load_textures</span><span class="p">(</span>
+    <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">dirname</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">skip_missing</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Loads textures for an scene.</p>
+<ul>
+<li>Parameters:<ul>
+<li>scn: scene to load textures into</li>
+<li>dirname: base directory name for texture files</li>
+<li>skip_missing: whether to skip missing textures or throw an expection</li>
+</ul>
+</li>
+</ul>
+<h3>Function save_textures()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">save_textures</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">dirname</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">skip_missing</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Saves textures for an scene.</p>
+<ul>
+<li>Parameters:<ul>
+<li>scn: scene to write textures from</li>
+<li>dirname: base directory name for texture files</li>
+<li>skip_missing: whether to skip missing textures or throw an expection</li>
+</ul>
+</li>
+</ul>
+<h3>Function compute_scene_bounds()</h3>
+<div class="codehilite"><pre><code><span></span><span class="n">ym</span><span class="o">::</span><span class="n">bbox3f</span> <span class="n">compute_scene_bounds</span><span class="p">(</span><span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Computes a scene bounding box</p>
+<h3>Function add_normals()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">add_normals</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Add missing data to the scene.</p>
+<h3>Function add_radius()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">add_radius</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="kt">float</span> <span class="n">radius</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Add missing data to the scene.</p>
+<h3>Function add_tangent_space()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">add_tangent_space</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Add missing data to the scene.</p>
+<h3>Function add_texture_data()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">add_texture_data</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Add missing data to the scene.</p>
+<h3>Function add_instances()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">add_instances</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Add missing data to the scene.</p>
+<h3>Function add_names()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">add_names</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Add missing data to the scene.</p>
+<h3>Function add_default_camera()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">add_default_camera</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Add a default camera that views the entire scene.</p>
+<h3>Function flatten_instances()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">flatten_instances</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Flatten scene instances into separate meshes.</p>
+<h3>Struct obj_vertex</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">obj_vertex</span> <span class="p">{</span>
+    <span class="kt">int</span> <span class="n">pos</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">texcoord</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">norm</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">color</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">radius</span><span class="p">;</span>
+    <span class="n">obj_vertex</span><span class="p">(</span><span class="kt">int</span> <span class="n">pos</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="kt">int</span> <span class="n">texcoord</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="kt">int</span> <span class="n">norm</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="kt">int</span> <span class="n">color</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="kt">int</span> <span class="n">radius</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">);</span> 
+<span class="p">}</span>
+</code></pre></div>
+
+
+<p>Face vertex</p>
+<ul>
+<li>Members:<ul>
+<li>pos:      position</li>
+<li>texcoord:      texcoord</li>
+<li>norm:      normal</li>
+<li>color:      color [extension]</li>
+<li>radius:      radius [extension]</li>
+<li>obj_vertex():      Constructor (copies members initializing missing ones to -1)</li>
+</ul>
+</li>
+</ul>
+<h3>Enum obj_element_type : uint16_t</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">enum</span> <span class="k">struct</span> <span class="nl">obj_element_type</span> <span class="p">:</span> <span class="kt">uint16_t</span> <span class="p">{</span>
+    <span class="n">point</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+    <span class="n">line</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
+    <span class="n">face</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span>
+    <span class="n">tetra</span> <span class="o">=</span> <span class="mi">4</span><span class="p">,</span>
+<span class="p">}</span>
+</code></pre></div>
+
+
+<p>element type</p>
+<ul>
+<li>Values:<ul>
+<li>point:      lists of points</li>
+<li>line:      polylines</li>
+<li>face:      polygon faces</li>
+<li>tetra:      tetrahedrons</li>
+</ul>
+</li>
+</ul>
+<h3>Struct obj_element</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">obj_element</span> <span class="p">{</span>
+    <span class="kt">uint32_t</span> <span class="n">start</span><span class="p">;</span>
+    <span class="n">obj_element_type</span> <span class="n">type</span><span class="p">;</span>
+    <span class="kt">uint16_t</span> <span class="n">size</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+
+<p>Element vertex indices</p>
+<ul>
+<li>Members:<ul>
+<li>start:      starting vertex index</li>
+<li>type:      element type</li>
+<li>size:      number of vertices</li>
+</ul>
+</li>
+</ul>
+<h3>Struct obj_group</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">obj_group</span> <span class="p">{</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">matname</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">groupname</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">obj_vertex</span><span class="o">&gt;</span> <span class="n">verts</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">obj_element</span><span class="o">&gt;</span> <span class="n">elems</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+
+<p>Element group</p>
+<ul>
+<li>Members:<ul>
+<li>matname:      material name</li>
+<li>groupname:      group name</li>
+<li>verts:      element vertices</li>
+<li>elems:      element faces</li>
+</ul>
+</li>
+</ul>
+<h3>Struct obj_object</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">obj_object</span> <span class="p">{</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">name</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">obj_group</span><span class="o">&gt;</span> <span class="n">groups</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+
+<p>Obj object</p>
+<ul>
+<li>Members:<ul>
+<li>name:      object name</li>
+<li>groups:      element groups</li>
+</ul>
+</li>
+</ul>
+<h3>Struct obj_material</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">obj_material</span> <span class="p">{</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">name</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">illum</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span> <span class="n">ke</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">};</span>
+    <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span> <span class="n">ka</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">};</span>
+    <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span> <span class="n">kd</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">};</span>
+    <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span> <span class="n">ks</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">};</span>
+    <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span> <span class="n">kr</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">};</span>
+    <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span> <span class="n">kt</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">};</span>
+    <span class="kt">float</span> <span class="n">ns</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+    <span class="kt">float</span> <span class="n">ior</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+    <span class="kt">float</span> <span class="n">op</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">ke_txt</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">ka_txt</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">kd_txt</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">ks_txt</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">kr_txt</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">kt_txt</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">ns_txt</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">op_txt</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">ior_txt</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">bump_txt</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">disp_txt</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">norm_txt</span><span class="p">;</span>
+    <span class="n">property_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span> <span class="n">ke_txt_info</span> <span class="o">=</span> <span class="p">{};</span>
+    <span class="n">property_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span> <span class="n">ka_txt_info</span> <span class="o">=</span> <span class="p">{};</span>
+    <span class="n">property_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span> <span class="n">kd_txt_info</span> <span class="o">=</span> <span class="p">{};</span>
+    <span class="n">property_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span> <span class="n">ks_txt_info</span> <span class="o">=</span> <span class="p">{};</span>
+    <span class="n">property_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span> <span class="n">kr_txt_info</span> <span class="o">=</span> <span class="p">{};</span>
+    <span class="n">property_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span> <span class="n">kt_txt_info</span> <span class="o">=</span> <span class="p">{};</span>
+    <span class="n">property_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span> <span class="n">ns_txt_info</span> <span class="o">=</span> <span class="p">{};</span>
+    <span class="n">property_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span> <span class="n">op_txt_info</span> <span class="o">=</span> <span class="p">{};</span>
+    <span class="n">property_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span> <span class="n">ior_txt_info</span> <span class="o">=</span> <span class="p">{};</span>
+    <span class="n">property_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span> <span class="n">bump_txt_info</span> <span class="o">=</span> <span class="p">{};</span>
+    <span class="n">property_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span> <span class="n">disp_txt_info</span> <span class="o">=</span> <span class="p">{};</span>
+    <span class="n">property_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span> <span class="n">norm_txt_info</span> <span class="o">=</span> <span class="p">{};</span>
+    <span class="kt">float</span> <span class="n">stiffness</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="kt">float</span> <span class="n">density</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="n">property_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span> <span class="n">unknown_props</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+
+<p>OBJ material</p>
+<ul>
+<li>Members:<ul>
+<li>name:      material name</li>
+<li>illum:      MTL illum mode</li>
+<li>ke:      emission color</li>
+<li>ka:      ambient color</li>
+<li>kd:      diffuse color</li>
+<li>ks:      specular color</li>
+<li>kr:      reflection color</li>
+<li>kt:      transmision color</li>
+<li>ns:      phong exponent for ks</li>
+<li>ior:      index of refraction</li>
+<li>op:      opacity</li>
+<li>ke_txt:      emission texture</li>
+<li>ka_txt:      ambient texture</li>
+<li>kd_txt:      diffuse texture</li>
+<li>ks_txt:      specular texture</li>
+<li>kr_txt:      reflection texture</li>
+<li>kt_txt:      transmission texture</li>
+<li>ns_txt:      specular exponent texture</li>
+<li>op_txt:      opacity texture</li>
+<li>ior_txt:      index of refraction</li>
+<li>bump_txt:      bump map texture (heighfield)</li>
+<li>disp_txt:      displacement map texture (heighfield)</li>
+<li>norm_txt:      normal map texture</li>
+<li>ke_txt_info:      emission texture</li>
+<li>ka_txt_info:      ambient texture</li>
+<li>kd_txt_info:      diffuse texture</li>
+<li>ks_txt_info:      specular texture</li>
+<li>kr_txt_info:      reflection texture</li>
+<li>kt_txt_info:      transmission texture</li>
+<li>ns_txt_info:      specular exponent texture</li>
+<li>op_txt_info:      opacity texture</li>
+<li>ior_txt_info:      index of refraction</li>
+<li>bump_txt_info:      bump map texture (heighfield)</li>
+<li>disp_txt_info:      displacement map texture (heighfield)</li>
+<li>norm_txt_info:      normal texture</li>
+<li>stiffness:      overall stiffness</li>
+<li>density:      density</li>
+<li>unknown_props:      unknown string props</li>
+</ul>
+</li>
+</ul>
+<h3>Struct obj_camera</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">obj_camera</span> <span class="p">{</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">name</span><span class="p">;</span>
+    <span class="n">ym</span><span class="o">::</span><span class="n">mat4f</span> <span class="n">xform</span> <span class="o">=</span> <span class="n">ym</span><span class="o">::</span><span class="n">identity_mat4f</span><span class="p">;</span>
+    <span class="kt">bool</span> <span class="n">ortho</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
+    <span class="kt">float</span> <span class="n">yfov</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">std</span><span class="o">::</span><span class="n">atan</span><span class="p">(</span><span class="mf">0.5f</span><span class="p">);</span>
+    <span class="kt">float</span> <span class="n">aspect</span> <span class="o">=</span> <span class="mf">16.0f</span> <span class="o">/</span> <span class="mf">9.0f</span><span class="p">;</span>
+    <span class="kt">float</span> <span class="n">aperture</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="kt">float</span> <span class="n">focus</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+
+<p>Camera [extension]</p>
+<ul>
+<li>Members:<ul>
+<li>name:      camera name</li>
+<li>xform:      camera transform</li>
+<li>ortho:      orthografic camera</li>
+<li>yfov:      vertical field of view</li>
+<li>aspect:      aspect ratio</li>
+<li>aperture:      lens aperture</li>
+<li>focus:      focus distance</li>
+</ul>
+</li>
+</ul>
+<h3>Struct obj_environment</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">obj_environment</span> <span class="p">{</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">name</span><span class="p">;</span>
+    <span class="n">ym</span><span class="o">::</span><span class="n">mat4f</span> <span class="n">xform</span> <span class="o">=</span> <span class="n">ym</span><span class="o">::</span><span class="n">identity_mat4f</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">matname</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+
+<p>Environment [extension]</p>
+<ul>
+<li>Members:<ul>
+<li>name:      environment name</li>
+<li>xform:      transform</li>
+<li>matname:      material name</li>
+</ul>
+</li>
+</ul>
+<h3>Struct obj_instance</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">obj_instance</span> <span class="p">{</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">name</span><span class="p">;</span>
+    <span class="n">ym</span><span class="o">::</span><span class="n">mat4f</span> <span class="n">xform</span> <span class="o">=</span> <span class="n">ym</span><span class="o">::</span><span class="n">identity_mat4f</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">meshname</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+
+<p>Instance [extension]</p>
+<ul>
+<li>Members:<ul>
+<li>name:      instance name</li>
+<li>xform:      transform</li>
+<li>meshname:      object name</li>
+</ul>
+</li>
+</ul>
+<h3>Struct obj</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">obj</span> <span class="p">{</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&gt;</span> <span class="n">pos</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&gt;</span> <span class="n">norm</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">ym</span><span class="o">::</span><span class="n">vec2f</span><span class="o">&gt;</span> <span class="n">texcoord</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">ym</span><span class="o">::</span><span class="n">vec4f</span><span class="o">&gt;</span> <span class="n">color</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;</span> <span class="n">radius</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">obj_object</span><span class="o">&gt;</span> <span class="n">objects</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">obj_material</span><span class="o">&gt;</span> <span class="n">materials</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">obj_camera</span><span class="o">&gt;</span> <span class="n">cameras</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">obj_environment</span><span class="o">&gt;</span> <span class="n">environments</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">obj_instance</span><span class="o">&gt;</span> <span class="n">instances</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+
+<p>OBJ asset</p>
+<ul>
+<li>Members:<ul>
+<li>pos:      vertex positions</li>
+<li>norm:      vertex normals</li>
+<li>texcoord:      vertex texcoord</li>
+<li>color:      vertex color [extension]</li>
+<li>radius:      vertex radius [extension]</li>
+<li>objects:      objects</li>
+<li>materials:      materials</li>
+<li>cameras:      cameras [extension]</li>
+<li>environments:      env maps [extension]</li>
+<li>instances:      instances [extension]</li>
+</ul>
+</li>
+</ul>
+<h3>Struct obj_exception</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="nl">obj_exception</span> <span class="p">:</span> <span class="n">std</span><span class="o">::</span><span class="n">exception</span> <span class="p">{</span>
+    <span class="n">obj_exception</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">errmsg</span><span class="p">);</span> 
+    <span class="k">virtual</span> <span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="nf">what</span><span class="p">()</span> <span class="k">const</span> <span class="k">throw</span><span class="p">();</span> 
+<span class="p">}</span>
+</code></pre></div>
+
+
+<p>IO Exception.</p>
+<ul>
+<li>Members:<ul>
+<li>obj_exception():      constructor with error message</li>
+<li>what():      retieval of error message</li>
+</ul>
+</li>
+</ul>
+<h3>Function load_obj()</h3>
+<div class="codehilite"><pre><code><span></span><span class="n">obj</span><span class="o">*</span> <span class="nf">load_obj</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">flip_texcoord</span> <span class="o">=</span> <span class="nb">true</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Load OBJ</p>
+<ul>
+<li>Parameters:<ul>
+<li>filename: filename</li>
+<li>flip_texcoord: whether to flip the v coordinate</li>
+</ul>
+</li>
+<li>Return:<ul>
+<li>obj</li>
+</ul>
+</li>
+</ul>
+<h3>Function load_mtl()</h3>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">obj_material</span><span class="o">&gt;</span> <span class="n">load_mtl</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Load MTL</p>
+<ul>
+<li>Parameters:<ul>
+<li>filename: filename</li>
+</ul>
+</li>
+<li>Return:<ul>
+<li>loaded materials</li>
+</ul>
+</li>
+</ul>
+<h3>Function save_obj()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">save_obj</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">,</span> <span class="k">const</span> <span class="n">obj</span><span class="o">*</span> <span class="n">asset</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">flip_texcoord</span> <span class="o">=</span> <span class="nb">true</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Save OBJ</p>
+<ul>
+<li>Parameters:<ul>
+<li>filename: filename</li>
+<li>asset: obj data to save</li>
+<li>flip_texcoord: whether to flip the v coordinate</li>
+</ul>
+</li>
+</ul>
+<h3>Function save_mtl()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">save_mtl</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">obj_material</span><span class="o">&gt;&amp;</span> <span class="n">materials</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Save MTL (@deprecated interface)</p>
+<h3>Function obj_to_scene()</h3>
+<div class="codehilite"><pre><code><span></span><span class="n">scene</span><span class="o">*</span> <span class="nf">obj_to_scene</span><span class="p">(</span><span class="k">const</span> <span class="n">obj</span><span class="o">*</span> <span class="n">obj</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Converts an OBJ into a scene.</p>
+<ul>
+<li>Parameters:<ul>
+<li>obj: obj to be flattened</li>
+</ul>
+</li>
+</ul>
+<h3>Function scene_to_obj()</h3>
+<div class="codehilite"><pre><code><span></span><span class="n">obj</span><span class="o">*</span> <span class="nf">scene_to_obj</span><span class="p">(</span><span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Save a scene in an OBJ file.</p>
+<ul>
+<li>Parameters:<ul>
+<li>scn: scene to convert</li>
+</ul>
+</li>
+</ul>
+        <article>
+        <footer></footer>
+        </body>
+        </html>
+    

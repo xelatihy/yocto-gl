@@ -33,16 +33,13 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <map>
 
 // clang-format off
 #ifndef __APPLE__
 #include <GL/glew.h>
 #else
-#include <OpenGL/gl.h>
 #include <OpenGL/gl3.h>
-#endif
-#ifndef YGLU_NO_GLFW
-#include <GLFW/glfw3.h>
 #endif
 // clang-format on
 
@@ -51,7 +48,7 @@ namespace yglu {
 //
 // Checks for GL error and then prints
 //
-YGLU_API bool check_error(bool print) {
+bool check_error(bool print) {
     auto ok = glGetError();
     if (ok == GL_NO_ERROR) return true;
     if (!print) return false;
@@ -64,8 +61,6 @@ YGLU_API bool check_error(bool print) {
             printf("GL_INVALID_FRAMEBUFFER_OPERATION\n");
             break;
         case GL_OUT_OF_MEMORY: printf("GL_OUT_OF_MEMORY\n"); break;
-        case GL_STACK_UNDERFLOW: printf("GL_STACK_UNDERFLOW\n"); break;
-        case GL_STACK_OVERFLOW: printf("GL_STACK_OVERFLOW\n"); break;
         default: printf("<UNKNOWN GL ERROR>\n"); break;
     }
     return false;
@@ -74,47 +69,56 @@ YGLU_API bool check_error(bool print) {
 //
 // Clear window
 //
-YGLU_API void clear_buffers(const float4& background) {
+void clear_buffers(const ym::vec4f& background) {
+    assert(check_error());
     glClearColor(background[0], background[1], background[2], background[3]);
     glClearDepth(1);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    assert(check_error());
 }
 
 //
 // Enable/disable depth test
 //
-YGLU_API void enable_depth_test(bool enabled) {
+void enable_depth_test(bool enabled) {
+    assert(check_error());
     if (enabled)
         glEnable(GL_DEPTH_TEST);
     else
         glDisable(GL_DEPTH_TEST);
+    assert(check_error());
 }
 
 //
 // Enable/disable culling
 //
-YGLU_API void enable_culling(bool enabled) {
+void enable_culling(bool enabled) {
+    assert(check_error());
     if (enabled)
         glEnable(GL_CULL_FACE);
     else
         glDisable(GL_CULL_FACE);
+    assert(check_error());
 }
 
 //
 // Enable/disable wireframe
 //
-YGLU_API void enable_wireframe(bool enabled) {
+void enable_wireframe(bool enabled) {
+    assert(check_error());
     if (enabled)
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     else
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    assert(check_error());
 }
 
 //
 // Enable/disable edges. Attempts to avoid z-fighting but the method is not
 // robust.
 //
-YGLU_API void enable_edges(bool enabled, float tolerance) {
+void enable_edges(bool enabled, float tolerance) {
+    assert(check_error());
     if (enabled) {
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
         glDepthRange(0, tolerance);
@@ -122,390 +126,124 @@ YGLU_API void enable_edges(bool enabled, float tolerance) {
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
         glDepthRange(0, 1);
     }
+    assert(check_error());
 }
 
 //
 // Line width
 //
-YGLU_API void line_width(float w) { glLineWidth(w); }
+void line_width(float w) {
+    assert(check_error());
+    glLineWidth(std::min(std::max(w, 0.0f), 1.0f));
+    assert(check_error());
+}
 
 //
 // Set viewport
 //
-YGLU_API void set_viewport(const int4& v) {
+void set_viewport(const ym::vec4i& v) {
+    assert(check_error());
     glViewport(v[0], v[1], v[2], v[3]);
-}
-
-namespace legacy {
-//
-// This is a public API. See above for documentation.
-//
-YGLU_API void draw_image(GLuint tid, int img_w, int img_h, int win_w, int win_h,
-    float ox, float oy, float zoom) {
-    assert(tid != 0);
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glBindTexture(GL_TEXTURE_2D, tid);
-    glEnable(GL_TEXTURE_2D);
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    glOrtho(0, win_w, win_h, 0, -1, 1);
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
-    glColor4f(1, 1, 1, 1);
-    glBegin(GL_QUADS);
-    glTexCoord2f(0, 0);
-    glVertex2f(ox, oy);
-    glTexCoord2f(0, 1);
-    glVertex2f(ox, oy + zoom * img_h);
-    glTexCoord2f(1, 1);
-    glVertex2f(ox + zoom * img_w, oy + zoom * img_h);
-    glTexCoord2f(1, 0);
-    glVertex2f(ox + zoom * img_w, oy);
-    glEnd();
-    glDisable(GL_TEXTURE_2D);
-    glDisable(GL_BLEND);
+    assert(check_error());
 }
 
 //
 // This is a public API. See above for documentation.
 //
-YGLU_API void read_imagef(float* pixels, int w, int h, int nc) {
-    GLuint formats[4] = {GL_LUMINANCE, GL_LUMINANCE_ALPHA, GL_RGB, GL_RGBA};
-    glReadPixels(0, 0, w, h, formats[nc - 1], GL_FLOAT, pixels);
-}
-
-//
-// Implementation of make_texture.
-//
-YGLU_API uint _make_texture(int w, int h, int nc, const void* pixels,
-    GLuint type, bool linear, bool mipmap) {
-    GLuint formats[4] = {GL_LUMINANCE, GL_LUMINANCE_ALPHA, GL_RGB, GL_RGBA};
-    GLuint id;
-    glGenTextures(1, &id);
-    glBindTexture(GL_TEXTURE_2D, id);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
-        (linear) ? GL_LINEAR : GL_NEAREST);
-    if (mipmap) {
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
-            (linear) ? GL_LINEAR_MIPMAP_LINEAR : GL_NEAREST_MIPMAP_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_TRUE);
-    } else {
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    }
-    glTexImage2D(GL_TEXTURE_2D, 0, formats[nc - 1], w, h, 0, formats[nc - 1],
-        type, pixels);
-    assert(glGetError() == GL_NO_ERROR);
-    return id;
+void shade_image(uint tid, int img_w, int img_h, int win_w, int win_h, float ox,
+    float oy, float zoom) {
+    assert(check_error());
+    shade_image(tid, img_w, img_h, win_w, win_h, ox, oy, zoom,
+        tonemap_type::none, 0, 1);
+    assert(check_error());
 }
 
 //
 // This is a public API. See above for documentation.
 //
-YGLU_API uint make_texture(
-    int w, int h, int nc, const float* pixels, bool linear, bool mipmap) {
-    return _make_texture(w, h, nc, pixels, GL_FLOAT, linear, mipmap);
-}
-
-//
-// This is a public API. See above for documentation.
-//
-YGLU_API uint make_texture(int w, int h, int nc, const unsigned char* pixels,
-    bool linear, bool mipmap) {
-    return _make_texture(w, h, nc, pixels, GL_UNSIGNED_BYTE, linear, mipmap);
-}
-
-//
-// Implementation of update_texture.
-//
-static void _update_texture(uint id, int w, int h, int nc, const void* pixels,
-    GLuint type, bool mipmap) {
-    GLuint formats[4] = {GL_LUMINANCE, GL_LUMINANCE_ALPHA, GL_RGB, GL_RGBA};
-    glBindTexture(GL_TEXTURE_2D, id);
-    glTexSubImage2D(
-        GL_TEXTURE_2D, 0, 0, 0, w, h, formats[nc - 1], type, pixels);
-}
-
-//
-// This is a public API. See above for documentation.
-//
-YGLU_API void update_texture(
-    uint id, int w, int h, int nc, const float* pixels, bool mipmap) {
-    _update_texture(id, w, h, nc, pixels, GL_FLOAT, mipmap);
-}
-
-//
-// This is a public API. See above for documentation.
-//
-YGLU_API void update_texture(
-    uint id, int w, int h, int nc, const unsigned char* pixels, bool mipmap) {
-    _update_texture(id, w, h, nc, pixels, GL_UNSIGNED_BYTE, mipmap);
-}
-
-//
-// This is a public API. See above for documentation.
-//
-YGLU_API void clear_texture(uint* tid) {
-    glDeleteTextures(1, tid);
-    *tid = 0;
-}
-
-//
-// This is a public API. See above for documentation.
-//
-YGLU_API void begin_frame(const float4x4& camera_xform,
-    const float4x4& camera_xform_inv, const float4x4& camera_proj,
-    bool eyelight, bool scale_kx) {
-    glPushMatrix();
-    glPushAttrib(GL_LIGHTING_BIT);
-
-    glEnable(GL_LIGHTING);
-
-    glLightModeli(GL_LIGHT_MODEL_LOCAL_VIEWER, 1);
-    // glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, 1);
-    glLightModeli(GL_LIGHT_MODEL_COLOR_CONTROL, GL_SEPARATE_SPECULAR_COLOR);
-
-#if 0
-    if (light_amb != float3{0, 0, 0}) {
-        float amb[] = {light_amb[0], light_amb[1], light_amb[2], 1};
-        glLightModelfv(GL_LIGHT_MODEL_AMBIENT, amb);
-    }
-#endif
-
-    if (eyelight) {
-        glEnable(GL_LIGHTING);
-        glEnable(GL_LIGHT0);
-        float ke[] = {(scale_kx) ? 3.1415926536f : 1,
-            (scale_kx) ? 3.1415926536f : 1, (scale_kx) ? 3.1415926536f : 1, 1};
-        float pos[] = {0, 0, 1, 0};
-        glLightfv(GL_LIGHT0, GL_DIFFUSE, ke);
-        glLightfv(GL_LIGHT0, GL_SPECULAR, ke);
-        glLightfv(GL_LIGHT0, GL_POSITION, pos);
-    }
-
-    glMatrixMode(GL_PROJECTION);
-    glLoadMatrixf(&camera_proj[0][0]);
-    glMatrixMode(GL_MODELVIEW);
-    glLoadMatrixf(&camera_xform_inv[0][0]);
-}
-
-//
-// Ends a frame.
-//
-YGLU_API void end_frame() {
-    glPopAttrib();
-    glPopMatrix();
-}
-
-//
-// This is a public API. See above for documentation.
-//
-YGLU_API void set_lights(const float3& amb, int num, const float3* pos,
-    const float3* ke, const ltype* type) {
-    if (amb != float3{0, 0, 0}) {
-        float amb_[] = {amb[0], amb[1], amb[2], 1};
-        glLightModelfv(GL_LIGHT_MODEL_AMBIENT, amb_);
-    }
-
-    for (auto i = 0; i < std::min(num, 16); i++) {
-        glEnable(GL_LIGHT0 + i);
-        float ke_[] = {ke[i][0], ke[i][1], ke[i][2], 1};
-        float pos_[] = {pos[i][0], pos[i][1], pos[i][2],
-            (type[i] == ltype::point) ? 1.0f : 0.0f};
-        glLightfv(GL_LIGHT0 + i, GL_DIFFUSE, ke_);
-        glLightfv(GL_LIGHT0 + i, GL_SPECULAR, ke_);
-        glLightfv(GL_LIGHT0 + i, GL_POSITION, pos_);
-        if (type[i] == ltype::point) {
-            glLightf(GL_LIGHT0 + i, GL_CONSTANT_ATTENUATION, 0);
-            glLightf(GL_LIGHT0 + i, GL_LINEAR_ATTENUATION, 0);
-            glLightf(GL_LIGHT0 + i, GL_QUADRATIC_ATTENUATION, 1);
-        } else {
-            glLightf(GL_LIGHT0 + i, GL_CONSTANT_ATTENUATION, 1);
-            glLightf(GL_LIGHT0 + i, GL_LINEAR_ATTENUATION, 0);
-            glLightf(GL_LIGHT0 + i, GL_QUADRATIC_ATTENUATION, 0);
-        }
-    }
-    for (auto i = num; i < 16; i++) { glDisable(GL_LIGHT0 + i); }
-
-#if 0
-    if(light_amb != float3{0,0,0}) {
-        glEnable(GL_LIGHT0);
-        float amb[] = {light_amb[0], light_amb[1], light_amb[2], 1};
-        glLightfv(GL_LIGHT0, GL_AMBIENT, amb);
-    }
-#endif
-}
-
-//
-// This is a public API. See above for documentation.
-//
-YGLU_API void begin_shape(const float4x4& xform) {
-    glPushMatrix();
-    glMatrixMode(GL_MODELVIEW);
-    glMultMatrixf((float*)xform.data());
-}
-
-//
-// This is a public API. See above for documentation.
-//
-YGLU_API void end_shape() {
-    glDisable(GL_TEXTURE_2D);
-    glPopMatrix();
-}
-
-//
-// This is a public API. See above for documentation.
-//
-YGLU_API float specular_roughness_to_exponent(float rs) {
-    return (rs) ? 2 / (rs * rs) - 2 : 1e6;
-}
-
-//
-// This is a public API. See above for documentation.
-//
-YGLU_API void set_material(const float3& ke, const float3& kd, const float3& ks,
-    float ns, int kd_txt, bool scale_kx) {
-    float kds = (scale_kx) ? 1 / 3.1415926536f : 1;
-    float kss = (scale_kx) ? (ns + 2) / (2 * 3.1415926536f) : 1;
-    // float kss = (scale_kx) ? 1 / 3.1415926536f : 1;
-    float ke_[] = {ke[0], ke[1], ke[2], 1};
-    float kd_[] = {kd[0] * kds, kd[1] * kds, kd[2] * kds, 1};
-    float ks_[] = {ks[0] * kss, ks[1] * kss, ks[2] * kss, 1};
-    glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, ke_);
-    glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, kd_);
-    glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, ks_);
-    glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, ns);
-    if (kd_txt >= 0) {
-        glEnable(GL_TEXTURE_2D);
-        glBindTexture(GL_TEXTURE_2D, kd_txt);
-    } else {
-        glDisable(GL_TEXTURE_2D);
-    }
-}
-
-//
-// This is a public API. See above for documentation.
-//
-YGLU_API float specular_roughness_to_exponent(float r);
-
-//
-// This is a public API. See above for documentation.
-//
-YGLU_API void draw_elems(int num, const int* elem, etype type,
-    const float3* pos, const float3* norm, const float2* texcoord,
-    const float3* color) {
-    if (!num) return;
-    assert(elem);
-    auto nc = 0;
-    switch (type) {
-        case etype::point:
-            glBegin(GL_POINTS);
-            nc = 1;
-            break;
-        case etype::line:
-            glBegin(GL_LINES);
-            nc = 2;
-            break;
-        case etype::triangle:
-            glBegin(GL_TRIANGLES);
-            nc = 3;
-            break;
-        case etype::quad:
-            glBegin(GL_QUADS);
-            nc = 4;
-            break;
-    }
-    for (auto j = 0; j < num; j++) {
-        auto e = elem + j * nc;
-        for (auto i = 0; i < nc; i++) {
-            if (norm)
-                glNormal3fv((float*)norm + e[i] * 3);
-            else
-                glNormal3f(0, 0, 1);
-            if (texcoord)
-                glTexCoord2fv((float*)texcoord + e[i] * 2);
-            else
-                glTexCoord2f(0, 0);
-            if (color)
-                glColor3fv((float*)color + e[i] * 3);
-            else
-                glColor3f(1, 1, 1);
-            glVertex3fv((float*)pos + e[i] * 3);
-        }
-    }
-    glEnd();
-}
-
-YGLU_API void draw_points(int num, const int* elem, const float3* pos,
-    const float3* norm, const float2* texcoord, const float3* color) {
-    return draw_elems(num, elem, etype::point, pos, norm, texcoord, color);
-}
-
-YGLU_API void draw_lines(int num, const int2* elem, const float3* pos,
-    const float3* norm, const float2* texcoord, const float3* color) {
-    return draw_elems(
-        num, (const int*)elem, etype::line, pos, norm, texcoord, color);
-}
-
-YGLU_API void draw_triangles(int num, const int3* elem, const float3* pos,
-    const float3* norm, const float2* texcoord, const float3* color) {
-    return draw_elems(
-        num, (const int*)elem, etype::triangle, pos, norm, texcoord, color);
-}
-
-}  // namespace legacy
-
-namespace modern {
-
-//
-// This is a public API. See above for documentation.
-//
-YGLU_API void shade_image(uint tid, int img_w, int img_h, int win_w, int win_h,
-    float ox, float oy, float zoom) {
-    shade_image(tid, img_w, img_h, win_w, win_h, ox, oy, zoom, 0, 1);
-}
-
-//
-// This is a public API. See above for documentation.
-//
-YGLU_API void shade_image(uint tid, int img_w, int img_h, int win_w, int win_h,
-    float ox, float oy, float zoom, float exposure, float gamma_) {
+void shade_image(uint tid, int img_w, int img_h, int win_w, int win_h, float ox,
+    float oy, float zoom, tonemap_type tmtype, float exposure, float gamma_) {
     static const std::string& vert =
-        ""
-        "#version 330\n"
-        "\n"
-        "layout(location = 0) in vec2 vert_texcoord;"
-        "uniform vec2 offset;\n"
-        "uniform float zoom;\n"
-        "uniform vec2 size;\n"
-        "uniform vec2 win_size;\n"
-        "out vec2 texcoord;"
-        "\n"
-        "void main() {\n"
-        "    texcoord = vert_texcoord.xy;\n"
-        "    vec2 pos = offset + size * vert_texcoord.xy * zoom;\n"
-        "    vec2 upos = 2 * pos / win_size - vec2(1,1);\n"
-        "    upos.y = - upos.y;\n"
-        "    gl_Position = vec4(upos.x, upos.y, 0, 1);\n"
-        "}\n"
-        "";
-    static const std::string& frag =
-        ""
-        "#version 330\n"
-        "\n"
-        "in vec2 texcoord;\n"
-        "out vec4 color;\n"
-        "uniform float exposure;\n"
-        "uniform float gamma;\n"
-        "\n"
-        "uniform sampler2D img;\n"
-        "\n"
-        "void main() {\n"
-        "     vec4 c = texture(img,texcoord);\n"
-        "     c.xyz = pow(c.xyz*pow(2,exposure),vec3(1/gamma));\n"
-        "     color = c;\n"
-        "}\n"
-        "";
+        R"(
+
+        #version 330
+
+        layout(location = 0) in vec2 vert_texcoord;
+        uniform vec2 offset;
+        uniform float zoom;
+        uniform vec2 size;
+        uniform vec2 win_size;
+        out vec2 texcoord;
+
+        void main() {
+            texcoord = vert_texcoord.xy;
+            vec2 pos = offset + size * vert_texcoord.xy * zoom;
+            vec2 upos = 2 * pos / win_size - vec2(1,1);
+            upos.y = - upos.y;
+            gl_Position = vec4(upos.x, upos.y, 0, 1);
+        }
+
+        )";
+
+    static const std::string frag_header =
+        R"(
+        #version 330
+
+        #define pi 3.14159265
+
+        )";
+
+    static const std::string frag_tonemap =
+        R"(
+    #define TONEMAP_LINEAR 0
+    #define TONEMAP_SRGB 1
+    #define TONEMAP_GAMMA 2
+    #define TONEMAP_FILMIC 3
+
+    struct Tonemap {
+        int type;       // tonemap type (TM_...)
+        float exposure; // image exposure
+        float gamma;    // image gamma
+    };
+    uniform Tonemap tonemap;
+
+    vec3 eval_filmic(vec3 x) {
+        float a = 2.51f;
+        float b = 0.03f;
+        float c = 2.43f;
+        float d = 0.59f;
+        float e = 0.14f;
+        return clamp((x*(a*x+b))/(x*(c*x+d)+e),0,1);
+    }
+
+    vec3 eval_tonemap(vec3 c) {
+        // final color correction
+        c = c*pow(2,tonemap.exposure);
+        if(tonemap.type == TONEMAP_SRGB) {
+            c = pow(c,vec3(1/2.2));
+        } else if(tonemap.type == TONEMAP_GAMMA) {
+            c = pow(c,vec3(1/tonemap.gamma));
+        } else if(tonemap.type == TONEMAP_FILMIC) {
+            c = eval_filmic(c);
+        }
+        return c;
+    }
+
+    )";
+
+    static const std::string frag_main =
+        R"(
+        in vec2 texcoord;
+        out vec4 color;
+
+        uniform sampler2D img;
+
+        void main() {
+             vec4 c = texture(img,texcoord);
+             c.xyz = eval_tonemap(c.xyz);
+             color = c;
+        }
+        )";
 
     assert(check_error());
 
@@ -516,7 +254,9 @@ YGLU_API void shade_image(uint tid, int img_w, int img_h, int win_w, int win_h,
     assert(check_error());
 
     static uint prog_id = 0;
-    if (!prog_id) prog_id = make_program(vert, frag, 0, 0);
+    if (!prog_id)
+        prog_id =
+            make_program(vert, frag_header + frag_tonemap + frag_main, 0, 0);
 
     assert(check_error());
 
@@ -561,8 +301,9 @@ YGLU_API void shade_image(uint tid, int img_w, int img_h, int win_w, int win_h,
     set_uniform(prog_id, "zoom", &zoom, 1, 1);
     set_uniform(prog_id, "size", size, 2, 1);
     set_uniform(prog_id, "win_size", win_size, 2, 1);
-    set_uniform(prog_id, "exposure", &exposure, 1, 1);
-    set_uniform(prog_id, "gamma", &gamma_, 1, 1);
+    set_uniform(prog_id, "tonemap.type", (int*)&tmtype, 1, 1);
+    set_uniform(prog_id, "tonemap.exposure", &exposure, 1, 1);
+    set_uniform(prog_id, "tonemap.gamma", &gamma_, 1, 1);
     set_uniform_texture(prog_id, "img", "", tid, 0);
 
     glEnableVertexAttribArray(0);
@@ -585,20 +326,22 @@ YGLU_API void shade_image(uint tid, int img_w, int img_h, int win_w, int win_h,
 //
 // This is a public API. See above for documentation.
 //
-YGLU_API void read_imagef(float* pixels, int w, int h, int nc) {
-    int formats[4] = {GL_LUMINANCE, GL_LUMINANCE_ALPHA, GL_RGB, GL_RGBA};
+void read_imagef(float* pixels, int w, int h, int nc) {
+    assert(check_error());
+    int formats[4] = {GL_RED, GL_RG, GL_RGB, GL_RGBA};
     glReadPixels(0, 0, w, h, formats[nc - 1], GL_FLOAT, pixels);
+    assert(check_error());
 }
 
 //
 // Implementation of make_texture.
 //
-YGLU_API uint _make_texture(int w, int h, int nc, const void* pixels,
-    GLuint type, bool linear, bool mipmap, bool as_float, bool as_srgb) {
+uint _make_texture(int w, int h, int nc, const void* pixels, GLuint type,
+    bool linear, bool mipmap, bool as_float, bool as_srgb) {
     assert(!as_srgb || !as_float);
-    int formats_ub[4] = {GL_LUMINANCE, GL_LUMINANCE_ALPHA, GL_RGB, GL_RGBA};
-    int formats_sub[4] = {
-        GL_SLUMINANCE, GL_SLUMINANCE_ALPHA, GL_SRGB, GL_SRGB_ALPHA};
+    assert(check_error());
+    int formats_ub[4] = {GL_RED, GL_RG, GL_RGB, GL_RGBA};
+    int formats_sub[4] = {GL_RED, GL_RG, GL_SRGB, GL_SRGB_ALPHA};
     int formats_f[4] = {GL_R32F, GL_RG32F, GL_RGB32F, GL_RGBA32F};
     int* formats =
         (as_float) ? formats_f : ((as_srgb) ? formats_sub : formats_ub);
@@ -608,15 +351,17 @@ YGLU_API uint _make_texture(int w, int h, int nc, const void* pixels,
     glBindTexture(GL_TEXTURE_2D, id);
     glTexImage2D(GL_TEXTURE_2D, 0, formats[nc - 1], w, h, 0, formats_ub[nc - 1],
         type, pixels);
+    if (mipmap) glGenerateMipmap(GL_TEXTURE_2D);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
         (linear) ? GL_LINEAR : GL_NEAREST);
     if (mipmap) {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
             (linear) ? GL_LINEAR_MIPMAP_LINEAR : GL_NEAREST_MIPMAP_NEAREST);
-        glGenerateMipmap(GL_TEXTURE_2D);
     } else {
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
+            (linear) ? GL_LINEAR : GL_NEAREST);
     }
+    glBindTexture(GL_TEXTURE_2D, 0);
     assert(check_error());
     return id;
 }
@@ -624,8 +369,8 @@ YGLU_API uint _make_texture(int w, int h, int nc, const void* pixels,
 //
 // This is a public API. See above for documentation.
 //
-YGLU_API uint make_texture(int w, int h, int nc, const float* pixels,
-    bool linear, bool mipmap, bool as_float) {
+uint make_texture(int w, int h, int nc, const float* pixels, bool linear,
+    bool mipmap, bool as_float) {
     return _make_texture(
         w, h, nc, pixels, GL_FLOAT, linear, mipmap, as_float, false);
 }
@@ -633,7 +378,7 @@ YGLU_API uint make_texture(int w, int h, int nc, const float* pixels,
 //
 // This is a public API. See above for documentation.
 //
-YGLU_API uint make_texture(int w, int h, int nc, const unsigned char* pixels,
+uint make_texture(int w, int h, int nc, const unsigned char* pixels,
     bool linear, bool mipmap, bool as_srgb) {
     return _make_texture(
         w, h, nc, pixels, GL_UNSIGNED_BYTE, linear, mipmap, false, as_srgb);
@@ -644,42 +389,51 @@ YGLU_API uint make_texture(int w, int h, int nc, const unsigned char* pixels,
 //
 static inline void _update_texture(uint id, int w, int h, int nc,
     const void* pixels, GLuint type, bool mipmap) {
-    int formats[4] = {GL_LUMINANCE, GL_LUMINANCE_ALPHA, GL_RGB, GL_RGBA};
+    assert(check_error());
+    int formats[4] = {GL_RED, GL_RG, GL_RGB, GL_RGBA};
     glBindTexture(GL_TEXTURE_2D, id);
     glTexSubImage2D(
         GL_TEXTURE_2D, 0, 0, 0, w, h, formats[nc - 1], type, pixels);
     if (mipmap) glGenerateMipmap(GL_TEXTURE_2D);
+    assert(check_error());
 }
 
 //
 // This is a public API. See above for documentation.
 //
-YGLU_API void update_texture(
+void update_texture(
     uint id, int w, int h, int nc, const float* pixels, bool mipmap) {
+    assert(check_error());
     _update_texture(id, w, h, nc, pixels, GL_FLOAT, mipmap);
+    assert(check_error());
 }
 
 //
 // This is a public API. See above for documentation.
 //
-YGLU_API void update_texture(
+void update_texture(
     uint id, int w, int h, int nc, const unsigned char* pixels, bool mipmap) {
+    assert(check_error());
     _update_texture(id, w, h, nc, pixels, GL_UNSIGNED_BYTE, mipmap);
+    assert(check_error());
 }
 
 //
 // This is a public API. See above for documentation.
 //
-YGLU_API void clear_texture(uint* tid) {
+void clear_texture(uint* tid) {
+    assert(check_error());
     glDeleteTextures(1, tid);
     *tid = 0;
+    assert(check_error());
 }
 
 //
 // This is a public API. See above for documentation.
 //
-YGLU_API uint make_buffer(
+uint make_buffer(
     int num, int size, const void* values, bool elements, bool dynamic) {
+    assert(check_error());
     auto target = (elements) ? GL_ELEMENT_ARRAY_BUFFER : GL_ARRAY_BUFFER;
     auto bid = (GLuint)0;
     glGenBuffers(1, &bid);
@@ -688,49 +442,59 @@ YGLU_API uint make_buffer(
         (dynamic) ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
     glBindBuffer(target, 0);
     return bid;
+    assert(check_error());
 }
 
 //
 // This is a public API. See above for documentation.
 //
-YGLU_API void update_buffer(uint bid, int num, int size, const void* values,
+void update_buffer(uint bid, int num, int size, const void* values,
     bool elements, bool dynamic) {
+    assert(check_error());
     auto target = (elements) ? GL_ELEMENT_ARRAY_BUFFER : GL_ARRAY_BUFFER;
     glBindBuffer(target, bid);
     glBufferSubData(target, 0, size * num, values);
     glBindBuffer(target, 0);
+    assert(check_error());
 }
 
 //
 // This is a public API. See above for documentation.
 //
-YGLU_API void clear_buffer(uint* bid) {
+void clear_buffer(uint* bid) {
+    assert(check_error());
     glDeleteBuffers(1, bid);
     *bid = 0;
+    assert(check_error());
 }
 
 //
 // This is a public API. See above for documentation.
 //
-YGLU_API uint make_vertex_arrays() {
+uint make_vertex_arrays() {
+    assert(check_error());
     auto aid = (uint)0;
     glGenVertexArrays(1, &aid);
+    assert(check_error());
     return aid;
 }
 
 //
 // This is a public API. See above for documentation.
 //
-YGLU_API void clear_vertex_arrays(uint* aid) {
+void clear_vertex_arrays(uint* aid) {
+    assert(check_error());
     glDeleteVertexArrays(1, aid);
     *aid = 0;
+    assert(check_error());
 }
 
 //
 // This is a public API. See above for documentation.
 //
-YGLU_API uint make_program(const std::string& vertex,
-    const std::string& fragment, uint* vid, uint* fid) {
+uint make_program(const std::string& vertex, const std::string& fragment,
+    uint* vid, uint* fid) {
+    assert(check_error());
     int errflags[2];
     char errbuf[10000];
     int gl_shader[2] = {0, 0};
@@ -750,12 +514,18 @@ YGLU_API uint make_program(const std::string& vertex,
         assert(glGetError() == GL_NO_ERROR);
     }
 
+    // TODO: make this changeable for binding
+
     // create program
     int gl_program = glCreateProgram();
     for (int i = 0; i < 2; i++) glAttachShader(gl_program, gl_shader[i]);
     glBindAttribLocation(gl_program, 0, "vert_pos");
     glBindAttribLocation(gl_program, 1, "vert_norm");
     glBindAttribLocation(gl_program, 2, "vert_texcoord");
+    glBindAttribLocation(gl_program, 3, "vert_color");
+    glBindAttribLocation(gl_program, 4, "vert_tangsp");
+    glBindAttribLocation(gl_program, 5, "vert_skin_weights");
+    glBindAttribLocation(gl_program, 6, "vert_skin_joints");
     glLinkProgram(gl_program);
     glValidateProgram(gl_program);
     glGetProgramiv(gl_program, GL_LINK_STATUS, &errflags[0]);
@@ -770,13 +540,15 @@ YGLU_API uint make_program(const std::string& vertex,
     // returns
     if (vid) *vid = gl_shader[0];
     if (fid) *fid = gl_shader[1];
+    assert(check_error());
     return gl_program;
 }
 
 //
 // This is a public API. See above for documentation.
 //
-YGLU_API void clear_program(uint* pid, uint* vid, uint* fid) {
+void clear_program(uint* pid, uint* vid, uint* fid) {
+    assert(check_error());
     if (vid) {
         glDetachShader(*pid, *vid);
         glDeleteShader(*vid);
@@ -791,14 +563,16 @@ YGLU_API void clear_program(uint* pid, uint* vid, uint* fid) {
         glDeleteProgram(*pid);
         *pid = 0;
     }
+    assert(check_error());
 }
 
 //
 // This is a public API. See above for documentation.
 //
-YGLU_API bool set_uniform(
+bool set_uniform(
     uint prog, const std::string& var, const int* val, int nc, int count) {
     assert(nc >= 1 && nc <= 4);
+    assert(check_error());
     int pos = glGetUniformLocation(prog, var.c_str());
     if (pos < 0) return false;
     switch (nc) {
@@ -808,15 +582,17 @@ YGLU_API bool set_uniform(
         case 4: glUniform4iv(pos, count, val); break;
         default: assert(false);
     }
+    assert(check_error());
     return true;
 }
 
 //
 // This is a public API. See above for documentation.
 //
-YGLU_API bool set_uniform(
+bool set_uniform(
     uint prog, const std::string& var, const float* val, int nc, int count) {
     assert((nc >= 1 && nc <= 4) || (nc == 16) || (nc == 12));
+    assert(check_error());
     int pos = glGetUniformLocation(prog, var.c_str());
     if (pos < 0) return false;
     switch (nc) {
@@ -828,21 +604,47 @@ YGLU_API bool set_uniform(
         case 16: glUniformMatrix4fv(pos, count, false, val); break;
         default: assert(false); return 0;
     }
+    assert(check_error());
     return true;
 }
 
 //
 // This is a public API. See above for documentation.
 //
-YGLU_API bool set_uniform_texture(uint prog, const std::string& var,
-    const std::string& varon, uint tid, uint tunit) {
+bool set_uniform_texture(uint prog, const std::string& var,
+    const std::string& varon, const texture_info& tinfo, uint tunit) {
+    static const auto wrap_mode_map =
+        std::map<texture_wrap, uint>{{texture_wrap::repeat, GL_REPEAT},
+            {texture_wrap::clamp, GL_CLAMP_TO_EDGE},
+            {texture_wrap::mirror, GL_MIRRORED_REPEAT}};
+    static const auto filter_mode_map =
+        std::map<texture_filter, uint>{{texture_filter::nearest, GL_NEAREST},
+            {texture_filter::linear, GL_LINEAR},
+            {texture_filter::nearest_mipmap_nearest, GL_NEAREST_MIPMAP_NEAREST},
+            {texture_filter::linear_mipmap_nearest, GL_LINEAR_MIPMAP_NEAREST},
+            {texture_filter::nearest_mipmap_linear, GL_NEAREST_MIPMAP_LINEAR},
+            {texture_filter::linear_mipmap_linear, GL_LINEAR_MIPMAP_LINEAR}};
+
+    assert(check_error());
     int pos = glGetUniformLocation(prog, var.c_str());
     int onpos =
         (!varon.empty()) ? glGetUniformLocation(prog, varon.c_str()) : -1;
     if (pos < 0) return false;
-    if (tid > 0) {
+    if (tinfo.txt_id > 0) {
         glActiveTexture(GL_TEXTURE0 + tunit);
-        glBindTexture(GL_TEXTURE_2D, tid);
+        glBindTexture(GL_TEXTURE_2D, tinfo.txt_id);
+        if (tinfo.wrap_s != texture_wrap::not_set)
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,
+                wrap_mode_map.at(tinfo.wrap_s));
+        if (tinfo.wrap_t != texture_wrap::not_set)
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T,
+                wrap_mode_map.at(tinfo.wrap_t));
+        if (tinfo.filter_min != texture_filter::not_set)
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
+                filter_mode_map.at(tinfo.filter_min));
+        if (tinfo.filter_mag != texture_filter::not_set)
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
+                filter_mode_map.at(tinfo.filter_mag));
         glUniform1i(pos, tunit);
         if (onpos >= 0) glUniform1i(onpos, 1);
     } else {
@@ -851,15 +653,25 @@ YGLU_API bool set_uniform_texture(uint prog, const std::string& var,
         glUniform1i(pos, tunit);
         if (onpos >= 0) glUniform1i(onpos, 0);
     }
+    assert(check_error());
     return true;
 }
 
 //
 // This is a public API. See above for documentation.
 //
-YGLU_API bool set_vertattr_ptr(
+bool set_uniform_texture(uint prog, const std::string& var,
+    const std::string& varon, uint tid, uint tunit) {
+    return set_uniform_texture(prog, var, varon, texture_info(tid), tunit);
+}
+
+//
+// This is a public API. See above for documentation.
+//
+bool set_vertattr_ptr(
     uint prog, const std::string& var, const float* value, int nc) {
     assert(nc >= 1 && nc <= 4);
+    assert(check_error());
     int pos = glGetAttribLocation(prog, var.c_str());
     if (pos < 0) return false;
     if (value) {
@@ -868,34 +680,58 @@ YGLU_API bool set_vertattr_ptr(
     } else {
         glDisableVertexAttribArray(pos);
     }
+    assert(check_error());
     return true;
 }
 
 //
 // This is a public API. See above for documentation.
 //
-YGLU_API bool set_vertattr_buffer(
-    uint prog, const std::string& var, uint bid, int nc) {
+bool set_vertattr_buffer(uint prog, const std::string& var, uint bid, int nc) {
     assert(nc >= 1 && nc <= 4);
+    assert(check_error());
     int pos = glGetAttribLocation(prog, var.c_str());
     if (pos < 0) return false;
     if (bid) {
         glEnableVertexAttribArray(pos);
-        glBindBuffer(GL_VERTEX_ARRAY, bid);
+        glBindBuffer(GL_ARRAY_BUFFER, bid);
         glVertexAttribPointer(pos, nc, GL_FLOAT, false, 0, 0);
-        glBindBuffer(GL_VERTEX_ARRAY, 0);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
     } else {
         glDisableVertexAttribArray(pos);
     }
+    assert(check_error());
     return true;
 }
 
 //
 // This is a public API. See above for documentation.
 //
-YGLU_API bool set_vertattr_val(
+bool set_vertattri_buffer(uint prog, const std::string& var, uint bid, int nc) {
+    assert(nc >= 1 && nc <= 4);
+    assert(check_error());
+    int pos = glGetAttribLocation(prog, var.c_str());
+    if (pos < 0) return false;
+    if (bid) {
+        glEnableVertexAttribArray(pos);
+        glBindBuffer(GL_ARRAY_BUFFER, bid);
+        // glVertexAttribPointer(pos, nc, GL_INT, false, 0, 0);
+        glVertexAttribIPointer(pos, nc, GL_INT, 0, 0);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+    } else {
+        glDisableVertexAttribArray(pos);
+    }
+    assert(check_error());
+    return true;
+}
+
+//
+// This is a public API. See above for documentation.
+//
+bool set_vertattr_val(
     uint prog, const std::string& var, const float* value, int nc) {
     assert(nc >= 1 && nc <= 4);
+    assert(check_error());
     int pos = glGetAttribLocation(prog, var.c_str());
     if (pos < 0) return false;
     glDisableVertexAttribArray(pos);
@@ -906,15 +742,38 @@ YGLU_API bool set_vertattr_val(
         case 4: glVertexAttrib4fv(pos, value); break;
         default: assert(false); break;
     }
+    assert(check_error());
     return true;
 }
 
 //
 // This is a public API. See above for documentation.
 //
-YGLU_API bool set_vertattr(
+bool set_vertattri_val(
+    uint prog, const std::string& var, const int* value, int nc) {
+    assert(nc >= 1 && nc <= 4);
+    assert(check_error());
+    int pos = glGetAttribLocation(prog, var.c_str());
+    if (pos < 0) return false;
+    glDisableVertexAttribArray(pos);
+    switch (nc) {
+        case 1: glVertexAttribI1iv(pos, value); break;
+        case 2: glVertexAttribI2iv(pos, value); break;
+        case 3: glVertexAttribI3iv(pos, value); break;
+        case 4: glVertexAttribI4iv(pos, value); break;
+        default: assert(false); break;
+    }
+    assert(check_error());
+    return true;
+}
+
+//
+// This is a public API. See above for documentation.
+//
+bool set_vertattr(
     uint prog, const std::string& var, uint bid, int nc, const float* def) {
     assert(nc >= 1 && nc <= 4);
+    assert(check_error());
     int pos = glGetAttribLocation(prog, var.c_str());
     if (pos < 0) return false;
     if (bid) {
@@ -934,13 +793,45 @@ YGLU_API bool set_vertattr(
             }
         }
     }
+    assert(check_error());
     return true;
 }
 
 //
 // This is a public API. See above for documentation.
 //
-YGLU_API bool draw_elems(int nelems, uint bid, etype type) {
+bool set_vertattri(
+    uint prog, const std::string& var, uint bid, int nc, const int* def) {
+    assert(nc >= 1 && nc <= 4);
+    assert(check_error());
+    int pos = glGetAttribLocation(prog, var.c_str());
+    if (pos < 0) return false;
+    if (bid) {
+        glEnableVertexAttribArray(pos);
+        glBindBuffer(GL_ARRAY_BUFFER, bid);
+        // glVertexAttribPointer(pos, nc, GL_INT, false, 0, 0);
+        glVertexAttribIPointer(pos, nc, GL_INT, 0, 0);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+    } else {
+        glDisableVertexAttribArray(pos);
+        if (def) {
+            switch (nc) {
+                case 1: glVertexAttribI1iv(pos, def); break;
+                case 2: glVertexAttribI2iv(pos, def); break;
+                case 3: glVertexAttribI3iv(pos, def); break;
+                case 4: glVertexAttribI4iv(pos, def); break;
+                default: assert(false); break;
+            }
+        }
+    }
+    assert(check_error());
+    return true;
+}
+
+//
+// This is a public API. See above for documentation.
+//
+bool draw_elems(int nelems, uint bid, etype type) {
     if (!nelems) return true;
     assert(bid);
     assert(check_error());
@@ -967,10 +858,9 @@ YGLU_API bool draw_elems(int nelems, uint bid, etype type) {
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, bid);
     glDrawElements(mode, nelems * nc, GL_UNSIGNED_INT, 0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+    assert(check_error());
     return true;
 }
-
-}  // namespace modern
 
 namespace stdshader {
 
@@ -980,227 +870,413 @@ namespace stdshader {
 // Filmic tone mapping from
 // https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/
 //
-YGLU_API void make_program(uint* pid, uint* aid) {
+void make_program(uint* pid, uint* aid) {
 #ifndef _WIN32
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Woverlength-strings"
 #endif
-    static const std::string& _vert_shader =
-        "#version 330\n"
-        "\n"
-        "layout(location = 0) in vec3 vert_pos;            // vertex position "
-        "(in mesh "
-        "coordinate frame)\n"
-        "layout(location = 1) in vec3 vert_norm;           // vertex normal   "
-        "(in mesh "
-        "coordinate frame)\n"
-        "layout(location = 2) in vec2 vert_texcoord;       // vertex "
-        "texcoords\n"
-        "layout(location = 3) in vec3 vert_color;          // vertex color\n"
-        "\n"
-        "uniform mat4 shape_xform;           // shape transform\n"
-        "uniform mat4 camera_xform_inv;      // inverse of the camera frame "
-        "(as a "
-        "matrix)\n"
-        "uniform mat4 camera_proj;           // camera projection\n"
-        "\n"
-        "out vec3 pos;                   // [to fragment shader] vertex "
-        "position (in world coordinate)\n"
-        "out vec3 norm;                  // [to fragment shader] vertex "
-        "normal "
-        "(in world coordinate)\n"
-        "out vec2 texcoord;              // [to fragment shader] vertex "
-        "texture coordinates\n"
-        "out vec3 color;                 // [to fragment shader] vertex "
-        "color\n"
-        "\n"
-        "// main function\n"
-        "void main() {\n"
-        "    pos = (shape_xform * vec4(vert_pos,1)).xyz;\n"
-        "    norm = (shape_xform * vec4(vert_norm,0)).xyz;\n"
-        "    color = vert_color;\n"
-        "    texcoord = vert_texcoord;\n"
-        "    gl_Position = camera_proj * camera_xform_inv * shape_xform * "
-        "vec4(vert_pos,1);\n"
-        "}\n"
-        "";
+    static const std::string& vert_header =
+        R"(
+        #version 330
 
-    static const std::string& _frag_shader =
-        "#version 330\n"
-        "\n"
-        "#define TM_DEF 0\n"
-        "#define TM_LINEAR 1\n"
-        "#define TM_SRGB 2\n"
-        "#define TM_GAMMA 3\n"
-        "#define TM_FILMIC 4\n"
-        "\n"
-        "#define pi 3.14159265\n"
-        "\n"
-        "in vec3 pos;                   // [from vertex shader] position "
-        "in "
-        "world space\n"
-        "in vec3 norm;                  // [from vertex shader] normal in "
-        "world space (need normalization)\n"
-        "in vec2 texcoord;              // [from vertex shader] texcoord\n"
-        "in vec3 color;                 // [from vertex shader] color\n"
-        "\n"
-        "uniform mat4 camera_xform;          // camera xform\n"
-        "\n"
-        "uniform vec3 light_amb;             // ambient light\n"
-        "uniform int light_num;              // number of lights\n"
-        "uniform int light_type[16];         // light type (0 -> point, 1 -> "
-        "directional)\n"
-        "uniform vec3 light_pos[16];         // light positions\n"
-        "uniform vec3 light_ke[16];          // light intensities\n"
-        "\n"
-        "uniform int material_etype;         // shading surface type\n"
-        "uniform vec3 material_ke;           // material ke\n"
-        "uniform vec3 material_kd;           // material kd\n"
-        "uniform vec3 material_ks;           // material ks\n"
-        "uniform float material_rs;          // material rs\n"
-        "uniform bool material_use_phong;    // material use phong\n"
-        "\n"
-        "uniform bool material_txt_ke_on;    // material ke texture on\n"
-        "uniform sampler2D material_txt_ke;  // material ke texture\n"
-        "uniform bool material_txt_kd_on;    // material kd texture on\n"
-        "uniform sampler2D material_txt_kd;  // material kd texture\n"
-        "uniform bool material_txt_ks_on;    // material ks texture on\n"
-        "uniform sampler2D material_txt_ks;  // material ks texture\n"
-        "uniform bool material_txt_rs_on;    // material rs texture on\n"
-        "uniform sampler2D material_txt_rs;  // material rs texture\n"
-        "\n"
-        "uniform float img_exposure;         // image exposure\n"
-        "uniform float img_gamma;            // image gamma\n"
-        "uniform int img_tonemap;            // image tonemap preset\n"
-        "\n"
-        "uniform bool shade_eyelight;        // eyelight shading\n"
-        "\n"
-        "out vec4 frag_color;        // eyelight shading\n"
-        "\n"
-        "vec3 brdfcos(int et, vec3 kd, vec3 ks, float rs, vec3 n, vec3 wi, "
-        "vec3 wo, bool use_phong) {\n"
-        "    vec3 wh = normalize(wi+wo);\n"
-        "    float ns = 2/(rs*rs)-2;"
-        "    float ndi = dot(wi,n), ndo = dot(wo,n), ndh = dot(wh,n);"
-        "    if(et == 1) {"
-        "        return ((1+dot(wo,wi))/2) * kd/pi;\n"
-        "    }\n"
-        "    if(et == 2) {"
-        "        float si = sqrt(1-ndi*ndi), so = sqrt(1-ndo*ndo), sh = "
-        "sqrt(1-ndh*ndh);"
-        "        if(si <= 0) return vec3(0);"
-        "        vec3 diff = si * kd / pi;"
-        "        if(sh<=0) return diff;"
-        "        float d = ((2+ns)/(2*pi)) * pow(si,ns);"
-        "        vec3 spec = si * ks * d / (4*si*so);"
-        "        return diff+spec;"
-        "    }\n"
-        "    if(et == 3 || et == 4) {"
-        "        if(ndi<=0 || ndo <=0) return vec3(0);"
-        "        vec3 diff = ndi * kd / pi;"
-        "        if(ndh<=0) return diff;"
-        "        if(use_phong) {"
-        "            float d = ((2+ns)/(2*pi)) * pow(ndh,ns);"
-        "            vec3 spec = ndi * ks * d / (4*ndi*ndo);"
-        "            return diff+spec;"
-        "        } else {\n"
-        "            float cos2 = ndh * ndh;"
-        "            float tan2 = (1 - cos2) / cos2;"
-        "            float alpha2 = rs * rs;"
-        "            float d = alpha2 / (pi * cos2 * cos2 * (alpha2 + tan2) * "
-        "(alpha2 + tan2));"
-        "            float lambda_o = (-1 + sqrt(1 + (1 - ndo * ndo) / (ndo * "
-        "ndo))) / 2;"
-        "            float lambda_i = (-1 + sqrt(1 + (1 - ndi * ndi) / (ndi * "
-        "ndi))) / 2;"
-        "            float g = 1 / (1 + lambda_o + lambda_i);"
-        "            vec3 spec = ndi * ks * d * g / (4*ndi*ndo);"
-        "            return diff+spec;"
-        "        }\n"
-        "    }\n"
-        "}\n"
-        "\n"
-        "vec3 tm_filmic(vec3 x) {"
-        "    float a = 2.51f;\n"
-        "    float b = 0.03f;\n"
-        "    float c = 2.43f;\n"
-        "    float d = 0.59f;\n"
-        "    float e = 0.14f;\n"
-        "    return clamp((x*(a*x+b))/(x*(c*x+d)+e),0,1);\n"
-        "}\n"
-        "\n"
-        "// main\n"
-        "void main() {\n"
-        "    // view vector\n"
-        "    vec3 wo = normalize( (camera_xform*vec4(0,0,0,1)).xyz - pos );"
-        "    // re-normalize normals\n"
-        "    vec3 n = normalize(norm);\n"
-        "    // use faceforward to ensure the normals points toward us\n"
-        "    n = faceforward(n,-wo,n);\n"
-        "    // get material color from textures\n"
-        "    vec3 ke = color * material_ke * ((material_txt_ke_on) ? "
-        "texture(material_txt_ke,texcoord).xyz : vec3(1,1,1));\n"
-        "    vec3 kd = color * material_kd * ((material_txt_kd_on) ? "
-        "texture(material_txt_kd,texcoord).xyz : vec3(1,1,1));\n"
-        "    vec3 ks = color * material_ks * ((material_txt_ks_on) ? "
-        "texture(material_txt_ks,texcoord).xyz : vec3(1,1,1));\n"
-        "    float rs = material_rs * ((material_txt_rs_on) ? "
-        "texture(material_txt_rs,texcoord).x : 1);\n"
-        "    // emission\n"
-        "    vec3 c = ke;\n"
-        "    // check early exit\n"
-        "    if(kd != vec3(0,0,0) || ks != vec3(0,0,0)) {\n"
-        "\n"
-        "    if(shade_eyelight) {\n"
-        "        vec3 wi = wo;\n"
-        "        vec3 wh = normalize(wi+wo);\n"
-        "        // accumulate blinn-phong model\n"
-        "        c += pi * "
-        "brdfcos(material_etype,kd,ks,rs,n,wi,wo,material_use_phong);\n"
-        "    } else {\n"
-        "        // accumulate ambient\n"
-        "        c += light_amb * kd;\n"
-        "        // foreach light\n"
-        "        for(int i = 0; i < light_num; i ++) {\n"
-        "            vec3 cl = vec3(0,0,0); vec3 wi = vec3(0,0,0);\n"
-        "            if(light_type[i] == 0) {\n"
-        "                // compute point light color at pos\n"
-        "                cl = light_ke[i] / pow(length(light_pos[i]-pos),2);\n"
-        "                // compute light direction at pos\n"
-        "                wi = normalize(light_pos[i]-pos);\n"
-        "            }\n"
-        "            else if(light_type[i] == 1) {\n"
-        "                // compute light color\n"
-        "                cl = light_ke[i];\n"
-        "                // compute light direction\n"
-        "                wi = normalize(light_pos[i]);\n"
-        "            }\n"
-        "            // compute h\n"
-        "            vec3 wh = normalize(wi+wo);\n"
-        "            // accumulate blinn-phong model\n"
-        "            c += cl * "
-        "brdfcos(material_etype,kd,ks,rs,n,wi,wo,material_use_phong);\n"
-        "        }\n"
-        "    }\n"
-        "    }\n"
-        "\n"
-        "    // final color correction\n"
-        "    c = c*pow(2,img_exposure);\n"
-        "    if(img_tonemap == TM_SRGB || img_tonemap == TM_DEF)"
-        "        c = pow(c,vec3(1/2.2));\n"
-        "    if(img_tonemap == TM_GAMMA)"
-        "        c = pow(c,vec3(1/img_gamma));\n"
-        "    if(img_tonemap == TM_FILMIC)"
-        "        c = tm_filmic(c);\n"
-        "    // output final color by setting gl_FragColor\n"
-        "    frag_color = vec4(c,1);\n"
-        "}\n"
-        "";
+    )";
+
+    static const std::string& vert_skinning =
+        R"(
+            #define SKIN_NONE 0
+            #define SKIN_STD 1
+            #define SKIN_GLTF 2
+    uniform int skin_type = 0;
+    uniform mat4 skin_xforms[32];
+    layout(location = 5) in vec4 vert_skin_weights;            // vertex skinning weights
+    layout(location = 6) in ivec4 vert_skin_joints;            // vertex skinning joints (in mesh coordinate frame)
+
+    vec3 transform_point(mat4 m, vec3 p) {
+        vec4 p4 = m * vec4(p,1);
+        return p4.xyz / p4.w;
+    }
+
+    vec3 transform_normal(mat4 m, vec3 p) {
+        vec4 p4 = m * vec4(p,0);
+        return p4.xyz;
+    }
+
+    void apply_skin(inout vec3 pos, inout vec3 norm) {
+        if(skin_type == 0) {
+            return;
+        } else if(skin_type == SKIN_STD) {
+            vec4 w = vert_skin_weights;
+            ivec4 j = ivec4(vert_skin_joints);
+            pos = transform_point( skin_xforms[j.x], pos ) * w.x +
+                  transform_point( skin_xforms[j.y], pos ) * w.y +
+                  transform_point( skin_xforms[j.z], pos ) * w.z +
+                  transform_point( skin_xforms[j.w], pos ) * w.w;
+            norm = normalize(
+                   transform_normal( skin_xforms[j.x], norm ) * w.x +
+                   transform_normal( skin_xforms[j.y], norm ) * w.y +
+                   transform_normal( skin_xforms[j.z], norm ) * w.z +
+                   transform_normal( skin_xforms[j.w], norm ) * w.w);
+         } else if(skin_type == SKIN_GLTF) {
+             vec4 w = vert_skin_weights;
+             ivec4 j = ivec4(vert_skin_joints);
+             mat4 xf = skin_xforms[j.x] * w.x + skin_xforms[j.y] * w.y +
+                       skin_xforms[j.z] * w.z + skin_xforms[j.w] * w.w;
+            pos = transform_point(xf, pos);
+            norm = normalize(transform_normal(xf, norm));
+         }
+    }
+    )";
+
+    static const std::string& vert_main =
+        R"(
+    layout(location = 0) in vec3 vert_pos;            // vertex position (in mesh coordinate frame)
+    layout(location = 1) in vec3 vert_norm;           // vertex normal (in mesh coordinate frame)
+    layout(location = 2) in vec2 vert_texcoord;       // vertex texcoords
+    layout(location = 3) in vec4 vert_color;          // vertex color
+    layout(location = 4) in vec4 vert_tangsp;         // vertex tangent space
+
+    uniform mat4 shape_xform;           // shape transform
+
+    struct Camera {
+        mat4 xform;          // camera xform
+        mat4 xform_inv;      // inverse of the camera frame (as a matrix)
+        mat4 proj;           // camera projection
+    };
+    uniform Camera camera;      // camera data
+
+    out vec3 pos;                   // [to fragment shader] vertex position (in world coordinate)
+    out vec3 norm;                  // [to fragment shader] vertex normal (in world coordinate)
+    out vec2 texcoord;              // [to fragment shader] vertex texture coordinates
+    out vec4 color;                 // [to fragment shader] vertex color
+    out vec4 tangsp;                // [to fragment shader] vertex tangent space
+
+    // main function
+    void main() {
+        // copy values
+        pos = vert_pos;
+        norm = vert_norm;
+        tangsp = vert_tangsp;
+
+        // world projection
+        pos = (shape_xform * vec4(pos,1)).xyz;
+        norm = (shape_xform * vec4(norm,0)).xyz;
+        tangsp.xyz = (shape_xform * vec4(tangsp.xyz,0)).xyz;
+
+        // skinning
+        apply_skin(pos, norm);
+
+        // copy other vertex properties
+        texcoord = vert_texcoord;
+        color = vert_color;
+
+        // clip
+        gl_Position = camera.proj * camera.xform_inv * vec4(pos,1);
+    }
+    )";
+
+    static const std::string frag_header =
+        R"(
+        #version 330
+
+        #define pi 3.14159265
+
+        )";
+
+    static const std::string frag_tonemap =
+        R"(
+        #define TONEMAP_LINEAR 0
+        #define TONEMAP_SRGB 1
+        #define TONEMAP_GAMMA 2
+        #define TONEMAP_FILMIC 3
+
+        struct Tonemap {
+            int type;       // tonemap type (TM_...)
+            float exposure; // image exposure
+            float gamma;    // image gamma
+        };
+        uniform Tonemap tonemap;
+
+        vec3 eval_filmic(vec3 x) {
+            float a = 2.51f;
+            float b = 0.03f;
+            float c = 2.43f;
+            float d = 0.59f;
+            float e = 0.14f;
+            return clamp((x*(a*x+b))/(x*(c*x+d)+e),0,1);
+        }
+
+        vec3 eval_tonemap(vec3 c) {
+            // final color correction
+            c = c*pow(2,tonemap.exposure);
+            if(tonemap.type == TONEMAP_SRGB) {
+                c = pow(c,vec3(1/2.2));
+            } else if(tonemap.type == TONEMAP_GAMMA) {
+                c = pow(c,vec3(1/tonemap.gamma));
+            } else if(tonemap.type == TONEMAP_FILMIC) {
+                c = eval_filmic(c);
+            }
+            return c;
+        }
+
+        )";
+
+    static const std::string frag_lighting =
+        R"(
+        struct Lighting {
+            bool eyelight;        // eyelight shading
+            vec3 amb;             // ambient light
+            int lnum;              // number of lights
+            int ltype[16];         // light type (0 -> point, 1 -> directional)
+            vec3 lpos[16];         // light positions
+            vec3 lke[16];          // light intensities
+        };
+        uniform Lighting lighting;
+
+        void eval_light(int lid, vec3 pos, out vec3 cl, out vec3 wi) {
+            cl = vec3(0,0,0);
+            wi = vec3(0,0,0);
+            if(lighting.ltype[lid] == 0) {
+                // compute point light color at pos
+                cl = lighting.lke[lid] / pow(length(lighting.lpos[lid]-pos),2);
+                // compute light direction at pos
+                wi = normalize(lighting.lpos[lid]-pos);
+            }
+            else if(lighting.ltype[lid] == 1) {
+                // compute light color
+                cl = lighting.lke[lid];
+                // compute light direction
+                wi = normalize(lighting.lpos[lid]);
+            }
+        }
+
+        )";
+
+    static const std::string frag_brdf =
+        R"(
+        #define BRDF_NONE 0
+        #define BRDF_POINT 1
+        #define BRDF_KAJIYA_KAY 2
+        #define BRDF_GGX 3
+        #define BRDF_PHONG 4
+
+        struct Brdf {
+            int type;
+            vec3 ke;
+            vec3 kd;
+            vec3 ks;
+            float rs;
+            float op;
+        };
+
+        vec3 brdfcos(Brdf brdf, vec3 n, vec3 wi, vec3 wo) {
+            if(brdf.type == BRDF_NONE) return vec3(0);
+            vec3 wh = normalize(wi+wo);
+            float ns = 2/(brdf.rs*brdf.rs)-2;
+            float ndi = dot(wi,n), ndo = dot(wo,n), ndh = dot(wh,n);
+            if(brdf.type == BRDF_POINT) {
+                return ((1+dot(wo,wi))/2) * brdf.kd/pi;
+            } else if(brdf.type == BRDF_KAJIYA_KAY) {
+                float si = sqrt(1-ndi*ndi);
+                float so = sqrt(1-ndo*ndo);
+                float sh = sqrt(1-ndh*ndh);
+                if(si <= 0) return vec3(0);
+                vec3 diff = si * brdf.kd / pi;
+                if(sh<=0) return diff;
+                float d = ((2+ns)/(2*pi)) * pow(si,ns);
+                vec3 spec = si * brdf.ks * d / (4*si*so);
+                return diff+spec;
+            } else if(brdf.type == BRDF_GGX || brdf.type == BRDF_PHONG) {
+                if(ndi<=0 || ndo <=0) return vec3(0);
+                vec3 diff = ndi * brdf.kd / pi;
+                if(ndh<=0) return diff;
+                if(brdf.type == BRDF_PHONG) {
+                    float d = ((2+ns)/(2*pi)) * pow(ndh,ns);
+                    vec3 spec = ndi * brdf.ks * d / (4*ndi*ndo);
+                    return diff+spec;
+                } else {
+                    float cos2 = ndh * ndh;
+                    float tan2 = (1 - cos2) / cos2;
+                    float alpha2 = brdf.rs * brdf.rs;
+                    float d = alpha2 / (pi * cos2 * cos2 * (alpha2 + tan2) * (alpha2 + tan2));
+                    float lambda_o = (-1 + sqrt(1 + (1 - ndo * ndo) / (ndo * ndo))) / 2;
+                    float lambda_i = (-1 + sqrt(1 + (1 - ndi * ndi) / (ndi * ndi))) / 2;
+                    float g = 1 / (1 + lambda_o + lambda_i);
+                    vec3 spec = ndi * brdf.ks * d * g / (4*ndi*ndo);
+                    return diff+spec;
+                }
+            }
+        }
+
+        )";
+
+    static const std::string frag_material =
+        R"(
+        #define MATERIAL_EMISSION_ONLY 0
+        #define MATERIAL_GENERIC 1
+        #define MATERIAL_GLTF_METALLIC_ROUGHNESS 2
+        #define MATERIAL_GLTF_SPECULAR_GLOSSINESS 3
+
+        #define ELEMENT_POINT 1
+        #define ELEMENT_LINE 2
+        #define ELEMENT_TRIANGLE 3
+
+        struct Material {
+            int mtype;         // material type
+            int etype;         // element type
+            vec3 ke;           // material ke
+            vec3 kd;           // material kd
+            vec3 ks;           // material ks
+            float rs;          // material rs
+            float op;          // material op
+
+            bool txt_ke_on;    // material ke texture on
+            sampler2D txt_ke;  // material ke texture
+            bool txt_kd_on;    // material kd texture on
+            sampler2D txt_kd;  // material kd texture
+            bool txt_ks_on;    // material ks texture on
+            sampler2D txt_ks;  // material ks texture
+            bool txt_rs_on;    // material rs texture on
+            sampler2D txt_rs;  // material rs texture
+
+            bool txt_norm_on;    // material norm texture on
+            sampler2D txt_norm;  // material norm texture
+            sampler2D txt_norm_scale;  // material norm scale
+
+            bool txt_occ_on;    // material occ texture on
+            sampler2D txt_occ;  // material occ texture
+            sampler2D txt_occ_scale;  // material occ scale
+
+            bool use_phong;       // material use phong
+            bool double_sided;    // material double sided
+        };
+        uniform Material material;
+
+        void eval_material(vec2 texcoord, vec4 color, out int type, out vec3 ke,
+                           out vec3 kd, out vec3 ks, out float rs, out float op) {
+            ke = color.xyz * material.ke;
+            kd = color.xyz * material.kd;
+            ks = color.xyz * material.ks;
+            rs = material.rs;
+            op = color.w * material.op;
+
+            vec3 ke_txt = (material.txt_ke_on) ? texture(material.txt_ke,texcoord).xyz : vec3(1);
+            vec4 kd_txt = (material.txt_kd_on) ? texture(material.txt_kd,texcoord) : vec4(1);
+            vec4 ks_txt = (material.txt_ks_on) ? texture(material.txt_ks,texcoord) : vec4(1);
+            float rs_txt = (material.txt_rs_on) ? texture(material.txt_rs,texcoord).x : 1;
+
+            // scale common values
+            ke *= ke_txt;
+
+            // get material color from textures and adjust values
+            if(material.mtype == MATERIAL_EMISSION_ONLY) {
+                type = BRDF_NONE;
+            } else if(material.mtype == MATERIAL_GENERIC) {
+                type = material.etype;
+                kd *= kd_txt.xyz;
+                ks *= ks_txt.xyz;
+                rs *= rs_txt;
+            } else if(material.mtype == MATERIAL_GLTF_METALLIC_ROUGHNESS) {
+                type = material.etype;
+                vec3 kb = kd * kd_txt.xyz;
+                float km = ks.x * ks_txt.z;
+                kd = kb * (1 - km);
+                ks = kb * km + vec3(0.04) * (1 - km);
+                rs *= ks_txt.y;
+                rs = rs*rs;
+                op *= kd_txt.w;
+                // TODO: fix rs
+            } else if(material.mtype == MATERIAL_GLTF_SPECULAR_GLOSSINESS) {
+                type = material.etype;
+                kd *= kd_txt.xyz;
+                ks *= ks_txt.xyz;
+                rs *= ks_txt.w;
+                op *= kd_txt.w;
+                // TODO: fix rs
+            }
+        }
+
+        vec3 apply_normal_map(vec2 texcoord, vec3 norm, vec4 tangsp) {
+            if(!material.txt_norm_on) return norm;
+            vec3 tangu = normalize(tangsp.xyz);
+            vec3 tangv = normalize(cross(tangu, norm));
+            if(tangsp.w < 0) tangv = -tangv;
+            vec3 txt = 2 * pow(texture(material.txt_norm,texcoord).xyz, vec3(1/2.2)) - 1;
+            return normalize( tangu * txt.x + tangv * txt.y + norm * txt.z );
+        }
+
+        )";
+
+    static const std::string frag_main =
+        R"(
+        in vec3 pos;                   // [from vertex shader] position in world space
+        in vec3 norm;                  // [from vertex shader] normal in world space (need normalization)
+        in vec2 texcoord;              // [from vertex shader] texcoord
+        in vec4 color;                 // [from vertex shader] color
+        in vec4 tangsp;                // [from vertex shader] tangent space
+
+        struct Camera {
+            mat4 xform;          // camera xform
+            mat4 xform_inv;      // inverse of the camera frame (as a matrix)
+            mat4 proj;           // camera projection
+        };
+        uniform Camera camera;      // camera data
+
+        out vec4 frag_color;        // eyelight shading
+
+        // main
+        void main() {
+            // view vector
+            vec3 wo = normalize( (camera.xform*vec4(0,0,0,1)).xyz - pos );
+
+            // re-normalize normals
+            vec3 n = normalize(norm);
+
+            // apply normal map
+            n = apply_normal_map(texcoord, n, tangsp);
+
+            // use faceforward to ensure the normals points toward us
+            if(material.double_sided) n = faceforward(n,-wo,n);
+
+            // get material color from textures
+            Brdf brdf;
+            eval_material(texcoord, color, brdf.type, brdf.ke, brdf.kd, brdf.ks, brdf.rs, brdf.op);
+
+            // emission
+            vec3 c = brdf.ke;
+
+            // check early exit
+            if(brdf.kd != vec3(0,0,0) || brdf.ks != vec3(0,0,0)) {
+                // eyelight shading
+                if(lighting.eyelight) {
+                    vec3 wi = wo;
+                    c += pi * brdfcos(brdf,n,wi,wo);
+                } else {
+                    // accumulate ambient
+                    c += lighting.amb * brdf.kd;
+                    // foreach light
+                    for(int lid = 0; lid < lighting.lnum; lid ++) {
+                        vec3 cl = vec3(0,0,0); vec3 wi = vec3(0,0,0);
+                        eval_light(lid, pos, cl, wi);
+                        c += cl * brdfcos(brdf,n,wi,wo);
+                    }
+                }
+            }
+
+            // final color correction
+            c = eval_tonemap(c);
+
+            // output final color by setting gl_FragColor
+            frag_color = vec4(c,brdf.op);
+        }
+    )";
 
     assert(check_error());
-    *aid = modern::make_vertex_arrays();
+    *aid = make_vertex_arrays();
     glBindVertexArray(*aid);
-    *pid = modern::make_program(_vert_shader, _frag_shader, 0, 0);
+    *pid = yglu::make_program(vert_header + vert_skinning + vert_main,
+        frag_header + frag_tonemap + frag_lighting + frag_brdf + frag_material +
+            frag_main,
+        0, 0);
     glBindVertexArray(0);
     assert(check_error());
 #ifndef _WIN32
@@ -1211,529 +1287,254 @@ YGLU_API void make_program(uint* pid, uint* aid) {
 //
 // This is a public API. See above for documentation.
 //
-YGLU_API void begin_frame(uint prog, uint vao, bool shade_eyelight,
-    float img_exposure, tonemap_type img_tonemap, float img_gamma,
-    const float4x4& camera_xform, const float4x4& camera_xform_inv,
-    const float4x4& camera_proj) {
+void begin_frame(uint prog, uint vao, bool shade_eyelight, float img_exposure,
+    tonemap_type img_tonemap, float img_gamma, const ym::mat4f& camera_xform,
+    const ym::mat4f& camera_xform_inv, const ym::mat4f& camera_proj) {
     assert(check_error());
     glUseProgram(prog);
     glBindVertexArray(vao);
     int shade_eyelighti = (shade_eyelight) ? 1 : 0;
-    modern::set_uniform(prog, "shade_eyelight", &shade_eyelighti, 1, 1);
-    modern::set_uniform(prog, "img_exposure", &img_exposure, 1, 1);
-    modern::set_uniform(prog, "img_gamma", &img_gamma, 1, 1);
+    set_uniform(prog, "lighting.eyelight", &shade_eyelighti, 1, 1);
+    set_uniform(prog, "tonemap.exposure", &img_exposure, 1, 1);
+    set_uniform(prog, "tonemap.gamma", &img_gamma, 1, 1);
     auto img_tonemap_int = (int)img_tonemap;
-    modern::set_uniform(prog, "img_tonemap", &img_tonemap_int, 1, 1);
-    modern::set_uniform(prog, "camera_xform", &camera_xform[0][0], 16, 1);
-    modern::set_uniform(
-        prog, "camera_xform_inv", &camera_xform_inv[0][0], 16, 1);
-    modern::set_uniform(prog, "camera_proj", &camera_proj[0][0], 16, 1);
+    set_uniform(prog, "tonemap.type", &img_tonemap_int, 1, 1);
+    set_uniform(prog, "camera.xform", &camera_xform[0][0], 16, 1);
+    set_uniform(prog, "camera.xform_inv", &camera_xform_inv[0][0], 16, 1);
+    set_uniform(prog, "camera.proj", &camera_proj[0][0], 16, 1);
     assert(check_error());
 }
 
 //
 // This is a public API. See above for documentation.
 //
-YGLU_API void end_frame() {
+void end_frame() {
+    assert(check_error());
     glBindVertexArray(0);
     glUseProgram(0);
-}
-
-//
-// This is a public API. See above for documentation.
-//
-YGLU_API void set_lights(uint prog, const float3& amb, int num, float3* pos,
-    float3* ke, ltype* type) {
-    assert(check_error());
-    modern::set_uniform(prog, "light_amb", &amb[0], 3, 1);
-    modern::set_uniform(prog, "light_num", &num, 1, 1);
-    modern::set_uniform(prog, "light_pos", (float*)pos, 3, num);
-    modern::set_uniform(prog, "light_ke", (float*)ke, 3, num);
-    modern::set_uniform(prog, "light_type", (int*)type, 1, num);
     assert(check_error());
 }
 
 //
 // This is a public API. See above for documentation.
 //
-YGLU_API void begin_shape(uint prog, const float4x4& xform) {
+void set_lights(uint prog, const ym::vec3f& amb, int num, ym::vec3f* pos,
+    ym::vec3f* ke, ltype* type) {
     assert(check_error());
-    modern::set_uniform(prog, "shape_xform", &xform[0][0], 16, 1);
+    set_uniform(prog, "lighting.amb", &amb[0], 3, 1);
+    set_uniform(prog, "lighting.lnum", &num, 1, 1);
+    set_uniform(prog, "lighting.lpos", (float*)pos, 3, num);
+    set_uniform(prog, "lighting.lke", (float*)ke, 3, num);
+    set_uniform(prog, "lighting.ltype", (int*)type, 1, num);
     assert(check_error());
 }
 
 //
 // This is a public API. See above for documentation.
 //
-YGLU_API void end_shape() {
+void begin_shape(uint prog, const ym::mat4f& xform) {
+    assert(check_error());
+    set_uniform(prog, "shape_xform", &xform[0][0], 16, 1);
+    assert(check_error());
+}
+
+//
+// This is a public API. See above for documentation.
+//
+void end_shape() {
     assert(check_error());
     for (int i = 0; i < 16; i++) glDisableVertexAttribArray(i);
     assert(check_error());
 }
 
 //
-// This is a public API. See above for documentation.
+// Same as set_material_generic(). Deprecated interface.
 //
-YGLU_API void set_material(uint prog, const float3& ke, const float3& kd,
-    const float3& ks, float rs, int ke_txt, int kd_txt, int ks_txt, int rs_txt,
-    bool use_phong) {
+void set_material(uint prog, const ym::vec3f& ke, const ym::vec3f& kd,
+    const ym::vec3f& ks, float rs, const texture_info& ke_txt,
+    const texture_info& kd_txt, const texture_info& ks_txt,
+    const texture_info& rs_txt, const texture_info& norm_txt,
+    const texture_info& occ_txt, bool use_phong, bool double_sided) {
+    set_material_generic(prog, ke, kd, ks, rs, 1, ke_txt, kd_txt, ks_txt,
+        rs_txt, norm_txt, occ_txt, use_phong, double_sided);
+}
+
+//
+// Internal representation
+//
+static inline void _set_material_generic(uint prog, int mtype,
+    const ym::vec3f& ke, const ym::vec3f& kd, const ym::vec3f& ks, float rs,
+    float op, const texture_info& ke_txt, const texture_info& kd_txt,
+    const texture_info& ks_txt, const texture_info& rs_txt,
+    const texture_info& norm_txt, const texture_info& occ_txt, bool use_phong,
+    bool double_sided) {
     assert(check_error());
-    modern::set_uniform(prog, "material_ke", &ke[0], 3, 1);
-    modern::set_uniform(prog, "material_kd", &kd[0], 3, 1);
-    modern::set_uniform(prog, "material_ks", &ks[0], 3, 1);
-    modern::set_uniform(prog, "material_rs", &rs, 1, 1);
-    modern::set_uniform_texture(
-        prog, "material_txt_ke", "material_txt_ke_on", ke_txt, 0);
-    modern::set_uniform_texture(
-        prog, "material_txt_kd", "material_txt_kd_on", kd_txt, 1);
-    modern::set_uniform_texture(
-        prog, "material_txt_ks", "material_txt_ks_on", ks_txt, 2);
-    modern::set_uniform_texture(
-        prog, "material_txt_rs", "material_txt_rs_on", rs_txt, 4);
-    int use_phongi = use_phong;
-    modern::set_uniform(prog, "material_use_phong", &use_phongi, 1, 1);
+    set_uniform(prog, "material.mtype", &mtype, 1, 1);
+    set_uniform(prog, "material.ke", &ke[0], 3, 1);
+    set_uniform(prog, "material.kd", &kd[0], 3, 1);
+    set_uniform(prog, "material.ks", &ks[0], 3, 1);
+    set_uniform(prog, "material.rs", &rs, 1, 1);
+    set_uniform(prog, "material.op", &op, 1, 1);
+    set_uniform_texture(
+        prog, "material.txt_ke", "material.txt_ke_on", ke_txt, 0);
+    set_uniform_texture(
+        prog, "material.txt_kd", "material.txt_kd_on", kd_txt, 1);
+    set_uniform_texture(
+        prog, "material.txt_ks", "material.txt_ks_on", ks_txt, 2);
+    set_uniform_texture(
+        prog, "material.txt_rs", "material.txt_rs_on", rs_txt, 3);
+    set_uniform_texture(
+        prog, "material.txt_norm", "material.txt_norm_on", norm_txt, 4);
+    set_uniform_texture(
+        prog, "material.txt_occ", "material.txt_occ_on", occ_txt, 5);
+    set_uniform(prog, "material.norm_scale", &norm_txt.scale, 1, 1);
+    set_uniform(prog, "material.occ_scale", &occ_txt.scale, 1, 1);
+    int use_phongi = use_phong, double_sidedi = double_sided;
+    set_uniform(prog, "material.use_phong", &use_phongi, 1, 1);
+    set_uniform(prog, "material.double_sided", &double_sidedi, 1, 1);
     assert(check_error());
+}
+
+//
+// Set material values for emission only (constant color).
+// Indicates textures ids with the correspoinding XXX_txt variables.
+//
+void set_material_emission_only(uint prog, const ym::vec3f& ke, float op,
+    const texture_info& ke_txt, bool double_sided) {
+    _set_material_generic(prog, 0, ke, {0, 0, 0}, {0, 0, 0}, 1, op, ke_txt, 0,
+        0, 0, 0, 0, false, double_sided);
+}
+
+//
+// Set material values with emission ke, diffuse kd, specular ks and
+// specular roughness rs, opacity op. Indicates textures ids with the
+// correspoinding
+// XXX_txt variables. Uses GGX by default, but can switch to Phong is needed.
+//
+void set_material_generic(uint prog, const ym::vec3f& ke, const ym::vec3f& kd,
+    const ym::vec3f& ks, float rs, float op, const texture_info& ke_txt,
+    const texture_info& kd_txt, const texture_info& ks_txt,
+    const texture_info& rs_txt, const texture_info& norm_txt,
+    const texture_info& occ_txt, bool use_phong, bool double_sided) {
+    _set_material_generic(prog, 1, ke, kd, ks, rs, op, ke_txt, kd_txt, ks_txt,
+        rs_txt, norm_txt, occ_txt, use_phong, double_sided);
+}
+
+//
+// Set material values for glTF specular-roughness PBR shader,
+// with emission ke, base color kb, opacity op, metallicity km and
+// specular roughness rs. Uses basecolor-opacity texture kb_txt and
+// metallic-roughness texture km_txt. Uses GGX but can be switched to Phong.
+//
+void set_material_gltf_metallic_roughness(uint prog, const ym::vec3f& ke,
+    const ym::vec3f& kb, float km, float rs, float op,
+    const texture_info& ke_txt, const texture_info& kb_txt,
+    const texture_info& km_txt, const texture_info& norm_txt,
+    const texture_info& occ_txt, bool use_phong, bool double_sided) {
+    _set_material_generic(prog, 2, ke, kb, {km, km, km}, rs, op, ke_txt, kb_txt,
+        km_txt, 0, norm_txt, occ_txt, use_phong, double_sided);
+}
+
+//
+// Set material values for glTF specular-roughness PBR shader,
+// with emission ke, diffuse color kd, opacity op, specular ks and
+// specular glossiness rs. Uses diffuse-opacity texture kd_txt and
+// specular-glpossiness texture ks_txt. Uses GGX but can be switched to Phong.
+//
+void set_material_gltf_specular_glossiness(uint prog, const ym::vec3f& ke,
+    const ym::vec3f& kd, const ym::vec3f& ks, float rs, float op,
+    const texture_info& ke_txt, const texture_info& kd_txt,
+    const texture_info& ks_txt, const texture_info& norm_txt,
+    const texture_info& occ_txt, bool use_phong, bool double_sided) {
+    _set_material_generic(prog, 3, ke, kd, ks, rs, op, ke_txt, kd_txt, ks_txt,
+        0, norm_txt, occ_txt, use_phong, double_sided);
 }
 
 //
 // This is a public API. See above for documentation.
 //
-YGLU_API float specular_exponent_to_roughness(float n) {
-    return std::sqrt(2 / (n + 2));
-}
+float specular_exponent_to_roughness(float n) { return std::sqrt(2 / (n + 2)); }
 
 //
 // This is a public API. See above for documentation.
 //
-YGLU_API void set_vert(
-    uint prog, uint pos, uint norm, uint texcoord, uint color) {
+void set_vert(
+    uint prog, uint pos, uint norm, uint texcoord, uint color, uint tangsp) {
     assert(check_error());
-    float white[3] = {1, 1, 1};
+    float white[4] = {1, 1, 1, 1};
     float zero[3] = {0, 0, 0};
-    modern::set_vertattr(prog, "vert_pos", pos, 3, 0);
-    modern::set_vertattr(prog, "vert_norm", norm, 3, zero);
-    modern::set_vertattr(prog, "vert_texcoord", texcoord, 2, zero);
-    modern::set_vertattr(prog, "vert_color", color, 3, white);
+    set_vertattr(prog, "vert_pos", pos, 3, 0);
+    set_vertattr(prog, "vert_norm", norm, 3, zero);
+    set_vertattr(prog, "vert_texcoord", texcoord, 2, zero);
+    set_vertattr(prog, "vert_color", color, 4, white);
+    set_vertattr(prog, "vert_tangsp", tangsp, 4, white);
     assert(check_error());
+}
+
+//
+// Set vertex data with buffers for skinning.
+//
+void set_vert_skinning(uint prog, uint weights, uint joints, int nxforms,
+    const ym::mat4f* xforms) {
+    int type = 1;
+    float zero[4] = {0, 0, 0, 0};
+    int zeroi[4] = {0, 0, 0, 0};
+    set_uniform(prog, "skin_type", &type, 1, 1);
+    set_uniform(prog, "skin_xforms", (float*)xforms, 16, std::min(nxforms, 32));
+    set_vertattr(prog, "vert_skin_weights", weights, 4, zero);
+    set_vertattri(prog, "vert_skin_joints", joints, 4, zeroi);
+}
+
+//
+// Set vertex data with buffers for skinning.
+//
+void set_vert_gltf_skinning(uint prog, uint weights, uint joints, int nxforms,
+    const ym::mat4f* xforms) {
+    int type = 2;
+    float zero[4] = {0, 0, 0, 0};
+    int zeroi[4] = {0, 0, 0, 0};
+    set_uniform(prog, "skin_type", &type, 1, 1);
+    set_uniform(prog, "skin_xforms", (float*)xforms, 16, std::min(nxforms, 32));
+    set_vertattr(prog, "vert_skin_weights", weights, 4, zero);
+    set_vertattri(prog, "vert_skin_joints", joints, 4, zeroi);
+}
+
+//
+// Disables vertex skinning.
+//
+void set_vert_skinning_off(uint prog) {
+    int type = 0;
+    float zero[4] = {0, 0, 0, 0};
+    int zeroi[4] = {0, 0, 0, 0};
+    set_uniform(prog, "skin_type", &type, 1, 1);
+    set_vertattr(prog, "vert_skin_weights", 0, 4, zero);
+    set_vertattri(prog, "vert_skin_joints", 0, 4, zeroi);
 }
 
 //
 // This is a public API. See above for documentation.
 //
-YGLU_API void draw_elem(uint prog, int num, uint bid, etype etype) {
+void draw_elem(uint prog, int num, uint bid, etype etype) {
     assert(check_error());
     if (num <= 0) return;
     auto etypei = (int)etype;
-    modern::set_uniform(prog, "material_etype", &etypei, 1, 1);
-    modern::draw_elems(num, bid, etype);
+    set_uniform(prog, "material.etype", &etypei, 1, 1);
+    draw_elems(num, bid, etype);
     assert(check_error());
 }
 
-YGLU_API void draw_points(uint prog, int num, uint bid) {
+void draw_points(uint prog, int num, uint bid) {
     draw_elem(prog, num, bid, etype::point);
 }
 
-YGLU_API void draw_lines(uint prog, int num, uint bid) {
+void draw_lines(uint prog, int num, uint bid) {
     draw_elem(prog, num, bid, etype::line);
 }
 
-YGLU_API void draw_triangles(uint prog, int num, uint bid) {
+void draw_triangles(uint prog, int num, uint bid) {
     draw_elem(prog, num, bid, etype::triangle);
 }
 
 }  // namespace stdshader
 
 }  // namespace yglu
-
-#ifndef YGLU_NO_GLFW
-
-#include <GLFW/glfw3.h>
-
-#ifndef YGLU_NO_NUKLEAR
-#define NK_INCLUDE_FIXED_TYPES
-#define NK_INCLUDE_STANDARD_IO
-#define NK_INCLUDE_STANDARD_VARARGS
-#define NK_INCLUDE_DEFAULT_ALLOCATOR
-#define NK_INCLUDE_VERTEX_BUFFER_OUTPUT
-#define NK_INCLUDE_FONT_BAKING
-#define NK_INCLUDE_DEFAULT_FONT
-#define NK_IMPLEMENTATION
-#define NK_GLFW_GL3_IMPLEMENTATION
-#define NK_GLFW_GL2_IMPLEMENTATION
-#include "ext/nuklear.h"
-#include "ext/nuklear_glfw_gl2.h"
-#include "ext/nuklear_glfw_gl3.h"
-#endif
-
-namespace yglu {
-
-namespace ui {
-//
-// Window
-//
-struct window {
-    GLFWwindow* win = nullptr;
-    bool legacy_gl = false;
-    void* user_pointer = nullptr;
-    nk_context* nk_ctx = nullptr;
-
-    int widget_width = 256;
-
-    text_callback text_cb = nullptr;
-    refresh_callback refresh_cb = nullptr;
-};
-
-//
-// Support
-//
-static inline void _glfw_error_cb(int error, const char* description) {
-    printf("GLFW error: %s\n", description);
-}
-
-//
-// Support
-//
-static inline void _glfw_text_cb(GLFWwindow* gwin, unsigned key) {
-    auto win = (window*)glfwGetWindowUserPointer(gwin);
-    if (win->nk_ctx) {
-        nk_glfw3_gl3_char_callback(win->win, key);
-        if (nk_item_is_any_active(win->nk_ctx)) return;
-    }
-    if (win->text_cb) win->text_cb(win, key);
-}
-
-//
-// Support
-//
-static inline void _glfw_refresh_cb(GLFWwindow* gwin, unsigned key) {
-    auto win = (window*)glfwGetWindowUserPointer(gwin);
-    if (win->refresh_cb) win->refresh_cb(win);
-}
-
-//
-// initialize glfw
-//
-window* init_window(int width, int height, const std::string& title,
-    bool legacy_gl, void* user_pointer) {
-    // window
-    auto win = new window();
-    win->user_pointer = user_pointer;
-    win->legacy_gl = legacy_gl;
-
-    // window
-    if (!glfwInit()) return nullptr;
-
-    // profile creation
-    if (!legacy_gl) {
-        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-#if __APPLE__
-        glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-#endif
-        glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-    }
-
-    win->win = glfwCreateWindow(width, height, title.c_str(), 0, 0);
-    glfwMakeContextCurrent(win->win);
-    glfwSetWindowUserPointer(win->win, win);
-
-    glfwSetErrorCallback(_glfw_error_cb);
-
-// init gl extensions
-#ifndef __APPLE__
-    if (!glewInit()) return nullptr;
-#endif
-
-    return win;
-}
-
-//
-// initialize glfw
-//
-void set_callbacks(
-    window* win, text_callback text_cb, refresh_callback refresh_cb) {
-    win->text_cb = text_cb;
-    win->refresh_cb = refresh_cb;
-    if (text_cb) glfwSetCharCallback(win->win, _glfw_text_cb);
-}
-
-//
-// Clear glfw
-//
-void clear_window(window* win) {
-    glfwDestroyWindow(win->win);
-    glfwTerminate();
-}
-
-//
-// Gets the user poiner
-void* get_user_pointer(window* win) { return win->user_pointer; }
-//
-
-//
-// Set window title
-//
-void set_window_title(window* win, const std::string& title) {
-    glfwSetWindowTitle(win->win, title.c_str());
-}
-
-//
-// Wait events
-//
-void wait_events(window* win) { glfwWaitEvents(); }
-
-//
-// Poll events
-//
-void poll_events(window* win) { glfwPollEvents(); }
-
-//
-// Swap buffers
-//
-void swap_buffers(window* win) { glfwSwapBuffers(win->win); }
-
-//
-// Should close
-//
-bool should_close(window* win) { return glfwWindowShouldClose(win->win); }
-
-//
-// Mouse button
-//
-int get_mouse_button(window* win) {
-    auto mouse1 =
-        glfwGetMouseButton(win->win, GLFW_MOUSE_BUTTON_1) == GLFW_PRESS;
-    auto mouse2 =
-        glfwGetMouseButton(win->win, GLFW_MOUSE_BUTTON_2) == GLFW_PRESS;
-    auto mouse3 =
-        glfwGetMouseButton(win->win, GLFW_MOUSE_BUTTON_3) == GLFW_PRESS;
-    if (mouse1) return 1;
-    if (mouse2) return 2;
-    if (mouse3) return 3;
-#if 0
-            if (action == GLFW_RELEASE) {
-                vparams.mouse_button = 0;
-            } else if (button == GLFW_MOUSE_BUTTON_1 && !mods) {
-                vparams.mouse_button = 1;
-            } else if (button == GLFW_MOUSE_BUTTON_1 && (mods & GLFW_MOD_CONTROL)) {
-                vparams.mouse_button = 2;
-            } else if (button == GLFW_MOUSE_BUTTON_1 && (mods & GLFW_MOD_SHIFT)) {
-                vparams.mouse_button = 3;
-            } else if (button == GLFW_MOUSE_BUTTON_2) {
-                vparams.mouse_button = 2;
-            } else {
-                vparams.mouse_button = 0;
-            }
-#endif
-    return 0;
-}
-
-//
-// Mouse position
-//
-int2 get_mouse_pos(window* win) {
-    double x, y;
-    glfwGetCursorPos(win->win, &x, &y);
-    return {(int)x, (int)y};
-}
-
-//
-// Mouse position
-//
-float2 get_mouse_posf(window* win) {
-    double x, y;
-    glfwGetCursorPos(win->win, &x, &y);
-    return {(float)x, (float)y};
-}
-
-//
-// Window size
-//
-int2 get_window_size(window* win) {
-    auto ret = int2{0, 0};
-    glfwGetWindowSize(win->win, &ret[0], &ret[1]);
-    return ret;
-}
-
-//
-// Framebuffer size
-//
-int2 get_framebuffer_size(window* win) {
-    auto ret = int2{0, 0};
-    glfwGetFramebufferSize(win->win, &ret[0], &ret[1]);
-    return ret;
-}
-
-//
-// Read pixels
-//
-std::vector<byte4> get_screenshot(
-    window* win, int2& wh, bool flipy, bool back) {
-    wh = get_framebuffer_size(win);
-    auto pixels = std::vector<byte4>(wh[0] * wh[1]);
-    glReadBuffer((back) ? GL_BACK : GL_FRONT);
-    glReadPixels(0, 0, wh[0], wh[1], GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
-    if (flipy) {
-        std::vector<byte4> line(wh[0]);
-        for (int j = 0; j < wh[1] / 2; j++) {
-            memcpy(line.data(), pixels.data() + j * wh[0] * 4, wh[0] * 4);
-            memcpy(pixels.data() + j * wh[0] * 4,
-                pixels.data() + (wh[1] - 1 - j) * wh[0] * 4, wh[0] * 4);
-            memcpy(pixels.data() + (wh[1] - 1 - j) * wh[0] * 4, line.data(),
-                wh[0] * 4);
-        }
-    }
-    return pixels;
-}
-
-#ifndef YGLU_NO_NUKLEAR
-
-//
-// Nuklear
-//
-void init_widgets(window* win) {
-    glfwSetScrollCallback(win->win, nk_gflw3_scroll_callback);
-    if (win->legacy_gl) {
-        win->nk_ctx = nk_glfw3_gl2_init(win->win, NK_GLFW3_GL2_DEFAULT);
-        nk_font_atlas* atlas;
-        nk_glfw3_gl2_font_stash_begin(&atlas);
-        nk_glfw3_gl2_font_stash_end();
-    } else {
-        win->nk_ctx = nk_glfw3_gl3_init(win->win, NK_GLFW3_GL3_DEFAULT);
-        nk_font_atlas* atlas;
-        nk_glfw3_gl3_font_stash_begin(&atlas);
-        nk_glfw3_gl3_font_stash_end();
-    }
-}
-
-//
-// Nuklear
-//
-void clear_widgets(window* win) {
-    if (win->legacy_gl) {
-        nk_glfw3_gl2_shutdown();
-    } else {
-        nk_glfw3_gl3_shutdown();
-    }
-}
-
-//
-// Begin draw widget
-//
-bool begin_widgets(window* win) {
-    if (!win->nk_ctx) return false;
-    auto window_size = get_window_size(win);
-    if (win->legacy_gl) {
-        nk_glfw3_gl2_new_frame();
-    } else {
-        nk_glfw3_gl3_new_frame();
-    }
-    auto visible = nk_begin(win->nk_ctx, "yshade",
-        nk_rect(window_size[0] - win->widget_width, 0, win->widget_width,
-            window_size[1]),
-        NK_WINDOW_BORDER | NK_WINDOW_MOVABLE | NK_WINDOW_SCALABLE |
-            NK_WINDOW_MINIMIZABLE | NK_WINDOW_TITLE);
-    // if(visible) dynamic_widget_layout(win, 1);
-    return visible;
-}
-
-//
-// Dynamic layout for next widgets
-//
-void dynamic_widget_layout(window* win, int n) {
-    nk_layout_row_dynamic(win->nk_ctx, 30, n);
-}
-
-//
-// End draw widget
-//
-void end_widgets(window* win) {
-    nk_end(win->nk_ctx);
-
-    if (win->legacy_gl) {
-        nk_glfw3_gl2_render(NK_ANTI_ALIASING_ON, 512 * 1024, 128 * 1024);
-    } else {
-        nk_glfw3_gl3_render(NK_ANTI_ALIASING_ON, 512 * 1024, 128 * 1024);
-    }
-}
-
-//
-// Label widget
-//
-void label_widget(window* win, const std::string& lbl) {
-    nk_label(win->nk_ctx, lbl.c_str(), NK_TEXT_LEFT);
-}
-
-//
-// Label and int widget
-//
-void int_label_widget(window* win, const std::string& lbl, int val) {
-    nk_value_int(win->nk_ctx, lbl.c_str(), val);
-}
-
-//
-// Label and float widget
-//
-void float_label_widget(window* win, const std::string& lbl, float val) {
-    nk_value_float(win->nk_ctx, lbl.c_str(), val);
-}
-
-//
-// Label widget
-//
-void int_widget(
-    window* win, const std::string& lbl, int* val, int min, int max, int incr) {
-    nk_property_int(win->nk_ctx, lbl.c_str(), min, val, max, incr, incr);
-}
-
-//
-// Label widget
-//
-void float_widget(window* win, const std::string& lbl, float* val, float min,
-    float max, float incr) {
-    nk_property_float(win->nk_ctx, lbl.c_str(), min, val, max, incr, incr);
-}
-
-//
-// Enum widget
-//
-void enum_widget(window* win, const std::string& lbl, int* val,
-    const std::vector<std::pair<std::string, int>>& labels) {
-    const char* items[100];
-    auto pos = -1;
-    for (auto i = 0; i < labels.size(); i++) {
-        items[i] = labels[i].first.c_str();
-        if (labels[i].second == *val) pos = i;
-    }
-    nk_combobox(win->nk_ctx, items, (int)labels.size(), &pos, 20, {100, 100});
-    *val = labels[pos].second;
-}
-
-//
-// Bool widget
-//
-void bool_widget(window* win, const std::string& lbl, bool* val) {
-    *val = nk_check_label(win->nk_ctx, lbl.c_str(), *val);
-}
-
-//
-// Button widget
-//
-bool button_widget(window* win, const std::string& lbl) {
-    return nk_button_label(win->nk_ctx, lbl.c_str());
-}
-
-//
-// Whether widget are active
-//
-bool get_widget_active(window* win) {
-    if (!win->nk_ctx) return false;
-    return nk_item_is_any_active(win->nk_ctx);
-}
-#endif
-
-}  // namespace ui
-
-}  // namespace yglu
-
-#endif

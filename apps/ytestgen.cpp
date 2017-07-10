@@ -27,19 +27,112 @@
 //
 
 // general includes ------------
-#include "yapp.h"
-
 #include <map>
 #include <set>
 
-#include "../yocto/yocto_cmd.h"
+#include "../yocto/yocto_gltf.h"
 #include "../yocto/yocto_img.h"
 #include "../yocto/yocto_math.h"
 #include "../yocto/yocto_obj.h"
-#include "../yocto/yocto_shape.h"
+#include "../yocto/yocto_utils.h"
 
-#include "sunsky/ArHosekSkyModel.c"
-#include "sunsky/ArHosekSkyModel.h"
+#include "ext/ArHosekSkyModel.h"
+
+//
+// Make standard shape. Public API described above.
+//
+void make_uvhollowcutsphere(int usteps, int vsteps, float radius,
+    std::vector<ym::vec3i>& triangles, std::vector<ym::vec3f>& pos,
+    std::vector<ym::vec3f>& norm, std::vector<ym::vec2f>& texcoord) {
+    triangles.clear();
+    pos.clear();
+    norm.clear();
+    texcoord.clear();
+
+    std::vector<ym::vec3f> mpos, mnorm;
+    std::vector<ym::vec2f> mtexcoord;
+    std::vector<ym::vec3i> mtriangles;
+    make_uvcutsphere(
+        usteps, vsteps, radius, mtriangles, mpos, mnorm, mtexcoord);
+    for (auto& uv : mtexcoord) uv.y *= radius;
+    ym::merge_triangles(
+        triangles, pos, norm, texcoord, mtriangles, mpos, mnorm, mtexcoord);
+    make_uvflippedcutsphere(
+        usteps, vsteps, radius, mtriangles, mpos, mnorm, mtexcoord);
+    for (auto& p : mpos) p *= radius;
+    ym::merge_triangles(
+        triangles, pos, norm, texcoord, mtriangles, mpos, mnorm, mtexcoord);
+    // dpdu = [- s r s0 s1, s r c0 s1, 0] === [- s0, c0, 0]
+    // dpdv = [s c0 s1, s s0 s1, s c1] === [c0 s1, s0 s1, c1]
+    // n = [c0 c1, - s0 c1, s1]
+    ym::make_triangles(usteps, vsteps, mtriangles, mpos, mnorm, mtexcoord,
+        [radius](const ym::vec2f& uv) {
+            auto a = ym::vec2f{2 * ym::pif * uv[0], ym::pif * (1 - radius)};
+            auto r = (1 - uv[1]) + uv[1] * radius;
+            return ym::vec3f{r * std::cos(a[0]) * std::sin(a[1]),
+                r * std::sin(a[0]) * std::sin(a[1]), r * std::cos(a[1])};
+        },
+        [radius](const ym::vec2f& uv) {
+            auto a = ym::vec2f{2 * ym::pif * uv[0], ym::pif * (1 - radius)};
+            return ym::vec3f{-std::cos(a[0]) * std::cos(a[1]),
+                -std::sin(a[0]) * std::cos(a[1]), std::sin(a[1])};
+        },
+        [radius](const ym::vec2f& uv) {
+            return ym::vec2f{uv[0], radius + (1 - radius) * uv[1]};
+        });
+    ym::merge_triangles(
+        triangles, pos, norm, texcoord, mtriangles, mpos, mnorm, mtexcoord);
+}
+
+//
+// Make standard shape. Public API described above.
+//
+void make_uvhollowcutsphere1(int usteps, int vsteps, float radius,
+    std::vector<ym::vec3i>& triangles, std::vector<ym::vec3f>& pos,
+    std::vector<ym::vec3f>& norm, std::vector<ym::vec2f>& texcoord) {
+    triangles.clear();
+    pos.clear();
+    norm.clear();
+    texcoord.clear();
+
+    std::vector<ym::vec3f> mpos, mnorm;
+    std::vector<ym::vec2f> mtexcoord;
+    std::vector<ym::vec3i> mtriangles;
+    make_uvcutsphere(
+        usteps, vsteps, radius, mtriangles, mpos, mnorm, mtexcoord);
+    for (auto& uv : mtexcoord) uv.y *= radius;
+    for (auto i = (usteps + 1) * vsteps; i < mnorm.size(); i++)
+        mnorm[i] = normalize(mnorm[i] + ym::vec3f{0, 0, 1});
+    ym::merge_triangles(
+        triangles, pos, norm, texcoord, mtriangles, mpos, mnorm, mtexcoord);
+    make_uvflippedcutsphere(
+        usteps, vsteps, radius * 1.05f, mtriangles, mpos, mnorm, mtexcoord);
+    for (auto& p : mpos) p *= 0.8f;
+    ym::merge_triangles(
+        triangles, pos, norm, texcoord, mtriangles, mpos, mnorm, mtexcoord);
+    ym::make_triangles(usteps, vsteps / 4, mtriangles, mpos, mnorm, mtexcoord,
+        [radius](const ym::vec2f& uv) {
+            auto p = 1 - std::acos(radius) / ym::pif;
+            auto v = p + uv[1] * (1 - p);
+            auto a = ym::vec2f{2 * ym::pif * uv[0], ym::pif * (1 - v)};
+            return ym::vec3f{std::cos(a[0]) * std::sin(a[1]),
+                std::sin(a[0]) * std::sin(a[1]), (2 * radius - std::cos(a[1]))};
+        },
+        [radius](const ym::vec2f& uv) {
+            auto p = 1 - std::acos(radius) / ym::pif;
+            auto v = p + uv[1] * (1 - p);
+            auto a = ym::vec2f{2 * ym::pif * uv[0], ym::pif * (1 - v)};
+            return ym::vec3f{-std::cos(a[0]) * std::sin(a[1]),
+                -std::sin(a[0]) * std::sin(a[1]), std::cos(a[1])};
+        },
+        [radius](const ym::vec2f& uv) {
+            return ym::vec2f{uv[0], radius + (1 - radius) * uv[1]};
+        });
+    for (auto i = 0; i < (usteps + 1); i++)
+        mnorm[i] = normalize(mnorm[i] + ym::vec3f{0, 0, 1});
+    ym::merge_triangles(
+        triangles, pos, norm, texcoord, mtriangles, mpos, mnorm, mtexcoord);
+}
 
 template <typename T>
 std::vector<T>& operator+=(std::vector<T>& a, const std::vector<T>& b) {
@@ -91,17 +184,23 @@ ym::frame3f make_lookat_frame(const ym::vec3f& pos, const ym::vec3f& to) {
     return xf;
 }
 
-yapp::texture* make_texture(const std::string& path) {
-    auto txt = new yapp::texture();
+yobj::texture* add_texture(yobj::scene* scn, const std::string& path) {
+    for (auto txt : scn->textures)
+        if (txt->path == path) return txt;
+    scn->textures += new yobj::texture();
+    auto txt = scn->textures.back();
     txt->path = path;
     return txt;
 }
 
-yapp::material* make_material(const std::string& name, const ym::vec3f& ke,
-    const ym::vec3f& kd, const ym::vec3f& ks, const ym::vec3f& kt, float rs,
-    yapp::texture* ke_txt, yapp::texture* kd_txt, yapp::texture* ks_txt,
-    yapp::texture* kt_txt, yapp::texture* norm_txt) {
-    auto mat = new yapp::material();
+yobj::material* add_material(yobj::scene* scn, const std::string& name,
+    const ym::vec3f& ke, const ym::vec3f& kd, const ym::vec3f& ks,
+    const ym::vec3f& kt, float rs, yobj::texture* ke_txt, yobj::texture* kd_txt,
+    yobj::texture* ks_txt, yobj::texture* kt_txt, yobj::texture* norm_txt) {
+    for (auto mat : scn->materials)
+        if (mat->name == name) return mat;
+    scn->materials += new yobj::material();
+    auto mat = scn->materials.back();
     mat->name = name;
     mat->ke = ke;
     mat->kd = kd;
@@ -116,275 +215,339 @@ yapp::material* make_material(const std::string& name, const ym::vec3f& ke,
     return mat;
 }
 
-yapp::material* make_emission(const std::string& name, const ym::vec3f& ke,
-    yapp::texture* txt = nullptr, yapp::texture* norm = nullptr) {
-    return make_material(name, ke, ym::zero3f, ym::zero3f, ym::zero3f, 0, txt,
-        nullptr, nullptr, nullptr, norm);
+yobj::material* add_emission(yobj::scene* scn, const std::string& name,
+    const ym::vec3f& ke, yobj::texture* txt = nullptr,
+    yobj::texture* norm = nullptr) {
+    auto mat = add_material(scn, name, ke, ym::zero3f, ym::zero3f, ym::zero3f,
+        0, txt, nullptr, nullptr, nullptr, norm);
+    mat->unknown_props["PBR_HACK"] = {"emission"};
+    return mat;
 }
 
-yapp::material* make_diffuse(const std::string& name, const ym::vec3f& kd,
-    yapp::texture* txt = nullptr, yapp::texture* norm = nullptr) {
-    return make_material(name, ym::zero3f, kd, ym::zero3f, ym::zero3f, 0,
-        nullptr, txt, nullptr, nullptr, norm);
+yobj::material* add_diffuse(yobj::scene* scn, const std::string& name,
+    const ym::vec3f& kd, yobj::texture* txt = nullptr,
+    yobj::texture* norm = nullptr) {
+    auto mat = add_material(scn, name, ym::zero3f, kd, ym::zero3f, ym::zero3f,
+        0, nullptr, txt, nullptr, nullptr, norm);
+    mat->unknown_props["PBR_HACK"] = {"diffuse"};
+    return mat;
 }
 
-yapp::material* make_plastic(const std::string& name, const ym::vec3f& kd,
-    float rs, yapp::texture* txt = nullptr, yapp::texture* norm = nullptr) {
-    return make_material(name, ym::zero3f, kd, {0.04f, 0.04f, 0.04f},
+yobj::material* add_plastic(yobj::scene* scn, const std::string& name,
+    const ym::vec3f& kd, float rs, yobj::texture* txt = nullptr,
+    yobj::texture* norm = nullptr) {
+    auto mat = add_material(scn, name, ym::zero3f, kd, {0.04f, 0.04f, 0.04f},
         ym::zero3f, rs, nullptr, txt, nullptr, nullptr, norm);
+    mat->unknown_props["PBR_HACK"] = {"plastic"};
+    return mat;
 }
 
-yapp::material* make_metal(const std::string& name, const ym::vec3f& kd,
-    float rs, yapp::texture* txt = nullptr, yapp::texture* norm = nullptr) {
-    return make_material(name, ym::zero3f, ym::zero3f, kd, ym::zero3f, rs,
-        nullptr, nullptr, txt, nullptr, norm);
+yobj::material* add_metal(yobj::scene* scn, const std::string& name,
+    const ym::vec3f& kd, float rs, yobj::texture* txt = nullptr,
+    yobj::texture* norm = nullptr) {
+    auto mat = add_material(scn, name, ym::zero3f, ym::zero3f, kd, ym::zero3f,
+        rs, nullptr, nullptr, txt, nullptr, norm);
+    mat->unknown_props["PBR_HACK"] = {"metal"};
+    return mat;
 }
 
-yapp::material* make_glass(const std::string& name, const ym::vec3f& kd,
-    float rs, yapp::texture* txt = nullptr, yapp::texture* norm = nullptr) {
-    return make_material(name, ym::zero3f, ym::zero3f, {0.04f, 0.04f, 0.04f},
-        kd, rs, nullptr, nullptr, txt, nullptr, norm);
+yobj::material* add_glass(yobj::scene* scn, const std::string& name,
+    const ym::vec3f& kd, float rs, yobj::texture* txt = nullptr,
+    yobj::texture* norm = nullptr) {
+    auto mat = add_material(scn, name, ym::zero3f, ym::zero3f,
+        {0.04f, 0.04f, 0.04f}, kd, rs, nullptr, nullptr, txt, nullptr, norm);
+    mat->unknown_props["PBR_HACK"] = {"glass"};
+    return mat;
 }
-
-enum struct mtype {
-    def,
-    matte00,
-    matte01,
-    matte02,
-    matte03,
-    matte04,
-    matte00_txt,
-    matte01_txt,
-    matte02_txt,
-    matte03_txt,
-    floor,
-    floor_txt,
-    plastic00,
-    plastic01,
-    plastic02,
-    plastic03,
-    plastic04,
-    plastic00_txt,
-    plastic01_txt,
-    plastic02_txt,
-    plastic03_txt,
-    plastic04_txt,
-    plastic05_txt,
-    plastic06_txt,
-    metal00,
-    metal01,
-    metal02,
-    metal03,
-    gold01,
-    gold02,
-    silver01,
-    silver02,
-    iron01,
-    iron02,
-    copper01,
-    copper02,
-    bump00,
-    bump01,
-    bump02,
-    bump03,
-    glass00,
-    glass01,
-    glass02,
-    glass03,
-    lines00,
-    lines01,
-    lines02,
-    lines03,
-    lines01_txt,
-    lines02_txt,
-    lines03_txt,
-    points00,
-    points01,
-    points01_txt,
-    pointlight01,
-    pointlight02,
-    arealight01,
-    arealight02,
-    env00,
-    env01,
-    sym_points01,
-    sym_lines01,
-    sym_cloth01,
-};
 
 ym::vec3f srgb(const ym::vec3f& k) {
     return {std::pow(k[0] / 255.0f, 2.2f), std::pow(k[1] / 255.0f, 2.2f),
         std::pow(k[2] / 255.0f, 2.2f)};
 }
 
-yapp::material* make_material(mtype type) {
-    switch (type) {
-        case mtype::def:
-        case mtype::matte00: return make_diffuse("matte00", {0.2f, 0.2f, 0.2f});
-        case mtype::matte01: return make_diffuse("matte01", {0.5f, 0.2f, 0.2f});
-        case mtype::matte02: return make_diffuse("matte02", {0.2f, 0.5f, 0.2f});
-        case mtype::matte03: return make_diffuse("matte03", {0.2f, 0.2f, 0.5f});
-        case mtype::matte04: return make_diffuse("matte04", {0.5f, 0.5f, 0.5f});
-        case mtype::floor: return make_diffuse("floor", {0.2f, 0.2f, 0.2f});
-        case mtype::matte00_txt:
-            return make_diffuse(
-                "matte00_txt", {1, 1, 1}, make_texture("grid.png"));
-        case mtype::matte01_txt:
-            return make_diffuse(
-                "matte01_txt", {1, 1, 1}, make_texture("rcolored.png"));
-        case mtype::matte02_txt:
-            return make_diffuse(
-                "matte02_txt", {1, 1, 1}, make_texture("checker.png"));
-        case mtype::matte03_txt:
-            return make_diffuse(
-                "matte03_txt", {1, 1, 1}, make_texture("colored.png"));
-        case mtype::floor_txt:
-            return make_diffuse(
-                "floor_txt", {1, 1, 1}, make_texture("grid.png"));
-        case mtype::plastic00:
-            return make_plastic("plastic00", {0.2f, 0.2f, 0.2f}, 0.01f);
-        case mtype::plastic01:
-            return make_plastic("plastic01", {0.5f, 0.2f, 0.2f}, 0.1f);
-        case mtype::plastic02:
-            return make_plastic("plastic02", {0.2f, 0.5f, 0.2f}, 0.05f);
-        case mtype::plastic03:
-            return make_plastic("plastic03", {0.2f, 0.2f, 0.5f}, 0.01f);
-        case mtype::plastic04:
-            return make_plastic("plastic04", {0.5f, 0.5f, 0.5f}, 0.01f);
-        case mtype::plastic00_txt:
-            return make_plastic(
-                "plastic01_txt", {1, 1, 1}, 0.1f, make_texture("grid.png"));
-        case mtype::plastic01_txt:
-            return make_plastic(
-                "plastic01_txt", {1, 1, 1}, 0.1f, make_texture("rcolored.png"));
-        case mtype::plastic02_txt:
-            return make_plastic(
-                "plastic02_txt", {1, 1, 1}, 0.05f, make_texture("checker.png"));
-        case mtype::plastic03_txt:
-            return make_plastic(
-                "plastic03_txt", {1, 1, 1}, 0.01f, make_texture("colored.png"));
-        case mtype::plastic04_txt:
-            return make_plastic("plastic04_txt", {0.2f, 0.2f, 0.2f}, 0.01f,
-                nullptr, make_texture("grid_normal.png"));
-        case mtype::plastic05_txt:
-            return make_plastic("plastic05_txt", {0.2f, 0.2f, 0.2f}, 0.01f,
-                nullptr,
-                make_texture("../data/menzel/stone-12_norm_cropped.png"));
-        case mtype::plastic06_txt:
-            return make_plastic(
-                "plastic06_txt", {1, 1, 1}, 0.01f, make_texture("colored.png"));
-        case mtype::metal00:
-            return make_metal("metal00", {0.8f, 0.8f, 0.8f}, 0);
-        case mtype::metal01:
-            return make_metal("metal01", {0.8f, 0.8f, 0.8f}, 0);
-        case mtype::metal02:
-            return make_metal("metal02", {0.8f, 0.8f, 0.8f}, 0.01f);
-        case mtype::metal03:
-            return make_metal("metal03", {0.8f, 0.8f, 0.8f}, 0.05f);
-        case mtype::gold01:
-            return make_metal("gold01", srgb({245, 215, 121}), 0.01f);
-        case mtype::gold02:
-            return make_metal("gold02", srgb({245, 215, 121}), 0.05f);
-        case mtype::silver01:
-            return make_metal("silver01", srgb({252, 250, 246}), 0.01f);
-        case mtype::silver02:
-            return make_metal("silver02", srgb({252, 250, 246}), 0.05f);
-        case mtype::iron01:
-            return make_metal("iron01", srgb({195, 199, 199}), 0.01f);
-        case mtype::iron02:
-            return make_metal("iron02", srgb({195, 199, 199}), 0.05f);
-        case mtype::copper01:
-            return make_metal("copper01", srgb({250, 190, 160}), 0.01f);
-        case mtype::copper02:
-            return make_metal("copper02", srgb({250, 190, 160}), 0.05f);
-        case mtype::bump00:
-            return make_plastic("bump00", {0.5f, 0.5f, 0.5f}, 0.05f, nullptr,
-                make_texture("grid_normal.png"));
-        case mtype::bump01:
-            return make_metal("bump01", srgb({250, 190, 160}), 0.01f, nullptr,
-                make_texture("grid_normal.png"));
-        case mtype::bump02:
-            return make_plastic("bump02", {0.2f, 0.2f, 0.5f}, 0.05f, nullptr,
-                make_texture("grid_normal.png"));
-        case mtype::bump03:
-            return make_metal("bump03", srgb({250, 190, 160}), 0.05f, nullptr,
-                make_texture("grid_normal.png"));
-        case mtype::glass00:
-            return make_glass("glass00", {0.8f, 0.8f, 0.8f}, 0);
-        case mtype::glass01:
-            return make_glass("glass01", {0.8f, 0.8f, 0.8f}, 0);
-        case mtype::glass02:
-            return make_glass("glass02", {0.8f, 0.8f, 0.8f}, 0.01f);
-        case mtype::glass03:
-            return make_glass("glass03", {0.8f, 0.8f, 0.8f}, 0.05f);
-        case mtype::lines00: return make_diffuse("lines00", {0.2f, 0.2f, 0.2f});
-        case mtype::lines01: return make_diffuse("lines01", {0.2f, 0.2f, 0.2f});
-        case mtype::lines02: return make_diffuse("lines02", {0.2f, 0.2f, 0.2f});
-        case mtype::lines03: return make_diffuse("lines03", {0.2f, 0.2f, 0.2f});
-        case mtype::lines01_txt:
-            return make_diffuse("lines01_txt", {0.2f, 0.2f, 0.2f});
-        case mtype::lines02_txt:
-            return make_diffuse("lines02_txt", {0.2f, 0.2f, 0.2f});
-        case mtype::lines03_txt:
-            return make_diffuse("lines03_txt", {0.2f, 0.2f, 0.2f});
-        case mtype::points00:
-            return make_diffuse("points00", {0.2f, 0.2f, 0.2f});
-        case mtype::points01:
-            return make_diffuse("points01", {0.2f, 0.2f, 0.2f});
-        case mtype::points01_txt:
-            return make_diffuse("points01_txt", {0.2f, 0.2f, 0.2f});
-        case mtype::pointlight01:
-            return make_emission("pointlight01", {100, 100, 100});
-        case mtype::pointlight02:
-            return make_emission("pointlight02", {100, 100, 100});
-        case mtype::arealight01:
-            return make_emission("arealight01", {40, 40, 40});
-        case mtype::arealight02:
-            return make_emission("arealight02", {16, 16, 16});
-        case mtype::env00: return make_emission("env00", {1, 1, 1});
-        case mtype::env01:
-            return make_emission("env01", {1, 1, 1}, make_texture("env.hdr"));
-        case mtype::sym_points01:
-            return make_diffuse("sym_points01", {0.2f, 0.8f, 0.2f});
-        case mtype::sym_lines01:
-            return make_diffuse("sym_lines01", {0.2f, 0.8f, 0.2f});
-        case mtype::sym_cloth01:
-            return make_diffuse("sym_cloth01", {0.2f, 0.8f, 0.2f});
+yobj::material* add_material(yobj::scene* scn, const std::string& name) {
+    if (name == "def") {
+        return add_diffuse(scn, name, {0.2f, 0.2f, 0.2f});
+    } else if (name == "matte00") {
+        return add_diffuse(scn, name, {0.2f, 0.2f, 0.2f});
+    } else if (name == "matte01") {
+        return add_diffuse(scn, name, {0.5f, 0.2f, 0.2f});
+    } else if (name == "matte02") {
+        return add_diffuse(scn, name, {0.2f, 0.5f, 0.2f});
+    } else if (name == "matte03") {
+        return add_diffuse(scn, name, {0.2f, 0.2f, 0.5f});
+    } else if (name == "matte04") {
+        return add_diffuse(scn, name, {0.5f, 0.5f, 0.5f});
+    } else if (name == "floor") {
+        return add_diffuse(scn, name, {0.2f, 0.2f, 0.2f});
+    } else if (name == "matte00_txt") {
+        return add_diffuse(scn, name, {1, 1, 1}, add_texture(scn, "grid.png"));
+    } else if (name == "matte01_txt") {
+        return add_diffuse(
+            scn, name, {1, 1, 1}, add_texture(scn, "rcolored.png"));
+    } else if (name == "matte02_txt") {
+        return add_diffuse(
+            scn, name, {1, 1, 1}, add_texture(scn, "checker.png"));
+    } else if (name == "matte03_txt") {
+        return add_diffuse(
+            scn, name, {1, 1, 1}, add_texture(scn, "colored.png"));
+    } else if (name == "floor_txt") {
+        return add_diffuse(scn, name, {1, 1, 1}, add_texture(scn, "grid.png"));
+    } else if (name == "plastic00") {
+        return add_plastic(scn, name, {0.2f, 0.2f, 0.2f}, 0.01f);
+    } else if (name == "plastic01") {
+        return add_plastic(scn, name, {0.5f, 0.2f, 0.2f}, 0.1f);
+    } else if (name == "plastic02") {
+        return add_plastic(scn, name, {0.2f, 0.5f, 0.2f}, 0.05f);
+    } else if (name == "plastic03") {
+        return add_plastic(scn, name, {0.2f, 0.2f, 0.5f}, 0.01f);
+    } else if (name == "plastic04") {
+        return add_plastic(scn, name, {0.5f, 0.5f, 0.5f}, 0.01f);
+    } else if (name == "plastic00_txt") {
+        return add_plastic(
+            scn, name, {1, 1, 1}, 0.1f, add_texture(scn, "grid.png"));
+    } else if (name == "plastic01_txt") {
+        return add_plastic(
+            scn, name, {1, 1, 1}, 0.1f, add_texture(scn, "rcolored.png"));
+    } else if (name == "plastic02_txt") {
+        return add_plastic(
+            scn, name, {1, 1, 1}, 0.05f, add_texture(scn, "checker.png"));
+    } else if (name == "plastic03_txt") {
+        return add_plastic(
+            scn, name, {1, 1, 1}, 0.01f, add_texture(scn, "colored.png"));
+    } else if (name == "plastic04_txt") {
+        return add_plastic(scn, name, {0.2f, 0.2f, 0.2f}, 0.01f, nullptr,
+            add_texture(scn, "grid_normal.png"));
+    } else if (name == "plastic05_txt") {
+        return add_plastic(scn, name, {0.2f, 0.2f, 0.2f}, 0.01f, nullptr,
+            add_texture(scn, "../data/menzel/stone-12_norm_cropped.png"));
+    } else if (name == "plastic06_txt") {
+        return add_plastic(
+            scn, name, {1, 1, 1}, 0.01f, add_texture(scn, "colored.png"));
+    } else if (name == "metal00") {
+        return add_metal(scn, name, {0.8f, 0.8f, 0.8f}, 0);
+    } else if (name == "metal01") {
+        return add_metal(scn, name, {0.8f, 0.8f, 0.8f}, 0);
+    } else if (name == "metal02") {
+        return add_metal(scn, name, {0.8f, 0.8f, 0.8f}, 0.01f);
+    } else if (name == "metal03") {
+        return add_metal(scn, name, {0.8f, 0.8f, 0.8f}, 0.05f);
+    } else if (name == "gold01") {
+        return add_metal(scn, name, srgb({245, 215, 121}), 0.01f);
+    } else if (name == "gold02") {
+        return add_metal(scn, name, srgb({245, 215, 121}), 0.05f);
+    } else if (name == "silver01") {
+        return add_metal(scn, name, srgb({252, 250, 246}), 0.01f);
+    } else if (name == "silver02") {
+        return add_metal(scn, name, srgb({252, 250, 246}), 0.05f);
+    } else if (name == "iron01") {
+        return add_metal(scn, name, srgb({195, 199, 199}), 0.01f);
+    } else if (name == "iron02") {
+        return add_metal(scn, name, srgb({195, 199, 199}), 0.05f);
+    } else if (name == "copper01") {
+        return add_metal(scn, name, srgb({250, 190, 160}), 0.01f);
+    } else if (name == "copper02") {
+        return add_metal(scn, name, srgb({250, 190, 160}), 0.05f);
+    } else if (name == "bump00") {
+        return add_plastic(scn, name, {0.5f, 0.5f, 0.5f}, 0.05f, nullptr,
+            add_texture(scn, "grid_normal.png"));
+    } else if (name == "bump01") {
+        return add_metal(scn, name, srgb({250, 190, 160}), 0.01f, nullptr,
+            add_texture(scn, "grid_normal.png"));
+    } else if (name == "bump02") {
+        return add_plastic(scn, name, {0.2f, 0.2f, 0.5f}, 0.05f, nullptr,
+            add_texture(scn, "grid_normal.png"));
+    } else if (name == "bump03") {
+        return add_metal(scn, name, srgb({250, 190, 160}), 0.05f, nullptr,
+            add_texture(scn, "grid_normal.png"));
+    } else if (name == "glass00") {
+        return add_glass(scn, name, {0.8f, 0.8f, 0.8f}, 0);
+    } else if (name == "glass01") {
+        return add_glass(scn, name, {0.8f, 0.8f, 0.8f}, 0);
+    } else if (name == "glass02") {
+        return add_glass(scn, name, {0.8f, 0.8f, 0.8f}, 0.01f);
+    } else if (name == "glass03") {
+        return add_glass(scn, name, {0.8f, 0.8f, 0.8f}, 0.05f);
+    } else if (name == "lines00") {
+        return add_diffuse(scn, name, {0.2f, 0.2f, 0.2f});
+    } else if (name == "lines01") {
+        return add_diffuse(scn, name, {0.2f, 0.2f, 0.2f});
+    } else if (name == "lines02") {
+        return add_diffuse(scn, name, {0.2f, 0.2f, 0.2f});
+    } else if (name == "lines03") {
+        return add_diffuse(scn, name, {0.2f, 0.2f, 0.2f});
+    } else if (name == "lines01_txt") {
+        return add_diffuse(scn, name, {0.2f, 0.2f, 0.2f});
+    } else if (name == "lines02_txt") {
+        return add_diffuse(scn, name, {0.2f, 0.2f, 0.2f});
+    } else if (name == "lines03_txt") {
+        return add_diffuse(scn, name, {0.2f, 0.2f, 0.2f});
+    } else if (name == "points00") {
+        return add_diffuse(scn, name, {0.2f, 0.2f, 0.2f});
+    } else if (name == "points01") {
+        return add_diffuse(scn, name, {0.2f, 0.2f, 0.2f});
+    } else if (name == "points01_txt") {
+        return add_diffuse(scn, name, {0.2f, 0.2f, 0.2f});
+    } else if (name == "pointlight") {
+        return add_emission(scn, name, {400, 400, 400});
+    } else if (name == "arealight") {
+        return add_emission(scn, name, {40, 40, 40});
+    } else if (name == "arealight_low") {
+        return add_emission(scn, name, {16, 16, 16});
+    } else if (name == "env") {
+        return add_emission(scn, name, {1, 1, 1});
+    } else if (name == "env_txt") {
+        return add_emission(scn, name, {1, 1, 1}, add_texture(scn, "env.hdr"));
+    } else if (name == "sym_points") {
+        return add_diffuse(scn, name, {0.2f, 0.8f, 0.2f});
+    } else if (name == "sym_lines") {
+        return add_diffuse(scn, name, {0.2f, 0.8f, 0.2f});
+    } else if (name == "sym_cloth") {
+        return add_diffuse(scn, name, {0.2f, 0.8f, 0.2f});
+    } else {
+        throw std::runtime_error("bad value");
     }
+    return nullptr;
 }
 
-yapp::shape* make_shape(const std::string& name, yapp::material* mat, int l,
-    yshape::stdsurface_type stype,
-    const ym::frame3f& frame = ym::identity_frame3f,
-    const ym::vec3f& scale = {1, 1, 1}) {
-    ym::vec4f params = {0.75f, 0.75f, 0, 0};
-    auto shape = new yapp::shape();
-    shape->name = name;
-    shape->mat = mat;
-    yshape::make_stdsurface(stype, l, params, shape->triangles, shape->pos,
-        shape->norm, shape->texcoord);
-    for (auto& p : shape->pos) (ym::vec3f&)p *= scale;
-    shape->frame = frame;
-    return shape;
+yobj::mesh* add_mesh(yobj::scene* scn, yobj::shape* shp) {
+    auto msh = new yobj::mesh();
+    msh->name = shp->name;
+    msh->shapes += shp;
+    scn->meshes += msh;
+    return msh;
 }
 
-yapp::shape* make_shape(const std::string& name, mtype mtype, int l,
-    yshape::stdsurface_type stype,
-    const ym::frame3f& frame = ym::identity_frame3f,
-    const ym::vec3f& scale = {1, 1, 1}) {
-    return make_shape(name, make_material(mtype), l, stype, frame, scale);
+yobj::instance* add_instance(yobj::scene* scn, const std::string& name,
+    yobj::mesh* shp, const ym::frame3f& frame = ym::identity_frame3f) {
+    scn->instances += new yobj::instance();
+    scn->instances.back()->name = name;
+    scn->instances.back()->msh = shp;
+    scn->instances.back()->xform = ym::to_mat(frame);
+    return scn->instances.back();
 }
 
-yapp::shape* _make_floor(const std::string& name, yapp::material* mat,
-    float s = 6, float p = 4, int l = 6,
-    const ym::frame3f& frame = make_frame({0, 0, -4}),
-    const ym::vec3f& scale = {6, 6, 6}) {
+yobj::instance* add_instance(yobj::scene* scn, const std::string& name,
+    yobj::shape* shp, const ym::frame3f& frame) {
+    return add_instance(scn, name, add_mesh(scn, shp), frame);
+}
+
+yobj::mesh* add_box(yobj::scene* scn, const std::string& name,
+    yobj::material* mat, int level, const ym::vec3f& scale) {
+    auto shp = new yobj::shape();
+    shp->mat = mat;
+    shp->name = name;
+    auto usteps = ym::pow2(level), vsteps = ym::pow2(level);
+    ym::make_uvcube(
+        usteps, vsteps, shp->triangles, shp->pos, shp->norm, shp->texcoord);
+    for (auto& p : shp->pos) p *= scale;
+    return add_mesh(scn, shp);
+}
+
+yobj::mesh* add_cube(yobj::scene* scn, const std::string& name,
+    yobj::material* mat, int level, float scale = 1) {
+    auto shp = new yobj::shape();
+    shp->mat = mat;
+    shp->name = name;
+    auto usteps = ym::pow2(level), vsteps = ym::pow2(level);
+    ym::make_uvcube(
+        usteps, vsteps, shp->triangles, shp->pos, shp->norm, shp->texcoord);
+    for (auto& p : shp->pos) p *= scale;
+    return add_mesh(scn, shp);
+}
+
+yobj::mesh* add_quad(yobj::scene* scn, const std::string& name,
+    yobj::material* mat, int level, float scale = 1) {
+    auto shp = new yobj::shape();
+    shp->mat = mat;
+    shp->name = name;
+    auto usteps = ym::pow2(level), vsteps = ym::pow2(level);
+    ym::make_uvquad(
+        usteps, vsteps, shp->triangles, shp->pos, shp->norm, shp->texcoord);
+    for (auto& p : shp->pos) p *= scale;
+    return add_mesh(scn, shp);
+}
+
+yobj::mesh* add_sphere(yobj::scene* scn, const std::string& name,
+    yobj::material* mat, int level, float scale = 1) {
+    auto shp = new yobj::shape();
+    shp->mat = mat;
+    shp->name = name;
+    auto usteps = ym::pow2(level + 2), vsteps = ym::pow2(level + 1);
+    ym::make_uvsphere(
+        usteps, vsteps, shp->triangles, shp->pos, shp->norm, shp->texcoord);
+    for (auto& p : shp->pos) p *= scale;
+    return add_mesh(scn, shp);
+}
+
+yobj::mesh* add_flipcapsphere(yobj::scene* scn, const std::string& name,
+    yobj::material* mat, int level, float scale = 1) {
+    auto shp = new yobj::shape();
+    shp->mat = mat;
+    shp->name = name;
+    auto usteps = ym::pow2(level + 2), vsteps = ym::pow2(level + 1);
+    ym::make_uvflipcapsphere(usteps, vsteps, 0.75f, shp->triangles, shp->pos,
+        shp->norm, shp->texcoord);
+    for (auto& p : shp->pos) p *= scale;
+    return add_mesh(scn, shp);
+}
+
+yobj::mesh* add_spherecube(yobj::scene* scn, const std::string& name,
+    yobj::material* mat, int level, float scale = 1) {
+    auto shp = new yobj::shape();
+    shp->mat = mat;
+    shp->name = name;
+    auto usteps = ym::pow2(level), vsteps = ym::pow2(level);
+    ym::make_uvspherecube(
+        usteps, vsteps, shp->triangles, shp->pos, shp->norm, shp->texcoord);
+    for (auto& p : shp->pos) p *= scale;
+    return add_mesh(scn, shp);
+}
+
+yobj::mesh* add_spherizedcube(yobj::scene* scn, const std::string& name,
+    yobj::material* mat, int level, float scale = 1) {
+    auto shp = new yobj::shape();
+    shp->mat = mat;
+    shp->name = name;
+    auto usteps = ym::pow2(level), vsteps = ym::pow2(level);
+    ym::make_uvspherizedcube(usteps, vsteps, 0.75f, shp->triangles, shp->pos,
+        shp->norm, shp->texcoord);
+    for (auto& p : shp->pos) p *= scale;
+    return add_mesh(scn, shp);
+}
+
+yobj::mesh* add_uvhollowcutsphere(yobj::scene* scn, const std::string& name,
+    yobj::material* mat, int level, float scale = 1) {
+    auto shp = new yobj::shape();
+    shp->mat = mat;
+    shp->name = name;
+    auto usteps = ym::pow2(level), vsteps = ym::pow2(level);
+    make_uvhollowcutsphere(usteps, vsteps, 0.75f, shp->triangles, shp->pos,
+        shp->norm, shp->texcoord);
+    for (auto& p : shp->pos) p *= scale;
+    return add_mesh(scn, shp);
+}
+
+yobj::mesh* add_uvhollowcutsphere1(yobj::scene* scn, const std::string& name,
+    yobj::material* mat, int level, float scale = 1) {
+    auto shp = new yobj::shape();
+    shp->mat = mat;
+    shp->name = name;
+    auto usteps = ym::pow2(level), vsteps = ym::pow2(level);
+    make_uvhollowcutsphere1(usteps, vsteps, 0.75f, shp->triangles, shp->pos,
+        shp->norm, shp->texcoord);
+    for (auto& p : shp->pos) p *= scale;
+    return add_mesh(scn, shp);
+}
+
+yobj::mesh* add_floor(yobj::scene* scn, const std::string& name,
+    yobj::material* mat, float s = 6, float p = 4, int l = 6,
+    float scale = 12) {
     auto n = (int)round(powf(2, (float)l));
-    auto shape = new yapp::shape();
-    shape->name = name;
-    shape->mat = mat;
-    yshape::make_uvsurface(n, n, shape->triangles, shape->pos, shape->norm,
-        shape->texcoord,
+    auto shp = new yobj::shape();
+    shp->name = name;
+    shp->mat = mat;
+    ym::make_triangles(n, n, shp->triangles, shp->pos, shp->norm, shp->texcoord,
         [p, scale](const ym::vec2f& uv) {
             auto pos = ym::zero3f;
             auto x = 2 * uv[0] - 1;
@@ -400,22 +563,15 @@ yapp::shape* _make_floor(const std::string& name, yapp::material* mat,
             return ym::vec3f{0, 1, 0};
         },
         [s](const ym::vec2f& uv) { return uv * s; });
-    if (p) {
-        yshape::compute_normals((int)shape->points.size(), shape->points.data(),
-            (int)shape->lines.size(), shape->lines.data(),
-            (int)shape->triangles.size(), shape->triangles.data(),
-            (int)shape->pos.size(), shape->pos.data(), shape->norm.data());
-    }
-    shape->frame = frame;
-    return shape;
+    if (p) { ym::compute_normals(shp->triangles, shp->pos, shp->norm); }
+    return add_mesh(scn, shp);
 }
 
-yapp::shape* make_lines(const std::string& name, yapp::material* mat, int num,
-    int n, float r, float c, float s, const ym::frame3f& frame,
-    const ym::vec3f& scale) {
-    auto shape = new yapp::shape();
-    shape->name = name;
-    shape->mat = mat;
+yobj::mesh* add_lines(yobj::scene* scn, const std::string& name,
+    yobj::material* mat, int num, int n, float r, float c, float s) {
+    auto shp = new yobj::shape();
+    shp->mat = mat;
+    shp->name = name;
 
     ym::rng_pcg32 rn;
     std::vector<ym::vec3f> base(num + 1), dir(num + 1);
@@ -429,9 +585,9 @@ yapp::shape* make_lines(const std::string& name, yapp::material* mat, int num,
         ln[i] = 0.15f + 0.15f * next1f(&rn);
     }
 
-    yshape::make_lines(n, num, shape->lines, shape->pos, shape->norm,
-        shape->texcoord, shape->radius,
-        [num, base, dir, ln, r, s, c, &rn, scale](const ym::vec2f& uv) {
+    ym::make_lines(n, num, shp->lines, shp->pos, shp->norm, shp->texcoord,
+        shp->radius,
+        [num, base, dir, ln, r, s, c, &rn](const ym::vec2f& uv) {
             auto i = ym::clamp((int)(uv[1] * (num + 1)), 0, num);
             auto pos = base[i] * (1 + uv[0] * ln[i]);
             if (r) {
@@ -458,7 +614,7 @@ yapp::shape* make_lines(const std::string& name, yapp::material* mat, int num,
                 pos =
                     pos * (1 - c * uv[0] * uv[0]) + cpos * (c * uv[0] * uv[0]);
             }
-            return scale * pos;
+            return pos;
         },
         [](const ym::vec2f& uv) {
             return ym::vec3f{0, 0, 1};
@@ -466,27 +622,22 @@ yapp::shape* make_lines(const std::string& name, yapp::material* mat, int num,
         [](const ym::vec2f& uv) { return uv; },
         [](const ym::vec2f& uv) { return 0.001f + 0.001f * (1 - uv[0]); });
 
-    yshape::compute_normals((int)shape->points.size(), shape->points.data(),
-        (int)shape->lines.size(), shape->lines.data(),
-        (int)shape->triangles.size(), shape->triangles.data(),
-        (int)shape->pos.size(), shape->pos.data(), shape->norm.data());
-    shape->frame = frame;
-    return shape;
+    ym::compute_tangents(shp->lines, shp->pos, shp->norm);
+    return add_mesh(scn, shp);
 }
 
-yapp::shape* make_points(const std::string& name, yapp::material* mat, int num,
-    int seed, const ym::frame3f& frame, const ym::vec3f& scale) {
-    auto shape = new yapp::shape();
-    shape->name = name;
-    shape->mat = mat;
-
+yobj::mesh* add_points(yobj::scene* scn, const std::string& name,
+    yobj::material* mat, int num, int seed) {
+    auto shp = new yobj::shape();
+    shp->mat = mat;
+    shp->name = name;
     ym::rng_pcg32 rn;
     ym::init(&rn, seed, 0);
-    yshape::make_points(num, shape->points, shape->pos, shape->norm,
-        shape->texcoord, shape->radius,
-        [&rn, scale](float u) {
-            return scale * ym::vec3f{-1 + 2 * next1f(&rn), -1 + 2 * next1f(&rn),
-                               -1 + 2 * next1f(&rn)};
+    ym::make_points(num, shp->points, shp->pos, shp->norm, shp->texcoord,
+        shp->radius,
+        [&rn](float u) {
+            return ym::vec3f{-1 + 2 * next1f(&rn), -1 + 2 * next1f(&rn),
+                -1 + 2 * next1f(&rn)};
         },
         [](float u) {
             return ym::vec3f{0, 0, 1};
@@ -495,578 +646,51 @@ yapp::shape* make_points(const std::string& name, yapp::material* mat, int num,
             return ym::vec2f{u, 0};
         },
         [](float u) { return 0.0025f; });
-    shape->frame = frame;
-    return shape;
+    return add_mesh(scn, shp);
 }
 
-yapp::shape* make_point(const std::string& name, yapp::material* mat,
-    const ym::frame3f& frame, float radius = 0.001f) {
-    auto shape = new yapp::shape();
-    shape->name = name;
-    shape->mat = mat;
-    shape->points.push_back(0);
-    shape->pos.push_back(frame[3]);
-    shape->norm.push_back({0, 0, 1});
-    shape->radius.push_back(radius);
-    return shape;
+yobj::instance* add_points_instance(yobj::scene* scn, const std::string& name,
+    yobj::material* mat, int num, int seed,
+    const ym::frame3f& frame = ym::identity_frame3f) {
+    return add_instance(
+        scn, name, add_points(scn, name, mat, num, seed), frame);
 }
 
-std::vector<yapp::shape*> make_random_shapes(int nshapes, int l);
-
-enum struct stype {
-    floor01,
-    floor02,
-    obj01,
-    obj02,
-    obj03,
-    matball01,
-    matball02,
-    lines01,
-    lines02,
-    lines03,
-    points01,
-    points02,
-    points03,
-    pointlight01,
-    arealight01,
-    arealight02,
-    envsphere00,
-    envsphere01,
-    envhemisphere00,
-    envhemisphere01,
-    simple_objs,
-    simple_objs_notxt,
-    simple_lines,
-    simple_points,
-    simple_pointlights,
-    simple_arealights01,
-    simple_arealights02,
-    simple_matballs01,
-    simple_matballs02,
-    simple_matballs03,
-    simple_matballs04,
-    simple_txtballs01,
-    simple_txtballs02,
-    simple_random32,
-    matball01_floor02,
-    matball02_floor02,
-    sym_points01,
-    sym_points02,
-    sym_quad01,
-    sym_cloth01,
-    sym_cloth02,
-};
-
-std::vector<yapp::shape*> make_shapes(stype st, mtype mt = mtype::def,
-    const ym::frame3f& frame = ym::identity_frame3f,
-    const ym::vec3f& scale = ym::vec3f{1, 1, 1}) {
-    switch (st) {
-        case stype::floor01: {
-            auto mat = (mt == mtype::def) ? make_material(mtype::floor_txt) :
-                                            make_material(mt);
-            return {_make_floor("floor01_" + mat->name, mat, 6, 0, 6, frame,
-                scale * ym::vec3f{6, 6, 6})};
-        } break;
-        case stype::floor02: {
-            auto mat = (mt == mtype::def) ? make_material(mtype::floor_txt) :
-                                            make_material(mt);
-            return {_make_floor("floor02_" + mat->name, mat)};
-        } break;
-        case stype::obj01: {
-            auto mat = (mt == mtype::def) ? make_material(mtype::plastic00) :
-                                            make_material(mt);
-            return {make_shape("simple_obj01_" + mat->name, mat, 5,
-                yshape::stdsurface_type::uvflipcapsphere, frame,
-                ym::vec3f{0.5f, 0.5f, 0.5f} * scale)};
-        } break;
-        case stype::obj02: {
-            auto mat = (mt == mtype::def) ? make_material(mtype::plastic00) :
-                                            make_material(mt);
-            return {make_shape("simple_obj02_" + mat->name, mat, 4,
-                yshape::stdsurface_type::uvspherizedcube, frame,
-                ym::vec3f{0.5f, 0.5f, 0.5f} * scale)};
-        } break;
-        case stype::obj03: {
-            auto mat = (mt == mtype::def) ? make_material(mtype::plastic00) :
-                                            make_material(mt);
-            return {make_shape("simple_obj03_" + mat->name, mat, 4,
-                yshape::stdsurface_type::uvspherecube, frame,
-                ym::vec3f{0.5f, 0.5f, 0.5f} * scale)};
-        } break;
-        case stype::simple_objs: {
-            return make_shapes(stype::obj01, mtype::plastic01_txt,
-                       make_frame({-1.25f, 0.5f, 0}, scale)) +
-                   make_shapes(stype::obj02, mtype::plastic02_txt,
-                       make_frame({0, 0.5f, 0}, scale)) +
-                   make_shapes(stype::obj03, mtype::plastic03_txt,
-                       make_frame({1.25f, 0.5f, 0}, scale));
-        } break;
-        case stype::simple_objs_notxt: {
-            return make_shapes(stype::obj01, mtype::plastic01,
-                       make_frame({-1.25f, 0.5f, 0}, scale)) +
-                   make_shapes(stype::obj02, mtype::plastic02,
-                       make_frame({0, 0.5f, 0}, scale)) +
-                   make_shapes(stype::obj03, mtype::plastic03,
-                       make_frame({1.25f, 0.5f, 0}, scale));
-        } break;
-        case stype::lines01: {
-            auto mat = (mt == mtype::def) ? make_material(mtype::lines00) :
-                                            make_material(mt);
-            return {make_lines("simple_lines01_" + mat->name, mat, 64 * 64 * 16,
-                        4, 0.1f, 0, 0, frame, {0.5f, 0.5f, 0.5f}),
-                make_shape("simple_interior02_", mtype::matte00, 6,
-                    yshape::stdsurface_type::uvsphere, frame,
-                    ym::vec3f{0.5f, 0.5f, 0.5f} * scale)};
-        } break;
-        case stype::lines02: {
-            auto mat = (mt == mtype::def) ? make_material(mtype::lines00) :
-                                            make_material(mt);
-            return {make_lines("simple_lines02_" + mat->name, mat, 64 * 64 * 16,
-                        4, 0, 0.75f, 0, frame, {0.5f, 0.5f, 0.5f}),
-                make_shape("simple_interior02_", mtype::matte00, 6,
-                    yshape::stdsurface_type::uvsphere, frame,
-                    ym::vec3f{0.5f, 0.5f, 0.5f} * scale)};
-        } break;
-        case stype::lines03: {
-            auto mat = (mt == mtype::def) ? make_material(mtype::lines00) :
-                                            make_material(mt);
-            return {make_lines("simple_lines03_" + mat->name, mat, 64 * 64 * 16,
-                        4, 0, 0, 0.5f, frame, {0.5f, 0.5f, 0.5f}),
-                make_shape("simple_interior02_", mtype::matte00, 6,
-                    yshape::stdsurface_type::uvsphere, frame,
-                    ym::vec3f{0.5f, 0.5f, 0.5f} * scale)};
-        } break;
-        case stype::simple_lines: {
-            return make_shapes(stype::lines01, mtype::lines01,
-                       make_frame({-1.25f, 0.5f, 0}), scale) +
-                   make_shapes(stype::lines02, mtype::lines02,
-                       make_frame({0, 0.5f, 0}), scale) +
-                   make_shapes(stype::lines03, mtype::lines03,
-                       make_frame({1.25f, 0.5f, 0}), scale);
-        } break;
-        case stype::points01: {
-            auto mat = (mt == mtype::def) ? make_material(mtype::points01) :
-                                            make_material(mt);
-            return {make_points("points01_" + mat->name, mat, 64 * 64 * 16, 1,
-                frame, ym::vec3f{0.5f, 0.5f, 0.5f} * scale)};
-        } break;
-        case stype::points02: {
-            auto mat = (mt == mtype::def) ? make_material(mtype::points01) :
-                                            make_material(mt);
-            return {make_points("points01_" + mat->name, mat, 64 * 64 * 16, 17,
-                frame, ym::vec3f{0.5f, 0.5f, 0.5f} * scale)};
-        } break;
-        case stype::points03: {
-            auto mat = (mt == mtype::def) ? make_material(mtype::points01) :
-                                            make_material(mt);
-            return {make_points("points01_" + mat->name, mat, 64 * 64 * 16, 121,
-                frame, ym::vec3f{0.5f, 0.5f, 0.5f} * scale)};
-        } break;
-        case stype::simple_points: {
-            return make_shapes(stype::points01, mtype::points01,
-                make_frame({0, 0.5f, 0}), scale);
-        } break;
-        case stype::pointlight01: {
-            auto mat = (mt == mtype::def) ? make_material(mtype::pointlight01) :
-                                            make_material(mt);
-            return {make_point("pointlight01_" + mat->name, mat, frame)};
-        } break;
-        case stype::simple_pointlights: {
-            return make_shapes(stype::pointlight01, mtype::pointlight01,
-                       make_frame({0.7f, 4, 3}), scale) +
-                   make_shapes(stype::pointlight01, mtype::pointlight01,
-                       make_frame({-0.7f, 4, 3}), scale);
-        } break;
-        case stype::arealight01: {
-            auto mat = (mt == mtype::def) ? make_material(mtype::arealight01) :
-                                            make_material(mt);
-            return {make_shape("arealight01_" + mat->name, mat, 0,
-                yshape::stdsurface_type::uvquad, frame,
-                ym::vec3f{0.5f, 0.5f, 0.5f} * scale)};
-        } break;
-        case stype::arealight02: {
-            auto mat = (mt == mtype::def) ? make_material(mtype::arealight02) :
-                                            make_material(mt);
-            return {make_shape("arealight02_" + mat->name, mat, 0,
-                yshape::stdsurface_type::uvquad, frame, scale)};
-        } break;
-        case stype::simple_arealights01: {
-            return make_shapes(stype::arealight01, mtype::arealight01,
-                       make_lookat_frame({-2, 2, 4}, {0, 1, 0}),
-                       ym::vec3f{2, 2, 2} * scale) +
-                   make_shapes(stype::arealight01, mtype::arealight01,
-                       make_lookat_frame({2, 2, 4}, {0, 1, 0}),
-                       ym::vec3f{2, 2, 2} * scale);
-        } break;
-        case stype::simple_arealights02: {
-            return make_shapes(stype::arealight01, mtype::arealight01,
-                       make_lookat_frame({-4, 3, 1}, {0, 0.5, 0}),
-                       ym::vec3f{2, 2, 2} * scale) +
-                   make_shapes(stype::arealight01, mtype::arealight02,
-                       make_lookat_frame({3, 2, 3}, {0, 0.5, 0}),
-                       ym::vec3f{2, 2, 2} * scale);
-        } break;
-        case stype::envsphere00: {
-            auto mat = (mt == mtype::def) ? make_material(mtype::env00) :
-                                            make_material(mt);
-            return {make_shape("envsphere00_" + mat->name, mat, 6,
-                yshape::stdsurface_type::uvflippedsphere,
-                make_frame({0, 0.5f, 0}, {90, 0, 0}),
-                ym::vec3f{10000, 10000, 10000} * scale)};
-        } break;
-        case stype::envsphere01: {
-            auto mat = (mt == mtype::def) ? make_material(mtype::env01) :
-                                            make_material(mt);
-            return {make_shape("envsphere01_" + mat->name, mat, 6,
-                yshape::stdsurface_type::uvflippedsphere,
-                make_frame({0, 0.5f, 0}, {90, 0, 0}),
-                ym::vec3f{10000, 10000, 10000} * scale)};
-        } break;
-        case stype::envhemisphere00: {
-            auto mat = (mt == mtype::def) ? make_material(mtype::env00) :
-                                            make_material(mt);
-            return {make_shape("envhemisphere00_" + mat->name, mat, 6,
-                yshape::stdsurface_type::uvflippedhemisphere,
-                make_frame({0, 0.5f, 0}, {90, 0, 0}),
-                ym::vec3f{10000, 10000, 10000} * scale)};
-        } break;
-        case stype::envhemisphere01: {
-            auto mat = (mt == mtype::def) ? make_material(mtype::env01) :
-                                            make_material(mt);
-            return {make_shape("envhemisphere01_" + mat->name, mat, 6,
-                yshape::stdsurface_type::uvflippedhemisphere,
-                make_frame({0, 0.5f, 0}, {90, 0, 0}),
-                ym::vec3f{10000, 10000, 10000} * scale)};
-        } break;
-        case stype::matball01: {
-            auto mat = (mt == mtype::def) ? make_material(mtype::plastic00) :
-                                            make_material(mt);
-            return {make_shape("intmatball01_" + mat->name,
-                        make_material(mtype::matte00), 5,
-                        yshape::stdsurface_type::uvsphere, frame,
-                        ym::vec3f{0.4f, 0.4f, 0.4f} * scale),
-                make_shape("matball01_" + mat->name, mat, 5,
-                    yshape::stdsurface_type::uvflipcapsphere,
-                    frame * make_frame({0, 0, 0}, {0, 35, 45}),
-                    ym::vec3f{0.5f, 0.5f, 0.5f} * scale)};
-        } break;
-        case stype::matball02: {
-            auto mat = (mt == mtype::def) ? make_material(mtype::plastic00) :
-                                            make_material(mt);
-            return {make_shape("intmatball01_" + mat->name,
-                        make_material(mtype::matte00), 5,
-                        yshape::stdsurface_type::uvsphere, frame,
-                        ym::vec3f{0.4f, 0.4f, 0.4f} * scale),
-                make_shape("matball01_" + mat->name, mat, 5,
-                    yshape::stdsurface_type::uvhollowcutsphere1,
-                    frame * make_frame({0, 0, 0}, {0, 35, 45}),
-                    ym::vec3f{0.5f, 0.5f, 0.5f} * scale)};
-        } break;
-        case stype::simple_matballs01: {
-            return make_shapes(stype::matball01, mtype::plastic01,
-                       make_frame({-1.25f, 0.5f, 0}), scale) +
-                   make_shapes(stype::matball01, mtype::plastic02,
-                       make_frame({0, 0.5f, 0}), scale) +
-                   make_shapes(stype::matball01, mtype::plastic03,
-                       make_frame({1.25f, 0.5f, 0}), scale);
-        } break;
-        case stype::simple_matballs02: {
-            return make_shapes(stype::matball01, mtype::plastic01_txt,
-                       make_frame({-1.25f, 0.5f, 0}), scale) +
-                   make_shapes(stype::matball01, mtype::plastic02_txt,
-                       make_frame({0, 0.5f, 0}), scale) +
-                   make_shapes(stype::matball01, mtype::plastic03_txt,
-                       make_frame({1.25f, 0.5f, 0}), scale);
-        } break;
-        case stype::simple_matballs03: {
-            return make_shapes(stype::matball01, mtype::metal01,
-                       make_frame({-1.25f, 0.5f, 0}), scale) +
-                   make_shapes(stype::matball01, mtype::metal02,
-                       make_frame({0, 0.5f, 0}), scale) +
-                   make_shapes(stype::matball01, mtype::metal03,
-                       make_frame({1.25f, 0.5f, 0}), scale);
-        } break;
-        case stype::simple_matballs04: {
-            return make_shapes(stype::matball01, mtype::glass01,
-                       make_frame({-1.25f, 0.5f, 0}), scale) +
-                   make_shapes(stype::matball01, mtype::glass02,
-                       make_frame({0, 0.5f, 0}), scale) +
-                   make_shapes(stype::matball01, mtype::glass03,
-                       make_frame({1.25f, 0.5f, 0}), scale);
-        } break;
-        case stype::simple_txtballs01: {
-            return make_shapes(stype::obj02, mtype::plastic01_txt,
-                       make_frame({-1.25f, 0.5f, 0}), scale) +
-                   make_shapes(stype::obj02, mtype::plastic02_txt,
-                       make_frame({0, 0.5f, 0}), scale) +
-                   make_shapes(stype::obj02, mtype::plastic03_txt,
-                       make_frame({1.25f, 0.5f, 0}), scale);
-        } break;
-        case stype::simple_txtballs02: {
-            return make_shapes(stype::obj02, mtype::plastic04_txt,
-                       make_frame({-1.25f, 0.5f, 0}), scale) +
-                   make_shapes(stype::obj02, mtype::plastic05_txt,
-                       make_frame({0, 0.5f, 0}), scale) +
-                   make_shapes(stype::obj02, mtype::plastic06_txt,
-                       make_frame({1.25f, 0.5f, 0}), scale);
-        } break;
-        case stype::simple_random32: {
-            return make_random_shapes(32, 5);
-        } break;
-        case stype::matball01_floor02: {
-            return make_shapes(stype::floor02) +
-                   make_shapes(
-                       stype::matball01, mt, make_frame({0, 0.5f, 0}), scale);
-        } break;
-        case stype::matball02_floor02: {
-            return make_shapes(stype::floor01) +
-                   make_shapes(
-                       stype::matball02, mt, make_frame({0, 0.5f, 0}), scale);
-        } break;
-        case stype::sym_points01: {
-            auto mat = (mt == mtype::def) ? mtype::sym_points01 : mt;
-            return make_shapes(stype::points01, mat,
-                       make_frame({-1.25f, 0.5f, 0}), scale) +
-                   make_shapes(stype::points02, mat,
-                       make_frame({0.0f, 0.5f, 0}), scale) +
-                   make_shapes(stype::points03, mat,
-                       make_frame({1.25f, 0.5f, 0}), scale);
-        } break;
-        case stype::sym_points02: {
-            auto mat = (mt == mtype::def) ? mtype::sym_points01 : mt;
-            return make_shapes(stype::simple_objs_notxt) +
-                   make_shapes(stype::points01, mat,
-                       make_frame({-1.25f, 1.5f, 0}), scale) +
-                   make_shapes(stype::points02, mat,
-                       make_frame({0.0f, 1.5f, 0}), scale) +
-                   make_shapes(stype::points03, mat,
-                       make_frame({1.25f, 1.5f, 0}), scale);
-        } break;
-        case stype::sym_quad01: {
-            auto mat = (mt == mtype::def) ? make_material(mtype::sym_cloth01) :
-                                            make_material(mt);
-            return {make_shape("tess_quad01_" + mat->name, mat, 6,
-                yshape::stdsurface_type::uvquad, frame,
-                ym::vec3f{0.5f, 0.5f, 0.5f} * scale)};
-        } break;
-        case stype::sym_cloth01: {
-            auto mat = (mt == mtype::def) ? mtype::sym_cloth01 : mt;
-            return make_shapes(stype::sym_quad01, mat,
-                       make_frame({-1.25f, 0.5f, 0}), scale) +
-                   make_shapes(stype::sym_quad01, mat,
-                       make_frame({0.0f, 0.5f, 0}), scale) +
-                   make_shapes(stype::sym_quad01, mat,
-                       make_frame({1.25f, 0.5f, 0}), scale);
-        } break;
-        case stype::sym_cloth02: {
-            auto mat = (mt == mtype::def) ? mtype::sym_cloth01 : mt;
-            return make_shapes(stype::simple_objs_notxt) +
-                   make_shapes(stype::sym_quad01, mat,
-                       make_frame({-1.25f, 1.5f, 0}, {-90, 0, 0}), scale) +
-                   make_shapes(stype::sym_quad01, mat,
-                       make_frame({0.0f, 1.5f, 0.10f}, {-90, 0, 0}), scale) +
-                   make_shapes(stype::sym_quad01, mat,
-                       make_frame({1.25f, 1.5f, 0.15f}, {-90, 0, 0}), scale);
-        } break;
-    }
-    return {};
+yobj::mesh* add_point(yobj::scene* scn, const std::string& name,
+    yobj::material* mat, float radius = 0.001f) {
+    auto shp = new yobj::shape();
+    shp->mat = mat;
+    shp->name = name;
+    shp->points.push_back(0);
+    shp->pos.push_back({0, 0, 0});
+    shp->norm.push_back({0, 0, 1});
+    shp->radius.push_back(radius);
+    return add_mesh(scn, shp);
 }
 
-std::vector<yapp::shape*> make_random_shapes(int nshapes, int l) {
-    ym::vec3f pos[1024];
-    float radius[1024];
-    int levels[1024];
-
-    assert(nshapes < 1024);
-
-    ym::rng_pcg32 rn;
-    for (auto i = 0; i < nshapes; i++) {
-        auto done = false;
-        while (!done) {
-            auto x = -2 + 4 * next1f(&rn);
-            auto z = 1 - 3 * next1f(&rn);
-            radius[i] = 0.15f + ((1 - z) / 3) * ((1 - z) / 3) * 0.5f;
-            pos[i] = ym::vec3f{x, radius[i], z};
-            levels[i] = (int)round(log2f(powf(2, (float)l) * radius[i] / 0.5f));
-            done = true;
-            for (int j = 1; j < i && done; j++) {
-                if (dist(pos[i], pos[j]) < radius[i] + radius[j]) done = false;
-            }
-        }
-    }
-
-    std::vector<stype> stypes = {
-        stype::obj01, stype::obj02, stype::obj03, stype::matball01};
-    std::vector<mtype> mtypes = {mtype::matte00, mtype::matte00_txt,
-        mtype::plastic01, mtype::plastic02, mtype::plastic03,
-        mtype::plastic01_txt, mtype::plastic02_txt, mtype::plastic03_txt,
-        mtype::metal01, mtype::metal02, mtype::metal03};
-
-    std::vector<yapp::shape*> shapes;
-    for (auto i = 0; i < nshapes; i++) {
-        char name[1024];
-        sprintf(name, "obj%02d", i);
-        auto st = stypes[(int)(next1f(&rn) * (float)stypes.size())];
-        auto mt = mtypes[(int)(next1f(&rn) * (float)mtypes.size())];
-        shapes += make_shapes(st, mt, make_frame(pos[i]),
-            {2 * radius[i], 2 * radius[i], 2 * radius[i]});
-    }
-
-    return shapes;
-}
-
-yapp::environment* make_env(const std::string& name, yapp::material* mat,
-    const ym::frame3f& frame = make_lookat_frame(
-        {0, 0.5f, 0}, {-1.5f, 0.5f, 0})) {
-    auto env = new yapp::environment();
+yobj::environment* add_env(yobj::scene* scn, const std::string& name,
+    yobj::material* mat,
+    const ym::frame3f& frame = make_lookat_frame({0, 0, 0}, {-1.5f, 0, 0})) {
+    scn->environments += new yobj::environment();
+    auto env = scn->environments.back();
     env->name = name;
     env->mat = mat;
-    env->frame = frame;
+    env->xform = ym::to_mat(frame);
     return env;
 }
 
-enum struct etype { env00, env01 };
-
-std::vector<yapp::environment*> make_environments(etype et,
-    mtype mt = mtype::def,
-    const ym::frame3f& frame = make_lookat_frame(
-        {0, 0.5f, 0}, {1.5f, 0.5f, 0})) {
-    switch (et) {
-        case etype::env00: {
-            auto mat = (mt == mtype::def) ? make_material(mtype::env00) :
-                                            make_material(mt);
-            return {make_env("env_" + mat->name, mat, frame)};
-        } break;
-        case etype::env01: {
-            auto mat = (mt == mtype::def) ? make_material(mtype::env01) :
-                                            make_material(mt);
-            return {make_env("env_" + mat->name, mat, frame)};
-        } break;
-    }
-    return {};
-}
-
-yapp::camera* make_camera(const std::string& name, const ym::vec3f& from,
-    const ym::vec3f& to, float h, float a, float r = 16.0f / 9.0f) {
-    auto cam = new yapp::camera();
+yobj::camera* add_camera(yobj::scene* scn, const std::string& name,
+    const ym::vec3f& from, const ym::vec3f& to, float h, float a,
+    float r = 16.0f / 9.0f) {
+    scn->cameras += new yobj::camera();
+    auto cam = scn->cameras.back();
     cam->name = name;
-    cam->frame = lookat_frame3(from, to, {0, 1, 0});
+    cam->xform = to_mat(lookat_frame3(from, to, {0, 1, 0}));
     cam->aperture = a;
     cam->focus = dist(from, to);
     cam->yfov = 2 * atan(h / 2);
     cam->aspect = r;
     return cam;
-}
-
-std::vector<yapp::texture*> make_random_textures() {
-    const std::string txts[5] = {"grid.png", "checker.png", "rchecker.png",
-        "colored.png", "rcolored.png"};
-    std::vector<yapp::texture*> textures;
-    for (auto txt : txts) {
-        textures.push_back(new yapp::texture());
-        textures.back()->path = txt;
-    }
-    return textures;
-}
-
-std::vector<yapp::material*> make_random_materials(int nshapes) {
-    auto textures = make_random_textures();
-    std::vector<yapp::material*> materials(nshapes);
-    materials[0] = make_diffuse("floor", {1, 1, 1}, textures[0]);
-
-    ym::rng_pcg32 rn;
-    for (auto i = 1; i < nshapes; i++) {
-        char name[1024];
-        sprintf(name, "obj%02d", i);
-        auto txt = -1;
-        if (next1f(&rn) < 0.5f) { txt = (int)(next1f(&rn) * 6) - 1; }
-        auto c = (txt >= 0) ?
-                     ym::vec3f{1, 1, 1} :
-                     ym::vec3f{0.2f + 0.3f * next1f(&rn),
-                         0.2f + 0.3f * next1f(&rn), 0.2f + 0.3f * next1f(&rn)};
-        auto rs = 0.01f + 0.25f * next1f(&rn);
-        auto mt = (int)(next1f(&rn) * 4);
-        if (mt == 0) {
-            materials[i] =
-                make_diffuse(name, c, (txt < 0) ? nullptr : textures[txt]);
-        } else if (mt == 1) {
-            materials[i] =
-                make_metal(name, c, rs, (txt < 0) ? nullptr : textures[txt]);
-        } else {
-            materials[i] =
-                make_plastic(name, c, rs, (txt < 0) ? nullptr : textures[txt]);
-        }
-    }
-
-    return materials;
-}
-
-std::vector<yapp::shape*> make_random_rigid_shapes(
-    int nshapes, int l, const std::vector<yapp::material*>& materials) {
-    std::vector<yapp::shape*> shapes(nshapes);
-    shapes[0] = make_shape("floor", materials[0], 2,
-        yshape::stdsurface_type::uvcube, make_frame({0, -0.5, 0}), {6, 0.5, 6});
-    ym::vec3f pos[1024];
-    float radius[1024];
-    int levels[1024];
-
-    ym::rng_pcg32 rn;
-    for (int i = 1; i < nshapes; i++) {
-        bool done = false;
-        while (!done) {
-            radius[i] = 0.1f + 0.4f * next1f(&rn);
-            pos[i] = ym::vec3f{-2 + 4 * next1f(&rn), 1 + 4 * next1f(&rn),
-                -2 + 4 * next1f(&rn)};
-            levels[i] = (int)round(log2f(powf(2, (float)l) * radius[i] / 0.5f));
-            done = true;
-            for (int j = 1; j < i && done; j++) {
-                if (dist(pos[i], pos[j]) < radius[i] + radius[j]) done = false;
-            }
-        }
-    }
-
-    for (int i = 1; i < nshapes; i++) {
-        auto name = "obj" + std::to_string(i);
-        yshape::stdsurface_type stypes[2] = {
-            yshape::stdsurface_type::uvspherecube,
-            yshape::stdsurface_type::uvcube};
-        auto stype = stypes[(int)(next1f(&rn) * 2)];
-        shapes[i] = make_shape(name, materials[i], levels[i], stype,
-            make_frame(pos[i]), {radius[i], radius[i], radius[i]});
-    }
-
-    return shapes;
-}
-
-yapp::scene* make_scene(const std::vector<yapp::camera*>& cameras,
-    const std::vector<yapp::shape*>& shapes,
-    const std::vector<yapp::environment*>& envs = {}) {
-    auto scene = new yapp::scene();
-    scene->cameras = cameras;
-    auto materials = std::set<yapp::material*>();
-    auto textures = std::set<yapp::texture*>();
-    for (auto shp : shapes) {
-        scene->shapes.push_back(shp);
-        assert(shp->mat);
-        materials.insert(shp->mat);
-    }
-    for (auto env : envs) {
-        scene->environments.push_back(env);
-        assert(env->mat);
-        materials.insert(env->mat);
-    }
-    for (auto mat : materials) {
-        scene->materials.push_back(mat);
-        textures.insert(mat->ke_txt);
-        textures.insert(mat->kd_txt);
-        textures.insert(mat->ks_txt);
-        textures.insert(mat->kt_txt);
-        textures.insert(mat->rs_txt);
-        textures.insert(mat->norm_txt);
-    }
-    textures.erase(nullptr);
-    for (auto txt : textures) { scene->textures.push_back(txt); }
-    return scene;
 }
 
 using ubyte = unsigned char;
@@ -1325,352 +949,600 @@ std::vector<ym::vec4f> make_sunsky_hdr(int w, int h, float sun_theta,
 void save_image(const std::string& filename, const std::string& dirname,
     const rgba* pixels, int s) {
     std::string path = std::string(dirname) + "/" + std::string(filename);
-    yimg::save_image(path, s, s, 4, nullptr, (unsigned char*)pixels);
+    yimg::save_image(path, s, s, 4, (unsigned char*)pixels);
 }
 
 void save_image_hdr(const std::string& filename, const std::string& dirname,
     const ym::vec4f* pixels, int w, int h) {
     std::string path = std::string(dirname) + "/" + std::string(filename);
-    yimg::save_image(path, w, h, 4, (float*)pixels, nullptr);
+    yimg::save_image(path, w, h, 4, (float*)pixels);
 }
 
-void save_scene(
-    const std::string& filename, const std::string& dirname, yapp::scene* scn) {
-    yapp::save_scene(dirname + "/" + filename, scn);
-    yapp::save_scene(
-        dirname + "/" + ycmd::get_basename(filename) + ".gltf", scn);
-    delete scn;
+std::vector<yobj::camera*> add_simple_cameras(yobj::scene* scn) {
+    return {add_camera(scn, "cam", {0, 3, 10}, {0, 0, 0}, 0.5f, 0),
+        add_camera(scn, "cam_dof", {0, 3, 10}, {0, 0, 0}, 0.5f, 0.1f)};
 }
 
-std::vector<yapp::camera*> make_simple_cameras() {
-    return {make_camera("cam", {0, 1.5f, 5}, {0, 0.5f, 0}, 0.5f, 0),
-        make_camera("cam_dof", {0, 1.5f, 5}, {0, 0.5, 0}, 0.5f, 0.1f)};
-}
-
-std::vector<yapp::camera*> make_matball_cameras() {
-    return {make_camera("cam_close", {0, 2.5f, 5}, {0, 0.5f, 0}, 0.25f, 0, 1),
-        make_camera("cam_close", {0, 1.5f, 5}, {0, 0.5f, 0}, 0.25f, 0, 1)};
+std::vector<yobj::camera*> add_matball_cameras(yobj::scene* scn) {
+    return {add_camera(scn, "cam_close", {0, 5, 10}, {0, 0, 0}, 0.25f, 0, 1),
+        add_camera(scn, "cam_close", {0, 3, 10}, {0, 0, 0}, 0.25f, 0, 1)};
 }
 
 // http://graphics.cs.williams.edu/data
 // http://www.graphics.cornell.edu/online/box/data.html
-yapp::scene* make_cornell_box_scene() {
-    std::vector<yapp::camera*> cameras = {
-        make_camera("cb_cam", {0, 1, 4}, {0, 1, 0}, 0.7f, 0, 1)};
-    std::vector<yapp::material*> materials = {
-        make_diffuse("cb_white", {0.725f, 0.71f, 0.68f}),
-        make_diffuse("cb_red", {0.63f, 0.065f, 0.05f}),
-        make_diffuse("cb_green", {0.14f, 0.45f, 0.091f}),
-        make_emission("cb_light", {17, 12, 4}),
+yobj::scene* make_cornell_box_scene() {
+    auto scn = new yobj::scene();
+    std::vector<yobj::camera*> cameras = {
+        add_camera(scn, "cb_cam", {0, 1, 4}, {0, 1, 0}, 0.7f, 0, 1)};
+    std::vector<yobj::material*> materials = {
+        add_diffuse(scn, "cb_white", {0.725f, 0.71f, 0.68f}),
+        add_diffuse(scn, "cb_red", {0.63f, 0.065f, 0.05f}),
+        add_diffuse(scn, "cb_green", {0.14f, 0.45f, 0.091f}),
+        add_emission(scn, "cb_light", {17, 12, 4}),
     };
-    std::vector<yapp::shape*> shapes = {
-        make_shape("cb_floor", materials[0], 0, yshape::stdsurface_type::uvquad,
+    std::vector<yobj::instance*> instances = {
+        add_instance(scn, "cb_floor",
+            add_quad(scn, "cb_floor", materials[0], 0),
             make_frame(ym::zero3f, {-90, 0, 0})),
-        make_shape("cb_ceiling", materials[0], 0,
-            yshape::stdsurface_type::uvquad, make_frame({0, 2, 0}, {90, 0, 0})),
-        make_shape("cb_back", materials[0], 0, yshape::stdsurface_type::uvquad,
+        add_instance(scn, "cb_ceiling",
+            add_quad(scn, "cb_ceiling", materials[0], 0),
+            make_frame({0, 2, 0}, {90, 0, 0})),
+        add_instance(scn, "cb_back", add_quad(scn, "cb_back", materials[0], 0),
             make_frame({0, 1, -1}, ym::zero3f)),
-        make_shape("cb_back", materials[2], 0, yshape::stdsurface_type::uvquad,
+        add_instance(scn, "cb_back", add_quad(scn, "cb_back", materials[2], 0),
             make_frame({+1, 1, 0}, {0, -90, 0})),
-        make_shape("cb_back", materials[1], 0, yshape::stdsurface_type::uvquad,
+        add_instance(scn, "cb_back", add_quad(scn, "cb_back", materials[1], 0),
             make_frame({-1, 1, 0}, {0, 90, 0})),
-        make_shape("cb_tallbox", materials[0], 0,
-            yshape::stdsurface_type::uvcube,
-            make_frame({-0.33f, 0.6f, -0.29f}, {0, 15, 0}), {0.3f, 0.6f, 0.3f}),
-        make_shape("cb_shortbox", materials[0], 0,
-            yshape::stdsurface_type::uvcube,
-            make_frame({0.33f, 0.3f, 0.33f}, {0, -15, 0}), {0.3f, 0.3f, 0.3f}),
-        make_shape("cb_light", materials[3], 0, yshape::stdsurface_type::uvquad,
-            make_frame({0, 1.999f, 0}, {90, 0, 0}), {0.25f, 0.25f, 0.25f})};
-    return make_scene(cameras, shapes);
+        add_instance(scn, "cb_tallbox",
+            add_box(scn, "cb_tallbox", materials[0], 0, {0.3f, 0.6f, 0.3f}),
+            make_frame({-0.33f, 0.6f, -0.29f}, {0, 15, 0})),
+        add_instance(scn, "cb_shortbox",
+            add_box(scn, "cb_shortbox", materials[0], 0, {0.3f, 0.3f, 0.3f}),
+            make_frame({0.33f, 0.3f, 0.33f}, {0, -15, 0})),
+        add_instance(scn, "cb_light",
+            add_quad(scn, "cb_light", materials[3], 0, 0.25f),
+            make_frame({0, 1.999f, 0}, {90, 0, 0}))};
+    return scn;
 }
 
-yapp::scene* make_envmap_scene(bool as_shape, bool use_map) {
-    if (!as_shape) {
-        if (use_map) {
-            return make_scene(make_simple_cameras(),
-                make_shapes(stype::floor02) +
-                    make_shapes(stype::simple_objs_notxt),
-                make_environments(etype::env01));
-        } else {
-            return make_scene(make_simple_cameras(),
-                make_shapes(stype::floor02) +
-                    make_shapes(stype::simple_objs_notxt),
-                make_environments(etype::env00));
-        }
+yobj::scene* make_matball_scene(const std::string& otype,
+    const std::string& mtype, const std::string& ltype) {
+    auto scn = new yobj::scene();
+    add_camera(scn, "cam_close", {0, 5, 10}, {0, 0, 0}, 0.25f, 0, 1);
+    add_camera(scn, "cam_close", {0, 3, 10}, {0, 0, 0}, 0.25f, 0, 1);
+
+    add_instance(scn, "floor",
+        add_floor(scn, "floor", add_material(scn, "floor_txt")),
+        make_frame({0, -1, 0}));
+
+    auto mat = add_material(scn, mtype);
+
+    if (otype == "matball01") {
+        add_instance(scn, "intmatball",
+            add_sphere(
+                scn, "intmatball", add_material(scn, "matte00"), 5, 0.8f));
+        add_instance(scn, "matball",
+            add_uvhollowcutsphere(scn, "matball", mat, 5),
+            make_frame({0, 0, 0}, {0, 35, 45}));
+
+    } else if (otype == "matball02") {
+        add_instance(scn, "intmatball",
+            add_sphere(
+                scn, "intmatball", add_material(scn, "matte00"), 5, 0.8f));
+        add_instance(scn, "matball",
+            add_uvhollowcutsphere1(scn, "matball", mat, 5),
+            make_frame({0, 0, 0}, {0, 35, 45}));
     } else {
-        if (use_map) {
-            return make_scene(make_simple_cameras(),
-                make_shapes(stype::floor02) +
-                    make_shapes(stype::simple_objs_notxt) +
-                    make_shapes(stype::envsphere01));
-        } else {
-            return make_scene(make_simple_cameras(),
-                make_shapes(stype::floor02) +
-                    make_shapes(stype::simple_objs_notxt) +
-                    make_shapes(stype::envsphere00));
-        }
+        throw std::runtime_error("bad value");
     }
+
+    if (ltype == "pointlight") {
+        auto mat = add_emission(scn, "pointlight", {400, 400, 400});
+        add_instance(scn, "pointlight01", add_point(scn, "pointlight01", mat),
+            make_frame({1.4f, 8, 6}));
+        add_instance(scn, "pointlight02", add_point(scn, "pointlight02", mat),
+            make_frame({-1.4f, 8, 6}));
+    } else if (ltype == "arealight") {
+        auto mat = add_emission(scn, "arealight", {40, 40, 40});
+        auto shp = add_quad(scn, "arealight", mat, 0, 2);
+        add_instance(
+            scn, "arealight01", shp, make_lookat_frame({-4, 4, 8}, {0, 2, 0}));
+        add_instance(
+            scn, "arealight02", shp, make_lookat_frame({4, 4, 8}, {0, 2, 0}));
+    } else if (ltype == "envlight") {
+        auto mat = add_emission(
+            scn, "envlight", {1, 1, 1}, add_texture(scn, "env.hdr"));
+        add_env(scn, "envlight", mat);
+    } else {
+        throw std::runtime_error("bad value");
+    }
+
+    return scn;
 }
 
-yapp::scene* make_rigid_scene(int config) {
-    std::vector<yapp::camera*> cameras = {
-        make_camera("cam", {5, 5, 5}, {0, 0.5f, 0}, 0.5f, 0),
-        make_camera("cam_dof", {5, 5, 5}, {0, 0.5f, 0}, 0.5f, 0.1f)};
-    std::vector<yapp::shape*> shapes;
+yobj::scene* make_simple_scene(
+    const std::string& otype, const std::string& ltype) {
+    auto scn = new yobj::scene();
+    add_camera(scn, "cam", {0, 3, 10}, {0, 0, 0}, 0.5f, 0);
+    add_camera(scn, "cam_dof", {0, 3, 10}, {0, 0, 0}, 0.5f, 0.1f);
 
-    std::vector<yapp::texture*> textures = {
-        make_texture("grid.png"), make_texture("checker.png")};
+    add_instance(scn, "floor",
+        add_floor(scn, "floor", add_material(scn, "floor_txt")),
+        make_frame({0, -1, 0}));
 
-    if (config == 0 || config == 1) {
-        std::vector<yapp::material*> materials = {
-            make_diffuse("floor", {1, 1, 1}, 0),
-            make_plastic("obj", {1, 1, 1}, 0.1f, textures[1])};
-        shapes = {(config) ?
-                      make_shape("floor", materials[0], 2,
-                          yshape::stdsurface_type::uvcube,
-                          make_frame({0, -2.5, 0}, {30, 0, 0}), {6, 0.5f, 6}) :
-                      make_shape("floor", materials[0], 4,
-                          yshape::stdsurface_type::uvcube,
-                          make_frame({0, -0.5f, 0}, {0, 0, 0}), {6, 0.5f, 6}),
-            make_shape("obj01", materials[1], 2,
-                yshape::stdsurface_type::uvcube,
-                make_frame({-1.25f, 0.5f, 0}, {0, 0, 0}), {0.5f, 0.5f, 0.5f}),
-            make_shape("obj02", materials[1], 3,
-                yshape::stdsurface_type::uvspherecube,
-                make_frame({0, 1, 0}, {0, 0, 0}), {0.5f, 0.5f, 0.5f}),
-            make_shape("obj03", materials[1], 2,
-                yshape::stdsurface_type::uvcube,
-                make_frame({1.25f, 1.5f, 0}, {0, 0, 0}), {0.5f, 0.5f, 0.5f}),
-            make_shape("obj11", materials[1], 2,
-                yshape::stdsurface_type::uvcube,
-                make_frame({-1.25f, 0.5f, 1.5f}, {0, 45, 0}),
-                {0.5f, 0.5f, 0.5f}),
-            make_shape("obj12", materials[1], 3,
-                yshape::stdsurface_type::uvspherecube,
-                make_frame({0, 1, 1.5f}, {45, 0, 0}), {0.5f, 0.5f, 0.5f}),
-            make_shape("obj13", materials[1], 2,
-                yshape::stdsurface_type::uvcube,
-                make_frame({1.25f, 1.5f, 1.5f}, {45, 0, 45}),
-                {0.5f, 0.5f, 0.5f}),
-            make_shape("obj21", materials[1], 2,
-                yshape::stdsurface_type::uvcube,
-                make_frame({-1.25f, 0.5f, -1.5f}, {0, 0, 0}),
-                {0.5f, 0.5f, 0.5f}),
-            make_shape("obj22", materials[1], 3,
-                yshape::stdsurface_type::uvspherecube,
-                make_frame({0, 1, -1.5f}, {22.5, 0, 0}), {0.5f, 0.5f, 0.5f}),
-            make_shape("obj23", materials[1], 2,
-                yshape::stdsurface_type::uvcube,
-                make_frame({1.25f, 1.5f, -1.5f}, {22.5f, 0, 22.5f}),
-                {0.5f, 0.5f, 0.5f})};
-    } else if (config == 2) {
-        shapes = make_random_rigid_shapes(128, 1, make_random_materials(128));
+    auto add_objects = [](yobj::scene* scn, std::vector<yobj::material*> mat) {
+        add_instance(scn, "obj01", add_flipcapsphere(scn, "obj01", mat[0], 5),
+            make_frame({-2.5f, 0, 0}));
+        add_instance(scn, "obj02", add_spherizedcube(scn, "obj02", mat[1], 4),
+            make_frame({0, 0, 0}));
+        add_instance(scn, "obj03", add_spherecube(scn, "obj03", mat[2], 4),
+            make_frame({2.5f, 0, 0}));
+    };
+
+    if (otype == "basic") {
+        auto mat = std::vector<yobj::material*>{
+            add_plastic(scn, "obj01", {0.5f, 0.2f, 0.2f}, 0.1f),
+            add_plastic(scn, "obj02", {0.2f, 0.5f, 0.2f}, 0.05f),
+            add_plastic(scn, "obj02", {0.2f, 0.2f, 0.5f}, 0.01f)};
+        add_objects(scn, mat);
+    } else if (otype == "simple") {
+        auto mat = std::vector<yobj::material*>{
+            add_plastic(scn, "obj01", {1, 1, 1}, 0.1f,
+                add_texture(scn, "rcolored.png")),
+            add_plastic(scn, "obj02", {1, 1, 1}, 0.05f,
+                add_texture(scn, "checker.png")),
+            add_plastic(scn, "obj02", {1, 1, 1}, 0.01f,
+                add_texture(scn, "colored.png"))};
+        add_objects(scn, mat);
+    } else if (otype == "points") {
+        auto mat = add_diffuse(scn, "points", {0.2f, 0.2f, 0.2f});
+        add_instance(
+            scn, "points01", add_points(scn, "points01", mat, 64 * 64 * 16, 1));
+    } else if (otype == "lines") {
+        auto mat = add_diffuse(scn, "lines", {0.2f, 0.2f, 0.2f});
+        auto imat = add_diffuse(scn, "lines", {0.2f, 0.2f, 0.2f});
+        add_instance(scn, "lines_01",
+            add_lines(scn, "lines01", mat, 64 * 64 * 16, 4, 0.1f, 0, 0),
+            make_frame({-2.5f, 0, 0}));
+        add_instance(scn, "lines_interior_01",
+            add_sphere(scn, "lines_interior_01", imat, 6),
+            make_frame({-2.5f, 0, 0}));
+        add_instance(scn, "lines_02",
+            add_lines(scn, "lines02", mat, 64 * 64 * 16, 4, 0, 0.75f, 0));
+        add_instance(scn, "lines_interior_02",
+            add_sphere(scn, "lines_interior_02", imat, 6));
+        add_instance(scn, "lines_03",
+            add_lines(scn, "lines03", mat, 64 * 64 * 16, 4, 0, 0, 0.5f),
+            make_frame({2.5f, 0, 0}));
+        add_instance(scn, "lines_interior_03",
+            add_sphere(scn, "lines_interior_03", imat, 6),
+            make_frame({2.5f, 0, 0}));
+    } else if (otype == "sym_points01") {
+        auto mat = add_material(scn, "sym_points");
+        add_points_instance(
+            scn, "points01", mat, 64 * 64 * 16, 1, make_frame({-2.5f, 0, 0}));
+        add_points_instance(scn, "points02", mat, 64 * 64 * 16, 1);
+        add_points_instance(
+            scn, "points03", mat, 64 * 64 * 16, 1, make_frame({2.5f, 0, 0}));
+    } else if (otype == "sym_points02") {
+        auto mat = add_material(scn, "sym_points");
+        auto omat = add_material(scn, "plastic01");
+        add_objects(scn, {omat, omat, omat});
+        add_points_instance(
+            scn, "points01", mat, 64 * 64 * 16, 1, make_frame({-2.5f, 3, 0}));
+        add_points_instance(
+            scn, "points02", mat, 64 * 64 * 16, 1, make_frame({0.0f, 3, 0}));
+        add_points_instance(
+            scn, "points03", mat, 64 * 64 * 16, 1, make_frame({2.5f, 3, 0}));
+    } else if (otype == "sym_cloth01") {
+        auto mat = add_material(scn, "sym_cloth");
+        add_instance(scn, "sym_quad01", add_quad(scn, "sym_quad01", mat, 6),
+            make_frame({-2.5f, 0, 0}));
+        add_instance(scn, "sym_quad02", add_quad(scn, "sym_quad02", mat, 6));
+        add_instance(scn, "sym_quad03", add_quad(scn, "sym_quad03", mat, 6),
+            make_frame({2.5f, 0, 0}));
+    } else if (otype == "sym_cloth02") {
+        auto mat = add_material(scn, "sym_cloth");
+        auto omat = add_material(scn, "plastic01");
+        add_objects(scn, {omat, omat, omat});
+        add_instance(scn, "sym_quad01", add_quad(scn, "sym_quad01", mat, 6),
+            make_frame({-2.5f, 3, 0}, {-90, 0, 0}));
+        add_instance(scn, "sym_quad01", add_quad(scn, "sym_quad01", mat, 6),
+            make_frame({0.0f, 3, 0.10f}, {-90, 0, 0}));
+        add_instance(scn, "sym_quad01", add_quad(scn, "sym_quad01", mat, 6),
+            make_frame({2.5f, 3, 0.15f}, {-90, 0, 0}));
     } else {
-        assert(false);
+        throw std::runtime_error("bad value");
     }
 
-    shapes.push_back(make_point("light01",
-        make_emission("light01", {100, 100, 100}), make_frame({0.7f, 4, 3})));
-    shapes.push_back(make_point("light02",
-        make_emission("light02", {100, 100, 100}), make_frame({-0.7f, 4, 3})));
+    if (ltype == "pointlight") {
+        auto mat = add_emission(scn, "pointlight", {400, 400, 400});
+        add_instance(scn, "pointlight01", add_point(scn, "pointlight01", mat),
+            make_frame({1.4f, 8, 6}));
+        add_instance(scn, "pointlight02", add_point(scn, "pointlight02", mat),
+            make_frame({-1.4f, 8, 6}));
+    } else if (ltype == "arealight") {
+        auto mat = add_emission(scn, "arealight", {40, 40, 40});
+        auto shp = add_quad(scn, "arealight", mat, 0, 2);
+        add_instance(
+            scn, "arealight01", shp, make_lookat_frame({-4, 4, 8}, {0, 2, 0}));
+        add_instance(
+            scn, "arealight02", shp, make_lookat_frame({4, 4, 8}, {0, 2, 0}));
+    } else if (ltype == "envlight") {
+        auto mat = add_emission(
+            scn, "envlight", {1, 1, 1}, add_texture(scn, "env.hdr"));
+        add_env(scn, "envlight", mat);
+    } else {
+        throw std::runtime_error("bad value");
+    }
 
-    return make_scene(cameras, shapes);
+    return scn;
+}
+
+yobj::scene* make_mesh_scene(const std::string& otype) {
+    auto scn = new yobj::scene();
+
+    if (otype == "cube") {
+        add_cube(scn, otype, add_material(scn, "plastic00"), 0);
+    } else if (otype == "sphere") {
+        add_sphere(scn, otype, add_material(scn, "plastic00"), 4);
+    } else {
+        throw std::runtime_error("bad value");
+    }
+
+    return scn;
+}
+
+yobj::scene* make_rigid_scene(
+    const std::string& otype, const std::string& ltype) {
+    auto scn = new yobj::scene();
+    add_camera(scn, "cam", {10, 10, 10}, {0, 0, 0}, 0.5f, 0);
+    add_camera(scn, "cam_dof", {10, 10, 10}, {0, 0, 0}, 0.5f, 0.1f);
+
+    if (otype == "flat" || otype == "slanted") {
+        auto fmat = add_diffuse(scn, "floor", {1, 1, 1});
+        auto mat = add_plastic(
+            scn, "obj", {1, 1, 1}, 0.1f, add_texture(scn, "checker.png"));
+        if (otype == "slanted")
+            add_instance(scn, "floor",
+                add_box(scn, "floor", fmat, 4, {12, 1, 12}),
+                make_frame({0, -1, 0}, {30, 0, 0}));
+        else
+            add_instance(scn, "floor",
+                add_box(scn, "floor", fmat, 4, {12, 1, 12}),
+                make_frame({0, -1, 0}, {0, 0, 0}));
+        add_instance(scn, "obj01", add_cube(scn, "obj01", mat, 2),
+            make_frame({-2.5f, 0, 0}, {0, 0, 0}));
+        add_instance(scn, "obj02", add_spherecube(scn, "obj02", mat, 3),
+            make_frame({0, 1, 0}, {0, 0, 0}));
+        add_instance(scn, "obj03", add_cube(scn, "obj03", mat, 2),
+            make_frame({2.5f, 3, 0}, {0, 0, 0}));
+        add_instance(scn, "obj11", add_cube(scn, "obj11", mat, 2),
+            make_frame({-2.5f, 3, 3}, {0, 45, 0}));
+        add_instance(scn, "obj12", add_spherecube(scn, "obj12", mat, 3),
+            make_frame({0, 1, 3}, {45, 0, 0}));
+        add_instance(scn, "obj13", add_cube(scn, "obj13", mat, 2),
+            make_frame({2.5f, 3, 3}, {45, 0, 45}));
+        add_instance(scn, "obj21", add_cube(scn, "obj21", mat, 2),
+            make_frame({-2.5f, 1, -3}, {0, 0, 0}));
+        add_instance(scn, "obj22", add_spherecube(scn, "obj22", mat, 3),
+            make_frame({0, 1, -3}, {22.5, 0, 0}));
+        add_instance(scn, "obj23", add_cube(scn, "obj23", mat, 2),
+            make_frame({2.5f, 3, -3}, {22.5f, 0, 22.5f}));
+    } else {
+        throw std::runtime_error("bad value");
+    }
+
+    if (ltype == "pointlight") {
+        auto mat = add_emission(scn, "pointlight", {400, 400, 400});
+        add_instance(scn, "pointlight01", add_point(scn, "pointlight01", mat),
+            make_frame({1.4f, 8, 6}));
+        add_instance(scn, "pointlight02", add_point(scn, "pointlight01", mat),
+            make_frame({-1.4f, 8, 6}));
+    } else {
+        throw std::runtime_error("bad value");
+    }
+
+    return scn;
+}
+
+template <typename T>
+static inline int index(const std::vector<T*>& vec, T* val) {
+    auto pos = std::find(vec.begin(), vec.end(), val);
+    if (pos != vec.end()) return (int)(pos - vec.begin());
+    return -1;
+}
+
+ygltf::scene_group* obj2gltf(const yobj::scene* obj, bool add_scene) {
+    auto gltf = new ygltf::scene_group();
+
+    // convert textures
+    for (auto otxt : obj->textures) {
+        auto gtxt = new ygltf::texture();
+        gtxt->path = otxt->path;
+        gtxt->width = otxt->width;
+        gtxt->height = otxt->height;
+        gtxt->ncomp = otxt->ncomp;
+        gtxt->dataf = otxt->dataf;
+        gtxt->datab = otxt->datab;
+        gltf->textures.push_back(gtxt);
+    }
+
+    // convert materials
+    for (auto omat : obj->materials) {
+        auto gmat = new ygltf::material();
+        gmat->name = omat->name;
+        gmat->emission = omat->ke;
+        gmat->emission_txt =
+            (index(obj->textures, omat->ke_txt) < 0) ?
+                nullptr :
+                gltf->textures[index(obj->textures, omat->ke_txt)];
+        if (!omat->unknown_props.at("PBR_HACK").empty()) {
+            auto mstr = omat->unknown_props.at("PBR_HACK").at(0);
+            if (mstr == "emission") {
+            } else if (mstr == "diffuse") {
+                gmat->metallic_roughness =
+                    new ygltf::material_metallic_rooughness();
+                auto gmr = gmat->metallic_roughness;
+                gmr->base = omat->kd;
+                gmr->opacity = omat->opacity;
+                gmr->metallic = 0;
+                gmr->roughness = 1;
+                gmr->base_txt =
+                    (index(obj->textures, omat->kd_txt) < 0) ?
+                        nullptr :
+                        gltf->textures[index(obj->textures, omat->kd_txt)];
+            } else if (mstr == "plastic") {
+                gmat->metallic_roughness =
+                    new ygltf::material_metallic_rooughness();
+                auto gmr = gmat->metallic_roughness;
+                gmr->base = omat->kd;
+                gmr->opacity = omat->opacity;
+                gmr->metallic = 0;
+                gmr->roughness = sqrtf(omat->rs);
+                gmr->base_txt =
+                    (index(obj->textures, omat->kd_txt) < 0) ?
+                        nullptr :
+                        gltf->textures[index(obj->textures, omat->kd_txt)];
+            } else if (mstr == "metal") {
+                gmat->metallic_roughness =
+                    new ygltf::material_metallic_rooughness();
+                auto gmr = gmat->metallic_roughness;
+                gmr->base = omat->ks;
+                gmr->opacity = omat->opacity;
+                gmr->metallic = 1;
+                gmr->roughness = sqrtf(omat->rs);
+                gmr->base_txt =
+                    (index(obj->textures, omat->ks_txt) < 0) ?
+                        nullptr :
+                        gltf->textures[index(obj->textures, omat->ks_txt)];
+            } else if (mstr == "glass") {
+            } else {
+                throw std::exception();
+            }
+        } else {
+            gmat->metallic_roughness =
+                new ygltf::material_metallic_rooughness();
+            auto gmr = gmat->metallic_roughness;
+            gmr->base = omat->kd;
+            gmr->opacity = omat->opacity;
+            gmr->metallic = 0;
+            gmr->roughness = sqrtf(omat->rs);
+            gmr->base_txt =
+                (index(obj->textures, omat->kd_txt) < 0) ?
+                    nullptr :
+                    gltf->textures[index(obj->textures, omat->kd_txt)];
+        }
+        gltf->materials.push_back(gmat);
+    }
+
+    // convert meshes
+    for (auto omesh : obj->meshes) {
+        auto gmesh = new ygltf::mesh();
+        gmesh->name = omesh->name;
+        for (auto oprim : omesh->shapes) {
+            auto gprim = new ygltf::shape();
+            gprim->mat = (index(obj->materials, oprim->mat) < 0) ?
+                             nullptr :
+                             gltf->materials[index(obj->materials, oprim->mat)];
+            gprim->pos = oprim->pos;
+            gprim->norm = oprim->norm;
+            gprim->texcoord = oprim->texcoord;
+            gprim->color = oprim->color;
+            gprim->points = oprim->points;
+            gprim->lines = oprim->lines;
+            gprim->triangles = oprim->triangles;
+            gmesh->shapes.push_back(gprim);
+        }
+        gltf->meshes.push_back(gmesh);
+    }
+
+    if (add_scene) {
+        // init nodes
+        auto scn = new ygltf::scene();
+        scn->name = "scene";
+        gltf->default_scene = scn;
+        gltf->scenes.push_back(scn);
+
+        // convert instances
+        if (obj->instances.empty()) {
+            for (auto msh : gltf->meshes) {
+                auto gnode = new ygltf::node();
+                gnode->name = msh->name;
+                gnode->msh = msh;
+                scn->nodes.push_back(gnode);
+                gltf->nodes.push_back(gnode);
+            }
+        } else {
+            for (auto oist : obj->instances) {
+                auto gnode = new ygltf::node();
+                gnode->name = oist->name;
+                gnode->matrix = oist->xform;
+                gnode->msh = gltf->meshes[index(obj->meshes, oist->msh)];
+                scn->nodes.push_back(gnode);
+                gltf->nodes.push_back(gnode);
+            }
+        }
+
+        // convert cameras
+        if (obj->cameras.empty()) {
+            ygltf::add_default_cameras(gltf);
+        } else {
+            // TODO: convert cameras
+            for (auto ocam : obj->cameras) {
+                auto gcam = new ygltf::camera();
+                gcam->name = ocam->name;
+                gcam->ortho = ocam->ortho;
+                gcam->yfov = ocam->yfov;
+                gcam->aspect = ocam->aspect;
+                gcam->focus = ocam->focus;
+                gcam->aperture = ocam->aperture;
+                gltf->cameras.push_back(gcam);
+                auto gnode = new ygltf::node();
+                gnode->name = ocam->name;
+                gnode->matrix = ocam->xform;
+                gnode->cam = gcam;
+                scn->nodes.push_back(gnode);
+                gltf->nodes.push_back(gnode);
+            }
+        }
+    }
+
+    // done
+    return gltf;
+}
+
+void save_scene(const std::string& scenename, const std::string& dirname,
+    yobj::scene* oscn, bool add_gltf_scene = true) {
+    auto gscn = obj2gltf(oscn, add_gltf_scene);
+    yobj::flatten_instances(oscn);
+
+    yobj::save_scene(dirname + "/" + scenename + ".obj", oscn, false);
+    ygltf::save_scenes(dirname + "/" + scenename + ".gltf", gscn, false);
+
+    delete oscn;
+    delete gscn;
 }
 
 int main(int argc, char* argv[]) {
-    // simple scenes ----------------------------
-    auto stypes = std::vector<std::pair<std::string, stype>>{
-        {"basic", stype::simple_objs_notxt}, {"simple", stype::simple_objs},
-        {"mat01", stype::simple_matballs01},
-        {"mat02", stype::simple_matballs02},
-        {"mat03", stype::simple_matballs03},
-        {"mat04", stype::simple_matballs04},
-        {"txt01", stype::simple_txtballs01},
-        {"txt02", stype::simple_txtballs02}, {"rand32", stype::simple_random32},
-        {"lines", stype::simple_lines}, {"points", stype::simple_points},
+    // mesh-only scenes -------------------------
+    auto motypes = std::vector<std::string>{
+        "cube", "sphere",
     };
+
+    // simple scenes ----------------------------
+    auto stypes = std::vector<std::string>{"basic", "simple", "lines", "points",
+        "sym_points01", "sym_points02", "sym_cloth01", "sym_cloth02"};
 
     // matball scenes --------------------------
-    auto mbtypes = std::vector<std::pair<std::string, stype>>{
-        {"matball01", stype::matball01_floor02},
-        {"matball02", stype::matball02_floor02}};
-    auto mtypes = std::vector<std::pair<std::string, mtype>>{
-        {"matte00", mtype::matte00}, {"matte01", mtype::matte01},
-        {"matte02", mtype::matte02}, {"matte03", mtype::matte03},
-        {"matte04", mtype::matte04}, {"matte00_txt", mtype::matte00_txt},
-        {"matte01_txt", mtype::matte01_txt},
-        {"matte02_txt", mtype::matte02_txt},
-        {"matte03_txt", mtype::matte03_txt}, {"plastic00", mtype::plastic00},
-        {"plastic01", mtype::plastic01}, {"plastic02", mtype::plastic02},
-        {"plastic03", mtype::plastic03}, {"plastic04", mtype::plastic04},
-        {"plastic00_txt", mtype::plastic00_txt},
-        {"plastic01_txt", mtype::plastic01_txt},
-        {"plastic02_txt", mtype::plastic02_txt},
-        {"plastic03_txt", mtype::plastic03_txt},
-        {"plastic04_txt", mtype::plastic04_txt}, {"gold01", mtype::gold01},
-        {"gold02", mtype::gold02}, {"copper01", mtype::copper01},
-        {"copper02", mtype::copper02}, {"silver01", mtype::silver01},
-        {"silver02", mtype::silver02}, {"bump00", mtype::bump00},
-        {"bump01", mtype::bump01}, {"bump02", mtype::bump02},
-        {"bump03", mtype::bump03}};
-
-    // sym scenes ------------------------------
-    auto sym_stypes = std::vector<std::pair<std::string, stype>>{
-        {"sym_points01", stype::sym_points01},
-        {"sym_points02", stype::sym_points02},
-        {"sym_cloth01", stype::sym_cloth01},
-        {"sym_cloth02", stype::sym_cloth02},
-    };
+    auto mtypes = std::vector<std::string>{"matte00", "matte01_txt",
+        "plastic01", "plastic02", "plastic03", "plastic04", "plastic01_txt",
+        "plastic02_txt", "plastic03_txt", "plastic04_txt", "gold01", "gold02",
+        "copper01", "copper02", "silver01", "silver02", "bump00", "bump01",
+        "bump02", "bump03"};
 
     // put together scene names
     auto scene_names = std::vector<std::string>{"all"};
-    for (auto stype : stypes) scene_names += stype.first;
-    for (auto mbtype : mbtypes)
-        for (auto mtype : mtypes)
-            scene_names += mbtype.first + "_" + mtype.first;
-    for (auto sym_stype : sym_stypes) scene_names += sym_stype.first;
-    scene_names +=
-        {"envmap", "cornell_box", "rigid", "textures", "matball_test"};
+    for (auto stype : stypes) scene_names += stype;
+    for (auto mtype : mtypes) scene_names += "matball_" + mtype;
+    for (auto motype : motypes) scene_names += "mesh_" + motype;
+    scene_names += {"cornell_box", "rigid", "textures"};
 
     // command line params
-    auto parser = ycmd::make_parser(argc, argv, "make tests");
-    auto scene = ycmd::parse_opts(
+    auto parser = yu::cmdline::make_parser(argc, argv, "make tests");
+    auto scene = parse_opts(
         parser, "--scene", "-s", "scene name", "all", false, scene_names);
     auto dirname =
-        ycmd::parse_opts(parser, "--dirname", "-d", "directory name", "tests");
-    ycmd::check_parser(parser);
+        parse_opts(parser, "--dirname", "-d", "directory name", "tests");
+    auto no_parallel =
+        parse_flag(parser, "--no-parallel", "", "do not run in parallel");
+    check_parser(parser);
+
+    // run lambda (allows for multi- and single- threaded switch)
+    auto run_async = [no_parallel](const std::function<void(void)>& func) {
+        if (!no_parallel) {
+            yu::concurrent::run_async(func);
+        } else {
+            func();
+        }
+    };
 
 // make directories
 #ifndef _MSC_VER
-    auto cmd = "mkdir -p " + dirname;
-#else
+    auto rcmd = "rm -rf " + dirname;
+    system(rcmd.c_str());
     auto cmd = "mkdir " + dirname;
-#endif
     system(cmd.c_str());
+#else
+    auto rcmd = "del " + dirname + "\\*.*; rmdir " + dirname;
+    system(rcmd.c_str());
+    auto cmd = "mkdir " + dirname;
+    system(cmd.c_str());
+#endif
+
+    // meshes scene ------------------------------
+    for (auto motype : motypes) {
+        auto sname = "mesh_" + motype;
+        if (scene != "all" && scene != sname) continue;
+        run_async([=] {
+            printf("generating %s scenes ...\n", sname.c_str());
+            auto scn = make_mesh_scene(motype);
+            save_scene(sname, dirname, scn, false);
+        });
+    }
 
     // simple scene ------------------------------
-    auto ftype = stype::floor02;
     for (auto stype : stypes) {
-        if (scene != "all" && scene != stype.first) continue;
-        ycmd::thread_pool_async([=] {
-            printf("generating %s scenes ...\n", stype.first.c_str());
-            save_scene(stype.first + "_pointlight.obj", dirname,
-                make_scene(make_simple_cameras(),
-                    make_shapes(ftype) + make_shapes(stype.second) +
-                        make_shapes(stype::simple_pointlights)));
-            save_scene(stype.first + "_arealight.obj", dirname,
-                make_scene(make_simple_cameras(),
-                    make_shapes(ftype) + make_shapes(stype.second) +
-                        make_shapes(stype::simple_arealights01)));
-            save_scene(stype.first + "_envlight.obj", dirname,
-                make_scene(make_simple_cameras(),
-                    make_shapes(ftype) + make_shapes(stype.second),
-                    make_environments(etype::env01)));
+        if (scene != "all" && scene != stype) continue;
+        run_async([=] {
+            printf("generating %s scenes ...\n", stype.c_str());
+            for (auto ltype : {"pointlight", "arealight", "envlight"}) {
+                auto scn = make_simple_scene(stype, ltype);
+                save_scene(stype + "_" + std::string(ltype), dirname, scn);
+            }
         });
     }
 
     // matball scene --------------------------
-    for (auto mbtype : mbtypes) {
-        for (auto mtype : mtypes) {
-            auto sname = mbtype.first + "_" + mtype.first;
-            if (scene != "all" && scene != sname) continue;
-            ycmd::thread_pool_async([=] {
-                printf("generating %s scenes ...\n", sname.c_str());
-                save_scene(sname + "_pointlight.obj", dirname,
-                    make_scene(make_matball_cameras(),
-                        make_shapes(mbtype.second, mtype.second) +
-                            make_shapes(stype::simple_pointlights)));
-                save_scene(sname + "_arealight.obj", dirname,
-                    make_scene(make_matball_cameras(),
-                        make_shapes(mbtype.second, mtype.second) +
-                            make_shapes(stype::simple_arealights02)));
-                save_scene(sname + "_envslight.obj", dirname,
-                    make_scene(make_matball_cameras(),
-                        make_shapes(mbtype.second, mtype.second) +
-                            make_shapes(stype::envsphere01),
-                        make_environments(etype::env01)));
-                save_scene(sname + "_envhlight.obj", dirname,
-                    make_scene(make_matball_cameras(),
-                        make_shapes(mbtype.second, mtype.second) +
-                            make_shapes(stype::envhemisphere01),
-                        make_environments(etype::env01)));
-                save_scene(sname + "_envlight.obj", dirname,
-                    make_scene(make_matball_cameras(),
-                        make_shapes(mbtype.second, mtype.second),
-                        make_environments(etype::env01)));
-            });
-        }
-    }
-
-    // matball ------------------------------
-    if (scene == "matball_test" || scene == "all") {
-        ycmd::thread_pool_async([=] {
-            printf("generating matball_test scenes ...\n");
-            save_scene("matball_test_arealight.obj", dirname,
-                make_scene(make_matball_cameras(),
-                    make_shapes(stype::matball02, mtype::plastic00_txt) +
-                        make_shapes(stype::simple_arealights02)));
-        });
-    }
-
-    // env scene ------------------------------
-    if (scene == "envmap" || scene == "all") {
-        ycmd::thread_pool_async([=] {
-            printf("generating envmap scenes ...\n");
-            save_scene("envmap_shape_const.obj", dirname,
-                make_envmap_scene(true, false));
-            save_scene(
-                "envmap_shape_map.obj", dirname, make_envmap_scene(true, true));
-            save_scene("envmap_inf_const.obj", dirname,
-                make_envmap_scene(false, false));
-            save_scene(
-                "envmap_inf_map.obj", dirname, make_envmap_scene(false, true));
+    auto mbtype = "matball01";
+    for (auto mtype : mtypes) {
+        auto sname = "matball_" + mtype;
+        if (scene != "all" && scene != sname) continue;
+        run_async([=] {
+            printf("generating %s scenes ...\n", sname.c_str());
+            for (auto ltype : {"pointlight", "arealight", "envlight"}) {
+                auto scn = make_matball_scene(mbtype, mtype, ltype);
+                save_scene(sname + "_" + std::string(ltype), dirname, scn);
+            }
         });
     }
 
     // cornell box ------------------------------
     if (scene == "cornell_box" || scene == "all") {
-        ycmd::thread_pool_async([=] {
+        run_async([=] {
             printf("generating cornell box scenes ...\n");
-            save_scene("cornell_box.obj", dirname, make_cornell_box_scene());
+            auto scn = make_cornell_box_scene();
+            save_scene("cornell_box", dirname, scn);
         });
     }
 
     // rigid body scenes ------------------------
     if (scene == "rigid" || scene == "all") {
-        ycmd::thread_pool_async([=] {
+        run_async([=] {
             printf("generating rigid body scenes ...\n");
-            save_scene("rigid_01.obj", dirname, make_rigid_scene(0));
-            save_scene("rigid_02.obj", dirname, make_rigid_scene(1));
-            // save_scene("rigid_03.obj", dirname, make_rigid_scene(2));
-        });
-    }
-
-    // simulation scenes ------------------------
-    auto sym_ftype = stype::floor02;
-    for (auto sym_stype : sym_stypes) {
-        if (scene != "all" && scene != sym_stype.first) continue;
-        ycmd::thread_pool_async([=] {
-            printf("generating %s scenes ...\n", sym_stype.first.c_str());
-            save_scene(sym_stype.first + "_pointlight.obj", dirname,
-                make_scene(make_simple_cameras(),
-                    make_shapes(sym_ftype) + make_shapes(sym_stype.second) +
-                        make_shapes(stype::simple_pointlights)));
-            save_scene(sym_stype.first + "_arealight.obj", dirname,
-                make_scene(make_simple_cameras(),
-                    make_shapes(sym_ftype) + make_shapes(sym_stype.second) +
-                        make_shapes(stype::simple_arealights01)));
-            save_scene(sym_stype.first + "_envlight.obj", dirname,
-                make_scene(make_simple_cameras(),
-                    make_shapes(sym_ftype) + make_shapes(sym_stype.second),
-                    make_environments(etype::env01)));
+            for (auto otype : {"flat", "slanted"}) {
+                auto ltype = "pointlight";
+                auto scn = make_rigid_scene(otype, ltype);
+                save_scene(
+                    "rigid_" + std::string(otype) + "_" + std::string(ltype),
+                    dirname, scn);
+            }
         });
     }
 
     // textures ---------------------------------
     if (scene == "textures" || scene == "all") {
-        ycmd::thread_pool_async([=] {
+        run_async([=] {
             printf("generating simple textures ...\n");
             save_image("grid.png", dirname, make_grid(512).data(), 512);
             save_image("checker.png", dirname, make_checker(512).data(), 512);
@@ -1699,5 +1571,5 @@ int main(int argc, char* argv[]) {
     }
 
     // waiting for all tasks to complete
-    ycmd::thread_pool_wait();
+    if (!no_parallel) yu::concurrent::wait_pool();
 }
