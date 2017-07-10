@@ -1,35 +1,18 @@
 ///
-/// YOCTO_OBJ: Wavefront OBJ/MTL loader and writer with support for points,
+/// # Yocto/Obj
+///
+/// Wavefront OBJ/MTL loader and writer with support for points,
 /// lines, triangles and general polygons and all materials properties.
-/// Contains also a few extension to eqasily create demos such as per-vertex
-/// color and radius, cameras and envmaps. Can use either a low-level OBJ
-/// representation or a high level flattened representation.
-///
-///
-/// USAGE FOR READING:
-///
-/// 1. load an obj with load_obj()
-///   - loads an obj from disk including its associate mtl files
-///   - returns a parsed scene data structure described below
-/// 2. [LOW-LEVEL INTERFACE] access the data directly from the returned object
-///   - the data is documented below and matches the OBJ file structure exactly
-/// 3. [HIGH-LEVEL INTERFACE] optionally flatten the data as a more friendly
-///    representation where shapes are index meshes, supporting points, lines
-///    and triangle primitives, with flatten_obj()
-///   - the flattened data, documented below, can be use to draw directly on
-///   the GPU or in a raytracer
-///   - vertices are duplicated as needed to support GPU friendly access
-///   - optionally load textures data as float arrays with
-///       load_fl_textures()
+/// Contains also a few extensions to easily create demos such as per-vertex
+/// color and radius, cameras, environment maps and instances.
+/// Can use either a low-level OBJ representation or a high level flattened
+/// representation.
 ///
 /// Both in reading and writing, OBJ has no clear convention on the orientation
 /// of textures Y axis. So in many cases textures appears flipped. To handle
 /// that, use the option to flip textures coordinates on either saving or
 /// loading. By default texture coordinates are flipped since this seems
 /// the convention found on test cases collected on the web.
-///
-/// The interface for each function is described in details in the interface
-/// section of this file.
 ///
 /// In the high level interface, shapes are indexed meshes and are described
 /// by arrays of vertex indices for points/lines/triangles and arrays for vertex
@@ -45,32 +28,40 @@
 ///   a GPU viewer; this is not a major limitation if we accept the previous
 ///   point that already changes shapes topology.
 ///
-///
-/// USAGE FOR WRITING:
-///
-/// 1. include this file (more compilation options below)
-/// 2. [LOW-LEVEL INTERFACE] fill an obj object with your scene data and save
-///    the obj/mtl pair with save_obj()
-///    ok = save_obj(filename, obj, error message)
-/// 3. [HIGH_LEVEL INTERFACE] create a flattened scene object and turn into an
-///    obj with unflatten_obj()
-///
-/// The interface for each function is described in details in the interface
-/// section of this file.
+/// This library depends in yocto_math.h. Texture loading depends on
+/// yocto_image. If the texture loading dependency is not desired, it can be
+/// disabled by defining YOBJ_NO_IMAGE before including this file.
 ///
 ///
-/// COMPILATION:
+/// ## Usage Of High-Level Interface
 ///
-/// To use the library include the .h and compile the .cpp. To use this library
-/// as a header-only library, define YBVH_INLINE before including this file.
+/// 1. load a scene with `load_scene()`
+/// 2. look at the `scene` data structures for access to individual elements
+/// 3. can also manipulate the scene by adding missing data with `add_XXX()`
+///    functions
+/// 4. since OBJ does natively support mesh transfotms, which we support with
+///    instances, use `flatten_instaces()` or `add_instances()` to go back
+///    and fourth
+/// 5. use `save_scene()` ti write the data to disk
 ///
-/// Texture loading depends on yocto_image.h.
+/// ## Usage Of Low-Level Interface
 ///
-/// If the texture loading dependency is not desired, it can be disabled by
-/// defining YOBJ_NO_IMAGE before including this file.
+/// 1. load a obj data with `load_obj()`; can load also textues
+/// 2. look at the `obj_XXX` data structures for access to individual elements
+/// 3. use obj back to disk with `save_obj()`; can also save textures
+/// 4. conversion from low- to -high-level data structures with
+///    `scene_to_obj()` and `obj_to_scene()`
 ///
 ///
-/// HISTORY:
+/// ## History
+///
+/// - v 0.22: change variable names for compilation on gcc
+/// - v 0.21: bug fixes
+/// - v 0.20: use yocto_math in the interface and remove inline compilation
+/// - v 0.19: add missing bounding box computation and missing data functions
+/// - v 0.18: prioritize high-level interface
+/// - v 0.17: name cleanup in both interface to better align with glTF
+/// - v 0.16: change flattened data structure to use pointers
 /// - v 0.15: added unknown properties std::map for materials
 /// - v 0.14: added extension to store tetrahedral meshes
 /// - v 0.13: started adding physics extension to materials
@@ -117,50 +108,362 @@ namespace yobj {}
 #ifndef _YOBJ_H_
 #define _YOBJ_H_
 
-// compilation options
-#ifdef YOBJ_INLINE
-#define YOBJ_API inline
-#else
-#define YOBJ_API
-#endif
-
 #include <array>
 #include <cmath>
 #include <map>
 #include <string>
 #include <vector>
 
+#include "yocto_math.h"
+
+// -----------------------------------------------------------------------------
+// INTERFACE
+// -----------------------------------------------------------------------------
+
+///
+/// Reading and Writing support for Wavefront OBJ.
+///
+namespace yobj {
+
+// -----------------------------------------------------------------------------
+// HIGH-LEVEL INTERFACE
+// -----------------------------------------------------------------------------
+
+///
+/// Property map
+///
+template <typename T>
+using property_map = std::map<std::string, std::vector<T>>;
+
+///
+/// Scene Texture
+///
+struct texture {
+    /// path
+    std::string path;
+    /// if loaded, image width
+    int width = 0;
+    /// if loaded, image hieght
+    int height = 0;
+    /// if loaded, number of component (1-4)
+    int ncomp = 0;
+    /// if loaded, pixel data for HDRs
+    std::vector<float> dataf;
+    /// if loaded, pixel data for LDRs
+    std::vector<unsigned char> datab;
+};
+
+///
+/// Scene Texture Additional Information
+///
+struct texture_info {
+    /// clamping
+    bool clamp = false;
+    /// bump scale
+    float bump_scale = 1;
+    /// unknown string props
+    property_map<std::string> unknown_props;
+};
+
+///
+/// Scene Material
+///
+struct material {
+    // whole material data -------------------
+    /// material name
+    std::string name;
+
+    // color information ---------------------
+    /// emission color
+    ym::vec3f ke = {0, 0, 0};
+    /// diffuse color
+    ym::vec3f kd = {0, 0, 0};
+    /// specular color
+    ym::vec3f ks = {0, 0, 0};
+    /// transmission color
+    ym::vec3f kt = {0, 0, 0};
+    /// roughness
+    float rs = 0.0001;
+    /// opacity
+    float opacity = 1;
+
+    // textures -------------------------------
+    /// emission texture
+    texture* ke_txt = nullptr;
+    /// diffuse texture
+    texture* kd_txt = nullptr;
+    /// specular texture
+    texture* ks_txt = nullptr;
+    /// transmission texture
+    texture* kt_txt = nullptr;
+    /// roughness texture
+    texture* rs_txt = nullptr;
+    /// bump map texture (heighfield)
+    texture* bump_txt = nullptr;
+    /// displacement map texture (heighfield)
+    texture* disp_txt = nullptr;
+    /// normal texture
+    texture* norm_txt = nullptr;
+
+    // texture information ---------------------
+    /// emission texture
+    texture_info ke_txt_info = {};
+    /// diffuse texture
+    texture_info kd_txt_info = {};
+    /// specular texture
+    texture_info ks_txt_info = {};
+    /// transmission texture
+    texture_info kt_txt_info = {};
+    /// roughness texture
+    texture_info rs_txt_info = {};
+    /// bump map texture (heighfield)
+    texture_info bump_txt_info = {};
+    /// displacement map texture (heighfield)
+    texture_info disp_txt_info = {};
+    /// normal texture
+    texture_info norm_txt_info = {};
+
+    // physics extensions ---------------------
+    /// stiffness
+    float stiffness = 0.0f;
+    /// density
+    float density = 0.0f;
+
+    // unknown properties ---------------------
+    /// unknown string props
+    property_map<std::string> unknown_props;
+};
+
+///
+/// Shape. May contain only one of the points/lines/triangles.
+///
+struct shape {
+    /// name of the group that enclosed it
+    std::string name = "";
+    /// material
+    material* mat = nullptr;
+
+    // shape elements -------------------------
+    /// points
+    std::vector<int> points;
+    /// lines
+    std::vector<ym::vec2i> lines;
+    /// triangles
+    std::vector<ym::vec3i> triangles;
+    /// tetrahedrons
+    std::vector<ym::vec4i> tetras;
+
+    // vertex data ----------------------------
+    /// per-vertex position (3 float)
+    std::vector<ym::vec3f> pos;
+    /// per-vertex normals (3 float)
+    std::vector<ym::vec3f> norm;
+    /// per-vertex texcoord (2 float)
+    std::vector<ym::vec2f> texcoord;
+    /// [extension] per-vertex color (4 float)
+    std::vector<ym::vec4f> color;
+    /// [extension] per-vertex radius (1 float)
+    std::vector<float> radius;
+    /// [extension] per-vertex tangent space (4 float)
+    std::vector<ym::vec4f> tangsp;
+};
+
+///
+/// Mesh
+///
+struct mesh {
+    // name
+    std::string name;
+    /// primitives
+    std::vector<shape*> shapes;
+
+    /// cleanup
+    ~mesh();
+};
+
+///
+/// Mesh instance.
+///
+struct instance {
+    // name
+    std::string name;
+    /// transform
+    ym::mat4f xform = ym::identity_mat4f;
+    /// mesh instances
+    mesh* msh = nullptr;
+};
+
+///
+/// Scene Camera
+///
+struct camera {
+    /// name
+    std::string name;
+    /// transform
+    ym::mat4f xform = ym::identity_mat4f;
+    /// ortho cam
+    bool ortho = false;
+    /// vertical field of view
+    float yfov = 2;
+    /// aspect ratio
+    float aspect = 16.0f / 9.0f;
+    /// focus distance
+    float focus = 1;
+    /// lens aperture
+    float aperture = 0;
+};
+
+///
+/// Envinonment map
+///
+struct environment {
+    /// name
+    std::string name;
+    /// index of material in material array
+    material* mat = nullptr;
+    /// transform
+    ym::mat4f xform = ym::identity_mat4f;
+};
+
+///
+/// Scene
+///
+struct scene {
+    /// shape array
+    std::vector<mesh*> meshes;
+    /// instance array
+    std::vector<instance*> instances;
+    /// material array
+    std::vector<material*> materials;
+    /// texture array
+    std::vector<texture*> textures;
+    /// camera array
+    std::vector<camera*> cameras;
+    /// environment array
+    std::vector<environment*> environments;
+
+    /// cleanup
+    ~scene();
+};
+
+///
+/// Load scene
+///
+/// - Parameters:
+///     - filename: filename
+///     - load_textures: whether to load textures (default to false)
+///     - flip_texcoord: whether to flip the v coordinate
+///     - skip_missing: skip missing textures
+/// - Returns:
+///     - scene
+///
+scene* load_scene(const std::string& filename, bool load_textures,
+    bool flip_texcoord = true, bool skip_missing = true);
+
+///
+/// Save scene
+///
+/// - Parameters:
+///     - filename: filename
+///     - scn: scene data to save
+///     - save_textures: whether to save textures (default to false)
+///     - flip_texcoord: whether to flip the v coordinate
+///
+void save_scene(const std::string& filename, const scene* scn,
+    bool save_textures, bool flip_texcoord = true);
+
+#ifndef YOBJ_NO_IMAGE
+
+///
+/// Loads textures for an scene.
+///
+/// - Parameters:
+///     - scn: scene to load textures into
+///     - dirname: base directory name for texture files
+///     - skip_missing: whether to skip missing textures or throw an expection
+///
+void load_textures(
+    scene* scn, const std::string& dirname, bool skip_missing = false);
+
+///
+/// Saves textures for an scene.
+///
+/// - Parameters:
+///     - scn: scene to write textures from
+///     - dirname: base directory name for texture files
+///     - skip_missing: whether to skip missing textures or throw an expection
+///
+void save_textures(
+    const scene* scn, const std::string& dirname, bool skip_missing = false);
+
+#endif
+
+///
+/// Computes a scene bounding box
+///
+ym::bbox3f compute_scene_bounds(const scene* scn);
+
+///
+/// Add missing data to the scene.
+///
+void add_normals(scene* scn);
+
+///
+/// Add missing data to the scene.
+///
+void add_radius(scene* scn, float radius);
+
+///
+/// Add missing data to the scene.
+///
+void add_tangent_space(scene* scn);
+
+///
+/// Add missing data to the scene.
+///
+void add_texture_data(scene* scn);
+
+///
+/// Add missing data to the scene.
+///
+void add_instances(scene* scn);
+
+///
+/// Add missing data to the scene.
+///
+void add_names(scene* scn);
+
+///
+/// Add a default camera that views the entire scene.
+///
+void add_default_camera(scene* scn);
+
+///
+/// Flatten scene instances into separate meshes.
+///
+void flatten_instances(scene* scn);
+
 // -----------------------------------------------------------------------------
 // LOW-LEVEL INTERFACE
 // -----------------------------------------------------------------------------
 
-namespace yobj {
-
-//
-// Typedefs for vec/mat types
-//
-using float2 = std::array<float, 2>;
-using float3 = std::array<float, 3>;
-using float16 = std::array<float, 16>;
-using int2 = std::array<int, 2>;
-using int3 = std::array<int, 3>;
-using int4 = std::array<int, 4>;
-
-/// @name low level API
-/// @{
-
 ///
 /// Face vertex
 ///
-struct vert {
-    int pos;       ///< position
-    int texcoord;  ///< texcoord
-    int norm;      ///< normal
-    int color;     ///< color [extension]
-    int radius;    ///< radius [extension]
+struct obj_vertex {
+    /// position
+    int pos;
+    /// texcoord
+    int texcoord;
+    /// normal
+    int norm;
+    /// color [extension]
+    int color;
+    /// radius [extension]
+    int radius;
 
     /// Constructor (copies members initializing missing ones to -1)
-    vert(int pos = -1, int texcoord = -1, int norm = -1, int color = -1,
+    obj_vertex(int pos = -1, int texcoord = -1, int norm = -1, int color = -1,
         int radius = -1)
         : pos(pos)
         , texcoord(texcoord)
@@ -170,140 +473,225 @@ struct vert {
 };
 
 ///
-/// Elelemnt vertex indices
+/// element type
 ///
-struct elem {
+enum struct obj_element_type : uint16_t {
+    /// lists of points
+    point = 1,
+    /// polylines
+    line = 2,
+    /// polygon faces
+    face = 3,
+    /// tetrahedrons
+    tetra = 4,
+};
+
+///
+/// Element vertex indices
+///
+struct obj_element {
+    /// starting vertex index
+    uint32_t start;
     /// element type
-    enum struct etype : uint16_t {
-        point = 1,  ///< lists of points
-        line = 2,   ///< polylines
-        face = 3,   ///< polygon faces
-        tetra = 4,  ///< tetrahedrons
-    };
-
-    uint32_t start;  ///< starting vertex index
-    etype type;      ///< element type
-    uint16_t size;   ///< number of vertices
-
-#ifdef _WIN32
-    elem(uint32_t start_, etype type_, uint16_t size_)
-        : start(start_), type(type_), size(size_) {}
-#endif
+    obj_element_type type;
+    /// number of vertices
+    uint16_t size;
 };
 
 ///
 /// Element group
 ///
-struct elem_group {
-    // group data
-    std::string matname;    ///< material name
-    std::string groupname;  ///< group name
+struct obj_group {
+    // group data ---------------------------
+    /// material name
+    std::string matname;
+    /// group name
+    std::string groupname;
 
-    // element data
-    std::vector<vert> verts;  ///< element vertices
-    std::vector<elem> elems;  ///< element faces
+    // element data -------------------------
+    /// element vertices
+    std::vector<obj_vertex> verts;
+    /// element faces
+    std::vector<obj_element> elems;
 };
 
 ///
 /// Obj object
 ///
-struct object {
-    // object data
-    std::string name;  ///< object name
+struct obj_object {
+    // object data --------------------------
+    /// object name
+    std::string name;
 
-    // element data
-    std::vector<elem_group> elems;  ///< element groups
+    // element data -------------------------
+    /// element groups
+    std::vector<obj_group> groups;
 };
-
-///
-/// Property maps
-///
-template <typename T>
-using property_map = std::map<std::string, std::vector<T>>;
 
 ///
 /// OBJ material
 ///
-struct material {
-    // whole material data
-    std::string name;  ///< material name
-    int illum = 0;     ///< MTL illum mode
+struct obj_material {
+    // whole material data ------------------
+    /// material name
+    std::string name;
+    /// MTL illum mode
+    int illum = 0;
 
-    // color information
-    float3 ke = {0, 0, 0};  ///< emission color
-    float3 ka = {0, 0, 0};  ///< ambient color
-    float3 kd = {0, 0, 0};  ///< diffuse color
-    float3 ks = {0, 0, 0};  ///< specular color
-    float3 kr = {0, 0, 0};  ///< reflection color
-    float3 kt = {0, 0, 0};  ///< transmision color
-    float ns = 1;           ///< phong exponent for ks
-    float ior = 1;          ///< index of refraction
-    float op = 1;           ///< opacity
+    // color information --------------------
+    /// emission color
+    ym::vec3f ke = {0, 0, 0};
+    /// ambient color
+    ym::vec3f ka = {0, 0, 0};
+    /// diffuse color
+    ym::vec3f kd = {0, 0, 0};
+    /// specular color
+    ym::vec3f ks = {0, 0, 0};
+    /// reflection color
+    ym::vec3f kr = {0, 0, 0};
+    /// transmision color
+    ym::vec3f kt = {0, 0, 0};
+    /// phong exponent for ks
+    float ns = 1;
+    /// index of refraction
+    float ior = 1;
+    /// opacity
+    float op = 1;
 
     // texture names for the above properties
-    std::string ke_txt;    ///< emission texture
-    std::string ka_txt;    ///< ambient texture
-    std::string kd_txt;    ///< diffuse texture
-    std::string ks_txt;    ///< specular texture
-    std::string kr_txt;    ///< reflection texture
-    std::string kt_txt;    ///< transmission texture
-    std::string ns_txt;    ///< specular exponent texture
-    std::string op_txt;    ///< opacity texture
-    std::string ior_txt;   ///< index of refraction
-    std::string bump_txt;  ///< bump map texture (heighfield)
-    std::string disp_txt;  ///< displacement map texture (heighfield)
-    std::string norm_txt;  ///< normal map texture
+    /// emission texture
+    std::string ke_txt;
+    /// ambient texture
+    std::string ka_txt;
+    /// diffuse texture
+    std::string kd_txt;
+    /// specular texture
+    std::string ks_txt;
+    /// reflection texture
+    std::string kr_txt;
+    /// transmission texture
+    std::string kt_txt;
+    /// specular exponent texture
+    std::string ns_txt;
+    /// opacity texture
+    std::string op_txt;
+    /// index of refraction
+    std::string ior_txt;
+    /// bump map texture (heighfield)
+    std::string bump_txt;
+    /// displacement map texture (heighfield)
+    std::string disp_txt;
+    /// normal map texture
+    std::string norm_txt;
 
-    // physics extensions
-    float stiffness = 0;  ///< overall stiffness
-    float density = 0;    ///< density
+    // texture information ---------------------
+    /// emission texture
+    property_map<std::string> ke_txt_info = {};
+    /// ambient texture
+    property_map<std::string> ka_txt_info = {};
+    /// diffuse texture
+    property_map<std::string> kd_txt_info = {};
+    /// specular texture
+    property_map<std::string> ks_txt_info = {};
+    /// reflection texture
+    property_map<std::string> kr_txt_info = {};
+    /// transmission texture
+    property_map<std::string> kt_txt_info = {};
+    /// specular exponent texture
+    property_map<std::string> ns_txt_info = {};
+    /// opacity texture
+    property_map<std::string> op_txt_info = {};
+    /// index of refraction
+    property_map<std::string> ior_txt_info = {};
+    /// bump map texture (heighfield)
+    property_map<std::string> bump_txt_info = {};
+    /// displacement map texture (heighfield)
+    property_map<std::string> disp_txt_info = {};
+    /// normal texture
+    property_map<std::string> norm_txt_info = {};
 
-    // unknown properties
-    property_map<std::string> str_props;  ///< unknown string props
-    property_map<int> int_props;          ///< unknown int props
-    property_map<float> flt_props;        ///< unknown float props
+    // physics extensions --------------------
+    /// overall stiffness
+    float stiffness = 0;
+    /// density
+    float density = 0;
+
+    // unknown properties ---------------------
+    /// unknown string props
+    property_map<std::string> unknown_props;
 };
 
 ///
 /// Camera [extension]
 ///
-struct camera {
-    std::string name;  ///< camera name
-    float16 xform = {
-        1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};  ///< camera transform
-    bool ortho = false;                ///< orthografic camera
-    float yfov = 2 * std::atan(0.5f);  ///< vertical field of view
-    float aspect = 16.0f / 9.0f;       ///< aspect ratio
-    float aperture = 0;                ///< lens aperture
-    float focus = 1;                   ///< focus distance
+struct obj_camera {
+    /// camera name
+    std::string name;
+    /// camera transform
+    ym::mat4f xform = ym::identity_mat4f;
+    /// orthografic camera
+    bool ortho = false;
+    /// vertical field of view
+    float yfov = 2 * std::atan(0.5f);
+    /// aspect ratio
+    float aspect = 16.0f / 9.0f;
+    /// lens aperture
+    float aperture = 0;
+    /// focus distance
+    float focus = 1;
 };
 
 ///
 /// Environment [extension]
 ///
-struct environment {
-    std::string name;  ///< environment name
-    float16 xform = {
-        1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};  /// transform
-    std::string matname;                                  /// material name
+struct obj_environment {
+    /// environment name
+    std::string name;
+    /// transform
+    ym::mat4f xform = ym::identity_mat4f;
+    /// material name
+    std::string matname;
+};
+
+///
+/// Instance [extension]
+///
+struct obj_instance {
+    /// instance name
+    std::string name;
+    /// transform
+    ym::mat4f xform = ym::identity_mat4f;
+    /// object name
+    std::string meshname;
 };
 
 ///
 /// OBJ asset
 ///
 struct obj {
-    // vertex data
-    std::vector<float3> pos;       /// vertex positions
-    std::vector<float3> norm;      /// vertex normals
-    std::vector<float2> texcoord;  /// vertex texcoord
-    std::vector<float3> color;     /// vertex color [extension]
-    std::vector<float> radius;     /// vertex radius [extension]
+    // vertex data -------------------------
+    /// vertex positions
+    std::vector<ym::vec3f> pos;
+    /// vertex normals
+    std::vector<ym::vec3f> norm;
+    /// vertex texcoord
+    std::vector<ym::vec2f> texcoord;
+    /// vertex color [extension]
+    std::vector<ym::vec4f> color;
+    /// vertex radius [extension]
+    std::vector<float> radius;
 
-    // scene objects
-    std::vector<object> objects;            /// objects
-    std::vector<material> materials;        /// materials
-    std::vector<camera> cameras;            /// cameras [extension]
-    std::vector<environment> environments;  /// env maps [extension]
+    // scene objects -----------------------
+    /// objects
+    std::vector<obj_object> objects;
+    /// materials
+    std::vector<obj_material> materials;
+    /// cameras [extension]
+    std::vector<obj_camera> cameras;
+    /// env maps [extension]
+    std::vector<obj_environment> environments;
+    /// instances [extension]
+    std::vector<obj_instance> instances;
 };
 
 ///
@@ -323,227 +711,58 @@ struct obj_exception : std::exception {
 ///
 /// Load OBJ
 ///
-/// Parameters:
-/// - filename: filename
-/// - flip_texcoord: whether to flip the v coordinate
+/// - Parameters:
+///     - filename: filename
+///     - flip_texcoord: whether to flip the v coordinate
+/// - Return:
+///     - obj
 ///
-/// Return:
-/// - obj
-///
-/// Throws:
-/// - io_exception: read/write exception
-///
-YOBJ_API obj* load_obj(const std::string& filename, bool flip_texcoord = true);
+obj* load_obj(const std::string& filename, bool flip_texcoord = true);
 
 ///
 /// Load MTL
 ///
-/// Parameters:
-/// - filename: filename
+/// - Parameters:
+///     - filename: filename
+/// - Return:
+///     - loaded materials
 ///
-/// Return:
-/// - loaded materials
-///
-/// Throws:
-/// - io_exception: read/write exception
-///
-YOBJ_API std::vector<material> load_mtl(const std::string& filename);
+std::vector<obj_material> load_mtl(const std::string& filename);
 
 ///
 /// Save OBJ
 ///
-/// Parameters:
-/// - filename: filename
-/// - asset: obj data to save
-/// - flip_texcoord: whether to flip the v coordinate
+/// - Parameters:
+///     - filename: filename
+///     - asset: obj data to save
+///     - flip_texcoord: whether to flip the v coordinate
 ///
-/// Throws:
-/// - io_exception: read/write exception
-///
-YOBJ_API void save_obj(
+void save_obj(
     const std::string& filename, const obj* asset, bool flip_texcoord = true);
 
 ///
 /// Save MTL (@deprecated interface)
 ///
-/// Throws:
-/// - io_exception: read/write exception
 ///
-YOBJ_API void save_mtl(
-    const std::string& filename, const std::vector<material>& materials);
-
-/// @}
-
-// -----------------------------------------------------------------------------
-// HIGH-LEVEL INTERFACE
-// -----------------------------------------------------------------------------
-
-/// @name high level API
-/// @{
+void save_mtl(
+    const std::string& filename, const std::vector<obj_material>& materials);
 
 ///
-/// Mesh primitives. May contain only one of the points/lines/triangles.
+/// Converts an OBJ into a scene.
 ///
-struct fl_primitives {
-    /// name of the group that enclosed it
-    std::string name = "";
-    /// material id (-1 if not found)
-    int material = -1;
-
-    // shape elements
-    std::vector<int> points;      ///< points
-    std::vector<int2> lines;      ///< lines
-    std::vector<int3> triangles;  ///< triangles
-    std::vector<int4> tetras;     ///< tetrahedrons
-
-    // vertex data
-    std::vector<float3> pos;       ///< per-vertex position (3 float)
-    std::vector<float3> norm;      ///< per-vertex normals (3 float)
-    std::vector<float2> texcoord;  ///< per-vertex texcoord (2 float)
-    std::vector<float3> color;     ///< [extension] per-vertex color (3 float)
-    std::vector<float> radius;     ///< [extension] per-vertex radius (1 float)
-};
+/// - Parameters:
+///     - obj: obj to be flattened
+///
+scene* obj_to_scene(const obj* obj);
 
 ///
-/// Scene geometry
+/// Save a scene in an OBJ file.
 ///
-struct fl_mesh {
-    // name
-    std::string name;
-
-    /// primitives
-    std::vector<int> primitives;
-};
-
+/// - Parameters:
+///     - scn: scene to convert
 ///
-/// Scene Material
-///
-struct fl_material {
-    // whole material data
-    std::string name;  ///< material name
-
-    // color information
-    float3 ke = {0, 0, 0};  ///< emission color
-    float3 kd = {0, 0, 0};  ///< diffuse color
-    float3 ks = {0, 0, 0};  ///< specular color
-    float3 kt = {0, 0, 0};  ///< transmission color
-    float rs = 0.0001;      ///< roughness
-
-    // indices in the texture array (-1 if not found)
-    int ke_txt = -1;    ///< emission texture index
-    int kd_txt = -1;    ///< diffuse texture index
-    int ks_txt = -1;    ///< specular texture index
-    int kt_txt = -1;    ///< transmission texture index
-    int rs_txt = -1;    ///< roughness texture index
-    int bump_txt = -1;  ///< bump map texture (heighfield)
-    int disp_txt = -1;  ///< displacement map texture (heighfield)
-    int norm_txt = -1;  ///< normal texture index
-
-    // physics extensions
-    float stiffness = 0.0f;  ///< stiffness
-    float density = 0.0f;    ///< density
-
-    // unknown properties
-    property_map<std::string> str_props;  ///< unknown string props
-    property_map<int> int_props;          ///< unknown int props
-    property_map<float> flt_props;        ///< unknown float props
-};
-
-///
-/// Scene Texture
-///
-struct fl_texture {
-    std::string path;                  ///< path
-    int width = 0, height = 0;         ///< if loaded, image width and hieght
-    int ncomp = 0;                     ///< if loaded, number of component (1-4)
-    std::vector<float> dataf;          ///< if loaded, pixel data for HDRs
-    std::vector<unsigned char> datab;  ///< if loaded, pixel data for LDRs
-};
-
-///
-/// Scene Camera
-///
-struct fl_camera {
-    std::string name;  ///< name
-    float16 xform = {
-        1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};  ///< transform
-    bool ortho = false;                                   ///< ortho cam
-    float yfov = 2;               ///< vertical field of view
-    float aspect = 16.0f / 9.0f;  ///< aspect ratio
-    float aperture = 0;           ///< lens aperture
-    float focus = 1;              ///< focus distance
-};
-
-///
-/// Envinonment map
-///
-struct fl_environment {
-    std::string name;  ///< name
-    int matid = -1;  ///< index of material in material array (-1 if not found)
-    float16 xform = {
-        1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};  ///< transform
-};
-
-///
-/// Scene
-///
-struct fl_obj {
-    std::vector<fl_primitives*> primitives;     ///< shape primitives
-    std::vector<fl_mesh*> meshes;               ///< mesh array
-    std::vector<fl_material*> materials;        ///< material array
-    std::vector<fl_texture*> textures;          ///< texture array
-    std::vector<fl_camera*> cameras;            ///< camera array
-    std::vector<fl_environment*> environments;  ///< environment array
-
-    ~fl_obj();
-};
-
-///
-/// Load an asset
-///
-/// Parameters:
-/// - obj: obj to be flattened
-///
-/// Returns:
-/// - flattened scene
-///
-YOBJ_API fl_obj* flatten_obj(const obj* asset);
-
-///
-/// Save an asset
-///
-/// Parameters:
-/// - scene: scene to unflatten
-///
-/// Returns:
-/// - obj
-///
-YOBJ_API obj* unflatten_obj(const fl_obj* scene);
-
-///
-/// Loads textures for an scene.
-///
-/// Parameters:
-/// - scene: scene to load textures into
-/// - dirname: base directory name for texture files
-/// - skip_missing: whether to skip missing textures or throw an expection
-///
-/// Throws:
-/// - obj_exception
-///
-YOBJ_API void load_textures(
-    fl_obj* scene, const std::string& dirname, bool skip_missing = false);
-
-/// @}
+obj* scene_to_obj(const scene* scn);
 
 }  // namespace yobj
-
-// -----------------------------------------------------------------------------
-// INCLUDE FOR HEADER-ONLY MODE
-// -----------------------------------------------------------------------------
-
-#ifdef YOBJ_INLINE
-#include "yocto_obj.cpp"
-#endif
 
 #endif

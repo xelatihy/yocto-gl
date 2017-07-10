@@ -1,34 +1,18 @@
 ///
-/// YOCTO_TRACE: path tracer implementation for support for textured mesh
+/// # Yocto/Trace
+///
+/// Path tracer implementation for support for textured mesh
 /// lights, GGX/Phong materials, environment mapping. The interface supports
 /// progressive parallel execution with any splitting strategy, by
 /// generating per-sample random number sequences or fully deterministic
 /// hash-based sampling.
 ///
-///
-/// USAGE:
-///
-/// 1. define your scene setting up only the public data
-/// - init the scene with make_scene()
-/// - define cameras with set_camera()
-/// - defile shapes with set set_triagle_shape(), set_line_shape(),
-/// set_point_shape()
-/// - define materials with set_material()
-/// - define textures with set_texture()
-/// - define environments with set_environment()
-/// - set intersection routines with set_intersection_callbacks()
-///     - can use yocto_bvh
-/// 2. prepare for rendering with init_lights()
-/// 3. define rendering params in render_params
-/// 4. render blocks of samples with trace_block() or the whole image with
-/// trace_image()
-///
-/// The interface for each function is described in details in the interface
-/// section of this file.
-///
-/// Shapes are indexed meshes and are described by array of vertex indices for
-/// points, lines and triangles, and arrays of vertex data. Only one primitive
-/// type can be non-empty for each shape.
+/// The raytraced scene is a list of instances of basic shapes. Each shape
+/// is a collection of points, lines or triangles with associated normals.
+/// Shapes are instanced by creating instances with soecific local-to-world
+/// trasforms. Instancing shares memory so large scenes can be created easily.
+/// Shaope data is in fact shared with the application and not copied
+/// internally.
 ///
 /// Materials are represented as sums of an emission term, a diffuse term and
 /// a specular microfacet term (GGX or Phong). Only opaque for now. We pick
@@ -42,22 +26,49 @@
 /// env is used.
 ///
 /// We generate our own random numbers guarantying that there is one random
-/// sequence per path. This means you can rul the path tracer in any order
+/// sequence per path. This means you can run the path tracer in any order
 /// serially or in parallel.
 ///
 /// For now, we support a straightforward path tracer with explicit direct
-/// illumination using MIS.
+/// illumination using MIS. Also added simpler shaders for a quick preview
+/// and a direct-only renderer.
+///
+/// The library can support raytracing either by building an internal
+/// acceleration structure with Yocto/Bvh or with user supplied intersection
+/// routines for custom intersection.
+///
+/// This library depends in yocto_math.h. Optionally depend on yocto_bvh.h/.cpp
+/// for internal acceleration. Disable this by setting YTRACE_NO_BVH.
 ///
 ///
-/// COMPILATION:
+/// ## Usage for Scene Creation
 ///
-/// To use the library include the .h and compile the .cpp. To use this library
-/// as a header-only library, define YBVH_INLINE before including this file.
+/// 1. create a scene with `make_scene()`
+/// 2. add cameras with `add_camera()`, `set_camera()`
+/// 3. add add texture with `add_texture()`
+/// 4. create material with `add_XXX_material()`
+/// 5. add shapes with `add_XXX_shape()`
+/// 6. add instances with `add_instance()`
+/// 7. add environment maps with `add_environment()`
 ///
-/// The .cpp file depends on yocto_math.h.
+/// ## Usage for Rendering
 ///
+/// 1. either build the ray-tracing acceleration structure with
+///   `init_intersection()` or supply your own with
+///   `set_intersection_callbacks()`
+/// 2. if desired, add logging with `set_logging_callbacks()`
+/// 3. prepare lights for rendering `init_lights()`
+/// 4. define rendering params with the `render_params` structure
+/// 5. render blocks of samples with `trace_block()` or the whole image with
+///     `trace_image()`
 ///
-/// HISTORY:
+/// ## History
+///
+/// - v 0.17: move to rgba per-vertex color
+/// - v 0.16: use yocto_math in the interface and remove inline compilation
+/// - v 0.15: move to add api
+/// - v 1.16: internally use yocto_bvh if desired
+/// - v 1.15: added gltf/generic material properties (deprecate old interface)
 /// - v 1.14: normal mapping
 /// - v 1.13: simpler Fresnel handling
 /// - v 1.12: significantly better path tracing
@@ -103,36 +114,24 @@ namespace ytrace {}
 #ifndef _YTRACE_H_
 #define _YTRACE_H_
 
-#ifdef YTRACE_INLINE
-#define YTRACE_API inline
-#else
-#define YTRACE_API
-#endif
-
 #include <array>
 #include <cstdarg>
 #include <functional>
 #include <vector>
 
+#include "yocto_math.h"
+
 // -----------------------------------------------------------------------------
 // INTERFACE
 // -----------------------------------------------------------------------------
 
+///
+/// Path tracer with MIS support.
+///
 namespace ytrace {
 
-//
-// Typedefs for vec/mat types
-//
-using float2 = std::array<float, 2>;
-using float3 = std::array<float, 3>;
-using float4 = std::array<float, 4>;
+// convenient typedef for bytes
 using byte = unsigned char;
-using byte2 = std::array<byte, 2>;
-using byte3 = std::array<byte, 3>;
-using byte4 = std::array<byte, 4>;
-using float3x4 = std::array<std::array<float, 3>, 4>;
-using int2 = std::array<int, 2>;
-using int3 = std::array<int, 3>;
 
 ///
 /// Trace scene.
@@ -142,180 +141,293 @@ struct scene;
 ///
 /// Initialize the scene with the proper number of objects.
 ///
-YTRACE_API scene* make_scene(int ncameras, int nshapes, int nmaterials,
-    int ntextures, int nenvironments);
+scene* make_scene();
 
 ///
 /// Free scene.
 ///
-YTRACE_API void free_scene(scene* scn);
+void free_scene(scene* scn);
+
+///
+/// Adds a camera in the scene.
+///
+/// - Parameters:
+///     - scn: scene
+///     - frame: local-to-world frame (x, y, z, o in column major order)
+///     - yfov: field of view
+///     - aspect: aspect ratio
+///     - aperture: lens aperture
+///     - focus: focus plane distance (cannot be zero)
+/// - Returns:
+///     - camera id
+///
+int add_camera(scene* scn, const ym::frame3f& frame, float yfov, float aspect,
+    float aperture = 0, float focus = 1);
 
 ///
 /// Sets a camera in the scene.
 ///
-/// Parameters:
-/// - scn: scene
-/// - cid: camera id
-/// - frame: local-to-world frame (x, y, z, o in column major order)
-/// - yfov: field of view
-/// - aspect: aspect ratio
-/// - aperture: lens aperture
-/// - focus: focus plane distance (cannot be zero)
+/// - Parameters:
+///     - scn: scene
+///     - cid: camera id
+///     - frame: local-to-world frame (x, y, z, o in column major order)
+///     - yfov: field of view
+///     - aspect: aspect ratio
+///     - aperture: lens aperture
+///     - focus: focus plane distance (cannot be zero)
 ///
-YTRACE_API void set_camera(scene* scn, int cid, const float3x4& frame,
-    float yfov, float aspect, float aperture = 0, float focus = 1);
+void set_camera(scene* scn, int cid, const ym::frame3f& frame, float yfov,
+    float aspect, float aperture = 0, float focus = 1);
+
+///
+/// Adds a texture in the scene.
+///
+/// - Parameters:
+///     - scn: scene
+///     - tid: texture id
+///     - width: width
+///     - height: height
+///     - ncomp: number of components (1-4)
+///     - hdr: hdr pixels
+///     - ldr: ldr pixels (sRGB)
+/// - Returns:
+///     - texture id
+///
+int add_texture(scene* scn, int width, int height, int ncomp, const float* hdr);
 
 ///
 /// Sets a texture in the scene.
 ///
-/// Parameters:
-/// - scn: scene
-/// - tid: texture id
-/// - width: width
-/// - height: height
-/// - ncomp: number of components (1-4)
-/// - hdr: hdr pixels
-/// - ldr: ldr pixels (sRGB)
+/// - Parameters:
+///     - scn: scene
+///     - tid: texture id
+///     - width: width
+///     - height: height
+///     - ncomp: number of components (1-4)
+///     - hdr: hdr pixels
+///     - ldr: ldr pixels (sRGB)
+/// - Returns:
+///     - texture id
 ///
-YTRACE_API void set_texture(
-    scene* scn, int tid, int width, int height, int ncomp, const float* hdr);
+int add_texture(scene* scn, int width, int height, int ncomp, const byte* ldr);
 
 ///
-/// Sets a texture in the scene.
+/// Sets a material in the scene. [DEPRECATED]
 ///
-/// Parameters:
-/// - scn: scene
-/// - tid: texture id
-/// - width: width
-/// - height: height
-/// - ncomp: number of components (1-4)
-/// - hdr: hdr pixels
-/// - ldr: ldr pixels (sRGB)
+/// - Parameters:
+///     - scn: scene
+///     - ke: emission, term
+///     - kd: diffuse term
+///     - ks: specular term
+///     - rs: specular roughness
+///     - ke_txt, kd_txt, ks_txt, rs_txt, norm_txt: texture indices (-1 for
+///     none) - use_phong: whether to use phong
+/// - Returns:
+///     - material id
 ///
-YTRACE_API void set_texture(
-    scene* scn, int tid, int width, int height, int ncomp, const byte* ldr);
+int add_material(scene* scn, const ym::vec3f& ke, const ym::vec3f& kd,
+    const ym::vec3f& ks, const ym::vec3f& kt, float rs = 0.1, int ke_txt = -1,
+    int kd_txt = -1, int ks_txt = -1, int kt_txt = -1, int rs_txt = -1,
+    int norm_txt = -1, bool use_phong = false);
 
 ///
-/// Sets a material in the scene.
+/// Sets a material in the scene with the most customization possible.
 ///
-/// Parameters:
-/// - scn: scene
-/// - mid: material id
-/// - ke: emission, term
-/// - kd: diffuse term
-/// - ks: specular term
-/// - rs: specular roughness
-/// - ke_txt, kd_txt, ks_txt, rs_txt, norm_txt: texture indices (-1 for none)
-/// - use_phong: whether to use phong
+/// - Parameters:
+///     - scn: scene
+///     - ke: emission, term
+///     - kd: diffuse term
+///     - ks: specular term
+///     - rs: specular roughness
+///     - ke_txt, kd_txt, ks_txt, rs_txt, norm_txt: texture indices (-1 for
+///     none) - use_phong: whether to use phong
+/// - Returns:
+///     - material id
 ///
-YTRACE_API void set_material(scene* scn, int mid, const float3& ke,
-    const float3& kd, const float3& ks, const float3& kt, float rs = 0.1,
-    int ke_txt = -1, int kd_txt = -1, int ks_txt = -1, int kt_txt = -1,
-    int rs_txt = -1, int norm_txt = -1, bool use_phong = false);
+int add_material_generic(scene* scn, const ym::vec3f& ke, const ym::vec3f& kd,
+    const ym::vec3f& ks, const ym::vec3f& kt, float rs, float op, int ke_txt,
+    int kd_txt, int ks_txt, int kt_txt, int rs_txt, int op_txt, int norm_txt,
+    int occ_txt, bool use_phong = false);
+
+///
+/// Sets a gltf metallic roughness material.
+///
+/// - Parameters:
+///     - scn: scene
+///     - ke: emission, term
+///     - kd: diffuse term
+///     - ks: specular term
+///     - rs: specular roughness
+///     - ke_txt, kd_txt, ks_txt, rs_txt, norm_txt: texture indices (-1 for
+///     none)
+///     - use_phong: whether to use phong
+/// - Returns:
+///     - material id
+///
+int add_material_gltf_metallic_roughness(scene* scn, const ym::vec3f& ke,
+    const ym::vec3f& kd, float ks, float rs, float op, int ke_txt, int kd_txt,
+    int ks_txt, int norm_txt, int occ_txt, bool use_phong = false);
+
+///
+/// Sets a gltf metallic specular glossiness.
+///
+/// - Parameters:
+///     - scn: scene
+///     - ke: emission, term
+///     - kd: diffuse term
+///     - ks: specular term
+///     - rs: specular roughness
+///     - ke_txt, kd_txt, ks_txt, rs_txt, norm_txt: texture indices (-1 for
+///     none)
+///    - use_phong: whether to use phong
+/// - Returns:
+///     - material id
+///
+int add_material_gltf_specular_glossiness(scene* scn, const ym::vec3f& ke,
+    const ym::vec3f& kd, const ym::vec3f& ks, float rs, float op, int ke_txt,
+    int kd_txt, int ks_txt, int norm_txt, int occ_txt, bool use_phong = false);
+
+///
+/// Sets a gltf emission only material.
+///
+/// - Parameters:
+///     - scn: scene
+///     - mid: material id
+///     - ke: emission, term
+///     - kd: diffuse term
+///     - ks: specular term
+///     - rs: specular roughness
+///     - ke_txt, kd_txt, ks_txt, rs_txt, norm_txt: texture indices (-1 for
+///     none)
+///     - use_phong: whether to use phong
+/// - Returns:
+///     - material id
+///
+int add_material_emission_only(
+    scene* scn, const ym::vec3f& ke, int ke_txt, int norm_txt, int occ_txt);
 
 ///
 /// Sets an environment in the scene.
 ///
-/// Parameters:
-/// - scn: scene
-/// - mid: material id
-/// - frame: local-to-world frame (x, y, z, o in column major order)
-/// - ke: emission
-/// - ke_txt: emission texture (-1 for none)
+/// - Parameters:
+///     - scn: scene
+///     - frame: local-to-world frame (x, y, z, o in column major order)
+///     - ke: emission
+///     - ke_txt: emission texture (-1 for none)
+/// - Returns:
+///     - environment id
 ///
-YTRACE_API void set_environment(scene* scn, int eid, const float3x4& frame,
-    const float3& ke, int txt_id = -1);
+int add_environment(
+    scene* scn, const ym::frame3f& frame, const ym::vec3f& ke, int txt_id = -1);
 
 ///
 /// Sets a shape in the scene.
 ///
-/// Parameters:
-/// - scn: scene
-/// - sid: shape id
-/// - frame: local-to-world frame (x, y, z, o in column major order)
-/// - mid: material id
-/// - npoints/nlines/ntriangles: number of elements
-/// - points/lines/tiangles: elem data
-/// - nverts: number of vertices
-/// - pos: vertex positions
-/// - norm/tang: vertex normals/tangents
-/// - texcoord: vertex texcoord
-/// - color: vertex color
-/// - tangsp: tangent space for normal and bump mapping
+/// - Parameters:
+///     - scn: scene
+///     - frame: local-to-world frame (x, y, z, o in column major order)
+///     - mid: material id
+///     - npoints/nlines/ntriangles: number of elements
+///     - points/lines/tiangles: elem data
+///     - nverts: number of vertices
+///     - pos: vertex positions
+///     - norm/tang: vertex normals/tangents
+///     - texcoord: vertex texcoord
+///     - color: vertex color
+///     - tangsp: tangent space for normal and bump mapping
+/// - Returns:
+///     - shape id
 ///
-YTRACE_API void set_triangle_shape(scene* scn, int sid, const float3x4& frame,
-    int mid, int ntriangles, const int3* triangles, int nverts,
-    const float3* pos, const float3* norm, const float2* texcoord = nullptr,
-    const float3* color = nullptr, const float4* tangsp = nullptr);
+int add_triangle_shape(scene* scn, int ntriangles, const ym::vec3i* triangles,
+    int nverts, const ym::vec3f* pos, const ym::vec3f* norm,
+    const ym::vec2f* texcoord = nullptr, const ym::vec4f* color = nullptr,
+    const ym::vec4f* tangsp = nullptr);
 
 ///
 /// Sets a shape in the scene.
 ///
-/// Parameters:
-/// - scn: scene
-/// - sid: shape id
-/// - frame: local-to-world frame (x, y, z, o in column major order)
-/// - mid: material id
-/// - npoints/nlines/ntriangles: number of elements
-/// - points/lines/tiangles: elem data
-/// - nverts: number of vertices
-/// - pos: vertex positions
-/// - norm/tang: vertex normals/tangents
-/// - texcoord: vertex texcoord
-/// - color: vertex color
-/// - radius: vertex radius
+/// - Parameters:
+///     - scn: scene
+///     - sid: shape id
+///     - frame: local-to-world frame (x, y, z, o in column major order)
+///     - mid: material id
+///     - npoints/nlines/ntriangles: number of elements
+///     - points/lines/tiangles: elem data
+///     - nverts: number of vertices
+///     - pos: vertex positions
+///     - norm/tang: vertex normals/tangents
+///     - texcoord: vertex texcoord
+///     - color: vertex color
+///     - radius: vertex radius
+/// - Returns:
+///     - shape id
 ///
-YTRACE_API void set_point_shape(scene* scn, int sid, const float3x4& frame,
-    int mid, int npoints, const int* points, int nverts, const float3* pos,
-    const float3* norm, const float2* texcoord = nullptr,
-    const float3* color = nullptr, const float* radius = nullptr);
+int add_point_shape(scene* scn, int npoints, const int* points, int nverts,
+    const ym::vec3f* pos, const ym::vec3f* norm,
+    const ym::vec2f* texcoord = nullptr, const ym::vec4f* color = nullptr,
+    const float* radius = nullptr);
 
 ///
 /// Sets a shape in the scene.
 ///
-/// Parameters:
-/// - scn: scene
-/// - sid: shape id
-/// - frame: local-to-world frame (x, y, z, o in column major order)
-/// - mid: material id
-/// - npoints/nlines/ntriangles: number of elements
-/// - points/lines/tiangles: elem data
-/// - nverts: number of vertices
-/// - pos: vertex positions
-/// - norm/tang: vertex normals/tangents
-/// - texcoord: vertex texcoord
-/// - color: vertex color
-/// - radius: vertex radius
+/// - Parameters:
+///     - scn: scene
+///     - frame: local-to-world frame (x, y, z, o in column major order)
+///     - mid: material id
+///     - npoints/nlines/ntriangles: number of elements
+///     - points/lines/tiangles: elem data
+///     - nverts: number of vertices
+///     - pos: vertex positions
+///     - norm/tang: vertex normals/tangents
+///     - texcoord: vertex texcoord
+///     - color: vertex color
+///     - radius: vertex radius
+/// - Returns:
+///     - shape id
 ///
-YTRACE_API void set_line_shape(scene* scn, int sid, const float3x4& frame,
-    int mid, int nlines, const int2* lines, int nverts, const float3* pos,
-    const float3* tang, const float2* texcoord = nullptr,
-    const float3* color = nullptr, const float* radius = nullptr);
+int add_line_shape(scene* scn, int nlines, const ym::vec2i* lines, int nverts,
+    const ym::vec3f* pos, const ym::vec3f* tang,
+    const ym::vec2f* texcoord = nullptr, const ym::vec4f* color = nullptr,
+    const float* radius = nullptr);
+
+///
+/// Adds an instance in the scene.
+///
+/// - Parameters:
+///     - scn: scene
+///     - iid: instance id
+///     - frame: local-to-world frame (x, y, z, o in column major order)
+///     - sid: shape id
+///     - mid: material id
+/// - Returns:
+///     - instance id
+///
+int add_instance(scene* scn, const ym::frame3f& frame, int sid, int mid);
 
 ///
 /// Sets per-vertex material properties.
 ///
-/// Parameters:
-/// - scn: scene
-/// - sid: shape id
-/// - ke: per-vertex emission
-/// - kd: per-vertex diffuse
-/// - ks: per-vertex specular
-/// - rs: per-vertex roughness
+/// - Parameters:
+///     - scn: scene
+///     - sid: shape id
+///     - ke: per-vertex emission
+///     - kd: per-vertex diffuse
+///     - ks: per-vertex specular
+///     - rs: per-vertex roughness
 ///
-YTRACE_API void set_vert_material(scene* scn, int sid, const float3* ke,
-    const float3* kd, const float3* ks, const float* rs);
+void set_vert_material(scene* scn, int sid, const ym::vec3f* ke,
+    const ym::vec3f* kd, const ym::vec3f* ks, const float* rs);
 
 ///
 /// Convert a Phong exponent to GGX/Phong roughness
 ///
-YTRACE_API float specular_exponent_to_roughness(float n);
+float specular_exponent_to_roughness(float n);
 
 ///
 /// Estimates the fresnel coefficient es from ks at normal incidence
 ///
-YTRACE_API void specular_fresnel_from_ks(
-    const float3& ks, float3& es, float3& esk);
+void specular_fresnel_from_ks(
+    const ym::vec3f& ks, ym::vec3f& es, ym::vec3f& esk);
 
 ///
 /// Ray-scene Intersection.
@@ -323,12 +435,14 @@ YTRACE_API void specular_fresnel_from_ks(
 struct intersect_point {
     /// ray distance
     float dist = 0;
+    /// instance index
+    int iid = -1;
     /// shape index
     int sid = -1;
     /// element distance
     int eid = -1;
     /// element baricentric coordinates
-    float3 euv = {0, 0, 0};
+    ym::vec3f euv = {0, 0, 0};
 
     /// check whether it was a hit
     operator bool() const { return eid >= 0; }
@@ -337,38 +451,38 @@ struct intersect_point {
 ///
 /// Ray-scene closest intersection callback.
 ///
-/// Parameters:
-/// - ctx: context
-/// - o: ray origin
-/// - d: ray direction
-/// - tmin/tmax: ray min/max distance
+/// - Parameters:
+///     - ctx: context
+///     - ray: ray
+/// - Return:
+///     - intersection point
 ///
-/// Return:
-/// - intersection point
-///
-using intersect_first_cb = intersect_point (*)(
-    void* ctx, const float3& o, const float3& d, float tmin, float tmax);
+using intersect_first_cb = intersect_point (*)(void* ctx, const ym::ray3f& ray);
 
 ///
 /// Ray-scene intersection callback
 ///
-/// Parameters:
-/// - ctx: context
-/// - o: ray origin
-/// - d: ray direction
-/// - tmin/tmax: ray min/max distance
+/// - Parameters:
+///     - ctx: context
+///     - ray: ray
+/// - Return:
+///     - whether we intersect or not
 ///
-/// Return:
-/// - whether we intersect or not
-///
-using intersect_any_cb = bool (*)(
-    void* ctx, const float3& o, const float3& d, float tmin, float tmax);
+using intersect_any_cb = bool (*)(void* ctx, const ym::ray3f& o);
 
 ///
 /// Sets the intersection callbacks
 ///
-YTRACE_API void set_intersection_callbacks(scene* scn, void* ctx,
+void set_intersection_callbacks(scene* scn, void* ctx,
     intersect_first_cb intersect_first, intersect_any_cb intersect_any);
+
+///
+/// Initialize acceleration structure.
+///
+/// - Parameters:
+///     - scn: trace scene
+///
+void init_intersection(scene* scn);
 
 ///
 /// Logger callback
@@ -379,41 +493,36 @@ using logging_msg_cb = void (*)(
 ///
 /// Logger
 ///
-YTRACE_API void set_logging_callbacks(
-    scene* scn, void* ctx, logging_msg_cb log);
+void set_logging_callbacks(scene* scn, void* ctx, logging_msg_cb log);
 
 ///
-/// Initialize rendering.
+/// Initialize lighting.
 ///
-/// Parameters:
-/// - scn: trace scene
+/// - Parameters:
+///     - scn: trace scene
 ///
-YTRACE_API void init_lights(scene* scn);
+void init_lights(scene* scn);
 
 ///
 /// Type of rendering algorithm (shader)
 ///
 enum struct shader_type {
-    /// default renderer
-    def = 0,
+    /// pathtrace
+    pathtrace = 0,
     /// eye hight for quick previews
     eyelight,
     /// direct illumination
     direct,
     /// direct illumination with ambient occlusion
     direct_ao,
-    /// pathtrace
-    pathtrace,
 };
 
 ///
 /// Random number generator type
 ///
 enum struct rng_type {
-    /// default generator
-    def = 0,
     /// uniform random numbers
-    uniform,
+    uniform = 0,
     /// stratified random numbers
     stratified,
     /// correlated multi-jittered sampling
@@ -431,11 +540,11 @@ struct render_params {
     /// progressive rendering
     bool progressive = true;
     /// sampler type
-    shader_type stype = shader_type::def;
+    shader_type stype = shader_type::pathtrace;
     /// random number generation type
-    rng_type rtype = rng_type::def;
+    rng_type rtype = rng_type::stratified;
     /// ambient lighting
-    float3 amb = {0, 0, 0};
+    ym::vec3f amb = {0, 0, 0};
     /// view environment map
     bool envmap_invisible = false;
     /// minimum ray depth
@@ -451,41 +560,33 @@ struct render_params {
 ///
 /// Renders a block of sample
 ///
-/// Parameters:
-/// - scn: trace scene
-/// - cid: camera id
-/// - width: image width
-/// - height: image height
-/// - img: pixel data in RGBA format
-/// - nsamples: number of samples
-/// - block_x, block_y: block corner
-/// - block_width, block_height: block width and height
-/// - samples_min, samples_max: sample block to render [sample_min, sample_max];
-/// max values are excluded
-///
 /// Notes: It is safe to call the function in parallel one different blocks.
 /// But two threads should not access the same pixels at the same time.
 /// Also blocks with different samples should be called sequentially if
 /// accumulate is true.
 ///
-YTRACE_API void trace_block(const scene* scn, int width, int height,
-    float4* img, int block_x, int block_y, int block_width, int block_height,
+/// - Parameters:
+///     - scn: trace scene
+///     - cid: camera id
+///     - width: image width
+///     - height: image height
+///     - img: pixel data in RGBA format
+///     - nsamples: number of samples
+///     - block_x, block_y: block corner
+///     - block_width, block_height: block width and height
+///     - samples_min, samples_max: sample block to render
+///       [sample_min, sample_max]; max values are excluded
+///
+void trace_block(const scene* scn, int width, int height, ym::vec4f* img,
+    int block_x, int block_y, int block_width, int block_height,
     int samples_min, int samples_max, const render_params& params);
 
 ///
-/// Convenience function to call trace_block with all sample at once.
+/// Convenience function to call trace_block() with all samples at once.
 ///
-YTRACE_API void trace_image(const scene* scn, const int width, int height,
-    float4* img, const render_params& params);
+void trace_image(const scene* scn, const int width, int height, ym::vec4f* img,
+    const render_params& params);
 
 }  // namespace ytrace
-
-// -----------------------------------------------------------------------------
-// INCLUDE FOR HEADER-ONLY MODE
-// -----------------------------------------------------------------------------
-
-#ifdef YTRACE_INLINE
-#include "yocto_trace.cpp"
-#endif
 
 #endif

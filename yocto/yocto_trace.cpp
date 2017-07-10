@@ -27,9 +27,15 @@
 // -----------------------------------------------------------------------------
 
 #include "yocto_trace.h"
-#include "yocto_math.h"
+
+#ifndef YTRACE_NO_BVH
+#include "yocto_bvh.h"
+#endif
+
+#include <map>
 
 //
+// BUG: gltf normalization
 // BUG: check recursive pathtraced environment map
 // BUG: check __sample_brdf at if (rnl >= wd && rnl < wd + ws) {
 // TODO: add envmap sampling and maybe use discreet ditributions
@@ -42,6 +48,11 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+
+#ifndef _WIN32
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
+#endif
 
 namespace ytrace {
 
@@ -68,15 +79,30 @@ struct texture {
 };
 
 //
+// Material type
+//
+enum struct material_type {
+    none,
+    emission_only,
+    generic,
+    gltf_metallic_roughness,
+    gltf_specular_glossiness
+};
+
+//
 // Material
 //
 struct material {
+    // type
+    material_type mtype = material_type::none;
+
     // material values
     ym::vec3f ke = ym::zero3f;  // emission, term
     ym::vec3f kd = ym::zero3f;  // diffuse term
     ym::vec3f ks = ym::zero3f;  // specular term
     ym::vec3f kt = ym::zero3f;  // transmittance term
     float rs = 0.1;             // specular roughness
+    float op = 1;               // opacity
 
     // textures
     texture* ke_txt = nullptr;
@@ -84,7 +110,9 @@ struct material {
     texture* ks_txt = nullptr;
     texture* kt_txt = nullptr;
     texture* rs_txt = nullptr;
+    texture* op_txt = nullptr;
     texture* norm_txt = nullptr;
+    texture* occ_txt = nullptr;
 
     // material flags
     bool use_phong = false;  // whether to use phong
@@ -94,9 +122,6 @@ struct material {
 // Shape
 //
 struct shape {
-    ym::frame3f frame = ym::identity_frame3f;  // local-to-world rigid transform
-    material* mat = nullptr;                   // material
-
     // element data [only one enabled at any given time]
     int nelems = 0;                        // number of elements
     const ym::vec1i* points = nullptr;     // elem data
@@ -108,7 +133,7 @@ struct shape {
     const ym::vec3f* pos = nullptr;       // vertex data
     const ym::vec3f* norm = nullptr;      // vertex data
     const ym::vec2f* texcoord = nullptr;  // vertex data
-    const ym::vec3f* color = nullptr;     // vertex data
+    const ym::vec4f* color = nullptr;     // vertex data
     const ym::vec1f* radius = nullptr;    // vertex data
     const ym::vec4f* tangsp = nullptr;    // vertex data
 
@@ -125,6 +150,15 @@ struct shape {
 };
 
 //
+// Instance
+//
+struct instance {
+    ym::frame3f frame = ym::identity_frame3f;  // local-to-world rigid transform
+    material* mat = nullptr;                   // material
+    shape* shp = nullptr;                      // shape
+};
+
+//
 // Environment
 //
 struct environment {
@@ -138,7 +172,7 @@ struct environment {
 // This is only used internally and should not be created.
 //
 struct light {
-    shape* shp = nullptr;        // shape
+    instance* ist = nullptr;     // instance
     environment* env = nullptr;  // environment
 };
 
@@ -150,13 +184,20 @@ struct scene {
     void* intersect_ctx = nullptr;                 // ray intersection context
     intersect_first_cb intersect_first = nullptr;  // ray intersection callback
     intersect_any_cb intersect_any = nullptr;      // ray hit callback
+#ifndef YTRACE_NO_BVH
+    ybvh::scene* intersect_bvh = nullptr;  // intersect internal bvh
+#endif
 
-    // scn data
+    // scene data
     std::vector<camera*> cameras;            // camera
     std::vector<environment*> environments;  // env
+    std::vector<instance*> instances;        // instances
     std::vector<shape*> shapes;              // shapes
     std::vector<material*> materials;        // materials
     std::vector<texture*> textures;          // textures
+
+    // default material
+    material* default_material = nullptr;
 
     // logging callback
     void* logging_ctx = nullptr;           // logging callback
@@ -173,9 +214,11 @@ struct scene {
 //
 // Scene support
 //
-YTRACE_API scene::~scene() {
-    for (auto sh : shapes)
-        if (sh) delete sh;
+scene::~scene() {
+    for (auto shp : shapes)
+        if (shp) delete shp;
+    for (auto ist : instances)
+        if (ist) delete ist;
     for (auto mat : materials)
         if (mat) delete mat;
     for (auto txt : textures)
@@ -186,6 +229,9 @@ YTRACE_API scene::~scene() {
         if (env) delete env;
     for (auto light : lights)
         if (light) delete light;
+#ifndef YTRACE_NO_BVH
+    if (intersect_bvh) ybvh::free_scene(intersect_bvh);
+#endif
 }
 
 //
@@ -202,34 +248,26 @@ static inline void _log(const scene* scn, int level, const char* msg, ...) {
 //
 // Public API. See above.
 //
-YTRACE_API scene* make_scene(int ncameras, int nshapes, int nmaterials,
-    int ntextures, int nenvironments) {
+scene* make_scene() {
     auto scn = new scene();
-    scn->cameras.resize(ncameras);
-    scn->shapes.resize(nshapes);
-    scn->materials.resize(nmaterials);
-    scn->textures.resize(ntextures);
-    scn->environments.resize(nenvironments);
-    for (auto& v : scn->cameras) v = new camera();
-    for (auto& v : scn->shapes) v = new shape();
-    for (auto& v : scn->materials) v = new material();
-    for (auto& v : scn->textures) v = new texture();
-    for (auto& v : scn->environments) v = new environment();
+    scn->default_material = new material();
+    scn->default_material->mtype = material_type::generic;
+    scn->default_material->kd = {0.2f, 0.2f, 0.2f};
     return scn;
 }
 
 ///
 // Public API. See above.
 ///
-YTRACE_API void free_scene(scene* scn) {
+void free_scene(scene* scn) {
     if (scn) delete scn;
 }
 
 //
 // Public API. See above.
 //
-YTRACE_API void set_camera(scene* scn, int cid, const float3x4& frame,
-    float yfov, float aspect, float aperture, float focus) {
+void set_camera(scene* scn, int cid, const ym::frame3f& frame, float yfov,
+    float aspect, float aperture, float focus) {
     scn->cameras[cid]->frame = frame;
     scn->cameras[cid]->yfov = yfov;
     scn->cameras[cid]->aspect = aspect;
@@ -240,7 +278,17 @@ YTRACE_API void set_camera(scene* scn, int cid, const float3x4& frame,
 //
 // Public API. See above.
 //
-YTRACE_API void set_texture(
+int add_camera(scene* scn, const ym::frame3f& frame, float yfov, float aspect,
+    float aperture, float focus) {
+    scn->cameras.push_back(new camera());
+    set_camera(scn, (int)scn->cameras.size() - 1, frame, yfov, aspect);
+    return (int)scn->cameras.size() - 1;
+}
+
+//
+// Public API. See above.
+//
+void set_texture(
     scene* scn, int tid, int width, int height, int ncomp, const float* hdr) {
     scn->textures[tid]->width = width;
     scn->textures[tid]->height = height;
@@ -252,7 +300,7 @@ YTRACE_API void set_texture(
 //
 // Public API. See above.
 //
-YTRACE_API void set_texture(
+void set_texture(
     scene* scn, int tid, int width, int height, int ncomp, const byte* ldr) {
     scn->textures[tid]->width = width;
     scn->textures[tid]->height = height;
@@ -264,15 +312,36 @@ YTRACE_API void set_texture(
 //
 // Public API. See above.
 //
-YTRACE_API void set_material(scene* scn, int mid, const float3& ke,
-    const float3& kd, const float3& ks, const float3& kt, float rs, int ke_txt,
-    int kd_txt, int ks_txt, int kt_txt, int rs_txt, int norm_txt,
-    bool use_phong) {
+int add_texture(
+    scene* scn, int width, int height, int ncomp, const float* hdr) {
+    scn->textures.push_back(new texture());
+    set_texture(scn, (int)scn->textures.size() - 1, width, height, ncomp, hdr);
+    return (int)scn->textures.size() - 1;
+}
+
+//
+// Public API. See above.
+//
+int add_texture(scene* scn, int width, int height, int ncomp, const byte* ldr) {
+    scn->textures.push_back(new texture());
+    set_texture(scn, (int)scn->textures.size() - 1, width, height, ncomp, ldr);
+    return (int)scn->textures.size() - 1;
+}
+
+//
+// Public API. See above.
+//
+void set_material_generic(scene* scn, int mid, const ym::vec3f& ke,
+    const ym::vec3f& kd, const ym::vec3f& ks, const ym::vec3f& kt, float rs,
+    float op, int ke_txt, int kd_txt, int ks_txt, int kt_txt, int rs_txt,
+    int op_txt, int norm_txt, int occ_txt, bool use_phong) {
+    scn->materials[mid]->mtype = material_type::generic;
     scn->materials[mid]->ke = ke;
     scn->materials[mid]->kd = kd;
     scn->materials[mid]->ks = ks;
     scn->materials[mid]->kt = kt;
     scn->materials[mid]->rs = rs;
+    scn->materials[mid]->op = op;
     scn->materials[mid]->ke_txt =
         (ke_txt >= 0) ? scn->textures[ke_txt] : nullptr;
     scn->materials[mid]->kd_txt =
@@ -283,15 +352,156 @@ YTRACE_API void set_material(scene* scn, int mid, const float3& ke,
         (kt_txt >= 0) ? scn->textures[kt_txt] : nullptr;
     scn->materials[mid]->rs_txt =
         (rs_txt >= 0) ? scn->textures[rs_txt] : nullptr;
+    scn->materials[mid]->op_txt =
+        (op_txt >= 0) ? scn->textures[rs_txt] : nullptr;
     scn->materials[mid]->norm_txt =
         (norm_txt >= 0) ? scn->textures[norm_txt] : nullptr;
+    scn->materials[mid]->use_phong = use_phong;
 }
 
 //
 // Public API. See above.
 //
-YTRACE_API void set_environment(
-    scene* scn, int eid, const float3x4& frame, const float3& ke, int txt_id) {
+int add_material_generic(scene* scn, const ym::vec3f& ke, const ym::vec3f& kd,
+    const ym::vec3f& ks, const ym::vec3f& kt, float rs, float op, int ke_txt,
+    int kd_txt, int ks_txt, int kt_txt, int rs_txt, int op_txt, int norm_txt,
+    int occ_txt, bool use_phong) {
+    scn->materials.push_back(new material());
+    set_material_generic(scn, (int)scn->materials.size() - 1, ke, kd, ks, kt,
+        rs, op, ke_txt, kd_txt, ks_txt, kt_txt, rs_txt, op_txt, norm_txt,
+        occ_txt, use_phong);
+    return (int)scn->materials.size() - 1;
+}
+
+//
+// Public API. See above.
+//
+void set_material(scene* scn, int mid, const ym::vec3f& ke, const ym::vec3f& kd,
+    const ym::vec3f& ks, const ym::vec3f& kt, float rs, int ke_txt, int kd_txt,
+    int ks_txt, int kt_txt, int rs_txt, int norm_txt, bool use_phong) {
+    set_material_generic(scn, mid, ke, kd, ks, kt, rs, 1, ke_txt, kd_txt,
+        ks_txt, kt_txt, rs_txt, -1, norm_txt, -1, use_phong);
+}
+
+//
+// Public API. See above.
+//
+int add_material(scene* scn, const ym::vec3f& ke, const ym::vec3f& kd,
+    const ym::vec3f& ks, const ym::vec3f& kt, float rs, int ke_txt, int kd_txt,
+    int ks_txt, int kt_txt, int rs_txt, int norm_txt, bool use_phong) {
+    return add_material_generic(scn, ke, kd, ks, kt, rs, 1, ke_txt, kd_txt,
+        ks_txt, kt_txt, rs_txt, norm_txt, -1, use_phong);
+}
+
+//
+// Public API. See above.
+//
+void set_material_gltf_metallic_roughness(scene* scn, int mid,
+    const ym::vec3f& ke, const ym::vec3f& kd, float ks, float rs, float op,
+    int ke_txt, int kd_txt, int ks_txt, int norm_txt, int occ_txt,
+    bool use_phong) {
+    scn->materials[mid]->mtype = material_type::gltf_metallic_roughness;
+    scn->materials[mid]->ke = ke;
+    scn->materials[mid]->kd = kd;
+    scn->materials[mid]->ks = {ks, ks, ks};
+    scn->materials[mid]->rs = rs;
+    scn->materials[mid]->op = op;
+    scn->materials[mid]->ke_txt =
+        (ke_txt >= 0) ? scn->textures[ke_txt] : nullptr;
+    scn->materials[mid]->kd_txt =
+        (kd_txt >= 0) ? scn->textures[kd_txt] : nullptr;
+    scn->materials[mid]->ks_txt =
+        (ks_txt >= 0) ? scn->textures[ks_txt] : nullptr;
+    scn->materials[mid]->norm_txt =
+        (norm_txt >= 0) ? scn->textures[norm_txt] : nullptr;
+    scn->materials[mid]->occ_txt =
+        (occ_txt >= 0) ? scn->textures[occ_txt] : nullptr;
+    scn->materials[mid]->use_phong = use_phong;
+}
+
+//
+// Public API. See above.
+//
+int add_material_gltf_metallic_roughness(scene* scn, const ym::vec3f& ke,
+    const ym::vec3f& kd, float ks, float rs, float op, int ke_txt, int kd_txt,
+    int ks_txt, int norm_txt, int occ_txt, bool use_phong) {
+    scn->materials.push_back(new material());
+    set_material_gltf_metallic_roughness(scn, (int)scn->materials.size() - 1,
+        ke, kd, ks, rs, op, ke_txt, kd_txt, ks_txt, norm_txt, occ_txt,
+        use_phong);
+    return (int)scn->materials.size() - 1;
+}
+
+//
+// Public API. See above.
+//
+void set_material_gltf_specular_glossiness(scene* scn, int mid,
+    const ym::vec3f& ke, const ym::vec3f& kd, const ym::vec3f& ks, float rs,
+    float op, int ke_txt, int kd_txt, int ks_txt, int norm_txt, int occ_txt,
+    bool use_phong) {
+    scn->materials[mid]->mtype = material_type::gltf_specular_glossiness;
+    scn->materials[mid]->ke = ke;
+    scn->materials[mid]->kd = kd;
+    scn->materials[mid]->ks = ks;
+    scn->materials[mid]->rs = rs;
+    scn->materials[mid]->op = op;
+    scn->materials[mid]->ke_txt =
+        (ke_txt >= 0) ? scn->textures[ke_txt] : nullptr;
+    scn->materials[mid]->kd_txt =
+        (kd_txt >= 0) ? scn->textures[kd_txt] : nullptr;
+    scn->materials[mid]->ks_txt =
+        (ks_txt >= 0) ? scn->textures[ks_txt] : nullptr;
+    scn->materials[mid]->norm_txt =
+        (norm_txt >= 0) ? scn->textures[norm_txt] : nullptr;
+    scn->materials[mid]->occ_txt =
+        (occ_txt >= 0) ? scn->textures[occ_txt] : nullptr;
+    scn->materials[mid]->use_phong = use_phong;
+}
+
+//
+// Public API. See above.
+//
+int add_material_gltf_specular_glossiness(scene* scn, const ym::vec3f& ke,
+    const ym::vec3f& kd, const ym::vec3f& ks, float rs, float op, int ke_txt,
+    int kd_txt, int ks_txt, int norm_txt, int occ_txt, bool use_phong) {
+    scn->materials.push_back(new material());
+    set_material_gltf_specular_glossiness(scn, (int)scn->materials.size() - 1,
+        ke, kd, ks, rs, op, ke_txt, kd_txt, ks_txt, norm_txt, occ_txt,
+        use_phong);
+    return (int)scn->materials.size() - 1;
+}
+
+//
+// Public API. See above.
+//
+void set_material_emission_only(scene* scn, int mid, const ym::vec3f& ke,
+    int ke_txt, int norm_txt, int occ_txt) {
+    scn->materials[mid]->mtype = material_type::emission_only;
+    scn->materials[mid]->ke = ke;
+    scn->materials[mid]->ke_txt =
+        (ke_txt >= 0) ? scn->textures[ke_txt] : nullptr;
+    scn->materials[mid]->norm_txt =
+        (norm_txt >= 0) ? scn->textures[norm_txt] : nullptr;
+    scn->materials[mid]->occ_txt =
+        (occ_txt >= 0) ? scn->textures[occ_txt] : nullptr;
+}
+
+//
+// Public API. See above.
+//
+int add_material_emission_only(
+    scene* scn, const ym::vec3f& ke, int ke_txt, int norm_txt, int occ_txt) {
+    scn->materials.push_back(new material());
+    set_material_emission_only(
+        scn, (int)scn->materials.size() - 1, ke, ke_txt, norm_txt, occ_txt);
+    return (int)scn->materials.size() - 1;
+}
+
+//
+// Public API. See above.
+//
+void set_environment(scene* scn, int eid, const ym::frame3f& frame,
+    const ym::vec3f& ke, int txt_id) {
     scn->environments[eid]->frame = frame;
     scn->environments[eid]->ke = ke;
     scn->environments[eid]->ke_txt =
@@ -301,43 +511,81 @@ YTRACE_API void set_environment(
 //
 // Public API. See above.
 //
-YTRACE_API void set_triangle_shape(scene* scn, int sid, const float3x4& frame,
-    int mid, int ntriangles, const int3* triangles, int nverts,
-    const float3* pos, const float3* norm, const float2* texcoord,
-    const float3* color, const float4* tangsp) {
-    scn->shapes[sid]->frame = frame;
-    scn->shapes[sid]->mat = scn->materials[mid];
+int add_environment(
+    scene* scn, const ym::frame3f& frame, const ym::vec3f& ke, int txt_id) {
+    scn->environments.push_back(new environment());
+    set_environment(scn, (int)scn->environments.size() - 1, frame, ke, txt_id);
+    return (int)scn->environments.size() - 1;
+}
+
+//
+// Public API. See above.
+//
+void set_instance(
+    scene* scn, int iid, const ym::frame3f& frame, int sid, int mid) {
+    scn->instances[iid]->frame = frame;
+    scn->instances[iid]->shp = scn->shapes[sid];
+    scn->instances[iid]->mat =
+        (mid < 0) ? scn->default_material : scn->materials[mid];
+}
+
+//
+// Public API. See above.
+//
+int add_instance(scene* scn, const ym::frame3f& frame, int sid, int mid) {
+    scn->instances.push_back(new instance());
+    set_instance(scn, (int)scn->instances.size() - 1, frame, sid, mid);
+    return (int)scn->instances.size() - 1;
+}
+
+//
+// Public API. See above.
+//
+void set_triangle_shape(scene* scn, int sid, int ntriangles,
+    const ym::vec3i* triangles, int nverts, const ym::vec3f* pos,
+    const ym::vec3f* norm, const ym::vec2f* texcoord, const ym::vec4f* color,
+    const ym::vec4f* tangsp) {
     scn->shapes[sid]->nelems = ntriangles;
     scn->shapes[sid]->points = nullptr;
     scn->shapes[sid]->lines = nullptr;
-    scn->shapes[sid]->triangles = (const ym::vec3i*)triangles;
+    scn->shapes[sid]->triangles = triangles;
     scn->shapes[sid]->nverts = nverts;
-    scn->shapes[sid]->pos = (const ym::vec3f*)pos;
-    scn->shapes[sid]->norm = (const ym::vec3f*)norm;
-    scn->shapes[sid]->texcoord = (const ym::vec2f*)texcoord;
-    scn->shapes[sid]->color = (const ym::vec3f*)color;
-    scn->shapes[sid]->tangsp = (const ym::vec4f*)tangsp;
+    scn->shapes[sid]->pos = pos;
+    scn->shapes[sid]->norm = norm;
+    scn->shapes[sid]->texcoord = texcoord;
+    scn->shapes[sid]->color = color;
+    scn->shapes[sid]->tangsp = tangsp;
     scn->shapes[sid]->radius = nullptr;
 }
 
 //
 // Public API. See above.
 //
-YTRACE_API void set_point_shape(scene* scn, int sid, const float3x4& frame,
-    int mid, int npoints, const int* points, int nverts, const float3* pos,
-    const float3* norm, const float2* texcoord, const float3* color,
-    const float* radius) {
-    scn->shapes[sid]->frame = frame;
-    scn->shapes[sid]->mat = scn->materials[mid];
+int add_triangle_shape(scene* scn, int ntriangles, const ym::vec3i* triangles,
+    int nverts, const ym::vec3f* pos, const ym::vec3f* norm,
+    const ym::vec2f* texcoord, const ym::vec4f* color,
+    const ym::vec4f* tangsp) {
+    scn->shapes.push_back(new shape());
+    set_triangle_shape(scn, (int)scn->shapes.size() - 1, ntriangles, triangles,
+        nverts, pos, norm, texcoord, color, tangsp);
+    return (int)scn->shapes.size() - 1;
+}
+
+//
+// Public API. See above.
+//
+void set_point_shape(scene* scn, int sid, int npoints, const int* points,
+    int nverts, const ym::vec3f* pos, const ym::vec3f* norm,
+    const ym::vec2f* texcoord, const ym::vec4f* color, const float* radius) {
     scn->shapes[sid]->nelems = npoints;
     scn->shapes[sid]->points = (const ym::vec1i*)points;
     scn->shapes[sid]->lines = nullptr;
     scn->shapes[sid]->triangles = nullptr;
     scn->shapes[sid]->nverts = nverts;
-    scn->shapes[sid]->pos = (const ym::vec3f*)pos;
-    scn->shapes[sid]->norm = (const ym::vec3f*)norm;
-    scn->shapes[sid]->texcoord = (const ym::vec2f*)texcoord;
-    scn->shapes[sid]->color = (const ym::vec3f*)color;
+    scn->shapes[sid]->pos = pos;
+    scn->shapes[sid]->norm = norm;
+    scn->shapes[sid]->texcoord = texcoord;
+    scn->shapes[sid]->color = color;
     scn->shapes[sid]->radius = (const ym::vec1f*)radius;
     scn->shapes[sid]->tangsp = nullptr;
 }
@@ -345,30 +593,51 @@ YTRACE_API void set_point_shape(scene* scn, int sid, const float3x4& frame,
 //
 // Public API. See above.
 //
-YTRACE_API void set_line_shape(scene* scn, int sid, const float3x4& frame,
-    int mid, int nlines, const int2* lines, int nverts, const float3* pos,
-    const float3* tang, const float2* texcoord, const float3* color,
-    const float* radius) {
-    scn->shapes[sid]->frame = frame;
-    scn->shapes[sid]->mat = scn->materials[mid];
+int add_point_shape(scene* scn, int npoints, const int* points, int nverts,
+    const ym::vec3f* pos, const ym::vec3f* norm, const ym::vec2f* texcoord,
+    const ym::vec4f* color, const float* radius) {
+    scn->shapes.push_back(new shape());
+    set_point_shape(scn, (int)scn->shapes.size() - 1, npoints, points, nverts,
+        pos, norm, texcoord, color, radius);
+    return (int)scn->shapes.size() - 1;
+}
+
+//
+// Public API. See above.
+//
+void set_line_shape(scene* scn, int sid, int nlines, const ym::vec2i* lines,
+    int nverts, const ym::vec3f* pos, const ym::vec3f* tang,
+    const ym::vec2f* texcoord, const ym::vec4f* color, const float* radius) {
     scn->shapes[sid]->nelems = nlines;
     scn->shapes[sid]->points = nullptr;
-    scn->shapes[sid]->lines = (const ym::vec2i*)lines;
+    scn->shapes[sid]->lines = lines;
     scn->shapes[sid]->triangles = nullptr;
     scn->shapes[sid]->nverts = nverts;
-    scn->shapes[sid]->pos = (const ym::vec3f*)pos;
-    scn->shapes[sid]->norm = (const ym::vec3f*)tang;
-    scn->shapes[sid]->texcoord = (const ym::vec2f*)texcoord;
-    scn->shapes[sid]->color = (const ym::vec3f*)color;
+    scn->shapes[sid]->pos = pos;
+    scn->shapes[sid]->norm = tang;
+    scn->shapes[sid]->texcoord = texcoord;
+    scn->shapes[sid]->color = color;
     scn->shapes[sid]->radius = (const ym::vec1f*)radius;
     scn->shapes[sid]->tangsp = nullptr;
 }
 
 //
+// Public API. See above.
+//
+int add_line_shape(scene* scn, int nlines, const ym::vec2i* lines, int nverts,
+    const ym::vec3f* pos, const ym::vec3f* tang, const ym::vec2f* texcoord,
+    const ym::vec4f* color, const float* radius) {
+    scn->shapes.push_back(new shape());
+    set_line_shape(scn, (int)scn->shapes.size() - 1, nlines, lines, nverts, pos,
+        tang, texcoord, color, radius);
+    return (int)scn->shapes.size() - 1;
+}
+
+//
 // Sets per-vertex material properties.
 //
-YTRACE_API void set_vert_material(scene* scn, int sid, const float3* ke,
-    const float3* kd, const float3* ks, const float* rs) {
+void set_vert_material(scene* scn, int sid, const ym::vec3f* ke,
+    const ym::vec3f* kd, const ym::vec3f* ks, const float* rs) {
     scn->shapes[sid]->ke = (const ym::vec3f*)ke;
     scn->shapes[sid]->kd = (const ym::vec3f*)kd;
     scn->shapes[sid]->ks = (const ym::vec3f*)ks;
@@ -378,7 +647,7 @@ YTRACE_API void set_vert_material(scene* scn, int sid, const float3* ke,
 //
 // Sets the intersection callbacks
 //
-YTRACE_API void set_intersection_callbacks(scene* scn, void* ctx,
+void set_intersection_callbacks(scene* scn, void* ctx,
     intersect_first_cb intersect_first, intersect_any_cb intersect_any) {
     scn->intersect_ctx = ctx;
     scn->intersect_first = intersect_first;
@@ -388,8 +657,7 @@ YTRACE_API void set_intersection_callbacks(scene* scn, void* ctx,
 //
 // Sets the logging callbacks
 //
-YTRACE_API void set_logging_callbacks(
-    scene* scn, void* ctx, logging_msg_cb logging_msg) {
+void set_logging_callbacks(scene* scn, void* ctx, logging_msg_cb logging_msg) {
     scn->logging_ctx = ctx;
     scn->logging_msg = logging_msg;
 }
@@ -397,15 +665,13 @@ YTRACE_API void set_logging_callbacks(
 //
 // Phong exponent to roughness. Public API, see above.
 //
-YTRACE_API float specular_exponent_to_roughness(float n) {
-    return sqrtf(2 / (n + 2));
-}
+float specular_exponent_to_roughness(float n) { return sqrtf(2 / (n + 2)); }
 
 //
 // Specular to fresnel eta. Public API, see above.
 //
-YTRACE_API void specular_fresnel_from_ks(
-    const float3& ks, float3& es, float3& esk) {
+void specular_fresnel_from_ks(
+    const ym::vec3f& ks, ym::vec3f& es, ym::vec3f& esk) {
     es = {(1 + std::sqrt(ks[0])) / (1 - std::sqrt(ks[0])),
         (1 + std::sqrt(ks[1])) / (1 - std::sqrt(ks[1])),
         (1 + std::sqrt(ks[2])) / (1 - std::sqrt(ks[2]))};
@@ -416,7 +682,7 @@ YTRACE_API void specular_fresnel_from_ks(
 // Compute shape element cdf for shape sampling.
 //
 template <typename T, typename Weight_callback>
-static inline std::vector<float> _compute_weight_cdf(int nelems, const T* elem,
+static std::vector<float> _compute_weight_cdf(int nelems, const T* elem,
     float* total_weight, const Weight_callback& weight_cb) {
     // prepare return
     auto cdf = std::vector<float>(nelems);
@@ -436,35 +702,99 @@ static inline std::vector<float> _compute_weight_cdf(int nelems, const T* elem,
     return cdf;
 }
 
+#ifndef YTRACE_NO_BVH
+//
+// internal intersection adapter
+//
+static inline intersect_point _internal_intersect_first(
+    void* ctx, const ym::ray3f& ray) {
+    auto scene_bvh = (ybvh::scene*)ctx;
+    auto isec = ybvh::intersect_scene(scene_bvh, ray, false);
+    auto ipt = ytrace::intersect_point();
+    ipt.dist = isec.dist;
+    ipt.iid = isec.iid;
+    ipt.sid = isec.sid;
+    ipt.eid = isec.eid;
+    ipt.euv = {isec.euv[0], isec.euv[1], isec.euv[2]};
+    return ipt;
+}
+
+//
+// internal intersection adapter
+//
+static inline bool _internal_intersect_any(void* ctx, const ym::ray3f& ray) {
+    auto scene_bvh = (ybvh::scene*)ctx;
+    return (bool)ybvh::intersect_scene(scene_bvh, ray, true);
+}
+#endif
+
+//
+// Init acceleation using yocto_bvh. Public API, see above.
+//
+void init_intersection(scene* scn) {
+#ifndef YTRACE_NO_BVH
+    scn->intersect_bvh = ybvh::make_scene();
+    auto shape_map = std::map<shape*, int>();
+    for (auto shp : scn->shapes) {
+        if (shp->points) {
+            shape_map[shp] = ybvh::add_point_shape(scn->intersect_bvh,
+                shp->nelems, (int*)shp->points, shp->nverts, shp->pos,
+                (float*)shp->radius);
+        } else if (shp->lines) {
+            shape_map[shp] =
+                ybvh::add_line_shape(scn->intersect_bvh, shp->nelems,
+                    shp->lines, shp->nverts, shp->pos, (float*)shp->radius);
+        } else if (shp->triangles) {
+            shape_map[shp] = ybvh::add_triangle_shape(scn->intersect_bvh,
+                shp->nelems, shp->triangles, shp->nverts, shp->pos, nullptr);
+        } else {
+            assert(false);
+        }
+    }
+    for (auto ist : scn->instances) {
+        ybvh::add_instance(scn->intersect_bvh, ist->frame, shape_map[ist->shp]);
+    }
+    ybvh::build_scene_bvh(scn->intersect_bvh);
+    set_intersection_callbacks(scn, scn->intersect_bvh,
+        _internal_intersect_first, _internal_intersect_any);
+#endif
+}
+
 //
 // Init lights. Public API, see above.
 //
-// TODO: cleanup loops
-YTRACE_API void init_lights(scene* scn) {
+void init_lights(scene* scn) {
     // clear old lights
     for (auto lgt : scn->lights) delete lgt;
     scn->lights.clear();
     scn->shadow_transmission = false;
-
     for (auto shp : scn->shapes) {
-        if (shp->mat->kt != ym::zero3f) scn->shadow_transmission = true;
-        if (shp->mat->ke == ym::zero3f) continue;
+        shp->area = 0;
+        shp->cdf.clear();
+    }
+
+    for (auto ist : scn->instances) {
+        if (ist->mat->kt != ym::zero3f) scn->shadow_transmission = true;
+        if (ist->mat->ke == ym::zero3f) continue;
         auto lgt = new light();
-        lgt->shp = shp;
-        if (shp->points) {
-            shp->cdf = _compute_weight_cdf(shp->nelems, shp->points, &shp->area,
-                [shp](auto e) { return 1; });
-        } else if (shp->lines) {
-            shp->cdf = _compute_weight_cdf(
-                shp->nelems, shp->lines, &shp->area, [shp](auto e) {
-                    return ym::length(shp->pos[e[1]] - shp->pos[e[0]]);
-                });
-        } else if (shp->triangles) {
-            shp->cdf = _compute_weight_cdf(
-                shp->nelems, shp->triangles, &shp->area, [shp](auto e) {
-                    return ym::triangle_area(
-                        shp->pos[e[0]], shp->pos[e[1]], shp->pos[e[2]]);
-                });
+        lgt->ist = ist;
+        auto shp = ist->shp;
+        if (shp->cdf.empty()) {
+            if (shp->points) {
+                shp->cdf = _compute_weight_cdf(shp->nelems, shp->points,
+                    &shp->area, [shp](ym::vec1i e) { return 1; });
+            } else if (ist->shp->lines) {
+                shp->cdf = _compute_weight_cdf(
+                    shp->nelems, shp->lines, &shp->area, [shp](ym::vec2i e) {
+                        return ym::length(shp->pos[e[1]] - shp->pos[e[0]]);
+                    });
+            } else if (shp->triangles) {
+                shp->cdf = _compute_weight_cdf(shp->nelems, shp->triangles,
+                    &shp->area, [shp](ym::vec3i e) {
+                        return ym::triangle_area(
+                            shp->pos[e[0]], shp->pos[e[1]], shp->pos[e[2]]);
+                    });
+            }
         }
         scn->lights.push_back(lgt);
     }
@@ -505,7 +835,6 @@ static inline _sampler _make_sampler(
     int i, int j, int s, int ns, rng_type rtype) {
     // we use various hashes to scramble the pixel values
     _sampler smp = {{0, 0}, i, j, s, 0, ns, rtype};
-    if (smp.rtype == rng_type::def) smp.rtype = rng_type::stratified;
     uint64_t sample_id = ((uint64_t)(i + 1)) << 0 | ((uint64_t)(j + 1)) << 15 |
                          ((uint64_t)(s + 1)) << 30;
     uint64_t initseq = ym::hash_uint64(sample_id);
@@ -548,7 +877,6 @@ static inline float _sample_next1f(_sampler* smp) {
     smp->d += 1;
 
     // make sure all sampled numbers are below 1
-    // TODO: use numeric_limits
     if (rn >= 1) rn = 1 - FLT_EPSILON;
 
     return rn;
@@ -624,7 +952,7 @@ struct point {
     type ptype = type::none;  // element type
 
     // light id -----------------------------
-    const shape* shp = nullptr;        // shape id used for MIS
+    const instance* ist = nullptr;     // instance id used for MIS
     const environment* env = nullptr;  // env id used for MIS
 
     // direction ----------------------------
@@ -634,12 +962,14 @@ struct point {
     ym::frame3f frame = ym::identity_frame3f;  // local frame
 
     // shading ------------------------------
-    ym::vec3f ke = ym::zero3f;  // material values
-    ym::vec3f kd = ym::zero3f;  // material values
-    ym::vec3f ks = ym::zero3f;  // material values
-    ym::vec3f kt = ym::zero3f;  // material values
-    float rs = 0;               // material values
-    bool use_phong = false;     // material values
+    material_type mtype = material_type::none;  // material type
+    ym::vec3f ke = ym::zero3f;                  // material values
+    ym::vec3f kd = ym::zero3f;                  // material values
+    ym::vec3f ks = ym::zero3f;                  // material values
+    ym::vec3f kt = ym::zero3f;                  // material values
+    float rs = 0;                               // material values
+    float op = 0;                               // material values
+    bool use_phong = false;                     // material values
 
     // helpers ------------------------------
     bool emission_only() const {
@@ -652,7 +982,7 @@ struct point {
 // Generates a ray ray_o, ray_d from a camera cam for image plane coordinate
 // uv and the lens coordinates luv.
 //
-static inline ym::ray3f _eval_camera(
+static ym::ray3f _eval_camera(
     const camera* cam, const ym::vec2f& uv, const ym::vec2f& luv) {
     auto h = 2 * std::tan(cam->yfov / 2);
     auto w = h * cam->aspect;
@@ -671,7 +1001,7 @@ static inline ym::vec4f _lookup_texture(
     if (txt->ldr) {
         auto v = ym::image_lookup(txt->width, txt->height, txt->ncomp, txt->ldr,
             ij[0], ij[1], (unsigned char)255);
-        return (srgb) ? ym::srgb_to_linear(v) : ym::byte_to_linear(v);
+        return (srgb) ? ym::srgb_to_linear(v) : ym::byte_to_float(v);
     } else if (txt->hdr) {
         return ym::image_lookup(
             txt->width, txt->height, txt->ncomp, txt->hdr, ij[0], ij[1], 1.0f);
@@ -684,7 +1014,7 @@ static inline ym::vec4f _lookup_texture(
 //
 // Wrapper for above function
 //
-static inline ym::vec4f _eval_texture(
+static ym::vec4f _eval_texture_(
     const texture* txt, const ym::vec2f& texcoord, bool srgb = true) {
     assert(txt);
     assert(txt->hdr || txt->ldr);
@@ -703,7 +1033,7 @@ static inline ym::vec4f _eval_texture(
     auto uv = st - ym::vec2f{(float)ij[0], (float)ij[1]};
 
     // get interpolation weights and indices
-    auto idx = std::array<ym::vec2i, 4>{ij, {ij[0], (ij[1] + 1) % wh[1]},
+    ym::vec2i idx[4] = {ij, {ij[0], (ij[1] + 1) % wh[1]},
         {(ij[0] + 1) % wh[0], ij[1]},
         {(ij[0] + 1) % wh[0], (ij[1] + 1) % wh[1]}};
     auto w = ym::vec4f{(1 - uv[0]) * (1 - uv[1]), (1 - uv[0]) * uv[1],
@@ -717,9 +1047,28 @@ static inline ym::vec4f _eval_texture(
 }
 
 //
+// Wrapper for above function
+//
+static ym::vec4f _eval_texture4(
+    const texture* txt, const ym::vec2f& texcoord, bool srgb = true) {
+    if (!txt) return {1, 1, 1, 1};
+    return _eval_texture_(txt, texcoord, srgb);
+}
+
+//
+// Wrapper for above function
+//
+static ym::vec3f _eval_texture3(
+    const texture* txt, const ym::vec2f& texcoord, bool srgb = true) {
+    if (!txt) return {1, 1, 1};
+    auto v = _eval_texture_(txt, texcoord, srgb);
+    return {v.x, v.y, v.z};
+}
+
+//
 // Evaluates emission.
 //
-static inline ym::vec3f _eval_emission(const point& pt) {
+static ym::vec3f _eval_emission(const point& pt) {
     if (pt.ke == ym::zero3f) return ym::zero3f;
     switch (pt.ptype) {
         case point::type::env: return pt.ke;
@@ -738,8 +1087,7 @@ static inline ym::vec3f _eval_emission(const point& pt) {
 // Compute the fresnel term for dielectrics. Implementation from
 // https://seblagarde.wordpress.com/2013/04/29/memo-on-fresnel-equations/
 //
-static inline ym::vec3f _eval_fresnel_dielectric(
-    float cosw, const ym::vec3f& eta_) {
+static ym::vec3f _eval_fresnel_dielectric(float cosw, const ym::vec3f& eta_) {
     auto eta = eta_;
     if (cosw < 0) {
         eta = 1.0f / eta;
@@ -769,7 +1117,7 @@ static inline ym::vec3f _eval_fresnel_dielectric(
 // Compute the fresnel term for metals. Implementation from
 // https://seblagarde.wordpress.com/2013/04/29/memo-on-fresnel-equations/
 //
-static inline ym::vec3f _eval_fresnel_metal(
+static ym::vec3f _eval_fresnel_metal(
     float cosw, const ym::vec3f& eta, const ym::vec3f& etak) {
     if (etak == ym::zero3f) return _eval_fresnel_dielectric(cosw, eta);
 
@@ -800,7 +1148,7 @@ static inline ym::vec3f _eval_fresnel_metal(
 //
 // Schlick approximation of Fresnel term
 //
-static inline ym::vec3f _eval_fresnel_schlick(const ym::vec3f& ks, float cosw) {
+static ym::vec3f _eval_fresnel_schlick(const ym::vec3f& ks, float cosw) {
     return ks + (ym::vec3f{1, 1, 1} - ks) *
                     std::pow(ym::clamp(1.0f - cosw, 0.0f, 1.0f), 5.0f);
 }
@@ -817,7 +1165,7 @@ static inline ym::vec3f _eval_fresnel_schlick(const ym::vec3f& ks, float cosw) {
 // - uses Kajiya-Kay for hair
 // - uses a hack for points
 //
-static inline ym::vec3f _eval_brdfcos(const point& pt, const ym::vec3f& wi) {
+static ym::vec3f _eval_brdfcos(const point& pt, const ym::vec3f& wi) {
     // exit if not needed
     if (pt.emission_only()) return ym::zero3f;
 
@@ -882,7 +1230,6 @@ static inline ym::vec3f _eval_brdfcos(const point& pt, const ym::vec3f& wi) {
 
                 if (!pt.use_phong) {
                     // evaluate GGX
-                    auto cos2 = ndh * ndh;
                     auto alpha2 = pt.rs * pt.rs;
                     auto di = (ndh * ndh) * (alpha2 - 1) + 1;
                     auto d = alpha2 / (ym::pif * di * di);
@@ -933,7 +1280,7 @@ static inline ym::vec3f _eval_brdfcos(const point& pt, const ym::vec3f& wi) {
 //
 // Compute the weight for sampling the BRDF
 //
-static inline float _weight_brdfcos(const point& pt, const ym::vec3f& wi) {
+static float _weight_brdfcos(const point& pt, const ym::vec3f& wi) {
     // skip if no component
     if (pt.emission_only()) return 0;
 
@@ -1004,7 +1351,7 @@ static inline float _weight_brdfcos(const point& pt, const ym::vec3f& wi) {
 //
 // Picks a direction based on the BRDF
 //
-static inline ym::vec3f _sample_brdfcos(
+static ym::vec3f _sample_brdfcos(
     const point& pt, float rnl, const ym::vec2f& rn) {
     // skip if no component
     if (pt.emission_only()) return ym::zero3f;
@@ -1085,8 +1432,7 @@ static inline ym::vec3f _sample_brdfcos(
 //
 // Create a point for an environment map. Resolves material with textures.
 //
-static inline point _eval_envpoint(
-    const environment* env, const ym::vec3f& wo) {
+static point _eval_envpoint(const environment* env, const ym::vec3f& wo) {
     // set shape data
     auto pt = point();
 
@@ -1109,8 +1455,7 @@ static inline point _eval_envpoint(
             (std::acos(ym::clamp(w[1], (float)-1, (float)1)) / ym::pif);
         auto phi = std::atan2(w[2], w[0]) / (2 * ym::pif);
         auto texcoord = ym::vec2f{phi, theta};
-        auto txt = _eval_texture(env->ke_txt, texcoord);
-        pt.ke = ym::lerp(pt.ke, {txt[0], txt[1], txt[2]}, txt[3]);
+        pt.ke *= _eval_texture3(env->ke_txt, texcoord);
     }
 
     // done
@@ -1134,20 +1479,25 @@ static inline ym::vec<float, N> _interpolate_value(
 //
 // Create a point for a shape. Resolves geometry and material with textures.
 //
-static inline point _eval_shapepoint(
-    const shape* shp, int eid, const ym::vec3f& euv, const ym::vec3f& wo) {
+static point _eval_shapepoint(
+    const instance* ist, int eid, const ym::vec3f& euv, const ym::vec3f& wo) {
     // set shape data
     auto pt = point();
 
-    // shape
-    pt.shp = shp;
+    // instance
+    pt.ist = ist;
 
     // direction
     pt.wo = wo;
 
+    // shortcuts
+    auto shp = ist->shp;
+    auto mat = ist->mat;
+
     // compute points and weights
-    auto pos = ym::zero3f, norm = ym::zero3f, color = ym::zero3f,
-         ke = ym::zero3f, kd = ym::zero3f, ks = ym::zero3f, kt = ym::zero3f;
+    auto pos = ym::zero3f, norm = ym::zero3f, ke = ym::zero3f, kd = ym::zero3f,
+         ks = ym::zero3f, kt = ym::zero3f;
+    auto color = ym::zero4f;
     auto texcoord = ym::zero2f;
     auto tangsp = ym::zero4f;
     auto rs = ym::zero1f;
@@ -1190,11 +1540,10 @@ static inline point _eval_shapepoint(
     }
 
     // handle normal map
-    if (shp->texcoord && shp->tangsp && shp->triangles && shp->mat->norm_txt) {
-        auto txt = _eval_texture(shp->mat->norm_txt, texcoord, false);
-        auto ntxt = ym::normalize(
-            ym::vec3f{txt[0], txt[1], txt[2]} * 2.0f - ym::vec3f{1, 1, 1});
-        ntxt = ym::normalize(ym::vec3f{ntxt[0], -ntxt[1], ntxt[2]});
+    if (shp->texcoord && shp->tangsp && shp->triangles && mat->norm_txt) {
+        auto txt = _eval_texture3(mat->norm_txt, texcoord, false) * 2.0f -
+                   ym::vec3f{1, 1, 1};
+        auto ntxt = ym::normalize(ym::vec3f{txt[0], -txt[1], txt[2]});
         auto frame = ym::make_frame3_fromzx(
             {0, 0, 0}, norm, {tangsp[0], tangsp[1], tangsp[2]});
         frame[1] *= tangsp[3];
@@ -1205,25 +1554,28 @@ static inline point _eval_shapepoint(
     pt.frame = ym::make_frame3_fromz(pos, norm);
 
     // transform to world space
-    pt.frame[3] = ym::transform_point(shp->frame, pt.frame[3]);
-    pt.frame[2] = ym::transform_direction(shp->frame, pt.frame[2]);
-    pt.frame[0] = ym::transform_direction(shp->frame, pt.frame[0]);
-    pt.frame[1] = ym::transform_direction(shp->frame, pt.frame[1]);
+    pt.frame[3] = ym::transform_point(ist->frame, pt.frame[3]);
+    pt.frame[2] = ym::transform_direction(ist->frame, pt.frame[2]);
+    pt.frame[0] = ym::transform_direction(ist->frame, pt.frame[0]);
+    pt.frame[1] = ym::transform_direction(ist->frame, pt.frame[1]);
 
     // sample material data
-    pt.ke = shp->mat->ke;
-    pt.kd = shp->mat->kd;
-    pt.ks = shp->mat->ks;
-    pt.kt = shp->mat->kt;
-    pt.rs = shp->mat->rs;
-    pt.use_phong = shp->mat->use_phong;
+    pt.mtype = ist->mat->mtype;
+    pt.ke = mat->ke;
+    pt.kd = mat->kd;
+    pt.ks = mat->ks;
+    pt.kt = mat->kt;
+    pt.rs = mat->rs;
+    pt.op = mat->op;
+    pt.use_phong = mat->use_phong;
 
     // handle surface color
     if (shp->color) {
-        pt.ke *= color;
-        pt.kd *= color;
-        pt.ks *= color;
-        pt.kt *= color;
+        auto c = ym::vec3f{color.x, color.y, color.z};
+        pt.ke *= c;
+        pt.kd *= c;
+        pt.ks *= c;
+        pt.kt *= c;
     }
 
     // handle per-vertex material
@@ -1235,26 +1587,74 @@ static inline point _eval_shapepoint(
 
     // handle textures
     if (shp->texcoord) {
-        if (shp->mat->ke_txt) {
-            auto txt = _eval_texture(shp->mat->ke_txt, texcoord);
-            pt.ke = ym::lerp(pt.ke, {txt[0], txt[1], txt[2]}, txt[3]);
+        if (mat->ke_txt) pt.ke *= _eval_texture3(mat->ke_txt, texcoord);
+        switch (mat->mtype) {
+            case material_type::none: break;
+            case material_type::emission_only: break;
+            case material_type::gltf_metallic_roughness: {
+                if (mat->kd_txt) {
+                    auto kd_txt = _eval_texture4(mat->kd_txt, texcoord);
+                    pt.kd *= {kd_txt.x, kd_txt.y, kd_txt.z};
+                    pt.op *= kd_txt.w;
+                }
+                if (mat->ks_txt) {
+                    auto ks_txt = _eval_texture4(mat->kd_txt, texcoord);
+                    pt.ks *= {ks_txt.z, ks_txt.z, ks_txt.z};
+                    pt.rs *= ks_txt.y;
+                }
+            } break;
+            case material_type::gltf_specular_glossiness: {
+                if (mat->kd_txt) {
+                    auto kd_txt = _eval_texture4(mat->kd_txt, texcoord);
+                    pt.kd *= {kd_txt.x, kd_txt.y, kd_txt.z};
+                    pt.op *= kd_txt.w;
+                }
+                if (mat->ks_txt) {
+                    auto ks_txt = _eval_texture4(mat->kd_txt, texcoord);
+                    pt.ks *= {ks_txt.x, ks_txt.y, ks_txt.z};
+                    pt.rs *= ks_txt.w;
+                }
+            } break;
+            case material_type::generic: {
+                if (mat->kd_txt) pt.kd *= _eval_texture3(mat->kd_txt, texcoord);
+                if (mat->ks_txt) pt.ks *= _eval_texture3(mat->ks_txt, texcoord);
+                if (mat->kt_txt) pt.kt *= _eval_texture3(mat->kt_txt, texcoord);
+                if (mat->rs_txt)
+                    pt.rs *= _eval_texture3(mat->rs_txt, texcoord).x;
+            } break;
         }
-        if (shp->mat->kd_txt) {
-            auto txt = _eval_texture(shp->mat->kd_txt, texcoord);
-            pt.kd = ym::lerp(pt.kd, {txt[0], txt[1], txt[2]}, txt[3]);
+        if (mat->occ_txt) {
+            auto occ = _eval_texture3(mat->occ_txt, texcoord);
+            pt.ke *= occ;
+            pt.kd *= occ;
+            pt.ks *= occ;
+            pt.kt *= occ;
         }
-        if (shp->mat->ks_txt) {
-            auto txt = _eval_texture(shp->mat->ks_txt, texcoord);
-            pt.ks = ym::lerp(pt.ks, {txt[0], txt[1], txt[2]}, txt[3]);
-        }
-        if (shp->mat->kt_txt) {
-            auto txt = _eval_texture(shp->mat->kt_txt, texcoord);
-            pt.kt = ym::lerp(pt.kt, {txt[0], txt[1], txt[2]}, txt[3]);
-        }
-        if (shp->mat->rs_txt) {
-            auto txt = _eval_texture(shp->mat->rs_txt, texcoord);
-            pt.rs = ym::lerp(pt.rs, txt[0], txt[3]);
-        }
+    }
+
+    // convert between material types
+    switch (mat->mtype) {
+        case material_type::none: break;
+        case material_type::emission_only: {
+            pt.kd = {0, 0, 0};
+            pt.ks = {0, 0, 0};
+            pt.kt = {0, 0, 0};
+            pt.op = 1;
+        } break;
+        case material_type::gltf_metallic_roughness: {
+            auto kb = pt.kd;
+            auto ks = ym::vec3f{0.04f, 0.04f, 0.04f};
+            auto m = pt.ks.x;
+            pt.kd = kb * (1 - m);
+            pt.ks = kb * m + ks * (1 - m);
+            pt.rs = pt.rs * pt.rs;
+            pt.kt = {0, 0, 0};
+        } break;
+        case material_type::gltf_specular_glossiness: {
+            pt.rs = (1 - pt.rs) * (1 - pt.rs);
+            pt.kt = {0, 0, 0};
+        } break;
+        case material_type::generic: break;
     }
 
     return pt;
@@ -1263,14 +1663,14 @@ static inline point _eval_shapepoint(
 //
 // Sample weight for a light point.
 //
-static inline float _weight_light(const point& lpt, const point& pt) {
+static float _weight_light(const point& lpt, const point& pt) {
     switch (lpt.ptype) {
         case point::type::env: {
             return 4 * ym::pif;
         } break;
         case point::type::point: {
             auto d = ym::dist(lpt.frame[3], pt.frame[3]);
-            return lpt.shp->area / (d * d);
+            return lpt.ist->shp->area / (d * d);
         } break;
         case point::type::line: {
             assert(false);
@@ -1278,8 +1678,8 @@ static inline float _weight_light(const point& lpt, const point& pt) {
         } break;
         case point::type::triangle: {
             auto d = ym::dist(lpt.frame[3], pt.frame[3]);
-            return lpt.shp->area * std::abs(ym::dot(lpt.frame[2], lpt.wo)) /
-                   (d * d);
+            return lpt.ist->shp->area *
+                   std::abs(ym::dot(lpt.frame[2], lpt.wo)) / (d * d);
         } break;
         default: {
             assert(false);
@@ -1291,26 +1691,25 @@ static inline float _weight_light(const point& lpt, const point& pt) {
 //
 // Picks a point on a light.
 //
-static inline point _sample_light(
+static point _sample_light(
     const light* lgt, const point& pt, float rne, const ym::vec2f& rn) {
-    if (lgt->shp) {
-        auto eid =
-            (int)(lower_bound(lgt->shp->cdf.begin(), lgt->shp->cdf.end(), rne) -
-                  lgt->shp->cdf.begin());
-        if (eid > lgt->shp->cdf.size() - 1) eid = (int)lgt->shp->cdf.size() - 1;
+    if (lgt->ist) {
+        auto shp = lgt->ist->shp;
+        auto eid = (int)(lower_bound(shp->cdf.begin(), shp->cdf.end(), rne) -
+                         shp->cdf.begin());
+        if (eid > shp->cdf.size() - 1) eid = (int)shp->cdf.size() - 1;
 
         auto euv = ym::zero3f;
-        if (lgt->shp->triangles) {
+        if (shp->triangles) {
             euv = {std::sqrt(rn[0]) * (1 - rn[1]), 1 - std::sqrt(rn[0]),
                 rn[1] * std::sqrt(rn[0])};
-        } else if (lgt->shp->lines) {
+        } else if (shp->lines) {
             euv = {1 - rn[0], rn[0], 0};
-        } else if (lgt->shp->points) {
+        } else if (shp->points) {
             euv = {1, 0, 0};
         } else
             assert(false);
-
-        auto lpt = _eval_shapepoint(lgt->shp, eid, euv, ym::zero3f);
+        auto lpt = _eval_shapepoint(lgt->ist, eid, euv, ym::zero3f);
         lpt.wo = ym::normalize(pt.frame[3] - lpt.frame[3]);
         return lpt;
     } else if (lgt->env) {
@@ -1355,12 +1754,11 @@ static inline ym::ray3f _offset_ray(
 //
 // Intersects a ray with the scn and return the point (or env point).
 //
-static inline point _intersect_scene(const scene* scn, const ym::ray3f& ray) {
-    auto isec = scn->intersect_first(
-        scn->intersect_ctx, ray.o, ray.d, ray.tmin, ray.tmax);
+static point _intersect_scene(const scene* scn, const ym::ray3f& ray) {
+    auto isec = scn->intersect_first(scn->intersect_ctx, ray);
     if (isec) {
         return _eval_shapepoint(
-            scn->shapes[isec.sid], isec.eid, isec.euv, -ray.d);
+            scn->instances[isec.iid], isec.eid, isec.euv, -ray.d);
     } else if (!scn->environments.empty()) {
         return _eval_envpoint(scn->environments[0], -ray.d);
     } else {
@@ -1371,7 +1769,7 @@ static inline point _intersect_scene(const scene* scn, const ym::ray3f& ray) {
 //
 // Intersects a scene and offsets the ray
 //
-static inline point _intersect_scene(const scene* scn, const point& pt,
+static point _intersect_scene(const scene* scn, const point& pt,
     const ym::vec3f& w, const render_params& params) {
     return _intersect_scene(scn, _offset_ray(pt, w, params));
 }
@@ -1387,12 +1785,12 @@ static inline point _intersect_scene(const scene* scn, const point& pt,
 //
 // Transparecy
 //
-static inline ym::vec3f _eval_transparency(const point& pt) { return pt.kt; }
+static ym::vec3f _eval_transparency(const point& pt) { return pt.kt; }
 
 //
 // Test occlusion
 //
-static inline ym::vec3f _eval_transmission(const scene* scn, const point& pt,
+static ym::vec3f _eval_transmission(const scene* scn, const point& pt,
     const point& lpt, const render_params& params) {
     if (scn->shadow_transmission) {
         auto cpt = pt;
@@ -1407,8 +1805,7 @@ static inline ym::vec3f _eval_transmission(const scene* scn, const point& pt,
         return weight;
     } else {
         auto shadow_ray = _offset_ray(pt, lpt, params);
-        return (scn->intersect_any(scn->intersect_ctx, shadow_ray.o,
-                   shadow_ray.d, shadow_ray.tmin, shadow_ray.tmax)) ?
+        return (scn->intersect_any(scn->intersect_ctx, shadow_ray)) ?
                    ym::zero3f :
                    ym::vec3f{1, 1, 1};
     }
@@ -1425,7 +1822,7 @@ static inline float _weight_mis(float w0, float w1) {
 //
 // Recursive path tracing.
 //
-static inline ym::vec4f _shade_pathtrace(const scene* scn, const ym::ray3f& ray,
+static ym::vec4f _shade_pathtrace(const scene* scn, const ym::ray3f& ray,
     _sampler* smp, const render_params& params) {
     // scn intersection
     auto pt = _intersect_scene(scn, ray);
@@ -1457,7 +1854,7 @@ static inline ym::vec4f _shade_pathtrace(const scene* scn, const ym::ray3f& ray,
         if (emission) l += weight * _eval_emission(pt);
 
         // direct – light
-        auto lgt = scn->lights[_sample_next1i(smp, scn->lights.size())];
+        auto lgt = scn->lights[_sample_next1i(smp, (int)scn->lights.size())];
         auto lpt =
             _sample_light(lgt, pt, _sample_next1f(smp), _sample_next2f(smp));
         auto lld = _eval_emission(lpt) * _eval_brdfcos(pt, -lpt.wo) *
@@ -1507,8 +1904,8 @@ static inline ym::vec4f _shade_pathtrace(const scene* scn, const ym::ray3f& ray,
 //
 // Recursive path tracing.
 //
-static inline ym::vec4f _shade_pathtrace_std(const scene* scn,
-    const ym::ray3f& ray, _sampler* smp, const render_params& params) {
+static ym::vec4f _shade_pathtrace_std(const scene* scn, const ym::ray3f& ray,
+    _sampler* smp, const render_params& params) {
     // scn intersection
     auto pt = _intersect_scene(scn, ray);
     if (pt.ptype == point::type::none ||
@@ -1538,15 +1935,14 @@ static inline ym::vec4f _shade_pathtrace_std(const scene* scn,
         // emission
         if (emission) l += weight * _eval_emission(pt);
         // direct
-        auto lgt = scn->lights[_sample_next1i(smp, scn->lights.size())];
+        auto lgt = scn->lights[_sample_next1i(smp, (int)scn->lights.size())];
         auto lpt =
             _sample_light(lgt, pt, _sample_next1f(smp), _sample_next2f(smp));
         auto ld = _eval_emission(lpt) * _eval_brdfcos(pt, -lpt.wo) *
                   _weight_light(lpt, pt) * (float)scn->lights.size();
         if (ld != ym::zero3f) {
             auto shadow_ray = _offset_ray(pt, lpt, params);
-            if (!scn->intersect_any(scn->intersect_ctx, shadow_ray.o,
-                    shadow_ray.d, shadow_ray.tmin, shadow_ray.tmax))
+            if (!scn->intersect_any(scn->intersect_ctx, shadow_ray))
                 l += weight * ld;
         }
 
@@ -1582,8 +1978,8 @@ static inline ym::vec4f _shade_pathtrace_std(const scene* scn,
 //
 // Recursive path tracing.
 //
-static inline ym::vec4f _shade_pathtrace_hack(const scene* scn,
-    const ym::ray3f& ray, _sampler* smp, const render_params& params) {
+static ym::vec4f _shade_pathtrace_hack(const scene* scn, const ym::ray3f& ray,
+    _sampler* smp, const render_params& params) {
     // scn intersection
     auto pt = _intersect_scene(scn, ray);
     if (pt.ptype == point::type::none ||
@@ -1624,15 +2020,14 @@ static inline ym::vec4f _shade_pathtrace_hack(const scene* scn,
         }
 
         // direct
-        auto lgt = scn->lights[_sample_next1i(smp, scn->lights.size())];
+        auto lgt = scn->lights[_sample_next1i(smp, (int)scn->lights.size())];
         auto lpt =
             _sample_light(lgt, pt, _sample_next1f(smp), _sample_next2f(smp));
         auto ld = _eval_emission(lpt) * _eval_brdfcos(pt, -lpt.wo) *
                   _weight_light(lpt, pt) * (float)scn->lights.size();
         if (ld != ym::zero3f) {
             auto shadow_ray = _offset_ray(pt, lpt, params);
-            if (!scn->intersect_any(scn->intersect_ctx, shadow_ray.o,
-                    shadow_ray.d, shadow_ray.tmin, shadow_ray.tmax))
+            if (!scn->intersect_any(scn->intersect_ctx, shadow_ray))
                 l += weight * ld;
         }
 
@@ -1667,7 +2062,7 @@ static inline ym::vec4f _shade_pathtrace_hack(const scene* scn,
 //
 // Direct illumination.
 //
-static inline ym::vec4f _shade_direct(const scene* scn, const ym::ray3f& ray,
+static ym::vec4f _shade_direct(const scene* scn, const ym::ray3f& ray,
     _sampler* smp, const render_params& params) {
     // scn intersection
     auto pt = _intersect_scene(scn, ray);
@@ -1690,9 +2085,7 @@ static inline ym::vec4f _shade_direct(const scene* scn, const ym::ray3f& ray,
                   _weight_light(lpt, pt);
         if (ld == ym::zero3f) continue;
         auto shadow_ray = _offset_ray(pt, lpt, params);
-        if (scn->intersect_any(scn->intersect_ctx, shadow_ray.o, shadow_ray.d,
-                shadow_ray.tmin, shadow_ray.tmax))
-            continue;
+        if (scn->intersect_any(scn->intersect_ctx, shadow_ray)) continue;
         l += ld;
     }
 
@@ -1703,7 +2096,7 @@ static inline ym::vec4f _shade_direct(const scene* scn, const ym::ray3f& ray,
 //
 // Eyelight for quick previewing.
 //
-static inline ym::vec4f _shade_eyelight(const scene* scn, const ym::ray3f& ray,
+static ym::vec4f _shade_eyelight(const scene* scn, const ym::ray3f& ray,
     _sampler* smp, const render_params& params) {
     // intersection
     point pt = _intersect_scene(scn, ray);
@@ -1730,15 +2123,14 @@ using shade_fn = ym::vec4f (*)(const scene* scn, const ym::ray3f& ray,
 //
 // Renders a block of pixels. Public API, see above.
 //
-YTRACE_API void _trace_block(const scene* scn, int width, int height,
-    ym::vec4f* img, int block_x, int block_y, int block_width, int block_height,
+void trace_block(const scene* scn, int width, int height, ym::vec4f* img,
+    int block_x, int block_y, int block_width, int block_height,
     int samples_min, int samples_max, const render_params& params) {
     auto cam = scn->cameras[params.camera_id];
     shade_fn shade;
     switch (params.stype) {
         case shader_type::eyelight: shade = _shade_eyelight; break;
         case shader_type::direct: shade = _shade_direct; break;
-        case shader_type::def:
         case shader_type::pathtrace: shade = _shade_pathtrace; break;
         default: assert(false); return;
     }
@@ -1775,22 +2167,16 @@ YTRACE_API void _trace_block(const scene* scn, int width, int height,
 }
 
 //
-// Renders a block of pixels. Public API, see above.
-//
-YTRACE_API void trace_block(const scene* scn, int width, int height,
-    float4* pixels, int block_x, int block_y, int block_width, int block_height,
-    int samples_min, int samples_max, const render_params& params) {
-    _trace_block(scn, width, height, (ym::vec4f*)pixels, block_x, block_y,
-        block_width, block_height, samples_min, samples_max, params);
-}
-
-//
 // Renders the whole image. Public API, see above.
 //
-YTRACE_API void trace_image(const scene* scn, int width, int height,
-    float4* pixels, const render_params& params) {
+void trace_image(const scene* scn, int width, int height, ym::vec4f* pixels,
+    const render_params& params) {
     trace_block(scn, width, height, pixels, 0, 0, width, height, 0,
         params.nsamples, params);
 }
 
 }  // namespace ytrace
+
+#ifndef _WIN32
+#pragma GCC diagnostic pop
+#endif

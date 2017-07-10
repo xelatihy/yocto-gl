@@ -2,14 +2,20 @@ cmake_minimum_required (VERSION 3.5)
 
 project (yocto-gl)
 
-option(INCLUDE_OPENGL_DEPS "Include OpenGL apps" OFF)
+option(YOCTO_NO_OPENGL "Skip OpenGL apps" OFF)
+option(YOCTO_CPP11 "Compile as C++11" OFF)
 
+if(NOT YOCTO_CPP11)
 set(CMAKE_CXX_STANDARD 14)
+else(NOT YOCTO_CPP11)
+set(CMAKE_CXX_STANDARD 11)
+endif(NOT YOCTO_CPP11)
+
 set(CMAKE_CXX_STANDARD_REQUIRED on)
 # set(CMAKE_BUILD_TYPE Debug)
 set(CMAKE_BUILD_TYPE Release)
 
-set(CMAKE_BINARY_DIR ${CMAKE_SOURCE_DIR}/../bin)
+set(CMAKE_BINARY_DIR ${CMAKE_SOURCE_DIR}/bin)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
@@ -21,53 +27,32 @@ endif(APPLE)
 if(WIN32)
     add_definitions(/D_CRT_SECURE_NO_WARNINGS /wd4018 /wd4244 /wd4305 /wd4800 /wd4267)
 endif(WIN32)
+if(NOT YOCTO_NO_OPENGL)
+    add_definitions(-DYOCTO_OPENGL_APPS)
+endif(NOT YOCTO_NO_OPENGL)
 
-set(app_files
-    yapp.h
-    yapp.cpp
-    tinyply.h
-    tinyply.cpp
-)
-
-if(INCLUDE_OPENGL_DEPS)
-    set(app_files
-        ${app_files}
-        yapp_ui.cpp
-    )
-endif(INCLUDE_OPENGL_DEPS)
-
-add_library(app STATIC ${app_files})
-
-target_link_libraries(app yocto)
-
-add_executable(ysym ysym.cpp)
-add_executable(ytestgen ytestgen.cpp)
-add_executable(ytrace ytrace.cpp)
+add_executable(ysym ysym.cpp yscene.h)
+add_executable(ytestgen ytestgen.cpp ext/ArHosekSkyModel.cpp)
+add_executable(ytrace ytrace.cpp yscene.h)
 add_executable(yobj2gltf yobj2gltf.cpp)
+add_executable(ygltfproc ygltfproc.cpp)
 add_executable(yimproc yimproc.cpp)
 
-target_link_libraries(ysym yocto app)
-target_link_libraries(ytestgen yocto app)
-target_link_libraries(ytrace yocto app)
+target_link_libraries(ysym yocto)
+target_link_libraries(ytestgen yocto)
+target_link_libraries(ytrace yocto)
 target_link_libraries(yobj2gltf yocto)
+target_link_libraries(ygltfproc yocto)
 target_link_libraries(yimproc yocto)
 
 if(UNIX AND NOT APPLE)
-    set_target_properties(ytrace PROPERTIES COMPILE_FLAGS -pthread LINK_FLAGS -pthread)
+    find_package(Threads REQUIRED)
 endif(UNIX AND NOT APPLE)
 
-if(INCLUDE_OPENGL_DEPS)
-    add_executable(yisym yisym.cpp)
-    add_executable(yshade yshade.cpp)
-    add_executable(yitrace yitrace.cpp)
+if(NOT YOCTO_NO_OPENGL)
+    add_executable(yview yview.cpp yscene.h)
     add_executable(yimview yimview.cpp)
 
-    target_link_libraries(yisym yocto app)
-    target_link_libraries(yshade yocto app)
-    target_link_libraries(yimview yocto app)
-    target_link_libraries(yitrace yocto app)
-
-    if(UNIX AND NOT APPLE)
-        set_target_properties(yitrace PROPERTIES COMPILE_FLAGS -pthread LINK_FLAGS -pthread)
-    endif(UNIX AND NOT APPLE)
-endif(INCLUDE_OPENGL_DEPS)
+    target_link_libraries(yview yocto)
+    target_link_libraries(yimview yocto)
+endif(NOT YOCTO_NO_OPENGL)

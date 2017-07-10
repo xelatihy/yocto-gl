@@ -1,0 +1,485 @@
+
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+          <link rel="stylesheet" href="style.css">
+        </head>
+        <body>
+        <header></header>
+        <article>
+        <h1>Yocto/Bvh</h1>
+<p>Ray-intersection and closet-point routines supporting points,
+lines, triangles and tetrahedra accelerated by a two-level bounding volume
+hierarchy (BVH). Tetrahedra support is still a work in progress.</p>
+<p>The scene model is comprised of a set of shapes, each with its own BVH.
+Shapes are collections of points, lines, triangles or tetrahedras. each
+shape may contain only one element type. Shapes are organized into a scene
+by creating shape instances, each of which with its own transform. For now,
+we only support rigid transform (translation and rotation). But eventually
+we might be able to support generic transforms. Shape data is shared with
+application and not copied to save memory. Instance data is instead
+kept internally to allow for more flexibility.</p>
+<p>The library supports two main queries. Ray-scene intersection for raytracing
+and point-scene overlap test for collision detection. Also for collision
+detection we support shape bounds overlap for broad-phase collisions.
+Queries and BVH build can be performed over the whole single or single
+shapes.</p>
+<p>This library depends in yocto_math.h</p>
+<h2>Usage</h2>
+<ol>
+<li>create a scene with <code>make_scene()</code></li>
+<li>for each shape, add shape data and transforms with <code>add_point_shape()</code>,
+   <code>add_line_shape()</code>, <code>add_triangle_shape()</code> and <code>add_tetra_shape()</code>; to
+   modify the frame call <code>set_shape_frame()</code></li>
+<li>add shape instances with <code>add_instance()</code></li>
+<li>build the bvh with <code>build_scene_bvh()</code></li>
+<li>perform ray-interseciton tests with <code>intersect_ray()</code><ul>
+<li>use early_exit=false if you want to know the closest hit point</li>
+<li>use early_exit=false if you only need to know whether there is a hit</li>
+<li>for points and lines, a radius is required</li>
+<li>for triangle and tetrahedra, the radius is ignored</li>
+</ul>
+</li>
+<li>perform point overlap tests with <code>overlap_point()</code> to if a point overlaps
+      with an element within a maximum distance<ul>
+<li>use early_exit as above</li>
+<li>for all primitives, a radius is used if defined, but should
+  be very small compared to the size of the primitive since the radius
+  overlap is approximate</li>
+</ul>
+</li>
+<li>perform shape overlap queries with <code>overlap_shape_bounds()</code></li>
+<li>use <code>refit_bvh()</code> to recompute the bvh bounds if transforms or vertices
+   are (you should rebuild the bvh for large changes); update the instances'
+   transforms with <code>set_instance_frame()</code>; shapes use shared memory, so
+   no explicit update is necessary</li>
+</ol>
+<h2>History</h2>
+<ul>
+<li>v 0.18: faster internal intersection</li>
+<li>v 0.17: removal of SAH build option (better use embree instead)</li>
+<li>v 0.16: use yocto_math in the interface and remove inline compilation</li>
+<li>v 0.15: move to add api</li>
+<li>v 0.14: added instances</li>
+<li>v 0.13: switch to .h/.cpp pair</li>
+<li>v 0.12: doxygen comments</li>
+<li>v 0.11: opaque API (allows for changing internals without altering API)</li>
+<li>v 0.10: internally use pointers for performance transparency</li>
+<li>v 0.9: [API change] use rigid frames rather than linear transforms</li>
+<li>v 0.8: [API change] added support for tetrahdedra and explicit shape ids</li>
+<li>v 0.7: [major API change] move to modern C++ interface</li>
+<li>v 0.6: internal refactoring</li>
+<li>v 0.5: removal of C interface</li>
+<li>v 0.4: use of STL containers</li>
+<li>v 0.3: cleaner interface based on opaque scene</li>
+<li>v 0.2: better internal intersections and cleaner bvh stats</li>
+<li>v 0.1: C++ implementation</li>
+<li>v 0.0: initial release in C99</li>
+</ul>
+<h2>Acknowledgements</h2>
+<p>This library includes code from "Real-Time Collision Detection"
+by Christer Ericson and from the Journal of Graphics Techniques.</p>
+<h2>Namespace ybvh</h2>
+<p>Accellerated ray-intersection and closet-point queries.</p>
+<h3>Struct scene</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">scene</span><span class="p">;</span>
+</code></pre></div>
+
+
+<p>Opaque BVH scene.</p>
+<h3>Function make_scene()</h3>
+<div class="codehilite"><pre><code><span></span><span class="n">scene</span><span class="o">*</span> <span class="nf">make_scene</span><span class="p">();</span>
+</code></pre></div>
+
+
+<p>Init scene.</p>
+<h3>Function free_scene()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">free_scene</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Free scene.</p>
+<ul>
+<li>Parameters:<ul>
+<li>scn: scene to free</li>
+</ul>
+</li>
+</ul>
+<h3>Function add_point_shape()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">int</span> <span class="nf">add_point_shape</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="kt">int</span> <span class="n">npoints</span><span class="p">,</span> <span class="k">const</span> <span class="kt">int</span><span class="o">*</span> <span class="n">point</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nverts</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">*</span> <span class="n">pos</span><span class="p">,</span> <span class="k">const</span> <span class="kt">float</span><span class="o">*</span> <span class="n">radius</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Add shape</p>
+<ul>
+<li>Parameters:<ul>
+<li>scn: scene</li>
+<li>npoints/point: point indices</li>
+<li>nverts: number of vertices</li>
+<li>pos/radius: vertex position and radius</li>
+</ul>
+</li>
+<li>Returns:<ul>
+<li>shape id</li>
+</ul>
+</li>
+</ul>
+<h3>Function add_line_shape()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">int</span> <span class="nf">add_line_shape</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nlines</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec2i</span><span class="o">*</span> <span class="n">lines</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nverts</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">*</span> <span class="n">pos</span><span class="p">,</span> <span class="k">const</span> <span class="kt">float</span><span class="o">*</span> <span class="n">radius</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Add shape.</p>
+<ul>
+<li>Parameters:<ul>
+<li>scn: scene</li>
+<li>nlines/line: line indices</li>
+<li>nverts: number of vertices</li>
+<li>pos/radius: vertex position and radius</li>
+</ul>
+</li>
+<li>Returns:<ul>
+<li>shape id</li>
+</ul>
+</li>
+</ul>
+<h3>Function add_triangle_shape()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">int</span> <span class="nf">add_triangle_shape</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="kt">int</span> <span class="n">ntriangles</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3i</span><span class="o">*</span> <span class="n">triangles</span><span class="p">,</span>
+    <span class="kt">int</span> <span class="n">nverts</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">*</span> <span class="n">pos</span><span class="p">,</span> <span class="k">const</span> <span class="kt">float</span><span class="o">*</span> <span class="n">radius</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Add shape</p>
+<ul>
+<li>Parameters:<ul>
+<li>scn: scene</li>
+<li>ntriange/triangles: triangle indices</li>
+<li>nverts: number of vertices</li>
+<li>pos/radius: vertex position and radius</li>
+</ul>
+</li>
+<li>Returns:<ul>
+<li>shape id</li>
+</ul>
+</li>
+</ul>
+<h3>Function add_tetra_shape()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">int</span> <span class="nf">add_tetra_shape</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="kt">int</span> <span class="n">ntetra</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec4i</span><span class="o">*</span> <span class="n">tetra</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nverts</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">*</span> <span class="n">pos</span><span class="p">,</span> <span class="k">const</span> <span class="kt">float</span><span class="o">*</span> <span class="n">radius</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Add shape</p>
+<ul>
+<li>Parameters:<ul>
+<li>scn: scene</li>
+<li>npoints/point: point indices</li>
+<li>ntetra/tetra: tetrahedra indices</li>
+<li>nverts: number of vertices</li>
+<li>pos/radius: vertex position and radius</li>
+</ul>
+</li>
+<li>Returns:<ul>
+<li>shape id</li>
+</ul>
+</li>
+</ul>
+<h3>Function add_point_shape()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">int</span> <span class="nf">add_point_shape</span><span class="p">(</span>
+    <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nverts</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">*</span> <span class="n">pos</span><span class="p">,</span> <span class="k">const</span> <span class="kt">float</span><span class="o">*</span> <span class="n">radius</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Add shape</p>
+<ul>
+<li>Parameters:<ul>
+<li>scn: scene</li>
+<li>nverts: number of vertices</li>
+<li>pos/radius: vertex position and radius</li>
+</ul>
+</li>
+<li>Returns:<ul>
+<li>shape id</li>
+</ul>
+</li>
+</ul>
+<h3>Function add_instance()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">int</span> <span class="nf">add_instance</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">frame3f</span><span class="o">&amp;</span> <span class="n">frame</span><span class="p">,</span> <span class="kt">int</span> <span class="n">sid</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Add an instance.</p>
+<ul>
+<li>Parameters:<ul>
+<li>scn: scene</li>
+<li>frame: instance transform</li>
+<li>sid: shape id</li>
+</ul>
+</li>
+<li>Returns:<ul>
+<li>instance id</li>
+</ul>
+</li>
+</ul>
+<h3>Function set_instance_frame()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_instance_frame</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="kt">int</span> <span class="n">iid</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">frame3f</span><span class="o">&amp;</span> <span class="n">frame</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Set an instance frame.</p>
+<ul>
+<li>Parameters:<ul>
+<li>scn: scene</li>
+<li>iid: instance id</li>
+<li>frame: shape transform</li>
+</ul>
+</li>
+</ul>
+<h3>Function build_scene_bvh()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">build_scene_bvh</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">equalsize</span> <span class="o">=</span> <span class="nb">true</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">do_shapes</span> <span class="o">=</span> <span class="nb">true</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Builds a scene BVH.</p>
+<ul>
+<li>Parameters:<ul>
+<li>scn: object to build the bvh for</li>
+<li>equalsize: space-splitting tree (otherwise balanced tree)</li>
+<li>do_shapes: build shapes</li>
+</ul>
+</li>
+</ul>
+<h3>Function build_shape_bvh()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">build_shape_bvh</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="kt">int</span> <span class="n">sid</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">equalsize</span> <span class="o">=</span> <span class="nb">true</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Builds a shape BVH.</p>
+<ul>
+<li>Parameters:<ul>
+<li>scn: object to build the bvh for</li>
+<li>sid: required shape</li>
+<li>equalsize: space-splitting tree (otherwise balanced tree)</li>
+</ul>
+</li>
+</ul>
+<h3>Function refit_scene_bvh()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">refit_scene_bvh</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">do_shapes</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Refit the bounds of each shape for moving objects. Use this only to avoid
+a rebuild, but note that queries are likely slow if objects move a lot.
+Before calling refit, set the scene data.</p>
+<ul>
+<li>Parameters:<ul>
+<li>scn: scene to refit</li>
+<li>do_instances: refit instances</li>
+<li>do_shapes: refit shapes</li>
+</ul>
+</li>
+</ul>
+<h3>Function refit_shape_bvh()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">refit_shape_bvh</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="kt">int</span> <span class="n">sid</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Refit the bounds of each shape for moving objects. Use this only to avoid
+a rebuild, but note that queries are likely slow if objects move a lot.
+Before calling refit, set the scene data.</p>
+<ul>
+<li>Parameters:<ul>
+<li>scn: scene to refit</li>
+<li>sid: shape id</li>
+</ul>
+</li>
+</ul>
+<h3>Struct intersection_point</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">intersection_point</span> <span class="p">{</span>
+    <span class="kt">float</span> <span class="n">dist</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">iid</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">sid</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">eid</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+    <span class="n">ym</span><span class="o">::</span><span class="n">vec4f</span> <span class="n">euv</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">};</span>
+    <span class="k">operator</span> <span class="nf">bool</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span> 
+<span class="p">}</span>
+</code></pre></div>
+
+
+<p>BVH intersection.</p>
+<ul>
+<li>Members:<ul>
+<li>dist:      distance</li>
+<li>iid:      instance index</li>
+<li>sid:      shape index</li>
+<li>eid:      element index</li>
+<li>euv:      element baricentric coordinates</li>
+<li>operator bool():      Check whether it was a hit.</li>
+</ul>
+</li>
+</ul>
+<h3>Function intersect_scene()</h3>
+<div class="codehilite"><pre><code><span></span><span class="n">intersection_point</span> <span class="nf">intersect_scene</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">ray3f</span><span class="o">&amp;</span> <span class="n">ray</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">early_exit</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Intersect the scene with a ray. Find any interstion if early_exit, otherwise
+find first intersection.</p>
+<ul>
+<li>Parameters:<ul>
+<li>scn: scene to intersect</li>
+<li>ray: ray</li>
+<li>early_exit: whether to stop at the first found hit</li>
+</ul>
+</li>
+<li>Returns:<ul>
+<li>intersection point</li>
+</ul>
+</li>
+</ul>
+<h3>Function intersect_shape()</h3>
+<div class="codehilite"><pre><code><span></span><span class="n">intersection_point</span> <span class="nf">intersect_shape</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="kt">int</span> <span class="n">sid</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">ray3f</span><span class="o">&amp;</span> <span class="n">ray</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">early_exit</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Intersect the scene with a ray. Find any interstion if early_exit, otherwise
+find first intersection.</p>
+<ul>
+<li>Parameters:<ul>
+<li>scn: scene to intersect</li>
+<li>sid: shape id</li>
+<li>ray: ray</li>
+<li>early_exit: whether to stop at the first found hit</li>
+</ul>
+</li>
+<li>Returns:<ul>
+<li>intersection point</li>
+</ul>
+</li>
+</ul>
+<h3>Function intersect_instance()</h3>
+<div class="codehilite"><pre><code><span></span><span class="n">intersection_point</span> <span class="nf">intersect_instance</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="kt">int</span> <span class="n">iid</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">ray3f</span><span class="o">&amp;</span> <span class="n">ray</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">early_exit</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Intersect the scene with a ray. Find any interstion if early_exit, otherwise
+find first intersection.</p>
+<ul>
+<li>Parameters:<ul>
+<li>scn: scene to intersect</li>
+<li>sid: shape id</li>
+<li>ray: ray</li>
+<li>early_exit: whether to stop at the first found hit</li>
+</ul>
+</li>
+<li>Returns:<ul>
+<li>intersection point</li>
+</ul>
+</li>
+</ul>
+<h3>Function overlap_instance_bounds()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">overlap_instance_bounds</span><span class="p">(</span><span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn1</span><span class="p">,</span> <span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn2</span><span class="p">,</span>
+    <span class="kt">bool</span> <span class="n">conservative</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">exclude_duplicates</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">exclude_self</span><span class="p">,</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">ym</span><span class="o">::</span><span class="n">vec2i</span><span class="o">&gt;*</span> <span class="n">overlaps</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Returns a list of instance pairs that can possibly overlap by checking only
+they axis aligned bouds. This is only a conservative check useful for
+collision detection.</p>
+<ul>
+<li>Parameters:<ul>
+<li>scn1, scn2: scenes to overlap</li>
+<li>conservative: use conservative checks</li>
+<li>skip_self: exlude self intersections</li>
+<li>skip_duplicates: exlude intersections (i1,i2) if (i2,i1)
+  is already present</li>
+</ul>
+</li>
+<li>Out Parameters:<ul>
+<li>overlaps: vectors of shape overlaps</li>
+</ul>
+</li>
+</ul>
+<h3>Function overlap_scene()</h3>
+<div class="codehilite"><pre><code><span></span><span class="n">intersection_point</span> <span class="nf">overlap_scene</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">pt</span><span class="p">,</span> <span class="kt">float</span> <span class="n">max_dist</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">early_exit</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Finds the closest element that overlaps a point within a given radius.</p>
+<ul>
+<li>Parameters:<ul>
+<li>scene: scene to check</li>
+<li>pt: ray origin</li>
+<li>max_dist: max point distance</li>
+<li>early_exit: whether to stop at the first found hit</li>
+</ul>
+</li>
+<li>Returns:<ul>
+<li>overlap point</li>
+</ul>
+</li>
+</ul>
+<h3>Function overlap_shape()</h3>
+<div class="codehilite"><pre><code><span></span><span class="n">intersection_point</span> <span class="nf">overlap_shape</span><span class="p">(</span><span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="kt">int</span> <span class="n">sid</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">pt</span><span class="p">,</span>
+    <span class="kt">float</span> <span class="n">max_dist</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">early_exit</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Finds the closest element that overlaps a point within a given radius.</p>
+<ul>
+<li>Parameters:<ul>
+<li>scene: scene to check</li>
+<li>sid: shape id</li>
+<li>pt: ray origin</li>
+<li>max_dist: max point distance</li>
+<li>early_exit: whether to stop at the first found hit</li>
+</ul>
+</li>
+<li>Returns:<ul>
+<li>overlap point</li>
+</ul>
+</li>
+</ul>
+<h3>Function overlap_instance()</h3>
+<div class="codehilite"><pre><code><span></span><span class="n">intersection_point</span> <span class="nf">overlap_instance</span><span class="p">(</span><span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="kt">int</span> <span class="n">iid</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">pt</span><span class="p">,</span> <span class="kt">float</span> <span class="n">max_dist</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">early_exit</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Finds the closest element that overlaps a point within a given radius.</p>
+<ul>
+<li>Parameters:<ul>
+<li>scene: scene to check</li>
+<li>iid: instance id</li>
+<li>pt: ray origin</li>
+<li>max_dist: max point distance</li>
+<li>early_exit: whether to stop at the first found hit</li>
+</ul>
+</li>
+<li>Returns:<ul>
+<li>overlap point</li>
+</ul>
+</li>
+</ul>
+<h3>Function compute_bvh_stats()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">compute_bvh_stats</span><span class="p">(</span><span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">include_shapes</span><span class="p">,</span> <span class="kt">int</span><span class="o">&amp;</span> <span class="n">nprims</span><span class="p">,</span>
+    <span class="kt">int</span><span class="o">&amp;</span> <span class="n">ninternals</span><span class="p">,</span> <span class="kt">int</span><span class="o">&amp;</span> <span class="n">nleaves</span><span class="p">,</span> <span class="kt">int</span><span class="o">&amp;</span> <span class="n">min_depth</span><span class="p">,</span> <span class="kt">int</span><span class="o">&amp;</span> <span class="n">max_depth</span><span class="p">,</span>
+    <span class="kt">int</span> <span class="n">req_shape</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Compute BVH stats.</p>
+        <article>
+        <footer></footer>
+        </body>
+        </html>
+    
