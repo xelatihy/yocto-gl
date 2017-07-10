@@ -36,6 +36,7 @@ Collision Detection" by Christer Ericson and public domain code from
 
 ## History
 
+- v 0.15: enable specialization always
 - v 0.14: move timer to Yocto/Utils
 - v 0.13: more shape functions
 - v 0.12: documentation update

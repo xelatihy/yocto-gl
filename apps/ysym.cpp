@@ -81,7 +81,7 @@ ysym::scene* make_simulation_scene(const yobj::scene* scene) {
 
     // add each instance (support only one shape per instance)
     for (auto ist : scene->instances) {
-        auto shp = ist->mesh->shapes[0];
+        auto shp = ist->msh->shapes[0];
         ysym::add_rigid_body(simulation_scene, to_frame(ym::mat4f(ist->xform)),
             shape_map.at(shp), material_map.at(shp->mat), {0, 0, 0}, {0, 0, 0});
     }
@@ -118,9 +118,9 @@ ysym::scene* make_simulation_scene(const ygltf::scene_group* scene) {
     // add each instance (support only one shape per instance)
     auto instances = ygltf::get_mesh_nodes(scene->scenes[0]);
     for (auto ist : instances) {
-        auto shp = ist->mesh->shapes[0];
+        auto shp = ist->msh->shapes[0];
         ysym::add_rigid_body(simulation_scene, to_frame(ym::mat4f(ist->xform)),
-            shape_map.at(shp), material_map.at(shp->material), {0, 0, 0},
+            shape_map.at(shp), material_map.at(shp->mat), {0, 0, 0},
             {0, 0, 0});
     }
 

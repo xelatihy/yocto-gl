@@ -72,6 +72,8 @@
 ///
 ///
 /// ## History
+///
+/// - v 0.13: change variable names for compilation on gcc
 /// - v 0.12: removed explicit root nodes
 /// - v 0.11: added camera near/far to high-level interface
 /// - v 0.10: added moprhing to high-level interface
@@ -397,7 +399,7 @@ struct shape {
     /// name of the mesh that enclosed it
     std::string name = "";
     /// material reference
-    material* material = nullptr;
+    material* mat = nullptr;
 
     /// vertex position
     std::vector<ym::vec3f> pos;
@@ -459,11 +461,11 @@ struct node {
     /// name
     std::string name = "";
     /// camera reference
-    camera* camera = nullptr;
+    camera* cam = nullptr;
     /// mesh reference
-    mesh* mesh = nullptr;
+    mesh* msh = nullptr;
     /// mesh reference
-    skin* skin = nullptr;
+    skin* skn = nullptr;
     /// children
     std::vector<node*> children;
 

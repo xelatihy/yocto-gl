@@ -2865,7 +2865,7 @@ scene_group* gltf_to_scenes(const glTF* gltf, int scene_idx) {
         for (auto gprim : gmesh->primitives) {
             auto prim = new shape();
             if (gprim->material) {
-                prim->material = scns->materials[(int)gprim->material];
+                prim->mat = scns->materials[(int)gprim->material];
             }
             // vertex data
             for (auto gattr : gprim->attributes) {
@@ -3072,9 +3072,9 @@ scene_group* gltf_to_scenes(const glTF* gltf, int scene_idx) {
         auto node = new ygltf::node();
         node->name = gnode->name;
         node->local_xform = node_transform(gnode);
-        node->camera =
+        node->cam =
             (!gnode->camera) ? nullptr : scns->cameras[(int)gnode->camera];
-        node->mesh = (!gnode->mesh) ? nullptr : scns->meshes[(int)gnode->mesh];
+        node->msh = (!gnode->mesh) ? nullptr : scns->meshes[(int)gnode->mesh];
         node->translation = gnode->translation;
         node->rotation = gnode->rotation;
         node->scale = gnode->scale;
@@ -3095,8 +3095,8 @@ scene_group* gltf_to_scenes(const glTF* gltf, int scene_idx) {
 
     // fix node morph weights
     for (auto node : scns->nodes) {
-        if (!node->mesh) continue;
-        for (auto shp : node->mesh->shapes) {
+        if (!node->msh) continue;
+        for (auto shp : node->msh->shapes) {
             if (node->morph_weights.size() < shp->morph_targets.size()) {
                 node->morph_weights.resize(shp->morph_targets.size());
             }
@@ -3207,7 +3207,7 @@ scene_group* gltf_to_scenes(const glTF* gltf, int scene_idx) {
     // set skin pointers
     for (auto nid = 0; nid < gltf->nodes.size(); nid++) {
         if (!gltf->nodes[nid]->skin) continue;
-        scns->nodes[nid]->skin = scns->skins[(int)gltf->nodes[nid]->skin];
+        scns->nodes[nid]->skn = scns->skins[(int)gltf->nodes[nid]->skin];
     }
 
     // convert scenes
@@ -3471,7 +3471,7 @@ glTF* scenes_to_gltf(const scene_group* scns, const std::string& buffer_uri) {
             auto pid = std::to_string(j);
             auto prim = new glTFMeshPrimitive();
             prim->material =
-                glTFid<glTFMaterial>(index(scns->materials, gprim->material));
+                glTFid<glTFMaterial>(index(scns->materials, gprim->mat));
             if (!gprim->pos.empty())
                 prim->attributes["POSITION"] = add_accessor(gid + pid + "_pos",
                     glTFAccessorType::Vec3, glTFAccessorComponentType::Float,
@@ -3579,8 +3579,8 @@ glTF* scenes_to_gltf(const scene_group* scns, const std::string& buffer_uri) {
     for (auto node : scns->nodes) {
         auto gnode = new glTFNode();
         gnode->name = node->name;
-        gnode->camera = glTFid<glTFCamera>(index(scns->cameras, node->camera));
-        gnode->mesh = glTFid<glTFMesh>(index(scns->meshes, node->mesh));
+        gnode->camera = glTFid<glTFCamera>(index(scns->cameras, node->cam));
+        gnode->mesh = glTFid<glTFMesh>(index(scns->meshes, node->msh));
         gnode->matrix = node->matrix;
         gnode->translation = node->translation;
         gnode->rotation = node->rotation;
@@ -3619,8 +3619,8 @@ glTF* scenes_to_gltf(const scene_group* scns, const std::string& buffer_uri) {
     nid = 0;
     for (auto node : scns->nodes) {
         auto gnode = gltf->nodes[nid++];
-        if (node->skin) {
-            gnode->skin = glTFid<glTFSkin>{index(scns->skins, node->skin)};
+        if (node->skn) {
+            gnode->skin = glTFid<glTFSkin>{index(scns->skins, node->skn)};
         }
     }
 
@@ -3766,9 +3766,9 @@ ym::bbox3f compute_scene_bounds(const scene_group* scn) {
     auto bbox = ym::invalid_bbox3f;
     if (!scn->nodes.empty()) {
         for (auto ist : scn->nodes) {
-            if (ist->mesh)
+            if (ist->msh)
                 bbox += ym::transform_bbox(
-                    ym::mat4f(ist->xform), bbox_meshes.at(ist->mesh));
+                    ym::mat4f(ist->xform), bbox_meshes.at(ist->msh));
         }
     } else {
         for (auto mesh : scn->meshes) bbox += bbox_meshes[mesh];
@@ -3803,7 +3803,7 @@ void add_tangent_space(scene_group* scn) {
         for (auto shp : msh->shapes) {
             if (shp->triangles.empty()) continue;
             if (!shp->tangsp.empty() || shp->texcoord.empty() ||
-                !shp->material->normal_txt)
+                !shp->mat->normal_txt)
                 continue;
             shp->tangsp.resize(shp->pos.size());
             ym::compute_tangent_frame(shp->triangles, shp->pos, shp->norm,
@@ -3848,7 +3848,7 @@ void add_nodes(scene_group* scn) {
     for (auto mesh : scn->meshes) {
         auto ist = new node();
         ist->name = mesh->name;
-        ist->mesh = mesh;
+        ist->msh = mesh;
         scn->nodes.push_back(ist);
     }
 }
@@ -3939,7 +3939,7 @@ void add_default_cameras(scene_group* scns) {
             cam->focus = ym::length(to - from);
             auto node = new ygltf::node();
             node->matrix = ym::to_mat(ym::lookat_frame3(from, to, up));
-            node->camera = cam;
+            node->cam = cam;
             node->name = cam->name;
             scns->cameras.push_back(cam);
             scns->nodes.push_back(node);
@@ -4159,8 +4159,8 @@ ym::vec2f get_animation_bounds(const scene_group* scns) {
 void get_nodes(const std::vector<node*> nodes, bool has_camera, bool has_mesh,
     std::vector<node*>* filtered) {
     for (auto node : nodes) {
-        if (has_camera && node->camera) filtered->push_back(node);
-        if (has_mesh && node->mesh) filtered->push_back(node);
+        if (has_camera && node->cam) filtered->push_back(node);
+        if (has_mesh && node->msh) filtered->push_back(node);
         get_nodes(node->children, has_camera, has_mesh, filtered);
     }
 }

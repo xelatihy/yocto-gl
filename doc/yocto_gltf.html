@@ -73,6 +73,7 @@ an object of type T. Internally this is just the same old glTF index. But
 this can used to access the scene data with <code>scene::get&lt;T&gt;(index)</code>.</p>
 <h2>History</h2>
 <ul>
+<li>v 0.13: change variable names for compilation on gcc</li>
 <li>v 0.12: removed explicit root nodes</li>
 <li>v 0.11: added camera near/far to high-level interface</li>
 <li>v 0.10: added moprhing to high-level interface</li>
@@ -334,7 +335,7 @@ avoid.</p>
 <h3>Struct shape</h3>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">shape</span> <span class="p">{</span>
     <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
-    <span class="n">material</span><span class="o">*</span> <span class="n">material</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+    <span class="n">material</span><span class="o">*</span> <span class="n">mat</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
     <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&gt;</span> <span class="n">pos</span><span class="p">;</span>
     <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&gt;</span> <span class="n">norm</span><span class="p">;</span>
     <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">ym</span><span class="o">::</span><span class="n">vec2f</span><span class="o">&gt;</span> <span class="n">texcoord</span><span class="p">;</span>
@@ -357,7 +358,7 @@ avoid.</p>
 <ul>
 <li>Members:<ul>
 <li>name:      name of the mesh that enclosed it</li>
-<li>material:      material reference</li>
+<li>mat:      material reference</li>
 <li>pos:      vertex position</li>
 <li>norm:      vertex normal</li>
 <li>texcoord:      vertex texcoord</li>
@@ -396,9 +397,9 @@ avoid.</p>
 <h3>Struct node</h3>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">node</span> <span class="p">{</span>
     <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
-    <span class="n">camera</span><span class="o">*</span> <span class="n">camera</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
-    <span class="n">mesh</span><span class="o">*</span> <span class="n">mesh</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
-    <span class="n">skin</span><span class="o">*</span> <span class="n">skin</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+    <span class="n">camera</span><span class="o">*</span> <span class="n">cam</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+    <span class="n">mesh</span><span class="o">*</span> <span class="n">msh</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+    <span class="n">skin</span><span class="o">*</span> <span class="n">skn</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
     <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">node</span><span class="o">*&gt;</span> <span class="n">children</span><span class="p">;</span>
     <span class="n">ym</span><span class="o">::</span><span class="n">mat4f</span> <span class="n">matrix</span> <span class="o">=</span> <span class="n">ym</span><span class="o">::</span><span class="n">identity_mat4f</span><span class="p">;</span>
     <span class="n">ym</span><span class="o">::</span><span class="n">quat4f</span> <span class="n">rotation</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">};</span>
@@ -417,9 +418,9 @@ avoid.</p>
 <ul>
 <li>Members:<ul>
 <li>name:      name</li>
-<li>camera:      camera reference</li>
-<li>mesh:      mesh reference</li>
-<li>skin:      mesh reference</li>
+<li>cam:      camera reference</li>
+<li>msh:      mesh reference</li>
+<li>skn:      mesh reference</li>
 <li>children:      children</li>
 <li>matrix:      A floating-point 4x4 transformation matrix stored in column-major order.</li>
 <li>rotation:      The node's unit quaternion rotation in the order (x, y, z, w), where w

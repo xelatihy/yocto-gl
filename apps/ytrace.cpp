@@ -114,9 +114,9 @@ bool update(yscene* scn) {
             auto cid = 1;
             for (auto cam : cameras) {
                 ytrace::set_camera(scn->trace_scene, cid++,
-                    ym::to_frame(cam->xform), cam->camera->yfov,
-                    cam->camera->aspect, cam->camera->aperture,
-                    cam->camera->focus);
+                    ym::to_frame(cam->xform), cam->cam->yfov,
+                    cam->cam->aspect, cam->cam->aperture,
+                    cam->cam->focus);
             }
         }
 
@@ -320,7 +320,7 @@ ytrace::scene* make_trace_scene(const yobj::scene* scene, const ycamera* cam) {
 
     if (!scene->instances.empty()) {
         for (auto ist : scene->instances) {
-            for (auto shp : ist->mesh->shapes) {
+            for (auto shp : ist->msh->shapes) {
                 ytrace::add_instance(trace_scene, ym::to_frame(ist->xform),
                     shape_map.at(shp), material_map.at(shp->mat));
             }
@@ -348,8 +348,8 @@ ytrace::scene* make_trace_scene(
     auto cameras = ygltf::get_camera_nodes(scenes->default_scene);
     for (auto cam : cameras) {
         ytrace::add_camera(trace_scene, ym::to_frame(cam->xform),
-            cam->camera->yfov, cam->camera->aspect, cam->camera->aperture,
-            cam->camera->focus);
+            cam->cam->yfov, cam->cam->aspect, cam->cam->aperture,
+            cam->cam->focus);
     }
 
     auto texture_map = std::map<ygltf::texture*, int>{{nullptr, -1}};
@@ -427,16 +427,16 @@ ytrace::scene* make_trace_scene(
     auto instances = ygltf::get_mesh_nodes(scenes->default_scene);
     if (!instances.empty()) {
         for (auto ist : instances) {
-            for (auto shp : ist->mesh->shapes) {
+            for (auto shp : ist->msh->shapes) {
                 ytrace::add_instance(trace_scene, ym::to_frame(ist->xform),
-                    shape_map.at(shp), material_map.at(shp->material));
+                    shape_map.at(shp), material_map.at(shp->mat));
             }
         }
     } else {
         for (auto msh : scenes->meshes) {
             for (auto shp : msh->shapes) {
                 ytrace::add_instance(trace_scene, ym::identity_frame3f,
-                    shape_map.at(shp), material_map.at(shp->material));
+                    shape_map.at(shp), material_map.at(shp->mat));
             }
         }
     }

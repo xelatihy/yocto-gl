@@ -422,7 +422,7 @@ yobj::instance* add_instance(yobj::scene* scn, const std::string& name,
     yobj::mesh* shp, const ym::frame3f& frame = ym::identity_frame3f) {
     scn->instances += new yobj::instance();
     scn->instances.back()->name = name;
-    scn->instances.back()->mesh = shp;
+    scn->instances.back()->msh = shp;
     scn->instances.back()->xform = ym::to_mat(frame);
     return scn->instances.back();
 }
@@ -1342,7 +1342,7 @@ ygltf::scene_group* obj2gltf(const yobj::scene* obj, bool add_scene) {
         gmesh->name = omesh->name;
         for (auto oprim : omesh->shapes) {
             auto gprim = new ygltf::shape();
-            gprim->material =
+            gprim->mat =
                 (index(obj->materials, oprim->mat) < 0) ?
                     nullptr :
                     gltf->materials[index(obj->materials, oprim->mat)];
@@ -1370,7 +1370,7 @@ ygltf::scene_group* obj2gltf(const yobj::scene* obj, bool add_scene) {
             for (auto msh : gltf->meshes) {
                 auto gnode = new ygltf::node();
                 gnode->name = msh->name;
-                gnode->mesh = msh;
+                gnode->msh = msh;
                 scn->nodes.push_back(gnode);
                 gltf->nodes.push_back(gnode);
             }
@@ -1379,7 +1379,7 @@ ygltf::scene_group* obj2gltf(const yobj::scene* obj, bool add_scene) {
                 auto gnode = new ygltf::node();
                 gnode->name = oist->name;
                 gnode->matrix = oist->xform;
-                gnode->mesh = gltf->meshes[index(obj->meshes, oist->mesh)];
+                gnode->msh = gltf->meshes[index(obj->meshes, oist->msh)];
                 scn->nodes.push_back(gnode);
                 gltf->nodes.push_back(gnode);
             }
@@ -1402,7 +1402,7 @@ ygltf::scene_group* obj2gltf(const yobj::scene* obj, bool add_scene) {
                 auto gnode = new ygltf::node();
                 gnode->name = ocam->name;
                 gnode->matrix = ocam->xform;
-                gnode->camera = gcam;
+                gnode->cam = gcam;
                 scn->nodes.push_back(gnode);
                 gltf->nodes.push_back(gnode);
             }

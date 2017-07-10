@@ -55,6 +55,7 @@
 ///
 /// ## History
 ///
+/// - v 0.22: change variable names for compilation on gcc
 /// - v 0.21: bug fixes
 /// - v 0.20: use yocto_math in the interface and remove inline compilation
 /// - v 0.19: add missing bounding box computation and missing data functions
@@ -288,8 +289,8 @@ struct instance {
     std::string name;
     /// transform
     ym::mat4f xform = ym::identity_mat4f;
-    /// primitives
-    mesh* mesh = nullptr;
+    /// mesh instances
+    mesh* msh = nullptr;
 };
 
 ///

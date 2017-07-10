@@ -54,6 +54,7 @@ disabled by defining YOBJ_NO_IMAGE before including this file.
 
 ## History
 
+- v 0.22: change variable names for compilation on gcc
 - v 0.21: bug fixes
 - v 0.20: use yocto_math in the interface and remove inline compilation
 - v 0.19: add missing bounding box computation and missing data functions
@@ -254,7 +255,7 @@ Mesh
 ~~~ .cpp
 struct instance {
     ym::mat4f xform = ym::identity_mat4f;
-    mesh* mesh = nullptr;
+    mesh* msh = nullptr;
 }
 ~~~
 
@@ -262,7 +263,7 @@ Mesh instance.
 
 - Members:
     - xform:      transform
-    - mesh:      primitives
+    - msh:      mesh instances
 
 
 ### Struct camera
@@ -518,7 +519,6 @@ struct obj_element {
     uint32_t start;
     obj_element_type type;
     uint16_t size;
-    obj_element(uint32_t start_, etype type_, uint16_t size_); 
 }
 ~~~
 
@@ -528,7 +528,6 @@ Element vertex indices
     - start:      starting vertex index
     - type:      element type
     - size:      number of vertices
-    - obj_element():      constructor
 
 
 ### Struct obj_group
