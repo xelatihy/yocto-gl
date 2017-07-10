@@ -443,29 +443,6 @@ void build_bvh(
 }
 
 //
-// Gets the bbox of a shape element
-//
-static ym::bbox3f bound_elem(const shape* shp, int eid) {
-    if (shp->point) {
-        auto f = shp->point[eid];
-        return point_bbox(shp->pos[f], shp->rad(f));
-    } else if (shp->line) {
-        auto f = shp->line[eid];
-        return line_bbox(
-            shp->pos[f.x], shp->pos[f.y], shp->rad(f.x), shp->rad(f.y));
-    } else if (shp->triangle) {
-        auto f = shp->triangle[eid];
-        return triangle_bbox(shp->pos[f.x], shp->pos[f.y], shp->pos[f.z]);
-    } else if (shp->tetra) {
-        auto f = shp->tetra[eid];
-        return tetrahedron_bbox(
-            shp->pos[f.x], shp->pos[f.y], shp->pos[f.z], shp->pos[f.w]);
-    } else {
-        return point_bbox(shp->pos[eid], shp->rad(eid));
-    }
-}
-
-//
 // Build a shape BVH. Public function whose interface is described above.
 //
 void build_shape_bvh(shape* shp, bool equalsize) {

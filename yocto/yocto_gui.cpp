@@ -34,13 +34,15 @@
 #include <cstdlib>
 #include <cstring>
 
-#ifndef __APPLE__
-#include <GL/glew.h>
-#else
+// GL3W/GLFW
+#ifdef __APPLE__
+#define GLFW_INCLUDE_GLCOREARB
 #include <OpenGL/gl3.h>
-#endif
-
 #include <GLFW/glfw3.h>
+#else
+#include <GL/glew.h>
+#include <GLFW/glfw3.h>
+#endif
 
 #include "ext/imgui/imgui.h"
 #include "ext/imgui/imgui_impl_glfw_gl3.h"

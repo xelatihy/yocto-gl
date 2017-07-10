@@ -10,17 +10,14 @@
 #include "imgui_impl_glfw_gl3.h"
 
 // GL3W/GLFW
-// clang-format off
-#ifndef __APPLE__
-#include <GL/glew.h>
-#else
-#include <OpenGL/gl.h>
+#ifdef __APPLE__
+#define GLFW_INCLUDE_GLCOREARB
 #include <OpenGL/gl3.h>
-#endif
-#ifndef YGLU_NO_GLFW
+#include <GLFW/glfw3.h>
+#else
+#include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #endif
-// clang-format on
 
 #ifdef _WIN32
 #undef APIENTRY

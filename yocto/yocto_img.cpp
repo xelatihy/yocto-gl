@@ -35,6 +35,7 @@
 #ifndef _WIN32
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
+#pragma GCC diagnostic ignored "-Wunused-variable"
 #ifndef __clang__
 #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
 #endif
