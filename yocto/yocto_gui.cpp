@@ -37,8 +37,8 @@
 // GL3W/GLFW
 #ifdef __APPLE__
 #define GLFW_INCLUDE_GLCOREARB
-#include <OpenGL/gl3.h>
 #include <GLFW/glfw3.h>
+#include <OpenGL/gl3.h>
 #else
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
