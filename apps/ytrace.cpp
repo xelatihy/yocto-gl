@@ -114,9 +114,8 @@ bool update(yscene* scn) {
             auto cid = 1;
             for (auto cam : cameras) {
                 ytrace::set_camera(scn->trace_scene, cid++,
-                    ym::to_frame(cam->xform), cam->cam->yfov,
-                    cam->cam->aspect, cam->cam->aperture,
-                    cam->cam->focus);
+                    ym::to_frame(cam->xform), cam->cam->yfov, cam->cam->aspect,
+                    cam->cam->aperture, cam->cam->focus);
             }
         }
 
@@ -166,8 +165,7 @@ bool update(yscene* scn) {
         if (scn->trace_cur_block == scn->trace_blocks.size()) {
             scn->trace_cur_block = 0;
             if (scn->trace_save_progressive &&
-                (scn->trace_cur_sample + 1) % scn->trace_save_progressive ==
-                    0) {
+                !((scn->trace_cur_sample + 1) % scn->trace_save_progressive)) {
                 auto imfilename =
                     yu::path::get_dirname(scn->imfilename) +
                     yu::path::get_basename(scn->imfilename) +

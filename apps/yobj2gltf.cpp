@@ -85,10 +85,9 @@ ygltf::scene_group* obj2gltf(const yobj::scene* obj, bool add_scene) {
         gmesh->name = omesh->name;
         for (auto oprim : omesh->shapes) {
             auto gprim = new ygltf::shape();
-            gprim->mat =
-                (index(obj->materials, oprim->mat) < 0) ?
-                    nullptr :
-                    gltf->materials[index(obj->materials, oprim->mat)];
+            gprim->mat = (index(obj->materials, oprim->mat) < 0) ?
+                             nullptr :
+                             gltf->materials[index(obj->materials, oprim->mat)];
             gprim->pos = oprim->pos;
             gprim->norm = oprim->norm;
             gprim->texcoord = oprim->texcoord;

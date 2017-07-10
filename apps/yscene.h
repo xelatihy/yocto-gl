@@ -745,14 +745,13 @@ inline void shade_scene(const ygltf::scene_group* scns, yshade_state* st,
         if (gcam->cam->ortho) {
             auto near = (gcam->cam->near) ? gcam->cam->near : 0.001f;
             auto far = (gcam->cam->far) ? gcam->cam->far : 10000;
-            camera_proj =
-                ym::ortho_mat4(gcam->cam->yfov * gcam->cam->aspect,
-                    gcam->cam->yfov, near, far);
+            camera_proj = ym::ortho_mat4(gcam->cam->yfov * gcam->cam->aspect,
+                gcam->cam->yfov, near, far);
         } else {
             auto near = (gcam->cam->near) ? gcam->cam->near : 0.001f;
             if (gcam->cam->far) {
-                camera_proj = ym::perspective_mat4(gcam->cam->yfov,
-                    gcam->cam->aspect, near, gcam->cam->far);
+                camera_proj = ym::perspective_mat4(
+                    gcam->cam->yfov, gcam->cam->aspect, near, gcam->cam->far);
             } else {
                 camera_proj = ym::perspective_mat4(
                     gcam->cam->yfov, gcam->cam->aspect, 0.01f);
@@ -1099,8 +1098,7 @@ void draw_tree_widgets(ygui::window* win, const std::string& lbl,
 void draw_tree_widgets(ygui::window* win, const std::string& lbl,
     ygltf::shape* shp, void** selection) {
     if (ygui::tree_begin_widget(win, lbl + shp->name, selection, shp)) {
-        if (shp->mat)
-            draw_tree_widgets(win, "mat: ", shp->mat, selection);
+        if (shp->mat) draw_tree_widgets(win, "mat: ", shp->mat, selection);
         ygui::tree_end_widget(win);
     }
 }
@@ -1121,8 +1119,7 @@ void draw_tree_widgets(ygui::window* win, const std::string& lbl,
     ygltf::node* node, void** selection) {
     if (ygui::tree_begin_widget(win, lbl + node->name, selection, node)) {
         if (node->msh) draw_tree_widgets(win, "mesh: ", node->msh, selection);
-        if (node->cam)
-            draw_tree_widgets(win, "cam: ", node->cam, selection);
+        if (node->cam) draw_tree_widgets(win, "cam: ", node->cam, selection);
         for (auto child : node->children)
             draw_tree_widgets(win, "", child, selection);
         ygui::tree_end_widget(win);

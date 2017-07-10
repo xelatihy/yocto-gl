@@ -120,8 +120,7 @@ ysym::scene* make_simulation_scene(const ygltf::scene_group* scene) {
     for (auto ist : instances) {
         auto shp = ist->msh->shapes[0];
         ysym::add_rigid_body(simulation_scene, to_frame(ym::mat4f(ist->xform)),
-            shape_map.at(shp), material_map.at(shp->mat), {0, 0, 0},
-            {0, 0, 0});
+            shape_map.at(shp), material_map.at(shp->mat), {0, 0, 0}, {0, 0, 0});
     }
 
     // initialize
