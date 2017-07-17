@@ -164,8 +164,8 @@ inline void parse_vertlist(char** tok, int ntoks,
 //
 // Loads an OBJ
 //
-obj* load_obj(
-    const std::string& filename, bool flip_texcoord, std::string* err) {
+obj* load_obj(const std::string& filename, bool flip_texcoord, bool flip_tr,
+    std::string* err) {
     // clear obj
     auto asset = std::unique_ptr<obj>(new obj());
 
@@ -301,7 +301,12 @@ obj* load_obj(
     // parse materials
     for (auto mtllib : cur_mtllibs) {
         auto mtlname = get_dirname(filename) + mtllib;
-        auto materials = load_mtl(mtlname);
+        std::string errm;
+        auto materials = load_mtl(mtlname, flip_tr, &errm);
+        if (materials.empty() && !errm.empty()) {
+            if (err) *err = errm;
+            return nullptr;
+        }
         asset->materials.insert(
             asset->materials.end(), materials.begin(), materials.end());
     }
@@ -341,7 +346,7 @@ void parse_texture(char** toks, int ntoks, std::string& path,
 // Load MTL
 //
 std::vector<obj_material> load_mtl(
-    const std::string& filename, std::string* err) {
+    const std::string& filename, bool flip_tr, std::string* err) {
     // clear materials
     auto materials = std::vector<obj_material>();
 
@@ -389,13 +394,21 @@ std::vector<obj_material> load_mtl(
         } else if (tok_s == "Kr") {
             materials.back().kr = parse_float3(cur_tok);
         } else if (tok_s == "Kt" || tok_s == "Tf") {
-            materials.back().kt = parse_float3(cur_tok);
+            if (cur_ntok >= 3) {
+                materials.back().kt = parse_float3(cur_tok);
+            } else {
+                auto v = parse_float(cur_tok);
+                materials.back().kt = {v, v, v};
+            }
         } else if (tok_s == "Tr") {
             if (cur_ntok >= 3) {
                 materials.back().kt = parse_float3(cur_tok);
             } else {
                 // as tinyobjreader
-                materials.back().op = 1 - parse_float(cur_tok);
+                if (flip_tr)
+                    materials.back().op = 1 - parse_float(cur_tok);
+                else
+                    materials.back().op = parse_float(cur_tok);
             }
         } else if (tok_s == "Ns") {
             materials.back().ns = parse_float(cur_tok);
@@ -544,6 +557,26 @@ inline void fwrite_str_props(FILE* file, const char* str, const std::string& s,
 }
 
 //
+// write one float prepended by a std::string
+//
+inline void fwrite_float_props(
+    FILE* file, const char* str, float v, float def = 0, bool newline = true) {
+    if (v == def) return;
+    fprintf(file, "%s %.6g", str, v);
+    if (newline) fprintf(file, "\n");
+}
+
+//
+// write three floats prepended by a std::string
+//
+inline void fwrite_float3_props(FILE* file, const char* str, const ym::vec3f& v,
+    const ym::vec3f& def = {0, 0, 0}, bool newline = true) {
+    if (v == def) return;
+    fprintf(file, "%s %.6g %.6g %.6g", str, v[0], v[1], v[2]);
+    if (newline) fprintf(file, "\n");
+}
+
+//
 // write an OBJ vertex triplet using only the indices that are active
 //
 inline void fwrite_objverts(FILE* file, const char* str, int nv,
@@ -571,7 +604,7 @@ inline void fwrite_objverts(FILE* file, const char* str, int nv,
 // Save an OBJ
 //
 bool save_obj(const std::string& filename, const obj* asset, bool flip_texcoord,
-    std::string* err) {
+    bool flip_tr, std::string* err) {
     // open file
     auto file = fopen(filename.c_str(), "wt");
     if (!file) {
@@ -642,7 +675,9 @@ bool save_obj(const std::string& filename, const obj* asset, bool flip_texcoord,
 
     // save materials
     if (!asset->materials.empty()) {
-        save_mtl(dirname + basename + ".mtl", asset->materials);
+        if (!save_mtl(
+                dirname + basename + ".mtl", asset->materials, flip_tr, err))
+            return false;
     }
 
     // done
@@ -653,7 +688,8 @@ bool save_obj(const std::string& filename, const obj* asset, bool flip_texcoord,
 // Save an MTL file
 //
 bool save_mtl(const std::string& filename,
-    const std::vector<obj_material>& materials, std::string* err) {
+    const std::vector<obj_material>& materials, bool flip_tr,
+    std::string* err) {
     auto file = fopen(filename.c_str(), "wt");
     if (!file) {
         if (err) *err = "could not open filename " + filename;
@@ -664,17 +700,15 @@ bool save_mtl(const std::string& filename,
     for (auto& mat : materials) {
         fwrite_str(file, "newmtl", mat.name, true);
         fwrite_int(file, "  illum", mat.illum);
-        fwrite_float3(file, "  Ke", mat.ke);
-        fwrite_float3(file, "  Ka", mat.ka);
-        fwrite_float3(file, "  Kd", mat.kd);
-        fwrite_float3(file, "  Ks", mat.ks);
-        fwrite_float3(file, "  Kr", mat.kr);
-        fwrite_float3(file, "  Kt", mat.kt);
-        fwrite_float(file, "  Ns", mat.ns);
-        fwrite_float(file, "  d", mat.op);
-        fwrite_float(file, "  Ni", mat.ior);
-        fwrite_float(file, "  phys_stiffness", mat.stiffness);
-        fwrite_float(file, "  phys_density", mat.density);
+        fwrite_float3_props(file, "  Ke", mat.ke);
+        fwrite_float3_props(file, "  Ka", mat.ka);
+        fwrite_float3_props(file, "  Kd", mat.kd);
+        fwrite_float3_props(file, "  Ks", mat.ks);
+        fwrite_float3_props(file, "  Kr", mat.kr);
+        fwrite_float3_props(file, "  Tf", mat.kt);
+        fwrite_float_props(file, "  Ns", mat.ns, 0);
+        fwrite_float_props(file, "  d", mat.op, 1);
+        fwrite_float_props(file, "  Ni", mat.ior, 1);
         fwrite_str_props(file, "  map_Ke", mat.ke_txt, mat.ke_txt_info);
         fwrite_str_props(file, "  map_Ka", mat.ka_txt, mat.ka_txt_info);
         fwrite_str_props(file, "  map_Kd", mat.kd_txt, mat.kd_txt_info);
@@ -817,6 +851,34 @@ scene* obj_to_scene(const obj* asset) {
         mat->bump_txt_info = _convert_texture_info(omat.bump_txt_info);
         mat->disp_txt_info = _convert_texture_info(omat.disp_txt_info);
         mat->unknown_props = omat.unknown_props;
+        switch (omat.illum) {
+            case 0:  // Color on and Ambient off
+            case 1:  // Color on and Ambient on
+            case 2:  // Highlight on
+            case 3:  // Reflection on and Ray trace on
+                mat->opacity = 1;
+                mat->kt = {0, 0, 0};
+                break;
+            case 4:  // Transparency: Glass on
+                     // Reflection: Ray trace on
+                break;
+            case 5:  // Reflection: Fresnel on and Ray trace on
+                mat->opacity = 1;
+                mat->kt = {0, 0, 0};
+                break;
+            case 6:  // Transparency: Refraction on
+                     // Reflection: Fresnel off and Ray trace on
+            case 7:  // Transparency: Refraction on
+                     // Reflection: Fresnel on and Ray trace on
+                break;
+            case 8:  // Reflection on and Ray trace off
+                mat->opacity = 1;
+                mat->kt = {0, 0, 0};
+                break;
+            case 9:  // Transparency: Glass on
+                     // Reflection: Ray trace off
+                break;
+        }
         scn->materials.push_back(mat);
     }
 
@@ -1005,6 +1067,11 @@ obj* scene_to_obj(const scene* scn) {
         mat->disp_txt_info = texture_props(fl_mat->disp_txt_info);
         mat->norm_txt_info = texture_props(fl_mat->norm_txt_info);
         mat->unknown_props = fl_mat->unknown_props;
+        if (fl_mat->opacity < 1 || fl_mat->kt != ym::zero3f) {
+            mat->illum = 4;
+        } else {
+            mat->illum = 2;
+        }
     }
 
     // convert shapes
@@ -1169,8 +1236,9 @@ bool save_textures(const scene* scn, const std::string& dirname,
 // Load scene
 //
 scene* load_scene(const std::string& filename, bool load_txt,
-    bool flip_texcoord, bool skip_missing, std::string* err) {
-    auto oscn = std::unique_ptr<obj>(load_obj(filename, flip_texcoord, err));
+    bool flip_texcoord, bool skip_missing, bool flip_tr, std::string* err) {
+    auto oscn =
+        std::unique_ptr<obj>(load_obj(filename, flip_texcoord, flip_tr, err));
     if (!oscn) return nullptr;
     auto scn = obj_to_scene(oscn.get());
     if (!scn) return nullptr;
@@ -1184,9 +1252,10 @@ scene* load_scene(const std::string& filename, bool load_txt,
 // Save scene
 //
 bool save_scene(const std::string& filename, const scene* scn, bool save_txt,
-    bool flip_texcoord, std::string* err) {
+    bool flip_texcoord, bool flip_tr, std::string* err) {
     auto oscn = std::unique_ptr<yobj::obj>(scene_to_obj(scn));
-    if (!save_obj(filename, oscn.get(), flip_texcoord, err)) return false;
+    if (!save_obj(filename, oscn.get(), flip_texcoord, flip_tr, err))
+        return false;
     if (save_txt)
         if (!save_textures(scn, get_dirname(filename), true, err)) return false;
     return true;

@@ -20,7 +20,10 @@ representation.</p>
 of textures Y axis. So in many cases textures appears flipped. To handle
 that, use the option to flip textures coordinates on either saving or
 loading. By default texture coordinates are flipped since this seems
-the convention found on test cases collected on the web.</p>
+the convention found on test cases collected on the web. The value Tr
+has similar problems, since its relation to opacity is software specific.
+Again we let the user chose the convension and set the default to the
+one found on the web.</p>
 <p>In the high level interface, shapes are indexed meshes and are described
 by arrays of vertex indices for points/lines/triangles and arrays for vertex
 positions, normals, texcoords, color and radius. The latter two as
@@ -58,6 +61,8 @@ disabled by defining YOBJ_NO_IMAGE before including this file.</p>
 </ol>
 <h2>History</h2>
 <ul>
+<li>v 0.26: added interpreting of illum in scene conversions</li>
+<li>v 0.25: added convention for Tr</li>
 <li>v 0.24: remove exception from code and add explicit error handling</li>
 <li>v 0.23: texture have always 4 channels</li>
 <li>v 0.22: change variable names for compilation on gcc</li>
@@ -340,7 +345,7 @@ disabled by defining YOBJ_NO_IMAGE before including this file.</p>
 </ul>
 <h3>Function load_scene()</h3>
 <div class="codehilite"><pre><code><span></span><span class="n">scene</span><span class="o">*</span> <span class="nf">load_scene</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">load_textures</span><span class="p">,</span>
-    <span class="kt">bool</span> <span class="n">flip_texcoord</span> <span class="o">=</span> <span class="nb">true</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">skip_missing</span> <span class="o">=</span> <span class="nb">true</span><span class="p">,</span>
+    <span class="kt">bool</span> <span class="n">flip_texcoord</span> <span class="o">=</span> <span class="nb">true</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">skip_missing</span> <span class="o">=</span> <span class="nb">true</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">flip_tr</span> <span class="o">=</span> <span class="nb">true</span><span class="p">,</span>
     <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">*</span> <span class="n">err</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">);</span>
 </code></pre></div>
 
@@ -352,6 +357,7 @@ disabled by defining YOBJ_NO_IMAGE before including this file.</p>
 <li>load_textures: whether to load textures (default to false)</li>
 <li>flip_texcoord: whether to flip the v coordinate</li>
 <li>skip_missing: skip missing textures</li>
+<li>flip_tr: whether to flip tr</li>
 <li>err: if set, store error message on error</li>
 </ul>
 </li>
@@ -362,7 +368,8 @@ disabled by defining YOBJ_NO_IMAGE before including this file.</p>
 </ul>
 <h3>Function save_scene()</h3>
 <div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">save_scene</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">,</span> <span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span>
-    <span class="kt">bool</span> <span class="n">save_textures</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">flip_texcoord</span> <span class="o">=</span> <span class="nb">true</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">*</span> <span class="n">err</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">);</span>
+    <span class="kt">bool</span> <span class="n">save_textures</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">flip_texcoord</span> <span class="o">=</span> <span class="nb">true</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">flip_tr</span> <span class="o">=</span> <span class="nb">true</span><span class="p">,</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">*</span> <span class="n">err</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -373,6 +380,7 @@ disabled by defining YOBJ_NO_IMAGE before including this file.</p>
 <li>scn: scene data to save</li>
 <li>save_textures: whether to save textures (default to false)</li>
 <li>flip_texcoord: whether to flip the v coordinate</li>
+<li>flip_tr: whether to flip tr</li>
 <li>err: if set, store error message on error</li>
 </ul>
 </li>
@@ -757,7 +765,7 @@ disabled by defining YOBJ_NO_IMAGE before including this file.</p>
 </ul>
 <h3>Function load_obj()</h3>
 <div class="codehilite"><pre><code><span></span><span class="n">obj</span><span class="o">*</span> <span class="nf">load_obj</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">flip_texcoord</span> <span class="o">=</span> <span class="nb">true</span><span class="p">,</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">*</span> <span class="n">err</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">);</span>
+    <span class="kt">bool</span> <span class="n">flip_tr</span> <span class="o">=</span> <span class="nb">true</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">*</span> <span class="n">err</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -766,6 +774,7 @@ disabled by defining YOBJ_NO_IMAGE before including this file.</p>
 <li>Parameters:<ul>
 <li>filename: filename</li>
 <li>flip_texcoord: whether to flip the v coordinate</li>
+<li>flip_tr: whether to flip the Tr value</li>
 <li>err: if set, store error message on error</li>
 </ul>
 </li>
@@ -775,8 +784,8 @@ disabled by defining YOBJ_NO_IMAGE before including this file.</p>
 </li>
 </ul>
 <h3>Function load_mtl()</h3>
-<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">obj_material</span><span class="o">&gt;</span> <span class="n">load_mtl</span><span class="p">(</span>
-    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">*</span> <span class="n">err</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">obj_material</span><span class="o">&gt;</span> <span class="n">load_mtl</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">,</span>
+    <span class="kt">bool</span> <span class="n">flip_tr</span> <span class="o">=</span> <span class="nb">true</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">*</span> <span class="n">err</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -784,6 +793,7 @@ disabled by defining YOBJ_NO_IMAGE before including this file.</p>
 <ul>
 <li>Parameters:<ul>
 <li>filename: filename</li>
+<li>flip_tr: whether to flip the Tr value</li>
 <li>err: if set, store error message on error</li>
 </ul>
 </li>
@@ -794,7 +804,7 @@ disabled by defining YOBJ_NO_IMAGE before including this file.</p>
 </ul>
 <h3>Function save_obj()</h3>
 <div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">save_obj</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">,</span> <span class="k">const</span> <span class="n">obj</span><span class="o">*</span> <span class="n">asset</span><span class="p">,</span>
-    <span class="kt">bool</span> <span class="n">flip_texcoord</span> <span class="o">=</span> <span class="nb">true</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">*</span> <span class="n">err</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">);</span>
+    <span class="kt">bool</span> <span class="n">flip_texcoord</span> <span class="o">=</span> <span class="nb">true</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">flip_tr</span> <span class="o">=</span> <span class="nb">true</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">*</span> <span class="n">err</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -804,6 +814,7 @@ disabled by defining YOBJ_NO_IMAGE before including this file.</p>
 <li>filename: filename</li>
 <li>asset: obj data to save</li>
 <li>flip_texcoord: whether to flip the v coordinate</li>
+<li>flip_tr: whether to flip the Tr value</li>
 <li>err: if set, store error message on error</li>
 </ul>
 </li>
@@ -814,7 +825,8 @@ disabled by defining YOBJ_NO_IMAGE before including this file.</p>
 </ul>
 <h3>Function save_mtl()</h3>
 <div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">save_mtl</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">obj_material</span><span class="o">&gt;&amp;</span> <span class="n">materials</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">*</span> <span class="n">err</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">);</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">obj_material</span><span class="o">&gt;&amp;</span> <span class="n">materials</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">flip_tr</span> <span class="o">=</span> <span class="nb">true</span><span class="p">,</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">*</span> <span class="n">err</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">);</span>
 </code></pre></div>
 
 

@@ -34,7 +34,7 @@
 #include <array>
 #include <memory>
 
-#define YOBJ2GLTF_VERBOSE
+// #define YOBJ2GLTF_VERBOSE
 
 template <typename T>
 static inline int index(const std::vector<T*>& vec, T* val) {
@@ -43,7 +43,8 @@ static inline int index(const std::vector<T*>& vec, T* val) {
     return -1;
 }
 
-ygltf::scene_group* obj2gltf(const yobj::scene* obj, bool add_scene) {
+ygltf::scene_group* obj2gltf(const yobj::scene* obj, bool add_scene,
+    bool add_specgloss, bool add_camera) {
     auto gltf = new ygltf::scene_group();
 
     // convert textures
@@ -55,24 +56,50 @@ ygltf::scene_group* obj2gltf(const yobj::scene* obj, bool add_scene) {
         gltf->textures.push_back(gtxt);
     }
 
+    // get a texture
+    auto get_texture = [obj, gltf](yobj::texture* txt) {
+        return (index(obj->textures, txt) < 0) ?
+                   nullptr :
+                   gltf->textures[index(obj->textures, txt)];
+    };
+
     // convert materials
     for (auto omat : obj->materials) {
         auto gmat = new ygltf::material();
         gmat->name = omat->name;
         gmat->emission = omat->ke;
-        gmat->emission_txt =
-            (index(obj->textures, omat->ke_txt) < 0) ?
-                nullptr :
-                gltf->textures[index(obj->textures, omat->ke_txt)];
+        gmat->emission_txt = get_texture(omat->ke_txt);
         gmat->metallic_roughness = new ygltf::material_metallic_rooughness();
+        auto mkd = ym::max_element_val(omat->kd);
+        auto mks = ym::max_element_val(omat->ks);
+        auto op = ym::min_element_val(
+            omat->opacity * (ym::vec3f{1, 1, 1} - omat->kt));
         auto gmr = gmat->metallic_roughness;
-        gmr->base = omat->kd;
-        gmr->opacity = omat->opacity;
-        gmr->metallic = 0;
-        gmr->roughness = omat->rs;
-        gmr->base_txt = (index(obj->textures, omat->kd_txt) < 0) ?
-                            nullptr :
-                            gltf->textures[index(obj->textures, omat->kd_txt)];
+        if (mks) {
+            auto scale = (mkd + mks > 1) ? mkd + mks : 1;
+            gmr->base = (omat->kd + omat->ks) / scale;
+            gmr->opacity = op;
+            gmr->metallic = mks / scale;
+            gmr->roughness = omat->rs * omat->rs;
+            gmr->base_txt = get_texture(omat->kd_txt);
+        } else {
+            gmr->base = omat->kd;
+            gmr->opacity = op;
+            gmr->metallic = 0;
+            gmr->roughness = 1;
+            gmr->base_txt = get_texture(omat->kd_txt);
+        }
+        if (add_specgloss) {
+            gmat->specular_glossiness =
+                new ygltf::material_specular_glossiness();
+            auto gsg = gmat->specular_glossiness;
+            gsg->diffuse = omat->kd;
+            gmr->opacity = op;
+            gsg->specular = omat->ks;
+            gsg->diffuse_txt = get_texture(omat->kd_txt);
+            gsg->specular_txt = get_texture(omat->ks_txt);
+        }
+        gmat->normal_txt = get_texture(omat->norm_txt);
         gltf->materials.push_back(gmat);
     }
 
@@ -82,6 +109,7 @@ ygltf::scene_group* obj2gltf(const yobj::scene* obj, bool add_scene) {
         gmesh->name = omesh->name;
         for (auto oprim : omesh->shapes) {
             auto gprim = new ygltf::shape();
+            gprim->name = oprim->name;
             gprim->mat = (index(obj->materials, oprim->mat) < 0) ?
                              nullptr :
                              gltf->materials[index(obj->materials, oprim->mat)];
@@ -89,6 +117,7 @@ ygltf::scene_group* obj2gltf(const yobj::scene* obj, bool add_scene) {
             gprim->norm = oprim->norm;
             gprim->texcoord = oprim->texcoord;
             gprim->color = oprim->color;
+            gprim->radius = oprim->radius;
             gprim->points = oprim->points;
             gprim->lines = oprim->lines;
             gprim->triangles = oprim->triangles;
@@ -126,7 +155,7 @@ ygltf::scene_group* obj2gltf(const yobj::scene* obj, bool add_scene) {
 
         // convert cameras
         if (obj->cameras.empty()) {
-            ygltf::add_default_cameras(gltf);
+            if (add_camera) ygltf::add_default_cameras(gltf);
         } else {
             // TODO: convert cameras
             for (auto ocam : obj->cameras) {
@@ -285,19 +314,16 @@ void scale_obj(yobj::scene* obj, float scale) {
     }
 }
 
-void flipy_texcoord_obj(yobj::scene* obj) {
+void normals_obj(yobj::scene* obj) {
     for (auto msh : obj->meshes) {
         for (auto prim : msh->shapes) {
-            if (prim->texcoord.empty()) continue;
-            auto tmin = prim->texcoord[0][1], tmax = prim->texcoord[0][1];
-            for (auto t : prim->texcoord) {
-                tmin = std::min(tmin, t[1]);
-                tmax = std::min(tmax, t[1]);
-            }
-            if (tmin >= 0 && tmax <= 1) {
-                for (auto& t : prim->texcoord) t[1] = 1 - t[1];
+            if (!prim->norm.empty()) continue;
+            if (!prim->lines.empty()) {
+                ym::compute_tangents(prim->lines, prim->pos, prim->norm);
+            } else if (!prim->triangles.empty()) {
+                ym::compute_normals(prim->triangles, prim->pos, prim->norm);
             } else {
-                for (auto& t : prim->texcoord) t[1] = 1 - t[1];
+                prim->norm.assign(prim->pos.size(), {0, 0, 1});
             }
         }
     }
@@ -306,15 +332,21 @@ void flipy_texcoord_obj(yobj::scene* obj) {
 int main(int argc, char** argv) {
     // command line params
     auto parser = yu::cmdline::make_parser(argc, argv, "converts obj to gltf");
-    auto no_flipy_texcoord = parse_flag(parser, "--no_flipy_texcoord", "",
-        "disable texcoord vertical flipping");
+    auto no_flipy_texcoord = parse_flag(
+        parser, "--no-flipy-texcoord", "", "texcoord vertical flipping");
+    auto no_flip_opacity =
+        parse_flag(parser, "--no-flip-opacity", "", "flip opacity");
     auto scale = parse_optf(parser, "--scale", "", "scale the model", 1.0f);
+    auto add_scene = parse_flag(parser, "--scene", "", "add scene");
+    auto add_normals = parse_flag(parser, "--normals", "", "add normals");
+    auto add_specgloss =
+        parse_flag(parser, "--specgloss", "", "add spec gloss");
     auto print_info =
-        parse_flag(parser, "--print_info", "-i", "print information", false);
+        parse_flag(parser, "--print-info", "", "print information", false);
     auto validate =
         parse_flag(parser, "--validate", "", "validate after saving", false);
     auto no_save =
-        parse_flag(parser, "--no_save", "-e", "exit without saving", false);
+        parse_flag(parser, "--no-save", "", "exit without saving", false);
     auto filename_in =
         parse_args(parser, "filename_in", "input filename", "", true);
     auto filename_out =
@@ -328,30 +360,39 @@ int main(int argc, char** argv) {
     }
 
     // load obj
-    auto obj = yobj::load_scene(filename_in, false);
+    auto err = std::string();
+    auto obj = yobj::load_scene(
+        filename_in, false, true, !no_flipy_texcoord, !no_flip_opacity, &err);
+    if (!obj) {
+        printf("error loading obj: %s\n", err.c_str());
+        return 1;
+    }
 
     // print information
     if (print_info) {
         printf("OBJ information ------------------------\n");
+        printf("filename: %s\n", filename_in.c_str());
         print_obj_info(obj);
     }
 
     // scale
     if (scale != 1.0f) scale_obj(obj, scale);
-    if (!no_flipy_texcoord) flipy_texcoord_obj(obj);
+    if (add_normals) normals_obj(obj);
 
     // print infomation again if needed
-    if (print_info and (scale != 1.0f || !no_flipy_texcoord)) {
+    if (print_info and scale != 1.0f) {
         printf("OBJ post-correction information -------\n");
+        printf("filename: %s\n", filename_in.c_str());
         print_obj_info(obj);
     }
 
     // convert
-    auto gltf = obj2gltf(obj, false);
+    auto gltf = obj2gltf(obj, add_scene, add_specgloss, false);
 
     // print information
     if (print_info) {
         printf("glTF information ---------------------\n");
+        printf("filename: %s\n", filename_out.c_str());
         print_gltf_info(gltf);
     }
 
@@ -359,7 +400,11 @@ int main(int argc, char** argv) {
     if (no_save) return 0;
 
     // save gltf
-    ygltf::save_scenes(filename_out, gltf, false);
+    auto ok = ygltf::save_scenes(filename_out, gltf, false, &err);
+    if (!ok) {
+        printf("error saving gltf: %s\n", err.c_str());
+        return 1;
+    }
 
     // validate
     if (validate) {

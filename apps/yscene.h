@@ -132,6 +132,7 @@ struct yscene {
 
     // shade
     bool wireframe = false, edges = false;
+    bool alpha_cutout = true;
     yshade_state* shstate = nullptr;
 
     // simulation
@@ -181,10 +182,12 @@ inline bool load_scene(
     // load scene
     auto ext = yu::path::get_extension(filename);
     if (ext == ".obj") {
-        scn->oscn = yobj::load_scene(filename, true);
+        auto err = std::string();
+        scn->oscn = yobj::load_scene(filename, true, true, true, true, &err);
         if (!scn->oscn) {
             yu::logging::log_msg(
                 yu::logging::log_level::error, "yscene", "cannot load scene");
+            yu::logging::log_msg(yu::logging::log_level::error, "ygltf", err);
             return false;
         }
         yobj::add_normals(scn->oscn);
@@ -203,10 +206,12 @@ inline bool load_scene(
             scn->view_cam->aperture = cam->aperture;
         }
     } else if (ext == ".gltf" || ext == ".glb") {
-        scn->gscn = ygltf::load_scenes(filename, true);
+        auto err = std::string();
+        scn->gscn = ygltf::load_scenes(filename, true, true, &err);
         if (!scn->gscn) {
             yu::logging::log_msg(
                 yu::logging::log_level::error, "yscene", "cannot load scene");
+            yu::logging::log_msg(yu::logging::log_level::error, "ygltf", err);
             return false;
         }
         ygltf::add_normals(scn->gscn);
@@ -380,7 +385,7 @@ inline void update_shade_state(const yobj::scene* sc, yshade_state* st) {
 // Draw a mesh
 //
 inline void shade_mesh(const yobj::mesh* msh, const yshade_state* st,
-    const ym::mat4f& xform, bool edges, bool wireframe) {
+    const ym::mat4f& xform, bool edges, bool wireframe, bool cutout) {
     static auto default_material = yobj::material();
     default_material.kd = {0.2f, 0.2f, 0.2f};
 
@@ -391,7 +396,7 @@ inline void shade_mesh(const yobj::mesh* msh, const yshade_state* st,
         yglu::stdshader::set_material_generic(st->prog, mat->ke, mat->kd,
             mat->ks, mat->rs, mat->opacity, st->txt.at(mat->ke_txt),
             st->txt.at(mat->kd_txt), st->txt.at(mat->ks_txt),
-            st->txt.at(mat->rs_txt), 0, 0, false, true);
+            st->txt.at(mat->rs_txt), 0, 0, false, true, cutout);
 
         auto vert_vbo = st->vert.at(shp);
         yglu::stdshader::set_vert(st->prog, vert_vbo.pos, vert_vbo.norm,
@@ -408,7 +413,7 @@ inline void shade_mesh(const yobj::mesh* msh, const yshade_state* st,
         if (edges && !wireframe) {
             assert(yglu::check_error());
             yglu::stdshader::set_material_emission_only(
-                st->prog, {0, 0, 0}, mat->opacity, 0, true);
+                st->prog, {0, 0, 0}, mat->opacity, 0, true, cutout);
 
             assert(yglu::check_error());
             yglu::line_width(2);
@@ -434,7 +439,7 @@ inline void shade_mesh(const yobj::mesh* msh, const yshade_state* st,
 inline void shade_scene(const yobj::scene* sc, yshade_state* st,
     const ycamera* ycam, const yobj::camera* ocam, const ym::vec4f& background,
     float exposure, yglu::tonemap_type tmtype, float gamma, bool wireframe,
-    bool edges, bool camera_lights, const ym::vec3f& amb) {
+    bool edges, bool cutout, bool camera_lights, const ym::vec3f& amb) {
     // update state
     update_shade_state(sc, st);
 
@@ -475,11 +480,11 @@ inline void shade_scene(const yobj::scene* sc, yshade_state* st,
 
     if (!sc->instances.empty()) {
         for (auto ist : sc->instances) {
-            shade_mesh(ist->msh, st, ist->xform, edges, wireframe);
+            shade_mesh(ist->msh, st, ist->xform, edges, wireframe, cutout);
         }
     } else {
         for (auto msh : sc->meshes) {
-            shade_mesh(msh, st, ym::identity_mat4f, edges, wireframe);
+            shade_mesh(msh, st, ym::identity_mat4f, edges, wireframe, cutout);
         }
     }
 
@@ -603,7 +608,7 @@ inline void update_shade_state(const ygltf::scene_group* sc, yshade_state* st) {
 //
 inline void shade_mesh(const ygltf::mesh* msh, const ygltf::skin* sk,
     const std::vector<float>& morph_weights, const yshade_state* st,
-    const ym::mat4f& xform, bool edges, bool wireframe) {
+    const ym::mat4f& xform, bool edges, bool wireframe, bool cutout) {
     static auto default_material = ygltf::material();
     default_material.metallic_roughness =
         new ygltf::material_metallic_rooughness();
@@ -640,7 +645,7 @@ inline void shade_mesh(const ygltf::mesh* msh, const ygltf::skin* sk,
                 txt_info(sg->specular_txt, sg->specular_txt_info),
                 txt_info(mat->normal_txt, mat->normal_txt_info),
                 txt_info(mat->occlusion_txt, mat->occlusion_txt_info), false,
-                mat->double_sided);
+                mat->double_sided, cutout);
         } else if (mat->metallic_roughness) {
             auto mr = mat->metallic_roughness;
             op = mr->opacity;
@@ -652,11 +657,11 @@ inline void shade_mesh(const ygltf::mesh* msh, const ygltf::skin* sk,
                 txt_info(mr->metallic_txt, mr->metallic_txt_info),
                 txt_info(mat->normal_txt, mat->normal_txt_info),
                 txt_info(mat->occlusion_txt, mat->occlusion_txt_info), false,
-                mat->double_sided);
+                mat->double_sided, cutout);
         } else {
             yglu::stdshader::set_material_emission_only(st->prog, mat->emission,
                 1, txt_info(mat->emission_txt, mat->emission_txt_info),
-                mat->double_sided);
+                mat->double_sided, cutout);
         }
 
         auto vert_vbo = st->vert.at(shp);
@@ -707,7 +712,7 @@ inline void shade_mesh(const ygltf::mesh* msh, const ygltf::skin* sk,
         if (edges && !wireframe) {
             assert(yglu::check_error());
             yglu::stdshader::set_material_emission_only(
-                st->prog, {0, 0, 0}, op, 0, true);
+                st->prog, {0, 0, 0}, op, 0, true, cutout);
 
             assert(yglu::check_error());
             yglu::line_width(2);
@@ -733,7 +738,7 @@ inline void shade_mesh(const ygltf::mesh* msh, const ygltf::skin* sk,
 inline void shade_scene(const ygltf::scene_group* scns, yshade_state* st,
     const ycamera* ycam, const ygltf::node* gcam, const ym::vec4f& background,
     float exposure, yglu::tonemap_type tmtype, float gamma, bool wireframe,
-    bool edges, bool camera_lights, const ym::vec3f& amb) {
+    bool edges, bool cutout, bool camera_lights, const ym::vec3f& amb) {
     // update state
     update_shade_state(scns, st);
 
@@ -790,12 +795,12 @@ inline void shade_scene(const ygltf::scene_group* scns, yshade_state* st,
     if (!instances.empty()) {
         for (auto ist : instances) {
             shade_mesh(ist->msh, ist->skn, ist->morph_weights, st, ist->xform,
-                edges, wireframe);
+                edges, wireframe, cutout);
         }
     } else {
         for (auto msh : scns->meshes) {
-            shade_mesh(
-                msh, nullptr, {}, st, ym::identity_mat4f, edges, wireframe);
+            shade_mesh(msh, nullptr, {}, st, ym::identity_mat4f, edges,
+                wireframe, cutout);
         }
     }
 
@@ -832,13 +837,13 @@ void draw_scene(ygui::window* win) {
     if (scn->oscn) {
         shade_scene(scn->oscn, scn->shstate, scn->view_cam, scn->ocam,
             scn->background, scn->exposure, (yglu::tonemap_type)scn->tonemap,
-            scn->gamma, scn->wireframe, scn->edges, scn->camera_lights,
-            scn->amb);
+            scn->gamma, scn->wireframe, scn->edges, scn->alpha_cutout,
+            scn->camera_lights, scn->amb);
     } else {
         shade_scene(scn->gscn, scn->shstate, scn->view_cam, scn->gcam,
             scn->background, scn->exposure, (yglu::tonemap_type)scn->tonemap,
-            scn->gamma, scn->wireframe, scn->edges, scn->camera_lights,
-            scn->amb);
+            scn->gamma, scn->wireframe, scn->edges, scn->alpha_cutout,
+            scn->camera_lights, scn->amb);
     }
 }
 
@@ -1710,7 +1715,17 @@ void draw_widgets(ygui::window* win) {
         }
         if (!scn->trace_scene) {
             ygui::checkbox_widget(win, "eyelight", &scn->camera_lights);
+            ygui::continue_line_widgets(win);
+            ygui::checkbox_widget(win, "wire", &scn->wireframe);
+            ygui::continue_line_widgets(win);
+            ygui::checkbox_widget(win, "edges", &scn->edges);
+            ygui::continue_line_widgets(win);
+            ygui::checkbox_widget(win, "cutout", &scn->alpha_cutout);
         }
+        ygui::slider_widget(win, "hdr exposure", &scn->exposure, -20, 20, 1);
+        ygui::slider_widget(win, "hdr gamma", &scn->gamma, 0.1, 5, 0.1);
+        ygui::combo_widget(
+            win, "hdr tonemap", (int*)&scn->tonemap, tmtype_names);
         if (ygui::collapsing_header_widget(win, "view cam")) {
             auto cam = scn->view_cam;
             ygui::slider_widget(win, "yfov", &cam->yfov, 0.1, 5);
@@ -1718,15 +1733,6 @@ void draw_widgets(ygui::window* win) {
             ygui::slider_widget(win, "focus", &cam->focus, 0.1, 1000);
             ygui::slider_widget(win, "near", &cam->near, 0.01, 1);
             ygui::slider_widget(win, "far", &cam->far, 1, 10000);
-        }
-        if (ygui::collapsing_header_widget(win, "shade")) {
-            ygui::checkbox_widget(win, "wireframe", &scn->wireframe);
-            ygui::checkbox_widget(win, "edges", &scn->edges);
-            ygui::slider_widget(
-                win, "hdr exposure", &scn->exposure, -20, 20, 1);
-            ygui::slider_widget(win, "hdr gamma", &scn->gamma, 0.1, 5, 0.1);
-            ygui::combo_widget(
-                win, "hdr tonemap", (int*)&scn->tonemap, tmtype_names);
         }
         if (ygui::collapsing_header_widget(win, "edit")) {
             if (scn->gscn)
@@ -1837,6 +1843,16 @@ void parse_cmdline(yscene* scene, int argc, char** argv, const char* help,
 
     // check parsing
     check_parser(parser);
+}
+
+//
+// Logging
+//
+inline void set_default_loggers() {
+    auto loggers = yu::logging::get_default_loggers();
+    loggers->push_back(yu::logging::make_stdout_logger());
+    loggers->push_back(
+        make_file_logger("yocto.log", true, yu::logging::log_level::verbose));
 }
 
 // ---------------------------------------------------------------------------

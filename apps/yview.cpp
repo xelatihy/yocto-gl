@@ -63,6 +63,9 @@ void draw_custom_widgets(ygui::window* win) {
 // ---------------------------------------------------------------------------
 
 int main(int argc, char* argv[]) {
+    // logging
+    set_default_loggers();
+
     // create empty scene
     auto scn = new yscene();
 
@@ -70,7 +73,7 @@ int main(int argc, char* argv[]) {
     parse_cmdline(scn, argc, argv, "interactively view scenes", false, false);
 
     // scene
-    load_scene(scn, scn->filename, false, false);
+    if (!load_scene(scn, scn->filename, false, false)) return 1;
 
     // run ui
     auto width = (int)std::round(scn->view_cam->aspect * scn->resolution);
