@@ -329,6 +329,17 @@ void normals_obj(yobj::scene* obj) {
     }
 }
 
+void validate_texture_paths(yobj::scene* obj, const std::string& filename) {
+    auto dirname = yu::path::get_dirname(filename);
+    for (auto txt : obj->textures) {
+        auto f = fopen((dirname + txt->path).c_str(), "rb");
+        if (!f)
+            printf("Missing texture: %s\n", txt->path.c_str());
+        else
+            fclose(f);
+    }
+}
+
 int main(int argc, char** argv) {
     // command line params
     auto parser = yu::cmdline::make_parser(argc, argv, "converts obj to gltf");
@@ -343,6 +354,8 @@ int main(int argc, char** argv) {
         parse_flag(parser, "--specgloss", "", "add spec gloss");
     auto print_info =
         parse_flag(parser, "--print-info", "", "print information", false);
+    auto validate_textures = parse_flag(
+        parser, "--validate-textures", "", "validate texture paths", false);
     auto validate =
         parse_flag(parser, "--validate", "", "validate after saving", false);
     auto no_save =
@@ -367,6 +380,9 @@ int main(int argc, char** argv) {
         printf("error loading obj: %s\n", err.c_str());
         return 1;
     }
+
+    // check missing texture
+    if (validate_textures) validate_texture_paths(obj, filename_in);
 
     // print information
     if (print_info) {
