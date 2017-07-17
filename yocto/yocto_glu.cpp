@@ -1088,6 +1088,7 @@ void make_program(uint* pid, uint* aid) {
             vec3 ks;
             float rs;
             float op;
+            bool cutout;
         };
 
         vec3 brdfcos(Brdf brdf, vec3 n, vec3 wi, vec3 wo) {
@@ -1170,11 +1171,12 @@ void make_program(uint* pid, uint* aid) {
 
             bool use_phong;       // material use phong
             bool double_sided;    // material double sided
+            bool alpha_cutout;    // material alpha cutout
         };
         uniform Material material;
 
         void eval_material(vec2 texcoord, vec4 color, out int type, out vec3 ke,
-                           out vec3 kd, out vec3 ks, out float rs, out float op) {
+                           out vec3 kd, out vec3 ks, out float rs, out float op, out bool cutout) {
             ke = color.xyz * material.ke;
             kd = color.xyz * material.kd;
             ks = color.xyz * material.ks;
@@ -1215,6 +1217,8 @@ void make_program(uint* pid, uint* aid) {
                 op *= kd_txt.w;
                 // TODO: fix rs
             }
+
+            cutout = material.alpha_cutout && op == 0;
         }
 
         vec3 apply_normal_map(vec2 texcoord, vec3 norm, vec4 tangsp) {
@@ -1261,7 +1265,10 @@ void make_program(uint* pid, uint* aid) {
 
             // get material color from textures
             Brdf brdf;
-            eval_material(texcoord, color, brdf.type, brdf.ke, brdf.kd, brdf.ks, brdf.rs, brdf.op);
+            eval_material(texcoord, color, brdf.type, brdf.ke, brdf.kd, brdf.ks, brdf.rs, brdf.op, brdf.cutout);
+
+            // exit if needed
+            if(brdf.cutout) discard;
 
             // emission
             vec3 c = brdf.ke;
@@ -1376,20 +1383,21 @@ void set_material(uint prog, const ym::vec3f& ke, const ym::vec3f& kd,
     const ym::vec3f& ks, float rs, const texture_info& ke_txt,
     const texture_info& kd_txt, const texture_info& ks_txt,
     const texture_info& rs_txt, const texture_info& norm_txt,
-    const texture_info& occ_txt, bool use_phong, bool double_sided) {
+    const texture_info& occ_txt, bool use_phong, bool double_sided,
+    bool alpha_cutout) {
     set_material_generic(prog, ke, kd, ks, rs, 1, ke_txt, kd_txt, ks_txt,
-        rs_txt, norm_txt, occ_txt, use_phong, double_sided);
+        rs_txt, norm_txt, occ_txt, use_phong, double_sided, alpha_cutout);
 }
 
 //
 // Internal representation
 //
-inline void _set_material_generic(uint prog, int mtype, const ym::vec3f& ke,
+inline void set_material_generic(uint prog, int mtype, const ym::vec3f& ke,
     const ym::vec3f& kd, const ym::vec3f& ks, float rs, float op,
     const texture_info& ke_txt, const texture_info& kd_txt,
     const texture_info& ks_txt, const texture_info& rs_txt,
     const texture_info& norm_txt, const texture_info& occ_txt, bool use_phong,
-    bool double_sided) {
+    bool double_sided, bool alpha_cutout) {
     assert(check_error());
     set_uniform(prog, "material.mtype", &mtype, 1, 1);
     set_uniform(prog, "material.ke", &ke[0], 3, 1);
@@ -1411,9 +1419,11 @@ inline void _set_material_generic(uint prog, int mtype, const ym::vec3f& ke,
         prog, "material.txt_occ", "material.txt_occ_on", occ_txt, 5);
     set_uniform(prog, "material.norm_scale", &norm_txt.scale, 1, 1);
     set_uniform(prog, "material.occ_scale", &occ_txt.scale, 1, 1);
-    int use_phongi = use_phong, double_sidedi = double_sided;
+    int use_phongi = use_phong, double_sidedi = double_sided,
+        alpha_cutouti = alpha_cutout;
     set_uniform(prog, "material.use_phong", &use_phongi, 1, 1);
     set_uniform(prog, "material.double_sided", &double_sidedi, 1, 1);
+    set_uniform(prog, "material.alpha_cutout", &alpha_cutouti, 1, 1);
     assert(check_error());
 }
 
@@ -1422,9 +1432,9 @@ inline void _set_material_generic(uint prog, int mtype, const ym::vec3f& ke,
 // Indicates textures ids with the correspoinding XXX_txt variables.
 //
 void set_material_emission_only(uint prog, const ym::vec3f& ke, float op,
-    const texture_info& ke_txt, bool double_sided) {
-    _set_material_generic(prog, 0, ke, {0, 0, 0}, {0, 0, 0}, 1, op, ke_txt, 0,
-        0, 0, 0, 0, false, double_sided);
+    const texture_info& ke_txt, bool double_sided, bool alpha_cutout) {
+    set_material_generic(prog, 0, ke, {0, 0, 0}, {0, 0, 0}, 1, op, ke_txt, 0, 0,
+        0, 0, 0, false, double_sided, alpha_cutout);
 }
 
 //
@@ -1437,9 +1447,10 @@ void set_material_generic(uint prog, const ym::vec3f& ke, const ym::vec3f& kd,
     const ym::vec3f& ks, float rs, float op, const texture_info& ke_txt,
     const texture_info& kd_txt, const texture_info& ks_txt,
     const texture_info& rs_txt, const texture_info& norm_txt,
-    const texture_info& occ_txt, bool use_phong, bool double_sided) {
-    _set_material_generic(prog, 1, ke, kd, ks, rs, op, ke_txt, kd_txt, ks_txt,
-        rs_txt, norm_txt, occ_txt, use_phong, double_sided);
+    const texture_info& occ_txt, bool use_phong, bool double_sided,
+    bool alpha_cutout) {
+    set_material_generic(prog, 1, ke, kd, ks, rs, op, ke_txt, kd_txt, ks_txt,
+        rs_txt, norm_txt, occ_txt, use_phong, double_sided, alpha_cutout);
 }
 
 //
@@ -1452,9 +1463,10 @@ void set_material_gltf_metallic_roughness(uint prog, const ym::vec3f& ke,
     const ym::vec3f& kb, float km, float rs, float op,
     const texture_info& ke_txt, const texture_info& kb_txt,
     const texture_info& km_txt, const texture_info& norm_txt,
-    const texture_info& occ_txt, bool use_phong, bool double_sided) {
-    _set_material_generic(prog, 2, ke, kb, {km, km, km}, rs, op, ke_txt, kb_txt,
-        km_txt, 0, norm_txt, occ_txt, use_phong, double_sided);
+    const texture_info& occ_txt, bool use_phong, bool double_sided,
+    bool alpha_cutout) {
+    set_material_generic(prog, 2, ke, kb, {km, km, km}, rs, op, ke_txt, kb_txt,
+        km_txt, 0, norm_txt, occ_txt, use_phong, double_sided, alpha_cutout);
 }
 
 //
@@ -1467,9 +1479,10 @@ void set_material_gltf_specular_glossiness(uint prog, const ym::vec3f& ke,
     const ym::vec3f& kd, const ym::vec3f& ks, float rs, float op,
     const texture_info& ke_txt, const texture_info& kd_txt,
     const texture_info& ks_txt, const texture_info& norm_txt,
-    const texture_info& occ_txt, bool use_phong, bool double_sided) {
-    _set_material_generic(prog, 3, ke, kd, ks, rs, op, ke_txt, kd_txt, ks_txt,
-        0, norm_txt, occ_txt, use_phong, double_sided);
+    const texture_info& occ_txt, bool use_phong, bool double_sided,
+    bool alpha_cutout) {
+    set_material_generic(prog, 3, ke, kd, ks, rs, op, ke_txt, kd_txt, ks_txt, 0,
+        norm_txt, occ_txt, use_phong, double_sided, alpha_cutout);
 }
 
 //

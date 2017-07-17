@@ -55,15 +55,6 @@ void save_image(const std::string& filename, int width, int height,
     }
 }
 
-//
-// Logging
-//
-void set_default_loggers() {
-    auto loggers = get_default_loggers();
-    loggers->push_back(make_stdout_logger());
-    loggers->push_back(make_file_logger("yocto.log", true, log_level::verbose));
-}
-
 // ---------------------------------------------------------------------------
 // INTERACTIVE FUNCTIONS
 // ---------------------------------------------------------------------------

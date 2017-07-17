@@ -11,7 +11,10 @@ Both in reading and writing, OBJ has no clear convention on the orientation
 of textures Y axis. So in many cases textures appears flipped. To handle
 that, use the option to flip textures coordinates on either saving or
 loading. By default texture coordinates are flipped since this seems
-the convention found on test cases collected on the web.
+the convention found on test cases collected on the web. The value Tr
+has similar problems, since its relation to opacity is software specific.
+Again we let the user chose the convension and set the default to the
+one found on the web.
 
 In the high level interface, shapes are indexed meshes and are described
 by arrays of vertex indices for points/lines/triangles and arrays for vertex
@@ -54,6 +57,8 @@ disabled by defining YOBJ_NO_IMAGE before including this file.
 
 ## History
 
+- v 0.26: added interpreting of illum in scene conversions
+- v 0.25: added convention for Tr
 - v 0.24: remove exception from code and add explicit error handling
 - v 0.23: texture have always 4 channels
 - v 0.22: change variable names for compilation on gcc
@@ -342,7 +347,7 @@ Scene
 
 ~~~ .cpp
 scene* load_scene(const std::string& filename, bool load_textures,
-    bool flip_texcoord = true, bool skip_missing = true,
+    bool flip_texcoord = true, bool skip_missing = true, bool flip_tr = true,
     std::string* err = nullptr);
 ~~~
 
@@ -353,6 +358,7 @@ Load scene
     - load_textures: whether to load textures (default to false)
     - flip_texcoord: whether to flip the v coordinate
     - skip_missing: skip missing textures
+    - flip_tr: whether to flip tr
     - err: if set, store error message on error
 - Returns:
     - scene (nullptr on error)
@@ -361,7 +367,8 @@ Load scene
 
 ~~~ .cpp
 bool save_scene(const std::string& filename, const scene* scn,
-    bool save_textures, bool flip_texcoord = true, std::string* err = nullptr);
+    bool save_textures, bool flip_texcoord = true, bool flip_tr = true,
+    std::string* err = nullptr);
 ~~~
 
 Save scene
@@ -371,6 +378,7 @@ Save scene
     - scn: scene data to save
     - save_textures: whether to save textures (default to false)
     - flip_texcoord: whether to flip the v coordinate
+    - flip_tr: whether to flip tr
     - err: if set, store error message on error
 - Returns:
     - whether an error occurred
@@ -765,7 +773,7 @@ OBJ asset
 
 ~~~ .cpp
 obj* load_obj(const std::string& filename, bool flip_texcoord = true,
-    std::string* err = nullptr);
+    bool flip_tr = true, std::string* err = nullptr);
 ~~~
 
 Load OBJ
@@ -773,6 +781,7 @@ Load OBJ
 - Parameters:
     - filename: filename
     - flip_texcoord: whether to flip the v coordinate
+    - flip_tr: whether to flip the Tr value
     - err: if set, store error message on error
 - Return:
     - obj (nullptr on error)
@@ -780,14 +789,15 @@ Load OBJ
 ### Function load_mtl()
 
 ~~~ .cpp
-std::vector<obj_material> load_mtl(
-    const std::string& filename, std::string* err = nullptr);
+std::vector<obj_material> load_mtl(const std::string& filename,
+    bool flip_tr = true, std::string* err = nullptr);
 ~~~
 
 Load MTL
 
 - Parameters:
     - filename: filename
+    - flip_tr: whether to flip the Tr value
     - err: if set, store error message on error
 - Return:
     - loaded materials (empty on error)
@@ -796,7 +806,7 @@ Load MTL
 
 ~~~ .cpp
 bool save_obj(const std::string& filename, const obj* asset,
-    bool flip_texcoord = true, std::string* err = nullptr);
+    bool flip_texcoord = true, bool flip_tr = true, std::string* err = nullptr);
 ~~~
 
 Save OBJ
@@ -805,6 +815,7 @@ Save OBJ
     - filename: filename
     - asset: obj data to save
     - flip_texcoord: whether to flip the v coordinate
+    - flip_tr: whether to flip the Tr value
     - err: if set, store error message on error
 - Returns:
     - whether an error occurred
@@ -813,7 +824,8 @@ Save OBJ
 
 ~~~ .cpp
 bool save_mtl(const std::string& filename,
-    const std::vector<obj_material>& materials, std::string* err = nullptr);
+    const std::vector<obj_material>& materials, bool flip_tr = true,
+    std::string* err = nullptr);
 ~~~
 
 Save MTL (@deprecated interface)

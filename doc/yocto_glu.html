@@ -49,6 +49,7 @@ Soon porting to glad.</p>
 section of this file.</p>
 <h2>History</h2>
 <ul>
+<li>v 0.14: alpha cut out in stdshader</li>
 <li>v 0.13: simpler texture creation functions</li>
 <li>v 0.12: removing legacy functions</li>
 <li>v 0.11: use yocto_math in the interface and remove inline compilation</li>
@@ -527,7 +528,7 @@ illumination amb.</p>
 <p>End shade drawing.</p>
 <h3>Function set_material_emission_only()</h3>
 <div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_material_emission_only</span><span class="p">(</span><span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">ke</span><span class="p">,</span> <span class="kt">float</span> <span class="n">op</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">ke_txt</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">double_sided</span><span class="p">);</span>
+    <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">ke_txt</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">double_sided</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">alpha_cutout</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -539,7 +540,8 @@ Works for points/lines/triangles. Element type set by draw_XXX calls.</p>
     <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">ks</span><span class="p">,</span> <span class="kt">float</span> <span class="n">rs</span><span class="p">,</span> <span class="kt">float</span> <span class="n">op</span><span class="p">,</span> <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">ke_txt</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">kd_txt</span><span class="p">,</span> <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">ks_txt</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">rs_txt</span><span class="p">,</span> <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">norm_txt</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">occ_txt</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">use_phong</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">double_sided</span><span class="p">);</span>
+    <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">occ_txt</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">use_phong</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">double_sided</span><span class="p">,</span>
+    <span class="kt">bool</span> <span class="n">alpha_cutout</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -554,7 +556,8 @@ calls.</p>
     <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">kb</span><span class="p">,</span> <span class="kt">float</span> <span class="n">km</span><span class="p">,</span> <span class="kt">float</span> <span class="n">rs</span><span class="p">,</span> <span class="kt">float</span> <span class="n">op</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">ke_txt</span><span class="p">,</span> <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">kb_txt</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">km_txt</span><span class="p">,</span> <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">norm_txt</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">occ_txt</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">use_phong</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">double_sided</span><span class="p">);</span>
+    <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">occ_txt</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">use_phong</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">double_sided</span><span class="p">,</span>
+    <span class="kt">bool</span> <span class="n">alpha_cutout</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -569,7 +572,8 @@ for lines, GGX/Phong for triangles). Element type set by draw_XXX calls.</p>
     <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">kd</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">ks</span><span class="p">,</span> <span class="kt">float</span> <span class="n">rs</span><span class="p">,</span> <span class="kt">float</span> <span class="n">op</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">ke_txt</span><span class="p">,</span> <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">kd_txt</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">ks_txt</span><span class="p">,</span> <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">norm_txt</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">occ_txt</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">use_phong</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">double_sided</span><span class="p">);</span>
+    <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">occ_txt</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">use_phong</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">double_sided</span><span class="p">,</span>
+    <span class="kt">bool</span> <span class="n">alpha_cutout</span><span class="p">);</span>
 </code></pre></div>
 
 

@@ -38,6 +38,7 @@
 ///
 /// ## History
 ///
+/// - v 0.14: alpha cut out in stdshader
 /// - v 0.13: simpler texture creation functions
 /// - v 0.12: removing legacy functions
 /// - v 0.11: use yocto_math in the interface and remove inline compilation
@@ -509,7 +510,7 @@ void end_shape();
 /// Works for points/lines/triangles. Element type set by draw_XXX calls.
 ///
 void set_material_emission_only(uint prog, const ym::vec3f& ke, float op,
-    const texture_info& ke_txt, bool double_sided);
+    const texture_info& ke_txt, bool double_sided, bool alpha_cutout);
 
 ///
 /// Set material values with emission ke, diffuse kd, specular ks and
@@ -523,7 +524,8 @@ void set_material_generic(uint prog, const ym::vec3f& ke, const ym::vec3f& kd,
     const ym::vec3f& ks, float rs, float op, const texture_info& ke_txt,
     const texture_info& kd_txt, const texture_info& ks_txt,
     const texture_info& rs_txt, const texture_info& norm_txt,
-    const texture_info& occ_txt, bool use_phong, bool double_sided);
+    const texture_info& occ_txt, bool use_phong, bool double_sided,
+    bool alpha_cutout);
 
 ///
 /// Set material values for glTF specular-roughness PBR shader,
@@ -537,7 +539,8 @@ void set_material_gltf_metallic_roughness(uint prog, const ym::vec3f& ke,
     const ym::vec3f& kb, float km, float rs, float op,
     const texture_info& ke_txt, const texture_info& kb_txt,
     const texture_info& km_txt, const texture_info& norm_txt,
-    const texture_info& occ_txt, bool use_phong, bool double_sided);
+    const texture_info& occ_txt, bool use_phong, bool double_sided,
+    bool alpha_cutout);
 
 ///
 /// Set material values for glTF specular-roughness PBR shader,
@@ -551,7 +554,8 @@ void set_material_gltf_specular_glossiness(uint prog, const ym::vec3f& ke,
     const ym::vec3f& kd, const ym::vec3f& ks, float rs, float op,
     const texture_info& ke_txt, const texture_info& kd_txt,
     const texture_info& ks_txt, const texture_info& norm_txt,
-    const texture_info& occ_txt, bool use_phong, bool double_sided);
+    const texture_info& occ_txt, bool use_phong, bool double_sided,
+    bool alpha_cutout);
 
 ///
 /// Convertes a phong exponent to roughness.
