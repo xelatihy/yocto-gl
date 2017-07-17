@@ -260,7 +260,16 @@ obj* load_obj(const std::string& filename, bool flip_texcoord, bool flip_tr,
             asset->objects.back().groups.push_back({cur_matname, name, {}, {}});
         } else if (tok_s == "mtllib") {
             auto name = (cur_ntok) ? cur_tok[0] : "";
-            cur_mtllibs.push_back(name);
+            if (name != std::string("")) {
+                auto found = false;
+                for (auto lib : cur_mtllibs) {
+                    if (lib == name) {
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found) cur_mtllibs.push_back(name);
+            }
         } else if (tok_s == "c") {
             asset->cameras.emplace_back();
             auto& cam = asset->cameras.back();
@@ -321,7 +330,11 @@ obj* load_obj(const std::string& filename, bool flip_texcoord, bool flip_tr,
 void parse_texture(char** toks, int ntoks, std::string& path,
     property_map<std::string>& info) {
     // texture name
-    if (ntoks > 0) path = toks[ntoks - 1];
+    if (ntoks > 0) {
+        path = toks[ntoks - 1];
+        for (auto& c : path)
+            if (c == '\\') c = '/';
+    }
 
     // texture options
     if (ntoks > 1) {
@@ -1310,6 +1323,7 @@ void add_normals(scene* scn) {
 void add_tangent_space(scene* scn) {
     for (auto msh : scn->meshes) {
         for (auto shp : msh->shapes) {
+            if (!shp->mat) continue;
             if (shp->triangles.empty()) continue;
             if (!shp->tangsp.empty() || shp->texcoord.empty() ||
                 !shp->mat->norm_txt)
