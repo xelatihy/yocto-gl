@@ -44,8 +44,6 @@ int main(int argc, char** argv) {
         yu::cmdline::make_parser(argc, argv, "prints info about gltf");
     auto use_scene = parse_flag(
         parser, "--use-flag", "-s", "convert to/from scene internally");
-    auto save_info =
-        parse_opts(parser, "--info-filename", "-i", "info filename (JSON)", "");
     auto save_out =
         parse_opts(parser, "--out-filename", "-o", "output filename", "");
     auto filename = parse_args(parser, "filename", "input filename", "", true);
@@ -65,82 +63,6 @@ int main(int argc, char** argv) {
 
     // saving output
     if (!save_out.empty()) ygltf::save_gltf(save_out, gltf, true, false);
-
-    // info
-    if (!save_info.empty()) {
-        // start statistics
-        auto info = json::object();
-
-        // number of elements
-        auto objects = json::object();
-        objects["accessors"] = gltf->accessors.size();
-        objects["animations"] = gltf->animations.size();
-        objects["buffers"] = gltf->buffers.size();
-        objects["bufferViews"] = gltf->bufferViews.size();
-        objects["cameras"] = gltf->cameras.size();
-        objects["images"] = gltf->images.size();
-        objects["materials"] = gltf->materials.size();
-        objects["meshes"] = gltf->meshes.size();
-        objects["nodes"] = gltf->nodes.size();
-        objects["samplers"] = gltf->samplers.size();
-        objects["scenes"] = gltf->scenes.size();
-        objects["skins"] = gltf->skins.size();
-        objects["textures"] = gltf->textures.size();
-        info["objects"] = objects;
-
-        static const auto type_map =
-            std::map<ygltf::glTFAccessorType, std::string>{
-                {ygltf::glTFAccessorType::NotSet, "NotSet"},
-                {ygltf::glTFAccessorType::Scalar, "Scalar"},
-                {ygltf::glTFAccessorType::Vec2, "Vec2"},
-                {ygltf::glTFAccessorType::Vec3, "Vec3"},
-                {ygltf::glTFAccessorType::Vec4, "Vec4"},
-                {ygltf::glTFAccessorType::Mat2, "Mat2"},
-                {ygltf::glTFAccessorType::Mat3, "Mat3"},
-                {ygltf::glTFAccessorType::Mat4, "Mat4"},
-            };
-
-        static const auto ctype_map =
-            std::map<ygltf::glTFAccessorComponentType, std::string>{
-                {ygltf::glTFAccessorComponentType::NotSet, "NotSet"},
-                {ygltf::glTFAccessorComponentType::Byte, "Byte"},
-                {ygltf::glTFAccessorComponentType::UnsignedByte,
-                    "Unsigned Byte"},
-                {ygltf::glTFAccessorComponentType::Short, "Short"},
-                {ygltf::glTFAccessorComponentType::UnsignedShort,
-                    "Unsigned Short"},
-                {ygltf::glTFAccessorComponentType::UnsignedInt, "UnsignedInt"},
-                {ygltf::glTFAccessorComponentType::Float, "Float"}};
-
-        // buffer descriptions
-        auto descrs = json::array();
-        for (auto gdescr : ygltf::gen_buffer_descriptors(gltf)) {
-            auto descr = json::object();
-            descr["name"] = gdescr->name;
-            descr["uri"] = gdescr->uri;
-            descr["size"] = gdescr->size;
-            descr["sections"] = json::array();
-            for (auto gsect : gdescr->sections) {
-                auto sect = json::object();
-                sect["refcount"] = gsect->refcount;
-                sect["start"] = gsect->start;
-                sect["size"] = gsect->size;
-                sect["stride"] = gsect->stride;
-                sect["count"] = gsect->count;
-                sect["type"] = type_map.at(gsect->type);
-                sect["ctype"] = ctype_map.at(gsect->ctype);
-                sect["ncomp"] = gsect->ncomp;
-                sect["csize"] = gsect->csize;
-                descr["sections"].push_back(sect);
-            }
-            descrs.push_back(descr);
-        }
-        info["descriptors"] = descrs;
-
-        // dump json
-        auto info_txt = info.dump(4);
-        yu::file::save_txtfile(save_info.c_str(), info_txt);
-    }
 
     // cleanup
     delete gltf;

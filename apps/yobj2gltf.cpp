@@ -50,11 +50,8 @@ ygltf::scene_group* obj2gltf(const yobj::scene* obj, bool add_scene) {
     for (auto otxt : obj->textures) {
         auto gtxt = new ygltf::texture();
         gtxt->path = otxt->path;
-        gtxt->width = otxt->width;
-        gtxt->height = otxt->height;
-        gtxt->ncomp = otxt->ncomp;
-        gtxt->dataf = otxt->dataf;
-        gtxt->datab = otxt->datab;
+        gtxt->ldr = (otxt->ldr) ? new ym::image4b(*otxt->ldr) : nullptr;
+        gtxt->hdr = (otxt->hdr) ? new ym::image4f(*otxt->hdr) : nullptr;
         gltf->textures.push_back(gtxt);
     }
 

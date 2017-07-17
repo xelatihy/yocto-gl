@@ -49,6 +49,7 @@ Soon porting to glad.</p>
 section of this file.</p>
 <h2>History</h2>
 <ul>
+<li>v 0.13: simpler texture creation functions</li>
 <li>v 0.12: removing legacy functions</li>
 <li>v 0.11: use yocto_math in the interface and remove inline compilation</li>
 <li>v 0.10: user interface with dear ImGui</li>
@@ -240,6 +241,18 @@ section of this file.</p>
 
 <p>Enable/disable edges. Attempts to avoid z-fighting but the method is not
 robust.</p>
+<h3>Function enable_blending()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">enable_blending</span><span class="p">(</span><span class="kt">bool</span> <span class="n">enabled</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Enable/disable blending</p>
+<h3>Function set_blend_over()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_blend_over</span><span class="p">();</span>
+</code></pre></div>
+
+
+<p>Set blending to over operator</p>
 <h3>Function line_width()</h3>
 <div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">line_width</span><span class="p">(</span><span class="kt">float</span> <span class="n">w</span><span class="p">);</span>
 </code></pre></div>
@@ -297,6 +310,36 @@ Returns the texture id.</p>
 <h3>Function update_texture()</h3>
 <div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">update_texture</span><span class="p">(</span>
     <span class="n">uint</span> <span class="n">tid</span><span class="p">,</span> <span class="kt">int</span> <span class="n">w</span><span class="p">,</span> <span class="kt">int</span> <span class="n">h</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nc</span><span class="p">,</span> <span class="k">const</span> <span class="kt">unsigned</span> <span class="kt">char</span><span class="o">*</span> <span class="n">pixels</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">mipmap</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Updates the texture tid with new image data.</p>
+<h3>Function make_texture()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">uint</span> <span class="nf">make_texture</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">image4f</span><span class="o">*</span> <span class="n">img</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">linear</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">mipmap</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">as_float</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Creates a texture from an image.
+Internally use float if as_float and filtering if filter.
+Returns the texture id.</p>
+<h3>Function make_texture()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">uint</span> <span class="nf">make_texture</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">image4b</span><span class="o">*</span> <span class="n">img</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">linear</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">mipmap</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">as_srgb</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Creates a texture from an image.
+Internally use srgb lookup if as_srgb and filtering if filter.
+Returns the texture id.</p>
+<h3>Function update_texture()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_texture</span><span class="p">(</span><span class="n">uint</span> <span class="n">tid</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">image4f</span><span class="o">*</span> <span class="n">img</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">mipmap</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Updates the texture tid with new image data.</p>
+<h3>Function update_texture()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_texture</span><span class="p">(</span><span class="n">uint</span> <span class="n">tid</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">image4b</span><span class="o">*</span> <span class="n">img</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">mipmap</span><span class="p">);</span>
 </code></pre></div>
 
 

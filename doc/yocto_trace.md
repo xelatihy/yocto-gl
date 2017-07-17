@@ -63,6 +63,7 @@ for internal acceleration. Disable this by setting YTRACE_NO_BVH.
 
 ## History
 
+- v 0.18: simpler texture creation functions
 - v 0.17: move to rgba per-vertex color
 - v 0.16: use yocto_math in the interface and remove inline compilation
 - v 0.15: move to add api
@@ -184,6 +185,34 @@ Sets a texture in the scene.
     - ncomp: number of components (1-4)
     - hdr: hdr pixels
     - ldr: ldr pixels (sRGB)
+- Returns:
+    - texture id
+
+### Function add_texture()
+
+~~~ .cpp
+int add_texture(scene* scn, const ym::image4f* img);
+~~~
+
+Adds a texture in the scene.
+
+- Parameters:
+    - scn: scene
+    - hdr: hdr image
+- Returns:
+    - texture id
+
+### Function add_texture()
+
+~~~ .cpp
+int add_texture(scene* scn, const ym::image4b* ldr);
+~~~
+
+Sets a texture in the scene.
+
+- Parameters:
+    - scn: scene
+    - ldr: ldr image (sRGB)
 - Returns:
     - texture id
 

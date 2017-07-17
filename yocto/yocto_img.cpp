@@ -63,138 +63,109 @@ namespace yimg {
 //
 // Get extension (including '.').
 //
-static inline std::string _get_extension(const std::string& filename) {
+std::string get_extension(const std::string& filename) {
     auto pos = filename.rfind('.');
     if (pos == std::string::npos) return "";
     return filename.substr(pos);
 }
 
 //
-// Loads an image
+// Loads an ldr image.
 //
-void load_image(const std::string& filename, int& width, int& height,
-    int& ncomp, float*& hdr) {
-    hdr = stbi_loadf(filename.c_str(), &width, &height, &ncomp, 0);
-    if (!hdr) { throw std::runtime_error("cannot load image " + filename); }
+ym::image4b* load_image4b(const std::string& filename) {
+    auto w = 0, h = 0, c = 0;
+    auto pixels =
+        std::unique_ptr<byte>(stbi_load(filename.c_str(), &w, &h, &c, 4));
+    if (!pixels) return nullptr;
+    return new ym::image4b(w, h, (ym::vec4b*)pixels.get());
 }
 
 //
-// Loads an image
+// Loads an hdr image.
 //
-void load_image(const std::string& filename, int& width, int& height,
-    int& ncomp, byte*& ldr) {
-    ldr = stbi_load(filename.c_str(), &width, &height, &ncomp, 0);
-    if (!ldr) { throw std::runtime_error("cannot load image " + filename); }
+ym::image4f* load_image4f(const std::string& filename) {
+    auto w = 0, h = 0, c = 0;
+    auto pixels =
+        std::unique_ptr<float>(stbi_loadf(filename.c_str(), &w, &h, &c, 4));
+    if (!pixels) return nullptr;
+    return new ym::image4f(w, h, (ym::vec4f*)pixels.get());
 }
 
 //
-// Loads an image from memory.
+// Saves an ldr image.
 //
-void load_image_from_memory(const std::string& fmt, const byte* data,
-    int length, int& width, int& height, int& ncomp, float*& hdr) {
-    hdr = stbi_loadf_from_memory(data, length, &width, &height, &ncomp, 0);
-    if (!*hdr) {
-        throw std::runtime_error(
-            "cannot load image from memory with format " + fmt);
+bool save_image4b(const std::string& filename, const ym::image4b* img) {
+    if (get_extension(filename) == ".png") {
+        return stbi_write_png(filename.c_str(), img->width(), img->height(), 4,
+            (byte*)img->data(), img->width() * 4);
     }
+    return false;
 }
 
 //
-// Loads an image from memory.
+// Saves an hdr image.
 //
-void load_image_from_memory(const std::string& fmt, const byte* data,
-    int length, int& width, int& height, int& ncomp, byte*& ldr) {
-    ldr = stbi_load_from_memory(data, length, &width, &height, &ncomp, 0);
-    if (!ldr) {
-        throw std::runtime_error(
-            "cannot load image from memory with format " + fmt);
+bool save_image4f(const std::string& filename, const ym::image4f* img) {
+    if (get_extension(filename) == ".hdr") {
+        return stbi_write_hdr(filename.c_str(), img->width(), img->height(), 4,
+            (float*)img->data());
     }
-}
-
-//
-// Loads an image from memory.
-//
-void load_image_from_memory(const std::string& fmt, byte* data, int length,
-    int& width, int& height, int& ncomp, float*& hdr, byte*& ldr) {
-    if (fmt == "hdr")
-        load_image_from_memory(fmt, data, length, width, height, ncomp, hdr);
-    else
-        load_image_from_memory(fmt, data, length, width, height, ncomp, ldr);
+    return false;
 }
 
 //
 // Loads an image
 //
-void load_image(const std::string& filename, int& width, int& height,
-    int& ncomp, float*& hdr, byte*& ldr) {
-    if (_get_extension(filename) == ".hdr")
-        load_image(filename, width, height, ncomp, hdr);
-    else
-        load_image(filename, width, height, ncomp, ldr);
+float* load_imagef(
+    const std::string& filename, int& width, int& height, int& ncomp) {
+    return stbi_loadf(filename.c_str(), &width, &height, &ncomp, 0);
 }
 
 //
 // Loads an image
 //
-void load_image(const std::string& filename, int& width, int& height,
-    int& ncomp, std::vector<float>& hdr, std::vector<byte>& ldr) {
-    auto hdr_ = (float*)nullptr;
-    auto ldr_ = (byte*)nullptr;
-    load_image(filename, width, height, ncomp, hdr_, ldr_);
-    if (hdr_) {
-        hdr = std::vector<float>(hdr_, hdr_ + width * height * ncomp);
-        delete hdr_;
-    }
-    if (ldr_) {
-        ldr = std::vector<unsigned char>(ldr_, ldr_ + width * height * ncomp);
-        delete ldr_;
-    }
+byte* load_image(
+    const std::string& filename, int& width, int& height, int& ncomp) {
+    return stbi_load(filename.c_str(), &width, &height, &ncomp, 0);
 }
 
 //
 // Loads an image from memory.
 //
-void load_image_from_memory(const std::string& fmt, const byte* data,
-    int length, int& width, int& height, int& ncomp, std::vector<float>& hdr,
-    std::vector<byte>& ldr) {
-    auto hdr_ = (float*)nullptr;
-    auto ldr_ = (byte*)nullptr;
-    load_image_from_memory(
-        fmt, (byte*)data, length, width, height, ncomp, hdr_, ldr_);
-    if (hdr_) {
-        hdr = std::vector<float>(hdr_, hdr_ + width * height * ncomp);
-        delete hdr_;
-    }
-    if (ldr_) {
-        ldr = std::vector<unsigned char>(ldr_, ldr_ + width * height * ncomp);
-        delete ldr_;
-    }
+float* load_imagef_from_memory(const std::string& fmt, const byte* data,
+    int length, int& width, int& height, int& ncomp) {
+    return stbi_loadf_from_memory(data, length, &width, &height, &ncomp, 0);
+}
+
+//
+// Loads an image from memory.
+//
+byte* load_image_from_memory(const std::string& fmt, const byte* data,
+    int length, int& width, int& height, int& ncomp) {
+    return stbi_load_from_memory(data, length, &width, &height, &ncomp, 0);
 }
 
 //
 // Saves an image
 //
-void save_image(const std::string& filename, int width, int height, int ncomp,
+bool save_imagef(const std::string& filename, int width, int height, int ncomp,
     const float* hdr) {
-    if (_get_extension(filename) == ".hdr") {
-        stbi_write_hdr(filename.c_str(), width, height, ncomp, hdr);
-    } else {
-        throw std::invalid_argument("unsupported output extension " + filename);
-    }
+    if (get_extension(filename) == ".hdr") {
+        return stbi_write_hdr(filename.c_str(), width, height, ncomp, hdr);
+    } else
+        return false;
 }
 
 //
 // Saves an image
 //
-void save_image(const std::string& filename, int width, int height, int ncomp,
+bool save_image(const std::string& filename, int width, int height, int ncomp,
     const byte* ldr) {
-    if (_get_extension(filename) == ".png") {
-        if (!ldr) throw std::invalid_argument("ldr data required");
-        stbi_write_png(
+    if (get_extension(filename) == ".png") {
+        return stbi_write_png(
             filename.c_str(), width, height, ncomp, ldr, width * ncomp);
-    } else {
-        throw std::invalid_argument("unsupported output extension " + filename);
-    }
+    } else
+        return false;
 }
 
 //

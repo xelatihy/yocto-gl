@@ -64,6 +64,7 @@
 ///
 /// ## History
 ///
+/// - v 0.18: simpler texture creation functions
 /// - v 0.17: move to rgba per-vertex color
 /// - v 0.16: use yocto_math in the interface and remove inline compilation
 /// - v 0.15: move to add api
@@ -210,6 +211,28 @@ int add_texture(scene* scn, int width, int height, int ncomp, const float* hdr);
 ///     - texture id
 ///
 int add_texture(scene* scn, int width, int height, int ncomp, const byte* ldr);
+
+///
+/// Adds a texture in the scene.
+///
+/// - Parameters:
+///     - scn: scene
+///     - hdr: hdr image
+/// - Returns:
+///     - texture id
+///
+int add_texture(scene* scn, const ym::image4f* img);
+
+///
+/// Sets a texture in the scene.
+///
+/// - Parameters:
+///     - scn: scene
+///     - ldr: ldr image (sRGB)
+/// - Returns:
+///     - texture id
+///
+int add_texture(scene* scn, const ym::image4b* ldr);
 
 ///
 /// Sets a material in the scene. [DEPRECATED]

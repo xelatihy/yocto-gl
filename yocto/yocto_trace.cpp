@@ -331,6 +331,26 @@ int add_texture(scene* scn, int width, int height, int ncomp, const byte* ldr) {
 //
 // Public API. See above.
 //
+int add_texture(scene* scn, const ym::image4f* hdr) {
+    scn->textures.push_back(new texture());
+    set_texture(scn, (int)scn->textures.size() - 1, hdr->width(), hdr->height(),
+        4, (float*)hdr->data());
+    return (int)scn->textures.size() - 1;
+}
+
+//
+// Public API. See above.
+//
+int add_texture(scene* scn, const ym::image4b* ldr) {
+    scn->textures.push_back(new texture());
+    set_texture(scn, (int)scn->textures.size() - 1, ldr->width(), ldr->height(),
+        4, (byte*)ldr->data());
+    return (int)scn->textures.size() - 1;
+}
+
+//
+// Public API. See above.
+//
 void set_material_generic(scene* scn, int mid, const ym::vec3f& ke,
     const ym::vec3f& kd, const ym::vec3f& ks, const ym::vec3f& kt, float rs,
     float op, int ke_txt, int kd_txt, int ks_txt, int kt_txt, int rs_txt,
@@ -678,35 +698,11 @@ void specular_fresnel_from_ks(
     esk = {0, 0, 0};
 }
 
-//
-// Compute shape element cdf for shape sampling.
-//
-template <typename T, typename Weight_callback>
-static std::vector<float> _compute_weight_cdf(int nelems, const T* elem,
-    float* total_weight, const Weight_callback& weight_cb) {
-    // prepare return
-    auto cdf = std::vector<float>(nelems);
-
-    // compute weights
-    *total_weight = 0;
-    for (auto i = 0; i < nelems; i++) {
-        auto w = weight_cb(elem[i]);
-        *total_weight += w;
-        cdf[i] = *total_weight;
-    }
-
-    // normalize
-    for (auto& c : cdf) c /= *total_weight;
-
-    // done
-    return cdf;
-}
-
 #ifndef YTRACE_NO_BVH
 //
 // internal intersection adapter
 //
-static inline intersect_point _internal_intersect_first(
+static inline intersect_point internal_intersect_first(
     void* ctx, const ym::ray3f& ray) {
     auto scene_bvh = (ybvh::scene*)ctx;
     auto isec = ybvh::intersect_scene(scene_bvh, ray, false);
@@ -756,7 +752,7 @@ void init_intersection(scene* scn) {
     }
     ybvh::build_scene_bvh(scn->intersect_bvh);
     set_intersection_callbacks(scn, scn->intersect_bvh,
-        _internal_intersect_first, _internal_intersect_any);
+        internal_intersect_first, _internal_intersect_any);
 #endif
 }
 
@@ -780,21 +776,18 @@ void init_lights(scene* scn) {
         lgt->ist = ist;
         auto shp = ist->shp;
         if (shp->cdf.empty()) {
+            shp->cdf.resize(shp->nelems);
             if (shp->points) {
-                shp->cdf = _compute_weight_cdf(shp->nelems, shp->points,
-                    &shp->area, [shp](ym::vec1i e) { return 1; });
+                shp->cdf.resize(shp->nelems);
+                for (auto i = 0; i < shp->nelems; i++) ist->shp->cdf[i] = i + 1;
             } else if (ist->shp->lines) {
-                shp->cdf = _compute_weight_cdf(
-                    shp->nelems, shp->lines, &shp->area, [shp](ym::vec2i e) {
-                        return ym::length(shp->pos[e[1]] - shp->pos[e[0]]);
-                    });
+                ym::sample_lines_cdf(
+                    shp->nelems, shp->lines, shp->pos, shp->cdf.data());
             } else if (shp->triangles) {
-                shp->cdf = _compute_weight_cdf(shp->nelems, shp->triangles,
-                    &shp->area, [shp](ym::vec3i e) {
-                        return ym::triangle_area(
-                            shp->pos[e[0]], shp->pos[e[1]], shp->pos[e[2]]);
-                    });
+                ym::sample_triangles_cdf(
+                    shp->nelems, shp->triangles, shp->pos, shp->cdf.data());
             }
+            shp->area = ist->shp->cdf.back();
         }
         scn->lights.push_back(lgt);
     }
@@ -815,7 +808,7 @@ void init_lights(scene* scn) {
 // Random number smp. Handles random number generation for stratified
 // sampling and correlated multi-jittered sampling.
 //
-struct _sampler {
+struct sampler {
     ym::rng_pcg32 rng;  // rnumber number state
     int i, j;           // pixel coordinates
     int s, d;           // sample and dimension indices
@@ -831,10 +824,10 @@ struct _sampler {
 // around according to the RNG documentaion, but we still found bad cases.
 // Scrambling avoids it.
 //
-static inline _sampler _make_sampler(
+static inline sampler make_sampler(
     int i, int j, int s, int ns, rng_type rtype) {
     // we use various hashes to scramble the pixel values
-    _sampler smp = {{0, 0}, i, j, s, 0, ns, rtype};
+    sampler smp = {{0, 0}, i, j, s, 0, ns, rtype};
     uint64_t sample_id = ((uint64_t)(i + 1)) << 0 | ((uint64_t)(j + 1)) << 15 |
                          ((uint64_t)(s + 1)) << 30;
     uint64_t initseq = ym::hash_uint64(sample_id);
@@ -851,7 +844,7 @@ static inline _sampler _make_sampler(
 // compute a 64bit sample and use hashing to avoid correlation. Then permutation
 // are computed with CMJS procedures.
 //
-static inline float _sample_next1f(_sampler* smp) {
+static inline float sample_next1f(sampler* smp) {
     float rn = 0;
     switch (smp->rtype) {
         case rng_type::uniform: {
@@ -888,7 +881,7 @@ static inline float _sample_next1f(_sampler* smp) {
 // Implementation notes: see above. Note that using deterministic keyed
 // permutaton we can use stratified sampling without preallocating samples.
 //
-static inline ym::vec2f _sample_next2f(_sampler* smp) {
+static inline ym::vec2f sample_next2f(sampler* smp) {
     ym::vec2f rn = {0, 0};
     switch (smp->rtype) {
         case rng_type::uniform: {
@@ -932,8 +925,8 @@ static inline ym::vec2f _sample_next2f(_sampler* smp) {
 //
 // Creates a 1-dimensional sample in [0,num-1]
 //
-static inline int _sample_next1i(_sampler* smp, int num) {
-    return ym::clamp(int(_sample_next1f(smp) * num), 0, num - 1);
+static inline int sample_next1i(sampler* smp, int num) {
+    return ym::clamp(int(sample_next1f(smp) * num), 0, num - 1);
 }
 
 //
@@ -982,7 +975,7 @@ struct point {
 // Generates a ray ray_o, ray_d from a camera cam for image plane coordinate
 // uv and the lens coordinates luv.
 //
-static ym::ray3f _eval_camera(
+static ym::ray3f eval_camera(
     const camera* cam, const ym::vec2f& uv, const ym::vec2f& luv) {
     auto h = 2 * std::tan(cam->yfov / 2);
     auto w = h * cam->aspect;
@@ -996,7 +989,7 @@ static ym::ray3f _eval_camera(
 //
 // Grab a texture value
 //
-static inline ym::vec4f _lookup_texture(
+static inline ym::vec4f lookup_texture(
     const texture* txt, const ym::vec2i& ij, bool srgb = true) {
     if (txt->ldr) {
         auto v = ym::image_lookup(txt->width, txt->height, txt->ncomp, txt->ldr,
@@ -1014,7 +1007,7 @@ static inline ym::vec4f _lookup_texture(
 //
 // Wrapper for above function
 //
-static ym::vec4f _eval_texture_(
+static ym::vec4f eval_texture_(
     const texture* txt, const ym::vec2f& texcoord, bool srgb = true) {
     assert(txt);
     assert(txt->hdr || txt->ldr);
@@ -1040,35 +1033,35 @@ static ym::vec4f _eval_texture_(
         uv[0] * (1 - uv[1]), uv[0] * uv[1]};
 
     // handle interpolation
-    return (_lookup_texture(txt, idx[0], srgb) * w[0] +
-            _lookup_texture(txt, idx[1], srgb) * w[1] +
-            _lookup_texture(txt, idx[2], srgb) * w[2] +
-            _lookup_texture(txt, idx[3], srgb) * w[3]);
+    return (lookup_texture(txt, idx[0], srgb) * w[0] +
+            lookup_texture(txt, idx[1], srgb) * w[1] +
+            lookup_texture(txt, idx[2], srgb) * w[2] +
+            lookup_texture(txt, idx[3], srgb) * w[3]);
 }
 
 //
 // Wrapper for above function
 //
-static ym::vec4f _eval_texture4(
+static ym::vec4f eval_texture4(
     const texture* txt, const ym::vec2f& texcoord, bool srgb = true) {
     if (!txt) return {1, 1, 1, 1};
-    return _eval_texture_(txt, texcoord, srgb);
+    return eval_texture_(txt, texcoord, srgb);
 }
 
 //
 // Wrapper for above function
 //
-static ym::vec3f _eval_texture3(
+static ym::vec3f eval_texture3(
     const texture* txt, const ym::vec2f& texcoord, bool srgb = true) {
     if (!txt) return {1, 1, 1};
-    auto v = _eval_texture_(txt, texcoord, srgb);
+    auto v = eval_texture_(txt, texcoord, srgb);
     return {v.x, v.y, v.z};
 }
 
 //
 // Evaluates emission.
 //
-static ym::vec3f _eval_emission(const point& pt) {
+static ym::vec3f eval_emission(const point& pt) {
     if (pt.ke == ym::zero3f) return ym::zero3f;
     switch (pt.ptype) {
         case point::type::env: return pt.ke;
@@ -1087,7 +1080,7 @@ static ym::vec3f _eval_emission(const point& pt) {
 // Compute the fresnel term for dielectrics. Implementation from
 // https://seblagarde.wordpress.com/2013/04/29/memo-on-fresnel-equations/
 //
-static ym::vec3f _eval_fresnel_dielectric(float cosw, const ym::vec3f& eta_) {
+static ym::vec3f eval_fresnel_dielectric(float cosw, const ym::vec3f& eta_) {
     auto eta = eta_;
     if (cosw < 0) {
         eta = 1.0f / eta;
@@ -1117,9 +1110,9 @@ static ym::vec3f _eval_fresnel_dielectric(float cosw, const ym::vec3f& eta_) {
 // Compute the fresnel term for metals. Implementation from
 // https://seblagarde.wordpress.com/2013/04/29/memo-on-fresnel-equations/
 //
-static ym::vec3f _eval_fresnel_metal(
+static ym::vec3f eval_fresnel_metal(
     float cosw, const ym::vec3f& eta, const ym::vec3f& etak) {
-    if (etak == ym::zero3f) return _eval_fresnel_dielectric(cosw, eta);
+    if (etak == ym::zero3f) return eval_fresnel_dielectric(cosw, eta);
 
     cosw = ym::clamp(cosw, (float)-1, (float)1);
     auto cos2 = cosw * cosw;
@@ -1148,7 +1141,7 @@ static ym::vec3f _eval_fresnel_metal(
 //
 // Schlick approximation of Fresnel term
 //
-static ym::vec3f _eval_fresnel_schlick(const ym::vec3f& ks, float cosw) {
+static ym::vec3f eval_fresnel_schlick(const ym::vec3f& ks, float cosw) {
     return ks + (ym::vec3f{1, 1, 1} - ks) *
                     std::pow(ym::clamp(1.0f - cosw, 0.0f, 1.0f), 5.0f);
 }
@@ -1165,7 +1158,7 @@ static ym::vec3f _eval_fresnel_schlick(const ym::vec3f& ks, float cosw) {
 // - uses Kajiya-Kay for hair
 // - uses a hack for points
 //
-static ym::vec3f _eval_brdfcos(const point& pt, const ym::vec3f& wi) {
+static ym::vec3f eval_brdfcos(const point& pt, const ym::vec3f& wi) {
     // exit if not needed
     if (pt.emission_only()) return ym::zero3f;
 
@@ -1261,7 +1254,7 @@ static ym::vec3f _eval_brdfcos(const point& pt, const ym::vec3f& wi) {
 
                 // handle fresnel
                 auto odh = ym::clamp(dot(wo, wh), 0.0f, 1.0f);
-                auto ks = _eval_fresnel_schlick(pt.ks, odh);
+                auto ks = eval_fresnel_schlick(pt.ks, odh);
 
                 // sum up
                 spec = ks * ndi * dg / (4 * ndi * ndo);
@@ -1280,7 +1273,7 @@ static ym::vec3f _eval_brdfcos(const point& pt, const ym::vec3f& wi) {
 //
 // Compute the weight for sampling the BRDF
 //
-static float _weight_brdfcos(const point& pt, const ym::vec3f& wi) {
+static float weight_brdfcos(const point& pt, const ym::vec3f& wi) {
     // skip if no component
     if (pt.emission_only()) return 0;
 
@@ -1351,7 +1344,7 @@ static float _weight_brdfcos(const point& pt, const ym::vec3f& wi) {
 //
 // Picks a direction based on the BRDF
 //
-static ym::vec3f _sample_brdfcos(
+static ym::vec3f sample_brdfcos(
     const point& pt, float rnl, const ym::vec2f& rn) {
     // skip if no component
     if (pt.emission_only()) return ym::zero3f;
@@ -1432,7 +1425,7 @@ static ym::vec3f _sample_brdfcos(
 //
 // Create a point for an environment map. Resolves material with textures.
 //
-static point _eval_envpoint(const environment* env, const ym::vec3f& wo) {
+static point eval_envpoint(const environment* env, const ym::vec3f& wo) {
     // set shape data
     auto pt = point();
 
@@ -1455,7 +1448,7 @@ static point _eval_envpoint(const environment* env, const ym::vec3f& wo) {
             (std::acos(ym::clamp(w[1], (float)-1, (float)1)) / ym::pif);
         auto phi = std::atan2(w[2], w[0]) / (2 * ym::pif);
         auto texcoord = ym::vec2f{phi, theta};
-        pt.ke *= _eval_texture3(env->ke_txt, texcoord);
+        pt.ke *= eval_texture3(env->ke_txt, texcoord);
     }
 
     // done
@@ -1466,9 +1459,8 @@ static point _eval_envpoint(const environment* env, const ym::vec3f& wo) {
 // Interpolate a value over an element
 //
 template <int N, int M>
-static inline ym::vec<float, N> _interpolate_value(
-    const ym::vec<float, N>* vals, const ym::vec<int, M>* elems, int eid,
-    const ym::vec3f& euv) {
+static inline ym::vec<float, N> interpolate_value(const ym::vec<float, N>* vals,
+    const ym::vec<int, M>* elems, int eid, const ym::vec3f& euv) {
     auto ret = ym::zero_vec<float, N>();
     if (!vals) return ret;
     auto& elem = elems[eid];
@@ -1479,7 +1471,7 @@ static inline ym::vec<float, N> _interpolate_value(
 //
 // Create a point for a shape. Resolves geometry and material with textures.
 //
-static point _eval_shapepoint(
+static point eval_shapepoint(
     const instance* ist, int eid, const ym::vec3f& euv, const ym::vec3f& wo) {
     // set shape data
     auto pt = point();
@@ -1503,45 +1495,45 @@ static point _eval_shapepoint(
     auto rs = ym::zero1f;
     if (shp->points) {
         pt.ptype = point::type::point;
-        pos = _interpolate_value(shp->pos, shp->points, eid, euv);
+        pos = interpolate_value(shp->pos, shp->points, eid, euv);
         norm =
-            ym::normalize(_interpolate_value(shp->norm, shp->points, eid, euv));
-        texcoord = _interpolate_value(shp->texcoord, shp->points, eid, euv);
-        color = _interpolate_value(shp->color, shp->points, eid, euv);
-        ke = _interpolate_value(shp->ke, shp->points, eid, euv);
-        kd = _interpolate_value(shp->kd, shp->points, eid, euv);
-        ks = _interpolate_value(shp->ks, shp->points, eid, euv);
-        kt = _interpolate_value(shp->kt, shp->points, eid, euv);
-        rs = _interpolate_value(shp->rs, shp->points, eid, euv);
+            ym::normalize(interpolate_value(shp->norm, shp->points, eid, euv));
+        texcoord = interpolate_value(shp->texcoord, shp->points, eid, euv);
+        color = interpolate_value(shp->color, shp->points, eid, euv);
+        ke = interpolate_value(shp->ke, shp->points, eid, euv);
+        kd = interpolate_value(shp->kd, shp->points, eid, euv);
+        ks = interpolate_value(shp->ks, shp->points, eid, euv);
+        kt = interpolate_value(shp->kt, shp->points, eid, euv);
+        rs = interpolate_value(shp->rs, shp->points, eid, euv);
     } else if (shp->lines) {
         pt.ptype = point::type::line;
-        pos = _interpolate_value(shp->pos, shp->lines, eid, euv);
+        pos = interpolate_value(shp->pos, shp->lines, eid, euv);
         norm =
-            ym::normalize(_interpolate_value(shp->norm, shp->lines, eid, euv));
-        texcoord = _interpolate_value(shp->texcoord, shp->lines, eid, euv);
-        color = _interpolate_value(shp->color, shp->lines, eid, euv);
-        ke = _interpolate_value(shp->ke, shp->lines, eid, euv);
-        kd = _interpolate_value(shp->kd, shp->lines, eid, euv);
-        ks = _interpolate_value(shp->ks, shp->lines, eid, euv);
-        kt = _interpolate_value(shp->kt, shp->lines, eid, euv);
-        rs = _interpolate_value(shp->rs, shp->lines, eid, euv);
+            ym::normalize(interpolate_value(shp->norm, shp->lines, eid, euv));
+        texcoord = interpolate_value(shp->texcoord, shp->lines, eid, euv);
+        color = interpolate_value(shp->color, shp->lines, eid, euv);
+        ke = interpolate_value(shp->ke, shp->lines, eid, euv);
+        kd = interpolate_value(shp->kd, shp->lines, eid, euv);
+        ks = interpolate_value(shp->ks, shp->lines, eid, euv);
+        kt = interpolate_value(shp->kt, shp->lines, eid, euv);
+        rs = interpolate_value(shp->rs, shp->lines, eid, euv);
     } else if (shp->triangles) {
         pt.ptype = point::type::triangle;
-        pos = _interpolate_value(shp->pos, shp->triangles, eid, euv);
-        norm = _interpolate_value(shp->norm, shp->triangles, eid, euv);
-        texcoord = _interpolate_value(shp->texcoord, shp->triangles, eid, euv);
-        color = _interpolate_value(shp->color, shp->triangles, eid, euv);
-        tangsp = _interpolate_value(shp->tangsp, shp->triangles, eid, euv);
-        ke = _interpolate_value(shp->ke, shp->triangles, eid, euv);
-        kd = _interpolate_value(shp->kd, shp->triangles, eid, euv);
-        ks = _interpolate_value(shp->ks, shp->triangles, eid, euv);
-        kt = _interpolate_value(shp->kt, shp->triangles, eid, euv);
-        rs = _interpolate_value(shp->rs, shp->triangles, eid, euv);
+        pos = interpolate_value(shp->pos, shp->triangles, eid, euv);
+        norm = interpolate_value(shp->norm, shp->triangles, eid, euv);
+        texcoord = interpolate_value(shp->texcoord, shp->triangles, eid, euv);
+        color = interpolate_value(shp->color, shp->triangles, eid, euv);
+        tangsp = interpolate_value(shp->tangsp, shp->triangles, eid, euv);
+        ke = interpolate_value(shp->ke, shp->triangles, eid, euv);
+        kd = interpolate_value(shp->kd, shp->triangles, eid, euv);
+        ks = interpolate_value(shp->ks, shp->triangles, eid, euv);
+        kt = interpolate_value(shp->kt, shp->triangles, eid, euv);
+        rs = interpolate_value(shp->rs, shp->triangles, eid, euv);
     }
 
     // handle normal map
     if (shp->texcoord && shp->tangsp && shp->triangles && mat->norm_txt) {
-        auto txt = _eval_texture3(mat->norm_txt, texcoord, false) * 2.0f -
+        auto txt = eval_texture3(mat->norm_txt, texcoord, false) * 2.0f -
                    ym::vec3f{1, 1, 1};
         auto ntxt = ym::normalize(ym::vec3f{txt[0], -txt[1], txt[2]});
         auto frame = ym::make_frame3_fromzx(
@@ -1587,44 +1579,44 @@ static point _eval_shapepoint(
 
     // handle textures
     if (shp->texcoord) {
-        if (mat->ke_txt) pt.ke *= _eval_texture3(mat->ke_txt, texcoord);
+        if (mat->ke_txt) pt.ke *= eval_texture3(mat->ke_txt, texcoord);
         switch (mat->mtype) {
             case material_type::none: break;
             case material_type::emission_only: break;
             case material_type::gltf_metallic_roughness: {
                 if (mat->kd_txt) {
-                    auto kd_txt = _eval_texture4(mat->kd_txt, texcoord);
+                    auto kd_txt = eval_texture4(mat->kd_txt, texcoord);
                     pt.kd *= {kd_txt.x, kd_txt.y, kd_txt.z};
                     pt.op *= kd_txt.w;
                 }
                 if (mat->ks_txt) {
-                    auto ks_txt = _eval_texture4(mat->kd_txt, texcoord);
+                    auto ks_txt = eval_texture4(mat->kd_txt, texcoord);
                     pt.ks *= {ks_txt.z, ks_txt.z, ks_txt.z};
                     pt.rs *= ks_txt.y;
                 }
             } break;
             case material_type::gltf_specular_glossiness: {
                 if (mat->kd_txt) {
-                    auto kd_txt = _eval_texture4(mat->kd_txt, texcoord);
+                    auto kd_txt = eval_texture4(mat->kd_txt, texcoord);
                     pt.kd *= {kd_txt.x, kd_txt.y, kd_txt.z};
                     pt.op *= kd_txt.w;
                 }
                 if (mat->ks_txt) {
-                    auto ks_txt = _eval_texture4(mat->kd_txt, texcoord);
+                    auto ks_txt = eval_texture4(mat->kd_txt, texcoord);
                     pt.ks *= {ks_txt.x, ks_txt.y, ks_txt.z};
                     pt.rs *= ks_txt.w;
                 }
             } break;
             case material_type::generic: {
-                if (mat->kd_txt) pt.kd *= _eval_texture3(mat->kd_txt, texcoord);
-                if (mat->ks_txt) pt.ks *= _eval_texture3(mat->ks_txt, texcoord);
-                if (mat->kt_txt) pt.kt *= _eval_texture3(mat->kt_txt, texcoord);
+                if (mat->kd_txt) pt.kd *= eval_texture3(mat->kd_txt, texcoord);
+                if (mat->ks_txt) pt.ks *= eval_texture3(mat->ks_txt, texcoord);
+                if (mat->kt_txt) pt.kt *= eval_texture3(mat->kt_txt, texcoord);
                 if (mat->rs_txt)
-                    pt.rs *= _eval_texture3(mat->rs_txt, texcoord).x;
+                    pt.rs *= eval_texture3(mat->rs_txt, texcoord).x;
             } break;
         }
         if (mat->occ_txt) {
-            auto occ = _eval_texture3(mat->occ_txt, texcoord);
+            auto occ = eval_texture3(mat->occ_txt, texcoord);
             pt.ke *= occ;
             pt.kd *= occ;
             pt.ks *= occ;
@@ -1663,7 +1655,7 @@ static point _eval_shapepoint(
 //
 // Sample weight for a light point.
 //
-static float _weight_light(const point& lpt, const point& pt) {
+static float weight_light(const point& lpt, const point& pt) {
     switch (lpt.ptype) {
         case point::type::env: {
             return 4 * ym::pif;
@@ -1691,25 +1683,25 @@ static float _weight_light(const point& lpt, const point& pt) {
 //
 // Picks a point on a light.
 //
-static point _sample_light(
+static point sample_light(
     const light* lgt, const point& pt, float rne, const ym::vec2f& rn) {
     if (lgt->ist) {
         auto shp = lgt->ist->shp;
-        auto eid = (int)(lower_bound(shp->cdf.begin(), shp->cdf.end(), rne) -
-                         shp->cdf.begin());
-        if (eid > shp->cdf.size() - 1) eid = (int)shp->cdf.size() - 1;
-
+        auto eid = 0;
         auto euv = ym::zero3f;
         if (shp->triangles) {
-            euv = {std::sqrt(rn[0]) * (1 - rn[1]), 1 - std::sqrt(rn[0]),
-                rn[1] * std::sqrt(rn[0])};
+            std::tie(eid, euv) =
+                ym::sample_triangles(shp->nelems, shp->cdf.data(), rne, rn);
         } else if (shp->lines) {
-            euv = {1 - rn[0], rn[0], 0};
+            std::tie(eid, (ym::vec2f&)euv) =
+                ym::sample_lines(shp->nelems, shp->cdf.data(), rne, rn.x);
         } else if (shp->points) {
+            eid = ym::clamp(0, shp->nelems - 1, (int)(rne * shp->nelems));
             euv = {1, 0, 0};
-        } else
+        } else {
             assert(false);
-        auto lpt = _eval_shapepoint(lgt->ist, eid, euv, ym::zero3f);
+        }
+        auto lpt = eval_shapepoint(lgt->ist, eid, euv, ym::zero3f);
         lpt.wo = ym::normalize(pt.frame[3] - lpt.frame[3]);
         return lpt;
     } else if (lgt->env) {
@@ -1717,7 +1709,7 @@ static point _sample_light(
         auto rr = std::sqrt(ym::clamp(1 - z * z, (float)0, (float)1));
         auto phi = 2 * ym::pif * rn[0];
         auto wo = ym::vec3f{std::cos(phi) * rr, z, std::sin(phi) * rr};
-        auto lpt = _eval_envpoint(lgt->env, wo);
+        auto lpt = eval_envpoint(lgt->env, wo);
         return lpt;
     } else {
         assert(false);
@@ -1728,7 +1720,7 @@ static point _sample_light(
 //
 // Offsets a ray origin to avoid self-intersection.
 //
-static inline ym::ray3f _offset_ray(
+static inline ym::ray3f offset_ray(
     const point& pt, const ym::vec3f& w, const render_params& params) {
     if (dot(w, pt.frame[2]) > 0) {
         return ym::ray3f(
@@ -1742,7 +1734,7 @@ static inline ym::ray3f _offset_ray(
 //
 // Offsets a ray origin to avoid self-intersection.
 //
-static inline ym::ray3f _offset_ray(
+static inline ym::ray3f offset_ray(
     const point& pt, const point& pt2, const render_params& params) {
     auto ray_dist = (pt2.ptype != point::type::env) ?
                         ym::dist(pt.frame[3], pt2.frame[3]) :
@@ -1754,13 +1746,13 @@ static inline ym::ray3f _offset_ray(
 //
 // Intersects a ray with the scn and return the point (or env point).
 //
-static point _intersect_scene(const scene* scn, const ym::ray3f& ray) {
+static point intersect_scene(const scene* scn, const ym::ray3f& ray) {
     auto isec = scn->intersect_first(scn->intersect_ctx, ray);
     if (isec) {
-        return _eval_shapepoint(
+        return eval_shapepoint(
             scn->instances[isec.iid], isec.eid, isec.euv, -ray.d);
     } else if (!scn->environments.empty()) {
-        return _eval_envpoint(scn->environments[0], -ray.d);
+        return eval_envpoint(scn->environments[0], -ray.d);
     } else {
         return {};
     }
@@ -1769,42 +1761,42 @@ static point _intersect_scene(const scene* scn, const ym::ray3f& ray) {
 //
 // Intersects a scene and offsets the ray
 //
-static point _intersect_scene(const scene* scn, const point& pt,
+static point intersect_scene(const scene* scn, const point& pt,
     const ym::vec3f& w, const render_params& params) {
-    return _intersect_scene(scn, _offset_ray(pt, w, params));
+    return intersect_scene(scn, offset_ray(pt, w, params));
 }
 
 //
 // Intersects a scene and offsets the ray
 //
-static inline point _intersect_scene(const scene* scn, const point& pt,
+static inline point intersect_scene(const scene* scn, const point& pt,
     const point& lpt, const render_params& params) {
-    return _intersect_scene(scn, _offset_ray(pt, lpt, params));
+    return intersect_scene(scn, offset_ray(pt, lpt, params));
 }
 
 //
 // Transparecy
 //
-static ym::vec3f _eval_transparency(const point& pt) { return pt.kt; }
+static ym::vec3f eval_transparency(const point& pt) { return pt.kt; }
 
 //
 // Test occlusion
 //
-static ym::vec3f _eval_transmission(const scene* scn, const point& pt,
+static ym::vec3f eval_transmission(const scene* scn, const point& pt,
     const point& lpt, const render_params& params) {
     if (scn->shadow_transmission) {
         auto cpt = pt;
         auto weight = ym::vec3f{1, 1, 1};
         for (auto bounce = 0; bounce < params.max_depth; bounce++) {
-            cpt = _intersect_scene(scn, cpt, lpt, params);
+            cpt = intersect_scene(scn, cpt, lpt, params);
             if (cpt.ptype == point::type::none || cpt.ptype == point::type::env)
                 break;
-            weight *= _eval_transparency(cpt);
+            weight *= eval_transparency(cpt);
             if (weight == ym::zero3f) break;
         }
         return weight;
     } else {
-        auto shadow_ray = _offset_ray(pt, lpt, params);
+        auto shadow_ray = offset_ray(pt, lpt, params);
         return (scn->intersect_any(scn->intersect_ctx, shadow_ray)) ?
                    ym::zero3f :
                    ym::vec3f{1, 1, 1};
@@ -1814,7 +1806,7 @@ static ym::vec3f _eval_transmission(const scene* scn, const point& pt,
 //
 // Mis weight
 //
-static inline float _weight_mis(float w0, float w1) {
+static inline float weight_mis(float w0, float w1) {
     if (!w0 || !w1) return 1;
     return (1 / w0) / (1 / w0 + 1 / w1);
 }
@@ -1822,16 +1814,16 @@ static inline float _weight_mis(float w0, float w1) {
 //
 // Recursive path tracing.
 //
-static ym::vec4f _shade_pathtrace(const scene* scn, const ym::ray3f& ray,
-    _sampler* smp, const render_params& params) {
+static ym::vec4f shade_pathtrace(const scene* scn, const ym::ray3f& ray,
+    sampler* smp, const render_params& params) {
     // scn intersection
-    auto pt = _intersect_scene(scn, ray);
+    auto pt = intersect_scene(scn, ray);
     if (pt.ptype == point::type::none ||
         (pt.ptype == point::type::env && params.envmap_invisible))
         return ym::zero4f;
 
     // emission
-    auto l = _eval_emission(pt);
+    auto l = eval_emission(pt);
     if (pt.emission_only() || scn->lights.empty()) return {l[0], l[1], l[2], 1};
 
     // trace path
@@ -1839,40 +1831,38 @@ static ym::vec4f _shade_pathtrace(const scene* scn, const ym::ray3f& ray,
     auto emission = false;
     for (auto bounce = 0; bounce < params.max_depth; bounce++) {
         // handle transparency
-        auto kt = _eval_transparency(pt);
+        auto kt = eval_transparency(pt);
         if (kt != ym::zero3f) {
             auto tprob = ym::max_element_val(kt);
-            if (_sample_next1f(smp) < tprob) {
+            if (sample_next1f(smp) < tprob) {
                 weight *= kt;
-                pt = _intersect_scene(scn, pt, -pt.wo, params);
+                pt = intersect_scene(scn, pt, -pt.wo, params);
                 emission = true;
                 continue;
             }
         }
 
         // emission
-        if (emission) l += weight * _eval_emission(pt);
+        if (emission) l += weight * eval_emission(pt);
 
         // direct – light
-        auto lgt = scn->lights[_sample_next1i(smp, (int)scn->lights.size())];
+        auto lgt = scn->lights[sample_next1i(smp, (int)scn->lights.size())];
         auto lpt =
-            _sample_light(lgt, pt, _sample_next1f(smp), _sample_next2f(smp));
-        auto lld = _eval_emission(lpt) * _eval_brdfcos(pt, -lpt.wo) *
-                   _weight_light(lpt, pt) * (float)scn->lights.size();
+            sample_light(lgt, pt, sample_next1f(smp), sample_next2f(smp));
+        auto lld = eval_emission(lpt) * eval_brdfcos(pt, -lpt.wo) *
+                   weight_light(lpt, pt) * (float)scn->lights.size();
         if (lld != ym::zero3f) {
-            l += weight * lld * _eval_transmission(scn, pt, lpt, params);
+            l += weight * lld * eval_transmission(scn, pt, lpt, params);
         }
 
         // direct – brdf
-        auto bpt = _intersect_scene(scn, pt,
-            _sample_brdfcos(pt, _sample_next1f(smp), _sample_next2f(smp)),
-            params);
-        auto bld = _eval_emission(bpt) * _eval_brdfcos(pt, -bpt.wo) *
-                   _weight_brdfcos(pt, -bpt.wo);
+        auto bpt = intersect_scene(scn, pt,
+            sample_brdfcos(pt, sample_next1f(smp), sample_next2f(smp)), params);
+        auto bld = eval_emission(bpt) * eval_brdfcos(pt, -bpt.wo) *
+                   weight_brdfcos(pt, -bpt.wo);
         if (bld != ym::zero3f) {
             l += weight * bld *
-                 _weight_mis(
-                     _weight_brdfcos(pt, -bpt.wo), _weight_light(bpt, pt));
+                 weight_mis(weight_brdfcos(pt, -bpt.wo), weight_light(bpt, pt));
         }
 
         // skip recursion if path ends
@@ -1880,7 +1870,7 @@ static ym::vec4f _shade_pathtrace(const scene* scn, const ym::ray3f& ray,
         if (bpt.emission_only()) break;
 
         // continue path
-        weight *= _eval_brdfcos(pt, -bpt.wo) * _weight_brdfcos(pt, -bpt.wo);
+        weight *= eval_brdfcos(pt, -bpt.wo) * weight_brdfcos(pt, -bpt.wo);
         if (weight == ym::zero3f) break;
 
         // roussian roulette
@@ -1889,7 +1879,7 @@ static ym::vec4f _shade_pathtrace(const scene* scn, const ym::ray3f& ray,
             auto rrprob =
                 1.0f -
                 std::min(std::max(std::max(rho[0], rho[1]), rho[2]), 0.95f);
-            if (_sample_next1f(smp) < rrprob) break;
+            if (sample_next1f(smp) < rrprob) break;
             weight *= 1 / (1 - rrprob);
         }
 
@@ -1904,16 +1894,16 @@ static ym::vec4f _shade_pathtrace(const scene* scn, const ym::ray3f& ray,
 //
 // Recursive path tracing.
 //
-static ym::vec4f _shade_pathtrace_std(const scene* scn, const ym::ray3f& ray,
-    _sampler* smp, const render_params& params) {
+static ym::vec4f shade_pathtrace_std(const scene* scn, const ym::ray3f& ray,
+    sampler* smp, const render_params& params) {
     // scn intersection
-    auto pt = _intersect_scene(scn, ray);
+    auto pt = intersect_scene(scn, ray);
     if (pt.ptype == point::type::none ||
         (pt.ptype == point::type::env && params.envmap_invisible))
         return ym::zero4f;
 
     // emission
-    auto l = _eval_emission(pt);
+    auto l = eval_emission(pt);
     if (pt.emission_only()) return {l[0], l[1], l[2], 1};
 
     // trace path
@@ -1921,27 +1911,27 @@ static ym::vec4f _shade_pathtrace_std(const scene* scn, const ym::ray3f& ray,
     auto emission = false;
     for (auto bounce = 0; bounce < params.max_depth; bounce++) {
         // handle transparency
-        auto kt = _eval_transparency(pt);
+        auto kt = eval_transparency(pt);
         if (kt != ym::zero3f) {
             auto tprob = ym::max_element_val(kt);
-            if (_sample_next1f(smp) < tprob) {
+            if (sample_next1f(smp) < tprob) {
                 weight *= kt;
-                pt = _intersect_scene(scn, pt, -pt.wo, params);
+                pt = intersect_scene(scn, pt, -pt.wo, params);
                 emission = true;
                 continue;
             }
         }
 
         // emission
-        if (emission) l += weight * _eval_emission(pt);
+        if (emission) l += weight * eval_emission(pt);
         // direct
-        auto lgt = scn->lights[_sample_next1i(smp, (int)scn->lights.size())];
+        auto lgt = scn->lights[sample_next1i(smp, (int)scn->lights.size())];
         auto lpt =
-            _sample_light(lgt, pt, _sample_next1f(smp), _sample_next2f(smp));
-        auto ld = _eval_emission(lpt) * _eval_brdfcos(pt, -lpt.wo) *
-                  _weight_light(lpt, pt) * (float)scn->lights.size();
+            sample_light(lgt, pt, sample_next1f(smp), sample_next2f(smp));
+        auto ld = eval_emission(lpt) * eval_brdfcos(pt, -lpt.wo) *
+                  weight_light(lpt, pt) * (float)scn->lights.size();
         if (ld != ym::zero3f) {
-            auto shadow_ray = _offset_ray(pt, lpt, params);
+            auto shadow_ray = offset_ray(pt, lpt, params);
             if (!scn->intersect_any(scn->intersect_ctx, shadow_ray))
                 l += weight * ld;
         }
@@ -1955,18 +1945,18 @@ static ym::vec4f _shade_pathtrace_std(const scene* scn, const ym::ray3f& ray,
             auto rrprob =
                 1.0f -
                 std::min(std::max(std::max(rho[0], rho[1]), rho[2]), 0.95f);
-            if (_sample_next1f(smp) < rrprob) break;
+            if (sample_next1f(smp) < rrprob) break;
             weight *= 1 / (1 - rrprob);
         }
 
         // continue path
         {
             auto wi =
-                _sample_brdfcos(pt, _sample_next1f(smp), _sample_next2f(smp));
-            weight *= _eval_brdfcos(pt, wi) * _weight_brdfcos(pt, wi);
+                sample_brdfcos(pt, sample_next1f(smp), sample_next2f(smp));
+            weight *= eval_brdfcos(pt, wi) * weight_brdfcos(pt, wi);
             if (weight == ym::zero3f) break;
 
-            pt = _intersect_scene(scn, pt, wi, params);
+            pt = intersect_scene(scn, pt, wi, params);
             emission = false;
             if (pt.emission_only()) break;
         }
@@ -1978,16 +1968,16 @@ static ym::vec4f _shade_pathtrace_std(const scene* scn, const ym::ray3f& ray,
 //
 // Recursive path tracing.
 //
-static ym::vec4f _shade_pathtrace_hack(const scene* scn, const ym::ray3f& ray,
-    _sampler* smp, const render_params& params) {
+static ym::vec4f shade_pathtrace_hack(const scene* scn, const ym::ray3f& ray,
+    sampler* smp, const render_params& params) {
     // scn intersection
-    auto pt = _intersect_scene(scn, ray);
+    auto pt = intersect_scene(scn, ray);
     if (pt.ptype == point::type::none ||
         (pt.ptype == point::type::env && params.envmap_invisible))
         return ym::zero4f;
 
     // emission
-    auto l = _eval_emission(pt);
+    auto l = eval_emission(pt);
     if (pt.emission_only()) return {l[0], l[1], l[2], 1};
 
     // trace path
@@ -2015,18 +2005,18 @@ static ym::vec4f _shade_pathtrace_hack(const scene* scn, const ym::ray3f& ray,
                 wi = normalize(wi);
             }
             weight *= pt.kt;
-            pt = _intersect_scene(scn, pt, wi, params);
+            pt = intersect_scene(scn, pt, wi, params);
             continue;
         }
 
         // direct
-        auto lgt = scn->lights[_sample_next1i(smp, (int)scn->lights.size())];
+        auto lgt = scn->lights[sample_next1i(smp, (int)scn->lights.size())];
         auto lpt =
-            _sample_light(lgt, pt, _sample_next1f(smp), _sample_next2f(smp));
-        auto ld = _eval_emission(lpt) * _eval_brdfcos(pt, -lpt.wo) *
-                  _weight_light(lpt, pt) * (float)scn->lights.size();
+            sample_light(lgt, pt, sample_next1f(smp), sample_next2f(smp));
+        auto ld = eval_emission(lpt) * eval_brdfcos(pt, -lpt.wo) *
+                  weight_light(lpt, pt) * (float)scn->lights.size();
         if (ld != ym::zero3f) {
-            auto shadow_ray = _offset_ray(pt, lpt, params);
+            auto shadow_ray = offset_ray(pt, lpt, params);
             if (!scn->intersect_any(scn->intersect_ctx, shadow_ray))
                 l += weight * ld;
         }
@@ -2040,18 +2030,18 @@ static ym::vec4f _shade_pathtrace_hack(const scene* scn, const ym::ray3f& ray,
             auto rrprob =
                 1.0f -
                 std::min(std::max(std::max(rho[0], rho[1]), rho[2]), 0.95f);
-            if (_sample_next1f(smp) < rrprob) break;
+            if (sample_next1f(smp) < rrprob) break;
             weight *= 1 / (1 - rrprob);
         }
 
         // continue path
         {
             auto wi =
-                _sample_brdfcos(pt, _sample_next1f(smp), _sample_next2f(smp));
-            weight *= _eval_brdfcos(pt, wi) * _weight_brdfcos(pt, wi);
+                sample_brdfcos(pt, sample_next1f(smp), sample_next2f(smp));
+            weight *= eval_brdfcos(pt, wi) * weight_brdfcos(pt, wi);
             if (weight == ym::zero3f) break;
 
-            pt = _intersect_scene(scn, pt, wi, params);
+            pt = intersect_scene(scn, pt, wi, params);
             if (pt.emission_only()) break;
         }
     }
@@ -2062,16 +2052,16 @@ static ym::vec4f _shade_pathtrace_hack(const scene* scn, const ym::ray3f& ray,
 //
 // Direct illumination.
 //
-static ym::vec4f _shade_direct(const scene* scn, const ym::ray3f& ray,
-    _sampler* smp, const render_params& params) {
+static ym::vec4f shade_direct(const scene* scn, const ym::ray3f& ray,
+    sampler* smp, const render_params& params) {
     // scn intersection
-    auto pt = _intersect_scene(scn, ray);
+    auto pt = intersect_scene(scn, ray);
     if (pt.ptype == point::type::none ||
         (pt.ptype == point::type::env && params.envmap_invisible))
         return ym::zero4f;
 
     // emission
-    auto l = _eval_emission(pt);
+    auto l = eval_emission(pt);
     if (pt.emission_only()) return {l[0], l[1], l[2], 1};
 
     // ambient
@@ -2080,11 +2070,11 @@ static ym::vec4f _shade_direct(const scene* scn, const ym::ray3f& ray,
     // direct
     for (auto& lgt : scn->lights) {
         auto lpt =
-            _sample_light(lgt, pt, _sample_next1f(smp), _sample_next2f(smp));
-        auto ld = _eval_emission(lpt) * _eval_brdfcos(pt, -lpt.wo) *
-                  _weight_light(lpt, pt);
+            sample_light(lgt, pt, sample_next1f(smp), sample_next2f(smp));
+        auto ld = eval_emission(lpt) * eval_brdfcos(pt, -lpt.wo) *
+                  weight_light(lpt, pt);
         if (ld == ym::zero3f) continue;
-        auto shadow_ray = _offset_ray(pt, lpt, params);
+        auto shadow_ray = offset_ray(pt, lpt, params);
         if (scn->intersect_any(scn->intersect_ctx, shadow_ray)) continue;
         l += ld;
     }
@@ -2096,20 +2086,20 @@ static ym::vec4f _shade_direct(const scene* scn, const ym::ray3f& ray,
 //
 // Eyelight for quick previewing.
 //
-static ym::vec4f _shade_eyelight(const scene* scn, const ym::ray3f& ray,
-    _sampler* smp, const render_params& params) {
+static ym::vec4f shade_eyelight(const scene* scn, const ym::ray3f& ray,
+    sampler* smp, const render_params& params) {
     // intersection
-    point pt = _intersect_scene(scn, ray);
+    point pt = intersect_scene(scn, ray);
     if (pt.ptype == point::type::none ||
         (pt.ptype == point::type::env && params.envmap_invisible))
         return ym::zero4f;
 
     // emission
-    auto l = _eval_emission(pt);
+    auto l = eval_emission(pt);
     if (pt.emission_only()) return {l[0], l[1], l[2], 1};
 
     // brdf*light
-    l += _eval_brdfcos(pt, pt.wo) * ym::pif;
+    l += eval_brdfcos(pt, pt.wo) * ym::pif;
 
     return {l[0], l[1], l[2], 1};
 }
@@ -2118,7 +2108,7 @@ static ym::vec4f _shade_eyelight(const scene* scn, const ym::ray3f& ray,
 // Shader function callback.
 //
 using shade_fn = ym::vec4f (*)(const scene* scn, const ym::ray3f& ray,
-    _sampler* smp, const render_params& params);
+    sampler* smp, const render_params& params);
 
 //
 // Renders a block of pixels. Public API, see above.
@@ -2129,21 +2119,20 @@ void trace_block(const scene* scn, int width, int height, ym::vec4f* img,
     auto cam = scn->cameras[params.camera_id];
     shade_fn shade;
     switch (params.stype) {
-        case shader_type::eyelight: shade = _shade_eyelight; break;
-        case shader_type::direct: shade = _shade_direct; break;
-        case shader_type::pathtrace: shade = _shade_pathtrace; break;
+        case shader_type::eyelight: shade = shade_eyelight; break;
+        case shader_type::direct: shade = shade_direct; break;
+        case shader_type::pathtrace: shade = shade_pathtrace; break;
         default: assert(false); return;
     }
     for (auto j = block_y; j < block_y + block_height; j++) {
         for (auto i = block_x; i < block_x + block_width; i++) {
             auto lp = ym::zero4f;
             for (auto s = samples_min; s < samples_max; s++) {
-                auto smp =
-                    _make_sampler(i, j, s, params.nsamples, params.rtype);
-                auto rn = _sample_next2f(&smp);
+                auto smp = make_sampler(i, j, s, params.nsamples, params.rtype);
+                auto rn = sample_next2f(&smp);
                 auto uv =
                     ym::vec2f{(i + rn[0]) / width, 1 - (j + rn[1]) / height};
-                auto ray = _eval_camera(cam, uv, _sample_next2f(&smp));
+                auto ray = eval_camera(cam, uv, sample_next2f(&smp));
                 auto l = shade(scn, ray, &smp, params);
                 if (!std::isfinite(l[0]) || !std::isfinite(l[1]) ||
                     !std::isfinite(l[2])) {

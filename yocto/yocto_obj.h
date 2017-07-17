@@ -55,6 +55,8 @@
 ///
 /// ## History
 ///
+/// - v 0.24: remove exception from code and add explicit error handling
+/// - v 0.23: texture have always 4 channels
 /// - v 0.22: change variable names for compilation on gcc
 /// - v 0.21: bug fixes
 /// - v 0.20: use yocto_math in the interface and remove inline compilation
@@ -141,16 +143,29 @@ using property_map = std::map<std::string, std::vector<T>>;
 struct texture {
     /// path
     std::string path;
-    /// if loaded, image width
-    int width = 0;
-    /// if loaded, image hieght
-    int height = 0;
-    /// if loaded, number of component (1-4)
-    int ncomp = 0;
-    /// if loaded, pixel data for HDRs
-    std::vector<float> dataf;
-    /// if loaded, pixel data for LDRs
-    std::vector<unsigned char> datab;
+    /// if loaded, ldr image
+    ym::image4b* ldr = nullptr;
+    /// if loaded, hdr image
+    ym::image4f* hdr = nullptr;
+
+    /// get texture width
+    int width() const {
+        if (ldr) return ldr->width();
+        if (hdr) return hdr->width();
+        return 0;
+    }
+    /// get texture height
+    int height() const {
+        if (ldr) return ldr->height();
+        if (hdr) return hdr->height();
+        return 0;
+    }
+
+    /// done
+    ~texture() {
+        if (ldr) delete ldr;
+        if (hdr) delete hdr;
+    }
 };
 
 ///
@@ -354,11 +369,13 @@ struct scene {
 ///     - load_textures: whether to load textures (default to false)
 ///     - flip_texcoord: whether to flip the v coordinate
 ///     - skip_missing: skip missing textures
+///     - err: if set, store error message on error
 /// - Returns:
-///     - scene
+///     - scene (nullptr on error)
 ///
 scene* load_scene(const std::string& filename, bool load_textures,
-    bool flip_texcoord = true, bool skip_missing = true);
+    bool flip_texcoord = true, bool skip_missing = true,
+    std::string* err = nullptr);
 
 ///
 /// Save scene
@@ -368,9 +385,12 @@ scene* load_scene(const std::string& filename, bool load_textures,
 ///     - scn: scene data to save
 ///     - save_textures: whether to save textures (default to false)
 ///     - flip_texcoord: whether to flip the v coordinate
+///     - err: if set, store error message on error
+/// - Returns:
+///     - whether an error occurred
 ///
-void save_scene(const std::string& filename, const scene* scn,
-    bool save_textures, bool flip_texcoord = true);
+bool save_scene(const std::string& filename, const scene* scn,
+    bool save_textures, bool flip_texcoord = true, std::string* err = nullptr);
 
 #ifndef YOBJ_NO_IMAGE
 
@@ -380,10 +400,13 @@ void save_scene(const std::string& filename, const scene* scn,
 /// - Parameters:
 ///     - scn: scene to load textures into
 ///     - dirname: base directory name for texture files
-///     - skip_missing: whether to skip missing textures or throw an expection
+///     - skip_missing: whether to skip missing textures or stops with error
+///     - err: if set, store error message on error
+/// - Returns:
+///     - whether an error occurred
 ///
-void load_textures(
-    scene* scn, const std::string& dirname, bool skip_missing = false);
+bool load_textures(scene* scn, const std::string& dirname,
+    bool skip_missing = false, std::string* err = nullptr);
 
 ///
 /// Saves textures for an scene.
@@ -391,10 +414,13 @@ void load_textures(
 /// - Parameters:
 ///     - scn: scene to write textures from
 ///     - dirname: base directory name for texture files
-///     - skip_missing: whether to skip missing textures or throw an expection
+///     - skip_missing: whether to skip missing textures or stops with error
+///     - err: if set, store error message on error
+/// - Returns:
+///     - whether an error occurred
 ///
-void save_textures(
-    const scene* scn, const std::string& dirname, bool skip_missing = false);
+bool save_textures(const scene* scn, const std::string& dirname,
+    bool skip_missing = false, std::string* err = nullptr);
 
 #endif
 
@@ -695,39 +721,29 @@ struct obj {
 };
 
 ///
-/// IO Exception.
-///
-struct obj_exception : std::exception {
-    /// constructor with error message
-    obj_exception(const std::string& errmsg) : _errmsg(errmsg) {}
-
-    /// retieval of error message
-    virtual const char* what() const throw() { return _errmsg.c_str(); }
-
-   private:
-    std::string _errmsg;
-};
-
-///
 /// Load OBJ
 ///
 /// - Parameters:
 ///     - filename: filename
 ///     - flip_texcoord: whether to flip the v coordinate
+///     - err: if set, store error message on error
 /// - Return:
-///     - obj
+///     - obj (nullptr on error)
 ///
-obj* load_obj(const std::string& filename, bool flip_texcoord = true);
+obj* load_obj(const std::string& filename, bool flip_texcoord = true,
+    std::string* err = nullptr);
 
 ///
 /// Load MTL
 ///
 /// - Parameters:
 ///     - filename: filename
+///     - err: if set, store error message on error
 /// - Return:
-///     - loaded materials
+///     - loaded materials (empty on error)
 ///
-std::vector<obj_material> load_mtl(const std::string& filename);
+std::vector<obj_material> load_mtl(
+    const std::string& filename, std::string* err = nullptr);
 
 ///
 /// Save OBJ
@@ -736,16 +752,19 @@ std::vector<obj_material> load_mtl(const std::string& filename);
 ///     - filename: filename
 ///     - asset: obj data to save
 ///     - flip_texcoord: whether to flip the v coordinate
+///     - err: if set, store error message on error
+/// - Returns:
+///     - whether an error occurred
 ///
-void save_obj(
-    const std::string& filename, const obj* asset, bool flip_texcoord = true);
+bool save_obj(const std::string& filename, const obj* asset,
+    bool flip_texcoord = true, std::string* err = nullptr);
 
 ///
 /// Save MTL (@deprecated interface)
 ///
 ///
-void save_mtl(
-    const std::string& filename, const std::vector<obj_material>& materials);
+bool save_mtl(const std::string& filename,
+    const std::vector<obj_material>& materials, std::string* err = nullptr);
 
 ///
 /// Converts an OBJ into a scene.

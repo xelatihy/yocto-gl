@@ -31,10 +31,7 @@ used to implement YOCTO. Features include</p>
 <p>We developed our own library since we felt that all existing ones are either
 complete, but unreadable or with lots of dependencies, or just as incomplete
 and untested as ours.</p>
-<p>This library has no dependencies.
-Some templated types and functions use specialization for easier access
-and faster compilation. Specialization can be disabled by defining
-YM_NO_SPECIALIZATION. Specialization is only supported fully on clang.</p>
+<p>This library has no dependencies.</p>
 <p>This library includes code from the PCG random number generator,
 boost hash_combine, Pixar multijittered sampling, code from "Real-Time
 Collision Detection" by Christer Ericson and public domain code from
@@ -42,6 +39,7 @@ Collision Detection" by Christer Ericson and public domain code from
 - https://gist.github.com/badboy/6267743</p>
 <h2>History</h2>
 <ul>
+<li>v 0.16: sampling</li>
 <li>v 0.15: enable specialization always</li>
 <li>v 0.14: move timer to Yocto/Utils</li>
 <li>v 0.13: more shape functions</li>
@@ -1625,6 +1623,8 @@ Colums access via operator[].</p>
     <span class="k">constexpr</span> <span class="nf">frame</span><span class="p">(</span><span class="k">const</span> <span class="n">M</span><span class="o">&amp;</span> <span class="n">m</span><span class="p">,</span> <span class="k">const</span> <span class="n">V</span><span class="o">&amp;</span> <span class="n">t</span><span class="p">);</span> 
     <span class="k">constexpr</span> <span class="n">V</span><span class="o">&amp;</span> <span class="k">operator</span><span class="p">[](</span><span class="kt">int</span> <span class="n">i</span><span class="p">);</span> 
     <span class="k">constexpr</span> <span class="k">const</span> <span class="n">V</span><span class="o">&amp;</span> <span class="k">operator</span><span class="p">[](</span><span class="kt">int</span> <span class="n">i</span><span class="p">)</span> <span class="k">const</span><span class="p">;</span> 
+    <span class="k">constexpr</span> <span class="n">V</span><span class="o">*</span> <span class="nf">data</span><span class="p">();</span> 
+    <span class="k">constexpr</span> <span class="k">const</span> <span class="n">V</span><span class="o">*</span> <span class="nf">data</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span> 
     <span class="k">constexpr</span> <span class="n">V</span><span class="o">&amp;</span> <span class="n">pos</span><span class="p">();</span> 
     <span class="k">constexpr</span> <span class="k">const</span> <span class="n">V</span><span class="o">&amp;</span> <span class="n">pos</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span> 
     <span class="k">constexpr</span> <span class="n">M</span><span class="o">&amp;</span> <span class="n">rot</span><span class="p">();</span> 
@@ -1650,6 +1650,8 @@ rot().</p>
 <li>frame():      element constructor</li>
 <li>operator<a href=""></a>:      element access</li>
 <li>operator<a href=""></a>:      element access</li>
+<li>data():      data access</li>
+<li>data():      data access</li>
 <li>pos():      access position</li>
 <li>pos():      access position</li>
 <li>rot():      access rotation</li>
@@ -1670,6 +1672,8 @@ rot().</p>
     <span class="k">constexpr</span> <span class="nf">frame</span><span class="p">(</span><span class="k">const</span> <span class="n">M</span><span class="o">&amp;</span> <span class="n">m</span><span class="p">,</span> <span class="k">const</span> <span class="n">V</span><span class="o">&amp;</span> <span class="n">t</span><span class="p">);</span> 
     <span class="k">constexpr</span> <span class="n">V</span><span class="o">&amp;</span> <span class="k">operator</span><span class="p">[](</span><span class="kt">int</span> <span class="n">i</span><span class="p">);</span> 
     <span class="k">constexpr</span> <span class="k">const</span> <span class="n">V</span><span class="o">&amp;</span> <span class="k">operator</span><span class="p">[](</span><span class="kt">int</span> <span class="n">i</span><span class="p">)</span> <span class="k">const</span><span class="p">;</span> 
+    <span class="k">constexpr</span> <span class="n">V</span><span class="o">*</span> <span class="nf">data</span><span class="p">();</span> 
+    <span class="k">constexpr</span> <span class="k">const</span> <span class="n">V</span><span class="o">*</span> <span class="nf">data</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span> 
     <span class="k">constexpr</span> <span class="n">V</span><span class="o">&amp;</span> <span class="n">pos</span><span class="p">();</span> 
     <span class="k">constexpr</span> <span class="k">const</span> <span class="n">V</span><span class="o">&amp;</span> <span class="n">pos</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span> 
     <span class="k">constexpr</span> <span class="n">M</span><span class="o">&amp;</span> <span class="n">rot</span><span class="p">();</span> 
@@ -1693,6 +1697,8 @@ rot().</p>
 <li>frame():      element constructor</li>
 <li>operator<a href=""></a>:      element access</li>
 <li>operator<a href=""></a>:      element access</li>
+<li>data():      data access</li>
+<li>data():      data access</li>
 <li>pos():      access position</li>
 <li>pos():      access position</li>
 <li>rot():      access rotation</li>
@@ -1715,6 +1721,8 @@ rot().</p>
     <span class="k">constexpr</span> <span class="nf">frame</span><span class="p">(</span><span class="k">const</span> <span class="n">M</span><span class="o">&amp;</span> <span class="n">m</span><span class="p">,</span> <span class="k">const</span> <span class="n">V</span><span class="o">&amp;</span> <span class="n">t</span><span class="p">);</span> 
     <span class="k">constexpr</span> <span class="n">V</span><span class="o">&amp;</span> <span class="k">operator</span><span class="p">[](</span><span class="kt">int</span> <span class="n">i</span><span class="p">);</span> 
     <span class="k">constexpr</span> <span class="k">const</span> <span class="n">V</span><span class="o">&amp;</span> <span class="k">operator</span><span class="p">[](</span><span class="kt">int</span> <span class="n">i</span><span class="p">)</span> <span class="k">const</span><span class="p">;</span> 
+    <span class="k">constexpr</span> <span class="n">V</span><span class="o">*</span> <span class="nf">data</span><span class="p">();</span> 
+    <span class="k">constexpr</span> <span class="k">const</span> <span class="n">V</span><span class="o">*</span> <span class="nf">data</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span> 
     <span class="k">constexpr</span> <span class="n">V</span><span class="o">&amp;</span> <span class="n">pos</span><span class="p">();</span> 
     <span class="k">constexpr</span> <span class="k">const</span> <span class="n">V</span><span class="o">&amp;</span> <span class="n">pos</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span> 
     <span class="k">constexpr</span> <span class="n">M</span><span class="o">&amp;</span> <span class="n">rot</span><span class="p">();</span> 
@@ -1739,6 +1747,8 @@ rot().</p>
 <li>frame():      element constructor</li>
 <li>operator<a href=""></a>:      element access</li>
 <li>operator<a href=""></a>:      element access</li>
+<li>data():      data access</li>
+<li>data():      data access</li>
 <li>pos():      access position</li>
 <li>pos():      access position</li>
 <li>rot():      access rotation</li>
@@ -1948,6 +1958,8 @@ rot().</p>
     <span class="k">constexpr</span> <span class="k">explicit</span> <span class="k">operator</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span> 
     <span class="k">constexpr</span> <span class="n">T</span><span class="o">&amp;</span> <span class="k">operator</span><span class="p">[](</span><span class="kt">int</span> <span class="n">i</span><span class="p">);</span> 
     <span class="k">constexpr</span> <span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="k">operator</span><span class="p">[](</span><span class="kt">int</span> <span class="n">i</span><span class="p">)</span> <span class="k">const</span><span class="p">;</span> 
+    <span class="k">constexpr</span> <span class="n">T</span><span class="o">*</span> <span class="nf">data</span><span class="p">();</span> 
+    <span class="k">constexpr</span> <span class="k">const</span> <span class="n">T</span><span class="o">*</span> <span class="nf">data</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span> 
     <span class="n">T</span> <span class="n">x</span><span class="p">;</span>
     <span class="n">T</span> <span class="n">y</span><span class="p">;</span>
     <span class="n">T</span> <span class="n">z</span><span class="p">;</span>
@@ -1966,6 +1978,8 @@ Quaterions are xi + yj + zk + w.</p>
 <li>operator N&gt;():      conversion to vec</li>
 <li>operator<a href=""></a>:      element access</li>
 <li>operator<a href=""></a>:      element access</li>
+<li>data():      data access</li>
+<li>data():      data access</li>
 <li>x:      data</li>
 <li>y:      data</li>
 <li>z:      data</li>
@@ -2863,6 +2877,77 @@ Assumes there is no shear and the matrix is affine.</p>
 
 <p>Decompose an affine matrix into translation, rotation, scale.
 Assumes there is no shear and the matrix is affine.</p>
+<h3>Struct rng_pcg32</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">rng_pcg32</span> <span class="p">{</span>
+</code></pre></div>
+
+
+<p>PCG random numbers. A family of random number generators that supports
+multiple sequences. In our code, we allocate one sequence for each sample.
+PCG32 from http://www.pcg-random.org/</p>
+<h3>Function next()</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">constexpr</span> <span class="kr">inline</span> <span class="kt">uint32_t</span> <span class="nf">next</span><span class="p">(</span><span class="n">rng_pcg32</span><span class="o">*</span> <span class="n">rng</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Next random number</p>
+<h3>Function init()</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">constexpr</span> <span class="kr">inline</span> <span class="kt">void</span> <span class="nf">init</span><span class="p">(</span><span class="n">rng_pcg32</span><span class="o">*</span> <span class="n">rng</span><span class="p">,</span> <span class="kt">uint64_t</span> <span class="n">state</span><span class="p">,</span> <span class="kt">uint64_t</span> <span class="n">seq</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Init a random number generator with a state state from the sequence seq.</p>
+<h3>Function next1f()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">float</span> <span class="nf">next1f</span><span class="p">(</span><span class="n">rng_pcg32</span><span class="o">*</span> <span class="n">rng</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Next random float in [0,1).</p>
+<h3>Function next2f()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">vec2f</span> <span class="nf">next2f</span><span class="p">(</span><span class="n">rng_pcg32</span><span class="o">*</span> <span class="n">rng</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Next random float in [0,1)x[0,1).</p>
+<h3>Function hash_permute()</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">constexpr</span> <span class="kr">inline</span> <span class="kt">uint32_t</span> <span class="nf">hash_permute</span><span class="p">(</span><span class="kt">uint32_t</span> <span class="n">i</span><span class="p">,</span> <span class="kt">uint32_t</span> <span class="n">n</span><span class="p">,</span> <span class="kt">uint32_t</span> <span class="n">key</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Computes the i-th term of a permutation of l values keyed by p.
+From Correlated Multi-Jittered Sampling by Kensler @ Pixar</p>
+<h3>Function hash_randfloat()</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">constexpr</span> <span class="kr">inline</span> <span class="kt">float</span> <span class="nf">hash_randfloat</span><span class="p">(</span><span class="kt">uint32_t</span> <span class="n">i</span><span class="p">,</span> <span class="kt">uint32_t</span> <span class="n">key</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Computes a float value by hashing i with a key p.
+From Correlated Multi-Jittered Sampling by Kensler @ Pixar</p>
+<h3>Function hash_uint64()</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">constexpr</span> <span class="kr">inline</span> <span class="kt">uint64_t</span> <span class="nf">hash_uint64</span><span class="p">(</span><span class="kt">uint64_t</span> <span class="n">a</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>64 bit integer hash. Public domain code.</p>
+<h3>Function hash_uint64_32()</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">constexpr</span> <span class="kr">inline</span> <span class="kt">uint32_t</span> <span class="nf">hash_uint64_32</span><span class="p">(</span><span class="kt">uint64_t</span> <span class="n">a</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>64-to-32 bit integer hash. Public domain code.</p>
+<h3>Function hash_combine()</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">constexpr</span> <span class="kr">inline</span> <span class="kt">int</span> <span class="nf">hash_combine</span><span class="p">(</span><span class="kt">int</span> <span class="n">a</span><span class="p">,</span> <span class="kt">int</span> <span class="n">b</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Combines two 64 bit hashes as in boost::hash_combine</p>
+<h3>Function hash_vec()</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="kt">int</span> <span class="n">N</span><span class="o">&gt;</span>
+<span class="k">constexpr</span> <span class="kr">inline</span> <span class="kt">int</span> <span class="n">hash_vec</span><span class="p">(</span><span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">v</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Hash a vector with hash_combine() and std::hash</p>
 <h3>Function triangle_normal()</h3>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
 <span class="k">constexpr</span> <span class="kr">inline</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;</span> <span class="n">triangle_normal</span><span class="p">(</span>
@@ -3065,7 +3150,7 @@ tangent wrt the V texcoord. Tangent frame is useful in normal mapping.</p>
 <h3>Function make_lines()</h3>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">PosFunc</span><span class="p">,</span> <span class="k">typename</span> <span class="n">TangFunc</span><span class="p">,</span> <span class="k">typename</span> <span class="n">TexcoordFunc</span><span class="p">,</span>
     <span class="k">typename</span> <span class="n">RadiusFunc</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="kt">void</span> <span class="n">make_lines</span><span class="p">(</span><span class="kt">int</span> <span class="n">usteps</span><span class="p">,</span> <span class="kt">int</span> <span class="n">num</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2i</span><span class="o">&gt;&amp;</span> <span class="n">lines</span><span class="p">,</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">make_lines</span><span class="p">(</span><span class="kt">int</span> <span class="n">num</span><span class="p">,</span> <span class="kt">int</span> <span class="n">usteps</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2i</span><span class="o">&gt;&amp;</span> <span class="n">lines</span><span class="p">,</span>
     <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">pos</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">tang</span><span class="p">,</span>
     <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;&amp;</span> <span class="n">texcoord</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;&amp;</span> <span class="n">radius</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">PosFunc</span><span class="o">&amp;</span> <span class="n">pos_fn</span><span class="p">,</span> <span class="k">const</span> <span class="n">TangFunc</span><span class="o">&amp;</span> <span class="n">tang_fn</span><span class="p">,</span>
@@ -3077,10 +3162,10 @@ tangent wrt the V texcoord. Tangent frame is useful in normal mapping.</p>
 <p>Parameters:
 - usteps: subdivisions in u
 - num: number of lines
-- pos_fn: pos callbacks (vec2f -&gt; vec3f)
-- tang_fn: tangent callbacks (vec2f -&gt; vec3f)
-- texcoord_fn: texcoord callbacks (vec2f -&gt; vec2f)
-- radius_fn: radius callbacks (vec2f -&gt; float)</p>
+- pos_fn: pos callbacks ((int, float) -&gt; vec3f)
+- tang_fn: tangent callbacks ((int, float) -&gt; vec3f)
+- texcoord_fn: texcoord callbacks ((int, float) -&gt; vec2f)
+- radius_fn: radius callbacks ((int, float) -&gt; float)</p>
 <p>Out Parameters:
 - lines: element array
 - pos/tang/texcoord/radius: vertex position/tangent/texcoords/radius</p>
@@ -3098,10 +3183,10 @@ tangent wrt the V texcoord. Tangent frame is useful in normal mapping.</p>
 <p>Generate a parametric point set. Mostly here for completeness.</p>
 <p>Parameters:
 - num: number of points
-- pos_fn: pos callbacks (float -&gt; vec3f)
-- norm_fn: norm callbacks (float -&gt; vec3f)
-- texcoord_fn: texcoord callbacks (float -&gt; vec2f)
-- radius_fn: radius callbacks (float -&gt; float)</p>
+- pos_fn: pos callbacks (int -&gt; vec3f)
+- norm_fn: norm callbacks (int -&gt; vec3f)
+- texcoord_fn: texcoord callbacks (int -&gt; vec2f)
+- radius_fn: radius callbacks (int -&gt; float)</p>
 <p>Out Parameters:
 - points: element array
 - pos/norm/texcoord/radius: vertex position/normal/texcoords/radius</p>
@@ -3115,6 +3200,84 @@ tangent wrt the V texcoord. Tangent frame is useful in normal mapping.</p>
 
 
 <p>Merge a triangle mesh into another.</p>
+<h3>Function sample_lines_cdf()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">sample_lines_cdf</span><span class="p">(</span>
+    <span class="kt">int</span> <span class="n">nlines</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec2i</span><span class="o">*</span> <span class="n">lines</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec3f</span><span class="o">*</span> <span class="n">pos</span><span class="p">,</span> <span class="kt">float</span><span class="o">*</span> <span class="n">cdf</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Compute a distribution for sampling lines uniformly</p>
+<h3>Function sample_lines_cdf()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;</span> <span class="n">sample_lines_cdf</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2i</span><span class="o">&gt;&amp;</span> <span class="n">lines</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">pos</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Compute a distribution for sampling lines uniformly</p>
+<h3>Function sample_lines()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">std</span><span class="o">::</span><span class="n">pair</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span> <span class="n">vec2f</span><span class="o">&gt;</span> <span class="n">sample_lines</span><span class="p">(</span>
+    <span class="kt">int</span> <span class="n">nlines</span><span class="p">,</span> <span class="k">const</span> <span class="kt">float</span><span class="o">*</span> <span class="n">cdf</span><span class="p">,</span> <span class="kt">float</span> <span class="n">re</span><span class="p">,</span> <span class="kt">float</span> <span class="n">ruv</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Pick a point on lines</p>
+<h3>Function sample_lines()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">std</span><span class="o">::</span><span class="n">pair</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span> <span class="n">vec2f</span><span class="o">&gt;</span> <span class="n">sample_lines</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;&amp;</span> <span class="n">cdf</span><span class="p">,</span> <span class="kt">float</span> <span class="n">re</span><span class="p">,</span> <span class="kt">float</span> <span class="n">ruv</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Pick a point on lines</p>
+<h3>Function sample_triangles_cdf()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">sample_triangles_cdf</span><span class="p">(</span>
+    <span class="kt">int</span> <span class="n">ntriangles</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec3i</span><span class="o">*</span> <span class="n">triangles</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec3f</span><span class="o">*</span> <span class="n">pos</span><span class="p">,</span> <span class="kt">float</span><span class="o">*</span> <span class="n">cdf</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Compute a distribution for sampling triangle meshes uniformly</p>
+<h3>Function sample_triangles_cdf()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;</span> <span class="n">sample_triangles_cdf</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;&amp;</span> <span class="n">triangles</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">pos</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Pick a point on lines</p>
+<h3>Function sample_triangles()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">std</span><span class="o">::</span><span class="n">pair</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span> <span class="n">vec3f</span><span class="o">&gt;</span> <span class="n">sample_triangles</span><span class="p">(</span>
+    <span class="kt">int</span> <span class="n">ntriangles</span><span class="p">,</span> <span class="k">const</span> <span class="kt">float</span><span class="o">*</span> <span class="n">cdf</span><span class="p">,</span> <span class="kt">float</span> <span class="n">re</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec2f</span><span class="o">&amp;</span> <span class="n">ruv</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Pick a point on a triangle mesh</p>
+<h3>Function sample_triangles()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">std</span><span class="o">::</span><span class="n">pair</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span> <span class="n">vec3f</span><span class="o">&gt;</span> <span class="n">sample_triangles</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;&amp;</span> <span class="n">cdf</span><span class="p">,</span> <span class="kt">float</span> <span class="n">re</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec2f</span><span class="o">&amp;</span> <span class="n">ruv</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Pick a point on a triangle mesh</p>
+<h3>Function sample_triangles_points()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">sample_triangles_points</span><span class="p">(</span><span class="kt">int</span> <span class="n">ntriangles</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec3i</span><span class="o">*</span> <span class="n">triangles</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">vec3f</span><span class="o">*</span> <span class="n">pos</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec3f</span><span class="o">*</span> <span class="n">norm</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec2f</span><span class="o">*</span> <span class="n">texcoord</span><span class="p">,</span> <span class="kt">int</span> <span class="n">npoints</span><span class="p">,</span>
+    <span class="n">vec3f</span><span class="o">*</span> <span class="n">sampled_pos</span><span class="p">,</span> <span class="n">vec3f</span><span class="o">*</span> <span class="n">sampled_norm</span><span class="p">,</span> <span class="n">vec2f</span><span class="o">*</span> <span class="n">sampled_texcoord</span><span class="p">,</span>
+    <span class="kt">uint64_t</span> <span class="n">seed</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Samples a set of points over a triangle mesh uniformly. The rng function
+takes the point index and returns vec3f numbers uniform directibuted in
+[0,1]^3. ù norm and texcoord are optional.</p>
+<h3>Function sample_triangles_points()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">sample_triangles_points</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;&amp;</span> <span class="n">triangles</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">pos</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">norm</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;&amp;</span> <span class="n">texcoord</span><span class="p">,</span> <span class="kt">int</span> <span class="n">npoints</span><span class="p">,</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">sampled_pos</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">sampled_norm</span><span class="p">,</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;&amp;</span> <span class="n">sampled_texcoord</span><span class="p">,</span> <span class="kt">uint64_t</span> <span class="n">seed</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Samples a set of points over a triangle mesh uniformly.
+Wrapper to the above function.</p>
 <h3>Function make_uvsphere()</h3>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">make_uvsphere</span><span class="p">(</span><span class="kt">int</span> <span class="n">usteps</span><span class="p">,</span> <span class="kt">int</span> <span class="n">vsteps</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;&amp;</span> <span class="n">triangles</span><span class="p">,</span>
     <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">pos</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">norm</span><span class="p">,</span>
@@ -3373,91 +3536,24 @@ http://jcgt.org/published/0002/02/02/paper.pdf</p>
 
 <p>Turntable for UI navigation for a frame/distance parametrization of the
 camera.</p>
-<h3>Struct rng_pcg32</h3>
-<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">rng_pcg32</span> <span class="p">{</span>
-</code></pre></div>
-
-
-<p>PCG random numbers. A family of random number generators that supports
-multiple sequences. In our code, we allocate one sequence for each sample.
-PCG32 from http://www.pcg-random.org/</p>
-<h3>Function next()</h3>
-<div class="codehilite"><pre><code><span></span><span class="k">constexpr</span> <span class="kr">inline</span> <span class="kt">uint32_t</span> <span class="nf">next</span><span class="p">(</span><span class="n">rng_pcg32</span><span class="o">*</span> <span class="n">rng</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Next random number</p>
-<h3>Function init()</h3>
-<div class="codehilite"><pre><code><span></span><span class="k">constexpr</span> <span class="kr">inline</span> <span class="kt">void</span> <span class="nf">init</span><span class="p">(</span><span class="n">rng_pcg32</span><span class="o">*</span> <span class="n">rng</span><span class="p">,</span> <span class="kt">uint64_t</span> <span class="n">state</span><span class="p">,</span> <span class="kt">uint64_t</span> <span class="n">seq</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Init a random number generator with a state state from the sequence seq.</p>
-<h3>Function next1f()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">float</span> <span class="nf">next1f</span><span class="p">(</span><span class="n">rng_pcg32</span><span class="o">*</span> <span class="n">rng</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Next random float in [0,1).</p>
-<h3>Function next2f()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">vec2f</span> <span class="nf">next2f</span><span class="p">(</span><span class="n">rng_pcg32</span><span class="o">*</span> <span class="n">rng</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Next random float in [0,1)x[0,1).</p>
-<h3>Function hash_permute()</h3>
-<div class="codehilite"><pre><code><span></span><span class="k">constexpr</span> <span class="kr">inline</span> <span class="kt">uint32_t</span> <span class="nf">hash_permute</span><span class="p">(</span><span class="kt">uint32_t</span> <span class="n">i</span><span class="p">,</span> <span class="kt">uint32_t</span> <span class="n">n</span><span class="p">,</span> <span class="kt">uint32_t</span> <span class="n">key</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Computes the i-th term of a permutation of l values keyed by p.
-From Correlated Multi-Jittered Sampling by Kensler @ Pixar</p>
-<h3>Function hash_randfloat()</h3>
-<div class="codehilite"><pre><code><span></span><span class="k">constexpr</span> <span class="kr">inline</span> <span class="kt">float</span> <span class="nf">hash_randfloat</span><span class="p">(</span><span class="kt">uint32_t</span> <span class="n">i</span><span class="p">,</span> <span class="kt">uint32_t</span> <span class="n">key</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Computes a float value by hashing i with a key p.
-From Correlated Multi-Jittered Sampling by Kensler @ Pixar</p>
-<h3>Function hash_uint64()</h3>
-<div class="codehilite"><pre><code><span></span><span class="k">constexpr</span> <span class="kr">inline</span> <span class="kt">uint64_t</span> <span class="nf">hash_uint64</span><span class="p">(</span><span class="kt">uint64_t</span> <span class="n">a</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>64 bit integer hash. Public domain code.</p>
-<h3>Function hash_uint64_32()</h3>
-<div class="codehilite"><pre><code><span></span><span class="k">constexpr</span> <span class="kr">inline</span> <span class="kt">uint32_t</span> <span class="nf">hash_uint64_32</span><span class="p">(</span><span class="kt">uint64_t</span> <span class="n">a</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>64-to-32 bit integer hash. Public domain code.</p>
-<h3>Function hash_combine()</h3>
-<div class="codehilite"><pre><code><span></span><span class="k">constexpr</span> <span class="kr">inline</span> <span class="kt">int</span> <span class="nf">hash_combine</span><span class="p">(</span><span class="kt">int</span> <span class="n">a</span><span class="p">,</span> <span class="kt">int</span> <span class="n">b</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Combines two 64 bit hashes as in boost::hash_combine</p>
-<h3>Function hash_vec()</h3>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="kt">int</span> <span class="n">N</span><span class="o">&gt;</span>
-<span class="k">constexpr</span> <span class="kr">inline</span> <span class="kt">int</span> <span class="n">hash_vec</span><span class="p">(</span><span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">v</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Hash a vector with hash_combine() and std::hash</p>
 <h3>Struct image</h3>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
 <span class="k">struct</span> <span class="n">image</span> <span class="p">{</span>
     <span class="k">constexpr</span> <span class="n">image</span><span class="p">();</span> 
     <span class="k">constexpr</span> <span class="n">image</span><span class="p">(</span><span class="kt">int</span> <span class="n">w</span><span class="p">,</span> <span class="kt">int</span> <span class="n">h</span><span class="p">,</span> <span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">v</span> <span class="o">=</span><span class="p">;</span> 
+    <span class="k">constexpr</span> <span class="nf">image</span><span class="p">(</span><span class="kt">int</span> <span class="n">w</span><span class="p">,</span> <span class="kt">int</span> <span class="n">h</span><span class="p">,</span> <span class="k">const</span> <span class="n">T</span><span class="o">*</span> <span class="n">v</span><span class="p">);</span> 
     <span class="kt">int</span> <span class="nf">width</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span> 
     <span class="kt">int</span> <span class="nf">height</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span> 
     <span class="n">vec2i</span> <span class="nf">size</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span> 
     <span class="kt">void</span> <span class="n">resize</span><span class="p">(</span><span class="kt">int</span> <span class="n">w</span><span class="p">,</span> <span class="kt">int</span> <span class="n">h</span><span class="p">,</span> <span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">v</span> <span class="o">=</span><span class="p">;</span> 
     <span class="kt">void</span> <span class="nf">assign</span><span class="p">(</span><span class="kt">int</span> <span class="n">w</span><span class="p">,</span> <span class="kt">int</span> <span class="n">h</span><span class="p">,</span> <span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">v</span><span class="p">);</span> 
+    <span class="kt">void</span> <span class="nf">set</span><span class="p">(</span><span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">v</span><span class="p">);</span> 
     <span class="n">T</span><span class="o">&amp;</span> <span class="k">operator</span><span class="p">[](</span><span class="k">const</span> <span class="n">vec2i</span><span class="o">&amp;</span> <span class="n">ij</span><span class="p">);</span> 
     <span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="k">operator</span><span class="p">[](</span><span class="k">const</span> <span class="n">vec2i</span><span class="o">&amp;</span> <span class="n">ij</span><span class="p">)</span> <span class="k">const</span><span class="p">;</span> 
     <span class="n">T</span><span class="o">&amp;</span> <span class="n">at</span><span class="p">(</span><span class="k">const</span> <span class="n">vec2i</span><span class="o">&amp;</span> <span class="n">ij</span><span class="p">);</span> 
     <span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">at</span><span class="p">(</span><span class="k">const</span> <span class="n">vec2i</span><span class="o">&amp;</span> <span class="n">ij</span><span class="p">)</span> <span class="k">const</span><span class="p">;</span> 
+    <span class="n">T</span><span class="o">&amp;</span> <span class="n">at</span><span class="p">(</span><span class="kt">int</span> <span class="n">i</span><span class="p">,</span> <span class="kt">int</span> <span class="n">j</span><span class="p">);</span> 
+    <span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">at</span><span class="p">(</span><span class="kt">int</span> <span class="n">i</span><span class="p">,</span> <span class="kt">int</span> <span class="n">j</span><span class="p">)</span> <span class="k">const</span><span class="p">;</span> 
     <span class="n">T</span><span class="o">*</span> <span class="nf">data</span><span class="p">();</span> 
     <span class="k">const</span> <span class="n">T</span><span class="o">*</span> <span class="nf">data</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span> 
 <span class="p">}</span>
@@ -3469,13 +3565,17 @@ From Correlated Multi-Jittered Sampling by Kensler @ Pixar</p>
 <li>Members:<ul>
 <li>image():      empty image constructor</li>
 <li>image():      image constructor</li>
+<li>image():      image constructor</li>
 <li>width():      width</li>
 <li>height():      height</li>
 <li>size():      size</li>
 <li>resize():      reallocate memory</li>
 <li>assign():      reallocate memory</li>
+<li>set():      set values</li>
 <li>operator<a href=""></a>:      element access</li>
 <li>operator<a href=""></a>:      element access</li>
+<li>at():      element access</li>
+<li>at():      element access</li>
 <li>at():      element access</li>
 <li>at():      element access</li>
 <li>data():      data access</li>
@@ -3483,6 +3583,42 @@ From Correlated Multi-Jittered Sampling by Kensler @ Pixar</p>
 </ul>
 </li>
 </ul>
+<h3>Typedef image1f</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">using</span> <span class="n">image1f</span> <span class="o">=</span> <span class="n">image</span><span class="o">&lt;</span><span class="n">vec</span><span class="o">&lt;</span><span class="kt">float</span><span class="p">,</span> <span class="mi">1</span><span class="o">&gt;&gt;</span><span class="p">;</span>
+</code></pre></div>
+
+
+<p>1-dimensional float image</p>
+<h3>Typedef image2f</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">using</span> <span class="n">image2f</span> <span class="o">=</span> <span class="n">image</span><span class="o">&lt;</span><span class="n">vec</span><span class="o">&lt;</span><span class="kt">float</span><span class="p">,</span> <span class="mi">2</span><span class="o">&gt;&gt;</span><span class="p">;</span>
+</code></pre></div>
+
+
+<p>2-dimensional float image</p>
+<h3>Typedef image3f</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">using</span> <span class="n">image3f</span> <span class="o">=</span> <span class="n">image</span><span class="o">&lt;</span><span class="n">vec</span><span class="o">&lt;</span><span class="kt">float</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&gt;</span><span class="p">;</span>
+</code></pre></div>
+
+
+<p>3-dimensional float image</p>
+<h3>Typedef image4f</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">using</span> <span class="n">image4f</span> <span class="o">=</span> <span class="n">image</span><span class="o">&lt;</span><span class="n">vec</span><span class="o">&lt;</span><span class="kt">float</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;&gt;</span><span class="p">;</span>
+</code></pre></div>
+
+
+<p>4-dimensional float image</p>
+<h3>Typedef image4b</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">using</span> <span class="n">image4b</span> <span class="o">=</span> <span class="n">image</span><span class="o">&lt;</span><span class="n">vec</span><span class="o">&lt;</span><span class="n">byte</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;&gt;</span><span class="p">;</span>
+</code></pre></div>
+
+
+<p>4-dimensional byte image</p>
+<h3>Typedef imagef</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">using</span> <span class="n">imagef</span> <span class="o">=</span> <span class="n">image</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;</span><span class="p">;</span>
+</code></pre></div>
+
+
+<p>float image</p>
 <h3>Function image_lookup()</h3>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
 <span class="k">constexpr</span> <span class="kr">inline</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;</span> <span class="n">image_lookup</span><span class="p">(</span>
@@ -3526,6 +3662,20 @@ https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/</p>
 
 
 <p>Tone mapping HDR to LDR images.</p>
+<h3>Function image_over()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">image_over</span><span class="p">(</span>
+    <span class="n">vec4f</span><span class="o">*</span> <span class="n">img</span><span class="p">,</span> <span class="kt">int</span> <span class="n">width</span><span class="p">,</span> <span class="kt">int</span> <span class="n">height</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nlayers</span><span class="p">,</span> <span class="n">vec4f</span><span class="o">**</span> <span class="n">layers</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Image over operator</p>
+<h3>Function image_over()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">image_over</span><span class="p">(</span>
+    <span class="n">vec4b</span><span class="o">*</span> <span class="n">img</span><span class="p">,</span> <span class="kt">int</span> <span class="n">width</span><span class="p">,</span> <span class="kt">int</span> <span class="n">height</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nlayers</span><span class="p">,</span> <span class="n">vec4b</span><span class="o">**</span> <span class="n">layers</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Image over operator</p>
         <article>
         <footer></footer>
         </body>

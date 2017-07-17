@@ -147,8 +147,7 @@ std::string make_doc(const std::string& cpp) {
                 for (auto& child : item.children) {
                     child.decl = replace(child.decl, ";", "");
                     child.decl = replace(child.decl, "}", "");
-                    child.name =
-                        split(partition(child.decl, "=")[0]).back();
+                    child.name = split(partition(child.decl, "=")[0]).back();
                     child.name = replace(child.name, ",", "");
                     item.comment += "    - " + child.name + ": " +
                                     replace(child.comment, "///", "");
@@ -178,16 +177,15 @@ std::string make_doc(const std::string& cpp) {
                         (!contains(child.decl, "(") ||
                             (child.decl.find("=") < child.decl.find("(")));
                     if (isvar) {
-                        child.name = replace(
-                            split(partition(child.decl, "=")[0]).back(),
-                            ";", "");
+                        child.name =
+                            replace(split(partition(child.decl, "=")[0]).back(),
+                                ";", "");
                         item.comment += "    - " + child.name + ": " +
                                         replace(child.comment, "///", "");
                         item.decl += child.decl;
                     } else {
                         if (contains(child.decl, "{")) {
-                            child.decl =
-                                partition(child.decl, "{")[0] + ";\n";
+                            child.decl = partition(child.decl, "{")[0] + ";\n";
                         }
                         if (contains(child.decl, " : ")) {
                             child.decl =
@@ -199,9 +197,7 @@ std::string make_doc(const std::string& cpp) {
                         child.decl = "   " + child.decl;
                         child.decl = replace(child.decl, " ;", ";");
                         child.name =
-                            split(partition(child.decl, "(")[0])
-                                .back() +
-                            "()";
+                            split(partition(child.decl, "(")[0]).back() + "()";
                         if (contains(child.decl, "operator "))
                             child.name = "operator " + child.name;
                         item.comment += "    - " + child.name + ": " +
@@ -236,8 +232,7 @@ std::string make_doc(const std::string& cpp) {
                 // replace_str(item.decl, "  ", " ");
                 item.decl = replace(item.decl, "( ", "(");
                 item.decl = replace(item.decl, " ;", ";");
-                item.name =
-                    split(partition(item.decl, "(")[0]).back() + "()";
+                item.name = split(partition(item.decl, "(")[0]).back() + "()";
                 if (contains(item.decl, "operator "))
                     item.name = "operator " + item.name;
                 item.comment = clean_comment(item.comment);

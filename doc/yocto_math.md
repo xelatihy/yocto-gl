@@ -23,9 +23,6 @@ complete, but unreadable or with lots of dependencies, or just as incomplete
 and untested as ours.
 
 This library has no dependencies.
-Some templated types and functions use specialization for easier access
-and faster compilation. Specialization can be disabled by defining
-YM_NO_SPECIALIZATION. Specialization is only supported fully on clang.
 
 This library includes code from the PCG random number generator,
 boost hash_combine, Pixar multijittered sampling, code from "Real-Time
@@ -36,6 +33,7 @@ Collision Detection" by Christer Ericson and public domain code from
 
 ## History
 
+- v 0.16: sampling
 - v 0.15: enable specialization always
 - v 0.14: move timer to Yocto/Utils
 - v 0.13: more shape functions
@@ -1993,6 +1991,8 @@ struct frame {
     constexpr frame(const M& m, const V& t); 
     constexpr V& operator[](int i); 
     constexpr const V& operator[](int i) const; 
+    constexpr V* data(); 
+    constexpr const V* data() const; 
     constexpr V& pos(); 
     constexpr const V& pos() const; 
     constexpr M& rot(); 
@@ -2017,6 +2017,8 @@ rot().
     - frame():      element constructor
     - operator[]():      element access
     - operator[]():      element access
+    - data():      data access
+    - data():      data access
     - pos():      access position
     - pos():      access position
     - rot():      access rotation
@@ -2038,6 +2040,8 @@ struct frame<float, 2> {
     constexpr frame(const M& m, const V& t); 
     constexpr V& operator[](int i); 
     constexpr const V& operator[](int i) const; 
+    constexpr V* data(); 
+    constexpr const V* data() const; 
     constexpr V& pos(); 
     constexpr const V& pos() const; 
     constexpr M& rot(); 
@@ -2060,6 +2064,8 @@ Specialization for 3D float frames.
     - frame():      element constructor
     - operator[]():      element access
     - operator[]():      element access
+    - data():      data access
+    - data():      data access
     - pos():      access position
     - pos():      access position
     - rot():      access rotation
@@ -2083,6 +2089,8 @@ struct frame<float, 3> {
     constexpr frame(const M& m, const V& t); 
     constexpr V& operator[](int i); 
     constexpr const V& operator[](int i) const; 
+    constexpr V* data(); 
+    constexpr const V* data() const; 
     constexpr V& pos(); 
     constexpr const V& pos() const; 
     constexpr M& rot(); 
@@ -2106,6 +2114,8 @@ Specialization for 3D float frames.
     - frame():      element constructor
     - operator[]():      element access
     - operator[]():      element access
+    - data():      data access
+    - data():      data access
     - pos():      access position
     - pos():      access position
     - rot():      access rotation
@@ -2372,6 +2382,8 @@ struct quat<T, 4> {
     constexpr explicit operator vec<T, N>() const; 
     constexpr T& operator[](int i); 
     constexpr const T& operator[](int i) const; 
+    constexpr T* data(); 
+    constexpr const T* data() const; 
     T x;
     T y;
     T z;
@@ -2389,6 +2401,8 @@ Quaterions are xi + yj + zk + w.
     - operator N>():      conversion to vec
     - operator[]():      element access
     - operator[]():      element access
+    - data():      data access
+    - data():      data access
     - x:      data
     - y:      data
     - z:      data
@@ -3475,6 +3489,99 @@ constexpr inline mat<T, 4, 4> compose_mat4(const vec<T, 3>& translation,
 Decompose an affine matrix into translation, rotation, scale.
 Assumes there is no shear and the matrix is affine.
 
+### Struct rng_pcg32
+
+~~~ .cpp
+struct rng_pcg32 {
+~~~
+
+PCG random numbers. A family of random number generators that supports
+multiple sequences. In our code, we allocate one sequence for each sample.
+PCG32 from http://www.pcg-random.org/
+
+### Function next()
+
+~~~ .cpp
+constexpr inline uint32_t next(rng_pcg32* rng);
+~~~
+
+Next random number
+
+### Function init()
+
+~~~ .cpp
+constexpr inline void init(rng_pcg32* rng, uint64_t state, uint64_t seq);
+~~~
+
+Init a random number generator with a state state from the sequence seq.
+
+### Function next1f()
+
+~~~ .cpp
+inline float next1f(rng_pcg32* rng);
+~~~
+
+Next random float in [0,1).
+
+### Function next2f()
+
+~~~ .cpp
+inline vec2f next2f(rng_pcg32* rng);
+~~~
+
+Next random float in [0,1)x[0,1).
+
+### Function hash_permute()
+
+~~~ .cpp
+constexpr inline uint32_t hash_permute(uint32_t i, uint32_t n, uint32_t key);
+~~~
+
+Computes the i-th term of a permutation of l values keyed by p.
+From Correlated Multi-Jittered Sampling by Kensler @ Pixar
+
+### Function hash_randfloat()
+
+~~~ .cpp
+constexpr inline float hash_randfloat(uint32_t i, uint32_t key);
+~~~
+
+Computes a float value by hashing i with a key p.
+From Correlated Multi-Jittered Sampling by Kensler @ Pixar
+
+### Function hash_uint64()
+
+~~~ .cpp
+constexpr inline uint64_t hash_uint64(uint64_t a);
+~~~
+
+64 bit integer hash. Public domain code.
+
+### Function hash_uint64_32()
+
+~~~ .cpp
+constexpr inline uint32_t hash_uint64_32(uint64_t a);
+~~~
+
+64-to-32 bit integer hash. Public domain code.
+
+### Function hash_combine()
+
+~~~ .cpp
+constexpr inline int hash_combine(int a, int b);
+~~~
+
+Combines two 64 bit hashes as in boost::hash_combine
+
+### Function hash_vec()
+
+~~~ .cpp
+template <typename T, int N>
+constexpr inline int hash_vec(const vec<T, N>& v);
+~~~
+
+Hash a vector with hash_combine() and std::hash
+
 ### Function triangle_normal()
 
 ~~~ .cpp
@@ -3727,7 +3834,7 @@ Out Parameters:
 ~~~ .cpp
 template <typename PosFunc, typename TangFunc, typename TexcoordFunc,
     typename RadiusFunc>
-inline void make_lines(int usteps, int num, std::vector<vec2i>& lines,
+inline void make_lines(int num, int usteps, std::vector<vec2i>& lines,
     std::vector<vec3f>& pos, std::vector<vec3f>& tang,
     std::vector<vec2f>& texcoord, std::vector<float>& radius,
     const PosFunc& pos_fn, const TangFunc& tang_fn,
@@ -3739,10 +3846,10 @@ Generate parametric lines with callbacks.
 Parameters:
 - usteps: subdivisions in u
 - num: number of lines
-- pos_fn: pos callbacks (vec2f -> vec3f)
-- tang_fn: tangent callbacks (vec2f -> vec3f)
-- texcoord_fn: texcoord callbacks (vec2f -> vec2f)
-- radius_fn: radius callbacks (vec2f -> float)
+- pos_fn: pos callbacks ((int, float) -> vec3f)
+- tang_fn: tangent callbacks ((int, float) -> vec3f)
+- texcoord_fn: texcoord callbacks ((int, float) -> vec2f)
+- radius_fn: radius callbacks ((int, float) -> float)
 
 Out Parameters:
 - lines: element array
@@ -3764,10 +3871,10 @@ Generate a parametric point set. Mostly here for completeness.
 
 Parameters:
 - num: number of points
-- pos_fn: pos callbacks (float -> vec3f)
-- norm_fn: norm callbacks (float -> vec3f)
-- texcoord_fn: texcoord callbacks (float -> vec2f)
-- radius_fn: radius callbacks (float -> float)
+- pos_fn: pos callbacks (int -> vec3f)
+- norm_fn: norm callbacks (int -> vec3f)
+- texcoord_fn: texcoord callbacks (int -> vec2f)
+- radius_fn: radius callbacks (int -> float)
 
 Out Parameters:
 - points: element array
@@ -3784,6 +3891,104 @@ inline void merge_triangles(std::vector<ym::vec3i>& triangles,
 ~~~
 
 Merge a triangle mesh into another.
+
+### Function sample_lines_cdf()
+
+~~~ .cpp
+inline void sample_lines_cdf(
+    int nlines, const vec2i* lines, const vec3f* pos, float* cdf);
+~~~
+
+Compute a distribution for sampling lines uniformly
+
+### Function sample_lines_cdf()
+
+~~~ .cpp
+inline std::vector<float> sample_lines_cdf(
+    const std::vector<vec2i>& lines, const std::vector<vec3f>& pos);
+~~~
+
+Compute a distribution for sampling lines uniformly
+
+### Function sample_lines()
+
+~~~ .cpp
+inline std::pair<int, vec2f> sample_lines(
+    int nlines, const float* cdf, float re, float ruv);
+~~~
+
+Pick a point on lines
+
+### Function sample_lines()
+
+~~~ .cpp
+inline std::pair<int, vec2f> sample_lines(
+    const std::vector<float>& cdf, float re, float ruv);
+~~~
+
+Pick a point on lines
+
+### Function sample_triangles_cdf()
+
+~~~ .cpp
+inline void sample_triangles_cdf(
+    int ntriangles, const vec3i* triangles, const vec3f* pos, float* cdf);
+~~~
+
+Compute a distribution for sampling triangle meshes uniformly
+
+### Function sample_triangles_cdf()
+
+~~~ .cpp
+inline std::vector<float> sample_triangles_cdf(
+    const std::vector<vec3i>& triangles, const std::vector<vec3f>& pos);
+~~~
+
+Pick a point on lines
+
+### Function sample_triangles()
+
+~~~ .cpp
+inline std::pair<int, vec3f> sample_triangles(
+    int ntriangles, const float* cdf, float re, const vec2f& ruv);
+~~~
+
+Pick a point on a triangle mesh
+
+### Function sample_triangles()
+
+~~~ .cpp
+inline std::pair<int, vec3f> sample_triangles(
+    const std::vector<float>& cdf, float re, const vec2f& ruv);
+~~~
+
+Pick a point on a triangle mesh
+
+### Function sample_triangles_points()
+
+~~~ .cpp
+inline void sample_triangles_points(int ntriangles, const vec3i* triangles,
+    const vec3f* pos, const vec3f* norm, const vec2f* texcoord, int npoints,
+    vec3f* sampled_pos, vec3f* sampled_norm, vec2f* sampled_texcoord,
+    uint64_t seed);
+~~~
+
+Samples a set of points over a triangle mesh uniformly. The rng function
+takes the point index and returns vec3f numbers uniform directibuted in
+[0,1]^3. ù norm and texcoord are optional.
+
+### Function sample_triangles_points()
+
+~~~ .cpp
+inline void sample_triangles_points(const std::vector<vec3i>& triangles,
+    const std::vector<vec3f>& pos, const std::vector<vec3f>& norm,
+    const std::vector<vec2f>& texcoord, int npoints,
+    std::vector<vec3f>& sampled_pos, std::vector<vec3f>& sampled_norm,
+    std::vector<vec2f>& sampled_texcoord, uint64_t seed);
+~~~
+
+Samples a set of points over a triangle mesh uniformly.
+Wrapper to the above function.
 
 ### Function make_uvsphere()
 
@@ -4114,99 +4319,6 @@ constexpr inline void turntable(frame<T, 3>& frame, float& focus,
 Turntable for UI navigation for a frame/distance parametrization of the
 camera.
 
-### Struct rng_pcg32
-
-~~~ .cpp
-struct rng_pcg32 {
-~~~
-
-PCG random numbers. A family of random number generators that supports
-multiple sequences. In our code, we allocate one sequence for each sample.
-PCG32 from http://www.pcg-random.org/
-
-### Function next()
-
-~~~ .cpp
-constexpr inline uint32_t next(rng_pcg32* rng);
-~~~
-
-Next random number
-
-### Function init()
-
-~~~ .cpp
-constexpr inline void init(rng_pcg32* rng, uint64_t state, uint64_t seq);
-~~~
-
-Init a random number generator with a state state from the sequence seq.
-
-### Function next1f()
-
-~~~ .cpp
-inline float next1f(rng_pcg32* rng);
-~~~
-
-Next random float in [0,1).
-
-### Function next2f()
-
-~~~ .cpp
-inline vec2f next2f(rng_pcg32* rng);
-~~~
-
-Next random float in [0,1)x[0,1).
-
-### Function hash_permute()
-
-~~~ .cpp
-constexpr inline uint32_t hash_permute(uint32_t i, uint32_t n, uint32_t key);
-~~~
-
-Computes the i-th term of a permutation of l values keyed by p.
-From Correlated Multi-Jittered Sampling by Kensler @ Pixar
-
-### Function hash_randfloat()
-
-~~~ .cpp
-constexpr inline float hash_randfloat(uint32_t i, uint32_t key);
-~~~
-
-Computes a float value by hashing i with a key p.
-From Correlated Multi-Jittered Sampling by Kensler @ Pixar
-
-### Function hash_uint64()
-
-~~~ .cpp
-constexpr inline uint64_t hash_uint64(uint64_t a);
-~~~
-
-64 bit integer hash. Public domain code.
-
-### Function hash_uint64_32()
-
-~~~ .cpp
-constexpr inline uint32_t hash_uint64_32(uint64_t a);
-~~~
-
-64-to-32 bit integer hash. Public domain code.
-
-### Function hash_combine()
-
-~~~ .cpp
-constexpr inline int hash_combine(int a, int b);
-~~~
-
-Combines two 64 bit hashes as in boost::hash_combine
-
-### Function hash_vec()
-
-~~~ .cpp
-template <typename T, int N>
-constexpr inline int hash_vec(const vec<T, N>& v);
-~~~
-
-Hash a vector with hash_combine() and std::hash
-
 ### Struct image
 
 ~~~ .cpp
@@ -4214,15 +4326,19 @@ template <typename T>
 struct image {
     constexpr image(); 
     constexpr image(int w, int h, const T& v =; 
+    constexpr image(int w, int h, const T* v); 
     int width() const; 
     int height() const; 
     vec2i size() const; 
     void resize(int w, int h, const T& v =; 
     void assign(int w, int h, const T& v); 
+    void set(const T& v); 
     T& operator[](const vec2i& ij); 
     const T& operator[](const vec2i& ij) const; 
     T& at(const vec2i& ij); 
     const T& at(const vec2i& ij) const; 
+    T& at(int i, int j); 
+    const T& at(int i, int j) const; 
     T* data(); 
     const T* data() const; 
 }
@@ -4233,18 +4349,70 @@ Image of a specified type
 - Members:
     - image():      empty image constructor
     - image():      image constructor
+    - image():      image constructor
     - width():      width
     - height():      height
     - size():      size
     - resize():      reallocate memory
     - assign():      reallocate memory
+    - set():      set values
     - operator[]():      element access
     - operator[]():      element access
+    - at():      element access
+    - at():      element access
     - at():      element access
     - at():      element access
     - data():      data access
     - data():      data access
 
+
+### Typedef image1f
+
+~~~ .cpp
+using image1f = image<vec<float, 1>>;
+~~~
+
+1-dimensional float image
+
+### Typedef image2f
+
+~~~ .cpp
+using image2f = image<vec<float, 2>>;
+~~~
+
+2-dimensional float image
+
+### Typedef image3f
+
+~~~ .cpp
+using image3f = image<vec<float, 3>>;
+~~~
+
+3-dimensional float image
+
+### Typedef image4f
+
+~~~ .cpp
+using image4f = image<vec<float, 4>>;
+~~~
+
+4-dimensional float image
+
+### Typedef image4b
+
+~~~ .cpp
+using image4b = image<vec<byte, 4>>;
+~~~
+
+4-dimensional byte image
+
+### Typedef imagef
+
+~~~ .cpp
+using imagef = image<float>;
+~~~
+
+float image
 
 ### Function image_lookup()
 
@@ -4301,4 +4469,22 @@ inline void tonemap_image(int width, int height, int ncomp, const float* hdr,
 ~~~
 
 Tone mapping HDR to LDR images.
+
+### Function image_over()
+
+~~~ .cpp
+inline void image_over(
+    vec4f* img, int width, int height, int nlayers, vec4f** layers);
+~~~
+
+Image over operator
+
+### Function image_over()
+
+~~~ .cpp
+inline void image_over(
+    vec4b* img, int width, int height, int nlayers, vec4b** layers);
+~~~
+
+Image over operator
 

@@ -17,84 +17,95 @@ stb_image_resize.h.
 
 ## History
 
+- v 0.1: added whole image functions
 - v 0.1: initial release
 
 ## Namespace yimg
 
 Utilitied for reading and writing images.
 
-### Function load_image()
+### Function load_image4b()
 
 ~~~ .cpp
-void load_image(
-    const std::string& filename, int& w, int& h, int& ncomp, byte*& ldr);
+ym::image4b* load_image4b(const std::string& filename);
 ~~~
 
 Loads an ldr image.
 
-### Function load_image()
+### Function load_image4f()
 
 ~~~ .cpp
-void load_image(
-    const std::string& filename, int& w, int& h, int& ncomp, float*& hdr);
+ym::image4f* load_image4f(const std::string& filename);
 ~~~
 
 Loads an hdr image.
 
+### Function save_image4b()
+
+~~~ .cpp
+bool save_image4b(const std::string& filename, const ym::image4b* img);
+~~~
+
+Saves an ldr image.
+
+### Function save_image4f()
+
+~~~ .cpp
+bool save_image4f(const std::string& filename, const ym::image4f* img);
+~~~
+
+Saves an hdr image.
+
 ### Function load_image()
 
 ~~~ .cpp
-void load_image(const std::string& filename, int& w, int& h, int& ncomp,
-    float*& hdr, byte*& ldr);
+byte* load_image(const std::string& filename, int& w, int& h, int& ncomp);
 ~~~
 
-Loads an image. Uses extension to determine which format to load.
-Suppoted formats are PNG, JPG, HDR.
+Loads an ldr image.
 
-### Function load_image()
+### Function load_imagef()
 
 ~~~ .cpp
-void load_image(const std::string& filename, int& w, int& h, int& ncomp,
-    std::vector<float>& hdr, std::vector<byte>& ldr);
+float* load_imagef(const std::string& filename, int& w, int& h, int& ncomp);
 ~~~
 
-Loads an image.
+Loads an hdr image.
 
 ### Function save_image()
 
 ~~~ .cpp
-void save_image(const std::string& filename, int width, int height, int ncomp,
-    const float* hdr);
-~~~
-
-Saves an hdr image. Uses extension to determine which format to load.
-Suppoted formats are HDR.
-
-### Function save_image()
-
-~~~ .cpp
-void save_image(const std::string& filename, int width, int height, int ncomp,
+bool save_image(const std::string& filename, int width, int height, int ncomp,
     const byte* ldr);
 ~~~
 
 Saves an ldr image. Uses extension to determine which format to load.
 Suppoted formats are PNG.
 
+### Function save_imagef()
+
+~~~ .cpp
+bool save_imagef(const std::string& filename, int width, int height, int ncomp,
+    const float* hdr);
+~~~
+
+Saves an hdr image. Uses extension to determine which format to load.
+Suppoted formats are HDR.
+
 ### Function load_image_from_memory()
 
 ~~~ .cpp
-void load_image_from_memory(const std::string& fmt, const byte* data,
-    int length, int& w, int& h, int& ncomp, float*& hdr, byte*& ldr);
+byte* load_image_from_memory(const std::string& fmt, const byte* data,
+    int length, int& w, int& h, int& ncomp);
 ~~~
 
 Loads an image from memory.
 
-### Function load_image_from_memory()
+### Function load_imagef_from_memory()
 
 ~~~ .cpp
-void load_image_from_memory(const std::string& fmt, const byte* data,
-    int length, int& w, int& h, int& ncomp, std::vector<float>& hdr,
-    std::vector<byte>& ldr);
+float* load_imagef_from_memory(const std::string& fmt, const byte* data,
+    int length, int& w, int& h, int& ncomp);
 ~~~
 
 Loads an image from memory.

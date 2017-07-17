@@ -12,6 +12,7 @@ GLFW for window management and dear ImGui for widgets.
 
 ## History
 
+- v 0.3: changed image widget sizing
 - v 0.2: added widgets explicit IDs
 - v 0.1: added more widgets
 - v 0.0: initial release split from yocto_glu
@@ -238,6 +239,14 @@ void indent_end_widgets(window* win);
 ~~~
 
 Indent widget
+
+### Function continue_line_widgets()
+
+~~~ .cpp
+void continue_line_widgets(window* win);
+~~~
+
+Continue line with next widget
 
 ### Function label_widget()
 
@@ -514,6 +523,15 @@ bool tree_begin_widget(
 
 Start selectable tree node
 
+### Function tree_begin_widget()
+
+~~~ .cpp
+bool tree_begin_widget(window* win, const std::string& lbl, void** selection,
+    void* content, const ym::vec4f& col);
+~~~
+
+Start selectable tree node
+
 ### Function tree_end_widget()
 
 ~~~ .cpp
@@ -531,13 +549,23 @@ void tree_leaf_widget(
 
 Selectable tree leaf node
 
+### Function tree_leaf_widget()
+
+~~~ .cpp
+void tree_leaf_widget(window* win, const std::string& lbl, void** selection,
+    void* content, const ym::vec4f& col);
+~~~
+
+Selectable tree leaf node
+
 ### Function image_widget()
 
 ~~~ .cpp
-void image_widget(window* win, int tid, ym::vec2i size);
+void image_widget(
+    window* win, int tid, const ym::vec2i& size, const ym::vec2i& imsize);
 ~~~
 
-Image widget
+Image widget with desired size size, taken from an image of size imsize.
 
 ### Function scroll_region_begin_widget()
 
@@ -563,4 +591,28 @@ void scroll_region_here_widget(window* win);
 ~~~
 
 Scroll region
+
+### Function groupid_begin_widget()
+
+~~~ .cpp
+void groupid_begin_widget(window* win, int gid);
+~~~
+
+Group ids
+
+### Function groupid_begin_widget()
+
+~~~ .cpp
+void groupid_begin_widget(window* win, void* gid);
+~~~
+
+Group ids
+
+### Function groupid_end_widget()
+
+~~~ .cpp
+void groupid_end_widget(window* win);
+~~~
+
+Group ids
 

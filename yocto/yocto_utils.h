@@ -59,10 +59,12 @@
 /// 3. Python-line string manipulation in namespace `string`
 /// 4. Python-like operators for standard containers in namespace `operators`
 /// 5. simple timer in namespace `timer`
+/// 6. hashing functions in the `hashing` namespace (SHA1 and xxHash)
 ///
 ///
 /// ## History
 ///
+/// - v 0.19: some containers ops
 /// - v 0.18: timer
 /// - v 0.17: renamed to yocto utils
 /// - v 0.16: split into namespaces
@@ -157,6 +159,7 @@ namespace yu {}
 #include <chrono>
 #include <functional>
 #include <future>
+#include <map>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -351,13 +354,13 @@ std::string load_txtfile(const std::string& filename);
 ///
 /// Saves binary data to a file.
 ///
-void save_binfile(
+bool save_binfile(
     const std::string& filename, const std::vector<unsigned char>& data);
 
 ///
 /// Saves a string to a text file.
 ///
-void save_txtfile(const std::string& filename, const std::string& str);
+bool save_txtfile(const std::string& filename, const std::string& str);
 
 }  // namespace file
 
@@ -499,6 +502,37 @@ std::string format(const char* fmt, va_list args);
 std::string format(const char* fmt, ...);
 
 }  // namespace string
+
+///
+/// Python-like STL functions
+///
+namespace containers {
+
+///
+/// Checks if a containers contains a value
+///
+template <typename T>
+inline bool contains(const std::vector<T>& v, const T& vv) {
+    return std::find(v.begin(), v.end(), vv) != v.end();
+}
+
+///
+/// Checks if a containers contains a value
+///
+template <typename K, typename V>
+inline bool contains(const std::map<K, V>& v, const K& vv) {
+    return v.find(vv) != v.end();
+}
+
+///
+/// Checks if a containers contains a value
+///
+template <typename K, typename V>
+inline bool contains(const std::unordered_map<K, V>& v, const K& vv) {
+    return v.find(vv) != v.end();
+}
+
+}  // namespace containers
 
 ///
 /// Python-like STL operators

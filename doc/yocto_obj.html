@@ -58,6 +58,8 @@ disabled by defining YOBJ_NO_IMAGE before including this file.</p>
 </ol>
 <h2>History</h2>
 <ul>
+<li>v 0.24: remove exception from code and add explicit error handling</li>
+<li>v 0.23: texture have always 4 channels</li>
 <li>v 0.22: change variable names for compilation on gcc</li>
 <li>v 0.21: bug fixes</li>
 <li>v 0.20: use yocto_math in the interface and remove inline compilation</li>
@@ -95,11 +97,11 @@ disabled by defining YOBJ_NO_IMAGE before including this file.</p>
 <h3>Struct texture</h3>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">texture</span> <span class="p">{</span>
     <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">path</span><span class="p">;</span>
-    <span class="kt">int</span> <span class="n">width</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
-    <span class="kt">int</span> <span class="n">height</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
-    <span class="kt">int</span> <span class="n">ncomp</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;</span> <span class="n">dataf</span><span class="p">;</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">unsigned</span> <span class="kt">char</span><span class="o">&gt;</span> <span class="n">datab</span><span class="p">;</span>
+    <span class="n">ym</span><span class="o">::</span><span class="n">image4b</span><span class="o">*</span> <span class="n">ldr</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+    <span class="n">ym</span><span class="o">::</span><span class="n">image4f</span><span class="o">*</span> <span class="n">hdr</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="nf">width</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span> 
+    <span class="kt">int</span> <span class="nf">height</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span> 
+    <span class="o">~</span><span class="n">texture</span><span class="p">();</span> 
 <span class="p">}</span>
 </code></pre></div>
 
@@ -108,11 +110,11 @@ disabled by defining YOBJ_NO_IMAGE before including this file.</p>
 <ul>
 <li>Members:<ul>
 <li>path:      path</li>
-<li>width:      if loaded, image width</li>
-<li>height:      if loaded, image hieght</li>
-<li>ncomp:      if loaded, number of component (1-4)</li>
-<li>dataf:      if loaded, pixel data for HDRs</li>
-<li>datab:      if loaded, pixel data for LDRs</li>
+<li>ldr:      if loaded, ldr image</li>
+<li>hdr:      if loaded, hdr image</li>
+<li>width():      get texture width</li>
+<li>height():      get texture height</li>
+<li>~texture():      done</li>
 </ul>
 </li>
 </ul>
@@ -338,7 +340,8 @@ disabled by defining YOBJ_NO_IMAGE before including this file.</p>
 </ul>
 <h3>Function load_scene()</h3>
 <div class="codehilite"><pre><code><span></span><span class="n">scene</span><span class="o">*</span> <span class="nf">load_scene</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">load_textures</span><span class="p">,</span>
-    <span class="kt">bool</span> <span class="n">flip_texcoord</span> <span class="o">=</span> <span class="nb">true</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">skip_missing</span> <span class="o">=</span> <span class="nb">true</span><span class="p">);</span>
+    <span class="kt">bool</span> <span class="n">flip_texcoord</span> <span class="o">=</span> <span class="nb">true</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">skip_missing</span> <span class="o">=</span> <span class="nb">true</span><span class="p">,</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">*</span> <span class="n">err</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -349,16 +352,17 @@ disabled by defining YOBJ_NO_IMAGE before including this file.</p>
 <li>load_textures: whether to load textures (default to false)</li>
 <li>flip_texcoord: whether to flip the v coordinate</li>
 <li>skip_missing: skip missing textures</li>
+<li>err: if set, store error message on error</li>
 </ul>
 </li>
 <li>Returns:<ul>
-<li>scene</li>
+<li>scene (nullptr on error)</li>
 </ul>
 </li>
 </ul>
 <h3>Function save_scene()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">save_scene</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">,</span> <span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span>
-    <span class="kt">bool</span> <span class="n">save_textures</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">flip_texcoord</span> <span class="o">=</span> <span class="nb">true</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">save_scene</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">,</span> <span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span>
+    <span class="kt">bool</span> <span class="n">save_textures</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">flip_texcoord</span> <span class="o">=</span> <span class="nb">true</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">*</span> <span class="n">err</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -369,12 +373,17 @@ disabled by defining YOBJ_NO_IMAGE before including this file.</p>
 <li>scn: scene data to save</li>
 <li>save_textures: whether to save textures (default to false)</li>
 <li>flip_texcoord: whether to flip the v coordinate</li>
+<li>err: if set, store error message on error</li>
+</ul>
+</li>
+<li>Returns:<ul>
+<li>whether an error occurred</li>
 </ul>
 </li>
 </ul>
 <h3>Function load_textures()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">load_textures</span><span class="p">(</span>
-    <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">dirname</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">skip_missing</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">load_textures</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">dirname</span><span class="p">,</span>
+    <span class="kt">bool</span> <span class="n">skip_missing</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">*</span> <span class="n">err</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -383,13 +392,18 @@ disabled by defining YOBJ_NO_IMAGE before including this file.</p>
 <li>Parameters:<ul>
 <li>scn: scene to load textures into</li>
 <li>dirname: base directory name for texture files</li>
-<li>skip_missing: whether to skip missing textures or throw an expection</li>
+<li>skip_missing: whether to skip missing textures or stops with error</li>
+<li>err: if set, store error message on error</li>
+</ul>
+</li>
+<li>Returns:<ul>
+<li>whether an error occurred</li>
 </ul>
 </li>
 </ul>
 <h3>Function save_textures()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">save_textures</span><span class="p">(</span>
-    <span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">dirname</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">skip_missing</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">save_textures</span><span class="p">(</span><span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">dirname</span><span class="p">,</span>
+    <span class="kt">bool</span> <span class="n">skip_missing</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">*</span> <span class="n">err</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -398,7 +412,12 @@ disabled by defining YOBJ_NO_IMAGE before including this file.</p>
 <li>Parameters:<ul>
 <li>scn: scene to write textures from</li>
 <li>dirname: base directory name for texture files</li>
-<li>skip_missing: whether to skip missing textures or throw an expection</li>
+<li>skip_missing: whether to skip missing textures or stops with error</li>
+<li>err: if set, store error message on error</li>
+</ul>
+</li>
+<li>Returns:<ul>
+<li>whether an error occurred</li>
 </ul>
 </li>
 </ul>
@@ -736,24 +755,9 @@ disabled by defining YOBJ_NO_IMAGE before including this file.</p>
 </ul>
 </li>
 </ul>
-<h3>Struct obj_exception</h3>
-<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="nl">obj_exception</span> <span class="p">:</span> <span class="n">std</span><span class="o">::</span><span class="n">exception</span> <span class="p">{</span>
-    <span class="n">obj_exception</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">errmsg</span><span class="p">);</span> 
-    <span class="k">virtual</span> <span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="nf">what</span><span class="p">()</span> <span class="k">const</span> <span class="k">throw</span><span class="p">();</span> 
-<span class="p">}</span>
-</code></pre></div>
-
-
-<p>IO Exception.</p>
-<ul>
-<li>Members:<ul>
-<li>obj_exception():      constructor with error message</li>
-<li>what():      retieval of error message</li>
-</ul>
-</li>
-</ul>
 <h3>Function load_obj()</h3>
-<div class="codehilite"><pre><code><span></span><span class="n">obj</span><span class="o">*</span> <span class="nf">load_obj</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">flip_texcoord</span> <span class="o">=</span> <span class="nb">true</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="n">obj</span><span class="o">*</span> <span class="nf">load_obj</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">flip_texcoord</span> <span class="o">=</span> <span class="nb">true</span><span class="p">,</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">*</span> <span class="n">err</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -762,15 +766,17 @@ disabled by defining YOBJ_NO_IMAGE before including this file.</p>
 <li>Parameters:<ul>
 <li>filename: filename</li>
 <li>flip_texcoord: whether to flip the v coordinate</li>
+<li>err: if set, store error message on error</li>
 </ul>
 </li>
 <li>Return:<ul>
-<li>obj</li>
+<li>obj (nullptr on error)</li>
 </ul>
 </li>
 </ul>
 <h3>Function load_mtl()</h3>
-<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">obj_material</span><span class="o">&gt;</span> <span class="n">load_mtl</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">obj_material</span><span class="o">&gt;</span> <span class="n">load_mtl</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">*</span> <span class="n">err</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -778,16 +784,17 @@ disabled by defining YOBJ_NO_IMAGE before including this file.</p>
 <ul>
 <li>Parameters:<ul>
 <li>filename: filename</li>
+<li>err: if set, store error message on error</li>
 </ul>
 </li>
 <li>Return:<ul>
-<li>loaded materials</li>
+<li>loaded materials (empty on error)</li>
 </ul>
 </li>
 </ul>
 <h3>Function save_obj()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">save_obj</span><span class="p">(</span>
-    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">,</span> <span class="k">const</span> <span class="n">obj</span><span class="o">*</span> <span class="n">asset</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">flip_texcoord</span> <span class="o">=</span> <span class="nb">true</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">save_obj</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">,</span> <span class="k">const</span> <span class="n">obj</span><span class="o">*</span> <span class="n">asset</span><span class="p">,</span>
+    <span class="kt">bool</span> <span class="n">flip_texcoord</span> <span class="o">=</span> <span class="nb">true</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">*</span> <span class="n">err</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -797,12 +804,17 @@ disabled by defining YOBJ_NO_IMAGE before including this file.</p>
 <li>filename: filename</li>
 <li>asset: obj data to save</li>
 <li>flip_texcoord: whether to flip the v coordinate</li>
+<li>err: if set, store error message on error</li>
+</ul>
+</li>
+<li>Returns:<ul>
+<li>whether an error occurred</li>
 </ul>
 </li>
 </ul>
 <h3>Function save_mtl()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">save_mtl</span><span class="p">(</span>
-    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">obj_material</span><span class="o">&gt;&amp;</span> <span class="n">materials</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">save_mtl</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">obj_material</span><span class="o">&gt;&amp;</span> <span class="n">materials</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">*</span> <span class="n">err</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">);</span>
 </code></pre></div>
 
 

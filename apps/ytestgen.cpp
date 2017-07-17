@@ -585,42 +585,42 @@ yobj::mesh* add_lines(yobj::scene* scn, const std::string& name,
         ln[i] = 0.15f + 0.15f * next1f(&rn);
     }
 
-    ym::make_lines(n, num, shp->lines, shp->pos, shp->norm, shp->texcoord,
+    ym::make_lines(num, n, shp->lines, shp->pos, shp->norm, shp->texcoord,
         shp->radius,
-        [num, base, dir, ln, r, s, c, &rn](const ym::vec2f& uv) {
-            auto i = ym::clamp((int)(uv[1] * (num + 1)), 0, num);
-            auto pos = base[i] * (1 + uv[0] * ln[i]);
+        [num, base, dir, ln, r, s, c, &rn](int idx, float u) {
+            auto pos = base[idx] * (1 + u * ln[idx]);
             if (r) {
                 pos += ym::vec3f{r * (0.5f - next1f(&rn)),
                     r * (0.5f - next1f(&rn)), r * (0.5f - next1f(&rn))};
             }
-            if (s && uv[0]) {
+            if (s && u) {
                 ym::frame3f rotation =
-                    rotation_frame3(ym::vec3f{0, 1, 0}, s * uv[0] * uv[0]);
+                    rotation_frame3(ym::vec3f{0, 1, 0}, s * u * u);
                 pos = transform_point(rotation, pos);
             }
             auto nc = 128;
-            if (c && i > nc) {
+            if (c && idx > nc) {
                 int cc = 0;
                 float md = HUGE_VALF;
                 for (int k = 0; k < nc; k++) {
-                    float d = dist(base[i], base[k]);
+                    float d = dist(base[idx], base[k]);
                     if (d < md) {
                         md = d;
                         cc = k;
                     }
                 }
-                ym::vec3f cpos = base[cc] * (1 + uv[0] * ln[cc]);
-                pos =
-                    pos * (1 - c * uv[0] * uv[0]) + cpos * (c * uv[0] * uv[0]);
+                ym::vec3f cpos = base[cc] * (1 + u * ln[cc]);
+                pos = pos * (1 - c * u * u) + cpos * (c * u * u);
             }
             return pos;
         },
-        [](const ym::vec2f& uv) {
+        [](int idx, float u) {
             return ym::vec3f{0, 0, 1};
         },
-        [](const ym::vec2f& uv) { return uv; },
-        [](const ym::vec2f& uv) { return 0.001f + 0.001f * (1 - uv[0]); });
+        [num](int idx, float u) {
+            return ym::vec2f{u, (float)idx / (float)num};
+        },
+        [](int idx, float u) { return 0.001f + 0.001f * (1 - u); });
 
     ym::compute_tangents(shp->lines, shp->pos, shp->norm);
     return add_mesh(scn, shp);
@@ -693,47 +693,44 @@ yobj::camera* add_camera(yobj::scene* scn, const std::string& name,
     return cam;
 }
 
-using ubyte = unsigned char;
-struct rgba {
-    ubyte r, g, b, a;
-};
+using byte = unsigned char;
 
-std::vector<rgba> make_grid(int s) {
-    std::vector<rgba> pixels(s * s);
+ym::image<ym::vec4b> make_grid(int s) {
+    ym::image<ym::vec4b> pixels(s, s);
     int g = 64;
     for (int j = 0; j < s; j++) {
         for (int i = 0; i < s; i++) {
             if (i % g == 0 || i % g == g - 1 || j % g == 0 || j % g == g - 1)
-                pixels[j * s + i] = rgba{90, 90, 90, 255};
+                pixels.at(i, j) = ym::vec4b{90, 90, 90, 255};
             else
-                pixels[j * s + i] = rgba{128, 128, 128, 255};
+                pixels.at(i, j) = ym::vec4b{128, 128, 128, 255};
         }
     }
     return pixels;
 }
 
-std::vector<rgba> make_checker(int s) {
-    std::vector<rgba> pixels(s * s);
+ym::image<ym::vec4b> make_checker(int s) {
+    ym::image<ym::vec4b> pixels(s, s);
     for (int j = 0; j < s; j++) {
         for (int i = 0; i < s; i++) {
             if ((i / 64 + j / 64) % 2)
-                pixels[j * s + i] = rgba{90, 90, 90, 255};
+                pixels.at(i, j) = ym::vec4b{90, 90, 90, 255};
             else
-                pixels[j * s + i] = rgba{128, 128, 128, 255};
+                pixels.at(i, j) = ym::vec4b{128, 128, 128, 255};
         }
     }
     return pixels;
 }
 
 // http://stackoverflow.com/questions/3018313/algorithm-to-convert-rgb-to-hsv-and-hsv-to-rgb-in-range-0-255-for-both
-rgba hsv_to_rgb(ubyte h, ubyte s, ubyte v) {
-    rgba rgb = {0, 0, 0, 255};
-    ubyte region, remainder, p, q, t;
+ym::vec4b hsv_to_rgb(byte h, byte s, byte v) {
+    ym::vec4b rgb = {0, 0, 0, 255};
+    byte region, remainder, p, q, t;
 
     if (s == 0) {
-        rgb.r = v;
-        rgb.g = v;
-        rgb.b = v;
+        rgb.x = v;
+        rgb.y = v;
+        rgb.z = v;
         return rgb;
     }
 
@@ -746,47 +743,47 @@ rgba hsv_to_rgb(ubyte h, ubyte s, ubyte v) {
 
     switch (region) {
         case 0:
-            rgb.r = v;
-            rgb.g = t;
-            rgb.b = p;
+            rgb.x = v;
+            rgb.y = t;
+            rgb.z = p;
             break;
         case 1:
-            rgb.r = q;
-            rgb.g = v;
-            rgb.b = p;
+            rgb.x = q;
+            rgb.y = v;
+            rgb.z = p;
             break;
         case 2:
-            rgb.r = p;
-            rgb.g = v;
-            rgb.b = t;
+            rgb.x = p;
+            rgb.y = v;
+            rgb.z = t;
             break;
         case 3:
-            rgb.r = p;
-            rgb.g = q;
-            rgb.b = v;
+            rgb.x = p;
+            rgb.y = q;
+            rgb.z = v;
             break;
         case 4:
-            rgb.r = t;
-            rgb.g = p;
-            rgb.b = v;
+            rgb.x = t;
+            rgb.y = p;
+            rgb.z = v;
             break;
         default:
-            rgb.r = v;
-            rgb.g = p;
-            rgb.b = q;
+            rgb.x = v;
+            rgb.y = p;
+            rgb.z = q;
             break;
     }
 
     return rgb;
 }
 
-std::vector<rgba> make_rcolored(int s) {
-    std::vector<rgba> pixels(s * s);
+ym::image<ym::vec4b> make_rcolored(int s) {
+    ym::image<ym::vec4b> pixels(s, s);
     for (int j = 0; j < s; j++) {
         for (int i = 0; i < s; i++) {
-            ubyte ph = 32 * (i / (s / 8));
-            ubyte pv = 128;
-            ubyte ps = 64 + 16 * (7 - j / (s / 8));
+            byte ph = 32 * (i / (s / 8));
+            byte pv = 128;
+            byte ps = 64 + 16 * (7 - j / (s / 8));
             if (i % 32 && j % 32) {
                 if ((i / 64 + j / 64) % 2)
                     pv += 16;
@@ -804,46 +801,46 @@ std::vector<rgba> make_rcolored(int s) {
                 pv = 196;
                 ps = 32;
             }
-            pixels[j * s + i] = hsv_to_rgb(ph, ps, pv);
+            pixels.at(i, j) = hsv_to_rgb(ph, ps, pv);
         }
     }
     return pixels;
 }
 
-std::vector<rgba> make_gammaramp(int s) {
-    std::vector<rgba> pixels(s * s);
+ym::image<ym::vec4b> make_gammaramp(int s) {
+    ym::image<ym::vec4b> pixels(s, s);
     for (int j = 0; j < s; j++) {
         for (int i = 0; i < s; i++) {
             auto u = j / float(s - 1);
             if (i < s / 3) u = pow(u, 2.2f);
             if (i > (s * 2) / 3) u = pow(u, 1 / 2.2f);
             auto c = (unsigned char)(u * 255);
-            pixels[j * s + i] = {c, c, c, 255};
+            pixels.at(i, j) = {c, c, c, 255};
         }
     }
     return pixels;
 }
 
-std::vector<ym::vec4f> make_gammarampf(int s) {
-    std::vector<ym::vec4f> pixels(s * s);
+ym::image<ym::vec4f> make_gammarampf(int s) {
+    ym::image<ym::vec4f> pixels(s, s);
     for (int j = 0; j < s; j++) {
         for (int i = 0; i < s; i++) {
             auto u = j / float(s - 1);
             if (i < s / 3) u = pow(u, 2.2f);
             if (i > (s * 2) / 3) u = pow(u, 1 / 2.2f);
-            pixels[j * s + i] = {u, u, u, 1};
+            pixels.at(i, j) = {u, u, u, 1};
         }
     }
     return pixels;
 }
 
-std::vector<rgba> make_colored(int s) {
-    std::vector<rgba> pixels(s * s);
+ym::image<ym::vec4b> make_colored(int s) {
+    ym::image<ym::vec4b> pixels(s, s);
     for (int j = 0; j < s; j++) {
         for (int i = 0; i < s; i++) {
-            ubyte ph = 32 * (i / (s / 8));
-            ubyte pv = 128;
-            ubyte ps = 64 + 16 * (7 - j / (s / 8));
+            byte ph = 32 * (i / (s / 8));
+            byte pv = 128;
+            byte ps = 64 + 16 * (7 - j / (s / 8));
             if (i % 32 && j % 32) {
                 if ((i / 64 + j / 64) % 2)
                     pv += 16;
@@ -853,38 +850,37 @@ std::vector<rgba> make_colored(int s) {
                 pv = 196;
                 ps = 32;
             }
-            pixels[j * s + i] = hsv_to_rgb(ph, ps, pv);
+            pixels.at(i, j) = hsv_to_rgb(ph, ps, pv);
         }
     }
     return pixels;
 }
 
-std::vector<rgba> img2norm(
-    int s, const std::vector<rgba>& img, float scale = 1) {
-    std::vector<rgba> pixels(s * s);
+ym::image<ym::vec4b> img2norm(
+    int s, const ym::image<ym::vec4b>& img, float scale = 1) {
+    ym::image<ym::vec4b> pixels(s, s);
     for (int j = 0; j < s; j++) {
         for (int i = 0; i < s; i++) {
             auto i1 = (i + 1) % s, j1 = (j + 1) % s;
-            auto p00 = img[j * s + i], p10 = img[j * s + i1],
-                 p01 = img[j1 * s + i];
-            auto g00 = (float(p00.r) + float(p00.g) + float(p00.b)) / (3 * 255);
-            auto g01 = (float(p01.r) + float(p01.g) + float(p01.b)) / (3 * 255);
-            auto g10 = (float(p10.r) + float(p10.g) + float(p10.b)) / (3 * 255);
+            auto p00 = img.at(i, j), p10 = img.at(i1, j), p01 = img.at(i, j1);
+            auto g00 = (float(p00.x) + float(p00.y) + float(p00.z)) / (3 * 255);
+            auto g01 = (float(p01.x) + float(p01.y) + float(p01.z)) / (3 * 255);
+            auto g10 = (float(p10.x) + float(p10.y) + float(p10.z)) / (3 * 255);
             auto n = ym::vec3f{scale * (g00 - g10), scale * (g00 - g01), 1.0f};
             n = normalize(n) * 0.5f + ym::vec3f{0.5f, 0.5f, 0.5f};
-            auto c = rgba{
-                ubyte(n[0] * 255), ubyte(n[1] * 255), ubyte(n[2] * 255), 255};
-            pixels[j * s + i] = c;
+            auto c = ym::vec4b{
+                byte(n[0] * 255), byte(n[1] * 255), byte(n[2] * 255), 255};
+            pixels.at(i, j) = c;
         }
     }
     return pixels;
 }
 
-std::vector<rgba> make_rchecker(int s) {
-    std::vector<rgba> pixels(s * s);
+ym::image<ym::vec4b> make_rchecker(int s) {
+    ym::image<ym::vec4b> pixels(s, s);
     for (int j = 0; j < s; j++) {
         for (int i = 0; i < s; i++) {
-            ubyte pv = 128;
+            byte pv = 128;
             if (i % 32 && j % 32) {
                 if ((i / 64 + j / 64) % 2)
                     pv += 16;
@@ -901,7 +897,7 @@ std::vector<rgba> make_rchecker(int s) {
             } else {
                 pv = 196;
             }
-            pixels[j * s + i] = rgba{pv, pv, pv, 255};
+            pixels.at(i, j) = ym::vec4b{pv, pv, pv, 255};
         }
     }
     return pixels;
@@ -947,7 +943,7 @@ std::vector<ym::vec4f> make_sunsky_hdr(int w, int h, float sun_theta,
 }
 
 void save_image(const std::string& filename, const std::string& dirname,
-    const rgba* pixels, int s) {
+    const ym::vec4b* pixels, int s) {
     std::string path = std::string(dirname) + "/" + std::string(filename);
     yimg::save_image(path, s, s, 4, (unsigned char*)pixels);
 }
@@ -955,7 +951,7 @@ void save_image(const std::string& filename, const std::string& dirname,
 void save_image_hdr(const std::string& filename, const std::string& dirname,
     const ym::vec4f* pixels, int w, int h) {
     std::string path = std::string(dirname) + "/" + std::string(filename);
-    yimg::save_image(path, w, h, 4, (float*)pixels);
+    yimg::save_imagef(path, w, h, 4, (float*)pixels);
 }
 
 std::vector<yobj::camera*> add_simple_cameras(yobj::scene* scn) {
@@ -1060,6 +1056,37 @@ yobj::scene* make_matball_scene(const std::string& otype,
     return scn;
 }
 
+yobj::instance* add_hair(yobj::scene* scn, yobj::instance* ist, int nhairs,
+    int level, float length, uint64_t seed, yobj::material* mat) {
+    auto hair_mesh = new yobj::mesh();
+    hair_mesh->name = ist->msh->name + "_hair";
+    for (auto shp : ist->msh->shapes) {
+        auto hair_shp = new yobj::shape();
+        hair_shp->name = shp->name;
+        hair_shp->mat = mat;
+        std::vector<ym::vec3f> triangle_pos;
+        std::vector<ym::vec3f> triangle_norm;
+        std::vector<ym::vec2f> triangle_texcoord;
+        ym::sample_triangles_points(shp->triangles, shp->pos, shp->norm,
+            shp->texcoord, nhairs, triangle_pos, triangle_norm,
+            triangle_texcoord, seed);
+        ym::make_lines(nhairs, ym::pow2(level), hair_shp->lines, hair_shp->pos,
+            hair_shp->norm, hair_shp->texcoord, hair_shp->radius,
+            [&triangle_pos, &triangle_norm, length](int idx, float u) {
+                return triangle_pos[idx] + triangle_norm[idx] * u * length;
+            },
+            [&triangle_norm](int idx, float u) { return triangle_norm[idx]; },
+            [nhairs](int idx, float u) {
+                return ym::vec2f{u, (float)idx / (float)nhairs};
+            },
+            [](int idx, float u) { return ym::lerp(0.01f, 0.0f, u); });
+        hair_mesh->shapes.push_back(hair_shp);
+    }
+    scn->meshes.push_back(hair_mesh);
+    return add_instance(
+        scn, ist->name + "_hair", hair_mesh, ym::to_frame(ist->xform));
+};
+
 yobj::scene* make_simple_scene(
     const std::string& otype, const std::string& ltype) {
     auto scn = new yobj::scene();
@@ -1071,19 +1098,22 @@ yobj::scene* make_simple_scene(
         make_frame({0, -1, 0}));
 
     auto add_objects = [](yobj::scene* scn, std::vector<yobj::material*> mat) {
-        add_instance(scn, "obj01", add_flipcapsphere(scn, "obj01", mat[0], 5),
-            make_frame({-2.5f, 0, 0}));
-        add_instance(scn, "obj02", add_spherizedcube(scn, "obj02", mat[1], 4),
-            make_frame({0, 0, 0}));
-        add_instance(scn, "obj03", add_spherecube(scn, "obj03", mat[2], 4),
-            make_frame({2.5f, 0, 0}));
+        return std::vector<yobj::instance*>{
+            add_instance(scn, "obj01",
+                add_flipcapsphere(scn, "obj01", mat[0], 5),
+                make_frame({-2.5f, 0, 0})),
+            add_instance(scn, "obj02",
+                add_spherizedcube(scn, "obj02", mat[1], 4),
+                make_frame({0, 0, 0})),
+            add_instance(scn, "obj03", add_spherecube(scn, "obj03", mat[2], 4),
+                make_frame({2.5f, 0, 0}))};
     };
 
     if (otype == "basic") {
         auto mat = std::vector<yobj::material*>{
             add_plastic(scn, "obj01", {0.5f, 0.2f, 0.2f}, 0.1f),
             add_plastic(scn, "obj02", {0.2f, 0.5f, 0.2f}, 0.05f),
-            add_plastic(scn, "obj02", {0.2f, 0.2f, 0.5f}, 0.01f)};
+            add_plastic(scn, "obj03", {0.2f, 0.2f, 0.5f}, 0.01f)};
         add_objects(scn, mat);
     } else if (otype == "simple") {
         auto mat = std::vector<yobj::material*>{
@@ -1091,7 +1121,7 @@ yobj::scene* make_simple_scene(
                 add_texture(scn, "rcolored.png")),
             add_plastic(scn, "obj02", {1, 1, 1}, 0.05f,
                 add_texture(scn, "checker.png")),
-            add_plastic(scn, "obj02", {1, 1, 1}, 0.01f,
+            add_plastic(scn, "obj03", {1, 1, 1}, 0.01f,
                 add_texture(scn, "colored.png"))};
         add_objects(scn, mat);
     } else if (otype == "points") {
@@ -1100,7 +1130,7 @@ yobj::scene* make_simple_scene(
             scn, "points01", add_points(scn, "points01", mat, 64 * 64 * 16, 1));
     } else if (otype == "lines") {
         auto mat = add_diffuse(scn, "lines", {0.2f, 0.2f, 0.2f});
-        auto imat = add_diffuse(scn, "lines", {0.2f, 0.2f, 0.2f});
+        auto imat = add_diffuse(scn, "interior", {0.2f, 0.2f, 0.2f});
         add_instance(scn, "lines_01",
             add_lines(scn, "lines01", mat, 64 * 64 * 16, 4, 0.1f, 0, 0),
             make_frame({-2.5f, 0, 0}));
@@ -1117,6 +1147,13 @@ yobj::scene* make_simple_scene(
         add_instance(scn, "lines_interior_03",
             add_sphere(scn, "lines_interior_03", imat, 6),
             make_frame({2.5f, 0, 0}));
+    } else if (otype == "hair") {
+        auto mat = add_diffuse(scn, "lines", {0.2f, 0.2f, 0.2f});
+        auto imat = add_diffuse(scn, "interior", {0.2f, 0.2f, 0.2f});
+        auto objs = add_objects(scn, {imat, imat, imat});
+        add_hair(scn, objs[0], ym::pow2(14), ym::pow2(2), 0.1f, 13, mat);
+        add_hair(scn, objs[1], ym::pow2(14), ym::pow2(2), 0.1f, 17, mat);
+        add_hair(scn, objs[2], ym::pow2(14), ym::pow2(2), 0.1f, 23, mat);
     } else if (otype == "sym_points01") {
         auto mat = add_material(scn, "sym_points");
         add_points_instance(
@@ -1260,11 +1297,8 @@ ygltf::scene_group* obj2gltf(const yobj::scene* obj, bool add_scene) {
     for (auto otxt : obj->textures) {
         auto gtxt = new ygltf::texture();
         gtxt->path = otxt->path;
-        gtxt->width = otxt->width;
-        gtxt->height = otxt->height;
-        gtxt->ncomp = otxt->ncomp;
-        gtxt->dataf = otxt->dataf;
-        gtxt->datab = otxt->datab;
+        gtxt->ldr = (otxt->ldr) ? new ym::image4b(*otxt->ldr) : nullptr;
+        gtxt->hdr = (otxt->hdr) ? new ym::image4f(*otxt->hdr) : nullptr;
         gltf->textures.push_back(gtxt);
     }
 
@@ -1397,6 +1431,8 @@ ygltf::scene_group* obj2gltf(const yobj::scene* obj, bool add_scene) {
                 gcam->aspect = ocam->aspect;
                 gcam->focus = ocam->focus;
                 gcam->aperture = ocam->aperture;
+                gcam->near = 0.01f;
+                gcam->far = 100.f;
                 gltf->cameras.push_back(gcam);
                 auto gnode = new ygltf::node();
                 gnode->name = ocam->name;
@@ -1432,7 +1468,7 @@ int main(int argc, char* argv[]) {
 
     // simple scenes ----------------------------
     auto stypes = std::vector<std::string>{"basic", "simple", "lines", "points",
-        "sym_points01", "sym_points02", "sym_cloth01", "sym_cloth02"};
+        "hair", "sym_points01", "sym_points02", "sym_cloth01", "sym_cloth02"};
 
     // matball scenes --------------------------
     auto mtypes = std::vector<std::string>{"matte00", "matte01_txt",

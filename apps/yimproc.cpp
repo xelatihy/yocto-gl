@@ -84,8 +84,15 @@ simage* make_image(int width, int height, int ncomp, bool hdr) {
 //
 simage* load_image(const std::string& filename) {
     auto img = new simage();
-    yimg::load_image(
-        filename, img->width, img->height, img->ncomp, img->hdr, img->ldr);
+    auto ext = yu::path::get_extension(filename);
+    if (ext == ".hdr") {
+        img->hdr =
+            yimg::load_imagef(filename, img->width, img->height, img->ncomp);
+
+    } else {
+        img->ldr =
+            yimg::load_image(filename, img->width, img->height, img->ncomp);
+    }
     return img;
 }
 
@@ -95,10 +102,10 @@ simage* load_image(const std::string& filename) {
 void save_image(const std::string& filename, const simage* img) {
     if (img->ldr) {
         yimg::save_image(
-            filename, img->width, img->height, img->ncomp, img->hdr);
-    } else if (img->hdr) {
-        yimg::save_image(
             filename, img->width, img->height, img->ncomp, img->ldr);
+    } else if (img->hdr) {
+        yimg::save_imagef(
+            filename, img->width, img->height, img->ncomp, img->hdr);
 
     } else {
         assert(false);

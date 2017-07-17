@@ -72,9 +72,11 @@ illustreates the library usage.</p>
 <li>Python-line string manipulation in namespace <code>string</code></li>
 <li>Python-like operators for standard containers in namespace <code>operators</code></li>
 <li>simple timer in namespace <code>timer</code></li>
+<li>hashing functions in the <code>hashing</code> namespace (SHA1 and xxHash)</li>
 </ol>
 <h2>History</h2>
 <ul>
+<li>v 0.19: some containers ops</li>
 <li>v 0.18: timer</li>
 <li>v 0.17: renamed to yocto utils</li>
 <li>v 0.16: split into namespaces</li>
@@ -297,14 +299,14 @@ Exit if needed.</p>
 
 <p>Loads the contents of a text file into a std::string.</p>
 <h3>Function save_binfile()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">save_binfile</span><span class="p">(</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">save_binfile</span><span class="p">(</span>
     <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">unsigned</span> <span class="kt">char</span><span class="o">&gt;&amp;</span> <span class="n">data</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Saves binary data to a file.</p>
 <h3>Function save_txtfile()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">save_txtfile</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">str</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">save_txtfile</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">str</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -461,6 +463,29 @@ length 10000 chars. Memory corruption will happen for longer strings.</p>
 
 
 <p>C-like string formatting. See format_str(fmt,args);</p>
+<h2>Namespace containers</h2>
+<p>Python-like STL functions</p>
+<h3>Function contains()</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">bool</span> <span class="n">contains</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">v</span><span class="p">,</span> <span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">vv</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Checks if a containers contains a value</p>
+<h3>Function contains()</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">K</span><span class="p">,</span> <span class="k">typename</span> <span class="n">V</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">bool</span> <span class="n">contains</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">map</span><span class="o">&lt;</span><span class="n">K</span><span class="p">,</span> <span class="n">V</span><span class="o">&gt;&amp;</span> <span class="n">v</span><span class="p">,</span> <span class="k">const</span> <span class="n">K</span><span class="o">&amp;</span> <span class="n">vv</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Checks if a containers contains a value</p>
+<h3>Function contains()</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">K</span><span class="p">,</span> <span class="k">typename</span> <span class="n">V</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">bool</span> <span class="n">contains</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">K</span><span class="p">,</span> <span class="n">V</span><span class="o">&gt;&amp;</span> <span class="n">v</span><span class="p">,</span> <span class="k">const</span> <span class="n">K</span><span class="o">&amp;</span> <span class="n">vv</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Checks if a containers contains a value</p>
 <h2>Namespace operators</h2>
 <p>Python-like STL operators</p>
 <h3>Function operator+()</h3>

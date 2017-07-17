@@ -68,8 +68,7 @@ std::string schemaname2typename(const std::string& schemaname) {
     auto name = std::string();
     while (!sname.empty()) {
         auto split = split_schemaname(sname);
-        name =
-            (char)toupper(split.first[0]) + split.first.substr(1) + name;
+        name = (char)toupper(split.first[0]) + split.first.substr(1) + name;
         sname = split.second;
     }
     return "glTF" + name;
@@ -131,72 +130,78 @@ struct Type {
 
         // Parse support function.
         template <typename T>
-        static void parse(std::vector<T>& vals, const json& js,
+        static bool parse(std::vector<T>& vals, const json& js,
                                   parse_stack& err) {
-            if (!js.is_array()) throw gltf_exception("json array expected at " + err.pathname());
+            if (!js.is_array()) return false;
             vals.resize(js.size());
             for (auto i = 0; i < js.size(); i++) {
                 // this is contrived to support for vector<bool>
                 auto v = T();
-                parse(v, js[i], err);
+                if(!parse(v, js[i], err)) return false;
                 vals[i] = v;
             }
+            return true;
         }
 
         // Parse support function.
         template <typename T, int N>
-        static void parse(ym::vec<T, N>& vals, const json& js,
+        static bool parse(ym::vec<T, N>& vals, const json& js,
                                   parse_stack& err) {
-            if (!js.is_array()) throw gltf_exception("json array expected at " + err.pathname());
-            if (N != js.size()) throw gltf_exception("json array expected at " + err.pathname());
+            if (!js.is_array()) return false;
+            if (N != js.size()) return false;
             for (auto i = 0; i < N; i++) {
-                parse(vals[i], js[i], err);
+                if(!parse(vals[i], js[i], err)) return false;
             }
+            return true;
         }
 
         // Parse support function.
         template <typename T, int N>
-        static void parse(ym::quat<T, N>& vals, const json& js,
+        static bool parse(ym::quat<T, N>& vals, const json& js,
                                   parse_stack& err) {
-            if (!js.is_array()) throw gltf_exception("json array expected at " + err.pathname());
-            if (N != js.size()) throw gltf_exception("json array expected at " + err.pathname());
+            if (!js.is_array()) return false;
+            if (N != js.size()) return false;
             for (auto i = 0; i < N; i++) {
-                parse(vals[i], js[i], err);
+                if(!parse(vals[i], js[i], err)) return false;
             }
+            return true;
         }
 
         // Parse support function.
         template <typename T, int N, int M>
-        static void parse(ym::mat<T, N, M>& vals, const json& js,
+        static bool parse(ym::mat<T, N, M>& vals, const json& js,
                                   parse_stack& err) {
-            if (!js.is_array()) throw gltf_exception("json array expected at " + err.pathname());
-            if (N*M != js.size()) throw gltf_exception("json array expected at " + err.pathname());
+            if (!js.is_array()) return false;
+            if (N*M != js.size()) return false;
             for (auto j = 0; j < M; j++) {
                 for (auto i = 0; i < N; i++) {
-                    parse(vals[j][i], js[j*N+i], err);
+                    if(!parse(vals[j][i], js[j*N+i], err)) return false;
                 }
             }
+            return true;
         }
 
         // Parse support function.
         template <typename T>
-        static void parse(std::map<std::string, T>& vals, const json& js,
+        static bool parse(std::map<std::string, T>& vals, const json& js,
                                   parse_stack& err) {
-            if (!js.is_object()) throw gltf_exception("json object expected at " + err.pathname());
+            if (!js.is_object()) return false;
             for (auto kv = js.begin(); kv != js.end(); ++kv) {
-                parse(vals[kv.key()], kv.value(), err);
+                if(!parse(vals[kv.key()], kv.value(), err)) return false;
             }
+            return true;
         }
 
         // Parse support function.
         template <typename T>
-        static void parse_attr(T& val, const char* name,
+        static bool parse_attr(T& val, const char* name,
                                const json& js, parse_stack& err) {
             auto iter = js.find(name);
-            if(iter == js.end()) return;
+            if(iter == js.end()) return true;
             err.path.push_back(name);
-            parse(val, *iter, err);
+            if(!parse(val, *iter, err)) return false;
             err.path.pop_back();
+            return true;
         }
 
         )___";
@@ -358,9 +363,10 @@ struct IntType : BuiltinType {
     virtual std::string to_parse_func() {
         return R"___(
             // Parse int function.
-            static void parse(int& val, const json& js, parse_stack& err) {
-                if (!js.is_number_integer()) throw gltf_exception(err.pathname());
+            static bool parse(int& val, const json& js, parse_stack& err) {
+                if (!js.is_number_integer()) return false;
                 val = js;
+                return true;
             }
         )___";
     }
@@ -382,9 +388,10 @@ struct IdType : BuiltinType {
         return R"___(
         // Parse id function.
         template<typename T>
-        static void parse(glTFid<T>& val, const json& js, parse_stack& err) {
-            if (!js.is_number_integer()) throw gltf_exception("json unsigned integer expected at " + err.pathname());
+        static bool parse(glTFid<T>& val, const json& js, parse_stack& err) {
+            if (!js.is_number_integer()) return false;
             val = glTFid<T>((int)js);
+            return true;
         }
         )___";
     }
@@ -440,9 +447,10 @@ struct StringType : BuiltinType {
     virtual std::string to_parse_func() {
         return R"___(
             // Parse std::string function.
-            static void parse(std::string& val, const json& js, parse_stack& err) {
-                if (!js.is_string())  throw gltf_exception("json string expected at " + err.pathname());
+            static bool parse(std::string& val, const json& js, parse_stack& err) {
+                if (!js.is_string())  return false;
                 val = js;
+                return true;
             }
         )___";
     }
@@ -466,9 +474,10 @@ struct FloatType : BuiltinType {
     virtual std::string to_parse_func() {
         return R"___(
             // Parse float function.
-            static void parse(float& val, const json& js, parse_stack& err) {
-                if (!js.is_number())  throw gltf_exception("json number expected at " + err.pathname());
+            static bool parse(float& val, const json& js, parse_stack& err) {
+                if (!js.is_number())  return false;
                 val = js;
+                return true;
             }
         )___";
     }
@@ -490,9 +499,10 @@ struct BoolType : BuiltinType {
     virtual std::string to_parse_func() {
         return R"___(
             // Parse bool function.
-            static void parse(bool& val, const json& js, parse_stack& err) {
-                if (!js.is_boolean())  throw gltf_exception("json bool expected at " + err.pathname());
+            static bool parse(bool& val, const json& js, parse_stack& err) {
+                if (!js.is_boolean())  return false;
                 val = js;
+                return true;
             }
         )___";
     }
@@ -512,8 +522,9 @@ struct JsonType : BuiltinType {
     virtual std::string to_parse_func() {
         return R"___(
             // Parse json function.
-            static void parse(json& val, const json& js, parse_stack& err) {
+            static bool parse(json& val, const json& js, parse_stack& err) {
                 val = js;
+                return true;
             }
         )___";
     }
@@ -721,26 +732,23 @@ struct StructType : Type {
     virtual std::string to_parse_func() {
         auto cpp = std::string();
         cpp += "// Parses a " + fname() + " object\n";
-        cpp += "static void parse(" + fname() +
+        cpp += "static bool parse(" + fname() +
                "*& val, const json& js, parse_stack& err) {\n";
-        cpp +=
-            "    if(!js.is_object()) throw gltf_exception(\"json object "
-            "expected\" + err.pathname());\n";
+        cpp += "    if(!js.is_object()) return false;\n";
         cpp += "    if(!val) val = new " + fname() + ";\n";
         if (base) {
-            cpp += "    parse((" + base->fname() + "*&)val, js, err);\n";
+            cpp += "    if(!parse((" + base->fname() +
+                   "*&)val, js, err)) return false;\n";
         }
         for (auto var : vars) {
             if (var->ext_name != "") continue;
             if (var->required) {
-                cpp += "    if(!js.count(\"" + var->name +
-                       "\")) throw gltf_exception(\"missing required json "
-                       "value\");";
-                cpp += "    parse_attr(val->" + var->name + ", \"" + var->name +
-                       "\", js, err);\n";
+                cpp += "    if(!js.count(\"" + var->name + "\")) return false;";
+                cpp += "    if(!parse_attr(val->" + var->name + ", \"" +
+                       var->name + "\", js, err)) return false;\n";
             } else {
-                cpp += "    parse_attr(val->" + var->name + ", \"" + var->name +
-                       "\", js, err);\n";
+                cpp += "    if(!parse_attr(val->" + var->name + ", \"" +
+                       var->name + "\", js, err)) return false;\n";
             }
         }
         auto has_ext = false;
@@ -756,6 +764,7 @@ struct StructType : Type {
             }
             cpp += "}\n";
         }
+        cpp += " return true;\n";
         cpp += "}\n\n";
         return cpp;
     }
@@ -963,7 +972,7 @@ struct EnumType : Type {
     virtual std::string to_parse_func() {
         auto cpp = std::string();
         cpp += "// Parse a " + fname() + " enum\n";
-        cpp += "static void parse(" + fname() +
+        cpp += "static bool parse(" + fname() +
                "& val, const json& js, parse_stack& err) {\n";
         cpp += "    static std::map<" + base->tname() + ", " + fname() +
                "> table = {\n";
@@ -974,10 +983,9 @@ struct EnumType : Type {
         cpp += "    };\n";
         cpp += "    auto v = " + base->tname() + "();\n";
         cpp += "    parse(v, js, err);\n";
-        cpp +=
-            "    if (table.find(v) == table.end()) throw "
-            "gltf_exception(err.pathname());\n";
+        cpp += "    if (table.find(v) == table.end()) return false;\n";
         cpp += "    val = table[v];\n";
+        cpp += "    return true;\n";
         cpp += "}\n\n";
         return cpp;
     }
@@ -1157,7 +1165,8 @@ void schemas2types(
         auto tname = schemaname2typename(sname);
         auto schema = load_json(schemadir + filename);
         auto type = new StructType(sname, tname);
-        if (schema.count("description")) type->help = schema["description"].get<std::string>();
+        if (schema.count("description"))
+            type->help = schema["description"].get<std::string>();
         if (schema.count("allOf")) {
             auto basename = filename2schemaname(schema["allOf"][0]["$ref"]);
             auto base = (StructType*)schema2type(types, basename);
@@ -1185,7 +1194,8 @@ void schemas2types(
             if (var_schema.count("description"))
                 var->help = var_schema["description"].get<std::string>();
             if (var_schema.count("gltf_detailedDescription"))
-                var->long_help = var_schema["gltf_detailedDescription"].get<std::string>();
+                var->long_help =
+                    var_schema["gltf_detailedDescription"].get<std::string>();
             if (var_schema.count("default"))
                 var->defvalue = var_schema.at("default");
             type->vars += var;
@@ -1205,8 +1215,8 @@ std::string substitute(
             ret += line;
             ret += code;
             skipping = true;
-        } else if (contains(line, "#codegen") &&
-                   contains(line, "end") && contains(line, label)) {
+        } else if (contains(line, "#codegen") && contains(line, "end") &&
+                   contains(line, label)) {
             ret += line;
             skipping = false;
         } else {
@@ -1246,20 +1256,18 @@ void add_extra_vars(std::vector<Type*> types) {
 }
 
 int main(int argc, char** argv) {
-    auto parser = make_parser(
-        argc, argv, "generates gltf c++ code from json schema");
+    auto parser =
+        make_parser(argc, argv, "generates gltf c++ code from json schema");
     auto schemadir = parse_opt<std::string>(parser, "--schemadir", "",
         "schema directory", "tools/gltf/schema/", false);
-    auto type_filename = parse_opt<std::string>(parser, "--type-filename",
-        "", "type filename", "yocto/yocto_gltf.h", false);
-    auto func_filename = parse_opt<std::string>(parser, "--func-filename",
-        "", "func filename", "yocto/yocto_gltf.cpp", false);
-    auto standalone =
-        parse_flag(parser, "--standalone", "", "standalone code");
+    auto type_filename = parse_opt<std::string>(parser, "--type-filename", "",
+        "type filename", "yocto/yocto_gltf.h", false);
+    auto func_filename = parse_opt<std::string>(parser, "--func-filename", "",
+        "func filename", "yocto/yocto_gltf.cpp", false);
+    auto standalone = parse_flag(parser, "--standalone", "", "standalone code");
     auto no_format =
         parse_flag(parser, "--no-format", "", "do not run clang format");
-    auto subtypes =
-        parse_flag(parser, "--subtypes", "-s", "use subtypes");
+    auto subtypes = parse_flag(parser, "--subtypes", "-s", "use subtypes");
     check_parser(parser);
 
     auto types = init_types();
