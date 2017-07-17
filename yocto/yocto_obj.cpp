@@ -47,9 +47,18 @@
 namespace yobj {
 
 //
+// Get extension (including '.').
+//
+inline std::string get_extension(const std::string& filename) {
+    auto pos = filename.rfind('.');
+    if (pos == std::string::npos) return "";
+    return filename.substr(pos);
+}
+
+//
 // Get directory name (including '/').
 //
-static std::string _get_dirname(const std::string& filename) {
+inline std::string get_dirname(const std::string& filename) {
     auto pos = filename.rfind('/');
     if (pos == std::string::npos) pos = filename.rfind('\\');
     if (pos == std::string::npos) return "";
@@ -60,7 +69,7 @@ static std::string _get_dirname(const std::string& filename) {
 // Splits a std::string into an array of strings on whitespace with Python split
 // semantic. Modifies original std::string to avoid allocation.
 //
-static int _splitws(char* str, char** splits, int maxsplits) {
+inline int splitws(char* str, char** splits, int maxsplits) {
     int n = 0;
     while (*str && n < maxsplits) {
         if (isspace(*str)) {
@@ -80,24 +89,24 @@ static int _splitws(char* str, char** splits, int maxsplits) {
 //
 // Parses one int.
 //
-static int _parse_int(char** tok) { return atoi(tok[0]); }
+inline int parse_int(char** tok) { return atoi(tok[0]); }
 
 //
 // Parses one float.
 //
-static float _parse_float(char** tok) { return atof(tok[0]); }
+inline float parse_float(char** tok) { return atof(tok[0]); }
 
 //
 // Parses two floats.
 //
-static ym::vec2f _parse_float2(char** tok) {
+inline ym::vec2f parse_float2(char** tok) {
     return ym::vec2f{(float)atof(tok[0]), (float)atof(tok[1])};
 }
 
 //
 // Parses three floats.
 //
-static ym::vec3f _parse_float3(char** tok) {
+inline ym::vec3f parse_float3(char** tok) {
     return ym::vec3f{
         (float)atof(tok[0]), (float)atof(tok[1]), (float)atof(tok[2])};
 }
@@ -105,7 +114,7 @@ static ym::vec3f _parse_float3(char** tok) {
 //
 // Parses four floats.
 //
-static ym::vec4f _parse_float4(char** tok) {
+inline ym::vec4f parse_float4(char** tok) {
     return ym::vec4f{(float)atof(tok[0]), (float)atof(tok[1]),
         (float)atof(tok[2]), (float)atof(tok[3])};
 }
@@ -113,7 +122,7 @@ static ym::vec4f _parse_float4(char** tok) {
 //
 // Parses 16 floats.
 //
-static ym::mat4f _parse_float16(char** tok) {
+inline ym::mat4f parse_float16(char** tok) {
     ym::mat4f m;
     auto mm = (float*)&m;
     for (auto i = 0; i < 16; i++) mm[i] = (float)atof(tok[i]);
@@ -123,7 +132,7 @@ static ym::mat4f _parse_float16(char** tok) {
 //
 // Parses an OBJ vertex list. Handles negative values.
 //
-static void _parse_vertlist(char** tok, int ntoks,
+inline void parse_vertlist(char** tok, int ntoks,
     std::vector<obj_vertex>& elems, const obj_vertex& vert_size) {
     elems.clear();
     for (auto i = 0; i < ntoks; i++) {
@@ -155,13 +164,17 @@ static void _parse_vertlist(char** tok, int ntoks,
 //
 // Loads an OBJ
 //
-obj* load_obj(const std::string& filename, bool flip_texcoord) {
+obj* load_obj(
+    const std::string& filename, bool flip_texcoord, std::string* err) {
     // clear obj
     auto asset = std::unique_ptr<obj>(new obj());
 
     // open file
     auto file = fopen(filename.c_str(), "rt");
-    if (!file) throw obj_exception("cannot open filename " + filename);
+    if (!file) {
+        if (err) *err = "cannot open filename " + filename;
+        return nullptr;
+    }
 
     // initializing obj
     asset->objects.push_back({});
@@ -181,7 +194,7 @@ obj* load_obj(const std::string& filename, bool flip_texcoord) {
     auto linenum = 0;
     while (fgets(line, 4096, file)) {
         linenum += 1;
-        int ntok = _splitws(line, toks, 1024);
+        int ntok = splitws(line, toks, 1024);
 
         // skip empty and comments
         if (!ntok) continue;
@@ -195,41 +208,41 @@ obj* load_obj(const std::string& filename, bool flip_texcoord) {
         // possible token values
         if (tok_s == "v") {
             vert_size.pos += 1;
-            asset->pos.push_back(_parse_float3(cur_tok));
+            asset->pos.push_back(parse_float3(cur_tok));
         } else if (tok_s == "vn") {
             vert_size.norm += 1;
-            asset->norm.push_back(_parse_float3(cur_tok));
+            asset->norm.push_back(parse_float3(cur_tok));
         } else if (tok_s == "vt") {
             vert_size.texcoord += 1;
-            asset->texcoord.push_back(_parse_float2(cur_tok));
+            asset->texcoord.push_back(parse_float2(cur_tok));
             if (flip_texcoord)
                 asset->texcoord.back()[1] = 1 - asset->texcoord.back()[1];
         } else if (tok_s == "vc") {
             vert_size.color += 1;
-            asset->color.push_back(_parse_float4(cur_tok));
+            asset->color.push_back(parse_float4(cur_tok));
         } else if (tok_s == "vr") {
             vert_size.radius += 1;
-            asset->radius.push_back(_parse_float(cur_tok));
+            asset->radius.push_back(parse_float(cur_tok));
         } else if (tok_s == "f") {
-            _parse_vertlist(cur_tok, cur_ntok, cur_elems, vert_size);
+            parse_vertlist(cur_tok, cur_ntok, cur_elems, vert_size);
             auto& g = asset->objects.back().groups.back();
             g.elems.push_back({(uint32_t)g.verts.size(), obj_element_type::face,
                 (uint16_t)cur_elems.size()});
             g.verts.insert(g.verts.end(), cur_elems.begin(), cur_elems.end());
         } else if (tok_s == "l") {
-            _parse_vertlist(cur_tok, cur_ntok, cur_elems, vert_size);
+            parse_vertlist(cur_tok, cur_ntok, cur_elems, vert_size);
             auto& g = asset->objects.back().groups.back();
             g.elems.push_back({(uint32_t)g.verts.size(), obj_element_type::line,
                 (uint16_t)cur_elems.size()});
             g.verts.insert(g.verts.end(), cur_elems.begin(), cur_elems.end());
         } else if (tok_s == "p") {
-            _parse_vertlist(cur_tok, cur_ntok, cur_elems, vert_size);
+            parse_vertlist(cur_tok, cur_ntok, cur_elems, vert_size);
             auto& g = asset->objects.back().groups.back();
             g.elems.push_back({(uint32_t)g.verts.size(),
                 obj_element_type::point, (uint16_t)cur_elems.size()});
             g.verts.insert(g.verts.end(), cur_elems.begin(), cur_elems.end());
         } else if (tok_s == "t") {
-            _parse_vertlist(cur_tok, cur_ntok, cur_elems, vert_size);
+            parse_vertlist(cur_tok, cur_ntok, cur_elems, vert_size);
             auto& g = asset->objects.back().groups.back();
             g.elems.push_back({(uint32_t)g.verts.size(),
                 obj_element_type::tetra, (uint16_t)cur_elems.size()});
@@ -252,24 +265,24 @@ obj* load_obj(const std::string& filename, bool flip_texcoord) {
             asset->cameras.emplace_back();
             auto& cam = asset->cameras.back();
             cam.name = (cur_ntok) ? cur_tok[0] : "";
-            cam.ortho = _parse_int(cur_tok + 1);
-            cam.yfov = _parse_float(cur_tok + 2);
-            cam.aspect = _parse_float(cur_tok + 3);
-            cam.aperture = _parse_float(cur_tok + 4);
-            cam.focus = _parse_float(cur_tok + 5);
-            cam.xform = _parse_float16(cur_tok + 6);
+            cam.ortho = parse_int(cur_tok + 1);
+            cam.yfov = parse_float(cur_tok + 2);
+            cam.aspect = parse_float(cur_tok + 3);
+            cam.aperture = parse_float(cur_tok + 4);
+            cam.focus = parse_float(cur_tok + 5);
+            cam.xform = parse_float16(cur_tok + 6);
         } else if (tok_s == "e") {
             asset->environments.emplace_back();
             auto& env = asset->environments.back();
             env.name = (cur_ntok) ? cur_tok[0] : "<unnamed>";
             env.matname = (cur_ntok - 1) ? cur_tok[1] : "<unnamed_material>";
-            env.xform = _parse_float16(cur_tok + 2);
+            env.xform = parse_float16(cur_tok + 2);
         } else if (tok_s == "i") {
             asset->instances.emplace_back();
             auto& ist = asset->instances.back();
             ist.name = (cur_ntok) ? cur_tok[0] : "<unnamed>";
             ist.meshname = (cur_ntok - 1) ? cur_tok[1] : "<unnamed_mesh>";
-            ist.xform = _parse_float16(cur_tok + 2);
+            ist.xform = parse_float16(cur_tok + 2);
         } else {
             // unused
         }
@@ -287,7 +300,7 @@ obj* load_obj(const std::string& filename, bool flip_texcoord) {
 
     // parse materials
     for (auto mtllib : cur_mtllibs) {
-        auto mtlname = _get_dirname(filename) + mtllib;
+        auto mtlname = get_dirname(filename) + mtllib;
         auto materials = load_mtl(mtlname);
         asset->materials.insert(
             asset->materials.end(), materials.begin(), materials.end());
@@ -300,7 +313,7 @@ obj* load_obj(const std::string& filename, bool flip_texcoord) {
 //
 // Parse texture options and name
 //
-static void parse_texture(char** toks, int ntoks, std::string& path,
+void parse_texture(char** toks, int ntoks, std::string& path,
     property_map<std::string>& info) {
     // texture name
     if (ntoks > 0) path = toks[ntoks - 1];
@@ -327,13 +340,17 @@ static void parse_texture(char** toks, int ntoks, std::string& path,
 //
 // Load MTL
 //
-std::vector<obj_material> load_mtl(const std::string& filename) {
+std::vector<obj_material> load_mtl(
+    const std::string& filename, std::string* err) {
     // clear materials
     auto materials = std::vector<obj_material>();
 
     // open file
     auto file = fopen(filename.c_str(), "rt");
-    if (!file) throw(obj_exception("cannot open filename " + filename));
+    if (!file) {
+        if (err) *err = "cannot open filename " + filename;
+        return {};
+    }
 
     // add a material preemptively to avoid crashes
     materials.emplace_back();
@@ -344,7 +361,7 @@ std::vector<obj_material> load_mtl(const std::string& filename) {
     auto linenum = 0;
     while (fgets(line, 4096, file)) {
         linenum += 1;
-        int ntok = _splitws(line, toks, 1024);
+        int ntok = splitws(line, toks, 1024);
 
         // skip empty and comments
         if (!ntok) continue;
@@ -360,36 +377,36 @@ std::vector<obj_material> load_mtl(const std::string& filename) {
             materials.emplace_back();
             materials.back().name = (cur_ntok) ? cur_tok[0] : "";
         } else if (tok_s == "illum") {
-            materials.back().illum = _parse_int(cur_tok);
+            materials.back().illum = parse_int(cur_tok);
         } else if (tok_s == "Ke") {
-            materials.back().ke = _parse_float3(cur_tok);
+            materials.back().ke = parse_float3(cur_tok);
         } else if (tok_s == "Ka") {
-            materials.back().ka = _parse_float3(cur_tok);
+            materials.back().ka = parse_float3(cur_tok);
         } else if (tok_s == "Kd") {
-            materials.back().kd = _parse_float3(cur_tok);
+            materials.back().kd = parse_float3(cur_tok);
         } else if (tok_s == "Ks") {
-            materials.back().ks = _parse_float3(cur_tok);
+            materials.back().ks = parse_float3(cur_tok);
         } else if (tok_s == "Kr") {
-            materials.back().kr = _parse_float3(cur_tok);
+            materials.back().kr = parse_float3(cur_tok);
         } else if (tok_s == "Kt" || tok_s == "Tf") {
-            materials.back().kt = _parse_float3(cur_tok);
+            materials.back().kt = parse_float3(cur_tok);
         } else if (tok_s == "Tr") {
             if (cur_ntok >= 3) {
-                materials.back().kt = _parse_float3(cur_tok);
+                materials.back().kt = parse_float3(cur_tok);
             } else {
                 // as tinyobjreader
-                materials.back().op = 1 - _parse_float(cur_tok);
+                materials.back().op = 1 - parse_float(cur_tok);
             }
         } else if (tok_s == "Ns") {
-            materials.back().ns = _parse_float(cur_tok);
+            materials.back().ns = parse_float(cur_tok);
         } else if (tok_s == "d") {
-            materials.back().op = _parse_float(cur_tok);
+            materials.back().op = parse_float(cur_tok);
         } else if (tok_s == "Ni") {
-            materials.back().ior = _parse_float(cur_tok);
+            materials.back().ior = parse_float(cur_tok);
         } else if (tok_s == "phys_stiffness") {
-            materials.back().stiffness = _parse_float(cur_tok);
+            materials.back().stiffness = parse_float(cur_tok);
         } else if (tok_s == "phys_density") {
-            materials.back().density = _parse_float(cur_tok);
+            materials.back().density = parse_float(cur_tok);
         } else if (tok_s == "map_Ke") {
             parse_texture(cur_tok, cur_ntok, materials.back().ke_txt,
                 materials.back().ke_txt_info);
@@ -443,7 +460,7 @@ std::vector<obj_material> load_mtl(const std::string& filename) {
 //
 // write one float prepended by a std::string
 //
-static void _fwrite_float(
+inline void fwrite_float(
     FILE* file, const char* str, float v, bool newline = true) {
     fprintf(file, "%s %.6g", str, v);
     if (newline) fprintf(file, "\n");
@@ -452,7 +469,7 @@ static void _fwrite_float(
 //
 // write one float prepended by a std::string
 //
-static void _fwrite_int(
+inline void fwrite_int(
     FILE* file, const char* str, int v, bool newline = true) {
     fprintf(file, "%s %d", str, v);
     if (newline) fprintf(file, "\n");
@@ -461,7 +478,7 @@ static void _fwrite_int(
 //
 // write two floats prepended by a std::string
 //
-static void _fwrite_float2(
+inline void fwrite_float2(
     FILE* file, const char* str, const ym::vec2f& v, bool newline = true) {
     fprintf(file, "%s %.6g %.6g", str, v[0], v[1]);
     if (newline) fprintf(file, "\n");
@@ -470,7 +487,7 @@ static void _fwrite_float2(
 //
 // write three floats prepended by a std::string
 //
-static void _fwrite_float3(
+inline void fwrite_float3(
     FILE* file, const char* str, const ym::vec3f& v, bool newline = true) {
     fprintf(file, "%s %.6g %.6g %.6g", str, v[0], v[1], v[2]);
     if (newline) fprintf(file, "\n");
@@ -479,7 +496,7 @@ static void _fwrite_float3(
 //
 // write four floats prepended by a std::string
 //
-static void _fwrite_float4(
+inline void fwrite_float4(
     FILE* file, const char* str, const ym::vec4f& v, bool newline = true) {
     fprintf(file, "%s %.6g %.6g %.6g %.6g", str, v[0], v[1], v[2], v[3]);
     if (newline) fprintf(file, "\n");
@@ -488,7 +505,7 @@ static void _fwrite_float4(
 //
 // write 16 floats prepended by a std::string
 //
-static void _fwrite_float16(
+inline void fwrite_float16(
     FILE* file, const char* str, const ym::mat4f& v, bool newline = true) {
     const float* vf = (float*)&v;
     fprintf(file, "%s", str);
@@ -499,7 +516,7 @@ static void _fwrite_float16(
 //
 // write a std::string prepended by another if the std::string is not NULL
 //
-static void _fwrite_str(FILE* file, const char* str, const std::string& s,
+inline void fwrite_str(FILE* file, const char* str, const std::string& s,
     bool force = false, bool newline = true) {
     if (s.empty() && !force) return;
     fprintf(file, "%s %s", str, s.c_str());
@@ -509,7 +526,7 @@ static void _fwrite_str(FILE* file, const char* str, const std::string& s,
 //
 // write a std::string prepended by another if the std::string is not NULL
 //
-static void _fwrite_str_props(FILE* file, const char* str, const std::string& s,
+inline void fwrite_str_props(FILE* file, const char* str, const std::string& s,
     const property_map<std::string>& props, bool force = false,
     bool newline = true) {
     if (s.empty() && !force) return;
@@ -529,7 +546,7 @@ static void _fwrite_str_props(FILE* file, const char* str, const std::string& s,
 //
 // write an OBJ vertex triplet using only the indices that are active
 //
-static void _fwrite_objverts(FILE* file, const char* str, int nv,
+inline void fwrite_objverts(FILE* file, const char* str, int nv,
     const obj_vertex* verts, bool newline = true) {
     fprintf(file, "%s", str);
     for (auto v = 0; v < nv; v++) {
@@ -553,66 +570,69 @@ static void _fwrite_objverts(FILE* file, const char* str, int nv,
 //
 // Save an OBJ
 //
-void save_obj(
-    const std::string& filename, const obj* asset, bool flip_texcoord) {
+bool save_obj(const std::string& filename, const obj* asset, bool flip_texcoord,
+    std::string* err) {
     // open file
     auto file = fopen(filename.c_str(), "wt");
-    if (!file) throw(obj_exception("could not open filename " + filename));
+    if (!file) {
+        if (err) *err = "could not open filename " + filename;
+        return false;
+    }
 
     // linkup to mtl
-    auto dirname = _get_dirname(filename);
+    auto dirname = get_dirname(filename);
     auto basename = filename.substr(dirname.length());
     basename = basename.substr(0, basename.length() - 4);
     if (!asset->materials.empty()) {
-        _fwrite_str(file, "mtllib", basename + ".mtl");
+        fwrite_str(file, "mtllib", basename + ".mtl");
     }
 
     // save cameras
     for (auto& cam : asset->cameras) {
-        _fwrite_str(file, "c", cam.name, true, false);
-        _fwrite_int(file, " ", cam.ortho, false);
-        _fwrite_float(file, " ", cam.yfov, false);
-        _fwrite_float(file, " ", cam.aspect, false);
-        _fwrite_float(file, " ", cam.aperture, false);
-        _fwrite_float(file, " ", cam.focus, false);
-        _fwrite_float16(file, " ", cam.xform, true);
+        fwrite_str(file, "c", cam.name, true, false);
+        fwrite_int(file, " ", cam.ortho, false);
+        fwrite_float(file, " ", cam.yfov, false);
+        fwrite_float(file, " ", cam.aspect, false);
+        fwrite_float(file, " ", cam.aperture, false);
+        fwrite_float(file, " ", cam.focus, false);
+        fwrite_float16(file, " ", cam.xform, true);
     }
 
     // save envs
     for (auto& env : asset->environments) {
-        _fwrite_str(file, "e", env.name, true, false);
-        _fwrite_str(file, " ", env.matname, true, false);
-        _fwrite_float16(file, " ", env.xform, true);
+        fwrite_str(file, "e", env.name, true, false);
+        fwrite_str(file, " ", env.matname, true, false);
+        fwrite_float16(file, " ", env.xform, true);
     }
 
     // save instances
     for (auto& ist : asset->instances) {
-        _fwrite_str(file, "i", ist.name, true, false);
-        _fwrite_str(file, " ", ist.meshname, true, false);
-        _fwrite_float16(file, " ", ist.xform, true);
+        fwrite_str(file, "i", ist.name, true, false);
+        fwrite_str(file, " ", ist.meshname, true, false);
+        fwrite_float16(file, " ", ist.xform, true);
     }
 
     // save all vertex data
-    for (auto& v : asset->pos) _fwrite_float3(file, "v", v);
+    for (auto& v : asset->pos) fwrite_float3(file, "v", v);
     if (flip_texcoord) {
         for (auto& v : asset->texcoord)
-            _fwrite_float2(file, "vt", {v[0], 1 - v[1]});
+            fwrite_float2(file, "vt", {v[0], 1 - v[1]});
     } else {
-        for (auto& v : asset->texcoord) _fwrite_float2(file, "vt", v);
+        for (auto& v : asset->texcoord) fwrite_float2(file, "vt", v);
     }
-    for (auto& v : asset->norm) _fwrite_float3(file, "vn", v);
-    for (auto& v : asset->color) _fwrite_float4(file, "vc", v);
-    for (auto& v : asset->radius) _fwrite_float(file, "vr", v);
+    for (auto& v : asset->norm) fwrite_float3(file, "vn", v);
+    for (auto& v : asset->color) fwrite_float4(file, "vc", v);
+    for (auto& v : asset->radius) fwrite_float(file, "vr", v);
 
     // save element data
     const char* elem_labels[] = {"", "p", "l", "f", "t"};
     for (auto& object : asset->objects) {
-        _fwrite_str(file, "o", object.name, true);
+        fwrite_str(file, "o", object.name, true);
         for (auto& group : object.groups) {
-            _fwrite_str(file, "usemtl", group.matname);
-            _fwrite_str(file, "g", group.groupname);
+            fwrite_str(file, "usemtl", group.matname);
+            fwrite_str(file, "g", group.groupname);
             for (auto elem : group.elems) {
-                _fwrite_objverts(file, elem_labels[(int)elem.type], elem.size,
+                fwrite_objverts(file, elem_labels[(int)elem.type], elem.size,
                     group.verts.data() + elem.start);
             }
         }
@@ -624,52 +644,61 @@ void save_obj(
     if (!asset->materials.empty()) {
         save_mtl(dirname + basename + ".mtl", asset->materials);
     }
+
+    // done
+    return true;
 }
 
 //
 // Save an MTL file
 //
-void save_mtl(
-    const std::string& filename, const std::vector<obj_material>& materials) {
+bool save_mtl(const std::string& filename,
+    const std::vector<obj_material>& materials, std::string* err) {
     auto file = fopen(filename.c_str(), "wt");
-    if (!file) throw(obj_exception("could not open filename " + filename));
+    if (!file) {
+        if (err) *err = "could not open filename " + filename;
+        return false;
+    }
 
     // for each material, dump all the values
     for (auto& mat : materials) {
-        _fwrite_str(file, "newmtl", mat.name, true);
-        _fwrite_int(file, "  illum", mat.illum);
-        _fwrite_float3(file, "  Ke", mat.ke);
-        _fwrite_float3(file, "  Ka", mat.ka);
-        _fwrite_float3(file, "  Kd", mat.kd);
-        _fwrite_float3(file, "  Ks", mat.ks);
-        _fwrite_float3(file, "  Kr", mat.kr);
-        _fwrite_float3(file, "  Kt", mat.kt);
-        _fwrite_float(file, "  Ns", mat.ns);
-        _fwrite_float(file, "  d", mat.op);
-        _fwrite_float(file, "  Ni", mat.ior);
-        _fwrite_float(file, "  phys_stiffness", mat.stiffness);
-        _fwrite_float(file, "  phys_density", mat.density);
-        _fwrite_str_props(file, "  map_Ke", mat.ke_txt, mat.ke_txt_info);
-        _fwrite_str_props(file, "  map_Ka", mat.ka_txt, mat.ka_txt_info);
-        _fwrite_str_props(file, "  map_Kd", mat.kd_txt, mat.kd_txt_info);
-        _fwrite_str_props(file, "  map_Ks", mat.ks_txt, mat.ks_txt_info);
-        _fwrite_str_props(file, "  map_Kr", mat.kr_txt, mat.kr_txt_info);
-        _fwrite_str_props(file, "  map_Kt", mat.kt_txt, mat.kt_txt_info);
-        _fwrite_str_props(file, "  map_Ns", mat.ns_txt, mat.ns_txt_info);
-        _fwrite_str_props(file, "  map_d", mat.op_txt, mat.op_txt_info);
-        _fwrite_str_props(file, "  map_Ni", mat.ior_txt, mat.ior_txt_info);
-        _fwrite_str_props(file, "  map_bump", mat.bump_txt, mat.bump_txt_info);
-        _fwrite_str_props(file, "  map_disp", mat.disp_txt, mat.disp_txt_info);
-        _fwrite_str_props(file, "  map_norm", mat.norm_txt, mat.norm_txt_info);
+        fwrite_str(file, "newmtl", mat.name, true);
+        fwrite_int(file, "  illum", mat.illum);
+        fwrite_float3(file, "  Ke", mat.ke);
+        fwrite_float3(file, "  Ka", mat.ka);
+        fwrite_float3(file, "  Kd", mat.kd);
+        fwrite_float3(file, "  Ks", mat.ks);
+        fwrite_float3(file, "  Kr", mat.kr);
+        fwrite_float3(file, "  Kt", mat.kt);
+        fwrite_float(file, "  Ns", mat.ns);
+        fwrite_float(file, "  d", mat.op);
+        fwrite_float(file, "  Ni", mat.ior);
+        fwrite_float(file, "  phys_stiffness", mat.stiffness);
+        fwrite_float(file, "  phys_density", mat.density);
+        fwrite_str_props(file, "  map_Ke", mat.ke_txt, mat.ke_txt_info);
+        fwrite_str_props(file, "  map_Ka", mat.ka_txt, mat.ka_txt_info);
+        fwrite_str_props(file, "  map_Kd", mat.kd_txt, mat.kd_txt_info);
+        fwrite_str_props(file, "  map_Ks", mat.ks_txt, mat.ks_txt_info);
+        fwrite_str_props(file, "  map_Kr", mat.kr_txt, mat.kr_txt_info);
+        fwrite_str_props(file, "  map_Kt", mat.kt_txt, mat.kt_txt_info);
+        fwrite_str_props(file, "  map_Ns", mat.ns_txt, mat.ns_txt_info);
+        fwrite_str_props(file, "  map_d", mat.op_txt, mat.op_txt_info);
+        fwrite_str_props(file, "  map_Ni", mat.ior_txt, mat.ior_txt_info);
+        fwrite_str_props(file, "  map_bump", mat.bump_txt, mat.bump_txt_info);
+        fwrite_str_props(file, "  map_disp", mat.disp_txt, mat.disp_txt_info);
+        fwrite_str_props(file, "  map_norm", mat.norm_txt, mat.norm_txt_info);
         for (auto&& p : mat.unknown_props) {
             auto s = std::string();
             for (auto&& v : p.second) s += v + " ";
-            _fwrite_str(file, p.first.c_str(), s.c_str());
+            fwrite_str(file, p.first.c_str(), s.c_str());
         }
         fprintf(file, "\n");
     }
 
     fclose(file);
+
+    // done
+    return true;
 }
 
 //
@@ -701,7 +730,7 @@ scene::~scene() {
 //
 // Loads a textures and saves into an array
 //
-static texture* _add_texture(
+static texture* add_texture(
     const std::string& filename, std::vector<texture*>& txts) {
     if (filename.empty()) return nullptr;
     for (auto txt : txts) {
@@ -771,14 +800,14 @@ scene* obj_to_scene(const obj* asset) {
         mat->opacity = omat.op;
         mat->stiffness = omat.stiffness;
         mat->density = omat.density;
-        mat->ke_txt = _add_texture(omat.ke_txt, scn->textures);
-        mat->kd_txt = _add_texture(omat.kd_txt, scn->textures);
-        mat->ks_txt = _add_texture(omat.ks_txt, scn->textures);
-        mat->kt_txt = _add_texture(omat.kt_txt, scn->textures);
-        mat->rs_txt = _add_texture(omat.ns_txt, scn->textures);
-        mat->norm_txt = _add_texture(omat.norm_txt, scn->textures);
-        mat->bump_txt = _add_texture(omat.bump_txt, scn->textures);
-        mat->disp_txt = _add_texture(omat.disp_txt, scn->textures);
+        mat->ke_txt = add_texture(omat.ke_txt, scn->textures);
+        mat->kd_txt = add_texture(omat.kd_txt, scn->textures);
+        mat->ks_txt = add_texture(omat.ks_txt, scn->textures);
+        mat->kt_txt = add_texture(omat.kt_txt, scn->textures);
+        mat->rs_txt = add_texture(omat.ns_txt, scn->textures);
+        mat->norm_txt = add_texture(omat.norm_txt, scn->textures);
+        mat->bump_txt = add_texture(omat.bump_txt, scn->textures);
+        mat->disp_txt = add_texture(omat.disp_txt, scn->textures);
         mat->ke_txt_info = _convert_texture_info(omat.ke_txt_info);
         mat->kd_txt_info = _convert_texture_info(omat.kd_txt_info);
         mat->ks_txt_info = _convert_texture_info(omat.ks_txt_info);
@@ -931,7 +960,7 @@ scene* obj_to_scene(const obj* asset) {
 //
 // Convert texture props
 //
-property_map<std::string> _texture_props(const texture_info& info) {
+property_map<std::string> texture_props(const texture_info& info) {
     auto props = info.unknown_props;
     if (info.clamp) { props["-clamp"] = {"on"}; }
     if (info.bump_scale != 1) {
@@ -967,14 +996,14 @@ obj* scene_to_obj(const scene* scn) {
         mat->bump_txt = (fl_mat->bump_txt) ? fl_mat->bump_txt->path : "";
         mat->disp_txt = (fl_mat->disp_txt) ? fl_mat->disp_txt->path : "";
         mat->norm_txt = (fl_mat->norm_txt) ? fl_mat->norm_txt->path : "";
-        mat->ke_txt_info = _texture_props(fl_mat->ke_txt_info);
-        mat->kd_txt_info = _texture_props(fl_mat->kd_txt_info);
-        mat->ks_txt_info = _texture_props(fl_mat->ks_txt_info);
-        mat->kt_txt_info = _texture_props(fl_mat->kt_txt_info);
-        mat->ns_txt_info = _texture_props(fl_mat->rs_txt_info);
-        mat->bump_txt_info = _texture_props(fl_mat->bump_txt_info);
-        mat->disp_txt_info = _texture_props(fl_mat->disp_txt_info);
-        mat->norm_txt_info = _texture_props(fl_mat->norm_txt_info);
+        mat->ke_txt_info = texture_props(fl_mat->ke_txt_info);
+        mat->kd_txt_info = texture_props(fl_mat->kd_txt_info);
+        mat->ks_txt_info = texture_props(fl_mat->ks_txt_info);
+        mat->kt_txt_info = texture_props(fl_mat->kt_txt_info);
+        mat->ns_txt_info = texture_props(fl_mat->rs_txt_info);
+        mat->bump_txt_info = texture_props(fl_mat->bump_txt_info);
+        mat->disp_txt_info = texture_props(fl_mat->disp_txt_info);
+        mat->norm_txt_info = texture_props(fl_mat->norm_txt_info);
         mat->unknown_props = fl_mat->unknown_props;
     }
 
@@ -1089,64 +1118,78 @@ obj* scene_to_obj(const scene* scn) {
 //
 // Loads textures for an scene.
 //
-void load_textures(scene* scn, const std::string& dirname, bool skip_missing) {
+bool load_textures(scene* scn, const std::string& dirname, bool skip_missing,
+    std::string* err) {
 #ifndef YOBJ_NO_IMAGE
     for (auto txt : scn->textures) {
         auto filename = dirname + txt->path;
         for (auto& c : filename)
             if (c == '\\') c = '/';
-        try {
-            yimg::load_image(filename, txt->width, txt->height, txt->ncomp,
-                txt->dataf, txt->datab);
-        } catch (...) {
-            if (!skip_missing) throw;
+        auto ext = get_extension(filename);
+        if (ext == ".hdr") {
+            txt->hdr = yimg::load_image4f(filename);
+        } else {
+            txt->ldr = yimg::load_image4b(filename);
+        }
+        if (!txt->hdr && !txt->ldr) {
+            if (skip_missing) continue;
+            if (err) *err = "cannot laod image " + filename;
+            return false;
         }
     }
 #endif
+    return true;
 }
 
 //
 // Loads textures for an scene.
 //
-void save_textures(
-    const scene* scn, const std::string& dirname, bool skip_missing) {
+bool save_textures(const scene* scn, const std::string& dirname,
+    bool skip_missing, std::string* err) {
 #ifndef YOBJ_NO_IMAGE
     for (auto txt : scn->textures) {
-        if (txt->datab.empty() && txt->dataf.empty()) continue;
+        if (!txt->ldr && !txt->hdr) continue;
         auto filename = dirname + txt->path;
         for (auto& c : filename)
             if (c == '\\') c = '/';
-        if (!txt->dataf.empty()) {
-            yimg::save_image(filename, txt->width, txt->height, txt->ncomp,
-                txt->dataf.data());
-        }
-        if (!txt->datab.empty()) {
-            yimg::save_image(filename, txt->width, txt->height, txt->ncomp,
-                txt->datab.data());
+        auto ok = true;
+        if (txt->ldr) { ok = yimg::save_image4b(filename, txt->ldr); }
+        if (txt->hdr) { ok = yimg::save_image4f(filename, txt->hdr); }
+        if (!ok) {
+            if (skip_missing) continue;
+            if (err) *err = "cannot save image " + filename;
+            return false;
         }
     }
 #endif
+    return true;
 }
 
 //
 // Load scene
 //
 scene* load_scene(const std::string& filename, bool load_txt,
-    bool flip_texcoord, bool skip_missing) {
-    auto oscn = std::unique_ptr<obj>(load_obj(filename, flip_texcoord));
+    bool flip_texcoord, bool skip_missing, std::string* err) {
+    auto oscn = std::unique_ptr<obj>(load_obj(filename, flip_texcoord, err));
+    if (!oscn) return nullptr;
     auto scn = obj_to_scene(oscn.get());
-    if (load_txt) load_textures(scn, _get_dirname(filename), skip_missing);
+    if (!scn) return nullptr;
+    if (load_txt)
+        if (!load_textures(scn, get_dirname(filename), skip_missing, err))
+            return nullptr;
     return scn;
 }
 
 //
 // Save scene
 //
-void save_scene(const std::string& filename, const scene* scn, bool save_txt,
-    bool flip_texcoord) {
+bool save_scene(const std::string& filename, const scene* scn, bool save_txt,
+    bool flip_texcoord, std::string* err) {
     auto oscn = std::unique_ptr<yobj::obj>(scene_to_obj(scn));
-    save_obj(filename, oscn.get(), flip_texcoord);
-    if (save_txt) save_textures(scn, _get_dirname(filename), true);
+    if (!save_obj(filename, oscn.get(), flip_texcoord, err)) return false;
+    if (save_txt)
+        if (!save_textures(scn, get_dirname(filename), true, err)) return false;
+    return true;
 }
 
 //
@@ -1227,12 +1270,9 @@ void add_radius(scene* scn, float radius) {
 //
 void add_texture_data(scene* scn) {
     for (auto txt : scn->textures) {
-        if (txt->dataf.empty() && txt->datab.empty()) {
+        if (!txt->hdr && !txt->ldr) {
             printf("unable to load texture %s\n", txt->path.c_str());
-            txt->width = 1;
-            txt->height = 1;
-            txt->ncomp = 4;
-            txt->datab = {{255, 255, 255, 255}};
+            txt->ldr = new ym::image4b(1, 1, {255, 255, 255, 255});
         }
     }
 }

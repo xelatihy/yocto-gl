@@ -130,6 +130,28 @@ void enable_edges(bool enabled, float tolerance) {
 }
 
 //
+// Enable/disable blending
+//
+void enable_blending(bool enabled) {
+    assert(check_error());
+    if (enabled) {
+        glEnable(GL_BLEND);
+    } else {
+        glDisable(GL_BLEND);
+    }
+    assert(check_error());
+}
+
+//
+// Set blending to over operator
+//
+void set_blend_over() {
+    assert(check_error());
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    assert(check_error());
+}
+
+//
 // Line width
 //
 void line_width(float w) {
@@ -387,8 +409,8 @@ uint make_texture(int w, int h, int nc, const unsigned char* pixels,
 //
 // Implementation of update_texture.
 //
-static inline void _update_texture(uint id, int w, int h, int nc,
-    const void* pixels, GLuint type, bool mipmap) {
+void update_texture(uint id, int w, int h, int nc, const void* pixels,
+    GLuint type, bool mipmap) {
     assert(check_error());
     int formats[4] = {GL_RED, GL_RG, GL_RGB, GL_RGBA};
     glBindTexture(GL_TEXTURE_2D, id);
@@ -404,7 +426,7 @@ static inline void _update_texture(uint id, int w, int h, int nc,
 void update_texture(
     uint id, int w, int h, int nc, const float* pixels, bool mipmap) {
     assert(check_error());
-    _update_texture(id, w, h, nc, pixels, GL_FLOAT, mipmap);
+    update_texture(id, w, h, nc, pixels, GL_FLOAT, mipmap);
     assert(check_error());
 }
 
@@ -414,7 +436,7 @@ void update_texture(
 void update_texture(
     uint id, int w, int h, int nc, const unsigned char* pixels, bool mipmap) {
     assert(check_error());
-    _update_texture(id, w, h, nc, pixels, GL_UNSIGNED_BYTE, mipmap);
+    update_texture(id, w, h, nc, pixels, GL_UNSIGNED_BYTE, mipmap);
     assert(check_error());
 }
 
@@ -1362,9 +1384,9 @@ void set_material(uint prog, const ym::vec3f& ke, const ym::vec3f& kd,
 //
 // Internal representation
 //
-static inline void _set_material_generic(uint prog, int mtype,
-    const ym::vec3f& ke, const ym::vec3f& kd, const ym::vec3f& ks, float rs,
-    float op, const texture_info& ke_txt, const texture_info& kd_txt,
+inline void _set_material_generic(uint prog, int mtype, const ym::vec3f& ke,
+    const ym::vec3f& kd, const ym::vec3f& ks, float rs, float op,
+    const texture_info& ke_txt, const texture_info& kd_txt,
     const texture_info& ks_txt, const texture_info& rs_txt,
     const texture_info& norm_txt, const texture_info& occ_txt, bool use_phong,
     bool double_sided) {

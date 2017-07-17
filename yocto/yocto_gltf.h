@@ -73,6 +73,8 @@
 ///
 /// ## History
 ///
+/// - v 0.15: remove exception from code and add explicit error handling
+/// - v 0.14: texture have always 4 channels
 /// - v 0.13: change variable names for compilation on gcc
 /// - v 0.12: removed explicit root nodes
 /// - v 0.11: added camera near/far to high-level interface
@@ -203,16 +205,29 @@ struct texture {
     std::string name = "";
     /// path
     std::string path = "";
-    /// image width
-    int width = 0;
-    /// image height
-    int height = 0;
-    /// image number of components
-    int ncomp = 0;
     /// 8-bit data
-    std::vector<uint8_t> datab;
+    ym::image4b* ldr = nullptr;
     /// float data
-    std::vector<float> dataf;
+    ym::image4f* hdr = nullptr;
+
+    /// get texture width
+    int width() const {
+        if (ldr) return ldr->width();
+        if (hdr) return hdr->width();
+        return 0;
+    }
+    /// get texture height
+    int height() const {
+        if (ldr) return ldr->height();
+        if (hdr) return hdr->height();
+        return 0;
+    }
+
+    /// cleanup
+    ~texture() {
+        if (hdr) delete hdr;
+        if (ldr) delete ldr;
+    }
 };
 
 ///
@@ -598,11 +613,12 @@ struct scene_group {
 ///     - filename: filename
 ///     - load_textures: whether to load textures (default to false)
 ///     - skip_missing: whether to skip missing buffers and textures
-/// - Return:
-///     - scene
+///     - err: if set, store error message on error
+/// - Returns:
+///     - scene (nullptr on error)
 ///
-scene_group* load_scenes(
-    const std::string& filename, bool load_textures, bool skip_missing = true);
+scene_group* load_scenes(const std::string& filename, bool load_textures,
+    bool skip_missing = true, std::string* err = nullptr);
 
 ///
 /// Save scene
@@ -611,9 +627,12 @@ scene_group* load_scenes(
 ///     - filename: filename
 ///     - scn: scene data to save
 ///     - save_textures: whether to save textures (default to false)
+///     - err: if set, store error message on error
+/// - Returns:
+///     - whether an error occurred
 ///
-void save_scenes(
-    const std::string& filename, const scene_group* scn, bool save_textures);
+bool save_scenes(const std::string& filename, const scene_group* scn,
+    bool save_textures, std::string* err = nullptr);
 
 ///
 /// Update node trasforms
@@ -1688,31 +1707,19 @@ struct glTF : glTFProperty {
 // #codegen end type -----------------------------------------------------------
 
 ///
-/// Error when reading/writing gltf.
-///
-struct gltf_exception : std::exception {
-    /// constructor with error message
-    gltf_exception(const std::string& errmsg) : _errmsg(errmsg) {}
-
-    /// retieval of error message
-    virtual const char* what() const throw() { return _errmsg.c_str(); }
-
-   private:
-    std::string _errmsg;
-};
-
-///
 /// Loads a gltf file from disk
 ///
 /// - Parameters:
 ///     - filename: scene filename
 ///     - load_bin/load_img: load binary data
 ///     - skip_missing: do not throw an exception if a file is missing
+///     - err: if set, store error message on error
 /// - Returns:
-///     - gltf data loaded
+///     - gltf data loaded (nullptr on error)
 ///
 glTF* load_gltf(const std::string& filename, bool load_bin = true,
-    bool load_img = false, bool skip_missing = false);
+    bool load_img = false, bool skip_missing = false,
+    std::string* err = nullptr);
 
 ///
 /// Loads a binary gltf file from disk
@@ -1720,11 +1727,13 @@ glTF* load_gltf(const std::string& filename, bool load_bin = true,
 /// - Parameters:
 ///     - filename: scene filename
 ///     - other params as above
+///     - err: if set, store error message on error
 /// - Returns:
-///     - gltf data loaded
+///     - gltf data loaded (nullptr on error)
 ///
 glTF* load_binary_gltf(const std::string& filename, bool load_bin = true,
-    bool load_img = false, bool skip_missing = false);
+    bool load_img = false, bool skip_missing = false,
+    std::string* err = nullptr);
 
 ///
 /// Saves a scene to disk
@@ -1732,10 +1741,13 @@ glTF* load_binary_gltf(const std::string& filename, bool load_bin = true,
 /// - Parameters:
 ///     - filename: scene filename
 ///     - gltf: data to save
-///     - save_bin/save_shaders/save_img: save binary data
+///     - save_bin/save_images: save binary data
+///     - err: if set, store error message on error
+/// - Returns:
+///     - whether an error occurred
 ///
-void save_gltf(const std::string& filename, const glTF* gltf,
-    bool save_bin = true, bool save_images = false);
+bool save_gltf(const std::string& filename, const glTF* gltf,
+    bool save_bin = true, bool save_images = false, std::string* err = nullptr);
 
 ///
 /// Saves a scene to disk
@@ -1743,10 +1755,13 @@ void save_gltf(const std::string& filename, const glTF* gltf,
 /// - Parameters:
 ///     - filename: scene filename
 ///     - gltf: data to save
-///     - save_bin/save_shaders/save_img: save binary data
+///     - save_bin/save_images: save binary data
+///     - err: if set, store error message on error
+/// - Returns:
+///     - whether an error occurred
 ///
-void save_binary_gltf(const std::string& filename, const glTF* gltf,
-    bool save_bin = true, bool save_images = false);
+bool save_binary_gltf(const std::string& filename, const glTF* gltf,
+    bool save_bin = true, bool save_images = false, std::string* err = nullptr);
 
 ///
 /// Load buffer data.
@@ -1754,11 +1769,14 @@ void save_binary_gltf(const std::string& filename, const glTF* gltf,
 /// - Parameters:
 ///     - dirname: directory used to resolve path references
 ///     - skip_missing: do not throw an exception if a file is missing
+///     - err: if set, store error message on error
 /// - Out Parameters:
 ///     - gltf: data to data
+/// - Returns:
+///     - whether an error occurred
 ///
-void load_buffers(
-    glTF* gltf, const std::string& dirname, bool skip_missing = false);
+bool load_buffers(glTF* gltf, const std::string& dirname,
+    bool skip_missing = false, std::string* err = nullptr);
 
 ///
 /// Loads images.
@@ -1766,11 +1784,14 @@ void load_buffers(
 /// - Parameters:
 ///     - dirname: directory used to resolve path references
 ///     - skip_missing: do not throw an exception if a file is missing
+///     - err: if set, store error message on error
 /// - Out Parameters:
 ///     - gltf: data to data
+/// - Returns:
+///     - whether an error occurred
 ///
-void load_images(
-    glTF* asset, const std::string& dirname, bool skip_missing = false);
+bool load_images(glTF* asset, const std::string& dirname,
+    bool skip_missing = false, std::string* err = nullptr);
 
 ///
 /// Save buffer data.
@@ -1778,8 +1799,13 @@ void load_images(
 /// - Parameters:
 ///     - dirname: directory used to resolve path references
 ///     - gltf: data to save
+///     - skip_missing: do not throw an exception if a file is missing
+///     - err: if set, store error message on error
+/// - Returns:
+///     - whether an error occurred
 ///
-void save_buffers(const glTF* gltf, const std::string& dirname);
+bool save_buffers(const glTF* gltf, const std::string& dirname,
+    bool skip_missing, std::string* err = nullptr);
 
 ///
 /// Saves images.
@@ -1787,8 +1813,13 @@ void save_buffers(const glTF* gltf, const std::string& dirname);
 /// - Parameters:
 ///     - dirname: directory used to resolve path references
 ///     - gltf: data to save
+///     - skip_missing: do not throw an exception if a file is missing
+///     - err: if set, store error message on error
+/// - Returns:
+///     - whether an error occurred
 ///
-void save_images(const glTF* asset, const std::string& dirname);
+bool save_images(const glTF* asset, const std::string& dirname,
+    bool skip_missing, std::string* err = nullptr);
 
 ///
 /// Convert a gltf asset to flattened group of scene.

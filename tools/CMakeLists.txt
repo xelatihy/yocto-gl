@@ -36,4 +36,3 @@ if(UNIX AND NOT APPLE)
     target_link_libraries(ygltfgen Threads::Threads)
     target_link_libraries(ydocgen Threads::Threads)
 endif(UNIX AND NOT APPLE)
-

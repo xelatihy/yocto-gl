@@ -37,6 +37,7 @@ section of this file.
 
 ## History
 
+- v 0.13: simpler texture creation functions
 - v 0.12: removing legacy functions
 - v 0.11: use yocto_math in the interface and remove inline compilation
 - v 0.10: user interface with dear ImGui
@@ -244,6 +245,22 @@ void enable_edges(bool enabled, float tolerance = 0.9999f);
 Enable/disable edges. Attempts to avoid z-fighting but the method is not
 robust.
 
+### Function enable_blending()
+
+~~~ .cpp
+void enable_blending(bool enabled);
+~~~
+
+Enable/disable blending
+
+### Function set_blend_over()
+
+~~~ .cpp
+void set_blend_over();
+~~~
+
+Set blending to over operator
+
 ### Function line_width()
 
 ~~~ .cpp
@@ -317,6 +334,44 @@ Updates the texture tid with new image data.
 ~~~ .cpp
 void update_texture(
     uint tid, int w, int h, int nc, const unsigned char* pixels, bool mipmap);
+~~~
+
+Updates the texture tid with new image data.
+
+### Function make_texture()
+
+~~~ .cpp
+inline uint make_texture(
+    const ym::image4f* img, bool linear, bool mipmap, bool as_float);
+~~~
+
+Creates a texture from an image.
+Internally use float if as_float and filtering if filter.
+Returns the texture id.
+
+### Function make_texture()
+
+~~~ .cpp
+inline uint make_texture(
+    const ym::image4b* img, bool linear, bool mipmap, bool as_srgb);
+~~~
+
+Creates a texture from an image.
+Internally use srgb lookup if as_srgb and filtering if filter.
+Returns the texture id.
+
+### Function update_texture()
+
+~~~ .cpp
+inline void update_texture(uint tid, const ym::image4f* img, bool mipmap);
+~~~
+
+Updates the texture tid with new image data.
+
+### Function update_texture()
+
+~~~ .cpp
+inline void update_texture(uint tid, const ym::image4b* img, bool mipmap);
 ~~~
 
 Updates the texture tid with new image data.

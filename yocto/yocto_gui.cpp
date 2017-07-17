@@ -67,14 +67,14 @@ struct window {
 //
 // Support
 //
-static inline void _glfw_error_cb(int error, const char* description) {
+void glfw_error_cb(int error, const char* description) {
     printf("GLFW error: %s\n", description);
 }
 
 //
 // Support
 //
-static inline void _glfw_text_cb(GLFWwindow* gwin, unsigned key) {
+void glfw_text_cb(GLFWwindow* gwin, unsigned key) {
     auto win = (window*)glfwGetWindowUserPointer(gwin);
     if (win->widget_enabled) { ImGui_ImplGlfwGL3_CharCallback(win->win, key); }
     if (win->text_cb) win->text_cb(win, key);
@@ -83,7 +83,7 @@ static inline void _glfw_text_cb(GLFWwindow* gwin, unsigned key) {
 //
 // Support
 //
-static inline void _glfw_key_cb(
+void glfw_key_cb(
     GLFWwindow* gwin, int key, int scancode, int action, int mods) {
     auto win = (window*)glfwGetWindowUserPointer(gwin);
     if (win->widget_enabled) {
@@ -94,8 +94,7 @@ static inline void _glfw_key_cb(
 //
 // Support
 //
-static inline void _glfw_mouse_cb(
-    GLFWwindow* gwin, int button, int action, int mods) {
+void glfw_mouse_cb(GLFWwindow* gwin, int button, int action, int mods) {
     auto win = (window*)glfwGetWindowUserPointer(gwin);
     if (win->widget_enabled) {
         ImGui_ImplGlfwGL3_MouseButtonCallback(win->win, button, action, mods);
@@ -106,8 +105,7 @@ static inline void _glfw_mouse_cb(
 //
 // Support
 //
-static inline void _glfw_scroll_cb(
-    GLFWwindow* gwin, double xoffset, double yoffset) {
+void glfw_scroll_cb(GLFWwindow* gwin, double xoffset, double yoffset) {
     auto win = (window*)glfwGetWindowUserPointer(gwin);
     if (win->widget_enabled) {
         ImGui_ImplGlfwGL3_ScrollCallback(win->win, xoffset, yoffset);
@@ -117,7 +115,7 @@ static inline void _glfw_scroll_cb(
 //
 // Support
 //
-static inline void _glfw_refresh_cb(GLFWwindow* gwin) {
+void glfw_refresh_cb(GLFWwindow* gwin) {
     auto win = (window*)glfwGetWindowUserPointer(gwin);
     if (win->refresh_cb) win->refresh_cb(win);
 }
@@ -146,14 +144,14 @@ window* init_window(
     glfwMakeContextCurrent(win->win);
     glfwSetWindowUserPointer(win->win, win);
 
-    glfwSetErrorCallback(_glfw_error_cb);
+    glfwSetErrorCallback(glfw_error_cb);
 
-    glfwSetCharCallback(win->win, _glfw_text_cb);
-    glfwSetKeyCallback(win->win, _glfw_key_cb);
-    glfwSetMouseButtonCallback(win->win, _glfw_mouse_cb);
-    glfwSetScrollCallback(win->win, _glfw_scroll_cb);
+    glfwSetCharCallback(win->win, glfw_text_cb);
+    glfwSetKeyCallback(win->win, glfw_key_cb);
+    glfwSetMouseButtonCallback(win->win, glfw_mouse_cb);
+    glfwSetScrollCallback(win->win, glfw_scroll_cb);
 
-    glfwSetWindowRefreshCallback(win->win, _glfw_refresh_cb);
+    glfwSetWindowRefreshCallback(win->win, glfw_refresh_cb);
 
 // init gl extensions
 #ifndef __APPLE__
@@ -171,7 +169,7 @@ void set_callbacks(window* win, text_callback text_cb, mouse_callback mouse_cb,
     win->text_cb = text_cb;
     win->mouse_cb = mouse_cb;
     win->refresh_cb = refresh_cb;
-    if (text_cb) glfwSetCharCallback(win->win, _glfw_text_cb);
+    if (text_cb) glfwSetCharCallback(win->win, glfw_text_cb);
 }
 
 //
@@ -369,6 +367,11 @@ void indent_begin_widgets(window* win) { ImGui::Indent(); }
 void indent_end_widgets(window* win) { ImGui::Unindent(); }
 
 //
+// Continue line with next widget
+//
+void continue_line_widgets(window* win) { ImGui::SameLine(); }
+
+//
 // Label widget
 //
 void label_widget(window* win, const std::string& lbl, const std::string& msg) {
@@ -518,10 +521,29 @@ bool slider_widget(window* win, const std::string& lbl, ym::vec4f* val,
 }
 
 //
+// Color widget
+//
+bool color_widget(window* win, const std::string& lbl, ym::vec4f* val) {
+    return ImGui::ColorEdit4(lbl.c_str(), (float*)val);
+}
+
+//
+// Color widget
+//
+bool color_widget(window* win, const std::string& lbl, ym::vec4b* val) {
+    auto valf = ImGui::ColorConvertU32ToFloat4(*(uint32_t*)val);
+    if (ImGui::ColorEdit4(lbl.c_str(), &valf.x)) {
+        auto valb = ImGui::ColorConvertFloat4ToU32(valf);
+        *(uint32_t*)val = valb;
+        return true;
+    }
+    return false;
+}
+
+//
 // Enum Widget
 //
-static inline bool __enum_widget_labels_int(
-    void* data, int idx, const char** out) {
+bool __enum_widget_labels_int(void* data, int idx, const char** out) {
     auto labels = (std::vector<std::pair<std::string, int>>*)data;
     *out = labels->at(idx).first.c_str();
     return true;
@@ -562,8 +584,7 @@ bool list_widget(window* win, const std::string& lbl, int* val,
 //
 // Enum Widget
 //
-static inline bool __enum_widget_labels_ptr(
-    void* data, int idx, const char** out) {
+bool __enum_widget_labels_ptr(void* data, int idx, const char** out) {
     auto labels = (std::vector<std::pair<std::string, int>>*)data;
     *out = labels->at(idx).first.c_str();
     return true;
@@ -648,6 +669,17 @@ bool tree_begin_widget(
 }
 
 //
+// Start selectable tree node
+//
+bool tree_begin_widget(window* win, const std::string& lbl, void** selection,
+    void* content, const ym::vec4f& col) {
+    ImGui::PushStyleColor(ImGuiCol_Text, {col.x, col.y, col.z, col.w});
+    auto ret = tree_begin_widget(win, lbl, selection, content);
+    ImGui::PopStyleColor();
+    return ret;
+}
+
+//
 // End selectable tree node
 //
 void tree_end_widget(window* win, void* content) { ImGui::TreePop(); }
@@ -665,12 +697,43 @@ void tree_leaf_widget(
 }
 
 //
+// Selectable tree leaf node
+//
+void tree_leaf_widget(window* win, const std::string& lbl, void** selection,
+    void* content, const ym::vec4f& col) {
+    ImGui::PushStyleColor(ImGuiCol_Text, {col.x, col.y, col.z, col.w});
+    tree_leaf_widget(win, lbl, selection, content);
+    ImGui::PopStyleColor();
+}
+
+//
 // Image widget
 //
-void image_widget(window* win, int tid, ym::vec2i size) {
+void image_widget(
+    window* win, int tid, const ym::vec2i& size, const ym::vec2i& imsize) {
     auto w = ImGui::GetContentRegionAvailWidth();
-    auto h = w * (float)size[1] / (float)size[0];
-    ImGui::Image((void*)(size_t)tid, {w, h});
+    auto s = ym::vec2f{(float)size.x, (float)size.y};
+    auto a = (float)imsize.x / (float)imsize.y;
+    if (!s.x && !s.y) {
+        s.x = w;
+        s.y = w / a;
+    } else if (s.x && !s.y) {
+        s.y = s.x / a;
+    } else if (!s.x && s.y) {
+        s.x = s.y * a;
+    } else {
+        auto as = s.x / s.y;
+        if (as / a > 1) {
+            s.x = s.y * a;
+        } else {
+            s.y = s.x / a;
+        }
+    }
+    if (s.x > w) {
+        s.x = w;
+        s.y = w / a;
+    }
+    ImGui::Image((void*)(size_t)tid, {s.x, s.y});
 }
 
 //
@@ -690,5 +753,33 @@ void scroll_region_end_widget(window* win) { ImGui::EndChild(); }
 // Scroll region
 //
 void scroll_region_here_widget(window* win) { ImGui::SetScrollHere(); }
+
+//
+// Group ids
+//
+void groupid_begin_widget(window* win, int gid) { ImGui::PushID(gid); }
+
+//
+// Group ids
+//
+void groupid_begin_widget(window* win, void* gid) { ImGui::PushID(gid); }
+
+//
+// Group ids
+//
+void groupid_end_widget(window* win) { ImGui::PopID(); }
+
+//
+// Text color
+//
+void text_color_begin_widget(window* win, const ym::vec4f& color) {
+    ImGui::PushStyleColor(
+        ImGuiCol_Text, {color[0], color[1], color[2], color[3]});
+}
+
+//
+// Text color
+//
+void text_color_end_widget(window* win) { ImGui::PopStyleColor(); }
 
 }  // namespace ygui

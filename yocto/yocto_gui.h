@@ -13,6 +13,7 @@
 ///
 /// ## History
 ///
+/// - v 0.3: changed image widget sizing
 /// - v 0.2: added widgets explicit IDs
 /// - v 0.1: added more widgets
 /// - v 0.0: initial release split from yocto_glu
@@ -200,6 +201,11 @@ void indent_begin_widgets(window* win);
 void indent_end_widgets(window* win);
 
 ///
+/// Continue line with next widget
+///
+void continue_line_widgets(window* win);
+
+///
 /// Label widget
 ///
 void label_widget(window* win, const std::string& lbl, const std::string& mesg);
@@ -302,6 +308,17 @@ bool slider_widget(window* win, const std::string& lbl, ym::vec3f* val,
 ///
 bool slider_widget(window* win, const std::string& lbl, ym::vec4f* val,
     float min, float max, float incr = 1.0f);
+
+//
+// Color widget
+//
+bool color_widget(window* win, const std::string& lbl, ym::vec4f* val);
+
+//
+// Color widget
+//
+bool color_widget(window* win, const std::string& lbl, ym::vec4b* val);
+
 ///
 /// Bool widget
 ///
@@ -379,6 +396,12 @@ bool tree_begin_widget(
     window* win, const std::string& lbl, void** selection, void* content);
 
 ///
+/// Start selectable tree node
+///
+bool tree_begin_widget(window* win, const std::string& lbl, void** selection,
+    void* content, const ym::vec4f& col);
+
+///
 /// End selectable tree node
 ///
 void tree_end_widget(window* win, void* content);
@@ -390,9 +413,16 @@ void tree_leaf_widget(
     window* win, const std::string& lbl, void** selection, void* content);
 
 ///
-/// Image widget
+/// Selectable tree leaf node
 ///
-void image_widget(window* win, int tid, ym::vec2i size);
+void tree_leaf_widget(window* win, const std::string& lbl, void** selection,
+    void* content, const ym::vec4f& col);
+
+///
+/// Image widget with desired size size, taken from an image of size imsize.
+///
+void image_widget(
+    window* win, int tid, const ym::vec2i& size, const ym::vec2i& imsize);
 
 ///
 /// Scroll region
@@ -409,6 +439,21 @@ void scroll_region_end_widget(window* win);
 /// Scroll region
 ///
 void scroll_region_here_widget(window* win);
+
+///
+/// Group ids
+///
+void groupid_begin_widget(window* win, int gid);
+
+///
+/// Group ids
+///
+void groupid_begin_widget(window* win, void* gid);
+
+///
+/// Group ids
+///
+void groupid_end_widget(window* win);
 
 }  // namespace ygui
 

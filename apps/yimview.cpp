@@ -44,8 +44,8 @@ struct img {
     int ncomp = 0;
 
     // pixel data
-    std::vector<float> hdr;
-    std::vector<unsigned char> ldr;
+    float* hdr = nullptr;
+    unsigned char* ldr = nullptr;
 
     // opengl texture
     yglu::uint tex_glid = 0;
@@ -57,7 +57,13 @@ struct img {
     ym::tonemap_type tonemap = ym::tonemap_type::srgb;
 
     // check hdr
-    bool is_hdr() const { return !hdr.empty(); }
+    bool is_hdr() const { return (bool)hdr; }
+
+    // cleanup
+    ~img() {
+        if (hdr) delete hdr;
+        if (ldr) delete ldr;
+    }
 };
 
 struct params {
@@ -89,18 +95,24 @@ std::vector<img*> load_images(const std::vector<std::string>& img_filenames,
         imgs.push_back(new img());
         auto img = imgs.back();
         img->filename = filename;
-        yimg::load_image(
-            filename, img->width, img->height, img->ncomp, img->hdr, img->ldr);
-        if (!img->hdr.empty()) {
-            img->ldr.resize(img->hdr.size());
-            ym::tonemap_image(img->width, img->height, img->ncomp,
-                img->hdr.data(), img->ldr.data(), img->tonemap, img->exposure,
-                img->gamma);
+        auto ext = yu::path::get_extension(filename);
+        if (ext == ".hdr") {
+            img->hdr = yimg::load_imagef(
+                filename, img->width, img->height, img->ncomp);
+
+        } else {
+            img->ldr =
+                yimg::load_image(filename, img->width, img->height, img->ncomp);
+        }
+        if (img->hdr) {
+            img->ldr = new unsigned char[img->width * img->height * img->ncomp];
+            ym::tonemap_image(img->width, img->height, img->ncomp, img->hdr,
+                img->ldr, img->tonemap, img->exposure, img->gamma);
             img->exposure = exposure;
             img->gamma = gamma;
             img->tonemap = tonemap;
         }
-        if (img->hdr.empty() && img->ldr.empty()) {
+        if (!img->hdr && !img->ldr) {
             printf("cannot load image %s\n", img->filename.c_str());
             exit(1);
         }
@@ -219,15 +231,15 @@ void draw_widgets(ygui::window* win) {
         auto ij = ym::vec2i{(int)round(xy[0]), (int)round(xy[1])};
         auto inside = ij[0] >= 0 && ij[1] >= 0 && ij[0] < img->width &&
                       ij[1] < img->height;
-        auto ldrp = lookup_image(img->width, img->height, img->ncomp,
-            img->ldr.data(), ij[0], ij[1], (unsigned char)255);
+        auto ldrp = lookup_image(img->width, img->height, img->ncomp, img->ldr,
+            ij[0], ij[1], (unsigned char)255);
         label_widget(win, "r", (inside) ? ldrp[0] : 0);
         label_widget(win, "g", (inside) ? ldrp[1] : 0);
         label_widget(win, "b", (inside) ? ldrp[2] : 0);
         label_widget(win, "a", (inside) ? ldrp[3] : 0);
         if (img->is_hdr()) {
             auto hdrp = lookup_image(img->width, img->height, img->ncomp,
-                img->hdr.data(), ij[0], ij[1], 1.0f);
+                img->hdr, ij[0], ij[1], 1.0f);
             label_widget(win, "r", (inside) ? hdrp[0] : 0);
             label_widget(win, "g", (inside) ? hdrp[1] : 0);
             label_widget(win, "b", (inside) ? hdrp[2] : 0);
@@ -261,7 +273,7 @@ void run_ui(yimview_app::params* pars) {
     // load textures
     for (auto& img : pars->imgs) {
         img->tex_glid = yglu::make_texture(img->width, img->height, img->ncomp,
-            (unsigned char*)img->ldr.data(), false, false, false);
+            (unsigned char*)img->ldr, false, false, false);
     }
 
     while (!should_close(win)) {
@@ -293,14 +305,13 @@ void run_ui(yimview_app::params* pars) {
         if (img->is_hdr() &&
             (pars->exposure != img->exposure || pars->gamma != img->gamma ||
                 pars->tonemap != img->tonemap)) {
-            ym::tonemap_image(img->width, img->height, img->ncomp,
-                img->hdr.data(), img->ldr.data(), pars->tonemap, pars->exposure,
-                pars->gamma);
+            ym::tonemap_image(img->width, img->height, img->ncomp, img->hdr,
+                img->ldr, pars->tonemap, pars->exposure, pars->gamma);
             img->exposure = pars->exposure;
             img->gamma = pars->gamma;
             img->tonemap = pars->tonemap;
             yglu::update_texture(img->tex_glid, img->width, img->height,
-                img->ncomp, img->ldr.data(), false);
+                img->ncomp, img->ldr, false);
         }
 
         // draw

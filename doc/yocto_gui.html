@@ -19,6 +19,7 @@ The library depends on GLEW for OpenGL functions on Windows and Linux,
 GLFW for window management and dear ImGui for widgets.</p>
 <h2>History</h2>
 <ul>
+<li>v 0.3: changed image widget sizing</li>
 <li>v 0.2: added widgets explicit IDs</li>
 <li>v 0.1: added more widgets</li>
 <li>v 0.0: initial release split from yocto_glu</li>
@@ -190,6 +191,12 @@ GLFW for window management and dear ImGui for widgets.</p>
 
 
 <p>Indent widget</p>
+<h3>Function continue_line_widgets()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">continue_line_widgets</span><span class="p">(</span><span class="n">window</span><span class="o">*</span> <span class="n">win</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Continue line with next widget</p>
 <h3>Function label_widget()</h3>
 <div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">label_widget</span><span class="p">(</span><span class="n">window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">mesg</span><span class="p">);</span>
 </code></pre></div>
@@ -403,6 +410,13 @@ GLFW for window management and dear ImGui for widgets.</p>
 
 
 <p>Start selectable tree node</p>
+<h3>Function tree_begin_widget()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">tree_begin_widget</span><span class="p">(</span><span class="n">window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span> <span class="kt">void</span><span class="o">**</span> <span class="n">selection</span><span class="p">,</span>
+    <span class="kt">void</span><span class="o">*</span> <span class="n">content</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec4f</span><span class="o">&amp;</span> <span class="n">col</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Start selectable tree node</p>
 <h3>Function tree_end_widget()</h3>
 <div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">tree_end_widget</span><span class="p">(</span><span class="n">window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="kt">void</span><span class="o">*</span> <span class="n">content</span><span class="p">);</span>
 </code></pre></div>
@@ -416,12 +430,20 @@ GLFW for window management and dear ImGui for widgets.</p>
 
 
 <p>Selectable tree leaf node</p>
-<h3>Function image_widget()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">image_widget</span><span class="p">(</span><span class="n">window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="kt">int</span> <span class="n">tid</span><span class="p">,</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec2i</span> <span class="n">size</span><span class="p">);</span>
+<h3>Function tree_leaf_widget()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">tree_leaf_widget</span><span class="p">(</span><span class="n">window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span> <span class="kt">void</span><span class="o">**</span> <span class="n">selection</span><span class="p">,</span>
+    <span class="kt">void</span><span class="o">*</span> <span class="n">content</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec4f</span><span class="o">&amp;</span> <span class="n">col</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Image widget</p>
+<p>Selectable tree leaf node</p>
+<h3>Function image_widget()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">image_widget</span><span class="p">(</span>
+    <span class="n">window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="kt">int</span> <span class="n">tid</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec2i</span><span class="o">&amp;</span> <span class="n">size</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec2i</span><span class="o">&amp;</span> <span class="n">imsize</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Image widget with desired size size, taken from an image of size imsize.</p>
 <h3>Function scroll_region_begin_widget()</h3>
 <div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">scroll_region_begin_widget</span><span class="p">(</span>
     <span class="n">window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span> <span class="kt">int</span> <span class="n">height</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">border</span><span class="p">);</span>
@@ -441,6 +463,24 @@ GLFW for window management and dear ImGui for widgets.</p>
 
 
 <p>Scroll region</p>
+<h3>Function groupid_begin_widget()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">groupid_begin_widget</span><span class="p">(</span><span class="n">window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="kt">int</span> <span class="n">gid</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Group ids</p>
+<h3>Function groupid_begin_widget()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">groupid_begin_widget</span><span class="p">(</span><span class="n">window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="kt">void</span><span class="o">*</span> <span class="n">gid</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Group ids</p>
+<h3>Function groupid_end_widget()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">groupid_end_widget</span><span class="p">(</span><span class="n">window</span><span class="o">*</span> <span class="n">win</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Group ids</p>
         <article>
         <footer></footer>
         </body>

@@ -176,12 +176,17 @@ struct yscene {
 // ---------------------------------------------------------------------------
 
 // loads a scene either OBJ or GLTF
-inline void load_scene(
+inline bool load_scene(
     yscene* scn, const std::string& filename, bool instances, bool radius) {
     // load scene
     auto ext = yu::path::get_extension(filename);
     if (ext == ".obj") {
         scn->oscn = yobj::load_scene(filename, true);
+        if (!scn->oscn) {
+            yu::logging::log_msg(
+                yu::logging::log_level::error, "yscene", "cannot load scene");
+            return false;
+        }
         yobj::add_normals(scn->oscn);
         yobj::add_texture_data(scn->oscn);
         if (radius) yobj::add_radius(scn->oscn, 0.001f);
@@ -199,6 +204,11 @@ inline void load_scene(
         }
     } else if (ext == ".gltf" || ext == ".glb") {
         scn->gscn = ygltf::load_scenes(filename, true);
+        if (!scn->gscn) {
+            yu::logging::log_msg(
+                yu::logging::log_level::error, "yscene", "cannot load scene");
+            return false;
+        }
         ygltf::add_normals(scn->gscn);
         ygltf::add_texture_data(scn->gscn);
         if (radius) ygltf::add_radius(scn->gscn, 0.001f);
@@ -266,6 +276,7 @@ inline void load_scene(
         scn->view_cam->focus = ym::length(to - from);
     }
 #endif
+    return true;
 }
 
 // ---------------------------------------------------------------------------
@@ -322,12 +333,10 @@ inline void update_shade_state(const yobj::scene* sc, yshade_state* st) {
     st->txt[nullptr] = 0;
     for (auto txt : sc->textures) {
         if (st->txt.find(txt) != st->txt.end()) continue;
-        if (!txt->dataf.empty()) {
-            st->txt[txt] = yglu::make_texture(txt->width, txt->height,
-                txt->ncomp, txt->dataf.data(), true, true, true);
-        } else if (!txt->datab.empty()) {
-            st->txt[txt] = yglu::make_texture(txt->width, txt->height,
-                txt->ncomp, txt->datab.data(), true, true, true);
+        if (txt->hdr) {
+            st->txt[txt] = yglu::make_texture(txt->hdr, true, true, true);
+        } else if (txt->ldr) {
+            st->txt[txt] = yglu::make_texture(txt->ldr, true, true, true);
         } else
             assert(false);
     }
@@ -459,7 +468,7 @@ inline void shade_scene(const yobj::scene* sc, yshade_state* st,
 
     if (!camera_lights) {
         update_shade_lights(st, sc);
-        yglu::stdshader::set_lights(st->prog, amb, st->lights_pos.size(),
+        yglu::stdshader::set_lights(st->prog, amb, (int)st->lights_pos.size(),
             st->lights_pos.data(), st->lights_ke.data(),
             st->lights_ltype.data());
     }
@@ -530,12 +539,10 @@ inline void update_shade_state(const ygltf::scene_group* sc, yshade_state* st) {
     st->txt[nullptr] = 0;
     for (auto txt : sc->textures) {
         if (st->txt.find(txt) != st->txt.end()) continue;
-        if (!txt->dataf.empty()) {
-            st->txt[txt] = yglu::make_texture(txt->width, txt->height,
-                txt->ncomp, txt->dataf.data(), true, true, true);
-        } else if (!txt->datab.empty()) {
-            st->txt[txt] = yglu::make_texture(txt->width, txt->height,
-                txt->ncomp, txt->datab.data(), true, true, true);
+        if (txt->hdr) {
+            st->txt[txt] = yglu::make_texture(txt->hdr, true, true, true);
+        } else if (txt->ldr) {
+            st->txt[txt] = yglu::make_texture(txt->ldr, true, true, true);
         } else
             assert(false);
     }
@@ -646,7 +653,6 @@ inline void shade_mesh(const ygltf::mesh* msh, const ygltf::skin* sk,
                 txt_info(mat->normal_txt, mat->normal_txt_info),
                 txt_info(mat->occlusion_txt, mat->occlusion_txt_info), false,
                 mat->double_sided);
-
         } else {
             yglu::stdshader::set_material_emission_only(st->prog, mat->emission,
                 1, txt_info(mat->emission_txt, mat->emission_txt_info),
@@ -669,9 +675,9 @@ inline void shade_mesh(const ygltf::mesh* msh, const ygltf::skin* sk,
             ym::compute_matrix_skinning(shp->pos, shp->norm, shp->skin_weights,
                 shp->skin_joints, skin_xforms, skinned_pos, skinned_norm);
             yglu::update_buffer(vert_vbo.pos, 3 * sizeof(float),
-                skinned_pos.size(), skinned_pos.data(), false, true);
+                (int)skinned_pos.size(), skinned_pos.data(), false, true);
             yglu::update_buffer(vert_vbo.norm, 3 * sizeof(float),
-                skinned_norm.size(), skinned_norm.data(), false, true);
+                (int)skinned_norm.size(), skinned_norm.data(), false, true);
 #endif
         } else if (!morph_weights.empty() && !shp->morph_targets.empty()) {
             std::vector<ym::vec3f> morph_pos, morph_norm;
@@ -679,9 +685,9 @@ inline void shade_mesh(const ygltf::mesh* msh, const ygltf::skin* sk,
             ygltf::compute_morphing_deformation(
                 shp, morph_weights, morph_pos, morph_norm, morph_tang);
             yglu::update_buffer(vert_vbo.pos, 3 * sizeof(float),
-                morph_pos.size(), morph_pos.data(), false, true);
+                (int)morph_pos.size(), morph_pos.data(), false, true);
             yglu::update_buffer(vert_vbo.norm, 3 * sizeof(float),
-                morph_norm.size(), morph_norm.data(), false, true);
+                (int)morph_norm.size(), morph_norm.data(), false, true);
         } else {
             yglu::stdshader::set_vert_skinning_off(st->prog);
         }
@@ -774,7 +780,7 @@ inline void shade_scene(const ygltf::scene_group* scns, yshade_state* st,
 
     if (!camera_lights) {
         update_shade_lights(st, scns);
-        yglu::stdshader::set_lights(st->prog, amb, st->lights_pos.size(),
+        yglu::stdshader::set_lights(st->prog, amb, (int)st->lights_pos.size(),
             st->lights_pos.data(), st->lights_ke.data(),
             st->lights_ltype.data());
     }
@@ -934,10 +940,11 @@ void draw_elem_widgets(ygui::window* win, yobj::scene* oscn, yobj::texture* txt,
 
     ygui::separator_widget(win);
     ygui::label_widget(win, "path", txt->path);
-    auto str = yu::string::format("%d x %d @ %d  %s", txt->width, txt->height,
-        txt->ncomp, (txt->dataf.empty()) ? "byte" : "float");
-    ygui::label_widget(win, "size", str);
-    ygui::image_widget(win, state->txt.at(txt), {txt->width, txt->height});
+    auto size = yu::string::format("%d x %d @ 4 %s", txt->width(),
+        txt->height(), (txt->ldr) ? "byte" : "float");
+    ygui::label_widget(win, "size", size);
+    ygui::image_widget(
+        win, state->txt.at(txt), {128, 128}, {txt->width(), txt->height()});
 }
 
 void draw_elem_widgets(ygui::window* win, yobj::scene* oscn,
@@ -1225,11 +1232,12 @@ void draw_elem_widgets(ygui::window* win, ygltf::scene_group* gscn,
 
     ygui::separator_widget(win);
     ygui::label_widget(win, "path", txt->path);
-    auto str = yu::string::format("%d x %d @ %d  %s", txt->width, txt->height,
-        txt->ncomp, (txt->dataf.empty()) ? "byte" : "float");
+    auto str = yu::string::format("%d x %d @ 4 %s", txt->width(), txt->height(),
+        (txt->ldr) ? "byte" : "float");
     ygui::label_widget(win, "size", str);
     if (state->txt.find(txt) != state->txt.end()) {
-        ygui::image_widget(win, state->txt.at(txt), {txt->width, txt->height});
+        ygui::image_widget(
+            win, state->txt.at(txt), {128, 128}, {txt->width(), txt->height()});
     }
 }
 
@@ -1570,13 +1578,14 @@ inline void draw_edit_widgets(ygui::window* win, ygltf::scene_group* gscn,
         auto scn = (yscene*)ygui::get_user_pointer(win);
         auto dirname = yu::path::get_dirname(scn->filename);
         try {
-            yimg::load_image(dirname + txt->path, txt->width, txt->height,
-                txt->ncomp, txt->dataf, txt->datab);
+            auto ext = yu::path::get_extension(dirname + txt->path);
+            if (ext == ".hdr") {
+                txt->hdr = yimg::load_image4f(dirname + txt->path);
+            } else {
+                txt->ldr = yimg::load_image4b(dirname + txt->path);
+            }
         } catch (...) {
-            txt->width = 1;
-            txt->height = 1;
-            txt->dataf = {};
-            txt->datab = {{255, 255, 255, 255}};
+            txt->ldr = new ym::image4b(1, 1, {255, 255, 255, 255});
         }
         gscn->textures.push_back(txt);
         *selection = txt;

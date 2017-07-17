@@ -85,99 +85,6 @@
 #include <sstream>
 #include <thread>
 
-//
-// Thread pool code derived from LLVM codebase
-//
-
-// thread pool
-struct ThreadPool {
-    ThreadPool(int nthreads = std::thread::hardware_concurrency());
-    ~ThreadPool();
-
-    std::shared_future<void> async(std::function<void()> task);
-    void wait();
-
-    void _thread_proc();
-
-    std::vector<std::thread> threads;
-    std::queue<std::packaged_task<void()>> tasks;
-    std::mutex queue_lock;
-    std::condition_variable queue_condition;
-    std::mutex completion_lock;
-    std::condition_variable completion_condition;
-    std::atomic<unsigned> working_threads;
-    bool stop_flag = false;
-};
-
-inline ThreadPool::ThreadPool(int nthreads)
-    : working_threads(0), stop_flag(false) {
-    threads.reserve(nthreads);
-    for (auto tid = 0; tid < nthreads; tid++) {
-        threads.emplace_back([this] { _thread_proc(); });
-    }
-}
-
-inline void ThreadPool::_thread_proc() {
-    while (true) {
-        std::packaged_task<void()> task;
-        {
-            std::unique_lock<std::mutex> lock_guard(queue_lock);
-            queue_condition.wait(
-                lock_guard, [&] { return stop_flag || !tasks.empty(); });
-
-            if (stop_flag && tasks.empty()) return;
-
-            {
-                working_threads++;
-                std::unique_lock<std::mutex> lock_guard(completion_lock);
-            }
-            task = std::move(tasks.front());
-            tasks.pop();
-        }
-
-        task();
-
-        {
-            std::unique_lock<std::mutex> lock_guard(completion_lock);
-            working_threads--;
-        }
-
-        completion_condition.notify_all();
-    }
-}
-
-inline ThreadPool::~ThreadPool() {
-    {
-        std::unique_lock<std::mutex> lock_guard(queue_lock);
-        stop_flag = true;
-    }
-    queue_condition.notify_all();
-    for (auto& Worker : threads) Worker.join();
-}
-
-inline std::shared_future<void> ThreadPool::async(std::function<void()> task) {
-    // Wrap the Task in a packaged_task to return a future object.
-    std::packaged_task<void()> packaged_task(std::move(task));
-    auto future = packaged_task.get_future();
-    {
-        std::unique_lock<std::mutex> lock_guard(queue_lock);
-        assert(!stop_flag && "Queuing a thread during ThreadPool destruction");
-        tasks.push(std::move(packaged_task));
-    }
-    queue_condition.notify_one();
-    return future.share();
-}
-
-inline void ThreadPool::wait() {
-    std::unique_lock<std::mutex> lock_guard(completion_lock);
-    completion_condition.wait(
-        lock_guard, [&] { return tasks.empty() && !working_threads; });
-}
-
-//
-// End of thread pool code derived from LLVM codebase
-//
-
 namespace yu {
 
 namespace cmdline {
@@ -793,22 +700,24 @@ std::string load_txtfile(const std::string& filename) {
 //
 // Saves binary data to a file.
 //
-void save_binfile(
+bool save_binfile(
     const std::string& filename, const std::vector<unsigned char>& data) {
     auto f = fopen(filename.c_str(), "wt");
-    if (!f) return;
+    if (!f) return false;
     fwrite(data.data(), 1, data.size(), f);
     fclose(f);
+    return true;
 }
 
 //
 // Saves a string to a text file.
 //
-void save_txtfile(const std::string& filename, const std::string& str) {
+bool save_txtfile(const std::string& filename, const std::string& str) {
     auto f = fopen(filename.c_str(), "wt");
-    if (!f) return;
+    if (!f) return false;
     fwrite(str.c_str(), 1, str.length(), f);
     fclose(f);
+    return true;
 }
 
 }  // namespace file
@@ -1115,7 +1024,7 @@ static inline logger* _make_stream_logger(
 logger* make_file_logger(const std::string& filename, bool append,
     log_level output_level, log_level flush_level) {
     auto file = fopen(filename.c_str(), (append) ? "at" : "wt");
-    if (!file) { throw std::runtime_error("cannot open log file " + filename); }
+    if (!file) return nullptr;
     return _make_stream_logger(file, output_level, flush_level);
 }
 
@@ -1256,6 +1165,98 @@ void log_msg(log_level level, const std::string& name, const std::string& msg) {
 }  // namespace logging
 
 namespace concurrent {
+
+//
+// Thread pool code derived from LLVM codebase
+//
+
+// thread pool
+struct ThreadPool {
+    // thread pool initialized with nthreads
+    ThreadPool(int nthreads = std::thread::hardware_concurrency())
+        : working_threads(0), stop_flag(false) {
+        threads.reserve(nthreads);
+        for (auto tid = 0; tid < nthreads; tid++) {
+            threads.emplace_back([this] { thread_proc(); });
+        }
+    }
+
+    // destructor
+    ~ThreadPool() {
+        {
+            std::unique_lock<std::mutex> lock_guard(queue_lock);
+            stop_flag = true;
+        }
+        queue_condition.notify_all();
+        for (auto& Worker : threads) Worker.join();
+    }
+
+    // schedule an asynchronous taks
+    std::shared_future<void> async(std::function<void()> task) {
+        // Wrap the Task in a packaged_task to return a future object.
+        std::packaged_task<void()> packaged_task(std::move(task));
+        auto future = packaged_task.get_future();
+        {
+            std::unique_lock<std::mutex> lock_guard(queue_lock);
+            assert(
+                !stop_flag && "Queuing a thread during ThreadPool destruction");
+            tasks.push(std::move(packaged_task));
+        }
+        queue_condition.notify_one();
+        return future.share();
+    }
+
+    // wait for all tasks to finish
+    void wait() {
+        std::unique_lock<std::mutex> lock_guard(completion_lock);
+        completion_condition.wait(
+            lock_guard, [&] { return tasks.empty() && !working_threads; });
+    }
+
+    // implementation -------------------------------------------------
+   private:
+    void thread_proc() {
+        while (true) {
+            std::packaged_task<void()> task;
+            {
+                std::unique_lock<std::mutex> lock_guard(queue_lock);
+                queue_condition.wait(
+                    lock_guard, [&] { return stop_flag || !tasks.empty(); });
+
+                if (stop_flag && tasks.empty()) return;
+
+                {
+                    working_threads++;
+                    std::unique_lock<std::mutex> lock_guard(completion_lock);
+                }
+                task = std::move(tasks.front());
+                tasks.pop();
+            }
+
+            task();
+
+            {
+                std::unique_lock<std::mutex> lock_guard(completion_lock);
+                working_threads--;
+            }
+
+            completion_condition.notify_all();
+        }
+    }
+
+    std::vector<std::thread> threads;
+    std::queue<std::packaged_task<void()>> tasks;
+    std::mutex queue_lock;
+    std::condition_variable queue_condition;
+    std::mutex completion_lock;
+    std::condition_variable completion_condition;
+    std::atomic<unsigned> working_threads;
+    bool stop_flag = false;
+};
+
+//
+// End of thread pool code derived from LLVM codebase
+//
 
 //
 // Forward declaration of thread pool.

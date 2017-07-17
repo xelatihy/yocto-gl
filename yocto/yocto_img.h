@@ -18,6 +18,7 @@
 ///
 /// ## History
 ///
+/// - v 0.1: added whole image functions
 /// - v 0.1: initial release
 ///
 namespace yimg {}
@@ -70,54 +71,58 @@ using byte = unsigned char;
 ///
 /// Loads an ldr image.
 ///
-void load_image(
-    const std::string& filename, int& w, int& h, int& ncomp, byte*& ldr);
+ym::image4b* load_image4b(const std::string& filename);
 
 ///
 /// Loads an hdr image.
 ///
-void load_image(
-    const std::string& filename, int& w, int& h, int& ncomp, float*& hdr);
+ym::image4f* load_image4f(const std::string& filename);
 
 ///
-/// Loads an image. Uses extension to determine which format to load.
-/// Suppoted formats are PNG, JPG, HDR.
+/// Saves an ldr image.
 ///
-void load_image(const std::string& filename, int& w, int& h, int& ncomp,
-    float*& hdr, byte*& ldr);
+bool save_image4b(const std::string& filename, const ym::image4b* img);
 
 ///
-/// Loads an image.
+/// Saves an hdr image.
 ///
-void load_image(const std::string& filename, int& w, int& h, int& ncomp,
-    std::vector<float>& hdr, std::vector<byte>& ldr);
+bool save_image4f(const std::string& filename, const ym::image4f* img);
 
 ///
-/// Saves an hdr image. Uses extension to determine which format to load.
-/// Suppoted formats are HDR.
+/// Loads an ldr image.
 ///
-void save_image(const std::string& filename, int width, int height, int ncomp,
-    const float* hdr);
+byte* load_image(const std::string& filename, int& w, int& h, int& ncomp);
+
+///
+/// Loads an hdr image.
+///
+float* load_imagef(const std::string& filename, int& w, int& h, int& ncomp);
 
 ///
 /// Saves an ldr image. Uses extension to determine which format to load.
 /// Suppoted formats are PNG.
 ///
-void save_image(const std::string& filename, int width, int height, int ncomp,
+bool save_image(const std::string& filename, int width, int height, int ncomp,
     const byte* ldr);
 
 ///
-/// Loads an image from memory.
+/// Saves an hdr image. Uses extension to determine which format to load.
+/// Suppoted formats are HDR.
 ///
-void load_image_from_memory(const std::string& fmt, const byte* data,
-    int length, int& w, int& h, int& ncomp, float*& hdr, byte*& ldr);
+bool save_imagef(const std::string& filename, int width, int height, int ncomp,
+    const float* hdr);
 
 ///
 /// Loads an image from memory.
 ///
-void load_image_from_memory(const std::string& fmt, const byte* data,
-    int length, int& w, int& h, int& ncomp, std::vector<float>& hdr,
-    std::vector<byte>& ldr);
+byte* load_image_from_memory(const std::string& fmt, const byte* data,
+    int length, int& w, int& h, int& ncomp);
+
+///
+/// Loads an image from memory.
+///
+float* load_imagef_from_memory(const std::string& fmt, const byte* data,
+    int length, int& w, int& h, int& ncomp);
 
 ///
 /// Resize image.

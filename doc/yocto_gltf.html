@@ -73,6 +73,8 @@ an object of type T. Internally this is just the same old glTF index. But
 this can used to access the scene data with <code>scene::get&lt;T&gt;(index)</code>.</p>
 <h2>History</h2>
 <ul>
+<li>v 0.15: remove exception from code and add explicit error handling</li>
+<li>v 0.14: texture have always 4 channels</li>
 <li>v 0.13: change variable names for compilation on gcc</li>
 <li>v 0.12: removed explicit root nodes</li>
 <li>v 0.11: added camera near/far to high-level interface</li>
@@ -123,11 +125,11 @@ this can used to access the scene data with <code>scene::get&lt;T&gt;(index)</co
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">texture</span> <span class="p">{</span>
     <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
     <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">path</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
-    <span class="kt">int</span> <span class="n">width</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
-    <span class="kt">int</span> <span class="n">height</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
-    <span class="kt">int</span> <span class="n">ncomp</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">uint8_t</span><span class="o">&gt;</span> <span class="n">datab</span><span class="p">;</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;</span> <span class="n">dataf</span><span class="p">;</span>
+    <span class="n">ym</span><span class="o">::</span><span class="n">image4b</span><span class="o">*</span> <span class="n">ldr</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+    <span class="n">ym</span><span class="o">::</span><span class="n">image4f</span><span class="o">*</span> <span class="n">hdr</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="nf">width</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span> 
+    <span class="kt">int</span> <span class="nf">height</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span> 
+    <span class="o">~</span><span class="n">texture</span><span class="p">();</span> 
 <span class="p">}</span>
 </code></pre></div>
 
@@ -137,11 +139,11 @@ this can used to access the scene data with <code>scene::get&lt;T&gt;(index)</co
 <li>Members:<ul>
 <li>name:      name</li>
 <li>path:      path</li>
-<li>width:      image width</li>
-<li>height:      image height</li>
-<li>ncomp:      image number of components</li>
-<li>datab:      8-bit data</li>
-<li>dataf:      float data</li>
+<li>ldr:      8-bit data</li>
+<li>hdr:      float data</li>
+<li>width():      get texture width</li>
+<li>height():      get texture height</li>
+<li>~texture():      cleanup</li>
 </ul>
 </li>
 </ul>
@@ -569,8 +571,8 @@ Scenes and nodes are missing for mesh-only assets.</p>
 </li>
 </ul>
 <h3>Function load_scenes()</h3>
-<div class="codehilite"><pre><code><span></span><span class="n">scene_group</span><span class="o">*</span> <span class="nf">load_scenes</span><span class="p">(</span>
-    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">load_textures</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">skip_missing</span> <span class="o">=</span> <span class="nb">true</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="n">scene_group</span><span class="o">*</span> <span class="nf">load_scenes</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">load_textures</span><span class="p">,</span>
+    <span class="kt">bool</span> <span class="n">skip_missing</span> <span class="o">=</span> <span class="nb">true</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">*</span> <span class="n">err</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -580,16 +582,17 @@ Scenes and nodes are missing for mesh-only assets.</p>
 <li>filename: filename</li>
 <li>load_textures: whether to load textures (default to false)</li>
 <li>skip_missing: whether to skip missing buffers and textures</li>
+<li>err: if set, store error message on error</li>
 </ul>
 </li>
-<li>Return:<ul>
-<li>scene</li>
+<li>Returns:<ul>
+<li>scene (nullptr on error)</li>
 </ul>
 </li>
 </ul>
 <h3>Function save_scenes()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">save_scenes</span><span class="p">(</span>
-    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">,</span> <span class="k">const</span> <span class="n">scene_group</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">save_textures</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">save_scenes</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">,</span> <span class="k">const</span> <span class="n">scene_group</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span>
+    <span class="kt">bool</span> <span class="n">save_textures</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">*</span> <span class="n">err</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -599,6 +602,11 @@ Scenes and nodes are missing for mesh-only assets.</p>
 <li>filename: filename</li>
 <li>scn: scene data to save</li>
 <li>save_textures: whether to save textures (default to false)</li>
+<li>err: if set, store error message on error</li>
+</ul>
+</li>
+<li>Returns:<ul>
+<li>whether an error occurred</li>
 </ul>
 </li>
 </ul>
@@ -1805,25 +1813,10 @@ not be present.</p>
 </ul>
 </li>
 </ul>
-<h3>Struct gltf_exception</h3>
-<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="nl">gltf_exception</span> <span class="p">:</span> <span class="n">std</span><span class="o">::</span><span class="n">exception</span> <span class="p">{</span>
-    <span class="n">gltf_exception</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">errmsg</span><span class="p">);</span> 
-    <span class="k">virtual</span> <span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="nf">what</span><span class="p">()</span> <span class="k">const</span> <span class="k">throw</span><span class="p">();</span> 
-<span class="p">}</span>
-</code></pre></div>
-
-
-<p>Error when reading/writing gltf.</p>
-<ul>
-<li>Members:<ul>
-<li>gltf_exception():      constructor with error message</li>
-<li>what():      retieval of error message</li>
-</ul>
-</li>
-</ul>
 <h3>Function load_gltf()</h3>
 <div class="codehilite"><pre><code><span></span><span class="n">glTF</span><span class="o">*</span> <span class="nf">load_gltf</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">load_bin</span> <span class="o">=</span> <span class="nb">true</span><span class="p">,</span>
-    <span class="kt">bool</span> <span class="n">load_img</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">skip_missing</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
+    <span class="kt">bool</span> <span class="n">load_img</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">skip_missing</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">*</span> <span class="n">err</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -1833,16 +1826,18 @@ not be present.</p>
 <li>filename: scene filename</li>
 <li>load_bin/load_img: load binary data</li>
 <li>skip_missing: do not throw an exception if a file is missing</li>
+<li>err: if set, store error message on error</li>
 </ul>
 </li>
 <li>Returns:<ul>
-<li>gltf data loaded</li>
+<li>gltf data loaded (nullptr on error)</li>
 </ul>
 </li>
 </ul>
 <h3>Function load_binary_gltf()</h3>
 <div class="codehilite"><pre><code><span></span><span class="n">glTF</span><span class="o">*</span> <span class="nf">load_binary_gltf</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">load_bin</span> <span class="o">=</span> <span class="nb">true</span><span class="p">,</span>
-    <span class="kt">bool</span> <span class="n">load_img</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">skip_missing</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
+    <span class="kt">bool</span> <span class="n">load_img</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">skip_missing</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">*</span> <span class="n">err</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -1851,16 +1846,17 @@ not be present.</p>
 <li>Parameters:<ul>
 <li>filename: scene filename</li>
 <li>other params as above</li>
+<li>err: if set, store error message on error</li>
 </ul>
 </li>
 <li>Returns:<ul>
-<li>gltf data loaded</li>
+<li>gltf data loaded (nullptr on error)</li>
 </ul>
 </li>
 </ul>
 <h3>Function save_gltf()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">save_gltf</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">,</span> <span class="k">const</span> <span class="n">glTF</span><span class="o">*</span> <span class="n">gltf</span><span class="p">,</span>
-    <span class="kt">bool</span> <span class="n">save_bin</span> <span class="o">=</span> <span class="nb">true</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">save_images</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">save_gltf</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">,</span> <span class="k">const</span> <span class="n">glTF</span><span class="o">*</span> <span class="n">gltf</span><span class="p">,</span>
+    <span class="kt">bool</span> <span class="n">save_bin</span> <span class="o">=</span> <span class="nb">true</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">save_images</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">*</span> <span class="n">err</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -1869,13 +1865,18 @@ not be present.</p>
 <li>Parameters:<ul>
 <li>filename: scene filename</li>
 <li>gltf: data to save</li>
-<li>save_bin/save_shaders/save_img: save binary data</li>
+<li>save_bin/save_images: save binary data</li>
+<li>err: if set, store error message on error</li>
+</ul>
+</li>
+<li>Returns:<ul>
+<li>whether an error occurred</li>
 </ul>
 </li>
 </ul>
 <h3>Function save_binary_gltf()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">save_binary_gltf</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">,</span> <span class="k">const</span> <span class="n">glTF</span><span class="o">*</span> <span class="n">gltf</span><span class="p">,</span>
-    <span class="kt">bool</span> <span class="n">save_bin</span> <span class="o">=</span> <span class="nb">true</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">save_images</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">save_binary_gltf</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">,</span> <span class="k">const</span> <span class="n">glTF</span><span class="o">*</span> <span class="n">gltf</span><span class="p">,</span>
+    <span class="kt">bool</span> <span class="n">save_bin</span> <span class="o">=</span> <span class="nb">true</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">save_images</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">*</span> <span class="n">err</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -1884,13 +1885,18 @@ not be present.</p>
 <li>Parameters:<ul>
 <li>filename: scene filename</li>
 <li>gltf: data to save</li>
-<li>save_bin/save_shaders/save_img: save binary data</li>
+<li>save_bin/save_images: save binary data</li>
+<li>err: if set, store error message on error</li>
+</ul>
+</li>
+<li>Returns:<ul>
+<li>whether an error occurred</li>
 </ul>
 </li>
 </ul>
 <h3>Function load_buffers()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">load_buffers</span><span class="p">(</span>
-    <span class="n">glTF</span><span class="o">*</span> <span class="n">gltf</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">dirname</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">skip_missing</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">load_buffers</span><span class="p">(</span><span class="n">glTF</span><span class="o">*</span> <span class="n">gltf</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">dirname</span><span class="p">,</span>
+    <span class="kt">bool</span> <span class="n">skip_missing</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">*</span> <span class="n">err</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -1899,16 +1905,21 @@ not be present.</p>
 <li>Parameters:<ul>
 <li>dirname: directory used to resolve path references</li>
 <li>skip_missing: do not throw an exception if a file is missing</li>
+<li>err: if set, store error message on error</li>
 </ul>
 </li>
 <li>Out Parameters:<ul>
 <li>gltf: data to data</li>
 </ul>
 </li>
+<li>Returns:<ul>
+<li>whether an error occurred</li>
+</ul>
+</li>
 </ul>
 <h3>Function load_images()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">load_images</span><span class="p">(</span>
-    <span class="n">glTF</span><span class="o">*</span> <span class="n">asset</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">dirname</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">skip_missing</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">load_images</span><span class="p">(</span><span class="n">glTF</span><span class="o">*</span> <span class="n">asset</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">dirname</span><span class="p">,</span>
+    <span class="kt">bool</span> <span class="n">skip_missing</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">*</span> <span class="n">err</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -1917,15 +1928,21 @@ not be present.</p>
 <li>Parameters:<ul>
 <li>dirname: directory used to resolve path references</li>
 <li>skip_missing: do not throw an exception if a file is missing</li>
+<li>err: if set, store error message on error</li>
 </ul>
 </li>
 <li>Out Parameters:<ul>
 <li>gltf: data to data</li>
 </ul>
 </li>
+<li>Returns:<ul>
+<li>whether an error occurred</li>
+</ul>
+</li>
 </ul>
 <h3>Function save_buffers()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">save_buffers</span><span class="p">(</span><span class="k">const</span> <span class="n">glTF</span><span class="o">*</span> <span class="n">gltf</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">dirname</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">save_buffers</span><span class="p">(</span><span class="k">const</span> <span class="n">glTF</span><span class="o">*</span> <span class="n">gltf</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">dirname</span><span class="p">,</span>
+    <span class="kt">bool</span> <span class="n">skip_missing</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">*</span> <span class="n">err</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -1934,11 +1951,18 @@ not be present.</p>
 <li>Parameters:<ul>
 <li>dirname: directory used to resolve path references</li>
 <li>gltf: data to save</li>
+<li>skip_missing: do not throw an exception if a file is missing</li>
+<li>err: if set, store error message on error</li>
+</ul>
+</li>
+<li>Returns:<ul>
+<li>whether an error occurred</li>
 </ul>
 </li>
 </ul>
 <h3>Function save_images()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">save_images</span><span class="p">(</span><span class="k">const</span> <span class="n">glTF</span><span class="o">*</span> <span class="n">asset</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">dirname</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">save_images</span><span class="p">(</span><span class="k">const</span> <span class="n">glTF</span><span class="o">*</span> <span class="n">asset</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">dirname</span><span class="p">,</span>
+    <span class="kt">bool</span> <span class="n">skip_missing</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">*</span> <span class="n">err</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -1947,6 +1971,12 @@ not be present.</p>
 <li>Parameters:<ul>
 <li>dirname: directory used to resolve path references</li>
 <li>gltf: data to save</li>
+<li>skip_missing: do not throw an exception if a file is missing</li>
+<li>err: if set, store error message on error</li>
+</ul>
+</li>
+<li>Returns:<ul>
+<li>whether an error occurred</li>
 </ul>
 </li>
 </ul>

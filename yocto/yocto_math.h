@@ -24,9 +24,6 @@
 /// and untested as ours.
 ///
 /// This library has no dependencies.
-/// Some templated types and functions use specialization for easier access
-/// and faster compilation. Specialization can be disabled by defining
-/// YM_NO_SPECIALIZATION. Specialization is only supported fully on clang.
 ///
 /// This library includes code from the PCG random number generator,
 /// boost hash_combine, Pixar multijittered sampling, code from "Real-Time
@@ -37,6 +34,7 @@
 ///
 /// ## History
 ///
+/// - v 0.16: sampling
 /// - v 0.15: enable specialization always
 /// - v 0.14: move timer to Yocto/Utils
 /// - v 0.13: more shape functions
@@ -237,8 +235,6 @@ struct vec {
     T v[N];
 };
 
-#ifndef YM_NO_SPECIALIZATION
-
 ///
 /// Specialization of vectors for 1 component and float coordinates.
 ///
@@ -359,8 +355,6 @@ struct vec<T, 4> {
     T w;
 };
 
-#endif
-
 /// 1-dimensional float vector
 using vec1f = vec<float, 1>;
 /// 2-dimensional float vector
@@ -468,8 +462,6 @@ constexpr inline bool operator<(const vec<T, N>& a, const vec<T, N>& b) {
     return false;
 }
 
-#ifndef YM_NO_SPECIALIZATION
-
 /// vector operator ==
 template <>
 constexpr inline bool operator==(const vec2f& a, const vec2f& b) {
@@ -505,8 +497,6 @@ template <>
 constexpr inline bool operator!=(const vec4f& a, const vec4f& b) {
     return a.x != b.x || a.y != b.y || a.z != b.z || a.w != b.w;
 }
-
-#endif
 
 /// vector operator +
 template <typename T, int N>
@@ -617,8 +607,6 @@ constexpr inline vec<T, N> operator/(const T a, const vec<T, N>& b) {
     for (auto i = 0; i < N; i++) c[i] = a / b[i];
     return c;
 }
-
-#ifndef YM_NO_SPECIALIZATION
 
 /// vector operator +
 template <>
@@ -800,8 +788,6 @@ constexpr inline vec4f operator/(const float a, const vec4f& b) {
     return {a / b.x, a / b.y, a / b.z, a / b.w};
 }
 
-#endif
-
 /// vector operator +=
 template <typename T, int N>
 constexpr inline vec<T, N>& operator+=(vec<T, N>& a, const vec<T, N>& b) {
@@ -859,8 +845,6 @@ constexpr inline vec<T, 3> cross(const vec<T, 3>& a, const vec<T, 3>& b) {
         a[0] * b[1] - a[1] * b[0]};
 }
 
-#ifndef YM_NO_SPECIALIZATION
-
 /// vector dot product
 template <>
 constexpr inline float dot(const vec2f& a, const vec2f& b) {
@@ -891,8 +875,6 @@ constexpr inline vec3f cross(const vec3f& a, const vec3f& b) {
     return {
         a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x};
 }
-
-#endif
 
 /// vector length
 template <typename T, int N>
@@ -1112,8 +1094,6 @@ struct mat {
     V v[M];
 };
 
-#ifndef YM_NO_SPECIALIZATION
-
 ///
 /// Specialization for 2x2 float matrices.
 ///
@@ -1227,8 +1207,6 @@ struct mat<float, 4, 4> {
     V w;
 };
 
-#endif
-
 /// 1-dimensional float matrix
 using mat1f = mat<float, 1, 1>;
 /// 2-dimensional float matrix
@@ -1247,8 +1225,6 @@ constexpr inline mat<T, N, N> identity_mat() {
     return c;
 }
 
-#ifndef YM_NO_SPECIALIZATION
-
 /// Specialization for Initialize an identity matrix.
 template <>
 constexpr inline mat3f identity_mat() {
@@ -1260,8 +1236,6 @@ template <>
 constexpr inline mat4f identity_mat() {
     return {{1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
 }
-
-#endif
 
 /// 1-dimensional float identity matrix
 const auto identity_mat1f = identity_mat<float, 1>();
@@ -1370,8 +1344,6 @@ constexpr inline mat<T, N, M> operator*(
     return c;
 }
 
-#ifndef YM_NO_SPECIALIZATION
-
 /// matrix-vector right multiply
 template <>
 constexpr inline vec2f operator*(const mat2f& a, const vec2f& b) {
@@ -1425,8 +1397,6 @@ template <>
 constexpr inline mat4f operator*(const mat4f& a, const mat4f& b) {
     return {a * b.x, a * b.y, a * b.z, a * b.w};
 }
-
-#endif
 
 /// matrix sum assignment
 template <typename T, int N, int M>
@@ -1629,6 +1599,11 @@ struct frame {
     /// element access
     constexpr const V& operator[](int i) const { return v[i]; }
 
+    /// data access
+    constexpr V* data() { return v; }
+    /// data access
+    constexpr const V* data() const { return v; }
+
     /// access position
     constexpr V& pos() { return v[N]; }
     /// access position
@@ -1642,8 +1617,6 @@ struct frame {
     /// element data
     V v[N + 1];
 };
-
-#ifndef YM_NO_SPECIALIZATION
 
 ///
 /// Specialization for 3D float frames.
@@ -1673,6 +1646,11 @@ struct frame<float, 2> {
     constexpr V& operator[](int i) { return (&x)[i]; }
     /// element access
     constexpr const V& operator[](int i) const { return (&x)[i]; }
+
+    /// data access
+    constexpr V* data() { return &x; }
+    /// data access
+    constexpr const V* data() const { return &x; }
 
     /// access position
     constexpr V& pos() { return o; }
@@ -1722,6 +1700,11 @@ struct frame<float, 3> {
     /// element access
     constexpr const V& operator[](int i) const { return (&x)[i]; }
 
+    /// data access
+    constexpr V* data() { return &x; }
+    /// data access
+    constexpr const V* data() const { return &x; }
+
     /// access position
     constexpr V& pos() { return o; }
     /// access position
@@ -1741,8 +1724,6 @@ struct frame<float, 3> {
     /// element data
     V o;
 };
-
-#endif
 
 /// 1-dimensional float frame
 using frame1f = frame<float, 1>;
@@ -1783,8 +1764,6 @@ constexpr inline frame<T, 3> make_frame3_fromzx(
     return {x, y, z, o};
 }
 
-#ifndef YM_NO_SPECIALIZATION
-
 /// Initialize an identity frame.
 template <>
 constexpr inline frame2f identity_frame() {
@@ -1815,8 +1794,6 @@ constexpr inline frame3f make_frame3_fromzx(
     auto y = normalize(cross(z, x));
     return {x, y, z, o};
 }
-
-#endif
 
 /// 1-dimensional float identity frame
 const auto identity_frame1f = identity_frame<float, 1>();
@@ -1926,8 +1903,6 @@ constexpr inline frame<T, N> inverse(const frame<T, N>& a) {
     return {minv, -(minv * pos(a))};
 }
 
-#ifndef YM_NO_SPECIALIZATION
-
 /// frame composition (equivalent to affine matrix multiply)
 template <>
 constexpr inline frame3f operator*(const frame3f& a, const frame3f& b) {
@@ -1940,8 +1915,6 @@ constexpr inline frame3f inverse(const frame3f& a) {
     auto minv = transpose(a.rot());
     return {minv, -(minv * a.pos())};
 }
-
-#endif
 
 // -----------------------------------------------------------------------------
 // QUATERNIONS
@@ -1979,6 +1952,11 @@ struct quat<T, 4> {
     constexpr T& operator[](int i) { return (&x)[i]; }
     /// element access
     constexpr const T& operator[](int i) const { return (&x)[i]; }
+
+    /// data access
+    constexpr T* data() { return &x; }
+    /// data access
+    constexpr const T* data() const { return &x; }
 
     /// data
     T x;
@@ -2088,8 +2066,6 @@ struct bbox {
     /// element data
     V max;
 };
-
-#ifndef YM_NO_SPECIALIZATION
 
 ///
 /// Specialization for float 3D bounding boxes.
@@ -2209,8 +2185,6 @@ struct bbox<float, 4> {
     /// element data
     V max;
 };
-
-#endif
 
 /// 1-dimensional float bbox
 using bbox1f = bbox<float, 1>;
@@ -2345,8 +2319,6 @@ constexpr inline bool contains(const bbox<T, N>& a, const bbox<T, N>& b) {
     return true;
 }
 
-#ifndef YM_NO_SPECIALIZATION
-
 /// expands a bounding box with a point
 template <>
 constexpr inline bbox3f expand(const bbox3f& a, const vec3f& b) {
@@ -2379,8 +2351,6 @@ constexpr inline bool contains(const bbox3f& a, const bbox3f& b) {
     if (a.min.z > b.max.z || a.max.z < b.min.z) return false;
     return true;
 }
-
-#endif
 
 /// same as expand()
 template <typename T, int N>
@@ -2434,8 +2404,6 @@ struct ray {
         : o(o), d(d), tmin(tmin), tmax(tmax) {}
 };
 
-#ifndef YM_NO_SPECIALIZATION
-
 ///
 /// Sepcialization for 3D float rays.
 ///
@@ -2462,8 +2430,6 @@ struct ray<float, 3> {
         const vec<T, N>& o, const vec<T, N>& d, T tmin = 0, T tmax = flt_max)
         : o(o), d(d), tmin(tmin), tmax(tmax) {}
 };
-
-#endif
 
 /// 1-dimensional float ray
 using ray1f = ray<float, 1>;
@@ -2564,8 +2530,6 @@ constexpr inline vec<T, N> transform_direction_inverse(
     return b * rot(a);
 }
 
-#ifndef YM_NO_SPECIALIZATION
-
 /// transforms a point by a matrix
 template <>
 constexpr inline vec3f transform_point(const mat4f& a, const vec3f& b) {
@@ -2632,8 +2596,6 @@ constexpr inline vec3f transform_direction_inverse(
     const frame3f& a, const vec3f& b) {
     return b * a.rot();
 }
-
-#endif
 
 /// transforms a ray by a matrix
 template <typename T, int N>
@@ -2974,6 +2936,134 @@ constexpr inline mat<T, 4, 4> compose_mat4(const vec<T, 3>& translation,
 }
 
 // -----------------------------------------------------------------------------
+// RANDOM NUMBER GENERATION
+// -----------------------------------------------------------------------------
+
+///
+/// PCG random numbers. A family of random number generators that supports
+/// multiple sequences. In our code, we allocate one sequence for each sample.
+/// PCG32 from http://www.pcg-random.org/
+///
+struct rng_pcg32 {
+    uint64_t state, inc;
+};
+
+/// Next random number
+constexpr inline uint32_t next(rng_pcg32* rng) {
+    uint64_t oldstate = rng->state;
+    rng->state = oldstate * 6364136223846793005ull + (rng->inc | 1u);
+    uint32_t xorshifted = (uint32_t)(((oldstate >> 18u) ^ oldstate) >> 27u);
+    uint32_t rot = oldstate >> 59u;
+    return (xorshifted >> rot) | (xorshifted << ((-((int32_t)rot)) & 31));
+}
+
+/// Init a random number generator with a state state from the sequence seq.
+constexpr inline void init(rng_pcg32* rng, uint64_t state, uint64_t seq) {
+    rng->state = 0U;
+    rng->inc = (seq << 1u) | 1u;
+    next(rng);
+    rng->state += state;
+    next(rng);
+}
+
+/// Next random float in [0,1).
+inline float next1f(rng_pcg32* rng) { return (float)ldexp(next(rng), -32); }
+
+/// Next random float in [0,1)x[0,1).
+inline vec2f next2f(rng_pcg32* rng) { return {next1f(rng), next1f(rng)}; }
+
+// -----------------------------------------------------------------------------
+// HASHING
+// -----------------------------------------------------------------------------
+
+/// Computes the i-th term of a permutation of l values keyed by p.
+/// From Correlated Multi-Jittered Sampling by Kensler @ Pixar
+constexpr inline uint32_t hash_permute(uint32_t i, uint32_t n, uint32_t key) {
+    uint32_t w = n - 1;
+    w |= w >> 1;
+    w |= w >> 2;
+    w |= w >> 4;
+    w |= w >> 8;
+    w |= w >> 16;
+    do {
+        i ^= key;
+        i *= 0xe170893du;
+        i ^= key >> 16;
+        i ^= (i & w) >> 4;
+        i ^= key >> 8;
+        i *= 0x0929eb3f;
+        i ^= key >> 23;
+        i ^= (i & w) >> 1;
+        i *= 1 | key >> 27;
+        i *= 0x6935fa69;
+        i ^= (i & w) >> 11;
+        i *= 0x74dcb303;
+        i ^= (i & w) >> 2;
+        i *= 0x9e501cc3;
+        i ^= (i & w) >> 2;
+        i *= 0xc860a3df;
+        i &= w;
+        i ^= i >> 5;
+    } while (i >= n);
+    return (i + key) % n;
+}
+
+/// Computes a float value by hashing i with a key p.
+/// From Correlated Multi-Jittered Sampling by Kensler @ Pixar
+constexpr inline float hash_randfloat(uint32_t i, uint32_t key) {
+    i ^= key;
+    i ^= i >> 17;
+    i ^= i >> 10;
+    i *= 0xb36534e5;
+    i ^= i >> 12;
+    i ^= i >> 21;
+    i *= 0x93fc4795;
+    i ^= 0xdf6e307f;
+    i ^= i >> 17;
+    i *= 1 | key >> 18;
+    return i * (1.0f / 4294967808.0f);
+}
+
+/// 64 bit integer hash. Public domain code.
+constexpr inline uint64_t hash_uint64(uint64_t a) {
+    a = (~a) + (a << 21);  // a = (a << 21) - a - 1;
+    a ^= (a >> 24);
+    a += (a << 3) + (a << 8);  // a * 265
+    a ^= (a >> 14);
+    a += (a << 2) + (a << 4);  // a * 21
+    a ^= (a >> 28);
+    a += (a << 31);
+    return a;
+}
+
+/// 64-to-32 bit integer hash. Public domain code.
+constexpr inline uint32_t hash_uint64_32(uint64_t a) {
+    a = (~a) + (a << 18);  // a = (a << 18) - a - 1;
+    a ^= (a >> 31);
+    a *= 21;  // a = (a + (a << 2)) + (a << 4);
+    a ^= (a >> 11);
+    a += (a << 6);
+    a ^= (a >> 22);
+    return (uint32_t)a;
+}
+
+/// Combines two 64 bit hashes as in boost::hash_combine
+constexpr inline int hash_combine(int a, int b) {
+    return a ^ (b + 0x9e3779b9 + (a << 6) + (a >> 2));
+}
+
+/// Hash a vector with hash_combine() and std::hash
+template <typename T, int N>
+constexpr inline int hash_vec(const vec<T, N>& v) {
+    std::hash<T> Th;
+    int h = 0;
+    for (auto i = 0; i < N; i++) {
+        h ^= (Th(v[i]) + 0x9e3779b9 + (h << 6) + (h >> 2));
+    }
+    return h;
+}
+
+// -----------------------------------------------------------------------------
 // GEOMETRY UTILITIES
 // -----------------------------------------------------------------------------
 
@@ -3081,8 +3171,8 @@ inline void compute_tangents(const std::vector<vec2i>& lines,
     const std::vector<vec3f>& pos, std::vector<vec3f>& tang,
     bool weighted = true) {
     tang.resize(pos.size());
-    compute_tangents(lines.size(), lines.data(), pos.size(), pos.data(),
-        tang.data(), weighted);
+    compute_tangents((int)lines.size(), lines.data(), (int)pos.size(),
+        pos.data(), tang.data(), weighted);
 }
 
 ///
@@ -3135,8 +3225,8 @@ inline void compute_normals(const std::vector<vec3i>& triangles,
     const std::vector<vec3f>& pos, std::vector<vec3f>& norm,
     bool weighted = true) {
     norm.resize(pos.size());
-    compute_normals(triangles.size(), triangles.data(), pos.size(), pos.data(),
-        norm.data(), weighted);
+    compute_normals((int)triangles.size(), triangles.data(), (int)pos.size(),
+        pos.data(), norm.data(), weighted);
 }
 
 ///
@@ -3203,8 +3293,9 @@ inline void compute_tangent_frame(const std::vector<vec3i>& triangles,
     const std::vector<vec2f>& texcoord, std::vector<vec4f>& tangsp,
     bool weighted = true) {
     tangsp.resize(tangsp.size());
-    compute_tangent_frame(triangles.size(), triangles.data(), pos.size(),
-        pos.data(), norm.data(), texcoord.data(), tangsp.data(), weighted);
+    compute_tangent_frame((int)triangles.size(), triangles.data(),
+        (int)pos.size(), pos.data(), norm.data(), texcoord.data(),
+        tangsp.data(), weighted);
 }
 
 /// Apply skinning
@@ -3254,7 +3345,7 @@ inline void compute_skinning(const std::vector<vec3f>& pos,
     std::vector<vec3f>& skinned_pos, std::vector<vec3f>& skinned_norm) {
     skinned_pos.resize(pos.size());
     skinned_norm.resize(norm.size());
-    compute_skinning(pos.size(), pos.data(), norm.data(), weights.data(),
+    compute_skinning((int)pos.size(), pos.data(), norm.data(), weights.data(),
         joints.data(), xforms.data(), skinned_pos.data(), skinned_norm.data());
 }
 
@@ -3265,7 +3356,7 @@ inline void compute_skinning(const std::vector<vec3f>& pos,
     std::vector<vec3f>& skinned_pos, std::vector<vec3f>& skinned_norm) {
     skinned_pos.resize(pos.size());
     skinned_norm.resize(norm.size());
-    compute_skinning(pos.size(), pos.data(), norm.data(), weights.data(),
+    compute_skinning((int)pos.size(), pos.data(), norm.data(), weights.data(),
         joints.data(), xforms.data(), skinned_pos.data(), skinned_norm.data());
 }
 
@@ -3290,8 +3381,9 @@ inline void compute_matrix_skinning(const std::vector<vec3f>& pos,
     std::vector<vec3f>& skinned_pos, std::vector<vec3f>& skinned_norm) {
     skinned_pos.resize(pos.size());
     skinned_norm.resize(norm.size());
-    compute_matrix_skinning(pos.size(), pos.data(), norm.data(), weights.data(),
-        joints.data(), xforms.data(), skinned_pos.data(), skinned_norm.data());
+    compute_matrix_skinning((int)pos.size(), pos.data(), norm.data(),
+        weights.data(), joints.data(), xforms.data(), skinned_pos.data(),
+        skinned_norm.data());
 }
 
 ///
@@ -3349,10 +3441,10 @@ inline void make_triangles(int usteps, int vsteps,
 /// Parameters:
 /// - usteps: subdivisions in u
 /// - num: number of lines
-/// - pos_fn: pos callbacks (vec2f -> vec3f)
-/// - tang_fn: tangent callbacks (vec2f -> vec3f)
-/// - texcoord_fn: texcoord callbacks (vec2f -> vec2f)
-/// - radius_fn: radius callbacks (vec2f -> float)
+/// - pos_fn: pos callbacks ((int, float) -> vec3f)
+/// - tang_fn: tangent callbacks ((int, float) -> vec3f)
+/// - texcoord_fn: texcoord callbacks ((int, float) -> vec2f)
+/// - radius_fn: radius callbacks ((int, float) -> float)
 ///
 /// Out Parameters:
 /// - lines: element array
@@ -3360,7 +3452,7 @@ inline void make_triangles(int usteps, int vsteps,
 ///
 template <typename PosFunc, typename TangFunc, typename TexcoordFunc,
     typename RadiusFunc>
-inline void make_lines(int usteps, int num, std::vector<vec2i>& lines,
+inline void make_lines(int num, int usteps, std::vector<vec2i>& lines,
     std::vector<vec3f>& pos, std::vector<vec3f>& tang,
     std::vector<vec2f>& texcoord, std::vector<float>& radius,
     const PosFunc& pos_fn, const TangFunc& tang_fn,
@@ -3372,11 +3464,12 @@ inline void make_lines(int usteps, int num, std::vector<vec2i>& lines,
     radius.resize((usteps + 1) * num);
     for (auto j = 0; j < num; j++) {
         for (auto i = 0; i <= usteps; i++) {
-            auto uv = vec2f{i / (float)usteps, j / (float)(num - 1)};
-            pos[vid(i, j)] = pos_fn(uv);
-            tang[vid(i, j)] = tang_fn(uv);
-            texcoord[vid(i, j)] = texcoord_fn(uv);
-            radius[vid(i, j)] = radius_fn(uv);
+            auto u = i / (float)usteps;
+            ;
+            pos[vid(i, j)] = pos_fn(j, u);
+            tang[vid(i, j)] = tang_fn(j, u);
+            texcoord[vid(i, j)] = texcoord_fn(j, u);
+            radius[vid(i, j)] = radius_fn(j, u);
         }
     }
 
@@ -3393,10 +3486,10 @@ inline void make_lines(int usteps, int num, std::vector<vec2i>& lines,
 ///
 /// Parameters:
 /// - num: number of points
-/// - pos_fn: pos callbacks (float -> vec3f)
-/// - norm_fn: norm callbacks (float -> vec3f)
-/// - texcoord_fn: texcoord callbacks (float -> vec2f)
-/// - radius_fn: radius callbacks (float -> float)
+/// - pos_fn: pos callbacks (int -> vec3f)
+/// - norm_fn: norm callbacks (int -> vec3f)
+/// - texcoord_fn: texcoord callbacks (int -> vec2f)
+/// - radius_fn: radius callbacks (int -> float)
 ///
 /// Out Parameters:
 /// - points: element array
@@ -3414,11 +3507,10 @@ inline void make_points(int num, std::vector<int>& points,
     texcoord.resize(num);
     radius.resize(num);
     for (auto i = 0; i < num; i++) {
-        auto u = i / (float)i;
-        pos[i] = pos_fn(u);
-        norm[i] = norm_fn(u);
-        texcoord[i] = texcoord_fn(u);
-        radius[i] = radius_fn(u);
+        pos[i] = pos_fn(i);
+        norm[i] = norm_fn(i);
+        texcoord[i] = texcoord_fn(i);
+        radius[i] = radius_fn(i);
     }
 
     points.resize(num);
@@ -3439,6 +3531,137 @@ inline void merge_triangles(std::vector<ym::vec3i>& triangles,
     for (auto p : mpos) pos.push_back(p);
     for (auto n : mnorm) norm.push_back(n);
     for (auto t : mtexcoord) texcoord.push_back(t);
+}
+
+// -----------------------------------------------------------------------------
+// SHAPE SAMPLING
+// -----------------------------------------------------------------------------
+
+///
+/// Compute a distribution for sampling lines uniformly
+///
+inline void sample_lines_cdf(
+    int nlines, const vec2i* lines, const vec3f* pos, float* cdf) {
+    for (auto i = 0; i < nlines; i++)
+        cdf[i] = length(pos[lines[i].x] - pos[lines[i].y]);
+    for (auto i = 1; i < nlines; i++) cdf[i] += cdf[i - 1];
+}
+
+///
+/// Compute a distribution for sampling lines uniformly
+///
+inline std::vector<float> sample_lines_cdf(
+    const std::vector<vec2i>& lines, const std::vector<vec3f>& pos) {
+    auto cdf = std::vector<float>(lines.size());
+    sample_lines_cdf((int)lines.size(), lines.data(), pos.data(), cdf.data());
+    return cdf;
+}
+
+///
+/// Pick a point on lines
+///
+inline std::pair<int, vec2f> sample_lines(
+    int nlines, const float* cdf, float re, float ruv) {
+    re = clamp(re * cdf[nlines - 1], 0.0f, cdf[nlines - 1] - 0.00001f);
+    auto eid = (int)(std::upper_bound(cdf, cdf + nlines, re) - cdf);
+    return {eid, {1 - ruv, ruv}};
+}
+
+///
+/// Pick a point on lines
+///
+inline std::pair<int, vec2f> sample_lines(
+    const std::vector<float>& cdf, float re, float ruv) {
+    return sample_lines((int)cdf.size(), cdf.data(), re, ruv);
+}
+
+///
+/// Compute a distribution for sampling triangle meshes uniformly
+///
+inline void sample_triangles_cdf(
+    int ntriangles, const vec3i* triangles, const vec3f* pos, float* cdf) {
+    for (auto i = 0; i < ntriangles; i++)
+        cdf[i] = triangle_area(
+            pos[triangles[i].x], pos[triangles[i].y], pos[triangles[i].z]);
+    for (auto i = 1; i < ntriangles; i++) cdf[i] += cdf[i - 1];
+}
+
+///
+/// Pick a point on lines
+///
+inline std::vector<float> sample_triangles_cdf(
+    const std::vector<vec3i>& triangles, const std::vector<vec3f>& pos) {
+    auto cdf = std::vector<float>(triangles.size());
+    sample_triangles_cdf(
+        (int)triangles.size(), triangles.data(), pos.data(), cdf.data());
+    return cdf;
+}
+
+///
+/// Pick a point on a triangle mesh
+///
+inline std::pair<int, vec3f> sample_triangles(
+    int ntriangles, const float* cdf, float re, const vec2f& ruv) {
+    re = clamp(re * cdf[ntriangles - 1], 0.0f, cdf[ntriangles - 1] - 0.00001f);
+    auto eid = (int)(std::upper_bound(cdf, cdf + ntriangles, re) - cdf);
+    return {
+        eid, {sqrt(ruv.x) * (1 - ruv.y), 1 - sqrt(ruv.x), ruv.y * sqrt(ruv.x)}};
+}
+
+///
+/// Pick a point on a triangle mesh
+///
+inline std::pair<int, vec3f> sample_triangles(
+    const std::vector<float>& cdf, float re, const vec2f& ruv) {
+    return sample_triangles((int)cdf.size(), cdf.data(), re, ruv);
+}
+
+///
+/// Samples a set of points over a triangle mesh uniformly. The rng function
+/// takes the point index and returns vec3f numbers uniform directibuted in
+/// [0,1]^3. ù norm and texcoord are optional.
+///
+inline void sample_triangles_points(int ntriangles, const vec3i* triangles,
+    const vec3f* pos, const vec3f* norm, const vec2f* texcoord, int npoints,
+    vec3f* sampled_pos, vec3f* sampled_norm, vec2f* sampled_texcoord,
+    uint64_t seed) {
+    auto cdf = std::vector<float>(ntriangles);
+    sample_triangles_cdf(ntriangles, triangles, pos, cdf.data());
+    rng_pcg32 rng;
+    init(&rng, seed, 0);
+    for (auto i = 0; i < npoints; i++) {
+        auto eid = 0;
+        auto euv = zero3f;
+        std::tie(eid, euv) = sample_triangles(
+            ntriangles, cdf.data(), next1f(&rng), {next1f(&rng), next1f(&rng)});
+        auto t = triangles[eid];
+        if (sampled_pos)
+            sampled_pos[i] =
+                pos[t.x] * euv.x + pos[t.y] * euv.y + pos[t.z] * euv.z;
+        if (sampled_norm)
+            sampled_norm[i] = normalize(
+                norm[t.x] * euv.x + norm[t.y] * euv.y + norm[t.z] * euv.z);
+        if (sampled_texcoord)
+            sampled_texcoord[i] = texcoord[t.x] * euv.x +
+                                  texcoord[t.y] * euv.y + texcoord[t.z] * euv.z;
+    }
+}
+
+///
+/// Samples a set of points over a triangle mesh uniformly.
+/// Wrapper to the above function.
+///
+inline void sample_triangles_points(const std::vector<vec3i>& triangles,
+    const std::vector<vec3f>& pos, const std::vector<vec3f>& norm,
+    const std::vector<vec2f>& texcoord, int npoints,
+    std::vector<vec3f>& sampled_pos, std::vector<vec3f>& sampled_norm,
+    std::vector<vec2f>& sampled_texcoord, uint64_t seed) {
+    sampled_pos.resize(npoints);
+    if (!norm.empty()) sampled_norm.resize(npoints);
+    if (!texcoord.empty()) sampled_texcoord.resize(npoints);
+    sample_triangles_points((int)triangles.size(), triangles.data(), pos.data(),
+        norm.data(), texcoord.data(), npoints, sampled_pos.data(),
+        sampled_norm.data(), sampled_texcoord.data(), seed);
 }
 
 // -----------------------------------------------------------------------------
@@ -4360,134 +4583,6 @@ constexpr inline void turntable(frame<T, 3>& frame, float& focus,
 }
 
 // -----------------------------------------------------------------------------
-// RANDOM NUMBER GENERATION
-// -----------------------------------------------------------------------------
-
-///
-/// PCG random numbers. A family of random number generators that supports
-/// multiple sequences. In our code, we allocate one sequence for each sample.
-/// PCG32 from http://www.pcg-random.org/
-///
-struct rng_pcg32 {
-    uint64_t state, inc;
-};
-
-/// Next random number
-constexpr inline uint32_t next(rng_pcg32* rng) {
-    uint64_t oldstate = rng->state;
-    rng->state = oldstate * 6364136223846793005ull + (rng->inc | 1u);
-    uint32_t xorshifted = (uint32_t)(((oldstate >> 18u) ^ oldstate) >> 27u);
-    uint32_t rot = oldstate >> 59u;
-    return (xorshifted >> rot) | (xorshifted << ((-((int32_t)rot)) & 31));
-}
-
-/// Init a random number generator with a state state from the sequence seq.
-constexpr inline void init(rng_pcg32* rng, uint64_t state, uint64_t seq) {
-    rng->state = 0U;
-    rng->inc = (seq << 1u) | 1u;
-    next(rng);
-    rng->state += state;
-    next(rng);
-}
-
-/// Next random float in [0,1).
-inline float next1f(rng_pcg32* rng) { return (float)ldexp(next(rng), -32); }
-
-/// Next random float in [0,1)x[0,1).
-inline vec2f next2f(rng_pcg32* rng) { return {next1f(rng), next1f(rng)}; }
-
-// -----------------------------------------------------------------------------
-// HASHING
-// -----------------------------------------------------------------------------
-
-/// Computes the i-th term of a permutation of l values keyed by p.
-/// From Correlated Multi-Jittered Sampling by Kensler @ Pixar
-constexpr inline uint32_t hash_permute(uint32_t i, uint32_t n, uint32_t key) {
-    uint32_t w = n - 1;
-    w |= w >> 1;
-    w |= w >> 2;
-    w |= w >> 4;
-    w |= w >> 8;
-    w |= w >> 16;
-    do {
-        i ^= key;
-        i *= 0xe170893du;
-        i ^= key >> 16;
-        i ^= (i & w) >> 4;
-        i ^= key >> 8;
-        i *= 0x0929eb3f;
-        i ^= key >> 23;
-        i ^= (i & w) >> 1;
-        i *= 1 | key >> 27;
-        i *= 0x6935fa69;
-        i ^= (i & w) >> 11;
-        i *= 0x74dcb303;
-        i ^= (i & w) >> 2;
-        i *= 0x9e501cc3;
-        i ^= (i & w) >> 2;
-        i *= 0xc860a3df;
-        i &= w;
-        i ^= i >> 5;
-    } while (i >= n);
-    return (i + key) % n;
-}
-
-/// Computes a float value by hashing i with a key p.
-/// From Correlated Multi-Jittered Sampling by Kensler @ Pixar
-constexpr inline float hash_randfloat(uint32_t i, uint32_t key) {
-    i ^= key;
-    i ^= i >> 17;
-    i ^= i >> 10;
-    i *= 0xb36534e5;
-    i ^= i >> 12;
-    i ^= i >> 21;
-    i *= 0x93fc4795;
-    i ^= 0xdf6e307f;
-    i ^= i >> 17;
-    i *= 1 | key >> 18;
-    return i * (1.0f / 4294967808.0f);
-}
-
-/// 64 bit integer hash. Public domain code.
-constexpr inline uint64_t hash_uint64(uint64_t a) {
-    a = (~a) + (a << 21);  // a = (a << 21) - a - 1;
-    a ^= (a >> 24);
-    a += (a << 3) + (a << 8);  // a * 265
-    a ^= (a >> 14);
-    a += (a << 2) + (a << 4);  // a * 21
-    a ^= (a >> 28);
-    a += (a << 31);
-    return a;
-}
-
-/// 64-to-32 bit integer hash. Public domain code.
-constexpr inline uint32_t hash_uint64_32(uint64_t a) {
-    a = (~a) + (a << 18);  // a = (a << 18) - a - 1;
-    a ^= (a >> 31);
-    a *= 21;  // a = (a + (a << 2)) + (a << 4);
-    a ^= (a >> 11);
-    a += (a << 6);
-    a ^= (a >> 22);
-    return (uint32_t)a;
-}
-
-/// Combines two 64 bit hashes as in boost::hash_combine
-constexpr inline int hash_combine(int a, int b) {
-    return a ^ (b + 0x9e3779b9 + (a << 6) + (a >> 2));
-}
-
-/// Hash a vector with hash_combine() and std::hash
-template <typename T, int N>
-constexpr inline int hash_vec(const vec<T, N>& v) {
-    std::hash<T> Th;
-    int h = 0;
-    for (auto i = 0; i < N; i++) {
-        h ^= (Th(v[i]) + 0x9e3779b9 + (h << 6) + (h >> 2));
-    }
-    return h;
-}
-
-// -----------------------------------------------------------------------------
 // IMAGE CONTAINERS
 // -----------------------------------------------------------------------------
 
@@ -4500,7 +4595,10 @@ struct image {
     constexpr image() : _w{0}, _h{0}, _d{} {}
     /// image constructor
     constexpr image(int w, int h, const T& v = {})
-        : _w{w}, _h{h}, _d{w * h, v} {}
+        : _w{w}, _h{h}, _d(size_t(w * h), v) {}
+    /// image constructor
+    constexpr image(int w, int h, const T* v)
+        : _w{w}, _h{h}, _d(v, v + w * h) {}
 
     /// width
     int width() const { return _w; }
@@ -4522,6 +4620,9 @@ struct image {
         _d.assign(_w * _h, v);
     }
 
+    /// set values
+    void set(const T& v) { _d.assign(_w * _h, v); }
+
     /// element access
     T& operator[](const vec2i& ij) { return _d[ij.y * _w + ij.x]; }
     /// element access
@@ -4530,6 +4631,10 @@ struct image {
     T& at(const vec2i& ij) { return _d.at(ij.y * _w + ij.x); }
     /// element access
     const T& at(const vec2i& ij) const { return _d.at(ij.y * _w + ij.x); }
+    /// element access
+    T& at(int i, int j) { return _d.at(j * _w + i); }
+    /// element access
+    const T& at(int i, int j) const { return _d.at(j * _w + i); }
 
     /// data access
     T* data() { return _d.data(); }
@@ -4540,6 +4645,21 @@ struct image {
     int _w, _h;
     std::vector<T> _d;
 };
+
+/// 1-dimensional float image
+using image1f = image<vec<float, 1>>;
+/// 2-dimensional float image
+using image2f = image<vec<float, 2>>;
+/// 3-dimensional float image
+using image3f = image<vec<float, 3>>;
+/// 4-dimensional float image
+using image4f = image<vec<float, 4>>;
+
+/// 4-dimensional byte image
+using image4b = image<vec<byte, 4>>;
+
+/// float image
+using imagef = image<float>;
 
 // -----------------------------------------------------------------------------
 // IMAGE OPERATIONS
@@ -4650,6 +4770,56 @@ inline void tonemap_image(int width, int height, int ncomp, const float* hdr,
             }
             *(vec3b*)l_ptr = float_to_byte(h);
             if (ncomp == 4) l_ptr[3] = float_to_byte(h_ptr[3]);
+        }
+    }
+}
+
+///
+/// Image over operator
+///
+inline void image_over(
+    vec4f* img, int width, int height, int nlayers, vec4f** layers) {
+    for (auto i = 0; i < width * height; i++) {
+        img[i] = {0, 0, 0, 0};
+        auto weight = 1.0f;
+        for (auto l = 0; l < nlayers; l++) {
+            img[i].x += layers[l][i].x * layers[l][i].w * weight;
+            img[i].y += layers[l][i].y * layers[l][i].w * weight;
+            img[i].z += layers[l][i].z * layers[l][i].w * weight;
+            img[i].w += layers[l][i].w * weight;
+            weight *= (1 - layers[l][i].w);
+        }
+        if (img[i].w) {
+            img[i].x /= img[i].w;
+            img[i].y /= img[i].w;
+            img[i].z /= img[i].w;
+        }
+    }
+}
+
+///
+/// Image over operator
+///
+inline void image_over(
+    vec4b* img, int width, int height, int nlayers, vec4b** layers) {
+    for (auto i = 0; i < width * height; i++) {
+        auto comp = zero4f;
+        auto weight = 1.0f;
+        for (auto l = 0; l < nlayers && weight > 0; l++) {
+            auto w = byte_to_float(layers[l][i].w);
+            comp.x += byte_to_float(layers[l][i].x) * w * weight;
+            comp.y += byte_to_float(layers[l][i].y) * w * weight;
+            comp.z += byte_to_float(layers[l][i].z) * w * weight;
+            comp.w += w * weight;
+            weight *= (1 - w);
+        }
+        if (comp.w) {
+            img[i].x = float_to_byte(comp.x / comp.w);
+            img[i].y = float_to_byte(comp.y / comp.w);
+            img[i].z = float_to_byte(comp.z / comp.w);
+            img[i].w = float_to_byte(comp.w);
+        } else {
+            img[i] = {0, 0, 0, 0};
         }
     }
 }

@@ -58,10 +58,12 @@ illustreates the library usage.
 3. Python-line string manipulation in namespace `string`
 4. Python-like operators for standard containers in namespace `operators`
 5. simple timer in namespace `timer`
+6. hashing functions in the `hashing` namespace (SHA1 and xxHash)
 
 
 ## History
 
+- v 0.19: some containers ops
 - v 0.18: timer
 - v 0.17: renamed to yocto utils
 - v 0.16: split into namespaces
@@ -342,7 +344,7 @@ Loads the contents of a text file into a std::string.
 ### Function save_binfile()
 
 ~~~ .cpp
-void save_binfile(
+bool save_binfile(
     const std::string& filename, const std::vector<unsigned char>& data);
 ~~~
 
@@ -351,7 +353,7 @@ Saves binary data to a file.
 ### Function save_txtfile()
 
 ~~~ .cpp
-void save_txtfile(const std::string& filename, const std::string& str);
+bool save_txtfile(const std::string& filename, const std::string& str);
 ~~~
 
 Saves a string to a text file.
@@ -557,6 +559,37 @@ std::string format(const char* fmt, ...);
 ~~~
 
 C-like string formatting. See format_str(fmt,args);
+
+## Namespace containers
+
+Python-like STL functions
+
+### Function contains()
+
+~~~ .cpp
+template <typename T>
+inline bool contains(const std::vector<T>& v, const T& vv);
+~~~
+
+Checks if a containers contains a value
+
+### Function contains()
+
+~~~ .cpp
+template <typename K, typename V>
+inline bool contains(const std::map<K, V>& v, const K& vv);
+~~~
+
+Checks if a containers contains a value
+
+### Function contains()
+
+~~~ .cpp
+template <typename K, typename V>
+inline bool contains(const std::unordered_map<K, V>& v, const K& vv);
+~~~
+
+Checks if a containers contains a value
 
 ## Namespace operators
 

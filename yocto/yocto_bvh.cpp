@@ -327,7 +327,7 @@ struct bound_prim_comp {
 // used and nodes added sequentially in the preallocated nodes array and
 // the number of nodes nnodes is updated.
 //
-static void make_node(bvh_node* node, std::vector<bvh_node>& nodes,
+void make_node(bvh_node* node, std::vector<bvh_node>& nodes,
     bound_prim* sorted_prims, int start, int end, bool equalsize) {
     // compute node bounds
     node->bbox = ym::invalid_bbox3f;
@@ -493,7 +493,7 @@ void build_scene_bvh(scene* scn, bool equalsize, bool do_shapes) {
 // Recursively recomputes the node bounds for a shape bvh
 //
 template <typename ElemBbox>
-static void refit_bvh(bvh_tree* bvh, int nodeid, const ElemBbox& elem_bbox) {
+void refit_bvh(bvh_tree* bvh, int nodeid, const ElemBbox& elem_bbox) {
     // refit
     auto node = &bvh->nodes[nodeid];
     node->bbox = ym::invalid_bbox3f;
@@ -608,8 +608,8 @@ void get_ray_log(int& nrays, int& nbbox_inters, int& npoint_inters,
 // rejected in the tmax tests
 //
 template <typename Isec>
-static intersection_point intersect_bvh(const bvh_tree* bvh,
-    const ym::ray3f& ray_, bool early_exit, const Isec& intersect_elem) {
+intersection_point intersect_bvh(const bvh_tree* bvh, const ym::ray3f& ray_,
+    bool early_exit, const Isec& intersect_elem) {
     // node stack
     int node_stack[64];
     auto node_cur = 0;
@@ -791,7 +791,7 @@ intersection_point intersect_scene(
 // rejected in the tmax tests
 //
 template <typename OverlapElem>
-static intersection_point overlap_bvh(const bvh_tree* bvh, const ym::vec3f& pos,
+intersection_point overlap_bvh(const bvh_tree* bvh, const ym::vec3f& pos,
     float max_dist, bool early_exit, const OverlapElem& overlap_elem) {
     // node stack
     int node_stack[64];
@@ -967,7 +967,7 @@ intersection_point overlap_scene(
 //
 // TODO: avoid duplicate elements
 //
-static void overlap_elem(const shape* shp1, const shape* shp2, int idx1,
+void overlap_elem(const shape* shp1, const shape* shp2, int idx1,
     int idx2, bool exclude_self, float radius, bool first_only,
     std::vector<std::pair<point, ym::vec2i>>* overlaps,
     std::unordered_map<int, int>* closest) {
@@ -1067,7 +1067,7 @@ static void overlap_elem(const shape* shp1, const shape* shp2, int idx1,
 // the code; note in fact that all subsequent farthest iterations will be
 // rejected in the tmax tests
 //
-static void overlap_verts(const scene* scn1, const scene* scn2,
+void overlap_verts(const scene* scn1, const scene* scn2,
     int sid1, int sid2, bool exclude_self, float radius, bool first_only,
     std::vector<std::pair<point, ym::vec2i>>* overlaps,
     std::unordered_map<int, int>* closest) {
@@ -1199,7 +1199,7 @@ static void overlap_verts(const scene* scn1, const scene* scn2,
 // Finds the overlap between shape bounds.
 // Similat interface as the public function.
 //
-static void overlap_instance_bounds_(const scene* scn1, const scene* scn2,
+void overlap_instance_bounds_(const scene* scn1, const scene* scn2,
     bool conservative, bool skip_duplicates, bool skip_self,
     std::vector<ym::vec2i>* overlaps) {
     // get bvhs

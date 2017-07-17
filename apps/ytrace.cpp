@@ -42,7 +42,7 @@ void save_image(const std::string& filename, int width, int height,
     float gamma) {
     auto ext = yu::path::get_extension(filename);
     if (ext == ".hdr") {
-        yimg::save_image(filename, width, height, 4, (float*)hdr);
+        yimg::save_imagef(filename, width, height, 4, (float*)hdr);
     } else if (ext == ".png") {
         auto ldr = std::vector<ym::vec4b>(width * height, {0, 0, 0, 0});
         ym::tonemap_image(width, height, 4, (float*)hdr,
@@ -259,12 +259,10 @@ ytrace::scene* make_trace_scene(const yobj::scene* scene, const ycamera* cam) {
 
     auto texture_map = std::map<yobj::texture*, int>{{nullptr, -1}};
     for (auto txt : scene->textures) {
-        if (!txt->dataf.empty()) {
-            texture_map[txt] = ytrace::add_texture(trace_scene, txt->width,
-                txt->height, txt->ncomp, txt->dataf.data());
-        } else if (!txt->datab.empty()) {
-            texture_map[txt] = ytrace::add_texture(trace_scene, txt->width,
-                txt->height, txt->ncomp, txt->datab.data());
+        if (txt->ldr) {
+            texture_map[txt] = ytrace::add_texture(trace_scene, txt->ldr);
+        } else if (txt->hdr) {
+            texture_map[txt] = ytrace::add_texture(trace_scene, txt->hdr);
         } else {
             assert(false);
         }
@@ -352,12 +350,10 @@ ytrace::scene* make_trace_scene(
 
     auto texture_map = std::map<ygltf::texture*, int>{{nullptr, -1}};
     for (auto txt : scenes->textures) {
-        if (!txt->dataf.empty()) {
-            texture_map[txt] = ytrace::add_texture(trace_scene, txt->width,
-                txt->height, txt->ncomp, txt->dataf.data());
-        } else if (!txt->datab.empty()) {
-            texture_map[txt] = ytrace::add_texture(trace_scene, txt->width,
-                txt->height, txt->ncomp, txt->datab.data());
+        if (txt->ldr) {
+            texture_map[txt] = ytrace::add_texture(trace_scene, txt->ldr);
+        } else if (txt->hdr) {
+            texture_map[txt] = ytrace::add_texture(trace_scene, txt->hdr);
         } else {
             assert(false);
         }
