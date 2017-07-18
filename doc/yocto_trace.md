@@ -154,7 +154,8 @@ Sets a camera in the scene.
 ### Function add_texture()
 
 ~~~ .cpp
-int add_texture(scene* scn, int width, int height, int ncomp, const float* hdr);
+int add_texture(
+    scene* scn, int width, int height, int ncomp, const ym::vec4f* hdr);
 ~~~
 
 Adds a texture in the scene.
@@ -164,16 +165,15 @@ Adds a texture in the scene.
     - tid: texture id
     - width: width
     - height: height
-    - ncomp: number of components (1-4)
     - hdr: hdr pixels
-    - ldr: ldr pixels (sRGB)
 - Returns:
     - texture id
 
 ### Function add_texture()
 
 ~~~ .cpp
-int add_texture(scene* scn, int width, int height, int ncomp, const byte* ldr);
+int add_texture(
+    scene* scn, int width, int height, int ncomp, const ym::vec4b* ldr);
 ~~~
 
 Sets a texture in the scene.
@@ -183,8 +183,6 @@ Sets a texture in the scene.
     - tid: texture id
     - width: width
     - height: height
-    - ncomp: number of components (1-4)
-    - hdr: hdr pixels
     - ldr: ldr pixels (sRGB)
 - Returns:
     - texture id

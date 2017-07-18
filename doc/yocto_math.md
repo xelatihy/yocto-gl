@@ -33,6 +33,7 @@ Collision Detection" by Christer Ericson and public domain code from
 
 ## History
 
+- v 0.22: removed image lookup with arbitrary channels
 - v 0.21: added more functions
 - v 0.20: remove unused bbox overlap tests
 - v 0.19: remove indexing from specializations
@@ -4630,26 +4631,6 @@ using imagef = image<float>;
 ~~~
 
 float image
-
-### Function image_lookup()
-
-~~~ .cpp
-template <typename T>
-constexpr inline vec<T, 4> image_lookup(
-    int width, int height, int ncomp, const T* img, int x, int y, T alpha = 0);
-~~~
-
-Lookup an image value from a generic image
-
-### Function image_set()
-
-~~~ .cpp
-template <typename T>
-constexpr inline void image_set(int width, int height, int ncomp, T* img, int x,
-    int y, const vec<T, 4>& vv);
-~~~
-
-Set an image value for a generic image
 
 ### Function srgb_to_linear()
 

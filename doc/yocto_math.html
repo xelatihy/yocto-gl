@@ -39,6 +39,7 @@ Collision Detection" by Christer Ericson and public domain code from
 - https://gist.github.com/badboy/6267743</p>
 <h2>History</h2>
 <ul>
+<li>v 0.22: removed image lookup with arbitrary channels</li>
 <li>v 0.21: added more functions</li>
 <li>v 0.20: remove unused bbox overlap tests</li>
 <li>v 0.19: remove indexing from specializations</li>
@@ -3790,22 +3791,6 @@ camera.</p>
 
 
 <p>float image</p>
-<h3>Function image_lookup()</h3>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-<span class="k">constexpr</span> <span class="kr">inline</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;</span> <span class="n">image_lookup</span><span class="p">(</span>
-    <span class="kt">int</span> <span class="n">width</span><span class="p">,</span> <span class="kt">int</span> <span class="n">height</span><span class="p">,</span> <span class="kt">int</span> <span class="n">ncomp</span><span class="p">,</span> <span class="k">const</span> <span class="n">T</span><span class="o">*</span> <span class="n">img</span><span class="p">,</span> <span class="kt">int</span> <span class="n">x</span><span class="p">,</span> <span class="kt">int</span> <span class="n">y</span><span class="p">,</span> <span class="n">T</span> <span class="n">alpha</span> <span class="o">=</span> <span class="mi">0</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Lookup an image value from a generic image</p>
-<h3>Function image_set()</h3>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-<span class="k">constexpr</span> <span class="kr">inline</span> <span class="kt">void</span> <span class="n">image_set</span><span class="p">(</span><span class="kt">int</span> <span class="n">width</span><span class="p">,</span> <span class="kt">int</span> <span class="n">height</span><span class="p">,</span> <span class="kt">int</span> <span class="n">ncomp</span><span class="p">,</span> <span class="n">T</span><span class="o">*</span> <span class="n">img</span><span class="p">,</span> <span class="kt">int</span> <span class="n">x</span><span class="p">,</span>
-    <span class="kt">int</span> <span class="n">y</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;&amp;</span> <span class="n">vv</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Set an image value for a generic image</p>
 <h3>Function srgb_to_linear()</h3>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">vec3f</span> <span class="nf">srgb_to_linear</span><span class="p">(</span><span class="k">const</span> <span class="n">vec3b</span><span class="o">&amp;</span> <span class="n">srgb</span><span class="p">);</span>
 </code></pre></div>

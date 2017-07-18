@@ -71,11 +71,10 @@ struct camera {
 // Texture
 //
 struct texture {
-    int width = 0;               // width
-    int height = 0;              // height
-    int ncomp = 0;               // number of components
-    const float* hdr = nullptr;  // hdr pixel values;
-    const byte* ldr = nullptr;   // ldr pixel values
+    int width = 0;                   // width
+    int height = 0;                  // height
+    const ym::vec4f* hdr = nullptr;  // hdr pixel values;
+    const ym::vec4b* ldr = nullptr;  // ldr pixel values
 };
 
 //
@@ -339,10 +338,9 @@ int add_camera(scene* scn, const ym::frame3f& frame, float yfov, float aspect,
 // Public API. See above.
 //
 void set_texture(
-    scene* scn, int tid, int width, int height, int ncomp, const float* hdr) {
+    scene* scn, int tid, int width, int height, const ym::vec4f* hdr) {
     scn->textures[tid]->width = width;
     scn->textures[tid]->height = height;
-    scn->textures[tid]->ncomp = ncomp;
     scn->textures[tid]->hdr = hdr;
     scn->textures[tid]->ldr = nullptr;
 }
@@ -351,10 +349,9 @@ void set_texture(
 // Public API. See above.
 //
 void set_texture(
-    scene* scn, int tid, int width, int height, int ncomp, const byte* ldr) {
+    scene* scn, int tid, int width, int height, const ym::vec4b* ldr) {
     scn->textures[tid]->width = width;
     scn->textures[tid]->height = height;
-    scn->textures[tid]->ncomp = ncomp;
     scn->textures[tid]->hdr = nullptr;
     scn->textures[tid]->ldr = ldr;
 }
@@ -362,19 +359,18 @@ void set_texture(
 //
 // Public API. See above.
 //
-int add_texture(
-    scene* scn, int width, int height, int ncomp, const float* hdr) {
+int add_texture(scene* scn, int width, int height, const ym::vec4f* hdr) {
     scn->textures.push_back(new texture());
-    set_texture(scn, (int)scn->textures.size() - 1, width, height, ncomp, hdr);
+    set_texture(scn, (int)scn->textures.size() - 1, width, height, hdr);
     return (int)scn->textures.size() - 1;
 }
 
 //
 // Public API. See above.
 //
-int add_texture(scene* scn, int width, int height, int ncomp, const byte* ldr) {
+int add_texture(scene* scn, int width, int height, const ym::vec4b* ldr) {
     scn->textures.push_back(new texture());
-    set_texture(scn, (int)scn->textures.size() - 1, width, height, ncomp, ldr);
+    set_texture(scn, (int)scn->textures.size() - 1, width, height, ldr);
     return (int)scn->textures.size() - 1;
 }
 
@@ -384,7 +380,7 @@ int add_texture(scene* scn, int width, int height, int ncomp, const byte* ldr) {
 int add_texture(scene* scn, const ym::image4f* hdr) {
     scn->textures.push_back(new texture());
     set_texture(scn, (int)scn->textures.size() - 1, hdr->width(), hdr->height(),
-        4, (float*)hdr->data());
+        hdr->data());
     return (int)scn->textures.size() - 1;
 }
 
@@ -394,7 +390,7 @@ int add_texture(scene* scn, const ym::image4f* hdr) {
 int add_texture(scene* scn, const ym::image4b* ldr) {
     scn->textures.push_back(new texture());
     set_texture(scn, (int)scn->textures.size() - 1, ldr->width(), ldr->height(),
-        4, (byte*)ldr->data());
+        ldr->data());
     return (int)scn->textures.size() - 1;
 }
 
@@ -976,12 +972,10 @@ static ym::ray3f eval_camera(
 static inline ym::vec4f lookup_texture(
     const texture* txt, const ym::vec2i& ij, bool srgb = true) {
     if (txt->ldr) {
-        auto v = ym::image_lookup(txt->width, txt->height, txt->ncomp, txt->ldr,
-            ij.x, ij.y, (unsigned char)255);
+        auto v = txt->ldr[ij.y * txt->width + ij.x];
         return (srgb) ? ym::srgb_to_linear(v) : ym::byte_to_float(v);
     } else if (txt->hdr) {
-        return ym::image_lookup(
-            txt->width, txt->height, txt->ncomp, txt->hdr, ij.x, ij.y, 1.0f);
+        return txt->hdr[ij.y * txt->width + ij.x];
     } else {
         assert(false);
         return {};
