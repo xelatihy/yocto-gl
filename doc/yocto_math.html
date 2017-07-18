@@ -39,6 +39,7 @@ Collision Detection" by Christer Ericson and public domain code from
 - https://gist.github.com/badboy/6267743</p>
 <h2>History</h2>
 <ul>
+<li>v 0.19: remove indexing from specializations</li>
 <li>v 0.18: bump to normal mapping convertion</li>
 <li>v 0.17: added example image geneation</li>
 <li>v 0.16: sampling</li>
@@ -3408,7 +3409,7 @@ Wrapper to the above function.</p>
 - r0, r1: line segment radia</p>
 <p>Out Parameters:
 - ray_t: ray parameter at the intersection point
-- euv: euv[0] is the line parameter at the intersection ( euv[1] is zero )</p>
+- euv: euv.x is the line parameter at the intersection ( euv.y is zero )</p>
 <p>Returns:
 - whether the intersection occurred</p>
 <p>Notes:
@@ -3484,7 +3485,7 @@ on the specific behaviour wrt NaNs.</p>
 on the specific behaviour wrt NaNs.</p>
 <h3>Function intersect_check_bbox()</h3>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">intersect_check_bbox</span><span class="p">(</span><span class="k">const</span> <span class="n">ray3f</span><span class="o">&amp;</span> <span class="n">ray</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">ray_dinv</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">vec3i</span><span class="o">&amp;</span> <span class="n">ray_dsign</span><span class="p">,</span> <span class="k">const</span> <span class="n">bbox3f</span><span class="o">&amp;</span> <span class="n">bbox</span><span class="p">);</span>
+    <span class="k">const</span> <span class="n">vec3i</span><span class="o">&amp;</span> <span class="n">ray_dsign</span><span class="p">,</span> <span class="k">const</span> <span class="n">bbox3f</span><span class="o">&amp;</span> <span class="n">bbox_</span><span class="p">);</span>
 </code></pre></div>
 
 
