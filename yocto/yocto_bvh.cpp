@@ -515,7 +515,7 @@ void refit_bvh(bvh_tree* bvh, int nodeid, const ElemBbox& elem_bbox) {
         for (auto i = 0; i < node->count; i++) {
             auto idx = node->start + i;
             refit_bvh(bvh, idx, elem_bbox);
-            node->bbox += bvh->nodes[i].bbox;
+            node->bbox += bvh->nodes[idx].bbox;
         }
     }
 }

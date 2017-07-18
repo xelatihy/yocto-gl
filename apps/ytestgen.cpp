@@ -1042,35 +1042,55 @@ yobj::scene* make_rigid_scene(
     add_camera(scn, "cam", {10, 10, 10}, {0, 0, 0}, 0.5f, 0);
     add_camera(scn, "cam_dof", {10, 10, 10}, {0, 0, 0}, 0.5f, 0.1f);
 
-    if (otype == "flat" || otype == "slanted") {
+    if (otype == "flat") {
         auto fmat = add_diffuse(scn, "floor", {1, 1, 1});
         auto mat = add_plastic(
             scn, "obj", {1, 1, 1}, 0.1f, add_texture(scn, "checker.png"));
-        if (otype == "slanted")
             add_instance(scn, "floor",
-                add_box(scn, "floor", fmat, 4, {12, 1, 12}), {0, -1, 0},
+                add_box(scn, "floor", fmat, 6, {12, 1, 12}), {0, -1, 0});
+        add_instance(scn, "obj01", add_cube(scn, "obj01", mat, 4),
+            {-2.5f, 0.5f, 0});
+        add_instance(scn, "obj02", add_spherecube(scn, "obj02", mat, 4),
+            {0, 1, 0});
+        add_instance(scn, "obj03", add_cube(scn, "obj03", mat, 4),
+            {2.5f, 1.5f, 0});
+        add_instance(scn, "obj11", add_cube(scn, "obj11", mat, 4),
+            {-2.5f, 0.5f, 3});
+        add_instance(scn, "obj12", add_spherecube(scn, "obj12", mat, 4),
+            {0, 1.0f, 3});
+        add_instance(scn, "obj13", add_cube(scn, "obj13", mat, 4),
+            {2.5f, 1.5f, 3});
+        add_instance(
+            scn, "obj21", add_cube(scn, "obj21", mat, 4), {-2.5f, 0.5f, -3});
+        add_instance(
+            scn, "obj22", add_spherecube(scn, "obj22", mat, 4), {0, 1.0f, -3});
+        add_instance(
+            scn, "obj23", add_cube(scn, "obj23", mat, 4), {2.5f, 1.5f, -3});
+    } else if (otype == "slanted") {
+        auto fmat = add_diffuse(scn, "floor", {1, 1, 1});
+        auto mat = add_plastic(
+            scn, "obj", {1, 1, 1}, 0.1f, add_texture(scn, "checker.png"));
+            add_instance(scn, "floor",
+                add_box(scn, "floor", fmat, 6, {12, 1, 12}), {0, -3, 0},
                 {30, 0, 0});
-        else
-            add_instance(scn, "floor",
-                add_box(scn, "floor", fmat, 4, {12, 1, 12}), {0, -1, 0});
+        add_instance(scn, "obj01", add_cube(scn, "obj01", mat, 4),
+                     {-2.5f, 1.0f, 0}, {0,0,45});
+        add_instance(scn, "obj02", add_spherecube(scn, "obj02", mat, 4),
+            {0, 1, 0});
+        add_instance(scn, "obj03", add_cube(scn, "obj03", mat, 4),
+            {2.5f, 1, 0});
+        add_instance(scn, "obj11", add_cube(scn, "obj11", mat, 4),
+            {-2.5f, 1, 3}, {0,0,45});
+        add_instance(scn, "obj12", add_spherecube(scn, "obj12", mat, 4),
+            {0, 1, 3});
+        add_instance(scn, "obj13", add_cube(scn, "obj13", mat, 4),
+            {2.5f, 1, 3});
         add_instance(
-            scn, "obj01", add_cube(scn, "obj01", mat, 2), {-2.5f, 0, 0});
+            scn, "obj21", add_cube(scn, "obj21", mat, 4), {-2.5f, 2.5f, -3}, {0,0,45});
         add_instance(
-            scn, "obj02", add_spherecube(scn, "obj02", mat, 3), {0, 1, 0});
+            scn, "obj22", add_spherecube(scn, "obj22", mat, 4), {0, 2.5f, -3});
         add_instance(
-            scn, "obj03", add_cube(scn, "obj03", mat, 2), {2.5f, 3, 0});
-        add_instance(scn, "obj11", add_cube(scn, "obj11", mat, 2),
-            {-2.5f, 3, 3}, {0, 45, 0});
-        add_instance(scn, "obj12", add_spherecube(scn, "obj12", mat, 3),
-            {0, 1, 3}, {45, 0, 0});
-        add_instance(scn, "obj13", add_cube(scn, "obj13", mat, 2), {2.5f, 3, 3},
-            {45, 0, 45});
-        add_instance(scn, "obj21", add_cube(scn, "obj21", mat, 2),
-            {-2.5f, 1, -3}, {0, 0, 0});
-        add_instance(scn, "obj22", add_spherecube(scn, "obj22", mat, 3),
-            {0, 1, -3}, {22.5, 0, 0});
-        add_instance(scn, "obj23", add_cube(scn, "obj23", mat, 2),
-            {2.5f, 3, -3}, {22.5f, 0, 22.5f});
+            scn, "obj23", add_cube(scn, "obj23", mat, 4), {2.5f, 2.5f, -3});
     } else {
         throw std::runtime_error("bad value");
     }
