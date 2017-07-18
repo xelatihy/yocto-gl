@@ -34,6 +34,7 @@
 ///
 /// ## History
 ///
+/// - v 0.20: remove unused bbox overlap tests
 /// - v 0.19: remove indexing from specializations
 /// - v 0.18: bump to normal mapping convertion
 /// - v 0.17: added example image geneation
@@ -1699,6 +1700,19 @@ struct frame<float, 3> {
     /// element constructor
     constexpr frame(const M& m, const V& t) : x(m.x), y(m.y), z(m.z), o(t) {}
 
+    /// conversion from matrix (assumes the matrix is a frame, so dangerous!)
+    constexpr frame(const mat<T, 4, 4>& m)
+        : x(m.x.x, m.x.y, m.x.z)
+        , y(m.y.x, m.y.y, m.y.z)
+        , z(m.z.x, m.z.y, m.z.z)
+        , o(m.w.x, m.w.y, m.w.z) {}
+
+    /// conversion to matrix
+    constexpr explicit operator mat<T, 4, 4>() const {
+        return {{x.x, x.y, x.z, 0}, {y.x, y.y, y.z, 0}, {z.x, z.y, z.z, 0},
+            {o.x, o.y, o.z, 1}};
+    }
+
     /// element access
     constexpr V& operator[](int i) { return (&x)[i]; }
     /// element access
@@ -2601,12 +2615,11 @@ constexpr inline vec3f transform_direction_inverse(
     return b * a.rot();
 }
 
-/// transforms a ray by a matrix
+/// transforms a ray by a matrix (direction is not normalized after)
 template <typename T, int N>
 constexpr inline ray<T, N> transform_ray(
     const mat<T, N + 1, N + 1>& a, const ray<T, N>& b) {
-    return {
-        transform_point(a, b.o), transform_direction(a, b.d), b.tmin, b.tmax};
+    return {transform_point(a, b.o), transform_vector(a, b.d), b.tmin, b.tmax};
 }
 
 /// transforms a bbox by a matrix
@@ -4360,110 +4373,6 @@ inline bool overlap_bbox(const bbox3f& bbox1, const bbox3f& bbox2) {
     if (bbox1.max.y < bbox2.min.y || bbox1.min.y > bbox2.max.y) return false;
     if (bbox1.max.z < bbox2.min.z || bbox1.min.z > bbox2.max.z) return false;
     return true;
-}
-
-// TODO: doc
-// from "Real-Time Collision Detection" by Christer Ericson, Sect. 4.4.1
-inline bool overlap_bbox(const bbox3f& bbox1, const bbox3f& bbox2,
-    const frame3f& frame1, const frame3f& frame2) {
-    // epsilon
-    const auto epsilon = 1e-5f;
-
-    // compute centered frames and extents
-    auto cframe1 = frame3f{rot(frame1), transform_point(frame1, center(bbox1))};
-    auto cframe2 = frame3f{rot(frame2), transform_point(frame2, center(bbox2))};
-    auto ext1 = diagonal(bbox1) / 2.0f, ext2 = diagonal(bbox2) / 2.0f;
-
-    // compute frame from 2 to 1
-    auto cframe2to1 = inverse(cframe1) * cframe2;
-
-    // split frame components and move to row-major
-    auto rot = transpose(cframe2to1.rot());
-    auto t = pos(cframe2to1);
-
-    // Compute common subexpressions. Add in an epsilon term to
-    // counteract arithmetic errors when two edges are parallel and
-    // their cross product is (near) null (see text for details)
-    mat3f absrot;
-    auto parallel_axis = false;
-    for (int i = 0; i < 3; i++)
-        for (int j = 0; j < 3; j++) {
-            absrot[i][j] = abs(rot[i][j]) + epsilon;
-            if (absrot[i][j] > 1) parallel_axis = true;
-        }
-
-    // Test axes L = A0, L = A1, L = A2
-    for (int i = 0; i < 3; i++) {
-        if (abs(t[i]) > ext1[i] + dot(ext2, absrot[i])) return false;
-    }
-
-    // Test axes L = B0, L = B1, L = B2
-    for (int i = 0; i < 3; i++) {
-        auto ra =
-            ext1.x * absrot.x[i] + ext1.y * absrot.y[i] + ext1.z * absrot.z[i];
-        auto rb = ext2[i];
-        if (abs(t.x * rot.x[i] + t.y * rot.y[i] + t.z * rot.z[i]) > ra + rb)
-            return false;
-    }
-
-    // if axis were nearly parallel, can exit here
-    if (parallel_axis) return true;
-
-    // Test axis L = A0 x B0
-    auto ra = ext1.y * absrot.z.x + ext1.z * absrot.y.x;
-    auto rb = ext2.y * absrot.x.z + ext2.z * absrot.x.y;
-    if (abs(t.z * rot.y.x - t.y * rot.z.x) > ra + rb) return false;
-
-    // Test axis L = A0 x B1
-    ra = ext1.y * absrot.z.y + ext1.z * absrot.y.y;
-    rb = ext2.x * absrot.x.z + ext2.z * absrot.x.x;
-    if (abs(t.z * rot.y.y - t.y * rot.z.y) > ra + rb) return false;
-
-    // Test axis L = A0 x B2
-    ra = ext1.y * absrot.z.z + ext1.z * absrot.y.z;
-    rb = ext2.x * absrot.x.y + ext2.y * absrot.x.x;
-    if (abs(t.z * rot.y.z - t.y * rot.z.z) > ra + rb) return false;
-
-    // Test axis L = A1 x B0
-    ra = ext1.x * absrot.z.x + ext1.z * absrot.x.x;
-    rb = ext2.y * absrot.y.z + ext2.z * absrot.y.y;
-    if (abs(t.x * rot.z.x - t.z * rot.x.x) > ra + rb) return false;
-
-    // Test axis L = A1 x B1
-    ra = ext1.x * absrot.z.y + ext1.z * absrot.x.y;
-    rb = ext2.x * absrot.y.z + ext2.z * absrot.y.x;
-    if (abs(t.x * rot.z.y - t.z * rot.x.y) > ra + rb) return false;
-
-    // Test axis L = A1 x B2
-    ra = ext1.x * absrot.z.z + ext1.z * absrot.x.z;
-    rb = ext2.x * absrot.y.y + ext2.y * absrot.y.x;
-    if (abs(t.x * rot.z.z - t.z * rot.x.z) > ra + rb) return false;
-
-    // Test axis L = A2 x B0
-    ra = ext1.x * absrot.y.x + ext1.y * absrot.x.x;
-    rb = ext2.y * absrot.z.z + ext2.z * absrot.z.y;
-    if (abs(t.y * rot.x.x - t.x * rot.y.x) > ra + rb) return false;
-
-    // Test axis L = A2 x B1
-    ra = ext1.x * absrot.y.y + ext1.y * absrot.x.y;
-    rb = ext2.x * absrot.z.z + ext2.z * absrot.z.x;
-    if (abs(t.y * rot.x.y - t.x * rot.y.y) > ra + rb) return false;
-
-    // Test axis L = A2 x B2
-    ra = ext1.x * absrot.y.z + ext1.y * absrot.x.z;
-    rb = ext2.x * absrot.z.y + ext2.y * absrot.z.x;
-    if (abs(t.y * rot.x.z - t.x * rot.y.z) > ra + rb) return false;
-
-    // Since no separating axis is found, the OBBs must be intersecting
-    return true;
-}
-
-// this is only a conservative test!
-// TODO: rename to something more clear
-// TODO: doc
-inline bool overlap_bbox_conservative(const bbox3f& bbox1, const bbox3f& bbox2,
-    const frame3f& frame1, const frame3f& frame2) {
-    return overlap_bbox(bbox1, transform_bbox(inverse(frame1) * frame2, bbox2));
 }
 
 // -----------------------------------------------------------------------------

@@ -252,8 +252,7 @@ void set_overlap_callbacks(scene* scn, void* ctx,
 static inline void _internal_overlap_shapes(
     void* ctx, std::vector<ym::vec2i>* overlaps) {
     auto scene_bvh = (ybvh::scene*)ctx;
-    ybvh::overlap_instance_bounds(
-        scene_bvh, scene_bvh, false, true, true, overlaps);
+    ybvh::overlap_instance_bounds(scene_bvh, scene_bvh, true, true, overlaps);
 }
 
 //

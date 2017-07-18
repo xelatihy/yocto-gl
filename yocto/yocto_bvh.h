@@ -45,12 +45,13 @@
 /// 7. perform shape overlap queries with `overlap_shape_bounds()`
 /// 8. use `refit_bvh()` to recompute the bvh bounds if transforms or vertices
 ///    are (you should rebuild the bvh for large changes); update the instances'
-///    transforms with `set_instance_frame()`; shapes use shared memory, so
-///    no explicit update is necessary
+///    transforms with `set_instance_frame()` or `set_instance_transform();
+///    shapes use shared memory, so no explicit update is necessary
 ///
 ///
 /// ## History
 ///
+/// - v 0.19: switch to matrices for transforms
 /// - v 0.18: faster internal intersection
 /// - v 0.17: removal of SAH build option (better use embree instead)
 /// - v 0.16: use yocto_math in the interface and remove inline compilation
@@ -210,12 +211,41 @@ int add_point_shape(
 ///
 /// - Parameters:
 ///     - scn: scene
+///     - xform: instance transform
+///     - xform_inverse: instance inverse transform
+///     - sid: shape id
+/// - Returns:
+///     - instance id
+///
+int add_instance(scene* scn, const ym::mat4f& xform,
+    const ym::mat4f& xform_inverse, int sid);
+
+///
+/// Add an instance.
+///
+/// - Parameters:
+///     - scn: scene
 ///     - frame: instance transform
 ///     - sid: shape id
 /// - Returns:
 ///     - instance id
 ///
-int add_instance(scene* scn, const ym::frame3f& frame, int sid);
+inline int add_instance(scene* scn, const ym::frame3f& frame, int sid) {
+    return add_instance(
+        scn, (ym::mat4f)frame, (ym::mat4f)ym::inverse(frame), sid);
+}
+
+///
+/// Set an instance transform.
+///
+/// - Parameters:
+///     - scn: scene
+///     - iid: instance id
+///     - xform: shape transform
+///     - xform_inverse: inverse of shape transform
+///
+void set_instance_transform(scene* scn, int iid, const ym::mat4f& xform,
+    const ym::mat4f& xform_inverse);
 
 ///
 /// Set an instance frame.
@@ -225,7 +255,24 @@ int add_instance(scene* scn, const ym::frame3f& frame, int sid);
 ///     - iid: instance id
 ///     - frame: shape transform
 ///
-void set_instance_frame(scene* scn, int iid, const ym::frame3f& frame);
+inline void set_instance_frame(scene* scn, int iid, const ym::frame3f& frame) {
+    set_instance_transform(
+        scn, iid, (ym::mat4f)frame, (ym::mat4f)ym::inverse(frame));
+}
+
+///
+/// Set an instance frame.
+///
+/// - Parameters:
+///     - scn: scene
+///     - iid: instance id
+///     - frame: shape transform
+///
+inline void set_instance_transform(
+    scene* scn, int iid, const ym::frame3f& frame) {
+    set_instance_transform(
+        scn, iid, (ym::mat4f)frame, (ym::mat4f)ym::inverse(frame));
+}
 
 ///
 /// Builds a scene BVH.
@@ -340,7 +387,6 @@ intersection_point intersect_instance(
 ///
 /// - Parameters:
 ///     - scn1, scn2: scenes to overlap
-///     - conservative: use conservative checks
 ///     - skip_self: exlude self intersections
 ///     - skip_duplicates: exlude intersections (i1,i2) if (i2,i1)
 ///       is already present
@@ -348,7 +394,7 @@ intersection_point intersect_instance(
 ///     - overlaps: vectors of shape overlaps
 ///
 void overlap_instance_bounds(const scene* scn1, const scene* scn2,
-    bool conservative, bool exclude_duplicates, bool exclude_self,
+    bool exclude_duplicates, bool exclude_self,
     std::vector<ym::vec2i>* overlaps);
 
 ///
