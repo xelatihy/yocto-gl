@@ -138,6 +138,9 @@ struct yscene {
     bool alpha_cutout = true;
     yshade_state* shstate = nullptr;
 
+    // navigation
+    bool navigation_fps = false;
+
     // simulation
     ysym::simulation_params simulation_params;
     int simulation_nframes = 1000;
@@ -1731,6 +1734,7 @@ void draw_widgets(ygui::window* win) {
             ygui::continue_line_widgets(win);
             ygui::checkbox_widget(win, "cutout", &scn->alpha_cutout);
         }
+        ygui::checkbox_widget(win, "fps", &scn->navigation_fps);
         ygui::slider_widget(win, "hdr exposure", &scn->exposure, -20, 20, 1);
         ygui::slider_widget(win, "hdr gamma", &scn->gamma, 0.1, 5, 0.1);
         ygui::combo_widget(
@@ -1934,29 +1938,64 @@ void run_ui(yscene* scn, int w, int h, const std::string& title, init_fn init,
 
         ygui::set_window_title(win, ("yshade | " + scn->filename));
 
-        // handle mouse
+        // handle mouse and keyboard for navigation
         if (!scn->gcam && !scn->ocam && mouse_button &&
             mouse_pos != mouse_last && !ygui::get_widget_active(win)) {
-            auto dolly = 0.0f;
-            auto pan = ym::zero2f;
-            auto rotate = ym::zero2f;
-            switch (mouse_button) {
-                case 1: rotate = (mouse_pos - mouse_last) / 100.0f; break;
-                case 2: dolly = (mouse_pos[0] - mouse_last[0]) / 100.0f; break;
-                case 3: pan = (mouse_pos - mouse_last) / 100.0f; break;
-                default: break;
-            }
+            if (scn->navigation_fps) {
+                auto dolly = 0.0f;
+                auto pan = ym::zero2f;
+                auto rotate = ym::zero2f;
+                switch (mouse_button) {
+                    case 1: rotate = (mouse_pos - mouse_last) / 100.0f; break;
+                    case 2:
+                        dolly = (mouse_pos[0] - mouse_last[0]) / 100.0f;
+                        break;
+                    case 3: pan = (mouse_pos - mouse_last) / 100.0f; break;
+                    default: break;
+                }
 
-            ym::turntable(
-                scn->view_cam->frame, scn->view_cam->focus, rotate, dolly, pan);
-            scn->scene_updated = true;
+                ym::camera_fps(scn->view_cam->frame, {0, 0, 0}, rotate);
+                scn->scene_updated = true;
+            } else {
+                auto dolly = 0.0f;
+                auto pan = ym::zero2f;
+                auto rotate = ym::zero2f;
+                switch (mouse_button) {
+                    case 1: rotate = (mouse_pos - mouse_last) / 100.0f; break;
+                    case 2:
+                        dolly = (mouse_pos[0] - mouse_last[0]) / 100.0f;
+                        break;
+                    case 3: pan = (mouse_pos - mouse_last) / 100.0f; break;
+                    default: break;
+                }
+
+                ym::camera_turntable(scn->view_cam->frame, scn->view_cam->focus,
+                    rotate, dolly, pan);
+                scn->scene_updated = true;
+            }
+        }
+
+        // handle keytboard for navigation
+        if (!scn->gcam && !scn->ocam && !ygui::get_widget_active(win) &&
+            scn->navigation_fps) {
+            auto transl = ym::zero3f;
+            if (ygui::get_key(win, 'a')) transl.x -= 1;
+            if (ygui::get_key(win, 'd')) transl.x += 1;
+            if (ygui::get_key(win, 's')) transl.z += 1;
+            if (ygui::get_key(win, 'w')) transl.z -= 1;
+            if (ygui::get_key(win, 'e')) transl.y += 1;
+            if (ygui::get_key(win, 'q')) transl.y -= 1;
+            if (transl != ym::zero3f) {
+                ym::camera_fps(scn->view_cam->frame, transl, {0, 0});
+                scn->scene_updated = true;
+            }
         }
 
         // draw
         draw(win);
 
         // update
-        auto updated = update(scn);
+        update(scn);
 
         // check for screenshot
         //        if (scn->no_ui) {
@@ -1965,10 +2004,7 @@ void run_ui(yscene* scn, int w, int h, const std::string& title, init_fn init,
         //        }
 
         // event hadling
-        if (updated)
-            ygui::poll_events(win);
-        else
-            ygui::wait_events(win);
+        ygui::poll_events(win);
     }
 
     ygui::clear_widgets(win);

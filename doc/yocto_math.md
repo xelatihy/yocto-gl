@@ -33,6 +33,7 @@ Collision Detection" by Christer Ericson and public domain code from
 
 ## History
 
+- v 0.23: more camera navigation
 - v 0.22: removed image lookup with arbitrary channels
 - v 0.21: added more functions
 - v 0.20: remove unused bbox overlap tests
@@ -4516,26 +4517,34 @@ inline bbox3f tetrahedron_bbox(
 
 Tetrahedron bounds
 
-### Function turntable()
+### Function camera_turntable()
 
 ~~~ .cpp
-template <typename T>
-constexpr inline void turntable(vec<T, 3>& from, vec<T, 3>& to, vec<T, 3>& up,
-    const vec<T, 2>& rotate, T dolly, const vec<T, 2>& pan);
+constexpr inline void camera_turntable(vec3f& from, vec3f& to, vec3f& up,
+    const vec3f& rotate, float dolly, const vec3f& pan);
 ~~~
 
 Turntable for UI navigation from a from/to/up parametrization of the camera.
 
-### Function turntable()
+### Function camera_turntable()
 
 ~~~ .cpp
-template <typename T>
-constexpr inline void turntable(frame<T, 3>& frame, float& focus,
-    const vec<T, 2>& rotate, T dolly, const vec<T, 2>& pan);
+constexpr inline void camera_turntable(frame3f& frame, float& focus,
+    const vec2f& rotate, float dolly, const vec2f& pan);
 ~~~
 
 Turntable for UI navigation for a frame/distance parametrization of the
 camera.
+
+### Function camera_fps()
+
+~~~ .cpp
+constexpr inline void camera_fps(
+    frame3f& frame, const vec3f& transl, const vec2f& rotate);
+~~~
+
+FPS camera for UI navigation for a frame parametrization.
+https://gamedev.stackexchange.com/questions/30644/how-to-keep-my-quaternion-using-fps-camera-from-tilting-and-messing-up
 
 ### Struct image
 

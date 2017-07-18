@@ -34,6 +34,7 @@
 ///
 /// ## History
 ///
+/// - v 0.23: more camera navigation
 /// - v 0.22: removed image lookup with arbitrary channels
 /// - v 0.21: added more functions
 /// - v 0.20: remove unused bbox overlap tests
@@ -4568,53 +4569,51 @@ inline bbox3f tetrahedron_bbox(
 // -----------------------------------------------------------------------------
 
 /// Turntable for UI navigation from a from/to/up parametrization of the camera.
-template <typename T>
-constexpr inline void turntable(vec<T, 3>& from, vec<T, 3>& to, vec<T, 3>& up,
-    const vec<T, 2>& rotate, T dolly, const vec<T, 2>& pan) {
+constexpr inline void camera_turntable(vec3f& from, vec3f& to, vec3f& up,
+    const vec3f& rotate, float dolly, const vec3f& pan) {
     // rotate if necessary
     if (rotate.x || rotate.y) {
-        auto z = ym_normalize(*to - *from);
-        auto lz = ym_dist(*to, *from);
+        auto z = normalize(to - from);
+        auto lz = dist(to, from);
         auto phi = atan2(z.z, z.x) + rotate.x;
         auto theta = acos(z.y) + rotate.y;
-        theta = max(T(0.001), min(theta, T(pi - 0.001)));
-        auto nz = vec<T, 3>{sin(theta) * cos(phi) * lz, cos(theta) * lz,
+        theta = clamp(theta, 0.001f, pif - 0.001f);
+        auto nz = vec3f{sin(theta) * cos(phi) * lz, cos(theta) * lz,
             sin(theta) * sin(phi) * lz};
-        *from = *to - nz;
+        from = to - nz;
     }
 
     // dolly if necessary
     if (dolly) {
-        auto z = normalize(*to - *from);
-        auto lz = max(T(0.001), dist(*to, *from) * (1 + dolly));
+        auto z = normalize(to - from);
+        auto lz = max(0.001f, dist(to, from) * (1 + dolly));
         z *= lz;
-        *from = *to - z;
+        from = to - z;
     }
 
     // pan if necessary
     if (pan.x || pan.y) {
-        auto z = normalize(*to - *from);
-        auto x = normalize(cross(*up, z));
+        auto z = normalize(to - from);
+        auto x = normalize(cross(up, z));
         auto y = normalize(cross(z, x));
-        auto t = vec<T, 3>{pan.x * x.x + pan.y * y.x, pan.x * x.y + pan.y * y.y,
+        auto t = vec3f{pan.x * x.x + pan.y * y.x, pan.x * x.y + pan.y * y.y,
             pan.x * x.z + pan.y * y.z};
-        *from += t;
-        *to += t;
+        from += t;
+        to += t;
     }
 }
 
 /// Turntable for UI navigation for a frame/distance parametrization of the
 /// camera.
-template <typename T>
-constexpr inline void turntable(frame<T, 3>& frame, float& focus,
-    const vec<T, 2>& rotate, T dolly, const vec<T, 2>& pan) {
+constexpr inline void camera_turntable(frame3f& frame, float& focus,
+    const vec2f& rotate, float dolly, const vec2f& pan) {
     // rotate if necessary
     if (rotate.x || rotate.y) {
         auto phi = atan2(frame.z.z, frame.z.x) + rotate.x;
         auto theta = acos(frame.z.y) + rotate.y;
-        theta = max(T(0.001), min(theta, T(pi - 0.001)));
+        theta = clamp(theta, 0.001f, pif - 0.001f);
         auto new_z =
-            vec<T, 3>{sin(theta) * cos(phi), cos(theta), sin(theta) * sin(phi)};
+            vec3f{sin(theta) * cos(phi), cos(theta), sin(theta) * sin(phi)};
         auto new_center = pos(frame) - frame.z * focus;
         auto new_o = new_center + new_z * focus;
         frame = lookat_frame3(new_o, new_center, {0, 1, 0});
@@ -4624,12 +4623,25 @@ constexpr inline void turntable(frame<T, 3>& frame, float& focus,
     // pan if necessary
     if (dolly) {
         auto c = pos(frame) - frame.z * focus;
-        focus = max(focus + dolly, T(0.001));
+        focus = max(focus + dolly, 0.001f);
         pos(frame) = c + frame.z * focus;
     }
 
     // pan if necessary
     if (pan.x || pan.y) { pos(frame) += frame.x * pan.x + frame.y * pan.y; }
+}
+
+/// FPS camera for UI navigation for a frame parametrization.
+/// https://gamedev.stackexchange.com/questions/30644/how-to-keep-my-quaternion-using-fps-camera-from-tilting-and-messing-up
+constexpr inline void camera_fps(
+    frame3f& frame, const vec3f& transl, const vec2f& rotate) {
+    auto y = vec3f{0, 1, 0};
+    auto z = orthonormalize(frame.z, y);
+    auto x = cross(y, z);
+
+    frame.rot() = ym::rotation_mat3({1, 0, 0}, rotate.y) * frame.rot() *
+                  ym::rotation_mat3({0, 1, 0}, rotate.x);
+    frame.pos() += transl.x * x + transl.y * y + transl.z * z;
 }
 
 // -----------------------------------------------------------------------------

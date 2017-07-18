@@ -150,6 +150,11 @@ ym::vec2f get_mouse_posf(window* window);
 ym::vec2i get_window_size(window* window);
 
 ///
+/// Check if a key is pressed (not all keys are supported)
+///
+bool get_key(window* window, int key);
+
+///
 /// Framebuffer size
 ///
 ym::vec2i get_framebuffer_size(window* window);
