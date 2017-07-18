@@ -1108,6 +1108,15 @@ static ym::vec3f eval_fresnel_schlick(const ym::vec3f& ks, float cosw) {
                     std::pow(ym::clamp(1.0f - cosw, 0.0f, 1.0f), 5.0f);
 }
 
+    //
+    // Schlick approximation of Fresnel term weighted by roughness.
+    // This is a hack, but works better than not doing it.
+    //
+    static ym::vec3f eval_fresnel_schlick(const ym::vec3f& ks, float cosw, float rs) {
+        auto fks = eval_fresnel_schlick(ks, cosw);
+        return ym::lerp(ks, fks, rs);
+    }
+    
 //
 // Evaluates the BRDF scaled by the cosine of the incoming direction.
 //
@@ -1129,7 +1138,9 @@ static ym::vec3f eval_brdfcos(const point& pt, const ym::vec3f& wi) {
 
     // accumulate brdfcos for each lobe
     auto brdfcos = ym::zero3f;
-    for (auto lid = 0; lid < pt.nbrdfs; lid++) {
+    // keep a weight to account for fresnel term
+    auto weight = ym::vec3f{1,1,1};
+    for (auto lid = pt.nbrdfs - 1; lid >= 0; lid--) {
         auto brdf = pt.brdfs[lid];
         switch (brdf.type) {
             // diffuse term
@@ -1142,7 +1153,7 @@ static ym::vec3f eval_brdfcos(const point& pt, const ym::vec3f& wi) {
                 if (ndi <= 0 || ndo <= 0) continue;
 
                 // diffuse term
-                brdfcos += brdf.rho * ndi / ym::pif;
+                brdfcos += weight * brdf.rho * ndi / ym::pif;
             } break;
             // specular term (GGX)
             case brdf_type::microfacet_ggx: {
@@ -1184,10 +1195,13 @@ static ym::vec3f eval_brdfcos(const point& pt, const ym::vec3f& wi) {
 
                 // handle fresnel
                 auto odh = ym::clamp(dot(wo, wh), 0.0f, 1.0f);
-                auto ks = eval_fresnel_schlick(brdf.rho, odh);
+                auto ks = eval_fresnel_schlick(brdf.rho, odh, brdf.roughness);
 
                 // sum up
-                brdfcos += ks * ndi * dg / (4 * ndi * ndo);
+                brdfcos += weight * ks * ndi * dg / (4 * ndi * ndo);
+                
+                // update weight
+                weight *= ym::vec3f{1,1,1} - ks;
             } break;
             // specular term Phong
             case brdf_type::microfacet_phong: {
@@ -1212,11 +1226,13 @@ static ym::vec3f eval_brdfcos(const point& pt, const ym::vec3f& wi) {
 
                 // handle fresnel
                 auto odh = ym::clamp(dot(wo, wh), 0.0f, 1.0f);
-                auto ks = eval_fresnel_schlick(brdf.rho, odh);
+                auto ks = eval_fresnel_schlick(brdf.rho, odh, brdf.roughness);
 
                 // sum up
-                brdfcos += ks * ndi * dg / (4 * ndi * ndo);
-
+                brdfcos += weight * ks * ndi * dg / (4 * ndi * ndo);
+                
+                // update weight
+                weight *= ym::vec3f{1,1,1} - ks;
             } break;
             // diffuse term (Kajiya-Kay)
             case brdf_type::kajiya_kay_diff: {
@@ -1234,7 +1250,7 @@ static ym::vec3f eval_brdfcos(const point& pt, const ym::vec3f& wi) {
                 if (si <= 0 || so <= 0) continue;
 
                 // diffuse term (Kajiya-Kay)
-                brdfcos += brdf.rho * si / ym::pif;
+                brdfcos += weight * brdf.rho * si / ym::pif;
             } break;
             // specular term (Kajiya-Kay)
             case brdf_type::kajiya_kay_spec: {
@@ -1261,12 +1277,12 @@ static ym::vec3f eval_brdfcos(const point& pt, const ym::vec3f& wi) {
                 // specular
                 auto ns = 2 / (brdf.roughness * brdf.roughness) - 2;
                 auto d = (ns + 2) * std::pow(sh, ns) / (2 + ym::pif);
-                brdfcos += brdf.rho * si * d / (4.0f * si * so);
+                brdfcos += weight * brdf.rho * si * d / (4.0f * si * so);
             } break;
             // diffuse term point
             case brdf_type::point_diffuse: {
                 auto ido = ym::dot(wo, wi);
-                brdfcos += brdf.rho * (2 * ido + 1) / (2 * ym::pif);
+                brdfcos += weight * brdf.rho * (2 * ido + 1) / (2 * ym::pif);
             } break;
             default: assert(false); break;
         }
