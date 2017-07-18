@@ -64,6 +64,7 @@ for internal acceleration. Disable this by setting YTRACE_NO_BVH.</p>
 </ol>
 <h2>History</h2>
 <ul>
+<li>v 0.19: explicit material models</li>
 <li>v 0.18: simpler texture creation functions</li>
 <li>v 0.17: move to rgba per-vertex color</li>
 <li>v 0.16: use yocto_math in the interface and remove inline compilation</li>
@@ -226,6 +227,130 @@ for internal acceleration. Disable this by setting YTRACE_NO_BVH.</p>
 </li>
 </ul>
 <h3>Function add_material()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">int</span> <span class="nf">add_material</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Adds a black material to the scene. Use set_material_XXX() functions to
+customize it.</p>
+<ul>
+<li>Parameters:<ul>
+<li>scn: scene</li>
+</ul>
+</li>
+<li>Returns:<ul>
+<li>material id</li>
+</ul>
+</li>
+</ul>
+<h3>Function set_material_emission()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_material_emission</span><span class="p">(</span>
+    <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="kt">int</span> <span class="n">mid</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">ke</span><span class="p">,</span> <span class="kt">int</span> <span class="n">ke_txt</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Sets the material emission.</p>
+<ul>
+<li>Parameters:<ul>
+<li>scn: scene</li>
+<li>mid: material id</li>
+<li>ke: emission, term</li>
+<li>ke_txt: emission texture (-1 for none)</li>
+</ul>
+</li>
+</ul>
+<h3>Function set_material_normal()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_material_normal</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="kt">int</span> <span class="n">mid</span><span class="p">,</span> <span class="kt">int</span> <span class="n">norm_txt</span><span class="p">,</span> <span class="kt">float</span> <span class="n">scale</span> <span class="o">=</span> <span class="mi">1</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Sets the material normal map.</p>
+<ul>
+<li>Parameters:<ul>
+<li>scn: scene</li>
+<li>mid: material id</li>
+<li>norm_txt: normal map (-1 for none)</li>
+<li>scale: normal scale</li>
+</ul>
+</li>
+</ul>
+<h3>Function set_material_occlusion()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_material_occlusion</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="kt">int</span> <span class="n">mid</span><span class="p">,</span> <span class="kt">int</span> <span class="n">occ_txt</span><span class="p">,</span> <span class="kt">float</span> <span class="n">scale</span> <span class="o">=</span> <span class="mi">1</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Sets the material normal map.</p>
+<ul>
+<li>Parameters:<ul>
+<li>scn: scene</li>
+<li>mid: material id</li>
+<li>occ_txt: occlusion map (-1 for none)</li>
+<li>scale: occlusion scale</li>
+</ul>
+</li>
+</ul>
+<h3>Function set_material_microfacet()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_material_microfacet</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="kt">int</span> <span class="n">mid</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">kd</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">ks</span><span class="p">,</span> <span class="kt">float</span> <span class="n">rs</span><span class="p">,</span> <span class="kt">float</span> <span class="n">op</span><span class="p">,</span> <span class="kt">int</span> <span class="n">kd_txt</span><span class="p">,</span> <span class="kt">int</span> <span class="n">ks_txt</span><span class="p">,</span> <span class="kt">int</span> <span class="n">rs_txt</span><span class="p">,</span>
+    <span class="kt">int</span> <span class="n">op_txt</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">use_phong</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Sets a material reflectance as a microfacet model in the scene.</p>
+<ul>
+<li>Parameters:<ul>
+<li>scn: scene</li>
+<li>mid: material id</li>
+<li>kd: diffuse term</li>
+<li>ks: specular term</li>
+<li>rs: specular roughness</li>
+<li>kd_txt, ks_txt, rs_txt: texture indices (-1 for
+none)</li>
+<li>use_phong: whether to use phong</li>
+</ul>
+</li>
+</ul>
+<h3>Function set_material_gltf_metallic_roughness()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_material_gltf_metallic_roughness</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="kt">int</span> <span class="n">mid</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">kb</span><span class="p">,</span> <span class="kt">float</span> <span class="n">km</span><span class="p">,</span> <span class="kt">float</span> <span class="n">rs</span><span class="p">,</span> <span class="kt">float</span> <span class="n">op</span><span class="p">,</span> <span class="kt">int</span> <span class="n">kd_txt</span><span class="p">,</span> <span class="kt">int</span> <span class="n">km_txt</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Sets a gltf metallic roughness material reflectance.</p>
+<ul>
+<li>Parameters:<ul>
+<li>scn: scene</li>
+<li>mid: material id</li>
+<li>kb: base color term</li>
+<li>km: metallic term</li>
+<li>rs: specular roughness</li>
+<li>kd_txt, km_txt: texture indices (-1 for none)</li>
+</ul>
+</li>
+</ul>
+<h3>Function set_material_gltf_specular_glossiness()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_material_gltf_specular_glossiness</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="kt">int</span> <span class="n">mid</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">kd</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">ks</span><span class="p">,</span> <span class="kt">float</span> <span class="n">rs</span><span class="p">,</span> <span class="kt">float</span> <span class="n">op</span><span class="p">,</span> <span class="kt">int</span> <span class="n">kd_txt</span><span class="p">,</span>
+    <span class="kt">int</span> <span class="n">ks_txt</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Sets a gltf metallic specular glossiness reflectance.</p>
+<ul>
+<li>Parameters:<ul>
+<li>scn: scene</li>
+<li>mid: material id</li>
+<li>ke: emission, term</li>
+<li>kd: diffuse term</li>
+<li>ks: specular term</li>
+<li>rs: specular glossiness</li>
+<li>kd_txt, ks_txt, norm_txt: texture indices (-1 for
+none)</li>
+</ul>
+</li>
+<li>use_phong: whether to use phong</li>
+</ul>
+<h3>Function add_material()</h3>
 <div class="codehilite"><pre><code><span></span><span class="kt">int</span> <span class="nf">add_material</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">ke</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">kd</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">ks</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">kt</span><span class="p">,</span> <span class="kt">float</span> <span class="n">rs</span> <span class="o">=</span> <span class="mf">0.1</span><span class="p">,</span> <span class="kt">int</span> <span class="n">ke_txt</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
     <span class="kt">int</span> <span class="n">kd_txt</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="kt">int</span> <span class="n">ks_txt</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="kt">int</span> <span class="n">kt_txt</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="kt">int</span> <span class="n">rs_txt</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
@@ -250,11 +375,11 @@ none) - use_phong: whether to use phong</li>
 </ul>
 </li>
 </ul>
-<h3>Function add_material_generic()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">int</span> <span class="nf">add_material_generic</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">ke</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">kd</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">ks</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">kt</span><span class="p">,</span> <span class="kt">float</span> <span class="n">rs</span><span class="p">,</span> <span class="kt">float</span> <span class="n">op</span><span class="p">,</span> <span class="kt">int</span> <span class="n">ke_txt</span><span class="p">,</span>
-    <span class="kt">int</span> <span class="n">kd_txt</span><span class="p">,</span> <span class="kt">int</span> <span class="n">ks_txt</span><span class="p">,</span> <span class="kt">int</span> <span class="n">kt_txt</span><span class="p">,</span> <span class="kt">int</span> <span class="n">rs_txt</span><span class="p">,</span> <span class="kt">int</span> <span class="n">op_txt</span><span class="p">,</span> <span class="kt">int</span> <span class="n">norm_txt</span><span class="p">,</span>
-    <span class="kt">int</span> <span class="n">occ_txt</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">use_phong</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
+<h3>Function add_material_uber()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">int</span> <span class="nf">add_material_uber</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">ke</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">kd</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">ks</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">kt</span><span class="p">,</span> <span class="kt">float</span> <span class="n">rs</span><span class="p">,</span>
+    <span class="kt">float</span> <span class="n">op</span><span class="p">,</span> <span class="kt">int</span> <span class="n">ke_txt</span><span class="p">,</span> <span class="kt">int</span> <span class="n">kd_txt</span><span class="p">,</span> <span class="kt">int</span> <span class="n">ks_txt</span><span class="p">,</span> <span class="kt">int</span> <span class="n">kt_txt</span><span class="p">,</span> <span class="kt">int</span> <span class="n">rs_txt</span><span class="p">,</span>
+    <span class="kt">int</span> <span class="n">op_txt</span><span class="p">,</span> <span class="kt">int</span> <span class="n">norm_txt</span><span class="p">,</span> <span class="kt">int</span> <span class="n">occ_txt</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">use_phong</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -265,9 +390,10 @@ none) - use_phong: whether to use phong</li>
 <li>ke: emission, term</li>
 <li>kd: diffuse term</li>
 <li>ks: specular term</li>
+<li>kt: transmission term</li>
 <li>rs: specular roughness</li>
-<li>ke_txt, kd_txt, ks_txt, rs_txt, norm_txt: texture indices (-1 for
-none) - use_phong: whether to use phong</li>
+<li>ke_txt, kd_txt, ks_txt, rs_txt, norm_txt, occ_txt: texture indices (-1
+for none) - use_phong: whether to use phong</li>
 </ul>
 </li>
 <li>Returns:<ul>
@@ -276,9 +402,9 @@ none) - use_phong: whether to use phong</li>
 </li>
 </ul>
 <h3>Function add_material_gltf_metallic_roughness()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">int</span> <span class="nf">add_material_gltf_metallic_roughness</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">ke</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">kd</span><span class="p">,</span> <span class="kt">float</span> <span class="n">ks</span><span class="p">,</span> <span class="kt">float</span> <span class="n">rs</span><span class="p">,</span> <span class="kt">float</span> <span class="n">op</span><span class="p">,</span> <span class="kt">int</span> <span class="n">ke_txt</span><span class="p">,</span> <span class="kt">int</span> <span class="n">kd_txt</span><span class="p">,</span>
-    <span class="kt">int</span> <span class="n">ks_txt</span><span class="p">,</span> <span class="kt">int</span> <span class="n">norm_txt</span><span class="p">,</span> <span class="kt">int</span> <span class="n">occ_txt</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">use_phong</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">int</span> <span class="nf">add_material_gltf_metallic_roughness</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">ke</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">kb</span><span class="p">,</span> <span class="kt">float</span> <span class="n">km</span><span class="p">,</span> <span class="kt">float</span> <span class="n">rs</span><span class="p">,</span> <span class="kt">float</span> <span class="n">op</span><span class="p">,</span> <span class="kt">int</span> <span class="n">ke_txt</span><span class="p">,</span> <span class="kt">int</span> <span class="n">kb_txt</span><span class="p">,</span>
+    <span class="kt">int</span> <span class="n">km_txt</span><span class="p">,</span> <span class="kt">int</span> <span class="n">norm_txt</span><span class="p">,</span> <span class="kt">int</span> <span class="n">occ_txt</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -287,12 +413,11 @@ none) - use_phong: whether to use phong</li>
 <li>Parameters:<ul>
 <li>scn: scene</li>
 <li>ke: emission, term</li>
-<li>kd: diffuse term</li>
-<li>ks: specular term</li>
+<li>kd: base color</li>
+<li>km: metallic term</li>
 <li>rs: specular roughness</li>
-<li>ke_txt, kd_txt, ks_txt, rs_txt, norm_txt: texture indices (-1 for
+<li>ke_txt, kb_txt, km_txt, norm_txt, occ_txt: texture indices (-1 for
 none)</li>
-<li>use_phong: whether to use phong</li>
 </ul>
 </li>
 <li>Returns:<ul>
@@ -301,9 +426,9 @@ none)</li>
 </li>
 </ul>
 <h3>Function add_material_gltf_specular_glossiness()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">int</span> <span class="nf">add_material_gltf_specular_glossiness</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">ke</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">kd</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">ks</span><span class="p">,</span> <span class="kt">float</span> <span class="n">rs</span><span class="p">,</span> <span class="kt">float</span> <span class="n">op</span><span class="p">,</span> <span class="kt">int</span> <span class="n">ke_txt</span><span class="p">,</span>
-    <span class="kt">int</span> <span class="n">kd_txt</span><span class="p">,</span> <span class="kt">int</span> <span class="n">ks_txt</span><span class="p">,</span> <span class="kt">int</span> <span class="n">norm_txt</span><span class="p">,</span> <span class="kt">int</span> <span class="n">occ_txt</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">use_phong</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">int</span> <span class="nf">add_material_gltf_specular_glossiness</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">ke</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">kd</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">ks</span><span class="p">,</span> <span class="kt">float</span> <span class="n">rs</span><span class="p">,</span>
+    <span class="kt">float</span> <span class="n">op</span><span class="p">,</span> <span class="kt">int</span> <span class="n">ke_txt</span><span class="p">,</span> <span class="kt">int</span> <span class="n">kd_txt</span><span class="p">,</span> <span class="kt">int</span> <span class="n">ks_txt</span><span class="p">,</span> <span class="kt">int</span> <span class="n">norm_txt</span><span class="p">,</span> <span class="kt">int</span> <span class="n">occ_txt</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -319,14 +444,13 @@ none)</li>
 none)</li>
 </ul>
 </li>
-<li>use_phong: whether to use phong</li>
 <li>Returns:<ul>
 <li>material id</li>
 </ul>
 </li>
 </ul>
 <h3>Function add_material_emission_only()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">int</span> <span class="nf">add_material_emission_only</span><span class="p">(</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">int</span> <span class="nf">add_material_emission_only</span><span class="p">(</span>
     <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">ke</span><span class="p">,</span> <span class="kt">int</span> <span class="n">ke_txt</span><span class="p">,</span> <span class="kt">int</span> <span class="n">norm_txt</span><span class="p">,</span> <span class="kt">int</span> <span class="n">occ_txt</span><span class="p">);</span>
 </code></pre></div>
 
@@ -475,24 +599,6 @@ none)</li>
 </li>
 <li>Returns:<ul>
 <li>instance id</li>
-</ul>
-</li>
-</ul>
-<h3>Function set_vert_material()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_vert_material</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="kt">int</span> <span class="n">sid</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">*</span> <span class="n">ke</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">*</span> <span class="n">kd</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">*</span> <span class="n">ks</span><span class="p">,</span> <span class="k">const</span> <span class="kt">float</span><span class="o">*</span> <span class="n">rs</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Sets per-vertex material properties.</p>
-<ul>
-<li>Parameters:<ul>
-<li>scn: scene</li>
-<li>sid: shape id</li>
-<li>ke: per-vertex emission</li>
-<li>kd: per-vertex diffuse</li>
-<li>ks: per-vertex specular</li>
-<li>rs: per-vertex roughness</li>
 </ul>
 </li>
 </ul>

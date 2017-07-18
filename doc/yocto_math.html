@@ -333,10 +333,13 @@ Collision Detection" by Christer Ericson and public domain code from
     <span class="k">constexpr</span> <span class="k">static</span> <span class="k">const</span> <span class="kt">int</span> <span class="n">N</span> <span class="o">=</span> <span class="mi">4</span><span class="p">;</span>
     <span class="k">constexpr</span> <span class="nf">vec</span><span class="p">();</span> 
     <span class="k">constexpr</span> <span class="nf">vec</span><span class="p">(</span><span class="n">T</span> <span class="n">x</span><span class="p">,</span> <span class="n">T</span> <span class="n">y</span><span class="p">,</span> <span class="n">T</span> <span class="n">z</span><span class="p">,</span> <span class="n">T</span> <span class="n">w</span><span class="p">);</span> 
+    <span class="k">constexpr</span> <span class="nf">vec</span><span class="p">(</span><span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">xyz</span><span class="p">,</span> <span class="n">T</span> <span class="n">w</span><span class="p">);</span> 
     <span class="k">constexpr</span> <span class="n">T</span><span class="o">&amp;</span> <span class="k">operator</span><span class="p">[](</span><span class="kt">int</span> <span class="n">i</span><span class="p">);</span> 
     <span class="k">constexpr</span> <span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="k">operator</span><span class="p">[](</span><span class="kt">int</span> <span class="n">i</span><span class="p">)</span> <span class="k">const</span><span class="p">;</span> 
     <span class="k">constexpr</span> <span class="n">T</span><span class="o">*</span> <span class="nf">data</span><span class="p">();</span> 
     <span class="k">constexpr</span> <span class="k">const</span> <span class="n">T</span><span class="o">*</span> <span class="nf">data</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span> 
+    <span class="k">constexpr</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">xyz</span><span class="p">();</span> 
+    <span class="k">constexpr</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">xyz</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span> 
     <span class="n">T</span> <span class="n">x</span><span class="p">;</span>
     <span class="n">T</span> <span class="n">y</span><span class="p">;</span>
     <span class="n">T</span> <span class="n">z</span><span class="p">;</span>
@@ -351,10 +354,13 @@ Collision Detection" by Christer Ericson and public domain code from
 <li>N:      size</li>
 <li>vec():      default constructor</li>
 <li>vec():      element constructor</li>
+<li>vec():      constructor from smaller vector</li>
 <li>operator<a href=""></a>:      element access</li>
 <li>operator<a href=""></a>:      element access</li>
 <li>data():      data access</li>
 <li>data():      data access</li>
+<li>xyz():      access xyz components</li>
+<li>xyz():      access xyz components</li>
 <li>x:      element data</li>
 <li>y:      element data</li>
 <li>z:      element data</li>

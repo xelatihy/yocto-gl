@@ -159,6 +159,7 @@ struct material {
     texture* ks_txt = nullptr;
     texture* kt_txt = nullptr;
     texture* rs_txt = nullptr;
+    texture* op_txt = nullptr;
     texture* bump_txt = nullptr;
     texture* disp_txt = nullptr;
     texture* norm_txt = nullptr;
@@ -191,6 +192,7 @@ Scene Material
     - ks_txt:      specular texture
     - kt_txt:      transmission texture
     - rs_txt:      roughness texture
+    - op_txt:      opacity texture
     - bump_txt:      bump map texture (heighfield)
     - disp_txt:      displacement map texture (heighfield)
     - norm_txt:      normal texture

@@ -63,6 +63,7 @@ for internal acceleration. Disable this by setting YTRACE_NO_BVH.
 
 ## History
 
+- v 0.19: explicit material models
 - v 0.18: simpler texture creation functions
 - v 0.17: move to rgba per-vertex color
 - v 0.16: use yocto_math in the interface and remove inline compilation
@@ -219,6 +220,121 @@ Sets a texture in the scene.
 ### Function add_material()
 
 ~~~ .cpp
+int add_material(scene* scn);
+~~~
+
+Adds a black material to the scene. Use set_material_XXX() functions to
+customize it.
+
+- Parameters:
+    - scn: scene
+- Returns:
+    - material id
+
+### Function set_material_emission()
+
+~~~ .cpp
+void set_material_emission(
+    scene* scn, int mid, const ym::vec3f& ke, int ke_txt);
+~~~
+
+Sets the material emission.
+
+- Parameters:
+    - scn: scene
+    - mid: material id
+    - ke: emission, term
+    - ke_txt: emission texture (-1 for none)
+
+### Function set_material_normal()
+
+~~~ .cpp
+void set_material_normal(scene* scn, int mid, int norm_txt, float scale = 1);
+~~~
+
+Sets the material normal map.
+
+- Parameters:
+    - scn: scene
+    - mid: material id
+    - norm_txt: normal map (-1 for none)
+    - scale: normal scale
+
+### Function set_material_occlusion()
+
+~~~ .cpp
+void set_material_occlusion(scene* scn, int mid, int occ_txt, float scale = 1);
+~~~
+
+Sets the material normal map.
+
+- Parameters:
+    - scn: scene
+    - mid: material id
+    - occ_txt: occlusion map (-1 for none)
+    - scale: occlusion scale
+
+### Function set_material_microfacet()
+
+~~~ .cpp
+void set_material_microfacet(scene* scn, int mid, const ym::vec3f& kd,
+    const ym::vec3f& ks, float rs, float op, int kd_txt, int ks_txt, int rs_txt,
+    int op_txt, bool use_phong = false);
+~~~
+
+Sets a material reflectance as a microfacet model in the scene.
+
+- Parameters:
+    - scn: scene
+    - mid: material id
+    - kd: diffuse term
+    - ks: specular term
+    - rs: specular roughness
+    - kd_txt, ks_txt, rs_txt: texture indices (-1 for
+    none)
+    - use_phong: whether to use phong
+
+### Function set_material_gltf_metallic_roughness()
+
+~~~ .cpp
+void set_material_gltf_metallic_roughness(scene* scn, int mid,
+    const ym::vec3f& kb, float km, float rs, float op, int kd_txt, int km_txt);
+~~~
+
+Sets a gltf metallic roughness material reflectance.
+
+- Parameters:
+    - scn: scene
+    - mid: material id
+    - kb: base color term
+    - km: metallic term
+    - rs: specular roughness
+    - kd_txt, km_txt: texture indices (-1 for none)
+
+### Function set_material_gltf_specular_glossiness()
+
+~~~ .cpp
+void set_material_gltf_specular_glossiness(scene* scn, int mid,
+    const ym::vec3f& kd, const ym::vec3f& ks, float rs, float op, int kd_txt,
+    int ks_txt);
+~~~
+
+Sets a gltf metallic specular glossiness reflectance.
+
+- Parameters:
+    - scn: scene
+    - mid: material id
+    - ke: emission, term
+    - kd: diffuse term
+    - ks: specular term
+    - rs: specular glossiness
+    - kd_txt, ks_txt, norm_txt: texture indices (-1 for
+    none)
+   - use_phong: whether to use phong
+
+### Function add_material()
+
+~~~ .cpp
 int add_material(scene* scn, const ym::vec3f& ke, const ym::vec3f& kd,
     const ym::vec3f& ks, const ym::vec3f& kt, float rs = 0.1, int ke_txt = -1,
     int kd_txt = -1, int ks_txt = -1, int kt_txt = -1, int rs_txt = -1,
@@ -238,13 +354,13 @@ Sets a material in the scene. [DEPRECATED]
 - Returns:
     - material id
 
-### Function add_material_generic()
+### Function add_material_uber()
 
 ~~~ .cpp
-int add_material_generic(scene* scn, const ym::vec3f& ke, const ym::vec3f& kd,
-    const ym::vec3f& ks, const ym::vec3f& kt, float rs, float op, int ke_txt,
-    int kd_txt, int ks_txt, int kt_txt, int rs_txt, int op_txt, int norm_txt,
-    int occ_txt, bool use_phong = false);
+inline int add_material_uber(scene* scn, const ym::vec3f& ke,
+    const ym::vec3f& kd, const ym::vec3f& ks, const ym::vec3f& kt, float rs,
+    float op, int ke_txt, int kd_txt, int ks_txt, int kt_txt, int rs_txt,
+    int op_txt, int norm_txt, int occ_txt, bool use_phong);
 ~~~
 
 Sets a material in the scene with the most customization possible.
@@ -254,18 +370,19 @@ Sets a material in the scene with the most customization possible.
     - ke: emission, term
     - kd: diffuse term
     - ks: specular term
+    - kt: transmission term
     - rs: specular roughness
-    - ke_txt, kd_txt, ks_txt, rs_txt, norm_txt: texture indices (-1 for
-    none) - use_phong: whether to use phong
+    - ke_txt, kd_txt, ks_txt, rs_txt, norm_txt, occ_txt: texture indices (-1
+    for none) - use_phong: whether to use phong
 - Returns:
     - material id
 
 ### Function add_material_gltf_metallic_roughness()
 
 ~~~ .cpp
-int add_material_gltf_metallic_roughness(scene* scn, const ym::vec3f& ke,
-    const ym::vec3f& kd, float ks, float rs, float op, int ke_txt, int kd_txt,
-    int ks_txt, int norm_txt, int occ_txt, bool use_phong = false);
+inline int add_material_gltf_metallic_roughness(scene* scn, const ym::vec3f& ke,
+    const ym::vec3f& kb, float km, float rs, float op, int ke_txt, int kb_txt,
+    int km_txt, int norm_txt, int occ_txt);
 ~~~
 
 Sets a gltf metallic roughness material.
@@ -273,21 +390,20 @@ Sets a gltf metallic roughness material.
 - Parameters:
     - scn: scene
     - ke: emission, term
-    - kd: diffuse term
-    - ks: specular term
+    - kd: base color
+    - km: metallic term
     - rs: specular roughness
-    - ke_txt, kd_txt, ks_txt, rs_txt, norm_txt: texture indices (-1 for
+    - ke_txt, kb_txt, km_txt, norm_txt, occ_txt: texture indices (-1 for
     none)
-    - use_phong: whether to use phong
 - Returns:
     - material id
 
 ### Function add_material_gltf_specular_glossiness()
 
 ~~~ .cpp
-int add_material_gltf_specular_glossiness(scene* scn, const ym::vec3f& ke,
-    const ym::vec3f& kd, const ym::vec3f& ks, float rs, float op, int ke_txt,
-    int kd_txt, int ks_txt, int norm_txt, int occ_txt, bool use_phong = false);
+inline int add_material_gltf_specular_glossiness(scene* scn,
+    const ym::vec3f& ke, const ym::vec3f& kd, const ym::vec3f& ks, float rs,
+    float op, int ke_txt, int kd_txt, int ks_txt, int norm_txt, int occ_txt);
 ~~~
 
 Sets a gltf metallic specular glossiness.
@@ -300,14 +416,13 @@ Sets a gltf metallic specular glossiness.
     - rs: specular roughness
     - ke_txt, kd_txt, ks_txt, rs_txt, norm_txt: texture indices (-1 for
     none)
-   - use_phong: whether to use phong
 - Returns:
     - material id
 
 ### Function add_material_emission_only()
 
 ~~~ .cpp
-int add_material_emission_only(
+inline int add_material_emission_only(
     scene* scn, const ym::vec3f& ke, int ke_txt, int norm_txt, int occ_txt);
 ~~~
 
@@ -438,23 +553,6 @@ Adds an instance in the scene.
     - mid: material id
 - Returns:
     - instance id
-
-### Function set_vert_material()
-
-~~~ .cpp
-void set_vert_material(scene* scn, int sid, const ym::vec3f* ke,
-    const ym::vec3f* kd, const ym::vec3f* ks, const float* rs);
-~~~
-
-Sets per-vertex material properties.
-
-- Parameters:
-    - scn: scene
-    - sid: shape id
-    - ke: per-vertex emission
-    - kd: per-vertex diffuse
-    - ks: per-vertex specular
-    - rs: per-vertex roughness
 
 ### Function specular_exponent_to_roughness()
 

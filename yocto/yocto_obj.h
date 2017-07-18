@@ -220,6 +220,8 @@ struct material {
     texture* kt_txt = nullptr;
     /// roughness texture
     texture* rs_txt = nullptr;
+    /// opacity texture
+    texture* op_txt = nullptr;
     /// bump map texture (heighfield)
     texture* bump_txt = nullptr;
     /// displacement map texture (heighfield)

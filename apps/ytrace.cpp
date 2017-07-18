@@ -267,11 +267,12 @@ ytrace::scene* make_trace_scene(const yobj::scene* scene, const ycamera* cam) {
 
     auto material_map = std::map<yobj::material*, int>{{nullptr, -1}};
     for (auto mat : scene->materials) {
-        material_map[mat] = ytrace::add_material_generic(trace_scene, mat->ke,
-            mat->kd, mat->ks, mat->kt, mat->rs, 1, texture_map.at(mat->ke_txt),
-            texture_map.at(mat->kd_txt), texture_map.at(mat->ks_txt),
-            texture_map.at(mat->kt_txt), texture_map.at(mat->rs_txt), -1,
-            texture_map.at(mat->norm_txt), -1);
+        material_map[mat] = ytrace::add_material_uber(trace_scene, mat->ke,
+            mat->kd, mat->ks, mat->kt, mat->rs, mat->opacity,
+            texture_map.at(mat->ke_txt), texture_map.at(mat->kd_txt),
+            texture_map.at(mat->ks_txt), texture_map.at(mat->kt_txt),
+            texture_map.at(mat->rs_txt), texture_map.at(mat->op_txt),
+            texture_map.at(mat->norm_txt), -1, false);
     }
 
     auto sid = 0;
