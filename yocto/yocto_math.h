@@ -334,6 +334,9 @@ struct vec<T, 4> {
     constexpr vec() : x{0}, y{0}, z{0}, w{0} {}
     /// element constructor
     constexpr vec(T x, T y, T z, T w) : x{x}, y{y}, z{z}, w{w} {}
+    /// constructor from smaller vector
+    constexpr vec(const vec<T, 3>& xyz, T w)
+        : x{xyz.x}, y{xyz.y}, z{xyz.z}, w{w} {}
 
     /// element access
     constexpr T& operator[](int i) { return (&x)[i]; }
@@ -344,6 +347,11 @@ struct vec<T, 4> {
     constexpr T* data() { return &x; }
     /// data access
     constexpr const T* data() const { return &x; }
+
+    /// access xyz components
+    constexpr vec<T, 3>& xyz() { return *(vec<T, 3>*)&x; }
+    /// access xyz components
+    constexpr const vec<T, 3>& xyz() const { return *(vec<T, 3>*)&x; }
 
     /// element data
     T x;

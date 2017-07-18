@@ -379,10 +379,13 @@ struct vec<T, 4> {
     constexpr static const int N = 4;
     constexpr vec(); 
     constexpr vec(T x, T y, T z, T w); 
+    constexpr vec(const vec<T, 3>& xyz, T w); 
     constexpr T& operator[](int i); 
     constexpr const T& operator[](int i) const; 
     constexpr T* data(); 
     constexpr const T* data() const; 
+    constexpr vec<T, 3>& xyz(); 
+    constexpr const vec<T, 3>& xyz() const; 
     T x;
     T y;
     T z;
@@ -396,10 +399,13 @@ Specialization of vectors for 4 components and float coordinates.
     - N:      size
     - vec():      default constructor
     - vec():      element constructor
+    - vec():      constructor from smaller vector
     - operator[]():      element access
     - operator[]():      element access
     - data():      data access
     - data():      data access
+    - xyz():      access xyz components
+    - xyz():      access xyz components
     - x:      element data
     - y:      element data
     - z:      element data
