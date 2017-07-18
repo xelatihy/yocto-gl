@@ -39,6 +39,7 @@ Collision Detection" by Christer Ericson and public domain code from
 - https://gist.github.com/badboy/6267743</p>
 <h2>History</h2>
 <ul>
+<li>v 0.23: more camera navigation</li>
 <li>v 0.22: removed image lookup with arbitrary channels</li>
 <li>v 0.21: added more functions</li>
 <li>v 0.20: remove unused bbox overlap tests</li>
@@ -3691,23 +3692,29 @@ http://jcgt.org/published/0002/02/02/paper.pdf</p>
 
 
 <p>Tetrahedron bounds</p>
-<h3>Function turntable()</h3>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-<span class="k">constexpr</span> <span class="kr">inline</span> <span class="kt">void</span> <span class="n">turntable</span><span class="p">(</span><span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">from</span><span class="p">,</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">to</span><span class="p">,</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">up</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">2</span><span class="o">&gt;&amp;</span> <span class="n">rotate</span><span class="p">,</span> <span class="n">T</span> <span class="n">dolly</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">2</span><span class="o">&gt;&amp;</span> <span class="n">pan</span><span class="p">);</span>
+<h3>Function camera_turntable()</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">constexpr</span> <span class="kr">inline</span> <span class="kt">void</span> <span class="nf">camera_turntable</span><span class="p">(</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">from</span><span class="p">,</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">to</span><span class="p">,</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">up</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">rotate</span><span class="p">,</span> <span class="kt">float</span> <span class="n">dolly</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">pan</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Turntable for UI navigation from a from/to/up parametrization of the camera.</p>
-<h3>Function turntable()</h3>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-<span class="k">constexpr</span> <span class="kr">inline</span> <span class="kt">void</span> <span class="n">turntable</span><span class="p">(</span><span class="n">frame</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">frame</span><span class="p">,</span> <span class="kt">float</span><span class="o">&amp;</span> <span class="n">focus</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">2</span><span class="o">&gt;&amp;</span> <span class="n">rotate</span><span class="p">,</span> <span class="n">T</span> <span class="n">dolly</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">2</span><span class="o">&gt;&amp;</span> <span class="n">pan</span><span class="p">);</span>
+<h3>Function camera_turntable()</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">constexpr</span> <span class="kr">inline</span> <span class="kt">void</span> <span class="nf">camera_turntable</span><span class="p">(</span><span class="n">frame3f</span><span class="o">&amp;</span> <span class="n">frame</span><span class="p">,</span> <span class="kt">float</span><span class="o">&amp;</span> <span class="n">focus</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">vec2f</span><span class="o">&amp;</span> <span class="n">rotate</span><span class="p">,</span> <span class="kt">float</span> <span class="n">dolly</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec2f</span><span class="o">&amp;</span> <span class="n">pan</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Turntable for UI navigation for a frame/distance parametrization of the
 camera.</p>
+<h3>Function camera_fps()</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">constexpr</span> <span class="kr">inline</span> <span class="kt">void</span> <span class="nf">camera_fps</span><span class="p">(</span>
+    <span class="n">frame3f</span><span class="o">&amp;</span> <span class="n">frame</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">transl</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec2f</span><span class="o">&amp;</span> <span class="n">rotate</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>FPS camera for UI navigation for a frame parametrization.
+https://gamedev.stackexchange.com/questions/30644/how-to-keep-my-quaternion-using-fps-camera-from-tilting-and-messing-up</p>
 <h3>Struct image</h3>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
 <span class="k">struct</span> <span class="n">image</span> <span class="p">{</span>

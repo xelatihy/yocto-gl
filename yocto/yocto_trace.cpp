@@ -1108,15 +1108,16 @@ static ym::vec3f eval_fresnel_schlick(const ym::vec3f& ks, float cosw) {
                     std::pow(ym::clamp(1.0f - cosw, 0.0f, 1.0f), 5.0f);
 }
 
-    //
-    // Schlick approximation of Fresnel term weighted by roughness.
-    // This is a hack, but works better than not doing it.
-    //
-    static ym::vec3f eval_fresnel_schlick(const ym::vec3f& ks, float cosw, float rs) {
-        auto fks = eval_fresnel_schlick(ks, cosw);
-        return ym::lerp(ks, fks, rs);
-    }
-    
+//
+// Schlick approximation of Fresnel term weighted by roughness.
+// This is a hack, but works better than not doing it.
+//
+static ym::vec3f eval_fresnel_schlick(
+    const ym::vec3f& ks, float cosw, float rs) {
+    auto fks = eval_fresnel_schlick(ks, cosw);
+    return ym::lerp(ks, fks, rs);
+}
+
 //
 // Evaluates the BRDF scaled by the cosine of the incoming direction.
 //
@@ -1139,7 +1140,7 @@ static ym::vec3f eval_brdfcos(const point& pt, const ym::vec3f& wi) {
     // accumulate brdfcos for each lobe
     auto brdfcos = ym::zero3f;
     // keep a weight to account for fresnel term
-    auto weight = ym::vec3f{1,1,1};
+    auto weight = ym::vec3f{1, 1, 1};
     for (auto lid = pt.nbrdfs - 1; lid >= 0; lid--) {
         auto brdf = pt.brdfs[lid];
         switch (brdf.type) {
@@ -1199,9 +1200,9 @@ static ym::vec3f eval_brdfcos(const point& pt, const ym::vec3f& wi) {
 
                 // sum up
                 brdfcos += weight * ks * ndi * dg / (4 * ndi * ndo);
-                
+
                 // update weight
-                weight *= ym::vec3f{1,1,1} - ks;
+                weight *= ym::vec3f{1, 1, 1} - ks;
             } break;
             // specular term Phong
             case brdf_type::microfacet_phong: {
@@ -1230,9 +1231,9 @@ static ym::vec3f eval_brdfcos(const point& pt, const ym::vec3f& wi) {
 
                 // sum up
                 brdfcos += weight * ks * ndi * dg / (4 * ndi * ndo);
-                
+
                 // update weight
-                weight *= ym::vec3f{1,1,1} - ks;
+                weight *= ym::vec3f{1, 1, 1} - ks;
             } break;
             // diffuse term (Kajiya-Kay)
             case brdf_type::kajiya_kay_diff: {

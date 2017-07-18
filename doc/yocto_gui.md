@@ -159,6 +159,14 @@ ym::vec2i get_window_size(window* window);
 
 Window size
 
+### Function get_key()
+
+~~~ .cpp
+bool get_key(window* window, int key);
+~~~
+
+Check if a key is pressed (not all keys are supported)
+
 ### Function get_framebuffer_size()
 
 ~~~ .cpp

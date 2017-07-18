@@ -271,6 +271,14 @@ ym::vec2i get_window_size(window* win) {
 }
 
 //
+// Check if a key is pressed (not all keys are supported)
+//
+bool get_key(window* win, int key) {
+    key = std::toupper(key);
+    return glfwGetKey(win->win, key) == GLFW_PRESS;
+}
+
+//
 // Framebuffer size
 //
 ym::vec2i get_framebuffer_size(window* win) {
