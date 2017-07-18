@@ -72,6 +72,7 @@ this can used to access the scene data with `scene::get<T>(index)`.
 
 ## History
 
+- v 0.17: add per-mesh buffer on write from scene
 - v 0.16: add transforms under function calls
 - v 0.15: remove exception from code and add explicit error handling
 - v 0.14: texture have always 4 channels
@@ -601,7 +602,8 @@ Load scene
 
 ~~~ .cpp
 bool save_scenes(const std::string& filename, const scene_group* scn,
-    bool save_textures, std::string* err = nullptr);
+    bool save_textures, bool separate_buffers = false,
+    std::string* err = nullptr);
 ~~~
 
 Save scene
@@ -610,6 +612,7 @@ Save scene
     - filename: filename
     - scn: scene data to save
     - save_textures: whether to save textures (default to false)
+    - separate_buffers: save separate buffers for each mesh
     - err: if set, store error message on error
 - Returns:
     - whether an error occurred
@@ -2015,10 +2018,13 @@ Convert a gltf asset to flattened group of scene.
 ### Function scenes_to_gltf()
 
 ~~~ .cpp
-glTF* scenes_to_gltf(const scene_group* fl_gltf, const std::string& buffer_uri);
+glTF* scenes_to_gltf(const scene_group* fl_gltf, const std::string& buffer_uri,
+    bool separate_buffers = false);
 ~~~
 
-Convert a flattened group of scene into a gltf.
+Convert a flattened group of scene into a gltf. If separate_buffers,
+creates a separate buffer for each each and animation and
+prepend buffer_uri to its name.
 
 ### Function validate_gltf()
 
