@@ -716,219 +716,11 @@ yobj::camera* add_camera(yobj::scene* scn, const std::string& name,
 
 using byte = unsigned char;
 
-ym::image<ym::vec4b> make_grid(int s) {
-    ym::image<ym::vec4b> pixels(s, s);
-    int g = 64;
-    for (int j = 0; j < s; j++) {
-        for (int i = 0; i < s; i++) {
-            if (i % g == 0 || i % g == g - 1 || j % g == 0 || j % g == g - 1)
-                pixels.at(i, j) = ym::vec4b{90, 90, 90, 255};
-            else
-                pixels.at(i, j) = ym::vec4b{128, 128, 128, 255};
-        }
-    }
-    return pixels;
-}
-
-ym::image<ym::vec4b> make_checker(int s) {
-    ym::image<ym::vec4b> pixels(s, s);
-    for (int j = 0; j < s; j++) {
-        for (int i = 0; i < s; i++) {
-            if ((i / 64 + j / 64) % 2)
-                pixels.at(i, j) = ym::vec4b{90, 90, 90, 255};
-            else
-                pixels.at(i, j) = ym::vec4b{128, 128, 128, 255};
-        }
-    }
-    return pixels;
-}
-
-// http://stackoverflow.com/questions/3018313/algorithm-to-convert-rgb-to-hsv-and-hsv-to-rgb-in-range-0-255-for-both
-ym::vec4b hsv_to_rgb(byte h, byte s, byte v) {
-    ym::vec4b rgb = {0, 0, 0, 255};
-    byte region, remainder, p, q, t;
-
-    if (s == 0) {
-        rgb.x = v;
-        rgb.y = v;
-        rgb.z = v;
-        return rgb;
-    }
-
-    region = h / 43;
-    remainder = (h - (region * 43)) * 6;
-
-    p = (v * (255 - s)) >> 8;
-    q = (v * (255 - ((s * remainder) >> 8))) >> 8;
-    t = (v * (255 - ((s * (255 - remainder)) >> 8))) >> 8;
-
-    switch (region) {
-        case 0:
-            rgb.x = v;
-            rgb.y = t;
-            rgb.z = p;
-            break;
-        case 1:
-            rgb.x = q;
-            rgb.y = v;
-            rgb.z = p;
-            break;
-        case 2:
-            rgb.x = p;
-            rgb.y = v;
-            rgb.z = t;
-            break;
-        case 3:
-            rgb.x = p;
-            rgb.y = q;
-            rgb.z = v;
-            break;
-        case 4:
-            rgb.x = t;
-            rgb.y = p;
-            rgb.z = v;
-            break;
-        default:
-            rgb.x = v;
-            rgb.y = p;
-            rgb.z = q;
-            break;
-    }
-
-    return rgb;
-}
-
-ym::image<ym::vec4b> make_rcolored(int s) {
-    ym::image<ym::vec4b> pixels(s, s);
-    for (int j = 0; j < s; j++) {
-        for (int i = 0; i < s; i++) {
-            byte ph = 32 * (i / (s / 8));
-            byte pv = 128;
-            byte ps = 64 + 16 * (7 - j / (s / 8));
-            if (i % 32 && j % 32) {
-                if ((i / 64 + j / 64) % 2)
-                    pv += 16;
-                else
-                    pv -= 16;
-                if ((i / 16 + j / 16) % 2)
-                    pv += 4;
-                else
-                    pv -= 4;
-                if ((i / 4 + j / 4) % 2)
-                    pv += 1;
-                else
-                    pv -= 1;
-            } else {
-                pv = 196;
-                ps = 32;
-            }
-            pixels.at(i, j) = hsv_to_rgb(ph, ps, pv);
-        }
-    }
-    return pixels;
-}
-
-ym::image<ym::vec4b> make_gammaramp(int s) {
-    ym::image<ym::vec4b> pixels(s, s);
-    for (int j = 0; j < s; j++) {
-        for (int i = 0; i < s; i++) {
-            auto u = j / float(s - 1);
-            if (i < s / 3) u = pow(u, 2.2f);
-            if (i > (s * 2) / 3) u = pow(u, 1 / 2.2f);
-            auto c = (unsigned char)(u * 255);
-            pixels.at(i, j) = {c, c, c, 255};
-        }
-    }
-    return pixels;
-}
-
-ym::image<ym::vec4f> make_gammarampf(int s) {
-    ym::image<ym::vec4f> pixels(s, s);
-    for (int j = 0; j < s; j++) {
-        for (int i = 0; i < s; i++) {
-            auto u = j / float(s - 1);
-            if (i < s / 3) u = pow(u, 2.2f);
-            if (i > (s * 2) / 3) u = pow(u, 1 / 2.2f);
-            pixels.at(i, j) = {u, u, u, 1};
-        }
-    }
-    return pixels;
-}
-
-ym::image<ym::vec4b> make_colored(int s) {
-    ym::image<ym::vec4b> pixels(s, s);
-    for (int j = 0; j < s; j++) {
-        for (int i = 0; i < s; i++) {
-            byte ph = 32 * (i / (s / 8));
-            byte pv = 128;
-            byte ps = 64 + 16 * (7 - j / (s / 8));
-            if (i % 32 && j % 32) {
-                if ((i / 64 + j / 64) % 2)
-                    pv += 16;
-                else
-                    pv -= 16;
-            } else {
-                pv = 196;
-                ps = 32;
-            }
-            pixels.at(i, j) = hsv_to_rgb(ph, ps, pv);
-        }
-    }
-    return pixels;
-}
-
-ym::image<ym::vec4b> img2norm(
-    int s, const ym::image<ym::vec4b>& img, float scale = 1) {
-    ym::image<ym::vec4b> pixels(s, s);
-    for (int j = 0; j < s; j++) {
-        for (int i = 0; i < s; i++) {
-            auto i1 = (i + 1) % s, j1 = (j + 1) % s;
-            auto p00 = img.at(i, j), p10 = img.at(i1, j), p01 = img.at(i, j1);
-            auto g00 = (float(p00.x) + float(p00.y) + float(p00.z)) / (3 * 255);
-            auto g01 = (float(p01.x) + float(p01.y) + float(p01.z)) / (3 * 255);
-            auto g10 = (float(p10.x) + float(p10.y) + float(p10.z)) / (3 * 255);
-            auto n = ym::vec3f{scale * (g00 - g10), scale * (g00 - g01), 1.0f};
-            n = normalize(n) * 0.5f + ym::vec3f{0.5f, 0.5f, 0.5f};
-            auto c = ym::vec4b{
-                byte(n[0] * 255), byte(n[1] * 255), byte(n[2] * 255), 255};
-            pixels.at(i, j) = c;
-        }
-    }
-    return pixels;
-}
-
-ym::image<ym::vec4b> make_rchecker(int s) {
-    ym::image<ym::vec4b> pixels(s, s);
-    for (int j = 0; j < s; j++) {
-        for (int i = 0; i < s; i++) {
-            byte pv = 128;
-            if (i % 32 && j % 32) {
-                if ((i / 64 + j / 64) % 2)
-                    pv += 16;
-                else
-                    pv -= 16;
-                if ((i / 16 + j / 16) % 2)
-                    pv += 4;
-                else
-                    pv -= 4;
-                if ((i / 4 + j / 4) % 2)
-                    pv += 1;
-                else
-                    pv -= 1;
-            } else {
-                pv = 196;
-            }
-            pixels.at(i, j) = ym::vec4b{pv, pv, pv, 255};
-        }
-    }
-    return pixels;
-}
-
 #define sqr(x) ((x) * (x))
 
-std::vector<ym::vec4f> make_sunsky_hdr(int w, int h, float sun_theta,
+ym::image<ym::vec4f> make_sunsky_hdr(int w, int h, float sun_theta,
     float turbidity, ym::vec3f ground, float scale, bool include_ground) {
-    std::vector<ym::vec4f> rgba(w * h);
+    ym::image<ym::vec4f> rgba(w, h);
     ArHosekSkyModelState* skymodel_state[3] = {
         arhosek_rgb_skymodelstate_alloc_init(turbidity, ground[0], sun_theta),
         arhosek_rgb_skymodelstate_alloc_init(turbidity, ground[0], sun_theta),
@@ -953,8 +745,7 @@ std::vector<ym::vec4f> make_sunsky_hdr(int w, int h, float sun_theta,
                     skymodel_state[1], theta, gamma, 1)),
                 (float)(arhosek_tristim_skymodel_radiance(
                     skymodel_state[2], theta, gamma, 2))};
-            rgba[j * w + i] = {
-                scale * sky[0], scale * sky[1], scale * sky[2], 1};
+            rgba.at(i, j) = {scale * sky[0], scale * sky[1], scale * sky[2], 1};
         }
     }
     arhosekskymodelstate_free(skymodel_state[0]);
@@ -964,15 +755,15 @@ std::vector<ym::vec4f> make_sunsky_hdr(int w, int h, float sun_theta,
 }
 
 void save_image(const std::string& filename, const std::string& dirname,
-    const ym::vec4b* pixels, int s) {
+    const ym::image4b& img) {
     std::string path = std::string(dirname) + "/" + std::string(filename);
-    yimg::save_image(path, s, s, 4, (unsigned char*)pixels);
+    yimg::save_image4b(path, &img);
 }
 
-void save_image_hdr(const std::string& filename, const std::string& dirname,
-    const ym::vec4f* pixels, int w, int h) {
+void save_image(const std::string& filename, const std::string& dirname,
+    const ym::image4f& img) {
     std::string path = std::string(dirname) + "/" + std::string(filename);
-    yimg::save_imagef(path, w, h, 4, (float*)pixels);
+    yimg::save_image4f(path, &img);
 }
 
 std::vector<yobj::camera*> add_simple_cameras(yobj::scene* scn) {
@@ -1597,29 +1388,25 @@ int main(int argc, char* argv[]) {
     if (scene == "textures" || scene == "all") {
         run_async([=] {
             printf("generating simple textures ...\n");
-            save_image("grid.png", dirname, make_grid(512).data(), 512);
-            save_image("checker.png", dirname, make_checker(512).data(), 512);
-            save_image("rchecker.png", dirname, make_rchecker(512).data(), 512);
-            save_image("colored.png", dirname, make_colored(512).data(), 512);
-            save_image("rcolored.png", dirname, make_rcolored(512).data(), 512);
-            save_image("gamma.png", dirname, make_gammaramp(512).data(), 512);
+            save_image("grid.png", dirname, ym::make_grid_image(512));
+            save_image("checker.png", dirname, ym::make_checker_image(512));
+            save_image("rchecker.png", dirname,
+                ym::make_recuvgrid_image(512, 64, false));
+            save_image("colored.png", dirname, ym::make_uvgrid_image(512));
+            save_image("rcolored.png", dirname, ym::make_recuvgrid_image(512));
+            save_image("gamma.png", dirname, ym::make_gammaramp_image(512));
             save_image("grid_normal.png", dirname,
-                img2norm(512, make_grid(512), 4).data(), 512);
+                ym::bump_to_normal_map(ym::make_grid_image(512), 4));
             save_image("checker_normal.png", dirname,
-                img2norm(512, make_checker(512), 4).data(), 512);
-            save_image_hdr(
-                "gamma.hdr", dirname, make_gammarampf(512).data(), 512, 512);
+                ym::bump_to_normal_map(ym::make_checker_image(512), 4));
+            save_image("gamma.hdr", dirname, ym::make_gammaramp_imagef(512));
             printf("generating envmaps textures ...\n");
-            save_image_hdr("env.hdr", dirname,
+            save_image("env.hdr", dirname,
                 make_sunsky_hdr(1024, 512, 0.8f, 8, ym::vec3f{0.2f, 0.2f, 0.2f},
-                    1 / powf(2, 6), true)
-                    .data(),
-                1024, 512);
-            save_image_hdr("env01.hdr", dirname,
+                    1 / powf(2, 6), true));
+            save_image("env01.hdr", dirname,
                 make_sunsky_hdr(1024, 512, 0.8f, 8, ym::vec3f{0.2f, 0.2f, 0.2f},
-                    1 / powf(2, 6), true)
-                    .data(),
-                1024, 512);
+                    1 / powf(2, 6), true));
         });
     }
 

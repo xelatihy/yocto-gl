@@ -33,6 +33,8 @@ Collision Detection" by Christer Ericson and public domain code from
 
 ## History
 
+- v 0.18: bump to normal mapping convertion
+- v 0.17: added example image geneation
 - v 0.16: sampling
 - v 0.15: enable specialization always
 - v 0.14: move timer to Yocto/Utils
@@ -3889,11 +3891,11 @@ Out Parameters:
 ### Function merge_triangles()
 
 ~~~ .cpp
-inline void merge_triangles(std::vector<ym::vec3i>& triangles,
-    std::vector<ym::vec3f>& pos, std::vector<ym::vec3f>& norm,
-    std::vector<ym::vec2f>& texcoord, const std::vector<ym::vec3i>& mtriangles,
-    const std::vector<ym::vec3f>& mpos, const std::vector<ym::vec3f>& mnorm,
-    const std::vector<ym::vec2f>& mtexcoord);
+inline void merge_triangles(std::vector<vec3i>& triangles,
+    std::vector<vec3f>& pos, std::vector<vec3f>& norm,
+    std::vector<vec2f>& texcoord, const std::vector<vec3i>& mtriangles,
+    const std::vector<vec3f>& mpos, const std::vector<vec3f>& mnorm,
+    const std::vector<vec2f>& mtexcoord);
 ~~~
 
 Merge a triangle mesh into another.
@@ -4272,7 +4274,7 @@ http://jcgt.org/published/0002/02/02/paper.pdf
 ### Function point_bbox()
 
 ~~~ .cpp
-inline ym::bbox3f point_bbox(const vec3f& p, float r = 0);
+inline bbox3f point_bbox(const vec3f& p, float r = 0);
 ~~~
 
 Point bounds
@@ -4280,7 +4282,7 @@ Point bounds
 ### Function line_bbox()
 
 ~~~ .cpp
-inline ym::bbox3f line_bbox(
+inline bbox3f line_bbox(
     const vec3f& v0, const vec3f& v1, float r0 = 0, float r1 = 0);
 ~~~
 
@@ -4289,8 +4291,7 @@ Line bounds
 ### Function triangle_bbox()
 
 ~~~ .cpp
-inline ym::bbox3f triangle_bbox(
-    const vec3f& v0, const vec3f& v1, const vec3f& v2);
+inline bbox3f triangle_bbox(const vec3f& v0, const vec3f& v1, const vec3f& v2);
 ~~~
 
 Triangle bounds
@@ -4298,7 +4299,7 @@ Triangle bounds
 ### Function tetrahedron_bbox()
 
 ~~~ .cpp
-inline ym::bbox3f tetrahedron_bbox(
+inline bbox3f tetrahedron_bbox(
     const vec3f& v0, const vec3f& v1, const vec3f& v2, const vec3f& v3);
 ~~~
 
@@ -4493,4 +4494,76 @@ inline void image_over(
 ~~~
 
 Image over operator
+
+### Function hsv_to_rgb()
+
+~~~ .cpp
+inline vec4b hsv_to_rgb(const vec4b& hsv);
+~~~
+
+Convert HSV to RGB
+
+Implementatkion from
+http://stackoverflow.com/questions/3018313/algorithm-to-convert-rgb-to-hsv-and-hsv-to-rgb-in-range-0-255-for-both
+
+### Function make_grid_image()
+
+~~~ .cpp
+inline image<vec4b> make_grid_image(int size, int tile = 64,
+    const vec4b& c0 =;
+~~~
+
+Make a grid image
+
+### Function make_checker_image()
+
+~~~ .cpp
+inline image<vec4b> make_checker_image(int size, int tile = 64,
+    const vec4b& c0 =;
+~~~
+
+Make a checkerboard image
+
+### Function make_gammaramp_image()
+
+~~~ .cpp
+inline image<vec4b> make_gammaramp_image(int size);
+~~~
+
+Make a gamma ramp image
+
+### Function make_gammaramp_imagef()
+
+~~~ .cpp
+inline image<vec4f> make_gammaramp_imagef(int size);
+~~~
+
+Make a gamma ramp image
+
+### Function make_uvgrid_image()
+
+~~~ .cpp
+inline image<vec4b> make_uvgrid_image(
+    int size, int tile = 64, bool colored = true);
+~~~
+
+Make a uv colored grid
+
+### Function make_recuvgrid_image()
+
+~~~ .cpp
+inline image<vec4b> make_recuvgrid_image(
+    int size, int tile = 64, bool colored = true);
+~~~
+
+Make a uv recusive colored grid
+
+### Function bump_to_normal_map()
+
+~~~ .cpp
+inline image<vec4b> bump_to_normal_map(
+    const image<vec4b>& img, float scale = 1);
+~~~
+
+Comvert a bump map to a normal map.
 

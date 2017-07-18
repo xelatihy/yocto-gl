@@ -34,6 +34,8 @@
 ///
 /// ## History
 ///
+/// - v 0.18: bump to normal mapping convertion
+/// - v 0.17: added example image geneation
 /// - v 0.16: sampling
 /// - v 0.15: enable specialization always
 /// - v 0.14: move timer to Yocto/Utils
@@ -3528,11 +3530,11 @@ inline void make_points(int num, std::vector<int>& points,
 ///
 /// Merge a triangle mesh into another.
 ///
-inline void merge_triangles(std::vector<ym::vec3i>& triangles,
-    std::vector<ym::vec3f>& pos, std::vector<ym::vec3f>& norm,
-    std::vector<ym::vec2f>& texcoord, const std::vector<ym::vec3i>& mtriangles,
-    const std::vector<ym::vec3f>& mpos, const std::vector<ym::vec3f>& mnorm,
-    const std::vector<ym::vec2f>& mtexcoord) {
+inline void merge_triangles(std::vector<vec3i>& triangles,
+    std::vector<vec3f>& pos, std::vector<vec3f>& norm,
+    std::vector<vec2f>& texcoord, const std::vector<vec3i>& mtriangles,
+    const std::vector<vec3f>& mpos, const std::vector<vec3f>& mnorm,
+    const std::vector<vec2f>& mtexcoord) {
     auto o = (int)pos.size();
     for (auto t : mtriangles)
         triangles.push_back({t[0] + o, t[1] + o, t[2] + o});
@@ -3702,7 +3704,7 @@ inline void make_uvsphere(int usteps, int vsteps, std::vector<vec3i>& triangles,
 inline void make_uvhemisphere(int usteps, int vsteps,
     std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
     std::vector<vec3f>& norm, std::vector<vec2f>& texcoord) {
-    return ym::make_triangles(usteps, vsteps, triangles, pos, norm, texcoord,
+    return make_triangles(usteps, vsteps, triangles, pos, norm, texcoord,
         [](const vec2f& uv) {
             auto a = vec2f{2 * pif * uv[0], pif * 0.5f * (1 - uv[1])};
             return vec3f{
@@ -3722,7 +3724,7 @@ inline void make_uvhemisphere(int usteps, int vsteps,
 inline void make_uvflippedsphere(int usteps, int vsteps,
     std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
     std::vector<vec3f>& norm, std::vector<vec2f>& texcoord) {
-    return ym::make_triangles(usteps, vsteps, triangles, pos, norm, texcoord,
+    return make_triangles(usteps, vsteps, triangles, pos, norm, texcoord,
         [](const vec2f& uv) {
             auto a = vec2f{2 * pif * uv[0], pif * uv[1]};
             return vec3f{
@@ -3744,7 +3746,7 @@ inline void make_uvflippedsphere(int usteps, int vsteps,
 inline void make_uvflippedhemisphere(int usteps, int vsteps,
     std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
     std::vector<vec3f>& norm, std::vector<vec2f>& texcoord) {
-    return ym::make_triangles(usteps, vsteps, triangles, pos, norm, texcoord,
+    return make_triangles(usteps, vsteps, triangles, pos, norm, texcoord,
         [](const vec2f& uv) {
             auto a = vec2f{2 * pif * uv[0], pif * (0.5f + 0.5f * uv[1])};
             return vec3f{
@@ -3782,16 +3784,15 @@ inline void make_uvquad(int usteps, int vsteps, std::vector<vec3i>& triangles,
 inline void make_uvcube(int usteps, int vsteps, std::vector<vec3i>& triangles,
     std::vector<vec3f>& pos, std::vector<vec3f>& norm,
     std::vector<vec2f>& texcoord) {
-    ym::frame3f frames[6] = {
-        ym::frame3f{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 1}},
-        ym::frame3f{{-1, 0, 0}, {0, 1, 0}, {0, 0, -1}, {0, 0, -1}},
-        ym::frame3f{{-1, 0, 0}, {0, 0, 1}, {0, 1, 0}, {0, 1, 0}},
-        ym::frame3f{{1, 0, 0}, {0, 0, 1}, {0, -1, 0}, {0, -1, 0}},
-        ym::frame3f{{0, 1, 0}, {0, 0, 1}, {1, 0, 0}, {1, 0, 0}},
-        ym::frame3f{{0, -1, 0}, {0, 0, 1}, {-1, 0, 0}, {-1, 0, 0}}};
+    frame3f frames[6] = {frame3f{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 1}},
+        frame3f{{-1, 0, 0}, {0, 1, 0}, {0, 0, -1}, {0, 0, -1}},
+        frame3f{{-1, 0, 0}, {0, 0, 1}, {0, 1, 0}, {0, 1, 0}},
+        frame3f{{1, 0, 0}, {0, 0, 1}, {0, -1, 0}, {0, -1, 0}},
+        frame3f{{0, 1, 0}, {0, 0, 1}, {1, 0, 0}, {1, 0, 0}},
+        frame3f{{0, -1, 0}, {0, 0, 1}, {-1, 0, 0}, {-1, 0, 0}}};
     std::vector<vec3f> quad_pos, quad_norm;
     std::vector<vec2f> quad_texcoord;
-    std::vector<ym::vec3i> quad_triangles;
+    std::vector<vec3i> quad_triangles;
     make_uvquad(
         usteps, vsteps, quad_triangles, quad_pos, quad_norm, quad_texcoord);
     for (auto i = 0; i < 6; i++) {
@@ -3805,9 +3806,9 @@ inline void make_uvcube(int usteps, int vsteps, std::vector<vec3i>& triangles,
     auto quad_faces = quad_triangles.size(), quad_verts = quad_pos.size();
     for (auto i = 0; i < 6; i++) {
         for (auto j = quad_verts * i; j < quad_verts * (i + 1); j++)
-            pos[j] = ym::transform_point(frames[i], pos[j]);
+            pos[j] = transform_point(frames[i], pos[j]);
         for (auto j = quad_verts * i; j < quad_verts * (i + 1); j++)
-            norm[j] = ym::transform_direction(frames[i], norm[j]);
+            norm[j] = transform_direction(frames[i], norm[j]);
         for (auto j = quad_faces * i; j < quad_faces * (i + 1); j++) {
             triangles[j].x += quad_verts * i;
             triangles[j].y += quad_verts * i;
@@ -3835,13 +3836,13 @@ inline void make_uvspherecube(int usteps, int vsteps,
 inline void make_uvspherizedcube(int usteps, int vsteps, float radius,
     std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
     std::vector<vec3f>& norm, std::vector<vec2f>& texcoord) {
-    ym::make_uvcube(usteps, vsteps, triangles, pos, norm, texcoord);
+    make_uvcube(usteps, vsteps, triangles, pos, norm, texcoord);
     for (auto i = 0; i < pos.size(); i++) {
-        norm[i] = ym::normalize(pos[i]);
+        norm[i] = normalize(pos[i]);
         pos[i] *= 1 - radius;
         pos[i] += norm[i] * radius;
     }
-    ym::compute_normals(triangles, pos, norm, true);
+    compute_normals(triangles, pos, norm, true);
 }
 
 ///
@@ -3850,7 +3851,7 @@ inline void make_uvspherizedcube(int usteps, int vsteps, float radius,
 inline void make_uvflipcapsphere(int usteps, int vsteps, float radius,
     std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
     std::vector<vec3f>& norm, std::vector<vec2f>& texcoord) {
-    ym::make_uvsphere(usteps, vsteps, triangles, pos, norm, texcoord);
+    make_uvsphere(usteps, vsteps, triangles, pos, norm, texcoord);
     for (auto i = 0; i < pos.size(); i++) {
         if (pos[i][2] > radius) {
             pos[i][2] = 2 * radius - pos[i][2];
@@ -4394,7 +4395,7 @@ inline bool overlap_bbox(const bbox3f& bbox1, const bbox3f& bbox2,
     auto cframe2to1 = inverse(cframe1) * cframe2;
 
     // split frame components and move to row-major
-    auto rot = transpose(ym::rot(cframe2to1));
+    auto rot = transpose(cframe2to1.rot());
     auto t = pos(cframe2to1);
 
     // Compute common subexpressions. Add in an epsilon term to
@@ -4490,33 +4491,32 @@ inline bool overlap_bbox_conservative(const bbox3f& bbox1, const bbox3f& bbox2,
 ///
 /// Point bounds
 ///
-inline ym::bbox3f point_bbox(const vec3f& p, float r = 0) {
-    return ym::bbox3f{p - vec3f{r, r, r}, p + vec3f{r, r, r}};
+inline bbox3f point_bbox(const vec3f& p, float r = 0) {
+    return bbox3f{p - vec3f{r, r, r}, p + vec3f{r, r, r}};
 }
 
 ///
 /// Line bounds
 ///
-inline ym::bbox3f line_bbox(
+inline bbox3f line_bbox(
     const vec3f& v0, const vec3f& v1, float r0 = 0, float r1 = 0) {
-    return ym::make_bbox({v0 - vec3f{r0, r0, r0}, v0 + vec3f{r0, r0, r0},
+    return make_bbox({v0 - vec3f{r0, r0, r0}, v0 + vec3f{r0, r0, r0},
         v1 - vec3f{r1, r1, r1}, v1 + vec3f{r1, r1, r1}});
 }
 
 ///
 /// Triangle bounds
 ///
-inline ym::bbox3f triangle_bbox(
-    const vec3f& v0, const vec3f& v1, const vec3f& v2) {
-    return ym::make_bbox({v0, v1, v2});
+inline bbox3f triangle_bbox(const vec3f& v0, const vec3f& v1, const vec3f& v2) {
+    return make_bbox({v0, v1, v2});
 }
 
 ///
 /// Tetrahedron bounds
 ///
-inline ym::bbox3f tetrahedron_bbox(
+inline bbox3f tetrahedron_bbox(
     const vec3f& v0, const vec3f& v1, const vec3f& v2, const vec3f& v3) {
-    return ym::make_bbox({v0, v1, v2, v3});
+    return make_bbox({v0, v1, v2, v3});
 }
 
 // -----------------------------------------------------------------------------
@@ -4830,6 +4830,234 @@ inline void image_over(
             img[i] = {0, 0, 0, 0};
         }
     }
+}
+
+///
+/// Convert HSV to RGB
+///
+/// Implementatkion from
+/// http://stackoverflow.com/questions/3018313/algorithm-to-convert-rgb-to-hsv-and-hsv-to-rgb-in-range-0-255-for-both
+///
+inline vec4b hsv_to_rgb(const vec4b& hsv) {
+    vec4b rgb = {0, 0, 0, hsv.w};
+    byte region, remainder, p, q, t;
+
+    byte h = hsv.x, s = hsv.y, v = hsv.z;
+
+    if (s == 0) {
+        rgb.x = v;
+        rgb.y = v;
+        rgb.z = v;
+        return rgb;
+    }
+
+    region = h / 43;
+    remainder = (h - (region * 43)) * 6;
+
+    p = (v * (255 - s)) >> 8;
+    q = (v * (255 - ((s * remainder) >> 8))) >> 8;
+    t = (v * (255 - ((s * (255 - remainder)) >> 8))) >> 8;
+
+    switch (region) {
+        case 0:
+            rgb.x = v;
+            rgb.y = t;
+            rgb.z = p;
+            break;
+        case 1:
+            rgb.x = q;
+            rgb.y = v;
+            rgb.z = p;
+            break;
+        case 2:
+            rgb.x = p;
+            rgb.y = v;
+            rgb.z = t;
+            break;
+        case 3:
+            rgb.x = p;
+            rgb.y = q;
+            rgb.z = v;
+            break;
+        case 4:
+            rgb.x = t;
+            rgb.y = p;
+            rgb.z = v;
+            break;
+        default:
+            rgb.x = v;
+            rgb.y = p;
+            rgb.z = q;
+            break;
+    }
+
+    return rgb;
+}
+
+// -----------------------------------------------------------------------------
+// EXAMPLE IMAGES
+// -----------------------------------------------------------------------------
+
+///
+/// Make a grid image
+///
+inline image<vec4b> make_grid_image(int size, int tile = 64,
+    const vec4b& c0 = {90, 90, 90, 255},
+    const vec4b& c1 = {128, 128, 128, 255}) {
+    auto s = size;
+    auto g = tile;
+    image<vec4b> pixels(s, s);
+    for (int j = 0; j < s; j++) {
+        for (int i = 0; i < s; i++) {
+            auto c =
+                i % g == 0 || i % g == g - 1 || j % g == 0 || j % g == g - 1;
+            pixels.at(i, j) = (c) ? c0 : c1;
+        }
+    }
+    return pixels;
+}
+
+///
+/// Make a checkerboard image
+///
+inline image<vec4b> make_checker_image(int size, int tile = 64,
+    const vec4b& c0 = {90, 90, 90, 255},
+    const vec4b& c1 = {128, 128, 128, 255}) {
+    auto s = size;
+    auto g = tile;
+    image<vec4b> pixels(s, s);
+    for (int j = 0; j < s; j++) {
+        for (int i = 0; i < s; i++) {
+            auto c = (i / g + j / g) % 2 == 0;
+            pixels.at(i, j) = (c) ? c0 : c1;
+        }
+    }
+    return pixels;
+}
+
+///
+/// Make a gamma ramp image
+///
+inline image<vec4b> make_gammaramp_image(int size) {
+    auto s = size;
+    image<vec4b> pixels(s, s);
+    for (int j = 0; j < s; j++) {
+        for (int i = 0; i < s; i++) {
+            auto u = j / float(s - 1);
+            if (i < s / 3) u = pow(u, 2.2f);
+            if (i > (s * 2) / 3) u = pow(u, 1 / 2.2f);
+            auto c = (unsigned char)(u * 255);
+            pixels.at(i, j) = {c, c, c, 255};
+        }
+    }
+    return pixels;
+}
+
+///
+/// Make a gamma ramp image
+///
+inline image<vec4f> make_gammaramp_imagef(int size) {
+    auto s = size;
+    image<vec4f> pixels(s, s);
+    for (int j = 0; j < s; j++) {
+        for (int i = 0; i < s; i++) {
+            auto u = j / float(s - 1);
+            if (i < s / 3) u = pow(u, 2.2f);
+            if (i > (s * 2) / 3) u = pow(u, 1 / 2.2f);
+            pixels.at(i, j) = {u, u, u, 1};
+        }
+    }
+    return pixels;
+}
+
+///
+/// Make a uv colored grid
+///
+inline image<vec4b> make_uvgrid_image(
+    int size, int tile = 64, bool colored = true) {
+    auto s = size;
+    auto g = tile;
+    image<vec4b> pixels(s, s);
+    for (int j = 0; j < s; j++) {
+        for (int i = 0; i < s; i++) {
+            byte ph = 32 * (i / (s / 8));
+            byte pv = 128;
+            byte ps = 64 + 16 * (7 - j / (s / 8));
+            if (i % (g / 2) && j % (g / 2)) {
+                if ((i / g + j / g) % 2)
+                    pv += 16;
+                else
+                    pv -= 16;
+            } else {
+                pv = 196;
+                ps = 32;
+            }
+            pixels.at(i, j) = (colored) ? hsv_to_rgb({ph, ps, pv, 255}) :
+                                          vec4b{pv, pv, pv, 255};
+        }
+    }
+    return pixels;
+}
+
+///
+/// Make a uv recusive colored grid
+///
+inline image<vec4b> make_recuvgrid_image(
+    int size, int tile = 64, bool colored = true) {
+    auto s = size;
+    auto g = tile;
+    image<vec4b> pixels(s, s);
+    for (int j = 0; j < s; j++) {
+        for (int i = 0; i < s; i++) {
+            byte ph = 32 * (i / (s / 8));
+            byte pv = 128;
+            byte ps = 64 + 16 * (7 - j / (s / 8));
+            if (i % (g / 2) && j % (g / 2)) {
+                if ((i / g + j / g) % 2)
+                    pv += 16;
+                else
+                    pv -= 16;
+                if ((i / (g / 4) + j / (g / 4)) % 2)
+                    pv += 4;
+                else
+                    pv -= 4;
+                if ((i / (g / 8) + j / (g / 8)) % 2)
+                    pv += 1;
+                else
+                    pv -= 1;
+            } else {
+                pv = 196;
+                ps = 32;
+            }
+            pixels.at(i, j) = (colored) ? hsv_to_rgb({ph, ps, pv, 255}) :
+                                          vec4b{pv, pv, pv, 255};
+        }
+    }
+    return pixels;
+}
+
+///
+/// Comvert a bump map to a normal map.
+///
+inline image<vec4b> bump_to_normal_map(
+    const image<vec4b>& img, float scale = 1) {
+    auto w = img.width(), h = img.height();
+    image<vec4b> norm(w, h);
+    for (int j = 0; j < h; j++) {
+        for (int i = 0; i < w; i++) {
+            auto i1 = (i + 1) % w, j1 = (j + 1) % h;
+            auto p00 = img.at(i, j), p10 = img.at(i1, j), p01 = img.at(i, j1);
+            auto g00 = (float(p00.x) + float(p00.y) + float(p00.z)) / (3 * 255);
+            auto g01 = (float(p01.x) + float(p01.y) + float(p01.z)) / (3 * 255);
+            auto g10 = (float(p10.x) + float(p10.y) + float(p10.z)) / (3 * 255);
+            auto n = vec3f{scale * (g00 - g10), scale * (g00 - g01), 1.0f};
+            n = normalize(n) * 0.5f + vec3f{0.5f, 0.5f, 0.5f};
+            auto c = vec4b{
+                byte(n[0] * 255), byte(n[1] * 255), byte(n[2] * 255), 255};
+            norm.at(i, j) = c;
+        }
+    }
+    return norm;
 }
 
 }  // namespace ym
