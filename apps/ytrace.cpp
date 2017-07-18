@@ -96,7 +96,7 @@ bool update(yscene* scn) {
             auto cid = 1;
             for (auto cam : scn->oscn->cameras) {
                 ytrace::set_camera(scn->trace_scene, cid++,
-                    ym::to_frame(cam->xform), cam->yfov, cam->aspect,
+                    ym::to_frame(cam->xform()), cam->yfov, cam->aspect,
                     cam->aperture, cam->focus);
             }
 
@@ -105,8 +105,8 @@ bool update(yscene* scn) {
             auto cid = 1;
             for (auto cam : cameras) {
                 ytrace::set_camera(scn->trace_scene, cid++,
-                    ym::to_frame(cam->xform), cam->cam->yfov, cam->cam->aspect,
-                    cam->cam->aperture, cam->cam->focus);
+                    ym::to_frame(cam->xform()), cam->cam->yfov,
+                    cam->cam->aspect, cam->cam->aperture, cam->cam->focus);
             }
         }
 
@@ -244,7 +244,7 @@ ytrace::scene* make_trace_scene(const yobj::scene* scene, const ycamera* cam) {
     ytrace::add_camera(trace_scene, cam->frame, cam->yfov, cam->aspect,
         cam->aperture, cam->focus);
     for (auto cam : scene->cameras) {
-        ytrace::add_camera(trace_scene, ym::to_frame(cam->xform), cam->yfov,
+        ytrace::add_camera(trace_scene, ym::to_frame(cam->xform()), cam->yfov,
             cam->aspect, cam->aperture, cam->focus);
     }
 
@@ -261,8 +261,8 @@ ytrace::scene* make_trace_scene(const yobj::scene* scene, const ycamera* cam) {
 
     for (auto env : scene->environments) {
         auto mat = env->mat;
-        ytrace::add_environment(trace_scene, ym::to_frame(env->xform), mat->ke,
-            texture_map.at(mat->ke_txt));
+        ytrace::add_environment(trace_scene, ym::to_frame(env->xform()),
+            mat->ke, texture_map.at(mat->ke_txt));
     }
 
     auto material_map = std::map<yobj::material*, int>{{nullptr, -1}};
@@ -308,7 +308,7 @@ ytrace::scene* make_trace_scene(const yobj::scene* scene, const ycamera* cam) {
     if (!scene->instances.empty()) {
         for (auto ist : scene->instances) {
             for (auto shp : ist->msh->shapes) {
-                ytrace::add_instance(trace_scene, ym::to_frame(ist->xform),
+                ytrace::add_instance(trace_scene, ym::to_frame(ist->xform()),
                     shape_map.at(shp), material_map.at(shp->mat));
             }
         }
@@ -334,7 +334,7 @@ ytrace::scene* make_trace_scene(
         cam->aperture, cam->focus);
     auto cameras = ygltf::get_camera_nodes(scenes->default_scene);
     for (auto cam : cameras) {
-        ytrace::add_camera(trace_scene, ym::to_frame(cam->xform),
+        ytrace::add_camera(trace_scene, ym::to_frame(cam->xform()),
             cam->cam->yfov, cam->cam->aspect, cam->cam->aperture,
             cam->cam->focus);
     }
@@ -413,7 +413,7 @@ ytrace::scene* make_trace_scene(
     if (!instances.empty()) {
         for (auto ist : instances) {
             for (auto shp : ist->msh->shapes) {
-                ytrace::add_instance(trace_scene, ym::to_frame(ist->xform),
+                ytrace::add_instance(trace_scene, ym::to_frame(ist->xform()),
                     shape_map.at(shp), material_map.at(shp->mat));
             }
         }

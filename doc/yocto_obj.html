@@ -61,6 +61,7 @@ disabled by defining YOBJ_NO_IMAGE before including this file.</p>
 </ol>
 <h2>History</h2>
 <ul>
+<li>v 0.27: explicit transforms</li>
 <li>v 0.26: added interpreting of illum in scene conversions</li>
 <li>v 0.25: added convention for Tr</li>
 <li>v 0.24: remove exception from code and add explicit error handling</li>
@@ -259,8 +260,12 @@ disabled by defining YOBJ_NO_IMAGE before including this file.</p>
 </ul>
 <h3>Struct instance</h3>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">instance</span> <span class="p">{</span>
-    <span class="n">ym</span><span class="o">::</span><span class="n">mat4f</span> <span class="n">xform</span> <span class="o">=</span> <span class="n">ym</span><span class="o">::</span><span class="n">identity_mat4f</span><span class="p">;</span>
+    <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span> <span class="n">translation</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">};</span>
+    <span class="n">ym</span><span class="o">::</span><span class="n">quat4f</span> <span class="n">rotation</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">};</span>
+    <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span> <span class="n">scale</span> <span class="o">=</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">};</span>
+    <span class="n">ym</span><span class="o">::</span><span class="n">mat4f</span> <span class="n">matrix</span> <span class="o">=</span> <span class="n">ym</span><span class="o">::</span><span class="n">identity_mat4f</span><span class="p">;</span>
     <span class="n">mesh</span><span class="o">*</span> <span class="n">msh</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+    <span class="n">ym</span><span class="o">::</span><span class="n">mat4f</span> <span class="n">xform</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span> 
 <span class="p">}</span>
 </code></pre></div>
 
@@ -268,20 +273,27 @@ disabled by defining YOBJ_NO_IMAGE before including this file.</p>
 <p>Mesh instance.</p>
 <ul>
 <li>Members:<ul>
-<li>xform:      transform</li>
+<li>translation:      translation</li>
+<li>rotation:      rotation</li>
+<li>scale:      scale</li>
+<li>matrix:      generic transform matrix</li>
 <li>msh:      mesh instances</li>
+<li>xform():      xform</li>
 </ul>
 </li>
 </ul>
 <h3>Struct camera</h3>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">camera</span> <span class="p">{</span>
     <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">name</span><span class="p">;</span>
-    <span class="n">ym</span><span class="o">::</span><span class="n">mat4f</span> <span class="n">xform</span> <span class="o">=</span> <span class="n">ym</span><span class="o">::</span><span class="n">identity_mat4f</span><span class="p">;</span>
+    <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span> <span class="n">translation</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">};</span>
+    <span class="n">ym</span><span class="o">::</span><span class="n">quat4f</span> <span class="n">rotation</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">};</span>
+    <span class="n">ym</span><span class="o">::</span><span class="n">mat4f</span> <span class="n">matrix</span> <span class="o">=</span> <span class="n">ym</span><span class="o">::</span><span class="n">identity_mat4f</span><span class="p">;</span>
     <span class="kt">bool</span> <span class="n">ortho</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
     <span class="kt">float</span> <span class="n">yfov</span> <span class="o">=</span> <span class="mi">2</span><span class="p">;</span>
     <span class="kt">float</span> <span class="n">aspect</span> <span class="o">=</span> <span class="mf">16.0f</span> <span class="o">/</span> <span class="mf">9.0f</span><span class="p">;</span>
     <span class="kt">float</span> <span class="n">focus</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
     <span class="kt">float</span> <span class="n">aperture</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="n">ym</span><span class="o">::</span><span class="n">mat4f</span> <span class="n">xform</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span> 
 <span class="p">}</span>
 </code></pre></div>
 
@@ -290,12 +302,15 @@ disabled by defining YOBJ_NO_IMAGE before including this file.</p>
 <ul>
 <li>Members:<ul>
 <li>name:      name</li>
-<li>xform:      transform</li>
+<li>translation:      translation</li>
+<li>rotation:      rotation</li>
+<li>matrix:      generic transform matrix</li>
 <li>ortho:      ortho cam</li>
 <li>yfov:      vertical field of view</li>
 <li>aspect:      aspect ratio</li>
 <li>focus:      focus distance</li>
 <li>aperture:      lens aperture</li>
+<li>xform():      xform</li>
 </ul>
 </li>
 </ul>
@@ -303,7 +318,9 @@ disabled by defining YOBJ_NO_IMAGE before including this file.</p>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">environment</span> <span class="p">{</span>
     <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">name</span><span class="p">;</span>
     <span class="n">material</span><span class="o">*</span> <span class="n">mat</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
-    <span class="n">ym</span><span class="o">::</span><span class="n">mat4f</span> <span class="n">xform</span> <span class="o">=</span> <span class="n">ym</span><span class="o">::</span><span class="n">identity_mat4f</span><span class="p">;</span>
+    <span class="n">ym</span><span class="o">::</span><span class="n">quat4f</span> <span class="n">rotation</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">};</span>
+    <span class="n">ym</span><span class="o">::</span><span class="n">mat4f</span> <span class="n">matrix</span> <span class="o">=</span> <span class="n">ym</span><span class="o">::</span><span class="n">identity_mat4f</span><span class="p">;</span>
+    <span class="n">ym</span><span class="o">::</span><span class="n">mat4f</span> <span class="n">xform</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span> 
 <span class="p">}</span>
 </code></pre></div>
 
@@ -313,7 +330,9 @@ disabled by defining YOBJ_NO_IMAGE before including this file.</p>
 <li>Members:<ul>
 <li>name:      name</li>
 <li>mat:      index of material in material array</li>
-<li>xform:      transform</li>
+<li>rotation:      rotation</li>
+<li>matrix:      generic transform matrix</li>
+<li>xform():      xform</li>
 </ul>
 </li>
 </ul>
@@ -672,7 +691,10 @@ disabled by defining YOBJ_NO_IMAGE before including this file.</p>
 <h3>Struct obj_camera</h3>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">obj_camera</span> <span class="p">{</span>
     <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">name</span><span class="p">;</span>
-    <span class="n">ym</span><span class="o">::</span><span class="n">mat4f</span> <span class="n">xform</span> <span class="o">=</span> <span class="n">ym</span><span class="o">::</span><span class="n">identity_mat4f</span><span class="p">;</span>
+    <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span> <span class="n">translation</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">};</span>
+    <span class="n">ym</span><span class="o">::</span><span class="n">quat4f</span> <span class="n">rotation</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">};</span>
+    <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span> <span class="n">scale</span> <span class="o">=</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">};</span>
+    <span class="n">ym</span><span class="o">::</span><span class="n">mat4f</span> <span class="n">matrix</span> <span class="o">=</span> <span class="n">ym</span><span class="o">::</span><span class="n">identity_mat4f</span><span class="p">;</span>
     <span class="kt">bool</span> <span class="n">ortho</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
     <span class="kt">float</span> <span class="n">yfov</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">std</span><span class="o">::</span><span class="n">atan</span><span class="p">(</span><span class="mf">0.5f</span><span class="p">);</span>
     <span class="kt">float</span> <span class="n">aspect</span> <span class="o">=</span> <span class="mf">16.0f</span> <span class="o">/</span> <span class="mf">9.0f</span><span class="p">;</span>
@@ -686,7 +708,10 @@ disabled by defining YOBJ_NO_IMAGE before including this file.</p>
 <ul>
 <li>Members:<ul>
 <li>name:      camera name</li>
-<li>xform:      camera transform</li>
+<li>translation:      translation</li>
+<li>rotation:      rotation</li>
+<li>scale:      scale</li>
+<li>matrix:      generic transform matrix</li>
 <li>ortho:      orthografic camera</li>
 <li>yfov:      vertical field of view</li>
 <li>aspect:      aspect ratio</li>
@@ -698,7 +723,8 @@ disabled by defining YOBJ_NO_IMAGE before including this file.</p>
 <h3>Struct obj_environment</h3>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">obj_environment</span> <span class="p">{</span>
     <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">name</span><span class="p">;</span>
-    <span class="n">ym</span><span class="o">::</span><span class="n">mat4f</span> <span class="n">xform</span> <span class="o">=</span> <span class="n">ym</span><span class="o">::</span><span class="n">identity_mat4f</span><span class="p">;</span>
+    <span class="n">ym</span><span class="o">::</span><span class="n">quat4f</span> <span class="n">rotation</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">};</span>
+    <span class="n">ym</span><span class="o">::</span><span class="n">mat4f</span> <span class="n">matrix</span> <span class="o">=</span> <span class="n">ym</span><span class="o">::</span><span class="n">identity_mat4f</span><span class="p">;</span>
     <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">matname</span><span class="p">;</span>
 <span class="p">}</span>
 </code></pre></div>
@@ -708,7 +734,8 @@ disabled by defining YOBJ_NO_IMAGE before including this file.</p>
 <ul>
 <li>Members:<ul>
 <li>name:      environment name</li>
-<li>xform:      transform</li>
+<li>rotation:      rotation</li>
+<li>matrix:      generic transform matrix</li>
 <li>matname:      material name</li>
 </ul>
 </li>
@@ -716,7 +743,10 @@ disabled by defining YOBJ_NO_IMAGE before including this file.</p>
 <h3>Struct obj_instance</h3>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">obj_instance</span> <span class="p">{</span>
     <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">name</span><span class="p">;</span>
-    <span class="n">ym</span><span class="o">::</span><span class="n">mat4f</span> <span class="n">xform</span> <span class="o">=</span> <span class="n">ym</span><span class="o">::</span><span class="n">identity_mat4f</span><span class="p">;</span>
+    <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span> <span class="n">translation</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">};</span>
+    <span class="n">ym</span><span class="o">::</span><span class="n">quat4f</span> <span class="n">rotation</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">};</span>
+    <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span> <span class="n">scale</span> <span class="o">=</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">};</span>
+    <span class="n">ym</span><span class="o">::</span><span class="n">mat4f</span> <span class="n">matrix</span> <span class="o">=</span> <span class="n">ym</span><span class="o">::</span><span class="n">identity_mat4f</span><span class="p">;</span>
     <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">meshname</span><span class="p">;</span>
 <span class="p">}</span>
 </code></pre></div>
@@ -726,7 +756,10 @@ disabled by defining YOBJ_NO_IMAGE before including this file.</p>
 <ul>
 <li>Members:<ul>
 <li>name:      instance name</li>
-<li>xform:      transform</li>
+<li>translation:      translation</li>
+<li>rotation:      rotation</li>
+<li>scale:      scale</li>
+<li>matrix:      generic transform matrix</li>
 <li>meshname:      object name</li>
 </ul>
 </li>

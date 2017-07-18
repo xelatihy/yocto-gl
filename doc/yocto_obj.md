@@ -57,6 +57,7 @@ disabled by defining YOBJ_NO_IMAGE before including this file.
 
 ## History
 
+- v 0.27: explicit transforms
 - v 0.26: added interpreting of illum in scene conversions
 - v 0.25: added convention for Tr
 - v 0.24: remove exception from code and add explicit error handling
@@ -261,16 +262,24 @@ Mesh
 
 ~~~ .cpp
 struct instance {
-    ym::mat4f xform = ym::identity_mat4f;
+    ym::vec3f translation = {0, 0, 0};
+    ym::quat4f rotation = {0, 0, 0, 1};
+    ym::vec3f scale = {1, 1, 1};
+    ym::mat4f matrix = ym::identity_mat4f;
     mesh* msh = nullptr;
+    ym::mat4f xform() const; 
 }
 ~~~
 
 Mesh instance.
 
 - Members:
-    - xform:      transform
+    - translation:      translation
+    - rotation:      rotation
+    - scale:      scale
+    - matrix:      generic transform matrix
     - msh:      mesh instances
+    - xform():      xform
 
 
 ### Struct camera
@@ -278,12 +287,15 @@ Mesh instance.
 ~~~ .cpp
 struct camera {
     std::string name;
-    ym::mat4f xform = ym::identity_mat4f;
+    ym::vec3f translation = {0, 0, 0};
+    ym::quat4f rotation = {0, 0, 0, 1};
+    ym::mat4f matrix = ym::identity_mat4f;
     bool ortho = false;
     float yfov = 2;
     float aspect = 16.0f / 9.0f;
     float focus = 1;
     float aperture = 0;
+    ym::mat4f xform() const; 
 }
 ~~~
 
@@ -291,12 +303,15 @@ Scene Camera
 
 - Members:
     - name:      name
-    - xform:      transform
+    - translation:      translation
+    - rotation:      rotation
+    - matrix:      generic transform matrix
     - ortho:      ortho cam
     - yfov:      vertical field of view
     - aspect:      aspect ratio
     - focus:      focus distance
     - aperture:      lens aperture
+    - xform():      xform
 
 
 ### Struct environment
@@ -305,7 +320,9 @@ Scene Camera
 struct environment {
     std::string name;
     material* mat = nullptr;
-    ym::mat4f xform = ym::identity_mat4f;
+    ym::quat4f rotation = {0, 0, 0, 1};
+    ym::mat4f matrix = ym::identity_mat4f;
+    ym::mat4f xform() const; 
 }
 ~~~
 
@@ -314,7 +331,9 @@ Envinonment map
 - Members:
     - name:      name
     - mat:      index of material in material array
-    - xform:      transform
+    - rotation:      rotation
+    - matrix:      generic transform matrix
+    - xform():      xform
 
 
 ### Struct scene
@@ -680,7 +699,10 @@ OBJ material
 ~~~ .cpp
 struct obj_camera {
     std::string name;
-    ym::mat4f xform = ym::identity_mat4f;
+    ym::vec3f translation = {0, 0, 0};
+    ym::quat4f rotation = {0, 0, 0, 1};
+    ym::vec3f scale = {1, 1, 1};
+    ym::mat4f matrix = ym::identity_mat4f;
     bool ortho = false;
     float yfov = 2 * std::atan(0.5f);
     float aspect = 16.0f / 9.0f;
@@ -693,7 +715,10 @@ Camera [extension]
 
 - Members:
     - name:      camera name
-    - xform:      camera transform
+    - translation:      translation
+    - rotation:      rotation
+    - scale:      scale
+    - matrix:      generic transform matrix
     - ortho:      orthografic camera
     - yfov:      vertical field of view
     - aspect:      aspect ratio
@@ -706,7 +731,8 @@ Camera [extension]
 ~~~ .cpp
 struct obj_environment {
     std::string name;
-    ym::mat4f xform = ym::identity_mat4f;
+    ym::quat4f rotation = {0, 0, 0, 1};
+    ym::mat4f matrix = ym::identity_mat4f;
     std::string matname;
 }
 ~~~
@@ -715,7 +741,8 @@ Environment [extension]
 
 - Members:
     - name:      environment name
-    - xform:      transform
+    - rotation:      rotation
+    - matrix:      generic transform matrix
     - matname:      material name
 
 
@@ -724,7 +751,10 @@ Environment [extension]
 ~~~ .cpp
 struct obj_instance {
     std::string name;
-    ym::mat4f xform = ym::identity_mat4f;
+    ym::vec3f translation = {0, 0, 0};
+    ym::quat4f rotation = {0, 0, 0, 1};
+    ym::vec3f scale = {1, 1, 1};
+    ym::mat4f matrix = ym::identity_mat4f;
     std::string meshname;
 }
 ~~~
@@ -733,7 +763,10 @@ Instance [extension]
 
 - Members:
     - name:      instance name
-    - xform:      transform
+    - translation:      translation
+    - rotation:      rotation
+    - scale:      scale
+    - matrix:      generic transform matrix
     - meshname:      object name
 
 

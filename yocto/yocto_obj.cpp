@@ -279,19 +279,25 @@ obj* load_obj(const std::string& filename, bool flip_texcoord, bool flip_tr,
             cam.aspect = parse_float(cur_tok + 3);
             cam.aperture = parse_float(cur_tok + 4);
             cam.focus = parse_float(cur_tok + 5);
-            cam.xform = parse_float16(cur_tok + 6);
+            cam.translation = parse_float3(cur_tok + 6);
+            cam.rotation = (ym::quat4f)parse_float4(cur_tok + 9);
+            if (cur_ntok > 13) cam.matrix = parse_float16(cur_tok + 13);
         } else if (tok_s == "e") {
             asset->environments.emplace_back();
             auto& env = asset->environments.back();
             env.name = (cur_ntok) ? cur_tok[0] : "<unnamed>";
             env.matname = (cur_ntok - 1) ? cur_tok[1] : "<unnamed_material>";
-            env.xform = parse_float16(cur_tok + 2);
+            env.rotation = (ym::quat4f)parse_float4(cur_tok + 2);
+            if (cur_ntok > 6) env.matrix = parse_float16(cur_tok + 6);
         } else if (tok_s == "i") {
             asset->instances.emplace_back();
             auto& ist = asset->instances.back();
             ist.name = (cur_ntok) ? cur_tok[0] : "<unnamed>";
             ist.meshname = (cur_ntok - 1) ? cur_tok[1] : "<unnamed_mesh>";
-            ist.xform = parse_float16(cur_tok + 2);
+            ist.translation = parse_float3(cur_tok + 2);
+            ist.rotation = (ym::quat4f)parse_float4(cur_tok + 5);
+            ist.scale = parse_float3(cur_tok + 9);
+            if (cur_ntok > 12) ist.matrix = parse_float16(cur_tok + 12);
         } else {
             // unused
         }
@@ -641,21 +647,30 @@ bool save_obj(const std::string& filename, const obj* asset, bool flip_texcoord,
         fwrite_float(file, " ", cam.aspect, false);
         fwrite_float(file, " ", cam.aperture, false);
         fwrite_float(file, " ", cam.focus, false);
-        fwrite_float16(file, " ", cam.xform, true);
+        fwrite_float3(file, " ", cam.translation, false);
+        fwrite_float4(file, " ", (ym::vec4f)cam.rotation, false);
+        if (cam.matrix != ym::identity_mat4f)
+            fwrite_float16(file, " ", cam.matrix, true);
     }
 
     // save envs
     for (auto& env : asset->environments) {
         fwrite_str(file, "e", env.name, true, false);
         fwrite_str(file, " ", env.matname, true, false);
-        fwrite_float16(file, " ", env.xform, true);
+        fwrite_float4(file, " ", (ym::vec4f)env.rotation, false);
+        if (env.matrix != ym::identity_mat4f)
+            fwrite_float16(file, " ", env.matrix, true);
     }
 
     // save instances
     for (auto& ist : asset->instances) {
         fwrite_str(file, "i", ist.name, true, false);
         fwrite_str(file, " ", ist.meshname, true, false);
-        fwrite_float16(file, " ", ist.xform, true);
+        fwrite_float3(file, " ", ist.translation, false);
+        fwrite_float4(file, " ", (ym::vec4f)ist.rotation, false);
+        fwrite_float3(file, " ", ist.scale, false);
+        if (ist.matrix != ym::identity_mat4f)
+            fwrite_float16(file, " ", ist.matrix, true);
     }
 
     // save all vertex data
@@ -1000,7 +1015,9 @@ scene* obj_to_scene(const obj* asset) {
         cam->aspect = ocam.aspect;
         cam->aperture = ocam.aperture;
         cam->focus = ocam.focus;
-        cam->xform = ocam.xform;
+        cam->translation = ocam.translation;
+        cam->rotation = ocam.rotation;
+        cam->matrix = ocam.matrix;
         scn->cameras.push_back(cam);
     }
 
@@ -1012,7 +1029,8 @@ scene* obj_to_scene(const obj* asset) {
         for (auto mat : scn->materials) {
             if (mat->name == oenv.matname) { env->mat = mat; }
         }
-        env->xform = oenv.xform;
+        env->rotation = oenv.rotation;
+        env->matrix = oenv.matrix;
         scn->environments.push_back(env);
     }
 
@@ -1024,7 +1042,10 @@ scene* obj_to_scene(const obj* asset) {
         for (auto mesh : scn->meshes) {
             if (mesh->name == oist.meshname) { ist->msh = mesh; }
         }
-        ist->xform = oist.xform;
+        ist->translation = oist.translation;
+        ist->rotation = oist.rotation;
+        ist->scale = oist.scale;
+        ist->matrix = oist.matrix;
         scn->instances.push_back(ist);
     }
 
@@ -1171,7 +1192,9 @@ obj* scene_to_obj(const scene* scn) {
         cam->aspect = fl_cam->aspect;
         cam->focus = fl_cam->focus;
         cam->aperture = fl_cam->aperture;
-        cam->xform = fl_cam->xform;
+        cam->translation = fl_cam->translation;
+        cam->rotation = fl_cam->rotation;
+        cam->matrix = fl_cam->matrix;
     }
 
     // convert envs
@@ -1180,7 +1203,8 @@ obj* scene_to_obj(const scene* scn) {
         auto env = &asset->environments.back();
         env->name = fl_env->name;
         env->matname = (fl_env->mat) ? fl_env->mat->name : "";
-        env->xform = fl_env->xform;
+        env->rotation = fl_env->rotation;
+        env->matrix = fl_env->matrix;
     }
 
     // convert instances
@@ -1189,7 +1213,10 @@ obj* scene_to_obj(const scene* scn) {
         auto ist = &asset->instances.back();
         ist->name = fl_ist->name;
         ist->meshname = (fl_ist->msh) ? fl_ist->msh->name : "<undefined>";
-        ist->xform = fl_ist->xform;
+        ist->translation = fl_ist->translation;
+        ist->rotation = fl_ist->rotation;
+        ist->scale = fl_ist->scale;
+        ist->matrix = fl_ist->matrix;
     }
 
     return asset;
@@ -1290,7 +1317,7 @@ ym::bbox3f compute_scene_bounds(const scene* scn) {
     if (!scn->instances.empty()) {
         for (auto ist : scn->instances) {
             bbox += ym::transform_bbox(
-                ym::mat4f(ist->xform), bbox_meshes[ist->msh]);
+                ym::mat4f(ist->xform()), bbox_meshes[ist->msh]);
         }
     } else {
         for (auto mesh : scn->meshes) { bbox += bbox_meshes[mesh]; }
@@ -1435,7 +1462,7 @@ void add_default_camera(scene* scn) {
         auto from = camera_dir * bbox_msize + center;
         auto to = center;
         auto up = ym::vec3f{0, 1, 0};
-        cam->xform = ym::to_mat(ym::lookat_frame3(from, to, up));
+        cam->matrix = ym::to_mat(ym::lookat_frame3(from, to, up));
         cam->ortho = false;
         cam->aspect = 16.0f / 9.0f;
         cam->yfov = 2 * atanf(0.5f);
@@ -1456,13 +1483,14 @@ void flatten_instances(scene* scn) {
     scn->instances.clear();
     for (auto ist : instances) {
         if (!ist->msh) continue;
+        auto xf = ist->xform();
         auto msh = ist->msh;
         auto nmsh = new mesh();
         nmsh->name = ist->name;
         for (auto shp : msh->shapes) {
             auto nshp = new shape(*shp);
-            for (auto& p : nshp->pos) p = transform_point(ist->xform, p);
-            for (auto& n : nshp->norm) n = transform_direction(ist->xform, n);
+            for (auto& p : nshp->pos) p = transform_point(xf, p);
+            for (auto& n : nshp->norm) n = transform_direction(xf, n);
             nmsh->shapes.push_back(nshp);
         }
         scn->meshes.push_back(nmsh);

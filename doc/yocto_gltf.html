@@ -73,6 +73,7 @@ an object of type T. Internally this is just the same old glTF index. But
 this can used to access the scene data with <code>scene::get&lt;T&gt;(index)</code>.</p>
 <h2>History</h2>
 <ul>
+<li>v 0.16: add transforms under function calls</li>
 <li>v 0.15: remove exception from code and add explicit error handling</li>
 <li>v 0.14: texture have always 4 channels</li>
 <li>v 0.13: change variable names for compilation on gcc</li>
@@ -408,10 +409,13 @@ avoid.</p>
     <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span> <span class="n">scale</span> <span class="o">=</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">};</span>
     <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span> <span class="n">translation</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">};</span>
     <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;</span> <span class="n">morph_weights</span><span class="p">;</span>
-    <span class="n">ym</span><span class="o">::</span><span class="n">mat4f</span> <span class="n">xform</span> <span class="o">=</span> <span class="n">ym</span><span class="o">::</span><span class="n">identity_mat4f</span><span class="p">;</span>
-    <span class="n">ym</span><span class="o">::</span><span class="n">mat4f</span> <span class="n">local_xform</span> <span class="o">=</span> <span class="n">ym</span><span class="o">::</span><span class="n">identity_mat4f</span><span class="p">;</span>
-    <span class="n">ym</span><span class="o">::</span><span class="n">mat4f</span> <span class="n">skin_xform</span> <span class="o">=</span> <span class="n">ym</span><span class="o">::</span><span class="n">identity_mat4f</span><span class="p">;</span>
     <span class="n">node</span><span class="o">*</span> <span class="n">parent</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+    <span class="n">ym</span><span class="o">::</span><span class="n">mat4f</span> <span class="n">xform</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span> 
+    <span class="n">ym</span><span class="o">::</span><span class="n">mat4f</span> <span class="n">local_xform</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span> 
+    <span class="n">ym</span><span class="o">::</span><span class="n">mat4f</span> <span class="n">skin_xform</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span> 
+    <span class="n">ym</span><span class="o">::</span><span class="n">mat4f</span> <span class="n">_xform</span> <span class="o">=</span> <span class="n">ym</span><span class="o">::</span><span class="n">identity_mat4f</span><span class="p">;</span>
+    <span class="n">ym</span><span class="o">::</span><span class="n">mat4f</span> <span class="n">_local_xform</span> <span class="o">=</span> <span class="n">ym</span><span class="o">::</span><span class="n">identity_mat4f</span><span class="p">;</span>
+    <span class="n">ym</span><span class="o">::</span><span class="n">mat4f</span> <span class="n">_skin_xform</span> <span class="o">=</span> <span class="n">ym</span><span class="o">::</span><span class="n">identity_mat4f</span><span class="p">;</span>
 <span class="p">}</span>
 </code></pre></div>
 
@@ -430,10 +434,13 @@ avoid.</p>
 <li>scale:      The node's non-uniform scale.</li>
 <li>translation:      The node's translation.</li>
 <li>morph_weights:      morph target weights</li>
-<li>xform:      transform (computed during update_transforms())</li>
-<li>local_xform:      local transform (computed during update_transforms())</li>
-<li>skin_xform:      skin transform (computed during update_transforms())</li>
-<li>parent:      parent node (computed during update_transforms())</li>
+<li>parent:      parent node (computed during update_node_hierarchy())</li>
+<li>xform():      transform (computed during update_transforms())</li>
+<li>local_xform():      local transform (computed during update_transforms())</li>
+<li>skin_xform():      skin transform (computed during update_transforms())</li>
+<li>_xform:      transform (computed during update_transforms())</li>
+<li>_local_xform:      local transform (computed during update_transforms())</li>
+<li>_skin_xform:      skin transform (computed during update_transforms())</li>
 </ul>
 </li>
 </ul>
@@ -610,6 +617,12 @@ Scenes and nodes are missing for mesh-only assets.</p>
 </ul>
 </li>
 </ul>
+<h3>Function update_node_hierarchy()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">update_node_hierarchy</span><span class="p">(</span><span class="n">scene_group</span><span class="o">*</span> <span class="n">scn</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Update node hierarchy</p>
 <h3>Function update_transforms()</h3>
 <div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">update_transforms</span><span class="p">(</span><span class="n">scene_group</span><span class="o">*</span> <span class="n">scn</span><span class="p">);</span>
 </code></pre></div>

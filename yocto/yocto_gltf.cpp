@@ -3243,7 +3243,6 @@ scene_group* gltf_to_scenes(const glTF* gltf, int scene_idx) {
     for (auto gnode : gltf->nodes) {
         auto node = new ygltf::node();
         node->name = gnode->name;
-        node->local_xform = node_transform(gnode);
         node->cam =
             (!gnode->camera) ? nullptr : scns->cameras[(int)gnode->camera];
         node->msh = (!gnode->mesh) ? nullptr : scns->meshes[(int)gnode->mesh];
@@ -3951,8 +3950,8 @@ ym::bbox3f compute_scene_bounds(const scene_group* scn) {
     if (!scn->nodes.empty()) {
         for (auto ist : scn->nodes) {
             if (ist->msh)
-                bbox += ym::transform_bbox(
-                    ym::mat4f(ist->xform), bbox_meshes.at(ist->msh));
+                bbox +=
+                    ym::transform_bbox(ist->xform(), bbox_meshes.at(ist->msh));
         }
     } else {
         for (auto mesh : scn->meshes) bbox += bbox_meshes[mesh];
@@ -4132,14 +4131,24 @@ void add_default_cameras(scene_group* scns) {
 #endif
 
 //
+// Update node hierarchy
+//
+void update_node_hierarchy(scene_group* scns) {
+    for (auto node : scns->nodes) node->parent = nullptr;
+    for (auto node : scns->nodes) {
+        for (auto child : node->children) child->parent = node;
+    }
+}
+
+//
 // Update node trasforms
 //
 void update_transforms(node* ist) {
-    ist->local_xform = node_transform(ist);
+    ist->_local_xform = node_transform(ist);
     if (ist->parent) {
-        ist->xform = ist->parent->xform * ist->local_xform;
+        ist->_xform = ist->parent->_xform * ist->_local_xform;
     } else {
-        ist->xform = ist->local_xform;
+        ist->_xform = ist->_local_xform;
     }
     for (auto child : ist->children) update_transforms(child);
 }
@@ -4148,10 +4157,7 @@ void update_transforms(node* ist) {
 // Update node trasforms
 //
 void update_transforms(scene_group* scns) {
-    for (auto node : scns->nodes) node->parent = nullptr;
-    for (auto node : scns->nodes) {
-        for (auto child : node->children) child->parent = node;
-    }
+    update_node_hierarchy(scns);
     for (auto node : scns->nodes) { update_transforms(node); }
 }
 
@@ -4266,8 +4272,8 @@ void update_animated_transforms(scene_group* scns, float time) {
 // Update skin trasforms
 //
 void update_skin_transforms(node* ist, node* parent) {
-    ist->skin_xform = node_transform(ist);
-    if (parent) ist->skin_xform = parent->skin_xform * ist->skin_xform;
+    ist->_skin_xform = node_transform(ist);
+    if (parent) ist->_skin_xform = parent->_skin_xform * ist->_skin_xform;
     for (auto child : ist->children) update_skin_transforms(child, ist);
 }
 
@@ -4281,9 +4287,9 @@ std::vector<ym::mat4f> get_skin_transforms(
     auto inv_root = ym::inverse(xform);
     for (auto i = 0; i < sk->joints.size(); i++) {
         if (!sk->pose_matrices.empty()) {
-            ret[i] = inv_root * sk->joints[i]->xform * sk->pose_matrices[i];
+            ret[i] = inv_root * sk->joints[i]->_xform * sk->pose_matrices[i];
         } else {
-            ret[i] = inv_root * sk->joints[i]->xform;
+            ret[i] = inv_root * sk->joints[i]->_xform;
         }
     }
     return ret;

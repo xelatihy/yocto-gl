@@ -72,6 +72,7 @@ this can used to access the scene data with `scene::get<T>(index)`.
 
 ## History
 
+- v 0.16: add transforms under function calls
 - v 0.15: remove exception from code and add explicit error handling
 - v 0.14: texture have always 4 channels
 - v 0.13: change variable names for compilation on gcc
@@ -413,10 +414,13 @@ struct node {
     ym::vec3f scale = {1, 1, 1};
     ym::vec3f translation = {0, 0, 0};
     std::vector<float> morph_weights;
-    ym::mat4f xform = ym::identity_mat4f;
-    ym::mat4f local_xform = ym::identity_mat4f;
-    ym::mat4f skin_xform = ym::identity_mat4f;
     node* parent = nullptr;
+    ym::mat4f xform() const; 
+    ym::mat4f local_xform() const; 
+    ym::mat4f skin_xform() const; 
+    ym::mat4f _xform = ym::identity_mat4f;
+    ym::mat4f _local_xform = ym::identity_mat4f;
+    ym::mat4f _skin_xform = ym::identity_mat4f;
 }
 ~~~
 
@@ -434,10 +438,13 @@ Node in the hierarchy.
     - scale:      The node's non-uniform scale.
     - translation:      The node's translation.
     - morph_weights:      morph target weights
-    - xform:      transform (computed during update_transforms())
-    - local_xform:      local transform (computed during update_transforms())
-    - skin_xform:      skin transform (computed during update_transforms())
-    - parent:      parent node (computed during update_transforms())
+    - parent:      parent node (computed during update_node_hierarchy())
+    - xform():      transform (computed during update_transforms())
+    - local_xform():      local transform (computed during update_transforms())
+    - skin_xform():      skin transform (computed during update_transforms())
+    - _xform:      transform (computed during update_transforms())
+    - _local_xform:      local transform (computed during update_transforms())
+    - _skin_xform:      skin transform (computed during update_transforms())
 
 
 ### Enum animation_interpolation
@@ -606,6 +613,14 @@ Save scene
     - err: if set, store error message on error
 - Returns:
     - whether an error occurred
+
+### Function update_node_hierarchy()
+
+~~~ .cpp
+void update_node_hierarchy(scene_group* scn);
+~~~
+
+Update node hierarchy
 
 ### Function update_transforms()
 
