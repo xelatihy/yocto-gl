@@ -73,6 +73,7 @@ an object of type T. Internally this is just the same old glTF index. But
 this can used to access the scene data with <code>scene::get&lt;T&gt;(index)</code>.</p>
 <h2>History</h2>
 <ul>
+<li>v 0.17: add per-mesh buffer on write from scene</li>
 <li>v 0.16: add transforms under function calls</li>
 <li>v 0.15: remove exception from code and add explicit error handling</li>
 <li>v 0.14: texture have always 4 channels</li>
@@ -599,7 +600,8 @@ Scenes and nodes are missing for mesh-only assets.</p>
 </ul>
 <h3>Function save_scenes()</h3>
 <div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">save_scenes</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">,</span> <span class="k">const</span> <span class="n">scene_group</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span>
-    <span class="kt">bool</span> <span class="n">save_textures</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">*</span> <span class="n">err</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">);</span>
+    <span class="kt">bool</span> <span class="n">save_textures</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">separate_buffers</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">*</span> <span class="n">err</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -609,6 +611,7 @@ Scenes and nodes are missing for mesh-only assets.</p>
 <li>filename: filename</li>
 <li>scn: scene data to save</li>
 <li>save_textures: whether to save textures (default to false)</li>
+<li>separate_buffers: save separate buffers for each mesh</li>
 <li>err: if set, store error message on error</li>
 </ul>
 </li>
@@ -2000,11 +2003,14 @@ not be present.</p>
 
 <p>Convert a gltf asset to flattened group of scene.</p>
 <h3>Function scenes_to_gltf()</h3>
-<div class="codehilite"><pre><code><span></span><span class="n">glTF</span><span class="o">*</span> <span class="nf">scenes_to_gltf</span><span class="p">(</span><span class="k">const</span> <span class="n">scene_group</span><span class="o">*</span> <span class="n">fl_gltf</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">buffer_uri</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="n">glTF</span><span class="o">*</span> <span class="nf">scenes_to_gltf</span><span class="p">(</span><span class="k">const</span> <span class="n">scene_group</span><span class="o">*</span> <span class="n">fl_gltf</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">buffer_uri</span><span class="p">,</span>
+    <span class="kt">bool</span> <span class="n">separate_buffers</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Convert a flattened group of scene into a gltf.</p>
+<p>Convert a flattened group of scene into a gltf. If separate_buffers,
+creates a separate buffer for each each and animation and
+prepend buffer_uri to its name.</p>
 <h3>Function validate_gltf()</h3>
 <div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;&gt;</span> <span class="n">validate_gltf</span><span class="p">(</span>
     <span class="k">const</span> <span class="n">glTF</span><span class="o">*</span> <span class="n">gltf</span><span class="p">);</span>

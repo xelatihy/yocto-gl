@@ -73,6 +73,7 @@
 ///
 /// ## History
 ///
+/// - v 0.17: add per-mesh buffer on write from scene
 /// - v 0.16: add transforms under function calls
 /// - v 0.15: remove exception from code and add explicit error handling
 /// - v 0.14: texture have always 4 channels
@@ -639,12 +640,14 @@ scene_group* load_scenes(const std::string& filename, bool load_textures,
 ///     - filename: filename
 ///     - scn: scene data to save
 ///     - save_textures: whether to save textures (default to false)
+///     - separate_buffers: save separate buffers for each mesh
 ///     - err: if set, store error message on error
 /// - Returns:
 ///     - whether an error occurred
 ///
 bool save_scenes(const std::string& filename, const scene_group* scn,
-    bool save_textures, std::string* err = nullptr);
+    bool save_textures, bool separate_buffers = false,
+    std::string* err = nullptr);
 
 ///
 /// Update node hierarchy
@@ -1844,9 +1847,12 @@ bool save_images(const glTF* asset, const std::string& dirname,
 scene_group* gltf_to_scenes(const glTF* gltf, int scene_idx = -1);
 
 ///
-/// Convert a flattened group of scene into a gltf.
+/// Convert a flattened group of scene into a gltf. If separate_buffers,
+/// creates a separate buffer for each each and animation and
+/// prepend buffer_uri to its name.
 ///
-glTF* scenes_to_gltf(const scene_group* fl_gltf, const std::string& buffer_uri);
+glTF* scenes_to_gltf(const scene_group* fl_gltf, const std::string& buffer_uri,
+    bool separate_buffers = false);
 
 ///
 /// Validate a gltf. Missing many validation as of this version.
@@ -1863,6 +1869,7 @@ struct vec_array_view {
     int size() const { return _size; }
     int count() const { return _size; }
     int ncomp() const { return _ncomp; }
+    bool valid() const { return _valid; }
 
     template <int N>
     ym::vec<float, N> get(int idx) const;
@@ -1887,6 +1894,7 @@ struct vec_array_view {
     int _ncomp = 0;
     glTFAccessorComponentType _ctype;
     bool _normalize = false;
+    bool _valid = false;
 
     static int _num_components(glTFAccessorType type);
     static int _ctype_size(glTFAccessorComponentType componentType);

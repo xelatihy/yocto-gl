@@ -357,6 +357,8 @@ int main(int argc, char** argv) {
     auto add_normals = parse_flag(parser, "--normals", "", "add normals");
     auto add_specgloss =
         parse_flag(parser, "--specgloss", "", "add spec gloss");
+    auto save_separate_buffers =
+        parse_flag(parser, "--separate-buffers", "", "save separate buffers");
     auto print_info =
         parse_flag(parser, "--print-info", "", "print information", false);
     auto validate_textures = parse_flag(
@@ -421,7 +423,8 @@ int main(int argc, char** argv) {
     if (no_save) return 0;
 
     // save gltf
-    auto ok = ygltf::save_scenes(filename_out, gltf, false, &err);
+    auto ok = ygltf::save_scenes(
+        filename_out, gltf, false, save_separate_buffers, &err);
     if (!ok) {
         printf("error saving gltf: %s\n", err.c_str());
         return 1;
@@ -429,11 +432,11 @@ int main(int argc, char** argv) {
 
     // validate
     if (validate) {
-        auto vgltf_ = ygltf::load_gltf(filename_out, true, false);
-        auto vgltf = ygltf::gltf_to_scenes(vgltf_);
+        auto vgltf = std::unique_ptr<ygltf::scene_group>(
+            ygltf::load_scenes(filename_out, true, false));
         if (print_info) {
             printf("glTF validate information -----------------\n");
-            print_gltf_info(vgltf);
+            print_gltf_info(vgltf.get());
         }
     }
 
