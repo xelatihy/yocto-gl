@@ -33,6 +33,7 @@ Collision Detection" by Christer Ericson and public domain code from
 
 ## History
 
+- v 0.19: remove indexing from specializations
 - v 0.18: bump to normal mapping convertion
 - v 0.17: added example image geneation
 - v 0.16: sampling
@@ -4151,7 +4152,7 @@ Parameters:
 
 Out Parameters:
 - ray_t: ray parameter at the intersection point
-- euv: euv[0] is the line parameter at the intersection ( euv[1] is zero )
+- euv: euv.x is the line parameter at the intersection ( euv.y is zero )
 
 Returns:
 - whether the intersection occurred
@@ -4252,7 +4253,7 @@ on the specific behaviour wrt NaNs.
 
 ~~~ .cpp
 inline bool intersect_check_bbox(const ray3f& ray, const vec3f& ray_dinv,
-    const vec3i& ray_dsign, const bbox3f& bbox);
+    const vec3i& ray_dsign, const bbox3f& bbox_);
 ~~~
 
 Intersect a ray with a axis-aligned bounding box
