@@ -39,6 +39,8 @@ Collision Detection" by Christer Ericson and public domain code from
 - https://gist.github.com/badboy/6267743</p>
 <h2>History</h2>
 <ul>
+<li>v 0.18: bump to normal mapping convertion</li>
+<li>v 0.17: added example image geneation</li>
 <li>v 0.16: sampling</li>
 <li>v 0.15: enable specialization always</li>
 <li>v 0.14: move timer to Yocto/Utils</li>
@@ -3197,11 +3199,11 @@ tangent wrt the V texcoord. Tangent frame is useful in normal mapping.</p>
 - points: element array
 - pos/norm/texcoord/radius: vertex position/normal/texcoords/radius</p>
 <h3>Function merge_triangles()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">merge_triangles</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">ym</span><span class="o">::</span><span class="n">vec3i</span><span class="o">&gt;&amp;</span> <span class="n">triangles</span><span class="p">,</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">pos</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">norm</span><span class="p">,</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">ym</span><span class="o">::</span><span class="n">vec2f</span><span class="o">&gt;&amp;</span> <span class="n">texcoord</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">ym</span><span class="o">::</span><span class="n">vec3i</span><span class="o">&gt;&amp;</span> <span class="n">mtriangles</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">mpos</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">mnorm</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">ym</span><span class="o">::</span><span class="n">vec2f</span><span class="o">&gt;&amp;</span> <span class="n">mtexcoord</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">merge_triangles</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;&amp;</span> <span class="n">triangles</span><span class="p">,</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">pos</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">norm</span><span class="p">,</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;&amp;</span> <span class="n">texcoord</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;&amp;</span> <span class="n">mtriangles</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">mpos</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">mnorm</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;&amp;</span> <span class="n">mtexcoord</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -3499,27 +3501,26 @@ on the specific behaviour wrt NaNs.</p>
 - based on "Robust BVH Ray Traversal" by T. Ize published at
 http://jcgt.org/published/0002/02/02/paper.pdf</p>
 <h3>Function point_bbox()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">ym</span><span class="o">::</span><span class="n">bbox3f</span> <span class="n">point_bbox</span><span class="p">(</span><span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">p</span><span class="p">,</span> <span class="kt">float</span> <span class="n">r</span> <span class="o">=</span> <span class="mi">0</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">bbox3f</span> <span class="nf">point_bbox</span><span class="p">(</span><span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">p</span><span class="p">,</span> <span class="kt">float</span> <span class="n">r</span> <span class="o">=</span> <span class="mi">0</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Point bounds</p>
 <h3>Function line_bbox()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">ym</span><span class="o">::</span><span class="n">bbox3f</span> <span class="n">line_bbox</span><span class="p">(</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">bbox3f</span> <span class="nf">line_bbox</span><span class="p">(</span>
     <span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">v0</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">v1</span><span class="p">,</span> <span class="kt">float</span> <span class="n">r0</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="kt">float</span> <span class="n">r1</span> <span class="o">=</span> <span class="mi">0</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Line bounds</p>
 <h3>Function triangle_bbox()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">ym</span><span class="o">::</span><span class="n">bbox3f</span> <span class="n">triangle_bbox</span><span class="p">(</span>
-    <span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">v0</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">v1</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">v2</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">bbox3f</span> <span class="nf">triangle_bbox</span><span class="p">(</span><span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">v0</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">v1</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">v2</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Triangle bounds</p>
 <h3>Function tetrahedron_bbox()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">ym</span><span class="o">::</span><span class="n">bbox3f</span> <span class="n">tetrahedron_bbox</span><span class="p">(</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">bbox3f</span> <span class="nf">tetrahedron_bbox</span><span class="p">(</span>
     <span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">v0</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">v1</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">v2</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">v3</span><span class="p">);</span>
 </code></pre></div>
 
@@ -3682,6 +3683,61 @@ https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/</p>
 
 
 <p>Image over operator</p>
+<h3>Function hsv_to_rgb()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">vec4b</span> <span class="nf">hsv_to_rgb</span><span class="p">(</span><span class="k">const</span> <span class="n">vec4b</span><span class="o">&amp;</span> <span class="n">hsv</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Convert HSV to RGB</p>
+<p>Implementatkion from
+http://stackoverflow.com/questions/3018313/algorithm-to-convert-rgb-to-hsv-and-hsv-to-rgb-in-range-0-255-for-both</p>
+<h3>Function make_grid_image()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">image</span><span class="o">&lt;</span><span class="n">vec4b</span><span class="o">&gt;</span> <span class="n">make_grid_image</span><span class="p">(</span><span class="kt">int</span> <span class="n">size</span><span class="p">,</span> <span class="kt">int</span> <span class="n">tile</span> <span class="o">=</span> <span class="mi">64</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">vec4b</span><span class="o">&amp;</span> <span class="n">c0</span> <span class="o">=</span><span class="p">;</span>
+</code></pre></div>
+
+
+<p>Make a grid image</p>
+<h3>Function make_checker_image()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">image</span><span class="o">&lt;</span><span class="n">vec4b</span><span class="o">&gt;</span> <span class="n">make_checker_image</span><span class="p">(</span><span class="kt">int</span> <span class="n">size</span><span class="p">,</span> <span class="kt">int</span> <span class="n">tile</span> <span class="o">=</span> <span class="mi">64</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">vec4b</span><span class="o">&amp;</span> <span class="n">c0</span> <span class="o">=</span><span class="p">;</span>
+</code></pre></div>
+
+
+<p>Make a checkerboard image</p>
+<h3>Function make_gammaramp_image()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">image</span><span class="o">&lt;</span><span class="n">vec4b</span><span class="o">&gt;</span> <span class="n">make_gammaramp_image</span><span class="p">(</span><span class="kt">int</span> <span class="n">size</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Make a gamma ramp image</p>
+<h3>Function make_gammaramp_imagef()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">image</span><span class="o">&lt;</span><span class="n">vec4f</span><span class="o">&gt;</span> <span class="n">make_gammaramp_imagef</span><span class="p">(</span><span class="kt">int</span> <span class="n">size</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Make a gamma ramp image</p>
+<h3>Function make_uvgrid_image()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">image</span><span class="o">&lt;</span><span class="n">vec4b</span><span class="o">&gt;</span> <span class="n">make_uvgrid_image</span><span class="p">(</span>
+    <span class="kt">int</span> <span class="n">size</span><span class="p">,</span> <span class="kt">int</span> <span class="n">tile</span> <span class="o">=</span> <span class="mi">64</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">colored</span> <span class="o">=</span> <span class="nb">true</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Make a uv colored grid</p>
+<h3>Function make_recuvgrid_image()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">image</span><span class="o">&lt;</span><span class="n">vec4b</span><span class="o">&gt;</span> <span class="n">make_recuvgrid_image</span><span class="p">(</span>
+    <span class="kt">int</span> <span class="n">size</span><span class="p">,</span> <span class="kt">int</span> <span class="n">tile</span> <span class="o">=</span> <span class="mi">64</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">colored</span> <span class="o">=</span> <span class="nb">true</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Make a uv recusive colored grid</p>
+<h3>Function bump_to_normal_map()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">image</span><span class="o">&lt;</span><span class="n">vec4b</span><span class="o">&gt;</span> <span class="n">bump_to_normal_map</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">image</span><span class="o">&lt;</span><span class="n">vec4b</span><span class="o">&gt;&amp;</span> <span class="n">img</span><span class="p">,</span> <span class="kt">float</span> <span class="n">scale</span> <span class="o">=</span> <span class="mi">1</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Comvert a bump map to a normal map.</p>
         <article>
         <footer></footer>
         </body>
