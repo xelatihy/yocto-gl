@@ -116,6 +116,9 @@ struct yscene {
     std::string imfilename;
     std::string outfilename;
 
+    // load options
+    bool split_shapes = false;
+
     // render
     int resolution = 0;
     float exposure = 0, gamma = 2.2f;
@@ -205,6 +208,7 @@ inline bool load_scene(
             scn->view_cam->focus = cam->focus;
             scn->view_cam->aperture = cam->aperture;
         }
+        if (scn->split_shapes) yobj::split_shapes(scn->oscn);
     } else if (ext == ".gltf" || ext == ".glb") {
         auto err = std::string();
         scn->gscn = ygltf::load_scenes(filename, true, true, &err);
@@ -238,6 +242,7 @@ inline bool load_scene(
             scn->view_cam->focus = cam->cam->focus;
             scn->view_cam->aperture = cam->cam->aperture;
         }
+        if (scn->split_shapes) ygltf::split_shapes(scn->gscn);
     }
 
 #if 1
@@ -1800,13 +1805,13 @@ void parse_cmdline(yscene* scene, int argc, char** argv, const char* help,
             "--shader", "-S", "path estimator type",
             (int)ytrace::shader_type::pathtrace, stype_names);
         scene->trace_params.envmap_invisible =
-            parse_flag(parser, "--envmap_invisible", "", "envmap invisible");
+            parse_flag(parser, "--envmap-invisible", "", "envmap invisible");
         scene->trace_nthreads = parse_opti(
             parser, "--threads", "-t", "number of threads [0 for default]", 0);
         scene->trace_block_size =
-            parse_opti(parser, "--block_size", "", "block size", 32);
+            parse_opti(parser, "--block-size", "", "block size", 32);
         scene->trace_batch_size =
-            parse_opti(parser, "--batch_size", "", "batch size", 16);
+            parse_opti(parser, "--batch-size", "", "batch size", 16);
         scene->trace_params.nsamples =
             parse_opti(parser, "--samples", "-s", "image samples", 256);
     }
@@ -1823,13 +1828,17 @@ void parse_cmdline(yscene* scene, int argc, char** argv, const char* help,
     auto amb = parse_optf(parser, "--ambient", "", "ambient factor", 0);
 
     scene->camera_lights = parse_flag(
-        parser, "--camera_lights", "-c", "enable camera lights", false);
+        parser, "--camera-lights", "-c", "enable camera lights", false);
 
     scene->amb = {amb, amb, amb};
     scene->trace_params.amb = {amb, amb, amb};
     if (scene->camera_lights) {
         scene->trace_params.stype = ytrace::shader_type::eyelight;
     }
+
+    // load options
+    scene->split_shapes = parse_flag(
+        parser, "--split-shapes", "", "split meshes into single shapes", false);
 
     // params
     scene->imfilename =

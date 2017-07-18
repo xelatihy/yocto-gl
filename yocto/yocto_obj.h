@@ -58,6 +58,7 @@
 ///
 /// ## History
 ///
+/// - v 0.28: add function to split meshes into single shapes
 /// - v 0.27: explicit transforms
 /// - v 0.26: added interpreting of illum in scene conversions
 /// - v 0.25: added convention for Tr
@@ -504,6 +505,11 @@ void add_default_camera(scene* scn);
 /// Flatten scene instances into separate meshes.
 ///
 void flatten_instances(scene* scn);
+
+///
+/// Split meshes into single shapes
+///
+void split_shapes(scene* scn);
 
 // -----------------------------------------------------------------------------
 // LOW-LEVEL INTERFACE

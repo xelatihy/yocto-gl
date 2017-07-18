@@ -1499,4 +1499,26 @@ void flatten_instances(scene* scn) {
     for (auto e : instances) delete e;
 }
 
+//
+// Split meshes into single shapes
+//
+void split_shapes(scene* scn) {
+    auto nmeshes = std::vector<mesh*>();
+    for (auto msh : scn->meshes) {
+        if (msh->shapes.size() <= 1) {
+            nmeshes.push_back(msh);
+            continue;
+        }
+        for (auto shp : msh->shapes) {
+            auto nmsh = new mesh();
+            nmsh->name = msh->name + shp->name;
+            nmsh->shapes.push_back(shp);
+            nmeshes.push_back(nmsh);
+        }
+        msh->shapes.clear();
+        delete msh;
+    }
+    scn->meshes = nmeshes;
+}
+
 }  // namespace yobj

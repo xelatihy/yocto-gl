@@ -61,6 +61,7 @@ disabled by defining YOBJ_NO_IMAGE before including this file.</p>
 </ol>
 <h2>History</h2>
 <ul>
+<li>v 0.28: add function to split meshes into single shapes</li>
 <li>v 0.27: explicit transforms</li>
 <li>v 0.26: added interpreting of illum in scene conversions</li>
 <li>v 0.25: added convention for Tr</li>
@@ -502,6 +503,12 @@ disabled by defining YOBJ_NO_IMAGE before including this file.</p>
 
 
 <p>Flatten scene instances into separate meshes.</p>
+<h3>Function split_shapes()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">split_shapes</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Split meshes into single shapes</p>
 <h3>Struct obj_vertex</h3>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">obj_vertex</span> <span class="p">{</span>
     <span class="kt">int</span> <span class="n">pos</span><span class="p">;</span>
