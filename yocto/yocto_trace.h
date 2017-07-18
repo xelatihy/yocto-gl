@@ -189,13 +189,12 @@ void set_camera(scene* scn, int cid, const ym::frame3f& frame, float yfov,
 ///     - tid: texture id
 ///     - width: width
 ///     - height: height
-///     - ncomp: number of components (1-4)
 ///     - hdr: hdr pixels
-///     - ldr: ldr pixels (sRGB)
 /// - Returns:
 ///     - texture id
 ///
-int add_texture(scene* scn, int width, int height, int ncomp, const float* hdr);
+int add_texture(
+    scene* scn, int width, int height, int ncomp, const ym::vec4f* hdr);
 
 ///
 /// Sets a texture in the scene.
@@ -205,13 +204,12 @@ int add_texture(scene* scn, int width, int height, int ncomp, const float* hdr);
 ///     - tid: texture id
 ///     - width: width
 ///     - height: height
-///     - ncomp: number of components (1-4)
-///     - hdr: hdr pixels
 ///     - ldr: ldr pixels (sRGB)
 /// - Returns:
 ///     - texture id
 ///
-int add_texture(scene* scn, int width, int height, int ncomp, const byte* ldr);
+int add_texture(
+    scene* scn, int width, int height, int ncomp, const ym::vec4b* ldr);
 
 ///
 /// Adds a texture in the scene.

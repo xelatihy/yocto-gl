@@ -34,6 +34,7 @@
 ///
 /// ## History
 ///
+/// - v 0.22: removed image lookup with arbitrary channels
 /// - v 0.21: added more functions
 /// - v 0.20: remove unused bbox overlap tests
 /// - v 0.19: remove indexing from specializations
@@ -4713,46 +4714,6 @@ using imagef = image<float>;
 // -----------------------------------------------------------------------------
 // IMAGE OPERATIONS
 // -----------------------------------------------------------------------------
-
-/// Lookup an image value from a generic image
-template <typename T>
-constexpr inline vec<T, 4> image_lookup(
-    int width, int height, int ncomp, const T* img, int x, int y, T alpha = 0) {
-    auto v = img + (y * width + x) * ncomp;
-    switch (ncomp) {
-        case 1: return {v[0], 0, 0, alpha};
-        case 2: return {v[0], v[1], 0, alpha};
-        case 3: return {v[0], v[1], v[2], alpha};
-        case 4: return {v[0], v[1], v[2], v[3]};
-        default: assert(false); return {0, 0, 0, 0};
-    }
-}
-
-/// Set an image value for a generic image
-template <typename T>
-constexpr inline void image_set(int width, int height, int ncomp, T* img, int x,
-    int y, const vec<T, 4>& vv) {
-    auto v = img + (y * width + x) * ncomp;
-    switch (ncomp) {
-        case 1: v.x = vv.x; break;
-        case 2:
-            v.x = vv.x;
-            v.y = vv.y;
-            break;
-        case 3:
-            v.x = vv.x;
-            v.y = vv.y;
-            v.z = vv.z;
-            break;
-        case 4:
-            v.x = vv.x;
-            v.y = vv.y;
-            v.z = vv.z;
-            v.w = vv.w;
-            break;
-        default: assert(false);
-    }
-}
 
 /// Approximate conversion from srgb.
 inline vec3f srgb_to_linear(const vec3b& srgb) {

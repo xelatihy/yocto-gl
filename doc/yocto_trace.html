@@ -149,7 +149,8 @@ for internal acceleration. Disable this by setting YTRACE_NO_BVH.</p>
 </li>
 </ul>
 <h3>Function add_texture()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">int</span> <span class="nf">add_texture</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="kt">int</span> <span class="n">width</span><span class="p">,</span> <span class="kt">int</span> <span class="n">height</span><span class="p">,</span> <span class="kt">int</span> <span class="n">ncomp</span><span class="p">,</span> <span class="k">const</span> <span class="kt">float</span><span class="o">*</span> <span class="n">hdr</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">int</span> <span class="nf">add_texture</span><span class="p">(</span>
+    <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="kt">int</span> <span class="n">width</span><span class="p">,</span> <span class="kt">int</span> <span class="n">height</span><span class="p">,</span> <span class="kt">int</span> <span class="n">ncomp</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec4f</span><span class="o">*</span> <span class="n">hdr</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -160,9 +161,7 @@ for internal acceleration. Disable this by setting YTRACE_NO_BVH.</p>
 <li>tid: texture id</li>
 <li>width: width</li>
 <li>height: height</li>
-<li>ncomp: number of components (1-4)</li>
 <li>hdr: hdr pixels</li>
-<li>ldr: ldr pixels (sRGB)</li>
 </ul>
 </li>
 <li>Returns:<ul>
@@ -171,7 +170,8 @@ for internal acceleration. Disable this by setting YTRACE_NO_BVH.</p>
 </li>
 </ul>
 <h3>Function add_texture()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">int</span> <span class="nf">add_texture</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="kt">int</span> <span class="n">width</span><span class="p">,</span> <span class="kt">int</span> <span class="n">height</span><span class="p">,</span> <span class="kt">int</span> <span class="n">ncomp</span><span class="p">,</span> <span class="k">const</span> <span class="n">byte</span><span class="o">*</span> <span class="n">ldr</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">int</span> <span class="nf">add_texture</span><span class="p">(</span>
+    <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="kt">int</span> <span class="n">width</span><span class="p">,</span> <span class="kt">int</span> <span class="n">height</span><span class="p">,</span> <span class="kt">int</span> <span class="n">ncomp</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec4b</span><span class="o">*</span> <span class="n">ldr</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -182,8 +182,6 @@ for internal acceleration. Disable this by setting YTRACE_NO_BVH.</p>
 <li>tid: texture id</li>
 <li>width: width</li>
 <li>height: height</li>
-<li>ncomp: number of components (1-4)</li>
-<li>hdr: hdr pixels</li>
 <li>ldr: ldr pixels (sRGB)</li>
 </ul>
 </li>
