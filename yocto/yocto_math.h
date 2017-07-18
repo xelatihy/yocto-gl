@@ -34,6 +34,7 @@
 ///
 /// ## History
 ///
+/// - v 0.21: added more functions
 /// - v 0.20: remove unused bbox overlap tests
 /// - v 0.19: remove indexing from specializations
 /// - v 0.18: bump to normal mapping convertion
@@ -189,6 +190,12 @@ constexpr inline float byte_to_float(byte x) { return (float)x / 255.0f; }
 using std::sqrt;
 /// pow
 using std::pow;
+/// pow
+using std::exp;
+/// log
+using std::log;
+/// log10
+using std::log10;
 /// sin
 using std::sin;
 /// cos
@@ -203,6 +210,12 @@ using std::acos;
 using std::atan2;
 /// abs
 using std::abs;
+/// floor
+using std::floor;
+/// ceil
+using std::ceil;
+/// round
+using std::round;
 
 // -----------------------------------------------------------------------------
 // VECTORS
@@ -924,7 +937,7 @@ constexpr inline T distsqr(const vec<T, N>& a, const vec<T, N>& b) {
 template <typename T, int N>
 constexpr inline T uangle(const vec<T, N>& a, const vec<T, N>& b) {
     auto d = dot(a, b);
-    return d > 1 ? 0 : std::acos(d < -1 ? -1 : d);
+    return d > 1 ? 0 : acos(d < -1 ? -1 : d);
 }
 
 /// angle between vectors
@@ -967,6 +980,24 @@ template <typename T>
 constexpr inline vec<T, 3> orthonormalize(
     const vec<T, 3>& a, const vec<T, 3>& b) {
     return normalize(a - b * dot(a, b));
+}
+
+/// vector component-wise min
+template <typename T, int N>
+constexpr inline vec<T, N> min(
+    const vec<T, N>& x, const vec<T, N>& a, const vec<T, N>& b) {
+    vec<T, N> c;
+    for (auto i = 0; i < N; i++) c[i] = min(x[i], a[i], b[i]);
+    return c;
+}
+
+/// vector component-wise max
+template <typename T, int N>
+constexpr inline vec<T, N> max(
+    const vec<T, N>& x, const vec<T, N>& a, const vec<T, N>& b) {
+    vec<T, N> c;
+    for (auto i = 0; i < N; i++) c[i] = max(x[i], a[i], b[i]);
+    return c;
 }
 
 /// vector component-wise clamp
@@ -1042,11 +1073,131 @@ constexpr inline T max_element_val(const vec<T, N>& a) {
     return v;
 }
 
+/// Element-wise sqrt
+template <typename T, int N>
+constexpr inline vec<T, N> sqrt(const vec<T, N>& a) {
+    auto c = vec<T, N>();
+    for (auto i = 0; i < N; i++) c[i] = sqrt(a[i]);
+    return c;
+}
+
 /// Element-wise pow
 template <typename T, int N>
 constexpr inline vec<T, N> pow(const vec<T, N>& a, const T b) {
     auto c = vec<T, N>();
     for (auto i = 0; i < N; i++) c[i] = pow(a[i], b);
+    return c;
+}
+
+/// Element-wise exp
+template <typename T, int N>
+constexpr inline vec<T, N> exp(const vec<T, N>& a) {
+    auto c = vec<T, N>();
+    for (auto i = 0; i < N; i++) c[i] = exp(a[i]);
+    return c;
+}
+
+/// Element-wise log
+template <typename T, int N>
+constexpr inline vec<T, N> log(const vec<T, N>& a) {
+    auto c = vec<T, N>();
+    for (auto i = 0; i < N; i++) c[i] = log(a[i]);
+    return c;
+}
+
+/// Element-wise log10
+template <typename T, int N>
+constexpr inline vec<T, N> log10(const vec<T, N>& a) {
+    auto c = vec<T, N>();
+    for (auto i = 0; i < N; i++) c[i] = log10(a[i]);
+    return c;
+}
+
+/// Element-wise sin
+template <typename T, int N>
+constexpr inline vec<T, N> sin(const vec<T, N>& a) {
+    auto c = vec<T, N>();
+    for (auto i = 0; i < N; i++) c[i] = sin(a[i]);
+    return c;
+}
+
+/// Element-wise cos
+template <typename T, int N>
+constexpr inline vec<T, N> cos(const vec<T, N>& a) {
+    auto c = vec<T, N>();
+    for (auto i = 0; i < N; i++) c[i] = cos(a[i]);
+    return c;
+}
+
+/// Element-wise tan
+template <typename T, int N>
+constexpr inline vec<T, N> tan(const vec<T, N>& a) {
+    auto c = vec<T, N>();
+    for (auto i = 0; i < N; i++) c[i] = tan(a[i]);
+    return c;
+}
+
+/// Element-wise asin
+template <typename T, int N>
+constexpr inline vec<T, N> asin(const vec<T, N>& a) {
+    auto c = vec<T, N>();
+    for (auto i = 0; i < N; i++) c[i] = asin(a[i]);
+    return c;
+}
+
+/// Element-wise acos
+template <typename T, int N>
+constexpr inline vec<T, N> acos(const vec<T, N>& a) {
+    auto c = vec<T, N>();
+    for (auto i = 0; i < N; i++) c[i] = acos(a[i]);
+    return c;
+}
+
+/// Element-wise atan
+template <typename T, int N>
+constexpr inline vec<T, N> atan(const vec<T, N>& a) {
+    auto c = vec<T, N>();
+    for (auto i = 0; i < N; i++) c[i] = atan(a[i]);
+    return c;
+}
+
+/// Element-wise abs
+template <typename T, int N>
+constexpr inline vec<T, N> abs(const vec<T, N>& a) {
+    auto c = vec<T, N>();
+    for (auto i = 0; i < N; i++) c[i] = abs(a[i]);
+    return c;
+}
+
+/// Element-wise floor
+template <typename T, int N>
+constexpr inline vec<T, N> floor(const vec<T, N>& a) {
+    auto c = vec<T, N>();
+    for (auto i = 0; i < N; i++) c[i] = floor(a[i]);
+    return c;
+}
+
+/// Element-wise ceil
+template <typename T, int N>
+constexpr inline vec<T, N> ceil(const vec<T, N>& a) {
+    auto c = vec<T, N>();
+    for (auto i = 0; i < N; i++) c[i] = ceil(a[i]);
+    return c;
+}
+
+/// Element-wise round
+template <typename T, int N>
+constexpr inline vec<T, N> round(const vec<T, N>& a) {
+    auto c = vec<T, N>();
+    for (auto i = 0; i < N; i++) c[i] = round(a[i]);
+    return c;
+}
+
+/// Element-wise round
+template <typename T, int N>
+constexpr inline vec<T, N> atan2(const vec<T, N>& a, const vec<T, N>& b) {
+    auto c = vec<T, N>();
+    for (auto i = 0; i < N; i++) c[i] = atan2(a[i], b[i]);
     return c;
 }
 
@@ -2024,7 +2175,7 @@ constexpr quat<T, 4> conjugate(const quat<T, 4>& v) {
 /// quaterion inverse
 template <typename T>
 constexpr quat<T, 4> inverse(const quat<T, 4>& v) {
-    return qconj(v) / lengthsqr(vec<T, 4>(v));
+    return conjugate(v) / lengthsqr(vec<T, 4>(v));
 }
 
 /// quaterion inverse
@@ -2038,16 +2189,15 @@ constexpr quat<T, 4> normalize(const quat<T, 4>& v) {
 /// quaterion normalized linear interpolation
 template <typename T>
 constexpr quat<T, 4> nlerp(const quat<T, 4>& a, const quat<T, 4>& b, T t) {
-    return nlerp(vec<T, 4>(a),
+    return (quat<T, 4>)nlerp(vec<T, 4>(a),
         dot(vec<T, 4>(a), vec<T, 4>(b)) < 0 ? -vec<T, 4>(b) : vec<T, 4>(b), t);
 }
 
 /// quaterion spherical linear interpolation
 template <typename T>
 constexpr quat<T, 4> slerp(const quat<T, 4>& a, const quat<T, 4>& b, T t) {
-    auto a_ = vec<float, 4>{a.x, a.y, a.z, a.w};
-    auto b_ = vec<float, 4>{b.x, b.y, b.z, b.w};
-    return slerp(a_, dot(a_, b_) < 0 ? -b_ : b_, t);
+    return (quat<T, 4>)slerp(vec<T, 4>(a),
+        dot(vec<T, 4>(a), vec<T, 4>(b)) < 0 ? -vec<T, 4>(b) : vec<T, 4>(b), t);
 }
 
 // -----------------------------------------------------------------------------

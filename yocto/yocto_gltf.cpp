@@ -4243,12 +4243,7 @@ void update_animated_node_transforms(const animation* anim, float time) {
                 rot = anim->rotation[i1];
             } break;
             case animation_interpolation::linear: {
-                // rot = ym::slerp(anim->rotation[i1], anim->rotation[i2], t);
-                auto rot_ = (ym::quat4f)normalize(
-                    ((ym::vec4f)anim->rotation[i1]) * (1 - t) +
-                    ((ym::vec4f)anim->rotation[i2]) * t);
-                rot = ym::quat4f{rot_.x, rot_.y, rot_.z, rot_.w};
-
+                rot = ym::slerp(anim->rotation[i1], anim->rotation[i2], t);
             } break;
             case animation_interpolation::catmull_rom: {
             } break;

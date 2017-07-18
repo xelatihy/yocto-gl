@@ -1046,20 +1046,20 @@ yobj::scene* make_rigid_scene(
         auto fmat = add_diffuse(scn, "floor", {1, 1, 1});
         auto mat = add_plastic(
             scn, "obj", {1, 1, 1}, 0.1f, add_texture(scn, "checker.png"));
-            add_instance(scn, "floor",
-                add_box(scn, "floor", fmat, 6, {12, 1, 12}), {0, -1, 0});
-        add_instance(scn, "obj01", add_cube(scn, "obj01", mat, 4),
-            {-2.5f, 0.5f, 0});
-        add_instance(scn, "obj02", add_spherecube(scn, "obj02", mat, 4),
-            {0, 1, 0});
-        add_instance(scn, "obj03", add_cube(scn, "obj03", mat, 4),
-            {2.5f, 1.5f, 0});
-        add_instance(scn, "obj11", add_cube(scn, "obj11", mat, 4),
-            {-2.5f, 0.5f, 3});
-        add_instance(scn, "obj12", add_spherecube(scn, "obj12", mat, 4),
-            {0, 1.0f, 3});
-        add_instance(scn, "obj13", add_cube(scn, "obj13", mat, 4),
-            {2.5f, 1.5f, 3});
+        add_instance(scn, "floor", add_box(scn, "floor", fmat, 6, {12, 1, 12}),
+            {0, -1, 0});
+        add_instance(
+            scn, "obj01", add_cube(scn, "obj01", mat, 4), {-2.5f, 0.5f, 0});
+        add_instance(
+            scn, "obj02", add_spherecube(scn, "obj02", mat, 4), {0, 1, 0});
+        add_instance(
+            scn, "obj03", add_cube(scn, "obj03", mat, 4), {2.5f, 1.5f, 0});
+        add_instance(
+            scn, "obj11", add_cube(scn, "obj11", mat, 4), {-2.5f, 0.5f, 3});
+        add_instance(
+            scn, "obj12", add_spherecube(scn, "obj12", mat, 4), {0, 1.0f, 3});
+        add_instance(
+            scn, "obj13", add_cube(scn, "obj13", mat, 4), {2.5f, 1.5f, 3});
         add_instance(
             scn, "obj21", add_cube(scn, "obj21", mat, 4), {-2.5f, 0.5f, -3});
         add_instance(
@@ -1070,23 +1070,22 @@ yobj::scene* make_rigid_scene(
         auto fmat = add_diffuse(scn, "floor", {1, 1, 1});
         auto mat = add_plastic(
             scn, "obj", {1, 1, 1}, 0.1f, add_texture(scn, "checker.png"));
-            add_instance(scn, "floor",
-                add_box(scn, "floor", fmat, 6, {12, 1, 12}), {0, -3, 0},
-                {30, 0, 0});
+        add_instance(scn, "floor", add_box(scn, "floor", fmat, 6, {12, 1, 12}),
+            {0, -3, 0}, {30, 0, 0});
         add_instance(scn, "obj01", add_cube(scn, "obj01", mat, 4),
-                     {-2.5f, 1.0f, 0}, {0,0,45});
-        add_instance(scn, "obj02", add_spherecube(scn, "obj02", mat, 4),
-            {0, 1, 0});
-        add_instance(scn, "obj03", add_cube(scn, "obj03", mat, 4),
-            {2.5f, 1, 0});
-        add_instance(scn, "obj11", add_cube(scn, "obj11", mat, 4),
-            {-2.5f, 1, 3}, {0,0,45});
-        add_instance(scn, "obj12", add_spherecube(scn, "obj12", mat, 4),
-            {0, 1, 3});
-        add_instance(scn, "obj13", add_cube(scn, "obj13", mat, 4),
-            {2.5f, 1, 3});
+            {-2.5f, 1.0f, 0}, {0, 0, 45});
         add_instance(
-            scn, "obj21", add_cube(scn, "obj21", mat, 4), {-2.5f, 2.5f, -3}, {0,0,45});
+            scn, "obj02", add_spherecube(scn, "obj02", mat, 4), {0, 1, 0});
+        add_instance(
+            scn, "obj03", add_cube(scn, "obj03", mat, 4), {2.5f, 1, 0});
+        add_instance(scn, "obj11", add_cube(scn, "obj11", mat, 4),
+            {-2.5f, 1, 3}, {0, 0, 45});
+        add_instance(
+            scn, "obj12", add_spherecube(scn, "obj12", mat, 4), {0, 1, 3});
+        add_instance(
+            scn, "obj13", add_cube(scn, "obj13", mat, 4), {2.5f, 1, 3});
+        add_instance(scn, "obj21", add_cube(scn, "obj21", mat, 4),
+            {-2.5f, 2.5f, -3}, {0, 0, 45});
         add_instance(
             scn, "obj22", add_spherecube(scn, "obj22", mat, 4), {0, 2.5f, -3});
         add_instance(

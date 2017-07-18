@@ -33,6 +33,8 @@ Collision Detection" by Christer Ericson and public domain code from
 
 ## History
 
+- v 0.21: added more functions
+- v 0.20: remove unused bbox overlap tests
 - v 0.19: remove indexing from specializations
 - v 0.18: bump to normal mapping convertion
 - v 0.17: added example image geneation
@@ -198,6 +200,30 @@ using std::pow;
 
 pow
 
+### Function Alias exp()
+
+~~~ .cpp
+using std::exp;
+~~~
+
+pow
+
+### Function Alias log()
+
+~~~ .cpp
+using std::log;
+~~~
+
+log
+
+### Function Alias log10()
+
+~~~ .cpp
+using std::log10;
+~~~
+
+log10
+
 ### Function Alias sin()
 
 ~~~ .cpp
@@ -253,6 +279,30 @@ using std::abs;
 ~~~
 
 abs
+
+### Function Alias floor()
+
+~~~ .cpp
+using std::floor;
+~~~
+
+floor
+
+### Function Alias ceil()
+
+~~~ .cpp
+using std::ceil;
+~~~
+
+ceil
+
+### Function Alias round()
+
+~~~ .cpp
+using std::round;
+~~~
+
+round
 
 ### Struct vec
 
@@ -1342,6 +1392,26 @@ constexpr inline vec<T, 3> orthonormalize(
 
 orthonormalize two vectors
 
+### Function min()
+
+~~~ .cpp
+template <typename T, int N>
+constexpr inline vec<T, N> min(
+    const vec<T, N>& x, const vec<T, N>& a, const vec<T, N>& b);
+~~~
+
+vector component-wise min
+
+### Function max()
+
+~~~ .cpp
+template <typename T, int N>
+constexpr inline vec<T, N> max(
+    const vec<T, N>& x, const vec<T, N>& a, const vec<T, N>& b);
+~~~
+
+vector component-wise max
+
 ### Function clamp()
 
 ~~~ .cpp
@@ -1407,6 +1477,15 @@ constexpr inline T max_element_val(const vec<T, N>& a);
 
 index of the max vector element
 
+### Function sqrt()
+
+~~~ .cpp
+template <typename T, int N>
+constexpr inline vec<T, N> sqrt(const vec<T, N>& a);
+~~~
+
+Element-wise sqrt
+
 ### Function pow()
 
 ~~~ .cpp
@@ -1415,6 +1494,132 @@ constexpr inline vec<T, N> pow(const vec<T, N>& a, const T b);
 ~~~
 
 Element-wise pow
+
+### Function exp()
+
+~~~ .cpp
+template <typename T, int N>
+constexpr inline vec<T, N> exp(const vec<T, N>& a);
+~~~
+
+Element-wise exp
+
+### Function log()
+
+~~~ .cpp
+template <typename T, int N>
+constexpr inline vec<T, N> log(const vec<T, N>& a);
+~~~
+
+Element-wise log
+
+### Function log10()
+
+~~~ .cpp
+template <typename T, int N>
+constexpr inline vec<T, N> log10(const vec<T, N>& a);
+~~~
+
+Element-wise log10
+
+### Function sin()
+
+~~~ .cpp
+template <typename T, int N>
+constexpr inline vec<T, N> sin(const vec<T, N>& a);
+~~~
+
+Element-wise sin
+
+### Function cos()
+
+~~~ .cpp
+template <typename T, int N>
+constexpr inline vec<T, N> cos(const vec<T, N>& a);
+~~~
+
+Element-wise cos
+
+### Function tan()
+
+~~~ .cpp
+template <typename T, int N>
+constexpr inline vec<T, N> tan(const vec<T, N>& a);
+~~~
+
+Element-wise tan
+
+### Function asin()
+
+~~~ .cpp
+template <typename T, int N>
+constexpr inline vec<T, N> asin(const vec<T, N>& a);
+~~~
+
+Element-wise asin
+
+### Function acos()
+
+~~~ .cpp
+template <typename T, int N>
+constexpr inline vec<T, N> acos(const vec<T, N>& a);
+~~~
+
+Element-wise acos
+
+### Function atan()
+
+~~~ .cpp
+template <typename T, int N>
+constexpr inline vec<T, N> atan(const vec<T, N>& a);
+~~~
+
+Element-wise atan
+
+### Function abs()
+
+~~~ .cpp
+template <typename T, int N>
+constexpr inline vec<T, N> abs(const vec<T, N>& a);
+~~~
+
+Element-wise abs
+
+### Function floor()
+
+~~~ .cpp
+template <typename T, int N>
+constexpr inline vec<T, N> floor(const vec<T, N>& a);
+~~~
+
+Element-wise floor
+
+### Function ceil()
+
+~~~ .cpp
+template <typename T, int N>
+constexpr inline vec<T, N> ceil(const vec<T, N>& a);
+~~~
+
+Element-wise ceil
+
+### Function round()
+
+~~~ .cpp
+template <typename T, int N>
+constexpr inline vec<T, N> round(const vec<T, N>& a);
+~~~
+
+Element-wise round
+
+### Function atan2()
+
+~~~ .cpp
+template <typename T, int N>
+constexpr inline vec<T, N> atan2(const vec<T, N>& a, const vec<T, N>& b);
+~~~
+
+Element-wise round
 
 ### Function float_to_byte()
 
@@ -2096,6 +2301,8 @@ struct frame<float, 3> {
     constexpr frame(); 
     constexpr frame(const V& x, const V& y, const V& z, const V& o); 
     constexpr frame(const M& m, const V& t); 
+    constexpr frame(const mat<T, 4, 4>& m); 
+    constexpr explicit operator mat<T, 4, 4>() const; 
     constexpr V& operator[](int i); 
     constexpr const V& operator[](int i) const; 
     constexpr V* data(); 
@@ -2121,6 +2328,8 @@ Specialization for 3D float frames.
     - frame():      default constructor
     - frame():      element constructor
     - frame():      element constructor
+    - frame():      conversion from matrix (assumes the matrix is a frame, so dangerous!)
+    - operator 4>():      conversion to matrix
     - operator[]():      element access
     - operator[]():      element access
     - data():      data access
@@ -3209,7 +3418,7 @@ constexpr inline ray<T, N> transform_ray(
     const mat<T, N + 1, N + 1>& a, const ray<T, N>& b);
 ~~~
 
-transforms a ray by a matrix
+transforms a ray by a matrix (direction is not normalized after)
 
 ### Function transform_bbox()
 
