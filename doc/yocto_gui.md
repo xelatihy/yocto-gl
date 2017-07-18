@@ -408,6 +408,24 @@ bool slider_widget(window* win, const std::string& lbl, ym::vec4f* val,
 
 Slider widget
 
+### Function slider_widget()
+
+~~~ .cpp
+bool slider_widget(window* win, const std::string& lbl, ym::mat4f* val,
+    float min, float max, float incr = 1.0f);
+~~~
+
+Slider widget
+
+### Function slider_widget()
+
+~~~ .cpp
+bool slider_widget(
+    window* win, const std::string& lbl, ym::quat4f* val, float incr = 1.0f);
+~~~
+
+Slider widget
+
 ### Function checkbox_widget()
 
 ~~~ .cpp

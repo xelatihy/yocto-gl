@@ -298,16 +298,30 @@ bool slider_widget(window* win, const std::string& lbl, float* val, float min,
 ///
 bool slider_widget(window* win, const std::string& lbl, ym::vec2f* val,
     float min, float max, float incr = 1.0f);
+
 ///
 /// Slider widget
 ///
 bool slider_widget(window* win, const std::string& lbl, ym::vec3f* val,
     float min, float max, float incr = 1.0f);
+
 ///
 /// Slider widget
 ///
 bool slider_widget(window* win, const std::string& lbl, ym::vec4f* val,
     float min, float max, float incr = 1.0f);
+
+///
+/// Slider widget
+///
+bool slider_widget(window* win, const std::string& lbl, ym::mat4f* val,
+    float min, float max, float incr = 1.0f);
+
+///
+/// Slider widget
+///
+bool slider_widget(
+    window* win, const std::string& lbl, ym::quat4f* val, float incr = 1.0f);
 
 //
 // Color widget

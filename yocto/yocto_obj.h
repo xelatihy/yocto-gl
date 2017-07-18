@@ -58,6 +58,7 @@
 ///
 /// ## History
 ///
+/// - v 0.27: explicit transforms
 /// - v 0.26: added interpreting of illum in scene conversions
 /// - v 0.25: added convention for Tr
 /// - v 0.24: remove exception from code and add explicit error handling
@@ -307,10 +308,22 @@ struct mesh {
 struct instance {
     // name
     std::string name;
-    /// transform
-    ym::mat4f xform = ym::identity_mat4f;
+    /// translation
+    ym::vec3f translation = {0, 0, 0};
+    /// rotation
+    ym::quat4f rotation = {0, 0, 0, 1};
+    /// scale
+    ym::vec3f scale = {1, 1, 1};
+    /// generic transform matrix
+    ym::mat4f matrix = ym::identity_mat4f;
     /// mesh instances
     mesh* msh = nullptr;
+
+    /// xform
+    ym::mat4f xform() const {
+        return ym::translation_mat4(translation) * ym::rotation_mat4(rotation) *
+               ym::scaling_mat4(scale) * matrix;
+    }
 };
 
 ///
@@ -319,8 +332,12 @@ struct instance {
 struct camera {
     /// name
     std::string name;
-    /// transform
-    ym::mat4f xform = ym::identity_mat4f;
+    /// translation
+    ym::vec3f translation = {0, 0, 0};
+    /// rotation
+    ym::quat4f rotation = {0, 0, 0, 1};
+    /// generic transform matrix
+    ym::mat4f matrix = ym::identity_mat4f;
     /// ortho cam
     bool ortho = false;
     /// vertical field of view
@@ -331,6 +348,12 @@ struct camera {
     float focus = 1;
     /// lens aperture
     float aperture = 0;
+
+    /// xform
+    ym::mat4f xform() const {
+        return ym::translation_mat4(translation) * ym::rotation_mat4(rotation) *
+               matrix;
+    }
 };
 
 ///
@@ -341,8 +364,13 @@ struct environment {
     std::string name;
     /// index of material in material array
     material* mat = nullptr;
-    /// transform
-    ym::mat4f xform = ym::identity_mat4f;
+    /// rotation
+    ym::quat4f rotation = {0, 0, 0, 1};
+    /// generic transform matrix
+    ym::mat4f matrix = ym::identity_mat4f;
+
+    /// xform
+    ym::mat4f xform() const { return ym::rotation_mat4(rotation) * matrix; }
 };
 
 ///
@@ -661,8 +689,14 @@ struct obj_material {
 struct obj_camera {
     /// camera name
     std::string name;
-    /// camera transform
-    ym::mat4f xform = ym::identity_mat4f;
+    /// translation
+    ym::vec3f translation = {0, 0, 0};
+    /// rotation
+    ym::quat4f rotation = {0, 0, 0, 1};
+    /// scale
+    ym::vec3f scale = {1, 1, 1};
+    /// generic transform matrix
+    ym::mat4f matrix = ym::identity_mat4f;
     /// orthografic camera
     bool ortho = false;
     /// vertical field of view
@@ -681,8 +715,10 @@ struct obj_camera {
 struct obj_environment {
     /// environment name
     std::string name;
-    /// transform
-    ym::mat4f xform = ym::identity_mat4f;
+    /// rotation
+    ym::quat4f rotation = {0, 0, 0, 1};
+    /// generic transform matrix
+    ym::mat4f matrix = ym::identity_mat4f;
     /// material name
     std::string matname;
 };
@@ -693,8 +729,14 @@ struct obj_environment {
 struct obj_instance {
     /// instance name
     std::string name;
-    /// transform
-    ym::mat4f xform = ym::identity_mat4f;
+    /// translation
+    ym::vec3f translation = {0, 0, 0};
+    /// rotation
+    ym::quat4f rotation = {0, 0, 0, 1};
+    /// scale
+    ym::vec3f scale = {1, 1, 1};
+    /// generic transform matrix
+    ym::mat4f matrix = ym::identity_mat4f;
     /// object name
     std::string meshname;
 };

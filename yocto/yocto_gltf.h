@@ -73,6 +73,7 @@
 ///
 /// ## History
 ///
+/// - v 0.16: add transforms under function calls
 /// - v 0.15: remove exception from code and add explicit error handling
 /// - v 0.14: texture have always 4 channels
 /// - v 0.13: change variable names for compilation on gcc
@@ -497,14 +498,25 @@ struct node {
     std::vector<float> morph_weights;
 
     // computed properties ---------------
-    /// transform (computed during update_transforms())
-    ym::mat4f xform = ym::identity_mat4f;
-    /// local transform (computed during update_transforms())
-    ym::mat4f local_xform = ym::identity_mat4f;
-    /// skin transform (computed during update_transforms())
-    ym::mat4f skin_xform = ym::identity_mat4f;
-    /// parent node (computed during update_transforms())
+    /// parent node (computed during update_node_hierarchy())
     node* parent = nullptr;
+
+    // computed properties ---------------
+    /// transform (computed during update_transforms())
+    ym::mat4f xform() const { return _xform; }
+    /// local transform (computed during update_transforms())
+    ym::mat4f local_xform() const { return _local_xform; }
+    /// skin transform (computed during update_transforms())
+    ym::mat4f skin_xform() const { return _skin_xform; }
+
+    // cached properties -----------------
+    // do not access directly: this is likely to change
+    /// transform (computed during update_transforms())
+    ym::mat4f _xform = ym::identity_mat4f;
+    /// local transform (computed during update_transforms())
+    ym::mat4f _local_xform = ym::identity_mat4f;
+    /// skin transform (computed during update_transforms())
+    ym::mat4f _skin_xform = ym::identity_mat4f;
 };
 
 ///
@@ -633,6 +645,11 @@ scene_group* load_scenes(const std::string& filename, bool load_textures,
 ///
 bool save_scenes(const std::string& filename, const scene_group* scn,
     bool save_textures, std::string* err = nullptr);
+
+///
+/// Update node hierarchy
+///
+void update_node_hierarchy(scene_group* scn);
 
 ///
 /// Update node trasforms

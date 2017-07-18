@@ -82,7 +82,7 @@ ysym::scene* make_simulation_scene(const yobj::scene* scene) {
     // add each instance (support only one shape per instance)
     for (auto ist : scene->instances) {
         auto shp = ist->msh->shapes[0];
-        ysym::add_rigid_body(simulation_scene, to_frame(ym::mat4f(ist->xform)),
+        ysym::add_rigid_body(simulation_scene, to_frame(ym::mat4f(ist->matrix)),
             shape_map.at(shp), material_map.at(shp->mat), {0, 0, 0}, {0, 0, 0});
     }
 
@@ -119,7 +119,7 @@ ysym::scene* make_simulation_scene(const ygltf::scene_group* scene) {
     auto instances = ygltf::get_mesh_nodes(scene->scenes[0]);
     for (auto ist : instances) {
         auto shp = ist->msh->shapes[0];
-        ysym::add_rigid_body(simulation_scene, to_frame(ym::mat4f(ist->xform)),
+        ysym::add_rigid_body(simulation_scene, to_frame(ist->xform()),
             shape_map.at(shp), material_map.at(shp->mat), {0, 0, 0}, {0, 0, 0});
     }
 
@@ -137,13 +137,13 @@ void simulate_step(yscene* scn) {
     ysym::advance_simulation(scn->simulation_scene, scn->simulation_params);
     if (scn->oscn) {
         for (auto iid = 0; iid < scn->oscn->instances.size(); iid++) {
-            scn->oscn->instances[iid]->xform = to_mat(ym::frame3f(
+            scn->oscn->instances[iid]->matrix = to_mat(ym::frame3f(
                 ysym::get_rigid_body_frame(scn->simulation_scene, iid)));
         }
     } else if (scn->gscn) {
         auto instances = ygltf::get_mesh_nodes(scn->gscn->default_scene);
         for (auto iid = 0; iid < instances.size(); iid++) {
-            instances[iid]->xform = to_mat(ym::frame3f(
+            instances[iid]->matrix = to_mat(ym::frame3f(
                 ysym::get_rigid_body_frame(scn->simulation_scene, iid)));
         }
     }
@@ -152,7 +152,7 @@ void simulate_step(yscene* scn) {
 void simulate_reset(yscene* scn) {
     if (scn->oscn) {
         for (int iid = 0; iid < scn->oscn->instances.size(); iid++) {
-            scn->oscn->instances[iid]->xform =
+            scn->oscn->instances[iid]->matrix =
                 to_mat(ym::frame3f(scn->simulation_initial_state[iid]));
             ysym::set_rigid_body_frame(
                 scn->simulation_scene, iid, scn->simulation_initial_state[iid]);
@@ -160,7 +160,7 @@ void simulate_reset(yscene* scn) {
     } else if (scn->gscn) {
         auto instances = ygltf::get_mesh_nodes(scn->gscn->default_scene);
         for (int iid = 0; iid < instances.size(); iid++) {
-            instances[iid]->xform =
+            instances[iid]->matrix =
                 to_mat(ym::frame3f(scn->simulation_initial_state[iid]));
             ysym::set_rigid_body_frame(
                 scn->simulation_scene, iid, scn->simulation_initial_state[iid]);
@@ -225,14 +225,14 @@ int main(int argc, char* argv[]) {
             scn->simulation_initial_state.resize(scn->oscn->instances.size());
             for (auto i = 0; i < scn->simulation_initial_state.size(); i++)
                 scn->simulation_initial_state[i] =
-                    ym::to_frame(scn->oscn->instances[i]->xform);
+                    ym::to_frame(scn->oscn->instances[i]->matrix);
 
         } else if (scn->gscn) {
             auto instances = ygltf::get_mesh_nodes(scn->gscn->default_scene);
             scn->simulation_initial_state.resize(instances.size());
             for (auto i = 0; i < scn->simulation_initial_state.size(); i++)
                 scn->simulation_initial_state[i] =
-                    ym::to_frame(instances[i]->xform);
+                    ym::to_frame(instances[i]->xform());
         }
 
         // run ui

@@ -521,6 +521,30 @@ bool slider_widget(window* win, const std::string& lbl, ym::vec4f* val,
 }
 
 //
+// Slider widget
+//
+bool slider_widget(window* win, const std::string& lbl, ym::mat4f* val,
+    float min, float max, float incr) {
+    auto mod = false;
+    for (auto i = 0; i < 4; i++) {
+        auto modr = slider_widget(win, lbl + "[" + std::to_string(i + 1) + "]",
+            val->data() + i, min, max, incr);
+        mod = mod || modr;
+    }
+    return mod;
+}
+
+//
+// Slider widget
+//
+bool slider_widget(
+    window* win, const std::string& lbl, ym::quat4f* val, float incr) {
+    auto mod = slider_widget(win, lbl, (ym::vec4f*)val, -1, 1, incr);
+    if (mod) *val = ym::normalize(*val);
+    return mod;
+}
+
+//
 // Color widget
 //
 bool color_widget(window* win, const std::string& lbl, ym::vec4f* val) {

@@ -146,7 +146,10 @@ ygltf::scene_group* obj2gltf(const yobj::scene* obj, bool add_scene,
             for (auto oist : obj->instances) {
                 auto gnode = new ygltf::node();
                 gnode->name = oist->name;
-                gnode->matrix = oist->xform;
+                gnode->translation = oist->translation;
+                gnode->rotation = oist->rotation;
+                gnode->scale = oist->scale;
+                gnode->matrix = oist->matrix;
                 gnode->msh = gltf->meshes[index(obj->meshes, oist->msh)];
                 scn->nodes.push_back(gnode);
                 gltf->nodes.push_back(gnode);
@@ -169,7 +172,9 @@ ygltf::scene_group* obj2gltf(const yobj::scene* obj, bool add_scene,
                 gltf->cameras.push_back(gcam);
                 auto gnode = new ygltf::node();
                 gnode->name = ocam->name;
-                gnode->matrix = ocam->xform;
+                gnode->translation = ocam->translation;
+                gnode->rotation = ocam->rotation;
+                gnode->matrix = ocam->matrix;
                 gnode->cam = gcam;
                 scn->nodes.push_back(gnode);
                 gltf->nodes.push_back(gnode);

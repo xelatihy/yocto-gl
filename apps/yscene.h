@@ -199,7 +199,7 @@ inline bool load_scene(
         if (!scn->oscn->cameras.empty()) {
             auto cam = scn->oscn->cameras[0];
             scn->view_cam = new ycamera();
-            scn->view_cam->frame = ym::to_frame(ym::mat4f(cam->xform));
+            scn->view_cam->frame = ym::to_frame(ym::mat4f(cam->xform()));
             scn->view_cam->yfov = cam->yfov;
             scn->view_cam->aspect = cam->aspect;
             scn->view_cam->focus = cam->focus;
@@ -230,7 +230,7 @@ inline bool load_scene(
         if (!ygltf::get_camera_nodes(scn->gscn->default_scene).empty()) {
             auto cam = ygltf::get_camera_nodes(scn->gscn->default_scene)[0];
             scn->view_cam = new ycamera();
-            scn->view_cam->frame = ym::to_frame(ym::mat4f(cam->xform));
+            scn->view_cam->frame = ym::to_frame(ym::mat4f(cam->xform()));
             scn->view_cam->yfov = cam->cam->yfov;
             scn->view_cam->aspect = cam->cam->aspect;
             scn->view_cam->near = cam->cam->near;
@@ -307,7 +307,7 @@ inline void update_shade_lights(yshade_state* st, const yobj::scene* sc) {
                 for (auto p : shp->points) {
                     if (st->lights_pos.size() >= 16) break;
                     st->lights_pos.push_back(ym::transform_point(
-                        ym::mat4f(ist->xform), shp->pos[p]));
+                        ym::mat4f(ist->xform()), shp->pos[p]));
                     st->lights_ke.push_back(mat->ke);
                     st->lights_ltype.push_back(yglu::ltype::point);
                 }
@@ -452,8 +452,8 @@ inline void shade_scene(const yobj::scene* sc, yshade_state* st,
 
     ym::mat4f camera_xform, camera_view, camera_proj;
     if (ocam) {
-        camera_xform = ym::mat4f(ocam->xform);
-        camera_view = ym::inverse(ym::mat4f(ocam->xform));
+        camera_xform = ym::mat4f(ocam->xform());
+        camera_view = ym::inverse(ym::mat4f(ocam->xform()));
         if (ocam->ortho) {
             camera_proj = ym::ortho_mat4(
                 ocam->yfov * ocam->aspect, ocam->yfov, 0.01f, 100000.0f);
@@ -480,7 +480,7 @@ inline void shade_scene(const yobj::scene* sc, yshade_state* st,
 
     if (!sc->instances.empty()) {
         for (auto ist : sc->instances) {
-            shade_mesh(ist->msh, st, ist->xform, edges, wireframe, cutout);
+            shade_mesh(ist->msh, st, ist->xform(), edges, wireframe, cutout);
         }
     } else {
         for (auto msh : sc->meshes) {
@@ -513,7 +513,7 @@ inline void update_shade_lights(
                 for (auto p : shp->points) {
                     if (st->lights_pos.size() >= 16) break;
                     st->lights_pos.push_back(ym::transform_point(
-                        ym::mat4f(ist->xform), shp->pos[p]));
+                        ym::mat4f(ist->xform()), shp->pos[p]));
                     st->lights_ke.push_back(mat->emission);
                     st->lights_ltype.push_back(yglu::ltype::point);
                 }
@@ -751,8 +751,8 @@ inline void shade_scene(const ygltf::scene_group* scns, yshade_state* st,
 
     ym::mat4f camera_xform, camera_view, camera_proj;
     if (gcam) {
-        camera_xform = ym::mat4f(gcam->xform);
-        camera_view = ym::inverse(ym::mat4f(gcam->xform));
+        camera_xform = ym::mat4f(gcam->xform());
+        camera_view = ym::inverse(ym::mat4f(gcam->xform()));
         if (gcam->cam->ortho) {
             auto near = (gcam->cam->near) ? gcam->cam->near : 0.001f;
             auto far = (gcam->cam->far) ? gcam->cam->far : 10000;
@@ -794,7 +794,7 @@ inline void shade_scene(const ygltf::scene_group* scns, yshade_state* st,
 
     if (!instances.empty()) {
         for (auto ist : instances) {
-            shade_mesh(ist->msh, ist->skn, ist->morph_weights, st, ist->xform,
+            shade_mesh(ist->msh, ist->skn, ist->morph_weights, st, ist->xform(),
                 edges, wireframe, cutout);
         }
     } else {
@@ -845,17 +845,6 @@ void draw_scene(ygui::window* win) {
             scn->gamma, scn->wireframe, scn->edges, scn->alpha_cutout,
             scn->camera_lights, scn->amb);
     }
-}
-
-void draw_matrix_widgets(
-    ygui::window* win, const std::string& lbl, ym::mat4f* m) {
-    auto pos = ym::vec3f(), scale = ym::vec3f();
-    auto rot = ym::mat3f();
-    ym::decompose_mat4(*m, pos, rot, scale);
-    ygui::slider_widget(win, lbl + " pos", &pos, -10, 10);
-    // ygui::slider_widget(win, "rot", (yglu::ym::vec4f*)&rot, -1, 1);
-    ygui::slider_widget(win, lbl + " scale", &scale, -10, 10);
-    *m = ym::compose_mat4(pos, rot, scale);
 }
 
 void draw_tree_widgets(ygui::window* win, const std::string& lbl,
@@ -1010,7 +999,9 @@ void draw_elem_widgets(ygui::window* win, yobj::scene* oscn, yobj::camera* cam,
     if (selection && *selection != cam) return;
     ygui::separator_widget(win);
     ygui::label_widget(win, "name", cam->name);
-    draw_matrix_widgets(win, "xform", (ym::mat4f*)&cam->xform);
+    ygui::slider_widget(win, "translation", &cam->translation, -10, 10);
+    ygui::slider_widget(win, "rotation", &cam->rotation);
+    ygui::slider_widget(win, "matrix", &cam->matrix, -10, 10);
     ygui::slider_widget(win, "yfov", &cam->yfov, 0.1, 4);
     ygui::slider_widget(win, "aspect", &cam->aspect, 0.1, 4);
     ygui::slider_widget(win, "focus", &cam->focus, 0.01, 10);
@@ -1027,7 +1018,10 @@ void draw_elem_widgets(ygui::window* win, yobj::scene* oscn,
 
     ygui::separator_widget(win);
     ygui::label_widget(win, "name", ist->name);
-    draw_matrix_widgets(win, "xform", (ym::mat4f*)&ist->xform);
+    ygui::slider_widget(win, "translation", &ist->translation, -10, 10);
+    ygui::slider_widget(win, "rotation", &ist->rotation);
+    ygui::slider_widget(win, "scale", &ist->scale, 0.01, 10);
+    ygui::slider_widget(win, "matrix", &ist->matrix, -10, 10);
     ygui::combo_widget(win, "mesh", &ist->msh, msh_names);
 }
 
@@ -1457,8 +1451,9 @@ void draw_elem_widgets(ygui::window* win, ygltf::scene_group* gscn,
     ygui::combo_widget(win, "mesh", &node->msh, msh_names);
     ygui::combo_widget(win, "cam", &node->cam, cam_names);
     ygui::slider_widget(win, "translation", &node->translation, -10, 10);
-    ygui::slider_widget(win, "scale", &node->scale, 0.001, 5);
-    // ygui::slider_widget(win, "rotation", &node->rotation, -1, 1);
+    ygui::slider_widget(win, "rotation", &node->rotation);
+    ygui::slider_widget(win, "scale", &node->scale, 0.01, 10);
+    ygui::slider_widget(win, "matrix", &node->matrix, -10, 10);
 }
 
 void draw_elem_widgets(ygui::window* win, ygltf::scene_group* gscn,
