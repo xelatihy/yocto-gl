@@ -4368,36 +4368,36 @@ inline bool overlap_point(
 }
 
 // TODO: documentation
-inline float closestuv_line(
+inline vec2f closestuv_line(
     const vec3f& pos, const vec3f& v0, const vec3f& v1) {
     auto ab = v1 - v0;
     auto d = dot(ab, ab);
     // Project c onto ab, computing parameterized position d(t) = a + t*(b – a)
     auto u = dot(pos - v0, ab) / d;
     u = clamp(u, (float)0, (float)1);
-    return u;
+    return {1 - u, u};
 }
 
 // TODO: documentation
 inline bool overlap_line(const vec3f& pos, float dist_max, const vec3f& v0,
     const vec3f& v1, float r0, float r1, float& dist, vec2f& euv) {
-    auto u = closestuv_line(pos, v0, v1);
+    auto uv = closestuv_line(pos, v0, v1);
     // Compute projected position from the clamped t d = a + t * ab;
-    auto p = lerp(v0, v1, u);
-    auto r = lerp(r0, r1, u);
+    auto p = lerp(v0, v1, uv.y);
+    auto r = lerp(r0, r1, uv.y);
     auto d2 = distsqr(pos, p);
     // check distance
     if (d2 > (dist_max + r) * (dist_max + r)) return false;
     // done
     dist = sqrt(d2);
-    euv = {1 - u, u};
+    euv = uv;
     return true;
 }
 
 // TODO: documentation
 // this is a complicated test -> I probably prefer to use a sequence of test
 // (triangle body, and 3 edges)
-inline vec2f closestuv_triangle(
+inline vec3f closestuv_triangle(
     const vec3f& pos, const vec3f& v0, const vec3f& v1, const vec3f& v2) {
     auto ab = v1 - v0;
     auto ac = v2 - v0;
@@ -4407,35 +4407,37 @@ inline vec2f closestuv_triangle(
     auto d2 = dot(ac, ap);
 
     // corner and edge cases
-    if (d1 <= 0 && d2 <= 0) return vec2f{0, 0};
+    if (d1 <= 0 && d2 <= 0) return vec3f{1, 0, 0};
 
     auto bp = pos - v1;
     auto d3 = dot(ab, bp);
     auto d4 = dot(ac, bp);
-    if (d3 >= 0 && d4 <= d3) return vec2f{1, 0};
+    if (d3 >= 0 && d4 <= d3) return vec3f{0, 1, 0};
 
     auto vc = d1 * d4 - d3 * d2;
-    if ((vc <= 0) && (d1 >= 0) && (d3 <= 0)) return vec2f{d1 / (d1 - d3), 0};
+    if ((vc <= 0) && (d1 >= 0) && (d3 <= 0))
+        return vec3f{1 - d1 / (d1 - d3), d1 / (d1 - d3), 0};
 
     auto cp = pos - v2;
     auto d5 = dot(ab, cp);
     auto d6 = dot(ac, cp);
-    if (d6 >= 0 && d5 <= d6) return vec2f{0, 1};
+    if (d6 >= 0 && d5 <= d6) return vec3f{0, 0, 1};
 
     auto vb = d5 * d2 - d1 * d6;
-    if ((vb <= 0) && (d2 >= 0) && (d6 <= 0)) return vec2f{0, d2 / (d2 - d6)};
+    if ((vb <= 0) && (d2 >= 0) && (d6 <= 0))
+        return vec3f{1 - d2 / (d2 - d6), 0, d2 / (d2 - d6)};
 
     auto va = d3 * d6 - d5 * d4;
     if ((va <= 0) && (d4 - d3 >= 0) && (d5 - d6 >= 0)) {
         auto w = (d4 - d3) / ((d4 - d3) + (d5 - d6));
-        return vec2f{1 - w, w};
+        return vec3f{0, 1 - w, w};
     }
 
     // face case
     auto denom = 1 / (va + vb + vc);
     auto v = vb * denom;
     auto w = vc * denom;
-    return vec2f{v, w};
+    return vec3f{1 - v - w, v, w};
 }
 
 // TODO: documentation
@@ -4443,12 +4445,12 @@ inline bool overlap_triangle(const vec3f& pos, float dist_max, const vec3f& v0,
     const vec3f& v1, const vec3f& v2, float r0, float r1, float r2, float& dist,
     vec3f& euv) {
     auto uv = closestuv_triangle(pos, v0, v1, v2);
-    auto p = blerp(v0, v1, v2, vec3f{1 - uv.x - uv.y, uv.x, uv.y});
-    auto r = blerp(r0, r1, r2, vec3f{1 - uv.x - uv.y, uv.x, uv.y});
+    auto p = blerp(v0, v1, v2, uv);
+    auto r = blerp(r0, r1, r2, uv);
     auto dd = distsqr(p, pos);
     if (dd > (dist_max + r) * (dist_max + r)) return false;
     dist = sqrt(dd);
-    euv = {1 - uv.x - uv.y, uv.x, uv.y};
+    euv = uv;
     return true;
 }
 
