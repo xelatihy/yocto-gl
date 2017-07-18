@@ -53,11 +53,12 @@ shapes.</p>
 <li>perform shape overlap queries with <code>overlap_shape_bounds()</code></li>
 <li>use <code>refit_bvh()</code> to recompute the bvh bounds if transforms or vertices
    are (you should rebuild the bvh for large changes); update the instances'
-   transforms with <code>set_instance_frame()</code>; shapes use shared memory, so
-   no explicit update is necessary</li>
+   transforms with <code>set_instance_frame()</code> or `set_instance_transform();
+   shapes use shared memory, so no explicit update is necessary</li>
 </ol>
 <h2>History</h2>
 <ul>
+<li>v 0.19: switch to matrices for transforms</li>
 <li>v 0.18: faster internal intersection</li>
 <li>v 0.17: removal of SAH build option (better use embree instead)</li>
 <li>v 0.16: use yocto_math in the interface and remove inline compilation</li>
@@ -208,7 +209,27 @@ by Christer Ericson and from the Journal of Graphics Techniques.</p>
 </li>
 </ul>
 <h3>Function add_instance()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">int</span> <span class="nf">add_instance</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">frame3f</span><span class="o">&amp;</span> <span class="n">frame</span><span class="p">,</span> <span class="kt">int</span> <span class="n">sid</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">int</span> <span class="nf">add_instance</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">mat4f</span><span class="o">&amp;</span> <span class="n">xform</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">mat4f</span><span class="o">&amp;</span> <span class="n">xform_inverse</span><span class="p">,</span> <span class="kt">int</span> <span class="n">sid</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Add an instance.</p>
+<ul>
+<li>Parameters:<ul>
+<li>scn: scene</li>
+<li>xform: instance transform</li>
+<li>xform_inverse: instance inverse transform</li>
+<li>sid: shape id</li>
+</ul>
+</li>
+<li>Returns:<ul>
+<li>instance id</li>
+</ul>
+</li>
+</ul>
+<h3>Function add_instance()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">int</span> <span class="nf">add_instance</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">frame3f</span><span class="o">&amp;</span> <span class="n">frame</span><span class="p">,</span> <span class="kt">int</span> <span class="n">sid</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -225,8 +246,39 @@ by Christer Ericson and from the Journal of Graphics Techniques.</p>
 </ul>
 </li>
 </ul>
+<h3>Function set_instance_transform()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_instance_transform</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="kt">int</span> <span class="n">iid</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">mat4f</span><span class="o">&amp;</span> <span class="n">xform</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">mat4f</span><span class="o">&amp;</span> <span class="n">xform_inverse</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Set an instance transform.</p>
+<ul>
+<li>Parameters:<ul>
+<li>scn: scene</li>
+<li>iid: instance id</li>
+<li>xform: shape transform</li>
+<li>xform_inverse: inverse of shape transform</li>
+</ul>
+</li>
+</ul>
 <h3>Function set_instance_frame()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_instance_frame</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="kt">int</span> <span class="n">iid</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">frame3f</span><span class="o">&amp;</span> <span class="n">frame</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">set_instance_frame</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="kt">int</span> <span class="n">iid</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">frame3f</span><span class="o">&amp;</span> <span class="n">frame</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Set an instance frame.</p>
+<ul>
+<li>Parameters:<ul>
+<li>scn: scene</li>
+<li>iid: instance id</li>
+<li>frame: shape transform</li>
+</ul>
+</li>
+</ul>
+<h3>Function set_instance_transform()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">set_instance_transform</span><span class="p">(</span>
+    <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="kt">int</span> <span class="n">iid</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">frame3f</span><span class="o">&amp;</span> <span class="n">frame</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -386,7 +438,7 @@ find first intersection.</p>
 </ul>
 <h3>Function overlap_instance_bounds()</h3>
 <div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">overlap_instance_bounds</span><span class="p">(</span><span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn1</span><span class="p">,</span> <span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn2</span><span class="p">,</span>
-    <span class="kt">bool</span> <span class="n">conservative</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">exclude_duplicates</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">exclude_self</span><span class="p">,</span>
+    <span class="kt">bool</span> <span class="n">exclude_duplicates</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">exclude_self</span><span class="p">,</span>
     <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">ym</span><span class="o">::</span><span class="n">vec2i</span><span class="o">&gt;*</span> <span class="n">overlaps</span><span class="p">);</span>
 </code></pre></div>
 
@@ -397,7 +449,6 @@ collision detection.</p>
 <ul>
 <li>Parameters:<ul>
 <li>scn1, scn2: scenes to overlap</li>
-<li>conservative: use conservative checks</li>
 <li>skip_self: exlude self intersections</li>
 <li>skip_duplicates: exlude intersections (i1,i2) if (i2,i1)
   is already present</li>

@@ -44,12 +44,13 @@ This library depends in yocto_math.h
 7. perform shape overlap queries with `overlap_shape_bounds()`
 8. use `refit_bvh()` to recompute the bvh bounds if transforms or vertices
    are (you should rebuild the bvh for large changes); update the instances'
-   transforms with `set_instance_frame()`; shapes use shared memory, so
-   no explicit update is necessary
+   transforms with `set_instance_frame()` or `set_instance_transform();
+   shapes use shared memory, so no explicit update is necessary
 
 
 ## History
 
+- v 0.19: switch to matrices for transforms
 - v 0.18: faster internal intersection
 - v 0.17: removal of SAH build option (better use embree instead)
 - v 0.16: use yocto_math in the interface and remove inline compilation
@@ -195,7 +196,24 @@ Add shape
 ### Function add_instance()
 
 ~~~ .cpp
-int add_instance(scene* scn, const ym::frame3f& frame, int sid);
+int add_instance(scene* scn, const ym::mat4f& xform,
+    const ym::mat4f& xform_inverse, int sid);
+~~~
+
+Add an instance.
+
+- Parameters:
+    - scn: scene
+    - xform: instance transform
+    - xform_inverse: instance inverse transform
+    - sid: shape id
+- Returns:
+    - instance id
+
+### Function add_instance()
+
+~~~ .cpp
+inline int add_instance(scene* scn, const ym::frame3f& frame, int sid);
 ~~~
 
 Add an instance.
@@ -207,10 +225,39 @@ Add an instance.
 - Returns:
     - instance id
 
+### Function set_instance_transform()
+
+~~~ .cpp
+void set_instance_transform(scene* scn, int iid, const ym::mat4f& xform,
+    const ym::mat4f& xform_inverse);
+~~~
+
+Set an instance transform.
+
+- Parameters:
+    - scn: scene
+    - iid: instance id
+    - xform: shape transform
+    - xform_inverse: inverse of shape transform
+
 ### Function set_instance_frame()
 
 ~~~ .cpp
-void set_instance_frame(scene* scn, int iid, const ym::frame3f& frame);
+inline void set_instance_frame(scene* scn, int iid, const ym::frame3f& frame);
+~~~
+
+Set an instance frame.
+
+- Parameters:
+    - scn: scene
+    - iid: instance id
+    - frame: shape transform
+
+### Function set_instance_transform()
+
+~~~ .cpp
+inline void set_instance_transform(
+    scene* scn, int iid, const ym::frame3f& frame);
 ~~~
 
 Set an instance frame.
@@ -356,7 +403,7 @@ find first intersection.
 
 ~~~ .cpp
 void overlap_instance_bounds(const scene* scn1, const scene* scn2,
-    bool conservative, bool exclude_duplicates, bool exclude_self,
+    bool exclude_duplicates, bool exclude_self,
     std::vector<ym::vec2i>* overlaps);
 ~~~
 
@@ -366,7 +413,6 @@ collision detection.
 
 - Parameters:
     - scn1, scn2: scenes to overlap
-    - conservative: use conservative checks
     - skip_self: exlude self intersections
     - skip_duplicates: exlude intersections (i1,i2) if (i2,i1)
       is already present
