@@ -73,6 +73,7 @@
 ///
 /// ## History
 ///
+/// - v 0.18: add function to split meshes into single shapes
 /// - v 0.17: add per-mesh buffer on write from scene
 /// - v 0.16: add transforms under function calls
 /// - v 0.15: remove exception from code and add explicit error handling
@@ -737,6 +738,11 @@ void add_names(scene_group* scn);
 /// Add a default camera that views the entire scene.
 ///
 void add_default_cameras(scene_group* scn);
+
+///
+/// Split meshes into single shapes
+///
+void split_shapes(scene_group* scn);
 
 // -----------------------------------------------------------------------------
 // LOW-LEVEL INTERFACE
@@ -1923,55 +1929,6 @@ struct element_array_view {
 /// Computes the local node transform and its inverse.
 ///
 ym::mat4f node_transform(const glTFNode* node);
-
-/// buffer section
-struct buffer_section {
-    /// number of times it is references
-    int refcount = 0;
-    /// starting byte
-    int start = 0;
-    /// size in byte
-    int size = 0;
-    /// stride in byte
-    int stride = 0;
-    /// number of elements
-    int count = 0;
-    /// type
-    glTFAccessorType type = glTFAccessorType::NotSet;
-    /// component type
-    glTFAccessorComponentType ctype = glTFAccessorComponentType::NotSet;
-    /// number of element component
-    int ncomp = 0;
-    /// component size in byte
-    int csize = 0;
-};
-
-///
-/// Buffer descriptor
-///
-struct buffer_descr {
-    /// buffer index
-    int buffer = -1;
-    /// buffer name
-    std::string name = "";
-    /// buffer uri
-    std::string uri = "";
-    /// buffer size
-    int size = -1;
-    /// sections
-    std::vector<buffer_section*> sections;
-
-    /// cleanup
-    ~buffer_descr() {
-        for (auto e : sections)
-            if (e) delete e;
-    }
-};
-
-///
-/// Generate buffer descriptions.
-///
-std::vector<buffer_descr*> gen_buffer_descriptors(const glTF* gltf);
 
 }  // namespace ygltf
 

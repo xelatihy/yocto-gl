@@ -73,6 +73,7 @@ an object of type T. Internally this is just the same old glTF index. But
 this can used to access the scene data with <code>scene::get&lt;T&gt;(index)</code>.</p>
 <h2>History</h2>
 <ul>
+<li>v 0.18: add function to split meshes into single shapes</li>
 <li>v 0.17: add per-mesh buffer on write from scene</li>
 <li>v 0.16: add transforms under function calls</li>
 <li>v 0.15: remove exception from code and add explicit error handling</li>
@@ -720,6 +721,12 @@ skin</p>
 
 
 <p>Add a default camera that views the entire scene.</p>
+<h3>Function split_shapes()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">split_shapes</span><span class="p">(</span><span class="n">scene_group</span><span class="o">*</span> <span class="n">scn</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Split meshes into single shapes</p>
 <h3>Typedef json</h3>
 <div class="codehilite"><pre><code><span></span><span class="k">using</span> <span class="n">json</span> <span class="o">=</span> <span class="n">nlohmann</span><span class="o">::</span><span class="n">json</span><span class="p">;</span>
 </code></pre></div>
@@ -2036,66 +2043,6 @@ prepend buffer_uri to its name.</p>
 
 
 <p>Computes the local node transform and its inverse.</p>
-<h3>Struct buffer_section</h3>
-<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">buffer_section</span> <span class="p">{</span>
-    <span class="kt">int</span> <span class="n">refcount</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
-    <span class="kt">int</span> <span class="n">start</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
-    <span class="kt">int</span> <span class="n">size</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
-    <span class="kt">int</span> <span class="n">stride</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
-    <span class="kt">int</span> <span class="n">count</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
-    <span class="n">glTFAccessorType</span> <span class="n">type</span> <span class="o">=</span> <span class="n">glTFAccessorType</span><span class="o">::</span><span class="n">NotSet</span><span class="p">;</span>
-    <span class="n">glTFAccessorComponentType</span> <span class="n">ctype</span> <span class="o">=</span> <span class="n">glTFAccessorComponentType</span><span class="o">::</span><span class="n">NotSet</span><span class="p">;</span>
-    <span class="kt">int</span> <span class="n">ncomp</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
-    <span class="kt">int</span> <span class="n">csize</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
-<span class="p">}</span>
-</code></pre></div>
-
-
-<p>buffer section</p>
-<ul>
-<li>Members:<ul>
-<li>refcount:      number of times it is references</li>
-<li>start:      starting byte</li>
-<li>size:      size in byte</li>
-<li>stride:      stride in byte</li>
-<li>count:      number of elements</li>
-<li>type:      type</li>
-<li>ctype:      component type</li>
-<li>ncomp:      number of element component</li>
-<li>csize:      component size in byte</li>
-</ul>
-</li>
-</ul>
-<h3>Struct buffer_descr</h3>
-<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">buffer_descr</span> <span class="p">{</span>
-    <span class="kt">int</span> <span class="n">buffer</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">uri</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
-    <span class="kt">int</span> <span class="n">size</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
-    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">buffer_section</span><span class="o">*&gt;</span> <span class="n">sections</span><span class="p">;</span>
-    <span class="o">~</span><span class="n">buffer_descr</span><span class="p">();</span> 
-<span class="p">}</span>
-</code></pre></div>
-
-
-<p>Buffer descriptor</p>
-<ul>
-<li>Members:<ul>
-<li>buffer:      buffer index</li>
-<li>name:      buffer name</li>
-<li>uri:      buffer uri</li>
-<li>size:      buffer size</li>
-<li>sections:      sections</li>
-<li>~buffer_descr():      cleanup</li>
-</ul>
-</li>
-</ul>
-<h3>Function gen_buffer_descriptors()</h3>
-<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">buffer_descr</span><span class="o">*&gt;</span> <span class="n">gen_buffer_descriptors</span><span class="p">(</span><span class="k">const</span> <span class="n">glTF</span><span class="o">*</span> <span class="n">gltf</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Generate buffer descriptions.</p>
         <article>
         <footer></footer>
         </body>

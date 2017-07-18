@@ -72,6 +72,7 @@ this can used to access the scene data with `scene::get<T>(index)`.
 
 ## History
 
+- v 0.18: add function to split meshes into single shapes
 - v 0.17: add per-mesh buffer on write from scene
 - v 0.16: add transforms under function calls
 - v 0.15: remove exception from code and add explicit error handling
@@ -748,6 +749,14 @@ void add_default_cameras(scene_group* scn);
 ~~~
 
 Add a default camera that views the entire scene.
+
+### Function split_shapes()
+
+~~~ .cpp
+void split_shapes(scene_group* scn);
+~~~
+
+Split meshes into single shapes
 
 ### Typedef json
 
@@ -2058,66 +2067,4 @@ ym::mat4f node_transform(const glTFNode* node);
 ~~~
 
 Computes the local node transform and its inverse.
-
-### Struct buffer_section
-
-~~~ .cpp
-struct buffer_section {
-    int refcount = 0;
-    int start = 0;
-    int size = 0;
-    int stride = 0;
-    int count = 0;
-    glTFAccessorType type = glTFAccessorType::NotSet;
-    glTFAccessorComponentType ctype = glTFAccessorComponentType::NotSet;
-    int ncomp = 0;
-    int csize = 0;
-}
-~~~
-
-buffer section
-
-- Members:
-    - refcount:      number of times it is references
-    - start:      starting byte
-    - size:      size in byte
-    - stride:      stride in byte
-    - count:      number of elements
-    - type:      type
-    - ctype:      component type
-    - ncomp:      number of element component
-    - csize:      component size in byte
-
-
-### Struct buffer_descr
-
-~~~ .cpp
-struct buffer_descr {
-    int buffer = -1;
-    std::string name = "";
-    std::string uri = "";
-    int size = -1;
-    std::vector<buffer_section*> sections;
-    ~buffer_descr(); 
-}
-~~~
-
-Buffer descriptor
-
-- Members:
-    - buffer:      buffer index
-    - name:      buffer name
-    - uri:      buffer uri
-    - size:      buffer size
-    - sections:      sections
-    - ~buffer_descr():      cleanup
-
-
-### Function gen_buffer_descriptors()
-
-~~~ .cpp
-std::vector<buffer_descr*> gen_buffer_descriptors(const glTF* gltf);
-~~~
-
-Generate buffer descriptions.
 

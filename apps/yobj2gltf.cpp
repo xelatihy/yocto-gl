@@ -359,6 +359,8 @@ int main(int argc, char** argv) {
         parse_flag(parser, "--specgloss", "", "add spec gloss");
     auto save_separate_buffers =
         parse_flag(parser, "--separate-buffers", "", "save separate buffers");
+    auto split_shapes = parse_flag(
+        parser, "--split-shapes", "", "split meshes into single shapes");
     auto print_info =
         parse_flag(parser, "--print-info", "", "print information", false);
     auto validate_textures = parse_flag(
@@ -398,7 +400,8 @@ int main(int argc, char** argv) {
         print_obj_info(obj);
     }
 
-    // scale
+    // process
+    if (split_shapes) yobj::split_shapes(obj);
     if (scale != 1.0f) scale_obj(obj, scale);
     if (add_normals) normals_obj(obj);
 

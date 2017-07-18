@@ -4414,4 +4414,26 @@ std::vector<node*> get_camera_nodes(const scene* scn) {
     return get_nodes(scn->nodes, true, false);
 }
 
+//
+// Split meshes into single shapes
+//
+void split_shapes(scene_group* scn) {
+    auto nmeshes = std::vector<mesh*>();
+    for (auto msh : scn->meshes) {
+        if (msh->shapes.size() <= 1) {
+            nmeshes.push_back(msh);
+            continue;
+        }
+        for (auto shp : msh->shapes) {
+            auto nmsh = new mesh();
+            nmsh->name = msh->name + shp->name;
+            nmsh->shapes.push_back(shp);
+            nmeshes.push_back(nmsh);
+        }
+        msh->shapes.clear();
+        delete msh;
+    }
+    scn->meshes = nmeshes;
+}
+
 }  // namespace ygltf
