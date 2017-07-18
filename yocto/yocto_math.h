@@ -34,6 +34,7 @@
 ///
 /// ## History
 ///
+/// - v 0.19: remove indexing from specializations
 /// - v 0.18: bump to normal mapping convertion
 /// - v 0.17: added example image geneation
 /// - v 0.16: sampling
@@ -845,14 +846,14 @@ constexpr inline T dot(const vec<T, N>& a, const vec<T, N>& b) {
 /// vector cross product (2d)
 template <typename T>
 constexpr inline T cross(const vec<T, 2>& a, const vec<T, 2>& b) {
-    return a[0] * b[1] - a[1] * b[0];
+    return a.x * b.y - a.y * b.x;
 }
 
 /// vector cross product (3d)
 template <typename T>
 constexpr inline vec<T, 3> cross(const vec<T, 3>& a, const vec<T, 3>& b) {
-    return {a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2],
-        a[0] * b[1] - a[1] * b[0]};
+    return {
+        a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x};
 }
 
 /// vector dot product
@@ -956,8 +957,8 @@ constexpr inline vec<T, N> slerp(const vec<T, N>& a, const vec<T, N>& b, T t) {
 // http://lolengine.net/blog/2013/09/21/picking-orthogonal-vector-combing-coconuts)
 template <typename T>
 constexpr inline vec<T, 3> orthogonal(const vec<T, 3>& v) {
-    return std::abs(v[0]) > std::abs(v[2]) ? vec<T, 3>{-v[1], v[0], 0} :
-                                             vec<T, 3>{0, -v[2], v[1]};
+    return std::abs(v.x) > std::abs(v.z) ? vec<T, 3>{-v.y, v.x, 0} :
+                                           vec<T, 3>{0, -v.z, v.y};
 }
 
 /// orthonormalize two vectors
@@ -1455,109 +1456,102 @@ constexpr inline mat<T, M, N> transpose(const mat<T, N, M>& a) {
 /// matrix adjugate (2x2)
 template <typename T>
 constexpr inline mat<T, 2, 2> adjugate(const mat<T, 2, 2>& a) {
-    return {{a[1][1], -a[0][1]}, {-a[1][0], a[0][0]}};
+    return {{a.y.y, -a.x.y}, {-a.y.x, a.x.x}};
 }
 
 /// matrix adjugate (3x3)
 template <typename T>
 constexpr inline mat<T, 3, 3> adjugate(const mat<T, 3, 3>& a) {
-    return {{a[1][1] * a[2][2] - a[2][1] * a[1][2],
-                a[2][1] * a[0][2] - a[0][1] * a[2][2],
-                a[0][1] * a[1][2] - a[1][1] * a[0][2]},
-        {a[1][2] * a[2][0] - a[2][2] * a[1][0],
-            a[2][2] * a[0][0] - a[0][2] * a[2][0],
-            a[0][2] * a[1][0] - a[1][2] * a[0][0]},
-        {a[1][0] * a[2][1] - a[2][0] * a[1][1],
-            a[2][0] * a[0][1] - a[0][0] * a[2][1],
-            a[0][0] * a[1][1] - a[1][0] * a[0][1]}};
+    return {{a.y.y * a.z.z - a.z.y * a.y.z, a.z.y * a.x.z - a.x.y * a.z.z,
+                a.x.y * a.y.z - a.y.y * a.x.z},
+        {a.y.z * a.z.x - a.z.z * a.y.x, a.z.z * a.x.x - a.x.z * a.z.x,
+            a.x.z * a.y.x - a.y.z * a.x.x},
+        {a.y.x * a.z.y - a.z.x * a.y.y, a.z.x * a.x.y - a.x.x * a.z.y,
+            a.x.x * a.y.y - a.y.x * a.x.y}};
 }
 
 /// matrix adjugate (4x4)
 template <typename T>
 constexpr inline mat<T, 4, 4> adjugate(const mat<T, 4, 4>& a) {
-    return {{a[1][1] * a[2][2] * a[3][3] + a[3][1] * a[1][2] * a[2][3] +
-                    a[2][1] * a[3][2] * a[1][3] - a[1][1] * a[3][2] * a[2][3] -
-                    a[2][1] * a[1][2] * a[3][3] - a[3][1] * a[2][2] * a[1][3],
-                a[0][1] * a[3][2] * a[2][3] + a[2][1] * a[0][2] * a[3][3] +
-                    a[3][1] * a[2][2] * a[0][3] - a[3][1] * a[0][2] * a[2][3] -
-                    a[2][1] * a[3][2] * a[0][3] - a[0][1] * a[2][2] * a[3][3],
-                a[0][1] * a[1][2] * a[3][3] + a[3][1] * a[0][2] * a[1][3] +
-                    a[1][1] * a[3][2] * a[0][3] - a[0][1] * a[3][2] * a[1][3] -
-                    a[1][1] * a[0][2] * a[3][3] - a[3][1] * a[1][2] * a[0][3],
-                a[0][1] * a[2][2] * a[1][3] + a[1][1] * a[0][2] * a[2][3] +
-                    a[2][1] * a[1][2] * a[0][3] - a[0][1] * a[1][2] * a[2][3] -
-                    a[2][1] * a[0][2] * a[1][3] - a[1][1] * a[2][2] * a[0][3]},
-        {a[1][2] * a[3][3] * a[2][0] + a[2][2] * a[1][3] * a[3][0] +
-                a[3][2] * a[2][3] * a[1][0] - a[1][2] * a[2][3] * a[3][0] -
-                a[3][2] * a[1][3] * a[2][0] - a[2][2] * a[3][3] * a[1][0],
-            a[0][2] * a[2][3] * a[3][0] + a[3][2] * a[0][3] * a[2][0] +
-                a[2][2] * a[3][3] * a[0][0] - a[0][2] * a[3][3] * a[2][0] -
-                a[2][2] * a[0][3] * a[3][0] - a[3][2] * a[2][3] * a[0][0],
-            a[0][2] * a[3][3] * a[1][0] + a[1][2] * a[0][3] * a[3][0] +
-                a[3][2] * a[1][3] * a[0][0] - a[0][2] * a[1][3] * a[3][0] -
-                a[3][2] * a[0][3] * a[1][0] - a[1][2] * a[3][3] * a[0][0],
-            a[0][2] * a[1][3] * a[2][0] + a[2][2] * a[0][3] * a[1][0] +
-                a[1][2] * a[2][3] * a[0][0] - a[0][2] * a[2][3] * a[1][0] -
-                a[1][2] * a[0][3] * a[2][0] - a[2][2] * a[1][3] * a[0][0]},
-        {a[1][3] * a[2][0] * a[3][1] + a[3][3] * a[1][0] * a[2][1] +
-                a[2][3] * a[3][0] * a[1][1] - a[1][3] * a[3][0] * a[2][1] -
-                a[2][3] * a[1][0] * a[3][1] - a[3][3] * a[2][0] * a[1][1],
-            a[0][3] * a[3][0] * a[2][1] + a[2][3] * a[0][0] * a[3][1] +
-                a[3][3] * a[2][0] * a[0][1] - a[0][3] * a[2][0] * a[3][1] -
-                a[3][3] * a[0][0] * a[2][1] - a[2][3] * a[3][0] * a[0][1],
-            a[0][3] * a[1][0] * a[3][1] + a[3][3] * a[0][0] * a[1][1] +
-                a[1][3] * a[3][0] * a[0][1] - a[0][3] * a[3][0] * a[1][1] -
-                a[1][3] * a[0][0] * a[3][1] - a[3][3] * a[1][0] * a[0][1],
-            a[0][3] * a[2][0] * a[1][1] + a[1][3] * a[0][0] * a[2][1] +
-                a[2][3] * a[1][0] * a[0][1] - a[0][3] * a[1][0] * a[2][1] -
-                a[2][3] * a[0][0] * a[1][1] - a[1][3] * a[2][0] * a[0][1]},
-        {a[1][0] * a[3][1] * a[2][2] + a[2][0] * a[1][1] * a[3][2] +
-                a[3][0] * a[2][1] * a[1][2] - a[1][0] * a[2][1] * a[3][2] -
-                a[3][0] * a[1][1] * a[2][2] - a[2][0] * a[3][1] * a[1][2],
-            a[0][0] * a[2][1] * a[3][2] + a[3][0] * a[0][1] * a[2][2] +
-                a[2][0] * a[3][1] * a[0][2] - a[0][0] * a[3][1] * a[2][2] -
-                a[2][0] * a[0][1] * a[3][2] - a[3][0] * a[2][1] * a[0][2],
-            a[0][0] * a[3][1] * a[1][2] + a[1][0] * a[0][1] * a[3][2] +
-                a[3][0] * a[1][1] * a[0][2] - a[0][0] * a[1][1] * a[3][2] -
-                a[3][0] * a[0][1] * a[1][2] - a[1][0] * a[3][1] * a[0][2],
-            a[0][0] * a[1][1] * a[2][2] + a[2][0] * a[0][1] * a[1][2] +
-                a[1][0] * a[2][1] * a[0][2] - a[0][0] * a[2][1] * a[1][2] -
-                a[1][0] * a[0][1] * a[2][2] - a[2][0] * a[1][1] * a[0][2]}};
+    return {{a.y.y * a.z.z * a.w.w + a.w.y * a.y.z * a.z.w +
+                    a.z.y * a.w.z * a.y.w - a.y.y * a.w.z * a.z.w -
+                    a.z.y * a.y.z * a.w.w - a.w.y * a.z.z * a.y.w,
+                a.x.y * a.w.z * a.z.w + a.z.y * a.x.z * a.w.w +
+                    a.w.y * a.z.z * a.x.w - a.w.y * a.x.z * a.z.w -
+                    a.z.y * a.w.z * a.x.w - a.x.y * a.z.z * a.w.w,
+                a.x.y * a.y.z * a.w.w + a.w.y * a.x.z * a.y.w +
+                    a.y.y * a.w.z * a.x.w - a.x.y * a.w.z * a.y.w -
+                    a.y.y * a.x.z * a.w.w - a.w.y * a.y.z * a.x.w,
+                a.x.y * a.z.z * a.y.w + a.y.y * a.x.z * a.z.w +
+                    a.z.y * a.y.z * a.x.w - a.x.y * a.y.z * a.z.w -
+                    a.z.y * a.x.z * a.y.w - a.y.y * a.z.z * a.x.w},
+        {a.y.z * a.w.w * a.z.x + a.z.z * a.y.w * a.w.x + a.w.z * a.z.w * a.y.x -
+                a.y.z * a.z.w * a.w.x - a.w.z * a.y.w * a.z.x -
+                a.z.z * a.w.w * a.y.x,
+            a.x.z * a.z.w * a.w.x + a.w.z * a.x.w * a.z.x +
+                a.z.z * a.w.w * a.x.x - a.x.z * a.w.w * a.z.x -
+                a.z.z * a.x.w * a.w.x - a.w.z * a.z.w * a.x.x,
+            a.x.z * a.w.w * a.y.x + a.y.z * a.x.w * a.w.x +
+                a.w.z * a.y.w * a.x.x - a.x.z * a.y.w * a.w.x -
+                a.w.z * a.x.w * a.y.x - a.y.z * a.w.w * a.x.x,
+            a.x.z * a.y.w * a.z.x + a.z.z * a.x.w * a.y.x +
+                a.y.z * a.z.w * a.x.x - a.x.z * a.z.w * a.y.x -
+                a.y.z * a.x.w * a.z.x - a.z.z * a.y.w * a.x.x},
+        {a.y.w * a.z.x * a.w.y + a.w.w * a.y.x * a.z.y + a.z.w * a.w.x * a.y.y -
+                a.y.w * a.w.x * a.z.y - a.z.w * a.y.x * a.w.y -
+                a.w.w * a.z.x * a.y.y,
+            a.x.w * a.w.x * a.z.y + a.z.w * a.x.x * a.w.y +
+                a.w.w * a.z.x * a.x.y - a.x.w * a.z.x * a.w.y -
+                a.w.w * a.x.x * a.z.y - a.z.w * a.w.x * a.x.y,
+            a.x.w * a.y.x * a.w.y + a.w.w * a.x.x * a.y.y +
+                a.y.w * a.w.x * a.x.y - a.x.w * a.w.x * a.y.y -
+                a.y.w * a.x.x * a.w.y - a.w.w * a.y.x * a.x.y,
+            a.x.w * a.z.x * a.y.y + a.y.w * a.x.x * a.z.y +
+                a.z.w * a.y.x * a.x.y - a.x.w * a.y.x * a.z.y -
+                a.z.w * a.x.x * a.y.y - a.y.w * a.z.x * a.x.y},
+        {a.y.x * a.w.y * a.z.z + a.z.x * a.y.y * a.w.z + a.w.x * a.z.y * a.y.z -
+                a.y.x * a.z.y * a.w.z - a.w.x * a.y.y * a.z.z -
+                a.z.x * a.w.y * a.y.z,
+            a.x.x * a.z.y * a.w.z + a.w.x * a.x.y * a.z.z +
+                a.z.x * a.w.y * a.x.z - a.x.x * a.w.y * a.z.z -
+                a.z.x * a.x.y * a.w.z - a.w.x * a.z.y * a.x.z,
+            a.x.x * a.w.y * a.y.z + a.y.x * a.x.y * a.w.z +
+                a.w.x * a.y.y * a.x.z - a.x.x * a.y.y * a.w.z -
+                a.w.x * a.x.y * a.y.z - a.y.x * a.w.y * a.x.z,
+            a.x.x * a.y.y * a.z.z + a.z.x * a.x.y * a.y.z +
+                a.y.x * a.z.y * a.x.z - a.x.x * a.z.y * a.y.z -
+                a.y.x * a.x.y * a.z.z - a.z.x * a.y.y * a.x.z}};
 }
 
 /// matrix determinant (2x2)
 template <typename T>
 constexpr inline T determinant(const mat<T, 2, 2>& a) {
-    return a[0][0] * a[1][1] - a[0][1] * a[1][0];
+    return a.x.x * a.y.y - a.x.y * a.y.x;
 }
 
 /// matrix determinant (3x3)
 template <typename T>
 constexpr inline T determinant(const mat<T, 3, 3>& a) {
-    return a[0][0] * (a[1][1] * a[2][2] - a[2][1] * a[1][2]) +
-           a[0][1] * (a[1][2] * a[2][0] - a[2][2] * a[1][0]) +
-           a[0][2] * (a[1][0] * a[2][1] - a[2][0] * a[1][1]);
+    return a.x.x * (a.y.y * a.z.z - a.z.y * a.y.z) +
+           a.x.y * (a.y.z * a.z.x - a.z.z * a.y.x) +
+           a.x.z * (a.y.x * a.z.y - a.z.x * a.y.y);
 }
 
 /// matrix determinant (4x4)
 template <typename T>
 constexpr inline T determinant(const mat<T, 4, 4>& a) {
-    return a[0][0] *
-               (a[1][1] * a[2][2] * a[3][3] + a[3][1] * a[1][2] * a[2][3] +
-                   a[2][1] * a[3][2] * a[1][3] - a[1][1] * a[3][2] * a[2][3] -
-                   a[2][1] * a[1][2] * a[3][3] - a[3][1] * a[2][2] * a[1][3]) +
-           a[0][1] *
-               (a[1][2] * a[3][3] * a[2][0] + a[2][2] * a[1][3] * a[3][0] +
-                   a[3][2] * a[2][3] * a[1][0] - a[1][2] * a[2][3] * a[3][0] -
-                   a[3][2] * a[1][3] * a[2][0] - a[2][2] * a[3][3] * a[1][0]) +
-           a[0][2] *
-               (a[1][3] * a[2][0] * a[3][1] + a[3][3] * a[1][0] * a[2][1] +
-                   a[2][3] * a[3][0] * a[1][1] - a[1][3] * a[3][0] * a[2][1] -
-                   a[2][3] * a[1][0] * a[3][1] - a[3][3] * a[2][0] * a[1][1]) +
-           a[0][3] *
-               (a[1][0] * a[3][1] * a[2][2] + a[2][0] * a[1][1] * a[3][2] +
-                   a[3][0] * a[2][1] * a[1][2] - a[1][0] * a[2][1] * a[3][2] -
-                   a[3][0] * a[1][1] * a[2][2] - a[2][0] * a[3][1] * a[1][2]);
+    return a.x.x * (a.y.y * a.z.z * a.w.w + a.w.y * a.y.z * a.z.w +
+                       a.z.y * a.w.z * a.y.w - a.y.y * a.w.z * a.z.w -
+                       a.z.y * a.y.z * a.w.w - a.w.y * a.z.z * a.y.w) +
+           a.x.y * (a.y.z * a.w.w * a.z.x + a.z.z * a.y.w * a.w.x +
+                       a.w.z * a.z.w * a.y.x - a.y.z * a.z.w * a.w.x -
+                       a.w.z * a.y.w * a.z.x - a.z.z * a.w.w * a.y.x) +
+           a.x.z * (a.y.w * a.z.x * a.w.y + a.w.w * a.y.x * a.z.y +
+                       a.z.w * a.w.x * a.y.y - a.y.w * a.w.x * a.z.y -
+                       a.z.w * a.y.x * a.w.y - a.w.w * a.z.x * a.y.y) +
+           a.x.w * (a.y.x * a.w.y * a.z.z + a.z.x * a.y.y * a.w.z +
+                       a.w.x * a.z.y * a.y.z - a.y.x * a.z.y * a.w.z -
+                       a.w.x * a.y.y * a.z.z - a.z.x * a.w.y * a.y.z);
 }
 
 /// matrix inverse (uses adjugate and determinant)
@@ -2001,16 +1995,16 @@ constexpr inline bool operator!=(const quat<T, N>& a, const quat<T, N>& b) {
 /// quaterion multiply
 template <typename T>
 constexpr quat<T, 4> operator*(const quat<T, 4>& a, const quat<T, 4>& b) {
-    return {a[0] * b[3] + a[3] * b[0] + a[1] * b[3] - a[2] * b[1],
-        a[1] * b[3] + a[3] * b[1] + a[2] * b[0] - a[0] * b[2],
-        a[2] * b[3] + a[3] * b[2] + a[0] * b[1] - a[1] * b[0],
-        a[3] * b[3] - a[0] * b[0] - a[1] * b[1] - a[2] * b[2]};
+    return {a.x * b.w + a.w * b.x + a.y * b.w - a.z * b.y,
+        a.y * b.w + a.w * b.y + a.z * b.x - a.x * b.z,
+        a.z * b.w + a.w * b.z + a.x * b.y - a.y * b.x,
+        a.w * b.w - a.x * b.x - a.y * b.y - a.z * b.z};
 }
 
 /// quaterion conjugate
 template <typename T>
 constexpr quat<T, 4> conjugate(const quat<T, 4>& v) {
-    return {-v[0], -v[1], -v[2], v[3]};
+    return {-v.x, -v.y, -v.z, v.w};
 }
 
 /// quaterion inverse
@@ -2294,8 +2288,8 @@ template <typename T, int N>
 constexpr inline bbox<T, N> expand(const bbox<T, N>& a, const vec<T, N>& b) {
     bbox<T, N> c;
     for (auto i = 0; i < N; i++) {
-        c[0][i] = min(a[0][i], b[i]);
-        c[1][i] = max(a[1][i], b[i]);
+        c.x[i] = min(a.x[i], b[i]);
+        c.y[i] = max(a.y[i], b[i]);
     }
     return c;
 }
@@ -2305,8 +2299,8 @@ template <typename T, int N>
 constexpr inline bbox<T, N> expand(const bbox<T, N>& a, const bbox<T, N>& b) {
     bbox<T, N> c;
     for (auto i = 0; i < N; i++) {
-        c[0][i] = min(a[0][i], b[0][i]);
-        c[1][i] = max(a[1][i], b[1][i]);
+        c.x[i] = min(a.x[i], b.x[i]);
+        c.y[i] = max(a.y[i], b.y[i]);
     }
     return c;
 }
@@ -2315,7 +2309,7 @@ constexpr inline bbox<T, N> expand(const bbox<T, N>& a, const bbox<T, N>& b) {
 template <typename T, int N>
 constexpr inline bool contains(const bbox<T, N>& a, const vec<T, N>& b) {
     for (auto i = 0; i < N; i++) {
-        if (a[0][i] > b[i] || a[1][i] < b[i]) return false;
+        if (a.x[i] > b[i] || a.y[i] < b[i]) return false;
     }
     return true;
 }
@@ -2324,7 +2318,7 @@ constexpr inline bool contains(const bbox<T, N>& a, const vec<T, N>& b) {
 template <typename T, int N>
 constexpr inline bool contains(const bbox<T, N>& a, const bbox<T, N>& b) {
     for (auto i = 0; i < N; i++) {
-        if (a[0][i] > b[1][i] || a[1][i] < b[0][i]) return false;
+        if (a.x[i] > b.y[i] || a.y[i] < b.x[i]) return false;
     }
     return true;
 }
@@ -2620,10 +2614,10 @@ template <typename T>
 constexpr inline bbox<T, 3> transform_bbox(
     const mat<T, 4, 4>& a, const bbox<T, 3>& b) {
     vec<T, 3> corners[8] = {
-        {b[0][0], b[0][1], b[0][2]}, {b[0][0], b[0][1], b[1][2]},
-        {b[0][0], b[1][1], b[0][2]}, {b[0][0], b[1][1], b[1][2]},
-        {b[1][0], b[0][1], b[0][2]}, {b[1][0], b[0][1], b[1][2]},
-        {b[1][0], b[1][1], b[0][2]}, {b[1][0], b[1][1], b[1][2]},
+        {b.min.x, b.min.y, b.min.z}, {b.min.x, b.min.y, b.max.z},
+        {b.min.x, b.max.y, b.min.z}, {b.min.x, b.max.y, b.max.z},
+        {b.max.x, b.min.y, b.min.z}, {b.max.x, b.min.y, b.max.z},
+        {b.max.x, b.max.y, b.min.z}, {b.max.x, b.max.y, b.max.z},
     };
     auto xformed = bbox<T, 3>();
     for (auto j = 0; j < 8; j++) xformed += transform_point(a, corners[j]);
@@ -2644,10 +2638,10 @@ constexpr inline bbox<T, 3> transform_bbox(
     const frame<T, 3>& a, const bbox<T, 3>& b) {
 #if 0
     vec<T, 3> corners[8] = {
-        {b[0][0], b[0][1], b[0][2]}, {b[0][0], b[0][1], b[1][2]},
-        {b[0][0], b[1][1], b[0][2]}, {b[0][0], b[1][1], b[1][2]},
-        {b[1][0], b[0][1], b[0][2]}, {b[1][0], b[0][1], b[1][2]},
-        {b[1][0], b[1][1], b[0][2]}, {b[1][0], b[1][1], b[1][2]},
+        {b.min.x, b.min.y, b.min.z}, {b.min.x, b.min.y, b.max.z},
+        {b.min.x, b.max.y, b.min.z}, {b.min.x, b.max.y, b.max.z},
+        {b.max.x, b.min.y, b.min.z}, {b.max.x, b.min.y, b.max.z},
+        {b.max.x, b.max.y, b.min.z}, {b.max.x, b.max.y, b.max.z},
     };
     auto xformed = bbox<T, 3>();
     for (auto j = 0; j < 8; j++) xformed += transform_point(a, corners[j]);
@@ -2662,14 +2656,14 @@ constexpr inline bbox<T, 3> transform_bbox(
     for (auto i = 0; i < 3; i++) {
         // form extent by summing smaller and larger terms respectively
         for (auto j = 0; j < 3; j++) {
-            auto e = rot(a)[j][i] * b[0][j];
-            auto f = rot(a)[j][i] * b[1][j];
+            auto e = a.rot()[j][i] * b.min[j];
+            auto f = a.rot()[j][i] * b.max[j];
             if (e < f) {
-                c[0][i] += e;
-                c[1][i] += f;
+                c.min[i] += e;
+                c.max[i] += f;
             } else {
-                c[0][i] += f;
-                c[1][i] += e;
+                c.min[i] += f;
+                c.max[i] += e;
             }
         }
     }
@@ -2697,12 +2691,12 @@ template <typename T>
 constexpr inline mat<T, 3, 3> rotation_mat3(const vec<T, 3>& axis, T angle) {
     auto s = sin(angle), c = cos(angle);
     auto vv = normalize(axis);
-    return {{c + (1 - c) * vv[0] * vv[0], (1 - c) * vv[0] * vv[1] + s * vv[2],
-                (1 - c) * vv[0] * vv[2] - s * vv[1]},
-        {(1 - c) * vv[0] * vv[1] - s * vv[2], c + (1 - c) * vv[1] * vv[1],
-            (1 - c) * vv[1] * vv[2] + s * vv[0]},
-        {(1 - c) * vv[0] * vv[2] + s * vv[1],
-            (1 - c) * vv[1] * vv[2] - s * vv[0], c + (1 - c) * vv[2] * vv[2]}};
+    return {{c + (1 - c) * vv.x * vv.x, (1 - c) * vv.x * vv.y + s * vv.z,
+                (1 - c) * vv.x * vv.z - s * vv.y},
+        {(1 - c) * vv.x * vv.y - s * vv.z, c + (1 - c) * vv.y * vv.y,
+            (1 - c) * vv.y * vv.z + s * vv.x},
+        {(1 - c) * vv.x * vv.z + s * vv.y, (1 - c) * vv.y * vv.z - s * vv.x,
+            c + (1 - c) * vv.z * vv.z}};
 }
 
 /// translation frame
@@ -2721,7 +2715,7 @@ constexpr inline mat<T, 4, 4> translation_mat4(const vec<T, 3>& a) {
 /// API)
 template <typename T>
 constexpr inline frame<T, 3> scaling_frame3(const vec<T, 3>& a) {
-    return {{a[0], 0, 0}, {0, a[1], 0}, {0, 0, a[2]}, {0, 0, 0}};
+    return {{a.x, 0, 0}, {0, a.y, 0}, {0, 0, a.z}, {0, 0, 0}};
 }
 
 /// scaling matrix
@@ -2774,14 +2768,13 @@ constexpr inline quat<T, 4> rotation_quat4(const vec<T, 4>& axis_angle) {
 /// quaterion to matrix conversion
 template <typename T>
 constexpr inline mat<T, 3, 3> rotation_mat3(const quat<T, 4>& v) {
-    return {
-        {v[3] * v[3] + v[0] * v[0] - v[1] * v[1] - v[2] * v[2],
-            (v[0] * v[1] + v[2] * v[3]) * 2, (v[2] * v[0] - v[1] * v[3]) * 2},
-        {(v[0] * v[1] - v[2] * v[3]) * 2,
-            v[3] * v[3] - v[0] * v[0] + v[1] * v[1] - v[2] * v[2],
-            (v[1] * v[2] + v[0] * v[3]) * 2},
-        {(v[2] * v[0] + v[1] * v[3]) * 2, (v[1] * v[2] - v[0] * v[3]) * 2,
-            v[3] * v[3] - v[0] * v[0] - v[1] * v[1] + v[2] * v[2]}};
+    return {{v.w * v.w + v.x * v.x - v.y * v.y - v.z * v.z,
+                (v.x * v.y + v.z * v.w) * 2, (v.z * v.x - v.y * v.w) * 2},
+        {(v.x * v.y - v.z * v.w) * 2,
+            v.w * v.w - v.x * v.x + v.y * v.y - v.z * v.z,
+            (v.y * v.z + v.x * v.w) * 2},
+        {(v.z * v.x + v.y * v.w) * 2, (v.y * v.z - v.x * v.w) * 2,
+            v.w * v.w - v.x * v.x - v.y * v.y + v.z * v.z}};
 }
 
 /// rotation matrix
@@ -2797,43 +2790,43 @@ constexpr inline quat<T, 4> rotation_quat4(const mat<T, 3, 3>& m_) {
     auto q = quat<T, 4>();
     auto m = transpose(m_);
 #if 1
-    auto trace = m[0][0] + m[1][1] + m[2][2];
+    auto trace = m.x.x + m.y.y + m.z.z;
     if (trace > 0) {
         float s = (T)0.5 / std::sqrt(trace + 1);
         q.w = (T)0.25 / s;
-        q.x = (m[2][1] - m[1][2]) * s;
-        q.y = (m[0][2] - m[2][0]) * s;
-        q.z = (m[1][0] - m[0][1]) * s;
+        q.x = (m.z.y - m.y.z) * s;
+        q.y = (m.x.z - m.z.x) * s;
+        q.z = (m.y.x - m.x.y) * s;
     } else {
-        if (m[0][0] > m[1][1] && m[0][0] > m[2][2]) {
-            float s = 2 * std::sqrt(max((T)0, 1 + m[0][0] - m[1][1] - m[2][2]));
-            q.w = (m[2][1] - m[1][2]) / s;
+        if (m.x.x > m.y.y && m.x.x > m.z.z) {
+            float s = 2 * std::sqrt(max((T)0, 1 + m.x.x - m.y.y - m.z.z));
+            q.w = (m.z.y - m.y.z) / s;
             q.x = (T)0.25 * s;
-            q.y = (m[0][1] + m[1][0]) / s;
-            q.z = (m[0][2] + m[2][0]) / s;
-        } else if (m[1][1] > m[2][2]) {
-            float s = 2 * std::sqrt(max((T)0, 1 + m[1][1] - m[0][0] - m[2][2]));
-            q.w = (m[0][2] - m[2][0]) / s;
-            q.x = (m[0][1] + m[1][0]) / s;
+            q.y = (m.x.y + m.y.x) / s;
+            q.z = (m.x.z + m.z.x) / s;
+        } else if (m.y.y > m.z.z) {
+            float s = 2 * std::sqrt(max((T)0, 1 + m.y.y - m.x.x - m.z.z));
+            q.w = (m.x.z - m.z.x) / s;
+            q.x = (m.x.y + m.y.x) / s;
             q.y = (T)0.25 * s;
-            q.z = (m[1][2] + m[2][1]) / s;
+            q.z = (m.y.z + m.z.y) / s;
         } else {
-            float s = 2 * std::sqrt(max((T)0, 1 + m[2][2] - m[0][0] - m[1][1]));
-            q.w = (m[1][0] - m[0][1]) / s;
-            q.x = (m[0][2] + m[2][0]) / s;
-            q.y = (m[1][2] + m[2][1]) / s;
+            float s = 2 * std::sqrt(max((T)0, 1 + m.z.z - m.x.x - m.y.y));
+            q.w = (m.y.x - m.x.y) / s;
+            q.x = (m.x.z + m.z.x) / s;
+            q.y = (m.y.z + m.z.y) / s;
             q.z = (T)0.25 * s;
         }
     }
 
 #else
-    q.w = std::sqrt(max(0, 1 + m[0][0] + m[1][1] + m[2][2])) / 2;
-    q.x = std::sqrt(max(0, 1 + m[0][0] - m[1][1] - m[2][2])) / 2;
-    q.y = std::sqrt(max(0, 1 - m[0][0] + m[1][1] - m[2][2])) / 2;
-    q.z = std::sqrt(max(0, 1 - m[0][0] - m[1][1] + m[2][2])) / 2;
-    Q.x = std::copysign(q.x, m[2][1] - m[1][2]);
-    Q.y = std::copysign(q.y, m[0][2] - m[2][0]);
-    Q.z = std::copysign(q.z, m[1][0] - m[0][1]);
+    q.w = std::sqrt(max(0, 1 + m.x.x + m.y.y + m.z.z)) / 2;
+    q.x = std::sqrt(max(0, 1 + m.x.x - m.y.y - m.z.z)) / 2;
+    q.y = std::sqrt(max(0, 1 - m.x.x + m.y.y - m.z.z)) / 2;
+    q.z = std::sqrt(max(0, 1 - m.x.x - m.y.y + m.z.z)) / 2;
+    Q.x = std::copysign(q.x, m.z.y - m.y.z);
+    Q.y = std::copysign(q.y, m.x.z - m.z.x);
+    Q.z = std::copysign(q.z, m.y.x - m.x.y);
 #endif
 
     return q;
@@ -3110,16 +3103,16 @@ constexpr inline std::pair<vec<T, 3>, vec<T, 3>> triangle_tangents_fromuv(
     // normal points up from texture space
     auto p = v1 - v0;
     auto q = v2 - v0;
-    auto s = vec<T, 2>{uv1[0] - uv0[0], uv2[0] - uv0[0]};
-    auto t = vec<T, 2>{uv1[1] - uv0[1], uv2[1] - uv0[1]};
-    auto div = s[0] * t[1] - s[1] * t[0];
+    auto s = vec<T, 2>{uv1.x - uv0.x, uv2.x - uv0.x};
+    auto t = vec<T, 2>{uv1.y - uv0.y, uv2.y - uv0.y};
+    auto div = s.x * t.y - s.y * t.x;
 
     if (div != 0) {
-        auto tu = vec<T, 3>{t[1] * p[0] - t[0] * q[0],
-                      t[1] * p[1] - t[0] * q[1], t[1] * p[2] - t[0] * q[2]} /
+        auto tu = vec<T, 3>{t.y * p.x - t.x * q.x, t.y * p.y - t.x * q.y,
+                      t.y * p.z - t.x * q.z} /
                   div;
-        auto tv = vec<T, 3>{s[0] * q[0] - s[1] * p[0],
-                      s[0] * q[1] - s[1] * p[1], s[0] * q[2] - s[1] * p[2]} /
+        auto tv = vec<T, 3>{s.x * q.x - s.y * p.x, s.x * q.y - s.y * p.y,
+                      s.x * q.z - s.y * p.z} /
                   div;
         return {tu, tv};
     } else {
@@ -3130,7 +3123,7 @@ constexpr inline std::pair<vec<T, 3>, vec<T, 3>> triangle_tangents_fromuv(
 /// triangle baricentric interpolation
 template <typename T, typename T1>
 constexpr inline T blerp(const T& a, const T& b, const T& c, const T1& w) {
-    return a * w[0] + b * w[1] + c * w[2];
+    return a * w.x + b * w.y + c * w.z;
 }
 
 ///
@@ -3280,7 +3273,7 @@ inline void compute_tangent_frame(int ntriangles, const vec3i* triangles,
     for (auto i = 0; i < nverts; i++) {
         tangu[i] = orthonormalize(tangu[i], norm[i]);
         auto s = (dot(cross(norm[i], tangu[i]), tangv[i]) < 0) ? -1.0f : 1.0f;
-        tangsp[i] = {tangu[i][0], tangu[i][1], tangu[i][2], s};
+        tangsp[i] = {tangu[i].x, tangu[i].y, tangu[i].z, s};
     }
 }
 
@@ -3536,8 +3529,7 @@ inline void merge_triangles(std::vector<vec3i>& triangles,
     const std::vector<vec3f>& mpos, const std::vector<vec3f>& mnorm,
     const std::vector<vec2f>& mtexcoord) {
     auto o = (int)pos.size();
-    for (auto t : mtriangles)
-        triangles.push_back({t[0] + o, t[1] + o, t[2] + o});
+    for (auto t : mtriangles) triangles.push_back({t.x + o, t.y + o, t.z + o});
     for (auto p : mpos) pos.push_back(p);
     for (auto n : mnorm) norm.push_back(n);
     for (auto t : mtexcoord) texcoord.push_back(t);
@@ -3686,14 +3678,12 @@ inline void make_uvsphere(int usteps, int vsteps, std::vector<vec3i>& triangles,
     std::vector<vec2f>& texcoord) {
     return make_triangles(usteps, vsteps, triangles, pos, norm, texcoord,
         [](const vec2f& uv) {
-            auto a = vec2f{2 * pif * uv[0], pif * (1 - uv[1])};
-            return vec3f{
-                cos(a[0]) * sin(a[1]), sin(a[0]) * sin(a[1]), cos(a[1])};
+            auto a = vec2f{2 * pif * uv.x, pif * (1 - uv.y)};
+            return vec3f{cos(a.x) * sin(a.y), sin(a.x) * sin(a.y), cos(a.y)};
         },
         [](const vec2f& uv) {
-            auto a = vec2f{2 * pif * uv[0], pif * (1 - uv[1])};
-            return vec3f{
-                cos(a[0]) * sin(a[1]), sin(a[0]) * sin(a[1]), cos(a[1])};
+            auto a = vec2f{2 * pif * uv.x, pif * (1 - uv.y)};
+            return vec3f{cos(a.x) * sin(a.y), sin(a.x) * sin(a.y), cos(a.y)};
         },
         [](const vec2f& uv) { return uv; });
 }
@@ -3706,14 +3696,12 @@ inline void make_uvhemisphere(int usteps, int vsteps,
     std::vector<vec3f>& norm, std::vector<vec2f>& texcoord) {
     return make_triangles(usteps, vsteps, triangles, pos, norm, texcoord,
         [](const vec2f& uv) {
-            auto a = vec2f{2 * pif * uv[0], pif * 0.5f * (1 - uv[1])};
-            return vec3f{
-                cos(a[0]) * sin(a[1]), sin(a[0]) * sin(a[1]), cos(a[1])};
+            auto a = vec2f{2 * pif * uv.x, pif * 0.5f * (1 - uv.y)};
+            return vec3f{cos(a.x) * sin(a.y), sin(a.x) * sin(a.y), cos(a.y)};
         },
         [](const vec2f& uv) {
-            auto a = vec2f{2 * pif * uv[0], pif * 0.5f * (1 - uv[1])};
-            return vec3f{
-                cos(a[0]) * sin(a[1]), sin(a[0]) * sin(a[1]), cos(a[1])};
+            auto a = vec2f{2 * pif * uv.x, pif * 0.5f * (1 - uv.y)};
+            return vec3f{cos(a.x) * sin(a.y), sin(a.x) * sin(a.y), cos(a.y)};
         },
         [](const vec2f& uv) { return uv; });
 }
@@ -3726,14 +3714,12 @@ inline void make_uvflippedsphere(int usteps, int vsteps,
     std::vector<vec3f>& norm, std::vector<vec2f>& texcoord) {
     return make_triangles(usteps, vsteps, triangles, pos, norm, texcoord,
         [](const vec2f& uv) {
-            auto a = vec2f{2 * pif * uv[0], pif * uv[1]};
-            return vec3f{
-                cos(a[0]) * sin(a[1]), sin(a[0]) * sin(a[1]), cos(a[1])};
+            auto a = vec2f{2 * pif * uv.x, pif * uv.y};
+            return vec3f{cos(a.x) * sin(a.y), sin(a.x) * sin(a.y), cos(a.y)};
         },
         [](const vec2f& uv) {
-            auto a = vec2f{2 * pif * uv[0], pif * uv[1]};
-            return vec3f{
-                -cos(a[0]) * sin(a[1]), -sin(a[0]) * sin(a[1]), -cos(a[1])};
+            auto a = vec2f{2 * pif * uv.x, pif * uv.y};
+            return vec3f{-cos(a.x) * sin(a.y), -sin(a.x) * sin(a.y), -cos(a.y)};
         },
         [](const vec2f& uv) {
             return vec2f{uv.x, 1 - uv.y};
@@ -3748,14 +3734,12 @@ inline void make_uvflippedhemisphere(int usteps, int vsteps,
     std::vector<vec3f>& norm, std::vector<vec2f>& texcoord) {
     return make_triangles(usteps, vsteps, triangles, pos, norm, texcoord,
         [](const vec2f& uv) {
-            auto a = vec2f{2 * pif * uv[0], pif * (0.5f + 0.5f * uv[1])};
-            return vec3f{
-                cos(a[0]) * sin(a[1]), sin(a[0]) * sin(a[1]), cos(a[1])};
+            auto a = vec2f{2 * pif * uv.x, pif * (0.5f + 0.5f * uv.y)};
+            return vec3f{cos(a.x) * sin(a.y), sin(a.x) * sin(a.y), cos(a.y)};
         },
         [](const vec2f& uv) {
-            auto a = vec2f{2 * pif * uv[0], pif * uv[1]};
-            return vec3f{
-                -cos(a[0]) * sin(a[1]), -sin(a[0]) * sin(a[1]), -cos(a[1])};
+            auto a = vec2f{2 * pif * uv.x, pif * uv.y};
+            return vec3f{-cos(a.x) * sin(a.y), -sin(a.x) * sin(a.y), -cos(a.y)};
         },
         [](const vec2f& uv) {
             return vec2f{uv.x, 1 - uv.y};
@@ -3770,7 +3754,7 @@ inline void make_uvquad(int usteps, int vsteps, std::vector<vec3i>& triangles,
     std::vector<vec2f>& texcoord) {
     return make_triangles(usteps, vsteps, triangles, pos, norm, texcoord,
         [](const vec2f& uv) {
-            return vec3f{(-1 + uv[0] * 2), (-1 + uv[1] * 2), 0};
+            return vec3f{(-1 + uv.x * 2), (-1 + uv.y * 2), 0};
         },
         [](const vec2f& uv) {
             return vec3f{0, 0, 1};
@@ -3853,14 +3837,14 @@ inline void make_uvflipcapsphere(int usteps, int vsteps, float radius,
     std::vector<vec3f>& norm, std::vector<vec2f>& texcoord) {
     make_uvsphere(usteps, vsteps, triangles, pos, norm, texcoord);
     for (auto i = 0; i < pos.size(); i++) {
-        if (pos[i][2] > radius) {
-            pos[i][2] = 2 * radius - pos[i][2];
-            norm[i][0] = -norm[i][0];
-            norm[i][1] = -norm[i][1];
-        } else if (pos[i][2] < -radius) {
-            pos[i][2] = -2 * radius - pos[i][2];
-            norm[i][0] = -norm[i][0];
-            norm[i][1] = -norm[i][1];
+        if (pos[i].z > radius) {
+            pos[i].z = 2 * radius - pos[i].z;
+            norm[i].x = -norm[i].x;
+            norm[i].y = -norm[i].y;
+        } else if (pos[i].z < -radius) {
+            pos[i].z = -2 * radius - pos[i].z;
+            norm[i].x = -norm[i].x;
+            norm[i].y = -norm[i].y;
         }
     }
 }
@@ -3874,15 +3858,15 @@ inline void make_uvcutsphere(int usteps, int vsteps, float radius,
     return make_triangles(usteps, vsteps, triangles, pos, norm, texcoord,
         [radius](const vec2f& uv) {
             auto p = 1 - std::acos(radius) / pif;
-            auto a = vec2f{2 * pif * uv[0], pif * (1 - p * uv[1])};
-            return vec3f{std::cos(a[0]) * std::sin(a[1]),
-                std::sin(a[0]) * std::sin(a[1]), std::cos(a[1])};
+            auto a = vec2f{2 * pif * uv.x, pif * (1 - p * uv.y)};
+            return vec3f{std::cos(a.x) * std::sin(a.y),
+                std::sin(a.x) * std::sin(a.y), std::cos(a.y)};
         },
         [radius](const vec2f& uv) {
             auto p = 1 - std::acos(radius) / pif;
-            auto a = vec2f{2 * pif * uv[0], pif * (1 - p * uv[1])};
-            return vec3f{std::cos(a[0]) * std::sin(a[1]),
-                std::sin(a[0]) * std::sin(a[1]), std::cos(a[1])};
+            auto a = vec2f{2 * pif * uv.x, pif * (1 - p * uv.y)};
+            return vec3f{std::cos(a.x) * std::sin(a.y),
+                std::sin(a.x) * std::sin(a.y), std::cos(a.y)};
         },
         [](const vec2f& uv) { return uv; });
 }
@@ -3896,18 +3880,16 @@ inline void make_uvflippedcutsphere(int usteps, int vsteps, float radius,
     return make_triangles(usteps, vsteps, triangles, pos, norm, texcoord,
         [radius](const vec2f& uv) {
             auto p = 1 - acos(radius) / pif;
-            auto a = vec2f{2 * pif * uv[0], pif * ((1 - p) + p * uv[1])};
-            return vec3f{
-                cos(a[0]) * sin(a[1]), sin(a[0]) * sin(a[1]), cos(a[1])};
+            auto a = vec2f{2 * pif * uv.x, pif * ((1 - p) + p * uv.y)};
+            return vec3f{cos(a.x) * sin(a.y), sin(a.x) * sin(a.y), cos(a.y)};
         },
         [radius](const vec2f& uv) {
             auto p = 1 - acos(radius) / pif;
-            auto a = vec2f{2 * pif * uv[0], pif * ((1 - p) + p * uv[1])};
-            return vec3f{
-                -cos(a[0]) * sin(a[1]), -sin(a[0]) * sin(a[1]), -cos(a[1])};
+            auto a = vec2f{2 * pif * uv.x, pif * ((1 - p) + p * uv.y)};
+            return vec3f{-cos(a.x) * sin(a.y), -sin(a.x) * sin(a.y), -cos(a.y)};
         },
         [](const vec2f& uv) {
-            return vec2f{uv[0], (1 - uv[1])};
+            return vec2f{uv.x, (1 - uv.y)};
         });
 }
 
@@ -3966,7 +3948,7 @@ inline bool intersect_point(
 ///
 /// Out Parameters:
 /// - ray_t: ray parameter at the intersection point
-/// - euv: euv[0] is the line parameter at the intersection ( euv[1] is zero )
+/// - euv: euv.x is the line parameter at the intersection ( euv.y is zero )
 ///
 /// Returns:
 /// - whether the intersection occurred
@@ -4141,8 +4123,8 @@ inline bool intersect_check_bbox(const ray3f& ray, const bbox3f& bbox) {
     for (int i = 0; i < 3; i++) {
         // determine intersection ranges
         auto invd = 1.0f / ray.d[i];
-        auto t0 = (bbox[0][i] - ray.o[i]) * invd;
-        auto t1 = (bbox[1][i] - ray.o[i]) * invd;
+        auto t0 = (bbox.min[i] - ray.o[i]) * invd;
+        auto t1 = (bbox.max[i] - ray.o[i]) * invd;
         // flip based on range directions
         if (invd < 0.0f) {
             float a = t0;
@@ -4195,13 +4177,14 @@ static inline const T& _safemax(const T& a, const T& b) {
 /// http://jcgt.org/published/0002/02/02/paper.pdf
 ///
 inline bool intersect_check_bbox(const ray3f& ray, const vec3f& ray_dinv,
-    const vec3i& ray_dsign, const bbox3f& bbox) {
-    auto txmin = (bbox[ray_dsign[0]][0] - ray.o[0]) * ray_dinv[0];
-    auto txmax = (bbox[1 - ray_dsign[0]][0] - ray.o[0]) * ray_dinv[0];
-    auto tymin = (bbox[ray_dsign[1]][1] - ray.o[1]) * ray_dinv[1];
-    auto tymax = (bbox[1 - ray_dsign[1]][1] - ray.o[1]) * ray_dinv[1];
-    auto tzmin = (bbox[ray_dsign[2]][2] - ray.o[2]) * ray_dinv[2];
-    auto tzmax = (bbox[1 - ray_dsign[2]][2] - ray.o[2]) * ray_dinv[2];
+    const vec3i& ray_dsign, const bbox3f& bbox_) {
+    auto bbox = &bbox_.min;
+    auto txmin = (bbox[ray_dsign.x].x - ray.o.x) * ray_dinv.x;
+    auto txmax = (bbox[1 - ray_dsign.x].x - ray.o.x) * ray_dinv.x;
+    auto tymin = (bbox[ray_dsign.y].y - ray.o.y) * ray_dinv.y;
+    auto tymax = (bbox[1 - ray_dsign.y].y - ray.o.y) * ray_dinv.y;
+    auto tzmin = (bbox[ray_dsign.z].z - ray.o.z) * ray_dinv.z;
+    auto tzmax = (bbox[1 - ray_dsign.z].z - ray.o.z) * ray_dinv.z;
     auto tmin = _safemax(tzmin, _safemax(tymin, _safemax(txmin, ray.tmin)));
     auto tmax = _safemin(tzmax, _safemin(tymax, _safemin(txmax, ray.tmax)));
     tmax *= 1.00000024f;  // for double: 1.0000000000000004
@@ -4297,12 +4280,12 @@ inline bool overlap_triangle(const vec3f& pos, float dist_max, const vec3f& v0,
     const vec3f& v1, const vec3f& v2, float r0, float r1, float r2, float& dist,
     vec3f& euv) {
     auto uv = closestuv_triangle(pos, v0, v1, v2);
-    auto p = blerp(v0, v1, v2, vec3f{1 - uv[0] - uv[1], uv[0], uv[1]});
-    auto r = blerp(r0, r1, r2, vec3f{1 - uv[0] - uv[1], uv[0], uv[1]});
+    auto p = blerp(v0, v1, v2, vec3f{1 - uv.x - uv.y, uv.x, uv.y});
+    auto r = blerp(r0, r1, r2, vec3f{1 - uv.x - uv.y, uv.x, uv.y});
     auto dd = distsqr(p, pos);
     if (dd > (dist_max + r) * (dist_max + r)) return false;
     dist = sqrt(dd);
-    euv = {1 - uv[0] - uv[1], uv[0], uv[1]};
+    euv = {1 - uv.x - uv.y, uv.x, uv.y};
     return true;
 }
 
@@ -4363,8 +4346,8 @@ inline bool distance_check_bbox(
     // For each axis count any excess distance outside box extents
     for (int i = 0; i < 3; i++) {
         auto v = pos[i];
-        if (v < bbox[0][i]) dd += (bbox[0][i] - v) * (bbox[0][i] - v);
-        if (v > bbox[1][i]) dd += (v - bbox[1][i]) * (v - bbox[1][i]);
+        if (v < bbox.min[i]) dd += (bbox.min[i] - v) * (bbox.min[i] - v);
+        if (v > bbox.max[i]) dd += (v - bbox.max[i]) * (v - bbox.max[i]);
     }
 
     // check distance
@@ -4373,9 +4356,9 @@ inline bool distance_check_bbox(
 
 // TODO: doc
 inline bool overlap_bbox(const bbox3f& bbox1, const bbox3f& bbox2) {
-    if (bbox1[1][0] < bbox2[0][0] || bbox1[0][0] > bbox2[1][0]) return false;
-    if (bbox1[1][1] < bbox2[0][1] || bbox1[0][1] > bbox2[1][1]) return false;
-    if (bbox1[1][2] < bbox2[0][2] || bbox1[0][2] > bbox2[1][2]) return false;
+    if (bbox1.max.x < bbox2.min.x || bbox1.min.x > bbox2.max.x) return false;
+    if (bbox1.max.y < bbox2.min.y || bbox1.min.y > bbox2.max.y) return false;
+    if (bbox1.max.z < bbox2.min.z || bbox1.min.z > bbox2.max.z) return false;
     return true;
 }
 
@@ -4416,11 +4399,10 @@ inline bool overlap_bbox(const bbox3f& bbox1, const bbox3f& bbox2,
 
     // Test axes L = B0, L = B1, L = B2
     for (int i = 0; i < 3; i++) {
-        auto ra = ext1[0] * absrot[0][i] + ext1[1] * absrot[1][i] +
-                  ext1[2] * absrot[2][i];
+        auto ra =
+            ext1.x * absrot.x[i] + ext1.y * absrot.y[i] + ext1.z * absrot.z[i];
         auto rb = ext2[i];
-        if (abs(t[0] * rot[0][i] + t[1] * rot[1][i] + t[2] * rot[2][i]) >
-            ra + rb)
+        if (abs(t.x * rot.x[i] + t.y * rot.y[i] + t.z * rot.z[i]) > ra + rb)
             return false;
     }
 
@@ -4428,49 +4410,49 @@ inline bool overlap_bbox(const bbox3f& bbox1, const bbox3f& bbox2,
     if (parallel_axis) return true;
 
     // Test axis L = A0 x B0
-    auto ra = ext1[1] * absrot[2][0] + ext1[2] * absrot[1][0];
-    auto rb = ext2[1] * absrot[0][2] + ext2[2] * absrot[0][1];
-    if (abs(t[2] * rot[1][0] - t[1] * rot[2][0]) > ra + rb) return false;
+    auto ra = ext1.y * absrot.z.x + ext1.z * absrot.y.x;
+    auto rb = ext2.y * absrot.x.z + ext2.z * absrot.x.y;
+    if (abs(t.z * rot.y.x - t.y * rot.z.x) > ra + rb) return false;
 
     // Test axis L = A0 x B1
-    ra = ext1[1] * absrot[2][1] + ext1[2] * absrot[1][1];
-    rb = ext2[0] * absrot[0][2] + ext2[2] * absrot[0][0];
-    if (abs(t[2] * rot[1][1] - t[1] * rot[2][1]) > ra + rb) return false;
+    ra = ext1.y * absrot.z.y + ext1.z * absrot.y.y;
+    rb = ext2.x * absrot.x.z + ext2.z * absrot.x.x;
+    if (abs(t.z * rot.y.y - t.y * rot.z.y) > ra + rb) return false;
 
     // Test axis L = A0 x B2
-    ra = ext1[1] * absrot[2][2] + ext1[2] * absrot[1][2];
-    rb = ext2[0] * absrot[0][1] + ext2[1] * absrot[0][0];
-    if (abs(t[2] * rot[1][2] - t[1] * rot[2][2]) > ra + rb) return false;
+    ra = ext1.y * absrot.z.z + ext1.z * absrot.y.z;
+    rb = ext2.x * absrot.x.y + ext2.y * absrot.x.x;
+    if (abs(t.z * rot.y.z - t.y * rot.z.z) > ra + rb) return false;
 
     // Test axis L = A1 x B0
-    ra = ext1[0] * absrot[2][0] + ext1[2] * absrot[0][0];
-    rb = ext2[1] * absrot[1][2] + ext2[2] * absrot[1][1];
-    if (abs(t[0] * rot[2][0] - t[2] * rot[0][0]) > ra + rb) return false;
+    ra = ext1.x * absrot.z.x + ext1.z * absrot.x.x;
+    rb = ext2.y * absrot.y.z + ext2.z * absrot.y.y;
+    if (abs(t.x * rot.z.x - t.z * rot.x.x) > ra + rb) return false;
 
     // Test axis L = A1 x B1
-    ra = ext1[0] * absrot[2][1] + ext1[2] * absrot[0][1];
-    rb = ext2[0] * absrot[1][2] + ext2[2] * absrot[1][0];
-    if (abs(t[0] * rot[2][1] - t[2] * rot[0][1]) > ra + rb) return false;
+    ra = ext1.x * absrot.z.y + ext1.z * absrot.x.y;
+    rb = ext2.x * absrot.y.z + ext2.z * absrot.y.x;
+    if (abs(t.x * rot.z.y - t.z * rot.x.y) > ra + rb) return false;
 
     // Test axis L = A1 x B2
-    ra = ext1[0] * absrot[2][2] + ext1[2] * absrot[0][2];
-    rb = ext2[0] * absrot[1][1] + ext2[1] * absrot[1][0];
-    if (abs(t[0] * rot[2][2] - t[2] * rot[0][2]) > ra + rb) return false;
+    ra = ext1.x * absrot.z.z + ext1.z * absrot.x.z;
+    rb = ext2.x * absrot.y.y + ext2.y * absrot.y.x;
+    if (abs(t.x * rot.z.z - t.z * rot.x.z) > ra + rb) return false;
 
     // Test axis L = A2 x B0
-    ra = ext1[0] * absrot[1][0] + ext1[1] * absrot[0][0];
-    rb = ext2[1] * absrot[2][2] + ext2[2] * absrot[2][1];
-    if (abs(t[1] * rot[0][0] - t[0] * rot[1][0]) > ra + rb) return false;
+    ra = ext1.x * absrot.y.x + ext1.y * absrot.x.x;
+    rb = ext2.y * absrot.z.z + ext2.z * absrot.z.y;
+    if (abs(t.y * rot.x.x - t.x * rot.y.x) > ra + rb) return false;
 
     // Test axis L = A2 x B1
-    ra = ext1[0] * absrot[1][1] + ext1[1] * absrot[0][1];
-    rb = ext2[0] * absrot[2][2] + ext2[2] * absrot[2][0];
-    if (abs(t[1] * rot[0][1] - t[0] * rot[1][1]) > ra + rb) return false;
+    ra = ext1.x * absrot.y.y + ext1.y * absrot.x.y;
+    rb = ext2.x * absrot.z.z + ext2.z * absrot.z.x;
+    if (abs(t.y * rot.x.y - t.x * rot.y.y) > ra + rb) return false;
 
     // Test axis L = A2 x B2
-    ra = ext1[0] * absrot[1][2] + ext1[1] * absrot[0][2];
-    rb = ext2[0] * absrot[2][1] + ext2[1] * absrot[2][0];
-    if (abs(t[1] * rot[0][2] - t[0] * rot[1][2]) > ra + rb) return false;
+    ra = ext1.x * absrot.y.z + ext1.y * absrot.x.z;
+    rb = ext2.x * absrot.z.y + ext2.y * absrot.z.x;
+    if (abs(t.y * rot.x.z - t.x * rot.y.z) > ra + rb) return false;
 
     // Since no separating axis is found, the OBBs must be intersecting
     return true;
@@ -4528,11 +4510,11 @@ template <typename T>
 constexpr inline void turntable(vec<T, 3>& from, vec<T, 3>& to, vec<T, 3>& up,
     const vec<T, 2>& rotate, T dolly, const vec<T, 2>& pan) {
     // rotate if necessary
-    if (rotate[0] || rotate[1]) {
+    if (rotate.x || rotate.y) {
         auto z = ym_normalize(*to - *from);
         auto lz = ym_dist(*to, *from);
-        auto phi = atan2(z[2], z[0]) + rotate[0];
-        auto theta = acos(z[1]) + rotate[1];
+        auto phi = atan2(z.z, z.x) + rotate.x;
+        auto theta = acos(z.y) + rotate.y;
         theta = max(T(0.001), min(theta, T(pi - 0.001)));
         auto nz = vec<T, 3>{sin(theta) * cos(phi) * lz, cos(theta) * lz,
             sin(theta) * sin(phi) * lz};
@@ -4548,12 +4530,12 @@ constexpr inline void turntable(vec<T, 3>& from, vec<T, 3>& to, vec<T, 3>& up,
     }
 
     // pan if necessary
-    if (pan[0] || pan[1]) {
+    if (pan.x || pan.y) {
         auto z = normalize(*to - *from);
         auto x = normalize(cross(*up, z));
         auto y = normalize(cross(z, x));
-        auto t = vec<T, 3>{pan[0] * x[0] + pan[1] * y[0],
-            pan[0] * x[1] + pan[1] * y[1], pan[0] * x[2] + pan[1] * y[2]};
+        auto t = vec<T, 3>{pan.x * x.x + pan.y * y.x, pan.x * x.y + pan.y * y.y,
+            pan.x * x.z + pan.y * y.z};
         *from += t;
         *to += t;
     }
@@ -4565,13 +4547,13 @@ template <typename T>
 constexpr inline void turntable(frame<T, 3>& frame, float& focus,
     const vec<T, 2>& rotate, T dolly, const vec<T, 2>& pan) {
     // rotate if necessary
-    if (rotate[0] || rotate[1]) {
-        auto phi = atan2(frame[2][2], frame[2][0]) + rotate[0];
-        auto theta = acos(frame[2][1]) + rotate[1];
+    if (rotate.x || rotate.y) {
+        auto phi = atan2(frame.z.z, frame.z.x) + rotate.x;
+        auto theta = acos(frame.z.y) + rotate.y;
         theta = max(T(0.001), min(theta, T(pi - 0.001)));
         auto new_z =
             vec<T, 3>{sin(theta) * cos(phi), cos(theta), sin(theta) * sin(phi)};
-        auto new_center = pos(frame) - frame[2] * focus;
+        auto new_center = pos(frame) - frame.z * focus;
         auto new_o = new_center + new_z * focus;
         frame = lookat_frame3(new_o, new_center, {0, 1, 0});
         focus = dist(new_o, new_center);
@@ -4579,15 +4561,13 @@ constexpr inline void turntable(frame<T, 3>& frame, float& focus,
 
     // pan if necessary
     if (dolly) {
-        auto c = pos(frame) - frame[2] * focus;
+        auto c = pos(frame) - frame.z * focus;
         focus = max(focus + dolly, T(0.001));
-        pos(frame) = c + frame[2] * focus;
+        pos(frame) = c + frame.z * focus;
     }
 
     // pan if necessary
-    if (pan[0] || pan[1]) {
-        pos(frame) += frame[0] * pan[0] + frame[1] * pan[1];
-    }
+    if (pan.x || pan.y) { pos(frame) += frame.x * pan.x + frame.y * pan.y; }
 }
 
 // -----------------------------------------------------------------------------
@@ -4693,21 +4673,21 @@ constexpr inline void image_set(int width, int height, int ncomp, T* img, int x,
     int y, const vec<T, 4>& vv) {
     auto v = img + (y * width + x) * ncomp;
     switch (ncomp) {
-        case 1: v[0] = vv[0]; break;
+        case 1: v.x = vv.x; break;
         case 2:
-            v[0] = vv[0];
-            v[1] = vv[1];
+            v.x = vv.x;
+            v.y = vv.y;
             break;
         case 3:
-            v[0] = vv[0];
-            v[1] = vv[1];
-            v[2] = vv[2];
+            v.x = vv.x;
+            v.y = vv.y;
+            v.z = vv.z;
             break;
         case 4:
-            v[0] = vv[0];
-            v[1] = vv[1];
-            v[2] = vv[2];
-            v[3] = vv[3];
+            v.x = vv.x;
+            v.y = vv.y;
+            v.z = vv.z;
+            v.w = vv.w;
             break;
         default: assert(false);
     }
@@ -4720,9 +4700,9 @@ inline vec3f srgb_to_linear(const vec3b& srgb) {
 
 /// Conversion from srgb.
 inline vec4f srgb_to_linear(const vec4b& srgb) {
-    return {pow(byte_to_float(srgb[0]), 2.2f),
-        std::pow(byte_to_float(srgb[1]), 2.2f),
-        std::pow(byte_to_float(srgb[2]), 2.2f), byte_to_float(srgb[3])};
+    return {pow(byte_to_float(srgb.x), 2.2f),
+        std::pow(byte_to_float(srgb.y), 2.2f),
+        std::pow(byte_to_float(srgb.z), 2.2f), byte_to_float(srgb.w)};
 }
 
 //
@@ -5052,8 +5032,8 @@ inline image<vec4b> bump_to_normal_map(
             auto g10 = (float(p10.x) + float(p10.y) + float(p10.z)) / (3 * 255);
             auto n = vec3f{scale * (g00 - g10), scale * (g00 - g01), 1.0f};
             n = normalize(n) * 0.5f + vec3f{0.5f, 0.5f, 0.5f};
-            auto c = vec4b{
-                byte(n[0] * 255), byte(n[1] * 255), byte(n[2] * 255), 255};
+            auto c =
+                vec4b{byte(n.x * 255), byte(n.y * 255), byte(n.z * 255), 255};
             norm.at(i, j) = c;
         }
     }

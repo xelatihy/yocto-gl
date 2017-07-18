@@ -208,10 +208,10 @@ void print_obj_info(const yobj::scene* obj) {
     }
 
     auto bbox = compute_scene_bounds(obj);
-    auto bboxc = ym::vec3f{(bbox[1][0] + bbox[0][0]) / 2,
-        (bbox[1][1] + bbox[0][1]) / 2, (bbox[1][2] + bbox[0][2]) / 2};
-    auto bboxs = ym::vec3f{bbox[1][0] - bbox[0][0], bbox[1][1] - bbox[0][1],
-        bbox[1][2] - bbox[0][2]};
+    auto bboxc = ym::vec3f{(bbox.max[0] + bbox.min[0]) / 2,
+        (bbox.max[1] + bbox.min[1]) / 2, (bbox.max[2] + bbox.min[2]) / 2};
+    auto bboxs = ym::vec3f{bbox.max[0] - bbox.min[0], bbox.max[1] - bbox.min[1],
+        bbox.max[2] - bbox.min[2]};
 
     printf("number of objects:    %d\n", nobjs);
     printf("number of groups:     %d\n", ngroups);
@@ -223,8 +223,8 @@ void print_obj_info(const yobj::scene* obj) {
     printf("number of lines:      %d\n", nlines);
     printf("number of triangles:  %d\n", ntriangles);
     printf("\n");
-    printf("bbox min:    %g %g %g\n", bbox[0][0], bbox[0][1], bbox[0][2]);
-    printf("bbox max:    %g %g %g\n", bbox[1][0], bbox[1][1], bbox[1][2]);
+    printf("bbox min:    %g %g %g\n", bbox.min[0], bbox.min[1], bbox.min[2]);
+    printf("bbox max:    %g %g %g\n", bbox.max[0], bbox.max[1], bbox.max[2]);
     printf("bbox center: %g %g %g\n", bboxc[0], bboxc[1], bboxc[2]);
     printf("bbox size:   %g %g %g\n", bboxs[0], bboxs[1], bboxs[2]);
     printf("\n");
@@ -268,10 +268,10 @@ void print_gltf_info(const ygltf::scene_group* gltf) {
     }
 
     auto bbox = compute_scene_bounds(gltf);
-    auto bboxc = ym::vec3f{(bbox[1][0] + bbox[0][0]) / 2,
-        (bbox[1][1] + bbox[0][1]) / 2, (bbox[1][2] + bbox[0][2]) / 2};
-    auto bboxs = ym::vec3f{bbox[1][0] - bbox[0][0], bbox[1][1] - bbox[0][1],
-        bbox[1][2] - bbox[0][2]};
+    auto bboxc = ym::vec3f{(bbox.max[0] + bbox.min[0]) / 2,
+        (bbox.max[1] + bbox.min[1]) / 2, (bbox.max[2] + bbox.min[2]) / 2};
+    auto bboxs = ym::vec3f{bbox.max[0] - bbox.min[0], bbox.max[1] - bbox.min[1],
+        bbox.max[2] - bbox.min[2]};
 
     printf("number of objects:    %d\n", nobjs);
     printf("number of groups:     %d\n", ngroups);
@@ -283,8 +283,8 @@ void print_gltf_info(const ygltf::scene_group* gltf) {
     printf("number of lines:      %d\n", nlines);
     printf("number of triangles:  %d\n", ntriangles);
     printf("\n");
-    printf("bbox min:    %g %g %g\n", bbox[0][0], bbox[0][1], bbox[0][2]);
-    printf("bbox max:    %g %g %g\n", bbox[1][0], bbox[1][1], bbox[1][2]);
+    printf("bbox min:    %g %g %g\n", bbox.min[0], bbox.min[1], bbox.min[2]);
+    printf("bbox max:    %g %g %g\n", bbox.max[0], bbox.max[1], bbox.max[2]);
     printf("bbox center: %g %g %g\n", bboxc[0], bboxc[1], bboxc[2]);
     printf("bbox size:   %g %g %g\n", bboxs[0], bboxs[1], bboxs[2]);
     printf("\n");

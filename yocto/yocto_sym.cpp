@@ -354,9 +354,9 @@ static ym::mat3f _compute_tetra_inertia(const ym::vec3f& v0,
             6 * volume / 120;
     }
     // setup inertia
-    return {{diag[1] + diag[2], -offd[2], -offd[1]},
-        {-offd[2], diag[0] + diag[2], -offd[0]},
-        {-offd[1], -offd[0], diag[0] + diag[1]}};
+    return {{diag.y + diag.z, -offd.z, -offd.y},
+        {-offd.z, diag.x + diag.z, -offd.x},
+        {-offd.y, -offd.x, diag.x + diag.y}};
 }
 
 //
@@ -370,10 +370,10 @@ std::tuple<float, ym::vec3f, ym::mat3f> _compute_moments(int ntriangles,
     for (auto i = 0; i < ntriangles; i++) {
         auto t = triangles[i];
         auto tvolume =
-            ym::tetrahedron_volume(ym::zero3f, pos[t[0]], pos[t[1]], pos[t[2]]);
+            ym::tetrahedron_volume(ym::zero3f, pos[t.x], pos[t.y], pos[t.z]);
         volume += tvolume;
         center +=
-            tvolume * (ym::zero3f + pos[t[0]] + pos[t[1]] + pos[t[2]]) / 4.0f;
+            tvolume * (ym::zero3f + pos[t.x] + pos[t.y] + pos[t.z]) / 4.0f;
     }
     center /= volume;
     // inertia
@@ -381,7 +381,7 @@ std::tuple<float, ym::vec3f, ym::mat3f> _compute_moments(int ntriangles,
     for (auto i = 0; i < ntriangles; i++) {
         auto t = triangles[i];
         inertia += _compute_tetra_inertia(
-            ym::zero3f, pos[t[0]], pos[t[1]], pos[t[2]], center);
+            ym::zero3f, pos[t.x], pos[t.y], pos[t.z], center);
     }
     inertia /= volume;
     return std::make_tuple(volume, center, inertia);
@@ -398,10 +398,9 @@ std::tuple<float, ym::vec3f, ym::mat3f> _compute_moments(
     for (auto i = 0; i < ntetra; i++) {
         auto t = tetra[i];
         auto tvolume =
-            ym::tetrahedron_volume(pos[t[0]], pos[t[1]], pos[t[2]], pos[t[3]]);
+            ym::tetrahedron_volume(pos[t.x], pos[t.y], pos[t.z], pos[t[3]]);
         volume += tvolume;
-        center +=
-            tvolume * (pos[t[0]] + pos[t[1]] + pos[t[2]] + pos[t[3]]) / 4.0f;
+        center += tvolume * (pos[t.x] + pos[t.y] + pos[t.z] + pos[t[3]]) / 4.0f;
     }
     center /= volume;
     // inertia
@@ -409,7 +408,7 @@ std::tuple<float, ym::vec3f, ym::mat3f> _compute_moments(
     for (auto i = 0; i < ntetra; i++) {
         auto t = tetra[i];
         inertia += _compute_tetra_inertia(
-            pos[t[0]], pos[t[1]], pos[t[2]], pos[t[3]], center);
+            pos[t.x], pos[t.y], pos[t.z], pos[t[3]], center);
     }
     inertia /= volume;
     return std::make_tuple(volume, center, inertia);
@@ -441,15 +440,15 @@ static void _compute_collision(const scene* scn, const ym::vec2i& sids,
     std::vector<collision>* collisions) {
     std::vector<std::pair<overlap_point, ym::vec2i>> overlaps;
     scn->overlap_verts(
-        scn->overlap_ctx, sids[0], sids[1], scn->overlap_max_radius, &overlaps);
+        scn->overlap_ctx, sids.x, sids.y, scn->overlap_max_radius, &overlaps);
     if (overlaps.empty()) return;
-    auto shape1 = scn->shapes[sids[0]];
-    auto shape2 = scn->shapes[sids[1]];
+    auto shape1 = scn->shapes[sids.x];
+    auto shape2 = scn->shapes[sids.y];
     for (auto& overlap : overlaps) {
-        auto p = transform_point(shape2->frame, shape2->pos[overlap.second[1]]);
+        auto p = transform_point(shape2->frame, shape2->pos[overlap.second.y]);
         auto triangle = shape1->triangles[overlap.first.eid];
-        auto v0 = shape1->pos[triangle[0]], v1 = shape1->pos[triangle[1]],
-             v2 = shape1->pos[triangle[2]];
+        auto v0 = shape1->pos[triangle.x], v1 = shape1->pos[triangle.y],
+             v2 = shape1->pos[triangle.z];
         auto tp = transform_point(
             shape1->frame, ym::blerp(v0, v1, v2, overlap.first.euv));
         auto n =
@@ -467,17 +466,17 @@ static void _compute_collision(const scene* scn, const ym::vec2i& sids,
 #else
 static void _compute_collision(const scene* scn, const ym::vec2i& sids,
     std::vector<collision>* collisions) {
-    auto bdy1 = scn->bodies[sids[0]];
-    auto bdy2 = scn->bodies[sids[1]];
+    auto bdy1 = scn->bodies[sids.x];
+    auto bdy2 = scn->bodies[sids.y];
     for (auto vid = 0; vid < bdy2->shp->nverts; vid++) {
         auto& p2 = bdy2->shp->pos[vid];
         auto p = transform_point(bdy2->frame, p2);
         auto overlap = scn->overlap_shape(
-            scn->overlap_ctx, sids[0], p, scn->overlap_max_radius);
+            scn->overlap_ctx, sids.x, p, scn->overlap_max_radius);
         if (!overlap) continue;
         auto triangle = bdy1->shp->triangles[overlap.eid];
-        auto v0 = bdy1->shp->pos[triangle[0]], v1 = bdy1->shp->pos[triangle[1]],
-             v2 = bdy1->shp->pos[triangle[2]];
+        auto v0 = bdy1->shp->pos[triangle.x], v1 = bdy1->shp->pos[triangle.y],
+             v2 = bdy1->shp->pos[triangle.z];
         auto tp = transform_point(bdy1->frame, blerp(v0, v1, v2, overlap.euv));
         auto n = transform_direction(bdy1->frame, triangle_normal(v0, v1, v2));
         const auto eps = -0.01f;
@@ -500,12 +499,12 @@ static void _compute_collisions(
     // test all pair-wise objects
     collisions->clear();
     for (auto& sc : body_collisions) {
-        auto bd1 = scene->bodies[sc[0]], bd2 = scene->bodies[sc[1]];
+        auto bd1 = scene->bodies[sc.x], bd2 = scene->bodies[sc.y];
         if (!bd1->simulated && !bd2->simulated) continue;
         if (!bd1->shp->triangles) continue;
         if (!bd2->shp->triangles) continue;
         _compute_collision(scene, sc, collisions);
-        _compute_collision(scene, {sc[1], sc[0]}, collisions);
+        _compute_collision(scene, {sc.y, sc.x}, collisions);
     }
 }
 #endif
@@ -539,19 +538,19 @@ void _solve_constraints(scene* scn, std::vector<collision>& collisions,
         auto r1 = ym::pos(col.frame) - col.bdy1->_centroid_world,
              r2 = ym::pos(col.frame) - col.bdy2->_centroid_world;
         col.meff_inv = {1 / (col.bdy1->_mass_inv + col.bdy2->_mass_inv +
-                                _muldot(ym::cross(r1, col.frame[0]),
+                                _muldot(ym::cross(r1, col.frame.x),
                                     col.bdy1->_inertia_inv_world) +
-                                _muldot(ym::cross(r2, col.frame[0]),
+                                _muldot(ym::cross(r2, col.frame.x),
                                     col.bdy2->_inertia_inv_world)),
             1 / (col.bdy1->_mass_inv + col.bdy2->_mass_inv +
-                    _muldot(ym::cross(r1, col.frame[1]),
+                    _muldot(ym::cross(r1, col.frame.y),
                         col.bdy1->_inertia_inv_world) +
-                    _muldot(ym::cross(r2, col.frame[1]),
+                    _muldot(ym::cross(r2, col.frame.y),
                         col.bdy2->_inertia_inv_world)),
             1 / (col.bdy1->_mass_inv + col.bdy2->_mass_inv +
-                    _muldot(ym::cross(r1, col.frame[2]),
+                    _muldot(ym::cross(r1, col.frame.z),
                         col.bdy1->_inertia_inv_world) +
-                    _muldot(ym::cross(r2, col.frame[2]),
+                    _muldot(ym::cross(r2, col.frame.z),
                         col.bdy2->_inertia_inv_world))};
     }
 
@@ -577,20 +576,20 @@ void _solve_constraints(scene* scn, std::vector<collision>& collisions,
             // float offset = col.depth*0.8f/dt;
             auto offset = 0.0f;
             ym::vec3f local_impulse =
-                col.meff_inv * ym::vec3f{-ym::dot(col.frame[0], vr),
-                                   -ym::dot(col.frame[1], vr),
-                                   -ym::dot(col.frame[2], vr) + offset};
+                col.meff_inv * ym::vec3f{-ym::dot(col.frame.x, vr),
+                                   -ym::dot(col.frame.y, vr),
+                                   -ym::dot(col.frame.z, vr) + offset};
             col.local_impulse += local_impulse;
-            col.local_impulse[2] = ym::clamp(
-                col.local_impulse[2], 0.0f, std::numeric_limits<float>::max());
-            col.local_impulse[0] = ym::clamp(col.local_impulse[0],
-                -col.local_impulse[2] * 0.6f, col.local_impulse[2] * 0.6f);
-            col.local_impulse[1] =
-                ym::clamp(col.local_impulse[1], -col.local_impulse[2] * 0.6f,
-                    col.local_impulse[2] - offset * 0.6f);
-            col.impulse = col.local_impulse[2] * col.frame[2] +
-                          col.local_impulse[0] * col.frame[0] +
-                          col.local_impulse[1] * col.frame[1];
+            col.local_impulse.z = ym::clamp(
+                col.local_impulse.z, 0.0f, std::numeric_limits<float>::max());
+            col.local_impulse.x = ym::clamp(col.local_impulse.x,
+                -col.local_impulse.z * 0.6f, col.local_impulse.z * 0.6f);
+            col.local_impulse.y =
+                ym::clamp(col.local_impulse.y, -col.local_impulse.z * 0.6f,
+                    col.local_impulse.z - offset * 0.6f);
+            col.impulse = col.local_impulse.z * col.frame.z +
+                          col.local_impulse.x * col.frame.x +
+                          col.local_impulse.y * col.frame.y;
             _apply_rel_impulse(col.bdy1, -col.impulse, r1);
             _apply_rel_impulse(col.bdy2, col.impulse, r2);
         }
@@ -607,9 +606,9 @@ void _solve_constraints(scene* scn, std::vector<collision>& collisions,
 
     // recompute total impulse and velocity for visualization
     for (auto& col : collisions) {
-        col.impulse = col.local_impulse[2] * col.frame[2] +
-                      col.local_impulse[0] * col.frame[0] +
-                      col.local_impulse[1] * col.frame[1];
+        col.impulse = col.local_impulse.z * col.frame.z +
+                      col.local_impulse.x * col.frame.x +
+                      col.local_impulse.y * col.frame.y;
     }
 }
 
@@ -641,7 +640,7 @@ void init_simulation(scene* scn) {
 // Check function for numerical problems
 //
 inline bool _isfinite(const ym::vec3f& v) {
-    return std::isfinite(v[0]) && std::isfinite(v[1]) && std::isfinite(v[2]);
+    return std::isfinite(v.x) && std::isfinite(v.y) && std::isfinite(v.z);
 }
 
 //
