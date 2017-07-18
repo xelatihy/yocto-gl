@@ -37,6 +37,7 @@
 ///
 /// ## History
 ///
+/// - v 0.15: removal of group overlap
 /// - v 0.14: use yocto_math in the interface and remove inline compilation
 /// - v 0.13: move to add api
 /// - v 1.12: internally use yocto_bvh if desired
@@ -240,20 +241,6 @@ using overlap_shape_cb = overlap_point (*)(
     void* ctx, int sid, const ym::vec3f& pt, float max_dist);
 
 ///
-/// Closest vertex-to-element overlap
-///
-/// - Parameters:
-///     - ctx: context
-///     - sid1: element shape to check
-///     - sid2: vertex shape to check
-///     - max_dist: maximum distance from each vert
-/// - Out Params:
-///     - overlaps: overlapping elements
-///
-using overlap_verts_cb = void (*)(void* ctx, int sid1, int sid2, float max_dist,
-    std::vector<std::pair<overlap_point, ym::vec2i>>* overlaps);
-
-///
 /// Refit data structure after transform updates
 ///
 /// - Parameters:
@@ -267,7 +254,7 @@ using overlap_refit_cb = void (*)(void* ctx, const scene* scn, int nshapes);
 ///
 void set_overlap_callbacks(scene* scn, void* ctx,
     overlap_shapes_cb overlap_shapes, overlap_shape_cb overlap_shape,
-    overlap_verts_cb overlap_verts, overlap_refit_cb overlap_refit);
+    overlap_refit_cb overlap_refit);
 
 ///
 /// Initialize overlap functions using internal structures.

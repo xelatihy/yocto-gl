@@ -26,6 +26,7 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
+#define YSCENE_SIMULATE_HACK
 #include "yscene.h"
 
 // ---------------------------------------------------------------------------

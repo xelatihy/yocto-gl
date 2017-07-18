@@ -1655,6 +1655,12 @@ void draw_scene_widgets(ygui::window* win, ygltf::scene_group* gscn,
     draw_elem_widgets(win, gscn, selection, state);
 }
 
+#ifndef YSCENE_SIMULATE_HACK
+void simulate_step(yscene* scene) {}
+#else
+void simulate_step(yscene* scene);
+#endif
+
 void draw_widgets(ygui::window* win) {
     static auto tmtype_names = std::vector<std::pair<std::string, int>>{
         {"none", (int)ym::tonemap_type::none},
@@ -1684,7 +1690,10 @@ void draw_widgets(ygui::window* win) {
             ygui::slider_widget(
                 win, "time", &scn->time, scn->time_range.x, scn->time_range.y);
             if (ygui::button_widget(win, "start")) scn->animate = true;
+            ygui::continue_line_widgets(win);
             if (ygui::button_widget(win, "stop")) scn->animate = false;
+            ygui::continue_line_widgets(win);
+            if (ygui::button_widget(win, "step")) { simulate_step(scn); }
         }
         if (scn->trace_scene) {
             ygui::label_widget(win, "s", scn->trace_cur_sample);
