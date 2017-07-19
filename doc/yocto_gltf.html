@@ -73,6 +73,8 @@ an object of type T. Internally this is just the same old glTF index. But
 this can used to access the scene data with <code>scene::get&lt;T&gt;(index)</code>.</p>
 <h2>History</h2>
 <ul>
+<li>v 0.20: removal of buggy shape splitting function</li>
+<li>v 0.19: explicit paths for separate buffer saving</li>
 <li>v 0.18: add function to split meshes into single shapes</li>
 <li>v 0.17: add per-mesh buffer on write from scene</li>
 <li>v 0.16: add transforms under function calls</li>
@@ -384,6 +386,7 @@ avoid.</p>
 <h3>Struct mesh</h3>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">mesh</span> <span class="p">{</span>
     <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">path</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
     <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">shape</span><span class="o">*&gt;</span> <span class="n">shapes</span><span class="p">;</span>
     <span class="o">~</span><span class="n">mesh</span><span class="p">();</span> 
 <span class="p">}</span>
@@ -394,6 +397,7 @@ avoid.</p>
 <ul>
 <li>Members:<ul>
 <li>name:      name</li>
+<li>path:      path (only used when writing files on disk with glTF)</li>
 <li>shapes:      primitives references</li>
 <li>~mesh():      cleanup</li>
 </ul>
@@ -495,6 +499,7 @@ avoid.</p>
 <h3>Struct animation_group</h3>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">animation_group</span> <span class="p">{</span>
     <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">name</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">path</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
     <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">animation</span><span class="o">*&gt;</span> <span class="n">animations</span><span class="p">;</span>
     <span class="o">~</span><span class="n">animation_group</span><span class="p">();</span> 
 <span class="p">}</span>
@@ -505,6 +510,7 @@ avoid.</p>
 <ul>
 <li>Members:<ul>
 <li>name:      Name</li>
+<li>path:      path (only used when writing files on disk with glTF)</li>
 <li>animations:      Times</li>
 <li>~animation_group():      cleanup</li>
 </ul>
@@ -513,6 +519,7 @@ avoid.</p>
 <h3>Struct skin</h3>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">skin</span> <span class="p">{</span>
     <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">path</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
     <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">ym</span><span class="o">::</span><span class="n">mat4f</span><span class="o">&gt;</span> <span class="n">pose_matrices</span><span class="p">;</span>
     <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">node</span><span class="o">*&gt;</span> <span class="n">joints</span><span class="p">;</span>
     <span class="n">node</span><span class="o">*</span> <span class="n">root</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
@@ -524,6 +531,7 @@ avoid.</p>
 <ul>
 <li>Members:<ul>
 <li>name:      name</li>
+<li>path:      path (only used when writing files on disk with glTF)</li>
 <li>pose_matrices:      inverse bind matrix</li>
 <li>joints:      joints</li>
 <li>root:      skeleton root node</li>
@@ -600,8 +608,8 @@ Scenes and nodes are missing for mesh-only assets.</p>
 </li>
 </ul>
 <h3>Function save_scenes()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">save_scenes</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">,</span> <span class="k">const</span> <span class="n">scene_group</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span>
-    <span class="kt">bool</span> <span class="n">save_textures</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">separate_buffers</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">save_scenes</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">buffer_uri</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">scene_group</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">save_textures</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">separate_buffers</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span>
     <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">*</span> <span class="n">err</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">);</span>
 </code></pre></div>
 
@@ -610,6 +618,7 @@ Scenes and nodes are missing for mesh-only assets.</p>
 <ul>
 <li>Parameters:<ul>
 <li>filename: filename</li>
+<li>buffer_uri: name of the main buffer</li>
 <li>scn: scene data to save</li>
 <li>save_textures: whether to save textures (default to false)</li>
 <li>separate_buffers: save separate buffers for each mesh</li>
@@ -721,12 +730,12 @@ skin</p>
 
 
 <p>Add a default camera that views the entire scene.</p>
-<h3>Function split_shapes()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">split_shapes</span><span class="p">(</span><span class="n">scene_group</span><span class="o">*</span> <span class="n">scn</span><span class="p">);</span>
+<h3>Function add_unique_path_names()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">add_unique_path_names</span><span class="p">(</span><span class="n">scene_group</span><span class="o">*</span> <span class="n">scns</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">buffer_uri</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Split meshes into single shapes</p>
+<p>Set unique path names for outputting separate buffers</p>
 <h3>Typedef json</h3>
 <div class="codehilite"><pre><code><span></span><span class="k">using</span> <span class="n">json</span> <span class="o">=</span> <span class="n">nlohmann</span><span class="o">::</span><span class="n">json</span><span class="p">;</span>
 </code></pre></div>
@@ -862,11 +871,13 @@ skin</p>
 </code></pre></div>
 
 
-<p>Indices of those attributes that deviate from their initialization value.</p>
+<p>Indices of those attributes that deviate from their initialization
+value.</p>
 <ul>
 <li>Members:<ul>
-<li>bufferView:      The index of the bufferView with sparse indices. Referenced bufferView
- can't have ARRAY_BUFFER or ELEMENT_ARRAY_BUFFER target. [required]</li>
+<li>bufferView:      The index of the bufferView with sparse indices. Referenced
+ bufferView can't have ARRAY_BUFFER or ELEMENT_ARRAY_BUFFER target.
+ [required]</li>
 <li>byteOffset:      The offset relative to the start of the bufferView in bytes. Must be
  aligned.</li>
 <li>componentType:      The indices data type. [required]</li>
@@ -881,12 +892,13 @@ skin</p>
 </code></pre></div>
 
 
-<p>Array of size <code>accessor.sparse.count</code> times number of components storing the
-displaced accessor attributes pointed by <code>accessor.sparse.indices</code>.</p>
+<p>Array of size <code>accessor.sparse.count</code> times number of components storing
+the displaced accessor attributes pointed by <code>accessor.sparse.indices</code>.</p>
 <ul>
 <li>Members:<ul>
-<li>bufferView:      The index of the bufferView with sparse values. Referenced bufferView
- can't have ARRAY_BUFFER or ELEMENT_ARRAY_BUFFER target. [required]</li>
+<li>bufferView:      The index of the bufferView with sparse values. Referenced
+ bufferView can't have ARRAY_BUFFER or ELEMENT_ARRAY_BUFFER target.
+ [required]</li>
 <li>byteOffset:      The offset relative to the start of the bufferView in bytes. Must be
  aligned.</li>
 </ul>
@@ -902,17 +914,18 @@ displaced accessor attributes pointed by <code>accessor.sparse.indices</code>.</
 </code></pre></div>
 
 
-<p>Sparse storage of attributes that deviate from their initialization value.</p>
+<p>Sparse storage of attributes that deviate from their initialization
+value.</p>
 <ul>
 <li>Members:<ul>
 <li>count:      Number of entries stored in the sparse array. [required]</li>
 <li>indices:      Index array of size <code>count</code> that points to those accessor attributes
  that deviate from their initialization value. Indices must strictly
  increase. [required]</li>
-<li>values:      Array of size <code>count</code> times number of components, storing the displaced
- accessor attributes pointed by <code>indices</code>. Substituted values must have
- the same <code>componentType</code> and number of components as the base accessor.
- [required]</li>
+<li>values:      Array of size <code>count</code> times number of components, storing the
+ displaced accessor attributes pointed by <code>indices</code>. Substituted
+ values must have the same <code>componentType</code> and number of components
+ as the base accessor. [required]</li>
 <li>~glTFAccessorSparse():      destructor</li>
 </ul>
 </li>
@@ -987,10 +1000,10 @@ displaced accessor attributes pointed by <code>accessor.sparse.indices</code>.</
 </code></pre></div>
 
 
-<p>A typed view into a bufferView.  A bufferView contains raw binary data.  An
-accessor provides a typed view into a bufferView or a subset of a bufferView
-similar to how WebGL's <code>vertexAttribPointer()</code> defines an attribute in a
-buffer.</p>
+<p>A typed view into a bufferView.  A bufferView contains raw binary data.
+An accessor provides a typed view into a bufferView or a subset of a
+bufferView similar to how WebGL's <code>vertexAttribPointer()</code> defines an
+attribute in a buffer.</p>
 <ul>
 <li>Members:<ul>
 <li>bufferView:      The index of the bufferView.</li>
@@ -1002,7 +1015,8 @@ buffer.</p>
 <li>normalized:      Specifies whether integer data values should be normalized.</li>
 <li>sparse:      Sparse storage of attributes that deviate from their initialization
  value.</li>
-<li>type:      Specifies if the attribute is a scalar, vector, or matrix. [required]</li>
+<li>type:      Specifies if the attribute is a scalar, vector, or matrix.
+ [required]</li>
 <li>~glTFAccessor():      destructor</li>
 </ul>
 </li>
@@ -1038,12 +1052,13 @@ buffer.</p>
 </code></pre></div>
 
 
-<p>The index of the node and TRS property that an animation channel targets.</p>
+<p>The index of the node and TRS property that an animation channel
+targets.</p>
 <ul>
 <li>Members:<ul>
 <li>node:      The index of the node to target. [required]</li>
-<li>path:      The name of the node's TRS property to modify, or the "weights" of the
- Morph Targets it instantiates. [required]</li>
+<li>path:      The name of the node's TRS property to modify, or the "weights" of
+ the Morph Targets it instantiates. [required]</li>
 </ul>
 </li>
 </ul>
@@ -1059,8 +1074,8 @@ buffer.</p>
 <p>Targets an animation's sampler at a node's property.</p>
 <ul>
 <li>Members:<ul>
-<li>sampler:      The index of a sampler in this animation used to compute the value for
- the target. [required]</li>
+<li>sampler:      The index of a sampler in this animation used to compute the value
+ for the target. [required]</li>
 <li>target:      The index of the node and TRS property to target. [required]</li>
 <li>~glTFAnimationChannel():      destructor</li>
 </ul>
@@ -1102,10 +1117,11 @@ buffer.</p>
 define a keyframe graph (but not its target).</p>
 <ul>
 <li>Members:<ul>
-<li>input:      The index of an accessor containing keyframe input values, e.g., time.
- [required]</li>
+<li>input:      The index of an accessor containing keyframe input values, e.g.,
+ time. [required]</li>
 <li>interpolation:      Interpolation algorithm.</li>
-<li>output:      The index of an accessor, containing keyframe output values. [required]</li>
+<li>output:      The index of an accessor, containing keyframe output values.
+ [required]</li>
 </ul>
 </li>
 </ul>
@@ -1123,12 +1139,12 @@ define a keyframe graph (but not its target).</p>
 <p>A keyframe animation.</p>
 <ul>
 <li>Members:<ul>
-<li>channels:      An array of channels, each of which targets an animation's sampler at a
- node's property. Different channels of the same animation can't have
- equal targets. [required]</li>
-<li>samplers:      An array of samplers that combines input and output accessors with an
- interpolation algorithm to define a keyframe graph (but not its target).
- [required]</li>
+<li>channels:      An array of channels, each of which targets an animation's sampler
+ at a node's property. Different channels of the same animation can't
+ have equal targets. [required]</li>
+<li>samplers:      An array of samplers that combines input and output accessors with
+ an interpolation algorithm to define a keyframe graph (but not its
+ target). [required]</li>
 <li>get():      typed access for channels</li>
 <li>get():      typed access for samplers</li>
 <li>~glTFAnimation():      destructor</li>
@@ -1148,7 +1164,8 @@ define a keyframe graph (but not its target).</p>
 <p>Metadata about the glTF asset.</p>
 <ul>
 <li>Members:<ul>
-<li>copyright:      A copyright message suitable for display to credit the content creator.</li>
+<li>copyright:      A copyright message suitable for display to credit the content
+ creator.</li>
 <li>generator:      Tool that generated this glTF model.  Useful for debugging.</li>
 <li>minVersion:      The minimum glTF version that this asset targets.</li>
 <li>version:      The glTF version that this asset targets. [required]</li>
@@ -1229,8 +1246,8 @@ projection matrix.</p>
 <li>Members:<ul>
 <li>xmag:      The floating-point horizontal magnification of the view. [required]</li>
 <li>ymag:      The floating-point vertical magnification of the view. [required]</li>
-<li>zfar:      The floating-point distance to the far clipping plane. <code>zfar</code> must be
- greater than <code>znear</code>. [required]</li>
+<li>zfar:      The floating-point distance to the far clipping plane. <code>zfar</code> must
+ be greater than <code>znear</code>. [required]</li>
 <li>znear:      The floating-point distance to the near clipping plane. [required]</li>
 </ul>
 </li>
@@ -1284,16 +1301,16 @@ projection matrix.</p>
 </code></pre></div>
 
 
-<p>A camera's projection.  A node can reference a camera to apply a transform
-to place the camera in the scene.</p>
+<p>A camera's projection.  A node can reference a camera to apply a
+transform to place the camera in the scene.</p>
 <ul>
 <li>Members:<ul>
-<li>orthographic:      An orthographic camera containing properties to create an orthographic
- projection matrix.</li>
+<li>orthographic:      An orthographic camera containing properties to create an
+ orthographic projection matrix.</li>
 <li>perspective:      A perspective camera containing properties to create a perspective
  projection matrix.</li>
-<li>type:      Specifies if the camera uses a perspective or orthographic projection.
- [required]</li>
+<li>type:      Specifies if the camera uses a perspective or orthographic
+ projection. [required]</li>
 <li>~glTFCamera():      destructor</li>
 </ul>
 </li>
@@ -1330,8 +1347,8 @@ to place the camera in the scene.</p>
 <code>bufferView</code> index. <code>mimeType</code> is required in the latter case.</p>
 <ul>
 <li>Members:<ul>
-<li>bufferView:      The index of the bufferView that contains the image. Use this instead of
- the image's uri property.</li>
+<li>bufferView:      The index of the bufferView that contains the image. Use this
+ instead of the image's uri property.</li>
 <li>mimeType:      The image's MIME type.</li>
 <li>uri:      The uri of the image.</li>
 <li>data:      Image data if loaded.</li>
@@ -1366,8 +1383,8 @@ to place the camera in the scene.</p>
 <p>A texture and its sampler.</p>
 <ul>
 <li>Members:<ul>
-<li>sampler:      The index of the sampler used by this texture. When undefined, a sampler
- with repeat wrapping and auto filtering should be used.</li>
+<li>sampler:      The index of the sampler used by this texture. When undefined, a
+ sampler with repeat wrapping and auto filtering should be used.</li>
 <li>source:      The index of the image used by this texture.</li>
 </ul>
 </li>
@@ -1497,12 +1514,13 @@ Physically-Based Rendering (PBR) methodology.</p>
 <li>emissiveTexture:      The emissive map texture.</li>
 <li>normalTexture:      The normal map texture.</li>
 <li>occlusionTexture:      The occlusion map texture.</li>
-<li>pbrMetallicRoughness:      A set of parameter values that are used to define the metallic-roughness
- material model from Physically-Based Rendering (PBR) methodology. When
- not specified, all the default values of <code>pbrMetallicRoughness</code> apply.</li>
+<li>pbrMetallicRoughness:      A set of parameter values that are used to define the
+ metallic-roughness material model from Physically-Based Rendering
+ (PBR) methodology. When not specified, all the default values of
+ <code>pbrMetallicRoughness</code> apply.</li>
 <li>pbrSpecularGlossiness:      A set of parameter values that are used to define the
- specular-glossiness material model from Physically-Based Rendering (PBR)
- methodology. When not specified, all the default values of
+ specular-glossiness material model from Physically-Based Rendering
+ (PBR) methodology. When not specified, all the default values of
  <code>pbrMetallicRoughness</code> apply.</li>
 <li>~glTFMaterial():      destructor</li>
 </ul>
@@ -1556,9 +1574,9 @@ Physically-Based Rendering (PBR) methodology.</p>
 <li>indices:      The index of the accessor that contains the indices.</li>
 <li>material:      The index of the material to apply to this primitive when rendering.</li>
 <li>mode:      The type of primitives to render.</li>
-<li>targets:      An array of Morph Targets, each  Morph Target is a dictionary mapping
- attributes (only <code>POSITION</code>, <code>NORMAL</code>, and <code>TANGENT</code> supported) to their
- deviations in the Morph Target.</li>
+<li>targets:      An array of Morph Targets, each  Morph Target is a dictionary
+ mapping attributes (only <code>POSITION</code>, <code>NORMAL</code>, and <code>TANGENT</code>
+ supported) to their deviations in the Morph Target.</li>
 </ul>
 </li>
 </ul>
@@ -1571,8 +1589,8 @@ Physically-Based Rendering (PBR) methodology.</p>
 </code></pre></div>
 
 
-<p>A set of primitives to be rendered.  A node can contain one mesh.  A node's
-transform places the mesh in the scene.</p>
+<p>A set of primitives to be rendered.  A node can contain one mesh.  A
+node's transform places the mesh in the scene.</p>
 <ul>
 <li>Members:<ul>
 <li>primitives:      An array of primitives, each defining geometry to be rendered with a
@@ -1601,25 +1619,26 @@ transform places the mesh in the scene.</p>
 <code>mesh.primitives</code> must contain <code>JOINTS_0</code> and <code>WEIGHTS_0</code> attributes.  A
 node can have either a <code>matrix</code> or any combination of
 <code>translation</code>/<code>rotation</code>/<code>scale</code> (TRS) properties. TRS properties are
-converted to matrices and postmultiplied in the <code>T * R * S</code> order to compose
-the transformation matrix; first the scale is applied to the vertices, then
-the rotation, and then the translation. If none are provided, the transform
-is the identity. When a node is targeted for animation (referenced by an
-animation.channel.target), only TRS properties may be present; <code>matrix</code> will
-not be present.</p>
+converted to matrices and postmultiplied in the <code>T * R * S</code> order to
+compose the transformation matrix; first the scale is applied to the
+vertices, then the rotation, and then the translation. If none are
+provided, the transform is the identity. When a node is targeted for
+animation (referenced by an animation.channel.target), only TRS
+properties may be present; <code>matrix</code> will not be present.</p>
 <ul>
 <li>Members:<ul>
 <li>camera:      The index of the camera referenced by this node.</li>
 <li>children:      The indices of this node's children.</li>
-<li>matrix:      A floating-point 4x4 transformation matrix stored in column-major order.</li>
+<li>matrix:      A floating-point 4x4 transformation matrix stored in column-major
+ order.</li>
 <li>mesh:      The index of the mesh in this node.</li>
-<li>rotation:      The node's unit quaternion rotation in the order (x, y, z, w), where w
- is the scalar.</li>
+<li>rotation:      The node's unit quaternion rotation in the order (x, y, z, w), where
+ w is the scalar.</li>
 <li>scale:      The node's non-uniform scale.</li>
 <li>skin:      The index of the skin referenced by this node.</li>
 <li>translation:      The node's translation.</li>
-<li>weights:      The weights of the instantiated Morph Target. Number of elements must
- match number of Morph Targets of used mesh.</li>
+<li>weights:      The weights of the instantiated Morph Target. Number of elements
+ must match number of Morph Targets of used mesh.</li>
 </ul>
 </li>
 </ul>
@@ -1753,12 +1772,13 @@ not be present.</p>
 <p>Joints and matrices defining a skin.</p>
 <ul>
 <li>Members:<ul>
-<li>inverseBindMatrices:      The index of the accessor containing the floating-point 4x4 inverse-bind
- matrices.  The default is that each matrix is a 4x4 identity matrix,
- which implies that inverse-bind matrices were pre-applied.</li>
+<li>inverseBindMatrices:      The index of the accessor containing the floating-point 4x4
+ inverse-bind matrices.  The default is that each matrix is a 4x4
+ identity matrix, which implies that inverse-bind matrices were
+ pre-applied.</li>
 <li>joints:      Indices of skeleton nodes, used as joints in this skin. [required]</li>
-<li>skeleton:      The index of the node used as a skeleton root. When undefined, joints
- transforms resolve to scene root.</li>
+<li>skeleton:      The index of the node used as a skeleton root. When undefined,
+ joints transforms resolve to scene root.</li>
 </ul>
 </li>
 </ul>
