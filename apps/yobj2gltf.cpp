@@ -426,8 +426,12 @@ int main(int argc, char** argv) {
     if (no_save) return 0;
 
     // save gltf
-    auto ok = ygltf::save_scenes(
-        filename_out, gltf, false, save_separate_buffers, &err);
+    if (save_separate_buffers)
+        ygltf::add_unique_path_names(
+            gltf, yu::path::get_basename(filename_out) + "_");
+    auto ok = ygltf::save_scenes(filename_out,
+        yu::path::get_basename(filename_out) + ".bin", gltf, false,
+        save_separate_buffers, &err);
     if (!ok) {
         printf("error saving gltf: %s\n", err.c_str());
         return 1;

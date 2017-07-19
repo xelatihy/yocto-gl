@@ -245,7 +245,6 @@ inline bool load_scene(
             scn->view_cam->focus = cam->cam->focus;
             scn->view_cam->aperture = cam->cam->aperture;
         }
-        if (scn->split_shapes) ygltf::split_shapes(scn->gscn);
     }
 
 #if 1
@@ -1295,6 +1294,7 @@ void draw_elem_widgets(ygui::window* win, ygltf::scene_group* gscn,
 
     ygui::slider_widget(win, "mr base", &mat->base, 0, 1);
     ygui::slider_widget(win, "mr opacity", &mat->opacity, 0, 1);
+    ygui::slider_widget(win, "mr metallic", &mat->metallic, 0, 1);
     ygui::slider_widget(win, "mr roughness", &mat->roughness, 0, 1);
     ygui::combo_widget(win, "mr base txt", &mat->base_txt, txt_names);
     if (mat->base_txt && mat->base_txt_info)

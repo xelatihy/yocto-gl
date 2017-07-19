@@ -187,7 +187,9 @@ void simulate_offline(yscene* scene) {
         if (scene->oscn) {
             yobj::save_scene(frame_filename, scene->oscn, false);
         } else if (scene->gscn) {
-            ygltf::save_scenes(frame_filename, scene->gscn, false);
+            ygltf::save_scenes(frame_filename,
+                yu::path::get_basename(frame_filename) + ".bin", scene->gscn,
+                false);
         }
     }
     printf("\rsimulating done\n");

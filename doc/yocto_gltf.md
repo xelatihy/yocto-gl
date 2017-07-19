@@ -72,6 +72,8 @@ this can used to access the scene data with `scene::get<T>(index)`.
 
 ## History
 
+- v 0.20: removal of buggy shape splitting function
+- v 0.19: explicit paths for separate buffer saving
 - v 0.18: add function to split meshes into single shapes
 - v 0.17: add per-mesh buffer on write from scene
 - v 0.16: add transforms under function calls
@@ -389,6 +391,7 @@ Primitives
 ~~~ .cpp
 struct mesh {
     std::string name = "";
+    std::string path = "";
     std::vector<shape*> shapes;
     ~mesh(); 
 }
@@ -398,6 +401,7 @@ Gltf mesh.
 
 - Members:
     - name:      name
+    - path:      path (only used when writing files on disk with glTF)
     - shapes:      primitives references
     - ~mesh():      cleanup
 
@@ -500,6 +504,7 @@ Keyframe data.
 ~~~ .cpp
 struct animation_group {
     std::string name;
+    std::string path = "";
     std::vector<animation*> animations;
     ~animation_group(); 
 }
@@ -509,6 +514,7 @@ Animation
 
 - Members:
     - name:      Name
+    - path:      path (only used when writing files on disk with glTF)
     - animations:      Times
     - ~animation_group():      cleanup
 
@@ -518,6 +524,7 @@ Animation
 ~~~ .cpp
 struct skin {
     std::string name = "";
+    std::string path = "";
     std::vector<ym::mat4f> pose_matrices;
     std::vector<node*> joints;
     node* root = nullptr;
@@ -528,6 +535,7 @@ Skin
 
 - Members:
     - name:      name
+    - path:      path (only used when writing files on disk with glTF)
     - pose_matrices:      inverse bind matrix
     - joints:      joints
     - root:      skeleton root node
@@ -602,8 +610,8 @@ Load scene
 ### Function save_scenes()
 
 ~~~ .cpp
-bool save_scenes(const std::string& filename, const scene_group* scn,
-    bool save_textures, bool separate_buffers = false,
+bool save_scenes(const std::string& filename, const std::string& buffer_uri,
+    const scene_group* scn, bool save_textures, bool separate_buffers = false,
     std::string* err = nullptr);
 ~~~
 
@@ -611,6 +619,7 @@ Save scene
 
 - Parameters:
     - filename: filename
+    - buffer_uri: name of the main buffer
     - scn: scene data to save
     - save_textures: whether to save textures (default to false)
     - separate_buffers: save separate buffers for each mesh
@@ -750,13 +759,13 @@ void add_default_cameras(scene_group* scn);
 
 Add a default camera that views the entire scene.
 
-### Function split_shapes()
+### Function add_unique_path_names()
 
 ~~~ .cpp
-void split_shapes(scene_group* scn);
+void add_unique_path_names(scene_group* scns, const std::string& buffer_uri);
 ~~~
 
-Split meshes into single shapes
+Set unique path names for outputting separate buffers
 
 ### Typedef json
 
@@ -904,11 +913,13 @@ struct glTFAccessorSparseIndices : glTFProperty {
 }
 ~~~
 
-Indices of those attributes that deviate from their initialization value.
+Indices of those attributes that deviate from their initialization
+value.
 
 - Members:
-    - bufferView:      The index of the bufferView with sparse indices. Referenced bufferView
-     can't have ARRAY_BUFFER or ELEMENT_ARRAY_BUFFER target. [required]
+    - bufferView:      The index of the bufferView with sparse indices. Referenced
+     bufferView can't have ARRAY_BUFFER or ELEMENT_ARRAY_BUFFER target.
+     [required]
     - byteOffset:      The offset relative to the start of the bufferView in bytes. Must be
      aligned.
     - componentType:      The indices data type. [required]
@@ -923,12 +934,13 @@ struct glTFAccessorSparseValues : glTFProperty {
 }
 ~~~
 
-Array of size `accessor.sparse.count` times number of components storing the
-displaced accessor attributes pointed by `accessor.sparse.indices`.
+Array of size `accessor.sparse.count` times number of components storing
+the displaced accessor attributes pointed by `accessor.sparse.indices`.
 
 - Members:
-    - bufferView:      The index of the bufferView with sparse values. Referenced bufferView
-     can't have ARRAY_BUFFER or ELEMENT_ARRAY_BUFFER target. [required]
+    - bufferView:      The index of the bufferView with sparse values. Referenced
+     bufferView can't have ARRAY_BUFFER or ELEMENT_ARRAY_BUFFER target.
+     [required]
     - byteOffset:      The offset relative to the start of the bufferView in bytes. Must be
      aligned.
 
@@ -944,17 +956,18 @@ struct glTFAccessorSparse : glTFProperty {
 }
 ~~~
 
-Sparse storage of attributes that deviate from their initialization value.
+Sparse storage of attributes that deviate from their initialization
+value.
 
 - Members:
     - count:      Number of entries stored in the sparse array. [required]
     - indices:      Index array of size `count` that points to those accessor attributes
      that deviate from their initialization value. Indices must strictly
      increase. [required]
-    - values:      Array of size `count` times number of components, storing the displaced
-     accessor attributes pointed by `indices`. Substituted values must have
-     the same `componentType` and number of components as the base accessor.
-     [required]
+    - values:      Array of size `count` times number of components, storing the
+     displaced accessor attributes pointed by `indices`. Substituted
+     values must have the same `componentType` and number of components
+     as the base accessor. [required]
     - ~glTFAccessorSparse():      destructor
 
 
@@ -1029,10 +1042,10 @@ struct glTFAccessor : glTFChildOfRootProperty {
 }
 ~~~
 
-A typed view into a bufferView.  A bufferView contains raw binary data.  An
-accessor provides a typed view into a bufferView or a subset of a bufferView
-similar to how WebGL's `vertexAttribPointer()` defines an attribute in a
-buffer.
+A typed view into a bufferView.  A bufferView contains raw binary data.
+An accessor provides a typed view into a bufferView or a subset of a
+bufferView similar to how WebGL's `vertexAttribPointer()` defines an
+attribute in a buffer.
 
 - Members:
     - bufferView:      The index of the bufferView.
@@ -1044,7 +1057,8 @@ buffer.
     - normalized:      Specifies whether integer data values should be normalized.
     - sparse:      Sparse storage of attributes that deviate from their initialization
      value.
-    - type:      Specifies if the attribute is a scalar, vector, or matrix. [required]
+    - type:      Specifies if the attribute is a scalar, vector, or matrix.
+     [required]
     - ~glTFAccessor():      destructor
 
 
@@ -1080,12 +1094,13 @@ struct glTFAnimationChannelTarget : glTFProperty {
 }
 ~~~
 
-The index of the node and TRS property that an animation channel targets.
+The index of the node and TRS property that an animation channel
+targets.
 
 - Members:
     - node:      The index of the node to target. [required]
-    - path:      The name of the node's TRS property to modify, or the "weights" of the
-     Morph Targets it instantiates. [required]
+    - path:      The name of the node's TRS property to modify, or the "weights" of
+     the Morph Targets it instantiates. [required]
 
 
 ### Struct glTFAnimationChannel
@@ -1101,8 +1116,8 @@ struct glTFAnimationChannel : glTFProperty {
 Targets an animation's sampler at a node's property.
 
 - Members:
-    - sampler:      The index of a sampler in this animation used to compute the value for
-     the target. [required]
+    - sampler:      The index of a sampler in this animation used to compute the value
+     for the target. [required]
     - target:      The index of the node and TRS property to target. [required]
     - ~glTFAnimationChannel():      destructor
 
@@ -1144,10 +1159,11 @@ Combines input and output accessors with an interpolation algorithm to
 define a keyframe graph (but not its target).
 
 - Members:
-    - input:      The index of an accessor containing keyframe input values, e.g., time.
-     [required]
+    - input:      The index of an accessor containing keyframe input values, e.g.,
+     time. [required]
     - interpolation:      Interpolation algorithm.
-    - output:      The index of an accessor, containing keyframe output values. [required]
+    - output:      The index of an accessor, containing keyframe output values.
+     [required]
 
 
 ### Struct glTFAnimation
@@ -1165,12 +1181,12 @@ struct glTFAnimation : glTFChildOfRootProperty {
 A keyframe animation.
 
 - Members:
-    - channels:      An array of channels, each of which targets an animation's sampler at a
-     node's property. Different channels of the same animation can't have
-     equal targets. [required]
-    - samplers:      An array of samplers that combines input and output accessors with an
-     interpolation algorithm to define a keyframe graph (but not its target).
-     [required]
+    - channels:      An array of channels, each of which targets an animation's sampler
+     at a node's property. Different channels of the same animation can't
+     have equal targets. [required]
+    - samplers:      An array of samplers that combines input and output accessors with
+     an interpolation algorithm to define a keyframe graph (but not its
+     target). [required]
     - get():      typed access for channels
     - get():      typed access for samplers
     - ~glTFAnimation():      destructor
@@ -1190,7 +1206,8 @@ struct glTFAsset : glTFProperty {
 Metadata about the glTF asset.
 
 - Members:
-    - copyright:      A copyright message suitable for display to credit the content creator.
+    - copyright:      A copyright message suitable for display to credit the content
+     creator.
     - generator:      Tool that generated this glTF model.  Useful for debugging.
     - minVersion:      The minimum glTF version that this asset targets.
     - version:      The glTF version that this asset targets. [required]
@@ -1271,8 +1288,8 @@ projection matrix.
 - Members:
     - xmag:      The floating-point horizontal magnification of the view. [required]
     - ymag:      The floating-point vertical magnification of the view. [required]
-    - zfar:      The floating-point distance to the far clipping plane. `zfar` must be
-     greater than `znear`. [required]
+    - zfar:      The floating-point distance to the far clipping plane. `zfar` must
+     be greater than `znear`. [required]
     - znear:      The floating-point distance to the near clipping plane. [required]
 
 
@@ -1326,16 +1343,16 @@ struct glTFCamera : glTFChildOfRootProperty {
 }
 ~~~
 
-A camera's projection.  A node can reference a camera to apply a transform
-to place the camera in the scene.
+A camera's projection.  A node can reference a camera to apply a
+transform to place the camera in the scene.
 
 - Members:
-    - orthographic:      An orthographic camera containing properties to create an orthographic
-     projection matrix.
+    - orthographic:      An orthographic camera containing properties to create an
+     orthographic projection matrix.
     - perspective:      A perspective camera containing properties to create a perspective
      projection matrix.
-    - type:      Specifies if the camera uses a perspective or orthographic projection.
-     [required]
+    - type:      Specifies if the camera uses a perspective or orthographic
+     projection. [required]
     - ~glTFCamera():      destructor
 
 
@@ -1372,8 +1389,8 @@ Image data used to create a texture. Image can be referenced by URI or
 `bufferView` index. `mimeType` is required in the latter case.
 
 - Members:
-    - bufferView:      The index of the bufferView that contains the image. Use this instead of
-     the image's uri property.
+    - bufferView:      The index of the bufferView that contains the image. Use this
+     instead of the image's uri property.
     - mimeType:      The image's MIME type.
     - uri:      The uri of the image.
     - data:      Image data if loaded.
@@ -1408,8 +1425,8 @@ struct glTFTexture : glTFChildOfRootProperty {
 A texture and its sampler.
 
 - Members:
-    - sampler:      The index of the sampler used by this texture. When undefined, a sampler
-     with repeat wrapping and auto filtering should be used.
+    - sampler:      The index of the sampler used by this texture. When undefined, a
+     sampler with repeat wrapping and auto filtering should be used.
     - source:      The index of the image used by this texture.
 
 
@@ -1539,12 +1556,13 @@ The material appearance of a primitive.
     - emissiveTexture:      The emissive map texture.
     - normalTexture:      The normal map texture.
     - occlusionTexture:      The occlusion map texture.
-    - pbrMetallicRoughness:      A set of parameter values that are used to define the metallic-roughness
-     material model from Physically-Based Rendering (PBR) methodology. When
-     not specified, all the default values of `pbrMetallicRoughness` apply.
+    - pbrMetallicRoughness:      A set of parameter values that are used to define the
+     metallic-roughness material model from Physically-Based Rendering
+     (PBR) methodology. When not specified, all the default values of
+     `pbrMetallicRoughness` apply.
     - pbrSpecularGlossiness:      A set of parameter values that are used to define the
-     specular-glossiness material model from Physically-Based Rendering (PBR)
-     methodology. When not specified, all the default values of
+     specular-glossiness material model from Physically-Based Rendering
+     (PBR) methodology. When not specified, all the default values of
      `pbrMetallicRoughness` apply.
     - ~glTFMaterial():      destructor
 
@@ -1598,9 +1616,9 @@ Geometry to be rendered with the given material.
     - indices:      The index of the accessor that contains the indices.
     - material:      The index of the material to apply to this primitive when rendering.
     - mode:      The type of primitives to render.
-    - targets:      An array of Morph Targets, each  Morph Target is a dictionary mapping
-     attributes (only `POSITION`, `NORMAL`, and `TANGENT` supported) to their
-     deviations in the Morph Target.
+    - targets:      An array of Morph Targets, each  Morph Target is a dictionary
+     mapping attributes (only `POSITION`, `NORMAL`, and `TANGENT`
+     supported) to their deviations in the Morph Target.
 
 
 ### Struct glTFMesh
@@ -1613,8 +1631,8 @@ struct glTFMesh : glTFChildOfRootProperty {
 }
 ~~~
 
-A set of primitives to be rendered.  A node can contain one mesh.  A node's
-transform places the mesh in the scene.
+A set of primitives to be rendered.  A node can contain one mesh.  A
+node's transform places the mesh in the scene.
 
 - Members:
     - primitives:      An array of primitives, each defining geometry to be rendered with a
@@ -1643,25 +1661,26 @@ A node in the node hierarchy.  When the node contains `skin`, all
 `mesh.primitives` must contain `JOINTS_0` and `WEIGHTS_0` attributes.  A
 node can have either a `matrix` or any combination of
 `translation`/`rotation`/`scale` (TRS) properties. TRS properties are
-converted to matrices and postmultiplied in the `T * R * S` order to compose
-the transformation matrix; first the scale is applied to the vertices, then
-the rotation, and then the translation. If none are provided, the transform
-is the identity. When a node is targeted for animation (referenced by an
-animation.channel.target), only TRS properties may be present; `matrix` will
-not be present.
+converted to matrices and postmultiplied in the `T * R * S` order to
+compose the transformation matrix; first the scale is applied to the
+vertices, then the rotation, and then the translation. If none are
+provided, the transform is the identity. When a node is targeted for
+animation (referenced by an animation.channel.target), only TRS
+properties may be present; `matrix` will not be present.
 
 - Members:
     - camera:      The index of the camera referenced by this node.
     - children:      The indices of this node's children.
-    - matrix:      A floating-point 4x4 transformation matrix stored in column-major order.
+    - matrix:      A floating-point 4x4 transformation matrix stored in column-major
+     order.
     - mesh:      The index of the mesh in this node.
-    - rotation:      The node's unit quaternion rotation in the order (x, y, z, w), where w
-     is the scalar.
+    - rotation:      The node's unit quaternion rotation in the order (x, y, z, w), where
+     w is the scalar.
     - scale:      The node's non-uniform scale.
     - skin:      The index of the skin referenced by this node.
     - translation:      The node's translation.
-    - weights:      The weights of the instantiated Morph Target. Number of elements must
-     match number of Morph Targets of used mesh.
+    - weights:      The weights of the instantiated Morph Target. Number of elements
+     must match number of Morph Targets of used mesh.
 
 
 ### Enum glTFSamplerMagFilter
@@ -1795,12 +1814,13 @@ struct glTFSkin : glTFChildOfRootProperty {
 Joints and matrices defining a skin.
 
 - Members:
-    - inverseBindMatrices:      The index of the accessor containing the floating-point 4x4 inverse-bind
-     matrices.  The default is that each matrix is a 4x4 identity matrix,
-     which implies that inverse-bind matrices were pre-applied.
+    - inverseBindMatrices:      The index of the accessor containing the floating-point 4x4
+     inverse-bind matrices.  The default is that each matrix is a 4x4
+     identity matrix, which implies that inverse-bind matrices were
+     pre-applied.
     - joints:      Indices of skeleton nodes, used as joints in this skin. [required]
-    - skeleton:      The index of the node used as a skeleton root. When undefined, joints
-     transforms resolve to scene root.
+    - skeleton:      The index of the node used as a skeleton root. When undefined,
+     joints transforms resolve to scene root.
 
 
 ### Struct glTF

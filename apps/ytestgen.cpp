@@ -1281,7 +1281,8 @@ void save_scene(const std::string& scenename, const std::string& dirname,
     yobj::flatten_instances(oscn);
 
     yobj::save_scene(dirname + "/" + scenename + ".obj", oscn, false);
-    ygltf::save_scenes(dirname + "/" + scenename + ".gltf", gscn, false);
+    ygltf::save_scenes(
+        dirname + "/" + scenename + ".gltf", scenename + ".bin", gscn, false);
 
     delete oscn;
     delete gscn;

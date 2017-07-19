@@ -3595,16 +3595,30 @@ glTF* scenes_to_gltf(const scene_group* scns, const std::string& buffer_uri,
         gltf->materials.push_back(gmat);
     }
 
-    // init buffers
-    auto gbuffer = (glTFBuffer*)nullptr;
-    if (!separate_buffers) {
-        gbuffer = new glTFBuffer();
+    // add buffer
+    auto add_buffer = [&gltf](const std::string& buffer_uri) {
+        auto gbuffer = new glTFBuffer();
         gltf->buffers.push_back(gbuffer);
         gbuffer->uri = buffer_uri;
-    }
+        return gbuffer;
+    };
+
+    // init buffers
+    auto gbuffer_global = add_buffer(buffer_uri);
+
+    // add an optional buffer
+    auto add_opt_buffer = [&gbuffer_global, buffer_uri, &add_buffer,
+                              separate_buffers](const std::string& uri) {
+        if (separate_buffers && uri != "") {
+            return add_buffer(uri);
+        } else {
+            if (!gbuffer_global) gbuffer_global = add_buffer(buffer_uri);
+            return gbuffer_global;
+        }
+    };
 
     // attribute handling
-    auto add_accessor = [&gltf, &gbuffer](const std::string& name,
+    auto add_accessor = [&gltf](glTFBuffer* gbuffer, const std::string& name,
                             glTFAccessorType type,
                             glTFAccessorComponentType ctype, int count,
                             int csize, const void* data, bool save_min_max) {
@@ -3660,14 +3674,8 @@ glTF* scenes_to_gltf(const scene_group* scns, const std::string& buffer_uri,
     };
 
     // convert meshes
-    auto mid = 0;
     for (auto msh : scns->meshes) {
-        if (separate_buffers) {
-            gbuffer = new glTFBuffer();
-            gltf->buffers.push_back(gbuffer);
-            gbuffer->uri = buffer_uri + "mesh_" + std::to_string(mid++) + "_" +
-                           msh->name + ".bin";
-        }
+        auto gbuffer = add_opt_buffer(msh->path);
         auto gmesh = new glTFMesh();
         gmesh->name = msh->name;
         for (auto j = 0; j < msh->shapes.size(); j++) {
@@ -3677,37 +3685,38 @@ glTF* scenes_to_gltf(const scene_group* scns, const std::string& buffer_uri,
             prim->material =
                 glTFid<glTFMaterial>(index(scns->materials, gprim->mat));
             if (!gprim->pos.empty())
-                prim->attributes["POSITION"] = add_accessor(pid + "_pos",
-                    glTFAccessorType::Vec3, glTFAccessorComponentType::Float,
-                    (int)gprim->pos.size(), sizeof(ym::vec3f),
-                    gprim->pos.data(), true);
+                prim->attributes["POSITION"] = add_accessor(gbuffer,
+                    pid + "_pos", glTFAccessorType::Vec3,
+                    glTFAccessorComponentType::Float, (int)gprim->pos.size(),
+                    sizeof(ym::vec3f), gprim->pos.data(), true);
             if (!gprim->norm.empty())
-                prim->attributes["NORMAL"] = add_accessor(pid + "_norm",
-                    glTFAccessorType::Vec3, glTFAccessorComponentType::Float,
-                    (int)gprim->norm.size(), sizeof(ym::vec3f),
-                    gprim->norm.data(), false);
+                prim->attributes["NORMAL"] = add_accessor(gbuffer,
+                    pid + "_norm", glTFAccessorType::Vec3,
+                    glTFAccessorComponentType::Float, (int)gprim->norm.size(),
+                    sizeof(ym::vec3f), gprim->norm.data(), false);
             if (!gprim->texcoord.empty())
-                prim->attributes["TEXCOORD_0"] = add_accessor(pid + "_texcoord",
-                    glTFAccessorType::Vec2, glTFAccessorComponentType::Float,
+                prim->attributes["TEXCOORD_0"] = add_accessor(gbuffer,
+                    pid + "_texcoord", glTFAccessorType::Vec2,
+                    glTFAccessorComponentType::Float,
                     (int)gprim->texcoord.size(), sizeof(ym::vec2f),
                     gprim->texcoord.data(), false);
             if (!gprim->texcoord1.empty())
-                prim->attributes["TEXCOORD_1"] =
-                    add_accessor(pid + "_texcoord1", glTFAccessorType::Vec2,
-                        glTFAccessorComponentType::Float,
-                        (int)gprim->texcoord1.size(), sizeof(ym::vec2f),
-                        gprim->texcoord1.data(), false);
+                prim->attributes["TEXCOORD_1"] = add_accessor(gbuffer,
+                    pid + "_texcoord1", glTFAccessorType::Vec2,
+                    glTFAccessorComponentType::Float,
+                    (int)gprim->texcoord1.size(), sizeof(ym::vec2f),
+                    gprim->texcoord1.data(), false);
             if (!gprim->color.empty())
-                prim->attributes["COLOR_0"] = add_accessor(pid + "_color",
-                    glTFAccessorType::Vec4, glTFAccessorComponentType::Float,
-                    (int)gprim->color.size(), sizeof(ym::vec4f),
-                    gprim->color.data(), false);
+                prim->attributes["COLOR_0"] = add_accessor(gbuffer,
+                    pid + "_color", glTFAccessorType::Vec4,
+                    glTFAccessorComponentType::Float, (int)gprim->color.size(),
+                    sizeof(ym::vec4f), gprim->color.data(), false);
             if (!gprim->skin_weights.empty())
-                prim->attributes["WEIGHTS_0"] =
-                    add_accessor(pid + "_skin_weights", glTFAccessorType::Vec4,
-                        glTFAccessorComponentType::Float,
-                        (int)gprim->skin_weights.size(), sizeof(ym::vec4f),
-                        gprim->skin_weights.data(), false);
+                prim->attributes["WEIGHTS_0"] = add_accessor(gbuffer,
+                    pid + "_skin_weights", glTFAccessorType::Vec4,
+                    glTFAccessorComponentType::Float,
+                    (int)gprim->skin_weights.size(), sizeof(ym::vec4f),
+                    gprim->skin_weights.data(), false);
             if (!gprim->skin_joints.empty()) {
                 using ushort = unsigned short;
                 auto joints_short = std::vector<ym::vec<ushort, 4>>();
@@ -3715,34 +3724,34 @@ glTF* scenes_to_gltf(const scene_group* scns, const std::string& buffer_uri,
                 for (auto&& j : gprim->skin_joints)
                     joints_short.push_back(
                         {(ushort)j.x, (ushort)j.y, (ushort)j.z, (ushort)j.w});
-                prim->attributes["JOINTS_0"] =
-                    add_accessor(pid + "_skin_joints", glTFAccessorType::Vec4,
-                        glTFAccessorComponentType::UnsignedShort,
-                        (int)joints_short.size(), sizeof(ushort) * 4,
-                        joints_short.data(), false);
+                prim->attributes["JOINTS_0"] = add_accessor(gbuffer,
+                    pid + "_skin_joints", glTFAccessorType::Vec4,
+                    glTFAccessorComponentType::UnsignedShort,
+                    (int)joints_short.size(), sizeof(ushort) * 4,
+                    joints_short.data(), false);
             }
             // auto elem_as_uint = gprim->pos.size() >
             // std::numeric_limits<unsigned short>::max();
             if (!gprim->points.empty()) {
-                prim->indices =
-                    add_accessor(pid + "_points", glTFAccessorType::Scalar,
-                        glTFAccessorComponentType::UnsignedInt,
-                        (int)gprim->points.size(), sizeof(int),
-                        (int*)gprim->points.data(), false);
+                prim->indices = add_accessor(gbuffer, pid + "_points",
+                    glTFAccessorType::Scalar,
+                    glTFAccessorComponentType::UnsignedInt,
+                    (int)gprim->points.size(), sizeof(int),
+                    (int*)gprim->points.data(), false);
                 prim->mode = glTFMeshPrimitiveMode::Points;
             } else if (!gprim->lines.empty()) {
-                prim->indices =
-                    add_accessor(pid + "_lines", glTFAccessorType::Scalar,
-                        glTFAccessorComponentType::UnsignedInt,
-                        (int)gprim->lines.size() * 2, sizeof(int),
-                        (int*)gprim->lines.data(), false);
+                prim->indices = add_accessor(gbuffer, pid + "_lines",
+                    glTFAccessorType::Scalar,
+                    glTFAccessorComponentType::UnsignedInt,
+                    (int)gprim->lines.size() * 2, sizeof(int),
+                    (int*)gprim->lines.data(), false);
                 prim->mode = glTFMeshPrimitiveMode::Lines;
             } else if (!gprim->triangles.empty()) {
-                prim->indices =
-                    add_accessor(pid + "_triangles", glTFAccessorType::Scalar,
-                        glTFAccessorComponentType::UnsignedInt,
-                        (int)gprim->triangles.size() * 3, sizeof(int),
-                        (int*)gprim->triangles.data(), false);
+                prim->indices = add_accessor(gbuffer, pid + "_triangles",
+                    glTFAccessorType::Scalar,
+                    glTFAccessorComponentType::UnsignedInt,
+                    (int)gprim->triangles.size() * 3, sizeof(int),
+                    (int*)gprim->triangles.data(), false);
                 prim->mode = glTFMeshPrimitiveMode::Triangles;
             } else {
                 assert(false);
@@ -3752,19 +3761,19 @@ glTF* scenes_to_gltf(const scene_group* scns, const std::string& buffer_uri,
                 auto tid = std::to_string(target_index++);
                 prim->targets.push_back({});
                 if (!target->pos.empty()) {
-                    prim->targets.back()["POSITION"] = add_accessor(
+                    prim->targets.back()["POSITION"] = add_accessor(gbuffer,
                         pid + "_" + tid + "_pos", glTFAccessorType::Vec3,
                         glTFAccessorComponentType::Float,
                         (int)target->pos.size(), sizeof(ym::vec3f),
                         target->pos.data(), true);
                 } else if (!target->norm.empty()) {
-                    prim->targets.back()["NORMAL"] = add_accessor(
+                    prim->targets.back()["NORMAL"] = add_accessor(gbuffer,
                         pid + "_" + tid + "_norm", glTFAccessorType::Vec3,
                         glTFAccessorComponentType::Float,
                         (int)target->norm.size(), sizeof(ym::vec3f),
                         target->norm.data(), true);
                 } else if (!target->tangsp.empty()) {
-                    prim->targets.back()["TANGENT"] = add_accessor(
+                    prim->targets.back()["TANGENT"] = add_accessor(gbuffer,
                         pid + "_" + tid + "_tang", glTFAccessorType::Vec3,
                         glTFAccessorComponentType::Float,
                         (int)target->tangsp.size(), sizeof(ym::vec3f),
@@ -3804,18 +3813,14 @@ glTF* scenes_to_gltf(const scene_group* scns, const std::string& buffer_uri,
     // skins
     for (auto sk : scns->skins) {
         auto gsk = new glTFSkin();
+        auto gbuffer = add_opt_buffer(sk->path);
         gsk->name = sk->name;
-        if (separate_buffers) {
-            gbuffer = new glTFBuffer();
-            gltf->buffers.push_back(gbuffer);
-            gbuffer->uri = buffer_uri + "skins.bin";
-        }
         gsk->skeleton = glTFid<glTFNode>(index(scns->nodes, sk->root));
         for (auto joint : sk->joints) {
             gsk->joints.push_back(glTFid<glTFNode>(index(scns->nodes, joint)));
         }
         if (!sk->pose_matrices.empty()) {
-            gsk->inverseBindMatrices = add_accessor(sk->name + "_pose",
+            gsk->inverseBindMatrices = add_accessor(gbuffer, sk->name + "_pose",
                 glTFAccessorType::Mat4, glTFAccessorComponentType::Float,
                 (int)sk->pose_matrices.size(), sizeof(ym::mat4f),
                 sk->pose_matrices.data(), false);
@@ -3846,38 +3851,33 @@ glTF* scenes_to_gltf(const scene_group* scns, const std::string& buffer_uri,
         };
 
     // animation
-    auto aid = 0;
     for (auto anims : scns->animations) {
         auto ganim = new glTFAnimation();
         ganim->name = anims->name;
-        if (separate_buffers) {
-            gbuffer = new glTFBuffer();
-            gltf->buffers.push_back(gbuffer);
-            gbuffer->uri = buffer_uri + "anim_" + std::to_string(aid++) + "_" +
-                           anims->name + ".bin";
-        }
+        auto gbuffer = add_opt_buffer(anims->path);
         auto count = 0;
         for (auto anim : anims->animations) {
             auto aid = ganim->name + "_" + std::to_string(count++);
             auto gsmp = new glTFAnimationSampler();
-            gsmp->input = add_accessor(aid + "_time", glTFAccessorType::Scalar,
-                glTFAccessorComponentType::Float, (int)anim->time.size(),
-                sizeof(float), anim->time.data(), false);
+            gsmp->input =
+                add_accessor(gbuffer, aid + "_time", glTFAccessorType::Scalar,
+                    glTFAccessorComponentType::Float, (int)anim->time.size(),
+                    sizeof(float), anim->time.data(), false);
             auto path = glTFAnimationChannelTargetPath::NotSet;
             if (!anim->translation.empty()) {
-                gsmp->output = add_accessor(aid + "_translation",
+                gsmp->output = add_accessor(gbuffer, aid + "_translation",
                     glTFAccessorType::Vec3, glTFAccessorComponentType::Float,
                     (int)anim->translation.size(), sizeof(ym::vec3f),
                     anim->translation.data(), false);
                 path = glTFAnimationChannelTargetPath::Translation;
             } else if (!anim->rotation.empty()) {
-                gsmp->output = add_accessor(aid + "_rotation",
+                gsmp->output = add_accessor(gbuffer, aid + "_rotation",
                     glTFAccessorType::Vec4, glTFAccessorComponentType::Float,
                     (int)anim->rotation.size(), sizeof(ym::vec4f),
                     anim->rotation.data(), false);
                 path = glTFAnimationChannelTargetPath::Rotation;
             } else if (!anim->scale.empty()) {
-                gsmp->output = add_accessor(aid + "_scale",
+                gsmp->output = add_accessor(gbuffer, aid + "_scale",
                     glTFAccessorType::Vec3, glTFAccessorComponentType::Float,
                     (int)anim->scale.size(), sizeof(ym::vec3f),
                     anim->scale.data(), false);
@@ -3890,7 +3890,7 @@ glTF* scenes_to_gltf(const scene_group* scns, const std::string& buffer_uri,
                     values.insert(values.end(), anim->morph_weights[i].begin(),
                         anim->morph_weights[i].end());
                 }
-                gsmp->output = add_accessor(aid + "_weights",
+                gsmp->output = add_accessor(gbuffer, aid + "_weights",
                     glTFAccessorType::Scalar, glTFAccessorComponentType::Float,
                     (int)values.size(), sizeof(float), values.data(), false);
                 path = glTFAnimationChannelTargetPath::Weights;
@@ -3958,10 +3958,9 @@ scene_group* load_scenes(const std::string& filename, bool load_textures,
 ///
 /// Save scene
 ///
-bool save_scenes(const std::string& filename, const scene_group* scn,
-    bool save_textures, bool separate_buffers, std::string* err) {
-    auto buffer_uri =
-        _get_basename(filename) + ((separate_buffers) ? "_" : ".bin");
+bool save_scenes(const std::string& filename, const std::string& buffer_uri,
+    const scene_group* scn, bool save_textures, bool separate_buffers,
+    std::string* err) {
     auto gltf = std::unique_ptr<glTF>(
         scenes_to_gltf(scn, buffer_uri, separate_buffers));
     return save_gltf(filename, gltf.get(), true, save_textures, err);
@@ -4410,25 +4409,24 @@ std::vector<node*> get_camera_nodes(const scene* scn) {
 }
 
 //
-// Split meshes into single shapes
+// Set unique path names for outputting separate buffers
 //
-void split_shapes(scene_group* scn) {
-    auto nmeshes = std::vector<mesh*>();
-    for (auto msh : scn->meshes) {
-        if (msh->shapes.size() <= 1) {
-            nmeshes.push_back(msh);
-            continue;
-        }
-        for (auto shp : msh->shapes) {
-            auto nmsh = new mesh();
-            nmsh->name = msh->name + shp->name;
-            nmsh->shapes.push_back(shp);
-            nmeshes.push_back(nmsh);
-        }
-        msh->shapes.clear();
-        delete msh;
+void add_unique_path_names(scene_group* scns, const std::string& buffer_uri) {
+    auto mid = 0;
+    for (auto msh : scns->meshes) {
+        msh->path = buffer_uri + "mesh_" + std::to_string(mid++) + "_" +
+                    msh->name + ".bin";
     }
-    scn->meshes = nmeshes;
+    auto aid = 0;
+    for (auto anm : scns->animations) {
+        anm->path = buffer_uri + "anim_" + std::to_string(aid++) + "_" +
+                    anm->name + ".bin";
+    }
+    auto sid = 0;
+    for (auto skn : scns->meshes) {
+        skn->path = buffer_uri + "skin_" + std::to_string(sid++) + "_" +
+                    skn->name + ".bin";
+    }
 }
 
 }  // namespace ygltf
