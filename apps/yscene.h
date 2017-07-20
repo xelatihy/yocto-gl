@@ -51,23 +51,31 @@
 using uint = unsigned int;
 
 //
+// OpenGL shape vbo
+//
+struct yshape_vbo {
+    uint pos = 0;
+    uint norm = 0;
+    uint texcoord = 0;
+    uint texcoord1 = 0;
+    uint color = 0;
+    uint tangsp = 0;
+    uint skin_joints = 0;
+    uint skin_weights = 0;
+    uint points = 0;
+    uint lines = 0;
+    uint triangles = 0;
+};
+
+//
 // OpenGL state
 //
 struct yshade_state {
-    struct vert_vbo {
-        uint pos, norm, texcoord, texcoord1, color, tangsp, skin_joints,
-            skin_weights;
-    };
-    struct elem_vbo {
-        uint points, lines, triangles;
-    };
-
     // shade state
     uint prog = 0;
     uint vao = 0;
     std::map<void*, uint> txt;
-    std::map<void*, vert_vbo> vert;
-    std::map<void*, elem_vbo> elem;
+    std::map<void*, yshape_vbo> vbo;
 
     // lights
     std::vector<ym::vec3f> lights_pos;
@@ -162,8 +170,9 @@ struct yscene {
     uint trace_texture_id = 0;
     int trace_preview_width = 0, trace_preview_height = 0;
     int trace_blocks_per_update = 8;
-    ym::image<ym::vec4f> trace_hdr, trace_preview;
+    ym::image<ym::vec4f> trace_preview;
     std::vector<ym::vec4i> trace_blocks;
+    ytrace::render_buffers* trace_buffers = nullptr;
 
     // editing support
     void* selection = nullptr;
@@ -175,6 +184,7 @@ struct yscene {
         if (shstate) delete shstate;
         if (simulation_scene) ysym::free_scene(simulation_scene);
         if (trace_scene) ytrace::free_scene(trace_scene);
+        if (trace_buffers) ytrace::free_buffers(trace_buffers);
     }
 };
 
@@ -354,34 +364,32 @@ inline void update_shade_state(const yobj::scene* sc, yshade_state* st) {
     }
     for (auto mesh : sc->meshes) {
         for (auto shape : mesh->shapes) {
-            if (st->vert.find(shape) != st->vert.end()) continue;
-            st->vert[shape] = {0, 0, 0, 0};
-            st->elem[shape] = {0, 0, 0};
+            if (st->vbo.find(shape) != st->vbo.end()) continue;
+            st->vbo[shape] = yshape_vbo();
             if (!shape->pos.empty())
-                st->vert[shape].pos = yglu::make_buffer((int)shape->pos.size(),
+                st->vbo[shape].pos = yglu::make_buffer((int)shape->pos.size(),
                     3 * sizeof(float), shape->pos.data(), false, false);
             if (!shape->norm.empty())
-                st->vert[shape].norm =
-                    yglu::make_buffer((int)shape->norm.size(),
-                        3 * sizeof(float), shape->norm.data(), false, false);
+                st->vbo[shape].norm = yglu::make_buffer((int)shape->norm.size(),
+                    3 * sizeof(float), shape->norm.data(), false, false);
             if (!shape->texcoord.empty())
-                st->vert[shape].texcoord = yglu::make_buffer(
+                st->vbo[shape].texcoord = yglu::make_buffer(
                     (int)shape->texcoord.size(), 2 * sizeof(float),
                     shape->texcoord.data(), false, false);
             if (!shape->color.empty())
-                st->vert[shape].color =
+                st->vbo[shape].color =
                     yglu::make_buffer((int)shape->color.size(),
                         4 * sizeof(float), shape->color.data(), false, false);
             if (!shape->points.empty())
-                st->elem[shape].points =
+                st->vbo[shape].points =
                     yglu::make_buffer((int)shape->points.size(), sizeof(int),
                         shape->points.data(), true, false);
             if (!shape->lines.empty())
-                st->elem[shape].lines =
+                st->vbo[shape].lines =
                     yglu::make_buffer((int)shape->lines.size(), 2 * sizeof(int),
                         shape->lines.data(), true, false);
             if (!shape->triangles.empty())
-                st->elem[shape].triangles =
+                st->vbo[shape].triangles =
                     yglu::make_buffer((int)shape->triangles.size(),
                         3 * sizeof(int), shape->triangles.data(), true, false);
         }
@@ -392,12 +400,16 @@ inline void update_shade_state(const yobj::scene* sc, yshade_state* st) {
 // Draw a mesh
 //
 inline void shade_mesh(const yobj::mesh* msh, const yshade_state* st,
-    const ym::mat4f& xform, bool edges, bool wireframe, bool cutout) {
+    const ym::mat4f& xform, bool highlighted, bool edges, bool wireframe,
+    bool cutout) {
     static auto default_material = yobj::material();
     default_material.kd = {0.2f, 0.2f, 0.2f};
 
     for (auto shp : msh->shapes) {
         yglu::stdshader::begin_shape(st->prog, ym::mat4f(xform));
+
+        yglu::stdshader::set_highlight(
+            st->prog, (highlighted) ? ym::vec4f{1, 1, 0, 1} : ym::zero4f);
 
         auto mat = (shp->mat) ? shp->mat : &default_material;
         yglu::stdshader::set_material_generic(st->prog, mat->ke, mat->kd,
@@ -405,17 +417,16 @@ inline void shade_mesh(const yobj::mesh* msh, const yshade_state* st,
             st->txt.at(mat->kd_txt), st->txt.at(mat->ks_txt),
             st->txt.at(mat->rs_txt), 0, 0, false, true, cutout);
 
-        auto vert_vbo = st->vert.at(shp);
-        yglu::stdshader::set_vert(st->prog, vert_vbo.pos, vert_vbo.norm,
-            vert_vbo.texcoord, vert_vbo.color, 0);
+        auto vbo = st->vbo.at(shp);
+        yglu::stdshader::set_vert(
+            st->prog, vbo.pos, vbo.norm, vbo.texcoord, vbo.color, 0);
 
-        auto velem_vbo = st->elem.at(shp);
         yglu::stdshader::draw_points(
-            st->prog, (int)shp->points.size(), velem_vbo.points);
+            st->prog, (int)shp->points.size(), vbo.points);
         yglu::stdshader::draw_lines(
-            st->prog, (int)shp->lines.size(), velem_vbo.lines);
+            st->prog, (int)shp->lines.size(), vbo.lines);
         yglu::stdshader::draw_triangles(
-            st->prog, (int)shp->triangles.size(), velem_vbo.triangles);
+            st->prog, (int)shp->triangles.size(), vbo.triangles);
 
         if (edges && !wireframe) {
             assert(yglu::check_error());
@@ -426,11 +437,11 @@ inline void shade_mesh(const yobj::mesh* msh, const yshade_state* st,
             yglu::line_width(2);
             yglu::enable_edges(true);
             yglu::stdshader::draw_points(
-                st->prog, (int)shp->points.size(), velem_vbo.points);
+                st->prog, (int)shp->points.size(), vbo.points);
             yglu::stdshader::draw_lines(
-                st->prog, (int)shp->lines.size(), velem_vbo.lines);
+                st->prog, (int)shp->lines.size(), vbo.lines);
             yglu::stdshader::draw_triangles(
-                st->prog, (int)shp->triangles.size(), velem_vbo.triangles);
+                st->prog, (int)shp->triangles.size(), vbo.triangles);
             yglu::enable_edges(false);
             yglu::line_width(1);
             assert(yglu::check_error());
@@ -444,9 +455,10 @@ inline void shade_mesh(const yobj::mesh* msh, const yshade_state* st,
 // Display a scene
 //
 inline void shade_scene(const yobj::scene* sc, yshade_state* st,
-    const ycamera* ycam, const yobj::camera* ocam, const ym::vec4f& background,
-    float exposure, yglu::tonemap_type tmtype, float gamma, bool wireframe,
-    bool edges, bool cutout, bool camera_lights, const ym::vec3f& amb) {
+    const ycamera* ycam, const yobj::camera* ocam, void* selection,
+    const ym::vec4f& background, float exposure, yglu::tonemap_type tmtype,
+    float gamma, bool wireframe, bool edges, bool cutout, bool camera_lights,
+    const ym::vec3f& amb) {
     // update state
     update_shade_state(sc, st);
 
@@ -487,11 +499,14 @@ inline void shade_scene(const yobj::scene* sc, yshade_state* st,
 
     if (!sc->instances.empty()) {
         for (auto ist : sc->instances) {
-            shade_mesh(ist->msh, st, ist->xform(), edges, wireframe, cutout);
+            shade_mesh(ist->msh, st, ist->xform(),
+                (ist == selection || ist->msh == selection), edges, wireframe,
+                cutout);
         }
     } else {
         for (auto msh : sc->meshes) {
-            shade_mesh(msh, st, ym::identity_mat4f, edges, wireframe, cutout);
+            shade_mesh(msh, st, ym::identity_mat4f, msh == selection, edges,
+                wireframe, cutout);
         }
     }
 
@@ -560,50 +575,48 @@ inline void update_shade_state(const ygltf::scene_group* sc, yshade_state* st) {
     }
     for (auto mesh : sc->meshes) {
         for (auto shape : mesh->shapes) {
-            if (st->vert.find(shape) != st->vert.end()) continue;
-            st->vert[shape] = {0, 0, 0, 0, 0, 0, 0};
-            st->elem[shape] = {0, 0, 0};
+            if (st->vbo.find(shape) != st->vbo.end()) continue;
+            st->vbo[shape] = yshape_vbo();
             if (!shape->pos.empty())
-                st->vert[shape].pos = yglu::make_buffer((int)shape->pos.size(),
+                st->vbo[shape].pos = yglu::make_buffer((int)shape->pos.size(),
                     3 * sizeof(float), shape->pos.data(), false, false);
             if (!shape->norm.empty())
-                st->vert[shape].norm =
-                    yglu::make_buffer((int)shape->norm.size(),
-                        3 * sizeof(float), shape->norm.data(), false, false);
+                st->vbo[shape].norm = yglu::make_buffer((int)shape->norm.size(),
+                    3 * sizeof(float), shape->norm.data(), false, false);
             if (!shape->texcoord.empty())
-                st->vert[shape].texcoord = yglu::make_buffer(
+                st->vbo[shape].texcoord = yglu::make_buffer(
                     (int)shape->texcoord.size(), 2 * sizeof(float),
                     shape->texcoord.data(), false, false);
             if (!shape->texcoord1.empty())
-                st->vert[shape].texcoord1 = yglu::make_buffer(
+                st->vbo[shape].texcoord1 = yglu::make_buffer(
                     (int)shape->texcoord1.size(), 2 * sizeof(float),
                     shape->texcoord1.data(), false, false);
             if (!shape->color.empty())
-                st->vert[shape].color =
+                st->vbo[shape].color =
                     yglu::make_buffer((int)shape->color.size(),
                         4 * sizeof(float), shape->color.data(), false, false);
             if (!shape->tangsp.empty())
-                st->vert[shape].tangsp =
+                st->vbo[shape].tangsp =
                     yglu::make_buffer((int)shape->tangsp.size(),
                         4 * sizeof(float), shape->tangsp.data(), false, false);
             if (!shape->skin_weights.empty())
-                st->vert[shape].skin_weights = yglu::make_buffer(
+                st->vbo[shape].skin_weights = yglu::make_buffer(
                     (int)shape->skin_weights.size(), 4 * sizeof(float),
                     shape->skin_weights.data(), false, false);
             if (!shape->skin_joints.empty())
-                st->vert[shape].skin_joints = yglu::make_buffer(
+                st->vbo[shape].skin_joints = yglu::make_buffer(
                     (int)shape->skin_joints.size(), 4 * sizeof(int),
                     shape->skin_joints.data(), false, false);
             if (!shape->points.empty())
-                st->elem[shape].points =
+                st->vbo[shape].points =
                     yglu::make_buffer((int)shape->points.size(), sizeof(int),
                         shape->points.data(), true, false);
             if (!shape->lines.empty())
-                st->elem[shape].lines =
+                st->vbo[shape].lines =
                     yglu::make_buffer((int)shape->lines.size(), 2 * sizeof(int),
                         shape->lines.data(), true, false);
             if (!shape->triangles.empty())
-                st->elem[shape].triangles =
+                st->vbo[shape].triangles =
                     yglu::make_buffer((int)shape->triangles.size(),
                         3 * sizeof(int), shape->triangles.data(), true, false);
         }
@@ -615,7 +628,8 @@ inline void update_shade_state(const ygltf::scene_group* sc, yshade_state* st) {
 //
 inline void shade_mesh(const ygltf::mesh* msh, const ygltf::skin* sk,
     const std::vector<float>& morph_weights, const yshade_state* st,
-    const ym::mat4f& xform, bool edges, bool wireframe, bool cutout) {
+    const ym::mat4f& xform, bool highlighted, bool edges, bool wireframe,
+    bool cutout) {
     static auto default_material = ygltf::material();
     default_material.metallic_roughness =
         new ygltf::material_metallic_rooughness();
@@ -638,6 +652,9 @@ inline void shade_mesh(const ygltf::mesh* msh, const ygltf::skin* sk,
 
     for (auto shp : msh->shapes) {
         yglu::stdshader::begin_shape(st->prog, xform);
+
+        yglu::stdshader::set_highlight(
+            st->prog, (highlighted) ? ym::vec4f{1, 1, 0, 1} : ym::zero4f);
 
         auto mat = (shp->mat) ? shp->mat : &default_material;
         float op = 1;
@@ -671,9 +688,9 @@ inline void shade_mesh(const ygltf::mesh* msh, const ygltf::skin* sk,
                 mat->double_sided, cutout);
         }
 
-        auto vert_vbo = st->vert.at(shp);
-        yglu::stdshader::set_vert(st->prog, vert_vbo.pos, vert_vbo.norm,
-            vert_vbo.texcoord, vert_vbo.color, vert_vbo.tangsp);
+        auto vbo = st->vbo.at(shp);
+        yglu::stdshader::set_vert(
+            st->prog, vbo.pos, vbo.norm, vbo.texcoord, vbo.color, vbo.tangsp);
         if (sk) {
             auto skin_xforms = ygltf::get_skin_transforms(sk, xform);
 #if 0
@@ -686,9 +703,9 @@ inline void shade_mesh(const ygltf::mesh* msh, const ygltf::skin* sk,
             //     shp->skin_joints, skin_xforms, skinned_pos, skinned_norm);
             ym::compute_matrix_skinning(shp->pos, shp->norm, shp->skin_weights,
                 shp->skin_joints, skin_xforms, skinned_pos, skinned_norm);
-            yglu::update_buffer(vert_vbo.pos, 3 * sizeof(float),
+            yglu::update_buffer(vbo.pos, 3 * sizeof(float),
                 (int)skinned_pos.size(), skinned_pos.data(), false, true);
-            yglu::update_buffer(vert_vbo.norm, 3 * sizeof(float),
+            yglu::update_buffer(vbo.norm, 3 * sizeof(float),
                 (int)skinned_norm.size(), skinned_norm.data(), false, true);
 #endif
         } else if (!morph_weights.empty() && !shp->morph_targets.empty()) {
@@ -696,9 +713,9 @@ inline void shade_mesh(const ygltf::mesh* msh, const ygltf::skin* sk,
             std::vector<ym::vec4f> morph_tang;
             ygltf::compute_morphing_deformation(
                 shp, morph_weights, morph_pos, morph_norm, morph_tang);
-            yglu::update_buffer(vert_vbo.pos, 3 * sizeof(float),
+            yglu::update_buffer(vbo.pos, 3 * sizeof(float),
                 (int)morph_pos.size(), morph_pos.data(), false, true);
-            yglu::update_buffer(vert_vbo.norm, 3 * sizeof(float),
+            yglu::update_buffer(vbo.norm, 3 * sizeof(float),
                 (int)morph_norm.size(), morph_norm.data(), false, true);
         } else {
             yglu::stdshader::set_vert_skinning_off(st->prog);
@@ -706,13 +723,12 @@ inline void shade_mesh(const ygltf::mesh* msh, const ygltf::skin* sk,
 
         yglu::enable_culling(!mat->double_sided);
 
-        auto velem_vbo = st->elem.at(shp);
         yglu::stdshader::draw_points(
-            st->prog, (int)shp->points.size(), velem_vbo.points);
+            st->prog, (int)shp->points.size(), vbo.points);
         yglu::stdshader::draw_lines(
-            st->prog, (int)shp->lines.size(), velem_vbo.lines);
+            st->prog, (int)shp->lines.size(), vbo.lines);
         yglu::stdshader::draw_triangles(
-            st->prog, (int)shp->triangles.size(), velem_vbo.triangles);
+            st->prog, (int)shp->triangles.size(), vbo.triangles);
 
         yglu::enable_culling(false);
 
@@ -725,11 +741,11 @@ inline void shade_mesh(const ygltf::mesh* msh, const ygltf::skin* sk,
             yglu::line_width(2);
             yglu::enable_edges(true);
             yglu::stdshader::draw_points(
-                st->prog, (int)shp->points.size(), velem_vbo.points);
+                st->prog, (int)shp->points.size(), vbo.points);
             yglu::stdshader::draw_lines(
-                st->prog, (int)shp->lines.size(), velem_vbo.lines);
+                st->prog, (int)shp->lines.size(), vbo.lines);
             yglu::stdshader::draw_triangles(
-                st->prog, (int)shp->triangles.size(), velem_vbo.triangles);
+                st->prog, (int)shp->triangles.size(), vbo.triangles);
             yglu::enable_edges(false);
             yglu::line_width(1);
             assert(yglu::check_error());
@@ -743,9 +759,10 @@ inline void shade_mesh(const ygltf::mesh* msh, const ygltf::skin* sk,
 // Display a scene
 //
 inline void shade_scene(const ygltf::scene_group* scns, yshade_state* st,
-    const ycamera* ycam, const ygltf::node* gcam, const ym::vec4f& background,
-    float exposure, yglu::tonemap_type tmtype, float gamma, bool wireframe,
-    bool edges, bool cutout, bool camera_lights, const ym::vec3f& amb) {
+    const ycamera* ycam, const ygltf::node* gcam, void* selection,
+    const ym::vec4f& background, float exposure, yglu::tonemap_type tmtype,
+    float gamma, bool wireframe, bool edges, bool cutout, bool camera_lights,
+    const ym::vec3f& amb) {
     // update state
     update_shade_state(scns, st);
 
@@ -802,12 +819,13 @@ inline void shade_scene(const ygltf::scene_group* scns, yshade_state* st,
     if (!instances.empty()) {
         for (auto ist : instances) {
             shade_mesh(ist->msh, ist->skn, ist->morph_weights, st, ist->xform(),
-                edges, wireframe, cutout);
+                ist == selection || ist->msh == selection, edges, wireframe,
+                cutout);
         }
     } else {
         for (auto msh : scns->meshes) {
-            shade_mesh(msh, nullptr, {}, st, ym::identity_mat4f, edges,
-                wireframe, cutout);
+            shade_mesh(msh, nullptr, {}, st, ym::identity_mat4f,
+                msh == selection, edges, wireframe, cutout);
         }
     }
 
@@ -843,14 +861,14 @@ void draw_scene(ygui::window* win) {
     if (scn->gcam) scn->gcam->cam->aspect = aspect;
     if (scn->oscn) {
         shade_scene(scn->oscn, scn->shstate, scn->view_cam, scn->ocam,
-            scn->background, scn->exposure, (yglu::tonemap_type)scn->tonemap,
-            scn->gamma, scn->wireframe, scn->edges, scn->alpha_cutout,
-            scn->camera_lights, scn->amb);
+            scn->selection, scn->background, scn->exposure,
+            (yglu::tonemap_type)scn->tonemap, scn->gamma, scn->wireframe,
+            scn->edges, scn->alpha_cutout, scn->camera_lights, scn->amb);
     } else {
         shade_scene(scn->gscn, scn->shstate, scn->view_cam, scn->gcam,
-            scn->background, scn->exposure, (yglu::tonemap_type)scn->tonemap,
-            scn->gamma, scn->wireframe, scn->edges, scn->alpha_cutout,
-            scn->camera_lights, scn->amb);
+            scn->selection, scn->background, scn->exposure,
+            (yglu::tonemap_type)scn->tonemap, scn->gamma, scn->wireframe,
+            scn->edges, scn->alpha_cutout, scn->camera_lights, scn->amb);
     }
 }
 
@@ -1592,9 +1610,7 @@ inline void draw_edit_widgets(ygui::window* win, ygltf::scene_group* gscn,
             } else {
                 txt->ldr = yimg::load_image4b(dirname + txt->path);
             }
-        } catch (...) {
-            txt->ldr = new ym::image4b(1, 1, {255, 255, 255, 255});
-        }
+        } catch (...) { txt->ldr = ym::image4b(1, 1, {255, 255, 255, 255}); }
         gscn->textures.push_back(txt);
         *selection = txt;
     }

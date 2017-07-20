@@ -57,6 +57,7 @@ disabled by defining YOBJ_NO_IMAGE before including this file.
 
 ## History
 
+- v 0.29: use reference interface for textures
 - v 0.28: add function to split meshes into single shapes
 - v 0.27: explicit transforms
 - v 0.26: added interpreting of illum in scene conversions
@@ -106,11 +107,10 @@ Property map
 ~~~ .cpp
 struct texture {
     std::string path;
-    ym::image4b* ldr = nullptr;
-    ym::image4f* hdr = nullptr;
+    ym::image4b ldr;
+    ym::image4f hdr;
     int width() const; 
     int height() const; 
-    ~texture(); 
 }
 ~~~
 
@@ -122,7 +122,6 @@ Scene Texture
     - hdr:      if loaded, hdr image
     - width():      get texture width
     - height():      get texture height
-    - ~texture():      done
 
 
 ### Struct texture_info

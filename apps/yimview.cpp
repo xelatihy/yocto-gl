@@ -106,8 +106,18 @@ std::vector<img*> load_images(const std::vector<std::string>& img_filenames,
         }
         if (img->hdr) {
             img->ldr = new unsigned char[img->width * img->height * img->ncomp];
-            ym::tonemap_image(img->width, img->height, img->ncomp, img->hdr,
-                img->ldr, img->tonemap, img->exposure, img->gamma);
+            if (img->ncomp == 3) {
+                ym::tonemap_image(img->width, img->height, (ym::vec3f*)img->hdr,
+                    (ym::vec3b*)img->ldr, img->tonemap, img->exposure,
+                    img->gamma);
+            } else if (img->ncomp == 4) {
+                ym::tonemap_image(img->width, img->height, (ym::vec4f*)img->hdr,
+                    (ym::vec4b*)img->ldr, img->tonemap, img->exposure,
+                    img->gamma);
+
+            } else {
+                assert(false);
+            }
             img->exposure = exposure;
             img->gamma = gamma;
             img->tonemap = tonemap;
@@ -305,8 +315,18 @@ void run_ui(yimview_app::params* pars) {
         if (img->is_hdr() &&
             (pars->exposure != img->exposure || pars->gamma != img->gamma ||
                 pars->tonemap != img->tonemap)) {
-            ym::tonemap_image(img->width, img->height, img->ncomp, img->hdr,
-                img->ldr, pars->tonemap, pars->exposure, pars->gamma);
+            if (img->ncomp == 3) {
+                ym::tonemap_image(img->width, img->height, (ym::vec3f*)img->hdr,
+                    (ym::vec3b*)img->ldr, pars->tonemap, pars->exposure,
+                    pars->gamma);
+            } else if (img->ncomp == 4) {
+                ym::tonemap_image(img->width, img->height, (ym::vec4f*)img->hdr,
+                    (ym::vec4b*)img->ldr, pars->tonemap, pars->exposure,
+                    pars->gamma);
+            } else {
+                assert(false);
+            }
+
             img->exposure = pars->exposure;
             img->gamma = pars->gamma;
             img->tonemap = pars->tonemap;

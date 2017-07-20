@@ -2240,6 +2240,45 @@ void trace_image(const scene* scn, int width, int height, ym::vec4f* pixels,
         params.nsamples, params);
 }
 
+//
+// Buffers for progressive rendering and denoising
+//
+struct render_buffers {
+    // rendered image
+    ym::image4f img;
+};
+
+//
+// Initialize buffers
+//
+render_buffers* init_buffers(int width, int height) {
+    auto buffers = new render_buffers();
+    buffers->img = ym::image4f(width, height);
+    return buffers;
+}
+
+///
+/// Grabs the image from the buffers
+///
+ym::image4f& get_traced_image_ref(render_buffers* buffers) {
+    return buffers->img;
+}
+
+///
+/// Trace a block of samples
+///
+void trace_block(const scene* scn, render_buffers* buffers, int block_x,
+    int block_y, int block_width, int block_height, int samples_min,
+    int samples_max, const render_params& params) {
+    trace_block(scn, buffers->img, block_x, block_y, block_width, block_height,
+        samples_min, samples_max, params);
+}
+
+///
+/// Clear buffers
+///
+void free_buffers(render_buffers* buffers) { delete buffers; }
+
 }  // namespace ytrace
 
 #ifndef _WIN32

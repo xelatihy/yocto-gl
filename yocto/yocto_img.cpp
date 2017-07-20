@@ -72,32 +72,32 @@ std::string get_extension(const std::string& filename) {
 //
 // Loads an ldr image.
 //
-ym::image4b* load_image4b(const std::string& filename) {
+ym::image4b load_image4b(const std::string& filename) {
     auto w = 0, h = 0, c = 0;
     auto pixels =
         std::unique_ptr<byte>(stbi_load(filename.c_str(), &w, &h, &c, 4));
-    if (!pixels) return nullptr;
-    return new ym::image4b(w, h, (ym::vec4b*)pixels.get());
+    if (!pixels) return {};
+    return ym::image4b(w, h, (ym::vec4b*)pixels.get());
 }
 
 //
 // Loads an hdr image.
 //
-ym::image4f* load_image4f(const std::string& filename) {
+ym::image4f load_image4f(const std::string& filename) {
     auto w = 0, h = 0, c = 0;
     auto pixels =
         std::unique_ptr<float>(stbi_loadf(filename.c_str(), &w, &h, &c, 4));
-    if (!pixels) return nullptr;
-    return new ym::image4f(w, h, (ym::vec4f*)pixels.get());
+    if (!pixels) return {};
+    return ym::image4f(w, h, (ym::vec4f*)pixels.get());
 }
 
 //
 // Saves an ldr image.
 //
-bool save_image4b(const std::string& filename, const ym::image4b* img) {
+bool save_image4b(const std::string& filename, const ym::image4b& img) {
     if (get_extension(filename) == ".png") {
-        return stbi_write_png(filename.c_str(), img->width(), img->height(), 4,
-            (byte*)img->data(), img->width() * 4);
+        return stbi_write_png(filename.c_str(), img.width(), img.height(), 4,
+            (byte*)img.data(), img.width() * 4);
     }
     return false;
 }
@@ -105,10 +105,10 @@ bool save_image4b(const std::string& filename, const ym::image4b* img) {
 //
 // Saves an hdr image.
 //
-bool save_image4f(const std::string& filename, const ym::image4f* img) {
+bool save_image4f(const std::string& filename, const ym::image4f& img) {
     if (get_extension(filename) == ".hdr") {
-        return stbi_write_hdr(filename.c_str(), img->width(), img->height(), 4,
-            (float*)img->data());
+        return stbi_write_hdr(
+            filename.c_str(), img.width(), img.height(), 4, (float*)img.data());
     }
     return false;
 }

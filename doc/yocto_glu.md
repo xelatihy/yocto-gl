@@ -37,6 +37,7 @@ section of this file.
 
 ## History
 
+- v 0.15: reference interface for images
 - v 0.14: alpha cut out in stdshader
 - v 0.13: simpler texture creation functions
 - v 0.12: removing legacy functions
@@ -343,7 +344,7 @@ Updates the texture tid with new image data.
 
 ~~~ .cpp
 inline uint make_texture(
-    const ym::image4f* img, bool linear, bool mipmap, bool as_float);
+    const ym::image4f& img, bool linear, bool mipmap, bool as_float);
 ~~~
 
 Creates a texture from an image.
@@ -354,7 +355,7 @@ Returns the texture id.
 
 ~~~ .cpp
 inline uint make_texture(
-    const ym::image4b* img, bool linear, bool mipmap, bool as_srgb);
+    const ym::image4b& img, bool linear, bool mipmap, bool as_srgb);
 ~~~
 
 Creates a texture from an image.
@@ -607,6 +608,14 @@ void end_shape();
 ~~~
 
 End shade drawing.
+
+### Function set_highlight()
+
+~~~ .cpp
+void set_highlight(uint prog, const ym::vec4f& highlight);
+~~~
+
+Set the object as highlight color.
 
 ### Function set_material_emission_only()
 

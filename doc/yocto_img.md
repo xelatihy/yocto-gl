@@ -17,7 +17,8 @@ stb_image_resize.h.
 
 ## History
 
-- v 0.1: added whole image functions
+- v 0.3: use reference interface for images
+- v 0.2: added whole image functions
 - v 0.1: initial release
 
 ## Namespace yimg
@@ -27,7 +28,7 @@ Utilitied for reading and writing images.
 ### Function load_image4b()
 
 ~~~ .cpp
-ym::image4b* load_image4b(const std::string& filename);
+ym::image4b load_image4b(const std::string& filename);
 ~~~
 
 Loads an ldr image.
@@ -35,7 +36,7 @@ Loads an ldr image.
 ### Function load_image4f()
 
 ~~~ .cpp
-ym::image4f* load_image4f(const std::string& filename);
+ym::image4f load_image4f(const std::string& filename);
 ~~~
 
 Loads an hdr image.
@@ -43,7 +44,7 @@ Loads an hdr image.
 ### Function save_image4b()
 
 ~~~ .cpp
-bool save_image4b(const std::string& filename, const ym::image4b* img);
+bool save_image4b(const std::string& filename, const ym::image4b& img);
 ~~~
 
 Saves an ldr image.
@@ -51,7 +52,7 @@ Saves an ldr image.
 ### Function save_image4f()
 
 ~~~ .cpp
-bool save_image4f(const std::string& filename, const ym::image4f* img);
+bool save_image4f(const std::string& filename, const ym::image4f& img);
 ~~~
 
 Saves an hdr image.
@@ -105,6 +106,24 @@ Loads an image from memory.
 
 ~~~ .cpp
 float* load_imagef_from_memory(const std::string& fmt, const byte* data,
+    int length, int& w, int& h, int& ncomp);
+~~~
+
+Loads an image from memory.
+
+### Function load_image4b_from_memory()
+
+~~~ .cpp
+ym::image4b load_image4b_from_memory(const std::string& fmt, const byte* data,
+    int length, int& w, int& h, int& ncomp);
+~~~
+
+Loads an image from memory.
+
+### Function load_image4f_from_memory()
+
+~~~ .cpp
+ym::image4f load_image4f_from_memory(const std::string& fmt, const byte* data,
     int length, int& w, int& h, int& ncomp);
 ~~~
 

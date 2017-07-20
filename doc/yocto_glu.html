@@ -49,6 +49,7 @@ Soon porting to glad.</p>
 section of this file.</p>
 <h2>History</h2>
 <ul>
+<li>v 0.15: reference interface for images</li>
 <li>v 0.14: alpha cut out in stdshader</li>
 <li>v 0.13: simpler texture creation functions</li>
 <li>v 0.12: removing legacy functions</li>
@@ -317,7 +318,7 @@ Returns the texture id.</p>
 <p>Updates the texture tid with new image data.</p>
 <h3>Function make_texture()</h3>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">uint</span> <span class="nf">make_texture</span><span class="p">(</span>
-    <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">image4f</span><span class="o">*</span> <span class="n">img</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">linear</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">mipmap</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">as_float</span><span class="p">);</span>
+    <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">image4f</span><span class="o">&amp;</span> <span class="n">img</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">linear</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">mipmap</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">as_float</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -326,7 +327,7 @@ Internally use float if as_float and filtering if filter.
 Returns the texture id.</p>
 <h3>Function make_texture()</h3>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">uint</span> <span class="nf">make_texture</span><span class="p">(</span>
-    <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">image4b</span><span class="o">*</span> <span class="n">img</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">linear</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">mipmap</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">as_srgb</span><span class="p">);</span>
+    <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">image4b</span><span class="o">&amp;</span> <span class="n">img</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">linear</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">mipmap</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">as_srgb</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -526,6 +527,12 @@ illumination amb.</p>
 
 
 <p>End shade drawing.</p>
+<h3>Function set_highlight()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_highlight</span><span class="p">(</span><span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec4f</span><span class="o">&amp;</span> <span class="n">highlight</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Set the object as highlight color.</p>
 <h3>Function set_material_emission_only()</h3>
 <div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_material_emission_only</span><span class="p">(</span><span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">ke</span><span class="p">,</span> <span class="kt">float</span> <span class="n">op</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">ke_txt</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">double_sided</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">alpha_cutout</span><span class="p">);</span>

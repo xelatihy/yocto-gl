@@ -72,6 +72,7 @@ this can used to access the scene data with `scene::get<T>(index)`.
 
 ## History
 
+- v 0.21: use reference interface for textures
 - v 0.20: removal of buggy shape splitting function
 - v 0.19: explicit paths for separate buffer saving
 - v 0.18: add function to split meshes into single shapes
@@ -133,11 +134,10 @@ Camera
 struct texture {
     std::string name = "";
     std::string path = "";
-    ym::image4b* ldr = nullptr;
-    ym::image4f* hdr = nullptr;
+    ym::image4b ldr;
+    ym::image4f hdr;
     int width() const; 
     int height() const; 
-    ~texture(); 
 }
 ~~~
 
@@ -150,7 +150,6 @@ Texture
     - hdr:      float data
     - width():      get texture width
     - height():      get texture height
-    - ~texture():      cleanup
 
 
 ### Enum texture_wrap

@@ -768,6 +768,16 @@ accumulate is true.
     - samples_min, samples_max: sample block to render
       [sample_min, sample_max]; max values are excluded
 
+### Function trace_block()
+
+~~~ .cpp
+inline void trace_block(const scene* scn, ym::image4f& img, int block_x,
+    int block_y, int block_width, int block_height, int samples_min,
+    int samples_max, const render_params& params);
+~~~
+
+Renders a block of sample. Convenience wrapper to the main function.
+
 ### Function trace_image()
 
 ~~~ .cpp
@@ -776,4 +786,46 @@ void trace_image(const scene* scn, const int width, int height, ym::vec4f* img,
 ~~~
 
 Convenience function to call trace_block() with all samples at once.
+
+### Struct render_buffers
+
+~~~ .cpp
+struct render_buffers;
+~~~
+
+Buffers for progressive rendering and denoising
+
+### Function init_buffers()
+
+~~~ .cpp
+render_buffers* init_buffers(int width, int height);
+~~~
+
+Initialize buffers
+
+### Function get_traced_image_ref()
+
+~~~ .cpp
+ym::image4f& get_traced_image_ref(render_buffers* buffers);
+~~~
+
+Grabs a reference to the image from the buffers
+
+### Function trace_block()
+
+~~~ .cpp
+void trace_block(const scene* scn, render_buffers* buffers, int block_x,
+    int block_y, int block_width, int block_height, int samples_min,
+    int samples_max, const render_params& params);
+~~~
+
+Trace a block of samples
+
+### Function free_buffers()
+
+~~~ .cpp
+void free_buffers(render_buffers*);
+~~~
+
+Clear buffers
 

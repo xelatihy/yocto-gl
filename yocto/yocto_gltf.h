@@ -73,6 +73,7 @@
 ///
 /// ## History
 ///
+/// - v 0.21: use reference interface for textures
 /// - v 0.20: removal of buggy shape splitting function
 /// - v 0.19: explicit paths for separate buffer saving
 /// - v 0.18: add function to split meshes into single shapes
@@ -211,27 +212,21 @@ struct texture {
     /// path
     std::string path = "";
     /// 8-bit data
-    ym::image4b* ldr = nullptr;
+    ym::image4b ldr;
     /// float data
-    ym::image4f* hdr = nullptr;
+    ym::image4f hdr;
 
     /// get texture width
     int width() const {
-        if (ldr) return ldr->width();
-        if (hdr) return hdr->width();
+        if (ldr) return ldr.width();
+        if (hdr) return hdr.width();
         return 0;
     }
     /// get texture height
     int height() const {
-        if (ldr) return ldr->height();
-        if (hdr) return hdr->height();
+        if (ldr) return ldr.height();
+        if (hdr) return hdr.height();
         return 0;
-    }
-
-    /// cleanup
-    ~texture() {
-        if (hdr) delete hdr;
-        if (ldr) delete ldr;
     }
 };
 

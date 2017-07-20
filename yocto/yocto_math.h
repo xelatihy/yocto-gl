@@ -4663,11 +4663,15 @@ struct image {
         : _w{w}, _h{h}, _d(v, v + w * h) {}
 
     /// width
-    int width() const { return _w; }
+    constexpr int width() const { return _w; }
     /// height
-    int height() const { return _h; }
+    constexpr int height() const { return _h; }
     /// size
-    vec2i size() const { return {_w, _h}; }
+    constexpr vec2i size() const { return {_w, _h}; }
+    /// check for empty
+    constexpr bool empty() const { return _w == 0 || _h == 0; }
+    /// check for empty
+    constexpr explicit operator bool() const { return _w != 0 && _h != 0; }
 
     /// reallocate memory
     void resize(int w, int h, const T& v = {}) {
@@ -4686,22 +4690,26 @@ struct image {
     void set(const T& v) { _d.assign(_w * _h, v); }
 
     /// element access
-    T& operator[](const vec2i& ij) { return _d[ij.y * _w + ij.x]; }
+    constexpr T& operator[](const vec2i& ij) { return _d[ij.y * _w + ij.x]; }
     /// element access
-    const T& operator[](const vec2i& ij) const { return _d[ij.y * _w + ij.x]; }
+    constexpr const T& operator[](const vec2i& ij) const {
+        return _d[ij.y * _w + ij.x];
+    }
     /// element access
-    T& at(const vec2i& ij) { return _d.at(ij.y * _w + ij.x); }
+    constexpr T& at(const vec2i& ij) { return _d.at(ij.y * _w + ij.x); }
     /// element access
-    const T& at(const vec2i& ij) const { return _d.at(ij.y * _w + ij.x); }
+    constexpr const T& at(const vec2i& ij) const {
+        return _d.at(ij.y * _w + ij.x);
+    }
     /// element access
-    T& at(int i, int j) { return _d.at(j * _w + i); }
+    constexpr T& at(int i, int j) { return _d.at(j * _w + i); }
     /// element access
-    const T& at(int i, int j) const { return _d.at(j * _w + i); }
+    constexpr const T& at(int i, int j) const { return _d.at(j * _w + i); }
 
     /// data access
-    T* data() { return _d.data(); }
+    constexpr T* data() { return _d.data(); }
     /// data access
-    const T* data() const { return _d.data(); }
+    constexpr const T* data() const { return _d.data(); }
 
    private:
     int _w, _h;
@@ -4773,16 +4781,39 @@ inline float tonemap_filmic(float x) {
 ///
 /// Tone mapping HDR to LDR images.
 ///
-inline void tonemap_image(int width, int height, int ncomp, const float* hdr,
-    byte* ldr, tonemap_type tm, float exposure, float gamma) {
-    if (ncomp < 3 || ncomp > 4)
-        throw std::invalid_argument("tonemap supports 3-4 channels only");
+inline void tonemap_image(int width, int height, const vec4f* hdr, vec4b* ldr,
+    tonemap_type tm, float exposure, float gamma) {
     auto scale = pow(2.0f, exposure);
     for (auto j = 0; j < height; j++) {
         for (auto i = 0; i < width; i++) {
-            auto h_ptr = hdr + (j * width + i) * ncomp;
-            auto l_ptr = ldr + (j * width + i) * ncomp;
-            auto h = *(vec3f*)h_ptr;
+            auto h = hdr[j * width + i];
+            h.xyz() *= scale;
+            switch (tm) {
+                case tonemap_type::none: break;
+                case tonemap_type::srgb:
+                    h.xyz() = pow(h.xyz(), 1 / 2.2f);
+                    break;
+                case tonemap_type::gamma:
+                    h.xyz() = pow(h.xyz(), 1 / gamma);
+                    break;
+                case tonemap_type::filmic:
+                    h.xyz() = tonemap_filmic(h.xyz());
+                    break;
+            }
+            ldr[j * width + i] = float_to_byte(h);
+        }
+    }
+}
+
+///
+/// Tone mapping HDR to LDR images.
+///
+inline void tonemap_image(int width, int height, const vec3f* hdr, vec3b* ldr,
+    tonemap_type tm, float exposure, float gamma) {
+    auto scale = pow(2.0f, exposure);
+    for (auto j = 0; j < height; j++) {
+        for (auto i = 0; i < width; i++) {
+            auto h = hdr[j * width + i];
             h *= scale;
             switch (tm) {
                 case tonemap_type::none: break;
@@ -4790,10 +4821,19 @@ inline void tonemap_image(int width, int height, int ncomp, const float* hdr,
                 case tonemap_type::gamma: h = pow(h, 1 / gamma); break;
                 case tonemap_type::filmic: h = tonemap_filmic(h); break;
             }
-            *(vec3b*)l_ptr = float_to_byte(h);
-            if (ncomp == 4) l_ptr[3] = float_to_byte(h_ptr[3]);
+            ldr[j * width + i] = float_to_byte(h);
         }
     }
+}
+
+///
+/// Tone mapping HDR to LDR images.
+///
+inline void tonemap_image(const image<vec4f>& hdr, image<vec4b>& ldr,
+    tonemap_type tm, float exposure, float gamma) {
+    ldr.resize(hdr.width(), hdr.height());
+    return tonemap_image(
+        hdr.width(), hdr.height(), hdr.data(), ldr.data(), tm, exposure, gamma);
 }
 
 ///

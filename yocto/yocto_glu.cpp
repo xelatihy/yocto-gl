@@ -1247,6 +1247,8 @@ void make_program(uint* pid, uint* aid) {
         };
         uniform Camera camera;      // camera data
 
+        uniform vec4 highlight;   // highlighted color
+
         out vec4 frag_color;        // eyelight shading
 
         // main
@@ -1293,6 +1295,12 @@ void make_program(uint* pid, uint* aid) {
 
             // final color correction
             c = eval_tonemap(c);
+
+            // highlighting
+            if(highlight.w > 0) {
+                if(mod(int(gl_FragCoord.x)/4 + int(gl_FragCoord.y)/4, 2)  == 0)
+                    c = highlight.xyz * highlight.w + c * (1-highlight.w);
+            }
 
             // output final color by setting gl_FragColor
             frag_color = vec4(c,brdf.op);
@@ -1374,6 +1382,13 @@ void end_shape() {
     assert(check_error());
     for (int i = 0; i < 16; i++) glDisableVertexAttribArray(i);
     assert(check_error());
+}
+
+//
+// Set the object as highlighted.
+//
+void set_highlight(uint prog, const ym::vec4f& highlight) {
+    set_uniform(prog, "highlight", highlight.data(), 4, 1);
 }
 
 //

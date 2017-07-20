@@ -58,6 +58,7 @@
 ///
 /// ## History
 ///
+/// - v 0.29: use reference interface for textures
 /// - v 0.28: add function to split meshes into single shapes
 /// - v 0.27: explicit transforms
 /// - v 0.26: added interpreting of illum in scene conversions
@@ -151,27 +152,21 @@ struct texture {
     /// path
     std::string path;
     /// if loaded, ldr image
-    ym::image4b* ldr = nullptr;
+    ym::image4b ldr;
     /// if loaded, hdr image
-    ym::image4f* hdr = nullptr;
+    ym::image4f hdr;
 
     /// get texture width
     int width() const {
-        if (ldr) return ldr->width();
-        if (hdr) return hdr->width();
+        if (ldr) return ldr.width();
+        if (hdr) return hdr.width();
         return 0;
     }
     /// get texture height
     int height() const {
-        if (ldr) return ldr->height();
-        if (hdr) return hdr->height();
+        if (ldr) return ldr.height();
+        if (hdr) return hdr.height();
         return 0;
-    }
-
-    /// done
-    ~texture() {
-        if (ldr) delete ldr;
-        if (hdr) delete hdr;
     }
 };
 

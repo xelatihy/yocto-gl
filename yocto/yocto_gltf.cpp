@@ -2877,44 +2877,42 @@ scene_group* gltf_to_scenes(const glTF* gltf, int scene_idx) {
         txt->path = (startsiwith(gtxt->uri, "data:")) ? std::string("inlines") :
                                                         gtxt->uri;
         if (!gtxt->data.datab.empty()) {
-            txt->ldr = new ym::image4b(gtxt->data.width, gtxt->data.height);
+            txt->ldr = ym::image4b(gtxt->data.width, gtxt->data.height);
             for (auto j = 0; j < gtxt->data.height; j++) {
                 for (auto i = 0; i < gtxt->data.width; i++) {
                     auto v = gtxt->data.datab.data() +
                              (gtxt->data.width * j + i) * gtxt->data.ncomp;
                     switch (gtxt->data.ncomp) {
                         case 1:
-                            txt->ldr->at(i, j) = {v[0], v[0], v[0], 255};
+                            txt->ldr.at(i, j) = {v[0], v[0], v[0], 255};
                             break;
-                        case 2:
-                            txt->ldr->at(i, j) = {v[0], v[1], 0, 255};
-                            break;
+                        case 2: txt->ldr.at(i, j) = {v[0], v[1], 0, 255}; break;
                         case 3:
-                            txt->ldr->at(i, j) = {v[0], v[1], v[2], 255};
+                            txt->ldr.at(i, j) = {v[0], v[1], v[2], 255};
                             break;
                         case 4:
-                            txt->ldr->at(i, j) = {v[0], v[1], v[2], v[3]};
+                            txt->ldr.at(i, j) = {v[0], v[1], v[2], v[3]};
                             break;
                         default: assert(false); break;
                     }
                 }
             }
         } else if (!gtxt->data.dataf.empty()) {
-            txt->hdr = new ym::image4f(gtxt->data.width, gtxt->data.height);
+            txt->hdr = ym::image4f(gtxt->data.width, gtxt->data.height);
             for (auto j = 0; j < gtxt->data.height; j++) {
                 for (auto i = 0; i < gtxt->data.width; i++) {
                     auto v = gtxt->data.dataf.data() +
                              (gtxt->data.width * j + i) * gtxt->data.ncomp;
                     switch (gtxt->data.ncomp) {
                         case 1:
-                            txt->hdr->at(i, j) = {v[0], v[0], v[0], 1};
+                            txt->hdr.at(i, j) = {v[0], v[0], v[0], 1};
                             break;
-                        case 2: txt->hdr->at(i, j) = {v[0], v[1], 0, 1}; break;
+                        case 2: txt->hdr.at(i, j) = {v[0], v[1], 0, 1}; break;
                         case 3:
-                            txt->hdr->at(i, j) = {v[0], v[1], v[2], 1};
+                            txt->hdr.at(i, j) = {v[0], v[1], v[2], 1};
                             break;
                         case 4:
-                            txt->hdr->at(i, j) = {v[0], v[1], v[2], v[3]};
+                            txt->hdr.at(i, j) = {v[0], v[1], v[2], v[3]};
                             break;
                         default: assert(false); break;
                     }
@@ -3460,20 +3458,20 @@ glTF* scenes_to_gltf(const scene_group* scns, const std::string& buffer_uri,
         auto gimg = new glTFImage();
         gimg->uri = txt->path;
         if (txt->hdr) {
-            gimg->data.width = txt->ldr->width();
-            gimg->data.height = txt->ldr->height();
+            gimg->data.width = txt->ldr.width();
+            gimg->data.height = txt->ldr.height();
             gimg->data.ncomp = 4;
-            gimg->data.datab.assign((uint8_t*)txt->ldr->data(),
-                (uint8_t*)txt->ldr->data() +
-                    txt->ldr->width() * txt->ldr->height() * 4);
+            gimg->data.datab.assign((uint8_t*)txt->ldr.data(),
+                (uint8_t*)txt->ldr.data() +
+                    txt->ldr.width() * txt->ldr.height() * 4);
         }
         if (txt->ldr) {
-            gimg->data.width = txt->hdr->width();
-            gimg->data.height = txt->hdr->height();
+            gimg->data.width = txt->hdr.width();
+            gimg->data.height = txt->hdr.height();
             gimg->data.ncomp = 4;
-            gimg->data.dataf.assign((uint8_t*)txt->hdr->data(),
-                (uint8_t*)txt->hdr->data() +
-                    txt->hdr->width() * txt->hdr->height() * 4);
+            gimg->data.dataf.assign((uint8_t*)txt->hdr.data(),
+                (uint8_t*)txt->hdr.data() +
+                    txt->hdr.width() * txt->hdr.height() * 4);
         }
         gltf->images.push_back(gimg);
     }
@@ -4050,7 +4048,7 @@ void add_texture_data(scene_group* scn) {
     for (auto txt : scn->textures) {
         if (!txt->hdr && !txt->ldr) {
             printf("unable to load texture %s\n", txt->path.c_str());
-            txt->ldr = new ym::image4b(1, 1, {255, 255, 255, 255});
+            txt->ldr = ym::image4b(1, 1, {255, 255, 255, 255});
         }
     }
 }
@@ -4090,6 +4088,13 @@ void add_names(scene_group* scn) {
         if (cam->name.empty())
             cam->name = "<camera " + std::to_string(cid) + ">";
         cid++;
+    }
+
+    auto tid = 0;
+    for (auto texture : scn->textures) {
+        if (texture->name.empty())
+            texture->name = "<texture " + std::to_string(tid) + ">";
+        tid++;
     }
 
     auto mid = 0;

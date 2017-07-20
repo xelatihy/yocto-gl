@@ -73,6 +73,7 @@ an object of type T. Internally this is just the same old glTF index. But
 this can used to access the scene data with <code>scene::get&lt;T&gt;(index)</code>.</p>
 <h2>History</h2>
 <ul>
+<li>v 0.21: use reference interface for textures</li>
 <li>v 0.20: removal of buggy shape splitting function</li>
 <li>v 0.19: explicit paths for separate buffer saving</li>
 <li>v 0.18: add function to split meshes into single shapes</li>
@@ -130,11 +131,10 @@ this can used to access the scene data with <code>scene::get&lt;T&gt;(index)</co
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">texture</span> <span class="p">{</span>
     <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
     <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">path</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
-    <span class="n">ym</span><span class="o">::</span><span class="n">image4b</span><span class="o">*</span> <span class="n">ldr</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
-    <span class="n">ym</span><span class="o">::</span><span class="n">image4f</span><span class="o">*</span> <span class="n">hdr</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+    <span class="n">ym</span><span class="o">::</span><span class="n">image4b</span> <span class="n">ldr</span><span class="p">;</span>
+    <span class="n">ym</span><span class="o">::</span><span class="n">image4f</span> <span class="n">hdr</span><span class="p">;</span>
     <span class="kt">int</span> <span class="nf">width</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span> 
     <span class="kt">int</span> <span class="nf">height</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span> 
-    <span class="o">~</span><span class="n">texture</span><span class="p">();</span> 
 <span class="p">}</span>
 </code></pre></div>
 
@@ -148,7 +148,6 @@ this can used to access the scene data with <code>scene::get&lt;T&gt;(index)</co
 <li>hdr:      float data</li>
 <li>width():      get texture width</li>
 <li>height():      get texture height</li>
-<li>~texture():      cleanup</li>
 </ul>
 </li>
 </ul>

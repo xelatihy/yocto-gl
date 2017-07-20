@@ -757,13 +757,13 @@ ym::image<ym::vec4f> make_sunsky_hdr(int w, int h, float sun_theta,
 void save_image(const std::string& filename, const std::string& dirname,
     const ym::image4b& img) {
     std::string path = std::string(dirname) + "/" + std::string(filename);
-    yimg::save_image4b(path, &img);
+    yimg::save_image4b(path, img);
 }
 
 void save_image(const std::string& filename, const std::string& dirname,
     const ym::image4f& img) {
     std::string path = std::string(dirname) + "/" + std::string(filename);
-    yimg::save_image4f(path, &img);
+    yimg::save_image4f(path, img);
 }
 
 std::vector<yobj::camera*> add_simple_cameras(yobj::scene* scn) {
@@ -1121,8 +1121,8 @@ ygltf::scene_group* obj2gltf(const yobj::scene* obj, bool add_scene) {
     for (auto otxt : obj->textures) {
         auto gtxt = new ygltf::texture();
         gtxt->path = otxt->path;
-        gtxt->ldr = (otxt->ldr) ? new ym::image4b(*otxt->ldr) : nullptr;
-        gtxt->hdr = (otxt->hdr) ? new ym::image4f(*otxt->hdr) : nullptr;
+        gtxt->ldr = otxt->ldr;
+        gtxt->hdr = otxt->hdr;
         gltf->textures.push_back(gtxt);
     }
 
