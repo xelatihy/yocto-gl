@@ -4554,20 +4554,22 @@ struct image {
     constexpr image(); 
     constexpr image(int w, int h, const T& v =; 
     constexpr image(int w, int h, const T* v); 
-    int width() const; 
-    int height() const; 
-    vec2i size() const; 
+    constexpr int width() const; 
+    constexpr int height() const; 
+    constexpr vec2i size() const; 
+    constexpr bool empty() const; 
+    constexpr explicit operator bool() const; 
     void resize(int w, int h, const T& v =; 
     void assign(int w, int h, const T& v); 
     void set(const T& v); 
-    T& operator[](const vec2i& ij); 
-    const T& operator[](const vec2i& ij) const; 
-    T& at(const vec2i& ij); 
-    const T& at(const vec2i& ij) const; 
-    T& at(int i, int j); 
-    const T& at(int i, int j) const; 
-    T* data(); 
-    const T* data() const; 
+    constexpr T& operator[](const vec2i& ij); 
+    constexpr const T& operator[](const vec2i& ij) const; 
+    constexpr T& at(const vec2i& ij); 
+    constexpr const T& at(const vec2i& ij) const; 
+    constexpr T& at(int i, int j); 
+    constexpr const T& at(int i, int j) const; 
+    constexpr T* data(); 
+    constexpr const T* data() const; 
 }
 ~~~
 
@@ -4580,6 +4582,8 @@ Image of a specified type
     - width():      width
     - height():      height
     - size():      size
+    - empty():      check for empty
+    - operator bool():      check for empty
     - resize():      reallocate memory
     - assign():      reallocate memory
     - set():      set values
@@ -4671,8 +4675,26 @@ https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/
 ### Function tonemap_image()
 
 ~~~ .cpp
-inline void tonemap_image(int width, int height, int ncomp, const float* hdr,
-    byte* ldr, tonemap_type tm, float exposure, float gamma);
+inline void tonemap_image(int width, int height, const vec4f* hdr, vec4b* ldr,
+    tonemap_type tm, float exposure, float gamma);
+~~~
+
+Tone mapping HDR to LDR images.
+
+### Function tonemap_image()
+
+~~~ .cpp
+inline void tonemap_image(int width, int height, const vec3f* hdr, vec3b* ldr,
+    tonemap_type tm, float exposure, float gamma);
+~~~
+
+Tone mapping HDR to LDR images.
+
+### Function tonemap_image()
+
+~~~ .cpp
+inline void tonemap_image(const image<vec4f>& hdr, image<vec4b>& ldr,
+    tonemap_type tm, float exposure, float gamma);
 ~~~
 
 Tone mapping HDR to LDR images.

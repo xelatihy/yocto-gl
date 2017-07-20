@@ -38,6 +38,7 @@
 ///
 /// ## History
 ///
+/// - v 0.15: reference interface for images
 /// - v 0.14: alpha cut out in stdshader
 /// - v 0.13: simpler texture creation functions
 /// - v 0.12: removing legacy functions
@@ -304,8 +305,8 @@ void update_texture(
 /// Returns the texture id.
 ///
 inline uint make_texture(
-    const ym::image4f* img, bool linear, bool mipmap, bool as_float) {
-    return make_texture(img->width(), img->height(), 4, (float*)img->data(),
+    const ym::image4f& img, bool linear, bool mipmap, bool as_float) {
+    return make_texture(img.width(), img.height(), 4, (float*)img.data(),
         linear, mipmap, as_float);
 }
 
@@ -315,9 +316,9 @@ inline uint make_texture(
 /// Returns the texture id.
 ///
 inline uint make_texture(
-    const ym::image4b* img, bool linear, bool mipmap, bool as_srgb) {
-    return make_texture(img->width(), img->height(), 4,
-        (unsigned char*)img->data(), linear, mipmap, as_srgb);
+    const ym::image4b& img, bool linear, bool mipmap, bool as_srgb) {
+    return make_texture(img.width(), img.height(), 4,
+        (unsigned char*)img.data(), linear, mipmap, as_srgb);
 }
 
 ///
@@ -503,6 +504,11 @@ void begin_shape(uint prog, const ym::mat4f& xform);
 /// End shade drawing.
 ///
 void end_shape();
+
+///
+/// Set the object as highlight color.
+///
+void set_highlight(uint prog, const ym::vec4f& highlight);
 
 ///
 /// Set material values for emission only (constant color).

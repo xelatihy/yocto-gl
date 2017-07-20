@@ -3721,20 +3721,22 @@ https://gamedev.stackexchange.com/questions/30644/how-to-keep-my-quaternion-usin
     <span class="k">constexpr</span> <span class="n">image</span><span class="p">();</span> 
     <span class="k">constexpr</span> <span class="n">image</span><span class="p">(</span><span class="kt">int</span> <span class="n">w</span><span class="p">,</span> <span class="kt">int</span> <span class="n">h</span><span class="p">,</span> <span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">v</span> <span class="o">=</span><span class="p">;</span> 
     <span class="k">constexpr</span> <span class="nf">image</span><span class="p">(</span><span class="kt">int</span> <span class="n">w</span><span class="p">,</span> <span class="kt">int</span> <span class="n">h</span><span class="p">,</span> <span class="k">const</span> <span class="n">T</span><span class="o">*</span> <span class="n">v</span><span class="p">);</span> 
-    <span class="kt">int</span> <span class="nf">width</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span> 
-    <span class="kt">int</span> <span class="nf">height</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span> 
-    <span class="n">vec2i</span> <span class="nf">size</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span> 
+    <span class="k">constexpr</span> <span class="kt">int</span> <span class="nf">width</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span> 
+    <span class="k">constexpr</span> <span class="kt">int</span> <span class="nf">height</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span> 
+    <span class="k">constexpr</span> <span class="n">vec2i</span> <span class="nf">size</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span> 
+    <span class="k">constexpr</span> <span class="kt">bool</span> <span class="nf">empty</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span> 
+    <span class="k">constexpr</span> <span class="k">explicit</span> <span class="k">operator</span> <span class="nf">bool</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span> 
     <span class="kt">void</span> <span class="n">resize</span><span class="p">(</span><span class="kt">int</span> <span class="n">w</span><span class="p">,</span> <span class="kt">int</span> <span class="n">h</span><span class="p">,</span> <span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">v</span> <span class="o">=</span><span class="p">;</span> 
     <span class="kt">void</span> <span class="nf">assign</span><span class="p">(</span><span class="kt">int</span> <span class="n">w</span><span class="p">,</span> <span class="kt">int</span> <span class="n">h</span><span class="p">,</span> <span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">v</span><span class="p">);</span> 
     <span class="kt">void</span> <span class="nf">set</span><span class="p">(</span><span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">v</span><span class="p">);</span> 
-    <span class="n">T</span><span class="o">&amp;</span> <span class="k">operator</span><span class="p">[](</span><span class="k">const</span> <span class="n">vec2i</span><span class="o">&amp;</span> <span class="n">ij</span><span class="p">);</span> 
-    <span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="k">operator</span><span class="p">[](</span><span class="k">const</span> <span class="n">vec2i</span><span class="o">&amp;</span> <span class="n">ij</span><span class="p">)</span> <span class="k">const</span><span class="p">;</span> 
-    <span class="n">T</span><span class="o">&amp;</span> <span class="n">at</span><span class="p">(</span><span class="k">const</span> <span class="n">vec2i</span><span class="o">&amp;</span> <span class="n">ij</span><span class="p">);</span> 
-    <span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">at</span><span class="p">(</span><span class="k">const</span> <span class="n">vec2i</span><span class="o">&amp;</span> <span class="n">ij</span><span class="p">)</span> <span class="k">const</span><span class="p">;</span> 
-    <span class="n">T</span><span class="o">&amp;</span> <span class="n">at</span><span class="p">(</span><span class="kt">int</span> <span class="n">i</span><span class="p">,</span> <span class="kt">int</span> <span class="n">j</span><span class="p">);</span> 
-    <span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">at</span><span class="p">(</span><span class="kt">int</span> <span class="n">i</span><span class="p">,</span> <span class="kt">int</span> <span class="n">j</span><span class="p">)</span> <span class="k">const</span><span class="p">;</span> 
-    <span class="n">T</span><span class="o">*</span> <span class="nf">data</span><span class="p">();</span> 
-    <span class="k">const</span> <span class="n">T</span><span class="o">*</span> <span class="nf">data</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span> 
+    <span class="k">constexpr</span> <span class="n">T</span><span class="o">&amp;</span> <span class="k">operator</span><span class="p">[](</span><span class="k">const</span> <span class="n">vec2i</span><span class="o">&amp;</span> <span class="n">ij</span><span class="p">);</span> 
+    <span class="k">constexpr</span> <span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="k">operator</span><span class="p">[](</span><span class="k">const</span> <span class="n">vec2i</span><span class="o">&amp;</span> <span class="n">ij</span><span class="p">)</span> <span class="k">const</span><span class="p">;</span> 
+    <span class="k">constexpr</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">at</span><span class="p">(</span><span class="k">const</span> <span class="n">vec2i</span><span class="o">&amp;</span> <span class="n">ij</span><span class="p">);</span> 
+    <span class="k">constexpr</span> <span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">at</span><span class="p">(</span><span class="k">const</span> <span class="n">vec2i</span><span class="o">&amp;</span> <span class="n">ij</span><span class="p">)</span> <span class="k">const</span><span class="p">;</span> 
+    <span class="k">constexpr</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">at</span><span class="p">(</span><span class="kt">int</span> <span class="n">i</span><span class="p">,</span> <span class="kt">int</span> <span class="n">j</span><span class="p">);</span> 
+    <span class="k">constexpr</span> <span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">at</span><span class="p">(</span><span class="kt">int</span> <span class="n">i</span><span class="p">,</span> <span class="kt">int</span> <span class="n">j</span><span class="p">)</span> <span class="k">const</span><span class="p">;</span> 
+    <span class="k">constexpr</span> <span class="n">T</span><span class="o">*</span> <span class="nf">data</span><span class="p">();</span> 
+    <span class="k">constexpr</span> <span class="k">const</span> <span class="n">T</span><span class="o">*</span> <span class="nf">data</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span> 
 <span class="p">}</span>
 </code></pre></div>
 
@@ -3748,6 +3750,8 @@ https://gamedev.stackexchange.com/questions/30644/how-to-keep-my-quaternion-usin
 <li>width():      width</li>
 <li>height():      height</li>
 <li>size():      size</li>
+<li>empty():      check for empty</li>
+<li>operator bool():      check for empty</li>
 <li>resize():      reallocate memory</li>
 <li>assign():      reallocate memory</li>
 <li>set():      set values</li>
@@ -3819,8 +3823,22 @@ https://gamedev.stackexchange.com/questions/30644/how-to-keep-my-quaternion-usin
 <p>Implementation from
 https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/</p>
 <h3>Function tonemap_image()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">tonemap_image</span><span class="p">(</span><span class="kt">int</span> <span class="n">width</span><span class="p">,</span> <span class="kt">int</span> <span class="n">height</span><span class="p">,</span> <span class="kt">int</span> <span class="n">ncomp</span><span class="p">,</span> <span class="k">const</span> <span class="kt">float</span><span class="o">*</span> <span class="n">hdr</span><span class="p">,</span>
-    <span class="n">byte</span><span class="o">*</span> <span class="n">ldr</span><span class="p">,</span> <span class="n">tonemap_type</span> <span class="n">tm</span><span class="p">,</span> <span class="kt">float</span> <span class="n">exposure</span><span class="p">,</span> <span class="kt">float</span> <span class="n">gamma</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">tonemap_image</span><span class="p">(</span><span class="kt">int</span> <span class="n">width</span><span class="p">,</span> <span class="kt">int</span> <span class="n">height</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec4f</span><span class="o">*</span> <span class="n">hdr</span><span class="p">,</span> <span class="n">vec4b</span><span class="o">*</span> <span class="n">ldr</span><span class="p">,</span>
+    <span class="n">tonemap_type</span> <span class="n">tm</span><span class="p">,</span> <span class="kt">float</span> <span class="n">exposure</span><span class="p">,</span> <span class="kt">float</span> <span class="n">gamma</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Tone mapping HDR to LDR images.</p>
+<h3>Function tonemap_image()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">tonemap_image</span><span class="p">(</span><span class="kt">int</span> <span class="n">width</span><span class="p">,</span> <span class="kt">int</span> <span class="n">height</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec3f</span><span class="o">*</span> <span class="n">hdr</span><span class="p">,</span> <span class="n">vec3b</span><span class="o">*</span> <span class="n">ldr</span><span class="p">,</span>
+    <span class="n">tonemap_type</span> <span class="n">tm</span><span class="p">,</span> <span class="kt">float</span> <span class="n">exposure</span><span class="p">,</span> <span class="kt">float</span> <span class="n">gamma</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Tone mapping HDR to LDR images.</p>
+<h3>Function tonemap_image()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">tonemap_image</span><span class="p">(</span><span class="k">const</span> <span class="n">image</span><span class="o">&lt;</span><span class="n">vec4f</span><span class="o">&gt;&amp;</span> <span class="n">hdr</span><span class="p">,</span> <span class="n">image</span><span class="o">&lt;</span><span class="n">vec4b</span><span class="o">&gt;&amp;</span> <span class="n">ldr</span><span class="p">,</span>
+    <span class="n">tonemap_type</span> <span class="n">tm</span><span class="p">,</span> <span class="kt">float</span> <span class="n">exposure</span><span class="p">,</span> <span class="kt">float</span> <span class="n">gamma</span><span class="p">);</span>
 </code></pre></div>
 
 

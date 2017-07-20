@@ -137,8 +137,13 @@ simage* tonemap_image(
     simage* hdr, float exposure, ym::tonemap_type tm, float gamma) {
     if (!hdr->hdr) throw std::invalid_argument("tonemap hdr only");
     auto ldr = make_image(hdr->width, hdr->height, hdr->ncomp, false);
-    tonemap_image(hdr->width, hdr->height, hdr->ncomp, hdr->hdr, ldr->ldr, tm,
-        exposure, gamma);
+    if (hdr->ncomp == 3) {
+        tonemap_image(hdr->width, hdr->height, (ym::vec3f*)hdr->hdr,
+            (ym::vec3b*)ldr->ldr, tm, exposure, gamma);
+    } else {
+        tonemap_image(hdr->width, hdr->height, (ym::vec4f*)hdr->hdr,
+            (ym::vec4b*)ldr->ldr, tm, exposure, gamma);
+    }
     return ldr;
 }
 

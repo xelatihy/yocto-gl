@@ -18,7 +18,8 @@
 ///
 /// ## History
 ///
-/// - v 0.1: added whole image functions
+/// - v 0.3: use reference interface for images
+/// - v 0.2: added whole image functions
 /// - v 0.1: initial release
 ///
 namespace yimg {}
@@ -71,22 +72,22 @@ using byte = unsigned char;
 ///
 /// Loads an ldr image.
 ///
-ym::image4b* load_image4b(const std::string& filename);
+ym::image4b load_image4b(const std::string& filename);
 
 ///
 /// Loads an hdr image.
 ///
-ym::image4f* load_image4f(const std::string& filename);
+ym::image4f load_image4f(const std::string& filename);
 
 ///
 /// Saves an ldr image.
 ///
-bool save_image4b(const std::string& filename, const ym::image4b* img);
+bool save_image4b(const std::string& filename, const ym::image4b& img);
 
 ///
 /// Saves an hdr image.
 ///
-bool save_image4f(const std::string& filename, const ym::image4f* img);
+bool save_image4f(const std::string& filename, const ym::image4f& img);
 
 ///
 /// Loads an ldr image.
@@ -122,6 +123,18 @@ byte* load_image_from_memory(const std::string& fmt, const byte* data,
 /// Loads an image from memory.
 ///
 float* load_imagef_from_memory(const std::string& fmt, const byte* data,
+    int length, int& w, int& h, int& ncomp);
+
+///
+/// Loads an image from memory.
+///
+ym::image4b load_image4b_from_memory(const std::string& fmt, const byte* data,
+    int length, int& w, int& h, int& ncomp);
+
+///
+/// Loads an image from memory.
+///
+ym::image4f load_image4f_from_memory(const std::string& fmt, const byte* data,
     int length, int& w, int& h, int& ncomp);
 
 ///

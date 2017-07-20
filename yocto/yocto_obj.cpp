@@ -1382,7 +1382,7 @@ void add_texture_data(scene* scn) {
     for (auto txt : scn->textures) {
         if (!txt->hdr && !txt->ldr) {
             printf("unable to load texture %s\n", txt->path.c_str());
-            txt->ldr = new ym::image4b(1, 1, {255, 255, 255, 255});
+            txt->ldr = ym::image4b(1, 1, {255, 255, 255, 255});
         }
     }
 }

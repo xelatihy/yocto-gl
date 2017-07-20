@@ -61,6 +61,7 @@ disabled by defining YOBJ_NO_IMAGE before including this file.</p>
 </ol>
 <h2>History</h2>
 <ul>
+<li>v 0.29: use reference interface for textures</li>
 <li>v 0.28: add function to split meshes into single shapes</li>
 <li>v 0.27: explicit transforms</li>
 <li>v 0.26: added interpreting of illum in scene conversions</li>
@@ -104,11 +105,10 @@ disabled by defining YOBJ_NO_IMAGE before including this file.</p>
 <h3>Struct texture</h3>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">texture</span> <span class="p">{</span>
     <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">path</span><span class="p">;</span>
-    <span class="n">ym</span><span class="o">::</span><span class="n">image4b</span><span class="o">*</span> <span class="n">ldr</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
-    <span class="n">ym</span><span class="o">::</span><span class="n">image4f</span><span class="o">*</span> <span class="n">hdr</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+    <span class="n">ym</span><span class="o">::</span><span class="n">image4b</span> <span class="n">ldr</span><span class="p">;</span>
+    <span class="n">ym</span><span class="o">::</span><span class="n">image4f</span> <span class="n">hdr</span><span class="p">;</span>
     <span class="kt">int</span> <span class="nf">width</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span> 
     <span class="kt">int</span> <span class="nf">height</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span> 
-    <span class="o">~</span><span class="n">texture</span><span class="p">();</span> 
 <span class="p">}</span>
 </code></pre></div>
 
@@ -121,7 +121,6 @@ disabled by defining YOBJ_NO_IMAGE before including this file.</p>
 <li>hdr:      if loaded, hdr image</li>
 <li>width():      get texture width</li>
 <li>height():      get texture height</li>
-<li>~texture():      done</li>
 </ul>
 </li>
 </ul>

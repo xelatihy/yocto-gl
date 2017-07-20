@@ -37,18 +37,15 @@ using namespace yu::logging;
 //
 // image saving
 //
-void save_image(const std::string& filename, int width, int height,
-    const ym::vec4f* hdr, float exposure, ym::tonemap_type tonemap,
-    float gamma) {
+void save_image(const std::string& filename, const ym::image4f& hdr,
+    float exposure, ym::tonemap_type tonemap, float gamma) {
     auto ext = yu::path::get_extension(filename);
     if (ext == ".hdr") {
-        yimg::save_imagef(filename, width, height, 4, (float*)hdr);
+        yimg::save_image4f(filename, hdr);
     } else if (ext == ".png") {
-        auto ldr = std::vector<ym::vec4b>(width * height, {0, 0, 0, 0});
-        ym::tonemap_image(width, height, 4, (float*)hdr,
-            (unsigned char*)ldr.data(), tonemap, exposure, gamma);
-        yimg::save_image(
-            filename, width, height, 4, (unsigned char*)ldr.data());
+        auto ldr = ym::image4b(hdr.width(), hdr.height());
+        ym::tonemap_image(hdr, ldr, tonemap, exposure, gamma);
+        yimg::save_image4b(filename, ldr);
     } else {
         printf("supports only hdr and png for image writing\n");
         return;
@@ -63,9 +60,9 @@ void save_image(const std::string& filename, int width, int height,
 
 void init_draw(ygui::window* win) {
     auto scn = (yscene*)ygui::get_user_pointer(win);
-    scn->trace_texture_id =
-        yglu::make_texture(scn->trace_hdr.width(), scn->trace_hdr.height(), 4,
-            (float*)scn->trace_hdr.data(), false, false, true);
+    auto& img = ytrace::get_traced_image_ref(scn->trace_buffers);
+    scn->trace_texture_id = yglu::make_texture(
+        img.width(), img.height(), 4, (float*)img.data(), false, false, true);
 }
 
 void draw_image(ygui::window* win) {
@@ -78,8 +75,9 @@ void draw_image(ygui::window* win) {
 
     // draw image
     auto window_size = ygui::get_window_size(win);
-    yglu::shade_image(scn->trace_texture_id, scn->trace_hdr.width(),
-        scn->trace_hdr.height(), window_size[0], window_size[1], 0, 0, 1,
+    auto img = ytrace::get_traced_image_ref(scn->trace_buffers);
+    yglu::shade_image(scn->trace_texture_id, img.width(), img.height(),
+        window_size[0], window_size[1], 0, 0, 1,
         (yglu::tonemap_type)scn->tonemap, scn->exposure, scn->gamma);
 
     draw_widgets(win);
@@ -115,23 +113,24 @@ bool update(yscene* scn) {
         pparams.nsamples = 1;
         ytrace::trace_image(scn->trace_scene, scn->trace_preview_width,
             scn->trace_preview_height, scn->trace_preview.data(), pparams);
+        auto& img = ytrace::get_traced_image_ref(scn->trace_buffers);
         for (auto qj = 0; qj < scn->trace_preview_height; qj++) {
             for (auto qi = 0; qi < scn->trace_preview_width; qi++) {
                 for (auto j = qj * scn->trace_block_size;
-                     j < ym::min((qj + 1) * scn->trace_block_size,
-                             scn->trace_hdr.height());
+                     j <
+                     ym::min((qj + 1) * scn->trace_block_size, img.height());
                      j++) {
                     for (auto i = qi * scn->trace_block_size;
-                         i < ym::min((qi + 1) * scn->trace_block_size,
-                                 scn->trace_hdr.width());
+                         i <
+                         ym::min((qi + 1) * scn->trace_block_size, img.width());
                          i++) {
-                        scn->trace_hdr[{i, j}] = scn->trace_preview[{qi, qj}];
+                        img[{i, j}] = scn->trace_preview[{qi, qj}];
                     }
                 }
             }
         }
-        yglu::update_texture(scn->trace_texture_id, scn->trace_hdr.width(),
-            scn->trace_hdr.height(), 4, (float*)scn->trace_hdr.data(), false);
+        yglu::update_texture(scn->trace_texture_id, img.width(), img.height(),
+            4, (float*)img.data(), false);
 
         // reset current counters
         scn->trace_cur_sample = 0;
@@ -144,15 +143,16 @@ bool update(yscene* scn) {
              scn->trace_cur_block++, b++) {
             auto block = scn->trace_blocks[scn->trace_cur_block];
             yu::concurrent::run_async([scn, block]() {
-                ytrace::trace_block(scn->trace_scene, scn->trace_hdr.width(),
-                    scn->trace_hdr.height(), scn->trace_hdr.data(), block[0],
-                    block[1], block[2], block[3], scn->trace_cur_sample,
-                    scn->trace_cur_sample + 1, scn->trace_params);
+                ytrace::trace_block(scn->trace_scene, scn->trace_buffers,
+                    block[0], block[1], block[2], block[3],
+                    scn->trace_cur_sample, scn->trace_cur_sample + 1,
+                    scn->trace_params);
             });
         }
         yu::concurrent::wait_pool();
-        yglu::update_texture(scn->trace_texture_id, scn->trace_hdr.width(),
-            scn->trace_hdr.height(), 4, (float*)scn->trace_hdr.data(), false);
+        auto& img = ytrace::get_traced_image_ref(scn->trace_buffers);
+        yglu::update_texture(scn->trace_texture_id, img.width(), img.height(),
+            4, (float*)img.data(), false);
         if (scn->trace_cur_block == scn->trace_blocks.size()) {
             scn->trace_cur_block = 0;
             if (scn->trace_save_progressive &&
@@ -164,9 +164,8 @@ bool update(yscene* scn) {
                     yu::path::get_extension(scn->imfilename);
                 log_msgf(log_level::info, "ytrace", "saving image %s",
                     imfilename.c_str());
-                save_image(imfilename, scn->trace_hdr.width(),
-                    scn->trace_hdr.height(), scn->trace_hdr.data(),
-                    scn->exposure, scn->tonemap, scn->gamma);
+                save_image(
+                    imfilename, img, scn->exposure, scn->tonemap, scn->gamma);
             }
             scn->trace_cur_sample++;
         }
@@ -203,8 +202,8 @@ void render_offline(yscene* scn) {
                               yu::path::get_extension(scn->imfilename);
             log_msgf(log_level::info, "ytrace", "saving image %s",
                 imfilename.c_str());
-            save_image(imfilename, scn->trace_hdr.width(),
-                scn->trace_hdr.height(), scn->trace_hdr.data(), scn->exposure,
+            save_image(imfilename,
+                ytrace::get_traced_image_ref(scn->trace_buffers), scn->exposure,
                 scn->tonemap, scn->gamma);
         }
         log_msgf(log_level::info, "ytrace", "rendering sample %4d/%d",
@@ -212,9 +211,8 @@ void render_offline(yscene* scn) {
         yu::concurrent::parallel_for(
             (int)scn->trace_blocks.size(), [=](int cur_block) {
                 auto block = scn->trace_blocks[cur_block];
-                ytrace::trace_block(scn->trace_scene, scn->trace_hdr.width(),
-                    scn->trace_hdr.height(), scn->trace_hdr.data(), block[0],
-                    block[1], block[2], block[3], cur_sample,
+                ytrace::trace_block(scn->trace_scene, scn->trace_buffers,
+                    block[0], block[1], block[2], block[3], cur_sample,
                     std::min(cur_sample + scn->trace_batch_size,
                         scn->trace_params.nsamples),
                     scn->trace_params);
@@ -225,8 +223,9 @@ void render_offline(yscene* scn) {
     // save image
     log_msgf(
         log_level::info, "ytrace", "saving image %s", scn->imfilename.c_str());
-    save_image(scn->imfilename, scn->trace_hdr.width(), scn->trace_hdr.height(),
-        scn->trace_hdr.data(), scn->exposure, scn->tonemap, scn->gamma);
+    save_image(scn->imfilename,
+        ytrace::get_traced_image_ref(scn->trace_buffers), scn->exposure,
+        scn->tonemap, scn->gamma);
 }
 
 // ---------------------------------------------------------------------------
@@ -251,9 +250,9 @@ ytrace::scene* make_trace_scene(const yobj::scene* scene, const ycamera* cam) {
     auto texture_map = std::map<yobj::texture*, int>{{nullptr, -1}};
     for (auto txt : scene->textures) {
         if (txt->ldr) {
-            texture_map[txt] = ytrace::add_texture(trace_scene, txt->ldr);
+            texture_map[txt] = ytrace::add_texture(trace_scene, &txt->ldr);
         } else if (txt->hdr) {
-            texture_map[txt] = ytrace::add_texture(trace_scene, txt->hdr);
+            texture_map[txt] = ytrace::add_texture(trace_scene, &txt->hdr);
         } else {
             assert(false);
         }
@@ -343,9 +342,9 @@ ytrace::scene* make_trace_scene(
     auto texture_map = std::map<ygltf::texture*, int>{{nullptr, -1}};
     for (auto txt : scenes->textures) {
         if (txt->ldr) {
-            texture_map[txt] = ytrace::add_texture(trace_scene, txt->ldr);
+            texture_map[txt] = ytrace::add_texture(trace_scene, &txt->ldr);
         } else if (txt->hdr) {
-            texture_map[txt] = ytrace::add_texture(trace_scene, txt->hdr);
+            texture_map[txt] = ytrace::add_texture(trace_scene, &txt->hdr);
         } else {
             assert(false);
         }
@@ -468,7 +467,7 @@ int main(int argc, char* argv[]) {
     // initialize rendering objects
     auto width = (int)std::round(scn->view_cam->aspect * scn->resolution);
     auto height = scn->resolution;
-    scn->trace_hdr.resize(width, height, {0, 0, 0, 0});
+    scn->trace_buffers = ytrace::init_buffers(width, height);
     scn->trace_blocks = make_trace_blocks(width, height, scn->trace_block_size);
 
 #ifndef YOCTO_NO_OPENGL

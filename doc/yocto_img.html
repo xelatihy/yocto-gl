@@ -23,31 +23,32 @@ stb_image_resize.h.</p>
 </ol>
 <h2>History</h2>
 <ul>
-<li>v 0.1: added whole image functions</li>
+<li>v 0.3: use reference interface for images</li>
+<li>v 0.2: added whole image functions</li>
 <li>v 0.1: initial release</li>
 </ul>
 <h2>Namespace yimg</h2>
 <p>Utilitied for reading and writing images.</p>
 <h3>Function load_image4b()</h3>
-<div class="codehilite"><pre><code><span></span><span class="n">ym</span><span class="o">::</span><span class="n">image4b</span><span class="o">*</span> <span class="n">load_image4b</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="n">ym</span><span class="o">::</span><span class="n">image4b</span> <span class="n">load_image4b</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Loads an ldr image.</p>
 <h3>Function load_image4f()</h3>
-<div class="codehilite"><pre><code><span></span><span class="n">ym</span><span class="o">::</span><span class="n">image4f</span><span class="o">*</span> <span class="n">load_image4f</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="n">ym</span><span class="o">::</span><span class="n">image4f</span> <span class="n">load_image4f</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Loads an hdr image.</p>
 <h3>Function save_image4b()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">save_image4b</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">image4b</span><span class="o">*</span> <span class="n">img</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">save_image4b</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">image4b</span><span class="o">&amp;</span> <span class="n">img</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Saves an ldr image.</p>
 <h3>Function save_image4f()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">save_image4f</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">image4f</span><span class="o">*</span> <span class="n">img</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">save_image4f</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">image4f</span><span class="o">&amp;</span> <span class="n">img</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -89,6 +90,20 @@ Suppoted formats are HDR.</p>
 <p>Loads an image from memory.</p>
 <h3>Function load_imagef_from_memory()</h3>
 <div class="codehilite"><pre><code><span></span><span class="kt">float</span><span class="o">*</span> <span class="nf">load_imagef_from_memory</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">fmt</span><span class="p">,</span> <span class="k">const</span> <span class="n">byte</span><span class="o">*</span> <span class="n">data</span><span class="p">,</span>
+    <span class="kt">int</span> <span class="n">length</span><span class="p">,</span> <span class="kt">int</span><span class="o">&amp;</span> <span class="n">w</span><span class="p">,</span> <span class="kt">int</span><span class="o">&amp;</span> <span class="n">h</span><span class="p">,</span> <span class="kt">int</span><span class="o">&amp;</span> <span class="n">ncomp</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Loads an image from memory.</p>
+<h3>Function load_image4b_from_memory()</h3>
+<div class="codehilite"><pre><code><span></span><span class="n">ym</span><span class="o">::</span><span class="n">image4b</span> <span class="n">load_image4b_from_memory</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">fmt</span><span class="p">,</span> <span class="k">const</span> <span class="n">byte</span><span class="o">*</span> <span class="n">data</span><span class="p">,</span>
+    <span class="kt">int</span> <span class="n">length</span><span class="p">,</span> <span class="kt">int</span><span class="o">&amp;</span> <span class="n">w</span><span class="p">,</span> <span class="kt">int</span><span class="o">&amp;</span> <span class="n">h</span><span class="p">,</span> <span class="kt">int</span><span class="o">&amp;</span> <span class="n">ncomp</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Loads an image from memory.</p>
+<h3>Function load_image4f_from_memory()</h3>
+<div class="codehilite"><pre><code><span></span><span class="n">ym</span><span class="o">::</span><span class="n">image4f</span> <span class="n">load_image4f_from_memory</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">fmt</span><span class="p">,</span> <span class="k">const</span> <span class="n">byte</span><span class="o">*</span> <span class="n">data</span><span class="p">,</span>
     <span class="kt">int</span> <span class="n">length</span><span class="p">,</span> <span class="kt">int</span><span class="o">&amp;</span> <span class="n">w</span><span class="p">,</span> <span class="kt">int</span><span class="o">&amp;</span> <span class="n">h</span><span class="p">,</span> <span class="kt">int</span><span class="o">&amp;</span> <span class="n">ncomp</span><span class="p">);</span>
 </code></pre></div>
 

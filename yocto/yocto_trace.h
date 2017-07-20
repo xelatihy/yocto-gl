@@ -713,10 +713,47 @@ void trace_block(const scene* scn, int width, int height, ym::vec4f* img,
     int samples_min, int samples_max, const render_params& params);
 
 ///
+/// Renders a block of sample. Convenience wrapper to the main function.
+///
+inline void trace_block(const scene* scn, ym::image4f& img, int block_x,
+    int block_y, int block_width, int block_height, int samples_min,
+    int samples_max, const render_params& params) {
+    trace_block(scn, img.width(), img.height(), img.data(), block_x, block_y,
+        block_width, block_height, samples_min, samples_max, params);
+}
+
+///
 /// Convenience function to call trace_block() with all samples at once.
 ///
 void trace_image(const scene* scn, const int width, int height, ym::vec4f* img,
     const render_params& params);
+
+///
+/// Buffers for progressive rendering and denoising
+///
+struct render_buffers;
+
+///
+/// Initialize buffers
+///
+render_buffers* init_buffers(int width, int height);
+
+///
+/// Grabs a reference to the image from the buffers
+///
+ym::image4f& get_traced_image_ref(render_buffers* buffers);
+
+///
+/// Trace a block of samples
+///
+void trace_block(const scene* scn, render_buffers* buffers, int block_x,
+    int block_y, int block_width, int block_height, int samples_min,
+    int samples_max, const render_params& params);
+
+///
+/// Clear buffers
+///
+void free_buffers(render_buffers*);
 
 }  // namespace ytrace
 
