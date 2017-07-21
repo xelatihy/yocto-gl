@@ -64,6 +64,7 @@ for internal acceleration. Disable this by setting YTRACE_NO_BVH.</p>
 </ol>
 <h2>History</h2>
 <ul>
+<li>v 0.20: buffer-based api</li>
 <li>v 0.19: explicit material models</li>
 <li>v 0.18: simpler texture creation functions</li>
 <li>v 0.17: move to rgba per-vertex color</li>
@@ -841,12 +842,30 @@ accumulate is true.</p>
 
 
 <p>Initialize buffers</p>
+<h3>Function free_buffers()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">free_buffers</span><span class="p">(</span><span class="n">render_buffers</span><span class="o">*</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Clear buffers</p>
+<h3>Function clear_buffers()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">clear_buffers</span><span class="p">(</span><span class="n">render_buffers</span><span class="o">*</span> <span class="n">buffers</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Clears the buffers for reuse</p>
 <h3>Function get_traced_image_ref()</h3>
 <div class="codehilite"><pre><code><span></span><span class="n">ym</span><span class="o">::</span><span class="n">image4f</span><span class="o">&amp;</span> <span class="n">get_traced_image_ref</span><span class="p">(</span><span class="n">render_buffers</span><span class="o">*</span> <span class="n">buffers</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Grabs a reference to the image from the buffers</p>
+<h3>Function get_cur_sample()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">int</span> <span class="nf">get_cur_sample</span><span class="p">(</span><span class="k">const</span> <span class="n">render_buffers</span><span class="o">*</span> <span class="n">buffers</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Gets the current sample number</p>
 <h3>Function trace_block()</h3>
 <div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">trace_block</span><span class="p">(</span><span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="n">render_buffers</span><span class="o">*</span> <span class="n">buffers</span><span class="p">,</span> <span class="kt">int</span> <span class="n">block_x</span><span class="p">,</span>
     <span class="kt">int</span> <span class="n">block_y</span><span class="p">,</span> <span class="kt">int</span> <span class="n">block_width</span><span class="p">,</span> <span class="kt">int</span> <span class="n">block_height</span><span class="p">,</span> <span class="kt">int</span> <span class="n">samples_min</span><span class="p">,</span>
@@ -855,12 +874,27 @@ accumulate is true.</p>
 
 
 <p>Trace a block of samples</p>
-<h3>Function free_buffers()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">free_buffers</span><span class="p">(</span><span class="n">render_buffers</span><span class="o">*</span><span class="p">);</span>
+<h3>Function trace_next_samples()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">trace_next_samples</span><span class="p">(</span><span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="n">render_buffers</span><span class="o">*</span> <span class="n">buffers</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nsamples</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">render_params</span><span class="o">&amp;</span> <span class="n">params</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Clear buffers</p>
+<p>Trace the next nsamples samples.</p>
+<h3>Function trace_image()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">trace_image</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="n">render_buffers</span><span class="o">*</span> <span class="n">buffers</span><span class="p">,</span> <span class="k">const</span> <span class="n">render_params</span><span class="o">&amp;</span> <span class="n">params</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Trace the whole image</p>
+<h3>Function trace_next_blocks()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">trace_next_blocks</span><span class="p">(</span><span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="n">render_buffers</span><span class="o">*</span> <span class="n">buffers</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nblocks</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">render_params</span><span class="o">&amp;</span> <span class="n">params</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Trace the next nblocks blocks up to a whole image.</p>
         <article>
         <footer></footer>
         </body>

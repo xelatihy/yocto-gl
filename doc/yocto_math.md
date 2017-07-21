@@ -645,6 +645,38 @@ const auto zero4i = zero_vec<int, 4>();
 
 4-dimensional int zero vector
 
+### Constant zero1b
+
+~~~ .cpp
+const auto zero1b = zero_vec<byte, 1>();
+~~~
+
+1-dimensional byte zero vector
+
+### Constant zero2b
+
+~~~ .cpp
+const auto zero2b = zero_vec<byte, 2>();
+~~~
+
+2-dimensional byte zero vector
+
+### Constant zero3b
+
+~~~ .cpp
+const auto zero3b = zero_vec<byte, 3>();
+~~~
+
+3-dimensional byte zero vector
+
+### Constant zero4b
+
+~~~ .cpp
+const auto zero4b = zero_vec<byte, 4>();
+~~~
+
+4-dimensional byte zero vector
+
 ### Function begin()
 
 ~~~ .cpp
