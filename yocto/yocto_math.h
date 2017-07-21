@@ -112,6 +112,11 @@ namespace ym {}
 #define constexpr
 #endif
 
+//
+// Compilation option
+//
+#define YM_FAST_RANDFLOAT 1
+
 ///
 /// Math types and utlities for 3D graphics and imaging
 ///
@@ -3163,7 +3168,15 @@ constexpr inline void init(rng_pcg32* rng, uint64_t state, uint64_t seq) {
 }
 
 /// Next random float in [0,1).
-inline float next1f(rng_pcg32* rng) { return (float)ldexp(next(rng), -32); }
+inline float next1f(rng_pcg32* rng) {
+#if YM_FAST_RANDFLOAT == 0
+    return (float)ldexp(next(rng), -32);
+#else
+    constexpr const static auto scale =
+        (float)(1.0 / std::numeric_limits<uint32_t>::max());
+    return next(rng) * scale;
+#endif
+}
 
 /// Next random float in [0,1)x[0,1).
 inline vec2f next2f(rng_pcg32* rng) { return {next1f(rng), next1f(rng)}; }
