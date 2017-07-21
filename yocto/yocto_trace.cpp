@@ -2273,6 +2273,9 @@ struct trace_state {
     ym::image4f acc;
     ym::imagef weight;
 
+    // auxiliary buffers
+    ym::image4f norm, albedo, depth;
+
     // progressive state
     int cur_sample = 0;
     std::vector<ym::bbox2i> blocks;
@@ -2337,6 +2340,15 @@ void init_state(
     state->img = ym::image4f(params.width, params.height);
     state->acc = ym::image4f(params.width, params.height);
     state->weight = ym::imagef(params.width, params.height);
+    if (params.aux_buffers) {
+        state->norm = ym::image4f(params.width, params.height);
+        state->albedo = ym::image4f(params.width, params.height);
+        state->depth = ym::image4f(params.width, params.height);
+    } else {
+        state->norm = ym::image4f();
+        state->albedo = ym::image4f();
+        state->depth = ym::image4f();
+    }
     state->cur_sample = 0;
     state->blocks = make_blocks(params.width, params.height, 32);
     state->scn = scn;
@@ -2382,17 +2394,82 @@ void init_state(
 ym::image4f& get_traced_image(trace_state* state) { return state->img; }
 
 //
+// Grabs the image from the state
+//
+void get_aux_buffers(const trace_state* state, ym::image4f& norm,
+    ym::image4f& albedo, ym::image4f& depth) {
+    if (!state->params.aux_buffers) return;
+    norm.resize(state->norm.width(), state->norm.height());
+    albedo.resize(state->albedo.width(), state->albedo.height());
+    depth.resize(state->depth.width(), state->depth.height());
+    for (auto j = 0; j < norm.height(); j++) {
+        for (auto i = 0; i < norm.width(); i++) {
+            norm[{i, j}] = state->norm[{i, j}] / state->weight[{i, j}];
+            albedo[{i, j}] = state->albedo[{i, j}] / state->weight[{i, j}];
+            depth[{i, j}] = state->depth[{i, j}] / state->weight[{i, j}];
+        }
+    }
+}
+
+//
 // Grt the current sample count
 //
 int get_cur_sample(const trace_state* state) { return state->cur_sample; }
 
 //
+// Trace a single sample
+//
+void trace_sample(ytrace::trace_state* state, int i, int j, int s, ym::vec3f& l,
+    ytrace::point& pt, ym::vec2f& rn) {
+    auto& params = state->params;
+    auto smp = make_sampler(i, j, s, params.nsamples, params.rtype);
+    rn = sample_next2f(&smp);
+    auto uv =
+        ym::vec2f{(i + rn.x) / params.width, 1 - (j + rn.y) / params.height};
+    auto ray = eval_camera(state->cam, uv, sample_next2f(&smp));
+    pt = intersect_scene(state->scn, ray);
+    if (!pt.ist || params.envmap_invisible) return;
+    l = state->shade(state->scn, pt, &smp, state->params);
+    if (!ym::isfinite(l)) {
+        log(state->scn, 2, "NaN detected");
+        return;
+    }
+    if (params.pixel_clamp > 0) l = ym::clamplen(l, params.pixel_clamp);
+}
+
+//
 // Trace a block of samples
 //
-void trace_block(
+void trace_block_box(
+    trace_state* state, int block_idx, int samples_min, int samples_max) {
+    auto& block = state->blocks[block_idx];
+    for (auto j = block.min.y; j < block.max.y; j++) {
+        for (auto i = block.min.x; i < block.max.x; i++) {
+            for (auto s = samples_min; s < samples_max; s++) {
+                ytrace::point pt;
+                auto l = ym::zero3f;
+                auto uv = ym::zero2f;
+                trace_sample(state, i, j, s, l, pt, uv);
+                state->acc[{i, j}] += {l, 1};
+                state->weight[{i, j}] += 1;
+                state->img[{i, j}] = state->acc[{i, j}] / state->weight[{i, j}];
+                if (state->params.aux_buffers && pt.ist) {
+                    state->norm[{i, j}] += {pt.frame.z, 1};
+                    state->albedo[{i, j}] += {pt.rho, 1};
+                    auto d = length(pt.frame.o - state->cam->frame.o);
+                    state->depth[{i, j}] += {d, d, d, 1};
+                }
+            }
+        }
+    }
+}
+
+//
+// Trace a block of samples
+//
+void trace_block_filtered(
     trace_state* state, int block_idx, int samples_min, int samples_max) {
     static constexpr const int pad = 2;
-    auto& params = state->params;
     auto& block = state->blocks[block_idx];
     auto block_size = ym::diagonal(block);
     auto acc_buffer =
@@ -2402,28 +2479,18 @@ void trace_block(
     for (auto j = block.min.y; j < block.max.y; j++) {
         for (auto i = block.min.x; i < block.max.x; i++) {
             for (auto s = samples_min; s < samples_max; s++) {
-                auto smp = make_sampler(i, j, s, params.nsamples, params.rtype);
-                auto rn = sample_next2f(&smp);
-                auto uv = ym::vec2f{
-                    (i + rn.x) / params.width, 1 - (j + rn.y) / params.height};
-                auto ray = eval_camera(state->cam, uv, sample_next2f(&smp));
-                auto pt = intersect_scene(state->scn, ray);
-                if (!pt.ist || params.envmap_invisible) continue;
-                auto l = state->shade(state->scn, pt, &smp, state->params);
-                if (!ym::isfinite(l)) {
-                    log(state->scn, 2, "NaN detected");
-                    continue;
-                }
-                if (params.pixel_clamp > 0)
-                    l = ym::clamplen(l, params.pixel_clamp);
+                ytrace::point pt;
+                auto l = ym::zero3f;
+                auto uv = ym::zero2f;
+                trace_sample(state, i, j, s, l, pt, uv);
                 if (state->filter) {
                     auto bi = i - block.min.x, bj = j - block.min.y;
                     for (auto fj = -state->filter_size;
                          fj <= state->filter_size; fj++) {
                         for (auto fi = -state->filter_size;
                              fi <= state->filter_size; fi++) {
-                            auto w = filter_triangle(fi - rn.x + 0.5f) *
-                                     filter_triangle(fj - rn.y + 0.5f);
+                            auto w = filter_triangle(fi - uv.x + 0.5f) *
+                                     filter_triangle(fj - uv.y + 0.5f);
                             acc_buffer[{bi + fi + pad, bj + fj + pad}] +=
                                 {l * w, w};
                             weight_buffer[{bi + fi + pad, bj + fj + pad}] += w;
@@ -2463,6 +2530,16 @@ void trace_block(
 }
 
 //
+// Trace a block of samples
+//
+void trace_block(
+    trace_state* state, int block_idx, int samples_min, int samples_max) {
+    if (state->filter)
+        return trace_block_filtered(state, block_idx, samples_min, samples_max);
+    else
+        return trace_block_box(state, block_idx, samples_min, samples_max);
+}
+//
 // Clear state
 //
 void free_state(trace_state*& state) {
@@ -2492,9 +2569,9 @@ bool trace_next_samples(trace_state* state, int nsamples) {
     return true;
 }
 
-///
-/// Starts an anyncrhounous renderer with a maximum of 256 samples.
-///
+//
+// Starts an anyncrhounous renderer with a maximum of 256 samples.
+//
 void trace_async_start(trace_state* state) {
     for (auto sample = 0; sample < state->params.nsamples; sample++) {
         for (auto block_idx = 0; block_idx < state->blocks.size();
@@ -2510,9 +2587,9 @@ void trace_async_start(trace_state* state) {
     }
 }
 
-///
-/// Stop the asynchronous renderer.
-///
+//
+// Stop the asynchronous renderer.
+//
 void trace_async_stop(trace_state* state) {
     if (!state->pool) return;
     yu::concurrent::clear_pool(state->pool);

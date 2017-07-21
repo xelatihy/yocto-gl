@@ -2503,7 +2503,7 @@ constexpr inline bbox<T, N> expand(const bbox<T, N>& a, const bbox<T, N>& b) {
 template <typename T, int N>
 constexpr inline bool contains(const bbox<T, N>& a, const vec<T, N>& b) {
     for (auto i = 0; i < N; i++) {
-        if (a.x[i] > b[i] || a.y[i] < b[i]) return false;
+        if (a.min[i] > b[i] || a.max[i] < b[i]) return false;
     }
     return true;
 }
@@ -2512,7 +2512,7 @@ constexpr inline bool contains(const bbox<T, N>& a, const vec<T, N>& b) {
 template <typename T, int N>
 constexpr inline bool contains(const bbox<T, N>& a, const bbox<T, N>& b) {
     for (auto i = 0; i < N; i++) {
-        if (a.x[i] > b.y[i] || a.y[i] < b.x[i]) return false;
+        if (a.min[i] > b.max[i] || a.max[i] < b.min[i]) return false;
     }
     return true;
 }

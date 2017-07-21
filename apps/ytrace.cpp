@@ -181,6 +181,24 @@ void render_offline(yscene* scn) {
         log_level::info, "ytrace", "saving image %s", scn->imfilename.c_str());
     save_image(scn->imfilename, ytrace::get_traced_image(scn->trace_state),
         scn->exposure, scn->tonemap, scn->gamma);
+
+    // save additional buffers
+    if (scn->trace_params.aux_buffers) {
+        log_msgf(log_level::info, "ytrace", "saving additional buffers for %s",
+            scn->imfilename.c_str());
+        auto norm = ym::image4f(), albedo = ym::image4f(),
+             depth = ym::image4f();
+        ytrace::get_aux_buffers(scn->trace_state, norm, albedo, depth);
+        auto basename = yu::path::get_dirname(scn->imfilename) +
+                        yu::path::get_basename(scn->imfilename);
+        auto ext = yu::path::get_extension(scn->imfilename);
+        save_image(
+            basename + ".normal" + ext, norm, 0, ym::tonemap_type::none, 1);
+        save_image(
+            basename + ".albedo" + ext, albedo, 0, ym::tonemap_type::none, 1);
+        save_image(
+            basename + ".depth" + ext, depth, 0, ym::tonemap_type::none, 1);
+    }
 }
 
 // ---------------------------------------------------------------------------

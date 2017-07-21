@@ -76,6 +76,7 @@ for internal acceleration. Disable this by setting YTRACE_NO_BVH.
 
 ## History
 
+- v 0.22: added additional buffers
 - v 0.21: added filters
 - v 0.20: state-based api
 - v 0.19: explicit material models
@@ -754,6 +755,7 @@ struct trace_params {
     shader_type stype = shader_type::pathtrace;
     rng_type rtype = rng_type::stratified;
     filter_type ftype = filter_type::box;
+    bool aux_buffers = false;
     ym::vec3f amb = {0, 0, 0};
     bool envmap_invisible = false;
     int min_depth = 3;
@@ -773,6 +775,7 @@ Rendering params
     - stype:      sampler type
     - rtype:      random number generation type
     - ftype:      filter type
+    - aux_buffers:      compute auxiliary buffers
     - amb:      ambient lighting
     - envmap_invisible:      view environment map
     - min_depth:      minimum ray depth
@@ -846,6 +849,15 @@ ym::image4f& get_traced_image(trace_state* state);
 ~~~
 
 Grabs a reference to the image from the state
+
+### Function get_aux_buffers()
+
+~~~ .cpp
+void get_aux_buffers(const trace_state* state, ym::image4f& norm,
+    ym::image4f& albedo, ym::image4f& depth);
+~~~
+
+Grabs the image from the state
 
 ### Function get_cur_sample()
 
