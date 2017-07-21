@@ -64,6 +64,7 @@
 ///
 /// ## History
 ///
+/// - v 0.20: buffer-based api
 /// - v 0.19: explicit material models
 /// - v 0.18: simpler texture creation functions
 /// - v 0.17: move to rgba per-vertex color
@@ -739,9 +740,24 @@ struct render_buffers;
 render_buffers* init_buffers(int width, int height);
 
 ///
+/// Clear buffers
+///
+void free_buffers(render_buffers*);
+
+///
+/// Clears the buffers for reuse
+///
+void clear_buffers(render_buffers* buffers);
+
+///
 /// Grabs a reference to the image from the buffers
 ///
 ym::image4f& get_traced_image_ref(render_buffers* buffers);
+
+///
+/// Gets the current sample number
+///
+int get_cur_sample(const render_buffers* buffers);
 
 ///
 /// Trace a block of samples
@@ -751,9 +767,16 @@ void trace_block(const scene* scn, render_buffers* buffers, int block_x,
     int samples_max, const render_params& params);
 
 ///
-/// Clear buffers
+/// Trace the next nsamples samples.
 ///
-void free_buffers(render_buffers*);
+bool trace_next_samples(const scene* scn, render_buffers* buffers, int nsamples,
+    const render_params& params);
+
+///
+/// Trace the next nblocks blocks up to a whole image.
+///
+bool trace_next_blocks(const scene* scn, render_buffers* buffers, int nblocks,
+    const render_params& params);
 
 }  // namespace ytrace
 

@@ -13,11 +13,12 @@
 ///
 /// 1. load images with `load_image()`
 /// 2. save images with `save_image()`
-/// 2. resize images with `resize_image()`
+/// 3. resize images with `resize_image()`
 ///
 ///
 /// ## History
 ///
+/// - v 0.4: new filtering methods
 /// - v 0.3: use reference interface for images
 /// - v 0.2: added whole image functions
 /// - v 0.1: initial release
@@ -70,6 +71,11 @@ namespace yimg {
 using byte = unsigned char;
 
 ///
+/// Check if an image is HDR based on filename
+///
+bool is_hdr_filename(const std::string& filename);
+
+///
 /// Loads an ldr image.
 ///
 ym::image4b load_image4b(const std::string& filename);
@@ -92,12 +98,14 @@ bool save_image4f(const std::string& filename, const ym::image4f& img);
 ///
 /// Loads an ldr image.
 ///
-byte* load_image(const std::string& filename, int& w, int& h, int& ncomp);
+std::vector<byte> load_image(
+    const std::string& filename, int& w, int& h, int& ncomp);
 
 ///
 /// Loads an hdr image.
 ///
-float* load_imagef(const std::string& filename, int& w, int& h, int& ncomp);
+std::vector<float> load_imagef(
+    const std::string& filename, int& w, int& h, int& ncomp);
 
 ///
 /// Saves an ldr image. Uses extension to determine which format to load.
@@ -116,26 +124,14 @@ bool save_imagef(const std::string& filename, int width, int height, int ncomp,
 ///
 /// Loads an image from memory.
 ///
-byte* load_image_from_memory(const std::string& fmt, const byte* data,
-    int length, int& w, int& h, int& ncomp);
+std::vector<byte> load_image_from_memory(const std::string& filename,
+    const byte* data, int length, int& w, int& h, int& ncomp);
 
 ///
 /// Loads an image from memory.
 ///
-float* load_imagef_from_memory(const std::string& fmt, const byte* data,
-    int length, int& w, int& h, int& ncomp);
-
-///
-/// Loads an image from memory.
-///
-ym::image4b load_image4b_from_memory(const std::string& fmt, const byte* data,
-    int length, int& w, int& h, int& ncomp);
-
-///
-/// Loads an image from memory.
-///
-ym::image4f load_image4f_from_memory(const std::string& fmt, const byte* data,
-    int length, int& w, int& h, int& ncomp);
+std::vector<float> load_imagef_from_memory(const std::string& filename,
+    const byte* data, int length, int& w, int& h, int& ncomp);
 
 ///
 /// Resize image.
@@ -162,6 +158,54 @@ void resize_image(int width, int height, int ncomp,
 void resize_image(int width, int height, int ncomp,
     const std::vector<byte>& img, int res_width, int res_height,
     std::vector<byte>& res_img);
+
+///
+/// Filter for resizing
+///
+enum struct resize_filter {
+    /// default
+    def = 0,
+    /// box filter
+    box = 1,
+    /// triangle filter
+    triangle = 2,
+    /// cubic spline
+    cubic_spline = 3,
+    /// Catmull-Rom interpolating sline
+    catmull_rom = 4,
+    /// Mitchel-Netrevalli filter with B=1/3, C=1/3
+    mitchell = 5
+};
+
+///
+/// Edge mode for resizing
+///
+enum struct resize_edge {
+    /// default
+    def = 0,
+    /// clamp
+    clamp = 1,
+    /// reflect
+    reflect = 2,
+    /// wrap
+    wrap = 3,
+    /// zero
+    zero = 4
+};
+
+///
+/// Resize image.
+///
+void resize_image(const ym::image4f& img, ym::image4f& res_img,
+    resize_filter filer = resize_filter::def,
+    resize_edge edge = resize_edge::def, bool premultiplied_alpha = true);
+
+///
+/// Resize image.
+///
+void resize_image(const ym::image4b& img, ym::image4b& res_img,
+    resize_filter filer = resize_filter::def,
+    resize_edge edge = resize_edge::def, bool premultiplied_alpha = true);
 
 }  // namespace yimg
 

@@ -38,60 +38,53 @@ using byte = unsigned char;
 //
 // Simple image structure to ease the passing of parameters.
 //
-struct simage {
-    /// image width
-    int width = 0;
+struct yimage {
+    // image path
+    std::string filename;
 
-    /// image height
-    int height = 0;
-
-    /// number of components
-    int ncomp = 0;
-
-    /// float data for hdr images if loaded
-    float* hdr = nullptr;
-
-    /// char data for ldr images if loaded
-    byte* ldr = nullptr;
-
-    /// default constructor
-    simage() {}
-
-    /// allocating constructor
-    simage(int width, int height, int ncomp, bool ishdr)
-        : width(width)
-        , height(height)
-        , ncomp(ncomp)
-        , hdr((ishdr) ? new float[width * height * ncomp] : nullptr)
-        , ldr((ishdr) ? nullptr : new byte[width * height * ncomp]) {}
-
-    /// destructor
-    ~simage() {
-        if (ldr) delete[] ldr;
-        if (hdr) delete[] hdr;
+    // original image data size
+    int width() const {
+        if (hdr) return hdr.width();
+        if (ldr) return ldr.width();
+        return 0;
     }
+    int height() const {
+        if (hdr) return hdr.height();
+        if (ldr) return ldr.height();
+        return 0;
+    }
+
+    // pixel data
+    ym::image<ym::vec4f> hdr;
+    ym::image<ym::vec4b> ldr;
 };
 
 //
 // Initializes an image
 //
-simage* make_image(int width, int height, int ncomp, bool hdr) {
-    return new simage(width, height, ncomp, hdr);
+yimage make_image(int width, int height, bool hdr) {
+    auto img = yimage();
+    if (hdr)
+        img.hdr = ym::image<ym::vec4f>(width, height);
+    else
+        img.ldr = ym::image<ym::vec4b>(width, height);
+    return img;
 }
 
 //
 // Loads an image
 //
-simage* load_image(const std::string& filename) {
-    auto img = new simage();
+yimage load_image(const std::string& filename) {
+    auto img = yimage();
     auto ext = yu::path::get_extension(filename);
     if (ext == ".hdr") {
-        img->hdr =
-            yimg::load_imagef(filename, img->width, img->height, img->ncomp);
-
+        img.hdr = yimg::load_image4f(filename);
     } else {
-        img->ldr =
-            yimg::load_image(filename, img->width, img->height, img->ncomp);
+        img.ldr = yimg::load_image4b(filename);
+    }
+    if (!img.ldr && !img.hdr) {
+        printf("could not load image %s\f", filename.c_str());
+        exit(0);
     }
     return img;
 }
@@ -99,115 +92,68 @@ simage* load_image(const std::string& filename) {
 //
 // Saves an image
 //
-void save_image(const std::string& filename, const simage* img) {
-    if (img->ldr) {
-        yimg::save_image(
-            filename, img->width, img->height, img->ncomp, img->ldr);
-    } else if (img->hdr) {
-        yimg::save_imagef(
-            filename, img->width, img->height, img->ncomp, img->hdr);
-
-    } else {
-        assert(false);
-    }
-}
-
-//
-// Resize image.
-//
-simage* resize_image(const simage* img, int res_width, int res_height) {
-    auto res = new simage();
-    if (img->hdr) {
-        yimg::resize_image(img->width, img->height, img->ncomp, img->hdr,
-            res->width, res->height, res->hdr);
-    } else if (img->ldr) {
-        yimg::resize_image(img->width, img->height, img->ncomp, img->ldr,
-            res->width, res->height, res->ldr);
-
-    } else {
-        assert(false);
-    }
-    return res;
+void save_image(const std::string& filename, const yimage& img) {
+    if (img.ldr) { yimg::save_image4b(filename, img.ldr); }
+    if (img.hdr) { yimg::save_image4f(filename, img.hdr); }
 }
 
 //
 // Tone mapping HDR to LDR images.
 //
-simage* tonemap_image(
-    simage* hdr, float exposure, ym::tonemap_type tm, float gamma) {
-    if (!hdr->hdr) throw std::invalid_argument("tonemap hdr only");
-    auto ldr = make_image(hdr->width, hdr->height, hdr->ncomp, false);
-    if (hdr->ncomp == 3) {
-        tonemap_image(hdr->width, hdr->height, (ym::vec3f*)hdr->hdr,
-            (ym::vec3b*)ldr->ldr, tm, exposure, gamma);
-    } else {
-        tonemap_image(hdr->width, hdr->height, (ym::vec4f*)hdr->hdr,
-            (ym::vec4b*)ldr->ldr, tm, exposure, gamma);
+yimage tonemap_image(
+    const yimage& hdr, float exposure, ym::tonemap_type tm, float gamma) {
+    if (!hdr.hdr) {
+        printf("tonemap hdr only\n");
+        exit(1);
     }
+    auto ldr = make_image(hdr.width(), hdr.height(), false);
+    tonemap_image(hdr.hdr, ldr.ldr, tm, exposure, gamma);
     return ldr;
 }
 
 //
 // Resize image.
 //
-simage* resize_image(simage* img, int res_width, int res_height) {
+yimage resize_image(const yimage& img, int res_width, int res_height) {
     if (res_width < 0 && res_height < 0)
         throw std::invalid_argument("at least argument should be >0");
     if (res_width < 0)
         res_width =
-            (int)std::round(img->width * (res_height / (float)img->height));
+            (int)std::round(img.width() * (res_height / (float)img.height()));
     if (res_height < 0)
         res_height =
-            (int)std::round(img->height * (res_width / (float)img->width));
-    auto res = make_image(res_width, res_height, img->ncomp, (bool)img->hdr);
-    if (img->hdr)
-        yimg::resize_image(img->width, img->height, img->ncomp, img->hdr,
-            res_width, res_height, res->hdr);
-    if (img->ldr)
-        yimg::resize_image(img->width, img->height, img->ncomp, img->ldr,
-            res_width, res_height, res->ldr);
+            (int)std::round(img.height() * (res_width / (float)img.width()));
+    auto res = make_image(res_width, res_height, (bool)img.hdr);
+    if (img.hdr) yimg::resize_image(img.hdr, res.hdr);
+    if (img.ldr) yimg::resize_image(img.ldr, res.ldr);
     return res;
 }
 
-simage* make_image_grid(const std::vector<simage*>& imgs, int tilex) {
+yimage make_image_grid(const std::vector<yimage>& imgs, int tilex) {
     auto nimgs = (int)imgs.size();
-    auto ret = new simage();
-    ret->width = imgs[0]->width * tilex;
-    ret->height = imgs[0]->height * (nimgs / tilex + ((nimgs % tilex) ? 1 : 0));
-    ret->ncomp = imgs[0]->ncomp;
-    auto nvalues = ret->width * ret->height * ret->ncomp;
-    if (imgs[0]->hdr) {
-        ret->hdr = new float[nvalues];
-        memset(ret->hdr, 0, sizeof(float) * nvalues);
-    } else {
-        ret->ldr = new byte[nvalues];
-        memset(ret->ldr, 0, sizeof(byte) * nvalues);
-    }
+    auto width = imgs[0].width() * tilex;
+    auto height =
+        imgs[0].height() * (nimgs / tilex + ((nimgs % tilex) ? 1 : 0));
+    auto ret = make_image(width, height, (bool)imgs[0].hdr);
     auto img_idx = 0;
-    for (auto img : imgs) {
-        if (img->width != imgs[0]->width || img->height != imgs[0]->height ||
-            img->ncomp != imgs[0]->ncomp) {
-            throw std::invalid_argument(
-                "images of different sizes are not accepted");
+    for (auto& img : imgs) {
+        if (img.width() != imgs[0].width() ||
+            img.height() != imgs[0].height()) {
+            printf("images of different sizes are not accepted\n");
+            exit(1);
         }
-        auto ox = (img_idx % tilex) * img->width,
-             oy = (img_idx / tilex) * img->height;
-        if (ret->hdr) {
-            for (auto j = 0; j < img->height; j++) {
-                for (auto i = 0; i < img->width; i++) {
-                    auto retp = ret->hdr +
-                                ((j + oy) * ret->width + i + ox) * ret->ncomp;
-                    auto imgp = img->hdr + (j * img->width + i) * img->ncomp;
-                    for (auto c = 0; c < ret->ncomp; c++) retp[c] = imgp[c];
+        auto ox = (img_idx % tilex) * img.width(),
+             oy = (img_idx / tilex) * img.height();
+        if (ret.hdr) {
+            for (auto j = 0; j < img.height(); j++) {
+                for (auto i = 0; i < img.width(); i++) {
+                    ret.hdr[{i + ox, j + oy}] = img.hdr[{i, j}];
                 }
             }
         } else {
-            for (auto j = 0; j < img->height; j++) {
-                for (auto i = 0; i < img->width; i++) {
-                    auto retp = ret->ldr +
-                                ((j + oy) * ret->width + i + ox) * ret->ncomp;
-                    auto imgp = img->ldr + (j * img->width + i) * img->ncomp;
-                    for (auto c = 0; c < ret->ncomp; c++) retp[c] = imgp[c];
+            for (auto j = 0; j < img.height(); j++) {
+                for (auto i = 0; i < img.width(); i++) {
+                    ret.ldr[{i + ox, j + oy}] = img.ldr[{i, j}];
                 }
             }
         }
@@ -215,9 +161,9 @@ simage* make_image_grid(const std::vector<simage*>& imgs, int tilex) {
     return ret;
 }
 
-simage* make_image_grid(
-    const std::vector<simage*>& imgs, int tilex, int width, int height) {
-    auto resized = std::vector<simage*>();
+yimage make_image_grid(
+    const std::vector<yimage>& imgs, int tilex, int width, int height) {
+    auto resized = std::vector<yimage>();
     for (auto img : imgs) resized.push_back(resize_image(img, width, height));
     return make_image_grid(resized, tilex);
 }
@@ -250,11 +196,11 @@ int main(int argc, char* argv[]) {
     check_parser(parser);
 
     // load images
-    std::vector<simage*> imgs;
+    std::vector<yimage> imgs;
     for (auto filename : filenames) imgs.push_back(load_image(filename));
 
     // decalre output
-    auto out = (simage*)nullptr;
+    auto out = yimage();
 
     // switch on commands
     if (command == "resize") { out = resize_image(imgs[0], width, height); }
@@ -264,10 +210,6 @@ int main(int argc, char* argv[]) {
 
     // save output
     save_image(output, out);
-
-    // cleanup
-    for (auto img : imgs) delete img;
-    delete out;
 
     // done
     return 0;

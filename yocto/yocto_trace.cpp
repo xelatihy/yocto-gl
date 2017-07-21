@@ -32,6 +32,8 @@
 #include "yocto_bvh.h"
 #endif
 
+#include "yocto_utils.h"
+
 #include <map>
 
 //
@@ -2246,7 +2248,33 @@ void trace_image(const scene* scn, int width, int height, ym::vec4f* pixels,
 struct render_buffers {
     // rendered image
     ym::image4f img;
+
+    // progressive state
+    int cur_sample = 0, cur_block = 0;
+    std::vector<ym::vec4i> blocks;
+
+    // pool
+    yu::concurrent::thread_pool* pool = nullptr;
+    // image blocks
+
+    // cleanup
+    ~render_buffers() {
+        if (pool) yu::concurrent::clear_pool(pool);
+    }
 };
+
+//
+// Make image blocks
+//
+std::vector<ym::vec4i> make_blocks(int w, int h, int bs) {
+    std::vector<ym::vec4i> blocks;
+    for (int j = 0; j < h; j += bs) {
+        for (int i = 0; i < w; i += bs) {
+            blocks.push_back({i, j, ym::min(bs, w - i), ym::min(bs, h - j)});
+        }
+    }
+    return blocks;
+}
 
 //
 // Initialize buffers
@@ -2254,19 +2282,37 @@ struct render_buffers {
 render_buffers* init_buffers(int width, int height) {
     auto buffers = new render_buffers();
     buffers->img = ym::image4f(width, height);
+    buffers->pool = yu::concurrent::make_pool();
+    buffers->blocks = make_blocks(width, height, 32);
     return buffers;
 }
 
-///
-/// Grabs the image from the buffers
-///
+//
+// Grabs the image from the buffers
+//
 ym::image4f& get_traced_image_ref(render_buffers* buffers) {
     return buffers->img;
 }
 
-///
-/// Trace a block of samples
-///
+//
+// Clears the buffers for reuse
+//
+void clear_buffers(render_buffers* buffers) {
+    buffers->img.set({0, 0, 0, 0});
+    buffers->cur_sample = 0;
+    buffers->cur_block = 0;
+}
+
+//
+// Grt the current sample count
+//
+int get_cur_sample(const render_buffers* buffers) {
+    return buffers->cur_sample;
+}
+
+//
+// Trace a block of samples
+//
 void trace_block(const scene* scn, render_buffers* buffers, int block_x,
     int block_y, int block_width, int block_height, int samples_min,
     int samples_max, const render_params& params) {
@@ -2274,10 +2320,84 @@ void trace_block(const scene* scn, render_buffers* buffers, int block_x,
         samples_min, samples_max, params);
 }
 
-///
-/// Clear buffers
-///
+//
+// Clear buffers
+//
 void free_buffers(render_buffers* buffers) { delete buffers; }
+
+//
+// Trace a batch of samples.
+//
+bool trace_next_samples(const scene* scn, render_buffers* buffers, int nsamples,
+    const render_params& params) {
+    if (buffers->cur_sample >= params.nsamples) return false;
+    nsamples = ym::min(nsamples, params.nsamples - buffers->cur_sample);
+    if (buffers->pool) {
+        yu::concurrent::parallel_for(buffers->pool, (int)buffers->blocks.size(),
+            [buffers, scn, nsamples, &params](int idx) {
+                auto block = buffers->blocks[idx];
+                ytrace::trace_block(scn, buffers, block[0], block[1], block[2],
+                    block[3], buffers->cur_sample,
+                    buffers->cur_sample + nsamples, params);
+            });
+    } else {
+        for (auto idx = 0; idx < (int)buffers->blocks.size(); idx++) {
+            auto block = buffers->blocks[idx];
+            ytrace::trace_block(scn, buffers, block[0], block[1], block[2],
+                block[3], buffers->cur_sample, buffers->cur_sample + nsamples,
+                params);
+        }
+    }
+    buffers->cur_sample += nsamples;
+    return true;
+}
+
+//
+// Trace nblocks up to a whole image.
+//
+bool trace_next_blocks(const scene* scn, render_buffers* buffers, int nblocks,
+    const render_params& params) {
+    if (buffers->cur_sample >= params.nsamples) return false;
+    nblocks =
+        ym::min(nblocks, (int)buffers->blocks.size() - buffers->cur_block);
+    if (buffers->pool) {
+        yu::concurrent::parallel_for(
+            buffers->pool, nblocks, [buffers, scn, &params](int idx) {
+                auto block = buffers->blocks[buffers->cur_block + idx];
+                ytrace::trace_block(scn, buffers, block[0], block[1], block[2],
+                    block[3], buffers->cur_sample, buffers->cur_sample + 1,
+                    params);
+            });
+    } else {
+        for (auto idx = 0; idx < nblocks; idx++) {
+            auto block = buffers->blocks[buffers->cur_block + idx];
+            ytrace::trace_block(scn, buffers, block[0], block[1], block[2],
+                block[3], buffers->cur_sample, buffers->cur_sample + 1, params);
+        }
+    }
+    buffers->cur_block += nblocks;
+    if (buffers->cur_block == buffers->blocks.size()) {
+        buffers->cur_block = 0;
+        buffers->cur_sample++;
+    }
+    return true;
+}
+
+//
+// Starts an async render batch.
+//
+void trace_async_start(const scene* scn, render_buffers* buffers, int nsamples,
+    const render_params& params) {}
+
+//
+// Stops an async render batch.
+//
+void trace_async_stop(render_buffers* buffers) {}
+
+//
+// Wait for an async render batch to complete.
+//
+void trace_async_wait(render_buffers* buffers) {}
 
 }  // namespace ytrace
 

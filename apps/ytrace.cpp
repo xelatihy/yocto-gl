@@ -111,64 +111,26 @@ bool update(yscene* scn) {
         // render preview
         auto pparams = scn->trace_params;
         pparams.nsamples = 1;
-        ytrace::trace_image(scn->trace_scene, scn->trace_preview_width,
-            scn->trace_preview_height, scn->trace_preview.data(), pparams);
+        ytrace::clear_buffers(scn->trace_buffers);
+        ytrace::clear_buffers(scn->preview_buffers);
         auto& img = ytrace::get_traced_image_ref(scn->trace_buffers);
-        for (auto qj = 0; qj < scn->trace_preview_height; qj++) {
-            for (auto qi = 0; qi < scn->trace_preview_width; qi++) {
-                for (auto j = qj * scn->trace_block_size;
-                     j <
-                     ym::min((qj + 1) * scn->trace_block_size, img.height());
-                     j++) {
-                    for (auto i = qi * scn->trace_block_size;
-                         i <
-                         ym::min((qi + 1) * scn->trace_block_size, img.width());
-                         i++) {
-                        img[{i, j}] = scn->trace_preview[{qi, qj}];
-                    }
-                }
-            }
-        }
+        ytrace::trace_next_samples(
+            scn->trace_scene, scn->preview_buffers, 1, scn->trace_params);
+        auto& preview = ytrace::get_traced_image_ref(scn->preview_buffers);
+        yimg::resize_image(preview, img, yimg::resize_filter::box);
         yglu::update_texture(scn->trace_texture_id, img.width(), img.height(),
             4, (float*)img.data(), false);
-
-        // reset current counters
-        scn->trace_cur_sample = 0;
-        scn->trace_cur_block = 0;
         scn->scene_updated = false;
     } else {
-        if (scn->trace_cur_sample == scn->trace_params.nsamples) return false;
-        for (auto b = 0; scn->trace_cur_block < scn->trace_blocks.size() &&
-                         b < scn->trace_blocks_per_update;
-             scn->trace_cur_block++, b++) {
-            auto block = scn->trace_blocks[scn->trace_cur_block];
-            yu::concurrent::run_async([scn, block]() {
-                ytrace::trace_block(scn->trace_scene, scn->trace_buffers,
-                    block[0], block[1], block[2], block[3],
-                    scn->trace_cur_sample, scn->trace_cur_sample + 1,
-                    scn->trace_params);
-            });
+        auto updated =
+            ytrace::trace_next_blocks(scn->trace_scene, scn->trace_buffers,
+                scn->trace_blocks_per_update, scn->trace_params);
+        if (updated) {
+            auto& img = ytrace::get_traced_image_ref(scn->trace_buffers);
+            yglu::update_texture(scn->trace_texture_id, img.width(),
+                img.height(), 4, (float*)img.data(), false);
         }
-        yu::concurrent::wait_pool();
-        auto& img = ytrace::get_traced_image_ref(scn->trace_buffers);
-        yglu::update_texture(scn->trace_texture_id, img.width(), img.height(),
-            4, (float*)img.data(), false);
-        if (scn->trace_cur_block == scn->trace_blocks.size()) {
-            scn->trace_cur_block = 0;
-            if (scn->trace_save_progressive &&
-                !((scn->trace_cur_sample + 1) % scn->trace_save_progressive)) {
-                auto imfilename =
-                    yu::path::get_dirname(scn->imfilename) +
-                    yu::path::get_basename(scn->imfilename) +
-                    yu::string::format(".%04d", scn->trace_cur_sample + 1) +
-                    yu::path::get_extension(scn->imfilename);
-                log_msgf(log_level::info, "ytrace", "saving image %s",
-                    imfilename.c_str());
-                save_image(
-                    imfilename, img, scn->exposure, scn->tonemap, scn->gamma);
-            }
-            scn->trace_cur_sample++;
-        }
+        return updated;
     }
 
     return true;
@@ -208,15 +170,8 @@ void render_offline(yscene* scn) {
         }
         log_msgf(log_level::info, "ytrace", "rendering sample %4d/%d",
             cur_sample, scn->trace_params.nsamples);
-        yu::concurrent::parallel_for(
-            (int)scn->trace_blocks.size(), [=](int cur_block) {
-                auto block = scn->trace_blocks[cur_block];
-                ytrace::trace_block(scn->trace_scene, scn->trace_buffers,
-                    block[0], block[1], block[2], block[3], cur_sample,
-                    std::min(cur_sample + scn->trace_batch_size,
-                        scn->trace_params.nsamples),
-                    scn->trace_params);
-            });
+        ytrace::trace_next_samples(scn->trace_scene, scn->trace_buffers,
+            scn->trace_batch_size, scn->trace_params);
     }
     log_msgf(log_level::info, "ytrace", "rendering done");
 
@@ -475,14 +430,9 @@ int main(int argc, char* argv[]) {
     if (!scn->interactive) {
         render_offline(scn);
     } else {
-        // image rendering params
-        scn->trace_preview_width = width / scn->trace_block_size;
-        scn->trace_preview_height = height / scn->trace_block_size;
-        scn->trace_preview.resize(
-            scn->trace_preview_width, scn->trace_preview_height, {0, 0, 0, 0});
+        scn->preview_buffers = ytrace::init_buffers(
+            width / scn->trace_block_size, height / scn->trace_block_size);
         scn->scene_updated = true;
-
-        // run interface
         run_ui(scn, width, height, "ytrace", init_draw, draw_image, update);
     }
 #else
