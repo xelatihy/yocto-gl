@@ -773,6 +773,14 @@ bool trace_next_samples(const scene* scn, render_buffers* buffers, int nsamples,
     const render_params& params);
 
 ///
+/// Trace the whole image
+///
+inline void trace_image(
+    const scene* scn, render_buffers* buffers, const render_params& params) {
+    trace_next_samples(scn, buffers, params.nsamples, params);
+}
+
+///
 /// Trace the next nblocks blocks up to a whole image.
 ///
 bool trace_next_blocks(const scene* scn, render_buffers* buffers, int nblocks,

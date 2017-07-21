@@ -63,6 +63,7 @@ for internal acceleration. Disable this by setting YTRACE_NO_BVH.
 
 ## History
 
+- v 0.20: buffer-based api
 - v 0.19: explicit material models
 - v 0.18: simpler texture creation functions
 - v 0.17: move to rgba per-vertex color
@@ -803,6 +804,22 @@ render_buffers* init_buffers(int width, int height);
 
 Initialize buffers
 
+### Function free_buffers()
+
+~~~ .cpp
+void free_buffers(render_buffers*);
+~~~
+
+Clear buffers
+
+### Function clear_buffers()
+
+~~~ .cpp
+void clear_buffers(render_buffers* buffers);
+~~~
+
+Clears the buffers for reuse
+
 ### Function get_traced_image_ref()
 
 ~~~ .cpp
@@ -810,6 +827,14 @@ ym::image4f& get_traced_image_ref(render_buffers* buffers);
 ~~~
 
 Grabs a reference to the image from the buffers
+
+### Function get_cur_sample()
+
+~~~ .cpp
+int get_cur_sample(const render_buffers* buffers);
+~~~
+
+Gets the current sample number
 
 ### Function trace_block()
 
@@ -821,11 +846,30 @@ void trace_block(const scene* scn, render_buffers* buffers, int block_x,
 
 Trace a block of samples
 
-### Function free_buffers()
+### Function trace_next_samples()
 
 ~~~ .cpp
-void free_buffers(render_buffers*);
+bool trace_next_samples(const scene* scn, render_buffers* buffers, int nsamples,
+    const render_params& params);
 ~~~
 
-Clear buffers
+Trace the next nsamples samples.
+
+### Function trace_image()
+
+~~~ .cpp
+inline void trace_image(
+    const scene* scn, render_buffers* buffers, const render_params& params);
+~~~
+
+Trace the whole image
+
+### Function trace_next_blocks()
+
+~~~ .cpp
+bool trace_next_blocks(const scene* scn, render_buffers* buffers, int nblocks,
+    const render_params& params);
+~~~
+
+Trace the next nblocks blocks up to a whole image.
 
