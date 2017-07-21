@@ -1604,8 +1604,7 @@ inline void draw_edit_widgets(ygui::window* win, ygltf::scene_group* gscn,
         auto scn = (yscene*)ygui::get_user_pointer(win);
         auto dirname = yu::path::get_dirname(scn->filename);
         try {
-            auto ext = yu::path::get_extension(dirname + txt->path);
-            if (ext == ".hdr") {
+            if (yimg::is_hdr_filename(txt->path)) {
                 txt->hdr = yimg::load_image4f(dirname + txt->path);
             } else {
                 txt->ldr = yimg::load_image4b(dirname + txt->path);

@@ -37,18 +37,14 @@ using namespace yu::logging;
 //
 // image saving
 //
-void save_image(const std::string& filename, const ym::image4f& hdr,
+bool save_image(const std::string& filename, const ym::image4f& hdr,
     float exposure, ym::tonemap_type tonemap, float gamma) {
-    auto ext = yu::path::get_extension(filename);
-    if (ext == ".hdr") {
-        yimg::save_image4f(filename, hdr);
-    } else if (ext == ".png") {
+    if (yimg::is_hdr_filename(filename)) {
+        return yimg::save_image4f(filename, hdr);
+    } else {
         auto ldr = ym::image4b(hdr.width(), hdr.height());
         ym::tonemap_image(hdr, ldr, tonemap, exposure, gamma);
-        yimg::save_image4b(filename, ldr);
-    } else {
-        printf("supports only hdr and png for image writing\n");
-        return;
+        return yimg::save_image4b(filename, ldr);
     }
 }
 

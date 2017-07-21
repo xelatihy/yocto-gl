@@ -79,8 +79,7 @@ bool load_images(params* pars) {
         pars->imgs.push_back(yimage());
         auto& img = pars->imgs.back();
         img.filename = filename;
-        auto ext = yu::path::get_extension(filename);
-        if (ext == ".hdr") {
+        if (yimg::is_hdr_filename(filename)) {
             img.hdr = yimg::load_image4f(filename);
         } else {
             img.ldr = yimg::load_image4b(filename);

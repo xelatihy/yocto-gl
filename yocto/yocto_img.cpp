@@ -31,8 +31,6 @@
 #include <cmath>
 #include <map>
 
-#ifndef YIMG_NO_STBIMAGE
-
 #ifndef _WIN32
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
@@ -58,7 +56,8 @@
 #pragma GCC diagnostic pop
 #endif
 
-#endif
+#define TINYEXR_IMPLEMENTATION
+#include "ext/tinyexr.h"
 
 namespace yimg {
 //
@@ -75,7 +74,7 @@ std::string get_extension(const std::string& filename) {
 //
 bool is_hdr_filename(const std::string& filename) {
     auto ext = get_extension(filename);
-    return ext == ".hdr";
+    return ext == ".hdr" || ext == ".exr";
 }
 
 //
@@ -93,9 +92,17 @@ ym::image4b load_image4b(const std::string& filename) {
 // Loads an hdr image.
 //
 ym::image4f load_image4f(const std::string& filename) {
+    auto ext = get_extension(filename);
     auto w = 0, h = 0, c = 0;
-    auto pixels =
-        std::unique_ptr<float>(stbi_loadf(filename.c_str(), &w, &h, &c, 4));
+    auto pixels = std::unique_ptr<float>(nullptr);
+    if (ext == ".exr") {
+        auto pixels_ = (float*)nullptr;
+        if (!LoadEXR(&pixels_, &w, &h, filename.c_str(), nullptr))
+            pixels = std::unique_ptr<float>(pixels_);
+    } else {
+        pixels =
+            std::unique_ptr<float>(stbi_loadf(filename.c_str(), &w, &h, &c, 4));
+    }
     if (!pixels) return {};
     return ym::image4f(w, h, (ym::vec4f*)pixels.get());
 }
@@ -118,6 +125,10 @@ bool save_image4f(const std::string& filename, const ym::image4f& img) {
     if (get_extension(filename) == ".hdr") {
         return stbi_write_hdr(
             filename.c_str(), img.width(), img.height(), 4, (float*)img.data());
+    }
+    if (get_extension(filename) == ".exr") {
+        return !SaveEXR(
+            (float*)img.data(), img.width(), img.height(), 4, filename.c_str());
     }
     return false;
 }

@@ -17,6 +17,7 @@ stb_image_resize.h.
 
 ## History
 
+- v 0.5: exr support in some io functions
 - v 0.4: new filtering methods
 - v 0.3: use reference interface for images
 - v 0.2: added whole image functions
