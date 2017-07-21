@@ -757,14 +757,19 @@ struct thread_pool;
 thread_pool* make_pool(int nthread = 0);
 
 ///
-/// Clear thread pool
+/// Free the thread pool
 ///
-void clear_pool(thread_pool* pool);
+void free_pool(thread_pool*& pool);
 
 ///
 /// Wait for all jobs to finish
 ///
 void wait_pool(thread_pool* pool);
+
+///
+/// Clear all jobs
+///
+void clear_pool(thread_pool* pool);
 
 ///
 /// Parallel for implementation
@@ -782,6 +787,11 @@ std::shared_future<void> run_async(
 /// Wait for all jobs to finish on a global thread pool
 ///
 void wait_pool();
+
+///
+/// Clear all jobs on a global thread pool
+///
+void clear_pool();
 
 ///
 /// Runs a task asynchronously onto a global thread pool

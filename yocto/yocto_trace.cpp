@@ -1827,7 +1827,7 @@ static point sample_light(
 // Offsets a ray origin to avoid self-intersection.
 //
 static inline ym::ray3f offset_ray(
-    const point& pt, const ym::vec3f& w, const render_params& params) {
+    const point& pt, const ym::vec3f& w, const trace_params& params) {
     if (dot(w, pt.frame.z) > 0) {
         return ym::ray3f(
             pt.frame.o + pt.frame.z * params.ray_eps, w, params.ray_eps);
@@ -1841,7 +1841,7 @@ static inline ym::ray3f offset_ray(
 // Offsets a ray origin to avoid self-intersection.
 //
 static inline ym::ray3f offset_ray(
-    const point& pt, const point& pt2, const render_params& params) {
+    const point& pt, const point& pt2, const trace_params& params) {
     auto ray_dist = (!pt2.env) ? ym::dist(pt.frame.o, pt2.frame.o) : FLT_MAX;
     return ym::ray3f(pt.frame.o + pt.frame.z * params.ray_eps, -pt2.wo,
         params.ray_eps, ray_dist - 2 * params.ray_eps);
@@ -1873,7 +1873,7 @@ static ym::vec3f eval_transparency(const point& pt) {
 // Test occlusion
 //
 static ym::vec3f eval_transmission(const scene* scn, const point& pt,
-    const point& lpt, const render_params& params) {
+    const point& lpt, const trace_params& params) {
     if (scn->shadow_transmission) {
         auto cpt = pt;
         auto weight = ym::vec3f{1, 1, 1};
@@ -1904,7 +1904,7 @@ static inline float weight_mis(float w0, float w1) {
 // Recursive path tracing.
 //
 static ym::vec4f shade_pathtrace(const scene* scn, const ym::ray3f& ray,
-    sampler* smp, const render_params& params) {
+    sampler* smp, const trace_params& params) {
     // scn intersection
     auto pt = intersect_scene(scn, ray);
     if (!pt.ist || (pt.env && params.envmap_invisible)) return ym::zero4f;
@@ -1983,7 +1983,7 @@ static ym::vec4f shade_pathtrace(const scene* scn, const ym::ray3f& ray,
 // Recursive path tracing.
 //
 static ym::vec4f shade_pathtrace_std(const scene* scn, const ym::ray3f& ray,
-    sampler* smp, const render_params& params) {
+    sampler* smp, const trace_params& params) {
     // scn intersection
     auto pt = intersect_scene(scn, ray);
     if (!pt.ist || (pt.env && params.envmap_invisible)) return ym::zero4f;
@@ -2054,7 +2054,7 @@ static ym::vec4f shade_pathtrace_std(const scene* scn, const ym::ray3f& ray,
 // Recursive path tracing.
 //
 static ym::vec4f shade_pathtrace_hack(const scene* scn, const ym::ray3f& ray,
-    sampler* smp, const render_params& params) {
+    sampler* smp, const trace_params& params) {
     // scn intersection
     auto pt = intersect_scene(scn, ray);
     if (!pt.ist || (pt.env && params.envmap_invisible)) return ym::zero4f;
@@ -2135,7 +2135,7 @@ static ym::vec4f shade_pathtrace_hack(const scene* scn, const ym::ray3f& ray,
 // Direct illumination.
 //
 static ym::vec4f shade_direct(const scene* scn, const ym::ray3f& ray,
-    sampler* smp, const render_params& params) {
+    sampler* smp, const trace_params& params) {
     // scn intersection
     auto pt = intersect_scene(scn, ray);
     if (!pt.ist || (pt.env && params.envmap_invisible)) return ym::zero4f;
@@ -2167,7 +2167,7 @@ static ym::vec4f shade_direct(const scene* scn, const ym::ray3f& ray,
 // Eyelight for quick previewing.
 //
 static ym::vec4f shade_eyelight(const scene* scn, const ym::ray3f& ray,
-    sampler* smp, const render_params& params) {
+    sampler* smp, const trace_params& params) {
     // intersection
     point pt = intersect_scene(scn, ray);
     if (!pt.ist || (pt.env && params.envmap_invisible)) return ym::zero4f;
@@ -2186,14 +2186,14 @@ static ym::vec4f shade_eyelight(const scene* scn, const ym::ray3f& ray,
 // Shader function callback.
 //
 using shade_fn = ym::vec4f (*)(const scene* scn, const ym::ray3f& ray,
-    sampler* smp, const render_params& params);
+    sampler* smp, const trace_params& params);
 
 //
 // Renders a block of pixels. Public API, see above.
 //
-void trace_block(const scene* scn, int width, int height, ym::vec4f* img,
-    int block_x, int block_y, int block_width, int block_height,
-    int samples_min, int samples_max, const render_params& params) {
+void trace_block(const scene* scn, ym::vec4f* img, int block_x, int block_y,
+    int block_width, int block_height, int samples_min, int samples_max,
+    const trace_params& params) {
     auto cam = scn->cameras[params.camera_id];
     shade_fn shade;
     switch (params.stype) {
@@ -2208,8 +2208,8 @@ void trace_block(const scene* scn, int width, int height, ym::vec4f* img,
             for (auto s = samples_min; s < samples_max; s++) {
                 auto smp = make_sampler(i, j, s, params.nsamples, params.rtype);
                 auto rn = sample_next2f(&smp);
-                auto uv =
-                    ym::vec2f{(i + rn.x) / width, 1 - (j + rn.y) / height};
+                auto uv = ym::vec2f{
+                    (i + rn.x) / params.width, 1 - (j + rn.y) / params.height};
                 auto ray = eval_camera(cam, uv, sample_next2f(&smp));
                 auto l = shade(scn, ray, &smp, params);
                 if (!std::isfinite(l.x) || !std::isfinite(l.y) ||
@@ -2223,43 +2223,42 @@ void trace_block(const scene* scn, int width, int height, ym::vec4f* img,
                 lp += l;
             }
             if (params.progressive && samples_min > 0) {
-                img[j * width + i] =
-                    (img[j * width + i] * (float)samples_min + lp) /
+                img[j * params.width + i] =
+                    (img[j * params.width + i] * (float)samples_min + lp) /
                     (float)samples_max;
             } else {
-                img[j * width + i] = lp / (float)(samples_max - samples_min);
+                img[j * params.width + i] =
+                    lp / (float)(samples_max - samples_min);
             }
         }
     }
 }
 
 //
-// Renders the whole image. Public API, see above.
+// state for progressive rendering and denoising
 //
-void trace_image(const scene* scn, int width, int height, ym::vec4f* pixels,
-    const render_params& params) {
-    trace_block(scn, width, height, pixels, 0, 0, width, height, 0,
-        params.nsamples, params);
-}
-
-//
-// Buffers for progressive rendering and denoising
-//
-struct render_buffers {
+struct trace_state {
     // rendered image
     ym::image4f img;
 
     // progressive state
-    int cur_sample = 0, cur_block = 0;
+    int cur_sample = 0;
     std::vector<ym::vec4i> blocks;
 
     // pool
     yu::concurrent::thread_pool* pool = nullptr;
-    // image blocks
+
+    // render scene
+    const scene* scn = nullptr;
+    // render options
+    trace_params params = {};
 
     // cleanup
-    ~render_buffers() {
-        if (pool) yu::concurrent::clear_pool(pool);
+    ~trace_state() {
+        if (pool) {
+            yu::concurrent::clear_pool(pool);
+            yu::concurrent::free_pool(pool);
+        }
     }
 };
 
@@ -2277,127 +2276,105 @@ std::vector<ym::vec4i> make_blocks(int w, int h, int bs) {
 }
 
 //
-// Initialize buffers
+// Initialize state
 //
-render_buffers* init_buffers(int width, int height) {
-    auto buffers = new render_buffers();
-    buffers->img = ym::image4f(width, height);
-    buffers->pool = yu::concurrent::make_pool();
-    buffers->blocks = make_blocks(width, height, 32);
-    return buffers;
+trace_state* make_state() { return new trace_state(); }
+
+//
+// Initialize state
+//
+void init_state(
+    trace_state* state, const scene* scn, const trace_params& params) {
+    if (state->pool) {
+        yu::concurrent::clear_pool(state->pool);
+    } else {
+        state->pool = yu::concurrent::make_pool();
+    }
+    state->img = ym::image4f(params.width, params.height);
+    state->cur_sample = 0;
+    state->blocks = make_blocks(params.width, params.height, 32);
+    state->scn = scn;
+    state->params = params;
 }
 
 //
-// Grabs the image from the buffers
+// Grabs the image from the state
 //
-ym::image4f& get_traced_image_ref(render_buffers* buffers) {
-    return buffers->img;
-}
-
-//
-// Clears the buffers for reuse
-//
-void clear_buffers(render_buffers* buffers) {
-    buffers->img.set({0, 0, 0, 0});
-    buffers->cur_sample = 0;
-    buffers->cur_block = 0;
-}
+ym::image4f& get_traced_image(trace_state* state) { return state->img; }
 
 //
 // Grt the current sample count
 //
-int get_cur_sample(const render_buffers* buffers) {
-    return buffers->cur_sample;
-}
+int get_cur_sample(const trace_state* state) { return state->cur_sample; }
 
 //
 // Trace a block of samples
 //
-void trace_block(const scene* scn, render_buffers* buffers, int block_x,
-    int block_y, int block_width, int block_height, int samples_min,
-    int samples_max, const render_params& params) {
-    trace_block(scn, buffers->img, block_x, block_y, block_width, block_height,
-        samples_min, samples_max, params);
+void trace_block(trace_state* state, int block_x, int block_y, int block_width,
+    int block_height, int samples_min, int samples_max) {
+    trace_block(state->scn, state->img.data(), block_x, block_y, block_width,
+        block_height, samples_min, samples_max, state->params);
 }
 
 //
-// Clear buffers
+// Clear state
 //
-void free_buffers(render_buffers* buffers) { delete buffers; }
+void free_state(trace_state*& state) {
+    if (state) delete state;
+    state = nullptr;
+}
 
 //
 // Trace a batch of samples.
 //
-bool trace_next_samples(const scene* scn, render_buffers* buffers, int nsamples,
-    const render_params& params) {
-    if (buffers->cur_sample >= params.nsamples) return false;
-    nsamples = ym::min(nsamples, params.nsamples - buffers->cur_sample);
-    if (buffers->pool) {
-        yu::concurrent::parallel_for(buffers->pool, (int)buffers->blocks.size(),
-            [buffers, scn, nsamples, &params](int idx) {
-                auto block = buffers->blocks[idx];
-                ytrace::trace_block(scn, buffers, block[0], block[1], block[2],
-                    block[3], buffers->cur_sample,
-                    buffers->cur_sample + nsamples, params);
-            });
-    } else {
-        for (auto idx = 0; idx < (int)buffers->blocks.size(); idx++) {
-            auto block = buffers->blocks[idx];
-            ytrace::trace_block(scn, buffers, block[0], block[1], block[2],
-                block[3], buffers->cur_sample, buffers->cur_sample + nsamples,
-                params);
-        }
-    }
-    buffers->cur_sample += nsamples;
-    return true;
-}
-
-//
-// Trace nblocks up to a whole image.
-//
-bool trace_next_blocks(const scene* scn, render_buffers* buffers, int nblocks,
-    const render_params& params) {
-    if (buffers->cur_sample >= params.nsamples) return false;
-    nblocks =
-        ym::min(nblocks, (int)buffers->blocks.size() - buffers->cur_block);
-    if (buffers->pool) {
+bool trace_next_samples(trace_state* state, int nsamples) {
+    if (state->cur_sample >= state->params.nsamples) return false;
+    nsamples = ym::min(nsamples, state->params.nsamples - state->cur_sample);
+    if (state->pool) {
         yu::concurrent::parallel_for(
-            buffers->pool, nblocks, [buffers, scn, &params](int idx) {
-                auto block = buffers->blocks[buffers->cur_block + idx];
-                ytrace::trace_block(scn, buffers, block[0], block[1], block[2],
-                    block[3], buffers->cur_sample, buffers->cur_sample + 1,
-                    params);
+            state->pool, (int)state->blocks.size(), [state, nsamples](int idx) {
+                auto block = state->blocks[idx];
+                ytrace::trace_block(state, block[0], block[1], block[2],
+                    block[3], state->cur_sample, state->cur_sample + nsamples);
             });
     } else {
-        for (auto idx = 0; idx < nblocks; idx++) {
-            auto block = buffers->blocks[buffers->cur_block + idx];
-            ytrace::trace_block(scn, buffers, block[0], block[1], block[2],
-                block[3], buffers->cur_sample, buffers->cur_sample + 1, params);
+        for (auto idx = 0; idx < (int)state->blocks.size(); idx++) {
+            auto block = state->blocks[idx];
+            ytrace::trace_block(state, block[0], block[1], block[2], block[3],
+                state->cur_sample, state->cur_sample + nsamples);
         }
     }
-    buffers->cur_block += nblocks;
-    if (buffers->cur_block == buffers->blocks.size()) {
-        buffers->cur_block = 0;
-        buffers->cur_sample++;
-    }
+    state->cur_sample += nsamples;
     return true;
 }
 
-//
-// Starts an async render batch.
-//
-void trace_async_start(const scene* scn, render_buffers* buffers, int nsamples,
-    const render_params& params) {}
+///
+/// Starts an anyncrhounous renderer with a maximum of 256 samples.
+///
+void trace_async_start(trace_state* state) {
+    for (auto sample = 0; sample < state->params.nsamples; sample++) {
+        for (auto block_idx = 0; block_idx < state->blocks.size();
+             block_idx++) {
+            yu::concurrent::run_async(
+                state->pool, [state, sample, block_idx]() {
+                    auto block = state->blocks[block_idx];
+                    ytrace::trace_block(state, block[0], block[1], block[2],
+                        block[3], sample, sample + 1);
+                    if (block_idx == state->blocks.size() - 1) {
+                        state->cur_sample++;
+                    }
+                });
+        }
+    }
+}
 
-//
-// Stops an async render batch.
-//
-void trace_async_stop(render_buffers* buffers) {}
-
-//
-// Wait for an async render batch to complete.
-//
-void trace_async_wait(render_buffers* buffers) {}
+///
+/// Stop the asynchronous renderer.
+///
+void trace_async_stop(trace_state* state) {
+    if (!state->pool) return;
+    yu::concurrent::clear_pool(state->pool);
+}
 
 }  // namespace ytrace
 

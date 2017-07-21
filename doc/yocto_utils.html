@@ -710,18 +710,24 @@ length 10000 chars. Memory corruption will happen for longer strings.</p>
 
 <p>Initialize a thread pool with a certain number of threads (0 for
 defatul).</p>
-<h3>Function clear_pool()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">clear_pool</span><span class="p">(</span><span class="n">thread_pool</span><span class="o">*</span> <span class="n">pool</span><span class="p">);</span>
+<h3>Function free_pool()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">free_pool</span><span class="p">(</span><span class="n">thread_pool</span><span class="o">*&amp;</span> <span class="n">pool</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Clear thread pool</p>
+<p>Free the thread pool</p>
 <h3>Function wait_pool()</h3>
 <div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">wait_pool</span><span class="p">(</span><span class="n">thread_pool</span><span class="o">*</span> <span class="n">pool</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Wait for all jobs to finish</p>
+<h3>Function clear_pool()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">clear_pool</span><span class="p">(</span><span class="n">thread_pool</span><span class="o">*</span> <span class="n">pool</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Clear all jobs</p>
 <h3>Function parallel_for()</h3>
 <div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">parallel_for</span><span class="p">(</span>
     <span class="n">thread_pool</span><span class="o">*</span> <span class="n">pool</span><span class="p">,</span> <span class="kt">int</span> <span class="n">count</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">function</span><span class="o">&lt;</span><span class="kt">void</span><span class="p">(</span><span class="kt">int</span> <span class="n">idx</span><span class="p">)</span><span class="o">&gt;&amp;</span> <span class="n">task</span><span class="p">);</span>
@@ -742,6 +748,12 @@ defatul).</p>
 
 
 <p>Wait for all jobs to finish on a global thread pool</p>
+<h3>Function clear_pool()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">clear_pool</span><span class="p">();</span>
+</code></pre></div>
+
+
+<p>Clear all jobs on a global thread pool</p>
 <h3>Function run_async()</h3>
 <div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">shared_future</span><span class="o">&lt;</span><span class="kt">void</span><span class="o">&gt;</span> <span class="n">run_async</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">function</span><span class="o">&lt;</span><span class="kt">void</span><span class="p">()</span><span class="o">&gt;&amp;</span> <span class="n">task</span><span class="p">);</span>
 </code></pre></div>

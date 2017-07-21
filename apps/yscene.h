@@ -158,7 +158,7 @@ struct yscene {
     std::vector<ym::frame3f> simulation_initial_state;
 
     // trace
-    ytrace::render_params trace_params;
+    ytrace::trace_params trace_params;
     bool trace_save_progressive = false;
     int trace_block_size = 32;
     int trace_batch_size = 16;
@@ -169,21 +169,22 @@ struct yscene {
     uint trace_texture_id = 0;
     int trace_blocks_per_update = 8;
     std::vector<ym::vec4i> trace_blocks;
-    ytrace::render_buffers* trace_buffers = nullptr;
-    ytrace::render_buffers* preview_buffers = nullptr;
+    ytrace::trace_state* trace_state = nullptr;
+    ytrace::trace_state* preview_state = nullptr;
+    bool trace_async_rendering = false;
 
     // editing support
     void* selection = nullptr;
 
     ~yscene() {
+        if (simulation_scene) ysym::free_scene(simulation_scene);
+        if (trace_state) ytrace::free_state(trace_state);
+        if (preview_state) ytrace::free_state(preview_state);
+        if (trace_scene) ytrace::free_scene(trace_scene);
+        if (shstate) delete shstate;
         if (oscn) delete oscn;
         if (gscn) delete gscn;
         if (view_cam) delete view_cam;
-        if (shstate) delete shstate;
-        if (simulation_scene) ysym::free_scene(simulation_scene);
-        if (trace_scene) ytrace::free_scene(trace_scene);
-        if (trace_buffers) ytrace::free_buffers(trace_buffers);
-        if (preview_buffers) ytrace::free_buffers(preview_buffers);
     }
 };
 
@@ -1715,7 +1716,7 @@ void draw_widgets(ygui::window* win) {
         }
         if (scn->trace_scene) {
             ygui::label_widget(
-                win, "s", ytrace::get_cur_sample(scn->trace_buffers));
+                win, "s", ytrace::get_cur_sample(scn->trace_state));
             ygui::slider_widget(
                 win, "samples", &scn->trace_params.nsamples, 0, 1000000, 1);
             if (ygui::combo_widget(win, "shader type",
@@ -1956,7 +1957,7 @@ void run_ui(yscene* scn, int w, int h, const std::string& title, init_fn init,
 
         // handle mouse and keyboard for navigation
         if (!scn->gcam && !scn->ocam && mouse_button &&
-            mouse_pos != mouse_last && !ygui::get_widget_active(win)) {
+            !ygui::get_widget_active(win)) {
             if (scn->navigation_fps) {
                 auto dolly = 0.0f;
                 auto pan = ym::zero2f;
@@ -1969,9 +1970,7 @@ void run_ui(yscene* scn, int w, int h, const std::string& title, init_fn init,
                     case 3: pan = (mouse_pos - mouse_last) / 100.0f; break;
                     default: break;
                 }
-
                 ym::camera_fps(scn->view_cam->frame, {0, 0, 0}, rotate);
-                scn->scene_updated = true;
             } else {
                 auto dolly = 0.0f;
                 auto pan = ym::zero2f;
@@ -1987,8 +1986,8 @@ void run_ui(yscene* scn, int w, int h, const std::string& title, init_fn init,
 
                 ym::camera_turntable(scn->view_cam->frame, scn->view_cam->focus,
                     rotate, dolly, pan);
-                scn->scene_updated = true;
             }
+            scn->scene_updated = true;
         }
 
         // handle keytboard for navigation

@@ -1191,6 +1191,15 @@ struct ThreadPool {
         for (auto& Worker : threads) Worker.join();
     }
 
+    // empty the queue
+    void clear() {
+        {
+            std::unique_lock<std::mutex> lock_guard(queue_lock);
+            tasks.clear();
+        }
+        queue_condition.notify_all();
+    }
+
     // schedule an asynchronous taks
     std::shared_future<void> async(std::function<void()> task) {
         // Wrap the Task in a packaged_task to return a future object.
@@ -1200,7 +1209,7 @@ struct ThreadPool {
             std::unique_lock<std::mutex> lock_guard(queue_lock);
             assert(
                 !stop_flag && "Queuing a thread during ThreadPool destruction");
-            tasks.push(std::move(packaged_task));
+            tasks.push_back(std::move(packaged_task));
         }
         queue_condition.notify_one();
         return future.share();
@@ -1230,7 +1239,7 @@ struct ThreadPool {
                     std::unique_lock<std::mutex> lock_guard(completion_lock);
                 }
                 task = std::move(tasks.front());
-                tasks.pop();
+                tasks.pop_front();
             }
 
             task();
@@ -1245,7 +1254,7 @@ struct ThreadPool {
     }
 
     std::vector<std::thread> threads;
-    std::queue<std::packaged_task<void()>> tasks;
+    std::deque<std::packaged_task<void()>> tasks;
     std::mutex queue_lock;
     std::condition_variable queue_condition;
     std::mutex completion_lock;
@@ -1281,8 +1290,12 @@ thread_pool* make_pool(int nthread) {
 //
 // Clear thread pool
 //
-void clear_pool(thread_pool* pool) {
-    if (pool) delete pool;
+void free_pool(thread_pool*& pool) {
+    if (pool) {
+        clear_pool(pool);
+        delete pool;
+    }
+    pool = nullptr;
 }
 
 //
@@ -1297,6 +1310,11 @@ std::shared_future<void> run_async(
 // Wait for jobs to finish
 //
 void wait_pool(thread_pool* pool) { pool->tp->wait(); }
+
+//
+// Wait for jobs to finish
+//
+void clear_pool(thread_pool* pool) { pool->tp->clear(); }
 
 //
 // Parallel for implementation
@@ -1334,6 +1352,13 @@ std::shared_future<void> run_async(const std::function<void()>& task) {
 //
 void wait_pool() {
     if (global_pool) global_pool->tp->wait();
+}
+
+//
+// Wait for jobs to finish
+//
+void clear_pool() {
+    if (global_pool) clear_pool(global_pool);
 }
 
 //

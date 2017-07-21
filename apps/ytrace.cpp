@@ -60,7 +60,7 @@ void save_image(const std::string& filename, const ym::image4f& hdr,
 
 void init_draw(ygui::window* win) {
     auto scn = (yscene*)ygui::get_user_pointer(win);
-    auto& img = ytrace::get_traced_image_ref(scn->trace_buffers);
+    auto& img = ytrace::get_traced_image(scn->trace_state);
     scn->trace_texture_id = yglu::make_texture(
         img.width(), img.height(), 4, (float*)img.data(), false, false, true);
 }
@@ -73,9 +73,13 @@ void draw_image(ygui::window* win) {
     // begin frame
     yglu::clear_buffers(scn->background);
 
+    // update texture
+    auto& img = ytrace::get_traced_image(scn->trace_state);
+    yglu::update_texture(scn->trace_texture_id, img.width(), img.height(), 4,
+        (float*)img.data(), false);
+
     // draw image
     auto window_size = ygui::get_window_size(win);
-    auto img = ytrace::get_traced_image_ref(scn->trace_buffers);
     yglu::shade_image(scn->trace_texture_id, img.width(), img.height(),
         window_size[0], window_size[1], 0, 0, 1,
         (yglu::tonemap_type)scn->tonemap, scn->exposure, scn->gamma);
@@ -86,6 +90,9 @@ void draw_image(ygui::window* win) {
 
 bool update(yscene* scn) {
     if (scn->scene_updated) {
+        ytrace::trace_async_stop(scn->trace_state);
+        scn->trace_async_rendering = false;
+
         // update cameras
         ytrace::set_camera(scn->trace_scene, 0, scn->view_cam->frame,
             scn->view_cam->yfov, scn->view_cam->aspect, scn->view_cam->aperture,
@@ -109,30 +116,25 @@ bool update(yscene* scn) {
         }
 
         // render preview
+        ytrace::init_state(
+            scn->trace_state, scn->trace_scene, scn->trace_params);
         auto pparams = scn->trace_params;
+        pparams.width = scn->trace_params.width / scn->trace_block_size;
+        pparams.height = scn->trace_params.height / scn->trace_block_size;
         pparams.nsamples = 1;
-        ytrace::clear_buffers(scn->trace_buffers);
-        ytrace::clear_buffers(scn->preview_buffers);
-        auto& img = ytrace::get_traced_image_ref(scn->trace_buffers);
-        ytrace::trace_next_samples(
-            scn->trace_scene, scn->preview_buffers, 1, scn->trace_params);
-        auto& preview = ytrace::get_traced_image_ref(scn->preview_buffers);
+        ytrace::init_state(scn->preview_state, scn->trace_scene, pparams);
+        auto& img = ytrace::get_traced_image(scn->trace_state);
+        ytrace::trace_next_samples(scn->preview_state, 1);
+        auto& preview = ytrace::get_traced_image(scn->preview_state);
         yimg::resize_image(preview, img, yimg::resize_filter::box);
         yglu::update_texture(scn->trace_texture_id, img.width(), img.height(),
             4, (float*)img.data(), false);
-        scn->scene_updated = false;
-    } else {
-        auto updated =
-            ytrace::trace_next_blocks(scn->trace_scene, scn->trace_buffers,
-                scn->trace_blocks_per_update, scn->trace_params);
-        if (updated) {
-            auto& img = ytrace::get_traced_image_ref(scn->trace_buffers);
-            yglu::update_texture(scn->trace_texture_id, img.width(),
-                img.height(), 4, (float*)img.data(), false);
-        }
-        return updated;
-    }
 
+        scn->scene_updated = false;
+    } else if (!scn->trace_async_rendering) {
+        ytrace::trace_async_start(scn->trace_state);
+        scn->trace_async_rendering = true;
+    }
     return true;
 }
 
@@ -164,23 +166,20 @@ void render_offline(yscene* scn) {
                               yu::path::get_extension(scn->imfilename);
             log_msgf(log_level::info, "ytrace", "saving image %s",
                 imfilename.c_str());
-            save_image(imfilename,
-                ytrace::get_traced_image_ref(scn->trace_buffers), scn->exposure,
-                scn->tonemap, scn->gamma);
+            save_image(imfilename, ytrace::get_traced_image(scn->trace_state),
+                scn->exposure, scn->tonemap, scn->gamma);
         }
         log_msgf(log_level::info, "ytrace", "rendering sample %4d/%d",
             cur_sample, scn->trace_params.nsamples);
-        ytrace::trace_next_samples(scn->trace_scene, scn->trace_buffers,
-            scn->trace_batch_size, scn->trace_params);
+        ytrace::trace_next_samples(scn->trace_state, scn->trace_batch_size);
     }
     log_msgf(log_level::info, "ytrace", "rendering done");
 
     // save image
     log_msgf(
         log_level::info, "ytrace", "saving image %s", scn->imfilename.c_str());
-    save_image(scn->imfilename,
-        ytrace::get_traced_image_ref(scn->trace_buffers), scn->exposure,
-        scn->tonemap, scn->gamma);
+    save_image(scn->imfilename, ytrace::get_traced_image(scn->trace_state),
+        scn->exposure, scn->tonemap, scn->gamma);
 }
 
 // ---------------------------------------------------------------------------
@@ -422,7 +421,10 @@ int main(int argc, char* argv[]) {
     // initialize rendering objects
     auto width = (int)std::round(scn->view_cam->aspect * scn->resolution);
     auto height = scn->resolution;
-    scn->trace_buffers = ytrace::init_buffers(width, height);
+    scn->trace_params.width = width;
+    scn->trace_params.height = height;
+    scn->trace_state = ytrace::make_state();
+    ytrace::init_state(scn->trace_state, scn->trace_scene, scn->trace_params);
     scn->trace_blocks = make_trace_blocks(width, height, scn->trace_block_size);
 
 #ifndef YOCTO_NO_OPENGL
@@ -430,8 +432,7 @@ int main(int argc, char* argv[]) {
     if (!scn->interactive) {
         render_offline(scn);
     } else {
-        scn->preview_buffers = ytrace::init_buffers(
-            width / scn->trace_block_size, height / scn->trace_block_size);
+        scn->preview_state = ytrace::make_state();
         scn->scene_updated = true;
         run_ui(scn, width, height, "ytrace", init_draw, draw_image, update);
     }
