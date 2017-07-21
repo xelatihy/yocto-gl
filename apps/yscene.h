@@ -166,13 +166,11 @@ struct yscene {
     ytrace::scene* trace_scene = nullptr;
 
     // interactive trace
-    int trace_cur_sample = 0, trace_cur_block = 0;
     uint trace_texture_id = 0;
-    int trace_preview_width = 0, trace_preview_height = 0;
     int trace_blocks_per_update = 8;
-    ym::image<ym::vec4f> trace_preview;
     std::vector<ym::vec4i> trace_blocks;
     ytrace::render_buffers* trace_buffers = nullptr;
+    ytrace::render_buffers* preview_buffers = nullptr;
 
     // editing support
     void* selection = nullptr;
@@ -185,6 +183,7 @@ struct yscene {
         if (simulation_scene) ysym::free_scene(simulation_scene);
         if (trace_scene) ytrace::free_scene(trace_scene);
         if (trace_buffers) ytrace::free_buffers(trace_buffers);
+        if (preview_buffers) ytrace::free_buffers(preview_buffers);
     }
 };
 
@@ -1715,7 +1714,8 @@ void draw_widgets(ygui::window* win) {
             if (ygui::button_widget(win, "step")) { simulate_step(scn); }
         }
         if (scn->trace_scene) {
-            ygui::label_widget(win, "s", scn->trace_cur_sample);
+            ygui::label_widget(
+                win, "s", ytrace::get_cur_sample(scn->trace_buffers));
             ygui::slider_widget(
                 win, "samples", &scn->trace_params.nsamples, 0, 1000000, 1);
             if (ygui::combo_widget(win, "shader type",

@@ -2432,125 +2432,82 @@ bool load_images(glTF* gltf, const std::string& dirname, bool skip_missing,
 #ifndef YGL_NO_STBIMAGE
     for (auto image : gltf->images) {
         image->data = image_data();
-        if (image->bufferView) {
-            auto view = gltf->get(image->bufferView);
-            auto buffer = gltf->get(view->buffer);
-            if (!view || !buffer || view->byteStride) {
-                if (skip_missing) continue;
-                if (err) *err = "invalid image buffer view";
-                return false;
-            }
-            auto ext = std::string();
-            if (image->mimeType == glTFImageMimeType::ImagePng)
-                ext = "png";
-            else if (image->mimeType == glTFImageMimeType::ImageJpeg)
-                ext = "jpg";
-            else {
-                if (skip_missing) continue;
-                if (err) *err = "unsupported image format";
-                return false;
-            }
-            if (ext == "hdr") {
-                auto pixels = yimg::load_imagef_from_memory(ext,
-                    buffer->data.data() + view->byteOffset, view->byteLength,
-                    image->data.width, image->data.height, image->data.ncomp);
-                if (!pixels) {
+        if (image->bufferView || startsiwith(image->uri, "data:")) {
+            auto fake_filename = std::string();
+            auto buffer = std::string();
+            auto data = (unsigned char*)nullptr;
+            auto data_size = 0;
+            if (image->bufferView) {
+                auto view = gltf->get(image->bufferView);
+                auto buffer = gltf->get(view->buffer);
+                if (!view || !buffer || view->byteStride) {
                     if (skip_missing) continue;
-                    if (err) *err = "cannot load image from memory";
+                    if (err) *err = "invalid image buffer view";
                     return false;
                 }
-                image->data.dataf.assign(
-                    pixels, pixels + image->data.width * image->data.height *
-                                         image->data.ncomp);
-                free(pixels);
+                if (image->mimeType == glTFImageMimeType::ImagePng)
+                    fake_filename = "fake.png";
+                else if (image->mimeType == glTFImageMimeType::ImageJpeg)
+                    fake_filename = "fake.jpg";
+                else {
+                    if (skip_missing) continue;
+                    if (err) *err = "unsupported image format";
+                    return false;
+                }
+                data = buffer->data.data() + view->byteOffset;
+                data_size = view->byteLength;
             } else {
-                auto pixels = yimg::load_image_from_memory(ext,
-                    buffer->data.data() + view->byteOffset, view->byteLength,
-                    image->data.width, image->data.height, image->data.ncomp);
-                if (!pixels) {
+                // assume it is base64 and find ','
+                auto pos = image->uri.find(',');
+                if (pos == image->uri.npos) {
                     if (skip_missing) continue;
-                    if (err) *err = "cannot load image from memory";
+                    if (err) *err = "could not decode base64 data";
                     return false;
                 }
-                image->data.datab.assign(
-                    pixels, pixels + image->data.width * image->data.height *
-                                         image->data.ncomp);
-                free(pixels);
-            }
-        } else if (startsiwith(image->uri, "data:")) {
-            // assume it is base64 and find ','
-            auto pos = image->uri.find(',');
-            auto ext = std::string();
-            if (pos == image->uri.npos) {
-                if (skip_missing) continue;
-                if (err) *err = "could not decode base64 data";
-                return false;
-            }
-            auto header = image->uri.substr(0, pos);
-            for (auto format : {"png", "jpg", "jpeg", "tga", "ppm", "hdr"})
-                if (header.find(format) != header.npos) ext = format;
-            if (ext.empty()) {
-                if (skip_missing) continue;
-                if (err)
-                    *err = "unsupported embedded image format " +
-                           header.substr(0, pos);
-                return false;
-            }
-            // decode
-            auto data = _base64::base64_decode(image->uri.substr(pos + 1));
-            if (ext == "hdr") {
-                auto pixels = yimg::load_imagef_from_memory(ext,
-                    (unsigned char*)data.data(), data.size(), image->data.width,
-                    image->data.height, image->data.ncomp);
-                if (!pixels) {
+                auto header = image->uri.substr(0, pos);
+                for (auto format : {"png", "jpg", "jpeg", "tga", "ppm", "hdr"})
+                    if (header.find(format) != header.npos)
+                        fake_filename = std::string("fake.") + format;
+                if (yimg::is_hdr_filename(fake_filename)) {
                     if (skip_missing) continue;
-                    if (err) *err = "cannot load image from memory";
+                    if (err)
+                        *err = "unsupported embedded image format " +
+                               header.substr(0, pos);
                     return false;
                 }
-                image->data.dataf.assign(
-                    pixels, pixels + image->data.width * image->data.height *
-                                         image->data.ncomp);
-                free(pixels);
+                // decode
+                buffer = _base64::base64_decode(image->uri.substr(pos + 1));
+                data_size = (int)buffer.size();
+                data = (unsigned char*)buffer.data();
+            }
+            if (yimg::is_hdr_filename(fake_filename)) {
+                image->data.dataf = yimg::load_imagef_from_memory(fake_filename,
+                    data, data_size, image->data.width, image->data.height,
+                    image->data.ncomp);
             } else {
-                auto pixels = yimg::load_image_from_memory(ext,
-                    (unsigned char*)data.data(), data.size(), image->data.width,
-                    image->data.height, image->data.ncomp);
-                if (!pixels) {
-                    if (skip_missing) continue;
-                    if (err) *err = "cannot load image from memory";
-                    return false;
-                }
-                image->data.datab.assign(
-                    pixels, pixels + image->data.width * image->data.height *
-                                         image->data.ncomp);
-                free(pixels);
+                image->data.datab = yimg::load_image_from_memory(fake_filename,
+                    data, data_size, image->data.width, image->data.height,
+                    image->data.ncomp);
+            }
+            if (image->data.dataf.empty() && image->data.datab.empty()) {
+                if (skip_missing) continue;
+                if (err) *err = "cannot load image from memory";
+                return false;
             }
         } else {
-            auto ext = _get_extension(image->uri);
-            if (ext == ".hdr") {
-                auto pixels = yimg::load_image(_fix_path(dirname + image->uri),
+            auto filename = _fix_path(dirname + image->uri);
+            if (yimg::is_hdr_filename(filename)) {
+                image->data.dataf = yimg::load_imagef(filename,
                     image->data.width, image->data.height, image->data.ncomp);
-                if (!pixels) {
-                    if (skip_missing) continue;
-                    if (err) *err = "cannot load image from memory";
-                    return false;
-                }
-                image->data.dataf.assign(
-                    pixels, pixels + image->data.width * image->data.height *
-                                         image->data.ncomp);
-                free(pixels);
             } else {
-                auto pixels = yimg::load_image(_fix_path(dirname + image->uri),
-                    image->data.width, image->data.height, image->data.ncomp);
-                if (!pixels) {
-                    if (skip_missing) continue;
-                    if (err) *err = "cannot load image from memory";
-                    return false;
-                }
-                image->data.datab.assign(
-                    pixels, pixels + image->data.width * image->data.height *
-                                         image->data.ncomp);
-                free(pixels);
+                image->data.datab = yimg::load_image(
+                    _fix_path(dirname + image->uri), image->data.width,
+                    image->data.height, image->data.ncomp);
+            }
+            if (image->data.dataf.empty() && image->data.datab.empty()) {
+                if (skip_missing) continue;
+                if (err) *err = "cannot load image " + filename;
+                return false;
             }
         }
     }

@@ -441,6 +441,15 @@ const auto zero3i = zero_vec<int, 3>();
 /// 4-dimensional int zero vector
 const auto zero4i = zero_vec<int, 4>();
 
+/// 1-dimensional byte zero vector
+const auto zero1b = zero_vec<byte, 1>();
+/// 2-dimensional byte zero vector
+const auto zero2b = zero_vec<byte, 2>();
+/// 3-dimensional byte zero vector
+const auto zero3b = zero_vec<byte, 3>();
+/// 4-dimensional byte zero vector
+const auto zero4b = zero_vec<byte, 4>();
+
 /// iteration support
 template <typename T, int N>
 constexpr inline T* begin(vec<T, N>& a) {

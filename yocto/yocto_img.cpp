@@ -29,6 +29,7 @@
 #include "yocto_img.h"
 
 #include <cmath>
+#include <map>
 
 #ifndef YIMG_NO_STBIMAGE
 
@@ -67,6 +68,14 @@ std::string get_extension(const std::string& filename) {
     auto pos = filename.rfind('.');
     if (pos == std::string::npos) return "";
     return filename.substr(pos);
+}
+
+//
+// Check if an image is HDR based on filename
+//
+bool is_hdr_filename(const std::string& filename) {
+    auto ext = get_extension(filename);
+    return ext == ".hdr";
 }
 
 //
@@ -116,33 +125,51 @@ bool save_image4f(const std::string& filename, const ym::image4f& img) {
 //
 // Loads an image
 //
-float* load_imagef(
+std::vector<float> load_imagef(
     const std::string& filename, int& width, int& height, int& ncomp) {
-    return stbi_loadf(filename.c_str(), &width, &height, &ncomp, 0);
+    auto pixels = stbi_loadf(filename.c_str(), &width, &height, &ncomp, 0);
+    if (!pixels) return {};
+    auto ret = std::vector<float>(pixels, pixels + width * height * ncomp);
+    free(pixels);
+    return ret;
 }
 
 //
 // Loads an image
 //
-byte* load_image(
+std::vector<byte> load_image(
     const std::string& filename, int& width, int& height, int& ncomp) {
-    return stbi_load(filename.c_str(), &width, &height, &ncomp, 0);
+    auto pixels = stbi_load(filename.c_str(), &width, &height, &ncomp, 0);
+    if (!pixels) return {};
+    auto ret = std::vector<byte>(pixels, pixels + width * height * ncomp);
+    free(pixels);
+    return ret;
 }
 
 //
 // Loads an image from memory.
 //
-float* load_imagef_from_memory(const std::string& fmt, const byte* data,
-    int length, int& width, int& height, int& ncomp) {
-    return stbi_loadf_from_memory(data, length, &width, &height, &ncomp, 0);
+std::vector<float> load_imagef_from_memory(const std::string& filename,
+    const byte* data, int length, int& width, int& height, int& ncomp) {
+    auto pixels =
+        stbi_loadf_from_memory(data, length, &width, &height, &ncomp, 0);
+    if (!pixels) return {};
+    auto ret = std::vector<float>(pixels, pixels + width * height * ncomp);
+    free(pixels);
+    return ret;
 }
 
 //
 // Loads an image from memory.
 //
-byte* load_image_from_memory(const std::string& fmt, const byte* data,
-    int length, int& width, int& height, int& ncomp) {
-    return stbi_load_from_memory(data, length, &width, &height, &ncomp, 0);
+std::vector<byte> load_image_from_memory(const std::string& filename,
+    const byte* data, int length, int& width, int& height, int& ncomp) {
+    auto pixels =
+        stbi_load_from_memory(data, length, &width, &height, &ncomp, 0);
+    if (!pixels) return {};
+    auto ret = std::vector<byte>(pixels, pixels + width * height * ncomp);
+    free(pixels);
+    return ret;
 }
 
 //
@@ -168,49 +195,45 @@ bool save_image(const std::string& filename, int width, int height, int ncomp,
         return false;
 }
 
-//
-// Resize image.
-//
-void resize_image(int width, int height, int ncomp, const float* hdr,
-    int res_width, int res_height, float* res_hdr) {
-    auto img_stride = (int)sizeof(float) * width * ncomp;
-    auto res_stride = (int)sizeof(float) * res_width * ncomp;
-    stbir_resize_float(hdr, width, height, img_stride, res_hdr, res_width,
-        res_height, res_stride, ncomp);
+static const auto filter_map = std::map<resize_filter, stbir_filter>{
+    {resize_filter::def, STBIR_FILTER_DEFAULT},
+    {resize_filter::box, STBIR_FILTER_BOX},
+    {resize_filter::triangle, STBIR_FILTER_TRIANGLE},
+    {resize_filter::cubic_spline, STBIR_FILTER_CUBICBSPLINE},
+    {resize_filter::catmull_rom, STBIR_FILTER_CATMULLROM},
+    {resize_filter::mitchell, STBIR_FILTER_MITCHELL}};
+
+static const auto edge_map = std::map<resize_edge, stbir_edge>{
+    {resize_edge::def, STBIR_EDGE_CLAMP},
+    {resize_edge::clamp, STBIR_EDGE_CLAMP},
+    {resize_edge::reflect, STBIR_EDGE_REFLECT},
+    {resize_edge::wrap, STBIR_EDGE_WRAP}, {resize_edge::zero, STBIR_EDGE_ZERO}};
+
+///
+/// Resize image.
+///
+void resize_image(const ym::image4f& img, ym::image4f& res_img,
+    resize_filter filter, resize_edge edge, bool premultiplied_alpha) {
+    stbir_resize_float_generic((float*)img.data(), img.width(), img.height(),
+        sizeof(ym::vec4f) * img.width(), (float*)res_img.data(),
+        res_img.width(), res_img.height(), sizeof(ym::vec4f) * res_img.width(),
+        4, 3, (premultiplied_alpha) ? STBIR_FLAG_ALPHA_PREMULTIPLIED : 0,
+        edge_map.at(edge), filter_map.at(filter), STBIR_COLORSPACE_LINEAR,
+        nullptr);
 }
 
-//
-// Resize image.
-//
-void resize_image(int width, int height, int ncomp, const byte* ldr,
-    int res_width, int res_height, byte* res_ldr) {
-    auto img_stride = (int)sizeof(byte) * width * ncomp;
-    auto res_stride = (int)sizeof(byte) * res_width * ncomp;
-    stbir_resize_uint8_srgb(ldr, width, height, img_stride, res_ldr, res_width,
-        res_height, res_stride, ncomp,
-        (ncomp == 4) ? 3 : STBIR_ALPHA_CHANNEL_NONE, 0);
-}
-
-//
-// Resize image.
-//
-void resize_image(int width, int height, int ncomp,
-    const std::vector<float>& img, int res_width, int res_height,
-    std::vector<float>& res_img) {
-    res_img.resize(res_width * res_height);
-    resize_image(width, height, ncomp, img.data(), res_width, res_height,
-        res_img.data());
-}
-
-//
-// Resize image.
-//
-void resize_image(int width, int height, int ncomp,
-    const std::vector<byte>& img, int res_width, int res_height,
-    std::vector<byte>& res_img) {
-    res_img.resize(res_width * res_height);
-    resize_image(width, height, ncomp, img.data(), res_width, res_height,
-        res_img.data());
+///
+/// Resize image.
+///
+void resize_image(const ym::image4b& img, ym::image4b& res_img,
+    resize_filter filter, resize_edge edge, bool premultiplied_alpha) {
+    stbir_resize_uint8_generic((unsigned char*)img.data(), img.width(),
+        img.height(), sizeof(ym::vec4b) * img.width(),
+        (unsigned char*)res_img.data(), res_img.width(), res_img.height(),
+        sizeof(ym::vec4b) * res_img.width(), 4, 3,
+        (premultiplied_alpha) ? STBIR_FLAG_ALPHA_PREMULTIPLIED : 0,
+        edge_map.at(edge), filter_map.at(filter), STBIR_COLORSPACE_LINEAR,
+        nullptr);
 }
 
 }  // namespace yimg
