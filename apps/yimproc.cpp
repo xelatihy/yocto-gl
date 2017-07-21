@@ -168,48 +168,93 @@ yimage make_image_grid(
     return make_image_grid(resized, tilex);
 }
 
+yimage filter_bilateral(
+    const yimage& img_, float spatial_sigma, float range_sigma) {
+    if (!img_.hdr) {
+        printf("bilateral only supports HDRs");
+        exit(1);
+    }
+    auto filtered_ = make_image(img_.width(), img_.height(), true);
+    auto& img = img_.hdr;
+    auto& filtered = filtered_.hdr;
+    auto width = (int)ym::ceil(2.57f * spatial_sigma);
+    auto sw = 1 / (2.0f * spatial_sigma * spatial_sigma);
+    auto rw = 1 / (2.0f * range_sigma * range_sigma);
+    for (auto j = 0; j < img.height(); j++) {
+        for (auto i = 0; i < img.width(); i++) {
+            auto av = ym::zero4f;
+            auto aw = 0.0f;
+            for (auto fj = -width; fj <= width; fj++) {
+                for (auto fi = -width; fi <= width; fi++) {
+                    auto ii = i + fi, jj = j + fj;
+                    if (ii < 0 || jj < 0) continue;
+                    if (ii >= img.width() || jj >= img.height()) continue;
+                    auto uv = ym::vec2f{float(i - ii), float(j - jj)};
+                    auto rgb = img[{i, j}] - img[{ii, jj}];
+                    auto w = ym::exp(-lengthsqr(uv) * sw) *
+                             ym::exp(-lengthsqr(rgb) * rw);
+                    av += w * img[{ii, jj}];
+                    aw += w;
+                }
+            }
+            filtered[{i, j}] = av / aw;
+        }
+    }
+    return filtered_;
+}
+
 int main(int argc, char* argv[]) {
-    static auto tmtype_names = std::vector<std::pair<std::string, int>>{
-        {"none", (int)ym::tonemap_type::none},
-        {"srgb", (int)ym::tonemap_type::srgb},
-        {"gamma", (int)ym::tonemap_type::gamma},
-        {"filmic", (int)ym::tonemap_type::filmic}};
+    static auto tmtype_names =
+        std::vector<std::pair<std::string, ym::tonemap_type>>{
+            {"none", ym::tonemap_type::none}, {"srgb", ym::tonemap_type::srgb},
+            {"gamma", ym::tonemap_type::gamma},
+            {"filmic", ym::tonemap_type::filmic}};
 
     // command line params
     auto parser = yu::cmdline::make_parser(argc, argv, "process images");
     auto command = parse_args(parser, "command", "command to execute", "", true,
-        {"resize", "tonemap"});
+        {"resize", "tonemap", "bilateral"});
     auto output =
         parse_opts(parser, "--output", "-o", "output image filename", "", true);
-    auto width = parse_opti(
-        parser, "--width", "-w", "width (-1 to maintain aspect)", -1);
-    auto height = parse_opti(
-        parser, "--height", "-h", "height (-1 to maintain aspect)", -1);
-    auto exposure = parse_optf(parser, "--exposure", "-e", "hdr exposure", 0);
-    auto gamma = parse_optf(parser, "--gamma", "-g", "hdr gamma", 2.2f);
-    auto tonemap = (ym::tonemap_type)parse_opte(parser, "--tonemap", "-t",
-        "hdr tonemap", (int)ym::tonemap_type::srgb, tmtype_names);
-    auto filenames = parse_argas(
-        parser, "filenames", "input image filenames", {}, true, -1, {});
+    if (command == "resize") {
+        auto width = parse_opti(
+            parser, "--width", "-w", "width (-1 to maintain aspect)", -1);
+        auto height = parse_opti(
+            parser, "--height", "-h", "height (-1 to maintain aspect)", -1);
+        auto filename =
+            parse_args(parser, "filename", "input image filename", "", true);
+        check_parser(parser);
 
-    // done command line parameters
-    check_parser(parser);
+        auto img = load_image(filename);
+        auto out = resize_image(img, width, height);
+        save_image(output, out);
+    } else if (command == "tonemap") {
+        auto exposure =
+            parse_optf(parser, "--exposure", "-e", "hdr exposure", 0);
+        auto gamma = parse_optf(parser, "--gamma", "-g", "hdr gamma", 2.2f);
+        auto tonemap = parse_opte(parser, "--tonemap", "-t", "hdr tonemap",
+            ym::tonemap_type::srgb, tmtype_names);
+        auto filename =
+            parse_args(parser, "filename", "input image filename", "", true);
+        check_parser(parser);
 
-    // load images
-    std::vector<yimage> imgs;
-    for (auto filename : filenames) imgs.push_back(load_image(filename));
+        auto img = load_image(filename);
+        auto out = tonemap_image(img, exposure, tonemap, gamma);
+        save_image(output, out);
+    } else if (command == "bilateral") {
+        auto radius =
+            parse_opti(parser, "--spatial-sigma", "-s", "spatial sigma", 3);
+        auto range_weight =
+            parse_optf(parser, "--range-sigma", "-r", "range sigma", 0.1f);
+        auto filename =
+            parse_args(parser, "filename", "input image filename", "", true);
+        check_parser(parser);
 
-    // decalre output
-    auto out = yimage();
-
-    // switch on commands
-    if (command == "resize") { out = resize_image(imgs[0], width, height); }
-    if (command == "tonemap") {
-        out = tonemap_image(imgs[0], exposure, tonemap, gamma);
+        auto img = load_image(filename);
+        auto out = filter_bilateral(img, radius, range_weight);
+        save_image(output, out);
+    } else {
     }
-
-    // save output
-    save_image(output, out);
 
     // done
     return 0;

@@ -76,6 +76,7 @@ for internal acceleration. Disable this by setting YTRACE_NO_BVH.</p>
 </ol>
 <h2>History</h2>
 <ul>
+<li>v 0.22: added additional buffers</li>
 <li>v 0.21: added filters</li>
 <li>v 0.20: state-based api</li>
 <li>v 0.19: explicit material models</li>
@@ -797,6 +798,7 @@ none)</li>
     <span class="n">shader_type</span> <span class="n">stype</span> <span class="o">=</span> <span class="n">shader_type</span><span class="o">::</span><span class="n">pathtrace</span><span class="p">;</span>
     <span class="n">rng_type</span> <span class="n">rtype</span> <span class="o">=</span> <span class="n">rng_type</span><span class="o">::</span><span class="n">stratified</span><span class="p">;</span>
     <span class="n">filter_type</span> <span class="n">ftype</span> <span class="o">=</span> <span class="n">filter_type</span><span class="o">::</span><span class="n">box</span><span class="p">;</span>
+    <span class="kt">bool</span> <span class="n">aux_buffers</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
     <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span> <span class="n">amb</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">};</span>
     <span class="kt">bool</span> <span class="n">envmap_invisible</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
     <span class="kt">int</span> <span class="n">min_depth</span> <span class="o">=</span> <span class="mi">3</span><span class="p">;</span>
@@ -817,6 +819,7 @@ none)</li>
 <li>stype:      sampler type</li>
 <li>rtype:      random number generation type</li>
 <li>ftype:      filter type</li>
+<li>aux_buffers:      compute auxiliary buffers</li>
 <li>amb:      ambient lighting</li>
 <li>envmap_invisible:      view environment map</li>
 <li>min_depth:      minimum ray depth</li>
@@ -882,6 +885,13 @@ accumulate is true.</p>
 
 
 <p>Grabs a reference to the image from the state</p>
+<h3>Function get_aux_buffers()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">get_aux_buffers</span><span class="p">(</span><span class="k">const</span> <span class="n">trace_state</span><span class="o">*</span> <span class="n">state</span><span class="p">,</span> <span class="n">ym</span><span class="o">::</span><span class="n">image4f</span><span class="o">&amp;</span> <span class="n">norm</span><span class="p">,</span>
+    <span class="n">ym</span><span class="o">::</span><span class="n">image4f</span><span class="o">&amp;</span> <span class="n">albedo</span><span class="p">,</span> <span class="n">ym</span><span class="o">::</span><span class="n">image4f</span><span class="o">&amp;</span> <span class="n">depth</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Grabs the image from the state</p>
 <h3>Function get_cur_sample()</h3>
 <div class="codehilite"><pre><code><span></span><span class="kt">int</span> <span class="nf">get_cur_sample</span><span class="p">(</span><span class="k">const</span> <span class="n">trace_state</span><span class="o">*</span> <span class="n">state</span><span class="p">);</span>
 </code></pre></div>

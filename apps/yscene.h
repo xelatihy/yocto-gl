@@ -1863,6 +1863,8 @@ void parse_cmdline(yscene* scene, int argc, char** argv, const char* help,
             parse_opti(parser, "--batch-size", "", "batch size", 16);
         scene->trace_params.nsamples =
             parse_opti(parser, "--samples", "-s", "image samples", 256);
+        scene->trace_params.aux_buffers =
+            parse_flag(parser, "--aux-buffers", "", "saves additional buffers");
     }
 
     // render

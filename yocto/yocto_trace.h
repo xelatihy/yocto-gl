@@ -77,6 +77,7 @@
 ///
 /// ## History
 ///
+/// - v 0.22: added additional buffers
 /// - v 0.21: added filters
 /// - v 0.20: state-based api
 /// - v 0.19: explicit material models
@@ -707,6 +708,8 @@ struct trace_params {
     rng_type rtype = rng_type::stratified;
     /// filter type
     filter_type ftype = filter_type::box;
+    /// compute auxiliary buffers
+    bool aux_buffers = false;
     /// ambient lighting
     ym::vec3f amb = {0, 0, 0};
     /// view environment map
@@ -768,6 +771,12 @@ void free_state(trace_state*& state);
 /// Grabs a reference to the image from the state
 ///
 ym::image4f& get_traced_image(trace_state* state);
+
+///
+/// Grabs the image from the state
+///
+void get_aux_buffers(const trace_state* state, ym::image4f& norm,
+    ym::image4f& albedo, ym::image4f& depth);
 
 ///
 /// Gets the current sample number
