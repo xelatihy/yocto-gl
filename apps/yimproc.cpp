@@ -76,8 +76,7 @@ yimage make_image(int width, int height, bool hdr) {
 //
 yimage load_image(const std::string& filename) {
     auto img = yimage();
-    auto ext = yu::path::get_extension(filename);
-    if (ext == ".hdr") {
+    if (yimg::is_hdr_filename(filename)) {
         img.hdr = yimg::load_image4f(filename);
     } else {
         img.ldr = yimg::load_image4b(filename);

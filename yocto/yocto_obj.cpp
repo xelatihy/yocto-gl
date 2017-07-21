@@ -1232,8 +1232,7 @@ bool load_textures(scene* scn, const std::string& dirname, bool skip_missing,
         auto filename = dirname + txt->path;
         for (auto& c : filename)
             if (c == '\\') c = '/';
-        auto ext = get_extension(filename);
-        if (ext == ".hdr") {
+        if (yimg::is_hdr_filename(filename)) {
             txt->hdr = yimg::load_image4f(filename);
         } else {
             txt->ldr = yimg::load_image4b(filename);
