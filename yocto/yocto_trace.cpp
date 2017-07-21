@@ -769,7 +769,7 @@ struct sampler {
     ym::rng_pcg32 rng;  // rnumber number state
     int i, j;           // pixel coordinates
     int s, d;           // sample and dimension indices
-    int ns;             // number of samples
+    int ns, ns2;        // number of samples and its square root
     rng_type rtype;     // random number type
 };
 
@@ -784,7 +784,8 @@ struct sampler {
 static inline sampler make_sampler(
     int i, int j, int s, int ns, rng_type rtype) {
     // we use various hashes to scramble the pixel values
-    sampler smp = {{0, 0}, i, j, s, 0, ns, rtype};
+    sampler smp = {
+        {0, 0}, i, j, s, 0, ns, (int)std::round(std::sqrt((float)ns)), rtype};
     uint64_t sample_id = ((uint64_t)(i + 1)) << 0 | ((uint64_t)(j + 1)) << 15 |
                          ((uint64_t)(s + 1)) << 30;
     uint64_t initseq = ym::hash_uint64(sample_id);
@@ -846,26 +847,24 @@ static inline ym::vec2f sample_next2f(sampler* smp) {
             rn.y = next1f(&smp->rng);
         } break;
         case rng_type::stratified: {
-            uint32_t ns2 = (uint32_t)std::round(std::sqrt(smp->ns));
             uint32_t p = ym::hash_uint64_32(((uint64_t)(smp->i + 1)) << 0 |
                                             ((uint64_t)(smp->j + 1)) << 15 |
                                             ((uint64_t)(smp->d + 1)) << 30);
             int s = ym::hash_permute(smp->s, smp->ns, p);
-            rn.x = (s % ns2 + next1f(&smp->rng)) / ns2;
-            rn.y = (s / ns2 + next1f(&smp->rng)) / ns2;
+            rn.x = (s % smp->ns2 + next1f(&smp->rng)) / smp->ns2;
+            rn.y = (s / smp->ns2 + next1f(&smp->rng)) / smp->ns2;
         } break;
         case rng_type::cmjs: {
-            uint32_t ns2 = (uint32_t)round(sqrt(smp->ns));
             uint32_t p = ym::hash_uint64_32(((uint64_t)(smp->i + 1)) << 0 |
                                             ((uint64_t)(smp->j + 1)) << 15 |
                                             ((uint64_t)(smp->d + 1)) << 30);
             int s = ym::hash_permute(smp->s, smp->ns, p);
-            int sx = ym::hash_permute(s % ns2, ns2, p * 0xa511e9b3);
-            int sy = ym::hash_permute(s / ns2, ns2, p * 0x63d83595);
+            int sx = ym::hash_permute(s % smp->ns2, smp->ns2, p * 0xa511e9b3);
+            int sy = ym::hash_permute(s / smp->ns2, smp->ns2, p * 0x63d83595);
             float jx = ym::hash_randfloat(s, p * 0xa399d265);
             float jy = ym::hash_randfloat(s, p * 0x711ad6a5);
-            rn.x = (s % ns2 + (sy + jx) / ns2) / ns2;
-            rn.y = (s / ns2 + (sx + jy) / ns2) / ns2;
+            rn.x = (s % smp->ns2 + (sy + jx) / smp->ns2) / smp->ns2;
+            rn.y = (s / smp->ns2 + (sx + jy) / smp->ns2) / smp->ns2;
         } break;
         default: assert(false);
     }
