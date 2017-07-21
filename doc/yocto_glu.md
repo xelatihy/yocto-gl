@@ -102,26 +102,6 @@ Light types
     - directional:      directional lights
 
 
-### Enum tonemap_type
-
-~~~ .cpp
-enum struct tonemap_type {
-    none = 0,
-    srgb = 1,
-    gamma = 2,
-    filmic = 3,
-}
-~~~
-
-Tone mapping presets
-
-- Values:
-    - none:      none
-    - srgb:      srgb
-    - gamma:      linear
-    - filmic:      filmic
-
-
 ### Enum texture_wrap
 
 ~~~ .cpp
@@ -293,7 +273,8 @@ with top-left corner at ox, oy with a zoom zoom.
 
 ~~~ .cpp
 void shade_image(uint tid, int img_w, int img_h, int win_w, int win_h, float ox,
-    float oy, float zoom, tonemap_type tmtype, float exposure, float gamma_);
+    float oy, float zoom, ym::tonemap_type tmtype, float exposure,
+    float gamma_);
 ~~~
 
 As above but includes an exposure/gamma correction.
@@ -567,8 +548,9 @@ Initialize a standard shader.
 
 ~~~ .cpp
 void begin_frame(uint prog, uint vao, bool shade_eyelight, float img_exposure,
-    tonemap_type img_tonemap, float img_gamma, const ym::mat4f& camera_xform,
-    const ym::mat4f& camera_xform_inv, const ym::mat4f& camera_proj);
+    ym::tonemap_type img_tonemap, float img_gamma,
+    const ym::mat4f& camera_xform, const ym::mat4f& camera_xform_inv,
+    const ym::mat4f& camera_proj);
 ~~~
 
 Starts a frame by setting exposure/gamma values, camera transforms and

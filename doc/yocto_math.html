@@ -250,6 +250,12 @@ Collision Detection" by Christer Ericson and public domain code from
 
 
 <p>round</p>
+<h3>Function Alias isfinite()</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">using</span> <span class="n">std</span><span class="o">::</span><span class="n">isfinite</span><span class="p">;</span>
+</code></pre></div>
+
+
+<p>isfinate</p>
 <h3>Struct vec</h3>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="kt">int</span> <span class="n">N</span><span class="o">&gt;</span>
 <span class="k">struct</span> <span class="n">vec</span> <span class="p">{</span>
@@ -1331,6 +1337,13 @@ Collision Detection" by Christer Ericson and public domain code from
 
 
 <p>Element-wise round</p>
+<h3>Function isfinite()</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="kt">int</span> <span class="n">N</span><span class="o">&gt;</span>
+<span class="k">constexpr</span> <span class="kr">inline</span> <span class="kt">bool</span> <span class="n">isfinite</span><span class="p">(</span><span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Check if finite</p>
 <h3>Function float_to_byte()</h3>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="kt">int</span> <span class="n">N</span><span class="o">&gt;</span>
 <span class="k">constexpr</span> <span class="kr">inline</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">byte</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;</span> <span class="n">float_to_byte</span><span class="p">(</span><span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="kt">float</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">);</span>
@@ -2425,6 +2438,30 @@ Access min/max with operator[].</p>
 <p>3-dimensional float bbox</p>
 <h3>Typedef bbox4f</h3>
 <div class="codehilite"><pre><code><span></span><span class="k">using</span> <span class="n">bbox4f</span> <span class="o">=</span> <span class="n">bbox</span><span class="o">&lt;</span><span class="kt">float</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;</span><span class="p">;</span>
+</code></pre></div>
+
+
+<p>4-dimensional float bbox</p>
+<h3>Typedef bbox1i</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">using</span> <span class="n">bbox1i</span> <span class="o">=</span> <span class="n">bbox</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span> <span class="mi">1</span><span class="o">&gt;</span><span class="p">;</span>
+</code></pre></div>
+
+
+<p>1-dimensional float bbox</p>
+<h3>Typedef bbox2i</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">using</span> <span class="n">bbox2i</span> <span class="o">=</span> <span class="n">bbox</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span> <span class="mi">2</span><span class="o">&gt;</span><span class="p">;</span>
+</code></pre></div>
+
+
+<p>2-dimensional float bbox</p>
+<h3>Typedef bbox3i</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">using</span> <span class="n">bbox3i</span> <span class="o">=</span> <span class="n">bbox</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;</span><span class="p">;</span>
+</code></pre></div>
+
+
+<p>3-dimensional float bbox</p>
+<h3>Typedef bbox4i</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">using</span> <span class="n">bbox4i</span> <span class="o">=</span> <span class="n">bbox</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;</span><span class="p">;</span>
 </code></pre></div>
 
 

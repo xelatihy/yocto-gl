@@ -1903,15 +1903,14 @@ static inline float weight_mis(float w0, float w1) {
 //
 // Recursive path tracing.
 //
-static ym::vec4f shade_pathtrace(const scene* scn, const ym::ray3f& ray,
+static ym::vec3f shade_pathtrace(const scene* scn, const point& pt_,
     sampler* smp, const trace_params& params) {
-    // scn intersection
-    auto pt = intersect_scene(scn, ray);
-    if (!pt.ist || (pt.env && params.envmap_invisible)) return ym::zero4f;
+    // make a copy
+    auto pt = pt_;
 
     // emission
     auto l = eval_emission(pt);
-    if (pt.no_reflectance() || scn->lights.empty()) return {l.x, l.y, l.z, 1};
+    if (pt.no_reflectance() || scn->lights.empty()) return l;
 
     // trace path
     auto weight = ym::vec3f{1, 1, 1};
@@ -1976,21 +1975,20 @@ static ym::vec4f shade_pathtrace(const scene* scn, const ym::ray3f& ray,
         emission = false;
     }
 
-    return {l.x, l.y, l.z, 1};
+    return l;
 }
 
 //
 // Recursive path tracing.
 //
-static ym::vec4f shade_pathtrace_std(const scene* scn, const ym::ray3f& ray,
+static ym::vec3f shade_pathtrace_std(const scene* scn, const point& pt_,
     sampler* smp, const trace_params& params) {
-    // scn intersection
-    auto pt = intersect_scene(scn, ray);
-    if (!pt.ist || (pt.env && params.envmap_invisible)) return ym::zero4f;
+    // amke a copy
+    auto pt = pt_;
 
     // emission
     auto l = eval_emission(pt);
-    if (pt.no_reflectance()) return {l.x, l.y, l.z, 1};
+    if (pt.no_reflectance()) return l;
 
     // trace path
     auto weight = ym::vec3f{1, 1, 1};
@@ -2047,21 +2045,20 @@ static ym::vec4f shade_pathtrace_std(const scene* scn, const ym::ray3f& ray,
         }
     }
 
-    return {l.x, l.y, l.z, 1};
+    return l;
 }
 
 //
 // Recursive path tracing.
 //
-static ym::vec4f shade_pathtrace_hack(const scene* scn, const ym::ray3f& ray,
+static ym::vec3f shade_pathtrace_hack(const scene* scn, const point& pt_,
     sampler* smp, const trace_params& params) {
-    // scn intersection
-    auto pt = intersect_scene(scn, ray);
-    if (!pt.ist || (pt.env && params.envmap_invisible)) return ym::zero4f;
+    // make a copy
+    auto pt = pt_;
 
     // emission
     auto l = eval_emission(pt);
-    if (pt.no_reflectance()) return {l.x, l.y, l.z, 1};
+    if (pt.no_reflectance()) return l;
 
     // trace path
     auto weight = ym::vec3f{1, 1, 1};
@@ -2128,24 +2125,20 @@ static ym::vec4f shade_pathtrace_hack(const scene* scn, const ym::ray3f& ray,
         }
     }
 
-    return {l.x, l.y, l.z, 1};
+    return l;
 }
 
 //
 // Direct illumination.
 //
-static ym::vec4f shade_direct(const scene* scn, const ym::ray3f& ray,
-    sampler* smp, const trace_params& params) {
-    // scn intersection
-    auto pt = intersect_scene(scn, ray);
-    if (!pt.ist || (pt.env && params.envmap_invisible)) return ym::zero4f;
-
+static ym::vec3f shade_direct(const scene* scn, const point& pt, sampler* smp,
+    const trace_params& params) {
     // emission
     auto l = eval_emission(pt);
-    if (pt.no_reflectance()) return {l.x, l.y, l.z, 1};
+    if (pt.no_reflectance()) return l;
 
     // ambient
-    l += (ym::vec3f)params.amb * pt.rho;
+    l += params.amb * pt.rho;
 
     // direct
     for (auto& lgt : scn->lights) {
@@ -2160,33 +2153,29 @@ static ym::vec4f shade_direct(const scene* scn, const ym::ray3f& ray,
     }
 
     // done
-    return {l.x, l.y, l.z, 1};
+    return l;
 }
 
 //
 // Eyelight for quick previewing.
 //
-static ym::vec4f shade_eyelight(const scene* scn, const ym::ray3f& ray,
-    sampler* smp, const trace_params& params) {
-    // intersection
-    point pt = intersect_scene(scn, ray);
-    if (!pt.ist || (pt.env && params.envmap_invisible)) return ym::zero4f;
-
+static ym::vec3f shade_eyelight(const scene* scn, const point& pt, sampler* smp,
+    const trace_params& params) {
     // emission
     auto l = eval_emission(pt);
-    if (pt.no_reflectance()) return {l.x, l.y, l.z, 1};
+    if (pt.no_reflectance()) return l;
 
     // brdf*light
     l += eval_brdfcos(pt, pt.wo) * ym::pif;
 
-    return {l.x, l.y, l.z, 1};
+    return l;
 }
 
 //
 // Shader function callback.
 //
-using shade_fn = ym::vec4f (*)(const scene* scn, const ym::ray3f& ray,
-    sampler* smp, const trace_params& params);
+using shade_fn = ym::vec3f (*)(const scene* scn, const point& pt, sampler* smp,
+    const trace_params& params);
 
 //
 // Renders a block of pixels. Public API, see above.
@@ -2211,28 +2200,67 @@ void trace_block(const scene* scn, ym::vec4f* img, int block_x, int block_y,
                 auto uv = ym::vec2f{
                     (i + rn.x) / params.width, 1 - (j + rn.y) / params.height};
                 auto ray = eval_camera(cam, uv, sample_next2f(&smp));
-                auto l = shade(scn, ray, &smp, params);
-                if (!std::isfinite(l.x) || !std::isfinite(l.y) ||
-                    !std::isfinite(l.z)) {
+                auto pt = intersect_scene(scn, ray);
+                if (!pt.ist || params.envmap_invisible) continue;
+                auto l = shade(scn, pt, &smp, params);
+                if (!ym::isfinite(l)) {
                     log(scn, 2, "NaN detected");
                     continue;
                 }
                 if (params.pixel_clamp > 0)
-                    *(ym::vec3f*)&l =
-                        ym::clamplen(*(ym::vec3f*)&l, params.pixel_clamp);
-                lp += l;
+                    l = ym::clamplen(l, params.pixel_clamp);
+                lp += {l, 1};
             }
-            if (params.progressive && samples_min > 0) {
-                img[j * params.width + i] =
-                    (img[j * params.width + i] * (float)samples_min + lp) /
-                    (float)samples_max;
-            } else {
-                img[j * params.width + i] =
-                    lp / (float)(samples_max - samples_min);
-            }
+            img[j * params.width + i] = lp / (float)(samples_max - samples_min);
         }
     }
 }
+
+// triangle filter (public domain from stb_image_resize)
+inline float filter_triangle(float x) {
+    x = (float)fabs(x);
+
+    if (x <= 1.0f)
+        return 1 - x;
+    else
+        return 0;
+}
+
+// cubic filter (public domain from stb_image_resize)
+inline float filter_cubic(float x) {
+    x = (float)fabs(x);
+    if (x < 1.0f)
+        return (4 + x * x * (3 * x - 6)) / 6;
+    else if (x < 2.0f)
+        return (8 + x * (-12 + x * (6 - x))) / 6;
+    else
+        return 0.0f;
+}
+
+// catmull-rom filter (public domain from stb_image_resize)
+inline float filter_catmullrom(float x) {
+    x = (float)fabs(x);
+    if (x < 1.0f)
+        return 1 - x * x * (2.5f - 1.5f * x);
+    else if (x < 2.0f)
+        return 2 - x * (4 + x * (0.5f * x - 2.5f));
+    else
+        return 0.0f;
+}
+
+// mitchell filter (public domain from stb_image_resize)
+inline float filter_mitchell(float x) {
+    x = (float)fabs(x);
+    if (x < 1.0f)
+        return (16 + x * x * (21 * x - 36)) / 18;
+    else if (x < 2.0f)
+        return (32 + x * (-60 + x * (36 - 7 * x))) / 18;
+    else
+        return 0.0f;
+}
+
+// filter function
+using filter_fn = float (*)(float);
 
 //
 // state for progressive rendering and denoising
@@ -2241,17 +2269,32 @@ struct trace_state {
     // rendered image
     ym::image4f img;
 
+    // progressive rendering buffers
+    ym::image4f acc;
+    ym::imagef weight;
+
     // progressive state
     int cur_sample = 0;
-    std::vector<ym::vec4i> blocks;
+    std::vector<ym::bbox2i> blocks;
 
     // pool
     yu::concurrent::thread_pool* pool = nullptr;
+    /// lock for access to image
+    std::mutex image_mutex;
 
     // render scene
     const scene* scn = nullptr;
     // render options
     trace_params params = {};
+
+    // render function
+    shade_fn shade = nullptr;
+    // render camera
+    const camera* cam = nullptr;
+    // filter function
+    filter_fn filter = nullptr;
+    // filter size
+    int filter_size = 0;
 
     // cleanup
     ~trace_state() {
@@ -2265,11 +2308,12 @@ struct trace_state {
 //
 // Make image blocks
 //
-std::vector<ym::vec4i> make_blocks(int w, int h, int bs) {
-    std::vector<ym::vec4i> blocks;
+std::vector<ym::bbox2i> make_blocks(int w, int h, int bs) {
+    std::vector<ym::bbox2i> blocks;
     for (int j = 0; j < h; j += bs) {
         for (int i = 0; i < w; i += bs) {
-            blocks.push_back({i, j, ym::min(bs, w - i), ym::min(bs, h - j)});
+            blocks.push_back(
+                {{i, j}, {ym::min(i + bs, w), ym::min(j + bs, h)}});
         }
     }
     return blocks;
@@ -2291,10 +2335,45 @@ void init_state(
         state->pool = yu::concurrent::make_pool();
     }
     state->img = ym::image4f(params.width, params.height);
+    state->acc = ym::image4f(params.width, params.height);
+    state->weight = ym::imagef(params.width, params.height);
     state->cur_sample = 0;
     state->blocks = make_blocks(params.width, params.height, 32);
     state->scn = scn;
     state->params = params;
+
+    state->cam = scn->cameras[params.camera_id];
+
+    switch (params.stype) {
+        case shader_type::eyelight: state->shade = shade_eyelight; break;
+        case shader_type::direct: state->shade = shade_direct; break;
+        case shader_type::pathtrace: state->shade = shade_pathtrace; break;
+        default: assert(false); return;
+    }
+
+    switch (params.ftype) {
+        case filter_type::box:
+            state->filter = nullptr;
+            state->filter_size = 0;
+            break;
+        case filter_type::triangle:
+            state->filter = filter_triangle;
+            state->filter_size = 1;
+            break;
+        case filter_type::cubic:
+            state->filter = filter_cubic;
+            state->filter_size = 2;
+            break;
+        case filter_type::catmull_rom:
+            state->filter = filter_catmullrom;
+            state->filter_size = 2;
+            break;
+        case filter_type::mitchell:
+            state->filter = filter_mitchell;
+            state->filter_size = 2;
+            break;
+        default: assert(false); return;
+    }
 }
 
 //
@@ -2310,10 +2389,77 @@ int get_cur_sample(const trace_state* state) { return state->cur_sample; }
 //
 // Trace a block of samples
 //
-void trace_block(trace_state* state, int block_x, int block_y, int block_width,
-    int block_height, int samples_min, int samples_max) {
-    trace_block(state->scn, state->img.data(), block_x, block_y, block_width,
-        block_height, samples_min, samples_max, state->params);
+void trace_block(
+    trace_state* state, int block_idx, int samples_min, int samples_max) {
+    static constexpr const int pad = 2;
+    auto& params = state->params;
+    auto& block = state->blocks[block_idx];
+    auto block_size = ym::diagonal(block);
+    auto acc_buffer =
+        ym::image4f(block_size.x + pad * 2, block_size.y + pad * 2);
+    auto weight_buffer =
+        ym::imagef(block_size.x + pad * 2, block_size.y + pad * 2);
+    for (auto j = block.min.y; j < block.max.y; j++) {
+        for (auto i = block.min.x; i < block.max.x; i++) {
+            for (auto s = samples_min; s < samples_max; s++) {
+                auto smp = make_sampler(i, j, s, params.nsamples, params.rtype);
+                auto rn = sample_next2f(&smp);
+                auto uv = ym::vec2f{
+                    (i + rn.x) / params.width, 1 - (j + rn.y) / params.height};
+                auto ray = eval_camera(state->cam, uv, sample_next2f(&smp));
+                auto pt = intersect_scene(state->scn, ray);
+                if (!pt.ist || params.envmap_invisible) continue;
+                auto l = state->shade(state->scn, pt, &smp, state->params);
+                if (!ym::isfinite(l)) {
+                    log(state->scn, 2, "NaN detected");
+                    continue;
+                }
+                if (params.pixel_clamp > 0)
+                    l = ym::clamplen(l, params.pixel_clamp);
+                if (state->filter) {
+                    auto bi = i - block.min.x, bj = j - block.min.y;
+                    for (auto fj = -state->filter_size;
+                         fj <= state->filter_size; fj++) {
+                        for (auto fi = -state->filter_size;
+                             fi <= state->filter_size; fi++) {
+                            auto w = filter_triangle(fi - rn.x + 0.5f) *
+                                     filter_triangle(fj - rn.y + 0.5f);
+                            acc_buffer[{bi + fi + pad, bj + fj + pad}] +=
+                                {l * w, w};
+                            weight_buffer[{bi + fi + pad, bj + fj + pad}] += w;
+                        }
+                    }
+                } else {
+                    auto bi = i - block.min.x, bj = j - block.min.y;
+                    acc_buffer[{bi + pad, bj + pad}] += {l, 1};
+                    weight_buffer[{bi + pad, bj + pad}] += 1;
+                }
+            }
+        }
+    }
+    if (state->filter) {
+        std::unique_lock<std::mutex> lock_guard(state->image_mutex);
+        auto width = state->acc.width(), height = state->acc.height();
+        for (auto j = ym::max(block.min.y - state->filter_size, 0);
+             j < ym::min(block.max.y + state->filter_size, height); j++) {
+            for (auto i = ym::max(block.min.x - state->filter_size, 0);
+                 i < ym::min(block.max.x + state->filter_size, width); i++) {
+                auto bi = i - block.min.x, bj = j - block.min.y;
+                state->acc[{i, j}] += acc_buffer[{bi + pad, bj + pad}];
+                state->weight[{i, j}] += weight_buffer[{bi + pad, bj + pad}];
+                state->img[{i, j}] = state->acc[{i, j}] / state->weight[{i, j}];
+            }
+        }
+    } else {
+        for (auto j = block.min.y; j < block.max.y; j++) {
+            for (auto i = block.min.x; i < block.max.x; i++) {
+                auto bi = i - block.min.x, bj = j - block.min.y;
+                state->acc[{i, j}] += acc_buffer[{bi + pad, bj + pad}];
+                state->weight[{i, j}] += weight_buffer[{bi + pad, bj + pad}];
+                state->img[{i, j}] = state->acc[{i, j}] / state->weight[{i, j}];
+            }
+        }
+    }
 }
 
 //
@@ -2333,15 +2479,13 @@ bool trace_next_samples(trace_state* state, int nsamples) {
     if (state->pool) {
         yu::concurrent::parallel_for(
             state->pool, (int)state->blocks.size(), [state, nsamples](int idx) {
-                auto block = state->blocks[idx];
-                ytrace::trace_block(state, block[0], block[1], block[2],
-                    block[3], state->cur_sample, state->cur_sample + nsamples);
+                ytrace::trace_block(state, idx, state->cur_sample,
+                    state->cur_sample + nsamples);
             });
     } else {
         for (auto idx = 0; idx < (int)state->blocks.size(); idx++) {
-            auto block = state->blocks[idx];
-            ytrace::trace_block(state, block[0], block[1], block[2], block[3],
-                state->cur_sample, state->cur_sample + nsamples);
+            ytrace::trace_block(
+                state, idx, state->cur_sample, state->cur_sample + nsamples);
         }
     }
     state->cur_sample += nsamples;
@@ -2357,9 +2501,7 @@ void trace_async_start(trace_state* state) {
              block_idx++) {
             yu::concurrent::run_async(
                 state->pool, [state, sample, block_idx]() {
-                    auto block = state->blocks[block_idx];
-                    ytrace::trace_block(state, block[0], block[1], block[2],
-                        block[3], sample, sample + 1);
+                    ytrace::trace_block(state, block_idx, sample, sample + 1);
                     if (block_idx == state->blocks.size() - 1) {
                         state->cur_sample++;
                     }

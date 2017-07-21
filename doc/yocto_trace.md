@@ -76,6 +76,7 @@ for internal acceleration. Disable this by setting YTRACE_NO_BVH.
 
 ## History
 
+- v 0.21: added filters
 - v 0.20: state-based api
 - v 0.19: explicit material models
 - v 0.18: simpler texture creation functions
@@ -168,8 +169,7 @@ Sets a camera in the scene.
 ### Function add_texture()
 
 ~~~ .cpp
-int add_texture(
-    scene* scn, int width, int height, int ncomp, const ym::vec4f* hdr);
+int add_texture(scene* scn, int width, int height, const ym::vec4f* hdr);
 ~~~
 
 Adds a texture in the scene.
@@ -186,8 +186,7 @@ Adds a texture in the scene.
 ### Function add_texture()
 
 ~~~ .cpp
-int add_texture(
-    scene* scn, int width, int height, int ncomp, const ym::vec4b* ldr);
+int add_texture(scene* scn, int width, int height, const ym::vec4b* ldr);
 ~~~
 
 Sets a texture in the scene.
@@ -721,6 +720,29 @@ Random number generator type
     - cmjs:      correlated multi-jittered sampling
 
 
+### Enum filter_type
+
+~~~ .cpp
+enum struct filter_type {
+    box = 1,
+    triangle = 2,
+    cubic = 3,
+    catmull_rom = 4,
+    mitchell = 5
+
+}
+~~~
+
+Filter type
+
+- Values:
+    - box:      box filter
+    - triangle:      hat filter
+    - cubic:      cubic spline
+    - catmull_rom:      Catmull-Rom spline
+    - mitchell:      Mitchell-Netrevalli
+
+
 ### Struct trace_params
 
 ~~~ .cpp
@@ -729,9 +751,9 @@ struct trace_params {
     int width = 0;
     int height = 0;
     int nsamples = 256;
-    bool progressive = true;
     shader_type stype = shader_type::pathtrace;
     rng_type rtype = rng_type::stratified;
+    filter_type ftype = filter_type::box;
     ym::vec3f amb = {0, 0, 0};
     bool envmap_invisible = false;
     int min_depth = 3;
@@ -748,9 +770,9 @@ Rendering params
     - width:      width
     - height:      height
     - nsamples:      number of samples
-    - progressive:      progressive rendering
     - stype:      sampler type
     - rtype:      random number generation type
+    - ftype:      filter type
     - amb:      ambient lighting
     - envmap_invisible:      view environment map
     - min_depth:      minimum ray depth

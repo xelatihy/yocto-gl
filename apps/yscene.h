@@ -456,7 +456,7 @@ inline void shade_mesh(const yobj::mesh* msh, const yshade_state* st,
 //
 inline void shade_scene(const yobj::scene* sc, yshade_state* st,
     const ycamera* ycam, const yobj::camera* ocam, void* selection,
-    const ym::vec4f& background, float exposure, yglu::tonemap_type tmtype,
+    const ym::vec4f& background, float exposure, ym::tonemap_type tmtype,
     float gamma, bool wireframe, bool edges, bool cutout, bool camera_lights,
     const ym::vec3f& amb) {
     // update state
@@ -760,7 +760,7 @@ inline void shade_mesh(const ygltf::mesh* msh, const ygltf::skin* sk,
 //
 inline void shade_scene(const ygltf::scene_group* scns, yshade_state* st,
     const ycamera* ycam, const ygltf::node* gcam, void* selection,
-    const ym::vec4f& background, float exposure, yglu::tonemap_type tmtype,
+    const ym::vec4f& background, float exposure, ym::tonemap_type tmtype,
     float gamma, bool wireframe, bool edges, bool cutout, bool camera_lights,
     const ym::vec3f& amb) {
     // update state
@@ -861,14 +861,14 @@ void draw_scene(ygui::window* win) {
     if (scn->gcam) scn->gcam->cam->aspect = aspect;
     if (scn->oscn) {
         shade_scene(scn->oscn, scn->shstate, scn->view_cam, scn->ocam,
-            scn->selection, scn->background, scn->exposure,
-            (yglu::tonemap_type)scn->tonemap, scn->gamma, scn->wireframe,
-            scn->edges, scn->alpha_cutout, scn->camera_lights, scn->amb);
+            scn->selection, scn->background, scn->exposure, scn->tonemap,
+            scn->gamma, scn->wireframe, scn->edges, scn->alpha_cutout,
+            scn->camera_lights, scn->amb);
     } else {
         shade_scene(scn->gscn, scn->shstate, scn->view_cam, scn->gcam,
-            scn->selection, scn->background, scn->exposure,
-            (yglu::tonemap_type)scn->tonemap, scn->gamma, scn->wireframe,
-            scn->edges, scn->alpha_cutout, scn->camera_lights, scn->amb);
+            scn->selection, scn->background, scn->exposure, scn->tonemap,
+            scn->gamma, scn->wireframe, scn->edges, scn->alpha_cutout,
+            scn->camera_lights, scn->amb);
     }
 }
 
@@ -1681,20 +1681,29 @@ void simulate_step(yscene* scene);
 #endif
 
 void draw_widgets(ygui::window* win) {
-    static auto tmtype_names = std::vector<std::pair<std::string, int>>{
-        {"none", (int)ym::tonemap_type::none},
-        {"srgb", (int)ym::tonemap_type::srgb},
-        {"gamma", (int)ym::tonemap_type::gamma},
-        {"filmic", (int)ym::tonemap_type::filmic}};
-    static auto rtype_names = std::vector<std::pair<std::string, int>>{
-        {"uniform", (int)ytrace::rng_type::uniform},
-        {"stratified", (int)ytrace::rng_type::stratified},
-        {"cmjs", (int)ytrace::rng_type::cmjs}};
-    static auto stype_names = std::vector<std::pair<std::string, int>>{
-        {"eye", (int)ytrace::shader_type::eyelight},
-        {"direct", (int)ytrace::shader_type::direct},
-        {"direct_ao", (int)ytrace::shader_type::direct_ao},
-        {"path", (int)ytrace::shader_type::pathtrace}};
+    static auto tmtype_names =
+        std::vector<std::pair<std::string, ym::tonemap_type>>{
+            {"none", ym::tonemap_type::none}, {"srgb", ym::tonemap_type::srgb},
+            {"gamma", ym::tonemap_type::gamma},
+            {"filmic", ym::tonemap_type::filmic}};
+    static auto rtype_names =
+        std::vector<std::pair<std::string, ytrace::rng_type>>{
+            {"uniform", ytrace::rng_type::uniform},
+            {"stratified", ytrace::rng_type::stratified},
+            {"cmjs", ytrace::rng_type::cmjs}};
+    static auto stype_names =
+        std::vector<std::pair<std::string, ytrace::shader_type>>{
+            {"eye", ytrace::shader_type::eyelight},
+            {"direct", ytrace::shader_type::direct},
+            {"direct_ao", ytrace::shader_type::direct_ao},
+            {"path", ytrace::shader_type::pathtrace}};
+    static auto ftype_names =
+        std::vector<std::pair<std::string, ytrace::filter_type>>{
+            {"box", ytrace::filter_type::box},
+            {"triangle", ytrace::filter_type::triangle},
+            {"cubic", ytrace::filter_type::cubic},
+            {"catmull-rom", ytrace::filter_type::catmull_rom},
+            {"mitchell", ytrace::filter_type::mitchell}};
 
     auto scn = (yscene*)ygui::get_user_pointer(win);
     if (ygui::begin_widgets(win, "yview")) {
@@ -1719,11 +1728,14 @@ void draw_widgets(ygui::window* win) {
                 win, "s", ytrace::get_cur_sample(scn->trace_state));
             ygui::slider_widget(
                 win, "samples", &scn->trace_params.nsamples, 0, 1000000, 1);
-            if (ygui::combo_widget(win, "shader type",
-                    (int*)&scn->trace_params.stype, stype_names))
+            if (ygui::combo_widget(
+                    win, "shader type", &scn->trace_params.stype, stype_names))
                 scn->scene_updated = true;
-            if (ygui::combo_widget(win, "random type",
-                    (int*)&scn->trace_params.rtype, rtype_names))
+            if (ygui::combo_widget(
+                    win, "random type", &scn->trace_params.rtype, rtype_names))
+                scn->scene_updated = true;
+            if (ygui::combo_widget(
+                    win, "filter type", &scn->trace_params.ftype, ftype_names))
                 scn->scene_updated = true;
         }
         if (scn->oscn) {
@@ -1754,8 +1766,7 @@ void draw_widgets(ygui::window* win) {
         ygui::checkbox_widget(win, "fps", &scn->navigation_fps);
         ygui::slider_widget(win, "hdr exposure", &scn->exposure, -20, 20, 1);
         ygui::slider_widget(win, "hdr gamma", &scn->gamma, 0.1, 5, 0.1);
-        ygui::combo_widget(
-            win, "hdr tonemap", (int*)&scn->tonemap, tmtype_names);
+        ygui::combo_widget(win, "hdr tonemap", &scn->tonemap, tmtype_names);
         if (ygui::collapsing_header_widget(win, "view cam")) {
             auto cam = scn->view_cam;
             ygui::slider_widget(win, "yfov", &cam->yfov, 0.1, 5);
@@ -1787,20 +1798,29 @@ void draw_widgets(ygui::window* win) {
 
 void parse_cmdline(yscene* scene, int argc, char** argv, const char* help,
     bool simulation, bool trace) {
-    static auto rtype_names = std::vector<std::pair<std::string, int>>{
-        {"uniform", (int)ytrace::rng_type::uniform},
-        {"stratified", (int)ytrace::rng_type::stratified},
-        {"cmjs", (int)ytrace::rng_type::cmjs}};
-    static auto stype_names = std::vector<std::pair<std::string, int>>{
-        {"path", (int)ytrace::shader_type::pathtrace},
-        {"eye", (int)ytrace::shader_type::eyelight},
-        {"direct", (int)ytrace::shader_type::direct},
-        {"direct_ao", (int)ytrace::shader_type::direct_ao}};
-    static auto tmtype_names = std::vector<std::pair<std::string, int>>{
-        {"none", (int)ym::tonemap_type::none},
-        {"srgb", (int)ym::tonemap_type::srgb},
-        {"gamma", (int)ym::tonemap_type::gamma},
-        {"filmic", (int)ym::tonemap_type::filmic}};
+    static auto rtype_names =
+        std::vector<std::pair<std::string, ytrace::rng_type>>{
+            {"uniform", ytrace::rng_type::uniform},
+            {"stratified", ytrace::rng_type::stratified},
+            {"cmjs", ytrace::rng_type::cmjs}};
+    static auto ftype_names =
+        std::vector<std::pair<std::string, ytrace::filter_type>>{
+            {"box", ytrace::filter_type::box},
+            {"triangle", ytrace::filter_type::triangle},
+            {"cubic", ytrace::filter_type::cubic},
+            {"catmull-rom", ytrace::filter_type::catmull_rom},
+            {"mitchell", ytrace::filter_type::mitchell}};
+    static auto stype_names =
+        std::vector<std::pair<std::string, ytrace::shader_type>>{
+            {"path", ytrace::shader_type::pathtrace},
+            {"eye", ytrace::shader_type::eyelight},
+            {"direct", ytrace::shader_type::direct},
+            {"direct_ao", ytrace::shader_type::direct_ao}};
+    static auto tmtype_names =
+        std::vector<std::pair<std::string, ym::tonemap_type>>{
+            {"none", ym::tonemap_type::none}, {"srgb", ym::tonemap_type::srgb},
+            {"gamma", ym::tonemap_type::gamma},
+            {"filmic", ym::tonemap_type::filmic}};
 
     // parse command line
     auto parser = yu::cmdline::make_parser(argc, argv, help);
@@ -1827,13 +1847,12 @@ void parse_cmdline(yscene* scene, int argc, char** argv, const char* help,
         scene->trace_params.camera_id = 0;
         scene->trace_save_progressive = parse_flag(
             parser, "--save-progressive", "", "save progressive images");
-
-        scene->trace_params.rtype =
-            (ytrace::rng_type)parse_opte(parser, "--random", "", "random type",
-                (int)ytrace::rng_type::stratified, rtype_names);
-        scene->trace_params.stype = (ytrace::shader_type)parse_opte(parser,
-            "--shader", "-S", "path estimator type",
-            (int)ytrace::shader_type::pathtrace, stype_names);
+        scene->trace_params.rtype = parse_opte(parser, "--random", "",
+            "random type", ytrace::rng_type::stratified, rtype_names);
+        scene->trace_params.ftype = parse_opte(parser, "--filter", "",
+            "filter type", ytrace::filter_type::box, ftype_names);
+        scene->trace_params.stype = parse_opte(parser, "--shader", "-S",
+            "path estimator type", ytrace::shader_type::pathtrace, stype_names);
         scene->trace_params.envmap_invisible =
             parse_flag(parser, "--envmap-invisible", "", "envmap invisible");
         scene->trace_nthreads = parse_opti(
@@ -1850,8 +1869,8 @@ void parse_cmdline(yscene* scene, int argc, char** argv, const char* help,
     scene->exposure =
         parse_optf(parser, "--exposure", "-e", "hdr image exposure", 0);
     scene->gamma = parse_optf(parser, "--gamma", "-g", "hdr image gamma", 2.2f);
-    scene->tonemap = (ym::tonemap_type)parse_opte(parser, "--tonemap", "-t",
-        "hdr tonemap output", (int)ym::tonemap_type::srgb, tmtype_names);
+    scene->tonemap = parse_opte(parser, "--tonemap", "-t", "hdr tonemap output",
+        ym::tonemap_type::srgb, tmtype_names);
     scene->resolution =
         parse_opti(parser, "--resolution", "-r", "image resolution", 720);
 

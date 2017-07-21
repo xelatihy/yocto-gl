@@ -218,6 +218,8 @@ using std::floor;
 using std::ceil;
 /// round
 using std::round;
+/// isfinate
+using std::isfinite;
 
 // -----------------------------------------------------------------------------
 // VECTORS
@@ -1210,6 +1212,14 @@ constexpr inline vec<T, N> atan2(const vec<T, N>& a, const vec<T, N>& b) {
     auto c = vec<T, N>();
     for (auto i = 0; i < N; i++) c[i] = atan2(a[i], b[i]);
     return c;
+}
+
+/// Check if finite
+template <typename T, int N>
+constexpr inline bool isfinite(const vec<T, N>& a) {
+    for (auto i = 0; i < N; i++)
+        if (!isfinite(a[i])) return false;
+    return true;
 }
 
 /// Element-wise conversion
@@ -2373,6 +2383,15 @@ using bbox2f = bbox<float, 2>;
 using bbox3f = bbox<float, 3>;
 /// 4-dimensional float bbox
 using bbox4f = bbox<float, 4>;
+
+/// 1-dimensional float bbox
+using bbox1i = bbox<int, 1>;
+/// 2-dimensional float bbox
+using bbox2i = bbox<int, 2>;
+/// 3-dimensional float bbox
+using bbox3i = bbox<int, 3>;
+/// 4-dimensional float bbox
+using bbox4i = bbox<int, 4>;
 
 /// initializes an empty bbox
 template <typename T, int N>

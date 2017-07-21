@@ -255,6 +255,17 @@ int parse_opte(parser* par, const std::string& longname,
     bool required = false);
 
 ///
+/// Parses an option enum as described in the intro.
+///
+template <typename T>
+T parse_opte(parser* par, const std::string& longname,
+    const std::string& shortname, const std::string& help, T def,
+    const std::vector<std::pair<std::string, T>>& vals, bool required = false) {
+    return (T)parse_opte(par, longname, shortname, help, (int)def,
+        (const std::vector<std::pair<std::string, int>>&)vals, required);
+}
+
+///
 /// Parses an option array as described in the intro.
 ///
 template <typename T>
