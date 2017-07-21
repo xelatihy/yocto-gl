@@ -850,13 +850,13 @@ thread_pool* make_pool(int nthread = 0);
 Initialize a thread pool with a certain number of threads (0 for
 defatul).
 
-### Function clear_pool()
+### Function free_pool()
 
 ~~~ .cpp
-void clear_pool(thread_pool* pool);
+void free_pool(thread_pool*& pool);
 ~~~
 
-Clear thread pool
+Free the thread pool
 
 ### Function wait_pool()
 
@@ -865,6 +865,14 @@ void wait_pool(thread_pool* pool);
 ~~~
 
 Wait for all jobs to finish
+
+### Function clear_pool()
+
+~~~ .cpp
+void clear_pool(thread_pool* pool);
+~~~
+
+Clear all jobs
 
 ### Function parallel_for()
 
@@ -891,6 +899,14 @@ void wait_pool();
 ~~~
 
 Wait for all jobs to finish on a global thread pool
+
+### Function clear_pool()
+
+~~~ .cpp
+void clear_pool();
+~~~
+
+Clear all jobs on a global thread pool
 
 ### Function run_async()
 

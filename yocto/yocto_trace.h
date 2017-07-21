@@ -58,13 +58,26 @@
 ///   `set_intersection_callbacks()`
 /// 2. if desired, add logging with `set_logging_callbacks()`
 /// 3. prepare lights for rendering `init_lights()`
-/// 4. define rendering params with the `render_params` structure
-/// 5. render blocks of samples with `trace_block()` or the whole image with
-///     `trace_image()`
+/// 4. define rendering params with the `trace_params` structure
+/// 5. render blocks of samples with `trace_block()`
+///
+/// ## Usage for Progressive Rendering
+///
+/// 1. either build the ray-tracing acceleration structure with
+///   `init_intersection()` or supply your own with
+///   `set_intersection_callbacks()`
+/// 2. if desired, add logging with `set_logging_callbacks()`
+/// 3. prepare lights for rendering `init_lights()`
+/// 4. define rendering params with the `trace_params` structure
+/// 5. initoialize the prograssive rendering state with `init_state()`
+/// 6. either render sames successively with `trace_next_samples()`
+///    or starts an asynchronousn renderer
+/// 7. get the rendered image with `get_traced_image()`
+///
 ///
 /// ## History
 ///
-/// - v 0.20: buffer-based api
+/// - v 0.20: state-based api
 /// - v 0.19: explicit material models
 /// - v 0.18: simpler texture creation functions
 /// - v 0.17: move to rgba per-vertex color
@@ -664,9 +677,13 @@ enum struct rng_type {
 ///
 /// Rendering params
 ///
-struct render_params {
+struct trace_params {
     /// camera id
     int camera_id = 0;
+    /// width
+    int width = 0;
+    /// height
+    int height = 0;
     /// number of samples
     int nsamples = 256;
     /// progressive rendering
@@ -692,7 +709,7 @@ struct render_params {
 ///
 /// Renders a block of sample
 ///
-/// Notes: It is safe to call the function in parallel one different blocks.
+/// Notes: It is safe to call the function in parallel on different blocks.
 /// But two threads should not access the same pixels at the same time.
 /// Also blocks with different samples should be called sequentially if
 /// accumulate is true.
@@ -700,91 +717,74 @@ struct render_params {
 /// - Parameters:
 ///     - scn: trace scene
 ///     - cid: camera id
-///     - width: image width
-///     - height: image height
-///     - img: pixel data in RGBA format
+///     - img: pixel data in RGBA format (width/height in params)
 ///     - nsamples: number of samples
 ///     - block_x, block_y: block corner
 ///     - block_width, block_height: block width and height
 ///     - samples_min, samples_max: sample block to render
 ///       [sample_min, sample_max]; max values are excluded
 ///
-void trace_block(const scene* scn, int width, int height, ym::vec4f* img,
-    int block_x, int block_y, int block_width, int block_height,
-    int samples_min, int samples_max, const render_params& params);
+void trace_block(const scene* scn, ym::vec4f* img, int block_x, int block_y,
+    int block_width, int block_height, int samples_min, int samples_max,
+    const trace_params& params);
 
 ///
-/// Renders a block of sample. Convenience wrapper to the main function.
+/// State for progressive rendering and denoising
 ///
-inline void trace_block(const scene* scn, ym::image4f& img, int block_x,
-    int block_y, int block_width, int block_height, int samples_min,
-    int samples_max, const render_params& params) {
-    trace_block(scn, img.width(), img.height(), img.data(), block_x, block_y,
-        block_width, block_height, samples_min, samples_max, params);
-}
+struct trace_state;
 
 ///
-/// Convenience function to call trace_block() with all samples at once.
+/// Creates state
 ///
-void trace_image(const scene* scn, const int width, int height, ym::vec4f* img,
-    const render_params& params);
+trace_state* make_state();
 
 ///
-/// Buffers for progressive rendering and denoising
+/// Initialize state
 ///
-struct render_buffers;
+void init_state(
+    trace_state* state, const scene* scn, const trace_params& params);
 
 ///
-/// Initialize buffers
+/// Clear state
 ///
-render_buffers* init_buffers(int width, int height);
+void free_state(trace_state*& state);
 
 ///
-/// Clear buffers
+/// Grabs a reference to the image from the state
 ///
-void free_buffers(render_buffers*);
-
-///
-/// Clears the buffers for reuse
-///
-void clear_buffers(render_buffers* buffers);
-
-///
-/// Grabs a reference to the image from the buffers
-///
-ym::image4f& get_traced_image_ref(render_buffers* buffers);
+ym::image4f& get_traced_image(trace_state* state);
 
 ///
 /// Gets the current sample number
 ///
-int get_cur_sample(const render_buffers* buffers);
-
-///
-/// Trace a block of samples
-///
-void trace_block(const scene* scn, render_buffers* buffers, int block_x,
-    int block_y, int block_width, int block_height, int samples_min,
-    int samples_max, const render_params& params);
+int get_cur_sample(const trace_state* state);
 
 ///
 /// Trace the next nsamples samples.
 ///
-bool trace_next_samples(const scene* scn, render_buffers* buffers, int nsamples,
-    const render_params& params);
+bool trace_next_samples(trace_state* state, int nsamples);
 
 ///
 /// Trace the whole image
 ///
-inline void trace_image(
-    const scene* scn, render_buffers* buffers, const render_params& params) {
-    trace_next_samples(scn, buffers, params.nsamples, params);
+inline ym::image4f trace_image(const scene* scn, const trace_params& params) {
+    auto state = make_state();
+    init_state(state, scn, params);
+    trace_next_samples(state, params.nsamples);
+    auto img = get_traced_image(state);
+    free_state(state);
+    return img;
 }
 
 ///
-/// Trace the next nblocks blocks up to a whole image.
+/// Starts an anyncrhounous renderer with a maximum of 256 samples.
 ///
-bool trace_next_blocks(const scene* scn, render_buffers* buffers, int nblocks,
-    const render_params& params);
+void trace_async_start(trace_state* state);
+
+///
+/// Stop the asynchronous renderer.
+///
+void trace_async_stop(trace_state* state);
 
 }  // namespace ytrace
 

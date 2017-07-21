@@ -58,13 +58,25 @@ for internal acceleration. Disable this by setting YTRACE_NO_BVH.</p>
   <code>set_intersection_callbacks()</code></li>
 <li>if desired, add logging with <code>set_logging_callbacks()</code></li>
 <li>prepare lights for rendering <code>init_lights()</code></li>
-<li>define rendering params with the <code>render_params</code> structure</li>
-<li>render blocks of samples with <code>trace_block()</code> or the whole image with
-    <code>trace_image()</code></li>
+<li>define rendering params with the <code>trace_params</code> structure</li>
+<li>render blocks of samples with <code>trace_block()</code></li>
+</ol>
+<h2>Usage for Progressive Rendering</h2>
+<ol>
+<li>either build the ray-tracing acceleration structure with
+  <code>init_intersection()</code> or supply your own with
+  <code>set_intersection_callbacks()</code></li>
+<li>if desired, add logging with <code>set_logging_callbacks()</code></li>
+<li>prepare lights for rendering <code>init_lights()</code></li>
+<li>define rendering params with the <code>trace_params</code> structure</li>
+<li>initoialize the prograssive rendering state with <code>init_state()</code></li>
+<li>either render sames successively with <code>trace_next_samples()</code>
+   or starts an asynchronousn renderer</li>
+<li>get the rendered image with <code>get_traced_image()</code></li>
 </ol>
 <h2>History</h2>
 <ul>
-<li>v 0.20: buffer-based api</li>
+<li>v 0.20: state-based api</li>
 <li>v 0.19: explicit material models</li>
 <li>v 0.18: simpler texture creation functions</li>
 <li>v 0.17: move to rgba per-vertex color</li>
@@ -754,9 +766,11 @@ none)</li>
 </ul>
 </li>
 </ul>
-<h3>Struct render_params</h3>
-<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">render_params</span> <span class="p">{</span>
+<h3>Struct trace_params</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">trace_params</span> <span class="p">{</span>
     <span class="kt">int</span> <span class="n">camera_id</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">width</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">height</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
     <span class="kt">int</span> <span class="n">nsamples</span> <span class="o">=</span> <span class="mi">256</span><span class="p">;</span>
     <span class="kt">bool</span> <span class="n">progressive</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
     <span class="n">shader_type</span> <span class="n">stype</span> <span class="o">=</span> <span class="n">shader_type</span><span class="o">::</span><span class="n">pathtrace</span><span class="p">;</span>
@@ -775,6 +789,8 @@ none)</li>
 <ul>
 <li>Members:<ul>
 <li>camera_id:      camera id</li>
+<li>width:      width</li>
+<li>height:      height</li>
 <li>nsamples:      number of samples</li>
 <li>progressive:      progressive rendering</li>
 <li>stype:      sampler type</li>
@@ -789,14 +805,14 @@ none)</li>
 </li>
 </ul>
 <h3>Function trace_block()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">trace_block</span><span class="p">(</span><span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="kt">int</span> <span class="n">width</span><span class="p">,</span> <span class="kt">int</span> <span class="n">height</span><span class="p">,</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec4f</span><span class="o">*</span> <span class="n">img</span><span class="p">,</span>
-    <span class="kt">int</span> <span class="n">block_x</span><span class="p">,</span> <span class="kt">int</span> <span class="n">block_y</span><span class="p">,</span> <span class="kt">int</span> <span class="n">block_width</span><span class="p">,</span> <span class="kt">int</span> <span class="n">block_height</span><span class="p">,</span>
-    <span class="kt">int</span> <span class="n">samples_min</span><span class="p">,</span> <span class="kt">int</span> <span class="n">samples_max</span><span class="p">,</span> <span class="k">const</span> <span class="n">render_params</span><span class="o">&amp;</span> <span class="n">params</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">trace_block</span><span class="p">(</span><span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec4f</span><span class="o">*</span> <span class="n">img</span><span class="p">,</span> <span class="kt">int</span> <span class="n">block_x</span><span class="p">,</span> <span class="kt">int</span> <span class="n">block_y</span><span class="p">,</span>
+    <span class="kt">int</span> <span class="n">block_width</span><span class="p">,</span> <span class="kt">int</span> <span class="n">block_height</span><span class="p">,</span> <span class="kt">int</span> <span class="n">samples_min</span><span class="p">,</span> <span class="kt">int</span> <span class="n">samples_max</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">trace_params</span><span class="o">&amp;</span> <span class="n">params</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Renders a block of sample</p>
-<p>Notes: It is safe to call the function in parallel one different blocks.
+<p>Notes: It is safe to call the function in parallel on different blocks.
 But two threads should not access the same pixels at the same time.
 Also blocks with different samples should be called sequentially if
 accumulate is true.</p>
@@ -804,9 +820,7 @@ accumulate is true.</p>
 <li>Parameters:<ul>
 <li>scn: trace scene</li>
 <li>cid: camera id</li>
-<li>width: image width</li>
-<li>height: image height</li>
-<li>img: pixel data in RGBA format</li>
+<li>img: pixel data in RGBA format (width/height in params)</li>
 <li>nsamples: number of samples</li>
 <li>block_x, block_y: block corner</li>
 <li>block_width, block_height: block width and height</li>
@@ -815,86 +829,67 @@ accumulate is true.</p>
 </ul>
 </li>
 </ul>
-<h3>Function trace_block()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">trace_block</span><span class="p">(</span><span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="n">ym</span><span class="o">::</span><span class="n">image4f</span><span class="o">&amp;</span> <span class="n">img</span><span class="p">,</span> <span class="kt">int</span> <span class="n">block_x</span><span class="p">,</span>
-    <span class="kt">int</span> <span class="n">block_y</span><span class="p">,</span> <span class="kt">int</span> <span class="n">block_width</span><span class="p">,</span> <span class="kt">int</span> <span class="n">block_height</span><span class="p">,</span> <span class="kt">int</span> <span class="n">samples_min</span><span class="p">,</span>
-    <span class="kt">int</span> <span class="n">samples_max</span><span class="p">,</span> <span class="k">const</span> <span class="n">render_params</span><span class="o">&amp;</span> <span class="n">params</span><span class="p">);</span>
+<h3>Struct trace_state</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">trace_state</span><span class="p">;</span>
 </code></pre></div>
 
 
-<p>Renders a block of sample. Convenience wrapper to the main function.</p>
-<h3>Function trace_image()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">trace_image</span><span class="p">(</span><span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="k">const</span> <span class="kt">int</span> <span class="n">width</span><span class="p">,</span> <span class="kt">int</span> <span class="n">height</span><span class="p">,</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec4f</span><span class="o">*</span> <span class="n">img</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">render_params</span><span class="o">&amp;</span> <span class="n">params</span><span class="p">);</span>
+<p>State for progressive rendering and denoising</p>
+<h3>Function make_state()</h3>
+<div class="codehilite"><pre><code><span></span><span class="n">trace_state</span><span class="o">*</span> <span class="nf">make_state</span><span class="p">();</span>
 </code></pre></div>
 
 
-<p>Convenience function to call trace_block() with all samples at once.</p>
-<h3>Struct render_buffers</h3>
-<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">render_buffers</span><span class="p">;</span>
+<p>Creates state</p>
+<h3>Function init_state()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">init_state</span><span class="p">(</span>
+    <span class="n">trace_state</span><span class="o">*</span> <span class="n">state</span><span class="p">,</span> <span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="k">const</span> <span class="n">trace_params</span><span class="o">&amp;</span> <span class="n">params</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Buffers for progressive rendering and denoising</p>
-<h3>Function init_buffers()</h3>
-<div class="codehilite"><pre><code><span></span><span class="n">render_buffers</span><span class="o">*</span> <span class="nf">init_buffers</span><span class="p">(</span><span class="kt">int</span> <span class="n">width</span><span class="p">,</span> <span class="kt">int</span> <span class="n">height</span><span class="p">);</span>
+<p>Initialize state</p>
+<h3>Function free_state()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">free_state</span><span class="p">(</span><span class="n">trace_state</span><span class="o">*&amp;</span> <span class="n">state</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Initialize buffers</p>
-<h3>Function free_buffers()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">free_buffers</span><span class="p">(</span><span class="n">render_buffers</span><span class="o">*</span><span class="p">);</span>
+<p>Clear state</p>
+<h3>Function get_traced_image()</h3>
+<div class="codehilite"><pre><code><span></span><span class="n">ym</span><span class="o">::</span><span class="n">image4f</span><span class="o">&amp;</span> <span class="n">get_traced_image</span><span class="p">(</span><span class="n">trace_state</span><span class="o">*</span> <span class="n">state</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Clear buffers</p>
-<h3>Function clear_buffers()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">clear_buffers</span><span class="p">(</span><span class="n">render_buffers</span><span class="o">*</span> <span class="n">buffers</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Clears the buffers for reuse</p>
-<h3>Function get_traced_image_ref()</h3>
-<div class="codehilite"><pre><code><span></span><span class="n">ym</span><span class="o">::</span><span class="n">image4f</span><span class="o">&amp;</span> <span class="n">get_traced_image_ref</span><span class="p">(</span><span class="n">render_buffers</span><span class="o">*</span> <span class="n">buffers</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Grabs a reference to the image from the buffers</p>
+<p>Grabs a reference to the image from the state</p>
 <h3>Function get_cur_sample()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">int</span> <span class="nf">get_cur_sample</span><span class="p">(</span><span class="k">const</span> <span class="n">render_buffers</span><span class="o">*</span> <span class="n">buffers</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">int</span> <span class="nf">get_cur_sample</span><span class="p">(</span><span class="k">const</span> <span class="n">trace_state</span><span class="o">*</span> <span class="n">state</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Gets the current sample number</p>
-<h3>Function trace_block()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">trace_block</span><span class="p">(</span><span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="n">render_buffers</span><span class="o">*</span> <span class="n">buffers</span><span class="p">,</span> <span class="kt">int</span> <span class="n">block_x</span><span class="p">,</span>
-    <span class="kt">int</span> <span class="n">block_y</span><span class="p">,</span> <span class="kt">int</span> <span class="n">block_width</span><span class="p">,</span> <span class="kt">int</span> <span class="n">block_height</span><span class="p">,</span> <span class="kt">int</span> <span class="n">samples_min</span><span class="p">,</span>
-    <span class="kt">int</span> <span class="n">samples_max</span><span class="p">,</span> <span class="k">const</span> <span class="n">render_params</span><span class="o">&amp;</span> <span class="n">params</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Trace a block of samples</p>
 <h3>Function trace_next_samples()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">trace_next_samples</span><span class="p">(</span><span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="n">render_buffers</span><span class="o">*</span> <span class="n">buffers</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nsamples</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">render_params</span><span class="o">&amp;</span> <span class="n">params</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">trace_next_samples</span><span class="p">(</span><span class="n">trace_state</span><span class="o">*</span> <span class="n">state</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nsamples</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Trace the next nsamples samples.</p>
 <h3>Function trace_image()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">trace_image</span><span class="p">(</span>
-    <span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="n">render_buffers</span><span class="o">*</span> <span class="n">buffers</span><span class="p">,</span> <span class="k">const</span> <span class="n">render_params</span><span class="o">&amp;</span> <span class="n">params</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">ym</span><span class="o">::</span><span class="n">image4f</span> <span class="n">trace_image</span><span class="p">(</span><span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="k">const</span> <span class="n">trace_params</span><span class="o">&amp;</span> <span class="n">params</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Trace the whole image</p>
-<h3>Function trace_next_blocks()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">trace_next_blocks</span><span class="p">(</span><span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="n">render_buffers</span><span class="o">*</span> <span class="n">buffers</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nblocks</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">render_params</span><span class="o">&amp;</span> <span class="n">params</span><span class="p">);</span>
+<h3>Function trace_async_start()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">trace_async_start</span><span class="p">(</span><span class="n">trace_state</span><span class="o">*</span> <span class="n">state</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Trace the next nblocks blocks up to a whole image.</p>
+<p>Starts an anyncrhounous renderer with a maximum of 256 samples.</p>
+<h3>Function trace_async_stop()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">trace_async_stop</span><span class="p">(</span><span class="n">trace_state</span><span class="o">*</span> <span class="n">state</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Stop the asynchronous renderer.</p>
         <article>
         <footer></footer>
         </body>
