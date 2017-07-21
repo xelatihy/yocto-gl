@@ -208,6 +208,17 @@ int parse_opte(parser* par, const std::string& longname,
 
 Parses an option enum as described in the intro.
 
+### Function parse_opte()
+
+~~~ .cpp
+template <typename T>
+T parse_opte(parser* par, const std::string& longname,
+    const std::string& shortname, const std::string& help, T def,
+    const std::vector<std::pair<std::string, T>>& vals, bool required = false);
+~~~
+
+Parses an option enum as described in the intro.
+
 ### Function parse_opta()
 
 ~~~ .cpp

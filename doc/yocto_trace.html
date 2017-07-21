@@ -76,6 +76,7 @@ for internal acceleration. Disable this by setting YTRACE_NO_BVH.</p>
 </ol>
 <h2>History</h2>
 <ul>
+<li>v 0.21: added filters</li>
 <li>v 0.20: state-based api</li>
 <li>v 0.19: explicit material models</li>
 <li>v 0.18: simpler texture creation functions</li>
@@ -162,8 +163,7 @@ for internal acceleration. Disable this by setting YTRACE_NO_BVH.</p>
 </li>
 </ul>
 <h3>Function add_texture()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">int</span> <span class="nf">add_texture</span><span class="p">(</span>
-    <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="kt">int</span> <span class="n">width</span><span class="p">,</span> <span class="kt">int</span> <span class="n">height</span><span class="p">,</span> <span class="kt">int</span> <span class="n">ncomp</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec4f</span><span class="o">*</span> <span class="n">hdr</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">int</span> <span class="nf">add_texture</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="kt">int</span> <span class="n">width</span><span class="p">,</span> <span class="kt">int</span> <span class="n">height</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec4f</span><span class="o">*</span> <span class="n">hdr</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -183,8 +183,7 @@ for internal acceleration. Disable this by setting YTRACE_NO_BVH.</p>
 </li>
 </ul>
 <h3>Function add_texture()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">int</span> <span class="nf">add_texture</span><span class="p">(</span>
-    <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="kt">int</span> <span class="n">width</span><span class="p">,</span> <span class="kt">int</span> <span class="n">height</span><span class="p">,</span> <span class="kt">int</span> <span class="n">ncomp</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec4b</span><span class="o">*</span> <span class="n">ldr</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">int</span> <span class="nf">add_texture</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="kt">int</span> <span class="n">width</span><span class="p">,</span> <span class="kt">int</span> <span class="n">height</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec4b</span><span class="o">*</span> <span class="n">ldr</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -766,15 +765,38 @@ none)</li>
 </ul>
 </li>
 </ul>
+<h3>Enum filter_type</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">enum</span> <span class="k">struct</span> <span class="n">filter_type</span> <span class="p">{</span>
+    <span class="n">box</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+    <span class="n">triangle</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
+    <span class="n">cubic</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span>
+    <span class="n">catmull_rom</span> <span class="o">=</span> <span class="mi">4</span><span class="p">,</span>
+    <span class="n">mitchell</span> <span class="o">=</span> <span class="mi">5</span>
+
+<span class="p">}</span>
+</code></pre></div>
+
+
+<p>Filter type</p>
+<ul>
+<li>Values:<ul>
+<li>box:      box filter</li>
+<li>triangle:      hat filter</li>
+<li>cubic:      cubic spline</li>
+<li>catmull_rom:      Catmull-Rom spline</li>
+<li>mitchell:      Mitchell-Netrevalli</li>
+</ul>
+</li>
+</ul>
 <h3>Struct trace_params</h3>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">trace_params</span> <span class="p">{</span>
     <span class="kt">int</span> <span class="n">camera_id</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
     <span class="kt">int</span> <span class="n">width</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
     <span class="kt">int</span> <span class="n">height</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
     <span class="kt">int</span> <span class="n">nsamples</span> <span class="o">=</span> <span class="mi">256</span><span class="p">;</span>
-    <span class="kt">bool</span> <span class="n">progressive</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
     <span class="n">shader_type</span> <span class="n">stype</span> <span class="o">=</span> <span class="n">shader_type</span><span class="o">::</span><span class="n">pathtrace</span><span class="p">;</span>
     <span class="n">rng_type</span> <span class="n">rtype</span> <span class="o">=</span> <span class="n">rng_type</span><span class="o">::</span><span class="n">stratified</span><span class="p">;</span>
+    <span class="n">filter_type</span> <span class="n">ftype</span> <span class="o">=</span> <span class="n">filter_type</span><span class="o">::</span><span class="n">box</span><span class="p">;</span>
     <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span> <span class="n">amb</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">};</span>
     <span class="kt">bool</span> <span class="n">envmap_invisible</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
     <span class="kt">int</span> <span class="n">min_depth</span> <span class="o">=</span> <span class="mi">3</span><span class="p">;</span>
@@ -792,9 +814,9 @@ none)</li>
 <li>width:      width</li>
 <li>height:      height</li>
 <li>nsamples:      number of samples</li>
-<li>progressive:      progressive rendering</li>
 <li>stype:      sampler type</li>
 <li>rtype:      random number generation type</li>
+<li>ftype:      filter type</li>
 <li>amb:      ambient lighting</li>
 <li>envmap_invisible:      view environment map</li>
 <li>min_depth:      minimum ray depth</li>

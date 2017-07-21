@@ -163,7 +163,7 @@ void draw_image(ygui::window* win) {
     auto window_size = get_window_size(win);
     yglu::shade_image(img.tex_glid, img.width(), img.height(), window_size[0],
         window_size[1], pars->offset[0], pars->offset[1], pars->zoom,
-        (yglu::tonemap_type)pars->tonemap, pars->exposure, pars->gamma);
+        pars->tonemap, pars->exposure, pars->gamma);
 }
 
 template <typename T>

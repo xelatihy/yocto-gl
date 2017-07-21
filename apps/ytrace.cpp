@@ -81,8 +81,8 @@ void draw_image(ygui::window* win) {
     // draw image
     auto window_size = ygui::get_window_size(win);
     yglu::shade_image(scn->trace_texture_id, img.width(), img.height(),
-        window_size[0], window_size[1], 0, 0, 1,
-        (yglu::tonemap_type)scn->tonemap, scn->exposure, scn->gamma);
+        window_size[0], window_size[1], 0, 0, 1, scn->tonemap, scn->exposure,
+        scn->gamma);
 
     draw_widgets(win);
     ygui::swap_buffers(win);
@@ -122,6 +122,7 @@ bool update(yscene* scn) {
         pparams.width = scn->trace_params.width / scn->trace_block_size;
         pparams.height = scn->trace_params.height / scn->trace_block_size;
         pparams.nsamples = 1;
+        pparams.ftype = ytrace::filter_type::box;
         ytrace::init_state(scn->preview_state, scn->trace_scene, pparams);
         auto& img = ytrace::get_traced_image(scn->trace_state);
         ytrace::trace_next_samples(scn->preview_state, 1);

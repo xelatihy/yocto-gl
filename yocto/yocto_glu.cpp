@@ -176,7 +176,7 @@ void shade_image(uint tid, int img_w, int img_h, int win_w, int win_h, float ox,
     float oy, float zoom) {
     assert(check_error());
     shade_image(tid, img_w, img_h, win_w, win_h, ox, oy, zoom,
-        tonemap_type::none, 0, 1);
+        ym::tonemap_type::none, 0, 1);
     assert(check_error());
 }
 
@@ -184,7 +184,8 @@ void shade_image(uint tid, int img_w, int img_h, int win_w, int win_h, float ox,
 // This is a public API. See above for documentation.
 //
 void shade_image(uint tid, int img_w, int img_h, int win_w, int win_h, float ox,
-    float oy, float zoom, tonemap_type tmtype, float exposure, float gamma_) {
+    float oy, float zoom, ym::tonemap_type tmtype, float exposure,
+    float gamma_) {
     static const std::string& vert =
         R"(
 
@@ -1325,8 +1326,9 @@ void make_program(uint* pid, uint* aid) {
 // This is a public API. See above for documentation.
 //
 void begin_frame(uint prog, uint vao, bool shade_eyelight, float img_exposure,
-    tonemap_type img_tonemap, float img_gamma, const ym::mat4f& camera_xform,
-    const ym::mat4f& camera_xform_inv, const ym::mat4f& camera_proj) {
+    ym::tonemap_type img_tonemap, float img_gamma,
+    const ym::mat4f& camera_xform, const ym::mat4f& camera_xform_inv,
+    const ym::mat4f& camera_proj) {
     assert(check_error());
     glUseProgram(prog);
     glBindVertexArray(vao);

@@ -129,20 +129,6 @@ enum struct ltype : int {
 };
 
 ///
-/// Tone mapping presets
-///
-enum struct tonemap_type {
-    /// none
-    none = 0,
-    /// srgb
-    srgb = 1,
-    /// linear
-    gamma = 2,
-    /// filmic
-    filmic = 3,
-};
-
-///
 /// Wrap values for texture
 ///
 enum struct texture_wrap {
@@ -265,7 +251,8 @@ void shade_image(uint tid, int img_w, int img_h, int win_w, int win_h, float ox,
 /// As above but includes an exposure/gamma correction.
 ///
 void shade_image(uint tid, int img_w, int img_h, int win_w, int win_h, float ox,
-    float oy, float zoom, tonemap_type tmtype, float exposure, float gamma_);
+    float oy, float zoom, ym::tonemap_type tmtype, float exposure,
+    float gamma_);
 
 // TEXTURE FUNCTIONS -----------------------------------------------------------
 
@@ -480,8 +467,9 @@ void make_program(uint* pid, uint* vao);
 /// preview.
 ///
 void begin_frame(uint prog, uint vao, bool shade_eyelight, float img_exposure,
-    tonemap_type img_tonemap, float img_gamma, const ym::mat4f& camera_xform,
-    const ym::mat4f& camera_xform_inv, const ym::mat4f& camera_proj);
+    ym::tonemap_type img_tonemap, float img_gamma,
+    const ym::mat4f& camera_xform, const ym::mat4f& camera_xform_inv,
+    const ym::mat4f& camera_proj);
 
 ///
 /// Ends a frame.

@@ -77,6 +77,7 @@
 ///
 /// ## History
 ///
+/// - v 0.21: added filters
 /// - v 0.20: state-based api
 /// - v 0.19: explicit material models
 /// - v 0.18: simpler texture creation functions
@@ -207,8 +208,7 @@ void set_camera(scene* scn, int cid, const ym::frame3f& frame, float yfov,
 /// - Returns:
 ///     - texture id
 ///
-int add_texture(
-    scene* scn, int width, int height, int ncomp, const ym::vec4f* hdr);
+int add_texture(scene* scn, int width, int height, const ym::vec4f* hdr);
 
 ///
 /// Sets a texture in the scene.
@@ -222,8 +222,7 @@ int add_texture(
 /// - Returns:
 ///     - texture id
 ///
-int add_texture(
-    scene* scn, int width, int height, int ncomp, const ym::vec4b* ldr);
+int add_texture(scene* scn, int width, int height, const ym::vec4b* ldr);
 
 ///
 /// Adds a texture in the scene.
@@ -675,6 +674,22 @@ enum struct rng_type {
 };
 
 ///
+/// Filter type
+///
+enum struct filter_type {
+    /// box filter
+    box = 1,
+    /// hat filter
+    triangle = 2,
+    /// cubic spline
+    cubic = 3,
+    /// Catmull-Rom spline
+    catmull_rom = 4,
+    /// Mitchell-Netrevalli
+    mitchell = 5
+};
+
+///
 /// Rendering params
 ///
 struct trace_params {
@@ -686,12 +701,12 @@ struct trace_params {
     int height = 0;
     /// number of samples
     int nsamples = 256;
-    /// progressive rendering
-    bool progressive = true;
     /// sampler type
     shader_type stype = shader_type::pathtrace;
     /// random number generation type
     rng_type rtype = rng_type::stratified;
+    /// filter type
+    filter_type ftype = filter_type::box;
     /// ambient lighting
     ym::vec3f amb = {0, 0, 0};
     /// view environment map

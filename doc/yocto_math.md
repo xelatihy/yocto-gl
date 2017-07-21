@@ -306,6 +306,14 @@ using std::round;
 
 round
 
+### Function Alias isfinite()
+
+~~~ .cpp
+using std::isfinite;
+~~~
+
+isfinate
+
 ### Struct vec
 
 ~~~ .cpp
@@ -1655,6 +1663,15 @@ constexpr inline vec<T, N> atan2(const vec<T, N>& a, const vec<T, N>& b);
 
 Element-wise round
 
+### Function isfinite()
+
+~~~ .cpp
+template <typename T, int N>
+constexpr inline bool isfinite(const vec<T, N>& a);
+~~~
+
+Check if finite
+
 ### Function float_to_byte()
 
 ~~~ .cpp
@@ -2929,6 +2946,38 @@ using bbox3f = bbox<float, 3>;
 
 ~~~ .cpp
 using bbox4f = bbox<float, 4>;
+~~~
+
+4-dimensional float bbox
+
+### Typedef bbox1i
+
+~~~ .cpp
+using bbox1i = bbox<int, 1>;
+~~~
+
+1-dimensional float bbox
+
+### Typedef bbox2i
+
+~~~ .cpp
+using bbox2i = bbox<int, 2>;
+~~~
+
+2-dimensional float bbox
+
+### Typedef bbox3i
+
+~~~ .cpp
+using bbox3i = bbox<int, 3>;
+~~~
+
+3-dimensional float bbox
+
+### Typedef bbox4i
+
+~~~ .cpp
+using bbox4i = bbox<int, 4>;
 ~~~
 
 4-dimensional float bbox
