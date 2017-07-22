@@ -28,7 +28,7 @@
 
 #include "yscene.h"
 
-using namespace yu::logging;
+using yu::logging::log_info;
 
 // ---------------------------------------------------------------------------
 // UTILITIES
@@ -153,7 +153,7 @@ std::vector<ym::vec4i> make_trace_blocks(int w, int h, int bs) {
 
 void render_offline(yscene* scn) {
     // render
-    log_msgf(log_level::info, "ytrace", "starting renderer");
+    log_info("starting renderer");
     for (auto cur_sample = 0; cur_sample < scn->trace_params.nsamples;
          cur_sample += scn->trace_batch_size) {
         if (scn->trace_save_progressive && cur_sample) {
@@ -161,27 +161,24 @@ void render_offline(yscene* scn) {
                               yu::path::get_basename(scn->imfilename) +
                               yu::string::format(".%04d", cur_sample) +
                               yu::path::get_extension(scn->imfilename);
-            log_msgf(log_level::info, "ytrace", "saving image %s",
-                imfilename.c_str());
+            log_info("saving image %s", imfilename.c_str());
             save_image(imfilename, ytrace::get_traced_image(scn->trace_state),
                 scn->exposure, scn->tonemap, scn->gamma);
         }
-        log_msgf(log_level::info, "ytrace", "rendering sample %4d/%d",
-            cur_sample, scn->trace_params.nsamples);
+        log_info(
+            "rendering sample %4d/%d", cur_sample, scn->trace_params.nsamples);
         ytrace::trace_next_samples(scn->trace_state, scn->trace_batch_size);
     }
-    log_msgf(log_level::info, "ytrace", "rendering done");
+    log_info("rendering done");
 
     // save image
-    log_msgf(
-        log_level::info, "ytrace", "saving image %s", scn->imfilename.c_str());
+    log_info("saving image %s", scn->imfilename.c_str());
     save_image(scn->imfilename, ytrace::get_traced_image(scn->trace_state),
         scn->exposure, scn->tonemap, scn->gamma);
 
     // save additional buffers
     if (scn->trace_params.aux_buffers) {
-        log_msgf(log_level::info, "ytrace", "saving additional buffers for %s",
-            scn->imfilename.c_str());
+        log_info("saving additional buffers for %s", scn->imfilename.c_str());
         auto norm = ym::image4f(), albedo = ym::image4f(),
              depth = ym::image4f();
         ytrace::get_aux_buffers(scn->trace_state, norm, albedo, depth);
@@ -200,11 +197,6 @@ void render_offline(yscene* scn) {
 // ---------------------------------------------------------------------------
 // TRACE SCENE
 // ---------------------------------------------------------------------------
-
-void logging_msg_cb(
-    int level, const char* name, const char* msg, va_list args) {
-    log_msgfv((log_level)level, name, msg, args);
-}
 
 ytrace::scene* make_trace_scene(const yobj::scene* scene, const ycamera* cam) {
     auto trace_scene = ytrace::make_scene();
@@ -290,7 +282,15 @@ ytrace::scene* make_trace_scene(const yobj::scene* scene, const ycamera* cam) {
         }
     }
 
-    ytrace::set_logging_callbacks(trace_scene, nullptr, logging_msg_cb);
+    ytrace::set_logging_callbacks(trace_scene,
+        [](const char* msg) {
+            yu::logging::log_msg(
+                yu::logging::log_level::info, "yocto_trace", msg);
+        },
+        [](const char* msg) {
+            yu::logging::log_msg(
+                yu::logging::log_level::error, "yocto_trace", msg);
+        });
 
     return trace_scene;
 }
@@ -395,8 +395,6 @@ ytrace::scene* make_trace_scene(
         }
     }
 
-    ytrace::set_logging_callbacks(trace_scene, nullptr, logging_msg_cb);
-
     return trace_scene;
 }
 
@@ -409,28 +407,24 @@ int main(int argc, char* argv[]) {
     auto scn = new yscene();
 
     // command line
-    parse_cmdline(
-        scn, argc, argv, "render scene with path tracing", false, true);
-
-    // logging
-    set_default_loggers(scn->log_filename);
+    parse_cmdline(scn, argc, argv, "ytrace", "render scene with path tracing",
+        false, true);
 
     // setting up rendering
-    log_msgf(
-        log_level::info, "ytrace", "loading scene %s", scn->filename.c_str());
+    log_info("loading scene %s", scn->filename.c_str());
     load_scene(scn, scn->filename, true, true);
 
     // build trace scene
-    log_msgf(log_level::info, "ytrace", "setting up tracer");
+    log_info("setting up tracer");
     scn->trace_scene = (scn->oscn) ?
                            make_trace_scene(scn->oscn, scn->view_cam) :
                            make_trace_scene(scn->gscn, scn->view_cam);
     // build bvh
-    log_msgf(log_level::info, "ytrace", "building bvh");
+    log_info("building bvh");
     ytrace::init_intersection(scn->trace_scene);
 
     // init renderer
-    log_msgf(log_level::info, "ytrace", "initializing tracer");
+    log_info("initializing tracer");
     ytrace::init_lights(scn->trace_scene);
 
     // initialize rendering objects

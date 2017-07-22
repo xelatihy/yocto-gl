@@ -79,6 +79,7 @@ Disable this by setting YTRACE_NO_BVH.</p>
 </ol>
 <h2>History</h2>
 <ul>
+<li>v 0.23: simpler logging</li>
 <li>v 0.22: added additional buffers</li>
 <li>v 0.21: added filters</li>
 <li>v 0.20: state-based api</li>
@@ -654,14 +655,13 @@ none)</li>
 </li>
 </ul>
 <h3>Typedef intersect_first_cb</h3>
-<div class="codehilite"><pre><code><span></span><span class="k">using</span> <span class="n">intersect_first_cb</span> <span class="o">=</span> <span class="n">intersect_point</span> <span class="p">(</span><span class="o">*</span><span class="p">)(</span><span class="kt">void</span><span class="o">*</span> <span class="n">ctx</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">ray3f</span><span class="o">&amp;</span> <span class="n">ray</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="k">using</span> <span class="n">intersect_first_cb</span> <span class="o">=</span> <span class="n">std</span><span class="o">::</span><span class="n">function</span><span class="o">&lt;</span><span class="n">intersect_point</span><span class="p">(</span><span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">ray3f</span><span class="o">&amp;</span> <span class="n">ray</span><span class="p">)</span><span class="o">&gt;</span><span class="p">;</span>
 </code></pre></div>
 
 
 <p>Ray-scene closest intersection callback.</p>
 <ul>
 <li>Parameters:<ul>
-<li>ctx: context</li>
 <li>ray: ray</li>
 </ul>
 </li>
@@ -671,14 +671,13 @@ none)</li>
 </li>
 </ul>
 <h3>Typedef intersect_any_cb</h3>
-<div class="codehilite"><pre><code><span></span><span class="k">using</span> <span class="n">intersect_any_cb</span> <span class="o">=</span> <span class="kt">bool</span> <span class="p">(</span><span class="o">*</span><span class="p">)(</span><span class="kt">void</span><span class="o">*</span> <span class="n">ctx</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">ray3f</span><span class="o">&amp;</span> <span class="n">o</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="k">using</span> <span class="n">intersect_any_cb</span> <span class="o">=</span> <span class="n">std</span><span class="o">::</span><span class="n">function</span><span class="o">&lt;</span><span class="kt">bool</span><span class="p">(</span><span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">ray3f</span><span class="o">&amp;</span> <span class="n">ray</span><span class="p">)</span><span class="o">&gt;</span><span class="p">;</span>
 </code></pre></div>
 
 
 <p>Ray-scene intersection callback</p>
 <ul>
 <li>Parameters:<ul>
-<li>ctx: context</li>
 <li>ray: ray</li>
 </ul>
 </li>
@@ -706,15 +705,15 @@ none)</li>
 </ul>
 </li>
 </ul>
-<h3>Typedef logging_msg_cb</h3>
-<div class="codehilite"><pre><code><span></span><span class="k">using</span> <span class="n">logging_msg_cb</span> <span class="o">=</span> <span class="kt">void</span> <span class="p">(</span><span class="o">*</span><span class="p">)(</span>
-    <span class="kt">int</span> <span class="n">level</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">name</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">msg</span><span class="p">,</span> <span class="kt">va_list</span> <span class="n">args</span><span class="p">);</span>
+<h3>Typedef logging_cb</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">using</span> <span class="n">logging_cb</span> <span class="o">=</span> <span class="n">std</span><span class="o">::</span><span class="n">function</span><span class="o">&lt;</span><span class="kt">void</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span><span class="o">*</span><span class="p">)</span><span class="o">&gt;</span><span class="p">;</span>
 </code></pre></div>
 
 
-<p>Logger callback</p>
+<p>Logging callback</p>
 <h3>Function set_logging_callbacks()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_logging_callbacks</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="kt">void</span><span class="o">*</span> <span class="n">ctx</span><span class="p">,</span> <span class="n">logging_msg_cb</span> <span class="n">log</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_logging_callbacks</span><span class="p">(</span>
+    <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="n">logging_cb</span> <span class="n">log_info</span><span class="p">,</span> <span class="n">logging_cb</span> <span class="n">log_error</span><span class="p">);</span>
 </code></pre></div>
 
 

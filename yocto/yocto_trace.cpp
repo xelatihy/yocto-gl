@@ -54,6 +54,7 @@
 #ifndef _WIN32
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
+#pragma GCC diagnostic ignored "-Wformat-security"
 #endif
 
 namespace ytrace {
@@ -232,7 +233,6 @@ struct light {
 //
 struct scene {
     // intersection callbaks
-    void* intersect_ctx = nullptr;                 // ray intersection context
     intersect_first_cb intersect_first = nullptr;  // ray intersection callback
     intersect_any_cb intersect_any = nullptr;      // ray hit callback
 #ifndef YTRACE_NO_BVH
@@ -251,8 +251,8 @@ struct scene {
     material* default_material = nullptr;
 
     // logging callback
-    void* logging_ctx = nullptr;           // logging callback
-    logging_msg_cb logging_msg = nullptr;  // logging message
+    logging_cb log_info = nullptr;   // logging message
+    logging_cb log_error = nullptr;  // logging message
 
     // destructor
     ~scene();
@@ -283,17 +283,6 @@ scene::~scene() {
 #ifndef YTRACE_NO_BVH
     if (intersect_bvh) ybvh::free_scene(intersect_bvh);
 #endif
-}
-
-//
-// Logging shortcut
-//
-static inline void log(const scene* scn, int level, const char* msg, ...) {
-    if (!scn->logging_msg) return;
-    va_list args;
-    va_start(args, msg);
-    scn->logging_msg(level, "yocto_trace", msg, args);
-    va_end(args);
 }
 
 //
@@ -624,9 +613,8 @@ int add_line_shape(scene* scn, int nlines, const ym::vec2i* lines, int nverts,
 //
 // Sets the intersection callbacks
 //
-void set_intersection_callbacks(scene* scn, void* ctx,
-    intersect_first_cb intersect_first, intersect_any_cb intersect_any) {
-    scn->intersect_ctx = ctx;
+void set_intersection_callbacks(scene* scn, intersect_first_cb intersect_first,
+    intersect_any_cb intersect_any) {
     scn->intersect_first = intersect_first;
     scn->intersect_any = intersect_any;
 }
@@ -634,9 +622,10 @@ void set_intersection_callbacks(scene* scn, void* ctx,
 //
 // Sets the logging callbacks
 //
-void set_logging_callbacks(scene* scn, void* ctx, logging_msg_cb logging_msg) {
-    scn->logging_ctx = ctx;
-    scn->logging_msg = logging_msg;
+void set_logging_callbacks(
+    scene* scn, logging_cb logging_info, logging_cb logging_error) {
+    scn->log_info = logging_info;
+    scn->log_error = logging_error;
 }
 
 //
@@ -654,32 +643,6 @@ void specular_fresnel_from_ks(
         (1 + std::sqrt(ks.z)) / (1 - std::sqrt(ks.z))};
     esk = {0, 0, 0};
 }
-
-#ifndef YTRACE_NO_BVH
-//
-// internal intersection adapter
-//
-static inline intersect_point internal_intersect_first(
-    void* ctx, const ym::ray3f& ray) {
-    auto scene_bvh = (ybvh::scene*)ctx;
-    auto isec = ybvh::intersect_scene(scene_bvh, ray, false);
-    auto ipt = ytrace::intersect_point();
-    ipt.dist = isec.dist;
-    ipt.iid = isec.iid;
-    ipt.sid = isec.sid;
-    ipt.eid = isec.eid;
-    ipt.euv = {isec.euv.x, isec.euv.y, isec.euv.z};
-    return ipt;
-}
-
-//
-// internal intersection adapter
-//
-static inline bool internal_intersect_any(void* ctx, const ym::ray3f& ray) {
-    auto scene_bvh = (ybvh::scene*)ctx;
-    return (bool)ybvh::intersect_scene(scene_bvh, ray, true);
-}
-#endif
 
 //
 // Init acceleation using yocto_bvh. Public API, see above.
@@ -708,8 +671,20 @@ void init_intersection(scene* scn) {
         ybvh::add_instance(scn->intersect_bvh, ist->frame, shape_map[ist->shp]);
     }
     ybvh::build_scene_bvh(scn->intersect_bvh);
-    set_intersection_callbacks(scn, scn->intersect_bvh,
-        internal_intersect_first, internal_intersect_any);
+    set_intersection_callbacks(scn,
+        [scn](const ym::ray3f& ray) {
+            auto isec = ybvh::intersect_scene(scn->intersect_bvh, ray, false);
+            auto ipt = ytrace::intersect_point();
+            ipt.dist = isec.dist;
+            ipt.iid = isec.iid;
+            ipt.sid = isec.sid;
+            ipt.eid = isec.eid;
+            ipt.euv = {isec.euv.x, isec.euv.y, isec.euv.z};
+            return ipt;
+        },
+        [scn](const ym::ray3f& ray) {
+            return (bool)ybvh::intersect_scene(scn->intersect_bvh, ray, true);
+        });
 #endif
 }
 
@@ -1850,7 +1825,7 @@ static inline ym::ray3f offset_ray(
 // Intersects a ray with the scn and return the point (or env point).
 //
 static point intersect_scene(const scene* scn, const ym::ray3f& ray) {
-    auto isec = scn->intersect_first(scn->intersect_ctx, ray);
+    auto isec = scn->intersect_first(ray);
     if (isec) {
         return eval_shapepoint(
             scn->instances[isec.iid], isec.eid, isec.euv, -ray.d);
@@ -1885,9 +1860,8 @@ static ym::vec3f eval_transmission(const scene* scn, const point& pt,
         return weight;
     } else {
         auto shadow_ray = offset_ray(pt, lpt, params);
-        return (scn->intersect_any(scn->intersect_ctx, shadow_ray)) ?
-                   ym::zero3f :
-                   ym::vec3f{1, 1, 1};
+        return (scn->intersect_any(shadow_ray)) ? ym::zero3f :
+                                                  ym::vec3f{1, 1, 1};
     }
 }
 
@@ -2015,8 +1989,7 @@ static ym::vec3f shade_pathtrace_std(const scene* scn, const point& pt_,
                   weight_light(lpt, pt) * (float)scn->lights.size();
         if (ld != ym::zero3f) {
             auto shadow_ray = offset_ray(pt, lpt, params);
-            if (!scn->intersect_any(scn->intersect_ctx, shadow_ray))
-                l += weight * ld;
+            if (!scn->intersect_any(shadow_ray)) l += weight * ld;
         }
 
         // skip recursion if path ends
@@ -2096,8 +2069,7 @@ static ym::vec3f shade_pathtrace_hack(const scene* scn, const point& pt_,
                   weight_light(lpt, pt) * (float)scn->lights.size();
         if (ld != ym::zero3f) {
             auto shadow_ray = offset_ray(pt, lpt, params);
-            if (!scn->intersect_any(scn->intersect_ctx, shadow_ray))
-                l += weight * ld;
+            if (!scn->intersect_any(shadow_ray)) l += weight * ld;
         }
 
         // skip recursion if path ends
@@ -2147,7 +2119,7 @@ static ym::vec3f shade_direct(const scene* scn, const point& pt, sampler* smp,
                   weight_light(lpt, pt);
         if (ld == ym::zero3f) continue;
         auto shadow_ray = offset_ray(pt, lpt, params);
-        if (scn->intersect_any(scn->intersect_ctx, shadow_ray)) continue;
+        if (scn->intersect_any(shadow_ray)) continue;
         l += ld;
     }
 
@@ -2203,7 +2175,7 @@ void trace_block(const scene* scn, ym::vec4f* img, int block_x, int block_y,
                 if (!pt.ist || params.envmap_invisible) continue;
                 auto l = shade(scn, pt, &smp, params);
                 if (!ym::isfinite(l)) {
-                    log(scn, 2, "NaN detected");
+                    if (scn->log_error) scn->log_error("NaN detected");
                     continue;
                 }
                 if (params.pixel_clamp > 0)
@@ -2432,7 +2404,7 @@ void trace_sample(ytrace::trace_state* state, int i, int j, int s, ym::vec3f& l,
     if (!pt.ist || params.envmap_invisible) return;
     l = state->shade(state->scn, pt, &smp, state->params);
     if (!ym::isfinite(l)) {
-        log(state->scn, 2, "NaN detected");
+        if (state->scn->log_error) state->scn->log_error("NaN detected");
         return;
     }
     if (params.pixel_clamp > 0) l = ym::clamplen(l, params.pixel_clamp);

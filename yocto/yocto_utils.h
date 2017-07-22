@@ -64,6 +64,7 @@
 ///
 /// ## History
 ///
+/// - v 0.22: seimpler logging
 /// - v 0.21: move to header-only mode
 /// - v 0.20: simpler logging
 /// - v 0.19: some containers ops
@@ -171,6 +172,11 @@ namespace yu {}
 #include <unordered_map>
 #include <vector>
 
+#ifndef _WIN32
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-security"
+#endif
+
 ///
 /// General utilities to write command line applications
 ///
@@ -189,14 +195,15 @@ struct parser;
 ///
 /// Inits a command line parser.
 ///
-inline parser* make_parser(
-    const std::vector<std::string>& args, const std::string& help = "");
+inline parser* make_parser(const std::vector<std::string>& args,
+    const std::string& name = "", const std::string& help = "");
 
 ///
 /// Inits a command line parser.
 ///
-inline parser* make_parser(int argc, char* argv[], const char* help) {
-    return make_parser(std::vector<std::string>(argv, argv + argc), help);
+inline parser* make_parser(
+    int argc, char* argv[], const char* name, const char* help) {
+    return make_parser(std::vector<std::string>(argv, argv + argc), name, help);
 }
 
 ///
@@ -657,22 +664,11 @@ inline std::string replace(
 /// C-like string formatting. This is only meant for short strings with max
 /// length 10000 chars. Memory corruption will happen for longer strings.
 ///
-inline std::string format(const char* fmt, va_list args) {
+template <typename... Args>
+inline std::string format(const char* fmt, Args&&... args) {
     char buffer[1024 * 16];
-    vsprintf(buffer, fmt, args);
+    sprintf(buffer, fmt, std::move(args)...);
     return buffer;
-}
-
-///
-/// C-like string formatting. This is only meant for short strings with max
-/// length 10000 chars. Memory corruption will happen for longer strings.
-///
-inline std::string format(const char* fmt, ...) {
-    va_list args;
-    va_start(args, fmt);
-    auto s = format(fmt, args);
-    va_end(args);
-    return s;
 }
 
 }  // namespace string
@@ -805,53 +801,83 @@ enum struct log_level : int {
 };
 
 ///
-/// Logger object
+/// Logger object. A logger can output messages to multiple streams.
+/// Use add streams commands for it.
 ///
 struct logger;
 
 ///
-/// Make a file logger. See set_logger() for Parameters.
+/// Make a logger with an optional console stream.
 ///
-/// - Parameters:
-///     - filename: logger filename or stderr if empty
-///     - apend: append or write open mode for file logger
-///
-///
-inline logger* make_file_logger(const std::string& filename, bool append,
-    bool short_message = false, log_level output_level = log_level::info,
-    log_level flush_level = log_level::info);
+inline logger* make_logger(const char* name, bool add_console_stream = false);
 
 ///
-/// Make a stderr logger. See set_logger() for Parameters.
+/// Set logger default name
 ///
-inline logger* make_stderr_logger(bool short_message = true,
-    log_level output_level = log_level::info,
-    log_level flush_level = log_level::info);
+inline void set_logger_name(logger* lgr, const char* name);
 
 ///
-/// Make a stderr logger. See set_logger() for Parameters.
+/// Free logger
 ///
-inline logger* make_stdout_logger(bool short_message = true,
-    log_level output_level = log_level::info,
-    log_level flush_level = log_level::info);
+inline void free_logger(logger*& lgr);
 
 ///
-/// Get default loggers. This is a modifiable reference.
-///
-inline std::vector<logger*>* get_default_loggers();
-
-///
-/// Set logger level
+/// Add a file stream to a logger.
 ///
 /// - Parameters:
 ///     - lgr: logger
-///     - name : logger name
+///     - filename: filename
+///     - append: append or write open mode for file logger
 ///     - short_message: whether to use a short message version
 ///     - output_level: output level
 ///     - flush_level: output level
+/// - Returns:
+///     - true if ok
 ///
-inline void set_logger(logger* lgr, bool short_message, log_level output_level,
-    log_level flush_level = log_level::error);
+inline bool add_file_stream(logger* lgr, const std::string& filename,
+    bool append, bool short_message = false,
+    log_level output_level = log_level::info,
+    log_level flush_level = log_level::info);
+
+///
+/// Add a console stream to a logger.
+///
+/// - Parameters:
+///     - lgr: logger
+///     - filename: logger filename or stderr if empty
+///     - use_std_error: use standard error instead of standard out
+///     - short_message: whether to use a short message version
+///     - output_level: output level
+///     - flush_level: output level
+/// - Returns:
+///     - true if ok
+///
+inline bool add_console_stream(logger* lgr, bool use_std_error = false,
+    bool short_message = true, log_level output_level = log_level::info,
+    log_level flush_level = log_level::info);
+
+///
+/// Get default logger.
+/// By default a non-verbose stdout logger is creater.
+///
+inline logger* get_default_logger();
+
+///
+/// Set default logger name
+///
+inline void set_logger_name(const char* name) {
+    set_logger_name(get_default_logger(), name);
+}
+
+///
+/// Add a file logger to the default loggers.
+///
+inline void add_file_stream(const std::string& filename, bool append,
+    bool short_message = false, log_level output_level = log_level::info,
+    log_level flush_level = log_level::info) {
+    add_file_stream(get_default_logger(), filename, append, short_message,
+        output_level, flush_level);
+}
 
 ///
 /// Log a message
@@ -866,26 +892,6 @@ inline void log_msg(
     logger* lgr, log_level level, const char* name, const char* msg);
 
 ///
-/// Log a message
-///
-/// - Parameters:
-///     - lgr: logger
-///     - level: message level
-///     - code: message code (5 chars)
-///     - msg: message
-///
-inline void log_msg(logger* lgr, log_level level, const std::string& name,
-    const std::string& msg) {
-    log_msg(lgr, level, name.c_str(), msg.c_str());
-}
-
-///
-/// Logs a message to the default loggers
-///
-inline void log_msgfv(logger* lgr, log_level level, const char* name,
-    const char* msg, va_list args);
-
-///
 /// Log a message formatted ala printf.
 ///
 /// - Parameters:
@@ -894,25 +900,46 @@ inline void log_msgfv(logger* lgr, log_level level, const char* name,
 ///     - code: message code (5 chars)
 ///     - msg: message
 ///
-inline void log_msgf(
-    logger* lgr, log_level level, const char* name, const char* msg, ...);
+template <typename... Args>
+inline void log_msg(logger* lgr, log_level level, const char* name,
+    const char* msg, const Args&... args) {
+    char buffer[4096];
+    sprintf(buffer, msg, args...);
+    log_msg(lgr, level, name, buffer);
+}
 
 ///
 /// Logs a message to the default loggers
 ///
+template <typename... Args>
 inline void log_msg(
-    log_level level, const std::string& name, const std::string& msg);
+    log_level level, const char* name, const char* msg, const Args&... args) {
+    log_msg(get_default_logger(), level, name, msg, args...);
+}
 
 ///
 /// Logs a message to the default loggers
 ///
-inline void log_msgf(log_level level, const char* name, const char* msg, ...);
+template <typename... Args>
+inline void log_info(const char* msg, const Args&... args) {
+    log_msg(log_level::info, "", msg, args...);
+}
 
 ///
 /// Logs a message to the default loggers
 ///
-inline void log_msgfv(
-    log_level level, const char* name, const char* msg, va_list args);
+template <typename... Args>
+inline void log_error(const char* msg, const Args&... args) {
+    log_msg(log_level::fatal, "", msg, args...);
+}
+
+///
+/// Logs a message to the default loggers
+///
+template <typename... Args>
+inline void log_fatal(const char* msg, const Args&... args) {
+    log_msg(log_level::fatal, "", msg, args...);
+}
 
 }  // namespace logging
 
@@ -1062,14 +1089,14 @@ struct parser {
 //
 // Inits the parser.
 //
-inline parser* make_parser(
-    const std::vector<std::string>& args, const std::string& help) {
+inline parser* make_parser(const std::vector<std::string>& args,
+    const std::string& name, const std::string& help) {
     // clears parser and copy argument data
     auto par = new parser();
     par->args = std::vector<std::string>(args.begin() + 1, args.end());
     par->error = false;
     par->exit_on_error = true;
-    par->help_prog = args[0];
+    par->help_prog = (name == "") ? args[0] : name;
     par->help_usage += help;
     par->print_help = parse_flag(par, "--help", "-?", "print help", false);
     return par;
@@ -1433,14 +1460,14 @@ namespace logging {
 //
 // Logger
 //
-struct logger {
+struct logger_stream {
     FILE* file = nullptr;
     bool short_message = false;
     log_level output_level = log_level::info;
     log_level flush_level = log_level::error;
     unsigned int guid = std::random_device()();
 
-    ~logger() {
+    ~logger_stream() {
         if (file == stderr) return;
         if (file == stdout) return;
         if (file) {
@@ -1451,65 +1478,75 @@ struct logger {
 };
 
 //
-// Skip a message
+// Logger
 //
-static inline bool _log_skip(logger* lgr, log_level level) {
-    return level < lgr->output_level;
-}
+struct logger {
+    // name
+    std::string name;
+    // streams
+    std::vector<logger_stream> streams;
+};
 
 //
-// Get default logger
+// Make a logger with an optional console stream.
 //
-inline std::vector<logger*>* get_default_loggers() {
-    static std::vector<logger*> lgrs = {};
-    return &lgrs;
-}
-
-//
-// Create a stream logger
-//
-static inline logger* _make_stream_logger(FILE* file, bool short_message,
-    log_level output_level, log_level flush_level) {
+inline logger* make_logger(const char* name, bool add_stream) {
     auto lgr = new logger();
-    lgr->file = file;
-    set_logger(lgr, short_message, output_level, flush_level);
+    lgr->name = name;
+    if (add_stream) add_console_stream(lgr);
     return lgr;
 }
 
 //
+// Free logger
+//
+inline void free_logger(logger*& lgr) {
+    if (lgr) delete lgr;
+    lgr = nullptr;
+}
+
+//
+// set logger name
+//
+inline void set_logger_name(logger* lgr, const char* name) { lgr->name = name; }
+
+//
+// default logger
+//
+static logger* default_logger = make_logger("<app>", true);
+
+//
+// default logger
+//
+logger* get_default_logger() { return default_logger; }
+
+//
 // Create a file logger
 //
-inline logger* make_file_logger(const std::string& filename, bool append,
-    bool short_message, log_level output_level, log_level flush_level) {
-    auto file = fopen(filename.c_str(), (append) ? "at" : "wt");
-    if (!file) return nullptr;
-    return _make_stream_logger(file, short_message, output_level, flush_level);
-}
-
-//
-// Create a stderr logger
-//
-inline logger* make_stderr_logger(
-    bool short_message, log_level output_level, log_level flush_level) {
-    return _make_stream_logger(stderr, true, output_level, flush_level);
-}
-
-//
-// Create a stderr logger
-//
-inline logger* make_stdout_logger(
-    bool short_message, log_level output_level, log_level flush_level) {
-    return _make_stream_logger(stdout, true, output_level, flush_level);
-}
-
-//
-// Set logger level
-//
-void set_logger(logger* lgr, bool short_message, log_level output_level,
+inline bool add_file_stream(logger* lgr, const std::string& filename,
+    bool append, bool short_message, log_level output_level,
     log_level flush_level) {
-    lgr->short_message = short_message;
-    lgr->output_level = output_level;
-    lgr->flush_level = flush_level;
+    auto file = fopen(filename.c_str(), (append) ? "at" : "wt");
+    if (!file) return false;
+    lgr->streams.push_back(logger_stream());
+    lgr->streams.back().file = file;
+    lgr->streams.back().short_message = short_message;
+    lgr->streams.back().output_level = output_level;
+    lgr->streams.back().flush_level = flush_level;
+    return true;
+}
+
+//
+// Create a stderr logger
+//
+inline bool add_console_stream(logger* lgr, bool use_std_error,
+    bool short_message, log_level output_level, log_level flush_level) {
+    lgr->streams.push_back(logger_stream());
+    lgr->streams.back().file = (use_std_error) ? stderr : stdout;
+    lgr->streams.back().short_message = short_message;
+    lgr->streams.back().output_level = output_level;
+    lgr->streams.back().flush_level = flush_level;
+    return true;
 }
 
 //
@@ -1517,107 +1554,43 @@ void set_logger(logger* lgr, bool short_message, log_level output_level,
 //
 inline void log_msg(
     logger* lgr, log_level level, const char* name, const char* msg) {
-    // skip if not needed
-    if (_log_skip(lgr, level)) return;
-
     // type string
-    const char* types[] = {"VERB", "INFO", "WARN", "ERRN"};
+    static const char* types[] = {"VERB", "INFO", "WARN", "ERRN"};
     const char* type = types[std::max(0, std::min(3, (int)level + 1))];
 
-    if (lgr->short_message) {
-        // time string
-        char time_buf[1024];
-        auto tm = time(nullptr);
-        auto ttm = localtime(&tm);  // TODO: use thread safe version
-        strftime(time_buf, 1024, "%H:%M:%S", ttm);
+    for (auto&& stream : lgr->streams) {
+        if (level < stream.output_level) continue;
+        if (stream.short_message) {
+            // time string
+            char time_buf[1024];
+            auto tm = time(nullptr);
+            auto ttm = localtime(&tm);  // TODO: use thread safe version
+            strftime(time_buf, 1024, "%H:%M:%S", ttm);
 
-        // output message
-        fprintf(lgr->file, "%s %s %s\n", time_buf, type, msg);
-    } else {
-        // time string
-        char time_buf[1024];
-        auto tm = time(nullptr);
-        auto ttm = localtime(&tm);  // TODO: use thread safe version
-        strftime(time_buf, 1024, "%Y-%m-%d %H:%M:%S", ttm);
+            // output message
+            fprintf(stream.file, "%s %s %s\n", time_buf, type, msg);
+        } else {
+            // time string
+            char time_buf[1024];
+            auto tm = time(nullptr);
+            auto ttm = localtime(&tm);  // TODO: use thread safe version
+            strftime(time_buf, 1024, "%Y-%m-%d %H:%M:%S", ttm);
 
-        // output message
-        fprintf(lgr->file, "%s %s %4x %-16s %s\n", time_buf, type, lgr->guid,
-            name, msg);
+            // name
+            auto rname = (name == nullptr || name[0] == 0) ? name : lgr->name;
+
+            // output message
+            fprintf(stream.file, "%s %s %4x %-16s %s\n", time_buf, type,
+                stream.guid, rname.c_str(), msg);
+        }
+
+        // flush if needed
+        if (level < stream.flush_level) return;
+        fflush(stream.file);
     }
 
-    // flush if needed
-    if (level < lgr->flush_level) return;
-    fflush(lgr->file);
-}
-
-//
-// Log a message formatted
-//
-inline void log_msgfv(logger* lgr, log_level level, const char* name,
-    const char* msg, va_list args) {
-    // skip if not needed
-    if (_log_skip(lgr, level)) return;
-
-    // make message
-    char msg_buf[1024 * 16];
-    vsprintf(msg_buf, msg, args);
-
-    // log
-    log_msg(lgr, level, name, msg_buf);
-}
-
-//
-// Log a message formatted
-//
-inline void log_msgf(
-    logger* lgr, log_level level, const char* name, const char* msg, ...) {
-    // skip if not needed
-    if (_log_skip(lgr, level)) return;
-
-    // make message
-    va_list args;
-    va_start(args, msg);
-    log_msgfv(lgr, level, name, msg, args);
-    va_end(args);
-}
-
-//
-// Log a message to the default logger
-//
-inline void log_msg(log_level level, const char* name, const char* msg) {
-    for (auto lgr : *get_default_loggers()) { log_msg(lgr, level, name, msg); }
-}
-
-//
-// Log a message to the default logger
-//
-inline void log_msgfv(
-    log_level level, const char* name, const char* msg, va_list args) {
-    for (auto lgr : *get_default_loggers()) {
-        log_msgfv(lgr, level, name, msg, args);
-    }
-}
-
-//
-// Log a message to the default logger
-//
-inline void log_msgf(log_level level, const char* name, const char* msg, ...) {
-    for (auto lgr : *get_default_loggers()) {
-        // skip if not needed
-        if (_log_skip(lgr, level)) return;
-        va_list args;
-        va_start(args, msg);
-        log_msgfv(lgr, level, name, msg, args);
-        va_end(args);
-    }
-}
-
-//
-// Log a message to the default logger
-//
-inline void log_msg(
-    log_level level, const std::string& name, const std::string& msg) {
-    log_msg(level, name.c_str(), msg.c_str());
+    // exit if needed
+    if (level >= log_level::fatal) exit(EXIT_FAILURE);
 }
 
 }  // namespace logging
@@ -1830,6 +1803,10 @@ inline void parallel_for(int count, const std::function<void(int idx)>& task) {
 }  // namespace concurrent
 
 }  // namespace yu
+
+#ifndef _WIN32
+#pragma GCC diagnostic pop
+#endif
 
 #ifdef YU_TEST
 //

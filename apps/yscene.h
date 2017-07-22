@@ -176,9 +176,6 @@ struct yscene {
     // editing support
     void* selection = nullptr;
 
-    // logging
-    std::string log_filename = "";
-
     ~yscene() {
         if (simulation_scene) ysym::free_scene(simulation_scene);
         if (trace_state) ytrace::free_state(trace_state);
@@ -204,9 +201,7 @@ inline bool load_scene(
         auto err = std::string();
         scn->oscn = yobj::load_scene(filename, true, true, true, true, &err);
         if (!scn->oscn) {
-            yu::logging::log_msg(
-                yu::logging::log_level::error, "yscene", "cannot load scene");
-            yu::logging::log_msg(yu::logging::log_level::error, "ygltf", err);
+            yu::logging::log_error("cannot load scene %s", filename.c_str());
             return false;
         }
         yobj::add_normals(scn->oscn);
@@ -229,9 +224,7 @@ inline bool load_scene(
         auto err = std::string();
         scn->gscn = ygltf::load_scenes(filename, true, true, &err);
         if (!scn->gscn) {
-            yu::logging::log_msg(
-                yu::logging::log_level::error, "yscene", "cannot load scene");
-            yu::logging::log_msg(yu::logging::log_level::error, "ygltf", err);
+            yu::logging::log_error("cannot load scene %s", filename.c_str());
             return false;
         }
         ygltf::add_normals(scn->gscn);
@@ -1798,8 +1791,8 @@ void draw_widgets(ygui::window* win) {
 // COMMAND LINE
 // ---------------------------------------------------------------------------
 
-void parse_cmdline(yscene* scene, int argc, char** argv, const char* help,
-    bool simulation, bool trace) {
+void parse_cmdline(yscene* scene, int argc, char** argv, const char* name,
+    const char* help, bool simulation, bool trace) {
     static auto rtype_names =
         std::vector<std::pair<std::string, ytrace::rng_type>>{
             {"uniform", ytrace::rng_type::uniform},
@@ -1825,7 +1818,7 @@ void parse_cmdline(yscene* scene, int argc, char** argv, const char* help,
             {"filmic", ym::tonemap_type::filmic}};
 
     // parse command line
-    auto parser = yu::cmdline::make_parser(argc, argv, help);
+    auto parser = yu::cmdline::make_parser(argc, argv, name, help);
 
 #ifndef YOCTO_NO_OPENGL
     if (simulation || trace) {
@@ -1894,7 +1887,12 @@ void parse_cmdline(yscene* scene, int argc, char** argv, const char* help,
         parser, "--split-shapes", "", "split meshes into single shapes", false);
 
     // logging
-    scene->log_filename = parse_opts(parser, "--log", "", "log to disk", "");
+    auto log_filename = parse_opts(parser, "--log", "", "log to disk", "");
+    if (log_filename != "") {
+        yu::logging::add_file_stream(
+            log_filename, true, false, yu::logging::log_level::verbose);
+    }
+    yu::logging::set_logger_name(name);
 
     // params
     scene->imfilename =
@@ -1903,17 +1901,6 @@ void parse_cmdline(yscene* scene, int argc, char** argv, const char* help,
 
     // check parsing
     check_parser(parser);
-}
-
-//
-// Logging
-//
-inline void set_default_loggers(const std::string& log_filename) {
-    auto loggers = yu::logging::get_default_loggers();
-    loggers->push_back(yu::logging::make_stdout_logger());
-    if (log_filename != "")
-        loggers->push_back(make_file_logger(
-            log_filename, false, true, yu::logging::log_level::verbose));
 }
 
 // ---------------------------------------------------------------------------

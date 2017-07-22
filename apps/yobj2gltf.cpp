@@ -34,6 +34,8 @@
 #include <array>
 #include <memory>
 
+using yu::logging::log_fatal;
+
 // #define YOBJ2GLTF_VERBOSE
 
 template <typename T>
@@ -347,7 +349,8 @@ void validate_texture_paths(yobj::scene* obj, const std::string& filename) {
 
 int main(int argc, char** argv) {
     // command line params
-    auto parser = yu::cmdline::make_parser(argc, argv, "converts obj to gltf");
+    auto parser = yu::cmdline::make_parser(
+        argc, argv, "yobj2gltf", "converts obj to gltf");
     auto no_flipy_texcoord = parse_flag(
         parser, "--no-flipy-texcoord", "", "texcoord vertical flipping");
     auto no_flip_opacity =
@@ -385,10 +388,7 @@ int main(int argc, char** argv) {
     auto err = std::string();
     auto obj = yobj::load_scene(
         filename_in, false, true, !no_flipy_texcoord, !no_flip_opacity, &err);
-    if (!obj) {
-        printf("error loading obj: %s\n", err.c_str());
-        return 1;
-    }
+    if (!obj) { log_fatal("error loading obj: %s\n", err.c_str()); }
 
     // check missing texture
     if (validate_textures) validate_texture_paths(obj, filename_in);
@@ -432,10 +432,7 @@ int main(int argc, char** argv) {
     auto ok = ygltf::save_scenes(filename_out,
         yu::path::get_basename(filename_out) + ".bin", gltf, false,
         save_separate_buffers, &err);
-    if (!ok) {
-        printf("error saving gltf: %s\n", err.c_str());
-        return 1;
-    }
+    if (!ok) { log_fatal("error saving gltf: %s\n", err.c_str()); }
 
     // validate
     if (validate) {

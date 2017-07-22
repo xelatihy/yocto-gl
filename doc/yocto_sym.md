@@ -36,6 +36,7 @@ for internal acceleration. Disable this by setting YSYM_NO_BVH.
 
 ## History
 
+- v 0.16: simpler logging
 - v 0.15: removal of group overlap
 - v 0.14: use yocto_math in the interface and remove inline compilation
 - v 0.13: move to add api
@@ -213,26 +214,24 @@ Point-scene overlap.
 ### Typedef overlap_shapes_cb
 
 ~~~ .cpp
-using overlap_shapes_cb = void (*)(void* ctx, std::vector<ym::vec2i>*);
+using overlap_shapes_cb = std::function<void(std::vector<ym::vec2i>*)>;
 ~~~
 
 Shape-shape intersection (conservative)
 
 - Out Parameters:
-    - ctx: context
     - overlaps: overlaps array
 
-### Typedef overlap_shape_cb
+### Function Alias function <overlap_point(int sid, const ym::vec3f& pt, float max_dist) \>()
 
 ~~~ .cpp
-using overlap_shape_cb = overlap_point (*)(
-    void* ctx, int sid, const ym::vec3f& pt, float max_dist);
+using overlap_shape_cb =
+    std::function<overlap_point(int sid, const ym::vec3f& pt, float max_dist)>;
 ~~~
 
 Closest element intersection callback
 
 - Parameters:
-    - ctx: context
     - sid: shape to check
     - pt: point
     - max_dist: maximum distance
@@ -242,21 +241,19 @@ Closest element intersection callback
 ### Typedef overlap_refit_cb
 
 ~~~ .cpp
-using overlap_refit_cb = void (*)(void* ctx, const scene* scn, int nshapes);
+using overlap_refit_cb = std::function<void(const scene* scn, int nshapes)>;
 ~~~
 
 Refit data structure after transform updates
 
 - Parameters:
-    - ctx: context
     - scn: scene
 
 ### Function set_overlap_callbacks()
 
 ~~~ .cpp
-void set_overlap_callbacks(scene* scn, void* ctx,
-    overlap_shapes_cb overlap_shapes, overlap_shape_cb overlap_shape,
-    overlap_refit_cb overlap_refit);
+void set_overlap_callbacks(scene* scn, overlap_shapes_cb overlap_shapes,
+    overlap_shape_cb overlap_shape, overlap_refit_cb overlap_refit);
 ~~~
 
 Set overlap functions

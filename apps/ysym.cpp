@@ -29,6 +29,8 @@
 #define YSCENE_SIMULATE_HACK
 #include "yscene.h"
 
+using yu::logging::log_info;
+
 // ---------------------------------------------------------------------------
 // INTERACTIVE FUNCTIONS
 // ---------------------------------------------------------------------------
@@ -175,11 +177,11 @@ void simulate_reset(yscene* scn) {
 
 void simulate_offline(yscene* scene) {
     // simulate each frame and save the results to a new scene
-    printf("rigid body simulation for %s to %s\n", scene->filename.c_str(),
+    log_info("rigid body simulation for %s to %s", scene->filename.c_str(),
         scene->outfilename.c_str());
-    printf("simulating ...");
+    log_info("simulating ...");
     for (auto i = 0; i < scene->simulation_nframes; i++) {
-        printf("\rsimulating frame %d/%d", i, scene->simulation_nframes);
+        log_info("simulating frame %d/%d", i, scene->simulation_nframes);
         simulate_step(scene);
         std::string errmsg;
         char frame_filename[4096];
@@ -192,7 +194,7 @@ void simulate_offline(yscene* scene) {
                 false);
         }
     }
-    printf("\rsimulating done\n");
+    log_info("simulating done");
 }
 
 // ---------------------------------------------------------------------------
@@ -204,11 +206,8 @@ int main(int argc, char* argv[]) {
     auto scn = new yscene();
 
     // command line
-    parse_cmdline(
-        scn, argc, argv, "rigid body simulation of a scene", true, false);
-
-    // logging
-    set_default_loggers(scn->log_filename);
+    parse_cmdline(scn, argc, argv, "ysym", "rigid body simulation of a scene",
+        true, false);
 
     // setting up rendering
     load_scene(scn, scn->filename, true, false);

@@ -32,6 +32,9 @@
 
 #include "string.h"
 
+using yu::logging::log_fatal;
+using yu::logging::log_info;
+
 // typedef
 using byte = unsigned char;
 
@@ -43,19 +46,11 @@ bool is_hdr(const std::string& filename) {
 }
 
 //
-// exit with an error
-//
-void exit_error(const std::string& err) {
-    printf("error: %s\n", err.c_str());
-    exit(1);
-}
-
-//
 // Load hdr
 //
 ym::image4f load_hdr(const std::string& filename) {
     auto img = yimg::load_image4f(filename);
-    if (!img) exit_error("cannot load image " + filename);
+    if (!img) log_fatal("cannot load image %s", filename.c_str());
     return img;
 }
 
@@ -64,7 +59,7 @@ ym::image4f load_hdr(const std::string& filename) {
 //
 ym::image4b load_ldr(const std::string& filename) {
     auto img = yimg::load_image4b(filename);
-    if (!img) exit_error("cannot load image " + filename);
+    if (!img) log_fatal("cannot load image %s", filename.c_str());
     return img;
 }
 
@@ -73,7 +68,7 @@ ym::image4b load_ldr(const std::string& filename) {
 //
 void save_hdr(const std::string& filename, const ym::image4f& img) {
     if (!yimg::save_image4f(filename, img))
-        exit_error("cannot save image " + filename);
+        log_fatal("cannot save image %s", filename.c_str());
 }
 
 //
@@ -81,7 +76,7 @@ void save_hdr(const std::string& filename, const ym::image4f& img) {
 //
 void save_ldr(const std::string& filename, const ym::image4b& img) {
     if (!yimg::save_image4b(filename, img))
-        exit_error("cannot save image " + filename);
+        log_fatal("cannot save image %s", filename.c_str());
 }
 
 //
@@ -91,7 +86,7 @@ template <typename T>
 ym::image<T> resize_image(
     const ym::image<T>& img, int res_width, int res_height) {
     if (res_width < 0 && res_height < 0)
-        exit_error("at least argument should be >0");
+        log_fatal("at least argument should be >0");
     if (res_width < 0)
         res_width =
             (int)std::round(img.width() * (res_height / (float)img.height()));
@@ -114,8 +109,7 @@ ym::image<T> make_image_grid(const std::vector<ym::image<T>>& imgs, int tilex) {
     for (auto& img : imgs) {
         if (img.width() != imgs[0].width() ||
             img.height() != imgs[0].height()) {
-            printf("images of different sizes are not accepted\n");
-            exit(1);
+            log_fatal("images of different sizes are not accepted");
         }
         auto ox = (img_idx % tilex) * img.width(),
              oy = (img_idx / tilex) * img.height();
@@ -220,7 +214,8 @@ int main(int argc, char* argv[]) {
             {"filmic", ym::tonemap_type::filmic}};
 
     // command line params
-    auto parser = yu::cmdline::make_parser(argc, argv, "process images");
+    auto parser =
+        yu::cmdline::make_parser(argc, argv, "yimproc", "process images");
     auto command = parse_args(parser, "command", "command to execute", "", true,
         {"resize", "tonemap", "bilateral"});
     auto output =

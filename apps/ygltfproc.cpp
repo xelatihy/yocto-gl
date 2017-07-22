@@ -40,8 +40,8 @@ using namespace nlohmann;
 
 int main(int argc, char** argv) {
     // command line params
-    auto parser =
-        yu::cmdline::make_parser(argc, argv, "prints info about gltf");
+    auto parser = yu::cmdline::make_parser(
+        argc, argv, "ygltfproc", "prints info about gltf");
     auto use_scene = parse_flag(
         parser, "--use-flag", "-s", "convert to/from scene internally");
     auto save_out =
