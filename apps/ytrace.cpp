@@ -405,15 +405,15 @@ ytrace::scene* make_trace_scene(
 // ---------------------------------------------------------------------------
 
 int main(int argc, char* argv[]) {
-    // logging
-    set_default_loggers();
-
     // create empty scene
     auto scn = new yscene();
 
     // command line
     parse_cmdline(
         scn, argc, argv, "render scene with path tracing", false, true);
+
+    // logging
+    set_default_loggers(scn->log_filename);
 
     // setting up rendering
     log_msgf(

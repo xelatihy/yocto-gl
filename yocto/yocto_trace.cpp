@@ -2404,8 +2404,10 @@ void get_aux_buffers(const trace_state* state, ym::image4f& norm,
     for (auto j = 0; j < norm.height(); j++) {
         for (auto i = 0; i < norm.width(); i++) {
             norm[{i, j}] = state->norm[{i, j}] / state->weight[{i, j}];
+            norm[{i, j}].xyz() =
+                normalize(norm[{i, j}].xyz()) * 0.5f + ym::vec3f{0.5, 0.5, 0.5};
             albedo[{i, j}] = state->albedo[{i, j}] / state->weight[{i, j}];
-            depth[{i, j}] = state->depth[{i, j}] / state->weight[{i, j}];
+            depth[{i, j}] = state->depth[{i, j}] / (10 * state->weight[{i, j}]);
         }
     }
 }

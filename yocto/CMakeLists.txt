@@ -52,13 +52,12 @@ if(NOT YOCTO_NO_OPENGL)
 endif(NOT YOCTO_NO_OPENGL)
 
 set(yocto_files
+    yocto_math.h
     yocto_utils.h
-    yocto_utils.cpp
     yocto_obj.h
     yocto_obj.cpp
     yocto_gltf.h
     yocto_gltf.cpp
-    yocto_math.h
     yocto_trace.h
     yocto_trace.cpp
     yocto_sym.h

@@ -176,6 +176,9 @@ struct yscene {
     // editing support
     void* selection = nullptr;
 
+    // logging
+    std::string log_filename = "";
+
     ~yscene() {
         if (simulation_scene) ysym::free_scene(simulation_scene);
         if (trace_state) ytrace::free_state(trace_state);
@@ -1890,6 +1893,9 @@ void parse_cmdline(yscene* scene, int argc, char** argv, const char* help,
     scene->split_shapes = parse_flag(
         parser, "--split-shapes", "", "split meshes into single shapes", false);
 
+    // logging
+    scene->log_filename = parse_opts(parser, "--log", "", "log to disk", "");
+
     // params
     scene->imfilename =
         parse_opts(parser, "--output-image", "-o", "image filename", "out.hdr");
@@ -1902,11 +1908,12 @@ void parse_cmdline(yscene* scene, int argc, char** argv, const char* help,
 //
 // Logging
 //
-inline void set_default_loggers() {
+inline void set_default_loggers(const std::string& log_filename) {
     auto loggers = yu::logging::get_default_loggers();
     loggers->push_back(yu::logging::make_stdout_logger());
-    loggers->push_back(
-        make_file_logger("yocto.log", true, yu::logging::log_level::verbose));
+    if (log_filename != "")
+        loggers->push_back(make_file_logger(
+            log_filename, false, true, yu::logging::log_level::verbose));
 }
 
 // ---------------------------------------------------------------------------
