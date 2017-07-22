@@ -2063,22 +2063,6 @@ std::vector<std::pair<std::string, std::string>> validate_gltf(
 
 Validate a gltf. Missing many validation as of this version.
 
-### Struct vec_array_view
-
-~~~ .cpp
-struct vec_array_view {
-~~~
-
-A view for gltf array buffers that allows for typed access.
-
-### Struct element_array_view
-
-~~~ .cpp
-struct element_array_view {
-~~~
-
-A view for gltf element array buffers that allows for typed access.
-
 ### Function node_transform()
 
 ~~~ .cpp
@@ -2086,4 +2070,36 @@ ym::mat4f node_transform(const glTFNode* node);
 ~~~
 
 Computes the local node transform and its inverse.
+
+### Struct accessor_view
+
+~~~ .cpp
+struct accessor_view {
+    accessor_view(const glTF* gltf, const glTFAccessor* accessor); 
+    int size() const; 
+    int count() const; 
+    int ncomp() const; 
+    bool valid() const; 
+    template <int N> ym::vec<float, N> getv( int idx, const ym::vec<float, N>& def = ym::zero_vec<float, N>()) const; 
+    template <int N, int M> ym::mat<float, N, M> getm(int idx) const; 
+    float get(int idx, int c = 0) const; 
+    template <int N> ym::vec<int, N> getiv( int idx, const ym::vec<int, N>& def = ym::zero_vec<int, N>()) const; 
+    int geti(int idx, int c = 0) const; 
+}
+~~~
+
+A view for gltf array buffers that allows for typed access.
+
+- Members:
+    - accessor_view():      construct a view from an accessor
+    - size():      number of elements in the view
+    - count():      number of elements in the view
+    - ncomp():      number of components per element
+    - valid():      check whether the view is valid
+    - getv():      get the idx-th element of fixes length
+    - getm():      get the idx-th element of fixes length as a matrix
+    - get():      get the c-th component of the idx-th element
+    - getiv():      get the idx-th element as integer
+    - geti():      get the c-th component of the idx-th element as integer
+
 

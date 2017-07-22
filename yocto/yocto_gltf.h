@@ -1884,31 +1884,45 @@ std::vector<std::pair<std::string, std::string>> validate_gltf(
     const glTF* gltf);
 
 ///
+/// Computes the local node transform and its inverse.
+///
+ym::mat4f node_transform(const glTFNode* node);
+
+///
 /// A view for gltf array buffers that allows for typed access.
 ///
-struct vec_array_view {
-    vec_array_view(const glTF* gltf, const glTFAccessor* accessor);
+struct accessor_view {
+    /// construct a view from an accessor
+    accessor_view(const glTF* gltf, const glTFAccessor* accessor);
 
+    /// number of elements in the view
     int size() const { return _size; }
+    /// number of elements in the view
     int count() const { return _size; }
+    /// number of components per element
     int ncomp() const { return _ncomp; }
+    /// check whether the view is valid
     bool valid() const { return _valid; }
 
+    /// get the idx-th element of fixes length
     template <int N>
-    ym::vec<float, N> get(int idx) const;
+    ym::vec<float, N> getv(
+        int idx, const ym::vec<float, N>& def = ym::zero_vec<float, N>()) const;
 
+    /// get the idx-th element of fixes length as a matrix
     template <int N, int M>
-    ym::mat<float, N, M> get(int idx) const;
+    ym::mat<float, N, M> getm(int idx) const;
 
+    /// get the c-th component of the idx-th element
+    float get(int idx, int c = 0) const;
+
+    /// get the idx-th element as integer
     template <int N>
-    ym::vec<float, N> get(int idx, const ym::vec<float, N>& def) const;
+    ym::vec<int, N> getiv(
+        int idx, const ym::vec<int, N>& def = ym::zero_vec<int, N>()) const;
 
-    float get(int idx, int c) const;
-
-    template <int N>
-    ym::vec<int, N> geti(int idx) const;
-
-    int geti(int idx, int c) const;
+    /// get the c-th component of the idx-th element as integer
+    int geti(int idx, int c = 0) const;
 
    private:
     const unsigned char* _data = nullptr;
@@ -1922,30 +1936,6 @@ struct vec_array_view {
     static int _num_components(glTFAccessorType type);
     static int _ctype_size(glTFAccessorComponentType componentType);
 };
-
-///
-/// A view for gltf element array buffers that allows for typed access.
-///
-struct element_array_view {
-    element_array_view(const glTF* gltf, const glTFAccessor* accessor);
-
-    int size() const { return _size; }
-
-    int operator[](int idx) const;
-
-   private:
-    const unsigned char* _data = nullptr;
-    int _size = 0;
-    int _stride = 0;
-    glTFAccessorComponentType _ctype;
-
-    static int _ctype_size(glTFAccessorComponentType componentType);
-};
-
-///
-/// Computes the local node transform and its inverse.
-///
-ym::mat4f node_transform(const glTFNode* node);
 
 }  // namespace ygltf
 
