@@ -58,6 +58,7 @@
 ///
 /// ## History
 ///
+/// - v 0.30: support for smoothing groups
 /// - v 0.29: use reference interface for textures
 /// - v 0.28: add function to split meshes into single shapes
 /// - v 0.27: explicit transforms
@@ -241,12 +242,6 @@ struct material {
     texture_info disp_txt_info = {};
     /// normal texture
     texture_info norm_txt_info = {};
-
-    // physics extensions ---------------------
-    /// stiffness
-    float stiffness = 0.0f;
-    /// density
-    float density = 0.0f;
 
     // unknown properties ---------------------
     /// unknown string props
@@ -572,6 +567,8 @@ struct obj_group {
     std::string matname;
     /// group name
     std::string groupname;
+    /// smoothing
+    bool smoothing = true;
 
     // element data -------------------------
     /// element vertices
@@ -674,12 +671,6 @@ struct obj_material {
     property_map<std::string> disp_txt_info = {};
     /// normal texture
     property_map<std::string> norm_txt_info = {};
-
-    // physics extensions --------------------
-    /// overall stiffness
-    float stiffness = 0;
-    /// density
-    float density = 0;
 
     // unknown properties ---------------------
     /// unknown string props

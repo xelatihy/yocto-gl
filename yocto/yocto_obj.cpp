@@ -258,6 +258,14 @@ obj* load_obj(const std::string& filename, bool flip_texcoord, bool flip_tr,
         } else if (tok_s == "g") {
             auto name = (cur_ntok) ? cur_tok[0] : "";
             asset->objects.back().groups.push_back({cur_matname, name, {}, {}});
+        } else if (tok_s == "s") {
+            auto name = (cur_ntok) ? cur_tok[0] : "";
+            auto smoothing = name == std::string("on");
+            if (asset->objects.back().groups.back().smoothing != smoothing) {
+                asset->objects.back().groups.push_back(
+                    {cur_matname, name, {}, {}});
+                asset->objects.back().groups.back().smoothing = smoothing;
+            }
         } else if (tok_s == "mtllib") {
             auto name = (cur_ntok) ? cur_tok[0] : "";
             if (name != std::string("")) {
@@ -435,10 +443,6 @@ std::vector<obj_material> load_mtl(
             materials.back().op = parse_float(cur_tok);
         } else if (tok_s == "Ni") {
             materials.back().ior = parse_float(cur_tok);
-        } else if (tok_s == "phys_stiffness") {
-            materials.back().stiffness = parse_float(cur_tok);
-        } else if (tok_s == "phys_density") {
-            materials.back().density = parse_float(cur_tok);
         } else if (tok_s == "map_Ke") {
             parse_texture(cur_tok, cur_ntok, materials.back().ke_txt,
                 materials.back().ke_txt_info);
@@ -692,6 +696,7 @@ bool save_obj(const std::string& filename, const obj* asset, bool flip_texcoord,
         for (auto& group : object.groups) {
             fwrite_str(file, "usemtl", group.matname);
             fwrite_str(file, "g", group.groupname);
+            if (!group.smoothing) fwrite_str(file, "s", "off");
             for (auto elem : group.elems) {
                 fwrite_objverts(file, elem_labels[(int)elem.type], elem.size,
                     group.verts.data() + elem.start);
@@ -860,8 +865,6 @@ scene* obj_to_scene(const obj* asset) {
         mat->kt = omat.kt;
         mat->rs = sqrt(2 / (omat.ns + 2));
         mat->opacity = omat.op;
-        mat->stiffness = omat.stiffness;
-        mat->density = omat.density;
         mat->ke_txt = add_texture(omat.ke_txt, scn->textures);
         mat->kd_txt = add_texture(omat.kd_txt, scn->textures);
         mat->ks_txt = add_texture(omat.ks_txt, scn->textures);
@@ -939,7 +942,7 @@ scene* obj_to_scene(const obj* asset) {
                 vert_ids.push_back(vert_map.at(vert));
             }
 
-            // covert elements
+            // convert elements
             for (auto& elem : group.elems) {
                 switch (elem.type) {
                     case obj_element_type::point: {
@@ -1001,6 +1004,55 @@ scene* obj_to_scene(const obj* asset) {
                     prim->radius[kv.second] = asset->radius[kv.first.radius];
                 }
             }
+
+            // fix smoothing
+            if (!group.smoothing) {
+                auto faceted = new shape();
+                faceted->name = prim->name;
+                faceted->mat = prim->mat;
+                auto pidx = std::vector<int>();
+                for (auto point : prim->points) {
+                    faceted->points.push_back((int)pidx.size());
+                    pidx.push_back(point);
+                }
+                for (auto line : prim->lines) {
+                    faceted->lines.push_back(
+                        {(int)pidx.size() + 0, (int)pidx.size() + 1});
+                    pidx.push_back(line.x);
+                    pidx.push_back(line.y);
+                }
+                for (auto triangle : prim->triangles) {
+                    faceted->triangles.push_back({(int)pidx.size() + 0,
+                        (int)pidx.size() + 1, (int)pidx.size() + 2});
+                    pidx.push_back(triangle.x);
+                    pidx.push_back(triangle.y);
+                    pidx.push_back(triangle.z);
+                }
+                for (auto tetra : prim->tetras) {
+                    faceted->tetras.push_back(
+                        {(int)pidx.size() + 0, (int)pidx.size() + 1,
+                            (int)pidx.size() + 2, (int)pidx.size() + 3});
+                    pidx.push_back(tetra.x);
+                    pidx.push_back(tetra.y);
+                    pidx.push_back(tetra.z);
+                    pidx.push_back(tetra.w);
+                }
+                for (auto idx : pidx) {
+                    if (!prim->pos.empty())
+                        faceted->pos.push_back(prim->pos[idx]);
+                    if (!prim->norm.empty())
+                        faceted->norm.push_back(prim->norm[idx]);
+                    if (!prim->texcoord.empty())
+                        faceted->texcoord.push_back(prim->texcoord[idx]);
+                    if (!prim->color.empty())
+                        faceted->color.push_back(prim->color[idx]);
+                    if (!prim->radius.empty())
+                        faceted->radius.push_back(prim->radius[idx]);
+                }
+                delete prim;
+                prim = faceted;
+            }
+
             msh->shapes.push_back(prim);
         }
         scn->meshes.push_back(msh);
@@ -1082,8 +1134,6 @@ obj* scene_to_obj(const scene* scn) {
         mat->kt = fl_mat->kt;
         mat->ns = (fl_mat->rs) ? 2 / (fl_mat->rs * fl_mat->rs) - 2 : 1e6;
         mat->op = fl_mat->opacity;
-        mat->stiffness = fl_mat->stiffness;
-        mat->density = fl_mat->density;
         mat->ke_txt = (fl_mat->ke_txt) ? fl_mat->ke_txt->path : "";
         mat->kd_txt = (fl_mat->kd_txt) ? fl_mat->kd_txt->path : "";
         mat->ks_txt = (fl_mat->ks_txt) ? fl_mat->ks_txt->path : "";

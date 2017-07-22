@@ -68,6 +68,7 @@ disabled by defining YOBJ_NO_IMAGE before including this file.</p>
 </ol>
 <h2>History</h2>
 <ul>
+<li>v 0.30: support for smoothing groups</li>
 <li>v 0.29: use reference interface for textures</li>
 <li>v 0.28: add function to split meshes into single shapes</li>
 <li>v 0.27: explicit transforms</li>
@@ -175,8 +176,6 @@ disabled by defining YOBJ_NO_IMAGE before including this file.</p>
     <span class="n">texture_info</span> <span class="n">bump_txt_info</span> <span class="o">=</span> <span class="p">{};</span>
     <span class="n">texture_info</span> <span class="n">disp_txt_info</span> <span class="o">=</span> <span class="p">{};</span>
     <span class="n">texture_info</span> <span class="n">norm_txt_info</span> <span class="o">=</span> <span class="p">{};</span>
-    <span class="kt">float</span> <span class="n">stiffness</span> <span class="o">=</span> <span class="mf">0.0f</span><span class="p">;</span>
-    <span class="kt">float</span> <span class="n">density</span> <span class="o">=</span> <span class="mf">0.0f</span><span class="p">;</span>
     <span class="n">property_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span> <span class="n">unknown_props</span><span class="p">;</span>
 <span class="p">}</span>
 </code></pre></div>
@@ -209,8 +208,6 @@ disabled by defining YOBJ_NO_IMAGE before including this file.</p>
 <li>bump_txt_info:      bump map texture (heighfield)</li>
 <li>disp_txt_info:      displacement map texture (heighfield)</li>
 <li>norm_txt_info:      normal texture</li>
-<li>stiffness:      stiffness</li>
-<li>density:      density</li>
 <li>unknown_props:      unknown string props</li>
 </ul>
 </li>
@@ -583,6 +580,7 @@ disabled by defining YOBJ_NO_IMAGE before including this file.</p>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">obj_group</span> <span class="p">{</span>
     <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">matname</span><span class="p">;</span>
     <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">groupname</span><span class="p">;</span>
+    <span class="kt">bool</span> <span class="n">smoothing</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
     <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">obj_vertex</span><span class="o">&gt;</span> <span class="n">verts</span><span class="p">;</span>
     <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">obj_element</span><span class="o">&gt;</span> <span class="n">elems</span><span class="p">;</span>
 <span class="p">}</span>
@@ -594,6 +592,7 @@ disabled by defining YOBJ_NO_IMAGE before including this file.</p>
 <li>Members:<ul>
 <li>matname:      material name</li>
 <li>groupname:      group name</li>
+<li>smoothing:      smoothing</li>
 <li>verts:      element vertices</li>
 <li>elems:      element faces</li>
 </ul>
@@ -652,8 +651,6 @@ disabled by defining YOBJ_NO_IMAGE before including this file.</p>
     <span class="n">property_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span> <span class="n">bump_txt_info</span> <span class="o">=</span> <span class="p">{};</span>
     <span class="n">property_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span> <span class="n">disp_txt_info</span> <span class="o">=</span> <span class="p">{};</span>
     <span class="n">property_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span> <span class="n">norm_txt_info</span> <span class="o">=</span> <span class="p">{};</span>
-    <span class="kt">float</span> <span class="n">stiffness</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
-    <span class="kt">float</span> <span class="n">density</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
     <span class="n">property_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span> <span class="n">unknown_props</span><span class="p">;</span>
 <span class="p">}</span>
 </code></pre></div>
@@ -697,8 +694,6 @@ disabled by defining YOBJ_NO_IMAGE before including this file.</p>
 <li>bump_txt_info:      bump map texture (heighfield)</li>
 <li>disp_txt_info:      displacement map texture (heighfield)</li>
 <li>norm_txt_info:      normal texture</li>
-<li>stiffness:      overall stiffness</li>
-<li>density:      density</li>
 <li>unknown_props:      unknown string props</li>
 </ul>
 </li>
