@@ -1,0 +1,82 @@
+
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+          <title>Yocto/GL</title>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+          <link rel="stylesheet" href="style.css">
+        </head>
+        <body>
+        <header>
+            <nav>
+                <img src="images/logo_white.png">
+                <a href="">doc</a>
+                <a href="https://github.com/xelatihy/yocto-gl">code</a>
+            </nav>
+        </header>
+        <article>
+        <h1>Yocto/GL: Single File Libraries for Physically-Based Graphics</h1>
+<p>Yocto/GL is a collection of single-file libraries for building physically-based graphics applications. Yocto/GL is written in C++14, with compilation supported on C++11, and compiles on OSX (clang/gcc), Linux (gcc) and Windows (MSVC 2017).</p>
+<p>Yocto/GL libraries are released under the permissive MIT license, while the example apps are released under the 2-clause BSD (to include warranty for binary distribution).</p>
+<h2>Libraries</h2>
+<ul>
+<li><a href="yocto_obj.html"><strong>yocto_obj</strong></a> (.h/.cpp): Wavefront OBJ/MTL loader and writer that supports arbitrary polygons (with/without triangulation), lines, and points. Includes optionals extensions for per-vertex color and radius, camera, instancing and environment mapping. Provides both a high level interface for easy data access and a low level interface for complete control of the format.</li>
+<li><a href="yocto_gltf.html"><strong>yocto_gltf</strong></a> (.h/.cpp): Khronos glTF loader and writer automatically generated from the spec. Supports all glTF format including Khronos extensions. Provides both a high level interface for easy data access and a low level interface for complete control of the format.</li>
+<li><a href="yocto_bvh.html"><strong>yocto_bvh</strong></a> (.h and .cpp): Ray casting and closet point queries for points, lines and triangles accelerated by a two-level bounding volume hierarchy.</li>
+<li><a href="yocto_trace.html"><strong>yocto_trace</strong></a> (.h/.cpp): Path tracer with support for point, line or triangle geometry, mesh area lights and environment maps, materials with either GGX or Phong (only opaque for now). Support both incremental and offline computation on single- or multi-core machines.</li>
+<li><a href="yocto_math.html"><strong>yocto_math</strong></a> (.h only): Vector and matrix math, shape and image manipulation.</li>
+<li><a href="yocto_utils.html"><strong>yocto_utils</strong></a> (.h only): Utilities for writing applications. Includes command line parsing, logging, thread pools, string and path manipulation.</li>
+<li><a href="yocto_sym.html"><strong>yocto_sym</strong></a> (.h/.cpp): Rigid body solver supporting convex and concave triangle meshes based on Sequential Impulses.</li>
+<li><a href="yocto_glu.html"><strong>yocto_glu</strong></a> (.h/.cpp): Quick and dirty rendering of images and shapes in OpenGL, useful to create interactive viewers.</li>
+<li><a href="yocto_gui.html"><strong>yocto_gui</strong></a> (.h/.cpp): A wrapper for GLFW and ImGui for window management and immediate mode widgets.</li>
+<li><a href="yocto_img.html"><strong>yocto_img</strong></a> (.h/.cpp): A wrapper for single-file libraries for image loading and saving.</li>
+</ul>
+<h2>Applications</h2>
+<p>This repository contains Yocto/GL applications written to test the libraries.</p>
+<ul>
+<li><strong>yview</strong>: Simple OpenGL viewer for OBJ and glTF scenes.</li>
+<li><strong>ytrace</strong>: Interactive/Offline path-tracer.</li>
+<li><strong>ysym</strong>: Interactive/Offline rigid body demo.</li>
+<li><strong>yobj2gltf</strong>: Converts Wavefront OBJ to glTF 2.</li>
+<li><strong>ytestgen</strong>: Creates various test cases for the path tracer and GL viewer.</li>
+<li><strong>yimview</strong>: HDR/PNG/JPG image viewer with exposure/gamma tone mapping.</li>
+<li><strong>yimproc</strong>: Offline image manipulation.</li>
+</ul>
+<h2>Tools</h2>
+<p>This repository contains tools used for code generation and documentation
+extraction.</p>
+<ul>
+<li><strong>ygltfgen.cpp</strong>: glTF parsing code generation.</li>
+<li><strong>ydocgen.cpp</strong>: Documentation generation.</li>
+</ul>
+<h2>Building</h2>
+<p>You can build the non-interactive example apps using <a href="http://cmake.org">cmake</a>
+with</p>
+<div class="codehilite"><pre><code><span></span>mkdir cmake
+cd cmake
+cmake ..
+make -j4        # linux/OSX
+msbuild         # Windows
+</code></pre></div>
+
+
+<p>The interactive apps use OpenGL, GLFW and GLEW. We include binaries for Windows, but you have to install the libraries yourself on Linux (we use <code>apt-get</code>) and OSX (we use <a href="http://brew.sh">homebrew</a>). If these libraries and not available you can compile without interactive viewer support with</p>
+<div class="codehilite"><pre><code><span></span>cmake -DYOCTO_NO_OPENGL=ON ..
+</code></pre></div>
+
+
+<h2>Example Screenshots</h2>
+<p>A few screenshots from <strong>ytrace</strong> are included here for demonstration.</p>
+<figure><img alt="" src="images/sh03.path.png">
+<img alt="" src="images/ls02.direct.png">
+<img alt="" src="images/cb01.path.png"></figure>
+<p>A screen capture from <strong>ysym</strong> is included here for demonstration.</p>
+<figure><img alt="" src="images/rb02.ysym.gif"></figure>
+<h2>Documentation</h2>
+<p>Each library is documented entirely in source code. Documentation is extracted for easier viewing in the docs folder.</p>
+        <article>
+        <footer></footer>
+        </body>
+        </html>
+    

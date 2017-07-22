@@ -10,8 +10,29 @@ body {
   line-height: 24px;
   font-variant-numeric: oldstyle-nums;
   font-feature-settings: "onum" 1;
-  max-width: 936px;
+  max-width: 720px;
   margin: 0 auto; }
+
+header {
+  text-align: left;
+  padding: 24px; }
+
+nav a {
+  font-family: "Lato", sans-serif;
+  font-size: 12px;
+  color: white;
+  background: black;
+  padding: 6px;
+  vertical-align: middle;
+  text-transform: uppercase; }
+
+nav img {
+  height: 28px;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  vertical-align: middle;
+  display: inline-block; }
 
 article {
   padding: 24px; }
@@ -38,13 +59,18 @@ h1, h2, h3 {
 
 h1 {
   font-size: 36px;
-  margin-top: 144px;
+  line-height: 50px;
+  margin-top: 72px;
   margin-bottom: 72px; }
 
 h2 {
   font-size: 24px;
   margin-top: 48px;
   margin-bottom: 24px; }
+
+a {
+  text-decoration: none;
+  color: firebrick; }
 
 code {
   font-family: "Hack", monospace;
