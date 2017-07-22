@@ -57,6 +57,7 @@ disabled by defining YOBJ_NO_IMAGE before including this file.
 
 ## History
 
+- v 0.30: support for smoothing groups
 - v 0.29: use reference interface for textures
 - v 0.28: add function to split meshes into single shapes
 - v 0.27: explicit transforms
@@ -170,8 +171,6 @@ struct material {
     texture_info bump_txt_info = {};
     texture_info disp_txt_info = {};
     texture_info norm_txt_info = {};
-    float stiffness = 0.0f;
-    float density = 0.0f;
     property_map<std::string> unknown_props;
 }
 ~~~
@@ -203,8 +202,6 @@ Scene Material
     - bump_txt_info:      bump map texture (heighfield)
     - disp_txt_info:      displacement map texture (heighfield)
     - norm_txt_info:      normal texture
-    - stiffness:      stiffness
-    - density:      density
     - unknown_props:      unknown string props
 
 
@@ -586,6 +583,7 @@ Element vertex indices
 struct obj_group {
     std::string matname;
     std::string groupname;
+    bool smoothing = true;
     std::vector<obj_vertex> verts;
     std::vector<obj_element> elems;
 }
@@ -596,6 +594,7 @@ Element group
 - Members:
     - matname:      material name
     - groupname:      group name
+    - smoothing:      smoothing
     - verts:      element vertices
     - elems:      element faces
 
@@ -655,8 +654,6 @@ struct obj_material {
     property_map<std::string> bump_txt_info = {};
     property_map<std::string> disp_txt_info = {};
     property_map<std::string> norm_txt_info = {};
-    float stiffness = 0;
-    float density = 0;
     property_map<std::string> unknown_props;
 }
 ~~~
@@ -699,8 +696,6 @@ OBJ material
     - bump_txt_info:      bump map texture (heighfield)
     - disp_txt_info:      displacement map texture (heighfield)
     - norm_txt_info:      normal texture
-    - stiffness:      overall stiffness
-    - density:      density
     - unknown_props:      unknown string props
 
 
