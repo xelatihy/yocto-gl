@@ -2573,7 +2573,7 @@ bool save_images(const glTF* gltf, const std::string& dirname,
 #endif
 }
 
-inline vec_array_view::vec_array_view(
+inline accessor_view::accessor_view(
     const glTF* gltf, const glTFAccessor* accessor) {
     _size = accessor->count;
     _ncomp = _num_components(accessor->type);
@@ -2591,7 +2591,7 @@ inline vec_array_view::vec_array_view(
     _valid = remaining_buffer_bytes >= view_bytes;
 }
 
-inline float vec_array_view::get(int idx, int c) const {
+inline float accessor_view::get(int idx, int c) const {
     auto i = std::min(std::max(c, 0), ncomp() - 1);
     auto valb = _data + _stride * idx + i * _ctype_size(_ctype);
     // use double for integer conversion to attempt to maintain precision
@@ -2636,14 +2636,7 @@ inline float vec_array_view::get(int idx, int c) const {
 }
 
 template <int N>
-inline ym::vec<float, N> vec_array_view::get(int idx) const {
-    auto def = ym::vec<float, N>();
-    for (auto i = 0; i < N; i++) def[i] = 0;
-    return get<N>(idx, def);
-}
-
-template <int N>
-inline ym::vec<float, N> vec_array_view::get(
+inline ym::vec<float, N> accessor_view::getv(
     int idx, const ym::vec<float, N>& def) const {
     auto v = def;
     for (auto i = 0; i < std::min(_ncomp, N); i++) v[i] = get(idx, i);
@@ -2651,7 +2644,7 @@ inline ym::vec<float, N> vec_array_view::get(
 }
 
 template <int N, int M>
-inline ym::mat<float, N, M> vec_array_view::get(int idx) const {
+inline ym::mat<float, N, M> accessor_view::getm(int idx) const {
     auto v = ym::mat<float, N, M>();
     assert(_ncomp == N * M);
     for (auto j = 0; j < M; j++)
@@ -2659,7 +2652,7 @@ inline ym::mat<float, N, M> vec_array_view::get(int idx) const {
     return v;
 }
 
-inline int vec_array_view::geti(int idx, int c) const {
+inline int accessor_view::geti(int idx, int c) const {
     auto i = std::min(std::max(c, 0), ncomp() - 1);
     auto valb = _data + _stride * idx + i * _ctype_size(_ctype);
     // use double for integer conversion to attempt to maintain precision
@@ -2681,14 +2674,14 @@ inline int vec_array_view::geti(int idx, int c) const {
 }
 
 template <int N>
-inline ym::vec<int, N> vec_array_view::geti(int idx) const {
-    auto v = ym::vec<int, N>();
+inline ym::vec<int, N> accessor_view::getiv(
+    int idx, const ym::vec<int, N>& def) const {
+    auto v = def;
     for (auto i = 0; i < std::min(_ncomp, N); i++) { v[i] = geti(idx, i); }
-    for (auto i = std::min(_ncomp, N); i < N; i++) v[i] = 0;
     return v;
 }
 
-inline int vec_array_view::_num_components(glTFAccessorType type) {
+inline int accessor_view::_num_components(glTFAccessorType type) {
     switch (type) {
         case glTFAccessorType::Scalar: return 1;
         case glTFAccessorType::Vec2: return 2;
@@ -2701,8 +2694,7 @@ inline int vec_array_view::_num_components(glTFAccessorType type) {
     }
 }
 
-inline int vec_array_view::_ctype_size(
-    glTFAccessorComponentType componentType) {
+inline int accessor_view::_ctype_size(glTFAccessorComponentType componentType) {
     switch (componentType) {
         case glTFAccessorComponentType::Byte: return 1;
         case glTFAccessorComponentType::UnsignedByte: return 1;
@@ -2710,56 +2702,6 @@ inline int vec_array_view::_ctype_size(
         case glTFAccessorComponentType::UnsignedShort: return 2;
         case glTFAccessorComponentType::UnsignedInt: return 4;
         case glTFAccessorComponentType::Float: return 4;
-        default: assert(false); return 0;
-    }
-}
-
-//
-// element_attay_view implementation
-//
-inline element_array_view::element_array_view(
-    const glTF* gltf, const glTFAccessor* accessor) {
-    _size = accessor->count;
-    _ctype = accessor->componentType;
-    auto buffer_view = gltf->get(accessor->bufferView);
-    _stride = (buffer_view->byteStride) ? buffer_view->byteStride :
-                                          _ctype_size(_ctype);
-    auto buffer = gltf->get(buffer_view->buffer);
-    _data =
-        buffer->data.data() + accessor->byteOffset + buffer_view->byteOffset;
-    assert(accessor->type == glTFAccessorType::Scalar);
-}
-
-//
-// element_attay_view implementation
-//
-inline int element_array_view::operator[](int idx) const {
-    auto valb = _data + _stride * idx;
-    switch (_ctype) {
-        case glTFAccessorComponentType::Byte: return int(*(char*)valb);
-        case glTFAccessorComponentType::UnsignedByte:
-            return int(*(unsigned char*)valb);
-        case glTFAccessorComponentType::Short: return int(*(short*)valb);
-        case glTFAccessorComponentType::UnsignedShort:
-            return int(*(unsigned short*)valb);
-        case glTFAccessorComponentType::UnsignedInt:
-            return int(*(unsigned int*)valb);
-        default: assert(false); return 0;
-    }
-}
-
-//
-// element_attay_view implementation
-//
-inline int element_array_view::_ctype_size(
-    glTFAccessorComponentType componentType) {
-    switch (componentType) {
-        case glTFAccessorComponentType::Byte: return 1;
-        case glTFAccessorComponentType::UnsignedByte: return 1;
-        case glTFAccessorComponentType::Short: return 2;
-        case glTFAccessorComponentType::UnsignedShort: return 2;
-        case glTFAccessorComponentType::UnsignedInt: return 4;
-        case glTFAccessorComponentType::Float: assert(false); return 0;
         default: assert(false); return 0;
     }
 }
@@ -3010,39 +2952,39 @@ scene_group* gltf_to_scenes(const glTF* gltf, int scene_idx) {
             // vertex data
             for (auto gattr : gprim->attributes) {
                 auto semantic = gattr.first;
-                auto vals = vec_array_view(gltf, gltf->get(gattr.second));
+                auto vals = accessor_view(gltf, gltf->get(gattr.second));
                 if (semantic == "POSITION") {
                     prim->pos.reserve(vals.size());
                     for (auto i = 0; i < vals.size(); i++)
-                        prim->pos.push_back(vals.get<3>(i));
+                        prim->pos.push_back(vals.getv<3>(i));
                 } else if (semantic == "NORMAL") {
                     prim->norm.reserve(vals.size());
                     for (auto i = 0; i < vals.size(); i++)
-                        prim->norm.push_back(vals.get<3>(i));
+                        prim->norm.push_back(vals.getv<3>(i));
                 } else if (semantic == "TEXCOORD" || semantic == "TEXCOORD_0") {
                     prim->texcoord.reserve(vals.size());
                     for (auto i = 0; i < vals.size(); i++)
-                        prim->texcoord.push_back(vals.get<2>(i));
+                        prim->texcoord.push_back(vals.getv<2>(i));
                 } else if (semantic == "TEXCOORD_1") {
                     prim->texcoord1.reserve(vals.size());
                     for (auto i = 0; i < vals.size(); i++)
-                        prim->texcoord1.push_back(vals.get<2>(i));
+                        prim->texcoord1.push_back(vals.getv<2>(i));
                 } else if (semantic == "COLOR" || semantic == "COLOR_0") {
                     prim->color.reserve(vals.size());
                     for (auto i = 0; i < vals.size(); i++)
-                        prim->color.push_back(vals.get<4>(i, {0, 0, 0, 1}));
+                        prim->color.push_back(vals.getv<4>(i, {0, 0, 0, 1}));
                 } else if (semantic == "TANGENT") {
                     prim->tangsp.reserve(vals.size());
                     for (auto i = 0; i < vals.size(); i++)
-                        prim->tangsp.push_back(vals.get<4>(i));
+                        prim->tangsp.push_back(vals.getv<4>(i));
                 } else if (semantic == "WEIGHTS_0") {
                     prim->skin_weights.reserve(vals.size());
                     for (auto i = 0; i < vals.size(); i++)
-                        prim->skin_weights.push_back(vals.get<4>(i));
+                        prim->skin_weights.push_back(vals.getv<4>(i));
                 } else if (semantic == "JOINTS_0") {
                     prim->skin_joints.reserve(vals.size());
                     for (auto i = 0; i < vals.size(); i++)
-                        prim->skin_joints.push_back(vals.geti<4>(i));
+                        prim->skin_joints.push_back(vals.getiv<4>(i));
                 } else {
                     // ignore
                 }
@@ -3097,56 +3039,58 @@ scene_group* gltf_to_scenes(const glTF* gltf, int scene_idx) {
                     } break;
                 }
             } else {
-                auto indices =
-                    element_array_view(gltf, gltf->get(gprim->indices));
+                auto indices = accessor_view(gltf, gltf->get(gprim->indices));
                 switch (gprim->mode) {
                     case glTFMeshPrimitiveMode::Triangles: {
                         prim->triangles.reserve(indices.size());
                         for (auto i = 0; i < indices.size() / 3; i++) {
-                            prim->triangles.push_back({indices[i * 3 + 0],
-                                indices[i * 3 + 1], indices[i * 3 + 2]});
+                            prim->triangles.push_back({indices.geti(i * 3 + 0),
+                                indices.geti(i * 3 + 1),
+                                indices.geti(i * 3 + 2)});
                         }
                     } break;
                     case glTFMeshPrimitiveMode::TriangleFan: {
                         prim->triangles.reserve(indices.size() - 2);
                         for (auto i = 2; i < indices.size(); i++) {
-                            prim->triangles.push_back(
-                                {indices[0], indices[i - 1], indices[i]});
+                            prim->triangles.push_back({indices.geti(0),
+                                indices.geti(i - 1), indices.geti(i)});
                         }
                     } break;
                     case glTFMeshPrimitiveMode::TriangleStrip: {
                         prim->triangles.reserve(indices.size() - 2);
                         for (auto i = 2; i < indices.size(); i++) {
-                            prim->triangles.push_back(
-                                {indices[i - 2], indices[i - 1], indices[i]});
+                            prim->triangles.push_back({indices.geti(i - 2),
+                                indices.geti(i - 1), indices.geti(i)});
                         }
                     } break;
                     case glTFMeshPrimitiveMode::Lines: {
                         prim->lines.reserve(indices.size() / 2);
                         for (auto i = 0; i < indices.size() / 2; i++) {
-                            prim->lines.push_back(
-                                {indices[i * 2 + 0], indices[i * 2 + 1]});
+                            prim->lines.push_back({indices.geti(i * 2 + 0),
+                                indices.geti(i * 2 + 1)});
                         }
                     } break;
                     case glTFMeshPrimitiveMode::LineLoop: {
                         prim->lines.reserve(indices.size());
                         for (auto i = 1; i < indices.size(); i++) {
-                            prim->lines.push_back({indices[i - 1], indices[i]});
+                            prim->lines.push_back(
+                                {indices.geti(i - 1), indices.geti(i)});
                         }
                         prim->lines.back() = {
-                            indices[indices.size() - 1], indices[0]};
+                            indices.geti(indices.size() - 1), indices.geti(0)};
                     } break;
                     case glTFMeshPrimitiveMode::LineStrip: {
                         prim->lines.reserve(indices.size() - 1);
                         for (auto i = 1; i < indices.size(); i++) {
-                            prim->lines.push_back({indices[i - 1], indices[i]});
+                            prim->lines.push_back(
+                                {indices.geti(i - 1), indices.geti(i)});
                         }
                     } break;
                     case glTFMeshPrimitiveMode::NotSet:
                     case glTFMeshPrimitiveMode::Points: {
                         prim->points.reserve(indices.size());
                         for (auto i = 0; i < indices.size(); i++) {
-                            prim->points.push_back(indices[i]);
+                            prim->points.push_back(indices.geti(i));
                         }
                     } break;
                 }
@@ -3158,19 +3102,19 @@ scene_group* gltf_to_scenes(const glTF* gltf, int scene_idx) {
                 auto target = new shape_morph();
                 for (auto gattr : gtarget) {
                     auto semantic = gattr.first;
-                    auto vals = vec_array_view(gltf, gltf->get(gattr.second));
+                    auto vals = accessor_view(gltf, gltf->get(gattr.second));
                     if (semantic == "POSITION") {
                         target->pos.reserve(vals.size());
                         for (auto i = 0; i < vals.size(); i++)
-                            target->pos.push_back(vals.get<3>(i));
+                            target->pos.push_back(vals.getv<3>(i));
                     } else if (semantic == "NORMAL") {
                         target->norm.reserve(vals.size());
                         for (auto i = 0; i < vals.size(); i++)
-                            target->norm.push_back(vals.get<3>(i));
+                            target->norm.push_back(vals.getv<3>(i));
                     } else if (semantic == "TANGENT") {
                         target->tangsp.reserve(vals.size());
                         for (auto i = 0; i < vals.size(); i++)
-                            target->tangsp.push_back(vals.get<3>(i));
+                            target->tangsp.push_back(vals.getv<3>(i));
                     } else {
                         // ignore
                     }
@@ -3253,31 +3197,31 @@ scene_group* gltf_to_scenes(const glTF* gltf, int scene_idx) {
                 auto gsampler = ganim->get(gchannel->sampler);
                 auto keyframes = new animation();
                 auto input_view =
-                    vec_array_view(gltf, gltf->get(gsampler->input));
+                    accessor_view(gltf, gltf->get(gsampler->input));
                 keyframes->time.resize(input_view.size());
                 for (auto i = 0; i < input_view.size(); i++)
-                    keyframes->time[i] = input_view.get<1>(i)[0];
+                    keyframes->time[i] = input_view.get(i);
                 keyframes->interp =
                     (animation_interpolation)gsampler->interpolation;
                 auto output_view =
-                    vec_array_view(gltf, gltf->get(gsampler->output));
+                    accessor_view(gltf, gltf->get(gsampler->output));
                 switch (gchannel->target->path) {
                     case glTFAnimationChannelTargetPath::Translation: {
                         keyframes->translation.reserve(output_view.size());
                         for (auto i = 0; i < output_view.size(); i++)
                             keyframes->translation.push_back(
-                                output_view.get<3>(i));
+                                output_view.getv<3>(i));
                     } break;
                     case glTFAnimationChannelTargetPath::Rotation: {
                         keyframes->rotation.reserve(output_view.size());
                         for (auto i = 0; i < output_view.size(); i++)
                             keyframes->rotation.push_back(
-                                (ym::quat4f)output_view.get<4>(i));
+                                (ym::quat4f)output_view.getv<4>(i));
                     } break;
                     case glTFAnimationChannelTargetPath::Scale: {
                         keyframes->scale.reserve(output_view.size());
                         for (auto i = 0; i < output_view.size(); i++)
-                            keyframes->scale.push_back(output_view.get<3>(i));
+                            keyframes->scale.push_back(output_view.getv<3>(i));
                     } break;
                     case glTFAnimationChannelTargetPath::Weights: {
                         // get a node that it refers to
@@ -3294,7 +3238,7 @@ scene_group* gltf_to_scenes(const glTF* gltf, int scene_idx) {
                             auto values = std::vector<float>();
                             values.reserve(output_view.size());
                             for (auto i = 0; i < output_view.size(); i++)
-                                values.push_back(output_view.get(i, 0));
+                                values.push_back(output_view.get(i));
                             keyframes->morph_weights.resize(
                                 values.size() / ncomp);
                             for (auto i = 0;
@@ -3332,12 +3276,12 @@ scene_group* gltf_to_scenes(const glTF* gltf, int scene_idx) {
             skin->pose_matrices.assign(skin->joints.size(), ym::identity_mat4f);
         } else {
             auto pose_matrix_view =
-                vec_array_view(gltf, gltf->get(gskin->inverseBindMatrices));
+                accessor_view(gltf, gltf->get(gskin->inverseBindMatrices));
             skin->pose_matrices.resize(skin->joints.size());
             assert(pose_matrix_view.size() == skin->joints.size());
             assert(pose_matrix_view.ncomp() == 16);
             for (auto i = 0; i < pose_matrix_view.size(); i++) {
-                skin->pose_matrices[i] = pose_matrix_view.get<4, 4>(i);
+                skin->pose_matrices[i] = pose_matrix_view.getm<4, 4>(i);
             }
         }
         scns->skins.push_back(skin);

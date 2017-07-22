@@ -2044,24 +2044,44 @@ prepend buffer_uri to its name.</p>
 
 
 <p>Validate a gltf. Missing many validation as of this version.</p>
-<h3>Struct vec_array_view</h3>
-<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">vec_array_view</span> <span class="p">{</span>
-</code></pre></div>
-
-
-<p>A view for gltf array buffers that allows for typed access.</p>
-<h3>Struct element_array_view</h3>
-<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">element_array_view</span> <span class="p">{</span>
-</code></pre></div>
-
-
-<p>A view for gltf element array buffers that allows for typed access.</p>
 <h3>Function node_transform()</h3>
 <div class="codehilite"><pre><code><span></span><span class="n">ym</span><span class="o">::</span><span class="n">mat4f</span> <span class="n">node_transform</span><span class="p">(</span><span class="k">const</span> <span class="n">glTFNode</span><span class="o">*</span> <span class="n">node</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Computes the local node transform and its inverse.</p>
+<h3>Struct accessor_view</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">accessor_view</span> <span class="p">{</span>
+    <span class="n">accessor_view</span><span class="p">(</span><span class="k">const</span> <span class="n">glTF</span><span class="o">*</span> <span class="n">gltf</span><span class="p">,</span> <span class="k">const</span> <span class="n">glTFAccessor</span><span class="o">*</span> <span class="n">accessor</span><span class="p">);</span> 
+    <span class="kt">int</span> <span class="nf">size</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span> 
+    <span class="kt">int</span> <span class="nf">count</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span> 
+    <span class="kt">int</span> <span class="nf">ncomp</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span> 
+    <span class="kt">bool</span> <span class="nf">valid</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span> 
+    <span class="k">template</span> <span class="o">&lt;</span><span class="kt">int</span> <span class="n">N</span><span class="o">&gt;</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec</span><span class="o">&lt;</span><span class="kt">float</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;</span> <span class="n">getv</span><span class="p">(</span> <span class="kt">int</span> <span class="n">idx</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec</span><span class="o">&lt;</span><span class="kt">float</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">def</span> <span class="o">=</span> <span class="n">ym</span><span class="o">::</span><span class="n">zero_vec</span><span class="o">&lt;</span><span class="kt">float</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;</span><span class="p">())</span> <span class="k">const</span><span class="p">;</span> 
+    <span class="k">template</span> <span class="o">&lt;</span><span class="kt">int</span> <span class="n">N</span><span class="p">,</span> <span class="kt">int</span> <span class="n">M</span><span class="o">&gt;</span> <span class="n">ym</span><span class="o">::</span><span class="n">mat</span><span class="o">&lt;</span><span class="kt">float</span><span class="p">,</span> <span class="n">N</span><span class="p">,</span> <span class="n">M</span><span class="o">&gt;</span> <span class="n">getm</span><span class="p">(</span><span class="kt">int</span> <span class="n">idx</span><span class="p">)</span> <span class="k">const</span><span class="p">;</span> 
+    <span class="kt">float</span> <span class="nf">get</span><span class="p">(</span><span class="kt">int</span> <span class="n">idx</span><span class="p">,</span> <span class="kt">int</span> <span class="n">c</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span> <span class="k">const</span><span class="p">;</span> 
+    <span class="k">template</span> <span class="o">&lt;</span><span class="kt">int</span> <span class="n">N</span><span class="o">&gt;</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;</span> <span class="n">getiv</span><span class="p">(</span> <span class="kt">int</span> <span class="n">idx</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">def</span> <span class="o">=</span> <span class="n">ym</span><span class="o">::</span><span class="n">zero_vec</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;</span><span class="p">())</span> <span class="k">const</span><span class="p">;</span> 
+    <span class="kt">int</span> <span class="nf">geti</span><span class="p">(</span><span class="kt">int</span> <span class="n">idx</span><span class="p">,</span> <span class="kt">int</span> <span class="n">c</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span> <span class="k">const</span><span class="p">;</span> 
+<span class="p">}</span>
+</code></pre></div>
+
+
+<p>A view for gltf array buffers that allows for typed access.</p>
+<ul>
+<li>Members:<ul>
+<li>accessor_view():      construct a view from an accessor</li>
+<li>size():      number of elements in the view</li>
+<li>count():      number of elements in the view</li>
+<li>ncomp():      number of components per element</li>
+<li>valid():      check whether the view is valid</li>
+<li>getv():      get the idx-th element of fixes length</li>
+<li>getm():      get the idx-th element of fixes length as a matrix</li>
+<li>get():      get the c-th component of the idx-th element</li>
+<li>getiv():      get the idx-th element as integer</li>
+<li>geti():      get the c-th component of the idx-th element as integer</li>
+</ul>
+</li>
+</ul>
         <article>
         <footer></footer>
         </body>
