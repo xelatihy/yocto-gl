@@ -79,6 +79,7 @@ Disable this by setting YTRACE_NO_BVH.
 
 ## History
 
+- v 0.23: simpler logging
 - v 0.22: added additional buffers
 - v 0.21: added filters
 - v 0.20: state-based api
@@ -613,13 +614,12 @@ Ray-scene Intersection.
 ### Typedef intersect_first_cb
 
 ~~~ .cpp
-using intersect_first_cb = intersect_point (*)(void* ctx, const ym::ray3f& ray);
+using intersect_first_cb = std::function<intersect_point(const ym::ray3f& ray)>;
 ~~~
 
 Ray-scene closest intersection callback.
 
 - Parameters:
-    - ctx: context
     - ray: ray
 - Return:
     - intersection point
@@ -627,13 +627,12 @@ Ray-scene closest intersection callback.
 ### Typedef intersect_any_cb
 
 ~~~ .cpp
-using intersect_any_cb = bool (*)(void* ctx, const ym::ray3f& o);
+using intersect_any_cb = std::function<bool(const ym::ray3f& ray)>;
 ~~~
 
 Ray-scene intersection callback
 
 - Parameters:
-    - ctx: context
     - ray: ray
 - Return:
     - whether we intersect or not
@@ -658,19 +657,19 @@ Initialize acceleration structure.
 - Parameters:
     - scn: trace scene
 
-### Typedef logging_msg_cb
+### Typedef logging_cb
 
 ~~~ .cpp
-using logging_msg_cb = void (*)(
-    int level, const char* name, const char* msg, va_list args);
+using logging_cb = std::function<void(const char*)>;
 ~~~
 
-Logger callback
+Logging callback
 
 ### Function set_logging_callbacks()
 
 ~~~ .cpp
-void set_logging_callbacks(scene* scn, void* ctx, logging_msg_cb log);
+void set_logging_callbacks(
+    scene* scn, logging_cb log_info, logging_cb log_error);
 ~~~
 
 Logger

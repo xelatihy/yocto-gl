@@ -1256,8 +1256,8 @@ void add_extra_vars(std::vector<Type*> types) {
 }
 
 int main(int argc, char** argv) {
-    auto parser =
-        make_parser(argc, argv, "generates gltf c++ code from json schema");
+    auto parser = make_parser(
+        argc, argv, "ygltfgen", "generates gltf c++ code from json schema");
     auto schemadir = parse_opt<std::string>(parser, "--schemadir", "",
         "schema directory", "tools/gltf/schema/", false);
     auto type_filename = parse_opt<std::string>(parser, "--type-filename", "",

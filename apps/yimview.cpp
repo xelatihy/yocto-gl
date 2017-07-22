@@ -32,6 +32,8 @@
 #include "../yocto/yocto_math.h"
 #include "../yocto/yocto_utils.h"
 
+using yu::logging::log_fatal;
+
 struct yimage {
     // image path
     std::string filename;
@@ -85,8 +87,7 @@ bool load_images(params* pars) {
             img.ldr = yimg::load_image4b(filename);
         }
         if (!img.hdr && !img.ldr) {
-            printf("cannot load image %s\n", img.filename.c_str());
-            return false;
+            log_fatal("cannot load image %s\n", img.filename.c_str());
         }
         img.tex_glid = 0;
     }
@@ -100,7 +101,8 @@ void parse_cmdline(params* pars, int argc, char** argv) {
         {"gamma", (int)ym::tonemap_type::gamma},
         {"filmic", (int)ym::tonemap_type::filmic}};
 
-    auto parser = yu::cmdline::make_parser(argc, argv, "view images");
+    auto parser =
+        yu::cmdline::make_parser(argc, argv, "yimview", "view images");
     pars->exposure =
         parse_optf(parser, "--exposure", "-e", "hdr image exposure", 0);
     pars->gamma = parse_optf(parser, "--gamma", "-g", "hdr image gamma", 2.2f);
@@ -143,7 +145,7 @@ void text_callback(ygui::window* win, unsigned int key) {
         case 'h':
             // TODO: hud
             break;
-        default: printf("unsupported key\n"); break;
+        default: log_fatal("unsupported key\n"); break;
     }
 }
 

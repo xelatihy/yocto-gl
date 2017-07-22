@@ -63,6 +63,7 @@ illustreates the library usage.
 
 ## History
 
+- v 0.22: seimpler logging
 - v 0.21: move to header-only mode
 - v 0.20: simpler logging
 - v 0.19: some containers ops
@@ -105,8 +106,8 @@ Command line parser.
 ### Function make_parser()
 
 ~~~ .cpp
-inline parser* make_parser(
-    const std::vector<std::string>& args, const std::string& help = "");
+inline parser* make_parser(const std::vector<std::string>& args,
+    const std::string& name = "", const std::string& help = "");
 ~~~
 
 Inits a command line parser.
@@ -114,7 +115,8 @@ Inits a command line parser.
 ### Function make_parser()
 
 ~~~ .cpp
-inline parser* make_parser(int argc, char* argv[], const char* help);
+inline parser* make_parser(
+    int argc, char* argv[], const char* name, const char* help);
 ~~~
 
 Inits a command line parser.
@@ -521,16 +523,8 @@ Replace s1 with s2 in str.
 ### Function format()
 
 ~~~ .cpp
-inline std::string format(const char* fmt, va_list args);
-~~~
-
-C-like string formatting. This is only meant for short strings with max
-length 10000 chars. Memory corruption will happen for longer strings.
-
-### Function format()
-
-~~~ .cpp
-inline std::string format(const char* fmt, ...);
+template <typename... Args>
+inline std::string format(const char* fmt, Args&&... args);
 ~~~
 
 C-like string formatting. This is only meant for short strings with max
@@ -662,65 +656,100 @@ Logging level
 struct logger;
 ~~~
 
-Logger object
+Logger object. A logger can output messages to multiple streams.
+Use add streams commands for it.
 
-### Function make_file_logger()
+### Function make_logger()
 
 ~~~ .cpp
-inline logger* make_file_logger(const std::string& filename, bool append,
+inline logger* make_logger(const char* name, bool add_console_stream = false);
+~~~
+
+Make a logger with an optional console stream.
+
+### Function set_logger_name()
+
+~~~ .cpp
+inline void set_logger_name(logger* lgr, const char* name);
+~~~
+
+Set logger default name
+
+### Function free_logger()
+
+~~~ .cpp
+inline void free_logger(logger*& lgr);
+~~~
+
+Free logger
+
+### Function add_file_stream()
+
+~~~ .cpp
+inline bool add_file_stream(logger* lgr, const std::string& filename,
+    bool append, bool short_message = false,
+    log_level output_level = log_level::info,
+    log_level flush_level = log_level::info);
+~~~
+
+Add a file stream to a logger.
+
+- Parameters:
+    - lgr: logger
+    - filename: filename
+    - append: append or write open mode for file logger
+    - short_message: whether to use a short message version
+    - output_level: output level
+    - flush_level: output level
+- Returns:
+    - true if ok
+
+### Function add_console_stream()
+
+~~~ .cpp
+inline bool add_console_stream(logger* lgr, bool use_std_error = false,
+    bool short_message = true, log_level output_level = log_level::info,
+    log_level flush_level = log_level::info);
+~~~
+
+Add a console stream to a logger.
+
+- Parameters:
+    - lgr: logger
+    - filename: logger filename or stderr if empty
+    - use_std_error: use standard error instead of standard out
+    - short_message: whether to use a short message version
+    - output_level: output level
+    - flush_level: output level
+- Returns:
+    - true if ok
+
+### Function get_default_logger()
+
+~~~ .cpp
+inline logger* get_default_logger();
+~~~
+
+Get default logger.
+By default a non-verbose stdout logger is creater.
+
+### Function set_logger_name()
+
+~~~ .cpp
+inline void set_logger_name(const char* name);
+~~~
+
+Set default logger name
+
+### Function add_file_stream()
+
+~~~ .cpp
+inline void add_file_stream(const std::string& filename, bool append,
     bool short_message = false, log_level output_level = log_level::info,
     log_level flush_level = log_level::info);
 ~~~
 
-Make a file logger. See set_logger() for Parameters.
-
-- Parameters:
-    - filename: logger filename or stderr if empty
-    - apend: append or write open mode for file logger
-
-### Function make_stderr_logger()
-
-~~~ .cpp
-inline logger* make_stderr_logger(bool short_message = true,
-    log_level output_level = log_level::info,
-    log_level flush_level = log_level::info);
-~~~
-
-Make a stderr logger. See set_logger() for Parameters.
-
-### Function make_stdout_logger()
-
-~~~ .cpp
-inline logger* make_stdout_logger(bool short_message = true,
-    log_level output_level = log_level::info,
-    log_level flush_level = log_level::info);
-~~~
-
-Make a stderr logger. See set_logger() for Parameters.
-
-### Function get_default_loggers()
-
-~~~ .cpp
-inline std::vector<logger*>* get_default_loggers();
-~~~
-
-Get default loggers. This is a modifiable reference.
-
-### Function set_logger()
-
-~~~ .cpp
-inline void set_logger(logger* lgr, bool short_message, log_level output_level,
-    log_level flush_level = log_level::error);
-~~~
-
-Set logger level
-
-- Parameters:
-    - lgr: logger
-    - name : logger name
-    - short_message: whether to use a short message version
-    - output_level: output level
-    - flush_level: output level
+Add a file logger to the default loggers.
 
 ### Function log_msg()
 
@@ -740,32 +769,9 @@ Log a message
 ### Function log_msg()
 
 ~~~ .cpp
-inline void log_msg(logger* lgr, log_level level, const std::string& name,
-    const std::string& msg);
-~~~
-
-Log a message
-
-- Parameters:
-    - lgr: logger
-    - level: message level
-    - code: message code (5 chars)
-    - msg: message
-
-### Function log_msgfv()
-
-~~~ .cpp
-inline void log_msgfv(logger* lgr, log_level level, const char* name,
-    const char* msg, va_list args);
-~~~
-
-Logs a message to the default loggers
-
-### Function log_msgf()
-
-~~~ .cpp
-inline void log_msgf(
-    logger* lgr, log_level level, const char* name, const char* msg, ...);
+template <typename... Args>
+inline void log_msg(logger* lgr, log_level level, const char* name,
+    const char* msg, const Args&... args);
 ~~~
 
 Log a message formatted ala printf.
@@ -779,25 +785,36 @@ Log a message formatted ala printf.
 ### Function log_msg()
 
 ~~~ .cpp
+template <typename... Args>
 inline void log_msg(
-    log_level level, const std::string& name, const std::string& msg);
+    log_level level, const char* name, const char* msg, const Args&... args);
 ~~~
 
 Logs a message to the default loggers
 
-### Function log_msgf()
+### Function log_info()
 
 ~~~ .cpp
-inline void log_msgf(log_level level, const char* name, const char* msg, ...);
+template <typename... Args>
+inline void log_info(const char* msg, const Args&... args);
 ~~~
 
 Logs a message to the default loggers
 
-### Function log_msgfv()
+### Function log_error()
 
 ~~~ .cpp
-inline void log_msgfv(
-    log_level level, const char* name, const char* msg, va_list args);
+template <typename... Args>
+inline void log_error(const char* msg, const Args&... args);
+~~~
+
+Logs a message to the default loggers
+
+### Function log_fatal()
+
+~~~ .cpp
+template <typename... Args>
+inline void log_fatal(const char* msg, const Args&... args);
 ~~~
 
 Logs a message to the default loggers

@@ -76,6 +76,7 @@ illustreates the library usage.</p>
 </ol>
 <h2>History</h2>
 <ul>
+<li>v 0.22: seimpler logging</li>
 <li>v 0.21: move to header-only mode</li>
 <li>v 0.20: simpler logging</li>
 <li>v 0.19: some containers ops</li>
@@ -110,14 +111,15 @@ illustreates the library usage.</p>
 
 <p>Command line parser.</p>
 <h3>Function make_parser()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">parser</span><span class="o">*</span> <span class="nf">make_parser</span><span class="p">(</span>
-    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;&amp;</span> <span class="n">args</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">help</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">parser</span><span class="o">*</span> <span class="nf">make_parser</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;&amp;</span> <span class="n">args</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">help</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Inits a command line parser.</p>
 <h3>Function make_parser()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">parser</span><span class="o">*</span> <span class="nf">make_parser</span><span class="p">(</span><span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span><span class="o">*</span> <span class="n">argv</span><span class="p">[],</span> <span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">help</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">parser</span><span class="o">*</span> <span class="nf">make_parser</span><span class="p">(</span>
+    <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span><span class="o">*</span> <span class="n">argv</span><span class="p">[],</span> <span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">name</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">help</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -432,14 +434,8 @@ Window if keep_newline is true.</p>
 
 <p>Replace s1 with s2 in str.</p>
 <h3>Function format()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">format</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">fmt</span><span class="p">,</span> <span class="kt">va_list</span> <span class="n">args</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>C-like string formatting. This is only meant for short strings with max
-length 10000 chars. Memory corruption will happen for longer strings.</p>
-<h3>Function format()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">format</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">fmt</span><span class="p">,</span> <span class="p">...);</span>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span><span class="p">...</span> <span class="n">Args</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">format</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">fmt</span><span class="p">,</span> <span class="n">Args</span><span class="o">&amp;&amp;</span><span class="p">...</span> <span class="n">args</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -546,61 +542,94 @@ length 10000 chars. Memory corruption will happen for longer strings.</p>
 </code></pre></div>
 
 
-<p>Logger object</p>
-<h3>Function make_file_logger()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">logger</span><span class="o">*</span> <span class="nf">make_file_logger</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">append</span><span class="p">,</span>
-    <span class="kt">bool</span> <span class="n">short_message</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span> <span class="n">log_level</span> <span class="n">output_level</span> <span class="o">=</span> <span class="n">log_level</span><span class="o">::</span><span class="n">info</span><span class="p">,</span>
-    <span class="n">log_level</span> <span class="n">flush_level</span> <span class="o">=</span> <span class="n">log_level</span><span class="o">::</span><span class="n">info</span><span class="p">);</span>
+<p>Logger object. A logger can output messages to multiple streams.
+Use add streams commands for it.</p>
+<h3>Function make_logger()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">logger</span><span class="o">*</span> <span class="nf">make_logger</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">name</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">add_console_stream</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Make a file logger. See set_logger() for Parameters.</p>
-<ul>
-<li>Parameters:<ul>
-<li>filename: logger filename or stderr if empty</li>
-<li>apend: append or write open mode for file logger</li>
-</ul>
-</li>
-</ul>
-<h3>Function make_stderr_logger()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">logger</span><span class="o">*</span> <span class="nf">make_stderr_logger</span><span class="p">(</span><span class="kt">bool</span> <span class="n">short_message</span> <span class="o">=</span> <span class="nb">true</span><span class="p">,</span>
+<p>Make a logger with an optional console stream.</p>
+<h3>Function set_logger_name()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">set_logger_name</span><span class="p">(</span><span class="n">logger</span><span class="o">*</span> <span class="n">lgr</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">name</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Set logger default name</p>
+<h3>Function free_logger()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">free_logger</span><span class="p">(</span><span class="n">logger</span><span class="o">*&amp;</span> <span class="n">lgr</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Free logger</p>
+<h3>Function add_file_stream()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">add_file_stream</span><span class="p">(</span><span class="n">logger</span><span class="o">*</span> <span class="n">lgr</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">,</span>
+    <span class="kt">bool</span> <span class="n">append</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">short_message</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span>
     <span class="n">log_level</span> <span class="n">output_level</span> <span class="o">=</span> <span class="n">log_level</span><span class="o">::</span><span class="n">info</span><span class="p">,</span>
     <span class="n">log_level</span> <span class="n">flush_level</span> <span class="o">=</span> <span class="n">log_level</span><span class="o">::</span><span class="n">info</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Make a stderr logger. See set_logger() for Parameters.</p>
-<h3>Function make_stdout_logger()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">logger</span><span class="o">*</span> <span class="nf">make_stdout_logger</span><span class="p">(</span><span class="kt">bool</span> <span class="n">short_message</span> <span class="o">=</span> <span class="nb">true</span><span class="p">,</span>
-    <span class="n">log_level</span> <span class="n">output_level</span> <span class="o">=</span> <span class="n">log_level</span><span class="o">::</span><span class="n">info</span><span class="p">,</span>
-    <span class="n">log_level</span> <span class="n">flush_level</span> <span class="o">=</span> <span class="n">log_level</span><span class="o">::</span><span class="n">info</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Make a stderr logger. See set_logger() for Parameters.</p>
-<h3>Function get_default_loggers()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">logger</span><span class="o">*&gt;*</span> <span class="n">get_default_loggers</span><span class="p">();</span>
-</code></pre></div>
-
-
-<p>Get default loggers. This is a modifiable reference.</p>
-<h3>Function set_logger()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">set_logger</span><span class="p">(</span><span class="n">logger</span><span class="o">*</span> <span class="n">lgr</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">short_message</span><span class="p">,</span> <span class="n">log_level</span> <span class="n">output_level</span><span class="p">,</span>
-    <span class="n">log_level</span> <span class="n">flush_level</span> <span class="o">=</span> <span class="n">log_level</span><span class="o">::</span><span class="n">error</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Set logger level</p>
+<p>Add a file stream to a logger.</p>
 <ul>
 <li>Parameters:<ul>
 <li>lgr: logger</li>
-<li>name : logger name</li>
+<li>filename: filename</li>
+<li>append: append or write open mode for file logger</li>
 <li>short_message: whether to use a short message version</li>
 <li>output_level: output level</li>
 <li>flush_level: output level</li>
 </ul>
 </li>
+<li>Returns:<ul>
+<li>true if ok</li>
 </ul>
+</li>
+</ul>
+<h3>Function add_console_stream()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">add_console_stream</span><span class="p">(</span><span class="n">logger</span><span class="o">*</span> <span class="n">lgr</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">use_std_error</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span>
+    <span class="kt">bool</span> <span class="n">short_message</span> <span class="o">=</span> <span class="nb">true</span><span class="p">,</span> <span class="n">log_level</span> <span class="n">output_level</span> <span class="o">=</span> <span class="n">log_level</span><span class="o">::</span><span class="n">info</span><span class="p">,</span>
+    <span class="n">log_level</span> <span class="n">flush_level</span> <span class="o">=</span> <span class="n">log_level</span><span class="o">::</span><span class="n">info</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Add a console stream to a logger.</p>
+<ul>
+<li>Parameters:<ul>
+<li>lgr: logger</li>
+<li>filename: logger filename or stderr if empty</li>
+<li>use_std_error: use standard error instead of standard out</li>
+<li>short_message: whether to use a short message version</li>
+<li>output_level: output level</li>
+<li>flush_level: output level</li>
+</ul>
+</li>
+<li>Returns:<ul>
+<li>true if ok</li>
+</ul>
+</li>
+</ul>
+<h3>Function get_default_logger()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">logger</span><span class="o">*</span> <span class="nf">get_default_logger</span><span class="p">();</span>
+</code></pre></div>
+
+
+<p>Get default logger.
+By default a non-verbose stdout logger is creater.</p>
+<h3>Function set_logger_name()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">set_logger_name</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">name</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Set default logger name</p>
+<h3>Function add_file_stream()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">add_file_stream</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">append</span><span class="p">,</span>
+    <span class="kt">bool</span> <span class="n">short_message</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span> <span class="n">log_level</span> <span class="n">output_level</span> <span class="o">=</span> <span class="n">log_level</span><span class="o">::</span><span class="n">info</span><span class="p">,</span>
+    <span class="n">log_level</span> <span class="n">flush_level</span> <span class="o">=</span> <span class="n">log_level</span><span class="o">::</span><span class="n">info</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Add a file logger to the default loggers.</p>
 <h3>Function log_msg()</h3>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">log_msg</span><span class="p">(</span>
     <span class="n">logger</span><span class="o">*</span> <span class="n">lgr</span><span class="p">,</span> <span class="n">log_level</span> <span class="n">level</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">name</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">msg</span><span class="p">);</span>
@@ -618,31 +647,9 @@ length 10000 chars. Memory corruption will happen for longer strings.</p>
 </li>
 </ul>
 <h3>Function log_msg()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">log_msg</span><span class="p">(</span><span class="n">logger</span><span class="o">*</span> <span class="n">lgr</span><span class="p">,</span> <span class="n">log_level</span> <span class="n">level</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">name</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">msg</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Log a message</p>
-<ul>
-<li>Parameters:<ul>
-<li>lgr: logger</li>
-<li>level: message level</li>
-<li>code: message code (5 chars)</li>
-<li>msg: message</li>
-</ul>
-</li>
-</ul>
-<h3>Function log_msgfv()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">log_msgfv</span><span class="p">(</span><span class="n">logger</span><span class="o">*</span> <span class="n">lgr</span><span class="p">,</span> <span class="n">log_level</span> <span class="n">level</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">name</span><span class="p">,</span>
-    <span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">msg</span><span class="p">,</span> <span class="kt">va_list</span> <span class="n">args</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Logs a message to the default loggers</p>
-<h3>Function log_msgf()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">log_msgf</span><span class="p">(</span>
-    <span class="n">logger</span><span class="o">*</span> <span class="n">lgr</span><span class="p">,</span> <span class="n">log_level</span> <span class="n">level</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">name</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">msg</span><span class="p">,</span> <span class="p">...);</span>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span><span class="p">...</span> <span class="n">Args</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">log_msg</span><span class="p">(</span><span class="n">logger</span><span class="o">*</span> <span class="n">lgr</span><span class="p">,</span> <span class="n">log_level</span> <span class="n">level</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">name</span><span class="p">,</span>
+    <span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">msg</span><span class="p">,</span> <span class="k">const</span> <span class="n">Args</span><span class="o">&amp;</span><span class="p">...</span> <span class="n">args</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -657,21 +664,30 @@ length 10000 chars. Memory corruption will happen for longer strings.</p>
 </li>
 </ul>
 <h3>Function log_msg()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">log_msg</span><span class="p">(</span>
-    <span class="n">log_level</span> <span class="n">level</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">name</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">msg</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span><span class="p">...</span> <span class="n">Args</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">log_msg</span><span class="p">(</span>
+    <span class="n">log_level</span> <span class="n">level</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">name</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">msg</span><span class="p">,</span> <span class="k">const</span> <span class="n">Args</span><span class="o">&amp;</span><span class="p">...</span> <span class="n">args</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Logs a message to the default loggers</p>
-<h3>Function log_msgf()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">log_msgf</span><span class="p">(</span><span class="n">log_level</span> <span class="n">level</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">name</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">msg</span><span class="p">,</span> <span class="p">...);</span>
+<h3>Function log_info()</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span><span class="p">...</span> <span class="n">Args</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">log_info</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">msg</span><span class="p">,</span> <span class="k">const</span> <span class="n">Args</span><span class="o">&amp;</span><span class="p">...</span> <span class="n">args</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Logs a message to the default loggers</p>
-<h3>Function log_msgfv()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">log_msgfv</span><span class="p">(</span>
-    <span class="n">log_level</span> <span class="n">level</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">name</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">msg</span><span class="p">,</span> <span class="kt">va_list</span> <span class="n">args</span><span class="p">);</span>
+<h3>Function log_error()</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span><span class="p">...</span> <span class="n">Args</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">log_error</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">msg</span><span class="p">,</span> <span class="k">const</span> <span class="n">Args</span><span class="o">&amp;</span><span class="p">...</span> <span class="n">args</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Logs a message to the default loggers</p>
+<h3>Function log_fatal()</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span><span class="p">...</span> <span class="n">Args</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">log_fatal</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">msg</span><span class="p">,</span> <span class="k">const</span> <span class="n">Args</span><span class="o">&amp;</span><span class="p">...</span> <span class="n">args</span><span class="p">);</span>
 </code></pre></div>
 
 

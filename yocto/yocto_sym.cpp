@@ -114,7 +114,6 @@ struct scene {
 
     // overlap callbacks -----------------------
     float overlap_max_radius = 0.25;  // maximum vertex overlap distance
-    void* overlap_ctx = nullptr;      // overlap context
     overlap_shapes_cb overlap_shapes = nullptr;  // overlap callbacks
     overlap_shape_cb overlap_shape = nullptr;    // overlap callbacks
     overlap_refit_cb overlap_refit = nullptr;    // overlap callbacks
@@ -234,55 +233,12 @@ void set_rigid_body_velocity(
 //
 // Public API.
 //
-void set_overlap_callbacks(scene* scn, void* ctx,
-    overlap_shapes_cb overlap_shapes, overlap_shape_cb overlap_shape,
-    overlap_refit_cb overlap_refit) {
-    scn->overlap_ctx = ctx;
+void set_overlap_callbacks(scene* scn, overlap_shapes_cb overlap_shapes,
+    overlap_shape_cb overlap_shape, overlap_refit_cb overlap_refit) {
     scn->overlap_shapes = overlap_shapes;
     scn->overlap_shape = overlap_shape;
     scn->overlap_refit = overlap_refit;
 }
-
-#ifndef YSYM_NO_BVH
-//
-// internal overlap adapter
-//
-static inline void internal_overlap_shapes(
-    void* ctx, std::vector<ym::vec2i>* overlaps) {
-    auto scene_bvh = (ybvh::scene*)ctx;
-    ybvh::overlap_instance_bounds(scene_bvh, scene_bvh, true, true, overlaps);
-}
-
-//
-// internal overlap adapter
-//
-static inline ysym::overlap_point internal_overlap_shape(
-    void* ctx, int iid, const ym::vec3f& pt, float max_dist) {
-    auto scene_bvh = (ybvh::scene*)ctx;
-    auto overlap = ybvh::overlap_instance(scene_bvh, iid, pt, max_dist, false);
-    ysym::overlap_point opt;
-    opt.dist = overlap.dist;
-    opt.iid = overlap.iid;
-    opt.sid = overlap.sid;
-    opt.eid = overlap.eid;
-    opt.euv = overlap.euv;
-    return opt;
-}
-
-//
-// internal overlap adapter
-//
-static inline void internal_overlap_refit(
-    void* ctx, const scene* scn, int nshapes) {
-    auto scene_bvh = (ybvh::scene*)ctx;
-    for (auto iid = 0; iid < nshapes; iid++) {
-        ybvh::set_instance_frame(
-            scene_bvh, iid, get_rigid_body_frame(scn, iid));
-    }
-    ybvh::refit_scene_bvh(scene_bvh, false);
-}
-
-#endif
 
 //
 // Initialize overlap functions using internal structures.
@@ -305,8 +261,29 @@ void init_overlap(scene* scn) {
             scn->overlap_bvh, bdy->frame, shape_map.at(bdy->shp));
     }
     ybvh::build_scene_bvh(scn->overlap_bvh);
-    set_overlap_callbacks(scn, scn->overlap_bvh, internal_overlap_shapes,
-        internal_overlap_shape, internal_overlap_refit);
+    set_overlap_callbacks(scn,
+        [scn](std::vector<ym::vec2i>* overlaps) {
+            ybvh::overlap_instance_bounds(
+                scn->overlap_bvh, scn->overlap_bvh, true, true, overlaps);
+        },
+        [scn](int iid, const ym::vec3f& pt, float max_dist) {
+            auto overlap = ybvh::overlap_instance(
+                scn->overlap_bvh, iid, pt, max_dist, false);
+            ysym::overlap_point opt;
+            opt.dist = overlap.dist;
+            opt.iid = overlap.iid;
+            opt.sid = overlap.sid;
+            opt.eid = overlap.eid;
+            opt.euv = overlap.euv;
+            return opt;
+        },
+        [scn](const scene* scn, int nshapes) {
+            for (auto iid = 0; iid < nshapes; iid++) {
+                ybvh::set_instance_frame(
+                    scn->overlap_bvh, iid, get_rigid_body_frame(scn, iid));
+            }
+            ybvh::refit_scene_bvh(scn->overlap_bvh, false);
+        });
 #endif
 }
 
@@ -438,8 +415,7 @@ static void compute_collision(const scene* scn, const ym::vec2i& sids,
     auto bdy2 = scn->bodies[sids.y];
     for (auto vid = 0; vid < bdy2->shp->nverts; vid++) {
         auto p2 = transform_point(bdy2->frame, bdy2->shp->pos[vid]);
-        auto overlap = scn->overlap_shape(
-            scn->overlap_ctx, sids.x, p2, scn->overlap_max_radius);
+        auto overlap = scn->overlap_shape(sids.x, p2, scn->overlap_max_radius);
         if (!overlap) continue;
         auto triangle = bdy1->shp->triangles[overlap.eid];
         auto v0 = bdy1->shp->pos[triangle.x], v1 = bdy1->shp->pos[triangle.y],
@@ -462,7 +438,7 @@ static void compute_collisions(
     scene* scene, std::vector<collision>* collisions) {
     // check which shapes might overlap
     auto body_collisions = std::vector<ym::vec2i>();
-    scene->overlap_shapes(scene->overlap_ctx, &body_collisions);
+    scene->overlap_shapes(&body_collisions);
     // test all pair-wise objects
     collisions->clear();
     for (auto& sc : body_collisions) {
@@ -674,7 +650,7 @@ void advance_simulation(scene* scn, const simulation_params& params) {
     }
 
     // update acceleartion for collisions
-    scn->overlap_refit(scn->overlap_ctx, scn, (int)scn->shapes.size());
+    scn->overlap_refit(scn, (int)scn->shapes.size());
 }
 
 }  // namespace ysym

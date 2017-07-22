@@ -80,6 +80,7 @@
 ///
 /// ## History
 ///
+/// - v 0.23: simpler logging
 /// - v 0.22: added additional buffers
 /// - v 0.21: added filters
 /// - v 0.20: state-based api
@@ -600,23 +601,21 @@ struct intersect_point {
 /// Ray-scene closest intersection callback.
 ///
 /// - Parameters:
-///     - ctx: context
 ///     - ray: ray
 /// - Return:
 ///     - intersection point
 ///
-using intersect_first_cb = intersect_point (*)(void* ctx, const ym::ray3f& ray);
+using intersect_first_cb = std::function<intersect_point(const ym::ray3f& ray)>;
 
 ///
 /// Ray-scene intersection callback
 ///
 /// - Parameters:
-///     - ctx: context
 ///     - ray: ray
 /// - Return:
 ///     - whether we intersect or not
 ///
-using intersect_any_cb = bool (*)(void* ctx, const ym::ray3f& o);
+using intersect_any_cb = std::function<bool(const ym::ray3f& ray)>;
 
 ///
 /// Sets the intersection callbacks
@@ -633,15 +632,15 @@ void set_intersection_callbacks(scene* scn, void* ctx,
 void init_intersection(scene* scn);
 
 ///
-/// Logger callback
+/// Logging callback
 ///
-using logging_msg_cb = void (*)(
-    int level, const char* name, const char* msg, va_list args);
+using logging_cb = std::function<void(const char*)>;
 
 ///
 /// Logger
 ///
-void set_logging_callbacks(scene* scn, void* ctx, logging_msg_cb log);
+void set_logging_callbacks(
+    scene* scn, logging_cb log_info, logging_cb log_error);
 
 ///
 /// Initialize lighting.

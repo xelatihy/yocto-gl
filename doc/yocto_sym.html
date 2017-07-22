@@ -41,6 +41,7 @@ for internal acceleration. Disable this by setting YSYM_NO_BVH.</p>
 </ol>
 <h2>History</h2>
 <ul>
+<li>v 0.16: simpler logging</li>
 <li>v 0.15: removal of group overlap</li>
 <li>v 0.14: use yocto_math in the interface and remove inline compilation</li>
 <li>v 0.13: move to add api</li>
@@ -222,28 +223,26 @@ for internal acceleration. Disable this by setting YSYM_NO_BVH.</p>
 </li>
 </ul>
 <h3>Typedef overlap_shapes_cb</h3>
-<div class="codehilite"><pre><code><span></span><span class="k">using</span> <span class="n">overlap_shapes_cb</span> <span class="o">=</span> <span class="kt">void</span> <span class="p">(</span><span class="o">*</span><span class="p">)(</span><span class="kt">void</span><span class="o">*</span> <span class="n">ctx</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">ym</span><span class="o">::</span><span class="n">vec2i</span><span class="o">&gt;*</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="k">using</span> <span class="n">overlap_shapes_cb</span> <span class="o">=</span> <span class="n">std</span><span class="o">::</span><span class="n">function</span><span class="o">&lt;</span><span class="kt">void</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">ym</span><span class="o">::</span><span class="n">vec2i</span><span class="o">&gt;*</span><span class="p">)</span><span class="o">&gt;</span><span class="p">;</span>
 </code></pre></div>
 
 
 <p>Shape-shape intersection (conservative)</p>
 <ul>
 <li>Out Parameters:<ul>
-<li>ctx: context</li>
 <li>overlaps: overlaps array</li>
 </ul>
 </li>
 </ul>
-<h3>Typedef overlap_shape_cb</h3>
-<div class="codehilite"><pre><code><span></span><span class="k">using</span> <span class="n">overlap_shape_cb</span> <span class="o">=</span> <span class="n">overlap_point</span> <span class="p">(</span><span class="o">*</span><span class="p">)(</span>
-    <span class="kt">void</span><span class="o">*</span> <span class="n">ctx</span><span class="p">,</span> <span class="kt">int</span> <span class="n">sid</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">pt</span><span class="p">,</span> <span class="kt">float</span> <span class="n">max_dist</span><span class="p">);</span>
+<h3>Function Alias function &lt;overlap_point(int sid, const ym::vec3f&amp; pt, float max_dist) >()</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">using</span> <span class="n">overlap_shape_cb</span> <span class="o">=</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">function</span><span class="o">&lt;</span><span class="n">overlap_point</span><span class="p">(</span><span class="kt">int</span> <span class="n">sid</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">pt</span><span class="p">,</span> <span class="kt">float</span> <span class="n">max_dist</span><span class="p">)</span><span class="o">&gt;</span><span class="p">;</span>
 </code></pre></div>
 
 
 <p>Closest element intersection callback</p>
 <ul>
 <li>Parameters:<ul>
-<li>ctx: context</li>
 <li>sid: shape to check</li>
 <li>pt: point</li>
 <li>max_dist: maximum distance</li>
@@ -255,22 +254,20 @@ for internal acceleration. Disable this by setting YSYM_NO_BVH.</p>
 </li>
 </ul>
 <h3>Typedef overlap_refit_cb</h3>
-<div class="codehilite"><pre><code><span></span><span class="k">using</span> <span class="n">overlap_refit_cb</span> <span class="o">=</span> <span class="kt">void</span> <span class="p">(</span><span class="o">*</span><span class="p">)(</span><span class="kt">void</span><span class="o">*</span> <span class="n">ctx</span><span class="p">,</span> <span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nshapes</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="k">using</span> <span class="n">overlap_refit_cb</span> <span class="o">=</span> <span class="n">std</span><span class="o">::</span><span class="n">function</span><span class="o">&lt;</span><span class="kt">void</span><span class="p">(</span><span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nshapes</span><span class="p">)</span><span class="o">&gt;</span><span class="p">;</span>
 </code></pre></div>
 
 
 <p>Refit data structure after transform updates</p>
 <ul>
 <li>Parameters:<ul>
-<li>ctx: context</li>
 <li>scn: scene</li>
 </ul>
 </li>
 </ul>
 <h3>Function set_overlap_callbacks()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_overlap_callbacks</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="kt">void</span><span class="o">*</span> <span class="n">ctx</span><span class="p">,</span>
-    <span class="n">overlap_shapes_cb</span> <span class="n">overlap_shapes</span><span class="p">,</span> <span class="n">overlap_shape_cb</span> <span class="n">overlap_shape</span><span class="p">,</span>
-    <span class="n">overlap_refit_cb</span> <span class="n">overlap_refit</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_overlap_callbacks</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="n">overlap_shapes_cb</span> <span class="n">overlap_shapes</span><span class="p">,</span>
+    <span class="n">overlap_shape_cb</span> <span class="n">overlap_shape</span><span class="p">,</span> <span class="n">overlap_refit_cb</span> <span class="n">overlap_refit</span><span class="p">);</span>
 </code></pre></div>
 
 

@@ -1313,7 +1313,8 @@ int main(int argc, char* argv[]) {
     scene_names += {"cornell_box", "rigid", "textures"};
 
     // command line params
-    auto parser = yu::cmdline::make_parser(argc, argv, "make tests");
+    auto parser =
+        yu::cmdline::make_parser(argc, argv, "ytestgen", "make tests");
     auto scene = parse_opts(
         parser, "--scene", "-s", "scene name", "all", false, scene_names);
     auto dirname =

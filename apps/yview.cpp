@@ -67,10 +67,8 @@ int main(int argc, char* argv[]) {
     auto scn = new yscene();
 
     // params
-    parse_cmdline(scn, argc, argv, "interactively view scenes", false, false);
-
-    // logging
-    set_default_loggers(scn->log_filename);
+    parse_cmdline(
+        scn, argc, argv, "yview", "interactively view scenes", false, false);
 
     // scene
     if (!load_scene(scn, scn->filename, false, false)) return 1;
@@ -78,7 +76,7 @@ int main(int argc, char* argv[]) {
     // run ui
     auto width = (int)std::round(scn->view_cam->aspect * scn->resolution);
     auto height = scn->resolution;
-    run_ui(scn, width, height, "yshade", shade_init, shade_draw, update);
+    run_ui(scn, width, height, "yview", shade_init, shade_draw, update);
 
     // clear
     delete scn;
