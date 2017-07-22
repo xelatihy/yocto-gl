@@ -254,7 +254,11 @@ std::string make_doc(const std::string& cpp) {
             // md += item.name;
             md += "\n\n";
         }
-        if (item.decl != "") md += "~~~ .cpp\n" + item.decl + "~~~\n\n";
+        if (item.decl != "") {
+            md += "~~~ .cpp\n";
+            md += replace(replace(item.decl, "{{", "{ {"), "}}", "} }");
+            md += "~~~\n\n";
+        }
         md += item.comment + "\n\n";
     }
     return md;
@@ -266,7 +270,7 @@ int main(int argc, char** argv) {
         auto md = make_doc(cpp);
         auto filename_out = filename;
         filename_out = replace(filename_out, ".h", ".md");
-        filename_out = replace(filename_out, "yocto/", "doc/");
+        filename_out = replace(filename_out, "yocto/", "docs/");
         save_txtfile(filename_out, md);
     }
 }
