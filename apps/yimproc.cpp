@@ -36,99 +36,75 @@
 using byte = unsigned char;
 
 //
-// Simple image structure to ease the passing of parameters.
+// Check if hdr
 //
-struct yimage {
-    // image path
-    std::string filename;
-
-    // original image data size
-    int width() const {
-        if (hdr) return hdr.width();
-        if (ldr) return ldr.width();
-        return 0;
-    }
-    int height() const {
-        if (hdr) return hdr.height();
-        if (ldr) return ldr.height();
-        return 0;
-    }
-
-    // pixel data
-    ym::image<ym::vec4f> hdr;
-    ym::image<ym::vec4b> ldr;
-};
+bool is_hdr(const std::string& filename) {
+    return yimg::is_hdr_filename(filename);
+}
 
 //
-// Initializes an image
+// exit with an error
 //
-yimage make_image(int width, int height, bool hdr) {
-    auto img = yimage();
-    if (hdr)
-        img.hdr = ym::image<ym::vec4f>(width, height);
-    else
-        img.ldr = ym::image<ym::vec4b>(width, height);
+void exit_error(const std::string& err) {
+    printf("error: %s\n", err.c_str());
+    exit(1);
+}
+
+//
+// Load hdr
+//
+ym::image4f load_hdr(const std::string& filename) {
+    auto img = yimg::load_image4f(filename);
+    if (!img) exit_error("cannot load image " + filename);
     return img;
 }
 
 //
-// Loads an image
+// Load ldr
 //
-yimage load_image(const std::string& filename) {
-    auto img = yimage();
-    if (yimg::is_hdr_filename(filename)) {
-        img.hdr = yimg::load_image4f(filename);
-    } else {
-        img.ldr = yimg::load_image4b(filename);
-    }
-    if (!img.ldr && !img.hdr) {
-        printf("could not load image %s\f", filename.c_str());
-        exit(0);
-    }
+ym::image4b load_ldr(const std::string& filename) {
+    auto img = yimg::load_image4b(filename);
+    if (!img) exit_error("cannot load image " + filename);
     return img;
 }
 
 //
-// Saves an image
+// Save hdr
 //
-void save_image(const std::string& filename, const yimage& img) {
-    if (img.ldr) { yimg::save_image4b(filename, img.ldr); }
-    if (img.hdr) { yimg::save_image4f(filename, img.hdr); }
+void save_hdr(const std::string& filename, const ym::image4f& img) {
+    if (!yimg::save_image4f(filename, img))
+        exit_error("cannot save image " + filename);
 }
 
 //
-// Tone mapping HDR to LDR images.
+// Save ldr
 //
-yimage tonemap_image(
-    const yimage& hdr, float exposure, ym::tonemap_type tm, float gamma) {
-    if (!hdr.hdr) {
-        printf("tonemap hdr only\n");
-        exit(1);
-    }
-    auto ldr = make_image(hdr.width(), hdr.height(), false);
-    tonemap_image(hdr.hdr, ldr.ldr, tm, exposure, gamma);
-    return ldr;
+void save_ldr(const std::string& filename, const ym::image4b& img) {
+    if (!yimg::save_image4b(filename, img))
+        exit_error("cannot save image " + filename);
 }
 
 //
 // Resize image.
 //
-yimage resize_image(const yimage& img, int res_width, int res_height) {
+template <typename T>
+ym::image<T> resize_image(
+    const ym::image<T>& img, int res_width, int res_height) {
     if (res_width < 0 && res_height < 0)
-        throw std::invalid_argument("at least argument should be >0");
+        exit_error("at least argument should be >0");
     if (res_width < 0)
         res_width =
             (int)std::round(img.width() * (res_height / (float)img.height()));
     if (res_height < 0)
         res_height =
             (int)std::round(img.height() * (res_width / (float)img.width()));
-    auto res = make_image(res_width, res_height, (bool)img.hdr);
-    if (img.hdr) yimg::resize_image(img.hdr, res.hdr);
-    if (img.ldr) yimg::resize_image(img.ldr, res.ldr);
+    auto res = ym::image<T>(res_width, res_height);
+    yimg::resize_image(img, res);
     return res;
 }
 
-yimage make_image_grid(const std::vector<yimage>& imgs, int tilex) {
+template <typename T>
+ym::image<T> make_image_grid(const std::vector<ym::image<T>>& imgs, int tilex) {
     auto nimgs = (int)imgs.size();
     auto width = imgs[0].width() * tilex;
     auto height =
@@ -160,22 +136,56 @@ yimage make_image_grid(const std::vector<yimage>& imgs, int tilex) {
     return ret;
 }
 
+#if 0
 yimage make_image_grid(
     const std::vector<yimage>& imgs, int tilex, int width, int height) {
     auto resized = std::vector<yimage>();
     for (auto img : imgs) resized.push_back(resize_image(img, width, height));
     return make_image_grid(resized, tilex);
 }
+#endif
 
-yimage filter_bilateral(
-    const yimage& img_, float spatial_sigma, float range_sigma) {
-    if (!img_.hdr) {
-        printf("bilateral only supports HDRs");
-        exit(1);
+ym::image4f filter_bilateral(const ym::image4f& img, float spatial_sigma,
+    float range_sigma, const std::vector<ym::image4f>& features,
+    const std::vector<float>& features_sigma) {
+    auto filtered = ym::image4f(img.width(), img.height());
+    auto width = (int)ym::ceil(2.57f * spatial_sigma);
+    auto sw = 1 / (2.0f * spatial_sigma * spatial_sigma);
+    auto rw = 1 / (2.0f * range_sigma * range_sigma);
+    auto fw = std::vector<float>();
+    for (auto feature_sigma : features_sigma)
+        fw.push_back(1 / (2.0f * feature_sigma * feature_sigma));
+    for (auto j = 0; j < img.height(); j++) {
+        for (auto i = 0; i < img.width(); i++) {
+            auto av = ym::zero4f;
+            auto aw = 0.0f;
+            for (auto fj = -width; fj <= width; fj++) {
+                for (auto fi = -width; fi <= width; fi++) {
+                    auto ii = i + fi, jj = j + fj;
+                    if (ii < 0 || jj < 0) continue;
+                    if (ii >= img.width() || jj >= img.height()) continue;
+                    auto uv = ym::vec2f{float(i - ii), float(j - jj)};
+                    auto rgb = img[{i, j}] - img[{ii, jj}];
+                    auto w = ym::exp(-lengthsqr(uv) * sw) *
+                             ym::exp(-lengthsqr(rgb) * rw);
+                    for (auto fi = 0; fi < features.size(); fi++) {
+                        auto feat =
+                            features[fi][{i, j}] - features[fi][{ii, jj}];
+                        w *= ym::exp(-lengthsqr(feat) * fw[fi]);
+                    }
+                    av += w * img[{ii, jj}];
+                    aw += w;
+                }
+            }
+            filtered[{i, j}] = av / aw;
+        }
     }
-    auto filtered_ = make_image(img_.width(), img_.height(), true);
-    auto& img = img_.hdr;
-    auto& filtered = filtered_.hdr;
+    return filtered;
+}
+
+ym::image4f filter_bilateral(
+    const ym::image4f& img, float spatial_sigma, float range_sigma) {
+    auto filtered = ym::image4f(img.width(), img.height());
     auto width = (int)ym::ceil(2.57f * spatial_sigma);
     auto sw = 1 / (2.0f * spatial_sigma * spatial_sigma);
     auto rw = 1 / (2.0f * range_sigma * range_sigma);
@@ -199,7 +209,7 @@ yimage filter_bilateral(
             filtered[{i, j}] = av / aw;
         }
     }
-    return filtered_;
+    return filtered;
 }
 
 int main(int argc, char* argv[]) {
@@ -224,9 +234,15 @@ int main(int argc, char* argv[]) {
             parse_args(parser, "filename", "input image filename", "", true);
         check_parser(parser);
 
-        auto img = load_image(filename);
-        auto out = resize_image(img, width, height);
-        save_image(output, out);
+        if (is_hdr(filename)) {
+            auto img = load_hdr(filename);
+            auto out = resize_image(img, width, height);
+            save_hdr(output, out);
+        } else {
+            auto img = load_ldr(filename);
+            auto out = resize_image(img, width, height);
+            save_ldr(output, out);
+        }
     } else if (command == "tonemap") {
         auto exposure =
             parse_optf(parser, "--exposure", "-e", "hdr exposure", 0);
@@ -237,22 +253,34 @@ int main(int argc, char* argv[]) {
             parse_args(parser, "filename", "input image filename", "", true);
         check_parser(parser);
 
-        auto img = load_image(filename);
-        auto out = tonemap_image(img, exposure, tonemap, gamma);
-        save_image(output, out);
+        auto img = load_hdr(filename);
+        auto out = ym::tonemap_image(img, tonemap, exposure, gamma);
+        save_ldr(output, out);
     } else if (command == "bilateral") {
-        auto radius =
+        auto spatial_sigma =
             parse_opti(parser, "--spatial-sigma", "-s", "spatial sigma", 3);
-        auto range_weight =
+        auto range_sigma =
             parse_optf(parser, "--range-sigma", "-r", "range sigma", 0.1f);
+        auto feature_sigma = parse_optf(
+            parser, "--features-sigma", "-f", "features sigmas", 0.1f);
         auto filename =
             parse_args(parser, "filename", "input image filename", "", true);
+        auto ffilenames = parse_argas(
+            parser, "features", "input features filename", {}, -1, false);
         check_parser(parser);
 
-        auto img = load_image(filename);
-        auto out = filter_bilateral(img, radius, range_weight);
-        save_image(output, out);
+        auto img = load_hdr(filename);
+        auto features = std::vector<ym::image4f>();
+        auto features_sigma = std::vector<float>();
+        for (auto ffilename : ffilenames) {
+            features.push_back(load_hdr(ffilename));
+            features_sigma.push_back(feature_sigma);
+        }
+        auto out = filter_bilateral(
+            img, spatial_sigma, range_sigma, features, features_sigma);
+        save_hdr(output, out);
     } else {
+        check_parser(parser);
     }
 
     // done

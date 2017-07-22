@@ -36,8 +36,11 @@ The library can support raytracing either by building an internal
 acceleration structure with Yocto/Bvh or with user supplied intersection
 routines for custom intersection.
 
-This library depends in yocto_math.h. Optionally depend on yocto_bvh.h/.cpp
-for internal acceleration. Disable this by setting YTRACE_NO_BVH.
+This library depends in yocto_math.h and yocto_utils.h/.cpp for concurrency.
+Eventually the concurrency calls will be move to std functions when
+more readily available.
+Optionally depend on yocto_bvh.h/.cpp for internal acceleration.
+Disable this by setting YTRACE_NO_BVH.
 
 
 ## Usage for Scene Creation

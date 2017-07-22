@@ -28,8 +28,8 @@ if(WIN32)
     add_definitions(/D_CRT_SECURE_NO_WARNINGS /wd4018 /wd4244 /wd4305 /wd4800 /wd4267)
 endif(WIN32)
 
-add_executable(ygltfgen ygltfgen.cpp ../yocto/yocto_utils.h ../yocto/yocto_utils.cpp)
-add_executable(ydocgen ydocgen.cpp ../yocto/yocto_utils.h ../yocto/yocto_utils.cpp)
+add_executable(ygltfgen ygltfgen.cpp ../yocto/yocto_utils.h)
+add_executable(ydocgen ydocgen.cpp ../yocto/yocto_utils.h)
 
 if(UNIX AND NOT APPLE)
     find_package(Threads REQUIRED)

@@ -207,6 +207,9 @@ int main(int argc, char* argv[]) {
     parse_cmdline(
         scn, argc, argv, "rigid body simulation of a scene", true, false);
 
+    // logging
+    set_default_loggers(scn->log_filename);
+
     // setting up rendering
     load_scene(scn, scn->filename, true, false);
     scn->simulation_scene = (scn->oscn) ? make_simulation_scene(scn->oscn) :

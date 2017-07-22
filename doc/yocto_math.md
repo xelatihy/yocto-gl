@@ -4780,6 +4780,15 @@ inline void tonemap_image(const image<vec4f>& hdr, image<vec4b>& ldr,
 
 Tone mapping HDR to LDR images.
 
+### Function tonemap_image()
+
+~~~ .cpp
+inline image<vec4b> tonemap_image(
+    const image<vec4f>& hdr, tonemap_type tm, float exposure, float gamma);
+~~~
+
+Tone mapping HDR to LDR images.
+
 ### Function image_over()
 
 ~~~ .cpp

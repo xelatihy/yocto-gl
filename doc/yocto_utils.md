@@ -63,6 +63,8 @@ illustreates the library usage.
 
 ## History
 
+- v 0.21: move to header-only mode
+- v 0.20: simpler logging
 - v 0.19: some containers ops
 - v 0.18: timer
 - v 0.17: renamed to yocto utils
@@ -103,7 +105,7 @@ Command line parser.
 ### Function make_parser()
 
 ~~~ .cpp
-parser* make_parser(
+inline parser* make_parser(
     const std::vector<std::string>& args, const std::string& help = "");
 ~~~
 
@@ -112,7 +114,7 @@ Inits a command line parser.
 ### Function make_parser()
 
 ~~~ .cpp
-parser* make_parser(int argc, char* argv[], const char* help);
+inline parser* make_parser(int argc, char* argv[], const char* help);
 ~~~
 
 Inits a command line parser.
@@ -120,7 +122,7 @@ Inits a command line parser.
 ### Function check_parser()
 
 ~~~ .cpp
-bool check_parser(parser* prs);
+inline bool check_parser(parser* prs);
 ~~~
 
 Ends parsing checking for error for unused options or arguments.
@@ -129,7 +131,7 @@ Exit if needed.
 ### Function parse_flag()
 
 ~~~ .cpp
-bool parse_flag(parser* par, const std::string& longname,
+inline bool parse_flag(parser* par, const std::string& longname,
     const std::string& shortname, const std::string& help, bool def = false);
 ~~~
 
@@ -139,7 +141,7 @@ Parses an optional flag as described in the intro.
 
 ~~~ .cpp
 template <typename T>
-T parse_opt(parser* par, const std::string& longname,
+inline T parse_opt(parser* par, const std::string& longname,
     const std::string& shortname, const std::string& help, const T& def,
     bool required = false, const std::vector<T>& choices =;
 ~~~
@@ -149,7 +151,7 @@ Parses an option as described in the intro.
 ### Function parse_opts()
 
 ~~~ .cpp
-std::string parse_opts(parser* par, const std::string& longname,
+inline std::string parse_opts(parser* par, const std::string& longname,
     const std::string& shortname, const std::string& help,
     const std::string& def, bool required = false,
     const std::vector<std::string>& choices =;
@@ -160,7 +162,7 @@ Specialization of parse_opt()
 ### Function parse_opti()
 
 ~~~ .cpp
-int parse_opti(parser* par, const std::string& longname,
+inline int parse_opti(parser* par, const std::string& longname,
     const std::string& shortname, const std::string& help, int def,
     bool required = false, const std::vector<int>& choices =;
 ~~~
@@ -170,7 +172,7 @@ Specialization of parse_opt()
 ### Function parse_optf()
 
 ~~~ .cpp
-float parse_optf(parser* par, const std::string& longname,
+inline float parse_optf(parser* par, const std::string& longname,
     const std::string& shortname, const std::string& help, float def,
     bool required = false, const std::vector<float>& choices =;
 ~~~
@@ -180,19 +182,9 @@ Specialization of parse_opt()
 ### Function parse_optd()
 
 ~~~ .cpp
-double parse_optd(parser* par, const std::string& longname,
+inline double parse_optd(parser* par, const std::string& longname,
     const std::string& shortname, const std::string& help, double def,
     bool required = false, const std::vector<double>& choices =;
-~~~
-
-Specialization of parse_opt()
-
-### Function parse_optb()
-
-~~~ .cpp
-bool parse_optb(parser* par, const std::string& longname,
-    const std::string& shortname, const std::string& help, bool def,
-    bool required = false);
 ~~~
 
 Specialization of parse_opt()
@@ -200,7 +192,7 @@ Specialization of parse_opt()
 ### Function parse_opte()
 
 ~~~ .cpp
-int parse_opte(parser* par, const std::string& longname,
+inline int parse_opte(parser* par, const std::string& longname,
     const std::string& shortname, const std::string& help, int def,
     const std::vector<std::pair<std::string, int>>& vals,
     bool required = false);
@@ -212,7 +204,7 @@ Parses an option enum as described in the intro.
 
 ~~~ .cpp
 template <typename T>
-T parse_opte(parser* par, const std::string& longname,
+inline T parse_opte(parser* par, const std::string& longname,
     const std::string& shortname, const std::string& help, T def,
     const std::vector<std::pair<std::string, T>>& vals, bool required = false);
 ~~~
@@ -223,7 +215,7 @@ Parses an option enum as described in the intro.
 
 ~~~ .cpp
 template <typename T>
-T parse_opta(parser* par, const std::string& longname,
+inline T parse_opta(parser* par, const std::string& longname,
     const std::string& shortname, const std::string& help, const T& def,
     int nargs, bool required = false, const std::vector<T>& choices =;
 ~~~
@@ -234,8 +226,9 @@ Parses an option array as described in the intro.
 
 ~~~ .cpp
 template <typename T>
-T parse_arg(parser* par, const std::string& longname, const std::string& help,
-    const T& def, bool required = false, const std::vector<T>& choices =;
+inline T parse_arg(parser* par, const std::string& longname,
+    const std::string& help, const T& def, bool required = false,
+    const std::vector<T>& choices =;
 ~~~
 
 Parses an argument as described in the intro.
@@ -243,7 +236,7 @@ Parses an argument as described in the intro.
 ### Function parse_args()
 
 ~~~ .cpp
-std::string parse_args(parser* par, const std::string& longname,
+inline std::string parse_args(parser* par, const std::string& longname,
     const std::string& help, const std::string& def, bool required = false,
     const std::vector<std::string>& choices =;
 ~~~
@@ -253,7 +246,7 @@ Specialization of parse_arg()
 ### Function parse_argi()
 
 ~~~ .cpp
-int parse_argi(parser* par, const std::string& longname,
+inline int parse_argi(parser* par, const std::string& longname,
     const std::string& help, int def, bool required = false,
     const std::vector<int>& choices =;
 ~~~
@@ -263,7 +256,7 @@ Specialization of parse_arg()
 ### Function parse_argf()
 
 ~~~ .cpp
-float parse_argf(parser* par, const std::string& longname,
+inline float parse_argf(parser* par, const std::string& longname,
     const std::string& help, float def, bool required = false,
     const std::vector<float>& choices =;
 ~~~
@@ -273,7 +266,7 @@ Specialization of parse_arg()
 ### Function parse_argd()
 
 ~~~ .cpp
-double parse_argd(parser* par, const std::string& longname,
+inline double parse_argd(parser* par, const std::string& longname,
     const std::string& help, double def, bool required = false,
     const std::vector<double>& choices =;
 ~~~
@@ -284,7 +277,7 @@ Specialization of parse_arg()
 
 ~~~ .cpp
 template <typename T>
-std::vector<T> parse_arga(parser* par, const std::string& longname,
+inline std::vector<T> parse_arga(parser* par, const std::string& longname,
     const std::string& help, const std::vector<T>& def, int nargs = -1,
     bool required = false, const std::vector<T>& choices =;
 ~~~
@@ -294,40 +287,10 @@ Parses an argument array as described in the intro.
 ### Function parse_argas()
 
 ~~~ .cpp
-std::vector<std::string> parse_argas(parser* par, const std::string& longname,
-    const std::string& help, const std::vector<std::string>& def,
-    int nargs = -1, bool required = false,
+inline std::vector<std::string> parse_argas(parser* par,
+    const std::string& longname, const std::string& help,
+    const std::vector<std::string>& def, int nargs = -1, bool required = false,
     const std::vector<std::string>& choices =;
-~~~
-
-Specialization of parse_arga()
-
-### Function parse_argai()
-
-~~~ .cpp
-std::vector<int> parse_argai(parser* par, const std::string& longname,
-    const std::string& help, const std::vector<int>& def, int nargs = -1,
-    bool required = false, const std::vector<int>& choices =;
-~~~
-
-Specialization of parse_arga()
-
-### Function parse_argaf()
-
-~~~ .cpp
-std::vector<float> parse_argaf(parser* par, const std::string& longname,
-    const std::string& help, const std::vector<float>& def, int nargs = -1,
-    bool required = false, const std::vector<float>& choices =;
-~~~
-
-Specialization of parse_arga()
-
-### Function parse_argad()
-
-~~~ .cpp
-std::vector<double> parse_argad(parser* par, const std::string& longname,
-    const std::string& help, const std::vector<double>& def, int nargs = -1,
-    bool required = false, const std::vector<double>& choices =;
 ~~~
 
 Specialization of parse_arga()
@@ -339,7 +302,7 @@ File loading and saving
 ### Function load_binfile()
 
 ~~~ .cpp
-std::vector<unsigned char> load_binfile(const std::string& filename);
+inline std::vector<unsigned char> load_binfile(const std::string& filename);
 ~~~
 
 Loads the contents of a binary file in an in-memory array.
@@ -347,7 +310,7 @@ Loads the contents of a binary file in an in-memory array.
 ### Function load_txtfile()
 
 ~~~ .cpp
-std::string load_txtfile(const std::string& filename);
+inline std::string load_txtfile(const std::string& filename);
 ~~~
 
 Loads the contents of a text file into a std::string.
@@ -355,7 +318,7 @@ Loads the contents of a text file into a std::string.
 ### Function save_binfile()
 
 ~~~ .cpp
-bool save_binfile(
+inline bool save_binfile(
     const std::string& filename, const std::vector<unsigned char>& data);
 ~~~
 
@@ -364,7 +327,7 @@ Saves binary data to a file.
 ### Function save_txtfile()
 
 ~~~ .cpp
-bool save_txtfile(const std::string& filename, const std::string& str);
+inline bool save_txtfile(const std::string& filename, const std::string& str);
 ~~~
 
 Saves a string to a text file.
@@ -376,31 +339,31 @@ Path manipulation
 ### Function get_dirname()
 
 ~~~ .cpp
-std::string get_dirname(const std::string& filename);
+inline std::string get_dirname(const std::string& filename);
 ~~~
 
 Get directory name (including '/').
 
-### Function get_basename()
-
-~~~ .cpp
-std::string get_basename(const std::string& filename);
-~~~
-
-Get file basename.
-
 ### Function get_extension()
 
 ~~~ .cpp
-std::string get_extension(const std::string& filename);
+inline std::string get_extension(const std::string& filename);
 ~~~
 
 Get extension (including '.').
 
+### Function get_basename()
+
+~~~ .cpp
+inline std::string get_basename(const std::string& filename);
+~~~
+
+Get file basename.
+
 ### Function get_filename()
 
 ~~~ .cpp
-std::string get_filename(const std::string& filename);
+inline std::string get_filename(const std::string& filename);
 ~~~
 
 Get filename without directory (equiv to get_basename() +
@@ -409,7 +372,7 @@ get_extension()).
 ### Function replace_extension()
 
 ~~~ .cpp
-std::string replace_extension(
+inline std::string replace_extension(
     const std::string& filename, const std::string& ext);
 ~~~
 
@@ -418,7 +381,7 @@ Replace extension.
 ### Function prepend_extension()
 
 ~~~ .cpp
-std::string prepend_extension(
+inline std::string prepend_extension(
     const std::string& filename, const std::string& prep);
 ~~~
 
@@ -427,7 +390,7 @@ Prepend a string to the extension.
 ### Function split_path()
 
 ~~~ .cpp
-void split_path(const std::string& filename, std::string& dirname,
+inline void split_path(const std::string& filename, std::string& dirname,
     std::string& basename, std::string& ext);
 ~~~
 
@@ -440,7 +403,7 @@ String manipulation
 ### Function startswith()
 
 ~~~ .cpp
-bool startswith(const std::string& str, const std::string& substr);
+inline bool startswith(const std::string& str, const std::string& substr);
 ~~~
 
 Checks if a std::string starts with a prefix.
@@ -448,7 +411,7 @@ Checks if a std::string starts with a prefix.
 ### Function endswith()
 
 ~~~ .cpp
-bool endswith(const std::string& str, const std::string& substr);
+inline bool endswith(const std::string& str, const std::string& substr);
 ~~~
 
 Checks if a std::string ends with a prefix.
@@ -456,7 +419,7 @@ Checks if a std::string ends with a prefix.
 ### Function contains()
 
 ~~~ .cpp
-bool contains(const std::string& str, const std::string& substr);
+inline bool contains(const std::string& str, const std::string& substr);
 ~~~
 
 Check is a string contains a substring.
@@ -464,7 +427,7 @@ Check is a string contains a substring.
 ### Function splitlines()
 
 ~~~ .cpp
-std::vector<std::string> splitlines(
+inline std::vector<std::string> splitlines(
     const std::string& str, bool keep_newline = false);
 ~~~
 
@@ -475,7 +438,7 @@ Window if keep_newline is true.
 ### Function partition()
 
 ~~~ .cpp
-std::vector<std::string> partition(
+inline std::vector<std::string> partition(
     const std::string& str, const std::string& split);
 ~~~
 
@@ -484,23 +447,15 @@ Partition the string.
 ### Function split()
 
 ~~~ .cpp
-std::vector<std::string> split(const std::string& str);
+inline std::vector<std::string> split(const std::string& str);
 ~~~
 
 Splits the string.
 
-### Function strip()
-
-~~~ .cpp
-std::string strip(const std::string& str);
-~~~
-
-Strip the string.
-
 ### Function rstrip()
 
 ~~~ .cpp
-std::string rstrip(const std::string& str);
+inline std::string rstrip(const std::string& str);
 ~~~
 
 Strip the string.
@@ -508,7 +463,15 @@ Strip the string.
 ### Function lstrip()
 
 ~~~ .cpp
-std::string lstrip(const std::string& str);
+inline std::string lstrip(const std::string& str);
+~~~
+
+Strip the string.
+
+### Function strip()
+
+~~~ .cpp
+inline std::string strip(const std::string& str);
 ~~~
 
 Strip the string.
@@ -516,7 +479,8 @@ Strip the string.
 ### Function join()
 
 ~~~ .cpp
-std::string join(const std::vector<std::string>& strs, const std::string& sep);
+inline std::string join(
+    const std::vector<std::string>& strs, const std::string& sep);
 ~~~
 
 Joins a list of std::string with a std::string as separator.
@@ -524,7 +488,7 @@ Joins a list of std::string with a std::string as separator.
 ### Function lower()
 
 ~~~ .cpp
-std::string lower(const std::string& str);
+inline std::string lower(const std::string& str);
 ~~~
 
 Converts an ASCII string to lowercase.
@@ -532,7 +496,7 @@ Converts an ASCII string to lowercase.
 ### Function upper()
 
 ~~~ .cpp
-std::string upper(const std::string& str);
+inline std::string upper(const std::string& str);
 ~~~
 
 Converts an ASCII string to uppercase.
@@ -540,15 +504,15 @@ Converts an ASCII string to uppercase.
 ### Function isspace()
 
 ~~~ .cpp
-bool isspace(const std::string& str);
+inline bool isspace(const std::string& str);
 ~~~
 
-Strung is space.
+Check if a string is space.
 
 ### Function replace()
 
 ~~~ .cpp
-std::string replace(
+inline std::string replace(
     const std::string& str, const std::string& s1, const std::string& s2);
 ~~~
 
@@ -557,7 +521,7 @@ Replace s1 with s2 in str.
 ### Function format()
 
 ~~~ .cpp
-std::string format(const char* fmt, va_list args);
+inline std::string format(const char* fmt, va_list args);
 ~~~
 
 C-like string formatting. This is only meant for short strings with max
@@ -566,10 +530,11 @@ length 10000 chars. Memory corruption will happen for longer strings.
 ### Function format()
 
 ~~~ .cpp
-std::string format(const char* fmt, ...);
+inline std::string format(const char* fmt, ...);
 ~~~
 
-C-like string formatting. See format_str(fmt,args);
+C-like string formatting. This is only meant for short strings with max
+length 10000 chars. Memory corruption will happen for longer strings.
 
 ## Namespace containers
 
@@ -702,8 +667,8 @@ Logger object
 ### Function make_file_logger()
 
 ~~~ .cpp
-logger* make_file_logger(const std::string& filename, bool append,
-    log_level output_level = log_level::info,
+inline logger* make_file_logger(const std::string& filename, bool append,
+    bool short_message = false, log_level output_level = log_level::info,
     log_level flush_level = log_level::info);
 ~~~
 
@@ -716,7 +681,8 @@ Make a file logger. See set_logger() for Parameters.
 ### Function make_stderr_logger()
 
 ~~~ .cpp
-logger* make_stderr_logger(log_level output_level = log_level::info,
+inline logger* make_stderr_logger(bool short_message = true,
+    log_level output_level = log_level::info,
     log_level flush_level = log_level::info);
 ~~~
 
@@ -725,24 +691,17 @@ Make a stderr logger. See set_logger() for Parameters.
 ### Function make_stdout_logger()
 
 ~~~ .cpp
-logger* make_stdout_logger(log_level output_level = log_level::info,
+inline logger* make_stdout_logger(bool short_message = true,
+    log_level output_level = log_level::info,
     log_level flush_level = log_level::info);
 ~~~
 
 Make a stderr logger. See set_logger() for Parameters.
 
-### Function clear_logger()
-
-~~~ .cpp
-void clear_logger(logger* lgr);
-~~~
-
-Clear a logger
-
 ### Function get_default_loggers()
 
 ~~~ .cpp
-std::vector<logger*>* get_default_loggers();
+inline std::vector<logger*>* get_default_loggers();
 ~~~
 
 Get default loggers. This is a modifiable reference.
@@ -750,7 +709,7 @@ Get default loggers. This is a modifiable reference.
 ### Function set_logger()
 
 ~~~ .cpp
-void set_logger(logger* lgr, log_level output_level,
+inline void set_logger(logger* lgr, bool short_message, log_level output_level,
     log_level flush_level = log_level::error);
 ~~~
 
@@ -759,13 +718,29 @@ Set logger level
 - Parameters:
     - lgr: logger
     - name : logger name
+    - short_message: whether to use a short message version
     - output_level: output level
     - flush_level: output level
 
 ### Function log_msg()
 
 ~~~ .cpp
-void log_msg(logger* lgr, log_level level, const std::string& name,
+inline void log_msg(
+    logger* lgr, log_level level, const char* name, const char* msg);
+~~~
+
+Log a message
+
+- Parameters:
+    - lgr: logger
+    - level: message level
+    - code: message code (5 chars)
+    - msg: message
+
+### Function log_msg()
+
+~~~ .cpp
+inline void log_msg(logger* lgr, log_level level, const std::string& name,
     const std::string& msg);
 ~~~
 
@@ -777,24 +752,19 @@ Log a message
     - code: message code (5 chars)
     - msg: message
 
-### Function log_msg()
+### Function log_msgfv()
 
 ~~~ .cpp
-void log_msg(logger* lgr, log_level level, const char* name, const char* msg);
+inline void log_msgfv(logger* lgr, log_level level, const char* name,
+    const char* msg, va_list args);
 ~~~
 
-Log a message
-
-- Parameters:
-    - lgr: logger
-    - level: message level
-    - code: message code (5 chars)
-    - msg: message
+Logs a message to the default loggers
 
 ### Function log_msgf()
 
 ~~~ .cpp
-void log_msgf(
+inline void log_msgf(
     logger* lgr, log_level level, const char* name, const char* msg, ...);
 ~~~
 
@@ -806,19 +776,11 @@ Log a message formatted ala printf.
     - code: message code (5 chars)
     - msg: message
 
-### Function log_msgfv()
-
-~~~ .cpp
-void log_msgfv(logger* lgr, log_level level, const char* name, const char* msg,
-    va_list args);
-~~~
-
-Logs a message to the default loggers
-
 ### Function log_msg()
 
 ~~~ .cpp
-void log_msg(log_level level, const std::string& name, const std::string& msg);
+inline void log_msg(
+    log_level level, const std::string& name, const std::string& msg);
 ~~~
 
 Logs a message to the default loggers
@@ -826,7 +788,7 @@ Logs a message to the default loggers
 ### Function log_msgf()
 
 ~~~ .cpp
-void log_msgf(log_level level, const char* name, const char* msg, ...);
+inline void log_msgf(log_level level, const char* name, const char* msg, ...);
 ~~~
 
 Logs a message to the default loggers
@@ -834,7 +796,7 @@ Logs a message to the default loggers
 ### Function log_msgfv()
 
 ~~~ .cpp
-void log_msgfv(
+inline void log_msgfv(
     log_level level, const char* name, const char* msg, va_list args);
 ~~~
 
@@ -855,7 +817,7 @@ Forward declaration of thread pool.
 ### Function make_pool()
 
 ~~~ .cpp
-thread_pool* make_pool(int nthread = 0);
+inline thread_pool* make_pool(int nthread = 0);
 ~~~
 
 Initialize a thread pool with a certain number of threads (0 for
@@ -864,7 +826,7 @@ defatul).
 ### Function free_pool()
 
 ~~~ .cpp
-void free_pool(thread_pool*& pool);
+inline void free_pool(thread_pool*& pool);
 ~~~
 
 Free the thread pool
@@ -872,7 +834,7 @@ Free the thread pool
 ### Function wait_pool()
 
 ~~~ .cpp
-void wait_pool(thread_pool* pool);
+inline void wait_pool(thread_pool* pool);
 ~~~
 
 Wait for all jobs to finish
@@ -880,7 +842,7 @@ Wait for all jobs to finish
 ### Function clear_pool()
 
 ~~~ .cpp
-void clear_pool(thread_pool* pool);
+inline void clear_pool(thread_pool* pool);
 ~~~
 
 Clear all jobs
@@ -888,7 +850,7 @@ Clear all jobs
 ### Function parallel_for()
 
 ~~~ .cpp
-void parallel_for(
+inline void parallel_for(
     thread_pool* pool, int count, const std::function<void(int idx)>& task);
 ~~~
 
@@ -897,7 +859,7 @@ Parallel for implementation
 ### Function run_async()
 
 ~~~ .cpp
-std::shared_future<void> run_async(
+inline std::shared_future<void> run_async(
     thread_pool* pool, const std::function<void()>& task);
 ~~~
 
@@ -906,7 +868,7 @@ Runs a task asynchronously onto a thread pool
 ### Function wait_pool()
 
 ~~~ .cpp
-void wait_pool();
+inline void wait_pool();
 ~~~
 
 Wait for all jobs to finish on a global thread pool
@@ -914,7 +876,7 @@ Wait for all jobs to finish on a global thread pool
 ### Function clear_pool()
 
 ~~~ .cpp
-void clear_pool();
+inline void clear_pool();
 ~~~
 
 Clear all jobs on a global thread pool
@@ -922,7 +884,7 @@ Clear all jobs on a global thread pool
 ### Function run_async()
 
 ~~~ .cpp
-std::shared_future<void> run_async(const std::function<void()>& task);
+inline std::shared_future<void> run_async(const std::function<void()>& task);
 ~~~
 
 Runs a task asynchronously onto a global thread pool
@@ -930,7 +892,7 @@ Runs a task asynchronously onto a global thread pool
 ### Function parallel_for()
 
 ~~~ .cpp
-void parallel_for(int count, const std::function<void(int idx)>& task);
+inline void parallel_for(int count, const std::function<void(int idx)>& task);
 ~~~
 
 Parallel for implementation on a global thread pool

@@ -63,14 +63,14 @@ void draw_custom_widgets(ygui::window* win) {
 // ---------------------------------------------------------------------------
 
 int main(int argc, char* argv[]) {
-    // logging
-    set_default_loggers();
-
     // create empty scene
     auto scn = new yscene();
 
     // params
     parse_cmdline(scn, argc, argv, "interactively view scenes", false, false);
+
+    // logging
+    set_default_loggers(scn->log_filename);
 
     // scene
     if (!load_scene(scn, scn->filename, false, false)) return 1;

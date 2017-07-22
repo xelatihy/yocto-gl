@@ -4878,6 +4878,17 @@ inline void tonemap_image(const image<vec4f>& hdr, image<vec4b>& ldr,
 }
 
 ///
+/// Tone mapping HDR to LDR images.
+///
+inline image<vec4b> tonemap_image(
+    const image<vec4f>& hdr, tonemap_type tm, float exposure, float gamma) {
+    auto ldr = image<vec4b>(hdr.width(), hdr.height());
+    tonemap_image(
+        hdr.width(), hdr.height(), hdr.data(), ldr.data(), tm, exposure, gamma);
+    return ldr;
+}
+
+///
 /// Image over operator
 ///
 inline void image_over(
