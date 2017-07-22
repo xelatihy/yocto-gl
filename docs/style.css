@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css?family=Crimson+Text|Lato');
+
 body, h1, h2, h3, h4, p, blockquote, code, ul, ol, dl, dd, img, figure, pre {
   margin: 0;
   padding: 0;
@@ -5,7 +7,7 @@ body, h1, h2, h3, h4, p, blockquote, code, ul, ol, dl, dd, img, figure, pre {
   hyphens: auto; }
 
 body {
-  font-family: "Crimson", serif;
+  font-family: "Crimson", "Crimson Text", serif;
   font-size: 18.4px;
   line-height: 24px;
   font-variant-numeric: oldstyle-nums;
