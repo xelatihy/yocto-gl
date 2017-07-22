@@ -6,16 +6,16 @@ Yocto/GL libraries are released under the permissive MIT license, while the exam
 
 ## Libraries
 
-- [**yocto_obj**](docs/yocto_obj.md) (.h/.cpp): Wavefront OBJ/MTL loader and writer that supports arbitrary polygons (with/without triangulation), lines, and points. Includes optionals extensions for per-vertex color and radius, camera, instancing and environment mapping. Provides both a high level interface for easy data access and a low level interface for complete control of the format.
-- [**yocto_gltf**](docs/yocto_gltf.md) (.h/.cpp): Khronos glTF loader and writer automatically generated from the spec. Supports all glTF format including Khronos extensions. Provides both a high level interface for easy data access and a low level interface for complete control of the format.
-- [**yocto_bvh**](docs/yocto_bvh.md) (.h and .cpp): Ray casting and closet point queries for points, lines and triangles accelerated by a two-level bounding volume hierarchy.
-- [**yocto_trace**](docs/yocto_trace.md) (.h/.cpp): Path tracer with support for point, line or triangle geometry, mesh area lights and environment maps, materials with either GGX or Phong (only opaque for now). Support both incremental and offline computation on single- or multi-core machines.
-- [**yocto_math**](docs/yocto_math.md) (.h only): Vector and matrix math, shape and image manipulation.
-- [**yocto_utils**](docs/yocto_utils.md) (.h only): Utilities for writing applications. Includes command line parsing, logging, thread pools, string and path manipulation.
-- [**yocto_sym**](docs/yocto_sym.md) (.h/.cpp): Rigid body solver supporting convex and concave triangle meshes based on Sequential Impulses.
-- [**yocto_glu**](docs/yocto_glu.md) (.h/.cpp): Quick and dirty rendering of images and shapes in OpenGL, useful to create interactive viewers.
-- [**yocto_gui**](docs/yocto_gui.md) (.h/.cpp): A wrapper for GLFW and ImGui for window management and immediate mode widgets.
-- [**yocto_img**](docs/yocto_img.md) (.h/.cpp): A wrapper for single-file libraries for image loading and saving.
+- [**yocto_obj**](yocto_obj.md) (.h/.cpp): Wavefront OBJ/MTL loader and writer that supports arbitrary polygons (with/without triangulation), lines, and points. Includes optionals extensions for per-vertex color and radius, camera, instancing and environment mapping. Provides both a high level interface for easy data access and a low level interface for complete control of the format.
+- [**yocto_gltf**](yocto_gltf.md) (.h/.cpp): Khronos glTF loader and writer automatically generated from the spec. Supports all glTF format including Khronos extensions. Provides both a high level interface for easy data access and a low level interface for complete control of the format.
+- [**yocto_bvh**](yocto_bvh.md) (.h and .cpp): Ray casting and closet point queries for points, lines and triangles accelerated by a two-level bounding volume hierarchy.
+- [**yocto_trace**](yocto_trace.md) (.h/.cpp): Path tracer with support for point, line or triangle geometry, mesh area lights and environment maps, materials with either GGX or Phong (only opaque for now). Support both incremental and offline computation on single- or multi-core machines.
+- [**yocto_math**](yocto_math.md) (.h only): Vector and matrix math, shape and image manipulation.
+- [**yocto_utils**](yocto_utils.md) (.h only): Utilities for writing applications. Includes command line parsing, logging, thread pools, string and path manipulation.
+- [**yocto_sym**](yocto_sym.md) (.h/.cpp): Rigid body solver supporting convex and concave triangle meshes based on Sequential Impulses.
+- [**yocto_glu**](yocto_glu.md) (.h/.cpp): Quick and dirty rendering of images and shapes in OpenGL, useful to create interactive viewers.
+- [**yocto_gui**](yocto_gui.md) (.h/.cpp): A wrapper for GLFW and ImGui for window management and immediate mode widgets.
+- [**yocto_img**](yocto_img.md) (.h/.cpp): A wrapper for single-file libraries for image loading and saving.
 
 ## Applications
 

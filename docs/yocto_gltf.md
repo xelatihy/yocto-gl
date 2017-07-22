@@ -1646,7 +1646,7 @@ node's transform places the mesh in the scene.
 struct glTFNode : glTFChildOfRootProperty {
     glTFid<glTFCamera> camera = {};
     std::vector<glTFid<glTFNode>> children = {};
-    ym::mat4f matrix = {{1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
+    ym::mat4f matrix = { {1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1} };
     glTFid<glTFMesh> mesh = {};
     ym::quat4f rotation = {0, 0, 0, 1};
     ym::vec3f scale = {1, 1, 1};
