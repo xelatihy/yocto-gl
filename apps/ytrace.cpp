@@ -28,8 +28,6 @@
 
 #include "yscene.h"
 
-using yu::logging::log_info;
-
 // ---------------------------------------------------------------------------
 // UTILITIES
 // ---------------------------------------------------------------------------
@@ -159,7 +157,7 @@ void render_offline(yscene* scn) {
         if (scn->trace_save_progressive && cur_sample) {
             auto imfilename = yu::path::get_dirname(scn->imfilename) +
                               yu::path::get_basename(scn->imfilename) +
-                              yu::string::format(".%04d", cur_sample) +
+                              yu::string::formatf(".%04d", cur_sample) +
                               yu::path::get_extension(scn->imfilename);
             log_info("saving image %s", imfilename.c_str());
             save_image(imfilename, ytrace::get_traced_image(scn->trace_state),

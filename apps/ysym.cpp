@@ -210,14 +210,17 @@ int main(int argc, char* argv[]) {
         true, false);
 
     // setting up rendering
+    log_info("loading scene %s", scn->filename.c_str());
     load_scene(scn, scn->filename, true, false);
     scn->simulation_scene = (scn->oscn) ? make_simulation_scene(scn->oscn) :
                                           make_simulation_scene(scn->gscn);
 
     // initialize simulation
+    log_info("setting up simulation");
     ysym::init_simulation(scn->simulation_scene);
 
     // initialize overlap
+    log_info("building bvh");
     ysym::init_overlap(scn->simulation_scene);
 
 #ifndef YOCTO_NO_OPENGL

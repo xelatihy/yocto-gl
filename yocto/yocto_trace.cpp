@@ -255,35 +255,30 @@ struct scene {
     logging_cb log_error = nullptr;  // logging message
 
     // destructor
-    ~scene();
+    ~scene() {
+        for (auto shp : shapes)
+            if (shp) delete shp;
+        for (auto ist : instances)
+            if (ist) delete ist;
+        for (auto mat : materials)
+            if (mat) delete mat;
+        for (auto txt : textures)
+            if (txt) delete txt;
+        for (auto cam : cameras)
+            if (cam) delete cam;
+        for (auto env : environments)
+            if (env) delete env;
+        for (auto light : lights)
+            if (light) delete light;
+#ifndef YTRACE_NO_BVH
+        if (intersect_bvh) ybvh::free_scene(intersect_bvh);
+#endif
+    }
 
     // [private] light sources
     std::vector<light*> lights;        // lights [private]
     bool shadow_transmission = false;  // wheter to test transmission
 };
-
-//
-// Scene support
-//
-scene::~scene() {
-    for (auto shp : shapes)
-        if (shp) delete shp;
-    for (auto ist : instances)
-        if (ist) delete ist;
-    for (auto mat : materials)
-        if (mat) delete mat;
-    for (auto txt : textures)
-        if (txt) delete txt;
-    for (auto cam : cameras)
-        if (cam) delete cam;
-    for (auto env : environments)
-        if (env) delete env;
-    for (auto light : lights)
-        if (light) delete light;
-#ifndef YTRACE_NO_BVH
-    if (intersect_bvh) ybvh::free_scene(intersect_bvh);
-#endif
-}
 
 //
 // Public API. See above.
@@ -299,8 +294,9 @@ scene* make_scene() {
 ///
 // Public API. See above.
 ///
-void free_scene(scene* scn) {
+void free_scene(scene*& scn) {
     if (scn) delete scn;
+    scn = nullptr;
 }
 
 //
@@ -869,7 +865,8 @@ enum struct brdf_type {
     microfacet_phong = 2,
     kajiya_kay_diff = 3,
     kajiya_kay_spec = 4,
-    point_diffuse = 5
+    point_diffuse = 5,
+    transparent = 6
 };
 
 //
@@ -1261,6 +1258,17 @@ static ym::vec3f eval_brdfcos(const point& pt, const ym::vec3f& wi) {
                 auto ido = ym::dot(wo, wi);
                 brdfcos += weight * brdf.rho * (2 * ido + 1) / (2 * ym::pif);
             } break;
+            // transparent
+            case brdf_type::transparent: {
+                // compute cosines
+                auto ido = ym::dot(wo, wi);
+
+                // exit if needed
+                if (ido > -0.999f) continue;
+
+                // transparent transmission hack
+                brdfcos += weight * brdf.rho;
+            } break;
             default: assert(false); break;
         }
     }
@@ -1285,6 +1293,9 @@ static float weight_brdfcos(const point& pt, const ym::vec3f& wi) {
     if (!sum) return 0;
     for (auto lid = 0; lid < pt.nbrdfs; lid++) weights[lid] /= sum;
 
+    // save wo
+    auto wo = pt.wo;
+
     // accumulate the probability over all lobes
     auto pdf = 0.0f;
     for (auto lid = 0; lid < pt.nbrdfs; lid++) {
@@ -1294,9 +1305,6 @@ static float weight_brdfcos(const point& pt, const ym::vec3f& wi) {
         switch (brdf.type) {
             // diffuse term
             case brdf_type::diffuse_lambert: {
-                // save wo
-                auto wo = pt.wo;
-
                 // compute dot products
                 auto ndo = ym::dot(pt.frame.z, wo),
                      ndi = ym::dot(pt.frame.z, wi);
@@ -1310,9 +1318,6 @@ static float weight_brdfcos(const point& pt, const ym::vec3f& wi) {
             } break;
             // specular term (GGX)
             case brdf_type::microfacet_ggx: {
-                // save wo
-                auto wo = pt.wo;
-
                 // compute wh
                 auto wh = ym::normalize(wi + wo);
 
@@ -1333,13 +1338,9 @@ static float weight_brdfcos(const point& pt, const ym::vec3f& wi) {
                                       (alpha2 + tan2));
                 auto hdo = ym::dot(wo, wh);
                 pdf += weights[lid] * d * ndh / (4 * hdo);
-
             } break;
             // specular term Phong
             case brdf_type::microfacet_phong: {
-                // save wo
-                auto wo = pt.wo;
-
                 // compute wh
                 auto wh = ym::normalize(wi + wo);
 
@@ -1366,12 +1367,26 @@ static float weight_brdfcos(const point& pt, const ym::vec3f& wi) {
             case brdf_type::point_diffuse: {
                 pdf += weights[lid] * 4 * ym::pif;
             } break;
+            // transparent term point
+            case brdf_type::transparent: {
+                // compute dot products
+                auto ido = ym::dot(wi, wo);
+
+                // check to make sure we are resonably close to trasmission
+                if (ido > 0.999f) continue;
+
+                // add probability
+                pdf += weights[lid];
+            } break;
             default: assert(false); break;
         }
     }
 
+    // check for missed pdf
+    if (!pdf) return 0;
+
     // done
-    return (pdf) ? 1 / pdf : 0;
+    return 1 / pdf;
 }
 
 //
@@ -1393,7 +1408,13 @@ static ym::vec3f sample_brdfcos(
     for (auto lid = 0; lid < pt.nbrdfs; lid++) weights[lid] /= sum;
 
     // pick a lobe
-    auto lid = ym::clamp((int)(rnl * pt.nbrdfs), 0, pt.nbrdfs);
+    auto cdf = ym::vec<float, 8>();
+    for (auto lid = 0; lid < pt.nbrdfs; lid++)
+        cdf[lid] = weights[lid] + ((lid > 0) ? cdf[lid - 1] : 0.0f);
+    auto lid = 0;
+    for (lid = 0; lid < 8; lid++)
+        if (rnl < cdf[lid]) break;
+    lid = ym::clamp(lid, 0, pt.nbrdfs - 1);
     auto brdf = pt.brdfs[lid];
 
     // sample selected lobe
@@ -1471,9 +1492,15 @@ static ym::vec3f sample_brdfcos(
         // diffuse term point
         case brdf_type::point_diffuse: {
             // sample wi with uniform spherical distribution
-            auto rz = rn.y, rr = sqrtf(1 - rz * rz), rphi = 2 * ym::pif * rn.x;
+            auto rz = 2 * rn.y - 1, rr = sqrtf(1 - rz * rz),
+                 rphi = 2 * ym::pif * rn.x;
             auto wi_local = ym::vec3f{rr * cosf(rphi), rr * sinf(rphi), rz};
             return transform_direction(pt.frame, wi_local);
+        } break;
+        // transparent term
+        case brdf_type::transparent: {
+            // continue ray direction
+            return -pt.wo;
         } break;
         default: assert(false); break;
     }
@@ -1722,6 +1749,16 @@ static point eval_shapepoint(
             pt.emissions[lid].type = emission_type::line;
     }
 
+    // correct for opacity
+    if (pt.op < 1) {
+        for (auto lid = 0; lid < pt.nemissions; lid++)
+            pt.emissions[lid].ke *= pt.op;
+        for (auto lid = 0; lid < pt.nbrdfs; lid++) pt.brdfs[lid].rho *= pt.op;
+        pt.brdfs[pt.nbrdfs].type = brdf_type::transparent;
+        pt.brdfs[pt.nbrdfs].rho = {1 - pt.op, 1 - pt.op, 1 - pt.op};
+        pt.nbrdfs += 1;
+    }
+
     // set whole albedo
     pt.rho = ym::zero3f;
     for (auto lid = 0; lid < pt.nbrdfs; lid++) pt.rho += pt.brdfs[lid].rho;
@@ -1817,8 +1854,13 @@ static inline ym::ray3f offset_ray(
 static inline ym::ray3f offset_ray(
     const point& pt, const point& pt2, const trace_params& params) {
     auto ray_dist = (!pt2.env) ? ym::dist(pt.frame.o, pt2.frame.o) : FLT_MAX;
-    return ym::ray3f(pt.frame.o + pt.frame.z * params.ray_eps, -pt2.wo,
-        params.ray_eps, ray_dist - 2 * params.ray_eps);
+    if (dot(pt2.frame.o - pt.frame.o, pt.frame.z) > 0) {
+        return ym::ray3f(pt.frame.o + pt.frame.z * params.ray_eps, -pt2.wo,
+            params.ray_eps, ray_dist - 2 * params.ray_eps);
+    } else {
+        return ym::ray3f(pt.frame.o - pt.frame.z * params.ray_eps, -pt2.wo,
+            params.ray_eps, ray_dist - 2 * params.ray_eps);
+    }
 }
 
 //
@@ -1889,18 +1931,6 @@ static ym::vec3f shade_pathtrace(const scene* scn, const point& pt_,
     auto weight = ym::vec3f{1, 1, 1};
     auto emission = false;
     for (auto bounce = 0; bounce < params.max_depth; bounce++) {
-        // handle transparency
-        auto kt = eval_transparency(pt);
-        if (kt != ym::zero3f) {
-            auto tprob = ym::max_element_val(kt);
-            if (sample_next1f(smp) < tprob) {
-                weight *= kt;
-                pt = intersect_scene(scn, offset_ray(pt, -pt.wo, params));
-                emission = true;
-                continue;
-            }
-        }
-
         // emission
         if (emission) l += weight * eval_emission(pt);
 
@@ -1908,10 +1938,13 @@ static ym::vec3f shade_pathtrace(const scene* scn, const point& pt_,
         auto lgt = scn->lights[sample_next1i(smp, (int)scn->lights.size())];
         auto lpt =
             sample_light(lgt, pt, sample_next1f(smp), sample_next2f(smp));
-        auto lld = eval_emission(lpt) * eval_brdfcos(pt, -lpt.wo) *
-                   weight_light(lpt, pt) * (float)scn->lights.size();
+        auto lw = weight_light(lpt, pt) * (float)scn->lights.size();
+        auto lke = eval_emission(lpt);
+        auto lbc = eval_brdfcos(pt, -lpt.wo);
+        auto lld = lke * lbc * lw;
         if (lld != ym::zero3f) {
-            l += weight * lld * eval_transmission(scn, pt, lpt, params);
+            l += weight * lld * eval_transmission(scn, pt, lpt, params) *
+                 weight_mis(lw, weight_brdfcos(pt, -lpt.wo));
         }
 
         // direct – brdf
@@ -1919,11 +1952,12 @@ static ym::vec3f shade_pathtrace(const scene* scn, const point& pt_,
             scn, offset_ray(pt,
                      sample_brdfcos(pt, sample_next1f(smp), sample_next2f(smp)),
                      params));
-        auto bld = eval_emission(bpt) * eval_brdfcos(pt, -bpt.wo) *
-                   weight_brdfcos(pt, -bpt.wo);
+        auto bw = weight_brdfcos(pt, -bpt.wo);
+        auto bke = eval_emission(bpt);
+        auto bbc = eval_brdfcos(pt, -bpt.wo);
+        auto bld = bke * bbc * bw;
         if (bld != ym::zero3f) {
-            l += weight * bld *
-                 weight_mis(weight_brdfcos(pt, -bpt.wo), weight_light(bpt, pt));
+            l += weight * bld * weight_mis(bw, weight_light(bpt, pt));
         }
 
         // skip recursion if path ends
@@ -1967,20 +2001,9 @@ static ym::vec3f shade_pathtrace_std(const scene* scn, const point& pt_,
     auto weight = ym::vec3f{1, 1, 1};
     auto emission = false;
     for (auto bounce = 0; bounce < params.max_depth; bounce++) {
-        // handle transparency
-        auto kt = eval_transparency(pt);
-        if (kt != ym::zero3f) {
-            auto tprob = ym::max_element_val(kt);
-            if (sample_next1f(smp) < tprob) {
-                weight *= kt;
-                pt = intersect_scene(scn, offset_ray(pt, -pt.wo, params));
-                emission = true;
-                continue;
-            }
-        }
-
         // emission
         if (emission) l += weight * eval_emission(pt);
+
         // direct
         auto lgt = scn->lights[sample_next1i(smp, (int)scn->lights.size())];
         auto lpt =
@@ -2035,32 +2058,6 @@ static ym::vec3f shade_pathtrace_hack(const scene* scn, const point& pt_,
     // trace path
     auto weight = ym::vec3f{1, 1, 1};
     for (auto bounce = 0; bounce < params.max_depth; bounce++) {
-        // transmission
-        if (pt.op != 1) {
-            auto wi = -pt.wo;
-            auto ior = 1.4f;
-            if (dot(pt.wo, pt.frame.z) > 0) {
-                auto n = pt.frame.z, w = pt.wo;
-                auto eta = 1 / ior;
-                auto cosi = dot(n, w);
-                auto k = 1 - eta * eta * (1 - cosi * cosi);
-                assert(k > 0);
-                wi = -eta * w + n * (eta * cosi - std::sqrt(k));
-                wi = normalize(wi);
-            } else {
-                auto n = -pt.frame.z, w = pt.wo;
-                auto eta = ior;
-                auto cosi = dot(n, w);
-                auto k = 1 - eta * eta * (1 - cosi * cosi);
-                if (k <= 0) break;
-                wi = -eta * w + n * (eta * cosi - std::sqrt(k));
-                wi = normalize(wi);
-            }
-            weight *= 1 - pt.op;
-            pt = intersect_scene(scn, offset_ray(pt, wi, params));
-            continue;
-        }
-
         // direct
         auto lgt = scn->lights[sample_next1i(smp, (int)scn->lights.size())];
         auto lpt =
@@ -2102,8 +2099,8 @@ static ym::vec3f shade_pathtrace_hack(const scene* scn, const point& pt_,
 //
 // Direct illumination.
 //
-static ym::vec3f shade_direct(const scene* scn, const point& pt, sampler* smp,
-    const trace_params& params) {
+static ym::vec3f shade_direct(const scene* scn, const point& pt, int bounce,
+    sampler* smp, const trace_params& params) {
     // emission
     auto l = eval_emission(pt);
     if (pt.no_reflectance()) return l;
@@ -2118,9 +2115,54 @@ static ym::vec3f shade_direct(const scene* scn, const point& pt, sampler* smp,
         auto ld = eval_emission(lpt) * eval_brdfcos(pt, -lpt.wo) *
                   weight_light(lpt, pt);
         if (ld == ym::zero3f) continue;
-        auto shadow_ray = offset_ray(pt, lpt, params);
-        if (scn->intersect_any(shadow_ray)) continue;
-        l += ld;
+        l += ld * eval_transmission(scn, pt, lpt, params);
+    }
+
+    // exit if needed
+    if (bounce >= params.max_depth) return l;
+
+    // opacity
+    for (auto lid = 0; lid < pt.nbrdfs; lid++) {
+        auto& brdf = pt.brdfs[lid];
+        if (brdf.type == brdf_type::transparent) {
+            auto ray = offset_ray(pt, -pt.wo, params);
+            l += brdf.rho * shade_direct(scn, intersect_scene(scn, ray),
+                                bounce + 1, smp, params);
+        }
+    }
+
+    // done
+    return l;
+}
+
+//
+// Direct illumination.
+//
+static ym::vec3f shade_direct(const scene* scn, const point& pt, sampler* smp,
+    const trace_params& params) {
+    return shade_direct(scn, pt, 0, smp, params);
+}
+
+//
+// Eyelight for quick previewing.
+//
+static ym::vec3f shade_eyelight(const scene* scn, const point& pt, int bounce,
+    sampler* smp, const trace_params& params) {
+    // emission
+    auto l = eval_emission(pt);
+    if (pt.no_reflectance()) return l;
+
+    // brdf*light
+    l += eval_brdfcos(pt, pt.wo) * ym::pif;
+
+    // opacity
+    for (auto lid = 0; lid < pt.nbrdfs; lid++) {
+        auto& brdf = pt.brdfs[lid];
+        if (brdf.type == brdf_type::transparent) {
+            auto ray = offset_ray(pt, -pt.wo, params);
+            l += brdf.rho * shade_eyelight(scn, intersect_scene(scn, ray),
+                                bounce + 1, smp, params);
+        }
     }
 
     // done
@@ -2132,14 +2174,7 @@ static ym::vec3f shade_direct(const scene* scn, const point& pt, sampler* smp,
 //
 static ym::vec3f shade_eyelight(const scene* scn, const point& pt, sampler* smp,
     const trace_params& params) {
-    // emission
-    auto l = eval_emission(pt);
-    if (pt.no_reflectance()) return l;
-
-    // brdf*light
-    l += eval_brdfcos(pt, pt.wo) * ym::pif;
-
-    return l;
+    return shade_eyelight(scn, pt, 0, smp, params);
 }
 
 //

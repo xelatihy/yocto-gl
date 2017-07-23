@@ -71,6 +71,7 @@ int main(int argc, char* argv[]) {
         scn, argc, argv, "yview", "interactively view scenes", false, false);
 
     // scene
+    log_info("loading scene %s", scn->filename.c_str());
     if (!load_scene(scn, scn->filename, false, false)) return 1;
 
     // run ui

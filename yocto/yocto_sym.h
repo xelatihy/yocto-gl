@@ -116,7 +116,7 @@ scene* make_scene();
 /// - Parameters:
 ///     - scn: rigid body scene
 ///
-void free_scene(scene* scn);
+void free_scene(scene*& scn);
 
 ///
 /// Sets a rigid shape.

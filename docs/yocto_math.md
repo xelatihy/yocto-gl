@@ -3832,6 +3832,144 @@ inline vec2f next2f(rng_pcg32* rng);
 
 Next random float in [0,1)x[0,1).
 
+### Function sample_hemisphere()
+
+~~~ .cpp
+inline vec3f sample_hemisphere(const vec2f& ruv);
+~~~
+
+sample hemispherical direction with uniform distribution
+
+### Function sample_hemisphere_pdf()
+
+~~~ .cpp
+inline float sample_hemisphere_pdf(const vec3f& w);
+~~~
+
+pdf for hemispherical direction with uniform distribution
+
+### Function sample_sphere()
+
+~~~ .cpp
+inline vec3f sample_sphere(const vec2f ruv);
+~~~
+
+spherical direction with uniform distribution
+
+### Function sample_sphere_pdf()
+
+~~~ .cpp
+inline float sample_sphere_pdf(const vec3f& w);
+~~~
+
+pdf for spherical direction with uniform distribution
+
+### Function sample_hemisphere_cosine()
+
+~~~ .cpp
+inline vec3f sample_hemisphere_cosine(const vec2f& ruv);
+~~~
+
+hemispherical direction with cosine distribution
+
+### Function sample_hemisphere_cosine_pdf()
+
+~~~ .cpp
+inline float sample_hemisphere_cosine_pdf(const vec3f& w);
+~~~
+
+pdf for hemispherical direction with cosine distribution
+
+### Function sample_hemisphere_cospower()
+
+~~~ .cpp
+inline vec3f sample_hemisphere_cospower(const vec2f& ruv, float n);
+~~~
+
+hemispherical direction with cosine power distribution
+
+### Function sample_hemisphere_cospower_pdf()
+
+~~~ .cpp
+inline float sample_hemisphere_cospower_pdf(const vec3f& w, float n);
+~~~
+
+pdf for hemispherical direction with cosine power distribution
+
+### Function sample_disk()
+
+~~~ .cpp
+inline vec3f sample_disk(const vec2f& ruv);
+~~~
+
+uniform disk
+
+### Function sample_disk_pdf()
+
+~~~ .cpp
+inline float sample_disk_pdf();
+~~~
+
+pdf for uniform disk
+
+### Function sample_cylinder()
+
+~~~ .cpp
+inline vec3f sample_cylinder(const vec2f& ruv);
+~~~
+
+uniform cylinder
+
+### Function sample_cylinder_pdf()
+
+~~~ .cpp
+inline float sample_cylinder_pdf();
+~~~
+
+pdf for uniform cylinder
+
+### Function sample_triangle()
+
+~~~ .cpp
+inline vec2f sample_triangle(const vec2f& ruv);
+~~~
+
+uniform triangle
+
+### Function sample_triangle()
+
+~~~ .cpp
+inline vec3f sample_triangle(
+    const vec2f& ruv, const vec3f& v0, const vec3f& v1, const vec3f& v2);
+~~~
+
+uniform triangle
+
+### Function sample_triangle_pdf()
+
+~~~ .cpp
+inline float sample_triangle_pdf(
+    const vec3f& v0, const vec3f& v1, const vec3f& v2);
+~~~
+
+pdf for uniform triangle (triangle area)
+
+### Function sample_index()
+
+~~~ .cpp
+inline int sample_index(float r, int size);
+~~~
+
+index with uniform distribution
+
+### Function sample_index_pdf()
+
+~~~ .cpp
+inline float sample_index_pdf(int size);
+~~~
+
+pdf for index with uniform distribution
+
 ### Function hash_permute()
 
 ~~~ .cpp

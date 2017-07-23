@@ -125,7 +125,17 @@ struct scene {
     std::vector<collision> __collisions;
 
     // destructor
-    ~scene();
+    ~scene() {
+        for (auto shp : shapes)
+            if (shp) delete shp;
+        for (auto bdy : bodies)
+            if (bdy) delete bdy;
+        for (auto mat : materials)
+            if (mat) delete mat;
+#ifndef YTRACE_NO_BVH
+        if (overlap_bvh) ybvh::free_scene(overlap_bvh);
+#endif
+    }
 };
 
 //
@@ -139,23 +149,9 @@ scene* make_scene() {
 //
 // Public API.
 //
-void free_scene(scene* scn) {
+void free_scene(scene*& scn) {
     if (scn) delete scn;
-}
-
-//
-// Destructor
-//
-scene::~scene() {
-    for (auto shp : shapes)
-        if (shp) delete shp;
-    for (auto bdy : bodies)
-        if (bdy) delete bdy;
-    for (auto mat : materials)
-        if (mat) delete mat;
-#ifndef YTRACE_NO_BVH
-    if (overlap_bvh) ybvh::free_scene(overlap_bvh);
-#endif
+    scn = nullptr;
 }
 
 //

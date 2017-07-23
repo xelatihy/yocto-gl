@@ -3151,6 +3151,110 @@ PCG32 from http://www.pcg-random.org/</p>
 
 
 <p>Next random float in [0,1)x[0,1).</p>
+<h3>Function sample_hemisphere()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">vec3f</span> <span class="nf">sample_hemisphere</span><span class="p">(</span><span class="k">const</span> <span class="n">vec2f</span><span class="o">&amp;</span> <span class="n">ruv</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>sample hemispherical direction with uniform distribution</p>
+<h3>Function sample_hemisphere_pdf()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">float</span> <span class="nf">sample_hemisphere_pdf</span><span class="p">(</span><span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">w</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>pdf for hemispherical direction with uniform distribution</p>
+<h3>Function sample_sphere()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">vec3f</span> <span class="nf">sample_sphere</span><span class="p">(</span><span class="k">const</span> <span class="n">vec2f</span> <span class="n">ruv</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>spherical direction with uniform distribution</p>
+<h3>Function sample_sphere_pdf()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">float</span> <span class="nf">sample_sphere_pdf</span><span class="p">(</span><span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">w</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>pdf for spherical direction with uniform distribution</p>
+<h3>Function sample_hemisphere_cosine()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">vec3f</span> <span class="nf">sample_hemisphere_cosine</span><span class="p">(</span><span class="k">const</span> <span class="n">vec2f</span><span class="o">&amp;</span> <span class="n">ruv</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>hemispherical direction with cosine distribution</p>
+<h3>Function sample_hemisphere_cosine_pdf()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">float</span> <span class="nf">sample_hemisphere_cosine_pdf</span><span class="p">(</span><span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">w</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>pdf for hemispherical direction with cosine distribution</p>
+<h3>Function sample_hemisphere_cospower()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">vec3f</span> <span class="nf">sample_hemisphere_cospower</span><span class="p">(</span><span class="k">const</span> <span class="n">vec2f</span><span class="o">&amp;</span> <span class="n">ruv</span><span class="p">,</span> <span class="kt">float</span> <span class="n">n</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>hemispherical direction with cosine power distribution</p>
+<h3>Function sample_hemisphere_cospower_pdf()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">float</span> <span class="nf">sample_hemisphere_cospower_pdf</span><span class="p">(</span><span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">w</span><span class="p">,</span> <span class="kt">float</span> <span class="n">n</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>pdf for hemispherical direction with cosine power distribution</p>
+<h3>Function sample_disk()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">vec3f</span> <span class="nf">sample_disk</span><span class="p">(</span><span class="k">const</span> <span class="n">vec2f</span><span class="o">&amp;</span> <span class="n">ruv</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>uniform disk</p>
+<h3>Function sample_disk_pdf()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">float</span> <span class="nf">sample_disk_pdf</span><span class="p">();</span>
+</code></pre></div>
+
+
+<p>pdf for uniform disk</p>
+<h3>Function sample_cylinder()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">vec3f</span> <span class="nf">sample_cylinder</span><span class="p">(</span><span class="k">const</span> <span class="n">vec2f</span><span class="o">&amp;</span> <span class="n">ruv</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>uniform cylinder</p>
+<h3>Function sample_cylinder_pdf()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">float</span> <span class="nf">sample_cylinder_pdf</span><span class="p">();</span>
+</code></pre></div>
+
+
+<p>pdf for uniform cylinder</p>
+<h3>Function sample_triangle()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">vec2f</span> <span class="nf">sample_triangle</span><span class="p">(</span><span class="k">const</span> <span class="n">vec2f</span><span class="o">&amp;</span> <span class="n">ruv</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>uniform triangle</p>
+<h3>Function sample_triangle()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">vec3f</span> <span class="nf">sample_triangle</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">vec2f</span><span class="o">&amp;</span> <span class="n">ruv</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">v0</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">v1</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">v2</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>uniform triangle</p>
+<h3>Function sample_triangle_pdf()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">float</span> <span class="nf">sample_triangle_pdf</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">v0</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">v1</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">v2</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>pdf for uniform triangle (triangle area)</p>
+<h3>Function sample_index()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">int</span> <span class="nf">sample_index</span><span class="p">(</span><span class="kt">float</span> <span class="n">r</span><span class="p">,</span> <span class="kt">int</span> <span class="n">size</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>index with uniform distribution</p>
+<h3>Function sample_index_pdf()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">float</span> <span class="nf">sample_index_pdf</span><span class="p">(</span><span class="kt">int</span> <span class="n">size</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>pdf for index with uniform distribution</p>
 <h3>Function hash_permute()</h3>
 <div class="codehilite"><pre><code><span></span><span class="k">constexpr</span> <span class="kr">inline</span> <span class="kt">uint32_t</span> <span class="nf">hash_permute</span><span class="p">(</span><span class="kt">uint32_t</span> <span class="n">i</span><span class="p">,</span> <span class="kt">uint32_t</span> <span class="n">n</span><span class="p">,</span> <span class="kt">uint32_t</span> <span class="n">key</span><span class="p">);</span>
 </code></pre></div>

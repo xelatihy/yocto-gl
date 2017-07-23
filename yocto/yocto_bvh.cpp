@@ -144,7 +144,11 @@ struct scene {
     ym::bbox3f bbox() const { return bvh->nodes[0].bbox; }
 
     // destructor
-    ~scene();
+    ~scene() {
+        for (auto& shp : shapes) delete shp;
+        for (auto& ist : instances) delete ist;
+        if (bvh) delete bvh;
+    }
 };
 
 // -----------------------------------------------------------------------------
@@ -159,17 +163,9 @@ scene* make_scene() { return new scene(); }
 ///
 /// Free scene.
 ///
-void free_scene(scene* scn) {
+void free_scene(scene*& scn) {
     if (scn) delete scn;
-}
-
-//
-// Destructor
-//
-scene::~scene() {
-    for (auto& shp : shapes) delete shp;
-    for (auto& ist : instances) delete ist;
-    if (bvh) delete bvh;
+    scn = nullptr;
 }
 
 //
