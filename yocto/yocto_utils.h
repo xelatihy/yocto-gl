@@ -64,7 +64,7 @@
 ///
 /// ## History
 ///
-/// - v 0.22: seimpler logging
+/// - v 0.22: simpler logging
 /// - v 0.21: move to header-only mode
 /// - v 0.20: simpler logging
 /// - v 0.19: some containers ops
@@ -195,41 +195,39 @@ struct parser;
 ///
 /// Inits a command line parser.
 ///
-inline parser* make_parser(const std::vector<std::string>& args,
+inline parser make_parser(const std::vector<std::string>& args,
     const std::string& name = "", const std::string& help = "");
 
 ///
 /// Inits a command line parser.
 ///
-inline parser* make_parser(
-    int argc, char* argv[], const char* name, const char* help) {
-    return make_parser(std::vector<std::string>(argv, argv + argc), name, help);
-}
+inline parser make_parser(
+    int argc, char* argv[], const std::string& name, const std::string& help);
 
 ///
 /// Ends parsing checking for error for unused options or arguments.
 /// Exit if needed.
 ///
-inline bool check_parser(parser* prs);
+inline bool check_parser(parser& par);
 
 ///
 /// Parses an optional flag as described in the intro.
 ///
-inline bool parse_flag(parser* par, const std::string& longname,
+inline bool parse_flag(parser& par, const std::string& longname,
     const std::string& shortname, const std::string& help, bool def = false);
 
 ///
 /// Parses an option as described in the intro.
 ///
 template <typename T>
-inline T parse_opt(parser* par, const std::string& longname,
+inline T parse_opt(parser& par, const std::string& longname,
     const std::string& shortname, const std::string& help, const T& def,
     bool required = false, const std::vector<T>& choices = {});
 
 ///
 /// Specialization of parse_opt()
 ///
-inline std::string parse_opts(parser* par, const std::string& longname,
+inline std::string parse_opts(parser& par, const std::string& longname,
     const std::string& shortname, const std::string& help,
     const std::string& def, bool required = false,
     const std::vector<std::string>& choices = {}) {
@@ -240,7 +238,7 @@ inline std::string parse_opts(parser* par, const std::string& longname,
 ///
 /// Specialization of parse_opt()
 ///
-inline int parse_opti(parser* par, const std::string& longname,
+inline int parse_opti(parser& par, const std::string& longname,
     const std::string& shortname, const std::string& help, int def,
     bool required = false, const std::vector<int>& choices = {}) {
     return parse_opt<int>(
@@ -250,7 +248,7 @@ inline int parse_opti(parser* par, const std::string& longname,
 ///
 /// Specialization of parse_opt()
 ///
-inline float parse_optf(parser* par, const std::string& longname,
+inline float parse_optf(parser& par, const std::string& longname,
     const std::string& shortname, const std::string& help, float def,
     bool required = false, const std::vector<float>& choices = {}) {
     return parse_opt<float>(
@@ -260,7 +258,7 @@ inline float parse_optf(parser* par, const std::string& longname,
 ///
 /// Specialization of parse_opt()
 ///
-inline double parse_optd(parser* par, const std::string& longname,
+inline double parse_optd(parser& par, const std::string& longname,
     const std::string& shortname, const std::string& help, double def,
     bool required = false, const std::vector<double>& choices = {}) {
     return parse_opt<double>(
@@ -270,7 +268,7 @@ inline double parse_optd(parser* par, const std::string& longname,
 ///
 /// Parses an option enum as described in the intro.
 ///
-inline int parse_opte(parser* par, const std::string& longname,
+inline int parse_opte(parser& par, const std::string& longname,
     const std::string& shortname, const std::string& help, int def,
     const std::vector<std::pair<std::string, int>>& vals,
     bool required = false);
@@ -279,7 +277,7 @@ inline int parse_opte(parser* par, const std::string& longname,
 /// Parses an option enum as described in the intro.
 ///
 template <typename T>
-inline T parse_opte(parser* par, const std::string& longname,
+inline T parse_opte(parser& par, const std::string& longname,
     const std::string& shortname, const std::string& help, T def,
     const std::vector<std::pair<std::string, T>>& vals, bool required = false) {
     return (T)parse_opte(par, longname, shortname, help, (int)def,
@@ -290,7 +288,7 @@ inline T parse_opte(parser* par, const std::string& longname,
 /// Parses an option array as described in the intro.
 ///
 template <typename T>
-inline T parse_opta(parser* par, const std::string& longname,
+inline T parse_opta(parser& par, const std::string& longname,
     const std::string& shortname, const std::string& help, const T& def,
     int nargs, bool required = false, const std::vector<T>& choices = {});
 
@@ -298,14 +296,14 @@ inline T parse_opta(parser* par, const std::string& longname,
 /// Parses an argument as described in the intro.
 ///
 template <typename T>
-inline T parse_arg(parser* par, const std::string& longname,
+inline T parse_arg(parser& par, const std::string& longname,
     const std::string& help, const T& def, bool required = false,
     const std::vector<T>& choices = {});
 
 ///
 /// Specialization of parse_arg()
 ///
-inline std::string parse_args(parser* par, const std::string& longname,
+inline std::string parse_args(parser& par, const std::string& longname,
     const std::string& help, const std::string& def, bool required = false,
     const std::vector<std::string>& choices = {}) {
     return parse_arg<std::string>(par, longname, help, def, required, choices);
@@ -314,7 +312,7 @@ inline std::string parse_args(parser* par, const std::string& longname,
 ///
 /// Specialization of parse_arg()
 ///
-inline int parse_argi(parser* par, const std::string& longname,
+inline int parse_argi(parser& par, const std::string& longname,
     const std::string& help, int def, bool required = false,
     const std::vector<int>& choices = {}) {
     return parse_arg<int>(par, longname, help, def, required, choices);
@@ -323,7 +321,7 @@ inline int parse_argi(parser* par, const std::string& longname,
 ///
 /// Specialization of parse_arg()
 ///
-inline float parse_argf(parser* par, const std::string& longname,
+inline float parse_argf(parser& par, const std::string& longname,
     const std::string& help, float def, bool required = false,
     const std::vector<float>& choices = {}) {
     return parse_arg<float>(par, longname, help, def, required, choices);
@@ -332,7 +330,7 @@ inline float parse_argf(parser* par, const std::string& longname,
 ///
 /// Specialization of parse_arg()
 ///
-inline double parse_argd(parser* par, const std::string& longname,
+inline double parse_argd(parser& par, const std::string& longname,
     const std::string& help, double def, bool required = false,
     const std::vector<double>& choices = {}) {
     return parse_arg<double>(par, longname, help, def, required, choices);
@@ -342,14 +340,14 @@ inline double parse_argd(parser* par, const std::string& longname,
 /// Parses an argument array as described in the intro.
 ///
 template <typename T>
-inline std::vector<T> parse_arga(parser* par, const std::string& longname,
+inline std::vector<T> parse_arga(parser& par, const std::string& longname,
     const std::string& help, const std::vector<T>& def, int nargs = -1,
     bool required = false, const std::vector<T>& choices = {});
 
 ///
 /// Specialization of parse_arga()
 ///
-inline std::vector<std::string> parse_argas(parser* par,
+inline std::vector<std::string> parse_argas(parser& par,
     const std::string& longname, const std::string& help,
     const std::vector<std::string>& def, int nargs = -1, bool required = false,
     const std::vector<std::string>& choices = {}) {
@@ -660,14 +658,23 @@ inline std::string replace(
     return s;
 }
 
+//
+// Argument conversion for format
+//
+inline int format_arg(int v) { return v; }
+inline float format_arg(float v) { return v; }
+inline double format_arg(double v) { return v; }
+inline const char* format_arg(bool v) { return (v) ? "true" : "false"; }
+inline const char* format_arg(const std::string& v) { return v.c_str(); }
+
 ///
 /// C-like string formatting. This is only meant for short strings with max
 /// length 10000 chars. Memory corruption will happen for longer strings.
 ///
 template <typename... Args>
-inline std::string format(const char* fmt, Args&&... args) {
+inline std::string formatf(const std::string& fmt, const Args&... args) {
     char buffer[1024 * 16];
-    sprintf(buffer, fmt, std::move(args)...);
+    sprintf(buffer, fmt.c_str(), format_arg(args)...);
     return buffer;
 }
 
@@ -809,17 +816,13 @@ struct logger;
 ///
 /// Make a logger with an optional console stream.
 ///
-inline logger* make_logger(const char* name, bool add_console_stream = false);
+inline logger make_logger(
+    const std::string& name, bool add_console_stream = false);
 
 ///
 /// Set logger default name
 ///
-inline void set_logger_name(logger* lgr, const char* name);
-
-///
-/// Free logger
-///
-inline void free_logger(logger*& lgr);
+inline void set_logger_name(logger& lgr, const std::string& name);
 
 ///
 /// Add a file stream to a logger.
@@ -834,7 +837,7 @@ inline void free_logger(logger*& lgr);
 /// - Returns:
 ///     - true if ok
 ///
-inline bool add_file_stream(logger* lgr, const std::string& filename,
+inline bool add_file_stream(logger& lgr, const std::string& filename,
     bool append, bool short_message = false,
     log_level output_level = log_level::info,
     log_level flush_level = log_level::info);
@@ -852,7 +855,7 @@ inline bool add_file_stream(logger* lgr, const std::string& filename,
 /// - Returns:
 ///     - true if ok
 ///
-inline bool add_console_stream(logger* lgr, bool use_std_error = false,
+inline bool add_console_stream(logger& lgr, bool use_std_error = false,
     bool short_message = true, log_level output_level = log_level::info,
     log_level flush_level = log_level::info);
 
@@ -860,12 +863,12 @@ inline bool add_console_stream(logger* lgr, bool use_std_error = false,
 /// Get default logger.
 /// By default a non-verbose stdout logger is creater.
 ///
-inline logger* get_default_logger();
+inline logger& get_default_logger();
 
 ///
 /// Set default logger name
 ///
-inline void set_logger_name(const char* name) {
+inline void set_logger_name(const std::string& name) {
     set_logger_name(get_default_logger(), name);
 }
 
@@ -888,8 +891,8 @@ inline void add_file_stream(const std::string& filename, bool append,
 ///     - code: message code (5 chars)
 ///     - msg: message
 ///
-inline void log_msg(
-    logger* lgr, log_level level, const char* name, const char* msg);
+inline void log_msg(logger& lgr, log_level level, const std::string& name,
+    const std::string& msg);
 
 ///
 /// Log a message formatted ala printf.
@@ -901,19 +904,17 @@ inline void log_msg(
 ///     - msg: message
 ///
 template <typename... Args>
-inline void log_msg(logger* lgr, log_level level, const char* name,
-    const char* msg, const Args&... args) {
-    char buffer[4096];
-    sprintf(buffer, msg, args...);
-    log_msg(lgr, level, name, buffer);
+inline void log_msg(logger& lgr, log_level level, const std::string& name,
+    const std::string& msg, const Args&... args) {
+    log_msg(lgr, level, name, string::formatf(msg, args...));
 }
 
 ///
 /// Logs a message to the default loggers
 ///
 template <typename... Args>
-inline void log_msg(
-    log_level level, const char* name, const char* msg, const Args&... args) {
+inline void log_msg(log_level level, const char* name, const std::string& msg,
+    const Args&... args) {
     log_msg(get_default_logger(), level, name, msg, args...);
 }
 
@@ -921,7 +922,7 @@ inline void log_msg(
 /// Logs a message to the default loggers
 ///
 template <typename... Args>
-inline void log_info(const char* msg, const Args&... args) {
+inline void log_info(const std::string& msg, const Args&... args) {
     log_msg(log_level::info, "", msg, args...);
 }
 
@@ -929,7 +930,7 @@ inline void log_info(const char* msg, const Args&... args) {
 /// Logs a message to the default loggers
 ///
 template <typename... Args>
-inline void log_error(const char* msg, const Args&... args) {
+inline void log_error(const std::string& msg, const Args&... args) {
     log_msg(log_level::fatal, "", msg, args...);
 }
 
@@ -937,9 +938,20 @@ inline void log_error(const char* msg, const Args&... args) {
 /// Logs a message to the default loggers
 ///
 template <typename... Args>
-inline void log_fatal(const char* msg, const Args&... args) {
+inline void log_fatal(const std::string& msg, const Args&... args) {
     log_msg(log_level::fatal, "", msg, args...);
 }
+
+///
+/// Timer for logging
+///
+struct log_timer {};
+
+///
+/// Log a message and start a timer
+///
+template <typename... Args>
+inline log_timer log_timed(const std::string& msg, const Args&... args) {}
 
 }  // namespace logging
 
@@ -1075,7 +1087,7 @@ struct parser {
 
     // help std::strings -------------------------------------------
     std::string help_prog;   // program description
-    std::string help_usage;  // sage lines
+    std::string help_usage;  // usage lines
     std::string help_opts;   // options lines
     std::string help_args;   // unnamed arguments lines
 
@@ -1089,35 +1101,43 @@ struct parser {
 //
 // Inits the parser.
 //
-inline parser* make_parser(const std::vector<std::string>& args,
+inline parser make_parser(const std::vector<std::string>& args,
     const std::string& name, const std::string& help) {
     // clears parser and copy argument data
-    auto par = new parser();
-    par->args = std::vector<std::string>(args.begin() + 1, args.end());
-    par->error = false;
-    par->exit_on_error = true;
-    par->help_prog = (name == "") ? args[0] : name;
-    par->help_usage += help;
-    par->print_help = parse_flag(par, "--help", "-?", "print help", false);
+    auto par = parser();
+    par.args = std::vector<std::string>(args.begin() + 1, args.end());
+    par.error = false;
+    par.exit_on_error = true;
+    par.help_prog = (name == "") ? args[0] : name;
+    par.help_usage += help;
+    par.print_help = parse_flag(par, "--help", "-?", "print help", false);
     return par;
+}
+
+//
+// Inits the parser.
+//
+inline parser make_parser(
+    int argc, char* argv[], const std::string& name, const std::string& help) {
+    return make_parser(std::vector<std::string>(argv, argv + argc), name, help);
 }
 
 //
 // Print help based on the help lines collected during parsing.
 //
-static inline void _print_help(parser* par) {
+static inline void _print_help(parser& par) {
     auto help = std::string();
-    help += "usage: " + par->help_prog;
-    if (!par->help_opts.empty()) help += "[options] ";
-    if (!par->help_args.empty()) help += "<arguments> ";
-    help += "\n    " + par->help_usage + "\n\n";
-    if (!par->help_opts.empty()) {
+    help += "usage: " + par.help_prog;
+    if (!par.help_opts.empty()) help += "[options] ";
+    if (!par.help_args.empty()) help += "<arguments> ";
+    help += "\n    " + par.help_usage + "\n\n";
+    if (!par.help_opts.empty()) {
         help += "options:\n";
-        help += par->help_opts;
+        help += par.help_opts;
     }
-    if (!par->help_args.empty()) {
+    if (!par.help_args.empty()) {
         help += "arguments:\n";
-        help += par->help_args;
+        help += par.help_args;
     }
     printf("%s\n", help.c_str());
 }
@@ -1126,23 +1146,22 @@ static inline void _print_help(parser* par) {
 // Ends parsing checking for error for unused options or arguments.
 // Exit if needed.
 //
-inline bool check_parser(parser* par) {
+inline bool check_parser(parser& par) {
     // check for error
-    if (!par->error && par->args.size() > 0) {
-        par->error = true;
-        if (par->args[0][0] == '-')
-            par->error_msg = "unknown option " + par->args[0];
+    if (!par.error && par.args.size() > 0) {
+        par.error = true;
+        if (par.args[0][0] == '-')
+            par.error_msg = "unknown option " + par.args[0];
         else
-            par->error_msg = "unsued values";
+            par.error_msg = "unsued values";
     };
     // check whether we need to print help and exit
-    if (par->error) printf("error: %s\n", par->error_msg.c_str());
-    if (par->print_help || par->error) {
+    if (par.error) printf("error: %s\n", par.error_msg.c_str());
+    if (par.print_help || par.error) {
         _print_help(par);
-        if (par->exit_on_error) exit(EXIT_FAILURE);
+        if (par.exit_on_error) exit(EXIT_FAILURE);
     }
-    auto ok = !par->error;
-    delete par;
+    auto ok = !par.error;
     return ok;
 }
 
@@ -1161,7 +1180,7 @@ static inline bool _startswith(
 //
 // Check if an option name is valid
 //
-static inline void _check_name(parser* par, const std::string& longname,
+static inline void _check_name(parser& par, const std::string& longname,
     const std::string& shortname, bool opt, int nargs) {
     // check name
     assert(!longname.empty());
@@ -1207,7 +1226,7 @@ inline std::string _tostring<bool>(const bool& val) {
 // Add a formatted help line
 //
 template <typename T>
-static inline void _add_help(parser* par, const std::string& longname,
+static inline void _add_help(parser& par, const std::string& longname,
     const std::string& shortname, const std::string& help, bool opt, bool req,
     int nargs, const std::vector<T>& def, const std::vector<T>& choices = {}) {
     // dummy variable for function overload
@@ -1259,16 +1278,16 @@ static inline void _add_help(parser* par, const std::string& longname,
 
     // add line to proper help
     if (opt)
-        par->help_opts += help_line;
+        par.help_opts += help_line;
     else
-        par->help_args += help_line;
+        par.help_args += help_line;
 }
 
 //
 // Parsing routine for arrays of values
 //
 template <typename T>
-static inline std::vector<T> _parse_vals(parser* par,
+static inline std::vector<T> _parse_vals(parser& par,
     const std::string& longname, const std::string& shortname,
     const std::string& help, bool opt, bool req, int nargs,
     const std::vector<T>& def, const std::vector<T>& choices = {}) {
@@ -1282,56 +1301,56 @@ static inline std::vector<T> _parse_vals(parser* par,
     _add_help(par, longname, shortname, help, opt, req, nargs, def, choices);
 
     // skip if alreasy in error
-    if (par->error) return vals;
+    if (par.error) return vals;
 
     // find the value position
     auto val_pos = -1;
     if (opt) {
         // find option name
-        for (auto i = 0; i < par->args.size() && val_pos < 0; i++) {
-            if (shortname == par->args[i]) val_pos = i;
-            if (longname == par->args[i]) val_pos = i;
+        for (auto i = 0; i < par.args.size() && val_pos < 0; i++) {
+            if (shortname == par.args[i]) val_pos = i;
+            if (longname == par.args[i]) val_pos = i;
         }
 
         // remove the option name
-        if (val_pos >= 0) { par->args.erase(par->args.begin() + val_pos); }
+        if (val_pos >= 0) { par.args.erase(par.args.begin() + val_pos); }
     } else {
         // check if arg is present
-        if (!par->args.empty()) {
-            if (par->args[0][0] != '-') { val_pos = 0; }
+        if (!par.args.empty()) {
+            if (par.args[0][0] != '-') { val_pos = 0; }
         }
     }
 
     // handle not found
     if (val_pos < 0) {
         if (req) {
-            par->error = true;
-            par->error_msg = "missing value for " + longname;
+            par.error = true;
+            par.error_msg = "missing value for " + longname;
             return vals;
         } else
             return def;
     }
 
     // check if value is present
-    if (nargs == -1) nargs = std::max(1, (int)par->args.size());
-    if (val_pos + nargs > par->args.size()) {
-        par->error = true;
-        par->error_msg = "missing value for " + longname;
+    if (nargs == -1) nargs = std::max(1, (int)par.args.size());
+    if (val_pos + nargs > par.args.size()) {
+        par.error = true;
+        par.error_msg = "missing value for " + longname;
         return vals;
     }
 
     // loop over values
     for (auto i = 0; i < nargs; i++) {
         // grab value
-        auto val_str = par->args[val_pos];
-        par->args.erase(par->args.begin() + val_pos);
+        auto val_str = par.args[val_pos];
+        par.args.erase(par.args.begin() + val_pos);
 
         // parse value
         auto stream = std::istringstream(val_str);
         auto val = T();
         if (!(stream >> val)) {
-            par->error = true;
-            par->error_msg = "incorrect value for " + longname;
+            par.error = true;
+            par.error_msg = "incorrect value for " + longname;
             return vals;
         }
         // check choices
@@ -1341,8 +1360,8 @@ static inline std::vector<T> _parse_vals(parser* par,
                 if (val == c) in_choices = true;
             }
             if (!in_choices) {
-                par->error = true;
-                par->error_msg = "incorrect value for " + longname;
+                par.error = true;
+                par.error_msg = "incorrect value for " + longname;
                 return vals;
             }
         }
@@ -1359,7 +1378,7 @@ static inline std::vector<T> _parse_vals(parser* par,
 // Parsing routine for values
 //
 template <typename T>
-static inline T _parse_val(parser* par, const std::string& longname,
+static inline T _parse_val(parser& par, const std::string& longname,
     const std::string& shortname, const std::string& help, bool opt,
     const T& def, bool req, const std::vector<T>& choices = {}) {
     // parse values
@@ -1376,7 +1395,7 @@ static inline T _parse_val(parser* par, const std::string& longname,
 //
 // Parses an optional flag as described in the intro.
 //
-inline bool parse_flag(parser* par, const std::string& longname,
+inline bool parse_flag(parser& par, const std::string& longname,
     const std::string& shortname, const std::string& help, bool def) {
     // parse values
     auto vals = _parse_vals<bool>(
@@ -1393,7 +1412,7 @@ inline bool parse_flag(parser* par, const std::string& longname,
 // Parses an option as described in the intro.
 //
 template <typename T>
-inline T parse_opt(parser* par, const std::string& longname,
+inline T parse_opt(parser& par, const std::string& longname,
     const std::string& shortname, const std::string& help, const T& def,
     bool req, const std::vector<T>& choices) {
     return _parse_val<T>(
@@ -1404,7 +1423,7 @@ inline T parse_opt(parser* par, const std::string& longname,
 // Parses an argument as described in the intro.
 //
 template <typename T>
-inline T parse_arg(parser* par, const std::string& longname,
+inline T parse_arg(parser& par, const std::string& longname,
     const std::string& help, const T& def, bool req,
     const std::vector<T>& choices) {
     return _parse_val<T>(par, longname, "", help, false, def, req, choices);
@@ -1414,7 +1433,7 @@ inline T parse_arg(parser* par, const std::string& longname,
 // Parses an option array as described in the intro.
 //
 template <typename T>
-inline std::vector<T> parse_opta(parser* par, const std::string& longname,
+inline std::vector<T> parse_opta(parser& par, const std::string& longname,
     const std::string& help, const std::vector<T>& def, int nargs,
     bool required, const std::vector<T>& choices) {
     return _parse_vals(
@@ -1425,7 +1444,7 @@ inline std::vector<T> parse_opta(parser* par, const std::string& longname,
 // Parses an argument array as described in the intro.
 //
 template <typename T>
-inline std::vector<T> parse_arga(parser* par, const std::string& longname,
+inline std::vector<T> parse_arga(parser& par, const std::string& longname,
     const std::string& help, const std::vector<T>& def, int nargs,
     bool required, const std::vector<T>& choices) {
     return _parse_vals(
@@ -1435,7 +1454,7 @@ inline std::vector<T> parse_arga(parser* par, const std::string& longname,
 //
 // Parses an option enum as described in the intro.
 //
-inline int parse_opte(parser* par, const std::string& longname,
+inline int parse_opte(parser& par, const std::string& longname,
     const std::string& shortname, const std::string& help, int def,
     const std::vector<std::pair<std::string, int>>& vals, bool required) {
     auto choices = std::vector<std::string>();
@@ -1458,15 +1477,21 @@ inline int parse_opte(parser* par, const std::string& longname,
 namespace logging {
 
 //
-// Logger
+// Logger Stream
 //
 struct logger_stream {
+    // stream for the logger
     FILE* file = nullptr;
+    // whether the logger uses a short message
     bool short_message = false;
+    // log level for output filtering
     log_level output_level = log_level::info;
+    // log level for flush filtering
     log_level flush_level = log_level::error;
+    // log id generated randomly
     unsigned int guid = std::random_device()();
 
+    // cleanup
     ~logger_stream() {
         if (file == stderr) return;
         if (file == stdout) return;
@@ -1478,87 +1503,81 @@ struct logger_stream {
 };
 
 //
-// Logger
+// Logger implemented as a collection of filtered stream
 //
 struct logger {
-    // name
+    /// name
     std::string name;
-    // streams
+    /// streams
     std::vector<logger_stream> streams;
 };
 
 //
 // Make a logger with an optional console stream.
 //
-inline logger* make_logger(const char* name, bool add_stream) {
-    auto lgr = new logger();
-    lgr->name = name;
+inline logger make_logger(const std::string& name, bool add_stream) {
+    auto lgr = logger();
+    lgr.name = name;
     if (add_stream) add_console_stream(lgr);
     return lgr;
 }
 
 //
-// Free logger
+// set logger name
 //
-inline void free_logger(logger*& lgr) {
-    if (lgr) delete lgr;
-    lgr = nullptr;
+inline void set_logger_name(logger& lgr, const std::string& name) {
+    lgr.name = name;
 }
 
 //
-// set logger name
+// default logger
 //
-inline void set_logger_name(logger* lgr, const char* name) { lgr->name = name; }
+static logger default_logger = make_logger("<app>", true);
 
 //
 // default logger
 //
-static logger* default_logger = make_logger("<app>", true);
-
-//
-// default logger
-//
-logger* get_default_logger() { return default_logger; }
+logger& get_default_logger() { return default_logger; }
 
 //
 // Create a file logger
 //
-inline bool add_file_stream(logger* lgr, const std::string& filename,
+inline bool add_file_stream(logger& lgr, const std::string& filename,
     bool append, bool short_message, log_level output_level,
     log_level flush_level) {
     auto file = fopen(filename.c_str(), (append) ? "at" : "wt");
     if (!file) return false;
-    lgr->streams.push_back(logger_stream());
-    lgr->streams.back().file = file;
-    lgr->streams.back().short_message = short_message;
-    lgr->streams.back().output_level = output_level;
-    lgr->streams.back().flush_level = flush_level;
+    lgr.streams.push_back(logger_stream());
+    lgr.streams.back().file = file;
+    lgr.streams.back().short_message = short_message;
+    lgr.streams.back().output_level = output_level;
+    lgr.streams.back().flush_level = flush_level;
     return true;
 }
 
 //
 // Create a stderr logger
 //
-inline bool add_console_stream(logger* lgr, bool use_std_error,
+inline bool add_console_stream(logger& lgr, bool use_std_error,
     bool short_message, log_level output_level, log_level flush_level) {
-    lgr->streams.push_back(logger_stream());
-    lgr->streams.back().file = (use_std_error) ? stderr : stdout;
-    lgr->streams.back().short_message = short_message;
-    lgr->streams.back().output_level = output_level;
-    lgr->streams.back().flush_level = flush_level;
+    lgr.streams.push_back(logger_stream());
+    lgr.streams.back().file = (use_std_error) ? stderr : stdout;
+    lgr.streams.back().short_message = short_message;
+    lgr.streams.back().output_level = output_level;
+    lgr.streams.back().flush_level = flush_level;
     return true;
 }
 
 //
 // Log a message
 //
-inline void log_msg(
-    logger* lgr, log_level level, const char* name, const char* msg) {
+inline void log_msg(logger& lgr, log_level level, const std::string& name,
+    const std::string& msg) {
     // type string
     static const char* types[] = {"VERB", "INFO", "WARN", "ERRN"};
     const char* type = types[std::max(0, std::min(3, (int)level + 1))];
 
-    for (auto&& stream : lgr->streams) {
+    for (auto&& stream : lgr.streams) {
         if (level < stream.output_level) continue;
         if (stream.short_message) {
             // time string
@@ -1568,7 +1587,7 @@ inline void log_msg(
             strftime(time_buf, 1024, "%H:%M:%S", ttm);
 
             // output message
-            fprintf(stream.file, "%s %s %s\n", time_buf, type, msg);
+            fprintf(stream.file, "%s %s %s\n", time_buf, type, msg.c_str());
         } else {
             // time string
             char time_buf[1024];
@@ -1577,11 +1596,11 @@ inline void log_msg(
             strftime(time_buf, 1024, "%Y-%m-%d %H:%M:%S", ttm);
 
             // name
-            auto rname = (name == nullptr || name[0] == 0) ? name : lgr->name;
+            auto rname = (name == "") ? lgr.name : name;
 
             // output message
             fprintf(stream.file, "%s %s %4x %-16s %s\n", time_buf, type,
-                stream.guid, rname.c_str(), msg);
+                stream.guid, rname.c_str(), msg.c_str());
         }
 
         // flush if needed

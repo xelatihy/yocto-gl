@@ -134,7 +134,7 @@ scene* make_scene();
 /// - Parameters:
 ///     - scn: scene to free
 ///
-void free_scene(scene* scn);
+void free_scene(scene*& scn);
 
 ///
 /// Add shape

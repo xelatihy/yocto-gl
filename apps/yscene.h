@@ -41,6 +41,8 @@
 #include "../yocto/yocto_gui.h"
 #endif
 
+using yu::logging::log_info;
+
 // ---------------------------------------------------------------------------
 // SCENE (OBJ or GLTF) AND APPLICATION PARAMETERS
 // ---------------------------------------------------------------------------
@@ -955,7 +957,7 @@ void draw_elem_widgets(ygui::window* win, yobj::scene* oscn, yobj::texture* txt,
 
     ygui::separator_widget(win);
     ygui::label_widget(win, "path", txt->path);
-    auto size = yu::string::format("%d x %d @ 4 %s", txt->width(),
+    auto size = yu::string::formatf("%d x %d @ 4 %s", txt->width(),
         txt->height(), (txt->ldr) ? "byte" : "float");
     ygui::label_widget(win, "size", size);
     ygui::image_widget(
@@ -1252,8 +1254,8 @@ void draw_elem_widgets(ygui::window* win, ygltf::scene_group* gscn,
 
     ygui::separator_widget(win);
     ygui::label_widget(win, "path", txt->path);
-    auto str = yu::string::format("%d x %d @ 4 %s", txt->width(), txt->height(),
-        (txt->ldr) ? "byte" : "float");
+    auto str = yu::string::formatf("%d x %d @ 4 %s", txt->width(),
+        txt->height(), (txt->ldr) ? "byte" : "float");
     ygui::label_widget(win, "size", str);
     if (state->txt.find(txt) != state->txt.end()) {
         ygui::image_widget(

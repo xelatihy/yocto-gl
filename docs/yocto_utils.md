@@ -63,7 +63,7 @@ illustreates the library usage.
 
 ## History
 
-- v 0.22: seimpler logging
+- v 0.22: simpler logging
 - v 0.21: move to header-only mode
 - v 0.20: simpler logging
 - v 0.19: some containers ops
@@ -106,7 +106,7 @@ Command line parser.
 ### Function make_parser()
 
 ~~~ .cpp
-inline parser* make_parser(const std::vector<std::string>& args,
+inline parser make_parser(const std::vector<std::string>& args,
     const std::string& name = "", const std::string& help = "");
 ~~~
 
@@ -115,8 +115,8 @@ Inits a command line parser.
 ### Function make_parser()
 
 ~~~ .cpp
-inline parser* make_parser(
-    int argc, char* argv[], const char* name, const char* help);
+inline parser make_parser(
+    int argc, char* argv[], const std::string& name, const std::string& help);
 ~~~
 
 Inits a command line parser.
@@ -124,7 +124,7 @@ Inits a command line parser.
 ### Function check_parser()
 
 ~~~ .cpp
-inline bool check_parser(parser* prs);
+inline bool check_parser(parser& par);
 ~~~
 
 Ends parsing checking for error for unused options or arguments.
@@ -133,7 +133,7 @@ Exit if needed.
 ### Function parse_flag()
 
 ~~~ .cpp
-inline bool parse_flag(parser* par, const std::string& longname,
+inline bool parse_flag(parser& par, const std::string& longname,
     const std::string& shortname, const std::string& help, bool def = false);
 ~~~
 
@@ -143,7 +143,7 @@ Parses an optional flag as described in the intro.
 
 ~~~ .cpp
 template <typename T>
-inline T parse_opt(parser* par, const std::string& longname,
+inline T parse_opt(parser& par, const std::string& longname,
     const std::string& shortname, const std::string& help, const T& def,
     bool required = false, const std::vector<T>& choices =;
 ~~~
@@ -153,7 +153,7 @@ Parses an option as described in the intro.
 ### Function parse_opts()
 
 ~~~ .cpp
-inline std::string parse_opts(parser* par, const std::string& longname,
+inline std::string parse_opts(parser& par, const std::string& longname,
     const std::string& shortname, const std::string& help,
     const std::string& def, bool required = false,
     const std::vector<std::string>& choices =;
@@ -164,7 +164,7 @@ Specialization of parse_opt()
 ### Function parse_opti()
 
 ~~~ .cpp
-inline int parse_opti(parser* par, const std::string& longname,
+inline int parse_opti(parser& par, const std::string& longname,
     const std::string& shortname, const std::string& help, int def,
     bool required = false, const std::vector<int>& choices =;
 ~~~
@@ -174,7 +174,7 @@ Specialization of parse_opt()
 ### Function parse_optf()
 
 ~~~ .cpp
-inline float parse_optf(parser* par, const std::string& longname,
+inline float parse_optf(parser& par, const std::string& longname,
     const std::string& shortname, const std::string& help, float def,
     bool required = false, const std::vector<float>& choices =;
 ~~~
@@ -184,7 +184,7 @@ Specialization of parse_opt()
 ### Function parse_optd()
 
 ~~~ .cpp
-inline double parse_optd(parser* par, const std::string& longname,
+inline double parse_optd(parser& par, const std::string& longname,
     const std::string& shortname, const std::string& help, double def,
     bool required = false, const std::vector<double>& choices =;
 ~~~
@@ -194,7 +194,7 @@ Specialization of parse_opt()
 ### Function parse_opte()
 
 ~~~ .cpp
-inline int parse_opte(parser* par, const std::string& longname,
+inline int parse_opte(parser& par, const std::string& longname,
     const std::string& shortname, const std::string& help, int def,
     const std::vector<std::pair<std::string, int>>& vals,
     bool required = false);
@@ -206,7 +206,7 @@ Parses an option enum as described in the intro.
 
 ~~~ .cpp
 template <typename T>
-inline T parse_opte(parser* par, const std::string& longname,
+inline T parse_opte(parser& par, const std::string& longname,
     const std::string& shortname, const std::string& help, T def,
     const std::vector<std::pair<std::string, T>>& vals, bool required = false);
 ~~~
@@ -217,7 +217,7 @@ Parses an option enum as described in the intro.
 
 ~~~ .cpp
 template <typename T>
-inline T parse_opta(parser* par, const std::string& longname,
+inline T parse_opta(parser& par, const std::string& longname,
     const std::string& shortname, const std::string& help, const T& def,
     int nargs, bool required = false, const std::vector<T>& choices =;
 ~~~
@@ -228,7 +228,7 @@ Parses an option array as described in the intro.
 
 ~~~ .cpp
 template <typename T>
-inline T parse_arg(parser* par, const std::string& longname,
+inline T parse_arg(parser& par, const std::string& longname,
     const std::string& help, const T& def, bool required = false,
     const std::vector<T>& choices =;
 ~~~
@@ -238,7 +238,7 @@ Parses an argument as described in the intro.
 ### Function parse_args()
 
 ~~~ .cpp
-inline std::string parse_args(parser* par, const std::string& longname,
+inline std::string parse_args(parser& par, const std::string& longname,
     const std::string& help, const std::string& def, bool required = false,
     const std::vector<std::string>& choices =;
 ~~~
@@ -248,7 +248,7 @@ Specialization of parse_arg()
 ### Function parse_argi()
 
 ~~~ .cpp
-inline int parse_argi(parser* par, const std::string& longname,
+inline int parse_argi(parser& par, const std::string& longname,
     const std::string& help, int def, bool required = false,
     const std::vector<int>& choices =;
 ~~~
@@ -258,7 +258,7 @@ Specialization of parse_arg()
 ### Function parse_argf()
 
 ~~~ .cpp
-inline float parse_argf(parser* par, const std::string& longname,
+inline float parse_argf(parser& par, const std::string& longname,
     const std::string& help, float def, bool required = false,
     const std::vector<float>& choices =;
 ~~~
@@ -268,7 +268,7 @@ Specialization of parse_arg()
 ### Function parse_argd()
 
 ~~~ .cpp
-inline double parse_argd(parser* par, const std::string& longname,
+inline double parse_argd(parser& par, const std::string& longname,
     const std::string& help, double def, bool required = false,
     const std::vector<double>& choices =;
 ~~~
@@ -279,7 +279,7 @@ Specialization of parse_arg()
 
 ~~~ .cpp
 template <typename T>
-inline std::vector<T> parse_arga(parser* par, const std::string& longname,
+inline std::vector<T> parse_arga(parser& par, const std::string& longname,
     const std::string& help, const std::vector<T>& def, int nargs = -1,
     bool required = false, const std::vector<T>& choices =;
 ~~~
@@ -289,7 +289,7 @@ Parses an argument array as described in the intro.
 ### Function parse_argas()
 
 ~~~ .cpp
-inline std::vector<std::string> parse_argas(parser* par,
+inline std::vector<std::string> parse_argas(parser& par,
     const std::string& longname, const std::string& help,
     const std::vector<std::string>& def, int nargs = -1, bool required = false,
     const std::vector<std::string>& choices =;
@@ -520,11 +520,11 @@ inline std::string replace(
 
 Replace s1 with s2 in str.
 
-### Function format()
+### Function formatf()
 
 ~~~ .cpp
 template <typename... Args>
-inline std::string format(const char* fmt, Args&&... args);
+inline std::string formatf(const std::string& fmt, const Args&... args);
 ~~~
 
 C-like string formatting. This is only meant for short strings with max
@@ -662,7 +662,8 @@ Use add streams commands for it.
 ### Function make_logger()
 
 ~~~ .cpp
-inline logger* make_logger(const char* name, bool add_console_stream = false);
+inline logger make_logger(
+    const std::string& name, bool add_console_stream = false);
 ~~~
 
 Make a logger with an optional console stream.
@@ -670,23 +671,15 @@ Make a logger with an optional console stream.
 ### Function set_logger_name()
 
 ~~~ .cpp
-inline void set_logger_name(logger* lgr, const char* name);
+inline void set_logger_name(logger& lgr, const std::string& name);
 ~~~
 
 Set logger default name
 
-### Function free_logger()
-
-~~~ .cpp
-inline void free_logger(logger*& lgr);
-~~~
-
-Free logger
-
 ### Function add_file_stream()
 
 ~~~ .cpp
-inline bool add_file_stream(logger* lgr, const std::string& filename,
+inline bool add_file_stream(logger& lgr, const std::string& filename,
     bool append, bool short_message = false,
     log_level output_level = log_level::info,
     log_level flush_level = log_level::info);
@@ -707,7 +700,7 @@ Add a file stream to a logger.
 ### Function add_console_stream()
 
 ~~~ .cpp
-inline bool add_console_stream(logger* lgr, bool use_std_error = false,
+inline bool add_console_stream(logger& lgr, bool use_std_error = false,
     bool short_message = true, log_level output_level = log_level::info,
     log_level flush_level = log_level::info);
 ~~~
@@ -727,7 +720,7 @@ Add a console stream to a logger.
 ### Function get_default_logger()
 
 ~~~ .cpp
-inline logger* get_default_logger();
+inline logger& get_default_logger();
 ~~~
 
 Get default logger.
@@ -736,7 +729,7 @@ By default a non-verbose stdout logger is creater.
 ### Function set_logger_name()
 
 ~~~ .cpp
-inline void set_logger_name(const char* name);
+inline void set_logger_name(const std::string& name);
 ~~~
 
 Set default logger name
@@ -754,8 +747,8 @@ Add a file logger to the default loggers.
 ### Function log_msg()
 
 ~~~ .cpp
-inline void log_msg(
-    logger* lgr, log_level level, const char* name, const char* msg);
+inline void log_msg(logger& lgr, log_level level, const std::string& name,
+    const std::string& msg);
 ~~~
 
 Log a message
@@ -770,8 +763,8 @@ Log a message
 
 ~~~ .cpp
 template <typename... Args>
-inline void log_msg(logger* lgr, log_level level, const char* name,
-    const char* msg, const Args&... args);
+inline void log_msg(logger& lgr, log_level level, const std::string& name,
+    const std::string& msg, const Args&... args);
 ~~~
 
 Log a message formatted ala printf.
@@ -786,8 +779,8 @@ Log a message formatted ala printf.
 
 ~~~ .cpp
 template <typename... Args>
-inline void log_msg(
-    log_level level, const char* name, const char* msg, const Args&... args);
+inline void log_msg(log_level level, const char* name, const std::string& msg,
+    const Args&... args);
 ~~~
 
 Logs a message to the default loggers
@@ -796,7 +789,7 @@ Logs a message to the default loggers
 
 ~~~ .cpp
 template <typename... Args>
-inline void log_info(const char* msg, const Args&... args);
+inline void log_info(const std::string& msg, const Args&... args);
 ~~~
 
 Logs a message to the default loggers
@@ -805,7 +798,7 @@ Logs a message to the default loggers
 
 ~~~ .cpp
 template <typename... Args>
-inline void log_error(const char* msg, const Args&... args);
+inline void log_error(const std::string& msg, const Args&... args);
 ~~~
 
 Logs a message to the default loggers
@@ -814,10 +807,27 @@ Logs a message to the default loggers
 
 ~~~ .cpp
 template <typename... Args>
-inline void log_fatal(const char* msg, const Args&... args);
+inline void log_fatal(const std::string& msg, const Args&... args);
 ~~~
 
 Logs a message to the default loggers
+
+### Struct log_timer }
+
+~~~ .cpp
+struct log_timer {};
+~~~
+
+Timer for logging
+
+### Function log_timed()
+
+~~~ .cpp
+template <typename... Args>
+inline log_timer log_timed(const std::string& msg, const Args&... args);
+~~~
+
+Log a message and start a timer
 
 ## Namespace concurrent
 
@@ -926,6 +936,8 @@ struct timer {
     void start(); 
     void stop(); 
     double elapsed(); 
+    std::string name;
+    std::vector<logger_stream> streams;
 }
 ~~~
 
@@ -936,5 +948,7 @@ A simple wrapper for std::chrono.
     - start():      start a timer
     - stop():      stops a timer
     - elapsed():      elapsed time
+    - name:      name
+    - streams:      streams
 
 

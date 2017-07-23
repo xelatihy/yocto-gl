@@ -3182,6 +3182,105 @@ inline float next1f(rng_pcg32* rng) {
 inline vec2f next2f(rng_pcg32* rng) { return {next1f(rng), next1f(rng)}; }
 
 // -----------------------------------------------------------------------------
+// MONETACARLO SAMPLING FUNCTIONS
+// -----------------------------------------------------------------------------
+
+/// sample hemispherical direction with uniform distribution
+inline vec3f sample_hemisphere(const vec2f& ruv) {
+    auto z = ruv.y;
+    auto r = sqrt(1 - z * z);
+    auto phi = 2 * pi * ruv.x;
+    return vec3f(r * cos(phi), r * sin(phi), z);
+}
+
+/// pdf for hemispherical direction with uniform distribution
+inline float sample_hemisphere_pdf(const vec3f& w) {
+    return (w.z <= 0) ? 0 : 1 / (2 * pi);
+}
+
+/// spherical direction with uniform distribution
+inline vec3f sample_sphere(const vec2f ruv) {
+    auto z = 2 * ruv.y - 1;
+    auto r = sqrt(1 - z * z);
+    auto phi = 2 * pi * ruv.x;
+    return vec3f(r * cos(phi), r * sin(phi), z);
+}
+
+/// pdf for spherical direction with uniform distribution
+inline float sample_sphere_pdf(const vec3f& w) { return 1 / (4 * pi); }
+
+/// hemispherical direction with cosine distribution
+inline vec3f sample_hemisphere_cosine(const vec2f& ruv) {
+    auto z = sqrt(ruv.y);
+    auto r = sqrt(1 - z * z);
+    auto phi = 2 * pi * ruv.x;
+    return vec3f(r * cos(phi), r * sin(phi), z);
+}
+
+/// pdf for hemispherical direction with cosine distribution
+inline float sample_hemisphere_cosine_pdf(const vec3f& w) {
+    return (w.z <= 0) ? 0 : w.z / pi;
+}
+
+/// hemispherical direction with cosine power distribution
+inline vec3f sample_hemisphere_cospower(const vec2f& ruv, float n) {
+    auto z = pow(ruv.y, 1 / (n + 1));
+    auto r = sqrt(1 - z * z);
+    auto phi = 2 * pi * ruv.x;
+    return vec3f(r * cos(phi), r * sin(phi), z);
+}
+
+/// pdf for hemispherical direction with cosine power distribution
+inline float sample_hemisphere_cospower_pdf(const vec3f& w, float n) {
+    return (w.z <= 0) ? 0 : pow(w.z, n) * (n + 1) / (2 * pi);
+}
+
+/// uniform disk
+inline vec3f sample_disk(const vec2f& ruv) {
+    auto r = sqrt(ruv.y);
+    auto phi = 2 * pi * ruv.x;
+    return vec3f(cos(phi) * r, sin(phi) * r, 0);
+}
+
+/// pdf for uniform disk
+inline float sample_disk_pdf() { return 1 / pi; }
+
+/// uniform cylinder
+inline vec3f sample_cylinder(const vec2f& ruv) {
+    auto phi = 2 * pi * ruv.x;
+    return vec3f(sin(phi), cos(phi), ruv.y * 2 - 1);
+}
+
+/// pdf for uniform cylinder
+inline float sample_cylinder_pdf() { return 1 / pi; }
+
+/// uniform triangle
+inline vec2f sample_triangle(const vec2f& ruv) {
+    return {1 - sqrt(ruv.x), ruv.y * sqrt(ruv.x)};
+}
+
+/// uniform triangle
+inline vec3f sample_triangle(
+    const vec2f& ruv, const vec3f& v0, const vec3f& v1, const vec3f& v2) {
+    auto uv = sample_triangle(ruv);
+    return v0 * uv.x + v1 * uv.y + v2 * (1 - uv.x - uv.y);
+}
+
+/// pdf for uniform triangle (triangle area)
+inline float sample_triangle_pdf(
+    const vec3f& v0, const vec3f& v1, const vec3f& v2) {
+    return 2 / length(cross(v1 - v0, v2 - v0));
+}
+
+/// index with uniform distribution
+inline int sample_index(float r, int size) {
+    return clamp((int)(r * size), 0, size - 1);
+}
+
+/// pdf for index with uniform distribution
+inline float sample_index_pdf(int size) { return 1.0f / size; }
+
+// -----------------------------------------------------------------------------
 // HASHING
 // -----------------------------------------------------------------------------
 

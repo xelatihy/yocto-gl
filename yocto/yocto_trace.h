@@ -80,6 +80,7 @@
 ///
 /// ## History
 ///
+/// - v 0.24: corrected transaprency bug
 /// - v 0.23: simpler logging
 /// - v 0.22: added additional buffers
 /// - v 0.21: added filters
@@ -168,7 +169,7 @@ scene* make_scene();
 ///
 /// Free scene.
 ///
-void free_scene(scene* scn);
+void free_scene(scene*& scn);
 
 ///
 /// Adds a camera in the scene.

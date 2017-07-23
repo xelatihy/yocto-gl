@@ -83,7 +83,7 @@ illustreates the library usage.</p>
 </ol>
 <h2>History</h2>
 <ul>
-<li>v 0.22: seimpler logging</li>
+<li>v 0.22: simpler logging</li>
 <li>v 0.21: move to header-only mode</li>
 <li>v 0.20: simpler logging</li>
 <li>v 0.19: some containers ops</li>
@@ -118,28 +118,28 @@ illustreates the library usage.</p>
 
 <p>Command line parser.</p>
 <h3>Function make_parser()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">parser</span><span class="o">*</span> <span class="nf">make_parser</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;&amp;</span> <span class="n">args</span><span class="p">,</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">parser</span> <span class="nf">make_parser</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;&amp;</span> <span class="n">args</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">help</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Inits a command line parser.</p>
 <h3>Function make_parser()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">parser</span><span class="o">*</span> <span class="nf">make_parser</span><span class="p">(</span>
-    <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span><span class="o">*</span> <span class="n">argv</span><span class="p">[],</span> <span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">name</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">help</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">parser</span> <span class="nf">make_parser</span><span class="p">(</span>
+    <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span><span class="o">*</span> <span class="n">argv</span><span class="p">[],</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">name</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">help</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Inits a command line parser.</p>
 <h3>Function check_parser()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">check_parser</span><span class="p">(</span><span class="n">parser</span><span class="o">*</span> <span class="n">prs</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">check_parser</span><span class="p">(</span><span class="n">parser</span><span class="o">&amp;</span> <span class="n">par</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Ends parsing checking for error for unused options or arguments.
 Exit if needed.</p>
 <h3>Function parse_flag()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">parse_flag</span><span class="p">(</span><span class="n">parser</span><span class="o">*</span> <span class="n">par</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">longname</span><span class="p">,</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">parse_flag</span><span class="p">(</span><span class="n">parser</span><span class="o">&amp;</span> <span class="n">par</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">longname</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">shortname</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">help</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">def</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
 </code></pre></div>
 
@@ -147,7 +147,7 @@ Exit if needed.</p>
 <p>Parses an optional flag as described in the intro.</p>
 <h3>Function parse_opt()</h3>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="n">T</span> <span class="n">parse_opt</span><span class="p">(</span><span class="n">parser</span><span class="o">*</span> <span class="n">par</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">longname</span><span class="p">,</span>
+<span class="kr">inline</span> <span class="n">T</span> <span class="n">parse_opt</span><span class="p">(</span><span class="n">parser</span><span class="o">&amp;</span> <span class="n">par</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">longname</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">shortname</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">help</span><span class="p">,</span> <span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">def</span><span class="p">,</span>
     <span class="kt">bool</span> <span class="n">required</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">choices</span> <span class="o">=</span><span class="p">;</span>
 </code></pre></div>
@@ -155,7 +155,7 @@ Exit if needed.</p>
 
 <p>Parses an option as described in the intro.</p>
 <h3>Function parse_opts()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">parse_opts</span><span class="p">(</span><span class="n">parser</span><span class="o">*</span> <span class="n">par</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">longname</span><span class="p">,</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">parse_opts</span><span class="p">(</span><span class="n">parser</span><span class="o">&amp;</span> <span class="n">par</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">longname</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">shortname</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">help</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">def</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">required</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;&amp;</span> <span class="n">choices</span> <span class="o">=</span><span class="p">;</span>
@@ -164,7 +164,7 @@ Exit if needed.</p>
 
 <p>Specialization of parse_opt()</p>
 <h3>Function parse_opti()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">int</span> <span class="n">parse_opti</span><span class="p">(</span><span class="n">parser</span><span class="o">*</span> <span class="n">par</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">longname</span><span class="p">,</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">int</span> <span class="n">parse_opti</span><span class="p">(</span><span class="n">parser</span><span class="o">&amp;</span> <span class="n">par</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">longname</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">shortname</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">help</span><span class="p">,</span> <span class="kt">int</span> <span class="n">def</span><span class="p">,</span>
     <span class="kt">bool</span> <span class="n">required</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;&amp;</span> <span class="n">choices</span> <span class="o">=</span><span class="p">;</span>
 </code></pre></div>
@@ -172,7 +172,7 @@ Exit if needed.</p>
 
 <p>Specialization of parse_opt()</p>
 <h3>Function parse_optf()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">float</span> <span class="n">parse_optf</span><span class="p">(</span><span class="n">parser</span><span class="o">*</span> <span class="n">par</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">longname</span><span class="p">,</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">float</span> <span class="n">parse_optf</span><span class="p">(</span><span class="n">parser</span><span class="o">&amp;</span> <span class="n">par</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">longname</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">shortname</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">help</span><span class="p">,</span> <span class="kt">float</span> <span class="n">def</span><span class="p">,</span>
     <span class="kt">bool</span> <span class="n">required</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;&amp;</span> <span class="n">choices</span> <span class="o">=</span><span class="p">;</span>
 </code></pre></div>
@@ -180,7 +180,7 @@ Exit if needed.</p>
 
 <p>Specialization of parse_opt()</p>
 <h3>Function parse_optd()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">double</span> <span class="n">parse_optd</span><span class="p">(</span><span class="n">parser</span><span class="o">*</span> <span class="n">par</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">longname</span><span class="p">,</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">double</span> <span class="n">parse_optd</span><span class="p">(</span><span class="n">parser</span><span class="o">&amp;</span> <span class="n">par</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">longname</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">shortname</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">help</span><span class="p">,</span> <span class="kt">double</span> <span class="n">def</span><span class="p">,</span>
     <span class="kt">bool</span> <span class="n">required</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">double</span><span class="o">&gt;&amp;</span> <span class="n">choices</span> <span class="o">=</span><span class="p">;</span>
 </code></pre></div>
@@ -188,7 +188,7 @@ Exit if needed.</p>
 
 <p>Specialization of parse_opt()</p>
 <h3>Function parse_opte()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">int</span> <span class="nf">parse_opte</span><span class="p">(</span><span class="n">parser</span><span class="o">*</span> <span class="n">par</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">longname</span><span class="p">,</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">int</span> <span class="nf">parse_opte</span><span class="p">(</span><span class="n">parser</span><span class="o">&amp;</span> <span class="n">par</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">longname</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">shortname</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">help</span><span class="p">,</span> <span class="kt">int</span> <span class="n">def</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="kt">int</span><span class="o">&gt;&gt;&amp;</span> <span class="n">vals</span><span class="p">,</span>
     <span class="kt">bool</span> <span class="n">required</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
@@ -198,7 +198,7 @@ Exit if needed.</p>
 <p>Parses an option enum as described in the intro.</p>
 <h3>Function parse_opte()</h3>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="n">T</span> <span class="n">parse_opte</span><span class="p">(</span><span class="n">parser</span><span class="o">*</span> <span class="n">par</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">longname</span><span class="p">,</span>
+<span class="kr">inline</span> <span class="n">T</span> <span class="n">parse_opte</span><span class="p">(</span><span class="n">parser</span><span class="o">&amp;</span> <span class="n">par</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">longname</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">shortname</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">help</span><span class="p">,</span> <span class="n">T</span> <span class="n">def</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="n">T</span><span class="o">&gt;&gt;&amp;</span> <span class="n">vals</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">required</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
 </code></pre></div>
@@ -207,7 +207,7 @@ Exit if needed.</p>
 <p>Parses an option enum as described in the intro.</p>
 <h3>Function parse_opta()</h3>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="n">T</span> <span class="n">parse_opta</span><span class="p">(</span><span class="n">parser</span><span class="o">*</span> <span class="n">par</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">longname</span><span class="p">,</span>
+<span class="kr">inline</span> <span class="n">T</span> <span class="n">parse_opta</span><span class="p">(</span><span class="n">parser</span><span class="o">&amp;</span> <span class="n">par</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">longname</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">shortname</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">help</span><span class="p">,</span> <span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">def</span><span class="p">,</span>
     <span class="kt">int</span> <span class="n">nargs</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">required</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">choices</span> <span class="o">=</span><span class="p">;</span>
 </code></pre></div>
@@ -216,7 +216,7 @@ Exit if needed.</p>
 <p>Parses an option array as described in the intro.</p>
 <h3>Function parse_arg()</h3>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="n">T</span> <span class="n">parse_arg</span><span class="p">(</span><span class="n">parser</span><span class="o">*</span> <span class="n">par</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">longname</span><span class="p">,</span>
+<span class="kr">inline</span> <span class="n">T</span> <span class="n">parse_arg</span><span class="p">(</span><span class="n">parser</span><span class="o">&amp;</span> <span class="n">par</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">longname</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">help</span><span class="p">,</span> <span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">def</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">required</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">choices</span> <span class="o">=</span><span class="p">;</span>
 </code></pre></div>
@@ -224,7 +224,7 @@ Exit if needed.</p>
 
 <p>Parses an argument as described in the intro.</p>
 <h3>Function parse_args()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">parse_args</span><span class="p">(</span><span class="n">parser</span><span class="o">*</span> <span class="n">par</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">longname</span><span class="p">,</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">parse_args</span><span class="p">(</span><span class="n">parser</span><span class="o">&amp;</span> <span class="n">par</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">longname</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">help</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">def</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">required</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;&amp;</span> <span class="n">choices</span> <span class="o">=</span><span class="p">;</span>
 </code></pre></div>
@@ -232,7 +232,7 @@ Exit if needed.</p>
 
 <p>Specialization of parse_arg()</p>
 <h3>Function parse_argi()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">int</span> <span class="n">parse_argi</span><span class="p">(</span><span class="n">parser</span><span class="o">*</span> <span class="n">par</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">longname</span><span class="p">,</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">int</span> <span class="n">parse_argi</span><span class="p">(</span><span class="n">parser</span><span class="o">&amp;</span> <span class="n">par</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">longname</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">help</span><span class="p">,</span> <span class="kt">int</span> <span class="n">def</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">required</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;&amp;</span> <span class="n">choices</span> <span class="o">=</span><span class="p">;</span>
 </code></pre></div>
@@ -240,7 +240,7 @@ Exit if needed.</p>
 
 <p>Specialization of parse_arg()</p>
 <h3>Function parse_argf()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">float</span> <span class="n">parse_argf</span><span class="p">(</span><span class="n">parser</span><span class="o">*</span> <span class="n">par</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">longname</span><span class="p">,</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">float</span> <span class="n">parse_argf</span><span class="p">(</span><span class="n">parser</span><span class="o">&amp;</span> <span class="n">par</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">longname</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">help</span><span class="p">,</span> <span class="kt">float</span> <span class="n">def</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">required</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;&amp;</span> <span class="n">choices</span> <span class="o">=</span><span class="p">;</span>
 </code></pre></div>
@@ -248,7 +248,7 @@ Exit if needed.</p>
 
 <p>Specialization of parse_arg()</p>
 <h3>Function parse_argd()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">double</span> <span class="n">parse_argd</span><span class="p">(</span><span class="n">parser</span><span class="o">*</span> <span class="n">par</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">longname</span><span class="p">,</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">double</span> <span class="n">parse_argd</span><span class="p">(</span><span class="n">parser</span><span class="o">&amp;</span> <span class="n">par</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">longname</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">help</span><span class="p">,</span> <span class="kt">double</span> <span class="n">def</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">required</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">double</span><span class="o">&gt;&amp;</span> <span class="n">choices</span> <span class="o">=</span><span class="p">;</span>
 </code></pre></div>
@@ -257,7 +257,7 @@ Exit if needed.</p>
 <p>Specialization of parse_arg()</p>
 <h3>Function parse_arga()</h3>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="n">parse_arga</span><span class="p">(</span><span class="n">parser</span><span class="o">*</span> <span class="n">par</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">longname</span><span class="p">,</span>
+<span class="kr">inline</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="n">parse_arga</span><span class="p">(</span><span class="n">parser</span><span class="o">&amp;</span> <span class="n">par</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">longname</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">help</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">def</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nargs</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
     <span class="kt">bool</span> <span class="n">required</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">choices</span> <span class="o">=</span><span class="p">;</span>
 </code></pre></div>
@@ -265,7 +265,7 @@ Exit if needed.</p>
 
 <p>Parses an argument array as described in the intro.</p>
 <h3>Function parse_argas()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span> <span class="n">parse_argas</span><span class="p">(</span><span class="n">parser</span><span class="o">*</span> <span class="n">par</span><span class="p">,</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;</span> <span class="n">parse_argas</span><span class="p">(</span><span class="n">parser</span><span class="o">&amp;</span> <span class="n">par</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">longname</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">help</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;&amp;</span> <span class="n">def</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nargs</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">required</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&gt;&amp;</span> <span class="n">choices</span> <span class="o">=</span><span class="p">;</span>
@@ -440,9 +440,9 @@ Window if keep_newline is true.</p>
 
 
 <p>Replace s1 with s2 in str.</p>
-<h3>Function format()</h3>
+<h3>Function formatf()</h3>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span><span class="p">...</span> <span class="n">Args</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">format</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">fmt</span><span class="p">,</span> <span class="n">Args</span><span class="o">&amp;&amp;</span><span class="p">...</span> <span class="n">args</span><span class="p">);</span>
+<span class="kr">inline</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">formatf</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">fmt</span><span class="p">,</span> <span class="k">const</span> <span class="n">Args</span><span class="o">&amp;</span><span class="p">...</span> <span class="n">args</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -552,25 +552,20 @@ length 10000 chars. Memory corruption will happen for longer strings.</p>
 <p>Logger object. A logger can output messages to multiple streams.
 Use add streams commands for it.</p>
 <h3>Function make_logger()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">logger</span><span class="o">*</span> <span class="nf">make_logger</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">name</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">add_console_stream</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">logger</span> <span class="nf">make_logger</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">name</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">add_console_stream</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Make a logger with an optional console stream.</p>
 <h3>Function set_logger_name()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">set_logger_name</span><span class="p">(</span><span class="n">logger</span><span class="o">*</span> <span class="n">lgr</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">name</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">set_logger_name</span><span class="p">(</span><span class="n">logger</span><span class="o">&amp;</span> <span class="n">lgr</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">name</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Set logger default name</p>
-<h3>Function free_logger()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">free_logger</span><span class="p">(</span><span class="n">logger</span><span class="o">*&amp;</span> <span class="n">lgr</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Free logger</p>
 <h3>Function add_file_stream()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">add_file_stream</span><span class="p">(</span><span class="n">logger</span><span class="o">*</span> <span class="n">lgr</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">,</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">add_file_stream</span><span class="p">(</span><span class="n">logger</span><span class="o">&amp;</span> <span class="n">lgr</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">,</span>
     <span class="kt">bool</span> <span class="n">append</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">short_message</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span>
     <span class="n">log_level</span> <span class="n">output_level</span> <span class="o">=</span> <span class="n">log_level</span><span class="o">::</span><span class="n">info</span><span class="p">,</span>
     <span class="n">log_level</span> <span class="n">flush_level</span> <span class="o">=</span> <span class="n">log_level</span><span class="o">::</span><span class="n">info</span><span class="p">);</span>
@@ -594,7 +589,7 @@ Use add streams commands for it.</p>
 </li>
 </ul>
 <h3>Function add_console_stream()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">add_console_stream</span><span class="p">(</span><span class="n">logger</span><span class="o">*</span> <span class="n">lgr</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">use_std_error</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">add_console_stream</span><span class="p">(</span><span class="n">logger</span><span class="o">&amp;</span> <span class="n">lgr</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">use_std_error</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span>
     <span class="kt">bool</span> <span class="n">short_message</span> <span class="o">=</span> <span class="nb">true</span><span class="p">,</span> <span class="n">log_level</span> <span class="n">output_level</span> <span class="o">=</span> <span class="n">log_level</span><span class="o">::</span><span class="n">info</span><span class="p">,</span>
     <span class="n">log_level</span> <span class="n">flush_level</span> <span class="o">=</span> <span class="n">log_level</span><span class="o">::</span><span class="n">info</span><span class="p">);</span>
 </code></pre></div>
@@ -617,14 +612,14 @@ Use add streams commands for it.</p>
 </li>
 </ul>
 <h3>Function get_default_logger()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">logger</span><span class="o">*</span> <span class="nf">get_default_logger</span><span class="p">();</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">logger</span><span class="o">&amp;</span> <span class="n">get_default_logger</span><span class="p">();</span>
 </code></pre></div>
 
 
 <p>Get default logger.
 By default a non-verbose stdout logger is creater.</p>
 <h3>Function set_logger_name()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">set_logger_name</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">name</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">set_logger_name</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">name</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -638,8 +633,8 @@ By default a non-verbose stdout logger is creater.</p>
 
 <p>Add a file logger to the default loggers.</p>
 <h3>Function log_msg()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">log_msg</span><span class="p">(</span>
-    <span class="n">logger</span><span class="o">*</span> <span class="n">lgr</span><span class="p">,</span> <span class="n">log_level</span> <span class="n">level</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">name</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">msg</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">log_msg</span><span class="p">(</span><span class="n">logger</span><span class="o">&amp;</span> <span class="n">lgr</span><span class="p">,</span> <span class="n">log_level</span> <span class="n">level</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">name</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">msg</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -655,8 +650,8 @@ By default a non-verbose stdout logger is creater.</p>
 </ul>
 <h3>Function log_msg()</h3>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span><span class="p">...</span> <span class="n">Args</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="kt">void</span> <span class="n">log_msg</span><span class="p">(</span><span class="n">logger</span><span class="o">*</span> <span class="n">lgr</span><span class="p">,</span> <span class="n">log_level</span> <span class="n">level</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">name</span><span class="p">,</span>
-    <span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">msg</span><span class="p">,</span> <span class="k">const</span> <span class="n">Args</span><span class="o">&amp;</span><span class="p">...</span> <span class="n">args</span><span class="p">);</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">log_msg</span><span class="p">(</span><span class="n">logger</span><span class="o">&amp;</span> <span class="n">lgr</span><span class="p">,</span> <span class="n">log_level</span> <span class="n">level</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">name</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">msg</span><span class="p">,</span> <span class="k">const</span> <span class="n">Args</span><span class="o">&amp;</span><span class="p">...</span> <span class="n">args</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -672,33 +667,46 @@ By default a non-verbose stdout logger is creater.</p>
 </ul>
 <h3>Function log_msg()</h3>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span><span class="p">...</span> <span class="n">Args</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="kt">void</span> <span class="n">log_msg</span><span class="p">(</span>
-    <span class="n">log_level</span> <span class="n">level</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">name</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">msg</span><span class="p">,</span> <span class="k">const</span> <span class="n">Args</span><span class="o">&amp;</span><span class="p">...</span> <span class="n">args</span><span class="p">);</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">log_msg</span><span class="p">(</span><span class="n">log_level</span> <span class="n">level</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">name</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">msg</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">Args</span><span class="o">&amp;</span><span class="p">...</span> <span class="n">args</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Logs a message to the default loggers</p>
 <h3>Function log_info()</h3>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span><span class="p">...</span> <span class="n">Args</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="kt">void</span> <span class="n">log_info</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">msg</span><span class="p">,</span> <span class="k">const</span> <span class="n">Args</span><span class="o">&amp;</span><span class="p">...</span> <span class="n">args</span><span class="p">);</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">log_info</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">msg</span><span class="p">,</span> <span class="k">const</span> <span class="n">Args</span><span class="o">&amp;</span><span class="p">...</span> <span class="n">args</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Logs a message to the default loggers</p>
 <h3>Function log_error()</h3>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span><span class="p">...</span> <span class="n">Args</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="kt">void</span> <span class="n">log_error</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">msg</span><span class="p">,</span> <span class="k">const</span> <span class="n">Args</span><span class="o">&amp;</span><span class="p">...</span> <span class="n">args</span><span class="p">);</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">log_error</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">msg</span><span class="p">,</span> <span class="k">const</span> <span class="n">Args</span><span class="o">&amp;</span><span class="p">...</span> <span class="n">args</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Logs a message to the default loggers</p>
 <h3>Function log_fatal()</h3>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span><span class="p">...</span> <span class="n">Args</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="kt">void</span> <span class="n">log_fatal</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">msg</span><span class="p">,</span> <span class="k">const</span> <span class="n">Args</span><span class="o">&amp;</span><span class="p">...</span> <span class="n">args</span><span class="p">);</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">log_fatal</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">msg</span><span class="p">,</span> <span class="k">const</span> <span class="n">Args</span><span class="o">&amp;</span><span class="p">...</span> <span class="n">args</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Logs a message to the default loggers</p>
+<h3>Struct log_timer }</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">log_timer</span> <span class="p">{};</span>
+</code></pre></div>
+
+
+<p>Timer for logging</p>
+<h3>Function log_timed()</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span><span class="p">...</span> <span class="n">Args</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="n">log_timer</span> <span class="n">log_timed</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">msg</span><span class="p">,</span> <span class="k">const</span> <span class="n">Args</span><span class="o">&amp;</span><span class="p">...</span> <span class="n">args</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Log a message and start a timer</p>
 <h2>Namespace concurrent</h2>
 <p>Concurrent  and async execution based on a thread pool</p>
 <h3>Struct thread_pool</h3>
@@ -778,6 +786,8 @@ defatul).</p>
     <span class="kt">void</span> <span class="nf">start</span><span class="p">();</span> 
     <span class="kt">void</span> <span class="nf">stop</span><span class="p">();</span> 
     <span class="kt">double</span> <span class="nf">elapsed</span><span class="p">();</span> 
+    <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">name</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">logger_stream</span><span class="o">&gt;</span> <span class="n">streams</span><span class="p">;</span>
 <span class="p">}</span>
 </code></pre></div>
 
@@ -789,6 +799,8 @@ defatul).</p>
 <li>start():      start a timer</li>
 <li>stop():      stops a timer</li>
 <li>elapsed():      elapsed time</li>
+<li>name:      name</li>
+<li>streams:      streams</li>
 </ul>
 </li>
 </ul>

@@ -79,6 +79,7 @@ Disable this by setting YTRACE_NO_BVH.
 
 ## History
 
+- v 0.24: corrected transaprency bug
 - v 0.23: simpler logging
 - v 0.22: added additional buffers
 - v 0.21: added filters
@@ -129,7 +130,7 @@ Initialize the scene with the proper number of objects.
 ### Function free_scene()
 
 ~~~ .cpp
-void free_scene(scene* scn);
+void free_scene(scene*& scn);
 ~~~
 
 Free scene.

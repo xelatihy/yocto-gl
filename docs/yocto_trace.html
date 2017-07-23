@@ -86,6 +86,7 @@ Disable this by setting YTRACE_NO_BVH.</p>
 </ol>
 <h2>History</h2>
 <ul>
+<li>v 0.24: corrected transaprency bug</li>
 <li>v 0.23: simpler logging</li>
 <li>v 0.22: added additional buffers</li>
 <li>v 0.21: added filters</li>
@@ -128,7 +129,7 @@ Disable this by setting YTRACE_NO_BVH.</p>
 
 <p>Initialize the scene with the proper number of objects.</p>
 <h3>Function free_scene()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">free_scene</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">free_scene</span><span class="p">(</span><span class="n">scene</span><span class="o">*&amp;</span> <span class="n">scn</span><span class="p">);</span>
 </code></pre></div>
 
 

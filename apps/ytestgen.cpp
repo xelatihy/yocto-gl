@@ -185,8 +185,9 @@ yobj::texture* add_texture(yobj::scene* scn, const std::string& path) {
 
 yobj::material* add_material(yobj::scene* scn, const std::string& name,
     const ym::vec3f& ke, const ym::vec3f& kd, const ym::vec3f& ks,
-    const ym::vec3f& kt, float rs, yobj::texture* ke_txt, yobj::texture* kd_txt,
-    yobj::texture* ks_txt, yobj::texture* kt_txt, yobj::texture* norm_txt) {
+    const ym::vec3f& kt, float rs, float op, yobj::texture* ke_txt,
+    yobj::texture* kd_txt, yobj::texture* ks_txt, yobj::texture* kt_txt,
+    yobj::texture* norm_txt) {
     for (auto mat : scn->materials)
         if (mat->name == name) return mat;
     scn->materials += new yobj::material();
@@ -197,6 +198,7 @@ yobj::material* add_material(yobj::scene* scn, const std::string& name,
     mat->ks = ks;
     mat->kt = kt;
     mat->rs = rs;
+    mat->opacity = op;
     mat->ke_txt = ke_txt;
     mat->kd_txt = kd_txt;
     mat->ks_txt = ks_txt;
@@ -209,7 +211,7 @@ yobj::material* add_emission(yobj::scene* scn, const std::string& name,
     const ym::vec3f& ke, yobj::texture* txt = nullptr,
     yobj::texture* norm = nullptr) {
     auto mat = add_material(scn, name, ke, ym::zero3f, ym::zero3f, ym::zero3f,
-        0, txt, nullptr, nullptr, nullptr, norm);
+        0, 1, txt, nullptr, nullptr, nullptr, norm);
     mat->unknown_props["PBR_HACK"] = {"emission"};
     return mat;
 }
@@ -218,7 +220,7 @@ yobj::material* add_diffuse(yobj::scene* scn, const std::string& name,
     const ym::vec3f& kd, yobj::texture* txt = nullptr,
     yobj::texture* norm = nullptr) {
     auto mat = add_material(scn, name, ym::zero3f, kd, ym::zero3f, ym::zero3f,
-        0, nullptr, txt, nullptr, nullptr, norm);
+        0, 1, nullptr, txt, nullptr, nullptr, norm);
     mat->unknown_props["PBR_HACK"] = {"diffuse"};
     return mat;
 }
@@ -227,7 +229,7 @@ yobj::material* add_plastic(yobj::scene* scn, const std::string& name,
     const ym::vec3f& kd, float rs, yobj::texture* txt = nullptr,
     yobj::texture* norm = nullptr) {
     auto mat = add_material(scn, name, ym::zero3f, kd, {0.04f, 0.04f, 0.04f},
-        ym::zero3f, rs, nullptr, txt, nullptr, nullptr, norm);
+        ym::zero3f, rs, 1, nullptr, txt, nullptr, nullptr, norm);
     mat->unknown_props["PBR_HACK"] = {"plastic"};
     return mat;
 }
@@ -236,7 +238,7 @@ yobj::material* add_metal(yobj::scene* scn, const std::string& name,
     const ym::vec3f& kd, float rs, yobj::texture* txt = nullptr,
     yobj::texture* norm = nullptr) {
     auto mat = add_material(scn, name, ym::zero3f, ym::zero3f, kd, ym::zero3f,
-        rs, nullptr, nullptr, txt, nullptr, norm);
+        rs, 1, nullptr, nullptr, txt, nullptr, norm);
     mat->unknown_props["PBR_HACK"] = {"metal"};
     return mat;
 }
@@ -245,8 +247,26 @@ yobj::material* add_glass(yobj::scene* scn, const std::string& name,
     const ym::vec3f& kd, float rs, yobj::texture* txt = nullptr,
     yobj::texture* norm = nullptr) {
     auto mat = add_material(scn, name, ym::zero3f, ym::zero3f,
-        {0.04f, 0.04f, 0.04f}, kd, rs, nullptr, nullptr, txt, nullptr, norm);
+        {0.04f, 0.04f, 0.04f}, kd, rs, 1, nullptr, nullptr, txt, nullptr, norm);
     mat->unknown_props["PBR_HACK"] = {"glass"};
+    return mat;
+}
+
+yobj::material* add_transparent_diffuse(yobj::scene* scn,
+    const std::string& name, const ym::vec3f& kd, float op,
+    yobj::texture* txt = nullptr, yobj::texture* norm = nullptr) {
+    auto mat = add_material(scn, name, ym::zero3f, kd, ym::zero3f, ym::zero3f,
+        0, op, nullptr, txt, nullptr, nullptr, norm);
+    mat->unknown_props["PBR_HACK"] = {"diffuse"};
+    return mat;
+}
+
+yobj::material* add_transparent_plastic(yobj::scene* scn,
+    const std::string& name, const ym::vec3f& kd, float rs, float op,
+    yobj::texture* txt = nullptr, yobj::texture* norm = nullptr) {
+    auto mat = add_material(scn, name, ym::zero3f, kd, {0.04f, 0.04f, 0.04f},
+        ym::zero3f, rs, op, nullptr, txt, nullptr, nullptr, norm);
+    mat->unknown_props["PBR_HACK"] = {"plastic"};
     return mat;
 }
 
@@ -932,6 +952,29 @@ yobj::scene* make_simple_scene(
             add_plastic(scn, "obj03", {1, 1, 1}, 0.01f,
                 add_texture(scn, "colored.png"))};
         add_objects(scn, mat);
+    } else if (otype == "transparent") {
+        auto mat = std::vector<yobj::material*>{
+            add_transparent_plastic(scn, "obj01", {1, 1, 1}, 0.1f, 0.1f,
+                add_texture(scn, "rcolored.png")),
+            add_transparent_plastic(scn, "obj02", {1, 1, 1}, 0.05f, 0.5f,
+                add_texture(scn, "checker.png")),
+            add_transparent_plastic(scn, "obj03", {1, 1, 1}, 0.01f, 0.9f,
+                add_texture(scn, "colored.png"))};
+        add_objects(scn, mat);
+    } else if (otype == "transparentp") {
+        auto mat = std::vector<yobj::material*>{
+            add_transparent_plastic(scn, "obj01", {1, 1, 1}, 0.1f, 0.1f,
+                add_texture(scn, "rcolored.png")),
+            add_transparent_plastic(scn, "obj02", {1, 1, 1}, 0.05f, 0.5f,
+                add_texture(scn, "checker.png")),
+            add_transparent_plastic(scn, "obj03", {1, 1, 1}, 0.01f, 0.9f,
+                add_texture(scn, "colored.png"))};
+        add_instance(
+            scn, "plane01", add_quad(scn, "plane01", mat[0], 2), {-2.5f, 0, 0});
+        add_instance(
+            scn, "plane02", add_quad(scn, "plane02", mat[1], 2), {0, 0, 0});
+        add_instance(
+            scn, "plane03", add_quad(scn, "plane03", mat[2], 2), {2.5f, 0, 0});
     } else if (otype == "points") {
         auto mat = add_diffuse(scn, "points", {0.2f, 0.2f, 0.2f});
         add_instance(
@@ -1295,8 +1338,9 @@ int main(int argc, char* argv[]) {
     };
 
     // simple scenes ----------------------------
-    auto stypes = std::vector<std::string>{"basic", "simple", "lines", "points",
-        "hair", "sym_points01", "sym_points02", "sym_cloth01", "sym_cloth02"};
+    auto stypes = std::vector<std::string>{"basic", "simple", "transparent",
+        "transparentp", "lines", "points", "hair", "sym_points01",
+        "sym_points02", "sym_cloth01", "sym_cloth02"};
 
     // matball scenes --------------------------
     auto mtypes = std::vector<std::string>{"matte00", "matte01_txt",

@@ -77,7 +77,7 @@ Initialze a scene.
 ### Function free_scene()
 
 ~~~ .cpp
-void free_scene(scene* scn);
+void free_scene(scene*& scn);
 ~~~
 
 Free a scene.
