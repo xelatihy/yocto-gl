@@ -211,7 +211,7 @@ Sets a texture in the scene.
 ### Function add_texture()
 
 ~~~ .cpp
-    inline int add_texture(scene* scn, const ym::image4f* img);
+inline int add_texture(scene* scn, const ym::image4f* img);
 ~~~
 
 Adds a texture in the scene.
@@ -225,7 +225,7 @@ Adds a texture in the scene.
 ### Function add_texture()
 
 ~~~ .cpp
-    inline int add_texture(scene* scn, const ym::image4b* img);
+inline int add_texture(scene* scn, const ym::image4b* img);
 ~~~
 
 Sets a texture in the scene.

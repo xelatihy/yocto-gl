@@ -267,6 +267,7 @@ Collision Detection" by Christer Ericson and public domain code from
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="kt">int</span> <span class="n">N</span><span class="o">&gt;</span>
 <span class="k">struct</span> <span class="n">vec</span> <span class="p">{</span>
     <span class="k">constexpr</span> <span class="n">vec</span><span class="p">();</span> 
+    <span class="k">constexpr</span> <span class="k">explicit</span> <span class="nf">vec</span><span class="p">(</span><span class="n">T</span> <span class="n">vv</span><span class="p">);</span> 
     <span class="k">constexpr</span> <span class="nf">vec</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">initializer_list</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">vv</span><span class="p">);</span> 
     <span class="k">constexpr</span> <span class="n">T</span><span class="o">&amp;</span> <span class="k">operator</span><span class="p">[](</span><span class="kt">int</span> <span class="n">i</span><span class="p">);</span> 
     <span class="k">constexpr</span> <span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="k">operator</span><span class="p">[](</span><span class="kt">int</span> <span class="n">i</span><span class="p">)</span> <span class="k">const</span><span class="p">;</span> 
@@ -281,6 +282,7 @@ Collision Detection" by Christer Ericson and public domain code from
 <ul>
 <li>Members:<ul>
 <li>vec():      default constructor</li>
+<li>vec():      element constructor</li>
 <li>vec():      list constructor</li>
 <li>operator<a href=""></a>:      element access</li>
 <li>operator<a href=""></a>:      element access</li>
@@ -324,6 +326,7 @@ Collision Detection" by Christer Ericson and public domain code from
 <span class="k">struct</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">2</span><span class="o">&gt;</span> <span class="p">{</span>
     <span class="k">constexpr</span> <span class="k">static</span> <span class="k">const</span> <span class="kt">int</span> <span class="n">N</span> <span class="o">=</span> <span class="mi">2</span><span class="p">;</span>
     <span class="k">constexpr</span> <span class="nf">vec</span><span class="p">();</span> 
+    <span class="k">constexpr</span> <span class="k">explicit</span> <span class="nf">vec</span><span class="p">(</span><span class="n">T</span> <span class="n">vv</span><span class="p">);</span> 
     <span class="k">constexpr</span> <span class="nf">vec</span><span class="p">(</span><span class="n">T</span> <span class="n">x</span><span class="p">,</span> <span class="n">T</span> <span class="n">y</span><span class="p">);</span> 
     <span class="k">constexpr</span> <span class="n">T</span><span class="o">&amp;</span> <span class="k">operator</span><span class="p">[](</span><span class="kt">int</span> <span class="n">i</span><span class="p">);</span> 
     <span class="k">constexpr</span> <span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="k">operator</span><span class="p">[](</span><span class="kt">int</span> <span class="n">i</span><span class="p">)</span> <span class="k">const</span><span class="p">;</span> 
@@ -341,6 +344,7 @@ Collision Detection" by Christer Ericson and public domain code from
 <li>N:      size</li>
 <li>vec():      default constructor</li>
 <li>vec():      element constructor</li>
+<li>vec():      element constructor</li>
 <li>operator<a href=""></a>:      element access</li>
 <li>operator<a href=""></a>:      element access</li>
 <li>data():      data access</li>
@@ -355,6 +359,7 @@ Collision Detection" by Christer Ericson and public domain code from
 <span class="k">struct</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;</span> <span class="p">{</span>
     <span class="k">constexpr</span> <span class="k">static</span> <span class="k">const</span> <span class="kt">int</span> <span class="n">N</span> <span class="o">=</span> <span class="mi">3</span><span class="p">;</span>
     <span class="k">constexpr</span> <span class="nf">vec</span><span class="p">();</span> 
+    <span class="k">constexpr</span> <span class="k">explicit</span> <span class="nf">vec</span><span class="p">(</span><span class="n">T</span> <span class="n">vv</span><span class="p">);</span> 
     <span class="k">constexpr</span> <span class="nf">vec</span><span class="p">(</span><span class="n">T</span> <span class="n">x</span><span class="p">,</span> <span class="n">T</span> <span class="n">y</span><span class="p">,</span> <span class="n">T</span> <span class="n">z</span><span class="p">);</span> 
     <span class="k">constexpr</span> <span class="n">T</span><span class="o">&amp;</span> <span class="k">operator</span><span class="p">[](</span><span class="kt">int</span> <span class="n">i</span><span class="p">);</span> 
     <span class="k">constexpr</span> <span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="k">operator</span><span class="p">[](</span><span class="kt">int</span> <span class="n">i</span><span class="p">)</span> <span class="k">const</span><span class="p">;</span> 
@@ -373,6 +378,7 @@ Collision Detection" by Christer Ericson and public domain code from
 <li>N:      size</li>
 <li>vec():      default constructor</li>
 <li>vec():      element constructor</li>
+<li>vec():      element constructor</li>
 <li>operator<a href=""></a>:      element access</li>
 <li>operator<a href=""></a>:      element access</li>
 <li>data():      data access</li>
@@ -388,6 +394,7 @@ Collision Detection" by Christer Ericson and public domain code from
 <span class="k">struct</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;</span> <span class="p">{</span>
     <span class="k">constexpr</span> <span class="k">static</span> <span class="k">const</span> <span class="kt">int</span> <span class="n">N</span> <span class="o">=</span> <span class="mi">4</span><span class="p">;</span>
     <span class="k">constexpr</span> <span class="nf">vec</span><span class="p">();</span> 
+    <span class="k">constexpr</span> <span class="k">explicit</span> <span class="nf">vec</span><span class="p">(</span><span class="n">T</span> <span class="n">vv</span><span class="p">);</span> 
     <span class="k">constexpr</span> <span class="nf">vec</span><span class="p">(</span><span class="n">T</span> <span class="n">x</span><span class="p">,</span> <span class="n">T</span> <span class="n">y</span><span class="p">,</span> <span class="n">T</span> <span class="n">z</span><span class="p">,</span> <span class="n">T</span> <span class="n">w</span><span class="p">);</span> 
     <span class="k">constexpr</span> <span class="nf">vec</span><span class="p">(</span><span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">xyz</span><span class="p">,</span> <span class="n">T</span> <span class="n">w</span><span class="p">);</span> 
     <span class="k">constexpr</span> <span class="n">T</span><span class="o">&amp;</span> <span class="k">operator</span><span class="p">[](</span><span class="kt">int</span> <span class="n">i</span><span class="p">);</span> 
@@ -409,6 +416,7 @@ Collision Detection" by Christer Ericson and public domain code from
 <li>Members:<ul>
 <li>N:      size</li>
 <li>vec():      default constructor</li>
+<li>vec():      element constructor</li>
 <li>vec():      element constructor</li>
 <li>vec():      constructor from smaller vector</li>
 <li>operator<a href=""></a>:      element access</li>
@@ -1370,6 +1378,7 @@ Collision Detection" by Christer Ericson and public domain code from
 <span class="k">struct</span> <span class="n">mat</span> <span class="p">{</span>
     <span class="k">using</span> <span class="n">V</span> <span class="o">=</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;</span><span class="p">;</span>
     <span class="k">constexpr</span> <span class="nf">mat</span><span class="p">();</span> 
+    <span class="k">constexpr</span> <span class="k">explicit</span> <span class="nf">mat</span><span class="p">(</span><span class="n">T</span> <span class="n">vv</span><span class="p">);</span> 
     <span class="k">constexpr</span> <span class="nf">mat</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">initializer_list</span><span class="o">&lt;</span><span class="n">V</span><span class="o">&gt;&amp;</span> <span class="n">vv</span><span class="p">);</span> 
     <span class="k">constexpr</span> <span class="n">V</span><span class="o">&amp;</span> <span class="k">operator</span><span class="p">[](</span><span class="kt">int</span> <span class="n">i</span><span class="p">);</span> 
     <span class="k">constexpr</span> <span class="k">const</span> <span class="n">V</span><span class="o">&amp;</span> <span class="k">operator</span><span class="p">[](</span><span class="kt">int</span> <span class="n">i</span><span class="p">)</span> <span class="k">const</span><span class="p">;</span> 
@@ -1387,6 +1396,7 @@ Colums access via operator[].</p>
 <li>Members:<ul>
 <li>V:      column data type</li>
 <li>mat():      default constructor</li>
+<li>mat():      diagonal constructor</li>
 <li>mat():      list constructor</li>
 <li>operator<a href=""></a>:      element access</li>
 <li>operator<a href=""></a>:      element access</li>
@@ -1403,6 +1413,7 @@ Colums access via operator[].</p>
     <span class="k">using</span> <span class="n">T</span> <span class="o">=</span> <span class="kt">float</span><span class="p">;</span>
     <span class="k">using</span> <span class="n">V</span> <span class="o">=</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;</span><span class="p">;</span>
     <span class="k">constexpr</span> <span class="nf">mat</span><span class="p">();</span> 
+    <span class="k">constexpr</span> <span class="k">explicit</span> <span class="nf">mat</span><span class="p">(</span><span class="n">T</span> <span class="n">vv</span><span class="p">);</span> 
     <span class="k">constexpr</span> <span class="nf">mat</span><span class="p">(</span><span class="k">const</span> <span class="n">V</span><span class="o">&amp;</span> <span class="n">x</span><span class="p">,</span> <span class="k">const</span> <span class="n">V</span><span class="o">&amp;</span> <span class="n">y</span><span class="p">);</span> 
     <span class="k">constexpr</span> <span class="n">V</span><span class="o">&amp;</span> <span class="k">operator</span><span class="p">[](</span><span class="kt">int</span> <span class="n">i</span><span class="p">);</span> 
     <span class="k">constexpr</span> <span class="k">const</span> <span class="n">V</span><span class="o">&amp;</span> <span class="k">operator</span><span class="p">[](</span><span class="kt">int</span> <span class="n">i</span><span class="p">)</span> <span class="k">const</span><span class="p">;</span> 
@@ -1421,6 +1432,7 @@ Colums access via operator[].</p>
 <li>T:      type</li>
 <li>V:      column data type</li>
 <li>mat():      default constructor</li>
+<li>mat():      diagonal constructor</li>
 <li>mat():      list constructor</li>
 <li>operator<a href=""></a>:      element access</li>
 <li>operator<a href=""></a>:      element access</li>
@@ -1438,6 +1450,7 @@ Colums access via operator[].</p>
     <span class="k">using</span> <span class="n">T</span> <span class="o">=</span> <span class="kt">float</span><span class="p">;</span>
     <span class="k">using</span> <span class="n">V</span> <span class="o">=</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;</span><span class="p">;</span>
     <span class="k">constexpr</span> <span class="nf">mat</span><span class="p">();</span> 
+    <span class="k">constexpr</span> <span class="k">explicit</span> <span class="nf">mat</span><span class="p">(</span><span class="n">T</span> <span class="n">vv</span><span class="p">);</span> 
     <span class="k">constexpr</span> <span class="nf">mat</span><span class="p">(</span><span class="k">const</span> <span class="n">V</span><span class="o">&amp;</span> <span class="n">x</span><span class="p">,</span> <span class="k">const</span> <span class="n">V</span><span class="o">&amp;</span> <span class="n">y</span><span class="p">,</span> <span class="k">const</span> <span class="n">V</span><span class="o">&amp;</span> <span class="n">z</span><span class="p">);</span> 
     <span class="k">constexpr</span> <span class="n">V</span><span class="o">&amp;</span> <span class="k">operator</span><span class="p">[](</span><span class="kt">int</span> <span class="n">i</span><span class="p">);</span> 
     <span class="k">constexpr</span> <span class="k">const</span> <span class="n">V</span><span class="o">&amp;</span> <span class="k">operator</span><span class="p">[](</span><span class="kt">int</span> <span class="n">i</span><span class="p">)</span> <span class="k">const</span><span class="p">;</span> 
@@ -1457,6 +1470,7 @@ Colums access via operator[].</p>
 <li>T:      type</li>
 <li>V:      column data type</li>
 <li>mat():      default constructor</li>
+<li>mat():      diagonal constructor</li>
 <li>mat():      list constructor</li>
 <li>operator<a href=""></a>:      element access</li>
 <li>operator<a href=""></a>:      element access</li>
@@ -1475,6 +1489,7 @@ Colums access via operator[].</p>
     <span class="k">using</span> <span class="n">T</span> <span class="o">=</span> <span class="kt">float</span><span class="p">;</span>
     <span class="k">using</span> <span class="n">V</span> <span class="o">=</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;</span><span class="p">;</span>
     <span class="k">constexpr</span> <span class="nf">mat</span><span class="p">();</span> 
+    <span class="k">constexpr</span> <span class="k">explicit</span> <span class="nf">mat</span><span class="p">(</span><span class="n">T</span> <span class="n">vv</span><span class="p">);</span> 
     <span class="k">constexpr</span> <span class="nf">mat</span><span class="p">(</span><span class="k">const</span> <span class="n">V</span><span class="o">&amp;</span> <span class="n">x</span><span class="p">,</span> <span class="k">const</span> <span class="n">V</span><span class="o">&amp;</span> <span class="n">y</span><span class="p">,</span> <span class="k">const</span> <span class="n">V</span><span class="o">&amp;</span> <span class="n">z</span><span class="p">,</span> <span class="k">const</span> <span class="n">V</span><span class="o">&amp;</span> <span class="n">w</span><span class="p">);</span> 
     <span class="k">constexpr</span> <span class="n">V</span><span class="o">&amp;</span> <span class="k">operator</span><span class="p">[](</span><span class="kt">int</span> <span class="n">i</span><span class="p">);</span> 
     <span class="k">constexpr</span> <span class="k">const</span> <span class="n">V</span><span class="o">&amp;</span> <span class="k">operator</span><span class="p">[](</span><span class="kt">int</span> <span class="n">i</span><span class="p">)</span> <span class="k">const</span><span class="p">;</span> 
@@ -1495,6 +1510,7 @@ Colums access via operator[].</p>
 <li>T:      type</li>
 <li>V:      column data type</li>
 <li>mat():      default constructor</li>
+<li>mat():      diagonal constructor</li>
 <li>mat():      list constructor</li>
 <li>operator<a href=""></a>:      element access</li>
 <li>operator<a href=""></a>:      element access</li>
@@ -3151,6 +3167,12 @@ PCG32 from http://www.pcg-random.org/</p>
 
 
 <p>Next random float in [0,1)x[0,1).</p>
+<h3>Function next3f()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">vec3f</span> <span class="nf">next3f</span><span class="p">(</span><span class="n">rng_pcg32</span><span class="o">*</span> <span class="n">rng</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Next random float in [0,1)x[0,1)x[0,1).</p>
 <h3>Function sample_hemisphere()</h3>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">vec3f</span> <span class="nf">sample_hemisphere</span><span class="p">(</span><span class="k">const</span> <span class="n">vec2f</span><span class="o">&amp;</span> <span class="n">ruv</span><span class="p">);</span>
 </code></pre></div>

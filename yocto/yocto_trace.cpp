@@ -1892,9 +1892,7 @@ static point eval_shapepoint(
 
     // sample reflectance
     switch (mat->rtype) {
-        case reflectance_type::none:
-            pt.op = 1;
-            break;
+        case reflectance_type::none: pt.op = 1; break;
         case reflectance_type::matte: {
             auto kd = ym::vec4f{mat->matte.kd, mat->matte.op} * kx_scale;
             if (shp->texcoord && mat->matte.kd_txt)

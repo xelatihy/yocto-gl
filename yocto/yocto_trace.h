@@ -241,9 +241,9 @@ int add_texture(scene* scn, int width, int height, const ym::vec4b* ldr);
 /// - Returns:
 ///     - texture id
 ///
-    inline int add_texture(scene* scn, const ym::image4f* img) {
-        return add_texture(scn, img->width(), img->height(), img->data());
-    }
+inline int add_texture(scene* scn, const ym::image4f* img) {
+    return add_texture(scn, img->width(), img->height(), img->data());
+}
 
 ///
 /// Sets a texture in the scene.
@@ -254,9 +254,9 @@ int add_texture(scene* scn, int width, int height, const ym::vec4b* ldr);
 /// - Returns:
 ///     - texture id
 ///
-    inline int add_texture(scene* scn, const ym::image4b* img){
-        return add_texture(scn, img->width(), img->height(), img->data());
-    }
+inline int add_texture(scene* scn, const ym::image4b* img) {
+    return add_texture(scn, img->width(), img->height(), img->data());
+}
 
 ///
 /// Adds a black material to the scene. Use set_material_XXX() functions to

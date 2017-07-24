@@ -675,6 +675,8 @@ bool save_obj(const std::string& filename, const obj* asset, bool flip_texcoord,
         fwrite_float3(file, " ", ist.scale, false);
         if (ist.matrix != ym::identity_mat4f)
             fwrite_float16(file, " ", ist.matrix, true);
+        else
+            fprintf(file, "\n");
     }
 
     // save all vertex data

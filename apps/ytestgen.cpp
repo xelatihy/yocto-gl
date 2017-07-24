@@ -918,6 +918,108 @@ yobj::instance* add_hair(yobj::scene* scn, yobj::instance* ist, int nhairs,
         scn, ist->name + "_hair", hair_mesh, ist->translation, ist->rotation);
 };
 
+std::vector<yobj::instance*> add_random_instances(
+    yobj::scene* scn, float cell_size, int ninstances, int nmeshes) {
+    auto rng = ym::rng_pcg32();
+    ym::init(&rng, 0, 0);
+    auto meshes = std::vector<yobj::mesh*>();
+    for (auto i = 0; i < nmeshes; i++) {
+        auto mtype = ym::next(&rng) % 2;
+        auto mat = (yobj::material*)nullptr;
+        auto mname = yu::string::formatf("mat%03d", i);
+        switch (mtype) {
+            case 0:
+                mat = add_diffuse(scn, mname, 0.5f + 0.5f * ym::next3f(&rng));
+                break;
+            case 1:
+                mat = add_plastic(scn, mname, 0.5f + 0.5f * ym::next3f(&rng),
+                    0.01f + 0.04f * ym::next1f(&rng));
+                break;
+        }
+        auto stype = ym::next(&rng) % 3;
+        auto sname = yu::string::formatf("shp%03d", i);
+        auto msh = (yobj::mesh*)nullptr;
+        switch (stype) {
+            case 0: msh = add_sphere(scn, sname, mat, 4, 1); break;
+            case 1: msh = add_cube(scn, sname, mat, 4, 1); break;
+            case 2: msh = add_spherecube(scn, sname, mat, 4, 1); break;
+        }
+        meshes.push_back(msh);
+    }
+    auto num = (int)(ym::sqrt(ninstances) + 0.5f);
+    auto instances = std::vector<yobj::instance*>();
+    for (auto j = 0; j < num; j++) {
+        for (auto i = 0; i < num; i++) {
+            auto ist = (yobj::instance*)nullptr;
+            auto iname = yu::string::formatf("ist%06d", i);
+            auto mid = ym::next(&rng) % nmeshes;
+            auto rxy =
+                ym::vec3f{ym::next1f(&rng) - 0.5f, 0, ym::next1f(&rng) - 0.5f};
+            auto cxy = ym::vec3f(i - num / 2, 0, j - num / 2);
+            auto pos = cell_size * cxy + rxy;
+            add_instance(scn, iname, meshes[mid], pos);
+            instances.push_back(ist);
+        }
+    }
+    return instances;
+}
+
+yobj::scene* make_instance_scene(
+    const std::string& otype, const std::string& ltype) {
+    auto scn = new yobj::scene();
+    add_camera(scn, "cam01", {0, 75, 75}, {0, 0, 0}, 0.5f, 0);
+    add_camera(scn, "cam02", {0, 150, 150}, {0, 0, 0}, 0.5f, 0);
+    add_camera(scn, "cam03", {0, 15, 75}, {0, 0, 0}, 0.5f, 0);
+    add_camera(scn, "cam04", {0, 30, 150}, {0, 0, 0}, 0.5f, 0);
+    add_camera(scn, "cam_dof", {0, 75, 75}, {0, 0, 0}, 0.5f, 0.1f);
+
+    add_instance(scn, "floor",
+        add_floor(scn, "floor", add_material(scn, "floor_txt"), 12, 0, 0, 120),
+        {0, -1, 0});
+
+    if (otype == "instance100") {
+        add_random_instances(scn, 4, 100, 10);
+    } else if (otype == "instance1600") {
+        add_random_instances(scn, 3, 1600, 10);
+    } else if (otype == "instance2500") {
+        add_random_instances(scn, 2, 2500, 10);
+    } else if (otype == "instance10000") {
+        add_random_instances(scn, 2, 10000, 10);
+    } else {
+        throw std::runtime_error("bad value");
+    }
+
+    if (ltype == "pointlight") {
+        add_instance(scn, "pointlight01",
+            add_point(scn, "pointlight01",
+                add_emission(scn, "pointlight01", ym::vec3f{10000})),
+            {0, 50, 50});
+        add_instance(scn, "pointlight02",
+            add_point(scn, "pointlight02",
+                add_emission(scn, "pointlight02", ym::vec3f{4000})),
+            {50, 50, 0});
+        add_instance(scn, "pointlight03",
+            add_point(scn, "pointlight03",
+                add_emission(scn, "pointlight03", ym::vec3f{4000})),
+            {0, 50, -50});
+    } else if (ltype == "arealight") {
+        auto mat = add_emission(scn, "arealight", {40, 40, 40});
+        auto shp = add_quad(scn, "arealight", mat, 0, 2);
+        add_instance(scn, "arealight01", shp, {-4, 4, 8},
+            make_lookat_frame({-4, 4, 8}, {0, 2, 0}).rot());
+        add_instance(scn, "arealight02", shp, {4, 4, 8},
+            make_lookat_frame({4, 4, 8}, {0, 2, 0}).rot());
+    } else if (ltype == "envlight") {
+        auto mat = add_emission(
+            scn, "envlight", {1, 1, 1}, add_texture(scn, "env.hdr"));
+        add_env(scn, "envlight", mat);
+    } else {
+        throw std::runtime_error("bad value");
+    }
+
+    return scn;
+}
+
 yobj::scene* make_simple_scene(
     const std::string& otype, const std::string& ltype) {
     auto scn = new yobj::scene();
@@ -1323,8 +1425,8 @@ ygltf::scene_group* obj2gltf(const yobj::scene* obj, bool add_scene) {
                 gcam->aspect = ocam->aspect;
                 gcam->focus = ocam->focus;
                 gcam->aperture = ocam->aperture;
-                gcam->near = 0.01f;
-                gcam->far = 100.f;
+                gcam->near = 0.1f;
+                gcam->far = 10000.f;
                 gltf->cameras.push_back(gcam);
                 auto gnode = new ygltf::node();
                 gnode->name = ocam->name;
@@ -1343,7 +1445,9 @@ ygltf::scene_group* obj2gltf(const yobj::scene* obj, bool add_scene) {
 void save_scene(const std::string& scenename, const std::string& dirname,
     yobj::scene* oscn, bool add_gltf_scene = true) {
     auto gscn = obj2gltf(oscn, add_gltf_scene);
-    yobj::flatten_instances(oscn);
+
+    if (!yu::string::startswith(scenename, "instance"))
+        yobj::flatten_instances(oscn);
 
     yobj::save_scene(dirname + "/" + scenename + ".obj", oscn, false);
     ygltf::save_scenes(
@@ -1371,9 +1475,14 @@ int main(int argc, char* argv[]) {
         "copper01", "copper02", "silver01", "silver02", "bump00", "bump01",
         "bump02", "bump03"};
 
+    // instance scenes -------------------------
+    auto itypes = std::vector<std::string>{
+        "instance100", "instance1600", "instance2500", "instance10000"};
+
     // put together scene names
     auto scene_names = std::vector<std::string>{"all"};
     for (auto stype : stypes) scene_names += stype;
+    for (auto itype : itypes) scene_names += itype;
     for (auto mtype : mtypes) scene_names += "matball_" + mtype;
     for (auto motype : motypes) scene_names += "mesh_" + motype;
     scene_names += {"cornell_box", "rigid", "textures"};
@@ -1430,6 +1539,18 @@ int main(int argc, char* argv[]) {
             for (auto ltype : {"pointlight", "arealight", "envlight"}) {
                 auto scn = make_simple_scene(stype, ltype);
                 save_scene(stype + "_" + std::string(ltype), dirname, scn);
+            }
+        });
+    }
+
+    // instance scenes --------------------------
+    for (auto itype : itypes) {
+        if (scene != "all" && scene != itype) continue;
+        run_async([=] {
+            printf("generating %s scenes ...\n", itype.c_str());
+            for (auto ltype : {"pointlight", "arealight", "envlight"}) {
+                auto scn = make_instance_scene(itype, ltype);
+                save_scene(itype + "_" + std::string(ltype), dirname, scn);
             }
         });
     }
