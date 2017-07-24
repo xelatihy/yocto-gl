@@ -88,7 +88,8 @@ enum struct reflectance_type {
     matte,
     microfacet,
     gltf_metallic_roughness,
-    gltf_specular_glossiness
+    gltf_specular_glossiness,
+    thin_glass,
 };
 
 // material reflectance - matte
@@ -138,6 +139,15 @@ struct reflectance_gltf_specular_glossiness {
     texture* ks_txt = nullptr;  // specular texture
 };
 
+// material reflectance - thin glass
+struct reflectance_thin_glass {
+    ym::vec3f ks = ym::zero3f;  // specular term
+    ym::vec3f kt = ym::zero3f;  // transmission term
+
+    texture* ks_txt = nullptr;  // specular texture
+    texture* kt_txt = nullptr;  // transmission texture
+};
+
 //
 // Material
 //
@@ -157,13 +167,15 @@ struct material {
     reflectance_gltf_metallic_roughness metalrough;
     // material reflectance - gltf_specular_glossiness
     reflectance_gltf_specular_glossiness specgloss;
+    // material reflectance - thin glass
+    reflectance_thin_glass thin_glass;
 
     // other textures
     texture* norm_txt = nullptr;  // nromal texture
     texture* occ_txt = nullptr;   // occlusion texture
 
     // flags
-    bool double_sided = true;
+    bool double_sided = false;  // double sided
 
     // conservative test for opacity
     bool is_opaque() const {
@@ -171,11 +183,14 @@ struct material {
             case reflectance_type::none: return false;
             case reflectance_type::matte: return matte.op != 1 || matte.op_txt;
             case reflectance_type::microfacet:
-                return microfacet.op != 1 || microfacet.op_txt;
+                return microfacet.op != 1 || microfacet.op_txt ||
+                       microfacet.kt != ym::zero3f || microfacet.kt_txt;
             case reflectance_type::gltf_metallic_roughness:
                 return metalrough.op != 1 || metalrough.kb_txt;
             case reflectance_type::gltf_specular_glossiness:
                 return specgloss.op != 1 || specgloss.kd_txt;
+            case reflectance_type::thin_glass:
+                return microfacet.kt != ym::zero3f || microfacet.kt_txt;
         }
     }
 };
@@ -367,26 +382,6 @@ int add_texture(scene* scn, int width, int height, const ym::vec4b* ldr) {
 //
 // Public API. See above.
 //
-int add_texture(scene* scn, const ym::image4f* hdr) {
-    scn->textures.push_back(new texture());
-    set_texture(scn, (int)scn->textures.size() - 1, hdr->width(), hdr->height(),
-        hdr->data());
-    return (int)scn->textures.size() - 1;
-}
-
-//
-// Public API. See above.
-//
-int add_texture(scene* scn, const ym::image4b* ldr) {
-    scn->textures.push_back(new texture());
-    set_texture(scn, (int)scn->textures.size() - 1, ldr->width(), ldr->height(),
-        ldr->data());
-    return (int)scn->textures.size() - 1;
-}
-
-//
-// Public API. See above.
-//
 int add_material(scene* scn) {
     scn->materials.push_back(new material());
     return (int)scn->materials.size() - 1;
@@ -473,6 +468,20 @@ void set_material_gltf_specular_glossiness(scene* scn, int mid,
     scn->materials[mid]->specgloss.kd_txt =
         (kd_txt >= 0) ? scn->textures[kd_txt] : nullptr;
     scn->materials[mid]->specgloss.ks_txt =
+        (ks_txt >= 0) ? scn->textures[ks_txt] : nullptr;
+}
+
+//
+// Public API. See above.
+//
+void set_material_thin_glass(scene* scn, int mid, const ym::vec3f& ks,
+    const ym::vec3f& kt, int ks_txt, int kt_txt) {
+    scn->materials[mid]->rtype = reflectance_type::thin_glass;
+    scn->materials[mid]->thin_glass.ks = ks;
+    scn->materials[mid]->thin_glass.kt = kt;
+    scn->materials[mid]->thin_glass.ks_txt =
+        (ks_txt >= 0) ? scn->textures[ks_txt] : nullptr;
+    scn->materials[mid]->thin_glass.ks_txt =
         (ks_txt >= 0) ? scn->textures[ks_txt] : nullptr;
 }
 
@@ -1883,7 +1892,9 @@ static point eval_shapepoint(
 
     // sample reflectance
     switch (mat->rtype) {
-        case reflectance_type::none: break;
+        case reflectance_type::none:
+            pt.op = 1;
+            break;
         case reflectance_type::matte: {
             auto kd = ym::vec4f{mat->matte.kd, mat->matte.op} * kx_scale;
             if (shp->texcoord && mat->matte.kd_txt)
@@ -1962,6 +1973,27 @@ static point eval_shapepoint(
             pt.brdfs[pt.nbrdfs].type = brdf_type::reflection_ggx;
             pt.brdfs[pt.nbrdfs].rho = ks.xyz();
             pt.brdfs[pt.nbrdfs].roughness = (1 - ks.w) * (1 - ks.w);
+            if (pt.brdfs[pt.nbrdfs].rho != ym::zero3f) pt.nbrdfs++;
+        } break;
+        case reflectance_type::thin_glass: {
+            auto ks = ym::vec4f{mat->thin_glass.ks, mat->microfacet.rs} *
+                      ym::vec4f{kx_scale.xyz(), 1};
+            auto kt = ym::vec4f{mat->thin_glass.kt, mat->microfacet.rs} *
+                      ym::vec4f{kx_scale.xyz(), 1};
+            if (shp->texcoord && mat->thin_glass.ks_txt)
+                ks.xyz() *=
+                    eval_texture(mat->thin_glass.ks_txt, texcoord).xyz();
+            if (shp->texcoord && mat->thin_glass.kt_txt)
+                kt.xyz() *=
+                    eval_texture(mat->thin_glass.kt_txt, texcoord).xyz();
+            pt.op = 1;
+            pt.brdfs[pt.nbrdfs].type = brdf_type::transparent;
+            pt.brdfs[pt.nbrdfs].rho = kt.xyz();
+            pt.brdfs[pt.nbrdfs].roughness = 0;
+            if (pt.brdfs[pt.nbrdfs].rho != ym::zero3f) pt.nbrdfs++;
+            pt.brdfs[pt.nbrdfs].type = brdf_type::reflection_ggx;
+            pt.brdfs[pt.nbrdfs].rho = ks.xyz();
+            pt.brdfs[pt.nbrdfs].roughness = ks.w;
             if (pt.brdfs[pt.nbrdfs].rho != ym::zero3f) pt.nbrdfs++;
         } break;
     }
