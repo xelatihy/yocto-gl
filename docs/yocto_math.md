@@ -320,6 +320,7 @@ isfinate
 template <typename T, int N>
 struct vec {
     constexpr vec(); 
+    constexpr explicit vec(T vv); 
     constexpr vec(const std::initializer_list<T>& vv); 
     constexpr T& operator[](int i); 
     constexpr const T& operator[](int i) const; 
@@ -333,6 +334,7 @@ Vector of elements of compile time dimension with default initializer.
 
 - Members:
     - vec():      default constructor
+    - vec():      element constructor
     - vec():      list constructor
     - operator[]():      element access
     - operator[]():      element access
@@ -377,6 +379,7 @@ template <typename T>
 struct vec<T, 2> {
     constexpr static const int N = 2;
     constexpr vec(); 
+    constexpr explicit vec(T vv); 
     constexpr vec(T x, T y); 
     constexpr T& operator[](int i); 
     constexpr const T& operator[](int i) const; 
@@ -393,6 +396,7 @@ Specialization of vectors for 2 components and float coordinates.
     - N:      size
     - vec():      default constructor
     - vec():      element constructor
+    - vec():      element constructor
     - operator[]():      element access
     - operator[]():      element access
     - data():      data access
@@ -408,6 +412,7 @@ template <typename T>
 struct vec<T, 3> {
     constexpr static const int N = 3;
     constexpr vec(); 
+    constexpr explicit vec(T vv); 
     constexpr vec(T x, T y, T z); 
     constexpr T& operator[](int i); 
     constexpr const T& operator[](int i) const; 
@@ -425,6 +430,7 @@ Specialization of vectors for 3 components and float coordinates.
     - N:      size
     - vec():      default constructor
     - vec():      element constructor
+    - vec():      element constructor
     - operator[]():      element access
     - operator[]():      element access
     - data():      data access
@@ -441,6 +447,7 @@ template <typename T>
 struct vec<T, 4> {
     constexpr static const int N = 4;
     constexpr vec(); 
+    constexpr explicit vec(T vv); 
     constexpr vec(T x, T y, T z, T w); 
     constexpr vec(const vec<T, 3>& xyz, T w); 
     constexpr T& operator[](int i); 
@@ -461,6 +468,7 @@ Specialization of vectors for 4 components and float coordinates.
 - Members:
     - N:      size
     - vec():      default constructor
+    - vec():      element constructor
     - vec():      element constructor
     - vec():      constructor from smaller vector
     - operator[]():      element access
@@ -1697,6 +1705,7 @@ template <typename T, int N, int M>
 struct mat {
     using V = vec<T, N>;
     constexpr mat(); 
+    constexpr explicit mat(T vv); 
     constexpr mat(const std::initializer_list<V>& vv); 
     constexpr V& operator[](int i); 
     constexpr const V& operator[](int i) const; 
@@ -1713,6 +1722,7 @@ Colums access via operator[].
 - Members:
     - V:      column data type
     - mat():      default constructor
+    - mat():      diagonal constructor
     - mat():      list constructor
     - operator[]():      element access
     - operator[]():      element access
@@ -1730,6 +1740,7 @@ struct mat<float, 2, 2> {
     using T = float;
     using V = vec<T, N>;
     constexpr mat(); 
+    constexpr explicit mat(T vv); 
     constexpr mat(const V& x, const V& y); 
     constexpr V& operator[](int i); 
     constexpr const V& operator[](int i) const; 
@@ -1747,6 +1758,7 @@ Specialization for 2x2 float matrices.
     - T:      type
     - V:      column data type
     - mat():      default constructor
+    - mat():      diagonal constructor
     - mat():      list constructor
     - operator[]():      element access
     - operator[]():      element access
@@ -1765,6 +1777,7 @@ struct mat<float, 3, 3> {
     using T = float;
     using V = vec<T, N>;
     constexpr mat(); 
+    constexpr explicit mat(T vv); 
     constexpr mat(const V& x, const V& y, const V& z); 
     constexpr V& operator[](int i); 
     constexpr const V& operator[](int i) const; 
@@ -1783,6 +1796,7 @@ Specialization for 3x3 float matrices.
     - T:      type
     - V:      column data type
     - mat():      default constructor
+    - mat():      diagonal constructor
     - mat():      list constructor
     - operator[]():      element access
     - operator[]():      element access
@@ -1802,6 +1816,7 @@ struct mat<float, 4, 4> {
     using T = float;
     using V = vec<T, N>;
     constexpr mat(); 
+    constexpr explicit mat(T vv); 
     constexpr mat(const V& x, const V& y, const V& z, const V& w); 
     constexpr V& operator[](int i); 
     constexpr const V& operator[](int i) const; 
@@ -1821,6 +1836,7 @@ Specialization for 4x4 float matrices.
     - T:      type
     - V:      column data type
     - mat():      default constructor
+    - mat():      diagonal constructor
     - mat():      list constructor
     - operator[]():      element access
     - operator[]():      element access
@@ -3831,6 +3847,14 @@ inline vec2f next2f(rng_pcg32* rng);
 ~~~
 
 Next random float in [0,1)x[0,1).
+
+### Function next3f()
+
+~~~ .cpp
+inline vec3f next3f(rng_pcg32* rng);
+~~~
+
+Next random float in [0,1)x[0,1)x[0,1).
 
 ### Function sample_hemisphere()
 

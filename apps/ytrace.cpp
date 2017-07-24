@@ -91,18 +91,20 @@ bool update(yscene* scn) {
         ytrace::set_camera(scn->trace_scene, 0, scn->view_cam->frame,
             scn->view_cam->yfov, scn->view_cam->aspect, scn->view_cam->aperture,
             scn->view_cam->focus);
+        scn->trace_params.camera_id = 0;
         if (scn->oscn) {
             auto cid = 1;
             for (auto cam : scn->oscn->cameras) {
+                if (scn->ocam == cam) scn->trace_params.camera_id = cid;
                 ytrace::set_camera(scn->trace_scene, cid++,
                     ym::to_frame(cam->xform()), cam->yfov, cam->aspect,
                     cam->aperture, cam->focus);
             }
-
         } else if (scn->gscn) {
             auto cameras = ygltf::get_camera_nodes(scn->gscn->default_scene);
             auto cid = 1;
             for (auto cam : cameras) {
+                if (scn->gcam == cam) scn->trace_params.camera_id = cid;
                 ytrace::set_camera(scn->trace_scene, cid++,
                     ym::to_frame(cam->xform()), cam->cam->yfov,
                     cam->cam->aspect, cam->cam->aperture, cam->cam->focus);
@@ -233,9 +235,8 @@ ytrace::scene* make_trace_scene(const yobj::scene* scene, const ycamera* cam) {
             ytrace::set_material_thin_glass(trace_scene, mid, mat->ks, mat->kt,
                 texture_map.at(mat->ks_txt), texture_map.at(mat->kt_txt));
         } else {
-            ytrace::set_material_microfacet(trace_scene, mid, mat->kd,
-                mat->ks, mat->kt, mat->rs, mat->opacity,
-                texture_map.at(mat->kd_txt),
+            ytrace::set_material_microfacet(trace_scene, mid, mat->kd, mat->ks,
+                mat->kt, mat->rs, mat->opacity, texture_map.at(mat->kd_txt),
                 texture_map.at(mat->ks_txt), texture_map.at(mat->kt_txt),
                 texture_map.at(mat->rs_txt), texture_map.at(mat->op_txt),
                 false);
@@ -332,25 +333,25 @@ ytrace::scene* make_trace_scene(
     for (auto mat : scenes->materials) {
         auto mid = ytrace::add_material(trace_scene);
         material_map[mat] = mid;
-        ytrace::set_material_emission(trace_scene, mid, mat->emission, texture_map.at(mat->emission_txt));
+        ytrace::set_material_emission(
+            trace_scene, mid, mat->emission, texture_map.at(mat->emission_txt));
         if (mat->specular_glossiness) {
             auto sg = mat->specular_glossiness;
-            ytrace::set_material_gltf_specular_glossiness(
-                trace_scene, mid, sg->diffuse, sg->specular,
-                sg->glossiness, sg->opacity,
+            ytrace::set_material_gltf_specular_glossiness(trace_scene, mid,
+                sg->diffuse, sg->specular, sg->glossiness, sg->opacity,
                 texture_map.at(sg->diffuse_txt),
                 texture_map.at(sg->specular_txt));
 
         } else if (mat->metallic_roughness) {
             auto mr = mat->metallic_roughness;
-            ytrace::set_material_gltf_metallic_roughness(
-                trace_scene, mid, mr->base, mr->metallic,
-                mr->roughness, mr->opacity,
-                texture_map.at(mr->base_txt),
-                texture_map.at(mr->metallic_txt));
+            ytrace::set_material_gltf_metallic_roughness(trace_scene, mid,
+                mr->base, mr->metallic, mr->roughness, mr->opacity,
+                texture_map.at(mr->base_txt), texture_map.at(mr->metallic_txt));
         }
-        ytrace::set_material_normal(trace_scene, mid, texture_map.at(mat->normal_txt));
-        ytrace::set_material_occlusion(trace_scene, mid, texture_map.at(mat->occlusion_txt));
+        ytrace::set_material_normal(
+            trace_scene, mid, texture_map.at(mat->normal_txt));
+        ytrace::set_material_occlusion(
+            trace_scene, mid, texture_map.at(mat->occlusion_txt));
         ytrace::set_material_double_sided(trace_scene, mid, mat->double_sided);
     }
 

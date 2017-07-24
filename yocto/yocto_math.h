@@ -239,7 +239,10 @@ struct vec {
     constexpr vec() {
         for (auto i = 0; i < N; i++) v[i] = 0;
     }
-
+    /// element constructor
+    constexpr explicit vec(T vv) {
+        for (auto i = 0; i < N; i++) v[i] = vv;
+    }
     /// list constructor
     constexpr vec(const std::initializer_list<T>& vv) {
         assert(N == vv.size());
@@ -299,6 +302,8 @@ struct vec<T, 2> {
     /// default constructor
     constexpr vec() : x{0}, y{0} {}
     /// element constructor
+    constexpr explicit vec(T vv) : x(vv), y(vv) {}
+    /// element constructor
     constexpr vec(T x, T y) : x{x}, y{y} {}
 
     /// element access
@@ -327,6 +332,8 @@ struct vec<T, 3> {
 
     /// default constructor
     constexpr vec() : x{0}, y{0}, z{0} {}
+    /// element constructor
+    constexpr explicit vec(T vv) : x(vv), y(vv), z(vv) {}
     /// element constructor
     constexpr vec(T x, T y, T z) : x{x}, y{y}, z{z} {}
 
@@ -358,6 +365,8 @@ struct vec<T, 4> {
 
     /// default constructor
     constexpr vec() : x{0}, y{0}, z{0}, w{0} {}
+    /// element constructor
+    constexpr explicit vec(T vv) : x(vv), y(vv), z(vv), w(vv) {}
     /// element constructor
     constexpr vec(T x, T y, T z, T w) : x{x}, y{y}, z{z}, w{w} {}
     /// constructor from smaller vector
@@ -1261,7 +1270,11 @@ struct mat {
     constexpr mat() {
         for (auto j = 0; j < M; j++) v[j] = V{};
     }
-
+    /// diagonal constructor
+    constexpr explicit mat(T vv) {
+        for (auto j = 0; j < M; j++)
+            for (auto i = 0; i < N; i++) v[j][i] = (i == j) ? vv : T{};
+    }
     /// list constructor
     constexpr mat(const std::initializer_list<V>& vv) {
         assert(M == vv.size());
@@ -1298,7 +1311,8 @@ struct mat<float, 2, 2> {
 
     /// default constructor
     constexpr mat() : x{0, 0}, y{0, 0} {}
-
+    /// diagonal constructor
+    constexpr explicit mat(T vv) : x{vv, 0}, y{0, vv} {}
     /// list constructor
     constexpr mat(const V& x, const V& y) : x(x), y(y) {}
 
@@ -1333,7 +1347,8 @@ struct mat<float, 3, 3> {
 
     /// default constructor
     constexpr mat() : x{0, 0, 0}, y{0, 0, 0}, z{0, 0, 0} {}
-
+    /// diagonal constructor
+    constexpr explicit mat(T vv) : x{vv, 0, 0}, y{0, vv, 0}, z{0, 0, vv} {}
     /// list constructor
     constexpr mat(const V& x, const V& y, const V& z) : x(x), y(y), z(z) {}
 
@@ -1371,7 +1386,9 @@ struct mat<float, 4, 4> {
     /// default constructor
     constexpr mat()
         : x{0, 0, 0, 0}, y{0, 0, 0, 0}, z{0, 0, 0, 0}, w{0, 0, 0, 0} {}
-
+    /// diagonal constructor
+    constexpr explicit mat(T vv)
+        : x{vv, 0, 0, 0}, y{0, vv, 0, 0}, z{0, 0, vv, 0}, w{0, 0, 0, vv} {}
     /// list constructor
     constexpr mat(const V& x, const V& y, const V& z, const V& w)
         : x(x), y(y), z(z), w(w) {}
@@ -1762,14 +1779,12 @@ struct frame {
     constexpr frame() {
         for (auto i = 0; i < N + 1; i++) v[i] = V{};
     }
-
     /// element constructor
     constexpr frame(const std::initializer_list<vec<T, N>>& vv) {
         assert(N + 1 == vv.size());
         auto i = 0;
         for (auto&& e : vv) v[i++] = e;
     }
-
     /// element constructor
     constexpr frame(const M& m, const V& t) {
         for (auto i = 0; i < N; i++) v[i] = m[i];
@@ -1817,10 +1832,8 @@ struct frame<float, 2> {
 
     /// default constructor
     constexpr frame() : x{0, 0}, y{0, 0}, o{0, 0} {}
-
     /// element constructor
     constexpr frame(const V& x, const V& y, const V& o) : x(x), y(y), o(o) {}
-
     /// element constructor
     constexpr frame(const M& m, const V& t) : x(m.x), y(m.y), o(t) {}
 
@@ -3180,6 +3193,11 @@ inline float next1f(rng_pcg32* rng) {
 
 /// Next random float in [0,1)x[0,1).
 inline vec2f next2f(rng_pcg32* rng) { return {next1f(rng), next1f(rng)}; }
+
+/// Next random float in [0,1)x[0,1)x[0,1).
+inline vec3f next3f(rng_pcg32* rng) {
+    return {next1f(rng), next1f(rng), next1f(rng)};
+}
 
 // -----------------------------------------------------------------------------
 // MONETACARLO SAMPLING FUNCTIONS

@@ -1741,7 +1741,8 @@ void draw_widgets(ygui::window* win) {
                     {"<view>", nullptr}};
             for (auto cam : scn->oscn->cameras)
                 camera_names.push_back({cam->name, cam});
-            ygui::combo_widget(win, "camera", &scn->ocam, camera_names);
+            if (ygui::combo_widget(win, "camera", &scn->ocam, camera_names))
+                scn->scene_updated = true;
         } else if (scn->gscn && scn->gscn->default_scene) {
             auto camera_names =
                 std::vector<std::pair<std::string, ygltf::node*>>{
@@ -1749,7 +1750,8 @@ void draw_widgets(ygui::window* win) {
             for (auto cam : ygltf::get_camera_nodes(scn->gscn->default_scene)) {
                 camera_names.push_back({cam->name, cam});
             }
-            ygui::combo_widget(win, "camera", &scn->gcam, camera_names);
+            if (ygui::combo_widget(win, "camera", &scn->gcam, camera_names))
+                scn->scene_updated = true;
         }
         if (!scn->trace_scene) {
             ygui::checkbox_widget(win, "eyelight", &scn->camera_lights);
