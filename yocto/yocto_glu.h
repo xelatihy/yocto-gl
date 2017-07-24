@@ -86,6 +86,7 @@ namespace yglu {}
 
 #include <array>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "yocto_math.h"
@@ -103,6 +104,11 @@ namespace yglu {
 /// Shortcut for GLuint.
 ///
 using uint = unsigned int;
+
+///
+/// Shortcut for unsigned chars.
+///
+using byte = unsigned char;
 
 ///
 /// Shape types
@@ -251,8 +257,7 @@ void shade_image(uint tid, int img_w, int img_h, int win_w, int win_h, float ox,
 /// As above but includes an exposure/gamma correction.
 ///
 void shade_image(uint tid, int img_w, int img_h, int win_w, int win_h, float ox,
-    float oy, float zoom, ym::tonemap_type tmtype, float exposure,
-    float gamma_);
+    float oy, float zoom, ym::tonemap_type tmtype, float exposure, float gamma);
 
 // TEXTURE FUNCTIONS -----------------------------------------------------------
 
@@ -291,9 +296,10 @@ void update_texture(
 /// Internally use float if as_float and filtering if filter.
 /// Returns the texture id.
 ///
-inline uint make_texture(
-    const ym::image4f& img, bool linear, bool mipmap, bool as_float) {
-    return make_texture(img.width(), img.height(), 4, (float*)img.data(),
+template <int N>
+inline uint make_texture(const ym::image<ym::vec<float, N>>& img, bool linear,
+    bool mipmap, bool as_float) {
+    return make_texture(img.width(), img.height(), N, (float*)img.data(),
         linear, mipmap, as_float);
 }
 
@@ -302,26 +308,31 @@ inline uint make_texture(
 /// Internally use srgb lookup if as_srgb and filtering if filter.
 /// Returns the texture id.
 ///
-inline uint make_texture(
-    const ym::image4b& img, bool linear, bool mipmap, bool as_srgb) {
-    return make_texture(img.width(), img.height(), 4,
-        (unsigned char*)img.data(), linear, mipmap, as_srgb);
+template <int N>
+inline uint make_texture(const ym::image<ym::vec<byte, N>>& img, bool linear,
+    bool mipmap, bool as_srgb) {
+    return make_texture(img.width(), img.height(), N, (byte*)img.data(), linear,
+        mipmap, as_srgb);
 }
 
 ///
 /// Updates the texture tid with new image data.
 ///
-inline void update_texture(uint tid, const ym::image4f* img, bool mipmap) {
+template <int N>
+inline void update_texture(
+    uint tid, const ym::image<ym::vec<float, N>>& img, bool mipmap) {
     update_texture(
-        tid, img->width(), img->height(), 4, (float*)img->data(), mipmap);
+        tid, img.width(), img.height(), N, (float*)img.data(), mipmap);
 }
 
 ///
 /// Updates the texture tid with new image data.
 ///
-inline void update_texture(uint tid, const ym::image4b* img, bool mipmap) {
-    update_texture(tid, img->width(), img->height(), 4,
-        (unsigned char*)img->data(), mipmap);
+template <int N>
+inline void update_texture(
+    uint tid, const ym::image<ym::vec<byte, N>>& img, bool mipmap) {
+    update_texture(
+        tid, img.width(), img.height(), N, (byte*)img.data(), mipmap);
 }
 
 ///
@@ -336,14 +347,53 @@ void clear_texture(uint* tid);
 /// content is dyanamic if dynamic.
 /// Returns the buffer id.
 ///
-uint make_buffer(
+uint make_buffer_raw(
     int num, int size, const void* values, bool elements, bool dynamic);
+
+///
+/// Creates a buffer with num elements of size size stored in values, where
+/// content is dyanamic if dynamic.
+/// Returns the buffer id.
+///
+template <typename T>
+inline uint make_buffer(int num, const T* values, bool elements, bool dynamic) {
+    return make_buffer_raw(num, sizeof(T), values, elements, dynamic);
+}
+
+///
+/// Creates a buffer with num elements of size size stored in values, where
+/// content is dyanamic if dynamic.
+/// Returns the buffer id.
+///
+template <typename T>
+inline uint make_buffer(
+    const std::vector<T>& values, bool elements, bool dynamic) {
+    return make_buffer(values.size(), values.data(), elements, dynamic);
+}
 
 ///
 /// Updates the buffer bid with new data.
 ///
-void update_buffer(uint bid, int num, int size, const void* values,
+void update_buffer_raw(uint bid, int num, int size, const void* values,
     bool elements, bool dynamic);
+
+///
+/// Updates the buffer bid with new data.
+///
+template <typename T>
+inline void update_buffer(
+    uint bid, int num, const T* values, bool elements, bool dynamic) {
+    update_buffer_raw(bid, num, sizeof(T), values, elements, dynamic);
+}
+
+///
+/// Updates the buffer bid with new data.
+///
+template <typename T>
+inline void update_buffer(
+    uint bid, const std::vector<T>& values, bool elements, bool dynamic) {
+    update_buffer(bid, values.size(), values.data(), elements, dynamic);
+}
 
 ///
 /// Destroys the buffer bid.
@@ -363,91 +413,464 @@ uint make_vertex_arrays();
 void clear_vertex_arrays(uint* aid);
 
 ///
+/// Binds a vertex array object
+///
+void bind_vertex_arrays(uint aid);
+
+///
 /// Creates and OpenGL program from vertex and fragment code. Returns the
-/// program id. Optionally return vertex and fragment shader ids. A VAO has to
-/// be
-/// bound before this.
+/// program id. Optionally return vertex and fragment shader ids. A VAO is
+/// created.
 ///
 uint make_program(const std::string& vertex, const std::string& fragment,
-    uint* vid, uint* fid);
+    uint* vid, uint* fid, uint* vao);
 
 ///
 /// Destroys the program pid and optionally the sahders vid and fid.
 ///
-void clear_program(uint* pid, uint* vid, uint* fid);
+void clear_program(uint* pid, uint* vid, uint* fid, uint* vao);
 
 ///
-/// Set uniform integer values val for program prog and variable var.
+/// Binds a program
+///
+void bind_program(uint pid);
+
+///
+/// Get uniform location (simple GL wrapper that avoids GL includes)
+///
+int get_uniform_location(uint pid, const std::string& name);
+
+///
+/// Get attrib location (simple GL wrapper that avoids GL includes)
+///
+int get_attrib_location(uint pid, const std::string& name);
+
+///
+/// Get the names of all uniforms
+///
+std::vector<std::pair<std::string, int>> get_uniforms_names(uint pid);
+
+///
+/// Get the names of all uniforms
+///
+inline std::unordered_map<std::string, int> get_uniforms_namemap(uint pid) {
+    auto namemap = std::unordered_map<std::string, int>();
+    for (auto kv : get_uniforms_names(pid)) namemap[kv.first] = kv.second;
+    return namemap;
+}
+
+///
+/// Get the names of all attributes
+///
+std::vector<std::pair<std::string, int>> get_attributes_names(uint pid);
+
+///
+/// Get the names of all attributes
+///
+inline std::unordered_map<std::string, int> get_attributes_namemap(uint pid) {
+    auto namemap = std::unordered_map<std::string, int>();
+    for (auto kv : get_attributes_names(pid)) namemap[kv.first] = kv.second;
+    return namemap;
+}
+
+///
+/// Set uniform integer values val for program prog and variable loc.
 /// The values have nc number of components (1-4) and count elements
 /// (for arrays).
 ///
-bool set_uniform(
-    uint prog, const std::string& var, const int* val, int nc, int count);
+bool set_uniform_raw(uint prog, int var, const int* val, int nc, int count);
 
 ///
 /// Set uniform float values val for program prog and variable var.
 /// The values have nc number of components (1-4) and count elements
 /// (for arrays).
 ///
-bool set_uniform(
-    uint prog, const std::string& var, const float* val, int nc, int count);
+bool set_uniform_raw(uint prog, int var, const float* val, int nc, int count);
+
+///
+/// Set uniform float values val for program prog and variable var.
+///
+inline bool set_uniform(uint prog, int var, bool val) {
+    auto vali = (int)val;
+    return set_uniform_raw(prog, var, &vali, 1, 1);
+}
+
+///
+/// Set uniform float values val for program prog and variable var.
+///
+inline bool set_uniform(uint prog, int var, int val) {
+    return set_uniform_raw(prog, var, &val, 1, 1);
+}
+
+///
+/// Set uniform float values val for program prog and variable var.
+///
+inline bool set_uniform(uint prog, int var, float val) {
+    return set_uniform_raw(prog, var, &val, 1, 1);
+}
+
+///
+/// Set uniform float values val for program prog and variable var.
+///
+template <int N>
+inline bool set_uniform(uint prog, int var, const ym::vec<float, N>& val) {
+    return set_uniform_raw(prog, var, val.data(), N, 1);
+}
+
+///
+/// Set uniform float values val for program prog and variable var.
+///
+template <int N>
+inline bool set_uniform(uint prog, int var, const ym::vec<int, N>& val) {
+    return set_uniform_raw(prog, var, val.data(), N, 1);
+}
+
+///
+/// Set uniform float values val for program prog and variable var.
+///
+inline bool set_uniform(uint prog, int var, const ym::mat4f& val) {
+    return set_uniform_raw(prog, var, (float*)val.data(), 16, 1);
+}
+
+///
+/// Set uniform float values val for program prog and variable var.
+///
+inline bool set_uniform(uint prog, int var, const ym::frame3f& val) {
+    return set_uniform_raw(prog, var, (float*)val.data(), 12, 1);
+}
+
+///
+/// Set uniform float values val for program prog and variable var.
+///
+inline bool set_uniform(uint prog, int var, const int* val, int num) {
+    return set_uniform_raw(prog, var, val, 1, num);
+}
+
+///
+/// Set uniform float values val for program prog and variable var.
+///
+inline bool set_uniform(uint prog, int var, const float* val, int num) {
+    return set_uniform_raw(prog, var, val, 1, num);
+}
+
+///
+/// Set uniform float values val for program prog and variable var.
+///
+template <int N>
+inline bool set_uniform(
+    uint prog, int var, const ym::vec<float, N>* val, int num) {
+    return set_uniform_raw(prog, var, val->data(), N, num);
+}
+
+///
+/// Set uniform float values val for program prog and variable var.
+///
+template <int N>
+inline bool set_uniform(
+    uint prog, int var, const ym::vec<int, N>* val, int num) {
+    return set_uniform_raw(prog, var, val->data(), N, num);
+}
+
+///
+/// Set uniform float values val for program prog and variable var.
+///
+inline bool set_uniform(uint prog, int var, const ym::mat4f* val, int num) {
+    return set_uniform_raw(prog, var, (float*)val, 16, num);
+}
+
+///
+/// Set uniform float values val for program prog and variable var.
+///
+template <typename T>
+inline bool set_uniform(uint prog, const std::string& var, const T& val) {
+    auto loc = get_uniform_location(prog, var);
+    if (loc < 0) return false;
+    return set_uniform(prog, loc, val);
+}
+
+///
+/// Set uniform float values val for program prog and variable var.
+///
+template <typename T>
+inline bool set_uniform(
+    uint prog, const std::string& var, const T* val, int num) {
+    auto loc = get_uniform_location(prog, var);
+    if (loc < 0) return false;
+    return set_uniform(prog, loc, val, num);
+}
+
+///
+/// Set uniform texture id tid and unit tunit for program prog and variable var.
+///
+bool set_uniform_texture(
+    uint prog, int var, const texture_info& tinfo, uint tunit);
 
 ///
 /// Set uniform texture id tid and unit tunit for program prog and variable var.
 /// Optionally sets the int variable varon to 0/1 whether the texture is enable
 /// on not.
 ///
-bool set_uniform_texture(uint prog, const std::string& var,
-    const std::string& varon, const texture_info& tinfo, uint tunit);
-bool set_uniform_texture(uint prog, const std::string& var,
-    const std::string& varon, uint tid, uint tunit);
+inline bool set_uniform_texture(
+    uint prog, int var, int varon, const texture_info& tinfo, uint tunit) {
+    if (!set_uniform_texture(prog, var, tinfo, tunit)) return false;
+    if (!set_uniform(prog, varon, (bool)tinfo.txt_id)) return false;
+    return true;
+}
+
+///
+/// Set uniform texture id tid and unit tunit for program prog and variable var.
+///
+inline bool set_uniform_texture(
+    uint prog, const std::string& var, const texture_info& tinfo, uint tunit) {
+    auto loc = get_uniform_location(prog, var);
+    if (loc < 0) return false;
+    return set_uniform_texture(prog, loc, tinfo, tunit);
+}
+
+///
+/// Set uniform texture id tid and unit tunit for program prog and variable var.
+/// Optionally sets the int variable varon to 0/1 whether the texture is enable
+/// on not.
+///
+inline bool set_uniform_texture(uint prog, const std::string& var,
+    const std::string& varon, const texture_info& tinfo, uint tunit) {
+    auto loc = get_uniform_location(prog, var);
+    if (loc < 0) return false;
+    auto locon = get_uniform_location(prog, varon);
+    if (locon < 0) return false;
+    return set_uniform_texture(prog, loc, locon, tinfo, tunit);
+}
 
 ///
 /// Sets a constant value for a vertex attribute for program prog and
 /// variable var. The attribute has nc components.
 ///
-bool set_vertattr_val(
-    uint prog, const std::string& var, const float* value, int nc);
+bool set_vertattr_val_raw(uint prog, int var, const float* value, int nc);
 
 ///
 /// Sets a constant value for a vertex attribute for program prog and
 /// variable var. The attribute has nc components.
 ///
-bool set_vertattri_val(
-    uint prog, const std::string& var, const int* value, int nc);
+bool set_vertattr_val_raw(uint prog, int var, const int* value, int nc);
 
 ///
 /// Sets a vartex attribute for program prog and variable var to the buffer bid.
 /// The attribute has nc components and per-vertex values values.
 ///
-bool set_vertattr_buffer(uint prog, const std::string& var, uint bid, int nc);
+bool set_vertattr_buffer(uint prog, int var, uint bid, int nc);
 
 ///
 /// Sets a vartex attribute for program prog and variable var to the buffer bid.
 /// The attribute has nc components and per-vertex values values.
 ///
-bool set_vertattri_buffer(uint prog, const std::string& var, uint bid, int nc);
+bool set_vertattri_buffer(uint prog, int var, uint bid, int nc);
 
 ///
 /// Sets a vartex attribute for program prog and variable var. The attribute
 /// has nc components and either buffer bid or a single value def
 /// (if bid is zero). Convenience wrapper to above functions.
 ///
-bool set_vertattr(
-    uint prog, const std::string& var, uint bid, int nc, const float* def);
+bool set_vertattr_raw(uint prog, int var, uint bid, int nc, const float* def);
 
 ///
 /// Sets a vartex attribute for program prog and variable var. The attribute
 /// has nc components and either buffer bid or a single value def
 /// (if bid is zero). Convenience wrapper to above functions.
 ///
-bool set_vertattri(
-    uint prog, const std::string& var, uint bid, int nc, const int* def);
+bool set_vertattr_raw(uint prog, int var, uint bid, int nc, const int* def);
+
+///
+/// Sets a vartex attribute for program prog and variable var. The attribute
+/// is either a buffer bid or a single value def
+/// (if bid is zero). Convenience wrapper to above functions.
+///
+template <int N>
+inline bool set_vertattr(
+    uint prog, int var, uint bid, const ym::vec<float, N>& def) {
+    return set_vertattr_raw(prog, var, bid, N, def.data());
+}
+
+///
+/// Sets a vartex attribute for program prog and variable var. The attribute
+/// is either a buffer bid or a single value def
+/// (if bid is zero). Convenience wrapper to above functions.
+///
+template <int N>
+inline bool set_vertattr(
+    uint prog, int var, uint bid, const ym::vec<int, N>& def) {
+    return set_vertattr_raw(prog, var, bid, N, def.data());
+}
+
+///
+/// Sets a vartex attribute for program prog and variable var. The attribute
+/// is either a buffer bid or a single value def
+/// (if bid is zero). Convenience wrapper to above functions.
+///
+template <int N>
+inline bool set_vertattr(
+    uint prog, const std::string& var, uint bid, const ym::vec<float, N>& def) {
+    auto loc = get_attrib_location(prog, var);
+    if (loc < 0) return false;
+    return set_vertattr(prog, loc, bid, def);
+}
+
+///
+/// Sets a vartex attribute for program prog and variable var. The attribute
+/// is either a buffer bid or a single value def
+/// (if bid is zero). Convenience wrapper to above functions.
+///
+template <int N>
+inline bool set_vertattr(
+    uint prog, const std::string& var, uint bid, const ym::vec<int, N>& def) {
+    auto loc = get_attrib_location(prog, var);
+    if (loc < 0) return false;
+    return set_vertattr(prog, loc, bid, def);
+}
 
 ///
 /// Draws nelems elements elem of type etype.
 ///
 bool draw_elems(int nelems, uint bid, etype etype);
+
+// PROGRAM INFO FUNCTIONS ------------------------------------------------------
+
+///
+/// Program information for faster binding. Create
+///
+struct program_info {
+    /// program id
+    uint prog_id = 0;
+    /// vertex shader id
+    uint vert_id = 0;
+    /// fragment shader id
+    uint frag_id = 0;
+    /// veretx array object
+    uint vao_id = 0;
+
+    /// vertex code
+    std::string vert_code = "";
+    /// fragment code
+    std::string frag_code = "";
+
+    /// attributes names
+    std::unordered_map<std::string, int> attrib_names;
+    /// uniform names
+    std::unordered_map<std::string, int> uniform_names;
+
+    /// check if valid
+    bool is_valid() const { return (bool)prog_id; }
+    /// check if valid
+    explicit operator bool() const { return (bool)prog_id; }
+};
+
+///
+/// Make program information
+///
+inline program_info make_program_info(
+    const std::string& vert, const std::string& frag) {
+    auto info = program_info();
+    assert(check_error());
+    info.prog_id =
+        make_program(vert, frag, &info.vert_id, &info.frag_id, &info.vao_id);
+    assert(check_error());
+    info.vert_code = vert;
+    info.frag_code = frag;
+    assert(check_error());
+    info.uniform_names = get_uniforms_namemap(info.prog_id);
+    assert(check_error());
+    info.attrib_names = get_attributes_namemap(info.prog_id);
+    assert(check_error());
+    return info;
+}
+
+///
+/// Free program info
+///
+inline void free_program_info(const program_info& prog);
+
+///
+/// Bind the program
+///
+inline void bind_program(const program_info& prog) {
+    bind_vertex_arrays(prog.vao_id);
+    bind_program(prog.prog_id);
+}
+
+///
+/// Unbind the program
+///
+inline void unbind_program(const program_info& prog) {
+    bind_vertex_arrays(0);
+    bind_program(0);
+}
+
+///
+/// Bind a uniform parameter
+///
+template <typename T>
+inline bool set_uniform(
+    const program_info& prog, const std::string& name, const T& val) {
+    auto pos = prog.uniform_names.find(name);
+    if (pos == prog.uniform_names.end()) return false;
+    return set_uniform(prog.prog_id, pos->second, val);
+}
+
+///
+/// Bind a uniform parameter
+///
+template <typename T>
+inline bool set_uniform(
+    const program_info& prog, const std::string& name, const T* val, int num) {
+    auto pos = prog.uniform_names.find(name);
+    if (pos == prog.uniform_names.end()) return false;
+    return set_uniform(prog.prog_id, pos->second, val, num);
+}
+
+///
+/// Bind a uniform texture
+///
+inline bool set_uniform_texture(const program_info& prog,
+    const std::string& var, const texture_info& tinfo, uint tunit) {
+    auto loc = prog.uniform_names.find(var);
+    if (loc == prog.uniform_names.end()) return false;
+    return set_uniform_texture(prog.prog_id, loc->second, tinfo, tunit);
+}
+
+///
+/// Bind a uniform texture
+///
+inline bool set_uniform_texture(const program_info& prog,
+    const std::string& var, const std::string& varon, const texture_info& tinfo,
+    uint tunit) {
+    auto loc = prog.uniform_names.find(var);
+    if (loc == prog.uniform_names.end()) return false;
+    auto locon = prog.uniform_names.find(varon);
+    if (locon == prog.uniform_names.end()) return false;
+    return set_uniform_texture(
+        prog.prog_id, loc->second, locon->second, tinfo, tunit);
+}
+
+///
+/// Bind a vertex attribute
+///
+template <int N>
+inline bool set_vertattr(const program_info& prog, const std::string& var,
+    uint bid, const ym::vec<float, N>& def) {
+    auto loc = prog.attrib_names.find(var);
+    if (loc == prog.attrib_names.end()) return false;
+    return set_vertattr(prog.prog_id, loc->second, bid, def);
+}
+
+///
+/// Bind a vertex attribute
+///
+template <int N>
+inline bool set_vertattr(const program_info& prog, const std::string& var,
+    uint bid, const ym::vec<int, N>& def) {
+    auto loc = prog.attrib_names.find(var);
+    if (loc == prog.attrib_names.end()) return false;
+    return set_vertattr(prog.prog_id, loc->second, bid, def);
+}
 
 // STANDARD SHADER FUNCTIONS ---------------------------------------------------
 
@@ -455,19 +878,18 @@ bool draw_elems(int nelems, uint bid, etype etype);
 /// Shade with a physically-based standard shader based on Phong/GGX.
 ///
 namespace stdshader {
-
 ///
 /// Initialize a standard shader.
 ///
-void make_program(uint* pid, uint* vao);
+program_info make_program();
 
 ///
 /// Starts a frame by setting exposure/gamma values, camera transforms and
 /// projection. Sets also whether to use full shading or a quick eyelight
 /// preview.
 ///
-void begin_frame(uint prog, uint vao, bool shade_eyelight, float img_exposure,
-    ym::tonemap_type img_tonemap, float img_gamma,
+void begin_frame(const program_info& prog, bool shade_eyelight,
+    float img_exposure, ym::tonemap_type img_tonemap, float img_gamma,
     const ym::mat4f& camera_xform, const ym::mat4f& camera_xform_inv,
     const ym::mat4f& camera_proj);
 
@@ -477,16 +899,16 @@ void begin_frame(uint prog, uint vao, bool shade_eyelight, float img_exposure,
 void end_frame();
 
 ///
-/// Set num lights with position pos, color ke, type ltype. Also set the ambient
-/// illumination amb.
+/// Set num lights with position pos, color ke, type ltype. Also set the
+/// ambient illumination amb.
 ///
-void set_lights(uint prog, const ym::vec3f& amb, int num, ym::vec3f* pos,
-    ym::vec3f* ke, ltype* ltype);
+void set_lights(const program_info& prog, const ym::vec3f& amb, int num,
+    ym::vec3f* pos, ym::vec3f* ke, ltype* ltype);
 
 ///
 /// Begins drawing a shape with transform xform.
 ///
-void begin_shape(uint prog, const ym::mat4f& xform);
+void begin_shape(const program_info& prog, const ym::mat4f& xform);
 
 ///
 /// End shade drawing.
@@ -496,30 +918,30 @@ void end_shape();
 ///
 /// Set the object as highlight color.
 ///
-void set_highlight(uint prog, const ym::vec4f& highlight);
+void set_highlight(const program_info& prog, const ym::vec4f& highlight);
 
 ///
 /// Set material values for emission only (constant color).
 /// Indicates textures ids with the correspoinding XXX_txt variables.
 /// Works for points/lines/triangles. Element type set by draw_XXX calls.
 ///
-void set_material_emission_only(uint prog, const ym::vec3f& ke, float op,
-    const texture_info& ke_txt, bool double_sided, bool alpha_cutout);
+void set_material_emission_only(const program_info& prog, const ym::vec3f& ke,
+    float op, const texture_info& ke_txt, bool double_sided, bool alpha_cutout);
 
 ///
 /// Set material values with emission ke, diffuse kd, specular ks and
 /// specular roughness rs, opacity op. Indicates textures ids with the
 /// correspoinding XXX_txt variables. Sets also normal and occlusion
 /// maps. Works for points/lines/triangles (diffuse for points,
-/// Kajiya-Kay for lines, GGX/Phong for triangles). Element type set by draw_XXX
-/// calls.
+/// Kajiya-Kay for lines, GGX/Phong for triangles). Element type set by
+/// draw_XXX calls.
 ///
-void set_material_generic(uint prog, const ym::vec3f& ke, const ym::vec3f& kd,
-    const ym::vec3f& ks, float rs, float op, const texture_info& ke_txt,
-    const texture_info& kd_txt, const texture_info& ks_txt,
-    const texture_info& rs_txt, const texture_info& norm_txt,
-    const texture_info& occ_txt, bool use_phong, bool double_sided,
-    bool alpha_cutout);
+void set_material_generic(const program_info& prog, const ym::vec3f& ke,
+    const ym::vec3f& kd, const ym::vec3f& ks, float rs, float op,
+    const texture_info& ke_txt, const texture_info& kd_txt,
+    const texture_info& ks_txt, const texture_info& rs_txt,
+    const texture_info& norm_txt, const texture_info& occ_txt, bool use_phong,
+    bool double_sided, bool alpha_cutout);
 
 ///
 /// Set material values for glTF specular-roughness PBR shader,
@@ -529,8 +951,8 @@ void set_material_generic(uint prog, const ym::vec3f& ke, const ym::vec3f& kd,
 /// maps. Works for points/lines/triangles (diffuse for points, Kajiya-Kay
 /// for lines, GGX/Phong for triangles). Element type set by draw_XXX calls.
 ///
-void set_material_gltf_metallic_roughness(uint prog, const ym::vec3f& ke,
-    const ym::vec3f& kb, float km, float rs, float op,
+void set_material_gltf_metallic_roughness(const program_info& prog,
+    const ym::vec3f& ke, const ym::vec3f& kb, float km, float rs, float op,
     const texture_info& ke_txt, const texture_info& kb_txt,
     const texture_info& km_txt, const texture_info& norm_txt,
     const texture_info& occ_txt, bool use_phong, bool double_sided,
@@ -544,9 +966,9 @@ void set_material_gltf_metallic_roughness(uint prog, const ym::vec3f& ke,
 /// maps. Works for points/lines/triangles (diffuse for points, Kajiya-Kay
 /// for lines, GGX/Phong for triangles). Element type set by draw_XXX calls.
 ///
-void set_material_gltf_specular_glossiness(uint prog, const ym::vec3f& ke,
-    const ym::vec3f& kd, const ym::vec3f& ks, float rs, float op,
-    const texture_info& ke_txt, const texture_info& kd_txt,
+void set_material_gltf_specular_glossiness(const program_info& prog,
+    const ym::vec3f& ke, const ym::vec3f& kd, const ym::vec3f& ks, float rs,
+    float op, const texture_info& ke_txt, const texture_info& kd_txt,
     const texture_info& ks_txt, const texture_info& norm_txt,
     const texture_info& occ_txt, bool use_phong, bool double_sided,
     bool alpha_cutout);
@@ -560,52 +982,53 @@ float specular_exponent_to_roughness(float n);
 /// Set vertex data with position pos, normals norm, texture coordinates
 /// texcoord and per-vertex color color and tangent space tangsp.
 ///
-void set_vert(uint prog, const ym::vec3f* pos, const ym::vec3f* norm,
-    const ym::vec2f* texcoord, const ym::vec4f* color, const ym::vec4f* tangsp);
+void set_vert(const program_info& prog, const ym::vec3f* pos,
+    const ym::vec3f* norm, const ym::vec2f* texcoord, const ym::vec4f* color,
+    const ym::vec4f* tangsp);
 
 ///
 /// Set vertex data with buffers for position pos, normals norm, texture
 /// coordinates texcoord, per-vertex color color and tangent space tangsp.
 ///
-void set_vert(
-    uint prog, uint pos, uint norm, uint texcoord, uint color, uint tangsp);
+void set_vert(const program_info& prog, uint pos, uint norm, uint texcoord,
+    uint color, uint tangsp);
 
 ///
 /// Set vertex data with buffers for skinning.
 ///
-void set_vert_skinning(
-    uint prog, uint weights, uint joints, int nxforms, const ym::mat4f* xforms);
+void set_vert_skinning(const program_info& prog, uint weights, uint joints,
+    int nxforms, const ym::mat4f* xforms);
 
 ///
 /// Set vertex data with buffers for skinning.
 ///
-void set_vert_gltf_skinning(
-    uint prog, uint weights, uint joints, int nxforms, const ym::mat4f* xforms);
+void set_vert_gltf_skinning(const program_info& prog, uint weights, uint joints,
+    int nxforms, const ym::mat4f* xforms);
 
 ///
 /// Disables vertex skinning.
 ///
-void set_vert_skinning_off(uint prog);
+void set_vert_skinning_off(const program_info& prog);
 
 ///
 /// Draw num elements elem of type etype.
 ///
-void draw_elems(uint prog, int num, uint bid, etype etype);
+void draw_elems(const program_info& prog, int num, uint bid, etype etype);
 
 ///
 /// Draw num elements elem of type etype.
 ///
-void draw_points(uint prog, int num, uint bid);
+void draw_points(const program_info& prog, int num, uint bid);
 
 ///
 /// Draw num elements elem of type etype.
 ///
-void draw_lines(uint prog, int num, uint bid);
+void draw_lines(const program_info& prog, int num, uint bid);
 
 ///
 /// Draw num elements elem of type etype.
 ///
-void draw_triangles(uint prog, int num, uint bid);
+void draw_triangles(const program_info& prog, int num, uint bid);
 
 }  // namespace stdshader
 

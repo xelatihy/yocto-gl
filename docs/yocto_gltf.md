@@ -2080,10 +2080,10 @@ struct accessor_view {
     int count() const; 
     int ncomp() const; 
     bool valid() const; 
-    template <int N> ym::vec<float, N> getv( int idx, const ym::vec<float, N>& def = ym::zero_vec<float, N>()) const; 
+    template <int N> ym::vec<float, N> getv( int idx, const ym::vec<float, N>& def = ym::vec<float, N>()) const; 
     template <int N, int M> ym::mat<float, N, M> getm(int idx) const; 
     float get(int idx, int c = 0) const; 
-    template <int N> ym::vec<int, N> getiv( int idx, const ym::vec<int, N>& def = ym::zero_vec<int, N>()) const; 
+    template <int N> ym::vec<int, N> getiv( int idx, const ym::vec<int, N>& def = ym::vec<int, N>()) const; 
     int geti(int idx, int c = 0) const; 
 }
 ~~~

@@ -1907,7 +1907,7 @@ struct accessor_view {
     /// get the idx-th element of fixes length
     template <int N>
     ym::vec<float, N> getv(
-        int idx, const ym::vec<float, N>& def = ym::zero_vec<float, N>()) const;
+        int idx, const ym::vec<float, N>& def = ym::vec<float, N>()) const;
 
     /// get the idx-th element of fixes length as a matrix
     template <int N, int M>
@@ -1919,7 +1919,7 @@ struct accessor_view {
     /// get the idx-th element as integer
     template <int N>
     ym::vec<int, N> getiv(
-        int idx, const ym::vec<int, N>& def = ym::zero_vec<int, N>()) const;
+        int idx, const ym::vec<int, N>& def = ym::vec<int, N>()) const;
 
     /// get the c-th component of the idx-th element as integer
     int geti(int idx, int c = 0) const;

@@ -81,6 +81,12 @@ section of this file.</p>
 
 
 <p>Shortcut for GLuint.</p>
+<h3>Typedef byte</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">using</span> <span class="n">byte</span> <span class="o">=</span> <span class="kt">unsigned</span> <span class="kt">char</span><span class="p">;</span>
+</code></pre></div>
+
+
+<p>Shortcut for unsigned chars.</p>
 <h3>Enum etype : int</h3>
 <div class="codehilite"><pre><code><span></span><span class="k">enum</span> <span class="k">struct</span> <span class="nl">etype</span> <span class="p">:</span> <span class="kt">int</span> <span class="p">{</span>
     <span class="n">point</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
@@ -264,8 +270,7 @@ robust.</p>
 with top-left corner at ox, oy with a zoom zoom.</p>
 <h3>Function shade_image()</h3>
 <div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">shade_image</span><span class="p">(</span><span class="n">uint</span> <span class="n">tid</span><span class="p">,</span> <span class="kt">int</span> <span class="n">img_w</span><span class="p">,</span> <span class="kt">int</span> <span class="n">img_h</span><span class="p">,</span> <span class="kt">int</span> <span class="n">win_w</span><span class="p">,</span> <span class="kt">int</span> <span class="n">win_h</span><span class="p">,</span> <span class="kt">float</span> <span class="n">ox</span><span class="p">,</span>
-    <span class="kt">float</span> <span class="n">oy</span><span class="p">,</span> <span class="kt">float</span> <span class="n">zoom</span><span class="p">,</span> <span class="n">ym</span><span class="o">::</span><span class="n">tonemap_type</span> <span class="n">tmtype</span><span class="p">,</span> <span class="kt">float</span> <span class="n">exposure</span><span class="p">,</span>
-    <span class="kt">float</span> <span class="n">gamma_</span><span class="p">);</span>
+    <span class="kt">float</span> <span class="n">oy</span><span class="p">,</span> <span class="kt">float</span> <span class="n">zoom</span><span class="p">,</span> <span class="n">ym</span><span class="o">::</span><span class="n">tonemap_type</span> <span class="n">tmtype</span><span class="p">,</span> <span class="kt">float</span> <span class="n">exposure</span><span class="p">,</span> <span class="kt">float</span> <span class="n">gamma</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -305,8 +310,9 @@ Returns the texture id.</p>
 
 <p>Updates the texture tid with new image data.</p>
 <h3>Function make_texture()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">uint</span> <span class="nf">make_texture</span><span class="p">(</span>
-    <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">image4f</span><span class="o">&amp;</span> <span class="n">img</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">linear</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">mipmap</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">as_float</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="kt">int</span> <span class="n">N</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="n">uint</span> <span class="n">make_texture</span><span class="p">(</span><span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">image</span><span class="o">&lt;</span><span class="n">ym</span><span class="o">::</span><span class="n">vec</span><span class="o">&lt;</span><span class="kt">float</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&gt;&amp;</span> <span class="n">img</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">linear</span><span class="p">,</span>
+    <span class="kt">bool</span> <span class="n">mipmap</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">as_float</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -314,8 +320,9 @@ Returns the texture id.</p>
 Internally use float if as_float and filtering if filter.
 Returns the texture id.</p>
 <h3>Function make_texture()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">uint</span> <span class="nf">make_texture</span><span class="p">(</span>
-    <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">image4b</span><span class="o">&amp;</span> <span class="n">img</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">linear</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">mipmap</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">as_srgb</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="kt">int</span> <span class="n">N</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="n">uint</span> <span class="n">make_texture</span><span class="p">(</span><span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">image</span><span class="o">&lt;</span><span class="n">ym</span><span class="o">::</span><span class="n">vec</span><span class="o">&lt;</span><span class="n">byte</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&gt;&amp;</span> <span class="n">img</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">linear</span><span class="p">,</span>
+    <span class="kt">bool</span> <span class="n">mipmap</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">as_srgb</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -323,13 +330,17 @@ Returns the texture id.</p>
 Internally use srgb lookup if as_srgb and filtering if filter.
 Returns the texture id.</p>
 <h3>Function update_texture()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_texture</span><span class="p">(</span><span class="n">uint</span> <span class="n">tid</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">image4f</span><span class="o">*</span> <span class="n">img</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">mipmap</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="kt">int</span> <span class="n">N</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">update_texture</span><span class="p">(</span>
+    <span class="n">uint</span> <span class="n">tid</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">image</span><span class="o">&lt;</span><span class="n">ym</span><span class="o">::</span><span class="n">vec</span><span class="o">&lt;</span><span class="kt">float</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&gt;&amp;</span> <span class="n">img</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">mipmap</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Updates the texture tid with new image data.</p>
 <h3>Function update_texture()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_texture</span><span class="p">(</span><span class="n">uint</span> <span class="n">tid</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">image4b</span><span class="o">*</span> <span class="n">img</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">mipmap</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="kt">int</span> <span class="n">N</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">update_texture</span><span class="p">(</span>
+    <span class="n">uint</span> <span class="n">tid</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">image</span><span class="o">&lt;</span><span class="n">ym</span><span class="o">::</span><span class="n">vec</span><span class="o">&lt;</span><span class="n">byte</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&gt;&amp;</span> <span class="n">img</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">mipmap</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -340,8 +351,8 @@ Returns the texture id.</p>
 
 
 <p>Destroys the texture tid.</p>
-<h3>Function make_buffer()</h3>
-<div class="codehilite"><pre><code><span></span><span class="n">uint</span> <span class="nf">make_buffer</span><span class="p">(</span>
+<h3>Function make_buffer_raw()</h3>
+<div class="codehilite"><pre><code><span></span><span class="n">uint</span> <span class="nf">make_buffer_raw</span><span class="p">(</span>
     <span class="kt">int</span> <span class="n">num</span><span class="p">,</span> <span class="kt">int</span> <span class="n">size</span><span class="p">,</span> <span class="k">const</span> <span class="kt">void</span><span class="o">*</span> <span class="n">values</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">elements</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">dynamic</span><span class="p">);</span>
 </code></pre></div>
 
@@ -349,9 +360,44 @@ Returns the texture id.</p>
 <p>Creates a buffer with num elements of size size stored in values, where
 content is dyanamic if dynamic.
 Returns the buffer id.</p>
-<h3>Function update_buffer()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">update_buffer</span><span class="p">(</span><span class="n">uint</span> <span class="n">bid</span><span class="p">,</span> <span class="kt">int</span> <span class="n">num</span><span class="p">,</span> <span class="kt">int</span> <span class="n">size</span><span class="p">,</span> <span class="k">const</span> <span class="kt">void</span><span class="o">*</span> <span class="n">values</span><span class="p">,</span>
+<h3>Function make_buffer()</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="n">uint</span> <span class="n">make_buffer</span><span class="p">(</span><span class="kt">int</span> <span class="n">num</span><span class="p">,</span> <span class="k">const</span> <span class="n">T</span><span class="o">*</span> <span class="n">values</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">elements</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">dynamic</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Creates a buffer with num elements of size size stored in values, where
+content is dyanamic if dynamic.
+Returns the buffer id.</p>
+<h3>Function make_buffer()</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="n">uint</span> <span class="n">make_buffer</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">values</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">elements</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">dynamic</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Creates a buffer with num elements of size size stored in values, where
+content is dyanamic if dynamic.
+Returns the buffer id.</p>
+<h3>Function update_buffer_raw()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">update_buffer_raw</span><span class="p">(</span><span class="n">uint</span> <span class="n">bid</span><span class="p">,</span> <span class="kt">int</span> <span class="n">num</span><span class="p">,</span> <span class="kt">int</span> <span class="n">size</span><span class="p">,</span> <span class="k">const</span> <span class="kt">void</span><span class="o">*</span> <span class="n">values</span><span class="p">,</span>
     <span class="kt">bool</span> <span class="n">elements</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">dynamic</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Updates the buffer bid with new data.</p>
+<h3>Function update_buffer()</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">update_buffer</span><span class="p">(</span>
+    <span class="n">uint</span> <span class="n">bid</span><span class="p">,</span> <span class="kt">int</span> <span class="n">num</span><span class="p">,</span> <span class="k">const</span> <span class="n">T</span><span class="o">*</span> <span class="n">values</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">elements</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">dynamic</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Updates the buffer bid with new data.</p>
+<h3>Function update_buffer()</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">update_buffer</span><span class="p">(</span>
+    <span class="n">uint</span> <span class="n">bid</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">values</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">elements</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">dynamic</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -374,42 +420,203 @@ Returns the buffer id.</p>
 
 
 <p>Destroys the program pid and optionally the sahders vid and fid.</p>
+<h3>Function bind_vertex_arrays()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">bind_vertex_arrays</span><span class="p">(</span><span class="n">uint</span> <span class="n">aid</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Binds a vertex array object</p>
 <h3>Function make_program()</h3>
 <div class="codehilite"><pre><code><span></span><span class="n">uint</span> <span class="nf">make_program</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">vertex</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">fragment</span><span class="p">,</span>
-    <span class="n">uint</span><span class="o">*</span> <span class="n">vid</span><span class="p">,</span> <span class="n">uint</span><span class="o">*</span> <span class="n">fid</span><span class="p">);</span>
+    <span class="n">uint</span><span class="o">*</span> <span class="n">vid</span><span class="p">,</span> <span class="n">uint</span><span class="o">*</span> <span class="n">fid</span><span class="p">,</span> <span class="n">uint</span><span class="o">*</span> <span class="n">vao</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Creates and OpenGL program from vertex and fragment code. Returns the
-program id. Optionally return vertex and fragment shader ids. A VAO has to
-be
-bound before this.</p>
+program id. Optionally return vertex and fragment shader ids. A VAO is
+created.</p>
 <h3>Function clear_program()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">clear_program</span><span class="p">(</span><span class="n">uint</span><span class="o">*</span> <span class="n">pid</span><span class="p">,</span> <span class="n">uint</span><span class="o">*</span> <span class="n">vid</span><span class="p">,</span> <span class="n">uint</span><span class="o">*</span> <span class="n">fid</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">clear_program</span><span class="p">(</span><span class="n">uint</span><span class="o">*</span> <span class="n">pid</span><span class="p">,</span> <span class="n">uint</span><span class="o">*</span> <span class="n">vid</span><span class="p">,</span> <span class="n">uint</span><span class="o">*</span> <span class="n">fid</span><span class="p">,</span> <span class="n">uint</span><span class="o">*</span> <span class="n">vao</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Destroys the program pid and optionally the sahders vid and fid.</p>
-<h3>Function set_uniform()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">set_uniform</span><span class="p">(</span>
-    <span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">var</span><span class="p">,</span> <span class="k">const</span> <span class="kt">int</span><span class="o">*</span> <span class="n">val</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nc</span><span class="p">,</span> <span class="kt">int</span> <span class="n">count</span><span class="p">);</span>
+<h3>Function bind_program()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">bind_program</span><span class="p">(</span><span class="n">uint</span> <span class="n">pid</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Set uniform integer values val for program prog and variable var.
+<p>Binds a program</p>
+<h3>Function get_uniform_location()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">int</span> <span class="nf">get_uniform_location</span><span class="p">(</span><span class="n">uint</span> <span class="n">pid</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">name</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Get uniform location (simple GL wrapper that avoids GL includes)</p>
+<h3>Function get_attrib_location()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">int</span> <span class="nf">get_attrib_location</span><span class="p">(</span><span class="n">uint</span> <span class="n">pid</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">name</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Get attrib location (simple GL wrapper that avoids GL includes)</p>
+<h3>Function get_uniforms_names()</h3>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="kt">int</span><span class="o">&gt;&gt;</span> <span class="n">get_uniforms_names</span><span class="p">(</span><span class="n">uint</span> <span class="n">pid</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Get the names of all uniforms</p>
+<h3>Function get_uniforms_namemap()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="kt">int</span><span class="o">&gt;</span> <span class="n">get_uniforms_namemap</span><span class="p">(</span><span class="n">uint</span> <span class="n">pid</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Get the names of all uniforms</p>
+<h3>Function get_attributes_names()</h3>
+<div class="codehilite"><pre><code><span></span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="kt">int</span><span class="o">&gt;&gt;</span> <span class="n">get_attributes_names</span><span class="p">(</span><span class="n">uint</span> <span class="n">pid</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Get the names of all attributes</p>
+<h3>Function get_attributes_namemap()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="kt">int</span><span class="o">&gt;</span> <span class="n">get_attributes_namemap</span><span class="p">(</span><span class="n">uint</span> <span class="n">pid</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Get the names of all attributes</p>
+<h3>Function set_uniform_raw()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">set_uniform_raw</span><span class="p">(</span><span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="kt">int</span> <span class="n">var</span><span class="p">,</span> <span class="k">const</span> <span class="kt">int</span><span class="o">*</span> <span class="n">val</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nc</span><span class="p">,</span> <span class="kt">int</span> <span class="n">count</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Set uniform integer values val for program prog and variable loc.
 The values have nc number of components (1-4) and count elements
 (for arrays).</p>
-<h3>Function set_uniform()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">set_uniform</span><span class="p">(</span>
-    <span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">var</span><span class="p">,</span> <span class="k">const</span> <span class="kt">float</span><span class="o">*</span> <span class="n">val</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nc</span><span class="p">,</span> <span class="kt">int</span> <span class="n">count</span><span class="p">);</span>
+<h3>Function set_uniform_raw()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">set_uniform_raw</span><span class="p">(</span><span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="kt">int</span> <span class="n">var</span><span class="p">,</span> <span class="k">const</span> <span class="kt">float</span><span class="o">*</span> <span class="n">val</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nc</span><span class="p">,</span> <span class="kt">int</span> <span class="n">count</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Set uniform float values val for program prog and variable var.
 The values have nc number of components (1-4) and count elements
 (for arrays).</p>
+<h3>Function set_uniform()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">set_uniform</span><span class="p">(</span><span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="kt">int</span> <span class="n">var</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">val</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Set uniform float values val for program prog and variable var.</p>
+<h3>Function set_uniform()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">set_uniform</span><span class="p">(</span><span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="kt">int</span> <span class="n">var</span><span class="p">,</span> <span class="kt">int</span> <span class="n">val</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Set uniform float values val for program prog and variable var.</p>
+<h3>Function set_uniform()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">set_uniform</span><span class="p">(</span><span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="kt">int</span> <span class="n">var</span><span class="p">,</span> <span class="kt">float</span> <span class="n">val</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Set uniform float values val for program prog and variable var.</p>
+<h3>Function set_uniform()</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="kt">int</span> <span class="n">N</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">bool</span> <span class="n">set_uniform</span><span class="p">(</span><span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="kt">int</span> <span class="n">var</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec</span><span class="o">&lt;</span><span class="kt">float</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">val</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Set uniform float values val for program prog and variable var.</p>
+<h3>Function set_uniform()</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="kt">int</span> <span class="n">N</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">bool</span> <span class="n">set_uniform</span><span class="p">(</span><span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="kt">int</span> <span class="n">var</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">val</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Set uniform float values val for program prog and variable var.</p>
+<h3>Function set_uniform()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">set_uniform</span><span class="p">(</span><span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="kt">int</span> <span class="n">var</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">mat4f</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Set uniform float values val for program prog and variable var.</p>
+<h3>Function set_uniform()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">set_uniform</span><span class="p">(</span><span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="kt">int</span> <span class="n">var</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">frame3f</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Set uniform float values val for program prog and variable var.</p>
+<h3>Function set_uniform()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">set_uniform</span><span class="p">(</span><span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="kt">int</span> <span class="n">var</span><span class="p">,</span> <span class="k">const</span> <span class="kt">int</span><span class="o">*</span> <span class="n">val</span><span class="p">,</span> <span class="kt">int</span> <span class="n">num</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Set uniform float values val for program prog and variable var.</p>
+<h3>Function set_uniform()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">set_uniform</span><span class="p">(</span><span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="kt">int</span> <span class="n">var</span><span class="p">,</span> <span class="k">const</span> <span class="kt">float</span><span class="o">*</span> <span class="n">val</span><span class="p">,</span> <span class="kt">int</span> <span class="n">num</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Set uniform float values val for program prog and variable var.</p>
+<h3>Function set_uniform()</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="kt">int</span> <span class="n">N</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">bool</span> <span class="n">set_uniform</span><span class="p">(</span>
+    <span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="kt">int</span> <span class="n">var</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec</span><span class="o">&lt;</span><span class="kt">float</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;*</span> <span class="n">val</span><span class="p">,</span> <span class="kt">int</span> <span class="n">num</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Set uniform float values val for program prog and variable var.</p>
+<h3>Function set_uniform()</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="kt">int</span> <span class="n">N</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">bool</span> <span class="n">set_uniform</span><span class="p">(</span>
+    <span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="kt">int</span> <span class="n">var</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;*</span> <span class="n">val</span><span class="p">,</span> <span class="kt">int</span> <span class="n">num</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Set uniform float values val for program prog and variable var.</p>
+<h3>Function set_uniform()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">set_uniform</span><span class="p">(</span><span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="kt">int</span> <span class="n">var</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">mat4f</span><span class="o">*</span> <span class="n">val</span><span class="p">,</span> <span class="kt">int</span> <span class="n">num</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Set uniform float values val for program prog and variable var.</p>
+<h3>Function set_uniform()</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">bool</span> <span class="n">set_uniform</span><span class="p">(</span><span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">var</span><span class="p">,</span> <span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Set uniform float values val for program prog and variable var.</p>
+<h3>Function set_uniform()</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">bool</span> <span class="n">set_uniform</span><span class="p">(</span>
+    <span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">var</span><span class="p">,</span> <span class="k">const</span> <span class="n">T</span><span class="o">*</span> <span class="n">val</span><span class="p">,</span> <span class="kt">int</span> <span class="n">num</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Set uniform float values val for program prog and variable var.</p>
 <h3>Function set_uniform_texture()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">set_uniform_texture</span><span class="p">(</span><span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">var</span><span class="p">,</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">set_uniform_texture</span><span class="p">(</span>
+    <span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="kt">int</span> <span class="n">var</span><span class="p">,</span> <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">tinfo</span><span class="p">,</span> <span class="n">uint</span> <span class="n">tunit</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Set uniform texture id tid and unit tunit for program prog and variable var.</p>
+<h3>Function set_uniform_texture()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">set_uniform_texture</span><span class="p">(</span>
+    <span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="kt">int</span> <span class="n">var</span><span class="p">,</span> <span class="kt">int</span> <span class="n">varon</span><span class="p">,</span> <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">tinfo</span><span class="p">,</span> <span class="n">uint</span> <span class="n">tunit</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Set uniform texture id tid and unit tunit for program prog and variable var.
+Optionally sets the int variable varon to 0/1 whether the texture is enable
+on not.</p>
+<h3>Function set_uniform_texture()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">set_uniform_texture</span><span class="p">(</span>
+    <span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">var</span><span class="p">,</span> <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">tinfo</span><span class="p">,</span> <span class="n">uint</span> <span class="n">tunit</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Set uniform texture id tid and unit tunit for program prog and variable var.</p>
+<h3>Function set_uniform_texture()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">set_uniform_texture</span><span class="p">(</span><span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">var</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">varon</span><span class="p">,</span> <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">tinfo</span><span class="p">,</span> <span class="n">uint</span> <span class="n">tunit</span><span class="p">);</span>
 </code></pre></div>
 
@@ -417,53 +624,89 @@ The values have nc number of components (1-4) and count elements
 <p>Set uniform texture id tid and unit tunit for program prog and variable var.
 Optionally sets the int variable varon to 0/1 whether the texture is enable
 on not.</p>
-<h3>Function set_vertattr_val()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">set_vertattr_val</span><span class="p">(</span>
-    <span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">var</span><span class="p">,</span> <span class="k">const</span> <span class="kt">float</span><span class="o">*</span> <span class="n">value</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nc</span><span class="p">);</span>
+<h3>Function set_vertattr_val_raw()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">set_vertattr_val_raw</span><span class="p">(</span><span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="kt">int</span> <span class="n">var</span><span class="p">,</span> <span class="k">const</span> <span class="kt">float</span><span class="o">*</span> <span class="n">value</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nc</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Sets a constant value for a vertex attribute for program prog and
 variable var. The attribute has nc components.</p>
-<h3>Function set_vertattri_val()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">set_vertattri_val</span><span class="p">(</span>
-    <span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">var</span><span class="p">,</span> <span class="k">const</span> <span class="kt">int</span><span class="o">*</span> <span class="n">value</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nc</span><span class="p">);</span>
+<h3>Function set_vertattr_val_raw()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">set_vertattr_val_raw</span><span class="p">(</span><span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="kt">int</span> <span class="n">var</span><span class="p">,</span> <span class="k">const</span> <span class="kt">int</span><span class="o">*</span> <span class="n">value</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nc</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Sets a constant value for a vertex attribute for program prog and
 variable var. The attribute has nc components.</p>
 <h3>Function set_vertattr_buffer()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">set_vertattr_buffer</span><span class="p">(</span><span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">var</span><span class="p">,</span> <span class="n">uint</span> <span class="n">bid</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nc</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">set_vertattr_buffer</span><span class="p">(</span><span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="kt">int</span> <span class="n">var</span><span class="p">,</span> <span class="n">uint</span> <span class="n">bid</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nc</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Sets a vartex attribute for program prog and variable var to the buffer bid.
 The attribute has nc components and per-vertex values values.</p>
 <h3>Function set_vertattri_buffer()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">set_vertattri_buffer</span><span class="p">(</span><span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">var</span><span class="p">,</span> <span class="n">uint</span> <span class="n">bid</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nc</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">set_vertattri_buffer</span><span class="p">(</span><span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="kt">int</span> <span class="n">var</span><span class="p">,</span> <span class="n">uint</span> <span class="n">bid</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nc</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Sets a vartex attribute for program prog and variable var to the buffer bid.
 The attribute has nc components and per-vertex values values.</p>
-<h3>Function set_vertattr()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">set_vertattr</span><span class="p">(</span>
-    <span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">var</span><span class="p">,</span> <span class="n">uint</span> <span class="n">bid</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nc</span><span class="p">,</span> <span class="k">const</span> <span class="kt">float</span><span class="o">*</span> <span class="n">def</span><span class="p">);</span>
+<h3>Function set_vertattr_raw()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">set_vertattr_raw</span><span class="p">(</span><span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="kt">int</span> <span class="n">var</span><span class="p">,</span> <span class="n">uint</span> <span class="n">bid</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nc</span><span class="p">,</span> <span class="k">const</span> <span class="kt">float</span><span class="o">*</span> <span class="n">def</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Sets a vartex attribute for program prog and variable var. The attribute
 has nc components and either buffer bid or a single value def
 (if bid is zero). Convenience wrapper to above functions.</p>
-<h3>Function set_vertattri()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">set_vertattri</span><span class="p">(</span>
-    <span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">var</span><span class="p">,</span> <span class="n">uint</span> <span class="n">bid</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nc</span><span class="p">,</span> <span class="k">const</span> <span class="kt">int</span><span class="o">*</span> <span class="n">def</span><span class="p">);</span>
+<h3>Function set_vertattr_raw()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">set_vertattr_raw</span><span class="p">(</span><span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="kt">int</span> <span class="n">var</span><span class="p">,</span> <span class="n">uint</span> <span class="n">bid</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nc</span><span class="p">,</span> <span class="k">const</span> <span class="kt">int</span><span class="o">*</span> <span class="n">def</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Sets a vartex attribute for program prog and variable var. The attribute
 has nc components and either buffer bid or a single value def
+(if bid is zero). Convenience wrapper to above functions.</p>
+<h3>Function set_vertattr()</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="kt">int</span> <span class="n">N</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">bool</span> <span class="n">set_vertattr</span><span class="p">(</span>
+    <span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="kt">int</span> <span class="n">var</span><span class="p">,</span> <span class="n">uint</span> <span class="n">bid</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec</span><span class="o">&lt;</span><span class="kt">float</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">def</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Sets a vartex attribute for program prog and variable var. The attribute
+is either a buffer bid or a single value def
+(if bid is zero). Convenience wrapper to above functions.</p>
+<h3>Function set_vertattr()</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="kt">int</span> <span class="n">N</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">bool</span> <span class="n">set_vertattr</span><span class="p">(</span>
+    <span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="kt">int</span> <span class="n">var</span><span class="p">,</span> <span class="n">uint</span> <span class="n">bid</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">def</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Sets a vartex attribute for program prog and variable var. The attribute
+is either a buffer bid or a single value def
+(if bid is zero). Convenience wrapper to above functions.</p>
+<h3>Function set_vertattr()</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="kt">int</span> <span class="n">N</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">bool</span> <span class="n">set_vertattr</span><span class="p">(</span>
+    <span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">var</span><span class="p">,</span> <span class="n">uint</span> <span class="n">bid</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec</span><span class="o">&lt;</span><span class="kt">float</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">def</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Sets a vartex attribute for program prog and variable var. The attribute
+is either a buffer bid or a single value def
+(if bid is zero). Convenience wrapper to above functions.</p>
+<h3>Function set_vertattr()</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="kt">int</span> <span class="n">N</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">bool</span> <span class="n">set_vertattr</span><span class="p">(</span>
+    <span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">var</span><span class="p">,</span> <span class="n">uint</span> <span class="n">bid</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">def</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Sets a vartex attribute for program prog and variable var. The attribute
+is either a buffer bid or a single value def
 (if bid is zero). Convenience wrapper to above functions.</p>
 <h3>Function draw_elems()</h3>
 <div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">draw_elems</span><span class="p">(</span><span class="kt">int</span> <span class="n">nelems</span><span class="p">,</span> <span class="n">uint</span> <span class="n">bid</span><span class="p">,</span> <span class="n">etype</span> <span class="n">etype</span><span class="p">);</span>
@@ -471,17 +714,121 @@ has nc components and either buffer bid or a single value def
 
 
 <p>Draws nelems elements elem of type etype.</p>
+<h3>Struct program_info</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">program_info</span> <span class="p">{</span>
+    <span class="n">uint</span> <span class="n">prog_id</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="n">uint</span> <span class="n">vert_id</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="n">uint</span> <span class="n">frag_id</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="n">uint</span> <span class="n">vao_id</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">vert_code</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">frag_code</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="kt">int</span><span class="o">&gt;</span> <span class="n">attrib_names</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span> <span class="kt">int</span><span class="o">&gt;</span> <span class="n">uniform_names</span><span class="p">;</span>
+    <span class="kt">bool</span> <span class="nf">is_valid</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span> 
+    <span class="k">explicit</span> <span class="k">operator</span> <span class="nf">bool</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span> 
+<span class="p">}</span>
+</code></pre></div>
+
+
+<p>Program information for faster binding. Create</p>
+<ul>
+<li>Members:<ul>
+<li>prog_id:      program id</li>
+<li>vert_id:      vertex shader id</li>
+<li>frag_id:      fragment shader id</li>
+<li>vao_id:      veretx array object</li>
+<li>vert_code:      vertex code</li>
+<li>frag_code:      fragment code</li>
+<li>attrib_names:      attributes names</li>
+<li>uniform_names:      uniform names</li>
+<li>is_valid():      check if valid</li>
+<li>operator bool():      check if valid</li>
+</ul>
+</li>
+</ul>
+<h3>Function make_program_info()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">program_info</span> <span class="nf">make_program_info</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">vert</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">frag</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Make program information</p>
+<h3>Function free_program_info()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">free_program_info</span><span class="p">(</span><span class="k">const</span> <span class="n">program_info</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Free program info</p>
+<h3>Function bind_program()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">bind_program</span><span class="p">(</span><span class="k">const</span> <span class="n">program_info</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Bind the program</p>
+<h3>Function unbind_program()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">unbind_program</span><span class="p">(</span><span class="k">const</span> <span class="n">program_info</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Unbind the program</p>
+<h3>Function set_uniform()</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">bool</span> <span class="n">set_uniform</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">program_info</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">name</span><span class="p">,</span> <span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Bind a uniform parameter</p>
+<h3>Function set_uniform()</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">bool</span> <span class="n">set_uniform</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">program_info</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">name</span><span class="p">,</span> <span class="k">const</span> <span class="n">T</span><span class="o">*</span> <span class="n">val</span><span class="p">,</span> <span class="kt">int</span> <span class="n">num</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Bind a uniform parameter</p>
+<h3>Function set_uniform_texture()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">set_uniform_texture</span><span class="p">(</span><span class="k">const</span> <span class="n">program_info</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">var</span><span class="p">,</span> <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">tinfo</span><span class="p">,</span> <span class="n">uint</span> <span class="n">tunit</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Bind a uniform texture</p>
+<h3>Function set_uniform_texture()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">set_uniform_texture</span><span class="p">(</span><span class="k">const</span> <span class="n">program_info</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">var</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">varon</span><span class="p">,</span> <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">tinfo</span><span class="p">,</span>
+    <span class="n">uint</span> <span class="n">tunit</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Bind a uniform texture</p>
+<h3>Function set_vertattr()</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="kt">int</span> <span class="n">N</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">bool</span> <span class="n">set_vertattr</span><span class="p">(</span><span class="k">const</span> <span class="n">program_info</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">var</span><span class="p">,</span>
+    <span class="n">uint</span> <span class="n">bid</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec</span><span class="o">&lt;</span><span class="kt">float</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">def</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Bind a vertex attribute</p>
+<h3>Function set_vertattr()</h3>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="kt">int</span> <span class="n">N</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">bool</span> <span class="n">set_vertattr</span><span class="p">(</span><span class="k">const</span> <span class="n">program_info</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">var</span><span class="p">,</span>
+    <span class="n">uint</span> <span class="n">bid</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">def</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Bind a vertex attribute</p>
 <h2>Namespace stdshader</h2>
 <p>Shade with a physically-based standard shader based on Phong/GGX.</p>
 <h3>Function make_program()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">make_program</span><span class="p">(</span><span class="n">uint</span><span class="o">*</span> <span class="n">pid</span><span class="p">,</span> <span class="n">uint</span><span class="o">*</span> <span class="n">vao</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="n">program_info</span> <span class="nf">make_program</span><span class="p">();</span>
 </code></pre></div>
 
 
 <p>Initialize a standard shader.</p>
 <h3>Function begin_frame()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">begin_frame</span><span class="p">(</span><span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="n">uint</span> <span class="n">vao</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">shade_eyelight</span><span class="p">,</span> <span class="kt">float</span> <span class="n">img_exposure</span><span class="p">,</span>
-    <span class="n">ym</span><span class="o">::</span><span class="n">tonemap_type</span> <span class="n">img_tonemap</span><span class="p">,</span> <span class="kt">float</span> <span class="n">img_gamma</span><span class="p">,</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">begin_frame</span><span class="p">(</span><span class="k">const</span> <span class="n">program_info</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">shade_eyelight</span><span class="p">,</span>
+    <span class="kt">float</span> <span class="n">img_exposure</span><span class="p">,</span> <span class="n">ym</span><span class="o">::</span><span class="n">tonemap_type</span> <span class="n">img_tonemap</span><span class="p">,</span> <span class="kt">float</span> <span class="n">img_gamma</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">mat4f</span><span class="o">&amp;</span> <span class="n">camera_xform</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">mat4f</span><span class="o">&amp;</span> <span class="n">camera_xform_inv</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">mat4f</span><span class="o">&amp;</span> <span class="n">camera_proj</span><span class="p">);</span>
 </code></pre></div>
@@ -497,15 +844,15 @@ preview.</p>
 
 <p>Ends a frame.</p>
 <h3>Function set_lights()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_lights</span><span class="p">(</span><span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">amb</span><span class="p">,</span> <span class="kt">int</span> <span class="n">num</span><span class="p">,</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">*</span> <span class="n">pos</span><span class="p">,</span>
-    <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">*</span> <span class="n">ke</span><span class="p">,</span> <span class="n">ltype</span><span class="o">*</span> <span class="n">ltype</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_lights</span><span class="p">(</span><span class="k">const</span> <span class="n">program_info</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">amb</span><span class="p">,</span> <span class="kt">int</span> <span class="n">num</span><span class="p">,</span>
+    <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">*</span> <span class="n">pos</span><span class="p">,</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">*</span> <span class="n">ke</span><span class="p">,</span> <span class="n">ltype</span><span class="o">*</span> <span class="n">ltype</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Set num lights with position pos, color ke, type ltype. Also set the ambient
-illumination amb.</p>
+<p>Set num lights with position pos, color ke, type ltype. Also set the
+ambient illumination amb.</p>
 <h3>Function begin_shape()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">begin_shape</span><span class="p">(</span><span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">mat4f</span><span class="o">&amp;</span> <span class="n">xform</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">begin_shape</span><span class="p">(</span><span class="k">const</span> <span class="n">program_info</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">mat4f</span><span class="o">&amp;</span> <span class="n">xform</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -517,14 +864,14 @@ illumination amb.</p>
 
 <p>End shade drawing.</p>
 <h3>Function set_highlight()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_highlight</span><span class="p">(</span><span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec4f</span><span class="o">&amp;</span> <span class="n">highlight</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_highlight</span><span class="p">(</span><span class="k">const</span> <span class="n">program_info</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec4f</span><span class="o">&amp;</span> <span class="n">highlight</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Set the object as highlight color.</p>
 <h3>Function set_material_emission_only()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_material_emission_only</span><span class="p">(</span><span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">ke</span><span class="p">,</span> <span class="kt">float</span> <span class="n">op</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">ke_txt</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">double_sided</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">alpha_cutout</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_material_emission_only</span><span class="p">(</span><span class="k">const</span> <span class="n">program_info</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">ke</span><span class="p">,</span>
+    <span class="kt">float</span> <span class="n">op</span><span class="p">,</span> <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">ke_txt</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">double_sided</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">alpha_cutout</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -532,12 +879,12 @@ illumination amb.</p>
 Indicates textures ids with the correspoinding XXX_txt variables.
 Works for points/lines/triangles. Element type set by draw_XXX calls.</p>
 <h3>Function set_material_generic()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_material_generic</span><span class="p">(</span><span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">ke</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">kd</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">ks</span><span class="p">,</span> <span class="kt">float</span> <span class="n">rs</span><span class="p">,</span> <span class="kt">float</span> <span class="n">op</span><span class="p">,</span> <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">ke_txt</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">kd_txt</span><span class="p">,</span> <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">ks_txt</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">rs_txt</span><span class="p">,</span> <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">norm_txt</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">occ_txt</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">use_phong</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">double_sided</span><span class="p">,</span>
-    <span class="kt">bool</span> <span class="n">alpha_cutout</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_material_generic</span><span class="p">(</span><span class="k">const</span> <span class="n">program_info</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">ke</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">kd</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">ks</span><span class="p">,</span> <span class="kt">float</span> <span class="n">rs</span><span class="p">,</span> <span class="kt">float</span> <span class="n">op</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">ke_txt</span><span class="p">,</span> <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">kd_txt</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">ks_txt</span><span class="p">,</span> <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">rs_txt</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">norm_txt</span><span class="p">,</span> <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">occ_txt</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">use_phong</span><span class="p">,</span>
+    <span class="kt">bool</span> <span class="n">double_sided</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">alpha_cutout</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -545,11 +892,11 @@ Works for points/lines/triangles. Element type set by draw_XXX calls.</p>
 specular roughness rs, opacity op. Indicates textures ids with the
 correspoinding XXX_txt variables. Sets also normal and occlusion
 maps. Works for points/lines/triangles (diffuse for points,
-Kajiya-Kay for lines, GGX/Phong for triangles). Element type set by draw_XXX
-calls.</p>
+Kajiya-Kay for lines, GGX/Phong for triangles). Element type set by
+draw_XXX calls.</p>
 <h3>Function set_material_gltf_metallic_roughness()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_material_gltf_metallic_roughness</span><span class="p">(</span><span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">ke</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">kb</span><span class="p">,</span> <span class="kt">float</span> <span class="n">km</span><span class="p">,</span> <span class="kt">float</span> <span class="n">rs</span><span class="p">,</span> <span class="kt">float</span> <span class="n">op</span><span class="p">,</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_material_gltf_metallic_roughness</span><span class="p">(</span><span class="k">const</span> <span class="n">program_info</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">ke</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">kb</span><span class="p">,</span> <span class="kt">float</span> <span class="n">km</span><span class="p">,</span> <span class="kt">float</span> <span class="n">rs</span><span class="p">,</span> <span class="kt">float</span> <span class="n">op</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">ke_txt</span><span class="p">,</span> <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">kb_txt</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">km_txt</span><span class="p">,</span> <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">norm_txt</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">occ_txt</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">use_phong</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">double_sided</span><span class="p">,</span>
@@ -564,9 +911,9 @@ metallic-roughness texture km_txt. Sets also normal and occlusion
 maps. Works for points/lines/triangles (diffuse for points, Kajiya-Kay
 for lines, GGX/Phong for triangles). Element type set by draw_XXX calls.</p>
 <h3>Function set_material_gltf_specular_glossiness()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_material_gltf_specular_glossiness</span><span class="p">(</span><span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">ke</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">kd</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">ks</span><span class="p">,</span> <span class="kt">float</span> <span class="n">rs</span><span class="p">,</span> <span class="kt">float</span> <span class="n">op</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">ke_txt</span><span class="p">,</span> <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">kd_txt</span><span class="p">,</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_material_gltf_specular_glossiness</span><span class="p">(</span><span class="k">const</span> <span class="n">program_info</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">ke</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">kd</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">ks</span><span class="p">,</span> <span class="kt">float</span> <span class="n">rs</span><span class="p">,</span>
+    <span class="kt">float</span> <span class="n">op</span><span class="p">,</span> <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">ke_txt</span><span class="p">,</span> <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">kd_txt</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">ks_txt</span><span class="p">,</span> <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">norm_txt</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">occ_txt</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">use_phong</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">double_sided</span><span class="p">,</span>
     <span class="kt">bool</span> <span class="n">alpha_cutout</span><span class="p">);</span>
@@ -586,61 +933,62 @@ for lines, GGX/Phong for triangles). Element type set by draw_XXX calls.</p>
 
 <p>Convertes a phong exponent to roughness.</p>
 <h3>Function set_vert()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_vert</span><span class="p">(</span><span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">*</span> <span class="n">pos</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">*</span> <span class="n">norm</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec2f</span><span class="o">*</span> <span class="n">texcoord</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec4f</span><span class="o">*</span> <span class="n">color</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec4f</span><span class="o">*</span> <span class="n">tangsp</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_vert</span><span class="p">(</span><span class="k">const</span> <span class="n">program_info</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">*</span> <span class="n">pos</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">*</span> <span class="n">norm</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec2f</span><span class="o">*</span> <span class="n">texcoord</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec4f</span><span class="o">*</span> <span class="n">color</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec4f</span><span class="o">*</span> <span class="n">tangsp</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Set vertex data with position pos, normals norm, texture coordinates
 texcoord and per-vertex color color and tangent space tangsp.</p>
 <h3>Function set_vert()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_vert</span><span class="p">(</span>
-    <span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="n">uint</span> <span class="n">pos</span><span class="p">,</span> <span class="n">uint</span> <span class="n">norm</span><span class="p">,</span> <span class="n">uint</span> <span class="n">texcoord</span><span class="p">,</span> <span class="n">uint</span> <span class="n">color</span><span class="p">,</span> <span class="n">uint</span> <span class="n">tangsp</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_vert</span><span class="p">(</span><span class="k">const</span> <span class="n">program_info</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="n">uint</span> <span class="n">pos</span><span class="p">,</span> <span class="n">uint</span> <span class="n">norm</span><span class="p">,</span> <span class="n">uint</span> <span class="n">texcoord</span><span class="p">,</span>
+    <span class="n">uint</span> <span class="n">color</span><span class="p">,</span> <span class="n">uint</span> <span class="n">tangsp</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Set vertex data with buffers for position pos, normals norm, texture
 coordinates texcoord, per-vertex color color and tangent space tangsp.</p>
 <h3>Function set_vert_skinning()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_vert_skinning</span><span class="p">(</span>
-    <span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="n">uint</span> <span class="n">weights</span><span class="p">,</span> <span class="n">uint</span> <span class="n">joints</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nxforms</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">mat4f</span><span class="o">*</span> <span class="n">xforms</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_vert_skinning</span><span class="p">(</span><span class="k">const</span> <span class="n">program_info</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="n">uint</span> <span class="n">weights</span><span class="p">,</span> <span class="n">uint</span> <span class="n">joints</span><span class="p">,</span>
+    <span class="kt">int</span> <span class="n">nxforms</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">mat4f</span><span class="o">*</span> <span class="n">xforms</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Set vertex data with buffers for skinning.</p>
 <h3>Function set_vert_gltf_skinning()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_vert_gltf_skinning</span><span class="p">(</span>
-    <span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="n">uint</span> <span class="n">weights</span><span class="p">,</span> <span class="n">uint</span> <span class="n">joints</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nxforms</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">mat4f</span><span class="o">*</span> <span class="n">xforms</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_vert_gltf_skinning</span><span class="p">(</span><span class="k">const</span> <span class="n">program_info</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="n">uint</span> <span class="n">weights</span><span class="p">,</span> <span class="n">uint</span> <span class="n">joints</span><span class="p">,</span>
+    <span class="kt">int</span> <span class="n">nxforms</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">mat4f</span><span class="o">*</span> <span class="n">xforms</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Set vertex data with buffers for skinning.</p>
 <h3>Function set_vert_skinning_off()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_vert_skinning_off</span><span class="p">(</span><span class="n">uint</span> <span class="n">prog</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_vert_skinning_off</span><span class="p">(</span><span class="k">const</span> <span class="n">program_info</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Disables vertex skinning.</p>
 <h3>Function draw_elems()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">draw_elems</span><span class="p">(</span><span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="kt">int</span> <span class="n">num</span><span class="p">,</span> <span class="n">uint</span> <span class="n">bid</span><span class="p">,</span> <span class="n">etype</span> <span class="n">etype</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">draw_elems</span><span class="p">(</span><span class="k">const</span> <span class="n">program_info</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="kt">int</span> <span class="n">num</span><span class="p">,</span> <span class="n">uint</span> <span class="n">bid</span><span class="p">,</span> <span class="n">etype</span> <span class="n">etype</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Draw num elements elem of type etype.</p>
 <h3>Function draw_points()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">draw_points</span><span class="p">(</span><span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="kt">int</span> <span class="n">num</span><span class="p">,</span> <span class="n">uint</span> <span class="n">bid</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">draw_points</span><span class="p">(</span><span class="k">const</span> <span class="n">program_info</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="kt">int</span> <span class="n">num</span><span class="p">,</span> <span class="n">uint</span> <span class="n">bid</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Draw num elements elem of type etype.</p>
 <h3>Function draw_lines()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">draw_lines</span><span class="p">(</span><span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="kt">int</span> <span class="n">num</span><span class="p">,</span> <span class="n">uint</span> <span class="n">bid</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">draw_lines</span><span class="p">(</span><span class="k">const</span> <span class="n">program_info</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="kt">int</span> <span class="n">num</span><span class="p">,</span> <span class="n">uint</span> <span class="n">bid</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Draw num elements elem of type etype.</p>
 <h3>Function draw_triangles()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">draw_triangles</span><span class="p">(</span><span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="kt">int</span> <span class="n">num</span><span class="p">,</span> <span class="n">uint</span> <span class="n">bid</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">draw_triangles</span><span class="p">(</span><span class="k">const</span> <span class="n">program_info</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="kt">int</span> <span class="n">num</span><span class="p">,</span> <span class="n">uint</span> <span class="n">bid</span><span class="p">);</span>
 </code></pre></div>
 
 
