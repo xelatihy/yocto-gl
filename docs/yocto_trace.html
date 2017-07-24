@@ -86,6 +86,7 @@ Disable this by setting YTRACE_NO_BVH.</p>
 </ol>
 <h2>History</h2>
 <ul>
+<li>v 0.25: added refraction (still buggy in some cases)</li>
 <li>v 0.24: corrected transaprency bug</li>
 <li>v 0.23: simpler logging</li>
 <li>v 0.22: added additional buffers</li>
@@ -314,8 +315,8 @@ customize it.</p>
 </ul>
 <h3>Function set_material_microfacet()</h3>
 <div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_material_microfacet</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="kt">int</span> <span class="n">mid</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">kd</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">ks</span><span class="p">,</span> <span class="kt">float</span> <span class="n">rs</span><span class="p">,</span> <span class="kt">float</span> <span class="n">op</span><span class="p">,</span> <span class="kt">int</span> <span class="n">kd_txt</span><span class="p">,</span> <span class="kt">int</span> <span class="n">ks_txt</span><span class="p">,</span> <span class="kt">int</span> <span class="n">rs_txt</span><span class="p">,</span>
-    <span class="kt">int</span> <span class="n">op_txt</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">use_phong</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
+    <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">ks</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">kt</span><span class="p">,</span> <span class="kt">float</span> <span class="n">rs</span><span class="p">,</span> <span class="kt">float</span> <span class="n">op</span><span class="p">,</span> <span class="kt">int</span> <span class="n">kd_txt</span><span class="p">,</span>
+    <span class="kt">int</span> <span class="n">ks_txt</span><span class="p">,</span> <span class="kt">int</span> <span class="n">kt_txt</span><span class="p">,</span> <span class="kt">int</span> <span class="n">rs_txt</span><span class="p">,</span> <span class="kt">int</span> <span class="n">op_txt</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">use_phong</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -326,8 +327,9 @@ customize it.</p>
 <li>mid: material id</li>
 <li>kd: diffuse term</li>
 <li>ks: specular term</li>
+<li>kt: transmission term</li>
 <li>rs: specular roughness</li>
-<li>kd_txt, ks_txt, rs_txt: texture indices (-1 for
+<li>kd_txt, ks_txt, kt_txt, rs_txt: texture indices (-1 for
 none)</li>
 <li>use_phong: whether to use phong</li>
 </ul>
@@ -373,33 +375,22 @@ none)</li>
 </li>
 <li>use_phong: whether to use phong</li>
 </ul>
-<h3>Function add_material()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">int</span> <span class="nf">add_material</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">ke</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">kd</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">ks</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">kt</span><span class="p">,</span> <span class="kt">float</span> <span class="n">rs</span> <span class="o">=</span> <span class="mf">0.1</span><span class="p">,</span> <span class="kt">int</span> <span class="n">ke_txt</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
-    <span class="kt">int</span> <span class="n">kd_txt</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="kt">int</span> <span class="n">ks_txt</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="kt">int</span> <span class="n">kt_txt</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="kt">int</span> <span class="n">rs_txt</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
-    <span class="kt">int</span> <span class="n">norm_txt</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">use_phong</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
+<h3>Function set_material_double_sided()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_material_double_sided</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="kt">int</span> <span class="n">mid</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">double_sided</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Sets a material in the scene. [DEPRECATED]</p>
+<p>Sets the material emission.</p>
 <ul>
 <li>Parameters:<ul>
 <li>scn: scene</li>
-<li>ke: emission, term</li>
-<li>kd: diffuse term</li>
-<li>ks: specular term</li>
-<li>rs: specular roughness</li>
-<li>ke_txt, kd_txt, ks_txt, rs_txt, norm_txt: texture indices (-1 for
-none) - use_phong: whether to use phong</li>
-</ul>
-</li>
-<li>Returns:<ul>
-<li>material id</li>
+<li>mid: material id</li>
+<li>double_sided: whether the material is double sided</li>
 </ul>
 </li>
 </ul>
-<h3>Function add_material_uber()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">int</span> <span class="nf">add_material_uber</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">ke</span><span class="p">,</span>
+<h3>Function add_material_microfacet()</h3>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">int</span> <span class="nf">add_material_microfacet</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">ke</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">kd</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">ks</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">kt</span><span class="p">,</span> <span class="kt">float</span> <span class="n">rs</span><span class="p">,</span>
     <span class="kt">float</span> <span class="n">op</span><span class="p">,</span> <span class="kt">int</span> <span class="n">ke_txt</span><span class="p">,</span> <span class="kt">int</span> <span class="n">kd_txt</span><span class="p">,</span> <span class="kt">int</span> <span class="n">ks_txt</span><span class="p">,</span> <span class="kt">int</span> <span class="n">kt_txt</span><span class="p">,</span> <span class="kt">int</span> <span class="n">rs_txt</span><span class="p">,</span>
     <span class="kt">int</span> <span class="n">op_txt</span><span class="p">,</span> <span class="kt">int</span> <span class="n">norm_txt</span><span class="p">,</span> <span class="kt">int</span> <span class="n">occ_txt</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">use_phong</span><span class="p">);</span>
@@ -815,6 +806,7 @@ none)</li>
     <span class="kt">int</span> <span class="n">max_depth</span> <span class="o">=</span> <span class="mi">8</span><span class="p">;</span>
     <span class="kt">float</span> <span class="n">pixel_clamp</span> <span class="o">=</span> <span class="mi">10</span><span class="p">;</span>
     <span class="kt">float</span> <span class="n">ray_eps</span> <span class="o">=</span> <span class="mf">1e-4</span><span class="n">f</span><span class="p">;</span>
+    <span class="kt">bool</span> <span class="n">parallel</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
 <span class="p">}</span>
 </code></pre></div>
 
@@ -836,6 +828,7 @@ none)</li>
 <li>max_depth:      maximum ray depth</li>
 <li>pixel_clamp:      final pixel clamping</li>
 <li>ray_eps:      ray intersection epsilon</li>
+<li>parallel:      parallel execution</li>
 </ul>
 </li>
 </ul>

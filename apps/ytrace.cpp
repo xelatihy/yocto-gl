@@ -225,8 +225,8 @@ ytrace::scene* make_trace_scene(const yobj::scene* scene, const ycamera* cam) {
 
     auto material_map = std::map<yobj::material*, int>{{nullptr, -1}};
     for (auto mat : scene->materials) {
-        material_map[mat] = ytrace::add_material_uber(trace_scene, mat->ke,
-            mat->kd, mat->ks, mat->kt, mat->rs, mat->opacity,
+        material_map[mat] = ytrace::add_material_microfacet(trace_scene,
+            mat->ke, mat->kd, mat->ks, mat->kt, mat->rs, mat->opacity,
             texture_map.at(mat->ke_txt), texture_map.at(mat->kd_txt),
             texture_map.at(mat->ks_txt), texture_map.at(mat->kt_txt),
             texture_map.at(mat->rs_txt), texture_map.at(mat->op_txt),

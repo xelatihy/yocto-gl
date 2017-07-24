@@ -80,6 +80,7 @@
 ///
 /// ## History
 ///
+/// - v 0.25: added refraction (still buggy in some cases)
 /// - v 0.24: corrected transaprency bug
 /// - v 0.23: simpler logging
 /// - v 0.22: added additional buffers
@@ -305,14 +306,15 @@ void set_material_occlusion(scene* scn, int mid, int occ_txt, float scale = 1);
 ///     - mid: material id
 ///     - kd: diffuse term
 ///     - ks: specular term
+///     - kt: transmission term
 ///     - rs: specular roughness
-///     - kd_txt, ks_txt, rs_txt: texture indices (-1 for
+///     - kd_txt, ks_txt, kt_txt, rs_txt: texture indices (-1 for
 ///     none)
 ///     - use_phong: whether to use phong
 ///
 void set_material_microfacet(scene* scn, int mid, const ym::vec3f& kd,
-    const ym::vec3f& ks, float rs, float op, int kd_txt, int ks_txt, int rs_txt,
-    int op_txt, bool use_phong = false);
+    const ym::vec3f& ks, const ym::vec3f& kt, float rs, float op, int kd_txt,
+    int ks_txt, int kt_txt, int rs_txt, int op_txt, bool use_phong = false);
 
 ///
 /// Sets a gltf metallic roughness material reflectance.
@@ -347,23 +349,14 @@ void set_material_gltf_specular_glossiness(scene* scn, int mid,
     int ks_txt);
 
 ///
-/// Sets a material in the scene. [DEPRECATED]
+/// Sets the material emission.
 ///
 /// - Parameters:
 ///     - scn: scene
-///     - ke: emission, term
-///     - kd: diffuse term
-///     - ks: specular term
-///     - rs: specular roughness
-///     - ke_txt, kd_txt, ks_txt, rs_txt, norm_txt: texture indices (-1 for
-///     none) - use_phong: whether to use phong
-/// - Returns:
-///     - material id
+///     - mid: material id
+///     - double_sided: whether the material is double sided
 ///
-int add_material(scene* scn, const ym::vec3f& ke, const ym::vec3f& kd,
-    const ym::vec3f& ks, const ym::vec3f& kt, float rs = 0.1, int ke_txt = -1,
-    int kd_txt = -1, int ks_txt = -1, int kt_txt = -1, int rs_txt = -1,
-    int norm_txt = -1, bool use_phong = false);
+void set_material_double_sided(scene* scn, int mid, bool double_sided);
 
 ///
 /// Sets a material in the scene with the most customization possible.
@@ -380,14 +373,14 @@ int add_material(scene* scn, const ym::vec3f& ke, const ym::vec3f& kd,
 /// - Returns:
 ///     - material id
 ///
-inline int add_material_uber(scene* scn, const ym::vec3f& ke,
+inline int add_material_microfacet(scene* scn, const ym::vec3f& ke,
     const ym::vec3f& kd, const ym::vec3f& ks, const ym::vec3f& kt, float rs,
     float op, int ke_txt, int kd_txt, int ks_txt, int kt_txt, int rs_txt,
     int op_txt, int norm_txt, int occ_txt, bool use_phong) {
     auto mid = add_material(scn);
     set_material_emission(scn, mid, ke, ke_txt);
-    set_material_microfacet(
-        scn, mid, kd, ks, rs, op, kd_txt, ks_txt, rs_txt, op_txt, use_phong);
+    set_material_microfacet(scn, mid, kd, ks, kt, rs, op, kd_txt, ks_txt,
+        kt_txt, rs_txt, op_txt, use_phong);
     set_material_normal(scn, mid, norm_txt, 1);
     set_material_occlusion(scn, mid, occ_txt, 1);
     return mid;
@@ -725,6 +718,8 @@ struct trace_params {
     float pixel_clamp = 10;
     /// ray intersection epsilon
     float ray_eps = 1e-4f;
+    /// parallel execution
+    bool parallel = true;
 };
 
 ///
