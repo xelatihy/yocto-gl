@@ -104,12 +104,14 @@ struct reflectance_matte {
 struct reflectance_microfacet {
     ym::vec3f kd = ym::zero3f;  // diffuse term
     ym::vec3f ks = ym::zero3f;  // specular term
+    ym::vec3f kt = ym::zero3f;  // transmission term
     float rs = 0.1;             // specular roughness
     float op = 1;               // opacity
     bool use_phong = false;     // whether to use phong
 
     texture* kd_txt = nullptr;  // diffuse texture
     texture* ks_txt = nullptr;  // specular texture
+    texture* kt_txt = nullptr;  // transmission texture
     texture* rs_txt = nullptr;  // roughness texture
     texture* op_txt = nullptr;  // opacity texture
 };
@@ -118,7 +120,6 @@ struct reflectance_microfacet {
 struct reflectance_gltf_metallic_roughness {
     ym::vec3f kb = ym::zero3f;  // base term
     float km = 0;               // metallic term
-    ym::vec3f kt = ym::zero3f;  // transmittance term
     float rs = 0.1;             // specular roughness
     float op = 1;               // opacity
 
@@ -130,7 +131,6 @@ struct reflectance_gltf_metallic_roughness {
 struct reflectance_gltf_specular_glossiness {
     ym::vec3f kd = ym::zero3f;  // diffuse term
     ym::vec3f ks = ym::zero3f;  // specular term
-    ym::vec3f kt = ym::zero3f;  // transmittance term
     float rs = 0.1;             // specular roughness
     float op = 1;               // opacity
 
@@ -161,6 +161,9 @@ struct material {
     // other textures
     texture* norm_txt = nullptr;  // nromal texture
     texture* occ_txt = nullptr;   // occlusion texture
+
+    // flags
+    bool double_sided = true;
 
     // conservative test for opacity
     bool is_opaque() const {
@@ -419,17 +422,20 @@ void set_material_occlusion(scene* scn, int mid, int occ_txt, float scale) {
 // Public API. See above.
 //
 void set_material_microfacet(scene* scn, int mid, const ym::vec3f& kd,
-    const ym::vec3f& ks, float rs, float op, int kd_txt, int ks_txt, int rs_txt,
-    int op_txt, bool use_phong) {
+    const ym::vec3f& ks, const ym::vec3f& kt, float rs, float op, int kd_txt,
+    int ks_txt, int kt_txt, int rs_txt, int op_txt, bool use_phong) {
     scn->materials[mid]->rtype = reflectance_type::microfacet;
     scn->materials[mid]->microfacet.kd = kd;
     scn->materials[mid]->microfacet.ks = ks;
+    scn->materials[mid]->microfacet.kt = kt;
     scn->materials[mid]->microfacet.rs = rs;
     scn->materials[mid]->microfacet.op = op;
     scn->materials[mid]->microfacet.kd_txt =
         (kd_txt >= 0) ? scn->textures[kd_txt] : nullptr;
     scn->materials[mid]->microfacet.ks_txt =
         (ks_txt >= 0) ? scn->textures[ks_txt] : nullptr;
+    scn->materials[mid]->microfacet.kt_txt =
+        (kt_txt >= 0) ? scn->textures[kt_txt] : nullptr;
     scn->materials[mid]->microfacet.rs_txt =
         (rs_txt >= 0) ? scn->textures[rs_txt] : nullptr;
     scn->materials[mid]->microfacet.op_txt =
@@ -468,6 +474,13 @@ void set_material_gltf_specular_glossiness(scene* scn, int mid,
         (kd_txt >= 0) ? scn->textures[kd_txt] : nullptr;
     scn->materials[mid]->specgloss.ks_txt =
         (ks_txt >= 0) ? scn->textures[ks_txt] : nullptr;
+}
+
+//
+// Double sided material
+//
+void set_material_double_sided(scene* scn, int mid, bool double_sided) {
+    scn->materials[mid]->double_sided = double_sided;
 }
 
 //
@@ -860,20 +873,22 @@ static inline int sample_next1i(sampler* smp, int num) {
 // Brdf type
 //
 enum struct brdf_type {
-    diffuse_lambert = 0,
-    microfacet_ggx = 1,
-    microfacet_phong = 2,
-    kajiya_kay_diff = 3,
-    kajiya_kay_spec = 4,
-    point_diffuse = 5,
-    transparent = 6
+    reflection_lambert = 0,
+    reflection_ggx = 1,
+    transmission_lambert = 10,
+    transmission_ggx = 11,
+    refraction_ggx = 21,
+    kajiya_kay_diff = 30,
+    kajiya_kay_spec = 31,
+    point_diffuse = 40,
+    transparent = 50
 };
 
 //
 // Brdf lobe
 //
 struct brdf {
-    brdf_type type = brdf_type::diffuse_lambert;
+    brdf_type type = brdf_type::reflection_lambert;
     ym::vec3f rho = ym::zero3f;
     float roughness = 1;
 };
@@ -1092,6 +1107,52 @@ static ym::vec3f eval_fresnel_schlick(
 }
 
 //
+// Evaluates the GGX distribution and geometric term
+//
+static inline float eval_ggx(float rs, float ndh, float ndi, float ndo) {
+    // evaluate GGX
+    auto alpha2 = rs * rs;
+    auto di = (ndh * ndh) * (alpha2 - 1) + 1;
+    auto d = alpha2 / (ym::pif * di * di);
+#ifndef YTRACE_GGX_SMITH
+    auto lambda_o =
+        (-1 + std::sqrt(1 + alpha2 * (1 - ndo * ndo) / (ndo * ndo))) / 2;
+    auto lambda_i =
+        (-1 + std::sqrt(1 + alpha2 * (1 - ndi * ndi) / (ndi * ndi))) / 2;
+    auto g = 1 / (1 + lambda_o + lambda_i);
+#else
+    auto go = (2 * ndo) / (ndo + std::sqrt(alpha2 + (1 - alpha2) * ndo * ndo));
+    auto gi = (2 * ndi) / (ndi + std::sqrt(alpha2 + (1 - alpha2) * ndi * ndi));
+    auto g = go * gi;
+#endif
+    return d * g;
+}
+
+//
+// Evaluates the GGX pdf
+//
+static inline float pdf_ggx(float rs, float ndh) {
+    auto cos2 = ndh * ndh;
+    auto tan2 = (1 - cos2) / cos2;
+    auto alpha2 = rs * rs;
+    auto d =
+        alpha2 / (ym::pif * cos2 * cos2 * (alpha2 + tan2) * (alpha2 + tan2));
+    return d;
+}
+
+//
+// Sample the GGX distribution
+//
+static ym::vec3f sample_ggx(float rs, const ym::vec2f& rn) {
+    auto tan2 = rs * rs * rn.y / (1 - rn.y);
+    auto rz = std::sqrt(1 / (tan2 + 1)), rr = std::sqrt(1 - rz * rz),
+         rphi = 2 * ym::pif * rn.x;
+    // set to wh
+    auto wh_local = ym::vec3f{rr * std::cos(rphi), rr * std::sin(rphi), rz};
+    return wh_local;
+}
+
+//
 // Evaluates the BRDF scaled by the cosine of the incoming direction.
 //
 // Implementation notes:
@@ -1117,8 +1178,9 @@ static ym::vec3f eval_brdfcos(const point& pt, const ym::vec3f& wi) {
     for (auto lid = pt.nbrdfs - 1; lid >= 0; lid--) {
         auto brdf = pt.brdfs[lid];
         switch (brdf.type) {
-            // diffuse term
-            case brdf_type::diffuse_lambert: {
+            // reflection terms
+            case brdf_type::reflection_lambert:
+            case brdf_type::reflection_ggx: {
                 // compute dot products
                 auto ndo = ym::dot(pt.frame.z, wo),
                      ndi = ym::dot(pt.frame.z, wi);
@@ -1127,89 +1189,125 @@ static ym::vec3f eval_brdfcos(const point& pt, const ym::vec3f& wi) {
                 if (ndi <= 0 || ndo <= 0) continue;
 
                 // diffuse term
-                brdfcos += weight * brdf.rho * ndi / ym::pif;
-            } break;
-            // specular term (GGX)
-            case brdf_type::microfacet_ggx: {
-                // compute wh
-                auto wh = ym::normalize(wo + wi);
+                if (brdf.type == brdf_type::reflection_lambert) {
+                    brdfcos += weight * brdf.rho * ndi / ym::pif;
+                }
+                // specular term
+                else {
+                    // compute wh
+                    auto wh = ym::normalize(wo + wi);
 
+                    // compute dot products
+                    auto ndh =
+                        ym::clamp(ym::dot(wh, pt.frame.z), (float)-1, (float)1);
+
+                    // exit if needed
+                    if (ndh <= 0) continue;
+
+                    // microfacet term
+                    auto dg = eval_ggx(brdf.roughness, ndh, ndi, ndo);
+
+                    // handle fresnel
+                    auto odh = ym::clamp(dot(wo, wh), 0.0f, 1.0f);
+                    auto ks =
+                        eval_fresnel_schlick(brdf.rho, odh, brdf.roughness);
+
+                    // sum up
+                    brdfcos += weight * ks * ndi * dg / (4 * ndi * ndo);
+
+                    // update weight
+                    weight *= ym::vec3f{1, 1, 1} - ks;
+                }
+            } break;
+            // transmission terms
+            case brdf_type::transmission_lambert:
+            case brdf_type::transmission_ggx: {
                 // compute dot products
                 auto ndo = ym::dot(pt.frame.z, wo),
-                     ndi = ym::dot(pt.frame.z, wi),
-                     ndh =
-                         ym::clamp(ym::dot(wh, pt.frame.z), (float)0, (float)1);
+                     ndi = ym::dot(pt.frame.z, wi);
 
                 // exit if needed
-                if (ndi <= 0 || ndo <= 0 || ndh <= 0) continue;
+                if (ndi >= 0 || ndo <= 0) continue;
 
-                // microfacet term
-                auto dg = 0.0f;
+                // flip direction
+                ndi = -ndi;
+                auto wi_ = -wi;
 
-                // evaluate GGX
-                auto alpha2 = brdf.roughness * brdf.roughness;
-                auto di = (ndh * ndh) * (alpha2 - 1) + 1;
-                auto d = alpha2 / (ym::pif * di * di);
-#ifndef YTRACE_GGX_SMITH
-                auto lambda_o = (-1 + std::sqrt(1 + alpha2 * (1 - ndo * ndo) /
-                                                        (ndo * ndo))) /
-                                2;
-                auto lambda_i = (-1 + std::sqrt(1 + alpha2 * (1 - ndi * ndi) /
-                                                        (ndi * ndi))) /
-                                2;
-                auto g = 1 / (1 + lambda_o + lambda_i);
-#else
-                auto go = (2 * ndo) /
-                          (ndo + std::sqrt(alpha2 + (1 - alpha2) * ndo * ndo));
-                auto gi = (2 * ndi) /
-                          (ndi + std::sqrt(alpha2 + (1 - alpha2) * ndi * ndi));
-                auto g = go * gi;
-#endif
-                dg = d * g;
+                // diffuse term
+                if (brdf.type == brdf_type::reflection_lambert) {
+                    brdfcos += weight * brdf.rho * ndi / ym::pif;
+                }
+                // specular term
+                else {
+                    // compute wh
+                    auto wh = ym::normalize(wo + wi_);
 
-                // handle fresnel
-                auto odh = ym::clamp(dot(wo, wh), 0.0f, 1.0f);
-                auto ks = eval_fresnel_schlick(brdf.rho, odh, brdf.roughness);
+                    // compute dot products
+                    auto ndh =
+                        ym::clamp(ym::dot(wh, pt.frame.z), (float)-1, (float)1);
 
-                // sum up
-                brdfcos += weight * ks * ndi * dg / (4 * ndi * ndo);
+                    // exit if needed
+                    if (ndh <= 0) continue;
 
-                // update weight
-                weight *= ym::vec3f{1, 1, 1} - ks;
+                    // microfacet term
+                    auto dg = eval_ggx(brdf.roughness, ndh, ndi, ndo);
+
+                    // handle fresnel
+                    auto odh = ym::clamp(dot(wo, wh), 0.0f, 1.0f);
+                    auto ks =
+                        eval_fresnel_schlick(brdf.rho, odh, brdf.roughness);
+
+                    // sum up
+                    brdfcos += weight * ks * ndi * dg / (4 * ndi * ndo);
+                }
             } break;
-            // specular term Phong
-            case brdf_type::microfacet_phong: {
-                // compute wh
-                auto wh = ym::normalize(wo + wi);
-
+            // refraction term (GGX)
+            case brdf_type::refraction_ggx: {
                 // compute dot products
                 auto ndo = ym::dot(pt.frame.z, wo),
-                     ndi = ym::dot(pt.frame.z, wi),
-                     ndh =
-                         ym::clamp(ym::dot(wh, pt.frame.z), (float)0, (float)1);
+                     ndi = ym::dot(pt.frame.z, wi);
+
+                // HACK
+                // eta
+                auto eta = 1.4f;
+
+                // HACK
+                auto kt = brdf.rho;
 
                 // exit if needed
-                if (ndi <= 0 || ndo <= 0 || ndh <= 0) continue;
+                if (ndi * ndo >= 0) continue;
+
+                // flip eta if necessary
+                if (ndo < 0) eta = 1 / eta;
+
+                // compute wh
+                auto wh = ym::normalize(wo + eta * wi);
+
+                // flip from pbrt
+                if (dot(pt.frame.z, wh) < 0) wh = -wh;
+
+                // compute dot products
+                auto ndh = ym::clamp(
+                         ym::dot(wh, pt.frame.z), (float)-1, (float)1),
+                     odh = ym::dot(wh, wo), idh = ym::dot(wh, wi);
 
                 // microfacet term
-                auto dg = 0.0f;
+                auto dg = eval_ggx(brdf.roughness, std::fabs(ndh),
+                    std::fabs(ndi), std::fabs(ndo));
 
-                // evaluate Blinn-Phong
-                auto ns = 2 / (brdf.roughness * brdf.roughness) - 2;
-                dg = (ns + 2) * std::pow(ndh, ns) / (2 + ym::pif);
-
-                // handle fresnel
-                auto odh = ym::clamp(dot(wo, wh), 0.0f, 1.0f);
-                auto ks = eval_fresnel_schlick(brdf.rho, odh, brdf.roughness);
+                // fresnel
+                auto f = 1 - eval_fresnel_schlick({0.04, 0.04, 0.04}, ndh).x;
 
                 // sum up
-                brdfcos += weight * ks * ndi * dg / (4 * ndi * ndo);
+                brdfcos += weight * kt * std::fabs(ndi) *
+                           (std::fabs(idh) * std::fabs(odh) * f * dg) /
+                           (std::fabs(ndi) * std::fabs(ndo) *
+                               (eta * idh + odh) * (eta * idh + odh));
 
-                // update weight
-                weight *= ym::vec3f{1, 1, 1} - ks;
             } break;
-            // diffuse term (Kajiya-Kay)
-            case brdf_type::kajiya_kay_diff: {
+            // hair (Kajiya-Kay)
+            case brdf_type::kajiya_kay_diff:
+            case brdf_type::kajiya_kay_spec: {
                 // compute dot products
                 auto ndo = ym::dot(pt.frame.z, wo),
                      ndi = ym::dot(pt.frame.z, wi);
@@ -1224,36 +1322,32 @@ static ym::vec3f eval_brdfcos(const point& pt, const ym::vec3f& wi) {
                 if (si <= 0 || so <= 0) continue;
 
                 // diffuse term (Kajiya-Kay)
-                brdfcos += weight * brdf.rho * si / ym::pif;
+                if (brdf.type == brdf_type::kajiya_kay_diff) {
+                    brdfcos += weight * brdf.rho * si / ym::pif;
+                }
+                // specular term (Kajiya-Kay)
+                else {
+                    // compute wh
+                    auto wh = ym::normalize(wo + wi);
+
+                    // compute dot products
+                    auto ndh =
+                        ym::clamp(ym::dot(wh, pt.frame.z), (float)0, (float)1);
+
+                    // take sines
+                    auto sh =
+                        std::sqrt(ym::clamp(1 - ndh * ndh, (float)0, (float)1));
+
+                    // exit if needed
+                    if (sh <= 0) continue;
+
+                    // specular
+                    auto ns = 2 / (brdf.roughness * brdf.roughness) - 2;
+                    auto d = (ns + 2) * std::pow(sh, ns) / (2 + ym::pif);
+                    brdfcos += weight * brdf.rho * si * d / (4.0f * si * so);
+                }
             } break;
-            // specular term (Kajiya-Kay)
-            case brdf_type::kajiya_kay_spec: {
-                // compute wh
-                auto wh = ym::normalize(wo + wi);
-
-                // compute dot products
-                auto ndo = ym::dot(pt.frame.z, wo),
-                     ndi = ym::dot(pt.frame.z, wi),
-                     ndh =
-                         ym::clamp(ym::dot(wh, pt.frame.z), (float)0, (float)1);
-
-                // take sines
-                auto so = std::sqrt(
-                         ym::clamp(1 - ndo * ndo, (float)0, (float)1)),
-                     si = std::sqrt(
-                         ym::clamp(1 - ndi * ndi, (float)0, (float)1)),
-                     sh = std::sqrt(
-                         ym::clamp(1 - ndh * ndh, (float)0, (float)1));
-
-                // exit if needed
-                if (si <= 0 || so <= 0 || sh <= 0) continue;
-
-                // specular
-                auto ns = 2 / (brdf.roughness * brdf.roughness) - 2;
-                auto d = (ns + 2) * std::pow(sh, ns) / (2 + ym::pif);
-                brdfcos += weight * brdf.rho * si * d / (4.0f * si * so);
-            } break;
-            // diffuse term point
+            // points
             case brdf_type::point_diffuse: {
                 auto ido = ym::dot(wo, wi);
                 brdfcos += weight * brdf.rho * (2 * ido + 1) / (2 * ym::pif);
@@ -1273,6 +1367,10 @@ static ym::vec3f eval_brdfcos(const point& pt, const ym::vec3f& wi) {
         }
     }
 
+    // check
+    assert(ym::isfinite(brdfcos));
+
+    // done
     return brdfcos;
 }
 
@@ -1303,8 +1401,9 @@ static float weight_brdfcos(const point& pt, const ym::vec3f& wi) {
 
         // sample the lobe
         switch (brdf.type) {
-            // diffuse term
-            case brdf_type::diffuse_lambert: {
+            // reflection term
+            case brdf_type::reflection_lambert:
+            case brdf_type::reflection_ggx: {
                 // compute dot products
                 auto ndo = ym::dot(pt.frame.z, wo),
                      ndi = ym::dot(pt.frame.z, wi);
@@ -1313,51 +1412,111 @@ static float weight_brdfcos(const point& pt, const ym::vec3f& wi) {
                 if (ndo <= 0 || ndi <= 0) continue;
 
                 // diffuse term
-                // hemipherical cosine probability
-                pdf += weights[lid] * ndi / ym::pif;
-            } break;
-            // specular term (GGX)
-            case brdf_type::microfacet_ggx: {
-                // compute wh
-                auto wh = ym::normalize(wi + wo);
+                if (brdf.type == brdf_type::reflection_lambert) {
+                    // hemipherical cosine probability
+                    pdf += weights[lid] * ndi / ym::pif;
+                }
+                // specular term (GGX)
+                else {
+                    // compute wh
+                    auto wh = ym::normalize(wi + wo);
 
+                    // compute dot products
+                    auto ndh = ym::dot(pt.frame.z, wh);
+
+                    // check to make sure we are above the surface
+                    if (ndh <= 0) continue;
+
+                    // specular term (GGX)
+                    // probability proportional to d adjusted by wh projection
+                    auto d = pdf_ggx(brdf.roughness, ndh);
+                    auto hdo = ym::dot(wo, wh);
+                    pdf += weights[lid] * d / (4 * hdo);
+                }
+            } break;
+            // transmission term
+            case brdf_type::transmission_lambert:
+            case brdf_type::transmission_ggx: {
                 // compute dot products
                 auto ndo = ym::dot(pt.frame.z, wo),
-                     ndi = ym::dot(pt.frame.z, wi),
-                     ndh = ym::dot(pt.frame.z, wh);
+                     ndi = ym::dot(pt.frame.z, wi);
 
                 // check to make sure we are above the surface
-                if (ndo <= 0 || ndi <= 0 || ndh <= 0) continue;
+                if (ndo <= 0 || ndi >= 0) continue;
+
+                // flip
+                ndi = -ndi;
+                auto wi_ = -wi;
+
+                // diffuse term
+                if (brdf.type == brdf_type::reflection_lambert) {
+                    // hemipherical cosine probability
+                    pdf += weights[lid] * ndi / ym::pif;
+                }
+                // specular term (GGX)
+                else {
+                    // compute wh
+                    auto wh = ym::normalize(wi_ + wo);
+
+                    // compute dot products
+                    auto ndh = ym::dot(pt.frame.z, wh);
+
+                    // check to make sure we are above the surface
+                    if (ndh <= 0) continue;
+
+                    // specular term (GGX)
+                    // probability proportional to d adjusted by wh projection
+                    auto d = pdf_ggx(brdf.roughness, ndh);
+                    auto hdo = ym::dot(wo, wh);
+                    pdf += weights[lid] * d / (4 * hdo);
+                }
+            } break;
+            // refraction term (GGX)
+            case brdf_type::refraction_ggx: {
+                // compute dot products
+                auto ndo = ym::dot(pt.frame.z, wo),
+                     ndi = ym::dot(pt.frame.z, wi);
+
+                // exit if needed
+                if (ndi * ndo >= 0) continue;
+
+                // HACK
+                // eta
+                auto eta = 1.4f;
+
+                // flip eta if necessary
+                if (ndo < 0) eta = 1 / eta;
+
+                // compute wh
+                auto wh = ym::normalize(wo + eta * wi);
+
+                // compute dot products
+                auto ndh = ym::clamp(
+                         ym::dot(wh, pt.frame.z), (float)-1, (float)1),
+                     odh = ym::dot(wh, wo), idh = ym::dot(wh, wi);
 
                 // specular term (GGX)
-                // probability proportional to d * ndh
-                auto cos2 = ndh * ndh;
-                auto tan2 = (1 - cos2) / cos2;
-                auto alpha2 = brdf.roughness * brdf.roughness;
-                auto d = alpha2 / (ym::pif * cos2 * cos2 * (alpha2 + tan2) *
-                                      (alpha2 + tan2));
-                auto hdo = ym::dot(wo, wh);
-                pdf += weights[lid] * d * ndh / (4 * hdo);
-            } break;
-            // specular term Phong
-            case brdf_type::microfacet_phong: {
-                // compute wh
-                auto wh = ym::normalize(wi + wo);
+                // probability proportional to d weighted by change of variable
+                auto d = pdf_ggx(brdf.roughness, std::fabs(ndh));
+                // pdf += weights[lid] * d * eta * eta * std::fabs(idh) /
+                //        ((odh + eta * idh) * (odh + eta * idh));
 
-                // compute dot products
-                auto ndo = ym::dot(pt.frame.z, wo),
-                     ndi = ym::dot(pt.frame.z, wi),
-                     ndh = ym::dot(pt.frame.z, wh);
+                static ym::vec2f acc = ym::zero2f;
+                static ym::vec2i count = ym::zero2i;
 
-                // check to make sure we are above the surface
-                // updated this for refraction
-                if (ndo <= 0 || ndi <= 0 || ndh <= 0) continue;
+                auto x = d * std::fabs(idh) /
+                         ((odh + eta * idh) * (odh + eta * idh));
+                auto idx = (ndo < 0) ? 0 : 1;
+                acc[idx] += x;
+                count[idx] += 1;
+                // printf("pdf  - %g --- + %g\n", acc[0] / count[0],
+                //    acc[1] / count[1]);
 
-                // specular term (Phong)
-                // get phong exponent
-                auto ns = 2 / (brdf.roughness * brdf.roughness) - 2;
-                // homerispherical cosine power probability
-                pdf += weights[lid] * powf(ndh, ns) * (ns + 1) / (2 * ym::pif);
+                pdf += weights[lid] * d * std::fabs(idh) /
+                       ((odh + eta * idh) * (odh + eta * idh));
+
+                // check
+                assert(ym::isfinite(pdf));
             } break;
             // diffuse term (Kajiya-Kay)
             case brdf_type::kajiya_kay_diff:
@@ -1385,8 +1544,29 @@ static float weight_brdfcos(const point& pt, const ym::vec3f& wi) {
     // check for missed pdf
     if (!pdf) return 0;
 
+    // check
+    assert(ym::isfinite(pdf));
+
     // done
     return 1 / pdf;
+}
+
+//
+// reflected vector
+//
+static inline ym::vec3f reflect(const ym::vec3f& w, const ym::vec3f& n) {
+    return -w + 2 * dot(n, w) * n;
+}
+
+//
+// refracted vector
+//
+static inline ym::vec3f refract(
+    const ym::vec3f& w, const ym::vec3f& n, float eta) {
+    // auto k = 1.0 - eta * eta * (1.0 - dot(n, w) * dot(n, w));
+    auto k = 1 - eta * eta * std::max(0.0f, 1 - ym::dot(n, w) * ym::dot(n, w));
+    if (k < 0) return ym::zero3f;  // tir
+    return -w * eta + (eta * ym::dot(n, w) - std::sqrt(k)) * n;
 }
 
 //
@@ -1417,10 +1597,14 @@ static ym::vec3f sample_brdfcos(
     lid = ym::clamp(lid, 0, pt.nbrdfs - 1);
     auto brdf = pt.brdfs[lid];
 
+    // value to be returned
+    auto wi = ym::zero3f;
+
     // sample selected lobe
     switch (brdf.type) {
-        // diffuse term
-        case brdf_type::diffuse_lambert: {
+        // reflection term
+        case brdf_type::reflection_lambert:
+        case brdf_type::reflection_ggx: {
             // save wo
             auto wo = pt.wo;
 
@@ -1431,15 +1615,26 @@ static ym::vec3f sample_brdfcos(
             if (ndo <= 0) return ym::zero3f;
 
             // sample according to diffuse
-            // sample wi with hemispherical cosine distribution
-            auto rz = sqrtf(rn.y), rr = sqrtf(1 - rz * rz),
-                 rphi = 2 * ym::pif * rn.x;
-            // set to wi
-            auto wi_local = ym::vec3f{rr * cosf(rphi), rr * sinf(rphi), rz};
-            return transform_direction(pt.frame, wi_local);
+            if (brdf.type == brdf_type::reflection_lambert) {
+                // sample wi with hemispherical cosine distribution
+                auto rz = sqrtf(rn.y), rr = sqrtf(1 - rz * rz),
+                     rphi = 2 * ym::pif * rn.x;
+                // set to wi
+                auto wi_local = ym::vec3f{rr * cosf(rphi), rr * sinf(rphi), rz};
+                return transform_direction(pt.frame, wi_local);
+            }
+            // sample according to specular GGX
+            else {
+                // sample wh with ggx distribution
+                auto wh_local = sample_ggx(brdf.roughness, rn);
+                auto wh = transform_direction(pt.frame, wh_local);
+                // compute wi
+                return ym::normalize(wh * 2.0f * ym::dot(wo, wh) - wo);
+            }
         } break;
-        // specular term (GGX)
-        case brdf_type::microfacet_ggx: {
+        // tranbsmission term
+        case brdf_type::transmission_lambert:
+        case brdf_type::transmission_ggx: {
             // save wo
             auto wo = pt.wo;
 
@@ -1448,42 +1643,66 @@ static ym::vec3f sample_brdfcos(
 
             // check to make sure we are above the surface
             if (ndo <= 0) return ym::zero3f;
+
+            // sample according to diffuse
+            if (brdf.type == brdf_type::reflection_lambert) {
+                // sample wi with hemispherical cosine distribution
+                auto rz = sqrtf(rn.y), rr = sqrtf(1 - rz * rz),
+                     rphi = 2 * ym::pif * rn.x;
+                // set to wi
+                auto wi_local = ym::vec3f{rr * cosf(rphi), rr * sinf(rphi), rz};
+                return -transform_direction(pt.frame, wi_local);
+            }
+            // sample according to specular GGX
+            else {
+                // sample wh with ggx distribution
+                auto wh_local = sample_ggx(brdf.roughness, rn);
+                auto wh = transform_direction(pt.frame, wh_local);
+                // compute wi
+                return -ym::normalize(wh * 2.0f * ym::dot(wo, wh) - wo);
+            }
+        } break;
+        // transmission term (GGX)
+        case brdf_type::refraction_ggx: {
+            // save wo
+            auto wo = pt.wo;
+
+            // compute cosine
+            auto ndo = ym::dot(pt.frame.z, wo);
+
+            // HACK
+            // eta
+            auto eta = 1.4f;
+
+            // flip eta if necessary
+            if (ndo < 0) eta = 1 / eta;
 
             // sample according to specular (GGX or Phong)
             // sample wh with ggx distribution
-            auto tan2 = brdf.roughness * brdf.roughness * rn.y / (1 - rn.y);
-            auto rz = std::sqrt(1 / (tan2 + 1)), rr = std::sqrt(1 - rz * rz),
-                 rphi = 2 * ym::pif * rn.x;
-            // set to wh
-            auto wh_local =
-                ym::vec3f{rr * std::cos(rphi), rr * std::sin(rphi), rz};
+            auto wh_local = sample_ggx(brdf.roughness, rn);
             auto wh = transform_direction(pt.frame, wh_local);
-            // compute wi
-            return ym::normalize(wh * 2.0f * ym::dot(wo, wh) - wo);
-        } break;
-        // specular term Phong
-        case brdf_type::microfacet_phong: {
-            // save wo
-            auto wo = pt.wo;
 
-            // compute cosine
-            auto ndo = ym::dot(pt.frame.z, wo);
+            // wi
+            auto e = 1 / eta;
+            auto wi = ym::zero3f;
+            auto odh = dot(pt.frame.z, wo);
+            auto k = 1 - e * e * std::max(0.0f, 1 - odh * odh);
+            if (k < 0)
+                wi = ym::zero3f;  // tir
+            else if (ndo < 0) {
+                wi = ym::normalize(-wo * e + (e * odh + std::sqrt(k)) * wh);
+                assert(dot(pt.frame.z, wi) * ndo <= 0);
 
-            // check to make sure we are above the surface
-            if (ndo <= 0) return ym::zero3f;
+            } else {
+                wi = ym::normalize(-wo * e + (e * odh - std::sqrt(k)) * wh);
+                assert(dot(pt.frame.z, wi) * ndo <= 0);
+            }
 
-            // sample according to specular (Phong)
-            // get phong exponent
-            auto ns = 2 / (brdf.roughness * brdf.roughness) - 2;
-            // sample wh with hemispherical cosine power distribution
-            auto rz = std::pow(rn.y, 1 / (ns + 1)), rr = std::sqrt(1 - rz * rz),
-                 rphi = 2 * ym::pif * rn.x;
-            // set to wh
-            auto wh_local =
-                ym::vec3f{rr * std::cos(rphi), rr * std::sin(rphi), rz};
-            auto wh = transform_direction(pt.frame, wh_local);
-            // compute wi
-            return ym::normalize(wh * 2.0f * ym::dot(wo, wh) - wo);
+            // check
+            assert(ym::isfinite(wi));
+
+            // done
+            return wi;
         } break;
         // diffuse term (Kajiya-Kay)
         case brdf_type::kajiya_kay_diff:
@@ -1505,9 +1724,9 @@ static ym::vec3f sample_brdfcos(
         default: assert(false); break;
     }
 
-    // should not get here
-    return ym::zero3f;
-}
+    // done
+    return wi;
+}  // namespace ytrace
 
 //
 // Create a point for an environment map. Resolves material with textures.
@@ -1640,6 +1859,12 @@ static point eval_shapepoint(
     pt.frame.x = ym::transform_direction(ist->frame, pt.frame.x);
     pt.frame.y = ym::transform_direction(ist->frame, pt.frame.y);
 
+    // correct for doulbe sided
+    if (mat->double_sided && ym::dot(pt.frame.z, pt.wo) < 0) {
+        pt.frame.z = -pt.frame.z;
+        pt.frame.x = -pt.frame.x;
+    }
+
     // handle color
     auto kx_scale = ym::vec4f{1, 1, 1, 1};
     if (shp->color) kx_scale *= color;
@@ -1666,7 +1891,7 @@ static point eval_shapepoint(
             if (shp->texcoord && mat->matte.op_txt)
                 kd.w *= eval_texture(mat->matte.op_txt, texcoord).x;
             pt.op = kd.w;
-            pt.brdfs[pt.nbrdfs].type = brdf_type::diffuse_lambert;
+            pt.brdfs[pt.nbrdfs].type = brdf_type::reflection_lambert;
             pt.brdfs[pt.nbrdfs].rho = kd.xyz();
             if (pt.brdfs[pt.nbrdfs].rho != ym::zero3f) pt.nbrdfs++;
         } break;
@@ -1675,6 +1900,8 @@ static point eval_shapepoint(
                 ym::vec4f{mat->microfacet.kd, mat->microfacet.op} * kx_scale;
             auto ks = ym::vec4f{mat->microfacet.ks, mat->microfacet.rs} *
                       ym::vec4f{kx_scale.xyz(), 1};
+            auto kt = ym::vec4f{mat->microfacet.kt, mat->microfacet.rs} *
+                      ym::vec4f{kx_scale.xyz(), 1};
             if (shp->texcoord && mat->microfacet.kd_txt)
                 kd *= eval_texture(mat->microfacet.kd_txt, texcoord);
             if (shp->texcoord && mat->microfacet.op_txt)
@@ -1682,11 +1909,18 @@ static point eval_shapepoint(
             if (shp->texcoord && mat->microfacet.ks_txt)
                 ks.xyz() *=
                     eval_texture(mat->microfacet.ks_txt, texcoord).xyz();
+            if (shp->texcoord && mat->microfacet.kt_txt)
+                kt.xyz() *=
+                    eval_texture(mat->microfacet.kt_txt, texcoord).xyz();
             pt.op = kd.w;
-            pt.brdfs[pt.nbrdfs].type = brdf_type::diffuse_lambert;
+            pt.brdfs[pt.nbrdfs].type = brdf_type::refraction_ggx;
+            pt.brdfs[pt.nbrdfs].rho = kt.xyz();
+            pt.brdfs[pt.nbrdfs].roughness = kt.w;
+            if (pt.brdfs[pt.nbrdfs].rho != ym::zero3f) pt.nbrdfs++;
+            pt.brdfs[pt.nbrdfs].type = brdf_type::reflection_lambert;
             pt.brdfs[pt.nbrdfs].rho = kd.xyz();
             if (pt.brdfs[pt.nbrdfs].rho != ym::zero3f) pt.nbrdfs++;
-            pt.brdfs[pt.nbrdfs].type = brdf_type::microfacet_ggx;
+            pt.brdfs[pt.nbrdfs].type = brdf_type::reflection_ggx;
             pt.brdfs[pt.nbrdfs].rho = ks.xyz();
             pt.brdfs[pt.nbrdfs].roughness = ks.w;
             if (pt.brdfs[pt.nbrdfs].rho != ym::zero3f) pt.nbrdfs++;
@@ -1703,10 +1937,10 @@ static point eval_shapepoint(
                 km.y *= km_txt.z;
             }
             pt.op = kb.w;
-            pt.brdfs[pt.nbrdfs].type = brdf_type::diffuse_lambert;
+            pt.brdfs[pt.nbrdfs].type = brdf_type::reflection_lambert;
             pt.brdfs[pt.nbrdfs].rho = kb.xyz() * (1 - km.x);
             if (pt.brdfs[pt.nbrdfs].rho != ym::zero3f) pt.nbrdfs++;
-            pt.brdfs[pt.nbrdfs].type = brdf_type::microfacet_ggx;
+            pt.brdfs[pt.nbrdfs].type = brdf_type::reflection_ggx;
             pt.brdfs[pt.nbrdfs].rho =
                 kb.xyz() * km.x + ym::vec3f{0.04f, 0.04f, 0.04f} * (1 - km.x);
             pt.brdfs[pt.nbrdfs].roughness = km.y * km.y;
@@ -1722,10 +1956,10 @@ static point eval_shapepoint(
             if (shp->texcoord && mat->specgloss.ks_txt)
                 ks *= eval_texture(mat->specgloss.ks_txt, texcoord);
             pt.op = kd.w;
-            pt.brdfs[pt.nbrdfs].type = brdf_type::diffuse_lambert;
+            pt.brdfs[pt.nbrdfs].type = brdf_type::reflection_lambert;
             pt.brdfs[pt.nbrdfs].rho = kd.xyz();
             if (pt.brdfs[pt.nbrdfs].rho != ym::zero3f) pt.nbrdfs++;
-            pt.brdfs[pt.nbrdfs].type = brdf_type::microfacet_ggx;
+            pt.brdfs[pt.nbrdfs].type = brdf_type::reflection_ggx;
             pt.brdfs[pt.nbrdfs].rho = ks.xyz();
             pt.brdfs[pt.nbrdfs].roughness = (1 - ks.w) * (1 - ks.w);
             if (pt.brdfs[pt.nbrdfs].rho != ym::zero3f) pt.nbrdfs++;
@@ -1740,7 +1974,7 @@ static point eval_shapepoint(
             pt.emissions[lid].type = emission_type::point;
     } else if (shp->lines) {
         for (auto lid = 0; lid < pt.nbrdfs; lid++) {
-            if (pt.brdfs[lid].type == brdf_type::diffuse_lambert)
+            if (pt.brdfs[lid].type == brdf_type::reflection_lambert)
                 pt.brdfs[lid].type = brdf_type::kajiya_kay_diff;
             else
                 pt.brdfs[lid].type = brdf_type::kajiya_kay_spec;
@@ -1882,7 +2116,16 @@ static point intersect_scene(const scene* scn, const ym::ray3f& ray) {
 // Transparecy
 //
 static ym::vec3f eval_transparency(const point& pt) {
-    return ym::vec3f(1 - pt.op, 1 - pt.op, 1 - pt.op);
+    auto kt = ym::zero3f;
+    for (auto lid = 0; lid < pt.nbrdfs; lid++) {
+        auto brdf = pt.brdfs[lid];
+        switch (brdf.type) {
+            case brdf_type::transparent:
+            case brdf_type::refraction_ggx: kt += brdf.rho; break;
+            default: break;
+        }
+    }
+    return kt;
 }
 
 //
@@ -2339,9 +2582,12 @@ trace_state* make_state() { return new trace_state(); }
 void init_state(
     trace_state* state, const scene* scn, const trace_params& params) {
     if (state->pool) {
-        yu::concurrent::clear_pool(state->pool);
+        if (params.parallel)
+            yu::concurrent::clear_pool(state->pool);
+        else
+            yu::concurrent::free_pool(state->pool);
     } else {
-        state->pool = yu::concurrent::make_pool();
+        if (params.parallel) state->pool = yu::concurrent::make_pool();
     }
     state->img = ym::image4f(params.width, params.height);
     state->acc = ym::image4f(params.width, params.height);

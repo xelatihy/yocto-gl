@@ -975,6 +975,28 @@ yobj::scene* make_simple_scene(
             scn, "plane02", add_quad(scn, "plane02", mat[1], 2), {0, 0, 0});
         add_instance(
             scn, "plane03", add_quad(scn, "plane03", mat[2], 2), {2.5f, 0, 0});
+    } else if (otype == "refracted") {
+        auto mat = std::vector<yobj::material*>{
+            add_glass(scn, "obj01", {1, 1, 1}, 0.1f),
+            add_glass(scn, "obj02", {1, 1, 1}, 0.05f),
+            add_glass(scn, "obj03", {1, 1, 1}, 0.01f)};
+        add_instance(
+            scn, "obj01", add_quad(scn, "obj01", mat[0], 2), {-2.5f, 0, 0});
+        add_instance(
+            scn, "obj02", add_cube(scn, "obj02", mat[1], 2), {0, 0, 0});
+        add_instance(
+            scn, "obj03", add_sphere(scn, "obj03", mat[2], 5), {2.5f, 0, 0});
+    } else if (otype == "refractedp") {
+        auto mat = std::vector<yobj::material*>{
+            add_glass(scn, "obj01", {1, 1, 1}, 0.05f),
+            add_glass(scn, "obj02", {1, 1, 1}, 0.02f),
+            add_glass(scn, "obj03", {1, 1, 1}, 0.01f)};
+        add_instance(
+            scn, "obj01", add_quad(scn, "obj01", mat[0], 2), {-2.5f, 0, 0});
+        add_instance(
+            scn, "obj02", add_quad(scn, "obj02", mat[1], 2), {0, 0, 0});
+        add_instance(
+            scn, "obj03", add_quad(scn, "obj03", mat[2], 2), {2.5f, 0, 0});
     } else if (otype == "points") {
         auto mat = add_diffuse(scn, "points", {0.2f, 0.2f, 0.2f});
         add_instance(
@@ -1339,8 +1361,8 @@ int main(int argc, char* argv[]) {
 
     // simple scenes ----------------------------
     auto stypes = std::vector<std::string>{"basic", "simple", "transparent",
-        "transparentp", "lines", "points", "hair", "sym_points01",
-        "sym_points02", "sym_cloth01", "sym_cloth02"};
+        "transparentp", "refracted", "refractedp", "lines", "points", "hair",
+        "sym_points01", "sym_points02", "sym_cloth01", "sym_cloth02"};
 
     // matball scenes --------------------------
     auto mtypes = std::vector<std::string>{"matte00", "matte01_txt",

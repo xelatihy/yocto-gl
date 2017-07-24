@@ -1862,6 +1862,8 @@ void parse_cmdline(yscene* scene, int argc, char** argv, const char* name,
             parse_opti(parser, "--samples", "-s", "image samples", 256);
         scene->trace_params.aux_buffers =
             parse_flag(parser, "--aux-buffers", "", "saves additional buffers");
+        scene->trace_params.parallel =
+            !parse_flag(parser, "--no-parallel", "", "so not run in parallel");
     }
 
     // render
