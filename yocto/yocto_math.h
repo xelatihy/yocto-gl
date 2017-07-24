@@ -425,46 +425,41 @@ using vec3b = vec<byte, 3>;
 /// 4-dimensional byte vector
 using vec4b = vec<byte, 4>;
 
-/// Initialize a zero vector.
-template <typename T, int N>
-constexpr inline vec<T, N> zero_vec() {
-    vec<T, N> c;
-    for (auto i = 0; i < N; i++) c[i] = 0;
-    return c;
-}
-
-/// Sepcialization of Initialize a zero vector.
-template <>
-constexpr inline vec3f zero_vec() {
-    return {0, 0, 0};
-}
-
 /// 1-dimensional float zero vector
-const auto zero1f = zero_vec<float, 1>();
+const auto zero1f = vec<float, 1>();
 /// 2-dimensional float zero vector
-const auto zero2f = zero_vec<float, 2>();
+const auto zero2f = vec<float, 2>();
 /// 3-dimensional float zero vector
-const auto zero3f = zero_vec<float, 3>();
+const auto zero3f = vec<float, 3>();
 /// 4-dimensional float zero vector
-const auto zero4f = zero_vec<float, 4>();
+const auto zero4f = vec<float, 4>();
+
+/// 1-dimensional float one vector
+const auto one1f = vec<float, 1>(1);
+/// 2-dimensional float one vector
+const auto one2f = vec<float, 2>(1);
+/// 3-dimensional float one vector
+const auto one3f = vec<float, 3>(1);
+/// 4-dimensional float one vector
+const auto one4f = vec<float, 4>(1);
 
 /// 1-dimensional int zero vector
-const auto zero1i = zero_vec<int, 1>();
+const auto zero1i = vec<int, 1>();
 /// 2-dimensional int zero vector
-const auto zero2i = zero_vec<int, 2>();
+const auto zero2i = vec<int, 2>();
 /// 3-dimensional int zero vector
-const auto zero3i = zero_vec<int, 3>();
+const auto zero3i = vec<int, 3>();
 /// 4-dimensional int zero vector
-const auto zero4i = zero_vec<int, 4>();
+const auto zero4i = vec<int, 4>();
 
 /// 1-dimensional byte zero vector
-const auto zero1b = zero_vec<byte, 1>();
+const auto zero1b = vec<byte, 1>();
 /// 2-dimensional byte zero vector
-const auto zero2b = zero_vec<byte, 2>();
+const auto zero2b = vec<byte, 2>();
 /// 3-dimensional byte zero vector
-const auto zero3b = zero_vec<byte, 3>();
+const auto zero3b = vec<byte, 3>();
 /// 4-dimensional byte zero vector
-const auto zero4b = zero_vec<byte, 4>();
+const auto zero4b = vec<byte, 4>();
 
 /// iteration support
 template <typename T, int N>
@@ -1527,7 +1522,7 @@ constexpr inline mat<T, M, N> operator/(const mat<T, N, M>& a, T b) {
 template <typename T, int N, int M>
 constexpr inline vec<T, N> operator*(
     const mat<T, N, M>& a, const vec<T, M>& b) {
-    vec<T, N> c = zero_vec<T, N>();
+    auto c = vec<T, N>();
     for (auto j = 0; j < M; j++) c += a[j] * b[j];
     return c;
 }

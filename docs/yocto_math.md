@@ -579,28 +579,10 @@ using vec4b = vec<byte, 4>;
 
 4-dimensional byte vector
 
-### Function zero_vec()
-
-~~~ .cpp
-template <typename T, int N>
-constexpr inline vec<T, N> zero_vec();
-~~~
-
-Initialize a zero vector.
-
-### Function zero_vec()
-
-~~~ .cpp
-template <>
-constexpr inline vec3f zero_vec();
-~~~
-
-Sepcialization of Initialize a zero vector.
-
 ### Constant zero1f
 
 ~~~ .cpp
-const auto zero1f = zero_vec<float, 1>();
+const auto zero1f = vec<float, 1>();
 ~~~
 
 1-dimensional float zero vector
@@ -608,7 +590,7 @@ const auto zero1f = zero_vec<float, 1>();
 ### Constant zero2f
 
 ~~~ .cpp
-const auto zero2f = zero_vec<float, 2>();
+const auto zero2f = vec<float, 2>();
 ~~~
 
 2-dimensional float zero vector
@@ -616,7 +598,7 @@ const auto zero2f = zero_vec<float, 2>();
 ### Constant zero3f
 
 ~~~ .cpp
-const auto zero3f = zero_vec<float, 3>();
+const auto zero3f = vec<float, 3>();
 ~~~
 
 3-dimensional float zero vector
@@ -624,15 +606,47 @@ const auto zero3f = zero_vec<float, 3>();
 ### Constant zero4f
 
 ~~~ .cpp
-const auto zero4f = zero_vec<float, 4>();
+const auto zero4f = vec<float, 4>();
 ~~~
 
 4-dimensional float zero vector
 
+### Constant one1f
+
+~~~ .cpp
+const auto one1f = vec<float, 1>(1);
+~~~
+
+1-dimensional float one vector
+
+### Constant one2f
+
+~~~ .cpp
+const auto one2f = vec<float, 2>(1);
+~~~
+
+2-dimensional float one vector
+
+### Constant one3f
+
+~~~ .cpp
+const auto one3f = vec<float, 3>(1);
+~~~
+
+3-dimensional float one vector
+
+### Constant one4f
+
+~~~ .cpp
+const auto one4f = vec<float, 4>(1);
+~~~
+
+4-dimensional float one vector
+
 ### Constant zero1i
 
 ~~~ .cpp
-const auto zero1i = zero_vec<int, 1>();
+const auto zero1i = vec<int, 1>();
 ~~~
 
 1-dimensional int zero vector
@@ -640,7 +654,7 @@ const auto zero1i = zero_vec<int, 1>();
 ### Constant zero2i
 
 ~~~ .cpp
-const auto zero2i = zero_vec<int, 2>();
+const auto zero2i = vec<int, 2>();
 ~~~
 
 2-dimensional int zero vector
@@ -648,7 +662,7 @@ const auto zero2i = zero_vec<int, 2>();
 ### Constant zero3i
 
 ~~~ .cpp
-const auto zero3i = zero_vec<int, 3>();
+const auto zero3i = vec<int, 3>();
 ~~~
 
 3-dimensional int zero vector
@@ -656,7 +670,7 @@ const auto zero3i = zero_vec<int, 3>();
 ### Constant zero4i
 
 ~~~ .cpp
-const auto zero4i = zero_vec<int, 4>();
+const auto zero4i = vec<int, 4>();
 ~~~
 
 4-dimensional int zero vector
@@ -664,7 +678,7 @@ const auto zero4i = zero_vec<int, 4>();
 ### Constant zero1b
 
 ~~~ .cpp
-const auto zero1b = zero_vec<byte, 1>();
+const auto zero1b = vec<byte, 1>();
 ~~~
 
 1-dimensional byte zero vector
@@ -672,7 +686,7 @@ const auto zero1b = zero_vec<byte, 1>();
 ### Constant zero2b
 
 ~~~ .cpp
-const auto zero2b = zero_vec<byte, 2>();
+const auto zero2b = vec<byte, 2>();
 ~~~
 
 2-dimensional byte zero vector
@@ -680,7 +694,7 @@ const auto zero2b = zero_vec<byte, 2>();
 ### Constant zero3b
 
 ~~~ .cpp
-const auto zero3b = zero_vec<byte, 3>();
+const auto zero3b = vec<byte, 3>();
 ~~~
 
 3-dimensional byte zero vector
@@ -688,7 +702,7 @@ const auto zero3b = zero_vec<byte, 3>();
 ### Constant zero4b
 
 ~~~ .cpp
-const auto zero4b = zero_vec<byte, 4>();
+const auto zero4b = vec<byte, 4>();
 ~~~
 
 4-dimensional byte zero vector

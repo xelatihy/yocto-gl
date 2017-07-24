@@ -74,8 +74,7 @@ struct yshape_vbo {
 //
 struct yshade_state {
     // shade state
-    uint prog = 0;
-    uint vao = 0;
+    yglu::program_info prog = {};
     std::map<void*, uint> txt;
     std::map<void*, yshape_vbo> vbo;
 
@@ -349,7 +348,7 @@ inline void update_shade_lights(yshade_state* st, const yobj::scene* sc) {
 // Init shading
 //
 inline void update_shade_state(const yobj::scene* sc, yshade_state* st) {
-    if (!st->prog) yglu::stdshader::make_program(&st->prog, &st->vao);
+    if (!st->prog) st->prog = yglu::stdshader::make_program();
     st->txt[nullptr] = 0;
     for (auto txt : sc->textures) {
         if (st->txt.find(txt) != st->txt.end()) continue;
@@ -365,31 +364,26 @@ inline void update_shade_state(const yobj::scene* sc, yshade_state* st) {
             if (st->vbo.find(shape) != st->vbo.end()) continue;
             st->vbo[shape] = yshape_vbo();
             if (!shape->pos.empty())
-                st->vbo[shape].pos = yglu::make_buffer((int)shape->pos.size(),
-                    3 * sizeof(float), shape->pos.data(), false, false);
+                st->vbo[shape].pos =
+                    yglu::make_buffer(shape->pos, false, false);
             if (!shape->norm.empty())
-                st->vbo[shape].norm = yglu::make_buffer((int)shape->norm.size(),
-                    3 * sizeof(float), shape->norm.data(), false, false);
+                st->vbo[shape].norm =
+                    yglu::make_buffer(shape->norm, false, false);
             if (!shape->texcoord.empty())
-                st->vbo[shape].texcoord = yglu::make_buffer(
-                    (int)shape->texcoord.size(), 2 * sizeof(float),
-                    shape->texcoord.data(), false, false);
+                st->vbo[shape].texcoord =
+                    yglu::make_buffer(shape->texcoord, false, false);
             if (!shape->color.empty())
                 st->vbo[shape].color =
-                    yglu::make_buffer((int)shape->color.size(),
-                        4 * sizeof(float), shape->color.data(), false, false);
+                    yglu::make_buffer(shape->color, false, false);
             if (!shape->points.empty())
                 st->vbo[shape].points =
-                    yglu::make_buffer((int)shape->points.size(), sizeof(int),
-                        shape->points.data(), true, false);
+                    yglu::make_buffer(shape->points, true, false);
             if (!shape->lines.empty())
                 st->vbo[shape].lines =
-                    yglu::make_buffer((int)shape->lines.size(), 2 * sizeof(int),
-                        shape->lines.data(), true, false);
+                    yglu::make_buffer(shape->lines, true, false);
             if (!shape->triangles.empty())
                 st->vbo[shape].triangles =
-                    yglu::make_buffer((int)shape->triangles.size(),
-                        3 * sizeof(int), shape->triangles.data(), true, false);
+                    yglu::make_buffer(shape->triangles, true, false);
         }
     }
 }
@@ -485,8 +479,8 @@ inline void shade_scene(const yobj::scene* sc, yshade_state* st,
             ycam->yfov, ycam->aspect, ycam->near, ycam->far);
     }
 
-    yglu::stdshader::begin_frame(st->prog, st->vao, camera_lights, exposure,
-        tmtype, gamma, camera_xform, camera_view, camera_proj);
+    yglu::stdshader::begin_frame(st->prog, camera_lights, exposure, tmtype,
+        gamma, camera_xform, camera_view, camera_proj);
 
     if (!camera_lights) {
         update_shade_lights(st, sc);
@@ -560,7 +554,7 @@ inline void update_shade_lights(
 // Init shading
 //
 inline void update_shade_state(const ygltf::scene_group* sc, yshade_state* st) {
-    if (!st->prog) yglu::stdshader::make_program(&st->prog, &st->vao);
+    if (!st->prog) st->prog = yglu::stdshader::make_program();
     st->txt[nullptr] = 0;
     for (auto txt : sc->textures) {
         if (st->txt.find(txt) != st->txt.end()) continue;
@@ -576,47 +570,38 @@ inline void update_shade_state(const ygltf::scene_group* sc, yshade_state* st) {
             if (st->vbo.find(shape) != st->vbo.end()) continue;
             st->vbo[shape] = yshape_vbo();
             if (!shape->pos.empty())
-                st->vbo[shape].pos = yglu::make_buffer((int)shape->pos.size(),
-                    3 * sizeof(float), shape->pos.data(), false, false);
+                st->vbo[shape].pos =
+                    yglu::make_buffer(shape->pos, false, false);
             if (!shape->norm.empty())
-                st->vbo[shape].norm = yglu::make_buffer((int)shape->norm.size(),
-                    3 * sizeof(float), shape->norm.data(), false, false);
+                st->vbo[shape].norm =
+                    yglu::make_buffer(shape->norm, false, false);
             if (!shape->texcoord.empty())
-                st->vbo[shape].texcoord = yglu::make_buffer(
-                    (int)shape->texcoord.size(), 2 * sizeof(float),
-                    shape->texcoord.data(), false, false);
+                st->vbo[shape].texcoord =
+                    yglu::make_buffer(shape->texcoord, false, false);
             if (!shape->texcoord1.empty())
-                st->vbo[shape].texcoord1 = yglu::make_buffer(
-                    (int)shape->texcoord1.size(), 2 * sizeof(float),
-                    shape->texcoord1.data(), false, false);
+                st->vbo[shape].texcoord1 =
+                    yglu::make_buffer(shape->texcoord1, false, false);
             if (!shape->color.empty())
                 st->vbo[shape].color =
-                    yglu::make_buffer((int)shape->color.size(),
-                        4 * sizeof(float), shape->color.data(), false, false);
+                    yglu::make_buffer(shape->color, false, false);
             if (!shape->tangsp.empty())
                 st->vbo[shape].tangsp =
-                    yglu::make_buffer((int)shape->tangsp.size(),
-                        4 * sizeof(float), shape->tangsp.data(), false, false);
+                    yglu::make_buffer(shape->tangsp, false, false);
             if (!shape->skin_weights.empty())
-                st->vbo[shape].skin_weights = yglu::make_buffer(
-                    (int)shape->skin_weights.size(), 4 * sizeof(float),
-                    shape->skin_weights.data(), false, false);
+                st->vbo[shape].skin_weights =
+                    yglu::make_buffer(shape->skin_weights, false, false);
             if (!shape->skin_joints.empty())
-                st->vbo[shape].skin_joints = yglu::make_buffer(
-                    (int)shape->skin_joints.size(), 4 * sizeof(int),
-                    shape->skin_joints.data(), false, false);
+                st->vbo[shape].skin_joints =
+                    yglu::make_buffer(shape->skin_joints, false, false);
             if (!shape->points.empty())
                 st->vbo[shape].points =
-                    yglu::make_buffer((int)shape->points.size(), sizeof(int),
-                        shape->points.data(), true, false);
+                    yglu::make_buffer(shape->points, true, false);
             if (!shape->lines.empty())
                 st->vbo[shape].lines =
-                    yglu::make_buffer((int)shape->lines.size(), 2 * sizeof(int),
-                        shape->lines.data(), true, false);
+                    yglu::make_buffer(shape->lines, true, false);
             if (!shape->triangles.empty())
                 st->vbo[shape].triangles =
-                    yglu::make_buffer((int)shape->triangles.size(),
-                        3 * sizeof(int), shape->triangles.data(), true, false);
+                    yglu::make_buffer(shape->triangles, true, false);
         }
     }
 }
@@ -701,20 +686,16 @@ inline void shade_mesh(const ygltf::mesh* msh, const ygltf::skin* sk,
             //     shp->skin_joints, skin_xforms, skinned_pos, skinned_norm);
             ym::compute_matrix_skinning(shp->pos, shp->norm, shp->skin_weights,
                 shp->skin_joints, skin_xforms, skinned_pos, skinned_norm);
-            yglu::update_buffer(vbo.pos, 3 * sizeof(float),
-                (int)skinned_pos.size(), skinned_pos.data(), false, true);
-            yglu::update_buffer(vbo.norm, 3 * sizeof(float),
-                (int)skinned_norm.size(), skinned_norm.data(), false, true);
+            yglu::update_buffer(vbo.pos, skinned_pos, false, true);
+            yglu::update_buffer(vbo.norm, skinned_norm, false, true);
 #endif
         } else if (!morph_weights.empty() && !shp->morph_targets.empty()) {
             std::vector<ym::vec3f> morph_pos, morph_norm;
             std::vector<ym::vec4f> morph_tang;
             ygltf::compute_morphing_deformation(
                 shp, morph_weights, morph_pos, morph_norm, morph_tang);
-            yglu::update_buffer(vbo.pos, 3 * sizeof(float),
-                (int)morph_pos.size(), morph_pos.data(), false, true);
-            yglu::update_buffer(vbo.norm, 3 * sizeof(float),
-                (int)morph_norm.size(), morph_norm.data(), false, true);
+            yglu::update_buffer(vbo.pos, morph_pos, false, true);
+            yglu::update_buffer(vbo.norm, morph_norm, false, true);
         } else {
             yglu::stdshader::set_vert_skinning_off(st->prog);
         }
@@ -802,8 +783,8 @@ inline void shade_scene(const ygltf::scene_group* scns, yshade_state* st,
         }
     }
 
-    yglu::stdshader::begin_frame(st->prog, st->vao, camera_lights, exposure,
-        tmtype, gamma, camera_xform, camera_view, camera_proj);
+    yglu::stdshader::begin_frame(st->prog, camera_lights, exposure, tmtype,
+        gamma, camera_xform, camera_view, camera_proj);
 
     if (!camera_lights) {
         update_shade_lights(st, scns);
