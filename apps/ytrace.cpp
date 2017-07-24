@@ -225,12 +225,23 @@ ytrace::scene* make_trace_scene(const yobj::scene* scene, const ycamera* cam) {
 
     auto material_map = std::map<yobj::material*, int>{{nullptr, -1}};
     for (auto mat : scene->materials) {
-        material_map[mat] = ytrace::add_material_microfacet(trace_scene,
-            mat->ke, mat->kd, mat->ks, mat->kt, mat->rs, mat->opacity,
-            texture_map.at(mat->ke_txt), texture_map.at(mat->kd_txt),
-            texture_map.at(mat->ks_txt), texture_map.at(mat->kt_txt),
-            texture_map.at(mat->rs_txt), texture_map.at(mat->op_txt),
-            texture_map.at(mat->norm_txt), -1, false);
+        auto mid = ytrace::add_material(trace_scene);
+        material_map[mat] = mid;
+        ytrace::set_material_emission(
+            trace_scene, mid, mat->ke, texture_map.at(mat->ke_txt));
+        if (mat->kt != ym::zero3f) {
+            ytrace::set_material_thin_glass(trace_scene, mid, mat->ks, mat->kt,
+                texture_map.at(mat->ks_txt), texture_map.at(mat->kt_txt));
+        } else {
+            ytrace::set_material_microfacet(trace_scene, mid, mat->kd,
+                mat->ks, mat->kt, mat->rs, mat->opacity,
+                texture_map.at(mat->kd_txt),
+                texture_map.at(mat->ks_txt), texture_map.at(mat->kt_txt),
+                texture_map.at(mat->rs_txt), texture_map.at(mat->op_txt),
+                false);
+        }
+        ytrace::set_material_normal(
+            trace_scene, mid, texture_map.at(mat->norm_txt), 1);
     }
 
     auto sid = 0;
@@ -319,30 +330,28 @@ ytrace::scene* make_trace_scene(
 
     auto material_map = std::map<ygltf::material*, int>{{nullptr, -1}};
     for (auto mat : scenes->materials) {
+        auto mid = ytrace::add_material(trace_scene);
+        material_map[mat] = mid;
+        ytrace::set_material_emission(trace_scene, mid, mat->emission, texture_map.at(mat->emission_txt));
         if (mat->specular_glossiness) {
             auto sg = mat->specular_glossiness;
-            material_map[mat] = ytrace::add_material_gltf_specular_glossiness(
-                trace_scene, mat->emission, sg->diffuse, sg->specular,
-                sg->glossiness, sg->opacity, texture_map.at(mat->emission_txt),
+            ytrace::set_material_gltf_specular_glossiness(
+                trace_scene, mid, sg->diffuse, sg->specular,
+                sg->glossiness, sg->opacity,
                 texture_map.at(sg->diffuse_txt),
-                texture_map.at(sg->specular_txt),
-                texture_map.at(mat->normal_txt),
-                texture_map.at(mat->occlusion_txt));
+                texture_map.at(sg->specular_txt));
 
         } else if (mat->metallic_roughness) {
             auto mr = mat->metallic_roughness;
-            material_map[mat] = ytrace::add_material_gltf_metallic_roughness(
-                trace_scene, mat->emission, mr->base, mr->metallic,
-                mr->roughness, mr->opacity, texture_map.at(mat->emission_txt),
-                texture_map.at(mr->base_txt), texture_map.at(mr->metallic_txt),
-                texture_map.at(mat->normal_txt),
-                texture_map.at(mat->occlusion_txt));
-        } else {
-            material_map[mat] = ytrace::add_material_emission_only(trace_scene,
-                mat->emission, texture_map.at(mat->emission_txt),
-                texture_map.at(mat->normal_txt),
-                texture_map.at(mat->occlusion_txt));
+            ytrace::set_material_gltf_metallic_roughness(
+                trace_scene, mid, mr->base, mr->metallic,
+                mr->roughness, mr->opacity,
+                texture_map.at(mr->base_txt),
+                texture_map.at(mr->metallic_txt));
         }
+        ytrace::set_material_normal(trace_scene, mid, texture_map.at(mat->normal_txt));
+        ytrace::set_material_occlusion(trace_scene, mid, texture_map.at(mat->occlusion_txt));
+        ytrace::set_material_double_sided(trace_scene, mid, mat->double_sided);
     }
 
     auto sid = 0;
