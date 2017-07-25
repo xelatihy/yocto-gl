@@ -74,7 +74,8 @@ struct yshape_vbo {
 //
 struct yshade_state {
     // shade state
-    yglu::program_info prog = {};
+    uint prog = 0;
+    uint vao = 0;
     std::map<void*, uint> txt;
     std::map<void*, yshape_vbo> vbo;
 
@@ -348,7 +349,7 @@ inline void update_shade_lights(yshade_state* st, const yobj::scene* sc) {
 // Init shading
 //
 inline void update_shade_state(const yobj::scene* sc, yshade_state* st) {
-    if (!st->prog) st->prog = yglu::stdshader::make_program();
+    if (!st->prog) st->prog = yglu::stdshader::make_program(&st->vao);
     st->txt[nullptr] = 0;
     for (auto txt : sc->textures) {
         if (st->txt.find(txt) != st->txt.end()) continue;
@@ -479,8 +480,8 @@ inline void shade_scene(const yobj::scene* sc, yshade_state* st,
             ycam->yfov, ycam->aspect, ycam->near, ycam->far);
     }
 
-    yglu::stdshader::begin_frame(st->prog, camera_lights, exposure, tmtype,
-        gamma, camera_xform, camera_view, camera_proj);
+    yglu::stdshader::begin_frame(st->prog, st->vao, camera_lights, exposure,
+        tmtype, gamma, camera_xform, camera_view, camera_proj);
 
     if (!camera_lights) {
         update_shade_lights(st, sc);
@@ -554,7 +555,7 @@ inline void update_shade_lights(
 // Init shading
 //
 inline void update_shade_state(const ygltf::scene_group* sc, yshade_state* st) {
-    if (!st->prog) st->prog = yglu::stdshader::make_program();
+    if (!st->prog) st->prog = yglu::stdshader::make_program(&st->vao);
     st->txt[nullptr] = 0;
     for (auto txt : sc->textures) {
         if (st->txt.find(txt) != st->txt.end()) continue;
@@ -783,8 +784,8 @@ inline void shade_scene(const ygltf::scene_group* scns, yshade_state* st,
         }
     }
 
-    yglu::stdshader::begin_frame(st->prog, camera_lights, exposure, tmtype,
-        gamma, camera_xform, camera_view, camera_proj);
+    yglu::stdshader::begin_frame(st->prog, st->vao, camera_lights, exposure,
+        tmtype, gamma, camera_xform, camera_view, camera_proj);
 
     if (!camera_lights) {
         update_shade_lights(st, scns);

@@ -74,9 +74,8 @@ void draw_image(ygui::window* win) {
 
     // draw image
     auto window_size = ygui::get_window_size(win);
-    yglu::shade_image(scn->trace_texture_id, img.width(), img.height(),
-        window_size[0], window_size[1], 0, 0, 1, scn->tonemap, scn->exposure,
-        scn->gamma);
+    yglu::shade_image(scn->trace_texture_id, window_size[0], window_size[1], 0,
+        0, 1, scn->tonemap, scn->exposure, scn->gamma);
 
     draw_widgets(win);
     ygui::swap_buffers(win);
