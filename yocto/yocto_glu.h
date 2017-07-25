@@ -194,6 +194,18 @@ struct texture_info {
 };
 
 ///
+/// Buffer type
+///
+enum struct buffer_type {
+    /// vertex
+    vertex = 0,
+    /// element
+    element = 1,
+    /// uniform block
+    uniform_block = 2
+};
+
+///
 /// Checks for GL error and then prints
 ///
 bool check_error(bool print = true);
@@ -250,14 +262,14 @@ void set_viewport(const ym::vec4i& v);
 /// Draw an texture tid of size img_w, img_h on a window of size win_w, win_h
 /// with top-left corner at ox, oy with a zoom zoom.
 ///
-void shade_image(uint tid, int img_w, int img_h, int win_w, int win_h, float ox,
-    float oy, float zoom);
+void shade_image(
+    uint tid, int win_w, int win_h, float ox, float oy, float zoom);
 
 ///
 /// As above but includes an exposure/gamma correction.
 ///
-void shade_image(uint tid, int img_w, int img_h, int win_w, int win_h, float ox,
-    float oy, float zoom, ym::tonemap_type tmtype, float exposure, float gamma);
+void shade_image(uint tid, int win_w, int win_h, float ox, float oy, float zoom,
+    ym::tonemap_type tmtype, float exposure, float gamma);
 
 // TEXTURE FUNCTIONS -----------------------------------------------------------
 
@@ -348,7 +360,7 @@ void clear_texture(uint* tid);
 /// Returns the buffer id.
 ///
 uint make_buffer_raw(
-    int num, int size, const void* values, bool elements, bool dynamic);
+    int size, const void* values, buffer_type btype, bool dynamic);
 
 ///
 /// Creates a buffer with num elements of size size stored in values, where
@@ -357,7 +369,8 @@ uint make_buffer_raw(
 ///
 template <typename T>
 inline uint make_buffer(int num, const T* values, bool elements, bool dynamic) {
-    return make_buffer_raw(num, sizeof(T), values, elements, dynamic);
+    return make_buffer_raw(num * sizeof(T), values,
+        (elements) ? buffer_type::element : buffer_type::vertex, dynamic);
 }
 
 ///
@@ -372,10 +385,20 @@ inline uint make_buffer(
 }
 
 ///
+/// Creates a buffer with a block of data stored in values, where
+/// content is dyanamic if dynamic.
+/// Returns the buffer id.
+///
+template <typename T>
+inline uint make_buffer(const T& values, buffer_type btype, bool dynamic) {
+    return make_buffer_raw(sizeof(T), &values, btype, dynamic);
+}
+
+///
 /// Updates the buffer bid with new data.
 ///
-void update_buffer_raw(uint bid, int num, int size, const void* values,
-    bool elements, bool dynamic);
+void update_buffer_raw(
+    uint bid, int size, const void* values, buffer_type btype, bool dynamic);
 
 ///
 /// Updates the buffer bid with new data.
@@ -383,7 +406,8 @@ void update_buffer_raw(uint bid, int num, int size, const void* values,
 template <typename T>
 inline void update_buffer(
     uint bid, int num, const T* values, bool elements, bool dynamic) {
-    update_buffer_raw(bid, num, sizeof(T), values, elements, dynamic);
+    update_buffer_raw(bid, num * sizeof(T), values,
+        (elements) ? buffer_type::element : buffer_type::vertex, dynamic);
 }
 
 ///
@@ -393,6 +417,15 @@ template <typename T>
 inline void update_buffer(
     uint bid, const std::vector<T>& values, bool elements, bool dynamic) {
     update_buffer(bid, values.size(), values.data(), elements, dynamic);
+}
+
+///
+/// Updates the buffer bid with new data.
+///
+template <typename T>
+inline void update_buffer(
+    uint bid, const T& values, buffer_type btype, bool dynamic) {
+    update_buffer_raw(bid, sizeof(T), &values, btype, dynamic);
 }
 
 ///
@@ -441,6 +474,11 @@ void bind_program(uint pid);
 int get_uniform_location(uint pid, const std::string& name);
 
 ///
+/// Get uniform location (simple GL wrapper that avoids GL includes)
+///
+int get_uniform_block_index(uint pid, const std::string& name);
+
+///
 /// Get attrib location (simple GL wrapper that avoids GL includes)
 ///
 int get_attrib_location(uint pid, const std::string& name);
@@ -456,6 +494,22 @@ std::vector<std::pair<std::string, int>> get_uniforms_names(uint pid);
 inline std::unordered_map<std::string, int> get_uniforms_namemap(uint pid) {
     auto namemap = std::unordered_map<std::string, int>();
     for (auto kv : get_uniforms_names(pid)) namemap[kv.first] = kv.second;
+    return namemap;
+}
+
+///
+/// Get the names of all uniform blocks
+///
+std::vector<std::pair<std::string, int>> get_uniform_buffers_names(uint pid);
+
+///
+/// Get the names of all uniform blocks
+///
+inline std::unordered_map<std::string, int> get_uniform_buffers_namemap(
+    uint pid) {
+    auto namemap = std::unordered_map<std::string, int>();
+    for (auto kv : get_uniform_buffers_names(pid))
+        namemap[kv.first] = kv.second;
     return namemap;
 }
 
@@ -600,6 +654,11 @@ inline bool set_uniform(
 }
 
 ///
+/// Set uniform block bid for program prog and variable var.
+///
+bool set_uniform_block(uint prog, int var, int bid, uint bunit);
+
+///
 /// Set uniform texture id tid and unit tunit for program prog and variable var.
 ///
 bool set_uniform_texture(
@@ -732,146 +791,6 @@ inline bool set_vertattr(
 ///
 bool draw_elems(int nelems, uint bid, etype etype);
 
-// PROGRAM INFO FUNCTIONS ------------------------------------------------------
-
-///
-/// Program information for faster binding. Create
-///
-struct program_info {
-    /// program id
-    uint prog_id = 0;
-    /// vertex shader id
-    uint vert_id = 0;
-    /// fragment shader id
-    uint frag_id = 0;
-    /// veretx array object
-    uint vao_id = 0;
-
-    /// vertex code
-    std::string vert_code = "";
-    /// fragment code
-    std::string frag_code = "";
-
-    /// attributes names
-    std::unordered_map<std::string, int> attrib_names;
-    /// uniform names
-    std::unordered_map<std::string, int> uniform_names;
-
-    /// check if valid
-    bool is_valid() const { return (bool)prog_id; }
-    /// check if valid
-    explicit operator bool() const { return (bool)prog_id; }
-};
-
-///
-/// Make program information
-///
-inline program_info make_program_info(
-    const std::string& vert, const std::string& frag) {
-    auto info = program_info();
-    assert(check_error());
-    info.prog_id =
-        make_program(vert, frag, &info.vert_id, &info.frag_id, &info.vao_id);
-    assert(check_error());
-    info.vert_code = vert;
-    info.frag_code = frag;
-    assert(check_error());
-    info.uniform_names = get_uniforms_namemap(info.prog_id);
-    assert(check_error());
-    info.attrib_names = get_attributes_namemap(info.prog_id);
-    assert(check_error());
-    return info;
-}
-
-///
-/// Free program info
-///
-inline void free_program_info(const program_info& prog);
-
-///
-/// Bind the program
-///
-inline void bind_program(const program_info& prog) {
-    bind_vertex_arrays(prog.vao_id);
-    bind_program(prog.prog_id);
-}
-
-///
-/// Unbind the program
-///
-inline void unbind_program(const program_info& prog) {
-    bind_vertex_arrays(0);
-    bind_program(0);
-}
-
-///
-/// Bind a uniform parameter
-///
-template <typename T>
-inline bool set_uniform(
-    const program_info& prog, const std::string& name, const T& val) {
-    auto pos = prog.uniform_names.find(name);
-    if (pos == prog.uniform_names.end()) return false;
-    return set_uniform(prog.prog_id, pos->second, val);
-}
-
-///
-/// Bind a uniform parameter
-///
-template <typename T>
-inline bool set_uniform(
-    const program_info& prog, const std::string& name, const T* val, int num) {
-    auto pos = prog.uniform_names.find(name);
-    if (pos == prog.uniform_names.end()) return false;
-    return set_uniform(prog.prog_id, pos->second, val, num);
-}
-
-///
-/// Bind a uniform texture
-///
-inline bool set_uniform_texture(const program_info& prog,
-    const std::string& var, const texture_info& tinfo, uint tunit) {
-    auto loc = prog.uniform_names.find(var);
-    if (loc == prog.uniform_names.end()) return false;
-    return set_uniform_texture(prog.prog_id, loc->second, tinfo, tunit);
-}
-
-///
-/// Bind a uniform texture
-///
-inline bool set_uniform_texture(const program_info& prog,
-    const std::string& var, const std::string& varon, const texture_info& tinfo,
-    uint tunit) {
-    auto loc = prog.uniform_names.find(var);
-    if (loc == prog.uniform_names.end()) return false;
-    auto locon = prog.uniform_names.find(varon);
-    if (locon == prog.uniform_names.end()) return false;
-    return set_uniform_texture(
-        prog.prog_id, loc->second, locon->second, tinfo, tunit);
-}
-
-///
-/// Bind a vertex attribute
-///
-template <int N>
-inline bool set_vertattr(const program_info& prog, const std::string& var,
-    uint bid, const ym::vec<float, N>& def) {
-    auto loc = prog.attrib_names.find(var);
-    if (loc == prog.attrib_names.end()) return false;
-    return set_vertattr(prog.prog_id, loc->second, bid, def);
-}
-
-///
-/// Bind a vertex attribute
-///
-template <int N>
-inline bool set_vertattr(const program_info& prog, const std::string& var,
-    uint bid, const ym::vec<int, N>& def) {
-    auto loc = prog.attrib_names.find(var);
-    if (loc == prog.attrib_names.end()) return false;
-    return set_vertattr(prog.prog_id, loc->second, bid, def);
-}
-
 // STANDARD SHADER FUNCTIONS ---------------------------------------------------
 
 ///
@@ -881,15 +800,15 @@ namespace stdshader {
 ///
 /// Initialize a standard shader.
 ///
-program_info make_program();
+uint make_program(uint* vao);
 
 ///
 /// Starts a frame by setting exposure/gamma values, camera transforms and
 /// projection. Sets also whether to use full shading or a quick eyelight
 /// preview.
 ///
-void begin_frame(const program_info& prog, bool shade_eyelight,
-    float img_exposure, ym::tonemap_type img_tonemap, float img_gamma,
+void begin_frame(uint prog, uint vao, bool shade_eyelight, float img_exposure,
+    ym::tonemap_type img_tonemap, float img_gamma,
     const ym::mat4f& camera_xform, const ym::mat4f& camera_xform_inv,
     const ym::mat4f& camera_proj);
 
@@ -902,13 +821,13 @@ void end_frame();
 /// Set num lights with position pos, color ke, type ltype. Also set the
 /// ambient illumination amb.
 ///
-void set_lights(const program_info& prog, const ym::vec3f& amb, int num,
-    ym::vec3f* pos, ym::vec3f* ke, ltype* ltype);
+void set_lights(uint prog, const ym::vec3f& amb, int num, ym::vec3f* pos,
+    ym::vec3f* ke, ltype* ltype);
 
 ///
 /// Begins drawing a shape with transform xform.
 ///
-void begin_shape(const program_info& prog, const ym::mat4f& xform);
+void begin_shape(uint prog, const ym::mat4f& xform);
 
 ///
 /// End shade drawing.
@@ -918,15 +837,15 @@ void end_shape();
 ///
 /// Set the object as highlight color.
 ///
-void set_highlight(const program_info& prog, const ym::vec4f& highlight);
+void set_highlight(uint prog, const ym::vec4f& highlight);
 
 ///
 /// Set material values for emission only (constant color).
 /// Indicates textures ids with the correspoinding XXX_txt variables.
 /// Works for points/lines/triangles. Element type set by draw_XXX calls.
 ///
-void set_material_emission_only(const program_info& prog, const ym::vec3f& ke,
-    float op, const texture_info& ke_txt, bool double_sided, bool alpha_cutout);
+void set_material_emission_only(uint prog, const ym::vec3f& ke, float op,
+    const texture_info& ke_txt, bool double_sided, bool alpha_cutout);
 
 ///
 /// Set material values with emission ke, diffuse kd, specular ks and
@@ -936,12 +855,12 @@ void set_material_emission_only(const program_info& prog, const ym::vec3f& ke,
 /// Kajiya-Kay for lines, GGX/Phong for triangles). Element type set by
 /// draw_XXX calls.
 ///
-void set_material_generic(const program_info& prog, const ym::vec3f& ke,
-    const ym::vec3f& kd, const ym::vec3f& ks, float rs, float op,
-    const texture_info& ke_txt, const texture_info& kd_txt,
-    const texture_info& ks_txt, const texture_info& rs_txt,
-    const texture_info& norm_txt, const texture_info& occ_txt, bool use_phong,
-    bool double_sided, bool alpha_cutout);
+void set_material_generic(uint prog, const ym::vec3f& ke, const ym::vec3f& kd,
+    const ym::vec3f& ks, float rs, float op, const texture_info& ke_txt,
+    const texture_info& kd_txt, const texture_info& ks_txt,
+    const texture_info& rs_txt, const texture_info& norm_txt,
+    const texture_info& occ_txt, bool use_phong, bool double_sided,
+    bool alpha_cutout);
 
 ///
 /// Set material values for glTF specular-roughness PBR shader,
@@ -951,8 +870,8 @@ void set_material_generic(const program_info& prog, const ym::vec3f& ke,
 /// maps. Works for points/lines/triangles (diffuse for points, Kajiya-Kay
 /// for lines, GGX/Phong for triangles). Element type set by draw_XXX calls.
 ///
-void set_material_gltf_metallic_roughness(const program_info& prog,
-    const ym::vec3f& ke, const ym::vec3f& kb, float km, float rs, float op,
+void set_material_gltf_metallic_roughness(uint prog, const ym::vec3f& ke,
+    const ym::vec3f& kb, float km, float rs, float op,
     const texture_info& ke_txt, const texture_info& kb_txt,
     const texture_info& km_txt, const texture_info& norm_txt,
     const texture_info& occ_txt, bool use_phong, bool double_sided,
@@ -966,9 +885,9 @@ void set_material_gltf_metallic_roughness(const program_info& prog,
 /// maps. Works for points/lines/triangles (diffuse for points, Kajiya-Kay
 /// for lines, GGX/Phong for triangles). Element type set by draw_XXX calls.
 ///
-void set_material_gltf_specular_glossiness(const program_info& prog,
-    const ym::vec3f& ke, const ym::vec3f& kd, const ym::vec3f& ks, float rs,
-    float op, const texture_info& ke_txt, const texture_info& kd_txt,
+void set_material_gltf_specular_glossiness(uint prog, const ym::vec3f& ke,
+    const ym::vec3f& kd, const ym::vec3f& ks, float rs, float op,
+    const texture_info& ke_txt, const texture_info& kd_txt,
     const texture_info& ks_txt, const texture_info& norm_txt,
     const texture_info& occ_txt, bool use_phong, bool double_sided,
     bool alpha_cutout);
@@ -982,53 +901,52 @@ float specular_exponent_to_roughness(float n);
 /// Set vertex data with position pos, normals norm, texture coordinates
 /// texcoord and per-vertex color color and tangent space tangsp.
 ///
-void set_vert(const program_info& prog, const ym::vec3f* pos,
-    const ym::vec3f* norm, const ym::vec2f* texcoord, const ym::vec4f* color,
-    const ym::vec4f* tangsp);
+void set_vert(uint prog, const ym::vec3f* pos, const ym::vec3f* norm,
+    const ym::vec2f* texcoord, const ym::vec4f* color, const ym::vec4f* tangsp);
 
 ///
 /// Set vertex data with buffers for position pos, normals norm, texture
 /// coordinates texcoord, per-vertex color color and tangent space tangsp.
 ///
-void set_vert(const program_info& prog, uint pos, uint norm, uint texcoord,
-    uint color, uint tangsp);
+void set_vert(
+    uint prog, uint pos, uint norm, uint texcoord, uint color, uint tangsp);
 
 ///
 /// Set vertex data with buffers for skinning.
 ///
-void set_vert_skinning(const program_info& prog, uint weights, uint joints,
-    int nxforms, const ym::mat4f* xforms);
+void set_vert_skinning(
+    uint prog, uint weights, uint joints, int nxforms, const ym::mat4f* xforms);
 
 ///
 /// Set vertex data with buffers for skinning.
 ///
-void set_vert_gltf_skinning(const program_info& prog, uint weights, uint joints,
-    int nxforms, const ym::mat4f* xforms);
+void set_vert_gltf_skinning(
+    uint prog, uint weights, uint joints, int nxforms, const ym::mat4f* xforms);
 
 ///
 /// Disables vertex skinning.
 ///
-void set_vert_skinning_off(const program_info& prog);
+void set_vert_skinning_off(uint prog);
 
 ///
 /// Draw num elements elem of type etype.
 ///
-void draw_elems(const program_info& prog, int num, uint bid, etype etype);
+void draw_elems(uint prog, int num, uint bid, etype etype);
 
 ///
 /// Draw num elements elem of type etype.
 ///
-void draw_points(const program_info& prog, int num, uint bid);
+void draw_points(uint prog, int num, uint bid);
 
 ///
 /// Draw num elements elem of type etype.
 ///
-void draw_lines(const program_info& prog, int num, uint bid);
+void draw_lines(uint prog, int num, uint bid);
 
 ///
 /// Draw num elements elem of type etype.
 ///
-void draw_triangles(const program_info& prog, int num, uint bid);
+void draw_triangles(uint prog, int num, uint bid);
 
 }  // namespace stdshader
 

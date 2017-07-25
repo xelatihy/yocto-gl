@@ -186,6 +186,25 @@ Texture information for parameter setting.
     - texture_info():      constructor from texture id only
 
 
+### Enum buffer_type
+
+~~~ .cpp
+enum struct buffer_type {
+    vertex = 0,
+    element = 1,
+    uniform_block = 2
+
+}
+~~~
+
+Buffer type
+
+- Values:
+    - vertex:      vertex
+    - element:      element
+    - uniform_block:      uniform block
+
+
 ### Function check_error()
 
 ~~~ .cpp
@@ -270,8 +289,8 @@ Set viewport
 ### Function shade_image()
 
 ~~~ .cpp
-void shade_image(uint tid, int img_w, int img_h, int win_w, int win_h, float ox,
-    float oy, float zoom);
+void shade_image(
+    uint tid, int win_w, int win_h, float ox, float oy, float zoom);
 ~~~
 
 Draw an texture tid of size img_w, img_h on a window of size win_w, win_h
@@ -280,8 +299,8 @@ with top-left corner at ox, oy with a zoom zoom.
 ### Function shade_image()
 
 ~~~ .cpp
-void shade_image(uint tid, int img_w, int img_h, int win_w, int win_h, float ox,
-    float oy, float zoom, ym::tonemap_type tmtype, float exposure, float gamma);
+void shade_image(uint tid, int win_w, int win_h, float ox, float oy, float zoom,
+    ym::tonemap_type tmtype, float exposure, float gamma);
 ~~~
 
 As above but includes an exposure/gamma correction.
@@ -384,7 +403,7 @@ Destroys the texture tid.
 
 ~~~ .cpp
 uint make_buffer_raw(
-    int num, int size, const void* values, bool elements, bool dynamic);
+    int size, const void* values, buffer_type btype, bool dynamic);
 ~~~
 
 Creates a buffer with num elements of size size stored in values, where
@@ -414,11 +433,22 @@ Creates a buffer with num elements of size size stored in values, where
 content is dyanamic if dynamic.
 Returns the buffer id.
 
+### Function make_buffer()
+
+~~~ .cpp
+template <typename T>
+inline uint make_buffer(const T& values, buffer_type btype, bool dynamic);
+~~~
+
+Creates a buffer with a block of data stored in values, where
+content is dyanamic if dynamic.
+Returns the buffer id.
+
 ### Function update_buffer_raw()
 
 ~~~ .cpp
-void update_buffer_raw(uint bid, int num, int size, const void* values,
-    bool elements, bool dynamic);
+void update_buffer_raw(
+    uint bid, int size, const void* values, buffer_type btype, bool dynamic);
 ~~~
 
 Updates the buffer bid with new data.
@@ -439,6 +469,16 @@ Updates the buffer bid with new data.
 template <typename T>
 inline void update_buffer(
     uint bid, const std::vector<T>& values, bool elements, bool dynamic);
+~~~
+
+Updates the buffer bid with new data.
+
+### Function update_buffer()
+
+~~~ .cpp
+template <typename T>
+inline void update_buffer(
+    uint bid, const T& values, buffer_type btype, bool dynamic);
 ~~~
 
 Updates the buffer bid with new data.
@@ -510,6 +550,14 @@ int get_uniform_location(uint pid, const std::string& name);
 
 Get uniform location (simple GL wrapper that avoids GL includes)
 
+### Function get_uniform_block_index()
+
+~~~ .cpp
+int get_uniform_block_index(uint pid, const std::string& name);
+~~~
+
+Get uniform location (simple GL wrapper that avoids GL includes)
+
 ### Function get_attrib_location()
 
 ~~~ .cpp
@@ -533,6 +581,23 @@ inline std::unordered_map<std::string, int> get_uniforms_namemap(uint pid);
 ~~~
 
 Get the names of all uniforms
+
+### Function get_uniform_buffers_names()
+
+~~~ .cpp
+std::vector<std::pair<std::string, int>> get_uniform_buffers_names(uint pid);
+~~~
+
+Get the names of all uniform blocks
+
+### Function get_uniform_buffers_namemap()
+
+~~~ .cpp
+inline std::unordered_map<std::string, int> get_uniform_buffers_namemap(
+    uint pid);
+~~~
+
+Get the names of all uniform blocks
 
 ### Function get_attributes_names()
 
@@ -691,6 +756,14 @@ inline bool set_uniform(
 
 Set uniform float values val for program prog and variable var.
 
+### Function set_uniform_block()
+
+~~~ .cpp
+bool set_uniform_block(uint prog, int var, int bid, uint bunit);
+~~~
+
+Set uniform block bid for program prog and variable var.
+
 ### Function set_uniform_texture()
 
 ~~~ .cpp
@@ -843,130 +916,6 @@ bool draw_elems(int nelems, uint bid, etype etype);
 
 Draws nelems elements elem of type etype.
 
-### Struct program_info
-
-~~~ .cpp
-struct program_info {
-    uint prog_id = 0;
-    uint vert_id = 0;
-    uint frag_id = 0;
-    uint vao_id = 0;
-    std::string vert_code = "";
-    std::string frag_code = "";
-    std::unordered_map<std::string, int> attrib_names;
-    std::unordered_map<std::string, int> uniform_names;
-    bool is_valid() const; 
-    explicit operator bool() const; 
-}
-~~~
-
-Program information for faster binding. Create
-
-- Members:
-    - prog_id:      program id
-    - vert_id:      vertex shader id
-    - frag_id:      fragment shader id
-    - vao_id:      veretx array object
-    - vert_code:      vertex code
-    - frag_code:      fragment code
-    - attrib_names:      attributes names
-    - uniform_names:      uniform names
-    - is_valid():      check if valid
-    - operator bool():      check if valid
-
-
-### Function make_program_info()
-
-~~~ .cpp
-inline program_info make_program_info(
-    const std::string& vert, const std::string& frag);
-~~~
-
-Make program information
-
-### Function free_program_info()
-
-~~~ .cpp
-inline void free_program_info(const program_info& prog);
-~~~
-
-Free program info
-
-### Function bind_program()
-
-~~~ .cpp
-inline void bind_program(const program_info& prog);
-~~~
-
-Bind the program
-
-### Function unbind_program()
-
-~~~ .cpp
-inline void unbind_program(const program_info& prog);
-~~~
-
-Unbind the program
-
-### Function set_uniform()
-
-~~~ .cpp
-template <typename T>
-inline bool set_uniform(
-    const program_info& prog, const std::string& name, const T& val);
-~~~
-
-Bind a uniform parameter
-
-### Function set_uniform()
-
-~~~ .cpp
-template <typename T>
-inline bool set_uniform(
-    const program_info& prog, const std::string& name, const T* val, int num);
-~~~
-
-Bind a uniform parameter
-
-### Function set_uniform_texture()
-
-~~~ .cpp
-inline bool set_uniform_texture(const program_info& prog,
-    const std::string& var, const texture_info& tinfo, uint tunit);
-~~~
-
-Bind a uniform texture
-
-### Function set_uniform_texture()
-
-~~~ .cpp
-inline bool set_uniform_texture(const program_info& prog,
-    const std::string& var, const std::string& varon, const texture_info& tinfo,
-    uint tunit);
-~~~
-
-Bind a uniform texture
-
-### Function set_vertattr()
-
-~~~ .cpp
-template <int N>
-inline bool set_vertattr(const program_info& prog, const std::string& var,
-    uint bid, const ym::vec<float, N>& def);
-~~~
-
-Bind a vertex attribute
-
-### Function set_vertattr()
-
-~~~ .cpp
-template <int N>
-inline bool set_vertattr(const program_info& prog, const std::string& var,
-    uint bid, const ym::vec<int, N>& def);
-~~~
-
-Bind a vertex attribute
-
 ## Namespace stdshader
 
 Shade with a physically-based standard shader based on Phong/GGX.
@@ -974,7 +923,7 @@ Shade with a physically-based standard shader based on Phong/GGX.
 ### Function make_program()
 
 ~~~ .cpp
-program_info make_program();
+uint make_program(uint* vao);
 ~~~
 
 Initialize a standard shader.
@@ -982,8 +931,8 @@ Initialize a standard shader.
 ### Function begin_frame()
 
 ~~~ .cpp
-void begin_frame(const program_info& prog, bool shade_eyelight,
-    float img_exposure, ym::tonemap_type img_tonemap, float img_gamma,
+void begin_frame(uint prog, uint vao, bool shade_eyelight, float img_exposure,
+    ym::tonemap_type img_tonemap, float img_gamma,
     const ym::mat4f& camera_xform, const ym::mat4f& camera_xform_inv,
     const ym::mat4f& camera_proj);
 ~~~
@@ -1003,8 +952,8 @@ Ends a frame.
 ### Function set_lights()
 
 ~~~ .cpp
-void set_lights(const program_info& prog, const ym::vec3f& amb, int num,
-    ym::vec3f* pos, ym::vec3f* ke, ltype* ltype);
+void set_lights(uint prog, const ym::vec3f& amb, int num, ym::vec3f* pos,
+    ym::vec3f* ke, ltype* ltype);
 ~~~
 
 Set num lights with position pos, color ke, type ltype. Also set the
@@ -1013,7 +962,7 @@ ambient illumination amb.
 ### Function begin_shape()
 
 ~~~ .cpp
-void begin_shape(const program_info& prog, const ym::mat4f& xform);
+void begin_shape(uint prog, const ym::mat4f& xform);
 ~~~
 
 Begins drawing a shape with transform xform.
@@ -1029,7 +978,7 @@ End shade drawing.
 ### Function set_highlight()
 
 ~~~ .cpp
-void set_highlight(const program_info& prog, const ym::vec4f& highlight);
+void set_highlight(uint prog, const ym::vec4f& highlight);
 ~~~
 
 Set the object as highlight color.
@@ -1037,8 +986,8 @@ Set the object as highlight color.
 ### Function set_material_emission_only()
 
 ~~~ .cpp
-void set_material_emission_only(const program_info& prog, const ym::vec3f& ke,
-    float op, const texture_info& ke_txt, bool double_sided, bool alpha_cutout);
+void set_material_emission_only(uint prog, const ym::vec3f& ke, float op,
+    const texture_info& ke_txt, bool double_sided, bool alpha_cutout);
 ~~~
 
 Set material values for emission only (constant color).
@@ -1048,12 +997,12 @@ Works for points/lines/triangles. Element type set by draw_XXX calls.
 ### Function set_material_generic()
 
 ~~~ .cpp
-void set_material_generic(const program_info& prog, const ym::vec3f& ke,
-    const ym::vec3f& kd, const ym::vec3f& ks, float rs, float op,
-    const texture_info& ke_txt, const texture_info& kd_txt,
-    const texture_info& ks_txt, const texture_info& rs_txt,
-    const texture_info& norm_txt, const texture_info& occ_txt, bool use_phong,
-    bool double_sided, bool alpha_cutout);
+void set_material_generic(uint prog, const ym::vec3f& ke, const ym::vec3f& kd,
+    const ym::vec3f& ks, float rs, float op, const texture_info& ke_txt,
+    const texture_info& kd_txt, const texture_info& ks_txt,
+    const texture_info& rs_txt, const texture_info& norm_txt,
+    const texture_info& occ_txt, bool use_phong, bool double_sided,
+    bool alpha_cutout);
 ~~~
 
 Set material values with emission ke, diffuse kd, specular ks and
@@ -1066,8 +1015,8 @@ draw_XXX calls.
 ### Function set_material_gltf_metallic_roughness()
 
 ~~~ .cpp
-void set_material_gltf_metallic_roughness(const program_info& prog,
-    const ym::vec3f& ke, const ym::vec3f& kb, float km, float rs, float op,
+void set_material_gltf_metallic_roughness(uint prog, const ym::vec3f& ke,
+    const ym::vec3f& kb, float km, float rs, float op,
     const texture_info& ke_txt, const texture_info& kb_txt,
     const texture_info& km_txt, const texture_info& norm_txt,
     const texture_info& occ_txt, bool use_phong, bool double_sided,
@@ -1084,9 +1033,9 @@ for lines, GGX/Phong for triangles). Element type set by draw_XXX calls.
 ### Function set_material_gltf_specular_glossiness()
 
 ~~~ .cpp
-void set_material_gltf_specular_glossiness(const program_info& prog,
-    const ym::vec3f& ke, const ym::vec3f& kd, const ym::vec3f& ks, float rs,
-    float op, const texture_info& ke_txt, const texture_info& kd_txt,
+void set_material_gltf_specular_glossiness(uint prog, const ym::vec3f& ke,
+    const ym::vec3f& kd, const ym::vec3f& ks, float rs, float op,
+    const texture_info& ke_txt, const texture_info& kd_txt,
     const texture_info& ks_txt, const texture_info& norm_txt,
     const texture_info& occ_txt, bool use_phong, bool double_sided,
     bool alpha_cutout);
@@ -1110,9 +1059,8 @@ Convertes a phong exponent to roughness.
 ### Function set_vert()
 
 ~~~ .cpp
-void set_vert(const program_info& prog, const ym::vec3f* pos,
-    const ym::vec3f* norm, const ym::vec2f* texcoord, const ym::vec4f* color,
-    const ym::vec4f* tangsp);
+void set_vert(uint prog, const ym::vec3f* pos, const ym::vec3f* norm,
+    const ym::vec2f* texcoord, const ym::vec4f* color, const ym::vec4f* tangsp);
 ~~~
 
 Set vertex data with position pos, normals norm, texture coordinates
@@ -1121,8 +1069,8 @@ texcoord and per-vertex color color and tangent space tangsp.
 ### Function set_vert()
 
 ~~~ .cpp
-void set_vert(const program_info& prog, uint pos, uint norm, uint texcoord,
-    uint color, uint tangsp);
+void set_vert(
+    uint prog, uint pos, uint norm, uint texcoord, uint color, uint tangsp);
 ~~~
 
 Set vertex data with buffers for position pos, normals norm, texture
@@ -1131,8 +1079,8 @@ coordinates texcoord, per-vertex color color and tangent space tangsp.
 ### Function set_vert_skinning()
 
 ~~~ .cpp
-void set_vert_skinning(const program_info& prog, uint weights, uint joints,
-    int nxforms, const ym::mat4f* xforms);
+void set_vert_skinning(
+    uint prog, uint weights, uint joints, int nxforms, const ym::mat4f* xforms);
 ~~~
 
 Set vertex data with buffers for skinning.
@@ -1140,8 +1088,8 @@ Set vertex data with buffers for skinning.
 ### Function set_vert_gltf_skinning()
 
 ~~~ .cpp
-void set_vert_gltf_skinning(const program_info& prog, uint weights, uint joints,
-    int nxforms, const ym::mat4f* xforms);
+void set_vert_gltf_skinning(
+    uint prog, uint weights, uint joints, int nxforms, const ym::mat4f* xforms);
 ~~~
 
 Set vertex data with buffers for skinning.
@@ -1149,7 +1097,7 @@ Set vertex data with buffers for skinning.
 ### Function set_vert_skinning_off()
 
 ~~~ .cpp
-void set_vert_skinning_off(const program_info& prog);
+void set_vert_skinning_off(uint prog);
 ~~~
 
 Disables vertex skinning.
@@ -1157,7 +1105,7 @@ Disables vertex skinning.
 ### Function draw_elems()
 
 ~~~ .cpp
-void draw_elems(const program_info& prog, int num, uint bid, etype etype);
+void draw_elems(uint prog, int num, uint bid, etype etype);
 ~~~
 
 Draw num elements elem of type etype.
@@ -1165,7 +1113,7 @@ Draw num elements elem of type etype.
 ### Function draw_points()
 
 ~~~ .cpp
-void draw_points(const program_info& prog, int num, uint bid);
+void draw_points(uint prog, int num, uint bid);
 ~~~
 
 Draw num elements elem of type etype.
@@ -1173,7 +1121,7 @@ Draw num elements elem of type etype.
 ### Function draw_lines()
 
 ~~~ .cpp
-void draw_lines(const program_info& prog, int num, uint bid);
+void draw_lines(uint prog, int num, uint bid);
 ~~~
 
 Draw num elements elem of type etype.
@@ -1181,7 +1129,7 @@ Draw num elements elem of type etype.
 ### Function draw_triangles()
 
 ~~~ .cpp
-void draw_triangles(const program_info& prog, int num, uint bid);
+void draw_triangles(uint prog, int num, uint bid);
 ~~~
 
 Draw num elements elem of type etype.
