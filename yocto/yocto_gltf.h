@@ -39,7 +39,8 @@
 /// 7. for rendering scenes, use `get_scene_cameras()` and
 ///    `get_scene_instances()` that avoid the need for explicirtly walking
 ///    the glTF node hierarchy
-/// 7. use `save_scenes()` ti write the data to disk
+/// 8. use `save_scenes()` to write the data to disk
+/// 9. use `convert_to_specgloss()` to convert materials to spec-gloss
 ///
 /// ## Usage Of Low-Level Interface
 ///
@@ -73,6 +74,7 @@
 ///
 /// ## History
 ///
+/// - v 0.22: conversion to spec gloss
 /// - v 0.21: use reference interface for textures
 /// - v 0.20: removal of buggy shape splitting function
 /// - v 0.19: explicit paths for separate buffer saving
@@ -747,6 +749,11 @@ void add_default_cameras(scene_group* scn);
 /// Set unique path names for outputting separate buffers
 ///
 void add_unique_path_names(scene_group* scns, const std::string& buffer_uri);
+
+///
+/// Convert materials to spec gloss
+///
+void add_spec_gloss(scene_group* scns);
 
 // -----------------------------------------------------------------------------
 // LOW-LEVEL INTERFACE

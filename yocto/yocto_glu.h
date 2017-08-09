@@ -835,17 +835,12 @@ void begin_shape(uint prog, const ym::mat4f& xform);
 void end_shape();
 
 ///
-/// Set the object as highlight color.
-///
-void set_highlight(uint prog, const ym::vec4f& highlight);
-
-///
 /// Set material values for emission only (constant color).
 /// Indicates textures ids with the correspoinding XXX_txt variables.
 /// Works for points/lines/triangles. Element type set by draw_XXX calls.
 ///
-void set_material_emission_only(uint prog, const ym::vec3f& ke, float op,
-    const texture_info& ke_txt, bool double_sided, bool alpha_cutout);
+void set_material_emission_only(uint prog, etype etype, const ym::vec3f& ke,
+    float op, const texture_info& ke_txt, bool double_sided, bool alpha_cutout);
 
 ///
 /// Set material values with emission ke, diffuse kd, specular ks and
@@ -855,12 +850,12 @@ void set_material_emission_only(uint prog, const ym::vec3f& ke, float op,
 /// Kajiya-Kay for lines, GGX/Phong for triangles). Element type set by
 /// draw_XXX calls.
 ///
-void set_material_generic(uint prog, const ym::vec3f& ke, const ym::vec3f& kd,
-    const ym::vec3f& ks, float rs, float op, const texture_info& ke_txt,
-    const texture_info& kd_txt, const texture_info& ks_txt,
-    const texture_info& rs_txt, const texture_info& norm_txt,
-    const texture_info& occ_txt, bool use_phong, bool double_sided,
-    bool alpha_cutout);
+void set_material_generic(uint prog, etype etype, const ym::vec3f& ke,
+    const ym::vec3f& kd, const ym::vec3f& ks, float rs, float op,
+    const texture_info& ke_txt, const texture_info& kd_txt,
+    const texture_info& ks_txt, const texture_info& rs_txt,
+    const texture_info& norm_txt, const texture_info& occ_txt, bool use_phong,
+    bool double_sided, bool alpha_cutout);
 
 ///
 /// Set material values for glTF specular-roughness PBR shader,
@@ -870,8 +865,8 @@ void set_material_generic(uint prog, const ym::vec3f& ke, const ym::vec3f& kd,
 /// maps. Works for points/lines/triangles (diffuse for points, Kajiya-Kay
 /// for lines, GGX/Phong for triangles). Element type set by draw_XXX calls.
 ///
-void set_material_gltf_metallic_roughness(uint prog, const ym::vec3f& ke,
-    const ym::vec3f& kb, float km, float rs, float op,
+void set_material_gltf_metallic_roughness(uint prog, etype etype,
+    const ym::vec3f& ke, const ym::vec3f& kb, float km, float rs, float op,
     const texture_info& ke_txt, const texture_info& kb_txt,
     const texture_info& km_txt, const texture_info& norm_txt,
     const texture_info& occ_txt, bool use_phong, bool double_sided,
@@ -885,9 +880,9 @@ void set_material_gltf_metallic_roughness(uint prog, const ym::vec3f& ke,
 /// maps. Works for points/lines/triangles (diffuse for points, Kajiya-Kay
 /// for lines, GGX/Phong for triangles). Element type set by draw_XXX calls.
 ///
-void set_material_gltf_specular_glossiness(uint prog, const ym::vec3f& ke,
-    const ym::vec3f& kd, const ym::vec3f& ks, float rs, float op,
-    const texture_info& ke_txt, const texture_info& kd_txt,
+void set_material_gltf_specular_glossiness(uint prog, etype etype,
+    const ym::vec3f& ke, const ym::vec3f& kd, const ym::vec3f& ks, float rs,
+    float op, const texture_info& ke_txt, const texture_info& kd_txt,
     const texture_info& ks_txt, const texture_info& norm_txt,
     const texture_info& occ_txt, bool use_phong, bool double_sided,
     bool alpha_cutout);
@@ -929,24 +924,16 @@ void set_vert_gltf_skinning(
 void set_vert_skinning_off(uint prog);
 
 ///
-/// Draw num elements elem of type etype.
+/// Set the object as highlight color.
 ///
-void draw_elems(uint prog, int num, uint bid, etype etype);
+void set_highlight(uint prog, const ym::vec4f& highlight);
 
 ///
 /// Draw num elements elem of type etype.
 ///
-void draw_points(uint prog, int num, uint bid);
-
-///
-/// Draw num elements elem of type etype.
-///
-void draw_lines(uint prog, int num, uint bid);
-
-///
-/// Draw num elements elem of type etype.
-///
-void draw_triangles(uint prog, int num, uint bid);
+inline void draw_elems(uint prog, int num, uint bid, etype etype) {
+    yglu::draw_elems(num, bid, etype);
+}
 
 }  // namespace stdshader
 

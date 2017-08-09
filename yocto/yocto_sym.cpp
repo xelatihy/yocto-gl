@@ -97,10 +97,9 @@ struct collision {
     rigid_body *bdy1 = nullptr, *bdy2 = nullptr;  // bodies
     ym::frame3f frame = ym::identity_frame3f;     // collision frame
     ym::vec3f impulse = ym::zero3f, local_impulse = ym::zero3f;  // impulses
-    ym::vec3f vel_before = ym::zero3f,
-              vel_after = ym::zero3f;  // velocities (for viz)
-    ym::vec3f meff_inv = ym::zero3f;   // effective mass
-    float depth = 0;                   // penetration depth
+    ym::vec3f meff_inv = ym::zero3f;  // effective mass
+    float depth = 0;                  // penetration depth
+    ym::vec3f r1 = ym::zero3f, r2 = ym::zero3f;
 };
 
 //
@@ -458,13 +457,6 @@ static inline void apply_rel_impulse(
 }
 
 //
-// Shortcut math function.
-//
-static inline float muldot(const ym::vec3f& v, const ym::mat3f& m) {
-    return ym::dot(v, m * v);
-}
-
-//
 // Solve constraints with PGS.
 //
 void solve_constraints(scene* scn, std::vector<collision>& collisions,
@@ -473,50 +465,44 @@ void solve_constraints(scene* scn, std::vector<collision>& collisions,
     for (auto& col : collisions) {
         col.local_impulse = ym::zero3f;
         col.impulse = ym::zero3f;
-        auto r1 = ym::pos(col.frame) - col.bdy1->_centroid_world,
-             r2 = ym::pos(col.frame) - col.bdy2->_centroid_world;
-        col.meff_inv = {1 / (col.bdy1->_mass_inv + col.bdy2->_mass_inv +
-                                muldot(ym::cross(r1, col.frame.x),
-                                    col.bdy1->_inertia_inv_world) +
-                                muldot(ym::cross(r2, col.frame.x),
-                                    col.bdy2->_inertia_inv_world)),
-            1 / (col.bdy1->_mass_inv + col.bdy2->_mass_inv +
-                    muldot(ym::cross(r1, col.frame.y),
-                        col.bdy1->_inertia_inv_world) +
-                    muldot(ym::cross(r2, col.frame.y),
-                        col.bdy2->_inertia_inv_world)),
-            1 / (col.bdy1->_mass_inv + col.bdy2->_mass_inv +
-                    muldot(ym::cross(r1, col.frame.z),
-                        col.bdy1->_inertia_inv_world) +
-                    muldot(ym::cross(r2, col.frame.z),
-                        col.bdy2->_inertia_inv_world))};
-    }
-
-    // compute relative velocity for visualization
-    for (auto& col : collisions) {
-        auto r1 = ym::pos(col.frame) - col.bdy1->_centroid_world,
-             r2 = ym::pos(col.frame) - col.bdy2->_centroid_world;
-        auto v1 = col.bdy1->lin_vel + ym::cross(col.bdy1->ang_vel, r1),
-             v2 = col.bdy2->lin_vel + ym::cross(col.bdy2->ang_vel, r2);
-        col.vel_before = v2 - v1;
+        col.r1 = col.frame.o - col.bdy1->_centroid_world,
+        col.r2 = col.frame.o - col.bdy2->_centroid_world;
+        col.meff_inv.z =
+            1 /
+            (col.bdy1->_mass_inv + col.bdy2->_mass_inv +
+                dot(cross(col.r1, col.frame.z),
+                    col.bdy1->_inertia_inv_world * cross(col.r1, col.frame.z)) +
+                dot(cross(col.r2, col.frame.z),
+                    col.bdy2->_inertia_inv_world * cross(col.r2, col.frame.z)));
+        col.meff_inv.x =
+            1 /
+            (col.bdy1->_mass_inv + col.bdy2->_mass_inv +
+                dot(cross(col.r1, col.frame.x),
+                    col.bdy1->_inertia_inv_world * cross(col.r1, col.frame.x)) +
+                dot(cross(col.r2, col.frame.x),
+                    col.bdy2->_inertia_inv_world * cross(col.r2, col.frame.x)));
+        col.meff_inv.y =
+            1 /
+            (col.bdy1->_mass_inv + col.bdy2->_mass_inv +
+                dot(cross(col.r1, col.frame.y),
+                    col.bdy1->_inertia_inv_world * cross(col.r1, col.frame.y)) +
+                dot(cross(col.r2, col.frame.y),
+                    col.bdy2->_inertia_inv_world * cross(col.r2, col.frame.y)));
     }
 
     // solve constraints
     for (int i = 0; i < params.solver_iterations; i++) {
         for (auto& col : collisions) {
-            auto r1 = ym::pos(col.frame) - col.bdy1->_centroid_world,
-                 r2 = ym::pos(col.frame) - col.bdy2->_centroid_world;
-            auto v1 = col.bdy1->lin_vel + ym::cross(col.bdy1->ang_vel, r1),
-                 v2 = col.bdy2->lin_vel + ym::cross(col.bdy2->ang_vel, r2);
+            auto v1 = col.bdy1->lin_vel + cross(col.bdy1->ang_vel, col.r1),
+                 v2 = col.bdy2->lin_vel + cross(col.bdy2->ang_vel, col.r2);
             auto vr = v2 - v1;
-            apply_rel_impulse(col.bdy1, col.impulse, r1);
-            apply_rel_impulse(col.bdy2, -col.impulse, r2);
-            // float offset = col.depth*0.8f/dt;
+            apply_rel_impulse(col.bdy1, col.impulse, col.r1);
+            apply_rel_impulse(col.bdy2, -col.impulse, col.r2);
+            // auto offset = col.depth * 0.8f / params.dt;
             auto offset = 0.0f;
-            ym::vec3f local_impulse =
-                col.meff_inv * ym::vec3f{-ym::dot(col.frame.x, vr),
-                                   -ym::dot(col.frame.y, vr),
-                                   -ym::dot(col.frame.z, vr) + offset};
+            auto local_impulse =
+                col.meff_inv * transform_vector_inverse(
+                                   col.frame, {-vr.x, -vr.y, -vr.z + offset});
             col.local_impulse += local_impulse;
             col.local_impulse.z = ym::clamp(
                 col.local_impulse.z, 0.0f, std::numeric_limits<float>::max());
@@ -525,28 +511,10 @@ void solve_constraints(scene* scn, std::vector<collision>& collisions,
             col.local_impulse.y =
                 ym::clamp(col.local_impulse.y, -col.local_impulse.z * 0.6f,
                     col.local_impulse.z - offset * 0.6f);
-            col.impulse = col.local_impulse.z * col.frame.z +
-                          col.local_impulse.x * col.frame.x +
-                          col.local_impulse.y * col.frame.y;
-            apply_rel_impulse(col.bdy1, -col.impulse, r1);
-            apply_rel_impulse(col.bdy2, col.impulse, r2);
+            col.impulse = transform_vector(col.frame, col.local_impulse);
+            apply_rel_impulse(col.bdy1, -col.impulse, col.r1);
+            apply_rel_impulse(col.bdy2, col.impulse, col.r2);
         }
-    }
-
-    // compute relative velocity for visualization
-    for (auto& col : collisions) {
-        auto r1 = ym::pos(col.frame) - col.bdy1->_centroid_world,
-             r2 = ym::pos(col.frame) - col.bdy2->_centroid_world;
-        auto v1 = col.bdy1->lin_vel + ym::cross(col.bdy1->ang_vel, r1),
-             v2 = col.bdy2->lin_vel + ym::cross(col.bdy2->ang_vel, r2);
-        col.vel_after = v2 - v1;
-    }
-
-    // recompute total impulse and velocity for visualization
-    for (auto& col : collisions) {
-        col.impulse = col.local_impulse.z * col.frame.z +
-                      col.local_impulse.x * col.frame.x +
-                      col.local_impulse.y * col.frame.y;
     }
 }
 

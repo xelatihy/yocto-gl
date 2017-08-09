@@ -665,6 +665,7 @@ inline int format_arg(int v) { return v; }
 inline float format_arg(float v) { return v; }
 inline double format_arg(double v) { return v; }
 inline const char* format_arg(bool v) { return (v) ? "true" : "false"; }
+inline const char* format_arg(const char* v) { return v; }
 inline const char* format_arg(const std::string& v) { return v.c_str(); }
 
 ///

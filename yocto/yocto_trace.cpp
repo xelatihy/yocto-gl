@@ -1518,9 +1518,6 @@ static float weight_brdfcos(const point& pt, const ym::vec3f& wi) {
                 auto idx = (ndo < 0) ? 0 : 1;
                 acc[idx] += x;
                 count[idx] += 1;
-                // printf("pdf  - %g --- + %g\n", acc[0] / count[0],
-                //    acc[1] / count[1]);
-
                 pdf += weights[lid] * d * std::fabs(idh) /
                        ((odh + eta * idh) * (odh + eta * idh));
 

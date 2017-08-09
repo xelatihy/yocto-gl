@@ -250,21 +250,20 @@ obj* load_obj(const std::string& filename, bool flip_texcoord, bool flip_tr,
         } else if (tok_s == "o") {
             auto name = (cur_ntok) ? cur_tok[0] : "";
             asset->objects.push_back({name, {}});
-            asset->objects.back().groups.push_back({cur_matname, "", {}, {}});
+            asset->objects.back().groups.push_back({cur_matname, ""});
         } else if (tok_s == "usemtl") {
             auto name = (cur_ntok) ? cur_tok[0] : "";
             cur_matname = name;
-            asset->objects.back().groups.push_back({cur_matname, "", {}, {}});
+            asset->objects.back().groups.push_back({cur_matname, ""});
         } else if (tok_s == "g") {
             auto name = (cur_ntok) ? cur_tok[0] : "";
-            asset->objects.back().groups.push_back({cur_matname, name, {}, {}});
+            asset->objects.back().groups.push_back({cur_matname, name});
         } else if (tok_s == "s") {
             auto name = (cur_ntok) ? cur_tok[0] : "";
             auto smoothing = name == std::string("on");
             if (asset->objects.back().groups.back().smoothing != smoothing) {
                 asset->objects.back().groups.push_back(
-                    {cur_matname, name, {}, {}});
-                asset->objects.back().groups.back().smoothing = smoothing;
+                    {cur_matname, name, smoothing});
             }
         } else if (tok_s == "mtllib") {
             auto name = (cur_ntok) ? cur_tok[0] : "";
@@ -853,7 +852,7 @@ texture_info _convert_texture_info(const property_map<std::string>& props) {
 //
 // Flattens an scene
 //
-scene* obj_to_scene(const obj* asset) {
+scene* obj_to_scene(const obj* asset, bool facet_non_smooth) {
     // clear scene
     auto scn = new scene();
 
@@ -1008,7 +1007,7 @@ scene* obj_to_scene(const obj* asset) {
             }
 
             // fix smoothing
-            if (!group.smoothing) {
+            if (!group.smoothing && facet_non_smooth) {
                 auto faceted = new shape();
                 faceted->name = prim->name;
                 faceted->mat = prim->mat;
@@ -1326,12 +1325,12 @@ bool save_textures(const scene* scn, const std::string& dirname,
 //
 // Load scene
 //
-scene* load_scene(const std::string& filename, bool load_txt,
-    bool flip_texcoord, bool skip_missing, bool flip_tr, std::string* err) {
+scene* load_scene(const std::string& filename, bool load_txt, bool skip_missing,
+    bool flip_texcoord, bool facet_non_smooth, bool flip_tr, std::string* err) {
     auto oscn =
         std::unique_ptr<obj>(load_obj(filename, flip_texcoord, flip_tr, err));
     if (!oscn) return nullptr;
-    auto scn = obj_to_scene(oscn.get());
+    auto scn = obj_to_scene(oscn.get(), facet_non_smooth);
     if (!scn) return nullptr;
     if (load_txt)
         if (!load_textures(scn, get_dirname(filename), skip_missing, err))

@@ -2947,7 +2947,7 @@ constexpr inline mat<T, 4, 4> rotation_mat4(const mat<T, 3, 3>& rot) {
 /// rotation matrix
 template <typename T>
 constexpr inline mat<T, 4, 4> rotation_mat4(const vec<T, 3>& axis, T angle) {
-    return rotation_mat4(rotation_frame3(axis, angle));
+    return rotation_mat4(rotation_frame3(axis, angle).rot());
 }
 
 /// quaternion axis-angle conversion
@@ -3174,6 +3174,9 @@ constexpr inline void init(rng_pcg32* rng, uint64_t state, uint64_t seq) {
     rng->state += state;
     next(rng);
 }
+
+/// Next random int in [0,n) range. Does not use prope math but fast.
+inline int next1i(rng_pcg32* rng, int n) { return next(rng) % n; }
 
 /// Next random float in [0,1).
 inline float next1f(rng_pcg32* rng) {
@@ -4893,11 +4896,22 @@ inline vec3f srgb_to_linear(const vec3b& srgb) {
     return pow(byte_to_float(srgb), 2.2f);
 }
 
-/// Conversion from srgb.
+/// Approximate conversion from srgb.
 inline vec4f srgb_to_linear(const vec4b& srgb) {
-    return {pow(byte_to_float(srgb.x), 2.2f),
-        std::pow(byte_to_float(srgb.y), 2.2f),
-        std::pow(byte_to_float(srgb.z), 2.2f), byte_to_float(srgb.w)};
+    return {pow(byte_to_float(srgb.x), 2.2f), pow(byte_to_float(srgb.y), 2.2f),
+        pow(byte_to_float(srgb.z), 2.2f), byte_to_float(srgb.w)};
+}
+
+/// Approximate conversion to srgb.
+inline vec3b linear_to_srgb(const vec3f& lin) {
+    return float_to_byte(pow(lin, 1 / 2.2f));
+}
+
+/// Approximate conversion to srgb.
+inline vec4b linear_to_srgb(const vec4f& lin) {
+    return {float_to_byte(pow(lin.x, 1 / 2.2f)),
+        float_to_byte(pow(lin.y, 1 / 2.2f)),
+        float_to_byte(pow(lin.z, 1 / 2.2f)), float_to_byte(lin.w)};
 }
 
 //
