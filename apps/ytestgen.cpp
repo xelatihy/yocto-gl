@@ -787,13 +787,13 @@ void save_image(const std::string& filename, const std::string& dirname,
 }
 
 std::vector<yobj::camera*> add_simple_cameras(yobj::scene* scn) {
-    return {add_camera(scn, "cam", {0, 3, 10}, {0, 0, 0}, 0.5f, 0),
-        add_camera(scn, "cam_dof", {0, 3, 10}, {0, 0, 0}, 0.5f, 0.1f)};
+    return {add_camera(scn, "cam", {0, 4, 10}, {0, 1, 0}, 0.5f, 0),
+        add_camera(scn, "cam_dof", {0, 4, 10}, {0, 1, 0}, 0.5f, 0.1f)};
 }
 
 std::vector<yobj::camera*> add_matball_cameras(yobj::scene* scn) {
-    return {add_camera(scn, "cam_close", {0, 5, 10}, {0, 0, 0}, 0.25f, 0, 1),
-        add_camera(scn, "cam_close", {0, 3, 10}, {0, 0, 0}, 0.25f, 0, 1)};
+    return {add_camera(scn, "cam_close", {0, 6, 10}, {0, 1, 0}, 0.25f, 0, 1),
+        add_camera(scn, "cam_close", {0, 4, 10}, {0, 1, 0}, 0.25f, 0, 1)};
 }
 
 // http://graphics.cs.williams.edu/data
@@ -836,28 +836,30 @@ yobj::scene* make_cornell_box_scene() {
 yobj::scene* make_matball_scene(const std::string& otype,
     const std::string& mtype, const std::string& ltype) {
     auto scn = new yobj::scene();
-    add_camera(scn, "cam_close", {0, 5, 10}, {0, 0, 0}, 0.25f, 0, 1);
-    add_camera(scn, "cam_close", {0, 3, 10}, {0, 0, 0}, 0.25f, 0, 1);
+    add_camera(scn, "cam_close", {0, 6, 10}, {0, 1, 0}, 0.25f, 0, 1);
+    add_camera(scn, "cam_close", {0, 4, 10}, {0, 1, 0}, 0.25f, 0, 1);
 
     add_instance(scn, "floor",
-        add_floor(scn, "floor", add_material(scn, "floor_txt")), {0, -1, 0});
+        add_floor(scn, "floor", add_material(scn, "floor_txt")), {0, 0, 0});
 
     auto mat = add_material(scn, mtype);
 
     if (otype == "matball01") {
         add_instance(scn, "intmatball",
             add_sphere(
-                scn, "intmatball", add_material(scn, "matte00"), 5, 0.8f));
+                scn, "intmatball", add_material(scn, "matte00"), 5, 0.8f),
+            {0, 1, 0});
         add_instance(scn, "matball",
-            add_uvhollowcutsphere(scn, "matball", mat, 5), {0, 0, 0},
+            add_uvhollowcutsphere(scn, "matball", mat, 5), {0, 1, 0},
             {0, 35, 45});
 
     } else if (otype == "matball02") {
         add_instance(scn, "intmatball",
             add_sphere(
-                scn, "intmatball", add_material(scn, "matte00"), 5, 0.8f));
+                scn, "intmatball", add_material(scn, "matte00"), 5, 0.8f),
+            {0, 1, 0});
         add_instance(scn, "matball",
-            add_uvhollowcutsphere1(scn, "matball", mat, 5), {0, 0, 0},
+            add_uvhollowcutsphere1(scn, "matball", mat, 5), {0, 1, 0},
             {0, 35, 45});
     } else {
         throw std::runtime_error("bad value");
@@ -866,16 +868,16 @@ yobj::scene* make_matball_scene(const std::string& otype,
     if (ltype == "pointlight") {
         auto mat = add_emission(scn, "pointlight", {400, 400, 400});
         add_instance(scn, "pointlight01", add_point(scn, "pointlight01", mat),
-            {1.4f, 8, 6});
+            {1.4f, 9, 6});
         add_instance(scn, "pointlight02", add_point(scn, "pointlight02", mat),
-            {-1.4f, 8, 6});
+            {-1.4f, 9, 6});
     } else if (ltype == "arealight") {
         auto mat = add_emission(scn, "arealight", {40, 40, 40});
         auto shp = add_quad(scn, "arealight", mat, 0, 2);
-        add_instance(scn, "arealight01", shp, {-4, 4, 8},
-            make_lookat_frame({-4, 4, 8}, {0, 2, 0}).rot());
-        add_instance(scn, "arealight02", shp, {4, 4, 8},
-            make_lookat_frame({4, 4, 8}, {0, 2, 0}).rot());
+        add_instance(scn, "arealight01", shp, {-4, 5, 8},
+            make_lookat_frame({-4, 5, 8}, {0, 3, 0}).rot());
+        add_instance(scn, "arealight02", shp, {4, 5, 8},
+            make_lookat_frame({4, 5, 8}, {0, 3, 0}).rot());
     } else if (ltype == "envlight") {
         auto mat = add_emission(
             scn, "envlight", {1, 1, 1}, add_texture(scn, "env.hdr"));
@@ -918,8 +920,9 @@ yobj::instance* add_hair(yobj::scene* scn, yobj::instance* ist, int nhairs,
         scn, ist->name + "_hair", hair_mesh, ist->translation, ist->rotation);
 };
 
-std::vector<yobj::instance*> add_random_instances(
-    yobj::scene* scn, float cell_size, int ninstances, int nmeshes) {
+std::vector<yobj::instance*> add_random_instances(yobj::scene* scn,
+    float cell_size, int ninstances, int nmeshes,
+    const ym::vec3f& translation) {
     auto rng = ym::rng_pcg32();
     ym::init(&rng, 0, 0);
     auto meshes = std::vector<yobj::mesh*>();
@@ -956,7 +959,7 @@ std::vector<yobj::instance*> add_random_instances(
             auto rxy =
                 ym::vec3f{ym::next1f(&rng) - 0.5f, 0, ym::next1f(&rng) - 0.5f};
             auto cxy = ym::vec3f(i - num / 2, 0, j - num / 2);
-            auto pos = cell_size * cxy + rxy;
+            auto pos = cell_size * cxy + rxy + translation;
             add_instance(scn, iname, meshes[mid], pos);
             instances.push_back(ist);
         }
@@ -967,24 +970,24 @@ std::vector<yobj::instance*> add_random_instances(
 yobj::scene* make_instance_scene(
     const std::string& otype, const std::string& ltype) {
     auto scn = new yobj::scene();
-    add_camera(scn, "cam01", {0, 75, 75}, {0, 0, 0}, 0.5f, 0);
-    add_camera(scn, "cam02", {0, 150, 150}, {0, 0, 0}, 0.5f, 0);
-    add_camera(scn, "cam03", {0, 15, 75}, {0, 0, 0}, 0.5f, 0);
-    add_camera(scn, "cam04", {0, 30, 150}, {0, 0, 0}, 0.5f, 0);
-    add_camera(scn, "cam_dof", {0, 75, 75}, {0, 0, 0}, 0.5f, 0.1f);
+    add_camera(scn, "cam01", {0, 75, 75}, {0, 1, 0}, 0.5f, 0);
+    add_camera(scn, "cam02", {0, 150, 150}, {0, 1, 0}, 0.5f, 0);
+    add_camera(scn, "cam03", {0, 15, 75}, {0, 1, 0}, 0.5f, 0);
+    add_camera(scn, "cam04", {0, 30, 150}, {0, 1, 0}, 0.5f, 0);
+    add_camera(scn, "cam_dof", {0, 75, 75}, {0, 1, 0}, 0.5f, 0.1f);
 
     add_instance(scn, "floor",
         add_floor(scn, "floor", add_material(scn, "floor_txt"), 12, 0, 0, 120),
-        {0, -1, 0});
+        {0, 0, 0});
 
     if (otype == "instance100") {
-        add_random_instances(scn, 4, 100, 10);
+        add_random_instances(scn, 4, 100, 10, {0, 1, 0});
     } else if (otype == "instance1600") {
-        add_random_instances(scn, 3, 1600, 10);
+        add_random_instances(scn, 3, 1600, 10, {0, 1, 0});
     } else if (otype == "instance2500") {
-        add_random_instances(scn, 2, 2500, 10);
+        add_random_instances(scn, 2, 2500, 10, {0, 1, 0});
     } else if (otype == "instance10000") {
-        add_random_instances(scn, 2, 10000, 10);
+        add_random_instances(scn, 2, 10000, 10, {0, 1, 0});
     } else {
         throw std::runtime_error("bad value");
     }
@@ -1023,20 +1026,20 @@ yobj::scene* make_instance_scene(
 yobj::scene* make_simple_scene(
     const std::string& otype, const std::string& ltype) {
     auto scn = new yobj::scene();
-    add_camera(scn, "cam", {0, 3, 10}, {0, 0, 0}, 0.5f, 0);
-    add_camera(scn, "cam_dof", {0, 3, 10}, {0, 0, 0}, 0.5f, 0.1f);
+    add_camera(scn, "cam", {0, 4, 10}, {0, 1, 0}, 0.5f, 0);
+    add_camera(scn, "cam_dof", {0, 4, 10}, {0, 1, 0}, 0.5f, 0.1f);
 
     add_instance(scn, "floor",
-        add_floor(scn, "floor", add_material(scn, "floor_txt")), {0, -1, 0});
+        add_floor(scn, "floor", add_material(scn, "floor_txt")), {0, 0, 0});
 
     auto add_objects = [](yobj::scene* scn, std::vector<yobj::material*> mat) {
         return std::vector<yobj::instance*>{
             add_instance(scn, "obj01",
-                add_flipcapsphere(scn, "obj01", mat[0], 5), {-2.5f, 0, 0}),
-            add_instance(
-                scn, "obj02", add_spherizedcube(scn, "obj02", mat[1], 4)),
+                add_flipcapsphere(scn, "obj01", mat[0], 5), {-2.5f, 1, 0}),
+            add_instance(scn, "obj02",
+                add_spherizedcube(scn, "obj02", mat[1], 4), {0, 1, 0}),
             add_instance(scn, "obj03", add_spherecube(scn, "obj03", mat[2], 4),
-                {2.5f, 0, 0})};
+                {2.5f, 1, 0})};
     };
 
     if (otype == "basic") {
@@ -1072,54 +1075,55 @@ yobj::scene* make_simple_scene(
             add_transparent_plastic(scn, "obj03", {1, 1, 1}, 0.01f, 0.9f,
                 add_texture(scn, "colored.png"))};
         add_instance(
-            scn, "plane01", add_quad(scn, "plane01", mat[0], 2), {-2.5f, 0, 0});
+            scn, "plane01", add_quad(scn, "plane01", mat[0], 2), {-2.5f, 1, 0});
         add_instance(
-            scn, "plane02", add_quad(scn, "plane02", mat[1], 2), {0, 0, 0});
+            scn, "plane02", add_quad(scn, "plane02", mat[1], 2), {0, 1, 0});
         add_instance(
-            scn, "plane03", add_quad(scn, "plane03", mat[2], 2), {2.5f, 0, 0});
+            scn, "plane03", add_quad(scn, "plane03", mat[2], 2), {2.5f, 1, 0});
     } else if (otype == "refracted") {
         auto mat = std::vector<yobj::material*>{
             add_glass(scn, "obj01", {1, 1, 1}, 0.1f),
             add_glass(scn, "obj02", {1, 1, 1}, 0.05f),
             add_glass(scn, "obj03", {1, 1, 1}, 0.01f)};
         add_instance(
-            scn, "obj01", add_quad(scn, "obj01", mat[0], 2), {-2.5f, 0, 0});
+            scn, "obj01", add_quad(scn, "obj01", mat[0], 2), {-2.5f, 1, 0});
         add_instance(
-            scn, "obj02", add_cube(scn, "obj02", mat[1], 2), {0, 0, 0});
+            scn, "obj02", add_cube(scn, "obj02", mat[1], 2), {0, 1, 0});
         add_instance(
-            scn, "obj03", add_sphere(scn, "obj03", mat[2], 5), {2.5f, 0, 0});
+            scn, "obj03", add_sphere(scn, "obj03", mat[2], 5), {2.5f, 1, 0});
     } else if (otype == "refractedp") {
         auto mat = std::vector<yobj::material*>{
             add_glass(scn, "obj01", {1, 1, 1}, 0.05f),
             add_glass(scn, "obj02", {1, 1, 1}, 0.02f),
             add_glass(scn, "obj03", {1, 1, 1}, 0.01f)};
         add_instance(
-            scn, "obj01", add_quad(scn, "obj01", mat[0], 2), {-2.5f, 0, 0});
+            scn, "obj01", add_quad(scn, "obj01", mat[0], 2), {-2.5f, 1, 0});
         add_instance(
-            scn, "obj02", add_quad(scn, "obj02", mat[1], 2), {0, 0, 0});
+            scn, "obj02", add_quad(scn, "obj02", mat[1], 2), {0, 1, 0});
         add_instance(
-            scn, "obj03", add_quad(scn, "obj03", mat[2], 2), {2.5f, 0, 0});
+            scn, "obj03", add_quad(scn, "obj03", mat[2], 2), {2.5f, 1, 0});
     } else if (otype == "points") {
         auto mat = add_diffuse(scn, "points", {0.2f, 0.2f, 0.2f});
-        add_instance(
-            scn, "points01", add_points(scn, "points01", mat, 64 * 64 * 16, 1));
+        add_instance(scn, "points01",
+            add_points(scn, "points01", mat, 64 * 64 * 16, 1), {0, 1, 0});
     } else if (otype == "lines") {
         auto mat = add_diffuse(scn, "lines", {0.2f, 0.2f, 0.2f});
         auto imat = add_diffuse(scn, "interior", {0.2f, 0.2f, 0.2f});
         add_instance(scn, "lines_01",
             add_lines(scn, "lines01", mat, 64 * 64 * 16, 4, 0.1f, 0, 0),
-            {-2.5f, 0, 0});
+            {-2.5f, 1, 0});
         add_instance(scn, "lines_interior_01",
-            add_sphere(scn, "lines_interior_01", imat, 6), {-2.5f, 0, 0});
+            add_sphere(scn, "lines_interior_01", imat, 6), {-2.5f, 1, 0});
         add_instance(scn, "lines_02",
-            add_lines(scn, "lines02", mat, 64 * 64 * 16, 4, 0, 0.75f, 0));
+            add_lines(scn, "lines02", mat, 64 * 64 * 16, 4, 0, 0.75f, 0),
+            {0, 1, 0});
         add_instance(scn, "lines_interior_02",
-            add_sphere(scn, "lines_interior_02", imat, 6));
+            add_sphere(scn, "lines_interior_02", imat, 6), {0, 1, 0});
         add_instance(scn, "lines_03",
             add_lines(scn, "lines03", mat, 64 * 64 * 16, 4, 0, 0, 0.5f),
-            {2.5f, 0, 0});
+            {2.5f, 1, 0});
         add_instance(scn, "lines_interior_03",
-            add_sphere(scn, "lines_interior_03", imat, 6), {2.5f, 0, 0});
+            add_sphere(scn, "lines_interior_03", imat, 6), {2.5f, 1, 0});
     } else if (otype == "hair") {
         auto mat = add_diffuse(scn, "lines", {0.2f, 0.2f, 0.2f});
         auto imat = add_diffuse(scn, "interior", {0.2f, 0.2f, 0.2f});
@@ -1127,40 +1131,6 @@ yobj::scene* make_simple_scene(
         add_hair(scn, objs[0], ym::pow2(14), ym::pow2(2), 0.1f, 13, mat);
         add_hair(scn, objs[1], ym::pow2(14), ym::pow2(2), 0.1f, 17, mat);
         add_hair(scn, objs[2], ym::pow2(14), ym::pow2(2), 0.1f, 23, mat);
-    } else if (otype == "sym_points01") {
-        auto mat = add_material(scn, "sym_points");
-        add_points_instance(
-            scn, "points01", mat, 64 * 64 * 16, 1, {-2.5f, 0, 0});
-        add_points_instance(scn, "points02", mat, 64 * 64 * 16, 1);
-        add_points_instance(
-            scn, "points03", mat, 64 * 64 * 16, 1, {2.5f, 0, 0});
-    } else if (otype == "sym_points02") {
-        auto mat = add_material(scn, "sym_points");
-        auto omat = add_material(scn, "plastic01");
-        add_objects(scn, {omat, omat, omat});
-        add_points_instance(
-            scn, "points01", mat, 64 * 64 * 16, 1, {-2.5f, 3, 0});
-        add_points_instance(
-            scn, "points02", mat, 64 * 64 * 16, 1, {0.0f, 3, 0});
-        add_points_instance(
-            scn, "points03", mat, 64 * 64 * 16, 1, {2.5f, 3, 0});
-    } else if (otype == "sym_cloth01") {
-        auto mat = add_material(scn, "sym_cloth");
-        add_instance(scn, "sym_quad01", add_quad(scn, "sym_quad01", mat, 6),
-            {-2.5f, 0, 0});
-        add_instance(scn, "sym_quad02", add_quad(scn, "sym_quad02", mat, 6));
-        add_instance(scn, "sym_quad03", add_quad(scn, "sym_quad03", mat, 6),
-            {2.5f, 0, 0});
-    } else if (otype == "sym_cloth02") {
-        auto mat = add_material(scn, "sym_cloth");
-        auto omat = add_material(scn, "plastic01");
-        add_objects(scn, {omat, omat, omat});
-        add_instance(scn, "sym_quad01", add_quad(scn, "sym_quad01", mat, 6),
-            {-2.5f, 3, 0}, {-90, 0, 0});
-        add_instance(scn, "sym_quad01", add_quad(scn, "sym_quad01", mat, 6),
-            {0.0f, 3, 0.10f}, {-90, 0, 0});
-        add_instance(scn, "sym_quad01", add_quad(scn, "sym_quad01", mat, 6),
-            {2.5f, 3, 0.15f}, {-90, 0, 0});
     } else {
         throw std::runtime_error("bad value");
     }
@@ -1174,10 +1144,10 @@ yobj::scene* make_simple_scene(
     } else if (ltype == "arealight") {
         auto mat = add_emission(scn, "arealight", {40, 40, 40});
         auto shp = add_quad(scn, "arealight", mat, 0, 2);
-        add_instance(scn, "arealight01", shp, {-4, 4, 8},
-            make_lookat_frame({-4, 4, 8}, {0, 2, 0}).rot());
-        add_instance(scn, "arealight02", shp, {4, 4, 8},
-            make_lookat_frame({4, 4, 8}, {0, 2, 0}).rot());
+        add_instance(scn, "arealight01", shp, {-4, 5, 8},
+            make_lookat_frame({-4, 5, 8}, {0, 3, 0}).rot());
+        add_instance(scn, "arealight02", shp, {4, 5, 8},
+            make_lookat_frame({4, 5, 8}, {0, 3, 0}).rot());
     } else if (ltype == "envlight") {
         auto mat = add_emission(
             scn, "envlight", {1, 1, 1}, add_texture(scn, "env.hdr"));
@@ -1209,7 +1179,7 @@ yobj::scene* make_rigid_scene(
     add_camera(scn, "cam", {10, 10, 10}, {0, 0, 0}, 0.5f, 0);
     add_camera(scn, "cam_dof", {10, 10, 10}, {0, 0, 0}, 0.5f, 0.1f);
 
-    if (otype == "flat") {
+    if (otype == "sym_rigid_flat") {
         auto fmat = add_diffuse(scn, "floor", {1, 1, 1});
         auto mat = add_plastic(
             scn, "obj", {1, 1, 1}, 0.1f, add_texture(scn, "checker.png"));
@@ -1233,7 +1203,7 @@ yobj::scene* make_rigid_scene(
             scn, "obj22", add_spherecube(scn, "obj22", mat, 4), {0, 1.0f, -3});
         add_instance(
             scn, "obj23", add_cube(scn, "obj23", mat, 4), {2.5f, 1.5f, -3});
-    } else if (otype == "slanted") {
+    } else if (otype == "sym_rigid_slanted") {
         auto fmat = add_diffuse(scn, "floor", {1, 1, 1});
         auto mat = add_plastic(
             scn, "obj", {1, 1, 1}, 0.1f, add_texture(scn, "checker.png"));
@@ -1267,6 +1237,165 @@ yobj::scene* make_rigid_scene(
             {1.4f, 8, 6});
         add_instance(scn, "pointlight02", add_point(scn, "pointlight01", mat),
             {-1.4f, 8, 6});
+    } else {
+        throw std::runtime_error("bad value");
+    }
+
+    return scn;
+}
+
+yobj::scene* make_soft_scene(
+    const std::string& otype, const std::string& ltype) {
+    auto scn = new yobj::scene();
+    add_camera(scn, "cam", {0, 4, 10}, {0, 1, 0}, 0.5f, 0, 1);
+    add_camera(scn, "cam_dof", {0, 4, 10}, {0, 1, 0}, 0.5f, 0.1f, 1);
+
+    add_instance(scn, "floor",
+        add_floor(scn, "floor", add_material(scn, "floor_txt")), {0, 0, 0});
+
+    if (otype == "sym_points01") {
+        auto mat = add_plastic(scn, "sym_points", {0.2f, 0.5f, 0.2f}, 0.1f);
+        add_points_instance(scn, "sym_points", mat, 64 * 64 * 16, 1, {0, 1, 0});
+    } else if (otype == "sym_points02") {
+        auto mat = add_plastic(scn, "sym_points", {0.2f, 0.5f, 0.2f}, 0.1f);
+        auto omat = add_plastic(scn, "obj", {0.2f, 0.2f, 0.2f}, 0.1f);
+        add_points_instance(
+            scn, "sym_points", mat, 64 * 64 * 16, 1, {0, 2.5f, 0});
+        add_instance(
+            scn, "obj", add_spherecube(scn, "obj", omat, 4), {0, 1, 0});
+    } else if (otype == "sym_cloth01") {
+        auto mat = add_plastic(scn, "sym_cloth", {0.2f, 0.5f, 0.2f}, 0.1f);
+        auto pmat = add_diffuse(scn, "pin_cloth", {0.5f, 0.2f, 0.2f});
+        add_instance(
+            scn, "sym_cloth", add_quad(scn, "sym_cloth", mat, 6), {0, 1.5, 0});
+        add_instance(
+            scn, "pin01", add_cube(scn, "pin01", pmat, 0, 0.1), {-1, 2.5, 0});
+        add_instance(
+            scn, "pin02", add_cube(scn, "pin02", pmat, 0, 0.1), {+1, 2.5, 0});
+    } else if (otype == "sym_cloth02") {
+        auto mat = add_plastic(scn, "sym_cloth", {0.2f, 0.5f, 0.2f}, 0.1f);
+        auto omat = add_plastic(scn, "obj", {0.2f, 0.2f, 0.2f}, 0.1f);
+        add_instance(scn, "sym_cloth", add_quad(scn, "sym_cloth", mat, 6),
+            {0.0f, 2.5f, 0.10f}, {-90, 0, 0});
+        add_instance(
+            scn, "obj", add_spherecube(scn, "obj", omat, 4), {0, 1, 0});
+    } else if (otype == "sym_cloth03") {
+        auto mat = add_plastic(scn, "sym_cloth", {0.2f, 0.5f, 0.2f}, 0.1f);
+        auto pmat = add_diffuse(scn, "pin_cloth", {0.5f, 0.2f, 0.2f});
+        add_instance(scn, "sym_cloth", add_quad(scn, "sym_cloth", mat, 6),
+            {0.0f, 2.5f, 1}, {-90, 0, 0});
+        add_instance(
+            scn, "pin01", add_cube(scn, "pin01", pmat, 0, 0.1), {-1, 2.5, 0});
+        add_instance(
+            scn, "pin02", add_cube(scn, "pin02", pmat, 0, 0.1), {+1, 2.5, 0});
+    } else if (otype == "sym_cloth04") {
+        auto mat = add_plastic(scn, "sym_cloth", {0.2f, 0.5f, 0.2f}, 0.1f);
+        auto pmat = add_diffuse(scn, "pin_cloth", {0.5f, 0.2f, 0.2f});
+        auto omat = add_plastic(scn, "obj", {0.2f, 0.2f, 0.2f}, 0.1f);
+        add_instance(scn, "sym_cloth", add_quad(scn, "sym_cloth", mat, 6),
+            {0.0f, 2.5f, 1}, {-90, 0, 0});
+        add_instance(
+            scn, "pin01", add_cube(scn, "pin01", pmat, 0, 0.1), {-1, 2.5, 0});
+        add_instance(
+            scn, "pin02", add_cube(scn, "pin02", pmat, 0, 0.1), {+1, 2.5, 0});
+        add_instance(
+            scn, "obj", add_spherecube(scn, "obj", omat, 4), {0, 1, 0});
+    } else if (otype == "sym_rigid01") {
+        auto mat = add_plastic(scn, "sym_rigid", {0.2f, 0.5f, 0.2f}, 0.1f);
+        add_instance(scn, "sym_rigid01",
+            add_cube(scn, "sym_rigid01", mat, 4, 0.2f), {-1, 2, 0});
+        add_instance(scn, "sym_rigid02",
+            add_cube(scn, "sym_rigid02", mat, 4, 0.2f), {0, 2, 0});
+        add_instance(scn, "sym_rigid03",
+            add_cube(scn, "sym_rigid04", mat, 4, 0.2f), {+1, 2, 0});
+    } else if (otype == "sym_rigid02") {
+        auto mat = add_plastic(scn, "sym_rigid", {0.2f, 0.5f, 0.2f}, 0.1f);
+        auto omat = add_plastic(scn, "obj", {0.2f, 0.2f, 0.2f}, 0.1f);
+        add_instance(scn, "stairs", add_cube(scn, "stairs", omat, 4, 2.0f),
+            {0, -1.0f, 0}, {0, 0, 30});
+        add_instance(scn, "sym_rigid01",
+            add_cube(scn, "sym_rigid01", mat, 4, 0.2f), {-1, 2, 0});
+        add_instance(scn, "sym_rigid02",
+            add_sphere(scn, "sym_rigid02", mat, 4, 0.2f), {0, 2, 0});
+        add_instance(scn, "sym_rigid03",
+            add_cube(scn, "sym_rigid04", mat, 4, 0.2f), {+1, 2, 0});
+    } else if (otype == "sym_rigid03") {
+        // auto mat = add_plastic(scn, "sym_rigid", {0.2f, 0.5f, 0.2f}, 0.1f);
+        auto mats = std::vector<yobj::material*>{
+            add_plastic(scn, "sym_rigidr", {0.5f, 0.2f, 0.2f}, 0.1f),
+            add_plastic(scn, "sym_rigidg", {0.2f, 0.5f, 0.2f}, 0.1f),
+            add_plastic(scn, "sym_rigidb", {0.2f, 0.2f, 0.5f}, 0.1f),
+            add_plastic(scn, "sym_rigidy", {0.5f, 0.5f, 0.2f}, 0.1f),
+            add_plastic(scn, "sym_rigidm", {0.5f, 0.2f, 0.5f}, 0.1f),
+            add_plastic(scn, "sym_rigidc", {0.2f, 0.5f, 0.5f}, 0.1f),
+        };
+        auto omat = add_plastic(scn, "obj", {0.2f, 0.2f, 0.2f}, 0.1f);
+        add_instance(scn, "stairs", add_cube(scn, "stairs", omat, 4, 2.0f),
+            {0, -1.0f, 0}, {0, 0, 30});
+        for (auto i = 0; i < 10; i++) {
+            auto cube = i % 2, mtype = i % 6;
+            auto shp = (cube) ? add_cube(scn, "sym_rigid" + std::to_string(i),
+                                    mats[mtype], 4, 0.2f) :
+                                add_sphere(scn, "sym_rigid" + std::to_string(i),
+                                    mats[mtype], 4, 0.2f);
+            add_instance(scn, "sym_rigid" + std::to_string(i), shp,
+                {(i % 3) - 1.0f, 2 + i * 0.5f, (i % 5) * 0.5f - 1.25f});
+        }
+    } else if (otype == "sym_rigid04") {
+        // auto mat = add_plastic(scn, "sym_rigid", {0.2f, 0.5f, 0.2f},
+        // 0.1f);
+        auto mats = std::vector<yobj::material*>{
+            add_plastic(scn, "sym_rigidr", {0.5f, 0.2f, 0.2f}, 0.1f),
+            add_plastic(scn, "sym_rigidg", {0.2f, 0.5f, 0.2f}, 0.1f),
+            add_plastic(scn, "sym_rigidb", {0.2f, 0.2f, 0.5f}, 0.1f),
+            add_plastic(scn, "sym_rigidy", {0.5f, 0.5f, 0.2f}, 0.1f),
+            add_plastic(scn, "sym_rigidm", {0.5f, 0.2f, 0.5f}, 0.1f),
+            add_plastic(scn, "sym_rigidc", {0.2f, 0.5f, 0.5f}, 0.1f),
+        };
+        auto omat = add_plastic(scn, "obj", {0.2f, 0.2f, 0.2f}, 0.1f);
+        add_instance(scn, "stairs", add_cube(scn, "stairs", omat, 4, 2.0f),
+            {0, -1.0f, 0}, {0, 0, 30});
+        auto rng = ym::rng_pcg32();
+        ym::init(&rng, 0, 0);
+        for (auto i = 0; i < 50; i++) {
+            auto stype = ym::next1i(&rng, 2);
+            auto mtype = ym::next1i(&rng, mats.size());
+            auto shp = (yobj::mesh*)nullptr;
+            switch (stype) {
+                case 0:
+                    shp = add_cube(scn, "sym_rigid" + std::to_string(i),
+                        mats[mtype], 4, 0.2f);
+                    break;
+                case 1:
+                    shp = add_sphere(scn, "sym_rigid" + std::to_string(i),
+                        mats[mtype], 4, 0.2f);
+                    break;
+            }
+            add_instance(scn, "sym_rigid" + std::to_string(i), shp,
+                {ym::next1f(&rng) * 2 - 1, 2 + i * 0.5f,
+                    ym::next1f(&rng) - 0.5f});
+        }
+    } else {
+        throw std::runtime_error("bad value");
+    }
+
+    if (ltype == "pointlight") {
+        auto mat = add_emission(scn, "pointlight", {400, 400, 400});
+        add_instance(scn, "pointlight01", add_point(scn, "pointlight01", mat),
+            {1.4f, 9, 6});
+        add_instance(scn, "pointlight02", add_point(scn, "pointlight02", mat),
+            {-1.4f, 9, 6});
+    } else if (ltype == "arealight") {
+        auto mat = add_emission(scn, "arealight", {40, 40, 40});
+        auto shp = add_quad(scn, "arealight", mat, 0, 2);
+        add_instance(scn, "arealight01", shp, {-4, 5, 8},
+            make_lookat_frame({-4, 5, 8}, {0, 3, 0}).rot());
+        add_instance(scn, "arealight02", shp, {4, 5, 8},
+            make_lookat_frame({4, 5, 8}, {0, 3, 0}).rot());
+    } else if (ltype == "envlight") {
+        auto mat = add_emission(
+            scn, "envlight", {1, 1, 1}, add_texture(scn, "env.hdr"));
+        add_env(scn, "envlight", mat);
     } else {
         throw std::runtime_error("bad value");
     }
@@ -1465,8 +1594,7 @@ int main(int argc, char* argv[]) {
 
     // simple scenes ----------------------------
     auto stypes = std::vector<std::string>{"basic", "simple", "transparent",
-        "transparentp", "refracted", "refractedp", "lines", "points", "hair",
-        "sym_points01", "sym_points02", "sym_cloth01", "sym_cloth02"};
+        "transparentp", "refracted", "refractedp", "lines", "points", "hair"};
 
     // matball scenes --------------------------
     auto mtypes = std::vector<std::string>{"matte00", "matte01_txt",
@@ -1479,12 +1607,23 @@ int main(int argc, char* argv[]) {
     auto itypes = std::vector<std::string>{
         "instance100", "instance1600", "instance2500", "instance10000"};
 
+    // sym soft scenes -------------------------
+    auto sstypes = std::vector<std::string>{"sym_points01", "sym_points02",
+        "sym_cloth01", "sym_cloth02", "sym_cloth03", "sym_cloth04",
+        "sym_rigid01", "sym_rigid02", "sym_rigid03", "sym_rigid04"};
+
+    // sym rigid scenes ------------------------
+    auto srtypes =
+        std::vector<std::string>{"sym_rigid_flat", "sym_rigid_slanted"};
+
     // put together scene names
     auto scene_names = std::vector<std::string>{"all"};
     for (auto stype : stypes) scene_names += stype;
     for (auto itype : itypes) scene_names += itype;
     for (auto mtype : mtypes) scene_names += "matball_" + mtype;
     for (auto motype : motypes) scene_names += "mesh_" + motype;
+    for (auto sstype : sstypes) scene_names += sstype;
+    for (auto srtype : srtypes) scene_names += srtype;
     scene_names += {"cornell_box", "rigid", "textures"};
 
     // command line params
@@ -1578,16 +1717,26 @@ int main(int argc, char* argv[]) {
         });
     }
 
-    // rigid body scenes ------------------------
-    if (scene == "rigid" || scene == "all") {
+    // soft body scenes -------------------------
+    for (auto sstype : sstypes) {
+        if (scene != "all" && scene != sstype) continue;
         run_async([=] {
-            printf("generating rigid body scenes ...\n");
-            for (auto otype : {"flat", "slanted"}) {
-                auto ltype = "pointlight";
-                auto scn = make_rigid_scene(otype, ltype);
-                save_scene(
-                    "rigid_" + std::string(otype) + "_" + std::string(ltype),
-                    dirname, scn);
+            printf("generating %s scenes ...\n", sstype.c_str());
+            for (auto ltype : {"pointlight"}) {
+                auto scn = make_soft_scene(sstype, ltype);
+                save_scene(sstype + "_" + std::string(ltype), dirname, scn);
+            }
+        });
+    }
+
+    // rigid body scenes ------------------------
+    for (auto srtype : srtypes) {
+        if (scene != "all" && scene != srtype) continue;
+        run_async([=] {
+            printf("generating %s scenes ...\n", srtype.c_str());
+            for (auto ltype : {"pointlight"}) {
+                auto scn = make_rigid_scene(srtype, ltype);
+                save_scene(srtype + "_" + std::string(ltype), dirname, scn);
             }
         });
     }

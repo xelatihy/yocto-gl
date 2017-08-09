@@ -66,8 +66,7 @@ ysym::scene* make_simulation_scene(const yobj::scene* scene) {
     // add each material
     auto material_map = std::map<yobj::material*, int>{{nullptr, -1}};
     for (auto mat : scene->materials) {
-        auto simulated = (mat->name != "floor" && mat->name != "floor_txt" &&
-                          mat->ke == ym::zero3f);
+        auto simulated = mat->name.substr(0, 4) == "sym_";
         auto density = (simulated) ? 1.0f : 0.0f;
         material_map[mat] = ysym::add_rigid_material(simulation_scene, density);
     }
@@ -102,8 +101,7 @@ ysym::scene* make_simulation_scene(const ygltf::scene_group* scene) {
     // add each material
     auto material_map = std::map<ygltf::material*, int>{{nullptr, -1}};
     for (auto mat : scene->materials) {
-        auto simulated = (mat->name != "floor" && mat->name != "floor_txt" &&
-                          mat->emission == ym::zero3f);
+        auto simulated = mat->name.substr(0, 4) == "sym_";
         auto density = (simulated) ? 1.0f : 0.0f;
         material_map[mat] = ysym::add_rigid_material(simulation_scene, density);
     }

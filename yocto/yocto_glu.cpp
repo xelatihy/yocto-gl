@@ -964,10 +964,11 @@ uint make_program(uint* vao) {
             #define SKIN_NONE 0
             #define SKIN_STD 1
             #define SKIN_GLTF 2
+
     uniform int skin_type = 0;
     uniform mat4 skin_xforms[32];
-    layout(location = 5) in vec4 vert_skin_weights;            // vertex skinning weights
-    layout(location = 6) in ivec4 vert_skin_joints;            // vertex skinning joints (in mesh coordinate frame)
+    layout(location = 6) in vec4 vert_skin_weights;            // vertex skinning weights
+    layout(location = 7) in ivec4 vert_skin_joints;            // vertex skinning joints (in mesh coordinate frame)
 
     vec3 transform_point(mat4 m, vec3 p) {
         vec4 p4 = m * vec4(p,1);
@@ -1264,14 +1265,13 @@ uint make_program(uint* vao) {
                 rs *= ks_txt.y;
                 rs = rs*rs;
                 op *= kd_txt.w;
-                // TODO: fix rs
             } else if(material.mtype == MATERIAL_GLTF_SPECULAR_GLOSSINESS) {
                 type = material.etype;
                 kd *= kd_txt.xyz;
                 ks *= ks_txt.xyz;
                 rs *= ks_txt.w;
+                rs = (1 - rs) * (1 - rs);
                 op *= kd_txt.w;
-                // TODO: fix rs
             }
 
             cutout = material.alpha_cutout && op == 0;
@@ -1459,28 +1459,16 @@ void set_highlight(uint prog, const ym::vec4f& highlight) {
 }
 
 //
-// Same as set_material_generic(). Deprecated interface.
-//
-void set_material(uint prog, const ym::vec3f& ke, const ym::vec3f& kd,
-    const ym::vec3f& ks, float rs, const texture_info& ke_txt,
-    const texture_info& kd_txt, const texture_info& ks_txt,
-    const texture_info& rs_txt, const texture_info& norm_txt,
-    const texture_info& occ_txt, bool use_phong, bool double_sided,
-    bool alpha_cutout) {
-    set_material_generic(prog, ke, kd, ks, rs, 1, ke_txt, kd_txt, ks_txt,
-        rs_txt, norm_txt, occ_txt, use_phong, double_sided, alpha_cutout);
-}
-
-//
 // Internal representation
 //
-inline void set_material_generic(uint prog, int mtype, const ym::vec3f& ke,
-    const ym::vec3f& kd, const ym::vec3f& ks, float rs, float op,
-    const texture_info& ke_txt, const texture_info& kd_txt,
+inline void set_material_generic(uint prog, int mtype, int etype,
+    const ym::vec3f& ke, const ym::vec3f& kd, const ym::vec3f& ks, float rs,
+    float op, const texture_info& ke_txt, const texture_info& kd_txt,
     const texture_info& ks_txt, const texture_info& rs_txt,
     const texture_info& norm_txt, const texture_info& occ_txt, bool use_phong,
     bool double_sided, bool alpha_cutout) {
     static auto mtype_id = get_uniform_location(prog, "material.mtype");
+    static auto etype_id = get_uniform_location(prog, "material.etype");
     static auto ke_id = get_uniform_location(prog, "material.ke");
     static auto kd_id = get_uniform_location(prog, "material.kd");
     static auto ks_id = get_uniform_location(prog, "material.ks");
@@ -1511,6 +1499,7 @@ inline void set_material_generic(uint prog, int mtype, const ym::vec3f& ke,
 
     assert(check_error());
     set_uniform(prog, mtype_id, mtype);
+    set_uniform(prog, etype_id, (int)etype);
     set_uniform(prog, ke_id, ke);
     set_uniform(prog, kd_id, kd);
     set_uniform(prog, ks_id, ks);
@@ -1534,10 +1523,11 @@ inline void set_material_generic(uint prog, int mtype, const ym::vec3f& ke,
 // Set material values for emission only (constant color).
 // Indicates textures ids with the correspoinding XXX_txt variables.
 //
-void set_material_emission_only(uint prog, const ym::vec3f& ke, float op,
-    const texture_info& ke_txt, bool double_sided, bool alpha_cutout) {
-    set_material_generic(prog, 0, ke, {0, 0, 0}, {0, 0, 0}, 1, op, ke_txt, 0, 0,
-        0, 0, 0, false, double_sided, alpha_cutout);
+void set_material_emission_only(uint prog, etype etype, const ym::vec3f& ke,
+    float op, const texture_info& ke_txt, bool double_sided,
+    bool alpha_cutout) {
+    set_material_generic(prog, 0, (int)etype, ke, {0, 0, 0}, {0, 0, 0}, 1, op,
+        ke_txt, 0, 0, 0, 0, 0, false, double_sided, alpha_cutout);
 }
 
 //
@@ -1546,14 +1536,15 @@ void set_material_emission_only(uint prog, const ym::vec3f& ke, float op,
 // correspoinding
 // XXX_txt variables. Uses GGX by default, but can switch to Phong is needed.
 //
-void set_material_generic(uint prog, const ym::vec3f& ke, const ym::vec3f& kd,
-    const ym::vec3f& ks, float rs, float op, const texture_info& ke_txt,
-    const texture_info& kd_txt, const texture_info& ks_txt,
-    const texture_info& rs_txt, const texture_info& norm_txt,
-    const texture_info& occ_txt, bool use_phong, bool double_sided,
-    bool alpha_cutout) {
-    set_material_generic(prog, 1, ke, kd, ks, rs, op, ke_txt, kd_txt, ks_txt,
-        rs_txt, norm_txt, occ_txt, use_phong, double_sided, alpha_cutout);
+void set_material_generic(uint prog, etype etype, const ym::vec3f& ke,
+    const ym::vec3f& kd, const ym::vec3f& ks, float rs, float op,
+    const texture_info& ke_txt, const texture_info& kd_txt,
+    const texture_info& ks_txt, const texture_info& rs_txt,
+    const texture_info& norm_txt, const texture_info& occ_txt, bool use_phong,
+    bool double_sided, bool alpha_cutout) {
+    set_material_generic(prog, 1, (int)etype, ke, kd, ks, rs, op, ke_txt,
+        kd_txt, ks_txt, rs_txt, norm_txt, occ_txt, use_phong, double_sided,
+        alpha_cutout);
 }
 
 //
@@ -1562,14 +1553,15 @@ void set_material_generic(uint prog, const ym::vec3f& ke, const ym::vec3f& kd,
 // specular roughness rs. Uses basecolor-opacity texture kb_txt and
 // metallic-roughness texture km_txt. Uses GGX but can be switched to Phong.
 //
-void set_material_gltf_metallic_roughness(uint prog, const ym::vec3f& ke,
-    const ym::vec3f& kb, float km, float rs, float op,
+void set_material_gltf_metallic_roughness(uint prog, etype etype,
+    const ym::vec3f& ke, const ym::vec3f& kb, float km, float rs, float op,
     const texture_info& ke_txt, const texture_info& kb_txt,
     const texture_info& km_txt, const texture_info& norm_txt,
     const texture_info& occ_txt, bool use_phong, bool double_sided,
     bool alpha_cutout) {
-    set_material_generic(prog, 2, ke, kb, {km, km, km}, rs, op, ke_txt, kb_txt,
-        km_txt, 0, norm_txt, occ_txt, use_phong, double_sided, alpha_cutout);
+    set_material_generic(prog, 2, (int)etype, ke, kb, {km, km, km}, rs, op,
+        ke_txt, kb_txt, km_txt, 0, norm_txt, occ_txt, use_phong, double_sided,
+        alpha_cutout);
 }
 
 //
@@ -1578,14 +1570,15 @@ void set_material_gltf_metallic_roughness(uint prog, const ym::vec3f& ke,
 // specular glossiness rs. Uses diffuse-opacity texture kd_txt and
 // specular-glpossiness texture ks_txt. Uses GGX but can be switched to Phong.
 //
-void set_material_gltf_specular_glossiness(uint prog, const ym::vec3f& ke,
-    const ym::vec3f& kd, const ym::vec3f& ks, float rs, float op,
-    const texture_info& ke_txt, const texture_info& kd_txt,
+void set_material_gltf_specular_glossiness(uint prog, etype etype,
+    const ym::vec3f& ke, const ym::vec3f& kd, const ym::vec3f& ks, float rs,
+    float op, const texture_info& ke_txt, const texture_info& kd_txt,
     const texture_info& ks_txt, const texture_info& norm_txt,
     const texture_info& occ_txt, bool use_phong, bool double_sided,
     bool alpha_cutout) {
-    set_material_generic(prog, 3, ke, kd, ks, rs, op, ke_txt, kd_txt, ks_txt, 0,
-        norm_txt, occ_txt, use_phong, double_sided, alpha_cutout);
+    set_material_generic(prog, 3, (int)etype, ke, kd, ks, rs, op, ke_txt,
+        kd_txt, ks_txt, 0, norm_txt, occ_txt, use_phong, double_sided,
+        alpha_cutout);
 }
 
 //
@@ -1662,24 +1655,10 @@ void set_vert_skinning_off(uint prog) {
 // This is a public API. See above for documentation.
 //
 void draw_elem(uint prog, int num, uint bid, etype etype) {
-    static auto etype_id = get_uniform_location(prog, "material.etype");
     assert(check_error());
     if (num <= 0) return;
-    set_uniform(prog, etype_id, (int)etype);
     draw_elems(num, bid, etype);
     assert(check_error());
-}
-
-void draw_points(uint prog, int num, uint bid) {
-    draw_elem(prog, num, bid, etype::point);
-}
-
-void draw_lines(uint prog, int num, uint bid) {
-    draw_elem(prog, num, bid, etype::line);
-}
-
-void draw_triangles(uint prog, int num, uint bid) {
-    draw_elem(prog, num, bid, etype::triangle);
 }
 
 }  // namespace stdshader

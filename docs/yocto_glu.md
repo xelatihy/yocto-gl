@@ -986,8 +986,8 @@ Set the object as highlight color.
 ### Function set_material_emission_only()
 
 ~~~ .cpp
-void set_material_emission_only(uint prog, const ym::vec3f& ke, float op,
-    const texture_info& ke_txt, bool double_sided, bool alpha_cutout);
+void set_material_emission_only(uint prog, etype etype, const ym::vec3f& ke,
+    float op, const texture_info& ke_txt, bool double_sided, bool alpha_cutout);
 ~~~
 
 Set material values for emission only (constant color).
@@ -997,12 +997,12 @@ Works for points/lines/triangles. Element type set by draw_XXX calls.
 ### Function set_material_generic()
 
 ~~~ .cpp
-void set_material_generic(uint prog, const ym::vec3f& ke, const ym::vec3f& kd,
-    const ym::vec3f& ks, float rs, float op, const texture_info& ke_txt,
-    const texture_info& kd_txt, const texture_info& ks_txt,
-    const texture_info& rs_txt, const texture_info& norm_txt,
-    const texture_info& occ_txt, bool use_phong, bool double_sided,
-    bool alpha_cutout);
+void set_material_generic(uint prog, etype etype, const ym::vec3f& ke,
+    const ym::vec3f& kd, const ym::vec3f& ks, float rs, float op,
+    const texture_info& ke_txt, const texture_info& kd_txt,
+    const texture_info& ks_txt, const texture_info& rs_txt,
+    const texture_info& norm_txt, const texture_info& occ_txt, bool use_phong,
+    bool double_sided, bool alpha_cutout);
 ~~~
 
 Set material values with emission ke, diffuse kd, specular ks and
@@ -1015,8 +1015,8 @@ draw_XXX calls.
 ### Function set_material_gltf_metallic_roughness()
 
 ~~~ .cpp
-void set_material_gltf_metallic_roughness(uint prog, const ym::vec3f& ke,
-    const ym::vec3f& kb, float km, float rs, float op,
+void set_material_gltf_metallic_roughness(uint prog, etype etype,
+    const ym::vec3f& ke, const ym::vec3f& kb, float km, float rs, float op,
     const texture_info& ke_txt, const texture_info& kb_txt,
     const texture_info& km_txt, const texture_info& norm_txt,
     const texture_info& occ_txt, bool use_phong, bool double_sided,
@@ -1033,9 +1033,9 @@ for lines, GGX/Phong for triangles). Element type set by draw_XXX calls.
 ### Function set_material_gltf_specular_glossiness()
 
 ~~~ .cpp
-void set_material_gltf_specular_glossiness(uint prog, const ym::vec3f& ke,
-    const ym::vec3f& kd, const ym::vec3f& ks, float rs, float op,
-    const texture_info& ke_txt, const texture_info& kd_txt,
+void set_material_gltf_specular_glossiness(uint prog, etype etype,
+    const ym::vec3f& ke, const ym::vec3f& kd, const ym::vec3f& ks, float rs,
+    float op, const texture_info& ke_txt, const texture_info& kd_txt,
     const texture_info& ks_txt, const texture_info& norm_txt,
     const texture_info& occ_txt, bool use_phong, bool double_sided,
     bool alpha_cutout);
@@ -1105,31 +1105,7 @@ Disables vertex skinning.
 ### Function draw_elems()
 
 ~~~ .cpp
-void draw_elems(uint prog, int num, uint bid, etype etype);
-~~~
-
-Draw num elements elem of type etype.
-
-### Function draw_points()
-
-~~~ .cpp
-void draw_points(uint prog, int num, uint bid);
-~~~
-
-Draw num elements elem of type etype.
-
-### Function draw_lines()
-
-~~~ .cpp
-void draw_lines(uint prog, int num, uint bid);
-~~~
-
-Draw num elements elem of type etype.
-
-### Function draw_triangles()
-
-~~~ .cpp
-void draw_triangles(uint prog, int num, uint bid);
+    inline void draw_elems(uint prog, int num, uint bid, etype etype);
 ~~~
 
 Draw num elements elem of type etype.

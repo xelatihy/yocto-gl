@@ -355,6 +355,8 @@ int main(int argc, char** argv) {
         parser, "--no-flipy-texcoord", "", "texcoord vertical flipping");
     auto no_flip_opacity =
         parse_flag(parser, "--no-flip-opacity", "", "flip opacity");
+    auto facet_non_smooth = parse_flag(
+        parser, "--facet-non-smooth", "", "facet non smooth surfaces");
     auto scale = parse_optf(parser, "--scale", "", "scale the model", 1.0f);
     auto add_scene = parse_flag(parser, "--scene", "", "add scene");
     auto add_normals = parse_flag(parser, "--normals", "", "add normals");
@@ -386,8 +388,8 @@ int main(int argc, char** argv) {
 
     // load obj
     auto err = std::string();
-    auto obj = yobj::load_scene(
-        filename_in, false, true, !no_flipy_texcoord, !no_flip_opacity, &err);
+    auto obj = yobj::load_scene(filename_in, false, true, !no_flipy_texcoord,
+        facet_non_smooth, !no_flip_opacity, &err);
     if (!obj) { log_fatal("error loading obj: %s\n", err.c_str()); }
 
     // check missing texture

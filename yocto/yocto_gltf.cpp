@@ -2429,7 +2429,7 @@ bool load_buffers(glTF* gltf, const std::string& dirname, bool skip_missing,
 //
 bool load_images(glTF* gltf, const std::string& dirname, bool skip_missing,
     std::string* err) {
-#ifndef YGL_NO_STBIMAGE
+#ifndef YGLTF_NO_IMAGE
     for (auto image : gltf->images) {
         image->data = image_data();
         if (image->bufferView || startsiwith(image->uri, "data:")) {
@@ -2511,8 +2511,8 @@ bool load_images(glTF* gltf, const std::string& dirname, bool skip_missing,
             }
         }
     }
-    return true;
 #endif
+    return true;
 }
 
 //
@@ -2540,7 +2540,7 @@ bool save_buffers(const glTF* gltf, const std::string& dirname,
 //
 bool save_images(const glTF* gltf, const std::string& dirname,
     bool skip_missing, std::string* err) {
-#ifndef YGL_NO_STBIMAGE
+#ifndef YGLTF_NO_IMAGE
     for (auto image : gltf->images) {
         if (startsiwith(image->uri, "data:")) {
             if (skip_missing) continue;
@@ -2569,8 +2569,8 @@ bool save_images(const glTF* gltf, const std::string& dirname,
             return false;
         }
     }
-    return true;
 #endif
+    return true;
 }
 
 inline accessor_view::accessor_view(
@@ -4332,6 +4332,82 @@ void add_unique_path_names(scene_group* scns, const std::string& buffer_uri) {
     for (auto skn : scns->meshes) {
         skn->path = buffer_uri + "skin_" + std::to_string(sid++) + "_" +
                     skn->name + ".bin";
+    }
+}
+
+//
+// Convert materials to spec gloss
+//
+void add_spec_gloss(scene_group* scns) {
+    auto txts = std::map<std::pair<texture*, texture*>,
+        std::pair<texture*, texture*>>();
+    for (auto mat : scns->materials) {
+        if (mat->specular_glossiness) continue;
+        if (!mat->metallic_roughness) continue;
+        mat->specular_glossiness = new material_specular_glossiness();
+        auto mr = mat->metallic_roughness;
+        auto sg = mat->specular_glossiness;
+        if (mr->base_txt || mr->metallic_txt) {
+            sg->diffuse = {1, 1, 1};
+            sg->opacity = 1;
+            sg->specular = {1, 1, 1};
+            sg->glossiness = 1;
+            auto mr_txt =
+                std::pair<texture*, texture*>{mr->base_txt, mr->metallic_txt};
+            if (txts.find(mr_txt) == txts.end()) {
+                auto w = 0, h = 0;
+                if (mr->base_txt) {
+                    w = ym::max(w, mr->base_txt->width());
+                    h = ym::max(h, mr->base_txt->height());
+                }
+                if (mr->metallic_txt) {
+                    w = ym::max(w, mr->metallic_txt->width());
+                    h = ym::max(h, mr->metallic_txt->height());
+                }
+                auto diff = new texture();
+                diff->ldr.resize(w, h);
+                auto spec = new texture();
+                spec->ldr.resize(w, h);
+                for (auto j = 0; j < h; j++) {
+                    for (auto i = 0; i < w; i++) {
+                        auto u = i / (float)w, v = j / (float)h;
+                        auto base = ym::vec4b{255, 255, 255, 255};
+                        auto metallic = ym::vec4b{255, 255, 255, 255};
+                        if (mr->base_txt) {
+                            auto ii = (int)(u * mr->base_txt->ldr.width());
+                            auto jj = (int)(v * mr->base_txt->ldr.height());
+                            base = mr->base_txt->ldr[{ii, jj}];
+                        } else {
+                            base = ym::linear_to_srgb(
+                                ym::vec4f(mr->base, mr->opacity));
+                        }
+                        if (mr->metallic_txt) {
+                            auto ii = (int)(u * mr->metallic_txt->ldr.width());
+                            auto jj = (int)(v * mr->metallic_txt->ldr.height());
+                            metallic = mr->metallic_txt->ldr[{ii, jj}];
+                        } else {
+                            metallic = ym::linear_to_srgb(
+                                ym::vec4f(1, mr->roughness, mr->metallic, 1));
+                        }
+                        auto kb = ym::srgb_to_linear(base);
+                        auto km = ym::srgb_to_linear(metallic);
+                        diff->ldr[{i, j}] =
+                            ym::linear_to_srgb({kb.xyz() * (1 - km.z), kb.w});
+                        spec->ldr[{i, j}] = ym::linear_to_srgb(
+                            {kb.xyz() * km.z + (1 - km.z) * 0.04f, 1 - km.y});
+                    }
+                }
+                txts[mr_txt] = {diff, spec};
+                scns->textures.push_back(diff);
+                scns->textures.push_back(spec);
+            }
+            std::tie(sg->diffuse_txt, sg->specular_txt) = txts[mr_txt];
+        } else {
+            sg->diffuse = mr->base * (1 - mr->metallic);
+            sg->specular = mr->base * mr->metallic + (1 - mr->metallic) * 0.04f;
+            sg->opacity = mr->opacity;
+            sg->glossiness = 1 - mr->roughness;
+        }
     }
 }
 

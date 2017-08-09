@@ -30,6 +30,7 @@
 
 #include <cmath>
 #include <map>
+#include <memory>
 
 #ifndef _WIN32
 #pragma GCC diagnostic push

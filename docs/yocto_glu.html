@@ -827,8 +827,8 @@ ambient illumination amb.</p>
 
 <p>Set the object as highlight color.</p>
 <h3>Function set_material_emission_only()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_material_emission_only</span><span class="p">(</span><span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">ke</span><span class="p">,</span> <span class="kt">float</span> <span class="n">op</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">ke_txt</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">double_sided</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">alpha_cutout</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_material_emission_only</span><span class="p">(</span><span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="n">etype</span> <span class="n">etype</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">ke</span><span class="p">,</span>
+    <span class="kt">float</span> <span class="n">op</span><span class="p">,</span> <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">ke_txt</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">double_sided</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">alpha_cutout</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -836,12 +836,12 @@ ambient illumination amb.</p>
 Indicates textures ids with the correspoinding XXX_txt variables.
 Works for points/lines/triangles. Element type set by draw_XXX calls.</p>
 <h3>Function set_material_generic()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_material_generic</span><span class="p">(</span><span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">ke</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">kd</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">ks</span><span class="p">,</span> <span class="kt">float</span> <span class="n">rs</span><span class="p">,</span> <span class="kt">float</span> <span class="n">op</span><span class="p">,</span> <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">ke_txt</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">kd_txt</span><span class="p">,</span> <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">ks_txt</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">rs_txt</span><span class="p">,</span> <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">norm_txt</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">occ_txt</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">use_phong</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">double_sided</span><span class="p">,</span>
-    <span class="kt">bool</span> <span class="n">alpha_cutout</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_material_generic</span><span class="p">(</span><span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="n">etype</span> <span class="n">etype</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">ke</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">kd</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">ks</span><span class="p">,</span> <span class="kt">float</span> <span class="n">rs</span><span class="p">,</span> <span class="kt">float</span> <span class="n">op</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">ke_txt</span><span class="p">,</span> <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">kd_txt</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">ks_txt</span><span class="p">,</span> <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">rs_txt</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">norm_txt</span><span class="p">,</span> <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">occ_txt</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">use_phong</span><span class="p">,</span>
+    <span class="kt">bool</span> <span class="n">double_sided</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">alpha_cutout</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -852,8 +852,8 @@ maps. Works for points/lines/triangles (diffuse for points,
 Kajiya-Kay for lines, GGX/Phong for triangles). Element type set by
 draw_XXX calls.</p>
 <h3>Function set_material_gltf_metallic_roughness()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_material_gltf_metallic_roughness</span><span class="p">(</span><span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">ke</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">kb</span><span class="p">,</span> <span class="kt">float</span> <span class="n">km</span><span class="p">,</span> <span class="kt">float</span> <span class="n">rs</span><span class="p">,</span> <span class="kt">float</span> <span class="n">op</span><span class="p">,</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_material_gltf_metallic_roughness</span><span class="p">(</span><span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="n">etype</span> <span class="n">etype</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">ke</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">kb</span><span class="p">,</span> <span class="kt">float</span> <span class="n">km</span><span class="p">,</span> <span class="kt">float</span> <span class="n">rs</span><span class="p">,</span> <span class="kt">float</span> <span class="n">op</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">ke_txt</span><span class="p">,</span> <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">kb_txt</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">km_txt</span><span class="p">,</span> <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">norm_txt</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">occ_txt</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">use_phong</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">double_sided</span><span class="p">,</span>
@@ -868,9 +868,9 @@ metallic-roughness texture km_txt. Sets also normal and occlusion
 maps. Works for points/lines/triangles (diffuse for points, Kajiya-Kay
 for lines, GGX/Phong for triangles). Element type set by draw_XXX calls.</p>
 <h3>Function set_material_gltf_specular_glossiness()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_material_gltf_specular_glossiness</span><span class="p">(</span><span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">ke</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">kd</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">ks</span><span class="p">,</span> <span class="kt">float</span> <span class="n">rs</span><span class="p">,</span> <span class="kt">float</span> <span class="n">op</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">ke_txt</span><span class="p">,</span> <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">kd_txt</span><span class="p">,</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_material_gltf_specular_glossiness</span><span class="p">(</span><span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="n">etype</span> <span class="n">etype</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">ke</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">kd</span><span class="p">,</span> <span class="k">const</span> <span class="n">ym</span><span class="o">::</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">ks</span><span class="p">,</span> <span class="kt">float</span> <span class="n">rs</span><span class="p">,</span>
+    <span class="kt">float</span> <span class="n">op</span><span class="p">,</span> <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">ke_txt</span><span class="p">,</span> <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">kd_txt</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">ks_txt</span><span class="p">,</span> <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">norm_txt</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">texture_info</span><span class="o">&amp;</span> <span class="n">occ_txt</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">use_phong</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">double_sided</span><span class="p">,</span>
     <span class="kt">bool</span> <span class="n">alpha_cutout</span><span class="p">);</span>
@@ -926,25 +926,7 @@ coordinates texcoord, per-vertex color color and tangent space tangsp.</p>
 
 <p>Disables vertex skinning.</p>
 <h3>Function draw_elems()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">draw_elems</span><span class="p">(</span><span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="kt">int</span> <span class="n">num</span><span class="p">,</span> <span class="n">uint</span> <span class="n">bid</span><span class="p">,</span> <span class="n">etype</span> <span class="n">etype</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Draw num elements elem of type etype.</p>
-<h3>Function draw_points()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">draw_points</span><span class="p">(</span><span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="kt">int</span> <span class="n">num</span><span class="p">,</span> <span class="n">uint</span> <span class="n">bid</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Draw num elements elem of type etype.</p>
-<h3>Function draw_lines()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">draw_lines</span><span class="p">(</span><span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="kt">int</span> <span class="n">num</span><span class="p">,</span> <span class="n">uint</span> <span class="n">bid</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Draw num elements elem of type etype.</p>
-<h3>Function draw_triangles()</h3>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">draw_triangles</span><span class="p">(</span><span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="kt">int</span> <span class="n">num</span><span class="p">,</span> <span class="n">uint</span> <span class="n">bid</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span>    <span class="kr">inline</span> <span class="kt">void</span> <span class="nf">draw_elems</span><span class="p">(</span><span class="n">uint</span> <span class="n">prog</span><span class="p">,</span> <span class="kt">int</span> <span class="n">num</span><span class="p">,</span> <span class="n">uint</span> <span class="n">bid</span><span class="p">,</span> <span class="n">etype</span> <span class="n">etype</span><span class="p">);</span>
 </code></pre></div>
 
 

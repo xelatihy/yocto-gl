@@ -394,6 +394,7 @@ struct scene {
 ///     - filename: filename
 ///     - load_textures: whether to load textures (default to false)
 ///     - flip_texcoord: whether to flip the v coordinate
+///     - facet_non_smooth: duplicate vertices if smoothing off
 ///     - skip_missing: skip missing textures
 ///     - flip_tr: whether to flip tr
 ///     - err: if set, store error message on error
@@ -401,7 +402,8 @@ struct scene {
 ///     - scene (nullptr on error)
 ///
 scene* load_scene(const std::string& filename, bool load_textures,
-    bool flip_texcoord = true, bool skip_missing = true, bool flip_tr = true,
+    bool skip_missing = true, bool flip_texcoord = true,
+    bool facent_non_smooth = false, bool flip_tr = true,
     std::string* err = nullptr);
 
 ///
@@ -818,8 +820,9 @@ bool save_mtl(const std::string& filename,
 ///
 /// - Parameters:
 ///     - obj: obj to be flattened
+///     - facet_non_smooth: duplicate vertices if smoothing off
 ///
-scene* obj_to_scene(const obj* obj);
+scene* obj_to_scene(const obj* obj, bool facet_non_smooth);
 
 ///
 /// Save a scene in an OBJ file.

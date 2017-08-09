@@ -287,7 +287,7 @@ void compute_moments(int ntetra, const ym::vec4i* tetra, int nverts,
     const ym::vec3f* pos, float* volume, ym::vec3f* center, ym::mat3f* inertia);
 
 ///
-/// Initialize the simulation
+/// Initialize the simulation.
 ///
 /// - Paramaters:
 ///     - scene: rigib body scene

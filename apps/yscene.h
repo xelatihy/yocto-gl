@@ -128,6 +128,7 @@ struct yscene {
 
     // load options
     bool split_shapes = false;
+    bool add_spec_gloss = false;
 
     // render
     int resolution = 0;
@@ -201,7 +202,8 @@ inline bool load_scene(
     auto ext = yu::path::get_extension(filename);
     if (ext == ".obj") {
         auto err = std::string();
-        scn->oscn = yobj::load_scene(filename, true, true, true, true, &err);
+        scn->oscn =
+            yobj::load_scene(filename, true, true, true, false, true, &err);
         if (!scn->oscn) {
             yu::logging::log_error("cannot load scene %s", filename.c_str());
             return false;
@@ -231,6 +233,7 @@ inline bool load_scene(
         }
         ygltf::add_normals(scn->gscn);
         ygltf::add_texture_data(scn->gscn);
+        if (scn->add_spec_gloss) ygltf::add_spec_gloss(scn->gscn);
         if (radius) ygltf::add_radius(scn->gscn, 0.001f);
         ygltf::add_tangent_space(scn->gscn);
         if (instances) {
@@ -401,11 +404,15 @@ inline void shade_mesh(const yobj::mesh* msh, const yshade_state* st,
     for (auto shp : msh->shapes) {
         yglu::stdshader::begin_shape(st->prog, ym::mat4f(xform));
 
+        auto etype = yglu::etype::triangle;
+        if (!shp->lines.empty()) etype = yglu::etype::line;
+        if (!shp->points.empty()) etype = yglu::etype::point;
+
         yglu::stdshader::set_highlight(
             st->prog, (highlighted) ? ym::vec4f{1, 1, 0, 1} : ym::zero4f);
 
         auto mat = (shp->mat) ? shp->mat : &default_material;
-        yglu::stdshader::set_material_generic(st->prog, mat->ke, mat->kd,
+        yglu::stdshader::set_material_generic(st->prog, etype, mat->ke, mat->kd,
             mat->ks, mat->rs, mat->opacity, st->txt.at(mat->ke_txt),
             st->txt.at(mat->kd_txt), st->txt.at(mat->ks_txt),
             st->txt.at(mat->rs_txt), 0, 0, false, true, cutout);
@@ -414,27 +421,27 @@ inline void shade_mesh(const yobj::mesh* msh, const yshade_state* st,
         yglu::stdshader::set_vert(
             st->prog, vbo.pos, vbo.norm, vbo.texcoord, vbo.color, 0);
 
-        yglu::stdshader::draw_points(
-            st->prog, (int)shp->points.size(), vbo.points);
-        yglu::stdshader::draw_lines(
-            st->prog, (int)shp->lines.size(), vbo.lines);
-        yglu::stdshader::draw_triangles(
-            st->prog, (int)shp->triangles.size(), vbo.triangles);
+        yglu::stdshader::draw_elems(
+            st->prog, (int)shp->points.size(), vbo.points, yglu::etype::point);
+        yglu::stdshader::draw_elems(
+            st->prog, (int)shp->lines.size(), vbo.lines, yglu::etype::line);
+        yglu::stdshader::draw_elems(st->prog, (int)shp->triangles.size(),
+            vbo.triangles, yglu::etype::triangle);
 
         if (edges && !wireframe) {
             assert(yglu::check_error());
             yglu::stdshader::set_material_emission_only(
-                st->prog, {0, 0, 0}, mat->opacity, 0, true, cutout);
+                st->prog, etype, {0, 0, 0}, mat->opacity, 0, true, cutout);
 
             assert(yglu::check_error());
             yglu::line_width(2);
             yglu::enable_edges(true);
-            yglu::stdshader::draw_points(
-                st->prog, (int)shp->points.size(), vbo.points);
-            yglu::stdshader::draw_lines(
-                st->prog, (int)shp->lines.size(), vbo.lines);
-            yglu::stdshader::draw_triangles(
-                st->prog, (int)shp->triangles.size(), vbo.triangles);
+            yglu::stdshader::draw_elems(st->prog, (int)shp->points.size(),
+                vbo.points, yglu::etype::point);
+            yglu::stdshader::draw_elems(
+                st->prog, (int)shp->lines.size(), vbo.lines, yglu::etype::line);
+            yglu::stdshader::draw_elems(st->prog, (int)shp->triangles.size(),
+                vbo.triangles, yglu::etype::triangle);
             yglu::enable_edges(false);
             yglu::line_width(1);
             assert(yglu::check_error());
@@ -637,6 +644,10 @@ inline void shade_mesh(const ygltf::mesh* msh, const ygltf::skin* sk,
     for (auto shp : msh->shapes) {
         yglu::stdshader::begin_shape(st->prog, xform);
 
+        auto etype = yglu::etype::triangle;
+        if (!shp->lines.empty()) etype = yglu::etype::line;
+        if (!shp->points.empty()) etype = yglu::etype::point;
+
         yglu::stdshader::set_highlight(
             st->prog, (highlighted) ? ym::vec4f{1, 1, 0, 1} : ym::zero4f);
 
@@ -646,7 +657,7 @@ inline void shade_mesh(const ygltf::mesh* msh, const ygltf::skin* sk,
             auto sg = mat->specular_glossiness;
             op = sg->opacity;
             yglu::stdshader::set_material_gltf_specular_glossiness(st->prog,
-                mat->emission, sg->diffuse, sg->specular, sg->glossiness,
+                etype, mat->emission, sg->diffuse, sg->specular, sg->glossiness,
                 sg->opacity,
                 txt_info(mat->emission_txt, mat->emission_txt_info),
                 txt_info(sg->diffuse_txt, sg->diffuse_txt_info),
@@ -658,7 +669,7 @@ inline void shade_mesh(const ygltf::mesh* msh, const ygltf::skin* sk,
             auto mr = mat->metallic_roughness;
             op = mr->opacity;
             yglu::stdshader::set_material_gltf_metallic_roughness(st->prog,
-                mat->emission, mr->base, mr->metallic, mr->roughness,
+                etype, mat->emission, mr->base, mr->metallic, mr->roughness,
                 mr->opacity,
                 txt_info(mat->emission_txt, mat->emission_txt_info),
                 txt_info(mr->base_txt, mr->base_txt_info),
@@ -667,8 +678,9 @@ inline void shade_mesh(const ygltf::mesh* msh, const ygltf::skin* sk,
                 txt_info(mat->occlusion_txt, mat->occlusion_txt_info), false,
                 mat->double_sided, cutout);
         } else {
-            yglu::stdshader::set_material_emission_only(st->prog, mat->emission,
-                1, txt_info(mat->emission_txt, mat->emission_txt_info),
+            yglu::stdshader::set_material_emission_only(st->prog, etype,
+                mat->emission, 1,
+                txt_info(mat->emission_txt, mat->emission_txt_info),
                 mat->double_sided, cutout);
         }
 
@@ -703,29 +715,29 @@ inline void shade_mesh(const ygltf::mesh* msh, const ygltf::skin* sk,
 
         yglu::enable_culling(!mat->double_sided);
 
-        yglu::stdshader::draw_points(
-            st->prog, (int)shp->points.size(), vbo.points);
-        yglu::stdshader::draw_lines(
-            st->prog, (int)shp->lines.size(), vbo.lines);
-        yglu::stdshader::draw_triangles(
-            st->prog, (int)shp->triangles.size(), vbo.triangles);
+        yglu::stdshader::draw_elems(
+            st->prog, (int)shp->points.size(), vbo.points, yglu::etype::point);
+        yglu::stdshader::draw_elems(
+            st->prog, (int)shp->lines.size(), vbo.lines, yglu::etype::line);
+        yglu::stdshader::draw_elems(st->prog, (int)shp->triangles.size(),
+            vbo.triangles, yglu::etype::triangle);
 
         yglu::enable_culling(false);
 
         if (edges && !wireframe) {
             assert(yglu::check_error());
             yglu::stdshader::set_material_emission_only(
-                st->prog, {0, 0, 0}, op, 0, true, cutout);
+                st->prog, etype, {0, 0, 0}, op, 0, true, cutout);
 
             assert(yglu::check_error());
             yglu::line_width(2);
             yglu::enable_edges(true);
-            yglu::stdshader::draw_points(
-                st->prog, (int)shp->points.size(), vbo.points);
-            yglu::stdshader::draw_lines(
-                st->prog, (int)shp->lines.size(), vbo.lines);
-            yglu::stdshader::draw_triangles(
-                st->prog, (int)shp->triangles.size(), vbo.triangles);
+            yglu::stdshader::draw_elems(st->prog, (int)shp->points.size(),
+                vbo.points, yglu::etype::point);
+            yglu::stdshader::draw_elems(
+                st->prog, (int)shp->lines.size(), vbo.lines, yglu::etype::line);
+            yglu::stdshader::draw_elems(st->prog, (int)shp->triangles.size(),
+                vbo.triangles, yglu::etype::triangle);
             yglu::enable_edges(false);
             yglu::line_width(1);
             assert(yglu::check_error());
@@ -1605,7 +1617,7 @@ inline void draw_edit_widgets(ygui::window* win, ygltf::scene_group* gscn,
         }
         if (selected_mesh) {
             for (auto node : gscn->nodes)
-                if (node->msh == selected_mesh) node->cam = nullptr;
+                if (node->msh == selected_mesh) node->msh = nullptr;
             remove(gscn->meshes, selected_mesh);
             delete selected_mesh;
             *selection = nullptr;
@@ -1873,6 +1885,8 @@ void parse_cmdline(yscene* scene, int argc, char** argv, const char* name,
     // load options
     scene->split_shapes = parse_flag(
         parser, "--split-shapes", "", "split meshes into single shapes", false);
+    scene->add_spec_gloss = parse_flag(
+        parser, "--add-spec-gloss", "", "add spec-gloss to gltf", false);
 
     // logging
     auto log_filename = parse_opts(parser, "--log", "", "log to disk", "");
