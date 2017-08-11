@@ -1269,9 +1269,9 @@ yobj::scene* make_soft_scene(
         add_instance(
             scn, "sym_cloth", add_quad(scn, "sym_cloth", mat, 6), {0, 1.5, 0});
         add_instance(
-            scn, "pin01", add_cube(scn, "pin01", pmat, 0, 0.1), {-1, 2.5, 0});
+            scn, "pin01", add_cube(scn, "pin01", pmat, 0, 0.05f), {-1, 2.5, 0});
         add_instance(
-            scn, "pin02", add_cube(scn, "pin02", pmat, 0, 0.1), {+1, 2.5, 0});
+            scn, "pin02", add_cube(scn, "pin02", pmat, 0, 0.05f), {+1, 2.5, 0});
     } else if (otype == "sym_cloth02") {
         auto mat = add_plastic(scn, "sym_cloth", {0.2f, 0.5f, 0.2f}, 0.1f);
         auto omat = add_plastic(scn, "obj", {0.2f, 0.2f, 0.2f}, 0.1f);
@@ -1285,9 +1285,9 @@ yobj::scene* make_soft_scene(
         add_instance(scn, "sym_cloth", add_quad(scn, "sym_cloth", mat, 6),
             {0.0f, 2.5f, 1}, {-90, 0, 0});
         add_instance(
-            scn, "pin01", add_cube(scn, "pin01", pmat, 0, 0.1), {-1, 2.5, 0});
+            scn, "pin01", add_cube(scn, "pin01", pmat, 0, 0.05f), {-1, 2.5, 0});
         add_instance(
-            scn, "pin02", add_cube(scn, "pin02", pmat, 0, 0.1), {+1, 2.5, 0});
+            scn, "pin02", add_cube(scn, "pin02", pmat, 0, 0.05f), {+1, 2.5, 0});
     } else if (otype == "sym_cloth04") {
         auto mat = add_plastic(scn, "sym_cloth", {0.2f, 0.5f, 0.2f}, 0.1f);
         auto pmat = add_diffuse(scn, "pin_cloth", {0.5f, 0.2f, 0.2f});
@@ -1295,9 +1295,22 @@ yobj::scene* make_soft_scene(
         add_instance(scn, "sym_cloth", add_quad(scn, "sym_cloth", mat, 6),
             {0.0f, 2.5f, 1}, {-90, 0, 0});
         add_instance(
-            scn, "pin01", add_cube(scn, "pin01", pmat, 0, 0.1), {-1, 2.5, 0});
+            scn, "pin01", add_cube(scn, "pin01", pmat, 0, 0.05f), {-1, 2.5, 0});
         add_instance(
-            scn, "pin02", add_cube(scn, "pin02", pmat, 0, 0.1), {+1, 2.5, 0});
+            scn, "pin02", add_cube(scn, "pin02", pmat, 0, 0.05f), {+1, 2.5, 0});
+        add_instance(
+            scn, "obj", add_spherecube(scn, "obj", omat, 4), {0, 1, 0});
+    } else if (otype == "sym_cloth05") {
+        auto mats = std::vector<yobj::material*>{
+            add_plastic(scn, "sym_cloth01", {0.2f, 0.5f, 0.2f}, 0.1f),
+            add_plastic(scn, "sym_cloth02", {0.2f, 0.2f, 0.5f}, 0.1f)};
+        auto omat = add_plastic(scn, "obj", {0.2f, 0.2f, 0.2f}, 0.1f);
+        add_instance(scn, "sym_cloth01",
+            add_quad(scn, "sym_cloth01", mats[0], 6), {0.0f, 2.5f, 0.10f},
+            {-90, 0, 0});
+        add_instance(scn, "sym_cloth02",
+            add_quad(scn, "sym_cloth02", mats[1], 6), {0.0f, 3.0f, 0.20f},
+            {-90, 0, 0});
         add_instance(
             scn, "obj", add_spherecube(scn, "obj", omat, 4), {0, 1, 0});
     } else if (otype == "sym_rigid01") {
@@ -1608,9 +1621,10 @@ int main(int argc, char* argv[]) {
         "instance100", "instance1600", "instance2500", "instance10000"};
 
     // sym soft scenes -------------------------
-    auto sstypes = std::vector<std::string>{"sym_points01", "sym_points02",
-        "sym_cloth01", "sym_cloth02", "sym_cloth03", "sym_cloth04",
-        "sym_rigid01", "sym_rigid02", "sym_rigid03", "sym_rigid04"};
+    auto sstypes =
+        std::vector<std::string>{"sym_points01", "sym_points02", "sym_cloth01",
+            "sym_cloth02", "sym_cloth03", "sym_cloth04", "sym_cloth05",
+            "sym_rigid01", "sym_rigid02", "sym_rigid03", "sym_rigid04"};
 
     // sym rigid scenes ------------------------
     auto srtypes =
