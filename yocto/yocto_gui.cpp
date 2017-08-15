@@ -123,11 +123,12 @@ void glfw_refresh_cb(GLFWwindow* gwin) {
 //
 // initialize glfw
 //
-window* init_window(
-    int width, int height, const std::string& title, void* user_pointer) {
+window* init_window(int width, int height, const std::string& title,
+    void* user_pointer, bool width_exclude_widgets) {
     // window
     auto win = new window();
     win->user_pointer = user_pointer;
+    if (width_exclude_widgets) width += win->widget_width;
 
     // window
     if (!glfwInit()) return nullptr;
@@ -182,8 +183,8 @@ void clear_window(window* win) {
 
 //
 // Gets the user poiner
-void* get_user_pointer(window* win) { return win->user_pointer; }
 //
+void* get_user_pointer(window* win) { return win->user_pointer; }
 
 //
 // Set window title
@@ -286,6 +287,11 @@ ym::vec2i get_framebuffer_size(window* win) {
     glfwGetFramebufferSize(win->win, &ret[0], &ret[1]);
     return ret;
 }
+
+//
+// Widgets
+//
+int get_widget_size(window* win) { return win->widget_width; }
 
 //
 // Read pixels

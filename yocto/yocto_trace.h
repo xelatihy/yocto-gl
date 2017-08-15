@@ -80,6 +80,7 @@
 ///
 /// ## History
 ///
+/// - v 0.27: debug renderers
 /// - v 0.26: thin glass material
 /// - v 0.25: added refraction (still buggy in some cases)
 /// - v 0.24: corrected transaprency bug
@@ -567,8 +568,12 @@ enum struct shader_type {
     eyelight,
     /// direct illumination
     direct,
-    /// direct illumination with ambient occlusion
-    direct_ao,
+    /// debug normal
+    debug_normal,
+    /// debug albedo
+    debug_albedo,
+    /// debug texcoord
+    debug_texcoord,
 };
 
 ///

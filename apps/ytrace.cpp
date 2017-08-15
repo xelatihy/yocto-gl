@@ -61,8 +61,6 @@ void init_draw(ygui::window* win) {
 
 void draw_image(ygui::window* win) {
     auto scn = (yscene*)ygui::get_user_pointer(win);
-    auto framebuffer_size = ygui::get_framebuffer_size(win);
-    yglu::set_viewport({0, 0, framebuffer_size[0], framebuffer_size[1]});
 
     // begin frame
     yglu::clear_buffers(scn->background);
@@ -73,9 +71,14 @@ void draw_image(ygui::window* win) {
         (float*)img.data(), false);
 
     // draw image
-    auto window_size = ygui::get_window_size(win);
-    yglu::shade_image(scn->trace_texture_id, window_size[0], window_size[1], 0,
-        0, 1, scn->tonemap, scn->exposure, scn->gamma);
+    auto ws = ygui::get_widget_size(win);
+    auto wwh = ygui::get_window_size(win);
+    auto fwh = ygui::get_framebuffer_size(win);
+    fwh.x -= (ws * fwh.x) / wwh.x;
+    wwh.x -= ws;
+    yglu::set_viewport({0, 0, fwh.x, fwh.y});
+    yglu::shade_image(scn->trace_texture_id, wwh.x, wwh.y, 0, 0, 1,
+        scn->tonemap, scn->exposure, scn->gamma);
 
     draw_widgets(win);
     ygui::swap_buffers(win);

@@ -942,6 +942,7 @@ struct point {
     int nbrdfs = 0;              // numner of brdf lobes
     brdf brdfs[8] = {};          // brdf lobes
     ym::vec3f rho = ym::zero3f;  // material brdf weight
+    ym::vec2f texcoord;          // texcoord for debugging
 
     // helpers ------------------------------
     bool no_reflectance() const { return nbrdfs == 0; }
@@ -1856,6 +1857,9 @@ static point eval_shapepoint(
         norm = ym::transform_direction(frame, ntxt);
     }
 
+    // save texcoord
+    pt.texcoord = texcoord;
+
     // creating frame
     pt.frame = ym::make_frame3_fromz(pos, norm);
 
@@ -1950,7 +1954,9 @@ static point eval_shapepoint(
             pt.brdfs[pt.nbrdfs].rho =
                 kb.xyz() * km.x + ym::vec3f{0.04f, 0.04f, 0.04f} * (1 - km.x);
             pt.brdfs[pt.nbrdfs].roughness = km.y * km.y;
-            if (pt.brdfs[pt.nbrdfs].rho != ym::zero3f) pt.nbrdfs++;
+            if (pt.brdfs[pt.nbrdfs].rho != ym::zero3f &&
+                pt.brdfs[pt.nbrdfs].roughness < 0.999f)
+                pt.nbrdfs++;
         } break;
         case reflectance_type::gltf_specular_glossiness: {
             auto kd =
@@ -2426,6 +2432,7 @@ static ym::vec3f shade_eyelight(const scene* scn, const point& pt, int bounce,
     l += eval_brdfcos(pt, pt.wo) * ym::pif;
 
     // opacity
+    if (bounce >= params.max_depth) return l;
     for (auto lid = 0; lid < pt.nbrdfs; lid++) {
         auto& brdf = pt.brdfs[lid];
         if (brdf.type == brdf_type::transparent) {
@@ -2445,6 +2452,30 @@ static ym::vec3f shade_eyelight(const scene* scn, const point& pt, int bounce,
 static ym::vec3f shade_eyelight(const scene* scn, const point& pt, sampler* smp,
     const trace_params& params) {
     return shade_eyelight(scn, pt, 0, smp, params);
+}
+
+//
+// Debug previewing.
+//
+static ym::vec3f shade_debug_normal(const scene* scn, const point& pt,
+    sampler* smp, const trace_params& params) {
+    return pt.frame.z * 0.5f + ym::vec3f{0.5f, 0.5f, 0.5f};
+}
+
+//
+// Debug previewing.
+//
+static ym::vec3f shade_debug_albedo(const scene* scn, const point& pt,
+    sampler* smp, const trace_params& params) {
+    return pt.rho;
+}
+
+//
+// Debug previewing.
+//
+static ym::vec3f shade_debug_texcoord(const scene* scn, const point& pt,
+    sampler* smp, const trace_params& params) {
+    return {pt.texcoord.x, pt.texcoord.y, 0};
 }
 
 //
@@ -2639,6 +2670,15 @@ void init_state(
         case shader_type::eyelight: state->shade = shade_eyelight; break;
         case shader_type::direct: state->shade = shade_direct; break;
         case shader_type::pathtrace: state->shade = shade_pathtrace; break;
+        case shader_type::debug_normal:
+            state->shade = shade_debug_normal;
+            break;
+        case shader_type::debug_albedo:
+            state->shade = shade_debug_albedo;
+            break;
+        case shader_type::debug_texcoord:
+            state->shade = shade_debug_texcoord;
+            break;
         default: assert(false); return;
     }
 

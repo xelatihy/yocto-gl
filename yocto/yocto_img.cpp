@@ -115,8 +115,12 @@ bool save_image4b(const std::string& filename, const ym::image4b& img) {
     if (get_extension(filename) == ".png") {
         return stbi_write_png(filename.c_str(), img.width(), img.height(), 4,
             (byte*)img.data(), img.width() * 4);
+    } else if (get_extension(filename) == ".jpg") {
+        return stbi_write_jpg(filename.c_str(), img.width(), img.height(), 4,
+            (byte*)img.data(), 75);
+    } else {
+        return false;
     }
-    return false;
 }
 
 //
@@ -126,12 +130,12 @@ bool save_image4f(const std::string& filename, const ym::image4f& img) {
     if (get_extension(filename) == ".hdr") {
         return stbi_write_hdr(
             filename.c_str(), img.width(), img.height(), 4, (float*)img.data());
-    }
-    if (get_extension(filename) == ".exr") {
+    } else if (get_extension(filename) == ".exr") {
         return !SaveEXR(
             (float*)img.data(), img.width(), img.height(), 4, filename.c_str());
+    } else {
+        return false;
     }
-    return false;
 }
 
 //
@@ -191,8 +195,9 @@ bool save_imagef(const std::string& filename, int width, int height, int ncomp,
     const float* hdr) {
     if (get_extension(filename) == ".hdr") {
         return stbi_write_hdr(filename.c_str(), width, height, ncomp, hdr);
-    } else
+    } else {
         return false;
+    }
 }
 
 //
@@ -203,8 +208,11 @@ bool save_image(const std::string& filename, int width, int height, int ncomp,
     if (get_extension(filename) == ".png") {
         return stbi_write_png(
             filename.c_str(), width, height, ncomp, ldr, width * ncomp);
-    } else
+    } else if (get_extension(filename) == ".jpg") {
+        return stbi_write_jpg(filename.c_str(), width, height, ncomp, ldr, 75);
+    } else {
         return false;
+    }
 }
 
 static const auto filter_map = std::map<resize_filter, stbir_filter>{

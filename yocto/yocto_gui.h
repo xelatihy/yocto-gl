@@ -13,6 +13,7 @@
 ///
 /// ## History
 ///
+/// - v 0.4: widget size
 /// - v 0.3: changed image widget sizing
 /// - v 0.2: added widgets explicit IDs
 /// - v 0.1: added more widgets
@@ -86,12 +87,12 @@ typedef void (*refresh_callback)(window*);
 /// initialize glfw
 ///
 window* init_window(int width, int height, const std::string& title,
-    void* user_pointer = nullptr);
+    void* user_pointer = nullptr, bool width_exclude_widgets = false);
 
 ///
 /// Clear glfw
 ///
-void clear_window(window* window);
+void clear_window(window* win);
 
 ///
 /// initialize glfw
@@ -127,37 +128,42 @@ bool should_close(window* win);
 ///
 /// User pointer
 ///
-void* get_user_pointer(window* window);
+void* get_user_pointer(window* win);
 
 ///
 /// Mouse button
 ///
-int get_mouse_button(window* window);
+int get_mouse_button(window* win);
 
 ///
 /// Mouse position
 ///
-ym::vec2i get_mouse_posi(window* window);
+ym::vec2i get_mouse_posi(window* win);
 
 ///
 /// Mouse position
 ///
-ym::vec2f get_mouse_posf(window* window);
+ym::vec2f get_mouse_posf(window* win);
 
 ///
 /// Window size
 ///
-ym::vec2i get_window_size(window* window);
+ym::vec2i get_window_size(window* win);
 
 ///
 /// Check if a key is pressed (not all keys are supported)
 ///
-bool get_key(window* window, int key);
+bool get_key(window* win, int key);
 
 ///
 /// Framebuffer size
 ///
-ym::vec2i get_framebuffer_size(window* window);
+ym::vec2i get_framebuffer_size(window* win);
+
+///
+/// Widgets
+///
+int get_widget_size(window* win);
 
 ///
 /// Read pixels

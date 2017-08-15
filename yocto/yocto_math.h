@@ -34,6 +34,8 @@
 ///
 /// ## History
 ///
+/// - v 0.25: geodesic sphere and surface faceting
+/// - v 0.24: tesselation function
 /// - v 0.23: more camera navigation
 /// - v 0.22: removed image lookup with arbitrary channels
 /// - v 0.21: added more functions
@@ -105,6 +107,7 @@ namespace ym {}
 #include <functional>
 #include <initializer_list>
 #include <limits>
+#include <unordered_map>
 #include <vector>
 
 // HACK to avoid compilation with MSVC2015 and C++11 without dirtying code
@@ -1246,6 +1249,22 @@ constexpr inline vec<float, N> byte_to_float(const vec<byte, N>& a) {
     for (auto i = 0; i < N; i++) c[i] = byte_to_float(a[i]);
     return c;
 }
+
+/// Hash functor for vec<T,N> for use with std::unordered_map
+template <typename T, int N>
+struct vec_hash {
+    // from boost::hash_combine
+    constexpr static size_t hash_combine(size_t h, size_t h1) {
+        h ^= h1 + 0x9e3779b9 + (h << 6) + (h >> 2);
+        return h;
+    }
+    constexpr size_t operator()(const vec<T, N>& v) const {
+        auto hash = std::hash<T>();
+        auto h = (size_t)0;
+        for (auto i = 0; i < N; i++) h = hash_combine(h, hash(v[i]));
+        return h;
+    }
+};
 
 // -----------------------------------------------------------------------------
 // MATRICES
@@ -3372,7 +3391,7 @@ constexpr inline uint32_t hash_uint64_32(uint64_t a) {
 }
 
 /// Combines two 64 bit hashes as in boost::hash_combine
-constexpr inline int hash_combine(int a, int b) {
+constexpr inline size_t hash_combine(size_t a, size_t b) {
     return a ^ (b + 0x9e3779b9 + (a << 6) + (a >> 2));
 }
 
@@ -3390,6 +3409,19 @@ constexpr inline int hash_vec(const vec<T, N>& v) {
 // -----------------------------------------------------------------------------
 // GEOMETRY UTILITIES
 // -----------------------------------------------------------------------------
+
+/// line tangent
+template <typename T>
+constexpr inline vec<T, 3> line_tangent(
+    const vec<T, 3>& v0, const vec<T, 3>& v1) {
+    return normalize(v1 - v0);
+}
+
+/// line length
+template <typename T>
+constexpr inline T line_length(const vec<T, 3>& v0, const vec<T, 3>& v1) {
+    return length(v1 - v0);
+}
 
 /// triangle normal
 template <typename T>
@@ -3711,6 +3743,88 @@ inline void compute_matrix_skinning(const std::vector<vec3f>& pos,
 }
 
 ///
+/// Tesselate a line and triangle list by splitting edges.
+/// For lines, this gives two output segments for each input segment.
+/// For triangles, this gives four output triangles for each input triangle.
+/// Stores vertex elements contigously so it not efficient for accesses but does
+/// not alter elements when editing. Also not as efficient for line-only
+/// splitting.
+///
+inline void tesselate_by_edge_split(std::vector<vec2i>& lines,
+    std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
+    std::vector<vec4f>& color, std::vector<float>& radius,
+    bool normalize_normals = true) {
+    auto edges = std::vector<vec2i>();
+    auto edge_map = std::unordered_map<vec2i, int, vec_hash<int, 2>>();
+
+    auto add_edge = [&edges, &edge_map](const vec2i& e) {
+        auto ee = vec2i{min(e.x, e.y), max(e.x, e.y)};
+        if (edge_map.find(ee) != edge_map.end()) return;
+        edge_map[ee] = (int)edges.size();
+        edges.push_back(ee);
+    };
+
+    auto edge_id = [&edge_map](const vec2i& e) {
+        return edge_map.at({min(e.x, e.y), max(e.x, e.y)});
+    };
+
+    for (auto l : lines) add_edge(l);
+    for (auto t : triangles) {
+        add_edge({t.x, t.y});
+        add_edge({t.y, t.z});
+        add_edge({t.z, t.x});
+    }
+
+    auto nverts = (int)pos.size();
+    auto nedges = (int)edges.size();
+
+    if (!pos.empty()) pos.resize(pos.size() + nedges);
+    if (!norm.empty()) norm.resize(norm.size() + nedges);
+    if (!texcoord.empty()) texcoord.resize(texcoord.size() + nedges);
+    if (!color.empty()) color.resize(color.size() + nedges);
+    if (!radius.empty()) radius.resize(radius.size() + nedges);
+
+    for (auto eid = 0; eid < nedges; eid++) {
+        auto e = edges[eid];
+        if (!pos.empty()) pos[nverts + eid] = (pos[e.x] + pos[e.y]) / 2.0f;
+        if (!norm.empty()) norm[nverts + eid] = (norm[e.x] + norm[e.y]) / 2.0f;
+        if (!texcoord.empty())
+            texcoord[nverts + eid] = (texcoord[e.x] + texcoord[e.y]) / 2.0f;
+        if (!color.empty())
+            color[nverts + eid] = (color[e.x] + color[e.y]) / 2.0f;
+        if (!radius.empty())
+            radius[nverts + eid] = (radius[e.x] + radius[e.y]) / 2.0f;
+    }
+
+    if (normalize_normals) {
+        for (auto& n : norm) n = normalize(n);
+    }
+
+    auto nlines = std::vector<vec2i>();
+    nlines.reserve(lines.size() * 2);
+    for (auto l : lines) {
+        nlines.push_back({l.x, nverts + edge_id(l)});
+        nlines.push_back({nverts + edge_id(l), l.y});
+    }
+    std::swap(lines, nlines);
+
+    auto ntriangles = std::vector<vec3i>();
+    ntriangles.reserve(triangles.size() * 4);
+    for (auto t : triangles) {
+        ntriangles.push_back(
+            {t.x, nverts + edge_id({t.x, t.y}), nverts + edge_id({t.z, t.x})});
+        ntriangles.push_back(
+            {t.y, nverts + edge_id({t.y, t.z}), nverts + edge_id({t.x, t.y})});
+        ntriangles.push_back(
+            {t.z, nverts + edge_id({t.z, t.x}), nverts + edge_id({t.y, t.z})});
+        ntriangles.push_back({nverts + edge_id({t.x, t.y}),
+            nverts + edge_id({t.y, t.z}), nverts + edge_id({t.z, t.x})});
+    }
+    std::swap(triangles, ntriangles);
+}
+
+///
 /// Generate a parametric surface with callbacks.
 ///
 /// Parameters:
@@ -3854,6 +3968,57 @@ inline void merge_triangles(std::vector<vec3i>& triangles,
     for (auto p : mpos) pos.push_back(p);
     for (auto n : mnorm) norm.push_back(n);
     for (auto t : mtexcoord) texcoord.push_back(t);
+}
+
+///
+/// Unshare shape data by duplicating all vertex data for each element,
+/// giving a faceted look.
+///
+inline void facet_mesh(std::vector<vec2i>& lines, std::vector<vec3i>& triangles,
+    std::vector<vec3f>& pos, std::vector<vec3f>& norm,
+    std::vector<vec2f>& texcoord, std::vector<vec4f>& color,
+    std::vector<float>& radius) {
+    auto npos = std::vector<vec3f>();
+    auto nnorm = std::vector<vec3f>();
+    auto ntexcoord = std::vector<vec2f>();
+    auto ncolor = std::vector<vec4f>();
+    auto nradius = std::vector<float>();
+
+    auto nlines = std::vector<vec2i>();
+    auto ntriangles = std::vector<vec3i>();
+
+    for (auto l : lines) {
+        nlines.push_back({(int)npos.size(), (int)npos.size() + 1});
+        for (auto v : l) {
+            if (!pos.empty()) npos.push_back(pos[v]);
+            if (!norm.empty())
+                nnorm.push_back(line_tangent(pos[l.x], pos[l.y]));
+            if (!texcoord.empty()) ntexcoord.push_back(texcoord[v]);
+            if (!color.empty()) ncolor.push_back(color[v]);
+            if (!radius.empty()) nradius.push_back(radius[v]);
+        }
+    }
+
+    for (auto t : triangles) {
+        ntriangles.push_back(
+            {(int)npos.size(), (int)npos.size() + 1, (int)npos.size() + 2});
+        for (auto v : t) {
+            if (!pos.empty()) npos.push_back(pos[v]);
+            if (!norm.empty())
+                nnorm.push_back(triangle_normal(pos[t.x], pos[t.y], pos[t.z]));
+            if (!texcoord.empty()) ntexcoord.push_back(texcoord[v]);
+            if (!color.empty()) ncolor.push_back(color[v]);
+            if (!radius.empty()) nradius.push_back(radius[v]);
+        }
+    }
+
+    std::swap(pos, npos);
+    std::swap(norm, nnorm);
+    std::swap(texcoord, ntexcoord);
+    std::swap(color, ncolor);
+    std::swap(radius, nradius);
+    std::swap(lines, nlines);
+    std::swap(triangles, ntriangles);
 }
 
 // -----------------------------------------------------------------------------
@@ -4007,6 +4172,34 @@ inline void make_uvsphere(int usteps, int vsteps, std::vector<vec3i>& triangles,
             return vec3f{cos(a.x) * sin(a.y), sin(a.x) * sin(a.y), cos(a.y)};
         },
         [](const vec2f& uv) { return uv; });
+}
+
+///
+/// Make a geodesic sphere.
+///
+inline void make_geodesicsphere(int level, std::vector<vec3i>& triangles,
+    std::vector<vec3f>& pos, std::vector<vec3f>& norm) {
+    // https://stackoverflow.com/questions/17705621/algorithm-for-a-geodesic-sphere
+    const float X = 0.525731112119133606f;
+    const float Z = 0.850650808352039932f;
+    pos = {{-X, 0.0, Z}, {X, 0.0, Z}, {-X, 0.0, -Z}, {X, 0.0, -Z}, {0.0, Z, X},
+        {0.0, Z, -X}, {0.0, -Z, X}, {0.0, -Z, -X}, {Z, X, 0.0}, {-Z, X, 0.0},
+        {Z, -X, 0.0}, {-Z, -X, 0.0}};
+    triangles = {{0, 1, 4}, {0, 4, 9}, {9, 4, 5}, {4, 8, 5}, {4, 1, 8},
+        {8, 1, 10}, {8, 10, 3}, {5, 8, 3}, {5, 3, 2}, {2, 3, 7}, {7, 3, 10},
+        {7, 10, 6}, {7, 6, 11}, {11, 6, 0}, {0, 6, 1}, {6, 10, 1}, {9, 11, 0},
+        {9, 2, 11}, {9, 5, 2}, {7, 11, 2}};
+    norm = pos;
+    std::vector<vec2i> _aux0;
+    std::vector<vec2f> _aux1;
+    std::vector<vec4f> _aux2;
+    std::vector<float> _aux3;
+    for (auto l = 0; l < level - 2; l++) {
+        tesselate_by_edge_split(
+            _aux0, triangles, pos, norm, _aux1, _aux2, _aux3, false);
+    }
+    for (auto& p : pos) p = normalize(p);
+    for (auto& n : norm) n = normalize(n);
 }
 
 ///
@@ -4382,8 +4575,9 @@ inline bool intersect_triangle(const ray3f& ray, const vec3f& v0,
 }
 
 ///
-/// Intersect a ray with a tetrahedron. Note that we consider only intersection
-/// wiht the tetrahedra surface and discount intersction with the interior.
+/// Intersect a ray with a tetrahedron. Note that we consider only
+/// intersection wiht the tetrahedra surface and discount intersction with
+/// the interior.
 ///
 /// Parameters:
 /// - ray: ray to intersect with
@@ -4464,16 +4658,16 @@ inline bool intersect_check_bbox(const ray3f& ray, const bbox3f& bbox) {
 }
 
 ///
-/// Min/max used in BVH traversal. Copied here since the traversal code relies
-/// on the specific behaviour wrt NaNs.
+/// Min/max used in BVH traversal. Copied here since the traversal code
+/// relies on the specific behaviour wrt NaNs.
 ///
 template <typename T>
 static inline const T& _safemin(const T& a, const T& b) {
     return (a < b) ? a : b;
 }
 ///
-/// Min/max used in BVH traversal. Copied here since the traversal code relies
-/// on the specific behaviour wrt NaNs.
+/// Min/max used in BVH traversal. Copied here since the traversal code
+/// relies on the specific behaviour wrt NaNs.
 ///
 template <typename T>
 static inline const T& _safemax(const T& a, const T& b) {
@@ -4530,7 +4724,8 @@ inline vec2f closestuv_line(
     const vec3f& pos, const vec3f& v0, const vec3f& v1) {
     auto ab = v1 - v0;
     auto d = dot(ab, ab);
-    // Project c onto ab, computing parameterized position d(t) = a + t*(b – a)
+    // Project c onto ab, computing parameterized position d(t) = a + t*(b –
+    // a)
     auto u = dot(pos - v0, ab) / d;
     u = clamp(u, (float)0, (float)1);
     return {1 - u, u};
@@ -4724,7 +4919,8 @@ inline bbox3f tetrahedron_bbox(
 // UI UTILITIES
 // -----------------------------------------------------------------------------
 
-/// Turntable for UI navigation from a from/to/up parametrization of the camera.
+/// Turntable for UI navigation from a from/to/up parametrization of the
+/// camera.
 constexpr inline void camera_turntable(vec3f& from, vec3f& to, vec3f& up,
     const vec3f& rotate, float dolly, const vec3f& pan) {
     // rotate if necessary
@@ -5197,6 +5393,23 @@ inline image<vec4f> make_gammaramp_imagef(int size) {
             if (i < s / 3) u = pow(u, 2.2f);
             if (i > (s * 2) / 3) u = pow(u, 1 / 2.2f);
             pixels.at(i, j) = {u, u, u, 1};
+        }
+    }
+    return pixels;
+}
+
+///
+/// Make an image color with red/green in the [0,1] range. Helpful to visualize
+/// uv texture coordinate application.
+///
+inline image<vec4b> make_uv_image(int size) {
+    auto s = size;
+    image<vec4b> pixels(s, s);
+    for (int j = 0; j < s; j++) {
+        for (int i = 0; i < s; i++) {
+            auto r = float_to_byte(i / (float)(s - 1));
+            auto g = float_to_byte(j / (float)(s - 1));
+            pixels.at(i, j) = vec4b{r, g, 0, 255};
         }
     }
     return pixels;

@@ -2985,6 +2985,10 @@ scene_group* gltf_to_scenes(const glTF* gltf, int scene_idx) {
                     prim->skin_joints.reserve(vals.size());
                     for (auto i = 0; i < vals.size(); i++)
                         prim->skin_joints.push_back(vals.getiv<4>(i));
+                } else if (semantic == "RADIUS") {
+                    prim->radius.reserve(vals.size());
+                    for (auto i = 0; i < vals.size(); i++)
+                        prim->radius.push_back(vals.get(i, 0));
                 } else {
                     // ignore
                 }
@@ -3629,6 +3633,11 @@ glTF* scenes_to_gltf(const scene_group* scns, const std::string& buffer_uri,
                     (int)joints_short.size(), sizeof(ushort) * 4,
                     joints_short.data(), false);
             }
+            if (!gprim->radius.empty())
+                prim->attributes["RADIUS"] = add_accessor(gbuffer,
+                    pid + "_radius", glTFAccessorType::Scalar,
+                    glTFAccessorComponentType::Float, (int)gprim->radius.size(),
+                    sizeof(float), gprim->radius.data(), false);
             // auto elem_as_uint = gprim->pos.size() >
             // std::numeric_limits<unsigned short>::max();
             if (!gprim->points.empty()) {

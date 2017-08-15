@@ -165,7 +165,7 @@ void line_width(float w) {
 //
 void set_viewport(const ym::vec4i& v) {
     assert(check_error());
-    glViewport(v[0], v[1], v[2], v[3]);
+    glViewport(v.x, v.y, v.z, v.w);
     assert(check_error());
 }
 
