@@ -465,7 +465,6 @@ inline void shade_scene(const yobj::scene* sc, yshade_state* st,
     // begin frame
     yglu::enable_depth_test(true);
     yglu::enable_culling(false);
-    yglu::clear_buffers();
 
     yglu::enable_wireframe(wireframe);
 
@@ -761,7 +760,6 @@ inline void shade_scene(const ygltf::scene_group* scns, yshade_state* st,
     // begin frame
     yglu::enable_depth_test(true);
     yglu::enable_culling(false);
-    yglu::clear_buffers();
 
     yglu::enable_wireframe(wireframe);
 
@@ -840,14 +838,14 @@ void save_screenshot(ygui::window* win, const std::string& imfilename) {
 
     auto wh = ym::vec2i{0, 0};
     auto pixels = ygui::get_screenshot(win, wh);
-    yimg::save_image(
-        imfilename, wh[0], wh[1], 4, (unsigned char*)pixels.data());
+    yimg::save_image(imfilename, wh.x, wh.y, 4, (unsigned char*)pixels.data());
 }
 
 void draw_scene(ygui::window* win) {
     auto scn = (yscene*)ygui::get_user_pointer(win);
     auto window_size = ygui::get_window_size(win);
-    auto aspect = (float)window_size[0] / (float)window_size[1];
+    window_size.x -= ygui::get_widget_size(win);
+    auto aspect = (float)window_size.x / (float)window_size.y;
     scn->view_cam->aspect = aspect;
     if (scn->ocam) scn->ocam->aspect = aspect;
     if (scn->gcam) scn->gcam->cam->aspect = aspect;
@@ -1686,8 +1684,10 @@ void draw_widgets(ygui::window* win) {
         std::vector<std::pair<std::string, ytrace::shader_type>>{
             {"eye", ytrace::shader_type::eyelight},
             {"direct", ytrace::shader_type::direct},
-            {"direct_ao", ytrace::shader_type::direct_ao},
-            {"path", ytrace::shader_type::pathtrace}};
+            {"path", ytrace::shader_type::pathtrace},
+            {"normal", ytrace::shader_type::debug_normal},
+            {"albedo", ytrace::shader_type::debug_albedo},
+            {"texcoord", ytrace::shader_type::debug_texcoord}};
     static auto ftype_names =
         std::vector<std::pair<std::string, ytrace::filter_type>>{
             {"box", ytrace::filter_type::box},
@@ -1718,7 +1718,7 @@ void draw_widgets(ygui::window* win) {
             ygui::label_widget(
                 win, "s", ytrace::get_cur_sample(scn->trace_state));
             ygui::slider_widget(
-                win, "samples", &scn->trace_params.nsamples, 0, 1000000, 1);
+                win, "samples", &scn->trace_params.nsamples, 1, 4096, 1);
             if (ygui::combo_widget(
                     win, "shader type", &scn->trace_params.stype, stype_names))
                 scn->scene_updated = true;
@@ -1808,7 +1808,10 @@ void parse_cmdline(yscene* scene, int argc, char** argv, const char* name,
             {"path", ytrace::shader_type::pathtrace},
             {"eye", ytrace::shader_type::eyelight},
             {"direct", ytrace::shader_type::direct},
-            {"direct_ao", ytrace::shader_type::direct_ao}};
+            {"normal", ytrace::shader_type::debug_normal},
+            {"albedo", ytrace::shader_type::debug_albedo},
+            {"texcoord", ytrace::shader_type::debug_texcoord},
+        };
     static auto tmtype_names =
         std::vector<std::pair<std::string, ym::tonemap_type>>{
             {"none", ym::tonemap_type::none}, {"srgb", ym::tonemap_type::srgb},
@@ -1869,7 +1872,7 @@ void parse_cmdline(yscene* scene, int argc, char** argv, const char* name,
     scene->tonemap = parse_opte(parser, "--tonemap", "-t", "hdr tonemap output",
         ym::tonemap_type::srgb, tmtype_names);
     scene->resolution =
-        parse_opti(parser, "--resolution", "-r", "image resolution", 720);
+        parse_opti(parser, "--resolution", "-r", "image resolution", 540);
 
     auto amb = parse_optf(parser, "--ambient", "", "ambient factor", 0);
 
@@ -1938,6 +1941,13 @@ void shade_draw(ygui::window* win) {
         ygltf::update_animated_transforms(scn->gscn, scn->time);
         ygltf::update_transforms(scn->gscn);
     }
+
+    auto wwh = ygui::get_window_size(win);
+    auto fwh = ygui::get_framebuffer_size(win);
+    fwh.x -= (ygui::get_widget_size(win) * fwh.x) / wwh.x;
+    yglu::set_viewport({0, 0, fwh.x, fwh.y});
+
+    yglu::clear_buffers();
     draw_scene(win);
     draw_widgets(win);
     ygui::swap_buffers(win);
@@ -1950,7 +1960,7 @@ void shade_draw(ygui::window* win) {
 void run_ui(yscene* scn, int w, int h, const std::string& title, init_fn init,
     draw_fn draw, update_fn update) {
     // window
-    auto win = ygui::init_window(w, h, title, scn);
+    auto win = ygui::init_window(w, h, title, scn, true);
     ygui::set_callbacks(win, nullptr, nullptr, draw);
 
     // window values

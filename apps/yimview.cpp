@@ -151,8 +151,6 @@ void text_callback(ygui::window* win, unsigned int key) {
 
 void draw_image(ygui::window* win) {
     auto pars = (params*)get_user_pointer(win);
-    auto framebuffer_size = get_framebuffer_size(win);
-    yglu::set_viewport({0, 0, framebuffer_size[0], framebuffer_size[1]});
 
     auto& img = pars->imgs[pars->cur_img];
 
@@ -161,10 +159,14 @@ void draw_image(ygui::window* win) {
         {pars->background, pars->background, pars->background, 0});
 
     // draw image
-    auto window_size = get_window_size(win);
-    yglu::shade_image(img.tex_glid, window_size[0], window_size[1],
-        pars->offset[0], pars->offset[1], pars->zoom, pars->tonemap,
-        pars->exposure, pars->gamma);
+    auto ws = ygui::get_widget_size(win);
+    auto wwh = ygui::get_window_size(win);
+    auto fwh = ygui::get_framebuffer_size(win);
+    fwh.x -= (ws * fwh.x) / wwh.x;
+    wwh.x -= ws;
+    yglu::set_viewport({0, 0, fwh.x, fwh.y});
+    yglu::shade_image(img.tex_glid, wwh.x, wwh.y, pars->offset.x,
+        pars->offset.y, pars->zoom, pars->tonemap, pars->exposure, pars->gamma);
 }
 
 template <typename T>
@@ -202,6 +204,10 @@ void draw_widgets(ygui::window* win) {
             slider_widget(win, "exposure", &pars->exposure, -20, 20, 1);
             slider_widget(win, "gamma", &pars->gamma, 0.1, 5, 0.1);
         }
+        auto offset = ym::vec2i{(int)pars->offset.x, (int)pars->offset.y};
+        slider_widget(win, "offset", &offset, -100, 100, 1);
+        pars->offset = ym::vec2f{(float)offset.x, (float)offset.y};
+        slider_widget(win, "zoom", &pars->zoom, 0.01, 10, 0.1);
         auto xy = (mouse_pos - pars->offset) / pars->zoom;
         auto ij = ym::vec2i{(int)round(xy[0]), (int)round(xy[1])};
         auto inside = ij[0] >= 0 && ij[1] >= 0 && ij[0] < img.width() &&
