@@ -2627,7 +2627,9 @@ struct ray {
 
     /// default constructor
     constexpr ray()
-        : o(), d(0, 0, 1), tmin(0), tmax(std::numeric_limits<T>::max()) {}
+        : o(), d(), tmin(0), tmax(std::numeric_limits<T>::max()) {
+		d[N-1] = 1;
+	}
     /// initializes a ray from its elements
     constexpr ray(const vec<T, N>& o, const vec<T, N>& d, T tmin = 0,
         T tmax = std::numeric_limits<T>::max())
