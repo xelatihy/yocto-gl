@@ -2220,9 +2220,8 @@ bool save_binary_gltf(const std::string& filename, const glTF* gltf,
 
     // fix string
     auto js_str = js.dump(2);
-    if (js_str.length() % 4) {
-        auto count = js_str.length() % 4;
-        for (auto c = 0; c < count; c++) js_str += " ";
+    while (js_str.length() % 4) {
+        js_str += " ";
     }
     uint32_t json_length = (uint32_t)js_str.size();
 
