@@ -1,0 +1,16 @@
+{
+    "$schema": "http://json-schema.org/draft-04/schema",
+    "name": "glTFProperty",
+    "type": "object",
+    "description": "Generic glTF object",
+    "properties": {
+        "extensions": {
+            "type": "map<string, json>",
+            "description": "Extensions."
+        },
+        "extras": {
+            "type": "json",
+            "description": "Extra data."
+        }
+    }
+}
