@@ -26,234 +26,159 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "../yocto/yocto_glu.h"
-#include "../yocto/yocto_gui.h"
-#include "../yocto/yocto_img.h"
-#include "../yocto/yocto_math.h"
-#include "../yocto/yocto_utils.h"
+#define YGL_OPENGL 1
+#include "../yocto/yocto_gl.h"
+using namespace ygl;
 
-using yu::logging::log_fatal;
+/// Generic image that contains either an HDR or an LDR image, giving access
+/// to both. This is helpful when writing viewers or generic image
+/// manipulation code
+struct gimage {
+    /// image path
+    string filename;
+    /// HDR image content
+    image4f hdr;
+    /// LDR image content
+    image4b ldr;
 
-struct yimage {
-    // image path
-    std::string filename;
+    /// Check if the image is valid
+    operator bool() const { return hdr || ldr; }
 
-    // original image data size
+    /// image width
     int width() const {
         if (hdr) return hdr.width();
         if (ldr) return ldr.width();
         return 0;
     }
+
+    /// image height
     int height() const {
         if (hdr) return hdr.height();
         if (ldr) return ldr.height();
         return 0;
     }
 
-    // pixel data
-    ym::image<ym::vec4f> hdr;
-    ym::image<ym::vec4b> ldr;
+    /// access to pixel values
+    vec4f& at4f(const vec2i& ij) { return hdr.at(ij); }
+    /// access to pixel values
+    const vec4f& at4f(const vec2i& ij) const { return hdr.at(ij); }
+    /// access to pixel values
+    vec4b& at4b(const vec2i& ij) { return ldr.at(ij); }
+    /// access to pixel values
+    const vec4b& at4b(const vec2i& ij) const { return ldr.at(ij); }
 
-    // opengl texture
-    yglu::uint tex_glid = 0;
+    /// guarded access to pixel values
+    vec4f lookup4f(const vec2i& ij, const vec4f& def = zero4f) const {
+        if (ij.x < 0 || ij.x >= width() || ij.y < 0 || ij.y > height())
+            return def;
+        if (hdr) return hdr.at(ij);
+        if (ldr) return srgb_to_linear(ldr.at(ij));
+        return def;
+    }
+    /// guarded access to pixel values
+    vec4b lookup4b(const vec2i& ij, const vec4b& def = zero4b) const {
+        if (ij.x < 0 || ij.x >= width() || ij.y < 0 || ij.y > height())
+            return def;
+        if (ldr) return ldr.at(ij);
+        if (hdr) return linear_to_srgb(hdr.at(ij));
+        return def;
+    }
 };
 
-struct params {
-    std::vector<std::string> filenames;
-    std::vector<yimage> imgs;
+/// Loads a generic image
+inline gimage load_gimage(const string& filename) {
+    auto img = gimage();
+    img.filename = filename;
+    if (is_hdr_filename(filename)) {
+        img.hdr = load_image4f(filename);
+    } else {
+        img.ldr = load_image4b(filename);
+    }
+    if (!img) { throw runtime_error("cannot load image " + img.filename); }
+    return img;
+}
+
+struct app_state {
+    vector<gimage*> imgs;
+    int cur_img = 0;
 
     float exposure = 0;
     float gamma = 1;
-    ym::tonemap_type tonemap = ym::tonemap_type::gamma;
+    bool filmic = false;
 
-    int cur_img = 0;
-    int cur_background = 0;
     float zoom = 1;
-    ym::vec2f offset = ym::vec2f();
+    vec2f offset = vec2f();
 
     float background = 0;
 
-    void* widget_ctx = nullptr;
+    gl_stdimage_program gl_prog = {};
+    unordered_map<gimage*, gl_texture> gl_txt = {};
+
+    ~app_state() {
+        for (auto v : imgs) delete v;
+    }
 };
 
-bool load_images(params* pars) {
-    for (auto filename : pars->filenames) {
-        pars->imgs.push_back(yimage());
-        auto& img = pars->imgs.back();
-        img.filename = filename;
-        if (yimg::is_hdr_filename(filename)) {
-            img.hdr = yimg::load_image4f(filename);
-        } else {
-            img.ldr = yimg::load_image4b(filename);
-        }
-        if (!img.hdr && !img.ldr) {
-            log_fatal("cannot load image %s\n", img.filename.c_str());
-        }
-        img.tex_glid = 0;
-    }
-    return true;
-}
+void draw(gl_window* win) {
+    auto app = (app_state*)get_user_pointer(win);
+    auto img = app->imgs[app->cur_img];
+    gl_clear_buffers({app->background, app->background, app->background, 0});
+    auto window_size = get_window_size(win);
+    auto framebuffer_size = get_framebuffer_size(win);
+    gl_set_viewport(framebuffer_size);
+    draw_image(app->gl_prog, app->gl_txt.at(img), window_size, app->offset,
+        app->zoom, app->exposure, app->gamma, app->filmic);
 
-void parse_cmdline(params* pars, int argc, char** argv) {
-    static auto tmtype_names = std::vector<std::pair<std::string, int>>{
-        {"none", (int)ym::tonemap_type::none},
-        {"srgb", (int)ym::tonemap_type::srgb},
-        {"gamma", (int)ym::tonemap_type::gamma},
-        {"filmic", (int)ym::tonemap_type::filmic}};
-
-    auto parser =
-        yu::cmdline::make_parser(argc, argv, "yimview", "view images");
-    pars->exposure =
-        parse_optf(parser, "--exposure", "-e", "hdr image exposure", 0);
-    pars->gamma = parse_optf(parser, "--gamma", "-g", "hdr image gamma", 2.2f);
-    pars->tonemap = (ym::tonemap_type)parse_opte(parser, "--tonemap", "-t",
-        "hdr image tonemap", (int)ym::tonemap_type::srgb, tmtype_names);
-    pars->filenames = parse_argas(parser, "image", "image filename", {}, true);
-
-    // done
-    check_parser(parser);
-}
-
-void text_callback(ygui::window* win, unsigned int key) {
-    auto pars = (params*)get_user_pointer(win);
-    switch (key) {
-        case ' ':
-        case '.':
-            pars->cur_img = (pars->cur_img + 1) % pars->imgs.size();
-            break;
-        case ',':
-            pars->cur_img = (pars->cur_img - 1 + (int)pars->imgs.size()) %
-                            pars->imgs.size();
-            break;
-        case '-':
-        case '_': pars->zoom /= 2; break;
-        case '+':
-        case '=': pars->zoom *= 2; break;
-        case '[': pars->exposure -= 1; break;
-        case ']': pars->exposure += 1; break;
-        case '{': pars->gamma -= 0.1f; break;
-        case '}': pars->gamma += 0.1f; break;
-        case '1':
-            pars->exposure = 0;
-            pars->gamma = 1;
-            break;
-        case '2':
-            pars->exposure = 0;
-            pars->gamma = 2.2f;
-            break;
-        case 'z': pars->zoom = 1; break;
-        case 'h':
-            // TODO: hud
-            break;
-        default: log_fatal("unsupported key\n"); break;
-    }
-}
-
-void draw_image(ygui::window* win) {
-    auto pars = (params*)get_user_pointer(win);
-
-    auto& img = pars->imgs[pars->cur_img];
-
-    // begin frame
-    yglu::clear_buffers(
-        {pars->background, pars->background, pars->background, 0});
-
-    // draw image
-    auto ws = ygui::get_widget_size(win);
-    auto wwh = ygui::get_window_size(win);
-    auto fwh = ygui::get_framebuffer_size(win);
-    fwh.x -= (ws * fwh.x) / wwh.x;
-    wwh.x -= ws;
-    yglu::set_viewport({0, 0, fwh.x, fwh.y});
-    yglu::shade_image(img.tex_glid, wwh.x, wwh.y, pars->offset.x,
-        pars->offset.y, pars->zoom, pars->tonemap, pars->exposure, pars->gamma);
-}
-
-template <typename T>
-ym::vec<T, 4> lookup_image(
-    int w, int h, int nc, const T* pixels, int x, int y, T one) {
-    if (x < 0 || y < 0 || x > w - 1 || y > h - 1) return {0, 0, 0, 0};
-    auto v = ym::vec<T, 4>{0, 0, 0, 0};
-    auto vv = pixels + ((w * y) + x) * nc;
-    switch (nc) {
-        case 1: v = {vv[0], 0, 0, one}; break;
-        case 2: v = {vv[0], vv[1], 0, one}; break;
-        case 3: v = {vv[0], vv[1], vv[2], one}; break;
-        case 4: v = {vv[0], vv[1], vv[2], vv[3]}; break;
-        default: assert(false);
-    }
-    return v;
-}
-
-void draw_widgets(ygui::window* win) {
-    static auto tmtype_names = std::vector<std::pair<std::string, int>>{
-        {"none", (int)ym::tonemap_type::none},
-        {"srgb", (int)ym::tonemap_type::srgb},
-        {"gamma", (int)ym::tonemap_type::gamma},
-        {"filmic", (int)ym::tonemap_type::filmic}};
-
-    auto pars = (params*)get_user_pointer(win);
-    auto& img = pars->imgs[pars->cur_img];
-    auto mouse_pos = (ym::vec2f)get_mouse_posf(win);
+    auto mouse_pos = (vec2f)get_mouse_posf(win);
     if (begin_widgets(win, "yimview")) {
-        label_widget(win, "filename", img.filename);
-        label_widget(win, "w", img.width());
-        label_widget(win, "h", img.height());
-        if (img.hdr) {
-            combo_widget(win, "tonemap", (int*)&pars->tonemap, tmtype_names);
-            slider_widget(win, "exposure", &pars->exposure, -20, 20, 1);
-            slider_widget(win, "gamma", &pars->gamma, 0.1, 5, 0.1);
+        draw_label_widget(win, "filename", img->filename);
+        draw_label_widget(win, "w", img->width());
+        draw_label_widget(win, "h", img->height());
+        if (img->hdr) {
+            draw_value_widget(win, "filmic", app->filmic);
+            draw_value_widget(win, "exposure", app->exposure, -20, 20, 1);
+            draw_value_widget(win, "gamma", app->gamma, 0.1, 5, 0.1);
         }
-        auto offset = ym::vec2i{(int)pars->offset.x, (int)pars->offset.y};
-        slider_widget(win, "offset", &offset, -100, 100, 1);
-        pars->offset = ym::vec2f{(float)offset.x, (float)offset.y};
-        slider_widget(win, "zoom", &pars->zoom, 0.01, 10, 0.1);
-        auto xy = (mouse_pos - pars->offset) / pars->zoom;
-        auto ij = ym::vec2i{(int)round(xy[0]), (int)round(xy[1])};
-        auto inside = ij[0] >= 0 && ij[1] >= 0 && ij[0] < img.width() &&
-                      ij[1] < img.height();
-        if (img.hdr) {
-            auto p = (inside) ? img.hdr[ij] : ym::zero4f;
-            label_widget(win, "r", p.x);
-            label_widget(win, "g", p.y);
-            label_widget(win, "b", p.z);
-            label_widget(win, "a", p.w);
-        }
-        if (img.ldr) {
-            auto p = (inside) ? img.ldr[ij] : ym::zero4b;
-            label_widget(win, "r", p.x);
-            label_widget(win, "g", p.y);
-            label_widget(win, "b", p.z);
-            label_widget(win, "a", p.w);
-        }
+        draw_value_widget(win, "offset", app->offset, -100, 100, 1);
+        draw_value_widget(win, "zoom", app->zoom, 0.01, 10, 0.1);
+        auto xy = (mouse_pos - app->offset) / app->zoom;
+        auto ij = vec2i{(int)round(xy[0]), (int)round(xy[1])};
+        auto ph = img->lookup4f(ij);
+        draw_label_widget(win, "r", ph.x);
+        draw_label_widget(win, "g", ph.y);
+        draw_label_widget(win, "b", ph.z);
+        draw_label_widget(win, "a", ph.w);
+        auto pl = img->lookup4b(ij);
+        draw_label_widget(win, "r", pl.x);
+        draw_label_widget(win, "g", pl.y);
+        draw_label_widget(win, "b", pl.z);
+        draw_label_widget(win, "a", pl.w);
     }
     end_widgets(win);
-}
 
-void window_refresh_callback(ygui::window* win) {
-    draw_image(win);
-    draw_widgets(win);
     swap_buffers(win);
 }
 
-void run_ui(params* pars) {
+void run_ui(app_state* app) {
     // window
-    auto win = ygui::init_window(
-        pars->imgs[0].width() + 320, pars->imgs[0].height(), "yimview", pars);
-    set_callbacks(win, text_callback, nullptr, window_refresh_callback);
+    auto win = make_window(
+        app->imgs[0]->width(), app->imgs[0]->height(), "yimview", app);
+    set_window_callbacks(win, nullptr, nullptr, draw);
 
     // window values
     int mouse_button = 0;
-    ym::vec2f mouse_pos, mouse_last;
+    vec2f mouse_pos, mouse_last;
 
+    // init widgets
     init_widgets(win);
 
     // load textures
-    for (auto& img : pars->imgs) {
-        if (img.hdr) {
-            img.tex_glid = yglu::make_texture(img.hdr, false, false, true);
-        } else if (img.ldr) {
-            img.tex_glid = yglu::make_texture(img.ldr, false, false, true);
+    app->gl_prog = make_stdimage_program();
+    for (auto img : app->imgs) {
+        if (img->hdr) {
+            app->gl_txt[img] = make_texture(img->hdr, false, false, true);
+        } else if (img->ldr) {
+            app->gl_txt[img] = make_texture(img->ldr, false, false, true);
         }
     }
 
@@ -262,19 +187,17 @@ void run_ui(params* pars) {
         mouse_pos = get_mouse_posf(win);
         mouse_button = get_mouse_button(win);
 
-        auto& img = pars->imgs[pars->cur_img];
-        set_window_title(win,
-            ("yimview | " + img.filename + " | " + std::to_string(img.width()) +
-                "x" + std::to_string(img.height()))
-                .c_str());
+        auto img = app->imgs[app->cur_img];
+        set_window_title(win, format("yimview | {} | {}x{}", img->filename,
+                                  img->width(), img->height()));
 
         // handle mouse
         if (mouse_button && mouse_pos != mouse_last &&
             !get_widget_active(win)) {
             switch (mouse_button) {
-                case 1: pars->offset += mouse_pos - mouse_last; break;
+                case 1: app->offset += mouse_pos - mouse_last; break;
                 case 2:
-                    pars->zoom *=
+                    app->zoom *=
                         powf(2, (mouse_pos[0] - mouse_last[0]) * 0.001f);
                     break;
                 default: break;
@@ -282,32 +205,43 @@ void run_ui(params* pars) {
         }
 
         // draw
-        draw_image(win);
-        draw_widgets(win);
-
-        // swap buffers
-        swap_buffers(win);
+        draw(win);
 
         // event hadling
         wait_events(win);
     }
 
-    clear_widgets(win);
     clear_window(win);
+    delete win;
 }
 
 int main(int argc, char* argv[]) {
+    auto app = new app_state();
+
     // command line params
-    auto pars = new params();
-    parse_cmdline(pars, argc, argv);
+    auto parser = make_parser(argc, argv, "yimview", "view images");
+    app->exposure =
+        parse_opt(parser, "--exposure", "-e", "hdr image exposure", 0.0f);
+    app->gamma = parse_opt(parser, "--gamma", "-g", "hdr image gamma", 2.2f);
+    app->filmic = parse_flag(parser, "--filmic", "-F", "hdr image filmic");
+    auto filenames =
+        parse_args(parser, "image", "image filename", vector<string>{});
+    // check parsing
+    if (should_exit(parser)) {
+        printf("%s\n", get_usage(parser).c_str());
+        exit(1);
+    }
 
     // loading images
-    if (!load_images(pars)) return 1;
+    for (auto filename : filenames) {
+        log_info("loading {}", filename);
+        app->imgs.push_back(new gimage(load_gimage(filename)));
+    }
 
     // run ui
-    run_ui(pars);
+    run_ui(app);
 
     // done
-    delete pars;
+    delete app;
     return 0;
 }
