@@ -26,80 +26,63 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "../yocto/yocto_img.h"
-#include "../yocto/yocto_math.h"
-#include "../yocto/yocto_utils.h"
-
-#include "string.h"
-
-using yu::logging::log_fatal;
-using yu::logging::log_info;
-
-// typedef
-using byte = unsigned char;
-
-//
-// Check if hdr
-//
-bool is_hdr(const std::string& filename) {
-    return yimg::is_hdr_filename(filename);
-}
+#include "../yocto/yocto_gl.h"
+using namespace ygl;
 
 //
 // Load hdr
 //
-ym::image4f load_hdr(const std::string& filename) {
-    auto img = yimg::load_image4f(filename);
-    if (!img) log_fatal("cannot load image %s", filename.c_str());
+image4f load_hdr(const string& filename) {
+    auto img = load_image4f(filename);
+    if (!img) log_fatal("cannot load image {}", filename);
     return img;
 }
 
 //
 // Load ldr
 //
-ym::image4b load_ldr(const std::string& filename) {
-    auto img = yimg::load_image4b(filename);
-    if (!img) log_fatal("cannot load image %s", filename.c_str());
+image4b load_ldr(const string& filename) {
+    auto img = load_image4b(filename);
+    if (!img) log_fatal("cannot load image {}", filename);
     return img;
 }
 
 //
 // Save hdr
 //
-void save_hdr(const std::string& filename, const ym::image4f& img) {
-    if (!yimg::save_image4f(filename, img))
-        log_fatal("cannot save image %s", filename.c_str());
+void save_hdr(const string& filename, const image4f& img) {
+    if (!save_image4f(filename, img))
+        log_fatal("cannot save image {}", filename);
 }
 
 //
 // Save ldr
 //
-void save_ldr(const std::string& filename, const ym::image4b& img) {
-    if (!yimg::save_image4b(filename, img))
-        log_fatal("cannot save image %s", filename.c_str());
+void save_ldr(const string& filename, const image4b& img) {
+    if (!save_image4b(filename, img))
+        log_fatal("cannot save image {}", filename);
 }
 
 //
 // Resize image.
 //
-template <typename T>
-ym::image<T> resize_image(
-    const ym::image<T>& img, int res_width, int res_height) {
+template <typename Image>
+Image resize_image(const Image& img, int res_width, int res_height) {
     if (res_width < 0 && res_height < 0)
         log_fatal("at least argument should be >0");
     if (res_width < 0)
         res_width =
-            (int)std::round(img.width() * (res_height / (float)img.height()));
+            (int)round(img.width() * (res_height / (float)img.height()));
     if (res_height < 0)
         res_height =
-            (int)std::round(img.height() * (res_width / (float)img.width()));
-    auto res = ym::image<T>(res_width, res_height);
-    yimg::resize_image(img, res);
+            (int)round(img.height() * (res_width / (float)img.width()));
+    auto res = Image(res_width, res_height);
+    resize_image(img, res);
     return res;
 }
 
-template <typename T>
-ym::image<T> make_image_grid(const std::vector<ym::image<T>>& imgs, int tilex) {
+template <typename Image>
+Image make_image_grid(const vector<Image>& imgs, int tilex) {
     auto nimgs = (int)imgs.size();
     auto width = imgs[0].width() * tilex;
     auto height =
@@ -132,40 +115,39 @@ ym::image<T> make_image_grid(const std::vector<ym::image<T>>& imgs, int tilex) {
 
 #if 0
 yimage make_image_grid(
-    const std::vector<yimage>& imgs, int tilex, int width, int height) {
-    auto resized = std::vector<yimage>();
+    const vector<yimage>& imgs, int tilex, int width, int height) {
+    auto resized = vector<yimage>();
     for (auto img : imgs) resized.push_back(resize_image(img, width, height));
     return make_image_grid(resized, tilex);
 }
 #endif
 
-ym::image4f filter_bilateral(const ym::image4f& img, float spatial_sigma,
-    float range_sigma, const std::vector<ym::image4f>& features,
-    const std::vector<float>& features_sigma) {
-    auto filtered = ym::image4f(img.width(), img.height());
-    auto width = (int)ym::ceil(2.57f * spatial_sigma);
+image4f filter_bilateral(const image4f& img, float spatial_sigma,
+    float range_sigma, const vector<image4f>& features,
+    const vector<float>& features_sigma) {
+    auto filtered = image4f(img.width(), img.height());
+    auto width = (int)ceil(2.57f * spatial_sigma);
     auto sw = 1 / (2.0f * spatial_sigma * spatial_sigma);
     auto rw = 1 / (2.0f * range_sigma * range_sigma);
-    auto fw = std::vector<float>();
+    auto fw = vector<float>();
     for (auto feature_sigma : features_sigma)
         fw.push_back(1 / (2.0f * feature_sigma * feature_sigma));
     for (auto j = 0; j < img.height(); j++) {
         for (auto i = 0; i < img.width(); i++) {
-            auto av = ym::zero4f;
+            auto av = zero4f;
             auto aw = 0.0f;
             for (auto fj = -width; fj <= width; fj++) {
                 for (auto fi = -width; fi <= width; fi++) {
                     auto ii = i + fi, jj = j + fj;
                     if (ii < 0 || jj < 0) continue;
                     if (ii >= img.width() || jj >= img.height()) continue;
-                    auto uv = ym::vec2f{float(i - ii), float(j - jj)};
+                    auto uv = vec2f{float(i - ii), float(j - jj)};
                     auto rgb = img[{i, j}] - img[{ii, jj}];
-                    auto w = ym::exp(-lengthsqr(uv) * sw) *
-                             ym::exp(-lengthsqr(rgb) * rw);
+                    auto w = exp(-dot(uv, uv) * sw) * exp(-dot(rgb, rgb) * rw);
                     for (auto fi = 0; fi < features.size(); fi++) {
                         auto feat =
                             features[fi][{i, j}] - features[fi][{ii, jj}];
-                        w *= ym::exp(-lengthsqr(feat) * fw[fi]);
+                        w *= exp(-dot(feat, feat) * fw[fi]);
                     }
                     av += w * img[{ii, jj}];
                     aw += w;
@@ -177,25 +159,24 @@ ym::image4f filter_bilateral(const ym::image4f& img, float spatial_sigma,
     return filtered;
 }
 
-ym::image4f filter_bilateral(
-    const ym::image4f& img, float spatial_sigma, float range_sigma) {
-    auto filtered = ym::image4f(img.width(), img.height());
-    auto width = (int)ym::ceil(2.57f * spatial_sigma);
+image4f filter_bilateral(
+    const image4f& img, float spatial_sigma, float range_sigma) {
+    auto filtered = image4f(img.width(), img.height());
+    auto width = (int)ceil(2.57f * spatial_sigma);
     auto sw = 1 / (2.0f * spatial_sigma * spatial_sigma);
     auto rw = 1 / (2.0f * range_sigma * range_sigma);
     for (auto j = 0; j < img.height(); j++) {
         for (auto i = 0; i < img.width(); i++) {
-            auto av = ym::zero4f;
+            auto av = zero4f;
             auto aw = 0.0f;
             for (auto fj = -width; fj <= width; fj++) {
                 for (auto fi = -width; fi <= width; fi++) {
                     auto ii = i + fi, jj = j + fj;
                     if (ii < 0 || jj < 0) continue;
                     if (ii >= img.width() || jj >= img.height()) continue;
-                    auto uv = ym::vec2f{float(i - ii), float(j - jj)};
+                    auto uv = vec2f{float(i - ii), float(j - jj)};
                     auto rgb = img[{i, j}] - img[{ii, jj}];
-                    auto w = ym::exp(-lengthsqr(uv) * sw) *
-                             ym::exp(-lengthsqr(rgb) * rw);
+                    auto w = exp(-dot(uv, uv) * sw) * exp(-dot(rgb, rgb) * rw);
                     av += w * img[{ii, jj}];
                     aw += w;
                 }
@@ -207,29 +188,26 @@ ym::image4f filter_bilateral(
 }
 
 int main(int argc, char* argv[]) {
-    static auto tmtype_names =
-        std::vector<std::pair<std::string, ym::tonemap_type>>{
-            {"none", ym::tonemap_type::none}, {"srgb", ym::tonemap_type::srgb},
-            {"gamma", ym::tonemap_type::gamma},
-            {"filmic", ym::tonemap_type::filmic}};
-
     // command line params
-    auto parser =
-        yu::cmdline::make_parser(argc, argv, "yimproc", "process images");
-    auto command = parse_args(parser, "command", "command to execute", "", true,
+    auto parser = make_parser(argc, argv, "yimproc", "process images");
+    auto command = parse_arg(parser, "command", "command to execute", ""s, true,
         {"resize", "tonemap", "bilateral"});
     auto output =
-        parse_opts(parser, "--output", "-o", "output image filename", "", true);
+        parse_opt(parser, "--output", "-o", "output image filename", ""s);
     if (command == "resize") {
-        auto width = parse_opti(
+        auto width = parse_opt(
             parser, "--width", "-w", "width (-1 to maintain aspect)", -1);
-        auto height = parse_opti(
+        auto height = parse_opt(
             parser, "--height", "-h", "height (-1 to maintain aspect)", -1);
         auto filename =
-            parse_args(parser, "filename", "input image filename", "", true);
-        check_parser(parser);
+            parse_arg(parser, "filename", "input image filename", ""s);
+        // check parsing
+        if (should_exit(parser)) {
+            printf("%s\n", get_usage(parser).c_str());
+            exit(1);
+        }
 
-        if (is_hdr(filename)) {
+        if (is_hdr_filename(filename)) {
             auto img = load_hdr(filename);
             auto out = resize_image(img, width, height);
             save_hdr(output, out);
@@ -240,33 +218,40 @@ int main(int argc, char* argv[]) {
         }
     } else if (command == "tonemap") {
         auto exposure =
-            parse_optf(parser, "--exposure", "-e", "hdr exposure", 0);
-        auto gamma = parse_optf(parser, "--gamma", "-g", "hdr gamma", 2.2f);
-        auto tonemap = parse_opte(parser, "--tonemap", "-t", "hdr tonemap",
-            ym::tonemap_type::srgb, tmtype_names);
+            parse_opt(parser, "--exposure", "-e", "hdr exposure", 0.0f);
+        auto gamma = parse_opt(parser, "--gamma", "-g", "hdr gamma", 2.2f);
+        auto filmic = parse_flag(parser, "--filmic", "-F", "hdr filmic");
         auto filename =
-            parse_args(parser, "filename", "input image filename", "", true);
-        check_parser(parser);
+            parse_arg(parser, "filename", "input image filename", ""s);
+        // check parsing
+        if (should_exit(parser)) {
+            printf("%s\n", get_usage(parser).c_str());
+            exit(1);
+        }
 
         auto img = load_hdr(filename);
-        auto out = ym::tonemap_image(img, tonemap, exposure, gamma);
+        auto out = tonemap_image(img, exposure, gamma, filmic);
         save_ldr(output, out);
     } else if (command == "bilateral") {
         auto spatial_sigma =
-            parse_opti(parser, "--spatial-sigma", "-s", "spatial sigma", 3);
+            parse_opt(parser, "--spatial-sigma", "-s", "spatial sigma", 3);
         auto range_sigma =
-            parse_optf(parser, "--range-sigma", "-r", "range sigma", 0.1f);
-        auto feature_sigma = parse_optf(
+            parse_opt(parser, "--range-sigma", "-r", "range sigma", 0.1f);
+        auto feature_sigma = parse_opt(
             parser, "--features-sigma", "-f", "features sigmas", 0.1f);
         auto filename =
-            parse_args(parser, "filename", "input image filename", "", true);
-        auto ffilenames = parse_argas(
-            parser, "features", "input features filename", {}, -1, false);
-        check_parser(parser);
+            parse_arg(parser, "filename", "input image filename", ""s);
+        auto ffilenames = parse_args(parser, "features",
+            "input features filename", vector<string>{}, false);
+        // check parsing
+        if (should_exit(parser)) {
+            printf("%s\n", get_usage(parser).c_str());
+            exit(1);
+        }
 
         auto img = load_hdr(filename);
-        auto features = std::vector<ym::image4f>();
-        auto features_sigma = std::vector<float>();
+        auto features = vector<image4f>();
+        auto features_sigma = vector<float>();
         for (auto ffilename : ffilenames) {
             features.push_back(load_hdr(ffilename));
             features_sigma.push_back(feature_sigma);
@@ -275,7 +260,11 @@ int main(int argc, char* argv[]) {
             img, spatial_sigma, range_sigma, features, features_sigma);
         save_hdr(output, out);
     } else {
-        check_parser(parser);
+        // check parsing
+        if (should_exit(parser)) {
+            printf("%s\n", get_usage(parser).c_str());
+            exit(1);
+        }
     }
 
     // done

@@ -26,441 +26,160 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "yscene.h"
+#include "../yocto/yocto_gl.h"
+using namespace ygl;
 
-// ---------------------------------------------------------------------------
-// UTILITIES
-// ---------------------------------------------------------------------------
+// Application state
+struct app_state {
+    // scene data
+    scene* scn = nullptr;
 
-//
-// image saving
-//
-bool save_image(const std::string& filename, const ym::image4f& hdr,
-    float exposure, ym::tonemap_type tonemap, float gamma) {
-    if (yimg::is_hdr_filename(filename)) {
-        return yimg::save_image4f(filename, hdr);
-    } else {
-        auto ldr = ym::image4b(hdr.width(), hdr.height());
-        ym::tonemap_image(hdr, ldr, tonemap, exposure, gamma);
-        return yimg::save_image4b(filename, ldr);
+    // filenames
+    string filename;
+    string imfilename;
+
+    // render
+    int resolution = 0;
+    float exposure = 0, gamma = 2.2f;
+    bool filmic = false;
+    vec4f background = {0, 0, 0, 0};
+
+    // trace
+    trace_params trace_params;
+    bool trace_save_progressive = false;
+    int trace_block_size = 32;
+    int trace_batch_size = 16;
+
+    // rendered images and buffers
+    image4f trace_img;
+    image4f trace_acc;
+    image4f trace_weight;
+    vector<rng_pcg32> trace_rngs;
+
+    ~app_state() {
+        if (scn) delete scn;
     }
-}
+};
 
-// ---------------------------------------------------------------------------
-// INTERACTIVE FUNCTIONS
-// ---------------------------------------------------------------------------
+int main(int argc, char* argv[]) {
+    // create empty scene
+    auto app = new app_state();
 
-#ifndef YOCTO_NO_OPENGL
-
-void init_draw(ygui::window* win) {
-    auto scn = (yscene*)ygui::get_user_pointer(win);
-    auto& img = ytrace::get_traced_image(scn->trace_state);
-    scn->trace_texture_id = yglu::make_texture(
-        img.width(), img.height(), 4, (float*)img.data(), false, false, true);
-}
-
-void draw_image(ygui::window* win) {
-    auto scn = (yscene*)ygui::get_user_pointer(win);
-
-    // begin frame
-    yglu::clear_buffers(scn->background);
-
-    // update texture
-    auto& img = ytrace::get_traced_image(scn->trace_state);
-    yglu::update_texture(scn->trace_texture_id, img.width(), img.height(), 4,
-        (float*)img.data(), false);
-
-    // draw image
-    auto ws = ygui::get_widget_size(win);
-    auto wwh = ygui::get_window_size(win);
-    auto fwh = ygui::get_framebuffer_size(win);
-    fwh.x -= (ws * fwh.x) / wwh.x;
-    wwh.x -= ws;
-    yglu::set_viewport({0, 0, fwh.x, fwh.y});
-    yglu::shade_image(scn->trace_texture_id, wwh.x, wwh.y, 0, 0, 1,
-        scn->tonemap, scn->exposure, scn->gamma);
-
-    draw_widgets(win);
-    ygui::swap_buffers(win);
-}
-
-bool update(yscene* scn) {
-    if (scn->scene_updated) {
-        ytrace::trace_async_stop(scn->trace_state);
-        scn->trace_async_rendering = false;
-
-        // update cameras
-        ytrace::set_camera(scn->trace_scene, 0, scn->view_cam->frame,
-            scn->view_cam->yfov, scn->view_cam->aspect, scn->view_cam->aperture,
-            scn->view_cam->focus);
-        scn->trace_params.camera_id = 0;
-        if (scn->oscn) {
-            auto cid = 1;
-            for (auto cam : scn->oscn->cameras) {
-                if (scn->ocam == cam) scn->trace_params.camera_id = cid;
-                ytrace::set_camera(scn->trace_scene, cid++,
-                    ym::to_frame(cam->xform()), cam->yfov, cam->aspect,
-                    cam->aperture, cam->focus);
-            }
-        } else if (scn->gscn) {
-            auto cameras = ygltf::get_camera_nodes(scn->gscn->default_scene);
-            auto cid = 1;
-            for (auto cam : cameras) {
-                if (scn->gcam == cam) scn->trace_params.camera_id = cid;
-                ytrace::set_camera(scn->trace_scene, cid++,
-                    ym::to_frame(cam->xform()), cam->cam->yfov,
-                    cam->cam->aspect, cam->cam->aperture, cam->cam->focus);
-            }
-        }
-
-        // render preview
-        ytrace::init_state(
-            scn->trace_state, scn->trace_scene, scn->trace_params);
-        auto pparams = scn->trace_params;
-        pparams.width = scn->trace_params.width / scn->trace_block_size;
-        pparams.height = scn->trace_params.height / scn->trace_block_size;
-        pparams.nsamples = 1;
-        pparams.ftype = ytrace::filter_type::box;
-        ytrace::init_state(scn->preview_state, scn->trace_scene, pparams);
-        auto& img = ytrace::get_traced_image(scn->trace_state);
-        ytrace::trace_next_samples(scn->preview_state, 1);
-        auto& preview = ytrace::get_traced_image(scn->preview_state);
-        yimg::resize_image(preview, img, yimg::resize_filter::box);
-        yglu::update_texture(scn->trace_texture_id, img.width(), img.height(),
-            4, (float*)img.data(), false);
-
-        scn->scene_updated = false;
-    } else if (!scn->trace_async_rendering) {
-        ytrace::trace_async_start(scn->trace_state);
-        scn->trace_async_rendering = true;
+    // parse command line
+    auto parser = make_parser(argc, argv, "ytrace", "offline oath tracing");
+    app->trace_params.camera_id = 0;
+    app->trace_save_progressive =
+        parse_flag(parser, "--save-progressive", "", "save progressive images");
+    app->trace_params.rtype = parse_opt(parser, "--random", "", "random type",
+        trace_rng_names(), trace_rng_type::stratified);
+    app->trace_params.ftype = parse_opt(parser, "--filter", "", "filter type",
+        trace_filter_names(), trace_filter_type::box);
+    app->trace_params.stype =
+        parse_opt(parser, "--shader", "-S", "path estimator type",
+            trace_shader_names(), trace_shader_type::pathtrace);
+    app->trace_params.envmap_invisible =
+        parse_flag(parser, "--envmap-invisible", "", "envmap invisible");
+    app->trace_params.shadow_notransmission = parse_flag(
+        parser, "--shadow-notransmission", "", "shadow without transmission");
+    app->trace_block_size =
+        parse_opt(parser, "--block-size", "", "block size", 32);
+    app->trace_batch_size =
+        parse_opt(parser, "--batch-size", "", "batch size", 16);
+    app->trace_params.nsamples =
+        parse_opt(parser, "--samples", "-s", "image samples", 256);
+    app->trace_params.parallel =
+        !parse_flag(parser, "--no-parallel", "", "so not run in parallel");
+    app->exposure =
+        parse_opt(parser, "--exposure", "-e", "hdr image exposure", 0.0f);
+    app->gamma = parse_opt(parser, "--gamma", "-g", "hdr image gamma", 2.2f);
+    app->filmic = parse_flag(parser, "--filmic", "-F", "hdr filmic output");
+    app->resolution =
+        parse_opt(parser, "--resolution", "-r", "image resolution", 540);
+    auto amb = parse_opt(parser, "--ambient", "", "ambient factor", 0.0f);
+    auto camera_lights =
+        parse_flag(parser, "--camera-lights", "-c", "enable camera lights");
+    app->trace_params.amb = {amb, amb, amb};
+    if (camera_lights) {
+        app->trace_params.stype = trace_shader_type::eyelight;
     }
-    return true;
-}
-
-#endif
-
-// ---------------------------------------------------------------------------
-// OFFLINE RENDERING
-// ---------------------------------------------------------------------------
-
-std::vector<ym::vec4i> make_trace_blocks(int w, int h, int bs) {
-    std::vector<ym::vec4i> blocks;
-    for (int j = 0; j < h; j += bs) {
-        for (int i = 0; i < w; i += bs) {
-            blocks.push_back({i, j, ym::min(bs, w - i), ym::min(bs, h - j)});
-        }
+    auto log_filename = parse_opt(parser, "--log", "", "log to disk", ""s);
+    if (log_filename != "") add_file_stream(log_filename, true);
+    app->imfilename =
+        parse_opt(parser, "--output-image", "-o", "image filename", "out.hdr"s);
+    app->filename = parse_arg(parser, "scene", "scene filename", ""s);
+    if (should_exit(parser)) {
+        printf("%s\n", get_usage(parser).c_str());
+        exit(1);
     }
-    return blocks;
-}
 
-void render_offline(yscene* scn) {
+    // setting up rendering
+    log_info("loading scene {}", app->filename);
+    try {
+        app->scn = load_scene(app->filename);
+    } catch (exception e) {
+        log_fatal("cannot load scene {}", app->filename);
+        return 1;
+    }
+    auto opts = add_elements_options();
+    opts.pointline_radius = 0.001f;
+    add_elements(app->scn, opts);
+
+    // build bvh
+    log_info("building bvh");
+    build_bvh(app->scn);
+
+    // init renderer
+    log_info("initializing tracer");
+    update_lights(app->scn, false);
+
+    // initialize rendering objects
+    auto width =
+        (int)round(app->scn->cameras[app->trace_params.camera_id]->aspect *
+                   app->resolution);
+    auto height = app->resolution;
+    app->trace_params.width = width;
+    app->trace_params.height = height;
+    app->trace_img = image4f(width, height);
+    app->trace_acc = image4f(width, height);
+    app->trace_weight = image4f(width, height);
+    app->trace_rngs = trace_rngs(app->trace_params);
+
     // render
     log_info("starting renderer");
-    for (auto cur_sample = 0; cur_sample < scn->trace_params.nsamples;
-         cur_sample += scn->trace_batch_size) {
-        if (scn->trace_save_progressive && cur_sample) {
-            auto imfilename = yu::path::get_dirname(scn->imfilename) +
-                              yu::path::get_basename(scn->imfilename) +
-                              yu::string::formatf(".%04d", cur_sample) +
-                              yu::path::get_extension(scn->imfilename);
-            log_info("saving image %s", imfilename.c_str());
-            save_image(imfilename, ytrace::get_traced_image(scn->trace_state),
-                scn->exposure, scn->tonemap, scn->gamma);
+    for (auto cur_sample = 0; cur_sample < app->trace_params.nsamples;
+         cur_sample += app->trace_batch_size) {
+        if (app->trace_save_progressive && cur_sample) {
+            auto imfilename = format("{}{}.{}{}",
+                path_dirname(app->imfilename), path_basename(app->imfilename),
+                cur_sample, path_extension(app->imfilename));
+            log_info("saving image {}", imfilename);
+            save_image(imfilename, app->trace_img, app->exposure, app->gamma,
+                app->filmic);
         }
         log_info(
-            "rendering sample %4d/%d", cur_sample, scn->trace_params.nsamples);
-        ytrace::trace_next_samples(scn->trace_state, scn->trace_batch_size);
+            "rendering sample {}/{}", cur_sample, app->trace_params.nsamples);
+        if (app->trace_params.ftype == trace_filter_type::box) {
+            trace_samples(app->scn, app->trace_img, cur_sample,
+                min(cur_sample + app->trace_batch_size,
+                    app->trace_params.nsamples),
+                app->trace_rngs, app->trace_params);
+        } else {
+            trace_filtered_samples(app->scn, app->trace_img, app->trace_acc,
+                app->trace_weight, cur_sample,
+                min(cur_sample + app->trace_batch_size,
+                    app->trace_params.nsamples),
+                app->trace_rngs, app->trace_params);
+        }
     }
     log_info("rendering done");
 
     // save image
-    log_info("saving image %s", scn->imfilename.c_str());
-    save_image(scn->imfilename, ytrace::get_traced_image(scn->trace_state),
-        scn->exposure, scn->tonemap, scn->gamma);
-
-    // save additional buffers
-    if (scn->trace_params.aux_buffers) {
-        log_info("saving additional buffers for %s", scn->imfilename.c_str());
-        auto norm = ym::image4f(), albedo = ym::image4f(),
-             depth = ym::image4f();
-        ytrace::get_aux_buffers(scn->trace_state, norm, albedo, depth);
-        auto basename = yu::path::get_dirname(scn->imfilename) +
-                        yu::path::get_basename(scn->imfilename);
-        auto ext = yu::path::get_extension(scn->imfilename);
-        save_image(
-            basename + ".normal" + ext, norm, 0, ym::tonemap_type::none, 1);
-        save_image(
-            basename + ".albedo" + ext, albedo, 0, ym::tonemap_type::none, 1);
-        save_image(
-            basename + ".depth" + ext, depth, 0, ym::tonemap_type::none, 1);
-    }
-}
-
-// ---------------------------------------------------------------------------
-// TRACE SCENE
-// ---------------------------------------------------------------------------
-
-ytrace::scene* make_trace_scene(const yobj::scene* scene, const ycamera* cam) {
-    auto trace_scene = ytrace::make_scene();
-
-    ytrace::add_camera(trace_scene, cam->frame, cam->yfov, cam->aspect,
-        cam->aperture, cam->focus);
-    for (auto cam : scene->cameras) {
-        ytrace::add_camera(trace_scene, ym::to_frame(cam->xform()), cam->yfov,
-            cam->aspect, cam->aperture, cam->focus);
-    }
-
-    auto texture_map = std::map<yobj::texture*, int>{{nullptr, -1}};
-    for (auto txt : scene->textures) {
-        if (txt->ldr) {
-            texture_map[txt] = ytrace::add_texture(trace_scene, &txt->ldr);
-        } else if (txt->hdr) {
-            texture_map[txt] = ytrace::add_texture(trace_scene, &txt->hdr);
-        } else {
-            assert(false);
-        }
-    }
-
-    for (auto env : scene->environments) {
-        auto mat = env->mat;
-        ytrace::add_environment(trace_scene, ym::to_frame(env->xform()),
-            mat->ke, texture_map.at(mat->ke_txt));
-    }
-
-    auto material_map = std::map<yobj::material*, int>{{nullptr, -1}};
-    for (auto mat : scene->materials) {
-        auto mid = ytrace::add_material(trace_scene);
-        material_map[mat] = mid;
-        ytrace::set_material_emission(
-            trace_scene, mid, mat->ke, texture_map.at(mat->ke_txt));
-        if (mat->kt != ym::zero3f) {
-            ytrace::set_material_thin_glass(trace_scene, mid, mat->ks, mat->kt,
-                texture_map.at(mat->ks_txt), texture_map.at(mat->kt_txt));
-        } else {
-            ytrace::set_material_microfacet(trace_scene, mid, mat->kd, mat->ks,
-                mat->kt, mat->rs, mat->opacity, texture_map.at(mat->kd_txt),
-                texture_map.at(mat->ks_txt), texture_map.at(mat->kt_txt),
-                texture_map.at(mat->rs_txt), texture_map.at(mat->op_txt),
-                false);
-        }
-        ytrace::set_material_normal(
-            trace_scene, mid, texture_map.at(mat->norm_txt), 1);
-    }
-
-    auto sid = 0;
-    auto shape_map = std::map<yobj::shape*, int>{{nullptr, -1}};
-    for (auto mesh : scene->meshes) {
-        for (auto shape : mesh->shapes) {
-            if (!shape->points.empty()) {
-                shape_map[shape] = ytrace::add_point_shape(trace_scene,
-                    (int)shape->points.size(), shape->points.data(),
-                    (int)shape->pos.size(), shape->pos.data(),
-                    shape->norm.data(), shape->texcoord.data(),
-                    shape->color.data(), shape->radius.data());
-            } else if (!shape->lines.empty()) {
-                shape_map[shape] = ytrace::add_line_shape(trace_scene,
-                    (int)shape->lines.size(), shape->lines.data(),
-                    (int)shape->pos.size(), shape->pos.data(),
-                    shape->norm.data(), shape->texcoord.data(),
-                    shape->color.data(), shape->radius.data());
-
-            } else if (!shape->triangles.empty()) {
-                shape_map[shape] = ytrace::add_triangle_shape(trace_scene,
-                    (int)shape->triangles.size(), shape->triangles.data(),
-                    (int)shape->pos.size(), shape->pos.data(),
-                    shape->norm.data(), shape->texcoord.data(),
-                    shape->color.data(), shape->tangsp.data());
-
-            } else {
-                assert(false);
-            }
-            sid++;
-        }
-    }
-
-    if (!scene->instances.empty()) {
-        for (auto ist : scene->instances) {
-            for (auto shp : ist->msh->shapes) {
-                ytrace::add_instance(trace_scene, ym::to_frame(ist->xform()),
-                    shape_map.at(shp), material_map.at(shp->mat));
-            }
-        }
-    } else {
-        for (auto msh : scene->meshes) {
-            for (auto shp : msh->shapes) {
-                ytrace::add_instance(trace_scene, ym::identity_frame3f,
-                    shape_map.at(shp), material_map.at(shp->mat));
-            }
-        }
-    }
-
-    ytrace::set_logging_callbacks(trace_scene,
-        [](const char* msg) {
-            yu::logging::log_msg(
-                yu::logging::log_level::info, "yocto_trace", msg);
-        },
-        [](const char* msg) {
-            yu::logging::log_msg(
-                yu::logging::log_level::error, "yocto_trace", msg);
-        });
-
-    return trace_scene;
-}
-
-ytrace::scene* make_trace_scene(
-    const ygltf::scene_group* scenes, const ycamera* cam) {
-    auto trace_scene = ytrace::make_scene();
-
-    ytrace::add_camera(trace_scene, cam->frame, cam->yfov, cam->aspect,
-        cam->aperture, cam->focus);
-    auto cameras = ygltf::get_camera_nodes(scenes->default_scene);
-    for (auto cam : cameras) {
-        ytrace::add_camera(trace_scene, ym::to_frame(cam->xform()),
-            cam->cam->yfov, cam->cam->aspect, cam->cam->aperture,
-            cam->cam->focus);
-    }
-
-    auto texture_map = std::map<ygltf::texture*, int>{{nullptr, -1}};
-    for (auto txt : scenes->textures) {
-        if (txt->ldr) {
-            texture_map[txt] = ytrace::add_texture(trace_scene, &txt->ldr);
-        } else if (txt->hdr) {
-            texture_map[txt] = ytrace::add_texture(trace_scene, &txt->hdr);
-        } else {
-            assert(false);
-        }
-    }
-
-    auto material_map = std::map<ygltf::material*, int>{{nullptr, -1}};
-    for (auto mat : scenes->materials) {
-        auto mid = ytrace::add_material(trace_scene);
-        material_map[mat] = mid;
-        ytrace::set_material_emission(
-            trace_scene, mid, mat->emission, texture_map.at(mat->emission_txt));
-        if (mat->specular_glossiness) {
-            auto sg = mat->specular_glossiness;
-            ytrace::set_material_gltf_specular_glossiness(trace_scene, mid,
-                sg->diffuse, sg->specular, sg->glossiness, sg->opacity,
-                texture_map.at(sg->diffuse_txt),
-                texture_map.at(sg->specular_txt));
-
-        } else if (mat->metallic_roughness) {
-            auto mr = mat->metallic_roughness;
-            ytrace::set_material_gltf_metallic_roughness(trace_scene, mid,
-                mr->base, mr->metallic, mr->roughness, mr->opacity,
-                texture_map.at(mr->base_txt), texture_map.at(mr->metallic_txt));
-        }
-        ytrace::set_material_normal(
-            trace_scene, mid, texture_map.at(mat->normal_txt));
-        ytrace::set_material_occlusion(
-            trace_scene, mid, texture_map.at(mat->occlusion_txt));
-        ytrace::set_material_double_sided(trace_scene, mid, mat->double_sided);
-    }
-
-    auto sid = 0;
-    auto shape_map = std::map<ygltf::shape*, int>{{nullptr, -1}};
-    for (auto mesh : scenes->meshes) {
-        for (auto shape : mesh->shapes) {
-            if (!shape->points.empty()) {
-                shape_map[shape] = ytrace::add_point_shape(trace_scene,
-                    (int)shape->points.size(), shape->points.data(),
-                    (int)shape->pos.size(), shape->pos.data(),
-                    shape->norm.data(), shape->texcoord.data(),
-                    shape->color.data(), shape->radius.data());
-            } else if (!shape->lines.empty()) {
-                shape_map[shape] = ytrace::add_line_shape(trace_scene,
-                    (int)shape->lines.size(), shape->lines.data(),
-                    (int)shape->pos.size(), shape->pos.data(),
-                    shape->norm.data(), shape->texcoord.data(),
-                    shape->color.data(), shape->radius.data());
-
-            } else if (!shape->triangles.empty()) {
-                shape_map[shape] = ytrace::add_triangle_shape(trace_scene,
-                    (int)shape->triangles.size(), shape->triangles.data(),
-                    (int)shape->pos.size(), shape->pos.data(),
-                    shape->norm.data(), shape->texcoord.data(),
-                    shape->color.data(), shape->tangsp.data());
-
-            } else {
-                assert(false);
-            }
-            sid++;
-        }
-    }
-
-    auto instances = ygltf::get_mesh_nodes(scenes->default_scene);
-    if (!instances.empty()) {
-        for (auto ist : instances) {
-            for (auto shp : ist->msh->shapes) {
-                ytrace::add_instance(trace_scene, ym::to_frame(ist->xform()),
-                    shape_map.at(shp), material_map.at(shp->mat));
-            }
-        }
-    } else {
-        for (auto msh : scenes->meshes) {
-            for (auto shp : msh->shapes) {
-                ytrace::add_instance(trace_scene, ym::identity_frame3f,
-                    shape_map.at(shp), material_map.at(shp->mat));
-            }
-        }
-    }
-
-    return trace_scene;
-}
-
-// ---------------------------------------------------------------------------
-// MAIN
-// ---------------------------------------------------------------------------
-
-int main(int argc, char* argv[]) {
-    // create empty scene
-    auto scn = new yscene();
-
-    // command line
-    parse_cmdline(scn, argc, argv, "ytrace", "render scene with path tracing",
-        false, true);
-
-    // setting up rendering
-    log_info("loading scene %s", scn->filename.c_str());
-    load_scene(scn, scn->filename, true, true);
-
-    // build trace scene
-    log_info("setting up tracer");
-    scn->trace_scene = (scn->oscn) ?
-                           make_trace_scene(scn->oscn, scn->view_cam) :
-                           make_trace_scene(scn->gscn, scn->view_cam);
-    // build bvh
-    log_info("building bvh");
-    ytrace::init_intersection(scn->trace_scene);
-
-    // init renderer
-    log_info("initializing tracer");
-    ytrace::init_lights(scn->trace_scene);
-
-    // initialize rendering objects
-    auto width = (int)std::round(scn->view_cam->aspect * scn->resolution);
-    auto height = scn->resolution;
-    scn->trace_params.width = width;
-    scn->trace_params.height = height;
-    scn->trace_state = ytrace::make_state();
-    ytrace::init_state(scn->trace_state, scn->trace_scene, scn->trace_params);
-    scn->trace_blocks = make_trace_blocks(width, height, scn->trace_block_size);
-
-#ifndef YOCTO_NO_OPENGL
-    // render offline or online
-    if (!scn->interactive) {
-        render_offline(scn);
-    } else {
-        scn->preview_state = ytrace::make_state();
-        scn->scene_updated = true;
-        run_ui(scn, width, height, "ytrace", init_draw, draw_image, update);
-    }
-#else
-    render_offline(scn);
-#endif
+    log_info("saving image {}", app->imfilename);
+    save_image(app->imfilename, app->trace_img, app->exposure, app->gamma,
+        app->filmic);
 
     // cleanup
-    delete scn;
+    delete app;
 
     // done
     return 0;
