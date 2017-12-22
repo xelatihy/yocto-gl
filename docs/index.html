@@ -11,7 +11,8 @@
     <header>
         <nav>
             <img src="images/logo_white.png">
-            <a href="index.html">doc</a>
+            <a href="index.html">about</a>
+            <a href="yocto_gl.html">api</a>
             <a href="https://github.com/xelatihy/yocto-gl">github</a>
         </nav>
     </header>
@@ -254,13 +255,13 @@ the use of Intel's Embree as a fast alternative.</p>
 <ol>
 <li>use <code>ray3f</code> to represent rays</li>
 <li>build the BVH with <code>build_points_bvh()</code>, <code>build_points_bvh()</code> or
-<code>build_points_bvh()</code></li>
+  <code>build_points_bvh()</code></li>
 <li>perform ray-element intersection with <code>intersect_points_bvh()</code>,
-<code>intersect_lines_bvh()</code> and <code>intersect_triangles_bvh()</code></li>
+  <code>intersect_lines_bvh()</code> and <code>intersect_triangles_bvh()</code></li>
 <li>perform point overlap queries with <code>overlap_points_bvh()</code>,
-<code>overlap_lines_bvh()</code> and <code>overlap_triangles_bvh()</code></li>
+  <code>overlap_lines_bvh()</code> and <code>overlap_triangles_bvh()</code></li>
 <li>to support custom elements, use <code>buid_bvh()</code>, <code>intersect_bvh()</code> and
-<code>overlap_bvh()</code> and provide them with proper callbacks</li>
+  <code>overlap_bvh()</code> and provide them with proper callbacks</li>
 <li>we also experimentally support quads with the <code>xxx_quads_xxx()</code> functions</li>
 </ol>
 <h3>Simple scene</h3>

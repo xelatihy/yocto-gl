@@ -276,13 +276,13 @@ the use of Intel's Embree as a fast alternative.
 
 1. use `ray3f` to represent rays
 2. build the BVH with `build_points_bvh()`, `build_points_bvh()` or
-`build_points_bvh()`
+  `build_points_bvh()`
 3. perform ray-element intersection with `intersect_points_bvh()`,
-`intersect_lines_bvh()` and `intersect_triangles_bvh()`
+  `intersect_lines_bvh()` and `intersect_triangles_bvh()`
 4. perform point overlap queries with `overlap_points_bvh()`,
-`overlap_lines_bvh()` and `overlap_triangles_bvh()`
+  `overlap_lines_bvh()` and `overlap_triangles_bvh()`
 5. to support custom elements, use `buid_bvh()`, `intersect_bvh()` and
-`overlap_bvh()` and provide them with proper callbacks
+  `overlap_bvh()` and provide them with proper callbacks
 6. we also experimentally support quads with the `xxx_quads_xxx()` functions
 
 
