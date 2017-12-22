@@ -41,18 +41,18 @@ article {
 
 p {
   margin: 24px 0;
-  text-align: justify; }
+  text-align: left; }
 
 ol, ul {
     padding-left: 24px;
     margin: 24px 0;
-    text-align: justify;
+    text-align: left;
 }
 
 ol ul, ol ol, ul ul, ul ol {
     padding-left: 24px;
     margin: 0;
-    text-align: justify;
+    text-align: left;
 }
 
 h1, h2, h3, h4 {

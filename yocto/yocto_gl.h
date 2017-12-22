@@ -209,7 +209,7 @@
 /// 3. Check for containment with `contains`  similarly to `in` in Python
 ///
 ///
-/// Shape Utilities
+/// ### Shape Utilities
 ///
 /// The library contains a few function to help with typically geometry
 /// manipulation useful to support scene viewing and path tracing.
