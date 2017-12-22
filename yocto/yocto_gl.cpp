@@ -5627,20 +5627,30 @@ inline obj_scene* scene_to_obj(const scene* scn) {
             }
         }
         for (auto quad : shp->quads) {
-            group->elems.push_back(
-                {(uint32_t)group->verts.size(), obj_element_type::face, 4});
-            auto last_vid = -1;
-            for (auto vid : quad) {
-                if (last_vid == vid) continue;
-                auto vert = obj_vertex{-1, -1, -1, -1, -1};
-                if (!shp->pos.empty()) vert.pos = offset.pos + vid;
-                if (!shp->texcoord.empty())
-                    vert.texcoord = offset.texcoord + vid;
-                if (!shp->norm.empty()) vert.norm = offset.norm + vid;
-                if (!shp->color.empty()) vert.color = offset.color + vid;
-                if (!shp->radius.empty()) vert.radius = offset.radius + vid;
-                group->verts.push_back(vert);
-                last_vid = vid;
+            group->elems.push_back({(uint32_t)group->verts.size(),
+                obj_element_type::face, (uint16_t)((quad.z == quad.w) ? 3 : 4)});
+            if(group->elems.back().size == 3) {
+                for (auto vid : quad.xyz()) {
+                    auto vert = obj_vertex{-1, -1, -1, -1, -1};
+                    if (!shp->pos.empty()) vert.pos = offset.pos + vid;
+                    if (!shp->texcoord.empty())
+                        vert.texcoord = offset.texcoord + vid;
+                    if (!shp->norm.empty()) vert.norm = offset.norm + vid;
+                    if (!shp->color.empty()) vert.color = offset.color + vid;
+                    if (!shp->radius.empty()) vert.radius = offset.radius + vid;
+                    group->verts.push_back(vert);
+                }
+            } else {
+                for (auto vid : quad) {
+                    auto vert = obj_vertex{-1, -1, -1, -1, -1};
+                    if (!shp->pos.empty()) vert.pos = offset.pos + vid;
+                    if (!shp->texcoord.empty())
+                        vert.texcoord = offset.texcoord + vid;
+                    if (!shp->norm.empty()) vert.norm = offset.norm + vid;
+                    if (!shp->color.empty()) vert.color = offset.color + vid;
+                    if (!shp->radius.empty()) vert.radius = offset.radius + vid;
+                    group->verts.push_back(vert);
+                }
             }
         }
         for (auto fid = 0; fid < shp->quads_pos.size(); fid++) {
@@ -6619,6 +6629,7 @@ inline void update_lights(scene* scn, bool point_only) {
     scn->lights.clear();
 
     for (auto ist : scn->instances) {
+        if(!ist->shp->mat) continue;
         if (ist->shp->mat->ke == zero3f) continue;
         if (point_only && ist->shp->points.empty()) continue;
         auto lgt = new light();
@@ -7288,7 +7299,7 @@ tuple<vector<vec4i>, vector<vec3f>> make_suzanne() {
         {388, 382, 314, 506}, {313, 505, 503, 321}, {504, 506, 314, 322},
         {319, 321, 503, 389}, {504, 322, 320, 390}};
     auto quads = suzanne_quads;
-    quads.reserve(quads.size() + suzanne_triangles.size());
+    quads.reserve(suzanne_quads.size() + suzanne_triangles.size());
     for (auto& t : suzanne_triangles) { quads.push_back({t.x, t.y, t.z, t.z}); }
     return {quads, suzanne_pos};
 }
@@ -8334,14 +8345,14 @@ inline const vector<pair<string, test_light_type>>& test_light_names() {
 
 tuple<vector<instance*>, environment*> add_test_lights(
     scene* scn, test_light_type type) {
-    if (type == test_light_type::none) return {};
+    if (type == test_light_type::none) return {{}, nullptr};
     switch (type) {
         case test_light_type::pointlight: {
             return {{add_test_instance(scn, test_shape_type::plight,
-                         test_material_type::light_point, {-4, 5, 8}),
+                         test_material_type::light_point, {-2, 10, 8}),
                         add_test_instance(scn, test_shape_type::plight,
-                            test_material_type::light_point, {+4, 5, 8})},
-                {}};
+                            test_material_type::light_point, {+2, 10, 8})},
+                nullptr};
         } break;
         case test_light_type::arealight: {
             return {
@@ -8352,7 +8363,7 @@ tuple<vector<instance*>, environment*> add_test_lights(
                         test_material_type::light_area,
                         lookat_frame3f(
                             {+4, 5, 8}, {0, 3, 0}, {0, 1, 0}, true))},
-                {}};
+                nullptr};
         } break;
         case test_light_type::arealight1: {
             return {
@@ -8363,7 +8374,7 @@ tuple<vector<instance*>, environment*> add_test_lights(
                         test_material_type::light_areal,
                         lookat_frame3f(
                             {-8, 5, 0}, {0, 3, 0}, {0, 1, 0}, true))},
-                {}};
+                nullptr};
         } break;
         case test_light_type::envlight: {
             return {
@@ -8612,9 +8623,9 @@ scene* make_test_scene(test_scene_type otype) {
             return make_simple_test_scene(test_camera_type::cam3,
                 {
                     {test_shape_type::cubes, test_material_type::plastic_red},
-                    {test_shape_type::suzanne,
+                    {test_shape_type::suzannes,
                         test_material_type::plastic_green},
-                    {test_shape_type::suzanne,
+                    {test_shape_type::suzannes,
                         test_material_type::plastic_blue},
                 },
                 test_light_type::pointlight);
@@ -10490,8 +10501,8 @@ inline bool draw_elem_widgets(gl_window* win, scene* scn, instance* ist,
     auto edited = vector<bool>();
     draw_separator_widget(win);
     draw_label_widget(win, "name", ist->name);
-    draw_value_widget(win, "frame", ist->frame, -10, 10);
-    draw_value_widget(win, "shape", ist->shp, shp_names);
+    edited += draw_value_widget(win, "frame", ist->frame, -10, 10);
+    edited += draw_value_widget(win, "shape", ist->shp, shp_names);
     return std::any_of(edited.begin(), edited.end(), [](auto x) { return x; });
 }
 
