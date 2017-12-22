@@ -50,6 +50,7 @@ struct app_state {
 
     // ui
     bool scene_updated = false;
+    bool update_bvh = false;
 
     // navigation
     bool navigation_fps = false;
@@ -113,6 +114,7 @@ void draw(gl_window* win) {
         edited += draw_value_widget(
             win, "filter type", app->trace_params.ftype, trace_filter_names());
         edited += draw_camera_widget(win, "camera", app->scn, app->scam);
+        edited += draw_value_widget(win, "update bvh", app->update_bvh);
         draw_value_widget(win, "fps", app->navigation_fps);
         draw_tonemap_widgets(win, "", app->exposure, app->gamma, app->filmic);
         edited +=
@@ -131,6 +133,9 @@ bool update(app_state* app) {
         trace_async_stop(app->trace_pool);
         app->trace_cur_sample = 0;
         app->trace_async_rendering = false;
+
+        // update BVH
+        if (app->update_bvh) refit_bvh(app->scn);
 
         // render preview
         auto pparams = app->trace_params;

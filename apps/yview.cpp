@@ -121,26 +121,43 @@ inline void update_shade_lights(shade_state* st, const scene* scn) {
     if (!scn->instances.empty()) {
         for (auto ist : scn->instances) {
             auto shp = ist->shp;
-            auto mat = shp->mat;
             if (!shp->mat) continue;
-            if (mat->ke == zero3f) continue;
-            for (auto p : shp->points) {
-                if (st->lights_pos.size() >= 16) break;
-                st->lights_pos.push_back(
-                    transform_point(ist->xform(), shp->pos[p]));
-                st->lights_ke.push_back(mat->ke);
-                st->lights_ltype.push_back(gl_ltype::point);
+            if (shp->mat->ke == zero3f) continue;
+            if (!shp->points.empty()) {
+                for (auto p : shp->points) {
+                    if (st->lights_pos.size() >= 16) break;
+                    st->lights_pos += transform_point(ist->frame, shp->pos[p]);
+                    st->lights_ke += shp->mat->ke;
+                    st->lights_ltype += gl_ltype::point;
+                }
+            } else {
+                auto bbox = make_bbox(shp->pos.size(), shp->pos.data());
+                auto pos = bbox_center(bbox);
+                auto area = 0.0f;
+                for (auto l : shp->lines)
+                    area += line_length(shp->pos[l.x], shp->pos[l.y]);
+                for (auto t : shp->triangles)
+                    area += triangle_area(
+                        shp->pos[t.x], shp->pos[t.y], shp->pos[t.z]);
+                for (auto t : shp->quads)
+                    area += quad_area(shp->pos[t.x], shp->pos[t.y],
+                        shp->pos[t.z], shp->pos[t.w]);
+                auto ke = shp->mat->ke * area;
+                if (st->lights_pos.size() < 16) {
+                    st->lights_pos += transform_point(ist->frame, pos);
+                    st->lights_ke += ke;
+                    st->lights_ltype += gl_ltype::point;
+                }
             }
         }
     } else {
         for (auto shp : scn->shapes) {
             if (!shp->mat) continue;
-            auto mat = shp->mat;
-            if (mat->ke == zero3f) continue;
+            if (shp->mat->ke == zero3f) continue;
             for (auto p : shp->points) {
                 if (st->lights_pos.size() >= 16) break;
                 st->lights_pos.push_back(shp->pos[p]);
-                st->lights_ke.push_back(mat->ke);
+                st->lights_ke.push_back(shp->mat->ke);
                 st->lights_ltype.push_back(gl_ltype::point);
             }
         }
