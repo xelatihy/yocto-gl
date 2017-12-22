@@ -161,10 +161,7 @@ def make_doc(cpp, first_only=False):
     first = True
     for item in items:
         if item.name != "":
-            if item.type == "Namespace":
-                md += "### "
-            else:
-                md += "#### "
+            md += "#### "
             md += item.type + " "
             md += item.name.replace("<", " <").replace(">", " \\>")
             # md += item.name
@@ -193,7 +190,8 @@ template = '''
     <header>
         <nav>
             <img src="images/logo_white.png">
-            <a href="index.html">doc</a>
+            <a href="index.html">about</a>
+            <a href="yocto_gl.html">api</a>
             <a href="https://github.com/xelatihy/yocto-gl">github</a>
         </nav>
     </header>
