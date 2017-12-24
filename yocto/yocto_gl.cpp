@@ -9918,7 +9918,7 @@ gl_window* make_window(
 
 // init gl extensions
 #ifndef __APPLE__
-    if (!glewInit()) return nullptr;
+    if (glewInit() != GLEW_OK) return nullptr;
 #endif
     return win;
 }
