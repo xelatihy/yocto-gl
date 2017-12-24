@@ -1389,15 +1389,18 @@ struct from_json_fn
     }
 };
 
+/*
+ * Fix Error C2864 (must init when define, not when declare)
+ */
 // taken from ranges-v3
 template<typename T>
 struct static_const
 {
-    static constexpr T value{};
+    static constexpr T value;
 };
 
 template<typename T>
-constexpr T static_const<T>::value;
+constexpr T static_const<T>::value = {};
 
 ////////////////////
 // input adapters //
@@ -9356,7 +9359,8 @@ class basic_json
 
     @since version 1.0.0
     */
-    constexpr operator value_t() const noexcept
+    // Fix Error C4430/C2549 (default-int not supported)
+    operator value_t() const noexcept
     {
         return m_type;
     }
