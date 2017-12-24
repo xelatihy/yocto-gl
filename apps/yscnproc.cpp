@@ -171,7 +171,7 @@ int main(int argc, char** argv) {
     }
 
     // print infomation again if needed
-    if (info and scale != 1.0f) {
+    if (info && scale != 1.0f) {
         printf("post-correction information -------\n");
         printf("output: %s\n", output.c_str());
         print_info(scn.get());
