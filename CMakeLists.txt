@@ -54,6 +54,7 @@ else(YOCTO_OPENGL)
 endif(YOCTO_OPENGL)
 
 if(UNIX AND NOT APPLE)
+    set(CMAKE_CXX_FLAGS "-fpermissive -std=c++0x")
     find_package(Threads REQUIRED)
     target_link_libraries(yocto_gl Threads::Threads)
 endif(UNIX AND NOT APPLE)
