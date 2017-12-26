@@ -9833,10 +9833,10 @@ gl_stdsurface_program make_stdsurface_program() {
 
         string myvert = R"(
 #version 330 core
-const vec2 quad_vertices[4] = vec2[4]( vec2( -1.0, -1.0), vec2( 1.0, -1.0), vec2( -1.0, 1.0), vec2( 1.0, 1.0));
+const vec2 quadvertices[4] = vec2[4]( vec2( -1.0, -1.0), vec2( 1.0, -1.0), vec2( -1.0, 1.0), vec2( 1.0, 1.0));
 void main()
 {
-    gl_Position = vec4(quad_vertices[gl_VertexID], 0.0, 1.0);
+    gl_Position = vec4(quadvertices[gl_VertexID], 0.0, 1.0);
 }
         )";
 
@@ -9847,12 +9847,11 @@ out vec4 fragColor;
 
 uniform vec2 resolution;
 
-
 void main() {
 	vec2 position = gl_FragCoord.xy / resolution.xy;
 	gl_FragColor.r = 0.0;
 	gl_FragColor.g = 0.0;
-	gl_FragColor.b = 0.0;
+	gl_FragColor.b = position.y;
 	gl_FragColor.a = 1.0;
     if (gl_FragCoord.x > 100) {
         gl_FragColor.r = 1.0;
@@ -9860,6 +9859,9 @@ void main() {
     if (gl_FragCoord.y > 100) {
         gl_FragColor.g = 1.0;
     }
+    //if (resolution.y == 0) {
+        //gl_FragColor.b = 1.0;
+    //}
 }
     )";
 
@@ -9868,8 +9870,6 @@ void main() {
     //prog._prog = make_program(_vert_header + _vert_skinning + _vert_main,
         //_frag_header + _frag_tonemap + _frag_lighting + _frag_brdf +
             //_frag_material + _frag_main);
-    //prog._prog = make_program(_vert_header + _vert_skinning + _vert_main,
-            //myfrag);
     prog._prog = make_program(myvert, myfrag);
     assert(gl_check_error());
     return prog;

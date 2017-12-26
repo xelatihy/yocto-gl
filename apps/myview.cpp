@@ -113,205 +113,64 @@ struct app_state {
     }
 };
 
-// Init shading
-inline void update_shade_lights(shade_state* st, const scene* scn) {
-    st->lights_pos.clear();
-    st->lights_ke.clear();
-    st->lights_ltype.clear();
-
-    if (!scn->instances.empty()) {
-        for (auto ist : scn->instances) {
-            auto shp = ist->shp;
-            if (!shp->mat) continue;
-            if (shp->mat->ke == zero3f) continue;
-            if (!shp->points.empty()) {
-                for (auto p : shp->points) {
-                    if (st->lights_pos.size() >= 16) break;
-                    st->lights_pos += transform_point(ist->frame, shp->pos[p]);
-                    st->lights_ke += shp->mat->ke;
-                    st->lights_ltype += gl_ltype::point;
-                }
-            } else {
-                auto bbox = make_bbox(shp->pos.size(), shp->pos.data());
-                auto pos = bbox_center(bbox);
-                auto area = 0.0f;
-                for (auto l : shp->lines)
-                    area += line_length(shp->pos[l.x], shp->pos[l.y]);
-                for (auto t : shp->triangles)
-                    area += triangle_area(
-                        shp->pos[t.x], shp->pos[t.y], shp->pos[t.z]);
-                for (auto t : shp->quads)
-                    area += quad_area(shp->pos[t.x], shp->pos[t.y],
-                        shp->pos[t.z], shp->pos[t.w]);
-                auto ke = shp->mat->ke * area;
-                if (st->lights_pos.size() < 16) {
-                    st->lights_pos += transform_point(ist->frame, pos);
-                    st->lights_ke += ke;
-                    st->lights_ltype += gl_ltype::point;
-                }
-            }
+inline gl_stdsurface_program make_my_program() {
+    string myvert = R"(
+        #version 330 core
+        const vec2 quadvertices[4] = vec2[4]( vec2( -1.0, -1.0), vec2( 1.0, -1.0), vec2( -1.0, 1.0), vec2( 1.0, 1.0));
+        void main()
+        {
+        gl_Position = vec4(quadvertices[gl_VertexID], 0.0, 1.0);
         }
-    } else {
-        for (auto shp : scn->shapes) {
-            if (!shp->mat) continue;
-            if (shp->mat->ke == zero3f) continue;
-            for (auto p : shp->points) {
-                if (st->lights_pos.size() >= 16) break;
-                st->lights_pos.push_back(shp->pos[p]);
-                st->lights_ke.push_back(shp->mat->ke);
-                st->lights_ltype.push_back(gl_ltype::point);
-            }
+    )";
+
+    string myfrag = R"(
+        #version 330 core
+
+        out vec4 fragColor;
+
+        uniform vec2 resolution;
+
+        void main() {
+            vec2 position = gl_FragCoord.xy / resolution.xy;
+            gl_FragColor.r = 0.0;
+            gl_FragColor.g = position.x;
+            gl_FragColor.b = 0.0;
+            gl_FragColor.a = 1.0;
+            //if (gl_FragCoord.x > 100) {
+                //gl_FragColor.r = 1.0;
+            //}
+            //if (gl_FragCoord.y > 100) {
+                //gl_FragColor.g = 1.0;
+            //}
         }
-    }
-}
+    )";
 
-// Init shading
-inline void update_shade_state(const scene* scn, shade_state* st) {
-    if (!is_program_valid(st->prog)) st->prog = make_stdsurface_program();
-    st->txt[nullptr] = {};
-    for (auto txt : scn->textures) {
-        if (st->txt.find(txt) != st->txt.end()) continue;
-        if (txt->hdr) {
-            st->txt[txt] = make_texture(txt->hdr, true, true, true);
-        } else if (txt->ldr) {
-            st->txt[txt] = make_texture(txt->ldr, true, true, true);
-        } else
-            assert(false);
-    }
-    for (auto shp : scn->shapes) {
-        if (st->vbo.find(shp) != st->vbo.end()) continue;
-        st->vbo[shp] = shape_vbo();
-        if (!shp->pos.empty()) st->vbo[shp].pos = make_vertex_buffer(shp->pos);
-        if (!shp->norm.empty())
-            st->vbo[shp].norm = make_vertex_buffer(shp->norm);
-        if (!shp->texcoord.empty())
-            st->vbo[shp].texcoord = make_vertex_buffer(shp->texcoord);
-        if (!shp->color.empty())
-            st->vbo[shp].color = make_vertex_buffer(shp->color);
-        if (!shp->tangsp.empty())
-            st->vbo[shp].tangsp = make_vertex_buffer(shp->tangsp);
-        if (!shp->points.empty())
-            st->vbo[shp].points = make_element_buffer(shp->points);
-        if (!shp->lines.empty())
-            st->vbo[shp].lines = make_element_buffer(shp->lines);
-        if (!shp->triangles.empty()) {
-            st->vbo[shp].triangles = make_element_buffer(shp->triangles);
-        }
-        if (!shp->quads.empty()) {
-            auto triangles = convert_quads_to_triangles(shp->quads);
-            st->vbo[shp].quads = make_element_buffer(triangles);
-        }
-        if (!shp->triangles.empty() || !shp->quads.empty() ||
-            !shp->quads_pos.empty()) {
-            auto edges = get_edges(
-                shp->lines, shp->triangles, shp->quads + shp->quads_pos);
-            st->vbo[shp].edges = make_element_buffer(edges);
-        }
-    }
-}
-
-// Draw a shape
-inline void shade_shape(shape* shp, shade_state* st, const mat4f& xform,
-    bool highlighted, bool edges, bool wireframe, bool cutout) {
-    static auto default_material = material();
-    default_material.kd = {0.2f, 0.2f, 0.2f};
-
-    //begin_stdsurface_shape(st->prog, mat4f(xform));
-
-
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-
-
-    //auto etype = gl_etype::triangle;
-    //if (!shp->lines.empty()) etype = gl_etype::line;
-    //if (!shp->points.empty()) etype = gl_etype::point;
-
-    //set_stdsurface_highlight(
-        //st->prog, (highlighted) ? vec4f{1, 1, 0, 1} : zero4f);
-
-    //auto txt = [&st](texture_info& info) -> gl_texture_info {
-        //if (!info.txt) return {};
-        //return st->txt.at(info.txt);
-    //};
-
-    //auto mat = (shp->mat) ? shp->mat : &default_material;
-    //set_stdsurface_material(st->prog, mat->mtype, etype, mat->ke, mat->kd,
-        //mat->ks, mat->rs, mat->op, txt(mat->ke_txt), txt(mat->kd_txt),
-        //txt(mat->ks_txt), txt(mat->rs_txt), txt(mat->norm_txt),
-        //txt(mat->occ_txt), false, mat->double_sided, cutout);
-
-    //auto& vbo = st->vbo.at(shp);
-    //set_stdsurface_vert(
-        //st->prog, vbo.pos, vbo.norm, vbo.texcoord, vbo.color, vbo.tangsp);
-
-    //draw_elems(vbo.points);
-    //draw_elems(vbo.lines);
-    //draw_elems(vbo.triangles);
-    //draw_elems(vbo.quads);
-
-    //if (edges && !wireframe) {
-        //assert(gl_check_error());
-        //set_stdsurface_material(st->prog, material_type::specular_roughness,
-            //etype, zero3f, zero3f, zero3f, 0.5f, mat->op, {}, {}, {}, {}, {},
-            //{}, true, mat->double_sided, cutout);
-
-        //assert(gl_check_error());
-        //gl_line_width(2);
-        //gl_enable_edges(true);
-        //draw_elems(vbo.edges);
-        //gl_enable_edges(false);
-        //gl_line_width(1);
-        //assert(gl_check_error());
-    //}
-
-    //end_stdsurface_shape(st->prog);
+    assert(gl_check_error());
+    auto prog = gl_stdsurface_program();
+    //prog._prog = make_program(_vert_header + _vert_skinning + _vert_main,
+    //_frag_header + _frag_tonemap + _frag_lighting + _frag_brdf +
+    //_frag_material + _frag_main);
+    prog._prog = make_program(myvert, myfrag);
+    assert(gl_check_error());
+    return prog;
 }
 
 // Display a scene
-inline void shade_scene(const scene* scn, shade_state* st, const camera* cam,
-    void* selection, const vec4f& background, float exposure, float gamma,
-    bool filmic, bool wireframe, bool edges, bool cutout, bool camera_lights,
-    const vec3f& amb) {
+inline void shade_scene(shade_state* st) {
+
     // update state
-    update_shade_state(scn, st);
+    if (!is_program_valid(st->prog)) st->prog = make_my_program();
 
-    // begin frame
-    gl_enable_depth_test(true);
-    gl_enable_culling(false);
 
-    gl_enable_wireframe(wireframe);
+    //we need to pass just 4 vertices to the vertex shader
+    bind_program(st->prog._prog);
 
-    mat4f camera_xform, camera_view, camera_proj;
-    camera_xform = to_mat4f(cam->frame);
-    camera_view = to_mat4f(inverse(cam->frame));
-    camera_proj =
-        perspective_mat4f(cam->yfov, cam->aspect, cam->near, cam->far);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
-    begin_stdsurface_frame(st->prog, camera_lights, exposure, gamma, filmic,
-        camera_xform, camera_view, camera_proj);
+    int uniform_resolution = glGetUniformLocation(st->prog._prog._pid,"resolution");
+    glUniform2f(uniform_resolution, 1000, 1000);
 
-    if (!camera_lights) {
-        update_shade_lights(st, scn);
-        set_stdsurface_lights(st->prog, amb, (int)st->lights_pos.size(),
-            st->lights_pos.data(), st->lights_ke.data(),
-            st->lights_ltype.data());
-    }
-
-    if (!scn->instances.empty()) {
-        for (auto ist : scn->instances) {
-            shade_shape(ist->shp, st, ist->xform(),
-                (ist == selection || ist->shp == selection), edges, wireframe,
-                cutout);
-        }
-    } else {
-        for (auto shp : scn->shapes) {
-            shade_shape(shp, st, identity_mat4f, shp == selection, edges,
-                wireframe, cutout);
-        }
-    }
-
-    end_stdsurface_frame(st->prog);
-    gl_enable_wireframe(false);
+    unbind_program(st->prog._prog);
 }
 
 // draw with shading
@@ -325,9 +184,7 @@ inline void draw(gl_window* win) {
     app->scam->aspect = aspect;
 
     gl_clear_buffers();
-    shade_scene(app->scn, app->shstate, app->scam, app->selection,
-        app->background, app->exposure, app->gamma, app->filmic, app->wireframe,
-        app->edges, app->alpha_cutout, app->camera_lights, app->amb);
+    shade_scene(app->shstate);
 
     if (begin_widgets(win, "yview")) {
         draw_label_widget(win, "scene", app->filename);
@@ -379,7 +236,7 @@ inline void run_ui(app_state* app, int w, int h, const string& title) {
 
     // load textures and vbos
     app->shstate = new shade_state();
-    update_shade_state(app->scn, app->shstate);
+    app->shstate->prog = make_my_program();
 
     // init widget
     init_widgets(win);
