@@ -127,14 +127,17 @@ inline gl_stdsurface_program make_my_program() {
     string myfrag = R"(
 #version 330 core
 
+#define PI 3.1415926535897932384626433832795
+
+
 out vec4 fragColor;
 
 uniform vec2 resolution;
 uniform float time;
 
-uniform vec3 _LightDir = vec3(0,500,0);
+uniform vec3 _LightDir = vec3(0,500,0); //we are assuming infinite light intensity
 uniform vec3 _CameraDir = vec3(0,5,5);
-uniform float blinn_phong_alpha = 20;
+uniform float blinn_phong_alpha = 100;
 
 uniform float ka = 0.05;
 uniform float kd = 0.3;
@@ -167,17 +170,27 @@ mat4 rotateZ(float theta) {
     );
 }
 
+// Adapted from: https://stackoverflow.com/questions/26070410/robust-atany-x-on-glsl-for-converting-xy-coordinate-to-angle
+float atan2(in float y, in float x) {
+    return x == 0.0 ? sign(y)*PI/2 : atan(y, x);
+}
+
 
 // Adapted from: http://iquilezles.org/www/articles/distfunctions/distfunctions.htm
 float sdTorus(vec3 p, vec2 t)
 {
     vec2 q = vec2(length(p.xz) - t.x, p.y);
-    return length(q) - t.y;
+    //return length(q) - (t.y + (pow(max(0.0, sin(atan2(p.z , p.x) + time*2)), 10)/3));
+
+
+    float angle = atan2(p.z , p.x)/2 + time; //atan divided by 2 to  have only one bulb
+    return length(q) - (t.y + exp(-100*(pow(cos(angle), 2)))/5);
 }
 
 float map(vec3 p) {
+    //vec3 rp = p;
     vec3 rp = (inverse(rotateZ(time * 2)) * vec4(p, 1.0)).xyz;
-    return sdTorus(rp, vec2(1, 0.5));
+    return sdTorus(rp, vec2(1, 0.2));
 }
 
 //Adapted from: http://jamie-wong.com/2016/07/15/ray-marching-signed-distance-functions/#rotation-and-translation
@@ -206,7 +219,7 @@ vec4 raymarch(vec3 ro, vec3 rd) {
             float l = ka;
             l += max(0.0, kd * dot(normalize(_LightDir - p), n));
             vec3 h = normalize(normalize(_LightDir - p) + normalize(_CameraDir - p));
-            l += ks * pow(max(dot(n , h), 0.0), 50);
+            l += ks * pow(max(dot(n , h), 0.0), blinn_phong_alpha);
             ret = vec4(vec3(l,l,l), 1);
             break;
         }
