@@ -604,9 +604,9 @@ image4f make_sunsky_image(
 
     auto img = image4f(2 * res, res);
     for (auto j = 0; j < img.height(); j++) {
-        if (!has_ground && j > img.height() / 2) continue;
+        if (!has_ground && j >= img.height() / 2) continue;
         auto theta = pif * ((j + 0.5f) / img.height());
-        theta = clamp(theta, 0.0f, pif / 2);
+        theta = clamp(theta, 0.0f, pif / 2 - flt_eps);
         for (int i = 0; i < img.width(); i++) {
             auto phi = 2 * pif * (float(i + 0.5f) / img.width());
             auto w =
@@ -978,7 +978,8 @@ inline vec3f sample_ggx(float rs, const vec2f& rn) {
 // https://www.cs.cornell.edu/~srm/publications/EGSR07-btdf.pdf
 // - uses Kajiya-Kay for hair
 // - uses a hack for points
-inline vec3f eval_brdfcos(const point& pt, const vec3f& wi) {
+inline vec3f eval_brdfcos(
+    const point& pt, const vec3f& wi, bool delta = false) {
     // grab variables
     auto& fr = pt.fr;
     auto& wn = pt.frame.z;
@@ -1004,8 +1005,8 @@ inline vec3f eval_brdfcos(const point& pt, const vec3f& wi) {
                 brdfcos += fr.kd * ndi / pif;
             }
 
-            // specular term
-            if (fr.ks != zero3f && ndi > 0 && ndo > 0 && ndh > 0) {
+            // specular term (GGX)
+            if (fr.ks != zero3f && ndi > 0 && ndo > 0 && ndh > 0 && fr.rs) {
                 // microfacet term
                 auto dg = eval_ggx(fr.rs, ndh, ndi, ndo);
 
@@ -1015,6 +1016,15 @@ inline vec3f eval_brdfcos(const point& pt, const vec3f& wi) {
 
                 // sum up
                 brdfcos += ks * ndi * dg / (4 * ndi * ndo);
+            }
+
+            // specular term (mirror)
+            if (fr.ks != zero3f && ndi > 0 && ndo > 0 && !fr.rs && delta) {
+                // handle fresnel
+                auto ks = eval_fresnel_schlick(fr.ks, ndo, fr.rs);
+
+                // sum up
+                brdfcos += ks;
             }
 
             // transmission hack
@@ -1069,7 +1079,8 @@ inline vec3f eval_brdfcos(const point& pt, const vec3f& wi) {
 }
 
 // Compute the weight for sampling the BRDF
-inline float weight_brdfcos(const point& pt, const vec3f& wi) {
+inline float weight_brdfcos(
+    const point& pt, const vec3f& wi, bool delta = false) {
     // grab variables
     auto& fr = pt.fr;
     auto& wn = pt.frame.z;
@@ -1102,11 +1113,17 @@ inline float weight_brdfcos(const point& pt, const vec3f& wi) {
             if (kdw && ndo > 0 && ndi > 0) { pdf += kdw * ndi / pif; }
 
             // specular term (GGX)
-            if (ksw && ndo > 0 && ndi > 0 && ndh > 0) {
+            if (ksw && ndo > 0 && ndi > 0 && ndh > 0 && fr.rs) {
                 // probability proportional to d adjusted by wh projection
                 auto d = pdf_ggx(fr.rs, ndh);
                 auto hdo = dot(wo, wh);
                 pdf += ksw * d / (4 * hdo);
+            }
+
+            // specular term (mirror)
+            if (ksw && ndo > 0 && ndi > 0 && !fr.rs && delta) {
+                // probability proportional to d adjusted by wh projection
+                pdf += ksw;
             }
 
             // transmission hack
@@ -1156,7 +1173,8 @@ inline vec3f refract(const vec3f& w, const vec3f& n, float eta) {
 }
 
 // Picks a direction based on the BRDF
-inline vec3f sample_brdfcos(const point& pt, float rnl, const vec2f& rn) {
+inline tuple<vec3f, bool> sample_brdfcos(
+    const point& pt, float rnl, const vec2f& rn) {
     // grab variables
     auto& fr = pt.fr;
     auto& wn = pt.frame.z;
@@ -1164,7 +1182,7 @@ inline vec3f sample_brdfcos(const point& pt, float rnl, const vec2f& rn) {
     auto& wo = pt.wo;
 
     // skip if no component
-    if (!fr) return zero3f;
+    if (!fr) return {zero3f, false};
 
     // probability of each lobe
     auto kdw = max_element(fr.kd).second, ksw = max_element(fr.ks).second,
@@ -1182,7 +1200,7 @@ inline vec3f sample_brdfcos(const point& pt, float rnl, const vec2f& rn) {
             auto ndo = dot(wn, wo);
 
             // check to make sure we are above the surface
-            if (ndo <= 0) return zero3f;
+            if (ndo <= 0) return {zero3f, false};
 
             // sample according to diffuse
             if (rnl < kdw) {
@@ -1191,20 +1209,25 @@ inline vec3f sample_brdfcos(const point& pt, float rnl, const vec2f& rn) {
                      rphi = 2 * pif * rn.x;
                 // set to wi
                 auto wi_local = vec3f{rr * cosf(rphi), rr * sinf(rphi), rz};
-                return transform_direction(fp, wi_local);
+                return {transform_direction(fp, wi_local), false};
             }
             // sample according to specular GGX
-            else if (rnl < kdw + ksw) {
+            else if (rnl < kdw + ksw && fr.rs) {
                 // sample wh with ggx distribution
                 auto wh_local = sample_ggx(fr.rs, rn);
                 auto wh = transform_direction(fp, wh_local);
                 // compute wi
-                return normalize(wh * 2.0f * dot(wo, wh) - wo);
+                return {normalize(wh * 2.0f * dot(wo, wh) - wo), false};
+            }
+            // sample according to specular mirror
+            else if (rnl < kdw + ksw && !fr.rs) {
+                // compute wi
+                return {normalize(wn * 2.0f * dot(wo, wn) - wo), true};
             }
             // transmission hack
             else if (rnl < kdw + ksw + ktw) {
                 // continue ray direction
-                return -wo;
+                return {-wo, true};
             } else
                 assert(false);
         } break;
@@ -1216,12 +1239,12 @@ inline vec3f sample_brdfcos(const point& pt, float rnl, const vec2f& rn) {
                 auto rz = 2 * rn.y - 1, rr = sqrtf(1 - rz * rz),
                      rphi = 2 * pif * rn.x;
                 auto wi_local = vec3f{rr * cosf(rphi), rr * sinf(rphi), rz};
-                return transform_direction(fp, wi_local);
+                return {transform_direction(fp, wi_local), false};
             }
             // transmission hack
             else if (rnl < kdw + ksw + ktw) {
                 // continue ray direction
-                return -wo;
+                return {-wo, true};
             } else
                 assert(false);
         } break;
@@ -1233,12 +1256,12 @@ inline vec3f sample_brdfcos(const point& pt, float rnl, const vec2f& rn) {
                 auto rz = 2 * rn.y - 1, rr = sqrtf(1 - rz * rz),
                      rphi = 2 * pif * rn.x;
                 auto wi_local = vec3f{rr * cosf(rphi), rr * sinf(rphi), rz};
-                return transform_direction(fp, wi_local);
+                return {transform_direction(fp, wi_local), false};
             }
             // transmission hack
             else if (rnl < kdw + ksw + ktw) {
                 // continue ray direction
-                return -wo;
+                return {-wo, true};
             } else
                 assert(false);
         } break;
@@ -1246,7 +1269,7 @@ inline vec3f sample_brdfcos(const point& pt, float rnl, const vec2f& rn) {
     }
 
     // done
-    return zero3f;
+    return {zero3f, false};
 }
 
 // Create a point for an environment map. Resolves material with textures.
@@ -1264,9 +1287,9 @@ inline point eval_envpoint(const environment* env, const vec3f& wo) {
     auto ke = env->ke;
     if (env->ke_txt) {
         auto w = transform_direction_inverse(env->frame, -wo);
-        auto theta = clamp(w.y, (float)-1, (float)1);
+        auto theta = acos(clamp(w.y, (float)-1, (float)1));
         auto phi = atan2(w.z, w.x);
-        auto texcoord = vec2f{0.5f + phi / (2 * pif), 1 + 0.5f * theta / pif};
+        auto texcoord = vec2f{0.5f + phi / (2 * pif), theta / pif};
         ke *= eval_texture(env->ke_txt, texcoord).xyz();
     }
 
@@ -1553,13 +1576,14 @@ inline vec3f eval_li_pathtrace(const scene* scn, const ray3f& ray, sampler& smp,
         }
 
         // direct – brdf
-        auto bpt = intersect_scene(
-            scn, offset_ray(pt,
-                     sample_brdfcos(pt, sample_next1f(smp), sample_next2f(smp)),
-                     params));
-        auto bw = weight_brdfcos(pt, -bpt.wo);
+        auto bwi = zero3f;
+        auto bdelta = false;
+        std::tie(bwi, bdelta) =
+            sample_brdfcos(pt, sample_next1f(smp), sample_next2f(smp));
+        auto bpt = intersect_scene(scn, offset_ray(pt, bwi, params));
+        auto bw = weight_brdfcos(pt, -bpt.wo, bdelta);
         auto bke = eval_emission(bpt);
-        auto bbc = eval_brdfcos(pt, -bpt.wo);
+        auto bbc = eval_brdfcos(pt, -bpt.wo, bdelta);
         auto bld = bke * bbc * bw;
         if (bld != zero3f) {
             l += weight * bld * weight_mis(bw, weight_light(bpt, pt));
@@ -1627,8 +1651,12 @@ inline vec3f eval_li_pathtrace_nomis(const scene* scn, const ray3f& ray,
         }
 
         // continue path
-        auto bwi = sample_brdfcos(pt, sample_next1f(smp), sample_next2f(smp));
-        weight *= eval_brdfcos(pt, bwi) * weight_brdfcos(pt, bwi);
+        auto bwi = zero3f;
+        auto bdelta = false;
+        std::tie(bwi, bdelta) =
+            sample_brdfcos(pt, sample_next1f(smp), sample_next2f(smp));
+        weight *=
+            eval_brdfcos(pt, bwi, bdelta) * weight_brdfcos(pt, bwi, bdelta);
         if (weight == zero3f) break;
 
         auto bpt = intersect_scene(scn, offset_ray(pt, bwi, params));
@@ -1677,8 +1705,12 @@ inline vec3f eval_li_pathtrace_hack(const scene* scn, const ray3f& ray,
         }
 
         // continue path
-        auto bwi = sample_brdfcos(pt, sample_next1f(smp), sample_next2f(smp));
-        weight *= eval_brdfcos(pt, bwi) * weight_brdfcos(pt, bwi);
+        auto bwi = zero3f;
+        auto bdelta = false;
+        std::tie(bwi, bdelta) =
+            sample_brdfcos(pt, sample_next1f(smp), sample_next2f(smp));
+        weight *=
+            eval_brdfcos(pt, bwi, bdelta) * weight_brdfcos(pt, bwi, bdelta);
         if (weight == zero3f) break;
 
         auto bpt = intersect_scene(scn, offset_ray(pt, bwi, params));
@@ -1717,6 +1749,13 @@ inline vec3f eval_li_direct(const scene* scn, const ray3f& ray, int bounce,
 
     // exit if needed
     if (bounce >= params.max_depth) return l;
+
+    // reflection
+    if (pt.fr.ks != zero3f && !pt.fr.rs) {
+        auto wi = reflect(pt.wo, pt.frame.z);
+        auto ray = offset_ray(pt, wi, params);
+        l += pt.fr.ks * eval_li_direct(scn, ray, bounce + 1, smp, params, hit);
+    }
 
     // opacity
     if (pt.fr.kt != zero3f) {
@@ -5108,7 +5147,7 @@ inline scene* obj_to_scene(const obj_scene* obj, const load_options& opts) {
         mat->ks = {omat->ks.x, omat->ks.y, omat->ks.z};
         mat->kr = {omat->kr.x, omat->kr.y, omat->kr.z};
         mat->kt = {omat->kt.x, omat->kt.y, omat->kt.z};
-        mat->rs = pow(2 / (omat->ns + 2), 1 / 4.0f);
+        mat->rs = (omat->ns >= 1e6f) ? 0 : pow(2 / (omat->ns + 2), 1 / 4.0f);
         mat->op = omat->op;
         mat->ke_txt = add_texture(omat->ke_txt);
         mat->kd_txt = add_texture(omat->kd_txt);
@@ -8529,6 +8568,10 @@ scene* make_test_scene(test_scene_type otype) {
             return make_simple_test_scene(
                 test_camera_type::cam3, {}, test_light_type::arealight);
         } break;
+        case test_scene_type::nothing_el: {
+            return make_simple_test_scene(test_camera_type::cam3, {},
+                test_light_type::envlight, {}, test_material_type::none);
+        } break;
         case test_scene_type::basic_pl: {
             return make_simple_test_scene(test_camera_type::cam3,
                 {
@@ -8623,23 +8666,67 @@ scene* make_test_scene(test_scene_type otype) {
                 },
                 test_light_type::arealight);
         } break;
-        case test_scene_type::matball1_al: {
-            return make_simple_test_scene(test_camera_type::cam1,
+        case test_scene_type::plastics_al: {
+            return make_simple_test_scene(test_camera_type::cam3,
                 {
                     {test_shape_type::matball1,
-                        test_material_type::plastic_red},
+                        test_material_type::matte_green},
+                    {test_shape_type::matball1,
+                        test_material_type::plastic_green},
+                    {test_shape_type::matball1,
+                        test_material_type::plastic_colored},
                 },
-                test_light_type::arealight1,
-                {{test_shape_type::matballi, test_material_type::matte_gray}});
+                test_light_type::arealight,
+                {{test_shape_type::matballi, test_material_type::matte_gray},
+                    {test_shape_type::matballi, test_material_type::matte_gray},
+                    {test_shape_type::matballi,
+                        test_material_type::matte_gray}});
         } break;
-        case test_scene_type::matball1_el: {
-            return make_simple_test_scene(test_camera_type::cam1,
+        case test_scene_type::plastics_el: {
+            return make_simple_test_scene(test_camera_type::cam3,
                 {
                     {test_shape_type::matball1,
-                        test_material_type::plastic_red},
+                        test_material_type::matte_green},
+                    {test_shape_type::matball1,
+                        test_material_type::plastic_green},
+                    {test_shape_type::matball1,
+                        test_material_type::plastic_colored},
                 },
                 test_light_type::envlight,
-                {{test_shape_type::matballi, test_material_type::matte_gray}});
+                {{test_shape_type::matballi, test_material_type::matte_gray},
+                    {test_shape_type::matballi, test_material_type::matte_gray},
+                    {test_shape_type::matballi,
+                        test_material_type::matte_gray}});
+        } break;
+        case test_scene_type::metals_al: {
+            return make_simple_test_scene(test_camera_type::cam3,
+                {
+                    {test_shape_type::matball1, test_material_type::gold_rough},
+                    {test_shape_type::matball1,
+                        test_material_type::gold_mirror},
+                    {test_shape_type::matball1,
+                        test_material_type::silver_mirror},
+                },
+                test_light_type::arealight,
+                {{test_shape_type::matballi, test_material_type::matte_gray},
+                    {test_shape_type::matballi, test_material_type::matte_gray},
+                    {test_shape_type::matballi,
+                        test_material_type::matte_gray}});
+        } break;
+        case test_scene_type::metals_el: {
+            return make_simple_test_scene(test_camera_type::cam3,
+                {
+                    {test_shape_type::matball1, test_material_type::gold_rough},
+                    {test_shape_type::matball1,
+                        test_material_type::gold_mirror},
+                    {test_shape_type::matball1,
+                        test_material_type::silver_mirror},
+                },
+                test_light_type::envlight,
+                {{test_shape_type::matballi, test_material_type::matte_gray},
+                    {test_shape_type::matballi, test_material_type::matte_gray},
+                    {test_shape_type::matballi,
+                        test_material_type::matte_gray}});
         } break;
         case test_scene_type::tesselation_pl: {
             return make_simple_test_scene(test_camera_type::cam3,
