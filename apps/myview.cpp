@@ -74,7 +74,6 @@ struct shade_state {
 struct app_state {
     string filename;
     string imfilename;
-    bool interactive;
 
     // ui
     bool scene_updated = false;
@@ -84,6 +83,9 @@ struct app_state {
     //Fragment shader variables
     int max_raymarching_steps = 64;
     float max_distance = 100;
+    float step_size = 1;
+
+    float A = -100, B = 5, C = 2, D = 1;
 
 
     ~app_state() {
@@ -122,6 +124,21 @@ inline gl_stdsurface_program make_my_program() {
     return prog;
 }
 
+inline void pass_to_shader(app_state* app, string name, float value) {
+    int uniform_name = glGetUniformLocation(app->shstate->prog._prog._pid,name.c_str());
+    glUniform1f(uniform_name, value);
+}
+
+inline void pass_to_shader(app_state* app, string name, int value) {
+    int uniform_name = glGetUniformLocation(app->shstate->prog._prog._pid,name.c_str());
+    glUniform1i(uniform_name, value);
+}
+
+inline void pass_to_shader(app_state* app, string name, int value1, int value2) {
+    int uniform_name = glGetUniformLocation(app->shstate->prog._prog._pid,name.c_str());
+    glUniform2f(uniform_name, value1, value2);
+}
+
 // Display a scene
 inline void shade_scene(app_state* app) {
     if (!is_program_valid(app->shstate->prog)) app->shstate->prog = make_my_program();
@@ -129,14 +146,14 @@ inline void shade_scene(app_state* app) {
     bind_program(app->shstate->prog._prog);
 
     //passing parameters to the fragment shader
-    int uniform_resolution = glGetUniformLocation(app->shstate->prog._prog._pid,"resolution");
-    glUniform2f(uniform_resolution, app->framebuffer_size.x, app->framebuffer_size.y);
-
-    int uniform_max_steps = glGetUniformLocation(app->shstate->prog._prog._pid,"max_raymarching_steps");
-    glUniform1i(uniform_max_steps, app->max_raymarching_steps);
-
-    int uniform_max_distance = glGetUniformLocation(app->shstate->prog._prog._pid,"max_distance");
-    glUniform1f(uniform_max_distance, app->max_distance);
+    pass_to_shader(app, "resolution", app->framebuffer_size.x, app->framebuffer_size.y);
+    pass_to_shader(app, "max_raymarching_steps", app->max_raymarching_steps);
+    pass_to_shader(app, "max_distance", app->max_distance);
+    pass_to_shader(app, "step_size", app->step_size);
+    pass_to_shader(app, "A", app->A);
+    pass_to_shader(app, "B", app->B);
+    pass_to_shader(app, "C", app->C);
+    pass_to_shader(app, "D", app->D);
 
     float real_time = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
     float time = fmod(real_time, 100000) / 1000.0f;
@@ -167,6 +184,11 @@ inline void draw(gl_window* win) {
         draw_button_widget(win, "Yo ciao");
         draw_value_widget(win, "Ray steps", app->max_raymarching_steps, 1, 200, 1);
         draw_value_widget(win, "Max distance", app->max_distance, 0, 200, 1);
+        draw_value_widget(win, "step size", app->step_size, 0, 1, 1);
+        draw_value_widget(win, "A", app->A, 0, -1000, 1);
+        draw_value_widget(win, "B", app->B, 0, 100, 1);
+        draw_value_widget(win, "C", app->C, 0, 10, 1);
+        draw_value_widget(win, "D", app->D, 0, 10, 1);
         draw_separator_widget(win);
     }
     end_widgets(win);

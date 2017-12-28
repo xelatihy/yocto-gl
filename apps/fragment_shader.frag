@@ -9,6 +9,9 @@ uniform vec2 resolution;
 uniform float time;
 uniform int max_raymarching_steps; //64 by default
 uniform float max_distance; //100 by default
+uniform float step_size;
+
+uniform float A, B, C, D;
 
 uniform vec3 _LightDir = vec3(0,500,0); //we are assuming infinite light intensity
 uniform vec3 _CameraDir = vec3(0,5,5);
@@ -51,21 +54,28 @@ float atan2(in float y, in float x) {
 }
 
 
-// Adapted from: http://iquilezles.org/www/articles/distfunctions/distfunctions.htm
-float sdTorus(vec3 p, vec2 t)
-{
+float sdTorus_bulbus(vec3 p, vec2 t) {
     vec2 q = vec2(length(p.xz) - t.x, p.y);
     //return length(q) - (t.y + (pow(max(0.0, sin(atan2(p.z , p.x) + time*2)), 10)/3));
 
 
-    float angle = atan2(p.z , p.x)/2 + time; //atan divided by 2 to  have only one bulb
-    return length(q) - (t.y + exp(-100*(pow(cos(angle), 2)))/5);
+    float angle = atan2(p.z , p.x)/2 + time*D; //atan divided by 2 to  have only one bulb
+    //return length(q) - (t.y + exp(-100*(pow(cos(angle), 2)))/5);
+    return length(q) - (t.y + exp(A*(pow(cos(angle), C)))/B);
+
+    //In latex: \sqrt{(x - T_x)^2 + (y)^2} - T_y + e^{-100*\cos(atan2(y, x)/2 + t)^2 / 5}
+}
+
+// Adapted from: http://iquilezles.org/www/articles/distfunctions/distfunctions.htm
+float sdTorus(vec3 p, vec2 t) {
+    vec2 q = vec2(length(p.xz) - t.x, p.y);
+    return length(q) - (t.y );
 }
 
 float map(vec3 p) {
-    //vec3 rp = p;
-    vec3 rp = (inverse(rotateZ(time * 2)) * vec4(p, 1.0)).xyz;
-    return sdTorus(rp, vec2(1, 0.2));
+    vec3 rp = p;
+    //vec3 rp = (inverse(rotateZ(time * 2)) * vec4(p, 1.0)).xyz;
+    return sdTorus_bulbus(rp, vec2(1, 0.2));
 }
 
 //Adapted from: http://jamie-wong.com/2016/07/15/ray-marching-signed-distance-functions/#rotation-and-translation
@@ -97,7 +107,7 @@ vec4 raymarch(vec3 ro, vec3 rd) {
         vec3 p = ro + rd * t; //point hit on the surface
         float d = map(p);   
 
-        if (d < 0.001) {
+        if (d < 0.0001) {
             vec3 n = calcNormal(p);
             float l = ka;
             l += max(0.0, kd * dot(normalize(_LightDir - p), n));
@@ -107,7 +117,7 @@ vec4 raymarch(vec3 ro, vec3 rd) {
             break;
         }
 
-        t += d;
+        t += d*step_size;
     }
     return ret;
 }
