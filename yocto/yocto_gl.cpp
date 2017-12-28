@@ -7594,35 +7594,36 @@ scene* make_cornell_box_scene() {
 
     auto scn = new scene();
     scn->cameras += make_camera("cb_cam", {0, 1, 5.15f}, {0, 1, 0}, 27, 0, 1);
-    scn->materials += make_material("cb_white", {0.725f, 0.71f, 0.68f});
-    scn->materials += make_material("cb_red", {0.63f, 0.065f, 0.05f});
-    scn->materials += make_material("cb_green", {0.14f, 0.45f, 0.091f});
-    scn->materials += make_material("cb_light", zero3f, {17, 12, 4});
-    scn->shapes += make_quad("cb_floor", scn->materials[0]);
-    scn->shapes += make_quad("cb_ceiling", scn->materials[0]);
-    scn->shapes += make_quad("cb_back", scn->materials[0]);
-    scn->shapes += make_quad("cb_left", scn->materials[2]);
-    scn->shapes += make_quad("cb_right", scn->materials[1]);
-    scn->shapes +=
-        make_box("cb_tallbox", scn->materials[0], {0.3f, 0.6f, 0.3f});
-    scn->shapes +=
-        make_box("cb_shortbox", scn->materials[0], {0.3f, 0.3f, 0.3f});
-    scn->shapes += make_quad("cb_light", scn->materials[3], 0.25f);
-    scn->instances +=
-        make_instance("cb_floor", scn->shapes[0], {0, 0, 0}, {-90, 0, 0});
-    scn->instances +=
-        make_instance("cb_ceiling", scn->shapes[1], {0, 2, 0}, {90, 0, 0});
-    scn->instances += make_instance("cb_back", scn->shapes[2], {0, 1, -1});
-    scn->instances +=
-        make_instance("cb_left", scn->shapes[3], {+1, 1, 0}, {0, -90, 0}),
-        scn->instances +=
-        make_instance("cb_right", scn->shapes[4], {-1, 1, 0}, {0, 90, 0}),
-        scn->instances += make_instance(
-            "cb_tallbox", scn->shapes[5], {-0.33f, 0.6f, -0.29f}, {0, 15, 0}),
-        scn->instances += make_instance(
-            "cb_shortbox", scn->shapes[6], {0.33f, 0.3f, 0.33f}, {0, -15, 0}),
-        scn->instances +=
-        make_instance("cb_light", scn->shapes[7], {0, 1.999f, 0}, {90, 0, 0});
+    //scn->materials += make_material("cb_white", {0.725f, 0.71f, 0.68f});
+    //scn->materials += make_material("cb_red", {0.63f, 0.065f, 0.05f});
+    //scn->materials += make_material("cb_green", {0.14f, 0.45f, 0.091f});
+    //scn->materials += make_material("cb_light", zero3f, {17, 12, 4});
+    //scn->shapes += make_quad("cb_floor", scn->materials[0]);
+    //scn->shapes += make_quad("cb_ceiling", scn->materials[0]);
+    //scn->shapes += make_quad("cb_back", scn->materials[0]);
+    //scn->shapes += make_quad("cb_left", scn->materials[2]);
+    //scn->shapes += make_quad("cb_right", scn->materials[1]);
+    //scn->shapes +=
+        //make_box("cb_tallbox", scn->materials[0], {0.3f, 0.6f, 0.3f});
+    //scn->shapes +=
+        //make_box("cb_shortbox", scn->materials[0], {0.3f, 0.3f, 0.3f});
+    //scn->shapes += make_quad("cb_light", scn->materials[3], 0.25f);
+    //scn->instances +=
+        //make_instance("cb_floor", scn->shapes[0], {0, 0, 0}, {-90, 0, 0});
+    //scn->instances +=
+        //make_instance("cb_ceiling", scn->shapes[1], {0, 2, 0}, {90, 0, 0});
+    //scn->instances += make_instance("cb_back", scn->shapes[2], {0, 1, -1});
+    //scn->instances +=
+        //make_instance("cb_left", scn->shapes[3], {+1, 1, 0}, {0, -90, 0}),
+        //scn->instances +=
+        //make_instance("cb_right", scn->shapes[4], {-1, 1, 0}, {0, 90, 0}),
+        //scn->instances += make_instance(
+            //"cb_tallbox", scn->shapes[5], {-0.33f, 0.6f, -0.29f}, {0, 15, 0}),
+        //scn->instances += make_instance(
+            //"cb_shortbox", scn->shapes[6], {0.33f, 0.3f, 0.33f}, {0, -15, 0}),
+        //scn->instances +=
+        //make_instance("cb_light", scn->shapes[7], {0, 1.999f, 0}, {90, 0, 0});
+    scn->instances += make_instance("ciao", make_quad("q", make_material("r", {0.9f, 0.3f, 0.3f}), 100), {0,0,0});
     return scn;
 }
 
@@ -9153,11 +9154,13 @@ gl_program make_program(const string& vertex, const string& fragment) {
     glGetProgramiv(prog._pid, GL_LINK_STATUS, &errflags);
     if (!errflags) {
         glGetProgramInfoLog(prog._pid, 10000, 0, errbuf);
+        printf( "%s\n", errbuf );
         throw runtime_error(string("program not linked\n\n") + errbuf);
     }
     glGetProgramiv(prog._pid, GL_VALIDATE_STATUS, &errflags);
     if (!errflags) {
         glGetProgramInfoLog(prog._pid, 10000, 0, errbuf);
+        printf( "%s\n", errbuf );
         throw runtime_error(string("program not linked\n\n") + errbuf);
     }
     assert(gl_check_error());
@@ -9828,9 +9831,7 @@ gl_stdsurface_program make_stdsurface_program() {
             if(tangsp.w < 0) tangv = -tangv;
             vec3 txt = 2 * pow(texture(material.txt_norm,texcoord).xyz, vec3(1/2.2)) - 1;
             return normalize( tangu * txt.x + tangv * txt.y + norm * txt.z );
-        }
-
-        )";
+        })";
 
     string _frag_main =
         R"(
@@ -9910,11 +9911,46 @@ gl_stdsurface_program make_stdsurface_program() {
 #pragma GCC diagnostic pop
 #endif
 
+        string myvert = R"(
+#version 330 core
+const vec2 quadvertices[4] = vec2[4]( vec2( -1.0, -1.0), vec2( 1.0, -1.0), vec2( -1.0, 1.0), vec2( 1.0, 1.0));
+void main()
+{
+    gl_Position = vec4(quadvertices[gl_VertexID], 0.0, 1.0);
+}
+        )";
+
+        string myfrag = R"(
+#version 330 core
+
+out vec4 fragColor;
+
+uniform vec2 resolution;
+
+void main() {
+	vec2 position = gl_FragCoord.xy / resolution.xy;
+	gl_FragColor.r = 0.0;
+	gl_FragColor.g = 0.0;
+	gl_FragColor.b = position.y;
+	gl_FragColor.a = 1.0;
+    if (gl_FragCoord.x > 100) {
+        gl_FragColor.r = 1.0;
+    }
+    if (gl_FragCoord.y > 100) {
+        gl_FragColor.g = 1.0;
+    }
+    //if (resolution.y == 0) {
+        //gl_FragColor.b = 1.0;
+    //}
+}
+    )";
+
     assert(gl_check_error());
     auto prog = gl_stdsurface_program();
-    prog._prog = make_program(_vert_header + _vert_skinning + _vert_main,
-        _frag_header + _frag_tonemap + _frag_lighting + _frag_brdf +
-            _frag_material + _frag_main);
+    //prog._prog = make_program(_vert_header + _vert_skinning + _vert_main,
+        //_frag_header + _frag_tonemap + _frag_lighting + _frag_brdf +
+            //_frag_material + _frag_main);
+    prog._prog = make_program(myvert, myfrag);
     assert(gl_check_error());
     return prog;
 }
@@ -9998,7 +10034,7 @@ gl_window* make_window(
 
 // init gl extensions
 #ifndef __APPLE__
-    if (!glewInit()) return nullptr;
+    if (glewInit() != GLEW_OK) return nullptr;
 #endif
     return win;
 }
