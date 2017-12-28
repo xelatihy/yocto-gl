@@ -2909,7 +2909,7 @@ inline vec3f transform_vector_inverse(const frame3f& a, const vec3f& b) {
 
 /// inverse transforms a direction by a frame (rigid affine transform)
 inline vec3f transform_direction_inverse(const frame3f& a, const vec3f& b) {
-    return normalize(transform_direction(a, b));
+    return normalize(transform_vector_inverse(a, b));
 }
 
 /// transforms a ray by a matrix (direction is not normalized after)
@@ -7680,14 +7680,15 @@ enum struct test_scene_type {
     cornell_box,     // Cornell box
     textures,        // Scene containing all generated textures
     shapes,          // Scene contaning a few meshes
+    plane_al,        // Simple scene with a plane and area lights
     basic_pl,        // Simple scene with no textures and point lights
     simple_pl,       // Textured scene with point lights
     simple_al,       // Textured scene with area lights
     simple_el,       // Textured scene with env lights
-    transparent_pl,  // Scene to test trasparency
-    points_pl,       // Point primitive
-    lines_pl,        // Line primitives
-    subdiv_pl,       // Scene to test subdivions surfaces
+    transparent_al,  // Scene to test trasparency
+    points_al,       // Point primitive
+    lines_al,        // Line primitives
+    subdiv_al,       // Scene to test subdivions surfaces
     matball1_al,     // Material ball - area light
     matball1_el,     // Material ball - env light
     tesselation_pl,  // Scene to show different tesselation
@@ -7703,14 +7704,15 @@ inline const vector<pair<string, test_scene_type>>& test_scene_names() {
         {"cornell_box", test_scene_type::cornell_box},
         {"textures", test_scene_type::textures},
         {"shapes", test_scene_type::shapes},
+        {"plane_al", test_scene_type::plane_al},
         {"basic_pl", test_scene_type::basic_pl},
         {"simple_pl", test_scene_type::simple_pl},
         {"simple_al", test_scene_type::simple_al},
         {"simple_el", test_scene_type::simple_el},
-        {"transparent_pl", test_scene_type::transparent_pl},
-        {"points_pl", test_scene_type::points_pl},
-        {"lines_pl", test_scene_type::lines_pl},
-        {"subdiv_pl", test_scene_type::subdiv_pl},
+        {"transparent_al", test_scene_type::transparent_al},
+        {"points_al", test_scene_type::points_al},
+        {"lines_al", test_scene_type::lines_al},
+        {"subdiv_al", test_scene_type::subdiv_al},
         {"matball1_al", test_scene_type::matball1_al},
         {"tesselation_pl", test_scene_type::tesselation_pl},
         {"textureuv_pl", test_scene_type::textureuv_pl},

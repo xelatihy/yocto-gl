@@ -937,7 +937,7 @@ inline float eval_ggx(float rs, float ndh, float ndi, float ndo) {
     auto alpha2 = rs * rs;
     auto di = (ndh * ndh) * (alpha2 - 1) + 1;
     auto d = alpha2 / (pif * di * di);
-#ifndef YTRACE_GGX_SMITH
+#ifndef YGL_GGX_SMITH
     auto lambda_o = (-1 + sqrt(1 + alpha2 * (1 - ndo * ndo) / (ndo * ndo))) / 2;
     auto lambda_i = (-1 + sqrt(1 + alpha2 * (1 - ndi * ndi) / (ndi * ndi))) / 2;
     auto g = 1 / (1 + lambda_o + lambda_i);
@@ -1824,44 +1824,32 @@ inline eval_li_fn get_shader(const trace_params& params) {
 // triangle filter (public domain from stb_image_resize)
 inline float filter_triangle(float x) {
     x = (float)fabs(x);
-
-    if (x <= 1.0f)
-        return 1 - x;
-    else
-        return 0;
+    if (x <= 1.0f) return 1 - x;
+    return 0;
 }
 
 // cubic filter (public domain from stb_image_resize)
 inline float filter_cubic(float x) {
     x = (float)fabs(x);
-    if (x < 1.0f)
-        return (4 + x * x * (3 * x - 6)) / 6;
-    else if (x < 2.0f)
-        return (8 + x * (-12 + x * (6 - x))) / 6;
-    else
-        return 0.0f;
+    if (x < 1.0f) return (4 + x * x * (3 * x - 6)) / 6;
+    if (x < 2.0f) return (8 + x * (-12 + x * (6 - x))) / 6;
+    return 0.0f;
 }
 
 // catmull-rom filter (public domain from stb_image_resize)
 inline float filter_catmullrom(float x) {
     x = (float)fabs(x);
-    if (x < 1.0f)
-        return 1 - x * x * (2.5f - 1.5f * x);
-    else if (x < 2.0f)
-        return 2 - x * (4 + x * (0.5f * x - 2.5f));
-    else
-        return 0.0f;
+    if (x < 1.0f) return 1 - x * x * (2.5f - 1.5f * x);
+    if (x < 2.0f) return 2 - x * (4 + x * (0.5f * x - 2.5f));
+    return 0.0f;
 }
 
 // mitchell filter (public domain from stb_image_resize)
 inline float filter_mitchell(float x) {
     x = (float)fabs(x);
-    if (x < 1.0f)
-        return (16 + x * x * (21 * x - 36)) / 18;
-    else if (x < 2.0f)
-        return (32 + x * (-60 + x * (36 - 7 * x))) / 18;
-    else
-        return 0.0f;
+    if (x < 1.0f) return (16 + x * x * (21 * x - 36)) / 18;
+    if (x < 2.0f) return (32 + x * (-60 + x * (36 - 7 * x))) / 18;
+    return 0.0f;
 }
 
 // filter function
@@ -5627,9 +5615,10 @@ inline obj_scene* scene_to_obj(const scene* scn) {
             }
         }
         for (auto quad : shp->quads) {
-            group->elems.push_back({(uint32_t)group->verts.size(),
-                obj_element_type::face, (uint16_t)((quad.z == quad.w) ? 3 : 4)});
-            if(group->elems.back().size == 3) {
+            group->elems.push_back(
+                {(uint32_t)group->verts.size(), obj_element_type::face,
+                    (uint16_t)((quad.z == quad.w) ? 3 : 4)});
+            if (group->elems.back().size == 3) {
                 for (auto vid : quad.xyz()) {
                     auto vert = obj_vertex{-1, -1, -1, -1, -1};
                     if (!shp->pos.empty()) vert.pos = offset.pos + vid;
@@ -6629,7 +6618,7 @@ inline void update_lights(scene* scn, bool point_only) {
     scn->lights.clear();
 
     for (auto ist : scn->instances) {
-        if(!ist->shp->mat) continue;
+        if (!ist->shp->mat) continue;
         if (ist->shp->mat->ke == zero3f) continue;
         if (point_only && ist->shp->points.empty()) continue;
         auto lgt = new light();
@@ -8536,6 +8525,10 @@ scene* make_test_scene(test_scene_type otype) {
         case test_scene_type::instancel_pl: {
             return make_instance_scene({100, 100}, {{-3, -3}, {3, 3}});
         } break;
+        case test_scene_type::plane_al: {
+            return make_simple_test_scene(
+                test_camera_type::cam3, {}, test_light_type::arealight);
+        } break;
         case test_scene_type::basic_pl: {
             return make_simple_test_scene(test_camera_type::cam3,
                 {
@@ -8584,7 +8577,7 @@ scene* make_test_scene(test_scene_type otype) {
                 },
                 test_light_type::envlight);
         } break;
-        case test_scene_type::transparent_pl: {
+        case test_scene_type::transparent_al: {
             return make_simple_test_scene(test_camera_type::cam3,
                 {
                     {test_shape_type::quad,
@@ -8594,32 +8587,32 @@ scene* make_test_scene(test_scene_type otype) {
                     {test_shape_type::quad,
                         test_material_type::transparent_blue},
                 },
-                test_light_type::pointlight);
+                test_light_type::arealight);
         } break;
-        case test_scene_type::points_pl: {
+        case test_scene_type::points_al: {
             return make_simple_test_scene(test_camera_type::cam3,
                 {
                     {test_shape_type::points, test_material_type::matte_gray},
                     {test_shape_type::points, test_material_type::matte_gray},
                     {test_shape_type::points, test_material_type::matte_gray},
                 },
-                test_light_type::pointlight);
+                test_light_type::arealight);
         } break;
-        case test_scene_type::lines_pl: {
+        case test_scene_type::lines_al: {
             return make_simple_test_scene(test_camera_type::cam3,
                 {
                     {test_shape_type::lines1, test_material_type::matte_gray},
                     {test_shape_type::lines2, test_material_type::matte_gray},
                     {test_shape_type::lines2, test_material_type::matte_gray},
                 },
-                test_light_type::pointlight,
+                test_light_type::arealight,
                 {
                     {test_shape_type::linesi, test_material_type::matte_gray},
                     {test_shape_type::linesi, test_material_type::matte_gray},
                     {test_shape_type::linesi, test_material_type::matte_gray},
                 });
         } break;
-        case test_scene_type::subdiv_pl: {
+        case test_scene_type::subdiv_al: {
             return make_simple_test_scene(test_camera_type::cam3,
                 {
                     {test_shape_type::cubes, test_material_type::plastic_red},
@@ -8628,7 +8621,7 @@ scene* make_test_scene(test_scene_type otype) {
                     {test_shape_type::suzannes,
                         test_material_type::plastic_blue},
                 },
-                test_light_type::pointlight);
+                test_light_type::arealight);
         } break;
         case test_scene_type::matball1_al: {
             return make_simple_test_scene(test_camera_type::cam1,
