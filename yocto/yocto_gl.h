@@ -743,10 +743,20 @@
 #include <unordered_set>
 #include <vector>
 
+// std::toupper()
+#include <cctype>
+
+/**
+ * In Visual Studio 2017, __cplusplus = 199711L (the old value), so the hack is wrong. 
+ * Also 'constexpr' must be defined as an alias of 'const'.
+ */
 // HACK to avoid compilation with MSVC2015 and C++11 without dirtying code
+/*
 #if defined(_WIN32) || __cplusplus < 201402L
 #define constexpr
 #endif
+*/
+#define constexpr const
 
 // Compilation option
 #define YGL_FAST_RANDFLOAT 1
