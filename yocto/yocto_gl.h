@@ -7681,6 +7681,7 @@ enum struct test_scene_type {
     textures,        // Scene containing all generated textures
     shapes,          // Scene contaning a few meshes
     plane_al,        // Simple scene with a plane and area lights
+    nothing_el,      // Simple scene with no objects and an environment map
     basic_pl,        // Simple scene with no textures and point lights
     simple_pl,       // Textured scene with point lights
     simple_al,       // Textured scene with area lights
@@ -7689,8 +7690,10 @@ enum struct test_scene_type {
     points_al,       // Point primitive
     lines_al,        // Line primitives
     subdiv_al,       // Scene to test subdivions surfaces
-    matball1_al,     // Material ball - area light
-    matball1_el,     // Material ball - env light
+    plastics_al,     // Material ball with plastics - area light
+    plastics_el,     // Material ball with plastics - env light
+    metals_al,       // Material ball with metals - area light
+    metals_el,       // Material ball with metals - env light
     tesselation_pl,  // Scene to show different tesselation
     textureuv_pl,    // Scene to show texture uvs
     normalmap_pl,    // Scene to show normal mapping
@@ -7705,6 +7708,7 @@ inline const vector<pair<string, test_scene_type>>& test_scene_names() {
         {"textures", test_scene_type::textures},
         {"shapes", test_scene_type::shapes},
         {"plane_al", test_scene_type::plane_al},
+        {"nothing_el", test_scene_type::nothing_el},
         {"basic_pl", test_scene_type::basic_pl},
         {"simple_pl", test_scene_type::simple_pl},
         {"simple_al", test_scene_type::simple_al},
@@ -7713,7 +7717,10 @@ inline const vector<pair<string, test_scene_type>>& test_scene_names() {
         {"points_al", test_scene_type::points_al},
         {"lines_al", test_scene_type::lines_al},
         {"subdiv_al", test_scene_type::subdiv_al},
-        {"matball1_al", test_scene_type::matball1_al},
+        {"plastics_al", test_scene_type::plastics_al},
+        {"plastics_el", test_scene_type::plastics_el},
+        {"metals_al", test_scene_type::metals_al},
+        {"metals_el", test_scene_type::metals_el},
         {"tesselation_pl", test_scene_type::tesselation_pl},
         {"textureuv_pl", test_scene_type::textureuv_pl},
         {"normalmap_pl", test_scene_type::normalmap_pl},
@@ -9574,8 +9581,14 @@ inline string format(const string& fmt, const Args&... args) {
 
 /// Wrapper for the above function that prints to stdout.
 template <typename... Args>
-inline string print(const string& fmt, const Args&... args) {
+inline void print(const string& fmt, const Args&... args) {
     printf("%s", format(fmt, args...).c_str());
+}
+
+/// Wrapper for the above function that prints to stdout with endline.
+template <typename... Args>
+inline void println(const string& fmt, const Args&... args) {
+    printf("%s\n", format(fmt, args...).c_str());
 }
 
 }  // namespace ygl
