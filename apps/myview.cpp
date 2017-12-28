@@ -72,47 +72,35 @@ struct shade_state {
 // Application state
 //
 struct app_state {
-    // scene data
-    scene* scn = nullptr;
-
-    // camera selection
-    camera* scam = nullptr;
-
-    // filenames
     string filename;
     string imfilename;
-    string outfilename;
-
-    // render
-    int resolution = 0;
-    float exposure = 0, gamma = 2.2f;
-    bool filmic = false;
-    vec4f background = {0, 0, 0, 0};
-
-    // lighting
-    bool camera_lights = false;
-    vec3f amb = {0, 0, 0};
+    bool interactive;
 
     // ui
-    bool interactive = false;
     bool scene_updated = false;
-
-    // shade
-    bool wireframe = false, edges = false;
-    bool alpha_cutout = true;
     shade_state* shstate = nullptr;
+    vec2i framebuffer_size;
 
-    // navigation
-    bool navigation_fps = false;
+    //Fragment shader variables
+    int max_raymarching_steps = 64;
+    float max_distance = 100;
 
-    // editing support
-    void* selection = nullptr;
 
     ~app_state() {
         if (shstate) delete shstate;
-        if (scn) delete scn;
     }
 };
+
+
+void loadShaderSource(const string& filename, string& out) {
+    std::ifstream file;
+    file.open(filename.c_str());
+    if (!file) throw runtime_error(string("cannot open shader file"));
+    std::stringstream stream;
+    stream << file.rdbuf();
+    file.close();
+    out = stream.str();
+}
 
 inline gl_stdsurface_program make_my_program() {
     string myvert = R"(
@@ -124,136 +112,8 @@ inline gl_stdsurface_program make_my_program() {
         }
     )";
 
-    string myfrag = R"(
-#version 330 core
-
-#define PI 3.1415926535897932384626433832795
-
-
-out vec4 fragColor;
-
-uniform vec2 resolution;
-uniform float time;
-
-uniform vec3 _LightDir = vec3(0,500,0); //we are assuming infinite light intensity
-uniform vec3 _CameraDir = vec3(0,5,5);
-uniform float blinn_phong_alpha = 100;
-
-uniform float ka = 0.05;
-uniform float kd = 0.3;
-uniform float ks = 1.0;
-
-mat4 rotateY(float theta) {
-    return mat4(
-        vec4(cos(theta), 0, sin(theta), 0),
-        vec4(0, 1, 0, 0),
-        vec4(-sin(theta), 0, cos(theta), 0),
-        vec4(0, 0, 0, 1)
-    );
-}
-
-mat4 rotateX(float theta) {
-    return mat4(
-        vec4(1, 0, 0, 0),
-        vec4(0, cos(theta), -sin(theta), 0),
-        vec4(0, sin(theta), cos(theta), 0),
-        vec4(0, 0, 0, 1)
-    );
-}
-
-mat4 rotateZ(float theta) {
-    return mat4(
-        vec4(cos(theta), -sin(theta), 0, 0),
-        vec4(sin(theta), cos(theta), 0, 0),
-        vec4(0, 0, 1, 0),
-        vec4(0, 0, 0, 1)
-    );
-}
-
-// Adapted from: https://stackoverflow.com/questions/26070410/robust-atany-x-on-glsl-for-converting-xy-coordinate-to-angle
-float atan2(in float y, in float x) {
-    return x == 0.0 ? sign(y)*PI/2 : atan(y, x);
-}
-
-
-// Adapted from: http://iquilezles.org/www/articles/distfunctions/distfunctions.htm
-float sdTorus(vec3 p, vec2 t)
-{
-    vec2 q = vec2(length(p.xz) - t.x, p.y);
-    //return length(q) - (t.y + (pow(max(0.0, sin(atan2(p.z , p.x) + time*2)), 10)/3));
-
-
-    float angle = atan2(p.z , p.x)/2 + time; //atan divided by 2 to  have only one bulb
-    return length(q) - (t.y + exp(-100*(pow(cos(angle), 2)))/5);
-}
-
-float map(vec3 p) {
-    //vec3 rp = p;
-    vec3 rp = (inverse(rotateZ(time * 2)) * vec4(p, 1.0)).xyz;
-    return sdTorus(rp, vec2(1, 0.2));
-}
-
-//Adapted from: http://jamie-wong.com/2016/07/15/ray-marching-signed-distance-functions/#rotation-and-translation
-vec3 calcNormal(in vec3 p) {
-    float eps = 0.0001;
-    return normalize(vec3(
-        map(vec3(p.x + eps, p.y, p.z)) - map(vec3(p.x - eps, p.y, p.z)),
-        map(vec3(p.x, p.y + eps, p.z)) - map(vec3(p.x, p.y - eps, p.z)),
-        map(vec3(p.x, p.y, p.z + eps)) - map(vec3(p.x, p.y, p.z - eps))
-    ));
-}
-
-
-//Adapted from: http://flafla2.github.io/2016/10/01/raymarching.html
-vec4 raymarch(vec3 ro, vec3 rd) {
-    vec4 ret = vec4(0,0,0,0);
-
-    const int maxstep = 64;
-    float t = 0; // current distance traveled along ray
-    for (int i = 0; i < maxstep; ++i) {
-        vec3 p = ro + rd * t; //point hit on the surface
-        float d = map(p);   
-
-        if (d < 0.001) {
-            vec3 n = calcNormal(p);
-            float l = ka;
-            l += max(0.0, kd * dot(normalize(_LightDir - p), n));
-            vec3 h = normalize(normalize(_LightDir - p) + normalize(_CameraDir - p));
-            l += ks * pow(max(dot(n , h), 0.0), blinn_phong_alpha);
-            ret = vec4(vec3(l,l,l), 1);
-            break;
-        }
-
-        t += d;
-    }
-    return ret;
-}
-
-
-//Adapted from: https://github.com/zackpudil/raymarcher/blob/master/src/shaders/scenes/earf_day.frag
-mat3 camera(vec3 e, vec3 l) {
-    vec3 f = normalize(l - e);
-    vec3 r = cross(vec3(0, 1, 0), f);
-    vec3 u = cross(f, r);
-    
-    return mat3(r, u, f);
-}
-
-
-
-void main() {
-	vec2 uv = -1.0 + 2.0*(gl_FragCoord.xy/resolution);
-	uv.x *= resolution.x/resolution.y;
-
-	vec3 col = vec3(0);
-
-    float atime = time*0.3;
-	//vec3 ro = 2.5*vec3(cos(atime), 0, -sin(atime));
-    vec3 ro = _CameraDir;
-	vec3 rd = camera(ro, vec3(0))*normalize(vec3(uv, 2.0));
-
-	fragColor = raymarch(ro, rd);
-}    )";
+    string myfrag;
+    loadShaderSource("fragment_shader.frag", myfrag);
 
     assert(gl_check_error());
     auto prog = gl_stdsurface_program();
@@ -263,24 +123,31 @@ void main() {
 }
 
 // Display a scene
-inline void shade_scene(shade_state* st, vec2i framebuffer_size) {
-    if (!is_program_valid(st->prog)) st->prog = make_my_program();
+inline void shade_scene(app_state* app) {
+    if (!is_program_valid(app->shstate->prog)) app->shstate->prog = make_my_program();
 
-    bind_program(st->prog._prog);
+    bind_program(app->shstate->prog._prog);
 
-    //we need to pass just 4 vertices to the vertex shader
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    //passing parameters to the fragment shader
+    int uniform_resolution = glGetUniformLocation(app->shstate->prog._prog._pid,"resolution");
+    glUniform2f(uniform_resolution, app->framebuffer_size.x, app->framebuffer_size.y);
 
-    int uniform_resolution = glGetUniformLocation(st->prog._prog._pid,"resolution");
-    glUniform2f(uniform_resolution, framebuffer_size.x, framebuffer_size.y);
+    int uniform_max_steps = glGetUniformLocation(app->shstate->prog._prog._pid,"max_raymarching_steps");
+    glUniform1i(uniform_max_steps, app->max_raymarching_steps);
+
+    int uniform_max_distance = glGetUniformLocation(app->shstate->prog._prog._pid,"max_distance");
+    glUniform1f(uniform_max_distance, app->max_distance);
 
     float real_time = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
     float time = fmod(real_time, 100000) / 1000.0f;
     std::cout << time << std::endl;
-    int uniform_time = glGetUniformLocation(st->prog._prog._pid,"time");
+    int uniform_time = glGetUniformLocation(app->shstate->prog._prog._pid,"time");
     glUniform1f(uniform_time, time);
 
-    unbind_program(st->prog._prog);
+    //we need to pass just 4 vertices to the vertex shader
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+    unbind_program(app->shstate->prog._prog);
 }
 
 // draw with shading
@@ -288,37 +155,23 @@ inline void draw(gl_window* win) {
     auto app = (app_state*)get_user_pointer(win);
 
     auto window_size = get_window_size(win);
-    auto framebuffer_size = get_framebuffer_size(win);
-    gl_set_viewport(framebuffer_size);
+    app->framebuffer_size = get_framebuffer_size(win);
+    gl_set_viewport(app->framebuffer_size);
     auto aspect = (float)window_size.x / (float)window_size.y;
-    app->scam->aspect = aspect;
 
     gl_clear_buffers();
-    shade_scene(app->shstate, framebuffer_size);
+    shade_scene(app);
 
     if (begin_widgets(win, "yview")) {
-        draw_label_widget(win, "scene", app->filename);
-        draw_camera_widget(win, "camera", app->scn, app->scam);
-        draw_value_widget(win, "wire", app->wireframe);
-        draw_continue_widget(win);
-        draw_value_widget(win, "edges", app->edges);
-        draw_continue_widget(win);
-        draw_value_widget(win, "cutout", app->alpha_cutout);
-        draw_continue_widget(win);
-        draw_value_widget(win, "fps", app->navigation_fps);
-        draw_tonemap_widgets(win, "", app->exposure, app->gamma, app->filmic);
-
         draw_separator_widget(win);
         draw_button_widget(win, "Yo ciao");
+        draw_value_widget(win, "Ray steps", app->max_raymarching_steps, 1, 200, 1);
+        draw_value_widget(win, "Max distance", app->max_distance, 0, 200, 1);
         draw_separator_widget(win);
-
-        draw_scene_widgets(
-            win, "scene", app->scn, app->selection, app->shstate->txt);
     }
     end_widgets(win);
 
     swap_buffers(win);
-    if (app->shstate->lights_pos.empty()) app->camera_lights = true;
 }
 
 // scene update
@@ -360,65 +213,44 @@ inline void run_ui(app_state* app, int w, int h, const string& title) {
         set_window_title(win, ("yview | " + app->filename));
 
         // handle mouse and keyboard for navigation
-        if (mouse_button && !get_widget_active(win)) {
-            if (app->navigation_fps) {
-                auto dolly = 0.0f;
-                auto pan = zero2f;
-                auto rotate = zero2f;
-                switch (mouse_button) {
-                    case 1: rotate = (mouse_pos - mouse_last) / 100.0f; break;
-                    case 2:
-                        dolly = (mouse_pos[0] - mouse_last[0]) / 100.0f;
-                        break;
-                    case 3: pan = (mouse_pos - mouse_last) / 100.0f; break;
-                    default: break;
-                }
-                camera_fps(app->scam->frame, {0, 0, 0}, rotate);
-            } else {
-                auto dolly = 0.0f;
-                auto pan = zero2f;
-                auto rotate = zero2f;
-                switch (mouse_button) {
-                    case 1: rotate = (mouse_pos - mouse_last) / 100.0f; break;
-                    case 2:
-                        dolly = (mouse_pos[0] - mouse_last[0]) / 100.0f;
-                        break;
-                    case 3: pan = (mouse_pos - mouse_last) / 100.0f; break;
-                    default: break;
-                }
+        //if (mouse_button && !get_widget_active(win)) {
+                //auto dolly = 0.0f;
+                //auto pan = zero2f;
+                //auto rotate = zero2f;
+                //switch (mouse_button) {
+                    //case 1: rotate = (mouse_pos - mouse_last) / 100.0f; break;
+                    //case 2:
+                        //dolly = (mouse_pos[0] - mouse_last[0]) / 100.0f;
+                        //break;
+                    //case 3: pan = (mouse_pos - mouse_last) / 100.0f; break;
+                    //default: break;
+                //}
 
-                camera_turntable(
-                    app->scam->frame, app->scam->focus, rotate, dolly, pan);
-            }
-            app->scene_updated = true;
-        }
+                //camera_turntable(
+                    //app->scam->frame, app->scam->focus, rotate, dolly, pan);
+            //app->scene_updated = true;
+        //}
 
         // handle keytboard for navigation
-        if (!get_widget_active(win) && app->navigation_fps) {
-            auto transl = zero3f;
-            if (get_key(win, 'a')) transl.x -= 1;
-            if (get_key(win, 'd')) transl.x += 1;
-            if (get_key(win, 's')) transl.z += 1;
-            if (get_key(win, 'w')) transl.z -= 1;
-            if (get_key(win, 'e')) transl.y += 1;
-            if (get_key(win, 'q')) transl.y -= 1;
-            if (transl != zero3f) {
-                camera_fps(app->scam->frame, transl, {0, 0});
-                app->scene_updated = true;
-            }
-        }
+        //if (!get_widget_active(win)) {
+            //auto transl = zero3f;
+            //if (get_key(win, 'a')) transl.x -= 1;
+            //if (get_key(win, 'd')) transl.x += 1;
+            //if (get_key(win, 's')) transl.z += 1;
+            //if (get_key(win, 'w')) transl.z -= 1;
+            //if (get_key(win, 'e')) transl.y += 1;
+            //if (get_key(win, 'q')) transl.y -= 1;
+            //if (transl != zero3f) {
+                //camera_fps(app->scam->frame, transl, {0, 0});
+                //app->scene_updated = true;
+            //}
+        //}
 
         // draw
         draw(win);
 
         // update
         update(app);
-
-        // check for screenshot
-        //        if (scn->no_ui) {
-        //            save_screenshot(win, scn->imfilename);
-        //            break;
-        //        }
 
         // event hadling
         poll_events(win);
@@ -437,22 +269,8 @@ int main(int argc, char* argv[]) {
 
     // parse command line
     auto parser = make_parser(argc, argv, "yview", "views scenes inteactively");
-    app->exposure =
-        parse_opt(parser, "--exposure", "-e", "hdr image exposure", 0.0f);
-    app->gamma = parse_opt(parser, "--gamma", "-g", "hdr image gamma", 2.2f);
-    app->filmic = parse_flag(parser, "--filmic", "-F", "hdr filmic output");
-    app->resolution =
-        parse_opt(parser, "--resolution", "-r", "image resolution", 540);
-    auto amb = parse_opt(parser, "--ambient", "", "ambient factor", 0.0f);
-    app->amb = {amb, amb, amb};
-    app->camera_lights =
-        parse_flag(parser, "--camera-lights", "-c", "enable camera lights");
     auto log_filename = parse_opt(parser, "--log", "", "log to disk", ""s);
     if (log_filename != "") add_file_stream(log_filename, true);
-    auto preserve_quads =
-        parse_flag(parser, "--preserve-quads", "-q", "preserve quads on load");
-    auto preserve_facevarying = parse_flag(
-        parser, "--preserve-facevarying", "-f", "preserve facevarying on load");
     app->imfilename =
         parse_opt(parser, "--output-image", "-o", "image filename", "out.hdr"s);
     app->filename = parse_arg(parser, "scene", "scene filename", ""s);
@@ -461,28 +279,10 @@ int main(int argc, char* argv[]) {
         exit(1);
     }
 
-    // scene loading
-    log_info("loading scene {}", app->filename);
-    try {
-        auto opts = load_options();
-        opts.preserve_quads = preserve_quads;
-        opts.preserve_facevarying = preserve_facevarying;
-        app->scn = load_scene(app->filename, opts);
-    } catch (exception e) { log_fatal("cannot load scene {}", app->filename); }
-
-    // tesselate input shapes
-    tesselate_shapes(app->scn);
-
-    // add missing data
-    add_elements(app->scn);
-    app->scam = app->scn->cameras[0];
-
-    // light
-    update_lights(app->scn, true);
 
     // run ui
-    auto width = (int)round(app->scam->aspect * app->resolution);
-    auto height = app->resolution;
+    auto width = 800;
+    auto height = 600;
     run_ui(app, width, height, "yview");
 
     // clear
