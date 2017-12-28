@@ -721,6 +721,7 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <cctype>
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
