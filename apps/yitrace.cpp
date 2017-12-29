@@ -55,11 +55,8 @@ struct app_state {
     // navigation
     bool navigation_fps = false;
 
-    // interactive simulation
-    vector<frame3f> simulation_initial_state;
-
     // trace
-    trace_params trace_params;
+    trace_params trace_params_;
     bool trace_save_progressive = false;
     int trace_block_size = 32;
     int trace_batch_size = 16;
@@ -106,13 +103,13 @@ void draw(gl_window* win) {
         draw_label_widget(win, "scene", app->filename);
         draw_label_widget(win, "sample", app->trace_cur_sample);
         draw_value_widget(
-            win, "samples", app->trace_params.nsamples, 1, 4096, 1);
+            win, "samples", app->trace_params_.nsamples, 1, 4096, 1);
         edited += draw_value_widget(
-            win, "shader type", app->trace_params.stype, trace_shader_names());
+            win, "shader type", app->trace_params_.stype, trace_shader_names());
         edited += draw_value_widget(
-            win, "random type", app->trace_params.rtype, trace_rng_names());
+            win, "random type", app->trace_params_.rtype, trace_rng_names());
         edited += draw_value_widget(
-            win, "filter type", app->trace_params.ftype, trace_filter_names());
+            win, "filter type", app->trace_params_.ftype, trace_filter_names());
         edited += draw_camera_widget(win, "camera", app->scn, app->scam);
         edited += draw_value_widget(win, "update bvh", app->update_bvh);
         draw_value_widget(win, "fps", app->navigation_fps);
@@ -138,9 +135,9 @@ bool update(app_state* app) {
         if (app->update_bvh) refit_bvh(app->scn);
 
         // render preview
-        auto pparams = app->trace_params;
-        pparams.width = app->trace_params.width / app->trace_block_size;
-        pparams.height = app->trace_params.height / app->trace_block_size;
+        auto pparams = app->trace_params_;
+        pparams.width = app->trace_params_.width / app->trace_block_size;
+        pparams.height = app->trace_params_.height / app->trace_block_size;
         pparams.nsamples = 1;
         pparams.ftype = trace_filter_type::box;
         app->preview_img = image4f(pparams.width, pparams.height);
@@ -152,7 +149,7 @@ bool update(app_state* app) {
         app->scene_updated = false;
     } else if (!app->trace_async_rendering) {
         trace_async_start(app->scn, app->trace_img, app->trace_rngs,
-            app->trace_params, app->trace_pool,
+            app->trace_params_, app->trace_pool,
             [app](int s) { app->trace_cur_sample = s; });
         app->trace_async_rendering = true;
     }
@@ -253,25 +250,25 @@ int main(int argc, char* argv[]) {
     // parse command line
     auto parser =
         make_parser(argc, argv, "yitrace", "path trace images interactively");
-    app->trace_params.camera_id = 0;
+    app->trace_params_.camera_id = 0;
     app->trace_save_progressive =
         parse_flag(parser, "--save-progressive", "", "save progressive images");
-    app->trace_params.rtype = parse_opt(parser, "--random", "", "random type",
+    app->trace_params_.rtype = parse_opt(parser, "--random", "", "random type",
         trace_rng_names(), trace_rng_type::stratified);
-    app->trace_params.ftype = parse_opt(parser, "--filter", "", "filter type",
+    app->trace_params_.ftype = parse_opt(parser, "--filter", "", "filter type",
         trace_filter_names(), trace_filter_type::box);
-    app->trace_params.stype =
+    app->trace_params_.stype =
         parse_opt(parser, "--shader", "-S", "path estimator type",
             trace_shader_names(), trace_shader_type::pathtrace);
-    app->trace_params.envmap_invisible =
+    app->trace_params_.envmap_invisible =
         parse_flag(parser, "--envmap-invisible", "", "envmap invisible");
-    app->trace_params.shadow_notransmission = parse_flag(
+    app->trace_params_.shadow_notransmission = parse_flag(
         parser, "--shadow-notransmission", "", "shadow without transmission");
     app->trace_block_size =
         parse_opt(parser, "--block-size", "", "block size", 32);
     app->trace_batch_size =
         parse_opt(parser, "--batch-size", "", "batch size", 16);
-    app->trace_params.nsamples =
+    app->trace_params_.nsamples =
         parse_opt(parser, "--samples", "-s", "image samples", 256);
     app->exposure =
         parse_opt(parser, "--exposure", "-e", "hdr image exposure", 0.0f);
@@ -282,9 +279,9 @@ int main(int argc, char* argv[]) {
     auto amb = parse_opt(parser, "--ambient", "", "ambient factor", 0.0f);
     auto camera_lights =
         parse_flag(parser, "--camera-lights", "-c", "enable camera lights");
-    app->trace_params.amb = {amb, amb, amb};
+    app->trace_params_.amb = {amb, amb, amb};
     if (camera_lights) {
-        app->trace_params.stype = trace_shader_type::eyelight;
+        app->trace_params_.stype = trace_shader_type::eyelight;
     }
     auto log_filename = parse_opt(parser, "--log", "", "log to disk", ""s);
     if (log_filename != "") add_file_stream(log_filename, true);
@@ -315,10 +312,10 @@ int main(int argc, char* argv[]) {
     // initialize rendering objects
     auto width = (int)round(app->scam->aspect * app->resolution);
     auto height = app->resolution;
-    app->trace_params.width = width;
-    app->trace_params.height = height;
+    app->trace_params_.width = width;
+    app->trace_params_.height = height;
     app->trace_img = image4f(width, height);
-    app->trace_rngs = trace_rngs(app->trace_params);
+    app->trace_rngs = trace_rngs(app->trace_params_);
     app->trace_pool = new thread_pool();
     app->preview_img = image4f();
     app->scene_updated = true;

@@ -8373,7 +8373,7 @@ inline const vector<pair<string, test_light_type>>& test_light_names() {
 
 tuple<vector<instance*>, environment*> add_test_lights(
     scene* scn, test_light_type type) {
-    if (type == test_light_type::none) return {{}, nullptr};
+    if (type == test_light_type::none) return {vector<instance*>{}, nullptr};
     switch (type) {
         case test_light_type::pointlight: {
             return {{add_test_instance(scn, test_shape_type::plight,
@@ -8405,9 +8405,9 @@ tuple<vector<instance*>, environment*> add_test_lights(
                 nullptr};
         } break;
         case test_light_type::envlight: {
-            return {
-                {}, add_test_environment(scn, test_environment_type::sky1,
-                        lookat_frame3f({0, 1, 0}, {0, 1, 1}, {0, 1, 0}, true))};
+            return {vector<instance*>{},
+                add_test_environment(scn, test_environment_type::sky1,
+                    lookat_frame3f({0, 1, 0}, {0, 1, 1}, {0, 1, 0}, true))};
         } break;
         default: throw runtime_error("bad value");
     }
