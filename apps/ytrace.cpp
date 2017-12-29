@@ -45,7 +45,7 @@ struct app_state {
     vec4f background = {0, 0, 0, 0};
 
     // trace
-    trace_params trace_params;
+    trace_params trace_params_;
     bool trace_save_progressive = false;
     int trace_block_size = 32;
     int trace_batch_size = 16;
@@ -67,27 +67,27 @@ int main(int argc, char* argv[]) {
 
     // parse command line
     auto parser = make_parser(argc, argv, "ytrace", "offline oath tracing");
-    app->trace_params.camera_id = 0;
+    app->trace_params_.camera_id = 0;
     app->trace_save_progressive =
         parse_flag(parser, "--save-progressive", "", "save progressive images");
-    app->trace_params.rtype = parse_opt(parser, "--random", "", "random type",
+    app->trace_params_.rtype = parse_opt(parser, "--random", "", "random type",
         trace_rng_names(), trace_rng_type::stratified);
-    app->trace_params.ftype = parse_opt(parser, "--filter", "", "filter type",
+    app->trace_params_.ftype = parse_opt(parser, "--filter", "", "filter type",
         trace_filter_names(), trace_filter_type::box);
-    app->trace_params.stype =
+    app->trace_params_.stype =
         parse_opt(parser, "--shader", "-S", "path estimator type",
             trace_shader_names(), trace_shader_type::pathtrace);
-    app->trace_params.envmap_invisible =
+    app->trace_params_.envmap_invisible =
         parse_flag(parser, "--envmap-invisible", "", "envmap invisible");
-    app->trace_params.shadow_notransmission = parse_flag(
+    app->trace_params_.shadow_notransmission = parse_flag(
         parser, "--shadow-notransmission", "", "shadow without transmission");
     app->trace_block_size =
         parse_opt(parser, "--block-size", "", "block size", 32);
     app->trace_batch_size =
         parse_opt(parser, "--batch-size", "", "batch size", 16);
-    app->trace_params.nsamples =
+    app->trace_params_.nsamples =
         parse_opt(parser, "--samples", "-s", "image samples", 256);
-    app->trace_params.parallel =
+    app->trace_params_.parallel =
         !parse_flag(parser, "--no-parallel", "", "so not run in parallel");
     app->exposure =
         parse_opt(parser, "--exposure", "-e", "hdr image exposure", 0.0f);
@@ -98,9 +98,9 @@ int main(int argc, char* argv[]) {
     auto amb = parse_opt(parser, "--ambient", "", "ambient factor", 0.0f);
     auto camera_lights =
         parse_flag(parser, "--camera-lights", "-c", "enable camera lights");
-    app->trace_params.amb = {amb, amb, amb};
+    app->trace_params_.amb = {amb, amb, amb};
     if (camera_lights) {
-        app->trace_params.stype = trace_shader_type::eyelight;
+        app->trace_params_.stype = trace_shader_type::eyelight;
     }
     auto log_filename = parse_opt(parser, "--log", "", "log to disk", ""s);
     if (log_filename != "") add_file_stream(log_filename, true);
@@ -134,41 +134,41 @@ int main(int argc, char* argv[]) {
 
     // initialize rendering objects
     auto width =
-        (int)round(app->scn->cameras[app->trace_params.camera_id]->aspect *
+        (int)round(app->scn->cameras[app->trace_params_.camera_id]->aspect *
                    app->resolution);
     auto height = app->resolution;
-    app->trace_params.width = width;
-    app->trace_params.height = height;
+    app->trace_params_.width = width;
+    app->trace_params_.height = height;
     app->trace_img = image4f(width, height);
     app->trace_acc = image4f(width, height);
     app->trace_weight = image4f(width, height);
-    app->trace_rngs = trace_rngs(app->trace_params);
+    app->trace_rngs = trace_rngs(app->trace_params_);
 
     // render
     log_info("starting renderer");
-    for (auto cur_sample = 0; cur_sample < app->trace_params.nsamples;
+    for (auto cur_sample = 0; cur_sample < app->trace_params_.nsamples;
          cur_sample += app->trace_batch_size) {
         if (app->trace_save_progressive && cur_sample) {
-            auto imfilename = format("{}{}.{}{}",
-                path_dirname(app->imfilename), path_basename(app->imfilename),
-                cur_sample, path_extension(app->imfilename));
+            auto imfilename = format("{}{}.{}{}", path_dirname(app->imfilename),
+                path_basename(app->imfilename), cur_sample,
+                path_extension(app->imfilename));
             log_info("saving image {}", imfilename);
             save_image(imfilename, app->trace_img, app->exposure, app->gamma,
                 app->filmic);
         }
         log_info(
-            "rendering sample {}/{}", cur_sample, app->trace_params.nsamples);
-        if (app->trace_params.ftype == trace_filter_type::box) {
+            "rendering sample {}/{}", cur_sample, app->trace_params_.nsamples);
+        if (app->trace_params_.ftype == trace_filter_type::box) {
             trace_samples(app->scn, app->trace_img, cur_sample,
                 min(cur_sample + app->trace_batch_size,
-                    app->trace_params.nsamples),
-                app->trace_rngs, app->trace_params);
+                    app->trace_params_.nsamples),
+                app->trace_rngs, app->trace_params_);
         } else {
             trace_filtered_samples(app->scn, app->trace_img, app->trace_acc,
                 app->trace_weight, cur_sample,
                 min(cur_sample + app->trace_batch_size,
-                    app->trace_params.nsamples),
-                app->trace_rngs, app->trace_params);
+                    app->trace_params_.nsamples),
+                app->trace_rngs, app->trace_params_);
         }
     }
     log_info("rendering done");
