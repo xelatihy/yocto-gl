@@ -7403,7 +7403,8 @@ inline void flatten_instances(scene* scn) {
 }
 
 /// Initialize the lights
-void update_lights(scene* scn, bool point_only);
+void update_lights(
+    scene* scn, bool include_env = false, bool sampling_cdf = false);
 
 /// Print scene information (call update bounds bes before)
 void print_info(const scene* scn);

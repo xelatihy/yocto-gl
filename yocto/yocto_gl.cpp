@@ -6665,17 +6665,17 @@ inline void merge_into(scene* merge_into, scene* merge_from) {
 }
 
 // Initialize the lights
-inline void update_lights(scene* scn, bool point_only) {
+inline void update_lights(scene* scn, bool include_env, bool sampling_cdf) {
     for (auto lgt : scn->lights) delete lgt;
     scn->lights.clear();
 
     for (auto ist : scn->instances) {
         if (!ist->shp->mat) continue;
         if (ist->shp->mat->ke == zero3f) continue;
-        if (point_only && ist->shp->points.empty()) continue;
         auto lgt = new light();
         lgt->ist = ist;
-        if (point_only) continue;
+        scn->lights.push_back(lgt);
+        if (!sampling_cdf) continue;
         auto shp = ist->shp;
         if (shp->elem_cdf.empty()) {
             if (!shp->points.empty()) {
@@ -6686,11 +6686,10 @@ inline void update_lights(scene* scn, bool point_only) {
                 shp->elem_cdf = sample_triangles_cdf(shp->triangles, shp->pos);
             }
         }
-        scn->lights.push_back(lgt);
     }
 
     for (auto env : scn->environments) {
-        if (point_only) continue;
+        if (!include_env) continue;
         if (env->ke == zero3f) continue;
         auto lgt = new light();
         lgt->env = env;
@@ -6763,8 +6762,8 @@ void merge_into(scene* merge_into, scene* merge_from) {
 }
 
 // Initialize the lights
-void update_lights(scene* scn, bool point_only) {
-    _impl_scn::update_lights(scn, point_only);
+void update_lights(scene* scn, bool include_env, bool sampling_cdf) {
+    _impl_scn::update_lights(scn, include_env, sampling_cdf);
 }
 
 // Print scene info (call update bounds bes before)
@@ -9970,47 +9969,33 @@ void update_stdsurface_state(gl_stdsurface_state* st, const scene* scn,
     st->lights_ke.clear();
     st->lights_ltype.clear();
 
-    if (!scn->instances.empty()) {
-        for (auto ist : scn->instances) {
-            auto shp = ist->shp;
-            if (!shp->mat) continue;
-            if (shp->mat->ke == zero3f) continue;
-            if (!shp->points.empty()) {
-                for (auto p : shp->points) {
-                    if (st->lights_pos.size() >= 16) break;
-                    st->lights_pos += transform_point(ist->frame, shp->pos[p]);
-                    st->lights_ke += shp->mat->ke;
-                    st->lights_ltype += gl_ltype::point;
-                }
-            } else {
-                auto bbox = make_bbox(shp->pos.size(), shp->pos.data());
-                auto pos = bbox_center(bbox);
-                auto area = 0.0f;
-                for (auto l : shp->lines)
-                    area += line_length(shp->pos[l.x], shp->pos[l.y]);
-                for (auto t : shp->triangles)
-                    area += triangle_area(
-                        shp->pos[t.x], shp->pos[t.y], shp->pos[t.z]);
-                for (auto t : shp->quads)
-                    area += quad_area(shp->pos[t.x], shp->pos[t.y],
-                        shp->pos[t.z], shp->pos[t.w]);
-                auto ke = shp->mat->ke * area;
-                if (st->lights_pos.size() < 16) {
-                    st->lights_pos += transform_point(ist->frame, pos);
-                    st->lights_ke += ke;
-                    st->lights_ltype += gl_ltype::point;
-                }
-            }
-        }
-    } else {
-        for (auto shp : scn->shapes) {
-            if (!shp->mat) continue;
-            if (shp->mat->ke == zero3f) continue;
+    for (auto lgt : scn->lights) {
+        if (!lgt->ist) continue;
+        auto shp = lgt->ist->shp;
+        if (!shp->points.empty()) {
             for (auto p : shp->points) {
                 if (st->lights_pos.size() >= 16) break;
-                st->lights_pos.push_back(shp->pos[p]);
-                st->lights_ke.push_back(shp->mat->ke);
-                st->lights_ltype.push_back(gl_ltype::point);
+                st->lights_pos += transform_point(lgt->ist->frame, shp->pos[p]);
+                st->lights_ke += shp->mat->ke;
+                st->lights_ltype += gl_ltype::point;
+            }
+        } else {
+            auto bbox = make_bbox(shp->pos.size(), shp->pos.data());
+            auto pos = bbox_center(bbox);
+            auto area = 0.0f;
+            for (auto l : shp->lines)
+                area += line_length(shp->pos[l.x], shp->pos[l.y]);
+            for (auto t : shp->triangles)
+                area +=
+                    triangle_area(shp->pos[t.x], shp->pos[t.y], shp->pos[t.z]);
+            for (auto t : shp->quads)
+                area += quad_area(
+                    shp->pos[t.x], shp->pos[t.y], shp->pos[t.z], shp->pos[t.w]);
+            auto ke = shp->mat->ke * area;
+            if (st->lights_pos.size() < 16) {
+                st->lights_pos += transform_point(lgt->ist->frame, pos);
+                st->lights_ke += ke;
+                st->lights_ltype += gl_ltype::point;
             }
         }
     }
