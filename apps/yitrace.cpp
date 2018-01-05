@@ -156,13 +156,9 @@ bool update(app_state* app) {
 // run ui loop
 void run_ui(app_state* app) {
     // window
-    auto win = make_window(
-        app->trace_params_.width, app->trace_params_.height, "yitrace", app);
+    auto win = make_window(app->trace_params_.width, app->trace_params_.height,
+        "yitrace | " + app->filename, app);
     set_window_callbacks(win, nullptr, nullptr, draw);
-
-    // window values
-    int mouse_button = 0;
-    vec2f mouse_pos, mouse_last;
 
     // load textures
     app->gl_prog = make_stdimage_program();
@@ -173,61 +169,10 @@ void run_ui(app_state* app) {
 
     // loop
     while (!should_close(win)) {
-        mouse_last = mouse_pos;
-        mouse_pos = get_mouse_posf(win);
-        mouse_button = get_mouse_button(win);
-
-        set_window_title(win, ("yshade | " + app->filename));
-
         // handle mouse and keyboard for navigation
-        if (mouse_button && !get_widget_active(win)) {
-            if (app->navigation_fps) {
-                auto dolly = 0.0f;
-                auto pan = zero2f;
-                auto rotate = zero2f;
-                switch (mouse_button) {
-                    case 1: rotate = (mouse_pos - mouse_last) / 100.0f; break;
-                    case 2:
-                        dolly = (mouse_pos[0] - mouse_last[0]) / 100.0f;
-                        break;
-                    case 3: pan = (mouse_pos - mouse_last) / 100.0f; break;
-                    default: break;
-                }
-                auto cam = app->scn->cameras[app->trace_params_.camera_id];
-                camera_fps(cam->frame, {0, 0, 0}, rotate);
-            } else {
-                auto dolly = 0.0f;
-                auto pan = zero2f;
-                auto rotate = zero2f;
-                switch (mouse_button) {
-                    case 1: rotate = (mouse_pos - mouse_last) / 100.0f; break;
-                    case 2:
-                        dolly = (mouse_pos[0] - mouse_last[0]) / 100.0f;
-                        break;
-                    case 3: pan = (mouse_pos - mouse_last) / 100.0f; break;
-                    default: break;
-                }
-                auto cam = app->scn->cameras[app->trace_params_.camera_id];
-                camera_turntable(cam->frame, cam->focus, rotate, dolly, pan);
-            }
+        auto cam = app->scn->cameras[app->trace_params_.camera_id];
+        if (handle_camera_navigation(win, cam, app->navigation_fps))
             app->scene_updated = true;
-        }
-
-        // handle keytboard for navigation
-        if (!get_widget_active(win) && app->navigation_fps) {
-            auto transl = zero3f;
-            if (get_key(win, 'a')) transl.x -= 1;
-            if (get_key(win, 'd')) transl.x += 1;
-            if (get_key(win, 's')) transl.z += 1;
-            if (get_key(win, 'w')) transl.z -= 1;
-            if (get_key(win, 'e')) transl.y += 1;
-            if (get_key(win, 'q')) transl.y -= 1;
-            if (transl != zero3f) {
-                auto cam = app->scn->cameras[app->trace_params_.camera_id];
-                camera_fps(cam->frame, transl, {0, 0});
-                app->scene_updated = true;
-            }
-        }
 
         // draw
         draw(win);

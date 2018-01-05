@@ -10301,6 +10301,67 @@ vector<vec4b> get_screenshot(gl_window* win, vec2i& wh, bool flipy, bool back) {
     return pixels;
 }
 
+// Handles camera navigation
+bool handle_camera_navigation(
+    gl_window* win, camera* cam, bool navigation_fps) {
+    static auto mouse_last = zero2f;
+    auto mouse_pos = get_mouse_posf(win);
+    auto mouse_button = get_mouse_button(win);
+
+    // updated
+    auto updated = false;
+
+    // handle mouse and keyboard for navigation
+    if (mouse_button && !get_widget_active(win)) {
+        if (navigation_fps) {
+            auto dolly = 0.0f;
+            auto pan = zero2f;
+            auto rotate = zero2f;
+            switch (mouse_button) {
+                case 1: rotate = (mouse_pos - mouse_last) / 100.0f; break;
+                case 2: dolly = (mouse_pos.x - mouse_last.x) / 100.0f; break;
+                case 3: pan = (mouse_pos - mouse_last) / 100.0f; break;
+                default: break;
+            }
+            camera_fps(cam->frame, {0, 0, 0}, rotate);
+            updated = true;
+        } else {
+            auto dolly = 0.0f;
+            auto pan = zero2f;
+            auto rotate = zero2f;
+            switch (mouse_button) {
+                case 1: rotate = (mouse_pos - mouse_last) / 100.0f; break;
+                case 2: dolly = (mouse_pos.x - mouse_last.x) / 100.0f; break;
+                case 3: pan = (mouse_pos - mouse_last) / 100.0f; break;
+                default: break;
+            }
+            camera_turntable(cam->frame, cam->focus, rotate, dolly, pan);
+            updated = true;
+        }
+    }
+
+    // handle keytboard for navigation
+    if (!get_widget_active(win) && navigation_fps) {
+        auto transl = zero3f;
+        if (get_key(win, 'a')) transl.x -= 1;
+        if (get_key(win, 'd')) transl.x += 1;
+        if (get_key(win, 's')) transl.z += 1;
+        if (get_key(win, 'w')) transl.z -= 1;
+        if (get_key(win, 'e')) transl.y += 1;
+        if (get_key(win, 'q')) transl.y -= 1;
+        if (transl != zero3f) {
+            camera_fps(cam->frame, transl, {0, 0});
+            updated = true;
+        }
+    }
+
+    // record mouse position
+    mouse_last = mouse_pos;
+
+    // done
+    return updated;
+}
+
 // Initialize widgets
 void init_widgets(gl_window* win) {
     ImGui_ImplGlfwGL3_Init(win->_gwin, false);
