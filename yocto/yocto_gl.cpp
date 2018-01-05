@@ -8370,44 +8370,39 @@ inline const vector<pair<string, test_light_type>>& test_light_names() {
 
 tuple<vector<instance*>, environment*> add_test_lights(
     scene* scn, test_light_type type) {
-    if (type == test_light_type::none) return {vector<instance*>{}, nullptr};
+    auto ists = vector<instance*>{};
+    auto env = (environment*)nullptr;
     switch (type) {
+        case test_light_type::none: break;
         case test_light_type::pointlight: {
-            return {{add_test_instance(scn, test_shape_type::plight,
-                         test_material_type::light_point, {-2, 10, 8}),
-                        add_test_instance(scn, test_shape_type::plight,
-                            test_material_type::light_point, {+2, 10, 8})},
-                nullptr};
+            ists.push_back(add_test_instance(scn, test_shape_type::plight,
+                test_material_type::light_point, {-2, 10, 8}));
+            ists.push_back(add_test_instance(scn, test_shape_type::plight,
+                test_material_type::light_point, {+2, 10, 8}));
         } break;
         case test_light_type::arealight: {
-            return {
-                {add_test_instance(scn, test_shape_type::alight,
-                     test_material_type::light_area,
-                     lookat_frame3f({-4, 5, 8}, {0, 3, 0}, {0, 1, 0}, true)),
-                    add_test_instance(scn, test_shape_type::alight,
-                        test_material_type::light_area,
-                        lookat_frame3f(
-                            {+4, 5, 8}, {0, 3, 0}, {0, 1, 0}, true))},
-                nullptr};
+            ists.push_back(add_test_instance(scn, test_shape_type::alight,
+                test_material_type::light_area,
+                lookat_frame3f({-4, 5, 8}, {0, 3, 0}, {0, 1, 0}, true)));
+            ists.push_back(add_test_instance(scn, test_shape_type::alight,
+                test_material_type::light_area,
+                lookat_frame3f({+4, 5, 8}, {0, 3, 0}, {0, 1, 0}, true)));
         } break;
         case test_light_type::arealight1: {
-            return {
-                {add_test_instance(scn, test_shape_type::alightt,
-                     test_material_type::light_areat,
-                     lookat_frame3f({0, 64, 0}, {0, 1, 0}, {0, 0, 1}, true)),
-                    add_test_instance(scn, test_shape_type::alightf,
-                        test_material_type::light_areaf,
-                        lookat_frame3f(
-                            {0, 64, 64}, {0, 1, 0}, {0, 1, 0}, true))},
-                nullptr};
+            ists.push_back(add_test_instance(scn, test_shape_type::alightt,
+                test_material_type::light_areat,
+                lookat_frame3f({0, 64, 0}, {0, 1, 0}, {0, 0, 1}, true)));
+            ists.push_back(add_test_instance(scn, test_shape_type::alightf,
+                test_material_type::light_areaf,
+                lookat_frame3f({0, 64, 64}, {0, 1, 0}, {0, 1, 0}, true)));
         } break;
         case test_light_type::envlight: {
-            return {vector<instance*>{},
-                add_test_environment(scn, test_environment_type::sky1,
-                    lookat_frame3f({0, 1, 0}, {0, 1, 1}, {0, 1, 0}, true))};
+            env = add_test_environment(scn, test_environment_type::sky1,
+                lookat_frame3f({0, 1, 0}, {0, 1, 1}, {0, 1, 0}, true));
         } break;
         default: throw runtime_error("bad value");
     }
+    return tuple<vector<instance*>, environment*>{ists, env};
 }
 
 enum struct test_camera_type { none, cam1, cam2, cam3 };
