@@ -7351,7 +7351,8 @@ Flatten scene instances into separate meshes.
 #### Function update_lights()
 
 ~~~ .cpp
-void update_lights(scene* scn, bool point_only);
+void update_lights(
+    scene* scn, bool include_env = false, bool sampling_cdf = false);
 ~~~
 
 Initialize the lights

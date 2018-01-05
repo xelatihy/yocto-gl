@@ -36,25 +36,13 @@ using namespace ygl;
 
 // Application state
 struct app_state {
-    // scene data
     scene* scn = nullptr;
-
-    // filenames
     string filename;
     string imfilename;
     string outfilename;
-
-    // params
-    int resolution = 0;
     gl_stdsurface_params shparams = {};
-
-    // shade
     gl_stdsurface_state* shstate = nullptr;
-
-    // navigation
     bool navigation_fps = false;
-
-    // editing support
     void* selection = nullptr;
 
     ~app_state() {
@@ -73,8 +61,11 @@ inline void draw(gl_window* win) {
     auto cam = app->scn->cameras[app->shparams.camera_id];
     cam->aspect = (float)framebuffer_size.x / (float)framebuffer_size.y;
 
-    gl_clear_buffers();
+    update_lights(app->scn, false, false);
     update_stdsurface_state(app->shstate, app->scn, app->shparams);
+    if (app->shstate->lights_pos.empty()) app->shparams.camera_lights = true;
+
+    gl_clear_buffers();
     draw_stdsurface_scene(app->shstate, app->scn, app->shparams);
 
     if (begin_widgets(win, "yview")) {
@@ -95,19 +86,13 @@ inline void draw(gl_window* win) {
     end_widgets(win);
 
     swap_buffers(win);
-    if (app->shstate->lights_pos.empty()) app->shparams.camera_lights = true;
 }
 
-// scene update
-bool update(app_state* st) { return false; }
-
-//
 // run ui loop
-//
-inline void run_ui(app_state* app) {
+void run_ui(app_state* app) {
     // window
-    auto win =
-        make_window(app->shparams.width, app->shparams.height, "yview", app);
+    auto win = make_window(app->shparams.width, app->shparams.height,
+        "yview | " + app->filename, app);
     set_window_callbacks(win, nullptr, nullptr, draw);
 
     // window values
@@ -126,8 +111,6 @@ inline void run_ui(app_state* app) {
         mouse_last = mouse_pos;
         mouse_pos = get_mouse_posf(win);
         mouse_button = get_mouse_button(win);
-
-        set_window_title(win, ("yview | " + app->filename));
 
         // handle mouse and keyboard for navigation
         if (mouse_button && !get_widget_active(win)) {
@@ -179,15 +162,6 @@ inline void run_ui(app_state* app) {
 
         // draw
         draw(win);
-
-        // update
-        update(app);
-
-        // check for screenshot
-        //        if (scn->no_ui) {
-        //            save_screenshot(win, scn->imfilename);
-        //            break;
-        //        }
 
         // event hadling
         poll_events(win);
@@ -248,7 +222,7 @@ int main(int argc, char* argv[]) {
     add_elements(app->scn);
 
     // light
-    update_lights(app->scn, true);
+    update_lights(app->scn, false, false);
 
     // run ui
     auto cam = app->scn->cameras[app->shparams.camera_id];

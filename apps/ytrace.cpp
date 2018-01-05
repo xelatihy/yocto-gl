@@ -130,7 +130,7 @@ int main(int argc, char* argv[]) {
 
     // init renderer
     log_info("initializing tracer");
-    update_lights(app->scn, false);
+    update_lights(app->scn, true, true);
 
     // initialize rendering objects
     auto width =

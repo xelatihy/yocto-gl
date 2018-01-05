@@ -5999,7 +5999,8 @@ merge_from to merged_into, so merge_from will be empty after this function.</p>
 
 <p>Flatten scene instances into separate meshes.</p>
 <h4>Function update_lights()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">update_lights</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">point_only</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">update_lights</span><span class="p">(</span>
+    <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">include_env</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">sampling_cdf</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
 </code></pre></div>
 
 
