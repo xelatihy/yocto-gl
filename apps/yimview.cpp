@@ -30,9 +30,9 @@
 #include "../yocto/yocto_gl.h"
 using namespace ygl;
 
-/// Generic image that contains either an HDR or an LDR image, giving access
-/// to both. This is helpful when writing viewers or generic image
-/// manipulation code
+// Generic image that contains either an HDR or an LDR image, giving access
+// to both. This is helpful when writing viewers or generic image
+// manipulation code
 struct gimage {
     /// image path
     string filename;
@@ -58,16 +58,16 @@ struct gimage {
         return 0;
     }
 
-    /// access to pixel values
+    // access to pixel values
     vec4f& at4f(const vec2i& ij) { return hdr.at(ij); }
-    /// access to pixel values
+    // access to pixel values
     const vec4f& at4f(const vec2i& ij) const { return hdr.at(ij); }
-    /// access to pixel values
+    // access to pixel values
     vec4b& at4b(const vec2i& ij) { return ldr.at(ij); }
-    /// access to pixel values
+    // access to pixel values
     const vec4b& at4b(const vec2i& ij) const { return ldr.at(ij); }
 
-    /// guarded access to pixel values
+    // guarded access to pixel values
     vec4f lookup4f(const vec2i& ij, const vec4f& def = zero4f) const {
         if (ij.x < 0 || ij.x >= width() || ij.y < 0 || ij.y > height())
             return def;
@@ -75,7 +75,7 @@ struct gimage {
         if (ldr) return srgb_to_linear(ldr.at(ij));
         return def;
     }
-    /// guarded access to pixel values
+    // guarded access to pixel values
     vec4b lookup4b(const vec2i& ij, const vec4b& def = zero4b) const {
         if (ij.x < 0 || ij.x >= width() || ij.y < 0 || ij.y > height())
             return def;
@@ -85,7 +85,7 @@ struct gimage {
     }
 };
 
-/// Loads a generic image
+// Loads a generic image
 inline gimage load_gimage(const string& filename) {
     auto img = gimage();
     img.filename = filename;

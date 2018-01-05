@@ -482,13 +482,18 @@ windows with GLFW and draw immediate-mode widgets with ImGui.
     - define material Parameters with `set_material()`
     - define vertices with `set_vert()`
     - draw elements with `draw_elems()`
-5. also includes other utlities for quick OpenGL
-6. GLFW window with `gl_window`
+5. draw yocto scenes using the above shader
+    - initialize the rendering state with `init_stdprogram_state()`
+    - load/update meshes and textures with `update_stdprogram_state()`
+    - setup draw params using a `gl_stdsurface_params` struct
+    - draw scene with `draw_stdprogram_scene()`
+6. also includes other utlities for quick OpenGL hacking
+7. GLFW window with `gl_window`
     - create with constructor
     - delete with `clear()`
     - set callbacks with `set_callbacks()`
     - includes carious utiliies to query window, mouse and keyboard
-7. immediate mode widgets
+8. immediate mode widgets using ImGui
     - init with `init_widget()`
     - use the various widget calls to draw the widget and handle events
 

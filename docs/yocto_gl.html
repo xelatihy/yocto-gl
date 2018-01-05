@@ -450,7 +450,14 @@ windows with GLFW and draw immediate-mode widgets with ImGui.</p>
 <li>draw elements with <code>draw_elems()</code></li>
 </ul>
 </li>
-<li>also includes other utlities for quick OpenGL</li>
+<li>draw yocto scenes using the above shader<ul>
+<li>initialize the rendering state with <code>init_stdprogram_state()</code></li>
+<li>load/update meshes and textures with <code>update_stdprogram_state()</code></li>
+<li>setup draw params using a <code>gl_stdsurface_params</code> struct</li>
+<li>draw scene with <code>draw_stdprogram_scene()</code></li>
+</ul>
+</li>
+<li>also includes other utlities for quick OpenGL hacking</li>
 <li>GLFW window with <code>gl_window</code><ul>
 <li>create with constructor</li>
 <li>delete with <code>clear()</code></li>
@@ -458,7 +465,7 @@ windows with GLFW and draw immediate-mode widgets with ImGui.</p>
 <li>includes carious utiliies to query window, mouse and keyboard</li>
 </ul>
 </li>
-<li>immediate mode widgets<ul>
+<li>immediate mode widgets using ImGui<ul>
 <li>init with <code>init_widget()</code></li>
 <li>use the various widget calls to draw the widget and handle events</li>
 </ul>
@@ -6327,14 +6334,14 @@ otherwise find first intersection.</p>
 <h4>Struct trace_params</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">trace_params</span> <span class="p">{</span>
     <span class="kt">int</span> <span class="n">camera_id</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
-    <span class="kt">int</span> <span class="n">width</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
-    <span class="kt">int</span> <span class="n">height</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">width</span> <span class="o">=</span> <span class="mi">360</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">height</span> <span class="o">=</span> <span class="mi">360</span><span class="p">;</span>
     <span class="kt">int</span> <span class="n">nsamples</span> <span class="o">=</span> <span class="mi">256</span><span class="p">;</span>
     <span class="n">trace_shader_type</span> <span class="n">stype</span> <span class="o">=</span> <span class="n">trace_shader_type</span><span class="o">::</span><span class="n">pathtrace</span><span class="p">;</span>
     <span class="kt">bool</span> <span class="n">shadow_notransmission</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
     <span class="n">trace_rng_type</span> <span class="n">rtype</span> <span class="o">=</span> <span class="n">trace_rng_type</span><span class="o">::</span><span class="n">stratified</span><span class="p">;</span>
     <span class="n">trace_filter_type</span> <span class="n">ftype</span> <span class="o">=</span> <span class="n">trace_filter_type</span><span class="o">::</span><span class="n">box</span><span class="p">;</span>
-    <span class="n">vec3f</span> <span class="n">amb</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">};</span>
+    <span class="n">vec3f</span> <span class="n">ambient</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">};</span>
     <span class="kt">bool</span> <span class="n">envmap_invisible</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
     <span class="kt">int</span> <span class="n">min_depth</span> <span class="o">=</span> <span class="mi">3</span><span class="p">;</span>
     <span class="kt">int</span> <span class="n">max_depth</span> <span class="o">=</span> <span class="mi">8</span><span class="p">;</span>
@@ -6351,14 +6358,14 @@ otherwise find first intersection.</p>
 <ul>
 <li>Members:<ul>
 <li>camera_id:      camera id</li>
-<li>width:      width</li>
-<li>height:      height</li>
+<li>width:      image width</li>
+<li>height:      image height</li>
 <li>nsamples:      number of samples</li>
 <li>stype:      sampler type</li>
 <li>shadow_notransmission:      wheter to test transmission in shadows</li>
 <li>rtype:      random number generation type</li>
 <li>ftype:      filter type</li>
-<li>amb:      ambient lighting</li>
+<li>ambient:      ambient lighting</li>
 <li>envmap_invisible:      view environment map</li>
 <li>min_depth:      minimum ray depth</li>
 <li>max_depth:      maximum ray depth</li>
@@ -9462,6 +9469,78 @@ coordinates texcoord, per-vertex color color and tangent space tangsp.</p>
 
 
 <p>Disables vertex skinning.</p>
+<h4>Struct gl_stdsurface_state</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">gl_stdsurface_state</span> <span class="p">{</span>
+</code></pre></div>
+
+
+<p>State object for gl_stdsurface_program drawing. Members are not part of the
+public API.</p>
+<h4>Struct gl_stdsurface_params</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">gl_stdsurface_params</span> <span class="p">{</span>
+    <span class="kt">int</span> <span class="n">camera_id</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">width</span> <span class="o">=</span> <span class="mi">360</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">height</span> <span class="o">=</span> <span class="mi">360</span><span class="p">;</span>
+    <span class="kt">float</span> <span class="n">exposure</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="kt">float</span> <span class="n">gamma</span> <span class="o">=</span> <span class="mf">2.2f</span><span class="p">;</span>
+    <span class="kt">bool</span> <span class="n">filmic</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
+    <span class="kt">bool</span> <span class="n">wireframe</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
+    <span class="kt">bool</span> <span class="n">edges</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
+    <span class="kt">bool</span> <span class="n">cutout</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
+    <span class="kt">bool</span> <span class="n">camera_lights</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
+    <span class="n">vec4f</span> <span class="n">background</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">};</span>
+    <span class="n">vec3f</span> <span class="n">ambient</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">};</span>
+    <span class="kt">void</span><span class="o">*</span> <span class="n">hilighted</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+
+<p>Params for  gl_stdsurface_program drawing</p>
+<ul>
+<li>Members:<ul>
+<li>camera_id:      camera id</li>
+<li>width:      image width</li>
+<li>height:      image height</li>
+<li>exposure:      image exposure</li>
+<li>gamma:      image gamma</li>
+<li>filmic:      image filmic tonemapping</li>
+<li>wireframe:      draw as wireframe</li>
+<li>edges:      draw with overlaid edges</li>
+<li>cutout:      draw with an alpha cutout for binary transparency</li>
+<li>camera_lights:      camera light mode</li>
+<li>background:      window background</li>
+<li>ambient:      ambient illumination</li>
+<li>hilighted:      highlighted object</li>
+</ul>
+</li>
+</ul>
+<h4>Function make_stdsurface_state()</h4>
+<div class="codehilite"><pre><code><span></span><span class="n">gl_stdsurface_state</span><span class="o">*</span> <span class="nf">make_stdsurface_state</span><span class="p">();</span>
+</code></pre></div>
+
+
+<p>Initialize gl_stdsurface_program draw state</p>
+<h4>Function update_stdsurface_state()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">update_stdsurface_state</span><span class="p">(</span><span class="n">gl_stdsurface_state</span><span class="o">*</span> <span class="n">st</span><span class="p">,</span> <span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">gl_stdsurface_params</span><span class="o">&amp;</span> <span class="n">params</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Update gl_stdsurface_program draw state. This updates stdsurface meshes
+and textures on the GPU.</p>
+<h4>Function clear_stdsurface_state()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">clear_stdsurface_state</span><span class="p">(</span><span class="n">gl_stdsurface_state</span><span class="o">*</span> <span class="n">st</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Clear gl_stdsurface_program draw state</p>
+<h4>Function draw_stdsurface_scene()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">draw_stdsurface_scene</span><span class="p">(</span><span class="n">gl_stdsurface_state</span><span class="o">*</span> <span class="n">st</span><span class="p">,</span> <span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">gl_stdsurface_params</span><span class="o">&amp;</span> <span class="n">params</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Draw whole scene</p>
 <h4>Function void()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">typedef</span> <span class="nf">void</span> <span class="p">(</span><span class="o">*</span><span class="n">gl_text_callback</span><span class="p">)(</span><span class="n">gl_window</span><span class="o">*</span><span class="p">,</span> <span class="kt">unsigned</span> <span class="kt">int</span><span class="p">);</span>
 </code></pre></div>
@@ -9925,7 +10004,7 @@ coordinates texcoord, per-vertex color color and tangent space tangsp.</p>
 <p>Tonemapping widgets</p>
 <h4>Function draw_camera_widget()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">draw_camera_widget</span><span class="p">(</span>
-    <span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="n">camera</span><span class="o">*&amp;</span> <span class="n">cam</span><span class="p">);</span>
+    <span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="kt">int</span><span class="o">&amp;</span> <span class="n">cam_idx</span><span class="p">);</span>
 </code></pre></div>
 
 

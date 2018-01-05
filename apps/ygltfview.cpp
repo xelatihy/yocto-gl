@@ -35,9 +35,7 @@ using ygl::log_info;
 // SCENE (OBJ or GLTF) AND APPLICATION PARAMETERS
 // ---------------------------------------------------------------------------
 
-//
 // OpenGL shape vbo
-//
 struct shape_vbo {
     ygl::gl_vertex_buffer pos = {};
     ygl::gl_vertex_buffer norm = {};
@@ -52,9 +50,7 @@ struct shape_vbo {
     ygl::gl_element_buffer triangles = {};
 };
 
-//
 // OpenGL state
-//
 struct shade_state {
     // shade state
     ygl::gl_stdsurface_program prog = {};
@@ -67,9 +63,7 @@ struct shade_state {
     std::vector<ygl::gl_ltype> lights_ltype;
 };
 
-//
 // Camera
-//
 struct camera {
     ygl::frame3f frame = ygl::identity_frame3f;
     float yfov = 1;
@@ -80,9 +74,7 @@ struct camera {
     float far = 10000;
 };
 
-//
 // Application state
-//
 struct app_state {
     // scene data
     ygl::gltf_scene_group* gscn = nullptr;
@@ -449,9 +441,7 @@ inline void shade_mesh(const ygl::gltf_mesh* msh, const ygl::gltf_skin* sk,
     }
 }
 
-//
 // Display a scene
-//
 inline void shade_scene(const ygl::gltf_scene_group* scns, shade_state* st,
     const camera* ycam, const ygl::gltf_node* gcam, void* selection,
     const ygl::vec4f& background, float exposure, float gamma, bool filmic,
@@ -1101,25 +1091,19 @@ void parse_cmdline(app_state* scene, int argc, char** argv, const char* name,
 // INTERACTION LOOP
 // ---------------------------------------------------------------------------
 
-//
 // callbacks
-//
 using init_fn = void (*)(ygl::gl_window* win);
 using draw_fn = void (*)(ygl::gl_window* win);
 using update_fn = bool (*)(app_state* scn);
 
-//
 // init draw with shading
-//
 void shade_init(ygl::gl_window* win) {
     auto scn = (app_state*)get_user_pointer(win);
     scn->shstate = new shade_state();
     update_shade_state(scn->gscn, scn->shstate);
 }
 
-//
 // draw with shading
-//
 void shade_draw(ygl::gl_window* win) {
     auto scn = (app_state*)get_user_pointer(win);
     if (scn->gscn) {
@@ -1139,9 +1123,7 @@ void shade_draw(ygl::gl_window* win) {
     if (scn->shstate->lights_pos.empty()) scn->camera_lights = true;
 }
 
-//
 // run ui loop
-//
 void run_ui(app_state* scn, int w, int h, const std::string& title,
     init_fn init, draw_fn draw, update_fn update) {
     // window

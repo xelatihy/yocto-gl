@@ -450,7 +450,14 @@ windows with GLFW and draw immediate-mode widgets with ImGui.</p>
 <li>draw elements with <code>draw_elems()</code></li>
 </ul>
 </li>
-<li>also includes other utlities for quick OpenGL</li>
+<li>draw yocto scenes using the above shader<ul>
+<li>initialize the rendering state with <code>init_stdprogram_state()</code></li>
+<li>load/update meshes and textures with <code>update_stdprogram_state()</code></li>
+<li>setup draw params using a <code>gl_stdsurface_params</code> struct</li>
+<li>draw scene with <code>draw_stdprogram_scene()</code></li>
+</ul>
+</li>
+<li>also includes other utlities for quick OpenGL hacking</li>
 <li>GLFW window with <code>gl_window</code><ul>
 <li>create with constructor</li>
 <li>delete with <code>clear()</code></li>
@@ -458,7 +465,7 @@ windows with GLFW and draw immediate-mode widgets with ImGui.</p>
 <li>includes carious utiliies to query window, mouse and keyboard</li>
 </ul>
 </li>
-<li>immediate mode widgets<ul>
+<li>immediate mode widgets using ImGui<ul>
 <li>init with <code>init_widget()</code></li>
 <li>use the various widget calls to draw the widget and handle events</li>
 </ul>

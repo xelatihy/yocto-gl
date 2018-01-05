@@ -1738,7 +1738,7 @@ inline vec3f eval_li_direct(const scene* scn, const ray3f& ray, int bounce,
     if (!pt.fr || scn->lights.empty()) return l;
 
     // ambient
-    l += params.amb * pt.fr.rho();
+    l += params.ambient * pt.fr.rho();
 
     // direct
     for (auto& lgt : scn->lights) {
@@ -9909,6 +9909,206 @@ gl_stdsurface_program make_stdsurface_program() {
             _frag_material + _frag_main);
     assert(gl_check_error());
     return prog;
+}
+
+// Initialize gl_stdsurface_program draw state
+gl_stdsurface_state* make_stdsurface_state() {
+    auto st = new gl_stdsurface_state();
+    if (!is_program_valid(st->prog)) st->prog = make_stdsurface_program();
+    st->txt[nullptr] = {};
+    return st;
+}
+
+// Init shading
+void update_stdsurface_state(gl_stdsurface_state* st, const scene* scn,
+    const gl_stdsurface_params& params) {
+    // update textures -----------------------------------------------------
+    for (auto txt : scn->textures) {
+        if (st->txt.find(txt) != st->txt.end()) continue;
+        if (txt->hdr) {
+            st->txt[txt] = make_texture(txt->hdr, true, true, true);
+        } else if (txt->ldr) {
+            st->txt[txt] = make_texture(txt->ldr, true, true, true);
+        } else
+            assert(false);
+    }
+
+    // update vbos -----------------------------------------------------
+    for (auto shp : scn->shapes) {
+        if (st->vbo.find(shp) != st->vbo.end()) continue;
+        st->vbo[shp] = gl_stdsurface_vbo();
+        if (!shp->pos.empty()) st->vbo[shp].pos = make_vertex_buffer(shp->pos);
+        if (!shp->norm.empty())
+            st->vbo[shp].norm = make_vertex_buffer(shp->norm);
+        if (!shp->texcoord.empty())
+            st->vbo[shp].texcoord = make_vertex_buffer(shp->texcoord);
+        if (!shp->color.empty())
+            st->vbo[shp].color = make_vertex_buffer(shp->color);
+        if (!shp->tangsp.empty())
+            st->vbo[shp].tangsp = make_vertex_buffer(shp->tangsp);
+        if (!shp->points.empty())
+            st->vbo[shp].points = make_element_buffer(shp->points);
+        if (!shp->lines.empty())
+            st->vbo[shp].lines = make_element_buffer(shp->lines);
+        if (!shp->triangles.empty()) {
+            st->vbo[shp].triangles = make_element_buffer(shp->triangles);
+        }
+        if (!shp->quads.empty()) {
+            auto triangles = convert_quads_to_triangles(shp->quads);
+            st->vbo[shp].quads = make_element_buffer(triangles);
+        }
+        if (!shp->triangles.empty() || !shp->quads.empty() ||
+            !shp->quads_pos.empty()) {
+            auto edges = get_edges(
+                shp->lines, shp->triangles, shp->quads + shp->quads_pos);
+            st->vbo[shp].edges = make_element_buffer(edges);
+        }
+    }
+
+    // updating lights -----------------------------------------------------
+    st->lights_pos.clear();
+    st->lights_ke.clear();
+    st->lights_ltype.clear();
+
+    if (!scn->instances.empty()) {
+        for (auto ist : scn->instances) {
+            auto shp = ist->shp;
+            if (!shp->mat) continue;
+            if (shp->mat->ke == zero3f) continue;
+            if (!shp->points.empty()) {
+                for (auto p : shp->points) {
+                    if (st->lights_pos.size() >= 16) break;
+                    st->lights_pos += transform_point(ist->frame, shp->pos[p]);
+                    st->lights_ke += shp->mat->ke;
+                    st->lights_ltype += gl_ltype::point;
+                }
+            } else {
+                auto bbox = make_bbox(shp->pos.size(), shp->pos.data());
+                auto pos = bbox_center(bbox);
+                auto area = 0.0f;
+                for (auto l : shp->lines)
+                    area += line_length(shp->pos[l.x], shp->pos[l.y]);
+                for (auto t : shp->triangles)
+                    area += triangle_area(
+                        shp->pos[t.x], shp->pos[t.y], shp->pos[t.z]);
+                for (auto t : shp->quads)
+                    area += quad_area(shp->pos[t.x], shp->pos[t.y],
+                        shp->pos[t.z], shp->pos[t.w]);
+                auto ke = shp->mat->ke * area;
+                if (st->lights_pos.size() < 16) {
+                    st->lights_pos += transform_point(ist->frame, pos);
+                    st->lights_ke += ke;
+                    st->lights_ltype += gl_ltype::point;
+                }
+            }
+        }
+    } else {
+        for (auto shp : scn->shapes) {
+            if (!shp->mat) continue;
+            if (shp->mat->ke == zero3f) continue;
+            for (auto p : shp->points) {
+                if (st->lights_pos.size() >= 16) break;
+                st->lights_pos.push_back(shp->pos[p]);
+                st->lights_ke.push_back(shp->mat->ke);
+                st->lights_ltype.push_back(gl_ltype::point);
+            }
+        }
+    }
+}
+
+// Draw a shape
+inline void draw_stdsurface_shape(gl_stdsurface_state* st, const shape* shp,
+    const mat4f& xform, bool highlighted, const gl_stdsurface_params& params) {
+    static auto default_material = material();
+    default_material.kd = {0.2f, 0.2f, 0.2f};
+
+    begin_stdsurface_shape(st->prog, xform);
+
+    auto etype = gl_etype::triangle;
+    if (!shp->lines.empty()) etype = gl_etype::line;
+    if (!shp->points.empty()) etype = gl_etype::point;
+
+    set_stdsurface_highlight(
+        st->prog, (highlighted) ? vec4f{1, 1, 0, 1} : zero4f);
+
+    auto txt = [&st](texture_info& info) -> gl_texture_info {
+        if (!info.txt) return {};
+        return st->txt.at(info.txt);
+    };
+
+    auto mat = (shp->mat) ? shp->mat : &default_material;
+    set_stdsurface_material(st->prog, mat->mtype, etype, mat->ke, mat->kd,
+        mat->ks, mat->rs, mat->op, txt(mat->ke_txt), txt(mat->kd_txt),
+        txt(mat->ks_txt), txt(mat->rs_txt), txt(mat->norm_txt),
+        txt(mat->occ_txt), false, mat->double_sided, params.cutout);
+
+    auto& vbo = st->vbo.at((shape*)shp);
+    set_stdsurface_vert(
+        st->prog, vbo.pos, vbo.norm, vbo.texcoord, vbo.color, vbo.tangsp);
+
+    draw_elems(vbo.points);
+    draw_elems(vbo.lines);
+    draw_elems(vbo.triangles);
+    draw_elems(vbo.quads);
+
+    if (params.edges && !params.wireframe) {
+        assert(gl_check_error());
+        set_stdsurface_material(st->prog, material_type::specular_roughness,
+            etype, zero3f, zero3f, zero3f, 0.5f, mat->op, {}, {}, {}, {}, {},
+            {}, true, mat->double_sided, false);
+
+        assert(gl_check_error());
+        gl_line_width(2);
+        gl_enable_edges(true);
+        draw_elems(vbo.edges);
+        gl_enable_edges(false);
+        gl_line_width(1);
+        assert(gl_check_error());
+    }
+
+    end_stdsurface_shape(st->prog);
+}
+
+// Display a scene
+void draw_stdsurface_scene(gl_stdsurface_state* st, const scene* scn,
+    const gl_stdsurface_params& params) {
+    // begin frame
+    gl_enable_depth_test(true);
+    gl_enable_culling(false);
+    gl_enable_wireframe(params.wireframe);
+    gl_set_viewport({params.width, params.height});
+
+    auto cam = scn->cameras[params.camera_id];
+    mat4f camera_xform, camera_view, camera_proj;
+    camera_xform = to_mat4f(cam->frame);
+    camera_view = to_mat4f(inverse(cam->frame));
+    camera_proj =
+        perspective_mat4f(cam->yfov, cam->aspect, cam->near, cam->far);
+
+    begin_stdsurface_frame(st->prog, params.camera_lights, params.exposure,
+        params.gamma, params.filmic, camera_xform, camera_view, camera_proj);
+
+    if (!params.camera_lights) {
+        set_stdsurface_lights(st->prog, params.ambient,
+            (int)st->lights_pos.size(), st->lights_pos.data(),
+            st->lights_ke.data(), st->lights_ltype.data());
+    }
+
+    if (!scn->instances.empty()) {
+        for (auto ist : scn->instances) {
+            draw_stdsurface_shape(st, ist->shp, ist->xform(),
+                (ist == params.hilighted || ist->shp == params.hilighted),
+                params);
+        }
+    } else {
+        for (auto shp : scn->shapes) {
+            draw_stdsurface_shape(
+                st, shp, identity_mat4f, shp == params.hilighted, params);
+        }
+    }
+
+    end_stdsurface_frame(st->prog);
+    gl_enable_wireframe(false);
 }
 
 // Support

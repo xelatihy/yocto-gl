@@ -29,43 +29,33 @@
 #include "../yocto/yocto_gl.h"
 using namespace ygl;
 
-//
 // Load hdr
-//
 image4f load_hdr(const string& filename) {
     auto img = load_image4f(filename);
     if (!img) log_fatal("cannot load image {}", filename);
     return img;
 }
 
-//
 // Load ldr
-//
 image4b load_ldr(const string& filename) {
     auto img = load_image4b(filename);
     if (!img) log_fatal("cannot load image {}", filename);
     return img;
 }
 
-//
 // Save hdr
-//
 void save_hdr(const string& filename, const image4f& img) {
     if (!save_image4f(filename, img))
         log_fatal("cannot save image {}", filename);
 }
 
-//
 // Save ldr
-//
 void save_ldr(const string& filename, const image4b& img) {
     if (!save_image4b(filename, img))
         log_fatal("cannot save image {}", filename);
 }
 
-//
 // Resize image.
-//
 template <typename Image>
 Image resize_image(const Image& img, int res_width, int res_height) {
     if (res_width < 0 && res_height < 0)

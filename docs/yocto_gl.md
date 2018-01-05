@@ -482,13 +482,18 @@ windows with GLFW and draw immediate-mode widgets with ImGui.
     - define material Parameters with `set_material()`
     - define vertices with `set_vert()`
     - draw elements with `draw_elems()`
-5. also includes other utlities for quick OpenGL
-6. GLFW window with `gl_window`
+5. draw yocto scenes using the above shader
+    - initialize the rendering state with `init_stdprogram_state()`
+    - load/update meshes and textures with `update_stdprogram_state()`
+    - setup draw params using a `gl_stdsurface_params` struct
+    - draw scene with `draw_stdprogram_scene()`
+6. also includes other utlities for quick OpenGL hacking
+7. GLFW window with `gl_window`
     - create with constructor
     - delete with `clear()`
     - set callbacks with `set_callbacks()`
     - includes carious utiliies to query window, mouse and keyboard
-7. immediate mode widgets
+8. immediate mode widgets using ImGui
     - init with `init_widget()`
     - use the various widget calls to draw the widget and handle events
 
@@ -7688,14 +7693,14 @@ Names for enumeration
 ~~~ .cpp
 struct trace_params {
     int camera_id = 0;
-    int width = 0;
-    int height = 0;
+    int width = 360;
+    int height = 360;
     int nsamples = 256;
     trace_shader_type stype = trace_shader_type::pathtrace;
     bool shadow_notransmission = false;
     trace_rng_type rtype = trace_rng_type::stratified;
     trace_filter_type ftype = trace_filter_type::box;
-    vec3f amb = {0, 0, 0};
+    vec3f ambient = {0, 0, 0};
     bool envmap_invisible = false;
     int min_depth = 3;
     int max_depth = 8;
@@ -7711,14 +7716,14 @@ Rendering params
 
 - Members:
     - camera_id:      camera id
-    - width:      width
-    - height:      height
+    - width:      image width
+    - height:      image height
     - nsamples:      number of samples
     - stype:      sampler type
     - shadow_notransmission:      wheter to test transmission in shadows
     - rtype:      random number generation type
     - ftype:      filter type
-    - amb:      ambient lighting
+    - ambient:      ambient lighting
     - envmap_invisible:      view environment map
     - min_depth:      minimum ray depth
     - max_depth:      maximum ray depth
@@ -11210,6 +11215,88 @@ inline void set_stdsurface_vert_skinning_off(gl_stdsurface_program& prog);
 
 Disables vertex skinning.
 
+#### Struct gl_stdsurface_state
+
+~~~ .cpp
+struct gl_stdsurface_state {
+~~~
+
+State object for gl_stdsurface_program drawing. Members are not part of the
+public API.
+
+#### Struct gl_stdsurface_params
+
+~~~ .cpp
+struct gl_stdsurface_params {
+    int camera_id = 0;
+    int width = 360;
+    int height = 360;
+    float exposure = 0;
+    float gamma = 2.2f;
+    bool filmic = false;
+    bool wireframe = false;
+    bool edges = false;
+    bool cutout = false;
+    bool camera_lights = false;
+    vec4f background = {0, 0, 0, 0};
+    vec3f ambient = {0, 0, 0};
+    void* hilighted = nullptr;
+}
+~~~
+
+Params for  gl_stdsurface_program drawing
+
+- Members:
+    - camera_id:      camera id
+    - width:      image width
+    - height:      image height
+    - exposure:      image exposure
+    - gamma:      image gamma
+    - filmic:      image filmic tonemapping
+    - wireframe:      draw as wireframe
+    - edges:      draw with overlaid edges
+    - cutout:      draw with an alpha cutout for binary transparency
+    - camera_lights:      camera light mode
+    - background:      window background
+    - ambient:      ambient illumination
+    - hilighted:      highlighted object
+
+
+#### Function make_stdsurface_state()
+
+~~~ .cpp
+gl_stdsurface_state* make_stdsurface_state();
+~~~
+
+Initialize gl_stdsurface_program draw state
+
+#### Function update_stdsurface_state()
+
+~~~ .cpp
+void update_stdsurface_state(gl_stdsurface_state* st, const scene* scn,
+    const gl_stdsurface_params& params);
+~~~
+
+Update gl_stdsurface_program draw state. This updates stdsurface meshes
+and textures on the GPU.
+
+#### Function clear_stdsurface_state()
+
+~~~ .cpp
+void clear_stdsurface_state(gl_stdsurface_state* st);
+~~~
+
+Clear gl_stdsurface_program draw state
+
+#### Function draw_stdsurface_scene()
+
+~~~ .cpp
+void draw_stdsurface_scene(gl_stdsurface_state* st, const scene* scn,
+    const gl_stdsurface_params& params);
+~~~
+
+Draw whole scene
+
 #### Function void()
 
 ~~~ .cpp
@@ -11819,7 +11906,7 @@ Tonemapping widgets
 
 ~~~ .cpp
 inline bool draw_camera_widget(
-    gl_window* win, const string& lbl, scene* scn, camera*& cam);
+    gl_window* win, const string& lbl, scene* scn, int& cam_idx);
 ~~~
 
 Draws a widget that can selected the camera

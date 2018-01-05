@@ -35,15 +35,11 @@ struct app_state {
     // scene data
     scene* scn = nullptr;
 
-    // camera selection
-    camera* scam = nullptr;
-
     // filenames
     string filename;
     string imfilename;
 
     // render
-    int resolution = 0;
     float exposure = 0, gamma = 2.2f;
     bool filmic = false;
     vec4f background = {0, 0, 0, 0};
@@ -110,7 +106,8 @@ void draw(gl_window* win) {
             win, "random type", app->trace_params_.rtype, trace_rng_names());
         edited += draw_value_widget(
             win, "filter type", app->trace_params_.ftype, trace_filter_names());
-        edited += draw_camera_widget(win, "camera", app->scn, app->scam);
+        edited += draw_camera_widget(
+            win, "camera", app->scn, app->trace_params_.camera_id);
         edited += draw_value_widget(win, "update bvh", app->update_bvh);
         draw_value_widget(win, "fps", app->navigation_fps);
         draw_tonemap_widgets(win, "", app->exposure, app->gamma, app->filmic);
@@ -157,9 +154,10 @@ bool update(app_state* app) {
 }
 
 // run ui loop
-void run_ui(app_state* app, int w, int h) {
+void run_ui(app_state* app) {
     // window
-    auto win = make_window(w, h, "yitrace", app);
+    auto win = make_window(
+        app->trace_params_.width, app->trace_params_.height, "yitrace", app);
     set_window_callbacks(win, nullptr, nullptr, draw);
 
     // window values
@@ -195,7 +193,8 @@ void run_ui(app_state* app, int w, int h) {
                     case 3: pan = (mouse_pos - mouse_last) / 100.0f; break;
                     default: break;
                 }
-                camera_fps(app->scam->frame, {0, 0, 0}, rotate);
+                auto cam = app->scn->cameras[app->trace_params_.camera_id];
+                camera_fps(cam->frame, {0, 0, 0}, rotate);
             } else {
                 auto dolly = 0.0f;
                 auto pan = zero2f;
@@ -208,9 +207,8 @@ void run_ui(app_state* app, int w, int h) {
                     case 3: pan = (mouse_pos - mouse_last) / 100.0f; break;
                     default: break;
                 }
-
-                camera_turntable(
-                    app->scam->frame, app->scam->focus, rotate, dolly, pan);
+                auto cam = app->scn->cameras[app->trace_params_.camera_id];
+                camera_turntable(cam->frame, cam->focus, rotate, dolly, pan);
             }
             app->scene_updated = true;
         }
@@ -225,7 +223,8 @@ void run_ui(app_state* app, int w, int h) {
             if (get_key(win, 'e')) transl.y += 1;
             if (get_key(win, 'q')) transl.y -= 1;
             if (transl != zero3f) {
-                camera_fps(app->scam->frame, transl, {0, 0});
+                auto cam = app->scn->cameras[app->trace_params_.camera_id];
+                camera_fps(cam->frame, transl, {0, 0});
                 app->scene_updated = true;
             }
         }
@@ -274,12 +273,12 @@ int main(int argc, char* argv[]) {
         parse_opt(parser, "--exposure", "-e", "hdr image exposure", 0.0f);
     app->gamma = parse_opt(parser, "--gamma", "-g", "hdr image gamma", 2.2f);
     app->filmic = parse_flag(parser, "--filmic", "-F", "hdr image filmic");
-    app->resolution =
+    app->trace_params_.height =
         parse_opt(parser, "--resolution", "-r", "image resolution", 540);
     auto amb = parse_opt(parser, "--ambient", "", "ambient factor", 0.0f);
     auto camera_lights =
         parse_flag(parser, "--camera-lights", "-c", "enable camera lights");
-    app->trace_params_.amb = {amb, amb, amb};
+    app->trace_params_.ambient = {amb, amb, amb};
     if (camera_lights) {
         app->trace_params_.stype = trace_shader_type::eyelight;
     }
@@ -299,7 +298,6 @@ int main(int argc, char* argv[]) {
         app->scn = load_scene(app->filename);
     } catch (exception e) { log_fatal("cannot load scene {}", app->filename); }
     add_elements(app->scn);
-    app->scam = app->scn->cameras[0];
 
     // build bvh
     log_info("building bvh");
@@ -310,18 +308,18 @@ int main(int argc, char* argv[]) {
     update_lights(app->scn, false);
 
     // initialize rendering objects
-    auto width = (int)round(app->scam->aspect * app->resolution);
-    auto height = app->resolution;
-    app->trace_params_.width = width;
-    app->trace_params_.height = height;
-    app->trace_img = image4f(width, height);
+    auto cam = app->scn->cameras[app->trace_params_.camera_id];
+    app->trace_params_.width =
+        (int)round(cam->aspect * app->trace_params_.height);
+    app->trace_img =
+        image4f(app->trace_params_.width, app->trace_params_.height);
     app->trace_rngs = trace_rngs(app->trace_params_);
     app->trace_pool = new thread_pool();
     app->preview_img = image4f();
     app->scene_updated = true;
 
     // run interactive
-    run_ui(app, width, height);
+    run_ui(app);
 
     // cleanup
     trace_async_stop(app->trace_pool);
