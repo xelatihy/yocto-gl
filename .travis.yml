@@ -28,29 +28,29 @@ matrix:
   - os: osx
     osx_image: xcode9.2
 
-  - os: linux
-    compiler: gcc
-    env: COMPILER=g++-5
-    addons:
-      apt:
-        sources: ['ubuntu-toolchain-r-test']
-        packages: ['g++-5', 'ninja-build']
-
-  - os: linux
-    compiler: gcc
-    env: COMPILER=g++-6
-    addons:
-      apt:
-        sources: ['ubuntu-toolchain-r-test']
-        packages: ['g++-6', 'ninja-build']
-
-  - os: linux
-    compiler: gcc
-    env: COMPILER=g++-7
-    addons:
-      apt:
-        sources: ['ubuntu-toolchain-r-test']
-        packages: ['g++-7', 'ninja-build']
+  # - os: linux
+  #   compiler: gcc
+  #   env: COMPILER=g++-5
+  #   addons:
+  #     apt:
+  #       sources: ['ubuntu-toolchain-r-test']
+  #       packages: ['g++-5', 'ninja-build']
+  #
+  # - os: linux
+  #   compiler: gcc
+  #   env: COMPILER=g++-6
+  #   addons:
+  #     apt:
+  #       sources: ['ubuntu-toolchain-r-test']
+  #       packages: ['g++-6', 'ninja-build']
+  #
+  # - os: linux
+  #   compiler: gcc
+  #   env: COMPILER=g++-7
+  #   addons:
+  #     apt:
+  #       sources: ['ubuntu-toolchain-r-test']
+  #       packages: ['g++-7', 'ninja-build']
 
   - os: linux
     compiler: gcc
@@ -94,29 +94,29 @@ matrix:
   #       sources: ['ubuntu-toolchain-r-test']
   #       packages: ['g++-6', 'clang-3.8', 'ninja-build']
   #
-  - os: linux
-    compiler: clang
-    env: COMPILER=clang++-3.9
-    addons:
-      apt:
-        sources: ['ubuntu-toolchain-r-test']
-        packages: ['g++-6', 'clang-3.9', 'ninja-build']
-
-  - os: linux
-    compiler: clang
-    env: COMPILER=clang++-4.0
-    addons:
-      apt:
-        sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-trusty-4.0']
-        packages: ['g++-6', 'clang-4.0', 'ninja-build']
-
-  - os: linux
-    compiler: clang
-    env: COMPILER=clang++-5.0
-    addons:
-      apt:
-        sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-trusty-5.0']
-        packages: ['g++-6', 'clang-5.0', 'ninja-build']
+  # - os: linux
+  #   compiler: clang
+  #   env: COMPILER=clang++-3.9
+  #   addons:
+  #     apt:
+  #       sources: ['ubuntu-toolchain-r-test']
+  #       packages: ['g++-6', 'clang-3.9', 'ninja-build']
+  #
+  # - os: linux
+  #   compiler: clang
+  #   env: COMPILER=clang++-4.0
+  #   addons:
+  #     apt:
+  #       sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-trusty-4.0']
+  #       packages: ['g++-6', 'clang-4.0', 'ninja-build']
+  #
+  # - os: linux
+  #   compiler: clang
+  #   env: COMPILER=clang++-5.0
+  #   addons:
+  #     apt:
+  #       sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-trusty-5.0']
+  #       packages: ['g++-6', 'clang-5.0', 'ninja-build']
 
   - os: linux
     compiler: clang
