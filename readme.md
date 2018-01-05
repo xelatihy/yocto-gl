@@ -77,7 +77,8 @@ easily switch STL implementation if desired.
 ## Compilation
 
 Yocto/GL is written in C++14, with compilation supported on C++11, and
-compiles on OSX (clang/gcc), Linux (gcc) and Windows (MSVC 2017).
+compiles on OSX (clang from Xcode 9+), Linux (gcc 6+, clang 4+)
+and Windows (MSVC 2017).
 
 For image loading and saving, Yocto/GL depends on `stb_image.h`,
 `stb_image_write.h`, `stb_image_resize.h` and `tinyexr.h`. These features
