@@ -1294,7 +1294,7 @@ inline point eval_envpoint(const environment* env, const vec3f& wo) {
     }
 
     // create emission lobe
-    if (ke != zero3f) { pt.em = {emission_type::env, ke}; }
+    if (ke != zero3f) { pt.em = emission{emission_type::env, ke}; }
 
     // done
     return pt;
