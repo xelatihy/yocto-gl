@@ -59,24 +59,13 @@ struct shade_state {
     std::vector<ygl::gl_ltype> lights_ltype;
 };
 
-// Camera
-struct camera {
-    ygl::frame3f frame = ygl::identity_frame3f;
-    float yfov = 1;
-    float aspect = 1;
-    float focus = 1;
-    float aperture = 0;
-    float near = 0.01f;
-    float far = 10000;
-};
-
 // Application state
 struct app_state {
     // scene data
     ygl::gltf_scene_group* gscn = nullptr;
 
     // view camera
-    camera* view_cam = nullptr;
+    ygl::camera* view_cam = nullptr;
 
     // view/scene selection
     ygl::gltf_node* gcam = nullptr;
@@ -153,7 +142,7 @@ inline bool load_scene(
     }
     if (!ygl::get_camera_nodes(scn->gscn->default_scene).empty()) {
         auto cam = ygl::get_camera_nodes(scn->gscn->default_scene)[0];
-        scn->view_cam = new camera();
+        scn->view_cam = new ygl::camera();
         scn->view_cam->frame = ygl::to_frame3f(ygl::mat4f(cam->xform()));
         scn->view_cam->yfov = cam->cam->yfov;
         scn->view_cam->aspect = cam->cam->aspect;
@@ -171,7 +160,7 @@ inline bool load_scene(
         auto bbox_msize = length(bbox_size) / 2;
         // auto bbox_msize =
         //     ygl::max(bbox_size[0], ygl::max(bbox_size[1], bbox_size[2]));
-        scn->view_cam = new camera();
+        scn->view_cam = new ygl::camera();
         auto camera_dir = ygl::vec3f{1.5f, 0.8f, 1.5f};
         auto from = camera_dir * bbox_msize + center;
         auto to = center;
@@ -425,7 +414,7 @@ inline void shade_mesh(const ygl::gltf_mesh* msh, const ygl::gltf_skin* sk,
 
 // Display a scene
 inline void shade_scene(const ygl::gltf_scene_group* scns, shade_state* st,
-    const camera* ycam, const ygl::gltf_node* gcam, void* selection,
+    const ygl::camera* ycam, const ygl::gltf_node* gcam, void* selection,
     const ygl::vec4f& background, float exposure, float gamma, bool filmic,
     bool wireframe, bool edges, bool cutout, bool camera_lights,
     const ygl::vec3f& amb) {
@@ -1099,14 +1088,10 @@ bool update(app_state* scn) {
 }
 
 // run ui loop
-void run_ui(app_state* scn, int w, int h) {
+void run_ui(app_state* app, int w, int h) {
     // window
-    auto win = ygl::make_window(w, h, "ygltfview", scn);
+    auto win = ygl::make_window(w, h, "ygltfview | " + app->filename, app);
     set_window_callbacks(win, nullptr, nullptr, shade_draw);
-
-    // window values
-    int mouse_button = 0;
-    ygl::vec2f mouse_pos, mouse_last;
 
     // load textures
     shade_init(win);
@@ -1116,66 +1101,16 @@ void run_ui(app_state* scn, int w, int h) {
 
     // loop
     while (!should_close(win)) {
-        mouse_last = mouse_pos;
-        mouse_pos = get_mouse_posf(win);
-        mouse_button = get_mouse_button(win);
-
-        set_window_title(win, ("yshade | " + scn->filename));
-
         // handle mouse and keyboard for navigation
-        if (!scn->gcam && mouse_button && !get_widget_active(win)) {
-            if (scn->navigation_fps) {
-                auto dolly = 0.0f;
-                auto pan = ygl::zero2f;
-                auto rotate = ygl::zero2f;
-                switch (mouse_button) {
-                    case 1: rotate = (mouse_pos - mouse_last) / 100.0f; break;
-                    case 2:
-                        dolly = (mouse_pos[0] - mouse_last[0]) / 100.0f;
-                        break;
-                    case 3: pan = (mouse_pos - mouse_last) / 100.0f; break;
-                    default: break;
-                }
-                ygl::camera_fps(scn->view_cam->frame, {0, 0, 0}, rotate);
-            } else {
-                auto dolly = 0.0f;
-                auto pan = ygl::zero2f;
-                auto rotate = ygl::zero2f;
-                switch (mouse_button) {
-                    case 1: rotate = (mouse_pos - mouse_last) / 100.0f; break;
-                    case 2:
-                        dolly = (mouse_pos[0] - mouse_last[0]) / 100.0f;
-                        break;
-                    case 3: pan = (mouse_pos - mouse_last) / 100.0f; break;
-                    default: break;
-                }
-
-                ygl::camera_turntable(scn->view_cam->frame,
-                    scn->view_cam->focus, rotate, dolly, pan);
-            }
-            scn->scene_updated = true;
-        }
-
-        // handle keytboard for navigation
-        if (!scn->gcam && !get_widget_active(win) && scn->navigation_fps) {
-            auto transl = ygl::zero3f;
-            if (get_key(win, 'a')) transl.x -= 1;
-            if (get_key(win, 'd')) transl.x += 1;
-            if (get_key(win, 's')) transl.z += 1;
-            if (get_key(win, 'w')) transl.z -= 1;
-            if (get_key(win, 'e')) transl.y += 1;
-            if (get_key(win, 'q')) transl.y -= 1;
-            if (transl != ygl::zero3f) {
-                ygl::camera_fps(scn->view_cam->frame, transl, {0, 0});
-                scn->scene_updated = true;
-            }
+        if (!app->gcam) {
+            handle_camera_navigation(win, app->view_cam, app->navigation_fps);
         }
 
         // draw
         shade_draw(win);
 
         // update
-        update(scn);
+        update(app);
 
         // event hadling
         poll_events(win);

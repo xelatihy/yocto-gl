@@ -11601,6 +11601,9 @@ inline void save_screenshot(gl_window* win, const string& imfilename) {
     save_image(imfilename, wh.x, wh.y, 4, (unsigned char*)pixels.data());
 }
 
+/// Handle camera navigation.
+bool handle_camera_navigation(gl_window* win, camera* cam, bool navigation_fps);
+
 /// Initialize widgets
 void init_widgets(gl_window* win);
 
