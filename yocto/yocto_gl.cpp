@@ -1294,7 +1294,10 @@ inline point eval_envpoint(const environment* env, const vec3f& wo) {
     }
 
     // create emission lobe
-    if (ke != zero3f) { pt.em = emission{emission_type::env, ke}; }
+    if (ke != zero3f) {
+        pt.em.type = emission_type::env;
+        pt.em.ke = ke;
+    }
 
     // done
     return pt;
@@ -2504,23 +2507,24 @@ inline obj_scene* load_obj(const string& filename, bool load_txt,
             auto name = string();
             parse_val(ss, name);
             asset->objects.push_back(new obj_object{name, {}});
-            asset->objects.back()->groups.push_back({cur_matname, ""});
+            asset->objects.back()->groups.push_back(obj_group{cur_matname, ""});
         } else if (cmd == "usemtl") {
             auto name = string();
             parse_val(ss, name);
             cur_matname = name;
-            asset->objects.back()->groups.push_back({cur_matname, ""});
+            asset->objects.back()->groups.push_back(obj_group{cur_matname, ""});
         } else if (cmd == "g") {
             auto name = string();
             parse_val(ss, name);
-            asset->objects.back()->groups.push_back({cur_matname, name});
+            asset->objects.back()->groups.push_back(
+                obj_group{cur_matname, name});
         } else if (cmd == "s") {
             auto name = string();
             parse_val(ss, name);
             auto smoothing = name == string("on");
             if (asset->objects.back()->groups.back().smoothing != smoothing) {
                 asset->objects.back()->groups.push_back(
-                    {cur_matname, name, smoothing});
+                    obj_group{cur_matname, name, smoothing});
             }
         } else if (cmd == "mtllib") {
             auto name = string();
