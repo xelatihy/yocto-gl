@@ -39,11 +39,6 @@ struct app_state {
     string filename;
     string imfilename;
 
-    // render
-    float exposure = 0, gamma = 2.2f;
-    bool filmic = false;
-    vec4f background = {0, 0, 0, 0};
-
     // ui
     bool scene_updated = false;
     bool update_bvh = false;
@@ -57,6 +52,9 @@ struct app_state {
     int trace_block_size = 32;
     int trace_batch_size = 16;
     int trace_nthreads = 0;
+
+    // image view
+    gl_stdimage_params imparams = {};
 
     // interactive trace
     gl_texture trace_texture = {};
@@ -81,9 +79,6 @@ struct app_state {
 void draw(gl_window* win) {
     auto app = (app_state*)get_user_pointer(win);
 
-    // begin frame
-    gl_clear_buffers(app->background);
-
     // update texture
     update_texture(app->trace_texture, app->trace_img);
 
@@ -91,26 +86,34 @@ void draw(gl_window* win) {
     auto window_size = get_window_size(win);
     auto framebuffer_size = get_framebuffer_size(win);
     gl_set_viewport(framebuffer_size);
-    draw_image(app->gl_prog, app->trace_texture, window_size, zero2f, 1,
-        app->exposure, app->gamma, app->filmic);
+    app->imparams.win_size = window_size;
+    draw_image(app->gl_prog, app->trace_texture, app->imparams);
 
     auto edited = vector<bool>();
     if (begin_widgets(win, "yitrace")) {
         draw_label_widget(win, "scene", app->filename);
+        draw_label_widget(win, "size", "{} x {}", app->trace_params_.width,
+            app->trace_params_.height);
         draw_label_widget(win, "sample", app->trace_cur_sample);
-        draw_value_widget(
-            win, "samples", app->trace_params_.nsamples, 1, 4096, 1);
-        edited += draw_value_widget(
-            win, "shader type", app->trace_params_.stype, trace_shader_names());
-        edited += draw_value_widget(
-            win, "random type", app->trace_params_.rtype, trace_rng_names());
-        edited += draw_value_widget(
-            win, "filter type", app->trace_params_.ftype, trace_filter_names());
-        edited += draw_camera_widget(
-            win, "camera", app->scn, app->trace_params_.camera_id);
-        edited += draw_value_widget(win, "update bvh", app->update_bvh);
-        draw_value_widget(win, "fps", app->navigation_fps);
-        draw_tonemap_widgets(win, "", app->exposure, app->gamma, app->filmic);
+        if (draw_header_widget(win, "trace")) {
+            draw_value_widget(
+                win, "samples", app->trace_params_.nsamples, 1, 4096, 1);
+            edited += draw_value_widget(win, "shader type",
+                app->trace_params_.stype, trace_shader_names());
+            edited += draw_value_widget(win, "random type",
+                app->trace_params_.rtype, trace_rng_names());
+            edited += draw_value_widget(win, "filter type",
+                app->trace_params_.ftype, trace_filter_names());
+            edited += draw_camera_widget(
+                win, "camera", app->scn, app->trace_params_.camera_id);
+            edited += draw_value_widget(win, "update bvh", app->update_bvh);
+            draw_value_widget(win, "fps", app->navigation_fps);
+        }
+        if (draw_header_widget(win, "image")) {
+            draw_imageview_widgets(win, "", app->imparams);
+            draw_imageinspect_widgets(win, "", app->trace_img, {},
+                get_mouse_posf(win), app->imparams);
+        }
         edited +=
             draw_scene_widgets(win, "scene", app->scn, app->selection, {});
     }
@@ -214,10 +217,12 @@ int main(int argc, char* argv[]) {
         parse_opt(parser, "--batch-size", "", "batch size", 16);
     app->trace_params_.nsamples =
         parse_opt(parser, "--samples", "-s", "image samples", 256);
-    app->exposure =
+    app->imparams.exposure =
         parse_opt(parser, "--exposure", "-e", "hdr image exposure", 0.0f);
-    app->gamma = parse_opt(parser, "--gamma", "-g", "hdr image gamma", 2.2f);
-    app->filmic = parse_flag(parser, "--filmic", "-F", "hdr image filmic");
+    app->imparams.gamma =
+        parse_opt(parser, "--gamma", "-g", "hdr image gamma", 2.2f);
+    app->imparams.filmic =
+        parse_flag(parser, "--filmic", "-F", "hdr image filmic");
     app->trace_params_.height =
         parse_opt(parser, "--resolution", "-r", "image resolution", 540);
     auto amb = parse_opt(parser, "--ambient", "", "ambient factor", 0.0f);
