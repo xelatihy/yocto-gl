@@ -2507,24 +2507,35 @@ inline obj_scene* load_obj(const string& filename, bool load_txt,
             auto name = string();
             parse_val(ss, name);
             asset->objects.push_back(new obj_object{name, {}});
-            asset->objects.back()->groups.push_back(obj_group{cur_matname, ""});
+            asset->objects.back()->groups.push_back({});
+            asset->objects.back()->groups.back().matname = cur_matname;
         } else if (cmd == "usemtl") {
             auto name = string();
             parse_val(ss, name);
             cur_matname = name;
-            asset->objects.back()->groups.push_back(obj_group{cur_matname, ""});
+            asset->objects.back()->groups.push_back({});
+            asset->objects.back()->groups.back().matname = cur_matname;
         } else if (cmd == "g") {
             auto name = string();
             parse_val(ss, name);
-            asset->objects.back()->groups.push_back(
-                obj_group{cur_matname, name});
+            asset->objects.back()->groups.push_back({});
+            asset->objects.back()->groups.back().matname = cur_matname;
+            asset->objects.back()->groups.back().groupname = name;
         } else if (cmd == "s") {
             auto name = string();
             parse_val(ss, name);
-            auto smoothing = name == string("on");
-            if (asset->objects.back()->groups.back().smoothing != smoothing) {
-                asset->objects.back()->groups.push_back(
-                    obj_group{cur_matname, name, smoothing});
+            auto smoothing = (name == "on");
+            if (asset->objects.back()->groups.empty()) {
+                asset->objects.back()->groups.push_back({});
+                asset->objects.back()->groups.back().matname = cur_matname;
+                asset->objects.back()->groups.back().smoothing = smoothing;
+            } else if (asset->objects.back()->groups.back().smoothing !=
+                       smoothing) {
+                auto gname = asset->objects.back()->groups.back().groupname;
+                asset->objects.back()->groups.push_back({});
+                asset->objects.back()->groups.back().matname = cur_matname;
+                asset->objects.back()->groups.back().groupname = gname;
+                asset->objects.back()->groups.back().smoothing = smoothing;
             }
         } else if (cmd == "mtllib") {
             auto name = string();
