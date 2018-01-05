@@ -11477,6 +11477,14 @@ inline void save_screenshot(gl_window* win, const string& imfilename);
 
 Save a screenshot to disk
 
+#### Function handle_camera_navigation()
+
+~~~ .cpp
+bool handle_camera_navigation(gl_window* win, camera* cam, bool navigation_fps);
+~~~
+
+Handle camera navigation.
+
 #### Function init_widgets()
 
 ~~~ .cpp
