@@ -102,17 +102,9 @@ struct app_state {
     vector<gimage*> imgs;
     int cur_img = 0;
 
-    float exposure = 0;
-    float gamma = 1;
-    bool filmic = false;
-
-    float zoom = 1;
-    vec2f offset = vec2f();
-
-    float background = 0;
-
     gl_stdimage_program gl_prog = {};
     unordered_map<gimage*, gl_texture> gl_txt = {};
+    gl_stdimage_params params;
 
     ~app_state() {
         for (auto v : imgs) delete v;
@@ -122,37 +114,19 @@ struct app_state {
 void draw(gl_window* win) {
     auto app = (app_state*)get_user_pointer(win);
     auto img = app->imgs[app->cur_img];
-    gl_clear_buffers({app->background, app->background, app->background, 0});
     auto window_size = get_window_size(win);
     auto framebuffer_size = get_framebuffer_size(win);
     gl_set_viewport(framebuffer_size);
-    draw_image(app->gl_prog, app->gl_txt.at(img), window_size, app->offset,
-        app->zoom, app->exposure, app->gamma, app->filmic);
+    app->params.win_size = window_size;
+    draw_image(app->gl_prog, app->gl_txt.at(img), app->params);
 
     auto mouse_pos = (vec2f)get_mouse_posf(win);
     if (begin_widgets(win, "yimview")) {
         draw_label_widget(win, "filename", img->filename);
-        draw_label_widget(win, "w", img->width());
-        draw_label_widget(win, "h", img->height());
-        if (img->hdr) {
-            draw_value_widget(win, "filmic", app->filmic);
-            draw_value_widget(win, "exposure", app->exposure, -20, 20, 1);
-            draw_value_widget(win, "gamma", app->gamma, 0.1, 5, 0.1);
-        }
-        draw_value_widget(win, "offset", app->offset, -100, 100, 1);
-        draw_value_widget(win, "zoom", app->zoom, 0.01, 10, 0.1);
-        auto xy = (mouse_pos - app->offset) / app->zoom;
-        auto ij = vec2i{(int)round(xy[0]), (int)round(xy[1])};
-        auto ph = img->lookup4f(ij);
-        draw_label_widget(win, "r", ph.x);
-        draw_label_widget(win, "g", ph.y);
-        draw_label_widget(win, "b", ph.z);
-        draw_label_widget(win, "a", ph.w);
-        auto pl = img->lookup4b(ij);
-        draw_label_widget(win, "r", pl.x);
-        draw_label_widget(win, "g", pl.y);
-        draw_label_widget(win, "b", pl.z);
-        draw_label_widget(win, "a", pl.w);
+        draw_label_widget(win, "size", "{} x {}", img->width(), img->height());
+        draw_imageview_widgets(win, "", app->params, (bool)img->hdr);
+        draw_imageinspect_widgets(
+            win, "", img->hdr, img->ldr, mouse_pos, app->params);
     }
     end_widgets(win);
 
@@ -195,9 +169,9 @@ void run_ui(app_state* app) {
         if (mouse_button && mouse_pos != mouse_last &&
             !get_widget_active(win)) {
             switch (mouse_button) {
-                case 1: app->offset += mouse_pos - mouse_last; break;
+                case 1: app->params.offset += mouse_pos - mouse_last; break;
                 case 2:
-                    app->zoom *=
+                    app->params.zoom *=
                         powf(2, (mouse_pos[0] - mouse_last[0]) * 0.001f);
                     break;
                 default: break;
@@ -220,10 +194,12 @@ int main(int argc, char* argv[]) {
 
     // command line params
     auto parser = make_parser(argc, argv, "yimview", "view images");
-    app->exposure =
+    app->params.exposure =
         parse_opt(parser, "--exposure", "-e", "hdr image exposure", 0.0f);
-    app->gamma = parse_opt(parser, "--gamma", "-g", "hdr image gamma", 2.2f);
-    app->filmic = parse_flag(parser, "--filmic", "-F", "hdr image filmic");
+    app->params.gamma =
+        parse_opt(parser, "--gamma", "-g", "hdr image gamma", 2.2f);
+    app->params.filmic =
+        parse_flag(parser, "--filmic", "-F", "hdr image filmic");
     auto filenames =
         parse_args(parser, "image", "image filename", vector<string>{});
     // check parsing
