@@ -89,10 +89,10 @@
 #if YGL_OPENGL
 #ifdef __APPLE__
 #include <OpenGL/gl3.h>
+#define GLFW_INCLUDE_GLCOREARB
 #else
 #include <GL/glew.h>
 #endif
-#define GLFW_INCLUDE_GLCOREARB
 #include <GLFW/glfw3.h>
 #include "ext/imgui/imgui.h"
 #include "ext/imgui/imgui_impl_glfw_gl3.h"
