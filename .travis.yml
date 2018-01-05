@@ -1,41 +1,149 @@
 language: cpp
 
-before_install:
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y; fi
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get update -q; fi
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get install gcc-6 g++-6 -y; fi
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-6 60 --slave /usr/bin/g++ g++ /usr/bin/g++-6; fi
-
-# addons:
-#   apt:
-#     sources:
-#     - ubuntu-toolchain-r-test
-#     packages:
-#     - gcc-6
-#     - g++-6
-
-compiler:
-  - clang
-  - gcc
-
-os:
-  - osx
-  - linux
-
-install: true
-
-osx_image: xcode8.2
-
 dist: trusty
 sudo: required
+group: edge
 
 matrix:
-  exclude:
+  include:
+
+  # - os: osx
+  #   osx_image: xcode8
+  #
+  # - os: osx
+  #   osx_image: xcode8.1
+  #
+  # - os: osx
+  #   osx_image: xcode8.2
+
   - os: osx
+    osx_image: xcode8.3
+
+  # - os: osx
+  #   osx_image: xcode9
+  #
+  # - os: osx
+  #   osx_image: xcode9.1
+
+  - os: osx
+    osx_image: xcode9.2
+
+  - os: linux
     compiler: gcc
+    env: COMPILER=g++-5
+    addons:
+      apt:
+        sources: ['ubuntu-toolchain-r-test']
+        packages: ['g++-5', 'ninja-build']
+
+  - os: linux
+    compiler: gcc
+    env: COMPILER=g++-6
+    addons:
+      apt:
+        sources: ['ubuntu-toolchain-r-test']
+        packages: ['g++-6', 'ninja-build']
+
+  - os: linux
+    compiler: gcc
+    env: COMPILER=g++-7
+    addons:
+      apt:
+        sources: ['ubuntu-toolchain-r-test']
+        packages: ['g++-7', 'ninja-build']
+
+  - os: linux
+    compiler: gcc
+    env:
+      - COMPILER=g++-7
+      - CXXFLAGS=-std=c++17
+    addons:
+      apt:
+        sources: ['ubuntu-toolchain-r-test']
+        packages: ['g++-7', 'ninja-build']
+
+  # - os: linux
+  #   compiler: clang
+  #   env: COMPILER=clang++-3.5
+  #   addons:
+  #     apt:
+  #       sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-precise-3.5']
+  #       packages: ['g++-6', 'clang-3.5', 'ninja-build']
+  #
+  # - os: linux
+  #   compiler: clang
+  #   env: COMPILER=clang++-3.6
+  #   addons:
+  #     apt:
+  #       sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-precise-3.6']
+  #       packages: ['g++-6', 'clang-3.6', 'ninja-build']
+  #
+  # - os: linux
+  #   compiler: clang
+  #   env: COMPILER=clang++-3.7
+  #   addons:
+  #     apt:
+  #       sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-precise-3.7']
+  #       packages: ['g++-6', 'clang-3.7', 'ninja-build']
+  #
+  # - os: linux
+  #   compiler: clang
+  #   env: COMPILER=clang++-3.8
+  #   addons:
+  #     apt:
+  #       sources: ['ubuntu-toolchain-r-test']
+  #       packages: ['g++-6', 'clang-3.8', 'ninja-build']
+  #
   - os: linux
     compiler: clang
+    env: COMPILER=clang++-3.9
+    addons:
+      apt:
+        sources: ['ubuntu-toolchain-r-test']
+        packages: ['g++-6', 'clang-3.9', 'ninja-build']
+
+  - os: linux
+    compiler: clang
+    env: COMPILER=clang++-4.0
+    addons:
+      apt:
+        sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-trusty-4.0']
+        packages: ['g++-6', 'clang-4.0', 'ninja-build']
+
+  - os: linux
+    compiler: clang
+    env: COMPILER=clang++-5.0
+    addons:
+      apt:
+        sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-trusty-5.0']
+        packages: ['g++-6', 'clang-5.0', 'ninja-build']
+
+  - os: linux
+    compiler: clang
+    env:
+      - COMPILER=clang++-5.0
+      - CXXFLAGS=-std=c++1z
+    addons:
+      apt:
+        sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-trusty-5.0']
+        packages: ['g++-6', 'clang-5.0', 'ninja-build']
 
 script:
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then ./apps/build.linux.sh; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then ./apps/build.osx.sh; fi
+  # get CMake and Ninja (only for systems with brew - macOS)
+  - |
+     if [[ (-x $(which brew)) ]]; then
+       brew update
+       brew install cmake ninja
+       cmake --version
+     fi
+  # make sure CXX is correctly set
+  - if [[ "${COMPILER}" != "" ]]; then export CXX=${COMPILER}; fi
+
+  # show OS/compiler version
+  - uname -a
+  - $CXX --version
+
+  # compile and execute unit tests
+  - mkdir -p build && cd build
+  - cmake .. ${CMAKE_OPTIONS} -DYOCTO_OPENGL=OFF -GNinja && cmake --build . --config Release
+  - cd ..
