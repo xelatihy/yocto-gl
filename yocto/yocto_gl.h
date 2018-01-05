@@ -483,13 +483,18 @@
 ///     - define material Parameters with `set_material()`
 ///     - define vertices with `set_vert()`
 ///     - draw elements with `draw_elems()`
-/// 5. also includes other utlities for quick OpenGL
-/// 6. GLFW window with `gl_window`
+/// 5. draw yocto scenes using the above shader
+///     - initialize the rendering state with `init_stdprogram_state()`
+///     - load/update meshes and textures with `update_stdprogram_state()`
+///     - setup draw params using a `gl_stdsurface_params` struct
+///     - draw scene with `draw_stdprogram_scene()`
+/// 6. also includes other utlities for quick OpenGL hacking
+/// 7. GLFW window with `gl_window`
 ///     - create with constructor
 ///     - delete with `clear()`
 ///     - set callbacks with `set_callbacks()`
 ///     - includes carious utiliies to query window, mouse and keyboard
-/// 7. immediate mode widgets
+/// 8. immediate mode widgets using ImGui
 ///     - init with `init_widget()`
 ///     - use the various widget calls to draw the widget and handle events
 ///
@@ -7848,10 +7853,10 @@ inline const vector<pair<string, trace_filter_type>>& trace_filter_names() {
 struct trace_params {
     /// camera id
     int camera_id = 0;
-    /// width
-    int width = 0;
-    /// height
-    int height = 0;
+    /// image width
+    int width = 360;
+    /// image height
+    int height = 360;
     /// number of samples
     int nsamples = 256;
     /// sampler type
@@ -7863,7 +7868,7 @@ struct trace_params {
     /// filter type
     trace_filter_type ftype = trace_filter_type::box;
     /// ambient lighting
-    vec3f amb = {0, 0, 0};
+    vec3f ambient = {0, 0, 0};
     /// view environment map
     bool envmap_invisible = false;
     /// minimum ray depth
@@ -11429,6 +11434,78 @@ inline void set_stdsurface_vert_skinning_off(gl_stdsurface_program& prog) {
     set_program_vertattr(prog._prog, joints_id, {}, zero4f);
 }
 
+// Vertex buffers for gl_stdsurface_program drawing. This is not part of the
+// public API.
+struct gl_stdsurface_vbo {
+    gl_vertex_buffer pos = {};         // position
+    gl_vertex_buffer norm = {};        // normals
+    gl_vertex_buffer texcoord = {};    // texcoord
+    gl_vertex_buffer texcoord1 = {};   // texcoord (sond version)
+    gl_vertex_buffer color = {};       // color
+    gl_vertex_buffer tangsp = {};      // tangent space
+    gl_element_buffer points = {};     // point elements
+    gl_element_buffer lines = {};      // line elements
+    gl_element_buffer triangles = {};  // triangle elements
+    gl_element_buffer quads = {};      // quad elements (as 2 triangles)
+    gl_element_buffer edges = {};      // edge elements
+};
+
+/// State object for gl_stdsurface_program drawing. Members are not part of the
+/// public API.
+struct gl_stdsurface_state {
+    gl_stdsurface_program prog = {};               // gl program
+    unordered_map<texture*, gl_texture> txt;       // gl textures
+    unordered_map<shape*, gl_stdsurface_vbo> vbo;  // mesh vbos
+    vector<vec3f> lights_pos;                      // light position
+    vector<vec3f> lights_ke;                       // light intensity
+    vector<gl_ltype> lights_ltype;                 // light type
+};
+
+/// Params for  gl_stdsurface_program drawing
+struct gl_stdsurface_params {
+    /// camera id
+    int camera_id = 0;
+    /// image width
+    int width = 360;
+    /// image height
+    int height = 360;
+    /// image exposure
+    float exposure = 0;
+    /// image gamma
+    float gamma = 2.2f;
+    /// image filmic tonemapping
+    bool filmic = false;
+    /// draw as wireframe
+    bool wireframe = false;
+    /// draw with overlaid edges
+    bool edges = false;
+    /// draw with an alpha cutout for binary transparency
+    bool cutout = false;
+    /// camera light mode
+    bool camera_lights = false;
+    /// window background
+    vec4f background = {0, 0, 0, 0};
+    /// ambient illumination
+    vec3f ambient = {0, 0, 0};
+    /// highlighted object
+    void* hilighted = nullptr;
+};
+
+/// Initialize gl_stdsurface_program draw state
+gl_stdsurface_state* make_stdsurface_state();
+
+/// Update gl_stdsurface_program draw state. This updates stdsurface meshes
+/// and textures on the GPU.
+void update_stdsurface_state(gl_stdsurface_state* st, const scene* scn,
+    const gl_stdsurface_params& params);
+
+/// Clear gl_stdsurface_program draw state
+void clear_stdsurface_state(gl_stdsurface_state* st);
+
+/// Draw whole scene
+void draw_stdsurface_scene(gl_stdsurface_state* st, const scene* scn,
+    const gl_stdsurface_params& params);
+
 }  // namespace ygl
 
 // Forward declaration
@@ -11755,10 +11832,11 @@ inline void draw_tonemap_widgets(gl_window* win, const string& lbl,
 
 /// Draws a widget that can selected the camera
 inline bool draw_camera_widget(
-    gl_window* win, const string& lbl, scene* scn, camera*& cam) {
-    auto camera_names = vector<pair<string, camera*>>{};
-    for (auto cam : scn->cameras) camera_names.push_back({cam->name, cam});
-    return draw_value_widget(win, lbl, cam, camera_names);
+    gl_window* win, const string& lbl, scene* scn, int& cam_idx) {
+    auto camera_names = vector<pair<string, int>>{};
+    auto idx = 0;
+    for (auto cam : scn->cameras) camera_names.push_back({cam->name, idx++});
+    return draw_value_widget(win, lbl, cam_idx, camera_names);
 }
 
 /// Draws widgets for a whole scene. Used for quickly making demos.

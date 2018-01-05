@@ -98,7 +98,7 @@ int main(int argc, char* argv[]) {
     auto amb = parse_opt(parser, "--ambient", "", "ambient factor", 0.0f);
     auto camera_lights =
         parse_flag(parser, "--camera-lights", "-c", "enable camera lights");
-    app->trace_params_.amb = {amb, amb, amb};
+    app->trace_params_.ambient = {amb, amb, amb};
     if (camera_lights) {
         app->trace_params_.stype = trace_shader_type::eyelight;
     }
