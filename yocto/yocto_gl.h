@@ -6899,9 +6899,9 @@ struct material {
     /// transmission color
     vec3f kt = {0, 0, 0};
     /// roughness
-    float rs = 0.0001;
+    float rs = 0.0001f;
     /// opacity
-    float op = 1;
+    float op = 1.0f;
 
     // textures -------------------------------
     /// emission texture
