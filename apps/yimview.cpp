@@ -120,13 +120,12 @@ void draw(gl_window* win) {
     app->params.win_size = window_size;
     draw_image(app->gl_prog, app->gl_txt.at(img), app->params);
 
-    auto mouse_pos = (vec2f)get_mouse_posf(win);
     if (begin_widgets(win, "yimview")) {
         draw_label_widget(win, "filename", img->filename);
         draw_label_widget(win, "size", "{} x {}", img->width(), img->height());
         draw_imageview_widgets(win, "", app->params, (bool)img->hdr);
         draw_imageinspect_widgets(
-            win, "", img->hdr, img->ldr, mouse_pos, app->params);
+            win, "", img->hdr, img->ldr, get_mouse_posf(win), app->params);
     }
     end_widgets(win);
 
