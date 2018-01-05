@@ -29,10 +29,6 @@
 #include "../yocto/yocto_gl.h"
 using namespace ygl;
 
-#include <algorithm>
-#include <array>
-#include <memory>
-
 void mkdir(const string& dir) {
     if (dir == "" || dir == "." || dir == ".." || dir == "./" || dir == "../")
         return;
