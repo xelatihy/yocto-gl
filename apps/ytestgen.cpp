@@ -26,10 +26,6 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-// general includes ------------
-#include <map>
-#include <set>
-
 #include "../yocto/yocto_gl.h"
 using namespace ygl;
 
@@ -130,18 +126,4 @@ int main(int argc, char* argv[]) {
             }
         });
     }
-
-#if 0
-    // instance scenes --------------------------
-    for (auto itype : itypes) {
-        if (scene != "all" && scene != itype) continue;
-        run_task([=] {
-            printf("generating %s scenes ...\n", itype.c_str());
-            for (auto ltype : {"pointlight", "arealight", "envlight"}) {
-                auto scn = make_instance_scene(itype, ltype);
-                save_scene(itype + "_" + string(ltype), dirname, scn);
-            }
-        });
-    }
-#endif
 }

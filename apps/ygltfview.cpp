@@ -31,10 +31,6 @@
 #include "../yocto/yocto_gltf.h"
 using ygl::log_info;
 
-// ---------------------------------------------------------------------------
-// SCENE (OBJ or GLTF) AND APPLICATION PARAMETERS
-// ---------------------------------------------------------------------------
-
 // OpenGL shape vbo
 struct shape_vbo {
     ygl::gl_vertex_buffer pos = {};
@@ -130,10 +126,6 @@ struct app_state {
     }
 };
 
-// ---------------------------------------------------------------------------
-// SCENE LOADING
-// ---------------------------------------------------------------------------
-
 // loads a scene either OBJ or GLTF
 inline bool load_scene(
     app_state* scn, const std::string& filename, bool instances, bool radius) {
@@ -213,13 +205,7 @@ inline bool load_scene(
     return true;
 }
 
-// ---------------------------------------------------------------------------
-// DRAWING
-// ---------------------------------------------------------------------------
-
-//
 // Init shading
-//
 inline void update_shade_lights(
     shade_state* st, const ygl::gltf_scene_group* scn) {
     st->lights_pos.clear();
@@ -260,9 +246,7 @@ inline void update_shade_lights(
     }
 }
 
-//
 // Init shading
-//
 inline void update_shade_state(
     const ygl::gltf_scene_group* sc, shade_state* st) {
     if (!is_program_valid(st->prog)) st->prog = ygl::make_stdsurface_program();
@@ -311,9 +295,7 @@ inline void update_shade_state(
     }
 }
 
-//
 // Draw a mesh
-//
 inline void shade_mesh(const ygl::gltf_mesh* msh, const ygl::gltf_skin* sk,
     const std::vector<float>& morph_weights, shade_state* st,
     const ygl::mat4f& xform, bool highlighted, bool edges, bool wireframe,
@@ -519,10 +501,6 @@ inline void shade_scene(const ygl::gltf_scene_group* scns, shade_state* st,
     ygl::gl_enable_wireframe(false);
 }
 
-// ---------------------------------------------------------------------------
-// INTERACTIVE FUNCTIONS
-// ---------------------------------------------------------------------------
-
 void save_screenshot(ygl::gl_window* win, const std::string& imfilename) {
     if (ygl::path_extension(imfilename) != ".png") {
         printf("supports only png screenshots");
@@ -537,7 +515,6 @@ void save_screenshot(ygl::gl_window* win, const std::string& imfilename) {
 void draw_scene(ygl::gl_window* win) {
     auto scn = (app_state*)get_user_pointer(win);
     auto window_size = get_window_size(win);
-    window_size.x -= get_widget_size(win);
     auto aspect = (float)window_size.x / (float)window_size.y;
     scn->view_cam->aspect = aspect;
     if (scn->gcam) scn->gcam->cam->aspect = aspect;
@@ -1039,10 +1016,6 @@ void draw_widgets(ygl::gl_window* win) {
     end_widgets(win);
 }
 
-// ---------------------------------------------------------------------------
-// COMMAND LINE
-// ---------------------------------------------------------------------------
-
 void parse_cmdline(app_state* scene, int argc, char** argv, const char* name,
     const char* help, bool simulation, bool trace) {
     using namespace std::string_literals;
@@ -1087,15 +1060,6 @@ void parse_cmdline(app_state* scene, int argc, char** argv, const char* name,
     }
 }
 
-// ---------------------------------------------------------------------------
-// INTERACTION LOOP
-// ---------------------------------------------------------------------------
-
-// callbacks
-using init_fn = void (*)(ygl::gl_window* win);
-using draw_fn = void (*)(ygl::gl_window* win);
-using update_fn = bool (*)(app_state* scn);
-
 // init draw with shading
 void shade_init(ygl::gl_window* win) {
     auto scn = (app_state*)get_user_pointer(win);
@@ -1111,10 +1075,8 @@ void shade_draw(ygl::gl_window* win) {
         ygl::update_transforms(scn->gscn);
     }
 
-    auto wwh = get_window_size(win);
     auto fwh = get_framebuffer_size(win);
-    fwh.x -= (get_widget_size(win) * fwh.x) / wwh.x;
-    ygl::gl_set_viewport({0, 0, fwh.x, fwh.y});
+    ygl::gl_set_viewport(fwh);
 
     ygl::gl_clear_buffers();
     draw_scene(win);
@@ -1123,19 +1085,31 @@ void shade_draw(ygl::gl_window* win) {
     if (scn->shstate->lights_pos.empty()) scn->camera_lights = true;
 }
 
+bool update(app_state* scn) {
+    // advance time
+    if (scn->animate && scn->time_range != ygl::zero2f) {
+        if (scn->time >= scn->time_range.y) {
+            scn->time = scn->time_range.x;
+        } else {
+            scn->time += 1 / 60.0f;
+        }
+        return true;
+    }
+    return false;
+}
+
 // run ui loop
-void run_ui(app_state* scn, int w, int h, const std::string& title,
-    init_fn init, draw_fn draw, update_fn update) {
+void run_ui(app_state* scn, int w, int h) {
     // window
-    auto win = ygl::make_window(w, h, title, scn);
-    set_window_callbacks(win, nullptr, nullptr, draw);
+    auto win = ygl::make_window(w, h, "ygltfview", scn);
+    set_window_callbacks(win, nullptr, nullptr, shade_draw);
 
     // window values
     int mouse_button = 0;
     ygl::vec2f mouse_pos, mouse_last;
 
     // load textures
-    init(win);
+    shade_init(win);
 
     // init widget
     init_widgets(win);
@@ -1198,39 +1172,16 @@ void run_ui(app_state* scn, int w, int h, const std::string& title,
         }
 
         // draw
-        draw(win);
+        shade_draw(win);
 
         // update
         update(scn);
-
-        // check for screenshot
-        //        if (scn->no_ui) {
-        //            save_screenshot(win, scn->imfilename);
-        //            break;
-        //        }
 
         // event hadling
         poll_events(win);
     }
 
     clear_window(win);
-}
-
-// ---------------------------------------------------------------------------
-// INTERACTIVE FUNCTIONS
-// ---------------------------------------------------------------------------
-
-bool update(app_state* scn) {
-    // advance time
-    if (scn->animate && scn->time_range != ygl::zero2f) {
-        if (scn->time >= scn->time_range.y) {
-            scn->time = scn->time_range.x;
-        } else {
-            scn->time += 1 / 60.0f;
-        }
-        return true;
-    }
-    return false;
 }
 
 void draw_custom_widgets(ygl::gl_window* win) {
@@ -1241,10 +1192,6 @@ void draw_custom_widgets(ygl::gl_window* win) {
         draw_value_widget(win, "play animation", scn->animate);
     }
 }
-
-// ---------------------------------------------------------------------------
-// MAIN
-// ---------------------------------------------------------------------------
 
 int main(int argc, char* argv[]) {
     // create empty scene
@@ -1261,7 +1208,7 @@ int main(int argc, char* argv[]) {
     // run ui
     auto width = (int)std::round(scn->view_cam->aspect * scn->resolution);
     auto height = scn->resolution;
-    run_ui(scn, width, height, "yview", shade_init, shade_draw, update);
+    run_ui(scn, width, height);
 
     // clear
     delete scn;

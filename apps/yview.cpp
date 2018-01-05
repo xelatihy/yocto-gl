@@ -30,10 +30,6 @@
 #include "../yocto/yocto_gl.h"
 using namespace ygl;
 
-// ---------------------------------------------------------------------------
-// SCENE (OBJ or GLTF) AND APPLICATION PARAMETERS
-// ---------------------------------------------------------------------------
-
 // Application state
 struct app_state {
     scene* scn = nullptr;
@@ -169,10 +165,6 @@ void run_ui(app_state* app) {
 
     clear_window(win);
 }
-
-// ---------------------------------------------------------------------------
-// MAIN
-// ---------------------------------------------------------------------------
 
 int main(int argc, char* argv[]) {
     // create empty scene
