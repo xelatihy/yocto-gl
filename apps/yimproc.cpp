@@ -103,15 +103,6 @@ Image make_image_grid(const vector<Image>& imgs, int tilex) {
     return ret;
 }
 
-#if 0
-yimage make_image_grid(
-    const vector<yimage>& imgs, int tilex, int width, int height) {
-    auto resized = vector<yimage>();
-    for (auto img : imgs) resized.push_back(resize_image(img, width, height));
-    return make_image_grid(resized, tilex);
-}
-#endif
-
 image4f filter_bilateral(const image4f& img, float spatial_sigma,
     float range_sigma, const vector<image4f>& features,
     const vector<float>& features_sigma) {

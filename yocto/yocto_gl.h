@@ -1763,6 +1763,11 @@ inline ostream& operator<<(ostream& os, const vec3i& a) {
 inline ostream& operator<<(ostream& os, const vec4i& a) {
     return os << a.x << ' ' << a.y << ' ' << a.z << ' ' << a.w;
 }
+/// stream write
+inline ostream& operator<<(ostream& os, const vec4b& a) {
+    return os << (int)a.x << ' ' << (int)a.y << ' ' << (int)a.z << ' '
+              << (int)a.w;
+}
 
 /// stream read
 inline istream& operator>>(istream& is, vec2f& a) { return is >> a.x >> a.y; }
@@ -1783,6 +1788,13 @@ inline istream& operator>>(istream& is, vec3i& a) {
 /// stream read
 inline istream& operator>>(istream& is, vec4i& a) {
     return is >> a.x >> a.y >> a.z >> a.w;
+}
+/// stream read
+inline istream& operator>>(istream& is, vec4b& a) {
+    auto b = zero4i;
+    is >> b;
+    a = {(byte)b.x, (byte)b.y, (byte)b.z, (byte)b.w};
+    return is;
 }
 
 }  // namespace ygl
@@ -11159,9 +11171,34 @@ inline void draw_image(gl_stdimage_program& prog, const gl_texture& txt,
 /// win_h with top-left corner at ox, oy with a zoom zoom.
 inline void draw_image(gl_stdimage_program& prog, const gl_texture& txt,
     const vec2i& win_size, const vec2f& offset, float zoom) {
-    assert(gl_check_error());
     draw_image(prog, txt, win_size, offset, zoom, 0, 1, false);
-    assert(gl_check_error());
+}
+
+/// Params for  gl_stdimage_program drawing. This is just a way to pack all
+/// params together for the above functions.
+struct gl_stdimage_params {
+    /// window size
+    vec2i win_size = {0, 0};
+    /// image offset
+    vec2f offset = {0, 0};
+    /// image zoom
+    float zoom = 1;
+    /// tonemap exposure
+    float exposure = 1;
+    /// tonemap gamma
+    float gamma = 2.2f;
+    /// tonemap filmic
+    bool filmic = false;
+    /// image background
+    vec4f background = zero4f;
+};
+
+/// As above but includes an exposure/gamma correction.
+inline void draw_image(gl_stdimage_program& prog, const gl_texture& txt,
+    const gl_stdimage_params& params, bool clear_background = true) {
+    if (clear_background) gl_clear_buffers(params.background);
+    draw_image(prog, txt, params.win_size, params.offset, params.zoom,
+        params.exposure, params.gamma, params.filmic);
 }
 
 // -----------------------------------------------------------------------------
@@ -11601,6 +11638,9 @@ inline void save_screenshot(gl_window* win, const string& imfilename) {
     save_image(imfilename, wh.x, wh.y, 4, (unsigned char*)pixels.data());
 }
 
+/// Handle camera navigation.
+bool handle_camera_navigation(gl_window* win, camera* cam, bool navigation_fps);
+
 /// Initialize widgets
 void init_widgets(gl_window* win);
 
@@ -11631,7 +11671,10 @@ void draw_label_widget(gl_window* win, const string& lbl, const string& msg);
 /// Label widget
 template <typename... Args>
 inline void draw_label_widget(
-    gl_window* win, const string& lbl, const string& fmt, const Args&... args);
+    gl_window* win, const string& lbl, const string& fmt, const Args&... args) {
+    auto msg = format(fmt, args...);
+    draw_label_widget(win, lbl, msg);
+}
 
 /// Label widget
 template <typename T>
@@ -11829,6 +11872,36 @@ inline void draw_tonemap_widgets(gl_window* win, const string& lbl,
     draw_value_widget(win, lbl + "exposure", exposure, -20, 20, 1);
     draw_value_widget(win, lbl + "gamma", gamma, 0.1, 5, 0.1);
     draw_value_widget(win, lbl + "filmic", filmic);
+}
+
+/// Image view widgets
+inline void draw_imageview_widgets(gl_window* win, const string& lbl,
+    gl_stdimage_params& params, bool show_tonemap = true) {
+    draw_value_widget(win, lbl + "offset", params.offset);
+    draw_value_widget(win, lbl + "zoom", params.zoom);
+    draw_color_widget(win, lbl + "background", params.background);
+    if (show_tonemap) {
+        draw_tonemap_widgets(
+            win, lbl, params.exposure, params.gamma, params.filmic);
+    }
+}
+
+/// Image inspection widgets
+inline void draw_imageinspect_widgets(gl_window* win, const string& lbl,
+    const image4f& hdr, const image4b& ldr, const vec2f& mouse_pos,
+    const gl_stdimage_params& params) {
+    auto xy = (mouse_pos - params.offset) / params.zoom;
+    auto ij = vec2i{(int)round(xy.x), (int)round(xy.y)};
+    auto wh = (hdr) ? hdr.size() : ldr.size();
+    auto v4f = zero4f;
+    auto v4b = zero4b;
+    if (ij.x >= 0 && ij.x < wh.x && ij.y >= 0 && ij.y < wh.y) {
+        v4f = (hdr) ? hdr.at(ij) : srgb_to_linear(ldr.at(ij));
+        v4b = (hdr) ? linear_to_srgb(hdr.at(ij)) : ldr.at(ij);
+    }
+    draw_label_widget(win, lbl + "mouse pos", ij);
+    draw_label_widget(win, lbl + "hdr val", v4f);
+    draw_label_widget(win, lbl + "ldr val", v4b);
 }
 
 /// Draws a widget that can selected the camera

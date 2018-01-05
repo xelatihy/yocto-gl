@@ -39,11 +39,6 @@ struct app_state {
     string filename;
     string imfilename;
 
-    // render
-    float exposure = 0, gamma = 2.2f;
-    bool filmic = false;
-    vec4f background = {0, 0, 0, 0};
-
     // ui
     bool scene_updated = false;
     bool update_bvh = false;
@@ -57,6 +52,9 @@ struct app_state {
     int trace_block_size = 32;
     int trace_batch_size = 16;
     int trace_nthreads = 0;
+
+    // image view
+    gl_stdimage_params imparams = {};
 
     // interactive trace
     gl_texture trace_texture = {};
@@ -81,9 +79,6 @@ struct app_state {
 void draw(gl_window* win) {
     auto app = (app_state*)get_user_pointer(win);
 
-    // begin frame
-    gl_clear_buffers(app->background);
-
     // update texture
     update_texture(app->trace_texture, app->trace_img);
 
@@ -91,26 +86,34 @@ void draw(gl_window* win) {
     auto window_size = get_window_size(win);
     auto framebuffer_size = get_framebuffer_size(win);
     gl_set_viewport(framebuffer_size);
-    draw_image(app->gl_prog, app->trace_texture, window_size, zero2f, 1,
-        app->exposure, app->gamma, app->filmic);
+    app->imparams.win_size = window_size;
+    draw_image(app->gl_prog, app->trace_texture, app->imparams);
 
     auto edited = vector<bool>();
     if (begin_widgets(win, "yitrace")) {
         draw_label_widget(win, "scene", app->filename);
+        draw_label_widget(win, "size", "{} x {}", app->trace_params_.width,
+            app->trace_params_.height);
         draw_label_widget(win, "sample", app->trace_cur_sample);
-        draw_value_widget(
-            win, "samples", app->trace_params_.nsamples, 1, 4096, 1);
-        edited += draw_value_widget(
-            win, "shader type", app->trace_params_.stype, trace_shader_names());
-        edited += draw_value_widget(
-            win, "random type", app->trace_params_.rtype, trace_rng_names());
-        edited += draw_value_widget(
-            win, "filter type", app->trace_params_.ftype, trace_filter_names());
-        edited += draw_camera_widget(
-            win, "camera", app->scn, app->trace_params_.camera_id);
-        edited += draw_value_widget(win, "update bvh", app->update_bvh);
-        draw_value_widget(win, "fps", app->navigation_fps);
-        draw_tonemap_widgets(win, "", app->exposure, app->gamma, app->filmic);
+        if (draw_header_widget(win, "trace")) {
+            draw_value_widget(
+                win, "samples", app->trace_params_.nsamples, 1, 4096, 1);
+            edited += draw_value_widget(win, "shader type",
+                app->trace_params_.stype, trace_shader_names());
+            edited += draw_value_widget(win, "random type",
+                app->trace_params_.rtype, trace_rng_names());
+            edited += draw_value_widget(win, "filter type",
+                app->trace_params_.ftype, trace_filter_names());
+            edited += draw_camera_widget(
+                win, "camera", app->scn, app->trace_params_.camera_id);
+            edited += draw_value_widget(win, "update bvh", app->update_bvh);
+            draw_value_widget(win, "fps", app->navigation_fps);
+        }
+        if (draw_header_widget(win, "image")) {
+            draw_imageview_widgets(win, "", app->imparams);
+            draw_imageinspect_widgets(win, "", app->trace_img, {},
+                get_mouse_posf(win), app->imparams);
+        }
         edited +=
             draw_scene_widgets(win, "scene", app->scn, app->selection, {});
     }
@@ -156,13 +159,9 @@ bool update(app_state* app) {
 // run ui loop
 void run_ui(app_state* app) {
     // window
-    auto win = make_window(
-        app->trace_params_.width, app->trace_params_.height, "yitrace", app);
+    auto win = make_window(app->trace_params_.width, app->trace_params_.height,
+        "yitrace | " + app->filename, app);
     set_window_callbacks(win, nullptr, nullptr, draw);
-
-    // window values
-    int mouse_button = 0;
-    vec2f mouse_pos, mouse_last;
 
     // load textures
     app->gl_prog = make_stdimage_program();
@@ -173,61 +172,10 @@ void run_ui(app_state* app) {
 
     // loop
     while (!should_close(win)) {
-        mouse_last = mouse_pos;
-        mouse_pos = get_mouse_posf(win);
-        mouse_button = get_mouse_button(win);
-
-        set_window_title(win, ("yshade | " + app->filename));
-
         // handle mouse and keyboard for navigation
-        if (mouse_button && !get_widget_active(win)) {
-            if (app->navigation_fps) {
-                auto dolly = 0.0f;
-                auto pan = zero2f;
-                auto rotate = zero2f;
-                switch (mouse_button) {
-                    case 1: rotate = (mouse_pos - mouse_last) / 100.0f; break;
-                    case 2:
-                        dolly = (mouse_pos[0] - mouse_last[0]) / 100.0f;
-                        break;
-                    case 3: pan = (mouse_pos - mouse_last) / 100.0f; break;
-                    default: break;
-                }
-                auto cam = app->scn->cameras[app->trace_params_.camera_id];
-                camera_fps(cam->frame, {0, 0, 0}, rotate);
-            } else {
-                auto dolly = 0.0f;
-                auto pan = zero2f;
-                auto rotate = zero2f;
-                switch (mouse_button) {
-                    case 1: rotate = (mouse_pos - mouse_last) / 100.0f; break;
-                    case 2:
-                        dolly = (mouse_pos[0] - mouse_last[0]) / 100.0f;
-                        break;
-                    case 3: pan = (mouse_pos - mouse_last) / 100.0f; break;
-                    default: break;
-                }
-                auto cam = app->scn->cameras[app->trace_params_.camera_id];
-                camera_turntable(cam->frame, cam->focus, rotate, dolly, pan);
-            }
+        auto cam = app->scn->cameras[app->trace_params_.camera_id];
+        if (handle_camera_navigation(win, cam, app->navigation_fps))
             app->scene_updated = true;
-        }
-
-        // handle keytboard for navigation
-        if (!get_widget_active(win) && app->navigation_fps) {
-            auto transl = zero3f;
-            if (get_key(win, 'a')) transl.x -= 1;
-            if (get_key(win, 'd')) transl.x += 1;
-            if (get_key(win, 's')) transl.z += 1;
-            if (get_key(win, 'w')) transl.z -= 1;
-            if (get_key(win, 'e')) transl.y += 1;
-            if (get_key(win, 'q')) transl.y -= 1;
-            if (transl != zero3f) {
-                auto cam = app->scn->cameras[app->trace_params_.camera_id];
-                camera_fps(cam->frame, transl, {0, 0});
-                app->scene_updated = true;
-            }
-        }
 
         // draw
         draw(win);
@@ -269,10 +217,12 @@ int main(int argc, char* argv[]) {
         parse_opt(parser, "--batch-size", "", "batch size", 16);
     app->trace_params_.nsamples =
         parse_opt(parser, "--samples", "-s", "image samples", 256);
-    app->exposure =
+    app->imparams.exposure =
         parse_opt(parser, "--exposure", "-e", "hdr image exposure", 0.0f);
-    app->gamma = parse_opt(parser, "--gamma", "-g", "hdr image gamma", 2.2f);
-    app->filmic = parse_flag(parser, "--filmic", "-F", "hdr image filmic");
+    app->imparams.gamma =
+        parse_opt(parser, "--gamma", "-g", "hdr image gamma", 2.2f);
+    app->imparams.filmic =
+        parse_flag(parser, "--filmic", "-F", "hdr image filmic");
     app->trace_params_.height =
         parse_opt(parser, "--resolution", "-r", "image resolution", 540);
     auto amb = parse_opt(parser, "--ambient", "", "ambient factor", 0.0f);
