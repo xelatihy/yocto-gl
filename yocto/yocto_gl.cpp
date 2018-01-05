@@ -2599,7 +2599,8 @@ inline obj_scene* load_obj(const string& filename, bool load_txt,
             asset->materials.end(), materials.begin(), materials.end());
         for (auto& txt : textures) {
             if (texture_set.find(txt) != texture_set.end()) continue;
-            asset->textures.push_back(new obj_texture{txt});
+            asset->textures.push_back(new obj_texture());
+            asset->textures.back()->path = txt;
             texture_set.insert(txt);
         }
     }
