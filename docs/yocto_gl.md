@@ -77,7 +77,8 @@ easily switch STL implementation if desired.
 ## Compilation
 
 Yocto/GL is written in C++14, with compilation supported on C++11, and
-compiles on OSX (clang/gcc), Linux (gcc) and Windows (MSVC 2017).
+compiles on OSX (clang from Xcode 9+), Linux (gcc 6+, clang 4+)
+and Windows (MSVC 2017).
 
 For image loading and saving, Yocto/GL depends on `stb_image.h`,
 `stb_image_write.h`, `stb_image_resize.h` and `tinyexr.h`. These features
@@ -5349,25 +5350,26 @@ vertices and pass it as creases.
 #### Function make_uvquads()
 
 ~~~ .cpp
-inline tuple<vector<vec4i>, vector<vec2f>> make_uvquads(
-    int usteps, int vsteps);
+inline tuple<vector<vec4i>, vector<vec2f>> make_uvquads(int usteps, int vsteps,
+    bool uwrap = false, bool vwrap = false, bool vpole0 = false,
+    bool vpole1 = false);
 ~~~
 
 Generate a rectangular grid of usteps x vsteps uv values for parametric
 surface generation.
 
-#### Function make_lines()
+#### Function make_uvlines()
 
 ~~~ .cpp
-inline tuple<vector<vec2i>, vector<vec2f>> make_lines(int num, int usteps);
+inline tuple<vector<vec2i>, vector<vec2f>> make_uvlines(int num, int usteps);
 ~~~
 
 Generate parametric num lines of usteps segments.
 
-#### Function make_points()
+#### Function make_uvpoints()
 
 ~~~ .cpp
-inline tuple<vector<int>, vector<vec2f>> make_points(int num);
+inline tuple<vector<int>, vector<vec2f>> make_uvpoints(int num);
 ~~~
 
 Generate a parametric point set. Mostly here for completeness.
@@ -5496,59 +5498,21 @@ Samples a set of points over a triangle mesh uniformly. The rng function
 takes the point index and returns vec3f numbers uniform directibuted in
 [0,1]^3. unorm and texcoord are optional.
 
-#### Function make_uvsphere()
+#### Function make_sphere()
 
 ~~~ .cpp
-tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_uvsphere(
-    int usteps, int vsteps);
+tuple<vector<vec3i>, vector<vec3f>> make_sphere(int level);
 ~~~
 
-Make a sphere. This is not watertight.
+Make a sphere. Returns quads, pos.
 
 #### Function make_geodesicsphere()
 
 ~~~ .cpp
-tuple<vector<vec3i>, vector<vec3f>, vector<vec3f>> make_geodesicsphere(
-    int level);
+tuple<vector<vec3i>, vector<vec3f>> make_geodesicsphere(int level);
 ~~~
 
-Make a geodesic sphere.
-
-#### Function make_uvhemisphere()
-
-~~~ .cpp
-tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
-make_uvhemisphere(int usteps, int vsteps);
-~~~
-
-Make a sphere. This is not watertight.
-
-#### Function make_uvflippedsphere()
-
-~~~ .cpp
-tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
-make_uvflippedsphere(int usteps, int vsteps);
-~~~
-
-Make an inside-out sphere. This is not watertight.
-
-#### Function make_uvflippedhemisphere()
-
-~~~ .cpp
-tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
-make_uvflippedhemisphere(int usteps, int vsteps);
-~~~
-
-Make an inside-out hemisphere. This is not watertight.
-
-#### Function make_uvquad()
-
-~~~ .cpp
-tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_uvquad(
-    int usteps, int vsteps);
-~~~
-
-Make a quad.
+Make a geodesic sphere. Returns quads, pos.
 
 #### Function make_cube()
 
@@ -5557,16 +5521,56 @@ tuple<vector<vec4i>, vector<vec3f>> make_cube();
 ~~~
 
 Make a cube with unique vertices. This is watertight but has no
-texture coordinates or normals.
+texture coordinates or normals. Returns quads, pos.
+
+#### Function make_uvsphere()
+
+~~~ .cpp
+tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_uvsphere(
+    int level, bool flipped = false);
+~~~
+
+Make a sphere. This is not watertight. Returns quads, pos, norm, texcoord.
+
+#### Function make_uvhemisphere()
+
+~~~ .cpp
+tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
+make_uvhemisphere(int level, bool flipped = false);
+~~~
+
+Make a sphere. This is not watertight. Returns quads, pos, norm, texcoord.
+
+#### Function make_uvquad()
+
+~~~ .cpp
+tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_uvquad(
+    int level);
+~~~
+
+Make a quad. Returns quads, pos, norm, texcoord.
+
+#### Function make_fvsphere()
+
+~~~ .cpp
+tuple<vector<vec4i>, vector<vec3f>, vector<vec4i>, vector<vec3f>, vector<vec4i>,
+    vector<vec2f>>
+make_fvsphere();
+~~~
+
+Make a facevarying sphere with unique vertices but different texture
+coordinates. Returns (quads, pos), (quads, norm), (quads, texcoord).
 
 #### Function make_fvcube()
 
 ~~~ .cpp
-tuple<vector<vec4i>, vector<vec3f>, vector<vec4i>, vector<vec2f>> make_fvcube();
+tuple<vector<vec4i>, vector<vec3f>, vector<vec4i>, vector<vec3f>, vector<vec4i>,
+    vector<vec2f>>
+make_fvcube();
 ~~~
 
 Make a facevarying cube with unique vertices but different texture
-coordinates.
+coordinates. Returns (quads, pos), (quads, norm), (quads, texcoord).
 
 #### Function make_suzanne()
 
@@ -5575,67 +5579,63 @@ tuple<vector<vec4i>, vector<vec3f>> make_suzanne();
 ~~~
 
 Make a suzanne monkey model for testing. Note that some quads are
-degenerate.
+degenerate. Returns quads, pos.
 
 #### Function make_uvcube()
 
 ~~~ .cpp
 tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_uvcube(
-    int usteps, int vsteps);
+    int level);
 ~~~
 
-Make a cube with uv. This is not watertight.
+Make a cube with uv. This is not watertight. Returns quads, pos, norm,
+texcoord.
 
 #### Function make_uvspherecube()
 
 ~~~ .cpp
 tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
-make_uvspherecube(int usteps, int vsteps);
+make_uvspherecube(int level);
 ~~~
 
-Make a sphere from a cube. This is not watertight.
+Make a sphere from a cube. This is not watertight. Returns quads, pos, norm,
+texcoord.
 
 #### Function make_uvspherizedcube()
 
 ~~~ .cpp
 tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
-make_uvspherizedcube(int usteps, int vsteps, float radius);
+make_uvspherizedcube(int level, float radius);
 ~~~
 
 Make a cube than stretch it towards a sphere. This is not watertight.
+Returns quads, pos, norm, texcoord.
 
 #### Function make_uvflipcapsphere()
 
 ~~~ .cpp
 tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
-make_uvflipcapsphere(int usteps, int vsteps, float radius);
+make_uvflipcapsphere(int level, float z, bool flipped = false);
 ~~~
 
-Make a flipped sphere. This is not watertight.
+Make a flipped sphere. This is not watertight. Returns quads, pos, norm,
+texcoord.
 
 #### Function make_uvcutsphere()
 
 ~~~ .cpp
 tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
-make_uvcutsphere(int usteps, int vsteps, float radius);
+make_uvcutsphere(int level, float z, bool flipped = false);
 ~~~
 
-Make a butout sphere. This is not watertight.
-
-#### Function make_uvflippedcutsphere()
-
-~~~ .cpp
-tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
-make_uvflippedcutsphere(int usteps, int vsteps, float radius);
-~~~
-
-Make a quad. This is not watertight.
+Make a cutout sphere. This is not watertight. Returns quads, pos, norm,
+texcoord.
 
 #### Function make_hair()
 
 ~~~ .cpp
 tuple<vector<vec2i>, vector<vec3f>, vector<vec3f>, vector<vec2f>, vector<float>>
-make_hair(int num, int usteps, const vec2f& len, const vec2f& rad,
+make_hair(int num, int level, const vec2f& len, const vec2f& rad,
     const vector<vec3i>& striangles, const vector<vec4i>& squads,
     const vector<vec3f>& spos, const vector<vec3f>& snorm,
     const vector<vec2f>& stexcoord, const vec2f& noise = zero2f,
@@ -5643,7 +5643,7 @@ make_hair(int num, int usteps, const vec2f& len, const vec2f& rad,
     uint32_t seed = 0);
 ~~~
 
-Make a hair ball around a shape
+Make a hair ball around a shape. Returns lines, pos, norm, texcoord, radius.
 
 #### Struct image4f
 
@@ -9539,10 +9539,19 @@ is not fast nor memory efficient. But it is good enough for some needs.
 
 ~~~ .cpp
 template <typename... Args>
-inline string print(const string& fmt, const Args&... args);
+inline void print(const string& fmt, const Args&... args);
 ~~~
 
 Wrapper for the above function that prints to stdout.
+
+#### Function println()
+
+~~~ .cpp
+template <typename... Args>
+inline void println(const string& fmt, const Args&... args);
+~~~
+
+Wrapper for the above function that prints to stdout with endline.
 
 #### Function load_binfile()
 
@@ -11483,7 +11492,7 @@ Value widget
 
 ~~~ .cpp
 bool draw_value_widget(gl_window* win, const string& lbl, int* val, int ncomp,
-    int min, int max, int incr = 1);
+    int min = 0, int max = 1, int incr = 1);
 ~~~
 
 Value widget
@@ -11492,7 +11501,7 @@ Value widget
 
 ~~~ .cpp
 bool draw_value_widget(gl_window* win, const string& lbl, float* val, int ncomp,
-    float min, float max, float incr = 1);
+    float min = 0, float max = 1, float incr = 1);
 ~~~
 
 Value widget
@@ -11501,7 +11510,7 @@ Value widget
 
 ~~~ .cpp
 inline bool draw_value_widget(gl_window* win, const string& lbl, int& val,
-    int min, int max, int incr = 1);
+    int min = 0, int max = 1, int incr = 1);
 ~~~
 
 Value widget
@@ -11510,7 +11519,7 @@ Value widget
 
 ~~~ .cpp
 inline bool draw_value_widget(gl_window* win, const string& lbl, vec2i& val,
-    int min, int max, int incr = 1);
+    int min = 0, int max = 1, int incr = 1);
 ~~~
 
 Value widget
@@ -11519,7 +11528,7 @@ Value widget
 
 ~~~ .cpp
 inline bool draw_value_widget(gl_window* win, const string& lbl, vec3i& val,
-    int min, int max, int incr = 1);
+    int min = 0, int max = 1, int incr = 1);
 ~~~
 
 Value widget
@@ -11528,7 +11537,7 @@ Value widget
 
 ~~~ .cpp
 inline bool draw_value_widget(gl_window* win, const string& lbl, vec4i& val,
-    int min, int max, int incr = 1);
+    int min = 0, int max = 1, int incr = 1);
 ~~~
 
 Value widget
@@ -11537,7 +11546,7 @@ Value widget
 
 ~~~ .cpp
 inline bool draw_value_widget(gl_window* win, const string& lbl, float& val,
-    float min, float max, float incr = 1);
+    float min = 0, float max = 1, float incr = 1);
 ~~~
 
 Value widget
@@ -11546,7 +11555,7 @@ Value widget
 
 ~~~ .cpp
 inline bool draw_value_widget(gl_window* win, const string& lbl, vec2f& val,
-    float min, float max, float incr = 1);
+    float min = 0, float max = 1, float incr = 1);
 ~~~
 
 Value widget
@@ -11555,7 +11564,7 @@ Value widget
 
 ~~~ .cpp
 inline bool draw_value_widget(gl_window* win, const string& lbl, vec3f& val,
-    float min, float max, float incr = 1);
+    float min = 0, float max = 1, float incr = 1);
 ~~~
 
 Value widget
@@ -11564,7 +11573,7 @@ Value widget
 
 ~~~ .cpp
 inline bool draw_value_widget(gl_window* win, const string& lbl, vec4f& val,
-    float min, float max, float incr = 1);
+    float min = 0, float max = 1, float incr = 1);
 ~~~
 
 Value widget
@@ -11573,7 +11582,7 @@ Value widget
 
 ~~~ .cpp
 inline bool draw_value_widget(gl_window* win, const string& lbl, mat4f& val,
-    float min, float max, float incr = 1);
+    float min = 0, float max = 1, float incr = 1);
 ~~~
 
 Slider widget
@@ -11582,7 +11591,7 @@ Slider widget
 
 ~~~ .cpp
 inline bool draw_value_widget(gl_window* win, const string& lbl, frame3f& val,
-    float min, float max, float incr = 1);
+    float min = -1, float max = 1, float incr = 1);
 ~~~
 
 Slider widget
@@ -11602,7 +11611,7 @@ Slider widget
 bool draw_color_widget(gl_window* win, const string& lbl, vec4f& val);
 ~~~
 
-Slider widget
+Color widget
 
 #### Function draw_color_widget()
 
@@ -11610,7 +11619,15 @@ Slider widget
 bool draw_color_widget(gl_window* win, const string& lbl, vec4b& val);
 ~~~
 
-Slider widget
+Color widget
+
+#### Function draw_color_widget()
+
+~~~ .cpp
+bool draw_color_widget(gl_window* win, const string& lbl, vec3f& val);
+~~~
+
+Color widget
 
 #### Function draw_value_widget()
 
