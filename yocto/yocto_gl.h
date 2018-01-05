@@ -745,11 +745,6 @@
 #include <unordered_set>
 #include <vector>
 
-// HACK to avoid compilation with MSVC2015 and C++11 without dirtying code
-#if defined(_WIN32) || __cplusplus < 201402L
-#define constexpr
-#endif
-
 // Compilation option
 #define YGL_FAST_RANDFLOAT 1
 
