@@ -101,10 +101,8 @@ inline const vector<pair<string, proc_shape_type>>& proc_shape_names() {
 
 // Procedural floor shape params
 struct proc_floor_shape_params {
-    float size = 10;
+    float size = 20;
     int tesselation = 5;
-    vec3f color = {0.2f, 0.2f, 0.2f};
-    bool textured = false;
 };
 
 // Procedural prim shape type
@@ -122,11 +120,9 @@ proc_prim_shape_names() {
 // Procedural prim shape params
 struct proc_prim_shape_params {
     proc_prim_shape_type ptype = proc_prim_shape_type::sphere;
-    float size = 1;
+    float size = 2;
     int tesselation = 5;
     int subdivision = 0;
-    vec3f color = {0.2f, 0.2f, 0.2f};
-    bool textured = false;
 };
 
 // Procesural shape
@@ -313,6 +309,7 @@ bool update_proc_floor_shape(proc_shape* pshp) {
         swap(p.y, p.z);
     }
     for (auto& n : shp->norm) n = {0, 1, 0};
+    for (auto& t : shp->texcoord) t *= params.size;
 
     return num_changed;
 }
@@ -335,12 +332,6 @@ bool update_proc_prim_shape(proc_shape* pshp) {
         default: throw runtime_error("should not have gotten here");
     }
     for (auto& p : shp->pos) p *= params.size / 2;
-
-    mat->name = pshp->name;
-    mat->mtype = material_type::specular_roughness;
-    mat->kd = {0.2f, 0.2f, 0.2f};
-    mat->ks = zero3f;
-    mat->rs = 1;
 
     return num_changed;
 }
@@ -474,9 +465,9 @@ inline bool draw_procelem_widgets(gl_window* win, proc_scene* scn,
     auto edited = vector<bool>();
     draw_separator_widget(win);
     edited += draw_value_widget(win, "name", cam->name);
-    edited += draw_value_widget(win, "from", cam->yfov, -10, 10);
-    edited += draw_value_widget(win, "to", cam->yfov, -10, 10);
-    edited += draw_value_widget(win, "up", cam->yfov, -10, 10);
+    edited += draw_value_widget(win, "from", cam->from, -10, 10);
+    edited += draw_value_widget(win, "to", cam->to, -10, 10);
+    edited += draw_value_widget(win, "up", cam->up, -10, 10);
     edited += draw_value_widget(win, "yfov", cam->yfov, 0.1, 4);
     edited += draw_value_widget(win, "aspect", cam->aspect, 0.1, 4);
     if (std::any_of(edited.begin(), edited.end(), [](auto x) { return x; })) {
@@ -535,8 +526,6 @@ inline bool draw_procelem_widgets(gl_window* win, proc_scene* scn,
             edited += draw_value_widget(win, "size", params.size, 0, 20);
             edited +=
                 draw_value_widget(win, "tesselation", params.tesselation, 0, 8);
-            edited += draw_color_widget(win, "color", params.color);
-            edited += draw_value_widget(win, "textured", params.textured);
         } break;
         case proc_shape_type::prim: {
             auto& params = shp->prim_params;
@@ -545,8 +534,6 @@ inline bool draw_procelem_widgets(gl_window* win, proc_scene* scn,
                 draw_value_widget(win, "tesselation", params.tesselation, 0, 8);
             edited +=
                 draw_value_widget(win, "subdivision", params.subdivision, 0, 8);
-            edited += draw_color_widget(win, "color", params.color);
-            edited += draw_value_widget(win, "textured", params.textured);
         } break;
         default: throw runtime_error("should not have gotten here");
     }
@@ -614,33 +601,33 @@ inline bool draw_procedit_widgets(
     draw_value_widget(win, "add type", stype, proc_shape_names());
     if (draw_button_widget(win, "add camera")) {
         auto cam = new proc_camera();
-        cam->name = "camera" + to_string(cur_cam++);
+        cam->name = "cam" + to_string(cur_cam++);
         scn->cameras += cam;
         update_proc_scene(scn);
     }
     if (draw_button_widget(win, "add texture")) {
         auto txt = new proc_texture();
-        txt->name = "shape" + to_string(cur_txt++);
+        txt->name = "txt" + to_string(cur_txt++);
         scn->textures += txt;
         update_proc_scene(scn);
     }
     if (draw_button_widget(win, "add material")) {
         auto mat = new proc_material();
-        mat->name = "material" + to_string(cur_mat++);
+        mat->name = "mat" + to_string(cur_mat++);
         scn->materials += mat;
         update_proc_scene(scn);
     }
     if (draw_button_widget(win, "add shape")) {
         auto shp = new proc_shape();
         shp->type = stype;
-        shp->name = "shape" + to_string(cur_shp++);
+        shp->name = "shp" + to_string(cur_shp++);
         shp->mat = scn->materials.front();
         scn->shapes += shp;
         update_proc_scene(scn);
     }
     if (draw_button_widget(win, "add instance")) {
         auto ist = new proc_instance();
-        ist->name = "instance" + to_string(cur_ist++);
+        ist->name = "ist" + to_string(cur_ist++);
         ist->shp = scn->shapes.back();
         scn->instances += ist;
         update_proc_scene(scn);
