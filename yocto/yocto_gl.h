@@ -10570,83 +10570,9 @@ struct gl_vertex_buffer {
     bool _float = true;
 };
 
-// Creates a buffer with num elements of size size stored in values, where
-// content is dyanamic if dynamic.
-void _init_vertex_buffer(gl_vertex_buffer& buf, int n, int nc,
-    const void* values, bool as_float, bool dynamic);
-
-// Updates the buffer bid with new data.
+// Updates the bufferwith new data.
 void _update_vertex_buffer(gl_vertex_buffer& buf, int n, int nc,
     const void* values, bool as_float, bool dynamic);
-
-/// Creates a buffer.
-inline gl_vertex_buffer make_vertex_buffer(
-    int num, int ncomp, const float* values, bool dynamic = false) {
-    auto buf = gl_vertex_buffer();
-    _init_vertex_buffer(buf, num, ncomp, values, true, dynamic);
-    return buf;
-}
-
-/// Creates a buffer.
-inline gl_vertex_buffer make_vertex_buffer(
-    int num, int ncomp, const int* values, bool dynamic = false) {
-    auto buf = gl_vertex_buffer();
-    _init_vertex_buffer(buf, num, ncomp, values, true, dynamic);
-    return buf;
-}
-
-/// Creates a buffer.
-inline gl_vertex_buffer make_vertex_buffer(
-    const vector<float>& values, bool dynamic = false) {
-    return make_vertex_buffer(values.size(), 1, values.data(), dynamic);
-}
-
-/// Creates a buffer.
-inline gl_vertex_buffer make_vertex_buffer(
-    const vector<vec2f>& values, bool dynamic = false) {
-    return make_vertex_buffer(
-        values.size(), 2, (const float*)values.data(), dynamic);
-}
-
-/// Creates a buffer.
-inline gl_vertex_buffer make_vertex_buffer(
-    const vector<vec3f>& values, bool dynamic = false) {
-    return make_vertex_buffer(
-        values.size(), 3, (const float*)values.data(), dynamic);
-}
-
-/// Creates a buffer.
-inline gl_vertex_buffer make_vertex_buffer(
-    const vector<vec4f>& values, bool dynamic = false) {
-    return make_vertex_buffer(
-        values.size(), 4, (const float*)values.data(), dynamic);
-}
-
-/// Creates a buffer.
-inline gl_vertex_buffer make_vertex_buffer(
-    const vector<int>& values, bool dynamic = false) {
-    return make_vertex_buffer(values.size(), 1, values.data(), dynamic);
-}
-
-/// Creates a buffer.
-inline gl_vertex_buffer make_vertex_buffer(
-    const vector<vec2i>& values, bool dynamic = false) {
-    return make_vertex_buffer(
-        values.size(), 2, (const int*)values.data(), dynamic);
-}
-/// Creates a buffer.
-inline gl_vertex_buffer make_vertex_buffer(
-    const vector<vec3i>& values, bool dynamic = false) {
-    return make_vertex_buffer(
-        values.size(), 3, (const int*)values.data(), dynamic);
-}
-
-/// Creates a buffer.
-inline gl_vertex_buffer make_vertex_buffer(
-    const vector<vec4i>& values, bool dynamic = false) {
-    return make_vertex_buffer(
-        values.size(), 4, (const int*)values.data(), dynamic);
-}
 
 /// Updates the buffer with new data.
 inline void update_vertex_buffer(gl_vertex_buffer& buf, int num, int ncomp,
@@ -10660,58 +10586,68 @@ inline void update_vertex_buffer(gl_vertex_buffer& buf, int num, int ncomp,
     _update_vertex_buffer(buf, num, ncomp, values, false, dynamic);
 }
 
-/// Updates the buffer bid with new data.
+/// Updates the bufferwith new data.
 inline void update_vertex_buffer(
     gl_vertex_buffer& buf, const vector<float>& values, bool dynamic = false) {
     update_vertex_buffer(buf, values.size(), 1, values.data(), dynamic);
 }
 
-/// Updates the buffer bid with new data.
+/// Updates the bufferwith new data.
 inline void update_vertex_buffer(
     gl_vertex_buffer& buf, const vector<vec2f>& values, bool dynamic = false) {
     update_vertex_buffer(
         buf, values.size(), 2, (const float*)values.data(), dynamic);
 }
 
-/// Updates the buffer bid with new data.
+/// Updates the bufferwith new data.
 inline void update_vertex_buffer(
     gl_vertex_buffer& buf, const vector<vec3f>& values, bool dynamic = false) {
     update_vertex_buffer(
         buf, values.size(), 3, (const float*)values.data(), dynamic);
 }
 
-/// Updates the buffer bid with new data.
+/// Updates the bufferwith new data.
 inline void update_vertex_buffer(
     gl_vertex_buffer& buf, const vector<vec4f>& values, bool dynamic = false) {
     update_vertex_buffer(
         buf, values.size(), 4, (const float*)values.data(), dynamic);
 }
 
-/// Updates the buffer bid with new data.
+/// Updates the bufferwith new data.
 inline void update_vertex_buffer(
     gl_vertex_buffer& buf, const vector<int>& values, bool dynamic = false) {
     update_vertex_buffer(buf, values.size(), 1, values.data(), dynamic);
 }
 
-/// Updates the buffer bid with new data.
+/// Updates the bufferwith new data.
 inline void update_vertex_buffer(
     gl_vertex_buffer& buf, const vector<vec2i>& values, bool dynamic = false) {
     update_vertex_buffer(
         buf, values.size(), 2, (const int*)values.data(), dynamic);
 }
 
-/// Updates the buffer bid with new data.
+/// Updates the bufferwith new data.
 inline void update_vertex_buffer(
     gl_vertex_buffer& buf, const vector<vec3i>& values, bool dynamic = false) {
     update_vertex_buffer(
         buf, values.size(), 3, (const int*)values.data(), dynamic);
 }
 
-/// Updates the buffer bid with new data.
+/// Updates the buffer with new data.
 inline void update_vertex_buffer(
     gl_vertex_buffer& buf, const vector<vec4i>& values, bool dynamic = false) {
     update_vertex_buffer(
         buf, values.size(), 4, (const int*)values.data(), dynamic);
+}
+
+/// Make a buffer with new data. A convenience wrapper to
+/// update_vertex_buffer().
+template <typename T>
+inline gl_vertex_buffer make_vertex_buffer(
+    const vector<T>& values, bool dynamic = false) {
+    auto buf = gl_vertex_buffer();
+    update_vertex_buffer(buf, values, dynamic);
+    return buf;
 }
 
 /// Bind the buffer at a particular attribute location
@@ -10750,50 +10686,9 @@ struct gl_element_buffer {
     int _ncomp = 0;
 };
 
-// Creates a buffer with num elements of size size stored in values, where
-// content is dyanamic if dynamic.
-// Returns the buffer id.
-void _init_element_buffer(
-    gl_element_buffer& buf, int n, int nc, const int* values, bool dynamic);
-
-// Updates the buffer bid with new data.
+// Updates the bufferwith new data.
 void _update_element_buffer(
     gl_element_buffer& buf, int n, int nc, const int* values, bool dynamic);
-
-/// Creates a buffer.
-inline gl_element_buffer make_element_buffer(
-    int num, int ncomp, const int* values, bool dynamic = false) {
-    auto buf = gl_element_buffer();
-    _init_element_buffer(buf, num, ncomp, values, dynamic);
-    return buf;
-}
-
-/// Creates a buffer.
-inline gl_element_buffer make_element_buffer(
-    const vector<int>& values, bool dynamic = false) {
-    return make_element_buffer(values.size(), 1, values.data(), dynamic);
-}
-
-/// Creates a buffer.
-inline gl_element_buffer make_element_buffer(
-    const vector<vec2i>& values, bool dynamic = false) {
-    return make_element_buffer(
-        values.size(), 2, (const int*)values.data(), dynamic);
-}
-
-/// Creates a buffer.
-inline gl_element_buffer make_element_buffer(
-    const vector<vec3i>& values, bool dynamic = false) {
-    return make_element_buffer(
-        values.size(), 3, (const int*)values.data(), dynamic);
-}
-
-/// Creates a buffer.
-inline gl_element_buffer make_element_buffer(
-    const vector<vec4i>& values, bool dynamic = false) {
-    return make_element_buffer(
-        values.size(), 4, (const int*)values.data(), dynamic);
-}
 
 /// Updates the buffer with new data.
 inline void update_element_buffer(gl_element_buffer& buf, int num, int ncomp,
@@ -10801,31 +10696,41 @@ inline void update_element_buffer(gl_element_buffer& buf, int num, int ncomp,
     _update_element_buffer(buf, num, ncomp, values, dynamic);
 }
 
-/// Updates the buffer bid with new data.
+/// Updates the bufferwith new data.
 inline void update_element_buffer(
     gl_element_buffer& buf, const vector<int>& values, bool dynamic = false) {
     update_element_buffer(buf, values.size(), 1, values.data(), dynamic);
 }
 
-/// Updates the buffer bid with new data.
+/// Updates the bufferwith new data.
 inline void update_element_buffer(
     gl_element_buffer& buf, const vector<vec2i>& values, bool dynamic = false) {
     update_element_buffer(
         buf, values.size(), 2, (const int*)values.data(), dynamic);
 }
 
-/// Updates the buffer bid with new data.
+/// Updates the bufferwith new data.
 inline void update_element_buffer(
     gl_element_buffer& buf, const vector<vec3i>& values, bool dynamic = false) {
     update_element_buffer(
         buf, values.size(), 3, (const int*)values.data(), dynamic);
 }
 
-/// Updates the buffer bid with new data.
+/// Updates the bufferwith new data.
 inline void update_element_buffer(
     gl_element_buffer& buf, const vector<vec4i>& values, bool dynamic = false) {
     update_element_buffer(
         buf, values.size(), 4, (const int*)values.data(), dynamic);
+}
+
+/// Make a buffer with new data. A convenience wrapper to
+/// update_velement_buffer().
+template <typename T>
+inline gl_element_buffer make_element_buffer(
+    const vector<T>& values, bool dynamic = false) {
+    auto buf = gl_element_buffer();
+    update_element_buffer(buf, values, dynamic);
+    return buf;
 }
 
 /// Draws elements.
