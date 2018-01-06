@@ -82,7 +82,7 @@ proc_prim_shape_names() {
 // Procedural prim shape params
 struct proc_prim_shape_params {
     proc_prim_shape_type ptype = proc_prim_shape_type::sphere;
-    float size = 10;
+    float size = 1;
     int tesselation = 5;
     int subdivision = 0;
     vec3f color = {0.2f, 0.2f, 0.2f};
@@ -377,7 +377,7 @@ inline bool draw_procelem_widgets(gl_window* win, proc_scene* scn,
             edited += draw_value_widget(win, "size", params.size, 0, 20);
             edited +=
                 draw_value_widget(win, "tesselation", params.tesselation, 0, 8);
-            edited += draw_value_widget(win, "color", params.color);
+            edited += draw_color_widget(win, "color", params.color);
             edited += draw_value_widget(win, "textured", params.textured);
         } break;
         case proc_shape_type::prim: {
@@ -387,7 +387,7 @@ inline bool draw_procelem_widgets(gl_window* win, proc_scene* scn,
                 draw_value_widget(win, "tesselation", params.tesselation, 0, 8);
             edited +=
                 draw_value_widget(win, "subdivision", params.subdivision, 0, 8);
-            edited += draw_value_widget(win, "color", params.color);
+            edited += draw_color_widget(win, "color", params.color);
             edited += draw_value_widget(win, "textured", params.textured);
         } break;
         default: throw runtime_error("should not have gotten here");
@@ -537,11 +537,19 @@ inline void draw(gl_window* win) {
 // update the scene from a changed to the proc scene
 void update(app_state* app) {
     if (!app->scene_updated) return;
+    for (auto pcam : app->pscn->cameras) {
+        if (pcam != app->selection) continue;
+        update_proc_camera(pcam);
+    }
     for (auto pshp : app->pscn->shapes) {
         if (pshp != app->selection) continue;
         update_proc_shape(pshp);
         update_stdsurface_state(app->shstate, app->scn, app->shparams,
             unordered_set<shape*>{pshp->shps.begin(), pshp->shps.end()}, {});
+    }
+    for (auto pist : app->pscn->instances) {
+        if (pist != app->selection) continue;
+        update_proc_instance(pist);
     }
     app->scene_updated = false;
 }
