@@ -3108,6 +3108,19 @@ inline void serialize(
     }
 }
 
+// Parses a pointer
+template <typename T>
+inline void serialize(T*& val, json& js, bool reading, parse_stack& err) {
+    if (reading) {
+        if (!js.is_object()) throw runtime_error("object expected");
+        if (!val) val = new T();
+        serialize(*val, js, reading, err);
+    } else {
+        if (!js.is_object()) js = json::object();
+        serialize(*val, js, reading, err);
+    }
+}
+
 // Parse int function.
 inline void serialize(int& val, json& js, bool reading, parse_stack& err) {
     if (reading) {
@@ -3272,37 +3285,34 @@ inline void serialize(
 
 // Parses a glTFProperty object
 inline void serialize(
-    glTFProperty*& val, json& js, bool reading, parse_stack& err) {
+    glTFProperty& val, json& js, bool reading, parse_stack& err) {
     if (reading) {
         if (!js.is_object()) throw runtime_error("object expected");
-        if (!val) val = new glTFProperty();
 #if YGL_GLTFJSON
-        serialize_attr(val->extensions, "extensions", js, err);
-        serialize_attr(val->extras, "extras", js, err);
+        serialize_attr(val.extensions, "extensions", js, err);
+        serialize_attr(val.extras, "extras", js, err);
 #endif
     } else {
         if (!js.is_object()) js = json::object();
 #if YGL_GLTFJSON
-        if (!val->extensions.empty())
-            dump_attr(val->extensions, "extensions", js, err);
-        if (!val->extras.is_null()) dump_attr(val->extras, "extras", js, err);
+        if (!val.extensions.empty())
+            dump_attr(val.extensions, "extensions", js, err);
+        if (!val.extras.is_null()) dump_attr(val.extras, "extras", js, err);
 #endif
     }
 }
 
 // Parses a glTFChildOfRootProperty object
 inline void serialize(
-    glTFChildOfRootProperty*& val, json& js, bool reading, parse_stack& err) {
+    glTFChildOfRootProperty& val, json& js, bool reading, parse_stack& err) {
     if (reading) {
         if (!js.is_object()) throw runtime_error("object expected");
-        if (!val) val = new glTFChildOfRootProperty();
-        serialize((glTFProperty*&)val, js, reading, err);
-        serialize_attr(val->name, "name", js, reading, err);
+        serialize((glTFProperty&)val, js, reading, err);
+        serialize_attr(val.name, "name", js, reading, err);
     } else {
         if (!js.is_object()) js = json::object();
-        serialize((glTFProperty*&)val, js, reading, err);
-        if (val->name != "")
-            serialize_attr(val->name, "name", js, reading, err);
+        serialize((glTFProperty&)val, js, reading, err);
+        if (val.name != "") serialize_attr(val.name, "name", js, reading, err);
     }
 }
 // Parse a glTFAccessorSparseIndicesComponentType enum
@@ -3331,70 +3341,67 @@ inline void serialize(glTFAccessorSparseIndicesComponentType& val, json& js,
 
 // Parses a glTFAccessorSparseIndices object
 inline void serialize(
-    glTFAccessorSparseIndices*& val, json& js, bool reading, parse_stack& err) {
+    glTFAccessorSparseIndices& val, json& js, bool reading, parse_stack& err) {
     if (reading) {
         if (!js.is_object()) throw runtime_error("object expected");
-        if (!val) val = new glTFAccessorSparseIndices();
-        serialize((glTFProperty*&)val, js, reading, err);
+        serialize((glTFProperty&)val, js, reading, err);
         if (!js.count("bufferView"))
             throw runtime_error("missing required variable");
-        serialize_attr(val->bufferView, "bufferView", js, reading, err);
-        serialize_attr(val->byteOffset, "byteOffset", js, reading, err);
+        serialize_attr(val.bufferView, "bufferView", js, reading, err);
+        serialize_attr(val.byteOffset, "byteOffset", js, reading, err);
         if (!js.count("componentType"))
             throw runtime_error("missing required variable");
-        serialize_attr(val->componentType, "componentType", js, reading, err);
+        serialize_attr(val.componentType, "componentType", js, reading, err);
     } else {
         if (!js.is_object()) js = json::object();
-        serialize((glTFProperty*&)val, js, reading, err);
-        serialize_attr(val->bufferView, "bufferView", js, reading, err);
-        if (val->byteOffset != 0)
-            serialize_attr(val->byteOffset, "byteOffset", js, reading, err);
-        serialize_attr(val->componentType, "componentType", js, reading, err);
+        serialize((glTFProperty&)val, js, reading, err);
+        serialize_attr(val.bufferView, "bufferView", js, reading, err);
+        if (val.byteOffset != 0)
+            serialize_attr(val.byteOffset, "byteOffset", js, reading, err);
+        serialize_attr(val.componentType, "componentType", js, reading, err);
     }
 }
 
 // Parses a glTFAccessorSparseValues object
 inline void serialize(
-    glTFAccessorSparseValues*& val, json& js, bool reading, parse_stack& err) {
+    glTFAccessorSparseValues& val, json& js, bool reading, parse_stack& err) {
     if (reading) {
         if (!js.is_object()) throw runtime_error("object expected");
-        if (!val) val = new glTFAccessorSparseValues();
-        serialize((glTFProperty*&)val, js, reading, err);
+        serialize((glTFProperty&)val, js, reading, err);
         if (!js.count("bufferView"))
             throw runtime_error("missing required variable");
-        serialize_attr(val->bufferView, "bufferView", js, reading, err);
-        serialize_attr(val->byteOffset, "byteOffset", js, reading, err);
+        serialize_attr(val.bufferView, "bufferView", js, reading, err);
+        serialize_attr(val.byteOffset, "byteOffset", js, reading, err);
     } else {
         if (!js.is_object()) js = json::object();
-        serialize((glTFProperty*&)val, js, reading, err);
-        serialize_attr(val->bufferView, "bufferView", js, reading, err);
-        if (val->byteOffset != 0)
-            serialize_attr(val->byteOffset, "byteOffset", js, reading, err);
+        serialize((glTFProperty&)val, js, reading, err);
+        serialize_attr(val.bufferView, "bufferView", js, reading, err);
+        if (val.byteOffset != 0)
+            serialize_attr(val.byteOffset, "byteOffset", js, reading, err);
     }
 }
 
 // Parses a glTFAccessorSparse object
 inline void serialize(
-    glTFAccessorSparse*& val, json& js, bool reading, parse_stack& err) {
+    glTFAccessorSparse& val, json& js, bool reading, parse_stack& err) {
     if (reading) {
         if (!js.is_object()) throw runtime_error("object expected");
-        if (!val) val = new glTFAccessorSparse();
-        serialize((glTFProperty*&)val, js, reading, err);
+        serialize((glTFProperty&)val, js, reading, err);
         if (!js.count("count"))
             throw runtime_error("missing required variable");
-        serialize_attr(val->count, "count", js, reading, err);
+        serialize_attr(val.count, "count", js, reading, err);
         if (!js.count("indices"))
             throw runtime_error("missing required variable");
-        serialize_attr(val->indices, "indices", js, reading, err);
+        serialize_attr(val.indices, "indices", js, reading, err);
         if (!js.count("values"))
             throw runtime_error("missing required variable");
-        serialize_attr(val->values, "values", js, reading, err);
+        serialize_attr(val.values, "values", js, reading, err);
     } else {
         if (!js.is_object()) js = json::object();
-        serialize((glTFProperty*&)val, js, reading, err);
-        serialize_attr(val->count, "count", js, reading, err);
-        serialize_attr(val->indices, "indices", js, reading, err);
-        serialize_attr(val->values, "values", js, reading, err);
+        serialize((glTFProperty&)val, js, reading, err);
+        serialize_attr(val.count, "count", js, reading, err);
+        serialize_attr(val.indices, "indices", js, reading, err);
+        serialize_attr(val.values, "values", js, reading, err);
     }
 }
 // Parse a glTFAccessorComponentType enum
@@ -3461,43 +3468,40 @@ inline void serialize(
 
 // Parses a glTFAccessor object
 inline void serialize(
-    glTFAccessor*& val, json& js, bool reading, parse_stack& err) {
+    glTFAccessor& val, json& js, bool reading, parse_stack& err) {
     if (reading) {
         if (!js.is_object()) throw runtime_error("object expected");
-        if (!val) val = new glTFAccessor();
-        serialize((glTFChildOfRootProperty*&)val, js, reading, err);
-        serialize_attr(val->bufferView, "bufferView", js, reading, err);
-        serialize_attr(val->byteOffset, "byteOffset", js, reading, err);
+        serialize((glTFChildOfRootProperty&)val, js, reading, err);
+        serialize_attr(val.bufferView, "bufferView", js, reading, err);
+        serialize_attr(val.byteOffset, "byteOffset", js, reading, err);
         if (!js.count("componentType"))
             throw runtime_error("missing required variable");
-        serialize_attr(val->componentType, "componentType", js, reading, err);
-        serialize_attr(val->normalized, "normalized", js, reading, err);
+        serialize_attr(val.componentType, "componentType", js, reading, err);
+        serialize_attr(val.normalized, "normalized", js, reading, err);
         if (!js.count("count"))
             throw runtime_error("missing required variable");
-        serialize_attr(val->count, "count", js, reading, err);
+        serialize_attr(val.count, "count", js, reading, err);
         if (!js.count("type")) throw runtime_error("missing required variable");
-        serialize_attr(val->type, "type", js, reading, err);
-        serialize_attr(val->max, "max", js, reading, err);
-        serialize_attr(val->min, "min", js, reading, err);
-        serialize_attr(val->sparse, "sparse", js, reading, err);
+        serialize_attr(val.type, "type", js, reading, err);
+        serialize_attr(val.max, "max", js, reading, err);
+        serialize_attr(val.min, "min", js, reading, err);
+        serialize_attr(val.sparse, "sparse", js, reading, err);
     } else {
         if (!js.is_object()) js = json::object();
-        serialize((glTFChildOfRootProperty*&)val, js, reading, err);
-        if (val->bufferView.is_valid())
-            serialize_attr(val->bufferView, "bufferView", js, reading, err);
-        if (val->byteOffset != 0)
-            serialize_attr(val->byteOffset, "byteOffset", js, reading, err);
-        serialize_attr(val->componentType, "componentType", js, reading, err);
-        if (val->normalized != false)
-            serialize_attr(val->normalized, "normalized", js, reading, err);
-        serialize_attr(val->count, "count", js, reading, err);
-        serialize_attr(val->type, "type", js, reading, err);
-        if (!val->max.empty())
-            serialize_attr(val->max, "max", js, reading, err);
-        if (!val->min.empty())
-            serialize_attr(val->min, "min", js, reading, err);
-        if (val->sparse != nullptr)
-            serialize_attr(val->sparse, "sparse", js, reading, err);
+        serialize((glTFChildOfRootProperty&)val, js, reading, err);
+        if (val.bufferView.is_valid())
+            serialize_attr(val.bufferView, "bufferView", js, reading, err);
+        if (val.byteOffset != 0)
+            serialize_attr(val.byteOffset, "byteOffset", js, reading, err);
+        serialize_attr(val.componentType, "componentType", js, reading, err);
+        if (val.normalized != false)
+            serialize_attr(val.normalized, "normalized", js, reading, err);
+        serialize_attr(val.count, "count", js, reading, err);
+        serialize_attr(val.type, "type", js, reading, err);
+        if (!val.max.empty()) serialize_attr(val.max, "max", js, reading, err);
+        if (!val.min.empty()) serialize_attr(val.min, "min", js, reading, err);
+        if (val.sparse != nullptr)
+            serialize_attr(val.sparse, "sparse", js, reading, err);
     }
 }
 // Parse a glTFAnimationChannelTargetPath enum
@@ -3527,42 +3531,40 @@ inline void serialize(glTFAnimationChannelTargetPath& val, json& js,
 }
 
 // Parses a glTFAnimationChannelTarget object
-inline void serialize(glTFAnimationChannelTarget*& val, json& js, bool reading,
-    parse_stack& err) {
+inline void serialize(
+    glTFAnimationChannelTarget& val, json& js, bool reading, parse_stack& err) {
     if (reading) {
         if (!js.is_object()) throw runtime_error("object expected");
-        if (!val) val = new glTFAnimationChannelTarget();
-        serialize((glTFProperty*&)val, js, reading, err);
+        serialize((glTFProperty&)val, js, reading, err);
         if (!js.count("node")) throw runtime_error("missing required variable");
-        serialize_attr(val->node, "node", js, reading, err);
+        serialize_attr(val.node, "node", js, reading, err);
         if (!js.count("path")) throw runtime_error("missing required variable");
-        serialize_attr(val->path, "path", js, reading, err);
+        serialize_attr(val.path, "path", js, reading, err);
     } else {
         if (!js.is_object()) js = json::object();
-        serialize((glTFProperty*&)val, js, reading, err);
-        serialize_attr(val->node, "node", js, reading, err);
-        serialize_attr(val->path, "path", js, reading, err);
+        serialize((glTFProperty&)val, js, reading, err);
+        serialize_attr(val.node, "node", js, reading, err);
+        serialize_attr(val.path, "path", js, reading, err);
     }
 }
 
 // Parses a glTFAnimationChannel object
 inline void serialize(
-    glTFAnimationChannel*& val, json& js, bool reading, parse_stack& err) {
+    glTFAnimationChannel& val, json& js, bool reading, parse_stack& err) {
     if (reading) {
         if (!js.is_object()) throw runtime_error("object expected");
-        if (!val) val = new glTFAnimationChannel();
-        serialize((glTFProperty*&)val, js, reading, err);
+        serialize((glTFProperty&)val, js, reading, err);
         if (!js.count("sampler"))
             throw runtime_error("missing required variable");
-        serialize_attr(val->sampler, "sampler", js, reading, err);
+        serialize_attr(val.sampler, "sampler", js, reading, err);
         if (!js.count("target"))
             throw runtime_error("missing required variable");
-        serialize_attr(val->target, "target", js, reading, err);
+        serialize_attr(val.target, "target", js, reading, err);
     } else {
         if (!js.is_object()) js = json::object();
-        serialize((glTFProperty*&)val, js, reading, err);
-        serialize_attr(val->sampler, "sampler", js, reading, err);
-        serialize_attr(val->target, "target", js, reading, err);
+        serialize((glTFProperty&)val, js, reading, err);
+        serialize_attr(val.sampler, "sampler", js, reading, err);
+        serialize_attr(val.target, "target", js, reading, err);
     }
 }
 // Parse a glTFAnimationSamplerInterpolation enum
@@ -3595,92 +3597,88 @@ inline void serialize(glTFAnimationSamplerInterpolation& val, json& js,
 
 // Parses a glTFAnimationSampler object
 inline void serialize(
-    glTFAnimationSampler*& val, json& js, bool reading, parse_stack& err) {
+    glTFAnimationSampler& val, json& js, bool reading, parse_stack& err) {
     if (reading) {
         if (!js.is_object()) throw runtime_error("object expected");
-        if (!val) val = new glTFAnimationSampler();
-        serialize((glTFProperty*&)val, js, reading, err);
+        serialize((glTFProperty&)val, js, reading, err);
         if (!js.count("input"))
             throw runtime_error("missing required variable");
-        serialize_attr(val->input, "input", js, reading, err);
-        serialize_attr(val->interpolation, "interpolation", js, reading, err);
+        serialize_attr(val.input, "input", js, reading, err);
+        serialize_attr(val.interpolation, "interpolation", js, reading, err);
         if (!js.count("output"))
             throw runtime_error("missing required variable");
-        serialize_attr(val->output, "output", js, reading, err);
+        serialize_attr(val.output, "output", js, reading, err);
     } else {
         if (!js.is_object()) js = json::object();
-        serialize((glTFProperty*&)val, js, reading, err);
-        serialize_attr(val->input, "input", js, reading, err);
-        if (val->interpolation != glTFAnimationSamplerInterpolation::Linear)
+        serialize((glTFProperty&)val, js, reading, err);
+        serialize_attr(val.input, "input", js, reading, err);
+        if (val.interpolation != glTFAnimationSamplerInterpolation::Linear)
             serialize_attr(
-                val->interpolation, "interpolation", js, reading, err);
-        serialize_attr(val->output, "output", js, reading, err);
+                val.interpolation, "interpolation", js, reading, err);
+        serialize_attr(val.output, "output", js, reading, err);
     }
 }
 
 // Parses a glTFAnimation object
 inline void serialize(
-    glTFAnimation*& val, json& js, bool reading, parse_stack& err) {
+    glTFAnimation& val, json& js, bool reading, parse_stack& err) {
     if (reading) {
         if (!js.is_object()) throw runtime_error("object expected");
-        if (!val) val = new glTFAnimation();
-        serialize((glTFChildOfRootProperty*&)val, js, reading, err);
+        serialize((glTFChildOfRootProperty&)val, js, reading, err);
         if (!js.count("channels"))
             throw runtime_error("missing required variable");
-        serialize_attr(val->channels, "channels", js, reading, err);
+        serialize_attr(val.channels, "channels", js, reading, err);
         if (!js.count("samplers"))
             throw runtime_error("missing required variable");
-        serialize_attr(val->samplers, "samplers", js, reading, err);
+        serialize_attr(val.samplers, "samplers", js, reading, err);
     } else {
         if (!js.is_object()) js = json::object();
-        serialize((glTFChildOfRootProperty*&)val, js, reading, err);
-        serialize_attr(val->channels, "channels", js, reading, err);
-        serialize_attr(val->samplers, "samplers", js, reading, err);
+        serialize((glTFChildOfRootProperty&)val, js, reading, err);
+        serialize_attr(val.channels, "channels", js, reading, err);
+        serialize_attr(val.samplers, "samplers", js, reading, err);
     }
 }
 
 // Parses a glTFAsset object
 inline void serialize(
-    glTFAsset*& val, json& js, bool reading, parse_stack& err) {
+    glTFAsset& val, json& js, bool reading, parse_stack& err) {
     if (reading) {
         if (!js.is_object()) throw runtime_error("object expected");
-        if (!val) val = new glTFAsset();
-        serialize((glTFProperty*&)val, js, reading, err);
-        serialize_attr(val->copyright, "copyright", js, reading, err);
-        serialize_attr(val->generator, "generator", js, reading, err);
+        serialize((glTFProperty&)val, js, reading, err);
+        serialize_attr(val.copyright, "copyright", js, reading, err);
+        serialize_attr(val.generator, "generator", js, reading, err);
         if (!js.count("version"))
             throw runtime_error("missing required variable");
-        serialize_attr(val->version, "version", js, reading, err);
-        serialize_attr(val->minVersion, "minVersion", js, reading, err);
+        serialize_attr(val.version, "version", js, reading, err);
+        serialize_attr(val.minVersion, "minVersion", js, reading, err);
     } else {
         if (!js.is_object()) js = json::object();
-        serialize((glTFProperty*&)val, js, reading, err);
-        if (val->copyright != "")
-            serialize_attr(val->copyright, "copyright", js, reading, err);
-        if (val->generator != "")
-            serialize_attr(val->generator, "generator", js, reading, err);
-        serialize_attr(val->version, "version", js, reading, err);
-        if (val->minVersion != "")
-            serialize_attr(val->minVersion, "minVersion", js, reading, err);
+        serialize((glTFProperty&)val, js, reading, err);
+        if (val.copyright != "")
+            serialize_attr(val.copyright, "copyright", js, reading, err);
+        if (val.generator != "")
+            serialize_attr(val.generator, "generator", js, reading, err);
+        serialize_attr(val.version, "version", js, reading, err);
+        if (val.minVersion != "")
+            serialize_attr(val.minVersion, "minVersion", js, reading, err);
     }
 }
 
 // Parses a glTFBuffer object
 inline void serialize(
-    glTFBuffer*& val, json& js, bool reading, parse_stack& err) {
+    glTFBuffer& val, json& js, bool reading, parse_stack& err) {
     if (reading) {
         if (!js.is_object()) throw runtime_error("object expected");
-        if (!val) val = new glTFBuffer();
-        serialize((glTFChildOfRootProperty*&)val, js, reading, err);
-        serialize_attr(val->uri, "uri", js, reading, err);
+        serialize((glTFChildOfRootProperty&)val, js, reading, err);
+        serialize_attr(val.uri, "uri", js, reading, err);
         if (!js.count("byteLength"))
             throw runtime_error("missing required variable");
-        serialize_attr(val->byteLength, "byteLength", js, reading, err);
+        serialize_attr(val.byteLength, "byteLength", js, reading, err);
     } else {
         if (!js.is_object()) js = json::object();
-        serialize((glTFChildOfRootProperty*&)val, js, reading, err);
-        if (val->uri != "") serialize_attr(val->uri, "uri", js, reading, err);
-        serialize_attr(val->byteLength, "byteLength", js, reading, err);
+        serialize((glTFChildOfRootProperty&)val, js, reading, err);
+        if (val.uri != "") serialize_attr(val.uri, "uri", js, reading, err);
+        serialize_attr(val.byteLength, "byteLength", js, reading, err);
     }
 }
 // Parse a glTFBufferViewTarget enum
@@ -3707,82 +3705,79 @@ inline void serialize(
 
 // Parses a glTFBufferView object
 inline void serialize(
-    glTFBufferView*& val, json& js, bool reading, parse_stack& err) {
+    glTFBufferView& val, json& js, bool reading, parse_stack& err) {
     if (reading) {
         if (!js.is_object()) throw runtime_error("object expected");
-        if (!val) val = new glTFBufferView();
-        serialize((glTFChildOfRootProperty*&)val, js, reading, err);
+        serialize((glTFChildOfRootProperty&)val, js, reading, err);
         if (!js.count("buffer"))
             throw runtime_error("missing required variable");
-        serialize_attr(val->buffer, "buffer", js, reading, err);
-        serialize_attr(val->byteOffset, "byteOffset", js, reading, err);
+        serialize_attr(val.buffer, "buffer", js, reading, err);
+        serialize_attr(val.byteOffset, "byteOffset", js, reading, err);
         if (!js.count("byteLength"))
             throw runtime_error("missing required variable");
-        serialize_attr(val->byteLength, "byteLength", js, reading, err);
-        serialize_attr(val->byteStride, "byteStride", js, reading, err);
-        serialize_attr(val->target, "target", js, reading, err);
+        serialize_attr(val.byteLength, "byteLength", js, reading, err);
+        serialize_attr(val.byteStride, "byteStride", js, reading, err);
+        serialize_attr(val.target, "target", js, reading, err);
     } else {
         if (!js.is_object()) js = json::object();
-        serialize((glTFChildOfRootProperty*&)val, js, reading, err);
-        serialize_attr(val->buffer, "buffer", js, reading, err);
-        if (val->byteOffset != 0)
-            serialize_attr(val->byteOffset, "byteOffset", js, reading, err);
-        serialize_attr(val->byteLength, "byteLength", js, reading, err);
-        if (val->byteStride != 0)
-            serialize_attr(val->byteStride, "byteStride", js, reading, err);
-        if (val->target != glTFBufferViewTarget::NotSet)
-            serialize_attr(val->target, "target", js, reading, err);
+        serialize((glTFChildOfRootProperty&)val, js, reading, err);
+        serialize_attr(val.buffer, "buffer", js, reading, err);
+        if (val.byteOffset != 0)
+            serialize_attr(val.byteOffset, "byteOffset", js, reading, err);
+        serialize_attr(val.byteLength, "byteLength", js, reading, err);
+        if (val.byteStride != 0)
+            serialize_attr(val.byteStride, "byteStride", js, reading, err);
+        if (val.target != glTFBufferViewTarget::NotSet)
+            serialize_attr(val.target, "target", js, reading, err);
     }
 }
 
 // Parses a glTFCameraOrthographic object
 inline void serialize(
-    glTFCameraOrthographic*& val, json& js, bool reading, parse_stack& err) {
+    glTFCameraOrthographic& val, json& js, bool reading, parse_stack& err) {
     if (reading) {
         if (!js.is_object()) throw runtime_error("object expected");
-        if (!val) val = new glTFCameraOrthographic();
-        serialize((glTFProperty*&)val, js, reading, err);
+        serialize((glTFProperty&)val, js, reading, err);
         if (!js.count("xmag")) throw runtime_error("missing required variable");
-        serialize_attr(val->xmag, "xmag", js, reading, err);
+        serialize_attr(val.xmag, "xmag", js, reading, err);
         if (!js.count("ymag")) throw runtime_error("missing required variable");
-        serialize_attr(val->ymag, "ymag", js, reading, err);
+        serialize_attr(val.ymag, "ymag", js, reading, err);
         if (!js.count("zfar")) throw runtime_error("missing required variable");
-        serialize_attr(val->zfar, "zfar", js, reading, err);
+        serialize_attr(val.zfar, "zfar", js, reading, err);
         if (!js.count("znear"))
             throw runtime_error("missing required variable");
-        serialize_attr(val->znear, "znear", js, reading, err);
+        serialize_attr(val.znear, "znear", js, reading, err);
     } else {
         if (!js.is_object()) js = json::object();
-        serialize((glTFProperty*&)val, js, reading, err);
-        serialize_attr(val->xmag, "xmag", js, reading, err);
-        serialize_attr(val->ymag, "ymag", js, reading, err);
-        serialize_attr(val->zfar, "zfar", js, reading, err);
-        serialize_attr(val->znear, "znear", js, reading, err);
+        serialize((glTFProperty&)val, js, reading, err);
+        serialize_attr(val.xmag, "xmag", js, reading, err);
+        serialize_attr(val.ymag, "ymag", js, reading, err);
+        serialize_attr(val.zfar, "zfar", js, reading, err);
+        serialize_attr(val.znear, "znear", js, reading, err);
     }
 }
 
 // Parses a glTFCameraPerspective object
 inline void serialize(
-    glTFCameraPerspective*& val, json& js, bool reading, parse_stack& err) {
+    glTFCameraPerspective& val, json& js, bool reading, parse_stack& err) {
     if (reading) {
         if (!js.is_object()) throw runtime_error("object expected");
-        if (!val) val = new glTFCameraPerspective();
-        serialize((glTFProperty*&)val, js, reading, err);
-        serialize_attr(val->aspectRatio, "aspectRatio", js, reading, err);
+        serialize((glTFProperty&)val, js, reading, err);
+        serialize_attr(val.aspectRatio, "aspectRatio", js, reading, err);
         if (!js.count("yfov")) throw runtime_error("missing required variable");
-        serialize_attr(val->yfov, "yfov", js, reading, err);
-        serialize_attr(val->zfar, "zfar", js, reading, err);
+        serialize_attr(val.yfov, "yfov", js, reading, err);
+        serialize_attr(val.zfar, "zfar", js, reading, err);
         if (!js.count("znear"))
             throw runtime_error("missing required variable");
-        serialize_attr(val->znear, "znear", js, reading, err);
+        serialize_attr(val.znear, "znear", js, reading, err);
     } else {
         if (!js.is_object()) js = json::object();
-        serialize((glTFProperty*&)val, js, reading, err);
-        if (val->aspectRatio != 0)
-            serialize_attr(val->aspectRatio, "aspectRatio", js, reading, err);
-        serialize_attr(val->yfov, "yfov", js, reading, err);
-        if (val->zfar != 0) serialize_attr(val->zfar, "zfar", js, reading, err);
-        serialize_attr(val->znear, "znear", js, reading, err);
+        serialize((glTFProperty&)val, js, reading, err);
+        if (val.aspectRatio != 0)
+            serialize_attr(val.aspectRatio, "aspectRatio", js, reading, err);
+        serialize_attr(val.yfov, "yfov", js, reading, err);
+        if (val.zfar != 0) serialize_attr(val.zfar, "zfar", js, reading, err);
+        serialize_attr(val.znear, "znear", js, reading, err);
     }
 }
 // Parse a glTFCameraType enum
@@ -3809,23 +3804,22 @@ inline void serialize(
 
 // Parses a glTFCamera object
 inline void serialize(
-    glTFCamera*& val, json& js, bool reading, parse_stack& err) {
+    glTFCamera& val, json& js, bool reading, parse_stack& err) {
     if (reading) {
         if (!js.is_object()) throw runtime_error("object expected");
-        if (!val) val = new glTFCamera();
-        serialize((glTFChildOfRootProperty*&)val, js, reading, err);
-        serialize_attr(val->orthographic, "orthographic", js, reading, err);
-        serialize_attr(val->perspective, "perspective", js, reading, err);
+        serialize((glTFChildOfRootProperty&)val, js, reading, err);
+        serialize_attr(val.orthographic, "orthographic", js, reading, err);
+        serialize_attr(val.perspective, "perspective", js, reading, err);
         if (!js.count("type")) throw runtime_error("missing required variable");
-        serialize_attr(val->type, "type", js, reading, err);
+        serialize_attr(val.type, "type", js, reading, err);
     } else {
         if (!js.is_object()) js = json::object();
-        serialize((glTFChildOfRootProperty*&)val, js, reading, err);
-        if (val->orthographic != nullptr)
-            serialize_attr(val->orthographic, "orthographic", js, reading, err);
-        if (val->perspective != nullptr)
-            serialize_attr(val->perspective, "perspective", js, reading, err);
-        serialize_attr(val->type, "type", js, reading, err);
+        serialize((glTFChildOfRootProperty&)val, js, reading, err);
+        if (val.orthographic != nullptr)
+            serialize_attr(val.orthographic, "orthographic", js, reading, err);
+        if (val.perspective != nullptr)
+            serialize_attr(val.perspective, "perspective", js, reading, err);
+        serialize_attr(val.type, "type", js, reading, err);
     }
 }
 // Parse a glTFImageMimeType enum
@@ -3852,164 +3846,157 @@ inline void serialize(
 
 // Parses a glTFImage object
 inline void serialize(
-    glTFImage*& val, json& js, bool reading, parse_stack& err) {
+    glTFImage& val, json& js, bool reading, parse_stack& err) {
     if (reading) {
         if (!js.is_object()) throw runtime_error("object expected");
-        if (!val) val = new glTFImage();
-        serialize((glTFChildOfRootProperty*&)val, js, reading, err);
-        serialize_attr(val->uri, "uri", js, reading, err);
-        serialize_attr(val->mimeType, "mimeType", js, reading, err);
-        serialize_attr(val->bufferView, "bufferView", js, reading, err);
+        serialize((glTFChildOfRootProperty&)val, js, reading, err);
+        serialize_attr(val.uri, "uri", js, reading, err);
+        serialize_attr(val.mimeType, "mimeType", js, reading, err);
+        serialize_attr(val.bufferView, "bufferView", js, reading, err);
     } else {
         if (!js.is_object()) js = json::object();
-        serialize((glTFChildOfRootProperty*&)val, js, reading, err);
-        if (val->uri != "") serialize_attr(val->uri, "uri", js, reading, err);
-        if (val->mimeType != glTFImageMimeType::NotSet)
-            serialize_attr(val->mimeType, "mimeType", js, reading, err);
-        if (val->bufferView.is_valid())
-            serialize_attr(val->bufferView, "bufferView", js, reading, err);
+        serialize((glTFChildOfRootProperty&)val, js, reading, err);
+        if (val.uri != "") serialize_attr(val.uri, "uri", js, reading, err);
+        if (val.mimeType != glTFImageMimeType::NotSet)
+            serialize_attr(val.mimeType, "mimeType", js, reading, err);
+        if (val.bufferView.is_valid())
+            serialize_attr(val.bufferView, "bufferView", js, reading, err);
     }
 }
 
 // Parses a glTFTextureInfo object
 inline void serialize(
-    glTFTextureInfo*& val, json& js, bool reading, parse_stack& err) {
+    glTFTextureInfo& val, json& js, bool reading, parse_stack& err) {
     if (reading) {
         if (!js.is_object()) throw runtime_error("object expected");
-        if (!val) val = new glTFTextureInfo();
-        serialize((glTFProperty*&)val, js, reading, err);
+        serialize((glTFProperty&)val, js, reading, err);
         if (!js.count("index"))
             throw runtime_error("missing required variable");
-        serialize_attr(val->index, "index", js, reading, err);
-        serialize_attr(val->texCoord, "texCoord", js, reading, err);
+        serialize_attr(val.index, "index", js, reading, err);
+        serialize_attr(val.texCoord, "texCoord", js, reading, err);
     } else {
         if (!js.is_object()) js = json::object();
-        serialize((glTFProperty*&)val, js, reading, err);
-        serialize_attr(val->index, "index", js, reading, err);
-        if (val->texCoord != 0)
-            serialize_attr(val->texCoord, "texCoord", js, reading, err);
+        serialize((glTFProperty&)val, js, reading, err);
+        serialize_attr(val.index, "index", js, reading, err);
+        if (val.texCoord != 0)
+            serialize_attr(val.texCoord, "texCoord", js, reading, err);
     }
 }
 
 // Parses a glTFTexture object
 inline void serialize(
-    glTFTexture*& val, json& js, bool reading, parse_stack& err) {
+    glTFTexture& val, json& js, bool reading, parse_stack& err) {
     if (reading) {
         if (!js.is_object()) throw runtime_error("object expected");
-        if (!val) val = new glTFTexture();
-        serialize((glTFChildOfRootProperty*&)val, js, reading, err);
-        serialize_attr(val->sampler, "sampler", js, reading, err);
-        serialize_attr(val->source, "source", js, reading, err);
+        serialize((glTFChildOfRootProperty&)val, js, reading, err);
+        serialize_attr(val.sampler, "sampler", js, reading, err);
+        serialize_attr(val.source, "source", js, reading, err);
     } else {
         if (!js.is_object()) js = json::object();
-        serialize((glTFChildOfRootProperty*&)val, js, reading, err);
-        if (val->sampler.is_valid())
-            serialize_attr(val->sampler, "sampler", js, reading, err);
-        if (val->source.is_valid())
-            serialize_attr(val->source, "source", js, reading, err);
+        serialize((glTFChildOfRootProperty&)val, js, reading, err);
+        if (val.sampler.is_valid())
+            serialize_attr(val.sampler, "sampler", js, reading, err);
+        if (val.source.is_valid())
+            serialize_attr(val.source, "source", js, reading, err);
     }
 }
 
 // Parses a glTFMaterialNormalTextureInfo object
-inline void serialize(glTFMaterialNormalTextureInfo*& val, json& js,
+inline void serialize(glTFMaterialNormalTextureInfo& val, json& js,
     bool reading, parse_stack& err) {
     if (reading) {
         if (!js.is_object()) throw runtime_error("object expected");
-        if (!val) val = new glTFMaterialNormalTextureInfo();
-        serialize((glTFTextureInfo*&)val, js, reading, err);
-        serialize_attr(val->scale, "scale", js, reading, err);
+        serialize((glTFTextureInfo&)val, js, reading, err);
+        serialize_attr(val.scale, "scale", js, reading, err);
     } else {
         if (!js.is_object()) js = json::object();
-        serialize((glTFTextureInfo*&)val, js, reading, err);
-        if (val->scale != 1)
-            serialize_attr(val->scale, "scale", js, reading, err);
+        serialize((glTFTextureInfo&)val, js, reading, err);
+        if (val.scale != 1)
+            serialize_attr(val.scale, "scale", js, reading, err);
     }
 }
 
 // Parses a glTFMaterialOcclusionTextureInfo object
-inline void serialize(glTFMaterialOcclusionTextureInfo*& val, json& js,
+inline void serialize(glTFMaterialOcclusionTextureInfo& val, json& js,
     bool reading, parse_stack& err) {
     if (reading) {
         if (!js.is_object()) throw runtime_error("object expected");
-        if (!val) val = new glTFMaterialOcclusionTextureInfo();
-        serialize((glTFTextureInfo*&)val, js, reading, err);
-        serialize_attr(val->strength, "strength", js, reading, err);
+        serialize((glTFTextureInfo&)val, js, reading, err);
+        serialize_attr(val.strength, "strength", js, reading, err);
     } else {
         if (!js.is_object()) js = json::object();
-        serialize((glTFTextureInfo*&)val, js, reading, err);
-        if (val->strength != 1)
-            serialize_attr(val->strength, "strength", js, reading, err);
+        serialize((glTFTextureInfo&)val, js, reading, err);
+        if (val.strength != 1)
+            serialize_attr(val.strength, "strength", js, reading, err);
     }
 }
 
 // Parses a glTFMaterialPbrMetallicRoughness object
-inline void serialize(glTFMaterialPbrMetallicRoughness*& val, json& js,
+inline void serialize(glTFMaterialPbrMetallicRoughness& val, json& js,
     bool reading, parse_stack& err) {
     if (reading) {
         if (!js.is_object()) throw runtime_error("object expected");
-        if (!val) val = new glTFMaterialPbrMetallicRoughness();
-        serialize((glTFProperty*&)val, js, reading, err);
+        serialize((glTFProperty&)val, js, reading, err);
         serialize_attr(
-            val->baseColorFactor, "baseColorFactor", js, reading, err);
+            val.baseColorFactor, "baseColorFactor", js, reading, err);
         serialize_attr(
-            val->baseColorTexture, "baseColorTexture", js, reading, err);
-        serialize_attr(val->metallicFactor, "metallicFactor", js, reading, err);
+            val.baseColorTexture, "baseColorTexture", js, reading, err);
+        serialize_attr(val.metallicFactor, "metallicFactor", js, reading, err);
         serialize_attr(
-            val->roughnessFactor, "roughnessFactor", js, reading, err);
-        serialize_attr(val->metallicRoughnessTexture,
-            "metallicRoughnessTexture", js, reading, err);
+            val.roughnessFactor, "roughnessFactor", js, reading, err);
+        serialize_attr(val.metallicRoughnessTexture, "metallicRoughnessTexture",
+            js, reading, err);
     } else {
         if (!js.is_object()) js = json::object();
-        serialize((glTFProperty*&)val, js, reading, err);
-        if (val->baseColorFactor != vec4f{1, 1, 1, 1})
+        serialize((glTFProperty&)val, js, reading, err);
+        if (val.baseColorFactor != vec4f{1, 1, 1, 1})
             serialize_attr(
-                val->baseColorFactor, "baseColorFactor", js, reading, err);
-        if (val->baseColorTexture != nullptr)
+                val.baseColorFactor, "baseColorFactor", js, reading, err);
+        if (val.baseColorTexture != nullptr)
             serialize_attr(
-                val->baseColorTexture, "baseColorTexture", js, reading, err);
-        if (val->metallicFactor != 1)
+                val.baseColorTexture, "baseColorTexture", js, reading, err);
+        if (val.metallicFactor != 1)
             serialize_attr(
-                val->metallicFactor, "metallicFactor", js, reading, err);
-        if (val->roughnessFactor != 1)
+                val.metallicFactor, "metallicFactor", js, reading, err);
+        if (val.roughnessFactor != 1)
             serialize_attr(
-                val->roughnessFactor, "roughnessFactor", js, reading, err);
-        if (val->metallicRoughnessTexture != nullptr)
-            serialize_attr(val->metallicRoughnessTexture,
+                val.roughnessFactor, "roughnessFactor", js, reading, err);
+        if (val.metallicRoughnessTexture != nullptr)
+            serialize_attr(val.metallicRoughnessTexture,
                 "metallicRoughnessTexture", js, reading, err);
     }
 }
 
 // Parses a glTFMaterialPbrSpecularGlossiness object
-inline void serialize(glTFMaterialPbrSpecularGlossiness*& val, json& js,
+inline void serialize(glTFMaterialPbrSpecularGlossiness& val, json& js,
     bool reading, parse_stack& err) {
     if (reading) {
         if (!js.is_object()) throw runtime_error("object expected");
-        if (!val) val = new glTFMaterialPbrSpecularGlossiness();
-        serialize((glTFProperty*&)val, js, reading, err);
-        serialize_attr(val->diffuseFactor, "diffuseFactor", js, reading, err);
-        serialize_attr(val->diffuseTexture, "diffuseTexture", js, reading, err);
-        serialize_attr(val->specularFactor, "specularFactor", js, reading, err);
+        serialize((glTFProperty&)val, js, reading, err);
+        serialize_attr(val.diffuseFactor, "diffuseFactor", js, reading, err);
+        serialize_attr(val.diffuseTexture, "diffuseTexture", js, reading, err);
+        serialize_attr(val.specularFactor, "specularFactor", js, reading, err);
         serialize_attr(
-            val->glossinessFactor, "glossinessFactor", js, reading, err);
-        serialize_attr(val->specularGlossinessTexture,
+            val.glossinessFactor, "glossinessFactor", js, reading, err);
+        serialize_attr(val.specularGlossinessTexture,
             "specularGlossinessTexture", js, reading, err);
     } else {
         if (!js.is_object()) js = json::object();
-        serialize((glTFProperty*&)val, js, reading, err);
-        if (val->diffuseFactor != vec4f{1, 1, 1, 1})
+        serialize((glTFProperty&)val, js, reading, err);
+        if (val.diffuseFactor != vec4f{1, 1, 1, 1})
             serialize_attr(
-                val->diffuseFactor, "diffuseFactor", js, reading, err);
-        if (val->diffuseTexture != nullptr)
+                val.diffuseFactor, "diffuseFactor", js, reading, err);
+        if (val.diffuseTexture != nullptr)
             serialize_attr(
-                val->diffuseTexture, "diffuseTexture", js, reading, err);
-        if (val->specularFactor != vec3f{1, 1, 1})
+                val.diffuseTexture, "diffuseTexture", js, reading, err);
+        if (val.specularFactor != vec3f{1, 1, 1})
             serialize_attr(
-                val->specularFactor, "specularFactor", js, reading, err);
-        if (val->glossinessFactor != 1)
+                val.specularFactor, "specularFactor", js, reading, err);
+        if (val.glossinessFactor != 1)
             serialize_attr(
-                val->glossinessFactor, "glossinessFactor", js, reading, err);
-        if (val->specularGlossinessTexture != nullptr)
-            serialize_attr(val->specularGlossinessTexture,
+                val.glossinessFactor, "glossinessFactor", js, reading, err);
+        if (val.specularGlossinessTexture != nullptr)
+            serialize_attr(val.specularGlossinessTexture,
                 "specularGlossinessTexture", js, reading, err);
     }
 }
@@ -4039,55 +4026,54 @@ inline void serialize(
 
 // Parses a glTFMaterial object
 inline void serialize(
-    glTFMaterial*& val, json& js, bool reading, parse_stack& err) {
+    glTFMaterial& val, json& js, bool reading, parse_stack& err) {
     if (reading) {
         if (!js.is_object()) throw runtime_error("object expected");
-        if (!val) val = new glTFMaterial();
-        serialize((glTFChildOfRootProperty*&)val, js, reading, err);
-        serialize_attr(val->pbrMetallicRoughness, "pbrMetallicRoughness", js,
-            reading, err);
-        serialize_attr(val->normalTexture, "normalTexture", js, reading, err);
+        serialize((glTFChildOfRootProperty&)val, js, reading, err);
         serialize_attr(
-            val->occlusionTexture, "occlusionTexture", js, reading, err);
+            val.pbrMetallicRoughness, "pbrMetallicRoughness", js, reading, err);
+        serialize_attr(val.normalTexture, "normalTexture", js, reading, err);
         serialize_attr(
-            val->emissiveTexture, "emissiveTexture", js, reading, err);
-        serialize_attr(val->emissiveFactor, "emissiveFactor", js, reading, err);
-        serialize_attr(val->alphaMode, "alphaMode", js, reading, err);
-        serialize_attr(val->alphaCutoff, "alphaCutoff", js, reading, err);
-        serialize_attr(val->doubleSided, "doubleSided", js, reading, err);
+            val.occlusionTexture, "occlusionTexture", js, reading, err);
+        serialize_attr(
+            val.emissiveTexture, "emissiveTexture", js, reading, err);
+        serialize_attr(val.emissiveFactor, "emissiveFactor", js, reading, err);
+        serialize_attr(val.alphaMode, "alphaMode", js, reading, err);
+        serialize_attr(val.alphaCutoff, "alphaCutoff", js, reading, err);
+        serialize_attr(val.doubleSided, "doubleSided", js, reading, err);
         if (js.count("extensions")) {
             auto& js_ext = js["extensions"];
-            serialize_attr(val->pbrSpecularGlossiness,
+            serialize_attr(val.pbrSpecularGlossiness,
                 "KHR_materials_pbrSpecularGlossiness", js_ext, reading, err);
         }
     } else {
         if (!js.is_object()) js = json::object();
-        serialize((glTFChildOfRootProperty*&)val, js, reading, err);
-        if (val->pbrMetallicRoughness != nullptr)
-            serialize_attr(val->pbrMetallicRoughness, "pbrMetallicRoughness",
-                js, reading, err);
-        if (val->normalTexture != nullptr)
+        serialize((glTFChildOfRootProperty&)val, js, reading, err);
+        if (val.pbrMetallicRoughness != nullptr)
+            serialize_attr(val.pbrMetallicRoughness, "pbrMetallicRoughness", js,
+                reading, err);
+        if (val.normalTexture != nullptr)
             serialize_attr(
-                val->normalTexture, "normalTexture", js, reading, err);
-        if (val->occlusionTexture != nullptr)
+                val.normalTexture, "normalTexture", js, reading, err);
+        if (val.occlusionTexture != nullptr)
             serialize_attr(
-                val->occlusionTexture, "occlusionTexture", js, reading, err);
-        if (val->emissiveTexture != nullptr)
+                val.occlusionTexture, "occlusionTexture", js, reading, err);
+        if (val.emissiveTexture != nullptr)
             serialize_attr(
-                val->emissiveTexture, "emissiveTexture", js, reading, err);
-        if (val->emissiveFactor != vec3f{0, 0, 0})
+                val.emissiveTexture, "emissiveTexture", js, reading, err);
+        if (val.emissiveFactor != vec3f{0, 0, 0})
             serialize_attr(
-                val->emissiveFactor, "emissiveFactor", js, reading, err);
-        if (val->alphaMode != glTFMaterialAlphaMode::Opaque)
-            serialize_attr(val->alphaMode, "alphaMode", js, reading, err);
-        if (val->alphaCutoff != 0.5)
-            serialize_attr(val->alphaCutoff, "alphaCutoff", js, reading, err);
-        if (val->doubleSided != false)
-            serialize_attr(val->doubleSided, "doubleSided", js, reading, err);
+                val.emissiveFactor, "emissiveFactor", js, reading, err);
+        if (val.alphaMode != glTFMaterialAlphaMode::Opaque)
+            serialize_attr(val.alphaMode, "alphaMode", js, reading, err);
+        if (val.alphaCutoff != 0.5)
+            serialize_attr(val.alphaCutoff, "alphaCutoff", js, reading, err);
+        if (val.doubleSided != false)
+            serialize_attr(val.doubleSided, "doubleSided", js, reading, err);
 
-        if (val->pbrSpecularGlossiness != nullptr) {
+        if (val.pbrSpecularGlossiness != nullptr) {
             auto& js_ext = js["extensions"];
-            serialize_attr(val->pbrSpecularGlossiness,
+            serialize_attr(val.pbrSpecularGlossiness,
                 "KHR_materials_pbrSpecularGlossiness", js_ext, reading, err);
         }
     }
@@ -4126,91 +4112,86 @@ inline void serialize(
 
 // Parses a glTFMeshPrimitive object
 inline void serialize(
-    glTFMeshPrimitive*& val, json& js, bool reading, parse_stack& err) {
+    glTFMeshPrimitive& val, json& js, bool reading, parse_stack& err) {
     if (reading) {
         if (!js.is_object()) throw runtime_error("object expected");
-        if (!val) val = new glTFMeshPrimitive();
-        serialize((glTFProperty*&)val, js, reading, err);
+        serialize((glTFProperty&)val, js, reading, err);
         if (!js.count("attributes"))
             throw runtime_error("missing required variable");
-        serialize_attr(val->attributes, "attributes", js, reading, err);
-        serialize_attr(val->indices, "indices", js, reading, err);
-        serialize_attr(val->material, "material", js, reading, err);
-        serialize_attr(val->mode, "mode", js, reading, err);
-        serialize_attr(val->targets, "targets", js, reading, err);
+        serialize_attr(val.attributes, "attributes", js, reading, err);
+        serialize_attr(val.indices, "indices", js, reading, err);
+        serialize_attr(val.material, "material", js, reading, err);
+        serialize_attr(val.mode, "mode", js, reading, err);
+        serialize_attr(val.targets, "targets", js, reading, err);
     } else {
         if (!js.is_object()) js = json::object();
-        serialize((glTFProperty*&)val, js, reading, err);
-        serialize_attr(val->attributes, "attributes", js, reading, err);
-        if (val->indices.is_valid())
-            serialize_attr(val->indices, "indices", js, reading, err);
-        if (val->material.is_valid())
-            serialize_attr(val->material, "material", js, reading, err);
-        if (val->mode != glTFMeshPrimitiveMode::Triangles)
-            serialize_attr(val->mode, "mode", js, reading, err);
-        if (!val->targets.empty())
-            serialize_attr(val->targets, "targets", js, reading, err);
+        serialize((glTFProperty&)val, js, reading, err);
+        serialize_attr(val.attributes, "attributes", js, reading, err);
+        if (val.indices.is_valid())
+            serialize_attr(val.indices, "indices", js, reading, err);
+        if (val.material.is_valid())
+            serialize_attr(val.material, "material", js, reading, err);
+        if (val.mode != glTFMeshPrimitiveMode::Triangles)
+            serialize_attr(val.mode, "mode", js, reading, err);
+        if (!val.targets.empty())
+            serialize_attr(val.targets, "targets", js, reading, err);
     }
 }
 
 // Parses a glTFMesh object
-inline void serialize(
-    glTFMesh*& val, json& js, bool reading, parse_stack& err) {
+inline void serialize(glTFMesh& val, json& js, bool reading, parse_stack& err) {
     if (reading) {
         if (!js.is_object()) throw runtime_error("object expected");
-        if (!val) val = new glTFMesh();
-        serialize((glTFChildOfRootProperty*&)val, js, reading, err);
+        serialize((glTFChildOfRootProperty&)val, js, reading, err);
         if (!js.count("primitives"))
             throw runtime_error("missing required variable");
-        serialize_attr(val->primitives, "primitives", js, reading, err);
-        serialize_attr(val->weights, "weights", js, reading, err);
+        serialize_attr(val.primitives, "primitives", js, reading, err);
+        serialize_attr(val.weights, "weights", js, reading, err);
     } else {
         if (!js.is_object()) js = json::object();
-        serialize((glTFChildOfRootProperty*&)val, js, reading, err);
-        serialize_attr(val->primitives, "primitives", js, reading, err);
-        if (!val->weights.empty())
-            serialize_attr(val->weights, "weights", js, reading, err);
+        serialize((glTFChildOfRootProperty&)val, js, reading, err);
+        serialize_attr(val.primitives, "primitives", js, reading, err);
+        if (!val.weights.empty())
+            serialize_attr(val.weights, "weights", js, reading, err);
     }
 }
 
 // Parses a glTFNode object
-inline void serialize(
-    glTFNode*& val, json& js, bool reading, parse_stack& err) {
+inline void serialize(glTFNode& val, json& js, bool reading, parse_stack& err) {
     if (reading) {
         if (!js.is_object()) throw runtime_error("object expected");
-        if (!val) val = new glTFNode();
-        serialize((glTFChildOfRootProperty*&)val, js, reading, err);
-        serialize_attr(val->camera, "camera", js, reading, err);
-        serialize_attr(val->children, "children", js, reading, err);
-        serialize_attr(val->skin, "skin", js, reading, err);
-        serialize_attr(val->matrix, "matrix", js, reading, err);
-        serialize_attr(val->mesh, "mesh", js, reading, err);
-        serialize_attr(val->rotation, "rotation", js, reading, err);
-        serialize_attr(val->scale, "scale", js, reading, err);
-        serialize_attr(val->translation, "translation", js, reading, err);
-        serialize_attr(val->weights, "weights", js, reading, err);
+        serialize((glTFChildOfRootProperty&)val, js, reading, err);
+        serialize_attr(val.camera, "camera", js, reading, err);
+        serialize_attr(val.children, "children", js, reading, err);
+        serialize_attr(val.skin, "skin", js, reading, err);
+        serialize_attr(val.matrix, "matrix", js, reading, err);
+        serialize_attr(val.mesh, "mesh", js, reading, err);
+        serialize_attr(val.rotation, "rotation", js, reading, err);
+        serialize_attr(val.scale, "scale", js, reading, err);
+        serialize_attr(val.translation, "translation", js, reading, err);
+        serialize_attr(val.weights, "weights", js, reading, err);
     } else {
         if (!js.is_object()) js = json::object();
-        serialize((glTFChildOfRootProperty*&)val, js, reading, err);
-        if (val->camera.is_valid())
-            serialize_attr(val->camera, "camera", js, reading, err);
-        if (!val->children.empty())
-            serialize_attr(val->children, "children", js, reading, err);
-        if (val->skin.is_valid())
-            serialize_attr(val->skin, "skin", js, reading, err);
-        if (val->matrix !=
+        serialize((glTFChildOfRootProperty&)val, js, reading, err);
+        if (val.camera.is_valid())
+            serialize_attr(val.camera, "camera", js, reading, err);
+        if (!val.children.empty())
+            serialize_attr(val.children, "children", js, reading, err);
+        if (val.skin.is_valid())
+            serialize_attr(val.skin, "skin", js, reading, err);
+        if (val.matrix !=
             mat4f{{1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}})
-            serialize_attr(val->matrix, "matrix", js, reading, err);
-        if (val->mesh.is_valid())
-            serialize_attr(val->mesh, "mesh", js, reading, err);
-        if (val->rotation != quat4f{0, 0, 0, 1})
-            serialize_attr(val->rotation, "rotation", js, reading, err);
-        if (val->scale != vec3f{1, 1, 1})
-            serialize_attr(val->scale, "scale", js, reading, err);
-        if (val->translation != vec3f{0, 0, 0})
-            serialize_attr(val->translation, "translation", js, reading, err);
-        if (!val->weights.empty())
-            serialize_attr(val->weights, "weights", js, reading, err);
+            serialize_attr(val.matrix, "matrix", js, reading, err);
+        if (val.mesh.is_valid())
+            serialize_attr(val.mesh, "mesh", js, reading, err);
+        if (val.rotation != quat4f{0, 0, 0, 1})
+            serialize_attr(val.rotation, "rotation", js, reading, err);
+        if (val.scale != vec3f{1, 1, 1})
+            serialize_attr(val.scale, "scale", js, reading, err);
+        if (val.translation != vec3f{0, 0, 0})
+            serialize_attr(val.translation, "translation", js, reading, err);
+        if (!val.weights.empty())
+            serialize_attr(val.weights, "weights", js, reading, err);
     }
 }
 // Parse a glTFSamplerMagFilter enum
@@ -4315,134 +4296,129 @@ inline void serialize(
 
 // Parses a glTFSampler object
 inline void serialize(
-    glTFSampler*& val, json& js, bool reading, parse_stack& err) {
+    glTFSampler& val, json& js, bool reading, parse_stack& err) {
     if (reading) {
         if (!js.is_object()) throw runtime_error("object expected");
-        if (!val) val = new glTFSampler();
-        serialize((glTFChildOfRootProperty*&)val, js, reading, err);
-        serialize_attr(val->magFilter, "magFilter", js, reading, err);
-        serialize_attr(val->minFilter, "minFilter", js, reading, err);
-        serialize_attr(val->wrapS, "wrapS", js, reading, err);
-        serialize_attr(val->wrapT, "wrapT", js, reading, err);
+        serialize((glTFChildOfRootProperty&)val, js, reading, err);
+        serialize_attr(val.magFilter, "magFilter", js, reading, err);
+        serialize_attr(val.minFilter, "minFilter", js, reading, err);
+        serialize_attr(val.wrapS, "wrapS", js, reading, err);
+        serialize_attr(val.wrapT, "wrapT", js, reading, err);
     } else {
         if (!js.is_object()) js = json::object();
-        serialize((glTFChildOfRootProperty*&)val, js, reading, err);
-        if (val->magFilter != glTFSamplerMagFilter::NotSet)
-            serialize_attr(val->magFilter, "magFilter", js, reading, err);
-        if (val->minFilter != glTFSamplerMinFilter::NotSet)
-            serialize_attr(val->minFilter, "minFilter", js, reading, err);
-        if (val->wrapS != glTFSamplerWrapS::Repeat)
-            serialize_attr(val->wrapS, "wrapS", js, reading, err);
-        if (val->wrapT != glTFSamplerWrapT::Repeat)
-            serialize_attr(val->wrapT, "wrapT", js, reading, err);
+        serialize((glTFChildOfRootProperty&)val, js, reading, err);
+        if (val.magFilter != glTFSamplerMagFilter::NotSet)
+            serialize_attr(val.magFilter, "magFilter", js, reading, err);
+        if (val.minFilter != glTFSamplerMinFilter::NotSet)
+            serialize_attr(val.minFilter, "minFilter", js, reading, err);
+        if (val.wrapS != glTFSamplerWrapS::Repeat)
+            serialize_attr(val.wrapS, "wrapS", js, reading, err);
+        if (val.wrapT != glTFSamplerWrapT::Repeat)
+            serialize_attr(val.wrapT, "wrapT", js, reading, err);
     }
 }
 
 // Parses a glTFScene object
 inline void serialize(
-    glTFScene*& val, json& js, bool reading, parse_stack& err) {
+    glTFScene& val, json& js, bool reading, parse_stack& err) {
     if (reading) {
         if (!js.is_object()) throw runtime_error("object expected");
-        if (!val) val = new glTFScene();
-        serialize((glTFChildOfRootProperty*&)val, js, reading, err);
-        serialize_attr(val->nodes, "nodes", js, reading, err);
+        serialize((glTFChildOfRootProperty&)val, js, reading, err);
+        serialize_attr(val.nodes, "nodes", js, reading, err);
     } else {
         if (!js.is_object()) js = json::object();
-        serialize((glTFChildOfRootProperty*&)val, js, reading, err);
-        if (!val->nodes.empty())
-            serialize_attr(val->nodes, "nodes", js, reading, err);
+        serialize((glTFChildOfRootProperty&)val, js, reading, err);
+        if (!val.nodes.empty())
+            serialize_attr(val.nodes, "nodes", js, reading, err);
     }
 }
 
 // Parses a glTFSkin object
-inline void serialize(
-    glTFSkin*& val, json& js, bool reading, parse_stack& err) {
+inline void serialize(glTFSkin& val, json& js, bool reading, parse_stack& err) {
     if (reading) {
         if (!js.is_object()) throw runtime_error("object expected");
-        if (!val) val = new glTFSkin();
-        serialize((glTFChildOfRootProperty*&)val, js, reading, err);
+        serialize((glTFChildOfRootProperty&)val, js, reading, err);
         serialize_attr(
-            val->inverseBindMatrices, "inverseBindMatrices", js, reading, err);
-        serialize_attr(val->skeleton, "skeleton", js, reading, err);
+            val.inverseBindMatrices, "inverseBindMatrices", js, reading, err);
+        serialize_attr(val.skeleton, "skeleton", js, reading, err);
         if (!js.count("joints"))
             throw runtime_error("missing required variable");
-        serialize_attr(val->joints, "joints", js, reading, err);
+        serialize_attr(val.joints, "joints", js, reading, err);
     } else {
         if (!js.is_object()) js = json::object();
-        serialize((glTFChildOfRootProperty*&)val, js, reading, err);
-        if (val->inverseBindMatrices.is_valid())
-            serialize_attr(val->inverseBindMatrices, "inverseBindMatrices", js,
+        serialize((glTFChildOfRootProperty&)val, js, reading, err);
+        if (val.inverseBindMatrices.is_valid())
+            serialize_attr(val.inverseBindMatrices, "inverseBindMatrices", js,
                 reading, err);
-        if (val->skeleton.is_valid())
-            serialize_attr(val->skeleton, "skeleton", js, reading, err);
-        serialize_attr(val->joints, "joints", js, reading, err);
+        if (val.skeleton.is_valid())
+            serialize_attr(val.skeleton, "skeleton", js, reading, err);
+        serialize_attr(val.joints, "joints", js, reading, err);
     }
 }
 
 // Parses a glTF object
-inline void serialize(glTF*& val, json& js, bool reading, parse_stack& err) {
+inline void serialize(glTF& val, json& js, bool reading, parse_stack& err) {
     if (reading) {
         if (!js.is_object()) throw runtime_error("object expected");
-        if (!val) val = new glTF();
-        serialize((glTFProperty*&)val, js, reading, err);
-        serialize_attr(val->extensionsUsed, "extensionsUsed", js, reading, err);
+        serialize((glTFProperty&)val, js, reading, err);
+        serialize_attr(val.extensionsUsed, "extensionsUsed", js, reading, err);
         serialize_attr(
-            val->extensionsRequired, "extensionsRequired", js, reading, err);
-        serialize_attr(val->accessors, "accessors", js, reading, err);
-        serialize_attr(val->animations, "animations", js, reading, err);
+            val.extensionsRequired, "extensionsRequired", js, reading, err);
+        serialize_attr(val.accessors, "accessors", js, reading, err);
+        serialize_attr(val.animations, "animations", js, reading, err);
         if (!js.count("asset"))
             throw runtime_error("missing required variable");
-        serialize_attr(val->asset, "asset", js, reading, err);
-        serialize_attr(val->buffers, "buffers", js, reading, err);
-        serialize_attr(val->bufferViews, "bufferViews", js, reading, err);
-        serialize_attr(val->cameras, "cameras", js, reading, err);
-        serialize_attr(val->images, "images", js, reading, err);
-        serialize_attr(val->materials, "materials", js, reading, err);
-        serialize_attr(val->meshes, "meshes", js, reading, err);
-        serialize_attr(val->nodes, "nodes", js, reading, err);
-        serialize_attr(val->samplers, "samplers", js, reading, err);
-        serialize_attr(val->scene, "scene", js, reading, err);
-        serialize_attr(val->scenes, "scenes", js, reading, err);
-        serialize_attr(val->skins, "skins", js, reading, err);
-        serialize_attr(val->textures, "textures", js, reading, err);
+        serialize_attr(val.asset, "asset", js, reading, err);
+        serialize_attr(val.buffers, "buffers", js, reading, err);
+        serialize_attr(val.bufferViews, "bufferViews", js, reading, err);
+        serialize_attr(val.cameras, "cameras", js, reading, err);
+        serialize_attr(val.images, "images", js, reading, err);
+        serialize_attr(val.materials, "materials", js, reading, err);
+        serialize_attr(val.meshes, "meshes", js, reading, err);
+        serialize_attr(val.nodes, "nodes", js, reading, err);
+        serialize_attr(val.samplers, "samplers", js, reading, err);
+        serialize_attr(val.scene, "scene", js, reading, err);
+        serialize_attr(val.scenes, "scenes", js, reading, err);
+        serialize_attr(val.skins, "skins", js, reading, err);
+        serialize_attr(val.textures, "textures", js, reading, err);
     } else {
         if (!js.is_object()) js = json::object();
-        serialize((glTFProperty*&)val, js, reading, err);
-        if (!val->extensionsUsed.empty())
+        serialize((glTFProperty&)val, js, reading, err);
+        if (!val.extensionsUsed.empty())
             serialize_attr(
-                val->extensionsUsed, "extensionsUsed", js, reading, err);
-        if (!val->extensionsRequired.empty())
-            serialize_attr(val->extensionsRequired, "extensionsRequired", js,
-                reading, err);
-        if (!val->accessors.empty())
-            serialize_attr(val->accessors, "accessors", js, reading, err);
-        if (!val->animations.empty())
-            serialize_attr(val->animations, "animations", js, reading, err);
-        serialize_attr(val->asset, "asset", js, reading, err);
-        if (!val->buffers.empty())
-            serialize_attr(val->buffers, "buffers", js, reading, err);
-        if (!val->bufferViews.empty())
-            serialize_attr(val->bufferViews, "bufferViews", js, reading, err);
-        if (!val->cameras.empty())
-            serialize_attr(val->cameras, "cameras", js, reading, err);
-        if (!val->images.empty())
-            serialize_attr(val->images, "images", js, reading, err);
-        if (!val->materials.empty())
-            serialize_attr(val->materials, "materials", js, reading, err);
-        if (!val->meshes.empty())
-            serialize_attr(val->meshes, "meshes", js, reading, err);
-        if (!val->nodes.empty())
-            serialize_attr(val->nodes, "nodes", js, reading, err);
-        if (!val->samplers.empty())
-            serialize_attr(val->samplers, "samplers", js, reading, err);
-        if (val->scene.is_valid())
-            serialize_attr(val->scene, "scene", js, reading, err);
-        if (!val->scenes.empty())
-            serialize_attr(val->scenes, "scenes", js, reading, err);
-        if (!val->skins.empty())
-            serialize_attr(val->skins, "skins", js, reading, err);
-        if (!val->textures.empty())
-            serialize_attr(val->textures, "textures", js, reading, err);
+                val.extensionsUsed, "extensionsUsed", js, reading, err);
+        if (!val.extensionsRequired.empty())
+            serialize_attr(
+                val.extensionsRequired, "extensionsRequired", js, reading, err);
+        if (!val.accessors.empty())
+            serialize_attr(val.accessors, "accessors", js, reading, err);
+        if (!val.animations.empty())
+            serialize_attr(val.animations, "animations", js, reading, err);
+        serialize_attr(val.asset, "asset", js, reading, err);
+        if (!val.buffers.empty())
+            serialize_attr(val.buffers, "buffers", js, reading, err);
+        if (!val.bufferViews.empty())
+            serialize_attr(val.bufferViews, "bufferViews", js, reading, err);
+        if (!val.cameras.empty())
+            serialize_attr(val.cameras, "cameras", js, reading, err);
+        if (!val.images.empty())
+            serialize_attr(val.images, "images", js, reading, err);
+        if (!val.materials.empty())
+            serialize_attr(val.materials, "materials", js, reading, err);
+        if (!val.meshes.empty())
+            serialize_attr(val.meshes, "meshes", js, reading, err);
+        if (!val.nodes.empty())
+            serialize_attr(val.nodes, "nodes", js, reading, err);
+        if (!val.samplers.empty())
+            serialize_attr(val.samplers, "samplers", js, reading, err);
+        if (val.scene.is_valid())
+            serialize_attr(val.scene, "scene", js, reading, err);
+        if (!val.scenes.empty())
+            serialize_attr(val.scenes, "scenes", js, reading, err);
+        if (!val.skins.empty())
+            serialize_attr(val.skins, "skins", js, reading, err);
+        if (!val.textures.empty())
+            serialize_attr(val.textures, "textures", js, reading, err);
     }
 }
 
