@@ -8977,32 +8977,16 @@ void clear_texture(gl_texture& txt) {
 // VERTEX ARRAY BUFFER
 // -----------------------------------------------------------------------------
 
-// Creates a buffer with num elements of size size stored in values, where
-// content is dyanamic if dynamic.
-void _init_vertex_buffer(gl_vertex_buffer& buf, int n, int nc,
-    const void* values, bool as_float, bool dynamic) {
-    buf._num = n;
-    buf._ncomp = nc;
-    buf._float = as_float;
-    assert(gl_check_error());
-    buf._bid = (GLuint)0;
-    glGenBuffers(1, &buf._bid);
-    glBindBuffer(GL_ARRAY_BUFFER, buf._bid);
-    glBufferData(GL_ARRAY_BUFFER,
-        buf._num * buf._ncomp * ((as_float) ? sizeof(float) : sizeof(int)),
-        values, (dynamic) ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    assert(gl_check_error());
-}
-
-// Updates the buffer bid with new data.
+// Updates the buffer with new data.
 void _update_vertex_buffer(gl_vertex_buffer& buf, int n, int nc,
     const void* values, bool as_float, bool dynamic) {
-    auto resize = n * nc != buf._num * buf._ncomp || as_float != buf._float;
+    auto resize =
+        !buf._bid || n * nc != buf._num * buf._ncomp || as_float != buf._float;
     buf._num = n;
     buf._ncomp = nc;
     buf._float = as_float;
     assert(gl_check_error());
+    if (!buf._bid) glGenBuffers(1, &buf._bid);
     glBindBuffer(GL_ARRAY_BUFFER, buf._bid);
     if (resize) {
         glBufferData(GL_ARRAY_BUFFER,
@@ -9045,30 +9029,14 @@ void clear_vertex_buffer(gl_vertex_buffer& buf) {
 // VERTEX ELEMENTS BUFFER
 // -----------------------------------------------------------------------------
 
-// Creates a buffer with num elements of size size stored in values, where
-// content is dyanamic if dynamic.
-// Returns the buffer id.
-void _init_element_buffer(
-    gl_element_buffer& buf, int n, int nc, const int* values, bool dynamic) {
-    buf._num = n;
-    buf._ncomp = nc;
-    assert(gl_check_error());
-    buf._bid = (GLuint)0;
-    glGenBuffers(1, &buf._bid);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buf._bid);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, buf._num * buf._ncomp * sizeof(int),
-        values, (dynamic) ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-    assert(gl_check_error());
-}
-
 // Updates the buffer bid with new data.
 void _update_element_buffer(
     gl_element_buffer& buf, int n, int nc, const int* values, bool dynamic) {
-    auto resize = n * nc != buf._num * buf._ncomp;
+    auto resize = !buf._bid || n * nc != buf._num * buf._ncomp;
     buf._num = n;
     buf._ncomp = nc;
     assert(gl_check_error());
+    if (!buf._bid) glGenBuffers(1, &buf._bid);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buf._bid);
     if (resize) {
         glBufferData(GL_ELEMENT_ARRAY_BUFFER,
