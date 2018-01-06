@@ -94,6 +94,19 @@ inline void serialize(map<string, T>& vals, json& js, bool reading, parse_stack&
     }
 }
 
+// Parses a pointer
+template<typename T>
+inline void serialize(T*& val, json& js, bool reading, parse_stack& err) {
+    if(reading) {
+        if (!js.is_object()) throw runtime_error("object expected");
+        if (!val) val = new T();
+        serialize(*val, js, reading, err);
+    } else {
+        if (!js.is_object()) js = json::object();
+        serialize(*val, js, reading, err);
+    }
+}
+
 // Parse int function.
 inline void serialize(int& val, json& js, bool reading, parse_stack& err) {
     if(reading) {
@@ -235,20 +248,19 @@ inline void serialize(glTFid<T>& val, json& js, bool reading, parse_stack& err) 
 }
 
 // Parses a glTFProperty object
-inline void serialize(glTFProperty*& val, json& js, bool reading, parse_stack& err) {
+inline void serialize(glTFProperty& val, json& js, bool reading, parse_stack& err) {
     if(reading) {
         if (!js.is_object()) throw runtime_error("object expected");
-        if (!val) val = new glTFProperty();
 #if YGL_GLTFJSON
-        serialize_attr(val->extensions, "extensions", js, err);
-        serialize_attr(val->extras, "extras", js, err);
+        serialize_attr(val.extensions, "extensions", js, err);
+        serialize_attr(val.extras, "extras", js, err);
 #endif
     } else {
         if (!js.is_object()) js = json::object();
 #if YGL_GLTFJSON
-        if (!val->extensions.empty())
-            dump_attr(val->extensions, "extensions", js, err);
-        if (!val->extras.is_null()) dump_attr(val->extras, "extras", js, err);
+        if (!val.extensions.empty())
+            dump_attr(val.extensions, "extensions", js, err);
+        if (!val.extras.is_null()) dump_attr(val.extras, "extras", js, err);
 #endif
     }
 }
@@ -275,26 +287,25 @@ inline void serialize({{name}}& val, json& js, bool reading, parse_stack& err) {
 {{/enums}}
 
 // Parses a {{name}} object
-inline void serialize({{name}}*& val, json& js, bool reading, parse_stack& err) {
+inline void serialize({{name}}& val, json& js, bool reading, parse_stack& err) {
     if(reading) {
         if (!js.is_object()) throw runtime_error("object expected");
-        if (!val) val = new {{name}}();
-        {{#base}}serialize(({{base}}*&)val, js, reading, err);{{/base}}
-        {{#properties}}{{^extension}}{{#required}}if (!js.count("{{name}}")) throw runtime_error("missing required variable");{{/required}}serialize_attr(val->{{name}}, "{{name}}", js, reading, err);{{/extension}}{{/properties}}
+        {{#base}}serialize(({{base}}&)val, js, reading, err);{{/base}}
+        {{#properties}}{{^extension}}{{#required}}if (!js.count("{{name}}")) throw runtime_error("missing required variable");{{/required}}serialize_attr(val.{{name}}, "{{name}}", js, reading, err);{{/extension}}{{/properties}}
         {{#has_extensions}}
         if (js.count("extensions")) {
             auto& js_ext = js["extensions"];
-            {{#properties}}{{#extension}}serialize_attr(val->{{name}}, "{{extension}}", js_ext, reading, err);{{/extension}}{{/properties}}
+            {{#properties}}{{#extension}}serialize_attr(val.{{name}}, "{{extension}}", js_ext, reading, err);{{/extension}}{{/properties}}
         }
         {{/has_extensions}}
     } else {
         if (!js.is_object()) js = json::object();
-        {{#base}}serialize(({{base}}*&)val, js, reading, err);{{/base}}
-        {{#properties}}{{^extension}}{{^required}}if ({{def_check}}) {{/required}}serialize_attr(val->{{name}}, "{{name}}", js, reading, err);{{/extension}}{{/properties}}
+        {{#base}}serialize(({{base}}&)val, js, reading, err);{{/base}}
+        {{#properties}}{{^extension}}{{^required}}if ({{def_check}}) {{/required}}serialize_attr(val.{{name}}, "{{name}}", js, reading, err);{{/extension}}{{/properties}}
         {{#properties}}{{#extension}}
         if ({{def_check}}) {
             auto& js_ext = js["extensions"];
-            serialize_attr(val->{{name}}, "{{extension}}", js_ext, reading, err);
+            serialize_attr(val.{{name}}, "{{extension}}", js_ext, reading, err);
         }
         {{/extension}}{{/properties}}
     }
@@ -391,15 +402,15 @@ def fix_schema(js):
         else:
             vjs['default'] = str(vjs['default']).replace('.0','').replace('[','{').replace(']','}').replace('False','false')
         if 'vector<' in vjs['type'] or 'map<' in vjs['type']:
-            vjs['def_check'] = '!' + 'val->' + vjs['name'] + '.empty()'
+            vjs['def_check'] = '!' + 'val.' + vjs['name'] + '.empty()'
         elif 'glTFid<' in vjs['type']:
-            vjs['def_check'] = 'val->' + vjs['name'] + '.is_valid()'
+            vjs['def_check'] = 'val.' + vjs['name'] + '.is_valid()'
         elif vjs['type'] in ['json']:
-            vjs['def_check'] = '!' + 'val->' + vjs['name'] + '.is_null()'
+            vjs['def_check'] = '!' + 'val.' + vjs['name'] + '.is_null()'
         elif vjs['type'] in ['vec3f','vec2f','vec4f','quat4f','mat4f']:
-            vjs['def_check'] = 'val->' + vjs['name'] + ' != ' + vjs['type'] + vjs['default']
+            vjs['def_check'] = 'val.' + vjs['name'] + ' != ' + vjs['type'] + vjs['default']
         else:
-            vjs['def_check'] = 'val->' + vjs['name'] + ' != ' + vjs['default']
+            vjs['def_check'] = 'val.' + vjs['name'] + ' != ' + vjs['default']
 
     return js
 
