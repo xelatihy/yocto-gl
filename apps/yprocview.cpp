@@ -40,19 +40,59 @@ struct proc_camera {
     float aspect = 16.0f / 9.0f;
 
     vector<camera*> cams;
+};
 
-    ~proc_camera() {
-        for (auto e : cams) delete e;
-    }
+// Procedural texture type
+enum struct proc_texture_type { grid, checker, colored };
+
+// Names for enumeration
+inline const vector<pair<string, proc_texture_type>>& proc_texture_names() {
+    static auto names = vector<pair<string, proc_texture_type>>{
+        {"grid", proc_texture_type::grid},
+        {"checker", proc_texture_type::checker},
+        {"colored", proc_texture_type::colored},
+    };
+    return names;
+}
+
+// Procedural texture
+struct proc_texture {
+    string name = "";
+    proc_texture_type type = proc_texture_type::grid;
+    int resolution = 512;
+
+    vector<texture*> txts;
+};
+
+// Procedural material type
+enum struct proc_material_type { matte, plastic, metal };
+
+// Names for enumeration
+inline const vector<pair<string, proc_material_type>>& proc_material_names() {
+    static auto names = vector<pair<string, proc_material_type>>{
+        {"matte", proc_material_type::matte},
+        {"plastic", proc_material_type::plastic},
+        {"metal", proc_material_type::metal},
+    };
+    return names;
+}
+
+// Procedural material
+struct proc_material {
+    string name = "";
+    proc_material_type type = proc_material_type::matte;
+    vec3f color = {0.2f, 0.2f, 0.2f};
+    proc_texture* txt = nullptr;
+
+    vector<material*> mats;
 };
 
 // Procedural shape type
-enum struct proc_shape_type { none, floor, prim };
+enum struct proc_shape_type { floor, prim };
 
 // Names for enumeration
 inline const vector<pair<string, proc_shape_type>>& proc_shape_names() {
     static auto names = vector<pair<string, proc_shape_type>>{
-        {"none", proc_shape_type::none},
         {"floor", proc_shape_type::floor},
         {"prim", proc_shape_type::prim},
     };
@@ -92,18 +132,13 @@ struct proc_prim_shape_params {
 // Procesural shape
 struct proc_shape {
     string name = "shp";
-    proc_shape_type type = proc_shape_type::none;
+    proc_shape_type type = proc_shape_type::prim;
+    proc_material* mat = nullptr;
 
     proc_floor_shape_params floor_params = {};
     proc_prim_shape_params prim_params = {};
 
     vector<shape*> shps;
-    vector<material*> mats;
-
-    ~proc_shape() {
-        for (auto e : shps) delete e;
-        for (auto e : mats) delete e;
-    }
 };
 
 // Procedural instance type
@@ -125,29 +160,23 @@ struct proc_instance {
     proc_shape* shp = nullptr;
 
     vector<instance*> ists;
-
-    ~proc_instance() {
-        for (auto e : ists) delete e;
-    }
 };
 
 // Procedural scene
 struct proc_scene {
     vector<proc_camera*> cameras;
+    vector<proc_texture*> textures;
+    vector<proc_material*> materials;
     vector<proc_shape*> shapes;
     vector<proc_instance*> instances;
 
     scene* scn = nullptr;
 
     ~proc_scene() {
-        if (scn) {
-            scn->cameras.clear();
-            scn->shapes.clear();
-            scn->materials.clear();
-            scn->instances.clear();
-            delete scn;
-        }
+        if (scn) delete scn;
         for (auto e : cameras) delete e;
+        for (auto e : textures) delete e;
+        for (auto e : materials) delete e;
         for (auto e : shapes) delete e;
         for (auto e : instances) delete e;
     }
@@ -160,10 +189,21 @@ proc_scene* init_proc_scene() {
     auto pcam = new proc_camera();
     pscn->cameras += pcam;
 
+    auto ptxt = new proc_texture();
+    pscn->textures += ptxt;
+    ptxt->name = "default";
+
+    auto pmat = new proc_material();
+    pscn->materials += pmat;
+    pmat->name = "default";
+    pmat->color = {1, 1, 1};
+    pmat->txt = ptxt;
+
     auto pshp = new proc_shape();
     pscn->shapes += pshp;
     pshp->name = "floor";
     pshp->type = proc_shape_type::floor;
+    pshp->mat = pmat;
 
     auto pist = new proc_instance();
     pscn->instances += pist;
@@ -201,16 +241,71 @@ bool update_proc_camera(proc_camera* pcam) {
     return num_changed;
 }
 
+// Updates the proc texture
+bool update_proc_texture(proc_texture* ptxt) {
+    auto num_changed = add_proc_objects(ptxt->txts, 1);
+    auto txt = ptxt->txts.front();
+    txt->name = ptxt->name;
+    txt->path = ptxt->name + ".png";
+    switch (ptxt->type) {
+        case proc_texture_type::grid: {
+            txt->ldr = make_grid_image(ptxt->resolution, ptxt->resolution, 64);
+        } break;
+        case proc_texture_type::checker: {
+            txt->ldr =
+                make_checker_image(ptxt->resolution, ptxt->resolution, 64);
+        } break;
+        case proc_texture_type::colored: {
+            txt->ldr =
+                make_uvgrid_image(ptxt->resolution, ptxt->resolution, 64);
+        } break;
+        default: throw runtime_error("should not have gotten here");
+    }
+    return num_changed;
+}
+
+// Updates the proc material
+bool update_proc_material(proc_material* pmat) {
+    auto num_changed = add_proc_objects(pmat->mats, 1);
+    auto mat = pmat->mats.front();
+    mat->name = pmat->name;
+    mat->mtype = material_type::specular_roughness;
+    switch (pmat->type) {
+        case proc_material_type::matte: {
+            mat->kd = pmat->color;
+            mat->ks = zero3f;
+            mat->rs = 1;
+            mat->kd_txt.txt = (pmat->txt) ? pmat->txt->txts.front() : nullptr;
+            mat->ks_txt.txt = nullptr;
+        } break;
+        case proc_material_type::plastic: {
+            mat->kd = pmat->color;
+            mat->ks = {0.04f, 0.04f, 0.04f};
+            mat->rs = 0.05f;
+            mat->kd_txt.txt = (pmat->txt) ? pmat->txt->txts.front() : nullptr;
+            mat->ks_txt.txt = nullptr;
+        } break;
+        case proc_material_type::metal: {
+            mat->kd = zero3f;
+            mat->ks = pmat->color;
+            mat->rs = 0.05f;
+            mat->kd_txt.txt = nullptr;
+            mat->ks_txt.txt = (pmat->txt) ? pmat->txt->txts.front() : nullptr;
+        } break;
+    }
+    return num_changed;
+}
+
 // Updates for floor proc shape
 bool update_proc_floor_shape(proc_shape* pshp) {
-    auto num_changed_shp = add_proc_objects(pshp->shps, 1);
-    auto num_changed_mat = add_proc_objects(pshp->mats, 1);
+    auto num_changed = add_proc_objects(pshp->shps, 1);
 
     auto& params = pshp->floor_params;
     auto shp = pshp->shps[0];
-    auto mat = pshp->mats[0];
+    auto mat = pshp->mat->mats[0];
 
     shp->name = pshp->name;
+    shp->mat = mat;
     tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
         make_uvquad(params.tesselation);
     for (auto& p : shp->pos) {
@@ -219,25 +314,19 @@ bool update_proc_floor_shape(proc_shape* pshp) {
     }
     for (auto& n : shp->norm) n = {0, 1, 0};
 
-    mat->name = pshp->name;
-    mat->mtype = material_type::specular_roughness;
-    mat->kd = {0.2f, 0.2f, 0.2f};
-    mat->ks = zero3f;
-    mat->rs = 1;
-
-    return num_changed_shp || num_changed_mat;
+    return num_changed;
 }
 
 // Updates for prim proc shape
 bool update_proc_prim_shape(proc_shape* pshp) {
-    auto num_changed_shp = add_proc_objects(pshp->shps, 1);
-    auto num_changed_mat = add_proc_objects(pshp->mats, 1);
+    auto num_changed = add_proc_objects(pshp->shps, 1);
 
     auto& params = pshp->prim_params;
     auto shp = pshp->shps[0];
-    auto mat = pshp->mats[0];
+    auto mat = pshp->mat->mats[0];
 
     shp->name = pshp->name;
+    shp->mat = mat;
     switch (params.ptype) {
         case proc_prim_shape_type::sphere: {
             tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
@@ -253,17 +342,12 @@ bool update_proc_prim_shape(proc_shape* pshp) {
     mat->ks = zero3f;
     mat->rs = 1;
 
-    return num_changed_shp || num_changed_mat;
+    return num_changed;
 }
 
 // Updates the proc shape
 bool update_proc_shape(proc_shape* pshp) {
     switch (pshp->type) {
-        case proc_shape_type::none: {
-            auto num_changed_shp = add_proc_objects(pshp->shps, 0);
-            auto num_changed_mat = add_proc_objects(pshp->mats, 0);
-            return num_changed_shp || num_changed_mat;
-        } break;
         case proc_shape_type::floor: {
             return update_proc_floor_shape(pshp);
         } break;
@@ -298,29 +382,21 @@ bool update_proc_instance(proc_instance* pist) {
 // Updates the view scene from the procedural one
 void update_proc_scene(proc_scene* pscn) {
     if (!pscn->scn) pscn->scn = new scene();
-    auto changed_cams = false;
-    for (auto pcam : pscn->cameras)
-        if (update_proc_camera(pcam)) changed_cams = true;
-    if (changed_cams) {
-        pscn->scn->cameras.clear();
-        for (auto pcam : pscn->cameras) pscn->scn->cameras += pcam->cams;
-    }
-    auto changed_shps = false;
-    for (auto pshp : pscn->shapes)
-        if (update_proc_shape(pshp)) changed_shps = true;
-    if (changed_shps) {
-        pscn->scn->shapes.clear();
-        pscn->scn->materials.clear();
-        for (auto pshp : pscn->shapes) pscn->scn->shapes += pshp->shps;
-        for (auto pshp : pscn->shapes) pscn->scn->materials += pshp->mats;
-    }
-    auto changed_ists = false;
-    for (auto pist : pscn->instances)
-        if (update_proc_instance(pist)) changed_ists = true;
-    if (changed_shps) {
-        pscn->scn->instances.clear();
-        for (auto pist : pscn->instances) pscn->scn->instances += pist->ists;
-    }
+    for (auto pcam : pscn->cameras) update_proc_camera(pcam);
+    for (auto ptxt : pscn->textures) update_proc_texture(ptxt);
+    for (auto pmat : pscn->materials) update_proc_material(pmat);
+    for (auto pshp : pscn->shapes) update_proc_shape(pshp);
+    for (auto pist : pscn->instances) update_proc_instance(pist);
+    pscn->scn->cameras.clear();
+    for (auto pcam : pscn->cameras) pscn->scn->cameras += pcam->cams;
+    pscn->scn->textures.clear();
+    for (auto ptxt : pscn->textures) pscn->scn->textures += ptxt->txts;
+    pscn->scn->materials.clear();
+    for (auto pmat : pscn->materials) pscn->scn->materials += pmat->mats;
+    pscn->scn->shapes.clear();
+    for (auto pshp : pscn->shapes) pscn->scn->shapes += pshp->shps;
+    pscn->scn->instances.clear();
+    for (auto pist : pscn->instances) pscn->scn->instances += pist->ists;
 }
 
 inline void draw_proctree_widgets(
@@ -329,8 +405,25 @@ inline void draw_proctree_widgets(
 }
 
 inline void draw_proctree_widgets(
+    gl_window* win, const string& lbl, proc_texture* txt, void*& selection) {
+    draw_tree_widget_leaf(win, lbl + txt->name, selection, txt);
+}
+
+inline void draw_proctree_widgets(
+    gl_window* win, const string& lbl, proc_material* mat, void*& selection) {
+    if (draw_tree_widget_begin(win, lbl + mat->name, selection, mat)) {
+        if (mat->txt)
+            draw_proctree_widgets(win, "texture: ", mat->txt, selection);
+        draw_tree_widget_end(win);
+    }
+}
+inline void draw_proctree_widgets(
     gl_window* win, const string& lbl, proc_shape* shp, void*& selection) {
-    draw_tree_widget_leaf(win, lbl + shp->name, selection, shp);
+    if (draw_tree_widget_begin(win, lbl + shp->name, selection, shp)) {
+        if (shp->mat)
+            draw_proctree_widgets(win, "material: ", shp->mat, selection);
+        draw_tree_widget_end(win);
+    }
 }
 
 inline void draw_proctree_widgets(
@@ -344,19 +437,31 @@ inline void draw_proctree_widgets(
 
 inline void draw_proctree_widgets(
     gl_window* win, const string& lbl, proc_scene* scn, void*& selection) {
-    if (draw_tree_widget_begin(win, lbl + "cameras")) {
+    if (draw_tree_widget_begin(win, lbl + "proc cameras")) {
         for (auto cam : scn->cameras)
             draw_proctree_widgets(win, "", cam, selection);
         draw_tree_widget_end(win);
     }
 
-    if (draw_tree_widget_begin(win, lbl + "shapes")) {
+    if (draw_tree_widget_begin(win, lbl + "proc textures")) {
+        for (auto txt : scn->textures)
+            draw_proctree_widgets(win, "", txt, selection);
+        draw_tree_widget_end(win);
+    }
+
+    if (draw_tree_widget_begin(win, lbl + "proc materials")) {
+        for (auto mat : scn->materials)
+            draw_proctree_widgets(win, "", mat, selection);
+        draw_tree_widget_end(win);
+    }
+
+    if (draw_tree_widget_begin(win, lbl + "proc shapes")) {
         for (auto msh : scn->shapes)
             draw_proctree_widgets(win, "", msh, selection);
         draw_tree_widget_end(win);
     }
 
-    if (draw_tree_widget_begin(win, lbl + "instances")) {
+    if (draw_tree_widget_begin(win, lbl + "proc instances")) {
         for (auto ist : scn->instances)
             draw_proctree_widgets(win, "", ist, selection);
         draw_tree_widget_end(win);
@@ -364,14 +469,67 @@ inline void draw_proctree_widgets(
 }
 
 inline bool draw_procelem_widgets(gl_window* win, proc_scene* scn,
+    proc_camera* cam, void*& selection,
+    const unordered_map<texture*, gl_texture>& gl_txt) {
+    auto edited = vector<bool>();
+    draw_separator_widget(win);
+    edited += draw_value_widget(win, "name", cam->name);
+    edited += draw_value_widget(win, "from", cam->yfov, -10, 10);
+    edited += draw_value_widget(win, "to", cam->yfov, -10, 10);
+    edited += draw_value_widget(win, "up", cam->yfov, -10, 10);
+    edited += draw_value_widget(win, "yfov", cam->yfov, 0.1, 4);
+    edited += draw_value_widget(win, "aspect", cam->aspect, 0.1, 4);
+    if (std::any_of(edited.begin(), edited.end(), [](auto x) { return x; })) {
+        update_proc_camera(cam);
+        return true;
+    }
+    return false;
+}
+
+inline bool draw_procelem_widgets(gl_window* win, proc_scene* scn,
+    proc_texture* txt, void*& selection,
+    const unordered_map<texture*, gl_texture>& gl_txt) {
+    auto edited = vector<bool>();
+    draw_separator_widget(win);
+    edited += draw_value_widget(win, "name", txt->name);
+    edited += draw_value_widget(win, "type", txt->type, proc_texture_names());
+    edited += draw_value_widget(win, "resolution", txt->resolution, 128, 4096);
+    if (std::any_of(edited.begin(), edited.end(), [](auto x) { return x; })) {
+        update_proc_texture(txt);
+        return true;
+    }
+    return false;
+}
+
+inline bool draw_procelem_widgets(gl_window* win, proc_scene* scn,
+    proc_material* mat, void*& selection,
+    const unordered_map<texture*, gl_texture>& gl_txt) {
+    auto txt_names = vector<pair<string, proc_texture*>>{{"none", nullptr}};
+    for (auto ptxt : scn->textures) txt_names += {ptxt->name, ptxt};
+    auto edited = vector<bool>();
+    draw_separator_widget(win);
+    edited += draw_value_widget(win, "name", mat->name);
+    edited += draw_value_widget(win, "type", mat->type, proc_material_names());
+    edited += draw_color_widget(win, "color", mat->color);
+    edited += draw_value_widget(win, "texture", mat->txt, txt_names);
+    if (std::any_of(edited.begin(), edited.end(), [](auto x) { return x; })) {
+        update_proc_material(mat);
+        return true;
+    }
+    return false;
+}
+
+inline bool draw_procelem_widgets(gl_window* win, proc_scene* scn,
     proc_shape* shp, void*& selection,
     const unordered_map<texture*, gl_texture>& gl_txt) {
+    auto mat_names = vector<pair<string, proc_material*>>{{"none", nullptr}};
+    for (auto pmat : scn->materials) mat_names += {pmat->name, pmat};
     auto edited = vector<bool>();
     draw_separator_widget(win);
     edited += draw_value_widget(win, "name", shp->name);
     edited += draw_value_widget(win, "type", shp->type, proc_shape_names());
+    edited += draw_value_widget(win, "material", shp->mat, mat_names);
     switch (shp->type) {
-        case proc_shape_type::none: break;
         case proc_shape_type::floor: {
             auto& params = shp->floor_params;
             edited += draw_value_widget(win, "size", params.size, 0, 20);
@@ -392,21 +550,11 @@ inline bool draw_procelem_widgets(gl_window* win, proc_scene* scn,
         } break;
         default: throw runtime_error("should not have gotten here");
     }
-    return std::any_of(edited.begin(), edited.end(), [](auto x) { return x; });
-}
-
-inline bool draw_procelem_widgets(gl_window* win, proc_scene* scn,
-    proc_camera* cam, void*& selection,
-    const unordered_map<texture*, gl_texture>& gl_txt) {
-    auto edited = vector<bool>();
-    draw_separator_widget(win);
-    edited += draw_value_widget(win, "name", cam->name);
-    edited += draw_value_widget(win, "from", cam->yfov, -10, 10);
-    edited += draw_value_widget(win, "to", cam->yfov, -10, 10);
-    edited += draw_value_widget(win, "up", cam->yfov, -10, 10);
-    edited += draw_value_widget(win, "yfov", cam->yfov, 0.1, 4);
-    edited += draw_value_widget(win, "aspect", cam->aspect, 0.1, 4);
-    return std::any_of(edited.begin(), edited.end(), [](auto x) { return x; });
+    if (std::any_of(edited.begin(), edited.end(), [](auto x) { return x; })) {
+        update_proc_shape(shp);
+        return true;
+    }
+    return false;
 }
 
 inline bool draw_procelem_widgets(gl_window* win, proc_scene* scn,
@@ -421,7 +569,11 @@ inline bool draw_procelem_widgets(gl_window* win, proc_scene* scn,
     edited += draw_value_widget(win, "frame", ist->frame, -10, 10);
     edited += draw_value_widget(win, "shape", ist->shp, shp_names);
     edited += draw_value_widget(win, "type", ist->type, proc_instance_names());
-    return std::any_of(edited.begin(), edited.end(), [](auto x) { return x; });
+    if (std::any_of(edited.begin(), edited.end(), [](auto x) { return x; })) {
+        update_proc_instance(ist);
+        return true;
+    }
+    return false;
 }
 
 inline bool draw_procelem_widgets(gl_window* win, proc_scene* scn,
@@ -429,6 +581,16 @@ inline bool draw_procelem_widgets(gl_window* win, proc_scene* scn,
     for (auto cam : scn->cameras) {
         if (cam == selection)
             return draw_procelem_widgets(win, scn, cam, selection, gl_txt);
+    }
+
+    for (auto txt : scn->textures) {
+        if (txt == selection)
+            return draw_procelem_widgets(win, scn, txt, selection, gl_txt);
+    }
+
+    for (auto mat : scn->materials) {
+        if (mat == selection)
+            return draw_procelem_widgets(win, scn, mat, selection, gl_txt);
     }
 
     for (auto shp : scn->shapes) {
@@ -444,20 +606,56 @@ inline bool draw_procelem_widgets(gl_window* win, proc_scene* scn,
     return false;
 }
 
-inline bool draw_edit_widgets(gl_window* win, proc_scene* scn) {
+inline bool draw_procedit_widgets(
+    gl_window* win, proc_scene* scn, void*& selection) {
     static auto stype = proc_shape_type::prim;
-    static auto cur_shape = 0;
+    static auto cur_cam = 0, cur_txt = 0, cur_mat = 0, cur_shp = 0, cur_ist = 0;
+    draw_separator_widget(win);
     draw_value_widget(win, "add type", stype, proc_shape_names());
-    if (draw_button_widget(win, "add")) {
+    if (draw_button_widget(win, "add camera")) {
+        auto cam = new proc_camera();
+        cam->name = "camera" + to_string(cur_cam++);
+        scn->cameras += cam;
+        update_proc_scene(scn);
+    }
+    if (draw_button_widget(win, "add texture")) {
+        auto txt = new proc_texture();
+        txt->name = "shape" + to_string(cur_txt++);
+        scn->textures += txt;
+        update_proc_scene(scn);
+    }
+    if (draw_button_widget(win, "add material")) {
+        auto mat = new proc_material();
+        mat->name = "material" + to_string(cur_mat++);
+        scn->materials += mat;
+        update_proc_scene(scn);
+    }
+    if (draw_button_widget(win, "add shape")) {
         auto shp = new proc_shape();
         shp->type = stype;
-        shp->name = "shape" + to_string(cur_shape++);
+        shp->name = "shape" + to_string(cur_shp++);
+        shp->mat = scn->materials.front();
         scn->shapes += shp;
+        update_proc_scene(scn);
+    }
+    if (draw_button_widget(win, "add instance")) {
         auto ist = new proc_instance();
-        ist->name = shp->name;
-        ist->shp = shp;
+        ist->name = "instance" + to_string(cur_ist++);
+        ist->shp = scn->shapes.back();
         scn->instances += ist;
         update_proc_scene(scn);
+    }
+    if (draw_button_widget(win, "snap to floor")) {
+        for (auto pist : scn->instances) {
+            if (pist != selection) continue;
+            for (auto shp : pist->shp->shps) update_bounds(shp);
+            for (auto ist : pist->ists) update_bounds(ist, false);
+            auto bbox = invalid_bbox3f;
+            for (auto ist : pist->ists) bbox += ist->bbox;
+            pist->frame =
+                translation_frame3f({0, -bbox.min.y, 0}) * pist->frame;
+            update_proc_instance(pist);
+        }
     }
     return false;
 }
@@ -468,7 +666,7 @@ inline bool draw_procscene_widgets(gl_window* win, const string& lbl,
     if (draw_header_widget(win, lbl)) {
         // draw_scroll_widget_begin(win, "model", 240, false);
         draw_proctree_widgets(win, "", scn, selection);
-        draw_edit_widgets(win, scn);
+        draw_procedit_widgets(win, scn, selection);
         // draw_scroll_widget_end(win);
         return draw_procelem_widgets(win, scn, selection, gl_txt);
     } else
@@ -506,7 +704,23 @@ inline void draw(gl_window* win) {
     cam->aspect = (float)framebuffer_size.x / (float)framebuffer_size.y;
 
     update_lights(app->scn, false, false);
-    update_stdsurface_state(app->shstate, app->scn, app->shparams);
+    if (app->scene_updated) {
+        unordered_set<shape*> refresh_shapes;
+        unordered_set<texture*> refresh_textures;
+        for (auto ptxt : app->pscn->textures) {
+            if (ptxt != app->selection) continue;
+            refresh_textures.insert(ptxt->txts.begin(), ptxt->txts.end());
+        }
+        for (auto pshp : app->pscn->shapes) {
+            if (pshp != app->selection) continue;
+            refresh_shapes.insert(pshp->shps.begin(), pshp->shps.end());
+        }
+        update_stdsurface_state(app->shstate, app->scn, app->shparams,
+            refresh_shapes, refresh_textures);
+        app->scene_updated = false;
+    } else {
+        update_stdsurface_state(app->shstate, app->scn, app->shparams);
+    }
     if (app->shstate->lights_pos.empty()) app->shparams.camera_lights = true;
 
     gl_clear_buffers();
@@ -534,26 +748,6 @@ inline void draw(gl_window* win) {
     swap_buffers(win);
 }
 
-// update the scene from a changed to the proc scene
-void update(app_state* app) {
-    if (!app->scene_updated) return;
-    for (auto pcam : app->pscn->cameras) {
-        if (pcam != app->selection) continue;
-        update_proc_camera(pcam);
-    }
-    for (auto pshp : app->pscn->shapes) {
-        if (pshp != app->selection) continue;
-        update_proc_shape(pshp);
-        update_stdsurface_state(app->shstate, app->scn, app->shparams,
-            unordered_set<shape*>{pshp->shps.begin(), pshp->shps.end()}, {});
-    }
-    for (auto pist : app->pscn->instances) {
-        if (pist != app->selection) continue;
-        update_proc_instance(pist);
-    }
-    app->scene_updated = false;
-}
-
 // run ui loop
 void run_ui(app_state* app) {
     // window
@@ -576,9 +770,6 @@ void run_ui(app_state* app) {
 
         // draw
         draw(win);
-
-        // update
-        update(app);
 
         // event hadling
         poll_events(win);
