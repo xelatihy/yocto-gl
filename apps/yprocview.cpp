@@ -63,6 +63,29 @@ inline const vector<pair<string, proc_shape_type>>& proc_shape_names() {
 struct proc_floor_shape_params {
     float size = 10;
     int tesselation = 5;
+    vec3f color = {0.2f, 0.2f, 0.2f};
+    bool textured = false;
+};
+
+// Procedural prim shape type
+enum struct proc_prim_shape_type { sphere };
+
+// Names for enumeration
+inline const vector<pair<string, proc_prim_shape_type>>&
+proc_prim_shape_names() {
+    static auto names = vector<pair<string, proc_prim_shape_type>>{
+        {"sphere", proc_prim_shape_type::sphere},
+    };
+    return names;
+}
+
+// Procedural prim shape params
+struct proc_prim_shape_params {
+    proc_prim_shape_type ptype = proc_prim_shape_type::sphere;
+    float size = 10;
+    int tesselation = 5;
+    int subdivision = 0;
+    vec3f color = {0.2f, 0.2f, 0.2f};
     bool textured = false;
 };
 
@@ -72,6 +95,7 @@ struct proc_shape {
     proc_shape_type type = proc_shape_type::none;
 
     proc_floor_shape_params floor_params = {};
+    proc_prim_shape_params prim_params = {};
 
     vector<shape*> shps;
     vector<material*> mats;
@@ -208,6 +232,27 @@ bool update_proc_floor_shape(proc_shape* pshp) {
 bool update_proc_prim_shape(proc_shape* pshp) {
     auto num_changed_shp = add_proc_objects(pshp->shps, 1);
     auto num_changed_mat = add_proc_objects(pshp->mats, 1);
+
+    auto& params = pshp->prim_params;
+    auto shp = pshp->shps[0];
+    auto mat = pshp->mats[0];
+
+    shp->name = pshp->name;
+    switch (params.ptype) {
+        case proc_prim_shape_type::sphere: {
+            tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
+                make_uvsphere(params.tesselation);
+        } break;
+        default: throw runtime_error("should not have gotten here");
+    }
+    for (auto& p : shp->pos) p *= params.size / 2;
+
+    mat->name = pshp->name;
+    mat->mtype = material_type::specular_roughness;
+    mat->kd = {0.2f, 0.2f, 0.2f};
+    mat->ks = zero3f;
+    mat->rs = 1;
+
     return num_changed_shp || num_changed_mat;
 }
 
@@ -330,11 +375,20 @@ inline bool draw_procelem_widgets(gl_window* win, proc_scene* scn,
         case proc_shape_type::floor: {
             auto& params = shp->floor_params;
             edited += draw_value_widget(win, "size", params.size, 0, 20);
-            edited += draw_value_widget(
-                win, "tesselation", params.tesselation, 0, 10);
+            edited +=
+                draw_value_widget(win, "tesselation", params.tesselation, 0, 8);
+            edited += draw_value_widget(win, "color", params.color);
             edited += draw_value_widget(win, "textured", params.textured);
         } break;
         case proc_shape_type::prim: {
+            auto& params = shp->prim_params;
+            edited += draw_value_widget(win, "size", params.size, 0, 20);
+            edited +=
+                draw_value_widget(win, "tesselation", params.tesselation, 0, 8);
+            edited +=
+                draw_value_widget(win, "subdivision", params.subdivision, 0, 8);
+            edited += draw_value_widget(win, "color", params.color);
+            edited += draw_value_widget(win, "textured", params.textured);
         } break;
         default: throw runtime_error("should not have gotten here");
     }
@@ -390,12 +444,31 @@ inline bool draw_procelem_widgets(gl_window* win, proc_scene* scn,
     return false;
 }
 
+inline bool draw_edit_widgets(gl_window* win, proc_scene* scn) {
+    static auto stype = proc_shape_type::prim;
+    static auto cur_shape = 0;
+    draw_value_widget(win, "add type", stype, proc_shape_names());
+    if (draw_button_widget(win, "add")) {
+        auto shp = new proc_shape();
+        shp->type = stype;
+        shp->name = "shape" + to_string(cur_shape++);
+        scn->shapes += shp;
+        auto ist = new proc_instance();
+        ist->name = shp->name;
+        ist->shp = shp;
+        scn->instances += ist;
+        update_proc_scene(scn);
+    }
+    return false;
+}
+
 inline bool draw_procscene_widgets(gl_window* win, const string& lbl,
     proc_scene* scn, void*& selection,
     const unordered_map<texture*, gl_texture>& gl_txt) {
     if (draw_header_widget(win, lbl)) {
         // draw_scroll_widget_begin(win, "model", 240, false);
         draw_proctree_widgets(win, "", scn, selection);
+        draw_edit_widgets(win, scn);
         // draw_scroll_widget_end(win);
         return draw_procelem_widgets(win, scn, selection, gl_txt);
     } else
