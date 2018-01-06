@@ -64,116 +64,193 @@ struct parse_stack {
 
 // Parse support function.
 template <typename T>
-inline void parse(vector<T>& vals, const json& js, parse_stack& err) {
-    if (!js.is_array()) throw runtime_error("array expected");
-    vals.resize(js.size());
-    for (auto i = 0; i < js.size(); i++) {
-        // this is contrived to support for vector<bool>
-        auto v = T();
-        parse(v, js[i], err);
-        vals[i] = v;
+inline void parse(vector<T>& vals, json& js, bool reading, parse_stack& err) {
+    if(reading) {
+        if (!js.is_array()) throw runtime_error("array expected");
+        vals.resize(js.size());
+        for (auto i = 0; i < js.size(); i++) {
+            // this is contrived to support for vector<bool>
+            auto v = T();
+            parse(v, js[i], reading, err);
+            vals[i] = v;
+        }
+    } else {
+        js = json::array();
+        for (auto i = 0; i < vals.size(); i++) { parse(vals[i], js[i], reading, err); }
+    }
+}
+
+// Parse support function.
+template <typename T>
+inline void parse(map<string, T>& vals, json& js, bool reading, parse_stack& err) {
+    if(reading) {
+        if (!js.is_object()) throw runtime_error("object expected");
+        for (auto kv = js.begin(); kv != js.end(); ++kv) {
+            parse(vals[kv.key()], kv.value(), reading, err);
+        }
+    } else {
+        js = json::object();
+        for (auto&& kv : vals) { parse(kv.second, js[kv.first], reading, err); }
     }
 }
 
 // Parse int function.
-inline void parse(int& val, const json& js, parse_stack& err) {
-    if (!js.is_number_integer()) throw runtime_error("integer expected");
-    val = js;
+inline void parse(int& val, json& js, bool reading, parse_stack& err) {
+    if(reading) {
+        if (!js.is_number_integer()) throw runtime_error("integer expected");
+        val = js;
+    } else {
+        js = val;
+    }
 }
 
 // Parse float function.
-inline void parse(float& val, const json& js, parse_stack& err) {
-    if (!js.is_number()) throw runtime_error("number expected");
-    val = js;
+inline void parse(float& val, json& js, bool reading, parse_stack& err) {
+    if(reading) {
+        if (!js.is_number()) throw runtime_error("number expected");
+        val = js;
+    } else {
+        js = val;
+    }
 }
 
 // Parse bool function.
-inline void parse(bool& val, const json& js, parse_stack& err) {
-    if (!js.is_boolean()) throw runtime_error("bool expected");
-    val = js;
+inline void parse(bool& val, json& js, bool reading, parse_stack& err) {
+    if(reading) {
+        if (!js.is_boolean()) throw runtime_error("bool expected");
+        val = js;
+    } else {
+        js = val;
+    }
 }
 
 // Parse std::string function.
-inline void parse(string& val, const json& js, parse_stack& err) {
-    if (!js.is_string()) throw runtime_error("string expected");
-    val = js;
+inline void parse(string& val, json& js, bool reading, parse_stack& err) {
+    if(reading) {
+        if (!js.is_string()) throw runtime_error("string expected");
+        val = js;
+    } else {
+        js = val;
+    }
 }
 
 // Parse json function.
-inline void parse(json& val, const json& js, parse_stack& err) { val = js; }
-
-// Parse support function.
-inline void parse(vec2f& vals, const json& js, parse_stack& err) {
-    if (!js.is_array()) throw runtime_error("array expected");
-    if (2 != js.size()) throw runtime_error("wrong array size");
-    for (auto i = 0; i < 2; i++) { parse(vals[i], js[i], err); }
+inline void parse(json& val, json& js, bool reading, parse_stack& err) {
+    if(reading) {
+        val = js;
+    } else {
+        js = val;
+    }
 }
 
 // Parse support function.
-inline void parse(vec3f& vals, const json& js, parse_stack& err) {
-    if (!js.is_array()) throw runtime_error("array expected");
-    if (3 != js.size()) throw runtime_error("wrong array size");
-    for (auto i = 0; i < 3; i++) { parse(vals[i], js[i], err); }
+inline void parse(vec2f& vals, json& js, bool reading, parse_stack& err) {
+    if(reading) {
+        if (!js.is_array()) throw runtime_error("array expected");
+        if (2 != js.size()) throw runtime_error("wrong array size");
+        for (auto i = 0; i < 2; i++) { parse(vals[i], js[i], reading, err); }
+    } else {
+        js = json::array();
+        for (auto i = 0; i < 2; i++) { parse(vals[i], js[i], reading, err); }
+    }
 }
 
 // Parse support function.
-inline void parse(vec4f& vals, const json& js, parse_stack& err) {
-    if (!js.is_array()) throw runtime_error("array expected");
-    if (4 != js.size()) throw runtime_error("wrong array size");
-    for (auto i = 0; i < 4; i++) { parse(vals[i], js[i], err); }
+inline void parse(vec3f& vals, json& js, bool reading, parse_stack& err) {
+    if(reading) {
+        if (!js.is_array()) throw runtime_error("array expected");
+        if (3 != js.size()) throw runtime_error("wrong array size");
+        for (auto i = 0; i < 3; i++) { parse(vals[i], js[i], reading, err); }
+    } else {
+        js = json::array();
+        for (auto i = 0; i < 3; i++) { parse(vals[i], js[i], reading, err); }
+    }
 }
 
 // Parse support function.
-inline void parse(quat4f& vals, const json& js, parse_stack& err) {
-    if (!js.is_array()) throw runtime_error("array expected");
-    if (4 != js.size()) throw runtime_error("wrong array size");
-    for (auto i = 0; i < 4; i++) { parse(vals[i], js[i], err); }
+inline void parse(vec4f& vals, json& js, bool reading, parse_stack& err) {
+    if(reading) {
+        if (!js.is_array()) throw runtime_error("array expected");
+        if (4 != js.size()) throw runtime_error("wrong array size");
+        for (auto i = 0; i < 4; i++) { parse(vals[i], js[i], reading, err); }
+    } else {
+        js = json::array();
+        for (auto i = 0; i < 4; i++) { parse(vals[i], js[i], reading, err); }
+    }
 }
 
 // Parse support function.
-inline void parse(mat4f& vals, const json& js, parse_stack& err) {
-    if (!js.is_array()) throw runtime_error("array expected");
-    if (16 != js.size()) throw runtime_error("wrong array size");
-    for (auto j = 0; j < 4; j++) {
-        for (auto i = 0; i < 4; i++) { parse(vals[j][i], js[j * 4 + i], err); }
+inline void parse(quat4f& vals, json& js, bool reading, parse_stack& err) {
+    if(reading) {
+        if (!js.is_array()) throw runtime_error("array expected");
+        if (4 != js.size()) throw runtime_error("wrong array size");
+        for (auto i = 0; i < 4; i++) { parse(vals[i], js[i], reading, err); }
+    } else {
+        js = json::array();
+        for (auto i = 0; i < 4; i++) { parse(vals[i], js[i], reading, err); }
+    }
+}
+
+// Parse support function.
+inline void parse(mat4f& vals, json& js, bool reading, parse_stack& err) {
+    if(reading) {
+        if (!js.is_array()) throw runtime_error("array expected");
+        if (16 != js.size()) throw runtime_error("wrong array size");
+        for (auto j = 0; j < 4; j++) {
+            for (auto i = 0; i < 4; i++) { parse(vals[j][i], js[j * 4 + i], reading, err); }
+        }
+    } else {
+        js = json::array();
+        for (auto j = 0; j < 4; j++) {
+            for (auto i = 0; i < 4; i++) { parse(vals[j][i], js[j * 4 + i], reading, err); }
+        }
     }
 }
 
 // Parse support function.
 template <typename T>
-inline void parse(map<string, T>& vals, const json& js, parse_stack& err) {
-    if (!js.is_object()) throw runtime_error("object expected");
-    for (auto kv = js.begin(); kv != js.end(); ++kv) {
-        parse(vals[kv.key()], kv.value(), err);
+inline void parse_attr(T& val, const char* name, json& js, bool reading, parse_stack& err) {
+    if(reading) {
+        auto iter = js.find(name);
+        if (iter == js.end()) return;
+        err.path.push_back(name);
+        parse(val, *iter, reading, err);
+        err.path.pop_back();
+    } else {
+        err.path.push_back(name);
+        parse(val, js[name], reading, err);
+        err.path.pop_back();
     }
-}
-
-// Parse support function.
-template <typename T>
-inline void parse_attr(
-    T& val, const char* name, const json& js, parse_stack& err) {
-    auto iter = js.find(name);
-    if (iter == js.end()) return;
-    err.path.push_back(name);
-    parse(val, *iter, err);
-    err.path.pop_back();
 }
 
 // Parse id function.
 template <typename T>
-inline void parse(glTFid<T>& val, const json& js, parse_stack& err) {
-    if (!js.is_number_integer()) throw runtime_error("int expected");
-    val = glTFid<T>((int)js);
+inline void parse(glTFid<T>& val, json& js, bool reading, parse_stack& err) {
+    if(reading) {
+        if (!js.is_number_integer()) throw runtime_error("int expected");
+        val = glTFid<T>((int)js);
+    } else {
+        js = (int)val;
+    }
 }
 
 // Parses a glTFProperty object
-inline void parse(glTFProperty*& val, const json& js, parse_stack& err) {
-    if (!js.is_object()) throw runtime_error("object expected");
-    if (!val) val = new glTFProperty();
+inline void parse(glTFProperty*& val, json& js, bool reading, parse_stack& err) {
+    if(reading) {
+        if (!js.is_object()) throw runtime_error("object expected");
+        if (!val) val = new glTFProperty();
 #if YGL_GLTFJSON
-    parse_attr(val->extensions, "extensions", js, err);
-    parse_attr(val->extras, "extras", js, err);
+        parse_attr(val->extensions, "extensions", js, err);
+        parse_attr(val->extras, "extras", js, err);
 #endif
+    } else {
+        if (!js.is_object()) js = json::object();
+#if YGL_GLTFJSON
+        if (!val->extensions.empty())
+            dump_attr(val->extensions, "extensions", js, err);
+        if (!val->extras.is_null()) dump_attr(val->extras, "extras", js, err);
+#endif
+    }
 }
 '''
 
@@ -181,146 +258,46 @@ parse_fmt = '''
 {{#types}}
 {{#enums}}
 // Parse a {{name}} enum
-inline void parse({{name}}& val, const json& js,
-    parse_stack& err) {
-    static map<{{item}}, {{name}}> table = { {{#values}} { {{enum}}, {{name}}::{{label}} },{{/values}} };
-    auto v = {{item}}();
-    parse(v, js, err);
-    if (table.find(v) == table.end()) throw runtime_error("bad enum value");
-    val = table[v];
+inline void parse({{name}}& val, json& js, bool reading, parse_stack& err) {
+    if(reading) {
+        static map<{{item}}, {{name}}> table = { {{#values}} { {{enum}}, {{name}}::{{label}} },{{/values}} };
+        auto v = {{item}}();
+        parse(v, js, reading, err);
+        if (table.find(v) == table.end()) throw runtime_error("bad enum value");
+        val = table[v];
+    } else {
+        static map<{{name}}, {{item}}> table = { {{#values}} { {{name}}::{{label}}, {{enum}}  },  {{/values}} };
+        auto v = table.at(val);
+        parse(v, js, reading, err);
+    }
 }
 
 {{/enums}}
 
 // Parses a {{name}} object
-inline void parse(
-    {{name}}*& val, const json& js, parse_stack& err) {
-    if (!js.is_object()) throw runtime_error("object expected");
-    if (!val) val = new {{name}}();
-    {{#base}}parse(({{base}}*&)val, js, err);{{/base}}
-    {{#properties}}{{^extension}}{{#required}}if (!js.count("{{name}}")) throw runtime_error("missing required variable");{{/required}}parse_attr(val->{{name}}, "{{name}}", js, err);{{/extension}}{{/properties}}
-    {{#has_extensions}}
-    if (js.count("extensions")) {
-        auto& js_ext = js["extensions"];
-        {{#properties}}{{#extension}}parse_attr(val->{{name}}, "{{extension}}", js_ext, err);{{/extension}}{{/properties}}
+inline void parse({{name}}*& val, json& js, bool reading, parse_stack& err) {
+    if(reading) {
+        if (!js.is_object()) throw runtime_error("object expected");
+        if (!val) val = new {{name}}();
+        {{#base}}parse(({{base}}*&)val, js, reading, err);{{/base}}
+        {{#properties}}{{^extension}}{{#required}}if (!js.count("{{name}}")) throw runtime_error("missing required variable");{{/required}}parse_attr(val->{{name}}, "{{name}}", js, reading, err);{{/extension}}{{/properties}}
+        {{#has_extensions}}
+        if (js.count("extensions")) {
+            auto& js_ext = js["extensions"];
+            {{#properties}}{{#extension}}parse_attr(val->{{name}}, "{{extension}}", js_ext, reading, err);{{/extension}}{{/properties}}
+        }
+        {{/has_extensions}}
+    } else {
+        if (!js.is_object()) js = json::object();
+        {{#base}}parse(({{base}}*&)val, js, reading, err);{{/base}}
+        {{#properties}}{{^extension}}{{^required}}if ({{def_check}}) {{/required}}parse_attr(val->{{name}}, "{{name}}", js, reading, err);{{/extension}}{{/properties}}
+        {{#properties}}{{#extension}}
+        if ({{def_check}}) {
+            auto& js_ext = js["extensions"];
+            parse_attr(val->{{name}}, "{{extension}}", js_ext, reading, err);
+        }
+        {{/extension}}{{/properties}}
     }
-    {{/has_extensions}}
-}
-{{/types}}
-'''
-
-dump_func = '''
-// Dump support function.
-template <typename T>
-inline void dump(const vector<T>& vals, json& js, parse_stack& err) {
-    js = json::array();
-    for (auto i = 0; i < vals.size(); i++) { dump(vals[i], js[i], err); }
-}
-
-// Converts int to json.
-inline void dump(const int& val, json& js, parse_stack& err) { js = val; }
-
-// Converts float to json.
-inline void dump(const float& val, json& js, parse_stack& err) { js = val; }
-
-// Converts bool to json.
-inline void dump(const bool& val, json& js, parse_stack& err) { js = val; }
-
-// Converts string to json.
-inline void dump(const string& val, json& js, parse_stack& err) { js = val; }
-
-// Converts json to json.
-inline void dump(const json& val, json& js, parse_stack& err) { js = val; }
-
-// Dump support function.
-inline void dump(const vec2f& vals, json& js, parse_stack& err) {
-    js = json::array();
-    for (auto i = 0; i < 2; i++) { dump(vals[i], js[i], err); }
-}
-
-// Dump support function.
-inline void dump(const vec3f& vals, json& js, parse_stack& err) {
-    js = json::array();
-    for (auto i = 0; i < 3; i++) { dump(vals[i], js[i], err); }
-}
-
-// Dump support function.
-inline void dump(const vec4f& vals, json& js, parse_stack& err) {
-    js = json::array();
-    for (auto i = 0; i < 4; i++) { dump(vals[i], js[i], err); }
-}
-
-// Dump support function.
-inline void dump(const quat4f& vals, json& js, parse_stack& err) {
-    js = json::array();
-    for (auto i = 0; i < 4; i++) { dump(vals[i], js[i], err); }
-}
-
-// Dump support function.
-inline void dump(const mat4f& vals, json& js, parse_stack& err) {
-    js = json::array();
-    for (auto j = 0; j < 4; j++) {
-        for (auto i = 0; i < 4; i++) { dump(vals[j][i], js[j * 4 + i], err); }
-    }
-}
-
-// Dump support function.
-template <typename T>
-inline void dump(const map<string, T>& vals, json& js, parse_stack& err) {
-    js = json::object();
-    for (auto&& kv : vals) { dump(kv.second, js[kv.first], err); }
-}
-
-// Dump support function.
-template <typename T>
-inline void dump_attr(
-    const T& val, const char* name, json& js, parse_stack& err) {
-    err.path.push_back(name);
-    dump(val, js[name], err);
-    err.path.pop_back();
-}
-
-// Converts glTFid to json.
-template <typename T>
-inline void dump(const glTFid<T>& val, json& js, parse_stack& err) {
-    js = (int)val;
-}
-
-// Converts a glTFProperty object to JSON
-inline void dump(const glTFProperty* val, json& js, parse_stack& err) {
-    if (!js.is_object()) js = json::object();
-#if YGL_GLTFJSON
-    if (!val->extensions.empty())
-        dump_attr(val->extensions, "extensions", js, err);
-    if (!val->extras.is_null()) dump_attr(val->extras, "extras", js, err);
-#endif
-}
-
-'''
-
-dump_fmt = '''
-{{#types}}
-{{#enums}}
-// Converts a {{name}} enum to JSON
-inline void dump(const {{name}}& val, json& js, parse_stack& err) {
-    static map<{{name}}, {{item}}> table = { {{#values}} { {{name}}::{{label}}, {{enum}}  },  {{/values}} };
-    auto v = table.at(val);
-    dump(v, js, err);
-}
-
-{{/enums}}
-
-// Converts a {{name}} object to JSON
-inline void dump(const {{name}}* val, json& js, parse_stack& err) {
-    if (!js.is_object()) js = json::object();
-    {{#base}}dump((const {{base}}*)val, js, err);{{/base}}
-    {{#properties}}{{^extension}}{{^required}}if ({{def_check}}) {{/required}}dump_attr(val->{{name}}, "{{name}}", js, err);{{/extension}}{{/properties}}
-    {{#properties}}{{#extension}}
-    if ({{def_check}}) {
-        auto& js_ext = js["extensions"];
-        dump_attr(val->{{name}}, "{{extension}}", js_ext, err);
-    }
-    {{/extension}}{{/properties}}
 }
 {{/types}}
 '''
@@ -440,8 +417,6 @@ funcs = ''
 funcs += parse_func + '\n\n';
 funcs += mustache.render(parse_fmt, {'types': schemas})
 funcs += '\n\n';
-funcs += dump_func + '\n\n';
-funcs += mustache.render(dump_fmt, {'types': schemas})
 
 # substitute
 substitute('yocto/yocto_gl.h', types, 'type')
