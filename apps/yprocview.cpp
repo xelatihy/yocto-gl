@@ -58,9 +58,11 @@ inline const vector<pair<string, proc_texture_type>>& proc_texture_names() {
 // Procedural texture
 struct proc_texture {
     string name = "";
-    proc_texture_type type = proc_texture_type::grid;
-    int resolution = 512;
-
+    proc_texture_type ttype = proc_texture_type::grid;
+    int res = 512;
+    int tile = 64;
+    vec4b c0 = {90, 90, 90, 255};
+    vec4b c1 = {128, 128, 128, 255};
     vector<texture*> txts;
 };
 
@@ -80,9 +82,10 @@ inline const vector<pair<string, proc_material_type>>& proc_material_names() {
 // Procedural material
 struct proc_material {
     string name = "";
-    proc_material_type type = proc_material_type::matte;
-    vec3f color = {0.2f, 0.2f, 0.2f};
+    proc_material_type mtype = proc_material_type::matte;
+    vec3f kb = {0.2f, 0.2f, 0.2f};
     proc_texture* txt = nullptr;
+    float rs = 0.05f;
 
     vector<material*> mats;
 };
@@ -102,7 +105,7 @@ inline const vector<pair<string, proc_shape_type>>& proc_shape_names() {
 // Procedural floor shape params
 struct proc_floor_shape_params {
     float size = 20;
-    int tesselation = 5;
+    int level = 5;
 };
 
 // Procedural prim shape type
@@ -121,8 +124,8 @@ proc_prim_shape_names() {
 struct proc_prim_shape_params {
     proc_prim_shape_type ptype = proc_prim_shape_type::sphere;
     float size = 2;
-    int tesselation = 5;
-    int subdivision = 0;
+    int level = 5;
+    int subdiv = 0;
 };
 
 // Procesural shape
@@ -192,7 +195,7 @@ proc_scene* init_proc_scene() {
     auto pmat = new proc_material();
     pscn->materials += pmat;
     pmat->name = "default";
-    pmat->color = {1, 1, 1};
+    pmat->kb = {1, 1, 1};
     pmat->txt = ptxt;
 
     auto pshp = new proc_shape();
@@ -243,17 +246,17 @@ bool update_proc_texture(proc_texture* ptxt) {
     auto txt = ptxt->txts.front();
     txt->name = ptxt->name;
     txt->path = ptxt->name + ".png";
-    switch (ptxt->type) {
+    switch (ptxt->ttype) {
         case proc_texture_type::grid: {
-            txt->ldr = make_grid_image(ptxt->resolution, ptxt->resolution, 64);
+            txt->ldr = make_grid_image(
+                ptxt->res, ptxt->res, ptxt->tile, ptxt->c0, ptxt->c1);
         } break;
         case proc_texture_type::checker: {
-            txt->ldr =
-                make_checker_image(ptxt->resolution, ptxt->resolution, 64);
+            txt->ldr = make_checker_image(
+                ptxt->res, ptxt->res, ptxt->tile, ptxt->c0, ptxt->c1);
         } break;
         case proc_texture_type::colored: {
-            txt->ldr =
-                make_uvgrid_image(ptxt->resolution, ptxt->resolution, 64);
+            txt->ldr = make_uvgrid_image(ptxt->res, ptxt->res, ptxt->tile);
         } break;
         default: throw runtime_error("should not have gotten here");
     }
@@ -266,25 +269,25 @@ bool update_proc_material(proc_material* pmat) {
     auto mat = pmat->mats.front();
     mat->name = pmat->name;
     mat->mtype = material_type::specular_roughness;
-    switch (pmat->type) {
+    switch (pmat->mtype) {
         case proc_material_type::matte: {
-            mat->kd = pmat->color;
+            mat->kd = pmat->kb;
             mat->ks = zero3f;
             mat->rs = 1;
             mat->kd_txt.txt = (pmat->txt) ? pmat->txt->txts.front() : nullptr;
             mat->ks_txt.txt = nullptr;
         } break;
         case proc_material_type::plastic: {
-            mat->kd = pmat->color;
+            mat->kd = pmat->kb;
             mat->ks = {0.04f, 0.04f, 0.04f};
-            mat->rs = 0.05f;
+            mat->rs = pmat->rs;
             mat->kd_txt.txt = (pmat->txt) ? pmat->txt->txts.front() : nullptr;
             mat->ks_txt.txt = nullptr;
         } break;
         case proc_material_type::metal: {
             mat->kd = zero3f;
-            mat->ks = pmat->color;
-            mat->rs = 0.05f;
+            mat->ks = pmat->kb;
+            mat->rs = pmat->rs;
             mat->kd_txt.txt = nullptr;
             mat->ks_txt.txt = (pmat->txt) ? pmat->txt->txts.front() : nullptr;
         } break;
@@ -303,7 +306,7 @@ bool update_proc_floor_shape(proc_shape* pshp) {
     shp->name = pshp->name;
     shp->mat = mat;
     tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
-        make_uvquad(params.tesselation);
+        make_uvquad(params.level);
     for (auto& p : shp->pos) {
         p *= params.size / 2;
         swap(p.y, p.z);
@@ -327,7 +330,7 @@ bool update_proc_prim_shape(proc_shape* pshp) {
     switch (params.ptype) {
         case proc_prim_shape_type::sphere: {
             tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
-                make_uvsphere(params.tesselation);
+                make_uvsphere(params.level);
         } break;
         default: throw runtime_error("should not have gotten here");
     }
@@ -483,8 +486,11 @@ inline bool draw_procelem_widgets(gl_window* win, proc_scene* scn,
     auto edited = vector<bool>();
     draw_separator_widget(win);
     edited += draw_value_widget(win, "name", txt->name);
-    edited += draw_value_widget(win, "type", txt->type, proc_texture_names());
-    edited += draw_value_widget(win, "resolution", txt->resolution, 128, 4096);
+    edited += draw_value_widget(win, "type", txt->ttype, proc_texture_names());
+    edited += draw_value_widget(win, "resolution", txt->res, 128, 4096);
+    edited += draw_value_widget(win, "tile", txt->tile, 8, 512);
+    edited += draw_color_widget(win, "color0", txt->c0);
+    edited += draw_color_widget(win, "color1", txt->c1);
     if (std::any_of(edited.begin(), edited.end(), [](auto x) { return x; })) {
         update_proc_texture(txt);
         return true;
@@ -500,8 +506,9 @@ inline bool draw_procelem_widgets(gl_window* win, proc_scene* scn,
     auto edited = vector<bool>();
     draw_separator_widget(win);
     edited += draw_value_widget(win, "name", mat->name);
-    edited += draw_value_widget(win, "type", mat->type, proc_material_names());
-    edited += draw_color_widget(win, "color", mat->color);
+    edited += draw_value_widget(win, "type", mat->mtype, proc_material_names());
+    edited += draw_color_widget(win, "color", mat->kb);
+    edited += draw_value_widget(win, "roughness", mat->rs);
     edited += draw_value_widget(win, "texture", mat->txt, txt_names);
     if (std::any_of(edited.begin(), edited.end(), [](auto x) { return x; })) {
         update_proc_material(mat);
@@ -524,16 +531,14 @@ inline bool draw_procelem_widgets(gl_window* win, proc_scene* scn,
         case proc_shape_type::floor: {
             auto& params = shp->floor_params;
             edited += draw_value_widget(win, "size", params.size, 0, 20);
-            edited +=
-                draw_value_widget(win, "tesselation", params.tesselation, 0, 8);
+            edited += draw_value_widget(win, "tesselation", params.level, 0, 8);
         } break;
         case proc_shape_type::prim: {
             auto& params = shp->prim_params;
             edited += draw_value_widget(win, "size", params.size, 0, 20);
+            edited += draw_value_widget(win, "tesselation", params.level, 0, 8);
             edited +=
-                draw_value_widget(win, "tesselation", params.tesselation, 0, 8);
-            edited +=
-                draw_value_widget(win, "subdivision", params.subdivision, 0, 8);
+                draw_value_widget(win, "subdivision", params.subdiv, 0, 8);
         } break;
         default: throw runtime_error("should not have gotten here");
     }
@@ -753,7 +758,11 @@ void run_ui(app_state* app) {
     while (!should_close(win)) {
         // handle mouse and keyboard for navigation
         auto cam = app->scn->cameras[app->shparams.camera_id];
-        handle_camera_navigation(win, cam, app->navigation_fps);
+        if (handle_camera_navigation(win, cam, app->navigation_fps)) {
+            auto pcam = app->pscn->cameras[app->shparams.camera_id];
+            pcam->from = cam->frame.o;
+            pcam->to = cam->frame.o - cam->focus * cam->frame.z;
+        }
 
         // draw
         draw(win);
