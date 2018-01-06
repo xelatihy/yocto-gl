@@ -8996,16 +8996,23 @@ void _init_vertex_buffer(gl_vertex_buffer& buf, int n, int nc,
 }
 
 // Updates the buffer bid with new data.
-void _update_vertex_buffer(
-    gl_vertex_buffer& buf, int n, int nc, const void* values, bool as_float) {
+void _update_vertex_buffer(gl_vertex_buffer& buf, int n, int nc,
+    const void* values, bool as_float, bool dynamic) {
+    auto resize = n * nc != buf._num * buf._ncomp || as_float != buf._float;
     buf._num = n;
     buf._ncomp = nc;
     buf._float = as_float;
     assert(gl_check_error());
     glBindBuffer(GL_ARRAY_BUFFER, buf._bid);
-    glBufferSubData(GL_ARRAY_BUFFER, 0,
-        buf._num * buf._ncomp * ((as_float) ? sizeof(float) : sizeof(int)),
-        values);
+    if (resize) {
+        glBufferData(GL_ARRAY_BUFFER,
+            buf._num * buf._ncomp * ((as_float) ? sizeof(float) : sizeof(int)),
+            values, (dynamic) ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
+    } else {
+        glBufferSubData(GL_ARRAY_BUFFER, 0,
+            buf._num * buf._ncomp * ((as_float) ? sizeof(float) : sizeof(int)),
+            values);
+    }
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     assert(gl_check_error());
 }
@@ -9057,13 +9064,20 @@ void _init_element_buffer(
 
 // Updates the buffer bid with new data.
 void _update_element_buffer(
-    gl_element_buffer& buf, int n, int nc, const int* values) {
+    gl_element_buffer& buf, int n, int nc, const int* values, bool dynamic) {
+    auto resize = n * nc != buf._num * buf._ncomp;
     buf._num = n;
     buf._ncomp = nc;
     assert(gl_check_error());
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buf._bid);
-    glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0,
-        buf._num * buf._ncomp * sizeof(int), values);
+    if (resize) {
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER,
+            buf._num * buf._ncomp * sizeof(int), values,
+            (dynamic) ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
+    } else {
+        glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0,
+            buf._num * buf._ncomp * sizeof(int), values);
+    }
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     assert(gl_check_error());
 }
@@ -9920,7 +9934,8 @@ gl_stdsurface_state* make_stdsurface_state() {
 
 // Init shading
 void update_stdsurface_state(gl_stdsurface_state* st, const scene* scn,
-    const gl_stdsurface_params& params) {
+    const gl_stdsurface_params& params, const vector<shape*>& refresh_shapes,
+    const vector<texture*>& refresh_textures) {
     // update textures -----------------------------------------------------
     for (auto txt : scn->textures) {
         if (st->txt.find(txt) != st->txt.end()) continue;
@@ -9928,6 +9943,16 @@ void update_stdsurface_state(gl_stdsurface_state* st, const scene* scn,
             st->txt[txt] = make_texture(txt->hdr, true, true, true);
         } else if (txt->ldr) {
             st->txt[txt] = make_texture(txt->ldr, true, true, true);
+        } else
+            assert(false);
+    }
+
+    // refresh textures ----------------------------------------------------
+    for (auto txt : refresh_textures) {
+        if (txt->hdr) {
+            update_texture(st->txt[txt], txt->hdr);
+        } else if (txt->ldr) {
+            update_texture(st->txt[txt], txt->ldr);
         } else
             assert(false);
     }
@@ -9961,6 +9986,36 @@ void update_stdsurface_state(gl_stdsurface_state* st, const scene* scn,
             auto edges = get_edges(
                 shp->lines, shp->triangles, shp->quads + shp->quads_pos);
             st->vbo[shp].edges = make_element_buffer(edges);
+        }
+    }
+
+    // refresh vbos --------------------------------------------------------
+    for (auto shp : refresh_shapes) {
+        if (!shp->pos.empty()) update_vertex_buffer(st->vbo[shp].pos, shp->pos);
+        if (!shp->norm.empty())
+            update_vertex_buffer(st->vbo[shp].norm, shp->norm);
+        if (!shp->texcoord.empty())
+            update_vertex_buffer(st->vbo[shp].texcoord, shp->texcoord);
+        if (!shp->color.empty())
+            update_vertex_buffer(st->vbo[shp].color, shp->color);
+        if (!shp->tangsp.empty())
+            update_vertex_buffer(st->vbo[shp].tangsp, shp->tangsp);
+        if (!shp->points.empty())
+            update_element_buffer(st->vbo[shp].points, shp->points);
+        if (!shp->lines.empty())
+            update_element_buffer(st->vbo[shp].lines, shp->lines);
+        if (!shp->triangles.empty()) {
+            update_element_buffer(st->vbo[shp].triangles, shp->triangles);
+        }
+        if (!shp->quads.empty()) {
+            auto triangles = convert_quads_to_triangles(shp->quads);
+            update_element_buffer(st->vbo[shp].quads, triangles);
+        }
+        if (!shp->triangles.empty() || !shp->quads.empty() ||
+            !shp->quads_pos.empty()) {
+            auto edges = get_edges(
+                shp->lines, shp->triangles, shp->quads + shp->quads_pos);
+            update_element_buffer(st->vbo[shp].edges, edges);
         }
     }
 

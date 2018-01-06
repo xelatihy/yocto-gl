@@ -2116,6 +2116,12 @@ and bug fixes are reported here.</p>
 
 
 <p>stream write</p>
+<h4>Function operator &lt; &lt;()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">ostream</span><span class="o">&amp;</span> <span class="k">operator</span><span class="o">&lt;&lt;</span><span class="p">(</span><span class="n">ostream</span><span class="o">&amp;</span> <span class="n">os</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec4b</span><span class="o">&amp;</span> <span class="n">a</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>stream write</p>
 <h4>Function operator > >()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">istream</span><span class="o">&amp;</span> <span class="k">operator</span><span class="o">&gt;&gt;</span><span class="p">(</span><span class="n">istream</span><span class="o">&amp;</span> <span class="n">is</span><span class="p">,</span> <span class="n">vec2f</span><span class="o">&amp;</span> <span class="n">a</span><span class="p">);</span>
 </code></pre></div>
@@ -2148,6 +2154,12 @@ and bug fixes are reported here.</p>
 <p>stream read</p>
 <h4>Function operator > >()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">istream</span><span class="o">&amp;</span> <span class="k">operator</span><span class="o">&gt;&gt;</span><span class="p">(</span><span class="n">istream</span><span class="o">&amp;</span> <span class="n">is</span><span class="p">,</span> <span class="n">vec4i</span><span class="o">&amp;</span> <span class="n">a</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>stream read</p>
+<h4>Function operator > >()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">istream</span><span class="o">&amp;</span> <span class="k">operator</span><span class="o">&gt;&gt;</span><span class="p">(</span><span class="n">istream</span><span class="o">&amp;</span> <span class="n">is</span><span class="p">,</span> <span class="n">vec4b</span><span class="o">&amp;</span> <span class="n">a</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -8777,71 +8789,71 @@ Returns the texture id.</p>
 
 <p>Creates a buffer.</p>
 <h4>Function update_vertex_buffer()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_vertex_buffer</span><span class="p">(</span>
-    <span class="n">gl_vertex_buffer</span><span class="o">&amp;</span> <span class="n">buf</span><span class="p">,</span> <span class="kt">int</span> <span class="n">num</span><span class="p">,</span> <span class="kt">int</span> <span class="n">ncomp</span><span class="p">,</span> <span class="k">const</span> <span class="kt">float</span><span class="o">*</span> <span class="n">values</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_vertex_buffer</span><span class="p">(</span><span class="n">gl_vertex_buffer</span><span class="o">&amp;</span> <span class="n">buf</span><span class="p">,</span> <span class="kt">int</span> <span class="n">num</span><span class="p">,</span> <span class="kt">int</span> <span class="n">ncomp</span><span class="p">,</span>
+    <span class="k">const</span> <span class="kt">float</span><span class="o">*</span> <span class="n">values</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">dynamic</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Updates the buffer with new data.</p>
+<h4>Function update_vertex_buffer()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_vertex_buffer</span><span class="p">(</span><span class="n">gl_vertex_buffer</span><span class="o">&amp;</span> <span class="n">buf</span><span class="p">,</span> <span class="kt">int</span> <span class="n">num</span><span class="p">,</span> <span class="kt">int</span> <span class="n">ncomp</span><span class="p">,</span>
+    <span class="k">const</span> <span class="kt">int</span><span class="o">*</span> <span class="n">values</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">dynamic</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Updates the buffer with new data.</p>
 <h4>Function update_vertex_buffer()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_vertex_buffer</span><span class="p">(</span>
-    <span class="n">gl_vertex_buffer</span><span class="o">&amp;</span> <span class="n">buf</span><span class="p">,</span> <span class="kt">int</span> <span class="n">num</span><span class="p">,</span> <span class="kt">int</span> <span class="n">ncomp</span><span class="p">,</span> <span class="k">const</span> <span class="kt">int</span><span class="o">*</span> <span class="n">values</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Updates the buffer with new data.</p>
-<h4>Function update_vertex_buffer()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_vertex_buffer</span><span class="p">(</span>
-    <span class="n">gl_vertex_buffer</span><span class="o">&amp;</span> <span class="n">buf</span><span class="p">,</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;&amp;</span> <span class="n">values</span><span class="p">);</span>
+    <span class="n">gl_vertex_buffer</span><span class="o">&amp;</span> <span class="n">buf</span><span class="p">,</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;&amp;</span> <span class="n">values</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">dynamic</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Updates the buffer bid with new data.</p>
 <h4>Function update_vertex_buffer()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_vertex_buffer</span><span class="p">(</span>
-    <span class="n">gl_vertex_buffer</span><span class="o">&amp;</span> <span class="n">buf</span><span class="p">,</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;&amp;</span> <span class="n">values</span><span class="p">);</span>
+    <span class="n">gl_vertex_buffer</span><span class="o">&amp;</span> <span class="n">buf</span><span class="p">,</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;&amp;</span> <span class="n">values</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">dynamic</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Updates the buffer bid with new data.</p>
 <h4>Function update_vertex_buffer()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_vertex_buffer</span><span class="p">(</span>
-    <span class="n">gl_vertex_buffer</span><span class="o">&amp;</span> <span class="n">buf</span><span class="p">,</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">values</span><span class="p">);</span>
+    <span class="n">gl_vertex_buffer</span><span class="o">&amp;</span> <span class="n">buf</span><span class="p">,</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">values</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">dynamic</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Updates the buffer bid with new data.</p>
 <h4>Function update_vertex_buffer()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_vertex_buffer</span><span class="p">(</span>
-    <span class="n">gl_vertex_buffer</span><span class="o">&amp;</span> <span class="n">buf</span><span class="p">,</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4f</span><span class="o">&gt;&amp;</span> <span class="n">values</span><span class="p">);</span>
+    <span class="n">gl_vertex_buffer</span><span class="o">&amp;</span> <span class="n">buf</span><span class="p">,</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4f</span><span class="o">&gt;&amp;</span> <span class="n">values</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">dynamic</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Updates the buffer bid with new data.</p>
 <h4>Function update_vertex_buffer()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_vertex_buffer</span><span class="p">(</span>
-    <span class="n">gl_vertex_buffer</span><span class="o">&amp;</span> <span class="n">buf</span><span class="p">,</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;&amp;</span> <span class="n">values</span><span class="p">);</span>
+    <span class="n">gl_vertex_buffer</span><span class="o">&amp;</span> <span class="n">buf</span><span class="p">,</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;&amp;</span> <span class="n">values</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">dynamic</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Updates the buffer bid with new data.</p>
 <h4>Function update_vertex_buffer()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_vertex_buffer</span><span class="p">(</span>
-    <span class="n">gl_vertex_buffer</span><span class="o">&amp;</span> <span class="n">buf</span><span class="p">,</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2i</span><span class="o">&gt;&amp;</span> <span class="n">values</span><span class="p">);</span>
+    <span class="n">gl_vertex_buffer</span><span class="o">&amp;</span> <span class="n">buf</span><span class="p">,</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2i</span><span class="o">&gt;&amp;</span> <span class="n">values</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">dynamic</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Updates the buffer bid with new data.</p>
 <h4>Function update_vertex_buffer()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_vertex_buffer</span><span class="p">(</span>
-    <span class="n">gl_vertex_buffer</span><span class="o">&amp;</span> <span class="n">buf</span><span class="p">,</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;&amp;</span> <span class="n">values</span><span class="p">);</span>
+    <span class="n">gl_vertex_buffer</span><span class="o">&amp;</span> <span class="n">buf</span><span class="p">,</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;&amp;</span> <span class="n">values</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">dynamic</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Updates the buffer bid with new data.</p>
 <h4>Function update_vertex_buffer()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_vertex_buffer</span><span class="p">(</span>
-    <span class="n">gl_vertex_buffer</span><span class="o">&amp;</span> <span class="n">buf</span><span class="p">,</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;&amp;</span> <span class="n">values</span><span class="p">);</span>
+    <span class="n">gl_vertex_buffer</span><span class="o">&amp;</span> <span class="n">buf</span><span class="p">,</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;&amp;</span> <span class="n">values</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">dynamic</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -8924,36 +8936,36 @@ Returns the texture id.</p>
 
 <p>Creates a buffer.</p>
 <h4>Function update_element_buffer()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_element_buffer</span><span class="p">(</span>
-    <span class="n">gl_element_buffer</span><span class="o">&amp;</span> <span class="n">buf</span><span class="p">,</span> <span class="kt">int</span> <span class="n">num</span><span class="p">,</span> <span class="kt">int</span> <span class="n">ncomp</span><span class="p">,</span> <span class="k">const</span> <span class="kt">int</span><span class="o">*</span> <span class="n">values</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_element_buffer</span><span class="p">(</span><span class="n">gl_element_buffer</span><span class="o">&amp;</span> <span class="n">buf</span><span class="p">,</span> <span class="kt">int</span> <span class="n">num</span><span class="p">,</span> <span class="kt">int</span> <span class="n">ncomp</span><span class="p">,</span>
+    <span class="k">const</span> <span class="kt">int</span><span class="o">*</span> <span class="n">values</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">dynamic</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Updates the buffer with new data.</p>
 <h4>Function update_element_buffer()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_element_buffer</span><span class="p">(</span>
-    <span class="n">gl_element_buffer</span><span class="o">&amp;</span> <span class="n">buf</span><span class="p">,</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;&amp;</span> <span class="n">values</span><span class="p">);</span>
+    <span class="n">gl_element_buffer</span><span class="o">&amp;</span> <span class="n">buf</span><span class="p">,</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;&amp;</span> <span class="n">values</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">dynamic</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Updates the buffer bid with new data.</p>
 <h4>Function update_element_buffer()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_element_buffer</span><span class="p">(</span>
-    <span class="n">gl_element_buffer</span><span class="o">&amp;</span> <span class="n">buf</span><span class="p">,</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2i</span><span class="o">&gt;&amp;</span> <span class="n">values</span><span class="p">);</span>
+    <span class="n">gl_element_buffer</span><span class="o">&amp;</span> <span class="n">buf</span><span class="p">,</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2i</span><span class="o">&gt;&amp;</span> <span class="n">values</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">dynamic</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Updates the buffer bid with new data.</p>
 <h4>Function update_element_buffer()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_element_buffer</span><span class="p">(</span>
-    <span class="n">gl_element_buffer</span><span class="o">&amp;</span> <span class="n">buf</span><span class="p">,</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;&amp;</span> <span class="n">values</span><span class="p">);</span>
+    <span class="n">gl_element_buffer</span><span class="o">&amp;</span> <span class="n">buf</span><span class="p">,</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;&amp;</span> <span class="n">values</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">dynamic</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Updates the buffer bid with new data.</p>
 <h4>Function update_element_buffer()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_element_buffer</span><span class="p">(</span>
-    <span class="n">gl_element_buffer</span><span class="o">&amp;</span> <span class="n">buf</span><span class="p">,</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;&amp;</span> <span class="n">values</span><span class="p">);</span>
+    <span class="n">gl_element_buffer</span><span class="o">&amp;</span> <span class="n">buf</span><span class="p">,</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;&amp;</span> <span class="n">values</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">dynamic</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -9355,6 +9367,40 @@ is either a buffer bid or a single value def
 
 <p>Draw an texture tid of size img_w, img_h on a window of size win_w,
 win_h with top-left corner at ox, oy with a zoom zoom.</p>
+<h4>Struct gl_stdimage_params</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">gl_stdimage_params</span> <span class="p">{</span>
+    <span class="n">vec2i</span> <span class="n">win_size</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">};</span>
+    <span class="n">vec2f</span> <span class="n">offset</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">};</span>
+    <span class="kt">float</span> <span class="n">zoom</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+    <span class="kt">float</span> <span class="n">exposure</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+    <span class="kt">float</span> <span class="n">gamma</span> <span class="o">=</span> <span class="mf">2.2f</span><span class="p">;</span>
+    <span class="kt">bool</span> <span class="n">filmic</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
+    <span class="n">vec4f</span> <span class="n">background</span> <span class="o">=</span> <span class="n">zero4f</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+
+<p>Params for  gl_stdimage_program drawing. This is just a way to pack all
+params together for the above functions.</p>
+<ul>
+<li>Members:<ul>
+<li>win_size:      window size</li>
+<li>offset:      image offset</li>
+<li>zoom:      image zoom</li>
+<li>exposure:      tonemap exposure</li>
+<li>gamma:      tonemap gamma</li>
+<li>filmic:      tonemap filmic</li>
+<li>background:      image background</li>
+</ul>
+</li>
+</ul>
+<h4>Function draw_image()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">draw_image</span><span class="p">(</span><span class="n">gl_stdimage_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">gl_texture</span><span class="o">&amp;</span> <span class="n">txt</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">gl_stdimage_params</span><span class="o">&amp;</span> <span class="n">params</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">clear_background</span> <span class="o">=</span> <span class="nb">true</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>As above but includes an exposure/gamma correction.</p>
 <h4>Struct gl_stdsurface_program</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">gl_stdsurface_program</span> <span class="p">{</span>
 </code></pre></div>
@@ -9522,8 +9568,9 @@ public API.</p>
 
 <p>Initialize gl_stdsurface_program draw state</p>
 <h4>Function update_stdsurface_state()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">update_stdsurface_state</span><span class="p">(</span><span class="n">gl_stdsurface_state</span><span class="o">*</span> <span class="n">st</span><span class="p">,</span> <span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">gl_stdsurface_params</span><span class="o">&amp;</span> <span class="n">params</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="n">update_stdsurface_state</span><span class="p">(</span><span class="n">gl_stdsurface_state</span><span class="o">*</span> <span class="n">st</span><span class="p">,</span> <span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">gl_stdsurface_params</span><span class="o">&amp;</span> <span class="n">params</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">shape</span><span class="o">*&gt;&amp;</span> <span class="n">refresh_shapes</span> <span class="o">=</span><span class="p">;</span>
 </code></pre></div>
 
 
@@ -10009,6 +10056,21 @@ and textures on the GPU.</p>
 
 
 <p>Tonemapping widgets</p>
+<h4>Function draw_imageview_widgets()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">draw_imageview_widgets</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span>
+    <span class="n">gl_stdimage_params</span><span class="o">&amp;</span> <span class="n">params</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">show_tonemap</span> <span class="o">=</span> <span class="nb">true</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Image view widgets</p>
+<h4>Function draw_imageinspect_widgets()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">draw_imageinspect_widgets</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">image4f</span><span class="o">&amp;</span> <span class="n">hdr</span><span class="p">,</span> <span class="k">const</span> <span class="n">image4b</span><span class="o">&amp;</span> <span class="n">ldr</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec2f</span><span class="o">&amp;</span> <span class="n">mouse_pos</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">gl_stdimage_params</span><span class="o">&amp;</span> <span class="n">params</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Image inspection widgets</p>
 <h4>Function draw_camera_widget()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">draw_camera_widget</span><span class="p">(</span>
     <span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="kt">int</span><span class="o">&amp;</span> <span class="n">cam_idx</span><span class="p">);</span>

@@ -33,11 +33,11 @@ using namespace ygl;
 // Procedural camera
 struct proc_camera {
     string name = "cam";
-    vec3f from = {0, 0, -4};
-    vec3f to = {0, 0, 0};
+    vec3f from = {0, 4, 10};
+    vec3f to = {0, 1, 0};
     vec3f up = {0, 1, 0};
-    float yfov = 1;
-    float aspect = 1;
+    float yfov = 15 * pif / 180;
+    float aspect = 16.0f / 9.0f;
 
     vector<camera*> cams;
 
@@ -48,6 +48,16 @@ struct proc_camera {
 
 // Procedural shape type
 enum struct proc_shape_type { none, floor, prim };
+
+// Names for enumeration
+inline const vector<pair<string, proc_shape_type>>& proc_shape_names() {
+    static auto names = vector<pair<string, proc_shape_type>>{
+        {"none", proc_shape_type::none},
+        {"floor", proc_shape_type::floor},
+        {"prim", proc_shape_type::prim},
+    };
+    return names;
+}
 
 // Procedural floor shape params
 struct proc_floor_shape_params {
@@ -60,7 +70,7 @@ struct proc_floor_shape_params {
 struct proc_shape {
     string name = "shp";
     proc_shape_type type = proc_shape_type::none;
-    
+
     proc_floor_shape_params floor_params = {};
 
     vector<shape*> shps;
@@ -74,6 +84,14 @@ struct proc_shape {
 
 // Procedural instance type
 enum struct proc_instance_type { single };
+
+// Names for enumeration
+inline const vector<pair<string, proc_instance_type>>& proc_instance_names() {
+    static auto names = vector<pair<string, proc_instance_type>>{
+        {"single", proc_instance_type::single},
+    };
+    return names;
+}
 
 // Procedural instances
 struct proc_instance {
@@ -96,18 +114,18 @@ struct proc_scene {
     vector<proc_instance*> instances;
 
     scene* scn = nullptr;
-    
+
     ~proc_scene() {
-        if(scn) {
+        if (scn) {
             scn->cameras.clear();
             scn->shapes.clear();
             scn->materials.clear();
             scn->instances.clear();
             delete scn;
         }
-        for(auto e : cameras) delete e;
-        for(auto e : shapes) delete e;
-        for(auto e : instances) delete e;
+        for (auto e : cameras) delete e;
+        for (auto e : shapes) delete e;
+        for (auto e : instances) delete e;
     }
 };
 
@@ -117,16 +135,17 @@ proc_scene* init_proc_scene() {
 
     auto pcam = new proc_camera();
     pscn->cameras += pcam;
-    
+
     auto pshp = new proc_shape();
     pscn->shapes += pshp;
+    pshp->name = "floor";
     pshp->type = proc_shape_type::floor;
 
     auto pist = new proc_instance();
     pscn->instances += pist;
     pist->name = "floor";
     pist->shp = pshp;
-    
+
     return pscn;
 }
 
@@ -152,7 +171,7 @@ bool update_proc_camera(proc_camera* pcam) {
     cam->yfov = pcam->yfov;
     cam->aspect = pcam->aspect;
     cam->near = 0.01f;
-    cam->far = 10.0f;
+    cam->far = 100.0f;
     cam->aperture = 0;
     cam->focus = length(pcam->from - pcam->to);
     return num_changed;
@@ -162,20 +181,26 @@ bool update_proc_camera(proc_camera* pcam) {
 bool update_proc_floor_shape(proc_shape* pshp) {
     auto num_changed_shp = add_proc_objects(pshp->shps, 1);
     auto num_changed_mat = add_proc_objects(pshp->mats, 1);
-    
+
     auto& params = pshp->floor_params;
     auto shp = pshp->shps[0];
     auto mat = pshp->mats[0];
 
     shp->name = pshp->name;
-    tie(shp->quads, shp->pos, shp->norm, shp->texcoord) = make_uvquad(params.tesselation);
-    
+    tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
+        make_uvquad(params.tesselation);
+    for (auto& p : shp->pos) {
+        p *= params.size / 2;
+        swap(p.y, p.z);
+    }
+    for (auto& n : shp->norm) n = {0, 1, 0};
+
     mat->name = pshp->name;
     mat->mtype = material_type::specular_roughness;
-    mat->kd = {0.2f,0.2f,0.2f};
+    mat->kd = {0.2f, 0.2f, 0.2f};
     mat->ks = zero3f;
     mat->rs = 1;
-    
+
     return num_changed_shp || num_changed_mat;
 }
 
@@ -253,6 +278,130 @@ void update_proc_scene(proc_scene* pscn) {
     }
 }
 
+inline void draw_proctree_widgets(
+    gl_window* win, const string& lbl, proc_camera* cam, void*& selection) {
+    draw_tree_widget_leaf(win, lbl + cam->name, selection, cam);
+}
+
+inline void draw_proctree_widgets(
+    gl_window* win, const string& lbl, proc_shape* shp, void*& selection) {
+    draw_tree_widget_leaf(win, lbl + shp->name, selection, shp);
+}
+
+inline void draw_proctree_widgets(
+    gl_window* win, const string& lbl, proc_instance* ist, void*& selection) {
+    if (draw_tree_widget_begin(win, lbl + ist->name, selection, ist)) {
+        if (ist->shp)
+            draw_proctree_widgets(win, "shape: ", ist->shp, selection);
+        draw_tree_widget_end(win);
+    }
+}
+
+inline void draw_proctree_widgets(
+    gl_window* win, const string& lbl, proc_scene* scn, void*& selection) {
+    if (draw_tree_widget_begin(win, lbl + "cameras")) {
+        for (auto cam : scn->cameras)
+            draw_proctree_widgets(win, "", cam, selection);
+        draw_tree_widget_end(win);
+    }
+
+    if (draw_tree_widget_begin(win, lbl + "shapes")) {
+        for (auto msh : scn->shapes)
+            draw_proctree_widgets(win, "", msh, selection);
+        draw_tree_widget_end(win);
+    }
+
+    if (draw_tree_widget_begin(win, lbl + "instances")) {
+        for (auto ist : scn->instances)
+            draw_proctree_widgets(win, "", ist, selection);
+        draw_tree_widget_end(win);
+    }
+}
+
+inline bool draw_procelem_widgets(gl_window* win, proc_scene* scn,
+    proc_shape* shp, void*& selection,
+    const unordered_map<texture*, gl_texture>& gl_txt) {
+    auto edited = vector<bool>();
+    draw_separator_widget(win);
+    edited += draw_value_widget(win, "name", shp->name);
+    edited += draw_value_widget(win, "type", shp->type, proc_shape_names());
+    switch (shp->type) {
+        case proc_shape_type::none: break;
+        case proc_shape_type::floor: {
+            auto& params = shp->floor_params;
+            edited += draw_value_widget(win, "size", params.size, 0, 20);
+            edited += draw_value_widget(
+                win, "tesselation", params.tesselation, 0, 10);
+            edited += draw_value_widget(win, "textured", params.textured);
+        } break;
+        case proc_shape_type::prim: {
+        } break;
+        default: throw runtime_error("should not have gotten here");
+    }
+    return std::any_of(edited.begin(), edited.end(), [](auto x) { return x; });
+}
+
+inline bool draw_procelem_widgets(gl_window* win, proc_scene* scn,
+    proc_camera* cam, void*& selection,
+    const unordered_map<texture*, gl_texture>& gl_txt) {
+    auto edited = vector<bool>();
+    draw_separator_widget(win);
+    edited += draw_value_widget(win, "name", cam->name);
+    edited += draw_value_widget(win, "from", cam->yfov, -10, 10);
+    edited += draw_value_widget(win, "to", cam->yfov, -10, 10);
+    edited += draw_value_widget(win, "up", cam->yfov, -10, 10);
+    edited += draw_value_widget(win, "yfov", cam->yfov, 0.1, 4);
+    edited += draw_value_widget(win, "aspect", cam->aspect, 0.1, 4);
+    return std::any_of(edited.begin(), edited.end(), [](auto x) { return x; });
+}
+
+inline bool draw_procelem_widgets(gl_window* win, proc_scene* scn,
+    proc_instance* ist, void*& selection,
+    const unordered_map<texture*, gl_texture>& gl_txt) {
+    auto shp_names = vector<pair<string, proc_shape*>>{{"<none>", nullptr}};
+    for (auto shp : scn->shapes) shp_names.push_back({shp->name, shp});
+
+    auto edited = vector<bool>();
+    draw_separator_widget(win);
+    edited += draw_value_widget(win, "name", ist->name);
+    edited += draw_value_widget(win, "frame", ist->frame, -10, 10);
+    edited += draw_value_widget(win, "shape", ist->shp, shp_names);
+    edited += draw_value_widget(win, "type", ist->type, proc_instance_names());
+    return std::any_of(edited.begin(), edited.end(), [](auto x) { return x; });
+}
+
+inline bool draw_procelem_widgets(gl_window* win, proc_scene* scn,
+    void*& selection, const unordered_map<texture*, gl_texture>& gl_txt) {
+    for (auto cam : scn->cameras) {
+        if (cam == selection)
+            return draw_procelem_widgets(win, scn, cam, selection, gl_txt);
+    }
+
+    for (auto shp : scn->shapes) {
+        if (shp == selection)
+            return draw_procelem_widgets(win, scn, shp, selection, gl_txt);
+    }
+
+    for (auto ist : scn->instances) {
+        if (ist == selection)
+            return draw_procelem_widgets(win, scn, ist, selection, gl_txt);
+    }
+
+    return false;
+}
+
+inline bool draw_procscene_widgets(gl_window* win, const string& lbl,
+    proc_scene* scn, void*& selection,
+    const unordered_map<texture*, gl_texture>& gl_txt) {
+    if (draw_header_widget(win, lbl)) {
+        // draw_scroll_widget_begin(win, "model", 240, false);
+        draw_proctree_widgets(win, "", scn, selection);
+        // draw_scroll_widget_end(win);
+        return draw_procelem_widgets(win, scn, selection, gl_txt);
+    } else
+        return false;
+}
+
 // Application state
 struct app_state {
     proc_scene* pscn = nullptr;
@@ -264,6 +413,7 @@ struct app_state {
     gl_stdsurface_state* shstate = nullptr;
     bool navigation_fps = false;
     void* selection = nullptr;
+    bool scene_updated = false;
 
     ~app_state() {
         if (shstate) delete shstate;
@@ -301,12 +451,26 @@ inline void draw(gl_window* win) {
         draw_value_widget(win, "fps", app->navigation_fps);
         draw_tonemap_widgets(win, "", app->shparams.exposure,
             app->shparams.gamma, app->shparams.filmic);
+        app->scene_updated = draw_procscene_widgets(
+            win, "proc scene", app->pscn, app->selection, app->shstate->txt);
         draw_scene_widgets(
             win, "scene", app->scn, app->selection, app->shstate->txt);
     }
     end_widgets(win);
 
     swap_buffers(win);
+}
+
+// update the scene from a changed to the proc scene
+void update(app_state* app) {
+    if (!app->scene_updated) return;
+    for (auto pshp : app->pscn->shapes) {
+        if (pshp != app->selection) continue;
+        update_proc_shape(pshp);
+        update_stdsurface_state(
+            app->shstate, app->scn, app->shparams, pshp->shps, {});
+    }
+    app->scene_updated = false;
 }
 
 // run ui loop
@@ -331,6 +495,9 @@ void run_ui(app_state* app) {
 
         // draw
         draw(win);
+
+        // update
+        update(app);
 
         // event hadling
         poll_events(win);
@@ -374,13 +541,13 @@ int main(int argc, char* argv[]) {
     // scene loading
     // log_info("loading scene {}", app->filename);
     // DISABLED FOR TESTING
-    
+
     // make a test scene
     app->pscn = init_proc_scene();
-    
+
     // convert to scene
     update_proc_scene(app->pscn);
-    
+
     // fix scene pointer
     app->scn = app->pscn->scn;
 

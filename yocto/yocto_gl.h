@@ -10576,8 +10576,8 @@ void _init_vertex_buffer(gl_vertex_buffer& buf, int n, int nc,
     const void* values, bool as_float, bool dynamic);
 
 // Updates the buffer bid with new data.
-void _update_vertex_buffer(
-    gl_vertex_buffer& buf, int n, int nc, const void* values, bool as_float);
+void _update_vertex_buffer(gl_vertex_buffer& buf, int n, int nc,
+    const void* values, bool as_float, bool dynamic);
 
 /// Creates a buffer.
 inline gl_vertex_buffer make_vertex_buffer(
@@ -10649,63 +10649,69 @@ inline gl_vertex_buffer make_vertex_buffer(
 }
 
 /// Updates the buffer with new data.
-inline void update_vertex_buffer(
-    gl_vertex_buffer& buf, int num, int ncomp, const float* values) {
-    _update_vertex_buffer(buf, num, ncomp, values, true);
+inline void update_vertex_buffer(gl_vertex_buffer& buf, int num, int ncomp,
+    const float* values, bool dynamic = false) {
+    _update_vertex_buffer(buf, num, ncomp, values, true, dynamic);
 }
 
 /// Updates the buffer with new data.
-inline void update_vertex_buffer(
-    gl_vertex_buffer& buf, int num, int ncomp, const int* values) {
-    _update_vertex_buffer(buf, num, ncomp, values, false);
+inline void update_vertex_buffer(gl_vertex_buffer& buf, int num, int ncomp,
+    const int* values, bool dynamic = false) {
+    _update_vertex_buffer(buf, num, ncomp, values, false, dynamic);
 }
 
 /// Updates the buffer bid with new data.
 inline void update_vertex_buffer(
-    gl_vertex_buffer& buf, const vector<float>& values) {
-    update_vertex_buffer(buf, values.size(), 1, values.data());
+    gl_vertex_buffer& buf, const vector<float>& values, bool dynamic = false) {
+    update_vertex_buffer(buf, values.size(), 1, values.data(), dynamic);
 }
 
 /// Updates the buffer bid with new data.
 inline void update_vertex_buffer(
-    gl_vertex_buffer& buf, const vector<vec2f>& values) {
-    update_vertex_buffer(buf, values.size(), 2, (const float*)values.data());
+    gl_vertex_buffer& buf, const vector<vec2f>& values, bool dynamic = false) {
+    update_vertex_buffer(
+        buf, values.size(), 2, (const float*)values.data(), dynamic);
 }
 
 /// Updates the buffer bid with new data.
 inline void update_vertex_buffer(
-    gl_vertex_buffer& buf, const vector<vec3f>& values) {
-    update_vertex_buffer(buf, values.size(), 3, (const float*)values.data());
+    gl_vertex_buffer& buf, const vector<vec3f>& values, bool dynamic = false) {
+    update_vertex_buffer(
+        buf, values.size(), 3, (const float*)values.data(), dynamic);
 }
 
 /// Updates the buffer bid with new data.
 inline void update_vertex_buffer(
-    gl_vertex_buffer& buf, const vector<vec4f>& values) {
-    update_vertex_buffer(buf, values.size(), 4, (const float*)values.data());
+    gl_vertex_buffer& buf, const vector<vec4f>& values, bool dynamic = false) {
+    update_vertex_buffer(
+        buf, values.size(), 4, (const float*)values.data(), dynamic);
 }
 
 /// Updates the buffer bid with new data.
 inline void update_vertex_buffer(
-    gl_vertex_buffer& buf, const vector<int>& values) {
-    update_vertex_buffer(buf, values.size(), 1, values.data());
+    gl_vertex_buffer& buf, const vector<int>& values, bool dynamic = false) {
+    update_vertex_buffer(buf, values.size(), 1, values.data(), dynamic);
 }
 
 /// Updates the buffer bid with new data.
 inline void update_vertex_buffer(
-    gl_vertex_buffer& buf, const vector<vec2i>& values) {
-    update_vertex_buffer(buf, values.size(), 2, (const int*)values.data());
+    gl_vertex_buffer& buf, const vector<vec2i>& values, bool dynamic = false) {
+    update_vertex_buffer(
+        buf, values.size(), 2, (const int*)values.data(), dynamic);
 }
 
 /// Updates the buffer bid with new data.
 inline void update_vertex_buffer(
-    gl_vertex_buffer& buf, const vector<vec3i>& values) {
-    update_vertex_buffer(buf, values.size(), 3, (const int*)values.data());
+    gl_vertex_buffer& buf, const vector<vec3i>& values, bool dynamic = false) {
+    update_vertex_buffer(
+        buf, values.size(), 3, (const int*)values.data(), dynamic);
 }
 
 /// Updates the buffer bid with new data.
 inline void update_vertex_buffer(
-    gl_vertex_buffer& buf, const vector<vec4i>& values) {
-    update_vertex_buffer(buf, values.size(), 4, (const int*)values.data());
+    gl_vertex_buffer& buf, const vector<vec4i>& values, bool dynamic = false) {
+    update_vertex_buffer(
+        buf, values.size(), 4, (const int*)values.data(), dynamic);
 }
 
 /// Bind the buffer at a particular attribute location
@@ -10752,7 +10758,7 @@ void _init_element_buffer(
 
 // Updates the buffer bid with new data.
 void _update_element_buffer(
-    gl_element_buffer& buf, int n, int nc, const int* values);
+    gl_element_buffer& buf, int n, int nc, const int* values, bool dynamic);
 
 /// Creates a buffer.
 inline gl_element_buffer make_element_buffer(
@@ -10790,33 +10796,36 @@ inline gl_element_buffer make_element_buffer(
 }
 
 /// Updates the buffer with new data.
-inline void update_element_buffer(
-    gl_element_buffer& buf, int num, int ncomp, const int* values) {
-    _update_element_buffer(buf, num, ncomp, values);
+inline void update_element_buffer(gl_element_buffer& buf, int num, int ncomp,
+    const int* values, bool dynamic = false) {
+    _update_element_buffer(buf, num, ncomp, values, dynamic);
 }
 
 /// Updates the buffer bid with new data.
 inline void update_element_buffer(
-    gl_element_buffer& buf, const vector<int>& values) {
-    update_element_buffer(buf, values.size(), 1, values.data());
+    gl_element_buffer& buf, const vector<int>& values, bool dynamic = false) {
+    update_element_buffer(buf, values.size(), 1, values.data(), dynamic);
 }
 
 /// Updates the buffer bid with new data.
 inline void update_element_buffer(
-    gl_element_buffer& buf, const vector<vec2i>& values) {
-    update_element_buffer(buf, values.size(), 2, (const int*)values.data());
+    gl_element_buffer& buf, const vector<vec2i>& values, bool dynamic = false) {
+    update_element_buffer(
+        buf, values.size(), 2, (const int*)values.data(), dynamic);
 }
 
 /// Updates the buffer bid with new data.
 inline void update_element_buffer(
-    gl_element_buffer& buf, const vector<vec3i>& values) {
-    update_element_buffer(buf, values.size(), 3, (const int*)values.data());
+    gl_element_buffer& buf, const vector<vec3i>& values, bool dynamic = false) {
+    update_element_buffer(
+        buf, values.size(), 3, (const int*)values.data(), dynamic);
 }
 
 /// Updates the buffer bid with new data.
 inline void update_element_buffer(
-    gl_element_buffer& buf, const vector<vec4i>& values) {
-    update_element_buffer(buf, values.size(), 4, (const int*)values.data());
+    gl_element_buffer& buf, const vector<vec4i>& values, bool dynamic = false) {
+    update_element_buffer(
+        buf, values.size(), 4, (const int*)values.data(), dynamic);
 }
 
 /// Draws elements.
@@ -11535,7 +11544,9 @@ gl_stdsurface_state* make_stdsurface_state();
 /// Update gl_stdsurface_program draw state. This updates stdsurface meshes
 /// and textures on the GPU.
 void update_stdsurface_state(gl_stdsurface_state* st, const scene* scn,
-    const gl_stdsurface_params& params);
+    const gl_stdsurface_params& params,
+    const vector<shape*>& refresh_shapes = {},
+    const vector<texture*>& refresh_textures = {});
 
 /// Clear gl_stdsurface_program draw state
 void clear_stdsurface_state(gl_stdsurface_state* st);
