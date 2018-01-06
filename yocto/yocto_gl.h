@@ -10413,77 +10413,70 @@ struct gl_texture {
     bool _srgb = true;
     // mipmap
     bool _mipmap = true;
+    // linear interpolation
+    bool _linear = true;
 };
 
-// Implementation of make_texture.
-void _init_texture(gl_texture& txt, int w, int h, int nc, const void* pixels,
+// Implementation of update_texture.
+void _update_texture(gl_texture& txt, int w, int h, int nc, const void* pixels,
     bool floats, bool linear, bool mipmap, bool as_float, bool as_srgb);
 
-// Implementation of update_texture.
-void _update_texture(
-    gl_texture& txt, int w, int h, int nc, const void* pixels, bool floats);
-
-/// Creates a texture with pixels values of size w, h with nc number of
-/// components (1-4).
-/// Internally use float if as_float and filtering if filter.
-/// Returns the texture id.
-inline gl_texture make_texture(int w, int h, int nc, const float* pixels,
-    bool linear, bool mipmap, bool as_float) {
-    auto txt = gl_texture();
-    _init_texture(txt, w, h, nc, pixels, true, linear, mipmap, as_float, false);
-    return txt;
+/// Updates a texture with pixels values of size w, h with nc number of
+/// components (1-4). Internally use float if as_float and filtering if filter.
+inline void update_texture(gl_texture& txt, int w, int h, int nc,
+    const float* pixels, bool linear, bool mipmap, bool as_float) {
+    _update_texture(
+        txt, w, h, nc, pixels, true, linear, mipmap, as_float, false);
 }
 
-/// Creates a texture with pixels values of size w, h with nc number of
-/// components (1-4).
-/// Internally use srgb lookup if as_srgb and filtering if filter.
-/// Returns the texture id.
-inline gl_texture make_texture(int w, int h, int nc,
+/// Updates a texture with pixels values of size w, h with nc number of
+/// components (1-4). Internally use float if as_float and filtering if filter.
+inline void update_texture(gl_texture& txt, int w, int h, int nc,
     const unsigned char* pixels, bool linear, bool mipmap, bool as_srgb) {
-    auto txt = gl_texture();
-    _init_texture(txt, w, h, nc, pixels, false, linear, mipmap, false, as_srgb);
-    return txt;
+    _update_texture(
+        txt, w, h, nc, pixels, false, linear, mipmap, false, as_srgb);
 }
 
-/// Creates a texture from an image.
+/// Updates a texture with pixels values from an image.
 /// Internally use float if as_float and filtering if filter.
-/// Returns the texture id.
-inline gl_texture make_texture(
-    const image4f& img, bool linear, bool mipmap, bool as_float) {
-    return make_texture(img.width(), img.height(), 4, (float*)img.data(),
+inline void update_texture(gl_texture& txt, const image4f& img, bool linear,
+    bool mipmap, bool as_float) {
+    update_texture(txt, img.width(), img.height(), 4, (const float*)img.data(),
         linear, mipmap, as_float);
 }
 
-/// Creates a texture from an image.
-/// Internally use srgb lookup if as_srgb and filtering if filter.
-/// Returns the texture id.
+/// Updates a texture with pixels values from an image.
+/// Internally use float if as_float and filtering if filter.
+inline void update_texture(gl_texture& txt, const image4b& img, bool linear,
+    bool mipmap, bool as_srgb) {
+    update_texture(txt, img.width(), img.height(), 4,
+        (const unsigned char*)img.data(), linear, mipmap, as_srgb);
+}
+
+/// Updates a texture with pixels values from an image.
+inline void update_texture(gl_texture& txt, const image4f& img) {
+    update_texture(txt, img, txt._linear, txt._mipmap, txt._float);
+}
+
+/// Updates a texture with pixels values from an image.
+inline void update_texture(gl_texture& txt, const image4b& img) {
+    update_texture(txt, img, txt._linear, txt._mipmap, txt._srgb);
+}
+
+/// Creates a texture from an image. Convenience wrapper to update_texture().
+inline gl_texture make_texture(
+    const image4f& img, bool linear, bool mipmap, bool as_float) {
+    auto txt = gl_texture();
+    update_texture(txt, img, linear, mipmap, as_float);
+    return txt;
+}
+
+/// Creates a texture from an image. Convenience wrapper to update_texture().
 inline gl_texture make_texture(
     const image4b& img, bool linear, bool mipmap, bool as_srgb) {
-    return make_texture(img.width(), img.height(), 4, (byte*)img.data(), linear,
-        mipmap, as_srgb);
-}
-
-/// Updates the texture tid with new image data.
-inline void update_texture(
-    gl_texture& txt, int w, int h, int nc, const float* pixels) {
-    _update_texture(txt, w, h, nc, pixels, true);
-}
-
-/// Updates the texture tid with new image data.
-inline void update_texture(
-    gl_texture& txt, int w, int h, int nc, const unsigned char* pixels) {
-    _update_texture(txt, w, h, nc, pixels, false);
-}
-
-/// Updates the texture tid with new image data.
-inline void update_texture(gl_texture& txt, const image4f& img) {
-    update_texture(txt, img.width(), img.height(), 4, (const float*)img.data());
-}
-
-/// Updates the texture tid with new image data.
-inline void update_texture(gl_texture& txt, const image4b& img) {
-    update_texture(
-        txt, img.width(), img.height(), 4, (const unsigned char*)img.data());
+    auto txt = gl_texture();
+    update_texture(txt, img, linear, mipmap, as_srgb);
+    return txt;
 }
 
 /// Binds a texture to a texture unit
@@ -11450,8 +11443,8 @@ gl_stdsurface_state* make_stdsurface_state();
 /// and textures on the GPU.
 void update_stdsurface_state(gl_stdsurface_state* st, const scene* scn,
     const gl_stdsurface_params& params,
-    const vector<shape*>& refresh_shapes = {},
-    const vector<texture*>& refresh_textures = {});
+    const unordered_set<shape*>& refresh_shapes = {},
+    const unordered_set<texture*>& refresh_textures = {});
 
 /// Clear gl_stdsurface_program draw state
 void clear_stdsurface_state(gl_stdsurface_state* st);
