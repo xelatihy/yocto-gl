@@ -6878,7 +6878,7 @@ struct texture_info {
     /// mipmaping
     bool mipmap = true;
     /// texture strength (occlusion and normal)
-    float scale = 1;
+    float scale = 1.0f;
 
     /// check whether the texture if present
     operator bool() const { return (bool)txt; }
@@ -6916,9 +6916,9 @@ struct material {
     /// transmission color
     vec3f kt = {0, 0, 0};
     /// roughness
-    float rs = 0.0001;
+    float rs = 0.0001f;
     /// opacity
-    float op = 1;
+    float op = 1.0f;
 
     // textures -------------------------------
     /// emission texture
@@ -7025,17 +7025,17 @@ struct camera {
     /// ortho cam
     bool ortho = false;
     /// vertical field of view
-    float yfov = 2;
+    float yfov = 2.0f;
     /// aspect ratio
     float aspect = 16.0f / 9.0f;
     /// focus distance
-    float focus = 1;
+    float focus = 1.0f;
     /// lens aperture
-    float aperture = 0;
+    float aperture = 0.0f;
     /// near plane distance
     float near = 0.01f;
     /// far plane distance
-    float far = 10000;
+    float far = 10000.0f;
 };
 
 /// Envinonment map
@@ -7336,7 +7336,7 @@ struct add_elements_options {
     /// Add missing normal
     bool smooth_normals = true;
     /// Add missing radius for points and lines (<=0 for no adding)
-    float pointline_radius = 0;
+    float pointline_radius = 0.0f;
     /// Add missing trangent space
     bool tangent_space = true;
     /// texture data
@@ -7579,7 +7579,7 @@ inline bool intersect_ray(const scene* scn, const ray3f& ray, bool early_exit,
 /// Surface point.
 struct intersection_point {
     /// distance of the hit along the ray or from the point
-    float dist = 0;
+    float dist = 0.0f;
     /// instance index
     int iid = -1;
     /// shape element index
@@ -7889,7 +7889,7 @@ struct trace_params {
     /// maximum ray depth
     int max_depth = 8;
     /// final pixel clamping
-    float pixel_clamp = 10;
+    float pixel_clamp = 10.0f;
     /// ray intersection epsilon
     float ray_eps = 1e-4f;
     /// parallel execution
@@ -8093,7 +8093,7 @@ struct obj_texture_info {
     /// whether to clamp tp th edge
     bool clamp = false;
     /// the scale for bump and displacement
-    float scale = 1;
+    float scale = 1.0f;
     /// the rest of the unknown properties
     unordered_map<string, vector<string>> unknown_props;
 };
@@ -8145,11 +8145,11 @@ struct obj_material {
     /// transmision color
     vec3f kt = {0, 0, 0};
     /// phong exponent for ks
-    float ns = 1;
+    float ns = 1.0f;
     /// index of refraction
-    float ior = 1;
+    float ior = 1.0f;
     /// opacity
-    float op = 1;
+    float op = 1.0f;
 
     // texture names for the above properties
     /// emission texture
@@ -8197,7 +8197,7 @@ struct obj_camera {
     /// lens aperture
     float aperture = 0;
     /// focus distance
-    float focus = 1;
+    float focus = 1.0f;
 };
 
 /// Environment [extension]
