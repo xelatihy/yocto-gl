@@ -1380,11 +1380,11 @@ struct from_json_fn
 template<typename T>
 struct static_const
 {
-    static constexpr T value{};
+    static constexpr T value;
 };
 
 template<typename T>
-constexpr T static_const<T>::value;
+constexpr T static_const<T>::value = {};
 
 ////////////////////
 // input adapters //
@@ -9459,7 +9459,7 @@ class basic_json
 
     @since version 1.0.0
     */
-    constexpr operator value_t() const noexcept
+    operator value_t() const noexcept
     {
         return m_type;
     }
