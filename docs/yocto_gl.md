@@ -2567,6 +2567,14 @@ inline ostream& operator<<(ostream& os, const vec4i& a);
 
 stream write
 
+#### Function operator < <()
+
+~~~ .cpp
+inline ostream& operator<<(ostream& os, const vec4b& a);
+~~~
+
+stream write
+
 #### Function operator \> \>()
 
 ~~~ .cpp
@@ -2611,6 +2619,14 @@ stream read
 
 ~~~ .cpp
 inline istream& operator>>(istream& is, vec4i& a);
+~~~
+
+stream read
+
+#### Function operator \> \>()
+
+~~~ .cpp
+inline istream& operator>>(istream& is, vec4b& a);
 ~~~
 
 stream read
@@ -10331,8 +10347,17 @@ Creates a buffer.
 #### Function update_vertex_buffer()
 
 ~~~ .cpp
-inline void update_vertex_buffer(
-    gl_vertex_buffer& buf, int num, int ncomp, const float* values);
+inline void update_vertex_buffer(gl_vertex_buffer& buf, int num, int ncomp,
+    const float* values, bool dynamic = false);
+~~~
+
+Updates the buffer with new data.
+
+#### Function update_vertex_buffer()
+
+~~~ .cpp
+inline void update_vertex_buffer(gl_vertex_buffer& buf, int num, int ncomp,
+    const int* values, bool dynamic = false);
 ~~~
 
 Updates the buffer with new data.
@@ -10341,16 +10366,7 @@ Updates the buffer with new data.
 
 ~~~ .cpp
 inline void update_vertex_buffer(
-    gl_vertex_buffer& buf, int num, int ncomp, const int* values);
-~~~
-
-Updates the buffer with new data.
-
-#### Function update_vertex_buffer()
-
-~~~ .cpp
-inline void update_vertex_buffer(
-    gl_vertex_buffer& buf, const vector<float>& values);
+    gl_vertex_buffer& buf, const vector<float>& values, bool dynamic = false);
 ~~~
 
 Updates the buffer bid with new data.
@@ -10359,7 +10375,7 @@ Updates the buffer bid with new data.
 
 ~~~ .cpp
 inline void update_vertex_buffer(
-    gl_vertex_buffer& buf, const vector<vec2f>& values);
+    gl_vertex_buffer& buf, const vector<vec2f>& values, bool dynamic = false);
 ~~~
 
 Updates the buffer bid with new data.
@@ -10368,7 +10384,7 @@ Updates the buffer bid with new data.
 
 ~~~ .cpp
 inline void update_vertex_buffer(
-    gl_vertex_buffer& buf, const vector<vec3f>& values);
+    gl_vertex_buffer& buf, const vector<vec3f>& values, bool dynamic = false);
 ~~~
 
 Updates the buffer bid with new data.
@@ -10377,7 +10393,7 @@ Updates the buffer bid with new data.
 
 ~~~ .cpp
 inline void update_vertex_buffer(
-    gl_vertex_buffer& buf, const vector<vec4f>& values);
+    gl_vertex_buffer& buf, const vector<vec4f>& values, bool dynamic = false);
 ~~~
 
 Updates the buffer bid with new data.
@@ -10386,7 +10402,7 @@ Updates the buffer bid with new data.
 
 ~~~ .cpp
 inline void update_vertex_buffer(
-    gl_vertex_buffer& buf, const vector<int>& values);
+    gl_vertex_buffer& buf, const vector<int>& values, bool dynamic = false);
 ~~~
 
 Updates the buffer bid with new data.
@@ -10395,7 +10411,7 @@ Updates the buffer bid with new data.
 
 ~~~ .cpp
 inline void update_vertex_buffer(
-    gl_vertex_buffer& buf, const vector<vec2i>& values);
+    gl_vertex_buffer& buf, const vector<vec2i>& values, bool dynamic = false);
 ~~~
 
 Updates the buffer bid with new data.
@@ -10404,7 +10420,7 @@ Updates the buffer bid with new data.
 
 ~~~ .cpp
 inline void update_vertex_buffer(
-    gl_vertex_buffer& buf, const vector<vec3i>& values);
+    gl_vertex_buffer& buf, const vector<vec3i>& values, bool dynamic = false);
 ~~~
 
 Updates the buffer bid with new data.
@@ -10413,7 +10429,7 @@ Updates the buffer bid with new data.
 
 ~~~ .cpp
 inline void update_vertex_buffer(
-    gl_vertex_buffer& buf, const vector<vec4i>& values);
+    gl_vertex_buffer& buf, const vector<vec4i>& values, bool dynamic = false);
 ~~~
 
 Updates the buffer bid with new data.
@@ -10522,8 +10538,8 @@ Creates a buffer.
 #### Function update_element_buffer()
 
 ~~~ .cpp
-inline void update_element_buffer(
-    gl_element_buffer& buf, int num, int ncomp, const int* values);
+inline void update_element_buffer(gl_element_buffer& buf, int num, int ncomp,
+    const int* values, bool dynamic = false);
 ~~~
 
 Updates the buffer with new data.
@@ -10532,7 +10548,7 @@ Updates the buffer with new data.
 
 ~~~ .cpp
 inline void update_element_buffer(
-    gl_element_buffer& buf, const vector<int>& values);
+    gl_element_buffer& buf, const vector<int>& values, bool dynamic = false);
 ~~~
 
 Updates the buffer bid with new data.
@@ -10541,7 +10557,7 @@ Updates the buffer bid with new data.
 
 ~~~ .cpp
 inline void update_element_buffer(
-    gl_element_buffer& buf, const vector<vec2i>& values);
+    gl_element_buffer& buf, const vector<vec2i>& values, bool dynamic = false);
 ~~~
 
 Updates the buffer bid with new data.
@@ -10550,7 +10566,7 @@ Updates the buffer bid with new data.
 
 ~~~ .cpp
 inline void update_element_buffer(
-    gl_element_buffer& buf, const vector<vec3i>& values);
+    gl_element_buffer& buf, const vector<vec3i>& values, bool dynamic = false);
 ~~~
 
 Updates the buffer bid with new data.
@@ -10559,7 +10575,7 @@ Updates the buffer bid with new data.
 
 ~~~ .cpp
 inline void update_element_buffer(
-    gl_element_buffer& buf, const vector<vec4i>& values);
+    gl_element_buffer& buf, const vector<vec4i>& values, bool dynamic = false);
 ~~~
 
 Updates the buffer bid with new data.
@@ -11073,6 +11089,42 @@ inline void draw_image(gl_stdimage_program& prog, const gl_texture& txt,
 Draw an texture tid of size img_w, img_h on a window of size win_w,
 win_h with top-left corner at ox, oy with a zoom zoom.
 
+#### Struct gl_stdimage_params
+
+~~~ .cpp
+struct gl_stdimage_params {
+    vec2i win_size = {0, 0};
+    vec2f offset = {0, 0};
+    float zoom = 1;
+    float exposure = 1;
+    float gamma = 2.2f;
+    bool filmic = false;
+    vec4f background = zero4f;
+}
+~~~
+
+Params for  gl_stdimage_program drawing. This is just a way to pack all
+params together for the above functions.
+
+- Members:
+    - win_size:      window size
+    - offset:      image offset
+    - zoom:      image zoom
+    - exposure:      tonemap exposure
+    - gamma:      tonemap gamma
+    - filmic:      tonemap filmic
+    - background:      image background
+
+
+#### Function draw_image()
+
+~~~ .cpp
+inline void draw_image(gl_stdimage_program& prog, const gl_texture& txt,
+    const gl_stdimage_params& params, bool clear_background = true);
+~~~
+
+As above but includes an exposure/gamma correction.
+
 #### Struct gl_stdsurface_program
 
 ~~~ .cpp
@@ -11275,7 +11327,8 @@ Initialize gl_stdsurface_program draw state
 
 ~~~ .cpp
 void update_stdsurface_state(gl_stdsurface_state* st, const scene* scn,
-    const gl_stdsurface_params& params);
+    const gl_stdsurface_params& params,
+    const vector<shape*>& refresh_shapes =;
 ~~~
 
 Update gl_stdsurface_program draw state. This updates stdsurface meshes
@@ -11910,6 +11963,25 @@ inline void draw_tonemap_widgets(gl_window* win, const string& lbl,
 ~~~
 
 Tonemapping widgets
+
+#### Function draw_imageview_widgets()
+
+~~~ .cpp
+inline void draw_imageview_widgets(gl_window* win, const string& lbl,
+    gl_stdimage_params& params, bool show_tonemap = true);
+~~~
+
+Image view widgets
+
+#### Function draw_imageinspect_widgets()
+
+~~~ .cpp
+inline void draw_imageinspect_widgets(gl_window* win, const string& lbl,
+    const image4f& hdr, const image4b& ldr, const vec2f& mouse_pos,
+    const gl_stdimage_params& params);
+~~~
+
+Image inspection widgets
 
 #### Function draw_camera_widget()
 
