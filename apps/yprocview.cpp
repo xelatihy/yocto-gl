@@ -109,13 +109,25 @@ struct proc_floor_shape_params {
 };
 
 // Procedural prim shape type
-enum struct proc_prim_shape_type { sphere };
+enum struct proc_prim_shape_type {
+    sphere,
+    geosphere,
+    cutsphere,
+    cube,
+    fvcube,
+    monkey
+};
 
 // Names for enumeration
 inline const vector<pair<string, proc_prim_shape_type>>&
 proc_prim_shape_names() {
     static auto names = vector<pair<string, proc_prim_shape_type>>{
         {"sphere", proc_prim_shape_type::sphere},
+        {"geosphere", proc_prim_shape_type::geosphere},
+        {"cutsphere", proc_prim_shape_type::cutsphere},
+        {"cube", proc_prim_shape_type::cube},
+        {"fvcube", proc_prim_shape_type::fvcube},
+        {"monkey", proc_prim_shape_type::monkey},
     };
     return names;
 }
@@ -126,6 +138,7 @@ struct proc_prim_shape_params {
     float size = 2;
     int level = 5;
     int subdiv = 0;
+    bool faceted = false;
 };
 
 // Procesural shape
@@ -332,9 +345,36 @@ bool update_proc_prim_shape(proc_shape* pshp) {
             tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
                 make_uvsphere(params.level);
         } break;
+        case proc_prim_shape_type::geosphere: {
+            tie(shp->triangles, shp->pos) = make_geodesicsphere(params.level);
+            shp->norm = shp->pos;
+        } break;
+        case proc_prim_shape_type::cutsphere: {
+            tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
+                make_uvflipcapsphere(params.level, 0.75f);
+        } break;
+        case proc_prim_shape_type::cube: {
+            tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
+                make_uvcube(params.level);
+        } break;
+        case proc_prim_shape_type::fvcube: {
+            tie(shp->quads_pos, shp->pos, shp->quads_norm, shp->norm,
+                shp->quads_texcoord, shp->texcoord) = make_fvcube();
+            for (auto i = 0; i < params.level; i++) subdivide_shape(shp, false);
+        } break;
+        case proc_prim_shape_type::monkey: {
+            tie(shp->quads, shp->pos) = make_suzanne();
+            for (auto i = 0; i < params.level; i++) subdivide_shape(shp, false);
+            shp->norm = compute_normals({}, {}, shp->quads, shp->pos);
+        } break;
         default: throw runtime_error("should not have gotten here");
     }
+
     for (auto& p : shp->pos) p *= params.size / 2;
+
+    for (auto i = 0; i < params.subdiv; i++) subdivide_shape(shp, true);
+
+    if (params.faceted) facet_shape(shp);
 
     return num_changed;
 }
@@ -535,6 +575,8 @@ inline bool draw_procelem_widgets(gl_window* win, proc_scene* scn,
         } break;
         case proc_shape_type::prim: {
             auto& params = shp->prim_params;
+            edited += draw_value_widget(
+                win, "ptype", params.ptype, proc_prim_shape_names());
             edited += draw_value_widget(win, "size", params.size, 0, 20);
             edited += draw_value_widget(win, "tesselation", params.level, 0, 8);
             edited +=
@@ -608,18 +650,21 @@ inline bool draw_procedit_widgets(
         auto cam = new proc_camera();
         cam->name = "cam" + to_string(cur_cam++);
         scn->cameras += cam;
+        selection = cam;
         update_proc_scene(scn);
     }
     if (draw_button_widget(win, "add texture")) {
         auto txt = new proc_texture();
         txt->name = "txt" + to_string(cur_txt++);
         scn->textures += txt;
+        selection = txt;
         update_proc_scene(scn);
     }
     if (draw_button_widget(win, "add material")) {
         auto mat = new proc_material();
         mat->name = "mat" + to_string(cur_mat++);
         scn->materials += mat;
+        selection = mat;
         update_proc_scene(scn);
     }
     if (draw_button_widget(win, "add shape")) {
@@ -628,6 +673,7 @@ inline bool draw_procedit_widgets(
         shp->name = "shp" + to_string(cur_shp++);
         shp->mat = scn->materials.front();
         scn->shapes += shp;
+        selection = shp;
         update_proc_scene(scn);
     }
     if (draw_button_widget(win, "add instance")) {
@@ -635,6 +681,7 @@ inline bool draw_procedit_widgets(
         ist->name = "ist" + to_string(cur_ist++);
         ist->shp = scn->shapes.back();
         scn->instances += ist;
+        selection = ist;
         update_proc_scene(scn);
     }
     if (draw_button_widget(win, "snap to floor")) {
