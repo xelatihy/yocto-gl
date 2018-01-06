@@ -3,6 +3,7 @@ cmake_minimum_required (VERSION 3.5)
 project (yocto-gl)
 
 option(YOCTO_OPENGL "Build OpenGL apps" ON)
+option(YOCTO_EXPERIMENTAL "Build experimental apps" OFF)
 
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED on)
@@ -79,4 +80,9 @@ if(YOCTO_OPENGL)
     target_link_libraries(yitrace yocto_gl)
     target_link_libraries(ygltfview yocto_gl)
     target_link_libraries(yimview yocto_gl)
+
+    if(YOCTO_EXPERIMENTAL)
+        add_executable(yprocview apps/yprocview.cpp yocto/yocto_gl.h)
+        target_link_libraries(yprocview yocto_gl)
+    endif(YOCTO_EXPERIMENTAL)
 endif(YOCTO_OPENGL)
