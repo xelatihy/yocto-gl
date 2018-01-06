@@ -10482,15 +10482,15 @@ bool draw_value_widget(gl_window* win, const string& lbl, int& val,
     return ok;
 }
 
-// List widget
-bool draw_list_widget(gl_window* win, const string& lbl, int& val,
-    const vector<pair<string, int>>& labels) {
+// Value widget
+bool draw_value_widget(gl_window* win, const string& lbl, void*& val,
+    const vector<pair<string, void*>>& labels) {
     auto cur = -1;
     for (auto idx = 0; idx < labels.size(); idx++) {
         if (labels[idx].second == val) cur = idx;
     }
     assert(cur >= 0);
-    auto ok = ImGui::ListBox(lbl.c_str(), &cur, _enum_widget_labels_int,
+    auto ok = ImGui::Combo(lbl.c_str(), &cur, _enum_widget_labels_int,
         (void*)&labels, (int)labels.size());
     val = labels[cur].second;
     return ok;

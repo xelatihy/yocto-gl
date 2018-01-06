@@ -11705,6 +11705,18 @@ bool draw_value_widget(gl_window* win, const string& lbl, int& val,
     const vector<pair<string, int>>& labels);
 
 /// Enum widget
+bool draw_value_widget(gl_window* win, const string& lbl, void*& val,
+    const vector<pair<string, void*>>& labels);
+
+/// Enum widget
+template <typename T>
+inline bool draw_value_widget(gl_window* win, const string& lbl, T*& val,
+    const vector<pair<string, T*>>& labels) {
+    return draw_value_widget(
+        win, lbl, (void*&)val, (const vector<pair<string, void*>>&)labels);
+}
+
+/// Enum widget
 template <typename T>
 inline bool draw_value_widget(gl_window* win, const string& lbl, T& val,
     const vector<pair<string, T>>& labels) {
