@@ -8542,70 +8542,64 @@ robust.</p>
 
 
 <p>Opengl texture object</p>
-<h4>Function make_texture()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">gl_texture</span> <span class="nf">make_texture</span><span class="p">(</span><span class="kt">int</span> <span class="n">w</span><span class="p">,</span> <span class="kt">int</span> <span class="n">h</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nc</span><span class="p">,</span> <span class="k">const</span> <span class="kt">float</span><span class="o">*</span> <span class="n">pixels</span><span class="p">,</span>
-    <span class="kt">bool</span> <span class="n">linear</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">mipmap</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">as_float</span><span class="p">);</span>
+<h4>Function update_texture()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_texture</span><span class="p">(</span><span class="n">gl_texture</span><span class="o">&amp;</span> <span class="n">txt</span><span class="p">,</span> <span class="kt">int</span> <span class="n">w</span><span class="p">,</span> <span class="kt">int</span> <span class="n">h</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nc</span><span class="p">,</span>
+    <span class="k">const</span> <span class="kt">float</span><span class="o">*</span> <span class="n">pixels</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">linear</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">mipmap</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">as_float</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Creates a texture with pixels values of size w, h with nc number of
-components (1-4).
-Internally use float if as_float and filtering if filter.
-Returns the texture id.</p>
-<h4>Function make_texture()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">gl_texture</span> <span class="nf">make_texture</span><span class="p">(</span><span class="kt">int</span> <span class="n">w</span><span class="p">,</span> <span class="kt">int</span> <span class="n">h</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nc</span><span class="p">,</span>
+<p>Updates a texture with pixels values of size w, h with nc number of
+components (1-4). Internally use float if as_float and filtering if filter.</p>
+<h4>Function update_texture()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_texture</span><span class="p">(</span><span class="n">gl_texture</span><span class="o">&amp;</span> <span class="n">txt</span><span class="p">,</span> <span class="kt">int</span> <span class="n">w</span><span class="p">,</span> <span class="kt">int</span> <span class="n">h</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nc</span><span class="p">,</span>
     <span class="k">const</span> <span class="kt">unsigned</span> <span class="kt">char</span><span class="o">*</span> <span class="n">pixels</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">linear</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">mipmap</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">as_srgb</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Creates a texture with pixels values of size w, h with nc number of
-components (1-4).
-Internally use srgb lookup if as_srgb and filtering if filter.
-Returns the texture id.</p>
+<p>Updates a texture with pixels values of size w, h with nc number of
+components (1-4). Internally use float if as_float and filtering if filter.</p>
+<h4>Function update_texture()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_texture</span><span class="p">(</span><span class="n">gl_texture</span><span class="o">&amp;</span> <span class="n">txt</span><span class="p">,</span> <span class="k">const</span> <span class="n">image4f</span><span class="o">&amp;</span> <span class="n">img</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">linear</span><span class="p">,</span>
+    <span class="kt">bool</span> <span class="n">mipmap</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">as_float</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Updates a texture with pixels values from an image.
+Internally use float if as_float and filtering if filter.</p>
+<h4>Function update_texture()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_texture</span><span class="p">(</span><span class="n">gl_texture</span><span class="o">&amp;</span> <span class="n">txt</span><span class="p">,</span> <span class="k">const</span> <span class="n">image4b</span><span class="o">&amp;</span> <span class="n">img</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">linear</span><span class="p">,</span>
+    <span class="kt">bool</span> <span class="n">mipmap</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">as_srgb</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Updates a texture with pixels values from an image.
+Internally use float if as_float and filtering if filter.</p>
+<h4>Function update_texture()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_texture</span><span class="p">(</span><span class="n">gl_texture</span><span class="o">&amp;</span> <span class="n">txt</span><span class="p">,</span> <span class="k">const</span> <span class="n">image4f</span><span class="o">&amp;</span> <span class="n">img</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Updates a texture with pixels values from an image.</p>
+<h4>Function update_texture()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_texture</span><span class="p">(</span><span class="n">gl_texture</span><span class="o">&amp;</span> <span class="n">txt</span><span class="p">,</span> <span class="k">const</span> <span class="n">image4b</span><span class="o">&amp;</span> <span class="n">img</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Updates a texture with pixels values from an image.</p>
 <h4>Function make_texture()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">gl_texture</span> <span class="nf">make_texture</span><span class="p">(</span>
     <span class="k">const</span> <span class="n">image4f</span><span class="o">&amp;</span> <span class="n">img</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">linear</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">mipmap</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">as_float</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Creates a texture from an image.
-Internally use float if as_float and filtering if filter.
-Returns the texture id.</p>
+<p>Creates a texture from an image. Convenience wrapper to update_texture().</p>
 <h4>Function make_texture()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">gl_texture</span> <span class="nf">make_texture</span><span class="p">(</span>
     <span class="k">const</span> <span class="n">image4b</span><span class="o">&amp;</span> <span class="n">img</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">linear</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">mipmap</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">as_srgb</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Creates a texture from an image.
-Internally use srgb lookup if as_srgb and filtering if filter.
-Returns the texture id.</p>
-<h4>Function update_texture()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_texture</span><span class="p">(</span>
-    <span class="n">gl_texture</span><span class="o">&amp;</span> <span class="n">txt</span><span class="p">,</span> <span class="kt">int</span> <span class="n">w</span><span class="p">,</span> <span class="kt">int</span> <span class="n">h</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nc</span><span class="p">,</span> <span class="k">const</span> <span class="kt">float</span><span class="o">*</span> <span class="n">pixels</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Updates the texture tid with new image data.</p>
-<h4>Function update_texture()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_texture</span><span class="p">(</span>
-    <span class="n">gl_texture</span><span class="o">&amp;</span> <span class="n">txt</span><span class="p">,</span> <span class="kt">int</span> <span class="n">w</span><span class="p">,</span> <span class="kt">int</span> <span class="n">h</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nc</span><span class="p">,</span> <span class="k">const</span> <span class="kt">unsigned</span> <span class="kt">char</span><span class="o">*</span> <span class="n">pixels</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Updates the texture tid with new image data.</p>
-<h4>Function update_texture()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_texture</span><span class="p">(</span><span class="n">gl_texture</span><span class="o">&amp;</span> <span class="n">txt</span><span class="p">,</span> <span class="k">const</span> <span class="n">image4f</span><span class="o">&amp;</span> <span class="n">img</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Updates the texture tid with new image data.</p>
-<h4>Function update_texture()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_texture</span><span class="p">(</span><span class="n">gl_texture</span><span class="o">&amp;</span> <span class="n">txt</span><span class="p">,</span> <span class="k">const</span> <span class="n">image4b</span><span class="o">&amp;</span> <span class="n">img</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Updates the texture tid with new image data.</p>
+<p>Creates a texture from an image. Convenience wrapper to update_texture().</p>
 <h4>Function bind_texture()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">bind_texture</span><span class="p">(</span><span class="k">const</span> <span class="n">gl_texture</span><span class="o">&amp;</span> <span class="n">txt</span><span class="p">,</span> <span class="n">uint</span> <span class="n">unit</span><span class="p">);</span>
 </code></pre></div>
@@ -8718,76 +8712,6 @@ Returns the texture id.</p>
 
 
 <p>OpenGL vertex/element buffer</p>
-<h4>Function make_vertex_buffer()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">gl_vertex_buffer</span> <span class="nf">make_vertex_buffer</span><span class="p">(</span>
-    <span class="kt">int</span> <span class="n">num</span><span class="p">,</span> <span class="kt">int</span> <span class="n">ncomp</span><span class="p">,</span> <span class="k">const</span> <span class="kt">float</span><span class="o">*</span> <span class="n">values</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">dynamic</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Creates a buffer.</p>
-<h4>Function make_vertex_buffer()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">gl_vertex_buffer</span> <span class="nf">make_vertex_buffer</span><span class="p">(</span>
-    <span class="kt">int</span> <span class="n">num</span><span class="p">,</span> <span class="kt">int</span> <span class="n">ncomp</span><span class="p">,</span> <span class="k">const</span> <span class="kt">int</span><span class="o">*</span> <span class="n">values</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">dynamic</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Creates a buffer.</p>
-<h4>Function make_vertex_buffer()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">gl_vertex_buffer</span> <span class="nf">make_vertex_buffer</span><span class="p">(</span>
-    <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;&amp;</span> <span class="n">values</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">dynamic</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Creates a buffer.</p>
-<h4>Function make_vertex_buffer()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">gl_vertex_buffer</span> <span class="nf">make_vertex_buffer</span><span class="p">(</span>
-    <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;&amp;</span> <span class="n">values</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">dynamic</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Creates a buffer.</p>
-<h4>Function make_vertex_buffer()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">gl_vertex_buffer</span> <span class="nf">make_vertex_buffer</span><span class="p">(</span>
-    <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">values</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">dynamic</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Creates a buffer.</p>
-<h4>Function make_vertex_buffer()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">gl_vertex_buffer</span> <span class="nf">make_vertex_buffer</span><span class="p">(</span>
-    <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4f</span><span class="o">&gt;&amp;</span> <span class="n">values</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">dynamic</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Creates a buffer.</p>
-<h4>Function make_vertex_buffer()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">gl_vertex_buffer</span> <span class="nf">make_vertex_buffer</span><span class="p">(</span>
-    <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;&amp;</span> <span class="n">values</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">dynamic</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Creates a buffer.</p>
-<h4>Function make_vertex_buffer()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">gl_vertex_buffer</span> <span class="nf">make_vertex_buffer</span><span class="p">(</span>
-    <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2i</span><span class="o">&gt;&amp;</span> <span class="n">values</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">dynamic</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Creates a buffer.</p>
-<h4>Function make_vertex_buffer()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">gl_vertex_buffer</span> <span class="nf">make_vertex_buffer</span><span class="p">(</span>
-    <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;&amp;</span> <span class="n">values</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">dynamic</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Creates a buffer.</p>
-<h4>Function make_vertex_buffer()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">gl_vertex_buffer</span> <span class="nf">make_vertex_buffer</span><span class="p">(</span>
-    <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;&amp;</span> <span class="n">values</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">dynamic</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Creates a buffer.</p>
 <h4>Function update_vertex_buffer()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_vertex_buffer</span><span class="p">(</span><span class="n">gl_vertex_buffer</span><span class="o">&amp;</span> <span class="n">buf</span><span class="p">,</span> <span class="kt">int</span> <span class="n">num</span><span class="p">,</span> <span class="kt">int</span> <span class="n">ncomp</span><span class="p">,</span>
     <span class="k">const</span> <span class="kt">float</span><span class="o">*</span> <span class="n">values</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">dynamic</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
@@ -8808,56 +8732,65 @@ Returns the texture id.</p>
 </code></pre></div>
 
 
-<p>Updates the buffer bid with new data.</p>
+<p>Updates the bufferwith new data.</p>
 <h4>Function update_vertex_buffer()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_vertex_buffer</span><span class="p">(</span>
     <span class="n">gl_vertex_buffer</span><span class="o">&amp;</span> <span class="n">buf</span><span class="p">,</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;&amp;</span> <span class="n">values</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">dynamic</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Updates the buffer bid with new data.</p>
+<p>Updates the bufferwith new data.</p>
 <h4>Function update_vertex_buffer()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_vertex_buffer</span><span class="p">(</span>
     <span class="n">gl_vertex_buffer</span><span class="o">&amp;</span> <span class="n">buf</span><span class="p">,</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">values</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">dynamic</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Updates the buffer bid with new data.</p>
+<p>Updates the bufferwith new data.</p>
 <h4>Function update_vertex_buffer()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_vertex_buffer</span><span class="p">(</span>
     <span class="n">gl_vertex_buffer</span><span class="o">&amp;</span> <span class="n">buf</span><span class="p">,</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4f</span><span class="o">&gt;&amp;</span> <span class="n">values</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">dynamic</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Updates the buffer bid with new data.</p>
+<p>Updates the bufferwith new data.</p>
 <h4>Function update_vertex_buffer()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_vertex_buffer</span><span class="p">(</span>
     <span class="n">gl_vertex_buffer</span><span class="o">&amp;</span> <span class="n">buf</span><span class="p">,</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;&amp;</span> <span class="n">values</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">dynamic</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Updates the buffer bid with new data.</p>
+<p>Updates the bufferwith new data.</p>
 <h4>Function update_vertex_buffer()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_vertex_buffer</span><span class="p">(</span>
     <span class="n">gl_vertex_buffer</span><span class="o">&amp;</span> <span class="n">buf</span><span class="p">,</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2i</span><span class="o">&gt;&amp;</span> <span class="n">values</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">dynamic</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Updates the buffer bid with new data.</p>
+<p>Updates the bufferwith new data.</p>
 <h4>Function update_vertex_buffer()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_vertex_buffer</span><span class="p">(</span>
     <span class="n">gl_vertex_buffer</span><span class="o">&amp;</span> <span class="n">buf</span><span class="p">,</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;&amp;</span> <span class="n">values</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">dynamic</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Updates the buffer bid with new data.</p>
+<p>Updates the bufferwith new data.</p>
 <h4>Function update_vertex_buffer()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_vertex_buffer</span><span class="p">(</span>
     <span class="n">gl_vertex_buffer</span><span class="o">&amp;</span> <span class="n">buf</span><span class="p">,</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;&amp;</span> <span class="n">values</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">dynamic</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Updates the buffer bid with new data.</p>
+<p>Updates the buffer with new data.</p>
+<h4>Function make_vertex_buffer()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="n">gl_vertex_buffer</span> <span class="n">make_vertex_buffer</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">values</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">dynamic</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Make a buffer with new data. A convenience wrapper to
+update_vertex_buffer().</p>
 <h4>Function bind_vertex_buffer()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">bind_vertex_buffer</span><span class="p">(</span><span class="k">const</span> <span class="n">gl_vertex_buffer</span><span class="o">&amp;</span> <span class="n">buf</span><span class="p">,</span> <span class="n">uint</span> <span class="n">vattr</span><span class="p">);</span>
 </code></pre></div>
@@ -8900,41 +8833,6 @@ Returns the texture id.</p>
 
 
 <p>OpenGL vertex/element buffer</p>
-<h4>Function make_element_buffer()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">gl_element_buffer</span> <span class="nf">make_element_buffer</span><span class="p">(</span>
-    <span class="kt">int</span> <span class="n">num</span><span class="p">,</span> <span class="kt">int</span> <span class="n">ncomp</span><span class="p">,</span> <span class="k">const</span> <span class="kt">int</span><span class="o">*</span> <span class="n">values</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">dynamic</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Creates a buffer.</p>
-<h4>Function make_element_buffer()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">gl_element_buffer</span> <span class="nf">make_element_buffer</span><span class="p">(</span>
-    <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;&amp;</span> <span class="n">values</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">dynamic</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Creates a buffer.</p>
-<h4>Function make_element_buffer()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">gl_element_buffer</span> <span class="nf">make_element_buffer</span><span class="p">(</span>
-    <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2i</span><span class="o">&gt;&amp;</span> <span class="n">values</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">dynamic</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Creates a buffer.</p>
-<h4>Function make_element_buffer()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">gl_element_buffer</span> <span class="nf">make_element_buffer</span><span class="p">(</span>
-    <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;&amp;</span> <span class="n">values</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">dynamic</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Creates a buffer.</p>
-<h4>Function make_element_buffer()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">gl_element_buffer</span> <span class="nf">make_element_buffer</span><span class="p">(</span>
-    <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;&amp;</span> <span class="n">values</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">dynamic</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Creates a buffer.</p>
 <h4>Function update_element_buffer()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_element_buffer</span><span class="p">(</span><span class="n">gl_element_buffer</span><span class="o">&amp;</span> <span class="n">buf</span><span class="p">,</span> <span class="kt">int</span> <span class="n">num</span><span class="p">,</span> <span class="kt">int</span> <span class="n">ncomp</span><span class="p">,</span>
     <span class="k">const</span> <span class="kt">int</span><span class="o">*</span> <span class="n">values</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">dynamic</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
@@ -8948,28 +8846,37 @@ Returns the texture id.</p>
 </code></pre></div>
 
 
-<p>Updates the buffer bid with new data.</p>
+<p>Updates the bufferwith new data.</p>
 <h4>Function update_element_buffer()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_element_buffer</span><span class="p">(</span>
     <span class="n">gl_element_buffer</span><span class="o">&amp;</span> <span class="n">buf</span><span class="p">,</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2i</span><span class="o">&gt;&amp;</span> <span class="n">values</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">dynamic</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Updates the buffer bid with new data.</p>
+<p>Updates the bufferwith new data.</p>
 <h4>Function update_element_buffer()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_element_buffer</span><span class="p">(</span>
     <span class="n">gl_element_buffer</span><span class="o">&amp;</span> <span class="n">buf</span><span class="p">,</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;&amp;</span> <span class="n">values</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">dynamic</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Updates the buffer bid with new data.</p>
+<p>Updates the bufferwith new data.</p>
 <h4>Function update_element_buffer()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">update_element_buffer</span><span class="p">(</span>
     <span class="n">gl_element_buffer</span><span class="o">&amp;</span> <span class="n">buf</span><span class="p">,</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;&amp;</span> <span class="n">values</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">dynamic</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Updates the buffer bid with new data.</p>
+<p>Updates the bufferwith new data.</p>
+<h4>Function make_element_buffer()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="n">gl_element_buffer</span> <span class="n">make_element_buffer</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">values</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">dynamic</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Make a buffer with new data. A convenience wrapper to
+update_velement_buffer().</p>
 <h4>Function draw_elems()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">draw_elems</span><span class="p">(</span><span class="k">const</span> <span class="n">gl_element_buffer</span><span class="o">&amp;</span> <span class="n">buf</span><span class="p">);</span>
 </code></pre></div>
@@ -9570,7 +9477,7 @@ public API.</p>
 <h4>Function update_stdsurface_state()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="n">update_stdsurface_state</span><span class="p">(</span><span class="n">gl_stdsurface_state</span><span class="o">*</span> <span class="n">st</span><span class="p">,</span> <span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">gl_stdsurface_params</span><span class="o">&amp;</span> <span class="n">params</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">shape</span><span class="o">*&gt;&amp;</span> <span class="n">refresh_shapes</span> <span class="o">=</span><span class="p">;</span>
+    <span class="k">const</span> <span class="n">unordered_set</span><span class="o">&lt;</span><span class="n">shape</span><span class="o">*&gt;&amp;</span> <span class="n">refresh_shapes</span> <span class="o">=</span><span class="p">;</span>
 </code></pre></div>
 
 

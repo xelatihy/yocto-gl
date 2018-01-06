@@ -467,8 +467,8 @@ void update(app_state* app) {
     for (auto pshp : app->pscn->shapes) {
         if (pshp != app->selection) continue;
         update_proc_shape(pshp);
-        update_stdsurface_state(
-            app->shstate, app->scn, app->shparams, pshp->shps, {});
+        update_stdsurface_state(app->shstate, app->scn, app->shparams,
+            unordered_set<shape*>{pshp->shps.begin(), pshp->shps.end()}, {});
     }
     app->scene_updated = false;
 }

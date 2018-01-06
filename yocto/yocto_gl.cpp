@@ -8904,15 +8904,20 @@ void gl_read_imagef(float* pixels, int w, int h, int nc) {
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-// Implementation of make_texture.
-void _init_texture(gl_texture& txt, int w, int h, int nc, const void* pixels,
+// Implementation of update_texture.
+void _update_texture(gl_texture& txt, int w, int h, int nc, const void* pixels,
     bool floats, bool linear, bool mipmap, bool as_float, bool as_srgb) {
+    auto refresh = !txt._tid || txt._width != w || txt._height != h ||
+                   txt._ncomp != nc || txt._float != as_float ||
+                   txt._srgb != as_srgb || txt._mipmap != mipmap ||
+                   txt._linear != linear;
     txt._width = w;
     txt._height = h;
     txt._ncomp = nc;
     txt._float = as_float;
     txt._srgb = as_srgb;
     txt._mipmap = mipmap;
+    txt._linear = linear;
     assert(!as_srgb || !as_float);
     assert(gl_check_error());
     int formats_ub[4] = {GL_RED, GL_RG, GL_RGB, GL_RGBA};
@@ -8921,10 +8926,15 @@ void _init_texture(gl_texture& txt, int w, int h, int nc, const void* pixels,
     int* formats =
         (as_float) ? formats_f : ((as_srgb) ? formats_sub : formats_ub);
     assert(gl_check_error());
-    glGenTextures(1, &txt._tid);
+    if (!txt._tid) glGenTextures(1, &txt._tid);
     glBindTexture(GL_TEXTURE_2D, txt._tid);
-    glTexImage2D(GL_TEXTURE_2D, 0, formats[nc - 1], w, h, 0, formats_ub[nc - 1],
-        (floats) ? GL_FLOAT : GL_UNSIGNED_BYTE, pixels);
+    if (refresh) {
+        glTexImage2D(GL_TEXTURE_2D, 0, formats[nc - 1], w, h, 0,
+            formats_ub[nc - 1], (floats) ? GL_FLOAT : GL_UNSIGNED_BYTE, pixels);
+    } else {
+        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, w, h, formats_ub[nc - 1],
+            (floats) ? GL_FLOAT : GL_UNSIGNED_BYTE, pixels);
+    }
     if (mipmap) glGenerateMipmap(GL_TEXTURE_2D);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
         (linear) ? GL_LINEAR : GL_NEAREST);
@@ -8936,20 +8946,6 @@ void _init_texture(gl_texture& txt, int w, int h, int nc, const void* pixels,
             (linear) ? GL_LINEAR : GL_NEAREST);
     }
     glBindTexture(GL_TEXTURE_2D, 0);
-    assert(gl_check_error());
-}
-
-// Implementation of update_texture.
-void _update_texture(
-    gl_texture& txt, int w, int h, int nc, const void* pixels, bool floats) {
-    txt._width = w;
-    txt._height = h;
-    assert(gl_check_error());
-    int formats[4] = {GL_RED, GL_RG, GL_RGB, GL_RGBA};
-    glBindTexture(GL_TEXTURE_2D, txt._tid);
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, w, h, formats[nc - 1],
-        (floats) ? GL_FLOAT : GL_UNSIGNED_BYTE, pixels);
-    if (txt._mipmap) glGenerateMipmap(GL_TEXTURE_2D);
     assert(gl_check_error());
 }
 
@@ -9902,63 +9898,31 @@ gl_stdsurface_state* make_stdsurface_state() {
 
 // Init shading
 void update_stdsurface_state(gl_stdsurface_state* st, const scene* scn,
-    const gl_stdsurface_params& params, const vector<shape*>& refresh_shapes,
-    const vector<texture*>& refresh_textures) {
+    const gl_stdsurface_params& params,
+    const unordered_set<shape*>& refresh_shapes,
+    const unordered_set<texture*>& refresh_textures) {
     // update textures -----------------------------------------------------
     for (auto txt : scn->textures) {
-        if (st->txt.find(txt) != st->txt.end()) continue;
+        if (st->txt.find(txt) == st->txt.end()) {
+            st->txt[txt] = gl_texture();
+        } else {
+            if (refresh_textures.find(txt) == refresh_textures.end()) continue;
+        }
         if (txt->hdr) {
-            st->txt[txt] = make_texture(txt->hdr, true, true, true);
+            update_texture(st->txt[txt], txt->hdr, true, true, true);
         } else if (txt->ldr) {
-            st->txt[txt] = make_texture(txt->ldr, true, true, true);
+            update_texture(st->txt[txt], txt->ldr, true, true, true);
         } else
             assert(false);
-    }
-
-    // refresh textures ----------------------------------------------------
-    for (auto txt : refresh_textures) {
-        if (txt->hdr) {
-            update_texture(st->txt[txt], txt->hdr);
-        } else if (txt->ldr) {
-            update_texture(st->txt[txt], txt->ldr);
-        } else
-            assert(false);
-    }
-
-    // update vbos -----------------------------------------------------
-    for (auto shp : scn->shapes) {
-        if (st->vbo.find(shp) != st->vbo.end()) continue;
-        st->vbo[shp] = gl_stdsurface_vbo();
-        if (!shp->pos.empty()) st->vbo[shp].pos = make_vertex_buffer(shp->pos);
-        if (!shp->norm.empty())
-            st->vbo[shp].norm = make_vertex_buffer(shp->norm);
-        if (!shp->texcoord.empty())
-            st->vbo[shp].texcoord = make_vertex_buffer(shp->texcoord);
-        if (!shp->color.empty())
-            st->vbo[shp].color = make_vertex_buffer(shp->color);
-        if (!shp->tangsp.empty())
-            st->vbo[shp].tangsp = make_vertex_buffer(shp->tangsp);
-        if (!shp->points.empty())
-            st->vbo[shp].points = make_element_buffer(shp->points);
-        if (!shp->lines.empty())
-            st->vbo[shp].lines = make_element_buffer(shp->lines);
-        if (!shp->triangles.empty()) {
-            st->vbo[shp].triangles = make_element_buffer(shp->triangles);
-        }
-        if (!shp->quads.empty()) {
-            auto triangles = convert_quads_to_triangles(shp->quads);
-            st->vbo[shp].quads = make_element_buffer(triangles);
-        }
-        if (!shp->triangles.empty() || !shp->quads.empty() ||
-            !shp->quads_pos.empty()) {
-            auto edges = get_edges(
-                shp->lines, shp->triangles, shp->quads + shp->quads_pos);
-            st->vbo[shp].edges = make_element_buffer(edges);
-        }
     }
 
     // refresh vbos --------------------------------------------------------
-    for (auto shp : refresh_shapes) {
+    for (auto shp : scn->shapes) {
+        if (st->vbo.find(shp) == st->vbo.end()) {
+            st->vbo[shp] = gl_stdsurface_vbo();
+        } else {
+            if (refresh_shapes.find(shp) == refresh_shapes.end()) continue;
+        }
         if (!shp->pos.empty()) update_vertex_buffer(st->vbo[shp].pos, shp->pos);
         if (!shp->norm.empty())
             update_vertex_buffer(st->vbo[shp].norm, shp->norm);

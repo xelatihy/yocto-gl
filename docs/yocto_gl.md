@@ -10050,29 +10050,61 @@ struct gl_texture {
 
 Opengl texture object
 
-#### Function make_texture()
+#### Function update_texture()
 
 ~~~ .cpp
-inline gl_texture make_texture(int w, int h, int nc, const float* pixels,
-    bool linear, bool mipmap, bool as_float);
+inline void update_texture(gl_texture& txt, int w, int h, int nc,
+    const float* pixels, bool linear, bool mipmap, bool as_float);
 ~~~
 
-Creates a texture with pixels values of size w, h with nc number of
-components (1-4).
-Internally use float if as_float and filtering if filter.
-Returns the texture id.
+Updates a texture with pixels values of size w, h with nc number of
+components (1-4). Internally use float if as_float and filtering if filter.
 
-#### Function make_texture()
+#### Function update_texture()
 
 ~~~ .cpp
-inline gl_texture make_texture(int w, int h, int nc,
+inline void update_texture(gl_texture& txt, int w, int h, int nc,
     const unsigned char* pixels, bool linear, bool mipmap, bool as_srgb);
 ~~~
 
-Creates a texture with pixels values of size w, h with nc number of
-components (1-4).
-Internally use srgb lookup if as_srgb and filtering if filter.
-Returns the texture id.
+Updates a texture with pixels values of size w, h with nc number of
+components (1-4). Internally use float if as_float and filtering if filter.
+
+#### Function update_texture()
+
+~~~ .cpp
+inline void update_texture(gl_texture& txt, const image4f& img, bool linear,
+    bool mipmap, bool as_float);
+~~~
+
+Updates a texture with pixels values from an image.
+Internally use float if as_float and filtering if filter.
+
+#### Function update_texture()
+
+~~~ .cpp
+inline void update_texture(gl_texture& txt, const image4b& img, bool linear,
+    bool mipmap, bool as_srgb);
+~~~
+
+Updates a texture with pixels values from an image.
+Internally use float if as_float and filtering if filter.
+
+#### Function update_texture()
+
+~~~ .cpp
+inline void update_texture(gl_texture& txt, const image4f& img);
+~~~
+
+Updates a texture with pixels values from an image.
+
+#### Function update_texture()
+
+~~~ .cpp
+inline void update_texture(gl_texture& txt, const image4b& img);
+~~~
+
+Updates a texture with pixels values from an image.
 
 #### Function make_texture()
 
@@ -10081,9 +10113,7 @@ inline gl_texture make_texture(
     const image4f& img, bool linear, bool mipmap, bool as_float);
 ~~~
 
-Creates a texture from an image.
-Internally use float if as_float and filtering if filter.
-Returns the texture id.
+Creates a texture from an image. Convenience wrapper to update_texture().
 
 #### Function make_texture()
 
@@ -10092,43 +10122,7 @@ inline gl_texture make_texture(
     const image4b& img, bool linear, bool mipmap, bool as_srgb);
 ~~~
 
-Creates a texture from an image.
-Internally use srgb lookup if as_srgb and filtering if filter.
-Returns the texture id.
-
-#### Function update_texture()
-
-~~~ .cpp
-inline void update_texture(
-    gl_texture& txt, int w, int h, int nc, const float* pixels);
-~~~
-
-Updates the texture tid with new image data.
-
-#### Function update_texture()
-
-~~~ .cpp
-inline void update_texture(
-    gl_texture& txt, int w, int h, int nc, const unsigned char* pixels);
-~~~
-
-Updates the texture tid with new image data.
-
-#### Function update_texture()
-
-~~~ .cpp
-inline void update_texture(gl_texture& txt, const image4f& img);
-~~~
-
-Updates the texture tid with new image data.
-
-#### Function update_texture()
-
-~~~ .cpp
-inline void update_texture(gl_texture& txt, const image4b& img);
-~~~
-
-Updates the texture tid with new image data.
+Creates a texture from an image. Convenience wrapper to update_texture().
 
 #### Function bind_texture()
 
@@ -10254,96 +10248,6 @@ struct gl_vertex_buffer {
 
 OpenGL vertex/element buffer
 
-#### Function make_vertex_buffer()
-
-~~~ .cpp
-inline gl_vertex_buffer make_vertex_buffer(
-    int num, int ncomp, const float* values, bool dynamic = false);
-~~~
-
-Creates a buffer.
-
-#### Function make_vertex_buffer()
-
-~~~ .cpp
-inline gl_vertex_buffer make_vertex_buffer(
-    int num, int ncomp, const int* values, bool dynamic = false);
-~~~
-
-Creates a buffer.
-
-#### Function make_vertex_buffer()
-
-~~~ .cpp
-inline gl_vertex_buffer make_vertex_buffer(
-    const vector<float>& values, bool dynamic = false);
-~~~
-
-Creates a buffer.
-
-#### Function make_vertex_buffer()
-
-~~~ .cpp
-inline gl_vertex_buffer make_vertex_buffer(
-    const vector<vec2f>& values, bool dynamic = false);
-~~~
-
-Creates a buffer.
-
-#### Function make_vertex_buffer()
-
-~~~ .cpp
-inline gl_vertex_buffer make_vertex_buffer(
-    const vector<vec3f>& values, bool dynamic = false);
-~~~
-
-Creates a buffer.
-
-#### Function make_vertex_buffer()
-
-~~~ .cpp
-inline gl_vertex_buffer make_vertex_buffer(
-    const vector<vec4f>& values, bool dynamic = false);
-~~~
-
-Creates a buffer.
-
-#### Function make_vertex_buffer()
-
-~~~ .cpp
-inline gl_vertex_buffer make_vertex_buffer(
-    const vector<int>& values, bool dynamic = false);
-~~~
-
-Creates a buffer.
-
-#### Function make_vertex_buffer()
-
-~~~ .cpp
-inline gl_vertex_buffer make_vertex_buffer(
-    const vector<vec2i>& values, bool dynamic = false);
-~~~
-
-Creates a buffer.
-
-#### Function make_vertex_buffer()
-
-~~~ .cpp
-inline gl_vertex_buffer make_vertex_buffer(
-    const vector<vec3i>& values, bool dynamic = false);
-~~~
-
-Creates a buffer.
-
-#### Function make_vertex_buffer()
-
-~~~ .cpp
-inline gl_vertex_buffer make_vertex_buffer(
-    const vector<vec4i>& values, bool dynamic = false);
-~~~
-
-Creates a buffer.
-
 #### Function update_vertex_buffer()
 
 ~~~ .cpp
@@ -10369,7 +10273,7 @@ inline void update_vertex_buffer(
     gl_vertex_buffer& buf, const vector<float>& values, bool dynamic = false);
 ~~~
 
-Updates the buffer bid with new data.
+Updates the bufferwith new data.
 
 #### Function update_vertex_buffer()
 
@@ -10378,7 +10282,7 @@ inline void update_vertex_buffer(
     gl_vertex_buffer& buf, const vector<vec2f>& values, bool dynamic = false);
 ~~~
 
-Updates the buffer bid with new data.
+Updates the bufferwith new data.
 
 #### Function update_vertex_buffer()
 
@@ -10387,7 +10291,7 @@ inline void update_vertex_buffer(
     gl_vertex_buffer& buf, const vector<vec3f>& values, bool dynamic = false);
 ~~~
 
-Updates the buffer bid with new data.
+Updates the bufferwith new data.
 
 #### Function update_vertex_buffer()
 
@@ -10396,7 +10300,7 @@ inline void update_vertex_buffer(
     gl_vertex_buffer& buf, const vector<vec4f>& values, bool dynamic = false);
 ~~~
 
-Updates the buffer bid with new data.
+Updates the bufferwith new data.
 
 #### Function update_vertex_buffer()
 
@@ -10405,7 +10309,7 @@ inline void update_vertex_buffer(
     gl_vertex_buffer& buf, const vector<int>& values, bool dynamic = false);
 ~~~
 
-Updates the buffer bid with new data.
+Updates the bufferwith new data.
 
 #### Function update_vertex_buffer()
 
@@ -10414,7 +10318,7 @@ inline void update_vertex_buffer(
     gl_vertex_buffer& buf, const vector<vec2i>& values, bool dynamic = false);
 ~~~
 
-Updates the buffer bid with new data.
+Updates the bufferwith new data.
 
 #### Function update_vertex_buffer()
 
@@ -10423,7 +10327,7 @@ inline void update_vertex_buffer(
     gl_vertex_buffer& buf, const vector<vec3i>& values, bool dynamic = false);
 ~~~
 
-Updates the buffer bid with new data.
+Updates the bufferwith new data.
 
 #### Function update_vertex_buffer()
 
@@ -10432,7 +10336,18 @@ inline void update_vertex_buffer(
     gl_vertex_buffer& buf, const vector<vec4i>& values, bool dynamic = false);
 ~~~
 
-Updates the buffer bid with new data.
+Updates the buffer with new data.
+
+#### Function make_vertex_buffer()
+
+~~~ .cpp
+template <typename T>
+inline gl_vertex_buffer make_vertex_buffer(
+    const vector<T>& values, bool dynamic = false);
+~~~
+
+Make a buffer with new data. A convenience wrapper to
+update_vertex_buffer().
 
 #### Function bind_vertex_buffer()
 
@@ -10490,51 +10405,6 @@ struct gl_element_buffer {
 
 OpenGL vertex/element buffer
 
-#### Function make_element_buffer()
-
-~~~ .cpp
-inline gl_element_buffer make_element_buffer(
-    int num, int ncomp, const int* values, bool dynamic = false);
-~~~
-
-Creates a buffer.
-
-#### Function make_element_buffer()
-
-~~~ .cpp
-inline gl_element_buffer make_element_buffer(
-    const vector<int>& values, bool dynamic = false);
-~~~
-
-Creates a buffer.
-
-#### Function make_element_buffer()
-
-~~~ .cpp
-inline gl_element_buffer make_element_buffer(
-    const vector<vec2i>& values, bool dynamic = false);
-~~~
-
-Creates a buffer.
-
-#### Function make_element_buffer()
-
-~~~ .cpp
-inline gl_element_buffer make_element_buffer(
-    const vector<vec3i>& values, bool dynamic = false);
-~~~
-
-Creates a buffer.
-
-#### Function make_element_buffer()
-
-~~~ .cpp
-inline gl_element_buffer make_element_buffer(
-    const vector<vec4i>& values, bool dynamic = false);
-~~~
-
-Creates a buffer.
-
 #### Function update_element_buffer()
 
 ~~~ .cpp
@@ -10551,7 +10421,7 @@ inline void update_element_buffer(
     gl_element_buffer& buf, const vector<int>& values, bool dynamic = false);
 ~~~
 
-Updates the buffer bid with new data.
+Updates the bufferwith new data.
 
 #### Function update_element_buffer()
 
@@ -10560,7 +10430,7 @@ inline void update_element_buffer(
     gl_element_buffer& buf, const vector<vec2i>& values, bool dynamic = false);
 ~~~
 
-Updates the buffer bid with new data.
+Updates the bufferwith new data.
 
 #### Function update_element_buffer()
 
@@ -10569,7 +10439,7 @@ inline void update_element_buffer(
     gl_element_buffer& buf, const vector<vec3i>& values, bool dynamic = false);
 ~~~
 
-Updates the buffer bid with new data.
+Updates the bufferwith new data.
 
 #### Function update_element_buffer()
 
@@ -10578,7 +10448,18 @@ inline void update_element_buffer(
     gl_element_buffer& buf, const vector<vec4i>& values, bool dynamic = false);
 ~~~
 
-Updates the buffer bid with new data.
+Updates the bufferwith new data.
+
+#### Function make_element_buffer()
+
+~~~ .cpp
+template <typename T>
+inline gl_element_buffer make_element_buffer(
+    const vector<T>& values, bool dynamic = false);
+~~~
+
+Make a buffer with new data. A convenience wrapper to
+update_velement_buffer().
 
 #### Function draw_elems()
 
@@ -11328,7 +11209,7 @@ Initialize gl_stdsurface_program draw state
 ~~~ .cpp
 void update_stdsurface_state(gl_stdsurface_state* st, const scene* scn,
     const gl_stdsurface_params& params,
-    const vector<shape*>& refresh_shapes =;
+    const unordered_set<shape*>& refresh_shapes =;
 ~~~
 
 Update gl_stdsurface_program draw state. This updates stdsurface meshes
