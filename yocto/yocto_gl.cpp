@@ -3117,11 +3117,19 @@ inline void from_json(array<T, N>& vals, const json& js) {
 
 // Parse support function.
 template <typename T, typename T1>
-inline void from_json(T& val, const json& js, const map<T1, T>& table) {
+inline void from_json(
+    T& val, const json& js, const vector<pair<T1, T>>& table) {
     auto v = T1();
     from_json(v, js);
-    if (table.find(v) == table.end()) throw runtime_error("bad enum value");
-    val = table.at(v);
+    auto found = false;
+    for (auto& kv : table) {
+        if (kv.first == v) {
+            val = kv.second;
+            found = true;
+            break;
+        }
+    }
+    if (!found) throw runtime_error("bad enum value");
 }
 
 // Parse support function.
@@ -3176,7 +3184,7 @@ inline void from_json(glTFChildOfRootProperty*& val, const json& js) {
 // Parse a glTFAccessorSparseIndicesComponentType enum
 inline void from_json(
     glTFAccessorSparseIndicesComponentType& val, const json& js) {
-    static map<int, glTFAccessorSparseIndicesComponentType> table = {
+    static vector<pair<int, glTFAccessorSparseIndicesComponentType>> table = {
         {5121, glTFAccessorSparseIndicesComponentType::UnsignedByte},
         {5123, glTFAccessorSparseIndicesComponentType::UnsignedShort},
         {5125, glTFAccessorSparseIndicesComponentType::UnsignedInt},
@@ -3220,7 +3228,7 @@ inline void from_json(glTFAccessorSparse*& val, const json& js) {
 }
 // Parse a glTFAccessorComponentType enum
 inline void from_json(glTFAccessorComponentType& val, const json& js) {
-    static map<int, glTFAccessorComponentType> table = {
+    static vector<pair<int, glTFAccessorComponentType>> table = {
         {5120, glTFAccessorComponentType::Byte},
         {5121, glTFAccessorComponentType::UnsignedByte},
         {5122, glTFAccessorComponentType::Short},
@@ -3233,7 +3241,7 @@ inline void from_json(glTFAccessorComponentType& val, const json& js) {
 
 // Parse a glTFAccessorType enum
 inline void from_json(glTFAccessorType& val, const json& js) {
-    static map<string, glTFAccessorType> table = {
+    static vector<pair<string, glTFAccessorType>> table = {
         {"SCALAR", glTFAccessorType::Scalar},
         {"VEC2", glTFAccessorType::Vec2},
         {"VEC3", glTFAccessorType::Vec3},
@@ -3265,7 +3273,7 @@ inline void from_json(glTFAccessor*& val, const json& js) {
 }
 // Parse a glTFAnimationChannelTargetPath enum
 inline void from_json(glTFAnimationChannelTargetPath& val, const json& js) {
-    static map<string, glTFAnimationChannelTargetPath> table = {
+    static vector<pair<string, glTFAnimationChannelTargetPath>> table = {
         {"translation", glTFAnimationChannelTargetPath::Translation},
         {"rotation", glTFAnimationChannelTargetPath::Rotation},
         {"scale", glTFAnimationChannelTargetPath::Scale},
@@ -3297,7 +3305,7 @@ inline void from_json(glTFAnimationChannel*& val, const json& js) {
 }
 // Parse a glTFAnimationSamplerInterpolation enum
 inline void from_json(glTFAnimationSamplerInterpolation& val, const json& js) {
-    static map<string, glTFAnimationSamplerInterpolation> table = {
+    static vector<pair<string, glTFAnimationSamplerInterpolation>> table = {
         {"LINEAR", glTFAnimationSamplerInterpolation::Linear},
         {"STEP", glTFAnimationSamplerInterpolation::Step},
         {"CATMULLROMSPLINE",
@@ -3354,7 +3362,7 @@ inline void from_json(glTFBuffer*& val, const json& js) {
 }
 // Parse a glTFBufferViewTarget enum
 inline void from_json(glTFBufferViewTarget& val, const json& js) {
-    static map<int, glTFBufferViewTarget> table = {
+    static vector<pair<int, glTFBufferViewTarget>> table = {
         {34962, glTFBufferViewTarget::ArrayBuffer},
         {34963, glTFBufferViewTarget::ElementArrayBuffer},
     };
@@ -3405,7 +3413,7 @@ inline void from_json(glTFCameraPerspective*& val, const json& js) {
 }
 // Parse a glTFCameraType enum
 inline void from_json(glTFCameraType& val, const json& js) {
-    static map<string, glTFCameraType> table = {
+    static vector<pair<string, glTFCameraType>> table = {
         {"perspective", glTFCameraType::Perspective},
         {"orthographic", glTFCameraType::Orthographic},
     };
@@ -3426,7 +3434,7 @@ inline void from_json(glTFCamera*& val, const json& js) {
 }
 // Parse a glTFImageMimeType enum
 inline void from_json(glTFImageMimeType& val, const json& js) {
-    static map<string, glTFImageMimeType> table = {
+    static vector<pair<string, glTFImageMimeType>> table = {
         {"image/jpeg", glTFImageMimeType::ImageJpeg},
         {"image/png", glTFImageMimeType::ImagePng},
     };
@@ -3515,7 +3523,7 @@ inline void from_json(glTFMaterialPbrSpecularGlossiness*& val, const json& js) {
 }
 // Parse a glTFMaterialAlphaMode enum
 inline void from_json(glTFMaterialAlphaMode& val, const json& js) {
-    static map<string, glTFMaterialAlphaMode> table = {
+    static vector<pair<string, glTFMaterialAlphaMode>> table = {
         {"OPAQUE", glTFMaterialAlphaMode::Opaque},
         {"MASK", glTFMaterialAlphaMode::Mask},
         {"BLEND", glTFMaterialAlphaMode::Blend},
@@ -3552,7 +3560,7 @@ inline void from_json(glTFMaterial*& val, const json& js) {
 }
 // Parse a glTFMeshPrimitiveMode enum
 inline void from_json(glTFMeshPrimitiveMode& val, const json& js) {
-    static map<int, glTFMeshPrimitiveMode> table = {
+    static vector<pair<int, glTFMeshPrimitiveMode>> table = {
         {0, glTFMeshPrimitiveMode::Points},
         {1, glTFMeshPrimitiveMode::Lines},
         {2, glTFMeshPrimitiveMode::LineLoop},
@@ -3605,7 +3613,7 @@ inline void from_json(glTFNode*& val, const json& js) {
 }
 // Parse a glTFSamplerMagFilter enum
 inline void from_json(glTFSamplerMagFilter& val, const json& js) {
-    static map<int, glTFSamplerMagFilter> table = {
+    static vector<pair<int, glTFSamplerMagFilter>> table = {
         {9728, glTFSamplerMagFilter::Nearest},
         {9729, glTFSamplerMagFilter::Linear},
     };
@@ -3614,7 +3622,7 @@ inline void from_json(glTFSamplerMagFilter& val, const json& js) {
 
 // Parse a glTFSamplerMinFilter enum
 inline void from_json(glTFSamplerMinFilter& val, const json& js) {
-    static map<int, glTFSamplerMinFilter> table = {
+    static vector<pair<int, glTFSamplerMinFilter>> table = {
         {9728, glTFSamplerMinFilter::Nearest},
         {9729, glTFSamplerMinFilter::Linear},
         {9984, glTFSamplerMinFilter::NearestMipmapNearest},
@@ -3627,7 +3635,7 @@ inline void from_json(glTFSamplerMinFilter& val, const json& js) {
 
 // Parse a glTFSamplerWrapS enum
 inline void from_json(glTFSamplerWrapS& val, const json& js) {
-    static map<int, glTFSamplerWrapS> table = {
+    static vector<pair<int, glTFSamplerWrapS>> table = {
         {33071, glTFSamplerWrapS::ClampToEdge},
         {33648, glTFSamplerWrapS::MirroredRepeat},
         {10497, glTFSamplerWrapS::Repeat},
@@ -3637,7 +3645,7 @@ inline void from_json(glTFSamplerWrapS& val, const json& js) {
 
 // Parse a glTFSamplerWrapT enum
 inline void from_json(glTFSamplerWrapT& val, const json& js) {
-    static map<int, glTFSamplerWrapT> table = {
+    static vector<pair<int, glTFSamplerWrapT>> table = {
         {33071, glTFSamplerWrapT::ClampToEdge},
         {33648, glTFSamplerWrapT::MirroredRepeat},
         {10497, glTFSamplerWrapT::Repeat},
@@ -3742,8 +3750,17 @@ inline void to_json(const map<string, T>& vals, json& js) {
 
 // Dump support function.
 template <typename T, typename T1>
-inline void to_json(const T& val, json& js, const map<T, T1>& table) {
-    auto v = table.at(val);
+inline void to_json(const T& val, json& js, const vector<pair<T1, T>>& table) {
+    auto found = false;
+    auto v = T1();
+    for (auto& kv : table) {
+        if (kv.second == val) {
+            v = kv.first;
+            found = true;
+            break;
+        }
+    }
+    if (!found) throw runtime_error("invalid value");
     to_json(v, js);
 }
 
@@ -3796,10 +3813,10 @@ inline void to_json(const glTFChildOfRootProperty* val, json& js) {
 // Converts a glTFAccessorSparseIndicesComponentType enum to JSON
 inline void to_json(
     const glTFAccessorSparseIndicesComponentType& val, json& js) {
-    static map<glTFAccessorSparseIndicesComponentType, int> table = {
-        {glTFAccessorSparseIndicesComponentType::UnsignedByte, 5121},
-        {glTFAccessorSparseIndicesComponentType::UnsignedShort, 5123},
-        {glTFAccessorSparseIndicesComponentType::UnsignedInt, 5125},
+    static vector<pair<int, glTFAccessorSparseIndicesComponentType>> table = {
+        {5121, glTFAccessorSparseIndicesComponentType::UnsignedByte},
+        {5123, glTFAccessorSparseIndicesComponentType::UnsignedShort},
+        {5125, glTFAccessorSparseIndicesComponentType::UnsignedInt},
     };
     to_json(val, js, table);
 }
@@ -3831,27 +3848,27 @@ inline void to_json(const glTFAccessorSparse* val, json& js) {
 }
 // Converts a glTFAccessorComponentType enum to JSON
 inline void to_json(const glTFAccessorComponentType& val, json& js) {
-    static map<glTFAccessorComponentType, int> table = {
-        {glTFAccessorComponentType::Byte, 5120},
-        {glTFAccessorComponentType::UnsignedByte, 5121},
-        {glTFAccessorComponentType::Short, 5122},
-        {glTFAccessorComponentType::UnsignedShort, 5123},
-        {glTFAccessorComponentType::UnsignedInt, 5125},
-        {glTFAccessorComponentType::Float, 5126},
+    static vector<pair<int, glTFAccessorComponentType>> table = {
+        {5120, glTFAccessorComponentType::Byte},
+        {5121, glTFAccessorComponentType::UnsignedByte},
+        {5122, glTFAccessorComponentType::Short},
+        {5123, glTFAccessorComponentType::UnsignedShort},
+        {5125, glTFAccessorComponentType::UnsignedInt},
+        {5126, glTFAccessorComponentType::Float},
     };
     to_json(val, js, table);
 }
 
 // Converts a glTFAccessorType enum to JSON
 inline void to_json(const glTFAccessorType& val, json& js) {
-    static map<glTFAccessorType, string> table = {
-        {glTFAccessorType::Scalar, "SCALAR"},
-        {glTFAccessorType::Vec2, "VEC2"},
-        {glTFAccessorType::Vec3, "VEC3"},
-        {glTFAccessorType::Vec4, "VEC4"},
-        {glTFAccessorType::Mat2, "MAT2"},
-        {glTFAccessorType::Mat3, "MAT3"},
-        {glTFAccessorType::Mat4, "MAT4"},
+    static vector<pair<string, glTFAccessorType>> table = {
+        {"SCALAR", glTFAccessorType::Scalar},
+        {"VEC2", glTFAccessorType::Vec2},
+        {"VEC3", glTFAccessorType::Vec3},
+        {"VEC4", glTFAccessorType::Vec4},
+        {"MAT2", glTFAccessorType::Mat2},
+        {"MAT3", glTFAccessorType::Mat3},
+        {"MAT4", glTFAccessorType::Mat4},
     };
     to_json(val, js, table);
 }
@@ -3872,11 +3889,11 @@ inline void to_json(const glTFAccessor* val, json& js) {
 }
 // Converts a glTFAnimationChannelTargetPath enum to JSON
 inline void to_json(const glTFAnimationChannelTargetPath& val, json& js) {
-    static map<glTFAnimationChannelTargetPath, string> table = {
-        {glTFAnimationChannelTargetPath::Translation, "translation"},
-        {glTFAnimationChannelTargetPath::Rotation, "rotation"},
-        {glTFAnimationChannelTargetPath::Scale, "scale"},
-        {glTFAnimationChannelTargetPath::Weights, "weights"},
+    static vector<pair<string, glTFAnimationChannelTargetPath>> table = {
+        {"translation", glTFAnimationChannelTargetPath::Translation},
+        {"rotation", glTFAnimationChannelTargetPath::Rotation},
+        {"scale", glTFAnimationChannelTargetPath::Scale},
+        {"weights", glTFAnimationChannelTargetPath::Weights},
     };
     to_json(val, js, table);
 }
@@ -3898,12 +3915,12 @@ inline void to_json(const glTFAnimationChannel* val, json& js) {
 }
 // Converts a glTFAnimationSamplerInterpolation enum to JSON
 inline void to_json(const glTFAnimationSamplerInterpolation& val, json& js) {
-    static map<glTFAnimationSamplerInterpolation, string> table = {
-        {glTFAnimationSamplerInterpolation::Linear, "LINEAR"},
-        {glTFAnimationSamplerInterpolation::Step, "STEP"},
-        {glTFAnimationSamplerInterpolation::CatmullRomSpline,
-            "CATMULLROMSPLINE"},
-        {glTFAnimationSamplerInterpolation::CubicSpline, "CUBICSPLINE"},
+    static vector<pair<string, glTFAnimationSamplerInterpolation>> table = {
+        {"LINEAR", glTFAnimationSamplerInterpolation::Linear},
+        {"STEP", glTFAnimationSamplerInterpolation::Step},
+        {"CATMULLROMSPLINE",
+            glTFAnimationSamplerInterpolation::CatmullRomSpline},
+        {"CUBICSPLINE", glTFAnimationSamplerInterpolation::CubicSpline},
     };
     to_json(val, js, table);
 }
@@ -3945,9 +3962,9 @@ inline void to_json(const glTFBuffer* val, json& js) {
 }
 // Converts a glTFBufferViewTarget enum to JSON
 inline void to_json(const glTFBufferViewTarget& val, json& js) {
-    static map<glTFBufferViewTarget, int> table = {
-        {glTFBufferViewTarget::ArrayBuffer, 34962},
-        {glTFBufferViewTarget::ElementArrayBuffer, 34963},
+    static vector<pair<int, glTFBufferViewTarget>> table = {
+        {34962, glTFBufferViewTarget::ArrayBuffer},
+        {34963, glTFBufferViewTarget::ElementArrayBuffer},
     };
     to_json(val, js, table);
 }
@@ -3985,9 +4002,9 @@ inline void to_json(const glTFCameraPerspective* val, json& js) {
 }
 // Converts a glTFCameraType enum to JSON
 inline void to_json(const glTFCameraType& val, json& js) {
-    static map<glTFCameraType, string> table = {
-        {glTFCameraType::Perspective, "perspective"},
-        {glTFCameraType::Orthographic, "orthographic"},
+    static vector<pair<string, glTFCameraType>> table = {
+        {"perspective", glTFCameraType::Perspective},
+        {"orthographic", glTFCameraType::Orthographic},
     };
     to_json(val, js, table);
 }
@@ -4004,9 +4021,9 @@ inline void to_json(const glTFCamera* val, json& js) {
 }
 // Converts a glTFImageMimeType enum to JSON
 inline void to_json(const glTFImageMimeType& val, json& js) {
-    static map<glTFImageMimeType, string> table = {
-        {glTFImageMimeType::ImageJpeg, "image/jpeg"},
-        {glTFImageMimeType::ImagePng, "image/png"},
+    static vector<pair<string, glTFImageMimeType>> table = {
+        {"image/jpeg", glTFImageMimeType::ImageJpeg},
+        {"image/png", glTFImageMimeType::ImagePng},
     };
     to_json(val, js, table);
 }
@@ -4085,10 +4102,10 @@ inline void to_json(const glTFMaterialPbrSpecularGlossiness* val, json& js) {
 }
 // Converts a glTFMaterialAlphaMode enum to JSON
 inline void to_json(const glTFMaterialAlphaMode& val, json& js) {
-    static map<glTFMaterialAlphaMode, string> table = {
-        {glTFMaterialAlphaMode::Opaque, "OPAQUE"},
-        {glTFMaterialAlphaMode::Mask, "MASK"},
-        {glTFMaterialAlphaMode::Blend, "BLEND"},
+    static vector<pair<string, glTFMaterialAlphaMode>> table = {
+        {"OPAQUE", glTFMaterialAlphaMode::Opaque},
+        {"MASK", glTFMaterialAlphaMode::Mask},
+        {"BLEND", glTFMaterialAlphaMode::Blend},
     };
     to_json(val, js, table);
 }
@@ -4120,14 +4137,14 @@ inline void to_json(const glTFMaterial* val, json& js) {
 }
 // Converts a glTFMeshPrimitiveMode enum to JSON
 inline void to_json(const glTFMeshPrimitiveMode& val, json& js) {
-    static map<glTFMeshPrimitiveMode, int> table = {
-        {glTFMeshPrimitiveMode::Points, 0},
-        {glTFMeshPrimitiveMode::Lines, 1},
-        {glTFMeshPrimitiveMode::LineLoop, 2},
-        {glTFMeshPrimitiveMode::LineStrip, 3},
-        {glTFMeshPrimitiveMode::Triangles, 4},
-        {glTFMeshPrimitiveMode::TriangleStrip, 5},
-        {glTFMeshPrimitiveMode::TriangleFan, 6},
+    static vector<pair<int, glTFMeshPrimitiveMode>> table = {
+        {0, glTFMeshPrimitiveMode::Points},
+        {1, glTFMeshPrimitiveMode::Lines},
+        {2, glTFMeshPrimitiveMode::LineLoop},
+        {3, glTFMeshPrimitiveMode::LineStrip},
+        {4, glTFMeshPrimitiveMode::Triangles},
+        {5, glTFMeshPrimitiveMode::TriangleStrip},
+        {6, glTFMeshPrimitiveMode::TriangleFan},
     };
     to_json(val, js, table);
 }
@@ -4172,42 +4189,42 @@ inline void to_json(const glTFNode* val, json& js) {
 }
 // Converts a glTFSamplerMagFilter enum to JSON
 inline void to_json(const glTFSamplerMagFilter& val, json& js) {
-    static map<glTFSamplerMagFilter, int> table = {
-        {glTFSamplerMagFilter::Nearest, 9728},
-        {glTFSamplerMagFilter::Linear, 9729},
+    static vector<pair<int, glTFSamplerMagFilter>> table = {
+        {9728, glTFSamplerMagFilter::Nearest},
+        {9729, glTFSamplerMagFilter::Linear},
     };
     to_json(val, js, table);
 }
 
 // Converts a glTFSamplerMinFilter enum to JSON
 inline void to_json(const glTFSamplerMinFilter& val, json& js) {
-    static map<glTFSamplerMinFilter, int> table = {
-        {glTFSamplerMinFilter::Nearest, 9728},
-        {glTFSamplerMinFilter::Linear, 9729},
-        {glTFSamplerMinFilter::NearestMipmapNearest, 9984},
-        {glTFSamplerMinFilter::LinearMipmapNearest, 9985},
-        {glTFSamplerMinFilter::NearestMipmapLinear, 9986},
-        {glTFSamplerMinFilter::LinearMipmapLinear, 9987},
+    static vector<pair<int, glTFSamplerMinFilter>> table = {
+        {9728, glTFSamplerMinFilter::Nearest},
+        {9729, glTFSamplerMinFilter::Linear},
+        {9984, glTFSamplerMinFilter::NearestMipmapNearest},
+        {9985, glTFSamplerMinFilter::LinearMipmapNearest},
+        {9986, glTFSamplerMinFilter::NearestMipmapLinear},
+        {9987, glTFSamplerMinFilter::LinearMipmapLinear},
     };
     to_json(val, js, table);
 }
 
 // Converts a glTFSamplerWrapS enum to JSON
 inline void to_json(const glTFSamplerWrapS& val, json& js) {
-    static map<glTFSamplerWrapS, int> table = {
-        {glTFSamplerWrapS::ClampToEdge, 33071},
-        {glTFSamplerWrapS::MirroredRepeat, 33648},
-        {glTFSamplerWrapS::Repeat, 10497},
+    static vector<pair<int, glTFSamplerWrapS>> table = {
+        {33071, glTFSamplerWrapS::ClampToEdge},
+        {33648, glTFSamplerWrapS::MirroredRepeat},
+        {10497, glTFSamplerWrapS::Repeat},
     };
     to_json(val, js, table);
 }
 
 // Converts a glTFSamplerWrapT enum to JSON
 inline void to_json(const glTFSamplerWrapT& val, json& js) {
-    static map<glTFSamplerWrapT, int> table = {
-        {glTFSamplerWrapT::ClampToEdge, 33071},
-        {glTFSamplerWrapT::MirroredRepeat, 33648},
-        {glTFSamplerWrapT::Repeat, 10497},
+    static vector<pair<int, glTFSamplerWrapT>> table = {
+        {33071, glTFSamplerWrapT::ClampToEdge},
+        {33648, glTFSamplerWrapT::MirroredRepeat},
+        {10497, glTFSamplerWrapT::Repeat},
     };
     to_json(val, js, table);
 }
