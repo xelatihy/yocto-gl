@@ -256,6 +256,12 @@ int main(int argc, char* argv[]) {
     // init renderer
     log_info("initializing tracer");
     update_lights(app->scn, true, true);
+    
+    // fix renderer type if no lights
+    if(app->scn->lights.empty() && app->trace_params_.stype != trace_shader_type::eyelight) {
+        log_info("no lights presents, switching to eyelight shader");
+        app->trace_params_.stype = trace_shader_type::eyelight;
+    }
 
     // initialize rendering objects
     auto cam = app->scn->cameras[app->trace_params_.camera_id];
