@@ -80,43 +80,6 @@ inline void from_json(string& val, const json& js) {
 inline void from_json(json& val, const json& js) { val = js; }
 
 // Parse support function.
-inline void from_json(vec2f& vals, const json& js) {
-    if (!js.is_array()) throw runtime_error("array expected");
-    if (2 != js.size()) throw runtime_error("wrong array size");
-    for (auto i = 0; i < 2; i++) { from_json(vals[i], js[i]); }
-}
-
-// Parse support function.
-inline void from_json(vec3f& vals, const json& js) {
-    if (!js.is_array()) throw runtime_error("array expected");
-    if (3 != js.size()) throw runtime_error("wrong array size");
-    for (auto i = 0; i < 3; i++) { from_json(vals[i], js[i]); }
-}
-
-// Parse support function.
-inline void from_json(vec4f& vals, const json& js) {
-    if (!js.is_array()) throw runtime_error("array expected");
-    if (4 != js.size()) throw runtime_error("wrong array size");
-    for (auto i = 0; i < 4; i++) { from_json(vals[i], js[i]); }
-}
-
-// Parse support function.
-inline void from_json(quat4f& vals, const json& js) {
-    if (!js.is_array()) throw runtime_error("array expected");
-    if (4 != js.size()) throw runtime_error("wrong array size");
-    for (auto i = 0; i < 4; i++) { from_json(vals[i], js[i]); }
-}
-
-// Parse support function.
-inline void from_json(mat4f& vals, const json& js) {
-    if (!js.is_array()) throw runtime_error("array expected");
-    if (16 != js.size()) throw runtime_error("wrong array size");
-    for (auto j = 0; j < 4; j++) {
-        for (auto i = 0; i < 4; i++) { from_json(vals[j][i], js[j * 4 + i]); }
-    }
-}
-
-// Parse support function.
 template <typename T>
 inline void from_json(vector<T>& vals, const json& js) {
     if (!js.is_array()) throw runtime_error("array expected");
@@ -136,6 +99,39 @@ inline void from_json(map<string, T>& vals, const json& js) {
     for (auto kv = js.begin(); kv != js.end(); ++kv) {
         from_json(vals[kv.key()], kv.value());
     }
+}
+
+// Parse support function.
+template<typename T, size_t N>
+inline void from_json(array<T, N>& vals, const json& js) {
+    if (!js.is_array()) throw runtime_error("array expected");
+    if (N != js.size()) throw runtime_error("wrong array size");
+    for (auto i = 0; i < N; i++) from_json(vals[i], js.at(i));
+}
+
+// Parse support function.
+inline void from_json(vec2f& vals, const json& js) {
+    from_json((array<float, 2>&)vals, js);
+}
+
+// Parse support function.
+inline void from_json(vec3f& vals, const json& js) {
+    from_json((array<float, 3>&)vals, js);
+}
+
+// Parse support function.
+inline void from_json(vec4f& vals, const json& js) {
+    from_json((array<float, 4>&)vals, js);
+}
+
+// Parse support function.
+inline void from_json(quat4f& vals, const json& js) {
+    from_json((array<float, 4>&)vals, js);
+}
+
+// Parse support function.
+inline void from_json(mat4f& vals, const json& js) {
+    from_json((array<float, 16>&)vals, js);
 }
 
 // Parse id function.
@@ -204,49 +200,49 @@ inline void to_json(const string& val, json& js) { js = val; }
 inline void to_json(const json& val, json& js) { js = val; }
 
 // Dump support function.
-inline void to_json(const vec2f& vals, json& js) {
+template<typename T, size_t N>
+inline void to_json(const array<T, N>& vals, json& js) {
     js = json::array();
-    for (auto i = 0; i < 2; i++) { to_json(vals[i], js[i]); }
-}
-
-// Dump support function.
-inline void to_json(const vec3f& vals, json& js) {
-    js = json::array();
-    for (auto i = 0; i < 3; i++) { to_json(vals[i], js[i]); }
-}
-
-// Dump support function.
-inline void to_json(const vec4f& vals, json& js) {
-    js = json::array();
-    for (auto i = 0; i < 4; i++) { to_json(vals[i], js[i]); }
-}
-
-// Dump support function.
-inline void to_json(const quat4f& vals, json& js) {
-    js = json::array();
-    for (auto i = 0; i < 4; i++) { to_json(vals[i], js[i]); }
-}
-
-// Dump support function.
-inline void to_json(const mat4f& vals, json& js) {
-    js = json::array();
-    for (auto j = 0; j < 4; j++) {
-        for (auto i = 0; i < 4; i++) { to_json(vals[j][i], js[j * 4 + i]); }
-    }
+    for (auto i = 0; i < N; i++) to_json(vals[i], js[i]);
 }
 
 // Dump support function.
 template <typename T>
 inline void to_json(const vector<T>& vals, json& js) {
     js = json::array();
-    for (auto i = 0; i < vals.size(); i++) { to_json(vals[i], js[i]); }
+    for (auto i = 0; i < vals.size(); i++) to_json(vals[i], js[i]);
 }
 
 // Dump support function.
 template <typename T>
 inline void to_json(const map<string, T>& vals, json& js) {
     js = json::object();
-    for (auto&& kv : vals) { to_json(kv.second, js[kv.first]); }
+    for (auto& kv : vals) to_json(kv.second, js[kv.first]);
+}
+
+// Dump support function.
+inline void to_json(const vec2f& vals, json& js) {
+    to_json((const array<float, 2>&)vals, js);
+}
+
+// Dump support function.
+inline void to_json(const vec3f& vals, json& js) {
+    to_json((const array<float, 3>&)vals, js);
+}
+
+// Dump support function.
+inline void to_json(const vec4f& vals, json& js) {
+    to_json((const array<float, 4>&)vals, js);
+}
+
+// Dump support function.
+inline void to_json(const quat4f& vals, json& js) {
+    to_json((const array<float, 4>&)vals, js);
+}
+
+// Dump support function.
+inline void to_json(const mat4f& vals, json& js) {
+    to_json((const array<float, 16>&)vals, js);
 }
 
 // Converts glTFid to json.
