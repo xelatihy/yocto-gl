@@ -3116,6 +3116,15 @@ inline void from_json(array<T, N>& vals, const json& js) {
 }
 
 // Parse support function.
+template <typename T, typename T1>
+inline void from_json(T& val, const json& js, const map<T1, T>& table) {
+    auto v = T1();
+    from_json(v, js);
+    if (table.find(v) == table.end()) throw runtime_error("bad enum value");
+    val = table.at(v);
+}
+
+// Parse support function.
 inline void from_json(vec2f& vals, const json& js) {
     from_json((array<float, 2>&)vals, js);
 }
@@ -3172,10 +3181,7 @@ inline void from_json(
         {5123, glTFAccessorSparseIndicesComponentType::UnsignedShort},
         {5125, glTFAccessorSparseIndicesComponentType::UnsignedInt},
     };
-    auto v = int();
-    from_json(v, js);
-    if (table.find(v) == table.end()) throw runtime_error("bad enum value");
-    val = table[v];
+    from_json(val, js, table);
 }
 
 // Parses a glTFAccessorSparseIndices object
@@ -3222,10 +3228,7 @@ inline void from_json(glTFAccessorComponentType& val, const json& js) {
         {5125, glTFAccessorComponentType::UnsignedInt},
         {5126, glTFAccessorComponentType::Float},
     };
-    auto v = int();
-    from_json(v, js);
-    if (table.find(v) == table.end()) throw runtime_error("bad enum value");
-    val = table[v];
+    from_json(val, js, table);
 }
 
 // Parse a glTFAccessorType enum
@@ -3239,10 +3242,7 @@ inline void from_json(glTFAccessorType& val, const json& js) {
         {"MAT3", glTFAccessorType::Mat3},
         {"MAT4", glTFAccessorType::Mat4},
     };
-    auto v = string();
-    from_json(v, js);
-    if (table.find(v) == table.end()) throw runtime_error("bad enum value");
-    val = table[v];
+    from_json(val, js, table);
 }
 
 // Parses a glTFAccessor object
@@ -3271,10 +3271,7 @@ inline void from_json(glTFAnimationChannelTargetPath& val, const json& js) {
         {"scale", glTFAnimationChannelTargetPath::Scale},
         {"weights", glTFAnimationChannelTargetPath::Weights},
     };
-    auto v = string();
-    from_json(v, js);
-    if (table.find(v) == table.end()) throw runtime_error("bad enum value");
-    val = table[v];
+    from_json(val, js, table);
 }
 
 // Parses a glTFAnimationChannelTarget object
@@ -3307,10 +3304,7 @@ inline void from_json(glTFAnimationSamplerInterpolation& val, const json& js) {
             glTFAnimationSamplerInterpolation::CatmullRomSpline},
         {"CUBICSPLINE", glTFAnimationSamplerInterpolation::CubicSpline},
     };
-    auto v = string();
-    from_json(v, js);
-    if (table.find(v) == table.end()) throw runtime_error("bad enum value");
-    val = table[v];
+    from_json(val, js, table);
 }
 
 // Parses a glTFAnimationSampler object
@@ -3364,10 +3358,7 @@ inline void from_json(glTFBufferViewTarget& val, const json& js) {
         {34962, glTFBufferViewTarget::ArrayBuffer},
         {34963, glTFBufferViewTarget::ElementArrayBuffer},
     };
-    auto v = int();
-    from_json(v, js);
-    if (table.find(v) == table.end()) throw runtime_error("bad enum value");
-    val = table[v];
+    from_json(val, js, table);
 }
 
 // Parses a glTFBufferView object
@@ -3418,10 +3409,7 @@ inline void from_json(glTFCameraType& val, const json& js) {
         {"perspective", glTFCameraType::Perspective},
         {"orthographic", glTFCameraType::Orthographic},
     };
-    auto v = string();
-    from_json(v, js);
-    if (table.find(v) == table.end()) throw runtime_error("bad enum value");
-    val = table[v];
+    from_json(val, js, table);
 }
 
 // Parses a glTFCamera object
@@ -3442,10 +3430,7 @@ inline void from_json(glTFImageMimeType& val, const json& js) {
         {"image/jpeg", glTFImageMimeType::ImageJpeg},
         {"image/png", glTFImageMimeType::ImagePng},
     };
-    auto v = string();
-    from_json(v, js);
-    if (table.find(v) == table.end()) throw runtime_error("bad enum value");
-    val = table[v];
+    from_json(val, js, table);
 }
 
 // Parses a glTFImage object
@@ -3535,10 +3520,7 @@ inline void from_json(glTFMaterialAlphaMode& val, const json& js) {
         {"MASK", glTFMaterialAlphaMode::Mask},
         {"BLEND", glTFMaterialAlphaMode::Blend},
     };
-    auto v = string();
-    from_json(v, js);
-    if (table.find(v) == table.end()) throw runtime_error("bad enum value");
-    val = table[v];
+    from_json(val, js, table);
 }
 
 // Parses a glTFMaterial object
@@ -3579,10 +3561,7 @@ inline void from_json(glTFMeshPrimitiveMode& val, const json& js) {
         {5, glTFMeshPrimitiveMode::TriangleStrip},
         {6, glTFMeshPrimitiveMode::TriangleFan},
     };
-    auto v = int();
-    from_json(v, js);
-    if (table.find(v) == table.end()) throw runtime_error("bad enum value");
-    val = table[v];
+    from_json(val, js, table);
 }
 
 // Parses a glTFMeshPrimitive object
@@ -3630,10 +3609,7 @@ inline void from_json(glTFSamplerMagFilter& val, const json& js) {
         {9728, glTFSamplerMagFilter::Nearest},
         {9729, glTFSamplerMagFilter::Linear},
     };
-    auto v = int();
-    from_json(v, js);
-    if (table.find(v) == table.end()) throw runtime_error("bad enum value");
-    val = table[v];
+    from_json(val, js, table);
 }
 
 // Parse a glTFSamplerMinFilter enum
@@ -3646,10 +3622,7 @@ inline void from_json(glTFSamplerMinFilter& val, const json& js) {
         {9986, glTFSamplerMinFilter::NearestMipmapLinear},
         {9987, glTFSamplerMinFilter::LinearMipmapLinear},
     };
-    auto v = int();
-    from_json(v, js);
-    if (table.find(v) == table.end()) throw runtime_error("bad enum value");
-    val = table[v];
+    from_json(val, js, table);
 }
 
 // Parse a glTFSamplerWrapS enum
@@ -3659,10 +3632,7 @@ inline void from_json(glTFSamplerWrapS& val, const json& js) {
         {33648, glTFSamplerWrapS::MirroredRepeat},
         {10497, glTFSamplerWrapS::Repeat},
     };
-    auto v = int();
-    from_json(v, js);
-    if (table.find(v) == table.end()) throw runtime_error("bad enum value");
-    val = table[v];
+    from_json(val, js, table);
 }
 
 // Parse a glTFSamplerWrapT enum
@@ -3672,10 +3642,7 @@ inline void from_json(glTFSamplerWrapT& val, const json& js) {
         {33648, glTFSamplerWrapT::MirroredRepeat},
         {10497, glTFSamplerWrapT::Repeat},
     };
-    auto v = int();
-    from_json(v, js);
-    if (table.find(v) == table.end()) throw runtime_error("bad enum value");
-    val = table[v];
+    from_json(val, js, table);
 }
 
 // Parses a glTFSampler object
@@ -3774,6 +3741,13 @@ inline void to_json(const map<string, T>& vals, json& js) {
 }
 
 // Dump support function.
+template <typename T, typename T1>
+inline void to_json(const T& val, json& js, const map<T, T1>& table) {
+    auto v = table.at(val);
+    to_json(v, js);
+}
+
+// Dump support function.
 inline void to_json(const vec2f& vals, json& js) {
     to_json((const array<float, 2>&)vals, js);
 }
@@ -3827,8 +3801,7 @@ inline void to_json(
         {glTFAccessorSparseIndicesComponentType::UnsignedShort, 5123},
         {glTFAccessorSparseIndicesComponentType::UnsignedInt, 5125},
     };
-    auto v = table.at(val);
-    to_json(v, js);
+    to_json(val, js, table);
 }
 
 // Converts a glTFAccessorSparseIndices object to JSON
@@ -3866,8 +3839,7 @@ inline void to_json(const glTFAccessorComponentType& val, json& js) {
         {glTFAccessorComponentType::UnsignedInt, 5125},
         {glTFAccessorComponentType::Float, 5126},
     };
-    auto v = table.at(val);
-    to_json(v, js);
+    to_json(val, js, table);
 }
 
 // Converts a glTFAccessorType enum to JSON
@@ -3881,8 +3853,7 @@ inline void to_json(const glTFAccessorType& val, json& js) {
         {glTFAccessorType::Mat3, "MAT3"},
         {glTFAccessorType::Mat4, "MAT4"},
     };
-    auto v = table.at(val);
-    to_json(v, js);
+    to_json(val, js, table);
 }
 
 // Converts a glTFAccessor object to JSON
@@ -3907,8 +3878,7 @@ inline void to_json(const glTFAnimationChannelTargetPath& val, json& js) {
         {glTFAnimationChannelTargetPath::Scale, "scale"},
         {glTFAnimationChannelTargetPath::Weights, "weights"},
     };
-    auto v = table.at(val);
-    to_json(v, js);
+    to_json(val, js, table);
 }
 
 // Converts a glTFAnimationChannelTarget object to JSON
@@ -3935,8 +3905,7 @@ inline void to_json(const glTFAnimationSamplerInterpolation& val, json& js) {
             "CATMULLROMSPLINE"},
         {glTFAnimationSamplerInterpolation::CubicSpline, "CUBICSPLINE"},
     };
-    auto v = table.at(val);
-    to_json(v, js);
+    to_json(val, js, table);
 }
 
 // Converts a glTFAnimationSampler object to JSON
@@ -3980,8 +3949,7 @@ inline void to_json(const glTFBufferViewTarget& val, json& js) {
         {glTFBufferViewTarget::ArrayBuffer, 34962},
         {glTFBufferViewTarget::ElementArrayBuffer, 34963},
     };
-    auto v = table.at(val);
-    to_json(v, js);
+    to_json(val, js, table);
 }
 
 // Converts a glTFBufferView object to JSON
@@ -4021,8 +3989,7 @@ inline void to_json(const glTFCameraType& val, json& js) {
         {glTFCameraType::Perspective, "perspective"},
         {glTFCameraType::Orthographic, "orthographic"},
     };
-    auto v = table.at(val);
-    to_json(v, js);
+    to_json(val, js, table);
 }
 
 // Converts a glTFCamera object to JSON
@@ -4041,8 +4008,7 @@ inline void to_json(const glTFImageMimeType& val, json& js) {
         {glTFImageMimeType::ImageJpeg, "image/jpeg"},
         {glTFImageMimeType::ImagePng, "image/png"},
     };
-    auto v = table.at(val);
-    to_json(v, js);
+    to_json(val, js, table);
 }
 
 // Converts a glTFImage object to JSON
@@ -4124,8 +4090,7 @@ inline void to_json(const glTFMaterialAlphaMode& val, json& js) {
         {glTFMaterialAlphaMode::Mask, "MASK"},
         {glTFMaterialAlphaMode::Blend, "BLEND"},
     };
-    auto v = table.at(val);
-    to_json(v, js);
+    to_json(val, js, table);
 }
 
 // Converts a glTFMaterial object to JSON
@@ -4164,8 +4129,7 @@ inline void to_json(const glTFMeshPrimitiveMode& val, json& js) {
         {glTFMeshPrimitiveMode::TriangleStrip, 5},
         {glTFMeshPrimitiveMode::TriangleFan, 6},
     };
-    auto v = table.at(val);
-    to_json(v, js);
+    to_json(val, js, table);
 }
 
 // Converts a glTFMeshPrimitive object to JSON
@@ -4212,8 +4176,7 @@ inline void to_json(const glTFSamplerMagFilter& val, json& js) {
         {glTFSamplerMagFilter::Nearest, 9728},
         {glTFSamplerMagFilter::Linear, 9729},
     };
-    auto v = table.at(val);
-    to_json(v, js);
+    to_json(val, js, table);
 }
 
 // Converts a glTFSamplerMinFilter enum to JSON
@@ -4226,8 +4189,7 @@ inline void to_json(const glTFSamplerMinFilter& val, json& js) {
         {glTFSamplerMinFilter::NearestMipmapLinear, 9986},
         {glTFSamplerMinFilter::LinearMipmapLinear, 9987},
     };
-    auto v = table.at(val);
-    to_json(v, js);
+    to_json(val, js, table);
 }
 
 // Converts a glTFSamplerWrapS enum to JSON
@@ -4237,8 +4199,7 @@ inline void to_json(const glTFSamplerWrapS& val, json& js) {
         {glTFSamplerWrapS::MirroredRepeat, 33648},
         {glTFSamplerWrapS::Repeat, 10497},
     };
-    auto v = table.at(val);
-    to_json(v, js);
+    to_json(val, js, table);
 }
 
 // Converts a glTFSamplerWrapT enum to JSON
@@ -4248,8 +4209,7 @@ inline void to_json(const glTFSamplerWrapT& val, json& js) {
         {glTFSamplerWrapT::MirroredRepeat, 33648},
         {glTFSamplerWrapT::Repeat, 10497},
     };
-    auto v = table.at(val);
-    to_json(v, js);
+    to_json(val, js, table);
 }
 
 // Converts a glTFSampler object to JSON

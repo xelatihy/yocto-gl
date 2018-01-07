@@ -110,6 +110,15 @@ inline void from_json(array<T, N>& vals, const json& js) {
 }
 
 // Parse support function.
+template<typename T, typename T1>
+inline void from_json(T& val, const json& js, const map<T1, T>& table) {
+    auto v = T1();
+    from_json(v, js);
+    if (table.find(v) == table.end()) throw runtime_error("bad enum value");
+    val = table.at(v);
+}
+
+// Parse support function.
 inline void from_json(vec2f& vals, const json& js) {
     from_json((array<float, 2>&)vals, js);
 }
@@ -158,10 +167,7 @@ parse_fmt = '''
 // Parse a {{name}} enum
 inline void from_json({{name}}& val, const json& js) {
     static map<{{item}}, {{name}}> table = { {{#values}} { {{enum}}, {{name}}::{{label}} },{{/values}} };
-    auto v = {{item}}();
-    from_json(v, js);
-    if (table.find(v) == table.end()) throw runtime_error("bad enum value");
-    val = table[v];
+    from_json(val, js, table);
 }
 
 {{/enums}}
@@ -221,6 +227,13 @@ inline void to_json(const map<string, T>& vals, json& js) {
 }
 
 // Dump support function.
+template<typename T, typename T1>
+inline void to_json(const T& val, json& js, const map<T, T1>& table) {
+    auto v = table.at(val);
+    to_json(v, js);
+}
+
+// Dump support function.
 inline void to_json(const vec2f& vals, json& js) {
     to_json((const array<float, 2>&)vals, js);
 }
@@ -268,8 +281,7 @@ dump_fmt = '''
 // Converts a {{name}} enum to JSON
 inline void to_json(const {{name}}& val, json& js) {
     static map<{{name}}, {{item}}> table = { {{#values}} { {{name}}::{{label}}, {{enum}}  },  {{/values}} };
-    auto v = table.at(val);
-    to_json(v, js);
+    to_json(val, js, table);
 }
 
 {{/enums}}
