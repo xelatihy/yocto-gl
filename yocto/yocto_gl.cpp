@@ -2509,6 +2509,12 @@ inline obj_scene* load_obj(const string& filename, bool load_txt,
             g.elems.push_back({(uint32_t)g.verts.size(),
                 obj_element_type::point, (uint16_t)cur_elems.size()});
             g.verts.insert(g.verts.end(), cur_elems.begin(), cur_elems.end());
+        } else if (cmd == "b") {
+            parse_vertlist(ss, cur_elems, vert_size);
+            auto& g = asset->objects.back()->groups.back();
+            g.elems.push_back({(uint32_t)g.verts.size(),
+                obj_element_type::bezier, (uint16_t)cur_elems.size()});
+            g.verts.insert(g.verts.end(), cur_elems.begin(), cur_elems.end());
         } else if (cmd == "t") {
             parse_vertlist(ss, cur_elems, vert_size);
             auto& g = asset->objects.back()->groups.back();
@@ -2859,7 +2865,10 @@ inline void save_obj(const string& filename, const obj_scene* asset,
     for (auto& v : asset->radius) dump_named_val(fs, "vr", v);
 
     // save element data
-    const char* elem_labels[] = {"", "p", "l", "f", "t"};
+    static auto elem_labels =
+        unordered_map<obj_element_type, string>{{obj_element_type::point, "p"},
+            {obj_element_type::line, "l"}, {obj_element_type::face, "f"},
+            {obj_element_type::bezier, "b"}, {obj_element_type::tetra, "t"}};
     for (auto object : asset->objects) {
         dump_named_val(fs, "o", object->name);
         for (auto& group : object->groups) {
@@ -2867,8 +2876,17 @@ inline void save_obj(const string& filename, const obj_scene* asset,
             dump_opt_val(fs, "g", group.groupname);
             if (!group.smoothing) dump_named_val(fs, "s", "off");
             for (auto elem : group.elems) {
-                dump_objverts(fs, elem_labels[(int)elem.type], elem.size,
-                    group.verts.data() + elem.start);
+                auto lbl = "";
+                switch (elem.type) {
+                    case obj_element_type::point: lbl = "p"; break;
+                    case obj_element_type::line: lbl = "l"; break;
+                    case obj_element_type::face: lbl = "f"; break;
+                    case obj_element_type::bezier: lbl = "b"; break;
+                    case obj_element_type::tetra: lbl = "t"; break;
+                    default: throw runtime_error("should not have gotten here");
+                }
+                dump_objverts(
+                    fs, lbl, elem.size, group.verts.data() + elem.start);
             }
         }
     }
@@ -2942,6 +2960,15 @@ inline obj_mesh* get_mesh(
                          i++) {
                         prim->triangles.push_back({vert_ids[elem.start],
                             vert_ids[i - 1], vert_ids[i]});
+                    }
+                } break;
+                case obj_element_type::bezier: {
+                    if ((elem.size - 1) % 3)
+                        throw runtime_error("bad obj bezier");
+                    for (auto i = elem.start + 1; i < elem.start + elem.size;
+                         i += 3) {
+                        prim->bezier.push_back({vert_ids[i - 1], vert_ids[i],
+                            vert_ids[i + 1], vert_ids[i + 2]});
                     }
                 } break;
                 case obj_element_type::tetra: {
@@ -5333,6 +5360,16 @@ inline scene* obj_to_scene(const obj_scene* obj, const load_options& opts) {
                                 }
                             }
                         } break;
+                        case obj_element_type::bezier: {
+                            if ((elem.size - 1) % 3)
+                                throw runtime_error("bad obj bezier");
+                            for (auto i = elem.start + 1;
+                                 i < elem.start + elem.size; i += 3) {
+                                shp->beziers.push_back(
+                                    {vert_ids[i - 1], vert_ids[i],
+                                        vert_ids[i + 1], vert_ids[i + 2]});
+                            }
+                        } break;
                         default: { assert(false); }
                     }
                 }
@@ -5743,6 +5780,20 @@ inline obj_scene* scene_to_obj(const scene* scn) {
                     vert.norm = offset.norm + shp->quads_norm[fid][i];
                 group->verts.push_back(vert);
                 last_vid = shp->quads_pos[fid][i];
+            }
+        }
+        for (auto bezier : shp->beziers) {
+            group->elems.push_back(
+                {(uint32_t)group->verts.size(), obj_element_type::bezier, 4});
+            for (auto vid : bezier) {
+                auto vert = obj_vertex{-1, -1, -1, -1, -1};
+                if (!shp->pos.empty()) vert.pos = offset.pos + vid;
+                if (!shp->texcoord.empty())
+                    vert.texcoord = offset.texcoord + vid;
+                if (!shp->norm.empty()) vert.norm = offset.norm + vid;
+                if (!shp->color.empty()) vert.color = offset.color + vid;
+                if (!shp->radius.empty()) vert.radius = offset.radius + vid;
+                group->verts.push_back(vert);
             }
         }
         obj->objects.emplace_back(object);
@@ -7514,6 +7565,18 @@ make_uvcutsphere(int level, float z, bool flipped) {
     return {quads, pos, norm, texcoord};
 }
 
+// Make a bezier circle. Returns bezier, pos.
+tuple<vector<vec4i>, vector<vec3f>> make_bezier_circle() {
+    // constant from http://spencermortensen.com/articles/bezier-circle/
+    static auto c = 0.551915024494f;
+    static auto pos = vector<vec3f>{{1, 0, 0}, {1, c, 0}, {c, 1, 0}, {0, 1, 0},
+        {-c, 1, 0}, {-1, c, 0}, {-1, 0, 0}, {-1, -c, 0}, {-c, -1, 0},
+        {0, -1, 0}, {c, -1, 0}, {1, -c, 0}};
+    static auto bezier =
+        vector<vec4i>{{0, 1, 2, 3}, {3, 4, 5, 6}, {6, 7, 8, 9}, {9, 10, 11, 0}};
+    return {bezier, pos};
+}
+
 // Make a hair ball around a shape
 tuple<vector<vec2i>, vector<vec3f>, vector<vec3f>, vector<vec2f>, vector<float>>
 make_hair(int num, int level, const vec2f& len, const vec2f& rad,
@@ -8102,6 +8165,7 @@ enum struct test_shape_type {
     lines2,
     lines3,
     linesi,
+    bcircle,
     plight,
     alight,
     alightt,
@@ -8136,6 +8200,7 @@ inline const vector<pair<string, test_shape_type>>& test_shape_names() {
         {"lines2", test_shape_type::lines2},
         {"lines3", test_shape_type::lines3},
         {"linesi", test_shape_type::linesi},
+        {"bcircle", test_shape_type::bcircle},
         {"plight", test_shape_type::plight},
         {"alight", test_shape_type::alight},
         {"alightt", test_shape_type::alightt},
@@ -8295,6 +8360,9 @@ inline shape* add_test_shape(
         case test_shape_type::linesi: {
             tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
                 make_uvsphere(5);
+        } break;
+        case test_shape_type::bcircle: {
+            tie(shp->beziers, shp->pos) = make_bezier_circle();
         } break;
         case test_shape_type::plight: {
             shp->points.push_back(0);
@@ -8588,7 +8656,8 @@ scene* make_test_scene(test_scene_type otype) {
                      test_shape_type::suzanne, test_shape_type::suzannes,
                      test_shape_type::cubefv, test_shape_type::cubefvs,
                      test_shape_type::quads, test_shape_type::spherefv,
-                     test_shape_type::matball, test_shape_type::matballi})
+                     test_shape_type::matball, test_shape_type::matballi,
+                     test_shape_type::bcircle})
                 add_test_shape(scn, stype, test_material_type::none);
             return scn;
         } break;
