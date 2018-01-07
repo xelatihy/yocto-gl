@@ -282,6 +282,18 @@ inline void to_json(const glTFid<T>& val, json& js) {
     js = (int)val;
 }
 
+// Check for default value
+template <typename T>
+inline bool operator==(const glTFid<T>& a, const glTFid<T>& b) {
+    return (int)a == (int)b;
+}
+
+// Check for default value
+template <typename T>
+inline bool operator!=(const glTFid<T>& a, const glTFid<T>& b) {
+    return (int)a != (int)b;
+}
+
 // Converts a glTFProperty object to JSON
 inline void to_json(const glTFProperty& val, json& js) {
     if (!js.is_object()) js = json::object();
@@ -306,9 +318,10 @@ inline void to_json(const {{name}}& val, json& js) {
 
 // Converts a {{name}} object to JSON
 inline void to_json(const {{name}}& val, json& js) {
+    static auto def = {{name}}();
     if (!js.is_object()) js = json::object();
     {{#base}}to_json((const {{base}}&)val, js);{{/base}}
-    {{#properties}}{{^extension}}{{^required}}if ({{def_check}}) {{/required}}to_json(val.{{name}}, js["{{name}}"]);{{/extension}}{{/properties}}
+    {{#properties}}{{^extension}}{{^required}}if (val.{{name}} != def.{{name}}) {{/required}}to_json(val.{{name}}, js["{{name}}"]);{{/extension}}{{/properties}}
     {{#properties}}{{#extension}}
     if ({{def_check}}) {
         auto& js_ext = js["extensions"];
