@@ -7283,6 +7283,9 @@ inline void tesselate_shape(shape* shp) {
     std::tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
         convert_face_varying(shp->quads_pos, shp->quads_norm,
             shp->quads_texcoord, shp->pos, shp->norm, shp->texcoord);
+    shp->quads_pos = {};
+    shp->quads_norm = {};
+    shp->quads_texcoord = {};
 }
 
 /// Tesselate scene shapes and update pointers
@@ -9735,14 +9738,16 @@ inline void _check_name(
 // cmdline implementation
 template <typename T>
 inline void _add_usage_str(cmdline_parser& parser, const string& name,
-    const string& flag, bool opt, const string& help, const string& def,
-    bool req, const vector<T>& choices) {
+    const string& flag, bool opt, const string& metavar, const string& help,
+    const string& def, bool req, const vector<T>& choices) {
     auto stream = stringstream();
     stream << "  " << name;
     if (!flag.empty()) stream << "/" << flag;
+    if (!metavar.empty()) stream << " " << metavar;
     while (stream.str().length() < 32) stream << " ";
     stream << help << " ";
     if (!req) stream << "[" << def << "]";
+    if (req) stream << "(required)";
     stream << "\n";
     if (!choices.empty()) {
         for (auto i = 0; i < 32; i++) stream << " ";
@@ -9765,11 +9770,12 @@ inline void _add_usage_str(cmdline_parser& parser, const string& name,
 // cmdline implementation
 template <typename T>
 inline void _add_usage(cmdline_parser& parser, const string& name,
-    const string& flag, bool opt, const string& help, const T& def, bool req,
-    const vector<T>& choices) {
+    const string& flag, bool opt, bool flag_opt, const string& help,
+    const T& def, bool req, const vector<T>& choices) {
     auto stream = stringstream();
     stream << def;
-    _add_usage_str(parser, name, flag, opt, help, stream.str(), req, choices);
+    _add_usage_str(parser, name, flag, opt, (flag_opt) ? "" : "<val>", help,
+        stream.str(), req, choices);
 }
 
 // cmdline implementation
@@ -9784,7 +9790,8 @@ inline void _add_usage(cmdline_parser& parser, const string& name,
         stream << v;
         first = false;
     }
-    _add_usage_str(parser, name, flag, opt, help, stream.str(), req, choices);
+    _add_usage_str(
+        parser, name, flag, opt, "<val>*", help, stream.str(), req, choices);
 }
 
 // cmdline implementation
@@ -9826,6 +9833,8 @@ inline bool parse_flag(cmdline_parser& parser, const string& name,
     bool req = false) {
     // check names
     _check_name(parser, name, flag, true);
+    // update usage
+    _add_usage(parser, name, flag, true, true, help, def, req, {});
     // skip if error
     if (!parser._error.empty()) return def;
     // find location of option
@@ -9850,7 +9859,7 @@ inline T parse_opt(cmdline_parser& parser, const string& name,
     // check names
     _check_name(parser, name, flag, true);
     // update usage
-    _add_usage(parser, name, flag, true, help, def, req, choices);
+    _add_usage(parser, name, flag, true, false, help, def, req, choices);
     // skip if error
     if (!parser._error.empty()) return def;
     // find location of option
@@ -9917,7 +9926,7 @@ inline T parse_arg(cmdline_parser& parser, const string& name,
     // check names
     _check_name(parser, name, "", false);
     // update usage
-    _add_usage(parser, name, "", false, help, def, req, choices);
+    _add_usage(parser, name, "", false, false, help, def, req, choices);
     // skip if error
     if (!parser._error.empty()) return def;
     // find location of argument
