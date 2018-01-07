@@ -1302,11 +1302,11 @@ inline point eval_envpoint(const environment* env, const vec3f& wo) {
     // done
     return pt;
 }
-    
+
 // Make a default material
 inline material make_default_material() {
     auto mat = material();
-    mat.kd = {0.2f,0.2f,0.2f};
+    mat.kd = {0.2f, 0.2f, 0.2f};
     mat.rs = 1;
     return mat;
 }
@@ -1316,7 +1316,7 @@ inline point eval_shapepoint(
     const instance* ist, int eid, const vec4f& euv, const vec3f& wo) {
     // default material
     static auto def_material = make_default_material();
-    
+
     // set shape data
     auto pt = point();
 
@@ -1329,7 +1329,7 @@ inline point eval_shapepoint(
     // shortcuts
     auto shp = ist->shp;
     auto mat = ist->shp->mat;
-    if(!mat) mat = &def_material;
+    if (!mat) mat = &def_material;
 
     // compute points and weights
     auto pos = eval_pos(ist->shp, eid, euv);
@@ -6931,11 +6931,11 @@ make_fvcube() {
         {+1, -1, -1}, {-1, -1, +1}, {-1, +1, +1}, {+1, +1, +1}, {+1, -1, +1}};
     static auto qpos = vector<vec4i>{{0, 1, 2, 3}, {7, 6, 5, 4}, {4, 5, 1, 0},
         {6, 7, 3, 2}, {2, 1, 5, 6}, {0, 3, 7, 4}};
-    static auto norm = vector<vec3f>{{0, 0, -1}, {0, 0, -1}, {0, 0, -1}, {0, 0, -1},
-        {0, 0, +1}, {0, 0, +1}, {0, 0, +1}, {0, 0, +1}, {-1, 0, 0}, {-1, 0, 0},
-        {-1, 0, 0}, {-1, 0, 0}, {+1, 0, 0}, {+1, 0, 0}, {+1, 0, 0}, {+1, 0, 0},
-        {0, +1, 0}, {0, +1, 0}, {0, +1, 0}, {0, +1, 0}, {0, -1, 0}, {0, -1, 0},
-        {0, -1, 0}, {0, -1, 0}};
+    static auto norm = vector<vec3f>{{0, 0, -1}, {0, 0, -1}, {0, 0, -1},
+        {0, 0, -1}, {0, 0, +1}, {0, 0, +1}, {0, 0, +1}, {0, 0, +1}, {-1, 0, 0},
+        {-1, 0, 0}, {-1, 0, 0}, {-1, 0, 0}, {+1, 0, 0}, {+1, 0, 0}, {+1, 0, 0},
+        {+1, 0, 0}, {0, +1, 0}, {0, +1, 0}, {0, +1, 0}, {0, +1, 0}, {0, -1, 0},
+        {0, -1, 0}, {0, -1, 0}, {0, -1, 0}};
     static auto qnorm = vector<vec4i>{{0, 1, 2, 3}, {4, 5, 6, 7},
         {8, 9, 10, 11}, {12, 13, 14, 15}, {16, 17, 18, 19}, {20, 21, 22, 23}};
     static auto texcoord = vector<vec2f>{{0, 0}, {1, 0}, {1, 1}, {0, 1}, {0, 0},
