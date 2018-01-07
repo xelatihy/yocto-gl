@@ -2555,6 +2555,16 @@ inline obj_scene* load_obj(const string& filename, bool load_txt,
                 asset->objects.back()->groups.back().groupname = gname;
                 asset->objects.back()->groups.back().smoothing = smoothing;
             }
+        } else if (cmd == "sl") {
+            auto subdiv = zero2i;
+            parse_val(ss, subdiv);
+            if (asset->objects.back()->groups.empty()) {
+                asset->objects.back()->groups.push_back({});
+                asset->objects.back()->groups.back().matname = cur_matname;
+            }
+            asset->objects.back()->groups.back().subdivision_level = subdiv.x;
+            asset->objects.back()->groups.back().subdivision_catmullclark =
+                (bool)subdiv.y;
         } else if (cmd == "mtllib") {
             auto name = string();
             parse_val(ss, name);
@@ -2875,6 +2885,11 @@ inline void save_obj(const string& filename, const obj_scene* asset,
             dump_opt_val(fs, "usemtl", group.matname);
             dump_opt_val(fs, "g", group.groupname);
             if (!group.smoothing) dump_named_val(fs, "s", "off");
+            if (group.subdivision_level) {
+                auto sl = vec2i{group.subdivision_level,
+                    (group.subdivision_catmullclark) ? 1 : 0};
+                dump_named_val(fs, "sl", sl);
+            }
             for (auto elem : group.elems) {
                 auto lbl = "";
                 switch (elem.type) {
@@ -5274,6 +5289,8 @@ inline scene* obj_to_scene(const obj_scene* obj, const load_options& opts) {
             auto shp = new shape();
             shp->name = omsh->name + oshp.groupname;
             shp->mat = mmap[oshp.matname];
+            shp->subdivision_level = oshp.subdivision_level;
+            shp->subdivision_catmullclark = oshp.subdivision_catmullclark;
 
             // check to see if this shuold be face-varying or flat quads
             auto as_facevarying = false, as_quads = false;
@@ -5697,6 +5714,8 @@ inline obj_scene* scene_to_obj(const scene* scn) {
         object->groups.emplace_back();
         auto group = &object->groups.back();
         group->matname = (shp->mat) ? shp->mat->name : "";
+        group->subdivision_level = shp->subdivision_level;
+        group->subdivision_catmullclark = shp->subdivision_catmullclark;
         for (auto point : shp->points) {
             group->elems.push_back(
                 {(uint32_t)group->verts.size(), obj_element_type::point, 1});
@@ -8363,6 +8382,7 @@ inline shape* add_test_shape(
         } break;
         case test_shape_type::bcircle: {
             tie(shp->beziers, shp->pos) = make_bezier_circle();
+            shp->subdivision_level = 2;
         } break;
         case test_shape_type::plight: {
             shp->points.push_back(0);
@@ -10904,9 +10924,9 @@ inline bool draw_elem_widgets(gl_window* win, scene* scn, shape* shp,
     void*& selection, const unordered_map<texture*, gl_texture>& gl_txt) {
     auto mat_names = vector<pair<string, material*>>{{"<none>", nullptr}};
     for (auto mat : scn->materials) mat_names.push_back({mat->name, mat});
-    
+
     auto draw_vector_widget = [](gl_window* win, const char* lbl, int len) {
-        if(len) draw_label_widget(win, lbl, len);
+        if (len) draw_label_widget(win, lbl, len);
     };
 
     auto edited = vector<bool>();
