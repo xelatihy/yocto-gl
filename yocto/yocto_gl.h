@@ -7234,7 +7234,7 @@ inline vec4f eval_texture(const texture_info& info, const vec2f& texcoord,
 
 /// Subdivides shape elements. Apply subdivision surface rules if subdivide
 /// is true.
-inline void subdivide_shape(shape* shp, bool subdiv = false) {
+inline void subdivide_shape_once(shape* shp, bool subdiv = false) {
     if (!shp->lines.empty() || !shp->triangles.empty() || !shp->quads.empty()) {
         vector<vec2i> edges;
         vector<vec4i> faces;
@@ -7301,8 +7301,15 @@ inline void facet_shape(shape* shp) {
 }
 
 /// Tesselate a shape into basic primitives
-inline void tesselate_shape(shape* shp) {
-    if (!shp->quads_pos.empty()) {
+inline void tesselate_shape(shape* shp, bool subdivide,
+    bool facevarying_to_sharedvertex, bool quads_to_triangles,
+    bool bezier_to_lines) {
+    if (subdivide && shp->subdivision_level) {
+        for (auto l = 0; l < shp->subdivision_level; l++) {
+            subdivide_shape_once(shp, shp->subdivision_catmullclark);
+        }
+    }
+    if (facevarying_to_sharedvertex && !shp->quads_pos.empty()) {
         std::tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
             convert_face_varying(shp->quads_pos, shp->quads_norm,
                 shp->quads_texcoord, shp->pos, shp->norm, shp->texcoord);
@@ -7310,15 +7317,24 @@ inline void tesselate_shape(shape* shp) {
         shp->quads_norm = {};
         shp->quads_texcoord = {};
     }
-    if (!shp->beziers.empty()) {
+    if (quads_to_triangles && !shp->quads.empty()) {
+        shp->triangles = convert_quads_to_triangles(shp->quads);
+        shp->quads = {};
+    }
+    if (bezier_to_lines && !shp->beziers.empty()) {
         shp->lines = convert_bezier_to_lines(shp->beziers);
         shp->beziers = {};
     }
 }
 
 /// Tesselate scene shapes and update pointers
-inline void tesselate_shapes(scene* scn) {
-    for (auto shp : scn->shapes) tesselate_shape(shp);
+inline void tesselate_shapes(scene* scn, bool subdivide,
+    bool facevarying_to_sharedvertex, bool quads_to_triangles,
+    bool bezier_to_lines) {
+    for (auto shp : scn->shapes) {
+        tesselate_shape(shp, subdivide, facevarying_to_sharedvertex,
+            quads_to_triangles, bezier_to_lines);
+    }
 }
 
 /// Loading options
@@ -11437,6 +11453,7 @@ struct gl_stdsurface_vbo {
     gl_element_buffer lines = {};      // line elements
     gl_element_buffer triangles = {};  // triangle elements
     gl_element_buffer quads = {};      // quad elements (as 2 triangles)
+    gl_element_buffer beziers = {};    // bezier elements (as 3 lines)
     gl_element_buffer edges = {};      // edge elements
 };
 

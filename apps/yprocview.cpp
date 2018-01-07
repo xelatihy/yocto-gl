@@ -360,11 +360,13 @@ bool update_proc_prim_shape(proc_shape* pshp) {
         case proc_prim_shape_type::fvcube: {
             tie(shp->quads_pos, shp->pos, shp->quads_norm, shp->norm,
                 shp->quads_texcoord, shp->texcoord) = make_fvcube();
-            for (auto i = 0; i < params.level; i++) subdivide_shape(shp, false);
+            for (auto i = 0; i < params.level; i++)
+                subdivide_shape_once(shp, false);
         } break;
         case proc_prim_shape_type::monkey: {
             tie(shp->quads, shp->pos) = make_suzanne();
-            for (auto i = 0; i < params.level; i++) subdivide_shape(shp, false);
+            for (auto i = 0; i < params.level; i++)
+                subdivide_shape_once(shp, false);
             shp->norm = compute_normals({}, {}, shp->quads, shp->pos);
         } break;
         default: throw runtime_error("should not have gotten here");
@@ -372,7 +374,7 @@ bool update_proc_prim_shape(proc_shape* pshp) {
 
     for (auto& p : shp->pos) p *= params.size / 2;
 
-    for (auto i = 0; i < params.subdiv; i++) subdivide_shape(shp, true);
+    for (auto i = 0; i < params.subdiv; i++) subdivide_shape_once(shp, true);
 
     if (params.faceted) facet_shape(shp);
 
