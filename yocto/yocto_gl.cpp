@@ -3787,6 +3787,18 @@ inline void to_json(const glTFid<T>& val, json& js) {
     js = (int)val;
 }
 
+// Check for default value
+template <typename T>
+inline bool operator==(const glTFid<T>& a, const glTFid<T>& b) {
+    return (int)a == (int)b;
+}
+
+// Check for default value
+template <typename T>
+inline bool operator!=(const glTFid<T>& a, const glTFid<T>& b) {
+    return (int)a != (int)b;
+}
+
 // Converts a glTFProperty object to JSON
 inline void to_json(const glTFProperty& val, json& js) {
     if (!js.is_object()) js = json::object();
@@ -3798,9 +3810,10 @@ inline void to_json(const glTFProperty& val, json& js) {
 
 // Converts a glTFChildOfRootProperty object to JSON
 inline void to_json(const glTFChildOfRootProperty& val, json& js) {
+    static auto def = glTFChildOfRootProperty();
     if (!js.is_object()) js = json::object();
     to_json((const glTFProperty&)val, js);
-    if (val.name != "") to_json(val.name, js["name"]);
+    if (val.name != def.name) to_json(val.name, js["name"]);
 }
 // Converts a glTFAccessorSparseIndicesComponentType enum to JSON
 inline void to_json(
@@ -3815,23 +3828,28 @@ inline void to_json(
 
 // Converts a glTFAccessorSparseIndices object to JSON
 inline void to_json(const glTFAccessorSparseIndices& val, json& js) {
+    static auto def = glTFAccessorSparseIndices();
     if (!js.is_object()) js = json::object();
     to_json((const glTFProperty&)val, js);
     to_json(val.bufferView, js["bufferView"]);
-    if (val.byteOffset != 0) to_json(val.byteOffset, js["byteOffset"]);
+    if (val.byteOffset != def.byteOffset)
+        to_json(val.byteOffset, js["byteOffset"]);
     to_json(val.componentType, js["componentType"]);
 }
 
 // Converts a glTFAccessorSparseValues object to JSON
 inline void to_json(const glTFAccessorSparseValues& val, json& js) {
+    static auto def = glTFAccessorSparseValues();
     if (!js.is_object()) js = json::object();
     to_json((const glTFProperty&)val, js);
     to_json(val.bufferView, js["bufferView"]);
-    if (val.byteOffset != 0) to_json(val.byteOffset, js["byteOffset"]);
+    if (val.byteOffset != def.byteOffset)
+        to_json(val.byteOffset, js["byteOffset"]);
 }
 
 // Converts a glTFAccessorSparse object to JSON
 inline void to_json(const glTFAccessorSparse& val, json& js) {
+    static auto def = glTFAccessorSparse();
     if (!js.is_object()) js = json::object();
     to_json((const glTFProperty&)val, js);
     to_json(val.count, js["count"]);
@@ -3867,17 +3885,21 @@ inline void to_json(const glTFAccessorType& val, json& js) {
 
 // Converts a glTFAccessor object to JSON
 inline void to_json(const glTFAccessor& val, json& js) {
+    static auto def = glTFAccessor();
     if (!js.is_object()) js = json::object();
     to_json((const glTFChildOfRootProperty&)val, js);
-    if (val.bufferView.is_valid()) to_json(val.bufferView, js["bufferView"]);
-    if (val.byteOffset != 0) to_json(val.byteOffset, js["byteOffset"]);
+    if (val.bufferView != def.bufferView)
+        to_json(val.bufferView, js["bufferView"]);
+    if (val.byteOffset != def.byteOffset)
+        to_json(val.byteOffset, js["byteOffset"]);
     to_json(val.componentType, js["componentType"]);
-    if (val.normalized != false) to_json(val.normalized, js["normalized"]);
+    if (val.normalized != def.normalized)
+        to_json(val.normalized, js["normalized"]);
     to_json(val.count, js["count"]);
     to_json(val.type, js["type"]);
-    if (!val.max.empty()) to_json(val.max, js["max"]);
-    if (!val.min.empty()) to_json(val.min, js["min"]);
-    if (val.sparse != nullptr) to_json(val.sparse, js["sparse"]);
+    if (val.max != def.max) to_json(val.max, js["max"]);
+    if (val.min != def.min) to_json(val.min, js["min"]);
+    if (val.sparse != def.sparse) to_json(val.sparse, js["sparse"]);
 }
 // Converts a glTFAnimationChannelTargetPath enum to JSON
 inline void to_json(const glTFAnimationChannelTargetPath& val, json& js) {
@@ -3892,6 +3914,7 @@ inline void to_json(const glTFAnimationChannelTargetPath& val, json& js) {
 
 // Converts a glTFAnimationChannelTarget object to JSON
 inline void to_json(const glTFAnimationChannelTarget& val, json& js) {
+    static auto def = glTFAnimationChannelTarget();
     if (!js.is_object()) js = json::object();
     to_json((const glTFProperty&)val, js);
     to_json(val.node, js["node"]);
@@ -3900,6 +3923,7 @@ inline void to_json(const glTFAnimationChannelTarget& val, json& js) {
 
 // Converts a glTFAnimationChannel object to JSON
 inline void to_json(const glTFAnimationChannel& val, json& js) {
+    static auto def = glTFAnimationChannel();
     if (!js.is_object()) js = json::object();
     to_json((const glTFProperty&)val, js);
     to_json(val.sampler, js["sampler"]);
@@ -3919,16 +3943,18 @@ inline void to_json(const glTFAnimationSamplerInterpolation& val, json& js) {
 
 // Converts a glTFAnimationSampler object to JSON
 inline void to_json(const glTFAnimationSampler& val, json& js) {
+    static auto def = glTFAnimationSampler();
     if (!js.is_object()) js = json::object();
     to_json((const glTFProperty&)val, js);
     to_json(val.input, js["input"]);
-    if (val.interpolation != glTFAnimationSamplerInterpolation::Linear)
+    if (val.interpolation != def.interpolation)
         to_json(val.interpolation, js["interpolation"]);
     to_json(val.output, js["output"]);
 }
 
 // Converts a glTFAnimation object to JSON
 inline void to_json(const glTFAnimation& val, json& js) {
+    static auto def = glTFAnimation();
     if (!js.is_object()) js = json::object();
     to_json((const glTFChildOfRootProperty&)val, js);
     to_json(val.channels, js["channels"]);
@@ -3937,19 +3963,22 @@ inline void to_json(const glTFAnimation& val, json& js) {
 
 // Converts a glTFAsset object to JSON
 inline void to_json(const glTFAsset& val, json& js) {
+    static auto def = glTFAsset();
     if (!js.is_object()) js = json::object();
     to_json((const glTFProperty&)val, js);
-    if (val.copyright != "") to_json(val.copyright, js["copyright"]);
-    if (val.generator != "") to_json(val.generator, js["generator"]);
+    if (val.copyright != def.copyright) to_json(val.copyright, js["copyright"]);
+    if (val.generator != def.generator) to_json(val.generator, js["generator"]);
     to_json(val.version, js["version"]);
-    if (val.minVersion != "") to_json(val.minVersion, js["minVersion"]);
+    if (val.minVersion != def.minVersion)
+        to_json(val.minVersion, js["minVersion"]);
 }
 
 // Converts a glTFBuffer object to JSON
 inline void to_json(const glTFBuffer& val, json& js) {
+    static auto def = glTFBuffer();
     if (!js.is_object()) js = json::object();
     to_json((const glTFChildOfRootProperty&)val, js);
-    if (val.uri != "") to_json(val.uri, js["uri"]);
+    if (val.uri != def.uri) to_json(val.uri, js["uri"]);
     to_json(val.byteLength, js["byteLength"]);
 }
 // Converts a glTFBufferViewTarget enum to JSON
@@ -3963,18 +3992,21 @@ inline void to_json(const glTFBufferViewTarget& val, json& js) {
 
 // Converts a glTFBufferView object to JSON
 inline void to_json(const glTFBufferView& val, json& js) {
+    static auto def = glTFBufferView();
     if (!js.is_object()) js = json::object();
     to_json((const glTFChildOfRootProperty&)val, js);
     to_json(val.buffer, js["buffer"]);
-    if (val.byteOffset != 0) to_json(val.byteOffset, js["byteOffset"]);
+    if (val.byteOffset != def.byteOffset)
+        to_json(val.byteOffset, js["byteOffset"]);
     to_json(val.byteLength, js["byteLength"]);
-    if (val.byteStride != 0) to_json(val.byteStride, js["byteStride"]);
-    if (val.target != glTFBufferViewTarget::NotSet)
-        to_json(val.target, js["target"]);
+    if (val.byteStride != def.byteStride)
+        to_json(val.byteStride, js["byteStride"]);
+    if (val.target != def.target) to_json(val.target, js["target"]);
 }
 
 // Converts a glTFCameraOrthographic object to JSON
 inline void to_json(const glTFCameraOrthographic& val, json& js) {
+    static auto def = glTFCameraOrthographic();
     if (!js.is_object()) js = json::object();
     to_json((const glTFProperty&)val, js);
     to_json(val.xmag, js["xmag"]);
@@ -3985,11 +4017,13 @@ inline void to_json(const glTFCameraOrthographic& val, json& js) {
 
 // Converts a glTFCameraPerspective object to JSON
 inline void to_json(const glTFCameraPerspective& val, json& js) {
+    static auto def = glTFCameraPerspective();
     if (!js.is_object()) js = json::object();
     to_json((const glTFProperty&)val, js);
-    if (val.aspectRatio != 0) to_json(val.aspectRatio, js["aspectRatio"]);
+    if (val.aspectRatio != def.aspectRatio)
+        to_json(val.aspectRatio, js["aspectRatio"]);
     to_json(val.yfov, js["yfov"]);
-    if (val.zfar != 0) to_json(val.zfar, js["zfar"]);
+    if (val.zfar != def.zfar) to_json(val.zfar, js["zfar"]);
     to_json(val.znear, js["znear"]);
 }
 // Converts a glTFCameraType enum to JSON
@@ -4003,11 +4037,13 @@ inline void to_json(const glTFCameraType& val, json& js) {
 
 // Converts a glTFCamera object to JSON
 inline void to_json(const glTFCamera& val, json& js) {
+    static auto def = glTFCamera();
     if (!js.is_object()) js = json::object();
     to_json((const glTFChildOfRootProperty&)val, js);
-    if (val.orthographic != nullptr)
+    if (val.orthographic != def.orthographic)
         to_json(val.orthographic, js["orthographic"]);
-    if (val.perspective != nullptr) to_json(val.perspective, js["perspective"]);
+    if (val.perspective != def.perspective)
+        to_json(val.perspective, js["perspective"]);
     to_json(val.type, js["type"]);
 }
 // Converts a glTFImageMimeType enum to JSON
@@ -4021,73 +4057,80 @@ inline void to_json(const glTFImageMimeType& val, json& js) {
 
 // Converts a glTFImage object to JSON
 inline void to_json(const glTFImage& val, json& js) {
+    static auto def = glTFImage();
     if (!js.is_object()) js = json::object();
     to_json((const glTFChildOfRootProperty&)val, js);
-    if (val.uri != "") to_json(val.uri, js["uri"]);
-    if (val.mimeType != glTFImageMimeType::NotSet)
-        to_json(val.mimeType, js["mimeType"]);
-    if (val.bufferView.is_valid()) to_json(val.bufferView, js["bufferView"]);
+    if (val.uri != def.uri) to_json(val.uri, js["uri"]);
+    if (val.mimeType != def.mimeType) to_json(val.mimeType, js["mimeType"]);
+    if (val.bufferView != def.bufferView)
+        to_json(val.bufferView, js["bufferView"]);
 }
 
 // Converts a glTFTextureInfo object to JSON
 inline void to_json(const glTFTextureInfo& val, json& js) {
+    static auto def = glTFTextureInfo();
     if (!js.is_object()) js = json::object();
     to_json((const glTFProperty&)val, js);
     to_json(val.index, js["index"]);
-    if (val.texCoord != 0) to_json(val.texCoord, js["texCoord"]);
+    if (val.texCoord != def.texCoord) to_json(val.texCoord, js["texCoord"]);
 }
 
 // Converts a glTFTexture object to JSON
 inline void to_json(const glTFTexture& val, json& js) {
+    static auto def = glTFTexture();
     if (!js.is_object()) js = json::object();
     to_json((const glTFChildOfRootProperty&)val, js);
-    if (val.sampler.is_valid()) to_json(val.sampler, js["sampler"]);
-    if (val.source.is_valid()) to_json(val.source, js["source"]);
+    if (val.sampler != def.sampler) to_json(val.sampler, js["sampler"]);
+    if (val.source != def.source) to_json(val.source, js["source"]);
 }
 
 // Converts a glTFMaterialNormalTextureInfo object to JSON
 inline void to_json(const glTFMaterialNormalTextureInfo& val, json& js) {
+    static auto def = glTFMaterialNormalTextureInfo();
     if (!js.is_object()) js = json::object();
     to_json((const glTFTextureInfo&)val, js);
-    if (val.scale != 1) to_json(val.scale, js["scale"]);
+    if (val.scale != def.scale) to_json(val.scale, js["scale"]);
 }
 
 // Converts a glTFMaterialOcclusionTextureInfo object to JSON
 inline void to_json(const glTFMaterialOcclusionTextureInfo& val, json& js) {
+    static auto def = glTFMaterialOcclusionTextureInfo();
     if (!js.is_object()) js = json::object();
     to_json((const glTFTextureInfo&)val, js);
-    if (val.strength != 1) to_json(val.strength, js["strength"]);
+    if (val.strength != def.strength) to_json(val.strength, js["strength"]);
 }
 
 // Converts a glTFMaterialPbrMetallicRoughness object to JSON
 inline void to_json(const glTFMaterialPbrMetallicRoughness& val, json& js) {
+    static auto def = glTFMaterialPbrMetallicRoughness();
     if (!js.is_object()) js = json::object();
     to_json((const glTFProperty&)val, js);
-    if (val.baseColorFactor != vec4f{1, 1, 1, 1})
+    if (val.baseColorFactor != def.baseColorFactor)
         to_json(val.baseColorFactor, js["baseColorFactor"]);
-    if (val.baseColorTexture != nullptr)
+    if (val.baseColorTexture != def.baseColorTexture)
         to_json(val.baseColorTexture, js["baseColorTexture"]);
-    if (val.metallicFactor != 1)
+    if (val.metallicFactor != def.metallicFactor)
         to_json(val.metallicFactor, js["metallicFactor"]);
-    if (val.roughnessFactor != 1)
+    if (val.roughnessFactor != def.roughnessFactor)
         to_json(val.roughnessFactor, js["roughnessFactor"]);
-    if (val.metallicRoughnessTexture != nullptr)
+    if (val.metallicRoughnessTexture != def.metallicRoughnessTexture)
         to_json(val.metallicRoughnessTexture, js["metallicRoughnessTexture"]);
 }
 
 // Converts a glTFMaterialPbrSpecularGlossiness object to JSON
 inline void to_json(const glTFMaterialPbrSpecularGlossiness& val, json& js) {
+    static auto def = glTFMaterialPbrSpecularGlossiness();
     if (!js.is_object()) js = json::object();
     to_json((const glTFProperty&)val, js);
-    if (val.diffuseFactor != vec4f{1, 1, 1, 1})
+    if (val.diffuseFactor != def.diffuseFactor)
         to_json(val.diffuseFactor, js["diffuseFactor"]);
-    if (val.diffuseTexture != nullptr)
+    if (val.diffuseTexture != def.diffuseTexture)
         to_json(val.diffuseTexture, js["diffuseTexture"]);
-    if (val.specularFactor != vec3f{1, 1, 1})
+    if (val.specularFactor != def.specularFactor)
         to_json(val.specularFactor, js["specularFactor"]);
-    if (val.glossinessFactor != 1)
+    if (val.glossinessFactor != def.glossinessFactor)
         to_json(val.glossinessFactor, js["glossinessFactor"]);
-    if (val.specularGlossinessTexture != nullptr)
+    if (val.specularGlossinessTexture != def.specularGlossinessTexture)
         to_json(val.specularGlossinessTexture, js["specularGlossinessTexture"]);
 }
 // Converts a glTFMaterialAlphaMode enum to JSON
@@ -4102,22 +4145,24 @@ inline void to_json(const glTFMaterialAlphaMode& val, json& js) {
 
 // Converts a glTFMaterial object to JSON
 inline void to_json(const glTFMaterial& val, json& js) {
+    static auto def = glTFMaterial();
     if (!js.is_object()) js = json::object();
     to_json((const glTFChildOfRootProperty&)val, js);
-    if (val.pbrMetallicRoughness != nullptr)
+    if (val.pbrMetallicRoughness != def.pbrMetallicRoughness)
         to_json(val.pbrMetallicRoughness, js["pbrMetallicRoughness"]);
-    if (val.normalTexture != nullptr)
+    if (val.normalTexture != def.normalTexture)
         to_json(val.normalTexture, js["normalTexture"]);
-    if (val.occlusionTexture != nullptr)
+    if (val.occlusionTexture != def.occlusionTexture)
         to_json(val.occlusionTexture, js["occlusionTexture"]);
-    if (val.emissiveTexture != nullptr)
+    if (val.emissiveTexture != def.emissiveTexture)
         to_json(val.emissiveTexture, js["emissiveTexture"]);
-    if (val.emissiveFactor != vec3f{0, 0, 0})
+    if (val.emissiveFactor != def.emissiveFactor)
         to_json(val.emissiveFactor, js["emissiveFactor"]);
-    if (val.alphaMode != glTFMaterialAlphaMode::Opaque)
-        to_json(val.alphaMode, js["alphaMode"]);
-    if (val.alphaCutoff != 0.5) to_json(val.alphaCutoff, js["alphaCutoff"]);
-    if (val.doubleSided != false) to_json(val.doubleSided, js["doubleSided"]);
+    if (val.alphaMode != def.alphaMode) to_json(val.alphaMode, js["alphaMode"]);
+    if (val.alphaCutoff != def.alphaCutoff)
+        to_json(val.alphaCutoff, js["alphaCutoff"]);
+    if (val.doubleSided != def.doubleSided)
+        to_json(val.doubleSided, js["doubleSided"]);
 
     if (val.pbrSpecularGlossiness != nullptr) {
         auto& js_ext = js["extensions"];
@@ -4141,41 +4186,40 @@ inline void to_json(const glTFMeshPrimitiveMode& val, json& js) {
 
 // Converts a glTFMeshPrimitive object to JSON
 inline void to_json(const glTFMeshPrimitive& val, json& js) {
+    static auto def = glTFMeshPrimitive();
     if (!js.is_object()) js = json::object();
     to_json((const glTFProperty&)val, js);
     to_json(val.attributes, js["attributes"]);
-    if (val.indices.is_valid()) to_json(val.indices, js["indices"]);
-    if (val.material.is_valid()) to_json(val.material, js["material"]);
-    if (val.mode != glTFMeshPrimitiveMode::Triangles)
-        to_json(val.mode, js["mode"]);
-    if (!val.targets.empty()) to_json(val.targets, js["targets"]);
+    if (val.indices != def.indices) to_json(val.indices, js["indices"]);
+    if (val.material != def.material) to_json(val.material, js["material"]);
+    if (val.mode != def.mode) to_json(val.mode, js["mode"]);
+    if (val.targets != def.targets) to_json(val.targets, js["targets"]);
 }
 
 // Converts a glTFMesh object to JSON
 inline void to_json(const glTFMesh& val, json& js) {
+    static auto def = glTFMesh();
     if (!js.is_object()) js = json::object();
     to_json((const glTFChildOfRootProperty&)val, js);
     to_json(val.primitives, js["primitives"]);
-    if (!val.weights.empty()) to_json(val.weights, js["weights"]);
+    if (val.weights != def.weights) to_json(val.weights, js["weights"]);
 }
 
 // Converts a glTFNode object to JSON
 inline void to_json(const glTFNode& val, json& js) {
+    static auto def = glTFNode();
     if (!js.is_object()) js = json::object();
     to_json((const glTFChildOfRootProperty&)val, js);
-    if (val.camera.is_valid()) to_json(val.camera, js["camera"]);
-    if (!val.children.empty()) to_json(val.children, js["children"]);
-    if (val.skin.is_valid()) to_json(val.skin, js["skin"]);
-    if (val.matrix !=
-        mat4f{{1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}})
-        to_json(val.matrix, js["matrix"]);
-    if (val.mesh.is_valid()) to_json(val.mesh, js["mesh"]);
-    if (val.rotation != quat4f{0, 0, 0, 1})
-        to_json(val.rotation, js["rotation"]);
-    if (val.scale != vec3f{1, 1, 1}) to_json(val.scale, js["scale"]);
-    if (val.translation != vec3f{0, 0, 0})
+    if (val.camera != def.camera) to_json(val.camera, js["camera"]);
+    if (val.children != def.children) to_json(val.children, js["children"]);
+    if (val.skin != def.skin) to_json(val.skin, js["skin"]);
+    if (val.matrix != def.matrix) to_json(val.matrix, js["matrix"]);
+    if (val.mesh != def.mesh) to_json(val.mesh, js["mesh"]);
+    if (val.rotation != def.rotation) to_json(val.rotation, js["rotation"]);
+    if (val.scale != def.scale) to_json(val.scale, js["scale"]);
+    if (val.translation != def.translation)
         to_json(val.translation, js["translation"]);
-    if (!val.weights.empty()) to_json(val.weights, js["weights"]);
+    if (val.weights != def.weights) to_json(val.weights, js["weights"]);
 }
 // Converts a glTFSamplerMagFilter enum to JSON
 inline void to_json(const glTFSamplerMagFilter& val, json& js) {
@@ -4221,56 +4265,60 @@ inline void to_json(const glTFSamplerWrapT& val, json& js) {
 
 // Converts a glTFSampler object to JSON
 inline void to_json(const glTFSampler& val, json& js) {
+    static auto def = glTFSampler();
     if (!js.is_object()) js = json::object();
     to_json((const glTFChildOfRootProperty&)val, js);
-    if (val.magFilter != glTFSamplerMagFilter::NotSet)
-        to_json(val.magFilter, js["magFilter"]);
-    if (val.minFilter != glTFSamplerMinFilter::NotSet)
-        to_json(val.minFilter, js["minFilter"]);
-    if (val.wrapS != glTFSamplerWrapS::Repeat) to_json(val.wrapS, js["wrapS"]);
-    if (val.wrapT != glTFSamplerWrapT::Repeat) to_json(val.wrapT, js["wrapT"]);
+    if (val.magFilter != def.magFilter) to_json(val.magFilter, js["magFilter"]);
+    if (val.minFilter != def.minFilter) to_json(val.minFilter, js["minFilter"]);
+    if (val.wrapS != def.wrapS) to_json(val.wrapS, js["wrapS"]);
+    if (val.wrapT != def.wrapT) to_json(val.wrapT, js["wrapT"]);
 }
 
 // Converts a glTFScene object to JSON
 inline void to_json(const glTFScene& val, json& js) {
+    static auto def = glTFScene();
     if (!js.is_object()) js = json::object();
     to_json((const glTFChildOfRootProperty&)val, js);
-    if (!val.nodes.empty()) to_json(val.nodes, js["nodes"]);
+    if (val.nodes != def.nodes) to_json(val.nodes, js["nodes"]);
 }
 
 // Converts a glTFSkin object to JSON
 inline void to_json(const glTFSkin& val, json& js) {
+    static auto def = glTFSkin();
     if (!js.is_object()) js = json::object();
     to_json((const glTFChildOfRootProperty&)val, js);
-    if (val.inverseBindMatrices.is_valid())
+    if (val.inverseBindMatrices != def.inverseBindMatrices)
         to_json(val.inverseBindMatrices, js["inverseBindMatrices"]);
-    if (val.skeleton.is_valid()) to_json(val.skeleton, js["skeleton"]);
+    if (val.skeleton != def.skeleton) to_json(val.skeleton, js["skeleton"]);
     to_json(val.joints, js["joints"]);
 }
 
 // Converts a glTF object to JSON
 inline void to_json(const glTF& val, json& js) {
+    static auto def = glTF();
     if (!js.is_object()) js = json::object();
     to_json((const glTFProperty&)val, js);
-    if (!val.extensionsUsed.empty())
+    if (val.extensionsUsed != def.extensionsUsed)
         to_json(val.extensionsUsed, js["extensionsUsed"]);
-    if (!val.extensionsRequired.empty())
+    if (val.extensionsRequired != def.extensionsRequired)
         to_json(val.extensionsRequired, js["extensionsRequired"]);
-    if (!val.accessors.empty()) to_json(val.accessors, js["accessors"]);
-    if (!val.animations.empty()) to_json(val.animations, js["animations"]);
+    if (val.accessors != def.accessors) to_json(val.accessors, js["accessors"]);
+    if (val.animations != def.animations)
+        to_json(val.animations, js["animations"]);
     to_json(val.asset, js["asset"]);
-    if (!val.buffers.empty()) to_json(val.buffers, js["buffers"]);
-    if (!val.bufferViews.empty()) to_json(val.bufferViews, js["bufferViews"]);
-    if (!val.cameras.empty()) to_json(val.cameras, js["cameras"]);
-    if (!val.images.empty()) to_json(val.images, js["images"]);
-    if (!val.materials.empty()) to_json(val.materials, js["materials"]);
-    if (!val.meshes.empty()) to_json(val.meshes, js["meshes"]);
-    if (!val.nodes.empty()) to_json(val.nodes, js["nodes"]);
-    if (!val.samplers.empty()) to_json(val.samplers, js["samplers"]);
-    if (val.scene.is_valid()) to_json(val.scene, js["scene"]);
-    if (!val.scenes.empty()) to_json(val.scenes, js["scenes"]);
-    if (!val.skins.empty()) to_json(val.skins, js["skins"]);
-    if (!val.textures.empty()) to_json(val.textures, js["textures"]);
+    if (val.buffers != def.buffers) to_json(val.buffers, js["buffers"]);
+    if (val.bufferViews != def.bufferViews)
+        to_json(val.bufferViews, js["bufferViews"]);
+    if (val.cameras != def.cameras) to_json(val.cameras, js["cameras"]);
+    if (val.images != def.images) to_json(val.images, js["images"]);
+    if (val.materials != def.materials) to_json(val.materials, js["materials"]);
+    if (val.meshes != def.meshes) to_json(val.meshes, js["meshes"]);
+    if (val.nodes != def.nodes) to_json(val.nodes, js["nodes"]);
+    if (val.samplers != def.samplers) to_json(val.samplers, js["samplers"]);
+    if (val.scene != def.scene) to_json(val.scene, js["scene"]);
+    if (val.scenes != def.scenes) to_json(val.scenes, js["scenes"]);
+    if (val.skins != def.skins) to_json(val.skins, js["skins"]);
+    if (val.textures != def.textures) to_json(val.textures, js["textures"]);
 }
 // #codegen end func
 
