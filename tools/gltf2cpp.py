@@ -53,119 +53,119 @@ struct {{name}} {{#base}}: {{base}}{{/base}} {
 
 parse_func = '''
 // Parse int function.
-inline void from_json(int& val, const json& js) {
+inline void serialize_from_json(int& val, const json& js) {
     if (!js.is_number_integer()) throw runtime_error("integer expected");
     val = js;
 }
 
 // Parse float function.
-inline void from_json(float& val, const json& js) {
+inline void serialize_from_json(float& val, const json& js) {
     if (!js.is_number()) throw runtime_error("number expected");
     val = js;
 }
 
 // Parse bool function.
-inline void from_json(bool& val, const json& js) {
+inline void serialize_from_json(bool& val, const json& js) {
     if (!js.is_boolean()) throw runtime_error("bool expected");
     val = js;
 }
 
 // Parse std::string function.
-inline void from_json(string& val, const json& js) {
+inline void serialize_from_json(string& val, const json& js) {
     if (!js.is_string()) throw runtime_error("string expected");
     val = js;
 }
 
 // Parse json function.
-inline void from_json(json& val, const json& js) { val = js; }
+inline void serialize_from_json(json& val, const json& js) { val = js; }
 
 // Parse support function.
 template <typename T>
-inline void from_json(T*& val, const json& js) {
+inline void serialize_from_json(T*& val, const json& js) {
     if (js.is_null()) { val = nullptr; return; }
     if (!js.is_object()) throw runtime_error("object expected");
     if (!val) val = new T();
-    from_json(*val, js);
+    serialize_from_json(*val, js);
 }
 
 // Parse support function.
 template <typename T>
-inline void from_json(vector<T>& vals, const json& js) {
+inline void serialize_from_json(vector<T>& vals, const json& js) {
     if (!js.is_array()) throw runtime_error("array expected");
     vals.resize(js.size());
     for (auto i = 0; i < js.size(); i++) {
         // this is contrived to support for vector<bool>
         auto v = T();
-        from_json(v, js[i]);
+        serialize_from_json(v, js[i]);
         vals[i] = v;
     }
 }
 
 // Parse support function.
 template <typename T>
-inline void from_json(map<string, T>& vals, const json& js) {
+inline void serialize_from_json(map<string, T>& vals, const json& js) {
     if (!js.is_object()) throw runtime_error("object expected");
     for (auto kv = js.begin(); kv != js.end(); ++kv) {
-        from_json(vals[kv.key()], kv.value());
+        serialize_from_json(vals[kv.key()], kv.value());
     }
 }
 
 // Parse support function.
 template<typename T, size_t N>
-inline void from_json(array<T, N>& vals, const json& js) {
+inline void serialize_from_json(array<T, N>& vals, const json& js) {
     if (!js.is_array()) throw runtime_error("array expected");
     if (N != js.size()) throw runtime_error("wrong array size");
-    for (auto i = 0; i < N; i++) from_json(vals[i], js.at(i));
+    for (auto i = 0; i < N; i++) serialize_from_json(vals[i], js.at(i));
 }
 
 // Parse support function.
 template<typename T, typename T1>
-inline void from_json(T& val, const json& js, const vector<pair<T1, T>>& table) {
+inline void serialize_from_json(T& val, const json& js, const vector<pair<T1, T>>& table) {
     auto v = T1();
-    from_json(v, js);
+    serialize_from_json(v, js);
     auto found = false;
     for(auto& kv : table) { if(kv.first == v) { val = kv.second; found = true; break; } }
     if(!found) throw runtime_error("bad enum value");
 }
 
 // Parse support function.
-inline void from_json(vec2f& vals, const json& js) {
-    from_json((array<float, 2>&)vals, js);
+inline void serialize_from_json(vec2f& vals, const json& js) {
+    serialize_from_json((array<float, 2>&)vals, js);
 }
 
 // Parse support function.
-inline void from_json(vec3f& vals, const json& js) {
-    from_json((array<float, 3>&)vals, js);
+inline void serialize_from_json(vec3f& vals, const json& js) {
+    serialize_from_json((array<float, 3>&)vals, js);
 }
 
 // Parse support function.
-inline void from_json(vec4f& vals, const json& js) {
-    from_json((array<float, 4>&)vals, js);
+inline void serialize_from_json(vec4f& vals, const json& js) {
+    serialize_from_json((array<float, 4>&)vals, js);
 }
 
 // Parse support function.
-inline void from_json(quat4f& vals, const json& js) {
-    from_json((array<float, 4>&)vals, js);
+inline void serialize_from_json(quat4f& vals, const json& js) {
+    serialize_from_json((array<float, 4>&)vals, js);
 }
 
 // Parse support function.
-inline void from_json(mat4f& vals, const json& js) {
-    from_json((array<float, 16>&)vals, js);
+inline void serialize_from_json(mat4f& vals, const json& js) {
+    serialize_from_json((array<float, 16>&)vals, js);
 }
 
 // Parse id function.
 template <typename T>
-inline void from_json(glTFid<T>& val, const json& js) {
+inline void serialize_from_json(glTFid<T>& val, const json& js) {
     if (!js.is_number_integer()) throw runtime_error("int expected");
     val = glTFid<T>((int)js);
 }
 
 // Parses a glTFProperty object
-inline void from_json(glTFProperty& val, const json& js) {
+inline void serialize_from_json(glTFProperty& val, const json& js) {
     if (!js.is_object()) throw runtime_error("object expected");
 #if YGL_GLTFJSON
-    if(js.count("extensions")) from_json(val.extensions, js.at("extensions"));
-    if(js.count("extras")) from_json(val.extras, js.at("extras"));
+    if(js.count("extensions")) serialize_from_json(val.extensions, js.at("extensions"));
+    if(js.count("extras")) serialize_from_json(val.extras, js.at("extras"));
 #endif
 }
 '''
@@ -174,22 +174,22 @@ parse_fmt = '''
 {{#types}}
 {{#enums}}
 // Parse a {{name}} enum
-inline void from_json({{name}}& val, const json& js) {
+inline void serialize_from_json({{name}}& val, const json& js) {
     static vector<pair<{{item}}, {{name}}>> table = { {{#values}} { {{enum}}, {{name}}::{{label}} },{{/values}} };
-    from_json(val, js, table);
+    serialize_from_json(val, js, table);
 }
 
 {{/enums}}
 
 // Parses a {{name}} object
-inline void from_json({{name}}& val, const json& js) {
+inline void serialize_from_json({{name}}& val, const json& js) {
     if (!js.is_object()) throw runtime_error("object expected");
-    {{#base}}from_json(({{base}}&)val, js);{{/base}}
-    {{#properties}}{{^extension}}{{#required}}if (!js.count("{{name}}")) throw runtime_error("missing value");{{/required}}{{^required}}if (js.count("{{name}}")) {{/required}}from_json(val.{{name}}, js.at("{{name}}"));{{/extension}}{{/properties}}
+    {{#base}}serialize_from_json(({{base}}&)val, js);{{/base}}
+    {{#properties}}{{^extension}}{{#required}}if (!js.count("{{name}}")) throw runtime_error("missing value");{{/required}}{{^required}}if (js.count("{{name}}")) {{/required}}serialize_from_json(val.{{name}}, js.at("{{name}}"));{{/extension}}{{/properties}}
     {{#has_extensions}}
     if (js.count("extensions")) {
         auto& js_ext = js["extensions"];
-        {{#properties}}{{#extension}}if (js_ext.count("{{extension}}")) from_json(val.{{name}}, js_ext.at("{{extension}}"));{{/extension}}{{/properties}}
+        {{#properties}}{{#extension}}if (js_ext.count("{{extension}}")) serialize_from_json(val.{{name}}, js_ext.at("{{extension}}"));{{/extension}}{{/properties}}
     }
     {{/has_extensions}}
 }
@@ -198,87 +198,87 @@ inline void from_json({{name}}& val, const json& js) {
 
 dump_func = '''
 // Converts int to json.
-inline void to_json(int val, json& js) { js = val; }
+inline void serialize_to_json(int val, json& js) { js = val; }
 
 // Converts float to json.
-inline void to_json(float val, json& js) { js = val; }
+inline void serialize_to_json(float val, json& js) { js = val; }
 
 // Converts bool to json.
-inline void to_json(bool val, json& js) { js = val; }
+inline void serialize_to_json(bool val, json& js) { js = val; }
 
 // Converts string to json.
-inline void to_json(const string& val, json& js) { js = val; }
+inline void serialize_to_json(const string& val, json& js) { js = val; }
 
 // Converts json to json.
-inline void to_json(const json& val, json& js) { js = val; }
+inline void serialize_to_json(const json& val, json& js) { js = val; }
 
 // Dump support function.
 template<typename T>
-inline void to_json(const T* val, json& js) {
+inline void serialize_to_json(const T* val, json& js) {
     if (!val) { js = nullptr; return; }
     if (!js.is_object()) js = json::object();
-    to_json(*val, js);
+    serialize_to_json(*val, js);
 }
 
 // Dump support function.
 template<typename T, size_t N>
-inline void to_json(const array<T, N>& vals, json& js) {
+inline void serialize_to_json(const array<T, N>& vals, json& js) {
     js = json::array();
-    for (auto i = 0; i < N; i++) to_json(vals[i], js[i]);
+    for (auto i = 0; i < N; i++) serialize_to_json(vals[i], js[i]);
 }
 
 // Dump support function.
 template <typename T>
-inline void to_json(const vector<T>& vals, json& js) {
+inline void serialize_to_json(const vector<T>& vals, json& js) {
     js = json::array();
-    for (auto i = 0; i < vals.size(); i++) to_json(vals[i], js[i]);
+    for (auto i = 0; i < vals.size(); i++) serialize_to_json(vals[i], js[i]);
 }
 
 // Dump support function.
 template <typename T>
-inline void to_json(const map<string, T>& vals, json& js) {
+inline void serialize_to_json(const map<string, T>& vals, json& js) {
     js = json::object();
-    for (auto& kv : vals) to_json(kv.second, js[kv.first]);
+    for (auto& kv : vals) serialize_to_json(kv.second, js[kv.first]);
 }
 
 // Dump support function.
 template<typename T, typename T1>
-inline void to_json(const T& val, json& js, const vector<pair<T1, T>>& table) {
+inline void serialize_to_json(const T& val, json& js, const vector<pair<T1, T>>& table) {
     auto found = false;
     auto v = T1();
     for(auto& kv : table) { if(kv.second == val) { v = kv.first; found = true; break; } }
     if(!found) throw runtime_error("invalid value");
-    to_json(v, js);
+    serialize_to_json(v, js);
 }
 
 // Dump support function.
-inline void to_json(const vec2f& vals, json& js) {
-    to_json((const array<float, 2>&)vals, js);
+inline void serialize_to_json(const vec2f& vals, json& js) {
+    serialize_to_json((const array<float, 2>&)vals, js);
 }
 
 // Dump support function.
-inline void to_json(const vec3f& vals, json& js) {
-    to_json((const array<float, 3>&)vals, js);
+inline void serialize_to_json(const vec3f& vals, json& js) {
+    serialize_to_json((const array<float, 3>&)vals, js);
 }
 
 // Dump support function.
-inline void to_json(const vec4f& vals, json& js) {
-    to_json((const array<float, 4>&)vals, js);
+inline void serialize_to_json(const vec4f& vals, json& js) {
+    serialize_to_json((const array<float, 4>&)vals, js);
 }
 
 // Dump support function.
-inline void to_json(const quat4f& vals, json& js) {
-    to_json((const array<float, 4>&)vals, js);
+inline void serialize_to_json(const quat4f& vals, json& js) {
+    serialize_to_json((const array<float, 4>&)vals, js);
 }
 
 // Dump support function.
-inline void to_json(const mat4f& vals, json& js) {
-    to_json((const array<float, 16>&)vals, js);
+inline void serialize_to_json(const mat4f& vals, json& js) {
+    serialize_to_json((const array<float, 16>&)vals, js);
 }
 
 // Converts glTFid to json.
 template <typename T>
-inline void to_json(const glTFid<T>& val, json& js) {
+inline void serialize_to_json(const glTFid<T>& val, json& js) {
     js = (int)val;
 }
 
@@ -295,10 +295,10 @@ inline bool operator!=(const glTFid<T>& a, const glTFid<T>& b) {
 }
 
 // Converts a glTFProperty object to JSON
-inline void to_json(const glTFProperty& val, json& js) {
+inline void serialize_to_json(const glTFProperty& val, json& js) {
     if (!js.is_object()) js = json::object();
 #if YGL_GLTFJSON
-    if (!val.extensions.empty()) to_json(val.extensions, js["extensions"]);
+    if (!val.extensions.empty()) serialize_to_json(val.extensions, js["extensions"]);
     if (!val.extras.is_null()) dump_attr(val.extras, "extras", js);
 #endif
 }
@@ -309,23 +309,23 @@ dump_fmt = '''
 {{#types}}
 {{#enums}}
 // Converts a {{name}} enum to JSON
-inline void to_json(const {{name}}& val, json& js) {
+inline void serialize_to_json(const {{name}}& val, json& js) {
     static vector<pair<{{item}}, {{name}}>> table = { {{#values}} { {{enum}}, {{name}}::{{label}} },{{/values}} };
-    to_json(val, js, table);
+    serialize_to_json(val, js, table);
 }
 
 {{/enums}}
 
 // Converts a {{name}} object to JSON
-inline void to_json(const {{name}}& val, json& js) {
+inline void serialize_to_json(const {{name}}& val, json& js) {
     static auto def = {{name}}();
     if (!js.is_object()) js = json::object();
-    {{#base}}to_json((const {{base}}&)val, js);{{/base}}
-    {{#properties}}{{^extension}}{{^required}}if (val.{{name}} != def.{{name}}) {{/required}}to_json(val.{{name}}, js["{{name}}"]);{{/extension}}{{/properties}}
+    {{#base}}serialize_to_json((const {{base}}&)val, js);{{/base}}
+    {{#properties}}{{^extension}}{{^required}}if (val.{{name}} != def.{{name}}) {{/required}}serialize_to_json(val.{{name}}, js["{{name}}"]);{{/extension}}{{/properties}}
     {{#properties}}{{#extension}}
     if ({{def_check}}) {
         auto& js_ext = js["extensions"];
-        to_json(val.{{name}}, js_ext["{{extension}}"]);
+        serialize_to_json(val.{{name}}, js_ext["{{extension}}"]);
     }
     {{/extension}}{{/properties}}
 }
