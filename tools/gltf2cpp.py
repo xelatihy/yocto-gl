@@ -81,6 +81,14 @@ inline void from_json(json& val, const json& js) { val = js; }
 
 // Parse support function.
 template <typename T>
+inline void from_json(T*& val, const json& js) {
+    if (!js.is_object()) throw runtime_error("object expected");
+    if (!val) val = new T();
+    from_json(*val, js);
+}
+
+// Parse support function.
+template <typename T>
 inline void from_json(vector<T>& vals, const json& js) {
     if (!js.is_array()) throw runtime_error("array expected");
     vals.resize(js.size());
@@ -152,12 +160,11 @@ inline void from_json(glTFid<T>& val, const json& js) {
 }
 
 // Parses a glTFProperty object
-inline void from_json(glTFProperty*& val, const json& js) {
+inline void from_json(glTFProperty& val, const json& js) {
     if (!js.is_object()) throw runtime_error("object expected");
-    if (!val) val = new glTFProperty();
 #if YGL_GLTFJSON
-    if(js.count("extensions")) from_json(val->extensions, js.at("extensions"));
-    if(js.count("extras")) from_json(val->extras, js.at("extras"));
+    if(js.count("extensions")) from_json(val.extensions, js.at("extensions"));
+    if(js.count("extras")) from_json(val.extras, js.at("extras"));
 #endif
 }
 '''
@@ -174,16 +181,14 @@ inline void from_json({{name}}& val, const json& js) {
 {{/enums}}
 
 // Parses a {{name}} object
-inline void from_json(
-    {{name}}*& val, const json& js) {
+inline void from_json({{name}}& val, const json& js) {
     if (!js.is_object()) throw runtime_error("object expected");
-    if (!val) val = new {{name}}();
-    {{#base}}from_json(({{base}}*&)val, js);{{/base}}
-    {{#properties}}{{^extension}}{{#required}}if (!js.count("{{name}}")) throw runtime_error("missing value");{{/required}}{{^required}}if (js.count("{{name}}")) {{/required}}from_json(val->{{name}}, js.at("{{name}}"));{{/extension}}{{/properties}}
+    {{#base}}from_json(({{base}}&)val, js);{{/base}}
+    {{#properties}}{{^extension}}{{#required}}if (!js.count("{{name}}")) throw runtime_error("missing value");{{/required}}{{^required}}if (js.count("{{name}}")) {{/required}}from_json(val.{{name}}, js.at("{{name}}"));{{/extension}}{{/properties}}
     {{#has_extensions}}
     if (js.count("extensions")) {
         auto& js_ext = js["extensions"];
-        {{#properties}}{{#extension}}if (js_ext.count("{{extension}}")) from_json(val->{{name}}, js_ext.at("{{extension}}"));{{/extension}}{{/properties}}
+        {{#properties}}{{#extension}}if (js_ext.count("{{extension}}")) from_json(val.{{name}}, js_ext.at("{{extension}}"));{{/extension}}{{/properties}}
     }
     {{/has_extensions}}
 }
@@ -192,19 +197,26 @@ inline void from_json(
 
 dump_func = '''
 // Converts int to json.
-inline void to_json(const int& val, json& js) { js = val; }
+inline void to_json(int val, json& js) { js = val; }
 
 // Converts float to json.
-inline void to_json(const float& val, json& js) { js = val; }
+inline void to_json(float val, json& js) { js = val; }
 
 // Converts bool to json.
-inline void to_json(const bool& val, json& js) { js = val; }
+inline void to_json(bool val, json& js) { js = val; }
 
 // Converts string to json.
 inline void to_json(const string& val, json& js) { js = val; }
 
 // Converts json to json.
 inline void to_json(const json& val, json& js) { js = val; }
+
+// Dump support function.
+template<typename T>
+inline void to_json(const T* val, json& js) {
+    if (!js.is_object()) js = json::object();
+    to_json(*val, js);
+}
 
 // Dump support function.
 template<typename T, size_t N>
@@ -269,11 +281,11 @@ inline void to_json(const glTFid<T>& val, json& js) {
 }
 
 // Converts a glTFProperty object to JSON
-inline void to_json(const glTFProperty* val, json& js) {
+inline void to_json(const glTFProperty& val, json& js) {
     if (!js.is_object()) js = json::object();
 #if YGL_GLTFJSON
-    if (!val->extensions.empty()) to_json(val->extensions, js["extensions"]);
-    if (!val->extras.is_null()) dump_attr(val->extras, "extras", js);
+    if (!val.extensions.empty()) to_json(val.extensions, js["extensions"]);
+    if (!val.extras.is_null()) dump_attr(val.extras, "extras", js);
 #endif
 }
 
@@ -291,14 +303,14 @@ inline void to_json(const {{name}}& val, json& js) {
 {{/enums}}
 
 // Converts a {{name}} object to JSON
-inline void to_json(const {{name}}* val, json& js) {
+inline void to_json(const {{name}}& val, json& js) {
     if (!js.is_object()) js = json::object();
-    {{#base}}to_json((const {{base}}*)val, js);{{/base}}
-    {{#properties}}{{^extension}}{{^required}}if ({{def_check}}) {{/required}}to_json(val->{{name}}, js["{{name}}"]);{{/extension}}{{/properties}}
+    {{#base}}to_json((const {{base}}&)val, js);{{/base}}
+    {{#properties}}{{^extension}}{{^required}}if ({{def_check}}) {{/required}}to_json(val.{{name}}, js["{{name}}"]);{{/extension}}{{/properties}}
     {{#properties}}{{#extension}}
     if ({{def_check}}) {
         auto& js_ext = js["extensions"];
-        to_json(val->{{name}}, js_ext["{{extension}}"]);
+        to_json(val.{{name}}, js_ext["{{extension}}"]);
     }
     {{/extension}}{{/properties}}
 }
@@ -394,15 +406,15 @@ def fix_schema(js):
         else:
             vjs['default'] = str(vjs['default']).replace('.0','').replace('[','{').replace(']','}').replace('False','false')
         if 'vector<' in vjs['type'] or 'map<' in vjs['type']:
-            vjs['def_check'] = '!' + 'val->' + vjs['name'] + '.empty()'
+            vjs['def_check'] = '!' + 'val.' + vjs['name'] + '.empty()'
         elif 'glTFid<' in vjs['type']:
-            vjs['def_check'] = 'val->' + vjs['name'] + '.is_valid()'
+            vjs['def_check'] = 'val.' + vjs['name'] + '.is_valid()'
         elif vjs['type'] in ['json']:
-            vjs['def_check'] = '!' + 'val->' + vjs['name'] + '.is_null()'
+            vjs['def_check'] = '!' + 'val.' + vjs['name'] + '.is_null()'
         elif vjs['type'] in ['vec3f','vec2f','vec4f','quat4f','mat4f']:
-            vjs['def_check'] = 'val->' + vjs['name'] + ' != ' + vjs['type'] + vjs['default']
+            vjs['def_check'] = 'val.' + vjs['name'] + ' != ' + vjs['type'] + vjs['default']
         else:
-            vjs['def_check'] = 'val->' + vjs['name'] + ' != ' + vjs['default']
+            vjs['def_check'] = 'val.' + vjs['name'] + ' != ' + vjs['default']
 
     return js
 
