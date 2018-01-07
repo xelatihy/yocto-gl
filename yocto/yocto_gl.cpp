@@ -3088,6 +3088,10 @@ inline void from_json(json& val, const json& js) { val = js; }
 // Parse support function.
 template <typename T>
 inline void from_json(T*& val, const json& js) {
+    if (js.is_null()) {
+        val = nullptr;
+        return;
+    }
     if (!js.is_object()) throw runtime_error("object expected");
     if (!val) val = new T();
     from_json(*val, js);
@@ -3707,6 +3711,10 @@ inline void to_json(const json& val, json& js) { js = val; }
 // Dump support function.
 template <typename T>
 inline void to_json(const T* val, json& js) {
+    if (!val) {
+        js = nullptr;
+        return;
+    }
     if (!js.is_object()) js = json::object();
     to_json(*val, js);
 }
