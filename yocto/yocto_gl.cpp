@@ -10904,18 +10904,29 @@ inline bool draw_elem_widgets(gl_window* win, scene* scn, shape* shp,
     void*& selection, const unordered_map<texture*, gl_texture>& gl_txt) {
     auto mat_names = vector<pair<string, material*>>{{"<none>", nullptr}};
     for (auto mat : scn->materials) mat_names.push_back({mat->name, mat});
+    
+    auto draw_vector_widget = [](gl_window* win, const char* lbl, int len) {
+        if(len) draw_label_widget(win, lbl, len);
+    };
 
     auto edited = vector<bool>();
     draw_separator_widget(win);
     draw_label_widget(win, "name", shp->name);
     edited += draw_value_widget(win, "material", shp->mat, mat_names);
-    draw_label_widget(win, "verts", (int)shp->pos.size());
-    if (!shp->triangles.empty())
-        draw_label_widget(win, "triangles", (int)shp->triangles.size());
-    if (!shp->lines.empty())
-        draw_label_widget(win, "lines", (int)shp->lines.size());
-    if (!shp->points.empty())
-        draw_label_widget(win, "points", (int)shp->points.size());
+    draw_vector_widget(win, "pos", (int)shp->pos.size());
+    draw_vector_widget(win, "norm", (int)shp->norm.size());
+    draw_vector_widget(win, "texcoord", (int)shp->texcoord.size());
+    draw_vector_widget(win, "color", (int)shp->color.size());
+    draw_vector_widget(win, "tangsp", (int)shp->tangsp.size());
+    draw_vector_widget(win, "radius", (int)shp->radius.size());
+    draw_vector_widget(win, "triangles", (int)shp->triangles.size());
+    draw_vector_widget(win, "quads", (int)shp->quads.size());
+    draw_vector_widget(win, "quads_pos", (int)shp->quads_pos.size());
+    draw_vector_widget(win, "quads_norm", (int)shp->quads_norm.size());
+    draw_vector_widget(win, "quads_texcoord", (int)shp->quads_texcoord.size());
+    draw_vector_widget(win, "lines", (int)shp->lines.size());
+    draw_vector_widget(win, "points", (int)shp->points.size());
+    draw_vector_widget(win, "beziers", (int)shp->beziers.size());
     return std::any_of(edited.begin(), edited.end(), [](auto x) { return x; });
 }
 

@@ -4394,6 +4394,18 @@ inline vector<vec3i> convert_quads_to_triangles(
 #endif
     return triangles;
 }
+    
+/// Convert beziers to lines using 3 lines for each bezier.
+inline vector<vec2i> convert_bezier_to_lines(const vector<vec4i>& beziers) {
+    auto lines = vector<vec2i>();
+    lines.reserve(beziers.size()*3);
+    for (auto& b : beziers) {
+        lines += {b.x,b.y};
+        lines += {b.y,b.z};
+        lines += {b.z,b.w};
+    }
+    return lines;
+}
 
 /// Convert face varying data to single primitives. Returns the quads indices
 /// and filled vectors for pos, norm and texcoord.
@@ -7284,13 +7296,18 @@ inline void facet_shape(shape* shp) {
 
 /// Tesselate a shape into basic primitives
 inline void tesselate_shape(shape* shp) {
-    if (shp->quads_pos.empty()) return;
-    std::tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
-        convert_face_varying(shp->quads_pos, shp->quads_norm,
-            shp->quads_texcoord, shp->pos, shp->norm, shp->texcoord);
-    shp->quads_pos = {};
-    shp->quads_norm = {};
-    shp->quads_texcoord = {};
+    if (!shp->quads_pos.empty()) {
+        std::tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
+            convert_face_varying(shp->quads_pos, shp->quads_norm,
+                shp->quads_texcoord, shp->pos, shp->norm, shp->texcoord);
+        shp->quads_pos = {};
+        shp->quads_norm = {};
+        shp->quads_texcoord = {};
+    }
+    if(!shp->beziers.empty()) {
+        shp->lines = convert_bezier_to_lines(shp->beziers);
+        shp->beziers = {};
+    }
 }
 
 /// Tesselate scene shapes and update pointers
