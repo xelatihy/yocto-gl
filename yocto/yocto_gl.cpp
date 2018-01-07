@@ -1302,10 +1302,20 @@ inline point eval_envpoint(const environment* env, const vec3f& wo) {
     // done
     return pt;
 }
+    
+// Make a default material
+inline material make_default_material() {
+    auto mat = material();
+    mat.kd = {0.2f,0.2f,0.2f};
+    return mat;
+}
 
 // Create a point for a shape. Resolves geometry and material with textures.
 inline point eval_shapepoint(
     const instance* ist, int eid, const vec4f& euv, const vec3f& wo) {
+    // default material
+    static auto def_material = make_default_material();
+    
     // set shape data
     auto pt = point();
 
@@ -1318,6 +1328,7 @@ inline point eval_shapepoint(
     // shortcuts
     auto shp = ist->shp;
     auto mat = ist->shp->mat;
+    if(!mat) mat = &def_material;
 
     // compute points and weights
     auto pos = eval_pos(ist->shp, eid, euv);
@@ -6537,6 +6548,12 @@ inline void add_elements(scene* scn, const add_elements_options& opts) {
                 shp->norm = compute_normals(
                     shp->lines, shp->triangles, shp->quads, shp->pos);
             }
+            if (!shp->quads_pos.empty()) {
+                if (!shp->quads_norm.empty())
+                    throw runtime_error("bad normals");
+                shp->quads_norm = shp->quads_pos;
+                shp->norm = compute_normals({}, {}, shp->quads_pos, shp->pos);
+            }
         }
     }
 
@@ -9944,31 +9961,48 @@ void update_stdsurface_state(gl_stdsurface_state* st, const scene* scn,
         } else {
             if (refresh_shapes.find(shp) == refresh_shapes.end()) continue;
         }
-        if (!shp->pos.empty()) update_vertex_buffer(st->vbo[shp].pos, shp->pos);
-        if (!shp->norm.empty())
-            update_vertex_buffer(st->vbo[shp].norm, shp->norm);
-        if (!shp->texcoord.empty())
-            update_vertex_buffer(st->vbo[shp].texcoord, shp->texcoord);
-        if (!shp->color.empty())
-            update_vertex_buffer(st->vbo[shp].color, shp->color);
-        if (!shp->tangsp.empty())
-            update_vertex_buffer(st->vbo[shp].tangsp, shp->tangsp);
-        if (!shp->points.empty())
-            update_element_buffer(st->vbo[shp].points, shp->points);
-        if (!shp->lines.empty())
-            update_element_buffer(st->vbo[shp].lines, shp->lines);
-        if (!shp->triangles.empty()) {
-            update_element_buffer(st->vbo[shp].triangles, shp->triangles);
-        }
-        if (!shp->quads.empty()) {
-            auto triangles = convert_quads_to_triangles(shp->quads);
+        if (!shp->quads_pos.empty()) {
+            auto pos = vector<vec3f>();
+            auto norm = vector<vec3f>();
+            auto texcoord = vector<vec2f>();
+            auto quads = vector<vec4i>();
+            tie(quads, pos, norm, texcoord) =
+                convert_face_varying(shp->quads_pos, shp->quads_norm,
+                    shp->quads_texcoord, shp->pos, shp->norm, shp->texcoord);
+            if (!pos.empty()) update_vertex_buffer(st->vbo[shp].pos, pos);
+            if (!norm.empty()) update_vertex_buffer(st->vbo[shp].norm, norm);
+            if (!texcoord.empty())
+                update_vertex_buffer(st->vbo[shp].texcoord, texcoord);
+            auto triangles = convert_quads_to_triangles(quads);
             update_element_buffer(st->vbo[shp].quads, triangles);
-        }
-        if (!shp->triangles.empty() || !shp->quads.empty() ||
-            !shp->quads_pos.empty()) {
-            auto edges = get_edges(
-                shp->lines, shp->triangles, shp->quads + shp->quads_pos);
+            auto edges = get_edges({}, {}, shp->quads);
             update_element_buffer(st->vbo[shp].edges, edges);
+        } else {
+            if (!shp->pos.empty())
+                update_vertex_buffer(st->vbo[shp].pos, shp->pos);
+            if (!shp->norm.empty())
+                update_vertex_buffer(st->vbo[shp].norm, shp->norm);
+            if (!shp->texcoord.empty())
+                update_vertex_buffer(st->vbo[shp].texcoord, shp->texcoord);
+            if (!shp->color.empty())
+                update_vertex_buffer(st->vbo[shp].color, shp->color);
+            if (!shp->tangsp.empty())
+                update_vertex_buffer(st->vbo[shp].tangsp, shp->tangsp);
+            if (!shp->points.empty())
+                update_element_buffer(st->vbo[shp].points, shp->points);
+            if (!shp->lines.empty())
+                update_element_buffer(st->vbo[shp].lines, shp->lines);
+            if (!shp->triangles.empty()) {
+                update_element_buffer(st->vbo[shp].triangles, shp->triangles);
+            }
+            if (!shp->quads.empty()) {
+                auto triangles = convert_quads_to_triangles(shp->quads);
+                update_element_buffer(st->vbo[shp].quads, triangles);
+            }
+            if (!shp->triangles.empty() || !shp->quads.empty()) {
+                auto edges = get_edges({}, shp->triangles, shp->quads);
+                update_element_buffer(st->vbo[shp].edges, edges);
+            }
         }
     }
 
