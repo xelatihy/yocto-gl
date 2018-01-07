@@ -4940,6 +4940,9 @@ make_uvflipcapsphere(int level, float z, bool flipped = false);
 tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
 make_uvcutsphere(int level, float z, bool flipped = false);
 
+/// Make a bezier circle. Returns bezier, pos.
+tuple<vector<vec4i>, vector<vec3f>> make_bezier_circle();
+
 /// Make a hair ball around a shape. Returns lines, pos, norm, texcoord, radius.
 tuple<vector<vec2i>, vector<vec3f>, vector<vec3f>, vector<vec2f>, vector<float>>
 make_hair(int num, int level, const vec2f& len, const vec2f& rad,
@@ -6968,6 +6971,8 @@ struct shape {
     vector<vec4i> quads_norm;
     /// face-varying indices for texcoord
     vector<vec4i> quads_texcoord;
+    /// bezier
+    vector<vec4i> beziers;
 
     // vertex data ----------------------------
     /// per-vertex position (3 float)
@@ -8047,8 +8052,10 @@ enum struct obj_element_type : uint16_t {
     line = 2,
     /// polygon faces
     face = 3,
+    /// bezier segments
+    bezier = 4,
     /// tetrahedrons
-    tetra = 4,
+    tetra = 5,
 };
 
 /// Element vertex indices
@@ -8310,6 +8317,8 @@ struct obj_shape {
     vector<vec2i> lines;
     /// triangles
     vector<vec3i> triangles;
+    /// bezier
+    vector<vec4i> bezier;
     /// tetrahedrons
     vector<vec4i> tetras;
 
