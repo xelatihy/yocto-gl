@@ -156,13 +156,17 @@ int main(int argc, char** argv) {
 
     if (tesselation) {
         for (auto shp : scn->shapes) {
-            for (auto l = 0; l < tesselation; l++) { subdivide_shape(shp); }
+            for (auto l = 0; l < tesselation; l++) {
+                subdivide_shape_once(shp);
+            }
         }
     }
 
     if (subdiv) {
         for (auto shp : scn->shapes) {
-            for (auto l = 0; l < subdiv; l++) { subdivide_shape(shp, true); }
+            for (auto l = 0; l < subdiv; l++) {
+                subdivide_shape_once(shp, true);
+            }
         }
     }
 

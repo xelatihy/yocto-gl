@@ -8294,14 +8294,14 @@ inline shape* add_test_shape(
         } break;
         case test_shape_type::cubes: {
             tie(shp->quads, shp->pos) = make_cube();
-            for (auto i = 0; i < 4; i++) subdivide_shape(shp, true);
+            for (auto i = 0; i < 4; i++) subdivide_shape_once(shp, true);
         } break;
         case test_shape_type::suzanne: {
             tie(shp->quads, shp->pos) = make_suzanne();
         } break;
         case test_shape_type::suzannes: {
             tie(shp->quads, shp->pos) = make_suzanne();
-            for (auto i = 0; i < 2; i++) subdivide_shape(shp, true);
+            for (auto i = 0; i < 2; i++) subdivide_shape_once(shp, true);
         } break;
         case test_shape_type::cubefv: {
             tie(shp->quads_pos, shp->pos, shp->quads_norm, shp->norm,
@@ -8310,12 +8310,12 @@ inline shape* add_test_shape(
         case test_shape_type::cubefvs: {
             tie(shp->quads_pos, shp->pos, shp->quads_norm, shp->norm,
                 shp->quads_texcoord, shp->texcoord) = make_fvcube();
-            for (auto l = 0; l < 4; l++) subdivide_shape(shp, true);
+            for (auto l = 0; l < 4; l++) subdivide_shape_once(shp, true);
         } break;
         case test_shape_type::quads: {
             tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
                 make_uvquad(0);
-            for (auto i = 0; i < 4; i++) subdivide_shape(shp, true);
+            for (auto i = 0; i < 4; i++) subdivide_shape_once(shp, true);
         } break;
         case test_shape_type::spherefv: {
             tie(shp->quads_pos, shp->pos, shp->quads_norm, shp->norm,
@@ -10089,6 +10089,10 @@ void update_stdsurface_state(gl_stdsurface_state* st, const scene* scn,
                 auto triangles = convert_quads_to_triangles(shp->quads);
                 update_element_buffer(st->vbo[shp].quads, triangles);
             }
+            if (!shp->beziers.empty()) {
+                auto lines = convert_bezier_to_lines(shp->beziers);
+                update_element_buffer(st->vbo[shp].beziers, lines);
+            }
             if (!shp->triangles.empty() || !shp->quads.empty()) {
                 auto edges = get_edges({}, shp->triangles, shp->quads);
                 update_element_buffer(st->vbo[shp].edges, edges);
@@ -10167,6 +10171,7 @@ inline void draw_stdsurface_shape(gl_stdsurface_state* st, const shape* shp,
     draw_elems(vbo.lines);
     draw_elems(vbo.triangles);
     draw_elems(vbo.quads);
+    draw_elems(vbo.beziers);
 
     if (params.edges && !params.wireframe) {
         assert(gl_check_error());
