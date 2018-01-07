@@ -3053,418 +3053,188 @@ obj_mesh* get_mesh(
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-namespace _impl_gltf {
-
 // Json alias
 using json = nlohmann::json;
 
 // #codegen begin func ---------------------------------------------------------
 
-// Parse error
-struct json_serialize_stack {
-    vector<string> path = {"glTF"};
-    string pathname() {
-        auto p = std::string();
-        for (auto n : path) p += '/' + n;
-        return p;
-    }
-};
-
-// Parse support function.
-template <typename T>
-inline void json_serialize_value(
-    vector<T>& vals, json& js, bool reading, json_serialize_stack& err) {
-    if (reading) {
-        if (!js.is_array()) throw runtime_error("array expected");
-        vals.resize(js.size());
-        for (auto i = 0; i < js.size(); i++) {
-            // this is contrived to support for vector<bool>
-            auto v = T();
-            json_serialize_value(v, js[i], reading, err);
-            vals[i] = v;
-        }
-    } else {
-        js = json::array();
-        for (auto i = 0; i < vals.size(); i++) {
-            json_serialize_value(vals[i], js[i], reading, err);
-        }
-    }
-}
-
-// Parse support function.
-template <typename T>
-inline void json_serialize_value(
-    map<string, T>& vals, json& js, bool reading, json_serialize_stack& err) {
-    if (reading) {
-        if (!js.is_object()) throw runtime_error("object expected");
-        for (auto kv = js.begin(); kv != js.end(); ++kv) {
-            json_serialize_value(vals[kv.key()], kv.value(), reading, err);
-        }
-    } else {
-        js = json::object();
-        for (auto&& kv : vals) {
-            json_serialize_value(kv.second, js[kv.first], reading, err);
-        }
-    }
-}
-
-// Parses a pointer
-template <typename T>
-inline void json_serialize_value(
-    T*& val, json& js, bool reading, json_serialize_stack& err) {
-    if (reading) {
-        if (!js.is_object()) throw runtime_error("object expected");
-        if (!val) val = new T();
-        json_serialize_value(*val, js, reading, err);
-    } else {
-        if (!js.is_object()) js = json::object();
-        json_serialize_value(*val, js, reading, err);
-    }
-}
-
 // Parse int function.
-inline void json_serialize_value(
-    int& val, json& js, bool reading, json_serialize_stack& err) {
-    if (reading) {
-        if (!js.is_number_integer()) throw runtime_error("integer expected");
-        val = js;
-    } else {
-        js = val;
-    }
+inline void from_json(int& val, const json& js) {
+    if (!js.is_number_integer()) throw runtime_error("integer expected");
+    val = js;
 }
 
 // Parse float function.
-inline void json_serialize_value(
-    float& val, json& js, bool reading, json_serialize_stack& err) {
-    if (reading) {
-        if (!js.is_number()) throw runtime_error("number expected");
-        val = js;
-    } else {
-        js = val;
-    }
+inline void from_json(float& val, const json& js) {
+    if (!js.is_number()) throw runtime_error("number expected");
+    val = js;
 }
 
 // Parse bool function.
-inline void json_serialize_value(
-    bool& val, json& js, bool reading, json_serialize_stack& err) {
-    if (reading) {
-        if (!js.is_boolean()) throw runtime_error("bool expected");
-        val = js;
-    } else {
-        js = val;
-    }
+inline void from_json(bool& val, const json& js) {
+    if (!js.is_boolean()) throw runtime_error("bool expected");
+    val = js;
 }
 
 // Parse std::string function.
-inline void json_serialize_value(
-    string& val, json& js, bool reading, json_serialize_stack& err) {
-    if (reading) {
-        if (!js.is_string()) throw runtime_error("string expected");
-        val = js;
-    } else {
-        js = val;
-    }
+inline void from_json(string& val, const json& js) {
+    if (!js.is_string()) throw runtime_error("string expected");
+    val = js;
 }
 
 // Parse json function.
-inline void json_serialize_value(
-    json& val, json& js, bool reading, json_serialize_stack& err) {
-    if (reading) {
-        val = js;
-    } else {
-        js = val;
+inline void from_json(json& val, const json& js) { val = js; }
+
+// Parse support function.
+template <typename T>
+inline void from_json(T*& val, const json& js) {
+    if (js.is_null()) {
+        val = nullptr;
+        return;
     }
+    if (!js.is_object()) throw runtime_error("object expected");
+    if (!val) val = new T();
+    from_json(*val, js);
 }
 
 // Parse support function.
-inline void json_serialize_value(
-    vec2f& vals, json& js, bool reading, json_serialize_stack& err) {
-    if (reading) {
-        if (!js.is_array()) throw runtime_error("array expected");
-        if (2 != js.size()) throw runtime_error("wrong array size");
-        for (auto i = 0; i < 2; i++) {
-            json_serialize_value(vals[i], js[i], reading, err);
-        }
-    } else {
-        js = json::array();
-        for (auto i = 0; i < 2; i++) {
-            json_serialize_value(vals[i], js[i], reading, err);
-        }
-    }
-}
-
-// Parse support function.
-inline void json_serialize_value(
-    vec3f& vals, json& js, bool reading, json_serialize_stack& err) {
-    if (reading) {
-        if (!js.is_array()) throw runtime_error("array expected");
-        if (3 != js.size()) throw runtime_error("wrong array size");
-        for (auto i = 0; i < 3; i++) {
-            json_serialize_value(vals[i], js[i], reading, err);
-        }
-    } else {
-        js = json::array();
-        for (auto i = 0; i < 3; i++) {
-            json_serialize_value(vals[i], js[i], reading, err);
-        }
-    }
-}
-
-// Parse support function.
-inline void json_serialize_value(
-    vec4f& vals, json& js, bool reading, json_serialize_stack& err) {
-    if (reading) {
-        if (!js.is_array()) throw runtime_error("array expected");
-        if (4 != js.size()) throw runtime_error("wrong array size");
-        for (auto i = 0; i < 4; i++) {
-            json_serialize_value(vals[i], js[i], reading, err);
-        }
-    } else {
-        js = json::array();
-        for (auto i = 0; i < 4; i++) {
-            json_serialize_value(vals[i], js[i], reading, err);
-        }
-    }
-}
-
-// Parse support function.
-inline void json_serialize_value(
-    quat4f& vals, json& js, bool reading, json_serialize_stack& err) {
-    if (reading) {
-        if (!js.is_array()) throw runtime_error("array expected");
-        if (4 != js.size()) throw runtime_error("wrong array size");
-        for (auto i = 0; i < 4; i++) {
-            json_serialize_value(vals[i], js[i], reading, err);
-        }
-    } else {
-        js = json::array();
-        for (auto i = 0; i < 4; i++) {
-            json_serialize_value(vals[i], js[i], reading, err);
-        }
-    }
-}
-
-// Parse support function.
-inline void json_serialize_value(
-    mat4f& vals, json& js, bool reading, json_serialize_stack& err) {
-    if (reading) {
-        if (!js.is_array()) throw runtime_error("array expected");
-        if (16 != js.size()) throw runtime_error("wrong array size");
-        for (auto j = 0; j < 4; j++) {
-            for (auto i = 0; i < 4; i++) {
-                json_serialize_value(vals[j][i], js[j * 4 + i], reading, err);
-            }
-        }
-    } else {
-        js = json::array();
-        for (auto j = 0; j < 4; j++) {
-            for (auto i = 0; i < 4; i++) {
-                json_serialize_value(vals[j][i], js[j * 4 + i], reading, err);
-            }
-        }
+template <typename T>
+inline void from_json(vector<T>& vals, const json& js) {
+    if (!js.is_array()) throw runtime_error("array expected");
+    vals.resize(js.size());
+    for (auto i = 0; i < js.size(); i++) {
+        // this is contrived to support for vector<bool>
+        auto v = T();
+        from_json(v, js[i]);
+        vals[i] = v;
     }
 }
 
 // Parse support function.
 template <typename T>
-inline void json_serialize_attr(T& val, const char* name, json& js,
-    bool reading, json_serialize_stack& err) {
-    if (reading) {
-        auto iter = js.find(name);
-        if (iter == js.end()) return;
-        err.path.push_back(name);
-        json_serialize_value(val, *iter, reading, err);
-        err.path.pop_back();
-    } else {
-        err.path.push_back(name);
-        json_serialize_value(val, js[name], reading, err);
-        err.path.pop_back();
+inline void from_json(map<string, T>& vals, const json& js) {
+    if (!js.is_object()) throw runtime_error("object expected");
+    for (auto kv = js.begin(); kv != js.end(); ++kv) {
+        from_json(vals[kv.key()], kv.value());
     }
 }
 
 // Parse support function.
-template <typename T>
-inline void json_serialize_enum(T& val, json& js,
-    const vector<pair<string, T>>& vals, bool reading,
-    json_serialize_stack& err) {
-    if (reading) {
-        auto v = string();
-        json_serialize_value(v, js, reading, err);
-        auto found = false;
-        for (auto& kv : vals) {
-            if (kv.first == v) {
-                val = kv.second;
-                found = true;
-                break;
-            }
-        }
-        if (!found) throw runtime_error("bad enum value");
-    } else {
-        auto v = string();
-        for (auto& kv : vals) {
-            if (kv.second == val) {
-                v = kv.first;
-                break;
-            }
-        }
-        json_serialize_value(v, js, reading, err);
-    }
+template <typename T, size_t N>
+inline void from_json(array<T, N>& vals, const json& js) {
+    if (!js.is_array()) throw runtime_error("array expected");
+    if (N != js.size()) throw runtime_error("wrong array size");
+    for (auto i = 0; i < N; i++) from_json(vals[i], js.at(i));
 }
 
 // Parse support function.
-template <typename T>
-inline void json_serialize_enum(T& val, json& js,
-    const vector<pair<int, T>>& vals, bool reading, json_serialize_stack& err) {
-    if (reading) {
-        auto v = 0;
-        json_serialize_value(v, js, reading, err);
-        auto found = false;
-        for (auto& kv : vals) {
-            if (kv.first == v) {
-                val = kv.second;
-                found = true;
-                break;
-            }
+template <typename T, typename T1>
+inline void from_json(
+    T& val, const json& js, const vector<pair<T1, T>>& table) {
+    auto v = T1();
+    from_json(v, js);
+    auto found = false;
+    for (auto& kv : table) {
+        if (kv.first == v) {
+            val = kv.second;
+            found = true;
+            break;
         }
-        if (!found) throw runtime_error("bad enum value");
-    } else {
-        auto v = 0;
-        for (auto& kv : vals) {
-            if (kv.second == val) {
-                v = kv.first;
-                break;
-            }
-        }
-        json_serialize_value(v, js, reading, err);
     }
+    if (!found) throw runtime_error("bad enum value");
+}
+
+// Parse support function.
+inline void from_json(vec2f& vals, const json& js) {
+    from_json((array<float, 2>&)vals, js);
+}
+
+// Parse support function.
+inline void from_json(vec3f& vals, const json& js) {
+    from_json((array<float, 3>&)vals, js);
+}
+
+// Parse support function.
+inline void from_json(vec4f& vals, const json& js) {
+    from_json((array<float, 4>&)vals, js);
+}
+
+// Parse support function.
+inline void from_json(quat4f& vals, const json& js) {
+    from_json((array<float, 4>&)vals, js);
+}
+
+// Parse support function.
+inline void from_json(mat4f& vals, const json& js) {
+    from_json((array<float, 16>&)vals, js);
 }
 
 // Parse id function.
 template <typename T>
-inline void json_serialize_value(
-    glTFid<T>& val, json& js, bool reading, json_serialize_stack& err) {
-    if (reading) {
-        if (!js.is_number_integer()) throw runtime_error("int expected");
-        val = glTFid<T>((int)js);
-    } else {
-        js = (int)val;
-    }
+inline void from_json(glTFid<T>& val, const json& js) {
+    if (!js.is_number_integer()) throw runtime_error("int expected");
+    val = glTFid<T>((int)js);
 }
 
 // Parses a glTFProperty object
-inline void json_serialize_value(
-    glTFProperty& val, json& js, bool reading, json_serialize_stack& err) {
-    if (reading) {
-        if (!js.is_object()) throw runtime_error("object expected");
+inline void from_json(glTFProperty& val, const json& js) {
+    if (!js.is_object()) throw runtime_error("object expected");
 #if YGL_GLTFJSON
-        json_serialize_attr(val.extensions, "extensions", js, err);
-        json_serialize_attr(val.extras, "extras", js, err);
+    if (js.count("extensions")) from_json(val.extensions, js.at("extensions"));
+    if (js.count("extras")) from_json(val.extras, js.at("extras"));
 #endif
-    } else {
-        if (!js.is_object()) js = json::object();
-#if YGL_GLTFJSON
-        if (!val.extensions.empty())
-            dump_attr(val.extensions, "extensions", js, err);
-        if (!val.extras.is_null()) dump_attr(val.extras, "extras", js, err);
-#endif
-    }
 }
 
 // Parses a glTFChildOfRootProperty object
-inline void json_serialize_value(glTFChildOfRootProperty& val, json& js,
-    bool reading, json_serialize_stack& err) {
-    if (reading) {
-        if (!js.is_object()) throw runtime_error("object expected");
-        json_serialize_value((glTFProperty&)val, js, reading, err);
-        json_serialize_attr(val.name, "name", js, reading, err);
-    } else {
-        if (!js.is_object()) js = json::object();
-        json_serialize_value((glTFProperty&)val, js, reading, err);
-        if (val.name != "")
-            json_serialize_attr(val.name, "name", js, reading, err);
-    }
+inline void from_json(glTFChildOfRootProperty& val, const json& js) {
+    if (!js.is_object()) throw runtime_error("object expected");
+    from_json((glTFProperty&)val, js);
+    if (js.count("name")) from_json(val.name, js.at("name"));
 }
 // Parse a glTFAccessorSparseIndicesComponentType enum
-inline void json_serialize_value(glTFAccessorSparseIndicesComponentType& val,
-    json& js, bool reading, json_serialize_stack& err) {
+inline void from_json(
+    glTFAccessorSparseIndicesComponentType& val, const json& js) {
     static vector<pair<int, glTFAccessorSparseIndicesComponentType>> table = {
         {5121, glTFAccessorSparseIndicesComponentType::UnsignedByte},
         {5123, glTFAccessorSparseIndicesComponentType::UnsignedShort},
         {5125, glTFAccessorSparseIndicesComponentType::UnsignedInt},
     };
-    json_serialize_enum(val, js, table, reading, err);
+    from_json(val, js, table);
 }
 
 // Parses a glTFAccessorSparseIndices object
-inline void json_serialize_value(glTFAccessorSparseIndices& val, json& js,
-    bool reading, json_serialize_stack& err) {
-    if (reading) {
-        if (!js.is_object()) throw runtime_error("object expected");
-        json_serialize_value((glTFProperty&)val, js, reading, err);
-        if (!js.count("bufferView"))
-            throw runtime_error("missing required variable");
-        json_serialize_attr(val.bufferView, "bufferView", js, reading, err);
-        json_serialize_attr(val.byteOffset, "byteOffset", js, reading, err);
-        if (!js.count("componentType"))
-            throw runtime_error("missing required variable");
-        json_serialize_attr(
-            val.componentType, "componentType", js, reading, err);
-    } else {
-        if (!js.is_object()) js = json::object();
-        json_serialize_value((glTFProperty&)val, js, reading, err);
-        json_serialize_attr(val.bufferView, "bufferView", js, reading, err);
-        if (val.byteOffset != 0)
-            json_serialize_attr(val.byteOffset, "byteOffset", js, reading, err);
-        json_serialize_attr(
-            val.componentType, "componentType", js, reading, err);
-    }
+inline void from_json(glTFAccessorSparseIndices& val, const json& js) {
+    if (!js.is_object()) throw runtime_error("object expected");
+    from_json((glTFProperty&)val, js);
+    if (!js.count("bufferView")) throw runtime_error("missing value");
+    from_json(val.bufferView, js.at("bufferView"));
+    if (js.count("byteOffset")) from_json(val.byteOffset, js.at("byteOffset"));
+    if (!js.count("componentType")) throw runtime_error("missing value");
+    from_json(val.componentType, js.at("componentType"));
 }
 
 // Parses a glTFAccessorSparseValues object
-inline void json_serialize_value(glTFAccessorSparseValues& val, json& js,
-    bool reading, json_serialize_stack& err) {
-    if (reading) {
-        if (!js.is_object()) throw runtime_error("object expected");
-        json_serialize_value((glTFProperty&)val, js, reading, err);
-        if (!js.count("bufferView"))
-            throw runtime_error("missing required variable");
-        json_serialize_attr(val.bufferView, "bufferView", js, reading, err);
-        json_serialize_attr(val.byteOffset, "byteOffset", js, reading, err);
-    } else {
-        if (!js.is_object()) js = json::object();
-        json_serialize_value((glTFProperty&)val, js, reading, err);
-        json_serialize_attr(val.bufferView, "bufferView", js, reading, err);
-        if (val.byteOffset != 0)
-            json_serialize_attr(val.byteOffset, "byteOffset", js, reading, err);
-    }
+inline void from_json(glTFAccessorSparseValues& val, const json& js) {
+    if (!js.is_object()) throw runtime_error("object expected");
+    from_json((glTFProperty&)val, js);
+    if (!js.count("bufferView")) throw runtime_error("missing value");
+    from_json(val.bufferView, js.at("bufferView"));
+    if (js.count("byteOffset")) from_json(val.byteOffset, js.at("byteOffset"));
 }
 
 // Parses a glTFAccessorSparse object
-inline void json_serialize_value(glTFAccessorSparse& val, json& js,
-    bool reading, json_serialize_stack& err) {
-    if (reading) {
-        if (!js.is_object()) throw runtime_error("object expected");
-        json_serialize_value((glTFProperty&)val, js, reading, err);
-        if (!js.count("count"))
-            throw runtime_error("missing required variable");
-        json_serialize_attr(val.count, "count", js, reading, err);
-        if (!js.count("indices"))
-            throw runtime_error("missing required variable");
-        json_serialize_attr(val.indices, "indices", js, reading, err);
-        if (!js.count("values"))
-            throw runtime_error("missing required variable");
-        json_serialize_attr(val.values, "values", js, reading, err);
-    } else {
-        if (!js.is_object()) js = json::object();
-        json_serialize_value((glTFProperty&)val, js, reading, err);
-        json_serialize_attr(val.count, "count", js, reading, err);
-        json_serialize_attr(val.indices, "indices", js, reading, err);
-        json_serialize_attr(val.values, "values", js, reading, err);
-    }
+inline void from_json(glTFAccessorSparse& val, const json& js) {
+    if (!js.is_object()) throw runtime_error("object expected");
+    from_json((glTFProperty&)val, js);
+    if (!js.count("count")) throw runtime_error("missing value");
+    from_json(val.count, js.at("count"));
+    if (!js.count("indices")) throw runtime_error("missing value");
+    from_json(val.indices, js.at("indices"));
+    if (!js.count("values")) throw runtime_error("missing value");
+    from_json(val.values, js.at("values"));
 }
 // Parse a glTFAccessorComponentType enum
-inline void json_serialize_value(glTFAccessorComponentType& val, json& js,
-    bool reading, json_serialize_stack& err) {
+inline void from_json(glTFAccessorComponentType& val, const json& js) {
     static vector<pair<int, glTFAccessorComponentType>> table = {
         {5120, glTFAccessorComponentType::Byte},
         {5121, glTFAccessorComponentType::UnsignedByte},
@@ -3473,12 +3243,11 @@ inline void json_serialize_value(glTFAccessorComponentType& val, json& js,
         {5125, glTFAccessorComponentType::UnsignedInt},
         {5126, glTFAccessorComponentType::Float},
     };
-    json_serialize_enum(val, js, table, reading, err);
+    from_json(val, js, table);
 }
 
 // Parse a glTFAccessorType enum
-inline void json_serialize_value(
-    glTFAccessorType& val, json& js, bool reading, json_serialize_stack& err) {
+inline void from_json(glTFAccessorType& val, const json& js) {
     static vector<pair<string, glTFAccessorType>> table = {
         {"SCALAR", glTFAccessorType::Scalar},
         {"VEC2", glTFAccessorType::Vec2},
@@ -3488,103 +3257,58 @@ inline void json_serialize_value(
         {"MAT3", glTFAccessorType::Mat3},
         {"MAT4", glTFAccessorType::Mat4},
     };
-    json_serialize_enum(val, js, table, reading, err);
+    from_json(val, js, table);
 }
 
 // Parses a glTFAccessor object
-inline void json_serialize_value(
-    glTFAccessor& val, json& js, bool reading, json_serialize_stack& err) {
-    if (reading) {
-        if (!js.is_object()) throw runtime_error("object expected");
-        json_serialize_value((glTFChildOfRootProperty&)val, js, reading, err);
-        json_serialize_attr(val.bufferView, "bufferView", js, reading, err);
-        json_serialize_attr(val.byteOffset, "byteOffset", js, reading, err);
-        if (!js.count("componentType"))
-            throw runtime_error("missing required variable");
-        json_serialize_attr(
-            val.componentType, "componentType", js, reading, err);
-        json_serialize_attr(val.normalized, "normalized", js, reading, err);
-        if (!js.count("count"))
-            throw runtime_error("missing required variable");
-        json_serialize_attr(val.count, "count", js, reading, err);
-        if (!js.count("type")) throw runtime_error("missing required variable");
-        json_serialize_attr(val.type, "type", js, reading, err);
-        json_serialize_attr(val.max, "max", js, reading, err);
-        json_serialize_attr(val.min, "min", js, reading, err);
-        json_serialize_attr(val.sparse, "sparse", js, reading, err);
-    } else {
-        if (!js.is_object()) js = json::object();
-        json_serialize_value((glTFChildOfRootProperty&)val, js, reading, err);
-        if (val.bufferView.is_valid())
-            json_serialize_attr(val.bufferView, "bufferView", js, reading, err);
-        if (val.byteOffset != 0)
-            json_serialize_attr(val.byteOffset, "byteOffset", js, reading, err);
-        json_serialize_attr(
-            val.componentType, "componentType", js, reading, err);
-        if (val.normalized != false)
-            json_serialize_attr(val.normalized, "normalized", js, reading, err);
-        json_serialize_attr(val.count, "count", js, reading, err);
-        json_serialize_attr(val.type, "type", js, reading, err);
-        if (!val.max.empty())
-            json_serialize_attr(val.max, "max", js, reading, err);
-        if (!val.min.empty())
-            json_serialize_attr(val.min, "min", js, reading, err);
-        if (val.sparse != nullptr)
-            json_serialize_attr(val.sparse, "sparse", js, reading, err);
-    }
+inline void from_json(glTFAccessor& val, const json& js) {
+    if (!js.is_object()) throw runtime_error("object expected");
+    from_json((glTFChildOfRootProperty&)val, js);
+    if (js.count("bufferView")) from_json(val.bufferView, js.at("bufferView"));
+    if (js.count("byteOffset")) from_json(val.byteOffset, js.at("byteOffset"));
+    if (!js.count("componentType")) throw runtime_error("missing value");
+    from_json(val.componentType, js.at("componentType"));
+    if (js.count("normalized")) from_json(val.normalized, js.at("normalized"));
+    if (!js.count("count")) throw runtime_error("missing value");
+    from_json(val.count, js.at("count"));
+    if (!js.count("type")) throw runtime_error("missing value");
+    from_json(val.type, js.at("type"));
+    if (js.count("max")) from_json(val.max, js.at("max"));
+    if (js.count("min")) from_json(val.min, js.at("min"));
+    if (js.count("sparse")) from_json(val.sparse, js.at("sparse"));
 }
 // Parse a glTFAnimationChannelTargetPath enum
-inline void json_serialize_value(glTFAnimationChannelTargetPath& val, json& js,
-    bool reading, json_serialize_stack& err) {
+inline void from_json(glTFAnimationChannelTargetPath& val, const json& js) {
     static vector<pair<string, glTFAnimationChannelTargetPath>> table = {
         {"translation", glTFAnimationChannelTargetPath::Translation},
         {"rotation", glTFAnimationChannelTargetPath::Rotation},
         {"scale", glTFAnimationChannelTargetPath::Scale},
         {"weights", glTFAnimationChannelTargetPath::Weights},
     };
-    json_serialize_enum(val, js, table, reading, err);
+    from_json(val, js, table);
 }
 
 // Parses a glTFAnimationChannelTarget object
-inline void json_serialize_value(glTFAnimationChannelTarget& val, json& js,
-    bool reading, json_serialize_stack& err) {
-    if (reading) {
-        if (!js.is_object()) throw runtime_error("object expected");
-        json_serialize_value((glTFProperty&)val, js, reading, err);
-        if (!js.count("node")) throw runtime_error("missing required variable");
-        json_serialize_attr(val.node, "node", js, reading, err);
-        if (!js.count("path")) throw runtime_error("missing required variable");
-        json_serialize_attr(val.path, "path", js, reading, err);
-    } else {
-        if (!js.is_object()) js = json::object();
-        json_serialize_value((glTFProperty&)val, js, reading, err);
-        json_serialize_attr(val.node, "node", js, reading, err);
-        json_serialize_attr(val.path, "path", js, reading, err);
-    }
+inline void from_json(glTFAnimationChannelTarget& val, const json& js) {
+    if (!js.is_object()) throw runtime_error("object expected");
+    from_json((glTFProperty&)val, js);
+    if (!js.count("node")) throw runtime_error("missing value");
+    from_json(val.node, js.at("node"));
+    if (!js.count("path")) throw runtime_error("missing value");
+    from_json(val.path, js.at("path"));
 }
 
 // Parses a glTFAnimationChannel object
-inline void json_serialize_value(glTFAnimationChannel& val, json& js,
-    bool reading, json_serialize_stack& err) {
-    if (reading) {
-        if (!js.is_object()) throw runtime_error("object expected");
-        json_serialize_value((glTFProperty&)val, js, reading, err);
-        if (!js.count("sampler"))
-            throw runtime_error("missing required variable");
-        json_serialize_attr(val.sampler, "sampler", js, reading, err);
-        if (!js.count("target"))
-            throw runtime_error("missing required variable");
-        json_serialize_attr(val.target, "target", js, reading, err);
-    } else {
-        if (!js.is_object()) js = json::object();
-        json_serialize_value((glTFProperty&)val, js, reading, err);
-        json_serialize_attr(val.sampler, "sampler", js, reading, err);
-        json_serialize_attr(val.target, "target", js, reading, err);
-    }
+inline void from_json(glTFAnimationChannel& val, const json& js) {
+    if (!js.is_object()) throw runtime_error("object expected");
+    from_json((glTFProperty&)val, js);
+    if (!js.count("sampler")) throw runtime_error("missing value");
+    from_json(val.sampler, js.at("sampler"));
+    if (!js.count("target")) throw runtime_error("missing value");
+    from_json(val.target, js.at("target"));
 }
 // Parse a glTFAnimationSamplerInterpolation enum
-inline void json_serialize_value(glTFAnimationSamplerInterpolation& val,
-    json& js, bool reading, json_serialize_stack& err) {
+inline void from_json(glTFAnimationSamplerInterpolation& val, const json& js) {
     static vector<pair<string, glTFAnimationSamplerInterpolation>> table = {
         {"LINEAR", glTFAnimationSamplerInterpolation::Linear},
         {"STEP", glTFAnimationSamplerInterpolation::Step},
@@ -3592,461 +3316,238 @@ inline void json_serialize_value(glTFAnimationSamplerInterpolation& val,
             glTFAnimationSamplerInterpolation::CatmullRomSpline},
         {"CUBICSPLINE", glTFAnimationSamplerInterpolation::CubicSpline},
     };
-    json_serialize_enum(val, js, table, reading, err);
+    from_json(val, js, table);
 }
 
 // Parses a glTFAnimationSampler object
-inline void json_serialize_value(glTFAnimationSampler& val, json& js,
-    bool reading, json_serialize_stack& err) {
-    if (reading) {
-        if (!js.is_object()) throw runtime_error("object expected");
-        json_serialize_value((glTFProperty&)val, js, reading, err);
-        if (!js.count("input"))
-            throw runtime_error("missing required variable");
-        json_serialize_attr(val.input, "input", js, reading, err);
-        json_serialize_attr(
-            val.interpolation, "interpolation", js, reading, err);
-        if (!js.count("output"))
-            throw runtime_error("missing required variable");
-        json_serialize_attr(val.output, "output", js, reading, err);
-    } else {
-        if (!js.is_object()) js = json::object();
-        json_serialize_value((glTFProperty&)val, js, reading, err);
-        json_serialize_attr(val.input, "input", js, reading, err);
-        if (val.interpolation != glTFAnimationSamplerInterpolation::Linear)
-            json_serialize_attr(
-                val.interpolation, "interpolation", js, reading, err);
-        json_serialize_attr(val.output, "output", js, reading, err);
-    }
+inline void from_json(glTFAnimationSampler& val, const json& js) {
+    if (!js.is_object()) throw runtime_error("object expected");
+    from_json((glTFProperty&)val, js);
+    if (!js.count("input")) throw runtime_error("missing value");
+    from_json(val.input, js.at("input"));
+    if (js.count("interpolation"))
+        from_json(val.interpolation, js.at("interpolation"));
+    if (!js.count("output")) throw runtime_error("missing value");
+    from_json(val.output, js.at("output"));
 }
 
 // Parses a glTFAnimation object
-inline void json_serialize_value(
-    glTFAnimation& val, json& js, bool reading, json_serialize_stack& err) {
-    if (reading) {
-        if (!js.is_object()) throw runtime_error("object expected");
-        json_serialize_value((glTFChildOfRootProperty&)val, js, reading, err);
-        if (!js.count("channels"))
-            throw runtime_error("missing required variable");
-        json_serialize_attr(val.channels, "channels", js, reading, err);
-        if (!js.count("samplers"))
-            throw runtime_error("missing required variable");
-        json_serialize_attr(val.samplers, "samplers", js, reading, err);
-    } else {
-        if (!js.is_object()) js = json::object();
-        json_serialize_value((glTFChildOfRootProperty&)val, js, reading, err);
-        json_serialize_attr(val.channels, "channels", js, reading, err);
-        json_serialize_attr(val.samplers, "samplers", js, reading, err);
-    }
+inline void from_json(glTFAnimation& val, const json& js) {
+    if (!js.is_object()) throw runtime_error("object expected");
+    from_json((glTFChildOfRootProperty&)val, js);
+    if (!js.count("channels")) throw runtime_error("missing value");
+    from_json(val.channels, js.at("channels"));
+    if (!js.count("samplers")) throw runtime_error("missing value");
+    from_json(val.samplers, js.at("samplers"));
 }
 
 // Parses a glTFAsset object
-inline void json_serialize_value(
-    glTFAsset& val, json& js, bool reading, json_serialize_stack& err) {
-    if (reading) {
-        if (!js.is_object()) throw runtime_error("object expected");
-        json_serialize_value((glTFProperty&)val, js, reading, err);
-        json_serialize_attr(val.copyright, "copyright", js, reading, err);
-        json_serialize_attr(val.generator, "generator", js, reading, err);
-        if (!js.count("version"))
-            throw runtime_error("missing required variable");
-        json_serialize_attr(val.version, "version", js, reading, err);
-        json_serialize_attr(val.minVersion, "minVersion", js, reading, err);
-    } else {
-        if (!js.is_object()) js = json::object();
-        json_serialize_value((glTFProperty&)val, js, reading, err);
-        if (val.copyright != "")
-            json_serialize_attr(val.copyright, "copyright", js, reading, err);
-        if (val.generator != "")
-            json_serialize_attr(val.generator, "generator", js, reading, err);
-        json_serialize_attr(val.version, "version", js, reading, err);
-        if (val.minVersion != "")
-            json_serialize_attr(val.minVersion, "minVersion", js, reading, err);
-    }
+inline void from_json(glTFAsset& val, const json& js) {
+    if (!js.is_object()) throw runtime_error("object expected");
+    from_json((glTFProperty&)val, js);
+    if (js.count("copyright")) from_json(val.copyright, js.at("copyright"));
+    if (js.count("generator")) from_json(val.generator, js.at("generator"));
+    if (!js.count("version")) throw runtime_error("missing value");
+    from_json(val.version, js.at("version"));
+    if (js.count("minVersion")) from_json(val.minVersion, js.at("minVersion"));
 }
 
 // Parses a glTFBuffer object
-inline void json_serialize_value(
-    glTFBuffer& val, json& js, bool reading, json_serialize_stack& err) {
-    if (reading) {
-        if (!js.is_object()) throw runtime_error("object expected");
-        json_serialize_value((glTFChildOfRootProperty&)val, js, reading, err);
-        json_serialize_attr(val.uri, "uri", js, reading, err);
-        if (!js.count("byteLength"))
-            throw runtime_error("missing required variable");
-        json_serialize_attr(val.byteLength, "byteLength", js, reading, err);
-    } else {
-        if (!js.is_object()) js = json::object();
-        json_serialize_value((glTFChildOfRootProperty&)val, js, reading, err);
-        if (val.uri != "")
-            json_serialize_attr(val.uri, "uri", js, reading, err);
-        json_serialize_attr(val.byteLength, "byteLength", js, reading, err);
-    }
+inline void from_json(glTFBuffer& val, const json& js) {
+    if (!js.is_object()) throw runtime_error("object expected");
+    from_json((glTFChildOfRootProperty&)val, js);
+    if (js.count("uri")) from_json(val.uri, js.at("uri"));
+    if (!js.count("byteLength")) throw runtime_error("missing value");
+    from_json(val.byteLength, js.at("byteLength"));
 }
 // Parse a glTFBufferViewTarget enum
-inline void json_serialize_value(glTFBufferViewTarget& val, json& js,
-    bool reading, json_serialize_stack& err) {
+inline void from_json(glTFBufferViewTarget& val, const json& js) {
     static vector<pair<int, glTFBufferViewTarget>> table = {
         {34962, glTFBufferViewTarget::ArrayBuffer},
         {34963, glTFBufferViewTarget::ElementArrayBuffer},
     };
-    json_serialize_enum(val, js, table, reading, err);
+    from_json(val, js, table);
 }
 
 // Parses a glTFBufferView object
-inline void json_serialize_value(
-    glTFBufferView& val, json& js, bool reading, json_serialize_stack& err) {
-    if (reading) {
-        if (!js.is_object()) throw runtime_error("object expected");
-        json_serialize_value((glTFChildOfRootProperty&)val, js, reading, err);
-        if (!js.count("buffer"))
-            throw runtime_error("missing required variable");
-        json_serialize_attr(val.buffer, "buffer", js, reading, err);
-        json_serialize_attr(val.byteOffset, "byteOffset", js, reading, err);
-        if (!js.count("byteLength"))
-            throw runtime_error("missing required variable");
-        json_serialize_attr(val.byteLength, "byteLength", js, reading, err);
-        json_serialize_attr(val.byteStride, "byteStride", js, reading, err);
-        json_serialize_attr(val.target, "target", js, reading, err);
-    } else {
-        if (!js.is_object()) js = json::object();
-        json_serialize_value((glTFChildOfRootProperty&)val, js, reading, err);
-        json_serialize_attr(val.buffer, "buffer", js, reading, err);
-        if (val.byteOffset != 0)
-            json_serialize_attr(val.byteOffset, "byteOffset", js, reading, err);
-        json_serialize_attr(val.byteLength, "byteLength", js, reading, err);
-        if (val.byteStride != 0)
-            json_serialize_attr(val.byteStride, "byteStride", js, reading, err);
-        if (val.target != glTFBufferViewTarget::NotSet)
-            json_serialize_attr(val.target, "target", js, reading, err);
-    }
+inline void from_json(glTFBufferView& val, const json& js) {
+    if (!js.is_object()) throw runtime_error("object expected");
+    from_json((glTFChildOfRootProperty&)val, js);
+    if (!js.count("buffer")) throw runtime_error("missing value");
+    from_json(val.buffer, js.at("buffer"));
+    if (js.count("byteOffset")) from_json(val.byteOffset, js.at("byteOffset"));
+    if (!js.count("byteLength")) throw runtime_error("missing value");
+    from_json(val.byteLength, js.at("byteLength"));
+    if (js.count("byteStride")) from_json(val.byteStride, js.at("byteStride"));
+    if (js.count("target")) from_json(val.target, js.at("target"));
 }
 
 // Parses a glTFCameraOrthographic object
-inline void json_serialize_value(glTFCameraOrthographic& val, json& js,
-    bool reading, json_serialize_stack& err) {
-    if (reading) {
-        if (!js.is_object()) throw runtime_error("object expected");
-        json_serialize_value((glTFProperty&)val, js, reading, err);
-        if (!js.count("xmag")) throw runtime_error("missing required variable");
-        json_serialize_attr(val.xmag, "xmag", js, reading, err);
-        if (!js.count("ymag")) throw runtime_error("missing required variable");
-        json_serialize_attr(val.ymag, "ymag", js, reading, err);
-        if (!js.count("zfar")) throw runtime_error("missing required variable");
-        json_serialize_attr(val.zfar, "zfar", js, reading, err);
-        if (!js.count("znear"))
-            throw runtime_error("missing required variable");
-        json_serialize_attr(val.znear, "znear", js, reading, err);
-    } else {
-        if (!js.is_object()) js = json::object();
-        json_serialize_value((glTFProperty&)val, js, reading, err);
-        json_serialize_attr(val.xmag, "xmag", js, reading, err);
-        json_serialize_attr(val.ymag, "ymag", js, reading, err);
-        json_serialize_attr(val.zfar, "zfar", js, reading, err);
-        json_serialize_attr(val.znear, "znear", js, reading, err);
-    }
+inline void from_json(glTFCameraOrthographic& val, const json& js) {
+    if (!js.is_object()) throw runtime_error("object expected");
+    from_json((glTFProperty&)val, js);
+    if (!js.count("xmag")) throw runtime_error("missing value");
+    from_json(val.xmag, js.at("xmag"));
+    if (!js.count("ymag")) throw runtime_error("missing value");
+    from_json(val.ymag, js.at("ymag"));
+    if (!js.count("zfar")) throw runtime_error("missing value");
+    from_json(val.zfar, js.at("zfar"));
+    if (!js.count("znear")) throw runtime_error("missing value");
+    from_json(val.znear, js.at("znear"));
 }
 
 // Parses a glTFCameraPerspective object
-inline void json_serialize_value(glTFCameraPerspective& val, json& js,
-    bool reading, json_serialize_stack& err) {
-    if (reading) {
-        if (!js.is_object()) throw runtime_error("object expected");
-        json_serialize_value((glTFProperty&)val, js, reading, err);
-        json_serialize_attr(val.aspectRatio, "aspectRatio", js, reading, err);
-        if (!js.count("yfov")) throw runtime_error("missing required variable");
-        json_serialize_attr(val.yfov, "yfov", js, reading, err);
-        json_serialize_attr(val.zfar, "zfar", js, reading, err);
-        if (!js.count("znear"))
-            throw runtime_error("missing required variable");
-        json_serialize_attr(val.znear, "znear", js, reading, err);
-    } else {
-        if (!js.is_object()) js = json::object();
-        json_serialize_value((glTFProperty&)val, js, reading, err);
-        if (val.aspectRatio != 0)
-            json_serialize_attr(
-                val.aspectRatio, "aspectRatio", js, reading, err);
-        json_serialize_attr(val.yfov, "yfov", js, reading, err);
-        if (val.zfar != 0)
-            json_serialize_attr(val.zfar, "zfar", js, reading, err);
-        json_serialize_attr(val.znear, "znear", js, reading, err);
-    }
+inline void from_json(glTFCameraPerspective& val, const json& js) {
+    if (!js.is_object()) throw runtime_error("object expected");
+    from_json((glTFProperty&)val, js);
+    if (js.count("aspectRatio"))
+        from_json(val.aspectRatio, js.at("aspectRatio"));
+    if (!js.count("yfov")) throw runtime_error("missing value");
+    from_json(val.yfov, js.at("yfov"));
+    if (js.count("zfar")) from_json(val.zfar, js.at("zfar"));
+    if (!js.count("znear")) throw runtime_error("missing value");
+    from_json(val.znear, js.at("znear"));
 }
 // Parse a glTFCameraType enum
-inline void json_serialize_value(
-    glTFCameraType& val, json& js, bool reading, json_serialize_stack& err) {
+inline void from_json(glTFCameraType& val, const json& js) {
     static vector<pair<string, glTFCameraType>> table = {
         {"perspective", glTFCameraType::Perspective},
         {"orthographic", glTFCameraType::Orthographic},
     };
-    json_serialize_enum(val, js, table, reading, err);
+    from_json(val, js, table);
 }
 
 // Parses a glTFCamera object
-inline void json_serialize_value(
-    glTFCamera& val, json& js, bool reading, json_serialize_stack& err) {
-    if (reading) {
-        if (!js.is_object()) throw runtime_error("object expected");
-        json_serialize_value((glTFChildOfRootProperty&)val, js, reading, err);
-        json_serialize_attr(val.orthographic, "orthographic", js, reading, err);
-        json_serialize_attr(val.perspective, "perspective", js, reading, err);
-        if (!js.count("type")) throw runtime_error("missing required variable");
-        json_serialize_attr(val.type, "type", js, reading, err);
-    } else {
-        if (!js.is_object()) js = json::object();
-        json_serialize_value((glTFChildOfRootProperty&)val, js, reading, err);
-        if (val.orthographic != nullptr)
-            json_serialize_attr(
-                val.orthographic, "orthographic", js, reading, err);
-        if (val.perspective != nullptr)
-            json_serialize_attr(
-                val.perspective, "perspective", js, reading, err);
-        json_serialize_attr(val.type, "type", js, reading, err);
-    }
+inline void from_json(glTFCamera& val, const json& js) {
+    if (!js.is_object()) throw runtime_error("object expected");
+    from_json((glTFChildOfRootProperty&)val, js);
+    if (js.count("orthographic"))
+        from_json(val.orthographic, js.at("orthographic"));
+    if (js.count("perspective"))
+        from_json(val.perspective, js.at("perspective"));
+    if (!js.count("type")) throw runtime_error("missing value");
+    from_json(val.type, js.at("type"));
 }
 // Parse a glTFImageMimeType enum
-inline void json_serialize_value(
-    glTFImageMimeType& val, json& js, bool reading, json_serialize_stack& err) {
+inline void from_json(glTFImageMimeType& val, const json& js) {
     static vector<pair<string, glTFImageMimeType>> table = {
         {"image/jpeg", glTFImageMimeType::ImageJpeg},
         {"image/png", glTFImageMimeType::ImagePng},
     };
-    json_serialize_enum(val, js, table, reading, err);
+    from_json(val, js, table);
 }
 
 // Parses a glTFImage object
-inline void json_serialize_value(
-    glTFImage& val, json& js, bool reading, json_serialize_stack& err) {
-    if (reading) {
-        if (!js.is_object()) throw runtime_error("object expected");
-        json_serialize_value((glTFChildOfRootProperty&)val, js, reading, err);
-        json_serialize_attr(val.uri, "uri", js, reading, err);
-        json_serialize_attr(val.mimeType, "mimeType", js, reading, err);
-        json_serialize_attr(val.bufferView, "bufferView", js, reading, err);
-    } else {
-        if (!js.is_object()) js = json::object();
-        json_serialize_value((glTFChildOfRootProperty&)val, js, reading, err);
-        if (val.uri != "")
-            json_serialize_attr(val.uri, "uri", js, reading, err);
-        if (val.mimeType != glTFImageMimeType::NotSet)
-            json_serialize_attr(val.mimeType, "mimeType", js, reading, err);
-        if (val.bufferView.is_valid())
-            json_serialize_attr(val.bufferView, "bufferView", js, reading, err);
-    }
+inline void from_json(glTFImage& val, const json& js) {
+    if (!js.is_object()) throw runtime_error("object expected");
+    from_json((glTFChildOfRootProperty&)val, js);
+    if (js.count("uri")) from_json(val.uri, js.at("uri"));
+    if (js.count("mimeType")) from_json(val.mimeType, js.at("mimeType"));
+    if (js.count("bufferView")) from_json(val.bufferView, js.at("bufferView"));
 }
 
 // Parses a glTFTextureInfo object
-inline void json_serialize_value(
-    glTFTextureInfo& val, json& js, bool reading, json_serialize_stack& err) {
-    if (reading) {
-        if (!js.is_object()) throw runtime_error("object expected");
-        json_serialize_value((glTFProperty&)val, js, reading, err);
-        if (!js.count("index"))
-            throw runtime_error("missing required variable");
-        json_serialize_attr(val.index, "index", js, reading, err);
-        json_serialize_attr(val.texCoord, "texCoord", js, reading, err);
-    } else {
-        if (!js.is_object()) js = json::object();
-        json_serialize_value((glTFProperty&)val, js, reading, err);
-        json_serialize_attr(val.index, "index", js, reading, err);
-        if (val.texCoord != 0)
-            json_serialize_attr(val.texCoord, "texCoord", js, reading, err);
-    }
+inline void from_json(glTFTextureInfo& val, const json& js) {
+    if (!js.is_object()) throw runtime_error("object expected");
+    from_json((glTFProperty&)val, js);
+    if (!js.count("index")) throw runtime_error("missing value");
+    from_json(val.index, js.at("index"));
+    if (js.count("texCoord")) from_json(val.texCoord, js.at("texCoord"));
 }
 
 // Parses a glTFTexture object
-inline void json_serialize_value(
-    glTFTexture& val, json& js, bool reading, json_serialize_stack& err) {
-    if (reading) {
-        if (!js.is_object()) throw runtime_error("object expected");
-        json_serialize_value((glTFChildOfRootProperty&)val, js, reading, err);
-        json_serialize_attr(val.sampler, "sampler", js, reading, err);
-        json_serialize_attr(val.source, "source", js, reading, err);
-    } else {
-        if (!js.is_object()) js = json::object();
-        json_serialize_value((glTFChildOfRootProperty&)val, js, reading, err);
-        if (val.sampler.is_valid())
-            json_serialize_attr(val.sampler, "sampler", js, reading, err);
-        if (val.source.is_valid())
-            json_serialize_attr(val.source, "source", js, reading, err);
-    }
+inline void from_json(glTFTexture& val, const json& js) {
+    if (!js.is_object()) throw runtime_error("object expected");
+    from_json((glTFChildOfRootProperty&)val, js);
+    if (js.count("sampler")) from_json(val.sampler, js.at("sampler"));
+    if (js.count("source")) from_json(val.source, js.at("source"));
 }
 
 // Parses a glTFMaterialNormalTextureInfo object
-inline void json_serialize_value(glTFMaterialNormalTextureInfo& val, json& js,
-    bool reading, json_serialize_stack& err) {
-    if (reading) {
-        if (!js.is_object()) throw runtime_error("object expected");
-        json_serialize_value((glTFTextureInfo&)val, js, reading, err);
-        json_serialize_attr(val.scale, "scale", js, reading, err);
-    } else {
-        if (!js.is_object()) js = json::object();
-        json_serialize_value((glTFTextureInfo&)val, js, reading, err);
-        if (val.scale != 1)
-            json_serialize_attr(val.scale, "scale", js, reading, err);
-    }
+inline void from_json(glTFMaterialNormalTextureInfo& val, const json& js) {
+    if (!js.is_object()) throw runtime_error("object expected");
+    from_json((glTFTextureInfo&)val, js);
+    if (js.count("scale")) from_json(val.scale, js.at("scale"));
 }
 
 // Parses a glTFMaterialOcclusionTextureInfo object
-inline void json_serialize_value(glTFMaterialOcclusionTextureInfo& val,
-    json& js, bool reading, json_serialize_stack& err) {
-    if (reading) {
-        if (!js.is_object()) throw runtime_error("object expected");
-        json_serialize_value((glTFTextureInfo&)val, js, reading, err);
-        json_serialize_attr(val.strength, "strength", js, reading, err);
-    } else {
-        if (!js.is_object()) js = json::object();
-        json_serialize_value((glTFTextureInfo&)val, js, reading, err);
-        if (val.strength != 1)
-            json_serialize_attr(val.strength, "strength", js, reading, err);
-    }
+inline void from_json(glTFMaterialOcclusionTextureInfo& val, const json& js) {
+    if (!js.is_object()) throw runtime_error("object expected");
+    from_json((glTFTextureInfo&)val, js);
+    if (js.count("strength")) from_json(val.strength, js.at("strength"));
 }
 
 // Parses a glTFMaterialPbrMetallicRoughness object
-inline void json_serialize_value(glTFMaterialPbrMetallicRoughness& val,
-    json& js, bool reading, json_serialize_stack& err) {
-    if (reading) {
-        if (!js.is_object()) throw runtime_error("object expected");
-        json_serialize_value((glTFProperty&)val, js, reading, err);
-        json_serialize_attr(
-            val.baseColorFactor, "baseColorFactor", js, reading, err);
-        json_serialize_attr(
-            val.baseColorTexture, "baseColorTexture", js, reading, err);
-        json_serialize_attr(
-            val.metallicFactor, "metallicFactor", js, reading, err);
-        json_serialize_attr(
-            val.roughnessFactor, "roughnessFactor", js, reading, err);
-        json_serialize_attr(val.metallicRoughnessTexture,
-            "metallicRoughnessTexture", js, reading, err);
-    } else {
-        if (!js.is_object()) js = json::object();
-        json_serialize_value((glTFProperty&)val, js, reading, err);
-        if (val.baseColorFactor != vec4f{1, 1, 1, 1})
-            json_serialize_attr(
-                val.baseColorFactor, "baseColorFactor", js, reading, err);
-        if (val.baseColorTexture != nullptr)
-            json_serialize_attr(
-                val.baseColorTexture, "baseColorTexture", js, reading, err);
-        if (val.metallicFactor != 1)
-            json_serialize_attr(
-                val.metallicFactor, "metallicFactor", js, reading, err);
-        if (val.roughnessFactor != 1)
-            json_serialize_attr(
-                val.roughnessFactor, "roughnessFactor", js, reading, err);
-        if (val.metallicRoughnessTexture != nullptr)
-            json_serialize_attr(val.metallicRoughnessTexture,
-                "metallicRoughnessTexture", js, reading, err);
-    }
+inline void from_json(glTFMaterialPbrMetallicRoughness& val, const json& js) {
+    if (!js.is_object()) throw runtime_error("object expected");
+    from_json((glTFProperty&)val, js);
+    if (js.count("baseColorFactor"))
+        from_json(val.baseColorFactor, js.at("baseColorFactor"));
+    if (js.count("baseColorTexture"))
+        from_json(val.baseColorTexture, js.at("baseColorTexture"));
+    if (js.count("metallicFactor"))
+        from_json(val.metallicFactor, js.at("metallicFactor"));
+    if (js.count("roughnessFactor"))
+        from_json(val.roughnessFactor, js.at("roughnessFactor"));
+    if (js.count("metallicRoughnessTexture"))
+        from_json(
+            val.metallicRoughnessTexture, js.at("metallicRoughnessTexture"));
 }
 
 // Parses a glTFMaterialPbrSpecularGlossiness object
-inline void json_serialize_value(glTFMaterialPbrSpecularGlossiness& val,
-    json& js, bool reading, json_serialize_stack& err) {
-    if (reading) {
-        if (!js.is_object()) throw runtime_error("object expected");
-        json_serialize_value((glTFProperty&)val, js, reading, err);
-        json_serialize_attr(
-            val.diffuseFactor, "diffuseFactor", js, reading, err);
-        json_serialize_attr(
-            val.diffuseTexture, "diffuseTexture", js, reading, err);
-        json_serialize_attr(
-            val.specularFactor, "specularFactor", js, reading, err);
-        json_serialize_attr(
-            val.glossinessFactor, "glossinessFactor", js, reading, err);
-        json_serialize_attr(val.specularGlossinessTexture,
-            "specularGlossinessTexture", js, reading, err);
-    } else {
-        if (!js.is_object()) js = json::object();
-        json_serialize_value((glTFProperty&)val, js, reading, err);
-        if (val.diffuseFactor != vec4f{1, 1, 1, 1})
-            json_serialize_attr(
-                val.diffuseFactor, "diffuseFactor", js, reading, err);
-        if (val.diffuseTexture != nullptr)
-            json_serialize_attr(
-                val.diffuseTexture, "diffuseTexture", js, reading, err);
-        if (val.specularFactor != vec3f{1, 1, 1})
-            json_serialize_attr(
-                val.specularFactor, "specularFactor", js, reading, err);
-        if (val.glossinessFactor != 1)
-            json_serialize_attr(
-                val.glossinessFactor, "glossinessFactor", js, reading, err);
-        if (val.specularGlossinessTexture != nullptr)
-            json_serialize_attr(val.specularGlossinessTexture,
-                "specularGlossinessTexture", js, reading, err);
-    }
+inline void from_json(glTFMaterialPbrSpecularGlossiness& val, const json& js) {
+    if (!js.is_object()) throw runtime_error("object expected");
+    from_json((glTFProperty&)val, js);
+    if (js.count("diffuseFactor"))
+        from_json(val.diffuseFactor, js.at("diffuseFactor"));
+    if (js.count("diffuseTexture"))
+        from_json(val.diffuseTexture, js.at("diffuseTexture"));
+    if (js.count("specularFactor"))
+        from_json(val.specularFactor, js.at("specularFactor"));
+    if (js.count("glossinessFactor"))
+        from_json(val.glossinessFactor, js.at("glossinessFactor"));
+    if (js.count("specularGlossinessTexture"))
+        from_json(
+            val.specularGlossinessTexture, js.at("specularGlossinessTexture"));
 }
 // Parse a glTFMaterialAlphaMode enum
-inline void json_serialize_value(glTFMaterialAlphaMode& val, json& js,
-    bool reading, json_serialize_stack& err) {
+inline void from_json(glTFMaterialAlphaMode& val, const json& js) {
     static vector<pair<string, glTFMaterialAlphaMode>> table = {
         {"OPAQUE", glTFMaterialAlphaMode::Opaque},
         {"MASK", glTFMaterialAlphaMode::Mask},
         {"BLEND", glTFMaterialAlphaMode::Blend},
     };
-    json_serialize_enum(val, js, table, reading, err);
+    from_json(val, js, table);
 }
 
 // Parses a glTFMaterial object
-inline void json_serialize_value(
-    glTFMaterial& val, json& js, bool reading, json_serialize_stack& err) {
-    if (reading) {
-        if (!js.is_object()) throw runtime_error("object expected");
-        json_serialize_value((glTFChildOfRootProperty&)val, js, reading, err);
-        json_serialize_attr(
-            val.pbrMetallicRoughness, "pbrMetallicRoughness", js, reading, err);
-        json_serialize_attr(
-            val.normalTexture, "normalTexture", js, reading, err);
-        json_serialize_attr(
-            val.occlusionTexture, "occlusionTexture", js, reading, err);
-        json_serialize_attr(
-            val.emissiveTexture, "emissiveTexture", js, reading, err);
-        json_serialize_attr(
-            val.emissiveFactor, "emissiveFactor", js, reading, err);
-        json_serialize_attr(val.alphaMode, "alphaMode", js, reading, err);
-        json_serialize_attr(val.alphaCutoff, "alphaCutoff", js, reading, err);
-        json_serialize_attr(val.doubleSided, "doubleSided", js, reading, err);
-        if (js.count("extensions")) {
-            auto& js_ext = js["extensions"];
-            json_serialize_attr(val.pbrSpecularGlossiness,
-                "KHR_materials_pbrSpecularGlossiness", js_ext, reading, err);
-        }
-    } else {
-        if (!js.is_object()) js = json::object();
-        json_serialize_value((glTFChildOfRootProperty&)val, js, reading, err);
-        if (val.pbrMetallicRoughness != nullptr)
-            json_serialize_attr(val.pbrMetallicRoughness,
-                "pbrMetallicRoughness", js, reading, err);
-        if (val.normalTexture != nullptr)
-            json_serialize_attr(
-                val.normalTexture, "normalTexture", js, reading, err);
-        if (val.occlusionTexture != nullptr)
-            json_serialize_attr(
-                val.occlusionTexture, "occlusionTexture", js, reading, err);
-        if (val.emissiveTexture != nullptr)
-            json_serialize_attr(
-                val.emissiveTexture, "emissiveTexture", js, reading, err);
-        if (val.emissiveFactor != vec3f{0, 0, 0})
-            json_serialize_attr(
-                val.emissiveFactor, "emissiveFactor", js, reading, err);
-        if (val.alphaMode != glTFMaterialAlphaMode::Opaque)
-            json_serialize_attr(val.alphaMode, "alphaMode", js, reading, err);
-        if (val.alphaCutoff != 0.5)
-            json_serialize_attr(
-                val.alphaCutoff, "alphaCutoff", js, reading, err);
-        if (val.doubleSided != false)
-            json_serialize_attr(
-                val.doubleSided, "doubleSided", js, reading, err);
-
-        if (val.pbrSpecularGlossiness != nullptr) {
-            auto& js_ext = js["extensions"];
-            json_serialize_attr(val.pbrSpecularGlossiness,
-                "KHR_materials_pbrSpecularGlossiness", js_ext, reading, err);
-        }
+inline void from_json(glTFMaterial& val, const json& js) {
+    if (!js.is_object()) throw runtime_error("object expected");
+    from_json((glTFChildOfRootProperty&)val, js);
+    if (js.count("pbrMetallicRoughness"))
+        from_json(val.pbrMetallicRoughness, js.at("pbrMetallicRoughness"));
+    if (js.count("normalTexture"))
+        from_json(val.normalTexture, js.at("normalTexture"));
+    if (js.count("occlusionTexture"))
+        from_json(val.occlusionTexture, js.at("occlusionTexture"));
+    if (js.count("emissiveTexture"))
+        from_json(val.emissiveTexture, js.at("emissiveTexture"));
+    if (js.count("emissiveFactor"))
+        from_json(val.emissiveFactor, js.at("emissiveFactor"));
+    if (js.count("alphaMode")) from_json(val.alphaMode, js.at("alphaMode"));
+    if (js.count("alphaCutoff"))
+        from_json(val.alphaCutoff, js.at("alphaCutoff"));
+    if (js.count("doubleSided"))
+        from_json(val.doubleSided, js.at("doubleSided"));
+    if (js.count("extensions")) {
+        auto& js_ext = js["extensions"];
+        if (js_ext.count("KHR_materials_pbrSpecularGlossiness"))
+            from_json(val.pbrSpecularGlossiness,
+                js_ext.at("KHR_materials_pbrSpecularGlossiness"));
     }
 }
 // Parse a glTFMeshPrimitiveMode enum
-inline void json_serialize_value(glTFMeshPrimitiveMode& val, json& js,
-    bool reading, json_serialize_stack& err) {
+inline void from_json(glTFMeshPrimitiveMode& val, const json& js) {
     static vector<pair<int, glTFMeshPrimitiveMode>> table = {
         {0, glTFMeshPrimitiveMode::Points},
         {1, glTFMeshPrimitiveMode::Lines},
@@ -4056,109 +3557,56 @@ inline void json_serialize_value(glTFMeshPrimitiveMode& val, json& js,
         {5, glTFMeshPrimitiveMode::TriangleStrip},
         {6, glTFMeshPrimitiveMode::TriangleFan},
     };
-    json_serialize_enum(val, js, table, reading, err);
+    from_json(val, js, table);
 }
 
 // Parses a glTFMeshPrimitive object
-inline void json_serialize_value(
-    glTFMeshPrimitive& val, json& js, bool reading, json_serialize_stack& err) {
-    if (reading) {
-        if (!js.is_object()) throw runtime_error("object expected");
-        json_serialize_value((glTFProperty&)val, js, reading, err);
-        if (!js.count("attributes"))
-            throw runtime_error("missing required variable");
-        json_serialize_attr(val.attributes, "attributes", js, reading, err);
-        json_serialize_attr(val.indices, "indices", js, reading, err);
-        json_serialize_attr(val.material, "material", js, reading, err);
-        json_serialize_attr(val.mode, "mode", js, reading, err);
-        json_serialize_attr(val.targets, "targets", js, reading, err);
-    } else {
-        if (!js.is_object()) js = json::object();
-        json_serialize_value((glTFProperty&)val, js, reading, err);
-        json_serialize_attr(val.attributes, "attributes", js, reading, err);
-        if (val.indices.is_valid())
-            json_serialize_attr(val.indices, "indices", js, reading, err);
-        if (val.material.is_valid())
-            json_serialize_attr(val.material, "material", js, reading, err);
-        if (val.mode != glTFMeshPrimitiveMode::Triangles)
-            json_serialize_attr(val.mode, "mode", js, reading, err);
-        if (!val.targets.empty())
-            json_serialize_attr(val.targets, "targets", js, reading, err);
-    }
+inline void from_json(glTFMeshPrimitive& val, const json& js) {
+    if (!js.is_object()) throw runtime_error("object expected");
+    from_json((glTFProperty&)val, js);
+    if (!js.count("attributes")) throw runtime_error("missing value");
+    from_json(val.attributes, js.at("attributes"));
+    if (js.count("indices")) from_json(val.indices, js.at("indices"));
+    if (js.count("material")) from_json(val.material, js.at("material"));
+    if (js.count("mode")) from_json(val.mode, js.at("mode"));
+    if (js.count("targets")) from_json(val.targets, js.at("targets"));
 }
 
 // Parses a glTFMesh object
-inline void json_serialize_value(
-    glTFMesh& val, json& js, bool reading, json_serialize_stack& err) {
-    if (reading) {
-        if (!js.is_object()) throw runtime_error("object expected");
-        json_serialize_value((glTFChildOfRootProperty&)val, js, reading, err);
-        if (!js.count("primitives"))
-            throw runtime_error("missing required variable");
-        json_serialize_attr(val.primitives, "primitives", js, reading, err);
-        json_serialize_attr(val.weights, "weights", js, reading, err);
-    } else {
-        if (!js.is_object()) js = json::object();
-        json_serialize_value((glTFChildOfRootProperty&)val, js, reading, err);
-        json_serialize_attr(val.primitives, "primitives", js, reading, err);
-        if (!val.weights.empty())
-            json_serialize_attr(val.weights, "weights", js, reading, err);
-    }
+inline void from_json(glTFMesh& val, const json& js) {
+    if (!js.is_object()) throw runtime_error("object expected");
+    from_json((glTFChildOfRootProperty&)val, js);
+    if (!js.count("primitives")) throw runtime_error("missing value");
+    from_json(val.primitives, js.at("primitives"));
+    if (js.count("weights")) from_json(val.weights, js.at("weights"));
 }
 
 // Parses a glTFNode object
-inline void json_serialize_value(
-    glTFNode& val, json& js, bool reading, json_serialize_stack& err) {
-    if (reading) {
-        if (!js.is_object()) throw runtime_error("object expected");
-        json_serialize_value((glTFChildOfRootProperty&)val, js, reading, err);
-        json_serialize_attr(val.camera, "camera", js, reading, err);
-        json_serialize_attr(val.children, "children", js, reading, err);
-        json_serialize_attr(val.skin, "skin", js, reading, err);
-        json_serialize_attr(val.matrix, "matrix", js, reading, err);
-        json_serialize_attr(val.mesh, "mesh", js, reading, err);
-        json_serialize_attr(val.rotation, "rotation", js, reading, err);
-        json_serialize_attr(val.scale, "scale", js, reading, err);
-        json_serialize_attr(val.translation, "translation", js, reading, err);
-        json_serialize_attr(val.weights, "weights", js, reading, err);
-    } else {
-        if (!js.is_object()) js = json::object();
-        json_serialize_value((glTFChildOfRootProperty&)val, js, reading, err);
-        if (val.camera.is_valid())
-            json_serialize_attr(val.camera, "camera", js, reading, err);
-        if (!val.children.empty())
-            json_serialize_attr(val.children, "children", js, reading, err);
-        if (val.skin.is_valid())
-            json_serialize_attr(val.skin, "skin", js, reading, err);
-        if (val.matrix !=
-            mat4f{{1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}})
-            json_serialize_attr(val.matrix, "matrix", js, reading, err);
-        if (val.mesh.is_valid())
-            json_serialize_attr(val.mesh, "mesh", js, reading, err);
-        if (val.rotation != quat4f{0, 0, 0, 1})
-            json_serialize_attr(val.rotation, "rotation", js, reading, err);
-        if (val.scale != vec3f{1, 1, 1})
-            json_serialize_attr(val.scale, "scale", js, reading, err);
-        if (val.translation != vec3f{0, 0, 0})
-            json_serialize_attr(
-                val.translation, "translation", js, reading, err);
-        if (!val.weights.empty())
-            json_serialize_attr(val.weights, "weights", js, reading, err);
-    }
+inline void from_json(glTFNode& val, const json& js) {
+    if (!js.is_object()) throw runtime_error("object expected");
+    from_json((glTFChildOfRootProperty&)val, js);
+    if (js.count("camera")) from_json(val.camera, js.at("camera"));
+    if (js.count("children")) from_json(val.children, js.at("children"));
+    if (js.count("skin")) from_json(val.skin, js.at("skin"));
+    if (js.count("matrix")) from_json(val.matrix, js.at("matrix"));
+    if (js.count("mesh")) from_json(val.mesh, js.at("mesh"));
+    if (js.count("rotation")) from_json(val.rotation, js.at("rotation"));
+    if (js.count("scale")) from_json(val.scale, js.at("scale"));
+    if (js.count("translation"))
+        from_json(val.translation, js.at("translation"));
+    if (js.count("weights")) from_json(val.weights, js.at("weights"));
 }
 // Parse a glTFSamplerMagFilter enum
-inline void json_serialize_value(glTFSamplerMagFilter& val, json& js,
-    bool reading, json_serialize_stack& err) {
+inline void from_json(glTFSamplerMagFilter& val, const json& js) {
     static vector<pair<int, glTFSamplerMagFilter>> table = {
         {9728, glTFSamplerMagFilter::Nearest},
         {9729, glTFSamplerMagFilter::Linear},
     };
-    json_serialize_enum(val, js, table, reading, err);
+    from_json(val, js, table);
 }
 
 // Parse a glTFSamplerMinFilter enum
-inline void json_serialize_value(glTFSamplerMinFilter& val, json& js,
-    bool reading, json_serialize_stack& err) {
+inline void from_json(glTFSamplerMinFilter& val, const json& js) {
     static vector<pair<int, glTFSamplerMinFilter>> table = {
         {9728, glTFSamplerMinFilter::Nearest},
         {9729, glTFSamplerMinFilter::Linear},
@@ -4167,164 +3615,714 @@ inline void json_serialize_value(glTFSamplerMinFilter& val, json& js,
         {9986, glTFSamplerMinFilter::NearestMipmapLinear},
         {9987, glTFSamplerMinFilter::LinearMipmapLinear},
     };
-    json_serialize_enum(val, js, table, reading, err);
+    from_json(val, js, table);
 }
 
 // Parse a glTFSamplerWrapS enum
-inline void json_serialize_value(
-    glTFSamplerWrapS& val, json& js, bool reading, json_serialize_stack& err) {
+inline void from_json(glTFSamplerWrapS& val, const json& js) {
     static vector<pair<int, glTFSamplerWrapS>> table = {
         {33071, glTFSamplerWrapS::ClampToEdge},
         {33648, glTFSamplerWrapS::MirroredRepeat},
         {10497, glTFSamplerWrapS::Repeat},
     };
-    json_serialize_enum(val, js, table, reading, err);
+    from_json(val, js, table);
 }
 
 // Parse a glTFSamplerWrapT enum
-inline void json_serialize_value(
-    glTFSamplerWrapT& val, json& js, bool reading, json_serialize_stack& err) {
+inline void from_json(glTFSamplerWrapT& val, const json& js) {
     static vector<pair<int, glTFSamplerWrapT>> table = {
         {33071, glTFSamplerWrapT::ClampToEdge},
         {33648, glTFSamplerWrapT::MirroredRepeat},
         {10497, glTFSamplerWrapT::Repeat},
     };
-    json_serialize_enum(val, js, table, reading, err);
+    from_json(val, js, table);
 }
 
 // Parses a glTFSampler object
-inline void json_serialize_value(
-    glTFSampler& val, json& js, bool reading, json_serialize_stack& err) {
-    if (reading) {
-        if (!js.is_object()) throw runtime_error("object expected");
-        json_serialize_value((glTFChildOfRootProperty&)val, js, reading, err);
-        json_serialize_attr(val.magFilter, "magFilter", js, reading, err);
-        json_serialize_attr(val.minFilter, "minFilter", js, reading, err);
-        json_serialize_attr(val.wrapS, "wrapS", js, reading, err);
-        json_serialize_attr(val.wrapT, "wrapT", js, reading, err);
-    } else {
-        if (!js.is_object()) js = json::object();
-        json_serialize_value((glTFChildOfRootProperty&)val, js, reading, err);
-        if (val.magFilter != glTFSamplerMagFilter::NotSet)
-            json_serialize_attr(val.magFilter, "magFilter", js, reading, err);
-        if (val.minFilter != glTFSamplerMinFilter::NotSet)
-            json_serialize_attr(val.minFilter, "minFilter", js, reading, err);
-        if (val.wrapS != glTFSamplerWrapS::Repeat)
-            json_serialize_attr(val.wrapS, "wrapS", js, reading, err);
-        if (val.wrapT != glTFSamplerWrapT::Repeat)
-            json_serialize_attr(val.wrapT, "wrapT", js, reading, err);
-    }
+inline void from_json(glTFSampler& val, const json& js) {
+    if (!js.is_object()) throw runtime_error("object expected");
+    from_json((glTFChildOfRootProperty&)val, js);
+    if (js.count("magFilter")) from_json(val.magFilter, js.at("magFilter"));
+    if (js.count("minFilter")) from_json(val.minFilter, js.at("minFilter"));
+    if (js.count("wrapS")) from_json(val.wrapS, js.at("wrapS"));
+    if (js.count("wrapT")) from_json(val.wrapT, js.at("wrapT"));
 }
 
 // Parses a glTFScene object
-inline void json_serialize_value(
-    glTFScene& val, json& js, bool reading, json_serialize_stack& err) {
-    if (reading) {
-        if (!js.is_object()) throw runtime_error("object expected");
-        json_serialize_value((glTFChildOfRootProperty&)val, js, reading, err);
-        json_serialize_attr(val.nodes, "nodes", js, reading, err);
-    } else {
-        if (!js.is_object()) js = json::object();
-        json_serialize_value((glTFChildOfRootProperty&)val, js, reading, err);
-        if (!val.nodes.empty())
-            json_serialize_attr(val.nodes, "nodes", js, reading, err);
-    }
+inline void from_json(glTFScene& val, const json& js) {
+    if (!js.is_object()) throw runtime_error("object expected");
+    from_json((glTFChildOfRootProperty&)val, js);
+    if (js.count("nodes")) from_json(val.nodes, js.at("nodes"));
 }
 
 // Parses a glTFSkin object
-inline void json_serialize_value(
-    glTFSkin& val, json& js, bool reading, json_serialize_stack& err) {
-    if (reading) {
-        if (!js.is_object()) throw runtime_error("object expected");
-        json_serialize_value((glTFChildOfRootProperty&)val, js, reading, err);
-        json_serialize_attr(
-            val.inverseBindMatrices, "inverseBindMatrices", js, reading, err);
-        json_serialize_attr(val.skeleton, "skeleton", js, reading, err);
-        if (!js.count("joints"))
-            throw runtime_error("missing required variable");
-        json_serialize_attr(val.joints, "joints", js, reading, err);
-    } else {
-        if (!js.is_object()) js = json::object();
-        json_serialize_value((glTFChildOfRootProperty&)val, js, reading, err);
-        if (val.inverseBindMatrices.is_valid())
-            json_serialize_attr(val.inverseBindMatrices, "inverseBindMatrices",
-                js, reading, err);
-        if (val.skeleton.is_valid())
-            json_serialize_attr(val.skeleton, "skeleton", js, reading, err);
-        json_serialize_attr(val.joints, "joints", js, reading, err);
-    }
+inline void from_json(glTFSkin& val, const json& js) {
+    if (!js.is_object()) throw runtime_error("object expected");
+    from_json((glTFChildOfRootProperty&)val, js);
+    if (js.count("inverseBindMatrices"))
+        from_json(val.inverseBindMatrices, js.at("inverseBindMatrices"));
+    if (js.count("skeleton")) from_json(val.skeleton, js.at("skeleton"));
+    if (!js.count("joints")) throw runtime_error("missing value");
+    from_json(val.joints, js.at("joints"));
 }
 
 // Parses a glTF object
-inline void json_serialize_value(
-    glTF& val, json& js, bool reading, json_serialize_stack& err) {
-    if (reading) {
-        if (!js.is_object()) throw runtime_error("object expected");
-        json_serialize_value((glTFProperty&)val, js, reading, err);
-        json_serialize_attr(
-            val.extensionsUsed, "extensionsUsed", js, reading, err);
-        json_serialize_attr(
-            val.extensionsRequired, "extensionsRequired", js, reading, err);
-        json_serialize_attr(val.accessors, "accessors", js, reading, err);
-        json_serialize_attr(val.animations, "animations", js, reading, err);
-        if (!js.count("asset"))
-            throw runtime_error("missing required variable");
-        json_serialize_attr(val.asset, "asset", js, reading, err);
-        json_serialize_attr(val.buffers, "buffers", js, reading, err);
-        json_serialize_attr(val.bufferViews, "bufferViews", js, reading, err);
-        json_serialize_attr(val.cameras, "cameras", js, reading, err);
-        json_serialize_attr(val.images, "images", js, reading, err);
-        json_serialize_attr(val.materials, "materials", js, reading, err);
-        json_serialize_attr(val.meshes, "meshes", js, reading, err);
-        json_serialize_attr(val.nodes, "nodes", js, reading, err);
-        json_serialize_attr(val.samplers, "samplers", js, reading, err);
-        json_serialize_attr(val.scene, "scene", js, reading, err);
-        json_serialize_attr(val.scenes, "scenes", js, reading, err);
-        json_serialize_attr(val.skins, "skins", js, reading, err);
-        json_serialize_attr(val.textures, "textures", js, reading, err);
-    } else {
-        if (!js.is_object()) js = json::object();
-        json_serialize_value((glTFProperty&)val, js, reading, err);
-        if (!val.extensionsUsed.empty())
-            json_serialize_attr(
-                val.extensionsUsed, "extensionsUsed", js, reading, err);
-        if (!val.extensionsRequired.empty())
-            json_serialize_attr(
-                val.extensionsRequired, "extensionsRequired", js, reading, err);
-        if (!val.accessors.empty())
-            json_serialize_attr(val.accessors, "accessors", js, reading, err);
-        if (!val.animations.empty())
-            json_serialize_attr(val.animations, "animations", js, reading, err);
-        json_serialize_attr(val.asset, "asset", js, reading, err);
-        if (!val.buffers.empty())
-            json_serialize_attr(val.buffers, "buffers", js, reading, err);
-        if (!val.bufferViews.empty())
-            json_serialize_attr(
-                val.bufferViews, "bufferViews", js, reading, err);
-        if (!val.cameras.empty())
-            json_serialize_attr(val.cameras, "cameras", js, reading, err);
-        if (!val.images.empty())
-            json_serialize_attr(val.images, "images", js, reading, err);
-        if (!val.materials.empty())
-            json_serialize_attr(val.materials, "materials", js, reading, err);
-        if (!val.meshes.empty())
-            json_serialize_attr(val.meshes, "meshes", js, reading, err);
-        if (!val.nodes.empty())
-            json_serialize_attr(val.nodes, "nodes", js, reading, err);
-        if (!val.samplers.empty())
-            json_serialize_attr(val.samplers, "samplers", js, reading, err);
-        if (val.scene.is_valid())
-            json_serialize_attr(val.scene, "scene", js, reading, err);
-        if (!val.scenes.empty())
-            json_serialize_attr(val.scenes, "scenes", js, reading, err);
-        if (!val.skins.empty())
-            json_serialize_attr(val.skins, "skins", js, reading, err);
-        if (!val.textures.empty())
-            json_serialize_attr(val.textures, "textures", js, reading, err);
-    }
+inline void from_json(glTF& val, const json& js) {
+    if (!js.is_object()) throw runtime_error("object expected");
+    from_json((glTFProperty&)val, js);
+    if (js.count("extensionsUsed"))
+        from_json(val.extensionsUsed, js.at("extensionsUsed"));
+    if (js.count("extensionsRequired"))
+        from_json(val.extensionsRequired, js.at("extensionsRequired"));
+    if (js.count("accessors")) from_json(val.accessors, js.at("accessors"));
+    if (js.count("animations")) from_json(val.animations, js.at("animations"));
+    if (!js.count("asset")) throw runtime_error("missing value");
+    from_json(val.asset, js.at("asset"));
+    if (js.count("buffers")) from_json(val.buffers, js.at("buffers"));
+    if (js.count("bufferViews"))
+        from_json(val.bufferViews, js.at("bufferViews"));
+    if (js.count("cameras")) from_json(val.cameras, js.at("cameras"));
+    if (js.count("images")) from_json(val.images, js.at("images"));
+    if (js.count("materials")) from_json(val.materials, js.at("materials"));
+    if (js.count("meshes")) from_json(val.meshes, js.at("meshes"));
+    if (js.count("nodes")) from_json(val.nodes, js.at("nodes"));
+    if (js.count("samplers")) from_json(val.samplers, js.at("samplers"));
+    if (js.count("scene")) from_json(val.scene, js.at("scene"));
+    if (js.count("scenes")) from_json(val.scenes, js.at("scenes"));
+    if (js.count("skins")) from_json(val.skins, js.at("skins"));
+    if (js.count("textures")) from_json(val.textures, js.at("textures"));
 }
 
+// Converts int to json.
+inline void to_json(int val, json& js) { js = val; }
+
+// Converts float to json.
+inline void to_json(float val, json& js) { js = val; }
+
+// Converts bool to json.
+inline void to_json(bool val, json& js) { js = val; }
+
+// Converts string to json.
+inline void to_json(const string& val, json& js) { js = val; }
+
+// Converts json to json.
+inline void to_json(const json& val, json& js) { js = val; }
+
+// Dump support function.
+template <typename T>
+inline void to_json(const T* val, json& js) {
+    if (!val) {
+        js = nullptr;
+        return;
+    }
+    if (!js.is_object()) js = json::object();
+    to_json(*val, js);
+}
+
+// Dump support function.
+template <typename T, size_t N>
+inline void to_json(const array<T, N>& vals, json& js) {
+    js = json::array();
+    for (auto i = 0; i < N; i++) to_json(vals[i], js[i]);
+}
+
+// Dump support function.
+template <typename T>
+inline void to_json(const vector<T>& vals, json& js) {
+    js = json::array();
+    for (auto i = 0; i < vals.size(); i++) to_json(vals[i], js[i]);
+}
+
+// Dump support function.
+template <typename T>
+inline void to_json(const map<string, T>& vals, json& js) {
+    js = json::object();
+    for (auto& kv : vals) to_json(kv.second, js[kv.first]);
+}
+
+// Dump support function.
+template <typename T, typename T1>
+inline void to_json(const T& val, json& js, const vector<pair<T1, T>>& table) {
+    auto found = false;
+    auto v = T1();
+    for (auto& kv : table) {
+        if (kv.second == val) {
+            v = kv.first;
+            found = true;
+            break;
+        }
+    }
+    if (!found) throw runtime_error("invalid value");
+    to_json(v, js);
+}
+
+// Dump support function.
+inline void to_json(const vec2f& vals, json& js) {
+    to_json((const array<float, 2>&)vals, js);
+}
+
+// Dump support function.
+inline void to_json(const vec3f& vals, json& js) {
+    to_json((const array<float, 3>&)vals, js);
+}
+
+// Dump support function.
+inline void to_json(const vec4f& vals, json& js) {
+    to_json((const array<float, 4>&)vals, js);
+}
+
+// Dump support function.
+inline void to_json(const quat4f& vals, json& js) {
+    to_json((const array<float, 4>&)vals, js);
+}
+
+// Dump support function.
+inline void to_json(const mat4f& vals, json& js) {
+    to_json((const array<float, 16>&)vals, js);
+}
+
+// Converts glTFid to json.
+template <typename T>
+inline void to_json(const glTFid<T>& val, json& js) {
+    js = (int)val;
+}
+
+// Check for default value
+template <typename T>
+inline bool operator==(const glTFid<T>& a, const glTFid<T>& b) {
+    return (int)a == (int)b;
+}
+
+// Check for default value
+template <typename T>
+inline bool operator!=(const glTFid<T>& a, const glTFid<T>& b) {
+    return (int)a != (int)b;
+}
+
+// Converts a glTFProperty object to JSON
+inline void to_json(const glTFProperty& val, json& js) {
+    if (!js.is_object()) js = json::object();
+#if YGL_GLTFJSON
+    if (!val.extensions.empty()) to_json(val.extensions, js["extensions"]);
+    if (!val.extras.is_null()) dump_attr(val.extras, "extras", js);
+#endif
+}
+
+// Converts a glTFChildOfRootProperty object to JSON
+inline void to_json(const glTFChildOfRootProperty& val, json& js) {
+    static auto def = glTFChildOfRootProperty();
+    if (!js.is_object()) js = json::object();
+    to_json((const glTFProperty&)val, js);
+    if (val.name != def.name) to_json(val.name, js["name"]);
+}
+// Converts a glTFAccessorSparseIndicesComponentType enum to JSON
+inline void to_json(
+    const glTFAccessorSparseIndicesComponentType& val, json& js) {
+    static vector<pair<int, glTFAccessorSparseIndicesComponentType>> table = {
+        {5121, glTFAccessorSparseIndicesComponentType::UnsignedByte},
+        {5123, glTFAccessorSparseIndicesComponentType::UnsignedShort},
+        {5125, glTFAccessorSparseIndicesComponentType::UnsignedInt},
+    };
+    to_json(val, js, table);
+}
+
+// Converts a glTFAccessorSparseIndices object to JSON
+inline void to_json(const glTFAccessorSparseIndices& val, json& js) {
+    static auto def = glTFAccessorSparseIndices();
+    if (!js.is_object()) js = json::object();
+    to_json((const glTFProperty&)val, js);
+    to_json(val.bufferView, js["bufferView"]);
+    if (val.byteOffset != def.byteOffset)
+        to_json(val.byteOffset, js["byteOffset"]);
+    to_json(val.componentType, js["componentType"]);
+}
+
+// Converts a glTFAccessorSparseValues object to JSON
+inline void to_json(const glTFAccessorSparseValues& val, json& js) {
+    static auto def = glTFAccessorSparseValues();
+    if (!js.is_object()) js = json::object();
+    to_json((const glTFProperty&)val, js);
+    to_json(val.bufferView, js["bufferView"]);
+    if (val.byteOffset != def.byteOffset)
+        to_json(val.byteOffset, js["byteOffset"]);
+}
+
+// Converts a glTFAccessorSparse object to JSON
+inline void to_json(const glTFAccessorSparse& val, json& js) {
+    static auto def = glTFAccessorSparse();
+    if (!js.is_object()) js = json::object();
+    to_json((const glTFProperty&)val, js);
+    to_json(val.count, js["count"]);
+    to_json(val.indices, js["indices"]);
+    to_json(val.values, js["values"]);
+}
+// Converts a glTFAccessorComponentType enum to JSON
+inline void to_json(const glTFAccessorComponentType& val, json& js) {
+    static vector<pair<int, glTFAccessorComponentType>> table = {
+        {5120, glTFAccessorComponentType::Byte},
+        {5121, glTFAccessorComponentType::UnsignedByte},
+        {5122, glTFAccessorComponentType::Short},
+        {5123, glTFAccessorComponentType::UnsignedShort},
+        {5125, glTFAccessorComponentType::UnsignedInt},
+        {5126, glTFAccessorComponentType::Float},
+    };
+    to_json(val, js, table);
+}
+
+// Converts a glTFAccessorType enum to JSON
+inline void to_json(const glTFAccessorType& val, json& js) {
+    static vector<pair<string, glTFAccessorType>> table = {
+        {"SCALAR", glTFAccessorType::Scalar},
+        {"VEC2", glTFAccessorType::Vec2},
+        {"VEC3", glTFAccessorType::Vec3},
+        {"VEC4", glTFAccessorType::Vec4},
+        {"MAT2", glTFAccessorType::Mat2},
+        {"MAT3", glTFAccessorType::Mat3},
+        {"MAT4", glTFAccessorType::Mat4},
+    };
+    to_json(val, js, table);
+}
+
+// Converts a glTFAccessor object to JSON
+inline void to_json(const glTFAccessor& val, json& js) {
+    static auto def = glTFAccessor();
+    if (!js.is_object()) js = json::object();
+    to_json((const glTFChildOfRootProperty&)val, js);
+    if (val.bufferView != def.bufferView)
+        to_json(val.bufferView, js["bufferView"]);
+    if (val.byteOffset != def.byteOffset)
+        to_json(val.byteOffset, js["byteOffset"]);
+    to_json(val.componentType, js["componentType"]);
+    if (val.normalized != def.normalized)
+        to_json(val.normalized, js["normalized"]);
+    to_json(val.count, js["count"]);
+    to_json(val.type, js["type"]);
+    if (val.max != def.max) to_json(val.max, js["max"]);
+    if (val.min != def.min) to_json(val.min, js["min"]);
+    if (val.sparse != def.sparse) to_json(val.sparse, js["sparse"]);
+}
+// Converts a glTFAnimationChannelTargetPath enum to JSON
+inline void to_json(const glTFAnimationChannelTargetPath& val, json& js) {
+    static vector<pair<string, glTFAnimationChannelTargetPath>> table = {
+        {"translation", glTFAnimationChannelTargetPath::Translation},
+        {"rotation", glTFAnimationChannelTargetPath::Rotation},
+        {"scale", glTFAnimationChannelTargetPath::Scale},
+        {"weights", glTFAnimationChannelTargetPath::Weights},
+    };
+    to_json(val, js, table);
+}
+
+// Converts a glTFAnimationChannelTarget object to JSON
+inline void to_json(const glTFAnimationChannelTarget& val, json& js) {
+    static auto def = glTFAnimationChannelTarget();
+    if (!js.is_object()) js = json::object();
+    to_json((const glTFProperty&)val, js);
+    to_json(val.node, js["node"]);
+    to_json(val.path, js["path"]);
+}
+
+// Converts a glTFAnimationChannel object to JSON
+inline void to_json(const glTFAnimationChannel& val, json& js) {
+    static auto def = glTFAnimationChannel();
+    if (!js.is_object()) js = json::object();
+    to_json((const glTFProperty&)val, js);
+    to_json(val.sampler, js["sampler"]);
+    to_json(val.target, js["target"]);
+}
+// Converts a glTFAnimationSamplerInterpolation enum to JSON
+inline void to_json(const glTFAnimationSamplerInterpolation& val, json& js) {
+    static vector<pair<string, glTFAnimationSamplerInterpolation>> table = {
+        {"LINEAR", glTFAnimationSamplerInterpolation::Linear},
+        {"STEP", glTFAnimationSamplerInterpolation::Step},
+        {"CATMULLROMSPLINE",
+            glTFAnimationSamplerInterpolation::CatmullRomSpline},
+        {"CUBICSPLINE", glTFAnimationSamplerInterpolation::CubicSpline},
+    };
+    to_json(val, js, table);
+}
+
+// Converts a glTFAnimationSampler object to JSON
+inline void to_json(const glTFAnimationSampler& val, json& js) {
+    static auto def = glTFAnimationSampler();
+    if (!js.is_object()) js = json::object();
+    to_json((const glTFProperty&)val, js);
+    to_json(val.input, js["input"]);
+    if (val.interpolation != def.interpolation)
+        to_json(val.interpolation, js["interpolation"]);
+    to_json(val.output, js["output"]);
+}
+
+// Converts a glTFAnimation object to JSON
+inline void to_json(const glTFAnimation& val, json& js) {
+    static auto def = glTFAnimation();
+    if (!js.is_object()) js = json::object();
+    to_json((const glTFChildOfRootProperty&)val, js);
+    to_json(val.channels, js["channels"]);
+    to_json(val.samplers, js["samplers"]);
+}
+
+// Converts a glTFAsset object to JSON
+inline void to_json(const glTFAsset& val, json& js) {
+    static auto def = glTFAsset();
+    if (!js.is_object()) js = json::object();
+    to_json((const glTFProperty&)val, js);
+    if (val.copyright != def.copyright) to_json(val.copyright, js["copyright"]);
+    if (val.generator != def.generator) to_json(val.generator, js["generator"]);
+    to_json(val.version, js["version"]);
+    if (val.minVersion != def.minVersion)
+        to_json(val.minVersion, js["minVersion"]);
+}
+
+// Converts a glTFBuffer object to JSON
+inline void to_json(const glTFBuffer& val, json& js) {
+    static auto def = glTFBuffer();
+    if (!js.is_object()) js = json::object();
+    to_json((const glTFChildOfRootProperty&)val, js);
+    if (val.uri != def.uri) to_json(val.uri, js["uri"]);
+    to_json(val.byteLength, js["byteLength"]);
+}
+// Converts a glTFBufferViewTarget enum to JSON
+inline void to_json(const glTFBufferViewTarget& val, json& js) {
+    static vector<pair<int, glTFBufferViewTarget>> table = {
+        {34962, glTFBufferViewTarget::ArrayBuffer},
+        {34963, glTFBufferViewTarget::ElementArrayBuffer},
+    };
+    to_json(val, js, table);
+}
+
+// Converts a glTFBufferView object to JSON
+inline void to_json(const glTFBufferView& val, json& js) {
+    static auto def = glTFBufferView();
+    if (!js.is_object()) js = json::object();
+    to_json((const glTFChildOfRootProperty&)val, js);
+    to_json(val.buffer, js["buffer"]);
+    if (val.byteOffset != def.byteOffset)
+        to_json(val.byteOffset, js["byteOffset"]);
+    to_json(val.byteLength, js["byteLength"]);
+    if (val.byteStride != def.byteStride)
+        to_json(val.byteStride, js["byteStride"]);
+    if (val.target != def.target) to_json(val.target, js["target"]);
+}
+
+// Converts a glTFCameraOrthographic object to JSON
+inline void to_json(const glTFCameraOrthographic& val, json& js) {
+    static auto def = glTFCameraOrthographic();
+    if (!js.is_object()) js = json::object();
+    to_json((const glTFProperty&)val, js);
+    to_json(val.xmag, js["xmag"]);
+    to_json(val.ymag, js["ymag"]);
+    to_json(val.zfar, js["zfar"]);
+    to_json(val.znear, js["znear"]);
+}
+
+// Converts a glTFCameraPerspective object to JSON
+inline void to_json(const glTFCameraPerspective& val, json& js) {
+    static auto def = glTFCameraPerspective();
+    if (!js.is_object()) js = json::object();
+    to_json((const glTFProperty&)val, js);
+    if (val.aspectRatio != def.aspectRatio)
+        to_json(val.aspectRatio, js["aspectRatio"]);
+    to_json(val.yfov, js["yfov"]);
+    if (val.zfar != def.zfar) to_json(val.zfar, js["zfar"]);
+    to_json(val.znear, js["znear"]);
+}
+// Converts a glTFCameraType enum to JSON
+inline void to_json(const glTFCameraType& val, json& js) {
+    static vector<pair<string, glTFCameraType>> table = {
+        {"perspective", glTFCameraType::Perspective},
+        {"orthographic", glTFCameraType::Orthographic},
+    };
+    to_json(val, js, table);
+}
+
+// Converts a glTFCamera object to JSON
+inline void to_json(const glTFCamera& val, json& js) {
+    static auto def = glTFCamera();
+    if (!js.is_object()) js = json::object();
+    to_json((const glTFChildOfRootProperty&)val, js);
+    if (val.orthographic != def.orthographic)
+        to_json(val.orthographic, js["orthographic"]);
+    if (val.perspective != def.perspective)
+        to_json(val.perspective, js["perspective"]);
+    to_json(val.type, js["type"]);
+}
+// Converts a glTFImageMimeType enum to JSON
+inline void to_json(const glTFImageMimeType& val, json& js) {
+    static vector<pair<string, glTFImageMimeType>> table = {
+        {"image/jpeg", glTFImageMimeType::ImageJpeg},
+        {"image/png", glTFImageMimeType::ImagePng},
+    };
+    to_json(val, js, table);
+}
+
+// Converts a glTFImage object to JSON
+inline void to_json(const glTFImage& val, json& js) {
+    static auto def = glTFImage();
+    if (!js.is_object()) js = json::object();
+    to_json((const glTFChildOfRootProperty&)val, js);
+    if (val.uri != def.uri) to_json(val.uri, js["uri"]);
+    if (val.mimeType != def.mimeType) to_json(val.mimeType, js["mimeType"]);
+    if (val.bufferView != def.bufferView)
+        to_json(val.bufferView, js["bufferView"]);
+}
+
+// Converts a glTFTextureInfo object to JSON
+inline void to_json(const glTFTextureInfo& val, json& js) {
+    static auto def = glTFTextureInfo();
+    if (!js.is_object()) js = json::object();
+    to_json((const glTFProperty&)val, js);
+    to_json(val.index, js["index"]);
+    if (val.texCoord != def.texCoord) to_json(val.texCoord, js["texCoord"]);
+}
+
+// Converts a glTFTexture object to JSON
+inline void to_json(const glTFTexture& val, json& js) {
+    static auto def = glTFTexture();
+    if (!js.is_object()) js = json::object();
+    to_json((const glTFChildOfRootProperty&)val, js);
+    if (val.sampler != def.sampler) to_json(val.sampler, js["sampler"]);
+    if (val.source != def.source) to_json(val.source, js["source"]);
+}
+
+// Converts a glTFMaterialNormalTextureInfo object to JSON
+inline void to_json(const glTFMaterialNormalTextureInfo& val, json& js) {
+    static auto def = glTFMaterialNormalTextureInfo();
+    if (!js.is_object()) js = json::object();
+    to_json((const glTFTextureInfo&)val, js);
+    if (val.scale != def.scale) to_json(val.scale, js["scale"]);
+}
+
+// Converts a glTFMaterialOcclusionTextureInfo object to JSON
+inline void to_json(const glTFMaterialOcclusionTextureInfo& val, json& js) {
+    static auto def = glTFMaterialOcclusionTextureInfo();
+    if (!js.is_object()) js = json::object();
+    to_json((const glTFTextureInfo&)val, js);
+    if (val.strength != def.strength) to_json(val.strength, js["strength"]);
+}
+
+// Converts a glTFMaterialPbrMetallicRoughness object to JSON
+inline void to_json(const glTFMaterialPbrMetallicRoughness& val, json& js) {
+    static auto def = glTFMaterialPbrMetallicRoughness();
+    if (!js.is_object()) js = json::object();
+    to_json((const glTFProperty&)val, js);
+    if (val.baseColorFactor != def.baseColorFactor)
+        to_json(val.baseColorFactor, js["baseColorFactor"]);
+    if (val.baseColorTexture != def.baseColorTexture)
+        to_json(val.baseColorTexture, js["baseColorTexture"]);
+    if (val.metallicFactor != def.metallicFactor)
+        to_json(val.metallicFactor, js["metallicFactor"]);
+    if (val.roughnessFactor != def.roughnessFactor)
+        to_json(val.roughnessFactor, js["roughnessFactor"]);
+    if (val.metallicRoughnessTexture != def.metallicRoughnessTexture)
+        to_json(val.metallicRoughnessTexture, js["metallicRoughnessTexture"]);
+}
+
+// Converts a glTFMaterialPbrSpecularGlossiness object to JSON
+inline void to_json(const glTFMaterialPbrSpecularGlossiness& val, json& js) {
+    static auto def = glTFMaterialPbrSpecularGlossiness();
+    if (!js.is_object()) js = json::object();
+    to_json((const glTFProperty&)val, js);
+    if (val.diffuseFactor != def.diffuseFactor)
+        to_json(val.diffuseFactor, js["diffuseFactor"]);
+    if (val.diffuseTexture != def.diffuseTexture)
+        to_json(val.diffuseTexture, js["diffuseTexture"]);
+    if (val.specularFactor != def.specularFactor)
+        to_json(val.specularFactor, js["specularFactor"]);
+    if (val.glossinessFactor != def.glossinessFactor)
+        to_json(val.glossinessFactor, js["glossinessFactor"]);
+    if (val.specularGlossinessTexture != def.specularGlossinessTexture)
+        to_json(val.specularGlossinessTexture, js["specularGlossinessTexture"]);
+}
+// Converts a glTFMaterialAlphaMode enum to JSON
+inline void to_json(const glTFMaterialAlphaMode& val, json& js) {
+    static vector<pair<string, glTFMaterialAlphaMode>> table = {
+        {"OPAQUE", glTFMaterialAlphaMode::Opaque},
+        {"MASK", glTFMaterialAlphaMode::Mask},
+        {"BLEND", glTFMaterialAlphaMode::Blend},
+    };
+    to_json(val, js, table);
+}
+
+// Converts a glTFMaterial object to JSON
+inline void to_json(const glTFMaterial& val, json& js) {
+    static auto def = glTFMaterial();
+    if (!js.is_object()) js = json::object();
+    to_json((const glTFChildOfRootProperty&)val, js);
+    if (val.pbrMetallicRoughness != def.pbrMetallicRoughness)
+        to_json(val.pbrMetallicRoughness, js["pbrMetallicRoughness"]);
+    if (val.normalTexture != def.normalTexture)
+        to_json(val.normalTexture, js["normalTexture"]);
+    if (val.occlusionTexture != def.occlusionTexture)
+        to_json(val.occlusionTexture, js["occlusionTexture"]);
+    if (val.emissiveTexture != def.emissiveTexture)
+        to_json(val.emissiveTexture, js["emissiveTexture"]);
+    if (val.emissiveFactor != def.emissiveFactor)
+        to_json(val.emissiveFactor, js["emissiveFactor"]);
+    if (val.alphaMode != def.alphaMode) to_json(val.alphaMode, js["alphaMode"]);
+    if (val.alphaCutoff != def.alphaCutoff)
+        to_json(val.alphaCutoff, js["alphaCutoff"]);
+    if (val.doubleSided != def.doubleSided)
+        to_json(val.doubleSided, js["doubleSided"]);
+
+    if (val.pbrSpecularGlossiness != nullptr) {
+        auto& js_ext = js["extensions"];
+        to_json(val.pbrSpecularGlossiness,
+            js_ext["KHR_materials_pbrSpecularGlossiness"]);
+    }
+}
+// Converts a glTFMeshPrimitiveMode enum to JSON
+inline void to_json(const glTFMeshPrimitiveMode& val, json& js) {
+    static vector<pair<int, glTFMeshPrimitiveMode>> table = {
+        {0, glTFMeshPrimitiveMode::Points},
+        {1, glTFMeshPrimitiveMode::Lines},
+        {2, glTFMeshPrimitiveMode::LineLoop},
+        {3, glTFMeshPrimitiveMode::LineStrip},
+        {4, glTFMeshPrimitiveMode::Triangles},
+        {5, glTFMeshPrimitiveMode::TriangleStrip},
+        {6, glTFMeshPrimitiveMode::TriangleFan},
+    };
+    to_json(val, js, table);
+}
+
+// Converts a glTFMeshPrimitive object to JSON
+inline void to_json(const glTFMeshPrimitive& val, json& js) {
+    static auto def = glTFMeshPrimitive();
+    if (!js.is_object()) js = json::object();
+    to_json((const glTFProperty&)val, js);
+    to_json(val.attributes, js["attributes"]);
+    if (val.indices != def.indices) to_json(val.indices, js["indices"]);
+    if (val.material != def.material) to_json(val.material, js["material"]);
+    if (val.mode != def.mode) to_json(val.mode, js["mode"]);
+    if (val.targets != def.targets) to_json(val.targets, js["targets"]);
+}
+
+// Converts a glTFMesh object to JSON
+inline void to_json(const glTFMesh& val, json& js) {
+    static auto def = glTFMesh();
+    if (!js.is_object()) js = json::object();
+    to_json((const glTFChildOfRootProperty&)val, js);
+    to_json(val.primitives, js["primitives"]);
+    if (val.weights != def.weights) to_json(val.weights, js["weights"]);
+}
+
+// Converts a glTFNode object to JSON
+inline void to_json(const glTFNode& val, json& js) {
+    static auto def = glTFNode();
+    if (!js.is_object()) js = json::object();
+    to_json((const glTFChildOfRootProperty&)val, js);
+    if (val.camera != def.camera) to_json(val.camera, js["camera"]);
+    if (val.children != def.children) to_json(val.children, js["children"]);
+    if (val.skin != def.skin) to_json(val.skin, js["skin"]);
+    if (val.matrix != def.matrix) to_json(val.matrix, js["matrix"]);
+    if (val.mesh != def.mesh) to_json(val.mesh, js["mesh"]);
+    if (val.rotation != def.rotation) to_json(val.rotation, js["rotation"]);
+    if (val.scale != def.scale) to_json(val.scale, js["scale"]);
+    if (val.translation != def.translation)
+        to_json(val.translation, js["translation"]);
+    if (val.weights != def.weights) to_json(val.weights, js["weights"]);
+}
+// Converts a glTFSamplerMagFilter enum to JSON
+inline void to_json(const glTFSamplerMagFilter& val, json& js) {
+    static vector<pair<int, glTFSamplerMagFilter>> table = {
+        {9728, glTFSamplerMagFilter::Nearest},
+        {9729, glTFSamplerMagFilter::Linear},
+    };
+    to_json(val, js, table);
+}
+
+// Converts a glTFSamplerMinFilter enum to JSON
+inline void to_json(const glTFSamplerMinFilter& val, json& js) {
+    static vector<pair<int, glTFSamplerMinFilter>> table = {
+        {9728, glTFSamplerMinFilter::Nearest},
+        {9729, glTFSamplerMinFilter::Linear},
+        {9984, glTFSamplerMinFilter::NearestMipmapNearest},
+        {9985, glTFSamplerMinFilter::LinearMipmapNearest},
+        {9986, glTFSamplerMinFilter::NearestMipmapLinear},
+        {9987, glTFSamplerMinFilter::LinearMipmapLinear},
+    };
+    to_json(val, js, table);
+}
+
+// Converts a glTFSamplerWrapS enum to JSON
+inline void to_json(const glTFSamplerWrapS& val, json& js) {
+    static vector<pair<int, glTFSamplerWrapS>> table = {
+        {33071, glTFSamplerWrapS::ClampToEdge},
+        {33648, glTFSamplerWrapS::MirroredRepeat},
+        {10497, glTFSamplerWrapS::Repeat},
+    };
+    to_json(val, js, table);
+}
+
+// Converts a glTFSamplerWrapT enum to JSON
+inline void to_json(const glTFSamplerWrapT& val, json& js) {
+    static vector<pair<int, glTFSamplerWrapT>> table = {
+        {33071, glTFSamplerWrapT::ClampToEdge},
+        {33648, glTFSamplerWrapT::MirroredRepeat},
+        {10497, glTFSamplerWrapT::Repeat},
+    };
+    to_json(val, js, table);
+}
+
+// Converts a glTFSampler object to JSON
+inline void to_json(const glTFSampler& val, json& js) {
+    static auto def = glTFSampler();
+    if (!js.is_object()) js = json::object();
+    to_json((const glTFChildOfRootProperty&)val, js);
+    if (val.magFilter != def.magFilter) to_json(val.magFilter, js["magFilter"]);
+    if (val.minFilter != def.minFilter) to_json(val.minFilter, js["minFilter"]);
+    if (val.wrapS != def.wrapS) to_json(val.wrapS, js["wrapS"]);
+    if (val.wrapT != def.wrapT) to_json(val.wrapT, js["wrapT"]);
+}
+
+// Converts a glTFScene object to JSON
+inline void to_json(const glTFScene& val, json& js) {
+    static auto def = glTFScene();
+    if (!js.is_object()) js = json::object();
+    to_json((const glTFChildOfRootProperty&)val, js);
+    if (val.nodes != def.nodes) to_json(val.nodes, js["nodes"]);
+}
+
+// Converts a glTFSkin object to JSON
+inline void to_json(const glTFSkin& val, json& js) {
+    static auto def = glTFSkin();
+    if (!js.is_object()) js = json::object();
+    to_json((const glTFChildOfRootProperty&)val, js);
+    if (val.inverseBindMatrices != def.inverseBindMatrices)
+        to_json(val.inverseBindMatrices, js["inverseBindMatrices"]);
+    if (val.skeleton != def.skeleton) to_json(val.skeleton, js["skeleton"]);
+    to_json(val.joints, js["joints"]);
+}
+
+// Converts a glTF object to JSON
+inline void to_json(const glTF& val, json& js) {
+    static auto def = glTF();
+    if (!js.is_object()) js = json::object();
+    to_json((const glTFProperty&)val, js);
+    if (val.extensionsUsed != def.extensionsUsed)
+        to_json(val.extensionsUsed, js["extensionsUsed"]);
+    if (val.extensionsRequired != def.extensionsRequired)
+        to_json(val.extensionsRequired, js["extensionsRequired"]);
+    if (val.accessors != def.accessors) to_json(val.accessors, js["accessors"]);
+    if (val.animations != def.animations)
+        to_json(val.animations, js["animations"]);
+    to_json(val.asset, js["asset"]);
+    if (val.buffers != def.buffers) to_json(val.buffers, js["buffers"]);
+    if (val.bufferViews != def.bufferViews)
+        to_json(val.bufferViews, js["bufferViews"]);
+    if (val.cameras != def.cameras) to_json(val.cameras, js["cameras"]);
+    if (val.images != def.images) to_json(val.images, js["images"]);
+    if (val.materials != def.materials) to_json(val.materials, js["materials"]);
+    if (val.meshes != def.meshes) to_json(val.meshes, js["meshes"]);
+    if (val.nodes != def.nodes) to_json(val.nodes, js["nodes"]);
+    if (val.samplers != def.samplers) to_json(val.samplers, js["samplers"]);
+    if (val.scene != def.scene) to_json(val.scene, js["scene"]);
+    if (val.scenes != def.scenes) to_json(val.scenes, js["scenes"]);
+    if (val.skins != def.skins) to_json(val.skins, js["skins"]);
+    if (val.textures != def.textures) to_json(val.textures, js["textures"]);
+}
 // #codegen end func
+
+namespace _impl_gltf {
 
 // Get directory name (including '/').
 inline string _get_dirname(const string& filename) {
@@ -4623,13 +4621,11 @@ glTF* load_gltf(
     }
 
     // parse json
-    auto stack = json_serialize_stack();
     auto gltf_ = gltf.get();
     try {
-        json_serialize_value(gltf_, js, true, stack);
+        from_json(gltf_, js);
     } catch (const exception& e) {
-        throw runtime_error("error parsing gltf at " + stack.pathname() +
-                            " with error " + string(e.what()));
+        throw runtime_error("error parsing gltf " + string(e.what()));
     }
 
     // load external resources
@@ -4683,8 +4679,7 @@ void save_gltf(
     const string& filename, const glTF* gltf, bool save_bin, bool save_image) {
     // dumps json
     auto js = json();
-    auto stack = json_serialize_stack();
-    json_serialize_value((glTF*&)gltf, js, false, stack);
+    to_json(gltf, js);
 
     // save json
     save_textfile(filename, js.dump(2));
@@ -4796,14 +4791,11 @@ glTF* load_binary_gltf(
     }
 
     // parse json
-    auto stack = json_serialize_stack();
     auto gltf_ = gltf.get();
     try {
-        json_serialize_value(gltf_, js, true, stack);
+        from_json(gltf_, js);
     } catch (const exception& e) {
-        throw runtime_error("cannot parse gltf json with error at " +
-                            stack.pathname() + string(" with error ") +
-                            e.what());
+        throw runtime_error("cannot parse gltf json " + string(e.what()));
         return nullptr;
     }
 
@@ -4834,8 +4826,7 @@ void save_binary_gltf(
 
     // dumps json
     auto js = json();
-    auto stack = json_serialize_stack();
-    json_serialize_value((glTF*&)gltf, js, false, stack);
+    to_json(gltf, js);
 
     // fix string
     auto js_str = js.dump(2);
