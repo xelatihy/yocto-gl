@@ -4394,15 +4394,15 @@ inline vector<vec3i> convert_quads_to_triangles(
 #endif
     return triangles;
 }
-    
+
 /// Convert beziers to lines using 3 lines for each bezier.
 inline vector<vec2i> convert_bezier_to_lines(const vector<vec4i>& beziers) {
     auto lines = vector<vec2i>();
-    lines.reserve(beziers.size()*3);
+    lines.reserve(beziers.size() * 3);
     for (auto& b : beziers) {
-        lines += {b.x,b.y};
-        lines += {b.y,b.z};
-        lines += {b.z,b.w};
+        lines += {b.x, b.y};
+        lines += {b.y, b.z};
+        lines += {b.z, b.w};
     }
     return lines;
 }
@@ -7002,6 +7002,12 @@ struct shape {
     /// per-vertex tangent space (4 float)
     vector<vec4f> tangsp;
 
+    // subdivision data -----------------------
+    /// number of times to subdivide
+    int subdivision_level = 0;
+    /// whether to use Catmull-Clark subdivision
+    bool subdivision_catmullclark = false;
+
     // computed data --------------------------
     /// element CDF for sampling
     vector<float> elem_cdf;
@@ -7304,7 +7310,7 @@ inline void tesselate_shape(shape* shp) {
         shp->quads_norm = {};
         shp->quads_texcoord = {};
     }
-    if(!shp->beziers.empty()) {
+    if (!shp->beziers.empty()) {
         shp->lines = convert_bezier_to_lines(shp->beziers);
         shp->beziers = {};
     }
@@ -8094,6 +8100,10 @@ struct obj_group {
     string groupname;
     /// smoothing
     bool smoothing = true;
+    /// number of times to subdivide
+    int subdivision_level = 0;
+    /// whether to use Catmull-Clark subdivision
+    bool subdivision_catmullclark = false;
 
     // element data -------------------------
     /// element vertices
