@@ -6930,8 +6930,8 @@ tuple<vector<vec3i>, vector<vec3f>> make_geodesicsphere(int level) {
         vector<vec2i> edges;
         vector<vec4i> faces;
         tie(_lines, triangles, _quads, edges, faces) =
-            subdivide_elems({}, triangles, {}, (int)pos.size());
-        pos = subdivide_vert(pos, edges, faces);
+            subdivide_elems_linear({}, triangles, {}, (int)pos.size());
+        pos = subdivide_vert_linear(pos, edges, faces);
     }
     for (auto& p : pos) p = normalize(p);
     return {triangles, pos};
