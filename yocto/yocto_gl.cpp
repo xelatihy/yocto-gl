@@ -3053,201 +3053,170 @@ obj_mesh* get_mesh(
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-namespace _impl_gltf {
-
 // Json alias
 using json = nlohmann::json;
 
 // #codegen begin func ---------------------------------------------------------
 
-// Parse error
-struct parse_stack {
-    vector<string> path = {"glTF"};
-    string pathname() {
-        auto p = std::string();
-        for (auto n : path) p += '/' + n;
-        return p;
-    }
-};
-
-// Parse support function.
-template <typename T>
-inline void parse(vector<T>& vals, const json& js, parse_stack& err) {
-    if (!js.is_array()) throw runtime_error("array expected");
-    vals.resize(js.size());
-    for (auto i = 0; i < js.size(); i++) {
-        // this is contrived to support for vector<bool>
-        auto v = T();
-        parse(v, js[i], err);
-        vals[i] = v;
-    }
-}
-
 // Parse int function.
-inline void parse(int& val, const json& js, parse_stack& err) {
+inline void parse(int& val, const json& js) {
     if (!js.is_number_integer()) throw runtime_error("integer expected");
     val = js;
 }
 
 // Parse float function.
-inline void parse(float& val, const json& js, parse_stack& err) {
+inline void parse(float& val, const json& js) {
     if (!js.is_number()) throw runtime_error("number expected");
     val = js;
 }
 
 // Parse bool function.
-inline void parse(bool& val, const json& js, parse_stack& err) {
+inline void parse(bool& val, const json& js) {
     if (!js.is_boolean()) throw runtime_error("bool expected");
     val = js;
 }
 
 // Parse std::string function.
-inline void parse(string& val, const json& js, parse_stack& err) {
+inline void parse(string& val, const json& js) {
     if (!js.is_string()) throw runtime_error("string expected");
     val = js;
 }
 
 // Parse json function.
-inline void parse(json& val, const json& js, parse_stack& err) { val = js; }
+inline void parse(json& val, const json& js) { val = js; }
 
 // Parse support function.
-inline void parse(vec2f& vals, const json& js, parse_stack& err) {
+inline void parse(vec2f& vals, const json& js) {
     if (!js.is_array()) throw runtime_error("array expected");
     if (2 != js.size()) throw runtime_error("wrong array size");
-    for (auto i = 0; i < 2; i++) { parse(vals[i], js[i], err); }
+    for (auto i = 0; i < 2; i++) { parse(vals[i], js[i]); }
 }
 
 // Parse support function.
-inline void parse(vec3f& vals, const json& js, parse_stack& err) {
+inline void parse(vec3f& vals, const json& js) {
     if (!js.is_array()) throw runtime_error("array expected");
     if (3 != js.size()) throw runtime_error("wrong array size");
-    for (auto i = 0; i < 3; i++) { parse(vals[i], js[i], err); }
+    for (auto i = 0; i < 3; i++) { parse(vals[i], js[i]); }
 }
 
 // Parse support function.
-inline void parse(vec4f& vals, const json& js, parse_stack& err) {
+inline void parse(vec4f& vals, const json& js) {
     if (!js.is_array()) throw runtime_error("array expected");
     if (4 != js.size()) throw runtime_error("wrong array size");
-    for (auto i = 0; i < 4; i++) { parse(vals[i], js[i], err); }
+    for (auto i = 0; i < 4; i++) { parse(vals[i], js[i]); }
 }
 
 // Parse support function.
-inline void parse(quat4f& vals, const json& js, parse_stack& err) {
+inline void parse(quat4f& vals, const json& js) {
     if (!js.is_array()) throw runtime_error("array expected");
     if (4 != js.size()) throw runtime_error("wrong array size");
-    for (auto i = 0; i < 4; i++) { parse(vals[i], js[i], err); }
+    for (auto i = 0; i < 4; i++) { parse(vals[i], js[i]); }
 }
 
 // Parse support function.
-inline void parse(mat4f& vals, const json& js, parse_stack& err) {
+inline void parse(mat4f& vals, const json& js) {
     if (!js.is_array()) throw runtime_error("array expected");
     if (16 != js.size()) throw runtime_error("wrong array size");
     for (auto j = 0; j < 4; j++) {
-        for (auto i = 0; i < 4; i++) { parse(vals[j][i], js[j * 4 + i], err); }
+        for (auto i = 0; i < 4; i++) { parse(vals[j][i], js[j * 4 + i]); }
     }
 }
 
 // Parse support function.
 template <typename T>
-inline void parse(map<string, T>& vals, const json& js, parse_stack& err) {
+inline void parse(vector<T>& vals, const json& js) {
+    if (!js.is_array()) throw runtime_error("array expected");
+    vals.resize(js.size());
+    for (auto i = 0; i < js.size(); i++) {
+        // this is contrived to support for vector<bool>
+        auto v = T();
+        parse(v, js[i]);
+        vals[i] = v;
+    }
+}
+
+// Parse support function.
+template <typename T>
+inline void parse(map<string, T>& vals, const json& js) {
     if (!js.is_object()) throw runtime_error("object expected");
     for (auto kv = js.begin(); kv != js.end(); ++kv) {
-        parse(vals[kv.key()], kv.value(), err);
+        parse(vals[kv.key()], kv.value());
     }
-}
-
-// Parse support function.
-template <typename T>
-inline void parse_attr(
-    T& val, const char* name, const json& js, parse_stack& err) {
-    auto iter = js.find(name);
-    if (iter == js.end()) return;
-    err.path.push_back(name);
-    parse(val, *iter, err);
-    err.path.pop_back();
 }
 
 // Parse id function.
 template <typename T>
-inline void parse(glTFid<T>& val, const json& js, parse_stack& err) {
+inline void parse(glTFid<T>& val, const json& js) {
     if (!js.is_number_integer()) throw runtime_error("int expected");
     val = glTFid<T>((int)js);
 }
 
 // Parses a glTFProperty object
-inline void parse(glTFProperty*& val, const json& js, parse_stack& err) {
+inline void parse(glTFProperty*& val, const json& js) {
     if (!js.is_object()) throw runtime_error("object expected");
     if (!val) val = new glTFProperty();
 #if YGL_GLTFJSON
-    parse_attr(val->extensions, "extensions", js, err);
-    parse_attr(val->extras, "extras", js, err);
+    if (js.count("extensions")) parse(val->extensions, js.at("extensions"));
+    if (js.count("extras")) parse(val->extras, js.at("extras"));
 #endif
 }
 
 // Parses a glTFChildOfRootProperty object
-inline void parse(
-    glTFChildOfRootProperty*& val, const json& js, parse_stack& err) {
+inline void parse(glTFChildOfRootProperty*& val, const json& js) {
     if (!js.is_object()) throw runtime_error("object expected");
     if (!val) val = new glTFChildOfRootProperty();
-    parse((glTFProperty*&)val, js, err);
-    parse_attr(val->name, "name", js, err);
+    parse((glTFProperty*&)val, js);
+    if (js.count("name")) parse(val->name, js.at("name"));
 }
 // Parse a glTFAccessorSparseIndicesComponentType enum
-inline void parse(glTFAccessorSparseIndicesComponentType& val, const json& js,
-    parse_stack& err) {
+inline void parse(glTFAccessorSparseIndicesComponentType& val, const json& js) {
     static map<int, glTFAccessorSparseIndicesComponentType> table = {
         {5121, glTFAccessorSparseIndicesComponentType::UnsignedByte},
         {5123, glTFAccessorSparseIndicesComponentType::UnsignedShort},
         {5125, glTFAccessorSparseIndicesComponentType::UnsignedInt},
     };
     auto v = int();
-    parse(v, js, err);
+    parse(v, js);
     if (table.find(v) == table.end()) throw runtime_error("bad enum value");
     val = table[v];
 }
 
 // Parses a glTFAccessorSparseIndices object
-inline void parse(
-    glTFAccessorSparseIndices*& val, const json& js, parse_stack& err) {
+inline void parse(glTFAccessorSparseIndices*& val, const json& js) {
     if (!js.is_object()) throw runtime_error("object expected");
     if (!val) val = new glTFAccessorSparseIndices();
-    parse((glTFProperty*&)val, js, err);
-    if (!js.count("bufferView"))
-        throw runtime_error("missing required variable");
-    parse_attr(val->bufferView, "bufferView", js, err);
-    parse_attr(val->byteOffset, "byteOffset", js, err);
-    if (!js.count("componentType"))
-        throw runtime_error("missing required variable");
-    parse_attr(val->componentType, "componentType", js, err);
+    parse((glTFProperty*&)val, js);
+    if (!js.count("bufferView")) throw runtime_error("missing value");
+    parse(val->bufferView, js.at("bufferView"));
+    if (js.count("byteOffset")) parse(val->byteOffset, js.at("byteOffset"));
+    if (!js.count("componentType")) throw runtime_error("missing value");
+    parse(val->componentType, js.at("componentType"));
 }
 
 // Parses a glTFAccessorSparseValues object
-inline void parse(
-    glTFAccessorSparseValues*& val, const json& js, parse_stack& err) {
+inline void parse(glTFAccessorSparseValues*& val, const json& js) {
     if (!js.is_object()) throw runtime_error("object expected");
     if (!val) val = new glTFAccessorSparseValues();
-    parse((glTFProperty*&)val, js, err);
-    if (!js.count("bufferView"))
-        throw runtime_error("missing required variable");
-    parse_attr(val->bufferView, "bufferView", js, err);
-    parse_attr(val->byteOffset, "byteOffset", js, err);
+    parse((glTFProperty*&)val, js);
+    if (!js.count("bufferView")) throw runtime_error("missing value");
+    parse(val->bufferView, js.at("bufferView"));
+    if (js.count("byteOffset")) parse(val->byteOffset, js.at("byteOffset"));
 }
 
 // Parses a glTFAccessorSparse object
-inline void parse(glTFAccessorSparse*& val, const json& js, parse_stack& err) {
+inline void parse(glTFAccessorSparse*& val, const json& js) {
     if (!js.is_object()) throw runtime_error("object expected");
     if (!val) val = new glTFAccessorSparse();
-    parse((glTFProperty*&)val, js, err);
-    if (!js.count("count")) throw runtime_error("missing required variable");
-    parse_attr(val->count, "count", js, err);
-    if (!js.count("indices")) throw runtime_error("missing required variable");
-    parse_attr(val->indices, "indices", js, err);
-    if (!js.count("values")) throw runtime_error("missing required variable");
-    parse_attr(val->values, "values", js, err);
+    parse((glTFProperty*&)val, js);
+    if (!js.count("count")) throw runtime_error("missing value");
+    parse(val->count, js.at("count"));
+    if (!js.count("indices")) throw runtime_error("missing value");
+    parse(val->indices, js.at("indices"));
+    if (!js.count("values")) throw runtime_error("missing value");
+    parse(val->values, js.at("values"));
 }
 // Parse a glTFAccessorComponentType enum
-inline void parse(
-    glTFAccessorComponentType& val, const json& js, parse_stack& err) {
+inline void parse(glTFAccessorComponentType& val, const json& js) {
     static map<int, glTFAccessorComponentType> table = {
         {5120, glTFAccessorComponentType::Byte},
         {5121, glTFAccessorComponentType::UnsignedByte},
@@ -3257,13 +3226,13 @@ inline void parse(
         {5126, glTFAccessorComponentType::Float},
     };
     auto v = int();
-    parse(v, js, err);
+    parse(v, js);
     if (table.find(v) == table.end()) throw runtime_error("bad enum value");
     val = table[v];
 }
 
 // Parse a glTFAccessorType enum
-inline void parse(glTFAccessorType& val, const json& js, parse_stack& err) {
+inline void parse(glTFAccessorType& val, const json& js) {
     static map<string, glTFAccessorType> table = {
         {"SCALAR", glTFAccessorType::Scalar},
         {"VEC2", glTFAccessorType::Vec2},
@@ -3274,33 +3243,31 @@ inline void parse(glTFAccessorType& val, const json& js, parse_stack& err) {
         {"MAT4", glTFAccessorType::Mat4},
     };
     auto v = string();
-    parse(v, js, err);
+    parse(v, js);
     if (table.find(v) == table.end()) throw runtime_error("bad enum value");
     val = table[v];
 }
 
 // Parses a glTFAccessor object
-inline void parse(glTFAccessor*& val, const json& js, parse_stack& err) {
+inline void parse(glTFAccessor*& val, const json& js) {
     if (!js.is_object()) throw runtime_error("object expected");
     if (!val) val = new glTFAccessor();
-    parse((glTFChildOfRootProperty*&)val, js, err);
-    parse_attr(val->bufferView, "bufferView", js, err);
-    parse_attr(val->byteOffset, "byteOffset", js, err);
-    if (!js.count("componentType"))
-        throw runtime_error("missing required variable");
-    parse_attr(val->componentType, "componentType", js, err);
-    parse_attr(val->normalized, "normalized", js, err);
-    if (!js.count("count")) throw runtime_error("missing required variable");
-    parse_attr(val->count, "count", js, err);
-    if (!js.count("type")) throw runtime_error("missing required variable");
-    parse_attr(val->type, "type", js, err);
-    parse_attr(val->max, "max", js, err);
-    parse_attr(val->min, "min", js, err);
-    parse_attr(val->sparse, "sparse", js, err);
+    parse((glTFChildOfRootProperty*&)val, js);
+    if (js.count("bufferView")) parse(val->bufferView, js.at("bufferView"));
+    if (js.count("byteOffset")) parse(val->byteOffset, js.at("byteOffset"));
+    if (!js.count("componentType")) throw runtime_error("missing value");
+    parse(val->componentType, js.at("componentType"));
+    if (js.count("normalized")) parse(val->normalized, js.at("normalized"));
+    if (!js.count("count")) throw runtime_error("missing value");
+    parse(val->count, js.at("count"));
+    if (!js.count("type")) throw runtime_error("missing value");
+    parse(val->type, js.at("type"));
+    if (js.count("max")) parse(val->max, js.at("max"));
+    if (js.count("min")) parse(val->min, js.at("min"));
+    if (js.count("sparse")) parse(val->sparse, js.at("sparse"));
 }
 // Parse a glTFAnimationChannelTargetPath enum
-inline void parse(
-    glTFAnimationChannelTargetPath& val, const json& js, parse_stack& err) {
+inline void parse(glTFAnimationChannelTargetPath& val, const json& js) {
     static map<string, glTFAnimationChannelTargetPath> table = {
         {"translation", glTFAnimationChannelTargetPath::Translation},
         {"rotation", glTFAnimationChannelTargetPath::Rotation},
@@ -3308,37 +3275,34 @@ inline void parse(
         {"weights", glTFAnimationChannelTargetPath::Weights},
     };
     auto v = string();
-    parse(v, js, err);
+    parse(v, js);
     if (table.find(v) == table.end()) throw runtime_error("bad enum value");
     val = table[v];
 }
 
 // Parses a glTFAnimationChannelTarget object
-inline void parse(
-    glTFAnimationChannelTarget*& val, const json& js, parse_stack& err) {
+inline void parse(glTFAnimationChannelTarget*& val, const json& js) {
     if (!js.is_object()) throw runtime_error("object expected");
     if (!val) val = new glTFAnimationChannelTarget();
-    parse((glTFProperty*&)val, js, err);
-    if (!js.count("node")) throw runtime_error("missing required variable");
-    parse_attr(val->node, "node", js, err);
-    if (!js.count("path")) throw runtime_error("missing required variable");
-    parse_attr(val->path, "path", js, err);
+    parse((glTFProperty*&)val, js);
+    if (!js.count("node")) throw runtime_error("missing value");
+    parse(val->node, js.at("node"));
+    if (!js.count("path")) throw runtime_error("missing value");
+    parse(val->path, js.at("path"));
 }
 
 // Parses a glTFAnimationChannel object
-inline void parse(
-    glTFAnimationChannel*& val, const json& js, parse_stack& err) {
+inline void parse(glTFAnimationChannel*& val, const json& js) {
     if (!js.is_object()) throw runtime_error("object expected");
     if (!val) val = new glTFAnimationChannel();
-    parse((glTFProperty*&)val, js, err);
-    if (!js.count("sampler")) throw runtime_error("missing required variable");
-    parse_attr(val->sampler, "sampler", js, err);
-    if (!js.count("target")) throw runtime_error("missing required variable");
-    parse_attr(val->target, "target", js, err);
+    parse((glTFProperty*&)val, js);
+    if (!js.count("sampler")) throw runtime_error("missing value");
+    parse(val->sampler, js.at("sampler"));
+    if (!js.count("target")) throw runtime_error("missing value");
+    parse(val->target, js.at("target"));
 }
 // Parse a glTFAnimationSamplerInterpolation enum
-inline void parse(
-    glTFAnimationSamplerInterpolation& val, const json& js, parse_stack& err) {
+inline void parse(glTFAnimationSamplerInterpolation& val, const json& js) {
     static map<string, glTFAnimationSamplerInterpolation> table = {
         {"LINEAR", glTFAnimationSamplerInterpolation::Linear},
         {"STEP", glTFAnimationSamplerInterpolation::Step},
@@ -3347,257 +3311,263 @@ inline void parse(
         {"CUBICSPLINE", glTFAnimationSamplerInterpolation::CubicSpline},
     };
     auto v = string();
-    parse(v, js, err);
+    parse(v, js);
     if (table.find(v) == table.end()) throw runtime_error("bad enum value");
     val = table[v];
 }
 
 // Parses a glTFAnimationSampler object
-inline void parse(
-    glTFAnimationSampler*& val, const json& js, parse_stack& err) {
+inline void parse(glTFAnimationSampler*& val, const json& js) {
     if (!js.is_object()) throw runtime_error("object expected");
     if (!val) val = new glTFAnimationSampler();
-    parse((glTFProperty*&)val, js, err);
-    if (!js.count("input")) throw runtime_error("missing required variable");
-    parse_attr(val->input, "input", js, err);
-    parse_attr(val->interpolation, "interpolation", js, err);
-    if (!js.count("output")) throw runtime_error("missing required variable");
-    parse_attr(val->output, "output", js, err);
+    parse((glTFProperty*&)val, js);
+    if (!js.count("input")) throw runtime_error("missing value");
+    parse(val->input, js.at("input"));
+    if (js.count("interpolation"))
+        parse(val->interpolation, js.at("interpolation"));
+    if (!js.count("output")) throw runtime_error("missing value");
+    parse(val->output, js.at("output"));
 }
 
 // Parses a glTFAnimation object
-inline void parse(glTFAnimation*& val, const json& js, parse_stack& err) {
+inline void parse(glTFAnimation*& val, const json& js) {
     if (!js.is_object()) throw runtime_error("object expected");
     if (!val) val = new glTFAnimation();
-    parse((glTFChildOfRootProperty*&)val, js, err);
-    if (!js.count("channels")) throw runtime_error("missing required variable");
-    parse_attr(val->channels, "channels", js, err);
-    if (!js.count("samplers")) throw runtime_error("missing required variable");
-    parse_attr(val->samplers, "samplers", js, err);
+    parse((glTFChildOfRootProperty*&)val, js);
+    if (!js.count("channels")) throw runtime_error("missing value");
+    parse(val->channels, js.at("channels"));
+    if (!js.count("samplers")) throw runtime_error("missing value");
+    parse(val->samplers, js.at("samplers"));
 }
 
 // Parses a glTFAsset object
-inline void parse(glTFAsset*& val, const json& js, parse_stack& err) {
+inline void parse(glTFAsset*& val, const json& js) {
     if (!js.is_object()) throw runtime_error("object expected");
     if (!val) val = new glTFAsset();
-    parse((glTFProperty*&)val, js, err);
-    parse_attr(val->copyright, "copyright", js, err);
-    parse_attr(val->generator, "generator", js, err);
-    if (!js.count("version")) throw runtime_error("missing required variable");
-    parse_attr(val->version, "version", js, err);
-    parse_attr(val->minVersion, "minVersion", js, err);
+    parse((glTFProperty*&)val, js);
+    if (js.count("copyright")) parse(val->copyright, js.at("copyright"));
+    if (js.count("generator")) parse(val->generator, js.at("generator"));
+    if (!js.count("version")) throw runtime_error("missing value");
+    parse(val->version, js.at("version"));
+    if (js.count("minVersion")) parse(val->minVersion, js.at("minVersion"));
 }
 
 // Parses a glTFBuffer object
-inline void parse(glTFBuffer*& val, const json& js, parse_stack& err) {
+inline void parse(glTFBuffer*& val, const json& js) {
     if (!js.is_object()) throw runtime_error("object expected");
     if (!val) val = new glTFBuffer();
-    parse((glTFChildOfRootProperty*&)val, js, err);
-    parse_attr(val->uri, "uri", js, err);
-    if (!js.count("byteLength"))
-        throw runtime_error("missing required variable");
-    parse_attr(val->byteLength, "byteLength", js, err);
+    parse((glTFChildOfRootProperty*&)val, js);
+    if (js.count("uri")) parse(val->uri, js.at("uri"));
+    if (!js.count("byteLength")) throw runtime_error("missing value");
+    parse(val->byteLength, js.at("byteLength"));
 }
 // Parse a glTFBufferViewTarget enum
-inline void parse(glTFBufferViewTarget& val, const json& js, parse_stack& err) {
+inline void parse(glTFBufferViewTarget& val, const json& js) {
     static map<int, glTFBufferViewTarget> table = {
         {34962, glTFBufferViewTarget::ArrayBuffer},
         {34963, glTFBufferViewTarget::ElementArrayBuffer},
     };
     auto v = int();
-    parse(v, js, err);
+    parse(v, js);
     if (table.find(v) == table.end()) throw runtime_error("bad enum value");
     val = table[v];
 }
 
 // Parses a glTFBufferView object
-inline void parse(glTFBufferView*& val, const json& js, parse_stack& err) {
+inline void parse(glTFBufferView*& val, const json& js) {
     if (!js.is_object()) throw runtime_error("object expected");
     if (!val) val = new glTFBufferView();
-    parse((glTFChildOfRootProperty*&)val, js, err);
-    if (!js.count("buffer")) throw runtime_error("missing required variable");
-    parse_attr(val->buffer, "buffer", js, err);
-    parse_attr(val->byteOffset, "byteOffset", js, err);
-    if (!js.count("byteLength"))
-        throw runtime_error("missing required variable");
-    parse_attr(val->byteLength, "byteLength", js, err);
-    parse_attr(val->byteStride, "byteStride", js, err);
-    parse_attr(val->target, "target", js, err);
+    parse((glTFChildOfRootProperty*&)val, js);
+    if (!js.count("buffer")) throw runtime_error("missing value");
+    parse(val->buffer, js.at("buffer"));
+    if (js.count("byteOffset")) parse(val->byteOffset, js.at("byteOffset"));
+    if (!js.count("byteLength")) throw runtime_error("missing value");
+    parse(val->byteLength, js.at("byteLength"));
+    if (js.count("byteStride")) parse(val->byteStride, js.at("byteStride"));
+    if (js.count("target")) parse(val->target, js.at("target"));
 }
 
 // Parses a glTFCameraOrthographic object
-inline void parse(
-    glTFCameraOrthographic*& val, const json& js, parse_stack& err) {
+inline void parse(glTFCameraOrthographic*& val, const json& js) {
     if (!js.is_object()) throw runtime_error("object expected");
     if (!val) val = new glTFCameraOrthographic();
-    parse((glTFProperty*&)val, js, err);
-    if (!js.count("xmag")) throw runtime_error("missing required variable");
-    parse_attr(val->xmag, "xmag", js, err);
-    if (!js.count("ymag")) throw runtime_error("missing required variable");
-    parse_attr(val->ymag, "ymag", js, err);
-    if (!js.count("zfar")) throw runtime_error("missing required variable");
-    parse_attr(val->zfar, "zfar", js, err);
-    if (!js.count("znear")) throw runtime_error("missing required variable");
-    parse_attr(val->znear, "znear", js, err);
+    parse((glTFProperty*&)val, js);
+    if (!js.count("xmag")) throw runtime_error("missing value");
+    parse(val->xmag, js.at("xmag"));
+    if (!js.count("ymag")) throw runtime_error("missing value");
+    parse(val->ymag, js.at("ymag"));
+    if (!js.count("zfar")) throw runtime_error("missing value");
+    parse(val->zfar, js.at("zfar"));
+    if (!js.count("znear")) throw runtime_error("missing value");
+    parse(val->znear, js.at("znear"));
 }
 
 // Parses a glTFCameraPerspective object
-inline void parse(
-    glTFCameraPerspective*& val, const json& js, parse_stack& err) {
+inline void parse(glTFCameraPerspective*& val, const json& js) {
     if (!js.is_object()) throw runtime_error("object expected");
     if (!val) val = new glTFCameraPerspective();
-    parse((glTFProperty*&)val, js, err);
-    parse_attr(val->aspectRatio, "aspectRatio", js, err);
-    if (!js.count("yfov")) throw runtime_error("missing required variable");
-    parse_attr(val->yfov, "yfov", js, err);
-    parse_attr(val->zfar, "zfar", js, err);
-    if (!js.count("znear")) throw runtime_error("missing required variable");
-    parse_attr(val->znear, "znear", js, err);
+    parse((glTFProperty*&)val, js);
+    if (js.count("aspectRatio")) parse(val->aspectRatio, js.at("aspectRatio"));
+    if (!js.count("yfov")) throw runtime_error("missing value");
+    parse(val->yfov, js.at("yfov"));
+    if (js.count("zfar")) parse(val->zfar, js.at("zfar"));
+    if (!js.count("znear")) throw runtime_error("missing value");
+    parse(val->znear, js.at("znear"));
 }
 // Parse a glTFCameraType enum
-inline void parse(glTFCameraType& val, const json& js, parse_stack& err) {
+inline void parse(glTFCameraType& val, const json& js) {
     static map<string, glTFCameraType> table = {
         {"perspective", glTFCameraType::Perspective},
         {"orthographic", glTFCameraType::Orthographic},
     };
     auto v = string();
-    parse(v, js, err);
+    parse(v, js);
     if (table.find(v) == table.end()) throw runtime_error("bad enum value");
     val = table[v];
 }
 
 // Parses a glTFCamera object
-inline void parse(glTFCamera*& val, const json& js, parse_stack& err) {
+inline void parse(glTFCamera*& val, const json& js) {
     if (!js.is_object()) throw runtime_error("object expected");
     if (!val) val = new glTFCamera();
-    parse((glTFChildOfRootProperty*&)val, js, err);
-    parse_attr(val->orthographic, "orthographic", js, err);
-    parse_attr(val->perspective, "perspective", js, err);
-    if (!js.count("type")) throw runtime_error("missing required variable");
-    parse_attr(val->type, "type", js, err);
+    parse((glTFChildOfRootProperty*&)val, js);
+    if (js.count("orthographic"))
+        parse(val->orthographic, js.at("orthographic"));
+    if (js.count("perspective")) parse(val->perspective, js.at("perspective"));
+    if (!js.count("type")) throw runtime_error("missing value");
+    parse(val->type, js.at("type"));
 }
 // Parse a glTFImageMimeType enum
-inline void parse(glTFImageMimeType& val, const json& js, parse_stack& err) {
+inline void parse(glTFImageMimeType& val, const json& js) {
     static map<string, glTFImageMimeType> table = {
         {"image/jpeg", glTFImageMimeType::ImageJpeg},
         {"image/png", glTFImageMimeType::ImagePng},
     };
     auto v = string();
-    parse(v, js, err);
+    parse(v, js);
     if (table.find(v) == table.end()) throw runtime_error("bad enum value");
     val = table[v];
 }
 
 // Parses a glTFImage object
-inline void parse(glTFImage*& val, const json& js, parse_stack& err) {
+inline void parse(glTFImage*& val, const json& js) {
     if (!js.is_object()) throw runtime_error("object expected");
     if (!val) val = new glTFImage();
-    parse((glTFChildOfRootProperty*&)val, js, err);
-    parse_attr(val->uri, "uri", js, err);
-    parse_attr(val->mimeType, "mimeType", js, err);
-    parse_attr(val->bufferView, "bufferView", js, err);
+    parse((glTFChildOfRootProperty*&)val, js);
+    if (js.count("uri")) parse(val->uri, js.at("uri"));
+    if (js.count("mimeType")) parse(val->mimeType, js.at("mimeType"));
+    if (js.count("bufferView")) parse(val->bufferView, js.at("bufferView"));
 }
 
 // Parses a glTFTextureInfo object
-inline void parse(glTFTextureInfo*& val, const json& js, parse_stack& err) {
+inline void parse(glTFTextureInfo*& val, const json& js) {
     if (!js.is_object()) throw runtime_error("object expected");
     if (!val) val = new glTFTextureInfo();
-    parse((glTFProperty*&)val, js, err);
-    if (!js.count("index")) throw runtime_error("missing required variable");
-    parse_attr(val->index, "index", js, err);
-    parse_attr(val->texCoord, "texCoord", js, err);
+    parse((glTFProperty*&)val, js);
+    if (!js.count("index")) throw runtime_error("missing value");
+    parse(val->index, js.at("index"));
+    if (js.count("texCoord")) parse(val->texCoord, js.at("texCoord"));
 }
 
 // Parses a glTFTexture object
-inline void parse(glTFTexture*& val, const json& js, parse_stack& err) {
+inline void parse(glTFTexture*& val, const json& js) {
     if (!js.is_object()) throw runtime_error("object expected");
     if (!val) val = new glTFTexture();
-    parse((glTFChildOfRootProperty*&)val, js, err);
-    parse_attr(val->sampler, "sampler", js, err);
-    parse_attr(val->source, "source", js, err);
+    parse((glTFChildOfRootProperty*&)val, js);
+    if (js.count("sampler")) parse(val->sampler, js.at("sampler"));
+    if (js.count("source")) parse(val->source, js.at("source"));
 }
 
 // Parses a glTFMaterialNormalTextureInfo object
-inline void parse(
-    glTFMaterialNormalTextureInfo*& val, const json& js, parse_stack& err) {
+inline void parse(glTFMaterialNormalTextureInfo*& val, const json& js) {
     if (!js.is_object()) throw runtime_error("object expected");
     if (!val) val = new glTFMaterialNormalTextureInfo();
-    parse((glTFTextureInfo*&)val, js, err);
-    parse_attr(val->scale, "scale", js, err);
+    parse((glTFTextureInfo*&)val, js);
+    if (js.count("scale")) parse(val->scale, js.at("scale"));
 }
 
 // Parses a glTFMaterialOcclusionTextureInfo object
-inline void parse(
-    glTFMaterialOcclusionTextureInfo*& val, const json& js, parse_stack& err) {
+inline void parse(glTFMaterialOcclusionTextureInfo*& val, const json& js) {
     if (!js.is_object()) throw runtime_error("object expected");
     if (!val) val = new glTFMaterialOcclusionTextureInfo();
-    parse((glTFTextureInfo*&)val, js, err);
-    parse_attr(val->strength, "strength", js, err);
+    parse((glTFTextureInfo*&)val, js);
+    if (js.count("strength")) parse(val->strength, js.at("strength"));
 }
 
 // Parses a glTFMaterialPbrMetallicRoughness object
-inline void parse(
-    glTFMaterialPbrMetallicRoughness*& val, const json& js, parse_stack& err) {
+inline void parse(glTFMaterialPbrMetallicRoughness*& val, const json& js) {
     if (!js.is_object()) throw runtime_error("object expected");
     if (!val) val = new glTFMaterialPbrMetallicRoughness();
-    parse((glTFProperty*&)val, js, err);
-    parse_attr(val->baseColorFactor, "baseColorFactor", js, err);
-    parse_attr(val->baseColorTexture, "baseColorTexture", js, err);
-    parse_attr(val->metallicFactor, "metallicFactor", js, err);
-    parse_attr(val->roughnessFactor, "roughnessFactor", js, err);
-    parse_attr(
-        val->metallicRoughnessTexture, "metallicRoughnessTexture", js, err);
+    parse((glTFProperty*&)val, js);
+    if (js.count("baseColorFactor"))
+        parse(val->baseColorFactor, js.at("baseColorFactor"));
+    if (js.count("baseColorTexture"))
+        parse(val->baseColorTexture, js.at("baseColorTexture"));
+    if (js.count("metallicFactor"))
+        parse(val->metallicFactor, js.at("metallicFactor"));
+    if (js.count("roughnessFactor"))
+        parse(val->roughnessFactor, js.at("roughnessFactor"));
+    if (js.count("metallicRoughnessTexture"))
+        parse(val->metallicRoughnessTexture, js.at("metallicRoughnessTexture"));
 }
 
 // Parses a glTFMaterialPbrSpecularGlossiness object
-inline void parse(
-    glTFMaterialPbrSpecularGlossiness*& val, const json& js, parse_stack& err) {
+inline void parse(glTFMaterialPbrSpecularGlossiness*& val, const json& js) {
     if (!js.is_object()) throw runtime_error("object expected");
     if (!val) val = new glTFMaterialPbrSpecularGlossiness();
-    parse((glTFProperty*&)val, js, err);
-    parse_attr(val->diffuseFactor, "diffuseFactor", js, err);
-    parse_attr(val->diffuseTexture, "diffuseTexture", js, err);
-    parse_attr(val->specularFactor, "specularFactor", js, err);
-    parse_attr(val->glossinessFactor, "glossinessFactor", js, err);
-    parse_attr(
-        val->specularGlossinessTexture, "specularGlossinessTexture", js, err);
+    parse((glTFProperty*&)val, js);
+    if (js.count("diffuseFactor"))
+        parse(val->diffuseFactor, js.at("diffuseFactor"));
+    if (js.count("diffuseTexture"))
+        parse(val->diffuseTexture, js.at("diffuseTexture"));
+    if (js.count("specularFactor"))
+        parse(val->specularFactor, js.at("specularFactor"));
+    if (js.count("glossinessFactor"))
+        parse(val->glossinessFactor, js.at("glossinessFactor"));
+    if (js.count("specularGlossinessTexture"))
+        parse(
+            val->specularGlossinessTexture, js.at("specularGlossinessTexture"));
 }
 // Parse a glTFMaterialAlphaMode enum
-inline void parse(
-    glTFMaterialAlphaMode& val, const json& js, parse_stack& err) {
+inline void parse(glTFMaterialAlphaMode& val, const json& js) {
     static map<string, glTFMaterialAlphaMode> table = {
         {"OPAQUE", glTFMaterialAlphaMode::Opaque},
         {"MASK", glTFMaterialAlphaMode::Mask},
         {"BLEND", glTFMaterialAlphaMode::Blend},
     };
     auto v = string();
-    parse(v, js, err);
+    parse(v, js);
     if (table.find(v) == table.end()) throw runtime_error("bad enum value");
     val = table[v];
 }
 
 // Parses a glTFMaterial object
-inline void parse(glTFMaterial*& val, const json& js, parse_stack& err) {
+inline void parse(glTFMaterial*& val, const json& js) {
     if (!js.is_object()) throw runtime_error("object expected");
     if (!val) val = new glTFMaterial();
-    parse((glTFChildOfRootProperty*&)val, js, err);
-    parse_attr(val->pbrMetallicRoughness, "pbrMetallicRoughness", js, err);
-    parse_attr(val->normalTexture, "normalTexture", js, err);
-    parse_attr(val->occlusionTexture, "occlusionTexture", js, err);
-    parse_attr(val->emissiveTexture, "emissiveTexture", js, err);
-    parse_attr(val->emissiveFactor, "emissiveFactor", js, err);
-    parse_attr(val->alphaMode, "alphaMode", js, err);
-    parse_attr(val->alphaCutoff, "alphaCutoff", js, err);
-    parse_attr(val->doubleSided, "doubleSided", js, err);
+    parse((glTFChildOfRootProperty*&)val, js);
+    if (js.count("pbrMetallicRoughness"))
+        parse(val->pbrMetallicRoughness, js.at("pbrMetallicRoughness"));
+    if (js.count("normalTexture"))
+        parse(val->normalTexture, js.at("normalTexture"));
+    if (js.count("occlusionTexture"))
+        parse(val->occlusionTexture, js.at("occlusionTexture"));
+    if (js.count("emissiveTexture"))
+        parse(val->emissiveTexture, js.at("emissiveTexture"));
+    if (js.count("emissiveFactor"))
+        parse(val->emissiveFactor, js.at("emissiveFactor"));
+    if (js.count("alphaMode")) parse(val->alphaMode, js.at("alphaMode"));
+    if (js.count("alphaCutoff")) parse(val->alphaCutoff, js.at("alphaCutoff"));
+    if (js.count("doubleSided")) parse(val->doubleSided, js.at("doubleSided"));
     if (js.count("extensions")) {
         auto& js_ext = js["extensions"];
-        parse_attr(val->pbrSpecularGlossiness,
-            "KHR_materials_pbrSpecularGlossiness", js_ext, err);
+        if (js_ext.count("KHR_materials_pbrSpecularGlossiness"))
+            parse(val->pbrSpecularGlossiness,
+                js_ext.at("KHR_materials_pbrSpecularGlossiness"));
     }
 }
 // Parse a glTFMeshPrimitiveMode enum
-inline void parse(
-    glTFMeshPrimitiveMode& val, const json& js, parse_stack& err) {
+inline void parse(glTFMeshPrimitiveMode& val, const json& js) {
     static map<int, glTFMeshPrimitiveMode> table = {
         {0, glTFMeshPrimitiveMode::Points},
         {1, glTFMeshPrimitiveMode::Lines},
@@ -3608,65 +3578,63 @@ inline void parse(
         {6, glTFMeshPrimitiveMode::TriangleFan},
     };
     auto v = int();
-    parse(v, js, err);
+    parse(v, js);
     if (table.find(v) == table.end()) throw runtime_error("bad enum value");
     val = table[v];
 }
 
 // Parses a glTFMeshPrimitive object
-inline void parse(glTFMeshPrimitive*& val, const json& js, parse_stack& err) {
+inline void parse(glTFMeshPrimitive*& val, const json& js) {
     if (!js.is_object()) throw runtime_error("object expected");
     if (!val) val = new glTFMeshPrimitive();
-    parse((glTFProperty*&)val, js, err);
-    if (!js.count("attributes"))
-        throw runtime_error("missing required variable");
-    parse_attr(val->attributes, "attributes", js, err);
-    parse_attr(val->indices, "indices", js, err);
-    parse_attr(val->material, "material", js, err);
-    parse_attr(val->mode, "mode", js, err);
-    parse_attr(val->targets, "targets", js, err);
+    parse((glTFProperty*&)val, js);
+    if (!js.count("attributes")) throw runtime_error("missing value");
+    parse(val->attributes, js.at("attributes"));
+    if (js.count("indices")) parse(val->indices, js.at("indices"));
+    if (js.count("material")) parse(val->material, js.at("material"));
+    if (js.count("mode")) parse(val->mode, js.at("mode"));
+    if (js.count("targets")) parse(val->targets, js.at("targets"));
 }
 
 // Parses a glTFMesh object
-inline void parse(glTFMesh*& val, const json& js, parse_stack& err) {
+inline void parse(glTFMesh*& val, const json& js) {
     if (!js.is_object()) throw runtime_error("object expected");
     if (!val) val = new glTFMesh();
-    parse((glTFChildOfRootProperty*&)val, js, err);
-    if (!js.count("primitives"))
-        throw runtime_error("missing required variable");
-    parse_attr(val->primitives, "primitives", js, err);
-    parse_attr(val->weights, "weights", js, err);
+    parse((glTFChildOfRootProperty*&)val, js);
+    if (!js.count("primitives")) throw runtime_error("missing value");
+    parse(val->primitives, js.at("primitives"));
+    if (js.count("weights")) parse(val->weights, js.at("weights"));
 }
 
 // Parses a glTFNode object
-inline void parse(glTFNode*& val, const json& js, parse_stack& err) {
+inline void parse(glTFNode*& val, const json& js) {
     if (!js.is_object()) throw runtime_error("object expected");
     if (!val) val = new glTFNode();
-    parse((glTFChildOfRootProperty*&)val, js, err);
-    parse_attr(val->camera, "camera", js, err);
-    parse_attr(val->children, "children", js, err);
-    parse_attr(val->skin, "skin", js, err);
-    parse_attr(val->matrix, "matrix", js, err);
-    parse_attr(val->mesh, "mesh", js, err);
-    parse_attr(val->rotation, "rotation", js, err);
-    parse_attr(val->scale, "scale", js, err);
-    parse_attr(val->translation, "translation", js, err);
-    parse_attr(val->weights, "weights", js, err);
+    parse((glTFChildOfRootProperty*&)val, js);
+    if (js.count("camera")) parse(val->camera, js.at("camera"));
+    if (js.count("children")) parse(val->children, js.at("children"));
+    if (js.count("skin")) parse(val->skin, js.at("skin"));
+    if (js.count("matrix")) parse(val->matrix, js.at("matrix"));
+    if (js.count("mesh")) parse(val->mesh, js.at("mesh"));
+    if (js.count("rotation")) parse(val->rotation, js.at("rotation"));
+    if (js.count("scale")) parse(val->scale, js.at("scale"));
+    if (js.count("translation")) parse(val->translation, js.at("translation"));
+    if (js.count("weights")) parse(val->weights, js.at("weights"));
 }
 // Parse a glTFSamplerMagFilter enum
-inline void parse(glTFSamplerMagFilter& val, const json& js, parse_stack& err) {
+inline void parse(glTFSamplerMagFilter& val, const json& js) {
     static map<int, glTFSamplerMagFilter> table = {
         {9728, glTFSamplerMagFilter::Nearest},
         {9729, glTFSamplerMagFilter::Linear},
     };
     auto v = int();
-    parse(v, js, err);
+    parse(v, js);
     if (table.find(v) == table.end()) throw runtime_error("bad enum value");
     val = table[v];
 }
 
 // Parse a glTFSamplerMinFilter enum
-inline void parse(glTFSamplerMinFilter& val, const json& js, parse_stack& err) {
+inline void parse(glTFSamplerMinFilter& val, const json& js) {
     static map<int, glTFSamplerMinFilter> table = {
         {9728, glTFSamplerMinFilter::Nearest},
         {9729, glTFSamplerMinFilter::Linear},
@@ -3676,227 +3644,215 @@ inline void parse(glTFSamplerMinFilter& val, const json& js, parse_stack& err) {
         {9987, glTFSamplerMinFilter::LinearMipmapLinear},
     };
     auto v = int();
-    parse(v, js, err);
+    parse(v, js);
     if (table.find(v) == table.end()) throw runtime_error("bad enum value");
     val = table[v];
 }
 
 // Parse a glTFSamplerWrapS enum
-inline void parse(glTFSamplerWrapS& val, const json& js, parse_stack& err) {
+inline void parse(glTFSamplerWrapS& val, const json& js) {
     static map<int, glTFSamplerWrapS> table = {
         {33071, glTFSamplerWrapS::ClampToEdge},
         {33648, glTFSamplerWrapS::MirroredRepeat},
         {10497, glTFSamplerWrapS::Repeat},
     };
     auto v = int();
-    parse(v, js, err);
+    parse(v, js);
     if (table.find(v) == table.end()) throw runtime_error("bad enum value");
     val = table[v];
 }
 
 // Parse a glTFSamplerWrapT enum
-inline void parse(glTFSamplerWrapT& val, const json& js, parse_stack& err) {
+inline void parse(glTFSamplerWrapT& val, const json& js) {
     static map<int, glTFSamplerWrapT> table = {
         {33071, glTFSamplerWrapT::ClampToEdge},
         {33648, glTFSamplerWrapT::MirroredRepeat},
         {10497, glTFSamplerWrapT::Repeat},
     };
     auto v = int();
-    parse(v, js, err);
+    parse(v, js);
     if (table.find(v) == table.end()) throw runtime_error("bad enum value");
     val = table[v];
 }
 
 // Parses a glTFSampler object
-inline void parse(glTFSampler*& val, const json& js, parse_stack& err) {
+inline void parse(glTFSampler*& val, const json& js) {
     if (!js.is_object()) throw runtime_error("object expected");
     if (!val) val = new glTFSampler();
-    parse((glTFChildOfRootProperty*&)val, js, err);
-    parse_attr(val->magFilter, "magFilter", js, err);
-    parse_attr(val->minFilter, "minFilter", js, err);
-    parse_attr(val->wrapS, "wrapS", js, err);
-    parse_attr(val->wrapT, "wrapT", js, err);
+    parse((glTFChildOfRootProperty*&)val, js);
+    if (js.count("magFilter")) parse(val->magFilter, js.at("magFilter"));
+    if (js.count("minFilter")) parse(val->minFilter, js.at("minFilter"));
+    if (js.count("wrapS")) parse(val->wrapS, js.at("wrapS"));
+    if (js.count("wrapT")) parse(val->wrapT, js.at("wrapT"));
 }
 
 // Parses a glTFScene object
-inline void parse(glTFScene*& val, const json& js, parse_stack& err) {
+inline void parse(glTFScene*& val, const json& js) {
     if (!js.is_object()) throw runtime_error("object expected");
     if (!val) val = new glTFScene();
-    parse((glTFChildOfRootProperty*&)val, js, err);
-    parse_attr(val->nodes, "nodes", js, err);
+    parse((glTFChildOfRootProperty*&)val, js);
+    if (js.count("nodes")) parse(val->nodes, js.at("nodes"));
 }
 
 // Parses a glTFSkin object
-inline void parse(glTFSkin*& val, const json& js, parse_stack& err) {
+inline void parse(glTFSkin*& val, const json& js) {
     if (!js.is_object()) throw runtime_error("object expected");
     if (!val) val = new glTFSkin();
-    parse((glTFChildOfRootProperty*&)val, js, err);
-    parse_attr(val->inverseBindMatrices, "inverseBindMatrices", js, err);
-    parse_attr(val->skeleton, "skeleton", js, err);
-    if (!js.count("joints")) throw runtime_error("missing required variable");
-    parse_attr(val->joints, "joints", js, err);
+    parse((glTFChildOfRootProperty*&)val, js);
+    if (js.count("inverseBindMatrices"))
+        parse(val->inverseBindMatrices, js.at("inverseBindMatrices"));
+    if (js.count("skeleton")) parse(val->skeleton, js.at("skeleton"));
+    if (!js.count("joints")) throw runtime_error("missing value");
+    parse(val->joints, js.at("joints"));
 }
 
 // Parses a glTF object
-inline void parse(glTF*& val, const json& js, parse_stack& err) {
+inline void parse(glTF*& val, const json& js) {
     if (!js.is_object()) throw runtime_error("object expected");
     if (!val) val = new glTF();
-    parse((glTFProperty*&)val, js, err);
-    parse_attr(val->extensionsUsed, "extensionsUsed", js, err);
-    parse_attr(val->extensionsRequired, "extensionsRequired", js, err);
-    parse_attr(val->accessors, "accessors", js, err);
-    parse_attr(val->animations, "animations", js, err);
-    if (!js.count("asset")) throw runtime_error("missing required variable");
-    parse_attr(val->asset, "asset", js, err);
-    parse_attr(val->buffers, "buffers", js, err);
-    parse_attr(val->bufferViews, "bufferViews", js, err);
-    parse_attr(val->cameras, "cameras", js, err);
-    parse_attr(val->images, "images", js, err);
-    parse_attr(val->materials, "materials", js, err);
-    parse_attr(val->meshes, "meshes", js, err);
-    parse_attr(val->nodes, "nodes", js, err);
-    parse_attr(val->samplers, "samplers", js, err);
-    parse_attr(val->scene, "scene", js, err);
-    parse_attr(val->scenes, "scenes", js, err);
-    parse_attr(val->skins, "skins", js, err);
-    parse_attr(val->textures, "textures", js, err);
-}
-
-// Dump support function.
-template <typename T>
-inline void dump(const vector<T>& vals, json& js, parse_stack& err) {
-    js = json::array();
-    for (auto i = 0; i < vals.size(); i++) { dump(vals[i], js[i], err); }
+    parse((glTFProperty*&)val, js);
+    if (js.count("extensionsUsed"))
+        parse(val->extensionsUsed, js.at("extensionsUsed"));
+    if (js.count("extensionsRequired"))
+        parse(val->extensionsRequired, js.at("extensionsRequired"));
+    if (js.count("accessors")) parse(val->accessors, js.at("accessors"));
+    if (js.count("animations")) parse(val->animations, js.at("animations"));
+    if (!js.count("asset")) throw runtime_error("missing value");
+    parse(val->asset, js.at("asset"));
+    if (js.count("buffers")) parse(val->buffers, js.at("buffers"));
+    if (js.count("bufferViews")) parse(val->bufferViews, js.at("bufferViews"));
+    if (js.count("cameras")) parse(val->cameras, js.at("cameras"));
+    if (js.count("images")) parse(val->images, js.at("images"));
+    if (js.count("materials")) parse(val->materials, js.at("materials"));
+    if (js.count("meshes")) parse(val->meshes, js.at("meshes"));
+    if (js.count("nodes")) parse(val->nodes, js.at("nodes"));
+    if (js.count("samplers")) parse(val->samplers, js.at("samplers"));
+    if (js.count("scene")) parse(val->scene, js.at("scene"));
+    if (js.count("scenes")) parse(val->scenes, js.at("scenes"));
+    if (js.count("skins")) parse(val->skins, js.at("skins"));
+    if (js.count("textures")) parse(val->textures, js.at("textures"));
 }
 
 // Converts int to json.
-inline void dump(const int& val, json& js, parse_stack& err) { js = val; }
+inline void dump(const int& val, json& js) { js = val; }
 
 // Converts float to json.
-inline void dump(const float& val, json& js, parse_stack& err) { js = val; }
+inline void dump(const float& val, json& js) { js = val; }
 
 // Converts bool to json.
-inline void dump(const bool& val, json& js, parse_stack& err) { js = val; }
+inline void dump(const bool& val, json& js) { js = val; }
 
 // Converts string to json.
-inline void dump(const string& val, json& js, parse_stack& err) { js = val; }
+inline void dump(const string& val, json& js) { js = val; }
 
 // Converts json to json.
-inline void dump(const json& val, json& js, parse_stack& err) { js = val; }
+inline void dump(const json& val, json& js) { js = val; }
 
 // Dump support function.
-inline void dump(const vec2f& vals, json& js, parse_stack& err) {
+inline void dump(const vec2f& vals, json& js) {
     js = json::array();
-    for (auto i = 0; i < 2; i++) { dump(vals[i], js[i], err); }
+    for (auto i = 0; i < 2; i++) { dump(vals[i], js[i]); }
 }
 
 // Dump support function.
-inline void dump(const vec3f& vals, json& js, parse_stack& err) {
+inline void dump(const vec3f& vals, json& js) {
     js = json::array();
-    for (auto i = 0; i < 3; i++) { dump(vals[i], js[i], err); }
+    for (auto i = 0; i < 3; i++) { dump(vals[i], js[i]); }
 }
 
 // Dump support function.
-inline void dump(const vec4f& vals, json& js, parse_stack& err) {
+inline void dump(const vec4f& vals, json& js) {
     js = json::array();
-    for (auto i = 0; i < 4; i++) { dump(vals[i], js[i], err); }
+    for (auto i = 0; i < 4; i++) { dump(vals[i], js[i]); }
 }
 
 // Dump support function.
-inline void dump(const quat4f& vals, json& js, parse_stack& err) {
+inline void dump(const quat4f& vals, json& js) {
     js = json::array();
-    for (auto i = 0; i < 4; i++) { dump(vals[i], js[i], err); }
+    for (auto i = 0; i < 4; i++) { dump(vals[i], js[i]); }
 }
 
 // Dump support function.
-inline void dump(const mat4f& vals, json& js, parse_stack& err) {
+inline void dump(const mat4f& vals, json& js) {
     js = json::array();
     for (auto j = 0; j < 4; j++) {
-        for (auto i = 0; i < 4; i++) { dump(vals[j][i], js[j * 4 + i], err); }
+        for (auto i = 0; i < 4; i++) { dump(vals[j][i], js[j * 4 + i]); }
     }
 }
 
 // Dump support function.
 template <typename T>
-inline void dump(const map<string, T>& vals, json& js, parse_stack& err) {
-    js = json::object();
-    for (auto&& kv : vals) { dump(kv.second, js[kv.first], err); }
+inline void dump(const vector<T>& vals, json& js) {
+    js = json::array();
+    for (auto i = 0; i < vals.size(); i++) { dump(vals[i], js[i]); }
 }
 
 // Dump support function.
 template <typename T>
-inline void dump_attr(
-    const T& val, const char* name, json& js, parse_stack& err) {
-    err.path.push_back(name);
-    dump(val, js[name], err);
-    err.path.pop_back();
+inline void dump(const map<string, T>& vals, json& js) {
+    js = json::object();
+    for (auto&& kv : vals) { dump(kv.second, js[kv.first]); }
 }
 
 // Converts glTFid to json.
 template <typename T>
-inline void dump(const glTFid<T>& val, json& js, parse_stack& err) {
+inline void dump(const glTFid<T>& val, json& js) {
     js = (int)val;
 }
 
 // Converts a glTFProperty object to JSON
-inline void dump(const glTFProperty* val, json& js, parse_stack& err) {
+inline void dump(const glTFProperty* val, json& js) {
     if (!js.is_object()) js = json::object();
 #if YGL_GLTFJSON
-    if (!val->extensions.empty())
-        dump_attr(val->extensions, "extensions", js, err);
-    if (!val->extras.is_null()) dump_attr(val->extras, "extras", js, err);
+    if (!val->extensions.empty()) dump(val->extensions, js["extensions"]);
+    if (!val->extras.is_null()) dump_attr(val->extras, "extras", js);
 #endif
 }
 
 // Converts a glTFChildOfRootProperty object to JSON
-inline void dump(
-    const glTFChildOfRootProperty* val, json& js, parse_stack& err) {
+inline void dump(const glTFChildOfRootProperty* val, json& js) {
     if (!js.is_object()) js = json::object();
-    dump((const glTFProperty*)val, js, err);
-    if (val->name != "") dump_attr(val->name, "name", js, err);
+    dump((const glTFProperty*)val, js);
+    if (val->name != "") dump(val->name, js["name"]);
 }
 // Converts a glTFAccessorSparseIndicesComponentType enum to JSON
-inline void dump(const glTFAccessorSparseIndicesComponentType& val, json& js,
-    parse_stack& err) {
+inline void dump(const glTFAccessorSparseIndicesComponentType& val, json& js) {
     static map<glTFAccessorSparseIndicesComponentType, int> table = {
         {glTFAccessorSparseIndicesComponentType::UnsignedByte, 5121},
         {glTFAccessorSparseIndicesComponentType::UnsignedShort, 5123},
         {glTFAccessorSparseIndicesComponentType::UnsignedInt, 5125},
     };
     auto v = table.at(val);
-    dump(v, js, err);
+    dump(v, js);
 }
 
 // Converts a glTFAccessorSparseIndices object to JSON
-inline void dump(
-    const glTFAccessorSparseIndices* val, json& js, parse_stack& err) {
+inline void dump(const glTFAccessorSparseIndices* val, json& js) {
     if (!js.is_object()) js = json::object();
-    dump((const glTFProperty*)val, js, err);
-    dump_attr(val->bufferView, "bufferView", js, err);
-    if (val->byteOffset != 0) dump_attr(val->byteOffset, "byteOffset", js, err);
-    dump_attr(val->componentType, "componentType", js, err);
+    dump((const glTFProperty*)val, js);
+    dump(val->bufferView, js["bufferView"]);
+    if (val->byteOffset != 0) dump(val->byteOffset, js["byteOffset"]);
+    dump(val->componentType, js["componentType"]);
 }
 
 // Converts a glTFAccessorSparseValues object to JSON
-inline void dump(
-    const glTFAccessorSparseValues* val, json& js, parse_stack& err) {
+inline void dump(const glTFAccessorSparseValues* val, json& js) {
     if (!js.is_object()) js = json::object();
-    dump((const glTFProperty*)val, js, err);
-    dump_attr(val->bufferView, "bufferView", js, err);
-    if (val->byteOffset != 0) dump_attr(val->byteOffset, "byteOffset", js, err);
+    dump((const glTFProperty*)val, js);
+    dump(val->bufferView, js["bufferView"]);
+    if (val->byteOffset != 0) dump(val->byteOffset, js["byteOffset"]);
 }
 
 // Converts a glTFAccessorSparse object to JSON
-inline void dump(const glTFAccessorSparse* val, json& js, parse_stack& err) {
+inline void dump(const glTFAccessorSparse* val, json& js) {
     if (!js.is_object()) js = json::object();
-    dump((const glTFProperty*)val, js, err);
-    dump_attr(val->count, "count", js, err);
-    dump_attr(val->indices, "indices", js, err);
-    dump_attr(val->values, "values", js, err);
+    dump((const glTFProperty*)val, js);
+    dump(val->count, js["count"]);
+    dump(val->indices, js["indices"]);
+    dump(val->values, js["values"]);
 }
 // Converts a glTFAccessorComponentType enum to JSON
-inline void dump(
-    const glTFAccessorComponentType& val, json& js, parse_stack& err) {
+inline void dump(const glTFAccessorComponentType& val, json& js) {
     static map<glTFAccessorComponentType, int> table = {
         {glTFAccessorComponentType::Byte, 5120},
         {glTFAccessorComponentType::UnsignedByte, 5121},
@@ -3906,11 +3862,11 @@ inline void dump(
         {glTFAccessorComponentType::Float, 5126},
     };
     auto v = table.at(val);
-    dump(v, js, err);
+    dump(v, js);
 }
 
 // Converts a glTFAccessorType enum to JSON
-inline void dump(const glTFAccessorType& val, json& js, parse_stack& err) {
+inline void dump(const glTFAccessorType& val, json& js) {
     static map<glTFAccessorType, string> table = {
         {glTFAccessorType::Scalar, "SCALAR"},
         {glTFAccessorType::Vec2, "VEC2"},
@@ -3921,28 +3877,25 @@ inline void dump(const glTFAccessorType& val, json& js, parse_stack& err) {
         {glTFAccessorType::Mat4, "MAT4"},
     };
     auto v = table.at(val);
-    dump(v, js, err);
+    dump(v, js);
 }
 
 // Converts a glTFAccessor object to JSON
-inline void dump(const glTFAccessor* val, json& js, parse_stack& err) {
+inline void dump(const glTFAccessor* val, json& js) {
     if (!js.is_object()) js = json::object();
-    dump((const glTFChildOfRootProperty*)val, js, err);
-    if (val->bufferView.is_valid())
-        dump_attr(val->bufferView, "bufferView", js, err);
-    if (val->byteOffset != 0) dump_attr(val->byteOffset, "byteOffset", js, err);
-    dump_attr(val->componentType, "componentType", js, err);
-    if (val->normalized != false)
-        dump_attr(val->normalized, "normalized", js, err);
-    dump_attr(val->count, "count", js, err);
-    dump_attr(val->type, "type", js, err);
-    if (!val->max.empty()) dump_attr(val->max, "max", js, err);
-    if (!val->min.empty()) dump_attr(val->min, "min", js, err);
-    if (val->sparse != nullptr) dump_attr(val->sparse, "sparse", js, err);
+    dump((const glTFChildOfRootProperty*)val, js);
+    if (val->bufferView.is_valid()) dump(val->bufferView, js["bufferView"]);
+    if (val->byteOffset != 0) dump(val->byteOffset, js["byteOffset"]);
+    dump(val->componentType, js["componentType"]);
+    if (val->normalized != false) dump(val->normalized, js["normalized"]);
+    dump(val->count, js["count"]);
+    dump(val->type, js["type"]);
+    if (!val->max.empty()) dump(val->max, js["max"]);
+    if (!val->min.empty()) dump(val->min, js["min"]);
+    if (val->sparse != nullptr) dump(val->sparse, js["sparse"]);
 }
 // Converts a glTFAnimationChannelTargetPath enum to JSON
-inline void dump(
-    const glTFAnimationChannelTargetPath& val, json& js, parse_stack& err) {
+inline void dump(const glTFAnimationChannelTargetPath& val, json& js) {
     static map<glTFAnimationChannelTargetPath, string> table = {
         {glTFAnimationChannelTargetPath::Translation, "translation"},
         {glTFAnimationChannelTargetPath::Rotation, "rotation"},
@@ -3950,28 +3903,26 @@ inline void dump(
         {glTFAnimationChannelTargetPath::Weights, "weights"},
     };
     auto v = table.at(val);
-    dump(v, js, err);
+    dump(v, js);
 }
 
 // Converts a glTFAnimationChannelTarget object to JSON
-inline void dump(
-    const glTFAnimationChannelTarget* val, json& js, parse_stack& err) {
+inline void dump(const glTFAnimationChannelTarget* val, json& js) {
     if (!js.is_object()) js = json::object();
-    dump((const glTFProperty*)val, js, err);
-    dump_attr(val->node, "node", js, err);
-    dump_attr(val->path, "path", js, err);
+    dump((const glTFProperty*)val, js);
+    dump(val->node, js["node"]);
+    dump(val->path, js["path"]);
 }
 
 // Converts a glTFAnimationChannel object to JSON
-inline void dump(const glTFAnimationChannel* val, json& js, parse_stack& err) {
+inline void dump(const glTFAnimationChannel* val, json& js) {
     if (!js.is_object()) js = json::object();
-    dump((const glTFProperty*)val, js, err);
-    dump_attr(val->sampler, "sampler", js, err);
-    dump_attr(val->target, "target", js, err);
+    dump((const glTFProperty*)val, js);
+    dump(val->sampler, js["sampler"]);
+    dump(val->target, js["target"]);
 }
 // Converts a glTFAnimationSamplerInterpolation enum to JSON
-inline void dump(
-    const glTFAnimationSamplerInterpolation& val, json& js, parse_stack& err) {
+inline void dump(const glTFAnimationSamplerInterpolation& val, json& js) {
     static map<glTFAnimationSamplerInterpolation, string> table = {
         {glTFAnimationSamplerInterpolation::Linear, "LINEAR"},
         {glTFAnimationSamplerInterpolation::Step, "STEP"},
@@ -3980,236 +3931,223 @@ inline void dump(
         {glTFAnimationSamplerInterpolation::CubicSpline, "CUBICSPLINE"},
     };
     auto v = table.at(val);
-    dump(v, js, err);
+    dump(v, js);
 }
 
 // Converts a glTFAnimationSampler object to JSON
-inline void dump(const glTFAnimationSampler* val, json& js, parse_stack& err) {
+inline void dump(const glTFAnimationSampler* val, json& js) {
     if (!js.is_object()) js = json::object();
-    dump((const glTFProperty*)val, js, err);
-    dump_attr(val->input, "input", js, err);
+    dump((const glTFProperty*)val, js);
+    dump(val->input, js["input"]);
     if (val->interpolation != glTFAnimationSamplerInterpolation::Linear)
-        dump_attr(val->interpolation, "interpolation", js, err);
-    dump_attr(val->output, "output", js, err);
+        dump(val->interpolation, js["interpolation"]);
+    dump(val->output, js["output"]);
 }
 
 // Converts a glTFAnimation object to JSON
-inline void dump(const glTFAnimation* val, json& js, parse_stack& err) {
+inline void dump(const glTFAnimation* val, json& js) {
     if (!js.is_object()) js = json::object();
-    dump((const glTFChildOfRootProperty*)val, js, err);
-    dump_attr(val->channels, "channels", js, err);
-    dump_attr(val->samplers, "samplers", js, err);
+    dump((const glTFChildOfRootProperty*)val, js);
+    dump(val->channels, js["channels"]);
+    dump(val->samplers, js["samplers"]);
 }
 
 // Converts a glTFAsset object to JSON
-inline void dump(const glTFAsset* val, json& js, parse_stack& err) {
+inline void dump(const glTFAsset* val, json& js) {
     if (!js.is_object()) js = json::object();
-    dump((const glTFProperty*)val, js, err);
-    if (val->copyright != "") dump_attr(val->copyright, "copyright", js, err);
-    if (val->generator != "") dump_attr(val->generator, "generator", js, err);
-    dump_attr(val->version, "version", js, err);
-    if (val->minVersion != "")
-        dump_attr(val->minVersion, "minVersion", js, err);
+    dump((const glTFProperty*)val, js);
+    if (val->copyright != "") dump(val->copyright, js["copyright"]);
+    if (val->generator != "") dump(val->generator, js["generator"]);
+    dump(val->version, js["version"]);
+    if (val->minVersion != "") dump(val->minVersion, js["minVersion"]);
 }
 
 // Converts a glTFBuffer object to JSON
-inline void dump(const glTFBuffer* val, json& js, parse_stack& err) {
+inline void dump(const glTFBuffer* val, json& js) {
     if (!js.is_object()) js = json::object();
-    dump((const glTFChildOfRootProperty*)val, js, err);
-    if (val->uri != "") dump_attr(val->uri, "uri", js, err);
-    dump_attr(val->byteLength, "byteLength", js, err);
+    dump((const glTFChildOfRootProperty*)val, js);
+    if (val->uri != "") dump(val->uri, js["uri"]);
+    dump(val->byteLength, js["byteLength"]);
 }
 // Converts a glTFBufferViewTarget enum to JSON
-inline void dump(const glTFBufferViewTarget& val, json& js, parse_stack& err) {
+inline void dump(const glTFBufferViewTarget& val, json& js) {
     static map<glTFBufferViewTarget, int> table = {
         {glTFBufferViewTarget::ArrayBuffer, 34962},
         {glTFBufferViewTarget::ElementArrayBuffer, 34963},
     };
     auto v = table.at(val);
-    dump(v, js, err);
+    dump(v, js);
 }
 
 // Converts a glTFBufferView object to JSON
-inline void dump(const glTFBufferView* val, json& js, parse_stack& err) {
+inline void dump(const glTFBufferView* val, json& js) {
     if (!js.is_object()) js = json::object();
-    dump((const glTFChildOfRootProperty*)val, js, err);
-    dump_attr(val->buffer, "buffer", js, err);
-    if (val->byteOffset != 0) dump_attr(val->byteOffset, "byteOffset", js, err);
-    dump_attr(val->byteLength, "byteLength", js, err);
-    if (val->byteStride != 0) dump_attr(val->byteStride, "byteStride", js, err);
+    dump((const glTFChildOfRootProperty*)val, js);
+    dump(val->buffer, js["buffer"]);
+    if (val->byteOffset != 0) dump(val->byteOffset, js["byteOffset"]);
+    dump(val->byteLength, js["byteLength"]);
+    if (val->byteStride != 0) dump(val->byteStride, js["byteStride"]);
     if (val->target != glTFBufferViewTarget::NotSet)
-        dump_attr(val->target, "target", js, err);
+        dump(val->target, js["target"]);
 }
 
 // Converts a glTFCameraOrthographic object to JSON
-inline void dump(
-    const glTFCameraOrthographic* val, json& js, parse_stack& err) {
+inline void dump(const glTFCameraOrthographic* val, json& js) {
     if (!js.is_object()) js = json::object();
-    dump((const glTFProperty*)val, js, err);
-    dump_attr(val->xmag, "xmag", js, err);
-    dump_attr(val->ymag, "ymag", js, err);
-    dump_attr(val->zfar, "zfar", js, err);
-    dump_attr(val->znear, "znear", js, err);
+    dump((const glTFProperty*)val, js);
+    dump(val->xmag, js["xmag"]);
+    dump(val->ymag, js["ymag"]);
+    dump(val->zfar, js["zfar"]);
+    dump(val->znear, js["znear"]);
 }
 
 // Converts a glTFCameraPerspective object to JSON
-inline void dump(const glTFCameraPerspective* val, json& js, parse_stack& err) {
+inline void dump(const glTFCameraPerspective* val, json& js) {
     if (!js.is_object()) js = json::object();
-    dump((const glTFProperty*)val, js, err);
-    if (val->aspectRatio != 0)
-        dump_attr(val->aspectRatio, "aspectRatio", js, err);
-    dump_attr(val->yfov, "yfov", js, err);
-    if (val->zfar != 0) dump_attr(val->zfar, "zfar", js, err);
-    dump_attr(val->znear, "znear", js, err);
+    dump((const glTFProperty*)val, js);
+    if (val->aspectRatio != 0) dump(val->aspectRatio, js["aspectRatio"]);
+    dump(val->yfov, js["yfov"]);
+    if (val->zfar != 0) dump(val->zfar, js["zfar"]);
+    dump(val->znear, js["znear"]);
 }
 // Converts a glTFCameraType enum to JSON
-inline void dump(const glTFCameraType& val, json& js, parse_stack& err) {
+inline void dump(const glTFCameraType& val, json& js) {
     static map<glTFCameraType, string> table = {
         {glTFCameraType::Perspective, "perspective"},
         {glTFCameraType::Orthographic, "orthographic"},
     };
     auto v = table.at(val);
-    dump(v, js, err);
+    dump(v, js);
 }
 
 // Converts a glTFCamera object to JSON
-inline void dump(const glTFCamera* val, json& js, parse_stack& err) {
+inline void dump(const glTFCamera* val, json& js) {
     if (!js.is_object()) js = json::object();
-    dump((const glTFChildOfRootProperty*)val, js, err);
+    dump((const glTFChildOfRootProperty*)val, js);
     if (val->orthographic != nullptr)
-        dump_attr(val->orthographic, "orthographic", js, err);
-    if (val->perspective != nullptr)
-        dump_attr(val->perspective, "perspective", js, err);
-    dump_attr(val->type, "type", js, err);
+        dump(val->orthographic, js["orthographic"]);
+    if (val->perspective != nullptr) dump(val->perspective, js["perspective"]);
+    dump(val->type, js["type"]);
 }
 // Converts a glTFImageMimeType enum to JSON
-inline void dump(const glTFImageMimeType& val, json& js, parse_stack& err) {
+inline void dump(const glTFImageMimeType& val, json& js) {
     static map<glTFImageMimeType, string> table = {
         {glTFImageMimeType::ImageJpeg, "image/jpeg"},
         {glTFImageMimeType::ImagePng, "image/png"},
     };
     auto v = table.at(val);
-    dump(v, js, err);
+    dump(v, js);
 }
 
 // Converts a glTFImage object to JSON
-inline void dump(const glTFImage* val, json& js, parse_stack& err) {
+inline void dump(const glTFImage* val, json& js) {
     if (!js.is_object()) js = json::object();
-    dump((const glTFChildOfRootProperty*)val, js, err);
-    if (val->uri != "") dump_attr(val->uri, "uri", js, err);
+    dump((const glTFChildOfRootProperty*)val, js);
+    if (val->uri != "") dump(val->uri, js["uri"]);
     if (val->mimeType != glTFImageMimeType::NotSet)
-        dump_attr(val->mimeType, "mimeType", js, err);
-    if (val->bufferView.is_valid())
-        dump_attr(val->bufferView, "bufferView", js, err);
+        dump(val->mimeType, js["mimeType"]);
+    if (val->bufferView.is_valid()) dump(val->bufferView, js["bufferView"]);
 }
 
 // Converts a glTFTextureInfo object to JSON
-inline void dump(const glTFTextureInfo* val, json& js, parse_stack& err) {
+inline void dump(const glTFTextureInfo* val, json& js) {
     if (!js.is_object()) js = json::object();
-    dump((const glTFProperty*)val, js, err);
-    dump_attr(val->index, "index", js, err);
-    if (val->texCoord != 0) dump_attr(val->texCoord, "texCoord", js, err);
+    dump((const glTFProperty*)val, js);
+    dump(val->index, js["index"]);
+    if (val->texCoord != 0) dump(val->texCoord, js["texCoord"]);
 }
 
 // Converts a glTFTexture object to JSON
-inline void dump(const glTFTexture* val, json& js, parse_stack& err) {
+inline void dump(const glTFTexture* val, json& js) {
     if (!js.is_object()) js = json::object();
-    dump((const glTFChildOfRootProperty*)val, js, err);
-    if (val->sampler.is_valid()) dump_attr(val->sampler, "sampler", js, err);
-    if (val->source.is_valid()) dump_attr(val->source, "source", js, err);
+    dump((const glTFChildOfRootProperty*)val, js);
+    if (val->sampler.is_valid()) dump(val->sampler, js["sampler"]);
+    if (val->source.is_valid()) dump(val->source, js["source"]);
 }
 
 // Converts a glTFMaterialNormalTextureInfo object to JSON
-inline void dump(
-    const glTFMaterialNormalTextureInfo* val, json& js, parse_stack& err) {
+inline void dump(const glTFMaterialNormalTextureInfo* val, json& js) {
     if (!js.is_object()) js = json::object();
-    dump((const glTFTextureInfo*)val, js, err);
-    if (val->scale != 1) dump_attr(val->scale, "scale", js, err);
+    dump((const glTFTextureInfo*)val, js);
+    if (val->scale != 1) dump(val->scale, js["scale"]);
 }
 
 // Converts a glTFMaterialOcclusionTextureInfo object to JSON
-inline void dump(
-    const glTFMaterialOcclusionTextureInfo* val, json& js, parse_stack& err) {
+inline void dump(const glTFMaterialOcclusionTextureInfo* val, json& js) {
     if (!js.is_object()) js = json::object();
-    dump((const glTFTextureInfo*)val, js, err);
-    if (val->strength != 1) dump_attr(val->strength, "strength", js, err);
+    dump((const glTFTextureInfo*)val, js);
+    if (val->strength != 1) dump(val->strength, js["strength"]);
 }
 
 // Converts a glTFMaterialPbrMetallicRoughness object to JSON
-inline void dump(
-    const glTFMaterialPbrMetallicRoughness* val, json& js, parse_stack& err) {
+inline void dump(const glTFMaterialPbrMetallicRoughness* val, json& js) {
     if (!js.is_object()) js = json::object();
-    dump((const glTFProperty*)val, js, err);
+    dump((const glTFProperty*)val, js);
     if (val->baseColorFactor != vec4f{1, 1, 1, 1})
-        dump_attr(val->baseColorFactor, "baseColorFactor", js, err);
+        dump(val->baseColorFactor, js["baseColorFactor"]);
     if (val->baseColorTexture != nullptr)
-        dump_attr(val->baseColorTexture, "baseColorTexture", js, err);
+        dump(val->baseColorTexture, js["baseColorTexture"]);
     if (val->metallicFactor != 1)
-        dump_attr(val->metallicFactor, "metallicFactor", js, err);
+        dump(val->metallicFactor, js["metallicFactor"]);
     if (val->roughnessFactor != 1)
-        dump_attr(val->roughnessFactor, "roughnessFactor", js, err);
+        dump(val->roughnessFactor, js["roughnessFactor"]);
     if (val->metallicRoughnessTexture != nullptr)
-        dump_attr(
-            val->metallicRoughnessTexture, "metallicRoughnessTexture", js, err);
+        dump(val->metallicRoughnessTexture, js["metallicRoughnessTexture"]);
 }
 
 // Converts a glTFMaterialPbrSpecularGlossiness object to JSON
-inline void dump(
-    const glTFMaterialPbrSpecularGlossiness* val, json& js, parse_stack& err) {
+inline void dump(const glTFMaterialPbrSpecularGlossiness* val, json& js) {
     if (!js.is_object()) js = json::object();
-    dump((const glTFProperty*)val, js, err);
+    dump((const glTFProperty*)val, js);
     if (val->diffuseFactor != vec4f{1, 1, 1, 1})
-        dump_attr(val->diffuseFactor, "diffuseFactor", js, err);
+        dump(val->diffuseFactor, js["diffuseFactor"]);
     if (val->diffuseTexture != nullptr)
-        dump_attr(val->diffuseTexture, "diffuseTexture", js, err);
+        dump(val->diffuseTexture, js["diffuseTexture"]);
     if (val->specularFactor != vec3f{1, 1, 1})
-        dump_attr(val->specularFactor, "specularFactor", js, err);
+        dump(val->specularFactor, js["specularFactor"]);
     if (val->glossinessFactor != 1)
-        dump_attr(val->glossinessFactor, "glossinessFactor", js, err);
+        dump(val->glossinessFactor, js["glossinessFactor"]);
     if (val->specularGlossinessTexture != nullptr)
-        dump_attr(val->specularGlossinessTexture, "specularGlossinessTexture",
-            js, err);
+        dump(val->specularGlossinessTexture, js["specularGlossinessTexture"]);
 }
 // Converts a glTFMaterialAlphaMode enum to JSON
-inline void dump(const glTFMaterialAlphaMode& val, json& js, parse_stack& err) {
+inline void dump(const glTFMaterialAlphaMode& val, json& js) {
     static map<glTFMaterialAlphaMode, string> table = {
         {glTFMaterialAlphaMode::Opaque, "OPAQUE"},
         {glTFMaterialAlphaMode::Mask, "MASK"},
         {glTFMaterialAlphaMode::Blend, "BLEND"},
     };
     auto v = table.at(val);
-    dump(v, js, err);
+    dump(v, js);
 }
 
 // Converts a glTFMaterial object to JSON
-inline void dump(const glTFMaterial* val, json& js, parse_stack& err) {
+inline void dump(const glTFMaterial* val, json& js) {
     if (!js.is_object()) js = json::object();
-    dump((const glTFChildOfRootProperty*)val, js, err);
+    dump((const glTFChildOfRootProperty*)val, js);
     if (val->pbrMetallicRoughness != nullptr)
-        dump_attr(val->pbrMetallicRoughness, "pbrMetallicRoughness", js, err);
+        dump(val->pbrMetallicRoughness, js["pbrMetallicRoughness"]);
     if (val->normalTexture != nullptr)
-        dump_attr(val->normalTexture, "normalTexture", js, err);
+        dump(val->normalTexture, js["normalTexture"]);
     if (val->occlusionTexture != nullptr)
-        dump_attr(val->occlusionTexture, "occlusionTexture", js, err);
+        dump(val->occlusionTexture, js["occlusionTexture"]);
     if (val->emissiveTexture != nullptr)
-        dump_attr(val->emissiveTexture, "emissiveTexture", js, err);
+        dump(val->emissiveTexture, js["emissiveTexture"]);
     if (val->emissiveFactor != vec3f{0, 0, 0})
-        dump_attr(val->emissiveFactor, "emissiveFactor", js, err);
+        dump(val->emissiveFactor, js["emissiveFactor"]);
     if (val->alphaMode != glTFMaterialAlphaMode::Opaque)
-        dump_attr(val->alphaMode, "alphaMode", js, err);
-    if (val->alphaCutoff != 0.5)
-        dump_attr(val->alphaCutoff, "alphaCutoff", js, err);
-    if (val->doubleSided != false)
-        dump_attr(val->doubleSided, "doubleSided", js, err);
+        dump(val->alphaMode, js["alphaMode"]);
+    if (val->alphaCutoff != 0.5) dump(val->alphaCutoff, js["alphaCutoff"]);
+    if (val->doubleSided != false) dump(val->doubleSided, js["doubleSided"]);
 
     if (val->pbrSpecularGlossiness != nullptr) {
         auto& js_ext = js["extensions"];
-        dump_attr(val->pbrSpecularGlossiness,
-            "KHR_materials_pbrSpecularGlossiness", js_ext, err);
+        dump(val->pbrSpecularGlossiness,
+            js_ext["KHR_materials_pbrSpecularGlossiness"]);
     }
 }
 // Converts a glTFMeshPrimitiveMode enum to JSON
-inline void dump(const glTFMeshPrimitiveMode& val, json& js, parse_stack& err) {
+inline void dump(const glTFMeshPrimitiveMode& val, json& js) {
     static map<glTFMeshPrimitiveMode, int> table = {
         {glTFMeshPrimitiveMode::Points, 0},
         {glTFMeshPrimitiveMode::Lines, 1},
@@ -4220,59 +4158,59 @@ inline void dump(const glTFMeshPrimitiveMode& val, json& js, parse_stack& err) {
         {glTFMeshPrimitiveMode::TriangleFan, 6},
     };
     auto v = table.at(val);
-    dump(v, js, err);
+    dump(v, js);
 }
 
 // Converts a glTFMeshPrimitive object to JSON
-inline void dump(const glTFMeshPrimitive* val, json& js, parse_stack& err) {
+inline void dump(const glTFMeshPrimitive* val, json& js) {
     if (!js.is_object()) js = json::object();
-    dump((const glTFProperty*)val, js, err);
-    dump_attr(val->attributes, "attributes", js, err);
-    if (val->indices.is_valid()) dump_attr(val->indices, "indices", js, err);
-    if (val->material.is_valid()) dump_attr(val->material, "material", js, err);
+    dump((const glTFProperty*)val, js);
+    dump(val->attributes, js["attributes"]);
+    if (val->indices.is_valid()) dump(val->indices, js["indices"]);
+    if (val->material.is_valid()) dump(val->material, js["material"]);
     if (val->mode != glTFMeshPrimitiveMode::Triangles)
-        dump_attr(val->mode, "mode", js, err);
-    if (!val->targets.empty()) dump_attr(val->targets, "targets", js, err);
+        dump(val->mode, js["mode"]);
+    if (!val->targets.empty()) dump(val->targets, js["targets"]);
 }
 
 // Converts a glTFMesh object to JSON
-inline void dump(const glTFMesh* val, json& js, parse_stack& err) {
+inline void dump(const glTFMesh* val, json& js) {
     if (!js.is_object()) js = json::object();
-    dump((const glTFChildOfRootProperty*)val, js, err);
-    dump_attr(val->primitives, "primitives", js, err);
-    if (!val->weights.empty()) dump_attr(val->weights, "weights", js, err);
+    dump((const glTFChildOfRootProperty*)val, js);
+    dump(val->primitives, js["primitives"]);
+    if (!val->weights.empty()) dump(val->weights, js["weights"]);
 }
 
 // Converts a glTFNode object to JSON
-inline void dump(const glTFNode* val, json& js, parse_stack& err) {
+inline void dump(const glTFNode* val, json& js) {
     if (!js.is_object()) js = json::object();
-    dump((const glTFChildOfRootProperty*)val, js, err);
-    if (val->camera.is_valid()) dump_attr(val->camera, "camera", js, err);
-    if (!val->children.empty()) dump_attr(val->children, "children", js, err);
-    if (val->skin.is_valid()) dump_attr(val->skin, "skin", js, err);
+    dump((const glTFChildOfRootProperty*)val, js);
+    if (val->camera.is_valid()) dump(val->camera, js["camera"]);
+    if (!val->children.empty()) dump(val->children, js["children"]);
+    if (val->skin.is_valid()) dump(val->skin, js["skin"]);
     if (val->matrix !=
         mat4f{{1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}})
-        dump_attr(val->matrix, "matrix", js, err);
-    if (val->mesh.is_valid()) dump_attr(val->mesh, "mesh", js, err);
+        dump(val->matrix, js["matrix"]);
+    if (val->mesh.is_valid()) dump(val->mesh, js["mesh"]);
     if (val->rotation != quat4f{0, 0, 0, 1})
-        dump_attr(val->rotation, "rotation", js, err);
-    if (val->scale != vec3f{1, 1, 1}) dump_attr(val->scale, "scale", js, err);
+        dump(val->rotation, js["rotation"]);
+    if (val->scale != vec3f{1, 1, 1}) dump(val->scale, js["scale"]);
     if (val->translation != vec3f{0, 0, 0})
-        dump_attr(val->translation, "translation", js, err);
-    if (!val->weights.empty()) dump_attr(val->weights, "weights", js, err);
+        dump(val->translation, js["translation"]);
+    if (!val->weights.empty()) dump(val->weights, js["weights"]);
 }
 // Converts a glTFSamplerMagFilter enum to JSON
-inline void dump(const glTFSamplerMagFilter& val, json& js, parse_stack& err) {
+inline void dump(const glTFSamplerMagFilter& val, json& js) {
     static map<glTFSamplerMagFilter, int> table = {
         {glTFSamplerMagFilter::Nearest, 9728},
         {glTFSamplerMagFilter::Linear, 9729},
     };
     auto v = table.at(val);
-    dump(v, js, err);
+    dump(v, js);
 }
 
 // Converts a glTFSamplerMinFilter enum to JSON
-inline void dump(const glTFSamplerMinFilter& val, json& js, parse_stack& err) {
+inline void dump(const glTFSamplerMinFilter& val, json& js) {
     static map<glTFSamplerMinFilter, int> table = {
         {glTFSamplerMinFilter::Nearest, 9728},
         {glTFSamplerMinFilter::Linear, 9729},
@@ -4282,91 +4220,87 @@ inline void dump(const glTFSamplerMinFilter& val, json& js, parse_stack& err) {
         {glTFSamplerMinFilter::LinearMipmapLinear, 9987},
     };
     auto v = table.at(val);
-    dump(v, js, err);
+    dump(v, js);
 }
 
 // Converts a glTFSamplerWrapS enum to JSON
-inline void dump(const glTFSamplerWrapS& val, json& js, parse_stack& err) {
+inline void dump(const glTFSamplerWrapS& val, json& js) {
     static map<glTFSamplerWrapS, int> table = {
         {glTFSamplerWrapS::ClampToEdge, 33071},
         {glTFSamplerWrapS::MirroredRepeat, 33648},
         {glTFSamplerWrapS::Repeat, 10497},
     };
     auto v = table.at(val);
-    dump(v, js, err);
+    dump(v, js);
 }
 
 // Converts a glTFSamplerWrapT enum to JSON
-inline void dump(const glTFSamplerWrapT& val, json& js, parse_stack& err) {
+inline void dump(const glTFSamplerWrapT& val, json& js) {
     static map<glTFSamplerWrapT, int> table = {
         {glTFSamplerWrapT::ClampToEdge, 33071},
         {glTFSamplerWrapT::MirroredRepeat, 33648},
         {glTFSamplerWrapT::Repeat, 10497},
     };
     auto v = table.at(val);
-    dump(v, js, err);
+    dump(v, js);
 }
 
 // Converts a glTFSampler object to JSON
-inline void dump(const glTFSampler* val, json& js, parse_stack& err) {
+inline void dump(const glTFSampler* val, json& js) {
     if (!js.is_object()) js = json::object();
-    dump((const glTFChildOfRootProperty*)val, js, err);
+    dump((const glTFChildOfRootProperty*)val, js);
     if (val->magFilter != glTFSamplerMagFilter::NotSet)
-        dump_attr(val->magFilter, "magFilter", js, err);
+        dump(val->magFilter, js["magFilter"]);
     if (val->minFilter != glTFSamplerMinFilter::NotSet)
-        dump_attr(val->minFilter, "minFilter", js, err);
-    if (val->wrapS != glTFSamplerWrapS::Repeat)
-        dump_attr(val->wrapS, "wrapS", js, err);
-    if (val->wrapT != glTFSamplerWrapT::Repeat)
-        dump_attr(val->wrapT, "wrapT", js, err);
+        dump(val->minFilter, js["minFilter"]);
+    if (val->wrapS != glTFSamplerWrapS::Repeat) dump(val->wrapS, js["wrapS"]);
+    if (val->wrapT != glTFSamplerWrapT::Repeat) dump(val->wrapT, js["wrapT"]);
 }
 
 // Converts a glTFScene object to JSON
-inline void dump(const glTFScene* val, json& js, parse_stack& err) {
+inline void dump(const glTFScene* val, json& js) {
     if (!js.is_object()) js = json::object();
-    dump((const glTFChildOfRootProperty*)val, js, err);
-    if (!val->nodes.empty()) dump_attr(val->nodes, "nodes", js, err);
+    dump((const glTFChildOfRootProperty*)val, js);
+    if (!val->nodes.empty()) dump(val->nodes, js["nodes"]);
 }
 
 // Converts a glTFSkin object to JSON
-inline void dump(const glTFSkin* val, json& js, parse_stack& err) {
+inline void dump(const glTFSkin* val, json& js) {
     if (!js.is_object()) js = json::object();
-    dump((const glTFChildOfRootProperty*)val, js, err);
+    dump((const glTFChildOfRootProperty*)val, js);
     if (val->inverseBindMatrices.is_valid())
-        dump_attr(val->inverseBindMatrices, "inverseBindMatrices", js, err);
-    if (val->skeleton.is_valid()) dump_attr(val->skeleton, "skeleton", js, err);
-    dump_attr(val->joints, "joints", js, err);
+        dump(val->inverseBindMatrices, js["inverseBindMatrices"]);
+    if (val->skeleton.is_valid()) dump(val->skeleton, js["skeleton"]);
+    dump(val->joints, js["joints"]);
 }
 
 // Converts a glTF object to JSON
-inline void dump(const glTF* val, json& js, parse_stack& err) {
+inline void dump(const glTF* val, json& js) {
     if (!js.is_object()) js = json::object();
-    dump((const glTFProperty*)val, js, err);
+    dump((const glTFProperty*)val, js);
     if (!val->extensionsUsed.empty())
-        dump_attr(val->extensionsUsed, "extensionsUsed", js, err);
+        dump(val->extensionsUsed, js["extensionsUsed"]);
     if (!val->extensionsRequired.empty())
-        dump_attr(val->extensionsRequired, "extensionsRequired", js, err);
-    if (!val->accessors.empty())
-        dump_attr(val->accessors, "accessors", js, err);
-    if (!val->animations.empty())
-        dump_attr(val->animations, "animations", js, err);
-    dump_attr(val->asset, "asset", js, err);
-    if (!val->buffers.empty()) dump_attr(val->buffers, "buffers", js, err);
-    if (!val->bufferViews.empty())
-        dump_attr(val->bufferViews, "bufferViews", js, err);
-    if (!val->cameras.empty()) dump_attr(val->cameras, "cameras", js, err);
-    if (!val->images.empty()) dump_attr(val->images, "images", js, err);
-    if (!val->materials.empty())
-        dump_attr(val->materials, "materials", js, err);
-    if (!val->meshes.empty()) dump_attr(val->meshes, "meshes", js, err);
-    if (!val->nodes.empty()) dump_attr(val->nodes, "nodes", js, err);
-    if (!val->samplers.empty()) dump_attr(val->samplers, "samplers", js, err);
-    if (val->scene.is_valid()) dump_attr(val->scene, "scene", js, err);
-    if (!val->scenes.empty()) dump_attr(val->scenes, "scenes", js, err);
-    if (!val->skins.empty()) dump_attr(val->skins, "skins", js, err);
-    if (!val->textures.empty()) dump_attr(val->textures, "textures", js, err);
+        dump(val->extensionsRequired, js["extensionsRequired"]);
+    if (!val->accessors.empty()) dump(val->accessors, js["accessors"]);
+    if (!val->animations.empty()) dump(val->animations, js["animations"]);
+    dump(val->asset, js["asset"]);
+    if (!val->buffers.empty()) dump(val->buffers, js["buffers"]);
+    if (!val->bufferViews.empty()) dump(val->bufferViews, js["bufferViews"]);
+    if (!val->cameras.empty()) dump(val->cameras, js["cameras"]);
+    if (!val->images.empty()) dump(val->images, js["images"]);
+    if (!val->materials.empty()) dump(val->materials, js["materials"]);
+    if (!val->meshes.empty()) dump(val->meshes, js["meshes"]);
+    if (!val->nodes.empty()) dump(val->nodes, js["nodes"]);
+    if (!val->samplers.empty()) dump(val->samplers, js["samplers"]);
+    if (val->scene.is_valid()) dump(val->scene, js["scene"]);
+    if (!val->scenes.empty()) dump(val->scenes, js["scenes"]);
+    if (!val->skins.empty()) dump(val->skins, js["skins"]);
+    if (!val->textures.empty()) dump(val->textures, js["textures"]);
 }
 // #codegen end func
+
+namespace _impl_gltf {
 
 // Get directory name (including '/').
 inline string _get_dirname(const string& filename) {
@@ -4665,13 +4599,11 @@ glTF* load_gltf(
     }
 
     // parse json
-    auto stack = parse_stack();
     auto gltf_ = gltf.get();
     try {
-        parse(gltf_, js, stack);
+        parse(gltf_, js);
     } catch (const exception& e) {
-        throw runtime_error("error parsing gltf at " + stack.pathname() +
-                            " with error " + string(e.what()));
+        throw runtime_error("error parsing gltf " + string(e.what()));
     }
 
     // load external resources
@@ -4725,8 +4657,7 @@ void save_gltf(
     const string& filename, const glTF* gltf, bool save_bin, bool save_image) {
     // dumps json
     auto js = json();
-    auto stack = parse_stack();
-    dump(gltf, js, stack);
+    dump(gltf, js);
 
     // save json
     save_textfile(filename, js.dump(2));
@@ -4838,14 +4769,11 @@ glTF* load_binary_gltf(
     }
 
     // parse json
-    auto stack = parse_stack();
     auto gltf_ = gltf.get();
     try {
-        parse(gltf_, js, stack);
+        parse(gltf_, js);
     } catch (const exception& e) {
-        throw runtime_error("cannot parse gltf json with error at " +
-                            stack.pathname() + string(" with error ") +
-                            e.what());
+        throw runtime_error("cannot parse gltf json " + string(e.what()));
         return nullptr;
     }
 
@@ -4876,8 +4804,7 @@ void save_binary_gltf(
 
     // dumps json
     auto js = json();
-    auto stack = parse_stack();
-    dump(gltf, js, stack);
+    dump(gltf, js);
 
     // fix string
     auto js_str = js.dump(2);
