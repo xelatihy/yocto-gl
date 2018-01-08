@@ -86,6 +86,10 @@
 #include "ext/json.hpp"
 #endif
 
+#if YGL_SVG
+#include "ext/nanosvg.h"
+#endif
+
 #if YGL_OPENGL
 #ifdef __APPLE__
 #include <OpenGL/gl3.h>
@@ -5136,6 +5140,57 @@ int accessor_view::_ctype_size(glTFAccessorComponentType componentType) {
 
 #endif
 
+#if YGL_SVG
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION FOR SVG
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+namespace _impl_svg {
+
+// Load SVG
+inline svg_scene* load_svg(const string& filename) {
+    auto svg = nsvgParseFromFile(filename.c_str(), "mm", 96);
+    if (!svg) throw runtime_error("cannot load SVG");
+    auto scn = new svg_scene();
+    for (auto shape = svg->shapes; shape != nullptr; shape = shape->next) {
+        auto shp = new svg_shape();
+        scn->shapes += shp;
+        for (auto path = shape->paths; path != nullptr; path = path->next) {
+            auto pth = new svg_path();
+            shp->paths += pth;
+            pth->pos.resize(path->npts);
+            for (int i = 0; i < path->npts; i += 1) {
+                pth->pos[i] = {path->pts[i * 2 + 0], path->pts[i * 2 + 1]};
+            }
+        }
+    }
+    nsvgDelete(svg);
+    return scn;
+}
+
+// Save SVG
+inline void save_svg(const string& filename, const vector<svg_path>& paths) {
+    throw runtime_error("not implemented yet");
+}
+
+}  // namespace _impl_svg
+
+// Load SVG
+svg_scene* load_svg(const string& filename) {
+    return _impl_svg::load_svg(filename);
+}
+
+// Save SVG
+void save_svg(const string& filename, const vector<svg_path>& paths) {
+    return _impl_svg::save_svg(filename, paths);
+}
+
+}  // namespace ygl
+
+#endif
+
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR SIMPLE SCENE
 // -----------------------------------------------------------------------------
@@ -6583,6 +6638,47 @@ inline void save_gltf_scene(
 
 #endif
 
+#if YGL_SVG
+
+// Converts an svg scene
+inline scene* svg_to_scene(const svg_scene* sscn, const load_options& opts) {
+    auto scn = new scene();
+    auto sid = 0;
+    for (auto sshp : sscn->shapes) {
+        auto shp = new shape();
+        shp->name = "shape" + to_string(sid++);
+        for (auto spth : sshp->paths) {
+            auto o = (int)shp->pos.size();
+            for (auto p : spth->pos) shp->pos += {p.x, p.y, 0};
+            for (auto vid = 1; vid < spth->pos.size(); vid += 3)
+                shp->beziers +=
+                    {o + vid - 1, o + vid + 0, o + vid + 1, o + vid + 2};
+        }
+        scn->shapes += shp;
+    }
+    auto miny = flt_max, maxy = -flt_max;
+    for (auto shp : scn->shapes) {
+        for (auto& p : shp->pos) {
+            miny = min(miny, p.y);
+            maxy = max(maxy, p.y);
+        }
+    }
+    auto mdly = (maxy + miny) / 2;
+    for (auto shp : scn->shapes) {
+        for (auto& p : shp->pos) p.y = -(p.y - mdly) + mdly;
+    }
+    return scn;
+}
+
+// Load an svg scene
+inline scene* load_svg_scene(const string& filename, const load_options& opts) {
+    auto sscn = unique_ptr<svg_scene>(load_svg(filename));
+    auto scn = unique_ptr<scene>(svg_to_scene(sscn.get(), opts));
+    return scn.release();
+}
+
+#endif
+
 // Load a scene
 inline scene* load_scene(const string& filename, const load_options& opts) {
     auto ext = path_extension(filename);
@@ -6590,6 +6686,9 @@ inline scene* load_scene(const string& filename, const load_options& opts) {
 #if YGL_GLTF
     if (ext == ".gltf" || ext == ".GLTF")
         return load_gltf_scene(filename, opts);
+#endif
+#if YGL_SVG
+    if (ext == ".svg" || ext == ".SVG") return load_svg_scene(filename, opts);
 #endif
     throw runtime_error("unsupported extension " + ext);
     return nullptr;

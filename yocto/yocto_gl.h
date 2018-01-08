@@ -30,6 +30,7 @@
 /// - simple logger and thread pool
 /// - path tracer supporting surfaces and hairs, GGX and MIS
 /// - support for loading and saving Wavefront OBJ and Khronos glTF
+/// - support for loading Bezier curves from SVG
 /// - OpenGL utilities to manage textures, buffers and prograrms
 /// - OpenGL shader for image viewing and GGX microfacet and hair rendering
 ///
@@ -88,8 +89,11 @@
 /// included in the manner described by the respective libraries. To simplify
 /// builds, we provice a file that builds these libraries, `stb_image.cpp`.
 ///
-/// To support Khronos glTF, Yocto/GL depends on `json.hpp`. These feature can
+/// To support Khronos glTF, Yocto/GL depends on `json.hpp`. This feature can
 /// be disabled by defining YGL_GLTF to 0 before including this file.
+///
+/// To support SVG, Yocto/GL depends on `nanosvg.h`. This feature can
+/// be disabled by defining YGL_SVG to 0 before including this file.
 ///
 /// OpenGL utilities include the OpenGL libaries, use GLEW on Windows/Linux,
 /// GLFW for windows handling and Dear ImGui for UI support.
@@ -710,6 +714,11 @@
 // enable glTF
 #ifndef YGL_GLTF
 #define YGL_GLTF 1
+#endif
+
+// enable SVG
+#ifndef YGL_SVG
+#define YGL_SVG 1
 #endif
 
 // enable OpenGL
@@ -9480,6 +9489,51 @@ struct accessor_view {
     static int _num_components(glTFAccessorType type);
     static int _ctype_size(glTFAccessorComponentType componentType);
 };
+
+}  // namespace ygl
+
+#endif
+
+#if YGL_SVG
+
+// -----------------------------------------------------------------------------
+// SVG SUPPORT
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+/// Svg path
+struct svg_path {
+    /// Path vertices
+    vector<vec2f> pos;
+};
+
+/// Svg shape
+struct svg_shape {
+    /// Paths
+    vector<svg_path*> paths;
+
+    /// Cleanup
+    ~svg_shape() {
+        for (auto e : paths) delete e;
+    }
+};
+
+/// Svg scene
+struct svg_scene {
+    /// Shapes
+    vector<svg_shape*> shapes;
+
+    /// Cleanup
+    ~svg_scene() {
+        for (auto e : shapes) delete e;
+    }
+};
+
+/// Load SVG
+svg_scene* load_svg(const string& filename);
+
+/// Save SVG
+void save_svg(const string& filename, const svg_scene* svg);
 
 }  // namespace ygl
 
