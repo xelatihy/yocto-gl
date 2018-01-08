@@ -11503,6 +11503,24 @@ inline void set_stdsurface_material(gl_stdsurface_program& prog,
     assert(gl_check_error());
 }
 
+/// Set constant material values with emission ke.
+inline void set_stdsurface_constmaterial(
+    gl_stdsurface_program& prog, const vec3f& ke, float op) {
+    static auto mtype_id =
+        get_program_uniform_location(prog._prog, "material.mtype");
+    static auto etype_id =
+        get_program_uniform_location(prog._prog, "material.etype");
+    static auto ke_id = get_program_uniform_location(prog._prog, "material.ke");
+    static auto op_id = get_program_uniform_location(prog._prog, "material.op");
+
+    assert(gl_check_error());
+    set_program_uniform(prog._prog, mtype_id, 0);
+    set_program_uniform(prog._prog, etype_id, 0);
+    set_program_uniform(prog._prog, ke_id, ke);
+    set_program_uniform(prog._prog, op_id, op);
+    assert(gl_check_error());
+}
+
 /// Set vertex data with buffers for position pos, normals norm, texture
 /// coordinates texcoord, per-vertex color color and tangent space tangsp.
 inline void set_stdsurface_vert(gl_stdsurface_program& prog,
