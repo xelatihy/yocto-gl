@@ -11652,7 +11652,11 @@ struct gl_stdsurface_params {
     /// ambient illumination
     vec3f ambient = {0, 0, 0};
     /// highlighted object
-    void* hilighted = nullptr;
+    void* highlighted = nullptr;
+    /// highlight color
+    vec3f highlight_color = {1, 1, 0};
+    /// edge color
+    vec3f edge_color = {0, 0, 0};
 };
 
 /// Initialize gl_stdsurface_program draw state
