@@ -63,7 +63,8 @@ inline void draw(gl_window* win) {
 
     app->shparams.highlighted = app->selection;
 
-    gl_clear_buffers();
+    gl_clear_buffers(app->shparams.background);
+    gl_enable_depth_test(true);
     draw_stdsurface_scene(app->shstate, app->scn, app->shparams);
 
     if (begin_widgets(win, "yview")) {

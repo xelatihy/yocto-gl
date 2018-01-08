@@ -11657,6 +11657,8 @@ struct gl_stdsurface_params {
     vec3f highlight_color = {1, 1, 0};
     /// edge color
     vec3f edge_color = {0, 0, 0};
+    /// cull back back
+    bool cull_backface = false;
 };
 
 /// Initialize gl_stdsurface_program draw state
