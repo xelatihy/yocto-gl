@@ -9147,32 +9147,42 @@ void _update_texture(gl_texture& txt, int w, int h, int nc, const void* pixels,
     txt._linear = linear;
     assert(!as_srgb || !as_float);
     assert(gl_check_error());
-    int formats_ub[4] = {GL_RED, GL_RG, GL_RGB, GL_RGBA};
-    int formats_sub[4] = {GL_RED, GL_RG, GL_SRGB, GL_SRGB_ALPHA};
-    int formats_f[4] = {GL_R32F, GL_RG32F, GL_RGB32F, GL_RGBA32F};
-    int* formats =
-        (as_float) ? formats_f : ((as_srgb) ? formats_sub : formats_ub);
-    assert(gl_check_error());
-    if (!txt._tid) glGenTextures(1, &txt._tid);
-    glBindTexture(GL_TEXTURE_2D, txt._tid);
-    if (refresh) {
-        glTexImage2D(GL_TEXTURE_2D, 0, formats[nc - 1], w, h, 0,
-            formats_ub[nc - 1], (floats) ? GL_FLOAT : GL_UNSIGNED_BYTE, pixels);
-    } else {
-        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, w, h, formats_ub[nc - 1],
-            (floats) ? GL_FLOAT : GL_UNSIGNED_BYTE, pixels);
-    }
-    if (mipmap) glGenerateMipmap(GL_TEXTURE_2D);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
-        (linear) ? GL_LINEAR : GL_NEAREST);
-    if (mipmap) {
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
-            (linear) ? GL_LINEAR_MIPMAP_LINEAR : GL_NEAREST_MIPMAP_NEAREST);
-    } else {
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
+    if (w * h) {
+        int formats_ub[4] = {GL_RED, GL_RG, GL_RGB, GL_RGBA};
+        int formats_sub[4] = {GL_RED, GL_RG, GL_SRGB, GL_SRGB_ALPHA};
+        int formats_f[4] = {GL_R32F, GL_RG32F, GL_RGB32F, GL_RGBA32F};
+        int* formats =
+            (as_float) ? formats_f : ((as_srgb) ? formats_sub : formats_ub);
+        assert(gl_check_error());
+        if (!txt._tid) glGenTextures(1, &txt._tid);
+        glBindTexture(GL_TEXTURE_2D, txt._tid);
+        if (refresh) {
+            glTexImage2D(GL_TEXTURE_2D, 0, formats[nc - 1], w, h, 0,
+                formats_ub[nc - 1], (floats) ? GL_FLOAT : GL_UNSIGNED_BYTE,
+                pixels);
+        } else {
+            glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, w, h, formats_ub[nc - 1],
+                (floats) ? GL_FLOAT : GL_UNSIGNED_BYTE, pixels);
+        }
+        if (mipmap) glGenerateMipmap(GL_TEXTURE_2D);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
             (linear) ? GL_LINEAR : GL_NEAREST);
+        if (mipmap) {
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
+                (linear) ? GL_LINEAR_MIPMAP_LINEAR : GL_NEAREST_MIPMAP_NEAREST);
+        } else {
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
+                (linear) ? GL_LINEAR : GL_NEAREST);
+        }
+        glBindTexture(GL_TEXTURE_2D, 0);
+    } else {
+        if (txt._tid) {
+            glBindTexture(GL_TEXTURE_2D, txt._tid);
+            glDeleteTextures(1, &txt._tid);
+            txt._tid = 0;
+            glBindTexture(GL_TEXTURE_2D, 0);
+        }
     }
-    glBindTexture(GL_TEXTURE_2D, 0);
     assert(gl_check_error());
 }
 
@@ -9209,18 +9219,29 @@ void _update_vertex_buffer(gl_vertex_buffer& buf, int n, int nc,
     buf._ncomp = nc;
     buf._float = as_float;
     assert(gl_check_error());
-    if (!buf._bid) glGenBuffers(1, &buf._bid);
-    glBindBuffer(GL_ARRAY_BUFFER, buf._bid);
-    if (resize) {
-        glBufferData(GL_ARRAY_BUFFER,
-            buf._num * buf._ncomp * ((as_float) ? sizeof(float) : sizeof(int)),
-            values, (dynamic) ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
+    if (n) {
+        if (!buf._bid) glGenBuffers(1, &buf._bid);
+        glBindBuffer(GL_ARRAY_BUFFER, buf._bid);
+        if (resize) {
+            glBufferData(GL_ARRAY_BUFFER,
+                buf._num * buf._ncomp *
+                    ((as_float) ? sizeof(float) : sizeof(int)),
+                values, (dynamic) ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
+        } else {
+            glBufferSubData(GL_ARRAY_BUFFER, 0,
+                buf._num * buf._ncomp *
+                    ((as_float) ? sizeof(float) : sizeof(int)),
+                values);
+        }
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
     } else {
-        glBufferSubData(GL_ARRAY_BUFFER, 0,
-            buf._num * buf._ncomp * ((as_float) ? sizeof(float) : sizeof(int)),
-            values);
+        if (buf._bid) {
+            glBindBuffer(GL_ARRAY_BUFFER, buf._bid);
+            glDeleteBuffers(1, &buf._bid);
+            buf._bid = 0;
+            glBindBuffer(GL_ARRAY_BUFFER, 0);
+        }
     }
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
     assert(gl_check_error());
 }
 
@@ -9259,17 +9280,26 @@ void _update_element_buffer(
     buf._num = n;
     buf._ncomp = nc;
     assert(gl_check_error());
-    if (!buf._bid) glGenBuffers(1, &buf._bid);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buf._bid);
-    if (resize) {
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-            buf._num * buf._ncomp * sizeof(int), values,
-            (dynamic) ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
+    if (n) {
+        if (!buf._bid) glGenBuffers(1, &buf._bid);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buf._bid);
+        if (resize) {
+            glBufferData(GL_ELEMENT_ARRAY_BUFFER,
+                buf._num * buf._ncomp * sizeof(int), values,
+                (dynamic) ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
+        } else {
+            glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0,
+                buf._num * buf._ncomp * sizeof(int), values);
+        }
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     } else {
-        glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0,
-            buf._num * buf._ncomp * sizeof(int), values);
+        if (buf._bid) {
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buf._bid);
+            glDeleteBuffers(1, &buf._bid);
+            buf._bid = 0;
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+        }
     }
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     assert(gl_check_error());
 }
 
@@ -10158,44 +10188,30 @@ void update_stdsurface_state(gl_stdsurface_state* st, const scene* scn,
             tie(quads, pos, norm, texcoord) =
                 convert_face_varying(shp->quads_pos, shp->quads_norm,
                     shp->quads_texcoord, shp->pos, shp->norm, shp->texcoord);
-            if (!pos.empty()) update_vertex_buffer(st->vbo[shp].pos, pos);
-            if (!norm.empty()) update_vertex_buffer(st->vbo[shp].norm, norm);
-            if (!texcoord.empty())
-                update_vertex_buffer(st->vbo[shp].texcoord, texcoord);
-            auto triangles = convert_quads_to_triangles(quads);
-            update_element_buffer(st->vbo[shp].quads, triangles);
-            auto edges = get_edges({}, {}, shp->quads);
-            update_element_buffer(st->vbo[shp].edges, edges);
+            update_vertex_buffer(st->vbo[shp].pos, pos);
+            update_vertex_buffer(st->vbo[shp].norm, norm);
+            update_vertex_buffer(st->vbo[shp].texcoord, texcoord);
+            update_element_buffer(
+                st->vbo[shp].quads, convert_quads_to_triangles(quads));
+            update_element_buffer(
+                st->vbo[shp].edges, get_edges({}, {}, shp->quads));
+            update_vertex_buffer(st->vbo[shp].color, vector<vec4f>{});
+            update_vertex_buffer(st->vbo[shp].tangsp, vector<vec4f>{});
         } else {
-            if (!shp->pos.empty())
-                update_vertex_buffer(st->vbo[shp].pos, shp->pos);
-            if (!shp->norm.empty())
-                update_vertex_buffer(st->vbo[shp].norm, shp->norm);
-            if (!shp->texcoord.empty())
-                update_vertex_buffer(st->vbo[shp].texcoord, shp->texcoord);
-            if (!shp->color.empty())
-                update_vertex_buffer(st->vbo[shp].color, shp->color);
-            if (!shp->tangsp.empty())
-                update_vertex_buffer(st->vbo[shp].tangsp, shp->tangsp);
-            if (!shp->points.empty())
-                update_element_buffer(st->vbo[shp].points, shp->points);
-            if (!shp->lines.empty())
-                update_element_buffer(st->vbo[shp].lines, shp->lines);
-            if (!shp->triangles.empty()) {
-                update_element_buffer(st->vbo[shp].triangles, shp->triangles);
-            }
-            if (!shp->quads.empty()) {
-                auto triangles = convert_quads_to_triangles(shp->quads);
-                update_element_buffer(st->vbo[shp].quads, triangles);
-            }
-            if (!shp->beziers.empty()) {
-                auto lines = convert_bezier_to_lines(shp->beziers);
-                update_element_buffer(st->vbo[shp].beziers, lines);
-            }
-            if (!shp->triangles.empty() || !shp->quads.empty()) {
-                auto edges = get_edges({}, shp->triangles, shp->quads);
-                update_element_buffer(st->vbo[shp].edges, edges);
-            }
+            update_vertex_buffer(st->vbo[shp].pos, shp->pos);
+            update_vertex_buffer(st->vbo[shp].norm, shp->norm);
+            update_vertex_buffer(st->vbo[shp].texcoord, shp->texcoord);
+            update_vertex_buffer(st->vbo[shp].color, shp->color);
+            update_vertex_buffer(st->vbo[shp].tangsp, shp->tangsp);
+            update_element_buffer(st->vbo[shp].points, shp->points);
+            update_element_buffer(st->vbo[shp].lines, shp->lines);
+            update_element_buffer(st->vbo[shp].triangles, shp->triangles);
+            update_element_buffer(
+                st->vbo[shp].quads, convert_quads_to_triangles(shp->quads));
+            update_element_buffer(
+                st->vbo[shp].beziers, convert_bezier_to_lines(shp->beziers));
+            update_element_buffer(
+                st->vbo[shp].edges, get_edges({}, shp->triangles, shp->quads));
         }
     }
 
