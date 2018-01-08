@@ -47,6 +47,7 @@ and released under the MIT license. Features include:</p>
 <li>simple logger and thread pool</li>
 <li>path tracer supporting surfaces and hairs, GGX and MIS</li>
 <li>support for loading and saving Wavefront OBJ and Khronos glTF</li>
+<li>support for loading Bezier curves from SVG</li>
 <li>OpenGL utilities to manage textures, buffers and prograrms</li>
 <li>OpenGL shader for image viewing and GGX microfacet and hair rendering</li>
 </ul>
@@ -93,8 +94,10 @@ can be disabled by defining YGL_IMAGEIO to 0 before including this file.
 If these features are useful, then the implementation files need to
 included in the manner described by the respective libraries. To simplify
 builds, we provice a file that builds these libraries, <code>stb_image.cpp</code>.</p>
-<p>To support Khronos glTF, Yocto/GL depends on <code>json.hpp</code>. These feature can
+<p>To support Khronos glTF, Yocto/GL depends on <code>json.hpp</code>. This feature can
 be disabled by defining YGL_GLTF to 0 before including this file.</p>
+<p>To support SVG, Yocto/GL depends on <code>nanosvg.h</code>. This feature can
+be disabled by defining YGL_SVG to 0 before including this file.</p>
 <p>OpenGL utilities include the OpenGL libaries, use GLEW on Windows/Linux,
 GLFW for windows handling and Dear ImGui for UI support.
 Since OpenGL is quite onerous and hard to link, its support is disabled by
@@ -218,10 +221,12 @@ manipulation useful to support scene viewing and path tracing.</p>
 <li>convert quads to triangles with <code>convert_quads_to_triangles()</code></li>
 <li>convert face varying to vertex shared representations with
     <code>convert_face_varying()</code></li>
-<li>subdivide elements by edge splits with <code>subdivide_elems()</code> and
-    <code>subdivide_vert()</code></li>
-<li>Catmull-Clark subdivision surface with <code>subdivide_catmullclark()</code> with
-    support for edge and vertex creasing</li>
+<li>subdivide elements by edge splits with <code>subdivide_elems_linear()</code> and
+    <code>subdivide_vert_linear()</code></li>
+<li>Catmull-Clark subdivision surface with <code>subdivide_vert_catmullclark()</code>
+    with support for edge and vertex creasing</li>
+<li>subdvide Bezier with <code>subdivide_bezier_recursive()</code> and
+    <code>subdivide_vert_bezier()</code></li>
 <li>example shapes: <code>make_cube()</code>, <code>make_uvsphere()</code>, <code>make_uvhemisphere()</code>,
     <code>make_uvquad()</code>, <code>make_uvcube()</code>, <code>make_fvcube()</code>, <code>make_hair()</code>,
     <code>make_suzanne()</code></li>
