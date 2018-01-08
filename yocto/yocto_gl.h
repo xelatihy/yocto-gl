@@ -11381,11 +11381,14 @@ inline void set_stdsurface_lights(gl_stdsurface_program& prog, const vec3f& amb,
 
 /// Begins drawing a shape with transform xform.
 inline void begin_stdsurface_shape(
-    gl_stdsurface_program& prog, const mat4f& xform) {
+    gl_stdsurface_program& prog, const mat4f& xform, float normal_offset = 0) {
     static auto xform_id =
         get_program_uniform_location(prog._prog, "shape_xform");
+    static auto normal_offset_id =
+        get_program_uniform_location(prog._prog, "shape_normal_offset");
     assert(gl_check_error());
     set_program_uniform(prog._prog, xform_id, xform);
+    set_program_uniform(prog._prog, normal_offset_id, normal_offset);
     assert(gl_check_error());
 }
 
@@ -11393,6 +11396,16 @@ inline void begin_stdsurface_shape(
 inline void end_stdsurface_shape(gl_stdsurface_program& prog) {
     assert(gl_check_error());
     for (int i = 0; i < 16; i++) unbind_vertex_buffer(i);
+    assert(gl_check_error());
+}
+
+/// Sets normal offset.
+inline void set_stdsurface_normaloffset(
+    gl_stdsurface_program& prog, float normal_offset) {
+    static auto normal_offset_id =
+        get_program_uniform_location(prog._prog, "shape_normal_offset");
+    assert(gl_check_error());
+    set_program_uniform(prog._prog, normal_offset_id, normal_offset);
     assert(gl_check_error());
 }
 
@@ -11610,6 +11623,8 @@ struct gl_stdsurface_params {
     bool wireframe = false;
     /// draw with overlaid edges
     bool edges = false;
+    /// offset for edges
+    float edge_offset = 0.01f;
     /// draw with an alpha cutout for binary transparency
     bool cutout = false;
     /// camera light mode

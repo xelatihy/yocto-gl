@@ -9806,6 +9806,7 @@ gl_stdsurface_program make_stdsurface_program() {
         layout(location = 4) in vec4 vert_tangsp;         // vertex tangent space
 
         uniform mat4 shape_xform;           // shape transform
+        uniform float shape_normal_offset;           // shape normal offset
 
         struct Camera {
             mat4 xform;          // camera xform
@@ -9826,6 +9827,11 @@ gl_stdsurface_program make_stdsurface_program() {
             pos = vert_pos;
             norm = vert_norm;
             tangsp = vert_tangsp;
+            
+            // normal offset
+            if(shape_normal_offset != 0) {
+                pos += shape_normal_offset * norm;
+            }
 
             // world projection
             pos = (shape_xform * vec4(pos,1)).xyz;
@@ -10289,18 +10295,11 @@ inline void draw_stdsurface_shape(gl_stdsurface_state* st, const shape* shp,
     draw_elems(vbo.beziers);
 
     if (params.edges && !params.wireframe) {
-        assert(gl_check_error());
         set_stdsurface_material(st->prog, material_type::specular_roughness,
             etype, zero3f, zero3f, zero3f, 0.5f, mat->op, {}, {}, {}, {}, {},
             {}, true, mat->double_sided, false);
-
-        assert(gl_check_error());
-        gl_line_width(2);
-        gl_enable_edges(true);
+        set_stdsurface_normaloffset(st->prog, params.edge_offset);
         draw_elems(vbo.edges);
-        gl_enable_edges(false);
-        gl_line_width(1);
-        assert(gl_check_error());
     }
 
     end_stdsurface_shape(st->prog);
