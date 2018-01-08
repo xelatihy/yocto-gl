@@ -9038,10 +9038,12 @@ void gl_clear_buffers(const vec4f& background) {
 // Enable/disable depth test
 void gl_enable_depth_test(bool enabled) {
     assert(gl_check_error());
-    if (enabled)
+    if (enabled) {
         glEnable(GL_DEPTH_TEST);
-    else
+        glDepthFunc(GL_LEQUAL);
+    } else {
         glDisable(GL_DEPTH_TEST);
+    }
     assert(gl_check_error());
 }
 
@@ -10356,13 +10358,13 @@ void draw_stdsurface_scene(gl_stdsurface_state* st, const scene* scn,
     if (!scn->instances.empty()) {
         for (auto ist : scn->instances) {
             draw_stdsurface_shape(st, ist->shp, ist->xform(),
-                                  (ist == params.highlighted || ist->shp == params.highlighted),
+                (ist == params.highlighted || ist->shp == params.highlighted),
                 params);
         }
     } else {
         for (auto shp : scn->shapes) {
             draw_stdsurface_shape(
-                                  st, shp, identity_mat4f, shp == params.highlighted, params);
+                st, shp, identity_mat4f, shp == params.highlighted, params);
         }
     }
 
