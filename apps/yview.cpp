@@ -61,6 +61,8 @@ inline void draw(gl_window* win) {
     update_stdsurface_state(app->shstate, app->scn, app->shparams);
     if (app->shstate->lights_pos.empty()) app->shparams.camera_lights = true;
 
+    app->shparams.highlighted = app->selection;
+
     gl_clear_buffers();
     draw_stdsurface_scene(app->shstate, app->scn, app->shparams);
 

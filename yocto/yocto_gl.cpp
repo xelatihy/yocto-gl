@@ -10286,9 +10286,6 @@ inline void draw_stdsurface_shape(gl_stdsurface_state* st, const shape* shp,
     if (!shp->lines.empty()) etype = gl_etype::line;
     if (!shp->points.empty()) etype = gl_etype::point;
 
-    set_stdsurface_highlight(
-        st->prog, (highlighted) ? vec4f{1, 1, 0, 1} : zero4f);
-
     auto txt = [&st](texture_info& info) -> gl_texture_info {
         if (!info.txt) return {};
         return st->txt.at(info.txt);
@@ -10310,10 +10307,22 @@ inline void draw_stdsurface_shape(gl_stdsurface_state* st, const shape* shp,
     draw_elems(vbo.quads);
     draw_elems(vbo.beziers);
 
-    if (params.edges && !params.wireframe) {
-        set_stdsurface_constmaterial(st->prog, zero3f, mat->op);
+    if ((params.edges && !params.wireframe) || highlighted) {
+        set_stdsurface_constmaterial(st->prog,
+            (highlighted) ? params.highlight_color : params.edge_color,
+            (highlighted) ? 1 : mat->op);
         set_stdsurface_normaloffset(st->prog, params.edge_offset);
         draw_elems(vbo.edges);
+    }
+
+    if (highlighted && false) {
+        set_stdsurface_constmaterial(st->prog, params.highlight_color, 1);
+        set_stdsurface_normaloffset(st->prog, params.edge_offset);
+        draw_elems(vbo.points);
+        draw_elems(vbo.lines);
+        draw_elems(vbo.triangles);
+        draw_elems(vbo.quads);
+        draw_elems(vbo.beziers);
     }
 
     end_stdsurface_shape(st->prog);
@@ -10347,13 +10356,13 @@ void draw_stdsurface_scene(gl_stdsurface_state* st, const scene* scn,
     if (!scn->instances.empty()) {
         for (auto ist : scn->instances) {
             draw_stdsurface_shape(st, ist->shp, ist->xform(),
-                (ist == params.hilighted || ist->shp == params.hilighted),
+                                  (ist == params.highlighted || ist->shp == params.highlighted),
                 params);
         }
     } else {
         for (auto shp : scn->shapes) {
             draw_stdsurface_shape(
-                st, shp, identity_mat4f, shp == params.hilighted, params);
+                                  st, shp, identity_mat4f, shp == params.highlighted, params);
         }
     }
 
