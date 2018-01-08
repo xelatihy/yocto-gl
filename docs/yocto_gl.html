@@ -47,6 +47,7 @@ and released under the MIT license. Features include:</p>
 <li>simple logger and thread pool</li>
 <li>path tracer supporting surfaces and hairs, GGX and MIS</li>
 <li>support for loading and saving Wavefront OBJ and Khronos glTF</li>
+<li>support for loading Bezier curves from SVG</li>
 <li>OpenGL utilities to manage textures, buffers and prograrms</li>
 <li>OpenGL shader for image viewing and GGX microfacet and hair rendering</li>
 </ul>
@@ -93,8 +94,10 @@ can be disabled by defining YGL_IMAGEIO to 0 before including this file.
 If these features are useful, then the implementation files need to
 included in the manner described by the respective libraries. To simplify
 builds, we provice a file that builds these libraries, <code>stb_image.cpp</code>.</p>
-<p>To support Khronos glTF, Yocto/GL depends on <code>json.hpp</code>. These feature can
+<p>To support Khronos glTF, Yocto/GL depends on <code>json.hpp</code>. This feature can
 be disabled by defining YGL_GLTF to 0 before including this file.</p>
+<p>To support SVG, Yocto/GL depends on <code>nanosvg.h</code>. This feature can
+be disabled by defining YGL_SVG to 0 before including this file.</p>
 <p>OpenGL utilities include the OpenGL libaries, use GLEW on Windows/Linux,
 GLFW for windows handling and Dear ImGui for UI support.
 Since OpenGL is quite onerous and hard to link, its support is disabled by
@@ -218,10 +221,12 @@ manipulation useful to support scene viewing and path tracing.</p>
 <li>convert quads to triangles with <code>convert_quads_to_triangles()</code></li>
 <li>convert face varying to vertex shared representations with
     <code>convert_face_varying()</code></li>
-<li>subdivide elements by edge splits with <code>subdivide_elems()</code> and
-    <code>subdivide_vert()</code></li>
-<li>Catmull-Clark subdivision surface with <code>subdivide_catmullclark()</code> with
-    support for edge and vertex creasing</li>
+<li>subdivide elements by edge splits with <code>subdivide_elems_linear()</code> and
+    <code>subdivide_vert_linear()</code></li>
+<li>Catmull-Clark subdivision surface with <code>subdivide_vert_catmullclark()</code>
+    with support for edge and vertex creasing</li>
+<li>subdvide Bezier with <code>subdivide_bezier_recursive()</code> and
+    <code>subdivide_vert_bezier()</code></li>
 <li>example shapes: <code>make_cube()</code>, <code>make_uvsphere()</code>, <code>make_uvhemisphere()</code>,
     <code>make_uvquad()</code>, <code>make_uvcube()</code>, <code>make_fvcube()</code>, <code>make_hair()</code>,
     <code>make_suzanne()</code></li>
@@ -4286,6 +4291,12 @@ boundaries.</p>
 
 <p>Convert quads to triangles with a diamond-like topology.
 Quads have to be consecutive one row after another.</p>
+<h4>Function convert_bezier_to_lines()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2i</span><span class="o">&gt;</span> <span class="n">convert_bezier_to_lines</span><span class="p">(</span><span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;&amp;</span> <span class="n">beziers</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Convert beziers to lines using 3 lines for each bezier.</p>
 <h4>Function convert_face_varying()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">tuple</span><span class="o">&lt;</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;&gt;</span>
 <span class="n">convert_face_varying</span><span class="p">(</span><span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;&amp;</span> <span class="n">quads_pos</span><span class="p">,</span>
@@ -4297,38 +4308,55 @@ Quads have to be consecutive one row after another.</p>
 
 <p>Convert face varying data to single primitives. Returns the quads indices
 and filled vectors for pos, norm and texcoord.</p>
-<h4>Function subdivide_elems()</h4>
+<h4>Function subdivide_elems_linear()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">tuple</span><span class="o">&lt;</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2i</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2i</span><span class="o">&gt;</span><span class="p">,</span>
     <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;&gt;</span>
-<span class="n">subdivide_elems</span><span class="p">(</span><span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2i</span><span class="o">&gt;&amp;</span> <span class="n">lines</span><span class="p">,</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;&amp;</span> <span class="n">triangles</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;&amp;</span> <span class="n">quads</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nverts</span><span class="p">);</span>
+<span class="n">subdivide_elems_linear</span><span class="p">(</span><span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2i</span><span class="o">&gt;&amp;</span> <span class="n">lines</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;&amp;</span> <span class="n">triangles</span><span class="p">,</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;&amp;</span> <span class="n">quads</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nverts</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Tesselate lines, triangles and quads by spolitting edges.
 Returns the tesselated elements and dictionaries for vertex calculations.</p>
-<h4>Function subdivide_vert()</h4>
+<h4>Function subdivide_vert_linear()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="n">subdivide_vert</span><span class="p">(</span><span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">vert</span><span class="p">,</span>
+<span class="kr">inline</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="n">subdivide_vert_linear</span><span class="p">(</span><span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">vert</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2i</span><span class="o">&gt;&amp;</span> <span class="n">edges</span><span class="p">,</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;&amp;</span> <span class="n">faces</span><span class="p">,</span>
     <span class="kt">bool</span> <span class="n">normalized</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Subdivide vertex properties given the maps</p>
-<h4>Function subdivide_catmullclark()</h4>
+<h4>Function subdivide_vert_catmullclark()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="n">subdivide_catmullclark</span><span class="p">(</span><span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;&amp;</span> <span class="n">quads</span><span class="p">,</span>
+<span class="kr">inline</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="n">subdivide_vert_catmullclark</span><span class="p">(</span><span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;&amp;</span> <span class="n">quads</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">vert</span><span class="p">,</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2i</span><span class="o">&gt;&amp;</span> <span class="n">crease_tlines</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;&amp;</span> <span class="n">crease_tpoints</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">normalized</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Performs the smoothing step of Catmull-Clark. Start with a tesselate quad
-mesh obtained with subdivide_elems() and subdivide_vert(). To handle open
-meshes with boundary, get the boundary from make_boundary_edge() and pass it
-as crease_lines. To fix the boundary entirely, just get the boundary
-vertices and pass it as creases.</p>
+mesh obtained with subdivide_elems_linear() and subdivide_vert_linear(). To
+handle open meshes with boundary, get the boundary from make_boundary_edge()
+and pass it as crease_lines. To fix the boundary entirely, just get the
+boundary vertices and pass it as creases.</p>
+<h4>Function subdivide_bezier_recursive()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">tuple</span><span class="o">&lt;</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;&gt;</span>
+<span class="n">subdivide_bezier_recursive</span><span class="p">(</span><span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;&amp;</span> <span class="n">beziers</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nverts</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Subdivide bezier recursive by splitting each segment into two in the middle.
+Returns the tesselated elements and dictionaries for vertex calculations.</p>
+<h4>Function subdivide_vert_bezier()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="n">subdivide_vert_bezier</span><span class="p">(</span><span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">vert</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;&amp;</span> <span class="n">verts</span><span class="p">,</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;&amp;</span> <span class="n">segments</span><span class="p">,</span>
+    <span class="kt">bool</span> <span class="n">normalized</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Subdivide vertex properties given the maps</p>
 <h4>Function make_uvquads()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">tuple</span><span class="o">&lt;</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;&gt;</span> <span class="n">make_uvquads</span><span class="p">(</span><span class="kt">int</span> <span class="n">usteps</span><span class="p">,</span> <span class="kt">int</span> <span class="n">vsteps</span><span class="p">,</span>
     <span class="kt">bool</span> <span class="n">uwrap</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">vwrap</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">vpole0</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span>
@@ -4553,6 +4581,12 @@ texcoord.</p>
 
 <p>Make a cutout sphere. This is not watertight. Returns quads, pos, norm,
 texcoord.</p>
+<h4>Function make_bezier_circle()</h4>
+<div class="codehilite"><pre><code><span></span><span class="n">tuple</span><span class="o">&lt;</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&gt;</span> <span class="n">make_bezier_circle</span><span class="p">();</span>
+</code></pre></div>
+
+
+<p>Make a bezier circle. Returns bezier, pos.</p>
 <h4>Function make_hair()</h4>
 <div class="codehilite"><pre><code><span></span><span class="n">tuple</span><span class="o">&lt;</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2i</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;&gt;</span>
 <span class="n">make_hair</span><span class="p">(</span><span class="kt">int</span> <span class="n">num</span><span class="p">,</span> <span class="kt">int</span> <span class="n">level</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec2f</span><span class="o">&amp;</span> <span class="n">len</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec2f</span><span class="o">&amp;</span> <span class="n">rad</span><span class="p">,</span>
@@ -5636,6 +5670,7 @@ BVHs, shape BVHs, each of which of a uniform primitive type.</p>
     <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span> <span class="n">quads_pos</span><span class="p">;</span>
     <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span> <span class="n">quads_norm</span><span class="p">;</span>
     <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span> <span class="n">quads_texcoord</span><span class="p">;</span>
+    <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span> <span class="n">beziers</span><span class="p">;</span>
     <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span> <span class="n">pos</span><span class="p">;</span>
     <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span> <span class="n">norm</span><span class="p">;</span>
     <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;</span> <span class="n">texcoord</span><span class="p">;</span>
@@ -5643,6 +5678,8 @@ BVHs, shape BVHs, each of which of a uniform primitive type.</p>
     <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4f</span><span class="o">&gt;</span> <span class="n">color</span><span class="p">;</span>
     <span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;</span> <span class="n">radius</span><span class="p">;</span>
     <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4f</span><span class="o">&gt;</span> <span class="n">tangsp</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">subdivision_level</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="kt">bool</span> <span class="n">subdivision_catmullclark</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
     <span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;</span> <span class="n">elem_cdf</span><span class="p">;</span>
     <span class="n">bvh_tree</span><span class="o">*</span> <span class="n">bvh</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
     <span class="n">bbox3f</span> <span class="n">bbox</span> <span class="o">=</span> <span class="n">invalid_bbox3f</span><span class="p">;</span>
@@ -5664,6 +5701,7 @@ May contain only one of the points/lines/triangles/quads.</p>
 <li>quads_pos:      face-varying indices for position</li>
 <li>quads_norm:      face-varying indices for normal</li>
 <li>quads_texcoord:      face-varying indices for texcoord</li>
+<li>beziers:      bezier</li>
 <li>pos:      per-vertex position (3 float)</li>
 <li>norm:      per-vertex normals (3 float)</li>
 <li>texcoord:      per-vertex texcoord (2 float)</li>
@@ -5671,6 +5709,8 @@ May contain only one of the points/lines/triangles/quads.</p>
 <li>color:      per-vertex color (4 float)</li>
 <li>radius:      per-vertex radius (1 float)</li>
 <li>tangsp:      per-vertex tangent space (4 float)</li>
+<li>subdivision_level:      number of times to subdivide</li>
+<li>subdivision_catmullclark:      whether to use Catmull-Clark subdivision</li>
 <li>elem_cdf:      element CDF for sampling</li>
 <li>bvh:      BVH</li>
 <li>bbox:      bounding box (needs to be updated explicitly)</li>
@@ -5853,8 +5893,8 @@ This is only used internally to avoid looping over all objects every time.</p>
 
 
 <p>Evaluate a texture</p>
-<h4>Function subdivide_shape()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">subdivide_shape</span><span class="p">(</span><span class="n">shape</span><span class="o">*</span> <span class="n">shp</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">subdiv</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
+<h4>Function subdivide_shape_once()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">subdivide_shape_once</span><span class="p">(</span><span class="n">shape</span><span class="o">*</span> <span class="n">shp</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">subdiv</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -5867,13 +5907,17 @@ is true.</p>
 
 <p>Facet a shape. Supports only non-face0varying shapes</p>
 <h4>Function tesselate_shape()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">tesselate_shape</span><span class="p">(</span><span class="n">shape</span><span class="o">*</span> <span class="n">shp</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">tesselate_shape</span><span class="p">(</span><span class="n">shape</span><span class="o">*</span> <span class="n">shp</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">subdivide</span><span class="p">,</span>
+    <span class="kt">bool</span> <span class="n">facevarying_to_sharedvertex</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">quads_to_triangles</span><span class="p">,</span>
+    <span class="kt">bool</span> <span class="n">bezier_to_lines</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Tesselate a shape into basic primitives</p>
 <h4>Function tesselate_shapes()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">tesselate_shapes</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">tesselate_shapes</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">subdivide</span><span class="p">,</span>
+    <span class="kt">bool</span> <span class="n">facevarying_to_sharedvertex</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">quads_to_triangles</span><span class="p">,</span>
+    <span class="kt">bool</span> <span class="n">bezier_to_lines</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -6516,7 +6560,8 @@ Samples have to be traced consecutively.</p>
     <span class="n">point</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
     <span class="n">line</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
     <span class="n">face</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span>
-    <span class="n">tetra</span> <span class="o">=</span> <span class="mi">4</span><span class="p">,</span>
+    <span class="n">bezier</span> <span class="o">=</span> <span class="mi">4</span><span class="p">,</span>
+    <span class="n">tetra</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span>
 <span class="p">}</span>
 </code></pre></div>
 
@@ -6527,6 +6572,7 @@ Samples have to be traced consecutively.</p>
 <li>point:      lists of points</li>
 <li>line:      polylines</li>
 <li>face:      polygon faces</li>
+<li>bezier:      bezier segments</li>
 <li>tetra:      tetrahedrons</li>
 </ul>
 </li>
@@ -6554,6 +6600,8 @@ Samples have to be traced consecutively.</p>
     <span class="n">string</span> <span class="n">matname</span><span class="p">;</span>
     <span class="n">string</span> <span class="n">groupname</span><span class="p">;</span>
     <span class="kt">bool</span> <span class="n">smoothing</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">subdivision_level</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="kt">bool</span> <span class="n">subdivision_catmullclark</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
     <span class="n">vector</span><span class="o">&lt;</span><span class="n">obj_vertex</span><span class="o">&gt;</span> <span class="n">verts</span><span class="p">;</span>
     <span class="n">vector</span><span class="o">&lt;</span><span class="n">obj_element</span><span class="o">&gt;</span> <span class="n">elems</span><span class="p">;</span>
 <span class="p">}</span>
@@ -6566,6 +6614,8 @@ Samples have to be traced consecutively.</p>
 <li>matname:      material name</li>
 <li>groupname:      group name</li>
 <li>smoothing:      smoothing</li>
+<li>subdivision_level:      number of times to subdivide</li>
+<li>subdivision_catmullclark:      whether to use Catmull-Clark subdivision</li>
 <li>verts:      element vertices</li>
 <li>elems:      element faces</li>
 </ul>
@@ -6840,6 +6890,7 @@ Samples have to be traced consecutively.</p>
     <span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">points</span><span class="p">;</span>
     <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2i</span><span class="o">&gt;</span> <span class="n">lines</span><span class="p">;</span>
     <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;</span> <span class="n">triangles</span><span class="p">;</span>
+    <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span> <span class="n">bezier</span><span class="p">;</span>
     <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span> <span class="n">tetras</span><span class="p">;</span>
     <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span> <span class="n">pos</span><span class="p">;</span>
     <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span> <span class="n">norm</span><span class="p">;</span>
@@ -6858,6 +6909,7 @@ Samples have to be traced consecutively.</p>
 <li>points:      points</li>
 <li>lines:      lines</li>
 <li>triangles:      triangles</li>
+<li>bezier:      bezier</li>
 <li>tetras:      tetrahedrons</li>
 <li>pos:      per-vertex position (3 float)</li>
 <li>norm:      per-vertex normals (3 float)</li>
@@ -7980,6 +8032,64 @@ not be present.</p>
 </ul>
 </li>
 </ul>
+<h4>Struct svg_path</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">svg_path</span> <span class="p">{</span>
+    <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;</span> <span class="n">pos</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+
+<p>Svg path</p>
+<ul>
+<li>Members:<ul>
+<li>pos:      Path vertices</li>
+</ul>
+</li>
+</ul>
+<h4>Struct svg_shape</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">svg_shape</span> <span class="p">{</span>
+    <span class="n">vector</span><span class="o">&lt;</span><span class="n">svg_path</span><span class="o">*&gt;</span> <span class="n">paths</span><span class="p">;</span>
+    <span class="o">~</span><span class="n">svg_shape</span><span class="p">();</span> 
+<span class="p">}</span>
+</code></pre></div>
+
+
+<p>Svg shape</p>
+<ul>
+<li>Members:<ul>
+<li>paths:      Paths</li>
+<li>~svg_shape():      Cleanup</li>
+</ul>
+</li>
+</ul>
+<h4>Struct svg_scene</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">svg_scene</span> <span class="p">{</span>
+    <span class="n">vector</span><span class="o">&lt;</span><span class="n">svg_shape</span><span class="o">*&gt;</span> <span class="n">shapes</span><span class="p">;</span>
+    <span class="o">~</span><span class="n">svg_scene</span><span class="p">();</span> 
+<span class="p">}</span>
+</code></pre></div>
+
+
+<p>Svg scene</p>
+<ul>
+<li>Members:<ul>
+<li>shapes:      Shapes</li>
+<li>~svg_scene():      Cleanup</li>
+</ul>
+</li>
+</ul>
+<h4>Function load_svg()</h4>
+<div class="codehilite"><pre><code><span></span><span class="n">svg_scene</span><span class="o">*</span> <span class="nf">load_svg</span><span class="p">(</span><span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Load SVG</p>
+<h4>Function save_svg()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">save_svg</span><span class="p">(</span><span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">,</span> <span class="k">const</span> <span class="n">svg_scene</span><span class="o">*</span> <span class="n">svg</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Save SVG</p>
 <h4>Function startswith()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">startswith</span><span class="p">(</span><span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">str</span><span class="p">,</span> <span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">substr</span><span class="p">);</span>
 </code></pre></div>
@@ -9824,6 +9934,21 @@ and textures on the GPU.</p>
 <h4>Function draw_value_widget()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">draw_value_widget</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span> <span class="kt">int</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">string</span><span class="p">,</span> <span class="kt">int</span><span class="o">&gt;&gt;&amp;</span> <span class="n">labels</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Enum widget</p>
+<h4>Function draw_value_widget()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">draw_value_widget</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span> <span class="kt">void</span><span class="o">*&amp;</span> <span class="n">val</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">string</span><span class="p">,</span> <span class="kt">void</span><span class="o">*&gt;&gt;&amp;</span> <span class="n">labels</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Enum widget</p>
+<h4>Function draw_value_widget()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">bool</span> <span class="n">draw_value_widget</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span> <span class="n">T</span><span class="o">*&amp;</span> <span class="n">val</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">string</span><span class="p">,</span> <span class="n">T</span><span class="o">*&gt;&gt;&amp;</span> <span class="n">labels</span><span class="p">);</span>
 </code></pre></div>
 
 

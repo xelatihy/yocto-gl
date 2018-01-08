@@ -29,6 +29,7 @@ and released under the MIT license. Features include:
 - simple logger and thread pool
 - path tracer supporting surfaces and hairs, GGX and MIS
 - support for loading and saving Wavefront OBJ and Khronos glTF
+- support for loading Bezier curves from SVG
 - OpenGL utilities to manage textures, buffers and prograrms
 - OpenGL shader for image viewing and GGX microfacet and hair rendering
 
@@ -87,8 +88,11 @@ If these features are useful, then the implementation files need to
 included in the manner described by the respective libraries. To simplify
 builds, we provice a file that builds these libraries, `stb_image.cpp`.
 
-To support Khronos glTF, Yocto/GL depends on `json.hpp`. These feature can
+To support Khronos glTF, Yocto/GL depends on `json.hpp`. This feature can
 be disabled by defining YGL_GLTF to 0 before including this file.
+
+To support SVG, Yocto/GL depends on `nanosvg.h`. This feature can
+be disabled by defining YGL_SVG to 0 before including this file.
 
 OpenGL utilities include the OpenGL libaries, use GLEW on Windows/Linux,
 GLFW for windows handling and Dear ImGui for UI support.
@@ -235,11 +239,13 @@ manipulation useful to support scene viewing and path tracing.
 12. convert quads to triangles with `convert_quads_to_triangles()`
 13. convert face varying to vertex shared representations with
     `convert_face_varying()`
-14. subdivide elements by edge splits with `subdivide_elems()` and
-    `subdivide_vert()`
-15. Catmull-Clark subdivision surface with `subdivide_catmullclark()` with
-    support for edge and vertex creasing
-16. example shapes: `make_cube()`, `make_uvsphere()`, `make_uvhemisphere()`,
+14. subdivide elements by edge splits with `subdivide_elems_linear()` and
+    `subdivide_vert_linear()`
+15. Catmull-Clark subdivision surface with `subdivide_vert_catmullclark()`
+    with support for edge and vertex creasing
+16. subdvide Bezier with `subdivide_bezier_recursive()` and
+    `subdivide_vert_bezier()`
+17. example shapes: `make_cube()`, `make_uvsphere()`, `make_uvhemisphere()`,
     `make_uvquad()`, `make_uvcube()`, `make_fvcube()`, `make_hair()`,
     `make_suzanne()`
 

@@ -30,6 +30,7 @@
 /// - simple logger and thread pool
 /// - path tracer supporting surfaces and hairs, GGX and MIS
 /// - support for loading and saving Wavefront OBJ and Khronos glTF
+/// - support for loading Bezier curves from SVG
 /// - OpenGL utilities to manage textures, buffers and prograrms
 /// - OpenGL shader for image viewing and GGX microfacet and hair rendering
 ///
@@ -88,8 +89,11 @@
 /// included in the manner described by the respective libraries. To simplify
 /// builds, we provice a file that builds these libraries, `stb_image.cpp`.
 ///
-/// To support Khronos glTF, Yocto/GL depends on `json.hpp`. These feature can
+/// To support Khronos glTF, Yocto/GL depends on `json.hpp`. This feature can
 /// be disabled by defining YGL_GLTF to 0 before including this file.
+///
+/// To support SVG, Yocto/GL depends on `nanosvg.h`. This feature can
+/// be disabled by defining YGL_SVG to 0 before including this file.
 ///
 /// OpenGL utilities include the OpenGL libaries, use GLEW on Windows/Linux,
 /// GLFW for windows handling and Dear ImGui for UI support.
@@ -236,11 +240,13 @@
 /// 12. convert quads to triangles with `convert_quads_to_triangles()`
 /// 13. convert face varying to vertex shared representations with
 ///     `convert_face_varying()`
-/// 14. subdivide elements by edge splits with `subdivide_elems()` and
-///     `subdivide_vert()`
-/// 15. Catmull-Clark subdivision surface with `subdivide_catmullclark()` with
-///     support for edge and vertex creasing
-/// 16. example shapes: `make_cube()`, `make_uvsphere()`, `make_uvhemisphere()`,
+/// 14. subdivide elements by edge splits with `subdivide_elems_linear()` and
+///     `subdivide_vert_linear()`
+/// 15. Catmull-Clark subdivision surface with `subdivide_vert_catmullclark()`
+///     with support for edge and vertex creasing
+/// 16. subdvide Bezier with `subdivide_bezier_recursive()` and
+///     `subdivide_vert_bezier()`
+/// 17. example shapes: `make_cube()`, `make_uvsphere()`, `make_uvhemisphere()`,
 ///     `make_uvquad()`, `make_uvcube()`, `make_fvcube()`, `make_hair()`,
 ///     `make_suzanne()`
 ///
@@ -708,6 +714,11 @@
 // enable glTF
 #ifndef YGL_GLTF
 #define YGL_GLTF 1
+#endif
+
+// enable SVG
+#ifndef YGL_SVG
+#define YGL_SVG 1
 #endif
 
 // enable OpenGL
@@ -4395,6 +4406,18 @@ inline vector<vec3i> convert_quads_to_triangles(
     return triangles;
 }
 
+/// Convert beziers to lines using 3 lines for each bezier.
+inline vector<vec2i> convert_bezier_to_lines(const vector<vec4i>& beziers) {
+    auto lines = vector<vec2i>();
+    lines.reserve(beziers.size() * 3);
+    for (auto& b : beziers) {
+        lines += {b.x, b.y};
+        lines += {b.y, b.z};
+        lines += {b.z, b.w};
+    }
+    return lines;
+}
+
 /// Convert face varying data to single primitives. Returns the quads indices
 /// and filled vectors for pos, norm and texcoord.
 inline tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
@@ -4453,8 +4476,8 @@ inline vec4f _subdivide_normalize(const vec4f& x) { return normalize(x); }
 /// Returns the tesselated elements and dictionaries for vertex calculations.
 inline tuple<vector<vec2i>, vector<vec3i>, vector<vec4i>, vector<vec2i>,
     vector<vec4i>>
-subdivide_elems(const vector<vec2i>& lines, const vector<vec3i>& triangles,
-    const vector<vec4i>& quads, int nverts) {
+subdivide_elems_linear(const vector<vec2i>& lines,
+    const vector<vec3i>& triangles, const vector<vec4i>& quads, int nverts) {
     if (!nverts) return {};
     auto emap = unordered_map<vec2i, int>();
     auto edges = vector<vec2i>();
@@ -4523,7 +4546,7 @@ subdivide_elems(const vector<vec2i>& lines, const vector<vec3i>& triangles,
 
 /// Subdivide vertex properties given the maps
 template <typename T>
-inline vector<T> subdivide_vert(const vector<T>& vert,
+inline vector<T> subdivide_vert_linear(const vector<T>& vert,
     const vector<vec2i>& edges, const vector<vec4i>& faces,
     bool normalized = false) {
     if (vert.empty()) return {};
@@ -4548,12 +4571,12 @@ inline vector<T> subdivide_vert(const vector<T>& vert,
 }
 
 /// Performs the smoothing step of Catmull-Clark. Start with a tesselate quad
-/// mesh obtained with subdivide_elems() and subdivide_vert(). To handle open
-/// meshes with boundary, get the boundary from make_boundary_edge() and pass it
-/// as crease_lines. To fix the boundary entirely, just get the boundary
-/// vertices and pass it as creases.
+/// mesh obtained with subdivide_elems_linear() and subdivide_vert_linear(). To
+/// handle open meshes with boundary, get the boundary from make_boundary_edge()
+/// and pass it as crease_lines. To fix the boundary entirely, just get the
+/// boundary vertices and pass it as creases.
 template <typename T>
-inline vector<T> subdivide_catmullclark(const vector<vec4i>& quads,
+inline vector<T> subdivide_vert_catmullclark(const vector<vec4i>& quads,
     const vector<T>& vert, const vector<vec2i>& crease_tlines,
     const vector<int>& crease_tpoints, bool normalized = false) {
     if (quads.empty() || vert.empty()) return vert;
@@ -4597,6 +4620,63 @@ inline vector<T> subdivide_catmullclark(const vector<vec4i>& quads,
 
     if (normalized) {
         for (auto& v : tvert) v = _subdivide_normalize(v);
+    }
+
+    return tvert;
+}
+
+/// Subdivide bezier recursive by splitting each segment into two in the middle.
+/// Returns the tesselated elements and dictionaries for vertex calculations.
+inline tuple<vector<vec4i>, vector<int>, vector<vec4i>>
+subdivide_bezier_recursive(const vector<vec4i>& beziers, int nverts) {
+    if (!nverts) return {};
+    auto vmap = unordered_map<int, int>();
+    auto verts = vector<int>();
+    for (auto& b : beziers) {
+        if (!contains(vmap, b.x)) {
+            vmap[b.x] = verts.size();
+            verts += b.x;
+        }
+        if (!contains(vmap, b.w)) {
+            vmap[b.w] = verts.size();
+            verts += b.w;
+        }
+    }
+    auto tbeziers = vector<vec4i>();
+    tbeziers.reserve(beziers.size() * 2);
+    for (auto b_kv : enumerate(beziers)) {
+        auto b = b_kv.second;
+        auto bo = (int)verts.size() + b_kv.first * 5;
+        tbeziers += {vmap.at(b.x), bo + 0, bo + 1, bo + 2};
+        tbeziers += {bo + 2, bo + 3, bo + 4, vmap.at(b.w)};
+    }
+    return {tbeziers, verts, beziers};
+}
+
+/// Subdivide vertex properties given the maps
+template <typename T>
+inline vector<T> subdivide_vert_bezier(const vector<T>& vert,
+    const vector<int>& verts, const vector<vec4i>& segments,
+    bool normalized = false) {
+    if (vert.empty()) return {};
+
+    auto tvert = vector<T>();
+    tvert.reserve(verts.size() + segments.size() * 5);
+
+    for (auto v : verts) tvert += vert[v];
+    for (auto s : segments) {
+        tvert += vert[s.x] * (1.f / 2) + vert[s.y] * (1.f / 2);
+        tvert += vert[s.x] * (1.f / 4) + vert[s.y] * (1.f / 2) +
+                 vert[s.z] * (1.f / 4);
+        tvert += vert[s.x] * (1.f / 8) + vert[s.y] * (3.f / 8) +
+                 vert[s.z] * (3.f / 8) + vert[s.w] * (1.f / 8);
+        tvert += vert[s.y] * (1.f / 4) + vert[s.z] * (1.f / 2) +
+                 vert[s.w] * (1.f / 4);
+        tvert += vert[s.z] * (1.f / 2) + vert[s.w] * (1.f / 2);
+    }
+
+    if (normalized) {
+        for (auto& n : tvert) n = _subdivide_normalize(n);
     }
 
     return tvert;
@@ -4939,6 +5019,9 @@ make_uvflipcapsphere(int level, float z, bool flipped = false);
 /// texcoord.
 tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
 make_uvcutsphere(int level, float z, bool flipped = false);
+
+/// Make a bezier circle. Returns bezier, pos.
+tuple<vector<vec4i>, vector<vec3f>> make_bezier_circle();
 
 /// Make a hair ball around a shape. Returns lines, pos, norm, texcoord, radius.
 tuple<vector<vec2i>, vector<vec3f>, vector<vec3f>, vector<vec2f>, vector<float>>
@@ -6968,6 +7051,8 @@ struct shape {
     vector<vec4i> quads_norm;
     /// face-varying indices for texcoord
     vector<vec4i> quads_texcoord;
+    /// bezier
+    vector<vec4i> beziers;
 
     // vertex data ----------------------------
     /// per-vertex position (3 float)
@@ -6984,6 +7069,12 @@ struct shape {
     vector<float> radius;
     /// per-vertex tangent space (4 float)
     vector<vec4f> tangsp;
+
+    // subdivision data -----------------------
+    /// number of times to subdivide
+    int subdivision_level = 0;
+    /// whether to use Catmull-Clark subdivision
+    bool subdivision_catmullclark = false;
 
     // computed data --------------------------
     /// element CDF for sampling
@@ -7211,30 +7302,30 @@ inline vec4f eval_texture(const texture_info& info, const vec2f& texcoord,
 
 /// Subdivides shape elements. Apply subdivision surface rules if subdivide
 /// is true.
-inline void subdivide_shape(shape* shp, bool subdiv = false) {
+inline void subdivide_shape_once(shape* shp, bool subdiv = false) {
     if (!shp->lines.empty() || !shp->triangles.empty() || !shp->quads.empty()) {
         vector<vec2i> edges;
         vector<vec4i> faces;
         tie(shp->lines, shp->triangles, shp->quads, edges, faces) =
-            subdivide_elems(
+            subdivide_elems_linear(
                 shp->lines, shp->triangles, shp->quads, (int)shp->pos.size());
-        shp->pos = subdivide_vert(shp->pos, edges, faces);
-        shp->norm = subdivide_vert(shp->norm, edges, faces);
-        shp->texcoord = subdivide_vert(shp->texcoord, edges, faces);
-        shp->color = subdivide_vert(shp->color, edges, faces);
-        shp->radius = subdivide_vert(shp->radius, edges, faces);
+        shp->pos = subdivide_vert_linear(shp->pos, edges, faces);
+        shp->norm = subdivide_vert_linear(shp->norm, edges, faces);
+        shp->texcoord = subdivide_vert_linear(shp->texcoord, edges, faces);
+        shp->color = subdivide_vert_linear(shp->color, edges, faces);
+        shp->radius = subdivide_vert_linear(shp->radius, edges, faces);
         if (subdiv && !shp->quads.empty()) {
             auto boundary = get_boundary_edges({}, {}, shp->quads);
             shp->pos =
-                subdivide_catmullclark(shp->quads, shp->pos, boundary, {});
-            shp->norm =
-                subdivide_catmullclark(shp->quads, shp->norm, boundary, {});
-            shp->texcoord =
-                subdivide_catmullclark(shp->quads, shp->texcoord, boundary, {});
-            shp->color =
-                subdivide_catmullclark(shp->quads, shp->color, boundary, {});
-            shp->radius =
-                subdivide_catmullclark(shp->quads, shp->radius, boundary, {});
+                subdivide_vert_catmullclark(shp->quads, shp->pos, boundary, {});
+            shp->norm = subdivide_vert_catmullclark(
+                shp->quads, shp->norm, boundary, {});
+            shp->texcoord = subdivide_vert_catmullclark(
+                shp->quads, shp->texcoord, boundary, {});
+            shp->color = subdivide_vert_catmullclark(
+                shp->quads, shp->color, boundary, {});
+            shp->radius = subdivide_vert_catmullclark(
+                shp->quads, shp->radius, boundary, {});
             shp->norm = compute_normals({}, {}, shp->quads, shp->pos);
         }
     } else if (!shp->quads_pos.empty()) {
@@ -7243,23 +7334,34 @@ inline void subdivide_shape(shape* shp, bool subdiv = false) {
         vector<vec2i> edges;
         vector<vec4i> faces;
         tie(_lines, _triangles, shp->quads_pos, edges, faces) =
-            subdivide_elems({}, {}, shp->quads_pos, shp->pos.size());
-        shp->pos = subdivide_vert(shp->pos, edges, faces);
+            subdivide_elems_linear({}, {}, shp->quads_pos, shp->pos.size());
+        shp->pos = subdivide_vert_linear(shp->pos, edges, faces);
         tie(_lines, _triangles, shp->quads_norm, edges, faces) =
-            subdivide_elems({}, {}, shp->quads_norm, shp->norm.size());
-        shp->norm = subdivide_vert(shp->norm, edges, faces);
+            subdivide_elems_linear({}, {}, shp->quads_norm, shp->norm.size());
+        shp->norm = subdivide_vert_linear(shp->norm, edges, faces);
         tie(_lines, _triangles, shp->quads_texcoord, edges, faces) =
-            subdivide_elems({}, {}, shp->quads_texcoord, shp->texcoord.size());
-        shp->texcoord = subdivide_vert(shp->texcoord, edges, faces);
+            subdivide_elems_linear(
+                {}, {}, shp->quads_texcoord, shp->texcoord.size());
+        shp->texcoord = subdivide_vert_linear(shp->texcoord, edges, faces);
         if (subdiv) {
-            shp->pos = subdivide_catmullclark(shp->quads_pos, shp->pos,
+            shp->pos = subdivide_vert_catmullclark(shp->quads_pos, shp->pos,
                 get_boundary_edges({}, {}, shp->quads_pos), {});
-            shp->norm = subdivide_catmullclark(shp->quads_norm, shp->norm,
+            shp->norm = subdivide_vert_catmullclark(shp->quads_norm, shp->norm,
                 get_boundary_edges({}, {}, shp->quads_norm), {});
             shp->texcoord =
-                subdivide_catmullclark(shp->quads_texcoord, shp->texcoord, {},
-                    get_boundary_verts({}, {}, shp->quads_texcoord));
+                subdivide_vert_catmullclark(shp->quads_texcoord, shp->texcoord,
+                    {}, get_boundary_verts({}, {}, shp->quads_texcoord));
         }
+    } else if (!shp->beziers.empty()) {
+        vector<int> verts;
+        vector<vec4i> segments;
+        tie(shp->beziers, verts, segments) =
+            subdivide_bezier_recursive(shp->beziers, (int)shp->pos.size());
+        shp->pos = subdivide_vert_bezier(shp->pos, verts, segments);
+        shp->norm = subdivide_vert_bezier(shp->norm, verts, segments);
+        shp->texcoord = subdivide_vert_bezier(shp->texcoord, verts, segments);
+        shp->color = subdivide_vert_bezier(shp->color, verts, segments);
+        shp->radius = subdivide_vert_bezier(shp->radius, verts, segments);
     }
 }
 
@@ -7278,19 +7380,40 @@ inline void facet_shape(shape* shp) {
 }
 
 /// Tesselate a shape into basic primitives
-inline void tesselate_shape(shape* shp) {
-    if (shp->quads_pos.empty()) return;
-    std::tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
-        convert_face_varying(shp->quads_pos, shp->quads_norm,
-            shp->quads_texcoord, shp->pos, shp->norm, shp->texcoord);
-    shp->quads_pos = {};
-    shp->quads_norm = {};
-    shp->quads_texcoord = {};
+inline void tesselate_shape(shape* shp, bool subdivide,
+    bool facevarying_to_sharedvertex, bool quads_to_triangles,
+    bool bezier_to_lines) {
+    if (subdivide && shp->subdivision_level) {
+        for (auto l = 0; l < shp->subdivision_level; l++) {
+            subdivide_shape_once(shp, shp->subdivision_catmullclark);
+        }
+    }
+    if (facevarying_to_sharedvertex && !shp->quads_pos.empty()) {
+        std::tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
+            convert_face_varying(shp->quads_pos, shp->quads_norm,
+                shp->quads_texcoord, shp->pos, shp->norm, shp->texcoord);
+        shp->quads_pos = {};
+        shp->quads_norm = {};
+        shp->quads_texcoord = {};
+    }
+    if (quads_to_triangles && !shp->quads.empty()) {
+        shp->triangles = convert_quads_to_triangles(shp->quads);
+        shp->quads = {};
+    }
+    if (bezier_to_lines && !shp->beziers.empty()) {
+        shp->lines = convert_bezier_to_lines(shp->beziers);
+        shp->beziers = {};
+    }
 }
 
 /// Tesselate scene shapes and update pointers
-inline void tesselate_shapes(scene* scn) {
-    for (auto shp : scn->shapes) tesselate_shape(shp);
+inline void tesselate_shapes(scene* scn, bool subdivide,
+    bool facevarying_to_sharedvertex, bool quads_to_triangles,
+    bool bezier_to_lines) {
+    for (auto shp : scn->shapes) {
+        tesselate_shape(shp, subdivide, facevarying_to_sharedvertex,
+            quads_to_triangles, bezier_to_lines);
+    }
 }
 
 /// Loading options
@@ -8047,8 +8170,10 @@ enum struct obj_element_type : uint16_t {
     line = 2,
     /// polygon faces
     face = 3,
+    /// bezier segments
+    bezier = 4,
     /// tetrahedrons
-    tetra = 4,
+    tetra = 5,
 };
 
 /// Element vertex indices
@@ -8070,6 +8195,10 @@ struct obj_group {
     string groupname;
     /// smoothing
     bool smoothing = true;
+    /// number of times to subdivide
+    int subdivision_level = 0;
+    /// whether to use Catmull-Clark subdivision
+    bool subdivision_catmullclark = false;
 
     // element data -------------------------
     /// element vertices
@@ -8310,6 +8439,8 @@ struct obj_shape {
     vector<vec2i> lines;
     /// triangles
     vector<vec3i> triangles;
+    /// bezier
+    vector<vec4i> bezier;
     /// tetrahedrons
     vector<vec4i> tetras;
 
@@ -9358,6 +9489,51 @@ struct accessor_view {
     static int _num_components(glTFAccessorType type);
     static int _ctype_size(glTFAccessorComponentType componentType);
 };
+
+}  // namespace ygl
+
+#endif
+
+#if YGL_SVG
+
+// -----------------------------------------------------------------------------
+// SVG SUPPORT
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+/// Svg path
+struct svg_path {
+    /// Path vertices
+    vector<vec2f> pos;
+};
+
+/// Svg shape
+struct svg_shape {
+    /// Paths
+    vector<svg_path*> paths;
+
+    /// Cleanup
+    ~svg_shape() {
+        for (auto e : paths) delete e;
+    }
+};
+
+/// Svg scene
+struct svg_scene {
+    /// Shapes
+    vector<svg_shape*> shapes;
+
+    /// Cleanup
+    ~svg_scene() {
+        for (auto e : shapes) delete e;
+    }
+};
+
+/// Load SVG
+svg_scene* load_svg(const string& filename);
+
+/// Save SVG
+void save_svg(const string& filename, const svg_scene* svg);
 
 }  // namespace ygl
 
@@ -11401,6 +11577,7 @@ struct gl_stdsurface_vbo {
     gl_element_buffer lines = {};      // line elements
     gl_element_buffer triangles = {};  // triangle elements
     gl_element_buffer quads = {};      // quad elements (as 2 triangles)
+    gl_element_buffer beziers = {};    // bezier elements (as 3 lines)
     gl_element_buffer edges = {};      // edge elements
 };
 

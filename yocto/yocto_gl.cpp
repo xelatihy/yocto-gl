@@ -86,6 +86,10 @@
 #include "ext/json.hpp"
 #endif
 
+#if YGL_SVG
+#include "ext/nanosvg.h"
+#endif
+
 #if YGL_OPENGL
 #ifdef __APPLE__
 #include <OpenGL/gl3.h>
@@ -2509,6 +2513,12 @@ inline obj_scene* load_obj(const string& filename, bool load_txt,
             g.elems.push_back({(uint32_t)g.verts.size(),
                 obj_element_type::point, (uint16_t)cur_elems.size()});
             g.verts.insert(g.verts.end(), cur_elems.begin(), cur_elems.end());
+        } else if (cmd == "b") {
+            parse_vertlist(ss, cur_elems, vert_size);
+            auto& g = asset->objects.back()->groups.back();
+            g.elems.push_back({(uint32_t)g.verts.size(),
+                obj_element_type::bezier, (uint16_t)cur_elems.size()});
+            g.verts.insert(g.verts.end(), cur_elems.begin(), cur_elems.end());
         } else if (cmd == "t") {
             parse_vertlist(ss, cur_elems, vert_size);
             auto& g = asset->objects.back()->groups.back();
@@ -2549,6 +2559,16 @@ inline obj_scene* load_obj(const string& filename, bool load_txt,
                 asset->objects.back()->groups.back().groupname = gname;
                 asset->objects.back()->groups.back().smoothing = smoothing;
             }
+        } else if (cmd == "sl") {
+            auto subdiv = zero2i;
+            parse_val(ss, subdiv);
+            if (asset->objects.back()->groups.empty()) {
+                asset->objects.back()->groups.push_back({});
+                asset->objects.back()->groups.back().matname = cur_matname;
+            }
+            asset->objects.back()->groups.back().subdivision_level = subdiv.x;
+            asset->objects.back()->groups.back().subdivision_catmullclark =
+                (bool)subdiv.y;
         } else if (cmd == "mtllib") {
             auto name = string();
             parse_val(ss, name);
@@ -2859,16 +2879,33 @@ inline void save_obj(const string& filename, const obj_scene* asset,
     for (auto& v : asset->radius) dump_named_val(fs, "vr", v);
 
     // save element data
-    const char* elem_labels[] = {"", "p", "l", "f", "t"};
+    static auto elem_labels =
+        unordered_map<obj_element_type, string>{{obj_element_type::point, "p"},
+            {obj_element_type::line, "l"}, {obj_element_type::face, "f"},
+            {obj_element_type::bezier, "b"}, {obj_element_type::tetra, "t"}};
     for (auto object : asset->objects) {
         dump_named_val(fs, "o", object->name);
         for (auto& group : object->groups) {
             dump_opt_val(fs, "usemtl", group.matname);
             dump_opt_val(fs, "g", group.groupname);
             if (!group.smoothing) dump_named_val(fs, "s", "off");
+            if (group.subdivision_level) {
+                auto sl = vec2i{group.subdivision_level,
+                    (group.subdivision_catmullclark) ? 1 : 0};
+                dump_named_val(fs, "sl", sl);
+            }
             for (auto elem : group.elems) {
-                dump_objverts(fs, elem_labels[(int)elem.type], elem.size,
-                    group.verts.data() + elem.start);
+                auto lbl = "";
+                switch (elem.type) {
+                    case obj_element_type::point: lbl = "p"; break;
+                    case obj_element_type::line: lbl = "l"; break;
+                    case obj_element_type::face: lbl = "f"; break;
+                    case obj_element_type::bezier: lbl = "b"; break;
+                    case obj_element_type::tetra: lbl = "t"; break;
+                    default: throw runtime_error("should not have gotten here");
+                }
+                dump_objverts(
+                    fs, lbl, elem.size, group.verts.data() + elem.start);
             }
         }
     }
@@ -2942,6 +2979,15 @@ inline obj_mesh* get_mesh(
                          i++) {
                         prim->triangles.push_back({vert_ids[elem.start],
                             vert_ids[i - 1], vert_ids[i]});
+                    }
+                } break;
+                case obj_element_type::bezier: {
+                    if ((elem.size - 1) % 3)
+                        throw runtime_error("bad obj bezier");
+                    for (auto i = elem.start + 1; i < elem.start + elem.size;
+                         i += 3) {
+                        prim->bezier.push_back({vert_ids[i - 1], vert_ids[i],
+                            vert_ids[i + 1], vert_ids[i + 2]});
                     }
                 } break;
                 case obj_element_type::tetra: {
@@ -5094,6 +5140,57 @@ int accessor_view::_ctype_size(glTFAccessorComponentType componentType) {
 
 #endif
 
+#if YGL_SVG
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION FOR SVG
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+namespace _impl_svg {
+
+// Load SVG
+inline svg_scene* load_svg(const string& filename) {
+    auto svg = nsvgParseFromFile(filename.c_str(), "mm", 96);
+    if (!svg) throw runtime_error("cannot load SVG");
+    auto scn = new svg_scene();
+    for (auto shape = svg->shapes; shape != nullptr; shape = shape->next) {
+        auto shp = new svg_shape();
+        scn->shapes += shp;
+        for (auto path = shape->paths; path != nullptr; path = path->next) {
+            auto pth = new svg_path();
+            shp->paths += pth;
+            pth->pos.resize(path->npts);
+            for (int i = 0; i < path->npts; i += 1) {
+                pth->pos[i] = {path->pts[i * 2 + 0], path->pts[i * 2 + 1]};
+            }
+        }
+    }
+    nsvgDelete(svg);
+    return scn;
+}
+
+// Save SVG
+inline void save_svg(const string& filename, const vector<svg_path>& paths) {
+    throw runtime_error("not implemented yet");
+}
+
+}  // namespace _impl_svg
+
+// Load SVG
+svg_scene* load_svg(const string& filename) {
+    return _impl_svg::load_svg(filename);
+}
+
+// Save SVG
+void save_svg(const string& filename, const vector<svg_path>& paths) {
+    return _impl_svg::save_svg(filename, paths);
+}
+
+}  // namespace ygl
+
+#endif
+
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR SIMPLE SCENE
 // -----------------------------------------------------------------------------
@@ -5247,6 +5344,8 @@ inline scene* obj_to_scene(const obj_scene* obj, const load_options& opts) {
             auto shp = new shape();
             shp->name = omsh->name + oshp.groupname;
             shp->mat = mmap[oshp.matname];
+            shp->subdivision_level = oshp.subdivision_level;
+            shp->subdivision_catmullclark = oshp.subdivision_catmullclark;
 
             // check to see if this shuold be face-varying or flat quads
             auto as_facevarying = false, as_quads = false;
@@ -5331,6 +5430,16 @@ inline scene* obj_to_scene(const obj_scene* obj, const load_options& opts) {
                                         {vert_ids[elem.start], vert_ids[i - 1],
                                             vert_ids[i]});
                                 }
+                            }
+                        } break;
+                        case obj_element_type::bezier: {
+                            if ((elem.size - 1) % 3)
+                                throw runtime_error("bad obj bezier");
+                            for (auto i = elem.start + 1;
+                                 i < elem.start + elem.size; i += 3) {
+                                shp->beziers.push_back(
+                                    {vert_ids[i - 1], vert_ids[i],
+                                        vert_ids[i + 1], vert_ids[i + 2]});
                             }
                         } break;
                         default: { assert(false); }
@@ -5660,6 +5769,8 @@ inline obj_scene* scene_to_obj(const scene* scn) {
         object->groups.emplace_back();
         auto group = &object->groups.back();
         group->matname = (shp->mat) ? shp->mat->name : "";
+        group->subdivision_level = shp->subdivision_level;
+        group->subdivision_catmullclark = shp->subdivision_catmullclark;
         for (auto point : shp->points) {
             group->elems.push_back(
                 {(uint32_t)group->verts.size(), obj_element_type::point, 1});
@@ -5743,6 +5854,20 @@ inline obj_scene* scene_to_obj(const scene* scn) {
                     vert.norm = offset.norm + shp->quads_norm[fid][i];
                 group->verts.push_back(vert);
                 last_vid = shp->quads_pos[fid][i];
+            }
+        }
+        for (auto bezier : shp->beziers) {
+            group->elems.push_back(
+                {(uint32_t)group->verts.size(), obj_element_type::bezier, 4});
+            for (auto vid : bezier) {
+                auto vert = obj_vertex{-1, -1, -1, -1, -1};
+                if (!shp->pos.empty()) vert.pos = offset.pos + vid;
+                if (!shp->texcoord.empty())
+                    vert.texcoord = offset.texcoord + vid;
+                if (!shp->norm.empty()) vert.norm = offset.norm + vid;
+                if (!shp->color.empty()) vert.color = offset.color + vid;
+                if (!shp->radius.empty()) vert.radius = offset.radius + vid;
+                group->verts.push_back(vert);
             }
         }
         obj->objects.emplace_back(object);
@@ -6513,6 +6638,47 @@ inline void save_gltf_scene(
 
 #endif
 
+#if YGL_SVG
+
+// Converts an svg scene
+inline scene* svg_to_scene(const svg_scene* sscn, const load_options& opts) {
+    auto scn = new scene();
+    auto sid = 0;
+    for (auto sshp : sscn->shapes) {
+        auto shp = new shape();
+        shp->name = "shape" + to_string(sid++);
+        for (auto spth : sshp->paths) {
+            auto o = (int)shp->pos.size();
+            for (auto p : spth->pos) shp->pos += {p.x, p.y, 0};
+            for (auto vid = 1; vid < spth->pos.size(); vid += 3)
+                shp->beziers +=
+                    {o + vid - 1, o + vid + 0, o + vid + 1, o + vid + 2};
+        }
+        scn->shapes += shp;
+    }
+    auto miny = flt_max, maxy = -flt_max;
+    for (auto shp : scn->shapes) {
+        for (auto& p : shp->pos) {
+            miny = min(miny, p.y);
+            maxy = max(maxy, p.y);
+        }
+    }
+    auto mdly = (maxy + miny) / 2;
+    for (auto shp : scn->shapes) {
+        for (auto& p : shp->pos) p.y = -(p.y - mdly) + mdly;
+    }
+    return scn;
+}
+
+// Load an svg scene
+inline scene* load_svg_scene(const string& filename, const load_options& opts) {
+    auto sscn = unique_ptr<svg_scene>(load_svg(filename));
+    auto scn = unique_ptr<scene>(svg_to_scene(sscn.get(), opts));
+    return scn.release();
+}
+
+#endif
+
 // Load a scene
 inline scene* load_scene(const string& filename, const load_options& opts) {
     auto ext = path_extension(filename);
@@ -6520,6 +6686,9 @@ inline scene* load_scene(const string& filename, const load_options& opts) {
 #if YGL_GLTF
     if (ext == ".gltf" || ext == ".GLTF")
         return load_gltf_scene(filename, opts);
+#endif
+#if YGL_SVG
+    if (ext == ".svg" || ext == ".SVG") return load_svg_scene(filename, opts);
 #endif
     throw runtime_error("unsupported extension " + ext);
     return nullptr;
@@ -6860,8 +7029,8 @@ tuple<vector<vec3i>, vector<vec3f>> make_geodesicsphere(int level) {
         vector<vec2i> edges;
         vector<vec4i> faces;
         tie(_lines, triangles, _quads, edges, faces) =
-            subdivide_elems({}, triangles, {}, (int)pos.size());
-        pos = subdivide_vert(pos, edges, faces);
+            subdivide_elems_linear({}, triangles, {}, (int)pos.size());
+        pos = subdivide_vert_linear(pos, edges, faces);
     }
     for (auto& p : pos) p = normalize(p);
     return {triangles, pos};
@@ -7514,6 +7683,18 @@ make_uvcutsphere(int level, float z, bool flipped) {
     return {quads, pos, norm, texcoord};
 }
 
+// Make a bezier circle. Returns bezier, pos.
+tuple<vector<vec4i>, vector<vec3f>> make_bezier_circle() {
+    // constant from http://spencermortensen.com/articles/bezier-circle/
+    static auto c = 0.551915024494f;
+    static auto pos = vector<vec3f>{{1, 0, 0}, {1, c, 0}, {c, 1, 0}, {0, 1, 0},
+        {-c, 1, 0}, {-1, c, 0}, {-1, 0, 0}, {-1, -c, 0}, {-c, -1, 0},
+        {0, -1, 0}, {c, -1, 0}, {1, -c, 0}};
+    static auto bezier =
+        vector<vec4i>{{0, 1, 2, 3}, {3, 4, 5, 6}, {6, 7, 8, 9}, {9, 10, 11, 0}};
+    return {bezier, pos};
+}
+
 // Make a hair ball around a shape
 tuple<vector<vec2i>, vector<vec3f>, vector<vec3f>, vector<vec2f>, vector<float>>
 make_hair(int num, int level, const vec2f& len, const vec2f& rad,
@@ -8102,6 +8283,7 @@ enum struct test_shape_type {
     lines2,
     lines3,
     linesi,
+    bcircle,
     plight,
     alight,
     alightt,
@@ -8136,6 +8318,7 @@ inline const vector<pair<string, test_shape_type>>& test_shape_names() {
         {"lines2", test_shape_type::lines2},
         {"lines3", test_shape_type::lines3},
         {"linesi", test_shape_type::linesi},
+        {"bcircle", test_shape_type::bcircle},
         {"plight", test_shape_type::plight},
         {"alight", test_shape_type::alight},
         {"alightt", test_shape_type::alightt},
@@ -8210,14 +8393,14 @@ inline shape* add_test_shape(
         } break;
         case test_shape_type::cubes: {
             tie(shp->quads, shp->pos) = make_cube();
-            for (auto i = 0; i < 4; i++) subdivide_shape(shp, true);
+            for (auto i = 0; i < 4; i++) subdivide_shape_once(shp, true);
         } break;
         case test_shape_type::suzanne: {
             tie(shp->quads, shp->pos) = make_suzanne();
         } break;
         case test_shape_type::suzannes: {
             tie(shp->quads, shp->pos) = make_suzanne();
-            for (auto i = 0; i < 2; i++) subdivide_shape(shp, true);
+            for (auto i = 0; i < 2; i++) subdivide_shape_once(shp, true);
         } break;
         case test_shape_type::cubefv: {
             tie(shp->quads_pos, shp->pos, shp->quads_norm, shp->norm,
@@ -8226,12 +8409,12 @@ inline shape* add_test_shape(
         case test_shape_type::cubefvs: {
             tie(shp->quads_pos, shp->pos, shp->quads_norm, shp->norm,
                 shp->quads_texcoord, shp->texcoord) = make_fvcube();
-            for (auto l = 0; l < 4; l++) subdivide_shape(shp, true);
+            for (auto l = 0; l < 4; l++) subdivide_shape_once(shp, true);
         } break;
         case test_shape_type::quads: {
             tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
                 make_uvquad(0);
-            for (auto i = 0; i < 4; i++) subdivide_shape(shp, true);
+            for (auto i = 0; i < 4; i++) subdivide_shape_once(shp, true);
         } break;
         case test_shape_type::spherefv: {
             tie(shp->quads_pos, shp->pos, shp->quads_norm, shp->norm,
@@ -8295,6 +8478,10 @@ inline shape* add_test_shape(
         case test_shape_type::linesi: {
             tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
                 make_uvsphere(5);
+        } break;
+        case test_shape_type::bcircle: {
+            tie(shp->beziers, shp->pos) = make_bezier_circle();
+            shp->subdivision_level = 2;
         } break;
         case test_shape_type::plight: {
             shp->points.push_back(0);
@@ -8588,7 +8775,8 @@ scene* make_test_scene(test_scene_type otype) {
                      test_shape_type::suzanne, test_shape_type::suzannes,
                      test_shape_type::cubefv, test_shape_type::cubefvs,
                      test_shape_type::quads, test_shape_type::spherefv,
-                     test_shape_type::matball, test_shape_type::matballi})
+                     test_shape_type::matball, test_shape_type::matballi,
+                     test_shape_type::bcircle})
                 add_test_shape(scn, stype, test_material_type::none);
             return scn;
         } break;
@@ -10000,6 +10188,10 @@ void update_stdsurface_state(gl_stdsurface_state* st, const scene* scn,
                 auto triangles = convert_quads_to_triangles(shp->quads);
                 update_element_buffer(st->vbo[shp].quads, triangles);
             }
+            if (!shp->beziers.empty()) {
+                auto lines = convert_bezier_to_lines(shp->beziers);
+                update_element_buffer(st->vbo[shp].beziers, lines);
+            }
             if (!shp->triangles.empty() || !shp->quads.empty()) {
                 auto edges = get_edges({}, shp->triangles, shp->quads);
                 update_element_buffer(st->vbo[shp].edges, edges);
@@ -10078,6 +10270,7 @@ inline void draw_stdsurface_shape(gl_stdsurface_state* st, const shape* shp,
     draw_elems(vbo.lines);
     draw_elems(vbo.triangles);
     draw_elems(vbo.quads);
+    draw_elems(vbo.beziers);
 
     if (params.edges && !params.wireframe) {
         assert(gl_check_error());
@@ -10836,17 +11029,28 @@ inline bool draw_elem_widgets(gl_window* win, scene* scn, shape* shp,
     auto mat_names = vector<pair<string, material*>>{{"<none>", nullptr}};
     for (auto mat : scn->materials) mat_names.push_back({mat->name, mat});
 
+    auto draw_vector_widget = [](gl_window* win, const char* lbl, int len) {
+        if (len) draw_label_widget(win, lbl, len);
+    };
+
     auto edited = vector<bool>();
     draw_separator_widget(win);
     draw_label_widget(win, "name", shp->name);
     edited += draw_value_widget(win, "material", shp->mat, mat_names);
-    draw_label_widget(win, "verts", (int)shp->pos.size());
-    if (!shp->triangles.empty())
-        draw_label_widget(win, "triangles", (int)shp->triangles.size());
-    if (!shp->lines.empty())
-        draw_label_widget(win, "lines", (int)shp->lines.size());
-    if (!shp->points.empty())
-        draw_label_widget(win, "points", (int)shp->points.size());
+    draw_vector_widget(win, "pos", (int)shp->pos.size());
+    draw_vector_widget(win, "norm", (int)shp->norm.size());
+    draw_vector_widget(win, "texcoord", (int)shp->texcoord.size());
+    draw_vector_widget(win, "color", (int)shp->color.size());
+    draw_vector_widget(win, "tangsp", (int)shp->tangsp.size());
+    draw_vector_widget(win, "radius", (int)shp->radius.size());
+    draw_vector_widget(win, "triangles", (int)shp->triangles.size());
+    draw_vector_widget(win, "quads", (int)shp->quads.size());
+    draw_vector_widget(win, "quads_pos", (int)shp->quads_pos.size());
+    draw_vector_widget(win, "quads_norm", (int)shp->quads_norm.size());
+    draw_vector_widget(win, "quads_texcoord", (int)shp->quads_texcoord.size());
+    draw_vector_widget(win, "lines", (int)shp->lines.size());
+    draw_vector_widget(win, "points", (int)shp->points.size());
+    draw_vector_widget(win, "beziers", (int)shp->beziers.size());
     return std::any_of(edited.begin(), edited.end(), [](auto x) { return x; });
 }
 

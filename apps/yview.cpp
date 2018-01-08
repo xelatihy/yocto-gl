@@ -156,7 +156,8 @@ int main(int argc, char* argv[]) {
     } catch (exception e) { log_fatal("cannot load scene {}", app->filename); }
 
     // tesselate input shapes
-    if (!preserve_facevarying) tesselate_shapes(app->scn);
+    tesselate_shapes(app->scn, true, !preserve_facevarying,
+        !preserve_quads && !preserve_facevarying, false);
 
     // add missing data
     add_elements(app->scn);
