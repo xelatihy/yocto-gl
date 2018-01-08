@@ -10103,7 +10103,7 @@ Enable/disable depth test
 #### Function gl_enable_culling()
 
 ~~~ .cpp
-void gl_enable_culling(bool enabled);
+void gl_enable_culling(bool enabled, bool front = false, bool back = true);
 ~~~
 
 Enable/disable culling
@@ -11191,7 +11191,7 @@ ambient illumination amb.
 
 ~~~ .cpp
 inline void begin_stdsurface_shape(
-    gl_stdsurface_program& prog, const mat4f& xform);
+    gl_stdsurface_program& prog, const mat4f& xform, float normal_offset = 0);
 ~~~
 
 Begins drawing a shape with transform xform.
@@ -11203,6 +11203,15 @@ inline void end_stdsurface_shape(gl_stdsurface_program& prog);
 ~~~
 
 End shade drawing.
+
+#### Function set_stdsurface_normaloffset()
+
+~~~ .cpp
+inline void set_stdsurface_normaloffset(
+    gl_stdsurface_program& prog, float normal_offset);
+~~~
+
+Sets normal offset.
 
 #### Function set_stdsurface_highlight()
 
@@ -11231,6 +11240,15 @@ correspoinding XXX_txt variables. Sets also normal and occlusion
 maps. Works for points/lines/triangles (diffuse for points,
 Kajiya-Kay for lines, GGX/Phong for triangles).
 Material type matches the scene material type.
+
+#### Function set_stdsurface_constmaterial()
+
+~~~ .cpp
+inline void set_stdsurface_constmaterial(
+    gl_stdsurface_program& prog, const vec3f& ke, float op);
+~~~
+
+Set constant material values with emission ke.
 
 #### Function set_stdsurface_vert()
 
@@ -11293,11 +11311,15 @@ struct gl_stdsurface_params {
     bool filmic = false;
     bool wireframe = false;
     bool edges = false;
+    float edge_offset = 0.01f;
     bool cutout = false;
     bool camera_lights = false;
     vec4f background = {0, 0, 0, 0};
     vec3f ambient = {0, 0, 0};
-    void* hilighted = nullptr;
+    void* highlighted = nullptr;
+    vec3f highlight_color = {1, 1, 0};
+    vec3f edge_color = {0, 0, 0};
+    bool cull_backface = true;
 }
 ~~~
 
@@ -11312,11 +11334,15 @@ Params for  gl_stdsurface_program drawing
     - filmic:      image filmic tonemapping
     - wireframe:      draw as wireframe
     - edges:      draw with overlaid edges
+    - edge_offset:      offset for edges
     - cutout:      draw with an alpha cutout for binary transparency
     - camera_lights:      camera light mode
     - background:      window background
     - ambient:      ambient illumination
-    - hilighted:      highlighted object
+    - highlighted:      highlighted object
+    - highlight_color:      highlight color
+    - edge_color:      edge color
+    - cull_backface:      cull back back
 
 
 #### Function make_stdsurface_state()
@@ -11545,7 +11571,8 @@ Handle camera navigation.
 #### Function init_widgets()
 
 ~~~ .cpp
-void init_widgets(gl_window* win);
+void init_widgets(
+    gl_window* win, bool light_style = false, bool extra_font = true);
 ~~~
 
 Initialize widgets

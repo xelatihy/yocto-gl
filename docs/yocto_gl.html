@@ -8598,7 +8598,7 @@ By default a non-verbose stdout logger is creater.</p>
 
 <p>Enable/disable depth test</p>
 <h4>Function gl_enable_culling()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">gl_enable_culling</span><span class="p">(</span><span class="kt">bool</span> <span class="n">enabled</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">gl_enable_culling</span><span class="p">(</span><span class="kt">bool</span> <span class="n">enabled</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">front</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">back</span> <span class="o">=</span> <span class="nb">true</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -9466,7 +9466,7 @@ preview.</p>
 ambient illumination amb.</p>
 <h4>Function begin_stdsurface_shape()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">begin_stdsurface_shape</span><span class="p">(</span>
-    <span class="n">gl_stdsurface_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">mat4f</span><span class="o">&amp;</span> <span class="n">xform</span><span class="p">);</span>
+    <span class="n">gl_stdsurface_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">mat4f</span><span class="o">&amp;</span> <span class="n">xform</span><span class="p">,</span> <span class="kt">float</span> <span class="n">normal_offset</span> <span class="o">=</span> <span class="mi">0</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -9477,6 +9477,13 @@ ambient illumination amb.</p>
 
 
 <p>End shade drawing.</p>
+<h4>Function set_stdsurface_normaloffset()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">set_stdsurface_normaloffset</span><span class="p">(</span>
+    <span class="n">gl_stdsurface_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="kt">float</span> <span class="n">normal_offset</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Sets normal offset.</p>
 <h4>Function set_stdsurface_highlight()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">set_stdsurface_highlight</span><span class="p">(</span>
     <span class="n">gl_stdsurface_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec4f</span><span class="o">&amp;</span> <span class="n">highlight</span><span class="p">);</span>
@@ -9501,6 +9508,13 @@ correspoinding XXX_txt variables. Sets also normal and occlusion
 maps. Works for points/lines/triangles (diffuse for points,
 Kajiya-Kay for lines, GGX/Phong for triangles).
 Material type matches the scene material type.</p>
+<h4>Function set_stdsurface_constmaterial()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">set_stdsurface_constmaterial</span><span class="p">(</span>
+    <span class="n">gl_stdsurface_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">ke</span><span class="p">,</span> <span class="kt">float</span> <span class="n">op</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Set constant material values with emission ke.</p>
 <h4>Function set_stdsurface_vert()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">set_stdsurface_vert</span><span class="p">(</span><span class="n">gl_stdsurface_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">gl_vertex_buffer</span><span class="o">&amp;</span> <span class="n">pos</span><span class="p">,</span> <span class="k">const</span> <span class="n">gl_vertex_buffer</span><span class="o">&amp;</span> <span class="n">norm</span><span class="p">,</span>
@@ -9550,11 +9564,15 @@ public API.</p>
     <span class="kt">bool</span> <span class="n">filmic</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
     <span class="kt">bool</span> <span class="n">wireframe</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
     <span class="kt">bool</span> <span class="n">edges</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
+    <span class="kt">float</span> <span class="n">edge_offset</span> <span class="o">=</span> <span class="mf">0.01f</span><span class="p">;</span>
     <span class="kt">bool</span> <span class="n">cutout</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
     <span class="kt">bool</span> <span class="n">camera_lights</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
     <span class="n">vec4f</span> <span class="n">background</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">};</span>
     <span class="n">vec3f</span> <span class="n">ambient</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">};</span>
-    <span class="kt">void</span><span class="o">*</span> <span class="n">hilighted</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+    <span class="kt">void</span><span class="o">*</span> <span class="n">highlighted</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+    <span class="n">vec3f</span> <span class="n">highlight_color</span> <span class="o">=</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">};</span>
+    <span class="n">vec3f</span> <span class="n">edge_color</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">};</span>
+    <span class="kt">bool</span> <span class="n">cull_backface</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
 <span class="p">}</span>
 </code></pre></div>
 
@@ -9570,11 +9588,15 @@ public API.</p>
 <li>filmic:      image filmic tonemapping</li>
 <li>wireframe:      draw as wireframe</li>
 <li>edges:      draw with overlaid edges</li>
+<li>edge_offset:      offset for edges</li>
 <li>cutout:      draw with an alpha cutout for binary transparency</li>
 <li>camera_lights:      camera light mode</li>
 <li>background:      window background</li>
 <li>ambient:      ambient illumination</li>
-<li>hilighted:      highlighted object</li>
+<li>highlighted:      highlighted object</li>
+<li>highlight_color:      highlight color</li>
+<li>edge_color:      edge color</li>
+<li>cull_backface:      cull back back</li>
 </ul>
 </li>
 </ul>
@@ -9748,7 +9770,8 @@ and textures on the GPU.</p>
 
 <p>Handle camera navigation.</p>
 <h4>Function init_widgets()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">init_widgets</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">init_widgets</span><span class="p">(</span>
+    <span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">light_style</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">extra_font</span> <span class="o">=</span> <span class="nb">true</span><span class="p">);</span>
 </code></pre></div>
 
 
