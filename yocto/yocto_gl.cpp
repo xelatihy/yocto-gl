@@ -9827,7 +9827,7 @@ gl_stdsurface_program make_stdsurface_program() {
             pos = vert_pos;
             norm = vert_norm;
             tangsp = vert_tangsp;
-            
+
             // normal offset
             if(shape_normal_offset != 0) {
                 pos += shape_normal_offset * norm;
@@ -10614,13 +10614,14 @@ bool handle_camera_navigation(
 }
 
 // Initialize widgets
-void init_widgets(gl_window* win) {
+void init_widgets(gl_window* win, bool alt_style) {
     ImGui_ImplGlfwGL3_Init(win->_gwin, false);
     ImGui::GetStyle().WindowRounding = 0;
     ImGui::GetIO().IniFilename = nullptr;
     ImGui::SetNextWindowPos({0, 0});
     auto size = get_window_size(win);
     ImGui::SetNextWindowSize({(float)win->_widget_width, (float)size[1]});
+    // ImGui::StyleColorsDark();
     win->_widget_enabled = true;
 }
 
