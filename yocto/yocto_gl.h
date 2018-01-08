@@ -11752,7 +11752,8 @@ inline void save_screenshot(gl_window* win, const string& imfilename) {
 bool handle_camera_navigation(gl_window* win, camera* cam, bool navigation_fps);
 
 /// Initialize widgets
-void init_widgets(gl_window* win, bool alt_style = false);
+void init_widgets(
+    gl_window* win, bool light_style = false, bool extra_font = true);
 
 /// Begin draw widget
 bool begin_widgets(gl_window* win, const string& title);

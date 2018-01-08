@@ -100,6 +100,8 @@
 #include <GLFW/glfw3.h>
 #include "ext/imgui/imgui.h"
 #include "ext/imgui/imgui_impl_glfw_gl3.h"
+unsigned int imgui_extrafont_compressed_size();
+const unsigned int* imgui_extrafont_compressed_data();
 #endif
 
 // -----------------------------------------------------------------------------
@@ -10614,14 +10616,23 @@ bool handle_camera_navigation(
 }
 
 // Initialize widgets
-void init_widgets(gl_window* win, bool alt_style) {
+void init_widgets(gl_window* win, bool light_style, bool alt_font) {
     ImGui_ImplGlfwGL3_Init(win->_gwin, false);
     ImGui::GetStyle().WindowRounding = 0;
     ImGui::GetIO().IniFilename = nullptr;
     ImGui::SetNextWindowPos({0, 0});
     auto size = get_window_size(win);
     ImGui::SetNextWindowSize({(float)win->_widget_width, (float)size[1]});
-    // ImGui::StyleColorsDark();
+    if (light_style) ImGui::StyleColorsLight();
+    if (alt_font) {
+        ImGuiIO& io = ImGui::GetIO();
+        io.Fonts->AddFontFromMemoryCompressedTTF(
+            imgui_extrafont_compressed_data(),
+            imgui_extrafont_compressed_size(), 16);
+    } else {
+        ImGuiIO& io = ImGui::GetIO();
+        io.Fonts->AddFontDefault();
+    }
     win->_widget_enabled = true;
 }
 
