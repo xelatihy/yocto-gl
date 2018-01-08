@@ -139,6 +139,7 @@ struct proc_prim_shape_params {
     int level = 5;
     int subdiv = 0;
     bool faceted = false;
+    bool baseline = true;
 };
 
 // Procesural shape
@@ -385,6 +386,14 @@ bool update_proc_prim_shape(proc_shape* pshp) {
     for (auto i = 0; i < params.subdiv; i++) subdivide_shape_once(shp, true);
 
     if (params.faceted) facet_shape(shp);
+
+    if (params.baseline) {
+        auto miny = flt_max;
+        for (auto shp : pshp->shps)
+            for (auto& p : shp->pos) miny = min(miny, p.y);
+        for (auto shp : pshp->shps)
+            for (auto& p : shp->pos) p.y -= miny;
+    }
 
     return num_changed;
 }
@@ -693,18 +702,6 @@ inline bool draw_procedit_widgets(
         scn->instances += ist;
         selection = ist;
         update_proc_scene(scn);
-    }
-    if (draw_button_widget(win, "snap to floor")) {
-        for (auto pist : scn->instances) {
-            if (pist != selection) continue;
-            for (auto shp : pist->shp->shps) update_bounds(shp);
-            for (auto ist : pist->ists) update_bounds(ist, false);
-            auto bbox = invalid_bbox3f;
-            for (auto ist : pist->ists) bbox += ist->bbox;
-            pist->frame =
-                translation_frame3f({0, -bbox.min.y, 0}) * pist->frame;
-            update_proc_instance(pist);
-        }
     }
     return false;
 }
