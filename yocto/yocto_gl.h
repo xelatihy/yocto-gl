@@ -10551,7 +10551,7 @@ void gl_clear_buffers(const vec4f& background = {0, 0, 0, 0});
 void gl_enable_depth_test(bool enabled);
 
 /// Enable/disable culling
-void gl_enable_culling(bool enabled);
+void gl_enable_culling(bool enabled, bool front = false, bool back = true);
 
 /// Enable/disable wireframe
 void gl_enable_wireframe(bool enabled);
@@ -11658,7 +11658,7 @@ struct gl_stdsurface_params {
     /// edge color
     vec3f edge_color = {0, 0, 0};
     /// cull back back
-    bool cull_backface = false;
+    bool cull_backface = true;
 };
 
 /// Initialize gl_stdsurface_program draw state

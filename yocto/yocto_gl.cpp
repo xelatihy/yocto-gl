@@ -9048,12 +9048,20 @@ void gl_enable_depth_test(bool enabled) {
 }
 
 // Enable/disable culling
-void gl_enable_culling(bool enabled) {
+void gl_enable_culling(bool enabled, bool front, bool back) {
     assert(gl_check_error());
-    if (enabled)
+    if (enabled && (front || back)) {
         glEnable(GL_CULL_FACE);
-    else
+        if (front && back)
+            glCullFace(GL_FRONT_AND_BACK);
+        else if (front)
+            glCullFace(GL_FRONT);
+        else if (back)
+            glCullFace(GL_BACK);
+    } else {
         glDisable(GL_CULL_FACE);
+        glCullFace(GL_BACK);
+    }
     assert(gl_check_error());
 }
 
@@ -10310,11 +10318,13 @@ inline void draw_stdsurface_shape(gl_stdsurface_state* st, const shape* shp,
     draw_elems(vbo.beziers);
 
     if ((params.edges && !params.wireframe) || highlighted) {
+        gl_enable_culling(false);
         set_stdsurface_constmaterial(st->prog,
             (highlighted) ? params.highlight_color : params.edge_color,
             (highlighted) ? 1 : mat->op);
         set_stdsurface_normaloffset(st->prog, params.edge_offset);
         draw_elems(vbo.edges);
+        gl_enable_culling(params.cull_backface);
     }
 
     if (highlighted && false) {

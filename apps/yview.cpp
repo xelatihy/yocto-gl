@@ -65,6 +65,7 @@ inline void draw(gl_window* win) {
 
     gl_clear_buffers(app->shparams.background);
     gl_enable_depth_test(true);
+    gl_enable_culling(app->shparams.cull_backface);
     draw_stdsurface_scene(app->shstate, app->scn, app->shparams);
 
     if (begin_widgets(win, "yview")) {
