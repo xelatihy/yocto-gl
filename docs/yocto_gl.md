@@ -576,6 +576,7 @@ and user end.
 Here we mark only major features added to the library. Small refactorings
 and bug fixes are reported here.
 
+- v 0.2.0: various bug fixes and improvement to OpenGL drawing and widgets
 - v 0.1.0: initial release after refactoring
 
 ## API Documentation
