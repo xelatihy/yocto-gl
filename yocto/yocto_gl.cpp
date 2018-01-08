@@ -10011,6 +10011,14 @@ gl_stdsurface_program make_stdsurface_program() {
 
         void eval_material(vec2 texcoord, vec4 color, out int type, out vec3 ke,
                            out vec3 kd, out vec3 ks, out float rs, out float op, out bool cutout) {
+            if(material.mtype == 0) {
+                type = 0;
+                ke = material.ke;
+                kd = vec3(0,0,0);
+                ks = vec3(0,0,0);
+                op = 1;
+            }
+
             ke = color.xyz * material.ke;
             kd = color.xyz * material.kd;
             ks = color.xyz * material.ks;
@@ -10105,6 +10113,12 @@ gl_stdsurface_program make_stdsurface_program() {
 
             // exit if needed
             if(brdf.cutout) discard;
+
+            // check const color
+            if(brdf.type == 0) {
+                frag_color = vec4(brdf.ke,brdf.op);
+                return;
+            }
 
             // emission
             vec3 c = brdf.ke;
@@ -10297,9 +10311,7 @@ inline void draw_stdsurface_shape(gl_stdsurface_state* st, const shape* shp,
     draw_elems(vbo.beziers);
 
     if (params.edges && !params.wireframe) {
-        set_stdsurface_material(st->prog, material_type::specular_roughness,
-            etype, zero3f, zero3f, zero3f, 0.5f, mat->op, {}, {}, {}, {}, {},
-            {}, true, mat->double_sided, false);
+        set_stdsurface_constmaterial(st->prog, zero3f, mat->op);
         set_stdsurface_normaloffset(st->prog, params.edge_offset);
         draw_elems(vbo.edges);
     }
