@@ -340,6 +340,14 @@ bool update_proc_prim_shape(proc_shape* pshp) {
 
     shp->name = pshp->name;
     shp->mat = mat;
+    shp->pos = {};
+    shp->norm = {};
+    shp->texcoord = {};
+    shp->radius = {};
+    shp->points = {};
+    shp->lines = {};
+    shp->triangles = {};
+    shp->quads = {};
     switch (params.ptype) {
         case proc_prim_shape_type::sphere: {
             tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
