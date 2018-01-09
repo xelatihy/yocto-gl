@@ -115,7 +115,8 @@ enum struct proc_prim_shape_type {
     cutsphere,
     cube,
     fvcube,
-    monkey, seashell
+    monkey,
+    seashell
 };
 
 // Names for enumeration
@@ -381,7 +382,8 @@ bool update_proc_prim_shape(proc_shape* pshp) {
             shp->norm = compute_normals({}, {}, shp->quads, shp->pos);
         } break;
         case proc_prim_shape_type::seashell: {
-            tie(shp->quads, shp->pos, shp->norm, shp->texcoord) = make_uvseashell(params.level, params.seashell_params);
+            tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
+                make_uvseashell(params.level, params.seashell_params);
         } break;
         default: throw runtime_error("should not have gotten here");
     }
@@ -605,14 +607,27 @@ inline bool draw_procelem_widgets(gl_window* win, proc_scene* scn,
             edited += draw_value_widget(win, "tesselation", params.level, 0, 8);
             edited +=
                 draw_value_widget(win, "subdivision", params.subdiv, 0, 8);
-            if(params.ptype == proc_prim_shape_type::seashell) {
-                edited += draw_value_widget(win, "spiral_revolutions", params.seashell_params.spiral_revolutions, 0, 10);
-                edited += draw_value_widget(win, "spiral_angle", params.seashell_params.spiral_angle, 0, pif);
-                edited += draw_value_widget(win, "enlarging_angle", params.seashell_params.enlarging_angle, 0, 2*pif);
-                edited += draw_value_widget(win, "spiral_aperture", params.seashell_params.spiral_aperture, 0, 2);
-                edited += draw_value_widget(win, "ellipse_axis", params.seashell_params.ellipse_axis, 0, 2);
-                edited += draw_value_widget(win, "ellipse_rotation", params.seashell_params.curve_rotation, 0, 2*pif);
-
+            if (params.ptype == proc_prim_shape_type::seashell) {
+                edited += draw_value_widget(win, "spiral_revolutions",
+                    params.seashell_params.spiral_revolutions, 1, 10);
+                edited += draw_value_widget(win, "spiral_angle",
+                    params.seashell_params.spiral_angle, 0, pif);
+                edited += draw_value_widget(win, "enlarging_angle",
+                    params.seashell_params.enlarging_angle, 0, 2 * pif);
+                edited += draw_value_widget(win, "spiral_aperture",
+                    params.seashell_params.spiral_aperture, 0, 2);
+                edited += draw_value_widget(win, "ellipse_axis",
+                    params.seashell_params.ellipse_axis, 0, 2);
+                edited += draw_value_widget(win, "ellipse_rotation",
+                    params.seashell_params.curve_rotation, 0, 2 * pif);
+                edited += draw_value_widget(win, "nodules_num",
+                    params.seashell_params.nodules_num, 0, 25);
+                edited += draw_value_widget(win, "nodule_length",
+                    params.seashell_params.nodule_length, 0, 10);
+                edited += draw_value_widget(win, "nodule_height",
+                    params.seashell_params.nodule_height, 0, 10);
+                edited += draw_value_widget(win, "nodule_pos",
+                    params.seashell_params.nodule_pos, 0, 10);
             }
         } break;
         default: throw runtime_error("should not have gotten here");

@@ -7689,11 +7689,16 @@ make_uvcutsphere(int level, float z, bool flipped) {
 tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
 make_uvseashell(int level, const make_seashell_params& params) {
     auto R = params.spiral_revolutions;
+    auto D = -1.0f;
     auto a = params.spiral_angle;
     auto b = params.enlarging_angle;
     auto A = params.spiral_aperture;
     auto e = params.ellipse_axis;
-    auto O = params.curve_rotation;
+    auto O = params.curve_rotation;  // (psi, Omega, mu)
+    auto W = params.nodule_length;
+    auto N = params.nodules_num;
+    auto P = params.nodule_pos;
+    auto L = params.nodule_height;
 
     auto cot_a = 1 / tan(a);
 
@@ -7705,13 +7710,24 @@ make_uvseashell(int level, const make_seashell_params& params) {
     for (auto i = 0; i < texcoord.size(); i++) {
         auto uv = texcoord[i];
         auto s = uv.x * 2 * pif;
-        auto t = uv.y * 2 * pif * R;
+        auto t = uv.y * 2 * pif * R - pif * R;
         auto re = 1 / sqrt(pow(cos(s) / e.x, 2) + pow(sin(s) / e.y, 2));
-        pos[i].x =
-            (A * sin(b) * cos(t) + cos(s) * cos(t) * re) * exp(t * cot_a);
-        pos[i].y =
-            (A * sin(b) * sin(t) + cos(s) * sin(t) * re) * exp(t * cot_a);
-        pos[i].z = (-A * cos(b) + sin(s) * re) * exp(t * cot_a);
+        if (L && W.x && W.y && t > 0) {
+            auto l = (2 * pif / N) *
+                     ((N * t) / (2 * pif) - floor((N * t) / (2 * pif)));
+            auto rn =
+                L * exp(-pow((2 * (s - P)) / W.x, 2) - pow((2 * l) / W.y, 2));
+            re += rn;
+        }
+        pos[i].x = (A * sin(b) * cos(t) + cos(s + O.x) * cos(t + O.y) * re -
+                       sin(O.z) * sin(t + O.y) * re) *
+                   D * exp(t * cot_a);
+        pos[i].y = (A * sin(b) * sin(t) + cos(s + O.x) * sin(t + O.y) * re +
+                       sin(O.z) * sin(s + O.x) * cos(t + O.y) * re) *
+                   exp(t * cot_a);
+        pos[i].z =
+            (-A * cos(b) + cos(O.z) * sin(s + O.x) * re) * exp(t * cot_a);
+        texcoord[i] = {uv.x, uv.y * R};
     }
     auto norm = compute_normals({}, {}, quads, pos);
     return {quads, pos, norm, texcoord};
