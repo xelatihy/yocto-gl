@@ -5021,6 +5021,26 @@ make_uvflipcapsphere(int level, float z, bool flipped = false);
 tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
 make_uvcutsphere(int level, float z, bool flipped = false);
 
+/// Make seashell params
+struct make_seashell_params {
+    /// spiral revolutions
+    float spiral_revolutions = 2;
+    /// spiral angle (alpha)
+    float spiral_angle = 83*pif/180;
+    /// enlarging revolutions (beta)
+    float enlarging_angle=42*pif/180;
+    /// spiral aperture (A)
+    float spiral_aperture = 0.25f;
+    /// ellipse axis (a,b)
+    vec2f ellipse_axis={0.12f,0.20f};
+    /// curve rotatation (psi, Omega, mu)
+    vec3f curve_rotation = {70*pif/180,30*pif/180,10*pif/180};
+};
+
+/// Make a seashell. This is not watertight. Returns quads, pos, norm, texcoord.
+tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
+make_uvseashell(int level, const make_seashell_params& params);
+
 /// Make a bezier circle. Returns bezier, pos.
 tuple<vector<vec4i>, vector<vec3f>> make_bezier_circle();
 

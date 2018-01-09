@@ -7685,6 +7685,38 @@ make_uvcutsphere(int level, float z, bool flipped) {
     return {quads, pos, norm, texcoord};
 }
 
+// Make a seashell. This is not watertight. Returns quads, pos, norm, texcoord.
+tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
+make_uvseashell(int level, const make_seashell_params& params) {
+    auto R = params.spiral_revolutions;
+    auto a = params.spiral_angle;
+    auto b = params.enlarging_angle;
+    auto A = params.spiral_aperture;
+    auto e = params.ellipse_axis;
+    auto O = params.curve_rotation;
+
+    auto cot_a = 1 / tan(a);
+
+    auto quads = vector<vec4i>();
+    auto texcoord = vector<vec2f>();
+    tie(quads, texcoord) =
+        make_uvquads(pow2(level + 2), pow2(level + 1 + (int)round(R)));
+    auto pos = vector<vec3f>(texcoord.size());
+    for (auto i = 0; i < texcoord.size(); i++) {
+        auto uv = texcoord[i];
+        auto s = uv.x * 2 * pif;
+        auto t = uv.y * 2 * pif * R;
+        auto re = 1 / sqrt(pow(cos(s) / e.x, 2) + pow(sin(s) / e.y, 2));
+        pos[i].x =
+            (A * sin(b) * cos(t) + cos(s) * cos(t) * re) * exp(t * cot_a);
+        pos[i].y =
+            (A * sin(b) * sin(t) + cos(s) * sin(t) * re) * exp(t * cot_a);
+        pos[i].z = (-A * cos(b) + sin(s) * re) * exp(t * cot_a);
+    }
+    auto norm = compute_normals({}, {}, quads, pos);
+    return {quads, pos, norm, texcoord};
+}
+
 // Make a bezier circle. Returns bezier, pos.
 tuple<vector<vec4i>, vector<vec3f>> make_bezier_circle() {
     // constant from http://spencermortensen.com/articles/bezier-circle/
