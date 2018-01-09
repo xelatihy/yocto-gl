@@ -115,7 +115,7 @@ enum struct proc_prim_shape_type {
     cutsphere,
     cube,
     fvcube,
-    monkey
+    monkey, seashell
 };
 
 // Names for enumeration
@@ -128,6 +128,7 @@ proc_prim_shape_names() {
         {"cube", proc_prim_shape_type::cube},
         {"fvcube", proc_prim_shape_type::fvcube},
         {"monkey", proc_prim_shape_type::monkey},
+        {"seashell", proc_prim_shape_type::seashell},
     };
     return names;
 }
@@ -140,6 +141,7 @@ struct proc_prim_shape_params {
     int subdiv = 0;
     bool faceted = false;
     bool baseline = true;
+    make_seashell_params seashell_params;
 };
 
 // Procesural shape
@@ -378,6 +380,9 @@ bool update_proc_prim_shape(proc_shape* pshp) {
                 subdivide_shape_once(shp, false);
             shp->norm = compute_normals({}, {}, shp->quads, shp->pos);
         } break;
+        case proc_prim_shape_type::seashell: {
+            tie(shp->quads, shp->pos, shp->norm, shp->texcoord) = make_uvseashell(params.level, params.seashell_params);
+        } break;
         default: throw runtime_error("should not have gotten here");
     }
 
@@ -600,6 +605,15 @@ inline bool draw_procelem_widgets(gl_window* win, proc_scene* scn,
             edited += draw_value_widget(win, "tesselation", params.level, 0, 8);
             edited +=
                 draw_value_widget(win, "subdivision", params.subdiv, 0, 8);
+            if(params.ptype == proc_prim_shape_type::seashell) {
+                edited += draw_value_widget(win, "spiral_revolutions", params.seashell_params.spiral_revolutions, 0, 10);
+                edited += draw_value_widget(win, "spiral_angle", params.seashell_params.spiral_angle, 0, pif);
+                edited += draw_value_widget(win, "enlarging_angle", params.seashell_params.enlarging_angle, 0, 2*pif);
+                edited += draw_value_widget(win, "spiral_aperture", params.seashell_params.spiral_aperture, 0, 2);
+                edited += draw_value_widget(win, "ellipse_axis", params.seashell_params.ellipse_axis, 0, 2);
+                edited += draw_value_widget(win, "ellipse_rotation", params.seashell_params.curve_rotation, 0, 2*pif);
+
+            }
         } break;
         default: throw runtime_error("should not have gotten here");
     }
