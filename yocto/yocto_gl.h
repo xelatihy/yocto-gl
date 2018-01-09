@@ -5025,16 +5025,24 @@ make_uvcutsphere(int level, float z, bool flipped = false);
 struct make_seashell_params {
     /// spiral revolutions
     float spiral_revolutions = 2;
-    /// spiral angle (alpha)
-    float spiral_angle = 83*pif/180;
-    /// enlarging revolutions (beta)
-    float enlarging_angle=42*pif/180;
-    /// spiral aperture (A)
+    /// spiral angle (alpha) [0,pi]
+    float spiral_angle = 83 * pif / 180;
+    /// enlarging revolutions (beta) [0,2pi]
+    float enlarging_angle = 42 * pif / 180;
+    /// spiral aperture (A) [0,inf]
     float spiral_aperture = 0.25f;
-    /// ellipse axis (a,b)
-    vec2f ellipse_axis={0.12f,0.20f};
-    /// curve rotatation (psi, Omega, mu)
-    vec3f curve_rotation = {70*pif/180,30*pif/180,10*pif/180};
+    /// ellipse axis (a,b) [0,inf]
+    vec2f ellipse_axis = {0.12f, 0.20f};
+    /// curve rotatation (psi, Omega, mu) [0,2pi]
+    vec3f curve_rotation = {70 * pif / 180, 30 * pif / 180, 10 * pif / 180};
+    /// number of nodules (N) [0,ing]
+    float nodules_num = 0;
+    /// length of nodules along curve and spiral (W1,W2) [0,inf]
+    vec2f nodule_length = {0, 0};
+    /// height of nodules (L) [0,inf]
+    float nodule_height = 0;
+    /// position of nodules (P) [0,inf]
+    float nodule_pos = 0;
 };
 
 /// Make a seashell. This is not watertight. Returns quads, pos, norm, texcoord.
