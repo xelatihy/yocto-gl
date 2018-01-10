@@ -10825,6 +10825,41 @@ bool draw_color_widget(gl_window* win, const string& lbl, vec4b& val) {
     return false;
 }
 
+// Support
+inline bool _enum_widget_labels_ptr(void* data, int idx, const char** out) {
+    auto labels = (vector<pair<string, int>>*)data;
+    *out = labels->at(idx).first.c_str();
+    return true;
+}
+
+// Support
+inline bool _enum_widget_labels_int(void* data, int idx, const char** out) {
+    auto labels = (vector<pair<string, int>>*)data;
+    *out = labels->at(idx).first.c_str();
+    return true;
+}
+
+// Support
+inline bool _enum_widget_labels_str(void* data, int idx, const char** out) {
+    auto labels = (vector<string>*)data;
+    *out = labels->at(idx).c_str();
+    return true;
+}
+
+// Value widget
+bool draw_value_widget(gl_window* win, const string& lbl, string& val,
+    const vector<string>& labels) {
+    auto cur = -1;
+    for (auto idx = 0; idx < labels.size(); idx++) {
+        if (labels[idx] == val) cur = idx;
+    }
+    assert(cur >= 0);
+    auto ok = ImGui::Combo(lbl.c_str(), &cur, _enum_widget_labels_str,
+        (void*)&labels, (int)labels.size());
+    val = labels[cur];
+    return ok;
+}
+
 // Value widget
 bool draw_value_widget(gl_window* win, const string& lbl, int& val,
     const vector<pair<string, int>>& labels) {
@@ -11229,6 +11264,202 @@ inline bool draw_scene_widgets(gl_window* win, const string& lbl, scene* scn,
         return false;
 }
 
+inline bool draw_edit_widgets(
+    gl_window* win, const string& lbl, scene* scn, void*& selection) {
+    static auto shp_names =
+        vector<string>{"floor", "cube", "sphere", "cutsphere", "monkey"};
+    static auto txt_names = vector<string>{"grid", "colored", "file"};
+    static auto shp_type = "sphere"s, txt_type = "colored"s, txt_filename = ""s;
+    static auto shp_size = 2.0f; static auto shp_tess = 5, shp_subdiv = 0;
+    static auto shp_last = (shape*)nullptr;
+    static auto txt_last = (texture*)nullptr;
+    
+    auto update_shape = [](shape* shp){
+        if (shp_type == "floor") {
+            tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
+            make_uvquad(5);
+            for (auto& p : shp->pos) {
+                swap(p.y, p.z);
+                p *= 20;
+            }
+            for (auto& n : shp->norm) n = {0, 1, 0};
+        } else if (shp_type == "cube") {
+            tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
+            make_uvcube(shp_tess);
+        } else if (shp_type == "sphere") {
+            tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
+            make_uvsphere(shp_tess);
+        } else if (shp_type == "cutsphere") {
+            tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
+            make_uvcutsphere(shp_tess, 0.75f);
+        } else if (shp_type == "monkey") {
+            tie(shp->quads, shp->pos) = make_suzanne();
+        } else {
+            throw runtime_error("should not have gotten here");
+        }
+        for (auto i = 0; i < shp_subdiv; i++) subdivide_shape_once(shp);
+        for(auto& p : shp->pos) p *= shp_size/2;
+    };
+
+    auto update_txt = [](texture* txt){
+        if (txt_type == "grid") {
+        } else if (txt_type == "colored") {
+        } else if (txt_type == "file") {
+        } else {
+            throw runtime_error("should not have gotten here");
+        }
+    };
+
+    if (draw_header_widget(win, lbl)) {
+        auto selected_ist = (instance*)nullptr;
+        auto selected_shp = (shape*)nullptr;
+        auto selected_cam = (camera*)nullptr;
+        auto selected_txt = (texture*)nullptr;
+        auto selected_mat = (material*)nullptr;
+
+        if (selection) {
+            for (auto ptr : scn->instances)
+                if (ptr == selection) selected_ist = ptr;
+            for (auto ptr : scn->shapes)
+                if (ptr == selection) selected_shp = ptr;
+            for (auto ptr : scn->cameras)
+                if (ptr == selection) selected_cam = ptr;
+            for (auto ptr : scn->materials)
+                if (ptr == selection) selected_mat = ptr;
+            for (auto ptr : scn->textures)
+                if (ptr == selection) selected_txt = ptr;
+        }
+
+        auto edited = false;
+        
+        if(selected_shp && shp_last == selected_shp) {
+            auto edited_shp = vector<bool>();
+            edited_shp += draw_value_widget(win, "shape type", shp_type, shp_names);
+            edited_shp += draw_value_widget(win, "shape radius", shp_size,0.01f,10.0f);
+            edited_shp += draw_value_widget(win, "shape tess", shp_tess,0,10);
+            edited_shp += draw_value_widget(win, "shape subdiv", shp_subdiv,0,5);
+            edited = std::any_of(edited_shp.begin(), edited_shp.end(), [](auto x){return x;});
+            if(edited) update_shape(shp_last);
+        }
+        if(txt_last == selected_txt) {
+            draw_value_widget(win, "texture type", txt_type, txt_names);
+            draw_value_widget(win, "texture file", txt_filename);
+        }
+
+        if (draw_button_widget(win, "add shape")) {
+            static auto count = 0;
+            // static auto last = (shape*)nullptr;
+            auto shp = new shape();
+            shp->name = "shape_" + to_string(count);
+            shp->mat = nullptr;
+            update_shape(shp);
+            scn->shapes.push_back(shp);
+            auto ist = new instance();
+            ist->name = shp->name;
+            ist->shp = shp;
+            scn->instances.push_back(ist);
+            selection = shp;
+            shp_last = shp;
+            edited = true;
+        }
+
+        if (draw_button_widget(win, "add camera")) {
+            static auto count = 0;
+            auto cam = new camera();
+            cam->name = "camera_" + to_string(count++);
+            scn->cameras.push_back(cam);
+            selection = cam;
+            edited = true;
+        }
+
+        if (draw_button_widget(win, "add instance")) {
+            static auto count = 0;
+            auto ist = new instance();
+            ist->name = "node_" + to_string(count++);
+            if (selected_shp) ist->shp = selected_shp;
+            scn->instances.push_back(ist);
+            selection = ist;
+            edited = true;
+        }
+
+        if (draw_button_widget(win, "add texture")) {
+            static auto count = 0;
+            auto txt = new texture();
+            txt->name = "texture_" + to_string(count++);
+            txt->path = txt_filename;
+            // auto dirname = yu::path::get_dirname(scn->filename);
+            //        try {
+            //            if (yimg::is_hdr_filename(txt->path)) {
+            //                txt->hdr = yimg::load_image4f(dirname +
+            //                txt->path);
+            //            } else {
+            //                txt->ldr = yimg::load_image4b(dirname +
+            //                txt->path);
+            //            }
+            //        } catch (...) { txt->ldr = image4b(1, 1, {255, 255, 255,
+            //        255}); }
+            scn->textures.push_back(txt);
+            selection = txt;
+            edited = true;
+        }
+
+        if (draw_button_widget(win, "delete")) {
+#if 0
+        if (selected_cam) {
+            for (auto node : gscn->nodes)
+                if (node->cam == selected_cam) node->cam = nullptr;
+            remove(gscn->cameras, selected_cam);
+            delete selected_cam;
+            *selection = nullptr;
+        }
+        if (selected_mesh) {
+            for (auto node : gscn->nodes)
+                if (node->msh == selected_mesh) node->msh = nullptr;
+            remove(gscn->meshes, selected_mesh);
+            delete selected_mesh;
+            *selection = nullptr;
+        }
+        if (selected_mat) {
+            for (auto mesh : gscn->meshes)
+                for (auto shp : mesh->shapes)
+                    if (shp->mat == selected_mat) shp->mat = nullptr;
+            remove(gscn->materials, selected_mat);
+            delete selected_mat;
+            *selection = nullptr;
+        }
+        if (selected_txt) {
+            for (auto mat : gscn->materials) {
+                if (mat->emission_txt == selected_txt)
+                    mat->emission_txt = nullptr;
+                if (mat->normal_txt == selected_txt) mat->normal_txt = nullptr;
+                if (mat->occlusion_txt == selected_txt)
+                    mat->occlusion_txt = nullptr;
+                if (mat->metallic_roughness) {
+                    if (mat->metallic_roughness->base_txt == selected_txt)
+                        mat->metallic_roughness->base_txt = nullptr;
+                    if (mat->metallic_roughness->metallic_txt == selected_txt)
+                        mat->metallic_roughness->metallic_txt = nullptr;
+                }
+                if (mat->specular_glossiness) {
+                    if (mat->specular_glossiness->diffuse_txt == selected_txt)
+                        mat->specular_glossiness->diffuse_txt = nullptr;
+                    if (mat->specular_glossiness->specular_txt == selected_txt)
+                        mat->specular_glossiness->specular_txt = nullptr;
+                }
+            }
+            remove(gscn->textures, selected_txt);
+            delete selected_txt;
+            *selection = nullptr;
+        }
+#endif
+        }
+        return edited;
+
+    } else {
+        return false;
+    }
+}
+
 #if 0
         inline void draw_edit_widgets(gl_window* win, scene* scn,
             void*&  selection, const yshade_state* state) {
@@ -11379,6 +11610,11 @@ bool draw_scene_widgets(gl_window* win, const string& lbl, scene* scn,
     void*& selection, const unordered_map<texture*, gl_texture>& gl_txt) {
     return __impl_scn_widgets::draw_scene_widgets(
         win, lbl, scn, selection, gl_txt);
+}
+
+bool draw_edit_widgets(
+    gl_window* win, const string& lbl, scene* scn, void*& selection) {
+    return __impl_scn_widgets::draw_edit_widgets(win, lbl, scn, selection);
 }
 
 }  // namespace ygl

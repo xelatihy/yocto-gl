@@ -70,16 +70,24 @@ inline void draw(gl_window* win) {
 
     if (begin_widgets(win, "yview")) {
         draw_label_widget(win, "scene", app->filename);
-        draw_camera_widget(win, "camera", app->scn, app->shparams.camera_id);
-        draw_value_widget(win, "wire", app->shparams.wireframe);
-        draw_continue_widget(win);
-        draw_value_widget(win, "edges", app->shparams.edges);
-        draw_continue_widget(win);
-        draw_value_widget(win, "cutout", app->shparams.cutout);
-        draw_continue_widget(win);
-        draw_value_widget(win, "fps", app->navigation_fps);
-        draw_tonemap_widgets(win, "", app->shparams.exposure,
-            app->shparams.gamma, app->shparams.filmic);
+        if(draw_header_widget(win, "view")) {
+            draw_camera_widget(win, "camera", app->scn, app->shparams.camera_id);
+            draw_value_widget(win, "wire", app->shparams.wireframe);
+            draw_continue_widget(win);
+            draw_value_widget(win, "edges", app->shparams.edges);
+            draw_continue_widget(win);
+            draw_value_widget(win, "cutout", app->shparams.cutout);
+            draw_continue_widget(win);
+            draw_value_widget(win, "fps", app->navigation_fps);
+            draw_tonemap_widgets(win, "", app->shparams.exposure,
+                app->shparams.gamma, app->shparams.filmic);
+        }
+        if(draw_edit_widgets(win, "edit", app->scn, app->selection)) {
+            unordered_set<shape*> shps; unordered_set<texture*> txts;
+            for(auto shp : app->scn->shapes) if(shp == app->selection) shps.insert(shp);
+            for(auto txt : app->scn->textures) if(txt == app->selection) txts.insert(txt);
+            update_stdsurface_state(app->shstate, app->scn, app->shparams, shps, txts);
+        }
         draw_scene_widgets(
             win, "scene", app->scn, app->selection, app->shstate->txt);
     }

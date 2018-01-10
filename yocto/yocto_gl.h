@@ -11941,19 +11941,9 @@ bool draw_color_widget(gl_window* win, const string& lbl, vec4b& val);
 /// Color widget
 bool draw_color_widget(gl_window* win, const string& lbl, vec3f& val);
 
-// Support
-inline bool _enum_widget_labels_ptr(void* data, int idx, const char** out) {
-    auto labels = (vector<pair<string, int>>*)data;
-    *out = labels->at(idx).first.c_str();
-    return true;
-}
-
-// Support
-inline bool _enum_widget_labels_int(void* data, int idx, const char** out) {
-    auto labels = (vector<pair<string, int>>*)data;
-    *out = labels->at(idx).first.c_str();
-    return true;
-}
+/// Enum widget
+bool draw_value_widget(gl_window* win, const string& lbl, string& val,
+                       const vector<string>& labels);
 
 /// Enum widget
 bool draw_value_widget(gl_window* win, const string& lbl, int& val,
@@ -12092,6 +12082,9 @@ inline bool draw_camera_widget(
 /// Draws widgets for a whole scene. Used for quickly making demos.
 bool draw_scene_widgets(gl_window* win, const string& lbl, scene* scn,
     void*& selection, const unordered_map<texture*, gl_texture>& gl_txt);
+
+    /// Draw edit widgets for simple sene manipulation.
+    bool draw_edit_widgets(gl_window* win, const string& lbl, scene* scn, void*&  selection);
 
 }  // namespace ygl
 
