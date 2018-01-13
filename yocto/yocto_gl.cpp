@@ -6709,6 +6709,90 @@ inline void save_scene(
     throw runtime_error("unsupported extension " + ext);
 }
 
+// Makes a test shape
+void update_prim_shape(shape* shp, const prim_shape_params& params) {
+    shp->pos = {};
+    shp->norm = {};
+    shp->texcoord = {};
+    shp->texcoord1 = {};
+    shp->color = {};
+    shp->radius = {};
+    shp->tangsp = {};
+    shp->points = {};
+    shp->lines = {};
+    shp->triangles = {};
+    shp->quads = {};
+    shp->quads_pos = {};
+    shp->quads_norm = {};
+    shp->quads_texcoord = {};
+    switch (params.type) {
+        case prim_shape_type::floor: {
+            tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
+                make_uvquad((params.tesselation < 0) ? 5 : params.tesselation);
+            for (auto& p : shp->pos) p = {-p.x, p.z, p.y};
+            for (auto& n : shp->norm) n = {n.x, n.z, n.y};
+            for (auto& p : shp->pos) p *= 20;
+            for (auto& uv : shp->texcoord) uv *= 20;
+        } break;
+        case prim_shape_type::quad: {
+            tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
+                make_uvquad((params.tesselation < 0) ? 0 : params.tesselation);
+        } break;
+        case prim_shape_type::cube: {
+            tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
+                make_uvcube((params.tesselation < 0) ? 0 : params.tesselation);
+        } break;
+        case prim_shape_type::sphere: {
+            tie(shp->quads, shp->pos, shp->norm, shp->texcoord) = make_uvsphere(
+                (params.tesselation < 0) ? 5 : params.tesselation);
+        } break;
+        case prim_shape_type::spherizedcube: {
+            tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
+                make_uvspherizedcube(
+                    (params.tesselation < 0) ? 4 : params.tesselation, 0.75f);
+        } break;
+        case prim_shape_type::geosphere: {
+            tie(shp->triangles, shp->pos) = make_geodesicsphere(
+                (params.tesselation < 0) ? 5 : params.tesselation);
+            shp->norm = shp->pos;
+        } break;
+        case prim_shape_type::flipcapsphere: {
+            tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
+                make_uvflipcapsphere(
+                    (params.tesselation < 0) ? 5 : params.tesselation, 0.75f);
+        } break;
+        case prim_shape_type::suzanne: {
+            tie(shp->quads, shp->pos) = make_suzanne(
+                (params.tesselation < 0) ? 0 : params.tesselation);
+        } break;
+        case prim_shape_type::fvcube: {
+            tie(shp->quads_pos, shp->pos, shp->quads_norm, shp->norm,
+                shp->quads_texcoord, shp->texcoord) =
+                make_fvcube((params.tesselation < 0) ? 0 : params.tesselation);
+        } break;
+        case prim_shape_type::fvsphere: {
+            tie(shp->quads, shp->pos, shp->norm, shp->texcoord) = make_uvsphere(
+                (params.tesselation < 0) ? 5 : params.tesselation);
+        } break;
+        case prim_shape_type::matball: {
+            tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
+                make_uvflipcapsphere(
+                    (params.tesselation < 0) ? 5 : params.tesselation, 0.75f);
+        } break;
+        default: throw runtime_error("should not have gotten here");
+    }
+
+    if (params.scale != 1) {
+        for (auto& p : shp->pos) p *= params.scale;
+    }
+
+    for (auto i = 0; i < params.subdivision; i++) {
+        subdivide_shape_once(shp, true);
+    }
+
+    if (params.faceted) facet_shape(shp);
+}
+
 // Add missing values and elements
 inline void add_elements(scene* scn, const add_elements_options& opts) {
     if (opts.smooth_normals) {
@@ -6988,10 +7072,10 @@ namespace ygl {
 
 // Make a sphere. This is not watertight.
 tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_uvsphere(
-    int level, bool flipped) {
+    int tesselation, bool flipped) {
     auto quads = vector<vec4i>();
     auto texcoord = vector<vec2f>();
-    tie(quads, texcoord) = make_uvquads(pow2(level + 2), pow2(level + 1));
+    tie(quads, texcoord) = make_uvquads(pow2(tesselation + 2), pow2(tesselation + 1));
     auto pos = vector<vec3f>(texcoord.size());
     auto norm = vector<vec3f>(texcoord.size());
     if (!flipped) {
@@ -7014,7 +7098,7 @@ tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_uvsphere(
 }
 
 // Make a geodesic sphere.
-tuple<vector<vec3i>, vector<vec3f>> make_geodesicsphere(int level) {
+tuple<vector<vec3i>, vector<vec3f>> make_geodesicsphere(int tesselation) {
     // https://stackoverflow.com/questions/17705621/algorithm-for-a-geodesic-sphere
     const float X = 0.525731112119133606f;
     const float Z = 0.850650808352039932f;
@@ -7025,7 +7109,7 @@ tuple<vector<vec3i>, vector<vec3f>> make_geodesicsphere(int level) {
         {4, 1, 8}, {8, 1, 10}, {8, 10, 3}, {5, 8, 3}, {5, 3, 2}, {2, 3, 7},
         {7, 3, 10}, {7, 10, 6}, {7, 6, 11}, {11, 6, 0}, {0, 6, 1}, {6, 10, 1},
         {9, 11, 0}, {9, 2, 11}, {9, 5, 2}, {7, 11, 2}};
-    for (auto l = 0; l < level - 2; l++) {
+    for (auto l = 0; l < tesselation - 2; l++) {
         vector<vec2i> _lines;
         vector<vec4i> _quads;
         vector<vec2i> edges;
@@ -7040,10 +7124,10 @@ tuple<vector<vec3i>, vector<vec3f>> make_geodesicsphere(int level) {
 
 // Make a sphere. This is not watertight.
 tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
-make_uvhemisphere(int level, bool flipped) {
+make_uvhemisphere(int tesselation, bool flipped) {
     auto quads = vector<vec4i>();
     auto texcoord = vector<vec2f>();
-    tie(quads, texcoord) = make_uvquads(pow2(level + 2), pow2(level));
+    tie(quads, texcoord) = make_uvquads(pow2(tesselation + 2), pow2(tesselation));
     auto pos = vector<vec3f>(texcoord.size());
     auto norm = vector<vec3f>(texcoord.size());
     if (!flipped) {
@@ -7067,10 +7151,10 @@ make_uvhemisphere(int level, bool flipped) {
 
 // Make a quad.
 tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_uvquad(
-    int level) {
+    int tesselation) {
     auto quads = vector<vec4i>();
     auto texcoord = vector<vec2f>();
-    tie(quads, texcoord) = make_uvquads(pow2(level), pow2(level));
+    tie(quads, texcoord) = make_uvquads(pow2(tesselation), pow2(tesselation));
     auto pos = vector<vec3f>(texcoord.size());
     auto norm = vector<vec3f>(texcoord.size());
     for (auto i = 0; i < texcoord.size(); i++) {
@@ -7083,21 +7167,30 @@ tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_uvquad(
 
 // Make a cube with unique vertices. This is watertight but has no
 // texture coordinates or normals.
-tuple<vector<vec4i>, vector<vec3f>> make_cube() {
-    static auto cube_pos =
-        vector<vec3f>{{-1, -1, -1}, {-1, +1, -1}, {+1, +1, -1}, {+1, -1, -1},
-            {-1, -1, +1}, {-1, +1, +1}, {+1, +1, +1}, {+1, -1, +1}};
-    static auto cube_quads = vector<vec4i>{{0, 1, 2, 3}, {7, 6, 5, 4},
-        {4, 5, 1, 0}, {6, 7, 3, 2}, {2, 1, 5, 6}, {0, 3, 7, 4}};
-    static auto cube_quad_uv = vector<vec2f>{{0, 0}, {1, 0}, {1, 1}, {0, 1}};
-    return {cube_quads, cube_pos};
+tuple<vector<vec4i>, vector<vec3f>> make_cube(int tesselation) {
+    static auto pos = vector<vec3f>{{-1, -1, -1}, {-1, +1, -1}, {+1, +1, -1},
+        {+1, -1, -1}, {-1, -1, +1}, {-1, +1, +1}, {+1, +1, +1}, {+1, -1, +1}};
+    static auto quads = vector<vec4i>{{0, 1, 2, 3}, {7, 6, 5, 4}, {4, 5, 1, 0},
+        {6, 7, 3, 2}, {2, 1, 5, 6}, {0, 3, 7, 4}};
+
+    auto tpos = pos;
+    auto quads_ = quads;
+    for (auto l = 0; l < tesselation; l++) {
+        auto edges = vector<vec2i>();
+        auto faces = vector<vec4i>();
+        tie(quads_, edges, faces) =
+            subdivide_quads_linear(quads_, (int)tpos.size());
+        tpos = subdivide_vert_linear(tpos, edges, faces);
+    }
+
+    return {quads_, tpos};
 }
 
 // Make a facevarying cube with unique vertices but different texture
 // coordinates.
 tuple<vector<vec4i>, vector<vec3f>, vector<vec4i>, vector<vec3f>, vector<vec4i>,
     vector<vec2f>>
-make_fvcube() {
+make_fvcube(int tesselation) {
     static auto pos = vector<vec3f>{{-1, -1, -1}, {-1, +1, -1}, {+1, +1, -1},
         {+1, -1, -1}, {-1, -1, +1}, {-1, +1, +1}, {+1, +1, +1}, {+1, -1, +1}};
     static auto qpos = vector<vec4i>{{0, 1, 2, 3}, {7, 6, 5, 4}, {4, 5, 1, 0},
@@ -7115,6 +7208,25 @@ make_fvcube() {
         {0, 1}};
     static auto qtexcoord = vector<vec4i>{{0, 1, 2, 3}, {4, 5, 6, 7},
         {8, 9, 10, 11}, {12, 13, 14, 15}, {16, 17, 18, 19}, {20, 21, 22, 23}};
+
+    auto tpos = pos, tnorm = norm;
+    auto ttexcoord = texcoord;
+    auto qpos_ = qpos, qnorm_ = qnorm;
+    auto qtexcoord_ = qtexcoord;
+    for (auto l = 0; l < tesselation; l++) {
+        auto edges = vector<vec2i>();
+        auto faces = vector<vec4i>();
+        tie(qpos_, edges, faces) =
+            subdivide_quads_linear(qpos_, (int)tpos.size());
+        tpos = subdivide_vert_linear(tpos, edges, faces);
+        tie(qnorm_, edges, faces) =
+            subdivide_quads_linear(qnorm_, (int)tnorm.size());
+        tnorm = subdivide_vert_linear(tnorm, edges, faces);
+        tie(qtexcoord_, edges, faces) =
+            subdivide_quads_linear(qtexcoord_, (int)ttexcoord.size());
+        ttexcoord = subdivide_vert_linear(ttexcoord, edges, faces);
+    }
+
     return {qpos, pos, qnorm, norm, qtexcoord, texcoord};
 }
 
@@ -7122,8 +7234,8 @@ make_fvcube() {
 // coordinates.
 tuple<vector<vec4i>, vector<vec3f>, vector<vec4i>, vector<vec3f>, vector<vec4i>,
     vector<vec2f>>
-make_fvsphere(int level) {
-    auto usteps = pow2(level + 2), vsteps = pow2(level + 1);
+make_fvsphere(int tesselation) {
+    auto usteps = pow2(tesselation + 2), vsteps = pow2(tesselation + 1);
     auto qpos = vector<vec4i>(), qtexcoord = vector<vec4i>();
     auto uvpos = vector<vec2f>(), texcoord = vector<vec2f>();
     tie(qpos, uvpos) = make_uvquads(usteps, vsteps, true, false, true, true);
@@ -7139,7 +7251,7 @@ make_fvsphere(int level) {
 
 // Make a suzanne monkey model for testing. Note that some quads are
 // degenerate.
-tuple<vector<vec4i>, vector<vec3f>> make_suzanne() {
+tuple<vector<vec4i>, vector<vec3f>> make_suzanne(int tesselation) {
     static auto suzanne_pos = vector<vec3f>{{0.4375, 0.1640625, 0.765625},
         {-0.4375, 0.1640625, 0.765625}, {0.5, 0.09375, 0.6875},
         {-0.5, 0.09375, 0.6875}, {0.546875, 0.0546875, 0.578125},
@@ -7560,12 +7672,21 @@ tuple<vector<vec4i>, vector<vec3f>> make_suzanne() {
     auto quads = suzanne_quads;
     quads.reserve(suzanne_quads.size() + suzanne_triangles.size());
     for (auto& t : suzanne_triangles) { quads.push_back({t.x, t.y, t.z, t.z}); }
-    return {quads, suzanne_pos};
+
+    auto pos = suzanne_pos;
+    for(auto l = 0; l < tesselation; l ++) {
+        auto edges = vector<vec2i>();
+        auto faces = vector<vec4i>();
+        tie(quads, edges, faces) = subdivide_quads_linear(quads, (int)pos.size());
+        pos = subdivide_vert_linear(pos, edges, faces);
+    }
+    
+    return {quads, pos};
 }
 
 // Make a cube with uv. This is not watertight.
 tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_uvcube(
-    int level) {
+    int tesselation) {
     frame3f frames[6] = {frame3f{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 1}},
         frame3f{{-1, 0, 0}, {0, 1, 0}, {0, 0, -1}, {0, 0, -1}},
         frame3f{{-1, 0, 0}, {0, 0, 1}, {0, 1, 0}, {0, 1, 0}},
@@ -7575,7 +7696,7 @@ tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_uvcube(
     vector<vec3f> quad_pos, quad_norm;
     vector<vec2f> quad_texcoord;
     vector<vec4i> quad_quads;
-    tie(quad_quads, quad_pos, quad_norm, quad_texcoord) = make_uvquad(level);
+    tie(quad_quads, quad_pos, quad_norm, quad_texcoord) = make_uvquad(tesselation);
     vector<vec3f> pos, norm;
     vector<vec2f> texcoord;
     vector<vec4i> quads;
@@ -7607,11 +7728,11 @@ tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_uvcube(
 
 // Make a sphere from a cube. This is not watertight.
 tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
-make_uvspherecube(int level) {
+make_uvspherecube(int tesselation) {
     vector<vec3f> pos, norm;
     vector<vec2f> texcoord;
     vector<vec4i> quads;
-    tie(quads, pos, norm, texcoord) = make_uvcube(level);
+    tie(quads, pos, norm, texcoord) = make_uvcube(tesselation);
     for (auto i = 0; i < pos.size(); i++) {
         pos[i] = normalize(pos[i]);
         norm[i] = normalize(pos[i]);
@@ -7621,11 +7742,11 @@ make_uvspherecube(int level) {
 
 // Make a cube than stretch it towards a sphere. This is not watertight.
 tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
-make_uvspherizedcube(int level, float radius) {
+make_uvspherizedcube(int tesselation, float radius) {
     vector<vec3f> pos, norm;
     vector<vec2f> texcoord;
     vector<vec4i> quads;
-    tie(quads, pos, norm, texcoord) = make_uvcube(level);
+    tie(quads, pos, norm, texcoord) = make_uvcube(tesselation);
     for (auto i = 0; i < pos.size(); i++) {
         norm[i] = normalize(pos[i]);
         pos[i] *= 1 - radius;
@@ -7637,11 +7758,11 @@ make_uvspherizedcube(int level, float radius) {
 
 // Make a flipped sphere. This is not watertight.
 tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
-make_uvflipcapsphere(int level, float z, bool flipped) {
+make_uvflipcapsphere(int tesselation, float z, bool flipped) {
     vector<vec3f> pos, norm;
     vector<vec2f> texcoord;
     vector<vec4i> quads;
-    tie(quads, pos, norm, texcoord) = make_uvsphere(level, flipped);
+    tie(quads, pos, norm, texcoord) = make_uvsphere(tesselation, flipped);
     for (auto i = 0; i < pos.size(); i++) {
         if (pos[i].z > z) {
             pos[i].z = 2 * z - pos[i].z;
@@ -7658,10 +7779,10 @@ make_uvflipcapsphere(int level, float z, bool flipped) {
 
 // Make a cutout sphere. This is not watertight.
 tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
-make_uvcutsphere(int level, float z, bool flipped) {
+make_uvcutsphere(int tesselation, float z, bool flipped) {
     auto quads = vector<vec4i>();
     auto texcoord = vector<vec2f>();
-    tie(quads, texcoord) = make_uvquads(pow2(level + 2), pow2(level + 1));
+    tie(quads, texcoord) = make_uvquads(pow2(tesselation + 2), pow2(tesselation + 1));
     auto pos = vector<vec3f>(texcoord.size());
     auto norm = vector<vec3f>(texcoord.size());
     if (!flipped) {
@@ -7687,7 +7808,7 @@ make_uvcutsphere(int level, float z, bool flipped) {
 
 // Make a seashell. This is not watertight. Returns quads, pos, norm, texcoord.
 tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
-make_uvseashell(int level, const make_seashell_params& params) {
+make_uvseashell(int tesselation, const make_seashell_params& params) {
     auto R = params.spiral_revolutions;
     auto D = -1.0f;
     auto a = params.spiral_angle;
@@ -7705,7 +7826,7 @@ make_uvseashell(int level, const make_seashell_params& params) {
     auto quads = vector<vec4i>();
     auto texcoord = vector<vec2f>();
     tie(quads, texcoord) =
-        make_uvquads(pow2(level + 2), pow2(level + 1 + (int)round(R)));
+        make_uvquads(pow2(tesselation + 2), pow2(tesselation + 1 + (int)round(R)));
     auto pos = vector<vec3f>(texcoord.size());
     for (auto i = 0; i < texcoord.size(); i++) {
         auto uv = texcoord[i];
@@ -7747,7 +7868,7 @@ tuple<vector<vec4i>, vector<vec3f>> make_bezier_circle() {
 
 // Make a hair ball around a shape
 tuple<vector<vec2i>, vector<vec3f>, vector<vec3f>, vector<vec2f>, vector<float>>
-make_hair(int num, int level, const vec2f& len, const vec2f& rad,
+make_hair(int num, int tesselation, const vec2f& len, const vec2f& rad,
     const vector<vec3i>& striangles, const vector<vec4i>& squads,
     const vector<vec3f>& spos, const vector<vec3f>& snorm,
     const vector<vec2f>& stexcoord, const vec2f& noise, const vec2f& clump,
@@ -7778,7 +7899,7 @@ make_hair(int num, int level, const vec2f& len, const vec2f& rad,
         }
     }
 
-    auto usteps = pow2(level);
+    auto usteps = pow2(tesselation);
     auto lines = vector<vec2i>();
     auto texcoord = vector<vec2f>();
     tie(lines, texcoord) = make_uvlines(num, usteps);
@@ -7913,7 +8034,7 @@ scene* make_cornell_box_scene() {
 // Make standard shape. Public API described above.
 //
 inline tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
-make_uvhollowcutsphere(int level, float radius) {
+make_uvhollowcutsphere(int tesselation, float radius) {
     auto quads = vector<vec4i>();
     auto pos = vector<vec3f>();
     auto norm = vector<vec3f>();
@@ -7925,7 +8046,7 @@ make_uvhollowcutsphere(int level, float radius) {
     vector<vec2i> _aux1;
     vector<vec3i> _aux2;
 
-    tie(mquads, mpos, mnorm, mtexcoord) = make_uvcutsphere(level, radius);
+    tie(mquads, mpos, mnorm, mtexcoord) = make_uvcutsphere(tesselation, radius);
     for (auto& uv : mtexcoord) uv.y *= radius;
     tie(_aux1, _aux2, quads) =
         merge_elems((int)pos.size(), {}, {}, quads, {}, {}, mquads);
@@ -7933,7 +8054,7 @@ make_uvhollowcutsphere(int level, float radius) {
     norm += mnorm;
     texcoord += mtexcoord;
 
-    tie(mquads, mpos, mnorm, mtexcoord) = make_uvcutsphere(level, radius, true);
+    tie(mquads, mpos, mnorm, mtexcoord) = make_uvcutsphere(tesselation, radius, true);
     for (auto& p : mpos) p *= radius;
     tie(_aux1, _aux2, quads) =
         merge_elems((int)pos.size(), {}, {}, quads, {}, {}, mquads);
@@ -7944,7 +8065,7 @@ make_uvhollowcutsphere(int level, float radius) {
     // dpdu = [- s r s0 s1, s r c0 s1, 0] === [- s0, c0, 0]
     // dpdv = [s c0 s1, s s0 s1, s c1] === [c0 s1, s0 s1, c1]
     // n = [c0 c1, - s0 c1, s1]
-    tie(mquads, mtexcoord) = make_uvquads(pow2(level + 2), pow2(level + 1));
+    tie(mquads, mtexcoord) = make_uvquads(pow2(tesselation + 2), pow2(tesselation + 1));
     mpos.resize(mtexcoord.size());
     mnorm.resize(mtexcoord.size());
     for (auto i = 0; i < mtexcoord.size(); i++) {
@@ -7968,7 +8089,7 @@ make_uvhollowcutsphere(int level, float radius) {
 // Make standard shape. Public API described above.
 //
 inline tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
-make_uvhollowcutsphere1(int level, float radius) {
+make_uvhollowcutsphere1(int tesselation, float radius) {
     auto quads = vector<vec4i>();
     auto pos = vector<vec3f>();
     auto norm = vector<vec3f>();
@@ -7980,9 +8101,9 @@ make_uvhollowcutsphere1(int level, float radius) {
     vector<vec2i> _aux1;
     vector<vec3i> _aux2;
 
-    tie(mquads, mpos, mnorm, mtexcoord) = make_uvcutsphere(level, radius);
+    tie(mquads, mpos, mnorm, mtexcoord) = make_uvcutsphere(tesselation, radius);
     for (auto& uv : mtexcoord) uv.y *= radius;
-    for (auto i = (pow2(level + 2) + 1) * pow2(level + 1); i < mnorm.size();
+    for (auto i = (pow2(tesselation + 2) + 1) * pow2(tesselation + 1); i < mnorm.size();
          i++)
         mnorm[i] = normalize(mnorm[i] + vec3f{0, 0, 1});
     tie(_aux1, _aux2, quads) =
@@ -7992,7 +8113,7 @@ make_uvhollowcutsphere1(int level, float radius) {
     texcoord += mtexcoord;
 
     tie(mquads, mpos, mnorm, mtexcoord) =
-        make_uvcutsphere(level, radius * 1.05f, true);
+        make_uvcutsphere(tesselation, radius * 1.05f, true);
     for (auto& p : mpos) p *= 0.8f;
     tie(_aux1, _aux2, quads) =
         merge_elems((int)pos.size(), {}, {}, quads, {}, {}, mquads);
@@ -8000,7 +8121,7 @@ make_uvhollowcutsphere1(int level, float radius) {
     norm += mnorm;
     texcoord += mtexcoord;
 
-    tie(mquads, mtexcoord) = make_uvquads(pow2(level + 2), pow2(level + 1) / 4);
+    tie(mquads, mtexcoord) = make_uvquads(pow2(tesselation + 2), pow2(tesselation + 1) / 4);
     mpos.resize(mtexcoord.size());
     mnorm.resize(mtexcoord.size());
     for (auto i = 0; i < mtexcoord.size(); i++) {
@@ -8013,7 +8134,7 @@ make_uvhollowcutsphere1(int level, float radius) {
         mnorm[i] = {-cos(a[0]) * sin(a[1]), -sin(a[0]) * sin(a[1]), cos(a[1])};
         mtexcoord[i] = {uv[0], radius + (1 - radius) * uv[1]};
     }
-    for (auto i = 0; i < (pow2(level + 2) + 1); i++)
+    for (auto i = 0; i < (pow2(tesselation + 2) + 1); i++)
         mnorm[i] = normalize(mnorm[i] + vec3f{0, 0, 1});
     tie(_aux1, _aux2, quads) =
         merge_elems((int)pos.size(), {}, {}, quads, {}, {}, mquads);
@@ -8439,26 +8560,26 @@ inline shape* add_test_shape(
             facet_shape(shp);
         } break;
         case test_shape_type::cubep: {
-            tie(shp->quads, shp->pos) = make_cube();
+            tie(shp->quads, shp->pos) = make_cube(0);
         } break;
         case test_shape_type::cubes: {
-            tie(shp->quads, shp->pos) = make_cube();
+            tie(shp->quads, shp->pos) = make_cube(0);
             for (auto i = 0; i < 4; i++) subdivide_shape_once(shp, true);
         } break;
         case test_shape_type::suzanne: {
-            tie(shp->quads, shp->pos) = make_suzanne();
+            tie(shp->quads, shp->pos) = make_suzanne(0);
         } break;
         case test_shape_type::suzannes: {
-            tie(shp->quads, shp->pos) = make_suzanne();
+            tie(shp->quads, shp->pos) = make_suzanne(0);
             for (auto i = 0; i < 2; i++) subdivide_shape_once(shp, true);
         } break;
         case test_shape_type::cubefv: {
             tie(shp->quads_pos, shp->pos, shp->quads_norm, shp->norm,
-                shp->quads_texcoord, shp->texcoord) = make_fvcube();
+                shp->quads_texcoord, shp->texcoord) = make_fvcube(0);
         } break;
         case test_shape_type::cubefvs: {
             tie(shp->quads_pos, shp->pos, shp->quads_norm, shp->norm,
-                shp->quads_texcoord, shp->texcoord) = make_fvcube();
+                shp->quads_texcoord, shp->texcoord) = make_fvcube(0);
             for (auto l = 0; l < 4; l++) subdivide_shape_once(shp, true);
         } break;
         case test_shape_type::quads: {
@@ -11270,14 +11391,15 @@ inline bool draw_edit_widgets(
         vector<string>{"floor", "cube", "sphere", "cutsphere", "monkey"};
     static auto txt_names = vector<string>{"grid", "colored", "file"};
     static auto shp_type = "sphere"s, txt_type = "colored"s, txt_filename = ""s;
-    static auto shp_size = 2.0f; static auto shp_tess = 5, shp_subdiv = 0;
+    static auto shp_size = 2.0f;
+    static auto shp_tess = 5, shp_subdiv = 0;
     static auto shp_last = (shape*)nullptr;
     static auto txt_last = (texture*)nullptr;
-    
-    auto update_shape = [](shape* shp){
+
+    auto update_shape = [](shape* shp) {
         if (shp_type == "floor") {
             tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
-            make_uvquad(5);
+                make_uvquad(5);
             for (auto& p : shp->pos) {
                 swap(p.y, p.z);
                 p *= 20;
@@ -11285,23 +11407,23 @@ inline bool draw_edit_widgets(
             for (auto& n : shp->norm) n = {0, 1, 0};
         } else if (shp_type == "cube") {
             tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
-            make_uvcube(shp_tess);
+                make_uvcube(shp_tess);
         } else if (shp_type == "sphere") {
             tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
-            make_uvsphere(shp_tess);
+                make_uvsphere(shp_tess);
         } else if (shp_type == "cutsphere") {
             tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
-            make_uvcutsphere(shp_tess, 0.75f);
+                make_uvcutsphere(shp_tess, 0.75f);
         } else if (shp_type == "monkey") {
-            tie(shp->quads, shp->pos) = make_suzanne();
+            tie(shp->quads, shp->pos) = make_suzanne(0);
         } else {
             throw runtime_error("should not have gotten here");
         }
         for (auto i = 0; i < shp_subdiv; i++) subdivide_shape_once(shp);
-        for(auto& p : shp->pos) p *= shp_size/2;
+        for (auto& p : shp->pos) p *= shp_size / 2;
     };
 
-    auto update_txt = [](texture* txt){
+    auto update_txt = [](texture* txt) {
         if (txt_type == "grid") {
         } else if (txt_type == "colored") {
         } else if (txt_type == "file") {
@@ -11331,17 +11453,21 @@ inline bool draw_edit_widgets(
         }
 
         auto edited = false;
-        
-        if(selected_shp && shp_last == selected_shp) {
+
+        if (selected_shp && shp_last == selected_shp) {
             auto edited_shp = vector<bool>();
-            edited_shp += draw_value_widget(win, "shape type", shp_type, shp_names);
-            edited_shp += draw_value_widget(win, "shape radius", shp_size,0.01f,10.0f);
-            edited_shp += draw_value_widget(win, "shape tess", shp_tess,0,10);
-            edited_shp += draw_value_widget(win, "shape subdiv", shp_subdiv,0,5);
-            edited = std::any_of(edited_shp.begin(), edited_shp.end(), [](auto x){return x;});
-            if(edited) update_shape(shp_last);
+            edited_shp +=
+                draw_value_widget(win, "shape type", shp_type, shp_names);
+            edited_shp +=
+                draw_value_widget(win, "shape radius", shp_size, 0.01f, 10.0f);
+            edited_shp += draw_value_widget(win, "shape tess", shp_tess, 0, 10);
+            edited_shp +=
+                draw_value_widget(win, "shape subdiv", shp_subdiv, 0, 5);
+            edited = std::any_of(
+                edited_shp.begin(), edited_shp.end(), [](auto x) { return x; });
+            if (edited) update_shape(shp_last);
         }
-        if(txt_last == selected_txt) {
+        if (txt_last == selected_txt) {
             draw_value_widget(win, "texture type", txt_type, txt_names);
             draw_value_widget(win, "texture file", txt_filename);
         }

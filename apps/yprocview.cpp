@@ -371,14 +371,10 @@ bool update_proc_prim_shape(proc_shape* pshp) {
         } break;
         case proc_prim_shape_type::fvcube: {
             tie(shp->quads_pos, shp->pos, shp->quads_norm, shp->norm,
-                shp->quads_texcoord, shp->texcoord) = make_fvcube();
-            for (auto i = 0; i < params.level; i++)
-                subdivide_shape_once(shp, false);
+                shp->quads_texcoord, shp->texcoord) = make_fvcube(params.level);
         } break;
         case proc_prim_shape_type::monkey: {
-            tie(shp->quads, shp->pos) = make_suzanne();
-            for (auto i = 0; i < params.level; i++)
-                subdivide_shape_once(shp, false);
+            tie(shp->quads, shp->pos) = make_suzanne(params.level);
             shp->norm = compute_normals({}, {}, shp->quads, shp->pos);
         } break;
         case proc_prim_shape_type::seashell: {

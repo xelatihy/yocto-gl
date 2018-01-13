@@ -4545,6 +4545,48 @@ subdivide_elems_linear(const vector<vec2i>& lines,
     return {tlines, ttriangles, tquads, edges, quads};
 }
 
+/// Tesselate lines spolitting them.
+/// Returns the tesselated elements and the old lines for vertex calculations.
+inline tuple<vector<vec2i>, vector<vec2i>> subdivide_lines_linear(
+    const vector<vec2i>& lines, int nverts) {
+    auto tlines = vector<vec2i>();
+    auto ttriangles = vector<vec3i>();
+    auto tquads = vector<vec4i>();
+    auto edges = vector<vec2i>();
+    auto faces = vector<vec4i>();
+    tie(tlines, ttriangles, tquads, edges, faces) =
+        subdivide_elems_linear(lines, {}, {}, nverts);
+    return {tlines, edges};
+}
+
+/// Tesselate triangles by splitting edges.
+/// Returns the tesselated triangles and edges for vertex calculations.
+inline tuple<vector<vec3i>, vector<vec2i>> subdivide_triangles_linear(
+    const vector<vec3i>& triangles, int nverts) {
+    auto tlines = vector<vec2i>();
+    auto ttriangles = vector<vec3i>();
+    auto tquads = vector<vec4i>();
+    auto edges = vector<vec2i>();
+    auto faces = vector<vec4i>();
+    tie(tlines, ttriangles, tquads, edges, faces) =
+    subdivide_elems_linear({},triangles, {}, nverts);
+    return {ttriangles, edges};
+}
+
+/// Tesselate quads by spolitting edges.
+/// Returns the tesselated quads, edges and faces for vertex calculations.
+inline tuple<vector<vec4i>, vector<vec2i>, vector<vec4i>>
+subdivide_quads_linear(const vector<vec4i>& quads, int nverts) {
+    auto tlines = vector<vec2i>();
+    auto ttriangles = vector<vec3i>();
+    auto tquads = vector<vec4i>();
+    auto edges = vector<vec2i>();
+    auto faces = vector<vec4i>();
+    tie(tlines, ttriangles, tquads, edges, faces) =
+    subdivide_elems_linear({},{},quads, nverts);
+    return {tquads, edges, faces};
+}
+
 /// Subdivide vertex properties given the maps
 template <typename T>
 inline vector<T> subdivide_vert_linear(const vector<T>& vert,
@@ -4959,67 +5001,67 @@ sample_triangles_points(const vector<vec3i>& triangles,
 namespace ygl {
 
 /// Make a sphere. Returns quads, pos.
-tuple<vector<vec3i>, vector<vec3f>> make_sphere(int level);
+tuple<vector<vec3i>, vector<vec3f>> make_sphere(int tesselation);
 
 /// Make a geodesic sphere. Returns quads, pos.
-tuple<vector<vec3i>, vector<vec3f>> make_geodesicsphere(int level);
+tuple<vector<vec3i>, vector<vec3f>> make_geodesicsphere(int tesselation);
 
 /// Make a cube with unique vertices. This is watertight but has no
 /// texture coordinates or normals. Returns quads, pos.
-tuple<vector<vec4i>, vector<vec3f>> make_cube();
+tuple<vector<vec4i>, vector<vec3f>> make_cube(int tesselation);
 
 /// Make a sphere. This is not watertight. Returns quads, pos, norm, texcoord.
 tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_uvsphere(
-    int level, bool flipped = false);
+    int tesselation, bool flipped = false);
 
 /// Make a sphere. This is not watertight. Returns quads, pos, norm, texcoord.
 tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
-make_uvhemisphere(int level, bool flipped = false);
+make_uvhemisphere(int tesselation, bool flipped = false);
 
 /// Make a quad. Returns quads, pos, norm, texcoord.
 tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_uvquad(
-    int level);
+    int tesselation);
 
 /// Make a facevarying sphere with unique vertices but different texture
 /// coordinates. Returns (quads, pos), (quads, norm), (quads, texcoord).
 tuple<vector<vec4i>, vector<vec3f>, vector<vec4i>, vector<vec3f>, vector<vec4i>,
     vector<vec2f>>
-make_fvsphere();
+make_fvsphere(int tesselation);
 
 /// Make a facevarying cube with unique vertices but different texture
 /// coordinates. Returns (quads, pos), (quads, norm), (quads, texcoord).
 tuple<vector<vec4i>, vector<vec3f>, vector<vec4i>, vector<vec3f>, vector<vec4i>,
     vector<vec2f>>
-make_fvcube();
+make_fvcube(int tesselation);
 
 /// Make a suzanne monkey model for testing. Note that some quads are
 /// degenerate. Returns quads, pos.
-tuple<vector<vec4i>, vector<vec3f>> make_suzanne();
+tuple<vector<vec4i>, vector<vec3f>> make_suzanne(int tesselation);
 
 /// Make a cube with uv. This is not watertight. Returns quads, pos, norm,
 /// texcoord.
 tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_uvcube(
-    int level);
+    int tesselation);
 
 /// Make a sphere from a cube. This is not watertight. Returns quads, pos, norm,
 /// texcoord.
 tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
-make_uvspherecube(int level);
+make_uvspherecube(int tesselation);
 
 /// Make a cube than stretch it towards a sphere. This is not watertight.
 /// Returns quads, pos, norm, texcoord.
 tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
-make_uvspherizedcube(int level, float radius);
+make_uvspherizedcube(int tesselation, float radius);
 
 /// Make a flipped sphere. This is not watertight. Returns quads, pos, norm,
 /// texcoord.
 tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
-make_uvflipcapsphere(int level, float z, bool flipped = false);
+make_uvflipcapsphere(int tesselation, float z, bool flipped = false);
 
 /// Make a cutout sphere. This is not watertight. Returns quads, pos, norm,
 /// texcoord.
 tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
-make_uvcutsphere(int level, float z, bool flipped = false);
+make_uvcutsphere(int tesselation, float z, bool flipped = false);
 
 /// Make seashell params
 struct make_seashell_params {
@@ -5047,14 +5089,14 @@ struct make_seashell_params {
 
 /// Make a seashell. This is not watertight. Returns quads, pos, norm, texcoord.
 tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
-make_uvseashell(int level, const make_seashell_params& params);
+make_uvseashell(int tesselation, const make_seashell_params& params);
 
 /// Make a bezier circle. Returns bezier, pos.
 tuple<vector<vec4i>, vector<vec3f>> make_bezier_circle();
 
 /// Make a hair ball around a shape. Returns lines, pos, norm, texcoord, radius.
 tuple<vector<vec2i>, vector<vec3f>, vector<vec3f>, vector<vec2f>, vector<float>>
-make_hair(int num, int level, const vec2f& len, const vec2f& rad,
+make_hair(int num, int tesselation, const vec2f& len, const vec2f& rad,
     const vector<vec3i>& striangles, const vector<vec4i>& squads,
     const vector<vec3f>& spos, const vector<vec3f>& snorm,
     const vector<vec2f>& stexcoord, const vec2f& noise = zero2f,
@@ -7328,6 +7370,67 @@ inline vec4f eval_texture(const texture_info& info, const vec2f& texcoord,
     return lookup(i, j) * (1 - u) * (1 - v) + lookup(i, jj) * (1 - u) * v +
            lookup(ii, j) * u * (1 - v) + lookup(ii, jj) * u * v;
 }
+
+/// Prim shape type
+enum struct prim_shape_type {
+    /// Floor (shared vertex, 20x20 size)
+    floor,
+    /// Quad (shared vertex)
+    quad,
+    /// Cube (shared vertex, not watertight)
+    cube,
+    /// Sphere (shared vertex, not watertight)
+    sphere,
+    /// Sphere with cube uvs (shared vertex, not watertight)
+    spherizedcube,
+    /// Geodesic sphere (shared vertex, watertight, no texcoord)
+    geosphere,
+    /// Sphere with flipped cap (shared vertex, not watertight)
+    flipcapsphere,
+    /// Suzanne (shared vertex, no texcoord)
+    suzanne,
+    /// Face-varying cube (shared vertex)
+    fvcube,
+    /// Face-varying sphere (shared vertex)
+    fvsphere,
+    /// Matball (shared vertex, not watertight)
+    matball,
+};
+
+/// Name for test shape enum
+inline vector<pair<string, prim_shape_type>>& prim_shape_names() {
+    static auto names = vector<pair<string, prim_shape_type>>{
+        {"floor", prim_shape_type::floor},
+        {"quad", prim_shape_type::quad},
+        {"cube", prim_shape_type::cube},
+        {"sphere", prim_shape_type::sphere},
+        {"spherizedcube", prim_shape_type::spherizedcube},
+        {"geosphere", prim_shape_type::geosphere},
+        {"flipcapsphere", prim_shape_type::flipcapsphere},
+        {"suzanne", prim_shape_type::suzanne},
+        {"fvcube", prim_shape_type::fvcube},
+        {"fvsphere", prim_shape_type::fvsphere},
+        {"matball", prim_shape_type::matball},
+    };
+    return names;
+}
+
+/// Prim shape parameters
+struct prim_shape_params {
+    /// Shape type
+    prim_shape_type type = prim_shape_type::sphere;
+    /// Level of shape tesselatation (-1 for default)
+    int tesselation = -1;
+    /// Level of shape tesselation for subdivision surfaces
+    int subdivision = 0;
+    /// Shape scale
+    float scale = 1;
+    /// Faceted shape
+    bool faceted = false;
+};
+
+/// Makes a prim shape
+void update_prim_shape(shape* shp, const prim_shape_params& params);
 
 /// Subdivides shape elements. Apply subdivision surface rules if subdivide
 /// is true.
@@ -11943,7 +12046,7 @@ bool draw_color_widget(gl_window* win, const string& lbl, vec3f& val);
 
 /// Enum widget
 bool draw_value_widget(gl_window* win, const string& lbl, string& val,
-                       const vector<string>& labels);
+    const vector<string>& labels);
 
 /// Enum widget
 bool draw_value_widget(gl_window* win, const string& lbl, int& val,
@@ -12083,8 +12186,9 @@ inline bool draw_camera_widget(
 bool draw_scene_widgets(gl_window* win, const string& lbl, scene* scn,
     void*& selection, const unordered_map<texture*, gl_texture>& gl_txt);
 
-    /// Draw edit widgets for simple sene manipulation.
-    bool draw_edit_widgets(gl_window* win, const string& lbl, scene* scn, void*&  selection);
+/// Draw edit widgets for simple sene manipulation.
+bool draw_edit_widgets(
+    gl_window* win, const string& lbl, scene* scn, void*& selection);
 
 }  // namespace ygl
 
