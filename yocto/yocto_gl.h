@@ -241,7 +241,9 @@
 /// 13. convert face varying to vertex shared representations with
 ///     `convert_face_varying()`
 /// 14. subdivide elements by edge splits with `subdivide_elems_linear()` and
-///     `subdivide_vert_linear()`
+///     `subdivide_vert_linear()`; for an easier interface use
+///     `subdivide_lines_linear()`, `subdivide_triangles_linear()`,
+///     `subdivide_quads_linear()`
 /// 15. Catmull-Clark subdivision surface with `subdivide_vert_catmullclark()`
 ///     with support for edge and vertex creasing
 /// 16. subdvide Bezier with `subdivide_bezier_recursive()` and
@@ -4545,48 +4547,6 @@ subdivide_elems_linear(const vector<vec2i>& lines,
     return {tlines, ttriangles, tquads, edges, quads};
 }
 
-/// Tesselate lines spolitting them.
-/// Returns the tesselated elements and the old lines for vertex calculations.
-inline tuple<vector<vec2i>, vector<vec2i>> subdivide_lines_linear(
-    const vector<vec2i>& lines, int nverts) {
-    auto tlines = vector<vec2i>();
-    auto ttriangles = vector<vec3i>();
-    auto tquads = vector<vec4i>();
-    auto edges = vector<vec2i>();
-    auto faces = vector<vec4i>();
-    tie(tlines, ttriangles, tquads, edges, faces) =
-        subdivide_elems_linear(lines, {}, {}, nverts);
-    return {tlines, edges};
-}
-
-/// Tesselate triangles by splitting edges.
-/// Returns the tesselated triangles and edges for vertex calculations.
-inline tuple<vector<vec3i>, vector<vec2i>> subdivide_triangles_linear(
-    const vector<vec3i>& triangles, int nverts) {
-    auto tlines = vector<vec2i>();
-    auto ttriangles = vector<vec3i>();
-    auto tquads = vector<vec4i>();
-    auto edges = vector<vec2i>();
-    auto faces = vector<vec4i>();
-    tie(tlines, ttriangles, tquads, edges, faces) =
-    subdivide_elems_linear({},triangles, {}, nverts);
-    return {ttriangles, edges};
-}
-
-/// Tesselate quads by spolitting edges.
-/// Returns the tesselated quads, edges and faces for vertex calculations.
-inline tuple<vector<vec4i>, vector<vec2i>, vector<vec4i>>
-subdivide_quads_linear(const vector<vec4i>& quads, int nverts) {
-    auto tlines = vector<vec2i>();
-    auto ttriangles = vector<vec3i>();
-    auto tquads = vector<vec4i>();
-    auto edges = vector<vec2i>();
-    auto faces = vector<vec4i>();
-    tie(tlines, ttriangles, tquads, edges, faces) =
-    subdivide_elems_linear({},{},quads, nverts);
-    return {tquads, edges, faces};
-}
-
 /// Subdivide vertex properties given the maps
 template <typename T>
 inline vector<T> subdivide_vert_linear(const vector<T>& vert,
@@ -7429,8 +7389,22 @@ struct prim_shape_params {
     bool faceted = false;
 };
 
-/// Makes a prim shape
+/// Upodates a prim shape
 void update_prim_shape(shape* shp, const prim_shape_params& params);
+
+/// Update a prim shape from the scene scn using the name to find the element.
+/// If not present the element is added to the scene.
+inline shape* update_prim_shape(scene* scn, const string& name, material* mat,
+    const prim_shape_params& params) {
+    auto shp = (shape*)nullptr;
+    for (auto elem : scn->shapes)
+        if (elem->name == name) shp = elem;
+    if (!shp) shp = new shape();
+    shp->name = name;
+    shp->mat = mat;
+    update_prim_shape(shp, params);
+    return shp;
+}
 
 /// Subdivides shape elements. Apply subdivision surface rules if subdivide
 /// is true.
