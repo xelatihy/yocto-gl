@@ -6729,13 +6729,14 @@ texture* update_prim_texture(
                     params.name :
                     get_key(prim_texture_names(), params.type);
     if (!txt) txt = (scn) ? add_named_texture(scn, name) : new texture();
+
     txt->name = name;
     txt->path = name + ".png";
+    txt->ldr = {};
+    txt->hdr = {};
+
     switch (params.type) {
-        case prim_texture_type::none: {
-            txt->ldr = {};
-            txt->hdr = {};
-        } break;
+        case prim_texture_type::none: break;
         default: throw runtime_error("should not have gotten here");
     }
 
@@ -6748,36 +6749,36 @@ material* update_prim_material(
     auto name = (params.name != "") ?
                     params.name :
                     get_key(prim_material_names(), params.type);
+    auto txt = (texture*)nullptr;
+    if (scn && params.txt != "") {
+        for (auto elem : scn->textures)
+            if (elem->name == params.txt) txt = elem;
+    }
+
     if (!mat) mat = (scn) ? add_named_material(scn, name) : new material();
+
     mat->name = name;
     mat->mtype = material_type::specular_roughness;
+    mat->ke = zero3f;
+    mat->kd = zero3f;
+    mat->rs = 1;
+    mat->kr = zero3f;
+    mat->kt = zero3f;
+    mat->ke_txt.txt = nullptr;
+    mat->kd_txt.txt = nullptr;
+    mat->ks_txt.txt = nullptr;
+    mat->kr_txt.txt = nullptr;
+    mat->kt_txt.txt = nullptr;
+
     switch (params.type) {
-        case prim_material_type::none: {
-            mat->ke = zero3f;
-            mat->kd = zero3f;
-            mat->rs = 1;
-            mat->kr = zero3f;
-            mat->kt = zero3f;
-            mat->ke_txt.txt = nullptr;
-            mat->kd_txt.txt = nullptr;
-            mat->ks_txt.txt = nullptr;
-            mat->kr_txt.txt = nullptr;
-            mat->kt_txt.txt = nullptr;
-        } break;
+        case prim_material_type::none: break;
         case prim_material_type::emission: {
             mat->ke = params.color;
             mat->kd = zero3f;
             mat->rs = 1;
             mat->kr = zero3f;
             mat->kt = zero3f;
-            mat->ke_txt.txt =
-                (params.txt.type == prim_texture_type::none) ?
-                    nullptr :
-                    update_prim_texture(mat->ke_txt.txt, params.txt, scn);
-            mat->kd_txt.txt = nullptr;
-            mat->ks_txt.txt = nullptr;
-            mat->kr_txt.txt = nullptr;
-            mat->kt_txt.txt = nullptr;
+            mat->ke_txt.txt = txt;
         } break;
         case prim_material_type::matte: {
             mat->ke = zero3f;
@@ -6785,46 +6786,19 @@ material* update_prim_material(
             mat->rs = 1;
             mat->kr = zero3f;
             mat->kt = zero3f;
-            mat->ke_txt.txt = nullptr;
-            mat->kd_txt.txt =
-                (params.txt.type == prim_texture_type::none) ?
-                    nullptr :
-                    update_prim_texture(mat->kd_txt.txt, params.txt, scn);
-            mat->ks_txt.txt = nullptr;
-            mat->kr_txt.txt = nullptr;
-            mat->kt_txt.txt = nullptr;
+            mat->kd_txt.txt = txt;
         } break;
         case prim_material_type::plastic: {
             mat->ke = zero3f;
             mat->kd = params.color;
             mat->ks = {0.04f, 0.04f, 0.04f};
             mat->rs = params.roughness;
-            mat->kr = zero3f;
-            mat->kt = zero3f;
-            mat->ke_txt.txt = nullptr;
-            mat->kd_txt.txt =
-                (params.txt.type == prim_texture_type::none) ?
-                    nullptr :
-                    update_prim_texture(mat->kd_txt.txt, params.txt, scn);
-            mat->ks_txt.txt = nullptr;
-            mat->kr_txt.txt = nullptr;
-            mat->kt_txt.txt = nullptr;
+            mat->kd_txt.txt = txt;
         } break;
         case prim_material_type::metal: {
-            mat->ke = zero3f;
-            mat->kd = zero3f;
             mat->ks = params.color;
             mat->rs = params.roughness;
-            mat->kr = zero3f;
-            mat->kt = zero3f;
-            mat->ke_txt.txt = nullptr;
-            mat->kd_txt.txt = nullptr;
-            mat->ks_txt.txt =
-                (params.txt.type == prim_texture_type::none) ?
-                    nullptr :
-                    update_prim_texture(mat->ks_txt.txt, params.txt, scn);
-            mat->kr_txt.txt = nullptr;
-            mat->kt_txt.txt = nullptr;
+            mat->ks_txt.txt = txt;
         } break;
         default: throw runtime_error("should not have gotten here");
     }
@@ -6834,14 +6808,19 @@ material* update_prim_material(
 
 // Makes/updates a test shape
 shape* update_prim_shape(
-    shape* shp, const prim_shape_params& params, scene* scn) {
+    scene* scn, shape* shp, const prim_shape_params& params) {
     auto name = (params.name != "") ? params.name :
                                       get_key(prim_shape_names(), params.type);
+    auto mat = (material*)nullptr;
+    if (scn && params.mat != "") {
+        for (auto elem : scn->materials)
+            if (elem->name == params.mat) mat = elem;
+    }
+
     if (!shp) shp = (scn) ? add_named_shape(scn, name) : new shape();
+
     shp->name = name;
-    shp->mat = (params.mat.type == prim_material_type::none) ?
-                   nullptr :
-                   update_prim_material(shp->mat, params.mat, scn);
+    shp->mat = mat;
     shp->pos = {};
     shp->norm = {};
     shp->texcoord = {};
@@ -6856,6 +6835,7 @@ shape* update_prim_shape(
     shp->quads_pos = {};
     shp->quads_norm = {};
     shp->quads_texcoord = {};
+
     switch (params.type) {
         case prim_shape_type::floor: {
             tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
