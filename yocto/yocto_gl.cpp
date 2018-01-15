@@ -6773,7 +6773,7 @@ material* update_prim_material(
     switch (params.type) {
         case prim_material_type::none: break;
         case prim_material_type::emission: {
-            mat->ke = params.color;
+            mat->ke = params.emission * params.color;
             mat->kd = zero3f;
             mat->rs = 1;
             mat->kr = zero3f;
@@ -6904,6 +6904,74 @@ shape* update_prim_shape(
     if (params.faceted) facet_shape(shp);
 
     return shp;
+}
+
+// Makes/updates a test shape.
+instance* update_prim_instance(
+    scene* scn, instance* ist, const prim_instance_params& params) {
+    auto name = (params.name != "") ? params.name : "instance";
+    auto shp = (shape*)nullptr;
+    if (scn && params.shp != "") {
+        for (auto elem : scn->shapes)
+            if (elem->name == params.shp) shp = elem;
+    }
+
+    if (!ist) ist = (scn) ? add_named_instance(scn, name) : new instance();
+
+    ist->name = name;
+    ist->frame = params.frame;
+    if (params.rotation != zero3f) {
+        auto rot =
+            rotation_mat3f(vec3f{0, 0, 1}, params.rotation.z * pif / 180) *
+            rotation_mat3f(vec3f{0, 1, 0}, params.rotation.y * pif / 180) *
+            rotation_mat3f(vec3f{1, 0, 0}, params.rotation.x * pif / 180);
+        ist->frame.rot() = ist->frame.rot() * rot;
+    }
+    ist->shp = shp;
+
+    return ist;
+}
+
+// Makes/updates a test shape
+camera* update_camera_instance(
+    scene* scn, camera* cam, const prim_camera_params& params) {
+    auto name = (params.name != "") ? params.name : "camera";
+
+    if (!cam) cam = (scn) ? add_named_camera(scn, name) : new camera();
+
+    cam->name = name;
+    cam->frame = lookat_frame3f(params.from, params.to, {0, 1, 0});
+    cam->yfov = params.yfov;
+    cam->near = 0.01f;
+    cam->far = 10000;
+    cam->aperture = 0;
+    cam->focus = length(params.from - params.to);
+
+    return cam;
+}
+
+// Makes/updates a test shape
+environment* update_environment_instance(
+    scene* scn, environment* env, const prim_environment_params& params) {
+    auto name = (params.name != "") ? params.name : "environment";
+    auto txt = (texture*)nullptr;
+    if (scn && params.txt != "") {
+        for (auto elem : scn->textures)
+            if (elem->name == params.txt) txt = elem;
+    }
+
+    if (!env)
+        env = (scn) ? add_named_environment(scn, name) : new environment();
+
+    env->name = name;
+    env->frame = identity_frame3f;
+    if (params.rotation) {
+        env->frame = rotation_frame3f({0, 1, 0}, params.rotation);
+    }
+    env->ke = params.emission * params.color;
+    env->ke_txt.txt = txt;
+
+    return env;
 }
 
 // Add missing values and elements

@@ -7431,6 +7431,8 @@ struct prim_material_params {
     string name = "";
     /// Type
     prim_material_type type = prim_material_type::matte;
+    /// Emission strenght
+    float emission = 1;
     /// Base color
     vec3f color = {0.2, 0.2, 0.2};
     /// Roughness
@@ -7509,6 +7511,58 @@ struct prim_shape_params {
 shape* update_prim_shape(
     scene* scn, shape* shp, const prim_shape_params& params);
 
+/// Test instance parameters
+struct prim_instance_params {
+    /// Name (if not filled, assign a default one)
+    string name = "";
+    /// Shape name
+    string shp = "";
+    /// Base frame
+    frame3f frame = identity_frame3f;
+    /// Rotation in Euler angles
+    vec3f rotation = zero3f;
+};
+
+/// Updates a test instance, adding it to the scene if missing.
+instance* update_prim_instance(
+    scene* scn, instance* ist, const prim_instance_params& params);
+
+/// Test camera parameters
+struct prim_camera_params {
+    /// Name (if not filled, assign a default one)
+    string name = "";
+    /// From
+    vec3f from = {0, 0, -1};
+    /// To
+    vec3f to = zero3f;
+    /// Fov
+    float yfov = 45 * pif / 180;
+    /// Aspect
+    float aspect = 1;
+};
+
+/// Updates a test instance, adding it to the scene if missing.
+camera* update_camera_instance(
+    scene* scn, camera* cam, const prim_camera_params& params);
+
+/// Test environment parameters
+struct prim_environment_params {
+    /// Name (if not filled, assign a default one)
+    string name = "";
+    /// Emission strenght
+    float emission = 1;
+    /// Emission color
+    vec3f color = {1, 1, 1};
+    /// Emission texture
+    string txt = "";
+    /// Rotation around y axis
+    float rotation = 0;
+};
+
+/// Updates a test instance, adding it to the scene if missing.
+environment* update_environment_instance(
+    scene* scn, environment* env, const prim_environment_params& params);
+
 /// Subdivides shape elements. Apply subdivision surface rules if subdivide
 /// is true.
 inline void subdivide_shape_once(shape* shp, bool subdiv = false) {
@@ -7574,7 +7628,7 @@ inline void subdivide_shape_once(shape* shp, bool subdiv = false) {
     }
 }
 
-/// Facet a shape. Supports only non-face0varying shapes
+/// Facet a shape. Supports only non-facevarying shapes
 inline void facet_shape(shape* shp) {
     if (!shp->lines.empty() || !shp->triangles.empty() || !shp->quads.empty()) {
         vector<int> verts;
