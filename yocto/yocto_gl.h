@@ -7397,7 +7397,7 @@ struct prim_texture_params {
 
 /// Updates a test texture, adding it to the scene if missing.
 texture* update_prim_texture(
-    texture* txt, const prim_texture_params& params, scene* scn = nullptr);
+    scene* scn, texture* txt, const prim_texture_params& params);
 
 /// Test material type
 enum struct prim_material_type {
@@ -7436,12 +7436,12 @@ struct prim_material_params {
     /// Roughness
     float roughness = 0.1;
     /// Base texture
-    prim_texture_params txt = {};
+    string txt = "";
 };
 
 /// Updates a test material, adding it to the scene if missing.
 material* update_prim_material(
-    material* mat, const prim_material_params& params, scene* scn = nullptr);
+    scene* scn, material* mat, const prim_material_params& params);
 
 /// Test shape type
 enum struct prim_shape_type {
@@ -7491,8 +7491,8 @@ inline vector<pair<string, prim_shape_type>>& prim_shape_names() {
 struct prim_shape_params {
     /// Shape name (if not filled, assign a default based on type)
     string name = "";
-    /// Material params
-    prim_material_params mat = {};
+    /// Material name
+    string mat = "";
     /// Shape type
     prim_shape_type type = prim_shape_type::sphere;
     /// Level of shape tesselatation (-1 for default)
@@ -7507,7 +7507,7 @@ struct prim_shape_params {
 
 /// Updates a test shape, adding it to the scene if missing.
 shape* update_prim_shape(
-    shape* shp, const prim_shape_params& params, scene* scn = nullptr);
+    scene* scn, shape* shp, const prim_shape_params& params);
 
 /// Subdivides shape elements. Apply subdivision surface rules if subdivide
 /// is true.
