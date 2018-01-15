@@ -7331,7 +7331,119 @@ inline vec4f eval_texture(const texture_info& info, const vec2f& texcoord,
            lookup(ii, j) * u * (1 - v) + lookup(ii, jj) * u * v;
 }
 
-/// Prim shape type
+// Implementation detail. Add a named element or return the one with that name.
+template <typename T>
+inline T* add_named_elem(vector<T*>& elems, const string& name) {
+    for (auto elem : elems)
+        if (elem->name == name) return elem;
+    auto elem = new T();
+    elem->name = name;
+    return elem;
+}
+
+/// Add a named shape, only if not already added
+inline shape* add_named_shape(scene* scn, const string& name) {
+    return add_named_elem(scn->shapes, name);
+}
+
+/// Add a named material, only if not already added
+inline material* add_named_material(scene* scn, const string& name) {
+    return add_named_elem(scn->materials, name);
+}
+
+/// Add a named texture, only if not already added
+inline texture* add_named_texture(scene* scn, const string& name) {
+    return add_named_elem(scn->textures, name);
+}
+
+/// Add a named camera, only if not already added
+inline camera* add_named_camera(scene* scn, const string& name) {
+    return add_named_elem(scn->cameras, name);
+}
+
+/// Add a named material, only if not already added
+inline environment* add_named_environment(scene* scn, const string& name) {
+    return add_named_elem(scn->environments, name);
+}
+
+/// Add a named material, only if not already added
+inline instance* add_named_instance(scene* scn, const string& name) {
+    return add_named_elem(scn->instances, name);
+}
+
+/// Test texture type
+enum struct prim_texture_type {
+    /// None (empty texture)
+    none,
+};
+
+/// Name for test texture enum
+inline vector<pair<string, prim_texture_type>>& prim_texture_names() {
+    static auto names = vector<pair<string, prim_texture_type>>{
+        {"none", prim_texture_type::none},
+    };
+    return names;
+}
+
+/// Test texture parameters
+struct prim_texture_params {
+    /// Name (if not filled, assign a default based on type)
+    string name = "";
+    /// Type
+    prim_texture_type type = prim_texture_type::none;
+    /// Resolution (-1 for default)
+    int resolution = -1;
+};
+
+/// Updates a test texture, adding it to the scene if missing.
+texture* update_prim_texture(
+    texture* txt, const prim_texture_params& params, scene* scn = nullptr);
+
+/// Test material type
+enum struct prim_material_type {
+    /// None (empty material)
+    none,
+    /// Emission
+    emission,
+    /// Matte (diffuse)
+    matte,
+    /// Plastic
+    plastic,
+    /// Matetal
+    metal,
+};
+
+/// Name for test shape enum
+inline vector<pair<string, prim_material_type>>& prim_material_names() {
+    static auto names = vector<pair<string, prim_material_type>>{
+        {"none", prim_material_type::none},
+        {"emission", prim_material_type::emission},
+        {"matte", prim_material_type::matte},
+        {"plastic", prim_material_type::plastic},
+        {"metal", prim_material_type::metal},
+    };
+    return names;
+}
+
+/// Test material parameters
+struct prim_material_params {
+    /// Name (if not filled, assign a default based on type)
+    string name = "";
+    /// Type
+    prim_material_type type = prim_material_type::matte;
+    /// Base color
+    vec3f color = {0.2, 0.2, 0.2};
+    /// Roughness
+    float roughness = 0.1;
+    /// Base texture
+    prim_texture_params txt = {};
+};
+
+/// Updates a test material, adding it to the scene if missing.
+material* update_prim_material(
+    material* mat, const prim_material_params& params, scene* scn = nullptr);
+
+/// Test shape type
 enum struct prim_shape_type {
     /// Floor (shared vertex, 20x20 size)
     floor,
@@ -7375,8 +7487,12 @@ inline vector<pair<string, prim_shape_type>>& prim_shape_names() {
     return names;
 }
 
-/// Prim shape parameters
+/// Test shape parameters
 struct prim_shape_params {
+    /// Shape name (if not filled, assign a default based on type)
+    string name = "";
+    /// Material params
+    prim_material_params mat = {};
     /// Shape type
     prim_shape_type type = prim_shape_type::sphere;
     /// Level of shape tesselatation (-1 for default)
@@ -7389,22 +7505,9 @@ struct prim_shape_params {
     bool faceted = false;
 };
 
-/// Upodates a prim shape
-void update_prim_shape(shape* shp, const prim_shape_params& params);
-
-/// Update a prim shape from the scene scn using the name to find the element.
-/// If not present the element is added to the scene.
-inline shape* update_prim_shape(scene* scn, const string& name, material* mat,
-    const prim_shape_params& params) {
-    auto shp = (shape*)nullptr;
-    for (auto elem : scn->shapes)
-        if (elem->name == name) shp = elem;
-    if (!shp) shp = new shape();
-    shp->name = name;
-    shp->mat = mat;
-    update_prim_shape(shp, params);
-    return shp;
-}
+/// Updates a test shape, adding it to the scene if missing.
+shape* update_prim_shape(
+    shape* shp, const prim_shape_params& params, scene* scn = nullptr);
 
 /// Subdivides shape elements. Apply subdivision surface rules if subdivide
 /// is true.

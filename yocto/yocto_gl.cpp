@@ -6709,8 +6709,139 @@ inline void save_scene(
     throw runtime_error("unsupported extension " + ext);
 }
 
-// Makes a test shape
-void update_prim_shape(shape* shp, const prim_shape_params& params) {
+}  // namespace _impl_scn
+
+// Load a scene
+scene* load_scene(const string& filename, const load_options& opts) {
+    return _impl_scn::load_scene(filename, opts);
+}
+
+// Save a scene
+void save_scene(
+    const string& filename, const scene* scn, const save_options& opts) {
+    _impl_scn::save_scene(filename, scn, opts);
+}
+
+// Makes/updates a test texture
+texture* update_prim_texture(
+    texture* txt, const prim_texture_params& params, scene* scn) {
+    auto name = (params.name != "") ?
+                    params.name :
+                    get_key(prim_texture_names(), params.type);
+    if (!txt) txt = (scn) ? add_named_texture(scn, name) : new texture();
+    txt->name = name;
+    txt->path = name + ".png";
+    switch (params.type) {
+        case prim_texture_type::none: {
+            txt->ldr = {};
+            txt->hdr = {};
+        } break;
+        default: throw runtime_error("should not have gotten here");
+    }
+
+    return txt;
+}
+
+// Makes/updates a test material
+material* update_prim_material(
+    material* mat, const prim_material_params& params, scene* scn) {
+    auto name = (params.name != "") ?
+                    params.name :
+                    get_key(prim_material_names(), params.type);
+    if (!mat) mat = (scn) ? add_named_material(scn, name) : new material();
+    mat->name = name;
+    mat->mtype = material_type::specular_roughness;
+    switch (params.type) {
+        case prim_material_type::none: {
+            mat->ke = zero3f;
+            mat->kd = zero3f;
+            mat->rs = 1;
+            mat->kr = zero3f;
+            mat->kt = zero3f;
+            mat->ke_txt.txt = nullptr;
+            mat->kd_txt.txt = nullptr;
+            mat->ks_txt.txt = nullptr;
+            mat->kr_txt.txt = nullptr;
+            mat->kt_txt.txt = nullptr;
+        } break;
+        case prim_material_type::emission: {
+            mat->ke = params.color;
+            mat->kd = zero3f;
+            mat->rs = 1;
+            mat->kr = zero3f;
+            mat->kt = zero3f;
+            mat->ke_txt.txt =
+                (params.txt.type == prim_texture_type::none) ?
+                    nullptr :
+                    update_prim_texture(mat->ke_txt.txt, params.txt, scn);
+            mat->kd_txt.txt = nullptr;
+            mat->ks_txt.txt = nullptr;
+            mat->kr_txt.txt = nullptr;
+            mat->kt_txt.txt = nullptr;
+        } break;
+        case prim_material_type::matte: {
+            mat->ke = zero3f;
+            mat->kd = params.color;
+            mat->rs = 1;
+            mat->kr = zero3f;
+            mat->kt = zero3f;
+            mat->ke_txt.txt = nullptr;
+            mat->kd_txt.txt =
+                (params.txt.type == prim_texture_type::none) ?
+                    nullptr :
+                    update_prim_texture(mat->kd_txt.txt, params.txt, scn);
+            mat->ks_txt.txt = nullptr;
+            mat->kr_txt.txt = nullptr;
+            mat->kt_txt.txt = nullptr;
+        } break;
+        case prim_material_type::plastic: {
+            mat->ke = zero3f;
+            mat->kd = params.color;
+            mat->ks = {0.04f, 0.04f, 0.04f};
+            mat->rs = params.roughness;
+            mat->kr = zero3f;
+            mat->kt = zero3f;
+            mat->ke_txt.txt = nullptr;
+            mat->kd_txt.txt =
+                (params.txt.type == prim_texture_type::none) ?
+                    nullptr :
+                    update_prim_texture(mat->kd_txt.txt, params.txt, scn);
+            mat->ks_txt.txt = nullptr;
+            mat->kr_txt.txt = nullptr;
+            mat->kt_txt.txt = nullptr;
+        } break;
+        case prim_material_type::metal: {
+            mat->ke = zero3f;
+            mat->kd = zero3f;
+            mat->ks = params.color;
+            mat->rs = params.roughness;
+            mat->kr = zero3f;
+            mat->kt = zero3f;
+            mat->ke_txt.txt = nullptr;
+            mat->kd_txt.txt = nullptr;
+            mat->ks_txt.txt =
+                (params.txt.type == prim_texture_type::none) ?
+                    nullptr :
+                    update_prim_texture(mat->ks_txt.txt, params.txt, scn);
+            mat->kr_txt.txt = nullptr;
+            mat->kt_txt.txt = nullptr;
+        } break;
+        default: throw runtime_error("should not have gotten here");
+    }
+
+    return mat;
+}
+
+// Makes/updates a test shape
+shape* update_prim_shape(
+    shape* shp, const prim_shape_params& params, scene* scn) {
+    auto name = (params.name != "") ? params.name :
+                                      get_key(prim_shape_names(), params.type);
+    if (!shp) shp = (scn) ? add_named_shape(scn, name) : new shape();
+    shp->name = name;
+    shp->mat = (params.mat.type == prim_material_type::none) ?
+                   nullptr :
+                   update_prim_material(shp->mat, params.mat, scn);
     shp->pos = {};
     shp->norm = {};
     shp->texcoord = {};
@@ -6791,10 +6922,12 @@ void update_prim_shape(shape* shp, const prim_shape_params& params) {
     }
 
     if (params.faceted) facet_shape(shp);
+
+    return shp;
 }
 
 // Add missing values and elements
-inline void add_elements(scene* scn, const add_elements_options& opts) {
+void add_elements(scene* scn, const add_elements_options& opts) {
     if (opts.smooth_normals) {
         for (auto shp : scn->shapes) {
             if (!shp->norm.empty()) continue;
@@ -6937,7 +7070,7 @@ inline void add_elements(scene* scn, const add_elements_options& opts) {
 }
 
 // Merge scene into one another
-inline void merge_into(scene* merge_into, scene* merge_from) {
+void merge_into(scene* merge_into, scene* merge_from) {
     merge_into->cameras.insert(merge_from->cameras.begin(),
         merge_from->cameras.end(), merge_into->cameras.end());
     merge_from->cameras.clear();
@@ -6959,7 +7092,7 @@ inline void merge_into(scene* merge_into, scene* merge_from) {
 }
 
 // Initialize the lights
-inline void update_lights(scene* scn, bool include_env, bool sampling_cdf) {
+void update_lights(scene* scn, bool include_env, bool sampling_cdf) {
     for (auto lgt : scn->lights) delete lgt;
     scn->lights.clear();
 
@@ -6992,7 +7125,7 @@ inline void update_lights(scene* scn, bool include_env, bool sampling_cdf) {
 }
 
 // Print scene info (call update bounds bes before)
-inline void print_info(const scene* scn) {
+void print_info(const scene* scn) {
     auto nverts = 0, nnorms = 0, ntexcoords = 0, npoints = 0, nlines = 0,
          ntriangles = 0, nquads = 0;
     for (auto shp : scn->shapes) {
@@ -7031,37 +7164,6 @@ inline void print_info(const scene* scn) {
     printf("bbox size:   %g %g %g\n", bboxs[0], bboxs[1], bboxs[2]);
     printf("\n");
 }
-
-}  // namespace _impl_scn
-
-// Load a scene
-scene* load_scene(const string& filename, const load_options& opts) {
-    return _impl_scn::load_scene(filename, opts);
-}
-
-// Save a scene
-void save_scene(
-    const string& filename, const scene* scn, const save_options& opts) {
-    _impl_scn::save_scene(filename, scn, opts);
-}
-
-// Add missing values and elements
-void add_elements(scene* scn, const add_elements_options& opts) {
-    _impl_scn::add_elements(scn, opts);
-}
-
-// Merge scene into one another
-void merge_into(scene* merge_into, scene* merge_from) {
-    _impl_scn::merge_into(merge_into, merge_from);
-}
-
-// Initialize the lights
-void update_lights(scene* scn, bool include_env, bool sampling_cdf) {
-    _impl_scn::update_lights(scn, include_env, sampling_cdf);
-}
-
-// Print scene info (call update bounds bes before)
-void print_info(const scene* scn) { _impl_scn::print_info(scn); }
 
 }  // namespace ygl
 
