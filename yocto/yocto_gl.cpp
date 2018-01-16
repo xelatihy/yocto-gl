@@ -6853,6 +6853,8 @@ material* update_prim_material(
         default: throw runtime_error("should not have gotten here");
     }
 
+    mat->norm_txt.txt = norm;
+
     return mat;
 }
 
@@ -8635,11 +8637,13 @@ string add_test_texture(prim_scene_params* scn, test_texture_type type) {
             txt->type = prim_texture_type::bump;
             txt->tile_size = 32;
             txt->bump_to_normal = true;
+            txt->bump_scale = 4;
         } break;
         case test_texture_type::tgridn: {
             txt->type = prim_texture_type::grid;
             txt->tile_size = 32;
             txt->bump_to_normal = true;
+            txt->bump_scale = 4;
         } break;
         case test_texture_type::noise: {
             txt->type = prim_texture_type::noise;
@@ -8781,7 +8785,6 @@ inline material* add_test_material(scene* scn, test_material_type type) {
             mat->kd = {1, 1, 1};
             mat->ks = {0.04f, 0.04f, 0.04f};
             mat->rs = 0.25f;
-            mat->kd_txt.txt = add_test_texture(scn, test_texture_type::colored);
             mat->norm_txt.txt = add_test_texture(scn, test_texture_type::bumpn);
         } break;
         case test_material_type::silver_mirror: {
@@ -8805,11 +8808,11 @@ inline material* add_test_material(scene* scn, test_material_type type) {
             mat->op = 0.9f;
         } break;
         case test_material_type::transparent_green: {
-            mat->kd = {0.5f, 0.2f, 0.2f};
+            mat->kd = {0.2f, 0.5f, 0.2f};
             mat->op = 0.5f;
         } break;
         case test_material_type::transparent_blue: {
-            mat->kd = {0.5f, 0.2f, 0.2f};
+            mat->kd = {0.2f, 0.2f, 0.5f};
             mat->op = 0.92f;
         } break;
         case test_material_type::light_point: {
@@ -9668,11 +9671,9 @@ scene* make_simple_test_scene(test_camera_type ctype,
     return scn;
 }
 
-// 1. lines
 // 2. normalmap
 // 3. lights are low
 // 4. tesselation not faceted
-// 5. transparent
 
 scene* make_simple_test_scene1(test_camera_type ctype,
     const vector<pair<test_shape_type, test_material_type>>& otypes,
