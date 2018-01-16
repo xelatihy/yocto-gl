@@ -8567,16 +8567,16 @@ string add_test_texture(prim_scene_params* scn, test_texture_type type) {
             txt->type = prim_texture_type::grid;
         } break;
         case test_texture_type::checker: {
-            txt->type = prim_texture_type::grid;
+            txt->type = prim_texture_type::checker;
         } break;
         case test_texture_type::colored: {
-            txt->type = prim_texture_type::grid;
+            txt->type = prim_texture_type::colored;
         } break;
         case test_texture_type::rcolored: {
-            txt->type = prim_texture_type::grid;
+            txt->type = prim_texture_type::rcolored;
         } break;
         case test_texture_type::bump: {
-            txt->type = prim_texture_type::grid;
+            txt->type = prim_texture_type::bump;
             txt->tile_size = 32;
         } break;
         case test_texture_type::tgrid: {
