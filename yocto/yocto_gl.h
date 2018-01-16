@@ -7402,12 +7402,49 @@ inline instance* add_named_instance(scene* scn, const string& name) {
 enum struct prim_texture_type {
     /// None (empty texture)
     none,
+    /// Grid image
+    grid,
+    /// Checker image
+    checker,
+    /// Colored checker image
+    colored,
+    /// Detailed colored checker image
+    rcolored,
+    /// Bump and dimple imahe
+    bump,
+    /// Uv debug image
+    uv,
+    /// Gamma ramp
+    gamma,
+    /// Perlin noise image
+    noise,
+    /// Perlin ridge image
+    ridge,
+    /// Perlin fbm image
+    fbm,
+    /// Perlin turbulence image
+    turbulence,
+    /// Gamma ramp (HDR)
+    gammaf,
+    /// Sky (HDR)
+    sky,
 };
 
 /// Name for test texture enum
 inline vector<pair<string, prim_texture_type>>& prim_texture_names() {
     static auto names = vector<pair<string, prim_texture_type>>{
         {"none", prim_texture_type::none},
+        {"grid", prim_texture_type::grid},
+        {"checker", prim_texture_type::checker},
+        {"rcolored", prim_texture_type::rcolored},
+        {"uv", prim_texture_type::uv},
+        {"gamma", prim_texture_type::gamma},
+        {"noise", prim_texture_type::noise},
+        {"ridge", prim_texture_type::ridge},
+        {"fbm", prim_texture_type::fbm},
+        {"turbulence", prim_texture_type::turbulence},
+        {"gammaf", prim_texture_type::gammaf},
+        {"sky", prim_texture_type::sky},
     };
     return names;
 }
@@ -7418,8 +7455,18 @@ struct prim_texture_params {
     string name = "";
     /// Type
     prim_texture_type type = prim_texture_type::none;
-    /// Resolution (-1 for default)
-    int resolution = -1;
+    /// Resolution
+    int resolution = 512;
+    /// Tile size for grid-like textures
+    int tile_size = 32;
+    /// Noise scale for noise-like textures
+    int noise_scale = 8;
+    /// Sun angle for sunsky-like textures
+    float sky_sunangle = pif / 4;
+    /// Convert to normal map
+    bool bump_to_normal = false;
+    /// Bump to normal scale
+    float bump_scale = 4;
 };
 
 /// Updates a test texture, adding it to the scene if missing.
@@ -7438,6 +7485,8 @@ enum struct prim_material_type {
     plastic,
     /// Matetal
     metal,
+    /// Transparent (diffuse with opacity)
+    transparent,
 };
 
 /// Name for test shape enum
@@ -7448,6 +7497,7 @@ inline vector<pair<string, prim_material_type>>& prim_material_names() {
         {"matte", prim_material_type::matte},
         {"plastic", prim_material_type::plastic},
         {"metal", prim_material_type::metal},
+        {"transparent", prim_material_type::transparent},
     };
     return names;
 }
@@ -7462,10 +7512,14 @@ struct prim_material_params {
     float emission = 1;
     /// Base color
     vec3f color = {0.2, 0.2, 0.2};
+    /// Opacity (only for supported materials)
+    float opacity = 1;
     /// Roughness
     float roughness = 0.1;
     /// Base texture
     string txt = "";
+    /// Normal map
+    string norm = "";
 };
 
 /// Updates a test material, adding it to the scene if missing.
@@ -7483,6 +7537,8 @@ enum struct prim_shape_type {
     /// Sphere (shared vertex, not watertight)
     sphere,
     /// Sphere with cube uvs (shared vertex, not watertight)
+    spherecube,
+    /// Spherized cube (shared vertex, not watertight)
     spherizedcube,
     /// Geodesic sphere (shared vertex, watertight, no texcoord)
     geosphere,
@@ -7490,12 +7546,22 @@ enum struct prim_shape_type {
     flipcapsphere,
     /// Suzanne (shared vertex, no texcoord)
     suzanne,
+    /// Position-only cube (shared vertex)
+    cubep,
     /// Face-varying cube (shared vertex)
     fvcube,
     /// Face-varying sphere (shared vertex)
     fvsphere,
     /// Matball (shared vertex, not watertight)
     matball,
+    /// Single point
+    point,
+    /// Random points in a cube
+    pointscube,
+    /// Random lines on a sphere
+    hairball,
+    /// Bezier circle
+    beziercircle,
 };
 
 /// Name for test shape enum
@@ -7505,13 +7571,19 @@ inline vector<pair<string, prim_shape_type>>& prim_shape_names() {
         {"quad", prim_shape_type::quad},
         {"cube", prim_shape_type::cube},
         {"sphere", prim_shape_type::sphere},
+        {"spherecube", prim_shape_type::spherecube},
         {"spherizedcube", prim_shape_type::spherizedcube},
         {"geosphere", prim_shape_type::geosphere},
         {"flipcapsphere", prim_shape_type::flipcapsphere},
         {"suzanne", prim_shape_type::suzanne},
+        {"cubep", prim_shape_type::cubep},
         {"fvcube", prim_shape_type::fvcube},
         {"fvsphere", prim_shape_type::fvsphere},
         {"matball", prim_shape_type::matball},
+        {"point", prim_shape_type::point},
+        {"pointscube", prim_shape_type::pointscube},
+        {"hairball", prim_shape_type::hairball},
+        {"beziercircle", prim_shape_type::beziercircle},
     };
     return names;
 }
@@ -7532,6 +7604,8 @@ struct prim_shape_params {
     float scale = 1;
     /// Faceted shape
     bool faceted = false;
+    /// Number of elements for points and lines (-1 for default)
+    int num = -1;
 };
 
 /// Updates a test shape, adding it to the scene if missing.
@@ -7582,6 +7656,8 @@ struct prim_environment_params {
     vec3f color = {1, 1, 1};
     /// Emission texture
     string txt = "";
+    /// Frame
+    frame3f frame = identity_frame3f;
     /// Rotation around y axis
     float rotation = 0;
 };
