@@ -9057,189 +9057,6 @@ inline const vector<pair<string, test_shape_type>>& test_shape_names() {
     return names;
 }
 
-inline shape* add_test_shape(
-    scene* scn, test_shape_type stype, test_material_type mtype) {
-    if (stype == test_shape_type::none) return nullptr;
-    auto name = ""s;
-    for (auto kv : test_shape_names())
-        if (kv.second == stype) name += kv.first;
-    name += "_";
-    for (auto kv : test_material_names())
-        if (kv.second == mtype) name += kv.first;
-    for (auto shp : scn->shapes)
-        if (shp->name == name) return shp;
-    auto shp = new shape();
-    shp->name = name;
-    shp->mat = add_test_material(scn, mtype);
-    scn->shapes += shp;
-    switch (stype) {
-        case test_shape_type::floor: {
-            tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
-                make_uvquad(6);
-            for (auto& p : shp->pos) p = {-p.x, p.z, p.y};
-            for (auto& n : shp->norm) n = {n.x, n.z, n.y};
-            for (auto& p : shp->pos) p *= 20;
-            for (auto& uv : shp->texcoord) uv *= 20;
-        } break;
-        case test_shape_type::quad: {
-            tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
-                make_uvquad(0);
-        } break;
-        case test_shape_type::cube: {
-            tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
-                make_uvcube(0);
-        } break;
-        case test_shape_type::sphere: {
-            tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
-                make_uvsphere(5);
-        } break;
-        case test_shape_type::spherecube: {
-            tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
-                make_uvspherecube(4);
-        } break;
-        case test_shape_type::spherizedcube: {
-            tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
-                make_uvspherizedcube(4, 0.75f);
-        } break;
-        case test_shape_type::flipcapsphere: {
-            tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
-                make_uvflipcapsphere(5, 0.75f);
-            // for (auto& uv : shp->texcoord) uv *= uvscale;
-        } break;
-        case test_shape_type::geosphere: {
-            tie(shp->triangles, shp->pos) = make_geodesicsphere(5);
-            shp->norm = shp->pos;
-        } break;
-        case test_shape_type::geospheref: {
-            tie(shp->triangles, shp->pos) = make_geodesicsphere(5);
-            facet_shape(shp);
-        } break;
-        case test_shape_type::geospherel: {
-            tie(shp->triangles, shp->pos) = make_geodesicsphere(4);
-            facet_shape(shp);
-        } break;
-        case test_shape_type::cubep: {
-            tie(shp->quads, shp->pos) = make_cube(0);
-        } break;
-        case test_shape_type::cubes: {
-            tie(shp->quads, shp->pos) = make_cube(0);
-            for (auto i = 0; i < 4; i++) subdivide_shape_once(shp, true);
-        } break;
-        case test_shape_type::suzanne: {
-            tie(shp->quads, shp->pos) = make_suzanne(0);
-        } break;
-        case test_shape_type::suzannes: {
-            tie(shp->quads, shp->pos) = make_suzanne(0);
-            for (auto i = 0; i < 2; i++) subdivide_shape_once(shp, true);
-        } break;
-        case test_shape_type::cubefv: {
-            tie(shp->quads_pos, shp->pos, shp->quads_norm, shp->norm,
-                shp->quads_texcoord, shp->texcoord) = make_fvcube(0);
-        } break;
-        case test_shape_type::cubefvs: {
-            tie(shp->quads_pos, shp->pos, shp->quads_norm, shp->norm,
-                shp->quads_texcoord, shp->texcoord) = make_fvcube(0);
-            for (auto l = 0; l < 4; l++) subdivide_shape_once(shp, true);
-        } break;
-        case test_shape_type::quads: {
-            tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
-                make_uvquad(0);
-            for (auto i = 0; i < 4; i++) subdivide_shape_once(shp, true);
-        } break;
-        case test_shape_type::spherefv: {
-            tie(shp->quads_pos, shp->pos, shp->quads_norm, shp->norm,
-                shp->quads_texcoord, shp->texcoord) = make_fvsphere(4);
-        } break;
-        case test_shape_type::matball: {
-            tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
-                make_uvflipcapsphere(5, 0.75f);
-#if 0
-            auto level = 6;
-            auto usteps = pow2(level + 2), vsteps = pow2(level + 1);
-            tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
-                make_uvhollowcutsphere(usteps, vsteps, 0.75f);
-#endif
-        } break;
-        case test_shape_type::matballi: {
-            tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
-                make_uvsphere(5);
-            for (auto& p : shp->pos) p *= 0.8f;
-        } break;
-        case test_shape_type::points: {
-            tie(shp->points, shp->texcoord) = make_uvpoints(64 * 64 * 16);
-            shp->pos.reserve(shp->texcoord.size());
-            shp->norm.resize(shp->texcoord.size(), {0, 0, 1});
-            shp->radius.resize(shp->texcoord.size(), 0.0025f);
-            auto rn = init_rng(0);
-            for (auto i = 0; i < shp->texcoord.size(); i++) {
-                shp->pos += vec3f{-1 + 2 * next_rand1f(rn),
-                    -1 + 2 * next_rand1f(rn), -1 + 2 * next_rand1f(rn)};
-            }
-        } break;
-        case test_shape_type::lines1: {
-            auto nhairs = 65536;
-            // auto nhairs = 32768;
-            tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
-                make_uvspherecube(5);
-            tie(shp->lines, shp->pos, shp->norm, shp->texcoord, shp->radius) =
-                make_hair(nhairs, 2, {0.1f, 0.1f}, {0.001f, 0.0001f}, {},
-                    shp->quads, shp->pos, shp->norm, shp->texcoord, {0.5f, 8});
-            shp->quads.clear();
-        } break;
-        case test_shape_type::lines2: {
-            auto nhairs = 65536;
-            // auto nhairs = 32768;
-            tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
-                make_uvspherecube(5);
-            tie(shp->lines, shp->pos, shp->norm, shp->texcoord, shp->radius) =
-                make_hair(nhairs, 2, {0.1f, 0.1f}, {0.001f, 0.0001f}, {},
-                    shp->quads, shp->pos, shp->norm, shp->texcoord, {},
-                    {0.5f, 128});
-            shp->quads.clear();
-        } break;
-        case test_shape_type::lines3: {
-            tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
-                make_uvspherecube(4);
-            tie(shp->lines, shp->pos, shp->norm, shp->texcoord, shp->radius) =
-                make_hair(16384, 2, {0.1f, 0.1f}, {0.01f, 0.0001f}, {},
-                    shp->quads, shp->pos, shp->norm, shp->texcoord);
-            shp->quads.clear();
-        } break;
-        case test_shape_type::linesi: {
-            tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
-                make_uvsphere(5);
-        } break;
-        case test_shape_type::bcircle: {
-            tie(shp->beziers, shp->pos) = make_bezier_circle();
-            shp->subdivision_level = 2;
-        } break;
-        case test_shape_type::plight: {
-            shp->points.push_back(0);
-            shp->pos.push_back({0, 0, 0});
-            shp->norm.push_back({0, 0, 1});
-            shp->radius.push_back(0.001f);
-        } break;
-        case test_shape_type::alight: {
-            tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
-                make_uvquad(0);
-            for (auto& p : shp->pos) p *= 2;
-        } break;
-        case test_shape_type::alightt: {
-            tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
-                make_uvquad(0);
-            for (auto& p : shp->pos) p *= 16;
-        } break;
-        case test_shape_type::alightf: {
-            tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
-                make_uvquad(0);
-            for (auto& p : shp->pos) p *= 16;
-        } break;
-        default: throw runtime_error("bad value");
-    }
-    // for (auto& p : shp->pos) p *= scale;
-    return shp;
-}
-
 inline string add_test_shape(
     prim_scene_params* scn, test_shape_type stype, test_material_type mtype) {
     if (stype == test_shape_type::none) return "";
@@ -9381,33 +9198,6 @@ test_environment_names() {
     return names;
 }
 
-inline environment* add_test_environment(
-    scene* scn, test_environment_type type, const frame3f& frame) {
-    if (type == test_environment_type::none) return nullptr;
-    auto name = ""s;
-    for (auto kv : test_environment_names())
-        if (kv.second == type) name += kv.first;
-    for (auto env : scn->environments)
-        if (env->name == name) return env;
-    auto env = new environment();
-    env->name = name;
-    scn->environments += env;
-
-    switch (type) {
-        case test_environment_type::sky1: {
-            env->ke = {1, 1, 1};
-            env->ke_txt.txt = add_test_texture(scn, test_texture_type::sky1);
-        } break;
-        case test_environment_type::sky2: {
-            env->ke = {1, 1, 1};
-            env->ke_txt.txt = add_test_texture(scn, test_texture_type::sky2);
-        } break;
-        default: throw runtime_error("bad type");
-    }
-
-    return env;
-}
-
 inline string add_test_environment(prim_scene_params* scn,
     test_environment_type type, const frame3f& frame, float rotation = 0) {
     if (type == test_environment_type::none) return nullptr;
@@ -9439,19 +9229,6 @@ inline string add_test_environment(prim_scene_params* scn,
     return name;
 }
 
-instance* add_test_instance(scene* scn, test_shape_type stype,
-    test_material_type mtype, const frame3f& frame) {
-    auto ist = new instance();
-    ist->shp = add_test_shape(scn, stype, mtype);
-    auto count = 0;
-    for (auto ist2 : scn->instances)
-        if (ist->shp == ist2->shp) count++;
-    ist->name = ist->shp->name + ((count) ? "!" + to_string(count + 1) : ""s);
-    ist->frame = frame;
-    scn->instances += ist;
-    return ist;
-}
-
 string add_test_instance(prim_scene_params* scn, test_shape_type stype,
     test_material_type mtype, const frame3f& frame) {
     scn->instances.push_back({});
@@ -9463,15 +9240,6 @@ string add_test_instance(prim_scene_params* scn, test_shape_type stype,
     ist->name = ist->shp + ((count) ? "!" + to_string(count + 1) : ""s);
     ist->frame = frame;
     return ist->name;
-}
-
-instance* add_test_instance(scene* scn, test_shape_type stype,
-    test_material_type mtype, const vec3f& pos, const vec3f& rot = {0, 0, 0}) {
-    return add_test_instance(scn, stype, mtype,
-        {rotation_mat3f(vec3f{0, 0, 1}, rot[2] * pif / 180) *
-                rotation_mat3f(vec3f{0, 1, 0}, rot[1] * pif / 180) *
-                rotation_mat3f(vec3f{1, 0, 0}, rot[0] * pif / 180),
-            pos});
 }
 
 string add_test_instance(prim_scene_params* scn, test_shape_type stype,
@@ -9499,43 +9267,6 @@ inline const vector<pair<string, test_light_type>>& test_light_names() {
             {"arealight1", test_light_type::arealight1},
             {"envlight", test_light_type::envlight}};
     return names;
-}
-
-tuple<vector<instance*>, environment*> add_test_lights(
-    scene* scn, test_light_type type) {
-    auto ists = vector<instance*>{};
-    auto env = (environment*)nullptr;
-    switch (type) {
-        case test_light_type::none: break;
-        case test_light_type::pointlight: {
-            ists.push_back(add_test_instance(scn, test_shape_type::plight,
-                test_material_type::light_point, {-2, 10, 8}));
-            ists.push_back(add_test_instance(scn, test_shape_type::plight,
-                test_material_type::light_point, {+2, 10, 8}));
-        } break;
-        case test_light_type::arealight: {
-            ists.push_back(add_test_instance(scn, test_shape_type::alight,
-                test_material_type::light_area,
-                lookat_frame3f({-4, 5, 8}, {0, 3, 0}, {0, 1, 0}, true)));
-            ists.push_back(add_test_instance(scn, test_shape_type::alight,
-                test_material_type::light_area,
-                lookat_frame3f({+4, 5, 8}, {0, 3, 0}, {0, 1, 0}, true)));
-        } break;
-        case test_light_type::arealight1: {
-            ists.push_back(add_test_instance(scn, test_shape_type::alightt,
-                test_material_type::light_areat,
-                lookat_frame3f({0, 64, 0}, {0, 1, 0}, {0, 0, 1}, true)));
-            ists.push_back(add_test_instance(scn, test_shape_type::alightf,
-                test_material_type::light_areaf,
-                lookat_frame3f({0, 64, 64}, {0, 1, 0}, {0, 1, 0}, true)));
-        } break;
-        case test_light_type::envlight: {
-            env = add_test_environment(scn, test_environment_type::sky1,
-                lookat_frame3f({0, 1, 0}, {0, 1, 1}, {0, 1, 0}, true));
-        } break;
-        default: throw runtime_error("bad value");
-    }
-    return tuple<vector<instance*>, environment*>{ists, env};
 }
 
 tuple<vector<string>, string> add_test_lights(
@@ -9584,43 +9315,6 @@ inline const vector<pair<string, test_camera_type>>& test_camera_names() {
         {"none", test_camera_type::none}, {"cam1", test_camera_type::cam1},
         {"cam2", test_camera_type::cam2}, {"cam3", test_camera_type::cam3}};
     return names;
-}
-
-camera* add_test_camera(scene* scn, test_camera_type type) {
-    if (type == test_camera_type::none) return nullptr;
-    auto name = ""s;
-    for (auto kv : test_camera_names())
-        if (kv.second == type) name = kv.first;
-    for (auto cam : scn->cameras)
-        if (cam->name == name) return cam;
-    auto cam = new camera();
-    cam->name = name;
-    scn->cameras += cam;
-    switch (type) {
-        case test_camera_type::cam1: {
-            cam->frame = lookat_frame3f({0, 4, 10}, {0, 1, 0}, {0, 1, 0});
-            cam->focus = length(vec3f{0, 4, 10} - vec3f{0, 1, 0});
-            cam->yfov = 15 * pif / 180;
-            cam->aperture = 0;
-            cam->aspect = 1;
-        } break;
-        case test_camera_type::cam2: {
-            cam->frame = lookat_frame3f({0, 4, 10}, {0, 1, 0}, {0, 1, 0});
-            cam->focus = length(vec3f{0, 4, 10} - vec3f{0, 1, 0});
-            cam->yfov = 15 * pif / 180;
-            cam->aperture = 0;
-            cam->aspect = 16.0f / 9.0f;
-        } break;
-        case test_camera_type::cam3: {
-            cam->frame = lookat_frame3f({0, 6, 24}, {0, 1, 0}, {0, 1, 0});
-            cam->focus = length(vec3f{0, 6, 24} - vec3f{0, 1, 0});
-            cam->yfov = 7.5f * pif / 180;
-            cam->aperture = 0;
-            cam->aspect = 2.35f / 1.0f;  // widescreen cinema
-        } break;
-        default: throw runtime_error("bad value");
-    }
-    return cam;
 }
 
 string add_test_camera(prim_scene_params* scn, test_camera_type type) {
@@ -9695,7 +9389,8 @@ scene* make_simple_test_scene(test_camera_type ctype,
 
 scene* make_instance_scene(
     const vec2i& num, const bbox2f& bbox, uint32_t seed = 13) {
-    auto scn = new scene();
+    auto pscn = prim_scene_params();
+    auto scn = &pscn;
     add_test_camera(scn, test_camera_type::cam3);
     add_test_instance(
         scn, test_shape_type::floor, test_material_type::matte_gray, {0, 0, 0});
@@ -9710,7 +9405,7 @@ scene* make_instance_scene(
                   min((bbox.max.x - bbox.min.x) / num.x,
                       (bbox.max.x - bbox.min.x) / num.y);
     auto rng = init_rng(seed, 7);
-    auto shps = unordered_set<shape*>();
+    auto start_shps = scn->shapes.size();
     for (auto j = 0; j < num.y; j++) {
         for (auto i = 0; i < num.x; i++) {
             auto rpos = next_rand2f(rng);
@@ -9725,15 +9420,14 @@ scene* make_instance_scene(
                 add_test_instance(scn, stypes[next_rand1i(rng, stypes.size())],
                     mtypes[next_rand1i(rng, mtypes.size())],
                     {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, pos});
-            shps.insert(ist->shp);
         }
     }
 
-    for (auto shp : shps) {
-        for (auto& p : shp->pos) p *= rscale;
+    for (auto i = start_shps; i < scn->shapes.size(); i ++) {
+        scn->shapes[i].scale *= rscale;
     }
 
-    return scn;
+    return update_prim_scene(nullptr, pscn);
 }
 
 scene* make_test_scene(test_scene_type otype) {
