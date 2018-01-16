@@ -6932,7 +6932,8 @@ shape* update_prim_shape(
                 make_suzanne((params.tesselation < 0) ? 0 : params.tesselation);
         } break;
         case prim_shape_type::cubep: {
-            tie(shp->quads, shp->pos) = make_cube((params.tesselation < 0) ? 0 : params.tesselation);
+            tie(shp->quads, shp->pos) =
+                make_cube((params.tesselation < 0) ? 0 : params.tesselation);
         } break;
         case prim_shape_type::fvcube: {
             tie(shp->quads_pos, shp->pos, shp->quads_norm, shp->norm,
@@ -6956,10 +6957,11 @@ shape* update_prim_shape(
         } break;
         case prim_shape_type::pointscube: {
             auto npoints = (params.num < 0) ? 64 * 64 * 16 : params.num;
+            auto radius = (params.radius < 0) ? 0.0025f : params.radius;
             tie(shp->points, shp->texcoord) = make_uvpoints(npoints);
             shp->pos.reserve(shp->texcoord.size());
             shp->norm.resize(shp->texcoord.size(), {0, 0, 1});
-            shp->radius.resize(shp->texcoord.size(), 0.0025f);
+            shp->radius.resize(shp->texcoord.size(), radius);
             auto rn = init_rng(0);
             for (auto i = 0; i < shp->texcoord.size(); i++) {
                 shp->pos += vec3f{-1 + 2 * next_rand1f(rn),
@@ -6968,11 +6970,46 @@ shape* update_prim_shape(
         } break;
         case prim_shape_type::hairball: {
             auto nhairs = (params.num < 0) ? 65536 : params.num;
+            auto radius = (params.radius < 0) ? vec2f{0.001f, 0.0001f} :
+                                                vec2f{params.radius, 0.0001f};
             tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
                 make_uvspherecube(5);
             tie(shp->lines, shp->pos, shp->norm, shp->texcoord, shp->radius) =
-                make_hair(nhairs, 2, {0.1f, 0.1f}, {0.001f, 0.0001f}, {},
-                    shp->quads, shp->pos, shp->norm, shp->texcoord, {0.5f, 8});
+                make_hair(nhairs, 2, {0.1f, 0.1f}, radius, {}, shp->quads,
+                    shp->pos, shp->norm, shp->texcoord, {0.5f, 8});
+            shp->quads.clear();
+        } break;
+        case prim_shape_type::hairball1: {
+            auto nhairs = (params.num < 0) ? 65536 : params.num;
+            auto radius = (params.radius < 0) ? vec2f{0.001f, 0.0001f} :
+                                                vec2f{params.radius, 0.0001f};
+            tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
+                make_uvspherecube(5);
+            tie(shp->lines, shp->pos, shp->norm, shp->texcoord, shp->radius) =
+                make_hair(nhairs, 2, {0.1f, 0.1f}, radius, {}, shp->quads,
+                    shp->pos, shp->norm, shp->texcoord, {0.5f, 8});
+            shp->quads.clear();
+        } break;
+        case prim_shape_type::hairball2: {
+            auto nhairs = (params.num < 0) ? 65536 : params.num;
+            auto radius = (params.radius < 0) ? vec2f{0.001f, 0.0001f} :
+                                                vec2f{params.radius, 0.0001f};
+            tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
+                make_uvspherecube(5);
+            tie(shp->lines, shp->pos, shp->norm, shp->texcoord, shp->radius) =
+                make_hair(nhairs, 2, {0.1f, 0.1f}, radius, {}, shp->quads,
+                    shp->pos, shp->norm, shp->texcoord, {}, {0.5f, 128});
+            shp->quads.clear();
+        } break;
+        case prim_shape_type::hairball3: {
+            auto nhairs = (params.num < 0) ? 65536 : params.num;
+            auto radius = (params.radius < 0) ? vec2f{0.001f, 0.0001f} :
+                                                vec2f{params.radius, 0.0001f};
+            tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
+                make_uvspherecube(5);
+            tie(shp->lines, shp->pos, shp->norm, shp->texcoord, shp->radius) =
+                make_hair(nhairs, 2, {0.1f, 0.1f}, radius, {}, shp->quads,
+                    shp->pos, shp->norm, shp->texcoord);
             shp->quads.clear();
         } break;
         case prim_shape_type::beziercircle: {
@@ -7031,6 +7068,7 @@ camera* update_prim_camera(
     cam->name = name;
     cam->frame = lookat_frame3f(params.from, params.to, {0, 1, 0});
     cam->yfov = params.yfov;
+    cam->aspect = params.aspect;
     cam->near = 0.01f;
     cam->far = 10000;
     cam->aperture = 0;
@@ -9258,7 +9296,7 @@ inline string add_test_shape(
             shp->type = prim_shape_type::fvsphere;
         } break;
         case test_shape_type::matball: {
-            shp->type = prim_shape_type::flipcapsphere;
+            shp->type = prim_shape_type::matball;
         } break;
         case test_shape_type::matballi: {
             shp->type = prim_shape_type::sphere;
@@ -9268,29 +9306,13 @@ inline string add_test_shape(
             shp->type = prim_shape_type::pointscube;
         } break;
         case test_shape_type::lines1: {
-            shp->type = prim_shape_type::hairball;
-            /*
-            tie(shp->lines, shp->pos, shp->norm, shp->texcoord, shp->radius) =
-                make_hair(nhairs, 2, {0.1f, 0.1f}, {0.001f, 0.0001f}, {},
-                    shp->quads, shp->pos, shp->norm, shp->texcoord, {0.5f, 8});
-             */
+            shp->type = prim_shape_type::hairball1;
         } break;
         case test_shape_type::lines2: {
-            shp->type = prim_shape_type::hairball;
-            /*
-            tie(shp->lines, shp->pos, shp->norm, shp->texcoord, shp->radius) =
-                make_hair(nhairs, 2, {0.1f, 0.1f}, {0.001f, 0.0001f}, {},
-                    shp->quads, shp->pos, shp->norm, shp->texcoord, {},
-                    {0.5f, 128});
-             */
+            shp->type = prim_shape_type::hairball2;
         } break;
         case test_shape_type::lines3: {
-            shp->type = prim_shape_type::hairball;
-            /*
-            tie(shp->lines, shp->pos, shp->norm, shp->texcoord, shp->radius) =
-                make_hair(16384, 2, {0.1f, 0.1f}, {0.01f, 0.0001f}, {},
-                    shp->quads, shp->pos, shp->norm, shp->texcoord);
-            */
+            shp->type = prim_shape_type::hairball3;
         } break;
         case test_shape_type::linesi: {
             shp->type = prim_shape_type::sphere;
@@ -9646,6 +9668,12 @@ scene* make_simple_test_scene(test_camera_type ctype,
     return scn;
 }
 
+// 1. lines
+// 2. normalmap
+// 3. lights are low
+// 4. tesselation not faceted
+// 5. transparent
+
 scene* make_simple_test_scene1(test_camera_type ctype,
     const vector<pair<test_shape_type, test_material_type>>& otypes,
     test_light_type ltype,
@@ -9731,13 +9759,13 @@ scene* make_test_scene(test_scene_type otype) {
             return make_cornell_box_scene();
         } break;
         case test_scene_type::textures: {
-            auto scn = new scene();
+            auto params = prim_scene_params();
             for (auto ttype : test_texture_names())
-                add_test_texture(scn, ttype.second);
-            return scn;
+                add_test_texture(&params, ttype.second);
+            return update_prim_scene(nullptr, params);
         } break;
         case test_scene_type::shapes: {
-            auto scn = new scene();
+            auto params = prim_scene_params();
             for (auto stype : {test_shape_type::quad, test_shape_type::cube,
                      test_shape_type::sphere, test_shape_type::spherecube,
                      test_shape_type::spherizedcube,
@@ -9748,8 +9776,8 @@ scene* make_test_scene(test_scene_type otype) {
                      test_shape_type::quads, test_shape_type::spherefv,
                      test_shape_type::matball, test_shape_type::matballi,
                      test_shape_type::bcircle})
-                add_test_shape(scn, stype, test_material_type::none);
-            return scn;
+                add_test_shape(&params, stype, test_material_type::none);
+            return update_prim_scene(nullptr, params);
         } break;
         case test_scene_type::instances_pl: {
             return make_instance_scene({10, 10}, {{-3, -3}, {3, 3}});
@@ -9839,7 +9867,7 @@ scene* make_test_scene(test_scene_type otype) {
                 {
                     {test_shape_type::lines1, test_material_type::matte_gray},
                     {test_shape_type::lines2, test_material_type::matte_gray},
-                    {test_shape_type::lines2, test_material_type::matte_gray},
+                    {test_shape_type::lines3, test_material_type::matte_gray},
                 },
                 test_light_type::arealight1,
                 {
