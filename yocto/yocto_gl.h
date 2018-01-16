@@ -7764,7 +7764,7 @@ inline void subdivide_shape_once(shape* shp, bool subdiv = false) {
 }
 
 /// Facet a shape. Supports only non-facevarying shapes
-inline void facet_shape(shape* shp) {
+inline void facet_shape(shape* shp, bool recompute_normals = true) {
     if (!shp->lines.empty() || !shp->triangles.empty() || !shp->quads.empty()) {
         vector<int> verts;
         tie(shp->lines, shp->triangles, shp->quads, verts) =
@@ -7774,6 +7774,10 @@ inline void facet_shape(shape* shp) {
         shp->texcoord = facet_vert(shp->texcoord, verts);
         shp->color = facet_vert(shp->color, verts);
         shp->radius = facet_vert(shp->radius, verts);
+        if (recompute_normals) {
+            shp->norm = compute_normals(
+                shp->lines, shp->triangles, shp->quads, shp->pos);
+        }
     }
 }
 
