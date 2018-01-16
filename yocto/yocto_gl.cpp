@@ -6801,11 +6801,13 @@ material* update_prim_material(
     auto name = (params.name != "") ?
                     params.name :
                     get_key(prim_material_names(), params.type);
-    auto txt = (texture*)nullptr;
-    if (scn && params.txt != "") {
+    auto txt = (texture*)nullptr, norm = (texture*)nullptr;
+    if (scn && params.txt != "")
         for (auto elem : scn->textures)
             if (elem->name == params.txt) txt = elem;
-    }
+    if (scn && params.norm != "")
+        for (auto elem : scn->textures)
+            if (elem->name == params.norm) norm = elem;
 
     if (!mat) mat = (scn) ? add_named_material(scn, name) : new material();
 
@@ -6826,22 +6828,13 @@ material* update_prim_material(
         case prim_material_type::none: break;
         case prim_material_type::emission: {
             mat->ke = params.emission * params.color;
-            mat->kd = zero3f;
-            mat->rs = 1;
-            mat->kr = zero3f;
-            mat->kt = zero3f;
             mat->ke_txt.txt = txt;
         } break;
         case prim_material_type::matte: {
-            mat->ke = zero3f;
             mat->kd = params.color;
-            mat->rs = 1;
-            mat->kr = zero3f;
-            mat->kt = zero3f;
             mat->kd_txt.txt = txt;
         } break;
         case prim_material_type::plastic: {
-            mat->ke = zero3f;
             mat->kd = params.color;
             mat->ks = {0.04f, 0.04f, 0.04f};
             mat->rs = params.roughness;
@@ -6851,6 +6844,11 @@ material* update_prim_material(
             mat->ks = params.color;
             mat->rs = params.roughness;
             mat->ks_txt.txt = txt;
+        } break;
+        case prim_material_type::transparent: {
+            mat->kd = params.color;
+            mat->op = params.opacity;
+            mat->kd_txt.txt = txt;
         } break;
         default: throw runtime_error("should not have gotten here");
     }
@@ -6911,7 +6909,8 @@ shape* update_prim_shape(
         } break;
         case prim_shape_type::spherecube: {
             tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
-            make_uvspherecube((params.tesselation < 0) ? 4 : params.tesselation);
+                make_uvspherecube(
+                    (params.tesselation < 0) ? 4 : params.tesselation);
         } break;
         case prim_shape_type::spherizedcube: {
             tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
@@ -6931,6 +6930,9 @@ shape* update_prim_shape(
         case prim_shape_type::suzanne: {
             tie(shp->quads, shp->pos) =
                 make_suzanne((params.tesselation < 0) ? 0 : params.tesselation);
+        } break;
+        case prim_shape_type::cubep: {
+            tie(shp->quads, shp->pos) = make_cube((params.tesselation < 0) ? 0 : params.tesselation);
         } break;
         case prim_shape_type::fvcube: {
             tie(shp->quads_pos, shp->pos, shp->quads_norm, shp->norm,
@@ -6967,10 +6969,10 @@ shape* update_prim_shape(
         case prim_shape_type::hairball: {
             auto nhairs = (params.num < 0) ? 65536 : params.num;
             tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
-            make_uvspherecube(5);
+                make_uvspherecube(5);
             tie(shp->lines, shp->pos, shp->norm, shp->texcoord, shp->radius) =
-            make_hair(nhairs, 2, {0.1f, 0.1f}, {0.001f, 0.0001f}, {},
-                      shp->quads, shp->pos, shp->norm, shp->texcoord, {0.5f, 8});
+                make_hair(nhairs, 2, {0.1f, 0.1f}, {0.001f, 0.0001f}, {},
+                    shp->quads, shp->pos, shp->norm, shp->texcoord, {0.5f, 8});
             shp->quads.clear();
         } break;
         case prim_shape_type::beziercircle: {
@@ -7064,7 +7066,7 @@ environment* update_prim_environment(
 // Makes/updates a test scene
 scene* update_prim_scene(scene* scn, const prim_scene_params& params,
     const unordered_set<void*>& refresh) {
-    auto update_elems = [scn, &refresh](
+    auto update_elems = [&scn, &refresh](
                             auto& elems, auto& telems, auto& update) {
         auto emap = unordered_map<string,
             std::remove_reference_t<decltype(elems[0])>>();
@@ -7072,7 +7074,7 @@ scene* update_prim_scene(scene* scn, const prim_scene_params& params,
         for (auto& telem : telems) {
             auto elem =
                 (contains(emap, telem.name)) ? emap.at(telem.name) : nullptr;
-            if (!contains(refresh, elem)) continue;
+            if (elem != nullptr && !contains(refresh, elem)) continue;
             update(scn, elem, telem);
         }
     };
@@ -9360,8 +9362,8 @@ inline environment* add_test_environment(
     return env;
 }
 
-inline string add_test_environment(
-                                   prim_scene_params* scn, test_environment_type type, const frame3f& frame, float rotation = 0) {
+inline string add_test_environment(prim_scene_params* scn,
+    test_environment_type type, const frame3f& frame, float rotation = 0) {
     if (type == test_environment_type::none) return nullptr;
     auto name = ""s;
     for (auto kv : test_environment_names())
@@ -9427,14 +9429,14 @@ instance* add_test_instance(scene* scn, test_shape_type stype,
 }
 
 string add_test_instance(prim_scene_params* scn, test_shape_type stype,
-                            test_material_type mtype, const vec3f& pos, const vec3f& rot = {0, 0, 0}) {
-        return add_test_instance(scn, stype, mtype,
-                                 {rotation_mat3f(vec3f{0, 0, 1}, rot[2] * pif / 180) *
-                                     rotation_mat3f(vec3f{0, 1, 0}, rot[1] * pif / 180) *
-                                     rotation_mat3f(vec3f{1, 0, 0}, rot[0] * pif / 180),
-                                     pos});
-    }
-    
+    test_material_type mtype, const vec3f& pos, const vec3f& rot = {0, 0, 0}) {
+    return add_test_instance(scn, stype, mtype,
+        {rotation_mat3f(vec3f{0, 0, 1}, rot[2] * pif / 180) *
+                rotation_mat3f(vec3f{0, 1, 0}, rot[1] * pif / 180) *
+                rotation_mat3f(vec3f{1, 0, 0}, rot[0] * pif / 180),
+            pos});
+}
+
 enum struct test_light_type {
     none,
     pointlight,
@@ -9644,6 +9646,42 @@ scene* make_simple_test_scene(test_camera_type ctype,
     return scn;
 }
 
+scene* make_simple_test_scene1(test_camera_type ctype,
+    const vector<pair<test_shape_type, test_material_type>>& otypes,
+    test_light_type ltype,
+    const vector<pair<test_shape_type, test_material_type>>& itypes = {},
+    bool rotate = false,
+    test_material_type fmat = test_material_type::matte_grid) {
+    auto pscn = prim_scene_params();
+    auto scn = &pscn;
+    add_test_camera(scn, ctype);
+    add_test_lights(scn, ltype);
+
+    if (fmat != test_material_type::none) {
+        add_test_instance(scn, test_shape_type::floor, fmat, identity_frame3f);
+    }
+
+    auto frames = std::vector<frame3f>{
+        identity_frame3f, identity_frame3f, identity_frame3f};
+    for (auto fi : enumerate(frames)) {
+        auto& f = fi.second;
+        if (otypes.size() == 2) f.o.x = vector<float>{-1.25f, +1.25f}[fi.first];
+        if (otypes.size() == 3)
+            f.o.x = vector<float>{-2.50f, 0, +2.50f}[fi.first];
+        f.o.y = 1;
+        if (rotate)
+            f = lookat_frame3f(f.o, f.o + vec3f{1, 1, 1}, {0, 1, 0}, true);
+    }
+
+    for (auto i : range(otypes.size())) {
+        add_test_instance(scn, otypes[i].first, otypes[i].second, frames[i]);
+        if (itypes.empty()) continue;
+        add_test_instance(scn, itypes[i].first, itypes[i].second, frames[i]);
+    }
+
+    return update_prim_scene(nullptr, pscn);
+}
+
 scene* make_instance_scene(
     const vec2i& num, const bbox2f& bbox, uint32_t seed = 13) {
     auto scn = new scene();
@@ -9720,15 +9758,15 @@ scene* make_test_scene(test_scene_type otype) {
             return make_instance_scene({100, 100}, {{-3, -3}, {3, 3}});
         } break;
         case test_scene_type::plane_al: {
-            return make_simple_test_scene(
+            return make_simple_test_scene1(
                 test_camera_type::cam3, {}, test_light_type::arealight);
         } break;
         case test_scene_type::nothing_el: {
-            return make_simple_test_scene(test_camera_type::cam3, {},
+            return make_simple_test_scene1(test_camera_type::cam3, {},
                 test_light_type::envlight, {}, false, test_material_type::none);
         } break;
         case test_scene_type::basic_pl: {
-            return make_simple_test_scene(test_camera_type::cam3,
+            return make_simple_test_scene1(test_camera_type::cam3,
                 {
                     {test_shape_type::flipcapsphere,
                         test_material_type::plastic_red},
@@ -9740,7 +9778,7 @@ scene* make_test_scene(test_scene_type otype) {
                 test_light_type::pointlight);
         } break;
         case test_scene_type::simple_pl: {
-            return make_simple_test_scene(test_camera_type::cam3,
+            return make_simple_test_scene1(test_camera_type::cam3,
                 {
                     {test_shape_type::flipcapsphere,
                         test_material_type::plastic_colored},
@@ -9752,7 +9790,7 @@ scene* make_test_scene(test_scene_type otype) {
                 test_light_type::pointlight);
         } break;
         case test_scene_type::simple_al: {
-            return make_simple_test_scene(test_camera_type::cam3,
+            return make_simple_test_scene1(test_camera_type::cam3,
                 {
                     {test_shape_type::flipcapsphere,
                         test_material_type::plastic_colored},
@@ -9764,7 +9802,7 @@ scene* make_test_scene(test_scene_type otype) {
                 test_light_type::arealight1);
         } break;
         case test_scene_type::simple_el: {
-            return make_simple_test_scene(test_camera_type::cam3,
+            return make_simple_test_scene1(test_camera_type::cam3,
                 {
                     {test_shape_type::flipcapsphere,
                         test_material_type::plastic_colored},
@@ -9776,7 +9814,7 @@ scene* make_test_scene(test_scene_type otype) {
                 test_light_type::envlight);
         } break;
         case test_scene_type::transparent_al: {
-            return make_simple_test_scene(test_camera_type::cam3,
+            return make_simple_test_scene1(test_camera_type::cam3,
                 {
                     {test_shape_type::quad,
                         test_material_type::transparent_red},
@@ -9788,7 +9826,7 @@ scene* make_test_scene(test_scene_type otype) {
                 test_light_type::arealight1);
         } break;
         case test_scene_type::points_al: {
-            return make_simple_test_scene(test_camera_type::cam3,
+            return make_simple_test_scene1(test_camera_type::cam3,
                 {
                     {test_shape_type::points, test_material_type::matte_gray},
                     {test_shape_type::points, test_material_type::matte_gray},
@@ -9797,7 +9835,7 @@ scene* make_test_scene(test_scene_type otype) {
                 test_light_type::arealight);
         } break;
         case test_scene_type::lines_al: {
-            return make_simple_test_scene(test_camera_type::cam3,
+            return make_simple_test_scene1(test_camera_type::cam3,
                 {
                     {test_shape_type::lines1, test_material_type::matte_gray},
                     {test_shape_type::lines2, test_material_type::matte_gray},
@@ -9811,7 +9849,7 @@ scene* make_test_scene(test_scene_type otype) {
                 });
         } break;
         case test_scene_type::subdiv_al: {
-            return make_simple_test_scene(test_camera_type::cam3,
+            return make_simple_test_scene1(test_camera_type::cam3,
                 {
                     {test_shape_type::cubes, test_material_type::plastic_red},
                     {test_shape_type::suzannes,
@@ -9822,7 +9860,7 @@ scene* make_test_scene(test_scene_type otype) {
                 test_light_type::arealight1);
         } break;
         case test_scene_type::plastics_al: {
-            return make_simple_test_scene(test_camera_type::cam3,
+            return make_simple_test_scene1(test_camera_type::cam3,
                 {
                     {test_shape_type::matball, test_material_type::matte_green},
                     {test_shape_type::matball,
@@ -9837,7 +9875,7 @@ scene* make_test_scene(test_scene_type otype) {
                         test_material_type::matte_gray}});
         } break;
         case test_scene_type::plastics_el: {
-            return make_simple_test_scene(test_camera_type::cam3,
+            return make_simple_test_scene1(test_camera_type::cam3,
                 {
                     {test_shape_type::matball, test_material_type::matte_green},
                     {test_shape_type::matball,
@@ -9852,7 +9890,7 @@ scene* make_test_scene(test_scene_type otype) {
                         test_material_type::matte_gray}});
         } break;
         case test_scene_type::metals_al: {
-            return make_simple_test_scene(test_camera_type::cam3,
+            return make_simple_test_scene1(test_camera_type::cam3,
                 {
                     {test_shape_type::matball, test_material_type::gold_rough},
                     {test_shape_type::matball, test_material_type::gold_mirror},
@@ -9866,7 +9904,7 @@ scene* make_test_scene(test_scene_type otype) {
                         test_material_type::matte_gray}});
         } break;
         case test_scene_type::metals_el: {
-            return make_simple_test_scene(test_camera_type::cam3,
+            return make_simple_test_scene1(test_camera_type::cam3,
                 {
                     {test_shape_type::matball, test_material_type::gold_rough},
                     {test_shape_type::matball, test_material_type::gold_mirror},
@@ -9880,7 +9918,7 @@ scene* make_test_scene(test_scene_type otype) {
                         test_material_type::matte_gray}});
         } break;
         case test_scene_type::tesselation_pl: {
-            return make_simple_test_scene(test_camera_type::cam3,
+            return make_simple_test_scene1(test_camera_type::cam3,
                 {
                     {test_shape_type::geospherel,
                         test_material_type::matte_gray},
@@ -9892,7 +9930,7 @@ scene* make_test_scene(test_scene_type otype) {
                 test_light_type::pointlight);
         } break;
         case test_scene_type::textureuv_pl: {
-            return make_simple_test_scene(test_camera_type::cam3,
+            return make_simple_test_scene1(test_camera_type::cam3,
                 {
                     {test_shape_type::flipcapsphere,
                         test_material_type::matte_green},
@@ -9904,7 +9942,7 @@ scene* make_test_scene(test_scene_type otype) {
                 test_light_type::pointlight);
         } break;
         case test_scene_type::normalmap_pl: {
-            return make_simple_test_scene(test_camera_type::cam3,
+            return make_simple_test_scene1(test_camera_type::cam3,
                 {
                     {test_shape_type::flipcapsphere,
                         test_material_type::plastic_blue},
