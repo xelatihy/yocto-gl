@@ -6724,7 +6724,7 @@ void save_scene(
 
 // Makes/updates a test texture
 texture* update_prim_texture(
-    texture* txt, const prim_texture_params& params, scene* scn) {
+    scene* scn, texture* txt, const prim_texture_params& params) {
     auto name = (params.name != "") ?
                     params.name :
                     get_key(prim_texture_names(), params.type);
@@ -6745,7 +6745,7 @@ texture* update_prim_texture(
 
 // Makes/updates a test material
 material* update_prim_material(
-    material* mat, const prim_material_params& params, scene* scn) {
+    scene* scn, material* mat, const prim_material_params& params) {
     auto name = (params.name != "") ?
                     params.name :
                     get_key(prim_material_names(), params.type);
@@ -6933,7 +6933,7 @@ instance* update_prim_instance(
 }
 
 // Makes/updates a test shape
-camera* update_camera_instance(
+camera* update_prim_camera(
     scene* scn, camera* cam, const prim_camera_params& params) {
     auto name = (params.name != "") ? params.name : "camera";
 
@@ -6951,7 +6951,7 @@ camera* update_camera_instance(
 }
 
 // Makes/updates a test shape
-environment* update_environment_instance(
+environment* update_prim_environment(
     scene* scn, environment* env, const prim_environment_params& params) {
     auto name = (params.name != "") ? params.name : "environment";
     auto txt = (texture*)nullptr;
@@ -6972,6 +6972,35 @@ environment* update_environment_instance(
     env->ke_txt.txt = txt;
 
     return env;
+}
+
+// Makes/updates a test scene
+scene* update_prim_scene(scene* scn, const prim_scene_params& params,
+    const unordered_set<void*>& refresh) {
+    auto update_elems = [scn, &refresh](
+                            auto& elems, auto& telems, auto& update) {
+        auto emap = unordered_map<string,
+            std::remove_reference_t<decltype(elems[0])>>();
+        for (auto elem : elems) emap[elem->name] = elem;
+        for (auto& telem : telems) {
+            auto elem =
+                (contains(emap, telem.name)) ? emap.at(telem.name) : nullptr;
+            if (!contains(refresh, elem)) continue;
+            update(scn, elem, telem);
+        }
+    };
+
+    if (!scn) scn = new scene();
+
+    update_elems(scn->cameras, params.cameras, update_prim_camera);
+    update_elems(scn->textures, params.textures, update_prim_texture);
+    update_elems(scn->materials, params.materials, update_prim_material);
+    update_elems(scn->shapes, params.shapes, update_prim_shape);
+    update_elems(scn->instances, params.instances, update_prim_instance);
+    update_elems(
+        scn->environments, params.environments, update_prim_environment);
+
+    return scn;
 }
 
 // Add missing values and elements

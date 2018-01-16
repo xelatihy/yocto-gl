@@ -756,6 +756,7 @@
 #include <limits>
 #include <map>
 #include <random>
+#include <set>
 #include <sstream>
 #include <string>
 #include <thread>
@@ -824,6 +825,8 @@ using std::vector;
 using std::array;
 /// map
 using std::map;
+/// set
+using std::set;
 /// unordered map
 using std::unordered_map;
 /// unordered set
@@ -3967,6 +3970,30 @@ inline bool contains(const map<K, V>& v, const K& vv) {
 /// Checks if a containers contains a value
 template <typename K, typename V>
 inline bool contains(const unordered_map<K, V>& v, const K& vv) {
+    return v.find(vv) != v.end();
+}
+
+/// Checks if a containers contains a value
+template <typename K, typename V>
+inline bool contains(const set<K, V>& v, const K& vv) {
+    return v.find(vv) != v.end();
+}
+
+/// Checks if a containers contains a value
+template <typename K, typename V>
+inline bool contains(const unordered_set<K, V>& v, const K& vv) {
+    return v.find(vv) != v.end();
+}
+
+/// Checks if a containers contains a value
+template <typename K, typename V, typename K1>
+inline bool contains(const unordered_map<K, V>& v, const K1& vv) {
+    return v.find(vv) != v.end();
+}
+
+/// Checks if a containers contains a value
+template <typename K, typename V, typename K1>
+inline bool contains(const unordered_set<K, V>& v, const K1& vv) {
     return v.find(vv) != v.end();
 }
 
@@ -7542,7 +7569,7 @@ struct prim_camera_params {
 };
 
 /// Updates a test instance, adding it to the scene if missing.
-camera* update_camera_instance(
+camera* update_prim_camera(
     scene* scn, camera* cam, const prim_camera_params& params);
 
 /// Test environment parameters
@@ -7560,8 +7587,27 @@ struct prim_environment_params {
 };
 
 /// Updates a test instance, adding it to the scene if missing.
-environment* update_environment_instance(
+environment* update_prim_environment(
     scene* scn, environment* env, const prim_environment_params& params);
+
+/// Test scene
+struct prim_scene_params {
+    vector<prim_camera_params> cameras;
+    vector<prim_texture_params> textures;
+    vector<prim_material_params> materials;
+    vector<prim_shape_params> shapes;
+    vector<prim_instance_params> instances;
+    vector<prim_environment_params> environments;
+};
+
+/// Updates a test scene, adding missing objects. Objects are only added (for
+/// now). A new scene is returned if it was not already created.
+scene* update_prim_scene(scene* scn, const prim_scene_params& params);
+
+/// Makes a test scene. Convenience wrapper around update_prim_scene().
+inline scene* make_prim_scene(const prim_scene_params& params) {
+    return update_prim_scene(nullptr, params);
+}
 
 /// Subdivides shape elements. Apply subdivision surface rules if subdivide
 /// is true.
