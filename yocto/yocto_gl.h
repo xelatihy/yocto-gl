@@ -7561,6 +7561,12 @@ enum struct prim_shape_type {
     pointscube,
     /// Random lines on a sphere
     hairball,
+    /// Random lines on a sphere (preset 1)
+    hairball1,
+    /// Random lines on a sphere (preset 2)
+    hairball2,
+    /// Random lines on a sphere (preset 3)
+    hairball3,
     /// Bezier circle
     beziercircle,
 };
@@ -7584,6 +7590,9 @@ inline vector<pair<string, prim_shape_type>>& prim_shape_names() {
         {"point", prim_shape_type::point},
         {"pointscube", prim_shape_type::pointscube},
         {"hairball", prim_shape_type::hairball},
+        {"hairball1", prim_shape_type::hairball1},
+        {"hairball2", prim_shape_type::hairball2},
+        {"hairball3", prim_shape_type::hairball3},
         {"beziercircle", prim_shape_type::beziercircle},
     };
     return names;
@@ -7603,6 +7612,8 @@ struct prim_shape_params {
     int subdivision = 0;
     /// Shape scale
     float scale = 1;
+    /// Radius for points and lines.
+    float radius = -1;
     /// Faceted shape
     bool faceted = false;
     /// Number of elements for points and lines (-1 for default)
