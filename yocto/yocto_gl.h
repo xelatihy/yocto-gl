@@ -7459,7 +7459,7 @@ struct prim_texture_params {
     /// Resolution
     int resolution = 512;
     /// Tile size for grid-like textures
-    int tile_size = 32;
+    int tile_size = 64;
     /// Noise scale for noise-like textures
     int noise_scale = 8;
     /// Sun angle for sunsky-like textures
