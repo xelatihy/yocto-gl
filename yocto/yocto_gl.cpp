@@ -8527,77 +8527,6 @@ inline const vector<pair<string, test_texture_type>>& test_texture_names() {
     return names;
 }
 
-texture* add_test_texture(scene* scn, test_texture_type type) {
-    if (type == test_texture_type::none) return nullptr;
-    auto name = ""s;
-    for (auto kv : test_texture_names())
-        if (kv.second == type) name = kv.first;
-    for (auto txt : scn->textures)
-        if (txt->path == name) return txt;
-    auto txt = new texture();
-    txt->path = name;
-    scn->textures += txt;
-    switch (type) {
-        case test_texture_type::grid: {
-            txt->ldr = make_grid_image(512, 512);
-        } break;
-        case test_texture_type::checker: {
-            txt->ldr = make_checker_image(512, 512);
-        } break;
-        case test_texture_type::colored: {
-            txt->ldr = make_uvgrid_image(512, 512);
-        } break;
-        case test_texture_type::rcolored: {
-            txt->ldr = make_recuvgrid_image(512, 512);
-        } break;
-        case test_texture_type::bump: {
-            txt->ldr = make_bumpdimple_image(512, 512, 32);
-        } break;
-        case test_texture_type::tgrid: {
-            txt->ldr = make_grid_image(512, 512, 32);
-        } break;
-        case test_texture_type::uv: {
-            txt->ldr = make_uv_image(512, 512);
-        } break;
-        case test_texture_type::gamma: {
-            txt->ldr = make_gammaramp_image(512, 512);
-        } break;
-        case test_texture_type::gridn: {
-            txt->ldr = bump_to_normal_map(make_grid_image(512, 512), 4);
-        } break;
-        case test_texture_type::bumpn: {
-            txt->ldr =
-                bump_to_normal_map(make_bumpdimple_image(512, 512, 32), 4);
-        } break;
-        case test_texture_type::tgridn: {
-            txt->ldr = bump_to_normal_map(make_grid_image(512, 512, 32), 4);
-        } break;
-        case test_texture_type::noise: {
-            txt->ldr = make_noise_image(512, 512, 8);
-        } break;
-        case test_texture_type::ridge: {
-            txt->ldr = make_ridge_image(512, 512, 8);
-        } break;
-        case test_texture_type::fbm: {
-            txt->ldr = make_fbm_image(512, 512, 8);
-        } break;
-        case test_texture_type::turbulence: {
-            txt->ldr = make_turbulence_image(512, 512, 8);
-        } break;
-        case test_texture_type::gammaf: {
-            txt->hdr = make_gammaramp_imagef(512, 512);
-        } break;
-        case test_texture_type::sky1: {
-            txt->hdr = make_sunsky_image(512, pif / 4);
-        } break;
-        case test_texture_type::sky2: {
-            txt->hdr = make_sunsky_image(512, pif / 2);
-        } break;
-        default: throw runtime_error("bad value");
-    }
-    return txt;
-}
-
 string add_test_texture(prim_scene_params& scn, test_texture_type type) {
     if (type == test_texture_type::none) return "";
     auto name = ""s;
@@ -8737,120 +8666,6 @@ inline const vector<pair<string, test_material_type>>& test_material_names() {
     };
 
     return names;
-}
-
-inline material* add_test_material(scene* scn, test_material_type type) {
-    if (type == test_material_type::none) return nullptr;
-    auto name = ""s;
-    for (auto kv : test_material_names())
-        if (kv.second == type) name = kv.first;
-    for (auto mat : scn->materials)
-        if (mat->name == name) return mat;
-    auto mat = new material();
-    mat->name = name;
-    scn->materials += mat;
-    switch (type) {
-        case test_material_type::matte_gray: {
-            mat->kd = {0.2f, 0.2f, 0.2f};
-        } break;
-        case test_material_type::matte_green: {
-            mat->kd = {0.2f, 0.5f, 0.2f};
-        } break;
-        case test_material_type::matte_grid: {
-            mat->kd = {1, 1, 1};
-            mat->kd_txt.txt = add_test_texture(scn, test_texture_type::grid);
-        } break;
-        case test_material_type::matte_colored: {
-            mat->kd = {1, 1, 1};
-            mat->kd_txt.txt = add_test_texture(scn, test_texture_type::colored);
-        } break;
-        case test_material_type::matte_uv: {
-            mat->kd = {1, 1, 1};
-            mat->kd_txt.txt = add_test_texture(scn, test_texture_type::uv);
-        } break;
-        case test_material_type::plastic_red: {
-            mat->kd = {0.5f, 0.2f, 0.2f};
-            mat->ks = {0.04f, 0.04f, 0.04f};
-            mat->rs = 0.25f;
-        } break;
-        case test_material_type::plastic_green: {
-            mat->kd = {0.2f, 0.5f, 0.2f};
-            mat->ks = {0.04f, 0.04f, 0.04f};
-            mat->rs = 0.1f;
-        } break;
-        case test_material_type::plastic_blue: {
-            mat->kd = {0.2f, 0.2f, 0.5f};
-            mat->ks = {0.04f, 0.04f, 0.04f};
-            mat->rs = 0.05f;
-        } break;
-        case test_material_type::plastic_colored: {
-            mat->kd = {1, 1, 1};
-            mat->ks = {0.04f, 0.04f, 0.04f};
-            mat->rs = 0.25f;
-            mat->kd_txt.txt = add_test_texture(scn, test_texture_type::colored);
-        } break;
-        case test_material_type::plastic_blue_bumped: {
-            mat->kd = {0.2f, 0.2f, 0.5f};
-            mat->ks = {0.04f, 0.04f, 0.04f};
-            mat->rs = 0.05f;
-            mat->norm_txt.txt = add_test_texture(scn, test_texture_type::bumpn);
-        } break;
-        case test_material_type::plastic_colored_bumped: {
-            mat->kd = {1, 1, 1};
-            mat->ks = {0.04f, 0.04f, 0.04f};
-            mat->rs = 0.25f;
-            mat->kd_txt.txt = add_test_texture(scn, test_texture_type::colored);
-            mat->norm_txt.txt = add_test_texture(scn, test_texture_type::bumpn);
-        } break;
-        case test_material_type::silver_mirror: {
-            mat->ks = {0.5, 0.5, 0.5};
-            mat->rs = 0.05f;
-        } break;
-        case test_material_type::silver_rough: {
-            mat->ks = {0.5, 0.5, 0.5};
-            mat->rs = 0.25f;
-        } break;
-        case test_material_type::gold_mirror: {
-            mat->ks = {0.66f, 0.45f, 0.34f};
-            mat->rs = 0.05f;
-        } break;
-        case test_material_type::gold_rough: {
-            mat->ks = {0.66f, 0.45f, 0.34f};
-            mat->rs = 0.25f;
-        } break;
-        case test_material_type::transparent_red: {
-            mat->kd = {0.5f, 0.2f, 0.2f};
-            mat->op = 0.9f;
-        } break;
-        case test_material_type::transparent_green: {
-            mat->kd = {0.2f, 0.5f, 0.2f};
-            mat->op = 0.5f;
-        } break;
-        case test_material_type::transparent_blue: {
-            mat->kd = {0.2f, 0.2f, 0.5f};
-            mat->op = 0.92f;
-        } break;
-        case test_material_type::light_point: {
-            mat->ke = {400, 400, 400};
-        } break;
-        case test_material_type::light_area: {
-            mat->ke = {40, 40, 40};
-        } break;
-        case test_material_type::light_arear: {
-            mat->ke = {80, 80, 80};
-        } break;
-        case test_material_type::light_areal: {
-            mat->ke = {20, 20, 20};
-        } break;
-        case test_material_type::light_areat: {
-            mat->ke = {10, 10, 10};
-        } break;
-        case test_material_type::light_areaf: {
-            mat->ke = {40, 40, 40};
-        } break;
-        default: throw runtime_error("bad value");
-    }
-    return mat;
 }
 
 inline string add_test_material(
@@ -9330,7 +9145,7 @@ unordered_map<string, prim_scene_params>& test_scene_presets() {
     auto add_floor = [](const prim_scene_params& params_) {
         auto params = params_;
         add_test_instance(params, test_shape_type::floor,
-            test_material_type::matte_gray, {0, 0, 0});
+            test_material_type::matte_grid, {0, 0, 0});
         return params;
     };
     auto add_pointlights = [](const prim_scene_params& params_) {
