@@ -7399,305 +7399,6 @@ inline instance* add_named_instance(scene* scn, const string& name) {
     return add_named_elem(scn->instances, name);
 }
 
-/// Test texture type
-enum struct prim_texture_type {
-    /// None (empty texture)
-    none,
-    /// Grid image
-    grid,
-    /// Checker image
-    checker,
-    /// Colored checker image
-    colored,
-    /// Detailed colored checker image
-    rcolored,
-    /// Bump and dimple imahe
-    bump,
-    /// Uv debug image
-    uv,
-    /// Gamma ramp
-    gamma,
-    /// Perlin noise image
-    noise,
-    /// Perlin ridge image
-    ridge,
-    /// Perlin fbm image
-    fbm,
-    /// Perlin turbulence image
-    turbulence,
-    /// Gamma ramp (HDR)
-    gammaf,
-    /// Sky (HDR)
-    sky,
-};
-
-/// Name for test texture enum
-inline vector<pair<string, prim_texture_type>>& prim_texture_names() {
-    static auto names = vector<pair<string, prim_texture_type>>{
-        {"none", prim_texture_type::none},
-        {"grid", prim_texture_type::grid},
-        {"checker", prim_texture_type::checker},
-        {"rcolored", prim_texture_type::rcolored},
-        {"uv", prim_texture_type::uv},
-        {"gamma", prim_texture_type::gamma},
-        {"noise", prim_texture_type::noise},
-        {"ridge", prim_texture_type::ridge},
-        {"fbm", prim_texture_type::fbm},
-        {"turbulence", prim_texture_type::turbulence},
-        {"gammaf", prim_texture_type::gammaf},
-        {"sky", prim_texture_type::sky},
-    };
-    return names;
-}
-
-/// Test texture parameters
-struct prim_texture_params {
-    /// Name (if not filled, assign a default based on type)
-    string name = "";
-    /// Type
-    prim_texture_type type = prim_texture_type::none;
-    /// Resolution
-    int resolution = 512;
-    /// Tile size for grid-like textures
-    int tile_size = 64;
-    /// Noise scale for noise-like textures
-    int noise_scale = 8;
-    /// Sun angle for sunsky-like textures
-    float sky_sunangle = pif / 4;
-    /// Convert to normal map
-    bool bump_to_normal = false;
-    /// Bump to normal scale
-    float bump_scale = 4;
-};
-
-/// Updates a test texture, adding it to the scene if missing.
-texture* update_prim_texture(
-    scene* scn, texture* txt, const prim_texture_params& params);
-
-/// Test material type
-enum struct prim_material_type {
-    /// None (empty material)
-    none,
-    /// Emission
-    emission,
-    /// Matte (diffuse)
-    matte,
-    /// Plastic
-    plastic,
-    /// Matetal
-    metal,
-    /// Transparent (diffuse with opacity)
-    transparent,
-};
-
-/// Name for test shape enum
-inline vector<pair<string, prim_material_type>>& prim_material_names() {
-    static auto names = vector<pair<string, prim_material_type>>{
-        {"none", prim_material_type::none},
-        {"emission", prim_material_type::emission},
-        {"matte", prim_material_type::matte},
-        {"plastic", prim_material_type::plastic},
-        {"metal", prim_material_type::metal},
-        {"transparent", prim_material_type::transparent},
-    };
-    return names;
-}
-
-/// Test material parameters
-struct prim_material_params {
-    /// Name (if not filled, assign a default based on type)
-    string name = "";
-    /// Type
-    prim_material_type type = prim_material_type::matte;
-    /// Emission strenght
-    float emission = 1;
-    /// Base color
-    vec3f color = {0.2, 0.2, 0.2};
-    /// Opacity (only for supported materials)
-    float opacity = 1;
-    /// Roughness
-    float roughness = 0.1;
-    /// Base texture
-    string txt = "";
-    /// Normal map
-    string norm = "";
-};
-
-/// Updates a test material, adding it to the scene if missing.
-material* update_prim_material(
-    scene* scn, material* mat, const prim_material_params& params);
-
-/// Test shape type
-enum struct prim_shape_type {
-    /// Floor (shared vertex, 20x20 size)
-    floor,
-    /// Quad (shared vertex)
-    quad,
-    /// Cube (shared vertex, not watertight)
-    cube,
-    /// Sphere (shared vertex, not watertight)
-    sphere,
-    /// Sphere with cube uvs (shared vertex, not watertight)
-    spherecube,
-    /// Spherized cube (shared vertex, not watertight)
-    spherizedcube,
-    /// Geodesic sphere (shared vertex, watertight, no texcoord)
-    geosphere,
-    /// Sphere with flipped cap (shared vertex, not watertight)
-    flipcapsphere,
-    /// Suzanne (shared vertex, no texcoord)
-    suzanne,
-    /// Position-only cube (shared vertex)
-    cubep,
-    /// Face-varying cube (shared vertex)
-    fvcube,
-    /// Face-varying sphere (shared vertex)
-    fvsphere,
-    /// Matball (shared vertex, not watertight)
-    matball,
-    /// Single point
-    point,
-    /// Random points in a cube
-    pointscube,
-    /// Random lines on a sphere
-    hairball,
-    /// Random lines on a sphere (preset 1)
-    hairball1,
-    /// Random lines on a sphere (preset 2)
-    hairball2,
-    /// Random lines on a sphere (preset 3)
-    hairball3,
-    /// Bezier circle
-    beziercircle,
-};
-
-/// Name for test shape enum
-inline vector<pair<string, prim_shape_type>>& prim_shape_names() {
-    static auto names = vector<pair<string, prim_shape_type>>{
-        {"floor", prim_shape_type::floor},
-        {"quad", prim_shape_type::quad},
-        {"cube", prim_shape_type::cube},
-        {"sphere", prim_shape_type::sphere},
-        {"spherecube", prim_shape_type::spherecube},
-        {"spherizedcube", prim_shape_type::spherizedcube},
-        {"geosphere", prim_shape_type::geosphere},
-        {"flipcapsphere", prim_shape_type::flipcapsphere},
-        {"suzanne", prim_shape_type::suzanne},
-        {"cubep", prim_shape_type::cubep},
-        {"fvcube", prim_shape_type::fvcube},
-        {"fvsphere", prim_shape_type::fvsphere},
-        {"matball", prim_shape_type::matball},
-        {"point", prim_shape_type::point},
-        {"pointscube", prim_shape_type::pointscube},
-        {"hairball", prim_shape_type::hairball},
-        {"hairball1", prim_shape_type::hairball1},
-        {"hairball2", prim_shape_type::hairball2},
-        {"hairball3", prim_shape_type::hairball3},
-        {"beziercircle", prim_shape_type::beziercircle},
-    };
-    return names;
-}
-
-/// Test shape parameters
-struct prim_shape_params {
-    /// Shape name (if not filled, assign a default based on type)
-    string name = "";
-    /// Material name
-    string mat = "";
-    /// Shape type
-    prim_shape_type type = prim_shape_type::sphere;
-    /// Level of shape tesselatation (-1 for default)
-    int tesselation = -1;
-    /// Level of shape tesselation for subdivision surfaces
-    int subdivision = 0;
-    /// Shape scale
-    float scale = 1;
-    /// Radius for points and lines.
-    float radius = -1;
-    /// Faceted shape
-    bool faceted = false;
-    /// Number of elements for points and lines (-1 for default)
-    int num = -1;
-};
-
-/// Updates a test shape, adding it to the scene if missing.
-shape* update_prim_shape(
-    scene* scn, shape* shp, const prim_shape_params& params);
-
-/// Test instance parameters
-struct prim_instance_params {
-    /// Name (if not filled, assign a default one)
-    string name = "";
-    /// Shape name
-    string shp = "";
-    /// Base frame
-    frame3f frame = identity_frame3f;
-    /// Rotation in Euler angles
-    vec3f rotation = zero3f;
-};
-
-/// Updates a test instance, adding it to the scene if missing.
-instance* update_prim_instance(
-    scene* scn, instance* ist, const prim_instance_params& params);
-
-/// Test camera parameters
-struct prim_camera_params {
-    /// Name (if not filled, assign a default one)
-    string name = "";
-    /// From
-    vec3f from = {0, 0, -1};
-    /// To
-    vec3f to = zero3f;
-    /// Fov
-    float yfov = 45 * pif / 180;
-    /// Aspect
-    float aspect = 1;
-};
-
-/// Updates a test instance, adding it to the scene if missing.
-camera* update_prim_camera(
-    scene* scn, camera* cam, const prim_camera_params& params);
-
-/// Test environment parameters
-struct prim_environment_params {
-    /// Name (if not filled, assign a default one)
-    string name = "";
-    /// Emission strenght
-    float emission = 1;
-    /// Emission color
-    vec3f color = {1, 1, 1};
-    /// Emission texture
-    string txt = "";
-    /// Frame
-    frame3f frame = identity_frame3f;
-    /// Rotation around y axis
-    float rotation = 0;
-};
-
-/// Updates a test instance, adding it to the scene if missing.
-environment* update_prim_environment(
-    scene* scn, environment* env, const prim_environment_params& params);
-
-/// Test scene
-struct prim_scene_params {
-    vector<prim_camera_params> cameras;
-    vector<prim_texture_params> textures;
-    vector<prim_material_params> materials;
-    vector<prim_shape_params> shapes;
-    vector<prim_instance_params> instances;
-    vector<prim_environment_params> environments;
-};
-
-/// Updates a test scene, adding missing objects. Objects are only added (for
-/// now). A new scene is returned if it was not already created.
-scene* update_prim_scene(scene* scn, const prim_scene_params& params,
-    const unordered_set<void*>& refresh = {});
-
-/// Makes a test scene. Convenience wrapper around update_prim_scene().
-inline scene* make_prim_scene(const prim_scene_params& params) {
-    return update_prim_scene(nullptr, params);
-}
-
 /// Subdivides shape elements. Apply subdivision surface rules if subdivide
 /// is true.
 inline void subdivide_shape_once(shape* shp, bool subdiv = false) {
@@ -8249,63 +7950,307 @@ namespace ygl {
 /// Makes the Cornell Box scene
 scene* make_cornell_box_scene();
 
-/// Test scene enumeration.
-enum struct test_scene_type {
-    cornell_box,     // Cornell box
-    textures,        // Scene containing all generated textures
-    shapes,          // Scene contaning a few meshes
-    plane_al,        // Simple scene with a plane and area lights
-    nothing_el,      // Simple scene with no objects and an environment map
-    basic_pl,        // Simple scene with no textures and point lights
-    simple_pl,       // Textured scene with point lights
-    simple_al,       // Textured scene with area lights
-    simple_el,       // Textured scene with env lights
-    transparent_al,  // Scene to test trasparency
-    points_al,       // Point primitive
-    lines_al,        // Line primitives
-    subdiv_al,       // Scene to test subdivions surfaces
-    plastics_al,     // Material ball with plastics - area light
-    plastics_el,     // Material ball with plastics - env light
-    metals_al,       // Material ball with metals - area light
-    metals_el,       // Material ball with metals - env light
-    tesselation_pl,  // Scene to show different tesselation
-    textureuv_pl,    // Scene to show texture uvs
-    normalmap_pl,    // Scene to show normal mapping
-    instances_pl,    // Scene with small number of instances
-    instancel_pl,    // Scene with large number of instances
+/// Test texture type
+enum struct prim_texture_type {
+    /// None (empty texture)
+    none,
+    /// Grid image
+    grid,
+    /// Checker image
+    checker,
+    /// Colored checker image
+    colored,
+    /// Detailed colored checker image
+    rcolored,
+    /// Bump and dimple imahe
+    bump,
+    /// Uv debug image
+    uv,
+    /// Gamma ramp
+    gamma,
+    /// Perlin noise image
+    noise,
+    /// Perlin ridge image
+    ridge,
+    /// Perlin fbm image
+    fbm,
+    /// Perlin turbulence image
+    turbulence,
+    /// Gamma ramp (HDR)
+    gammaf,
+    /// Sky (HDR)
+    sky,
 };
 
-/// Names for enumeration
-inline const vector<pair<string, test_scene_type>>& test_scene_names() {
-    static auto names = vector<pair<string, test_scene_type>>{
-        {"cornell_box", test_scene_type::cornell_box},
-        {"textures", test_scene_type::textures},
-        {"shapes", test_scene_type::shapes},
-        {"plane_al", test_scene_type::plane_al},
-        {"nothing_el", test_scene_type::nothing_el},
-        {"basic_pl", test_scene_type::basic_pl},
-        {"simple_pl", test_scene_type::simple_pl},
-        {"simple_al", test_scene_type::simple_al},
-        {"simple_el", test_scene_type::simple_el},
-        {"transparent_al", test_scene_type::transparent_al},
-        {"points_al", test_scene_type::points_al},
-        {"lines_al", test_scene_type::lines_al},
-        {"subdiv_al", test_scene_type::subdiv_al},
-        {"plastics_al", test_scene_type::plastics_al},
-        {"plastics_el", test_scene_type::plastics_el},
-        {"metals_al", test_scene_type::metals_al},
-        {"metals_el", test_scene_type::metals_el},
-        {"tesselation_pl", test_scene_type::tesselation_pl},
-        {"textureuv_pl", test_scene_type::textureuv_pl},
-        {"normalmap_pl", test_scene_type::normalmap_pl},
-        {"instances_pl", test_scene_type::instances_pl},
-        {"instancel_pl", test_scene_type::instancel_pl},
+/// Name for test texture enum
+inline vector<pair<string, prim_texture_type>>& prim_texture_names() {
+    static auto names = vector<pair<string, prim_texture_type>>{
+        {"none", prim_texture_type::none},
+        {"grid", prim_texture_type::grid},
+        {"checker", prim_texture_type::checker},
+        {"rcolored", prim_texture_type::rcolored},
+        {"uv", prim_texture_type::uv},
+        {"gamma", prim_texture_type::gamma},
+        {"noise", prim_texture_type::noise},
+        {"ridge", prim_texture_type::ridge},
+        {"fbm", prim_texture_type::fbm},
+        {"turbulence", prim_texture_type::turbulence},
+        {"gammaf", prim_texture_type::gammaf},
+        {"sky", prim_texture_type::sky},
     };
     return names;
 }
 
+/// Test texture parameters
+struct prim_texture_params {
+    /// Name (if not filled, assign a default based on type)
+    string name = "";
+    /// Type
+    prim_texture_type type = prim_texture_type::none;
+    /// Resolution
+    int resolution = 512;
+    /// Tile size for grid-like textures
+    int tile_size = 64;
+    /// Noise scale for noise-like textures
+    int noise_scale = 8;
+    /// Sun angle for sunsky-like textures
+    float sky_sunangle = pif / 4;
+    /// Convert to normal map
+    bool bump_to_normal = false;
+    /// Bump to normal scale
+    float bump_scale = 4;
+};
+
+/// Updates a test texture, adding it to the scene if missing.
+texture* update_prim_texture(
+    scene* scn, texture* txt, const prim_texture_params& params);
+
+/// Test material type
+enum struct prim_material_type {
+    /// None (empty material)
+    none,
+    /// Emission
+    emission,
+    /// Matte (diffuse)
+    matte,
+    /// Plastic
+    plastic,
+    /// Matetal
+    metal,
+    /// Transparent (diffuse with opacity)
+    transparent,
+};
+
+/// Name for test shape enum
+inline vector<pair<string, prim_material_type>>& prim_material_names() {
+    static auto names = vector<pair<string, prim_material_type>>{
+        {"none", prim_material_type::none},
+        {"emission", prim_material_type::emission},
+        {"matte", prim_material_type::matte},
+        {"plastic", prim_material_type::plastic},
+        {"metal", prim_material_type::metal},
+        {"transparent", prim_material_type::transparent},
+    };
+    return names;
+}
+
+/// Test material parameters
+struct prim_material_params {
+    /// Name (if not filled, assign a default based on type)
+    string name = "";
+    /// Type
+    prim_material_type type = prim_material_type::matte;
+    /// Emission strenght
+    float emission = 1;
+    /// Base color
+    vec3f color = {0.2, 0.2, 0.2};
+    /// Opacity (only for supported materials)
+    float opacity = 1;
+    /// Roughness
+    float roughness = 0.1;
+    /// Base texture
+    string txt = "";
+    /// Normal map
+    string norm = "";
+};
+
+/// Updates a test material, adding it to the scene if missing.
+material* update_prim_material(
+    scene* scn, material* mat, const prim_material_params& params);
+
+/// Test shape type
+enum struct prim_shape_type {
+    /// Floor (shared vertex, 20x20 size)
+    floor,
+    /// Quad (shared vertex)
+    quad,
+    /// Cube (shared vertex, not watertight)
+    cube,
+    /// Sphere (shared vertex, not watertight)
+    sphere,
+    /// Sphere with cube uvs (shared vertex, not watertight)
+    spherecube,
+    /// Spherized cube (shared vertex, not watertight)
+    spherizedcube,
+    /// Geodesic sphere (shared vertex, watertight, no texcoord)
+    geosphere,
+    /// Sphere with flipped cap (shared vertex, not watertight)
+    flipcapsphere,
+    /// Suzanne (shared vertex, no texcoord)
+    suzanne,
+    /// Position-only cube (shared vertex)
+    cubep,
+    /// Face-varying cube (shared vertex)
+    fvcube,
+    /// Face-varying sphere (shared vertex)
+    fvsphere,
+    /// Matball (shared vertex, not watertight)
+    matball,
+    /// Single point
+    point,
+    /// Random points in a cube
+    pointscube,
+    /// Random lines on a sphere
+    hairball,
+    /// Random lines on a sphere (preset 1)
+    hairball1,
+    /// Random lines on a sphere (preset 2)
+    hairball2,
+    /// Random lines on a sphere (preset 3)
+    hairball3,
+    /// Bezier circle
+    beziercircle,
+};
+
+/// Name for test shape enum
+inline vector<pair<string, prim_shape_type>>& prim_shape_names() {
+    static auto names = vector<pair<string, prim_shape_type>>{
+        {"floor", prim_shape_type::floor},
+        {"quad", prim_shape_type::quad},
+        {"cube", prim_shape_type::cube},
+        {"sphere", prim_shape_type::sphere},
+        {"spherecube", prim_shape_type::spherecube},
+        {"spherizedcube", prim_shape_type::spherizedcube},
+        {"geosphere", prim_shape_type::geosphere},
+        {"flipcapsphere", prim_shape_type::flipcapsphere},
+        {"suzanne", prim_shape_type::suzanne},
+        {"cubep", prim_shape_type::cubep},
+        {"fvcube", prim_shape_type::fvcube},
+        {"fvsphere", prim_shape_type::fvsphere},
+        {"matball", prim_shape_type::matball},
+        {"point", prim_shape_type::point},
+        {"pointscube", prim_shape_type::pointscube},
+        {"hairball", prim_shape_type::hairball},
+        {"hairball1", prim_shape_type::hairball1},
+        {"hairball2", prim_shape_type::hairball2},
+        {"hairball3", prim_shape_type::hairball3},
+        {"beziercircle", prim_shape_type::beziercircle},
+    };
+    return names;
+}
+
+/// Test shape parameters
+struct prim_shape_params {
+    /// Shape name (if not filled, assign a default based on type)
+    string name = "";
+    /// Material name
+    string mat = "";
+    /// Shape type
+    prim_shape_type type = prim_shape_type::sphere;
+    /// Level of shape tesselatation (-1 for default)
+    int tesselation = -1;
+    /// Level of shape tesselation for subdivision surfaces
+    int subdivision = 0;
+    /// Shape scale
+    float scale = 1;
+    /// Radius for points and lines.
+    float radius = -1;
+    /// Faceted shape
+    bool faceted = false;
+    /// Number of elements for points and lines (-1 for default)
+    int num = -1;
+};
+
+/// Updates a test shape, adding it to the scene if missing.
+shape* update_prim_shape(
+    scene* scn, shape* shp, const prim_shape_params& params);
+
+/// Test instance parameters
+struct prim_instance_params {
+    /// Name (if not filled, assign a default one)
+    string name = "";
+    /// Shape name
+    string shp = "";
+    /// Base frame
+    frame3f frame = identity_frame3f;
+    /// Rotation in Euler angles
+    vec3f rotation = zero3f;
+};
+
+/// Updates a test instance, adding it to the scene if missing.
+instance* update_prim_instance(
+    scene* scn, instance* ist, const prim_instance_params& params);
+
+/// Test camera parameters
+struct prim_camera_params {
+    /// Name (if not filled, assign a default one)
+    string name = "";
+    /// From
+    vec3f from = {0, 0, -1};
+    /// To
+    vec3f to = zero3f;
+    /// Fov
+    float yfov = 45 * pif / 180;
+    /// Aspect
+    float aspect = 1;
+};
+
+/// Updates a test instance, adding it to the scene if missing.
+camera* update_prim_camera(
+    scene* scn, camera* cam, const prim_camera_params& params);
+
+/// Test environment parameters
+struct prim_environment_params {
+    /// Name (if not filled, assign a default one)
+    string name = "";
+    /// Emission strenght
+    float emission = 1;
+    /// Emission color
+    vec3f color = {1, 1, 1};
+    /// Emission texture
+    string txt = "";
+    /// Frame
+    frame3f frame = identity_frame3f;
+    /// Rotation around y axis
+    float rotation = 0;
+};
+
+/// Updates a test instance, adding it to the scene if missing.
+environment* update_prim_environment(
+    scene* scn, environment* env, const prim_environment_params& params);
+
+/// Test scene
+struct prim_scene_params {
+    vector<prim_camera_params> cameras;
+    vector<prim_texture_params> textures;
+    vector<prim_material_params> materials;
+    vector<prim_shape_params> shapes;
+    vector<prim_instance_params> instances;
+    vector<prim_environment_params> environments;
+};
+
+/// Updates a test scene, adding missing objects. Objects are only added (for
+/// now). A new scene is returned if it was not already created.
+scene* update_prim_scene(scene* scn, const prim_scene_params& params,
+    const unordered_set<void*>& refresh = {});
+
+/// Makes a test scene. Convenience wrapper around update_prim_scene().
+inline scene* make_prim_scene(const prim_scene_params& params) {
+    return update_prim_scene(nullptr, params);
+}
+
 /// Makes a test scene
-scene* make_test_scene(test_scene_type stype);
+unordered_map<string, prim_scene_params>& test_scene_presets();
 
 }  // namespace ygl
 

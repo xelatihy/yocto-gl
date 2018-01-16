@@ -8598,15 +8598,15 @@ texture* add_test_texture(scene* scn, test_texture_type type) {
     return txt;
 }
 
-string add_test_texture(prim_scene_params* scn, test_texture_type type) {
+string add_test_texture(prim_scene_params& scn, test_texture_type type) {
     if (type == test_texture_type::none) return "";
     auto name = ""s;
     for (auto kv : test_texture_names())
         if (kv.second == type) name = kv.first;
-    for (auto& txt : scn->textures)
+    for (auto& txt : scn.textures)
         if (txt.name == name) return name;
-    scn->textures.push_back({});
-    auto txt = &scn->textures.back();
+    scn.textures.push_back({});
+    auto txt = &scn.textures.back();
     txt->name = name;
     switch (type) {
         case test_texture_type::grid: {
@@ -8854,15 +8854,15 @@ inline material* add_test_material(scene* scn, test_material_type type) {
 }
 
 inline string add_test_material(
-    prim_scene_params* scn, test_material_type type) {
+    prim_scene_params& scn, test_material_type type) {
     if (type == test_material_type::none) return "";
     auto name = ""s;
     for (auto kv : test_material_names())
         if (kv.second == type) name = kv.first;
-    for (auto& mat : scn->materials)
+    for (auto& mat : scn.materials)
         if (mat.name == name) return name;
-    scn->materials.push_back({});
-    auto mat = &scn->materials.back();
+    scn.materials.push_back({});
+    auto mat = &scn.materials.back();
     mat->name = name;
     switch (type) {
         case test_material_type::matte_gray: {
@@ -9058,7 +9058,7 @@ inline const vector<pair<string, test_shape_type>>& test_shape_names() {
 }
 
 inline string add_test_shape(
-    prim_scene_params* scn, test_shape_type stype, test_material_type mtype) {
+    prim_scene_params& scn, test_shape_type stype, test_material_type mtype) {
     if (stype == test_shape_type::none) return "";
     auto name = ""s;
     for (auto kv : test_shape_names())
@@ -9066,10 +9066,10 @@ inline string add_test_shape(
     name += "_";
     for (auto kv : test_material_names())
         if (kv.second == mtype) name += kv.first;
-    for (auto& shp : scn->shapes)
+    for (auto& shp : scn.shapes)
         if (shp.name == name) return name;
-    scn->shapes.push_back({});
-    auto shp = &scn->shapes.back();
+    scn.shapes.push_back({});
+    auto shp = &scn.shapes.back();
     shp->name = name;
     shp->mat = add_test_material(scn, mtype);
     switch (stype) {
@@ -9198,16 +9198,16 @@ test_environment_names() {
     return names;
 }
 
-inline string add_test_environment(prim_scene_params* scn,
+inline string add_test_environment(prim_scene_params& scn,
     test_environment_type type, const frame3f& frame, float rotation = 0) {
     if (type == test_environment_type::none) return nullptr;
     auto name = ""s;
     for (auto kv : test_environment_names())
         if (kv.second == type) name += kv.first;
-    for (auto env : scn->environments)
+    for (auto env : scn.environments)
         if (env.name == name) return name;
-    scn->environments.push_back({});
-    auto env = &scn->environments.back();
+    scn.environments.push_back({});
+    auto env = &scn.environments.back();
     env->name = name;
 
     env->emission = 1;
@@ -9229,83 +9229,26 @@ inline string add_test_environment(prim_scene_params* scn,
     return name;
 }
 
-string add_test_instance(prim_scene_params* scn, test_shape_type stype,
+string add_test_instance(prim_scene_params& scn, test_shape_type stype,
     test_material_type mtype, const frame3f& frame) {
-    scn->instances.push_back({});
-    auto ist = &scn->instances.back();
+    scn.instances.push_back({});
+    auto ist = &scn.instances.back();
     ist->shp = add_test_shape(scn, stype, mtype);
     auto count = 0;
-    for (auto& ist2 : scn->instances)
+    for (auto& ist2 : scn.instances)
         if (ist->shp == ist2.shp) count++;
     ist->name = ist->shp + ((count) ? "!" + to_string(count + 1) : ""s);
     ist->frame = frame;
     return ist->name;
 }
 
-string add_test_instance(prim_scene_params* scn, test_shape_type stype,
+string add_test_instance(prim_scene_params& scn, test_shape_type stype,
     test_material_type mtype, const vec3f& pos, const vec3f& rot = {0, 0, 0}) {
     return add_test_instance(scn, stype, mtype,
         {rotation_mat3f(vec3f{0, 0, 1}, rot[2] * pif / 180) *
                 rotation_mat3f(vec3f{0, 1, 0}, rot[1] * pif / 180) *
                 rotation_mat3f(vec3f{1, 0, 0}, rot[0] * pif / 180),
             pos});
-}
-
-enum struct test_light_type {
-    none,
-    pointlight,
-    arealight,
-    arealight1,
-    envlight
-};
-
-inline const vector<pair<string, test_light_type>>& test_light_names() {
-    static auto names =
-        vector<pair<string, test_light_type>>{{"none", test_light_type::none},
-            {"pointlight", test_light_type::pointlight},
-            {"arealight", test_light_type::arealight},
-            {"arealight1", test_light_type::arealight1},
-            {"envlight", test_light_type::envlight}};
-    return names;
-}
-
-tuple<vector<string>, string> add_test_lights(
-    prim_scene_params* scn, test_light_type type) {
-    auto ists = vector<string>{};
-    auto env = "";
-    switch (type) {
-        case test_light_type::none: break;
-        case test_light_type::pointlight: {
-            ists.push_back(add_test_instance(scn, test_shape_type::plight,
-                test_material_type::light_point, {-2, 10, 8}));
-            ists.push_back(add_test_instance(scn, test_shape_type::plight,
-                test_material_type::light_point, {+2, 10, 8}));
-        } break;
-        case test_light_type::arealight: {
-            ists.push_back(add_test_instance(scn, test_shape_type::alight,
-                test_material_type::light_area,
-                lookat_frame3f({-4, 5, 8}, {0, 3, 0}, {0, 1, 0}, true)));
-            ists.push_back(add_test_instance(scn, test_shape_type::alight,
-                test_material_type::light_area,
-                lookat_frame3f({+4, 5, 8}, {0, 3, 0}, {0, 1, 0}, true)));
-        } break;
-        case test_light_type::arealight1: {
-            ists.push_back(add_test_instance(scn, test_shape_type::alightt,
-                test_material_type::light_areat,
-                lookat_frame3f({0, 64, 0}, {0, 1, 0}, {0, 0, 1}, true)));
-            ists.push_back(add_test_instance(scn, test_shape_type::alightf,
-                test_material_type::light_areaf,
-                lookat_frame3f({0, 64, 64}, {0, 1, 0}, {0, 1, 0}, true)));
-        } break;
-        case test_light_type::envlight: {
-#if 0
-            env = add_test_environment(scn, test_environment_type::sky,
-                lookat_frame3f({0, 1, 0}, {0, 1, 1}, {0, 1, 0}, true));
-#endif
-        } break;
-        default: throw runtime_error("bad value");
-    }
-    return tuple<vector<string>, string>{ists, env};
 }
 
 enum struct test_camera_type { none, cam1, cam2, cam3 };
@@ -9317,15 +9260,15 @@ inline const vector<pair<string, test_camera_type>>& test_camera_names() {
     return names;
 }
 
-string add_test_camera(prim_scene_params* scn, test_camera_type type) {
+string add_test_camera(prim_scene_params& scn, test_camera_type type) {
     if (type == test_camera_type::none) return nullptr;
     auto name = ""s;
     for (auto kv : test_camera_names())
         if (kv.second == type) name = kv.first;
-    for (auto& cam : scn->cameras)
+    for (auto& cam : scn.cameras)
         if (cam.name == name) return name;
-    scn->cameras.push_back({});
-    auto cam = &scn->cameras.back();
+    scn.cameras.push_back({});
+    auto cam = &scn.cameras.back();
     cam->name = name;
     switch (type) {
         case test_camera_type::cam1: {
@@ -9351,326 +9294,309 @@ string add_test_camera(prim_scene_params* scn, test_camera_type type) {
     return name;
 }
 
-scene* make_simple_test_scene(test_camera_type ctype,
-    const vector<pair<test_shape_type, test_material_type>>& otypes,
-    test_light_type ltype,
-    const vector<pair<test_shape_type, test_material_type>>& itypes = {},
-    bool rotate = false,
-    test_material_type fmat = test_material_type::matte_grid) {
-    auto pscn = prim_scene_params();
-    auto scn = &pscn;
-    add_test_camera(scn, ctype);
-    add_test_lights(scn, ltype);
+unordered_map<string, prim_scene_params>& test_scene_presets() {
+    static auto presets = unordered_map<string, prim_scene_params>();
+    if (!presets.empty()) return presets;
 
-    if (fmat != test_material_type::none) {
-        add_test_instance(scn, test_shape_type::floor, fmat, identity_frame3f);
-    }
+    // shared variables
+    auto params = prim_scene_params();
 
-    auto frames = std::vector<frame3f>{
-        identity_frame3f, identity_frame3f, identity_frame3f};
-    for (auto fi : enumerate(frames)) {
-        auto& f = fi.second;
-        if (otypes.size() == 2) f.o.x = vector<float>{-1.25f, +1.25f}[fi.first];
-        if (otypes.size() == 3)
-            f.o.x = vector<float>{-2.50f, 0, +2.50f}[fi.first];
-        f.o.y = 1;
-        if (rotate)
-            f = lookat_frame3f(f.o, f.o + vec3f{1, 1, 1}, {0, 1, 0}, true);
-    }
+    // textures
+    params = {};
+    for (auto ttype : test_texture_names())
+        add_test_texture(params, ttype.second);
+    presets["textures"] = params;
 
-    for (auto i : range(otypes.size())) {
-        add_test_instance(scn, otypes[i].first, otypes[i].second, frames[i]);
-        if (itypes.empty()) continue;
-        add_test_instance(scn, itypes[i].first, itypes[i].second, frames[i]);
-    }
+    // shapes
+    params = {};
+    for (auto stype : {test_shape_type::quad, test_shape_type::cube,
+             test_shape_type::sphere, test_shape_type::spherecube,
+             test_shape_type::spherizedcube, test_shape_type::flipcapsphere,
+             test_shape_type::geosphere, test_shape_type::geospheref,
+             test_shape_type::cubes, test_shape_type::suzanne,
+             test_shape_type::suzannes, test_shape_type::cubefv,
+             test_shape_type::cubefvs, test_shape_type::quads,
+             test_shape_type::spherefv, test_shape_type::matball,
+             test_shape_type::matballi, test_shape_type::bcircle})
+        add_test_shape(params, stype, test_material_type::none);
+    presets["shapes"] = params;
 
-    return update_prim_scene(nullptr, pscn);
-}
+    // shared functions
+    auto add_camera = [](const prim_scene_params& params_) {
+        auto params = params_;
+        add_test_camera(params, test_camera_type::cam3);
+        return params;
+    };
+    auto add_floor = [](const prim_scene_params& params_) {
+        auto params = params_;
+        add_test_instance(params, test_shape_type::floor,
+            test_material_type::matte_gray, {0, 0, 0});
+        return params;
+    };
+    auto add_pointlights = [](const prim_scene_params& params_) {
+        auto params = params_;
+        add_test_instance(params, test_shape_type::plight,
+            test_material_type::light_point, {-2, 10, 8});
+        add_test_instance(params, test_shape_type::plight,
+            test_material_type::light_point, {+2, 10, 8});
+        return params;
+    };
+    auto add_arealights = [](const prim_scene_params& params_) {
+        auto params = params_;
+        add_test_instance(params, test_shape_type::alight,
+            test_material_type::light_area,
+            lookat_frame3f({-4, 5, 8}, {0, 3, 0}, {0, 1, 0}, true));
+        add_test_instance(params, test_shape_type::alight,
+            test_material_type::light_area,
+            lookat_frame3f({+4, 5, 8}, {0, 3, 0}, {0, 1, 0}, true));
+        return params;
+    };
+    auto add_arealights1 = [](const prim_scene_params& params_) {
+        auto params = params_;
+        add_test_instance(params, test_shape_type::alightt,
+            test_material_type::light_areat,
+            lookat_frame3f({0, 64, 0}, {0, 1, 0}, {0, 0, 1}, true));
+        add_test_instance(params, test_shape_type::alightf,
+            test_material_type::light_areaf,
+            lookat_frame3f({0, 64, 64}, {0, 1, 0}, {0, 1, 0}, true));
+        return params;
+    };
+    auto add_envlights = [](const prim_scene_params& params_) {
+        auto params = params_;
+#if 0
+        env = add_test_environment(params, test_environment_type::sky,
+                                   lookat_frame3f({0, 1, 0}, {0, 1, 1}, {0, 1, 0}, true));
+#endif
+        return params;
+    };
 
-scene* make_instance_scene(
-    const vec2i& num, const bbox2f& bbox, uint32_t seed = 13) {
-    auto pscn = prim_scene_params();
-    auto scn = &pscn;
-    add_test_camera(scn, test_camera_type::cam3);
-    add_test_instance(
-        scn, test_shape_type::floor, test_material_type::matte_gray, {0, 0, 0});
-    add_test_lights(scn, test_light_type::pointlight);
-
-    auto mtypes = vector<test_material_type>{test_material_type::plastic_red,
-        test_material_type::plastic_green, test_material_type::plastic_blue};
-    auto stypes = vector<test_shape_type>{test_shape_type::sphere,
-        test_shape_type::flipcapsphere, test_shape_type::cube};
-
-    auto rscale = 0.9f * 0.25f *
-                  min((bbox.max.x - bbox.min.x) / num.x,
-                      (bbox.max.x - bbox.min.x) / num.y);
-    auto rng = init_rng(seed, 7);
-    auto start_shps = scn->shapes.size();
-    for (auto j = 0; j < num.y; j++) {
-        for (auto i = 0; i < num.x; i++) {
-            auto rpos = next_rand2f(rng);
-            auto pos = vec3f{
-                bbox.min.x + (bbox.max.x - bbox.min.x) *
-                                 (i + 0.45f + 0.1f * rpos.x) / num.x,
-                rscale,
-                bbox.min.y + (bbox.max.y - bbox.min.y) *
-                                 (j + 0.45f + 0.1f * rpos.y) / num.y,
-            };
-            auto ist =
-                add_test_instance(scn, stypes[next_rand1i(rng, stypes.size())],
-                    mtypes[next_rand1i(rng, mtypes.size())],
-                    {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, pos});
+    // simple scenes shared functions
+    auto init_simple_scene = [&](bool floor = true) {
+        auto params = prim_scene_params();
+        params = add_camera(params);
+        if (floor) params = add_floor(params);
+        return params;
+    };
+    auto add_simple_objects = [&](const prim_scene_params& params_,
+                                  const vector<pair<test_shape_type,
+                                      test_material_type>>& otypes,
+                                  bool rotate = false) {
+        auto params = params_;
+        auto frames = std::vector<frame3f>{
+            identity_frame3f, identity_frame3f, identity_frame3f};
+        for (auto fi : enumerate(frames)) {
+            auto& f = fi.second;
+            if (otypes.size() == 2)
+                f.o.x = vector<float>{-1.25f, +1.25f}[fi.first];
+            if (otypes.size() == 3)
+                f.o.x = vector<float>{-2.50f, 0, +2.50f}[fi.first];
+            f.o.y = 1;
+            if (rotate)
+                f = lookat_frame3f(f.o, f.o + vec3f{1, 1, 1}, {0, 1, 0}, true);
         }
-    }
 
-    for (auto i = start_shps; i < scn->shapes.size(); i ++) {
-        scn->shapes[i].scale *= rscale;
-    }
+        for (auto i : range(otypes.size())) {
+            add_test_instance(
+                params, otypes[i].first, otypes[i].second, frames[i]);
+        }
+        return params;
+    };
+    auto add_matball_objects = [&](const prim_scene_params& params_,
+                                   const vector<test_material_type>& mtypes) {
+        auto params = params_;
+        params = add_simple_objects(
+            params, {{test_shape_type::matball, mtypes[0]},
+                        {test_shape_type::matball, mtypes[1]},
+                        {test_shape_type::matball, mtypes[2]}});
+        params = add_simple_objects(params,
+            {{test_shape_type::matballi, test_material_type::matte_gray},
+                {test_shape_type::matballi, test_material_type::matte_gray},
+                {test_shape_type::matballi, test_material_type::matte_gray}});
+        return params;
+    };
 
-    return update_prim_scene(nullptr, pscn);
-}
+    // plane only
+    params = init_simple_scene();
+    presets["plane_al"] = add_arealights(params);
 
-scene* make_test_scene(test_scene_type otype) {
-    switch (otype) {
-        case test_scene_type::cornell_box: {
-            return make_cornell_box_scene();
-        } break;
-        case test_scene_type::textures: {
-            auto params = prim_scene_params();
-            for (auto ttype : test_texture_names())
-                add_test_texture(&params, ttype.second);
-            return update_prim_scene(nullptr, params);
-        } break;
-        case test_scene_type::shapes: {
-            auto params = prim_scene_params();
-            for (auto stype : {test_shape_type::quad, test_shape_type::cube,
-                     test_shape_type::sphere, test_shape_type::spherecube,
-                     test_shape_type::spherizedcube,
-                     test_shape_type::flipcapsphere, test_shape_type::geosphere,
-                     test_shape_type::geospheref, test_shape_type::cubes,
-                     test_shape_type::suzanne, test_shape_type::suzannes,
-                     test_shape_type::cubefv, test_shape_type::cubefvs,
-                     test_shape_type::quads, test_shape_type::spherefv,
-                     test_shape_type::matball, test_shape_type::matballi,
-                     test_shape_type::bcircle})
-                add_test_shape(&params, stype, test_material_type::none);
-            return update_prim_scene(nullptr, params);
-        } break;
-        case test_scene_type::instances_pl: {
-            return make_instance_scene({10, 10}, {{-3, -3}, {3, 3}});
-        } break;
-        case test_scene_type::instancel_pl: {
-            return make_instance_scene({100, 100}, {{-3, -3}, {3, 3}});
-        } break;
-        case test_scene_type::plane_al: {
-            return make_simple_test_scene(
-                test_camera_type::cam3, {}, test_light_type::arealight);
-        } break;
-        case test_scene_type::nothing_el: {
-            return make_simple_test_scene(test_camera_type::cam3, {},
-                test_light_type::envlight, {}, false, test_material_type::none);
-        } break;
-        case test_scene_type::basic_pl: {
-            return make_simple_test_scene(test_camera_type::cam3,
-                {
-                    {test_shape_type::flipcapsphere,
-                        test_material_type::plastic_red},
-                    {test_shape_type::spherecube,
-                        test_material_type::plastic_green},
-                    {test_shape_type::spherizedcube,
-                        test_material_type::plastic_blue},
-                },
-                test_light_type::pointlight);
-        } break;
-        case test_scene_type::simple_pl: {
-            return make_simple_test_scene(test_camera_type::cam3,
-                {
-                    {test_shape_type::flipcapsphere,
-                        test_material_type::plastic_colored},
-                    {test_shape_type::spherecube,
-                        test_material_type::plastic_colored},
-                    {test_shape_type::spherizedcube,
-                        test_material_type::plastic_colored},
-                },
-                test_light_type::pointlight);
-        } break;
-        case test_scene_type::simple_al: {
-            return make_simple_test_scene(test_camera_type::cam3,
-                {
-                    {test_shape_type::flipcapsphere,
-                        test_material_type::plastic_colored},
-                    {test_shape_type::spherecube,
-                        test_material_type::plastic_colored},
-                    {test_shape_type::spherizedcube,
-                        test_material_type::plastic_colored},
-                },
-                test_light_type::arealight1);
-        } break;
-        case test_scene_type::simple_el: {
-            return make_simple_test_scene(test_camera_type::cam3,
-                {
-                    {test_shape_type::flipcapsphere,
-                        test_material_type::plastic_colored},
-                    {test_shape_type::spherecube,
-                        test_material_type::plastic_colored},
-                    {test_shape_type::spherizedcube,
-                        test_material_type::plastic_colored},
-                },
-                test_light_type::envlight);
-        } break;
-        case test_scene_type::transparent_al: {
-            return make_simple_test_scene(test_camera_type::cam3,
-                {
-                    {test_shape_type::quad,
-                        test_material_type::transparent_red},
-                    {test_shape_type::quad,
-                        test_material_type::transparent_green},
-                    {test_shape_type::quad,
-                        test_material_type::transparent_blue},
-                },
-                test_light_type::arealight1);
-        } break;
-        case test_scene_type::points_al: {
-            return make_simple_test_scene(test_camera_type::cam3,
-                {
-                    {test_shape_type::points, test_material_type::matte_gray},
-                    {test_shape_type::points, test_material_type::matte_gray},
-                    {test_shape_type::points, test_material_type::matte_gray},
-                },
-                test_light_type::arealight);
-        } break;
-        case test_scene_type::lines_al: {
-            return make_simple_test_scene(test_camera_type::cam3,
-                {
-                    {test_shape_type::lines1, test_material_type::matte_gray},
-                    {test_shape_type::lines2, test_material_type::matte_gray},
-                    {test_shape_type::lines3, test_material_type::matte_gray},
-                },
-                test_light_type::arealight1,
-                {
+    // envmap only
+    params = init_simple_scene(false);
+    presets["nothing_el"] = add_envlights(params);
+
+    // basic shapes
+    params = add_simple_objects(init_simple_scene(),
+        {{test_shape_type::flipcapsphere, test_material_type::plastic_red},
+            {test_shape_type::spherecube, test_material_type::plastic_green},
+            {test_shape_type::spherizedcube,
+                test_material_type::plastic_blue}});
+    presets["basic_pl"] = add_pointlights(params);
+
+    // simple shapes
+    params = add_simple_objects(init_simple_scene(),
+        {
+            {test_shape_type::flipcapsphere,
+                test_material_type::plastic_colored},
+            {test_shape_type::spherecube, test_material_type::plastic_colored},
+            {test_shape_type::spherizedcube,
+                test_material_type::plastic_colored},
+        });
+    presets["simple_pl"] = add_pointlights(params);
+    presets["simple_al"] = add_arealights(params);
+    presets["simple_el"] = add_envlights(params);
+
+    // transparent shapes
+    params = add_simple_objects(init_simple_scene(),
+        {
+            {test_shape_type::quad, test_material_type::transparent_red},
+            {test_shape_type::quad, test_material_type::transparent_green},
+            {test_shape_type::quad, test_material_type::transparent_blue},
+        });
+    presets["transparent_al"] = add_arealights(params);
+
+    // points shapes
+    params = add_simple_objects(init_simple_scene(),
+        {
+            {test_shape_type::points, test_material_type::matte_gray},
+            {test_shape_type::points, test_material_type::matte_gray},
+            {test_shape_type::points, test_material_type::matte_gray},
+        });
+    presets["points_al"] = add_arealights(params);
+
+    // lines shapes
+    params = add_simple_objects(init_simple_scene(),
+        {
+            {test_shape_type::lines1, test_material_type::matte_gray},
+            {test_shape_type::lines2, test_material_type::matte_gray},
+            {test_shape_type::lines3, test_material_type::matte_gray},
+        });
+    params = add_simple_objects(
+        params, {
                     {test_shape_type::linesi, test_material_type::matte_gray},
                     {test_shape_type::linesi, test_material_type::matte_gray},
                     {test_shape_type::linesi, test_material_type::matte_gray},
                 });
-        } break;
-        case test_scene_type::subdiv_al: {
-            return make_simple_test_scene(test_camera_type::cam3,
-                {
-                    {test_shape_type::cubes, test_material_type::plastic_red},
-                    {test_shape_type::suzannes,
-                        test_material_type::plastic_green},
-                    {test_shape_type::suzannes,
-                        test_material_type::plastic_blue},
-                },
-                test_light_type::arealight1);
-        } break;
-        case test_scene_type::plastics_al: {
-            return make_simple_test_scene(test_camera_type::cam3,
-                {
-                    {test_shape_type::matball, test_material_type::matte_green},
-                    {test_shape_type::matball,
-                        test_material_type::plastic_green},
-                    {test_shape_type::matball,
-                        test_material_type::plastic_colored},
-                },
-                test_light_type::arealight1,
-                {{test_shape_type::matballi, test_material_type::matte_gray},
-                    {test_shape_type::matballi, test_material_type::matte_gray},
-                    {test_shape_type::matballi,
-                        test_material_type::matte_gray}});
-        } break;
-        case test_scene_type::plastics_el: {
-            return make_simple_test_scene(test_camera_type::cam3,
-                {
-                    {test_shape_type::matball, test_material_type::matte_green},
-                    {test_shape_type::matball,
-                        test_material_type::plastic_green},
-                    {test_shape_type::matball,
-                        test_material_type::plastic_colored},
-                },
-                test_light_type::envlight,
-                {{test_shape_type::matballi, test_material_type::matte_gray},
-                    {test_shape_type::matballi, test_material_type::matte_gray},
-                    {test_shape_type::matballi,
-                        test_material_type::matte_gray}});
-        } break;
-        case test_scene_type::metals_al: {
-            return make_simple_test_scene(test_camera_type::cam3,
-                {
-                    {test_shape_type::matball, test_material_type::gold_rough},
-                    {test_shape_type::matball, test_material_type::gold_mirror},
-                    {test_shape_type::matball,
-                        test_material_type::silver_mirror},
-                },
-                test_light_type::arealight1,
-                {{test_shape_type::matballi, test_material_type::matte_gray},
-                    {test_shape_type::matballi, test_material_type::matte_gray},
-                    {test_shape_type::matballi,
-                        test_material_type::matte_gray}});
-        } break;
-        case test_scene_type::metals_el: {
-            return make_simple_test_scene(test_camera_type::cam3,
-                {
-                    {test_shape_type::matball, test_material_type::gold_rough},
-                    {test_shape_type::matball, test_material_type::gold_mirror},
-                    {test_shape_type::matball,
-                        test_material_type::silver_mirror},
-                },
-                test_light_type::envlight,
-                {{test_shape_type::matballi, test_material_type::matte_gray},
-                    {test_shape_type::matballi, test_material_type::matte_gray},
-                    {test_shape_type::matballi,
-                        test_material_type::matte_gray}});
-        } break;
-        case test_scene_type::tesselation_pl: {
-            return make_simple_test_scene(test_camera_type::cam3,
-                {
-                    {test_shape_type::geospherel,
-                        test_material_type::matte_gray},
-                    {test_shape_type::geospheref,
-                        test_material_type::matte_gray},
-                    {test_shape_type::geosphere,
-                        test_material_type::matte_gray},
-                },
-                test_light_type::pointlight);
-        } break;
-        case test_scene_type::textureuv_pl: {
-            return make_simple_test_scene(test_camera_type::cam3,
-                {
-                    {test_shape_type::flipcapsphere,
-                        test_material_type::matte_green},
-                    {test_shape_type::flipcapsphere,
-                        test_material_type::matte_colored},
-                    {test_shape_type::flipcapsphere,
-                        test_material_type::matte_uv},
-                },
-                test_light_type::pointlight);
-        } break;
-        case test_scene_type::normalmap_pl: {
-            return make_simple_test_scene(test_camera_type::cam3,
-                {
-                    {test_shape_type::flipcapsphere,
-                        test_material_type::plastic_blue},
-                    {test_shape_type::flipcapsphere,
-                        test_material_type::plastic_blue_bumped},
-                    {test_shape_type::flipcapsphere,
-                        test_material_type::plastic_colored_bumped},
-                },
-                test_light_type::pointlight);
-        } break;
-#if 0
-    else if (otype == "normdisp") {
-        auto mat = vector<material*>{
-            add_test_material(scn, test_material_type::plastic_bumped),
-            add_test_material(scn, test_material_type::plastic_bumped)};
-        add_test_instance(scn, "obj01",
-            add_uvspherecube(scn, "base_obj01", mat[0], 4), {-1.25f, 1, 0});
-        add_test_instance(scn, "obj03",
-            add_uvspherecube(scn, "subdiv_02_obj02", mat[1], 4), {1.25f, 1, 0});
+    presets["lines_al"] = add_arealights(params);
+
+    // subdiv shapes
+    params = add_simple_objects(init_simple_scene(),
+        {
+            {test_shape_type::cubes, test_material_type::plastic_red},
+            {test_shape_type::suzannes, test_material_type::plastic_green},
+            {test_shape_type::suzannes, test_material_type::plastic_blue},
+        });
+    presets["subdiv_al"] = add_arealights(params);
+
+    // plastics shapes
+    params = add_matball_objects(init_simple_scene(),
+        {test_material_type::matte_green, test_material_type::plastic_green,
+            test_material_type::plastic_colored});
+    presets["plastics_al"] = add_arealights(params);
+    presets["plastics_el"] = add_envlights(params);
+
+    // metals shapes
+    params = add_matball_objects(init_simple_scene(),
+        {test_material_type::gold_rough, test_material_type::gold_mirror,
+            test_material_type::silver_mirror});
+    presets["metals_al"] = add_arealights(params);
+    presets["metals_el"] = add_envlights(params);
+
+    // tesselation shapes
+    params = add_simple_objects(init_simple_scene(),
+        {
+            {test_shape_type::geospherel, test_material_type::matte_gray},
+            {test_shape_type::geospheref, test_material_type::matte_gray},
+            {test_shape_type::geosphere, test_material_type::matte_gray},
+        });
+    presets["tesselation_pl"] = add_pointlights(params);
+
+    // textureuv shapes
+    params = add_simple_objects(init_simple_scene(),
+        {
+            {test_shape_type::flipcapsphere, test_material_type::matte_green},
+            {test_shape_type::flipcapsphere, test_material_type::matte_colored},
+            {test_shape_type::flipcapsphere, test_material_type::matte_uv},
+        });
+    presets["textureuv_pl"] = add_pointlights(params);
+
+    // normalmap shapes
+    params = add_simple_objects(init_simple_scene(),
+        {
+            {test_shape_type::flipcapsphere, test_material_type::plastic_blue},
+            {test_shape_type::flipcapsphere,
+                test_material_type::plastic_blue_bumped},
+            {test_shape_type::flipcapsphere,
+                test_material_type::plastic_colored_bumped},
+        });
+    presets["normalmap_pl"] = add_pointlights(params);
+
+    // instances shared functions
+    auto add_random_instances = [](prim_scene_params& params_, const vec2i& num,
+                                    const bbox2f& bbox, uint32_t seed = 13) {
+        auto params = params_;
+        // instances
+        auto mtypes = vector<test_material_type>{
+            test_material_type::plastic_red, test_material_type::plastic_green,
+            test_material_type::plastic_blue};
+        auto stypes = vector<test_shape_type>{test_shape_type::sphere,
+            test_shape_type::flipcapsphere, test_shape_type::cube};
+
+        auto rscale = 0.9f * 0.25f *
+                      min((bbox.max.x - bbox.min.x) / num.x,
+                          (bbox.max.x - bbox.min.x) / num.y);
+        auto rng = init_rng(seed, 7);
+        auto start_shps = params.shapes.size();
+        for (auto j = 0; j < num.y; j++) {
+            for (auto i = 0; i < num.x; i++) {
+                auto rpos = next_rand2f(rng);
+                auto pos = vec3f{
+                    bbox.min.x + (bbox.max.x - bbox.min.x) *
+                                     (i + 0.45f + 0.1f * rpos.x) / num.x,
+                    rscale,
+                    bbox.min.y + (bbox.max.y - bbox.min.y) *
+                                     (j + 0.45f + 0.1f * rpos.y) / num.y,
+                };
+                add_test_instance(params,
+                    stypes[next_rand1i(rng, stypes.size())],
+                    mtypes[next_rand1i(rng, mtypes.size())],
+                    {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, pos});
+            }
         }
+
+        for (auto i = start_shps; i < params.shapes.size(); i++) {
+            params.shapes[i].scale *= rscale;
+        }
+        return params;
+    };
+
+    auto init_random_instances = [&]() {
+        auto params = prim_scene_params();
+        params = add_camera(params);
+        params = add_floor(params);
+        return params;
+    };
+
+    // instances
+    params = init_random_instances();
+    params = add_random_instances(params, {10, 10}, {{-3, -3}, {3, 3}});
+    presets["instances_pl"] = add_pointlights(params);
+
+    params = init_random_instances();
+    params = add_random_instances(params, {100, 100}, {{-3, -3}, {3, 3}});
+    presets["instancel_pl"] = add_pointlights(params);
+
+#if 0
+        else if (otype == "normdisp") {
+            auto mat = vector<material*>{
+                add_test_material(scn, test_material_type::plastic_bumped),
+                add_test_material(scn, test_material_type::plastic_bumped)};
+            add_test_instance(scn, "obj01",
+                add_uvspherecube(scn, "base_obj01", mat[0], 4), {-1.25f, 1, 0});
+            add_test_instance(scn, "obj03",
+                add_uvspherecube(scn, "subdiv_02_obj02", mat[1], 4), {1.25f, 1, 0});
+            }
 #endif
-        default: throw runtime_error("bad value");
-    }
+
+    return presets;
 }
 
 }  // namespace ygl
