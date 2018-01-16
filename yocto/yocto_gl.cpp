@@ -6737,7 +6737,59 @@ texture* update_prim_texture(
 
     switch (params.type) {
         case prim_texture_type::none: break;
+        case prim_texture_type::grid: {
+            txt->ldr = make_grid_image(params.resolution, params.resolution);
+        } break;
+        case prim_texture_type::checker: {
+            txt->ldr = make_checker_image(params.resolution, params.resolution);
+        } break;
+        case prim_texture_type::colored: {
+            txt->ldr = make_uvgrid_image(params.resolution, params.resolution);
+        } break;
+        case prim_texture_type::rcolored: {
+            txt->ldr =
+                make_recuvgrid_image(params.resolution, params.resolution);
+        } break;
+        case prim_texture_type::bump: {
+            txt->ldr = make_bumpdimple_image(
+                params.resolution, params.resolution, params.tile_size);
+        } break;
+        case prim_texture_type::uv: {
+            txt->ldr = make_uv_image(params.resolution, params.resolution);
+        } break;
+        case prim_texture_type::gamma: {
+            txt->ldr =
+                make_gammaramp_image(params.resolution, params.resolution);
+        } break;
+        case prim_texture_type::noise: {
+            txt->ldr = make_noise_image(
+                params.resolution, params.resolution, params.noise_scale);
+        } break;
+        case prim_texture_type::ridge: {
+            txt->ldr = make_ridge_image(
+                params.resolution, params.resolution, params.noise_scale);
+        } break;
+        case prim_texture_type::fbm: {
+            txt->ldr = make_fbm_image(
+                params.resolution, params.resolution, params.noise_scale);
+        } break;
+        case prim_texture_type::turbulence: {
+            txt->ldr = make_turbulence_image(
+                params.resolution, params.resolution, params.noise_scale);
+        } break;
+        case prim_texture_type::gammaf: {
+            txt->hdr =
+                make_gammaramp_imagef(params.resolution, params.resolution);
+        } break;
+        case prim_texture_type::sky: {
+            txt->hdr =
+                make_sunsky_image(params.resolution, params.sky_sunangle);
+        } break;
         default: throw runtime_error("should not have gotten here");
+    }
+
+    if (params.bump_to_normal) {
+        txt->ldr = bump_to_normal_map(txt->ldr, params.bump_scale);
     }
 
     return txt;
@@ -6857,6 +6909,10 @@ shape* update_prim_shape(
             tie(shp->quads, shp->pos, shp->norm, shp->texcoord) = make_uvsphere(
                 (params.tesselation < 0) ? 5 : params.tesselation);
         } break;
+        case prim_shape_type::spherecube: {
+            tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
+            make_uvspherecube((params.tesselation < 0) ? 4 : params.tesselation);
+        } break;
         case prim_shape_type::spherizedcube: {
             tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
                 make_uvspherizedcube(
@@ -6889,6 +6945,37 @@ shape* update_prim_shape(
             tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
                 make_uvflipcapsphere(
                     (params.tesselation < 0) ? 5 : params.tesselation, 0.75f);
+        } break;
+        case prim_shape_type::point: {
+            shp->points.push_back(0);
+            shp->pos.push_back({0, 0, 0});
+            shp->norm.push_back({0, 0, 1});
+            shp->radius.push_back(0.001f);
+        } break;
+        case prim_shape_type::pointscube: {
+            auto npoints = (params.num < 0) ? 64 * 64 * 16 : params.num;
+            tie(shp->points, shp->texcoord) = make_uvpoints(npoints);
+            shp->pos.reserve(shp->texcoord.size());
+            shp->norm.resize(shp->texcoord.size(), {0, 0, 1});
+            shp->radius.resize(shp->texcoord.size(), 0.0025f);
+            auto rn = init_rng(0);
+            for (auto i = 0; i < shp->texcoord.size(); i++) {
+                shp->pos += vec3f{-1 + 2 * next_rand1f(rn),
+                    -1 + 2 * next_rand1f(rn), -1 + 2 * next_rand1f(rn)};
+            }
+        } break;
+        case prim_shape_type::hairball: {
+            auto nhairs = (params.num < 0) ? 65536 : params.num;
+            tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
+            make_uvspherecube(5);
+            tie(shp->lines, shp->pos, shp->norm, shp->texcoord, shp->radius) =
+            make_hair(nhairs, 2, {0.1f, 0.1f}, {0.001f, 0.0001f}, {},
+                      shp->quads, shp->pos, shp->norm, shp->texcoord, {0.5f, 8});
+            shp->quads.clear();
+        } break;
+        case prim_shape_type::beziercircle: {
+            tie(shp->beziers, shp->pos) = make_bezier_circle();
+            shp->subdivision_level = 2;
         } break;
         default: throw runtime_error("should not have gotten here");
     }
@@ -8463,6 +8550,85 @@ texture* add_test_texture(scene* scn, test_texture_type type) {
     return txt;
 }
 
+string add_test_texture(prim_scene_params* scn, test_texture_type type) {
+    if (type == test_texture_type::none) return "";
+    auto name = ""s;
+    for (auto kv : test_texture_names())
+        if (kv.second == type) name = kv.first;
+    for (auto& txt : scn->textures)
+        if (txt.name == name) return name;
+    scn->textures.push_back({});
+    auto txt = &scn->textures.back();
+    txt->name = name;
+    switch (type) {
+        case test_texture_type::grid: {
+            txt->type = prim_texture_type::grid;
+        } break;
+        case test_texture_type::checker: {
+            txt->type = prim_texture_type::grid;
+        } break;
+        case test_texture_type::colored: {
+            txt->type = prim_texture_type::grid;
+        } break;
+        case test_texture_type::rcolored: {
+            txt->type = prim_texture_type::grid;
+        } break;
+        case test_texture_type::bump: {
+            txt->type = prim_texture_type::grid;
+            txt->tile_size = 32;
+        } break;
+        case test_texture_type::tgrid: {
+            txt->type = prim_texture_type::grid;
+            txt->tile_size = 32;
+        } break;
+        case test_texture_type::uv: {
+            txt->type = prim_texture_type::uv;
+        } break;
+        case test_texture_type::gamma: {
+            txt->type = prim_texture_type::gamma;
+        } break;
+        case test_texture_type::gridn: {
+            txt->type = prim_texture_type::grid;
+            txt->bump_to_normal = true;
+        } break;
+        case test_texture_type::bumpn: {
+            txt->type = prim_texture_type::bump;
+            txt->tile_size = 32;
+            txt->bump_to_normal = true;
+        } break;
+        case test_texture_type::tgridn: {
+            txt->type = prim_texture_type::grid;
+            txt->tile_size = 32;
+            txt->bump_to_normal = true;
+        } break;
+        case test_texture_type::noise: {
+            txt->type = prim_texture_type::noise;
+        } break;
+        case test_texture_type::ridge: {
+            txt->type = prim_texture_type::ridge;
+        } break;
+        case test_texture_type::fbm: {
+            txt->type = prim_texture_type::fbm;
+        } break;
+        case test_texture_type::turbulence: {
+            txt->type = prim_texture_type::turbulence;
+        } break;
+        case test_texture_type::gammaf: {
+            txt->type = prim_texture_type::gamma;
+        } break;
+        case test_texture_type::sky1: {
+            txt->type = prim_texture_type::sky;
+            txt->sky_sunangle = pif / 4;
+        } break;
+        case test_texture_type::sky2: {
+            txt->type = prim_texture_type::sky;
+            txt->sky_sunangle = pif / 2;
+        } break;
+        default: throw runtime_error("bad value");
+    }
+    return name;
+}
+
 enum struct test_material_type {
     none,
     matte_grid,
@@ -8627,6 +8793,133 @@ inline material* add_test_material(scene* scn, test_material_type type) {
         default: throw runtime_error("bad value");
     }
     return mat;
+}
+
+inline string add_test_material(
+    prim_scene_params* scn, test_material_type type) {
+    if (type == test_material_type::none) return "";
+    auto name = ""s;
+    for (auto kv : test_material_names())
+        if (kv.second == type) name = kv.first;
+    for (auto& mat : scn->materials)
+        if (mat.name == name) return name;
+    scn->materials.push_back({});
+    auto mat = &scn->materials.back();
+    mat->name = name;
+    switch (type) {
+        case test_material_type::matte_gray: {
+            mat->type = prim_material_type::matte;
+            mat->color = {0.2f, 0.2f, 0.2f};
+        } break;
+        case test_material_type::matte_green: {
+            mat->type = prim_material_type::matte;
+            mat->color = {0.2f, 0.5f, 0.2f};
+        } break;
+        case test_material_type::matte_grid: {
+            mat->type = prim_material_type::matte;
+            mat->color = {1, 1, 1};
+            mat->txt = add_test_texture(scn, test_texture_type::grid);
+        } break;
+        case test_material_type::matte_colored: {
+            mat->type = prim_material_type::matte;
+            mat->color = {1, 1, 1};
+            mat->txt = add_test_texture(scn, test_texture_type::colored);
+        } break;
+        case test_material_type::matte_uv: {
+            mat->type = prim_material_type::matte;
+            mat->color = {1, 1, 1};
+            mat->txt = add_test_texture(scn, test_texture_type::uv);
+        } break;
+        case test_material_type::plastic_red: {
+            mat->type = prim_material_type::plastic;
+            mat->color = {0.5f, 0.2f, 0.2f};
+            mat->roughness = 0.25f;
+        } break;
+        case test_material_type::plastic_green: {
+            mat->type = prim_material_type::plastic;
+            mat->color = {0.2f, 0.5f, 0.2f};
+            mat->roughness = 0.1f;
+        } break;
+        case test_material_type::plastic_blue: {
+            mat->type = prim_material_type::plastic;
+            mat->color = {0.2f, 0.2f, 0.5f};
+            mat->roughness = 0.05f;
+        } break;
+        case test_material_type::plastic_colored: {
+            mat->type = prim_material_type::plastic;
+            mat->color = {1, 1, 1};
+            mat->roughness = 0.25f;
+            mat->txt = add_test_texture(scn, test_texture_type::colored);
+        } break;
+        case test_material_type::plastic_bumped: {
+            mat->type = prim_material_type::plastic;
+            mat->color = {1, 1, 1};
+            mat->roughness = 0.25f;
+            mat->txt = add_test_texture(scn, test_texture_type::colored);
+            mat->norm = add_test_texture(scn, test_texture_type::bumpn);
+        } break;
+        case test_material_type::silver_mirror: {
+            mat->type = prim_material_type::metal;
+            mat->color = {0.5, 0.5, 0.5};
+            mat->roughness = 0.05f;
+        } break;
+        case test_material_type::silver_rough: {
+            mat->type = prim_material_type::metal;
+            mat->color = {0.5, 0.5, 0.5};
+            mat->roughness = 0.25f;
+        } break;
+        case test_material_type::gold_mirror: {
+            mat->type = prim_material_type::metal;
+            mat->color = {0.66f, 0.45f, 0.34f};
+            mat->roughness = 0.05f;
+        } break;
+        case test_material_type::gold_rough: {
+            mat->type = prim_material_type::metal;
+            mat->color = {0.66f, 0.45f, 0.34f};
+            mat->roughness = 0.25f;
+        } break;
+        case test_material_type::transparent_red: {
+            mat->type = prim_material_type::transparent;
+            mat->color = {0.5f, 0.2f, 0.2f};
+            mat->opacity = 0.9f;
+        } break;
+        case test_material_type::transparent_green: {
+            mat->type = prim_material_type::transparent;
+            mat->color = {0.5f, 0.2f, 0.2f};
+            mat->opacity = 0.5f;
+        } break;
+        case test_material_type::transparent_blue: {
+            mat->type = prim_material_type::transparent;
+            mat->color = {0.5f, 0.2f, 0.2f};
+            mat->opacity = 0.92f;
+        } break;
+        case test_material_type::light_point: {
+            mat->type = prim_material_type::emission;
+            mat->emission = 400;
+        } break;
+        case test_material_type::light_area: {
+            mat->type = prim_material_type::emission;
+            mat->emission = 40;
+        } break;
+        case test_material_type::light_arear: {
+            mat->type = prim_material_type::emission;
+            mat->emission = 80;
+        } break;
+        case test_material_type::light_areal: {
+            mat->type = prim_material_type::emission;
+            mat->emission = 20;
+        } break;
+        case test_material_type::light_areat: {
+            mat->type = prim_material_type::emission;
+            mat->emission = 10;
+        } break;
+        case test_material_type::light_areaf: {
+            mat->type = prim_material_type::emission;
+            mat->emission = 40;
+        } break;
+        default: throw runtime_error("bad value");
+    }
+    return name;
 }
 
 enum struct test_shape_type {
@@ -8883,6 +9176,147 @@ inline shape* add_test_shape(
     return shp;
 }
 
+inline string add_test_shape(
+    prim_scene_params* scn, test_shape_type stype, test_material_type mtype) {
+    if (stype == test_shape_type::none) return "";
+    auto name = ""s;
+    for (auto kv : test_shape_names())
+        if (kv.second == stype) name += kv.first;
+    name += "_";
+    for (auto kv : test_material_names())
+        if (kv.second == mtype) name += kv.first;
+    for (auto& shp : scn->shapes)
+        if (shp.name == name) return name;
+    scn->shapes.push_back({});
+    auto shp = &scn->shapes.back();
+    shp->name = name;
+    shp->mat = add_test_material(scn, mtype);
+    switch (stype) {
+        case test_shape_type::floor: {
+            shp->type = prim_shape_type::floor;
+        } break;
+        case test_shape_type::quad: {
+            shp->type = prim_shape_type::quad;
+        } break;
+        case test_shape_type::cube: {
+            shp->type = prim_shape_type::cube;
+        } break;
+        case test_shape_type::sphere: {
+            shp->type = prim_shape_type::sphere;
+        } break;
+        case test_shape_type::spherecube: {
+            shp->type = prim_shape_type::spherecube;
+        } break;
+        case test_shape_type::spherizedcube: {
+            shp->type = prim_shape_type::spherizedcube;
+        } break;
+        case test_shape_type::flipcapsphere: {
+            shp->type = prim_shape_type::flipcapsphere;
+        } break;
+        case test_shape_type::geosphere: {
+            shp->type = prim_shape_type::geosphere;
+            shp->tesselation = 5;
+        } break;
+        case test_shape_type::geospheref: {
+            shp->type = prim_shape_type::geosphere;
+            shp->tesselation = 5;
+            shp->faceted = true;
+        } break;
+        case test_shape_type::geospherel: {
+            shp->type = prim_shape_type::geosphere;
+            shp->tesselation = 4;
+            shp->faceted = true;
+        } break;
+        case test_shape_type::cubep: {
+            shp->type = prim_shape_type::cubep;
+        } break;
+        case test_shape_type::cubes: {
+            shp->type = prim_shape_type::cubep;
+            shp->subdivision = 4;
+        } break;
+        case test_shape_type::suzanne: {
+            shp->type = prim_shape_type::suzanne;
+        } break;
+        case test_shape_type::suzannes: {
+            shp->type = prim_shape_type::suzanne;
+            shp->subdivision = 2;
+        } break;
+        case test_shape_type::cubefv: {
+            shp->type = prim_shape_type::fvcube;
+        } break;
+        case test_shape_type::cubefvs: {
+            shp->type = prim_shape_type::fvcube;
+            shp->subdivision = 4;
+        } break;
+        case test_shape_type::quads: {
+            shp->type = prim_shape_type::quad;
+            shp->subdivision = 4;
+        } break;
+        case test_shape_type::spherefv: {
+            shp->type = prim_shape_type::fvsphere;
+        } break;
+        case test_shape_type::matball: {
+            shp->type = prim_shape_type::flipcapsphere;
+        } break;
+        case test_shape_type::matballi: {
+            shp->type = prim_shape_type::sphere;
+            shp->scale = 0.8f;
+        } break;
+        case test_shape_type::points: {
+            shp->type = prim_shape_type::pointscube;
+        } break;
+        case test_shape_type::lines1: {
+            shp->type = prim_shape_type::hairball;
+            /*
+            tie(shp->lines, shp->pos, shp->norm, shp->texcoord, shp->radius) =
+                make_hair(nhairs, 2, {0.1f, 0.1f}, {0.001f, 0.0001f}, {},
+                    shp->quads, shp->pos, shp->norm, shp->texcoord, {0.5f, 8});
+             */
+        } break;
+        case test_shape_type::lines2: {
+            shp->type = prim_shape_type::hairball;
+            /*
+            tie(shp->lines, shp->pos, shp->norm, shp->texcoord, shp->radius) =
+                make_hair(nhairs, 2, {0.1f, 0.1f}, {0.001f, 0.0001f}, {},
+                    shp->quads, shp->pos, shp->norm, shp->texcoord, {},
+                    {0.5f, 128});
+             */
+        } break;
+        case test_shape_type::lines3: {
+            shp->type = prim_shape_type::hairball;
+            /*
+            tie(shp->lines, shp->pos, shp->norm, shp->texcoord, shp->radius) =
+                make_hair(16384, 2, {0.1f, 0.1f}, {0.01f, 0.0001f}, {},
+                    shp->quads, shp->pos, shp->norm, shp->texcoord);
+            */
+        } break;
+        case test_shape_type::linesi: {
+            shp->type = prim_shape_type::sphere;
+        } break;
+        case test_shape_type::bcircle: {
+            shp->type = prim_shape_type::beziercircle;
+        } break;
+        case test_shape_type::plight: {
+            shp->type = prim_shape_type::point;
+        } break;
+        case test_shape_type::alight: {
+            shp->type = prim_shape_type::quad;
+            shp->scale = 2;
+        } break;
+        case test_shape_type::alightt: {
+            shp->type = prim_shape_type::quad;
+            shp->scale = 16;
+        } break;
+        case test_shape_type::alightf: {
+            shp->type = prim_shape_type::quad;
+            shp->scale = 16;
+        } break;
+        default: throw runtime_error("bad value");
+    }
+    // for (auto& p : shp->pos) p *= scale;
+    return name;
+}
+
 enum struct test_environment_type {
     none,
     sky1,
@@ -8926,6 +9360,37 @@ inline environment* add_test_environment(
     return env;
 }
 
+inline string add_test_environment(
+                                   prim_scene_params* scn, test_environment_type type, const frame3f& frame, float rotation = 0) {
+    if (type == test_environment_type::none) return nullptr;
+    auto name = ""s;
+    for (auto kv : test_environment_names())
+        if (kv.second == type) name += kv.first;
+    for (auto env : scn->environments)
+        if (env.name == name) return name;
+    scn->environments.push_back({});
+    auto env = &scn->environments.back();
+    env->name = name;
+
+    env->emission = 1;
+    env->color = {1, 1, 1};
+    env->txt = "";
+    env->frame = frame;
+    env->rotation = rotation;
+
+    switch (type) {
+        case test_environment_type::sky1: {
+            env->txt = add_test_texture(scn, test_texture_type::sky1);
+        } break;
+        case test_environment_type::sky2: {
+            env->txt = add_test_texture(scn, test_texture_type::sky2);
+        } break;
+        default: throw runtime_error("bad type");
+    }
+
+    return name;
+}
+
 instance* add_test_instance(scene* scn, test_shape_type stype,
     test_material_type mtype, const frame3f& frame) {
     auto ist = new instance();
@@ -8939,6 +9404,19 @@ instance* add_test_instance(scene* scn, test_shape_type stype,
     return ist;
 }
 
+string add_test_instance(prim_scene_params* scn, test_shape_type stype,
+    test_material_type mtype, const frame3f& frame) {
+    scn->instances.push_back({});
+    auto ist = &scn->instances.back();
+    ist->shp = add_test_shape(scn, stype, mtype);
+    auto count = 0;
+    for (auto& ist2 : scn->instances)
+        if (ist->shp == ist2.shp) count++;
+    ist->name = ist->shp + ((count) ? "!" + to_string(count + 1) : ""s);
+    ist->frame = frame;
+    return ist->name;
+}
+
 instance* add_test_instance(scene* scn, test_shape_type stype,
     test_material_type mtype, const vec3f& pos, const vec3f& rot = {0, 0, 0}) {
     return add_test_instance(scn, stype, mtype,
@@ -8948,6 +9426,15 @@ instance* add_test_instance(scene* scn, test_shape_type stype,
             pos});
 }
 
+string add_test_instance(prim_scene_params* scn, test_shape_type stype,
+                            test_material_type mtype, const vec3f& pos, const vec3f& rot = {0, 0, 0}) {
+        return add_test_instance(scn, stype, mtype,
+                                 {rotation_mat3f(vec3f{0, 0, 1}, rot[2] * pif / 180) *
+                                     rotation_mat3f(vec3f{0, 1, 0}, rot[1] * pif / 180) *
+                                     rotation_mat3f(vec3f{1, 0, 0}, rot[0] * pif / 180),
+                                     pos});
+    }
+    
 enum struct test_light_type {
     none,
     pointlight,
@@ -9003,6 +9490,45 @@ tuple<vector<instance*>, environment*> add_test_lights(
     return tuple<vector<instance*>, environment*>{ists, env};
 }
 
+tuple<vector<string>, string> add_test_lights(
+    prim_scene_params* scn, test_light_type type) {
+    auto ists = vector<string>{};
+    auto env = "";
+    switch (type) {
+        case test_light_type::none: break;
+        case test_light_type::pointlight: {
+            ists.push_back(add_test_instance(scn, test_shape_type::plight,
+                test_material_type::light_point, {-2, 10, 8}));
+            ists.push_back(add_test_instance(scn, test_shape_type::plight,
+                test_material_type::light_point, {+2, 10, 8}));
+        } break;
+        case test_light_type::arealight: {
+            ists.push_back(add_test_instance(scn, test_shape_type::alight,
+                test_material_type::light_area,
+                lookat_frame3f({-4, 5, 8}, {0, 3, 0}, {0, 1, 0}, true)));
+            ists.push_back(add_test_instance(scn, test_shape_type::alight,
+                test_material_type::light_area,
+                lookat_frame3f({+4, 5, 8}, {0, 3, 0}, {0, 1, 0}, true)));
+        } break;
+        case test_light_type::arealight1: {
+            ists.push_back(add_test_instance(scn, test_shape_type::alightt,
+                test_material_type::light_areat,
+                lookat_frame3f({0, 64, 0}, {0, 1, 0}, {0, 0, 1}, true)));
+            ists.push_back(add_test_instance(scn, test_shape_type::alightf,
+                test_material_type::light_areaf,
+                lookat_frame3f({0, 64, 64}, {0, 1, 0}, {0, 1, 0}, true)));
+        } break;
+        case test_light_type::envlight: {
+#if 0
+            env = add_test_environment(scn, test_environment_type::sky,
+                lookat_frame3f({0, 1, 0}, {0, 1, 1}, {0, 1, 0}, true));
+#endif
+        } break;
+        default: throw runtime_error("bad value");
+    }
+    return tuple<vector<string>, string>{ists, env};
+}
+
 enum struct test_camera_type { none, cam1, cam2, cam3 };
 
 inline const vector<pair<string, test_camera_type>>& test_camera_names() {
@@ -9047,6 +9573,40 @@ camera* add_test_camera(scene* scn, test_camera_type type) {
         default: throw runtime_error("bad value");
     }
     return cam;
+}
+
+string add_test_camera(prim_scene_params* scn, test_camera_type type) {
+    if (type == test_camera_type::none) return nullptr;
+    auto name = ""s;
+    for (auto kv : test_camera_names())
+        if (kv.second == type) name = kv.first;
+    for (auto& cam : scn->cameras)
+        if (cam.name == name) return name;
+    scn->cameras.push_back({});
+    auto cam = &scn->cameras.back();
+    cam->name = name;
+    switch (type) {
+        case test_camera_type::cam1: {
+            cam->from = {0, 4, 10};
+            cam->to = {0, 1, 0};
+            cam->yfov = 15 * pif / 180;
+            cam->aspect = 1;
+        } break;
+        case test_camera_type::cam2: {
+            cam->from = {0, 4, 10};
+            cam->to = {0, 1, 0};
+            cam->yfov = 15 * pif / 180;
+            cam->aspect = 16.0f / 9.0f;
+        } break;
+        case test_camera_type::cam3: {
+            cam->from = {0, 6, 24};
+            cam->to = {0, 1, 0};
+            cam->yfov = 7.5f * pif / 180;
+            cam->aspect = 2.35f / 1.0f;  // widescreen cinema
+        } break;
+        default: throw runtime_error("bad value");
+    }
+    return name;
 }
 
 scene* make_simple_test_scene(test_camera_type ctype,
