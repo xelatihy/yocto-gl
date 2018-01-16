@@ -7365,6 +7365,7 @@ inline T* add_named_elem(vector<T*>& elems, const string& name) {
         if (elem->name == name) return elem;
     auto elem = new T();
     elem->name = name;
+    elems.push_back(elem);
     return elem;
 }
 
@@ -7678,7 +7679,8 @@ struct prim_scene_params {
 
 /// Updates a test scene, adding missing objects. Objects are only added (for
 /// now). A new scene is returned if it was not already created.
-scene* update_prim_scene(scene* scn, const prim_scene_params& params);
+scene* update_prim_scene(scene* scn, const prim_scene_params& params,
+    const unordered_set<void*>& refresh = {});
 
 /// Makes a test scene. Convenience wrapper around update_prim_scene().
 inline scene* make_prim_scene(const prim_scene_params& params) {
