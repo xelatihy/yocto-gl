@@ -7154,11 +7154,17 @@ void add_elements(scene* scn, const add_elements_options& opts) {
 
     if (opts.tangent_space) {
         for (auto shp : scn->shapes) {
-            if (!shp->tangsp.empty() || shp->triangles.empty() ||
-                shp->texcoord.empty() || (shp->mat))
+            if (!shp->tangsp.empty() || shp->texcoord.empty() || !shp->mat ||
+                !(shp->mat->norm_txt.txt || shp->mat->bump_txt.txt))
                 continue;
-            shp->tangsp = compute_tangent_frames(
-                shp->triangles, shp->pos, shp->norm, shp->texcoord);
+            if (!shp->triangles.empty()) {
+                shp->tangsp = compute_tangent_frames(
+                    shp->triangles, shp->pos, shp->norm, shp->texcoord);
+            } else if (!shp->quads.empty()) {
+                auto triangles = convert_quads_to_triangles(shp->quads);
+                shp->tangsp = compute_tangent_frames(
+                    triangles, shp->pos, shp->norm, shp->texcoord);
+            }
         }
     }
 
@@ -8684,7 +8690,8 @@ enum struct test_material_type {
     plastic_blue,
     plastic_green,
     plastic_colored,
-    plastic_bumped,
+    plastic_blue_bumped,
+    plastic_colored_bumped,
     silver_mirror,
     silver_rough,
     gold_mirror,
@@ -8712,7 +8719,8 @@ inline const vector<pair<string, test_material_type>>& test_material_names() {
         {"plastic_blue", test_material_type::plastic_blue},
         {"plastic_green", test_material_type::plastic_green},
         {"plastic_colored", test_material_type::plastic_colored},
-        {"plastic_bumped", test_material_type::plastic_bumped},
+        {"plastic_blue_bumped", test_material_type::plastic_blue_bumped},
+        {"plastic_colored_bumped", test_material_type::plastic_colored_bumped},
         {"silver_mirror", test_material_type::silver_mirror},
         {"silver_rough", test_material_type::silver_rough},
         {"gold_mirror", test_material_type::gold_mirror},
@@ -8781,10 +8789,17 @@ inline material* add_test_material(scene* scn, test_material_type type) {
             mat->rs = 0.25f;
             mat->kd_txt.txt = add_test_texture(scn, test_texture_type::colored);
         } break;
-        case test_material_type::plastic_bumped: {
+        case test_material_type::plastic_blue_bumped: {
+            mat->kd = {0.2f, 0.2f, 0.5f};
+            mat->ks = {0.04f, 0.04f, 0.04f};
+            mat->rs = 0.05f;
+            mat->norm_txt.txt = add_test_texture(scn, test_texture_type::bumpn);
+        } break;
+        case test_material_type::plastic_colored_bumped: {
             mat->kd = {1, 1, 1};
             mat->ks = {0.04f, 0.04f, 0.04f};
             mat->rs = 0.25f;
+            mat->kd_txt.txt = add_test_texture(scn, test_texture_type::colored);
             mat->norm_txt.txt = add_test_texture(scn, test_texture_type::bumpn);
         } break;
         case test_material_type::silver_mirror: {
@@ -8894,7 +8909,13 @@ inline string add_test_material(
             mat->roughness = 0.25f;
             mat->txt = add_test_texture(scn, test_texture_type::colored);
         } break;
-        case test_material_type::plastic_bumped: {
+        case test_material_type::plastic_blue_bumped: {
+            mat->type = prim_material_type::plastic;
+            mat->color = {0.2f, 0.2f, 0.5f};
+            mat->roughness = 0.05f;
+            mat->norm = add_test_texture(scn, test_texture_type::bumpn);
+        } break;
+        case test_material_type::plastic_colored_bumped: {
             mat->type = prim_material_type::plastic;
             mat->color = {1, 1, 1};
             mat->roughness = 0.25f;
@@ -9976,9 +9997,9 @@ scene* make_test_scene(test_scene_type otype) {
                     {test_shape_type::flipcapsphere,
                         test_material_type::plastic_blue},
                     {test_shape_type::flipcapsphere,
-                        test_material_type::plastic_bumped},
+                        test_material_type::plastic_blue_bumped},
                     {test_shape_type::flipcapsphere,
-                        test_material_type::plastic_bumped},
+                        test_material_type::plastic_colored_bumped},
                 },
                 test_light_type::pointlight);
         } break;
