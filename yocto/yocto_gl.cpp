@@ -9142,38 +9142,130 @@ unordered_map<string, prim_scene_params>& test_scene_presets() {
         add_test_camera(params, test_camera_type::cam3);
         return params;
     };
-    auto add_floor = [](const prim_scene_params& params_) {
+    auto add_texture = [](const prim_scene_params& params_, const string& name,
+                           prim_texture_type type) {
         auto params = params_;
-        add_test_instance(params, test_shape_type::floor,
-            test_material_type::matte_grid, {0, 0, 0});
+        params.textures.emplace_back();
+        params.textures.back().name = name;
+        params.textures.back().type = type;
         return params;
     };
-    auto add_pointlights = [](const prim_scene_params& params_) {
+    auto add_material = [](const prim_scene_params& params_, const string& name,
+                            prim_material_type type, const vec3f& color,
+                            float roughness = 1) {
         auto params = params_;
-        add_test_instance(params, test_shape_type::plight,
-            test_material_type::light_point, {-2, 10, 8});
-        add_test_instance(params, test_shape_type::plight,
-            test_material_type::light_point, {+2, 10, 8});
+        params.materials.emplace_back();
+        params.materials.back().name = name;
+        params.materials.back().type = type;
+        params.materials.back().color = color;
+        params.materials.back().roughness = roughness;
         return params;
     };
-    auto add_arealights = [](const prim_scene_params& params_) {
+    auto add_materialt = [](const prim_scene_params& params_,
+                             const string& name, prim_material_type type,
+                             const string& txt, float roughness = 1) {
         auto params = params_;
-        add_test_instance(params, test_shape_type::alight,
-            test_material_type::light_area,
-            lookat_frame3f({-4, 5, 8}, {0, 3, 0}, {0, 1, 0}, true));
-        add_test_instance(params, test_shape_type::alight,
-            test_material_type::light_area,
-            lookat_frame3f({+4, 5, 8}, {0, 3, 0}, {0, 1, 0}, true));
+        params.materials.emplace_back();
+        params.materials.back().name = name;
+        params.materials.back().type = type;
+        params.materials.back().color = {1, 1, 1};
+        params.materials.back().roughness = roughness;
+        params.materials.back().txt = txt;
         return params;
     };
-    auto add_arealights1 = [](const prim_scene_params& params_) {
+    auto add_shape = [](const prim_scene_params& params_, const string& name,
+                         const string& mat, prim_shape_type type) {
         auto params = params_;
-        add_test_instance(params, test_shape_type::alightt,
-            test_material_type::light_areat,
+        params.shapes.emplace_back();
+        params.shapes.back().name = name;
+        params.shapes.back().mat = mat;
+        params.shapes.back().type = type;
+        return params;
+    };
+    auto add_instance = [](const prim_scene_params& params_, const string& name,
+                            const string& shp,
+                            const frame3f& frame = identity_frame3f) {
+        auto params = params_;
+        params.instances.emplace_back();
+        params.instances.back().name = name;
+        params.instances.back().shp = shp;
+        params.instances.back().frame = frame;
+        return params;
+    };
+    auto add_shape_instance = [&](const prim_scene_params& params_,
+                                  const string& name, prim_shape_type stype,
+                                  const string& mat,
+                                  const vec3f& pos = {0, 1, 0}) {
+        auto params = params_;
+        params = add_shape(params, name, mat, stype);
+        auto f = identity_frame3f;
+        f.o = pos;
+        params = add_instance(params, name, name, f);
+        return params;
+    };
+    auto add_floor = [&](const prim_scene_params& params_) {
+        auto params = params_;
+        params = add_texture(params, "floor", prim_texture_type::grid);
+        params =
+            add_materialt(params, "floor", prim_texture_type::matte, "floor");
+        params = add_shape_instance(
+            params, "floor", prim_shape_type::floor, "floor", {0, 1, 0});
+        return params;
+    };
+    auto add_pointlights = [&](const prim_scene_params& params_) {
+        auto params = params_;
+        params = add_material(
+            params, "pointlight1", prim_material_type::emission, {1, 1, 1});
+        params.materials.back().emission = 80;
+        params = add_material(
+            params, "pointlight2", prim_material_type::emission, {1, 1, 1});
+        params.materials.back().emission = 80;
+        params = add_shape_instance(params, "pointlight1",
+            prim_shape_type::point, "pointlight1", {-2, 10, 8});
+        params = add_shape_instancep(params, "pointlight2",
+            prim_shape_type::point, "pointlight2", {+2, 10, 8});
+        return params;
+    };
+    auto add_arealights = [&](const prim_scene_params& params_) {
+        auto params = params_;
+        params = add_material(
+            params, "arealight1", prim_material_type::emission, {1, 1, 1});
+        params.materials.back().emission = 80;
+        params = add_material(
+            params, "arealight2", prim_material_type::emission, {1, 1, 1});
+        params.materials.back().emission = 80;
+        params = add_shape_instancef(
+            params, "arealight1", prim_shape_type::quad, "arealight1");
+        params.shapes.back().scale *= 2;
+        params.instances.back().frame =
+            lookat_frame3f({-4, 5, 8}, {0, 3, 0}, {0, 1, 0}, true);
+        params = add_shape_instancef(
+            params, "arealight2", prim_shape_type::quad, "arealight2");
+        params.shapes.back().scale *= 2;
+        params.instances.back().frame =
+            lookat_frame3f({+4, 5, 8}, {0, 3, 0}, {0, 1, 0}, true);
+        return params;
+    };
+    auto add_arealights1 = [&](const prim_scene_params& params_) {
+        auto params = params_;
+        params = add_material(
+            params, "arealight1", prim_material_type::emission, {1, 1, 1});
+        params.materials.back().emission = 80;
+        params = add_material(
+            params, "arealight2", prim_material_type::emission, {1, 1, 1});
+        params.materials.back().emission = 80;
+        params = add_shape_instancef(params, "arealight1",
+            prim_shape_type::quad, "arealight1",
             lookat_frame3f({0, 64, 0}, {0, 1, 0}, {0, 0, 1}, true));
-        add_test_instance(params, test_shape_type::alightf,
-            test_material_type::light_areaf,
+        params.shapes.back().scale *= 16;
+        params.instances.back().frame =
+            lookat_frame3f({0, 64, 0}, {0, 1, 0}, {0, 0, 1}, true);
+        params = add_shape_instancef(params, "arealight2",
+            prim_shape_type::quad, "arealight2",
             lookat_frame3f({0, 64, 64}, {0, 1, 0}, {0, 1, 0}, true));
+        params.shapes.back().scale *= 16;
+        params.instances.back().frame =
+            lookat_frame3f({0, 64, 64}, {0, 1, 0}, {0, 1, 0}, true);
         return params;
     };
     auto add_envlights = [](const prim_scene_params& params_) {
@@ -9192,30 +9284,20 @@ unordered_map<string, prim_scene_params>& test_scene_presets() {
         if (floor) params = add_floor(params);
         return params;
     };
-    auto add_simple_objects = [&](const prim_scene_params& params_,
-                                  const vector<pair<test_shape_type,
-                                      test_material_type>>& otypes,
-                                  bool rotate = false) {
-        auto params = params_;
-        auto frames = std::vector<frame3f>{
-            identity_frame3f, identity_frame3f, identity_frame3f};
-        for (auto fi : enumerate(frames)) {
-            auto& f = fi.second;
-            if (otypes.size() == 2)
-                f.o.x = vector<float>{-1.25f, +1.25f}[fi.first];
-            if (otypes.size() == 3)
-                f.o.x = vector<float>{-2.50f, 0, +2.50f}[fi.first];
-            f.o.y = 1;
-            if (rotate)
-                f = lookat_frame3f(f.o, f.o + vec3f{1, 1, 1}, {0, 1, 0}, true);
-        }
-
-        for (auto i : range(otypes.size())) {
-            add_test_instance(
-                params, otypes[i].first, otypes[i].second, frames[i]);
-        }
-        return params;
-    };
+    auto add_simple_objects =
+        [&](const prim_scene_params& params_,
+            const vector<test_shape_type>& stypes,
+            const vector<string>> & mats = {"obj1", "obj2", "obj3"}) {
+            auto posx = vector<float>{-2.50f, 0, +2.50f};
+            // auto posx = vector<float>{-1.25f, +1.25f};
+            auto params = params_;
+            for (auto i : range(3)) {
+                params = add_shape_instance(
+                    params, "obj1", stypes[i], mats[i], {posx[i], 1, 0});
+            }
+            // f = lookat_frame3f(f.o, f.o + vec3f{1, 1, 1}, {0, 1, 0}, true);
+            return params;
+        };
     auto add_matball_objects = [&](const prim_scene_params& params_,
                                    const vector<test_material_type>& mtypes) {
         auto params = params_;
@@ -9239,6 +9321,12 @@ unordered_map<string, prim_scene_params>& test_scene_presets() {
     presets["nothing_el"] = add_envlights(params);
 
     // basic shapes
+    params = add_shape_instancep(params, "obj1", test_shape_type::flipcapsphere,
+        test_material_type::plastic, {offset[0], 1, 0});
+    params = add_shape_instancep(params, "obj2", test_shape_type::spherecube,
+        test_material_type::plastic, {offset[0], 1, 0});
+    params = add_shape_instancep(params, "obj3", test_shape_type::spherizedcube,
+        test_material_type::plastic, {offset[0], 1, 0});
     params = add_simple_objects(init_simple_scene(),
         {{test_shape_type::flipcapsphere, test_material_type::plastic_red},
             {test_shape_type::spherecube, test_material_type::plastic_green},
