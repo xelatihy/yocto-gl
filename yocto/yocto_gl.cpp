@@ -3139,7 +3139,7 @@ inline void serialize_from_json(bool& val, const json& js) {
 // Parse std::string function.
 inline void serialize_from_json(string& val, const json& js) {
     if (!js.is_string()) throw runtime_error("string expected");
-    val = js;
+    val = js.get<std::string>();
 }
 
 // Parse json function.
