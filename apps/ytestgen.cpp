@@ -51,7 +51,9 @@ void save_test_scene(const string& sname, const string& basedir) {
     auto dirname = basedir + "/" + sname + "/";
     printf("generating %s scenes ...\n", sname.c_str());
     try {
-        auto scn = (sname == "cornell_box") ? make_cornell_box_scene() : make_prim_scene(test_scene_presets().at(sname));
+        auto scn = (sname == "cornell_box") ?
+                       make_cornell_box_scene() :
+                       make_test_scene(test_scene_presets().at(sname));
         mkdir(dirname);
         if (sname == "textures") {
             for (auto txt : scn->textures) {
@@ -109,13 +111,13 @@ int main(int argc, char* argv[]) {
     if (clean) rmdir(dirname);
     mkdir(dirname);
 
-    if(scene != "") {
+    if (scene != "") {
         save_test_scene(scene, dirname);
     } else if (no_parallel) {
         for (auto scn : scene_names) save_test_scene(scn, dirname);
     } else {
-        parallel_for(scene_names.size(), [&scene_names,dirname](int idx) {
-                save_test_scene(scene_names[idx], dirname);
+        parallel_for(scene_names.size(), [&scene_names, dirname](int idx) {
+            save_test_scene(scene_names[idx], dirname);
         });
     }
 }

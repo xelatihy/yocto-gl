@@ -6723,11 +6723,11 @@ void save_scene(
 }
 
 // Makes/updates a test texture
-texture* update_prim_texture(
-    scene* scn, texture* txt, const prim_texture_params& params) {
+texture* update_test_texture(
+    scene* scn, texture* txt, const test_texture_params& params) {
     auto name = (params.name != "") ?
                     params.name :
-                    get_key(prim_texture_names(), params.type);
+                    get_key(test_texture_names(), params.type);
     if (!txt) txt = (scn) ? add_named_texture(scn, name) : new texture();
 
     txt->name = name;
@@ -6736,52 +6736,52 @@ texture* update_prim_texture(
     txt->hdr = {};
 
     switch (params.type) {
-        case prim_texture_type::none: break;
-        case prim_texture_type::grid: {
+        case test_texture_type::none: break;
+        case test_texture_type::grid: {
             txt->ldr = make_grid_image(params.resolution, params.resolution);
         } break;
-        case prim_texture_type::checker: {
+        case test_texture_type::checker: {
             txt->ldr = make_checker_image(params.resolution, params.resolution);
         } break;
-        case prim_texture_type::colored: {
+        case test_texture_type::colored: {
             txt->ldr = make_uvgrid_image(params.resolution, params.resolution);
         } break;
-        case prim_texture_type::rcolored: {
+        case test_texture_type::rcolored: {
             txt->ldr =
                 make_recuvgrid_image(params.resolution, params.resolution);
         } break;
-        case prim_texture_type::bump: {
+        case test_texture_type::bump: {
             txt->ldr = make_bumpdimple_image(
                 params.resolution, params.resolution, params.tile_size);
         } break;
-        case prim_texture_type::uv: {
+        case test_texture_type::uv: {
             txt->ldr = make_uv_image(params.resolution, params.resolution);
         } break;
-        case prim_texture_type::gamma: {
+        case test_texture_type::gamma: {
             txt->ldr =
                 make_gammaramp_image(params.resolution, params.resolution);
         } break;
-        case prim_texture_type::noise: {
+        case test_texture_type::noise: {
             txt->ldr = make_noise_image(
                 params.resolution, params.resolution, params.noise_scale);
         } break;
-        case prim_texture_type::ridge: {
+        case test_texture_type::ridge: {
             txt->ldr = make_ridge_image(
                 params.resolution, params.resolution, params.noise_scale);
         } break;
-        case prim_texture_type::fbm: {
+        case test_texture_type::fbm: {
             txt->ldr = make_fbm_image(
                 params.resolution, params.resolution, params.noise_scale);
         } break;
-        case prim_texture_type::turbulence: {
+        case test_texture_type::turbulence: {
             txt->ldr = make_turbulence_image(
                 params.resolution, params.resolution, params.noise_scale);
         } break;
-        case prim_texture_type::gammaf: {
+        case test_texture_type::gammaf: {
             txt->hdr =
                 make_gammaramp_imagef(params.resolution, params.resolution);
         } break;
-        case prim_texture_type::sky: {
+        case test_texture_type::sky: {
             txt->hdr =
                 make_sunsky_image(params.resolution, params.sky_sunangle);
         } break;
@@ -6796,11 +6796,11 @@ texture* update_prim_texture(
 }
 
 // Makes/updates a test material
-material* update_prim_material(
-    scene* scn, material* mat, const prim_material_params& params) {
+material* update_test_material(
+    scene* scn, material* mat, const test_material_params& params) {
     auto name = (params.name != "") ?
                     params.name :
-                    get_key(prim_material_names(), params.type);
+                    get_key(test_material_names(), params.type);
     auto txt = (texture*)nullptr, norm = (texture*)nullptr;
     if (scn && params.txt != "")
         for (auto elem : scn->textures)
@@ -6825,27 +6825,27 @@ material* update_prim_material(
     mat->kt_txt.txt = nullptr;
 
     switch (params.type) {
-        case prim_material_type::none: break;
-        case prim_material_type::emission: {
+        case test_material_type::none: break;
+        case test_material_type::emission: {
             mat->ke = params.emission * params.color;
             mat->ke_txt.txt = txt;
         } break;
-        case prim_material_type::matte: {
+        case test_material_type::matte: {
             mat->kd = params.color;
             mat->kd_txt.txt = txt;
         } break;
-        case prim_material_type::plastic: {
+        case test_material_type::plastic: {
             mat->kd = params.color;
             mat->ks = {0.04f, 0.04f, 0.04f};
             mat->rs = params.roughness;
             mat->kd_txt.txt = txt;
         } break;
-        case prim_material_type::metal: {
+        case test_material_type::metal: {
             mat->ks = params.color;
             mat->rs = params.roughness;
             mat->ks_txt.txt = txt;
         } break;
-        case prim_material_type::transparent: {
+        case test_material_type::transparent: {
             mat->kd = params.color;
             mat->op = params.opacity;
             mat->kd_txt.txt = txt;
@@ -6859,10 +6859,10 @@ material* update_prim_material(
 }
 
 // Makes/updates a test shape
-shape* update_prim_shape(
-    scene* scn, shape* shp, const prim_shape_params& params) {
+shape* update_test_shape(
+    scene* scn, shape* shp, const test_shape_params& params) {
     auto name = (params.name != "") ? params.name :
-                                      get_key(prim_shape_names(), params.type);
+                                      get_key(test_shape_names(), params.type);
     auto mat = (material*)nullptr;
     if (scn && params.mat != "") {
         for (auto elem : scn->materials)
@@ -6889,7 +6889,7 @@ shape* update_prim_shape(
     shp->quads_texcoord = {};
 
     switch (params.type) {
-        case prim_shape_type::floor: {
+        case test_shape_type::floor: {
             tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
                 make_uvquad((params.tesselation < 0) ? 5 : params.tesselation);
             for (auto& p : shp->pos) p = {-p.x, p.z, p.y};
@@ -6897,67 +6897,67 @@ shape* update_prim_shape(
             for (auto& p : shp->pos) p *= 20;
             for (auto& uv : shp->texcoord) uv *= 20;
         } break;
-        case prim_shape_type::quad: {
+        case test_shape_type::quad: {
             tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
                 make_uvquad((params.tesselation < 0) ? 0 : params.tesselation);
         } break;
-        case prim_shape_type::cube: {
+        case test_shape_type::cube: {
             tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
                 make_uvcube((params.tesselation < 0) ? 0 : params.tesselation);
         } break;
-        case prim_shape_type::sphere: {
+        case test_shape_type::sphere: {
             tie(shp->quads, shp->pos, shp->norm, shp->texcoord) = make_uvsphere(
                 (params.tesselation < 0) ? 5 : params.tesselation);
         } break;
-        case prim_shape_type::spherecube: {
+        case test_shape_type::spherecube: {
             tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
                 make_uvspherecube(
                     (params.tesselation < 0) ? 4 : params.tesselation);
         } break;
-        case prim_shape_type::spherizedcube: {
+        case test_shape_type::spherizedcube: {
             tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
                 make_uvspherizedcube(
                     (params.tesselation < 0) ? 4 : params.tesselation, 0.75f);
         } break;
-        case prim_shape_type::geosphere: {
+        case test_shape_type::geosphere: {
             tie(shp->triangles, shp->pos) = make_geodesicsphere(
                 (params.tesselation < 0) ? 5 : params.tesselation);
             shp->norm = shp->pos;
         } break;
-        case prim_shape_type::flipcapsphere: {
+        case test_shape_type::flipcapsphere: {
             tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
                 make_uvflipcapsphere(
                     (params.tesselation < 0) ? 5 : params.tesselation, 0.75f);
         } break;
-        case prim_shape_type::suzanne: {
+        case test_shape_type::suzanne: {
             tie(shp->quads, shp->pos) =
                 make_suzanne((params.tesselation < 0) ? 0 : params.tesselation);
         } break;
-        case prim_shape_type::cubep: {
+        case test_shape_type::cubep: {
             tie(shp->quads, shp->pos) =
                 make_cube((params.tesselation < 0) ? 0 : params.tesselation);
         } break;
-        case prim_shape_type::fvcube: {
+        case test_shape_type::fvcube: {
             tie(shp->quads_pos, shp->pos, shp->quads_norm, shp->norm,
                 shp->quads_texcoord, shp->texcoord) =
                 make_fvcube((params.tesselation < 0) ? 0 : params.tesselation);
         } break;
-        case prim_shape_type::fvsphere: {
+        case test_shape_type::fvsphere: {
             tie(shp->quads, shp->pos, shp->norm, shp->texcoord) = make_uvsphere(
                 (params.tesselation < 0) ? 5 : params.tesselation);
         } break;
-        case prim_shape_type::matball: {
+        case test_shape_type::matball: {
             tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
                 make_uvflipcapsphere(
                     (params.tesselation < 0) ? 5 : params.tesselation, 0.75f);
         } break;
-        case prim_shape_type::point: {
+        case test_shape_type::point: {
             shp->points.push_back(0);
             shp->pos.push_back({0, 0, 0});
             shp->norm.push_back({0, 0, 1});
             shp->radius.push_back(0.001f);
         } break;
-        case prim_shape_type::pointscube: {
+        case test_shape_type::pointscube: {
             auto npoints = (params.num < 0) ? 64 * 64 * 16 : params.num;
             auto radius = (params.radius < 0) ? 0.0025f : params.radius;
             tie(shp->points, shp->texcoord) = make_uvpoints(npoints);
@@ -6970,7 +6970,7 @@ shape* update_prim_shape(
                     -1 + 2 * next_rand1f(rn), -1 + 2 * next_rand1f(rn)};
             }
         } break;
-        case prim_shape_type::hairball: {
+        case test_shape_type::hairball: {
             auto nhairs = (params.num < 0) ? 65536 : params.num;
             auto radius = (params.radius < 0) ? vec2f{0.001f, 0.0001f} :
                                                 vec2f{params.radius, 0.0001f};
@@ -6981,7 +6981,7 @@ shape* update_prim_shape(
                     shp->pos, shp->norm, shp->texcoord, {0.5f, 8});
             shp->quads.clear();
         } break;
-        case prim_shape_type::hairball1: {
+        case test_shape_type::hairball1: {
             auto nhairs = (params.num < 0) ? 65536 : params.num;
             auto radius = (params.radius < 0) ? vec2f{0.001f, 0.0001f} :
                                                 vec2f{params.radius, 0.0001f};
@@ -6992,7 +6992,7 @@ shape* update_prim_shape(
                     shp->pos, shp->norm, shp->texcoord, {0.5f, 8});
             shp->quads.clear();
         } break;
-        case prim_shape_type::hairball2: {
+        case test_shape_type::hairball2: {
             auto nhairs = (params.num < 0) ? 65536 : params.num;
             auto radius = (params.radius < 0) ? vec2f{0.001f, 0.0001f} :
                                                 vec2f{params.radius, 0.0001f};
@@ -7003,7 +7003,7 @@ shape* update_prim_shape(
                     shp->pos, shp->norm, shp->texcoord, {}, {0.5f, 128});
             shp->quads.clear();
         } break;
-        case prim_shape_type::hairball3: {
+        case test_shape_type::hairball3: {
             auto nhairs = (params.num < 0) ? 65536 : params.num;
             auto radius = (params.radius < 0) ? vec2f{0.001f, 0.0001f} :
                                                 vec2f{params.radius, 0.0001f};
@@ -7014,7 +7014,7 @@ shape* update_prim_shape(
                     shp->pos, shp->norm, shp->texcoord);
             shp->quads.clear();
         } break;
-        case prim_shape_type::beziercircle: {
+        case test_shape_type::beziercircle: {
             tie(shp->beziers, shp->pos) = make_bezier_circle();
             shp->subdivision_level = 2;
         } break;
@@ -7035,8 +7035,8 @@ shape* update_prim_shape(
 }
 
 // Makes/updates a test shape.
-instance* update_prim_instance(
-    scene* scn, instance* ist, const prim_instance_params& params) {
+instance* update_test_instance(
+    scene* scn, instance* ist, const test_instance_params& params) {
     auto name = (params.name != "") ? params.name : "instance";
     auto shp = (shape*)nullptr;
     if (scn && params.shp != "") {
@@ -7061,8 +7061,8 @@ instance* update_prim_instance(
 }
 
 // Makes/updates a test shape
-camera* update_prim_camera(
-    scene* scn, camera* cam, const prim_camera_params& params) {
+camera* update_test_camera(
+    scene* scn, camera* cam, const test_camera_params& params) {
     auto name = (params.name != "") ? params.name : "camera";
 
     if (!cam) cam = (scn) ? add_named_camera(scn, name) : new camera();
@@ -7080,8 +7080,8 @@ camera* update_prim_camera(
 }
 
 // Makes/updates a test shape
-environment* update_prim_environment(
-    scene* scn, environment* env, const prim_environment_params& params) {
+environment* update_test_environment(
+    scene* scn, environment* env, const test_environment_params& params) {
     auto name = (params.name != "") ? params.name : "environment";
     auto txt = (texture*)nullptr;
     if (scn && params.txt != "") {
@@ -7104,7 +7104,7 @@ environment* update_prim_environment(
 }
 
 // Makes/updates a test scene
-scene* update_prim_scene(scene* scn, const prim_scene_params& params,
+scene* update_test_scene(scene* scn, const test_scene_params& params,
     const unordered_set<void*>& refresh) {
     auto update_elems = [&scn, &refresh](
                             auto& elems, auto& telems, auto& update) {
@@ -7121,13 +7121,13 @@ scene* update_prim_scene(scene* scn, const prim_scene_params& params,
 
     if (!scn) scn = new scene();
 
-    update_elems(scn->cameras, params.cameras, update_prim_camera);
-    update_elems(scn->textures, params.textures, update_prim_texture);
-    update_elems(scn->materials, params.materials, update_prim_material);
-    update_elems(scn->shapes, params.shapes, update_prim_shape);
-    update_elems(scn->instances, params.instances, update_prim_instance);
+    update_elems(scn->cameras, params.cameras, update_test_camera);
+    update_elems(scn->textures, params.textures, update_test_texture);
+    update_elems(scn->materials, params.materials, update_test_material);
+    update_elems(scn->shapes, params.shapes, update_test_shape);
+    update_elems(scn->instances, params.instances, update_test_instance);
     update_elems(
-        scn->environments, params.environments, update_prim_environment);
+        scn->environments, params.environments, update_test_environment);
 
     return scn;
 }
@@ -8481,74 +8481,74 @@ make_uvhollowcutsphere1(int tesselation, float radius) {
     return {quads, pos, norm, texcoord};
 }
 
-unordered_map<string, prim_texture_params>& test_texture_presets() {
-    static auto presets = unordered_map<string, prim_texture_params>();
+unordered_map<string, test_texture_params>& test_texture_presets() {
+    static auto presets = unordered_map<string, test_texture_params>();
     if (!presets.empty()) return presets;
 
-    auto make_test_texture = [](const string& name, prim_texture_type type) {
-        auto params = prim_texture_params();
+    auto make_test_texture = [](const string& name, test_texture_type type) {
+        auto params = test_texture_params();
         params.name = name;
         params.type = type;
         return params;
     };
 
-    presets["grid"] = make_test_texture("grid", prim_texture_type::grid);
+    presets["grid"] = make_test_texture("grid", test_texture_type::grid);
     presets["checker"] =
-        make_test_texture("checker", prim_texture_type::checker);
+        make_test_texture("checker", test_texture_type::checker);
     presets["colored"] =
-        make_test_texture("colored", prim_texture_type::colored);
+        make_test_texture("colored", test_texture_type::colored);
     presets["rcolored"] =
-        make_test_texture("rcolored", prim_texture_type::rcolored);
-    presets["bump"] = make_test_texture("bump", prim_texture_type::bump);
+        make_test_texture("rcolored", test_texture_type::rcolored);
+    presets["bump"] = make_test_texture("bump", test_texture_type::bump);
     presets["bump"].tile_size = 32;
-    presets["tgrid"] = make_test_texture("tgrid", prim_texture_type::bump);
+    presets["tgrid"] = make_test_texture("tgrid", test_texture_type::bump);
     presets["tgrid"].tile_size = 32;
-    presets["uv"] = make_test_texture("uv", prim_texture_type::uv);
-    presets["gamma"] = make_test_texture("gamma", prim_texture_type::gamma);
-    presets["gridn"] = make_test_texture("gridn", prim_texture_type::grid);
+    presets["uv"] = make_test_texture("uv", test_texture_type::uv);
+    presets["gamma"] = make_test_texture("gamma", test_texture_type::gamma);
+    presets["gridn"] = make_test_texture("gridn", test_texture_type::grid);
     presets["gridn"].bump_to_normal = true;
     presets["gridn"].bump_to_normal = true;
     presets["gridn"].bump_scale = 4;
-    presets["tgridn"] = make_test_texture("tgridn", prim_texture_type::grid);
+    presets["tgridn"] = make_test_texture("tgridn", test_texture_type::grid);
     presets["tgridn"].tile_size = 32;
     presets["tgridn"].bump_to_normal = true;
     presets["tgridn"].bump_to_normal = true;
     presets["tgridn"].bump_scale = 4;
-    presets["bumpn"] = make_test_texture("bumpn", prim_texture_type::bump);
+    presets["bumpn"] = make_test_texture("bumpn", test_texture_type::bump);
     presets["bumpn"].tile_size = 32;
     presets["bumpn"].bump_to_normal = true;
     presets["bumpn"].bump_scale = 4;
-    presets["noise"] = make_test_texture("noise", prim_texture_type::noise);
-    presets["ridge"] = make_test_texture("ridge", prim_texture_type::ridge);
-    presets["fbm"] = make_test_texture("fbm", prim_texture_type::fbm);
+    presets["noise"] = make_test_texture("noise", test_texture_type::noise);
+    presets["ridge"] = make_test_texture("ridge", test_texture_type::ridge);
+    presets["fbm"] = make_test_texture("fbm", test_texture_type::fbm);
     presets["turbulence"] =
-        make_test_texture("turbulence", prim_texture_type::turbulence);
+        make_test_texture("turbulence", test_texture_type::turbulence);
 
-    presets["gammaf"] = make_test_texture("gammaf", prim_texture_type::gammaf);
-    presets["sky1"] = make_test_texture("sky1", prim_texture_type::sky);
+    presets["gammaf"] = make_test_texture("gammaf", test_texture_type::gammaf);
+    presets["sky1"] = make_test_texture("sky1", test_texture_type::sky);
     presets["sky1"].sky_sunangle = pif / 4;
-    presets["sky2"] = make_test_texture("sky2", prim_texture_type::sky);
+    presets["sky2"] = make_test_texture("sky2", test_texture_type::sky);
     presets["sky2"].sky_sunangle = pif / 2;
 
     return presets;
 }
 
-unordered_map<string, prim_material_params>& test_material_presets() {
-    static auto presets = unordered_map<string, prim_material_params>();
+unordered_map<string, test_material_params>& test_material_presets() {
+    static auto presets = unordered_map<string, test_material_params>();
     if (!presets.empty()) return presets;
 
-    auto make_test_material = [](const string& name, prim_material_type type,
+    auto make_test_material = [](const string& name, test_material_type type,
                                   const vec3f& color, float roughness = 1) {
-        auto params = prim_material_params();
+        auto params = test_material_params();
         params.name = name;
         params.type = type;
         params.color = color;
         params.roughness = roughness;
         return params;
     };
-    auto make_test_materialt = [](const string& name, prim_material_type type,
+    auto make_test_materialt = [](const string& name, test_material_type type,
                                    const string& txt, float roughness = 1) {
-        auto params = prim_material_params();
+        auto params = test_material_params();
         params.name = name;
         params.type = type;
         params.color = {1, 1, 1};
@@ -8557,11 +8557,11 @@ unordered_map<string, prim_material_params>& test_material_presets() {
         return params;
     };
 
-    auto emission = prim_material_type::emission;
-    auto matte = prim_material_type::matte;
-    auto plastic = prim_material_type::plastic;
-    auto metal = prim_material_type::metal;
-    auto transparent = prim_material_type::transparent;
+    auto emission = test_material_type::emission;
+    auto matte = test_material_type::matte;
+    auto plastic = test_material_type::plastic;
+    auto metal = test_material_type::metal;
+    auto transparent = test_material_type::transparent;
 
     auto gray = vec3f{0.2f, 0.2f, 0.2f};
     auto lgray = vec3f{0.5f, 0.5f, 0.5f};
@@ -8575,7 +8575,7 @@ unordered_map<string, prim_material_params>& test_material_presets() {
     auto rough = 0.25f;
     auto sharp = 0.05f;
 
-    auto params = vector<prim_material_params>();
+    auto params = vector<test_material_params>();
 
     presets["matte_floor"] = make_test_materialt("matte_floor", matte, "grid");
 
@@ -8630,14 +8630,14 @@ unordered_map<string, prim_material_params>& test_material_presets() {
     return presets;
 }
 
-unordered_map<string, prim_shape_params>& test_shape_presets() {
-    static auto presets = unordered_map<string, prim_shape_params>();
+unordered_map<string, test_shape_params>& test_shape_presets() {
+    static auto presets = unordered_map<string, test_shape_params>();
     if (!presets.empty()) return presets;
 
-    auto make_test_shape = [](const string& name, prim_shape_type type,
+    auto make_test_shape = [](const string& name, test_shape_type type,
                                int tesselation = -1, int subdivision = 0,
                                bool faceted = false) {
-        auto params = prim_shape_params();
+        auto params = test_shape_params();
         params.name = name;
         params.type = type;
         params.tesselation = tesselation;
@@ -8646,59 +8646,59 @@ unordered_map<string, prim_shape_params>& test_shape_presets() {
         return params;
     };
 
-    presets["floor"] = make_test_shape("floor", prim_shape_type::floor);
-    presets["quad"] = make_test_shape("quad", prim_shape_type::quad);
-    presets["cube"] = make_test_shape("cube", prim_shape_type::cube);
-    presets["sphere"] = make_test_shape("sphere", prim_shape_type::sphere);
+    presets["floor"] = make_test_shape("floor", test_shape_type::floor);
+    presets["quad"] = make_test_shape("quad", test_shape_type::quad);
+    presets["cube"] = make_test_shape("cube", test_shape_type::cube);
+    presets["sphere"] = make_test_shape("sphere", test_shape_type::sphere);
     presets["spherecube"] =
-        make_test_shape("spherecube", prim_shape_type::spherecube);
+        make_test_shape("spherecube", test_shape_type::spherecube);
     presets["spherizedcube"] =
-        make_test_shape("spherizedcube", prim_shape_type::spherizedcube);
+        make_test_shape("spherizedcube", test_shape_type::spherizedcube);
     presets["flipcapsphere"] =
-        make_test_shape("flipcapsphere", prim_shape_type::flipcapsphere);
+        make_test_shape("flipcapsphere", test_shape_type::flipcapsphere);
     presets["geosphere"] =
-        make_test_shape("geosphere", prim_shape_type::geosphere, 5);
+        make_test_shape("geosphere", test_shape_type::geosphere, 5);
     presets["geospheref"] =
-        make_test_shape("geospheref", prim_shape_type::geosphere, 5, 0, true);
+        make_test_shape("geospheref", test_shape_type::geosphere, 5, 0, true);
     presets["geospherel"] =
-        make_test_shape("geospherel", prim_shape_type::geosphere, 4, 0, true);
-    presets["cubep"] = make_test_shape("cubep", prim_shape_type::cubep);
-    presets["cubes"] = make_test_shape("cubes", prim_shape_type::cubep, 0, 4);
-    presets["suzanne"] = make_test_shape("suzanne", prim_shape_type::suzanne);
+        make_test_shape("geospherel", test_shape_type::geosphere, 4, 0, true);
+    presets["cubep"] = make_test_shape("cubep", test_shape_type::cubep);
+    presets["cubes"] = make_test_shape("cubes", test_shape_type::cubep, 0, 4);
+    presets["suzanne"] = make_test_shape("suzanne", test_shape_type::suzanne);
     presets["suzannes"] =
-        make_test_shape("suzannes", prim_shape_type::suzanne, 0, 2);
-    presets["cubefv"] = make_test_shape("cubefv", prim_shape_type::fvcube);
+        make_test_shape("suzannes", test_shape_type::suzanne, 0, 2);
+    presets["cubefv"] = make_test_shape("cubefv", test_shape_type::fvcube);
     presets["cubefvs"] =
-        make_test_shape("cubefvs", prim_shape_type::fvcube, 0, 4);
+        make_test_shape("cubefvs", test_shape_type::fvcube, 0, 4);
     presets["spherefv"] =
-        make_test_shape("spherefv", prim_shape_type::fvsphere);
-    presets["matball"] = make_test_shape("matball", prim_shape_type::matball);
-    presets["matballi"] = make_test_shape("matballi", prim_shape_type::sphere);
+        make_test_shape("spherefv", test_shape_type::fvsphere);
+    presets["matball"] = make_test_shape("matball", test_shape_type::matball);
+    presets["matballi"] = make_test_shape("matballi", test_shape_type::sphere);
     presets["matballi"].scale = 0.8f;
     presets["pointscube"] =
-        make_test_shape("pointscube", prim_shape_type::pointscube);
+        make_test_shape("pointscube", test_shape_type::pointscube);
     presets["hairball1"] =
-        make_test_shape("hairball1", prim_shape_type::hairball1);
+        make_test_shape("hairball1", test_shape_type::hairball1);
     presets["hairball2"] =
-        make_test_shape("hairball2", prim_shape_type::hairball2);
+        make_test_shape("hairball2", test_shape_type::hairball2);
     presets["hairball3"] =
-        make_test_shape("hairball3", prim_shape_type::hairball3);
+        make_test_shape("hairball3", test_shape_type::hairball3);
     presets["hairballi"] =
-        make_test_shape("hairballi", prim_shape_type::sphere);
+        make_test_shape("hairballi", test_shape_type::sphere);
     presets["hairballi"].scale = 0.8f;
     presets["beziercircle"] =
-        make_test_shape("beziercircle", prim_shape_type::beziercircle);
-    presets["point"] = make_test_shape("point", prim_shape_type::point);
+        make_test_shape("beziercircle", test_shape_type::beziercircle);
+    presets["point"] = make_test_shape("point", test_shape_type::point);
 
     return presets;
 }
 
-unordered_map<string, prim_environment_params>& test_environment_presets() {
-    static auto presets = unordered_map<string, prim_environment_params>();
+unordered_map<string, test_environment_params>& test_environment_presets() {
+    static auto presets = unordered_map<string, test_environment_params>();
     if (!presets.empty()) return presets;
 
     auto make_test_environment = [](const string& name, const string& txt) {
-        auto params = prim_environment_params();
+        auto params = test_environment_params();
         params.name = name;
         params.color = {1, 1, 1};
         params.txt = txt;
@@ -8712,13 +8712,13 @@ unordered_map<string, prim_environment_params>& test_environment_presets() {
     return presets;
 }
 
-unordered_map<string, prim_camera_params>& test_camera_presets() {
-    static auto presets = unordered_map<string, prim_camera_params>();
+unordered_map<string, test_camera_params>& test_camera_presets() {
+    static auto presets = unordered_map<string, test_camera_params>();
     if (!presets.empty()) return presets;
 
     auto make_test_camera = [](const string& name, const vec3f& from,
                                 const vec3f& to, float yfov, float aspect) {
-        auto params = prim_camera_params();
+        auto params = test_camera_params();
         params.name = name;
         params.from = from;
         params.to = to;
@@ -8737,18 +8737,18 @@ unordered_map<string, prim_camera_params>& test_camera_presets() {
     return presets;
 }
 
-unordered_map<string, prim_scene_params>& test_scene_presets() {
-    static auto presets = unordered_map<string, prim_scene_params>();
+unordered_map<string, test_scene_params>& test_scene_presets() {
+    static auto presets = unordered_map<string, test_scene_params>();
     if (!presets.empty()) return presets;
 
     auto make_test_scene = [](const string& name) {
-        auto params = prim_scene_params();
+        auto params = test_scene_params();
         params.name = name;
         return params;
     };
     auto make_test_instance = [](const string& name, const string& shp,
                                   const vec3f& pos = {0, 0, 0}) {
-        auto params = prim_instance_params();
+        auto params = test_instance_params();
         params.name = name;
         params.shp = shp;
         params.frame.o = pos;
