@@ -11226,52 +11226,137 @@ inline bool draw_scene_widgets(gl_window* win, const string& lbl, scene* scn,
         return false;
 }
 
+    inline bool draw_elem_widgets(gl_window* win, test_scene_params* scn,
+                                  test_texture_params* txt, void*& selection,
+                                  const unordered_map<texture*, gl_texture>& gl_txt) {
+        draw_separator_widget(win);
+        draw_label_widget(win, "name", txt->name);
+        draw_value_widget(win, "type", txt->type, test_texture_names());
+        draw_value_widget(win, "resolution", txt->resolution);
+        draw_value_widget(win, "tile size", txt->tile_size);
+        draw_value_widget(win, "noise size", txt->noise_scale);
+        draw_value_widget(win, "sky sun angle", txt->sky_sunangle);
+        draw_value_widget(win, "normal map", txt->bump_to_normal);
+        draw_value_widget(win, "bump scale", txt->bump_scale);
+#if 0
+        if (contains(gl_txt, txt)) {
+            draw_image_widget(win, get_texture_id(gl_txt.at(txt)), {128, 128},
+                              {txt->width(), txt->height()});
+        }
+#endif
+        return false;
+    }
+    
+    inline bool draw_elem_widgets(gl_window* win, test_scene_params* scn,
+                                  test_material_params* mat, void*& selection,
+                                  const unordered_map<texture*, gl_texture>& gl_txt) {
+        auto edited = vector<bool>();
+        draw_separator_widget(win);
+        edited += draw_value_widget(win, "name", mat->name);
+        edited += draw_value_widget(win, "type", mat->type, test_material_names());
+        edited += draw_value_widget(win, "emission", mat->emission, 0, 100);
+        edited += draw_color_widget(win, "color", mat->color);
+        edited += draw_value_widget(win, "roughness", mat->roughness);
+        edited += draw_value_widget(win, "txt", mat->txt);
+        edited += draw_value_widget(win, "norm", mat->norm);
+        return std::any_of(edited.begin(), edited.end(), [](auto x) { return x; });
+    }
+    
+    inline bool draw_elem_widgets(gl_window* win, test_scene_params* scn,
+                                  test_shape_params* shp, void*& selection,
+                                  const unordered_map<texture*, gl_texture>& gl_txt) {
+        auto edited = vector<bool>();
+        draw_separator_widget(win);
+        edited += draw_value_widget(win, "name", shp->name);
+        edited += draw_value_widget(win, "type", shp->type, test_shape_names());
+        edited += draw_value_widget(win, "material", shp->mat);
+        edited += draw_value_widget(win, "tesselation", shp->tesselation, -1, 8);
+        edited += draw_value_widget(win, "subdivision", shp->subdivision, -1, 8);
+        edited += draw_value_widget(win, "scale", shp->scale, 0.01f, 10.0f);
+        edited += draw_value_widget(win, "faceted", shp->faceted);
+        edited += draw_value_widget(win, "num lines/points", shp->num, -1, 100000);
+        edited += draw_value_widget(
+                                    win, "radius lines/points", shp->radius, 0.0001f, 0.01f);
+        return std::any_of(edited.begin(), edited.end(), [](auto x) { return x; });
+    }
+    
+    inline bool draw_elem_widgets(gl_window* win, test_scene_params* scn,
+                                  test_camera_params* cam, void*& selection,
+                                  const unordered_map<texture*, gl_texture>& gl_txt) {
+        auto edited = vector<bool>();
+        draw_separator_widget(win);
+        edited += draw_value_widget(win, "name", cam->name);
+        edited += draw_value_widget(win, "from", cam->from, -10, 10);
+        edited += draw_value_widget(win, "to", cam->to, -10, 10);
+        edited += draw_value_widget(win, "yfov", cam->yfov, 0.1, 4);
+        edited += draw_value_widget(win, "aspect", cam->aspect, 0.1, 4);
+        return std::any_of(edited.begin(), edited.end(), [](auto x) { return x; });
+    }
+    
+    inline bool draw_elem_widgets(gl_window* win, test_scene_params* scn,
+                                  test_environment_params* env, void*& selection,
+                                  const unordered_map<texture*, gl_texture>& gl_txt) {
+        auto edited = vector<bool>();
+        draw_separator_widget(win);
+        edited += draw_value_widget(win, "name", env->name);
+        edited += draw_value_widget(win, "rotation", env->rotation, -pif, pif);
+        edited += draw_value_widget(win, "emission", env->emission);
+        edited += draw_value_widget(win, "txt", env->txt);
+        return std::any_of(edited.begin(), edited.end(), [](auto x) { return x; });
+    }
+    
+    inline bool draw_elem_widgets(gl_window* win, test_scene_params* scn,
+                                  test_instance_params* ist, void*& selection,
+                                  const unordered_map<texture*, gl_texture>& gl_txt) {
+        auto edited = vector<bool>();
+        draw_separator_widget(win);
+        edited += draw_value_widget(win, "name", ist->name);
+        edited += draw_value_widget(win, "frame", ist->frame, -10, 10);
+        edited += draw_value_widget(win, "shape", ist->shp);
+        return std::any_of(edited.begin(), edited.end(), [](auto x) { return x; });
+    }
+    
+    inline bool draw_elem_widgets(gl_window* win, test_scene_params* scn,
+                                  void*& selection, const unordered_map<texture*, gl_texture>& gl_txt) {
+        for (auto& cam : scn->cameras) {
+            if (&cam == selection)
+                return draw_elem_widgets(win, scn, &cam, selection, gl_txt);
+        }
+        
+        for (auto& shp : scn->shapes) {
+            if (&shp == selection)
+                return draw_elem_widgets(win, scn, &shp, selection, gl_txt);
+        }
+        
+        for (auto& ist : scn->instances) {
+            if (&ist == selection)
+                return draw_elem_widgets(win, scn, &ist, selection, gl_txt);
+        }
+        
+        for (auto& mat : scn->materials) {
+            if (&mat == selection)
+                return draw_elem_widgets(win, scn, &mat, selection, gl_txt);
+        }
+        
+        for (auto& txt : scn->textures) {
+            if (&txt == selection)
+                return draw_elem_widgets(win, scn, &txt, selection, gl_txt);
+        }
+        
+        for (auto& env : scn->environments) {
+            if (&env == selection)
+                return draw_elem_widgets(win, scn, &env, selection, gl_txt);
+        }
+        
+        return false;
+    }
+
 inline bool draw_edit_widgets(
     gl_window* win, const string& lbl, scene* scn, void*& selection) {
-    static auto shp_names =
-        vector<string>{"floor", "cube", "sphere", "cutsphere", "monkey"};
-    static auto txt_names = vector<string>{"grid", "colored", "file"};
-    static auto shp_type = "sphere"s, txt_type = "colored"s, txt_filename = ""s;
-    static auto shp_size = 2.0f;
-    static auto shp_tess = 5, shp_subdiv = 0;
+    static auto shp_params = test_shape_params();
+    static auto txt_params = test_texture_params();
     static auto shp_last = (shape*)nullptr;
     static auto txt_last = (texture*)nullptr;
-
-    auto update_shape = [](shape* shp) {
-        if (shp_type == "floor") {
-            tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
-                make_uvquad(5);
-            for (auto& p : shp->pos) {
-                swap(p.y, p.z);
-                p *= 20;
-            }
-            for (auto& n : shp->norm) n = {0, 1, 0};
-        } else if (shp_type == "cube") {
-            tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
-                make_uvcube(shp_tess);
-        } else if (shp_type == "sphere") {
-            tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
-                make_uvsphere(shp_tess);
-        } else if (shp_type == "cutsphere") {
-            tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
-                make_uvcutsphere(shp_tess, 0.75f);
-        } else if (shp_type == "monkey") {
-            tie(shp->quads, shp->pos) = make_suzanne(0);
-        } else {
-            throw runtime_error("should not have gotten here");
-        }
-        for (auto i = 0; i < shp_subdiv; i++) subdivide_shape_once(shp);
-        for (auto& p : shp->pos) p *= shp_size / 2;
-    };
-
-    auto update_txt = [](texture* txt) {
-        if (txt_type == "grid") {
-        } else if (txt_type == "colored") {
-        } else if (txt_type == "file") {
-        } else {
-            throw runtime_error("should not have gotten here");
-        }
-    };
 
     if (draw_header_widget(win, lbl)) {
         auto selected_ist = (instance*)nullptr;
@@ -11296,31 +11381,20 @@ inline bool draw_edit_widgets(
         auto edited = false;
 
         if (selected_shp && shp_last == selected_shp) {
-            auto edited_shp = vector<bool>();
-            edited_shp +=
-                draw_value_widget(win, "shape type", shp_type, shp_names);
-            edited_shp +=
-                draw_value_widget(win, "shape radius", shp_size, 0.01f, 10.0f);
-            edited_shp += draw_value_widget(win, "shape tess", shp_tess, 0, 10);
-            edited_shp +=
-                draw_value_widget(win, "shape subdiv", shp_subdiv, 0, 5);
-            edited = std::any_of(
-                edited_shp.begin(), edited_shp.end(), [](auto x) { return x; });
-            if (edited) update_shape(shp_last);
+            edited = draw_elem_widgets(win, nullptr, &shp_params, selection,{});
+            if (edited) update_test_shape(scn, shp_last, shp_params);
         }
-        if (txt_last == selected_txt) {
-            draw_value_widget(win, "texture type", txt_type, txt_names);
-            draw_value_widget(win, "texture file", txt_filename);
+        if (selected_txt && txt_last == selected_txt) {
+            edited = draw_elem_widgets(win, nullptr, &txt_params, selection,{});
+            if (edited) update_test_texture(scn, txt_last, txt_params);
         }
 
         if (draw_button_widget(win, "add shape")) {
             static auto count = 0;
-            // static auto last = (shape*)nullptr;
             auto shp = new shape();
             shp->name = "shape_" + to_string(count);
-            shp->mat = nullptr;
-            update_shape(shp);
             scn->shapes.push_back(shp);
+            update_test_shape(scn, shp, shp_params);
             auto ist = new instance();
             ist->name = shp->name;
             ist->shp = shp;
@@ -11353,18 +11427,7 @@ inline bool draw_edit_widgets(
             static auto count = 0;
             auto txt = new texture();
             txt->name = "texture_" + to_string(count++);
-            txt->path = txt_filename;
-            // auto dirname = yu::path::get_dirname(scn->filename);
-            //        try {
-            //            if (yimg::is_hdr_filename(txt->path)) {
-            //                txt->hdr = yimg::load_image4f(dirname +
-            //                txt->path);
-            //            } else {
-            //                txt->ldr = yimg::load_image4b(dirname +
-            //                txt->path);
-            //            }
-            //        } catch (...) { txt->ldr = image4b(1, 1, {255, 255, 255,
-            //        255}); }
+            update_test_texture(scn, txt, txt_params);
             scn->textures.push_back(txt);
             selection = txt;
             edited = true;
