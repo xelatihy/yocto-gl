@@ -8025,6 +8025,9 @@ struct prim_texture_params {
 texture* update_prim_texture(
     scene* scn, texture* txt, const prim_texture_params& params);
 
+/// Test texture presets
+unordered_map<string, prim_texture_params>& test_texture_presets();
+
 /// Test material type
 enum struct prim_material_type {
     /// None (empty material)
@@ -8077,6 +8080,9 @@ struct prim_material_params {
 /// Updates a test material, adding it to the scene if missing.
 material* update_prim_material(
     scene* scn, material* mat, const prim_material_params& params);
+
+/// Test material presets
+unordered_map<string, prim_material_params>& test_material_presets();
 
 /// Test shape type
 enum struct prim_shape_type {
@@ -8175,6 +8181,9 @@ struct prim_shape_params {
 shape* update_prim_shape(
     scene* scn, shape* shp, const prim_shape_params& params);
 
+/// Test shape presets
+unordered_map<string, prim_shape_params>& test_shape_presets();
+
 /// Test instance parameters
 struct prim_instance_params {
     /// Name (if not filled, assign a default one)
@@ -8190,6 +8199,9 @@ struct prim_instance_params {
 /// Updates a test instance, adding it to the scene if missing.
 instance* update_prim_instance(
     scene* scn, instance* ist, const prim_instance_params& params);
+
+/// Test instance presets
+unordered_map<string, prim_instance_params>& test_instance_presets();
 
 /// Test camera parameters
 struct prim_camera_params {
@@ -8208,6 +8220,9 @@ struct prim_camera_params {
 /// Updates a test instance, adding it to the scene if missing.
 camera* update_prim_camera(
     scene* scn, camera* cam, const prim_camera_params& params);
+
+/// Test camera presets
+unordered_map<string, prim_camera_params>& test_camera_presets();
 
 /// Test environment parameters
 struct prim_environment_params {
@@ -8229,8 +8244,12 @@ struct prim_environment_params {
 environment* update_prim_environment(
     scene* scn, environment* env, const prim_environment_params& params);
 
+/// Test environment presets
+unordered_map<string, prim_environment_params>& test_environment_presets();
+
 /// Test scene
 struct prim_scene_params {
+    string name;
     vector<prim_camera_params> cameras;
     vector<prim_texture_params> textures;
     vector<prim_material_params> materials;
@@ -8249,7 +8268,7 @@ inline scene* make_prim_scene(const prim_scene_params& params) {
     return update_prim_scene(nullptr, params);
 }
 
-/// Makes a test scene
+/// Test scene presets
 unordered_map<string, prim_scene_params>& test_scene_presets();
 
 }  // namespace ygl
