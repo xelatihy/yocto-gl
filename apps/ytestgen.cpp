@@ -29,6 +29,12 @@
 #include "../yocto/yocto_gl.h"
 using namespace ygl;
 
+#ifndef _MSC_VER
+#define DIR_SEPARATOR "/"
+#else
+#define DIR_SEPARATOR "\\"
+#endif
+
 void mkdir(const string& dir) {
 #ifndef _MSC_VER
     system(("mkdir -p " + dir).c_str());
@@ -49,7 +55,7 @@ void rmdir(const string& dir) {
 
 void save_test_scene(test_scene_type stype, const string& basedir) {
     auto sname = get_key(test_scene_names(), stype);
-    auto dirname = basedir + "/" + sname + "/";
+    auto dirname = basedir + DIR_SEPARATOR + sname + DIR_SEPARATOR;
     printf("generating %s scenes ...\n", sname.c_str());
     try {
         auto scn = make_test_scene(stype);
