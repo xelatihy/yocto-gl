@@ -12418,7 +12418,8 @@ inline bool draw_camera_widget(
 
 /// Draws widgets for a whole scene. Used for quickly making demos.
 bool draw_scene_widgets(gl_window* win, const string& lbl, scene* scn,
-    void*& selection, const unordered_map<texture*, gl_texture>& gl_txt);
+    void*& selection, const unordered_map<texture*, gl_texture>& gl_txt,
+                        test_scene_params* test_scn = nullptr);
 
 /// Draw edit widgets for simple sene manipulation.
 bool draw_edit_widgets(

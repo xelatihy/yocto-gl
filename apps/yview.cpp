@@ -40,6 +40,7 @@ struct app_state {
     gl_stdsurface_state* shstate = nullptr;
     bool navigation_fps = false;
     void* selection = nullptr;
+    test_scene_params edit_params;
 
     ~app_state() {
         if (shstate) delete shstate;
@@ -89,7 +90,7 @@ inline void draw(gl_window* win) {
             update_stdsurface_state(app->shstate, app->scn, app->shparams, shps, txts);
         }
         draw_scene_widgets(
-            win, "scene", app->scn, app->selection, app->shstate->txt);
+            win, "scene", app->scn, app->selection, app->shstate->txt, &app->edit_params);
     }
     end_widgets(win);
 
