@@ -11185,47 +11185,38 @@ inline bool draw_elem_widgets(gl_window* win, scene* scn, instance* ist,
     return std::any_of(edited.begin(), edited.end(), [](auto x) { return x; });
 }
 
-inline bool draw_elem_widgets(gl_window* win, scene* scn, void*& selection,
-    const unordered_map<texture*, gl_texture>& gl_txt) {
-    for (auto cam : scn->cameras) {
-        if (cam == selection)
-            return draw_elem_widgets(win, scn, cam, selection, gl_txt);
+    inline bool draw_elem_widgets(gl_window* win, scene* scn, environment* env,
+                                  void*& selection, const unordered_map<texture*, gl_texture>& gl_txt) {
+        auto txt_names = vector<pair<string, texture*>>{{"<none>", nullptr}};
+        for (auto txt : scn->textures) txt_names.push_back({txt->path, txt});
+        
+        auto txt_widget = [&txt_names](gl_window* win, const string& lbl,
+                                       texture_info& info) {
+            auto edited = vector<bool>();
+            edited += draw_value_widget(win, lbl, info.txt, txt_names);
+            if (info.txt) {
+                edited += draw_value_widget(win, lbl + " wrap_s", info.wrap_s);
+                edited += draw_value_widget(win, lbl + " wrap_t", info.wrap_t);
+                edited += draw_value_widget(win, lbl + " linear", info.linear);
+                edited += draw_value_widget(win, lbl + " mipmap", info.mipmap);
+            }
+            return std::any_of(
+                               edited.begin(), edited.end(), [](auto x) { return x; });
+        };
+
+        auto edited = vector<bool>();
+        draw_separator_widget(win);
+        draw_label_widget(win, "name", env->name);
+        edited += draw_value_widget(win, "frame", env->frame, 0, 0);
+        auto ke_l = max_element(env->ke).second;
+        auto ke_c = (ke_l) ? env->ke / ke_l : zero3f;
+        edited += draw_value_widget(win, "ke l", ke_l, 0, 100);
+        edited += draw_color_widget(win, "ke", ke_c);
+        env->ke = ke_l * ke_c;
+        edited += txt_widget(win, "ke_txt", env->ke_txt);
+        return std::any_of(edited.begin(), edited.end(), [](auto x) { return x; });
     }
-
-    for (auto shp : scn->shapes) {
-        if (shp == selection)
-            return draw_elem_widgets(win, scn, shp, selection, gl_txt);
-    }
-
-    for (auto ist : scn->instances) {
-        if (ist == selection)
-            return draw_elem_widgets(win, scn, ist, selection, gl_txt);
-    }
-
-    for (auto mat : scn->materials) {
-        if (mat == selection)
-            return draw_elem_widgets(win, scn, mat, selection, gl_txt);
-    }
-
-    for (auto txt : scn->textures) {
-        if (txt == selection)
-            return draw_elem_widgets(win, scn, txt, selection, gl_txt);
-    }
-
-    return false;
-}
-
-inline bool draw_scene_widgets(gl_window* win, const string& lbl, scene* scn,
-    void*& selection, const unordered_map<texture*, gl_texture>& gl_txt) {
-    if (draw_header_widget(win, lbl)) {
-        // draw_scroll_widget_begin(win, "model", 240, false);
-        draw_tree_widgets(win, "", scn, selection);
-        // draw_scroll_widget_end(win);
-        return draw_elem_widgets(win, scn, selection, gl_txt);
-    } else
-        return false;
-}
-
+    
     inline bool draw_elem_widgets(gl_window* win, test_scene_params* scn,
                                   test_texture_params* txt, void*& selection,
                                   const unordered_map<texture*, gl_texture>& gl_txt) {
@@ -11316,40 +11307,38 @@ inline bool draw_scene_widgets(gl_window* win, const string& lbl, scene* scn,
         return std::any_of(edited.begin(), edited.end(), [](auto x) { return x; });
     }
     
-    inline bool draw_elem_widgets(gl_window* win, test_scene_params* scn,
-                                  void*& selection, const unordered_map<texture*, gl_texture>& gl_txt) {
-        for (auto& cam : scn->cameras) {
-            if (&cam == selection)
-                return draw_elem_widgets(win, scn, &cam, selection, gl_txt);
-        }
-        
-        for (auto& shp : scn->shapes) {
-            if (&shp == selection)
-                return draw_elem_widgets(win, scn, &shp, selection, gl_txt);
-        }
-        
-        for (auto& ist : scn->instances) {
-            if (&ist == selection)
-                return draw_elem_widgets(win, scn, &ist, selection, gl_txt);
-        }
-        
-        for (auto& mat : scn->materials) {
-            if (&mat == selection)
-                return draw_elem_widgets(win, scn, &mat, selection, gl_txt);
-        }
-        
-        for (auto& txt : scn->textures) {
-            if (&txt == selection)
-                return draw_elem_widgets(win, scn, &txt, selection, gl_txt);
-        }
-        
-        for (auto& env : scn->environments) {
-            if (&env == selection)
-                return draw_elem_widgets(win, scn, &env, selection, gl_txt);
-        }
-        
-        return false;
+    template<typename T, typename T1>
+    inline bool draw_selected_elem_widgets(gl_window* win, scene* scn, const vector<T*>& elems, vector<T1>& test_elems,
+                                           void*& selection, const unordered_map<texture*, gl_texture>& gl_txt) {
+        auto selected = (T*)nullptr;
+        for (auto elem : elems)
+            if (elem == selection) { selected = elem; break; }
+        if(!selected) return false;
+        auto test_selected = (T1*)nullptr;
+        for(auto& test_elem : test_elems) if(test_elem.name == selected->name) test_selected = &test_elem;
+        return draw_elem_widgets(win, scn, selected, selection, gl_txt);
     }
+
+inline bool draw_scene_widgets(gl_window* win, const string& lbl, scene* scn,
+    void*& selection, const unordered_map<texture*, gl_texture>& gl_txt, test_scene_params* test_scn) {
+    static auto test_scn_def = test_scene_params();
+    
+    if (draw_header_widget(win, lbl)) {
+        // draw_scroll_widget_begin(win, "model", 240, false);
+        draw_tree_widgets(win, "", scn, selection);
+        // draw_scroll_widget_end(win);
+        
+        auto test_scn_res = (test_scn) ? test_scn : &test_scn_def;
+        if(draw_selected_elem_widgets(win, scn, scn->cameras, test_scn_res->cameras, selection, gl_txt)) return true;
+        if(draw_selected_elem_widgets(win, scn, scn->textures, test_scn_res->textures, selection, gl_txt)) return true;
+        if(draw_selected_elem_widgets(win, scn, scn->materials, test_scn_res->materials, selection, gl_txt)) return true;
+        if(draw_selected_elem_widgets(win, scn, scn->shapes, test_scn_res->shapes, selection, gl_txt)) return true;
+        if(draw_selected_elem_widgets(win, scn, scn->instances, test_scn_res->instances, selection, gl_txt)) return true;
+        if(draw_selected_elem_widgets(win, scn, scn->environments, test_scn->environments, selection, gl_txt)) return true;
+        return false;
+    } else
+        return false;
+}
 
 inline bool draw_edit_widgets(
     gl_window* win, const string& lbl, scene* scn, void*& selection) {
@@ -11359,33 +11348,38 @@ inline bool draw_edit_widgets(
     static auto txt_last = (texture*)nullptr;
 
     if (draw_header_widget(win, lbl)) {
-        auto selected_ist = (instance*)nullptr;
-        auto selected_shp = (shape*)nullptr;
         auto selected_cam = (camera*)nullptr;
         auto selected_txt = (texture*)nullptr;
         auto selected_mat = (material*)nullptr;
+        auto selected_shp = (shape*)nullptr;
+        auto selected_ist = (instance*)nullptr;
+        auto selected_env = (environment*)nullptr;
 
         if (selection) {
-            for (auto ptr : scn->instances)
-                if (ptr == selection) selected_ist = ptr;
-            for (auto ptr : scn->shapes)
-                if (ptr == selection) selected_shp = ptr;
             for (auto ptr : scn->cameras)
                 if (ptr == selection) selected_cam = ptr;
-            for (auto ptr : scn->materials)
-                if (ptr == selection) selected_mat = ptr;
             for (auto ptr : scn->textures)
                 if (ptr == selection) selected_txt = ptr;
+            for (auto ptr : scn->materials)
+                if (ptr == selection) selected_mat = ptr;
+            for (auto ptr : scn->shapes)
+                if (ptr == selection) selected_shp = ptr;
+            for (auto ptr : scn->instances)
+                if (ptr == selection) selected_ist = ptr;
+            for (auto ptr : scn->environments)
+                if (ptr == selection) selected_env = ptr;
         }
 
         auto edited = false;
 
         if (selected_shp && shp_last == selected_shp) {
-            edited = draw_elem_widgets(win, nullptr, &shp_params, selection,{});
+            edited =
+                draw_elem_widgets(win, nullptr, &shp_params, selection, {});
             if (edited) update_test_shape(scn, shp_last, shp_params);
         }
         if (selected_txt && txt_last == selected_txt) {
-            edited = draw_elem_widgets(win, nullptr, &txt_params, selection,{});
+            edited =
+                draw_elem_widgets(win, nullptr, &txt_params, selection, {});
             if (edited) update_test_texture(scn, txt_last, txt_params);
         }
 
@@ -11637,9 +11631,10 @@ inline bool draw_edit_widgets(
 }  // namespace __impl_scn_widgets
 
 bool draw_scene_widgets(gl_window* win, const string& lbl, scene* scn,
-    void*& selection, const unordered_map<texture*, gl_texture>& gl_txt) {
+    void*& selection, const unordered_map<texture*, gl_texture>& gl_txt,
+                        test_scene_params* test_scn) {
     return __impl_scn_widgets::draw_scene_widgets(
-        win, lbl, scn, selection, gl_txt);
+        win, lbl, scn, selection, gl_txt, test_scn);
 }
 
 bool draw_edit_widgets(
