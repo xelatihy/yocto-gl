@@ -776,18 +776,8 @@ inline void draw(gl_window* win) {
 
     update_lights(app->scn, false, false);
     if (app->scene_updated) {
-        unordered_set<shape*> refresh_shapes;
-        unordered_set<texture*> refresh_textures;
-        for (auto ptxt : app->pscn->textures) {
-            if (ptxt != app->selection) continue;
-            refresh_textures.insert(ptxt->txts.begin(), ptxt->txts.end());
-        }
-        for (auto pshp : app->pscn->shapes) {
-            if (pshp != app->selection) continue;
-            refresh_shapes.insert(pshp->shps.begin(), pshp->shps.end());
-        }
-        update_stdsurface_state(app->shstate, app->scn, app->shparams,
-            refresh_shapes, refresh_textures);
+        update_stdsurface_state(
+            app->shstate, app->scn, app->shparams, {app->selection});
         app->scene_updated = false;
     } else {
         update_stdsurface_state(app->shstate, app->scn, app->shparams);

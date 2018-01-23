@@ -492,10 +492,10 @@
 ///     - define vertices with `set_vert()`
 ///     - draw elements with `draw_elems()`
 /// 5. draw yocto scenes using the above shader
-///     - initialize the rendering state with `init_stdprogram_state()`
-///     - load/update meshes and textures with `update_stdprogram_state()`
+///     - initialize the rendering state with `init_stdsurface_state()`
+///     - load/update meshes and textures with `update_stdsurface_state()`
 ///     - setup draw params using a `gl_stdsurface_params` struct
-///     - draw scene with `draw_stdprogram_scene()`
+///     - draw scene with `draw_stdsurface_scene()`
 /// 6. also includes other utlities for quick OpenGL hacking
 /// 7. GLFW window with `gl_window`
 ///     - create with constructor
@@ -8035,9 +8035,9 @@ struct test_texture_params {
     float bump_scale = 4;
 };
 
-/// Updates a test texture, adding it to the scene if missing.
-texture* update_test_texture(
-    scene* scn, texture* txt, const test_texture_params& params);
+/// Updates a test texture.
+void update_test_texture(
+    const scene* scn, texture* txt, const test_texture_params& params);
 
 /// Test texture presets
 unordered_map<string, test_texture_params>& test_texture_presets();
@@ -8091,9 +8091,9 @@ struct test_material_params {
     string norm = "";
 };
 
-/// Updates a test material, adding it to the scene if missing.
-material* update_test_material(
-    scene* scn, material* mat, const test_material_params& params);
+/// Updates a test material.
+void update_test_material(
+    const scene* scn, material* mat, const test_material_params& params);
 
 /// Test material presets
 unordered_map<string, test_material_params>& test_material_presets();
@@ -8185,8 +8185,8 @@ struct test_shape_params {
 };
 
 /// Updates a test shape, adding it to the scene if missing.
-shape* update_test_shape(
-    scene* scn, shape* shp, const test_shape_params& params);
+void update_test_shape(
+    const scene* scn, shape* shp, const test_shape_params& params);
 
 /// Test shape presets
 unordered_map<string, test_shape_params>& test_shape_presets();
@@ -8204,8 +8204,8 @@ struct test_instance_params {
 };
 
 /// Updates a test instance, adding it to the scene if missing.
-instance* update_test_instance(
-    scene* scn, instance* ist, const test_instance_params& params);
+void update_test_instance(
+    const scene* scn, instance* ist, const test_instance_params& params);
 
 /// Test instance presets
 unordered_map<string, test_instance_params>& test_instance_presets();
@@ -8225,8 +8225,8 @@ struct test_camera_params {
 };
 
 /// Updates a test instance, adding it to the scene if missing.
-camera* update_test_camera(
-    scene* scn, camera* cam, const test_camera_params& params);
+void update_test_camera(
+    const scene* scn, camera* cam, const test_camera_params& params);
 
 /// Test camera presets
 unordered_map<string, test_camera_params>& test_camera_presets();
@@ -8248,8 +8248,8 @@ struct test_environment_params {
 };
 
 /// Updates a test instance, adding it to the scene if missing.
-environment* update_test_environment(
-    scene* scn, environment* env, const test_environment_params& params);
+void update_test_environment(
+    const scene* scn, environment* env, const test_environment_params& params);
 
 /// Test environment presets
 unordered_map<string, test_environment_params>& test_environment_presets();
@@ -8267,12 +8267,14 @@ struct test_scene_params {
 
 /// Updates a test scene, adding missing objects. Objects are only added (for
 /// now). A new scene is returned if it was not already created.
-scene* update_test_scene(scene* scn, const test_scene_params& params,
+void update_test_scene(scene* scn, const test_scene_params& params,
     const unordered_set<void*>& refresh = {});
 
 /// Makes a test scene. Convenience wrapper around update_test_scene().
 inline scene* make_test_scene(const test_scene_params& params) {
-    return update_test_scene(nullptr, params);
+    auto scn = new scene();
+    update_test_scene(scn, params);
+    return scn;
 }
 
 /// Test scene presets
@@ -12041,8 +12043,7 @@ gl_stdsurface_state* make_stdsurface_state();
 /// and textures on the GPU.
 void update_stdsurface_state(gl_stdsurface_state* st, const scene* scn,
     const gl_stdsurface_params& params,
-    const unordered_set<shape*>& refresh_shapes = {},
-    const unordered_set<texture*>& refresh_textures = {});
+    const unordered_set<void*>& refresh = {});
 
 /// Clear gl_stdsurface_program draw state
 void clear_stdsurface_state(gl_stdsurface_state* st);

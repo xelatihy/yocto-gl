@@ -86,14 +86,8 @@ inline void draw(gl_window* win) {
         }
         if (draw_scene_widgets(win, "scene", app->scn, app->selection,
                 app->shstate->txt, &app->edit_params)) {
-            unordered_set<shape*> shps;
-            unordered_set<texture*> txts;
-            for (auto shp : app->scn->shapes)
-                if (shp == app->selection) shps.insert(shp);
-            for (auto txt : app->scn->textures)
-                if (txt == app->selection) txts.insert(txt);
             update_stdsurface_state(
-                app->shstate, app->scn, app->shparams, shps, txts);
+                app->shstate, app->scn, app->shparams, {app->selection});
         }
     }
     end_widgets(win);
