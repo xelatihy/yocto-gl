@@ -71,8 +71,9 @@ inline void draw(gl_window* win) {
 
     if (begin_widgets(win, "yview")) {
         draw_label_widget(win, "scene", app->filename);
-        if(draw_header_widget(win, "view")) {
-            draw_camera_widget(win, "camera", app->scn, app->shparams.camera_id);
+        if (draw_header_widget(win, "view")) {
+            draw_camera_widget(
+                win, "camera", app->scn, app->shparams.camera_id);
             draw_value_widget(win, "wire", app->shparams.wireframe);
             draw_continue_widget(win);
             draw_value_widget(win, "edges", app->shparams.edges);
@@ -83,14 +84,17 @@ inline void draw(gl_window* win) {
             draw_tonemap_widgets(win, "", app->shparams.exposure,
                 app->shparams.gamma, app->shparams.filmic);
         }
-        if(draw_edit_widgets(win, "edit", app->scn, app->selection)) {
-            unordered_set<shape*> shps; unordered_set<texture*> txts;
-            for(auto shp : app->scn->shapes) if(shp == app->selection) shps.insert(shp);
-            for(auto txt : app->scn->textures) if(txt == app->selection) txts.insert(txt);
-            update_stdsurface_state(app->shstate, app->scn, app->shparams, shps, txts);
+        if (draw_scene_widgets(win, "scene", app->scn, app->selection,
+                app->shstate->txt, &app->edit_params)) {
+            unordered_set<shape*> shps;
+            unordered_set<texture*> txts;
+            for (auto shp : app->scn->shapes)
+                if (shp == app->selection) shps.insert(shp);
+            for (auto txt : app->scn->textures)
+                if (txt == app->selection) txts.insert(txt);
+            update_stdsurface_state(
+                app->shstate, app->scn, app->shparams, shps, txts);
         }
-        draw_scene_widgets(
-            win, "scene", app->scn, app->selection, app->shstate->txt, &app->edit_params);
     }
     end_widgets(win);
 
