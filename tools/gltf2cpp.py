@@ -82,13 +82,14 @@ inline void serialize_from_json({{name}}& val, const json& js) {
 
 // Parses a {{name}} object
 inline void serialize_from_json({{name}}& val, const json& js) {
-    if (!js.is_object()) throw runtime_error("object expected");
+    static auto def = {{name}}();
+    serialize_from_json_obj(js);
     {{#base}}serialize_from_json(({{base}}&)val, js);{{/base}}
-    {{#properties}}{{^extension}}{{#required}}if (!js.count("{{name}}")) throw runtime_error("missing value");{{/required}}{{^required}}if (js.count("{{name}}")) {{/required}}serialize_from_json(val.{{name}}, js.at("{{name}}"));{{/extension}}{{/properties}}
+    {{#properties}}{{^extension}}serialize_from_json_attr(val.{{name}}, js, "{{name}}", {{#required}}true{{/required}}{{^required}}false{{/required}}, def.{{name}});{{/extension}}{{/properties}}
     {{#has_extensions}}
     if (js.count("extensions")) {
         auto& js_ext = js["extensions"];
-        {{#properties}}{{#extension}}if (js_ext.count("{{extension}}")) serialize_from_json(val.{{name}}, js_ext.at("{{extension}}"));{{/extension}}{{/properties}}
+        {{#properties}}{{#extension}}serialize_from_json_attr(val.{{name}}, js_ext, "{{extension}}", false, def.{{name}});{{/extension}}{{/properties}}
     }
     {{/has_extensions}}
 }
@@ -139,13 +140,13 @@ inline void serialize_to_json(const {{name}}& val, json& js) {
 // Converts a {{name}} object to JSON
 inline void serialize_to_json(const {{name}}& val, json& js) {
     static auto def = {{name}}();
-    if (!js.is_object()) js = json::object();
+    serialize_to_json_obj(js);
     {{#base}}serialize_to_json((const {{base}}&)val, js);{{/base}}
-    {{#properties}}{{^extension}}{{^required}}if (val.{{name}} != def.{{name}}) {{/required}}serialize_to_json(val.{{name}}, js["{{name}}"]);{{/extension}}{{/properties}}
+    {{#properties}}{{^extension}}serialize_to_json_attr(val.{{name}}, js, "{{name}}", {{#required}}true{{/required}}{{^required}}false{{/required}}, def.{{name}});{{/extension}}{{/properties}}
     {{#properties}}{{#extension}}
     if ({{def_check}}) {
         auto& js_ext = js["extensions"];
-        serialize_to_json(val.{{name}}, js_ext["{{extension}}"]);
+        serialize_to_json_attr(val.{{name}}, js_ext, "{{extension}}",  {{#required}}true{{/required}}{{^required}}false{{/required}}, def.{{name}});
     }
     {{/extension}}{{/properties}}
 }
