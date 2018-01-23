@@ -8736,7 +8736,11 @@ unordered_map<string, test_scene_params>& test_scene_presets() {
         auto params = make_test_scene(name);
         params.cameras += test_camera_presets().at("cam3");
         params.materials += test_material_presets().at("matte_floor");
+        if (params.materials.back().txt != "")
+            params.textures +=
+                test_texture_presets().at(params.materials.back().txt);
         params.shapes += test_shape_presets().at("floor");
+        params.shapes.back().mat = params.materials.back().name;
         params.instances += make_test_instance("floor", "floor", {0, 0, 0});
         if (interior) {
             params.materials += test_material_presets().at("matte_gray");
