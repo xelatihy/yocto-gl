@@ -8273,7 +8273,7 @@ void update_test_scene(scene* scn, const test_scene_params& tscn,
 /// Makes a test scene. Convenience wrapper around update_test_scene().
 inline scene* make_test_scene(const test_scene_params& tscn) {
     auto scn = new scene();
-    update_test_scene(scn, params);
+    update_test_scene(scn, tscn);
     return scn;
 }
 
@@ -8281,7 +8281,13 @@ inline scene* make_test_scene(const test_scene_params& tscn) {
 unordered_map<string, test_scene_params>& test_scene_presets();
 
 /// Remove duplicates based on name
-void remove_duplicates(test_scene_params tscn);
+void remove_duplicates(test_scene_params& tscn);
+
+/// Load test scene
+test_scene_params load_test_scene(const string& filename);
+
+/// Save test scene
+void save_test_scene(const string& filename, const test_scene_params& scn);
 
 }  // namespace ygl
 

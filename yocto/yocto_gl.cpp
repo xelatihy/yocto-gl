@@ -6722,358 +6722,6 @@ void save_scene(
     _impl_scn::save_scene(filename, scn, opts);
 }
 
-// Makes/updates a test texture
-void update_test_texture(
-    const scene* scn, texture* txt, const test_texture_params& ttxt) {
-    if (ttxt.name == "") throw runtime_error("cannot use empty name");
-
-    txt->name = ttxt.name;
-    txt->path = "";
-    txt->ldr = {};
-    txt->hdr = {};
-
-    switch (ttxt.type) {
-        case test_texture_type::none: break;
-        case test_texture_type::grid: {
-            txt->ldr = make_grid_image(ttxt.resolution, ttxt.resolution);
-        } break;
-        case test_texture_type::checker: {
-            txt->ldr = make_checker_image(ttxt.resolution, ttxt.resolution);
-        } break;
-        case test_texture_type::colored: {
-            txt->ldr = make_uvgrid_image(ttxt.resolution, ttxt.resolution);
-        } break;
-        case test_texture_type::rcolored: {
-            txt->ldr = make_recuvgrid_image(ttxt.resolution, ttxt.resolution);
-        } break;
-        case test_texture_type::bump: {
-            txt->ldr = make_bumpdimple_image(
-                ttxt.resolution, ttxt.resolution, ttxt.tile_size);
-        } break;
-        case test_texture_type::uv: {
-            txt->ldr = make_uv_image(ttxt.resolution, ttxt.resolution);
-        } break;
-        case test_texture_type::gamma: {
-            txt->ldr = make_gammaramp_image(ttxt.resolution, ttxt.resolution);
-        } break;
-        case test_texture_type::noise: {
-            txt->ldr = make_noise_image(
-                ttxt.resolution, ttxt.resolution, ttxt.noise_scale);
-        } break;
-        case test_texture_type::ridge: {
-            txt->ldr = make_ridge_image(
-                ttxt.resolution, ttxt.resolution, ttxt.noise_scale);
-        } break;
-        case test_texture_type::fbm: {
-            txt->ldr = make_fbm_image(
-                ttxt.resolution, ttxt.resolution, ttxt.noise_scale);
-        } break;
-        case test_texture_type::turbulence: {
-            txt->ldr = make_turbulence_image(
-                ttxt.resolution, ttxt.resolution, ttxt.noise_scale);
-        } break;
-        case test_texture_type::gammaf: {
-            txt->hdr = make_gammaramp_imagef(ttxt.resolution, ttxt.resolution);
-        } break;
-        case test_texture_type::sky: {
-            txt->hdr = make_sunsky_image(ttxt.resolution, ttxt.sky_sunangle);
-        } break;
-        default: throw runtime_error("should not have gotten here");
-    }
-
-    if (ttxt.bump_to_normal) {
-        txt->ldr = bump_to_normal_map(txt->ldr, ttxt.bump_scale);
-    }
-
-    if (txt->ldr) txt->path = ttxt.name + ".png";
-    if (txt->hdr) txt->path = ttxt.name + ".sky";
-}
-
-// Makes/updates a test material
-void update_test_material(
-    const scene* scn, material* mat, const test_material_params& tmat) {
-    if (tmat.name == "") throw runtime_error("cannot use empty name");
-    auto txt = (texture*)nullptr, norm = (texture*)nullptr;
-    if (scn && tmat.txt != "")
-        for (auto elem : scn->textures)
-            if (elem->name == tmat.txt) txt = elem;
-    if (scn && tmat.norm != "")
-        for (auto elem : scn->textures)
-            if (elem->name == tmat.norm) norm = elem;
-
-    mat->name = tmat.name;
-    mat->mtype = material_type::specular_roughness;
-    mat->ke = zero3f;
-    mat->kd = zero3f;
-    mat->rs = 1;
-    mat->kr = zero3f;
-    mat->kt = zero3f;
-    mat->ke_txt.txt = nullptr;
-    mat->kd_txt.txt = nullptr;
-    mat->ks_txt.txt = nullptr;
-    mat->kr_txt.txt = nullptr;
-    mat->kt_txt.txt = nullptr;
-
-    switch (tmat.type) {
-        case test_material_type::none: break;
-        case test_material_type::emission: {
-            mat->ke = tmat.emission * tmat.color;
-            mat->ke_txt.txt = txt;
-        } break;
-        case test_material_type::matte: {
-            mat->kd = tmat.color;
-            mat->kd_txt.txt = txt;
-        } break;
-        case test_material_type::plastic: {
-            mat->kd = tmat.color;
-            mat->ks = {0.04f, 0.04f, 0.04f};
-            mat->rs = tmat.roughness;
-            mat->kd_txt.txt = txt;
-        } break;
-        case test_material_type::metal: {
-            mat->ks = tmat.color;
-            mat->rs = tmat.roughness;
-            mat->ks_txt.txt = txt;
-        } break;
-        case test_material_type::transparent: {
-            mat->kd = tmat.color;
-            mat->op = tmat.opacity;
-            mat->kd_txt.txt = txt;
-        } break;
-        default: throw runtime_error("should not have gotten here");
-    }
-
-    mat->norm_txt.txt = norm;
-}
-
-// Makes/updates a test shape
-void update_test_shape(
-    const scene* scn, shape* shp, const test_shape_params& tshp) {
-    if (tshp.name == "") throw runtime_error("cannot use empty name");
-    auto mat = (material*)nullptr;
-    if (scn && tshp.mat != "") {
-        for (auto elem : scn->materials)
-            if (elem->name == tshp.mat) mat = elem;
-    }
-
-    shp->name = tshp.name;
-    shp->mat = mat;
-    shp->pos = {};
-    shp->norm = {};
-    shp->texcoord = {};
-    shp->texcoord1 = {};
-    shp->color = {};
-    shp->radius = {};
-    shp->tangsp = {};
-    shp->points = {};
-    shp->lines = {};
-    shp->triangles = {};
-    shp->quads = {};
-    shp->quads_pos = {};
-    shp->quads_norm = {};
-    shp->quads_texcoord = {};
-
-    switch (tshp.type) {
-        case test_shape_type::floor: {
-            tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
-                make_uvquad((tshp.tesselation < 0) ? 5 : tshp.tesselation);
-            for (auto& p : shp->pos) p = {-p.x, p.z, p.y};
-            for (auto& n : shp->norm) n = {n.x, n.z, n.y};
-            for (auto& p : shp->pos) p *= 20;
-            for (auto& uv : shp->texcoord) uv *= 20;
-        } break;
-        case test_shape_type::quad: {
-            tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
-                make_uvquad((tshp.tesselation < 0) ? 0 : tshp.tesselation);
-        } break;
-        case test_shape_type::cube: {
-            tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
-                make_uvcube((tshp.tesselation < 0) ? 0 : tshp.tesselation);
-        } break;
-        case test_shape_type::sphere: {
-            tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
-                make_uvsphere((tshp.tesselation < 0) ? 5 : tshp.tesselation);
-        } break;
-        case test_shape_type::spherecube: {
-            tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
-                make_uvspherecube(
-                    (tshp.tesselation < 0) ? 4 : tshp.tesselation);
-        } break;
-        case test_shape_type::spherizedcube: {
-            tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
-                make_uvspherizedcube(
-                    (tshp.tesselation < 0) ? 4 : tshp.tesselation, 0.75f);
-        } break;
-        case test_shape_type::geosphere: {
-            tie(shp->triangles, shp->pos) = make_geodesicsphere(
-                (tshp.tesselation < 0) ? 5 : tshp.tesselation);
-            shp->norm = shp->pos;
-        } break;
-        case test_shape_type::flipcapsphere: {
-            tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
-                make_uvflipcapsphere(
-                    (tshp.tesselation < 0) ? 5 : tshp.tesselation, 0.75f);
-        } break;
-        case test_shape_type::suzanne: {
-            tie(shp->quads, shp->pos) =
-                make_suzanne((tshp.tesselation < 0) ? 0 : tshp.tesselation);
-        } break;
-        case test_shape_type::cubep: {
-            tie(shp->quads, shp->pos) =
-                make_cube((tshp.tesselation < 0) ? 0 : tshp.tesselation);
-        } break;
-        case test_shape_type::fvcube: {
-            tie(shp->quads_pos, shp->pos, shp->quads_norm, shp->norm,
-                shp->quads_texcoord, shp->texcoord) =
-                make_fvcube((tshp.tesselation < 0) ? 0 : tshp.tesselation);
-        } break;
-        case test_shape_type::fvsphere: {
-            tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
-                make_uvsphere((tshp.tesselation < 0) ? 5 : tshp.tesselation);
-        } break;
-        case test_shape_type::matball: {
-            tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
-                make_uvflipcapsphere(
-                    (tshp.tesselation < 0) ? 5 : tshp.tesselation, 0.75f);
-        } break;
-        case test_shape_type::point: {
-            shp->points.push_back(0);
-            shp->pos.push_back({0, 0, 0});
-            shp->norm.push_back({0, 0, 1});
-            shp->radius.push_back(0.001f);
-        } break;
-        case test_shape_type::pointscube: {
-            auto npoints = (tshp.num < 0) ? 64 * 64 * 16 : tshp.num;
-            auto radius = (tshp.radius < 0) ? 0.0025f : tshp.radius;
-            tie(shp->points, shp->texcoord) = make_uvpoints(npoints);
-            shp->pos.reserve(shp->texcoord.size());
-            shp->norm.resize(shp->texcoord.size(), {0, 0, 1});
-            shp->radius.resize(shp->texcoord.size(), radius);
-            auto rn = init_rng(0);
-            for (auto i = 0; i < shp->texcoord.size(); i++) {
-                shp->pos += vec3f{-1 + 2 * next_rand1f(rn),
-                    -1 + 2 * next_rand1f(rn), -1 + 2 * next_rand1f(rn)};
-            }
-        } break;
-        case test_shape_type::hairball: {
-            auto nhairs = (tshp.num < 0) ? 65536 : tshp.num;
-            auto radius = (tshp.radius < 0) ? vec2f{0.001f, 0.0001f} :
-                                              vec2f{tshp.radius, 0.0001f};
-            tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
-                make_uvspherecube(5);
-            tie(shp->lines, shp->pos, shp->norm, shp->texcoord, shp->radius) =
-                make_hair(nhairs, 2, {}, shp->quads, shp->pos, shp->norm,
-                    shp->texcoord, tshp.hair_params);
-            shp->quads.clear();
-        } break;
-        case test_shape_type::beziercircle: {
-            tie(shp->beziers, shp->pos) = make_bezier_circle();
-            shp->subdivision_level = 2;
-        } break;
-        default: throw runtime_error("should not have gotten here");
-    }
-
-    if (tshp.scale != 1) {
-        for (auto& p : shp->pos) p *= tshp.scale;
-    }
-
-    for (auto i = 0; i < tshp.subdivision; i++) {
-        subdivide_shape_once(shp, true);
-    }
-
-    if (tshp.faceted) facet_shape(shp);
-}
-
-// Makes/updates a test shape.
-void update_test_instance(
-    const scene* scn, instance* ist, const test_instance_params& tist) {
-    if (tist.name == "") throw runtime_error("cannot use empty name");
-    auto shp = (shape*)nullptr;
-    if (scn && tist.shp != "") {
-        for (auto elem : scn->shapes)
-            if (elem->name == tist.shp) shp = elem;
-    }
-
-    ist->name = tist.name;
-    ist->frame = tist.frame;
-    if (tist.rotation != zero3f) {
-        auto rot = rotation_mat3f(vec3f{0, 0, 1}, tist.rotation.z * pif / 180) *
-                   rotation_mat3f(vec3f{0, 1, 0}, tist.rotation.y * pif / 180) *
-                   rotation_mat3f(vec3f{1, 0, 0}, tist.rotation.x * pif / 180);
-        ist->frame.rot() = ist->frame.rot() * rot;
-    }
-    ist->shp = shp;
-}
-
-// Makes/updates a test shape
-void update_test_camera(
-    const scene* scn, camera* cam, const test_camera_params& tcam) {
-    if (tcam.name == "") throw runtime_error("cannot use empty name");
-
-    cam->name = tcam.name;
-    cam->frame = lookat_frame3f(tcam.from, tcam.to, {0, 1, 0});
-    cam->yfov = tcam.yfov;
-    cam->aspect = tcam.aspect;
-    cam->near = 0.01f;
-    cam->far = 10000;
-    cam->aperture = 0;
-    cam->focus = length(tcam.from - tcam.to);
-}
-
-// Makes/updates a test shape
-void update_test_environment(
-    const scene* scn, environment* env, const test_environment_params& tenv) {
-    if (tenv.name == "") throw runtime_error("cannot use empty name");
-    auto txt = (texture*)nullptr;
-    if (scn && tenv.txt != "") {
-        for (auto elem : scn->textures)
-            if (elem->name == tenv.txt) txt = elem;
-    }
-
-    env->name = tenv.name;
-    env->frame = identity_frame3f;
-    if (tenv.rotation) {
-        env->frame = rotation_frame3f({0, 1, 0}, tenv.rotation);
-    }
-    env->ke = tenv.emission * tenv.color;
-    env->ke_txt.txt = txt;
-}
-
-// Update test elements
-template <typename T, typename T1>
-inline void update_test_scene_elem(scene* scn, vector<T*>& elems,
-    const vector<T1>& telems, void (*update)(const scene*, T*, const T1&),
-    const unordered_set<void*>& refresh) {
-    auto emap = unordered_map<string, T*>();
-    for (auto elem : elems) emap[elem->name] = elem;
-    for (auto& telem : telems) {
-        if (!contains(emap, telem.name)) {
-            elems += new T();
-            update(scn, elems.back(), telem);
-        } else {
-            auto elem = emap.at(telem.name);
-            if (contains(refresh, elem)) update(scn, elem, telem);
-        }
-    }
-}
-
-// Makes/updates a test scene
-void update_test_scene(scene* scn, const test_scene_params& params,
-    const unordered_set<void*>& refresh) {
-    update_test_scene_elem(
-        scn, scn->cameras, params.cameras, update_test_camera, refresh);
-    update_test_scene_elem(
-        scn, scn->textures, params.textures, update_test_texture, refresh);
-    update_test_scene_elem(
-        scn, scn->materials, params.materials, update_test_material, refresh);
-    update_test_scene_elem(
-        scn, scn->shapes, params.shapes, update_test_shape, refresh);
-    update_test_scene_elem(
-        scn, scn->instances, params.instances, update_test_instance, refresh);
-    update_test_scene_elem(scn, scn->environments, params.environments,
-        update_test_environment, refresh);
-}
-
 // Add missing values and elements
 void add_elements(scene* scn, const add_elements_options& opts) {
     if (opts.smooth_normals) {
@@ -8425,6 +8073,392 @@ make_uvhollowcutsphere1(int tesselation, float radius) {
     return {quads, pos, norm, texcoord};
 }
 
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
+// EXAMPLE SCENES
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// Makes/updates a test texture
+void update_test_texture(
+    const scene* scn, texture* txt, const test_texture_params& ttxt) {
+    if (ttxt.name == "") throw runtime_error("cannot use empty name");
+
+    txt->name = ttxt.name;
+    txt->path = "";
+    txt->ldr = {};
+    txt->hdr = {};
+
+    switch (ttxt.type) {
+        case test_texture_type::none: break;
+        case test_texture_type::grid: {
+            txt->ldr = make_grid_image(ttxt.resolution, ttxt.resolution);
+        } break;
+        case test_texture_type::checker: {
+            txt->ldr = make_checker_image(ttxt.resolution, ttxt.resolution);
+        } break;
+        case test_texture_type::colored: {
+            txt->ldr = make_uvgrid_image(ttxt.resolution, ttxt.resolution);
+        } break;
+        case test_texture_type::rcolored: {
+            txt->ldr = make_recuvgrid_image(ttxt.resolution, ttxt.resolution);
+        } break;
+        case test_texture_type::bump: {
+            txt->ldr = make_bumpdimple_image(
+                ttxt.resolution, ttxt.resolution, ttxt.tile_size);
+        } break;
+        case test_texture_type::uv: {
+            txt->ldr = make_uv_image(ttxt.resolution, ttxt.resolution);
+        } break;
+        case test_texture_type::gamma: {
+            txt->ldr = make_gammaramp_image(ttxt.resolution, ttxt.resolution);
+        } break;
+        case test_texture_type::noise: {
+            txt->ldr = make_noise_image(
+                ttxt.resolution, ttxt.resolution, ttxt.noise_scale);
+        } break;
+        case test_texture_type::ridge: {
+            txt->ldr = make_ridge_image(
+                ttxt.resolution, ttxt.resolution, ttxt.noise_scale);
+        } break;
+        case test_texture_type::fbm: {
+            txt->ldr = make_fbm_image(
+                ttxt.resolution, ttxt.resolution, ttxt.noise_scale);
+        } break;
+        case test_texture_type::turbulence: {
+            txt->ldr = make_turbulence_image(
+                ttxt.resolution, ttxt.resolution, ttxt.noise_scale);
+        } break;
+        case test_texture_type::gammaf: {
+            txt->hdr = make_gammaramp_imagef(ttxt.resolution, ttxt.resolution);
+        } break;
+        case test_texture_type::sky: {
+            txt->hdr = make_sunsky_image(ttxt.resolution, ttxt.sky_sunangle);
+        } break;
+        default: throw runtime_error("should not have gotten here");
+    }
+
+    if (ttxt.bump_to_normal) {
+        txt->ldr = bump_to_normal_map(txt->ldr, ttxt.bump_scale);
+    }
+
+    if (txt->ldr) txt->path = ttxt.name + ".png";
+    if (txt->hdr) txt->path = ttxt.name + ".sky";
+}
+
+// Makes/updates a test material
+void update_test_material(
+    const scene* scn, material* mat, const test_material_params& tmat) {
+    if (tmat.name == "") throw runtime_error("cannot use empty name");
+    auto txt = (texture*)nullptr, norm = (texture*)nullptr;
+    if (scn && tmat.txt != "")
+        for (auto elem : scn->textures)
+            if (elem->name == tmat.txt) txt = elem;
+    if (scn && tmat.norm != "")
+        for (auto elem : scn->textures)
+            if (elem->name == tmat.norm) norm = elem;
+
+    mat->name = tmat.name;
+    mat->mtype = material_type::specular_roughness;
+    mat->ke = zero3f;
+    mat->kd = zero3f;
+    mat->rs = 1;
+    mat->kr = zero3f;
+    mat->kt = zero3f;
+    mat->ke_txt.txt = nullptr;
+    mat->kd_txt.txt = nullptr;
+    mat->ks_txt.txt = nullptr;
+    mat->kr_txt.txt = nullptr;
+    mat->kt_txt.txt = nullptr;
+
+    switch (tmat.type) {
+        case test_material_type::none: break;
+        case test_material_type::emission: {
+            mat->ke = tmat.emission * tmat.color;
+            mat->ke_txt.txt = txt;
+        } break;
+        case test_material_type::matte: {
+            mat->kd = tmat.color;
+            mat->kd_txt.txt = txt;
+        } break;
+        case test_material_type::plastic: {
+            mat->kd = tmat.color;
+            mat->ks = {0.04f, 0.04f, 0.04f};
+            mat->rs = tmat.roughness;
+            mat->kd_txt.txt = txt;
+        } break;
+        case test_material_type::metal: {
+            mat->ks = tmat.color;
+            mat->rs = tmat.roughness;
+            mat->ks_txt.txt = txt;
+        } break;
+        case test_material_type::transparent: {
+            mat->kd = tmat.color;
+            mat->op = tmat.opacity;
+            mat->kd_txt.txt = txt;
+        } break;
+        default: throw runtime_error("should not have gotten here");
+    }
+
+    mat->norm_txt.txt = norm;
+}
+
+// Makes/updates a test shape
+void update_test_shape(
+    const scene* scn, shape* shp, const test_shape_params& tshp) {
+    if (tshp.name == "") throw runtime_error("cannot use empty name");
+    auto mat = (material*)nullptr;
+    if (scn && tshp.mat != "") {
+        for (auto elem : scn->materials)
+            if (elem->name == tshp.mat) mat = elem;
+    }
+
+    shp->name = tshp.name;
+    shp->mat = mat;
+    shp->pos = {};
+    shp->norm = {};
+    shp->texcoord = {};
+    shp->texcoord1 = {};
+    shp->color = {};
+    shp->radius = {};
+    shp->tangsp = {};
+    shp->points = {};
+    shp->lines = {};
+    shp->triangles = {};
+    shp->quads = {};
+    shp->quads_pos = {};
+    shp->quads_norm = {};
+    shp->quads_texcoord = {};
+
+    switch (tshp.type) {
+        case test_shape_type::floor: {
+            tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
+                make_uvquad((tshp.tesselation < 0) ? 5 : tshp.tesselation);
+            for (auto& p : shp->pos) p = {-p.x, p.z, p.y};
+            for (auto& n : shp->norm) n = {n.x, n.z, n.y};
+            for (auto& p : shp->pos) p *= 20;
+            for (auto& uv : shp->texcoord) uv *= 20;
+        } break;
+        case test_shape_type::quad: {
+            tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
+                make_uvquad((tshp.tesselation < 0) ? 0 : tshp.tesselation);
+        } break;
+        case test_shape_type::cube: {
+            tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
+                make_uvcube((tshp.tesselation < 0) ? 0 : tshp.tesselation);
+        } break;
+        case test_shape_type::sphere: {
+            tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
+                make_uvsphere((tshp.tesselation < 0) ? 5 : tshp.tesselation);
+        } break;
+        case test_shape_type::spherecube: {
+            tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
+                make_uvspherecube(
+                    (tshp.tesselation < 0) ? 4 : tshp.tesselation);
+        } break;
+        case test_shape_type::spherizedcube: {
+            tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
+                make_uvspherizedcube(
+                    (tshp.tesselation < 0) ? 4 : tshp.tesselation, 0.75f);
+        } break;
+        case test_shape_type::geosphere: {
+            tie(shp->triangles, shp->pos) = make_geodesicsphere(
+                (tshp.tesselation < 0) ? 5 : tshp.tesselation);
+            shp->norm = shp->pos;
+        } break;
+        case test_shape_type::flipcapsphere: {
+            tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
+                make_uvflipcapsphere(
+                    (tshp.tesselation < 0) ? 5 : tshp.tesselation, 0.75f);
+        } break;
+        case test_shape_type::suzanne: {
+            tie(shp->quads, shp->pos) =
+                make_suzanne((tshp.tesselation < 0) ? 0 : tshp.tesselation);
+        } break;
+        case test_shape_type::cubep: {
+            tie(shp->quads, shp->pos) =
+                make_cube((tshp.tesselation < 0) ? 0 : tshp.tesselation);
+        } break;
+        case test_shape_type::fvcube: {
+            tie(shp->quads_pos, shp->pos, shp->quads_norm, shp->norm,
+                shp->quads_texcoord, shp->texcoord) =
+                make_fvcube((tshp.tesselation < 0) ? 0 : tshp.tesselation);
+        } break;
+        case test_shape_type::fvsphere: {
+            tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
+                make_uvsphere((tshp.tesselation < 0) ? 5 : tshp.tesselation);
+        } break;
+        case test_shape_type::matball: {
+            tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
+                make_uvflipcapsphere(
+                    (tshp.tesselation < 0) ? 5 : tshp.tesselation, 0.75f);
+        } break;
+        case test_shape_type::point: {
+            shp->points.push_back(0);
+            shp->pos.push_back({0, 0, 0});
+            shp->norm.push_back({0, 0, 1});
+            shp->radius.push_back(0.001f);
+        } break;
+        case test_shape_type::pointscube: {
+            auto npoints = (tshp.num < 0) ? 64 * 64 * 16 : tshp.num;
+            auto radius = (tshp.radius < 0) ? 0.0025f : tshp.radius;
+            tie(shp->points, shp->texcoord) = make_uvpoints(npoints);
+            shp->pos.reserve(shp->texcoord.size());
+            shp->norm.resize(shp->texcoord.size(), {0, 0, 1});
+            shp->radius.resize(shp->texcoord.size(), radius);
+            auto rn = init_rng(0);
+            for (auto i = 0; i < shp->texcoord.size(); i++) {
+                shp->pos += vec3f{-1 + 2 * next_rand1f(rn),
+                    -1 + 2 * next_rand1f(rn), -1 + 2 * next_rand1f(rn)};
+            }
+        } break;
+        case test_shape_type::hairball: {
+            auto nhairs = (tshp.num < 0) ? 65536 : tshp.num;
+            auto radius = (tshp.radius < 0) ? vec2f{0.001f, 0.0001f} :
+                                              vec2f{tshp.radius, 0.0001f};
+            tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
+                make_uvspherecube(5);
+            tie(shp->lines, shp->pos, shp->norm, shp->texcoord, shp->radius) =
+                make_hair(nhairs, 2, {}, shp->quads, shp->pos, shp->norm,
+                    shp->texcoord, tshp.hair_params);
+            shp->quads.clear();
+        } break;
+        case test_shape_type::beziercircle: {
+            tie(shp->beziers, shp->pos) = make_bezier_circle();
+            shp->subdivision_level = 2;
+        } break;
+        default: throw runtime_error("should not have gotten here");
+    }
+
+    if (tshp.scale != 1) {
+        for (auto& p : shp->pos) p *= tshp.scale;
+    }
+
+    for (auto i = 0; i < tshp.subdivision; i++) {
+        subdivide_shape_once(shp, true);
+    }
+
+    if (tshp.faceted) facet_shape(shp);
+}
+
+// Makes/updates a test shape.
+void update_test_instance(
+    const scene* scn, instance* ist, const test_instance_params& tist) {
+    if (tist.name == "") throw runtime_error("cannot use empty name");
+    auto shp = (shape*)nullptr;
+    if (scn && tist.shp != "") {
+        for (auto elem : scn->shapes)
+            if (elem->name == tist.shp) shp = elem;
+    }
+
+    ist->name = tist.name;
+    ist->frame = tist.frame;
+    if (tist.rotation != zero3f) {
+        auto rot = rotation_mat3f(vec3f{0, 0, 1}, tist.rotation.z * pif / 180) *
+                   rotation_mat3f(vec3f{0, 1, 0}, tist.rotation.y * pif / 180) *
+                   rotation_mat3f(vec3f{1, 0, 0}, tist.rotation.x * pif / 180);
+        ist->frame.rot() = ist->frame.rot() * rot;
+    }
+    ist->shp = shp;
+}
+
+// Makes/updates a test shape
+void update_test_camera(
+    const scene* scn, camera* cam, const test_camera_params& tcam) {
+    if (tcam.name == "") throw runtime_error("cannot use empty name");
+
+    cam->name = tcam.name;
+    cam->frame = lookat_frame3f(tcam.from, tcam.to, {0, 1, 0});
+    cam->yfov = tcam.yfov;
+    cam->aspect = tcam.aspect;
+    cam->near = 0.01f;
+    cam->far = 10000;
+    cam->aperture = 0;
+    cam->focus = length(tcam.from - tcam.to);
+}
+
+// Makes/updates a test shape
+void update_test_environment(
+    const scene* scn, environment* env, const test_environment_params& tenv) {
+    if (tenv.name == "") throw runtime_error("cannot use empty name");
+    auto txt = (texture*)nullptr;
+    if (scn && tenv.txt != "") {
+        for (auto elem : scn->textures)
+            if (elem->name == tenv.txt) txt = elem;
+    }
+
+    env->name = tenv.name;
+    env->frame = identity_frame3f;
+    if (tenv.rotation) {
+        env->frame = rotation_frame3f({0, 1, 0}, tenv.rotation);
+    }
+    env->ke = tenv.emission * tenv.color;
+    env->ke_txt.txt = txt;
+}
+
+// Update test elements
+template <typename T, typename T1>
+inline void update_test_scene_elem(scene* scn, vector<T*>& elems,
+    const vector<T1>& telems, void (*update)(const scene*, T*, const T1&),
+    const unordered_set<void*>& refresh) {
+    auto emap = unordered_map<string, T*>();
+    for (auto elem : elems) emap[elem->name] = elem;
+    for (auto& telem : telems) {
+        if (!contains(emap, telem.name)) {
+            elems += new T();
+            update(scn, elems.back(), telem);
+        } else {
+            auto elem = emap.at(telem.name);
+            if (contains(refresh, elem)) update(scn, elem, telem);
+        }
+    }
+}
+
+// Makes/updates a test scene
+void update_test_scene(scene* scn, const test_scene_params& params,
+    const unordered_set<void*>& refresh) {
+    update_test_scene_elem(
+        scn, scn->cameras, params.cameras, update_test_camera, refresh);
+    update_test_scene_elem(
+        scn, scn->textures, params.textures, update_test_texture, refresh);
+    update_test_scene_elem(
+        scn, scn->materials, params.materials, update_test_material, refresh);
+    update_test_scene_elem(
+        scn, scn->shapes, params.shapes, update_test_shape, refresh);
+    update_test_scene_elem(
+        scn, scn->instances, params.instances, update_test_instance, refresh);
+    update_test_scene_elem(scn, scn->environments, params.environments,
+        update_test_environment, refresh);
+}
+
+// remove duplicate elems
+template <typename T>
+inline void remove_duplicate_elems(vector<T>& telems) {
+    auto names = unordered_set<string>();
+    for (auto& elem : telems) names.insert(elem.name);
+    if (names.size() == telems.size()) return;
+    names.clear();
+    auto ntelems = vector<T>();
+    ntelems.reserve(names.size());
+    for (auto& elem : telems) {
+        if (contains(names, elem.name)) continue;
+        ntelems += elem;
+        names.insert(elem.name);
+    }
+    telems = ntelems;
+}
+
+// remove duplicates
+void remove_duplicates(test_scene_params& scn) {
+    remove_duplicate_elems(scn.cameras);
+    remove_duplicate_elems(scn.textures);
+    remove_duplicate_elems(scn.materials);
+    remove_duplicate_elems(scn.shapes);
+    remove_duplicate_elems(scn.instances);
+    remove_duplicate_elems(scn.environments);
+}
+
 unordered_map<string, test_texture_params>& test_texture_presets() {
     static auto presets = unordered_map<string, test_texture_params>();
     if (!presets.empty()) return presets;
@@ -8965,6 +8999,34 @@ unordered_map<string, test_scene_params>& test_scene_presets() {
 
     return presets;
 }
+
+// Load test scene
+test_scene_params load_test_scene(const string& filename) {
+    // load json
+    std::ifstream stream(filename.c_str());
+    if (!stream) throw runtime_error("could not load json " + filename);
+    auto js = json();
+    try {
+        stream >> js;
+    } catch (const exception& e) {
+        throw runtime_error(
+            string("could not load json with error ") + e.what());
+    }
+
+    // clear data
+    auto scn = test_scene_params();
+    try {
+        serialize_from_json(scn, js);
+    } catch (const exception& e) {
+        throw runtime_error("error parsing gltf " + string(e.what()));
+    }
+
+    // done
+    return scn;
+}
+
+// Save test scene
+void save_test_scene(const string& filename, const test_scene_params& scn) {}
 
 }  // namespace ygl
 
