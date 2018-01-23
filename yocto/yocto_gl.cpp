@@ -6723,15 +6723,12 @@ void save_scene(
 }
 
 // Makes/updates a test texture
-texture* update_test_texture(
-    scene* scn, texture* txt, const test_texture_params& params) {
-    auto name = (params.name != "") ?
-                    params.name :
-                    get_key(test_texture_names(), params.type);
-    if (!txt) txt = (scn) ? add_named_texture(scn, name) : new texture();
+void update_test_texture(
+    const scene* scn, texture* txt, const test_texture_params& params) {
+    if (params.name == "") throw runtime_error("cannot use empty name");
 
-    txt->name = name;
-    txt->path = name + ".png";
+    txt->name = params.name;
+    txt->path = "";
     txt->ldr = {};
     txt->hdr = {};
 
@@ -6792,15 +6789,14 @@ texture* update_test_texture(
         txt->ldr = bump_to_normal_map(txt->ldr, params.bump_scale);
     }
 
-    return txt;
+    if (txt->ldr) txt->path = params.name + ".png";
+    if (txt->hdr) txt->path = params.name + ".sky";
 }
 
 // Makes/updates a test material
-material* update_test_material(
-    scene* scn, material* mat, const test_material_params& params) {
-    auto name = (params.name != "") ?
-                    params.name :
-                    get_key(test_material_names(), params.type);
+void update_test_material(
+    const scene* scn, material* mat, const test_material_params& params) {
+    if (params.name == "") throw runtime_error("cannot use empty name");
     auto txt = (texture*)nullptr, norm = (texture*)nullptr;
     if (scn && params.txt != "")
         for (auto elem : scn->textures)
@@ -6809,9 +6805,7 @@ material* update_test_material(
         for (auto elem : scn->textures)
             if (elem->name == params.norm) norm = elem;
 
-    if (!mat) mat = (scn) ? add_named_material(scn, name) : new material();
-
-    mat->name = name;
+    mat->name = params.name;
     mat->mtype = material_type::specular_roughness;
     mat->ke = zero3f;
     mat->kd = zero3f;
@@ -6854,24 +6848,19 @@ material* update_test_material(
     }
 
     mat->norm_txt.txt = norm;
-
-    return mat;
 }
 
 // Makes/updates a test shape
-shape* update_test_shape(
-    scene* scn, shape* shp, const test_shape_params& params) {
-    auto name = (params.name != "") ? params.name :
-                                      get_key(test_shape_names(), params.type);
+void update_test_shape(
+    const scene* scn, shape* shp, const test_shape_params& params) {
+    if (params.name == "") throw runtime_error("cannot use empty name");
     auto mat = (material*)nullptr;
     if (scn && params.mat != "") {
         for (auto elem : scn->materials)
             if (elem->name == params.mat) mat = elem;
     }
 
-    if (!shp) shp = (scn) ? add_named_shape(scn, name) : new shape();
-
-    shp->name = name;
+    shp->name = params.name;
     shp->mat = mat;
     shp->pos = {};
     shp->norm = {};
@@ -6997,23 +6986,19 @@ shape* update_test_shape(
     }
 
     if (params.faceted) facet_shape(shp);
-
-    return shp;
 }
 
 // Makes/updates a test shape.
-instance* update_test_instance(
-    scene* scn, instance* ist, const test_instance_params& params) {
-    auto name = (params.name != "") ? params.name : "instance";
+void update_test_instance(
+    const scene* scn, instance* ist, const test_instance_params& params) {
+    if (params.name == "") throw runtime_error("cannot use empty name");
     auto shp = (shape*)nullptr;
     if (scn && params.shp != "") {
         for (auto elem : scn->shapes)
             if (elem->name == params.shp) shp = elem;
     }
 
-    if (!ist) ist = (scn) ? add_named_instance(scn, name) : new instance();
-
-    ist->name = name;
+    ist->name = params.name;
     ist->frame = params.frame;
     if (params.rotation != zero3f) {
         auto rot =
@@ -7023,18 +7008,14 @@ instance* update_test_instance(
         ist->frame.rot() = ist->frame.rot() * rot;
     }
     ist->shp = shp;
-
-    return ist;
 }
 
 // Makes/updates a test shape
-camera* update_test_camera(
-    scene* scn, camera* cam, const test_camera_params& params) {
-    auto name = (params.name != "") ? params.name : "camera";
+void update_test_camera(
+    const scene* scn, camera* cam, const test_camera_params& params) {
+    if (params.name == "") throw runtime_error("cannot use empty name");
 
-    if (!cam) cam = (scn) ? add_named_camera(scn, name) : new camera();
-
-    cam->name = name;
+    cam->name = params.name;
     cam->frame = lookat_frame3f(params.from, params.to, {0, 1, 0});
     cam->yfov = params.yfov;
     cam->aspect = params.aspect;
@@ -7042,61 +7023,60 @@ camera* update_test_camera(
     cam->far = 10000;
     cam->aperture = 0;
     cam->focus = length(params.from - params.to);
-
-    return cam;
 }
 
 // Makes/updates a test shape
-environment* update_test_environment(
-    scene* scn, environment* env, const test_environment_params& params) {
-    auto name = (params.name != "") ? params.name : "environment";
+void update_test_environment(
+    const scene* scn, environment* env, const test_environment_params& params) {
+    if (params.name == "") throw runtime_error("cannot use empty name");
     auto txt = (texture*)nullptr;
     if (scn && params.txt != "") {
         for (auto elem : scn->textures)
             if (elem->name == params.txt) txt = elem;
     }
 
-    if (!env)
-        env = (scn) ? add_named_environment(scn, name) : new environment();
-
-    env->name = name;
+    env->name = params.name;
     env->frame = identity_frame3f;
     if (params.rotation) {
         env->frame = rotation_frame3f({0, 1, 0}, params.rotation);
     }
     env->ke = params.emission * params.color;
     env->ke_txt.txt = txt;
+}
 
-    return env;
+// Update test elements
+template <typename T, typename T1>
+inline void update_test_scene_elem(scene* scn, vector<T*>& elems,
+    const vector<T1>& telems, void (*update)(const scene*, T*, const T1&),
+    const unordered_set<void*>& refresh) {
+    auto emap = unordered_map<string, T*>();
+    for (auto elem : elems) emap[elem->name] = elem;
+    for (auto& telem : telems) {
+        if (!contains(emap, telem.name)) {
+            elems += new T();
+            update(scn, elems.back(), telem);
+        } else {
+            auto elem = emap.at(telem.name);
+            if (contains(refresh, elem)) update(scn, elem, telem);
+        }
+    }
 }
 
 // Makes/updates a test scene
-scene* update_test_scene(scene* scn, const test_scene_params& params,
+void update_test_scene(scene* scn, const test_scene_params& params,
     const unordered_set<void*>& refresh) {
-    auto update_elems = [&scn, &refresh](
-                            auto& elems, auto& telems, auto& update) {
-        auto emap = unordered_map<string,
-            std::remove_reference_t<decltype(elems[0])>>();
-        for (auto elem : elems) emap[elem->name] = elem;
-        for (auto& telem : telems) {
-            auto elem =
-                (contains(emap, telem.name)) ? emap.at(telem.name) : nullptr;
-            if (elem != nullptr && !contains(refresh, elem)) continue;
-            update(scn, elem, telem);
-        }
-    };
-
-    if (!scn) scn = new scene();
-
-    update_elems(scn->cameras, params.cameras, update_test_camera);
-    update_elems(scn->textures, params.textures, update_test_texture);
-    update_elems(scn->materials, params.materials, update_test_material);
-    update_elems(scn->shapes, params.shapes, update_test_shape);
-    update_elems(scn->instances, params.instances, update_test_instance);
-    update_elems(
-        scn->environments, params.environments, update_test_environment);
-
-    return scn;
+    update_test_scene_elem(
+        scn, scn->cameras, params.cameras, update_test_camera, refresh);
+    update_test_scene_elem(
+        scn, scn->textures, params.textures, update_test_texture, refresh);
+    update_test_scene_elem(
+        scn, scn->materials, params.materials, update_test_material, refresh);
+    update_test_scene_elem(
+        scn, scn->shapes, params.shapes, update_test_shape, refresh);
+    update_test_scene_elem(
+        scn, scn->instances, params.instances, update_test_instance, refresh);
+    update_test_scene_elem(scn, scn->environments, params.environments,
+        update_test_environment, refresh);
 }
 
 // Add missing values and elements
@@ -10174,15 +10154,13 @@ gl_stdsurface_state* make_stdsurface_state() {
 
 // Init shading
 void update_stdsurface_state(gl_stdsurface_state* st, const scene* scn,
-    const gl_stdsurface_params& params,
-    const unordered_set<shape*>& refresh_shapes,
-    const unordered_set<texture*>& refresh_textures) {
+    const gl_stdsurface_params& params, const unordered_set<void*>& refresh) {
     // update textures -----------------------------------------------------
     for (auto txt : scn->textures) {
         if (st->txt.find(txt) == st->txt.end()) {
             st->txt[txt] = gl_texture();
         } else {
-            if (refresh_textures.find(txt) == refresh_textures.end()) continue;
+            if (refresh.find(txt) == refresh.end()) continue;
         }
         if (txt->hdr) {
             update_texture(st->txt[txt], txt->hdr, true, true, true);
@@ -10197,7 +10175,7 @@ void update_stdsurface_state(gl_stdsurface_state* st, const scene* scn,
         if (st->vbo.find(shp) == st->vbo.end()) {
             st->vbo[shp] = gl_stdsurface_vbo();
         } else {
-            if (refresh_shapes.find(shp) == refresh_shapes.end()) continue;
+            if (refresh.find(shp) == refresh.end()) continue;
         }
         if (!shp->quads_pos.empty()) {
             auto pos = vector<vec3f>();
@@ -11288,7 +11266,7 @@ template <typename T, typename T1>
 inline bool draw_selected_elem_widgets(gl_window* win, scene* scn,
     test_scene_params* test_scn, const vector<T*>& elems,
     vector<T1>& test_elems, void*& selection,
-    T* (*update_test_elem)(scene*, T*, const T1&),
+    void (*update_test_elem)(const scene*, T*, const T1&),
     const unordered_map<texture*, gl_texture>& gl_txt) {
     auto selected = (T*)nullptr;
     for (auto elem : elems)
@@ -11313,7 +11291,7 @@ inline bool draw_selected_elem_widgets(gl_window* win, scene* scn,
 template <typename T, typename T1>
 inline bool draw_add_elem_widgets(gl_window* win, scene* scn, const string& lbl,
     vector<T*>& elems, vector<T1>& test_elems, void*& selection,
-    T* (*update_test_elem)(scene*, T*, const T1&)) {
+    void (*update_test_elem)(const scene*, T*, const T1&)) {
     static auto count = 0;
     if (draw_button_widget(win, "add " + lbl)) {
         auto name = lbl + "_" + to_string(count++);
