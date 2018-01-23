@@ -8764,11 +8764,11 @@ unordered_map<string, test_scene_params>& test_scene_presets() {
             auto pos = vector<vec3f>{{-2, 10, 8}, {+2, 10, 8}};
             auto scale = 1.0f;
             if (lights == "arealights") {
-                emission = 80;
+                emission = 8;
                 shp = "quad";
                 mat = "arealight";
-                pos = {{0, 64, 0}, {0, 64, 64}};
-                scale = 16;
+                pos = {{0, 32, 0}, {0, 32, 32}};
+                scale = 32;
             }
             if (lights == "arealights1") {
                 emission = 80;
@@ -8785,6 +8785,7 @@ unordered_map<string, test_scene_params>& test_scene_presets() {
                 params.shapes += test_shape_presets().at(shp);
                 params.shapes.back().name = name;
                 params.shapes.back().mat = name;
+                params.shapes.back().scale = scale;
                 params.instances += make_test_instance(name, name, pos[i]);
                 if (lights == "arealights" || lights == "arealights1")
                     params.instances.back().frame =
