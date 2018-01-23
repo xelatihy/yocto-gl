@@ -6976,56 +6976,9 @@ shape* update_test_shape(
                                                 vec2f{params.radius, 0.0001f};
             tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
                 make_uvspherecube(5);
-            auto params = make_hair_params();
-            params.length = {0.1f, 0.1f};
-            params.radius = radius;
-            params.noise = {0.5f, 8};
             tie(shp->lines, shp->pos, shp->norm, shp->texcoord, shp->radius) =
-                make_hair(nhairs, 2, {}, shp->quads,
-                    shp->pos, shp->norm, shp->texcoord, params);
-            shp->quads.clear();
-        } break;
-        case test_shape_type::hairball1: {
-            auto nhairs = (params.num < 0) ? 65536 : params.num;
-            auto radius = (params.radius < 0) ? vec2f{0.001f, 0.0001f} :
-                                                vec2f{params.radius, 0.0001f};
-            tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
-                make_uvspherecube(5);
-            auto params = make_hair_params();
-            params.length = {0.1f, 0.1f};
-            params.radius = radius;
-            params.noise = {0.5f, 8};
-            tie(shp->lines, shp->pos, shp->norm, shp->texcoord, shp->radius) =
-                make_hair(nhairs, 2, {}, shp->quads,
-                    shp->pos, shp->norm, shp->texcoord, params);
-            shp->quads.clear();
-        } break;
-        case test_shape_type::hairball2: {
-            auto nhairs = (params.num < 0) ? 65536 : params.num;
-            auto radius = (params.radius < 0) ? vec2f{0.001f, 0.0001f} :
-                                                vec2f{params.radius, 0.0001f};
-            tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
-                make_uvspherecube(5);
-            auto params = make_hair_params();
-            params.length = {0.1f, 0.1f};
-            params.radius = radius;
-            params.clump = {0.5f, 128};
-            tie(shp->lines, shp->pos, shp->norm, shp->texcoord, shp->radius) =
-                make_hair(nhairs, 2, {}, shp->quads,
-                    shp->pos, shp->norm, shp->texcoord, params);
-            shp->quads.clear();
-        } break;
-        case test_shape_type::hairball3: {
-            auto nhairs = (params.num < 0) ? 65536 : params.num;
-            auto radius = (params.radius < 0) ? vec2f{0.001f, 0.0001f} :
-                                                vec2f{params.radius, 0.0001f};
-            tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
-                make_uvspherecube(5);
-            auto params = make_hair_params();
-            params.length = {0.1f, 0.1f};
-            params.radius = radius;
-            tie(shp->lines, shp->pos, shp->norm, shp->texcoord, shp->radius) =
-                make_hair(nhairs, 2, {}, shp->quads, shp->pos, shp->norm, shp->texcoord, params);
+                make_hair(nhairs, 2, {}, shp->quads, shp->pos, shp->norm,
+                    shp->texcoord, params.hair_params);
             shp->quads.clear();
         } break;
         case test_shape_type::beziercircle: {
@@ -8229,7 +8182,8 @@ make_hair(int num, int tesselation, const vector<vec3i>& striangles,
 
     auto rng = init_rng(params.seed, 3);
     auto blen = vector<float>(bpos.size());
-    for (auto& l : blen) l = lerp(params.length.x, params.length.y, next_rand1f(rng));
+    for (auto& l : blen)
+        l = lerp(params.length.x, params.length.y, next_rand1f(rng));
 
     auto cidx = vector<int>();
     if (params.clump.x > 0) {
@@ -8264,11 +8218,13 @@ make_hair(int num, int tesselation, const vector<vec3i>& striangles,
                 u * params.clump.x);
         }
         if (params.noise.x > 0) {
-            auto nx = perlin_noise(pos[i] * params.noise.y + vec3f{0, 0, 0}) * params.noise.x;
-            auto ny =
-                perlin_noise(pos[i] * params.noise.y + vec3f{3, 7, 11}) * params.noise.x;
+            auto nx = perlin_noise(pos[i] * params.noise.y + vec3f{0, 0, 0}) *
+                      params.noise.x;
+            auto ny = perlin_noise(pos[i] * params.noise.y + vec3f{3, 7, 11}) *
+                      params.noise.x;
             auto nz =
-                perlin_noise(pos[i] * params.noise.y + vec3f{13, 17, 19}) * params.noise.x;
+                perlin_noise(pos[i] * params.noise.y + vec3f{13, 17, 19}) *
+                params.noise.x;
             pos[i] += {nx, ny, nz};
         }
     }
@@ -8691,11 +8647,19 @@ unordered_map<string, test_shape_params>& test_shape_presets() {
     presets["pointscube"] =
         make_test_shape("pointscube", test_shape_type::pointscube);
     presets["hairball1"] =
-        make_test_shape("hairball1", test_shape_type::hairball1);
+        make_test_shape("hairball1", test_shape_type::hairball);
+    presets["hairball1"].hair_params.radius = {0.001f, 0.0001f};
+    presets["hairball1"].hair_params.length = {0.1f, 0.1f};
+    presets["hairball1"].hair_params.noise = {0.5f, 8};
     presets["hairball2"] =
-        make_test_shape("hairball2", test_shape_type::hairball2);
+        make_test_shape("hairball2", test_shape_type::hairball);
+    presets["hairball2"].hair_params.radius = {0.001f, 0.0001f};
+    presets["hairball2"].hair_params.length = {0.1f, 0.1f};
+    presets["hairball2"].hair_params.clump = {0.5f, 128};
     presets["hairball3"] =
-        make_test_shape("hairball3", test_shape_type::hairball3);
+        make_test_shape("hairball3", test_shape_type::hairball);
+    presets["hairball3"].hair_params.radius = {0.001f, 0.0001f};
+    presets["hairball3"].hair_params.length = {0.1f, 0.1f};
     presets["hairballi"] =
         make_test_shape("hairballi", test_shape_type::sphere);
     presets["hairballi"].scale = 0.8f;

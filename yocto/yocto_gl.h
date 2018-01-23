@@ -8132,12 +8132,6 @@ enum struct test_shape_type {
     pointscube,
     /// Random lines on a sphere
     hairball,
-    /// Random lines on a sphere (preset 1)
-    hairball1,
-    /// Random lines on a sphere (preset 2)
-    hairball2,
-    /// Random lines on a sphere (preset 3)
-    hairball3,
     /// Bezier circle
     beziercircle,
 };
@@ -8161,9 +8155,6 @@ inline vector<pair<string, test_shape_type>>& test_shape_names() {
         {"point", test_shape_type::point},
         {"pointscube", test_shape_type::pointscube},
         {"hairball", test_shape_type::hairball},
-        {"hairball1", test_shape_type::hairball1},
-        {"hairball2", test_shape_type::hairball2},
-        {"hairball3", test_shape_type::hairball3},
         {"beziercircle", test_shape_type::beziercircle},
     };
     return names;
@@ -8189,6 +8180,8 @@ struct test_shape_params {
     bool faceted = false;
     /// Number of elements for points and lines (-1 for default)
     int num = -1;
+    /// Hair generation params
+    make_hair_params hair_params = {};
 };
 
 /// Updates a test shape, adding it to the scene if missing.
