@@ -8758,7 +8758,7 @@ unordered_map<string, test_scene_params>& test_scene_presets() {
         }
         if (lights == "pointlights" || lights == "arealights" ||
             lights == "arealights1") {
-            auto emission = 80;
+            auto emission = 120;
             auto shp = "point";
             auto mat = "pointlight";
             auto pos = vector<vec3f>{{-2, 10, 8}, {+2, 10, 8}};
@@ -8767,8 +8767,8 @@ unordered_map<string, test_scene_params>& test_scene_presets() {
                 emission = 8;
                 shp = "quad";
                 mat = "arealight";
-                pos = {{0, 32, 0}, {0, 32, 32}};
-                scale = 32;
+                pos = {{0, 16, 0}, {0, 16, 16}};
+                scale = 8;
             }
             if (lights == "arealights1") {
                 emission = 80;
