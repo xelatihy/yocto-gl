@@ -6976,9 +6976,13 @@ shape* update_test_shape(
                                                 vec2f{params.radius, 0.0001f};
             tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
                 make_uvspherecube(5);
+            auto params = make_hair_params();
+            params.length = {0.1f, 0.1f};
+            params.radius = radius;
+            params.noise = {0.5f, 8};
             tie(shp->lines, shp->pos, shp->norm, shp->texcoord, shp->radius) =
-                make_hair(nhairs, 2, {0.1f, 0.1f}, radius, {}, shp->quads,
-                    shp->pos, shp->norm, shp->texcoord, {0.5f, 8});
+                make_hair(nhairs, 2, {}, shp->quads,
+                    shp->pos, shp->norm, shp->texcoord, params);
             shp->quads.clear();
         } break;
         case test_shape_type::hairball1: {
@@ -6987,9 +6991,13 @@ shape* update_test_shape(
                                                 vec2f{params.radius, 0.0001f};
             tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
                 make_uvspherecube(5);
+            auto params = make_hair_params();
+            params.length = {0.1f, 0.1f};
+            params.radius = radius;
+            params.noise = {0.5f, 8};
             tie(shp->lines, shp->pos, shp->norm, shp->texcoord, shp->radius) =
-                make_hair(nhairs, 2, {0.1f, 0.1f}, radius, {}, shp->quads,
-                    shp->pos, shp->norm, shp->texcoord, {0.5f, 8});
+                make_hair(nhairs, 2, {}, shp->quads,
+                    shp->pos, shp->norm, shp->texcoord, params);
             shp->quads.clear();
         } break;
         case test_shape_type::hairball2: {
@@ -6998,9 +7006,13 @@ shape* update_test_shape(
                                                 vec2f{params.radius, 0.0001f};
             tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
                 make_uvspherecube(5);
+            auto params = make_hair_params();
+            params.length = {0.1f, 0.1f};
+            params.radius = radius;
+            params.clump = {0.5f, 128};
             tie(shp->lines, shp->pos, shp->norm, shp->texcoord, shp->radius) =
-                make_hair(nhairs, 2, {0.1f, 0.1f}, radius, {}, shp->quads,
-                    shp->pos, shp->norm, shp->texcoord, {}, {0.5f, 128});
+                make_hair(nhairs, 2, {}, shp->quads,
+                    shp->pos, shp->norm, shp->texcoord, params);
             shp->quads.clear();
         } break;
         case test_shape_type::hairball3: {
@@ -7009,9 +7021,11 @@ shape* update_test_shape(
                                                 vec2f{params.radius, 0.0001f};
             tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
                 make_uvspherecube(5);
+            auto params = make_hair_params();
+            params.length = {0.1f, 0.1f};
+            params.radius = radius;
             tie(shp->lines, shp->pos, shp->norm, shp->texcoord, shp->radius) =
-                make_hair(nhairs, 2, {0.1f, 0.1f}, radius, {}, shp->quads,
-                    shp->pos, shp->norm, shp->texcoord);
+                make_hair(nhairs, 2, {}, shp->quads, shp->pos, shp->norm, shp->texcoord, params);
             shp->quads.clear();
         } break;
         case test_shape_type::beziercircle: {
@@ -8202,28 +8216,27 @@ tuple<vector<vec4i>, vector<vec3f>> make_bezier_circle() {
 
 // Make a hair ball around a shape
 tuple<vector<vec2i>, vector<vec3f>, vector<vec3f>, vector<vec2f>, vector<float>>
-make_hair(int num, int tesselation, const vec2f& len, const vec2f& rad,
-    const vector<vec3i>& striangles, const vector<vec4i>& squads,
-    const vector<vec3f>& spos, const vector<vec3f>& snorm,
-    const vector<vec2f>& stexcoord, const vec2f& noise, const vec2f& clump,
-    const vec2f& rotation, uint32_t seed) {
+make_hair(int num, int tesselation, const vector<vec3i>& striangles,
+    const vector<vec4i>& squads, const vector<vec3f>& spos,
+    const vector<vec3f>& snorm, const vector<vec2f>& stexcoord,
+    const make_hair_params& params) {
     vector<vec3f> bpos;
     vector<vec3f> bnorm;
     vector<vec2f> btexcoord;
     tie(bpos, bnorm, btexcoord) =
         sample_triangles_points(striangles + convert_quads_to_triangles(squads),
-            spos, snorm, stexcoord, num, seed);
+            spos, snorm, stexcoord, num, params.seed);
 
-    auto rng = init_rng(seed, 3);
+    auto rng = init_rng(params.seed, 3);
     auto blen = vector<float>(bpos.size());
-    for (auto& l : blen) l = lerp(len.x, len.y, next_rand1f(rng));
+    for (auto& l : blen) l = lerp(params.length.x, params.length.y, next_rand1f(rng));
 
     auto cidx = vector<int>();
-    if (clump.x > 0) {
+    if (params.clump.x > 0) {
         for (auto bidx : range(bpos.size())) {
             cidx += 0;
             auto cdist = flt_max;
-            for (auto c = 0; c < clump.y; c++) {
+            for (auto c = 0; c < params.clump.y; c++) {
                 auto d = length(bpos[bidx] - bpos[c]);
                 if (d < cdist) {
                     cdist = d;
@@ -8245,22 +8258,22 @@ make_hair(int num, int tesselation, const vec2f& len, const vec2f& rad,
         auto bidx = i / (usteps + 1);
         pos[i] = bpos[bidx] + bnorm[bidx] * u * blen[bidx];
         norm[i] = bnorm[bidx];
-        radius[i] = lerp(rad.x, rad.y, u);
-        if (clump.x > 0) {
+        radius[i] = lerp(params.radius.x, params.radius.y, u);
+        if (params.clump.x > 0) {
             pos[i] = lerp(pos[i], pos[i + (cidx[bidx] - bidx) * (usteps + 1)],
-                u * clump.x);
+                u * params.clump.x);
         }
-        if (noise.x > 0) {
-            auto nx = perlin_noise(pos[i] * noise.y + vec3f{0, 0, 0}) * noise.x;
+        if (params.noise.x > 0) {
+            auto nx = perlin_noise(pos[i] * params.noise.y + vec3f{0, 0, 0}) * params.noise.x;
             auto ny =
-                perlin_noise(pos[i] * noise.y + vec3f{3, 7, 11}) * noise.x;
+                perlin_noise(pos[i] * params.noise.y + vec3f{3, 7, 11}) * params.noise.x;
             auto nz =
-                perlin_noise(pos[i] * noise.y + vec3f{13, 17, 19}) * noise.x;
+                perlin_noise(pos[i] * params.noise.y + vec3f{13, 17, 19}) * params.noise.x;
             pos[i] += {nx, ny, nz};
         }
     }
 
-    if (clump.x > 0 || noise.x > 0 || rotation.x > 0)
+    if (params.clump.x > 0 || params.noise.x > 0 || params.rotation.x > 0)
         norm = compute_normals(lines, {}, {}, pos);
 
     return {lines, pos, norm, texcoord, radius};
