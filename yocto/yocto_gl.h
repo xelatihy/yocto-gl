@@ -8037,7 +8037,7 @@ struct test_texture_params {
 
 /// Updates a test texture.
 void update_test_texture(
-    const scene* scn, texture* txt, const test_texture_params& params);
+    const scene* scn, texture* txt, const test_texture_params& ttxt);
 
 /// Test texture presets
 unordered_map<string, test_texture_params>& test_texture_presets();
@@ -8093,7 +8093,7 @@ struct test_material_params {
 
 /// Updates a test material.
 void update_test_material(
-    const scene* scn, material* mat, const test_material_params& params);
+    const scene* scn, material* mat, const test_material_params& tmat);
 
 /// Test material presets
 unordered_map<string, test_material_params>& test_material_presets();
@@ -8186,7 +8186,7 @@ struct test_shape_params {
 
 /// Updates a test shape, adding it to the scene if missing.
 void update_test_shape(
-    const scene* scn, shape* shp, const test_shape_params& params);
+    const scene* scn, shape* shp, const test_shape_params& tshp);
 
 /// Test shape presets
 unordered_map<string, test_shape_params>& test_shape_presets();
@@ -8205,7 +8205,7 @@ struct test_instance_params {
 
 /// Updates a test instance, adding it to the scene if missing.
 void update_test_instance(
-    const scene* scn, instance* ist, const test_instance_params& params);
+    const scene* scn, instance* ist, const test_instance_params& tist);
 
 /// Test instance presets
 unordered_map<string, test_instance_params>& test_instance_presets();
@@ -8226,7 +8226,7 @@ struct test_camera_params {
 
 /// Updates a test instance, adding it to the scene if missing.
 void update_test_camera(
-    const scene* scn, camera* cam, const test_camera_params& params);
+    const scene* scn, camera* cam, const test_camera_params& tcam);
 
 /// Test camera presets
 unordered_map<string, test_camera_params>& test_camera_presets();
@@ -8249,7 +8249,7 @@ struct test_environment_params {
 
 /// Updates a test instance, adding it to the scene if missing.
 void update_test_environment(
-    const scene* scn, environment* env, const test_environment_params& params);
+    const scene* scn, environment* env, const test_environment_params& tenv);
 
 /// Test environment presets
 unordered_map<string, test_environment_params>& test_environment_presets();
@@ -8267,11 +8267,11 @@ struct test_scene_params {
 
 /// Updates a test scene, adding missing objects. Objects are only added (for
 /// now). A new scene is returned if it was not already created.
-void update_test_scene(scene* scn, const test_scene_params& params,
+void update_test_scene(scene* scn, const test_scene_params& tscn,
     const unordered_set<void*>& refresh = {});
 
 /// Makes a test scene. Convenience wrapper around update_test_scene().
-inline scene* make_test_scene(const test_scene_params& params) {
+inline scene* make_test_scene(const test_scene_params& tscn) {
     auto scn = new scene();
     update_test_scene(scn, params);
     return scn;
@@ -8279,6 +8279,9 @@ inline scene* make_test_scene(const test_scene_params& params) {
 
 /// Test scene presets
 unordered_map<string, test_scene_params>& test_scene_presets();
+
+/// Remove duplicates based on name
+void remove_duplicates(test_scene_params tscn);
 
 }  // namespace ygl
 
