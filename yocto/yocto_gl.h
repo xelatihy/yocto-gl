@@ -5081,14 +5081,28 @@ make_uvseashell(int tesselation, const make_seashell_params& params);
 /// Make a bezier circle. Returns bezier, pos.
 tuple<vector<vec4i>, vector<vec3f>> make_bezier_circle();
 
+/// Parameters for the make hair function
+struct make_hair_params {
+    /// minimum and maximum length
+    vec2f length = {0.1f, 0.1f};
+    /// minimum and maximum radius from base to tip
+    vec2f radius = {0.005f, 0.001f};
+    /// noise added to hair (strength/scale)
+    vec2f noise = zero2f;
+    /// clump added to hair (number/strength)
+    vec2f clump = zero2f;
+    /// rotation
+    vec2f rotation = zero2f;
+    /// random seed
+    uint32_t seed = 0;
+};
+
 /// Make a hair ball around a shape. Returns lines, pos, norm, texcoord, radius.
 tuple<vector<vec2i>, vector<vec3f>, vector<vec3f>, vector<vec2f>, vector<float>>
-make_hair(int num, int tesselation, const vec2f& len, const vec2f& rad,
-    const vector<vec3i>& striangles, const vector<vec4i>& squads,
-    const vector<vec3f>& spos, const vector<vec3f>& snorm,
-    const vector<vec2f>& stexcoord, const vec2f& noise = zero2f,
-    const vec2f& clump = zero2f, const vec2f& rotation = zero2f,
-    uint32_t seed = 0);
+make_hair(int num, int tesselation, const vector<vec3i>& striangles,
+    const vector<vec4i>& squads, const vector<vec3f>& spos,
+    const vector<vec3f>& snorm, const vector<vec2f>& stexcoord,
+    const make_hair_params& params);
 
 }  // namespace ygl
 
