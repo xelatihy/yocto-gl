@@ -3116,8 +3116,6 @@ namespace ygl {
 // Json alias
 using json = nlohmann::json;
 
-// #codegen begin func ---------------------------------------------------------
-
 // Parse int function.
 inline void serialize_from_json(int& val, const json& js) {
     if (!js.is_number_integer()) throw runtime_error("integer expected");
@@ -3228,6 +3226,97 @@ inline void serialize_from_json(quat4f& vals, const json& js) {
 inline void serialize_from_json(mat4f& vals, const json& js) {
     serialize_from_json((array<float, 16>&)vals, js);
 }
+
+// Converts int to json.
+inline void serialize_to_json(int val, json& js) { js = val; }
+
+// Converts float to json.
+inline void serialize_to_json(float val, json& js) { js = val; }
+
+// Converts bool to json.
+inline void serialize_to_json(bool val, json& js) { js = val; }
+
+// Converts string to json.
+inline void serialize_to_json(const string& val, json& js) { js = val; }
+
+// Converts json to json.
+inline void serialize_to_json(const json& val, json& js) { js = val; }
+
+// Dump support function.
+template <typename T>
+inline void serialize_to_json(const T* val, json& js) {
+    if (!val) {
+        js = nullptr;
+        return;
+    }
+    if (!js.is_object()) js = json::object();
+    serialize_to_json(*val, js);
+}
+
+// Dump support function.
+template <typename T, size_t N>
+inline void serialize_to_json(const array<T, N>& vals, json& js) {
+    js = json::array();
+    for (auto i = 0; i < N; i++) serialize_to_json(vals[i], js[i]);
+}
+
+// Dump support function.
+template <typename T>
+inline void serialize_to_json(const vector<T>& vals, json& js) {
+    js = json::array();
+    for (auto i = 0; i < vals.size(); i++) serialize_to_json(vals[i], js[i]);
+}
+
+// Dump support function.
+template <typename T>
+inline void serialize_to_json(const map<string, T>& vals, json& js) {
+    js = json::object();
+    for (auto& kv : vals) serialize_to_json(kv.second, js[kv.first]);
+}
+
+// Dump support function.
+template <typename T, typename T1>
+inline void serialize_to_json(
+    const T& val, json& js, const vector<pair<T1, T>>& table) {
+    auto found = false;
+    auto v = T1();
+    for (auto& kv : table) {
+        if (kv.second == val) {
+            v = kv.first;
+            found = true;
+            break;
+        }
+    }
+    if (!found) throw runtime_error("invalid value");
+    serialize_to_json(v, js);
+}
+
+// Dump support function.
+inline void serialize_to_json(const vec2f& vals, json& js) {
+    serialize_to_json((const array<float, 2>&)vals, js);
+}
+
+// Dump support function.
+inline void serialize_to_json(const vec3f& vals, json& js) {
+    serialize_to_json((const array<float, 3>&)vals, js);
+}
+
+// Dump support function.
+inline void serialize_to_json(const vec4f& vals, json& js) {
+    serialize_to_json((const array<float, 4>&)vals, js);
+}
+
+// Dump support function.
+inline void serialize_to_json(const quat4f& vals, json& js) {
+    serialize_to_json((const array<float, 4>&)vals, js);
+}
+
+// Dump support function.
+inline void serialize_to_json(const mat4f& vals, json& js) {
+    serialize_to_json((const array<float, 16>&)vals, js);
+}
+
+// #codegen begin func ---------------------------------------------------------
 
 // Parse id function.
 template <typename T>
@@ -3790,95 +3879,6 @@ inline void serialize_from_json(glTF& val, const json& js) {
     if (js.count("skins")) serialize_from_json(val.skins, js.at("skins"));
     if (js.count("textures"))
         serialize_from_json(val.textures, js.at("textures"));
-}
-
-// Converts int to json.
-inline void serialize_to_json(int val, json& js) { js = val; }
-
-// Converts float to json.
-inline void serialize_to_json(float val, json& js) { js = val; }
-
-// Converts bool to json.
-inline void serialize_to_json(bool val, json& js) { js = val; }
-
-// Converts string to json.
-inline void serialize_to_json(const string& val, json& js) { js = val; }
-
-// Converts json to json.
-inline void serialize_to_json(const json& val, json& js) { js = val; }
-
-// Dump support function.
-template <typename T>
-inline void serialize_to_json(const T* val, json& js) {
-    if (!val) {
-        js = nullptr;
-        return;
-    }
-    if (!js.is_object()) js = json::object();
-    serialize_to_json(*val, js);
-}
-
-// Dump support function.
-template <typename T, size_t N>
-inline void serialize_to_json(const array<T, N>& vals, json& js) {
-    js = json::array();
-    for (auto i = 0; i < N; i++) serialize_to_json(vals[i], js[i]);
-}
-
-// Dump support function.
-template <typename T>
-inline void serialize_to_json(const vector<T>& vals, json& js) {
-    js = json::array();
-    for (auto i = 0; i < vals.size(); i++) serialize_to_json(vals[i], js[i]);
-}
-
-// Dump support function.
-template <typename T>
-inline void serialize_to_json(const map<string, T>& vals, json& js) {
-    js = json::object();
-    for (auto& kv : vals) serialize_to_json(kv.second, js[kv.first]);
-}
-
-// Dump support function.
-template <typename T, typename T1>
-inline void serialize_to_json(
-    const T& val, json& js, const vector<pair<T1, T>>& table) {
-    auto found = false;
-    auto v = T1();
-    for (auto& kv : table) {
-        if (kv.second == val) {
-            v = kv.first;
-            found = true;
-            break;
-        }
-    }
-    if (!found) throw runtime_error("invalid value");
-    serialize_to_json(v, js);
-}
-
-// Dump support function.
-inline void serialize_to_json(const vec2f& vals, json& js) {
-    serialize_to_json((const array<float, 2>&)vals, js);
-}
-
-// Dump support function.
-inline void serialize_to_json(const vec3f& vals, json& js) {
-    serialize_to_json((const array<float, 3>&)vals, js);
-}
-
-// Dump support function.
-inline void serialize_to_json(const vec4f& vals, json& js) {
-    serialize_to_json((const array<float, 4>&)vals, js);
-}
-
-// Dump support function.
-inline void serialize_to_json(const quat4f& vals, json& js) {
-    serialize_to_json((const array<float, 4>&)vals, js);
-}
-
-// Dump support function.
-inline void serialize_to_json(const mat4f& vals, json& js) {
-    serialize_to_json((const array<float, 16>&)vals, js);
 }
 
 // Converts glTFid to json.
@@ -9015,11 +9015,13 @@ test_scene_params load_test_scene(const string& filename) {
 
     // clear data
     auto scn = test_scene_params();
+#if 0
     try {
         serialize_from_json(scn, js);
     } catch (const exception& e) {
         throw runtime_error("error parsing gltf " + string(e.what()));
     }
+#endif
 
     // done
     return scn;
