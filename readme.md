@@ -240,7 +240,9 @@ manipulation useful to support scene viewing and path tracing.
 13. convert face varying to vertex shared representations with
     `convert_face_varying()`
 14. subdivide elements by edge splits with `subdivide_elems_linear()` and
-    `subdivide_vert_linear()`
+    `subdivide_vert_linear()`; for an easier interface use
+    `subdivide_lines_linear()`, `subdivide_triangles_linear()`,
+    `subdivide_quads_linear()`
 15. Catmull-Clark subdivision surface with `subdivide_vert_catmullclark()`
     with support for edge and vertex creasing
 16. subdvide Bezier with `subdivide_bezier_recursive()` and
@@ -489,10 +491,10 @@ windows with GLFW and draw immediate-mode widgets with ImGui.
     - define vertices with `set_vert()`
     - draw elements with `draw_elems()`
 5. draw yocto scenes using the above shader
-    - initialize the rendering state with `init_stdprogram_state()`
-    - load/update meshes and textures with `update_stdprogram_state()`
+    - initialize the rendering state with `init_stdsurface_state()`
+    - load/update meshes and textures with `update_stdsurface_state()`
     - setup draw params using a `gl_stdsurface_params` struct
-    - draw scene with `draw_stdprogram_scene()`
+    - draw scene with `draw_stdsurface_scene()`
 6. also includes other utlities for quick OpenGL hacking
 7. GLFW window with `gl_window`
     - create with constructor
@@ -518,8 +520,8 @@ manipulating files.
    `prepend_path_extension()`, `split_path()`
 3. Python-like format strings (only support for position arguments and no
    formatting commands): `format()`, `print()`
-5. load/save entire files: `load_binfile()`, `load_txtfile()`,
-   `save_binfile()` and `save_binfile()`
+5. load/save entire files: `load_binary()`, `load_text()`,
+   `save_text()` and `save_binary()`
 4. simple logger with support for console and file streams:
     1. create a `logger`
     2. add more streams with `add_console_stream()` or `add_file_stream()`

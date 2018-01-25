@@ -240,7 +240,9 @@ manipulation useful to support scene viewing and path tracing.
 13. convert face varying to vertex shared representations with
     `convert_face_varying()`
 14. subdivide elements by edge splits with `subdivide_elems_linear()` and
-    `subdivide_vert_linear()`
+    `subdivide_vert_linear()`; for an easier interface use
+    `subdivide_lines_linear()`, `subdivide_triangles_linear()`,
+    `subdivide_quads_linear()`
 15. Catmull-Clark subdivision surface with `subdivide_vert_catmullclark()`
     with support for edge and vertex creasing
 16. subdvide Bezier with `subdivide_bezier_recursive()` and
@@ -489,10 +491,10 @@ windows with GLFW and draw immediate-mode widgets with ImGui.
     - define vertices with `set_vert()`
     - draw elements with `draw_elems()`
 5. draw yocto scenes using the above shader
-    - initialize the rendering state with `init_stdprogram_state()`
-    - load/update meshes and textures with `update_stdprogram_state()`
+    - initialize the rendering state with `init_stdsurface_state()`
+    - load/update meshes and textures with `update_stdsurface_state()`
     - setup draw params using a `gl_stdsurface_params` struct
-    - draw scene with `draw_stdprogram_scene()`
+    - draw scene with `draw_stdsurface_scene()`
 6. also includes other utlities for quick OpenGL hacking
 7. GLFW window with `gl_window`
     - create with constructor
@@ -518,8 +520,8 @@ manipulating files.
    `prepend_path_extension()`, `split_path()`
 3. Python-like format strings (only support for position arguments and no
    formatting commands): `format()`, `print()`
-5. load/save entire files: `load_binfile()`, `load_txtfile()`,
-   `save_binfile()` and `save_binfile()`
+5. load/save entire files: `load_binary()`, `load_text()`,
+   `save_text()` and `save_binary()`
 4. simple logger with support for console and file streams:
     1. create a `logger`
     2. add more streams with `add_console_stream()` or `add_file_stream()`
@@ -756,6 +758,14 @@ using std::map;
 ~~~
 
 map
+
+#### Function Alias set()
+
+~~~ .cpp
+using std::set;
+~~~
+
+set
 
 #### Function Alias unordered_map()
 
@@ -5053,6 +5063,42 @@ inline bool contains(const unordered_map<K, V>& v, const K& vv);
 
 Checks if a containers contains a value
 
+#### Function contains()
+
+~~~ .cpp
+template <typename K, typename V>
+inline bool contains(const set<K, V>& v, const K& vv);
+~~~
+
+Checks if a containers contains a value
+
+#### Function contains()
+
+~~~ .cpp
+template <typename K, typename V>
+inline bool contains(const unordered_set<K, V>& v, const K& vv);
+~~~
+
+Checks if a containers contains a value
+
+#### Function contains()
+
+~~~ .cpp
+template <typename K, typename V, typename K1>
+inline bool contains(const unordered_map<K, V>& v, const K1& vv);
+~~~
+
+Checks if a containers contains a value
+
+#### Function contains()
+
+~~~ .cpp
+template <typename K, typename V, typename K1>
+inline bool contains(const unordered_set<K, V>& v, const K1& vv);
+~~~
+
+Checks if a containers contains a value
+
 #### Function line_tangent()
 
 ~~~ .cpp
@@ -5558,7 +5604,7 @@ takes the point index and returns vec3f numbers uniform directibuted in
 #### Function make_sphere()
 
 ~~~ .cpp
-tuple<vector<vec3i>, vector<vec3f>> make_sphere(int level);
+tuple<vector<vec3i>, vector<vec3f>> make_sphere(int tesselation);
 ~~~
 
 Make a sphere. Returns quads, pos.
@@ -5566,7 +5612,7 @@ Make a sphere. Returns quads, pos.
 #### Function make_geodesicsphere()
 
 ~~~ .cpp
-tuple<vector<vec3i>, vector<vec3f>> make_geodesicsphere(int level);
+tuple<vector<vec3i>, vector<vec3f>> make_geodesicsphere(int tesselation);
 ~~~
 
 Make a geodesic sphere. Returns quads, pos.
@@ -5574,7 +5620,7 @@ Make a geodesic sphere. Returns quads, pos.
 #### Function make_cube()
 
 ~~~ .cpp
-tuple<vector<vec4i>, vector<vec3f>> make_cube();
+tuple<vector<vec4i>, vector<vec3f>> make_cube(int tesselation);
 ~~~
 
 Make a cube with unique vertices. This is watertight but has no
@@ -5584,7 +5630,7 @@ texture coordinates or normals. Returns quads, pos.
 
 ~~~ .cpp
 tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_uvsphere(
-    int level, bool flipped = false);
+    int tesselation, bool flipped = false);
 ~~~
 
 Make a sphere. This is not watertight. Returns quads, pos, norm, texcoord.
@@ -5593,7 +5639,7 @@ Make a sphere. This is not watertight. Returns quads, pos, norm, texcoord.
 
 ~~~ .cpp
 tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
-make_uvhemisphere(int level, bool flipped = false);
+make_uvhemisphere(int tesselation, bool flipped = false);
 ~~~
 
 Make a sphere. This is not watertight. Returns quads, pos, norm, texcoord.
@@ -5602,7 +5648,7 @@ Make a sphere. This is not watertight. Returns quads, pos, norm, texcoord.
 
 ~~~ .cpp
 tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_uvquad(
-    int level);
+    int tesselation);
 ~~~
 
 Make a quad. Returns quads, pos, norm, texcoord.
@@ -5612,7 +5658,7 @@ Make a quad. Returns quads, pos, norm, texcoord.
 ~~~ .cpp
 tuple<vector<vec4i>, vector<vec3f>, vector<vec4i>, vector<vec3f>, vector<vec4i>,
     vector<vec2f>>
-make_fvsphere();
+make_fvsphere(int tesselation);
 ~~~
 
 Make a facevarying sphere with unique vertices but different texture
@@ -5623,7 +5669,7 @@ coordinates. Returns (quads, pos), (quads, norm), (quads, texcoord).
 ~~~ .cpp
 tuple<vector<vec4i>, vector<vec3f>, vector<vec4i>, vector<vec3f>, vector<vec4i>,
     vector<vec2f>>
-make_fvcube();
+make_fvcube(int tesselation);
 ~~~
 
 Make a facevarying cube with unique vertices but different texture
@@ -5632,7 +5678,7 @@ coordinates. Returns (quads, pos), (quads, norm), (quads, texcoord).
 #### Function make_suzanne()
 
 ~~~ .cpp
-tuple<vector<vec4i>, vector<vec3f>> make_suzanne();
+tuple<vector<vec4i>, vector<vec3f>> make_suzanne(int tesselation);
 ~~~
 
 Make a suzanne monkey model for testing. Note that some quads are
@@ -5642,7 +5688,7 @@ degenerate. Returns quads, pos.
 
 ~~~ .cpp
 tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_uvcube(
-    int level);
+    int tesselation);
 ~~~
 
 Make a cube with uv. This is not watertight. Returns quads, pos, norm,
@@ -5652,7 +5698,7 @@ texcoord.
 
 ~~~ .cpp
 tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
-make_uvspherecube(int level);
+make_uvspherecube(int tesselation);
 ~~~
 
 Make a sphere from a cube. This is not watertight. Returns quads, pos, norm,
@@ -5662,7 +5708,7 @@ texcoord.
 
 ~~~ .cpp
 tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
-make_uvspherizedcube(int level, float radius);
+make_uvspherizedcube(int tesselation, float radius);
 ~~~
 
 Make a cube than stretch it towards a sphere. This is not watertight.
@@ -5672,7 +5718,7 @@ Returns quads, pos, norm, texcoord.
 
 ~~~ .cpp
 tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
-make_uvflipcapsphere(int level, float z, bool flipped = false);
+make_uvflipcapsphere(int tesselation, float z, bool flipped = false);
 ~~~
 
 Make a flipped sphere. This is not watertight. Returns quads, pos, norm,
@@ -5682,11 +5728,52 @@ texcoord.
 
 ~~~ .cpp
 tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
-make_uvcutsphere(int level, float z, bool flipped = false);
+make_uvcutsphere(int tesselation, float z, bool flipped = false);
 ~~~
 
 Make a cutout sphere. This is not watertight. Returns quads, pos, norm,
 texcoord.
+
+#### Struct make_seashell_params
+
+~~~ .cpp
+struct make_seashell_params {
+    float spiral_revolutions = 2;
+    float spiral_angle = 83 * pif / 180;
+    float enlarging_angle = 42 * pif / 180;
+    float spiral_aperture = 0.25f;
+    vec2f ellipse_axis = {0.12f, 0.20f};
+    vec3f curve_rotation = {70 * pif / 180, 30 * pif / 180, 10 * pif / 180};
+    float nodules_num = 0;
+    vec2f nodule_length = {0, 0};
+    float nodule_height = 0;
+    float nodule_pos = 0;
+}
+~~~
+
+Make seashell params
+
+- Members:
+    - spiral_revolutions:      spiral revolutions
+    - spiral_angle:      spiral angle (alpha) [0,pi]
+    - enlarging_angle:      enlarging revolutions (beta) [0,2pi]
+    - spiral_aperture:      spiral aperture (A) [0,inf]
+    - ellipse_axis:      ellipse axis (a,b) [0,inf]
+    - curve_rotation:      curve rotatation (psi, Omega, mu) [0,2pi]
+    - nodules_num:      number of nodules (N) [0,ing]
+    - nodule_length:      length of nodules along curve and spiral (W1,W2) [0,inf]
+    - nodule_height:      height of nodules (L) [0,inf]
+    - nodule_pos:      position of nodules (P) [0,inf]
+
+
+#### Function make_uvseashell()
+
+~~~ .cpp
+tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
+make_uvseashell(int tesselation, const make_seashell_params& params);
+~~~
+
+Make a seashell. This is not watertight. Returns quads, pos, norm, texcoord.
 
 #### Function make_bezier_circle()
 
@@ -5696,16 +5783,38 @@ tuple<vector<vec4i>, vector<vec3f>> make_bezier_circle();
 
 Make a bezier circle. Returns bezier, pos.
 
+#### Struct make_hair_params
+
+~~~ .cpp
+struct make_hair_params {
+    vec2f length = {0.1f, 0.1f};
+    vec2f radius = {0.005f, 0.001f};
+    vec2f noise = zero2f;
+    vec2f clump = zero2f;
+    vec2f rotation = zero2f;
+    uint32_t seed = 0;
+}
+~~~
+
+Parameters for the make hair function
+
+- Members:
+    - length:      minimum and maximum length
+    - radius:      minimum and maximum radius from base to tip
+    - noise:      noise added to hair (strength/scale)
+    - clump:      clump added to hair (number/strength)
+    - rotation:      rotation
+    - seed:      random seed
+
+
 #### Function make_hair()
 
 ~~~ .cpp
 tuple<vector<vec2i>, vector<vec3f>, vector<vec3f>, vector<vec2f>, vector<float>>
-make_hair(int num, int level, const vec2f& len, const vec2f& rad,
-    const vector<vec3i>& striangles, const vector<vec4i>& squads,
-    const vector<vec3f>& spos, const vector<vec3f>& snorm,
-    const vector<vec2f>& stexcoord, const vec2f& noise = zero2f,
-    const vec2f& clump = zero2f, const vec2f& rotation = zero2f,
-    uint32_t seed = 0);
+make_hair(int num, int tesselation, const vector<vec3i>& striangles,
+    const vector<vec4i>& squads, const vector<vec3f>& spos,
+    const vector<vec3f>& snorm, const vector<vec2f>& stexcoord,
+    const make_hair_params& params);
 ~~~
 
 Make a hair ball around a shape. Returns lines, pos, norm, texcoord, radius.
@@ -7233,6 +7342,54 @@ inline vec4f eval_texture(const texture_info& info, const vec2f& texcoord,
 
 Evaluate a texture
 
+#### Function add_named_shape()
+
+~~~ .cpp
+inline shape* add_named_shape(scene* scn, const string& name);
+~~~
+
+Add a named shape, only if not already added
+
+#### Function add_named_material()
+
+~~~ .cpp
+inline material* add_named_material(scene* scn, const string& name);
+~~~
+
+Add a named material, only if not already added
+
+#### Function add_named_texture()
+
+~~~ .cpp
+inline texture* add_named_texture(scene* scn, const string& name);
+~~~
+
+Add a named texture, only if not already added
+
+#### Function add_named_camera()
+
+~~~ .cpp
+inline camera* add_named_camera(scene* scn, const string& name);
+~~~
+
+Add a named camera, only if not already added
+
+#### Function add_named_environment()
+
+~~~ .cpp
+inline environment* add_named_environment(scene* scn, const string& name);
+~~~
+
+Add a named material, only if not already added
+
+#### Function add_named_instance()
+
+~~~ .cpp
+inline instance* add_named_instance(scene* scn, const string& name);
+~~~
+
+Add a named material, only if not already added
+
 #### Function subdivide_shape_once()
 
 ~~~ .cpp
@@ -7245,10 +7402,10 @@ is true.
 #### Function facet_shape()
 
 ~~~ .cpp
-inline void facet_shape(shape* shp);
+inline void facet_shape(shape* shp, bool recompute_normals = true);
 ~~~
 
-Facet a shape. Supports only non-face0varying shapes
+Facet a shape. Supports only non-facevarying shapes
 
 #### Function tesselate_shape()
 
@@ -7646,29 +7803,471 @@ scene* make_cornell_box_scene();
 
 Makes the Cornell Box scene
 
-#### Enum test_scene_type
+#### Struct test_camera_params
 
 ~~~ .cpp
-enum struct test_scene_type {
+struct test_camera_params {
+    string name = "";
+    vec3f from = {0, 0, -1};
+    vec3f to = zero3f;
+    float yfov = 45 * pif / 180;
+    float aspect = 1;
+}
 ~~~
 
-Test scene enumeration.
+Test camera parameters
 
-#### Function test_scene_names()
+- Members:
+    - name:      Name (if not filled, assign a default one)
+    - from:      From
+    - to:      To
+    - yfov:      Fov
+    - aspect:      Aspect
+
+
+#### Function update_test_camera()
 
 ~~~ .cpp
-inline const vector<pair<string, test_scene_type>>& test_scene_names();
+void update_test_camera(
+    const scene* scn, camera* cam, const test_camera_params& tcam);
 ~~~
 
-Names for enumeration
+Updates a test instance, adding it to the scene if missing.
+
+#### Function test_camera_presets()
+
+~~~ .cpp
+unordered_map<string, test_camera_params>& test_camera_presets();
+~~~
+
+Test camera presets
+
+#### Enum test_texture_type
+
+~~~ .cpp
+enum struct test_texture_type {
+    none,
+    grid,
+    checker,
+    colored,
+    rcolored,
+    bump,
+    uv,
+    gamma,
+    noise,
+    ridge,
+    fbm,
+    turbulence,
+    gammaf,
+    sky,
+}
+~~~
+
+Test texture type
+
+- Values:
+    - none:      None (empty texture)
+    - grid:      Grid image
+    - checker:      Checker image
+    - colored:      Colored checker image
+    - rcolored:      Detailed colored checker image
+    - bump:      Bump and dimple imahe
+    - uv:      Uv debug image
+    - gamma:      Gamma ramp
+    - noise:      Perlin noise image
+    - ridge:      Perlin ridge image
+    - fbm:      Perlin fbm image
+    - turbulence:      Perlin turbulence image
+    - gammaf:      Gamma ramp (HDR)
+    - sky:      Sky (HDR)
+
+
+#### Function test_texture_names()
+
+~~~ .cpp
+inline vector<pair<string, test_texture_type>>& test_texture_names();
+~~~
+
+Name for test texture enum
+
+#### Struct test_texture_params
+
+~~~ .cpp
+struct test_texture_params {
+    string name = "";
+    test_texture_type type = test_texture_type::none;
+    int resolution = 512;
+    int tile_size = 64;
+    int noise_scale = 8;
+    float sky_sunangle = pif / 4;
+    bool bump_to_normal = false;
+    float bump_scale = 4;
+}
+~~~
+
+Test texture parameters
+
+- Members:
+    - name:      Name (if not filled, assign a default based on type)
+    - type:      Type
+    - resolution:      Resolution
+    - tile_size:      Tile size for grid-like textures
+    - noise_scale:      Noise scale for noise-like textures
+    - sky_sunangle:      Sun angle for sunsky-like textures
+    - bump_to_normal:      Convert to normal map
+    - bump_scale:      Bump to normal scale
+
+
+#### Function update_test_texture()
+
+~~~ .cpp
+void update_test_texture(
+    const scene* scn, texture* txt, const test_texture_params& ttxt);
+~~~
+
+Updates a test texture.
+
+#### Function test_texture_presets()
+
+~~~ .cpp
+unordered_map<string, test_texture_params>& test_texture_presets();
+~~~
+
+Test texture presets
+
+#### Enum test_material_type
+
+~~~ .cpp
+enum struct test_material_type {
+    none,
+    emission,
+    matte,
+    plastic,
+    metal,
+    transparent,
+}
+~~~
+
+Test material type
+
+- Values:
+    - none:      None (empty material)
+    - emission:      Emission
+    - matte:      Matte (diffuse)
+    - plastic:      Plastic
+    - metal:      Matetal
+    - transparent:      Transparent (diffuse with opacity)
+
+
+#### Function test_material_names()
+
+~~~ .cpp
+inline vector<pair<string, test_material_type>>& test_material_names();
+~~~
+
+Name for test shape enum
+
+#### Struct test_material_params
+
+~~~ .cpp
+struct test_material_params {
+    string name = "";
+    test_material_type type = test_material_type::matte;
+    float emission = 1;
+    vec3f color = {0.2, 0.2, 0.2};
+    float opacity = 1;
+    float roughness = 0.1;
+    string texture = "";
+    string normal = "";
+}
+~~~
+
+Test material parameters
+
+- Members:
+    - name:      Name (if not filled, assign a default based on type)
+    - type:      Type
+    - emission:      Emission strenght
+    - color:      Base color
+    - opacity:      Opacity (only for supported materials)
+    - roughness:      Roughness
+    - texture:      Base texture
+    - normal:      Normal map
+
+
+#### Function update_test_material()
+
+~~~ .cpp
+void update_test_material(
+    const scene* scn, material* mat, const test_material_params& tmat);
+~~~
+
+Updates a test material.
+
+#### Function test_material_presets()
+
+~~~ .cpp
+unordered_map<string, test_material_params>& test_material_presets();
+~~~
+
+Test material presets
+
+#### Enum test_shape_type
+
+~~~ .cpp
+enum struct test_shape_type {
+    floor,
+    quad,
+    cube,
+    sphere,
+    spherecube,
+    spherizedcube,
+    geosphere,
+    flipcapsphere,
+    suzanne,
+    cubep,
+    fvcube,
+    fvsphere,
+    matball,
+    point,
+    pointscube,
+    hairball,
+    beziercircle,
+}
+~~~
+
+Test shape type
+
+- Values:
+    - floor:      Floor (shared vertex, 20x20 size)
+    - quad:      Quad (shared vertex)
+    - cube:      Cube (shared vertex, not watertight)
+    - sphere:      Sphere (shared vertex, not watertight)
+    - spherecube:      Sphere with cube uvs (shared vertex, not watertight)
+    - spherizedcube:      Spherized cube (shared vertex, not watertight)
+    - geosphere:      Geodesic sphere (shared vertex, watertight, no texcoord)
+    - flipcapsphere:      Sphere with flipped cap (shared vertex, not watertight)
+    - suzanne:      Suzanne (shared vertex, no texcoord)
+    - cubep:      Position-only cube (shared vertex)
+    - fvcube:      Face-varying cube (shared vertex)
+    - fvsphere:      Face-varying sphere (shared vertex)
+    - matball:      Matball (shared vertex, not watertight)
+    - point:      Single point
+    - pointscube:      Random points in a cube
+    - hairball:      Random lines on a sphere
+    - beziercircle:      Bezier circle
+
+
+#### Function test_shape_names()
+
+~~~ .cpp
+inline vector<pair<string, test_shape_type>>& test_shape_names();
+~~~
+
+Name for test shape enum
+
+#### Struct test_shape_params
+
+~~~ .cpp
+struct test_shape_params {
+    string name = "";
+    test_shape_type type = test_shape_type::sphere;
+    string material = "";
+    int tesselation = -1;
+    int subdivision = 0;
+    float scale = 1;
+    float radius = -1;
+    bool faceted = false;
+    int num = -1;
+    make_hair_params hair_params = {};
+}
+~~~
+
+Test shape parameters
+
+- Members:
+    - name:      Shape name (if not filled, assign a default based on type)
+    - type:      Shape type
+    - material:      Material name
+    - tesselation:      Level of shape tesselatation (-1 for default)
+    - subdivision:      Level of shape tesselation for subdivision surfaces
+    - scale:      Shape scale
+    - radius:      Radius for points and lines.
+    - faceted:      Faceted shape
+    - num:      Number of elements for points and lines (-1 for default)
+    - hair_params:      Hair generation params
+
+
+#### Function update_test_shape()
+
+~~~ .cpp
+void update_test_shape(
+    const scene* scn, shape* shp, const test_shape_params& tshp);
+~~~
+
+Updates a test shape, adding it to the scene if missing.
+
+#### Function test_shape_presets()
+
+~~~ .cpp
+unordered_map<string, test_shape_params>& test_shape_presets();
+~~~
+
+Test shape presets
+
+#### Struct test_instance_params
+
+~~~ .cpp
+struct test_instance_params {
+    string name = "";
+    string shape = "";
+    frame3f frame = identity_frame3f;
+    vec3f rotation = zero3f;
+}
+~~~
+
+Test instance parameters
+
+- Members:
+    - name:      Name (if not filled, assign a default one)
+    - shape:      Shape name
+    - frame:      Base frame
+    - rotation:      Rotation in Euler angles
+
+
+#### Function update_test_instance()
+
+~~~ .cpp
+void update_test_instance(
+    const scene* scn, instance* ist, const test_instance_params& tist);
+~~~
+
+Updates a test instance, adding it to the scene if missing.
+
+#### Function test_instance_presets()
+
+~~~ .cpp
+unordered_map<string, test_instance_params>& test_instance_presets();
+~~~
+
+Test instance presets
+
+#### Struct test_environment_params
+
+~~~ .cpp
+struct test_environment_params {
+    string name = "";
+    float emission = 1;
+    vec3f color = {1, 1, 1};
+    string texture = "";
+    frame3f frame = identity_frame3f;
+    float rotation = 0;
+}
+~~~
+
+Test environment parameters
+
+- Members:
+    - name:      Name (if not filled, assign a default one)
+    - emission:      Emission strenght
+    - color:      Emission color
+    - texture:      Emission texture
+    - frame:      Frame
+    - rotation:      Rotation around y axis
+
+
+#### Function update_test_environment()
+
+~~~ .cpp
+void update_test_environment(
+    const scene* scn, environment* env, const test_environment_params& tenv);
+~~~
+
+Updates a test instance, adding it to the scene if missing.
+
+#### Function test_environment_presets()
+
+~~~ .cpp
+unordered_map<string, test_environment_params>& test_environment_presets();
+~~~
+
+Test environment presets
+
+#### Struct test_scene_params
+
+~~~ .cpp
+struct test_scene_params {
+    string name;
+    vector<test_camera_params> cameras;
+    vector<test_texture_params> textures;
+    vector<test_material_params> materials;
+    vector<test_shape_params> shapes;
+    vector<test_instance_params> instances;
+    vector<test_environment_params> environments;
+}
+~~~
+
+Test scene
+
+- Members:
+    - name:      name
+    - cameras:      camers
+    - textures:      textures
+    - materials:      materials
+    - shapes:      shapes
+    - instances:      instances
+    - environments:      envieonmennts
+
+
+#### Function update_test_scene()
+
+~~~ .cpp
+void update_test_scene(scene* scn, const test_scene_params& tscn,
+    const unordered_set<void*>& refresh =;
+~~~
+
+Updates a test scene, adding missing objects. Objects are only added (for
+now). A new scene is returned if it was not already created.
 
 #### Function make_test_scene()
 
 ~~~ .cpp
-scene* make_test_scene(test_scene_type stype);
+inline scene* make_test_scene(const test_scene_params& tscn);
 ~~~
 
-Makes a test scene
+Makes a test scene. Convenience wrapper around update_test_scene().
+
+#### Function test_scene_presets()
+
+~~~ .cpp
+unordered_map<string, test_scene_params>& test_scene_presets();
+~~~
+
+Test scene presets
+
+#### Function remove_duplicates()
+
+~~~ .cpp
+void remove_duplicates(test_scene_params& tscn);
+~~~
+
+Remove duplicates based on name
+
+#### Function load_test_scene()
+
+~~~ .cpp
+test_scene_params load_test_scene(const string& filename);
+~~~
+
+Load test scene
+
+#### Function save_test_scene()
+
+~~~ .cpp
+void save_test_scene(const string& filename, const test_scene_params& scn);
+~~~
+
+Save test scene
 
 #### Enum trace_shader_type
 
@@ -9699,35 +10298,35 @@ inline void println(const string& fmt, const Args&... args);
 
 Wrapper for the above function that prints to stdout with endline.
 
-#### Function load_binfile()
+#### Function load_binary()
 
 ~~~ .cpp
-inline vector<unsigned char> load_binfile(const string& filename);
+inline vector<unsigned char> load_binary(const string& filename);
 ~~~
 
 Loads the contents of a binary file in an in-memory array.
 
-#### Function load_txtfile()
+#### Function load_text()
 
 ~~~ .cpp
-inline string load_txtfile(const string& filename);
+inline string load_text(const string& filename);
 ~~~
 
 Loads the contents of a text file into a string.
 
-#### Function save_binfile()
+#### Function save_binary()
 
 ~~~ .cpp
-inline void save_binfile(
+inline void save_binary(
     const string& filename, const vector<unsigned char>& data);
 ~~~
 
 Saves binary data to a file.
 
-#### Function save_txtfile()
+#### Function save_text()
 
 ~~~ .cpp
-inline void save_txtfile(const string& filename, const string& str);
+inline void save_text(const string& filename, const string& str);
 ~~~
 
 Saves a string to a text file.
@@ -11359,7 +11958,7 @@ Initialize gl_stdsurface_program draw state
 ~~~ .cpp
 void update_stdsurface_state(gl_stdsurface_state* st, const scene* scn,
     const gl_stdsurface_params& params,
-    const unordered_set<shape*>& refresh_shapes =;
+    const unordered_set<void*>& refresh =;
 ~~~
 
 Update gl_stdsurface_program draw state. This updates stdsurface meshes
@@ -11813,6 +12412,15 @@ Color widget
 #### Function draw_value_widget()
 
 ~~~ .cpp
+bool draw_value_widget(gl_window* win, const string& lbl, string& val,
+    const vector<string>& labels);
+~~~
+
+Enum widget
+
+#### Function draw_value_widget()
+
+~~~ .cpp
 bool draw_value_widget(gl_window* win, const string& lbl, int& val,
     const vector<pair<string, int>>& labels);
 ~~~
@@ -12047,7 +12655,8 @@ Draws a widget that can selected the camera
 
 ~~~ .cpp
 bool draw_scene_widgets(gl_window* win, const string& lbl, scene* scn,
-    void*& selection, const unordered_map<texture*, gl_texture>& gl_txt);
+    void*& selection, const unordered_map<texture*, gl_texture>& gl_txt,
+    test_scene_params* test_scn = nullptr);
 ~~~
 
 Draws widgets for a whole scene. Used for quickly making demos.

@@ -222,7 +222,9 @@ manipulation useful to support scene viewing and path tracing.</p>
 <li>convert face varying to vertex shared representations with
     <code>convert_face_varying()</code></li>
 <li>subdivide elements by edge splits with <code>subdivide_elems_linear()</code> and
-    <code>subdivide_vert_linear()</code></li>
+    <code>subdivide_vert_linear()</code>; for an easier interface use
+    <code>subdivide_lines_linear()</code>, <code>subdivide_triangles_linear()</code>,
+    <code>subdivide_quads_linear()</code></li>
 <li>Catmull-Clark subdivision surface with <code>subdivide_vert_catmullclark()</code>
     with support for edge and vertex creasing</li>
 <li>subdvide Bezier with <code>subdivide_bezier_recursive()</code> and
@@ -456,10 +458,10 @@ windows with GLFW and draw immediate-mode widgets with ImGui.</p>
 </ul>
 </li>
 <li>draw yocto scenes using the above shader<ul>
-<li>initialize the rendering state with <code>init_stdprogram_state()</code></li>
-<li>load/update meshes and textures with <code>update_stdprogram_state()</code></li>
+<li>initialize the rendering state with <code>init_stdsurface_state()</code></li>
+<li>load/update meshes and textures with <code>update_stdsurface_state()</code></li>
 <li>setup draw params using a <code>gl_stdsurface_params</code> struct</li>
-<li>draw scene with <code>draw_stdprogram_scene()</code></li>
+<li>draw scene with <code>draw_stdsurface_scene()</code></li>
 </ul>
 </li>
 <li>also includes other utlities for quick OpenGL hacking</li>
@@ -489,8 +491,8 @@ manipulating files.</p>
    <code>prepend_path_extension()</code>, <code>split_path()</code></li>
 <li>Python-like format strings (only support for position arguments and no
    formatting commands): <code>format()</code>, <code>print()</code></li>
-<li>load/save entire files: <code>load_binfile()</code>, <code>load_txtfile()</code>,
-   <code>save_binfile()</code> and <code>save_binfile()</code></li>
+<li>load/save entire files: <code>load_binary()</code>, <code>load_text()</code>,
+   <code>save_text()</code> and <code>save_binary()</code></li>
 <li>simple logger with support for console and file streams:<ol>
 <li>create a <code>logger</code></li>
 <li>add more streams with <code>add_console_stream()</code> or <code>add_file_stream()</code></li>

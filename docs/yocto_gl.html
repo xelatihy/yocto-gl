@@ -222,7 +222,9 @@ manipulation useful to support scene viewing and path tracing.</p>
 <li>convert face varying to vertex shared representations with
     <code>convert_face_varying()</code></li>
 <li>subdivide elements by edge splits with <code>subdivide_elems_linear()</code> and
-    <code>subdivide_vert_linear()</code></li>
+    <code>subdivide_vert_linear()</code>; for an easier interface use
+    <code>subdivide_lines_linear()</code>, <code>subdivide_triangles_linear()</code>,
+    <code>subdivide_quads_linear()</code></li>
 <li>Catmull-Clark subdivision surface with <code>subdivide_vert_catmullclark()</code>
     with support for edge and vertex creasing</li>
 <li>subdvide Bezier with <code>subdivide_bezier_recursive()</code> and
@@ -456,10 +458,10 @@ windows with GLFW and draw immediate-mode widgets with ImGui.</p>
 </ul>
 </li>
 <li>draw yocto scenes using the above shader<ul>
-<li>initialize the rendering state with <code>init_stdprogram_state()</code></li>
-<li>load/update meshes and textures with <code>update_stdprogram_state()</code></li>
+<li>initialize the rendering state with <code>init_stdsurface_state()</code></li>
+<li>load/update meshes and textures with <code>update_stdsurface_state()</code></li>
 <li>setup draw params using a <code>gl_stdsurface_params</code> struct</li>
-<li>draw scene with <code>draw_stdprogram_scene()</code></li>
+<li>draw scene with <code>draw_stdsurface_scene()</code></li>
 </ul>
 </li>
 <li>also includes other utlities for quick OpenGL hacking</li>
@@ -489,8 +491,8 @@ manipulating files.</p>
    <code>prepend_path_extension()</code>, <code>split_path()</code></li>
 <li>Python-like format strings (only support for position arguments and no
    formatting commands): <code>format()</code>, <code>print()</code></li>
-<li>load/save entire files: <code>load_binfile()</code>, <code>load_txtfile()</code>,
-   <code>save_binfile()</code> and <code>save_binfile()</code></li>
+<li>load/save entire files: <code>load_binary()</code>, <code>load_text()</code>,
+   <code>save_text()</code> and <code>save_binary()</code></li>
 <li>simple logger with support for console and file streams:<ol>
 <li>create a <code>logger</code></li>
 <li>add more streams with <code>add_console_stream()</code> or <code>add_file_stream()</code></li>
@@ -691,6 +693,12 @@ and bug fixes are reported here.</p>
 
 
 <p>map</p>
+<h4>Function Alias set()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">using</span> <span class="n">std</span><span class="o">::</span><span class="n">set</span><span class="p">;</span>
+</code></pre></div>
+
+
+<p>set</p>
 <h4>Function Alias unordered_map()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">using</span> <span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="p">;</span>
 </code></pre></div>
@@ -4077,6 +4085,34 @@ offset=1.0 (used to invert the ridges).</p>
 
 
 <p>Checks if a containers contains a value</p>
+<h4>Function contains()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">K</span><span class="p">,</span> <span class="k">typename</span> <span class="n">V</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">bool</span> <span class="n">contains</span><span class="p">(</span><span class="k">const</span> <span class="n">set</span><span class="o">&lt;</span><span class="n">K</span><span class="p">,</span> <span class="n">V</span><span class="o">&gt;&amp;</span> <span class="n">v</span><span class="p">,</span> <span class="k">const</span> <span class="n">K</span><span class="o">&amp;</span> <span class="n">vv</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Checks if a containers contains a value</p>
+<h4>Function contains()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">K</span><span class="p">,</span> <span class="k">typename</span> <span class="n">V</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">bool</span> <span class="n">contains</span><span class="p">(</span><span class="k">const</span> <span class="n">unordered_set</span><span class="o">&lt;</span><span class="n">K</span><span class="p">,</span> <span class="n">V</span><span class="o">&gt;&amp;</span> <span class="n">v</span><span class="p">,</span> <span class="k">const</span> <span class="n">K</span><span class="o">&amp;</span> <span class="n">vv</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Checks if a containers contains a value</p>
+<h4>Function contains()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">K</span><span class="p">,</span> <span class="k">typename</span> <span class="n">V</span><span class="p">,</span> <span class="k">typename</span> <span class="n">K1</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">bool</span> <span class="n">contains</span><span class="p">(</span><span class="k">const</span> <span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">K</span><span class="p">,</span> <span class="n">V</span><span class="o">&gt;&amp;</span> <span class="n">v</span><span class="p">,</span> <span class="k">const</span> <span class="n">K1</span><span class="o">&amp;</span> <span class="n">vv</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Checks if a containers contains a value</p>
+<h4>Function contains()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">K</span><span class="p">,</span> <span class="k">typename</span> <span class="n">V</span><span class="p">,</span> <span class="k">typename</span> <span class="n">K1</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">bool</span> <span class="n">contains</span><span class="p">(</span><span class="k">const</span> <span class="n">unordered_set</span><span class="o">&lt;</span><span class="n">K</span><span class="p">,</span> <span class="n">V</span><span class="o">&gt;&amp;</span> <span class="n">v</span><span class="p">,</span> <span class="k">const</span> <span class="n">K1</span><span class="o">&amp;</span> <span class="n">vv</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Checks if a containers contains a value</p>
 <h4>Function line_tangent()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">vec3f</span> <span class="nf">line_tangent</span><span class="p">(</span><span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">v0</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">v1</span><span class="p">);</span>
 </code></pre></div>
@@ -4478,19 +4514,19 @@ giving a faceted look. Note that faceted tangents are not computed.</p>
 takes the point index and returns vec3f numbers uniform directibuted in
 [0,1]^3. unorm and texcoord are optional.</p>
 <h4>Function make_sphere()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">tuple</span><span class="o">&lt;</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&gt;</span> <span class="n">make_sphere</span><span class="p">(</span><span class="kt">int</span> <span class="n">level</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="n">tuple</span><span class="o">&lt;</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&gt;</span> <span class="n">make_sphere</span><span class="p">(</span><span class="kt">int</span> <span class="n">tesselation</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Make a sphere. Returns quads, pos.</p>
 <h4>Function make_geodesicsphere()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">tuple</span><span class="o">&lt;</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&gt;</span> <span class="n">make_geodesicsphere</span><span class="p">(</span><span class="kt">int</span> <span class="n">level</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="n">tuple</span><span class="o">&lt;</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&gt;</span> <span class="n">make_geodesicsphere</span><span class="p">(</span><span class="kt">int</span> <span class="n">tesselation</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Make a geodesic sphere. Returns quads, pos.</p>
 <h4>Function make_cube()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">tuple</span><span class="o">&lt;</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&gt;</span> <span class="n">make_cube</span><span class="p">();</span>
+<div class="codehilite"><pre><code><span></span><span class="n">tuple</span><span class="o">&lt;</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&gt;</span> <span class="n">make_cube</span><span class="p">(</span><span class="kt">int</span> <span class="n">tesselation</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -4498,21 +4534,21 @@ takes the point index and returns vec3f numbers uniform directibuted in
 texture coordinates or normals. Returns quads, pos.</p>
 <h4>Function make_uvsphere()</h4>
 <div class="codehilite"><pre><code><span></span><span class="n">tuple</span><span class="o">&lt;</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;&gt;</span> <span class="n">make_uvsphere</span><span class="p">(</span>
-    <span class="kt">int</span> <span class="n">level</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">flipped</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
+    <span class="kt">int</span> <span class="n">tesselation</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">flipped</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Make a sphere. This is not watertight. Returns quads, pos, norm, texcoord.</p>
 <h4>Function make_uvhemisphere()</h4>
 <div class="codehilite"><pre><code><span></span><span class="n">tuple</span><span class="o">&lt;</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;&gt;</span>
-<span class="n">make_uvhemisphere</span><span class="p">(</span><span class="kt">int</span> <span class="n">level</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">flipped</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
+<span class="n">make_uvhemisphere</span><span class="p">(</span><span class="kt">int</span> <span class="n">tesselation</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">flipped</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Make a sphere. This is not watertight. Returns quads, pos, norm, texcoord.</p>
 <h4>Function make_uvquad()</h4>
 <div class="codehilite"><pre><code><span></span><span class="n">tuple</span><span class="o">&lt;</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;&gt;</span> <span class="n">make_uvquad</span><span class="p">(</span>
-    <span class="kt">int</span> <span class="n">level</span><span class="p">);</span>
+    <span class="kt">int</span> <span class="n">tesselation</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -4520,7 +4556,7 @@ texture coordinates or normals. Returns quads, pos.</p>
 <h4>Function make_fvsphere()</h4>
 <div class="codehilite"><pre><code><span></span><span class="n">tuple</span><span class="o">&lt;</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span><span class="p">,</span>
     <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;&gt;</span>
-<span class="n">make_fvsphere</span><span class="p">();</span>
+<span class="n">make_fvsphere</span><span class="p">(</span><span class="kt">int</span> <span class="n">tesselation</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -4529,14 +4565,14 @@ coordinates. Returns (quads, pos), (quads, norm), (quads, texcoord).</p>
 <h4>Function make_fvcube()</h4>
 <div class="codehilite"><pre><code><span></span><span class="n">tuple</span><span class="o">&lt;</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span><span class="p">,</span>
     <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;&gt;</span>
-<span class="n">make_fvcube</span><span class="p">();</span>
+<span class="n">make_fvcube</span><span class="p">(</span><span class="kt">int</span> <span class="n">tesselation</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Make a facevarying cube with unique vertices but different texture
 coordinates. Returns (quads, pos), (quads, norm), (quads, texcoord).</p>
 <h4>Function make_suzanne()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">tuple</span><span class="o">&lt;</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&gt;</span> <span class="n">make_suzanne</span><span class="p">();</span>
+<div class="codehilite"><pre><code><span></span><span class="n">tuple</span><span class="o">&lt;</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&gt;</span> <span class="n">make_suzanne</span><span class="p">(</span><span class="kt">int</span> <span class="n">tesselation</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -4544,7 +4580,7 @@ coordinates. Returns (quads, pos), (quads, norm), (quads, texcoord).</p>
 degenerate. Returns quads, pos.</p>
 <h4>Function make_uvcube()</h4>
 <div class="codehilite"><pre><code><span></span><span class="n">tuple</span><span class="o">&lt;</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;&gt;</span> <span class="n">make_uvcube</span><span class="p">(</span>
-    <span class="kt">int</span> <span class="n">level</span><span class="p">);</span>
+    <span class="kt">int</span> <span class="n">tesselation</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -4552,7 +4588,7 @@ degenerate. Returns quads, pos.</p>
 texcoord.</p>
 <h4>Function make_uvspherecube()</h4>
 <div class="codehilite"><pre><code><span></span><span class="n">tuple</span><span class="o">&lt;</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;&gt;</span>
-<span class="n">make_uvspherecube</span><span class="p">(</span><span class="kt">int</span> <span class="n">level</span><span class="p">);</span>
+<span class="n">make_uvspherecube</span><span class="p">(</span><span class="kt">int</span> <span class="n">tesselation</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -4560,7 +4596,7 @@ texcoord.</p>
 texcoord.</p>
 <h4>Function make_uvspherizedcube()</h4>
 <div class="codehilite"><pre><code><span></span><span class="n">tuple</span><span class="o">&lt;</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;&gt;</span>
-<span class="n">make_uvspherizedcube</span><span class="p">(</span><span class="kt">int</span> <span class="n">level</span><span class="p">,</span> <span class="kt">float</span> <span class="n">radius</span><span class="p">);</span>
+<span class="n">make_uvspherizedcube</span><span class="p">(</span><span class="kt">int</span> <span class="n">tesselation</span><span class="p">,</span> <span class="kt">float</span> <span class="n">radius</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -4568,7 +4604,7 @@ texcoord.</p>
 Returns quads, pos, norm, texcoord.</p>
 <h4>Function make_uvflipcapsphere()</h4>
 <div class="codehilite"><pre><code><span></span><span class="n">tuple</span><span class="o">&lt;</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;&gt;</span>
-<span class="n">make_uvflipcapsphere</span><span class="p">(</span><span class="kt">int</span> <span class="n">level</span><span class="p">,</span> <span class="kt">float</span> <span class="n">z</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">flipped</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
+<span class="n">make_uvflipcapsphere</span><span class="p">(</span><span class="kt">int</span> <span class="n">tesselation</span><span class="p">,</span> <span class="kt">float</span> <span class="n">z</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">flipped</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -4576,26 +4612,87 @@ Returns quads, pos, norm, texcoord.</p>
 texcoord.</p>
 <h4>Function make_uvcutsphere()</h4>
 <div class="codehilite"><pre><code><span></span><span class="n">tuple</span><span class="o">&lt;</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;&gt;</span>
-<span class="n">make_uvcutsphere</span><span class="p">(</span><span class="kt">int</span> <span class="n">level</span><span class="p">,</span> <span class="kt">float</span> <span class="n">z</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">flipped</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
+<span class="n">make_uvcutsphere</span><span class="p">(</span><span class="kt">int</span> <span class="n">tesselation</span><span class="p">,</span> <span class="kt">float</span> <span class="n">z</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">flipped</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Make a cutout sphere. This is not watertight. Returns quads, pos, norm,
 texcoord.</p>
+<h4>Struct make_seashell_params</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">make_seashell_params</span> <span class="p">{</span>
+    <span class="kt">float</span> <span class="n">spiral_revolutions</span> <span class="o">=</span> <span class="mi">2</span><span class="p">;</span>
+    <span class="kt">float</span> <span class="n">spiral_angle</span> <span class="o">=</span> <span class="mi">83</span> <span class="o">*</span> <span class="n">pif</span> <span class="o">/</span> <span class="mi">180</span><span class="p">;</span>
+    <span class="kt">float</span> <span class="n">enlarging_angle</span> <span class="o">=</span> <span class="mi">42</span> <span class="o">*</span> <span class="n">pif</span> <span class="o">/</span> <span class="mi">180</span><span class="p">;</span>
+    <span class="kt">float</span> <span class="n">spiral_aperture</span> <span class="o">=</span> <span class="mf">0.25f</span><span class="p">;</span>
+    <span class="n">vec2f</span> <span class="n">ellipse_axis</span> <span class="o">=</span> <span class="p">{</span><span class="mf">0.12f</span><span class="p">,</span> <span class="mf">0.20f</span><span class="p">};</span>
+    <span class="n">vec3f</span> <span class="n">curve_rotation</span> <span class="o">=</span> <span class="p">{</span><span class="mi">70</span> <span class="o">*</span> <span class="n">pif</span> <span class="o">/</span> <span class="mi">180</span><span class="p">,</span> <span class="mi">30</span> <span class="o">*</span> <span class="n">pif</span> <span class="o">/</span> <span class="mi">180</span><span class="p">,</span> <span class="mi">10</span> <span class="o">*</span> <span class="n">pif</span> <span class="o">/</span> <span class="mi">180</span><span class="p">};</span>
+    <span class="kt">float</span> <span class="n">nodules_num</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="n">vec2f</span> <span class="n">nodule_length</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">};</span>
+    <span class="kt">float</span> <span class="n">nodule_height</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="kt">float</span> <span class="n">nodule_pos</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+
+<p>Make seashell params</p>
+<ul>
+<li>Members:<ul>
+<li>spiral_revolutions:      spiral revolutions</li>
+<li>spiral_angle:      spiral angle (alpha) [0,pi]</li>
+<li>enlarging_angle:      enlarging revolutions (beta) [0,2pi]</li>
+<li>spiral_aperture:      spiral aperture (A) [0,inf]</li>
+<li>ellipse_axis:      ellipse axis (a,b) [0,inf]</li>
+<li>curve_rotation:      curve rotatation (psi, Omega, mu) [0,2pi]</li>
+<li>nodules_num:      number of nodules (N) [0,ing]</li>
+<li>nodule_length:      length of nodules along curve and spiral (W1,W2) [0,inf]</li>
+<li>nodule_height:      height of nodules (L) [0,inf]</li>
+<li>nodule_pos:      position of nodules (P) [0,inf]</li>
+</ul>
+</li>
+</ul>
+<h4>Function make_uvseashell()</h4>
+<div class="codehilite"><pre><code><span></span><span class="n">tuple</span><span class="o">&lt;</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;&gt;</span>
+<span class="n">make_uvseashell</span><span class="p">(</span><span class="kt">int</span> <span class="n">tesselation</span><span class="p">,</span> <span class="k">const</span> <span class="n">make_seashell_params</span><span class="o">&amp;</span> <span class="n">params</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Make a seashell. This is not watertight. Returns quads, pos, norm, texcoord.</p>
 <h4>Function make_bezier_circle()</h4>
 <div class="codehilite"><pre><code><span></span><span class="n">tuple</span><span class="o">&lt;</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&gt;</span> <span class="n">make_bezier_circle</span><span class="p">();</span>
 </code></pre></div>
 
 
 <p>Make a bezier circle. Returns bezier, pos.</p>
+<h4>Struct make_hair_params</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">make_hair_params</span> <span class="p">{</span>
+    <span class="n">vec2f</span> <span class="n">length</span> <span class="o">=</span> <span class="p">{</span><span class="mf">0.1f</span><span class="p">,</span> <span class="mf">0.1f</span><span class="p">};</span>
+    <span class="n">vec2f</span> <span class="n">radius</span> <span class="o">=</span> <span class="p">{</span><span class="mf">0.005f</span><span class="p">,</span> <span class="mf">0.001f</span><span class="p">};</span>
+    <span class="n">vec2f</span> <span class="n">noise</span> <span class="o">=</span> <span class="n">zero2f</span><span class="p">;</span>
+    <span class="n">vec2f</span> <span class="n">clump</span> <span class="o">=</span> <span class="n">zero2f</span><span class="p">;</span>
+    <span class="n">vec2f</span> <span class="n">rotation</span> <span class="o">=</span> <span class="n">zero2f</span><span class="p">;</span>
+    <span class="kt">uint32_t</span> <span class="n">seed</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+
+<p>Parameters for the make hair function</p>
+<ul>
+<li>Members:<ul>
+<li>length:      minimum and maximum length</li>
+<li>radius:      minimum and maximum radius from base to tip</li>
+<li>noise:      noise added to hair (strength/scale)</li>
+<li>clump:      clump added to hair (number/strength)</li>
+<li>rotation:      rotation</li>
+<li>seed:      random seed</li>
+</ul>
+</li>
+</ul>
 <h4>Function make_hair()</h4>
 <div class="codehilite"><pre><code><span></span><span class="n">tuple</span><span class="o">&lt;</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2i</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;&gt;</span>
-<span class="n">make_hair</span><span class="p">(</span><span class="kt">int</span> <span class="n">num</span><span class="p">,</span> <span class="kt">int</span> <span class="n">level</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec2f</span><span class="o">&amp;</span> <span class="n">len</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec2f</span><span class="o">&amp;</span> <span class="n">rad</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;&amp;</span> <span class="n">striangles</span><span class="p">,</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;&amp;</span> <span class="n">squads</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">spos</span><span class="p">,</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">snorm</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;&amp;</span> <span class="n">stexcoord</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec2f</span><span class="o">&amp;</span> <span class="n">noise</span> <span class="o">=</span> <span class="n">zero2f</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">vec2f</span><span class="o">&amp;</span> <span class="n">clump</span> <span class="o">=</span> <span class="n">zero2f</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec2f</span><span class="o">&amp;</span> <span class="n">rotation</span> <span class="o">=</span> <span class="n">zero2f</span><span class="p">,</span>
-    <span class="kt">uint32_t</span> <span class="n">seed</span> <span class="o">=</span> <span class="mi">0</span><span class="p">);</span>
+<span class="n">make_hair</span><span class="p">(</span><span class="kt">int</span> <span class="n">num</span><span class="p">,</span> <span class="kt">int</span> <span class="n">tesselation</span><span class="p">,</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;&amp;</span> <span class="n">striangles</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;&amp;</span> <span class="n">squads</span><span class="p">,</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">spos</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&amp;</span> <span class="n">snorm</span><span class="p">,</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;&amp;</span> <span class="n">stexcoord</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">make_hair_params</span><span class="o">&amp;</span> <span class="n">params</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -5894,6 +5991,42 @@ This is only used internally to avoid looping over all objects every time.</p>
 
 
 <p>Evaluate a texture</p>
+<h4>Function add_named_shape()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">shape</span><span class="o">*</span> <span class="nf">add_named_shape</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">name</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Add a named shape, only if not already added</p>
+<h4>Function add_named_material()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">material</span><span class="o">*</span> <span class="nf">add_named_material</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">name</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Add a named material, only if not already added</p>
+<h4>Function add_named_texture()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">texture</span><span class="o">*</span> <span class="nf">add_named_texture</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">name</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Add a named texture, only if not already added</p>
+<h4>Function add_named_camera()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">camera</span><span class="o">*</span> <span class="nf">add_named_camera</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">name</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Add a named camera, only if not already added</p>
+<h4>Function add_named_environment()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">environment</span><span class="o">*</span> <span class="nf">add_named_environment</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">name</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Add a named material, only if not already added</p>
+<h4>Function add_named_instance()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">instance</span><span class="o">*</span> <span class="nf">add_named_instance</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">name</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Add a named material, only if not already added</p>
 <h4>Function subdivide_shape_once()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">subdivide_shape_once</span><span class="p">(</span><span class="n">shape</span><span class="o">*</span> <span class="n">shp</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">subdiv</span> <span class="o">=</span> <span class="nb">false</span><span class="p">);</span>
 </code></pre></div>
@@ -5902,11 +6035,11 @@ This is only used internally to avoid looping over all objects every time.</p>
 <p>Subdivides shape elements. Apply subdivision surface rules if subdivide
 is true.</p>
 <h4>Function facet_shape()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">facet_shape</span><span class="p">(</span><span class="n">shape</span><span class="o">*</span> <span class="n">shp</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">facet_shape</span><span class="p">(</span><span class="n">shape</span><span class="o">*</span> <span class="n">shp</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">recompute_normals</span> <span class="o">=</span> <span class="nb">true</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Facet a shape. Supports only non-face0varying shapes</p>
+<p>Facet a shape. Supports only non-facevarying shapes</p>
 <h4>Function tesselate_shape()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">tesselate_shape</span><span class="p">(</span><span class="n">shape</span><span class="o">*</span> <span class="n">shp</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">subdivide</span><span class="p">,</span>
     <span class="kt">bool</span> <span class="n">facevarying_to_sharedvertex</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">quads_to_triangles</span><span class="p">,</span>
@@ -6288,24 +6421,430 @@ otherwise find first intersection.</p>
 
 
 <p>Makes the Cornell Box scene</p>
-<h4>Enum test_scene_type</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">enum</span> <span class="k">struct</span> <span class="n">test_scene_type</span> <span class="p">{</span>
+<h4>Struct test_camera_params</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">test_camera_params</span> <span class="p">{</span>
+    <span class="n">string</span> <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
+    <span class="n">vec3f</span> <span class="n">from</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">};</span>
+    <span class="n">vec3f</span> <span class="n">to</span> <span class="o">=</span> <span class="n">zero3f</span><span class="p">;</span>
+    <span class="kt">float</span> <span class="n">yfov</span> <span class="o">=</span> <span class="mi">45</span> <span class="o">*</span> <span class="n">pif</span> <span class="o">/</span> <span class="mi">180</span><span class="p">;</span>
+    <span class="kt">float</span> <span class="n">aspect</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+<span class="p">}</span>
 </code></pre></div>
 
 
-<p>Test scene enumeration.</p>
-<h4>Function test_scene_names()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">string</span><span class="p">,</span> <span class="n">test_scene_type</span><span class="o">&gt;&gt;&amp;</span> <span class="n">test_scene_names</span><span class="p">();</span>
+<p>Test camera parameters</p>
+<ul>
+<li>Members:<ul>
+<li>name:      Name (if not filled, assign a default one)</li>
+<li>from:      From</li>
+<li>to:      To</li>
+<li>yfov:      Fov</li>
+<li>aspect:      Aspect</li>
+</ul>
+</li>
+</ul>
+<h4>Function update_test_camera()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">update_test_camera</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="n">camera</span><span class="o">*</span> <span class="n">cam</span><span class="p">,</span> <span class="k">const</span> <span class="n">test_camera_params</span><span class="o">&amp;</span> <span class="n">tcam</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Names for enumeration</p>
+<p>Updates a test instance, adding it to the scene if missing.</p>
+<h4>Function test_camera_presets()</h4>
+<div class="codehilite"><pre><code><span></span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">string</span><span class="p">,</span> <span class="n">test_camera_params</span><span class="o">&gt;&amp;</span> <span class="n">test_camera_presets</span><span class="p">();</span>
+</code></pre></div>
+
+
+<p>Test camera presets</p>
+<h4>Enum test_texture_type</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">enum</span> <span class="k">struct</span> <span class="n">test_texture_type</span> <span class="p">{</span>
+    <span class="n">none</span><span class="p">,</span>
+    <span class="n">grid</span><span class="p">,</span>
+    <span class="n">checker</span><span class="p">,</span>
+    <span class="n">colored</span><span class="p">,</span>
+    <span class="n">rcolored</span><span class="p">,</span>
+    <span class="n">bump</span><span class="p">,</span>
+    <span class="n">uv</span><span class="p">,</span>
+    <span class="n">gamma</span><span class="p">,</span>
+    <span class="n">noise</span><span class="p">,</span>
+    <span class="n">ridge</span><span class="p">,</span>
+    <span class="n">fbm</span><span class="p">,</span>
+    <span class="n">turbulence</span><span class="p">,</span>
+    <span class="n">gammaf</span><span class="p">,</span>
+    <span class="n">sky</span><span class="p">,</span>
+<span class="p">}</span>
+</code></pre></div>
+
+
+<p>Test texture type</p>
+<ul>
+<li>Values:<ul>
+<li>none:      None (empty texture)</li>
+<li>grid:      Grid image</li>
+<li>checker:      Checker image</li>
+<li>colored:      Colored checker image</li>
+<li>rcolored:      Detailed colored checker image</li>
+<li>bump:      Bump and dimple imahe</li>
+<li>uv:      Uv debug image</li>
+<li>gamma:      Gamma ramp</li>
+<li>noise:      Perlin noise image</li>
+<li>ridge:      Perlin ridge image</li>
+<li>fbm:      Perlin fbm image</li>
+<li>turbulence:      Perlin turbulence image</li>
+<li>gammaf:      Gamma ramp (HDR)</li>
+<li>sky:      Sky (HDR)</li>
+</ul>
+</li>
+</ul>
+<h4>Function test_texture_names()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">string</span><span class="p">,</span> <span class="n">test_texture_type</span><span class="o">&gt;&gt;&amp;</span> <span class="n">test_texture_names</span><span class="p">();</span>
+</code></pre></div>
+
+
+<p>Name for test texture enum</p>
+<h4>Struct test_texture_params</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">test_texture_params</span> <span class="p">{</span>
+    <span class="n">string</span> <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
+    <span class="n">test_texture_type</span> <span class="n">type</span> <span class="o">=</span> <span class="n">test_texture_type</span><span class="o">::</span><span class="n">none</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">resolution</span> <span class="o">=</span> <span class="mi">512</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">tile_size</span> <span class="o">=</span> <span class="mi">64</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">noise_scale</span> <span class="o">=</span> <span class="mi">8</span><span class="p">;</span>
+    <span class="kt">float</span> <span class="n">sky_sunangle</span> <span class="o">=</span> <span class="n">pif</span> <span class="o">/</span> <span class="mi">4</span><span class="p">;</span>
+    <span class="kt">bool</span> <span class="n">bump_to_normal</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
+    <span class="kt">float</span> <span class="n">bump_scale</span> <span class="o">=</span> <span class="mi">4</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+
+<p>Test texture parameters</p>
+<ul>
+<li>Members:<ul>
+<li>name:      Name (if not filled, assign a default based on type)</li>
+<li>type:      Type</li>
+<li>resolution:      Resolution</li>
+<li>tile_size:      Tile size for grid-like textures</li>
+<li>noise_scale:      Noise scale for noise-like textures</li>
+<li>sky_sunangle:      Sun angle for sunsky-like textures</li>
+<li>bump_to_normal:      Convert to normal map</li>
+<li>bump_scale:      Bump to normal scale</li>
+</ul>
+</li>
+</ul>
+<h4>Function update_test_texture()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">update_test_texture</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="n">texture</span><span class="o">*</span> <span class="n">txt</span><span class="p">,</span> <span class="k">const</span> <span class="n">test_texture_params</span><span class="o">&amp;</span> <span class="n">ttxt</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Updates a test texture.</p>
+<h4>Function test_texture_presets()</h4>
+<div class="codehilite"><pre><code><span></span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">string</span><span class="p">,</span> <span class="n">test_texture_params</span><span class="o">&gt;&amp;</span> <span class="n">test_texture_presets</span><span class="p">();</span>
+</code></pre></div>
+
+
+<p>Test texture presets</p>
+<h4>Enum test_material_type</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">enum</span> <span class="k">struct</span> <span class="n">test_material_type</span> <span class="p">{</span>
+    <span class="n">none</span><span class="p">,</span>
+    <span class="n">emission</span><span class="p">,</span>
+    <span class="n">matte</span><span class="p">,</span>
+    <span class="n">plastic</span><span class="p">,</span>
+    <span class="n">metal</span><span class="p">,</span>
+    <span class="n">transparent</span><span class="p">,</span>
+<span class="p">}</span>
+</code></pre></div>
+
+
+<p>Test material type</p>
+<ul>
+<li>Values:<ul>
+<li>none:      None (empty material)</li>
+<li>emission:      Emission</li>
+<li>matte:      Matte (diffuse)</li>
+<li>plastic:      Plastic</li>
+<li>metal:      Matetal</li>
+<li>transparent:      Transparent (diffuse with opacity)</li>
+</ul>
+</li>
+</ul>
+<h4>Function test_material_names()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">string</span><span class="p">,</span> <span class="n">test_material_type</span><span class="o">&gt;&gt;&amp;</span> <span class="n">test_material_names</span><span class="p">();</span>
+</code></pre></div>
+
+
+<p>Name for test shape enum</p>
+<h4>Struct test_material_params</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">test_material_params</span> <span class="p">{</span>
+    <span class="n">string</span> <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
+    <span class="n">test_material_type</span> <span class="n">type</span> <span class="o">=</span> <span class="n">test_material_type</span><span class="o">::</span><span class="n">matte</span><span class="p">;</span>
+    <span class="kt">float</span> <span class="n">emission</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+    <span class="n">vec3f</span> <span class="n">color</span> <span class="o">=</span> <span class="p">{</span><span class="mf">0.2</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">};</span>
+    <span class="kt">float</span> <span class="n">opacity</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+    <span class="kt">float</span> <span class="n">roughness</span> <span class="o">=</span> <span class="mf">0.1</span><span class="p">;</span>
+    <span class="n">string</span> <span class="n">texture</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
+    <span class="n">string</span> <span class="n">normal</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+
+<p>Test material parameters</p>
+<ul>
+<li>Members:<ul>
+<li>name:      Name (if not filled, assign a default based on type)</li>
+<li>type:      Type</li>
+<li>emission:      Emission strenght</li>
+<li>color:      Base color</li>
+<li>opacity:      Opacity (only for supported materials)</li>
+<li>roughness:      Roughness</li>
+<li>texture:      Base texture</li>
+<li>normal:      Normal map</li>
+</ul>
+</li>
+</ul>
+<h4>Function update_test_material()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">update_test_material</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="n">material</span><span class="o">*</span> <span class="n">mat</span><span class="p">,</span> <span class="k">const</span> <span class="n">test_material_params</span><span class="o">&amp;</span> <span class="n">tmat</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Updates a test material.</p>
+<h4>Function test_material_presets()</h4>
+<div class="codehilite"><pre><code><span></span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">string</span><span class="p">,</span> <span class="n">test_material_params</span><span class="o">&gt;&amp;</span> <span class="n">test_material_presets</span><span class="p">();</span>
+</code></pre></div>
+
+
+<p>Test material presets</p>
+<h4>Enum test_shape_type</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">enum</span> <span class="k">struct</span> <span class="n">test_shape_type</span> <span class="p">{</span>
+    <span class="n">floor</span><span class="p">,</span>
+    <span class="n">quad</span><span class="p">,</span>
+    <span class="n">cube</span><span class="p">,</span>
+    <span class="n">sphere</span><span class="p">,</span>
+    <span class="n">spherecube</span><span class="p">,</span>
+    <span class="n">spherizedcube</span><span class="p">,</span>
+    <span class="n">geosphere</span><span class="p">,</span>
+    <span class="n">flipcapsphere</span><span class="p">,</span>
+    <span class="n">suzanne</span><span class="p">,</span>
+    <span class="n">cubep</span><span class="p">,</span>
+    <span class="n">fvcube</span><span class="p">,</span>
+    <span class="n">fvsphere</span><span class="p">,</span>
+    <span class="n">matball</span><span class="p">,</span>
+    <span class="n">point</span><span class="p">,</span>
+    <span class="n">pointscube</span><span class="p">,</span>
+    <span class="n">hairball</span><span class="p">,</span>
+    <span class="n">beziercircle</span><span class="p">,</span>
+<span class="p">}</span>
+</code></pre></div>
+
+
+<p>Test shape type</p>
+<ul>
+<li>Values:<ul>
+<li>floor:      Floor (shared vertex, 20x20 size)</li>
+<li>quad:      Quad (shared vertex)</li>
+<li>cube:      Cube (shared vertex, not watertight)</li>
+<li>sphere:      Sphere (shared vertex, not watertight)</li>
+<li>spherecube:      Sphere with cube uvs (shared vertex, not watertight)</li>
+<li>spherizedcube:      Spherized cube (shared vertex, not watertight)</li>
+<li>geosphere:      Geodesic sphere (shared vertex, watertight, no texcoord)</li>
+<li>flipcapsphere:      Sphere with flipped cap (shared vertex, not watertight)</li>
+<li>suzanne:      Suzanne (shared vertex, no texcoord)</li>
+<li>cubep:      Position-only cube (shared vertex)</li>
+<li>fvcube:      Face-varying cube (shared vertex)</li>
+<li>fvsphere:      Face-varying sphere (shared vertex)</li>
+<li>matball:      Matball (shared vertex, not watertight)</li>
+<li>point:      Single point</li>
+<li>pointscube:      Random points in a cube</li>
+<li>hairball:      Random lines on a sphere</li>
+<li>beziercircle:      Bezier circle</li>
+</ul>
+</li>
+</ul>
+<h4>Function test_shape_names()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">string</span><span class="p">,</span> <span class="n">test_shape_type</span><span class="o">&gt;&gt;&amp;</span> <span class="n">test_shape_names</span><span class="p">();</span>
+</code></pre></div>
+
+
+<p>Name for test shape enum</p>
+<h4>Struct test_shape_params</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">test_shape_params</span> <span class="p">{</span>
+    <span class="n">string</span> <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
+    <span class="n">test_shape_type</span> <span class="n">type</span> <span class="o">=</span> <span class="n">test_shape_type</span><span class="o">::</span><span class="n">sphere</span><span class="p">;</span>
+    <span class="n">string</span> <span class="n">material</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">tesselation</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">subdivision</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="kt">float</span> <span class="n">scale</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+    <span class="kt">float</span> <span class="n">radius</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+    <span class="kt">bool</span> <span class="n">faceted</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">num</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+    <span class="n">make_hair_params</span> <span class="n">hair_params</span> <span class="o">=</span> <span class="p">{};</span>
+<span class="p">}</span>
+</code></pre></div>
+
+
+<p>Test shape parameters</p>
+<ul>
+<li>Members:<ul>
+<li>name:      Shape name (if not filled, assign a default based on type)</li>
+<li>type:      Shape type</li>
+<li>material:      Material name</li>
+<li>tesselation:      Level of shape tesselatation (-1 for default)</li>
+<li>subdivision:      Level of shape tesselation for subdivision surfaces</li>
+<li>scale:      Shape scale</li>
+<li>radius:      Radius for points and lines.</li>
+<li>faceted:      Faceted shape</li>
+<li>num:      Number of elements for points and lines (-1 for default)</li>
+<li>hair_params:      Hair generation params</li>
+</ul>
+</li>
+</ul>
+<h4>Function update_test_shape()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">update_test_shape</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="n">shape</span><span class="o">*</span> <span class="n">shp</span><span class="p">,</span> <span class="k">const</span> <span class="n">test_shape_params</span><span class="o">&amp;</span> <span class="n">tshp</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Updates a test shape, adding it to the scene if missing.</p>
+<h4>Function test_shape_presets()</h4>
+<div class="codehilite"><pre><code><span></span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">string</span><span class="p">,</span> <span class="n">test_shape_params</span><span class="o">&gt;&amp;</span> <span class="n">test_shape_presets</span><span class="p">();</span>
+</code></pre></div>
+
+
+<p>Test shape presets</p>
+<h4>Struct test_instance_params</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">test_instance_params</span> <span class="p">{</span>
+    <span class="n">string</span> <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
+    <span class="n">string</span> <span class="n">shape</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
+    <span class="n">frame3f</span> <span class="n">frame</span> <span class="o">=</span> <span class="n">identity_frame3f</span><span class="p">;</span>
+    <span class="n">vec3f</span> <span class="n">rotation</span> <span class="o">=</span> <span class="n">zero3f</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+
+<p>Test instance parameters</p>
+<ul>
+<li>Members:<ul>
+<li>name:      Name (if not filled, assign a default one)</li>
+<li>shape:      Shape name</li>
+<li>frame:      Base frame</li>
+<li>rotation:      Rotation in Euler angles</li>
+</ul>
+</li>
+</ul>
+<h4>Function update_test_instance()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">update_test_instance</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="n">instance</span><span class="o">*</span> <span class="n">ist</span><span class="p">,</span> <span class="k">const</span> <span class="n">test_instance_params</span><span class="o">&amp;</span> <span class="n">tist</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Updates a test instance, adding it to the scene if missing.</p>
+<h4>Function test_instance_presets()</h4>
+<div class="codehilite"><pre><code><span></span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">string</span><span class="p">,</span> <span class="n">test_instance_params</span><span class="o">&gt;&amp;</span> <span class="n">test_instance_presets</span><span class="p">();</span>
+</code></pre></div>
+
+
+<p>Test instance presets</p>
+<h4>Struct test_environment_params</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">test_environment_params</span> <span class="p">{</span>
+    <span class="n">string</span> <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
+    <span class="kt">float</span> <span class="n">emission</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+    <span class="n">vec3f</span> <span class="n">color</span> <span class="o">=</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">};</span>
+    <span class="n">string</span> <span class="n">texture</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
+    <span class="n">frame3f</span> <span class="n">frame</span> <span class="o">=</span> <span class="n">identity_frame3f</span><span class="p">;</span>
+    <span class="kt">float</span> <span class="n">rotation</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+
+<p>Test environment parameters</p>
+<ul>
+<li>Members:<ul>
+<li>name:      Name (if not filled, assign a default one)</li>
+<li>emission:      Emission strenght</li>
+<li>color:      Emission color</li>
+<li>texture:      Emission texture</li>
+<li>frame:      Frame</li>
+<li>rotation:      Rotation around y axis</li>
+</ul>
+</li>
+</ul>
+<h4>Function update_test_environment()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">update_test_environment</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="n">environment</span><span class="o">*</span> <span class="n">env</span><span class="p">,</span> <span class="k">const</span> <span class="n">test_environment_params</span><span class="o">&amp;</span> <span class="n">tenv</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Updates a test instance, adding it to the scene if missing.</p>
+<h4>Function test_environment_presets()</h4>
+<div class="codehilite"><pre><code><span></span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">string</span><span class="p">,</span> <span class="n">test_environment_params</span><span class="o">&gt;&amp;</span> <span class="n">test_environment_presets</span><span class="p">();</span>
+</code></pre></div>
+
+
+<p>Test environment presets</p>
+<h4>Struct test_scene_params</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">test_scene_params</span> <span class="p">{</span>
+    <span class="n">string</span> <span class="n">name</span><span class="p">;</span>
+    <span class="n">vector</span><span class="o">&lt;</span><span class="n">test_camera_params</span><span class="o">&gt;</span> <span class="n">cameras</span><span class="p">;</span>
+    <span class="n">vector</span><span class="o">&lt;</span><span class="n">test_texture_params</span><span class="o">&gt;</span> <span class="n">textures</span><span class="p">;</span>
+    <span class="n">vector</span><span class="o">&lt;</span><span class="n">test_material_params</span><span class="o">&gt;</span> <span class="n">materials</span><span class="p">;</span>
+    <span class="n">vector</span><span class="o">&lt;</span><span class="n">test_shape_params</span><span class="o">&gt;</span> <span class="n">shapes</span><span class="p">;</span>
+    <span class="n">vector</span><span class="o">&lt;</span><span class="n">test_instance_params</span><span class="o">&gt;</span> <span class="n">instances</span><span class="p">;</span>
+    <span class="n">vector</span><span class="o">&lt;</span><span class="n">test_environment_params</span><span class="o">&gt;</span> <span class="n">environments</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+
+<p>Test scene</p>
+<ul>
+<li>Members:<ul>
+<li>name:      name</li>
+<li>cameras:      camers</li>
+<li>textures:      textures</li>
+<li>materials:      materials</li>
+<li>shapes:      shapes</li>
+<li>instances:      instances</li>
+<li>environments:      envieonmennts</li>
+</ul>
+</li>
+</ul>
+<h4>Function update_test_scene()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="n">update_test_scene</span><span class="p">(</span><span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="k">const</span> <span class="n">test_scene_params</span><span class="o">&amp;</span> <span class="n">tscn</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">unordered_set</span><span class="o">&lt;</span><span class="kt">void</span><span class="o">*&gt;&amp;</span> <span class="n">refresh</span> <span class="o">=</span><span class="p">;</span>
+</code></pre></div>
+
+
+<p>Updates a test scene, adding missing objects. Objects are only added (for
+now). A new scene is returned if it was not already created.</p>
 <h4>Function make_test_scene()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">scene</span><span class="o">*</span> <span class="nf">make_test_scene</span><span class="p">(</span><span class="n">test_scene_type</span> <span class="n">stype</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">scene</span><span class="o">*</span> <span class="nf">make_test_scene</span><span class="p">(</span><span class="k">const</span> <span class="n">test_scene_params</span><span class="o">&amp;</span> <span class="n">tscn</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Makes a test scene</p>
+<p>Makes a test scene. Convenience wrapper around update_test_scene().</p>
+<h4>Function test_scene_presets()</h4>
+<div class="codehilite"><pre><code><span></span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">string</span><span class="p">,</span> <span class="n">test_scene_params</span><span class="o">&gt;&amp;</span> <span class="n">test_scene_presets</span><span class="p">();</span>
+</code></pre></div>
+
+
+<p>Test scene presets</p>
+<h4>Function remove_duplicates()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">remove_duplicates</span><span class="p">(</span><span class="n">test_scene_params</span><span class="o">&amp;</span> <span class="n">tscn</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Remove duplicates based on name</p>
+<h4>Function load_test_scene()</h4>
+<div class="codehilite"><pre><code><span></span><span class="n">test_scene_params</span> <span class="nf">load_test_scene</span><span class="p">(</span><span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Load test scene</p>
+<h4>Function save_test_scene()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">save_test_scene</span><span class="p">(</span><span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">,</span> <span class="k">const</span> <span class="n">test_scene_params</span><span class="o">&amp;</span> <span class="n">scn</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Save test scene</p>
 <h4>Enum trace_shader_type</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">enum</span> <span class="k">struct</span> <span class="n">trace_shader_type</span> <span class="p">{</span>
     <span class="n">pathtrace</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
@@ -8265,27 +8804,27 @@ is not fast nor memory efficient. But it is good enough for some needs.</p>
 
 
 <p>Wrapper for the above function that prints to stdout with endline.</p>
-<h4>Function load_binfile()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">vector</span><span class="o">&lt;</span><span class="kt">unsigned</span> <span class="kt">char</span><span class="o">&gt;</span> <span class="n">load_binfile</span><span class="p">(</span><span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">);</span>
+<h4>Function load_binary()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">vector</span><span class="o">&lt;</span><span class="kt">unsigned</span> <span class="kt">char</span><span class="o">&gt;</span> <span class="n">load_binary</span><span class="p">(</span><span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Loads the contents of a binary file in an in-memory array.</p>
-<h4>Function load_txtfile()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">string</span> <span class="nf">load_txtfile</span><span class="p">(</span><span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">);</span>
+<h4>Function load_text()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">string</span> <span class="nf">load_text</span><span class="p">(</span><span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Loads the contents of a text file into a string.</p>
-<h4>Function save_binfile()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">save_binfile</span><span class="p">(</span>
+<h4>Function save_binary()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">save_binary</span><span class="p">(</span>
     <span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">,</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="kt">unsigned</span> <span class="kt">char</span><span class="o">&gt;&amp;</span> <span class="n">data</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Saves binary data to a file.</p>
-<h4>Function save_txtfile()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">save_txtfile</span><span class="p">(</span><span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">,</span> <span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">str</span><span class="p">);</span>
+<h4>Function save_text()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">save_text</span><span class="p">(</span><span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">,</span> <span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">str</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -9610,7 +10149,7 @@ public API.</p>
 <h4>Function update_stdsurface_state()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="n">update_stdsurface_state</span><span class="p">(</span><span class="n">gl_stdsurface_state</span><span class="o">*</span> <span class="n">st</span><span class="p">,</span> <span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">gl_stdsurface_params</span><span class="o">&amp;</span> <span class="n">params</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">unordered_set</span><span class="o">&lt;</span><span class="n">shape</span><span class="o">*&gt;&amp;</span> <span class="n">refresh_shapes</span> <span class="o">=</span><span class="p">;</span>
+    <span class="k">const</span> <span class="n">unordered_set</span><span class="o">&lt;</span><span class="kt">void</span><span class="o">*&gt;&amp;</span> <span class="n">refresh</span> <span class="o">=</span><span class="p">;</span>
 </code></pre></div>
 
 
@@ -9956,6 +10495,13 @@ and textures on the GPU.</p>
 
 <p>Color widget</p>
 <h4>Function draw_value_widget()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">draw_value_widget</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">string</span><span class="o">&gt;&amp;</span> <span class="n">labels</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Enum widget</p>
+<h4>Function draw_value_widget()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">draw_value_widget</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span> <span class="kt">int</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">string</span><span class="p">,</span> <span class="kt">int</span><span class="o">&gt;&gt;&amp;</span> <span class="n">labels</span><span class="p">);</span>
 </code></pre></div>
@@ -10136,7 +10682,8 @@ and textures on the GPU.</p>
 <p>Draws a widget that can selected the camera</p>
 <h4>Function draw_scene_widgets()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">draw_scene_widgets</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span>
-    <span class="kt">void</span><span class="o">*&amp;</span> <span class="n">selection</span><span class="p">,</span> <span class="k">const</span> <span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">texture</span><span class="o">*</span><span class="p">,</span> <span class="n">gl_texture</span><span class="o">&gt;&amp;</span> <span class="n">gl_txt</span><span class="p">);</span>
+    <span class="kt">void</span><span class="o">*&amp;</span> <span class="n">selection</span><span class="p">,</span> <span class="k">const</span> <span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">texture</span><span class="o">*</span><span class="p">,</span> <span class="n">gl_texture</span><span class="o">&gt;&amp;</span> <span class="n">gl_txt</span><span class="p">,</span>
+    <span class="n">test_scene_params</span><span class="o">*</span> <span class="n">test_scn</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">);</span>
 </code></pre></div>
 
 

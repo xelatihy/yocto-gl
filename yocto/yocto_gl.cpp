@@ -3228,6 +3228,11 @@ inline void serialize_from_json(mat4f& vals, const json& js) {
 }
 
 // Parse support function.
+inline void serialize_from_json(frame3f& vals, const json& js) {
+    serialize_from_json((array<float, 12>&)vals, js);
+}
+
+// Parse support function.
 inline void serialize_from_json_obj(const json& js) {
     if (!js.is_object()) throw runtime_error("object expected");
 }
@@ -3337,6 +3342,11 @@ inline void serialize_to_json(const mat4f& vals, json& js) {
 }
 
 // Dump support function.
+inline void serialize_to_json(const frame3f& vals, json& js) {
+    serialize_to_json((const array<float, 12>&)vals, js);
+}
+
+// Dump support function.
 inline void serialize_to_json_obj(json& js) {
     if (!js.is_object()) js = json::object();
 }
@@ -3346,6 +3356,13 @@ template <typename T>
 inline void serialize_to_json_attr(const T& val, json& js, const char* name,
     bool required = true, const T& def = {}) {
     if (required || val != def) serialize_to_json(val, js[name]);
+}
+
+// Dump support function.
+template <typename T>
+inline void serialize_to_json_attr(const vector<T>& val, json& js,
+    const char* name, bool required = true, const vector<T>& def = {}) {
+    if (required || !val.empty()) serialize_to_json(val, js[name]);
 }
 
 // #codegen begin func ---------------------------------------------------------
@@ -4603,73 +4620,37 @@ inline string _fix_path(const string& path_) {
     return path;
 }
 
-// Load a binary file in memory
-// http://stackoverflow.com/questions/116038/what-is-the-best-way-to-read-an-entire-file-into-a-stdstring-in-c
-vector<unsigned char> load_binfile(const string& filename, bool skip_missing) {
-    std::ifstream ifs(
-        filename.c_str(), std::ios::in | std::ios::binary | std::ios::ate);
-    if (!ifs) {
-        if (skip_missing) return {};
-        throw runtime_error("could not open file " + filename);
-    }
-    std::ifstream::pos_type fileSize = ifs.tellg();
-    ifs.seekg(0, std::ios::beg);
-    vector<unsigned char> bytes(fileSize);
-    ifs.read((char*)&bytes[0], fileSize);
-    return bytes;
-}
-
-// Saves text.
-void save_textfile(const string& filename, const string& txt) {
-    auto f = fopen(filename.c_str(), "wt");
-    if (!f) throw runtime_error("cannot write file " + filename);
-    fwrite(txt.c_str(), 1, (int)txt.size(), f);
-    fclose(f);
-}
-
-// Saves binary.
-void save_binfile(const string& filename, const vector<unsigned char>& bin,
-    bool skip_missing) {
-    auto f = fopen(filename.c_str(), "wb");
-    if (!f && !skip_missing)
-        throw runtime_error("cannot write file " + filename);
-    fwrite(bin.data(), 1, (int)bin.size(), f);
-    fclose(f);
-}
-
-// Check if a string starts with a prefix
-static inline bool startsiwith(const string& str, const string& prefix) {
-    if (str.length() < prefix.length()) return false;
-    return str.substr(0, prefix.length()) == prefix;
-}
-
 // Load buffer data.
 void load_buffers(glTF* gltf, const string& dirname, bool skip_missing) {
     for (auto buffer : gltf->buffers) {
         if (buffer->uri == "") continue;
-        if (startsiwith(buffer->uri, "data:")) {
-            // assume it is base64 and find ','
-            auto pos = buffer->uri.find(',');
-            if (pos == buffer->uri.npos) {
-                if (skip_missing) continue;
-                throw runtime_error("could not decode base64 data");
+        try {
+            if (startswith(buffer->uri, "data:")) {
+                // assume it is base64 and find ','
+                auto pos = buffer->uri.find(',');
+                if (pos == buffer->uri.npos) {
+                    if (skip_missing) continue;
+                    throw runtime_error("could not decode base64 data");
+                }
+                // decode
+                auto data = base64_decode(buffer->uri.substr(pos + 1));
+                buffer->data =
+                    vector<unsigned char>((unsigned char*)data.c_str(),
+                        (unsigned char*)data.c_str() + data.length());
+            } else {
+                buffer->data = load_binary(_fix_path(dirname + buffer->uri));
+                if (buffer->data.empty()) {
+                    if (skip_missing) continue;
+                    throw runtime_error("could not load binary file " +
+                                        _fix_path(dirname + buffer->uri));
+                }
             }
-            // decode
-            auto data = base64_decode(buffer->uri.substr(pos + 1));
-            buffer->data = vector<unsigned char>((unsigned char*)data.c_str(),
-                (unsigned char*)data.c_str() + data.length());
-        } else {
-            buffer->data =
-                load_binfile(_fix_path(dirname + buffer->uri), skip_missing);
-            if (buffer->data.empty()) {
-                if (skip_missing) continue;
-                throw runtime_error("could not load binary file " +
-                                    _fix_path(dirname + buffer->uri));
+            if (buffer->byteLength != buffer->data.size()) {
+                throw runtime_error("mismatched buffer size");
             }
-        }
-        if (buffer->byteLength != buffer->data.size()) {
+        } catch (const std::exception&) {
             if (skip_missing) continue;
-            throw runtime_error("mismatched buffer size");
+            throw;
         }
     }
 }
@@ -4680,7 +4661,7 @@ void load_images(glTF* gltf, const string& dirname, bool skip_missing) {
         image->data = image_data();
         auto filename = string();
 #if YGL_IMAGEIO
-        if (image->bufferView || startsiwith(image->uri, "data:")) {
+        if (image->bufferView || startswith(image->uri, "data:")) {
             auto buffer = string();
             auto data = (unsigned char*)nullptr;
             auto data_size = 0;
@@ -4786,36 +4767,42 @@ glTF* load_gltf(
 // Save buffer data.
 void save_buffers(const glTF* gltf, const string& dirname, bool skip_missing) {
     for (auto buffer : gltf->buffers) {
-        if (startsiwith(buffer->uri, "data:")) {
+        try {
+            if (startswith(buffer->uri, "data:")) {
+                throw runtime_error("saving of embedded data not supported");
+            }
+            save_binary(dirname + buffer->uri, buffer->data);
+        } catch (const std::exception&) {
             if (skip_missing) continue;
-            throw runtime_error("saving of embedded data not supported");
+            throw;
         }
-        save_binfile(dirname + buffer->uri, buffer->data, skip_missing);
     }
 }
 
 // Save images.
 void save_images(const glTF* gltf, const string& dirname, bool skip_missing) {
     for (auto image : gltf->images) {
-        if (startsiwith(image->uri, "data:")) {
-            if (skip_missing) continue;
-            throw runtime_error("saving of embedded data not supported");
-        }
-        auto filename = dirname + image->uri;
-        auto ok = false;
+        try {
+            if (startswith(image->uri, "data:")) {
+                throw runtime_error("saving of embedded data not supported");
+            }
+            auto filename = dirname + image->uri;
+            auto ok = false;
 #if YGL_IMAGEIO
-        if (!image->data.datab.empty()) {
-            ok = save_image(filename, image->data.width, image->data.height,
-                image->data.ncomp, image->data.datab.data());
-        }
-        if (!image->data.dataf.empty()) {
-            ok = save_imagef(filename, image->data.width, image->data.height,
-                image->data.ncomp, image->data.dataf.data());
-        }
+            if (!image->data.datab.empty()) {
+                ok = save_image(filename, image->data.width, image->data.height,
+                    image->data.ncomp, image->data.datab.data());
+            }
+            if (!image->data.dataf.empty()) {
+                ok =
+                    save_imagef(filename, image->data.width, image->data.height,
+                        image->data.ncomp, image->data.dataf.data());
+            }
 #endif
-        if (!ok) {
+            if (!ok) { throw runtime_error("cannot save image " + filename); }
+        } catch (const std::exception&) {
             if (skip_missing) continue;
-            throw runtime_error("cannot save image " + filename);
+            throw;
         }
     }
 }
@@ -4828,7 +4815,7 @@ void save_gltf(
     serialize_to_json(gltf, js);
 
     // save json
-    save_textfile(filename, js.dump(2));
+    save_text(filename, js.dump(2));
 
     // save external resources
     auto dirname = _get_dirname(filename);
@@ -8166,12 +8153,12 @@ void update_test_material(
     const scene* scn, material* mat, const test_material_params& tmat) {
     if (tmat.name == "") throw runtime_error("cannot use empty name");
     auto txt = (texture*)nullptr, norm = (texture*)nullptr;
-    if (scn && tmat.txt != "")
+    if (scn && tmat.texture != "")
         for (auto elem : scn->textures)
-            if (elem->name == tmat.txt) txt = elem;
-    if (scn && tmat.norm != "")
+            if (elem->name == tmat.texture) txt = elem;
+    if (scn && tmat.normal != "")
         for (auto elem : scn->textures)
-            if (elem->name == tmat.norm) norm = elem;
+            if (elem->name == tmat.normal) norm = elem;
 
     mat->name = tmat.name;
     mat->mtype = material_type::specular_roughness;
@@ -8223,9 +8210,9 @@ void update_test_shape(
     const scene* scn, shape* shp, const test_shape_params& tshp) {
     if (tshp.name == "") throw runtime_error("cannot use empty name");
     auto mat = (material*)nullptr;
-    if (scn && tshp.mat != "") {
+    if (scn && tshp.material != "") {
         for (auto elem : scn->materials)
-            if (elem->name == tshp.mat) mat = elem;
+            if (elem->name == tshp.material) mat = elem;
     }
 
     shp->name = tshp.name;
@@ -8361,9 +8348,9 @@ void update_test_instance(
     const scene* scn, instance* ist, const test_instance_params& tist) {
     if (tist.name == "") throw runtime_error("cannot use empty name");
     auto shp = (shape*)nullptr;
-    if (scn && tist.shp != "") {
+    if (scn && tist.shape != "") {
         for (auto elem : scn->shapes)
-            if (elem->name == tist.shp) shp = elem;
+            if (elem->name == tist.shape) shp = elem;
     }
 
     ist->name = tist.name;
@@ -8397,9 +8384,9 @@ void update_test_environment(
     const scene* scn, environment* env, const test_environment_params& tenv) {
     if (tenv.name == "") throw runtime_error("cannot use empty name");
     auto txt = (texture*)nullptr;
-    if (scn && tenv.txt != "") {
+    if (scn && tenv.texture != "") {
         for (auto elem : scn->textures)
-            if (elem->name == tenv.txt) txt = elem;
+            if (elem->name == tenv.texture) txt = elem;
     }
 
     env->name = tenv.name;
@@ -8545,7 +8532,7 @@ unordered_map<string, test_material_params>& test_material_presets() {
         params.type = type;
         params.color = {1, 1, 1};
         params.roughness = roughness;
-        params.txt = txt;
+        params.texture = txt;
         return params;
     };
 
@@ -8590,10 +8577,10 @@ unordered_map<string, test_material_params>& test_material_presets() {
         make_test_materialt("plastic_colored", plastic, "colored", rough);
     presets["plastic_blue_bumped"] =
         make_test_material("plastic_blue_bumped", plastic, blue, sharp);
-    presets["plastic_blue_bumped"].norm = "bumpn";
+    presets["plastic_blue_bumped"].normal = "bumpn";
     presets["plastic_colored_bumped"] = make_test_materialt(
         "plastic_colored_bumped", plastic, "colored", rough);
-    presets["plastic_colored_bumped"].norm = "bumpn";
+    presets["plastic_colored_bumped"].normal = "bumpn";
 
     presets["silver_sharp"] =
         make_test_material("silver_sharp", metal, lgray, sharp);
@@ -8697,11 +8684,11 @@ unordered_map<string, test_environment_params>& test_environment_presets() {
     static auto presets = unordered_map<string, test_environment_params>();
     if (!presets.empty()) return presets;
 
-    auto make_test_environment = [](const string& name, const string& txt) {
+    auto make_test_environment = [](const string& name, const string& texture) {
         auto params = test_environment_params();
         params.name = name;
         params.color = {1, 1, 1};
-        params.txt = txt;
+        params.texture = texture;
         return params;
     };
 
@@ -8746,11 +8733,11 @@ unordered_map<string, test_scene_params>& test_scene_presets() {
         params.name = name;
         return params;
     };
-    auto make_test_instance = [](const string& name, const string& shp,
+    auto make_test_instance = [](const string& name, const string& shape,
                                   const vec3f& pos = {0, 0, 0}) {
         auto params = test_instance_params();
         params.name = name;
-        params.shp = shp;
+        params.shape = shape;
         params.frame.o = pos;
         return params;
     };
@@ -8779,17 +8766,17 @@ unordered_map<string, test_scene_params>& test_scene_presets() {
         auto params = make_test_scene(name);
         params.cameras += test_camera_presets().at("cam3");
         params.materials += test_material_presets().at("matte_floor");
-        if (params.materials.back().txt != "")
+        if (params.materials.back().texture != "")
             params.textures +=
-                test_texture_presets().at(params.materials.back().txt);
+                test_texture_presets().at(params.materials.back().texture);
         params.shapes += test_shape_presets().at("floor");
-        params.shapes.back().mat = params.materials.back().name;
+        params.shapes.back().material = params.materials.back().name;
         params.instances += make_test_instance("floor", "floor", {0, 0, 0});
         if (interior) {
             params.materials += test_material_presets().at("matte_gray");
             params.shapes += test_shape_presets().at("sphere");
             params.shapes.back().name = "interior";
-            params.shapes.back().mat = "matte_gray";
+            params.shapes.back().material = "matte_gray";
             params.shapes.back().scale = 0.8f;
         }
         for (auto i : range(shapes.size())) {
@@ -8797,7 +8784,7 @@ unordered_map<string, test_scene_params>& test_scene_presets() {
             params.materials += test_material_presets().at(mats[i]);
             params.shapes += test_shape_presets().at(shapes[i]);
             params.shapes.back().name = name;
-            params.shapes.back().mat = mats[i];
+            params.shapes.back().material = mats[i];
             params.instances += make_test_instance(name, name, pos[i]);
             if (interior)
                 params.instances +=
@@ -8831,7 +8818,7 @@ unordered_map<string, test_scene_params>& test_scene_presets() {
                 params.materials.back().emission = emission;
                 params.shapes += test_shape_presets().at(shp);
                 params.shapes.back().name = name;
-                params.shapes.back().mat = name;
+                params.shapes.back().material = name;
                 params.shapes.back().scale = scale;
                 params.instances += make_test_instance(name, name, pos[i]);
                 if (lights == "arealights" || lights == "arealights1")
@@ -8941,7 +8928,7 @@ unordered_map<string, test_scene_params>& test_scene_presets() {
             for (auto mat : {"plastic_red", "plastic_green", "plastic_blue"}) {
                 params.shapes += test_shape_presets().at(shp);
                 params.shapes.back().name += "_"s + mat;
-                params.shapes.back().mat = mat;
+                params.shapes.back().material = mat;
                 params.shapes.back().scale *= rscale;
                 shapes += params.shapes.back().name;
             }
@@ -8973,7 +8960,7 @@ unordered_map<string, test_scene_params>& test_scene_presets() {
             params.materials.back().emission = 80;
             params.shapes += test_shape_presets().at("point");
             params.shapes.back().name = name;
-            params.shapes.back().mat = name;
+            params.shapes.back().material = name;
             params.instances += make_test_instance(name, name, pos[i]);
         }
 
@@ -9002,9 +8989,9 @@ unordered_map<string, test_scene_params>& test_scene_presets() {
     for (auto& kv : presets) {
         auto& preset = kv.second;
         auto used = unordered_set<string>();
-        for (auto& mat : preset.materials) used.insert(mat.txt);
-        for (auto& mat : preset.materials) used.insert(mat.norm);
-        for (auto& env : preset.environments) used.insert(env.txt);
+        for (auto& mat : preset.materials) used.insert(mat.texture);
+        for (auto& mat : preset.materials) used.insert(mat.normal);
+        for (auto& env : preset.environments) used.insert(env.texture);
         used.erase("");
         for (auto& txt : preset.textures) used.erase(txt.name);
         for (auto& txt : used)
@@ -9012,6 +8999,234 @@ unordered_map<string, test_scene_params>& test_scene_presets() {
     }
 
     return presets;
+}
+
+// Parses a test_camera object
+inline void serialize_from_json(test_camera_params& val, const json& js) {
+    static auto def = test_camera_params();
+    serialize_from_json_obj(js);
+    serialize_from_json_attr(val.name, js, "name");
+    serialize_from_json_attr(val.from, js, "from");
+    serialize_from_json_attr(val.to, js, "to");
+    serialize_from_json_attr(val.yfov, js, "yfov");
+    serialize_from_json_attr(val.aspect, js, "aspect");
+}
+
+// Parses a test_camera object
+inline void serialize_from_json(test_texture_type& val, const json& js) {
+    serialize_from_json(val, js, test_texture_names());
+}
+
+// Parses a test_camera object
+inline void serialize_from_json(test_texture_params& val, const json& js) {
+    static auto def = test_texture_params();
+    serialize_from_json_obj(js);
+    serialize_from_json_attr(val.name, js, "name");
+    serialize_from_json_attr(val.type, js, "type");
+    serialize_from_json_attr(val.resolution, js, "resolution");
+    serialize_from_json_attr(
+        val.tile_size, js, "tile_size", false, def.tile_size);
+    serialize_from_json_attr(
+        val.noise_scale, js, "noise_scale", false, def.noise_scale);
+    serialize_from_json_attr(
+        val.sky_sunangle, js, "sky_sunangle", false, def.sky_sunangle);
+    serialize_from_json_attr(
+        val.bump_to_normal, js, "bump_to_normal", false, def.bump_to_normal);
+    serialize_from_json_attr(
+        val.bump_scale, js, "bump_scale", false, def.bump_scale);
+}
+
+// Parses a test_camera object
+inline void serialize_from_json(test_material_type& val, const json& js) {
+    serialize_from_json(val, js, test_material_names());
+}
+
+// Parses a test_camera object
+inline void serialize_from_json(test_material_params& val, const json& js) {
+    static auto def = test_material_params();
+    serialize_from_json_obj(js);
+    serialize_from_json_attr(val.name, js, "name");
+    serialize_from_json_attr(val.type, js, "type");
+    serialize_from_json_attr(val.emission, js, "emission", false, def.emission);
+    serialize_from_json_attr(val.color, js, "color", false, def.color);
+    serialize_from_json_attr(val.opacity, js, "opacity", false, def.opacity);
+    serialize_from_json_attr(
+        val.roughness, js, "roughness", false, def.roughness);
+    serialize_from_json_attr(val.texture, js, "texture", false, def.texture);
+    serialize_from_json_attr(val.normal, js, "normal", false, def.normal);
+}
+
+// Parses a test_camera object
+inline void serialize_from_json(test_shape_type& val, const json& js) {
+    serialize_from_json(val, js, test_shape_names());
+}
+
+// Parses a test_camera object
+inline void serialize_from_json(test_shape_params& val, const json& js) {
+    static auto def = test_shape_params();
+    serialize_from_json_obj(js);
+    serialize_from_json_attr(val.name, js, "name");
+    serialize_from_json_attr(val.type, js, "type");
+    serialize_from_json_attr(val.material, js, "material", false, def.material);
+    serialize_from_json_attr(
+        val.tesselation, js, "tesselation", false, def.tesselation);
+    serialize_from_json_attr(
+        val.subdivision, js, "subdivision", false, def.subdivision);
+    serialize_from_json_attr(val.scale, js, "scale", false, def.scale);
+    serialize_from_json_attr(val.radius, js, "radius", false, def.radius);
+    serialize_from_json_attr(val.faceted, js, "faceted", false, def.faceted);
+    serialize_from_json_attr(val.num, js, "num", false, def.num);
+    // TODO: hair parameters
+}
+
+// Parses a test_camera object
+inline void serialize_from_json(test_instance_params& val, const json& js) {
+    static auto def = test_instance_params();
+    serialize_from_json_obj(js);
+    serialize_from_json_attr(val.name, js, "name");
+    serialize_from_json_attr(val.shape, js, "shape");
+    serialize_from_json_attr(val.frame, js, "frame", false, def.frame);
+    serialize_from_json_attr(val.rotation, js, "rotation", false, def.rotation);
+}
+
+// Parses a test_camera object
+inline void serialize_from_json(test_environment_params& val, const json& js) {
+    static auto def = test_environment_params();
+    serialize_from_json_obj(js);
+    serialize_from_json_attr(val.name, js, "name");
+    serialize_from_json_attr(val.emission, js, "emission", false, def.emission);
+    serialize_from_json_attr(val.color, js, "color", false, def.color);
+    serialize_from_json_attr(val.texture, js, "texture", false, def.texture);
+    serialize_from_json_attr(val.frame, js, "frame", false, def.frame);
+    serialize_from_json_attr(val.rotation, js, "rotation", false, def.rotation);
+}
+
+// Parses a test_camera object
+inline void serialize_from_json(test_scene_params& val, const json& js) {
+    static auto def = test_scene_params();
+    serialize_from_json_obj(js);
+    serialize_from_json_attr(val.name, js, "name", false, def.name);
+    serialize_from_json_attr(val.cameras, js, "cameras", false, def.cameras);
+    serialize_from_json_attr(val.textures, js, "textures", false, def.textures);
+    serialize_from_json_attr(
+        val.materials, js, "materials", false, def.materials);
+    serialize_from_json_attr(val.shapes, js, "shapes", false, def.shapes);
+    serialize_from_json_attr(
+        val.environments, js, "environments", false, def.environments);
+}
+
+// Converts a test_camera object to JSON
+inline void serialize_to_json(const test_camera_params& val, json& js) {
+    static auto def = test_camera_params();
+    serialize_to_json_obj(js);
+    serialize_to_json_attr(val.name, js, "name");
+    serialize_to_json_attr(val.from, js, "from");
+    serialize_to_json_attr(val.to, js, "to");
+    serialize_to_json_attr(val.yfov, js, "yfov");
+    serialize_to_json_attr(val.aspect, js, "aspect");
+}
+
+// Converts a test_camera object to JSON
+inline void serialize_to_json(const test_texture_type& val, json& js) {
+    serialize_to_json(val, js, test_texture_names());
+}
+
+// Converts a test_camera object to JSON
+inline void serialize_to_json(const test_texture_params& val, json& js) {
+    static auto def = test_texture_params();
+    serialize_to_json_obj(js);
+    serialize_to_json_attr(val.name, js, "name");
+    serialize_to_json_attr(val.type, js, "type");
+    serialize_to_json_attr(val.resolution, js, "resolution");
+    serialize_to_json_attr(
+        val.tile_size, js, "tile_size", false, def.tile_size);
+    serialize_to_json_attr(
+        val.noise_scale, js, "noise_scale", false, def.noise_scale);
+    serialize_to_json_attr(
+        val.sky_sunangle, js, "sky_sunangle", false, def.sky_sunangle);
+    serialize_to_json_attr(
+        val.bump_to_normal, js, "bump_to_normal", false, def.bump_to_normal);
+    serialize_to_json_attr(
+        val.bump_scale, js, "bump_scale", false, def.bump_scale);
+}
+
+// Converts a test_camera object to JSON
+inline void serialize_to_json(const test_material_type& val, json& js) {
+    serialize_to_json(val, js, test_material_names());
+}
+
+// Converts a test_camera object to JSON
+inline void serialize_to_json(const test_material_params& val, json& js) {
+    static auto def = test_material_params();
+    serialize_to_json_obj(js);
+    serialize_to_json_attr(val.name, js, "name");
+    serialize_to_json_attr(val.type, js, "type");
+    serialize_to_json_attr(val.emission, js, "emission", false, def.emission);
+    serialize_to_json_attr(val.color, js, "color", false, def.color);
+    serialize_to_json_attr(val.opacity, js, "opacity", false, def.opacity);
+    serialize_to_json_attr(
+        val.roughness, js, "roughness", false, def.roughness);
+    serialize_to_json_attr(val.texture, js, "texture", false, def.texture);
+    serialize_to_json_attr(val.normal, js, "normal", false, def.normal);
+}
+
+// Parses a test_camera object
+inline void serialize_to_json(const test_shape_type& val, json& js) {
+    serialize_to_json(val, js, test_shape_names());
+}
+
+// Parses a test_camera object
+inline void serialize_to_json(const test_shape_params& val, json& js) {
+    static auto def = test_shape_params();
+    serialize_to_json_obj(js);
+    serialize_to_json_attr(val.name, js, "name");
+    serialize_to_json_attr(val.type, js, "type");
+    serialize_to_json_attr(val.material, js, "material", false, def.material);
+    serialize_to_json_attr(
+        val.tesselation, js, "tesselation", false, def.tesselation);
+    serialize_to_json_attr(
+        val.subdivision, js, "subdivision", false, def.subdivision);
+    serialize_to_json_attr(val.scale, js, "scale", false, def.scale);
+    serialize_to_json_attr(val.radius, js, "radius", false, def.radius);
+    serialize_to_json_attr(val.faceted, js, "faceted", false, def.faceted);
+    serialize_to_json_attr(val.num, js, "num", false, def.num);
+    // TODO: hair parameters
+}
+
+// Parses a test_camera object
+inline void serialize_to_json(const test_instance_params& val, json& js) {
+    static auto def = test_instance_params();
+    serialize_to_json_obj(js);
+    serialize_to_json_attr(val.name, js, "name");
+    serialize_to_json_attr(val.shape, js, "shape");
+    serialize_to_json_attr(val.frame, js, "frame", false, def.frame);
+    serialize_to_json_attr(val.rotation, js, "rotation", false, def.rotation);
+}
+
+// Parses a test_camera object
+inline void serialize_to_json(const test_environment_params& val, json& js) {
+    static auto def = test_environment_params();
+    serialize_to_json_obj(js);
+    serialize_to_json_attr(val.name, js, "name");
+    serialize_to_json_attr(val.emission, js, "emission", false, def.emission);
+    serialize_to_json_attr(val.color, js, "color", false, def.color);
+    serialize_to_json_attr(val.texture, js, "texture", false, def.texture);
+    serialize_to_json_attr(val.frame, js, "frame", false, def.frame);
+    serialize_to_json_attr(val.rotation, js, "rotation", false, def.rotation);
+}
+
+// Parses a test_camera object
+inline void serialize_to_json(const test_scene_params& val, json& js) {
+    static auto def = test_scene_params();
+    serialize_to_json_obj(js);
+    serialize_to_json_attr(val.name, js, "name", false, ""s);
+    serialize_to_json_attr(val.cameras, js, "cameras", false, def.cameras);
+    serialize_to_json_attr(val.textures, js, "textures", false, def.textures);
+    serialize_to_json_attr(
+        val.materials, js, "materials", false, def.materials);
+    serialize_to_json_attr(val.shapes, js, "shapes", false, def.shapes);
+    serialize_to_json_attr(
+        val.environments, js, "environments", false, def.environments);
 }
 
 // Load test scene
@@ -9029,20 +9244,22 @@ test_scene_params load_test_scene(const string& filename) {
 
     // clear data
     auto scn = test_scene_params();
-#if 0
     try {
         serialize_from_json(scn, js);
     } catch (const exception& e) {
-        throw runtime_error("error parsing gltf " + string(e.what()));
+        throw runtime_error("error parsing test scene " + string(e.what()));
     }
-#endif
 
     // done
     return scn;
 }
 
 // Save test scene
-void save_test_scene(const string& filename, const test_scene_params& scn) {}
+void save_test_scene(const string& filename, const test_scene_params& scn) {
+    auto js = json();
+    serialize_to_json(scn, js);
+    save_text(filename, js.dump(2));
+}
 
 }  // namespace ygl
 
@@ -11281,8 +11498,8 @@ inline bool draw_elem_widgets(gl_window* win, test_scene_params* scn,
     edited += draw_value_widget(win, "emission", mat->emission, 0, 100);
     edited += draw_color_widget(win, "color", mat->color);
     edited += draw_value_widget(win, "roughness", mat->roughness);
-    edited += draw_value_widget(win, "txt", mat->txt);
-    edited += draw_value_widget(win, "norm", mat->norm);
+    edited += draw_value_widget(win, "texture", mat->texture);
+    edited += draw_value_widget(win, "normal", mat->normal);
     return std::any_of(edited.begin(), edited.end(), [](auto x) { return x; });
 }
 
@@ -11293,7 +11510,7 @@ inline bool draw_elem_widgets(gl_window* win, test_scene_params* scn,
     draw_separator_widget(win);
     edited += draw_value_widget(win, "name", shp->name);
     edited += draw_value_widget(win, "type", shp->type, test_shape_names());
-    edited += draw_value_widget(win, "material", shp->mat);
+    edited += draw_value_widget(win, "material", shp->material);
     edited += draw_value_widget(win, "tesselation", shp->tesselation, -1, 8);
     edited += draw_value_widget(win, "subdivision", shp->subdivision, -1, 8);
     edited += draw_value_widget(win, "scale", shp->scale, 0.01f, 10.0f);
@@ -11325,7 +11542,7 @@ inline bool draw_elem_widgets(gl_window* win, test_scene_params* scn,
     edited += draw_value_widget(win, "name", env->name);
     edited += draw_value_widget(win, "rotation", env->rotation, -pif, pif);
     edited += draw_value_widget(win, "emission", env->emission);
-    edited += draw_value_widget(win, "txt", env->txt);
+    edited += draw_value_widget(win, "txt", env->texture);
     return std::any_of(edited.begin(), edited.end(), [](auto x) { return x; });
 }
 
@@ -11336,7 +11553,7 @@ inline bool draw_elem_widgets(gl_window* win, test_scene_params* scn,
     draw_separator_widget(win);
     edited += draw_value_widget(win, "name", ist->name);
     edited += draw_value_widget(win, "frame", ist->frame, -10, 10);
-    edited += draw_value_widget(win, "shape", ist->shp);
+    edited += draw_value_widget(win, "shape", ist->shape);
     return std::any_of(edited.begin(), edited.end(), [](auto x) { return x; });
 }
 
@@ -11412,7 +11629,7 @@ inline bool draw_scene_widgets(gl_window* win, const string& lbl, scene* scn,
                 scn->instances.back()->shp = scn->shapes.back();
                 test_scn->instances += test_instance_params();
                 test_scn->instances.back().name = scn->instances.back()->name;
-                test_scn->instances.back().shp =
+                test_scn->instances.back().shape =
                     scn->instances.back()->shp->name;
             }
             edited += draw_add_elem_widgets(win, scn, "ist", scn->instances,

@@ -521,8 +521,8 @@
 ///    `prepend_path_extension()`, `split_path()`
 /// 3. Python-like format strings (only support for position arguments and no
 ///    formatting commands): `format()`, `print()`
-/// 5. load/save entire files: `load_binfile()`, `load_txtfile()`,
-///    `save_binfile()` and `save_binfile()`
+/// 5. load/save entire files: `load_binary()`, `load_text()`,
+///    `save_text()` and `save_binary()`
 /// 4. simple logger with support for console and file streams:
 ///     1. create a `logger`
 ///     2. add more streams with `add_console_stream()` or `add_file_stream()`
@@ -732,6 +732,11 @@
 // enable explicit json objects in glTF
 #ifndef YGL_GLTFJSON
 #define YGL_GLTFJSON 0
+#endif
+
+// use iostream for whole file operations
+#ifndef YGL_IOSTREAM
+#define YGL_IOSTREAM 0
 #endif
 
 // -----------------------------------------------------------------------------
@@ -7964,6 +7969,27 @@ namespace ygl {
 /// Makes the Cornell Box scene
 scene* make_cornell_box_scene();
 
+/// Test camera parameters
+struct test_camera_params {
+    /// Name (if not filled, assign a default one)
+    string name = "";
+    /// From
+    vec3f from = {0, 0, -1};
+    /// To
+    vec3f to = zero3f;
+    /// Fov
+    float yfov = 45 * pif / 180;
+    /// Aspect
+    float aspect = 1;
+};
+
+/// Updates a test instance, adding it to the scene if missing.
+void update_test_camera(
+    const scene* scn, camera* cam, const test_camera_params& tcam);
+
+/// Test camera presets
+unordered_map<string, test_camera_params>& test_camera_presets();
+
 /// Test texture type
 enum struct test_texture_type {
     /// None (empty texture)
@@ -8001,8 +8027,10 @@ inline vector<pair<string, test_texture_type>>& test_texture_names() {
     static auto names = vector<pair<string, test_texture_type>>{
         {"none", test_texture_type::none},
         {"grid", test_texture_type::grid},
+        {"colored", test_texture_type::colored},
         {"checker", test_texture_type::checker},
         {"rcolored", test_texture_type::rcolored},
+        {"bump", test_texture_type::bump},
         {"uv", test_texture_type::uv},
         {"gamma", test_texture_type::gamma},
         {"noise", test_texture_type::noise},
@@ -8086,9 +8114,9 @@ struct test_material_params {
     /// Roughness
     float roughness = 0.1;
     /// Base texture
-    string txt = "";
+    string texture = "";
     /// Normal map
-    string norm = "";
+    string normal = "";
 };
 
 /// Updates a test material.
@@ -8164,10 +8192,10 @@ inline vector<pair<string, test_shape_type>>& test_shape_names() {
 struct test_shape_params {
     /// Shape name (if not filled, assign a default based on type)
     string name = "";
-    /// Material name
-    string mat = "";
     /// Shape type
     test_shape_type type = test_shape_type::sphere;
+    /// Material name
+    string material = "";
     /// Level of shape tesselatation (-1 for default)
     int tesselation = -1;
     /// Level of shape tesselation for subdivision surfaces
@@ -8196,7 +8224,7 @@ struct test_instance_params {
     /// Name (if not filled, assign a default one)
     string name = "";
     /// Shape name
-    string shp = "";
+    string shape = "";
     /// Base frame
     frame3f frame = identity_frame3f;
     /// Rotation in Euler angles
@@ -8210,27 +8238,6 @@ void update_test_instance(
 /// Test instance presets
 unordered_map<string, test_instance_params>& test_instance_presets();
 
-/// Test camera parameters
-struct test_camera_params {
-    /// Name (if not filled, assign a default one)
-    string name = "";
-    /// From
-    vec3f from = {0, 0, -1};
-    /// To
-    vec3f to = zero3f;
-    /// Fov
-    float yfov = 45 * pif / 180;
-    /// Aspect
-    float aspect = 1;
-};
-
-/// Updates a test instance, adding it to the scene if missing.
-void update_test_camera(
-    const scene* scn, camera* cam, const test_camera_params& tcam);
-
-/// Test camera presets
-unordered_map<string, test_camera_params>& test_camera_presets();
-
 /// Test environment parameters
 struct test_environment_params {
     /// Name (if not filled, assign a default one)
@@ -8240,7 +8247,7 @@ struct test_environment_params {
     /// Emission color
     vec3f color = {1, 1, 1};
     /// Emission texture
-    string txt = "";
+    string texture = "";
     /// Frame
     frame3f frame = identity_frame3f;
     /// Rotation around y axis
@@ -8256,12 +8263,19 @@ unordered_map<string, test_environment_params>& test_environment_presets();
 
 /// Test scene
 struct test_scene_params {
+    /// name
     string name;
+    /// camers
     vector<test_camera_params> cameras;
+    /// textures
     vector<test_texture_params> textures;
+    /// materials
     vector<test_material_params> materials;
+    /// shapes
     vector<test_shape_params> shapes;
+    /// instances
     vector<test_instance_params> instances;
+    /// envieonmennts
     vector<test_environment_params> environments;
 };
 
@@ -10208,8 +10222,9 @@ inline void println(const string& fmt, const Args&... args) {
 namespace ygl {
 
 /// Loads the contents of a binary file in an in-memory array.
-inline vector<unsigned char> load_binfile(const string& filename) {
-    fstream fs(filename, ios_base::in | ios_base::binary);
+inline vector<unsigned char> load_binary(const string& filename) {
+    // http://stackoverflow.com/questions/116038/what-is-the-best-way-to-read-an-entire-file-into-a-stdstring-in-c
+    fstream fs(filename, ios_base::in | ios_base::binary | std::ios::ate);
     if (fs.fail()) throw runtime_error("cannot read file " + filename);
     fs.seekg(0, std::ios::end);
     auto buf = vector<unsigned char>(fs.tellg());
@@ -10221,7 +10236,7 @@ inline vector<unsigned char> load_binfile(const string& filename) {
 }
 
 /// Loads the contents of a text file into a string.
-inline string load_txtfile(const string& filename) {
+inline string load_text(const string& filename) {
     fstream fs(filename, ios_base::in);
     if (fs.fail()) throw runtime_error("cannot read file " + filename);
     stringstream ss;
@@ -10231,21 +10246,35 @@ inline string load_txtfile(const string& filename) {
 }
 
 /// Saves binary data to a file.
-inline void save_binfile(
+inline void save_binary(
     const string& filename, const vector<unsigned char>& data) {
+#if YGL_IOSTREAM
     fstream fs(filename, ios_base::out | ios_base::binary);
     if (fs.fail()) throw runtime_error("cannot write file " + filename);
     fs.write((const char*)data.data(), data.size());
     if (fs.fail() || fs.bad())
         throw runtime_error("cannot write file " + filename);
+#else
+    auto f = fopen(filename.c_str(), "wb");
+    if (!f) throw runtime_error("cannot write file " + filename);
+    fwrite(data.data(), 1, (int)data.size(), f);
+    fclose(f);
+#endif
 }
 
 /// Saves a string to a text file.
-inline void save_txtfile(const string& filename, const string& str) {
+inline void save_text(const string& filename, const string& str) {
+#if YGL_IOSTREAM
     fstream fs(filename, ios_base::out);
     if (fs.fail()) throw runtime_error("cannot write file " + filename);
     fs << str;
     if (fs.fail()) throw runtime_error("cannot write file " + filename);
+#else
+    auto f = fopen(filename.c_str(), "wt");
+    if (!f) throw runtime_error("cannot write file " + filename);
+    fwrite(str.c_str(), 1, (int)str.size(), f);
+    fclose(f);
+#endif
 }
 
 }  // namespace ygl
