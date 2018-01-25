@@ -10630,7 +10630,7 @@ void draw_stdsurface_scene(gl_stdsurface_state* st, const scene* scn,
     const gl_stdsurface_params& params) {
     // begin frame
     gl_enable_depth_test(true);
-    gl_enable_culling(false);
+    gl_enable_culling(params.cull_backface);
     gl_enable_wireframe(params.wireframe);
     gl_set_viewport({params.width, params.height});
 
@@ -10638,8 +10638,8 @@ void draw_stdsurface_scene(gl_stdsurface_state* st, const scene* scn,
     mat4f camera_xform, camera_view, camera_proj;
     camera_xform = to_mat4f(cam->frame);
     camera_view = to_mat4f(inverse(cam->frame));
-    camera_proj =
-        perspective_mat4f(cam->yfov, cam->aspect, cam->near, cam->far);
+    camera_proj = perspective_mat4f(cam->yfov,
+        (float)params.width / (float)params.height, cam->near, cam->far);
 
     begin_stdsurface_frame(st->prog, params.camera_lights, params.exposure,
         params.gamma, params.filmic, camera_xform, camera_view, camera_proj);

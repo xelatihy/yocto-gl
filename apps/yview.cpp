@@ -56,7 +56,6 @@ inline void draw(gl_window* win) {
     app->shparams.width = framebuffer_size.x;
     app->shparams.height = framebuffer_size.y;
     auto cam = app->scn->cameras[app->shparams.camera_id];
-    cam->aspect = (float)framebuffer_size.x / (float)framebuffer_size.y;
 
     update_lights(app->scn, false, false);
     update_stdsurface_state(app->shstate, app->scn, app->shparams);
