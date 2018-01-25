@@ -73,15 +73,20 @@ inline void draw(gl_window* win) {
         if (draw_header_widget(win, "file")) {
             draw_value_widget(win, "scene", app->filename);
             if (draw_button_widget(win, "new")) {
-                app->edit_params = test_scene_presets().at("floor");
+                app->edit_params = test_scene_presets().at("plane_al");
                 delete app->scn;
                 app->scn = new scene();
+                clear_stdsurface_state(app->shstate, false);
                 update_test_scene(app->scn, app->edit_params);
+                update_stdsurface_state(
+                    app->shstate, app->scn, app->shparams, {});
             }
             draw_continue_widget(win);
             if (draw_button_widget(win, "load")) {
                 app->scn = load_scene(app->filename, {});
-                update_stdsurface_state(app->shstate, app->scn, app->shparams);
+                clear_stdsurface_state(app->shstate, false);
+                update_stdsurface_state(
+                    app->shstate, app->scn, app->shparams, {});
             }
             draw_continue_widget(win);
             if (draw_button_widget(win, "save")) {

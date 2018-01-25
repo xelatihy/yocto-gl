@@ -8835,10 +8835,11 @@ unordered_map<string, test_scene_params>& test_scene_presets() {
     };
 
     // plane only
-    presets["plane_al"] = make_simple_scene("plane", {}, {}, "pointlights");
+    presets["plane_pl"] = make_simple_scene("plane_pl", {}, {}, "pointlights");
+    presets["plane_al"] = make_simple_scene("plane_al", {}, {}, "arealights");
 
     // basic shapes
-    presets["basic_pl"] = make_simple_scene("basic",
+    presets["basic_pl"] = make_simple_scene("basic_pl",
         {"flipcapsphere", "spherecube", "spherizedcube"},
         {"plastic_red", "plastic_green", "plastic_blue"}, "arealights");
 
@@ -10445,6 +10446,30 @@ gl_stdsurface_state* make_stdsurface_state() {
     if (!is_program_valid(st->prog)) st->prog = make_stdsurface_program();
     st->txt[nullptr] = {};
     return st;
+}
+
+// Clear fl_stdsurface_program state
+void clear_stdsurface_state(gl_stdsurface_state* st, bool clear_program) {
+    for (auto& txt_kv : st->txt) {
+        auto& txt = txt_kv.second;
+        clear_texture(txt);
+    }
+    st->txt.clear();
+    for (auto& vbo_kv : st->vbo) {
+        auto& vbo = vbo_kv.second;
+        clear_vertex_buffer(vbo.pos);
+        clear_vertex_buffer(vbo.norm);
+        clear_vertex_buffer(vbo.texcoord);
+        clear_vertex_buffer(vbo.color);
+        clear_vertex_buffer(vbo.tangsp);
+        clear_element_buffer(vbo.points);
+        clear_element_buffer(vbo.lines);
+        clear_element_buffer(vbo.triangles);
+        clear_element_buffer(vbo.quads);
+        clear_element_buffer(vbo.edges);
+    }
+    st->vbo.clear();
+    if (clear_program) st->vbo.clear();
 }
 
 // Init shading

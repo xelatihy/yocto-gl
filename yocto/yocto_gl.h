@@ -12084,7 +12084,7 @@ void update_stdsurface_state(gl_stdsurface_state* st, const scene* scn,
     const unordered_set<void*>& refresh = {});
 
 /// Clear gl_stdsurface_program draw state
-void clear_stdsurface_state(gl_stdsurface_state* st);
+void clear_stdsurface_state(gl_stdsurface_state* st, bool clear_program = true);
 
 /// Draw whole scene
 void draw_stdsurface_scene(gl_stdsurface_state* st, const scene* scn,
