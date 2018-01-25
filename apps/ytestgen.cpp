@@ -51,10 +51,13 @@ void save_test_scene(const string& sname, const string& basedir) {
     auto dirname = basedir + "/" + sname + "/";
     printf("generating %s scenes ...\n", sname.c_str());
     try {
+        mkdir(dirname);
+        auto test_scn = (sname == "cornell_box") ?
+                            test_scene_params() :
+                            test_scene_presets().at(sname);
         auto scn = (sname == "cornell_box") ?
                        make_cornell_box_scene() :
                        make_test_scene(test_scene_presets().at(sname));
-        mkdir(dirname);
         if (sname == "textures") {
             for (auto txt : scn->textures) {
                 if (txt->hdr) save_image4f(dirname + txt->path, txt->hdr);
@@ -83,6 +86,7 @@ void save_test_scene(const string& sname, const string& basedir) {
             if (!facevarying) save_scene(dirname + sname + ".gltf", scn, opts);
             if (!startswith(sname, "instance")) flatten_instances(scn);
             save_scene(dirname + sname + ".obj", scn, opts);
+            save_test_scene(dirname + sname + ".json", test_scn);
         }
         delete scn;
     } catch (exception& e) { log_fatal("error {}", e.what()); }

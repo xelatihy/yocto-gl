@@ -56,30 +56,6 @@ def docs():
     os.system('./tools/cpp2doc.py')
 
 @run.command()
-def deploy():
-    def run(cmd):
-        print(cmd)
-        os.system(cmd)
-    run('cp CMakeLists.txt ../yocto-gl/CMakeLists.txt')
-    run('cp readme.md ../yocto-gl/')
-    run('cp .travis.yml ../yocto-gl/')
-    run('cp appveyor.yml ../yocto-gl/')
-    run('cp yocto/yocto_* ../yocto-gl/yocto/')
-    run('cp yocto/ext/* ../yocto-gl/yocto/ext/')
-    run('cp yocto/ext/imgui/* ../yocto-gl/yocto/ext/imgui/')
-    run('cp apps/* ../yocto-gl/apps/')
-    run('cp apps/w32/* ../yocto-gl/apps/w32/')
-    run('cp apps/w32/include/GL/* ../yocto-gl/apps/w32/include/GL/')
-    run('cp apps/w32/include/GLFW/* ../yocto-gl/apps/w32/include/GLFW/')
-    run('cp apps/w32/lib-vc2015/* ../yocto-gl/apps/w32/lib-vc2015/')
-    run('cp images/* ../yocto-gl/images/')
-    run('cp tools/* ../yocto-gl/tools/')
-    run('cp tools/gltf/schema/* ../yocto-gl/tools/gltf/schema/')
-    run('cp tools/gltf/types/* ../yocto-gl/tools/gltf/types/')
-    run('cp docs/* ../yocto-gl/docs/')
-    run('cp docs/images/* ../yocto-gl/docs/images/')
-
-@run.command()
 def readme():
     readme = ''
     for filename in ['yocto/yocto_gl.h']:
@@ -88,6 +64,13 @@ def readme():
             if not line.startswith('///'): break
             readme += line.replace('/// ','').replace('///','')
     with open('readme_.md', 'w') as f: f.write(readme)
+
+# @run.command()
+# def commit():
+#     format()
+#     readme()
+#     docs()
+#     run('git commit -a')
 
 if __name__ == '__main__':
     run()

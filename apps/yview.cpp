@@ -70,7 +70,29 @@ inline void draw(gl_window* win) {
     draw_stdsurface_scene(app->shstate, app->scn, app->shparams);
 
     if (begin_widgets(win, "yview")) {
-        draw_label_widget(win, "scene", app->filename);
+        if (draw_header_widget(win, "file")) {
+            draw_value_widget(win, "scene", app->filename);
+            if (draw_button_widget(win, "new")) {
+                app->edit_params = test_scene_presets().at("floor");
+                delete app->scn;
+                app->scn = new scene();
+                update_test_scene(app->scn, app->edit_params);
+            }
+            draw_continue_widget(win);
+            if (draw_button_widget(win, "load")) {
+                app->scn = load_scene(app->filename, {});
+                update_stdsurface_state(app->shstate, app->scn, app->shparams);
+            }
+            draw_continue_widget(win);
+            if (draw_button_widget(win, "save")) {
+                save_scene(app->filename, app->scn, {});
+            }
+            draw_continue_widget(win);
+            if (draw_button_widget(win, "save proc")) {
+                save_test_scene(replace_path_extension(app->filename, ".json"),
+                    app->edit_params);
+            }
+        }
         if (draw_header_widget(win, "view")) {
             draw_camera_widget(
                 win, "camera", app->scn, app->shparams.camera_id);
