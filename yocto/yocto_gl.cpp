@@ -73,6 +73,38 @@
 //
 //
 
+//
+// # Todo
+//
+// ## Infrastructure
+//
+// - transforms in scene
+// - evaluate meshes with multiple shapes
+// - uniform serialization
+//    - consider simpler serialization code based on input flag
+//    - consider json archive model (use this to define to_son/from_from)
+// - lights in scene for viewers
+//    - do this only if necessary
+//
+// ## Trace
+//
+// - envmap sampling
+// - sampler simplification
+//     https://lemire.me/blog/2017/09/18/visiting-all-values-in-an-array-exactly-once-in-random-order/
+//     https://lemire.me/blog/2017/09/26/benchmarking-algorithms-to-visit-all-values-in-an-array-in-random-order/
+// - look at simpler denoiser
+//
+// ## yView
+//
+// - start in edit mode
+// - show edit scene
+//
+// ## yITrace
+//
+// - check editing
+// - consider update
+//
+
 #include "yocto_gl.h"
 
 #if YGL_IMAGEIO
