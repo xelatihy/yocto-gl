@@ -56,21 +56,11 @@ def docs():
     os.system('./tools/cpp2doc.py')
 
 @run.command()
-def readme():
-    readme = ''
-    for filename in ['yocto/yocto_gl.h']:
-        with open(filename) as f: cpp = f.read();
-        for line in cpp.splitlines(True):
-            if not line.startswith('///'): break
-            readme += line.replace('/// ','').replace('///','')
-    with open('readme_.md', 'w') as f: f.write(readme)
-
-# @run.command()
-# def commit():
-#     format()
-#     readme()
-#     docs()
-#     run('git commit -a')
+@click.argument('msg', required=False, default='')
+def commit(msg=''):
+    os.system('./tools/build.py format')
+    os.system('./tools/build.py docs')
+    os.system('git commit -a -m ' + msg)
 
 if __name__ == '__main__':
     run()

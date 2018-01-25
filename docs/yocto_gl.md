@@ -11967,7 +11967,7 @@ and textures on the GPU.
 #### Function clear_stdsurface_state()
 
 ~~~ .cpp
-void clear_stdsurface_state(gl_stdsurface_state* st);
+void clear_stdsurface_state(gl_stdsurface_state* st, bool clear_program = true);
 ~~~
 
 Clear gl_stdsurface_program draw state
