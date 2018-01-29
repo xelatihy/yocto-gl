@@ -2141,70 +2141,88 @@ void trace_block_filtered(const scene* scn, image4f& img, image4f& acc,
 
 // Trace the next samples in [samples_min, samples_max) range.
 // Samples have to be traced consecutively.
-void trace_samples(const scene* scn, image4f& img, int samples_min,
-    int samples_max, vector<rng_pcg32>& rngs, const trace_params& params) {
-    auto blocks = trace_blocks(params);
-    if (params.parallel) {
-        parallel_for((int)blocks.size(), [&img, scn, samples_min, samples_max,
-                                             &blocks, &params, &rngs](int idx) {
-            trace_block(scn, img, blocks[idx].first, blocks[idx].second,
-                samples_min, samples_max, rngs, params);
-        });
-    } else {
-        for (auto idx = 0; idx < (int)blocks.size(); idx++) {
-            trace_block(scn, img, blocks[idx].first, blocks[idx].second,
-                samples_min, samples_max, rngs, params);
-        }
-    }
-}
-
-// Trace the next samples in [samples_min, samples_max) range.
-// Samples have to be traced consecutively.
-void trace_filtered_samples(const scene* scn, image4f& img, image4f& acc,
-    image4f& weight, int samples_min, int samples_max, vector<rng_pcg32>& rngs,
+void trace_samples(trace_state* st, const scene* scn, int nsamples,
     const trace_params& params) {
-    auto blocks = trace_blocks(params);
-    std::mutex image_mutex;
+    nsamples = min(nsamples, params.nsamples - st->sample);
     if (params.parallel) {
-        parallel_for((int)blocks.size(),
-            [&img, &acc, &weight, scn, samples_min, samples_max, &blocks,
-                &params, &image_mutex, &rngs](int idx) {
-                trace_block_filtered(scn, img, acc, weight, blocks[idx].first,
-                    blocks[idx].second, samples_min, samples_max, rngs,
-                    image_mutex, params);
+        if (params.ftype == trace_filter_type::box) {
+            parallel_for(
+                (int)st->blocks.size(), [st, scn, nsamples, &params](int idx) {
+                    trace_block(scn, st->img, st->blocks[idx].first,
+                        st->blocks[idx].second, st->sample,
+                        st->sample + nsamples, st->rngs, params);
+                });
+        } else {
+            std::mutex image_mutex;
+            parallel_for((int)st->blocks.size(), [st, scn, nsamples, &params,
+                                                     &image_mutex](int idx) {
+                trace_block_filtered(scn, st->img, st->acc, st->weight,
+                    st->blocks[idx].first, st->blocks[idx].second, st->sample,
+                    st->sample + nsamples, st->rngs, image_mutex, params);
             });
+        }
     } else {
-        for (auto idx = 0; idx < (int)blocks.size(); idx++) {
-            trace_block_filtered(scn, img, acc, weight, blocks[idx].first,
-                blocks[idx].second, samples_min, samples_max, rngs, image_mutex,
-                params);
+        if (params.ftype == trace_filter_type::box) {
+            for (auto idx = 0; idx < (int)st->blocks.size(); idx++) {
+                trace_block(scn, st->img, st->blocks[idx].first,
+                    st->blocks[idx].second, st->sample, st->sample + nsamples,
+                    st->rngs, params);
+            }
+        } else {
+            std::mutex image_mutex;
+            for (auto idx = 0; idx < (int)st->blocks.size(); idx++) {
+                trace_block_filtered(scn, st->img, st->acc, st->weight,
+                    st->blocks[idx].first, st->blocks[idx].second, st->sample,
+                    st->sample + nsamples, st->rngs, image_mutex, params);
+            }
         }
     }
+    st->sample += nsamples;
 }
 
-// Starts an anyncrhounous renderer with a maximum of 256 samples.
-void trace_async_start(const scene* scn, image4f& img, vector<rng_pcg32>& rngs,
-    const trace_params& params, thread_pool* pool,
-    const function<void(int)>& callback) {
-    auto blocks = trace_blocks(params);
+// Starts an anyncrhounous renderer.
+void trace_async_start(
+    trace_state* st, const scene* scn, const trace_params& params) {
+    st->sample = 0;
     for (auto sample = 0; sample < params.nsamples; sample++) {
-        for (auto& block : blocks) {
-            auto is_last = (block == blocks.back());
-            run_async(pool, [&img, scn, sample, block, &params, callback, &rngs,
-                                is_last]() {
-                trace_block(scn, img, block.first, block.second, sample,
-                    sample + 1, rngs, params);
-                if (is_last) callback(sample);
+        for (auto& block : st->blocks) {
+            auto is_last = (block == st->blocks.back());
+            run_async(st->pool, [st, scn, block, &params, sample, is_last]() {
+                trace_block(scn, st->img, block.first, block.second, sample,
+                    sample + 1, st->rngs, params);
+                if (is_last) st->sample = sample;
             });
         }
     }
 }
 
 // Stop the asynchronous renderer.
-void trace_async_stop(thread_pool* pool) {
-    if (!pool) return;
-    clear_pool(pool);
-    wait_pool(pool);
+void trace_async_stop(trace_state* st) {
+    if (!st->pool) return;
+    clear_pool(st->pool);
+    wait_pool(st->pool);
+}
+
+// Initialize a rendering state
+trace_state* make_trace_state(const trace_params& params) {
+    auto st = new trace_state();
+    st->img = image4f(params.width, params.height);
+    for (int j = 0; j < params.height; j += params.block_size) {
+        for (int i = 0; i < params.width; i += params.block_size) {
+            st->blocks +=
+                {{i, j}, {min(i + params.block_size, params.width),
+                             min(j + params.block_size, params.height)}};
+        }
+    }
+    for (auto idx : range(params.width * params.height)) {
+        st->rngs += init_rng(params.seed, idx * 2 + 1);
+    }
+    if (params.ftype != trace_filter_type::box) {
+        st->acc = image4f(params.width, params.height);
+        st->weight = image4f(params.width, params.height);
+    }
+    if (params.parallel) st->pool = new thread_pool();
+    return st;
 }
 
 }  // namespace ygl

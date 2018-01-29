@@ -8422,107 +8422,49 @@ struct trace_params {
     uint32_t seed = 0;
     /// block size for parallel batches (probably leave it as is)
     int block_size = 32;
+    /// batch size for progressive rendering
+    int batch_size = 16;
 };
-
-/// Make image blocks
-inline vector<pair<vec2i, vec2i>> trace_blocks(const trace_params& params) {
-    vector<pair<vec2i, vec2i>> blocks;
-    for (int j = 0; j < params.height; j += params.block_size) {
-        for (int i = 0; i < params.width; i += params.block_size) {
-            blocks.push_back(
-                {{i, j}, {min(i + params.block_size, params.width),
-                             min(j + params.block_size, params.height)}});
-        }
-    }
-    return blocks;
-}
-
-/// Make a 2D array of random number generators for parallelization
-inline vector<rng_pcg32> trace_rngs(const trace_params& params) {
-    auto rngs = vector<rng_pcg32>(params.width * params.height);
-    for (auto j : range(params.height)) {
-        for (auto i : range(params.width)) {
-            rngs[j * params.width + i] =
-                init_rng(params.seed, (j * params.width + i) * 2 + 1);
-        }
-    }
-    return rngs;
-}
-
-/// Renders a block of samples
-///
-/// Notes: It is safe to call the function in parallel on different blocks.
-/// But two threads should not access the same pixels at the same time. If
-/// the same block is rendered with different samples, samples have to be
-/// sequential.
-///
-/// - Parameters:
-///     - scn: trace scene
-///     - img: pixel data in RGBA format (width/height in params)
-///     - block: range of pixels to render
-///     - samples_min, samples_max: range of samples to render
-///     - params: trace params
-void trace_block(const scene* scn, image4f& img, const vec2i& block_min,
-    const vec2i& block_max, int samples_min, int samples_max,
-    vector<rng_pcg32>& rngs, const trace_params& params);
-
-/// Trace the next samples in [samples_min, samples_max) range.
-/// Samples have to be traced consecutively.
-void trace_samples(const scene* scn, image4f& img, int samples_min,
-    int samples_max, vector<rng_pcg32>& rngs, const trace_params& params);
-
-/// Renders a filtered block of samples
-///
-/// Notes: It is safe to call the function in parallel on different blocks.
-/// But two threads should not access the same pixels at the same time. If
-/// the same block is rendered with different samples, samples have to be
-/// sequential.
-///
-/// - Parameters:
-///     - scn: trace scene
-///     - img: pixel data in RGBA format (width/height in params)
-///     - acc: accumulation buffer in RGBA format (width/height in params)
-///     - weight: weight buffer in float format (width/height in params)
-///     - block: range of pixels to render
-///     - samples_min, samples_max: range of samples to render
-///     - image_mutex: mutex for locking
-///     - params: trace params
-void trace_block_filtered(const scene* scn, image4f& img, image4f& acc,
-    image4f& weight, const vec2i& block_min, const vec2i& block_max,
-    int samples_min, int samples_max, vector<rng_pcg32>& rngs,
-    std::mutex& image_mutex, const trace_params& params);
-
-/// Trace the next samples in [samples_min, samples_max) range.
-/// Samples have to be traced consecutively.
-void trace_filtered_samples(const scene* scn, image4f& img, image4f& acc,
-    image4f& weight, int samples_min, int samples_max, vector<rng_pcg32>& rngs,
-    const trace_params& params);
-
-/// Trace the whole image
-inline image4f trace_image(const scene* scn, const trace_params& params) {
-    auto img = image4f(params.width, params.height);
-    auto rngs = trace_rngs(params);
-    if (params.ftype == trace_filter_type::box) {
-        trace_samples(scn, img, 0, params.nsamples, rngs, params);
-    } else {
-        auto acc = image4f(params.width, params.height);
-        auto weight = image4f(params.width, params.height);
-        trace_filtered_samples(
-            scn, img, acc, weight, 0, params.nsamples, rngs, params);
-    }
-    return img;
-}
 
 // forward declaration
 struct thread_pool;
 
-/// Starts an anyncrhounous renderer with a maximum of 256 samples.
-void trace_async_start(const scene* scn, image4f& img, vector<rng_pcg32>& rngs,
-    const trace_params& params, thread_pool* pool,
-    const function<void(int)>& callback);
+/// Trace state. Members are not part of the public API.
+struct trace_state {
+    image4f img;                        // rendered image
+    vector<pair<vec2i, vec2i>> blocks;  // image blocks
+    vector<rng_pcg32> rngs;             // random number generators
+    thread_pool* pool = nullptr;        // thread pool
+    int sample = 0;                     // current sample
+    image4f acc, weight;                // progressive rendering buffers
+};
+
+/// Initialize a rendering state
+trace_state* make_trace_state(const trace_params& params);
+
+/// Gets the computed trace image
+inline const image4f& get_trace_image(const trace_state* st) { return st->img; }
+
+/// Gets the current trace sample
+inline int get_trace_sample(const trace_state* st) { return st->sample; }
+
+/// Trace the next nsamples samples.
+void trace_samples(trace_state* st, const scene* scn, int nsamples,
+    const trace_params& params);
+
+/// Trace the whole image
+inline image4f trace_image(const scene* scn, const trace_params& params) {
+    auto st = unique_ptr<trace_state>(make_trace_state(params));
+    trace_samples(st.get(), scn, params.nsamples, params);
+    return get_trace_image(st.get());
+}
+
+/// Starts an anyncrhounous renderer.
+void trace_async_start(
+    trace_state* st, const scene* scn, const trace_params& params);
 
 /// Stop the asynchronous renderer.
-void trace_async_stop(thread_pool* pool);
+void trace_async_stop(trace_state* st);
 
 }  // namespace ygl
 
