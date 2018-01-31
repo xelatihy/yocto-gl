@@ -78,6 +78,8 @@
 //
 // ## Infrastructure
 //
+// - templated vectors and matrices
+// - simpler images
 // - transforms in scene
 // - evaluate meshes with multiple shapes
 // - uniform serialization
@@ -386,7 +388,7 @@ image4b load_image4b(const string& filename) {
     auto w = 0, h = 0, c = 0;
     auto pixels = unique_ptr<byte>(stbi_load(filename.c_str(), &w, &h, &c, 4));
     if (!pixels) return {};
-    return image4b(w, h, (vec4b*)pixels.get());
+    return make_image(w, h, (vec4b*)pixels.get());
 }
 
 // Loads an hdr image.
