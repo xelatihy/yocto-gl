@@ -79,6 +79,9 @@
 // ## Infrastructure
 //
 // - templated vectors and matrices
+// - remove vec2...
+// - transform name cleanup
+// - bbox1 -> bbox<vec<1>>
 // - simpler images
 // - transforms in scene
 // - evaluate meshes with multiple shapes
@@ -1384,7 +1387,7 @@ inline point eval_shapepoint(
                    vec3f{1, 1, 1};
         auto ntxt = normalize(vec3f{txt.x, -txt.y, txt.z});
         auto frame =
-            make_frame3_fromzx({0, 0, 0}, norm, {tangsp.x, tangsp.y, tangsp.z});
+            make_frame_fromzx({0, 0, 0}, norm, {tangsp.x, tangsp.y, tangsp.z});
         frame.y *= tangsp.w;
         norm = transform_direction(frame, ntxt);
     }
@@ -5985,14 +5988,14 @@ inline void gltf_node_to_instances(scene* scn, const vector<camera>& cameras,
     auto xform = xf * node_transform(nde);
     if (nde->camera) {
         auto cam = new camera(cameras[(int)nde->camera]);
-        cam->frame = to_frame3(xform);
+        cam->frame = to_frame(xform);
         scn->cameras.push_back(cam);
     }
     if (nde->mesh) {
         for (auto shp : meshes[(int)nde->mesh]) {
             auto ist = new instance();
             ist->name = nde->name;
-            ist->frame = to_frame3(xform);
+            ist->frame = to_frame(xform);
             ist->shp = shp;
             scn->instances.push_back(ist);
         }
@@ -6654,7 +6657,7 @@ inline glTF* scene_to_gltf(
         auto gnode = new glTFNode();
         gnode->name = ist->name;
         gnode->mesh = glTFid<glTFMesh>(index(scn->shapes, ist->shp));
-        gnode->matrix = to_mat4(ist->frame);
+        gnode->matrix = to_mat(ist->frame);
         gltf->nodes.push_back(gnode);
     }
 
@@ -6663,7 +6666,7 @@ inline glTF* scene_to_gltf(
         auto gnode = new glTFNode();
         gnode->name = cam->name;
         gnode->camera = glTFid<glTFCamera>(index(scn->cameras, cam));
-        gnode->matrix = to_mat4(cam->frame);
+        gnode->matrix = to_mat(cam->frame);
         gltf->nodes.push_back(gnode);
     }
 
@@ -10688,8 +10691,8 @@ void draw_stdsurface_scene(gl_stdsurface_state* st, const scene* scn,
 
     auto cam = scn->cameras[params.camera_id];
     mat4f camera_xform, camera_view, camera_proj;
-    camera_xform = to_mat4(cam->frame);
-    camera_view = to_mat4(inverse(cam->frame));
+    camera_xform = to_mat(cam->frame);
+    camera_view = to_mat(inverse(cam->frame));
     camera_proj = perspective_mat4(cam->yfov,
         (float)params.width / (float)params.height, cam->near, cam->far);
 
