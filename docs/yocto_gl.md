@@ -3346,18 +3346,18 @@ inline const vec3f* end(const frame3f& a);
 
 iteration support
 
-#### Function to_mat4f()
+#### Function to_matf()
 
 ~~~ .cpp
-inline mat4f to_mat4f(const frame3f& a);
+inline mat4f to_matf(const frame3f& a);
 ~~~
 
 frame to matrix conversion
 
-#### Function to_frame3f()
+#### Function to_framef()
 
 ~~~ .cpp
-inline frame3f to_frame3f(const mat4f& a);
+inline frame3f to_framef(const mat4f& a);
 ~~~
 
 matrix to frame conversion

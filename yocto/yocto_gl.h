@@ -1001,20 +1001,11 @@ struct vec<T, 2> {
     /// element access
     const T& operator[](int i) const { return (&x)[i]; }
 
-    /// data access
-    T* data() { return &x; }
-    /// data access
-    const T* data() const { return &x; }
-
     /// element data
     T x;
     /// element data
     T y;
 };
-
-/// Shortcut for vector of two elements
-template <typename T>
-using vec2 = vec<T, 2>;
 
 /// Vector of 3 elements.
 template <typename T>
@@ -1031,11 +1022,6 @@ struct vec<T, 3> {
     /// element access
     const T& operator[](int i) const { return (&x)[i]; }
 
-    /// data access
-    T* data() { return &x; }
-    /// data access
-    const T* data() const { return &x; }
-
     /// element data
     T x;
     /// element data
@@ -1043,10 +1029,6 @@ struct vec<T, 3> {
     /// element data
     T z;
 };
-
-/// Shortcut for vector of 3 elements
-template <typename T>
-using vec3 = vec<T, 3>;
 
 /// Vector of 4 elements.
 template <typename T>
@@ -1065,11 +1047,6 @@ struct vec<T, 4> {
     /// element access
     const T& operator[](int i) const { return (&x)[i]; }
 
-    /// data access
-    T* data() { return &x; }
-    /// data access
-    const T* data() const { return &x; }
-
     /// access xyz components
     vec<T, 3>& xyz() { return *(vec<T, 3>*)&x; }
     /// access xyz components
@@ -1085,6 +1062,12 @@ struct vec<T, 4> {
     T w;
 };
 
+/// Shortcut for vector of two elements
+template <typename T>
+using vec2 = vec<T, 2>;
+/// Shortcut for vector of 3 elements
+template <typename T>
+using vec3 = vec<T, 3>;
 /// Shortcut for vector of 4 elements
 template <typename T>
 using vec4 = vec<T, 4>;
@@ -1142,6 +1125,21 @@ inline T* end(vec<T, N>& a) {
 template <typename T, int N>
 inline const T* end(const vec<T, N>& a) {
     return &a.x + N;
+}
+/// vector data access
+template <typename T, int N>
+inline T* data(vec<T, N>& a) {
+    return &a.x;
+}
+/// vector data access
+template <typename T, int N>
+inline const T* data(const vec<T, N>& a) {
+    return &a.x;
+}
+/// vector size
+template <typename T, int N>
+inline int size(vec<T, N>& a) {
+    return N;
 }
 
 /// vector operator ==
@@ -1359,95 +1357,33 @@ inline vec4<T> operator/(T1 a, const vec4<T>& b) {
 }
 
 /// vector operator +=
-template <typename T>
-inline vec2<T>& operator+=(vec2<T>& a, const vec2<T>& b) {
+template <typename T, int N>
+inline vec<T, N>& operator+=(vec<T, N>& a, const vec<T, N>& b) {
     return a = a + b;
 }
 /// vector operator -=
-template <typename T>
-inline vec2<T>& operator-=(vec2<T>& a, const vec2<T>& b) {
+template <typename T, int N>
+inline vec<T, N>& operator-=(vec2<T>& a, const vec<T, N>& b) {
     return a = a - b;
 }
 /// vector operator *=
-template <typename T>
-inline vec2<T>& operator*=(vec2<T>& a, const vec2<T>& b) {
+template <typename T, int N>
+inline vec<T, N>& operator*=(vec<T, N>& a, const vec<T, N>& b) {
     return a = a * b;
 }
 /// vector operator *=
-template <typename T, typename T1>
-inline vec2<T>& operator*=(vec2<T>& a, T1 b) {
+template <typename T, int N, typename T1>
+inline vec<T, N>& operator*=(vec<T, N>& a, T1 b) {
     return a = a * b;
 }
 /// vector operator /=
-template <typename T>
-inline vec2<T>& operator/=(vec2<T>& a, const vec2<T>& b) {
+template <typename T, int N>
+inline vec<T, N>& operator/=(vec<T, N>& a, const vec<T, N>& b) {
     return a = a / b;
 }
 /// vector operator /=
-template <typename T, typename T1>
-inline vec2<T>& operator/=(vec2<T>& a, T1 b) {
-    return a = a / b;
-}
-
-/// vector operator +=
-template <typename T>
-inline vec3<T>& operator+=(vec3<T>& a, const vec3<T>& b) {
-    return a = a + b;
-}
-/// vector operator -=
-template <typename T>
-inline vec3<T>& operator-=(vec3<T>& a, const vec3<T>& b) {
-    return a = a - b;
-}
-/// vector operator *=
-template <typename T>
-inline vec3<T>& operator*=(vec3<T>& a, const vec3<T>& b) {
-    return a = a * b;
-}
-/// vector operator *=
-template <typename T>
-inline vec3<T>& operator*=(vec3<T>& a, float b) {
-    return a = a * b;
-}
-/// vector operator /=
-template <typename T>
-inline vec3<T>& operator/=(vec3<T>& a, const vec3<T>& b) {
-    return a = a / b;
-}
-/// vector operator /=
-template <typename T>
-inline vec3<T>& operator/=(vec3<T>& a, float b) {
-    return a = a / b;
-}
-
-/// vector operator +=
-template <typename T>
-inline vec4<T>& operator+=(vec4<T>& a, const vec4<T>& b) {
-    return a = a + b;
-}
-/// vector operator -=
-template <typename T>
-inline vec4<T>& operator-=(vec4<T>& a, const vec4<T>& b) {
-    return a = a - b;
-}
-/// vector operator *=
-template <typename T>
-inline vec4<T>& operator*=(vec4<T>& a, const vec4<T>& b) {
-    return a = a * b;
-}
-/// vector operator *=
-template <typename T, typename T1>
-inline vec4<T>& operator*=(vec4<T>& a, T1 b) {
-    return a = a * b;
-}
-/// vector operator /=
-template <typename T>
-inline vec4<T>& operator/=(vec4<T>& a, const vec4<T>& b) {
-    return a = a / b;
-}
-/// vector operator /=
-template <typename T, typename T1>
-inline vec4<T>& operator/=(vec4<T>& a, T1 b) {
+template <typename T, int N, typename T1>
+inline vec<T, N>& operator/=(vec<T, N>& a, T1 b) {
     return a = a / b;
 }
 
@@ -1480,38 +1416,13 @@ inline vec3<T> cross(const vec3<T>& a, const vec3<T>& b) {
 }
 
 /// vector length
-template <typename T>
-inline T length(const vec2<T>& a) {
+template <typename T, int N>
+inline T length(const vec<T, N>& a) {
     return sqrt(dot(a, a));
 }
-/// vector length
-template <typename T>
-inline T length(const vec3<T>& a) {
-    return sqrt(dot(a, a));
-}
-/// vector length
-template <typename T>
-inline T length(const vec4<T>& a) {
-    return sqrt(dot(a, a));
-}
-
 /// vector normalization
-template <typename T>
-inline vec2<T> normalize(const vec2<T>& a) {
-    auto l = length(a);
-    if (l == 0) return a;
-    return a * (1 / l);
-}
-/// vector normalization
-template <typename T>
-inline vec3<T> normalize(const vec3<T>& a) {
-    auto l = length(a);
-    if (l == 0) return a;
-    return a * (1 / l);
-}
-/// vector normalization
-template <typename T>
-inline vec4<T> normalize(const vec4<T>& a) {
+template <typename T, int N>
+inline vec<T, N> normalize(const vec<T, N>& a) {
     auto l = length(a);
     if (l == 0) return a;
     return a * (1 / l);
@@ -1536,50 +1447,26 @@ inline T angle(const vec3<T>& a, const vec3<T>& b) {
     return uangle(normalize(a), normalize(b));
 }
 /// vector linear interpolation
-template <typename T, typename T1>
-inline vec2<T> lerp(const vec2<T>& a, const vec2<T>& b, T1 t) {
+template <typename T, int N, typename T1>
+inline vec<T, N> lerp(const vec<T, N>& a, const vec<T, N>& b, T1 t) {
     return a * (1 - t) + b * t;
 }
-/// vector linear interpolation
-template <typename T, typename T1>
-inline vec3<T> lerp(const vec3<T>& a, const vec3<T>& b, T1 t) {
-    return a * (1 - t) + b * t;
-}
-/// vector linear interpolation
-template <typename T, typename T1>
-inline vec4<T> lerp(const vec4<T>& a, const vec4<T>& b, T1 t) {
-    return a * (1 - t) + b * t;
-}
-
 /// vector bilinear interpolation
-template <typename T, typename T1>
-inline vec3<T> bilerp(const vec3<T>& aa, const vec3<T>& ba, const vec3<T>& ab,
-    const vec3<T>& bb, T1 s, T1 t) {
+template <typename T, int N, typename T1>
+inline vec<T, N> bilerp(const vec<T, N>& aa, const vec<T, N>& ba,
+    const vec<T, N>& ab, const vec<T, N>& bb, T1 s, T1 t) {
     return aa * (1 - s) * (1 - t) + ba * s * (1 - t) + ab * (1 - s) * t +
            bb * s * t;
 }
 
 /// vector normalized linear interpolation
-template <typename T, typename T1>
-inline vec3<T> nlerp(const vec3<T>& a, const vec3<T>& b, T1 t) {
+template <typename T, int N, typename T1>
+inline vec<T, N> nlerp(const vec<T, N>& a, const vec<T, N>& b, T1 t) {
     return normalize(lerp(a, b, t));
 }
 /// vector spherical linear interpolation (vectors have to be normalized)
-template <typename T, typename T1>
-inline vec3<T> slerp(const vec3<T>& a, const vec3<T>& b, T1 t) {
-    auto th = uangle(a, b);
-    return th == 0 ?
-               a :
-               a * (sin(th * (1 - t)) / sin(th)) + b * (sin(th * t) / sin(th));
-}
-/// vector normalized linear interpolation
-template <typename T, typename T1>
-inline vec4<T> nlerp(const vec4<T>& a, const vec4<T>& b, T1 t) {
-    return normalize(lerp(a, b, t));
-}
-/// vector spherical linear interpolation (vectors have to be normalized)
-template <typename T, typename T1>
-inline vec4<T> slerp(const vec4<T>& a, const vec4<T>& b, T1 t) {
+template <typename T, int N, typename T1>
+inline vec<T, N> slerp(const vec<T, N>& a, const vec<T, N>& b, T1 t) {
     auto th = uangle(a, b);
     return th == 0 ?
                a :
@@ -1592,7 +1479,6 @@ inline vec3<T> orthogonal(const vec3<T>& v) {
     // http://lolengine.net/blog/2013/09/21/picking-orthogonal-vector-combing-coconuts)
     return abs(v.x) > abs(v.z) ? vec3<T>{-v.y, v.x, 0} : vec3<T>{0, -v.z, v.y};
 }
-
 /// orthonormalize two vectors
 template <typename T>
 inline vec3<T> orthonormalize(const vec3<T>& a, const vec3<T>& b) {
@@ -1615,30 +1501,17 @@ inline vec4<T> clamp(const vec4<T>& x, T1 min, T1 max) {
     return {clamp(x.x, min, max), clamp(x.y, min, max), clamp(x.z, min, max),
         clamp(x.w, min, max)};
 }
-
 /// clamp the length of a vector
-template <typename T, typename T1>
-inline vec2<T> clamplen(const vec2<T>& x, T1 max) {
-    auto l = length(x);
-    return (l > max) ? x * max / l : x;
-}
-/// clamp the length of a vector
-template <typename T, typename T1>
-inline vec3<T> clamplen(const vec3<T>& x, T1 max) {
-    auto l = length(x);
-    return (l > max) ? x * max / l : x;
-}
-/// clamp the length of a vector
-template <typename T, typename T1>
-inline vec4<T> clamplen(const vec4<T>& x, T1 max) {
+template <typename T, int N, typename T1>
+inline vec<T, N> clamplen(const vec<T, N>& x, T1 max) {
     auto l = length(x);
     return (l > max) ? x * max / l : x;
 }
 
-// implementation
-template <typename T>
-inline pair<int, float> _min_element(int N, const T* a) {
-    auto v = flt_max;
+/// index and valur of minimum vector element
+template <typename T, int N>
+inline pair<int, T> min_element(const vec<T, N>& a) {
+    auto v = numeric_limits<T>::max();
     auto pos = -1;
     for (auto i = 0; i < N; i++) {
         if (v > a[i]) {
@@ -1649,26 +1522,10 @@ inline pair<int, float> _min_element(int N, const T* a) {
     return {pos, v};
 }
 
-/// min vector element
-template <typename T>
-inline pair<int, T> min_element(const vec2<T>& a) {
-    return _min_element(2, &a.x);
-}
-/// min vector element
-template <typename T>
-inline pair<int, T> min_element(const vec3<T>& a) {
-    return _min_element(3, &a.x);
-}
-/// min vector element
-template <typename T>
-inline pair<int, T> min_element(const vec4<T>& a) {
-    return _min_element(4, &a.x);
-}
-
-/// index of the max vector element
-template <typename T>
-inline pair<int, float> _max_element(int N, const T* a) {
-    auto v = flt_min;
+/// index and value of the maximum vector element
+template <typename T, int N>
+inline pair<int, T> max_element(const vec<T, N>& a) {
+    auto v = numeric_limits<T>::lowest();
     auto pos = -1;
     for (auto i = 0; i < N; i++) {
         if (v < a[i]) {
@@ -1677,22 +1534,6 @@ inline pair<int, float> _max_element(int N, const T* a) {
         }
     }
     return {pos, v};
-}
-
-/// index of the min vector element
-template <typename T>
-inline pair<int, T> max_element(const vec2<T>& a) {
-    return _max_element(2, &a.x);
-}
-/// index of the min vector element
-template <typename T>
-inline pair<int, T> max_element(const vec3<T>& a) {
-    return _max_element(3, &a.x);
-}
-/// index of the min vector element
-template <typename T>
-inline pair<int, T> max_element(const vec4<T>& a) {
-    return _max_element(4, &a.x);
 }
 
 /// Element-wise conversion
@@ -1715,87 +1556,37 @@ inline vec4f byte_to_float(const vec4b& a) {
 }
 
 /// stream write
-template <typename T>
-inline ostream& operator<<(ostream& os, const vec2<T>& a) {
-    return os << a.x << ' ' << a.y;
-}
-/// stream write
-template <typename T>
-inline ostream& operator<<(ostream& os, const vec3<T>& a) {
-    return os << a.x << ' ' << a.y << ' ' << a.z;
-}
-/// stream write
-template <typename T>
-inline ostream& operator<<(ostream& os, const vec4<T>& a) {
-    return os << a.x << ' ' << a.y << ' ' << a.z << ' ' << a.w;
-}
-/// stream write
-inline ostream& operator<<(ostream& os, const vec4b& a) {
-    return os << (int)a.x << ' ' << (int)a.y << ' ' << (int)a.z << ' '
-              << (int)a.w;
+template <typename T, int N>
+inline ostream& operator<<(ostream& os, const vec<T, N>& a) {
+    for (auto i = 0; i < N; i++) {
+        if (i) os << ' ';
+        os << data(a)[i];
+    }
+    return os;
 }
 
 /// stream read
-template <typename T>
-inline istream& operator>>(istream& is, vec2<T>& a) {
-    return is >> a.x >> a.y;
-}
-/// stream read
-template <typename T>
-inline istream& operator>>(istream& is, vec3<T>& a) {
-    return is >> a.x >> a.y >> a.z;
-}
-/// stream read
-template <typename T>
-inline istream& operator>>(istream& is, vec4<T>& a) {
-    return is >> a.x >> a.y >> a.z >> a.w;
+template <typename T, int N>
+inline istream& operator>>(istream& is, vec<T, N>& a) {
+    for (auto i = 0; i < N; i++) is >> data(a)[i];
+    return is;
 }
 
 }  // namespace ygl
 
 namespace std {
 /// Hash functor for vector for use with unordered_map
-template <>
-struct hash<ygl::vec2i> {
+template <typename T, int N>
+struct hash<ygl::vec<T, N>> {
     // from boost::hash_combine
     static size_t hash_combine(size_t h, size_t h1) {
         h ^= h1 + 0x9e3779b9 + (h << 6) + (h >> 2);
         return h;
     }
-    size_t operator()(const ygl::vec2i& v) const {
+    size_t operator()(const ygl::vec<T, N>& v) const {
         auto vh = hash<int>();
         auto h = (size_t)0;
-        for (auto i = 0; i < 2; i++) h = hash_combine(h, vh(v[i]));
-        return h;
-    }
-};
-/// Hash functor for vector for use with unordered_map
-template <>
-struct hash<ygl::vec3i> {
-    // from boost::hash_combine
-    static size_t hash_combine(size_t h, size_t h1) {
-        h ^= h1 + 0x9e3779b9 + (h << 6) + (h >> 2);
-        return h;
-    }
-    size_t operator()(const ygl::vec3i& v) const {
-        auto vh = hash<int>();
-        auto h = (size_t)0;
-        for (auto i = 0; i < 3; i++) h = hash_combine(h, vh(v[i]));
-        return h;
-    }
-};
-/// Hash functor for vector for use with unordered_map
-template <>
-struct hash<ygl::vec4i> {
-    // from boost::hash_combine
-    static size_t hash_combine(size_t h, size_t h1) {
-        h ^= h1 + 0x9e3779b9 + (h << 6) + (h >> 2);
-        return h;
-    }
-    size_t operator()(const ygl::vec4i& v) const {
-        auto vh = hash<int>();
-        auto h = (size_t)0;
-        for (auto i = 0; i < 4; i++) h = hash_combine(h, vh(v[i]));
+        for (auto i = 0; i < N; i++) h = hash_combine(h, vh(v[i]));
         return h;
     }
 };
@@ -1827,20 +1618,11 @@ struct mat<T, 2> {
     /// element access
     const vec<T, 2>& operator[](int i) const { return (&x)[i]; }
 
-    /// data access
-    vec<T, 2>* data() { return &x; }
-    /// data access
-    const vec<T, 2>* data() const { return &x; }
-
     /// element data
     vec<T, 2> x;
     /// element data
     vec<T, 2> y;
 };
-
-/// Shortcut for matrices of two elements
-template <typename T>
-using mat2 = mat<T, 2>;
 
 /// Matrix of 3x3 elements stored in column major format.
 /// Colums access via operator[].
@@ -1859,11 +1641,6 @@ struct mat<T, 3> {
     /// element access
     const vec<T, 3>& operator[](int i) const { return (&x)[i]; }
 
-    /// data access
-    vec<T, 3>* data() { return &x; }
-    /// data access
-    const vec<T, 3>* data() const { return &x; }
-
     /// element data
     vec<T, 3> x;
     /// element data
@@ -1871,10 +1648,6 @@ struct mat<T, 3> {
     /// element data
     vec<T, 3> z;
 };
-
-/// Shortcut for matrices of three elements
-template <typename T>
-using mat3 = mat<T, 3>;
 
 /// Matrix of 4x4 elements stored in column major format.
 /// Colums access via operator[].
@@ -1895,11 +1668,6 @@ struct mat<T, 4> {
     /// element access
     const vec<T, 4>& operator[](int i) const { return (&x)[i]; }
 
-    /// data access
-    vec<T, 4>* data() { return &x; }
-    /// data access
-    const vec<T, 4>* data() const { return &x; }
-
     /// element data
     vec<T, 4> x;
     /// element data
@@ -1910,6 +1678,12 @@ struct mat<T, 4> {
     vec<T, 4> w;
 };
 
+/// Shortcut for matrices of two elements
+template <typename T>
+using mat2 = mat<T, 2>;
+/// Shortcut for matrices of three elements
+template <typename T>
+using mat3 = mat<T, 3>;
 /// Shortcut for matrices of four elements
 template <typename T>
 using mat4 = mat<T, 4>;
@@ -1927,6 +1701,42 @@ const auto identity_mat2f = mat2f();
 const auto identity_mat3f = mat3f();
 /// 4-dimensional float identity matrix
 const auto identity_mat4f = mat4f();
+
+/// matrix iteration support
+template <typename T, int N>
+inline vec<T, N>* begin(mat<T, N>& m) {
+    return &(m.x);
+}
+/// matrix iteration support
+template <typename T, int N>
+inline vec<T, N>* end(mat<T, N>& m) {
+    return &(m.x) + N;
+}
+/// matrix iteration support
+template <typename T, int N>
+inline const vec<T, N>* begin(const mat<T, N>& m) {
+    return &(m.x);
+}
+/// matrix iteration support
+template <typename T, int N>
+inline const vec<T, N>* end(const mat<T, N>& m) {
+    return &(m.x) + N;
+}
+/// matrix data access
+template <typename T, int N>
+inline vec<T, N>* data(mat<T, N>& m) {
+    return &(m.x);
+}
+/// matrix data access
+template <typename T, int N>
+inline const vec<T, N>* data(const mat<T, N>& m) {
+    return &(m.x);
+}
+/// matrix size
+template <typename T, int N>
+inline int size(mat<T, N>& a) {
+    return N;
+}
 
 /// matrix operator ==
 template <typename T>
@@ -2059,63 +1869,23 @@ inline mat4<T> operator*(const mat4<T>& a, const mat4<T>& b) {
 }
 
 /// matrix sum assignment
-template <typename T>
-inline mat2<T>& operator+=(mat2<T>& a, const mat2<T>& b) {
+template <typename T, int N>
+inline mat<T, N>& operator+=(mat<T, N>& a, const mat<T, N>& b) {
     return a = a + b;
 }
 /// matrix-matrix multiply assignment
-template <typename T>
-inline mat2<T>& operator*=(mat2<T>& a, const mat2<T>& b) {
+template <typename T, int N>
+inline mat<T, N>& operator*=(mat<T, N>& a, const mat<T, N>& b) {
     return a = a * b;
 }
 /// matrix scaling assignment
-template <typename T, typename T1>
-inline mat2<T>& operator*=(mat2<T>& a, T1 b) {
+template <typename T, int N, typename T1>
+inline mat<T, N>& operator*=(mat<T, N>& a, T1 b) {
     return a = a * b;
 }
 /// matrix scaling assignment
-template <typename T, typename T1>
-inline mat2<T>& operator/=(mat2<T>& a, T1 b) {
-    return a = a / b;
-}
-/// matrix sum assignment
-template <typename T>
-inline mat3<T>& operator+=(mat3<T>& a, const mat3<T>& b) {
-    return a = a + b;
-}
-/// matrix-matrix multiply assignment
-template <typename T>
-inline mat3<T>& operator*=(mat3<T>& a, const mat3<T>& b) {
-    return a = a * b;
-}
-/// matrix scaling assignment
-template <typename T, typename T1>
-inline mat3<T>& operator*=(mat3<T>& a, T1 b) {
-    return a = a * b;
-}
-/// matrix scaling assignment
-template <typename T, typename T1>
-inline mat3<T>& operator/=(mat3<T>& a, T1 b) {
-    return a = a / b;
-}
-/// matrix sum assignment
-template <typename T>
-inline mat4<T>& operator+=(mat4<T>& a, const mat4<T>& b) {
-    return a = a + b;
-}
-/// matrix-matrix multiply assignment
-template <typename T>
-inline mat4<T>& operator*=(mat4<T>& a, const mat4<T>& b) {
-    return a = a * b;
-}
-/// matrix scaling assignment
-template <typename T, typename T1>
-inline mat4<T>& operator*=(mat4<T>& a, T1 b) {
-    return a = a * b;
-}
-/// matrix scaling assignment
-template <typename T, typename T1>
-inline mat4<T>& operator/=(mat4<T>& a, T1 b) {
+template <typename T, int N, typename T1>
+inline mat<T, N>& operator/=(mat<T, N>& a, T1 b) {
     return a = a / b;
 }
 
@@ -2251,51 +2021,27 @@ inline T determinant(const mat4<T>& a) {
 }
 
 /// matrix inverse (uses adjugate and determinant)
-template <typename T>
-inline mat2<T> inverse(const mat2<T>& a) {
-    return adjugate(a) / determinant(a);
-}
-/// matrix inverse (uses adjugate and determinant)
-template <typename T>
-inline mat3<T> inverse(const mat3<T>& a) {
-    return adjugate(a) / determinant(a);
-}
-/// matrix inverse (uses adjugate and determinant)
-template <typename T>
-inline mat4<T> inverse(const mat4<T>& a) {
+template <typename T, int N>
+inline mat<T, N> inverse(const mat<T, N>& a) {
     return adjugate(a) / determinant(a);
 }
 
 /// stream write
-template <typename T>
-inline ostream& operator<<(ostream& os, const mat2<T>& a) {
-    return os << a.x << ' ' << a.y;
+template <typename T, int N>
+inline ostream& operator<<(ostream& os, const mat<T, N>& a) {
+    for (auto i = 0; i < N; i++) {
+        if (i) os << ' ';
+        os << data(a)[i];
+    }
+    return os;
 }
 /// stream read
-template <typename T>
-inline istream& operator>>(istream& is, mat2<T>& a) {
-    return is >> a.x >> a.y;
+template <typename T, int N>
+inline istream& operator>>(istream& is, mat<T, N>& a) {
+    for (auto i = 0; i < N; i++) is >> data(a)[i];
+    return is;
 }
-/// stream write
-template <typename T>
-inline ostream& operator<<(ostream& os, const mat3<T>& a) {
-    return os << a.x << ' ' << a.y << ' ' << a.z;
-}
-/// stream read
-template <typename T>
-inline istream& operator>>(istream& is, mat3<T>& a) {
-    return is >> a.x >> a.y >> a.z;
-}
-/// stream write
-template <typename T>
-inline ostream& operator<<(ostream& os, const mat4<T>& a) {
-    return os << a.x << ' ' << a.y << ' ' << a.z << ' ' << a.w;
-}
-/// stream read
-template <typename T>
-inline istream& operator>>(istream& is, mat4<T>& a) {
-    return is >> a.x >> a.y >> a.z >> a.w;
-}
+
 }  // namespace ygl
 
 // -----------------------------------------------------------------------------
@@ -2379,6 +2125,42 @@ using frame3f = frame3<float>;
 const auto identity_frame3f =
     frame3f{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}};
 
+/// iteration support
+template <typename T, int N>
+inline vec<T, N>* begin(frame<T, N>& a) {
+    return &a.x;
+}
+/// iteration support
+template <typename T, int N>
+inline const vec<T, N>* begin(const frame<T, N>& a) {
+    return &a.x;
+}
+/// iteration support
+template <typename T, int N>
+inline vec<T, N>* end(frame<T, N>& a) {
+    return &a.x + 4;
+}
+/// iteration support
+template <typename T, int N>
+inline const vec<T, N>* end(const frame<T, N>& a) {
+    return &a.x + 4;
+}
+/// data access
+template <typename T, int N>
+inline vec<T, N>* data(frame<T, N>& a) {
+    return &a.x;
+}
+/// data access
+template <typename T, int N>
+inline const vec<T, N>* data(const frame<T, N>& a) {
+    return &a.x;
+}
+/// frame size
+template <typename T, int N>
+inline int size(frame<T, N>& a) {
+    return N + 1;
+}
+
 // initializes a frame3 from origin and z.
 template <typename T>
 inline frame3<T> make_frame_fromz(const vec3<T>& o, const vec3<T>& z_) {
@@ -2390,7 +2172,7 @@ inline frame3<T> make_frame_fromz(const vec3<T>& o, const vec3<T>& z_) {
 
 // initializes a frame3 from origin, z and x.
 template <typename T>
-inline frame3<T> make_frame3_fromzx(
+inline frame3<T> make_frame_fromzx(
     const vec3<T>& o, const vec3<T>& z_, const vec3<T>& x_) {
     auto z = normalize(z_);
     auto x = orthonormalize(x_, z);
@@ -2398,36 +2180,15 @@ inline frame3<T> make_frame3_fromzx(
     return {x, y, z, o};
 }
 
-/// iteration support
-template <typename T>
-inline vec3<T>* begin(frame3<T>& a) {
-    return &a.x;
-}
-/// iteration support
-template <typename T>
-inline const vec3<T>* begin(const frame3<T>& a) {
-    return &a.x;
-}
-/// iteration support
-template <typename T>
-inline vec3<T>* end(frame3<T>& a) {
-    return &a.x + 4;
-}
-/// iteration support
-template <typename T>
-inline const vec3<T>* end(const frame3<T>& a) {
-    return &a.x + 4;
-}
-
 /// frame to matrix conversion
 template <typename T>
-inline mat4<T> to_mat4(const frame3<T>& a) {
+inline mat4<T> to_mat(const frame3<T>& a) {
     return {{a.x.x, a.x.y, a.x.z, 0}, {a.y.x, a.y.y, a.y.z, 0},
         {a.z.x, a.z.y, a.z.z, 0}, {a.o.x, a.o.y, a.o.z, 1}};
 }
 /// matrix to frame conversion
 template <typename T>
-inline frame3<T> to_frame3(const mat4<T>& a) {
+inline frame3<T> to_frame(const mat4<T>& a) {
     return {{a.x.x, a.x.y, a.x.z}, {a.y.x, a.y.y, a.y.z}, {a.z.x, a.z.y, a.z.z},
         {a.w.x, a.w.y, a.w.z}};
 }
@@ -2457,14 +2218,19 @@ inline frame3<T> inverse(const frame3<T>& a) {
 }
 
 /// stream write
-template <typename T>
-inline ostream& operator<<(ostream& os, const frame3<T>& a) {
-    return os << a.x << ' ' << a.y << ' ' << a.z << ' ' << a.o;
+template <typename T, int N>
+inline ostream& operator<<(ostream& os, const frame<T, N>& a) {
+    for (auto i = 0; i < N; i++) {
+        if (i) os << ' ';
+        os << data(a)[i];
+    }
+    return os;
 }
 /// stream read
-template <typename T>
-inline istream& operator>>(istream& is, frame3<T>& a) {
-    return is >> a.x >> a.y >> a.z >> a.o;
+template <typename T, int N>
+inline istream& operator>>(istream& is, frame<T, N>& a) {
+    for (auto i = 0; i < N; i++) is >> data(a)[i];
+    return is;
 }
 
 }  // namespace ygl
@@ -2497,11 +2263,6 @@ struct quat<T, 4> {
     /// element access
     const T& operator[](int i) const { return (&x)[i]; }
 
-    /// data access
-    T* data() { return &x; }
-    /// data access
-    const T* data() const { return &x; }
-
     /// data
     T x;
     /// data
@@ -2521,6 +2282,42 @@ using quat4f = quat4<float>;
 
 /// float identity quaterion
 const auto identity_quat4f = quat4f{0, 0, 0, 1};
+
+/// iteration support
+template <typename T, int N>
+inline T* begin(quat<T, N>& a) {
+    return &a.x;
+}
+/// iteration support
+template <typename T, int N>
+inline const T* begin(const quat<T, N>& a) {
+    return &a.x;
+}
+/// iteration support
+template <typename T, int N>
+inline T* end(quat<T, N>& a) {
+    return &a.x + N;
+}
+/// iteration support
+template <typename T, int N>
+inline const T* end(const quat<T, N>& a) {
+    return &a.x + N;
+}
+/// vector data access
+template <typename T, int N>
+inline T* data(quat<T, N>& a) {
+    return &a.x;
+}
+/// vector data access
+template <typename T, int N>
+inline const T* data(const quat<T, N>& a) {
+    return &a.x;
+}
+/// vector size
+template <typename T, int N>
+inline int size(quat<T, N>& a) {
+    return N;
+}
 
 /// vector operator ==
 template <typename T>
@@ -2588,15 +2385,19 @@ inline quat4<T> slerp(const quat4<T>& a, const quat4<T>& b, T1 t) {
 }
 
 /// stream write
-template <typename T>
-inline ostream& operator<<(ostream& os, const quat4<T>& a) {
-    return os << a.x << ' ' << a.y << ' ' << a.z << ' ' << a.w;
+template <typename T, int N>
+inline ostream& operator<<(ostream& os, const quat<T, N>& a) {
+    for (auto i = 0; i < N; i++) {
+        if (i) os << ' ';
+        os << data(a)[i];
+    }
+    return os;
 }
-
 /// stream read
-template <typename T>
-inline istream& operator>>(istream& is, quat4<T>& a) {
-    return is >> a.x >> a.y >> a.z >> a.w;
+template <typename T, int N>
+inline istream& operator>>(istream& is, quat<T, N>& a) {
+    for (auto i = 0; i < N; i++) is >> data(a)[i];
+    return is;
 }
 
 }  // namespace ygl
@@ -2766,68 +2567,42 @@ inline bool operator!=(const bbox4<T>& a, const bbox4<T>& b) {
 
 /// computes the center of a bbox
 template <typename T>
-inline float bbox_center(const bbox1<T>& a) {
+inline T bbox_center(const bbox<T, 1>& a) {
     return (a.min + a.max) / 2;
 }
 /// computes the diagonal of a bbox
 template <typename T>
-inline float bbox_diagonal(const bbox1<T>& a) {
+inline T bbox_diagonal(const bbox<T, 1>& a) {
     return a.max - a.min;
 }
-
 /// computes the center of a bbox
-template <typename T>
-inline vec2<T> bbox_center(const bbox2<T>& a) {
-    return (a.min + a.max) / 2.0f;
+template <typename T, int N>
+inline vec<T, N> bbox_center(const bbox<T, N>& a) {
+    return (a.min + a.max) / 2;
 }
 /// computes the diagonal of a bbox
-template <typename T>
-inline vec2<T> bbox_diagonal(const bbox2<T>& a) {
-    return a.max - a.min;
-}
-
-/// computes the center of a bbox
-template <typename T>
-inline vec3<T> bbox_center(const bbox3<T>& a) {
-    return (a.min + a.max) / 2.0f;
-}
-/// computes the diagonal of a bbox
-template <typename T>
-inline vec3<T> bbox_diagonal(const bbox3<T>& a) {
-    return a.max - a.min;
-}
-
-/// computes the center of a bbox
-template <typename T>
-inline vec4<T> bbox_center(const bbox4<T>& a) {
-    return (a.min + a.max) / 2.0f;
-}
-/// computes the diagonal of a bbox
-template <typename T>
-inline vec4<T> bbox_diagonal(const bbox4<T>& a) {
+template <typename T, int N>
+inline vec<T, N> bbox_diagonal(const bbox<T, N>& a) {
     return a.max - a.min;
 }
 
 /// expands a bounding box with a point
 template <typename T>
-inline bbox1<T> expand(const bbox1<T>& a, float b) {
+inline bbox1<T> expand(const bbox1<T>& a, T b) {
     return {min(a.min, b), max(a.max, b)};
 }
-
 /// expands a bounding box with a point
 template <typename T>
 inline bbox2<T> expand(const bbox2<T>& a, const vec2<T>& b) {
     return {{min(a.min.x, b.x), min(a.min.y, b.y)},
         {max(a.max.x, b.x), max(a.max.y, b.y)}};
 }
-
 /// expands a bounding box with a point
 template <typename T>
 inline bbox3<T> expand(const bbox3<T>& a, const vec3<T>& b) {
     return {{min(a.min.x, b.x), min(a.min.y, b.y), min(a.min.z, b.z)},
         {max(a.max.x, b.x), max(a.max.y, b.y), max(a.max.z, b.z)}};
 }
-
 /// expands a bounding box with a point
 template <typename T>
 inline bbox4<T> expand(const bbox4<T>& a, const vec4<T>& b) {
@@ -2842,14 +2617,12 @@ template <typename T>
 inline bbox1<T> expand(const bbox1<T>& a, const bbox1<T>& b) {
     return {min(a.min, b.min), max(a.max, b.max)};
 }
-
 /// expands a bounding box with a bounding box
 template <typename T>
 inline bbox2<T> expand(const bbox2<T>& a, const bbox2<T>& b) {
     return {{min(a.min.x, b.min.x), min(a.min.y, b.min.y)},
         {max(a.max.x, b.max.x), max(a.max.y, b.max.y)}};
 }
-
 /// expands a bounding box with a bounding box
 template <typename T>
 inline bbox3<T> expand(const bbox3<T>& a, const bbox3<T>& b) {
@@ -2857,7 +2630,6 @@ inline bbox3<T> expand(const bbox3<T>& a, const bbox3<T>& b) {
         {min(a.min.x, b.min.x), min(a.min.y, b.min.y), min(a.min.z, b.min.z)},
         {max(a.max.x, b.max.x), max(a.max.y, b.max.y), max(a.max.z, b.max.z)}};
 }
-
 /// expands a bounding box with a bounding box
 template <typename T>
 inline bbox4<T> expand(const bbox4<T>& a, const bbox4<T>& b) {
@@ -2875,7 +2647,6 @@ inline bool contains(const bbox3<T>& a, const vec3<T>& b) {
     if (a.min.z > b.z || a.max.z < b.z) return false;
     return true;
 }
-
 /// check if a bounding box contains a bounding box
 template <typename T>
 inline bool contains(const bbox3<T>& a, const bbox3<T>& b) {
@@ -2887,129 +2658,57 @@ inline bool contains(const bbox3<T>& a, const bbox3<T>& b) {
 
 /// assign to expand()
 template <typename T>
-inline bbox1<T>& operator+=(bbox1<T>& a, float b) {
+inline bbox<T, 1>& operator+=(bbox<T, 1>& a, T b) {
     return a = expand(a, b);
 }
 /// assign to expand()
-template <typename T>
-inline bbox1<T>& operator+=(bbox1<T>& a, const bbox1<T>& b) {
-    return a = expand(a, b);
-}
-
-/// assign to expand()
-template <typename T>
-inline bbox2<T>& operator+=(bbox2<T>& a, const vec2<T>& b) {
+template <typename T, int N>
+inline bbox<T, N>& operator+=(bbox<T, N>& a, const vec<T, N>& b) {
     return a = expand(a, b);
 }
 /// assign to expand()
-template <typename T>
-inline bbox2<T>& operator+=(bbox2<T>& a, const bbox2<T>& b) {
-    return a = expand(a, b);
-}
-
-/// assign to expand()
-template <typename T>
-inline bbox3<T>& operator+=(bbox3<T>& a, const vec3<T>& b) {
-    return a = expand(a, b);
-}
-/// assign to expand()
-template <typename T>
-inline bbox3<T>& operator+=(bbox3<T>& a, const bbox3<T>& b) {
-    return a = expand(a, b);
-}
-
-/// assign to expand()
-template <typename T>
-inline bbox4<T>& operator+=(bbox4<T>& a, const vec4<T>& b) {
-    return a = expand(a, b);
-}
-/// assign to expand()
-template <typename T>
-inline bbox4<T>& operator+=(bbox4<T>& a, const bbox4<T>& b) {
+template <typename T, int N>
+inline bbox<T, N>& operator+=(bbox<T, N>& a, const bbox<T, N>& b) {
     return a = expand(a, b);
 }
 
 /// initialize a bonding box from a list of points
 template <typename T>
-inline bbox1<T> make_bbox(int count, const T* v) {
-    auto a = bbox1<T>();
+inline bbox<T, 1> make_bbox(int count, const T* v) {
+    auto a = bbox<T, 1>();
     for (auto j = 0; j < count; j++) a += v[j];
     return a;
 }
-
 /// initialize a bonding box from a list of points
 template <typename T>
-inline bbox2<T> make_bbox(int count, const vec2<T>* v) {
-    auto a = bbox2<T>();
+inline bbox<T, 1> make_bbox(const initializer_list<T>& v) {
+    auto a = bbox<T, 1>();
+    for (auto&& vv : v) a += vv;
+    return a;
+}
+/// initialize a bonding box from a list of points
+template <typename T, int N>
+inline bbox<T, N> make_bbox(int count, const vec<T, N>* v) {
+    auto a = bbox<T, N>();
     for (auto j = 0; j < count; j++) a += v[j];
     return a;
 }
-
 /// initialize a bonding box from a list of points
-template <typename T>
-inline bbox3<T> make_bbox(int count, const vec3<T>* v) {
-    auto a = bbox3<T>();
-    for (auto j = 0; j < count; j++) a += v[j];
-    return a;
-}
-
-/// initialize a bonding box from a list of points
-template <typename T>
-inline bbox4<T> make_bbox(int count, const vec4<T>* v) {
-    auto a = bbox4<T>();
-    for (auto j = 0; j < count; j++) a += v[j];
-    return a;
-}
-
-/// initialize a bonding box from a list of points
-template <typename T>
-inline bbox3<T> make_bbox(const initializer_list<vec3<T>>& v) {
-    auto a = bbox3<T>();
+template <typename T, int N>
+inline bbox<T, N> make_bbox(const initializer_list<vec<T, N>>& v) {
+    auto a = bbox<T, N>();
     for (auto&& vv : v) a += vv;
     return a;
 }
 
 /// stream write
-template <typename T>
-inline ostream& operator<<(ostream& os, const bbox1f& a) {
+template <typename T, int N>
+inline ostream& operator<<(ostream& os, const bbox<T, N>& a) {
     return os << a.min << ' ' << a.max;
 }
 /// stream read
-template <typename T>
-inline istream& operator>>(istream& is, bbox1f& a) {
-    return is >> a.min >> a.max;
-}
-
-/// stream write
-template <typename T>
-inline ostream& operator<<(ostream& os, const bbox2<T>& a) {
-    return os << a.min << ' ' << a.max;
-}
-/// stream read
-template <typename T>
-inline istream& operator>>(istream& is, bbox2<T>& a) {
-    return is >> a.min >> a.max;
-}
-
-/// stream write
-template <typename T>
-inline ostream& operator<<(ostream& os, const bbox3f& a) {
-    return os << a.min << ' ' << a.max;
-}
-/// stream read
-template <typename T>
-inline istream& operator>>(istream& is, bbox3f& a) {
-    return is >> a.min >> a.max;
-}
-
-/// stream write
-template <typename T>
-inline ostream& operator<<(ostream& os, const bbox4<T>& a) {
-    return os << a.min << ' ' << a.max;
-}
-/// stream read
-template <typename T>
-inline istream& operator>>(istream& is, bbox4<T>& a) {
+template <typename T, int N>
+inline istream& operator>>(istream& is, bbox<T, N>& a) {
     return is >> a.min >> a.max;
 }
 
@@ -3285,7 +2984,7 @@ inline frame3<T> translation_frame3(const vec3<T>& a) {
 /// translation matrix
 template <typename T>
 inline mat4<T> translation_mat4(const vec3<T>& a) {
-    return to_mat4(translation_frame3(a));
+    return to_mat(translation_frame3(a));
 }
 
 /// scaling frame (this is not rigid and here for symmatry of API)
@@ -3297,7 +2996,7 @@ inline frame3<T> scaling_frame3(const vec3<T>& a) {
 /// scaling matrix
 template <typename T>
 inline mat4<T> scaling_mat4(const vec3<T>& a) {
-    return to_mat4<T>(scaling_frame3(a));
+    return to_mat<T>(scaling_frame3(a));
 }
 
 /// rotation frame
@@ -3426,7 +3125,7 @@ inline frame3<T> lookat_frame3(const vec3<T>& eye, const vec3<T>& center,
 template <typename T>
 inline mat4<T> lookat_mat4(
     const vec3<T>& eye, const vec3<T>& center, const vec3<T>& up) {
-    return to_mat4(lookat_frame3(eye, center, up));
+    return to_mat(lookat_frame3(eye, center, up));
 }
 
 /// OpenGL frustum matrix
@@ -3460,8 +3159,7 @@ inline mat4<T> ortho_mat4(T xmag, T ymag, T near, T far) {
 
 /// OpenGL/GLTF perspective matrix
 template <typename T>
-inline mat4<T> perspective_mat4(
-    T fovy, T aspect, T near, T far) {
+inline mat4<T> perspective_mat4(T fovy, T aspect, T near, T far) {
     auto tg = tan(fovy / 2);
     return {{1 / (aspect * tg), 0, 0, 0}, {0, 1 / tg, 0, 0},
         {0, 0, (far + near) / (near - far), -1},
@@ -7380,7 +7078,7 @@ struct instance {
     bbox3f bbox = invalid_bbox3f;
 
     /// instance transform as matrix
-    mat4f xform() const { return to_mat4(frame); }
+    mat4f xform() const { return to_mat(frame); }
 };
 
 /// Scene Camera
@@ -7479,7 +7177,8 @@ inline T eval_barycentric(
         return eval_barycentric_triangle(
             vals, shp->triangles[eid], vec3f{euv.x, euv.y, euv.z});
     } else if (!shp->lines.empty()) {
-        return eval_barycentric_line(vals, shp->lines[eid], vec2f{euv.x, euv.y});
+        return eval_barycentric_line(
+            vals, shp->lines[eid], vec2f{euv.x, euv.y});
     } else if (!shp->points.empty()) {
         return eval_barycentric_point(vals, shp->points[eid], euv.x);
     } else if (!shp->quads.empty()) {
@@ -11545,39 +11244,21 @@ inline bool set_program_uniform(gl_program& prog, int var, float val) {
 }
 
 /// Set uniform float values val for program pid and variable var.
-inline bool set_program_uniform(gl_program& prog, int var, const vec2f& val) {
-    return set_program_uniform(prog, var, val.data(), 2, 1);
-}
-/// Set uniform float values val for program pid and variable var.
-inline bool set_program_uniform(gl_program& prog, int var, const vec3f& val) {
-    return set_program_uniform(prog, var, val.data(), 3, 1);
-}
-/// Set uniform float values val for program pid and variable var.
-inline bool set_program_uniform(gl_program& prog, int var, const vec4f& val) {
-    return set_program_uniform(prog, var, val.data(), 4, 1);
+template<typename T, int N>
+inline bool set_program_uniform(gl_program& prog, int var, const vec<T, N>& val) {
+    return set_program_uniform(prog, var, data(val), N, 1);
 }
 
 /// Set uniform float values val for program pid and variable var.
-inline bool set_program_uniform(gl_program& prog, int var, const vec2i& val) {
-    return set_program_uniform(prog, var, val.data(), 2, 1);
-}
-/// Set uniform float values val for program pid and variable var.
-inline bool set_program_uniform(gl_program& prog, int var, const vec3i& val) {
-    return set_program_uniform(prog, var, val.data(), 3, 1);
-}
-/// Set uniform float values val for program pid and variable var.
-inline bool set_program_uniform(gl_program& prog, int var, const vec4i& val) {
-    return set_program_uniform(prog, var, val.data(), 4, 1);
+template<typename T>
+inline bool set_program_uniform(gl_program& prog, int var, const mat<T, 4>& val) {
+    return set_program_uniform(prog, var, (T*)data(val), 16, 1);
 }
 
 /// Set uniform float values val for program pid and variable var.
-inline bool set_program_uniform(gl_program& prog, int var, const mat4f& val) {
-    return set_program_uniform(prog, var, (float*)val.data(), 16, 1);
-}
-
-/// Set uniform float values val for program pid and variable var.
-inline bool set_program_uniform(gl_program& prog, int var, const frame3f& val) {
-    return set_program_uniform(prog, var, (float*)val.data(), 12, 1);
+template<typename T>
+inline bool set_program_uniform(gl_program& prog, int var, const frame<T, 3>& val) {
+    return set_program_uniform(prog, var, (T*)data(val), 12, 1);
 }
 
 /// Set uniform float values val for program pid and variable var.
@@ -11593,43 +11274,25 @@ inline bool set_program_uniform(
 }
 
 /// Set uniform float values val for program pid and variable var.
+template<typename T, int N>
 inline bool set_program_uniform(
-    gl_program& prog, int var, const vec2f* val, int num) {
-    return set_program_uniform(prog, var, (const float*)val, 2, num);
-}
-/// Set uniform float values val for program pid and variable var.
-inline bool set_program_uniform(
-    gl_program& prog, int var, const vec3f* val, int num) {
-    return set_program_uniform(prog, var, (const float*)val, 3, num);
-}
-/// Set uniform float values val for program pid and variable var.
-inline bool set_program_uniform(
-    gl_program& prog, int var, const vec4f* val, int num) {
-    return set_program_uniform(prog, var, (const float*)val, 4, num);
+    gl_program& prog, int var, const vec<T, N>* val, int num) {
+    return set_program_uniform(prog, var, (T*)val, N, num);
 }
 
 /// Set uniform float values val for program pid and variable var.
+template<typename T>
 inline bool set_program_uniform(
-    gl_program& prog, int var, const vec2i* val, int num) {
-    return set_program_uniform(prog, var, (const int*)val, 2, num);
-}
-/// Set uniform float values val for program pid and variable var.
-inline bool set_program_uniform(
-    gl_program& prog, int var, const vec3i* val, int num) {
-    return set_program_uniform(prog, var, (const int*)val, 3, num);
-}
-/// Set uniform float values val for program pid and variable var.
-inline bool set_program_uniform(
-    gl_program& prog, int var, const vec4i* val, int num) {
-    return set_program_uniform(prog, var, (const int*)val, 4, num);
+    gl_program& prog, int var, const mat<T, 4>* val, int num) {
+    return set_program_uniform(prog, var, (T*)val, 16, num);
 }
 
 /// Set uniform float values val for program pid and variable var.
-inline bool set_program_uniform(
-    gl_program& prog, int var, const mat4f* val, int num) {
-    return set_program_uniform(prog, var, (float*)val, 16, num);
+template<typename T>
+inline bool set_program_uniform(gl_program& prog, int var, const frame<T, 3>* val, int num) {
+    return set_program_uniform(prog, var, (T*)val, 12, num);
 }
-
+    
 /// Set uniform float values val for program pid and variable var.
 template <typename T>
 inline bool set_program_uniform(
@@ -11708,48 +11371,18 @@ bool set_program_vertattr(gl_program& prog, int pos,
 /// Sets a vartex attribute for program pid and variable var. The attribute
 /// is either a buffer bid or a single value def
 /// (if bid is zero). Convenience wrapper to above functions.
+template<typename T, int N>
 inline bool set_program_vertattr(
-    gl_program& prog, int var, const gl_vertex_buffer& buf, const vec2f& def) {
-    return set_program_vertattr(prog, var, buf, 2, def.data());
-}
-/// Sets a vartex attribute for program pid and variable var. The attribute
-/// is either a buffer bid or a single value def
-/// (if bid is zero). Convenience wrapper to above functions.
-inline bool set_program_vertattr(
-    gl_program& prog, int var, const gl_vertex_buffer& buf, const vec3f& def) {
-    return set_program_vertattr(prog, var, buf, 3, def.data());
-}
-/// Sets a vartex attribute for program pid and variable var. The attribute
-/// is either a buffer bid or a single value def
-/// (if bid is zero). Convenience wrapper to above functions.
-inline bool set_program_vertattr(
-    gl_program& prog, int var, const gl_vertex_buffer& buf, const vec4f& def) {
-    return set_program_vertattr(prog, var, buf, 4, def.data());
+    gl_program& prog, int var, const gl_vertex_buffer& buf, const vec<T, N>& def) {
+    return set_program_vertattr(prog, var, buf, N, data(def));
 }
 
 /// Sets a vartex attribute for program pid and variable var. The attribute
 /// is either a buffer bid or a single value def
 /// (if bid is zero). Convenience wrapper to above functions.
+template<typename T, int N>
 inline bool set_program_vertattr(gl_program& prog, const string& var,
-    const gl_vertex_buffer& buf, const vec2f& def) {
-    auto loc = get_program_attrib_location(prog, var);
-    if (loc < 0) return false;
-    return set_program_vertattr(prog, loc, buf, def);
-}
-/// Sets a vartex attribute for program pid and variable var. The attribute
-/// is either a buffer bid or a single value def
-/// (if bid is zero). Convenience wrapper to above functions.
-inline bool set_program_vertattr(gl_program& prog, const string& var,
-    const gl_vertex_buffer& buf, const vec3f& def) {
-    auto loc = get_program_attrib_location(prog, var);
-    if (loc < 0) return false;
-    return set_program_vertattr(prog, loc, buf, def);
-}
-/// Sets a vartex attribute for program pid and variable var. The attribute
-/// is either a buffer bid or a single value def
-/// (if bid is zero). Convenience wrapper to above functions.
-inline bool set_program_vertattr(gl_program& prog, const string& var,
-    const gl_vertex_buffer& buf, const vec4f& def) {
+    const gl_vertex_buffer& buf, const vec<T, N>& def) {
     auto loc = get_program_attrib_location(prog, var);
     if (loc < 0) return false;
     return set_program_vertattr(prog, loc, buf, def);
@@ -12387,23 +12020,6 @@ inline bool draw_value_widget(gl_window* win, const string& lbl, int& val,
     int min = 0, int max = 1, int incr = 1) {
     return draw_value_widget(win, lbl, &val, 1, min, max, incr);
 }
-
-/// Value widget
-inline bool draw_value_widget(gl_window* win, const string& lbl, vec2i& val,
-    int min = 0, int max = 1, int incr = 1) {
-    return draw_value_widget(win, lbl, val.data(), 2, min, max, incr);
-}
-/// Value widget
-inline bool draw_value_widget(gl_window* win, const string& lbl, vec3i& val,
-    int min = 0, int max = 1, int incr = 1) {
-    return draw_value_widget(win, lbl, val.data(), 3, min, max, incr);
-}
-/// Value widget
-inline bool draw_value_widget(gl_window* win, const string& lbl, vec4i& val,
-    int min = 0, int max = 1, int incr = 1) {
-    return draw_value_widget(win, lbl, val.data(), 4, min, max, incr);
-}
-
 /// Value widget
 inline bool draw_value_widget(gl_window* win, const string& lbl, float& val,
     float min = 0, float max = 1, float incr = 1) {
@@ -12411,23 +12027,15 @@ inline bool draw_value_widget(gl_window* win, const string& lbl, float& val,
 }
 
 /// Value widget
-inline bool draw_value_widget(gl_window* win, const string& lbl, vec2f& val,
-    float min = 0, float max = 1, float incr = 1) {
-    return draw_value_widget(win, lbl, val.data(), 2, min, max, incr);
-}
-/// Value widget
-inline bool draw_value_widget(gl_window* win, const string& lbl, vec3f& val,
-    float min = 0, float max = 1, float incr = 1) {
-    return draw_value_widget(win, lbl, val.data(), 3, min, max, incr);
-}
-/// Value widget
-inline bool draw_value_widget(gl_window* win, const string& lbl, vec4f& val,
-    float min = 0, float max = 1, float incr = 1) {
-    return draw_value_widget(win, lbl, val.data(), 4, min, max, incr);
+template <typename T, int N>
+inline bool draw_value_widget(gl_window* win, const string& lbl, vec<T, N>& val,
+    int min = 0, int max = 1, int incr = 1) {
+    return draw_value_widget(win, lbl, data(val), N, min, max, incr);
 }
 
 /// Slider widget
-inline bool draw_value_widget(gl_window* win, const string& lbl, mat4f& val,
+template <typename T>
+inline bool draw_value_widget(gl_window* win, const string& lbl, mat<T, 4>& val,
     float min = 0, float max = 1, float incr = 1) {
     auto modx = draw_value_widget(win, lbl + ".x", val.x, min, max, incr);
     auto mody = draw_value_widget(win, lbl + ".y", val.y, min, max, incr);
@@ -12437,8 +12045,9 @@ inline bool draw_value_widget(gl_window* win, const string& lbl, mat4f& val,
 }
 
 /// Slider widget
-inline bool draw_value_widget(gl_window* win, const string& lbl, frame3f& val,
-    float min = -1, float max = 1, float incr = 1) {
+template <typename T>
+inline bool draw_value_widget(gl_window* win, const string& lbl,
+    frame<T, 3>& val, float min = -1, float max = 1, float incr = 1) {
     auto modx = draw_value_widget(win, lbl + ".x", val.x, -1, 1, 0.01f);
     auto mody = draw_value_widget(win, lbl + ".y", val.y, -1, 1, 0.01f);
     auto modz = draw_value_widget(win, lbl + ".z", val.z, -1, 1, 0.01f);
@@ -12448,19 +12057,18 @@ inline bool draw_value_widget(gl_window* win, const string& lbl, frame3f& val,
 }
 
 /// Slider widget
+template <typename T, int N>
 inline bool draw_value_widget(
-    gl_window* win, const string& lbl, quat4f& val, float incr = 1) {
-    auto mod = draw_value_widget(win, lbl, *(vec4f*)&val, -1, 1, incr);
+    gl_window* win, const string& lbl, quat<T, N>& val, float incr = 1) {
+    auto mod = draw_value_widget(win, lbl, *(vec<T, N>*)&val, -1, 1, incr);
     if (mod) val = normalize(val);
     return mod;
 }
 
 /// Color widget
 bool draw_color_widget(gl_window* win, const string& lbl, vec4f& val);
-
 /// Color widget
 bool draw_color_widget(gl_window* win, const string& lbl, vec4b& val);
-
 /// Color widget
 bool draw_color_widget(gl_window* win, const string& lbl, vec3f& val);
 

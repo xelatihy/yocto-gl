@@ -1335,7 +1335,7 @@ void add_default_cameras(gltf_scene_group* scns) {
             cam->aperture = 0;
             cam->focus = length(to - from);
             auto node = new gltf_node();
-            node->matrix = to_mat4(lookat_frame3(from, to, up));
+            node->matrix = to_mat(lookat_frame3(from, to, up));
             node->cam = cam;
             node->name = cam->name;
             scns->cameras.push_back(cam);
