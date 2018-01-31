@@ -143,7 +143,7 @@ inline bool load_scene(
     if (!ygl::get_camera_nodes(scn->gscn->default_scene).empty()) {
         auto cam = ygl::get_camera_nodes(scn->gscn->default_scene)[0];
         scn->view_cam = new ygl::camera();
-        scn->view_cam->frame = ygl::to_frame3f(ygl::mat4f(cam->xform()));
+        scn->view_cam->frame = ygl::to_frame3(ygl::mat4f(cam->xform()));
         scn->view_cam->yfov = cam->cam->yfov;
         scn->view_cam->aspect = cam->cam->aspect;
         scn->view_cam->near = cam->cam->near;
@@ -165,7 +165,7 @@ inline bool load_scene(
         auto from = camera_dir * bbox_msize + center;
         auto to = center;
         auto up = ygl::vec3f{0, 1, 0};
-        scn->view_cam->frame = ygl::lookat_frame3f(from, to, up);
+        scn->view_cam->frame = ygl::lookat_frame3(from, to, up);
         scn->view_cam->aspect = 16.0f / 9.0f;
         scn->view_cam->yfov = 2 * atanf(0.5f);
         scn->view_cam->aperture = 0;
@@ -435,28 +435,28 @@ inline void shade_scene(const ygl::gltf_scene_group* scns, shade_state* st,
             auto near = (gcam->cam->near) ? gcam->cam->near : 0.001f;
             auto far = (gcam->cam->far) ? gcam->cam->far : 10000;
             camera_proj =
-                ygl::ortho2d_mat4f(gcam->cam->yfov * gcam->cam->aspect,
+                ygl::ortho2d_mat4(gcam->cam->yfov * gcam->cam->aspect,
                     gcam->cam->yfov, near, far);
         } else {
             auto near = (gcam->cam->near) ? gcam->cam->near : 0.001f;
             if (gcam->cam->far) {
-                camera_proj = ygl::perspective_mat4f(
+                camera_proj = ygl::perspective_mat4(
                     gcam->cam->yfov, gcam->cam->aspect, near, gcam->cam->far);
             } else {
-                camera_proj = ygl::perspective_mat4f(
+                camera_proj = ygl::perspective_mat4(
                     gcam->cam->yfov, gcam->cam->aspect, 0.01f);
             }
         }
     } else {
-        camera_xform = ygl::to_mat4f(ycam->frame);
-        camera_view = ygl::to_mat4f(ygl::inverse(ycam->frame));
+        camera_xform = ygl::to_mat4(ycam->frame);
+        camera_view = ygl::to_mat4(ygl::inverse(ycam->frame));
         auto near = (ycam->near) ? ycam->near : 0.001f;
         if (ycam->far) {
-            camera_proj = ygl::perspective_mat4f(
+            camera_proj = ygl::perspective_mat4(
                 ycam->yfov, ycam->aspect, near, ycam->far);
         } else {
             camera_proj =
-                ygl::perspective_mat4f(ycam->yfov, ycam->aspect, near);
+                ygl::perspective_mat4(ycam->yfov, ycam->aspect, near);
         }
     }
 
