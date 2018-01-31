@@ -35,9 +35,8 @@ namespace ygl {
 
 // Math support
 inline mat4f node_transform(const gltf_node* node) {
-    return translation_mat4(node->translation) *
-           rotation_mat4(node->rotation) * scaling_mat4(node->scale) *
-           node->matrix;
+    return translation_mat4(node->translation) * rotation_mat4(node->rotation) *
+           scaling_mat4(node->scale) * node->matrix;
 }
 
 // cleanup

@@ -5,8 +5,8 @@ algorithms implemented as a two-file library (`yocto_gl.h`, `yocto_gl.cpp`),
 and released under the MIT license. Features include:
 
 - convenience math functions for graphics
-- static length vectors for 2, 3, 4 length and int and float type
-- static length matrices for 2x2, 3x3, 4x4 and float type
+- static length vectors for 2, 3, 4 length of arbitrary type
+- static length matrices for 2x2, 3x3, 4x4 of arbitrary type
 - static length rigid transforms (frames), specialized for 2d and 3d space
 - linear algebra operations and transforms
 - axis aligned bounding boxes
@@ -140,29 +140,31 @@ Here we give an overview of some of the main features.
 ### Small Vectors and Matrices, Frames, Bounding Boxes and Transforms
 
 We provide common operations for small vectors and matrices typically used
-in graphics. In particular, we support 2-4 dimensional float vectors
-`vec2f`, `vec3f`, `vec4f`, 2-4 dimensional int vectors `vec2i`, `vec3i`,
-`vec4i` and a 4 dimensional byte vector `vec4b`. The float vectors
-support most arithmetic and vector operations.
+in graphics. In particular, we support 2-4 dimensional vectors of arbitrary
+`vec<T, 2>`, `vec<T, 3>`, `vec<T, 4>` with specializarion for float
+(`vec2f`, `vec3f`, `vec4f`), int (`vec2i`, `vec3i`, `vec4i`) and bytes
+(`vec4b`). Vector operations are templated so they work on every type, but
+many of them are well-defined only for float types.
 
-We support 2-4 dimensional float matrices `mat2f`, `mat3f`, `mat4f`, with
-matrix-matrix and matrix-vector products, trasposes and inverses. Matrices
-are stored in column-major ordered and are accessed and constructed by
-column.
+We support 2-4 dimensional generic matrices `mat<T, 2>`, `mat<T, 3>`,
+`mat<T, 4>`, with matrix-matrix and matrix-vector products, trasposes and
+inverses. Matrices are stored in column-major ordered and are accessed and
+constructed by column.
 
 To represent transformations, most of the library facilities prefer the use
-cooordinate frames, aka rigid transforms, represented as `frame3f`.
+cooordinate frames, aka rigid transforms, represented as `frame<T, 3>`.
 The structure store three coodinate axis and the frame origin. This is
 equivalenent to a rigid transform written as a column-major affine
 matrix. Transform operations are better behaved with this representation.
 
 We represent coordinate bounds with axis-aligned bounding boxes in 1-4
-dimensions: `bbox1f`, `bbox2f`, `bbox3f`, `bbox4f`. These types support
-expansion operation, union and containment. We provide operations to
-compute bounds for points, lines, triangles and quads.
+dimensions: `bbox<T, 1>`, `bbox<T, 2>`, `bbox<T, 3>`, `bbox<T, 4>`. These
+types support expansion operation, union and containment. We provide
+operations to compute bounds for points, lines, triangles and quads.
 
-For all basic types we support iteration with `begin()`/`end()` pairs
-and stream inout and output.
+For all basic types we support iteration with `begin()`/`end()` pairs,
+data access with `data()`, `empty()` and `size()` and stream inout and
+output.
 
 For both matrices and frames we support transform operations for points,
 vectors and directions (`trasform_point()`, `trasform_vector()`,
@@ -254,8 +256,9 @@ manipulation useful to support scene viewing and path tracing.
 
 ### Image and color
 
-We support simple containers for either 4-byte per pixel sRGB images
-`image4b`, or 4-float per pixel HDR images `image4f`.
+Imags are stored with the `image` templated structure. The two most used
+image types are 4-byte per pixel sRGB images `image4b`, or 4-float per
+pixel HDR images `image4f`.
 
 1. convert between byte and float images with `srgb_to_linear()` and
    `linear_to_srgb()`
@@ -1131,100 +1134,124 @@ inline float byte_to_float(byte x);
 
 Safe byte to float conversion
 
-#### Struct vec2f
+#### Struct vec
 
 ~~~ .cpp
-struct vec2f {
-    vec2f(); 
-    explicit vec2f(float vv); 
-    vec2f(float x, float y); 
-    float& operator[](int i); 
-    const float& operator[](int i) const; 
-    float* data(); 
-    const float* data() const; 
-    float x;
-    float y;
+template <typename T, int N>
+struct vec;
+~~~
+
+Generic vector of N elements. This is used only to define template
+specializations for small fixed sized vectors.
+
+#### Struct vec <T, 1 \>
+
+~~~ .cpp
+template <typename T>
+struct vec<T, 1> {
+    vec(); 
+    vec(T x); 
+    T& operator[](int i); 
+    const T& operator[](int i) const; 
+    T x;
 }
 ~~~
 
-Vector of 2 float elements.
+Vector of 1 element. Defined only for completeness.
 
 - Members:
-    - vec2f():      default constructor
-    - vec2f():      element constructor
-    - vec2f():      element constructor
+    - vec():      default constructor
+    - vec():      element constructor
     - operator[]():      element access
     - operator[]():      element access
-    - data():      data access
-    - data():      data access
+    - x:      element data
+
+
+#### Struct vec <T, 2 \>
+
+~~~ .cpp
+template <typename T>
+struct vec<T, 2> {
+    vec(); 
+    explicit vec(T vv); 
+    vec(T x, T y); 
+    T& operator[](int i); 
+    const T& operator[](int i) const; 
+    T x;
+    T y;
+}
+~~~
+
+Vector of 2 elements.
+
+- Members:
+    - vec():      default constructor
+    - vec():      element constructor
+    - vec():      element constructor
+    - operator[]():      element access
+    - operator[]():      element access
     - x:      element data
     - y:      element data
 
 
-#### Struct vec3f
+#### Struct vec <T, 3 \>
 
 ~~~ .cpp
-struct vec3f {
-    vec3f(); 
-    explicit vec3f(float vv); 
-    vec3f(float x, float y, float z); 
-    float& operator[](int i); 
-    const float& operator[](int i) const; 
-    float* data(); 
-    const float* data() const; 
-    float x;
-    float y;
-    float z;
+template <typename T>
+struct vec<T, 3> {
+    vec(); 
+    explicit vec(T vv); 
+    vec(T x, T y, T z); 
+    T& operator[](int i); 
+    const T& operator[](int i) const; 
+    T x;
+    T y;
+    T z;
 }
 ~~~
 
-Vector of 3 float elements.
+Vector of 3 elements.
 
 - Members:
-    - vec3f():      default constructor
-    - vec3f():      element constructor
-    - vec3f():      element constructor
+    - vec():      default constructor
+    - vec():      element constructor
+    - vec():      element constructor
     - operator[]():      element access
     - operator[]():      element access
-    - data():      data access
-    - data():      data access
     - x:      element data
     - y:      element data
     - z:      element data
 
 
-#### Struct vec4f
+#### Struct vec <T, 4 \>
 
 ~~~ .cpp
-struct vec4f {
-    vec4f(); 
-    explicit vec4f(float vv); 
-    vec4f(float x, float y, float z, float w); 
-    vec4f(const vec3f& xyz, float w); 
-    float& operator[](int i); 
-    const float& operator[](int i) const; 
-    float* data(); 
-    const float* data() const; 
-    vec3f& xyz(); 
-    const vec3f& xyz() const; 
-    float x;
-    float y;
-    float z;
-    float w;
+template <typename T>
+struct vec<T, 4> {
+    vec(); 
+    explicit vec(T vv); 
+    vec(T x, T y, T z, T w); 
+    vec(const vec<T, 3>& xyz, T w); 
+    T& operator[](int i); 
+    const T& operator[](int i) const; 
+    vec<T, 3>& xyz(); 
+    const vec<T, 3>& xyz() const; 
+    T x;
+    T y;
+    T z;
+    T w;
 }
 ~~~
 
-Vector of 4 float elements.
+Vector of 4 elements.
 
 - Members:
-    - vec4f():      default constructor
-    - vec4f():      element constructor
-    - vec4f():      element constructor
-    - vec4f():      constructor from smaller vector
+    - vec():      default constructor
+    - vec():      element constructor
+    - vec():      element constructor
+    - vec():      constructor from smaller vector
     - operator[]():      element access
     - operator[]():      element access
-    - data():      data access
-    - data():      data access
     - xyz():      access xyz components
     - xyz():      access xyz components
     - x:      element data
@@ -1233,179 +1260,93 @@ Vector of 4 float elements.
     - w:      element data
 
 
-#### Struct vec2i
+#### Typedef vec1f
 
 ~~~ .cpp
-struct vec2i {
-    vec2i(); 
-    explicit vec2i(int vv); 
-    vec2i(int x, int y); 
-    int& operator[](int i); 
-    const int& operator[](int i) const; 
-    int* data(); 
-    const int* data() const; 
-    int x;
-    int y;
-}
+using vec1f = vec<float, 1>;
 ~~~
 
-Vector of 2 int elements.
+1-dimension float vector
 
-- Members:
-    - vec2i():      default constructor
-    - vec2i():      element constructor
-    - vec2i():      element constructor
-    - operator[]():      element access
-    - operator[]():      element access
-    - data():      data access
-    - data():      data access
-    - x:      element data
-    - y:      element data
-
-
-#### Struct vec3i
+#### Typedef vec2f
 
 ~~~ .cpp
-struct vec3i {
-    vec3i(); 
-    explicit vec3i(int vv); 
-    vec3i(int x, int y, int z); 
-    int& operator[](int i); 
-    const int& operator[](int i) const; 
-    int* data(); 
-    const int* data() const; 
-    int x;
-    int y;
-    int z;
-}
+using vec2f = vec<float, 2>;
 ~~~
 
-Vector of 3 int elements.
+2-dimension float vector
 
-- Members:
-    - vec3i():      default constructor
-    - vec3i():      element constructor
-    - vec3i():      element constructor
-    - operator[]():      element access
-    - operator[]():      element access
-    - data():      data access
-    - data():      data access
-    - x:      element data
-    - y:      element data
-    - z:      element data
-
-
-#### Struct vec4i
+#### Typedef vec3f
 
 ~~~ .cpp
-struct vec4i {
-    vec4i(); 
-    explicit vec4i(int vv); 
-    vec4i(int x, int y, int z, int w); 
-    vec4i(const vec3i& xyz, int w); 
-    int& operator[](int i); 
-    const int& operator[](int i) const; 
-    int* data(); 
-    const int* data() const; 
-    vec3i& xyz(); 
-    const vec3i& xyz() const; 
-    int x;
-    int y;
-    int z;
-    int w;
-}
+using vec3f = vec<float, 3>;
 ~~~
 
-Vector of 4 int elements.
+3-dimension float vector
 
-- Members:
-    - vec4i():      default constructor
-    - vec4i():      element constructor
-    - vec4i():      element constructor
-    - vec4i():      constructor from smaller vector
-    - operator[]():      element access
-    - operator[]():      element access
-    - data():      data access
-    - data():      data access
-    - xyz():      access xyz components
-    - xyz():      access xyz components
-    - x:      element data
-    - y:      element data
-    - z:      element data
-    - w:      element data
-
-
-#### Struct vec3b
+#### Typedef vec4f
 
 ~~~ .cpp
-struct vec3b {
-    vec3b(); 
-    explicit vec3b(int vv); 
-    vec3b(byte x, byte y, byte z); 
-    byte& operator[](int i); 
-    const byte& operator[](int i) const; 
-    byte* data(); 
-    const byte* data() const; 
-    byte x;
-    byte y;
-    byte z;
-}
+using vec4f = vec<float, 4>;
 ~~~
 
-Vector of 3 byte elements.
+4-dimension float vector
 
-- Members:
-    - vec3b():      default constructor
-    - vec3b():      element constructor
-    - vec3b():      element constructor
-    - operator[]():      element access
-    - operator[]():      element access
-    - data():      data access
-    - data():      data access
-    - x:      element data
-    - y:      element data
-    - z:      element data
-
-
-#### Struct vec4b
+#### Typedef vec1i
 
 ~~~ .cpp
-struct vec4b {
-    vec4b(); 
-    explicit vec4b(byte vv); 
-    vec4b(byte x, byte y, byte z, byte w); 
-    vec4b(const vec3b& xyz, byte w); 
-    byte& operator[](int i); 
-    const byte& operator[](int i) const; 
-    byte* data(); 
-    const byte* data() const; 
-    vec3b& xyz(); 
-    const vec3b& xyz() const; 
-    byte x;
-    byte y;
-    byte z;
-    byte w;
-}
+using vec1i = vec<int, 1>;
 ~~~
 
-Vector of 4 byte elements.
+1-dimension int vector
 
-- Members:
-    - vec4b():      default constructor
-    - vec4b():      element constructor
-    - vec4b():      element constructor
-    - vec4b():      constructor from smaller vector
-    - operator[]():      element access
-    - operator[]():      element access
-    - data():      data access
-    - data():      data access
-    - xyz():      access xyz components
-    - xyz():      access xyz components
-    - x:      element data
-    - y:      element data
-    - z:      element data
-    - w:      element data
+#### Typedef vec2i
 
+~~~ .cpp
+using vec2i = vec<int, 2>;
+~~~
+
+2-dimension int vector
+
+#### Typedef vec3i
+
+~~~ .cpp
+using vec3i = vec<int, 3>;
+~~~
+
+3-dimension int vector
+
+#### Typedef vec4i
+
+~~~ .cpp
+using vec4i = vec<int, 4>;
+~~~
+
+4-dimension int vector
+
+#### Typedef vec3b
+
+~~~ .cpp
+using vec3b = vec<byte, 3>;
+~~~
+
+3-dimension byte vector
+
+#### Typedef vec4b
+
+~~~ .cpp
+using vec4b = vec<byte, 4>;
+~~~
+
+4-dimension byte vector
+
+#### Constant zero1f
+
+~~~ .cpp
+const auto zero1f = vec1f();
+~~~
+
+1-dimensional float zero vector
 
 #### Constant zero2f
 
@@ -1430,6 +1371,14 @@ const auto zero4f = vec4f();
 ~~~
 
 4-dimensional float zero vector
+
+#### Constant zero1i
+
+~~~ .cpp
+const auto zero1i = vec1i();
+~~~
+
+1-dimensional int zero vector
 
 #### Constant zero2i
 
@@ -1466,7 +1415,8 @@ const auto zero4b = vec4b();
 #### Function begin()
 
 ~~~ .cpp
-inline int* begin(vec2i& a);
+template <typename T, int N>
+inline T* begin(vec<T, N>& a);
 ~~~
 
 iteration support
@@ -1474,7 +1424,8 @@ iteration support
 #### Function begin()
 
 ~~~ .cpp
-inline const int* begin(const vec2i& a);
+template <typename T, int N>
+inline const T* begin(const vec<T, N>& a);
 ~~~
 
 iteration support
@@ -1482,7 +1433,8 @@ iteration support
 #### Function end()
 
 ~~~ .cpp
-inline int* end(vec2i& a);
+template <typename T, int N>
+inline T* end(vec<T, N>& a);
 ~~~
 
 iteration support
@@ -1490,79 +1442,53 @@ iteration support
 #### Function end()
 
 ~~~ .cpp
-inline const int* end(const vec2i& a);
+template <typename T, int N>
+inline const T* end(const vec<T, N>& a);
 ~~~
 
 iteration support
 
-#### Function begin()
+#### Function data()
 
 ~~~ .cpp
-inline int* begin(vec3i& a);
+template <typename T, int N>
+inline T* data(vec<T, N>& a);
 ~~~
 
-iteration support
+vector data access
 
-#### Function begin()
+#### Function data()
 
 ~~~ .cpp
-inline const int* begin(const vec3i& a);
+template <typename T, int N>
+inline const T* data(const vec<T, N>& a);
 ~~~
 
-iteration support
+vector data access
 
-#### Function end()
+#### Function size()
 
 ~~~ .cpp
-inline int* end(vec3i& a);
+template <typename T, int N>
+inline int size(vec<T, N>& a);
 ~~~
 
-iteration support
+vector size
 
-#### Function end()
+#### Function empty()
 
 ~~~ .cpp
-inline const int* end(const vec3i& a);
+template <typename T, int N>
+inline bool empty(vec<T, N>& a);
 ~~~
 
-iteration support
-
-#### Function begin()
-
-~~~ .cpp
-inline int* begin(vec4i& a);
-~~~
-
-iteration support
-
-#### Function begin()
-
-~~~ .cpp
-inline const int* begin(const vec4i& a);
-~~~
-
-iteration support
-
-#### Function end()
-
-~~~ .cpp
-inline int* end(vec4i& a);
-~~~
-
-iteration support
-
-#### Function end()
-
-~~~ .cpp
-inline const int* end(const vec4i& a);
-~~~
-
-iteration support
+vector empty
 
 #### Function operator==()
 
 ~~~ .cpp
-inline bool operator==(const vec2f& a, const vec2f& b);
+template <typename T>
+inline bool operator==(const vec<T, 1>& a, const vec<T, 1>& b);
 ~~~
 
 vector operator ==
@@ -1570,7 +1496,8 @@ vector operator ==
 #### Function operator!=()
 
 ~~~ .cpp
-inline bool operator!=(const vec2f& a, const vec2f& b);
+template <typename T>
+inline bool operator!=(const vec<T, 1>& a, const vec<T, 1>& b);
 ~~~
 
 vector operator !=
@@ -1578,7 +1505,8 @@ vector operator !=
 #### Function operator==()
 
 ~~~ .cpp
-inline bool operator==(const vec3f& a, const vec3f& b);
+template <typename T>
+inline bool operator==(const vec<T, 2>& a, const vec<T, 2>& b);
 ~~~
 
 vector operator ==
@@ -1586,7 +1514,8 @@ vector operator ==
 #### Function operator!=()
 
 ~~~ .cpp
-inline bool operator!=(const vec3f& a, const vec3f& b);
+template <typename T>
+inline bool operator!=(const vec<T, 2>& a, const vec<T, 2>& b);
 ~~~
 
 vector operator !=
@@ -1594,7 +1523,8 @@ vector operator !=
 #### Function operator==()
 
 ~~~ .cpp
-inline bool operator==(const vec4f& a, const vec4f& b);
+template <typename T>
+inline bool operator==(const vec<T, 3>& a, const vec<T, 3>& b);
 ~~~
 
 vector operator ==
@@ -1602,7 +1532,8 @@ vector operator ==
 #### Function operator!=()
 
 ~~~ .cpp
-inline bool operator!=(const vec4f& a, const vec4f& b);
+template <typename T>
+inline bool operator!=(const vec<T, 3>& a, const vec<T, 3>& b);
 ~~~
 
 vector operator !=
@@ -1610,7 +1541,8 @@ vector operator !=
 #### Function operator==()
 
 ~~~ .cpp
-inline bool operator==(const vec2i& a, const vec2i& b);
+template <typename T>
+inline bool operator==(const vec<T, 4>& a, const vec<T, 4>& b);
 ~~~
 
 vector operator ==
@@ -1618,39 +1550,8 @@ vector operator ==
 #### Function operator!=()
 
 ~~~ .cpp
-inline bool operator!=(const vec2i& a, const vec2i& b);
-~~~
-
-vector operator !=
-
-#### Function operator==()
-
-~~~ .cpp
-inline bool operator==(const vec3i& a, const vec3i& b);
-~~~
-
-vector operator ==
-
-#### Function operator!=()
-
-~~~ .cpp
-inline bool operator!=(const vec3i& a, const vec3i& b);
-~~~
-
-vector operator !=
-
-#### Function operator==()
-
-~~~ .cpp
-inline bool operator==(const vec4i& a, const vec4i& b);
-~~~
-
-vector operator ==
-
-#### Function operator!=()
-
-~~~ .cpp
-inline bool operator!=(const vec4i& a, const vec4i& b);
+template <typename T>
+inline bool operator!=(const vec<T, 4>& a, const vec<T, 4>& b);
 ~~~
 
 vector operator !=
@@ -1658,7 +1559,8 @@ vector operator !=
 #### Function operator <()
 
 ~~~ .cpp
-inline bool operator<(const vec2i& a, const vec2i& b);
+template <typename T>
+inline bool operator<(const vec<T, 2>& a, const vec<T, 2>& b);
 ~~~
 
 vector operator < (lexicographic order - useful for map)
@@ -1666,7 +1568,8 @@ vector operator < (lexicographic order - useful for map)
 #### Function operator <()
 
 ~~~ .cpp
-inline bool operator<(const vec3i& a, const vec3i& b);
+template <typename T>
+inline bool operator<(const vec<T, 3>& a, const vec<T, 3>& b);
 ~~~
 
 vector operator < (lexicographic order - useful for map)
@@ -1674,7 +1577,8 @@ vector operator < (lexicographic order - useful for map)
 #### Function operator <()
 
 ~~~ .cpp
-inline bool operator<(const vec4i& a, const vec4i& b);
+template <typename T>
+inline bool operator<(const vec<T, 4>& a, const vec<T, 4>& b);
 ~~~
 
 vector operator < (lexicographic order - useful for map)
@@ -1682,7 +1586,8 @@ vector operator < (lexicographic order - useful for map)
 #### Function operator+()
 
 ~~~ .cpp
-inline vec2f operator+(const vec2f& a);
+template <typename T>
+inline vec<T, 2> operator+(const vec<T, 2>& a);
 ~~~
 
 vector operator +
@@ -1690,7 +1595,8 @@ vector operator +
 #### Function operator-()
 
 ~~~ .cpp
-inline vec2f operator-(const vec2f& a);
+template <typename T>
+inline vec<T, 2> operator-(const vec<T, 2>& a);
 ~~~
 
 vector operator -
@@ -1698,7 +1604,8 @@ vector operator -
 #### Function operator+()
 
 ~~~ .cpp
-inline vec2f operator+(const vec2f& a, const vec2f& b);
+template <typename T>
+inline vec<T, 2> operator+(const vec<T, 2>& a, const vec<T, 2>& b);
 ~~~
 
 vector operator +
@@ -1706,7 +1613,8 @@ vector operator +
 #### Function operator-()
 
 ~~~ .cpp
-inline vec2f operator-(const vec2f& a, const vec2f& b);
+template <typename T>
+inline vec<T, 2> operator-(const vec<T, 2>& a, const vec<T, 2>& b);
 ~~~
 
 vector operator -
@@ -1714,7 +1622,8 @@ vector operator -
 #### Function operator*()
 
 ~~~ .cpp
-inline vec2f operator*(const vec2f& a, const vec2f& b);
+template <typename T>
+inline vec<T, 2> operator*(const vec<T, 2>& a, const vec<T, 2>& b);
 ~~~
 
 vector operator *
@@ -1722,7 +1631,8 @@ vector operator *
 #### Function operator*()
 
 ~~~ .cpp
-inline vec2f operator*(const vec2f& a, float b);
+template <typename T, typename T1>
+inline vec<T, 2> operator*(const vec<T, 2>& a, T1 b);
 ~~~
 
 vector operator *
@@ -1730,7 +1640,8 @@ vector operator *
 #### Function operator*()
 
 ~~~ .cpp
-inline vec2f operator*(float a, const vec2f& b);
+template <typename T>
+inline vec<T, 2> operator*(float a, const vec<T, 2>& b);
 ~~~
 
 vector operator *
@@ -1738,7 +1649,8 @@ vector operator *
 #### Function operator/()
 
 ~~~ .cpp
-inline vec2f operator/(const vec2f& a, const vec2f& b);
+template <typename T>
+inline vec<T, 2> operator/(const vec<T, 2>& a, const vec<T, 2>& b);
 ~~~
 
 vector operator /
@@ -1746,7 +1658,8 @@ vector operator /
 #### Function operator/()
 
 ~~~ .cpp
-inline vec2f operator/(const vec2f& a, float b);
+template <typename T, typename T1>
+inline vec<T, 2> operator/(const vec<T, 2>& a, T1 b);
 ~~~
 
 vector operator /
@@ -1754,7 +1667,8 @@ vector operator /
 #### Function operator/()
 
 ~~~ .cpp
-inline vec2f operator/(float a, const vec2f& b);
+template <typename T, typename T1>
+inline vec<T, 2> operator/(T1 a, const vec<T, 2>& b);
 ~~~
 
 vector operator /
@@ -1762,7 +1676,8 @@ vector operator /
 #### Function operator+()
 
 ~~~ .cpp
-inline vec3f operator+(const vec3f& a);
+template <typename T>
+inline vec<T, 3> operator+(const vec<T, 3>& a);
 ~~~
 
 vector operator +
@@ -1770,7 +1685,8 @@ vector operator +
 #### Function operator-()
 
 ~~~ .cpp
-inline vec3f operator-(const vec3f& a);
+template <typename T>
+inline vec<T, 3> operator-(const vec<T, 3>& a);
 ~~~
 
 vector operator -
@@ -1778,7 +1694,8 @@ vector operator -
 #### Function operator+()
 
 ~~~ .cpp
-inline vec3f operator+(const vec3f& a, const vec3f& b);
+template <typename T>
+inline vec<T, 3> operator+(const vec<T, 3>& a, const vec<T, 3>& b);
 ~~~
 
 vector operator +
@@ -1786,7 +1703,8 @@ vector operator +
 #### Function operator-()
 
 ~~~ .cpp
-inline vec3f operator-(const vec3f& a, const vec3f& b);
+template <typename T>
+inline vec<T, 3> operator-(const vec<T, 3>& a, const vec<T, 3>& b);
 ~~~
 
 vector operator -
@@ -1794,7 +1712,8 @@ vector operator -
 #### Function operator*()
 
 ~~~ .cpp
-inline vec3f operator*(const vec3f& a, const vec3f& b);
+template <typename T>
+inline vec<T, 3> operator*(const vec<T, 3>& a, const vec<T, 3>& b);
 ~~~
 
 vector operator *
@@ -1802,7 +1721,8 @@ vector operator *
 #### Function operator*()
 
 ~~~ .cpp
-inline vec3f operator*(const vec3f& a, float b);
+template <typename T, typename T1>
+inline vec<T, 3> operator*(const vec<T, 3>& a, T1 b);
 ~~~
 
 vector operator *
@@ -1810,7 +1730,8 @@ vector operator *
 #### Function operator*()
 
 ~~~ .cpp
-inline vec3f operator*(float a, const vec3f& b);
+template <typename T, typename T1>
+inline vec<T, 3> operator*(T1 a, const vec<T, 3>& b);
 ~~~
 
 vector operator *
@@ -1818,7 +1739,8 @@ vector operator *
 #### Function operator/()
 
 ~~~ .cpp
-inline vec3f operator/(const vec3f& a, const vec3f& b);
+template <typename T>
+inline vec<T, 3> operator/(const vec<T, 3>& a, const vec<T, 3>& b);
 ~~~
 
 vector operator /
@@ -1826,7 +1748,8 @@ vector operator /
 #### Function operator/()
 
 ~~~ .cpp
-inline vec3f operator/(const vec3f& a, float b);
+template <typename T, typename T1>
+inline vec<T, 3> operator/(const vec<T, 3>& a, T1 b);
 ~~~
 
 vector operator /
@@ -1834,7 +1757,8 @@ vector operator /
 #### Function operator/()
 
 ~~~ .cpp
-inline vec3f operator/(float a, const vec3f& b);
+template <typename T, typename T1>
+inline vec<T, 3> operator/(T1 a, const vec<T, 3>& b);
 ~~~
 
 vector operator /
@@ -1842,7 +1766,8 @@ vector operator /
 #### Function operator+()
 
 ~~~ .cpp
-inline vec4f operator+(const vec4f& a);
+template <typename T>
+inline vec<T, 4> operator+(const vec<T, 4>& a);
 ~~~
 
 vector operator +
@@ -1850,7 +1775,8 @@ vector operator +
 #### Function operator-()
 
 ~~~ .cpp
-inline vec4f operator-(const vec4f& a);
+template <typename T>
+inline vec<T, 4> operator-(const vec<T, 4>& a);
 ~~~
 
 vector operator -
@@ -1858,7 +1784,8 @@ vector operator -
 #### Function operator+()
 
 ~~~ .cpp
-inline vec4f operator+(const vec4f& a, const vec4f& b);
+template <typename T>
+inline vec<T, 4> operator+(const vec<T, 4>& a, const vec<T, 4>& b);
 ~~~
 
 vector operator +
@@ -1866,7 +1793,8 @@ vector operator +
 #### Function operator-()
 
 ~~~ .cpp
-inline vec4f operator-(const vec4f& a, const vec4f& b);
+template <typename T>
+inline vec<T, 4> operator-(const vec<T, 4>& a, const vec<T, 4>& b);
 ~~~
 
 vector operator -
@@ -1874,7 +1802,8 @@ vector operator -
 #### Function operator*()
 
 ~~~ .cpp
-inline vec4f operator*(const vec4f& a, const vec4f& b);
+template <typename T>
+inline vec<T, 4> operator*(const vec<T, 4>& a, const vec<T, 4>& b);
 ~~~
 
 vector operator *
@@ -1882,7 +1811,8 @@ vector operator *
 #### Function operator*()
 
 ~~~ .cpp
-inline vec4f operator*(const vec4f& a, float b);
+template <typename T>
+inline vec<T, 4> operator*(const vec<T, 4>& a, float b);
 ~~~
 
 vector operator *
@@ -1890,7 +1820,8 @@ vector operator *
 #### Function operator*()
 
 ~~~ .cpp
-inline vec4f operator*(float a, const vec4f& b);
+template <typename T>
+inline vec<T, 4> operator*(float a, const vec<T, 4>& b);
 ~~~
 
 vector operator *
@@ -1898,7 +1829,8 @@ vector operator *
 #### Function operator/()
 
 ~~~ .cpp
-inline vec4f operator/(const vec4f& a, const vec4f& b);
+template <typename T>
+inline vec<T, 4> operator/(const vec<T, 4>& a, const vec<T, 4>& b);
 ~~~
 
 vector operator /
@@ -1906,7 +1838,8 @@ vector operator /
 #### Function operator/()
 
 ~~~ .cpp
-inline vec4f operator/(const vec4f& a, float b);
+template <typename T, typename T1>
+inline vec<T, 4> operator/(const vec<T, 4>& a, T1 b);
 ~~~
 
 vector operator /
@@ -1914,7 +1847,8 @@ vector operator /
 #### Function operator/()
 
 ~~~ .cpp
-inline vec4f operator/(float a, const vec4f& b);
+template <typename T, typename T1>
+inline vec<T, 4> operator/(T1 a, const vec<T, 4>& b);
 ~~~
 
 vector operator /
@@ -1922,7 +1856,8 @@ vector operator /
 #### Function operator+=()
 
 ~~~ .cpp
-inline vec2f& operator+=(vec2f& a, const vec2f& b);
+template <typename T, int N>
+inline vec<T, N>& operator+=(vec<T, N>& a, const vec<T, N>& b);
 ~~~
 
 vector operator +=
@@ -1930,7 +1865,8 @@ vector operator +=
 #### Function operator-=()
 
 ~~~ .cpp
-inline vec2f& operator-=(vec2f& a, const vec2f& b);
+template <typename T, int N>
+inline vec<T, N>& operator-=(vec<T, 2>& a, const vec<T, N>& b);
 ~~~
 
 vector operator -=
@@ -1938,7 +1874,8 @@ vector operator -=
 #### Function operator*=()
 
 ~~~ .cpp
-inline vec2f& operator*=(vec2f& a, const vec2f& b);
+template <typename T, int N>
+inline vec<T, N>& operator*=(vec<T, N>& a, const vec<T, N>& b);
 ~~~
 
 vector operator *=
@@ -1946,7 +1883,8 @@ vector operator *=
 #### Function operator*=()
 
 ~~~ .cpp
-inline vec2f& operator*=(vec2f& a, float b);
+template <typename T, int N, typename T1>
+inline vec<T, N>& operator*=(vec<T, N>& a, T1 b);
 ~~~
 
 vector operator *=
@@ -1954,7 +1892,8 @@ vector operator *=
 #### Function operator/=()
 
 ~~~ .cpp
-inline vec2f& operator/=(vec2f& a, const vec2f& b);
+template <typename T, int N>
+inline vec<T, N>& operator/=(vec<T, N>& a, const vec<T, N>& b);
 ~~~
 
 vector operator /=
@@ -1962,255 +1901,17 @@ vector operator /=
 #### Function operator/=()
 
 ~~~ .cpp
-inline vec2f& operator/=(vec2f& a, float b);
+template <typename T, int N, typename T1>
+inline vec<T, N>& operator/=(vec<T, N>& a, T1 b);
 ~~~
 
 vector operator /=
-
-#### Function operator+=()
-
-~~~ .cpp
-inline vec3f& operator+=(vec3f& a, const vec3f& b);
-~~~
-
-vector operator +=
-
-#### Function operator-=()
-
-~~~ .cpp
-inline vec3f& operator-=(vec3f& a, const vec3f& b);
-~~~
-
-vector operator -=
-
-#### Function operator*=()
-
-~~~ .cpp
-inline vec3f& operator*=(vec3f& a, const vec3f& b);
-~~~
-
-vector operator *=
-
-#### Function operator*=()
-
-~~~ .cpp
-inline vec3f& operator*=(vec3f& a, float b);
-~~~
-
-vector operator *=
-
-#### Function operator/=()
-
-~~~ .cpp
-inline vec3f& operator/=(vec3f& a, const vec3f& b);
-~~~
-
-vector operator /=
-
-#### Function operator/=()
-
-~~~ .cpp
-inline vec3f& operator/=(vec3f& a, float b);
-~~~
-
-vector operator /=
-
-#### Function operator+=()
-
-~~~ .cpp
-inline vec4f& operator+=(vec4f& a, const vec4f& b);
-~~~
-
-vector operator +=
-
-#### Function operator-=()
-
-~~~ .cpp
-inline vec4f& operator-=(vec4f& a, const vec4f& b);
-~~~
-
-vector operator -=
-
-#### Function operator*=()
-
-~~~ .cpp
-inline vec4f& operator*=(vec4f& a, const vec4f& b);
-~~~
-
-vector operator *=
-
-#### Function operator*=()
-
-~~~ .cpp
-inline vec4f& operator*=(vec4f& a, float b);
-~~~
-
-vector operator *=
-
-#### Function operator/=()
-
-~~~ .cpp
-inline vec4f& operator/=(vec4f& a, const vec4f& b);
-~~~
-
-vector operator /=
-
-#### Function operator/=()
-
-~~~ .cpp
-inline vec4f& operator/=(vec4f& a, float b);
-~~~
-
-vector operator /=
-
-#### Function operator+()
-
-~~~ .cpp
-inline vec2i operator+(const vec2i& a);
-~~~
-
-vector operator +
-
-#### Function operator-()
-
-~~~ .cpp
-inline vec2i operator-(const vec2i& a);
-~~~
-
-vector operator -
-
-#### Function operator+()
-
-~~~ .cpp
-inline vec2i operator+(const vec2i& a, const vec2i& b);
-~~~
-
-vector operator +
-
-#### Function operator-()
-
-~~~ .cpp
-inline vec2i operator-(const vec2i& a, const vec2i& b);
-~~~
-
-vector operator -
-
-#### Function operator+()
-
-~~~ .cpp
-inline vec3i operator+(const vec3i& a);
-~~~
-
-vector operator +
-
-#### Function operator-()
-
-~~~ .cpp
-inline vec3i operator-(const vec3i& a);
-~~~
-
-vector operator -
-
-#### Function operator+()
-
-~~~ .cpp
-inline vec3i operator+(const vec3i& a, const vec3i& b);
-~~~
-
-vector operator +
-
-#### Function operator-()
-
-~~~ .cpp
-inline vec3i operator-(const vec3i& a, const vec3i& b);
-~~~
-
-vector operator -
-
-#### Function operator+()
-
-~~~ .cpp
-inline vec4i operator+(const vec4i& a);
-~~~
-
-vector operator +
-
-#### Function operator-()
-
-~~~ .cpp
-inline vec4i operator-(const vec4i& a);
-~~~
-
-vector operator -
-
-#### Function operator+()
-
-~~~ .cpp
-inline vec4i operator+(const vec4i& a, const vec4i& b);
-~~~
-
-vector operator +
-
-#### Function operator-()
-
-~~~ .cpp
-inline vec4i operator-(const vec4i& a, const vec4i& b);
-~~~
-
-vector operator -
-
-#### Function operator+=()
-
-~~~ .cpp
-inline vec2i& operator+=(vec2i& a, const vec2i& b);
-~~~
-
-vector operator +=
-
-#### Function operator-=()
-
-~~~ .cpp
-inline vec2i& operator-=(vec2i& a, const vec2i& b);
-~~~
-
-vector operator -=
-
-#### Function operator+=()
-
-~~~ .cpp
-inline vec3i& operator+=(vec3i& a, const vec3i& b);
-~~~
-
-vector operator +=
-
-#### Function operator-=()
-
-~~~ .cpp
-inline vec3i& operator-=(vec3i& a, const vec3i& b);
-~~~
-
-vector operator -=
-
-#### Function operator+=()
-
-~~~ .cpp
-inline vec4i& operator+=(vec4i& a, const vec4i& b);
-~~~
-
-vector operator +=
-
-#### Function operator-=()
-
-~~~ .cpp
-inline vec4i& operator-=(vec4i& a, const vec4i& b);
-~~~
-
-vector operator -=
 
 #### Function dot()
 
 ~~~ .cpp
-inline float dot(const vec2f& a, const vec2f& b);
+template <typename T>
+inline T dot(const vec<T, 2>& a, const vec<T, 2>& b);
 ~~~
 
 vector dot product
@@ -2218,7 +1919,8 @@ vector dot product
 #### Function dot()
 
 ~~~ .cpp
-inline float dot(const vec3f& a, const vec3f& b);
+template <typename T>
+inline T dot(const vec<T, 3>& a, const vec<T, 3>& b);
 ~~~
 
 vector dot product
@@ -2226,7 +1928,8 @@ vector dot product
 #### Function dot()
 
 ~~~ .cpp
-inline float dot(const vec4f& a, const vec4f& b);
+template <typename T>
+inline T dot(const vec<T, 4>& a, const vec<T, 4>& b);
 ~~~
 
 vector dot product
@@ -2234,7 +1937,8 @@ vector dot product
 #### Function cross()
 
 ~~~ .cpp
-inline float cross(const vec2f& a, const vec2f& b);
+template <typename T>
+inline T cross(const vec<T, 2>& a, const vec<T, 2>& b);
 ~~~
 
 vector cross product
@@ -2242,7 +1946,8 @@ vector cross product
 #### Function cross()
 
 ~~~ .cpp
-inline vec3f cross(const vec3f& a, const vec3f& b);
+template <typename T>
+inline vec<T, 3> cross(const vec<T, 3>& a, const vec<T, 3>& b);
 ~~~
 
 vector cross product
@@ -2250,23 +1955,8 @@ vector cross product
 #### Function length()
 
 ~~~ .cpp
-inline float length(const vec2f& a);
-~~~
-
-vector length
-
-#### Function length()
-
-~~~ .cpp
-inline float length(const vec3f& a);
-~~~
-
-vector length
-
-#### Function length()
-
-~~~ .cpp
-inline float length(const vec4f& a);
+template <typename T, int N>
+inline T length(const vec<T, N>& a);
 ~~~
 
 vector length
@@ -2274,23 +1964,8 @@ vector length
 #### Function normalize()
 
 ~~~ .cpp
-inline vec2f normalize(const vec2f& a);
-~~~
-
-vector normalization
-
-#### Function normalize()
-
-~~~ .cpp
-inline vec3f normalize(const vec3f& a);
-~~~
-
-vector normalization
-
-#### Function normalize()
-
-~~~ .cpp
-inline vec4f normalize(const vec4f& a);
+template <typename T, int N>
+inline vec<T, N> normalize(const vec<T, N>& a);
 ~~~
 
 vector normalization
@@ -2298,7 +1973,8 @@ vector normalization
 #### Function uangle()
 
 ~~~ .cpp
-inline float uangle(const vec3f& a, const vec3f& b);
+template <typename T>
+inline T uangle(const vec<T, 3>& a, const vec<T, 3>& b);
 ~~~
 
 angle between normalized vectors
@@ -2306,7 +1982,8 @@ angle between normalized vectors
 #### Function uangle()
 
 ~~~ .cpp
-inline float uangle(const vec4f& a, const vec4f& b);
+template <typename T>
+inline T uangle(const vec<T, 4>& a, const vec<T, 4>& b);
 ~~~
 
 angle between normalized vectors
@@ -2314,7 +1991,8 @@ angle between normalized vectors
 #### Function angle()
 
 ~~~ .cpp
-inline float angle(const vec3f& a, const vec3f& b);
+template <typename T>
+inline T angle(const vec<T, 3>& a, const vec<T, 3>& b);
 ~~~
 
 angle between vectors
@@ -2322,23 +2000,8 @@ angle between vectors
 #### Function lerp()
 
 ~~~ .cpp
-inline vec2f lerp(const vec2f& a, const vec2f& b, float t);
-~~~
-
-vector linear interpolation
-
-#### Function lerp()
-
-~~~ .cpp
-inline vec3f lerp(const vec3f& a, const vec3f& b, float t);
-~~~
-
-vector linear interpolation
-
-#### Function lerp()
-
-~~~ .cpp
-inline vec4f lerp(const vec4f& a, const vec4f& b, float t);
+template <typename T, int N, typename T1>
+inline vec<T, N> lerp(const vec<T, N>& a, const vec<T, N>& b, T1 t);
 ~~~
 
 vector linear interpolation
@@ -2346,8 +2009,9 @@ vector linear interpolation
 #### Function bilerp()
 
 ~~~ .cpp
-inline vec3f bilerp(const vec3f& aa, const vec3f& ba, const vec3f& ab,
-    const vec3f& bb, float s, float t);
+template <typename T, int N, typename T1>
+inline vec<T, N> bilerp(const vec<T, N>& aa, const vec<T, N>& ba,
+    const vec<T, N>& ab, const vec<T, N>& bb, T1 s, T1 t);
 ~~~
 
 vector bilinear interpolation
@@ -2355,7 +2019,8 @@ vector bilinear interpolation
 #### Function nlerp()
 
 ~~~ .cpp
-inline vec3f nlerp(const vec3f& a, const vec3f& b, float t);
+template <typename T, int N, typename T1>
+inline vec<T, N> nlerp(const vec<T, N>& a, const vec<T, N>& b, T1 t);
 ~~~
 
 vector normalized linear interpolation
@@ -2363,23 +2028,8 @@ vector normalized linear interpolation
 #### Function slerp()
 
 ~~~ .cpp
-inline vec3f slerp(const vec3f& a, const vec3f& b, float t);
-~~~
-
-vector spherical linear interpolation (vectors have to be normalized)
-
-#### Function nlerp()
-
-~~~ .cpp
-inline vec4f nlerp(const vec4f& a, const vec4f& b, float t);
-~~~
-
-vector normalized linear interpolation
-
-#### Function slerp()
-
-~~~ .cpp
-inline vec4f slerp(const vec4f& a, const vec4f& b, float t);
+template <typename T, int N, typename T1>
+inline vec<T, N> slerp(const vec<T, N>& a, const vec<T, N>& b, T1 t);
 ~~~
 
 vector spherical linear interpolation (vectors have to be normalized)
@@ -2387,7 +2037,8 @@ vector spherical linear interpolation (vectors have to be normalized)
 #### Function orthogonal()
 
 ~~~ .cpp
-inline vec3f orthogonal(const vec3f& v);
+template <typename T>
+inline vec<T, 3> orthogonal(const vec<T, 3>& v);
 ~~~
 
 orthogonal vector
@@ -2395,7 +2046,8 @@ orthogonal vector
 #### Function orthonormalize()
 
 ~~~ .cpp
-inline vec3f orthonormalize(const vec3f& a, const vec3f& b);
+template <typename T>
+inline vec<T, 3> orthonormalize(const vec<T, 3>& a, const vec<T, 3>& b);
 ~~~
 
 orthonormalize two vectors
@@ -2403,7 +2055,8 @@ orthonormalize two vectors
 #### Function clamp()
 
 ~~~ .cpp
-inline vec2f clamp(const vec2f& x, float min, float max);
+template <typename T, typename T1>
+inline vec<T, 2> clamp(const vec<T, 2>& x, T1 min, T1 max);
 ~~~
 
 vector component-wise clamp
@@ -2411,7 +2064,8 @@ vector component-wise clamp
 #### Function clamp()
 
 ~~~ .cpp
-inline vec3f clamp(const vec3f& x, float min, float max);
+template <typename T, typename T1>
+inline vec<T, 3> clamp(const vec<T, 3>& x, T1 min, T1 max);
 ~~~
 
 vector component-wise clamp
@@ -2419,7 +2073,8 @@ vector component-wise clamp
 #### Function clamp()
 
 ~~~ .cpp
-inline vec4f clamp(const vec4f& x, float min, float max);
+template <typename T, typename T1>
+inline vec<T, 4> clamp(const vec<T, 4>& x, T1 min, T1 max);
 ~~~
 
 vector component-wise clamp
@@ -2427,23 +2082,8 @@ vector component-wise clamp
 #### Function clamplen()
 
 ~~~ .cpp
-inline vec2f clamplen(const vec2f& x, float max);
-~~~
-
-clamp the length of a vector
-
-#### Function clamplen()
-
-~~~ .cpp
-inline vec3f clamplen(const vec3f& x, float max);
-~~~
-
-clamp the length of a vector
-
-#### Function clamplen()
-
-~~~ .cpp
-inline vec4f clamplen(const vec4f& x, float max);
+template <typename T, int N, typename T1>
+inline vec<T, N> clamplen(const vec<T, N>& x, T1 max);
 ~~~
 
 clamp the length of a vector
@@ -2451,58 +2091,20 @@ clamp the length of a vector
 #### Function min_element()
 
 ~~~ .cpp
-inline pair<int, float> min_element(const vec2f& a);
+template <typename T, int N>
+inline pair<int, T> min_element(const vec<T, N>& a);
 ~~~
 
-min vector element
-
-#### Function min_element()
-
-~~~ .cpp
-inline pair<int, float> min_element(const vec3f& a);
-~~~
-
-min vector element
-
-#### Function min_element()
-
-~~~ .cpp
-inline pair<int, float> min_element(const vec4f& a);
-~~~
-
-min vector element
-
-#### Function _max_element()
-
-~~~ .cpp
-inline pair<int, float> _max_element(int N, const float* a);
-~~~
-
-index of the max vector element
+index and valur of minimum vector element
 
 #### Function max_element()
 
 ~~~ .cpp
-inline pair<int, float> max_element(const vec2f& a);
+template <typename T, int N>
+inline pair<int, T> max_element(const vec<T, N>& a);
 ~~~
 
-index of the min vector element
-
-#### Function max_element()
-
-~~~ .cpp
-inline pair<int, float> max_element(const vec3f& a);
-~~~
-
-index of the min vector element
-
-#### Function max_element()
-
-~~~ .cpp
-inline pair<int, float> max_element(const vec4f& a);
-~~~
-
-index of the min vector element
+index and value of the maximum vector element
 
 #### Function float_to_byte()
 
@@ -2539,55 +2141,8 @@ Element-wise conversion
 #### Function operator < <()
 
 ~~~ .cpp
-inline ostream& operator<<(ostream& os, const vec2f& a);
-~~~
-
-stream write
-
-#### Function operator < <()
-
-~~~ .cpp
-inline ostream& operator<<(ostream& os, const vec3f& a);
-~~~
-
-stream write
-
-#### Function operator < <()
-
-~~~ .cpp
-inline ostream& operator<<(ostream& os, const vec4f& a);
-~~~
-
-stream write
-
-#### Function operator < <()
-
-~~~ .cpp
-inline ostream& operator<<(ostream& os, const vec2i& a);
-~~~
-
-stream write
-
-#### Function operator < <()
-
-~~~ .cpp
-inline ostream& operator<<(ostream& os, const vec3i& a);
-~~~
-
-stream write
-
-#### Function operator < <()
-
-~~~ .cpp
-inline ostream& operator<<(ostream& os, const vec4i& a);
-~~~
-
-stream write
-
-#### Function operator < <()
-
-~~~ .cpp
-inline ostream& operator<<(ostream& os, const vec4b& a);
+template <typename T, int N>
+inline ostream& operator<<(ostream& os, const vec<T, N>& a);
 ~~~
 
 stream write
@@ -2595,99 +2150,43 @@ stream write
 #### Function operator \> \>()
 
 ~~~ .cpp
-inline istream& operator>>(istream& is, vec2f& a);
+template <typename T, int N>
+inline istream& operator>>(istream& is, vec<T, N>& a);
 ~~~
 
 stream read
 
-#### Function operator \> \>()
+#### Struct hash <ygl::vec <T, N \> \>
 
 ~~~ .cpp
-inline istream& operator>>(istream& is, vec3f& a);
-~~~
-
-stream read
-
-#### Function operator \> \>()
-
-~~~ .cpp
-inline istream& operator>>(istream& is, vec4f& a);
-~~~
-
-stream read
-
-#### Function operator \> \>()
-
-~~~ .cpp
-inline istream& operator>>(istream& is, vec2i& a);
-~~~
-
-stream read
-
-#### Function operator \> \>()
-
-~~~ .cpp
-inline istream& operator>>(istream& is, vec3i& a);
-~~~
-
-stream read
-
-#### Function operator \> \>()
-
-~~~ .cpp
-inline istream& operator>>(istream& is, vec4i& a);
-~~~
-
-stream read
-
-#### Function operator \> \>()
-
-~~~ .cpp
-inline istream& operator>>(istream& is, vec4b& a);
-~~~
-
-stream read
-
-#### Struct hash <ygl::vec2i \>
-
-~~~ .cpp
-template <>
-struct hash<ygl::vec2i> {
+template <typename T, int N>
+struct hash<ygl::vec<T, N>> {
 ~~~
 
 Hash functor for vector for use with unordered_map
 
-#### Struct hash <ygl::vec3i \>
+#### Struct mat
 
 ~~~ .cpp
-template <>
-struct hash<ygl::vec3i> {
+template <typename T, int N>
+struct mat;
 ~~~
 
-Hash functor for vector for use with unordered_map
+Generic matrix of NxN elements. This is used only to define template
+specializations for small fixed sized matrices.
 
-#### Struct hash <ygl::vec4i \>
-
-~~~ .cpp
-template <>
-struct hash<ygl::vec4i> {
-~~~
-
-Hash functor for vector for use with unordered_map
-
-#### Struct mat2f
+#### Struct mat <T, 2 \>
 
 ~~~ .cpp
-struct mat2f {
-    mat2f(); 
-    explicit mat2f(float vv); 
-    mat2f(const vec2f& x, const vec2f& y); 
-    vec2f& operator[](int i); 
-    const vec2f& operator[](int i) const; 
-    vec2f* data(); 
-    const vec2f* data() const; 
-    vec2f x;
-    vec2f y;
+template <typename T>
+struct mat<T, 2> {
+    mat(); 
+    explicit mat(T vv); 
+    mat(const vec<T, 2>& x, const vec<T, 2>& y); 
+    vec<T, 2>& operator[](int i); 
+    const vec<T, 2>& operator[](int i) const; 
+    vec<T, 2> x;
+    vec<T, 2> y;
 }
 ~~~
 
@@ -2695,31 +2194,28 @@ Matrix of 2x2 elements stored in column major format.
 Colums access via operator[].
 
 - Members:
-    - mat2f():      default constructor
-    - mat2f():      diagonal constructor
-    - mat2f():      list constructor
+    - mat():      default constructor
+    - mat():      diagonal constructor
+    - mat():      list constructor
     - operator[]():      element access
     - operator[]():      element access
-    - data():      data access
-    - data():      data access
     - x:      element data
     - y:      element data
 
 
-#### Struct mat3f
+#### Struct mat <T, 3 \>
 
 ~~~ .cpp
-struct mat3f {
-    mat3f(); 
-    explicit mat3f(float vv); 
-    mat3f(const vec3f& x, const vec3f& y, const vec3f& z); 
-    vec3f& operator[](int i); 
-    const vec3f& operator[](int i) const; 
-    vec3f* data(); 
-    const vec3f* data() const; 
-    vec3f x;
-    vec3f y;
-    vec3f z;
+template <typename T>
+struct mat<T, 3> {
+    mat(); 
+    explicit mat(T vv); 
+    mat(const vec<T, 3>& x, const vec<T, 3>& y, const vec<T, 3>& z); 
+    vec<T, 3>& operator[](int i); 
+    const vec<T, 3>& operator[](int i) const; 
+    vec<T, 3> x;
+    vec<T, 3> y;
+    vec<T, 3> z;
 }
 ~~~
 
@@ -2727,33 +2223,30 @@ Matrix of 3x3 elements stored in column major format.
 Colums access via operator[].
 
 - Members:
-    - mat3f():      default constructor
-    - mat3f():      diagonal constructor
-    - mat3f():      list constructor
+    - mat():      default constructor
+    - mat():      diagonal constructor
+    - mat():      list constructor
     - operator[]():      element access
     - operator[]():      element access
-    - data():      data access
-    - data():      data access
     - x:      element data
     - y:      element data
     - z:      element data
 
 
-#### Struct mat4f
+#### Struct mat <T, 4 \>
 
 ~~~ .cpp
-struct mat4f {
-    mat4f(); 
-    explicit mat4f(float vv); 
-    mat4f(const vec4f& x, const vec4f& y, const vec4f& z, const vec4f& w); 
-    vec4f& operator[](int i); 
-    const vec4f& operator[](int i) const; 
-    vec4f* data(); 
-    const vec4f* data() const; 
-    vec4f x;
-    vec4f y;
-    vec4f z;
-    vec4f w;
+template <typename T>
+struct mat<T, 4> {
+    mat<T, 4>(); 
+    explicit mat<T, 4>(float vv); 
+    mat<T, 4>(const vec<T, 4>& x, const vec<T, 4>& y, const vec<T, 4>& z, const vec<T, 4>& w); 
+    vec<T, 4>& operator[](int i); 
+    const vec<T, 4>& operator[](int i) const; 
+    vec<T, 4> x;
+    vec<T, 4> y;
+    vec<T, 4> z;
+    vec<T, 4> w;
 }
 ~~~
 
@@ -2761,18 +2254,40 @@ Matrix of 4x4 elements stored in column major format.
 Colums access via operator[].
 
 - Members:
-    - mat4f():      default constructor
-    - mat4f():      diagonal constructor
-    - mat4f():      list constructor
+    - 4>():      default constructor
+    - 4>():      diagonal constructor
+    - 4>():      list constructor
     - operator[]():      element access
     - operator[]():      element access
-    - data():      data access
-    - data():      data access
     - x:      element data
     - y:      element data
     - z:      element data
     - w:      element data
 
+
+#### Typedef mat2f
+
+~~~ .cpp
+using mat2f = mat<float, 2>;
+~~~
+
+2-dimension float matrix
+
+#### Typedef mat3f
+
+~~~ .cpp
+using mat3f = mat<float, 3>;
+~~~
+
+3-dimension float matrix
+
+#### Typedef mat4f
+
+~~~ .cpp
+using mat4f = mat<float, 4>;
+~~~
+
+4-dimension float matrix
 
 #### Constant identity_mat2f
 
@@ -2798,10 +2313,83 @@ const auto identity_mat4f = mat4f();
 
 4-dimensional float identity matrix
 
+#### Function begin()
+
+~~~ .cpp
+template <typename T, int N>
+inline vec<T, N>* begin(mat<T, N>& m);
+~~~
+
+matrix iteration support
+
+#### Function end()
+
+~~~ .cpp
+template <typename T, int N>
+inline vec<T, N>* end(mat<T, N>& m);
+~~~
+
+matrix iteration support
+
+#### Function begin()
+
+~~~ .cpp
+template <typename T, int N>
+inline const vec<T, N>* begin(const mat<T, N>& m);
+~~~
+
+matrix iteration support
+
+#### Function end()
+
+~~~ .cpp
+template <typename T, int N>
+inline const vec<T, N>* end(const mat<T, N>& m);
+~~~
+
+matrix iteration support
+
+#### Function data()
+
+~~~ .cpp
+template <typename T, int N>
+inline vec<T, N>* data(mat<T, N>& m);
+~~~
+
+matrix data access
+
+#### Function data()
+
+~~~ .cpp
+template <typename T, int N>
+inline const vec<T, N>* data(const mat<T, N>& m);
+~~~
+
+matrix data access
+
+#### Function size()
+
+~~~ .cpp
+template <typename T, int N>
+inline int size(mat<T, N>& a);
+~~~
+
+matrix size
+
+#### Function empty()
+
+~~~ .cpp
+template <typename T, int N>
+inline bool empty(mat<T, N>& a);
+~~~
+
+vector empty
+
 #### Function operator==()
 
 ~~~ .cpp
-inline bool operator==(const mat2f& a, const mat2f& b);
+template <typename T>
+inline bool operator==(const mat<T, 2>& a, const mat<T, 2>& b);
 ~~~
 
 matrix operator ==
@@ -2809,7 +2397,8 @@ matrix operator ==
 #### Function operator!=()
 
 ~~~ .cpp
-inline bool operator!=(const mat2f& a, const mat2f& b);
+template <typename T>
+inline bool operator!=(const mat<T, 2>& a, const mat<T, 2>& b);
 ~~~
 
 matrix operator !=
@@ -2817,7 +2406,8 @@ matrix operator !=
 #### Function operator==()
 
 ~~~ .cpp
-inline bool operator==(const mat3f& a, const mat3f& b);
+template <typename T>
+inline bool operator==(const mat<T, 3>& a, const mat<T, 3>& b);
 ~~~
 
 matrix operator ==
@@ -2825,7 +2415,8 @@ matrix operator ==
 #### Function operator!=()
 
 ~~~ .cpp
-inline bool operator!=(const mat3f& a, const mat3f& b);
+template <typename T>
+inline bool operator!=(const mat<T, 3>& a, const mat<T, 3>& b);
 ~~~
 
 matrix operator !=
@@ -2833,7 +2424,8 @@ matrix operator !=
 #### Function operator==()
 
 ~~~ .cpp
-inline bool operator==(const mat4f& a, const mat4f& b);
+template <typename T>
+inline bool operator==(const mat<T, 4>& a, const mat<T, 4>& b);
 ~~~
 
 matrix operator ==
@@ -2841,7 +2433,8 @@ matrix operator ==
 #### Function operator!=()
 
 ~~~ .cpp
-inline bool operator!=(const mat4f& a, const mat4f& b);
+template <typename T>
+inline bool operator!=(const mat<T, 4>& a, const mat<T, 4>& b);
 ~~~
 
 matrix operator !=
@@ -2849,7 +2442,8 @@ matrix operator !=
 #### Function operator+()
 
 ~~~ .cpp
-inline mat2f operator+(const mat2f& a, const mat2f& b);
+template <typename T>
+inline mat<T, 2> operator+(const mat<T, 2>& a, const mat<T, 2>& b);
 ~~~
 
 matrix operator +
@@ -2857,7 +2451,8 @@ matrix operator +
 #### Function operator+()
 
 ~~~ .cpp
-inline mat3f operator+(const mat3f& a, const mat3f& b);
+template <typename T>
+inline mat<T, 3> operator+(const mat<T, 3>& a, const mat<T, 3>& b);
 ~~~
 
 matrix operator +
@@ -2865,7 +2460,8 @@ matrix operator +
 #### Function operator+()
 
 ~~~ .cpp
-inline mat4f operator+(const mat4f& a, const mat4f& b);
+template <typename T>
+inline mat<T, 4> operator+(const mat<T, 4>& a, const mat<T, 4>& b);
 ~~~
 
 matrix operator +
@@ -2873,7 +2469,8 @@ matrix operator +
 #### Function operator*()
 
 ~~~ .cpp
-inline mat2f operator*(const mat2f& a, float b);
+template <typename T, typename T1>
+inline mat<T, 2> operator*(const mat<T, 2>& a, T1 b);
 ~~~
 
 matrix scalar multiply
@@ -2881,7 +2478,8 @@ matrix scalar multiply
 #### Function operator/()
 
 ~~~ .cpp
-inline mat2f operator/(const mat2f& a, float b);
+template <typename T, typename T1>
+inline mat<T, 2> operator/(const mat<T, 2>& a, T1 b);
 ~~~
 
 matrix scalar division
@@ -2889,7 +2487,8 @@ matrix scalar division
 #### Function operator*()
 
 ~~~ .cpp
-inline vec2f operator*(const mat2f& a, const vec2f& b);
+template <typename T>
+inline vec<T, 2> operator*(const mat<T, 2>& a, const vec<T, 2>& b);
 ~~~
 
 matrix-vector right multiply
@@ -2897,7 +2496,8 @@ matrix-vector right multiply
 #### Function operator*()
 
 ~~~ .cpp
-inline vec2f operator*(const vec2f& a, const mat2f& b);
+template <typename T>
+inline vec<T, 2> operator*(const vec<T, 2>& a, const mat<T, 2>& b);
 ~~~
 
 matrix-vector left multiply
@@ -2905,7 +2505,8 @@ matrix-vector left multiply
 #### Function operator*()
 
 ~~~ .cpp
-inline mat2f operator*(const mat2f& a, const mat2f& b);
+template <typename T>
+inline mat<T, 2> operator*(const mat<T, 2>& a, const mat<T, 2>& b);
 ~~~
 
 matrix-matrix multiply
@@ -2913,7 +2514,8 @@ matrix-matrix multiply
 #### Function operator*()
 
 ~~~ .cpp
-inline mat3f operator*(const mat3f& a, float b);
+template <typename T, typename T1>
+inline mat<T, 3> operator*(const mat<T, 3>& a, T1 b);
 ~~~
 
 matrix scalar multiply
@@ -2921,7 +2523,8 @@ matrix scalar multiply
 #### Function operator/()
 
 ~~~ .cpp
-inline mat3f operator/(const mat3f& a, float b);
+template <typename T, typename T1>
+inline mat<T, 3> operator/(const mat<T, 3>& a, T1 b);
 ~~~
 
 matrix scalar division
@@ -2929,7 +2532,8 @@ matrix scalar division
 #### Function operator*()
 
 ~~~ .cpp
-inline mat4f operator*(const mat4f& a, float b);
+template <typename T, typename T1>
+inline mat<T, 4> operator*(const mat<T, 4>& a, T1 b);
 ~~~
 
 matrix scalar multiply
@@ -2937,7 +2541,8 @@ matrix scalar multiply
 #### Function operator/()
 
 ~~~ .cpp
-inline mat4f operator/(const mat4f& a, float b);
+template <typename T, typename T1>
+inline mat<T, 4> operator/(const mat<T, 4>& a, T1 b);
 ~~~
 
 matrix scalar division
@@ -2945,7 +2550,8 @@ matrix scalar division
 #### Function operator*()
 
 ~~~ .cpp
-inline vec3f operator*(const mat3f& a, const vec3f& b);
+template <typename T>
+inline vec<T, 3> operator*(const mat<T, 3>& a, const vec<T, 3>& b);
 ~~~
 
 matrix-vector right multiply
@@ -2953,7 +2559,8 @@ matrix-vector right multiply
 #### Function operator*()
 
 ~~~ .cpp
-inline vec3f operator*(const vec3f& a, const mat3f& b);
+template <typename T>
+inline vec<T, 3> operator*(const vec<T, 3>& a, const mat<T, 3>& b);
 ~~~
 
 matrix-vector left multiply
@@ -2961,7 +2568,8 @@ matrix-vector left multiply
 #### Function operator*()
 
 ~~~ .cpp
-inline mat3f operator*(const mat3f& a, const mat3f& b);
+template <typename T>
+inline mat<T, 3> operator*(const mat<T, 3>& a, const mat<T, 3>& b);
 ~~~
 
 matrix-matrix multiply
@@ -2969,7 +2577,8 @@ matrix-matrix multiply
 #### Function operator*()
 
 ~~~ .cpp
-inline vec4f operator*(const mat4f& a, const vec4f& b);
+template <typename T>
+inline vec<T, 4> operator*(const mat<T, 4>& a, const vec<T, 4>& b);
 ~~~
 
 matrix-vector right multiply
@@ -2977,7 +2586,8 @@ matrix-vector right multiply
 #### Function operator*()
 
 ~~~ .cpp
-inline vec4f operator*(const vec4f& a, const mat4f& b);
+template <typename T>
+inline vec<T, 4> operator*(const vec<T, 4>& a, const mat<T, 4>& b);
 ~~~
 
 matrix-vector left multiply
@@ -2985,7 +2595,8 @@ matrix-vector left multiply
 #### Function operator*()
 
 ~~~ .cpp
-inline mat4f operator*(const mat4f& a, const mat4f& b);
+template <typename T>
+inline mat<T, 4> operator*(const mat<T, 4>& a, const mat<T, 4>& b);
 ~~~
 
 matrix-matrix multiply
@@ -2993,7 +2604,8 @@ matrix-matrix multiply
 #### Function operator+=()
 
 ~~~ .cpp
-inline mat2f& operator+=(mat2f& a, const mat2f& b);
+template <typename T, int N>
+inline mat<T, N>& operator+=(mat<T, N>& a, const mat<T, N>& b);
 ~~~
 
 matrix sum assignment
@@ -3001,7 +2613,8 @@ matrix sum assignment
 #### Function operator*=()
 
 ~~~ .cpp
-inline mat2f& operator*=(mat2f& a, const mat2f& b);
+template <typename T, int N>
+inline mat<T, N>& operator*=(mat<T, N>& a, const mat<T, N>& b);
 ~~~
 
 matrix-matrix multiply assignment
@@ -3009,7 +2622,8 @@ matrix-matrix multiply assignment
 #### Function operator*=()
 
 ~~~ .cpp
-inline mat2f& operator*=(mat2f& a, float b);
+template <typename T, int N, typename T1>
+inline mat<T, N>& operator*=(mat<T, N>& a, T1 b);
 ~~~
 
 matrix scaling assignment
@@ -3017,71 +2631,8 @@ matrix scaling assignment
 #### Function operator/=()
 
 ~~~ .cpp
-inline mat2f& operator/=(mat2f& a, float b);
-~~~
-
-matrix scaling assignment
-
-#### Function operator+=()
-
-~~~ .cpp
-inline mat3f& operator+=(mat3f& a, const mat3f& b);
-~~~
-
-matrix sum assignment
-
-#### Function operator*=()
-
-~~~ .cpp
-inline mat3f& operator*=(mat3f& a, const mat3f& b);
-~~~
-
-matrix-matrix multiply assignment
-
-#### Function operator*=()
-
-~~~ .cpp
-inline mat3f& operator*=(mat3f& a, float b);
-~~~
-
-matrix scaling assignment
-
-#### Function operator/=()
-
-~~~ .cpp
-inline mat3f& operator/=(mat3f& a, float b);
-~~~
-
-matrix scaling assignment
-
-#### Function operator+=()
-
-~~~ .cpp
-inline mat4f& operator+=(mat4f& a, const mat4f& b);
-~~~
-
-matrix sum assignment
-
-#### Function operator*=()
-
-~~~ .cpp
-inline mat4f& operator*=(mat4f& a, const mat4f& b);
-~~~
-
-matrix-matrix multiply assignment
-
-#### Function operator*=()
-
-~~~ .cpp
-inline mat4f& operator*=(mat4f& a, float b);
-~~~
-
-matrix scaling assignment
-
-#### Function operator/=()
-
-~~~ .cpp
-inline mat4f& operator/=(mat4f& a, float b);
+template <typename T, int N, typename T1>
+inline mat<T, N>& operator/=(mat<T, N>& a, T1 b);
 ~~~
 
 matrix scaling assignment
@@ -3089,7 +2640,8 @@ matrix scaling assignment
 #### Function mat_diagonal()
 
 ~~~ .cpp
-inline vec2f mat_diagonal(const mat2f& a);
+template <typename T>
+inline vec<T, 2> mat_diagonal(const mat<T, 2>& a);
 ~~~
 
 matrix diagonal
@@ -3097,7 +2649,8 @@ matrix diagonal
 #### Function mat_diagonal()
 
 ~~~ .cpp
-inline vec3f mat_diagonal(const mat3f& a);
+template <typename T>
+inline vec<T, 3> mat_diagonal(const mat<T, 3>& a);
 ~~~
 
 matrix diagonal
@@ -3105,7 +2658,8 @@ matrix diagonal
 #### Function mat_diagonal()
 
 ~~~ .cpp
-inline vec4f mat_diagonal(const mat4f& a);
+template <typename T>
+inline vec<T, 4> mat_diagonal(const mat<T, 4>& a);
 ~~~
 
 matrix diagonal
@@ -3113,7 +2667,8 @@ matrix diagonal
 #### Function transpose()
 
 ~~~ .cpp
-inline mat2f transpose(const mat2f& a);
+template <typename T>
+inline mat<T, 2> transpose(const mat<T, 2>& a);
 ~~~
 
 matrix transpose
@@ -3121,7 +2676,8 @@ matrix transpose
 #### Function transpose()
 
 ~~~ .cpp
-inline mat3f transpose(const mat3f& a);
+template <typename T>
+inline mat<T, 3> transpose(const mat<T, 3>& a);
 ~~~
 
 matrix transpose
@@ -3129,7 +2685,8 @@ matrix transpose
 #### Function transpose()
 
 ~~~ .cpp
-inline mat4f transpose(const mat4f& a);
+template <typename T>
+inline mat<T, 4> transpose(const mat<T, 4>& a);
 ~~~
 
 matrix transpose
@@ -3137,7 +2694,8 @@ matrix transpose
 #### Function adjugate()
 
 ~~~ .cpp
-inline mat2f adjugate(const mat2f& a);
+template <typename T>
+inline mat<T, 2> adjugate(const mat<T, 2>& a);
 ~~~
 
 matrix adjugate
@@ -3145,7 +2703,8 @@ matrix adjugate
 #### Function adjugate()
 
 ~~~ .cpp
-inline mat3f adjugate(const mat3f& a);
+template <typename T>
+inline mat<T, 3> adjugate(const mat<T, 3>& a);
 ~~~
 
 matrix adjugate
@@ -3153,7 +2712,8 @@ matrix adjugate
 #### Function adjugate()
 
 ~~~ .cpp
-inline mat4f adjugate(const mat4f& a);
+template <typename T>
+inline mat<T, 4> adjugate(const mat<T, 4>& a);
 ~~~
 
 matrix adjugate
@@ -3161,7 +2721,8 @@ matrix adjugate
 #### Function determinant()
 
 ~~~ .cpp
-inline float determinant(const mat2f& a);
+template <typename T>
+inline T determinant(const mat<T, 2>& a);
 ~~~
 
 matrix determinant
@@ -3169,7 +2730,8 @@ matrix determinant
 #### Function determinant()
 
 ~~~ .cpp
-inline float determinant(const mat3f& a);
+template <typename T>
+inline T determinant(const mat<T, 3>& a);
 ~~~
 
 matrix determinant
@@ -3177,7 +2739,8 @@ matrix determinant
 #### Function determinant()
 
 ~~~ .cpp
-inline float determinant(const mat4f& a);
+template <typename T>
+inline T determinant(const mat<T, 4>& a);
 ~~~
 
 matrix determinant
@@ -3185,23 +2748,8 @@ matrix determinant
 #### Function inverse()
 
 ~~~ .cpp
-inline mat2f inverse(const mat2f& a);
-~~~
-
-matrix inverse (uses adjugate and determinant)
-
-#### Function inverse()
-
-~~~ .cpp
-inline mat3f inverse(const mat3f& a);
-~~~
-
-matrix inverse (uses adjugate and determinant)
-
-#### Function inverse()
-
-~~~ .cpp
-inline mat4f inverse(const mat4f& a);
+template <typename T, int N>
+inline mat<T, N> inverse(const mat<T, N>& a);
 ~~~
 
 matrix inverse (uses adjugate and determinant)
@@ -3209,7 +2757,8 @@ matrix inverse (uses adjugate and determinant)
 #### Function operator < <()
 
 ~~~ .cpp
-inline ostream& operator<<(ostream& os, const mat2f& a);
+template <typename T, int N>
+inline ostream& operator<<(ostream& os, const mat<T, N>& a);
 ~~~
 
 stream write
@@ -3217,80 +2766,60 @@ stream write
 #### Function operator \> \>()
 
 ~~~ .cpp
-inline istream& operator>>(istream& is, mat2f& a);
+template <typename T, int N>
+inline istream& operator>>(istream& is, mat<T, N>& a);
 ~~~
 
 stream read
 
-#### Function operator < <()
+#### Struct frame
 
 ~~~ .cpp
-inline ostream& operator<<(ostream& os, const mat3f& a);
+template <typename T, int N>
+struct frame;
 ~~~
 
-stream write
+Generic frame of N elements. This is used only to define template
+specializations for small fixed sized frames.
 
-#### Function operator \> \>()
-
-~~~ .cpp
-inline istream& operator>>(istream& is, mat3f& a);
-~~~
-
-stream read
-
-#### Function operator < <()
+#### Struct frame <T, 3 \>
 
 ~~~ .cpp
-inline ostream& operator<<(ostream& os, const mat4f& a);
-~~~
-
-stream write
-
-#### Function operator \> \>()
-
-~~~ .cpp
-inline istream& operator>>(istream& is, mat4f& a);
-~~~
-
-stream read
-
-#### Struct frame3f
-
-~~~ .cpp
-struct frame3f {
+template <typename T>
+struct frame<T, 3> {
     static const int N = 3;
-    frame3f(); 
-    frame3f(const vec3f& x, const vec3f& y, const vec3f& z, const vec3f& o); 
-    frame3f(const mat3f& m, const vec3f& t); 
-    frame3f(const mat4f& m); 
-    vec3f& operator[](int i); 
-    const vec3f& operator[](int i) const; 
-    vec3f* data(); 
-    const vec3f* data() const; 
-    vec3f& pos(); 
-    const vec3f& pos() const; 
-    mat3f& rot(); 
-    const mat3f& rot() const; 
-    vec3f x;
-    vec3f y;
-    vec3f z;
-    vec3f o;
+    frame(); 
+    frame(const vec<T, 3>& x, const vec<T, 3>& y, const vec<T, 3>& z, const vec<T, 3>& o); 
+    frame(const mat<T, 3>& m, const vec<T, 3>& t); 
+    frame(const mat<T, 4>& m); 
+    vec<T, 3>& operator[](int i); 
+    const vec<T, 3>& operator[](int i) const; 
+    vec<T, 3>* data(); 
+    const vec<T, 3>* data() const; 
+    vec<T, 3>& pos(); 
+    const vec<T, 3>& pos() const; 
+    mat<T, 3>& rot(); 
+    const mat<T, 3>& rot() const; 
+    vec<T, 3> x;
+    vec<T, 3> y;
+    vec<T, 3> z;
+    vec<T, 3> o;
 }
 ~~~
 
 Rigid transforms stored as a column-major affine matrix.
-In memory, this representation is equivalent to storing an 3x3 rotation
-followed by a 3x1 translation. Viewed this way, the representation allows
-also to retrive the axis of the coordinate frame as the first 3 columns and
-the translation as the 4th column. Colums access via operator[].
+In memory, this representation is equivalent to storing an NxN rotation
+followed by a Nx1 translation. Viewed this way, the representation allows
+also to retrive the axis of the coordinate frame as the first N columns and
+the translation as the (N+1)-th column. Colums access via operator[].
 Access rotation and position with pos() and rot().
 
 - Members:
     - N:      size
-    - frame3f():      default constructor
-    - frame3f():      element constructor
-    - frame3f():      element constructor
-    - frame3f():      conversion from matrix (assumes the matrix is a frame, so dangerous!)
+    - frame():      default constructor
+    - frame():      element constructor
+    - frame():      element constructor
+    - frame():      conversion from matrix (assumes the matrix is a frame, so dangerous!)
     - operator[]():      element access
     - operator[]():      element access
     - data():      data access
@@ -3305,6 +2834,14 @@ Access rotation and position with pos() and rot().
     - o:      element data
 
 
+#### Typedef frame3f
+
+~~~ .cpp
+using frame3f = frame<float, 3>;
+~~~
+
+3-dimension float frame
+
 #### Constant identity_frame3f
 
 ~~~ .cpp
@@ -3317,7 +2854,8 @@ indentity frame
 #### Function begin()
 
 ~~~ .cpp
-inline vec3f* begin(frame3f& a);
+template <typename T, int N>
+inline vec<T, N>* begin(frame<T, N>& a);
 ~~~
 
 iteration support
@@ -3325,7 +2863,8 @@ iteration support
 #### Function begin()
 
 ~~~ .cpp
-inline const vec3f* begin(const frame3f& a);
+template <typename T, int N>
+inline const vec<T, N>* begin(const frame<T, N>& a);
 ~~~
 
 iteration support
@@ -3333,7 +2872,8 @@ iteration support
 #### Function end()
 
 ~~~ .cpp
-inline vec3f* end(frame3f& a);
+template <typename T, int N>
+inline vec<T, N>* end(frame<T, N>& a);
 ~~~
 
 iteration support
@@ -3341,23 +2881,62 @@ iteration support
 #### Function end()
 
 ~~~ .cpp
-inline const vec3f* end(const frame3f& a);
+template <typename T, int N>
+inline const vec<T, N>* end(const frame<T, N>& a);
 ~~~
 
 iteration support
 
-#### Function to_matf()
+#### Function data()
 
 ~~~ .cpp
-inline mat4f to_matf(const frame3f& a);
+template <typename T, int N>
+inline vec<T, N>* data(frame<T, N>& a);
+~~~
+
+data access
+
+#### Function data()
+
+~~~ .cpp
+template <typename T, int N>
+inline const vec<T, N>* data(const frame<T, N>& a);
+~~~
+
+data access
+
+#### Function size()
+
+~~~ .cpp
+template <typename T, int N>
+inline int size(frame<T, N>& a);
+~~~
+
+frame size
+
+#### Function empty()
+
+~~~ .cpp
+template <typename T, int N>
+inline bool empty(frame<T, N>& a);
+~~~
+
+vector empty
+
+#### Function to_mat()
+
+~~~ .cpp
+template <typename T>
+inline mat<T, 4> to_mat(const frame<T, 3>& a);
 ~~~
 
 frame to matrix conversion
 
-#### Function to_framef()
+#### Function to_frame()
 
 ~~~ .cpp
-inline frame3f to_framef(const mat4f& a);
+template <typename T>
+inline frame<T, 3> to_frame(const mat<T, 4>& a);
 ~~~
 
 matrix to frame conversion
@@ -3365,7 +2944,8 @@ matrix to frame conversion
 #### Function operator==()
 
 ~~~ .cpp
-inline bool operator==(const frame3f& a, const frame3f& b);
+template <typename T>
+inline bool operator==(const frame<T, 3>& a, const frame<T, 3>& b);
 ~~~
 
 vector operator ==
@@ -3373,7 +2953,8 @@ vector operator ==
 #### Function operator!=()
 
 ~~~ .cpp
-inline bool operator!=(const frame3f& a, const frame3f& b);
+template <typename T>
+inline bool operator!=(const frame<T, 3>& a, const frame<T, 3>& b);
 ~~~
 
 vector operator !=
@@ -3381,7 +2962,8 @@ vector operator !=
 #### Function operator*()
 
 ~~~ .cpp
-inline frame3f operator*(const frame3f& a, const frame3f& b);
+template <typename T>
+inline frame<T, 3> operator*(const frame<T, 3>& a, const frame<T, 3>& b);
 ~~~
 
 frame composition (equivalent to affine matrix multiply)
@@ -3389,7 +2971,8 @@ frame composition (equivalent to affine matrix multiply)
 #### Function inverse()
 
 ~~~ .cpp
-inline frame3f inverse(const frame3f& a);
+template <typename T>
+inline frame<T, 3> inverse(const frame<T, 3>& a);
 ~~~
 
 frame inverse (equivalent to rigid affine inverse)
@@ -3397,7 +2980,8 @@ frame inverse (equivalent to rigid affine inverse)
 #### Function operator < <()
 
 ~~~ .cpp
-inline ostream& operator<<(ostream& os, const frame3f& a);
+template <typename T, int N>
+inline ostream& operator<<(ostream& os, const frame<T, N>& a);
 ~~~
 
 stream write
@@ -3405,26 +2989,36 @@ stream write
 #### Function operator \> \>()
 
 ~~~ .cpp
-inline istream& operator>>(istream& is, frame3f& a);
+template <typename T, int N>
+inline istream& operator>>(istream& is, frame<T, N>& a);
 ~~~
 
 stream read
 
-#### Struct quat4f
+#### Struct quat
 
 ~~~ .cpp
-struct quat4f {
-    quat4f(); 
-    explicit quat4f(const vec4f& vv); 
-    explicit operator vec4f() const; 
-    float& operator[](int i); 
-    const float& operator[](int i) const; 
-    float* data(); 
-    const float* data() const; 
-    float x;
-    float y;
-    float z;
-    float w;
+template <typename T, int N>
+struct quat;
+~~~
+
+Generic quaternion of N elements. This is used only to define template
+specializations for small fixed sized quaternions.
+
+#### Struct quat <T, 4 \>
+
+~~~ .cpp
+template <typename T>
+struct quat<T, 4> {
+    quat(); 
+    explicit quat(const vec<T, 4>& vv); 
+    explicit operator vec<T, 4>() const; 
+    T& operator[](int i); 
+    const T& operator[](int i) const; 
+    T x;
+    T y;
+    T z;
+    T w;
 }
 ~~~
 
@@ -3432,18 +3026,24 @@ Quaternions implemented as a vec<T,4>. Data access via operator[].
 Quaterions are xi + yj + zk + w.
 
 - Members:
-    - quat4f():      default constructor
-    - quat4f():      conversion from vec
-    - operator vec4f():      conversion to vec
+    - quat():      default constructor
+    - quat():      conversion from vec
+    - operator 4>():      conversion to vec
     - operator[]():      element access
     - operator[]():      element access
-    - data():      data access
-    - data():      data access
     - x:      data
     - y:      data
     - z:      data
     - w:      data
 
+
+#### Typedef quat4f
+
+~~~ .cpp
+using quat4f = quat<float, 4>;
+~~~
+
+4-dimension float quaternion
 
 #### Constant identity_quat4f
 
@@ -3453,10 +3053,83 @@ const auto identity_quat4f = quat4f{0, 0, 0, 1};
 
 float identity quaterion
 
+#### Function begin()
+
+~~~ .cpp
+template <typename T, int N>
+inline T* begin(quat<T, N>& a);
+~~~
+
+iteration support
+
+#### Function begin()
+
+~~~ .cpp
+template <typename T, int N>
+inline const T* begin(const quat<T, N>& a);
+~~~
+
+iteration support
+
+#### Function end()
+
+~~~ .cpp
+template <typename T, int N>
+inline T* end(quat<T, N>& a);
+~~~
+
+iteration support
+
+#### Function end()
+
+~~~ .cpp
+template <typename T, int N>
+inline const T* end(const quat<T, N>& a);
+~~~
+
+iteration support
+
+#### Function data()
+
+~~~ .cpp
+template <typename T, int N>
+inline T* data(quat<T, N>& a);
+~~~
+
+vector data access
+
+#### Function data()
+
+~~~ .cpp
+template <typename T, int N>
+inline const T* data(const quat<T, N>& a);
+~~~
+
+vector data access
+
+#### Function size()
+
+~~~ .cpp
+template <typename T, int N>
+inline int size(quat<T, N>& a);
+~~~
+
+vector size
+
+#### Function empty()
+
+~~~ .cpp
+template <typename T, int N>
+inline bool empty(quat<T, N>& a);
+~~~
+
+vector empty
+
 #### Function operator==()
 
 ~~~ .cpp
-inline bool operator==(const quat4f& a, const quat4f& b);
+template <typename T>
+inline bool operator==(const quat<T, 4>& a, const quat<T, 4>& b);
 ~~~
 
 vector operator ==
@@ -3464,7 +3137,8 @@ vector operator ==
 #### Function operator!=()
 
 ~~~ .cpp
-inline bool operator!=(const quat4f& a, const quat4f& b);
+template <typename T>
+inline bool operator!=(const quat<T, 4>& a, const quat<T, 4>& b);
 ~~~
 
 vector operator !=
@@ -3472,7 +3146,8 @@ vector operator !=
 #### Function operator*()
 
 ~~~ .cpp
-inline quat4f operator*(const quat4f& a, const quat4f& b);
+template <typename T>
+inline quat<T, 4> operator*(const quat<T, 4>& a, const quat<T, 4>& b);
 ~~~
 
 quaterion multiply
@@ -3480,7 +3155,8 @@ quaterion multiply
 #### Function operator*()
 
 ~~~ .cpp
-inline quat4f operator*(const quat4f& a, float b);
+template <typename T, typename T1>
+inline quat<T, 4> operator*(const quat<T, 4>& a, float b);
 ~~~
 
 quaterion multiply
@@ -3488,7 +3164,8 @@ quaterion multiply
 #### Function operator/()
 
 ~~~ .cpp
-inline quat4f operator/(const quat4f& a, float b);
+template <typename T>
+inline quat<T, 4> operator/(const quat<T, 4>& a, float b);
 ~~~
 
 quaterion division
@@ -3496,7 +3173,8 @@ quaterion division
 #### Function conjugate()
 
 ~~~ .cpp
-inline quat4f conjugate(const quat4f& v);
+template <typename T>
+inline quat<T, 4> conjugate(const quat<T, 4>& v);
 ~~~
 
 quaterion conjugate
@@ -3504,7 +3182,8 @@ quaterion conjugate
 #### Function inverse()
 
 ~~~ .cpp
-inline quat4f inverse(const quat4f& v);
+template <typename T>
+inline quat<T, 4> inverse(const quat<T, 4>& v);
 ~~~
 
 quaterion inverse
@@ -3512,7 +3191,8 @@ quaterion inverse
 #### Function normalize()
 
 ~~~ .cpp
-inline quat4f normalize(const quat4f& v);
+template <typename T>
+inline quat<T, 4> normalize(const quat<T, 4>& v);
 ~~~
 
 quaterion inverse
@@ -3520,7 +3200,8 @@ quaterion inverse
 #### Function nlerp()
 
 ~~~ .cpp
-inline quat4f nlerp(const quat4f& a, const quat4f& b, float t);
+template <typename T, typename T1>
+inline quat<T, 4> nlerp(const quat<T, 4>& a, const quat<T, 4>& b, T1 t);
 ~~~
 
 quaterion normalized linear interpolation
@@ -3528,7 +3209,8 @@ quaterion normalized linear interpolation
 #### Function slerp()
 
 ~~~ .cpp
-inline quat4f slerp(const quat4f& a, const quat4f& b, float t);
+template <typename T, typename T1>
+inline quat<T, 4> slerp(const quat<T, 4>& a, const quat<T, 4>& b, T1 t);
 ~~~
 
 quaterion spherical linear interpolation
@@ -3536,7 +3218,8 @@ quaterion spherical linear interpolation
 #### Function operator < <()
 
 ~~~ .cpp
-inline ostream& operator<<(ostream& os, const quat4f& a);
+template <typename T, int N>
+inline ostream& operator<<(ostream& os, const quat<T, N>& a);
 ~~~
 
 stream write
@@ -3544,106 +3227,68 @@ stream write
 #### Function operator \> \>()
 
 ~~~ .cpp
-inline istream& operator>>(istream& is, quat4f& a);
+template <typename T, int N>
+inline istream& operator>>(istream& is, quat<T, N>& a);
 ~~~
 
 stream read
 
-#### Struct bbox1f
+#### Struct bbox
 
 ~~~ .cpp
-struct bbox1f {
-    bbox1f(); 
-    bbox1f(float m, float M); 
-    float& operator[](int i); 
-    const float& operator[](int i) const; 
-    float min;
-    float max;
+template <typename T, int N>
+struct bbox {
+    bbox(); 
+    bbox(const vec<T, N>& m, const vec<T, N>& M); 
+    vec<T, N>& operator[](int i); 
+    const vec<T, N>& operator[](int i) const; 
+    vec<T, N> min;
+    vec<T, N> max;
 }
 ~~~
 
 Axis aligned bounding box represented as a min/max vector pair.
 
 - Members:
-    - bbox1f():      initializes an invalid bbox
-    - bbox1f():      list constructor
+    - bbox():      initializes an invalid bbox
+    - bbox():      list constructor
     - operator[]():      element access
     - operator[]():      element access
     - min:      element data
     - max:      element data
 
 
-#### Struct bbox2f
+#### Typedef bbox1f
 
 ~~~ .cpp
-struct bbox2f {
-    bbox2f(); 
-    bbox2f(const vec2f& m, const vec2f& M); 
-    vec2f& operator[](int i); 
-    const vec2f& operator[](int i) const; 
-    vec2f min;
-    vec2f max;
-}
+using bbox1f = bbox<float, 1>;
 ~~~
 
-Axis aligned bounding box represented as a min/max vector pair.
+1-dimension float bounding box
 
-- Members:
-    - bbox2f():      initializes an invalid bbox
-    - bbox2f():      list constructor
-    - operator[]():      element access
-    - operator[]():      element access
-    - min:      element data
-    - max:      element data
-
-
-#### Struct bbox3f
+#### Typedef bbox2f
 
 ~~~ .cpp
-struct bbox3f {
-    bbox3f(); 
-    bbox3f(const vec3f& m, const vec3f& M); 
-    vec3f& operator[](int i); 
-    const vec3f& operator[](int i) const; 
-    vec3f min;
-    vec3f max;
-}
+using bbox2f = bbox<float, 2>;
 ~~~
 
-Axis aligned bounding box represented as a min/max vector pair.
+2-dimension float bounding box
 
-- Members:
-    - bbox3f():      initializes an invalid bbox
-    - bbox3f():      list constructor
-    - operator[]():      element access
-    - operator[]():      element access
-    - min:      element data
-    - max:      element data
-
-
-#### Struct bbox4f
+#### Typedef bbox3f
 
 ~~~ .cpp
-struct bbox4f {
-    bbox4f(); 
-    bbox4f(const vec4f& m, const vec4f& M); 
-    vec4f& operator[](int i); 
-    const vec4f& operator[](int i) const; 
-    vec4f min;
-    vec4f max;
-}
+using bbox3f = bbox<float, 3>;
 ~~~
 
-Axis aligned bounding box represented as a min/max vector pair.
+3-dimension float bounding box
 
-- Members:
-    - bbox4f():      initializes an invalid bbox
-    - bbox4f():      list constructor
-    - operator[]():      element access
-    - operator[]():      element access
-    - min:      element data
-    - max:      element data
+#### Typedef bbox4f
 
+~~~ .cpp
+using bbox4f = bbox<float, 4>;
+~~~
+
+4-dimension float bounding box
 
 #### Constant invalid_bbox1f
 
@@ -3680,7 +3325,8 @@ const auto invalid_bbox4f = bbox4f();
 #### Function operator==()
 
 ~~~ .cpp
-inline bool operator==(const bbox1f& a, const bbox1f& b);
+template <typename T, int N>
+inline bool operator==(const bbox<T, N>& a, const bbox<T, N>& b);
 ~~~
 
 bbox operator ==
@@ -3688,55 +3334,8 @@ bbox operator ==
 #### Function operator!=()
 
 ~~~ .cpp
-inline bool operator!=(const bbox1f& a, const bbox1f& b);
-~~~
-
-bbox operator !=
-
-#### Function operator==()
-
-~~~ .cpp
-inline bool operator==(const bbox2f& a, const bbox2f& b);
-~~~
-
-bbox operator ==
-
-#### Function operator!=()
-
-~~~ .cpp
-inline bool operator!=(const bbox2f& a, const bbox2f& b);
-~~~
-
-bbox operator !=
-
-#### Function operator==()
-
-~~~ .cpp
-inline bool operator==(const bbox3f& a, const bbox3f& b);
-~~~
-
-bbox operator ==
-
-#### Function operator!=()
-
-~~~ .cpp
-inline bool operator!=(const bbox3f& a, const bbox3f& b);
-~~~
-
-bbox operator !=
-
-#### Function operator==()
-
-~~~ .cpp
-inline bool operator==(const bbox4f& a, const bbox4f& b);
-~~~
-
-bbox operator ==
-
-#### Function operator!=()
-
-~~~ .cpp
-inline bool operator!=(const bbox4f& a, const bbox4f& b);
+template <typename T, int N>
+inline bool operator!=(const bbox<T, N>& a, const bbox<T, N>& b);
 ~~~
 
 bbox operator !=
@@ -3744,7 +3343,8 @@ bbox operator !=
 #### Function bbox_center()
 
 ~~~ .cpp
-inline float bbox_center(const bbox1f& a);
+template <typename T, int N>
+inline vec<T, N> bbox_center(const bbox<T, N>& a);
 ~~~
 
 computes the center of a bbox
@@ -3752,55 +3352,8 @@ computes the center of a bbox
 #### Function bbox_diagonal()
 
 ~~~ .cpp
-inline float bbox_diagonal(const bbox1f& a);
-~~~
-
-computes the diagonal of a bbox
-
-#### Function bbox_center()
-
-~~~ .cpp
-inline vec2f bbox_center(const bbox2f& a);
-~~~
-
-computes the center of a bbox
-
-#### Function bbox_diagonal()
-
-~~~ .cpp
-inline vec2f bbox_diagonal(const bbox2f& a);
-~~~
-
-computes the diagonal of a bbox
-
-#### Function bbox_center()
-
-~~~ .cpp
-inline vec3f bbox_center(const bbox3f& a);
-~~~
-
-computes the center of a bbox
-
-#### Function bbox_diagonal()
-
-~~~ .cpp
-inline vec3f bbox_diagonal(const bbox3f& a);
-~~~
-
-computes the diagonal of a bbox
-
-#### Function bbox_center()
-
-~~~ .cpp
-inline vec4f bbox_center(const bbox4f& a);
-~~~
-
-computes the center of a bbox
-
-#### Function bbox_diagonal()
-
-~~~ .cpp
-inline vec4f bbox_diagonal(const bbox4f& a);
+template <typename T, int N>
+inline vec<T, N> bbox_diagonal(const bbox<T, N>& a);
 ~~~
 
 computes the diagonal of a bbox
@@ -3808,7 +3361,8 @@ computes the diagonal of a bbox
 #### Function expand()
 
 ~~~ .cpp
-inline bbox1f expand(const bbox1f& a, float b);
+template <typename T>
+inline bbox<T, 1> expand(const bbox<T, 1>& a, T b);
 ~~~
 
 expands a bounding box with a point
@@ -3816,7 +3370,8 @@ expands a bounding box with a point
 #### Function expand()
 
 ~~~ .cpp
-inline bbox2f expand(const bbox2f& a, const vec2f& b);
+template <typename T>
+inline bbox<T, 1> expand(const bbox<T, 1>& a, const vec<T, 1>& b);
 ~~~
 
 expands a bounding box with a point
@@ -3824,7 +3379,8 @@ expands a bounding box with a point
 #### Function expand()
 
 ~~~ .cpp
-inline bbox3f expand(const bbox3f& a, const vec3f& b);
+template <typename T>
+inline bbox<T, 2> expand(const bbox<T, 2>& a, const vec<T, 2>& b);
 ~~~
 
 expands a bounding box with a point
@@ -3832,7 +3388,8 @@ expands a bounding box with a point
 #### Function expand()
 
 ~~~ .cpp
-inline bbox4f expand(const bbox4f& a, const vec4f& b);
+template <typename T>
+inline bbox<T, 3> expand(const bbox<T, 3>& a, const vec<T, 3>& b);
 ~~~
 
 expands a bounding box with a point
@@ -3840,7 +3397,17 @@ expands a bounding box with a point
 #### Function expand()
 
 ~~~ .cpp
-inline bbox1f expand(const bbox1f& a, const bbox1f& b);
+template <typename T>
+inline bbox<T, 4> expand(const bbox<T, 4>& a, const vec<T, 4>& b);
+~~~
+
+expands a bounding box with a point
+
+#### Function expand()
+
+~~~ .cpp
+template <typename T>
+inline bbox<T, 1> expand(const bbox<T, 1>& a, const bbox<T, 1>& b);
 ~~~
 
 expands a bounding box with a bounding box
@@ -3848,7 +3415,8 @@ expands a bounding box with a bounding box
 #### Function expand()
 
 ~~~ .cpp
-inline bbox2f expand(const bbox2f& a, const bbox2f& b);
+template <typename T>
+inline bbox<T, 2> expand(const bbox<T, 2>& a, const bbox<T, 2>& b);
 ~~~
 
 expands a bounding box with a bounding box
@@ -3856,7 +3424,8 @@ expands a bounding box with a bounding box
 #### Function expand()
 
 ~~~ .cpp
-inline bbox3f expand(const bbox3f& a, const bbox3f& b);
+template <typename T>
+inline bbox<T, 3> expand(const bbox<T, 3>& a, const bbox<T, 3>& b);
 ~~~
 
 expands a bounding box with a bounding box
@@ -3864,7 +3433,8 @@ expands a bounding box with a bounding box
 #### Function expand()
 
 ~~~ .cpp
-inline bbox4f expand(const bbox4f& a, const bbox4f& b);
+template <typename T>
+inline bbox<T, 4> expand(const bbox<T, 4>& a, const bbox<T, 4>& b);
 ~~~
 
 expands a bounding box with a bounding box
@@ -3872,7 +3442,8 @@ expands a bounding box with a bounding box
 #### Function contains()
 
 ~~~ .cpp
-inline bool contains(const bbox3f& a, const vec3f& b);
+template <typename T, int N>
+inline bool contains(const bbox<T, N>& a, const vec<T, N>& b);
 ~~~
 
 check if a bounding box contains a point
@@ -3880,7 +3451,8 @@ check if a bounding box contains a point
 #### Function contains()
 
 ~~~ .cpp
-inline bool contains(const bbox3f& a, const bbox3f& b);
+template <typename T, int N>
+inline bool contains(const bbox<T, 3>& a, const bbox<T, 3>& b);
 ~~~
 
 check if a bounding box contains a bounding box
@@ -3888,7 +3460,8 @@ check if a bounding box contains a bounding box
 #### Function operator+=()
 
 ~~~ .cpp
-inline bbox1f& operator+=(bbox1f& a, float b);
+template <typename T, int N>
+inline bbox<T, N>& operator+=(bbox<T, N>& a, const vec<T, N>& b);
 ~~~
 
 assign to expand()
@@ -3896,55 +3469,8 @@ assign to expand()
 #### Function operator+=()
 
 ~~~ .cpp
-inline bbox1f& operator+=(bbox1f& a, const bbox1f& b);
-~~~
-
-assign to expand()
-
-#### Function operator+=()
-
-~~~ .cpp
-inline bbox2f& operator+=(bbox2f& a, const vec2f& b);
-~~~
-
-assign to expand()
-
-#### Function operator+=()
-
-~~~ .cpp
-inline bbox2f& operator+=(bbox2f& a, const bbox2f& b);
-~~~
-
-assign to expand()
-
-#### Function operator+=()
-
-~~~ .cpp
-inline bbox3f& operator+=(bbox3f& a, const vec3f& b);
-~~~
-
-assign to expand()
-
-#### Function operator+=()
-
-~~~ .cpp
-inline bbox3f& operator+=(bbox3f& a, const bbox3f& b);
-~~~
-
-assign to expand()
-
-#### Function operator+=()
-
-~~~ .cpp
-inline bbox4f& operator+=(bbox4f& a, const vec4f& b);
-~~~
-
-assign to expand()
-
-#### Function operator+=()
-
-~~~ .cpp
-inline bbox4f& operator+=(bbox4f& a, const bbox4f& b);
+template <typename T, int N>
+inline bbox<T, N>& operator+=(bbox<T, N>& a, const bbox<T, N>& b);
 ~~~
 
 assign to expand()
@@ -3952,7 +3478,8 @@ assign to expand()
 #### Function make_bbox()
 
 ~~~ .cpp
-inline bbox1f make_bbox(int count, const float* v);
+template <typename T, int N>
+inline bbox<T, N> make_bbox(int count, const vec<T, N>* v);
 ~~~
 
 initialize a bonding box from a list of points
@@ -3960,31 +3487,8 @@ initialize a bonding box from a list of points
 #### Function make_bbox()
 
 ~~~ .cpp
-inline bbox2f make_bbox(int count, const vec2f* v);
-~~~
-
-initialize a bonding box from a list of points
-
-#### Function make_bbox()
-
-~~~ .cpp
-inline bbox3f make_bbox(int count, const vec3f* v);
-~~~
-
-initialize a bonding box from a list of points
-
-#### Function make_bbox()
-
-~~~ .cpp
-inline bbox4f make_bbox(int count, const vec4f* v);
-~~~
-
-initialize a bonding box from a list of points
-
-#### Function make_bbox()
-
-~~~ .cpp
-inline bbox3f make_bbox(const initializer_list<vec3f>& v);
+template <typename T, int N>
+inline bbox<T, N> make_bbox(const initializer_list<vec<T, N>>& v);
 ~~~
 
 initialize a bonding box from a list of points
@@ -3992,7 +3496,8 @@ initialize a bonding box from a list of points
 #### Function operator < <()
 
 ~~~ .cpp
-inline ostream& operator<<(ostream& os, const bbox1f& a);
+template <typename T, int N>
+inline ostream& operator<<(ostream& os, const bbox<T, N>& a);
 ~~~
 
 stream write
@@ -4000,55 +3505,8 @@ stream write
 #### Function operator \> \>()
 
 ~~~ .cpp
-inline istream& operator>>(istream& is, bbox1f& a);
-~~~
-
-stream read
-
-#### Function operator < <()
-
-~~~ .cpp
-inline ostream& operator<<(ostream& os, const bbox2f& a);
-~~~
-
-stream write
-
-#### Function operator \> \>()
-
-~~~ .cpp
-inline istream& operator>>(istream& is, bbox2f& a);
-~~~
-
-stream read
-
-#### Function operator < <()
-
-~~~ .cpp
-inline ostream& operator<<(ostream& os, const bbox3f& a);
-~~~
-
-stream write
-
-#### Function operator \> \>()
-
-~~~ .cpp
-inline istream& operator>>(istream& is, bbox3f& a);
-~~~
-
-stream read
-
-#### Function operator < <()
-
-~~~ .cpp
-inline ostream& operator<<(ostream& os, const bbox4f& a);
-~~~
-
-stream write
-
-#### Function operator \> \>()
-
-~~~ .cpp
-inline istream& operator>>(istream& is, bbox4f& a);
+template <typename T, int N>
+inline istream& operator>>(istream& is, bbox<T, N>& a);
 ~~~
 
 stream read
@@ -4056,7 +3514,8 @@ stream read
 #### Function point_bbox()
 
 ~~~ .cpp
-inline bbox3f point_bbox(const vec3f& p, float r = 0);
+template <typename T, typename T1>
+inline bbox<T, 3> point_bbox(const vec<T, 3>& p, T1 r = 0);
 ~~~
 
 Point bounds
@@ -4064,8 +3523,9 @@ Point bounds
 #### Function line_bbox()
 
 ~~~ .cpp
-inline bbox3f line_bbox(
-    const vec3f& v0, const vec3f& v1, float r0 = 0, float r1 = 0);
+template <typename T, typename T1>
+inline bbox<T, 3> line_bbox(
+    const vec<T, 3>& v0, const vec<T, 3>& v1, T1 r0 = 0, T1 r1 = 0);
 ~~~
 
 Line bounds
@@ -4073,7 +3533,9 @@ Line bounds
 #### Function triangle_bbox()
 
 ~~~ .cpp
-inline bbox3f triangle_bbox(const vec3f& v0, const vec3f& v1, const vec3f& v2);
+template <typename T>
+inline bbox<T, 3> triangle_bbox(
+    const vec<T, 3>& v0, const vec<T, 3>& v1, const vec<T, 3>& v2);
 ~~~
 
 Triangle bounds
@@ -4081,8 +3543,9 @@ Triangle bounds
 #### Function quad_bbox()
 
 ~~~ .cpp
-inline bbox3f quad_bbox(
-    const vec3f& v0, const vec3f& v1, const vec3f& v2, const vec3f& v3);
+template <typename T>
+inline bbox<T, 3> quad_bbox(const vec<T, 3>& v0, const vec<T, 3>& v1,
+    const vec<T, 3>& v2, const vec<T, 3>& v3);
 ~~~
 
 Quad bounds
@@ -4090,24 +3553,35 @@ Quad bounds
 #### Function tetrahedron_bbox()
 
 ~~~ .cpp
-inline bbox3f tetrahedron_bbox(
-    const vec3f& v0, const vec3f& v1, const vec3f& v2, const vec3f& v3);
+template <typename T, typename T1>
+inline bbox<T, 3> tetrahedron_bbox(const vec<T, 3>& v0, const vec<T, 3>& v1,
+    const vec<T, 3>& v2, const vec<T, 3>& v3);
 ~~~
 
 Tetrahedron bounds
 
-#### Struct ray3f
+#### Struct ray
 
 ~~~ .cpp
-struct ray3f {
+template <typename T, int N>
+struct ray;
+~~~
+
+Generic ray of N elements. This is used only to define template
+specializations for small fixed sized rays.
+
+#### Struct ray <T, 3 \>
+
+~~~ .cpp
+template <typename T>
+struct ray<T, 3> {
     static const int N = 3;
-    using T = float;
-    vec3f o;
-    vec3f d;
-    float tmin;
-    float tmax;
-    ray3f(); 
-    ray3f(const vec3f& o, const vec3f& d, float tmin = 0, float tmax = flt_max); 
+    ray(); 
+    ray(const vec<T, 3>& o, const vec<T, 3>& d, T tmin = 0, T tmax = flt_max); 
+    vec<T, 3> o;
+    vec<T, 3> d;
+    T tmin;
+    T tmax;
 }
 ~~~
 
@@ -4115,19 +3589,37 @@ Rays with origin, direction and min/max t value.
 
 - Members:
     - N:      size
-    - T:      type
+    - ray():      default constructor
+    - ray():      initializes a ray from its elements
     - o:      origin
     - d:      direction
     - tmin:      minimum distance
     - tmax:      maximum distance
-    - ray3f():      default constructor
-    - ray3f():      initializes a ray from its elements
 
+
+#### Typedef template  <typename T \>
+ray3
+
+~~~ .cpp
+template <typename T>
+using ray3 = ray<T, 3>;
+~~~
+
+Shortcut for rays of 3 element
+
+#### Typedef ray3f
+
+~~~ .cpp
+using ray3f = ray3<float>;
+~~~
+
+3-dimension float bounding box
 
 #### Function operator < <()
 
 ~~~ .cpp
-inline ostream& operator<<(ostream& os, const ray3f& a);
+template <typename T>
+inline ostream& operator<<(ostream& os, const ray3<T>& a);
 ~~~
 
 stream write
@@ -4135,7 +3627,8 @@ stream write
 #### Function operator \> \>()
 
 ~~~ .cpp
-inline istream& operator>>(istream& is, ray3f& a);
+template <typename T>
+inline istream& operator>>(istream& is, ray3<T>& a);
 ~~~
 
 stream read
@@ -4143,7 +3636,8 @@ stream read
 #### Function transform_point()
 
 ~~~ .cpp
-inline vec3f transform_point(const mat4f& a, const vec3f& b);
+template <typename T>
+inline vec<T, 3> transform_point(const mat<T, 4>& a, const vec<T, 3>& b);
 ~~~
 
 transforms a point by a matrix
@@ -4151,7 +3645,8 @@ transforms a point by a matrix
 #### Function transform_vector()
 
 ~~~ .cpp
-inline vec3f transform_vector(const mat4f& a, const vec3f& b);
+template <typename T>
+inline vec<T, 3> transform_vector(const mat<T, 4>& a, const vec<T, 3>& b);
 ~~~
 
 transforms a vector by a matrix
@@ -4159,7 +3654,8 @@ transforms a vector by a matrix
 #### Function transform_direction()
 
 ~~~ .cpp
-inline vec3f transform_direction(const mat4f& a, const vec3f& b);
+template <typename T>
+inline vec<T, 3> transform_direction(const mat<T, 4>& a, const vec<T, 3>& b);
 ~~~
 
 transforms a direction by a matrix
@@ -4167,7 +3663,8 @@ transforms a direction by a matrix
 #### Function transform_point()
 
 ~~~ .cpp
-inline vec3f transform_point(const frame3f& a, const vec3f& b);
+template <typename T>
+inline vec<T, 3> transform_point(const frame<T, 3>& a, const vec<T, 3>& b);
 ~~~
 
 transforms a point by a frame (rigid affine transform)
@@ -4175,7 +3672,8 @@ transforms a point by a frame (rigid affine transform)
 #### Function transform_vector()
 
 ~~~ .cpp
-inline vec3f transform_vector(const frame3f& a, const vec3f& b);
+template <typename T>
+inline vec<T, 3> transform_vector(const frame<T, 3>& a, const vec<T, 3>& b);
 ~~~
 
 transforms a vector by a frame (rigid affine transform)
@@ -4183,7 +3681,8 @@ transforms a vector by a frame (rigid affine transform)
 #### Function transform_direction()
 
 ~~~ .cpp
-inline vec3f transform_direction(const frame3f& a, const vec3f& b);
+template <typename T>
+inline vec<T, 3> transform_direction(const frame<T, 3>& a, const vec<T, 3>& b);
 ~~~
 
 transforms a direction by a frame (rigid affine transform)
@@ -4191,7 +3690,8 @@ transforms a direction by a frame (rigid affine transform)
 #### Function transform_frame()
 
 ~~~ .cpp
-inline frame3f transform_frame(const frame3f& a, const frame3f& b);
+template <typename T>
+inline frame<T, 3> transform_frame(const frame<T, 3>& a, const frame<T, 3>& b);
 ~~~
 
 transforms a frame by a frame (rigid affine transform)
@@ -4199,7 +3699,9 @@ transforms a frame by a frame (rigid affine transform)
 #### Function transform_point_inverse()
 
 ~~~ .cpp
-inline vec3f transform_point_inverse(const frame3f& a, const vec3f& b);
+template <typename T>
+inline vec<T, 3> transform_point_inverse(
+    const frame<T, 3>& a, const vec<T, 3>& b);
 ~~~
 
 inverse transforms a point by a frame (rigid affine transform)
@@ -4207,7 +3709,9 @@ inverse transforms a point by a frame (rigid affine transform)
 #### Function transform_vector_inverse()
 
 ~~~ .cpp
-inline vec3f transform_vector_inverse(const frame3f& a, const vec3f& b);
+template <typename T>
+inline vec<T, 3> transform_vector_inverse(
+    const frame<T, 3>& a, const vec<T, 3>& b);
 ~~~
 
 inverse transforms a vector by a frame (rigid affine transform)
@@ -4215,7 +3719,9 @@ inverse transforms a vector by a frame (rigid affine transform)
 #### Function transform_direction_inverse()
 
 ~~~ .cpp
-inline vec3f transform_direction_inverse(const frame3f& a, const vec3f& b);
+template <typename T>
+inline vec<T, 3> transform_direction_inverse(
+    const frame<T, 3>& a, const vec<T, 3>& b);
 ~~~
 
 inverse transforms a direction by a frame (rigid affine transform)
@@ -4223,7 +3729,8 @@ inverse transforms a direction by a frame (rigid affine transform)
 #### Function transform_ray()
 
 ~~~ .cpp
-inline ray3f transform_ray(const mat4f& a, const ray3f& b);
+template <typename T>
+inline ray3<T> transform_ray(const mat<T, 4>& a, const ray3<T>& b);
 ~~~
 
 transforms a ray by a matrix (direction is not normalized after)
@@ -4231,7 +3738,8 @@ transforms a ray by a matrix (direction is not normalized after)
 #### Function transform_bbox()
 
 ~~~ .cpp
-inline bbox3f transform_bbox(const mat4f& a, const bbox3f& b);
+template <typename T>
+inline bbox<T, 3> transform_bbox(const mat<T, 4>& a, const bbox<T, 3>& b);
 ~~~
 
 transforms a bbox by a matrix
@@ -4239,7 +3747,8 @@ transforms a bbox by a matrix
 #### Function transform_ray()
 
 ~~~ .cpp
-inline ray3f transform_ray(const frame3f& a, const ray3f& b);
+template <typename T>
+inline ray3<T> transform_ray(const frame<T, 3>& a, const ray3<T>& b);
 ~~~
 
 transforms a ray by a frame (rigid affine transform)
@@ -4247,7 +3756,8 @@ transforms a ray by a frame (rigid affine transform)
 #### Function transform_bbox()
 
 ~~~ .cpp
-inline bbox3f transform_bbox(const frame3f& a, const bbox3f& b);
+template <typename T>
+inline bbox<T, 3> transform_bbox(const frame<T, 3>& a, const bbox<T, 3>& b);
 ~~~
 
 transforms a bbox by a frame (rigid affine transform)
@@ -4255,7 +3765,8 @@ transforms a bbox by a frame (rigid affine transform)
 #### Function transform_ray_inverse()
 
 ~~~ .cpp
-inline ray3f transform_ray_inverse(const frame3f& a, const ray3f& b);
+template <typename T>
+inline ray3<T> transform_ray_inverse(const frame<T, 3>& a, const ray3<T>& b);
 ~~~
 
 inverse transforms a ray by a frame (rigid affine transform)
@@ -4263,71 +3774,81 @@ inverse transforms a ray by a frame (rigid affine transform)
 #### Function transform_bbox_inverse()
 
 ~~~ .cpp
-inline bbox3f transform_bbox_inverse(const frame3f& a, const bbox3f& b);
+template <typename T>
+inline bbox<T, 3> transform_bbox_inverse(
+    const frame<T, 3>& a, const bbox<T, 3>& b);
 ~~~
 
 inverse transforms a bbox by a frame (rigid affine transform)
 
-#### Function rotation_mat3f()
+#### Function rotation_mat3()
 
 ~~~ .cpp
-inline mat3f rotation_mat3f(const vec3f& axis, float angle);
+template <typename T, typename T1>
+inline mat<T, 3> rotation_mat3(const vec<T, 3>& axis, T1 angle);
 ~~~
 
 rotation matrix from axis-angle
 
-#### Function translation_frame3f()
+#### Function translation_frame3()
 
 ~~~ .cpp
-inline frame3f translation_frame3f(const vec3f& a);
+template <typename T>
+inline frame<T, 3> translation_frame3(const vec<T, 3>& a);
 ~~~
 
 translation frame
 
-#### Function translation_mat4f()
+#### Function translation_mat4()
 
 ~~~ .cpp
-inline mat4f translation_mat4f(const vec3f& a);
+template <typename T>
+inline mat<T, 4> translation_mat4(const vec<T, 3>& a);
 ~~~
 
 translation matrix
 
-#### Function scaling_frame3f()
+#### Function scaling_frame3()
 
 ~~~ .cpp
-inline frame3f scaling_frame3f(const vec3f& a);
+template <typename T>
+inline frame<T, 3> scaling_frame3(const vec<T, 3>& a);
 ~~~
 
 scaling frame (this is not rigid and here for symmatry of API)
 
-#### Function scaling_mat4f()
+#### Function scaling_mat4()
 
 ~~~ .cpp
-inline mat4f scaling_mat4f(const vec3f& a);
+template <typename T>
+inline mat<T, 4> scaling_mat4(const vec<T, 3>& a);
 ~~~
 
 scaling matrix
 
-#### Function rotation_frame3f()
+#### Function rotation_frame3()
 
 ~~~ .cpp
-inline frame3f rotation_frame3f(const vec3f& axis, float angle);
+template <typename T>
+inline frame<T, 3> rotation_frame3(const vec<T, 3>& axis, T angle);
 ~~~
 
 rotation frame
 
-#### Function rotation_mat4f()
+#### Function rotation_mat4()
 
 ~~~ .cpp
-inline mat4f rotation_mat4f(const mat3f& rot);
+template <typename T>
+inline mat<T, 4> rotation_mat4(const mat<T, 3>& rot);
 ~~~
 
 rotation matrix
 
-#### Function rotation_mat4f()
+#### Function rotation_mat4()
 
 ~~~ .cpp
-inline mat4f rotation_mat4f(const vec3f& axis, float angle);
+template <typename T>
+inline mat<T, 4> rotation_mat4(const vec<T, 3>& axis, float angle);
 ~~~
 
 rotation matrix
@@ -4335,154 +3856,170 @@ rotation matrix
 #### Function rotation_axisangle4()
 
 ~~~ .cpp
-inline vec4f rotation_axisangle4(const quat4f& a);
+template <typename T>
+inline vec<T, 4> rotation_axisangle4(const quat<T, 4>& a);
 ~~~
 
 quaternion axis-angle conversion
 
-#### Function rotation_quat4f()
+#### Function rotation_quat4()
 
 ~~~ .cpp
-inline quat4f rotation_quat4f(const vec4f& axis_angle);
+template <typename T>
+inline quat<T, 4> rotation_quat4(const vec<T, 4>& axis_angle);
 ~~~
 
 axis-angle to quaternion
 
-#### Function rotation_mat3f()
+#### Function rotation_mat3()
 
 ~~~ .cpp
-inline mat3f rotation_mat3f(const quat4f& v);
+template <typename T>
+inline mat<T, 3> rotation_mat3(const quat<T, 4>& v);
 ~~~
 
 quaterion to matrix conversion
 
-#### Function rotation_mat4f()
+#### Function rotation_mat4()
 
 ~~~ .cpp
-inline mat4f rotation_mat4f(const quat4f& v);
+template <typename T>
+inline mat<T, 4> rotation_mat4(const quat<T, 4>& v);
 ~~~
 
 rotation matrix
 
-#### Function rotation_quat4f()
+#### Function rotation_quat4()
 
 ~~~ .cpp
-inline quat4f rotation_quat4f(const mat3f& m_);
+template <typename T>
+inline quat<T, 4> rotation_quat4(const mat<T, 3>& m_);
 ~~~
 
 matrix to quaternion
 
-#### Function lookat_frame3f()
+#### Function lookat_frame3()
 
 ~~~ .cpp
-inline frame3f lookat_frame3f(const vec3f& eye, const vec3f& center,
-    const vec3f& up, bool inv_xz = false);
+template <typename T>
+inline frame<T, 3> lookat_frame3(const vec<T, 3>& eye, const vec<T, 3>& center,
+    const vec<T, 3>& up, bool inv_xz = false);
 ~~~
 
 OpenGL lookat frame
 
-#### Function lookat_mat4f()
+#### Function lookat_mat4()
 
 ~~~ .cpp
-inline mat4f lookat_mat4f(
-    const vec3f& eye, const vec3f& center, const vec3f& up);
+template <typename T>
+inline mat<T, 4> lookat_mat4(
+    const vec<T, 3>& eye, const vec<T, 3>& center, const vec<T, 3>& up);
 ~~~
 
 OpenGL lookat matrix
 
-#### Function frustum_mat4f()
+#### Function frustum_mat4()
 
 ~~~ .cpp
-inline mat4f frustum_mat4f(
-    float l, float r, float b, float t, float n, float f);
+template <typename T>
+inline mat<T, 4> frustum_mat4(T l, T r, T b, T t, T n, T f);
 ~~~
 
 OpenGL frustum matrix
 
-#### Function ortho_mat4f()
+#### Function ortho_mat4()
 
 ~~~ .cpp
-inline mat4f ortho_mat4f(float l, float r, float b, float t, float n, float f);
+template <typename T>
+inline mat<T, 4> ortho_mat4(T l, T r, T b, T t, T n, T f);
 ~~~
 
 OpenGL orthographic matrix
 
-#### Function ortho2d_mat4f()
+#### Function ortho2d_mat4()
 
 ~~~ .cpp
-inline mat4f ortho2d_mat4f(float left, float right, float bottom, float top);
+template <typename T>
+inline mat<T, 4> ortho2d_mat4(T left, T right, T bottom, T top);
 ~~~
 
 OpenGL orthographic 2D matrix
 
-#### Function ortho_mat4f()
+#### Function ortho_mat4()
 
 ~~~ .cpp
-inline mat4f ortho_mat4f(float xmag, float ymag, float near, float far);
+template <typename T>
+inline mat<T, 4> ortho_mat4(T xmag, T ymag, T near, T far);
 ~~~
 
 OpenGL/GLTF orthographic matrix
 
-#### Function perspective_mat4f()
+#### Function perspective_mat4()
 
 ~~~ .cpp
-inline mat4f perspective_mat4f(
-    float fovy, float aspect, float near, float far);
+template <typename T>
+inline mat<T, 4> perspective_mat4(T fovy, T aspect, T near, T far);
 ~~~
 
 OpenGL/GLTF perspective matrix
 
-#### Function perspective_mat4f()
+#### Function perspective_mat4()
 
 ~~~ .cpp
-inline mat4f perspective_mat4f(float fovy, float aspect, float near);
+template <typename T>
+inline mat<T, 4> perspective_mat4(T fovy, T aspect, T near);
 ~~~
 
 OpenGL/GLTF infinite perspective matrix
 
-#### Function decompose_mat4f()
+#### Function decompose_mat4()
 
 ~~~ .cpp
-inline void decompose_mat4f(
-    const mat4f& m, vec3f& translation, mat3f& rotation, vec3f& scale);
+template <typename T>
+inline void decompose_mat4(const mat<T, 4>& m, vec<T, 3>& translation,
+    mat<T, 3>& rotation, vec<T, 3>& scale);
 ~~~
 
 Decompose an affine matrix into translation, rotation, scale.
 Assumes there is no shear and the matrix is affine.
 
-#### Function to_quat4f()
+#### Function to_quat4()
 
 ~~~ .cpp
-inline quat4f to_quat4f(const mat3f& a);
+template <typename T>
+inline quat<T, 4> to_quat4(const mat<T, 3>& a);
 ~~~
 
 Convert a rotation matrix to a quaternion
 
-#### Function decompose_mat4f()
+#### Function decompose_mat4()
 
 ~~~ .cpp
-inline void decompose_mat4f(
-    const mat4f& m, vec3f& translation, quat4f& rotation, vec3f& scale);
+template <typename T>
+inline void decompose_mat4(const mat<T, 4>& m, vec<T, 3>& translation,
+    quat<T, 4>& rotation, vec<T, 3>& scale);
 ~~~
 
 Decompose an affine matrix into translation, rotation, scale.
 Assumes there is no shear and the matrix is affine.
 
-#### Function compose_mat4f()
+#### Function compose_mat4()
 
 ~~~ .cpp
-inline mat4f compose_mat4f(
-    const vec3f& translation, const mat3f& rotation, const vec3f& scale);
+template <typename T>
+inline mat<T, 4> compose_mat4(const vec<T, 3>& translation,
+    const mat<T, 3>& rotation, const vec<T, 3>& scale);
 ~~~
 
 Decompose an affine matrix into translation, rotation, scale.
 Assumes there is no shear and the matrix is affine.
 
-#### Function compose_mat4f()
+#### Function compose_mat4()
 
 ~~~ .cpp
-inline mat4f compose_mat4f(
-    const vec3f& translation, const quat4f& rotation, const vec3f& scale);
+template <typename T>
+inline mat<T, 4> compose_mat4(const vec<T, 3>& translation,
+    const quat<T, 4>& rotation, const vec<T, 3>& scale);
 ~~~
 
 Decompose an affine matrix into translation, rotation, scale.
@@ -4491,8 +4028,9 @@ Assumes there is no shear and the matrix is affine.
 #### Function camera_turntable()
 
 ~~~ .cpp
-inline void camera_turntable(vec3f& from, vec3f& to, vec3f& up,
-    const vec3f& rotate, float dolly, const vec3f& pan);
+template <typename T>
+inline void camera_turntable(vec<T, 3>& from, vec<T, 3>& to, vec<T, 3>& up,
+    const vec<T, 3>& rotate, T dolly, const vec<T, 3>& pan);
 ~~~
 
 Turntable for UI navigation from a from/to/up parametrization of the
@@ -4501,8 +4039,9 @@ camera.
 #### Function camera_turntable()
 
 ~~~ .cpp
-inline void camera_turntable(frame3f& frame, float& focus, const vec2f& rotate,
-    float dolly, const vec2f& pan);
+template <typename T>
+inline void camera_turntable(frame<T, 3>& frame, T& focus,
+    const vec<T, 2>& rotate, T dolly, const vec<T, 2>& pan);
 ~~~
 
 Turntable for UI navigation for a frame/distance parametrization of the
@@ -4511,8 +4050,9 @@ camera.
 #### Function camera_fps()
 
 ~~~ .cpp
+template <typename T>
 inline void camera_fps(
-    frame3f& frame, const vec3f& transl, const vec2f& rotate);
+    frame<T, 3>& frame, const vec<T, 3>& transl, const vec<T, 2>& rotate);
 ~~~
 
 FPS camera for UI navigation for a frame parametrization.
@@ -4711,7 +4251,7 @@ pdf for hemispherical direction with uniform distribution
 #### Function sample_sphere()
 
 ~~~ .cpp
-inline vec3f sample_sphere(const vec2f ruv);
+inline vec3f sample_sphere(const vec2f& ruv);
 ~~~
 
 spherical direction with uniform distribution
@@ -5153,8 +4693,8 @@ tetrahedron volume
 #### Function eval_barycentric_point()
 
 ~~~ .cpp
-template <typename T>
-inline T eval_barycentric_point(const vector<T>& vals, const int& p, float w);
+template <typename T, typename T1>
+inline T eval_barycentric_point(const vector<T>& vals, const int& p, T1 w);
 ~~~
 
 line barycentric interpolation
@@ -5162,9 +4702,9 @@ line barycentric interpolation
 #### Function eval_barycentric_line()
 
 ~~~ .cpp
-template <typename T>
+template <typename T, typename T1>
 inline T eval_barycentric_line(
-    const vector<T>& vals, const vec2i& l, const vec2f& w);
+    const vector<T>& vals, const vec2i& l, const vec<T1, 2>& w);
 ~~~
 
 line barycentric interpolation
@@ -5172,9 +4712,9 @@ line barycentric interpolation
 #### Function eval_barycentric_triangle()
 
 ~~~ .cpp
-template <typename T>
+template <typename T, typename T1>
 inline T eval_barycentric_triangle(
-    const vector<T>& vals, const vec3i& t, const vec3f& w);
+    const vector<T>& vals, const vec3i& t, const vec<T1, 3>& w);
 ~~~
 
 triangle barycentric interpolation
@@ -5182,9 +4722,9 @@ triangle barycentric interpolation
 #### Function eval_barycentric_tetra()
 
 ~~~ .cpp
-template <typename T>
+template <typename T, typename T1>
 inline T eval_barycentric_tetra(
-    const vector<T>& vals, const vec4i& t, const vec4f& w);
+    const vector<T>& vals, const vec4i& t, const vec<T1, 4>& w);
 ~~~
 
 tetrahedron barycentric interpolation
@@ -5192,9 +4732,9 @@ tetrahedron barycentric interpolation
 #### Function eval_barycentric_quad()
 
 ~~~ .cpp
-template <typename T>
+template <typename T, typename T1>
 inline T eval_barycentric_quad(
-    const vector<T>& vals, const vec4i& t, const vec4f& w);
+    const vector<T>& vals, const vec4i& t, const vec<T1, 4>& w);
 ~~~
 
 quad interpolation based on the two-triangle representation
@@ -5819,105 +5359,139 @@ make_hair(int num, int tesselation, const vector<vec3i>& striangles,
 
 Make a hair ball around a shape. Returns lines, pos, norm, texcoord, radius.
 
-#### Struct image4f
+#### Struct image
 
 ~~~ .cpp
-struct image4f {
-    image4f(); 
-    image4f(int w, int h, const vec4f& v = zero4f); 
-    image4f(int w, int h, const vec4f* v); 
+template <typename T>
+struct image {
+    image(); 
+    image(int w, int h, const T& v =; 
     int width() const; 
     int height() const; 
-    vec2i size() const; 
     bool empty() const; 
     explicit operator bool() const; 
-    void resize(int w, int h, const vec4f& v = zero4f); 
-    void assign(int w, int h, const vec4f& v); 
-    void set(const vec4f& v); 
-    vec4f& operator[](const vec2i& ij); 
-    const vec4f& operator[](const vec2i& ij) const; 
-    vec4f& at(const vec2i& ij); 
-    const vec4f& at(const vec2i& ij) const; 
-    vec4f& at(int i, int j); 
-    const vec4f& at(int i, int j) const; 
-    vec4f* data(); 
-    const vec4f* data() const; 
+    T& operator[](const vec2i& ij); 
+    const T& operator[](const vec2i& ij) const; 
+    T& at(const vec2i& ij); 
+    const T& at(const vec2i& ij) const; 
+    T& at(int i, int j); 
+    const T& at(int i, int j) const; 
 }
+~~~
+
+Generic image container
+
+- Members:
+    - image():      empty image constructor
+    - image():      image constructor
+    - width():      width
+    - height():      height
+    - empty():      check for empty
+    - operator bool():      check for empty
+    - operator[]():      element access
+    - operator[]():      element access
+    - at():      element access
+    - at():      element access
+    - at():      element access
+    - at():      element access
+
+
+#### Typedef image4f
+
+~~~ .cpp
+using image4f = image<vec4f>;
 ~~~
 
 HDR image
 
-- Members:
-    - image4f():      empty image constructor
-    - image4f():      image constructor
-    - image4f():      image constructor
-    - width():      width
-    - height():      height
-    - size():      size
-    - empty():      check for empty
-    - operator bool():      check for empty
-    - resize():      reallocate memory
-    - assign():      reallocate memory
-    - set():      set values
-    - operator[]():      element access
-    - operator[]():      element access
-    - at():      element access
-    - at():      element access
-    - at():      element access
-    - at():      element access
-    - data():      data access
-    - data():      data access
-
-
-#### Struct image4b
+#### Typedef image4b
 
 ~~~ .cpp
-struct image4b {
-    image4b(); 
-    image4b(int w, int h, const vec4b& v = zero4b); 
-    image4b(int w, int h, const vec4b* v); 
-    int width() const; 
-    int height() const; 
-    vec2i size() const; 
-    bool empty() const; 
-    explicit operator bool() const; 
-    void resize(int w, int h, const vec4b& v = zero4b); 
-    void assign(int w, int h, const vec4b& v); 
-    void set(const vec4b& v); 
-    vec4b& operator[](const vec2i& ij); 
-    const vec4b& operator[](const vec2i& ij) const; 
-    vec4b& at(const vec2i& ij); 
-    const vec4b& at(const vec2i& ij) const; 
-    vec4b& at(int i, int j); 
-    const vec4b& at(int i, int j) const; 
-    vec4b* data(); 
-    const vec4b* data() const; 
-}
+using image4b = image<vec4b>;
 ~~~
 
 LDR image
 
-- Members:
-    - image4b():      empty image constructor
-    - image4b():      image constructor
-    - image4b():      image constructor
-    - width():      width
-    - height():      height
-    - size():      size
-    - empty():      check for empty
-    - operator bool():      check for empty
-    - resize():      reallocate memory
-    - assign():      reallocate memory
-    - set():      set values
-    - operator[]():      element access
-    - operator[]():      element access
-    - at():      element access
-    - at():      element access
-    - at():      element access
-    - at():      element access
-    - data():      data access
-    - data():      data access
+#### Function begin()
 
+~~~ .cpp
+template <typename T>
+inline T* begin(image<T>& a);
+~~~
+
+iteration support
+
+#### Function begin()
+
+~~~ .cpp
+template <typename T>
+inline const T* begin(const image<T>& a);
+~~~
+
+iteration support
+
+#### Function end()
+
+~~~ .cpp
+template <typename T>
+inline T* end(image<T>& a);
+~~~
+
+iteration support
+
+#### Function end()
+
+~~~ .cpp
+template <typename T>
+inline const T* end(const image<T>& a);
+~~~
+
+iteration support
+
+#### Function data()
+
+~~~ .cpp
+template <typename T>
+inline T* data(image<T>& a);
+~~~
+
+vector data access
+
+#### Function data()
+
+~~~ .cpp
+template <typename T>
+inline const T* data(const image<T>& a);
+~~~
+
+vector data access
+
+#### Function size()
+
+~~~ .cpp
+template <typename T>
+inline int size(image<T>& a);
+~~~
+
+vector size
+
+#### Function empty()
+
+~~~ .cpp
+template <typename T>
+inline bool empty(image<T>& a);
+~~~
+
+vector empty
+
+#### Function make_image()
+
+~~~ .cpp
+template <typename T>
+inline image<T> make_image(int w, int h, T* vals);
+~~~
+
+Create an image with values stored in an array in scanliine order.
 
 #### Function srgb_to_linear()
 
@@ -6977,6 +6551,9 @@ struct texture {
     string path;
     image4b ldr;
     image4f hdr;
+    bool empty() const; 
+    bool is_ldr() const; 
+    bool is_hdr() const; 
     int width() const; 
     int height() const; 
 }
@@ -6989,8 +6566,11 @@ Scene Texture
     - path:      path
     - ldr:      if loaded, ldr image
     - hdr:      if loaded, hdr image
-    - width():      get texture width
-    - height():      get texture height
+    - empty():      if loaded, whether it is empty
+    - is_ldr():      if loaded, whether it is ldr
+    - is_hdr():      if loaded, whether it is hdr
+    - width():      if loaded, get texture width
+    - height():      if loaded, get texture height
 
 
 #### Struct texture_info
@@ -8379,6 +7959,7 @@ struct trace_params {
     bool parallel = true;
     uint32_t seed = 0;
     int block_size = 32;
+    int batch_size = 16;
 }
 ~~~
 
@@ -8402,92 +7983,49 @@ Rendering params
     - parallel:      parallel execution
     - seed:      seed for the random number generators
     - block_size:      block size for parallel batches (probably leave it as is)
+    - batch_size:      batch size for progressive rendering
 
 
-#### Function trace_blocks()
-
-~~~ .cpp
-inline vector<pair<vec2i, vec2i>> trace_blocks(const trace_params& params);
-~~~
-
-Make image blocks
-
-#### Function trace_rngs()
+#### Struct trace_state
 
 ~~~ .cpp
-inline vector<rng_pcg32> trace_rngs(const trace_params& params);
+struct trace_state {
 ~~~
 
-Make a 2D array of random number generators for parallelization
+Trace state. Members are not part of the public API.
 
-#### Function trace_block()
+#### Function make_trace_state()
 
 ~~~ .cpp
-void trace_block(const scene* scn, image4f& img, const vec2i& block_min,
-    const vec2i& block_max, int samples_min, int samples_max,
-    vector<rng_pcg32>& rngs, const trace_params& params);
+trace_state* make_trace_state(const trace_params& params);
 ~~~
 
-Renders a block of samples
+Initialize a rendering state
 
-Notes: It is safe to call the function in parallel on different blocks.
-But two threads should not access the same pixels at the same time. If
-the same block is rendered with different samples, samples have to be
-sequential.
+#### Function get_trace_image()
 
-- Parameters:
-    - scn: trace scene
-    - img: pixel data in RGBA format (width/height in params)
-    - block: range of pixels to render
-    - samples_min, samples_max: range of samples to render
-    - params: trace params
+~~~ .cpp
+inline const image4f& get_trace_image(const trace_state* st);
+~~~
+
+Gets the computed trace image
+
+#### Function get_trace_sample()
+
+~~~ .cpp
+inline int get_trace_sample(const trace_state* st);
+~~~
+
+Gets the current trace sample
 
 #### Function trace_samples()
 
 ~~~ .cpp
-void trace_samples(const scene* scn, image4f& img, int samples_min,
-    int samples_max, vector<rng_pcg32>& rngs, const trace_params& params);
-~~~
-
-Trace the next samples in [samples_min, samples_max) range.
-Samples have to be traced consecutively.
-
-#### Function trace_block_filtered()
-
-~~~ .cpp
-void trace_block_filtered(const scene* scn, image4f& img, image4f& acc,
-    image4f& weight, const vec2i& block_min, const vec2i& block_max,
-    int samples_min, int samples_max, vector<rng_pcg32>& rngs,
-    std::mutex& image_mutex, const trace_params& params);
-~~~
-
-Renders a filtered block of samples
-
-Notes: It is safe to call the function in parallel on different blocks.
-But two threads should not access the same pixels at the same time. If
-the same block is rendered with different samples, samples have to be
-sequential.
-
-- Parameters:
-    - scn: trace scene
-    - img: pixel data in RGBA format (width/height in params)
-    - acc: accumulation buffer in RGBA format (width/height in params)
-    - weight: weight buffer in float format (width/height in params)
-    - block: range of pixels to render
-    - samples_min, samples_max: range of samples to render
-    - image_mutex: mutex for locking
-    - params: trace params
-
-#### Function trace_filtered_samples()
-
-~~~ .cpp
-void trace_filtered_samples(const scene* scn, image4f& img, image4f& acc,
-    image4f& weight, int samples_min, int samples_max, vector<rng_pcg32>& rngs,
+void trace_samples(trace_state* st, const scene* scn, int nsamples,
     const trace_params& params);
 ~~~
 
-Trace the next samples in [samples_min, samples_max) range.
-Samples have to be traced consecutively.
+Trace the next nsamples samples.
 
 #### Function trace_image()
 
@@ -8500,17 +8038,16 @@ Trace the whole image
 #### Function trace_async_start()
 
 ~~~ .cpp
-void trace_async_start(const scene* scn, image4f& img, vector<rng_pcg32>& rngs,
-    const trace_params& params, thread_pool* pool,
-    const function<void(int)>& callback);
+void trace_async_start(
+    trace_state* st, const scene* scn, const trace_params& params);
 ~~~
 
-Starts an anyncrhounous renderer with a maximum of 256 samples.
+Starts an anyncrhounous renderer.
 
 #### Function trace_async_stop()
 
 ~~~ .cpp
-void trace_async_stop(thread_pool* pool);
+void trace_async_stop(trace_state* st);
 ~~~
 
 Stop the asynchronous renderer.
@@ -11323,7 +10860,9 @@ Set uniform float values val for program pid and variable var.
 #### Function set_program_uniform()
 
 ~~~ .cpp
-inline bool set_program_uniform(gl_program& prog, int var, const vec2f& val);
+template <typename T, int N>
+inline bool set_program_uniform(
+    gl_program& prog, int var, const vec<T, N>& val);
 ~~~
 
 Set uniform float values val for program pid and variable var.
@@ -11331,7 +10870,9 @@ Set uniform float values val for program pid and variable var.
 #### Function set_program_uniform()
 
 ~~~ .cpp
-inline bool set_program_uniform(gl_program& prog, int var, const vec3f& val);
+template <typename T>
+inline bool set_program_uniform(
+    gl_program& prog, int var, const mat<T, 4>& val);
 ~~~
 
 Set uniform float values val for program pid and variable var.
@@ -11339,47 +10880,9 @@ Set uniform float values val for program pid and variable var.
 #### Function set_program_uniform()
 
 ~~~ .cpp
-inline bool set_program_uniform(gl_program& prog, int var, const vec4f& val);
-~~~
-
-Set uniform float values val for program pid and variable var.
-
-#### Function set_program_uniform()
-
-~~~ .cpp
-inline bool set_program_uniform(gl_program& prog, int var, const vec2i& val);
-~~~
-
-Set uniform float values val for program pid and variable var.
-
-#### Function set_program_uniform()
-
-~~~ .cpp
-inline bool set_program_uniform(gl_program& prog, int var, const vec3i& val);
-~~~
-
-Set uniform float values val for program pid and variable var.
-
-#### Function set_program_uniform()
-
-~~~ .cpp
-inline bool set_program_uniform(gl_program& prog, int var, const vec4i& val);
-~~~
-
-Set uniform float values val for program pid and variable var.
-
-#### Function set_program_uniform()
-
-~~~ .cpp
-inline bool set_program_uniform(gl_program& prog, int var, const mat4f& val);
-~~~
-
-Set uniform float values val for program pid and variable var.
-
-#### Function set_program_uniform()
-
-~~~ .cpp
-inline bool set_program_uniform(gl_program& prog, int var, const frame3f& val);
+template <typename T>
+inline bool set_program_uniform(
+    gl_program& prog, int var, const frame<T, 3>& val);
 ~~~
 
 Set uniform float values val for program pid and variable var.
@@ -11405,8 +10908,9 @@ Set uniform float values val for program pid and variable var.
 #### Function set_program_uniform()
 
 ~~~ .cpp
+template <typename T, int N>
 inline bool set_program_uniform(
-    gl_program& prog, int var, const vec2f* val, int num);
+    gl_program& prog, int var, const vec<T, N>* val, int num);
 ~~~
 
 Set uniform float values val for program pid and variable var.
@@ -11414,8 +10918,9 @@ Set uniform float values val for program pid and variable var.
 #### Function set_program_uniform()
 
 ~~~ .cpp
+template <typename T>
 inline bool set_program_uniform(
-    gl_program& prog, int var, const vec3f* val, int num);
+    gl_program& prog, int var, const mat<T, 4>* val, int num);
 ~~~
 
 Set uniform float values val for program pid and variable var.
@@ -11423,44 +10928,9 @@ Set uniform float values val for program pid and variable var.
 #### Function set_program_uniform()
 
 ~~~ .cpp
+template <typename T>
 inline bool set_program_uniform(
-    gl_program& prog, int var, const vec4f* val, int num);
-~~~
-
-Set uniform float values val for program pid and variable var.
-
-#### Function set_program_uniform()
-
-~~~ .cpp
-inline bool set_program_uniform(
-    gl_program& prog, int var, const vec2i* val, int num);
-~~~
-
-Set uniform float values val for program pid and variable var.
-
-#### Function set_program_uniform()
-
-~~~ .cpp
-inline bool set_program_uniform(
-    gl_program& prog, int var, const vec3i* val, int num);
-~~~
-
-Set uniform float values val for program pid and variable var.
-
-#### Function set_program_uniform()
-
-~~~ .cpp
-inline bool set_program_uniform(
-    gl_program& prog, int var, const vec4i* val, int num);
-~~~
-
-Set uniform float values val for program pid and variable var.
-
-#### Function set_program_uniform()
-
-~~~ .cpp
-inline bool set_program_uniform(
-    gl_program& prog, int var, const mat4f* val, int num);
+    gl_program& prog, int var, const frame<T, 3>* val, int num);
 ~~~
 
 Set uniform float values val for program pid and variable var.
@@ -11570,8 +11040,9 @@ has nc components and either buffer bid or a single value def
 #### Function set_program_vertattr()
 
 ~~~ .cpp
-inline bool set_program_vertattr(
-    gl_program& prog, int var, const gl_vertex_buffer& buf, const vec2f& def);
+template <typename T, int N>
+inline bool set_program_vertattr(gl_program& prog, int var,
+    const gl_vertex_buffer& buf, const vec<T, N>& def);
 ~~~
 
 Sets a vartex attribute for program pid and variable var. The attribute
@@ -11581,52 +11052,9 @@ is either a buffer bid or a single value def
 #### Function set_program_vertattr()
 
 ~~~ .cpp
-inline bool set_program_vertattr(
-    gl_program& prog, int var, const gl_vertex_buffer& buf, const vec3f& def);
-~~~
-
-Sets a vartex attribute for program pid and variable var. The attribute
-is either a buffer bid or a single value def
-(if bid is zero). Convenience wrapper to above functions.
-
-#### Function set_program_vertattr()
-
-~~~ .cpp
-inline bool set_program_vertattr(
-    gl_program& prog, int var, const gl_vertex_buffer& buf, const vec4f& def);
-~~~
-
-Sets a vartex attribute for program pid and variable var. The attribute
-is either a buffer bid or a single value def
-(if bid is zero). Convenience wrapper to above functions.
-
-#### Function set_program_vertattr()
-
-~~~ .cpp
+template <typename T, int N>
 inline bool set_program_vertattr(gl_program& prog, const string& var,
-    const gl_vertex_buffer& buf, const vec2f& def);
-~~~
-
-Sets a vartex attribute for program pid and variable var. The attribute
-is either a buffer bid or a single value def
-(if bid is zero). Convenience wrapper to above functions.
-
-#### Function set_program_vertattr()
-
-~~~ .cpp
-inline bool set_program_vertattr(gl_program& prog, const string& var,
-    const gl_vertex_buffer& buf, const vec3f& def);
-~~~
-
-Sets a vartex attribute for program pid and variable var. The attribute
-is either a buffer bid or a single value def
-(if bid is zero). Convenience wrapper to above functions.
-
-#### Function set_program_vertattr()
-
-~~~ .cpp
-inline bool set_program_vertattr(gl_program& prog, const string& var,
-    const gl_vertex_buffer& buf, const vec4f& def);
+    const gl_vertex_buffer& buf, const vec<T, N>& def);
 ~~~
 
 Sets a vartex attribute for program pid and variable var. The attribute
@@ -12298,33 +11726,6 @@ Value widget
 #### Function draw_value_widget()
 
 ~~~ .cpp
-inline bool draw_value_widget(gl_window* win, const string& lbl, vec2i& val,
-    int min = 0, int max = 1, int incr = 1);
-~~~
-
-Value widget
-
-#### Function draw_value_widget()
-
-~~~ .cpp
-inline bool draw_value_widget(gl_window* win, const string& lbl, vec3i& val,
-    int min = 0, int max = 1, int incr = 1);
-~~~
-
-Value widget
-
-#### Function draw_value_widget()
-
-~~~ .cpp
-inline bool draw_value_widget(gl_window* win, const string& lbl, vec4i& val,
-    int min = 0, int max = 1, int incr = 1);
-~~~
-
-Value widget
-
-#### Function draw_value_widget()
-
-~~~ .cpp
 inline bool draw_value_widget(gl_window* win, const string& lbl, float& val,
     float min = 0, float max = 1, float incr = 1);
 ~~~
@@ -12334,8 +11735,9 @@ Value widget
 #### Function draw_value_widget()
 
 ~~~ .cpp
-inline bool draw_value_widget(gl_window* win, const string& lbl, vec2f& val,
-    float min = 0, float max = 1, float incr = 1);
+template <int N>
+inline bool draw_value_widget(gl_window* win, const string& lbl,
+    vec<int, N>& val, int min = 0, int max = 1, int incr = 1);
 ~~~
 
 Value widget
@@ -12343,8 +11745,9 @@ Value widget
 #### Function draw_value_widget()
 
 ~~~ .cpp
-inline bool draw_value_widget(gl_window* win, const string& lbl, vec3f& val,
-    float min = 0, float max = 1, float incr = 1);
+template <int N>
+inline bool draw_value_widget(gl_window* win, const string& lbl,
+    vec<float, N>& val, float min = 0, float max = 1, float incr = 0.01f);
 ~~~
 
 Value widget
@@ -12352,17 +11755,8 @@ Value widget
 #### Function draw_value_widget()
 
 ~~~ .cpp
-inline bool draw_value_widget(gl_window* win, const string& lbl, vec4f& val,
-    float min = 0, float max = 1, float incr = 1);
-~~~
-
-Value widget
-
-#### Function draw_value_widget()
-
-~~~ .cpp
-inline bool draw_value_widget(gl_window* win, const string& lbl, mat4f& val,
-    float min = 0, float max = 1, float incr = 1);
+inline bool draw_value_widget(gl_window* win, const string& lbl,
+    mat<float, 4>& val, float min = 0, float max = 1, float incr = 0.01f);
 ~~~
 
 Slider widget
@@ -12370,8 +11764,8 @@ Slider widget
 #### Function draw_value_widget()
 
 ~~~ .cpp
-inline bool draw_value_widget(gl_window* win, const string& lbl, frame3f& val,
-    float min = -1, float max = 1, float incr = 1);
+inline bool draw_value_widget(gl_window* win, const string& lbl,
+    frame<float, 3>& val, float min = -1, float max = 1, float incr = 1);
 ~~~
 
 Slider widget
@@ -12379,8 +11773,9 @@ Slider widget
 #### Function draw_value_widget()
 
 ~~~ .cpp
+template <typename T, int N>
 inline bool draw_value_widget(
-    gl_window* win, const string& lbl, quat4f& val, float incr = 1);
+    gl_window* win, const string& lbl, quat<T, N>& val, float incr = 1);
 ~~~
 
 Slider widget
