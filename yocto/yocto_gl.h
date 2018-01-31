@@ -6831,13 +6831,13 @@ namespace ygl {
 /// Scene Texture
 struct texture {
     /// name
-    string name;
+    string name = "";
     /// path
-    string path;
+    string path = "";
     /// if loaded, ldr image
-    image4b ldr;
+    image4b ldr = {};
     /// if loaded, hdr image
-    image4f hdr;
+    image4f hdr = {};
 
     /// if loaded, whether it is empty
     bool empty() const { return ldr.empty() && hdr.empty(); }
@@ -6885,7 +6885,7 @@ enum struct material_type {
 struct material {
     // whole material data -------------------
     /// material name
-    string name;
+    string name = "";
     /// double-sided rendering
     bool double_sided = false;
     /// material type
@@ -6997,7 +6997,7 @@ struct shape {
 /// Shape instance.
 struct instance {
     // name
-    string name;
+    string name = "";
     /// transform frame
     frame3f frame = identity_frame3f;
     /// shape instance
@@ -7014,7 +7014,7 @@ struct instance {
 /// Scene Camera
 struct camera {
     /// name
-    string name;
+    string name = "";
     /// transform frame
     frame3f frame = identity_frame3f;
     /// ortho cam
@@ -7036,7 +7036,7 @@ struct camera {
 /// Envinonment map
 struct environment {
     /// name
-    string name;
+    string name = "";
     /// transform frame
     frame3f frame = identity_frame3f;
     /// emission coefficient
@@ -7054,23 +7054,44 @@ struct light {
     environment* env = nullptr;
 };
 
+/// Node hierarchy
+struct node {
+    /// name
+    string name = "";
+    /// frame
+    frame3f frame = identity_frame3f;
+    /// node camera
+    camera* cam = nullptr;
+    /// node instance
+    instance* ist = nullptr;
+    /// node environment
+    environment* env = nullptr;
+    /// child nodes
+    vector<node*> children = {};
+};
+
 /// Scene
 struct scene {
     /// shape array
-    vector<shape*> shapes;
+    vector<shape*> shapes = {};
     /// instance array
-    vector<instance*> instances;
+    vector<instance*> instances = {};
     /// material array
-    vector<material*> materials;
+    vector<material*> materials = {};
     /// texture array
-    vector<texture*> textures;
+    vector<texture*> textures = {};
     /// camera array
-    vector<camera*> cameras;
+    vector<camera*> cameras = {};
     /// environment array
-    vector<environment*> environments;
+    vector<environment*> environments = {};
 
     /// light array
-    vector<light*> lights;
+    vector<light*> lights = {};
+
+    /// node root hierarchy
+    node* root = nullptr;
+    /// node hierarchy
+    vector<node*> nodes = {};
 
     // computed data --------------------------
     /// BVH
@@ -7094,6 +7115,8 @@ struct scene {
             if (v) delete v;
         for (auto light : lights)
             if (light) delete light;
+        for (auto node : nodes)
+            if (node) delete node;
         if (bvh) delete bvh;
     }
 };
@@ -7364,6 +7387,21 @@ inline void tesselate_shapes(scene* scn, bool subdivide,
         tesselate_shape(shp, subdivide, facevarying_to_sharedvertex,
             quads_to_triangles, bezier_to_lines);
     }
+}
+
+/// Update node transforms
+inline void update_transforms(
+    node* nde, const frame3f& parent = identity_frame3f) {
+    auto frame = parent * nde->frame;
+    if (nde->ist) nde->ist->frame = frame;
+    if (nde->cam) nde->cam->frame = frame;
+    if (nde->env) nde->env->frame = frame;
+    for (auto child : nde->children) update_transforms(child, frame);
+}
+
+/// Update node transforms
+inline void update_transforms(scene* scn) {
+    if (scn->root) update_transforms(scn->root);
 }
 
 /// Loading options

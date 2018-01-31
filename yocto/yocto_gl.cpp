@@ -78,6 +78,7 @@
 //
 // ## Infrastructure
 //
+// - build gl by default
 // - transforms in scene
 // - evaluate meshes with multiple shapes
 // - uniform serialization
@@ -5977,27 +5978,35 @@ inline void save_obj_scene(
 #if YGL_GLTF
 
 // Instance gltf cameras and meshes
-inline void gltf_node_to_instances(scene* scn, const vector<camera>& cameras,
+inline node* gltf_node_to_instances(scene* scn, const vector<camera>& cameras,
     const vector<vector<shape*>>& meshes, const glTF* gltf,
     glTFid<glTFNode> nid, const mat4f& xf) {
-    auto nde = gltf->get(nid);
-    auto xform = xf * node_transform(nde);
-    if (nde->camera) {
-        auto cam = new camera(cameras[(int)nde->camera]);
+    auto gnde = gltf->get(nid);
+    auto xform = xf * node_transform(gnde);
+    auto nde = new node();
+    scn->nodes.push_back(nde);
+    nde->name = gnde->name;
+    if (gnde->camera) {
+        auto cam = new camera(cameras[(int)gnde->camera]);
         cam->frame = to_frame(xform);
+        nde->cam = cam;
         scn->cameras.push_back(cam);
     }
-    if (nde->mesh) {
-        for (auto shp : meshes[(int)nde->mesh]) {
+    if (gnde->mesh) {
+        for (auto shp : meshes[(int)gnde->mesh]) {
             auto ist = new instance();
-            ist->name = nde->name;
+            ist->name = gnde->name;
             ist->frame = to_frame(xform);
             ist->shp = shp;
+            nde->ist = ist;
             scn->instances.push_back(ist);
         }
     }
-    for (auto cid : nde->children)
-        gltf_node_to_instances(scn, cameras, meshes, gltf, cid, xform);
+    for (auto cid : gnde->children) {
+        nde->children.push_back(
+            gltf_node_to_instances(scn, cameras, meshes, gltf, cid, xform));
+    }
+    return nde;
 }
 
 // Flattens a gltf file into a flattened asset.
@@ -6302,10 +6311,13 @@ inline scene* gltf_to_scene(const glTF* gltf) {
     }
 
     // instance meshes and cameras
+    auto root = new node();
+    root->name = "root";
+    scn->nodes.push_back(root);
     if (gltf->scene) {
         for (auto nid : gltf->get(gltf->scene)->nodes) {
-            gltf_node_to_instances(
-                scn, cameras, meshes, gltf, nid, identity_mat4f);
+            root->children.push_back(gltf_node_to_instances(
+                scn, cameras, meshes, gltf, nid, identity_mat4f));
         }
     } else if (!gltf->nodes.empty()) {
         // set up node children and root nodes
@@ -6316,8 +6328,8 @@ inline scene* gltf_to_scene(const glTF* gltf) {
         }
         for (auto nid = 0; nid < gltf->nodes.size(); nid++) {
             if (!is_root[nid]) continue;
-            gltf_node_to_instances(scn, cameras, meshes, gltf,
-                glTFid<glTFNode>(nid), identity_mat4f);
+            root->children.push_back(gltf_node_to_instances(scn, cameras,
+                meshes, gltf, glTFid<glTFNode>(nid), identity_mat4f));
         }
     }
 
