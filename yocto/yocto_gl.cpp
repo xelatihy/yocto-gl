@@ -404,7 +404,7 @@ image4f load_image4f(const string& filename) {
         pixels = unique_ptr<float>(stbi_loadf(filename.c_str(), &w, &h, &c, 4));
     }
     if (!pixels) return {};
-    return image4f(w, h, (vec4f*)pixels.get());
+    return make_image(w, h, (vec4f*)pixels.get());
 }
 
 // Saves an ldr image.
@@ -5985,14 +5985,14 @@ inline void gltf_node_to_instances(scene* scn, const vector<camera>& cameras,
     auto xform = xf * node_transform(nde);
     if (nde->camera) {
         auto cam = new camera(cameras[(int)nde->camera]);
-        cam->frame = to_frame3f(xform);
+        cam->frame = to_frame3(xform);
         scn->cameras.push_back(cam);
     }
     if (nde->mesh) {
         for (auto shp : meshes[(int)nde->mesh]) {
             auto ist = new instance();
             ist->name = nde->name;
-            ist->frame = to_frame3f(xform);
+            ist->frame = to_frame3(xform);
             ist->shp = shp;
             scn->instances.push_back(ist);
         }
@@ -6654,7 +6654,7 @@ inline glTF* scene_to_gltf(
         auto gnode = new glTFNode();
         gnode->name = ist->name;
         gnode->mesh = glTFid<glTFMesh>(index(scn->shapes, ist->shp));
-        gnode->matrix = to_mat4f(ist->frame);
+        gnode->matrix = to_mat4(ist->frame);
         gltf->nodes.push_back(gnode);
     }
 
@@ -6663,7 +6663,7 @@ inline glTF* scene_to_gltf(
         auto gnode = new glTFNode();
         gnode->name = cam->name;
         gnode->camera = glTFid<glTFCamera>(index(scn->cameras, cam));
-        gnode->matrix = to_mat4f(cam->frame);
+        gnode->matrix = to_mat4(cam->frame);
         gltf->nodes.push_back(gnode);
     }
 
@@ -6907,7 +6907,7 @@ void add_elements(scene* scn, const add_elements_options& opts) {
         auto from = camera_dir * bbox_msize + bbox_center;
         auto to = bbox_center;
         auto up = vec3f{0, 1, 0};
-        cam->frame = lookat_frame3f(from, to, up);
+        cam->frame = lookat_frame3(from, to, up);
         cam->ortho = false;
         cam->aspect = 16.0f / 9.0f;
         cam->yfov = 2 * atanf(0.5f);
@@ -7926,7 +7926,7 @@ scene* make_cornell_box_scene() {
                            float aperture, float aspect = 16.0f / 9.0f) {
         auto cam = new camera();
         cam->name = name;
-        cam->frame = lookat_frame3f(from, to, {0, 1, 0});
+        cam->frame = lookat_frame3(from, to, {0, 1, 0});
         cam->aperture = aperture;
         cam->focus = length(from - to);
         cam->yfov = yfov * pif / 180;
@@ -7939,9 +7939,9 @@ scene* make_cornell_box_scene() {
         auto ist = new instance();
         ist->name = name;
         ist->shp = shp;
-        ist->frame = {rotation_mat3f(vec3f{0, 0, 1}, rot[2] * pif / 180) *
-                          rotation_mat3f(vec3f{0, 1, 0}, rot[1] * pif / 180) *
-                          rotation_mat3f(vec3f{1, 0, 0}, rot[0] * pif / 180),
+        ist->frame = {rotation_mat3(vec3f{0, 0, 1}, rot[2] * pif / 180) *
+                          rotation_mat3(vec3f{0, 1, 0}, rot[1] * pif / 180) *
+                          rotation_mat3(vec3f{1, 0, 0}, rot[0] * pif / 180),
             pos};
         return ist;
     };
@@ -8408,9 +8408,9 @@ void update_test_instance(
     ist->name = tist.name;
     ist->frame = tist.frame;
     if (tist.rotation != zero3f) {
-        auto rot = rotation_mat3f(vec3f{0, 0, 1}, tist.rotation.z * pif / 180) *
-                   rotation_mat3f(vec3f{0, 1, 0}, tist.rotation.y * pif / 180) *
-                   rotation_mat3f(vec3f{1, 0, 0}, tist.rotation.x * pif / 180);
+        auto rot = rotation_mat3(vec3f{0, 0, 1}, tist.rotation.z * pif / 180) *
+                   rotation_mat3(vec3f{0, 1, 0}, tist.rotation.y * pif / 180) *
+                   rotation_mat3(vec3f{1, 0, 0}, tist.rotation.x * pif / 180);
         ist->frame.rot() = ist->frame.rot() * rot;
     }
     ist->shp = shp;
@@ -8422,7 +8422,7 @@ void update_test_camera(
     if (tcam.name == "") throw runtime_error("cannot use empty name");
 
     cam->name = tcam.name;
-    cam->frame = lookat_frame3f(tcam.from, tcam.to, {0, 1, 0});
+    cam->frame = lookat_frame3(tcam.from, tcam.to, vec3f{0, 1, 0});
     cam->yfov = tcam.yfov;
     cam->aspect = tcam.aspect;
     cam->near = 0.01f;
@@ -8444,7 +8444,7 @@ void update_test_environment(
     env->name = tenv.name;
     env->frame = identity_frame3f;
     if (tenv.rotation) {
-        env->frame = rotation_frame3f({0, 1, 0}, tenv.rotation);
+        env->frame = rotation_frame3({0, 1, 0}, tenv.rotation);
     }
     env->ke = tenv.emission * tenv.color;
     env->ke_txt.txt = txt;
@@ -8875,7 +8875,7 @@ unordered_map<string, test_scene_params>& test_scene_presets() {
                 params.instances += make_test_instance(name, name, pos[i]);
                 if (lights == "arealights" || lights == "arealights1")
                     params.instances.back().frame =
-                        lookat_frame3f(pos[i], {0, 1, 0}, {0, 0, 1}, true);
+                        lookat_frame3(pos[i], {0, 1, 0}, {0, 0, 1}, true);
             }
         }
         if (lights == "envlights") {
@@ -10688,9 +10688,9 @@ void draw_stdsurface_scene(gl_stdsurface_state* st, const scene* scn,
 
     auto cam = scn->cameras[params.camera_id];
     mat4f camera_xform, camera_view, camera_proj;
-    camera_xform = to_mat4f(cam->frame);
-    camera_view = to_mat4f(inverse(cam->frame));
-    camera_proj = perspective_mat4f(cam->yfov,
+    camera_xform = to_mat4(cam->frame);
+    camera_view = to_mat4(inverse(cam->frame));
+    camera_proj = perspective_mat4(cam->yfov,
         (float)params.width / (float)params.height, cam->near, cam->far);
 
     begin_stdsurface_frame(st->prog, params.camera_lights, params.exposure,
