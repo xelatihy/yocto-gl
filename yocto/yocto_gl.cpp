@@ -78,11 +78,6 @@
 //
 // ## Infrastructure
 //
-// - templated vectors and matrices
-// - remove vec2...
-// - transform name cleanup
-// - bbox1 -> bbox<vec<1>>
-// - simpler images
 // - transforms in scene
 // - evaluate meshes with multiple shapes
 // - uniform serialization
@@ -519,9 +514,10 @@ void resize_image(const image4f& img, image4f& res_img, resize_filter filter,
             {resize_edge::wrap, STBIR_EDGE_WRAP},
             {resize_edge::zero, STBIR_EDGE_ZERO}};
 
-    stbir_resize_float_generic((float*)img.pixels.data(), img.width(), img.height(),
-        sizeof(vec4f) * img.width(), (float*)res_img.pixels.data(), res_img.width(),
-        res_img.height(), sizeof(vec4f) * res_img.width(), 4, 3,
+    stbir_resize_float_generic((float*)img.pixels.data(), img.width(),
+        img.height(), sizeof(vec4f) * img.width(),
+        (float*)res_img.pixels.data(), res_img.width(), res_img.height(),
+        sizeof(vec4f) * res_img.width(), 4, 3,
         (premultiplied_alpha) ? STBIR_FLAG_ALPHA_PREMULTIPLIED : 0,
         edge_map.at(edge), filter_map.at(filter), STBIR_COLORSPACE_LINEAR,
         nullptr);
@@ -547,8 +543,8 @@ void resize_image(const image4b& img, image4b& res_img, resize_filter filter,
 
     stbir_resize_uint8_generic((unsigned char*)img.pixels.data(), img.width(),
         img.height(), sizeof(vec4b) * img.width(),
-        (unsigned char*)res_img.pixels.data(), res_img.width(), res_img.height(),
-        sizeof(vec4b) * res_img.width(), 4, 3,
+        (unsigned char*)res_img.pixels.data(), res_img.width(),
+        res_img.height(), sizeof(vec4b) * res_img.width(), 4, 3,
         (premultiplied_alpha) ? STBIR_FLAG_ALPHA_PREMULTIPLIED : 0,
         edge_map.at(edge), filter_map.at(filter), STBIR_COLORSPACE_LINEAR,
         nullptr);

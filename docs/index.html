@@ -23,8 +23,8 @@ algorithms implemented as a two-file library (<code>yocto_gl.h</code>, <code>yoc
 and released under the MIT license. Features include:</p>
 <ul>
 <li>convenience math functions for graphics</li>
-<li>static length vectors for 2, 3, 4 length and int and float type</li>
-<li>static length matrices for 2x2, 3x3, 4x4 and float type</li>
+<li>static length vectors for 2, 3, 4 length of arbitrary type</li>
+<li>static length matrices for 2x2, 3x3, 4x4 of arbitrary type</li>
 <li>static length rigid transforms (frames), specialized for 2d and 3d space</li>
 <li>linear algebra operations and transforms</li>
 <li>axis aligned bounding boxes</li>
@@ -132,25 +132,27 @@ You can find the extracted documentation at <code>yocto_gl.html</code>.
 Here we give an overview of some of the main features.</p>
 <h3>Small Vectors and Matrices, Frames, Bounding Boxes and Transforms</h3>
 <p>We provide common operations for small vectors and matrices typically used
-in graphics. In particular, we support 2-4 dimensional float vectors
-<code>vec2f</code>, <code>vec3f</code>, <code>vec4f</code>, 2-4 dimensional int vectors <code>vec2i</code>, <code>vec3i</code>,
-<code>vec4i</code> and a 4 dimensional byte vector <code>vec4b</code>. The float vectors
-support most arithmetic and vector operations.</p>
-<p>We support 2-4 dimensional float matrices <code>mat2f</code>, <code>mat3f</code>, <code>mat4f</code>, with
-matrix-matrix and matrix-vector products, trasposes and inverses. Matrices
-are stored in column-major ordered and are accessed and constructed by
-column.</p>
+in graphics. In particular, we support 2-4 dimensional vectors of arbitrary
+<code>vec&lt;T, 2&gt;</code>, <code>vec&lt;T, 3&gt;</code>, <code>vec&lt;T, 4&gt;</code> with specializarion for float
+(<code>vec2f</code>, <code>vec3f</code>, <code>vec4f</code>), int (<code>vec2i</code>, <code>vec3i</code>, <code>vec4i</code>) and bytes
+(<code>vec4b</code>). Vector operations are templated so they work on every type, but
+many of them are well-defined only for float types.</p>
+<p>We support 2-4 dimensional generic matrices <code>mat&lt;T, 2&gt;</code>, <code>mat&lt;T, 3&gt;</code>,
+<code>mat&lt;T, 4&gt;</code>, with matrix-matrix and matrix-vector products, trasposes and
+inverses. Matrices are stored in column-major ordered and are accessed and
+constructed by column.</p>
 <p>To represent transformations, most of the library facilities prefer the use
-cooordinate frames, aka rigid transforms, represented as <code>frame3f</code>.
+cooordinate frames, aka rigid transforms, represented as <code>frame&lt;T, 3&gt;</code>.
 The structure store three coodinate axis and the frame origin. This is
 equivalenent to a rigid transform written as a column-major affine
 matrix. Transform operations are better behaved with this representation.</p>
 <p>We represent coordinate bounds with axis-aligned bounding boxes in 1-4
-dimensions: <code>bbox1f</code>, <code>bbox2f</code>, <code>bbox3f</code>, <code>bbox4f</code>. These types support
-expansion operation, union and containment. We provide operations to
-compute bounds for points, lines, triangles and quads.</p>
-<p>For all basic types we support iteration with <code>begin()</code>/<code>end()</code> pairs
-and stream inout and output.</p>
+dimensions: <code>bbox&lt;T, 1&gt;</code>, <code>bbox&lt;T, 2&gt;</code>, <code>bbox&lt;T, 3&gt;</code>, <code>bbox&lt;T, 4&gt;</code>. These
+types support expansion operation, union and containment. We provide
+operations to compute bounds for points, lines, triangles and quads.</p>
+<p>For all basic types we support iteration with <code>begin()</code>/<code>end()</code> pairs,
+data access with <code>data()</code>, <code>empty()</code> and <code>size()</code> and stream inout and
+output.</p>
 <p>For both matrices and frames we support transform operations for points,
 vectors and directions (<code>trasform_point()</code>, <code>trasform_vector()</code>,
 <code>trasform_direction()</code>). For frames we also the support inverse operations
@@ -234,8 +236,9 @@ manipulation useful to support scene viewing and path tracing.</p>
     <code>make_suzanne()</code></li>
 </ol>
 <h3>Image and color</h3>
-<p>We support simple containers for either 4-byte per pixel sRGB images
-<code>image4b</code>, or 4-float per pixel HDR images <code>image4f</code>.</p>
+<p>Imags are stored with the <code>image</code> templated structure. The two most used
+image types are 4-byte per pixel sRGB images <code>image4b</code>, or 4-float per
+pixel HDR images <code>image4f</code>.</p>
 <ol>
 <li>convert between byte and float images with <code>srgb_to_linear()</code> and
    <code>linear_to_srgb()</code></li>

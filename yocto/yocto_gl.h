@@ -1758,11 +1758,11 @@ template <typename T, int N>
 inline int size(mat<T, N>& a) {
     return N;
 }
-    /// vector empty
-    template <typename T, int N>
-    inline bool empty(mat<T, N>& a) {
-        return false;
-    }
+/// vector empty
+template <typename T, int N>
+inline bool empty(mat<T, N>& a) {
+    return false;
+}
 
 /// matrix operator ==
 template <typename T>
@@ -2182,11 +2182,11 @@ template <typename T, int N>
 inline int size(frame<T, N>& a) {
     return N + 1;
 }
-    /// vector empty
-    template <typename T, int N>
-    inline bool empty(frame<T, N>& a) {
-        return false;
-    }
+/// vector empty
+template <typename T, int N>
+inline bool empty(frame<T, N>& a) {
+    return false;
+}
 
 // initializes a frame3 from origin and z.
 template <typename T>
@@ -2341,11 +2341,11 @@ template <typename T, int N>
 inline int size(quat<T, N>& a) {
     return N;
 }
-    /// vector empty
-    template <typename T, int N>
-    inline bool empty(quat<T, N>& a) {
-        return false;
-    }
+/// vector empty
+template <typename T, int N>
+inline bool empty(quat<T, N>& a) {
+    return false;
+}
 
 /// vector operator ==
 template <typename T>
@@ -4983,7 +4983,8 @@ struct image {
     /// empty image constructor
     image() : _w{0}, _h{0}, pixels{} {}
     /// image constructor
-    image(int w, int h, const T& v = {}) : _w{w}, _h{h}, pixels(size_t(w * h), v) {}
+    image(int w, int h, const T& v = {})
+        : _w{w}, _h{h}, pixels(size_t(w * h), v) {}
 
     /// width
     int width() const { return _w; }
@@ -4997,7 +4998,9 @@ struct image {
     /// element access
     T& operator[](const vec2i& ij) { return pixels[ij.y * _w + ij.x]; }
     /// element access
-    const T& operator[](const vec2i& ij) const { return pixels[ij.y * _w + ij.x]; }
+    const T& operator[](const vec2i& ij) const {
+        return pixels[ij.y * _w + ij.x];
+    }
     /// element access
     T& at(const vec2i& ij) { return pixels.at(ij.y * _w + ij.x); }
     /// element access
@@ -5015,48 +5018,48 @@ struct image {
 using image4f = image<vec4f>;
 /// LDR image
 using image4b = image<vec4b>;
-    
-    /// iteration support
-    template <typename T>
-    inline T* begin(image<T>& a) {
-        return a.pixels.data();
-    }
-    /// iteration support
-    template <typename T>
-    inline const T* begin(const image<T>& a) {
-        return a.pixels.data();
-    }
-    /// iteration support
-    template <typename T>
-    inline T* end(image<T>& a) {
-        return a.pixels.data() + a.width()*a.height();
-    }
-    /// iteration support
-    template <typename T>
-    inline const T* end(const image<T>& a) {
-        return a.pixels.data() + a.width()*a.height();
-    }
-    /// vector data access
-    template <typename T>
-    inline T* data(image<T>& a) {
-        return a.pixels.data();
-    }
-    /// vector data access
-    template <typename T>
-    inline const T* data(const image<T>& a) {
-        return a.pixels.data();
-    }
-    /// vector size
-    template <typename T>
-    inline int size(image<T>& a) {
-        return a.width()*a.height();
-    }
-    /// vector empty
-    template <typename T>
-    inline bool empty(image<T>& a) {
-        return a.width()*a.height() == 0;
-    }
-    
+
+/// iteration support
+template <typename T>
+inline T* begin(image<T>& a) {
+    return a.pixels.data();
+}
+/// iteration support
+template <typename T>
+inline const T* begin(const image<T>& a) {
+    return a.pixels.data();
+}
+/// iteration support
+template <typename T>
+inline T* end(image<T>& a) {
+    return a.pixels.data() + a.width() * a.height();
+}
+/// iteration support
+template <typename T>
+inline const T* end(const image<T>& a) {
+    return a.pixels.data() + a.width() * a.height();
+}
+/// vector data access
+template <typename T>
+inline T* data(image<T>& a) {
+    return a.pixels.data();
+}
+/// vector data access
+template <typename T>
+inline const T* data(const image<T>& a) {
+    return a.pixels.data();
+}
+/// vector size
+template <typename T>
+inline int size(image<T>& a) {
+    return a.width() * a.height();
+}
+/// vector empty
+template <typename T>
+inline bool empty(image<T>& a) {
+    return a.width() * a.height() == 0;
+}
+
 /// Create an image with values stored in an array in scanliine order.
 template <typename T>
 inline image<T> make_image(int w, int h, T* vals) {
@@ -6835,7 +6838,7 @@ struct texture {
     image4b ldr;
     /// if loaded, hdr image
     image4f hdr;
-    
+
     /// if loaded, whether it is empty
     bool empty() const { return ldr.empty() && hdr.empty(); }
     /// if loaded, whether it is ldr
@@ -6844,13 +6847,9 @@ struct texture {
     bool is_hdr() const { return !hdr.empty(); }
 
     /// if loaded, get texture width
-    int width() const {
-        return (is_ldr()) ? ldr.width() : hdr.width();
-    }
+    int width() const { return (is_ldr()) ? ldr.width() : hdr.width(); }
     /// if loaded, get texture height
-    int height() const {
-        return (is_ldr()) ? ldr.height() : hdr.height();
-    }
+    int height() const { return (is_ldr()) ? ldr.height() : hdr.height(); }
 };
 
 /// Scene Texture Additional Information
@@ -12128,15 +12127,15 @@ inline void draw_imageinspect_widgets(gl_window* win, const string& lbl,
     auto ij = vec2i{(int)round(xy.x), (int)round(xy.y)};
     auto v4f = zero4f;
     auto v4b = zero4b;
-    if(hdr) {
-        auto wh = vec2i{hdr.width(),hdr.height()};
+    if (hdr) {
+        auto wh = vec2i{hdr.width(), hdr.height()};
         if (ij.x >= 0 && ij.x < wh.x && ij.y >= 0 && ij.y < wh.y) {
             v4f = hdr.at(ij);
             v4b = linear_to_srgb(hdr.at(ij));
         }
     }
-    if(ldr) {
-        auto wh = vec2i{ldr.width(),ldr.height()};
+    if (ldr) {
+        auto wh = vec2i{ldr.width(), ldr.height()};
         if (ij.x >= 0 && ij.x < wh.x && ij.y >= 0 && ij.y < wh.y) {
             v4f = srgb_to_linear(ldr.at(ij));
             v4b = ldr.at(ij);
