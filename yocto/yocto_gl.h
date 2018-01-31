@@ -4968,8 +4968,6 @@ struct image {
     int width() const { return _w; }
     /// height
     int height() const { return _h; }
-    /// size
-    vec2i size() const { return {_w, _h}; }
     /// check for empty
     bool empty() const { return _w == 0 || _h == 0; }
     /// check for empty
@@ -6781,18 +6779,21 @@ struct texture {
     image4b ldr;
     /// if loaded, hdr image
     image4f hdr;
+    
+    /// if loaded, whether it is empty
+    bool empty() const { return ldr.empty() && hdr.empty(); }
+    /// if loaded, whether it is ldr
+    bool is_ldr() const { return !ldr.empty(); }
+    /// if loaded, whether it is hdr
+    bool is_hdr() const { return !hdr.empty(); }
 
-    /// get texture width
+    /// if loaded, get texture width
     int width() const {
-        if (ldr) return ldr.width();
-        if (hdr) return hdr.width();
-        return 0;
+        return (is_ldr()) ? ldr.width() : hdr.width();
     }
-    /// get texture height
+    /// if loaded, get texture height
     int height() const {
-        if (ldr) return ldr.height();
-        if (hdr) return hdr.height();
-        return 0;
+        return (is_ldr()) ? ldr.height() : hdr.height();
     }
 };
 
@@ -12069,12 +12070,21 @@ inline void draw_imageinspect_widgets(gl_window* win, const string& lbl,
     const gl_stdimage_params& params) {
     auto xy = (mouse_pos - params.offset) / params.zoom;
     auto ij = vec2i{(int)round(xy.x), (int)round(xy.y)};
-    auto wh = (hdr) ? hdr.size() : ldr.size();
     auto v4f = zero4f;
     auto v4b = zero4b;
-    if (ij.x >= 0 && ij.x < wh.x && ij.y >= 0 && ij.y < wh.y) {
-        v4f = (hdr) ? hdr.at(ij) : srgb_to_linear(ldr.at(ij));
-        v4b = (hdr) ? linear_to_srgb(hdr.at(ij)) : ldr.at(ij);
+    if(hdr) {
+        auto wh = vec2i{hdr.width(),hdr.height()};
+        if (ij.x >= 0 && ij.x < wh.x && ij.y >= 0 && ij.y < wh.y) {
+            v4f = hdr.at(ij);
+            v4b = linear_to_srgb(hdr.at(ij));
+        }
+    }
+    if(ldr) {
+        auto wh = vec2i{ldr.width(),ldr.height()};
+        if (ij.x >= 0 && ij.x < wh.x && ij.y >= 0 && ij.y < wh.y) {
+            v4f = srgb_to_linear(ldr.at(ij));
+            v4b = ldr.at(ij);
+        }
     }
     draw_label_widget(win, lbl + "mouse pos", ij);
     draw_label_widget(win, lbl + "hdr val", v4f);
