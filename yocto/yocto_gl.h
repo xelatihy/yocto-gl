@@ -986,6 +986,23 @@ namespace ygl {
 template <typename T, int N>
 struct vec;
 
+/// Vector of 1 element. Defined only for completeness.
+template <typename T>
+struct vec<T, 1> {
+    /// default constructor
+    vec() : x{0} {}
+    /// element constructor
+    vec(T x) : x{x} {}
+
+    /// element access
+    T& operator[](int i) { return (&x)[i]; }
+    /// element access
+    const T& operator[](int i) const { return (&x)[i]; }
+
+    /// element data
+    T x;
+};
+
 /// Vector of 2 elements.
 template <typename T>
 struct vec<T, 2> {
@@ -1062,12 +1079,16 @@ struct vec<T, 4> {
     T w;
 };
 
+/// 1-dimension float vector
+using vec1f = vec<float, 1>;
 /// 2-dimension float vector
 using vec2f = vec<float, 2>;
 /// 3-dimension float vector
 using vec3f = vec<float, 3>;
 /// 4-dimension float vector
 using vec4f = vec<float, 4>;
+/// 1-dimension int vector
+using vec1i = vec<int, 1>;
 /// 2-dimension int vector
 using vec2i = vec<int, 2>;
 /// 3-dimension int vector
@@ -1079,20 +1100,22 @@ using vec3b = vec<byte, 3>;
 /// 4-dimension byte vector
 using vec4b = vec<byte, 4>;
 
+/// 1-dimensional float zero vector
+const auto zero1f = vec1f();
 /// 2-dimensional float zero vector
 const auto zero2f = vec2f();
 /// 3-dimensional float zero vector
 const auto zero3f = vec3f();
 /// 4-dimensional float zero vector
 const auto zero4f = vec4f();
-
+/// 1-dimensional int zero vector
+const auto zero1i = vec1i();
 /// 2-dimensional int zero vector
 const auto zero2i = vec2i();
 /// 3-dimensional int zero vector
 const auto zero3i = vec3i();
 /// 4-dimensional int zero vector
 const auto zero4i = vec4i();
-
 /// 4-dimensional byte zero vector
 const auto zero4b = vec4b();
 
@@ -1130,6 +1153,17 @@ inline const T* data(const vec<T, N>& a) {
 template <typename T, int N>
 inline int size(vec<T, N>& a) {
     return N;
+}
+
+/// vector operator ==
+template <typename T>
+inline bool operator==(const vec<T, 1>& a, const vec<T, 1>& b) {
+    return a.x == b.x;
+}
+/// vector operator !=
+template <typename T>
+inline bool operator!=(const vec<T, 1>& a, const vec<T, 1>& b) {
+    return a.x != b.x;
 }
 
 /// vector operator ==
@@ -2380,87 +2414,23 @@ inline istream& operator>>(istream& is, quat<T, N>& a) {
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-/// Generic bounbding box of N elements. This is used only to define template
-/// specializations for small fixed sized bounding boxes.
-template <typename T, int N>
-struct bbox;
-
 /// Axis aligned bounding box represented as a min/max vector pair.
-template <typename T>
-struct bbox<T, 1> {
+template <typename T, int N>
+struct bbox {
     /// initializes an invalid bbox
     bbox() : min{flt_max}, max{flt_min} {}
     /// list constructor
-    bbox(T m, T M) : min{m}, max{M} {}
+    bbox(const vec<T, N>& m, const vec<T, N>& M) : min{m}, max{M} {}
 
     /// element access
-    T& operator[](int i) { return (&min)[i]; }
+    vec<T, N>& operator[](int i) { return (&min)[i]; }
     /// element access
-    const T& operator[](int i) const { return (&min)[i]; }
+    const vec<T, N>& operator[](int i) const { return (&min)[i]; }
 
     /// element data
-    T min;
+    vec<T, N> min;
     /// element data
-    T max;
-};
-
-/// Axis aligned bounding box represented as a min/max vector pair.
-template <typename T>
-struct bbox<T, 2> {
-    /// initializes an invalid bbox
-    bbox() : min{flt_max, flt_max}, max{flt_min, flt_min} {}
-    /// list constructor
-    bbox(const vec<T, 2>& m, const vec<T, 2>& M) : min{m}, max{M} {}
-
-    /// element access
-    vec<T, 2>& operator[](int i) { return (&min)[i]; }
-    /// element access
-    const vec<T, 2>& operator[](int i) const { return (&min)[i]; }
-
-    /// element data
-    vec<T, 2> min;
-    /// element data
-    vec<T, 2> max;
-};
-
-/// Axis aligned bounding box represented as a min/max vector pair.
-template <typename T>
-struct bbox<T, 3> {
-    /// initializes an invalid bbox
-    bbox() : min{flt_max, flt_max, flt_max}, max{flt_min, flt_min, flt_min} {}
-    /// list constructor
-    bbox(const vec<T, 3>& m, const vec<T, 3>& M) : min{m}, max{M} {}
-
-    /// element access
-    vec<T, 3>& operator[](int i) { return (&min)[i]; }
-    /// element access
-    const vec<T, 3>& operator[](int i) const { return (&min)[i]; }
-
-    /// element data
-    vec<T, 3> min;
-    /// element data
-    vec<T, 3> max;
-};
-
-/// Axis aligned bounding box represented as a min/max vector pair.
-template <typename T>
-struct bbox<T, 4> {
-    /// initializes an invalid bbox
-    bbox()
-        : min{flt_max, flt_max, flt_max, flt_max}
-        , max{flt_min, flt_min, flt_min, flt_min} {}
-    /// list constructor
-    bbox(const vec<T, 4>& m, const vec<T, 4>& M) : min{m}, max{M} {}
-
-    /// element access
-    vec<T, 4>& operator[](int i) { return (&min)[i]; }
-    /// element access
-    const vec<T, 4>& operator[](int i) const { return (&min)[i]; }
-
-    /// element data
-    vec<T, 4> min;
-    /// element data
-    vec<T, 4> max;
+    vec<T, N> max;
 };
 
 /// 1-dimension float bounding box
@@ -2482,59 +2452,16 @@ const auto invalid_bbox3f = bbox3f();
 const auto invalid_bbox4f = bbox4f();
 
 /// bbox operator ==
-template <typename T>
-inline bool operator==(const bbox<T, 1>& a, const bbox<T, 1>& b) {
+template <typename T, int N>
+inline bool operator==(const bbox<T, N>& a, const bbox<T, N>& b) {
     return a.min == b.min && a.max == b.max;
 }
 /// bbox operator !=
-template <typename T>
-inline bool operator!=(const bbox<T, 1>& a, const bbox<T, 1>& b) {
+template <typename T, int N>
+inline bool operator!=(const bbox<T, N>& a, const bbox<T, N>& b) {
     return a.min != b.min || a.max != b.max;
 }
 
-/// bbox operator ==
-template <typename T>
-inline bool operator==(const bbox<T, 2>& a, const bbox<T, 2>& b) {
-    return a.min == b.min && a.max == b.max;
-}
-/// bbox operator !=
-template <typename T>
-inline bool operator!=(const bbox<T, 2>& a, const bbox<T, 2>& b) {
-    return a.min != b.min || a.max != b.max;
-}
-
-/// bbox operator ==
-template <typename T>
-inline bool operator==(const bbox<T, 3>& a, const bbox<T, 3>& b) {
-    return a.min == b.min && a.max == b.max;
-}
-/// bbox operator !=
-template <typename T>
-inline bool operator!=(const bbox<T, 3>& a, const bbox<T, 3>& b) {
-    return a.min != b.min || a.max != b.max;
-}
-
-/// bbox operator ==
-template <typename T>
-inline bool operator==(const bbox<T, 4>& a, const bbox<T, 4>& b) {
-    return a.min == b.min && a.max == b.max;
-}
-/// bbox operator !=
-template <typename T>
-inline bool operator!=(const bbox<T, 4>& a, const bbox<T, 4>& b) {
-    return a.min != b.min || a.max != b.max;
-}
-
-/// computes the center of a bbox
-template <typename T>
-inline T bbox_center(const bbox<T, 1>& a) {
-    return (a.min + a.max) / 2;
-}
-/// computes the diagonal of a bbox
-template <typename T>
-inline T bbox_diagonal(const bbox<T, 1>& a) {
-    return a.max - a.min;
-}
 /// computes the center of a bbox
 template <typename T, int N>
 inline vec<T, N> bbox_center(const bbox<T, N>& a) {
@@ -2549,7 +2476,12 @@ inline vec<T, N> bbox_diagonal(const bbox<T, N>& a) {
 /// expands a bounding box with a point
 template <typename T>
 inline bbox<T, 1> expand(const bbox<T, 1>& a, T b) {
-    return {min(a.min, b), max(a.max, b)};
+    return {{min(a.min.x, b)}, {max(a.max.x, b)}};
+}
+/// expands a bounding box with a point
+template <typename T>
+inline bbox<T, 1> expand(const bbox<T, 1>& a, const vec<T, 1>& b) {
+    return {{min(a.min.x, b.x)}, {max(a.max.x, b.x)}};
 }
 /// expands a bounding box with a point
 template <typename T>
@@ -2600,27 +2532,20 @@ inline bbox<T, 4> expand(const bbox<T, 4>& a, const bbox<T, 4>& b) {
 }
 
 /// check if a bounding box contains a point
-template <typename T>
-inline bool contains(const bbox<T, 3>& a, const vec<T, 3>& b) {
-    if (a.min.x > b.x || a.max.x < b.x) return false;
-    if (a.min.y > b.y || a.max.y < b.y) return false;
-    if (a.min.z > b.z || a.max.z < b.z) return false;
+template <typename T, int N>
+inline bool contains(const bbox<T, N>& a, const vec<T, N>& b) {
+    for (auto i = 0; i < N; i++)
+        if (a.min[i] > b[i] || a.max[i] < b[i]) return false;
     return true;
 }
 /// check if a bounding box contains a bounding box
-template <typename T>
+template <typename T, int N>
 inline bool contains(const bbox<T, 3>& a, const bbox<T, 3>& b) {
-    if (a.min.x > b.max.x || a.max.x < b.min.x) return false;
-    if (a.min.y > b.max.y || a.max.y < b.min.y) return false;
-    if (a.min.z > b.max.z || a.max.z < b.min.z) return false;
+    for (auto i = 0; i < N; i++)
+        if (a.min[i] > b.max[i] || a.max[i] < b.min[i]) return false;
     return true;
 }
 
-/// assign to expand()
-template <typename T>
-inline bbox<T, 1>& operator+=(bbox<T, 1>& a, T b) {
-    return a = expand(a, b);
-}
 /// assign to expand()
 template <typename T, int N>
 inline bbox<T, N>& operator+=(bbox<T, N>& a, const vec<T, N>& b) {
@@ -2632,20 +2557,6 @@ inline bbox<T, N>& operator+=(bbox<T, N>& a, const bbox<T, N>& b) {
     return a = expand(a, b);
 }
 
-/// initialize a bonding box from a list of points
-template <typename T>
-inline bbox<T, 1> make_bbox(int count, const T* v) {
-    auto a = bbox<T, 1>();
-    for (auto j = 0; j < count; j++) a += v[j];
-    return a;
-}
-/// initialize a bonding box from a list of points
-template <typename T>
-inline bbox<T, 1> make_bbox(const initializer_list<T>& v) {
-    auto a = bbox<T, 1>();
-    for (auto&& vv : v) a += vv;
-    return a;
-}
 /// initialize a bonding box from a list of points
 template <typename T, int N>
 inline bbox<T, N> make_bbox(int count, const vec<T, N>* v) {
@@ -11994,27 +11905,29 @@ inline bool draw_value_widget(gl_window* win, const string& lbl, float& val,
 }
 
 /// Value widget
-template <typename T, int N>
-inline bool draw_value_widget(gl_window* win, const string& lbl, vec<T, N>& val,
-    int min = 0, int max = 1, int incr = 1) {
+template <int N>
+inline bool draw_value_widget(gl_window* win, const string& lbl,
+    vec<int, N>& val, int min = 0, int max = 1, int incr = 1) {
     return draw_value_widget(win, lbl, data(val), N, min, max, incr);
 }
-
+/// Value widget
+template <int N>
+inline bool draw_value_widget(gl_window* win, const string& lbl,
+    vec<float, N>& val, float min = 0, float max = 1, float incr = 0.01f) {
+    return draw_value_widget(win, lbl, data(val), N, min, max, incr);
+}
 /// Slider widget
-template <typename T>
-inline bool draw_value_widget(gl_window* win, const string& lbl, mat<T, 4>& val,
-    float min = 0, float max = 1, float incr = 1) {
+inline bool draw_value_widget(gl_window* win, const string& lbl,
+    mat<float, 4>& val, float min = 0, float max = 1, float incr = 0.01f) {
     auto modx = draw_value_widget(win, lbl + ".x", val.x, min, max, incr);
     auto mody = draw_value_widget(win, lbl + ".y", val.y, min, max, incr);
     auto modz = draw_value_widget(win, lbl + ".z", val.z, min, max, incr);
     auto modw = draw_value_widget(win, lbl + ".w", val.w, min, max, incr);
     return modx || mody || modz || modw;
 }
-
 /// Slider widget
-template <typename T>
 inline bool draw_value_widget(gl_window* win, const string& lbl,
-    frame<T, 3>& val, float min = -1, float max = 1, float incr = 1) {
+    frame<float, 3>& val, float min = -1, float max = 1, float incr = 1) {
     auto modx = draw_value_widget(win, lbl + ".x", val.x, -1, 1, 0.01f);
     auto mody = draw_value_widget(win, lbl + ".y", val.y, -1, 1, 0.01f);
     auto modz = draw_value_widget(win, lbl + ".z", val.z, -1, 1, 0.01f);
