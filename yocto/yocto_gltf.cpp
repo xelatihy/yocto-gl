@@ -35,8 +35,8 @@ namespace ygl {
 
 // Math support
 inline mat4f node_transform(const gltf_node* node) {
-    return translation_mat4f(node->translation) *
-           rotation_mat4f(node->rotation) * scaling_mat4f(node->scale) *
+    return translation_mat4(node->translation) *
+           rotation_mat4(node->rotation) * scaling_mat4(node->scale) *
            node->matrix;
 }
 
@@ -671,16 +671,16 @@ glTF* scenes_to_gltf(const gltf_scene_group* scns,
             gimg->data.width = txt->hdr.width();
             gimg->data.height = txt->hdr.height();
             gimg->data.ncomp = 4;
-            gimg->data.dataf.assign((uint8_t*)txt->hdr.data(),
-                (uint8_t*)txt->hdr.data() +
+            gimg->data.dataf.assign((uint8_t*)data(txt->hdr),
+                (uint8_t*)data(txt->hdr) +
                     txt->hdr.width() * txt->hdr.height() * 4);
         }
         if (txt->ldr) {
             gimg->data.width = txt->ldr.width();
             gimg->data.height = txt->ldr.height();
             gimg->data.ncomp = 4;
-            gimg->data.datab.assign((uint8_t*)txt->ldr.data(),
-                (uint8_t*)txt->ldr.data() +
+            gimg->data.datab.assign((uint8_t*)data(txt->ldr),
+                (uint8_t*)data(txt->ldr) +
                     txt->ldr.width() * txt->ldr.height() * 4);
         }
         gltf->images.push_back(gimg);
@@ -857,9 +857,9 @@ glTF* scenes_to_gltf(const gltf_scene_group* scns,
             ctype == glTFAccessorComponentType::Float) {
             switch (type) {
                 case glTFAccessorType::Scalar: {
-                    auto bbox = make_bbox(count, (float*)data);
-                    accessor->min = {bbox.min};
-                    accessor->max = {bbox.max};
+                    auto bbox = make_bbox(count, (vec1f*)data);
+                    accessor->min = {bbox.min.x};
+                    accessor->max = {bbox.max.x};
                 } break;
                 case glTFAccessorType::Vec2: {
                     auto bbox = make_bbox(count, (vec2f*)data);
@@ -1335,7 +1335,7 @@ void add_default_cameras(gltf_scene_group* scns) {
             cam->aperture = 0;
             cam->focus = length(to - from);
             auto node = new gltf_node();
-            node->matrix = to_mat4f(lookat_frame3f(from, to, up));
+            node->matrix = to_mat(lookat_frame3(from, to, up));
             node->cam = cam;
             node->name = cam->name;
             scns->cameras.push_back(cam);
@@ -1610,9 +1610,9 @@ void add_spec_gloss(gltf_scene_group* scns) {
                     h = max(h, mr->metallic_txt->height());
                 }
                 auto diff = new gltf_texture();
-                diff->ldr.resize(w, h);
+                diff->ldr = image4b(w, h);
                 auto spec = new gltf_texture();
-                spec->ldr.resize(w, h);
+                spec->ldr = image4b(w, h);
                 for (auto j = 0; j < h; j++) {
                     for (auto i = 0; i < w; i++) {
                         auto u = i / (float)w, v = j / (float)h;
