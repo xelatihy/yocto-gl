@@ -434,9 +434,8 @@ inline void shade_scene(const ygl::gltf_scene_group* scns, shade_state* st,
         if (gcam->cam->ortho) {
             auto near = (gcam->cam->near) ? gcam->cam->near : 0.001f;
             auto far = (gcam->cam->far) ? gcam->cam->far : 10000;
-            camera_proj =
-                ygl::ortho2d_mat4(gcam->cam->yfov * gcam->cam->aspect,
-                    gcam->cam->yfov, near, far);
+            camera_proj = ygl::ortho2d_mat4(gcam->cam->yfov * gcam->cam->aspect,
+                gcam->cam->yfov, near, far);
         } else {
             auto near = (gcam->cam->near) ? gcam->cam->near : 0.001f;
             if (gcam->cam->far) {
@@ -455,8 +454,7 @@ inline void shade_scene(const ygl::gltf_scene_group* scns, shade_state* st,
             camera_proj = ygl::perspective_mat4(
                 ycam->yfov, ycam->aspect, near, ycam->far);
         } else {
-            camera_proj =
-                ygl::perspective_mat4(ycam->yfov, ycam->aspect, near);
+            camera_proj = ygl::perspective_mat4(ycam->yfov, ycam->aspect, near);
         }
     }
 
@@ -909,7 +907,7 @@ void draw_elem_widgets(ygl::gl_window* win, ygl::gltf_scene_group* gscn,
     draw_value_widget(win, "cam", node->cam, cam_names);
     draw_value_widget(win, "translation", node->translation, -10, 10);
     draw_value_widget(win, "rotation", node->rotation);
-    draw_value_widget(win, "scale", node->scale, 0.01, 10);
+    draw_value_widget(win, "scale", node->scale, 0.01f, 10);
     draw_value_widget(win, "matrix", node->matrix, -10, 10);
 }
 

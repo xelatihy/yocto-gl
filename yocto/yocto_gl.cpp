@@ -6549,9 +6549,9 @@ inline glTF* scene_to_gltf(
             ctype == glTFAccessorComponentType::Float) {
             switch (type) {
                 case glTFAccessorType::Scalar: {
-                    auto bbox = make_bbox(count, (float*)data);
-                    accessor->min = {bbox.min};
-                    accessor->max = {bbox.max};
+                    auto bbox = make_bbox(count, (vec1f*)data);
+                    accessor->min = {bbox.min.x};
+                    accessor->max = {bbox.max.x};
                 } break;
                 case glTFAccessorType::Vec2: {
                     auto bbox = make_bbox(count, (vec2f*)data);
