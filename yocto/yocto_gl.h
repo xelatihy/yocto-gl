@@ -163,8 +163,9 @@
 /// types support expansion operation, union and containment. We provide
 /// operations to compute bounds for points, lines, triangles and quads.
 ///
-/// For all basic types we support iteration with `begin()`/`end()` pairs
-/// and stream inout and output.
+/// For all basic types we support iteration with `begin()`/`end()` pairs,
+/// data access with `data()`, `empty()` and `size()` and stream inout and
+/// output.
 ///
 /// For both matrices and frames we support transform operations for points,
 /// vectors and directions (`trasform_point()`, `trasform_vector()`,
@@ -1154,6 +1155,11 @@ template <typename T, int N>
 inline int size(vec<T, N>& a) {
     return N;
 }
+/// vector empty
+template <typename T, int N>
+inline bool empty(vec<T, N>& a) {
+    return false;
+}
 
 /// vector operator ==
 template <typename T>
@@ -1752,6 +1758,11 @@ template <typename T, int N>
 inline int size(mat<T, N>& a) {
     return N;
 }
+    /// vector empty
+    template <typename T, int N>
+    inline bool empty(mat<T, N>& a) {
+        return false;
+    }
 
 /// matrix operator ==
 template <typename T>
@@ -2171,6 +2182,11 @@ template <typename T, int N>
 inline int size(frame<T, N>& a) {
     return N + 1;
 }
+    /// vector empty
+    template <typename T, int N>
+    inline bool empty(frame<T, N>& a) {
+        return false;
+    }
 
 // initializes a frame3 from origin and z.
 template <typename T>
@@ -2325,6 +2341,11 @@ template <typename T, int N>
 inline int size(quat<T, N>& a) {
     return N;
 }
+    /// vector empty
+    template <typename T, int N>
+    inline bool empty(quat<T, N>& a) {
+        return false;
+    }
 
 /// vector operator ==
 template <typename T>
@@ -4960,9 +4981,9 @@ namespace ygl {
 template <typename T>
 struct image {
     /// empty image constructor
-    image() : _w{0}, _h{0}, _d{} {}
+    image() : _w{0}, _h{0}, pixels{} {}
     /// image constructor
-    image(int w, int h, const T& v = {}) : _w{w}, _h{h}, _d(size_t(w * h), v) {}
+    image(int w, int h, const T& v = {}) : _w{w}, _h{h}, pixels(size_t(w * h), v) {}
 
     /// width
     int width() const { return _w; }
@@ -4974,38 +4995,73 @@ struct image {
     explicit operator bool() const { return _w != 0 && _h != 0; }
 
     /// element access
-    T& operator[](const vec2i& ij) { return _d[ij.y * _w + ij.x]; }
+    T& operator[](const vec2i& ij) { return pixels[ij.y * _w + ij.x]; }
     /// element access
-    const T& operator[](const vec2i& ij) const { return _d[ij.y * _w + ij.x]; }
+    const T& operator[](const vec2i& ij) const { return pixels[ij.y * _w + ij.x]; }
     /// element access
-    T& at(const vec2i& ij) { return _d.at(ij.y * _w + ij.x); }
+    T& at(const vec2i& ij) { return pixels.at(ij.y * _w + ij.x); }
     /// element access
-    const T& at(const vec2i& ij) const { return _d.at(ij.y * _w + ij.x); }
+    const T& at(const vec2i& ij) const { return pixels.at(ij.y * _w + ij.x); }
     /// element access
-    T& at(int i, int j) { return _d.at(j * _w + i); }
+    T& at(int i, int j) { return pixels.at(j * _w + i); }
     /// element access
-    const T& at(int i, int j) const { return _d.at(j * _w + i); }
+    const T& at(int i, int j) const { return pixels.at(j * _w + i); }
 
-    /// data access
-    T* data() { return _d.data(); }
-    /// data access
-    const T* data() const { return _d.data(); }
-
-   private:
     int _w, _h;
-    vector<T> _d;
+    vector<T> pixels;
 };
 
 /// HDR image
 using image4f = image<vec4f>;
 /// LDR image
 using image4b = image<vec4b>;
-
+    
+    /// iteration support
+    template <typename T>
+    inline T* begin(image<T>& a) {
+        return a.pixels.data();
+    }
+    /// iteration support
+    template <typename T>
+    inline const T* begin(const image<T>& a) {
+        return a.pixels.data();
+    }
+    /// iteration support
+    template <typename T>
+    inline T* end(image<T>& a) {
+        return a.pixels.data() + a.width()*a.height();
+    }
+    /// iteration support
+    template <typename T>
+    inline const T* end(const image<T>& a) {
+        return a.pixels.data() + a.width()*a.height();
+    }
+    /// vector data access
+    template <typename T>
+    inline T* data(image<T>& a) {
+        return a.pixels.data();
+    }
+    /// vector data access
+    template <typename T>
+    inline const T* data(const image<T>& a) {
+        return a.pixels.data();
+    }
+    /// vector size
+    template <typename T>
+    inline int size(image<T>& a) {
+        return a.width()*a.height();
+    }
+    /// vector empty
+    template <typename T>
+    inline bool empty(image<T>& a) {
+        return a.width()*a.height() == 0;
+    }
+    
 /// Create an image with values stored in an array in scanliine order.
 template <typename T>
 inline image<T> make_image(int w, int h, T* vals) {
     auto img = image<T>(w, h);
-    for (auto idx = 0; idx < w * h; idx++) img.data()[idx] = vals[idx];
+    for (auto idx = 0; idx < w * h; idx++) img.pixels[idx] = vals[idx];
     return img;
 }
 
@@ -10753,7 +10809,7 @@ inline void update_texture(gl_texture& txt, int w, int h, int nc,
 /// Internally use float if as_float and filtering if filter.
 inline void update_texture(gl_texture& txt, const image4f& img, bool linear,
     bool mipmap, bool as_float) {
-    update_texture(txt, img.width(), img.height(), 4, (const float*)img.data(),
+    update_texture(txt, img.width(), img.height(), 4, (const float*)data(img),
         linear, mipmap, as_float);
 }
 
@@ -10762,7 +10818,7 @@ inline void update_texture(gl_texture& txt, const image4f& img, bool linear,
 inline void update_texture(gl_texture& txt, const image4b& img, bool linear,
     bool mipmap, bool as_srgb) {
     update_texture(txt, img.width(), img.height(), 4,
-        (const unsigned char*)img.data(), linear, mipmap, as_srgb);
+        (const unsigned char*)data(img), linear, mipmap, as_srgb);
 }
 
 /// Updates a texture with pixels values from an image.

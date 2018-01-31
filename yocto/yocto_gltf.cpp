@@ -671,16 +671,16 @@ glTF* scenes_to_gltf(const gltf_scene_group* scns,
             gimg->data.width = txt->hdr.width();
             gimg->data.height = txt->hdr.height();
             gimg->data.ncomp = 4;
-            gimg->data.dataf.assign((uint8_t*)txt->hdr.data(),
-                (uint8_t*)txt->hdr.data() +
+            gimg->data.dataf.assign((uint8_t*)data(txt->hdr),
+                (uint8_t*)data(txt->hdr) +
                     txt->hdr.width() * txt->hdr.height() * 4);
         }
         if (txt->ldr) {
             gimg->data.width = txt->ldr.width();
             gimg->data.height = txt->ldr.height();
             gimg->data.ncomp = 4;
-            gimg->data.datab.assign((uint8_t*)txt->ldr.data(),
-                (uint8_t*)txt->ldr.data() +
+            gimg->data.datab.assign((uint8_t*)data(txt->ldr),
+                (uint8_t*)data(txt->ldr) +
                     txt->ldr.width() * txt->ldr.height() * 4);
         }
         gltf->images.push_back(gimg);

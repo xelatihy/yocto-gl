@@ -414,10 +414,10 @@ image4f load_image4f(const string& filename) {
 bool save_image4b(const string& filename, const image4b& img) {
     if (path_extension(filename) == ".png") {
         return stbi_write_png(filename.c_str(), img.width(), img.height(), 4,
-            (byte*)img.data(), img.width() * 4);
+            (byte*)data(img), img.width() * 4);
     } else if (path_extension(filename) == ".jpg") {
         return stbi_write_jpg(filename.c_str(), img.width(), img.height(), 4,
-            (byte*)img.data(), 75);
+            (byte*)data(img), 75);
     } else {
         return false;
     }
@@ -427,10 +427,10 @@ bool save_image4b(const string& filename, const image4b& img) {
 bool save_image4f(const string& filename, const image4f& img) {
     if (path_extension(filename) == ".hdr") {
         return stbi_write_hdr(
-            filename.c_str(), img.width(), img.height(), 4, (float*)img.data());
+            filename.c_str(), img.width(), img.height(), 4, (float*)data(img));
     } else if (path_extension(filename) == ".exr") {
         return !SaveEXR(
-            (float*)img.data(), img.width(), img.height(), 4, filename.c_str());
+            (float*)data(img), img.width(), img.height(), 4, filename.c_str());
     } else {
         return false;
     }
@@ -519,8 +519,8 @@ void resize_image(const image4f& img, image4f& res_img, resize_filter filter,
             {resize_edge::wrap, STBIR_EDGE_WRAP},
             {resize_edge::zero, STBIR_EDGE_ZERO}};
 
-    stbir_resize_float_generic((float*)img.data(), img.width(), img.height(),
-        sizeof(vec4f) * img.width(), (float*)res_img.data(), res_img.width(),
+    stbir_resize_float_generic((float*)img.pixels.data(), img.width(), img.height(),
+        sizeof(vec4f) * img.width(), (float*)res_img.pixels.data(), res_img.width(),
         res_img.height(), sizeof(vec4f) * res_img.width(), 4, 3,
         (premultiplied_alpha) ? STBIR_FLAG_ALPHA_PREMULTIPLIED : 0,
         edge_map.at(edge), filter_map.at(filter), STBIR_COLORSPACE_LINEAR,
@@ -545,9 +545,9 @@ void resize_image(const image4b& img, image4b& res_img, resize_filter filter,
             {resize_edge::wrap, STBIR_EDGE_WRAP},
             {resize_edge::zero, STBIR_EDGE_ZERO}};
 
-    stbir_resize_uint8_generic((unsigned char*)img.data(), img.width(),
+    stbir_resize_uint8_generic((unsigned char*)img.pixels.data(), img.width(),
         img.height(), sizeof(vec4b) * img.width(),
-        (unsigned char*)res_img.data(), res_img.width(), res_img.height(),
+        (unsigned char*)res_img.pixels.data(), res_img.width(), res_img.height(),
         sizeof(vec4b) * res_img.width(), 4, 3,
         (premultiplied_alpha) ? STBIR_FLAG_ALPHA_PREMULTIPLIED : 0,
         edge_map.at(edge), filter_map.at(filter), STBIR_COLORSPACE_LINEAR,
@@ -5738,16 +5738,16 @@ inline obj_scene* scene_to_obj(const scene* scn) {
             otxt->width = txt->hdr.width();
             otxt->height = txt->hdr.height();
             otxt->ncomp = 4;
-            otxt->dataf.assign((float*)txt->hdr.data(),
-                (float*)txt->hdr.data() +
+            otxt->dataf.assign((float*)data(txt->hdr),
+                (float*)data(txt->hdr) +
                     txt->hdr.width() * txt->hdr.height() * 4);
         }
         if (txt->ldr) {
             otxt->width = txt->ldr.width();
             otxt->height = txt->ldr.height();
             otxt->ncomp = 4;
-            otxt->datab.assign((uint8_t*)txt->ldr.data(),
-                (uint8_t*)txt->ldr.data() +
+            otxt->datab.assign((uint8_t*)data(txt->ldr),
+                (uint8_t*)data(txt->ldr) +
                     txt->ldr.width() * txt->ldr.height() * 4);
         }
         obj->textures.push_back(otxt);
@@ -6383,16 +6383,16 @@ inline glTF* scene_to_gltf(
             gimg->data.width = txt->hdr.width();
             gimg->data.height = txt->hdr.height();
             gimg->data.ncomp = 4;
-            gimg->data.dataf.assign((float*)txt->hdr.data(),
-                (float*)txt->hdr.data() +
+            gimg->data.dataf.assign((float*)data(txt->hdr),
+                (float*)data(txt->hdr) +
                     txt->hdr.width() * txt->hdr.height() * 4);
         }
         if (txt->ldr) {
             gimg->data.width = txt->ldr.width();
             gimg->data.height = txt->ldr.height();
             gimg->data.ncomp = 4;
-            gimg->data.datab.assign((uint8_t*)txt->ldr.data(),
-                (uint8_t*)txt->ldr.data() +
+            gimg->data.datab.assign((uint8_t*)data(txt->ldr),
+                (uint8_t*)data(txt->ldr) +
                     txt->ldr.width() * txt->ldr.height() * 4);
         }
         gltf->images.push_back(gimg);
