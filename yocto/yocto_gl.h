@@ -1730,91 +1730,118 @@ struct hash<ygl::vec4i> {
 // -----------------------------------------------------------------------------
 namespace ygl {
 
+/// Generic matrix of NxN elements. This is used only to define template
+/// specializations for small fixed sized matrices.
+template<typename T, int N>
+struct mat;
+
 /// Matrix of 2x2 elements stored in column major format.
 /// Colums access via operator[].
-struct mat2f {
+template<typename T>
+struct mat<T, 2> {
     /// default constructor
-    mat2f() : x{1, 0}, y{0, 1} {}
+    mat() : x{1, 0}, y{0, 1} {}
     /// diagonal constructor
-    explicit mat2f(float vv) : x{vv, 0}, y{0, vv} {}
+    explicit mat(T vv) : x{vv, 0}, y{0, vv} {}
     /// list constructor
-    mat2f(const vec2f& x, const vec2f& y) : x(x), y(y) {}
+    mat(const vec<T, 2>& x, const vec<T, 2>& y) : x(x), y(y) {}
 
     /// element access
-    vec2f& operator[](int i) { return (&x)[i]; }
+    vec<T, 2>& operator[](int i) { return (&x)[i]; }
     /// element access
-    const vec2f& operator[](int i) const { return (&x)[i]; }
+    const vec<T, 2>& operator[](int i) const { return (&x)[i]; }
 
     /// data access
-    vec2f* data() { return &x; }
+    vec<T, 2>* data() { return &x; }
     /// data access
-    const vec2f* data() const { return &x; }
+    const vec<T, 2>* data() const { return &x; }
 
     /// element data
-    vec2f x;
+    vec<T, 2> x;
     /// element data
-    vec2f y;
+    vec<T, 2> y;
 };
+
+    /// Shortcut for matrices of two elements
+    template<typename T>
+    using mat2 = mat<T, 2>;
 
 /// Matrix of 3x3 elements stored in column major format.
 /// Colums access via operator[].
-struct mat3f {
+template<typename T>
+struct mat<T, 3> {
     /// default constructor
-    mat3f() : x{1, 0, 0}, y{0, 1, 0}, z{0, 0, 1} {}
+    mat() : x{1, 0, 0}, y{0, 1, 0}, z{0, 0, 1} {}
     /// diagonal constructor
-    explicit mat3f(float vv) : x{vv, 0, 0}, y{0, vv, 0}, z{0, 0, vv} {}
+    explicit mat(T vv) : x{vv, 0, 0}, y{0, vv, 0}, z{0, 0, vv} {}
     /// list constructor
-    mat3f(const vec3f& x, const vec3f& y, const vec3f& z) : x(x), y(y), z(z) {}
+    mat(const vec<T, 3>& x, const vec<T, 3>& y, const vec<T, 3>& z) : x(x), y(y), z(z) {}
 
     /// element access
-    vec3f& operator[](int i) { return (&x)[i]; }
+    vec<T, 3>& operator[](int i) { return (&x)[i]; }
     /// element access
-    const vec3f& operator[](int i) const { return (&x)[i]; }
+    const vec<T, 3>& operator[](int i) const { return (&x)[i]; }
 
     /// data access
-    vec3f* data() { return &x; }
+    vec<T, 3>* data() { return &x; }
     /// data access
-    const vec3f* data() const { return &x; }
+    const vec<T, 3>* data() const { return &x; }
 
     /// element data
-    vec3f x;
+    vec<T, 3> x;
     /// element data
-    vec3f y;
+    vec<T, 3> y;
     /// element data
-    vec3f z;
+    vec<T, 3> z;
 };
 
+    /// Shortcut for matrices of three elements
+    template<typename T>
+    using mat3 = mat<T, 3>;
+    
 /// Matrix of 4x4 elements stored in column major format.
 /// Colums access via operator[].
-struct mat4f {
+template<typename T>
+struct mat<T, 4> {
     /// default constructor
-    mat4f() : x{1, 0, 0, 0}, y{0, 1, 0, 0}, z{0, 0, 1, 0}, w{0, 0, 0, 1} {}
+    mat<T, 4>() : x{1, 0, 0, 0}, y{0, 1, 0, 0}, z{0, 0, 1, 0}, w{0, 0, 0, 1} {}
     /// diagonal constructor
-    explicit mat4f(float vv)
+    explicit mat<T, 4>(float vv)
         : x{vv, 0, 0, 0}, y{0, vv, 0, 0}, z{0, 0, vv, 0}, w{0, 0, 0, vv} {}
     /// list constructor
-    mat4f(const vec4f& x, const vec4f& y, const vec4f& z, const vec4f& w)
+    mat<T, 4>(const vec<T, 4>& x, const vec<T, 4>& y, const vec<T, 4>& z, const vec<T, 4>& w)
         : x(x), y(y), z(z), w(w) {}
 
     /// element access
-    vec4f& operator[](int i) { return (&x)[i]; }
+    vec<T, 4>& operator[](int i) { return (&x)[i]; }
     /// element access
-    const vec4f& operator[](int i) const { return (&x)[i]; }
+    const vec<T, 4>& operator[](int i) const { return (&x)[i]; }
 
     /// data access
-    vec4f* data() { return &x; }
+    vec<T, 4>* data() { return &x; }
     /// data access
-    const vec4f* data() const { return &x; }
+    const vec<T, 4>* data() const { return &x; }
 
     /// element data
-    vec4f x;
+    vec<T, 4> x;
     /// element data
-    vec4f y;
+    vec<T, 4> y;
     /// element data
-    vec4f z;
+    vec<T, 4> z;
     /// element data
-    vec4f w;
+    vec<T, 4> w;
 };
+
+/// Shortcut for matrices of four elements
+template<typename T>
+using mat4 = mat<T, 4>;
+
+/// 2-dimension float matrix
+using mat2f = mat2<float>;
+/// 3-dimension float matrix
+using mat3f = mat3<float>;
+/// 4-dimension float matrix
+using mat4f = mat4<float>;
 
 /// 2-dimensional float identity matrix
 const auto identity_mat2f = mat2f();
@@ -2113,62 +2140,75 @@ inline istream& operator>>(istream& is, mat4f& a) {
 // -----------------------------------------------------------------------------
 namespace ygl {
 
+/// Generic frame of N elements. This is used only to define template
+/// specializations for small fixed sized frames.
+template<typename T, int N>
+struct frame;
+
 /// Rigid transforms stored as a column-major affine matrix.
-/// In memory, this representation is equivalent to storing an 3x3 rotation
-/// followed by a 3x1 translation. Viewed this way, the representation allows
-/// also to retrive the axis of the coordinate frame as the first 3 columns and
-/// the translation as the 4th column. Colums access via operator[].
+/// In memory, this representation is equivalent to storing an NxN rotation
+/// followed by a Nx1 translation. Viewed this way, the representation allows
+/// also to retrive the axis of the coordinate frame as the first N columns and
+/// the translation as the (N+1)-th column. Colums access via operator[].
 /// Access rotation and position with pos() and rot().
-struct frame3f {
+template<typename T>
+struct frame<T, 3> {
     /// size
     static const int N = 3;
 
     /// default constructor
-    frame3f() : x{1, 0, 0}, y{0, 1, 0}, z{0, 0, 1}, o{0, 0, 0} {}
+    frame() : x{1, 0, 0}, y{0, 1, 0}, z{0, 0, 1}, o{0, 0, 0} {}
 
     /// element constructor
-    frame3f(const vec3f& x, const vec3f& y, const vec3f& z, const vec3f& o)
+    frame(const vec<T, 3>& x, const vec<T, 3>& y, const vec<T, 3>& z, const vec<T, 3>& o)
         : x(x), y(y), z(z), o(o) {}
 
     /// element constructor
-    frame3f(const mat3f& m, const vec3f& t) : x(m.x), y(m.y), z(m.z), o(t) {}
+    frame(const mat<T, 3>& m, const vec<T, 3>& t) : x(m.x), y(m.y), z(m.z), o(t) {}
 
     /// conversion from matrix (assumes the matrix is a frame, so dangerous!)
-    frame3f(const mat4f& m)
+    frame(const mat<T, 4>& m)
         : x(m.x.x, m.x.y, m.x.z)
         , y(m.y.x, m.y.y, m.y.z)
         , z(m.z.x, m.z.y, m.z.z)
         , o(m.w.x, m.w.y, m.w.z) {}
 
     /// element access
-    vec3f& operator[](int i) { return (&x)[i]; }
+    vec<T, 3>& operator[](int i) { return (&x)[i]; }
     /// element access
-    const vec3f& operator[](int i) const { return (&x)[i]; }
+    const vec<T, 3>& operator[](int i) const { return (&x)[i]; }
 
     /// data access
-    vec3f* data() { return &x; }
+    vec<T, 3>* data() { return &x; }
     /// data access
-    const vec3f* data() const { return &x; }
+    const vec<T, 3>* data() const { return &x; }
 
     /// access position
-    vec3f& pos() { return o; }
+    vec<T, 3>& pos() { return o; }
     /// access position
-    const vec3f& pos() const { return o; }
+    const vec<T, 3>& pos() const { return o; }
 
     /// access rotation
-    mat3f& rot() { return *(mat3f*)(&x); }
+    mat<T, 3>& rot() { return *(mat<T, 3>*)(&x); }
     /// access rotation
-    const mat3f& rot() const { return *(mat3f*)(&x); }
+    const mat<T, 3>& rot() const { return *(mat<T, 3>*)(&x); }
 
     /// element data
-    vec3f x;
+    vec<T, 3> x;
     /// element data
-    vec3f y;
+    vec<T, 3> y;
     /// element data
-    vec3f z;
+    vec<T, 3> z;
     /// element data
-    vec3f o;
+    vec<T, 3> o;
 };
+    
+/// Shortcut for frames of three elements
+template<typename T>
+using frame3 = frame<T, 3>;
+
+/// 3-dimension float frame
+using frame3f = frame3<float>;
 
 /// indentity frame
 const auto identity_frame3f =
@@ -2246,40 +2286,51 @@ inline istream& operator>>(istream& is, frame3f& a) {
 // QUATERNIONS
 // -----------------------------------------------------------------------------
 namespace ygl {
+    
+/// Generic quaternion of N elements. This is used only to define template
+/// specializations for small fixed sized quaternions.
+template<typename T, int N>
+struct quat;
 
 /// Quaternions implemented as a vec<T,4>. Data access via operator[].
 /// Quaterions are xi + yj + zk + w.
-struct quat4f {
+template<typename T>
+struct quat<T, 4> {
     /// default constructor
-    quat4f() : x{0}, y{0}, z{0}, w{1} {}
-
+    quat() : x{0}, y{0}, z{0}, w{1} {}
     // list constructor
-    quat4f(float x, float y, float z, float w) : x{x}, y{y}, z{z}, w{w} {}
-
+    quat(T x, T y, T z, T w) : x{x}, y{y}, z{z}, w{w} {}
     /// conversion from vec
-    explicit quat4f(const vec4f& vv) : x{vv.x}, y{vv.y}, z{vv.z}, w{vv.w} {}
+    explicit quat(const vec<T, 4>& vv) : x{vv.x}, y{vv.y}, z{vv.z}, w{vv.w} {}
     /// conversion to vec
-    explicit operator vec4f() const { return {x, y, z, w}; }
+    explicit operator vec<T, 4>() const { return {x, y, z, w}; }
 
     /// element access
-    float& operator[](int i) { return (&x)[i]; }
+    T& operator[](int i) { return (&x)[i]; }
     /// element access
-    const float& operator[](int i) const { return (&x)[i]; }
+    const T& operator[](int i) const { return (&x)[i]; }
 
     /// data access
-    float* data() { return &x; }
+    T* data() { return &x; }
     /// data access
-    const float* data() const { return &x; }
+    const T* data() const { return &x; }
 
     /// data
-    float x;
+    T x;
     /// data
-    float y;
+    T y;
     /// data
-    float z;
+    T z;
     /// data
-    float w;
+    T w;
 };
+    
+/// Shortcut for quaternions of four elements
+template<typename T>
+using quat4 = quat<T, 4>;
+
+/// 4-dimension float quaternion
+using quat4f = quat4<float>;
 
 /// float identity quaterion
 const auto identity_quat4f = quat4f{0, 0, 0, 1};
@@ -2354,79 +2405,110 @@ inline istream& operator>>(istream& is, quat4f& a) {
 // -----------------------------------------------------------------------------
 namespace ygl {
 
+/// Generic bounbding box of N elements. This is used only to define template
+/// specializations for small fixed sized bounding boxes.
+template<typename T, int N>
+struct bbox;
+
 /// Axis aligned bounding box represented as a min/max vector pair.
-struct bbox1f {
+template<typename T>
+struct bbox<T, 1> {
     /// initializes an invalid bbox
-    bbox1f() : min{flt_max}, max{flt_min} {}
+    bbox() : min{flt_max}, max{flt_min} {}
     /// list constructor
-    bbox1f(float m, float M) : min{m}, max{M} {}
+    bbox(T m, T M) : min{m}, max{M} {}
 
     /// element access
-    float& operator[](int i) { return (&min)[i]; }
+    T& operator[](int i) { return (&min)[i]; }
     /// element access
-    const float& operator[](int i) const { return (&min)[i]; }
+    const T& operator[](int i) const { return (&min)[i]; }
 
     /// element data
-    float min;
+    T min;
     /// element data
-    float max;
+    T max;
 };
 
 /// Axis aligned bounding box represented as a min/max vector pair.
-struct bbox2f {
+    template<typename T>
+struct bbox<T, 2> {
     /// initializes an invalid bbox
-    bbox2f() : min{flt_max, flt_max}, max{flt_min, flt_min} {}
+    bbox() : min{flt_max, flt_max}, max{flt_min, flt_min} {}
     /// list constructor
-    bbox2f(const vec2f& m, const vec2f& M) : min{m}, max{M} {}
+    bbox(const vec<T, 2>& m, const vec<T, 2>& M) : min{m}, max{M} {}
 
     /// element access
-    vec2f& operator[](int i) { return (&min)[i]; }
+    vec<T, 2>& operator[](int i) { return (&min)[i]; }
     /// element access
-    const vec2f& operator[](int i) const { return (&min)[i]; }
+    const vec<T, 2>& operator[](int i) const { return (&min)[i]; }
 
     /// element data
-    vec2f min;
+    vec<T, 2> min;
     /// element data
-    vec2f max;
+    vec<T, 2> max;
 };
 
 /// Axis aligned bounding box represented as a min/max vector pair.
-struct bbox3f {
+    template<typename T>
+struct bbox<T, 3> {
     /// initializes an invalid bbox
-    bbox3f() : min{flt_max, flt_max, flt_max}, max{flt_min, flt_min, flt_min} {}
+    bbox() : min{flt_max, flt_max, flt_max}, max{flt_min, flt_min, flt_min} {}
     /// list constructor
-    bbox3f(const vec3f& m, const vec3f& M) : min{m}, max{M} {}
+    bbox(const vec<T, 3>& m, const vec<T, 3>& M) : min{m}, max{M} {}
 
     /// element access
-    vec3f& operator[](int i) { return (&min)[i]; }
+    vec<T, 3>& operator[](int i) { return (&min)[i]; }
     /// element access
-    const vec3f& operator[](int i) const { return (&min)[i]; }
+    const vec<T, 3>& operator[](int i) const { return (&min)[i]; }
 
     /// element data
-    vec3f min;
+    vec<T, 3> min;
     /// element data
-    vec3f max;
+    vec<T, 3> max;
 };
 
 /// Axis aligned bounding box represented as a min/max vector pair.
-struct bbox4f {
+    template<typename T>
+struct bbox<T, 4> {
     /// initializes an invalid bbox
-    bbox4f()
+    bbox()
         : min{flt_max, flt_max, flt_max, flt_max}
         , max{flt_min, flt_min, flt_min, flt_min} {}
     /// list constructor
-    bbox4f(const vec4f& m, const vec4f& M) : min{m}, max{M} {}
+    bbox(const vec<T, 4>& m, const vec<T, 4>& M) : min{m}, max{M} {}
 
     /// element access
-    vec4f& operator[](int i) { return (&min)[i]; }
+    vec<T, 4>& operator[](int i) { return (&min)[i]; }
     /// element access
-    const vec4f& operator[](int i) const { return (&min)[i]; }
+    const vec<T, 4>& operator[](int i) const { return (&min)[i]; }
 
     /// element data
-    vec4f min;
+    vec<T, 4> min;
     /// element data
-    vec4f max;
+    vec<T, 4> max;
 };
+    
+/// Shortcut for bounding boxes of 1 element
+template<typename T>
+using bbox1 = bbox<T, 1>;
+/// Shortcut for bounding boxes of 2 element
+template<typename T>
+using bbox2 = bbox<T, 2>;
+/// Shortcut for bounding boxes of 3 element
+template<typename T>
+using bbox3 = bbox<T, 3>;
+/// Shortcut for bounding boxes of 4 element
+template<typename T>
+using bbox4 = bbox<T, 4>;
+
+/// 1-dimension float bounding box
+using bbox1f = bbox1<float>;
+/// 2-dimension float bounding box
+using bbox2f = bbox2<float>;
+/// 3-dimension float bounding box
+using bbox3f = bbox3<float>;
+/// 4-dimension float bounding box
+using bbox4f = bbox4<float>;
 
 /// 1-dimensional float empty bbox
 const auto invalid_bbox1f = bbox1f();
@@ -2708,28 +2790,39 @@ inline bbox3f tetrahedron_bbox(
 // -----------------------------------------------------------------------------
 namespace ygl {
 
+    /// Generic ray of N elements. This is used only to define template
+    /// specializations for small fixed sized rays.
+    template<typename T, int N>
+    struct ray;
+
 /// Rays with origin, direction and min/max t value.
-struct ray3f {
+template<typename T>
+struct ray<T, 3> {
     /// size
     static const int N = 3;
-    /// type
-    using T = float;
-
-    /// origin
-    vec3f o;
-    /// direction
-    vec3f d;
-    /// minimum distance
-    float tmin;
-    /// maximum distance
-    float tmax;
 
     /// default constructor
-    ray3f() : o{0, 0, 0}, d{0, 0, 1}, tmin{0}, tmax{flt_max} {}
+    ray() : o{0, 0, 0}, d{0, 0, 1}, tmin{0}, tmax{flt_max} {}
     /// initializes a ray from its elements
-    ray3f(const vec3f& o, const vec3f& d, float tmin = 0, float tmax = flt_max)
+    ray(const vec<T, 3>& o, const vec<T, 3>& d, T tmin = 0, T tmax = flt_max)
         : o(o), d(d), tmin(tmin), tmax(tmax) {}
+
+    /// origin
+    vec<T, 3> o;
+    /// direction
+    vec<T, 3> d;
+    /// minimum distance
+    T tmin;
+    /// maximum distance
+    T tmax;
 };
+
+/// Shortcut for rays of 3 element
+template<typename T>
+using ray3 = ray<T, 3>;
+
+/// 3-dimension float bounding box
+using ray3f = ray3<float>;
 
 /// stream write
 inline ostream& operator<<(ostream& os, const ray3f& a) {
