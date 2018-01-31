@@ -980,244 +980,130 @@ inline float byte_to_float(byte x) { return (float)x / 255.0f; }
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-/// Vector of 2 float elements.
-struct vec2f {
+/// Generic vector of N elements. This is used only to define template
+/// specializations for small fixed sized vectors.
+template<typename T, int N>
+struct vec;
+
+/// Vector of 2 elements.
+template<typename T>
+struct vec<T, 2> {
     /// default constructor
-    vec2f() : x{0}, y{0} {}
+    vec() : x{0}, y{0} {}
     /// element constructor
-    explicit vec2f(float vv) : x(vv), y(vv) {}
+    explicit vec(T vv) : x(vv), y(vv) {}
     /// element constructor
-    vec2f(float x, float y) : x{x}, y{y} {}
+    vec(T x, T y) : x{x}, y{y} {}
 
     /// element access
-    float& operator[](int i) { return (&x)[i]; }
+    T& operator[](int i) { return (&x)[i]; }
     /// element access
-    const float& operator[](int i) const { return (&x)[i]; }
+    const T& operator[](int i) const { return (&x)[i]; }
 
     /// data access
-    float* data() { return &x; }
+    T* data() { return &x; }
     /// data access
-    const float* data() const { return &x; }
+    const T* data() const { return &x; }
 
     /// element data
-    float x;
+    T x;
     /// element data
-    float y;
+    T y;
+};
+    
+/// Shortcut for vector of two elements
+template<typename T>
+using vec2 = vec<T, 2>;
+
+/// Vector of 3 elements.
+template<typename T>
+struct vec<T, 3> {
+    /// default constructor
+    vec() : x{0}, y{0}, z{0} {}
+    /// element constructor
+    explicit vec(T vv) : x(vv), y(vv), z(vv) {}
+    /// element constructor
+    vec(T x, T y, T z) : x{x}, y{y}, z{z} {}
+
+    /// element access
+    T& operator[](int i) { return (&x)[i]; }
+    /// element access
+    const T& operator[](int i) const { return (&x)[i]; }
+
+    /// data access
+    T* data() { return &x; }
+    /// data access
+    const T* data() const { return &x; }
+
+    /// element data
+    T x;
+    /// element data
+    T y;
+    /// element data
+    T z;
 };
 
-/// Vector of 3 float elements.
-struct vec3f {
+/// Shortcut for vector of 3 elements
+template<typename T>
+using vec3 = vec<T, 3>;
+
+/// Vector of 4 elements.
+template<typename T>
+struct vec<T, 4> {
     /// default constructor
-    vec3f() : x{0}, y{0}, z{0} {}
+    vec() : x{0}, y{0}, z{0}, w{0} {}
     /// element constructor
-    explicit vec3f(float vv) : x(vv), y(vv), z(vv) {}
+    explicit vec(T vv) : x(vv), y(vv), z(vv), w(vv) {}
     /// element constructor
-    vec3f(float x, float y, float z) : x{x}, y{y}, z{z} {}
-
-    /// element access
-    float& operator[](int i) { return (&x)[i]; }
-    /// element access
-    const float& operator[](int i) const { return (&x)[i]; }
-
-    /// data access
-    float* data() { return &x; }
-    /// data access
-    const float* data() const { return &x; }
-
-    /// element data
-    float x;
-    /// element data
-    float y;
-    /// element data
-    float z;
-};
-
-/// Vector of 4 float elements.
-struct vec4f {
-    /// default constructor
-    vec4f() : x{0}, y{0}, z{0}, w{0} {}
-    /// element constructor
-    explicit vec4f(float vv) : x(vv), y(vv), z(vv), w(vv) {}
-    /// element constructor
-    vec4f(float x, float y, float z, float w) : x{x}, y{y}, z{z}, w{w} {}
+    vec(T x, T y, T z, T w) : x{x}, y{y}, z{z}, w{w} {}
     /// constructor from smaller vector
-    vec4f(const vec3f& xyz, float w) : x{xyz.x}, y{xyz.y}, z{xyz.z}, w{w} {}
+    vec(const vec<T, 3>& xyz, T w) : x{xyz.x}, y{xyz.y}, z{xyz.z}, w{w} {}
 
     /// element access
-    float& operator[](int i) { return (&x)[i]; }
+    T& operator[](int i) { return (&x)[i]; }
     /// element access
-    const float& operator[](int i) const { return (&x)[i]; }
+    const T& operator[](int i) const { return (&x)[i]; }
 
     /// data access
-    float* data() { return &x; }
+    T* data() { return &x; }
     /// data access
-    const float* data() const { return &x; }
+    const T* data() const { return &x; }
 
     /// access xyz components
-    vec3f& xyz() { return *(vec3f*)&x; }
+    vec<T, 3>& xyz() { return *(vec<T, 3>*)&x; }
     /// access xyz components
-    const vec3f& xyz() const { return *(vec3f*)&x; }
+    const vec<T, 3>& xyz() const { return *(vec<T, 3>*)&x; }
 
     /// element data
-    float x;
+    T x;
     /// element data
-    float y;
+    T y;
     /// element data
-    float z;
+    T z;
     /// element data
-    float w;
+    T w;
 };
 
-/// Vector of 2 int elements.
-struct vec2i {
-    /// default constructor
-    vec2i() : x{0}, y{0} {}
-    /// element constructor
-    explicit vec2i(int vv) : x(vv), y(vv) {}
-    /// element constructor
-    vec2i(int x, int y) : x{x}, y{y} {}
+/// Shortcut for vector of 4 elements
+template<typename T>
+using vec4 = vec<T, 4>;
 
-    /// element access
-    int& operator[](int i) { return (&x)[i]; }
-    /// element access
-    const int& operator[](int i) const { return (&x)[i]; }
-
-    /// data access
-    int* data() { return &x; }
-    /// data access
-    const int* data() const { return &x; }
-
-    /// element data
-    int x;
-    /// element data
-    int y;
-};
-
-/// Vector of 3 int elements.
-struct vec3i {
-    /// default constructor
-    vec3i() : x{0}, y{0}, z{0} {}
-    /// element constructor
-    explicit vec3i(int vv) : x(vv), y(vv), z(vv) {}
-    /// element constructor
-    vec3i(int x, int y, int z) : x{x}, y{y}, z{z} {}
-
-    /// element access
-    int& operator[](int i) { return (&x)[i]; }
-    /// element access
-    const int& operator[](int i) const { return (&x)[i]; }
-
-    /// data access
-    int* data() { return &x; }
-    /// data access
-    const int* data() const { return &x; }
-
-    /// element data
-    int x;
-    /// element data
-    int y;
-    /// element data
-    int z;
-};
-
-/// Vector of 4 int elements.
-struct vec4i {
-    /// default constructor
-    vec4i() : x{0}, y{0}, z{0}, w{0} {}
-    /// element constructor
-    explicit vec4i(int vv) : x(vv), y(vv), z(vv), w(vv) {}
-    /// element constructor
-    vec4i(int x, int y, int z, int w) : x{x}, y{y}, z{z}, w{w} {}
-    /// constructor from smaller vector
-    vec4i(const vec3i& xyz, int w) : x{xyz.x}, y{xyz.y}, z{xyz.z}, w{w} {}
-
-    /// element access
-    int& operator[](int i) { return (&x)[i]; }
-    /// element access
-    const int& operator[](int i) const { return (&x)[i]; }
-
-    /// data access
-    int* data() { return &x; }
-    /// data access
-    const int* data() const { return &x; }
-
-    /// access xyz components
-    vec3i& xyz() { return *(vec3i*)&x; }
-    /// access xyz components
-    const vec3i& xyz() const { return *(vec3i*)&x; }
-
-    /// element data
-    int x;
-    /// element data
-    int y;
-    /// element data
-    int z;
-    /// element data
-    int w;
-};
-
-/// Vector of 3 byte elements.
-struct vec3b {
-    /// default constructor
-    vec3b() : x{0}, y{0}, z{0} {}
-    /// element constructor
-    explicit vec3b(int vv) : x(vv), y(vv), z(vv) {}
-    /// element constructor
-    vec3b(byte x, byte y, byte z) : x{x}, y{y}, z{z} {}
-
-    /// element access
-    byte& operator[](int i) { return (&x)[i]; }
-    /// element access
-    const byte& operator[](int i) const { return (&x)[i]; }
-
-    /// data access
-    byte* data() { return &x; }
-    /// data access
-    const byte* data() const { return &x; }
-
-    /// element data
-    byte x;
-    /// element data
-    byte y;
-    /// element data
-    byte z;
-};
-
-/// Vector of 4 byte elements.
-struct vec4b {
-    /// default constructor
-    vec4b() : x{0}, y{0}, z{0}, w{0} {}
-    /// element constructor
-    explicit vec4b(byte vv) : x(vv), y(vv), z(vv), w(vv) {}
-    /// element constructor
-    vec4b(byte x, byte y, byte z, byte w) : x{x}, y{y}, z{z}, w{w} {}
-    /// constructor from smaller vector
-    vec4b(const vec3b& xyz, byte w) : x{xyz.x}, y{xyz.y}, z{xyz.z}, w{w} {}
-
-    /// element access
-    byte& operator[](int i) { return (&x)[i]; }
-    /// element access
-    const byte& operator[](int i) const { return (&x)[i]; }
-
-    /// data access
-    byte* data() { return &x; }
-    /// data access
-    const byte* data() const { return &x; }
-
-    /// access xyz components
-    vec3b& xyz() { return *(vec3b*)&x; }
-    /// access xyz components
-    const vec3b& xyz() const { return *(vec3b*)&x; }
-
-    /// element data
-    byte x;
-    /// element data
-    byte y;
-    /// element data
-    byte z;
-    /// element data
-    byte w;
-};
+/// 2-dimension float vector
+using vec2f = vec2<float>;
+/// 3-dimension float vector
+using vec3f = vec3<float>;
+/// 4-dimension float vector
+using vec4f = vec4<float>;
+/// 2-dimension int vector
+using vec2i = vec2<int>;
+/// 3-dimension int vector
+using vec3i = vec3<int>;
+/// 4-dimension int vector
+using vec4i = vec4<int>;
+/// 3-dimension byte vector
+using vec3b = vec3<byte>;
+/// 4-dimension byte vector
+using vec4b = vec4<byte>;
 
 /// 2-dimensional float zero vector
 const auto zero2f = vec2f();
@@ -1237,88 +1123,54 @@ const auto zero4i = vec4i();
 const auto zero4b = vec4b();
 
 /// iteration support
-inline int* begin(vec2i& a) { return &a.x; }
+template<typename T, int N>
+inline T* begin(vec<T, N>& a) { return &a.x; }
 /// iteration support
-inline const int* begin(const vec2i& a) { return &a.x; }
+template<typename T, int N>
+inline const T* begin(const vec<T, N>& a) { return &a.x; }
 /// iteration support
-inline int* end(vec2i& a) { return &a.x + 2; }
+template<typename T, int N>
+inline T* end(vec<T, N>& a) { return &a.x + N; }
 /// iteration support
-inline const int* end(const vec2i& a) { return &a.x + 2; }
-
-/// iteration support
-inline int* begin(vec3i& a) { return &a.x; }
-/// iteration support
-inline const int* begin(const vec3i& a) { return &a.x; }
-/// iteration support
-inline int* end(vec3i& a) { return &a.x + 3; }
-/// iteration support
-inline const int* end(const vec3i& a) { return &a.x + 3; }
-
-/// iteration support
-inline int* begin(vec4i& a) { return &a.x; }
-/// iteration support
-inline const int* begin(const vec4i& a) { return &a.x; }
-/// iteration support
-inline int* end(vec4i& a) { return &a.x + 4; }
-/// iteration support
-inline const int* end(const vec4i& a) { return &a.x + 4; }
+template<typename T, int N>
+inline const T* end(const vec<T, N>& a) { return &a.x + N; }
 
 /// vector operator ==
-inline bool operator==(const vec2f& a, const vec2f& b) {
+template<typename T>
+inline bool operator==(const vec2<T>& a, const vec2<T>& b) {
     return a.x == b.x && a.y == b.y;
 }
 /// vector operator !=
-inline bool operator!=(const vec2f& a, const vec2f& b) {
+    template<typename T>
+inline bool operator!=(const vec2<T>& a, const vec2<T>& b) {
     return a.x != b.x || a.y != b.y;
 }
 
 /// vector operator ==
-inline bool operator==(const vec3f& a, const vec3f& b) {
+    template<typename T>
+inline bool operator==(const vec3<T>& a, const vec3<T>& b) {
     return a.x == b.x && a.y == b.y && a.z == b.z;
 }
 /// vector operator !=
-inline bool operator!=(const vec3f& a, const vec3f& b) {
+    template<typename T>
+inline bool operator!=(const vec3<T>& a, const vec3<T>& b) {
     return a.x != b.x || a.y != b.y || a.z != b.z;
 }
 
 /// vector operator ==
-inline bool operator==(const vec4f& a, const vec4f& b) {
+    template<typename T>
+inline bool operator==(const vec4<T>& a, const vec4<T>& b) {
     return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
 }
 /// vector operator !=
-inline bool operator!=(const vec4f& a, const vec4f& b) {
-    return a.x != b.x || a.y != b.y || a.z != b.z || a.w != b.w;
-}
-
-/// vector operator ==
-inline bool operator==(const vec2i& a, const vec2i& b) {
-    return a.x == b.x && a.y == b.y;
-}
-/// vector operator !=
-inline bool operator!=(const vec2i& a, const vec2i& b) {
-    return a.x != b.x || a.y != b.y;
-}
-
-/// vector operator ==
-inline bool operator==(const vec3i& a, const vec3i& b) {
-    return a.x == b.x && a.y == b.y && a.z == b.z;
-}
-/// vector operator !=
-inline bool operator!=(const vec3i& a, const vec3i& b) {
-    return a.x != b.x || a.y != b.y || a.z != b.z;
-}
-
-/// vector operator ==
-inline bool operator==(const vec4i& a, const vec4i& b) {
-    return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
-}
-/// vector operator !=
-inline bool operator!=(const vec4i& a, const vec4i& b) {
+    template<typename T>
+inline bool operator!=(const vec4<T>& a, const vec4<T>& b) {
     return a.x != b.x || a.y != b.y || a.z != b.z || a.w != b.w;
 }
 
 /// vector operator < (lexicographic order - useful for map)
-inline bool operator<(const vec2i& a, const vec2i& b) {
+    template<typename T>
+inline bool operator<(const vec2<T>& a, const vec2<T>& b) {
     for (auto i = 0; i < 2; i++) {
         if (a[i] < b[i]) return true;
         if (a[i] > b[i]) return false;
@@ -1326,7 +1178,8 @@ inline bool operator<(const vec2i& a, const vec2i& b) {
     return false;
 }
 /// vector operator < (lexicographic order - useful for map)
-inline bool operator<(const vec3i& a, const vec3i& b) {
+    template<typename T>
+inline bool operator<(const vec3<T>& a, const vec3<T>& b) {
     for (auto i = 0; i < 3; i++) {
         if (a[i] < b[i]) return true;
         if (a[i] > b[i]) return false;
@@ -1334,7 +1187,8 @@ inline bool operator<(const vec3i& a, const vec3i& b) {
     return false;
 }
 /// vector operator < (lexicographic order - useful for map)
-inline bool operator<(const vec4i& a, const vec4i& b) {
+    template<typename T>
+inline bool operator<(const vec4<T>& a, const vec4<T>& b) {
     for (auto i = 0; i < 4; i++) {
         if (a[i] < b[i]) return true;
         if (a[i] > b[i]) return false;

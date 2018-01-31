@@ -1610,9 +1610,9 @@ void add_spec_gloss(gltf_scene_group* scns) {
                     h = max(h, mr->metallic_txt->height());
                 }
                 auto diff = new gltf_texture();
-                diff->ldr.resize(w, h);
+                diff->ldr = image4b(w, h);
                 auto spec = new gltf_texture();
-                spec->ldr.resize(w, h);
+                spec->ldr = image4b(w, h);
                 for (auto j = 0; j < h; j++) {
                     for (auto i = 0; i < w; i++) {
                         auto u = i / (float)w, v = j / (float)h;
