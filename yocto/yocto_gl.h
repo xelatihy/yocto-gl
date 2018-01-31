@@ -6,8 +6,8 @@
 /// and released under the MIT license. Features include:
 ///
 /// - convenience math functions for graphics
-/// - static length vectors for 2, 3, 4 length and int and float type
-/// - static length matrices for 2x2, 3x3, 4x4 and float type
+/// - static length vectors for 2, 3, 4 length of arbitrary type
+/// - static length matrices for 2x2, 3x3, 4x4 of arbitrary type
 /// - static length rigid transforms (frames), specialized for 2d and 3d space
 /// - linear algebra operations and transforms
 /// - axis aligned bounding boxes
@@ -141,25 +141,26 @@
 /// ### Small Vectors and Matrices, Frames, Bounding Boxes and Transforms
 ///
 /// We provide common operations for small vectors and matrices typically used
-/// in graphics. In particular, we support 2-4 dimensional float vectors
-/// `vec2f`, `vec3f`, `vec4f`, 2-4 dimensional int vectors `vec2i`, `vec3i`,
-/// `vec4i` and a 4 dimensional byte vector `vec4b`. The float vectors
-/// support most arithmetic and vector operations.
+/// in graphics. In particular, we support 2-4 dimensional vectors of arbitrary
+/// `vec2<T>`, `vec3<T>`, `vec4<T>` with specializarion for float (`vec2f`,
+/// `vec3f`, `vec4f`), int (`vec2i`, `vec3i`, `vec4i`) and bytes (`vec4b`).
+/// Vector operations are templated so they work on every type, but many of
+/// them are well-defined only for float types.
 ///
-/// We support 2-4 dimensional float matrices `mat2f`, `mat3f`, `mat4f`, with
-/// matrix-matrix and matrix-vector products, trasposes and inverses. Matrices
-/// are stored in column-major ordered and are accessed and constructed by
-/// column.
+/// We support 2-4 dimensional generic matrices `mat2<T>`, `mat3<T>`, `mat4<T>`,
+/// with matrix-matrix and matrix-vector products, trasposes and inverses.
+/// Matrices are stored in column-major ordered and are accessed and constructed
+/// by column.
 ///
 /// To represent transformations, most of the library facilities prefer the use
-/// cooordinate frames, aka rigid transforms, represented as `frame3f`.
+/// cooordinate frames, aka rigid transforms, represented as `frame3<T>`.
 /// The structure store three coodinate axis and the frame origin. This is
 /// equivalenent to a rigid transform written as a column-major affine
 /// matrix. Transform operations are better behaved with this representation.
 ///
 /// We represent coordinate bounds with axis-aligned bounding boxes in 1-4
-/// dimensions: `bbox1f`, `bbox2f`, `bbox3f`, `bbox4f`. These types support
-/// expansion operation, union and containment. We provide operations to
+/// dimensions: `bbox1<T>`, `bbox2<T>`, `bbox3<T>`, `bbox4<T>`. These types
+/// support expansion operation, union and containment. We provide operations to
 /// compute bounds for points, lines, triangles and quads.
 ///
 /// For all basic types we support iteration with `begin()`/`end()` pairs
