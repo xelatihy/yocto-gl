@@ -255,8 +255,9 @@
 ///
 /// ### Image and color
 ///
-/// We support simple containers for either 4-byte per pixel sRGB images
-/// `image4b`, or 4-float per pixel HDR images `image4f`.
+/// Imags are stored with the `image` templated structure. The two most used
+/// image types are 4-byte per pixel sRGB images `image4b`, or 4-float per
+/// pixel HDR images `image4f`.
 ///
 /// 1. convert between byte and float images with `srgb_to_linear()` and
 ///    `linear_to_srgb()`
@@ -5116,129 +5117,62 @@ make_hair(int num, int tesselation, const vector<vec3i>& striangles,
 // -----------------------------------------------------------------------------
 namespace ygl {
 
+/// Generic image container
+template <typename T>
+struct image {
+    /// empty image constructor
+    image() : _w{0}, _h{0}, _d{} {}
+    /// image constructor
+    image(int w, int h, const T& v = {}) : _w{w}, _h{h}, _d(size_t(w * h), v) {}
+    /// image constructor
+    image(int w, int h, const vec4f* v) : _w{w}, _h{h}, _d(v, v + w * h) {}
+
+    /// width
+    int width() const { return _w; }
+    /// height
+    int height() const { return _h; }
+    /// size
+    vec2i size() const { return {_w, _h}; }
+    /// check for empty
+    bool empty() const { return _w == 0 || _h == 0; }
+    /// check for empty
+    explicit operator bool() const { return _w != 0 && _h != 0; }
+
+    /// element access
+    T& operator[](const vec2i& ij) { return _d[ij.y * _w + ij.x]; }
+    /// element access
+    const T& operator[](const vec2i& ij) const { return _d[ij.y * _w + ij.x]; }
+    /// element access
+    T& at(const vec2i& ij) { return _d.at(ij.y * _w + ij.x); }
+    /// element access
+    const T& at(const vec2i& ij) const { return _d.at(ij.y * _w + ij.x); }
+    /// element access
+    T& at(int i, int j) { return _d.at(j * _w + i); }
+    /// element access
+    const T& at(int i, int j) const { return _d.at(j * _w + i); }
+
+    /// data access
+    T* data() { return _d.data(); }
+    /// data access
+    const T* data() const { return _d.data(); }
+
+   private:
+    int _w, _h;
+    vector<T> _d;
+};
+
 /// HDR image
-struct image4f {
-    /// empty image constructor
-    image4f() : _w{0}, _h{0}, _d{} {}
-    /// image constructor
-    image4f(int w, int h, const vec4f& v = zero4f)
-        : _w{w}, _h{h}, _d(size_t(w * h), v) {}
-    /// image constructor
-    image4f(int w, int h, const vec4f* v) : _w{w}, _h{h}, _d(v, v + w * h) {}
-
-    /// width
-    int width() const { return _w; }
-    /// height
-    int height() const { return _h; }
-    /// size
-    vec2i size() const { return {_w, _h}; }
-    /// check for empty
-    bool empty() const { return _w == 0 || _h == 0; }
-    /// check for empty
-    explicit operator bool() const { return _w != 0 && _h != 0; }
-
-    /// reallocate memory
-    void resize(int w, int h, const vec4f& v = zero4f) {
-        _w = w;
-        _h = h;
-        _d.resize(_w * _h);
-    }
-    /// reallocate memory
-    void assign(int w, int h, const vec4f& v) {
-        _w = w;
-        _h = h;
-        _d.assign(_w * _h, v);
-    }
-
-    /// set values
-    void set(const vec4f& v) { _d.assign(_w * _h, v); }
-
-    /// element access
-    vec4f& operator[](const vec2i& ij) { return _d[ij.y * _w + ij.x]; }
-    /// element access
-    const vec4f& operator[](const vec2i& ij) const {
-        return _d[ij.y * _w + ij.x];
-    }
-    /// element access
-    vec4f& at(const vec2i& ij) { return _d.at(ij.y * _w + ij.x); }
-    /// element access
-    const vec4f& at(const vec2i& ij) const { return _d.at(ij.y * _w + ij.x); }
-    /// element access
-    vec4f& at(int i, int j) { return _d.at(j * _w + i); }
-    /// element access
-    const vec4f& at(int i, int j) const { return _d.at(j * _w + i); }
-
-    /// data access
-    vec4f* data() { return _d.data(); }
-    /// data access
-    const vec4f* data() const { return _d.data(); }
-
-   private:
-    int _w, _h;
-    vector<vec4f> _d;
-};
-
+using image4f = image<vec4f>;
 /// LDR image
-struct image4b {
-    /// empty image constructor
-    image4b() : _w{0}, _h{0}, _d{} {}
-    /// image constructor
-    image4b(int w, int h, const vec4b& v = zero4b)
-        : _w{w}, _h{h}, _d(size_t(w * h), v) {}
-    /// image constructor
-    image4b(int w, int h, const vec4b* v) : _w{w}, _h{h}, _d(v, v + w * h) {}
+using image4b = image<vec4b>;
 
-    /// width
-    int width() const { return _w; }
-    /// height
-    int height() const { return _h; }
-    /// size
-    vec2i size() const { return {_w, _h}; }
-    /// check for empty
-    bool empty() const { return _w == 0 || _h == 0; }
-    /// check for empty
-    explicit operator bool() const { return _w != 0 && _h != 0; }
-
-    /// reallocate memory
-    void resize(int w, int h, const vec4b& v = zero4b) {
-        _w = w;
-        _h = h;
-        _d.resize(_w * _h);
-    }
-    /// reallocate memory
-    void assign(int w, int h, const vec4b& v) {
-        _w = w;
-        _h = h;
-        _d.assign(_w * _h, v);
-    }
-
-    /// set values
-    void set(const vec4b& v) { _d.assign(_w * _h, v); }
-
-    /// element access
-    vec4b& operator[](const vec2i& ij) { return _d[ij.y * _w + ij.x]; }
-    /// element access
-    const vec4b& operator[](const vec2i& ij) const {
-        return _d[ij.y * _w + ij.x];
-    }
-    /// element access
-    vec4b& at(const vec2i& ij) { return _d.at(ij.y * _w + ij.x); }
-    /// element access
-    const vec4b& at(const vec2i& ij) const { return _d.at(ij.y * _w + ij.x); }
-    /// element access
-    vec4b& at(int i, int j) { return _d.at(j * _w + i); }
-    /// element access
-    const vec4b& at(int i, int j) const { return _d.at(j * _w + i); }
-
-    /// data access
-    vec4b* data() { return _d.data(); }
-    /// data access
-    const vec4b* data() const { return _d.data(); }
-
-   private:
-    int _w, _h;
-    vector<vec4b> _d;
-};
+/// Create an image with values stored in an array in scanliine order.
+template <typename T>
+inline image<T> make_image(int w, int h, T* vals) {
+    auto img = image<T>(w, h);
+    for (auto idx = 0; idx < w * h; idx++) img.data()[idx] = vals[idx];
+    return img;
+}
 
 }  // namespace ygl
 
