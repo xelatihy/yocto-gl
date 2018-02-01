@@ -80,6 +80,9 @@
 //
 // - build gl by default
 // - transforms in scene
+//     - node children in elem widgets
+//     - node children in test elem
+//     - node children in test elem widgets
 // - evaluate meshes with multiple shapes
 // - uniform serialization
 //    - consider simpler serialization code based on input flag
@@ -5984,6 +5987,7 @@ inline node* gltf_node_to_instances(scene* scn, const vector<camera>& cameras,
     auto gnde = gltf->get(nid);
     auto xform = xf * node_transform(gnde);
     auto nde = new node();
+    nde->frame = to_frame(xform);
     scn->nodes.push_back(nde);
     nde->name = gnde->name;
     if (gnde->camera) {
@@ -8215,13 +8219,9 @@ void update_test_texture(
 void update_test_material(
     const scene* scn, material* mat, const test_material_params& tmat) {
     if (tmat.name == "") throw runtime_error("cannot use empty name");
-    auto txt = (texture*)nullptr, norm = (texture*)nullptr;
-    if (scn && tmat.texture != "")
-        for (auto elem : scn->textures)
-            if (elem->name == tmat.texture) txt = elem;
-    if (scn && tmat.normal != "")
-        for (auto elem : scn->textures)
-            if (elem->name == tmat.normal) norm = elem;
+
+    auto txt = find_named_elem(scn->textures, tmat.texture);
+    auto norm = find_named_elem(scn->textures, tmat.normal);
 
     mat->name = tmat.name;
     mat->mtype = material_type::specular_roughness;
@@ -8424,14 +8424,13 @@ void update_test_instance(
                    rotation_mat3(vec3f{1, 0, 0}, tist.rotation.x * pif / 180);
         ist->frame.rot() = ist->frame.rot() * rot;
     }
-    ist->shp = shp;
+    ist->shp = find_named_elem(scn->shapes, tist.shape);
 }
 
 // Makes/updates a test shape
 void update_test_camera(
     const scene* scn, camera* cam, const test_camera_params& tcam) {
     if (tcam.name == "") throw runtime_error("cannot use empty name");
-
     cam->name = tcam.name;
     cam->frame = lookat_frame3(tcam.from, tcam.to, vec3f{0, 1, 0});
     cam->yfov = tcam.yfov;
@@ -8446,19 +8445,24 @@ void update_test_camera(
 void update_test_environment(
     const scene* scn, environment* env, const test_environment_params& tenv) {
     if (tenv.name == "") throw runtime_error("cannot use empty name");
-    auto txt = (texture*)nullptr;
-    if (scn && tenv.texture != "") {
-        for (auto elem : scn->textures)
-            if (elem->name == tenv.texture) txt = elem;
-    }
-
     env->name = tenv.name;
     env->frame = identity_frame3f;
     if (tenv.rotation) {
         env->frame = rotation_frame3({0, 1, 0}, tenv.rotation);
     }
     env->ke = tenv.emission * tenv.color;
-    env->ke_txt.txt = txt;
+    env->ke_txt.txt = find_named_elem(scn->textures, tenv.texture);
+}
+
+// Makes/updates a test shape
+void update_test_node(
+    const scene* scn, node* nde, const test_node_params& tnde) {
+    if (tnde.name == "") throw runtime_error("cannot use empty name");
+    nde->name = tnde.name;
+    nde->frame = identity_frame3f;
+    nde->cam = find_named_elem(scn->cameras, tnde.camera);
+    nde->ist = find_named_elem(scn->instances, tnde.instance);
+    nde->env = find_named_elem(scn->environments, tnde.environment);
 }
 
 // Update test elements
@@ -8494,6 +8498,8 @@ void update_test_scene(scene* scn, const test_scene_params& params,
         scn, scn->instances, params.instances, update_test_instance, refresh);
     update_test_scene_elem(scn, scn->environments, params.environments,
         update_test_environment, refresh);
+    update_test_scene_elem(
+        scn, scn->nodes, params.nodes, update_test_node, refresh);
 }
 
 // remove duplicate elems
@@ -11368,41 +11374,53 @@ inline void draw_tree_widgets(
 inline void draw_tree_widgets(
     gl_window* win, const string& lbl, instance* ist, void*& selection) {
     if (draw_tree_widget_begin(win, lbl + ist->name, selection, ist)) {
-        if (ist->shp) draw_tree_widgets(win, "shape: ", ist->shp, selection);
+        if (ist->shp) draw_tree_widgets(win, "shp: ", ist->shp, selection);
+        draw_tree_widget_end(win);
+    }
+}
+
+inline void draw_tree_widgets(
+    gl_window* win, const string& lbl, environment* env, void*& selection) {
+    if (draw_tree_widget_begin(win, lbl + env->name, selection, env)) {
+        if (env->ke_txt.txt)
+            draw_tree_widgets(win, "txt: ", env->ke_txt.txt, selection);
+        draw_tree_widget_end(win);
+    }
+}
+
+inline void draw_tree_widgets(
+    gl_window* win, const string& lbl, node* nde, void*& selection) {
+    if (draw_tree_widget_begin(win, lbl + nde->name, selection, nde)) {
+        if (nde->cam) draw_tree_widgets(win, "cam: ", nde->cam, selection);
+        if (nde->ist) draw_tree_widgets(win, "ist: ", nde->ist, selection);
+        if (nde->env) draw_tree_widgets(win, "env: ", nde->env, selection);
+        for (auto idx = 0; idx < nde->children.size(); idx++) {
+            draw_tree_widgets(
+                win, "", nde->children[idx], selection);
+        }
+        draw_tree_widget_end(win);
+    }
+}
+
+template <typename T>
+inline void draw_scene_tree_widgets(gl_window* win, const string& lbl,
+    const vector<T*>& elems, void*& selection) {
+    if (draw_tree_widget_begin(win, lbl)) {
+        for (auto elem : elems) draw_tree_widgets(win, "", elem, selection);
         draw_tree_widget_end(win);
     }
 }
 
 inline void draw_tree_widgets(
     gl_window* win, const string& lbl, scene* scn, void*& selection) {
-    if (draw_tree_widget_begin(win, lbl + "cameras")) {
-        for (auto cam : scn->cameras)
-            draw_tree_widgets(win, "", cam, selection);
-        draw_tree_widget_end(win);
-    }
-
-    if (draw_tree_widget_begin(win, lbl + "shapes")) {
-        for (auto msh : scn->shapes) draw_tree_widgets(win, "", msh, selection);
-        draw_tree_widget_end(win);
-    }
-
-    if (draw_tree_widget_begin(win, lbl + "instances")) {
-        for (auto ist : scn->instances)
-            draw_tree_widgets(win, "", ist, selection);
-        draw_tree_widget_end(win);
-    }
-
-    if (draw_tree_widget_begin(win, lbl + "materials")) {
-        for (auto mat : scn->materials)
-            draw_tree_widgets(win, "", mat, selection);
-        draw_tree_widget_end(win);
-    }
-
-    if (draw_tree_widget_begin(win, lbl + "textures")) {
-        for (auto txt : scn->textures)
-            draw_tree_widgets(win, "", txt, selection);
-        draw_tree_widget_end(win);
-    }
+    draw_scene_tree_widgets(win, lbl + "cameras", scn->cameras, selection);
+    draw_scene_tree_widgets(win, lbl + "textures", scn->textures, selection);
+    draw_scene_tree_widgets(win, lbl + "materials", scn->materials, selection);
+    draw_scene_tree_widgets(win, lbl + "shapes", scn->shapes, selection);
+    draw_scene_tree_widgets(win, lbl + "instances", scn->instances, selection);
+    draw_scene_tree_widgets(
+        win, lbl + "environments", scn->environments, selection);
+    draw_scene_tree_widgets(win, lbl + "nodes", scn->nodes, selection);
 }
 
 inline bool draw_elem_widgets(gl_window* win, scene* scn, texture* txt,
@@ -11555,6 +11573,25 @@ inline bool draw_elem_widgets(gl_window* win, scene* scn, environment* env,
     return std::any_of(edited.begin(), edited.end(), [](auto x) { return x; });
 }
 
+inline bool draw_elem_widgets(gl_window* win, scene* scn, node* nde,
+    void*& selection, const unordered_map<texture*, gl_texture>& gl_txt) {
+    auto cam_names = vector<pair<string, camera*>>{{"<none>", nullptr}};
+    for (auto cam : scn->cameras) cam_names.push_back({cam->name, cam});
+    auto ist_names = vector<pair<string, instance*>>{{"<none>", nullptr}};
+    for (auto ist : scn->instances) ist_names.push_back({ist->name, ist});
+    auto env_names = vector<pair<string, environment*>>{{"<none>", nullptr}};
+    for (auto env : scn->environments) env_names.push_back({env->name, env});
+
+    auto edited = vector<bool>();
+    draw_separator_widget(win);
+    draw_label_widget(win, "nde", nde->name);
+    edited += draw_value_widget(win, "frame", nde->frame, -10, 10);
+    edited += draw_value_widget(win, "camera", nde->cam, cam_names);
+    edited += draw_value_widget(win, "instance", nde->cam, cam_names);
+    edited += draw_value_widget(win, "environment", nde->env, env_names);
+    return std::any_of(edited.begin(), edited.end(), [](auto x) { return x; });
+}
+
 inline bool draw_elem_widgets(gl_window* win, test_scene_params* scn,
     test_texture_params* txt, void*& selection,
     const unordered_map<texture*, gl_texture>& gl_txt) {
@@ -11631,6 +11668,19 @@ inline bool draw_elem_widgets(gl_window* win, test_scene_params* scn,
     edited += draw_value_widget(win, "rotation", env->rotation, -pif, pif);
     edited += draw_value_widget(win, "emission", env->emission);
     edited += draw_value_widget(win, "txt", env->texture);
+    return std::any_of(edited.begin(), edited.end(), [](auto x) { return x; });
+}
+
+inline bool draw_elem_widgets(gl_window* win, test_scene_params* scn,
+    test_node_params* nde, void*& selection,
+    const unordered_map<texture*, gl_texture>& gl_txt) {
+    auto edited = vector<bool>();
+    draw_separator_widget(win);
+    edited += draw_value_widget(win, "name", nde->name);
+    edited += draw_value_widget(win, "frame", nde->frame);
+    edited += draw_value_widget(win, "camera", nde->camera);
+    edited += draw_value_widget(win, "instance", nde->instance);
+    edited += draw_value_widget(win, "environment", nde->environment);
     return std::any_of(edited.begin(), edited.end(), [](auto x) { return x; });
 }
 
@@ -11740,6 +11790,8 @@ inline bool draw_scene_widgets(gl_window* win, const string& lbl, scene* scn,
         edited += draw_selected_elem_widgets(win, scn, test_scn,
             scn->environments, test_scn->environments, selection,
             update_test_environment, gl_txt);
+        edited += draw_selected_elem_widgets(win, scn, test_scn, scn->nodes,
+            test_scn->nodes, selection, update_test_node, gl_txt);
         return std::any_of(
             edited.begin(), edited.end(), [](auto x) { return x; });
     } else

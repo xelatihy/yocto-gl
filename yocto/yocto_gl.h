@@ -7088,9 +7088,7 @@ struct scene {
     /// light array
     vector<light*> lights = {};
 
-    /// node root hierarchy
-    node* root = nullptr;
-    /// node hierarchy
+    /// node hierarchy (root is first node)
     vector<node*> nodes = {};
 
     // computed data --------------------------
@@ -7228,7 +7226,15 @@ inline vec4f eval_texture(const texture_info& info, const vec2f& texcoord,
            lookup(ii, j) * u * (1 - v) + lookup(ii, jj) * u * v;
 }
 
-// Implementation detail. Add a named element or return the one with that name.
+/// Finds an element by name
+template<typename T>
+inline T* find_named_elem(const vector<T*>& elems, const string& name) {
+    if(name == "") return nullptr;
+    for(auto elem : elems) if(elem->name == name) return elem;
+    return nullptr;
+}
+
+// Add a named element or return the one with that name.
 template <typename T>
 inline T* add_named_elem(vector<T*>& elems, const string& name) {
     for (auto elem : elems)
@@ -7238,37 +7244,7 @@ inline T* add_named_elem(vector<T*>& elems, const string& name) {
     elems.push_back(elem);
     return elem;
 }
-
-/// Add a named shape, only if not already added
-inline shape* add_named_shape(scene* scn, const string& name) {
-    return add_named_elem(scn->shapes, name);
-}
-
-/// Add a named material, only if not already added
-inline material* add_named_material(scene* scn, const string& name) {
-    return add_named_elem(scn->materials, name);
-}
-
-/// Add a named texture, only if not already added
-inline texture* add_named_texture(scene* scn, const string& name) {
-    return add_named_elem(scn->textures, name);
-}
-
-/// Add a named camera, only if not already added
-inline camera* add_named_camera(scene* scn, const string& name) {
-    return add_named_elem(scn->cameras, name);
-}
-
-/// Add a named material, only if not already added
-inline environment* add_named_environment(scene* scn, const string& name) {
-    return add_named_elem(scn->environments, name);
-}
-
-/// Add a named material, only if not already added
-inline instance* add_named_instance(scene* scn, const string& name) {
-    return add_named_elem(scn->instances, name);
-}
-
+    
 /// Subdivides shape elements. Apply subdivision surface rules if subdivide
 /// is true.
 inline void subdivide_shape_once(shape* shp, bool subdiv = false) {
@@ -7401,7 +7377,7 @@ inline void update_transforms(
 
 /// Update node transforms
 inline void update_transforms(scene* scn) {
-    if (scn->root) update_transforms(scn->root);
+    if (!scn->nodes.empty()) update_transforms(scn->nodes[0]);
 }
 
 /// Loading options
@@ -8127,6 +8103,27 @@ void update_test_environment(
 /// Test environment presets
 unordered_map<string, test_environment_params>& test_environment_presets();
 
+/// Test node parameters
+struct test_node_params {
+    /// Name (if not filled, assign a default one)
+    string name = "";
+    /// Camera
+    string camera = "";
+    /// Instance
+    string instance = "";
+    /// Environment
+    string environment = "";
+    /// Frame
+    frame3f frame = identity_frame3f;
+};
+    
+    /// Updates a test node, adding it to the scene if missing.
+    void update_test_node(
+                                 const scene* scn, node* nde, const test_node_params& tndr);
+    
+    /// Test nodes presets
+    unordered_map<string, test_node_params>& test_node_presets();
+    
 /// Test scene
 struct test_scene_params {
     /// name
@@ -8143,6 +8140,8 @@ struct test_scene_params {
     vector<test_instance_params> instances;
     /// envieonmennts
     vector<test_environment_params> environments;
+    /// nodes
+    vector<test_node_params> nodes;
 };
 
 /// Updates a test scene, adding missing objects. Objects are only added (for
