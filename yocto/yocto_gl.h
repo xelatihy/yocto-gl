@@ -2298,10 +2298,10 @@ struct quat<T, 4> {
     quat(const vec<T, 3>& axis, T angle) : x{0}, y{0}, z{0}, w{1} {
         auto len = length(axis);
         if (len) {
-            x = cos(angle / 2) * axis.x / len;
-            y = cos(angle / 2) * axis.y / len;
-            z = cos(angle / 2) * axis.z / len;
-            w = sin(angle / 2);
+            x = sin(angle / 2) * axis.x / len;
+            y = sin(angle / 2) * axis.y / len;
+            z = sin(angle / 2) * axis.z / len;
+            w = cos(angle / 2);
         }
     }
     /// conversion to vec
@@ -2310,7 +2310,7 @@ struct quat<T, 4> {
     /// rotation axis
     vec<T, 3> axis() const { return normalize(vec<T, 3>{x, y, z}); }
     /// rotation angle
-    T angle() const { return atan2(length(vec<T, 3>{x, y, z}), w); }
+    T angle() const { return 2*acos(w); }
 
     /// element access
     T& operator[](int i) { return (&x)[i]; }
@@ -2950,22 +2950,13 @@ inline mat<T, 4> rotation_mat4(const vec<T, 3>& axis, float angle) {
 /// quaternion axis-angle conversion
 template <typename T>
 inline vec<T, 4> rotation_axisangle4(const quat<T, 4>& a) {
-    auto axis = normalize(vec<T, 3>{a.x, a.y, a.z});
-    auto angle = acos(a.w) * 2;
-    return {axis.x, axis.y, axis.z, angle};
+    return {a.axis(), a.angle()};
 }
 
 /// axis-angle to quaternion
 template <typename T>
-inline quat<T, 4> rotation_quat4(const vec<T, 4>& axis_angle) {
-    auto axis = vec<T, 3>{axis_angle.x, axis_angle.y, axis_angle.z};
-    auto len = length(axis);
-    auto angle = atan2(len, axis_angle.w);
-    if (len)
-        axis /= len;
-    else
-        axis = {0, 0, 1};
-    return {axis.x, axis.y, axis.z, angle};
+inline quat<T, 4> rotation_quat4(const vec<T, 3>& axis, T angle) {
+    return quat<T, 4>(axis, angle);
 }
 
 /// quaterion to matrix conversion
@@ -4099,10 +4090,12 @@ inline T eval_keyframed_step(
 }
 
 // Implementation detail.
-inline vec3f eval_keyframed_lerp(const vec3f& a, const vec3f& b, float t) {
+template<typename T>
+inline T eval_keyframed_lerp(const T& a, const T& b, float t) {
     return lerp(a, b, t);
 }
-inline quat4f eval_keyframed_lerp(const quat4f& a, const quat4f& b, float t) {
+template<typename T>
+inline quat<T, 4> eval_keyframed_lerp(const quat<T, 4>& a, const quat<T, 4>& b, float t) {
     return slerp(a, b, t);
 }
 
@@ -4117,6 +4110,28 @@ inline T eval_keyframed_linear(
                      times.begin());
     return eval_keyframed_lerp(vals.at(idx-1), vals.at(idx),
         (time - times.at(idx-1)) / (times.at(idx) - times.at(idx-1)));
+}
+
+// Implementation detail.
+    template<typename T>
+inline T eval_keyframed_cubic(const T& a, const T& b, const T& c, const T& d, float t) {
+    return eval_bezier_cubic(a, b, c, d, t);
+}
+    template<typename T>
+inline quat<T, 4> eval_keyframed_cubic(const quat<T, 4>& a, const quat<T, 4>& b, const quat<T, 4>& c, const quat<T, 4>& d, float t) {
+    return normalize((quat4f)eval_keyframed_cubic((vec4f)a, (vec4f)b, (vec4f)c, (vec4f)d, t));
+}
+
+/// Evalautes a keyframed value using bezier interpolation
+template <typename T>
+inline T eval_keyframed_bezier(const vector<float>& times, const vector<T>& vals, float time) {
+    time = clamp(time, times.front(), times.back() - 0.001f);
+    if (time <= times.front()) return vals.front();
+    if (time >= times.back()) return vals.back();
+    auto idx = (int)(std::upper_bound(times.begin(), times.end(), time) -
+                     times.begin());
+    return eval_keyframed_cubic(vals.at(idx-3), vals.at(idx-2), vals.at(idx-1), vals.at(idx),
+                               (time - times.at(idx-1)) / (times.at(idx) - times.at(idx-1)));
 }
 
 }  // namespace ygl
@@ -7528,7 +7543,8 @@ inline void update_transforms(animation* anm, float time) {
             case keyframe_type::linear:
                 return eval_keyframed_linear(times, vals, time);
             case keyframe_type::catmull_rom: return vals.at(0);
-            case keyframe_type::bezier: return vals.at(0);
+            case keyframe_type::bezier:
+                return eval_keyframed_bezier(times, vals, time);
             default: throw runtime_error("should not have been here");
         }
         return vals.at(0);
