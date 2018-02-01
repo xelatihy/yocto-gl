@@ -7627,8 +7627,6 @@ struct add_elements_options {
     bool texture_data = true;
     /// Add instances
     bool shape_instances = true;
-    /// Add default camera
-    bool default_camera = true;
     /// Add an empty default environment
     bool default_environment = false;
     /// Add default names
@@ -7643,6 +7641,10 @@ struct add_elements_options {
         return opts;
     }
 };
+
+/// Make a view camera either copying a given one or building a default one.
+/// Bounding boxes for the scene will be updated.
+camera* make_view_camera(scene* scn, int camera_id);
 
 /// Add elements
 void add_elements(scene* scn, const add_elements_options& opts = {});
@@ -8486,8 +8488,8 @@ inline const vector<pair<string, trace_filter_type>>& trace_filter_names() {
 
 /// Rendering params
 struct trace_params {
-    /// camera id
-    int camera_id = 0;
+    /// camera id (-1 for default)
+    int camera_id = -1;
     /// image width
     int width = 360;
     /// image height
@@ -8547,19 +8549,20 @@ inline const image4f& get_trace_image(const trace_state* st) { return st->img; }
 inline int get_trace_sample(const trace_state* st) { return st->sample; }
 
 /// Trace the next nsamples samples.
-void trace_samples(trace_state* st, const scene* scn, int nsamples,
-    const trace_params& params);
+void trace_samples(trace_state* st, const scene* scn, const camera* view,
+    int nsamples, const trace_params& params);
 
 /// Trace the whole image
-inline image4f trace_image(const scene* scn, const trace_params& params) {
+inline image4f trace_image(
+    const scene* scn, const camera* view, const trace_params& params) {
     auto st = unique_ptr<trace_state>(make_trace_state(params));
-    trace_samples(st.get(), scn, params.nsamples, params);
+    trace_samples(st.get(), scn, view, params.nsamples, params);
     return get_trace_image(st.get());
 }
 
 /// Starts an anyncrhounous renderer.
-void trace_async_start(
-    trace_state* st, const scene* scn, const trace_params& params);
+void trace_async_start(trace_state* st, const scene* scn, const camera* view,
+    const trace_params& params);
 
 /// Stop the asynchronous renderer.
 void trace_async_stop(trace_state* st);
@@ -12015,8 +12018,8 @@ struct gl_stdsurface_state {
 
 /// Params for  gl_stdsurface_program drawing
 struct gl_stdsurface_params {
-    /// camera id
-    int camera_id = 0;
+    /// camera id (-1 for deafult)
+    int camera_id = -1;
     /// image width
     int width = 360;
     /// image height
@@ -12065,7 +12068,7 @@ void clear_stdsurface_state(gl_stdsurface_state* st, bool clear_program = true);
 
 /// Draw whole scene
 void draw_stdsurface_scene(gl_stdsurface_state* st, const scene* scn,
-    const gl_stdsurface_params& params);
+    const camera* view, const gl_stdsurface_params& params);
 
 }  // namespace ygl
 
@@ -12426,8 +12429,9 @@ inline void draw_imageinspect_widgets(gl_window* win, const string& lbl,
 
 /// Draws a widget that can selected the camera
 inline bool draw_camera_widget(
-    gl_window* win, const string& lbl, scene* scn, int& cam_idx) {
+    gl_window* win, const string& lbl, scene* scn, camera* view, int& cam_idx) {
     auto camera_names = vector<pair<string, int>>{};
+    camera_names.push_back({view->name, -1});
     auto idx = 0;
     for (auto cam : scn->cameras) camera_names.push_back({cam->name, idx++});
     return draw_value_widget(win, lbl, cam_idx, camera_names);

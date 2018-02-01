@@ -32,6 +32,7 @@ using namespace ygl;
 // Application state
 struct app_state {
     scene* scn = nullptr;
+    camera* view = nullptr;
     string filename;
     string imfilename;
     string outfilename;
@@ -44,6 +45,7 @@ struct app_state {
     ~app_state() {
         if (shstate) delete shstate;
         if (scn) delete scn;
+        if (view) delete view;
     }
 };
 
@@ -54,7 +56,6 @@ inline void draw(gl_window* win) {
     auto framebuffer_size = get_framebuffer_size(win);
     app->shparams.width = framebuffer_size.x;
     app->shparams.height = framebuffer_size.y;
-    auto cam = app->scn->cameras[app->shparams.camera_id];
 
     update_transforms(app->scn);
     update_lights(app->scn, false, false);
@@ -66,7 +67,7 @@ inline void draw(gl_window* win) {
     gl_clear_buffers(app->shparams.background);
     gl_enable_depth_test(true);
     gl_enable_culling(app->shparams.cull_backface);
-    draw_stdsurface_scene(app->shstate, app->scn, app->shparams);
+    draw_stdsurface_scene(app->shstate, app->scn, app->view, app->shparams);
 
     if (begin_widgets(win, "yview")) {
         if (draw_header_widget(win, "file")) {
@@ -99,7 +100,7 @@ inline void draw(gl_window* win) {
         }
         if (draw_header_widget(win, "view")) {
             draw_camera_widget(
-                win, "camera", app->scn, app->shparams.camera_id);
+                win, "camera", app->scn, app->view, app->shparams.camera_id);
             draw_value_widget(win, "wire", app->shparams.wireframe);
             draw_continue_widget(win);
             draw_value_widget(win, "edges", app->shparams.edges);
@@ -138,8 +139,9 @@ void run_ui(app_state* app) {
     // loop
     while (!should_close(win)) {
         // handle mouse and keyboard for navigation
-        auto cam = app->scn->cameras[app->shparams.camera_id];
-        handle_camera_navigation(win, cam, app->navigation_fps);
+        if (app->shparams.camera_id < 0) {
+            handle_camera_navigation(win, app->view, app->navigation_fps);
+        }
 
         // draw
         draw(win);
@@ -200,11 +202,17 @@ int main(int argc, char* argv[]) {
     // add missing data
     add_elements(app->scn);
 
+    // view camera
+    app->view = make_view_camera(app->scn, app->shparams.camera_id);
+    app->shparams.camera_id = -1;
+
     // light
     update_lights(app->scn, false, false);
 
     // run ui
-    auto cam = app->scn->cameras[app->shparams.camera_id];
+    auto cam = (app->shparams.camera_id < 0) ?
+                   app->view :
+                   app->scn->cameras[app->shparams.camera_id];
     app->shparams.width = (int)round(cam->aspect * app->shparams.height);
     run_ui(app);
 

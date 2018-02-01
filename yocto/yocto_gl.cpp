@@ -78,6 +78,7 @@
 //
 // ## Infrastructure
 //
+// - remove default environment
 // - nodes
 //    - multiple instances to support multiple shapes
 // - animation
@@ -93,6 +94,9 @@
 //
 // ## Trace
 //
+// - remove filtering support
+// - move piel sampling to trace_block and not in sampler
+// - handle missing environment
 // - envmap sampling
 // - sampler simplification
 //     https://lemire.me/blog/2017/09/18/visiting-all-values-in-an-array-exactly-once-in-random-order/
@@ -1978,9 +1982,10 @@ inline int get_filter_size(const trace_params& params) {
 }
 
 // Renders a block of pixels. Public API, see above.
-inline void trace_block(const scene* scn, image4f& img, int block_x,
-    int block_y, int block_width, int block_height, int samples_min,
-    int samples_max, vector<rng_pcg32>& rngs, const trace_params& params) {
+inline void trace_block(const scene* scn, const camera* view, image4f& img,
+    int block_x, int block_y, int block_width, int block_height,
+    int samples_min, int samples_max, vector<rng_pcg32>& rngs,
+    const trace_params& params) {
     auto cam = scn->cameras[params.camera_id];
     auto shade = get_shader(params);
     for (auto j = block_y; j < block_y + block_height; j++) {
@@ -2014,11 +2019,11 @@ inline void trace_block(const scene* scn, image4f& img, int block_x,
 }
 
 // Trace a block of samples
-inline void trace_block(const scene* scn, image4f& img, const vec2i& block_min,
-    const vec2i& block_max, int samples_min, int samples_max,
-    vector<rng_pcg32>& rngs, const trace_params& params) {
+inline void trace_block(const scene* scn, const camera* view, image4f& img,
+    const vec2i& block_min, const vec2i& block_max, int samples_min,
+    int samples_max, vector<rng_pcg32>& rngs, const trace_params& params) {
     auto shade = get_shader(params);
-    auto cam = scn->cameras[params.camera_id];
+    auto cam = (params.camera_id < 0) ? view : scn->cameras[params.camera_id];
     for (auto j = block_min.y; j < block_max.y; j++) {
         for (auto i = block_min.x; i < block_max.x; i++) {
             auto lp = zero4f;
@@ -2050,12 +2055,13 @@ inline void trace_block(const scene* scn, image4f& img, const vec2i& block_min,
 }
 
 // Trace a block of samples
-inline void trace_block_filtered(const scene* scn, image4f& img, image4f& acc,
-    image4f& weight, const vec2i& block_min, const vec2i& block_max,
-    int samples_min, int samples_max, vector<rng_pcg32>& rngs,
-    std::mutex& image_mutex, const trace_params& params) {
+inline void trace_block_filtered(const scene* scn, const camera* view,
+    image4f& img, image4f& acc, image4f& weight, const vec2i& block_min,
+    const vec2i& block_max, int samples_min, int samples_max,
+    vector<rng_pcg32>& rngs, std::mutex& image_mutex,
+    const trace_params& params) {
     auto shade = get_shader(params);
-    auto cam = scn->cameras[params.camera_id];
+    auto cam = (params.camera_id < 0) ? view : scn->cameras[params.camera_id];
     auto filter = get_filter(params);
     auto filter_size = get_filter_size(params);
     static constexpr const int pad = 2;
@@ -2129,55 +2135,57 @@ inline void trace_block_filtered(const scene* scn, image4f& img, image4f& acc,
 }  // namespace _impl_trace
 
 // Renders a block of samples
-void trace_block(const scene* scn, image4f& img, const vec2i& block_min,
-    const vec2i& block_max, int samples_min, int samples_max,
-    vector<rng_pcg32>& rngs, const trace_params& params) {
-    _impl_trace::trace_block(
-        scn, img, block_min, block_max, samples_min, samples_max, rngs, params);
+void trace_block(const scene* scn, const camera* view, image4f& img,
+    const vec2i& block_min, const vec2i& block_max, int samples_min,
+    int samples_max, vector<rng_pcg32>& rngs, const trace_params& params) {
+    _impl_trace::trace_block(scn, view, img, block_min, block_max, samples_min,
+        samples_max, rngs, params);
 }
 
 // Renders a filtered block of samples
-void trace_block_filtered(const scene* scn, image4f& img, image4f& acc,
-    image4f& weight, const vec2i& block_min, const vec2i& block_max,
-    int samples_min, int samples_max, vector<rng_pcg32>& rngs,
-    std::mutex& image_mutex, const trace_params& params) {
-    _impl_trace::trace_block_filtered(scn, img, acc, weight, block_min,
+void trace_block_filtered(const scene* scn, const camera* view, image4f& img,
+    image4f& acc, image4f& weight, const vec2i& block_min,
+    const vec2i& block_max, int samples_min, int samples_max,
+    vector<rng_pcg32>& rngs, std::mutex& image_mutex,
+    const trace_params& params) {
+    _impl_trace::trace_block_filtered(scn, view, img, acc, weight, block_min,
         block_max, samples_min, samples_max, rngs, image_mutex, params);
 }
 
 // Trace the next samples in [samples_min, samples_max) range.
 // Samples have to be traced consecutively.
-void trace_samples(trace_state* st, const scene* scn, int nsamples,
-    const trace_params& params) {
+void trace_samples(trace_state* st, const scene* scn, const camera* view,
+    int nsamples, const trace_params& params) {
     nsamples = min(nsamples, params.nsamples - st->sample);
     if (params.parallel) {
         if (params.ftype == trace_filter_type::box) {
-            parallel_for(
-                (int)st->blocks.size(), [st, scn, nsamples, &params](int idx) {
-                    trace_block(scn, st->img, st->blocks[idx].first,
+            parallel_for((int)st->blocks.size(),
+                [st, scn, view, nsamples, &params](int idx) {
+                    trace_block(scn, view, st->img, st->blocks[idx].first,
                         st->blocks[idx].second, st->sample,
                         st->sample + nsamples, st->rngs, params);
                 });
         } else {
             std::mutex image_mutex;
-            parallel_for((int)st->blocks.size(), [st, scn, nsamples, &params,
-                                                     &image_mutex](int idx) {
-                trace_block_filtered(scn, st->img, st->acc, st->weight,
-                    st->blocks[idx].first, st->blocks[idx].second, st->sample,
-                    st->sample + nsamples, st->rngs, image_mutex, params);
-            });
+            parallel_for((int)st->blocks.size(),
+                [st, scn, view, nsamples, &params, &image_mutex](int idx) {
+                    trace_block_filtered(scn, view, st->img, st->acc,
+                        st->weight, st->blocks[idx].first,
+                        st->blocks[idx].second, st->sample,
+                        st->sample + nsamples, st->rngs, image_mutex, params);
+                });
         }
     } else {
         if (params.ftype == trace_filter_type::box) {
             for (auto idx = 0; idx < (int)st->blocks.size(); idx++) {
-                trace_block(scn, st->img, st->blocks[idx].first,
+                trace_block(scn, view, st->img, st->blocks[idx].first,
                     st->blocks[idx].second, st->sample, st->sample + nsamples,
                     st->rngs, params);
             }
         } else {
             std::mutex image_mutex;
             for (auto idx = 0; idx < (int)st->blocks.size(); idx++) {
-                trace_block_filtered(scn, st->img, st->acc, st->weight,
+                trace_block_filtered(scn, view, st->img, st->acc, st->weight,
                     st->blocks[idx].first, st->blocks[idx].second, st->sample,
                     st->sample + nsamples, st->rngs, image_mutex, params);
             }
@@ -2187,17 +2195,18 @@ void trace_samples(trace_state* st, const scene* scn, int nsamples,
 }
 
 // Starts an anyncrhounous renderer.
-void trace_async_start(
-    trace_state* st, const scene* scn, const trace_params& params) {
+void trace_async_start(trace_state* st, const scene* scn, const camera* view,
+    const trace_params& params) {
     st->sample = 0;
     for (auto sample = 0; sample < params.nsamples; sample++) {
         for (auto& block : st->blocks) {
             auto is_last = (block == st->blocks.back());
-            run_async(st->pool, [st, scn, block, &params, sample, is_last]() {
-                trace_block(scn, st->img, block.first, block.second, sample,
-                    sample + 1, st->rngs, params);
-                if (is_last) st->sample = sample;
-            });
+            run_async(
+                st->pool, [st, scn, view, block, &params, sample, is_last]() {
+                    trace_block(scn, view, st->img, block.first, block.second,
+                        sample, sample + 1, st->rngs, params);
+                    if (is_last) st->sample = sample;
+                });
         }
     }
 }
@@ -7130,7 +7139,17 @@ void add_elements(scene* scn, const add_elements_options& opts) {
         }
     }
 
-    if (opts.default_camera && scn->cameras.empty()) {
+    // default environment
+    if (opts.default_environment && scn->environments.empty()) {
+        auto env = new environment();
+        env->name = "default_environment";
+        scn->environments.push_back(env);
+    }
+}
+
+// Make a view camera either copying a given one or building a default one.
+camera* make_view_camera(scene* scn, int camera_id) {
+    if (scn->cameras.empty()) {
         update_bounds(scn);
         auto bbox = scn->bbox;
         auto bbox_center = (bbox.max + bbox.min) / 2.0f;
@@ -7149,14 +7168,10 @@ void add_elements(scene* scn, const add_elements_options& opts) {
         cam->yfov = 2 * atanf(0.5f);
         cam->aperture = 0;
         cam->focus = length(to - from);
-        scn->cameras.push_back(cam);
-    }
-
-    // default environment
-    if (opts.default_environment && scn->environments.empty()) {
-        auto env = new environment();
-        env->name = "default_environment";
-        scn->environments.push_back(env);
+        return cam;
+    } else {
+        camera_id = clamp(camera_id, 0, (int)scn->cameras.size());
+        return new camera(*scn->cameras[camera_id]);
     }
 }
 
@@ -11014,18 +11029,17 @@ inline void draw_stdsurface_shape(gl_stdsurface_state* st, const shape* shp,
 
 // Display a scene
 void draw_stdsurface_scene(gl_stdsurface_state* st, const scene* scn,
-    const gl_stdsurface_params& params) {
+    const camera* view, const gl_stdsurface_params& params) {
     // begin frame
     gl_enable_depth_test(true);
     gl_enable_culling(params.cull_backface);
     gl_enable_wireframe(params.wireframe);
     gl_set_viewport({params.width, params.height});
 
-    auto cam = scn->cameras[params.camera_id];
-    mat4f camera_xform, camera_view, camera_proj;
-    camera_xform = to_mat(cam->frame);
-    camera_view = to_mat(inverse(cam->frame));
-    camera_proj = perspective_mat4(cam->yfov,
+    auto cam = (params.camera_id < 0) ? view : scn->cameras[params.camera_id];
+    auto camera_xform = to_mat(cam->frame);
+    auto camera_view = to_mat(inverse(cam->frame));
+    auto camera_proj = perspective_mat4(cam->yfov,
         (float)params.width / (float)params.height, cam->near, cam->far);
 
     begin_stdsurface_frame(st->prog, params.camera_lights, params.exposure,
@@ -11901,11 +11915,13 @@ inline bool draw_elem_widgets(gl_window* win, scene* scn, node* nde,
     edited += draw_value_widget(win, "parent", nde->parent, nde_names);
     edited += draw_value_widget(win, "frame", nde->frame, -10, 10);
     edited += draw_value_widget(win, "camera", nde->cam, cam_names);
-    for(auto idx = 0; idx < nde->ists.size(); idx ++)
-        edited += draw_value_widget(win, "instance " + to_string(idx), nde->ists[idx], ist_names);
+    for (auto idx = 0; idx < nde->ists.size(); idx++)
+        edited += draw_value_widget(
+            win, "instance " + to_string(idx), nde->ists[idx], ist_names);
     edited += draw_value_widget(win, "environment", nde->env, env_names);
-    for(auto idx = 0; idx < nde->children_.size(); idx ++)
-        edited += draw_value_widget(win, "child " + to_string(idx), nde->children_[idx], nde_names);
+    for (auto idx = 0; idx < nde->children_.size(); idx++)
+        edited += draw_value_widget(
+            win, "child " + to_string(idx), nde->children_[idx], nde_names);
     return std::any_of(edited.begin(), edited.end(), [](auto x) { return x; });
 }
 
