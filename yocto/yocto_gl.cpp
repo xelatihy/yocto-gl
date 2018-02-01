@@ -89,6 +89,8 @@
 //    - consider json archive model (use this to define to_son/from_from)
 // - lights in scene for viewers
 //    - do this only if necessary
+// - check rotation and decompoaition of rotations
+//    - see euclideanspace.com
 //
 // ## Trace
 //
@@ -9055,11 +9057,11 @@ unordered_map<string, test_animation_params>& test_animation_presets() {
         };
 
     presets["bounce"] = make_test_animation(
-        "bounce", false, {0, 1}, {{0, 0, 0}, {0, 1, 0}}, {}, {});
+        "bounce", false, {0, 1, 2}, {{0, 0, 0}, {0, 1, 0}, {0, 0, 0}}, {}, {});
     presets["scale"] = make_test_animation(
-        "scale", false, {0, 1}, {}, {}, {{1, 1, 1}, {0.1f, 0.1f, 0.1f}});
-    presets["rotation"] = make_test_animation("rotation", false, {0, 1}, {},
-        {{{0, 1, 0}, 0}, {{0, 1, 0}, 2 * pif}}, {});
+        "scale", false, {0, 1, 2}, {}, {}, {{1, 1, 1}, {0.1f, 0.1f, 0.1f}, {1, 1, 1}});
+    presets["rotation"] = make_test_animation("rotation", false, {0, 1, 2}, {},
+        {{{0, 1, 0}, 0}, {{0, 1, 0}, pif}, {{0, 1, 0}, 0}}, {});
 
     return presets;
 }
@@ -9309,7 +9311,7 @@ unordered_map<string, test_scene_params>& test_scene_presets() {
     presets["animated_pl"] = make_simple_scene("animated_pl",
         {"flipcapsphere", "spherecube", "spherizedcube"},
         {"plastic_colored", "plastic_colored", "plastic_colored"},
-        "pointlights", false, true, {"bounce", "bounce", "bounce"});
+        "pointlights", false, true, {"bounce", "scale", "rotation"});
 
     // instances shared functions
     auto make_random_scene = [&](const string& name, const vec2i& num,
