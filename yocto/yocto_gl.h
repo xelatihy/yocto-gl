@@ -2932,7 +2932,7 @@ template <typename T>
 inline frame<T, 3> rotation_frame3(const quat<T, 4>& rot) {
     return {rotation_mat3(rot), {0, 0, 0}};
 }
-    
+
 /// rotation matrix
 template <typename T>
 inline mat<T, 4> rotation_mat4(const mat<T, 3>& rot) {
