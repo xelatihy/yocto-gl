@@ -16,6 +16,7 @@
 /// - normal and tangent computation for meshes and lines
 /// - generation of tesselated meshes
 /// - mesh refinement with linear tesselation and Catmull-Cark subdivision
+/// - keyframed animation, skinning and morphing
 /// - random number generation via PCG32
 /// - simple image data structure and a few image operations
 /// - simple scene format
@@ -253,6 +254,17 @@
 /// 17. example shapes: `make_cube()`, `make_uvsphere()`, `make_uvhemisphere()`,
 ///     `make_uvquad()`, `make_uvcube()`, `make_fvcube()`, `make_hair()`,
 ///     `make_suzanne()`
+///
+///
+/// ### Animation utilities
+///
+/// The library contains a few function to help with typical animation
+/// manipulation useful to support scene viewing.
+///
+/// 1. evaluate keyframed values with step, linear and bezier interpolation with
+///    `eval_keyframed_step()`, `eval_keyframed_linear()`,
+///    `eval_keyframed_bezier()`
+/// 2. mesh skinning with `compute_matrix_skinning()`
 ///
 ///
 /// ### Image and color
@@ -2282,8 +2294,23 @@ struct quat<T, 4> {
     quat(T x, T y, T z, T w) : x{x}, y{y}, z{z}, w{w} {}
     /// conversion from vec
     explicit quat(const vec<T, 4>& vv) : x{vv.x}, y{vv.y}, z{vv.z}, w{vv.w} {}
+    /// conversion from axis-angle
+    quat(const vec<T, 3>& axis, T angle) : x{0}, y{0}, z{0}, w{1} {
+        auto len = length(axis);
+        if (len) {
+            x = cos(angle / 2) * axis.x / len;
+            y = cos(angle / 2) * axis.y / len;
+            z = cos(angle / 2) * axis.z / len;
+            w = sin(angle / 2);
+        }
+    }
     /// conversion to vec
     explicit operator vec<T, 4>() const { return {x, y, z, w}; }
+
+    /// rotation axis
+    vec<T, 3> axis() const { return normalize(vec<T, 3>{x, y, z}); }
+    /// rotation angle
+    T angle() const { return atan2(length(vec<T, 3>{x, y, z}), w); }
 
     /// element access
     T& operator[](int i) { return (&x)[i]; }
@@ -4044,6 +4071,46 @@ inline T eval_bezier_cubic_derivative(
     if (vals.empty()) return T();
     return eval_bezier_cubic_derivative(
         vals[b.x], vals[b.y], vals[b.z], vals[b.w], t);
+}
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
+// ANIMATION UTILITIES
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+/// Evalautes a keyframed value using step interpolation
+template <typename T>
+inline T eval_keyframed_step(
+    const vector<float>& times, const vector<T>& vals, float time) {
+    time = clamp(time, times.front(), times.back() - 0.001f);
+    if (time <= times.front()) return vals.front();
+    if (time >= times.back()) return vals.back();
+    auto idx = (int)(std::lower_bound(times.begin(), times.end(), time) -
+                     times.begin());
+    return vals.at(idx);
+}
+
+// Implementation detail.
+inline vec3f eval_keyframed_lerp(const vec3f& a, const vec3f& b, float t) {
+    return lerp(a, b, t);
+}
+inline quat4f eval_keyframed_lerp(const quat4f& a, const quat4f& b, float t) {
+    return slerp(a, b, t);
+}
+
+/// Evalautes a keyframed value using linear interpolation
+template <typename T>
+inline T eval_keyframed_linear(
+    const vector<float>& times, const vector<T>& vals, float time) {
+    time = clamp(time, times.front(), times.back() - 0.001f);
+    if (time <= times.front()) return vals.front();
+    if (time >= times.back()) return vals.back();
+    auto idx = (int)(std::lower_bound(times.begin(), times.end(), time) -
+                     times.begin());
+    return eval_keyframed_lerp(vals.at(idx), vals.at(idx + 1),
+        (time - times.at(idx)) / (times.at(idx + 1) - times.at(idx)));
 }
 
 }  // namespace ygl
@@ -6881,17 +6948,24 @@ enum struct material_type {
     specular_glossiness = 2,
 };
 
+/// Name for material type enum
+inline vector<pair<string, material_type>>& material_type_names() {
+    static auto names = vector<pair<string, material_type>>{
+        {"specular_roughness", material_type::specular_roughness},
+        {"metallic_roughness", material_type::metallic_roughness},
+        {"specular_glossiness", material_type::specular_glossiness},
+    };
+    return names;
+}
+
 /// Scene Material
 struct material {
-    // whole material data -------------------
     /// material name
     string name = "";
     /// double-sided rendering
     bool double_sided = false;
     /// material type
-    material_type mtype = material_type::specular_roughness;
-
-    // color information ---------------------
+    material_type type = material_type::specular_roughness;
     /// emission color
     vec3f ke = {0, 0, 0};
     /// diffuse color / base color
@@ -6906,8 +6980,6 @@ struct material {
     float rs = 0.0001;
     /// opacity
     float op = 1;
-
-    // textures -------------------------------
     /// emission texture
     texture_info ke_txt = {};
     /// diffuse texture
@@ -7060,6 +7132,12 @@ struct node {
     string name = "";
     /// frame
     frame3f frame = identity_frame3f;
+    /// translation
+    vec3f translation = zero3f;
+    /// rotation
+    quat4f rotation = {0, 0, 0, 1};
+    /// scale
+    vec3f scale = {1, 1, 1};
     /// node camera
     camera* cam = nullptr;
     /// node instance
@@ -7068,6 +7146,64 @@ struct node {
     environment* env = nullptr;
     /// child nodes
     vector<node*> children = {};
+};
+
+/// Keyframe type
+enum struct keyframe_type {
+    /// linear
+    linear = 0,
+    /// step function
+    step = 1,
+    /// catmull-rom spline
+    catmull_rom = 2,
+    /// cubic bezier spline
+    bezier = 3,
+};
+
+/// Name for keyframe type enum
+inline vector<pair<string, keyframe_type>>& keyframe_type_names() {
+    static auto names = vector<pair<string, keyframe_type>>{
+        {"linear", keyframe_type::linear},
+        {"step", keyframe_type::step},
+        {"bezier", keyframe_type::bezier},
+        {"catmullrom", keyframe_type::catmull_rom},
+    };
+    return names;
+}
+
+/// Keyframe data.
+struct keyframe {
+    /// Name
+    std::string name;
+    /// Interpolation
+    keyframe_type type = keyframe_type::linear;
+    /// Target nodes
+    std::vector<node*> nodes;
+    /// Times
+    std::vector<float> times;
+    /// Translation
+    std::vector<vec3f> translation;
+    /// Rotation
+    std::vector<quat4f> rotation;
+    /// Scale
+    std::vector<vec3f> scale;
+    /// Weights for morphing
+    std::vector<std::vector<float>> morph_weights;
+};
+
+/// Animation made of multiple keyframed values
+struct animation {
+    /// Name
+    std::string name;
+    /// path (only used when writing files on disk with glTF)
+    std::string path = "";
+    /// Keyframed values
+    vector<keyframe*> keyframes;
+
+    /// Cleanup
+    animation() {
+        for (auto v : keyframes) delete v;
+    }
 };
 
 /// Scene
@@ -7090,6 +7226,8 @@ struct scene {
 
     /// node hierarchy (root is first node)
     vector<node*> nodes = {};
+    /// node animation
+    vector<animation*> animations = {};
 
     // computed data --------------------------
     /// BVH
@@ -7111,10 +7249,12 @@ struct scene {
             if (v) delete v;
         for (auto v : environments)
             if (v) delete v;
-        for (auto light : lights)
-            if (light) delete light;
-        for (auto node : nodes)
-            if (node) delete node;
+        for (auto v : lights)
+            if (v) delete v;
+        for (auto v : nodes)
+            if (v) delete v;
+        for (auto v : animations)
+            if (v) delete v;
         if (bvh) delete bvh;
     }
 };
@@ -7227,10 +7367,11 @@ inline vec4f eval_texture(const texture_info& info, const vec2f& texcoord,
 }
 
 /// Finds an element by name
-template<typename T>
+template <typename T>
 inline T* find_named_elem(const vector<T*>& elems, const string& name) {
-    if(name == "") return nullptr;
-    for(auto elem : elems) if(elem->name == name) return elem;
+    if (name == "") return nullptr;
+    for (auto elem : elems)
+        if (elem->name == name) return elem;
     return nullptr;
 }
 
@@ -7244,7 +7385,7 @@ inline T* add_named_elem(vector<T*>& elems, const string& name) {
     elems.push_back(elem);
     return elem;
 }
-    
+
 /// Subdivides shape elements. Apply subdivision surface rules if subdivide
 /// is true.
 inline void subdivide_shape_once(shape* shp, bool subdiv = false) {
@@ -7365,6 +7506,39 @@ inline void tesselate_shapes(scene* scn, bool subdivide,
     }
 }
 
+/// Update animation transforms
+inline void update_transforms(animation* anm, float time) {
+    auto interpolate = [](keyframe_type type, const vector<float>& times,
+                           const auto& vals, float time) {
+        switch (type) {
+            case keyframe_type::step:
+                return eval_keyframed_step(times, vals, time);
+            case keyframe_type::linear:
+                return eval_keyframed_linear(times, vals, time);
+            case keyframe_type::catmull_rom: return vals.at(0);
+            case keyframe_type::bezier: return vals.at(0);
+            default: throw runtime_error("should not have been here");
+        }
+        return vals.at(0);
+    };
+
+    for (auto kfr : anm->keyframes) {
+        if (!kfr->translation.empty()) {
+            auto val =
+                interpolate(kfr->type, kfr->times, kfr->translation, time);
+            for (auto nde : kfr->nodes) nde->translation = val;
+        }
+        if (!kfr->rotation.empty()) {
+            auto val = interpolate(kfr->type, kfr->times, kfr->rotation, time);
+            for (auto nde : kfr->nodes) nde->rotation = val;
+        }
+        if (!kfr->scale.empty()) {
+            auto val = interpolate(kfr->type, kfr->times, kfr->scale, time);
+            for (auto nde : kfr->nodes) nde->scale = val;
+        }
+    }
+}
+
 /// Update node transforms
 inline void update_transforms(
     node* nde, const frame3f& parent = identity_frame3f) {
@@ -7376,7 +7550,8 @@ inline void update_transforms(
 }
 
 /// Update node transforms
-inline void update_transforms(scene* scn) {
+inline void update_transforms(scene* scn, float time = 0) {
+    for (auto agr : scn->animations) update_transforms(agr, time);
     if (!scn->nodes.empty()) update_transforms(scn->nodes[0]);
 }
 
@@ -8118,14 +8293,43 @@ struct test_node_params {
     /// Frame
     frame3f frame = identity_frame3f;
 };
-    
-    /// Updates a test node, adding it to the scene if missing.
-    void update_test_node(
-                                 const scene* scn, node* nde, const test_node_params& tndr);
-    
-    /// Test nodes presets
-    unordered_map<string, test_node_params>& test_node_presets();
-    
+
+/// Updates a test node, adding it to the scene if missing.
+void update_test_node(
+    const scene* scn, node* nde, const test_node_params& tndr);
+
+/// Test nodes presets
+unordered_map<string, test_node_params>& test_node_presets();
+
+/// Test animation parameters
+struct test_animation_params {
+    /// Name (if not filled, assign a default one)
+    string name = "";
+    /// Linear or bezier
+    bool bezier = false;
+    /// Animation speed
+    float speed = 1;
+    /// Animation scale
+    float scale = 1;
+    /// Keyframes times
+    vector<float> times = {};
+    /// Translation keyframes
+    vector<vec3f> translation = {};
+    /// Rotation keyframes
+    vector<quat4f> rotation = {};
+    /// Scale keyframes
+    vector<vec3f> scaling = {};
+    /// Environment
+    vector<string> nodes = {};
+};
+
+/// Updates a test node, adding it to the scene if missing.
+void update_test_animation(
+    const scene* scn, animation* anm, const test_animation_params& tndr);
+
+/// Test nodes presets
+unordered_map<string, test_node_params>& test_node_presets();
+
 /// Test scene
 struct test_scene_params {
     /// name
@@ -8144,6 +8348,8 @@ struct test_scene_params {
     vector<test_environment_params> environments;
     /// nodes
     vector<test_node_params> nodes;
+    /// animations
+    vector<test_animation_params> animations;
 };
 
 /// Updates a test scene, adding missing objects. Objects are only added (for
@@ -11583,14 +11789,14 @@ inline void set_stdsurface_highlight(
 /// Kajiya-Kay for lines, GGX/Phong for triangles).
 /// Material type matches the scene material type.
 inline void set_stdsurface_material(gl_stdsurface_program& prog,
-    material_type mtype, gl_etype etype, const vec3f& ke, const vec3f& kd,
+    material_type type, gl_etype etype, const vec3f& ke, const vec3f& kd,
     const vec3f& ks, float rs, float op, const gl_texture_info& ke_txt,
     const gl_texture_info& kd_txt, const gl_texture_info& ks_txt,
     const gl_texture_info& rs_txt, const gl_texture_info& norm_txt,
     const gl_texture_info& occ_txt, bool use_phong, bool double_sided,
     bool alpha_cutout) {
     static auto mtype_id =
-        get_program_uniform_location(prog._prog, "material.mtype");
+        get_program_uniform_location(prog._prog, "material.type");
     static auto etype_id =
         get_program_uniform_location(prog._prog, "material.etype");
     static auto ke_id = get_program_uniform_location(prog._prog, "material.ke");
@@ -11639,7 +11845,7 @@ inline void set_stdsurface_material(gl_stdsurface_program& prog,
         {material_type::specular_glossiness, 3}};
 
     assert(gl_check_error());
-    set_program_uniform(prog._prog, mtype_id, mtypes.at(mtype));
+    set_program_uniform(prog._prog, mtype_id, mtypes.at(type));
     set_program_uniform(prog._prog, etype_id, (int)etype);
     set_program_uniform(prog._prog, ke_id, ke);
     set_program_uniform(prog._prog, kd_id, kd);
@@ -11666,7 +11872,7 @@ inline void set_stdsurface_material(gl_stdsurface_program& prog,
 inline void set_stdsurface_constmaterial(
     gl_stdsurface_program& prog, const vec3f& ke, float op) {
     static auto mtype_id =
-        get_program_uniform_location(prog._prog, "material.mtype");
+        get_program_uniform_location(prog._prog, "material.type");
     static auto etype_id =
         get_program_uniform_location(prog._prog, "material.etype");
     static auto ke_id = get_program_uniform_location(prog._prog, "material.ke");
@@ -11976,6 +12182,14 @@ inline void draw_label_widget(gl_window* win, const string& lbl, const T& val) {
     sst << val;
     return draw_label_widget(win, lbl, sst.str());
 }
+
+/// Label widget
+template <typename T>
+inline void draw_label_widget(gl_window* win, const string& lbl,
+    const vector<T>& vals, bool skip_empty = false) {
+    if (skip_empty && vals.empty()) return;
+    draw_label_widget(win, lbl, (int)vals.size());
+};
 
 /// Value widget
 bool draw_value_widget(gl_window* win, const string& lbl, string& str);

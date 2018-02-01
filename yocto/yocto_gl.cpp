@@ -1412,7 +1412,7 @@ inline point eval_shapepoint(
 
     // sample reflectance
     auto kd = zero4f, ks = zero4f, kt = zero4f;
-    switch (mat->mtype) {
+    switch (mat->type) {
         case material_type::specular_roughness: {
             kd = vec4f{mat->kd, mat->op} * kx_scale *
                  eval_texture(mat->kd_txt, texcoord);
@@ -5342,7 +5342,7 @@ inline scene* obj_to_scene(const obj_scene* obj, const load_options& opts) {
     for (auto omat : obj->materials) {
         auto mat = new material();
         mat->name = omat->name;
-        mat->mtype = material_type::specular_roughness;
+        mat->type = material_type::specular_roughness;
         mat->ke = {omat->ke.x, omat->ke.y, omat->ke.z};
         mat->kd = {omat->kd.x, omat->kd.y, omat->kd.z};
         mat->ks = {omat->ks.x, omat->ks.y, omat->ks.z};
@@ -5759,7 +5759,7 @@ inline obj_scene* scene_to_obj(const scene* scn) {
         omat->name = mat->name;
         omat->ke = {mat->ke.x, mat->ke.y, mat->ke.z};
         omat->ke_txt = add_texture(mat->ke_txt);
-        switch (mat->mtype) {
+        switch (mat->type) {
             case material_type::specular_roughness: {
                 omat->kd = {mat->kd.x, mat->kd.y, mat->kd.z};
                 omat->ks = {mat->ks.x, mat->ks.y, mat->ks.z};
@@ -6106,7 +6106,7 @@ inline scene* gltf_to_scene(const glTF* gltf, const load_options& opts) {
         mat->ke = gmat->emissiveFactor;
         mat->ke_txt = add_texture(gmat->emissiveTexture);
         if (gmat->pbrMetallicRoughness) {
-            mat->mtype = material_type::metallic_roughness;
+            mat->type = material_type::metallic_roughness;
             auto gmr = gmat->pbrMetallicRoughness;
             mat->kd = {gmr->baseColorFactor[0], gmr->baseColorFactor[1],
                 gmr->baseColorFactor[2]};
@@ -6118,7 +6118,7 @@ inline scene* gltf_to_scene(const glTF* gltf, const load_options& opts) {
             mat->ks_txt = add_texture(gmr->metallicRoughnessTexture);
         }
         if (gmat->pbrSpecularGlossiness) {
-            mat->mtype = material_type::specular_glossiness;
+            mat->type = material_type::specular_glossiness;
             auto gsg = gmat->pbrSpecularGlossiness;
             mat->kd = {gsg->diffuseFactor[0], gsg->diffuseFactor[1],
                 gsg->diffuseFactor[2]};
@@ -6336,8 +6336,8 @@ inline scene* gltf_to_scene(const glTF* gltf, const load_options& opts) {
                 meshes, gltf, glTFid<glTFNode>(nid), identity_mat4f));
         }
     }
-    if(!opts.preserve_hierarchy) {
-        for(auto nde : scn->nodes) delete nde;
+    if (!opts.preserve_hierarchy) {
+        for (auto nde : scn->nodes) delete nde;
         scn->nodes.clear();
     }
 
@@ -6471,7 +6471,7 @@ inline glTF* scene_to_gltf(
         gmat->name = mat->name;
         gmat->emissiveFactor = mat->ke;
         gmat->emissiveTexture = add_texture(mat->ke_txt);
-        switch (mat->mtype) {
+        switch (mat->type) {
             case material_type::specular_roughness: {
                 gmat->pbrSpecularGlossiness =
                     new glTFMaterialPbrSpecularGlossiness();
@@ -7985,7 +7985,7 @@ scene* make_cornell_box_scene() {
 
     auto make_material = [](string name, vec3f kd, vec3f ke = {0, 0, 0}) {
         auto mat = new material();
-        mat->mtype = material_type::specular_roughness;
+        mat->type = material_type::specular_roughness;
         mat->name = name;
         mat->ke = ke;
         mat->kd = kd;
@@ -8228,7 +8228,7 @@ void update_test_material(
     auto norm = find_named_elem(scn->textures, tmat.normal);
 
     mat->name = tmat.name;
-    mat->mtype = material_type::specular_roughness;
+    mat->type = material_type::specular_roughness;
     mat->ke = zero3f;
     mat->kd = zero3f;
     mat->rs = 1;
@@ -8469,6 +8469,31 @@ void update_test_node(
     nde->env = find_named_elem(scn->environments, tnde.environment);
 }
 
+// Makes/updates a test animation
+void update_test_animation(
+    const scene* scn, animation* anm, const test_animation_params& tanm) {
+    if (tanm.name == "") throw runtime_error("cannot use empty name");
+    if(anm->keyframes.size() != 1) {
+        for(auto v : anm->keyframes) delete v;
+        anm->keyframes.clear();
+        anm->keyframes.push_back(new keyframe());
+    }
+    anm->name = tanm.name;
+    auto kfr = anm->keyframes.front();
+    kfr->name = tanm.name;
+    kfr->type = (tanm.bezier) ? keyframe_type::linear : keyframe_type::bezier;
+    kfr->times = tanm.times;
+    for (auto& v : kfr->times) v *= tanm.speed;
+    kfr->translation = tanm.translation;
+    kfr->rotation = tanm.rotation;
+    kfr->scale = tanm.scaling;
+    for (auto& v : kfr->translation) v *= tanm.scale;
+    for (auto& v : kfr->scale) v *= tanm.scale;
+    kfr->nodes.clear();
+    for (auto& nde : tanm.nodes)
+        kfr->nodes.push_back(find_named_elem(scn->nodes, nde));
+}
+
 // Update test elements
 template <typename T, typename T1>
 inline void update_test_scene_elem(scene* scn, vector<T*>& elems,
@@ -8504,6 +8529,7 @@ void update_test_scene(scene* scn, const test_scene_params& params,
         update_test_environment, refresh);
     update_test_scene_elem(
         scn, scn->nodes, params.nodes, update_test_node, refresh);
+    update_test_scene_elem(scn, scn->animations, params.animations, update_test_animation, refresh);
 }
 
 // remove duplicate elems
@@ -8768,6 +8794,36 @@ unordered_map<string, test_environment_params>& test_environment_presets() {
     presets["const"] = make_test_environment("const", "");
     presets["sky1"] = make_test_environment("sky1", "");
     presets["sky2"] = make_test_environment("sky2", "");
+
+    return presets;
+}
+
+unordered_map<string, test_animation_params>& test_animation_presets() {
+    static auto presets = unordered_map<string, test_animation_params>();
+    if (!presets.empty()) return presets;
+
+    auto make_test_animation =
+        [](const string& name, bool bezier, const vector<float>& times,
+            const vector<vec3f>& translation, const vector<quat4f>& rotation,
+            const vector<vec3f>& scaling) {
+            auto params = test_animation_params();
+            params.name = name;
+            params.speed = 1;
+            params.scale = 1;
+            params.bezier = bezier;
+            params.times = times;
+            params.translation = translation;
+            params.rotation = rotation;
+            params.scaling = scaling;
+            return params;
+        };
+
+    presets["bounce"] = make_test_animation(
+        "bounce", false, {0, 1}, {{0, 0, 0}, {0, 1, 0}}, {}, {});
+    presets["scale"] = make_test_animation(
+        "scale", false, {0, 1}, {}, {}, {{1, 1, 1}, {0.1f, 0.1f, 0.1f}});
+    presets["rotation"] = make_test_animation("rotation", false, {0, 1}, {},
+        {{{0, 1, 0}, 0}, {{0, 1, 0}, 2 * pif}}, {});
 
     return presets;
 }
@@ -10324,7 +10380,7 @@ gl_stdsurface_program make_stdsurface_program() {
     string _frag_material =
         R"(
         struct Material {
-            int mtype;         // material type
+            int type;         // material type
             int etype;         // element type
             vec3 ke;           // material ke
             vec3 kd;           // material kd
@@ -10357,7 +10413,7 @@ gl_stdsurface_program make_stdsurface_program() {
 
         void eval_material(vec2 texcoord, vec4 color, out int type, out vec3 ke,
                            out vec3 kd, out vec3 ks, out float rs, out float op, out bool cutout) {
-            if(material.mtype == 0) {
+            if(material.type == 0) {
                 type = 0;
                 ke = material.ke;
                 kd = vec3(0,0,0);
@@ -10380,15 +10436,15 @@ gl_stdsurface_program make_stdsurface_program() {
             ke *= ke_txt;
 
             // get material color from textures and adjust values
-            if(material.mtype == 0) {
+            if(material.type == 0) {
                 type = 0;
-            } else if(material.mtype == 1) {
+            } else if(material.type == 1) {
                 type = material.etype;
                 kd *= kd_txt.xyz;
                 ks *= ks_txt.xyz;
                 rs *= rs_txt;
                 rs = rs*rs;
-            } else if(material.mtype == 2) {
+            } else if(material.type == 2) {
                 type = material.etype;
                 vec3 kb = kd * kd_txt.xyz;
                 float km = ks.x * ks_txt.z;
@@ -10397,7 +10453,7 @@ gl_stdsurface_program make_stdsurface_program() {
                 rs *= ks_txt.y;
                 rs = rs*rs;
                 op *= kd_txt.w;
-            } else if(material.mtype == 3) {
+            } else if(material.type == 3) {
                 type = material.etype;
                 kd *= kd_txt.xyz;
                 ks *= ks_txt.xyz;
@@ -10660,7 +10716,7 @@ inline void draw_stdsurface_shape(gl_stdsurface_state* st, const shape* shp,
     };
 
     auto mat = (shp->mat) ? shp->mat : &default_material;
-    set_stdsurface_material(st->prog, mat->mtype, etype, mat->ke, mat->kd,
+    set_stdsurface_material(st->prog, mat->type, etype, mat->ke, mat->kd,
         mat->ks, mat->rs, mat->op, txt(mat->ke_txt), txt(mat->kd_txt),
         txt(mat->ks_txt), txt(mat->rs_txt), txt(mat->norm_txt),
         txt(mat->occ_txt), false, mat->double_sided, params.cutout);
@@ -11399,8 +11455,7 @@ inline void draw_tree_widgets(
         if (nde->ist) draw_tree_widgets(win, "ist: ", nde->ist, selection);
         if (nde->env) draw_tree_widgets(win, "env: ", nde->env, selection);
         for (auto idx = 0; idx < nde->children.size(); idx++) {
-            draw_tree_widgets(
-                win, "", nde->children[idx], selection);
+            draw_tree_widgets(win, "", nde->children[idx], selection);
         }
         draw_tree_widget_end(win);
     }
@@ -11443,19 +11498,13 @@ inline bool draw_elem_widgets(gl_window* win, scene* scn, texture* txt,
 
 inline bool draw_elem_widgets(gl_window* win, scene* scn, material* mat,
     void*& selection, const unordered_map<texture*, gl_texture>& gl_txt) {
-    static auto mtype_names = vector<pair<string, material_type>>{
-        {"specular_roughness", material_type::specular_roughness},
-        {"metallic_roughness", material_type::metallic_roughness},
-        {"specular_glossiness", material_type::specular_glossiness},
-    };
-
     auto txt_names = vector<pair<string, texture*>>{{"<none>", nullptr}};
     for (auto txt : scn->textures) txt_names.push_back({txt->path, txt});
 
     auto edited = vector<bool>();
     draw_separator_widget(win);
     draw_label_widget(win, "name", mat->name);
-    edited += draw_value_widget(win, "mtype", mat->mtype, mtype_names);
+    edited += draw_value_widget(win, "type", mat->type, material_type_names());
     auto ke_l = max_element(mat->ke).second;
     auto ke_c = (ke_l) ? mat->ke / ke_l : zero3f;
     edited += draw_value_widget(win, "ke l", ke_l, 0, 100);
@@ -11494,28 +11543,24 @@ inline bool draw_elem_widgets(gl_window* win, scene* scn, shape* shp,
     auto mat_names = vector<pair<string, material*>>{{"<none>", nullptr}};
     for (auto mat : scn->materials) mat_names.push_back({mat->name, mat});
 
-    auto draw_vector_widget = [](gl_window* win, const char* lbl, int len) {
-        if (len) draw_label_widget(win, lbl, len);
-    };
-
     auto edited = vector<bool>();
     draw_separator_widget(win);
     draw_label_widget(win, "name", shp->name);
     edited += draw_value_widget(win, "material", shp->mat, mat_names);
-    draw_vector_widget(win, "pos", (int)shp->pos.size());
-    draw_vector_widget(win, "norm", (int)shp->norm.size());
-    draw_vector_widget(win, "texcoord", (int)shp->texcoord.size());
-    draw_vector_widget(win, "color", (int)shp->color.size());
-    draw_vector_widget(win, "tangsp", (int)shp->tangsp.size());
-    draw_vector_widget(win, "radius", (int)shp->radius.size());
-    draw_vector_widget(win, "triangles", (int)shp->triangles.size());
-    draw_vector_widget(win, "quads", (int)shp->quads.size());
-    draw_vector_widget(win, "quads_pos", (int)shp->quads_pos.size());
-    draw_vector_widget(win, "quads_norm", (int)shp->quads_norm.size());
-    draw_vector_widget(win, "quads_texcoord", (int)shp->quads_texcoord.size());
-    draw_vector_widget(win, "lines", (int)shp->lines.size());
-    draw_vector_widget(win, "points", (int)shp->points.size());
-    draw_vector_widget(win, "beziers", (int)shp->beziers.size());
+    draw_label_widget(win, "pos", shp->pos, true);
+    draw_label_widget(win, "norm", shp->norm, true);
+    draw_label_widget(win, "texcoord", shp->texcoord, true);
+    draw_label_widget(win, "color", shp->color, true);
+    draw_label_widget(win, "tangsp", shp->tangsp, true);
+    draw_label_widget(win, "radius", shp->radius, true);
+    draw_label_widget(win, "triangles", shp->triangles, true);
+    draw_label_widget(win, "quads", shp->quads, true);
+    draw_label_widget(win, "quads_pos", shp->quads_pos, true);
+    draw_label_widget(win, "quads_norm", shp->quads_norm, true);
+    draw_label_widget(win, "quads_texcoord", shp->quads_texcoord, true);
+    draw_label_widget(win, "lines", shp->lines, true);
+    draw_label_widget(win, "points", shp->points, true);
+    draw_label_widget(win, "beziers", shp->beziers, true);
     return std::any_of(edited.begin(), edited.end(), [](auto x) { return x; });
 }
 
@@ -11588,7 +11633,7 @@ inline bool draw_elem_widgets(gl_window* win, scene* scn, node* nde,
 
     auto edited = vector<bool>();
     draw_separator_widget(win);
-    draw_label_widget(win, "nde", nde->name);
+    draw_label_widget(win, "name", nde->name);
     edited += draw_value_widget(win, "frame", nde->frame, -10, 10);
     edited += draw_value_widget(win, "camera", nde->cam, cam_names);
     edited += draw_value_widget(win, "instance", nde->cam, cam_names);
@@ -11596,6 +11641,28 @@ inline bool draw_elem_widgets(gl_window* win, scene* scn, node* nde,
     return std::any_of(edited.begin(), edited.end(), [](auto x) { return x; });
 }
 
+inline bool draw_elem_widgets(gl_window* win, scene* scn, animation* anm,
+                              void*& selection, const unordered_map<texture*, gl_texture>& gl_txt) {
+    auto nde_names = vector<pair<string, node*>>{{"<none>", nullptr}};
+    for (auto nde : scn->nodes) nde_names.push_back({nde->name, nde});
+    
+    auto edited = vector<bool>();
+    draw_separator_widget(win);
+    draw_label_widget(win, "name", anm->name);
+    for(auto kfr_kv : enumerate(anm->keyframes)) {
+        auto kfr = kfr_kv.second;
+        auto ids = to_string(kfr_kv.first);
+        edited += draw_value_widget(win, "name " + ids, kfr->name);
+        edited += draw_value_widget(win, "type " + ids, kfr->type, keyframe_type_names());
+        draw_label_widget(win, "times " + ids, kfr->times, true);
+        draw_label_widget(win, "translation " + ids, kfr->translation, true);
+        draw_label_widget(win, "rotation " + ids, kfr->rotation, true);
+        draw_label_widget(win, "scale " + ids, kfr->scale, true);
+        draw_label_widget(win, "nodes " + ids, kfr->nodes, true);
+    }
+    return std::any_of(edited.begin(), edited.end(), [](auto x) { return x; });
+}
+    
 inline bool draw_elem_widgets(gl_window* win, test_scene_params* scn,
     test_texture_params* txt, void*& selection,
     const unordered_map<texture*, gl_texture>& gl_txt) {
@@ -11689,6 +11756,28 @@ inline bool draw_elem_widgets(gl_window* win, test_scene_params* scn,
 }
 
 inline bool draw_elem_widgets(gl_window* win, test_scene_params* scn,
+                              test_animation_params* anm, void*& selection,
+                              const unordered_map<texture*, gl_texture>& gl_txt) {
+    auto edited = vector<bool>();
+    draw_separator_widget(win);
+    edited += draw_value_widget(win, "name", anm->name);
+    edited += draw_value_widget(win, "bezier", anm->bezier);
+    edited += draw_value_widget(win, "speed", anm->speed);
+    edited += draw_value_widget(win, "scale", anm->scale);
+    for(auto idx = 0; idx < anm->times.size(); idx++)
+        edited += draw_value_widget(win, "time " + to_string(idx), anm->times[idx]);
+    for(auto idx = 0; idx < anm->translation.size(); idx++)
+        edited += draw_value_widget(win, "translation " + to_string(idx), anm->translation[idx]);
+    for(auto idx = 0; idx < anm->rotation.size(); idx++)
+        edited += draw_value_widget(win, "rotation " + to_string(idx), anm->rotation[idx]);
+    for(auto idx = 0; idx < anm->scaling.size(); idx++)
+        edited += draw_value_widget(win, "scaling " + to_string(idx), anm->scaling[idx]);
+    for(auto idx = 0; idx < anm->nodes.size(); idx++)
+        edited += draw_value_widget(win, "node " + to_string(idx), anm->nodes[idx]);
+    return std::any_of(edited.begin(), edited.end(), [](auto x) { return x; });
+}
+
+inline bool draw_elem_widgets(gl_window* win, test_scene_params* scn,
     test_instance_params* ist, void*& selection,
     const unordered_map<texture*, gl_texture>& gl_txt) {
     auto edited = vector<bool>();
@@ -11778,6 +11867,8 @@ inline bool draw_scene_widgets(gl_window* win, const string& lbl, scene* scn,
                 test_scn->instances, selection, update_test_instance);
             edited += draw_add_elem_widgets(win, scn, "env", scn->environments,
                 test_scn->environments, selection, update_test_environment);
+            edited += draw_add_elem_widgets(win, scn, "anim", scn->animations,
+                                            test_scn->animations, selection, update_test_animation);
         }
 
         auto test_scn_res = (test_scn) ? test_scn : &test_scn_def;
@@ -11796,6 +11887,8 @@ inline bool draw_scene_widgets(gl_window* win, const string& lbl, scene* scn,
             update_test_environment, gl_txt);
         edited += draw_selected_elem_widgets(win, scn, test_scn, scn->nodes,
             test_scn->nodes, selection, update_test_node, gl_txt);
+        edited += draw_selected_elem_widgets(win, scn, test_scn, scn->animations,
+                                             test_scn->animations, selection, update_test_animation, gl_txt);
         return std::any_of(
             edited.begin(), edited.end(), [](auto x) { return x; });
     } else
