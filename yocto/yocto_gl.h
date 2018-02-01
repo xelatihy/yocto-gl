@@ -7136,6 +7136,8 @@ struct light {
 struct node {
     /// name
     string name = "";
+    /// parent node
+    node* parent = nullptr;
     /// frame
     frame3f frame = identity_frame3f;
     /// translation
@@ -7152,8 +7154,10 @@ struct node {
     vector<instance*> ists = {};
     /// node environment
     environment* env = nullptr;
+
+    // computed properties ---------------------------------
     /// child nodes
-    vector<node*> children = {};
+    vector<node*> children_ = {};
 };
 
 /// Keyframe type
@@ -7232,8 +7236,6 @@ struct scene {
     /// light array
     vector<light*> lights = {};
 
-    /// root of the node hierarchy
-    node* root = nullptr;
     /// node hierarchy
     vector<node*> nodes = {};
     /// node animation
@@ -7263,7 +7265,6 @@ struct scene {
             if (v) delete v;
         for (auto v : nodes)
             if (v) delete v;
-        if (root) delete root;
         for (auto v : animations)
             if (v) delete v;
         if (bvh) delete bvh;
@@ -7558,13 +7559,17 @@ inline void update_transforms(
     for (auto ist : nde->ists) ist->frame = frame;
     if (nde->cam) nde->cam->frame = frame;
     if (nde->env) nde->env->frame = frame;
-    for (auto child : nde->children) update_transforms(child, frame);
+    for (auto child : nde->children_) update_transforms(child, frame);
 }
 
 /// Update node transforms
 inline void update_transforms(scene* scn, float time = 0) {
     for (auto agr : scn->animations) update_transforms(agr, time);
-    if (scn->root) update_transforms(scn->root);
+    for (auto nde : scn->nodes) nde->children_.clear();
+    for (auto nde : scn->nodes)
+        if (nde->parent) nde->parent->children_.push_back(nde);
+    for (auto nde : scn->nodes)
+        if (!nde->parent) update_transforms(nde);
 }
 
 /// Loading options
@@ -8296,6 +8301,8 @@ unordered_map<string, test_environment_params>& test_environment_presets();
 struct test_node_params {
     /// Name (if not filled, assign a default one)
     string name = "";
+    /// Parent node
+    string parent = "";
     /// Camera
     string camera = "";
     /// Instance
@@ -8305,11 +8312,11 @@ struct test_node_params {
     /// Frame
     frame3f frame = identity_frame3f;
     /// Translation
-    vec3f translation = {0,0,0};
+    vec3f translation = {0, 0, 0};
     /// Roation
-    quat4f rotation = {0,0,0,1};
+    quat4f rotation = {0, 0, 0, 1};
     /// Scaling
-    vec3f scaling = {1,1,1};
+    vec3f scaling = {1, 1, 1};
 };
 
 /// Updates a test node, adding it to the scene if missing.
