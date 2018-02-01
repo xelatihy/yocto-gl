@@ -5981,39 +5981,6 @@ inline void save_obj_scene(
 
 #if YGL_GLTF
 
-// Instance gltf cameras and meshes
-inline node* gltf_node_to_instances(scene* scn, const vector<camera>& cameras,
-    const vector<vector<shape*>>& meshes, const glTF* gltf,
-    glTFid<glTFNode> nid, const mat4f& xf) {
-    auto gnde = gltf->get(nid);
-    auto xform = xf * node_transform(gnde);
-    auto nde = new node();
-    nde->frame = to_frame(xform);
-    scn->nodes.push_back(nde);
-    nde->name = gnde->name;
-    if (gnde->camera) {
-        auto cam = new camera(cameras[(int)gnde->camera]);
-        cam->frame = to_frame(xform);
-        nde->cam = cam;
-        scn->cameras.push_back(cam);
-    }
-    if (gnde->mesh) {
-        for (auto shp : meshes[(int)gnde->mesh]) {
-            auto ist = new instance();
-            ist->name = gnde->name;
-            ist->frame = to_frame(xform);
-            ist->shp = shp;
-            nde->ists.push_back(ist);
-            scn->instances.push_back(ist);
-        }
-    }
-    for (auto cid : gnde->children) {
-        nde->children.push_back(
-            gltf_node_to_instances(scn, cameras, meshes, gltf, cid, xform));
-    }
-    return nde;
-}
-
 // Flattens a gltf file into a flattened asset.
 inline scene* gltf_to_scene(const glTF* gltf, const load_options& opts) {
     // clear asset
@@ -6350,32 +6317,11 @@ inline scene* gltf_to_scene(const glTF* gltf, const load_options& opts) {
         scn->nodes.push_back(nde);
     }
 
-    // set up children pointers
+    // set up parent pointers
     for (auto nid = 0; nid < gltf->nodes.size(); nid++) {
         auto gnde = gltf->nodes[nid];
         auto nde = scn->nodes[nid];
-        for (auto n : gnde->children)
-            nde->children.push_back(scn->nodes[(int)n]);
-    }
-
-    // create root node
-    scn->root = new node();
-    scn->root->name = "root";
-    if (gltf->scene) {
-        for (auto nid : gltf->get(gltf->scene)->nodes) {
-            scn->root->children.push_back(scn->nodes[(int)nid]);
-        }
-    } else if (!gltf->nodes.empty()) {
-        // set up node children and root nodes
-        auto is_root = vector<bool>(gltf->nodes.size(), true);
-        for (auto nid = 0; nid < gltf->nodes.size(); nid++) {
-            for (auto cid : gltf->get(glTFid<glTFNode>(nid))->children)
-                is_root[(int)cid] = false;
-        }
-        for (auto nid = 0; nid < gltf->nodes.size(); nid++) {
-            if (!is_root[nid]) continue;
-            scn->root->children.push_back(scn->nodes[nid]);
-        }
+        for (auto cid : gnde->children) scn->nodes[(int)cid]->parent = nde;
     }
 
     // keyframe type conversion
@@ -6872,18 +6818,16 @@ inline glTF* scene_to_gltf(
         // children
         for (auto idx = 0; idx < scn->nodes.size(); idx++) {
             auto nde = scn->nodes.at(idx);
-            auto gnde = gltf->nodes.at(idx);
-            for (auto child : nde->children) {
-                gnde->children.push_back(
-                    glTFid<glTFNode>(index(scn->nodes, child)));
-            }
+            if (!nde->parent) continue;
+            auto gnde = gltf->nodes.at(index(scn->nodes, nde->parent));
+            gnde->children.push_back(glTFid<glTFNode>(idx));
         }
-        
+
         // root nodes
         auto is_root = vector<bool>(gltf->nodes.size(), true);
-        for(auto idx = 0; idx < gltf->nodes.size(); idx ++) {
+        for (auto idx = 0; idx < gltf->nodes.size(); idx++) {
             auto gnde = gltf->nodes.at(idx);
-            for(auto idx1 = 0; idx1 < gnde->children.size(); idx1++) {
+            for (auto idx1 = 0; idx1 < gnde->children.size(); idx1++) {
                 is_root[(int)gnde->children.at(idx1)] = false;
             }
         }
@@ -6891,9 +6835,8 @@ inline glTF* scene_to_gltf(
         // scene with root nodes
         auto gscene = new glTFScene();
         gscene->name = "scene";
-        for(auto idx = 0; idx < gltf->nodes.size(); idx ++) {
-            if(is_root[idx])
-                gscene->nodes.push_back(glTFid<glTFNode>(idx));
+        for (auto idx = 0; idx < gltf->nodes.size(); idx++) {
+            if (is_root[idx]) gscene->nodes.push_back(glTFid<glTFNode>(idx));
         }
         gltf->scenes.push_back(gscene);
         gltf->scene = glTFid<glTFScene>(0);
@@ -11771,8 +11714,10 @@ inline void draw_tree_widgets(
             draw_tree_widgets(
                 win, "ist" + to_string(idx) + ": ", nde->ists[idx], selection);
         if (nde->env) draw_tree_widgets(win, "env: ", nde->env, selection);
-        for (auto idx = 0; idx < nde->children.size(); idx++) {
-            draw_tree_widgets(win, "", nde->children[idx], selection);
+        if (nde->parent)
+            draw_tree_widgets(win, "parent", nde->parent, selection);
+        for (auto idx = 0; idx < nde->children_.size(); idx++) {
+            draw_tree_widgets(win, "", nde->children_[idx], selection);
         }
         draw_tree_widget_end(win);
     }
@@ -11947,16 +11892,20 @@ inline bool draw_elem_widgets(gl_window* win, scene* scn, node* nde,
     for (auto ist : scn->instances) ist_names.push_back({ist->name, ist});
     auto env_names = vector<pair<string, environment*>>{{"<none>", nullptr}};
     for (auto env : scn->environments) env_names.push_back({env->name, env});
+    auto nde_names = vector<pair<string, node*>>{{"<none>", nullptr}};
+    for (auto nde : scn->nodes) nde_names.push_back({nde->name, nde});
 
     auto edited = vector<bool>();
     draw_separator_widget(win);
     draw_label_widget(win, "name", nde->name);
+    edited += draw_value_widget(win, "parent", nde->parent, nde_names);
     edited += draw_value_widget(win, "frame", nde->frame, -10, 10);
     edited += draw_value_widget(win, "camera", nde->cam, cam_names);
-    for(auto idx = 0; idx < nde->ists.size(); idx ++) {
+    for(auto idx = 0; idx < nde->ists.size(); idx ++)
         edited += draw_value_widget(win, "instance " + to_string(idx), nde->ists[idx], ist_names);
-    }
     edited += draw_value_widget(win, "environment", nde->env, env_names);
+    for(auto idx = 0; idx < nde->children_.size(); idx ++)
+        edited += draw_value_widget(win, "child " + to_string(idx), nde->children_[idx], nde_names);
     return std::any_of(edited.begin(), edited.end(), [](auto x) { return x; });
 }
 
@@ -12070,6 +12019,7 @@ inline bool draw_elem_widgets(gl_window* win, test_scene_params* scn,
     edited += draw_value_widget(win, "name", nde->name);
     edited += draw_value_widget(win, "frame", nde->frame);
     edited += draw_value_widget(win, "camera", nde->camera);
+    edited += draw_value_widget(win, "parent", nde->parent);
     edited += draw_value_widget(win, "instance", nde->instance);
     edited += draw_value_widget(win, "environment", nde->environment);
     return std::any_of(edited.begin(), edited.end(), [](auto x) { return x; });
