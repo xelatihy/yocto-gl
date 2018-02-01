@@ -78,7 +78,11 @@
 //
 // ## Infrastructure
 //
+// - build gl by default
 // - transforms in scene
+//     - node children in elem widgets
+//     - node children in test elem
+//     - node children in test elem widgets
 // - evaluate meshes with multiple shapes
 // - uniform serialization
 //    - consider simpler serialization code based on input flag
@@ -1408,7 +1412,7 @@ inline point eval_shapepoint(
 
     // sample reflectance
     auto kd = zero4f, ks = zero4f, kt = zero4f;
-    switch (mat->mtype) {
+    switch (mat->type) {
         case material_type::specular_roughness: {
             kd = vec4f{mat->kd, mat->op} * kx_scale *
                  eval_texture(mat->kd_txt, texcoord);
@@ -5338,7 +5342,7 @@ inline scene* obj_to_scene(const obj_scene* obj, const load_options& opts) {
     for (auto omat : obj->materials) {
         auto mat = new material();
         mat->name = omat->name;
-        mat->mtype = material_type::specular_roughness;
+        mat->type = material_type::specular_roughness;
         mat->ke = {omat->ke.x, omat->ke.y, omat->ke.z};
         mat->kd = {omat->kd.x, omat->kd.y, omat->kd.z};
         mat->ks = {omat->ks.x, omat->ks.y, omat->ks.z};
@@ -5755,7 +5759,7 @@ inline obj_scene* scene_to_obj(const scene* scn) {
         omat->name = mat->name;
         omat->ke = {mat->ke.x, mat->ke.y, mat->ke.z};
         omat->ke_txt = add_texture(mat->ke_txt);
-        switch (mat->mtype) {
+        switch (mat->type) {
             case material_type::specular_roughness: {
                 omat->kd = {mat->kd.x, mat->kd.y, mat->kd.z};
                 omat->ks = {mat->ks.x, mat->ks.y, mat->ks.z};
@@ -5977,31 +5981,40 @@ inline void save_obj_scene(
 #if YGL_GLTF
 
 // Instance gltf cameras and meshes
-inline void gltf_node_to_instances(scene* scn, const vector<camera>& cameras,
+inline node* gltf_node_to_instances(scene* scn, const vector<camera>& cameras,
     const vector<vector<shape*>>& meshes, const glTF* gltf,
     glTFid<glTFNode> nid, const mat4f& xf) {
-    auto nde = gltf->get(nid);
-    auto xform = xf * node_transform(nde);
-    if (nde->camera) {
-        auto cam = new camera(cameras[(int)nde->camera]);
+    auto gnde = gltf->get(nid);
+    auto xform = xf * node_transform(gnde);
+    auto nde = new node();
+    nde->frame = to_frame(xform);
+    scn->nodes.push_back(nde);
+    nde->name = gnde->name;
+    if (gnde->camera) {
+        auto cam = new camera(cameras[(int)gnde->camera]);
         cam->frame = to_frame(xform);
+        nde->cam = cam;
         scn->cameras.push_back(cam);
     }
-    if (nde->mesh) {
-        for (auto shp : meshes[(int)nde->mesh]) {
+    if (gnde->mesh) {
+        for (auto shp : meshes[(int)gnde->mesh]) {
             auto ist = new instance();
-            ist->name = nde->name;
+            ist->name = gnde->name;
             ist->frame = to_frame(xform);
             ist->shp = shp;
+            nde->ist = ist;
             scn->instances.push_back(ist);
         }
     }
-    for (auto cid : nde->children)
-        gltf_node_to_instances(scn, cameras, meshes, gltf, cid, xform);
+    for (auto cid : gnde->children) {
+        nde->children.push_back(
+            gltf_node_to_instances(scn, cameras, meshes, gltf, cid, xform));
+    }
+    return nde;
 }
 
 // Flattens a gltf file into a flattened asset.
-inline scene* gltf_to_scene(const glTF* gltf) {
+inline scene* gltf_to_scene(const glTF* gltf, const load_options& opts) {
     // clear asset
     auto scn = new scene();
 
@@ -6093,7 +6106,7 @@ inline scene* gltf_to_scene(const glTF* gltf) {
         mat->ke = gmat->emissiveFactor;
         mat->ke_txt = add_texture(gmat->emissiveTexture);
         if (gmat->pbrMetallicRoughness) {
-            mat->mtype = material_type::metallic_roughness;
+            mat->type = material_type::metallic_roughness;
             auto gmr = gmat->pbrMetallicRoughness;
             mat->kd = {gmr->baseColorFactor[0], gmr->baseColorFactor[1],
                 gmr->baseColorFactor[2]};
@@ -6105,7 +6118,7 @@ inline scene* gltf_to_scene(const glTF* gltf) {
             mat->ks_txt = add_texture(gmr->metallicRoughnessTexture);
         }
         if (gmat->pbrSpecularGlossiness) {
-            mat->mtype = material_type::specular_glossiness;
+            mat->type = material_type::specular_glossiness;
             auto gsg = gmat->pbrSpecularGlossiness;
             mat->kd = {gsg->diffuseFactor[0], gsg->diffuseFactor[1],
                 gsg->diffuseFactor[2]};
@@ -6302,10 +6315,13 @@ inline scene* gltf_to_scene(const glTF* gltf) {
     }
 
     // instance meshes and cameras
+    auto root = new node();
+    root->name = "root";
+    scn->nodes.push_back(root);
     if (gltf->scene) {
         for (auto nid : gltf->get(gltf->scene)->nodes) {
-            gltf_node_to_instances(
-                scn, cameras, meshes, gltf, nid, identity_mat4f);
+            root->children.push_back(gltf_node_to_instances(
+                scn, cameras, meshes, gltf, nid, identity_mat4f));
         }
     } else if (!gltf->nodes.empty()) {
         // set up node children and root nodes
@@ -6316,9 +6332,13 @@ inline scene* gltf_to_scene(const glTF* gltf) {
         }
         for (auto nid = 0; nid < gltf->nodes.size(); nid++) {
             if (!is_root[nid]) continue;
-            gltf_node_to_instances(scn, cameras, meshes, gltf,
-                glTFid<glTFNode>(nid), identity_mat4f);
+            root->children.push_back(gltf_node_to_instances(scn, cameras,
+                meshes, gltf, glTFid<glTFNode>(nid), identity_mat4f));
         }
+    }
+    if (!opts.preserve_hierarchy) {
+        for (auto nde : scn->nodes) delete nde;
+        scn->nodes.clear();
     }
 
     return scn;
@@ -6329,7 +6349,7 @@ inline scene* load_gltf_scene(
     const string& filename, const load_options& opts) {
     auto gscn = unique_ptr<glTF>(
         load_gltf(filename, true, opts.load_textures, opts.skip_missing));
-    auto scn = unique_ptr<scene>(gltf_to_scene(gscn.get()));
+    auto scn = unique_ptr<scene>(gltf_to_scene(gscn.get(), opts));
     if (!scn) {
         throw runtime_error("could not convert gltf scene");
         return nullptr;
@@ -6451,7 +6471,7 @@ inline glTF* scene_to_gltf(
         gmat->name = mat->name;
         gmat->emissiveFactor = mat->ke;
         gmat->emissiveTexture = add_texture(mat->ke_txt);
-        switch (mat->mtype) {
+        switch (mat->type) {
             case material_type::specular_roughness: {
                 gmat->pbrSpecularGlossiness =
                     new glTFMaterialPbrSpecularGlossiness();
@@ -6647,32 +6667,68 @@ inline glTF* scene_to_gltf(
         gmesh->primitives.push_back(gprim);
         gltf->meshes.push_back(gmesh);
     }
-
-    // instances
-    for (auto ist : scn->instances) {
-        auto gnode = new glTFNode();
-        gnode->name = ist->name;
-        gnode->mesh = glTFid<glTFMesh>(index(scn->shapes, ist->shp));
-        gnode->matrix = to_mat(ist->frame);
-        gltf->nodes.push_back(gnode);
-    }
-
-    // cameras
-    for (auto cam : scn->cameras) {
-        auto gnode = new glTFNode();
-        gnode->name = cam->name;
-        gnode->camera = glTFid<glTFCamera>(index(scn->cameras, cam));
-        gnode->matrix = to_mat(cam->frame);
-        gltf->nodes.push_back(gnode);
-    }
-
-    // scenes
-    if (!gltf->nodes.empty()) {
+    
+    // hierarchy
+    if(scn->nodes.empty()) {
+        // instances
+        for (auto ist : scn->instances) {
+            auto gnode = new glTFNode();
+            gnode->name = ist->name;
+            gnode->mesh = glTFid<glTFMesh>(index(scn->shapes, ist->shp));
+            gnode->matrix = to_mat(ist->frame);
+            gltf->nodes.push_back(gnode);
+        }
+        
+        // cameras
+        for (auto cam : scn->cameras) {
+            auto gnode = new glTFNode();
+            gnode->name = cam->name;
+            gnode->camera = glTFid<glTFCamera>(index(scn->cameras, cam));
+            gnode->matrix = to_mat(cam->frame);
+            gltf->nodes.push_back(gnode);
+        }
+        
+        // scenes
+        if (!gltf->nodes.empty()) {
+            auto gscene = new glTFScene();
+            gscene->name = "scene";
+            for (auto i = 0; i < gltf->nodes.size(); i++) {
+                gscene->nodes.push_back(glTFid<glTFNode>(i));
+            }
+            gltf->scenes.push_back(gscene);
+            gltf->scene = glTFid<glTFScene>(0);
+        }
+    } else {
+        // nopdes
+        for(auto nde : scn->nodes) {
+            auto gnode = new glTFNode();
+            gnode->name = nde->name;
+            if(nde->cam) {
+                gnode->camera = glTFid<glTFCamera>(index(scn->cameras, nde->cam));
+            }
+            if(nde->ist) {
+                gnode->mesh = glTFid<glTFMesh>(index(scn->shapes, nde->ist->shp));
+            }
+            gnode->matrix = to_mat(nde->frame);
+            gnode->translation = nde->translation;
+            gnode->rotation = nde->rotation;
+            gnode->scale = nde->scale;
+            gltf->nodes.push_back(gnode);
+        }
+        
+        // children
+        for(auto idx = 0; idx < scn->nodes.size(); idx++) {
+            auto nde = scn->nodes.at(idx);
+            auto gnde = gltf->nodes.at(idx);
+            for(auto child : nde->children) {
+                gnde->children.push_back(glTFid<glTFNode>(index(scn->nodes, child)));
+            }
+        }
+                                        
+        // scene
         auto gscene = new glTFScene();
         gscene->name = "scene";
-        for (auto i = 0; i < gltf->nodes.size(); i++) {
-            gscene->nodes.push_back(glTFid<glTFNode>(i));
-        }
+        gscene->nodes.push_back(glTFid<glTFNode>(0));
         gltf->scenes.push_back(gscene);
         gltf->scene = glTFid<glTFScene>(0);
     }
@@ -7965,7 +8021,7 @@ scene* make_cornell_box_scene() {
 
     auto make_material = [](string name, vec3f kd, vec3f ke = {0, 0, 0}) {
         auto mat = new material();
-        mat->mtype = material_type::specular_roughness;
+        mat->type = material_type::specular_roughness;
         mat->name = name;
         mat->ke = ke;
         mat->kd = kd;
@@ -8203,16 +8259,12 @@ void update_test_texture(
 void update_test_material(
     const scene* scn, material* mat, const test_material_params& tmat) {
     if (tmat.name == "") throw runtime_error("cannot use empty name");
-    auto txt = (texture*)nullptr, norm = (texture*)nullptr;
-    if (scn && tmat.texture != "")
-        for (auto elem : scn->textures)
-            if (elem->name == tmat.texture) txt = elem;
-    if (scn && tmat.normal != "")
-        for (auto elem : scn->textures)
-            if (elem->name == tmat.normal) norm = elem;
+
+    auto txt = find_named_elem(scn->textures, tmat.texture);
+    auto norm = find_named_elem(scn->textures, tmat.normal);
 
     mat->name = tmat.name;
-    mat->mtype = material_type::specular_roughness;
+    mat->type = material_type::specular_roughness;
     mat->ke = zero3f;
     mat->kd = zero3f;
     mat->rs = 1;
@@ -8412,14 +8464,13 @@ void update_test_instance(
                    rotation_mat3(vec3f{1, 0, 0}, tist.rotation.x * pif / 180);
         ist->frame.rot() = ist->frame.rot() * rot;
     }
-    ist->shp = shp;
+    ist->shp = find_named_elem(scn->shapes, tist.shape);
 }
 
 // Makes/updates a test shape
 void update_test_camera(
     const scene* scn, camera* cam, const test_camera_params& tcam) {
     if (tcam.name == "") throw runtime_error("cannot use empty name");
-
     cam->name = tcam.name;
     cam->frame = lookat_frame3(tcam.from, tcam.to, vec3f{0, 1, 0});
     cam->yfov = tcam.yfov;
@@ -8434,19 +8485,49 @@ void update_test_camera(
 void update_test_environment(
     const scene* scn, environment* env, const test_environment_params& tenv) {
     if (tenv.name == "") throw runtime_error("cannot use empty name");
-    auto txt = (texture*)nullptr;
-    if (scn && tenv.texture != "") {
-        for (auto elem : scn->textures)
-            if (elem->name == tenv.texture) txt = elem;
-    }
-
     env->name = tenv.name;
     env->frame = identity_frame3f;
     if (tenv.rotation) {
         env->frame = rotation_frame3({0, 1, 0}, tenv.rotation);
     }
     env->ke = tenv.emission * tenv.color;
-    env->ke_txt.txt = txt;
+    env->ke_txt.txt = find_named_elem(scn->textures, tenv.texture);
+}
+
+// Makes/updates a test shape
+void update_test_node(
+    const scene* scn, node* nde, const test_node_params& tnde) {
+    if (tnde.name == "") throw runtime_error("cannot use empty name");
+    nde->name = tnde.name;
+    nde->frame = identity_frame3f;
+    nde->cam = find_named_elem(scn->cameras, tnde.camera);
+    nde->ist = find_named_elem(scn->instances, tnde.instance);
+    nde->env = find_named_elem(scn->environments, tnde.environment);
+}
+
+// Makes/updates a test animation
+void update_test_animation(
+    const scene* scn, animation* anm, const test_animation_params& tanm) {
+    if (tanm.name == "") throw runtime_error("cannot use empty name");
+    if(anm->keyframes.size() != 1) {
+        for(auto v : anm->keyframes) delete v;
+        anm->keyframes.clear();
+        anm->keyframes.push_back(new keyframe());
+    }
+    anm->name = tanm.name;
+    auto kfr = anm->keyframes.front();
+    kfr->name = tanm.name;
+    kfr->type = (tanm.bezier) ? keyframe_type::linear : keyframe_type::bezier;
+    kfr->times = tanm.times;
+    for (auto& v : kfr->times) v *= tanm.speed;
+    kfr->translation = tanm.translation;
+    kfr->rotation = tanm.rotation;
+    kfr->scale = tanm.scaling;
+    for (auto& v : kfr->translation) v *= tanm.scale;
+    for (auto& v : kfr->scale) v *= tanm.scale;
+    kfr->nodes.clear();
+    for (auto& nde : tanm.nodes)
+        kfr->nodes.push_back(find_named_elem(scn->nodes, nde));
 }
 
 // Update test elements
@@ -8482,6 +8563,9 @@ void update_test_scene(scene* scn, const test_scene_params& params,
         scn, scn->instances, params.instances, update_test_instance, refresh);
     update_test_scene_elem(scn, scn->environments, params.environments,
         update_test_environment, refresh);
+    update_test_scene_elem(
+        scn, scn->nodes, params.nodes, update_test_node, refresh);
+    update_test_scene_elem(scn, scn->animations, params.animations, update_test_animation, refresh);
 }
 
 // remove duplicate elems
@@ -8746,6 +8830,36 @@ unordered_map<string, test_environment_params>& test_environment_presets() {
     presets["const"] = make_test_environment("const", "");
     presets["sky1"] = make_test_environment("sky1", "");
     presets["sky2"] = make_test_environment("sky2", "");
+
+    return presets;
+}
+
+unordered_map<string, test_animation_params>& test_animation_presets() {
+    static auto presets = unordered_map<string, test_animation_params>();
+    if (!presets.empty()) return presets;
+
+    auto make_test_animation =
+        [](const string& name, bool bezier, const vector<float>& times,
+            const vector<vec3f>& translation, const vector<quat4f>& rotation,
+            const vector<vec3f>& scaling) {
+            auto params = test_animation_params();
+            params.name = name;
+            params.speed = 1;
+            params.scale = 1;
+            params.bezier = bezier;
+            params.times = times;
+            params.translation = translation;
+            params.rotation = rotation;
+            params.scaling = scaling;
+            return params;
+        };
+
+    presets["bounce"] = make_test_animation(
+        "bounce", false, {0, 1}, {{0, 0, 0}, {0, 1, 0}}, {}, {});
+    presets["scale"] = make_test_animation(
+        "scale", false, {0, 1}, {}, {}, {{1, 1, 1}, {0.1f, 0.1f, 0.1f}});
+    presets["rotation"] = make_test_animation("rotation", false, {0, 1}, {},
+        {{{0, 1, 0}, 0}, {{0, 1, 0}, 2 * pif}}, {});
 
     return presets;
 }
@@ -10302,7 +10416,7 @@ gl_stdsurface_program make_stdsurface_program() {
     string _frag_material =
         R"(
         struct Material {
-            int mtype;         // material type
+            int type;         // material type
             int etype;         // element type
             vec3 ke;           // material ke
             vec3 kd;           // material kd
@@ -10335,7 +10449,7 @@ gl_stdsurface_program make_stdsurface_program() {
 
         void eval_material(vec2 texcoord, vec4 color, out int type, out vec3 ke,
                            out vec3 kd, out vec3 ks, out float rs, out float op, out bool cutout) {
-            if(material.mtype == 0) {
+            if(material.type == 0) {
                 type = 0;
                 ke = material.ke;
                 kd = vec3(0,0,0);
@@ -10358,15 +10472,15 @@ gl_stdsurface_program make_stdsurface_program() {
             ke *= ke_txt;
 
             // get material color from textures and adjust values
-            if(material.mtype == 0) {
+            if(material.type == 0) {
                 type = 0;
-            } else if(material.mtype == 1) {
+            } else if(material.type == 1) {
                 type = material.etype;
                 kd *= kd_txt.xyz;
                 ks *= ks_txt.xyz;
                 rs *= rs_txt;
                 rs = rs*rs;
-            } else if(material.mtype == 2) {
+            } else if(material.type == 2) {
                 type = material.etype;
                 vec3 kb = kd * kd_txt.xyz;
                 float km = ks.x * ks_txt.z;
@@ -10375,7 +10489,7 @@ gl_stdsurface_program make_stdsurface_program() {
                 rs *= ks_txt.y;
                 rs = rs*rs;
                 op *= kd_txt.w;
-            } else if(material.mtype == 3) {
+            } else if(material.type == 3) {
                 type = material.etype;
                 kd *= kd_txt.xyz;
                 ks *= ks_txt.xyz;
@@ -10638,7 +10752,7 @@ inline void draw_stdsurface_shape(gl_stdsurface_state* st, const shape* shp,
     };
 
     auto mat = (shp->mat) ? shp->mat : &default_material;
-    set_stdsurface_material(st->prog, mat->mtype, etype, mat->ke, mat->kd,
+    set_stdsurface_material(st->prog, mat->type, etype, mat->ke, mat->kd,
         mat->ks, mat->rs, mat->op, txt(mat->ke_txt), txt(mat->kd_txt),
         txt(mat->ks_txt), txt(mat->rs_txt), txt(mat->norm_txt),
         txt(mat->occ_txt), false, mat->double_sided, params.cutout);
@@ -11356,41 +11470,52 @@ inline void draw_tree_widgets(
 inline void draw_tree_widgets(
     gl_window* win, const string& lbl, instance* ist, void*& selection) {
     if (draw_tree_widget_begin(win, lbl + ist->name, selection, ist)) {
-        if (ist->shp) draw_tree_widgets(win, "shape: ", ist->shp, selection);
+        if (ist->shp) draw_tree_widgets(win, "shp: ", ist->shp, selection);
+        draw_tree_widget_end(win);
+    }
+}
+
+inline void draw_tree_widgets(
+    gl_window* win, const string& lbl, environment* env, void*& selection) {
+    if (draw_tree_widget_begin(win, lbl + env->name, selection, env)) {
+        if (env->ke_txt.txt)
+            draw_tree_widgets(win, "txt: ", env->ke_txt.txt, selection);
+        draw_tree_widget_end(win);
+    }
+}
+
+inline void draw_tree_widgets(
+    gl_window* win, const string& lbl, node* nde, void*& selection) {
+    if (draw_tree_widget_begin(win, lbl + nde->name, selection, nde)) {
+        if (nde->cam) draw_tree_widgets(win, "cam: ", nde->cam, selection);
+        if (nde->ist) draw_tree_widgets(win, "ist: ", nde->ist, selection);
+        if (nde->env) draw_tree_widgets(win, "env: ", nde->env, selection);
+        for (auto idx = 0; idx < nde->children.size(); idx++) {
+            draw_tree_widgets(win, "", nde->children[idx], selection);
+        }
+        draw_tree_widget_end(win);
+    }
+}
+
+template <typename T>
+inline void draw_scene_tree_widgets(gl_window* win, const string& lbl,
+    const vector<T*>& elems, void*& selection) {
+    if (draw_tree_widget_begin(win, lbl)) {
+        for (auto elem : elems) draw_tree_widgets(win, "", elem, selection);
         draw_tree_widget_end(win);
     }
 }
 
 inline void draw_tree_widgets(
     gl_window* win, const string& lbl, scene* scn, void*& selection) {
-    if (draw_tree_widget_begin(win, lbl + "cameras")) {
-        for (auto cam : scn->cameras)
-            draw_tree_widgets(win, "", cam, selection);
-        draw_tree_widget_end(win);
-    }
-
-    if (draw_tree_widget_begin(win, lbl + "shapes")) {
-        for (auto msh : scn->shapes) draw_tree_widgets(win, "", msh, selection);
-        draw_tree_widget_end(win);
-    }
-
-    if (draw_tree_widget_begin(win, lbl + "instances")) {
-        for (auto ist : scn->instances)
-            draw_tree_widgets(win, "", ist, selection);
-        draw_tree_widget_end(win);
-    }
-
-    if (draw_tree_widget_begin(win, lbl + "materials")) {
-        for (auto mat : scn->materials)
-            draw_tree_widgets(win, "", mat, selection);
-        draw_tree_widget_end(win);
-    }
-
-    if (draw_tree_widget_begin(win, lbl + "textures")) {
-        for (auto txt : scn->textures)
-            draw_tree_widgets(win, "", txt, selection);
-        draw_tree_widget_end(win);
-    }
+    draw_scene_tree_widgets(win, lbl + "cameras", scn->cameras, selection);
+    draw_scene_tree_widgets(win, lbl + "textures", scn->textures, selection);
+    draw_scene_tree_widgets(win, lbl + "materials", scn->materials, selection);
+    draw_scene_tree_widgets(win, lbl + "shapes", scn->shapes, selection);
+    draw_scene_tree_widgets(win, lbl + "instances", scn->instances, selection);
+    draw_scene_tree_widgets(
+        win, lbl + "environments", scn->environments, selection);
+    draw_scene_tree_widgets(win, lbl + "nodes", scn->nodes, selection);
 }
 
 inline bool draw_elem_widgets(gl_window* win, scene* scn, texture* txt,
@@ -11409,19 +11534,13 @@ inline bool draw_elem_widgets(gl_window* win, scene* scn, texture* txt,
 
 inline bool draw_elem_widgets(gl_window* win, scene* scn, material* mat,
     void*& selection, const unordered_map<texture*, gl_texture>& gl_txt) {
-    static auto mtype_names = vector<pair<string, material_type>>{
-        {"specular_roughness", material_type::specular_roughness},
-        {"metallic_roughness", material_type::metallic_roughness},
-        {"specular_glossiness", material_type::specular_glossiness},
-    };
-
     auto txt_names = vector<pair<string, texture*>>{{"<none>", nullptr}};
     for (auto txt : scn->textures) txt_names.push_back({txt->path, txt});
 
     auto edited = vector<bool>();
     draw_separator_widget(win);
     draw_label_widget(win, "name", mat->name);
-    edited += draw_value_widget(win, "mtype", mat->mtype, mtype_names);
+    edited += draw_value_widget(win, "type", mat->type, material_type_names());
     auto ke_l = max_element(mat->ke).second;
     auto ke_c = (ke_l) ? mat->ke / ke_l : zero3f;
     edited += draw_value_widget(win, "ke l", ke_l, 0, 100);
@@ -11460,28 +11579,24 @@ inline bool draw_elem_widgets(gl_window* win, scene* scn, shape* shp,
     auto mat_names = vector<pair<string, material*>>{{"<none>", nullptr}};
     for (auto mat : scn->materials) mat_names.push_back({mat->name, mat});
 
-    auto draw_vector_widget = [](gl_window* win, const char* lbl, int len) {
-        if (len) draw_label_widget(win, lbl, len);
-    };
-
     auto edited = vector<bool>();
     draw_separator_widget(win);
     draw_label_widget(win, "name", shp->name);
     edited += draw_value_widget(win, "material", shp->mat, mat_names);
-    draw_vector_widget(win, "pos", (int)shp->pos.size());
-    draw_vector_widget(win, "norm", (int)shp->norm.size());
-    draw_vector_widget(win, "texcoord", (int)shp->texcoord.size());
-    draw_vector_widget(win, "color", (int)shp->color.size());
-    draw_vector_widget(win, "tangsp", (int)shp->tangsp.size());
-    draw_vector_widget(win, "radius", (int)shp->radius.size());
-    draw_vector_widget(win, "triangles", (int)shp->triangles.size());
-    draw_vector_widget(win, "quads", (int)shp->quads.size());
-    draw_vector_widget(win, "quads_pos", (int)shp->quads_pos.size());
-    draw_vector_widget(win, "quads_norm", (int)shp->quads_norm.size());
-    draw_vector_widget(win, "quads_texcoord", (int)shp->quads_texcoord.size());
-    draw_vector_widget(win, "lines", (int)shp->lines.size());
-    draw_vector_widget(win, "points", (int)shp->points.size());
-    draw_vector_widget(win, "beziers", (int)shp->beziers.size());
+    draw_label_widget(win, "pos", shp->pos, true);
+    draw_label_widget(win, "norm", shp->norm, true);
+    draw_label_widget(win, "texcoord", shp->texcoord, true);
+    draw_label_widget(win, "color", shp->color, true);
+    draw_label_widget(win, "tangsp", shp->tangsp, true);
+    draw_label_widget(win, "radius", shp->radius, true);
+    draw_label_widget(win, "triangles", shp->triangles, true);
+    draw_label_widget(win, "quads", shp->quads, true);
+    draw_label_widget(win, "quads_pos", shp->quads_pos, true);
+    draw_label_widget(win, "quads_norm", shp->quads_norm, true);
+    draw_label_widget(win, "quads_texcoord", shp->quads_texcoord, true);
+    draw_label_widget(win, "lines", shp->lines, true);
+    draw_label_widget(win, "points", shp->points, true);
+    draw_label_widget(win, "beziers", shp->beziers, true);
     return std::any_of(edited.begin(), edited.end(), [](auto x) { return x; });
 }
 
@@ -11543,6 +11658,47 @@ inline bool draw_elem_widgets(gl_window* win, scene* scn, environment* env,
     return std::any_of(edited.begin(), edited.end(), [](auto x) { return x; });
 }
 
+inline bool draw_elem_widgets(gl_window* win, scene* scn, node* nde,
+    void*& selection, const unordered_map<texture*, gl_texture>& gl_txt) {
+    auto cam_names = vector<pair<string, camera*>>{{"<none>", nullptr}};
+    for (auto cam : scn->cameras) cam_names.push_back({cam->name, cam});
+    auto ist_names = vector<pair<string, instance*>>{{"<none>", nullptr}};
+    for (auto ist : scn->instances) ist_names.push_back({ist->name, ist});
+    auto env_names = vector<pair<string, environment*>>{{"<none>", nullptr}};
+    for (auto env : scn->environments) env_names.push_back({env->name, env});
+
+    auto edited = vector<bool>();
+    draw_separator_widget(win);
+    draw_label_widget(win, "name", nde->name);
+    edited += draw_value_widget(win, "frame", nde->frame, -10, 10);
+    edited += draw_value_widget(win, "camera", nde->cam, cam_names);
+    edited += draw_value_widget(win, "instance", nde->cam, cam_names);
+    edited += draw_value_widget(win, "environment", nde->env, env_names);
+    return std::any_of(edited.begin(), edited.end(), [](auto x) { return x; });
+}
+
+inline bool draw_elem_widgets(gl_window* win, scene* scn, animation* anm,
+                              void*& selection, const unordered_map<texture*, gl_texture>& gl_txt) {
+    auto nde_names = vector<pair<string, node*>>{{"<none>", nullptr}};
+    for (auto nde : scn->nodes) nde_names.push_back({nde->name, nde});
+    
+    auto edited = vector<bool>();
+    draw_separator_widget(win);
+    draw_label_widget(win, "name", anm->name);
+    for(auto kfr_kv : enumerate(anm->keyframes)) {
+        auto kfr = kfr_kv.second;
+        auto ids = to_string(kfr_kv.first);
+        edited += draw_value_widget(win, "name " + ids, kfr->name);
+        edited += draw_value_widget(win, "type " + ids, kfr->type, keyframe_type_names());
+        draw_label_widget(win, "times " + ids, kfr->times, true);
+        draw_label_widget(win, "translation " + ids, kfr->translation, true);
+        draw_label_widget(win, "rotation " + ids, kfr->rotation, true);
+        draw_label_widget(win, "scale " + ids, kfr->scale, true);
+        draw_label_widget(win, "nodes " + ids, kfr->nodes, true);
+    }
+    return std::any_of(edited.begin(), edited.end(), [](auto x) { return x; });
+}
+    
 inline bool draw_elem_widgets(gl_window* win, test_scene_params* scn,
     test_texture_params* txt, void*& selection,
     const unordered_map<texture*, gl_texture>& gl_txt) {
@@ -11619,6 +11775,41 @@ inline bool draw_elem_widgets(gl_window* win, test_scene_params* scn,
     edited += draw_value_widget(win, "rotation", env->rotation, -pif, pif);
     edited += draw_value_widget(win, "emission", env->emission);
     edited += draw_value_widget(win, "txt", env->texture);
+    return std::any_of(edited.begin(), edited.end(), [](auto x) { return x; });
+}
+
+inline bool draw_elem_widgets(gl_window* win, test_scene_params* scn,
+    test_node_params* nde, void*& selection,
+    const unordered_map<texture*, gl_texture>& gl_txt) {
+    auto edited = vector<bool>();
+    draw_separator_widget(win);
+    edited += draw_value_widget(win, "name", nde->name);
+    edited += draw_value_widget(win, "frame", nde->frame);
+    edited += draw_value_widget(win, "camera", nde->camera);
+    edited += draw_value_widget(win, "instance", nde->instance);
+    edited += draw_value_widget(win, "environment", nde->environment);
+    return std::any_of(edited.begin(), edited.end(), [](auto x) { return x; });
+}
+
+inline bool draw_elem_widgets(gl_window* win, test_scene_params* scn,
+                              test_animation_params* anm, void*& selection,
+                              const unordered_map<texture*, gl_texture>& gl_txt) {
+    auto edited = vector<bool>();
+    draw_separator_widget(win);
+    edited += draw_value_widget(win, "name", anm->name);
+    edited += draw_value_widget(win, "bezier", anm->bezier);
+    edited += draw_value_widget(win, "speed", anm->speed);
+    edited += draw_value_widget(win, "scale", anm->scale);
+    for(auto idx = 0; idx < anm->times.size(); idx++)
+        edited += draw_value_widget(win, "time " + to_string(idx), anm->times[idx]);
+    for(auto idx = 0; idx < anm->translation.size(); idx++)
+        edited += draw_value_widget(win, "translation " + to_string(idx), anm->translation[idx]);
+    for(auto idx = 0; idx < anm->rotation.size(); idx++)
+        edited += draw_value_widget(win, "rotation " + to_string(idx), anm->rotation[idx]);
+    for(auto idx = 0; idx < anm->scaling.size(); idx++)
+        edited += draw_value_widget(win, "scaling " + to_string(idx), anm->scaling[idx]);
+    for(auto idx = 0; idx < anm->nodes.size(); idx++)
+        edited += draw_value_widget(win, "node " + to_string(idx), anm->nodes[idx]);
     return std::any_of(edited.begin(), edited.end(), [](auto x) { return x; });
 }
 
@@ -11712,6 +11903,8 @@ inline bool draw_scene_widgets(gl_window* win, const string& lbl, scene* scn,
                 test_scn->instances, selection, update_test_instance);
             edited += draw_add_elem_widgets(win, scn, "env", scn->environments,
                 test_scn->environments, selection, update_test_environment);
+            edited += draw_add_elem_widgets(win, scn, "anim", scn->animations,
+                                            test_scn->animations, selection, update_test_animation);
         }
 
         auto test_scn_res = (test_scn) ? test_scn : &test_scn_def;
@@ -11728,6 +11921,10 @@ inline bool draw_scene_widgets(gl_window* win, const string& lbl, scene* scn,
         edited += draw_selected_elem_widgets(win, scn, test_scn,
             scn->environments, test_scn->environments, selection,
             update_test_environment, gl_txt);
+        edited += draw_selected_elem_widgets(win, scn, test_scn, scn->nodes,
+            test_scn->nodes, selection, update_test_node, gl_txt);
+        edited += draw_selected_elem_widgets(win, scn, test_scn, scn->animations,
+                                             test_scn->animations, selection, update_test_animation, gl_txt);
         return std::any_of(
             edited.begin(), edited.end(), [](auto x) { return x; });
     } else

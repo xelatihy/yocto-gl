@@ -26,7 +26,6 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#define YGL_OPENGL 1
 #include "../yocto/yocto_gl.h"
 using namespace ygl;
 
@@ -57,6 +56,7 @@ inline void draw(gl_window* win) {
     app->shparams.height = framebuffer_size.y;
     auto cam = app->scn->cameras[app->shparams.camera_id];
 
+    update_transforms(app->scn);
     update_lights(app->scn, false, false);
     update_stdsurface_state(app->shstate, app->scn, app->shparams);
     if (app->shstate->lights_pos.empty()) app->shparams.camera_lights = true;
@@ -189,6 +189,7 @@ int main(int argc, char* argv[]) {
         auto opts = load_options();
         opts.preserve_quads = preserve_quads;
         opts.preserve_facevarying = preserve_facevarying;
+        opts.preserve_hierarchy = true;
         app->scn = load_scene(app->filename, opts);
     } catch (exception e) { log_fatal("cannot load scene {}", app->filename); }
 
