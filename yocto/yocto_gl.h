@@ -4113,10 +4113,10 @@ inline T eval_keyframed_linear(
     time = clamp(time, times.front(), times.back() - 0.001f);
     if (time <= times.front()) return vals.front();
     if (time >= times.back()) return vals.back();
-    auto idx = (int)(std::lower_bound(times.begin(), times.end(), time) -
+    auto idx = (int)(std::upper_bound(times.begin(), times.end(), time) -
                      times.begin());
-    return eval_keyframed_lerp(vals.at(idx), vals.at(idx + 1),
-        (time - times.at(idx)) / (times.at(idx + 1) - times.at(idx)));
+    return eval_keyframed_lerp(vals.at(idx-1), vals.at(idx),
+        (time - times.at(idx-1)) / (times.at(idx) - times.at(idx-1)));
 }
 
 }  // namespace ygl

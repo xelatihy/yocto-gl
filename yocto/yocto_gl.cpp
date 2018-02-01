@@ -8716,7 +8716,7 @@ void update_test_animation(
     anm->name = tanm.name;
     auto kfr = anm->keyframes.front();
     kfr->name = tanm.name;
-    kfr->type = (tanm.bezier) ? keyframe_type::linear : keyframe_type::bezier;
+    kfr->type = (!tanm.bezier) ? keyframe_type::linear : keyframe_type::bezier;
     kfr->times = tanm.times;
     for (auto& v : kfr->times) v *= tanm.speed;
     kfr->translation = tanm.translation;
