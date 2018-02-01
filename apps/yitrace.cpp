@@ -26,7 +26,6 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#define YGL_OPENGL 1
 #include "../yocto/yocto_gl.h"
 using namespace ygl;
 
