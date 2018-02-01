@@ -26,7 +26,6 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#define YGL_OPENGL 1
 #include "../yocto/yocto_gl.h"
 #include "../yocto/yocto_gltf.h"
 using ygl::log_info;
