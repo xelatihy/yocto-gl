@@ -97,11 +97,11 @@
 ///
 /// OpenGL utilities include the OpenGL libaries, use GLEW on Windows/Linux,
 /// GLFW for windows handling and Dear ImGui for UI support.
-/// Since OpenGL is quite onerous and hard to link, its support is disabled by
-/// default. You can enable it by defining YGL_OPENGL to 1 before including
-/// this file. If you use any of the OpenGL calls, make sure to properly link to
-/// the OpenGL libraries on your system. For ImGUI, build with the libraries
-/// `imgui.cpp`, `imgui_draw.cpp`, `imgui_impl_glfw_gl3.cpp`.
+/// Since OpenGL is quite onerous and hard to link, its support can be disabled
+/// by defining YGL_OPENGL to 1 before including this file. If you use any of
+/// the OpenGL calls, make sure to properly link to the OpenGL libraries on
+/// your system. For ImGUI, build with the libraries `imgui.cpp`,
+/// `imgui_draw.cpp`, `imgui_impl_glfw_gl3.cpp`.
 ///
 ///
 /// ## Example Applications
@@ -729,7 +729,7 @@
 
 // enable OpenGL
 #ifndef YGL_OPENGL
-#define YGL_OPENGL 0
+#define YGL_OPENGL 1
 #endif
 
 // enable explicit json objects in glTF
