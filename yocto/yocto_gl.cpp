@@ -79,8 +79,6 @@
 // ## Infrastructure
 //
 // - remove default environment
-// - nodes
-//    - multiple instances to support multiple shapes
 // - animation
 //    - gltf read
 //    - gltf write
@@ -107,6 +105,7 @@
 //
 // - start in edit mode
 // - show edit scene
+// - animation support
 //
 // ## yITrace
 //
@@ -11737,6 +11736,10 @@ inline void draw_tree_widgets(
     }
 }
 
+inline void draw_tree_widgets(gl_window* win, const string& lbl, animation* anm, void*& selection) {
+    draw_tree_widget_leaf(win, lbl + anm->name, selection, anm);
+}
+    
 template <typename T>
 inline void draw_scene_tree_widgets(gl_window* win, const string& lbl,
     const vector<T*>& elems, void*& selection) {
@@ -11756,6 +11759,7 @@ inline void draw_tree_widgets(
     draw_scene_tree_widgets(
         win, lbl + "environments", scn->environments, selection);
     draw_scene_tree_widgets(win, lbl + "nodes", scn->nodes, selection);
+    draw_scene_tree_widgets(win, lbl + "animations", scn->animations, selection);
 }
 
 inline bool draw_elem_widgets(gl_window* win, scene* scn, texture* txt,
