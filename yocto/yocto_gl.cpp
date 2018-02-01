@@ -6721,6 +6721,7 @@ inline glTF* scene_to_gltf(
             auto gmsh = new glTFMesh();
             gmsh->name = shp->name;
             gmsh->primitives.push_back(shapes.at(shp));
+            gltf->meshes.push_back(gmsh);
         }
         
         // instances
@@ -6756,6 +6757,7 @@ inline glTF* scene_to_gltf(
         auto meshes = map<vector<instance*>, int>();
         for(auto nde : scn->nodes) {
             if(nde->ists.empty()) continue;
+            if(contains(meshes, nde->ists)) continue;
             auto gmsh = new glTFMesh();
             gmsh->name = nde->ists.front()->name;
             for(auto ist : nde->ists)
