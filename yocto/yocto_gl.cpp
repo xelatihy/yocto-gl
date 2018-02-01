@@ -6014,7 +6014,7 @@ inline node* gltf_node_to_instances(scene* scn, const vector<camera>& cameras,
 }
 
 // Flattens a gltf file into a flattened asset.
-inline scene* gltf_to_scene(const glTF* gltf) {
+inline scene* gltf_to_scene(const glTF* gltf, const load_options& opts) {
     // clear asset
     auto scn = new scene();
 
@@ -6336,6 +6336,10 @@ inline scene* gltf_to_scene(const glTF* gltf) {
                 meshes, gltf, glTFid<glTFNode>(nid), identity_mat4f));
         }
     }
+    if(!opts.preserve_hierarchy) {
+        for(auto nde : scn->nodes) delete nde;
+        scn->nodes.clear();
+    }
 
     return scn;
 }
@@ -6345,7 +6349,7 @@ inline scene* load_gltf_scene(
     const string& filename, const load_options& opts) {
     auto gscn = unique_ptr<glTF>(
         load_gltf(filename, true, opts.load_textures, opts.skip_missing));
-    auto scn = unique_ptr<scene>(gltf_to_scene(gscn.get()));
+    auto scn = unique_ptr<scene>(gltf_to_scene(gscn.get(), opts));
     if (!scn) {
         throw runtime_error("could not convert gltf scene");
         return nullptr;
