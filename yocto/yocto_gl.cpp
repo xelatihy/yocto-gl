@@ -6878,11 +6878,23 @@ inline glTF* scene_to_gltf(
                     glTFid<glTFNode>(index(scn->nodes, child)));
             }
         }
+        
+        // root nodes
+        auto is_root = vector<bool>(gltf->nodes.size(), true);
+        for(auto idx = 0; idx < gltf->nodes.size(); idx ++) {
+            auto gnde = gltf->nodes.at(idx);
+            for(auto idx1 = 0; idx1 < gnde->children.size(); idx1++) {
+                is_root[(int)gnde->children.at(idx1)] = false;
+            }
+        }
 
-        // scene
+        // scene with root nodes
         auto gscene = new glTFScene();
         gscene->name = "scene";
-        gscene->nodes.push_back(glTFid<glTFNode>(0));
+        for(auto idx = 0; idx < gltf->nodes.size(); idx ++) {
+            if(is_root[idx])
+                gscene->nodes.push_back(glTFid<glTFNode>(idx));
+        }
         gltf->scenes.push_back(gscene);
         gltf->scene = glTFid<glTFScene>(0);
     }
@@ -8725,13 +8737,13 @@ void update_test_node(
     const scene* scn, node* nde, const test_node_params& tnde) {
     if (tnde.name == "") throw runtime_error("cannot use empty name");
     nde->name = tnde.name;
-    nde->frame = identity_frame3f;
+    nde->frame = tnde.frame;
+    nde->translation = tnde.translation;
+    nde->rotation = tnde.rotation;
+    nde->scaling = tnde.scaling;
     nde->cam = find_named_elem(scn->cameras, tnde.camera);
     auto ist = find_named_elem(scn->instances, tnde.instance);
-    if (ist)
-        nde->ists = {ist};
-    else
-        nde->ists.clear();
+    nde->ists = (ist) ? vector<instance*>{ist} : vector<instance*>{};
     nde->env = find_named_elem(scn->environments, tnde.environment);
 }
 
@@ -9157,7 +9169,9 @@ unordered_map<string, test_scene_params>& test_scene_presets() {
     auto make_simple_scene = [&](const string& name,
                                  const vector<string>& shapes,
                                  const vector<string>& mats,
-                                 const string& lights, bool interior = false) {
+                                 const string& lights, bool interior = false,
+                                 bool nodes = false,
+                                 const vector<string>& animations = {}) {
         auto pos = vector<vec3f>{{-2.50f, 1, 0}, {0, 1, 0}, {+2.50f, 1, 0}};
         auto params = make_test_scene(name);
         params.cameras += test_camera_presets().at("cam3");
@@ -9182,9 +9196,14 @@ unordered_map<string, test_scene_params>& test_scene_presets() {
             params.shapes.back().name = name;
             params.shapes.back().material = mats[i];
             params.instances += make_test_instance(name, name, pos[i]);
-            if (interior)
+            if (interior) {
                 params.instances +=
                     make_test_instance(name + "i", "interior", pos[i]);
+            }
+            if (!animations.empty()) {
+                params.animations += test_animation_presets().at(animations[i]);
+                params.animations.back().nodes += name;
+            }
         }
         if (lights == "pointlights" || lights == "arealights" ||
             lights == "arealights1") {
@@ -9226,6 +9245,29 @@ unordered_map<string, test_scene_params>& test_scene_presets() {
             // env = add_test_environment(params,
             // test_environment_type::sky,
             //     lookat_frame3f({0, 1, 0}, {0, 1, 1}, {0, 1, 0}, true));
+        }
+        if (!animations.empty() || nodes) {
+            for (auto& cam : params.cameras) {
+                auto nde = test_node_params();
+                nde.name = cam.name;
+                nde.frame = lookat_frame3(cam.from, cam.to, vec3f{0, 1, 0});
+                nde.camera = cam.name;
+                params.nodes += nde;
+            }
+            for (auto& ist : params.instances) {
+                auto nde = test_node_params();
+                nde.name = ist.name;
+                nde.frame = ist.frame;
+                nde.instance = ist.name;
+                params.nodes += nde;
+            }
+            for (auto& env : params.environments) {
+                auto nde = test_node_params();
+                nde.name = env.name;
+                nde.frame = env.frame;
+                nde.environment = env.name;
+                params.nodes += nde;
+            }
         }
         return params;
     };
@@ -9305,6 +9347,12 @@ unordered_map<string, test_scene_params>& test_scene_presets() {
         {"flipcapsphere", "flipcapsphere", "flipcapsphere"},
         {"plastic_blue", "plastic_blue_bumped", "plastic_colored_bumped"},
         "pointlights");
+
+    // animated shapes
+    presets["animated_pl"] = make_simple_scene("animated_pl",
+        {"flipcapsphere", "spherecube", "spherizedcube"},
+        {"plastic_colored", "plastic_colored", "plastic_colored"},
+        "pointlights", false, true, {"bounce", "bounce", "bounce"});
 
     // instances shared functions
     auto make_random_scene = [&](const string& name, const vec2i& num,
@@ -11905,7 +11953,9 @@ inline bool draw_elem_widgets(gl_window* win, scene* scn, node* nde,
     draw_label_widget(win, "name", nde->name);
     edited += draw_value_widget(win, "frame", nde->frame, -10, 10);
     edited += draw_value_widget(win, "camera", nde->cam, cam_names);
-    edited += draw_value_widget(win, "instance", nde->cam, cam_names);
+    for(auto idx = 0; idx < nde->ists.size(); idx ++) {
+        edited += draw_value_widget(win, "instance " + to_string(idx), nde->ists[idx], ist_names);
+    }
     edited += draw_value_widget(win, "environment", nde->env, env_names);
     return std::any_of(edited.begin(), edited.end(), [](auto x) { return x; });
 }
