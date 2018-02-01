@@ -7572,6 +7572,19 @@ inline void update_transforms(scene* scn, float time = 0) {
         if (!nde->parent) update_transforms(nde);
 }
 
+/// Compute animation range
+inline vec2f compute_animation_range(const scene* scn) {
+    if (scn->animations.empty()) return zero2f;
+    auto range = vec2f{+flt_max, -flt_max};
+    for (auto anm : scn->animations) {
+        for (auto kfr : anm->keyframes) {
+            range.x = min(range.x,kfr->times.front());
+            range.y = max(range.y,kfr->times.back());
+        }
+    }
+    return range;
+}
+
 /// Loading options
 struct load_options {
     /// Whether to load textures

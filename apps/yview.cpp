@@ -41,6 +41,9 @@ struct app_state {
     bool navigation_fps = false;
     void* selection = nullptr;
     test_scene_params edit_params;
+    float time = 0;
+    vec2f time_range = zero2f;
+    bool animate = false;
 
     ~app_state() {
         if (shstate) delete shstate;
@@ -57,7 +60,7 @@ inline void draw(gl_window* win) {
     app->shparams.width = framebuffer_size.x;
     app->shparams.height = framebuffer_size.y;
 
-    update_transforms(app->scn);
+    update_transforms(app->scn, app->time);
     update_lights(app->scn, false, false);
     update_stdsurface_state(app->shstate, app->scn, app->shparams);
     if (app->shstate->lights_pos.empty()) app->shparams.camera_lights = true;
@@ -110,6 +113,11 @@ inline void draw(gl_window* win) {
             draw_value_widget(win, "fps", app->navigation_fps);
             draw_tonemap_widgets(win, "", app->shparams.exposure,
                 app->shparams.gamma, app->shparams.filmic);
+            if (app->time_range != zero2f) {
+                draw_value_widget(win, "time", app->time, app->time_range.x,
+                    app->time_range.y);
+                draw_value_widget(win, "animate", app->animate);
+            }
         }
         if (draw_scene_widgets(win, "scene", app->scn, app->selection,
                 app->shstate->txt, &app->edit_params)) {
@@ -141,6 +149,13 @@ void run_ui(app_state* app) {
         // handle mouse and keyboard for navigation
         if (app->shparams.camera_id < 0) {
             handle_camera_navigation(win, app->view, app->navigation_fps);
+        }
+
+        // animation
+        if (app->animate) {
+            app->time += 1 / 60.0f;
+            if (app->time < app->time_range.x || app->time > app->time_range.y)
+                app->time = app->time_range.x;
         }
 
         // draw
@@ -205,6 +220,10 @@ int main(int argc, char* argv[]) {
     // view camera
     app->view = make_view_camera(app->scn, app->shparams.camera_id);
     app->shparams.camera_id = -1;
+
+    // animation
+    app->time_range = compute_animation_range(app->scn);
+    app->time = app->time_range.x;
 
     // light
     update_lights(app->scn, false, false);
