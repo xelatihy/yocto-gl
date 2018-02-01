@@ -6667,32 +6667,68 @@ inline glTF* scene_to_gltf(
         gmesh->primitives.push_back(gprim);
         gltf->meshes.push_back(gmesh);
     }
-
-    // instances
-    for (auto ist : scn->instances) {
-        auto gnode = new glTFNode();
-        gnode->name = ist->name;
-        gnode->mesh = glTFid<glTFMesh>(index(scn->shapes, ist->shp));
-        gnode->matrix = to_mat(ist->frame);
-        gltf->nodes.push_back(gnode);
-    }
-
-    // cameras
-    for (auto cam : scn->cameras) {
-        auto gnode = new glTFNode();
-        gnode->name = cam->name;
-        gnode->camera = glTFid<glTFCamera>(index(scn->cameras, cam));
-        gnode->matrix = to_mat(cam->frame);
-        gltf->nodes.push_back(gnode);
-    }
-
-    // scenes
-    if (!gltf->nodes.empty()) {
+    
+    // hierarchy
+    if(scn->nodes.empty()) {
+        // instances
+        for (auto ist : scn->instances) {
+            auto gnode = new glTFNode();
+            gnode->name = ist->name;
+            gnode->mesh = glTFid<glTFMesh>(index(scn->shapes, ist->shp));
+            gnode->matrix = to_mat(ist->frame);
+            gltf->nodes.push_back(gnode);
+        }
+        
+        // cameras
+        for (auto cam : scn->cameras) {
+            auto gnode = new glTFNode();
+            gnode->name = cam->name;
+            gnode->camera = glTFid<glTFCamera>(index(scn->cameras, cam));
+            gnode->matrix = to_mat(cam->frame);
+            gltf->nodes.push_back(gnode);
+        }
+        
+        // scenes
+        if (!gltf->nodes.empty()) {
+            auto gscene = new glTFScene();
+            gscene->name = "scene";
+            for (auto i = 0; i < gltf->nodes.size(); i++) {
+                gscene->nodes.push_back(glTFid<glTFNode>(i));
+            }
+            gltf->scenes.push_back(gscene);
+            gltf->scene = glTFid<glTFScene>(0);
+        }
+    } else {
+        // nopdes
+        for(auto nde : scn->nodes) {
+            auto gnode = new glTFNode();
+            gnode->name = nde->name;
+            if(nde->cam) {
+                gnode->camera = glTFid<glTFCamera>(index(scn->cameras, nde->cam));
+            }
+            if(nde->ist) {
+                gnode->mesh = glTFid<glTFMesh>(index(scn->shapes, nde->ist->shp));
+            }
+            gnode->matrix = to_mat(nde->frame);
+            gnode->translation = nde->translation;
+            gnode->rotation = nde->rotation;
+            gnode->scale = nde->scale;
+            gltf->nodes.push_back(gnode);
+        }
+        
+        // children
+        for(auto idx = 0; idx < scn->nodes.size(); idx++) {
+            auto nde = scn->nodes.at(idx);
+            auto gnde = gltf->nodes.at(idx);
+            for(auto child : nde->children) {
+                gnde->children.push_back(glTFid<glTFNode>(index(scn->nodes, child)));
+            }
+        }
+                                        
+        // scene
         auto gscene = new glTFScene();
         gscene->name = "scene";
-        for (auto i = 0; i < gltf->nodes.size(); i++) {
-            gscene->nodes.push_back(glTFid<glTFNode>(i));
-        }
+        gscene->nodes.push_back(glTFid<glTFNode>(0));
         gltf->scenes.push_back(gscene);
         gltf->scene = glTFid<glTFScene>(0);
     }
