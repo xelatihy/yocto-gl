@@ -8304,6 +8304,12 @@ struct test_node_params {
     string environment = "";
     /// Frame
     frame3f frame = identity_frame3f;
+    /// Translation
+    vec3f translation = {0,0,0};
+    /// Roation
+    quat4f rotation = {0,0,0,1};
+    /// Scaling
+    vec3f scaling = {1,1,1};
 };
 
 /// Updates a test node, adding it to the scene if missing.
