@@ -2927,6 +2927,12 @@ inline frame<T, 3> rotation_frame3(const vec<T, 3>& axis, T angle) {
     return {rotation_mat3(axis, angle), {0, 0, 0}};
 }
 
+/// rotation frame
+template <typename T>
+inline frame<T, 3> rotation_frame3(const quat<T, 4>& rot) {
+    return {rotation_mat3(rot), {0, 0, 0}};
+}
+    
 /// rotation matrix
 template <typename T>
 inline mat<T, 4> rotation_mat4(const mat<T, 3>& rot) {
@@ -7137,11 +7143,13 @@ struct node {
     /// rotation
     quat4f rotation = {0, 0, 0, 1};
     /// scale
-    vec3f scale = {1, 1, 1};
+    vec3f scaling = {1, 1, 1};
+    /// Weights for morphing
+    std::vector<float> weights = {};
     /// node camera
     camera* cam = nullptr;
     /// node instance
-    instance* ist = nullptr;
+    vector<instance*> ists = {};
     /// node environment
     environment* env = nullptr;
     /// child nodes
@@ -7186,9 +7194,9 @@ struct keyframe {
     /// Rotation
     std::vector<quat4f> rotation;
     /// Scale
-    std::vector<vec3f> scale;
+    std::vector<vec3f> scaling;
     /// Weights for morphing
-    std::vector<std::vector<float>> morph_weights;
+    std::vector<std::vector<float>> weights;
 };
 
 /// Animation made of multiple keyframed values
@@ -7224,7 +7232,9 @@ struct scene {
     /// light array
     vector<light*> lights = {};
 
-    /// node hierarchy (root is first node)
+    /// root of the node hierarchy
+    node* root = nullptr;
+    /// node hierarchy
     vector<node*> nodes = {};
     /// node animation
     vector<animation*> animations = {};
@@ -7253,6 +7263,7 @@ struct scene {
             if (v) delete v;
         for (auto v : nodes)
             if (v) delete v;
+        if (root) delete root;
         for (auto v : animations)
             if (v) delete v;
         if (bvh) delete bvh;
@@ -7532,9 +7543,9 @@ inline void update_transforms(animation* anm, float time) {
             auto val = interpolate(kfr->type, kfr->times, kfr->rotation, time);
             for (auto nde : kfr->nodes) nde->rotation = val;
         }
-        if (!kfr->scale.empty()) {
-            auto val = interpolate(kfr->type, kfr->times, kfr->scale, time);
-            for (auto nde : kfr->nodes) nde->scale = val;
+        if (!kfr->scaling.empty()) {
+            auto val = interpolate(kfr->type, kfr->times, kfr->scaling, time);
+            for (auto nde : kfr->nodes) nde->scaling = val;
         }
     }
 }
@@ -7542,8 +7553,9 @@ inline void update_transforms(animation* anm, float time) {
 /// Update node transforms
 inline void update_transforms(
     node* nde, const frame3f& parent = identity_frame3f) {
-    auto frame = parent * nde->frame;
-    if (nde->ist) nde->ist->frame = frame;
+    auto frame = parent * nde->frame * translation_frame3(nde->translation) *
+                 rotation_frame3(nde->rotation) * scaling_frame3(nde->scaling);
+    for (auto ist : nde->ists) ist->frame = frame;
     if (nde->cam) nde->cam->frame = frame;
     if (nde->env) nde->env->frame = frame;
     for (auto child : nde->children) update_transforms(child, frame);
@@ -7552,7 +7564,7 @@ inline void update_transforms(
 /// Update node transforms
 inline void update_transforms(scene* scn, float time = 0) {
     for (auto agr : scn->animations) update_transforms(agr, time);
-    if (!scn->nodes.empty()) update_transforms(scn->nodes[0]);
+    if (scn->root) update_transforms(scn->root);
 }
 
 /// Loading options

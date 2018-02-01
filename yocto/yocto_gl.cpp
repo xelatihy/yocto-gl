@@ -78,11 +78,12 @@
 //
 // ## Infrastructure
 //
-// - build gl by default
-// - transforms in scene
-//     - node children in elem widgets
-//     - node children in test elem
-//     - node children in test elem widgets
+// - nodes
+//    - multiple instances to support multiple shapes
+// - animation
+//    - gltf read
+//    - gltf write
+//    - obj with nodes
 // - evaluate meshes with multiple shapes
 // - uniform serialization
 //    - consider simpler serialization code based on input flag
@@ -6002,7 +6003,7 @@ inline node* gltf_node_to_instances(scene* scn, const vector<camera>& cameras,
             ist->name = gnde->name;
             ist->frame = to_frame(xform);
             ist->shp = shp;
-            nde->ist = ist;
+            nde->ists.push_back(ist);
             scn->instances.push_back(ist);
         }
     }
@@ -6314,14 +6315,55 @@ inline scene* gltf_to_scene(const glTF* gltf, const load_options& opts) {
         }
     }
 
-    // instance meshes and cameras
-    auto root = new node();
-    root->name = "root";
-    scn->nodes.push_back(root);
+    // convert nodes
+    for (auto gnde : gltf->nodes) {
+        auto nde = new node();
+        nde->name = gnde->name;
+        if (gnde->camera) {
+            auto cam = new camera(cameras[(int)gnde->camera]);
+            nde->cam = cam;
+            scn->cameras.push_back(cam);
+        }
+        if (gnde->mesh) {
+            for (auto shp : meshes[(int)gnde->mesh]) {
+                auto ist = new instance();
+                ist->name = gnde->name;
+                ist->shp = shp;
+                nde->ists.push_back(ist);
+                scn->instances.push_back(ist);
+            }
+#if 0
+            for (auto shp : node->msh->shapes) {
+                if (node->morph_weights.size() < shp->morph_targets.size()) {
+                    node->morph_weights.resize(shp->morph_targets.size());
+                }
+            }
+#endif
+        }
+        nde->translation = gnde->translation;
+        nde->rotation = gnde->rotation;
+        nde->scaling = gnde->scale;
+        nde->frame = to_frame(gnde->matrix);
+#if 0
+        nde->weights = gnde->weights;
+#endif
+        scn->nodes.push_back(nde);
+    }
+
+    // set up children pointers
+    for (auto nid = 0; nid < gltf->nodes.size(); nid++) {
+        auto gnde = gltf->nodes[nid];
+        auto nde = scn->nodes[nid];
+        for (auto n : gnde->children)
+            nde->children.push_back(scn->nodes[(int)n]);
+    }
+
+    // create root node
+    scn->root = new node();
+    scn->root->name = "root";
     if (gltf->scene) {
         for (auto nid : gltf->get(gltf->scene)->nodes) {
-            root->children.push_back(gltf_node_to_instances(
-                scn, cameras, meshes, gltf, nid, identity_mat4f));
+            scn->root->children.push_back(scn->nodes[(int)nid]);
         }
     } else if (!gltf->nodes.empty()) {
         // set up node children and root nodes
@@ -6332,13 +6374,19 @@ inline scene* gltf_to_scene(const glTF* gltf, const load_options& opts) {
         }
         for (auto nid = 0; nid < gltf->nodes.size(); nid++) {
             if (!is_root[nid]) continue;
-            root->children.push_back(gltf_node_to_instances(scn, cameras,
-                meshes, gltf, glTFid<glTFNode>(nid), identity_mat4f));
+            scn->root->children.push_back(scn->nodes[nid]);
         }
     }
+    
+    // compute transforms
+    update_transforms(scn, 0);
+
+    // remove hierarchy if necessary
     if (!opts.preserve_hierarchy) {
         for (auto nde : scn->nodes) delete nde;
         scn->nodes.clear();
+        for (auto anm : scn->animations) delete anm;
+        scn->animations.clear();
     }
 
     return scn;
@@ -6593,10 +6641,9 @@ inline glTF* scene_to_gltf(
     };
 
     // convert meshes
+    auto shapes = unordered_map<shape*,glTFMeshPrimitive*>();
     for (auto shp : scn->shapes) {
         auto gbuffer = add_opt_buffer(shp->path);
-        auto gmesh = new glTFMesh();
-        gmesh->name = shp->name;
         auto gprim = new glTFMeshPrimitive();
         gprim->material = glTFid<glTFMaterial>(index(scn->materials, shp->mat));
         if (!shp->pos.empty())
@@ -6664,12 +6711,18 @@ inline glTF* scene_to_gltf(
         } else {
             throw runtime_error("empty mesh");
         }
-        gmesh->primitives.push_back(gprim);
-        gltf->meshes.push_back(gmesh);
+        shapes[shp] = gprim;
     }
     
     // hierarchy
-    if(scn->nodes.empty()) {
+    if (scn->nodes.empty()) {
+        // meshes
+        for(auto shp : scn->shapes) {
+            auto gmsh = new glTFMesh();
+            gmsh->name = shp->name;
+            gmsh->primitives.push_back(shapes.at(shp));
+        }
+        
         // instances
         for (auto ist : scn->instances) {
             auto gnode = new glTFNode();
@@ -6678,7 +6731,7 @@ inline glTF* scene_to_gltf(
             gnode->matrix = to_mat(ist->frame);
             gltf->nodes.push_back(gnode);
         }
-        
+
         // cameras
         for (auto cam : scn->cameras) {
             auto gnode = new glTFNode();
@@ -6687,7 +6740,7 @@ inline glTF* scene_to_gltf(
             gnode->matrix = to_mat(cam->frame);
             gltf->nodes.push_back(gnode);
         }
-        
+
         // scenes
         if (!gltf->nodes.empty()) {
             auto gscene = new glTFScene();
@@ -6699,32 +6752,46 @@ inline glTF* scene_to_gltf(
             gltf->scene = glTFid<glTFScene>(0);
         }
     } else {
-        // nopdes
+        // meshes
+        auto meshes = map<vector<instance*>, int>();
         for(auto nde : scn->nodes) {
+            if(nde->ists.empty()) continue;
+            auto gmsh = new glTFMesh();
+            gmsh->name = nde->ists.front()->name;
+            for(auto ist : nde->ists)
+                gmsh->primitives.push_back(shapes.at(ist->shp));
+            meshes[nde->ists] = (int)gltf->meshes.size();
+            gltf->meshes.push_back(gmsh);
+        }
+        
+        // nodes
+        for (auto nde : scn->nodes) {
             auto gnode = new glTFNode();
             gnode->name = nde->name;
-            if(nde->cam) {
-                gnode->camera = glTFid<glTFCamera>(index(scn->cameras, nde->cam));
+            if (nde->cam) {
+                gnode->camera =
+                    glTFid<glTFCamera>(index(scn->cameras, nde->cam));
             }
-            if(nde->ist) {
-                gnode->mesh = glTFid<glTFMesh>(index(scn->shapes, nde->ist->shp));
+            if (!nde->ists.empty()) {
+                gnode->mesh = glTFid<glTFMesh>(meshes.at(nde->ists));
             }
             gnode->matrix = to_mat(nde->frame);
             gnode->translation = nde->translation;
             gnode->rotation = nde->rotation;
-            gnode->scale = nde->scale;
+            gnode->scale = nde->scaling;
             gltf->nodes.push_back(gnode);
         }
-        
+
         // children
-        for(auto idx = 0; idx < scn->nodes.size(); idx++) {
+        for (auto idx = 0; idx < scn->nodes.size(); idx++) {
             auto nde = scn->nodes.at(idx);
             auto gnde = gltf->nodes.at(idx);
-            for(auto child : nde->children) {
-                gnde->children.push_back(glTFid<glTFNode>(index(scn->nodes, child)));
+            for (auto child : nde->children) {
+                gnde->children.push_back(
+                    glTFid<glTFNode>(index(scn->nodes, child)));
             }
         }
-                                        
+
         // scene
         auto gscene = new glTFScene();
         gscene->name = "scene";
@@ -8501,7 +8568,9 @@ void update_test_node(
     nde->name = tnde.name;
     nde->frame = identity_frame3f;
     nde->cam = find_named_elem(scn->cameras, tnde.camera);
-    nde->ist = find_named_elem(scn->instances, tnde.instance);
+    auto ist = find_named_elem(scn->instances, tnde.instance);
+    if(ist) nde->ists = {ist};
+    else nde->ists.clear();
     nde->env = find_named_elem(scn->environments, tnde.environment);
 }
 
@@ -8509,8 +8578,8 @@ void update_test_node(
 void update_test_animation(
     const scene* scn, animation* anm, const test_animation_params& tanm) {
     if (tanm.name == "") throw runtime_error("cannot use empty name");
-    if(anm->keyframes.size() != 1) {
-        for(auto v : anm->keyframes) delete v;
+    if (anm->keyframes.size() != 1) {
+        for (auto v : anm->keyframes) delete v;
         anm->keyframes.clear();
         anm->keyframes.push_back(new keyframe());
     }
@@ -8522,9 +8591,9 @@ void update_test_animation(
     for (auto& v : kfr->times) v *= tanm.speed;
     kfr->translation = tanm.translation;
     kfr->rotation = tanm.rotation;
-    kfr->scale = tanm.scaling;
+    kfr->scaling = tanm.scaling;
     for (auto& v : kfr->translation) v *= tanm.scale;
-    for (auto& v : kfr->scale) v *= tanm.scale;
+    for (auto& v : kfr->scaling) v *= tanm.scale;
     kfr->nodes.clear();
     for (auto& nde : tanm.nodes)
         kfr->nodes.push_back(find_named_elem(scn->nodes, nde));
@@ -8565,7 +8634,8 @@ void update_test_scene(scene* scn, const test_scene_params& params,
         update_test_environment, refresh);
     update_test_scene_elem(
         scn, scn->nodes, params.nodes, update_test_node, refresh);
-    update_test_scene_elem(scn, scn->animations, params.animations, update_test_animation, refresh);
+    update_test_scene_elem(scn, scn->animations, params.animations,
+        update_test_animation, refresh);
 }
 
 // remove duplicate elems
@@ -11488,7 +11558,8 @@ inline void draw_tree_widgets(
     gl_window* win, const string& lbl, node* nde, void*& selection) {
     if (draw_tree_widget_begin(win, lbl + nde->name, selection, nde)) {
         if (nde->cam) draw_tree_widgets(win, "cam: ", nde->cam, selection);
-        if (nde->ist) draw_tree_widgets(win, "ist: ", nde->ist, selection);
+        for (auto idx = 0; idx < nde->ists.size(); idx++)
+            draw_tree_widgets(win, "ist" + to_string(idx)+": ", nde->ists[idx], selection);
         if (nde->env) draw_tree_widgets(win, "env: ", nde->env, selection);
         for (auto idx = 0; idx < nde->children.size(); idx++) {
             draw_tree_widgets(win, "", nde->children[idx], selection);
@@ -11678,27 +11749,28 @@ inline bool draw_elem_widgets(gl_window* win, scene* scn, node* nde,
 }
 
 inline bool draw_elem_widgets(gl_window* win, scene* scn, animation* anm,
-                              void*& selection, const unordered_map<texture*, gl_texture>& gl_txt) {
+    void*& selection, const unordered_map<texture*, gl_texture>& gl_txt) {
     auto nde_names = vector<pair<string, node*>>{{"<none>", nullptr}};
     for (auto nde : scn->nodes) nde_names.push_back({nde->name, nde});
-    
+
     auto edited = vector<bool>();
     draw_separator_widget(win);
     draw_label_widget(win, "name", anm->name);
-    for(auto kfr_kv : enumerate(anm->keyframes)) {
+    for (auto kfr_kv : enumerate(anm->keyframes)) {
         auto kfr = kfr_kv.second;
         auto ids = to_string(kfr_kv.first);
         edited += draw_value_widget(win, "name " + ids, kfr->name);
-        edited += draw_value_widget(win, "type " + ids, kfr->type, keyframe_type_names());
+        edited += draw_value_widget(
+            win, "type " + ids, kfr->type, keyframe_type_names());
         draw_label_widget(win, "times " + ids, kfr->times, true);
         draw_label_widget(win, "translation " + ids, kfr->translation, true);
         draw_label_widget(win, "rotation " + ids, kfr->rotation, true);
-        draw_label_widget(win, "scale " + ids, kfr->scale, true);
+        draw_label_widget(win, "scale " + ids, kfr->scaling, true);
         draw_label_widget(win, "nodes " + ids, kfr->nodes, true);
     }
     return std::any_of(edited.begin(), edited.end(), [](auto x) { return x; });
 }
-    
+
 inline bool draw_elem_widgets(gl_window* win, test_scene_params* scn,
     test_texture_params* txt, void*& selection,
     const unordered_map<texture*, gl_texture>& gl_txt) {
@@ -11792,24 +11864,29 @@ inline bool draw_elem_widgets(gl_window* win, test_scene_params* scn,
 }
 
 inline bool draw_elem_widgets(gl_window* win, test_scene_params* scn,
-                              test_animation_params* anm, void*& selection,
-                              const unordered_map<texture*, gl_texture>& gl_txt) {
+    test_animation_params* anm, void*& selection,
+    const unordered_map<texture*, gl_texture>& gl_txt) {
     auto edited = vector<bool>();
     draw_separator_widget(win);
     edited += draw_value_widget(win, "name", anm->name);
     edited += draw_value_widget(win, "bezier", anm->bezier);
     edited += draw_value_widget(win, "speed", anm->speed);
     edited += draw_value_widget(win, "scale", anm->scale);
-    for(auto idx = 0; idx < anm->times.size(); idx++)
-        edited += draw_value_widget(win, "time " + to_string(idx), anm->times[idx]);
-    for(auto idx = 0; idx < anm->translation.size(); idx++)
-        edited += draw_value_widget(win, "translation " + to_string(idx), anm->translation[idx]);
-    for(auto idx = 0; idx < anm->rotation.size(); idx++)
-        edited += draw_value_widget(win, "rotation " + to_string(idx), anm->rotation[idx]);
-    for(auto idx = 0; idx < anm->scaling.size(); idx++)
-        edited += draw_value_widget(win, "scaling " + to_string(idx), anm->scaling[idx]);
-    for(auto idx = 0; idx < anm->nodes.size(); idx++)
-        edited += draw_value_widget(win, "node " + to_string(idx), anm->nodes[idx]);
+    for (auto idx = 0; idx < anm->times.size(); idx++)
+        edited +=
+            draw_value_widget(win, "time " + to_string(idx), anm->times[idx]);
+    for (auto idx = 0; idx < anm->translation.size(); idx++)
+        edited += draw_value_widget(
+            win, "translation " + to_string(idx), anm->translation[idx]);
+    for (auto idx = 0; idx < anm->rotation.size(); idx++)
+        edited += draw_value_widget(
+            win, "rotation " + to_string(idx), anm->rotation[idx]);
+    for (auto idx = 0; idx < anm->scaling.size(); idx++)
+        edited += draw_value_widget(
+            win, "scaling " + to_string(idx), anm->scaling[idx]);
+    for (auto idx = 0; idx < anm->nodes.size(); idx++)
+        edited +=
+            draw_value_widget(win, "node " + to_string(idx), anm->nodes[idx]);
     return std::any_of(edited.begin(), edited.end(), [](auto x) { return x; });
 }
 
@@ -11904,7 +11981,7 @@ inline bool draw_scene_widgets(gl_window* win, const string& lbl, scene* scn,
             edited += draw_add_elem_widgets(win, scn, "env", scn->environments,
                 test_scn->environments, selection, update_test_environment);
             edited += draw_add_elem_widgets(win, scn, "anim", scn->animations,
-                                            test_scn->animations, selection, update_test_animation);
+                test_scn->animations, selection, update_test_animation);
         }
 
         auto test_scn_res = (test_scn) ? test_scn : &test_scn_def;
@@ -11923,8 +12000,9 @@ inline bool draw_scene_widgets(gl_window* win, const string& lbl, scene* scn,
             update_test_environment, gl_txt);
         edited += draw_selected_elem_widgets(win, scn, test_scn, scn->nodes,
             test_scn->nodes, selection, update_test_node, gl_txt);
-        edited += draw_selected_elem_widgets(win, scn, test_scn, scn->animations,
-                                             test_scn->animations, selection, update_test_animation, gl_txt);
+        edited +=
+            draw_selected_elem_widgets(win, scn, test_scn, scn->animations,
+                test_scn->animations, selection, update_test_animation, gl_txt);
         return std::any_of(
             edited.begin(), edited.end(), [](auto x) { return x; });
     } else
