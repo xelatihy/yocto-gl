@@ -6377,7 +6377,7 @@ inline scene* gltf_to_scene(const glTF* gltf, const load_options& opts) {
             scn->root->children.push_back(scn->nodes[nid]);
         }
     }
-    
+
     // compute transforms
     update_transforms(scn, 0);
 
@@ -6641,7 +6641,7 @@ inline glTF* scene_to_gltf(
     };
 
     // convert meshes
-    auto shapes = unordered_map<shape*,glTFMeshPrimitive*>();
+    auto shapes = unordered_map<shape*, glTFMeshPrimitive*>();
     for (auto shp : scn->shapes) {
         auto gbuffer = add_opt_buffer(shp->path);
         auto gprim = new glTFMeshPrimitive();
@@ -6713,17 +6713,17 @@ inline glTF* scene_to_gltf(
         }
         shapes[shp] = gprim;
     }
-    
+
     // hierarchy
     if (scn->nodes.empty()) {
         // meshes
-        for(auto shp : scn->shapes) {
+        for (auto shp : scn->shapes) {
             auto gmsh = new glTFMesh();
             gmsh->name = shp->name;
             gmsh->primitives.push_back(shapes.at(shp));
             gltf->meshes.push_back(gmsh);
         }
-        
+
         // instances
         for (auto ist : scn->instances) {
             auto gnode = new glTFNode();
@@ -6755,17 +6755,17 @@ inline glTF* scene_to_gltf(
     } else {
         // meshes
         auto meshes = map<vector<instance*>, int>();
-        for(auto nde : scn->nodes) {
-            if(nde->ists.empty()) continue;
-            if(contains(meshes, nde->ists)) continue;
+        for (auto nde : scn->nodes) {
+            if (nde->ists.empty()) continue;
+            if (contains(meshes, nde->ists)) continue;
             auto gmsh = new glTFMesh();
             gmsh->name = nde->ists.front()->name;
-            for(auto ist : nde->ists)
+            for (auto ist : nde->ists)
                 gmsh->primitives.push_back(shapes.at(ist->shp));
             meshes[nde->ists] = (int)gltf->meshes.size();
             gltf->meshes.push_back(gmsh);
         }
-        
+
         // nodes
         for (auto nde : scn->nodes) {
             auto gnode = new glTFNode();
@@ -8571,8 +8571,10 @@ void update_test_node(
     nde->frame = identity_frame3f;
     nde->cam = find_named_elem(scn->cameras, tnde.camera);
     auto ist = find_named_elem(scn->instances, tnde.instance);
-    if(ist) nde->ists = {ist};
-    else nde->ists.clear();
+    if (ist)
+        nde->ists = {ist};
+    else
+        nde->ists.clear();
     nde->env = find_named_elem(scn->environments, tnde.environment);
 }
 
@@ -11561,7 +11563,8 @@ inline void draw_tree_widgets(
     if (draw_tree_widget_begin(win, lbl + nde->name, selection, nde)) {
         if (nde->cam) draw_tree_widgets(win, "cam: ", nde->cam, selection);
         for (auto idx = 0; idx < nde->ists.size(); idx++)
-            draw_tree_widgets(win, "ist" + to_string(idx)+": ", nde->ists[idx], selection);
+            draw_tree_widgets(
+                win, "ist" + to_string(idx) + ": ", nde->ists[idx], selection);
         if (nde->env) draw_tree_widgets(win, "env: ", nde->env, selection);
         for (auto idx = 0; idx < nde->children.size(); idx++) {
             draw_tree_widgets(win, "", nde->children[idx], selection);
