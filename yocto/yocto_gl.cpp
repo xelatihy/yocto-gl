@@ -6378,6 +6378,91 @@ inline scene* gltf_to_scene(const glTF* gltf, const load_options& opts) {
         }
     }
 
+    // keyframe type conversion
+    static auto keyframe_types =
+        unordered_map<glTFAnimationSamplerInterpolation, keyframe_type>{
+            {glTFAnimationSamplerInterpolation::NotSet, keyframe_type::linear},
+            {glTFAnimationSamplerInterpolation::Linear, keyframe_type::linear},
+            {glTFAnimationSamplerInterpolation::Step, keyframe_type::step},
+            {glTFAnimationSamplerInterpolation::CubicSpline,
+                keyframe_type::bezier},
+            {glTFAnimationSamplerInterpolation::CatmullRomSpline,
+                keyframe_type::catmull_rom},
+        };
+
+    // convert animations
+    for (auto ganm : gltf->animations) {
+        auto anm = new animation();
+        anm->name = ganm->name;
+        auto sampler_map = unordered_map<vec2i, keyframe*>();
+        for (auto gchannel : ganm->channels) {
+            if (sampler_map.find({(int)gchannel->sampler,
+                    (int)gchannel->target->path}) == sampler_map.end()) {
+                auto gsampler = ganm->get(gchannel->sampler);
+                auto kfr = new keyframe();
+                auto input_view =
+                    accessor_view(gltf, gltf->get(gsampler->input));
+                kfr->times.resize(input_view.size());
+                for (auto i = 0; i < input_view.size(); i++)
+                    kfr->times[i] = input_view.get(i);
+                kfr->type = keyframe_types.at(gsampler->interpolation);
+                auto output_view =
+                    accessor_view(gltf, gltf->get(gsampler->output));
+                switch (gchannel->target->path) {
+                    case glTFAnimationChannelTargetPath::Translation: {
+                        kfr->translation.reserve(output_view.size());
+                        for (auto i = 0; i < output_view.size(); i++)
+                            kfr->translation.push_back(output_view.getv3f(i));
+                    } break;
+                    case glTFAnimationChannelTargetPath::Rotation: {
+                        kfr->rotation.reserve(output_view.size());
+                        for (auto i = 0; i < output_view.size(); i++)
+                            kfr->rotation.push_back(
+                                (quat4f)output_view.getv4f(i));
+                    } break;
+                    case glTFAnimationChannelTargetPath::Scale: {
+                        kfr->scaling.reserve(output_view.size());
+                        for (auto i = 0; i < output_view.size(); i++)
+                            kfr->scaling.push_back(output_view.getv3f(i));
+                    } break;
+                    case glTFAnimationChannelTargetPath::Weights: {
+                        // get a node that it refers to
+                        auto ncomp = 0;
+                        auto gnode = gltf->get(gchannel->target->node);
+                        auto gmesh = gltf->get(gnode->mesh);
+                        if (gmesh) {
+                            for (auto gshp : gmesh->primitives) {
+                                ncomp = max((int)gshp->targets.size(), ncomp);
+                            }
+                        }
+                        if (ncomp) {
+                            auto values = std::vector<float>();
+                            values.reserve(output_view.size());
+                            for (auto i = 0; i < output_view.size(); i++)
+                                values.push_back(output_view.get(i));
+                            kfr->weights.resize(values.size() / ncomp);
+                            for (auto i = 0; i < kfr->weights.size(); i++) {
+                                kfr->weights[i].resize(ncomp);
+                                for (auto j = 0; j < ncomp; j++)
+                                    kfr->weights[i][j] = values[i * ncomp + j];
+                            }
+                        }
+                    } break;
+                    default: {
+                        throw runtime_error("should not have gotten here");
+                    }
+                }
+                sampler_map[{
+                    (int)gchannel->sampler, (int)gchannel->target->path}] = kfr;
+                anm->keyframes.push_back(kfr);
+            }
+            sampler_map
+                .at({(int)gchannel->sampler, (int)gchannel->target->path})
+                ->nodes.push_back(scn->nodes[(int)gchannel->target->node]);
+        }
+        scn->animations.push_back(anm);
+    }
+
     // compute transforms
     update_transforms(scn, 0);
 
@@ -6800,6 +6885,78 @@ inline glTF* scene_to_gltf(
         gscene->nodes.push_back(glTFid<glTFNode>(0));
         gltf->scenes.push_back(gscene);
         gltf->scene = glTFid<glTFScene>(0);
+    }
+
+    // interpolation map
+    static const auto interpolation_map =
+        std::map<keyframe_type, glTFAnimationSamplerInterpolation>{
+            {keyframe_type::step, glTFAnimationSamplerInterpolation::Step},
+            {keyframe_type::linear, glTFAnimationSamplerInterpolation::Linear},
+            {keyframe_type::bezier,
+                glTFAnimationSamplerInterpolation::CubicSpline},
+            {keyframe_type::catmull_rom,
+                glTFAnimationSamplerInterpolation::CatmullRomSpline},
+        };
+
+    // animation
+    for (auto anm : scn->animations) {
+        auto ganm = new glTFAnimation();
+        ganm->name = anm->name;
+        auto gbuffer = add_opt_buffer(anm->path);
+        auto count = 0;
+        for (auto kfr : anm->keyframes) {
+            auto aid = ganm->name + "_" + std::to_string(count++);
+            auto gsmp = new glTFAnimationSampler();
+            gsmp->input =
+                add_accessor(gbuffer, aid + "_time", glTFAccessorType::Scalar,
+                    glTFAccessorComponentType::Float, (int)kfr->times.size(),
+                    sizeof(float), kfr->times.data(), false);
+            auto path = glTFAnimationChannelTargetPath::NotSet;
+            if (!kfr->translation.empty()) {
+                gsmp->output = add_accessor(gbuffer, aid + "_translation",
+                    glTFAccessorType::Vec3, glTFAccessorComponentType::Float,
+                    (int)kfr->translation.size(), sizeof(vec3f),
+                    kfr->translation.data(), false);
+                path = glTFAnimationChannelTargetPath::Translation;
+            } else if (!kfr->rotation.empty()) {
+                gsmp->output = add_accessor(gbuffer, aid + "_rotation",
+                    glTFAccessorType::Vec4, glTFAccessorComponentType::Float,
+                    (int)kfr->rotation.size(), sizeof(vec4f),
+                    kfr->rotation.data(), false);
+                path = glTFAnimationChannelTargetPath::Rotation;
+            } else if (!kfr->scaling.empty()) {
+                gsmp->output = add_accessor(gbuffer, aid + "_scale",
+                    glTFAccessorType::Vec3, glTFAccessorComponentType::Float,
+                    (int)kfr->scaling.size(), sizeof(vec3f),
+                    kfr->scaling.data(), false);
+                path = glTFAnimationChannelTargetPath::Scale;
+            } else if (!kfr->weights.empty()) {
+                auto values = std::vector<float>();
+                values.reserve(kfr->weights.size() * kfr->weights[0].size());
+                for (auto i = 0; i < kfr->weights.size(); i++) {
+                    values.insert(values.end(), kfr->weights[i].begin(),
+                        kfr->weights[i].end());
+                }
+                gsmp->output = add_accessor(gbuffer, aid + "_weights",
+                    glTFAccessorType::Scalar, glTFAccessorComponentType::Float,
+                    (int)values.size(), sizeof(float), values.data(), false);
+                path = glTFAnimationChannelTargetPath::Weights;
+            } else {
+                throw runtime_error("should not have gotten here");
+            }
+            gsmp->interpolation = interpolation_map.at(kfr->type);
+            for (auto node : kfr->nodes) {
+                auto gchan = new glTFAnimationChannel();
+                gchan->sampler =
+                    glTFid<glTFAnimationSampler>{(int)ganm->samplers.size()};
+                gchan->target = new glTFAnimationChannelTarget();
+                gchan->target->node = glTFid<glTFNode>{index(scn->nodes, node)};
+                gchan->target->path = path;
+                ganm->channels.push_back(gchan);
+            }
+            ganm->samplers.push_back(gsmp);
+        }
+        gltf->animations.push_back(ganm);
     }
 
     // done
