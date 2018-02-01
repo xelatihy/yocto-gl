@@ -190,6 +190,7 @@ int main(int argc, char* argv[]) {
         auto opts = load_options();
         opts.preserve_quads = preserve_quads;
         opts.preserve_facevarying = preserve_facevarying;
+        opts.preserve_hierarchy = true;
         app->scn = load_scene(app->filename, opts);
     } catch (exception e) { log_fatal("cannot load scene {}", app->filename); }
 

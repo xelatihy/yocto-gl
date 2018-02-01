@@ -7396,6 +7396,8 @@ struct load_options {
     bool preserve_quads = false;
     /// whether to preserve face-varying faces
     bool preserve_facevarying = false;
+    /// whether to preserve node hierarchy
+    bool preserve_hierarchy = false;
 };
 
 /// Loads a scene. For now OBJ or glTF are supported.
