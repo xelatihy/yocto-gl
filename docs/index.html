@@ -302,7 +302,7 @@ applications and tuned for quick creating viewers, renderers and simulators.</p>
 lines and triangles accelerated by a two-level bounding volume
 hierarchy (BVH). Quad support is experimental.</p>
 <ol>
-<li>build the bvh with <code>build_bvh()</code></li>
+<li>build the bvh with <code>make_bvh()</code></li>
 <li>perform ray-interseciton tests with <code>intersect_ray()</code><ul>
 <li>use early_exit=false if you want to know the closest hit point</li>
 <li>use early_exit=false if you only need to know whether there is a hit</li>
@@ -343,7 +343,7 @@ add a large triangle mesh with inward normals instead. The latter is more
 general (you can even more an arbitrary shape sun). For now only the first
 env is used.</p>
 <ol>
-<li>build the ray-tracing acceleration structure with <code>build_bvh()</code></li>
+<li>build the ray-tracing acceleration structure with <code>make_bvh()</code></li>
 <li>prepare lights for rendering <code>update_lights()</code></li>
 <li>define rendering params with the <code>trace_params</code> structure</li>
 <li>render blocks of samples with <code>trace_block()</code></li>
@@ -351,7 +351,7 @@ env is used.</p>
 <p>The code can also run in fully asynchronous mode to preview images in a
 window.</p>
 <ol>
-<li>build the ray-tracing acceleration structure with <code>build_bvh()</code></li>
+<li>build the ray-tracing acceleration structure with <code>make_bvh()</code></li>
 <li>prepare lights for rendering <code>update_lights()</code></li>
 <li>define rendering params with the <code>trace_params</code> structure</li>
 <li>initialize the prograssive rendering buffers</li>

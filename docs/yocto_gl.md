@@ -328,7 +328,7 @@ Ray-intersection and closet-point routines supporting points,
 lines and triangles accelerated by a two-level bounding volume
 hierarchy (BVH). Quad support is experimental.
 
-1. build the bvh with `build_bvh()`
+1. build the bvh with `make_bvh()`
 2. perform ray-interseciton tests with `intersect_ray()`
     - use early_exit=false if you want to know the closest hit point
     - use early_exit=false if you only need to know whether there is a hit
@@ -370,7 +370,7 @@ add a large triangle mesh with inward normals instead. The latter is more
 general (you can even more an arbitrary shape sun). For now only the first
 env is used.
 
-1. build the ray-tracing acceleration structure with `build_bvh()`
+1. build the ray-tracing acceleration structure with `make_bvh()`
 2. prepare lights for rendering `update_lights()`
 3. define rendering params with the `trace_params` structure
 4. render blocks of samples with `trace_block()`
@@ -378,7 +378,7 @@ env is used.
 The code can also run in fully asynchronous mode to preview images in a
 window.
 
-1. build the ray-tracing acceleration structure with `build_bvh()`
+1. build the ray-tracing acceleration structure with `make_bvh()`
 2. prepare lights for rendering `update_lights()`
 3. define rendering params with the `trace_params` structure
 4. initialize the prograssive rendering buffers
@@ -6156,10 +6156,10 @@ This is an internal data structure.
     - sorted_prim:      sorted elements
 
 
-#### Function build_bvh()
+#### Function make_bvh()
 
 ~~~ .cpp
-inline bvh_tree* build_bvh(
+inline bvh_tree* make_bvh(
     int nprims, bool equalsize, const function<bbox3f(int)>& elem_bbox);
 ~~~
 
@@ -7172,18 +7172,18 @@ void print_info(const scene* scn);
 
 Print scene information (call update bounds bes before)
 
-#### Function build_bvh()
+#### Function make_bvh()
 
 ~~~ .cpp
-inline void build_bvh(shape* shp, bool equalsize = true);
+inline void make_bvh(shape* shp, bool equalsize = true);
 ~~~
 
 Build a shape BVH
 
-#### Function build_bvh()
+#### Function make_bvh()
 
 ~~~ .cpp
-inline void build_bvh(
+inline void make_bvh(
     scene* scn, bool equalsize = true, bool do_shapes = true);
 ~~~
 
