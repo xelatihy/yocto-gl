@@ -4516,157 +4516,18 @@ inline vec3f rgb_to_xyz(const vec3f& rgb) {
         0.0193339f * rgb.x + 0.1191920f * rgb.y + 0.9503041f * rgb.z};
 }
 
-#if 1
-/// Tone map with a fitted filmic curve.
-///
-/// Implementation from
-/// https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/
-inline float tonemap_filmic(float hdr) {
-    // rescale
-    auto x = hdr * 2.05f;
-    // fitted values
-    float a = 2.51f, b = 0.03f, c = 2.43f, d = 0.59f, e = 0.14f;
-    auto y = ((x * (a * x + b)) / (x * (c * x + d) + e));
-    return pow(clamp(y, 0.0f, 1.0f), 1 / 2.2f);
-}
-#else
-inline float tonemap_filmic(float x) {
-    auto y =
-        (x * (x * (x * (x * 2708.7142 + 6801.1525) + 1079.5474) + 1.1614649) -
-            0.00004139375) /
-        (x * (x * (x * (x * 983.38937 + 4132.0662) + 2881.6522) + 128.35911) +
-            1.0);
-    return (float)std::max(y, 0.0);
-}
-#endif
-
 /// Tone mapping HDR to LDR images.
-inline image4b tonemap_image(
-    const image4f& hdr, float exposure, float gamma, bool filmic = false) {
-    auto ldr = image4b(hdr.width(), hdr.height());
-    auto scale = pow(2.0f, exposure);
-    for (auto j = 0; j < hdr.height(); j++) {
-        for (auto i = 0; i < hdr.width(); i++) {
-            auto h = hdr[{i, j}];
-            h.xyz() *= scale;
-            if (filmic) {
-                h.xyz() = {tonemap_filmic(h.x), tonemap_filmic(h.y),
-                    tonemap_filmic(h.z)};
-            } else {
-                h.xyz() = {pow(h.x, 1 / gamma), pow(h.y, 1 / gamma),
-                    pow(h.z, 1 / gamma)};
-            }
-            ldr[{i, j}] = float_to_byte(h);
-        }
-    }
-    return ldr;
-}
+image4b tonemap_image(
+    const image4f& hdr, float exposure, float gamma, bool filmic = false);
 
 /// Image over operator
-inline void image_over(
-    vec4f* img, int width, int height, int nlayers, vec4f** layers) {
-    for (auto i = 0; i < width * height; i++) {
-        img[i] = {0, 0, 0, 0};
-        auto weight = 1.0f;
-        for (auto l = 0; l < nlayers; l++) {
-            img[i].x += layers[l][i].x * layers[l][i].w * weight;
-            img[i].y += layers[l][i].y * layers[l][i].w * weight;
-            img[i].z += layers[l][i].z * layers[l][i].w * weight;
-            img[i].w += layers[l][i].w * weight;
-            weight *= (1 - layers[l][i].w);
-        }
-        if (img[i].w) {
-            img[i].x /= img[i].w;
-            img[i].y /= img[i].w;
-            img[i].z /= img[i].w;
-        }
-    }
-}
+void image_over(vec4f* img, int width, int height, int nlayers, vec4f** layers);
 
 /// Image over operator
-inline void image_over(
-    vec4b* img, int width, int height, int nlayers, vec4b** layers) {
-    for (auto i = 0; i < width * height; i++) {
-        auto comp = zero4f;
-        auto weight = 1.0f;
-        for (auto l = 0; l < nlayers && weight > 0; l++) {
-            auto w = byte_to_float(layers[l][i].w);
-            comp.x += byte_to_float(layers[l][i].x) * w * weight;
-            comp.y += byte_to_float(layers[l][i].y) * w * weight;
-            comp.z += byte_to_float(layers[l][i].z) * w * weight;
-            comp.w += w * weight;
-            weight *= (1 - w);
-        }
-        if (comp.w) {
-            img[i].x = float_to_byte(comp.x / comp.w);
-            img[i].y = float_to_byte(comp.y / comp.w);
-            img[i].z = float_to_byte(comp.z / comp.w);
-            img[i].w = float_to_byte(comp.w);
-        } else {
-            img[i] = {0, 0, 0, 0};
-        }
-    }
-}
+void image_over(vec4b* img, int width, int height, int nlayers, vec4b** layers);
 
 /// Convert HSV to RGB
-///
-/// Implementatkion from
-/// http://stackoverflow.com/questions/3018313/algorithm-to-convert-rgb-to-hsv-and-hsv-to-rgb-in-range-0-255-for-both
-inline vec4b hsv_to_rgb(const vec4b& hsv) {
-    vec4b rgb = {0, 0, 0, hsv.w};
-    byte region, remainder, p, q, t;
-
-    byte h = hsv.x, s = hsv.y, v = hsv.z;
-
-    if (s == 0) {
-        rgb.x = v;
-        rgb.y = v;
-        rgb.z = v;
-        return rgb;
-    }
-
-    region = h / 43;
-    remainder = (h - (region * 43)) * 6;
-
-    p = (v * (255 - s)) >> 8;
-    q = (v * (255 - ((s * remainder) >> 8))) >> 8;
-    t = (v * (255 - ((s * (255 - remainder)) >> 8))) >> 8;
-
-    switch (region) {
-        case 0:
-            rgb.x = v;
-            rgb.y = t;
-            rgb.z = p;
-            break;
-        case 1:
-            rgb.x = q;
-            rgb.y = v;
-            rgb.z = p;
-            break;
-        case 2:
-            rgb.x = p;
-            rgb.y = v;
-            rgb.z = t;
-            break;
-        case 3:
-            rgb.x = p;
-            rgb.y = q;
-            rgb.z = v;
-            break;
-        case 4:
-            rgb.x = t;
-            rgb.y = p;
-            rgb.z = v;
-            break;
-        default:
-            rgb.x = v;
-            rgb.y = p;
-            rgb.z = q;
-            break;
-    }
-
-    return rgb;
-}
+vec4b hsv_to_rgb(const vec4b& hsv);
 
 }  // namespace ygl
 
@@ -4676,203 +4537,47 @@ inline vec4b hsv_to_rgb(const vec4b& hsv) {
 namespace ygl {
 
 /// Make a grid image
-inline image4b make_grid_image(int width, int height, int tile = 64,
+image4b make_grid_image(int width, int height, int tile = 64,
     const vec4b& c0 = {90, 90, 90, 255},
-    const vec4b& c1 = {128, 128, 128, 255}) {
-    image4b pixels(width, height);
-    for (int j = 0; j < width; j++) {
-        for (int i = 0; i < height; i++) {
-            auto c = i % tile == 0 || i % tile == tile - 1 || j % tile == 0 ||
-                     j % tile == tile - 1;
-            pixels.at(i, j) = (c) ? c0 : c1;
-        }
-    }
-    return pixels;
-}
+    const vec4b& c1 = {128, 128, 128, 255});
 
 /// Make a checkerboard image
-inline image4b make_checker_image(int width, int height, int tile = 64,
+image4b make_checker_image(int width, int height, int tile = 64,
     const vec4b& c0 = {90, 90, 90, 255},
-    const vec4b& c1 = {128, 128, 128, 255}) {
-    image4b pixels(width, height);
-    for (int j = 0; j < height; j++) {
-        for (int i = 0; i < width; i++) {
-            auto c = (i / tile + j / tile) % 2 == 0;
-            pixels.at(i, j) = (c) ? c0 : c1;
-        }
-    }
-    return pixels;
-}
+    const vec4b& c1 = {128, 128, 128, 255});
 
 /// Make an image with bumps and dimples.
-inline image4b make_bumpdimple_image(int width, int height, int tile = 64) {
-    image4b pixels(width, height);
-    for (int j = 0; j < height; j++) {
-        for (int i = 0; i < width; i++) {
-            auto c = (i / tile + j / tile) % 2 == 0;
-            auto ii = i % tile - tile / 2, jj = j % tile - tile / 2;
-            auto r =
-                sqrt(float(ii * ii + jj * jj)) / sqrt(float(tile * tile) / 4);
-            auto h = 0.5f;
-            if (r < 0.5f) { h += (c) ? (0.5f - r) : -(0.5f - r); }
-            auto g = float_to_byte(h);
-            pixels.at(i, j) = vec4b{g, g, g, 255};
-        }
-    }
-    return pixels;
-}
+image4b make_bumpdimple_image(int width, int height, int tile = 64);
 
 /// Make a uv colored grid
-inline image4b make_ramp_image(int width, int height, const vec4b& c0,
-    const vec4b& c1, bool srgb = false) {
-    image4b pixels(width, height);
-    for (int j = 0; j < height; j++) {
-        for (int i = 0; i < width; i++) {
-            auto u = (float)i / (float)width;
-            if (srgb) {
-                pixels.at(i, j) = linear_to_srgb(
-                    srgb_to_linear(c0) * (1 - u) + srgb_to_linear(c1) * u);
-            } else {
-                pixels.at(i, j) = float_to_byte(
-                    byte_to_float(c0) * (1 - u) + byte_to_float(c1) * u);
-            }
-        }
-    }
-    return pixels;
-}
+image4b make_ramp_image(
+    int width, int height, const vec4b& c0, const vec4b& c1, bool srgb = false);
 
 /// Make a gamma ramp image
-inline image4b make_gammaramp_image(int width, int height) {
-    image4b pixels(width, height);
-    for (int j = 0; j < height; j++) {
-        for (int i = 0; i < width; i++) {
-            auto u = j / float(height - 1);
-            if (i < width / 3) u = pow(u, 2.2f);
-            if (i > (width * 2) / 3) u = pow(u, 1 / 2.2f);
-            auto c = (unsigned char)(u * 255);
-            pixels.at(i, j) = {c, c, c, 255};
-        }
-    }
-    return pixels;
-}
+image4b make_gammaramp_image(int width, int height);
 
 /// Make a gamma ramp image
-inline image4f make_gammaramp_imagef(int width, int height) {
-    image4f pixels(width, height);
-    for (int j = 0; j < height; j++) {
-        for (int i = 0; i < width; i++) {
-            auto u = j / float(height - 1);
-            if (i < width / 3) u = pow(u, 2.2f);
-            if (i > (width * 2) / 3) u = pow(u, 1 / 2.2f);
-            pixels.at(i, j) = {u, u, u, 1};
-        }
-    }
-    return pixels;
-}
+image4f make_gammaramp_imagef(int width, int height);
 
 /// Make an image color with red/green in the [0,1] range. Helpful to visualize
 /// uv texture coordinate application.
-inline image4b make_uv_image(int width, int height) {
-    image4b pixels(width, height);
-    for (int j = 0; j < height; j++) {
-        for (int i = 0; i < width; i++) {
-            auto r = float_to_byte(i / (float)(width - 1));
-            auto g = float_to_byte(j / (float)(height - 1));
-            pixels.at(i, j) = vec4b{r, g, 0, 255};
-        }
-    }
-    return pixels;
-}
+image4b make_uv_image(int width, int height);
 
 /// Make a uv colored grid
-inline image4b make_uvgrid_image(
-    int width, int height, int tile = 64, bool colored = true) {
-    image4b pixels(width, height);
-    for (int j = 0; j < height; j++) {
-        for (int i = 0; i < width; i++) {
-            byte ph = 32 * (i / (height / 8));
-            byte pv = 128;
-            byte ps = 64 + 16 * (7 - j / (height / 8));
-            if (i % (tile / 2) && j % (tile / 2)) {
-                if ((i / tile + j / tile) % 2)
-                    pv += 16;
-                else
-                    pv -= 16;
-            } else {
-                pv = 196;
-                ps = 32;
-            }
-            pixels.at(i, j) = (colored) ? hsv_to_rgb({ph, ps, pv, 255}) :
-                                          vec4b{pv, pv, pv, 255};
-        }
-    }
-    return pixels;
-}
+image4b make_uvgrid_image(
+    int width, int height, int tile = 64, bool colored = true);
 
 /// Make a uv recusive colored grid
-inline image4b make_recuvgrid_image(
-    int width, int height, int tile = 64, bool colored = true) {
-    image4b pixels(width, height);
-    for (int j = 0; j < height; j++) {
-        for (int i = 0; i < width; i++) {
-            byte ph = 32 * (i / (height / 8));
-            byte pv = 128;
-            byte ps = 64 + 16 * (7 - j / (height / 8));
-            if (i % (tile / 2) && j % (tile / 2)) {
-                if ((i / tile + j / tile) % 2)
-                    pv += 16;
-                else
-                    pv -= 16;
-                if ((i / (tile / 4) + j / (tile / 4)) % 2)
-                    pv += 4;
-                else
-                    pv -= 4;
-                if ((i / (tile / 8) + j / (tile / 8)) % 2)
-                    pv += 1;
-                else
-                    pv -= 1;
-            } else {
-                pv = 196;
-                ps = 32;
-            }
-            pixels.at(i, j) = (colored) ? hsv_to_rgb({ph, ps, pv, 255}) :
-                                          vec4b{pv, pv, pv, 255};
-        }
-    }
-    return pixels;
-}
+image4b make_recuvgrid_image(
+    int width, int height, int tile = 64, bool colored = true);
 
 /// Comvert a bump map to a normal map.
-inline image4b bump_to_normal_map(const image4b& img, float scale = 1) {
-    image4b norm(img.width(), img.height());
-    for (int j = 0; j < img.height(); j++) {
-        for (int i = 0; i < img.width(); i++) {
-            auto i1 = (i + 1) % img.width(), j1 = (j + 1) % img.height();
-            auto p00 = img.at(i, j), p10 = img.at(i1, j), p01 = img.at(i, j1);
-            auto g00 = (float(p00.x) + float(p00.y) + float(p00.z)) / (3 * 255);
-            auto g01 = (float(p01.x) + float(p01.y) + float(p01.z)) / (3 * 255);
-            auto g10 = (float(p10.x) + float(p10.y) + float(p10.z)) / (3 * 255);
-            auto n = vec3f{scale * (g00 - g10), scale * (g00 - g01), 1.0f};
-            n = normalize(n) * 0.5f + vec3f{0.5f, 0.5f, 0.5f};
-            auto c =
-                vec4b{byte(n.x * 255), byte(n.y * 255), byte(n.z * 255), 255};
-            norm.at(i, j) = c;
-        }
-    }
-    return norm;
-}
+image4b bump_to_normal_map(const image4b& img, float scale = 1);
 
 /// Make a sunsky HDR model with sun at theta elevation in [0,pi/2], turbidity
 /// in [1.7,10] with or without sun.
 image4f make_sunsky_image(int res, float thetaSun, float turbidity = 3,
     bool has_sun = false, bool has_ground = true);
-
-/// Compute the revised Pelin noise function. Wrap provides a wrapping noise
-/// but must be power of two (wraps at 256 anyway). For octave based noise,
-/// good values are obtained with octaves=6 (numerber of noise calls),
-/// lacunarity=~2.0 (spacing between successive octaves: 2.0 for warpping
-/// output), gain=0.5 (relative weighting applied to each successive octave),
-/// offset=1.0 (used to invert the ridges).
 
 /// Make a noise image. Wrap works only if both resx and resy are powers of two.
 image4b make_noise_image(int resx, int resy, float scale = 1, bool wrap = true);
@@ -4936,15 +4641,8 @@ bool save_image(
     const string& filename, int width, int height, int ncomp, const byte* ldr);
 
 /// Save an HDR or LDR image with tonemapping based on filename
-inline bool save_image(const string& filename, const image4f& hdr,
-    float exposure, float gamma, bool filmic = false) {
-    if (is_hdr_filename(filename)) {
-        return save_image4f(filename, hdr);
-    } else {
-        auto ldr = tonemap_image(hdr, exposure, gamma, filmic);
-        return save_image4b(filename, ldr);
-    }
-}
+bool save_image(const string& filename, const image4f& hdr, float exposure,
+    float gamma, bool filmic = false);
 
 /// Filter for resizing
 enum struct resize_filter {
@@ -4995,162 +4693,20 @@ void resize_image(const image4b& img, image4b& res_img,
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-/// Intersect a ray with a point (approximate)
-///
-/// Parameters:
-/// - ray: ray origin and direction, parameter min, max range
-/// - p: point position
-/// - r: point radius
-///
-/// Out Parameters:
-/// - ray_t: ray parameter at the intersection point
-/// - euv: primitive uv ( {0,0} for points )
-///
-/// Returns:
-/// - whether the intersection occurred
-///
-/// Iplementation Notes:
-/// - out Parameters and only writtent o if an intersection occurs
-/// - algorithm finds the closest point on the ray segment to the point and
-///    test their distance with the point radius
-/// - based on http://geomalgorithms.com/a02-lines.html.
-inline bool intersect_point(
-    const ray3f& ray, const vec3f& p, float r, float& ray_t) {
-    // find parameter for line-point minimum distance
-    auto w = p - ray.o;
-    auto t = dot(w, ray.d) / dot(ray.d, ray.d);
+/// Intersect a ray with a point (approximate).
+/// Based on http://geomalgorithms.com/a02-lines.html.
+bool intersect_point(const ray3f& ray, const vec3f& p, float r, float& ray_t);
 
-    // exit if not within bounds
-    if (t < ray.tmin || t > ray.tmax) return false;
-
-    // test for line-point distance vs point radius
-    auto rp = ray.o + ray.d * t;
-    auto prp = p - rp;
-    if (dot(prp, prp) > r * r) return false;
-
-    // intersection occurred: set params and exit
-    ray_t = t;
-
-    return true;
-}
-
-/// Intersect a ray with a line
-///
-/// Parameters:
-/// - ray: ray origin and direction, parameter min, max range
-/// - v0, v1: line segment points
-/// - r0, r1: line segment radia
-///
-/// Out Parameters:
-/// - ray_t: ray parameter at the intersection point
-/// - euv: euv.x is the line parameter at the intersection ( euv.y is zero )
-///
-/// Returns:
-/// - whether the intersection occurred
-///
-/// Notes:
-/// - out Parameters and only writtent o if an intersection occurs
-/// - algorithm find the closest points on line and ray segment and test
-///   their distance with the line radius at that location
-/// - based on http://geomalgorithms.com/a05-intersect-1.html
-/// - based on http://geomalgorithms.com/a07-distance.html#
+/// Intersect a ray with a line (approximate).
+/// Based on http://geomalgorithms.com/a05-intersect-1.html and
+/// http://geomalgorithms.com/a07-distance.html#
 ///     dist3D_Segment_to_Segment
-inline bool intersect_line(const ray3f& ray, const vec3f& v0, const vec3f& v1,
-    float r0, float r1, float& ray_t, vec2f& euv) {
-    // setup intersection params
-    auto u = ray.d;
-    auto v = v1 - v0;
-    auto w = ray.o - v0;
-
-    // compute values to solve a linear system
-    auto a = dot(u, u);
-    auto b = dot(u, v);
-    auto c = dot(v, v);
-    auto d = dot(u, w);
-    auto e = dot(v, w);
-    auto det = a * c - b * b;
-
-    // check determinant and exit if lines are parallel
-    // (could use EPSILONS if desired)
-    if (det == 0) return false;
-
-    // compute Parameters on both ray and segment
-    auto t = (b * e - c * d) / det;
-    auto s = (a * e - b * d) / det;
-
-    // exit if not within bounds
-    if (t < ray.tmin || t > ray.tmax) return false;
-
-    // clamp segment param to segment corners
-    s = clamp(s, (float)0, (float)1);
-
-    // compute segment-segment distance on the closest points
-    auto p0 = ray.o + ray.d * t;
-    auto p1 = v0 + (v1 - v0) * s;
-    auto p01 = p0 - p1;
-
-    // check with the line radius at the same point
-    auto r = r0 * (1 - s) + r1 * s;
-    if (dot(p01, p01) > r * r) return false;
-
-    // intersection occurred: set params and exit
-    ray_t = t;
-    euv = {1 - s, s};
-
-    return true;
-}
+bool intersect_line(const ray3f& ray, const vec3f& v0, const vec3f& v1,
+    float r0, float r1, float& ray_t, vec2f& euv);
 
 /// Intersect a ray with a triangle
-///
-/// Parameters:
-/// - ray: ray origin and direction, parameter min, max range
-/// - v0, v1, v2: triangle vertices
-///
-/// Out Parameters:
-/// - ray_t: ray parameter at the intersection point
-/// - euv: baricentric coordinates of the intersection
-///
-/// Returns:
-/// - whether the intersection occurred
-///
-/// Notes:
-/// - out Parameters and only writtent o if an intersection occurs
-/// - algorithm based on Muller-Trombone intersection test
-inline bool intersect_triangle(const ray3f& ray, const vec3f& v0,
-    const vec3f& v1, const vec3f& v2, float& ray_t, vec3f& euv) {
-    // compute triangle edges
-    auto edge1 = v1 - v0;
-    auto edge2 = v2 - v0;
-
-    // compute determinant to solve a linear system
-    auto pvec = cross(ray.d, edge2);
-    auto det = dot(edge1, pvec);
-
-    // check determinant and exit if triangle and ray are parallel
-    // (could use EPSILONS if desired)
-    if (det == 0) return false;
-    auto inv_det = 1.0f / det;
-
-    // compute and check first bricentric coordinated
-    auto tvec = ray.o - v0;
-    auto u = dot(tvec, pvec) * inv_det;
-    if (u < 0 || u > 1) return false;
-
-    // compute and check second bricentric coordinated
-    auto qvec = cross(tvec, edge1);
-    auto v = dot(ray.d, qvec) * inv_det;
-    if (v < 0 || u + v > 1) return false;
-
-    // compute and check ray parameter
-    auto t = dot(edge2, qvec) * inv_det;
-    if (t < ray.tmin || t > ray.tmax) return false;
-
-    // intersection occurred: set params and exit
-    ray_t = t;
-    euv = {1 - u - v, u, v};
-
-    return true;
-}
+bool intersect_triangle(const ray3f& ray, const vec3f& v0, const vec3f& v1,
+    const vec3f& v2, float& ray_t, vec3f& euv);
 
 /// Intersect a ray with a quad represented as two triangles (0,1,3) and
 /// (2,3,1), with the uv coordinates of the second triangle corrected by u =
@@ -5158,153 +4714,24 @@ inline bool intersect_triangle(const ray3f& ray, const vec3f& v0,
 /// to 1. This is equivalent to Intel's Embree. The external user does not have
 /// to be concerned about the parametrization and can just use the euv as
 /// specified.
-///
-/// Parameters:
-/// - ray: ray origin and direction, parameter min, max range
-/// - v0, v1, v2, v3: quad vertices
-///
-/// Out Parameters:
-/// - ray_t: ray parameter at the intersection point
-/// - euv: baricentric coordinates of the intersection
-///
-/// Returns:
-/// - whether the intersection occurred
-inline bool intersect_quad(const ray3f& ray, const vec3f& v0, const vec3f& v1,
-    const vec3f& v2, const vec3f& v3, float& ray_t, vec4f& euv) {
-    auto hit = false;
-    auto tray = ray;
-    if (intersect_triangle(tray, v0, v1, v3, ray_t, (vec3f&)euv)) {
-        euv = {euv.x, euv.y, 0, euv.z};
-        tray.tmax = ray_t;
-        hit = true;
-    }
-    if (intersect_triangle(tray, v2, v3, v1, ray_t, (vec3f&)euv)) {
-        euv = {0, 1 - euv.y, euv.y + euv.z - 1, 1 - euv.z};
-        tray.tmax = ray_t;
-        hit = true;
-    }
-    return hit;
-}
+bool intersect_quad(const ray3f& ray, const vec3f& v0, const vec3f& v1,
+    const vec3f& v2, const vec3f& v3, float& ray_t, vec4f& euv);
 
 /// Intersect a ray with a tetrahedron. Note that we consider only
 /// intersection wiht the tetrahedra surface and discount intersction with
 /// the interior.
-///
-/// Parameters:
-/// - ray: ray to intersect with
-/// - v0, v1, v2: triangle vertices
-///
-/// Out Parameters:
-/// - ray_t: ray parameter at the intersection point
-/// - euv: baricentric coordinates of the intersection
-///
-/// Returns:
-/// - whether the intersection occurred
-///
-/// TODO: check order
-/// TODO: uv
-inline bool intersect_tetrahedron(const ray3f& ray_, const vec3f& v0,
-    const vec3f& v1, const vec3f& v2, const vec3f& v3, float& ray_t,
-    vec4f& euv) {
-    // check intersction for each face
-    auto hit = false;
-    auto ray = ray_;
-    auto tuv = zero3f;
-    if (intersect_triangle(ray, v0, v1, v2, ray_t, tuv)) {
-        hit = true;
-        ray.tmax = ray_t;
-    }
-    if (intersect_triangle(ray, v0, v1, v3, ray_t, tuv)) {
-        hit = true;
-        ray.tmax = ray_t;
-    }
-    if (intersect_triangle(ray, v0, v2, v3, ray_t, tuv)) {
-        hit = true;
-        ray.tmax = ray_t;
-    }
-    if (intersect_triangle(ray, v1, v2, v3, ray_t, tuv)) {
-        hit = true;
-        ray.tmax = ray_t;
-    }
-
-    return hit;
-}
+bool intersect_tetrahedron(const ray3f& ray_, const vec3f& v0, const vec3f& v1,
+    const vec3f& v2, const vec3f& v3, float& ray_t, vec4f& euv);
 
 /// Intersect a ray with a axis-aligned bounding box
-///
-/// Parameters:
-/// - ray: ray to intersect with
-/// - bbox: bounding box min/max bounds
-///
-/// Returns:
-/// - whether the intersection occurred
-inline bool intersect_check_bbox(const ray3f& ray, const bbox3f& bbox) {
-    // set up convenient pointers for looping over axes
-    auto tmin = ray.tmin, tmax = ray.tmax;
-
-    // for each axis, clip intersection against the bounding planes
-    for (int i = 0; i < 3; i++) {
-        // determine intersection ranges
-        auto invd = 1.0f / ray.d[i];
-        auto t0 = (bbox.min[i] - ray.o[i]) * invd;
-        auto t1 = (bbox.max[i] - ray.o[i]) * invd;
-        // flip based on range directions
-        if (invd < 0.0f) {
-            float a = t0;
-            t0 = t1;
-            t1 = a;
-        }
-        // clip intersection
-        tmin = t0 > tmin ? t0 : tmin;
-        tmax = t1 < tmax ? t1 : tmax;
-        // if intersection is empty, exit
-        if (tmin > tmax) return false;
-    }
-
-    // passed all planes, then intersection occurred
-    return true;
-}
-
-/// Min/max used in BVH traversal. Copied here since the traversal code
-/// relies on the specific behaviour wrt NaNs.
-static inline const float& _safemin(const float& a, const float& b) {
-    return (a < b) ? a : b;
-}
-/// Min/max used in BVH traversal. Copied here since the traversal code
-/// relies on the specific behaviour wrt NaNs.
-static inline const float& _safemax(const float& a, const float& b) {
-    return (a > b) ? a : b;
-}
+bool intersect_check_bbox(const ray3f& ray, const bbox3f& bbox);
 
 /// Intersect a ray with a axis-aligned bounding box
-///
-/// Parameters:
-/// - ray_o, ray_d: ray origin and direction
-/// - ray_tmin, ray_tmax: ray parameter min, max range
-/// - ray_dinv: ray inverse direction
-/// - ray_dsign: ray direction sign
-/// - bbox_min, bbox_max: bounding box min/max bounds
-///
-/// Returns:
-/// - whether the intersection occurred
-///
 /// Implementation Notes:
 /// - based on "Robust BVH Ray Traversal" by T. Ize published at
 /// http://jcgt.org/published/0002/02/02/paper.pdf
-inline bool intersect_check_bbox(const ray3f& ray, const vec3f& ray_dinv,
-    const vec3i& ray_dsign, const bbox3f& bbox_) {
-    auto bbox = &bbox_.min;
-    auto txmin = (bbox[ray_dsign.x].x - ray.o.x) * ray_dinv.x;
-    auto txmax = (bbox[1 - ray_dsign.x].x - ray.o.x) * ray_dinv.x;
-    auto tymin = (bbox[ray_dsign.y].y - ray.o.y) * ray_dinv.y;
-    auto tymax = (bbox[1 - ray_dsign.y].y - ray.o.y) * ray_dinv.y;
-    auto tzmin = (bbox[ray_dsign.z].z - ray.o.z) * ray_dinv.z;
-    auto tzmax = (bbox[1 - ray_dsign.z].z - ray.o.z) * ray_dinv.z;
-    auto tmin = _safemax(tzmin, _safemax(tymin, _safemax(txmin, ray.tmin)));
-    auto tmax = _safemin(tzmax, _safemin(tymax, _safemin(txmax, ray.tmax)));
-    tmax *= 1.00000024f;  // for double: 1.0000000000000004
-    return tmin <= tmax;
-}
+bool intersect_check_bbox(const ray3f& ray, const vec3f& ray_dinv,
+    const vec3i& ray_dsign, const bbox3f& bbox);
 
 }  // namespace ygl
 
@@ -5314,194 +4741,46 @@ inline bool intersect_check_bbox(const ray3f& ray, const vec3f& ray_dinv,
 namespace ygl {
 
 // TODO: documentation
-inline bool overlap_point(
-    const vec3f& pos, float dist_max, const vec3f& p, float r, float& dist) {
-    auto d2 = dot(pos - p, pos - p);
-    if (d2 > (dist_max + r) * (dist_max + r)) return false;
-    dist = sqrt(d2);
-    return true;
-}
+bool overlap_point(
+    const vec3f& pos, float dist_max, const vec3f& p, float r, float& dist);
 
 // TODO: documentation
-inline vec2f closestuv_line(
-    const vec3f& pos, const vec3f& v0, const vec3f& v1) {
-    auto ab = v1 - v0;
-    auto d = dot(ab, ab);
-    // Project c onto ab, computing parameterized position d(t) = a + t*(b –
-    // a)
-    auto u = dot(pos - v0, ab) / d;
-    u = clamp(u, (float)0, (float)1);
-    return {1 - u, u};
-}
+vec2f closestuv_line(const vec3f& pos, const vec3f& v0, const vec3f& v1);
 
 // TODO: documentation
-inline bool overlap_line(const vec3f& pos, float dist_max, const vec3f& v0,
-    const vec3f& v1, float r0, float r1, float& dist, vec2f& euv) {
-    auto uv = closestuv_line(pos, v0, v1);
-    // Compute projected position from the clamped t d = a + t * ab;
-    auto p = lerp(v0, v1, uv.y);
-    auto r = lerp(r0, r1, uv.y);
-    auto d2 = dot(pos - p, pos - p);
-    // check distance
-    if (d2 > (dist_max + r) * (dist_max + r)) return false;
-    // done
-    dist = sqrt(d2);
-    euv = uv;
-    return true;
-}
+bool overlap_line(const vec3f& pos, float dist_max, const vec3f& v0,
+    const vec3f& v1, float r0, float r1, float& dist, vec2f& euv);
 
 // TODO: documentation
 // this is a complicated test -> I probably prefer to use a sequence of test
 // (triangle body, and 3 edges)
-inline vec3f closestuv_triangle(
-    const vec3f& pos, const vec3f& v0, const vec3f& v1, const vec3f& v2) {
-    auto ab = v1 - v0;
-    auto ac = v2 - v0;
-    auto ap = pos - v0;
-
-    auto d1 = dot(ab, ap);
-    auto d2 = dot(ac, ap);
-
-    // corner and edge cases
-    if (d1 <= 0 && d2 <= 0) return {1, 0, 0};
-
-    auto bp = pos - v1;
-    auto d3 = dot(ab, bp);
-    auto d4 = dot(ac, bp);
-    if (d3 >= 0 && d4 <= d3) return {0, 1, 0};
-
-    auto vc = d1 * d4 - d3 * d2;
-    if ((vc <= 0) && (d1 >= 0) && (d3 <= 0))
-        return {1 - d1 / (d1 - d3), d1 / (d1 - d3), 0};
-
-    auto cp = pos - v2;
-    auto d5 = dot(ab, cp);
-    auto d6 = dot(ac, cp);
-    if (d6 >= 0 && d5 <= d6) return {0, 0, 1};
-
-    auto vb = d5 * d2 - d1 * d6;
-    if ((vb <= 0) && (d2 >= 0) && (d6 <= 0))
-        return {1 - d2 / (d2 - d6), 0, d2 / (d2 - d6)};
-
-    auto va = d3 * d6 - d5 * d4;
-    if ((va <= 0) && (d4 - d3 >= 0) && (d5 - d6 >= 0)) {
-        auto w = (d4 - d3) / ((d4 - d3) + (d5 - d6));
-        return {0, 1 - w, w};
-    }
-
-    // face case
-    auto denom = 1 / (va + vb + vc);
-    auto v = vb * denom;
-    auto w = vc * denom;
-    return {1 - v - w, v, w};
-}
+vec3f closestuv_triangle(
+    const vec3f& pos, const vec3f& v0, const vec3f& v1, const vec3f& v2);
 
 // TODO: documentation
-inline bool overlap_triangle(const vec3f& pos, float dist_max, const vec3f& v0,
+bool overlap_triangle(const vec3f& pos, float dist_max, const vec3f& v0,
     const vec3f& v1, const vec3f& v2, float r0, float r1, float r2, float& dist,
-    vec3f& euv) {
-    auto uv = closestuv_triangle(pos, v0, v1, v2);
-    auto p = v0 * uv.x + v1 * uv.y + v2 * uv.z;
-    auto r = r0 * uv.x + r1 * uv.y + r2 * uv.z;
-    auto dd = dot(p - pos, p - pos);
-    if (dd > (dist_max + r) * (dist_max + r)) return false;
-    dist = sqrt(dd);
-    euv = uv;
-    return true;
-}
+    vec3f& euv);
 
 // TODO: documentation
-inline bool overlap_quad(const vec3f& pos, float dist_max, const vec3f& v0,
+bool overlap_quad(const vec3f& pos, float dist_max, const vec3f& v0,
     const vec3f& v1, const vec3f& v2, const vec3f& v3, float r0, float r1,
-    float r2, float r3, float& dist, vec4f& euv) {
-    auto hit = false;
-    if (overlap_triangle(
-            pos, dist_max, v0, v1, v3, r0, r1, r3, dist, (vec3f&)euv)) {
-        euv = {euv.x, euv.y, 0, euv.z};
-        dist_max = dist;
-        hit = true;
-    }
-    if (overlap_triangle(
-            pos, dist_max, v2, v3, v1, r2, r3, r1, dist, (vec3f&)euv)) {
-        // dist_max = dist;
-        euv = {0, 1 - euv.y, euv.y + euv.z - 1, 1 - euv.z};
-        hit = true;
-    }
-    return hit;
-}
+    float r2, float r3, float& dist, vec4f& euv);
 
 // TODO: documentation
-inline bool overlap_tetrahedron(const vec3f& pos, const vec3f& v0,
-    const vec3f& v1, const vec3f& v2, const vec3f& v3, vec4f& euv) {
-    auto vol = dot(v3 - v0, cross(v3 - v1, v3 - v0));
-    if (vol == 0) return false;
-    auto u = dot(v3 - v0, cross(v3 - v1, v3 - v0)) / vol;
-    if (u < 0 || u > 1) return false;
-    auto v = dot(v3 - v0, cross(v3 - v1, v3 - v0)) / vol;
-    if (v < 0 || v > 1 || u + v > 1) return false;
-    auto w = dot(v3 - v0, cross(v3 - v1, v3 - v0)) / vol;
-    if (w < 0 || w > 1 || u + v + w > 1) return false;
-    euv = {u, v, w, 1 - u - v - w};
-    return true;
-}
+bool overlap_tetrahedron(const vec3f& pos, const vec3f& v0, const vec3f& v1,
+    const vec3f& v2, const vec3f& v3, vec4f& euv);
 
 // TODO: documentation
-inline bool overlap_tetrahedron(const vec3f& pos, float dist_max,
-    const vec3f& v0, const vec3f& v1, const vec3f& v2, const vec3f& v3,
-    float r0, float r1, float r2, float r3, float& dist, vec4f& euv) {
-    // check interior
-    if (overlap_tetrahedron(pos, v0, v1, v2, v3, euv)) {
-        dist = 0;
-        return true;
-    }
-
-    // check faces
-    auto hit = false;
-    auto tuv = zero3f;
-    if (overlap_triangle(pos, dist_max, v0, v1, v2, r0, r1, r2, dist, tuv)) {
-        hit = true;
-        dist_max = dist;
-    }
-    if (overlap_triangle(pos, dist_max, v0, v1, v3, r0, r1, r3, dist, tuv)) {
-        hit = true;
-        dist_max = dist;
-    }
-    if (overlap_triangle(pos, dist_max, v0, v2, v3, r0, r2, r3, dist, tuv)) {
-        hit = true;
-        dist_max = dist;
-    }
-    if (overlap_triangle(pos, dist_max, v1, v2, v3, r1, r2, r3, dist, tuv)) {
-        hit = true;
-        // dist_max = dist;
-    }
-
-    return hit;
-}
+bool overlap_tetrahedron(const vec3f& pos, float dist_max, const vec3f& v0,
+    const vec3f& v1, const vec3f& v2, const vec3f& v3, float r0, float r1,
+    float r2, float r3, float& dist, vec4f& euv);
 
 // TODO: documentation
-inline bool distance_check_bbox(
-    const vec3f& pos, float dist_max, const bbox3f& bbox) {
-    // computing distance
-    auto dd = 0.0f;
-
-    // For each axis count any excess distance outside box extents
-    for (int i = 0; i < 3; i++) {
-        auto v = pos[i];
-        if (v < bbox.min[i]) dd += (bbox.min[i] - v) * (bbox.min[i] - v);
-        if (v > bbox.max[i]) dd += (v - bbox.max[i]) * (v - bbox.max[i]);
-    }
-
-    // check distance
-    return dd < dist_max * dist_max;
-}
+bool distance_check_bbox(const vec3f& pos, float dist_max, const bbox3f& bbox);
 
 // TODO: doc
-inline bool overlap_bbox(const bbox3f& bbox1, const bbox3f& bbox2) {
-    if (bbox1.max.x < bbox2.min.x || bbox1.min.x > bbox2.max.x) return false;
-    if (bbox1.max.y < bbox2.min.y || bbox1.min.y > bbox2.max.y) return false;
-    if (bbox1.max.z < bbox2.min.z || bbox1.min.z > bbox2.max.z) return false;
-    return true;
-}
+bool overlap_bbox(const bbox3f& bbox1, const bbox3f& bbox2);
 
 }  // namespace ygl
 
