@@ -6412,9 +6412,9 @@ inline scene* gltf_to_scene(const glTF* gltf, const load_options& opts) {
                     (int)gchannel->sampler, (int)gchannel->target->path}] = kfr;
                 anm->keyframes.push_back(kfr);
             }
-            sampler_map
-                .at({(int)gchannel->sampler, (int)gchannel->target->path})
-                ->nodes.push_back(scn->nodes[(int)gchannel->target->node]);
+            anm->targets.push_back({sampler_map.at({(int)gchannel->sampler,
+                                        (int)gchannel->target->path}),
+                scn->nodes[(int)gchannel->target->node]});
         }
         scn->animations.push_back(anm);
     }
@@ -6869,6 +6869,7 @@ inline glTF* scene_to_gltf(
         ganm->name = anm->name;
         auto gbuffer = add_opt_buffer(anm->path);
         auto count = 0;
+        auto paths = unordered_map<keyframe*, glTFAnimationChannelTargetPath>();
         for (auto kfr : anm->keyframes) {
             auto aid = ganm->name + "_" + std::to_string(count++);
             auto gsmp = new glTFAnimationSampler();
@@ -6910,17 +6911,21 @@ inline glTF* scene_to_gltf(
                 throw runtime_error("should not have gotten here");
             }
             gsmp->interpolation = interpolation_map.at(kfr->type);
-            for (auto node : kfr->nodes) {
-                auto gchan = new glTFAnimationChannel();
-                gchan->sampler =
-                    glTFid<glTFAnimationSampler>{(int)ganm->samplers.size()};
-                gchan->target = new glTFAnimationChannelTarget();
-                gchan->target->node = glTFid<glTFNode>{index(scn->nodes, node)};
-                gchan->target->path = path;
-                ganm->channels.push_back(gchan);
-            }
             ganm->samplers.push_back(gsmp);
+            paths[kfr] = path;
         }
+        for (auto target : anm->targets) {
+            auto kfr = target.first;
+            auto node = target.second;
+            auto gchan = new glTFAnimationChannel();
+            gchan->sampler =
+                glTFid<glTFAnimationSampler>{index(anm->keyframes, kfr)};
+            gchan->target = new glTFAnimationChannelTarget();
+            gchan->target->node = glTFid<glTFNode>{index(scn->nodes, node)};
+            gchan->target->path = paths.at(kfr);
+            ganm->channels.push_back(gchan);
+        }
+
         gltf->animations.push_back(ganm);
     }
 
@@ -8726,9 +8731,9 @@ void update_test_animation(
     kfr->scaling = tanm.scaling;
     for (auto& v : kfr->translation) v *= tanm.scale;
     for (auto& v : kfr->scaling) v *= tanm.scale;
-    kfr->nodes.clear();
+    anm->targets.clear();
     for (auto& nde : tanm.nodes)
-        kfr->nodes.push_back(find_named_elem(scn->nodes, nde));
+        anm->targets.push_back({kfr, find_named_elem(scn->nodes, nde)});
 }
 
 // Update test elements
@@ -9058,8 +9063,8 @@ unordered_map<string, test_animation_params>& test_animation_presets() {
 
     presets["bounce"] = make_test_animation(
         "bounce", false, {0, 1, 2}, {{0, 0, 0}, {0, 1, 0}, {0, 0, 0}}, {}, {});
-    presets["scale"] = make_test_animation(
-        "scale", false, {0, 1, 2}, {}, {}, {{1, 1, 1}, {0.1f, 0.1f, 0.1f}, {1, 1, 1}});
+    presets["scale"] = make_test_animation("scale", false, {0, 1, 2}, {}, {},
+        {{1, 1, 1}, {0.1f, 0.1f, 0.1f}, {1, 1, 1}});
     presets["rotation"] = make_test_animation("rotation", false, {0, 1, 2}, {},
         {{{0, 1, 0}, 0}, {{0, 1, 0}, pif}, {{0, 1, 0}, 0}}, {});
 
@@ -11738,10 +11743,11 @@ inline void draw_tree_widgets(
     }
 }
 
-inline void draw_tree_widgets(gl_window* win, const string& lbl, animation* anm, void*& selection) {
+inline void draw_tree_widgets(
+    gl_window* win, const string& lbl, animation* anm, void*& selection) {
     draw_tree_widget_leaf(win, lbl + anm->name, selection, anm);
 }
-    
+
 template <typename T>
 inline void draw_scene_tree_widgets(gl_window* win, const string& lbl,
     const vector<T*>& elems, void*& selection) {
@@ -11761,7 +11767,8 @@ inline void draw_tree_widgets(
     draw_scene_tree_widgets(
         win, lbl + "environments", scn->environments, selection);
     draw_scene_tree_widgets(win, lbl + "nodes", scn->nodes, selection);
-    draw_scene_tree_widgets(win, lbl + "animations", scn->animations, selection);
+    draw_scene_tree_widgets(
+        win, lbl + "animations", scn->animations, selection);
 }
 
 inline bool draw_elem_widgets(gl_window* win, scene* scn, texture* txt,
@@ -11949,7 +11956,12 @@ inline bool draw_elem_widgets(gl_window* win, scene* scn, animation* anm,
         draw_label_widget(win, "translation " + ids, kfr->translation, true);
         draw_label_widget(win, "rotation " + ids, kfr->rotation, true);
         draw_label_widget(win, "scale " + ids, kfr->scaling, true);
-        draw_label_widget(win, "nodes " + ids, kfr->nodes, true);
+    }
+    for(auto target_kv : enumerate(anm->targets)) {
+        auto kfr = target_kv.second.first;
+        auto nde = target_kv.second.second;
+        auto ids = to_string(target_kv.first);
+        draw_label_widget(win, "target " + ids, kfr->name + " -> " + nde->name);
     }
     return std::any_of(edited.begin(), edited.end(), [](auto x) { return x; });
 }

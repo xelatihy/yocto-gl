@@ -2310,7 +2310,7 @@ struct quat<T, 4> {
     /// rotation axis
     vec<T, 3> axis() const { return normalize(vec<T, 3>{x, y, z}); }
     /// rotation angle
-    T angle() const { return 2*acos(w); }
+    T angle() const { return 2 * acos(w); }
 
     /// element access
     T& operator[](int i) { return (&x)[i]; }
@@ -4090,12 +4090,13 @@ inline T eval_keyframed_step(
 }
 
 // Implementation detail.
-template<typename T>
+template <typename T>
 inline T eval_keyframed_lerp(const T& a, const T& b, float t) {
     return lerp(a, b, t);
 }
-template<typename T>
-inline quat<T, 4> eval_keyframed_lerp(const quat<T, 4>& a, const quat<T, 4>& b, float t) {
+template <typename T>
+inline quat<T, 4> eval_keyframed_lerp(
+    const quat<T, 4>& a, const quat<T, 4>& b, float t) {
     return slerp(a, b, t);
 }
 
@@ -4108,30 +4109,35 @@ inline T eval_keyframed_linear(
     if (time >= times.back()) return vals.back();
     auto idx = (int)(std::upper_bound(times.begin(), times.end(), time) -
                      times.begin());
-    return eval_keyframed_lerp(vals.at(idx-1), vals.at(idx),
-        (time - times.at(idx-1)) / (times.at(idx) - times.at(idx-1)));
+    return eval_keyframed_lerp(vals.at(idx - 1), vals.at(idx),
+        (time - times.at(idx - 1)) / (times.at(idx) - times.at(idx - 1)));
 }
 
 // Implementation detail.
-    template<typename T>
-inline T eval_keyframed_cubic(const T& a, const T& b, const T& c, const T& d, float t) {
+template <typename T>
+inline T eval_keyframed_cubic(
+    const T& a, const T& b, const T& c, const T& d, float t) {
     return eval_bezier_cubic(a, b, c, d, t);
 }
-    template<typename T>
-inline quat<T, 4> eval_keyframed_cubic(const quat<T, 4>& a, const quat<T, 4>& b, const quat<T, 4>& c, const quat<T, 4>& d, float t) {
-    return normalize((quat4f)eval_keyframed_cubic((vec4f)a, (vec4f)b, (vec4f)c, (vec4f)d, t));
+template <typename T>
+inline quat<T, 4> eval_keyframed_cubic(const quat<T, 4>& a, const quat<T, 4>& b,
+    const quat<T, 4>& c, const quat<T, 4>& d, float t) {
+    return normalize((quat4f)eval_keyframed_cubic(
+        (vec4f)a, (vec4f)b, (vec4f)c, (vec4f)d, t));
 }
 
 /// Evalautes a keyframed value using bezier interpolation
 template <typename T>
-inline T eval_keyframed_bezier(const vector<float>& times, const vector<T>& vals, float time) {
+inline T eval_keyframed_bezier(
+    const vector<float>& times, const vector<T>& vals, float time) {
     time = clamp(time, times.front(), times.back() - 0.001f);
     if (time <= times.front()) return vals.front();
     if (time >= times.back()) return vals.back();
     auto idx = (int)(std::upper_bound(times.begin(), times.end(), time) -
                      times.begin());
-    return eval_keyframed_cubic(vals.at(idx-3), vals.at(idx-2), vals.at(idx-1), vals.at(idx),
-                               (time - times.at(idx-1)) / (times.at(idx) - times.at(idx-1)));
+    return eval_keyframed_cubic(vals.at(idx - 3), vals.at(idx - 2),
+        vals.at(idx - 1), vals.at(idx),
+        (time - times.at(idx - 1)) / (times.at(idx) - times.at(idx - 1)));
 }
 
 }  // namespace ygl
@@ -7204,8 +7210,6 @@ struct keyframe {
     std::string name;
     /// Interpolation
     keyframe_type type = keyframe_type::linear;
-    /// Target nodes
-    std::vector<node*> nodes;
     /// Times
     std::vector<float> times;
     /// Translation
@@ -7226,6 +7230,8 @@ struct animation {
     std::string path = "";
     /// Keyframed values
     vector<keyframe*> keyframes;
+    /// Binds keyframe values to nodes.
+    vector<pair<keyframe*, node*>> targets;
 
     /// Cleanup
     animation() {
@@ -7554,15 +7560,18 @@ inline void update_transforms(animation* anm, float time) {
         if (!kfr->translation.empty()) {
             auto val =
                 interpolate(kfr->type, kfr->times, kfr->translation, time);
-            for (auto nde : kfr->nodes) nde->translation = val;
+            for (auto target : anm->targets) if(target.first == kfr)
+                target.second->translation = val;
         }
         if (!kfr->rotation.empty()) {
             auto val = interpolate(kfr->type, kfr->times, kfr->rotation, time);
-            for (auto nde : kfr->nodes) nde->rotation = val;
+            for (auto target : anm->targets) if(target.first == kfr)
+                target.second->rotation = val;
         }
         if (!kfr->scaling.empty()) {
             auto val = interpolate(kfr->type, kfr->times, kfr->scaling, time);
-            for (auto nde : kfr->nodes) nde->scaling = val;
+            for (auto target : anm->targets) if(target.first == kfr)
+                target.second->scaling = val;
         }
     }
 }
@@ -7594,8 +7603,8 @@ inline vec2f compute_animation_range(const scene* scn) {
     auto range = vec2f{+flt_max, -flt_max};
     for (auto anm : scn->animations) {
         for (auto kfr : anm->keyframes) {
-            range.x = min(range.x,kfr->times.front());
-            range.y = max(range.y,kfr->times.back());
+            range.x = min(range.x, kfr->times.front());
+            range.y = max(range.y, kfr->times.back());
         }
     }
     return range;
