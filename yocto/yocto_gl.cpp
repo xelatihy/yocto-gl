@@ -80,8 +80,6 @@
 //
 // - remove default environment
 // - animation
-//    - gltf read
-//    - gltf write
 //    - obj with nodes
 // - evaluate meshes with multiple shapes
 // - uniform serialization
@@ -2257,33 +2255,31 @@ inline void parse_val(stringstream& ss, T& v) {
 }
 
 // Parse a value
-inline void parse_val(stringstream& ss, vec2f& v) {
-    for (auto i = 0; i < 2; i++) parse_val(ss, v[i]);
-}
-// Parse a value
-inline void parse_val(stringstream& ss, vec3f& v) {
-    for (auto i = 0; i < 3; i++) parse_val(ss, v[i]);
-}
-// Parse a value
-inline void parse_val(stringstream& ss, vec4f& v) {
-    for (auto i = 0; i < 4; i++) parse_val(ss, v[i]);
+inline void parse_val(stringstream& ss, string& v) {
+    ss >> v;
+    if (v.length() == 0) return;
+    if ((v.front() == '"' && v.back() == '"') ||
+        (v.front() == '\'' && v.back() == '\'')) {
+        v = v.substr(1, v.length() - 2);
+        return;
+    }
 }
 
 // Parse a value
-inline void parse_val(stringstream& ss, vec2i& v) {
-    for (auto i = 0; i < 2; i++) parse_val(ss, v[i]);
-}
-// Parse a value
-inline void parse_val(stringstream& ss, vec3i& v) {
-    for (auto i = 0; i < 3; i++) parse_val(ss, v[i]);
-}
-// Parse a value
-inline void parse_val(stringstream& ss, vec4i& v) {
-    for (auto i = 0; i < 4; i++) parse_val(ss, v[i]);
+template <typename T, int N>
+inline void parse_val(stringstream& ss, vec<T, N>& v) {
+    for (auto i = 0; i < N; i++) parse_val(ss, v[i]);
 }
 
 // Parse a value
-inline void parse_val(stringstream& ss, frame3f& v) {
+template <typename T, int N>
+inline void parse_val(stringstream& ss, quat<T, N>& v) {
+    for (auto i = 0; i < N; i++) parse_val(ss, v[i]);
+}
+
+// Parse a value
+template <typename T>
+inline void parse_val(stringstream& ss, frame<T, 3>& v) {
     parse_val(ss, v.x);
     parse_val(ss, v.y);
     parse_val(ss, v.z);
@@ -2672,6 +2668,18 @@ inline obj_scene* load_obj(const string& filename, bool load_txt,
             parse_val(ss, ist->objname);
             parse_val(ss, ist->frame);
             asset->instances.push_back(ist);
+        } else if (cmd == "n") {
+            auto nde = new obj_node();
+            parse_val(ss, nde->name);
+            parse_val(ss, nde->parent);
+            parse_val(ss, nde->camname);
+            parse_val(ss, nde->objname);
+            parse_val(ss, nde->envname);
+            parse_val(ss, nde->frame);
+            parse_val(ss, nde->translation);
+            parse_val(ss, nde->rotation);
+            parse_val(ss, nde->scaling);
+            asset->nodes.push_back(nde);
         } else {
             // unused
         }
@@ -2719,34 +2727,26 @@ inline void dump_val(fstream& fs, const T& v) {
 }
 
 // write to stream
-inline void dump_val(fstream& fs, const vec2f& v) {
-    dump_val(fs, v.x);
-    fs << ' ';
-    dump_val(fs, v.y);
+template <typename T, int N>
+inline void dump_val(fstream& fs, const vec<T, N>& v) {
+    for (auto i = 0; i < N; i++) {
+        if (i) fs << ' ';
+        dump_val(fs, v[i]);
+    }
 }
 
 // write to stream
-inline void dump_val(fstream& fs, const vec3f& v) {
-    dump_val(fs, v.x);
-    fs << ' ';
-    dump_val(fs, v.y);
-    fs << ' ';
-    dump_val(fs, v.z);
+template <typename T, int N>
+inline void dump_val(fstream& fs, const quat<T, N>& v) {
+    for (auto i = 0; i < N; i++) {
+        if (i) fs << ' ';
+        dump_val(fs, v[i]);
+    }
 }
 
 // write to stream
-inline void dump_val(fstream& fs, const vec4f& v) {
-    dump_val(fs, v.x);
-    fs << ' ';
-    dump_val(fs, v.y);
-    fs << ' ';
-    dump_val(fs, v.z);
-    fs << ' ';
-    dump_val(fs, v.w);
-}
-
-// write to stream
-inline void dump_val(fstream& fs, const frame3f& v) {
+template <typename T>
+inline void dump_val(fstream& fs, const frame<T, 3>& v) {
     dump_val(fs, v.x);
     fs << ' ';
     dump_val(fs, v.y);
@@ -2803,7 +2803,7 @@ inline void dump_objverts(
             }
         }
     }
-    dump_val(fs, '\n');
+    dump_val(fs, "\n");
 }
 
 // Save an MTL file
@@ -2909,7 +2909,7 @@ inline void save_obj(const string& filename, const obj_scene* asset,
         dump_val(fs, cam->focus);
         dump_val(fs, " ");
         dump_val(fs, cam->frame);
-        dump_val(fs, '\n');
+        dump_val(fs, "\n");
     }
 
     // save envs
@@ -2920,7 +2920,7 @@ inline void save_obj(const string& filename, const obj_scene* asset,
         dump_val(fs, env->matname);
         dump_val(fs, " ");
         dump_val(fs, env->frame);
-        dump_val(fs, '\n');
+        dump_val(fs, "\n");
     }
 
     // save instances
@@ -2931,7 +2931,30 @@ inline void save_obj(const string& filename, const obj_scene* asset,
         dump_val(fs, ist->objname);
         dump_val(fs, " ");
         dump_val(fs, ist->frame);
-        dump_val(fs, '\n');
+        dump_val(fs, "\n");
+    }
+
+    // save nodes
+    for (auto nde : asset->nodes) {
+        dump_val(fs, "n ");
+        dump_val(fs, nde->name);
+        dump_val(fs, " ");
+        dump_val(fs, (nde->parent.empty()) ? string("\"\"") : nde->parent);
+        dump_val(fs, " ");
+        dump_val(fs, (nde->camname.empty()) ? string("\"\"") : nde->camname);
+        dump_val(fs, " ");
+        dump_val(fs, (nde->objname.empty()) ? string("\"\"") : nde->objname);
+        dump_val(fs, " ");
+        dump_val(fs, (nde->envname.empty()) ? string("\"\"") : nde->envname);
+        dump_val(fs, " ");
+        dump_val(fs, nde->frame);
+        dump_val(fs, " ");
+        dump_val(fs, nde->translation);
+        dump_val(fs, " ");
+        dump_val(fs, nde->rotation);
+        dump_val(fs, " ");
+        dump_val(fs, nde->scaling);
+        dump_val(fs, "\n");
     }
 
     // save all vertex data
@@ -11957,7 +11980,7 @@ inline bool draw_elem_widgets(gl_window* win, scene* scn, animation* anm,
         draw_label_widget(win, "rotation " + ids, kfr->rotation, true);
         draw_label_widget(win, "scale " + ids, kfr->scaling, true);
     }
-    for(auto target_kv : enumerate(anm->targets)) {
+    for (auto target_kv : enumerate(anm->targets)) {
         auto kfr = target_kv.second.first;
         auto nde = target_kv.second.second;
         auto ids = to_string(target_kv.first);

@@ -7560,18 +7560,18 @@ inline void update_transforms(animation* anm, float time) {
         if (!kfr->translation.empty()) {
             auto val =
                 interpolate(kfr->type, kfr->times, kfr->translation, time);
-            for (auto target : anm->targets) if(target.first == kfr)
-                target.second->translation = val;
+            for (auto target : anm->targets)
+                if (target.first == kfr) target.second->translation = val;
         }
         if (!kfr->rotation.empty()) {
             auto val = interpolate(kfr->type, kfr->times, kfr->rotation, time);
-            for (auto target : anm->targets) if(target.first == kfr)
-                target.second->rotation = val;
+            for (auto target : anm->targets)
+                if (target.first == kfr) target.second->rotation = val;
         }
         if (!kfr->scaling.empty()) {
             auto val = interpolate(kfr->type, kfr->times, kfr->scaling, time);
-            for (auto target : anm->targets) if(target.first == kfr)
-                target.second->scaling = val;
+            for (auto target : anm->targets)
+                if (target.first == kfr) target.second->scaling = val;
         }
     }
 }
@@ -8831,6 +8831,28 @@ struct obj_instance {
     string objname;
 };
 
+/// Node [extension]
+struct obj_node {
+    /// node name
+    string name;
+    /// node parent
+    string parent;
+    /// camera
+    string camname;
+    /// object
+    string objname;
+    /// environment
+    string envname;
+    /// transform frame (affine matrix)
+    frame3f frame = identity_frame3f;
+    /// translation
+    vec3f translation = zero3f;
+    /// rotation
+    quat4f rotation = {0, 0, 0, 1};
+    /// scaling
+    vec3f scaling = {1, 1, 1};
+};
+
 /// OBJ asset
 struct obj_scene {
     // vertex data -------------------------
@@ -8858,6 +8880,8 @@ struct obj_scene {
     vector<obj_environment*> environments;
     /// instances [extension]
     vector<obj_instance*> instances;
+    /// nodes [extension]
+    vector<obj_node*> nodes;
 
     /// cleanup
     ~obj_scene() {
@@ -8872,6 +8896,8 @@ struct obj_scene {
         for (auto v : environments)
             if (v) delete v;
         for (auto v : instances)
+            if (v) delete v;
+        for (auto v : nodes)
             if (v) delete v;
     }
 };
