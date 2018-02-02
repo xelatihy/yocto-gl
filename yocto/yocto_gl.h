@@ -4903,6 +4903,30 @@ bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray, bool early_exit,
 /// Finds the closest element with a bvh.
 bool overlap_bvh(const bvh_tree* bvh, const vec3f& pos, float max_dist,
     bool early_exit, float& dist, int& iid, int& eid, vec4f& ew);
+
+/// Intersection point
+struct intersection_point {
+    /// distance of the hit along the ray or from the point
+    float dist = 0;
+    /// instance index
+    int iid = -1;
+    /// shape element index
+    int eid = -1;
+    /// shape barycentric coordinates
+    vec4f euv = zero4f;
+
+    /// check if intersection is valid
+    operator bool() const { return eid >= 0; }
+};
+
+/// Intersect ray with a bvh (convenience wrapper).
+intersection_point intersect_bvh(
+    const bvh_tree* bvh, const ray3f& ray, bool early_exit);
+
+/// Finds the closest element with a bvh (convenience wrapper).
+intersection_point overlap_bvh(
+    const bvh_tree* bvh, const vec3f& pos, float max_dist, bool early_exit);
+
 }  // namespace ygl
 
 // -----------------------------------------------------------------------------
@@ -5355,21 +5379,6 @@ inline bool intersect_ray(const scene* scn, const ray3f& ray, bool early_exit,
     float& ray_t, int& iid, int& eid, vec4f& euv) {
     return intersect_bvh(scn->bvh, ray, early_exit, ray_t, iid, eid, euv);
 }
-
-/// Surface point.
-struct intersection_point {
-    /// distance of the hit along the ray or from the point
-    float dist = 0;
-    /// instance index
-    int iid = -1;
-    /// shape element index
-    int eid = -1;
-    /// shape barycentric coordinates
-    vec4f euv = zero4f;
-
-    /// check if intersection is valid
-    operator bool() const { return eid >= 0; }
-};
 
 /// Intersect the scene with a ray. Find any interstion if early_exit,
 /// otherwise find first intersection.
@@ -6039,19 +6048,19 @@ inline const image4f& get_trace_image(const trace_state* st) { return st->img; }
 inline int get_trace_sample(const trace_state* st) { return st->sample; }
 
 /// Trace the next nsamples samples.
-void trace_samples(trace_state* st, const scene* scn, const camera* view,
+void trace_samples(trace_state* st, const scene* scn, const camera* view, const bvh_tree* bvh,
     int nsamples, const trace_params& params);
 
 /// Trace the whole image
 inline image4f trace_image(
-    const scene* scn, const camera* view, const trace_params& params) {
+    const scene* scn, const camera* view, const bvh_tree* bvh,const trace_params& params) {
     auto st = unique_ptr<trace_state>(make_trace_state(params));
-    trace_samples(st.get(), scn, view, params.nsamples, params);
+    trace_samples(st.get(), scn, view, bvh, params.nsamples, params);
     return get_trace_image(st.get());
 }
 
 /// Starts an anyncrhounous renderer.
-void trace_async_start(trace_state* st, const scene* scn, const camera* view,
+void trace_async_start(trace_state* st, const scene* scn, const camera* view,const bvh_tree* bvh,
     const trace_params& params);
 
 /// Stop the asynchronous renderer.

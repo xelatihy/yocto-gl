@@ -117,7 +117,7 @@ bool update(app_state* app) {
         pparams.nsamples = 1;
         pparams.ftype = trace_filter_type::box;
         auto preview_state = make_trace_state(pparams);
-        trace_samples(preview_state, app->scn, app->view, 1, pparams);
+        trace_samples(preview_state, app->scn, app->view, app->scn->bvh, 1, pparams);
         resize_image(get_trace_image(preview_state),
             (image4f&)get_trace_image(app->state), resize_filter::box);
         update_texture(app->trace_texture, get_trace_image(app->state));
@@ -125,7 +125,7 @@ bool update(app_state* app) {
 
         app->scene_updated = false;
     } else if (!app->rendering) {
-        trace_async_start(app->state, app->scn, app->view, app->params);
+        trace_async_start(app->state, app->scn, app->view, app->scn->bvh, app->params);
         app->rendering = true;
     }
     return true;
