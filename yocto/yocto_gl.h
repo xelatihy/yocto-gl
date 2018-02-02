@@ -4874,7 +4874,14 @@ struct bvh_tree {
     /// instance inverse frames for instance BVHs
     vector<frame3f> ist_frames_inv;
     /// instance BVHs
-    vector<bvh_tree*> ist_bvhs;
+    vector<int> ist_bvhs;
+    /// shape BVHs
+    vector<bvh_tree*> shape_bvhs;
+    /// whether it owns the memory of the shape BVHs
+    bool own_shape_bvhs = false;
+
+    // cleanup
+    ~bvh_tree();
 };
 
 /// Build a shape BVH from a set of primitives.
@@ -4885,8 +4892,13 @@ bvh_tree* make_bvh(const vector<int>& points, const vector<vec2i>& lines,
 
 /// Build a scene BVH from a set of shape instances.
 bvh_tree* make_bvh(const vector<frame3f>& frames,
-    const vector<frame3f>& frames_inv, const vector<bvh_tree*>& ist_bvhs,
-    bool equal_size);
+    const vector<frame3f>& frames_inv, const vector<int>& ist_bvhs,
+    const vector<bvh_tree*>& shape_bvhs, bool own_shape_bvhs, bool equal_size);
+
+/// Grab the shape BVHs
+inline const vector<bvh_tree*>& get_shape_bvhs(const bvh_tree* bvh) {
+    return bvh->shape_bvhs;
+}
 
 /// Recursively recomputes the node bounds for a shape bvh
 void refit_bvh(bvh_tree* bvh, const vector<vec3f>& pos,
@@ -5094,11 +5106,6 @@ struct shape {
     // computed data --------------------------
     /// element CDF for sampling
     vector<float> elem_cdf;
-    /// BVH
-    bvh_tree* bvh = nullptr;
-
-    // cleanup
-    ~shape();
 };
 
 /// Shape instance.
@@ -5261,10 +5268,6 @@ struct scene {
     /// node animation
     vector<animation*> animations = {};
 
-    // computed data --------------------------
-    /// BVH
-    bvh_tree* bvh = nullptr;
-
     // Cleanup
     ~scene();
 };
@@ -5354,71 +5357,18 @@ void print_info(const scene* scn);
 
 /// Build a shape BVH
 bvh_tree* make_bvh(
-    shape* shp, float def_radius = 0.001f, bool equalsize = true);
+    const shape* shp, float def_radius = 0.001f, bool equalsize = true);
 
-/// Build a scene BVH
-bvh_tree* make_bvh(scene* scn, unordered_map<shape*, bvh_tree*>& shapes_bvh,
-    float def_radius = 0.001f, bool equalsize = true);
-
-/// Refits a scene BVH
-void refit_bvh(bvh_tree* bvh, shape* shp, float def_radius = 0.001f);
+/// Build a scene BVH. Compute shape bvhs if the map is empty.
+bvh_tree* make_bvh(
+    const scene* scn, float def_radius = 0.001f, bool equalsize = true);
 
 /// Refits a scene BVH
-void refit_bvh(bvh_tree* bvh, scene* scn, float def_radius = 0.001f);
+void refit_bvh(bvh_tree* bvh, const shape* shp, float def_radius = 0.001f);
 
-/// Intersect the shape with a ray. Find any interstion if early_exit,
-/// otherwise find first intersection.
-inline bool intersect_ray(const shape* shp, const ray3f& ray, bool early_exit,
-    float& ray_t, int& eid, vec4f& euv) {
-    auto iid = 0;
-    return intersect_bvh(shp->bvh, ray, early_exit, ray_t, iid, eid, euv);
-}
-
-/// Intersect the scene with a ray. Find any interstion if early_exit,
-/// otherwise find first intersection.
-inline bool intersect_ray(const scene* scn, const ray3f& ray, bool early_exit,
-    float& ray_t, int& iid, int& eid, vec4f& euv) {
-    return intersect_bvh(scn->bvh, ray, early_exit, ray_t, iid, eid, euv);
-}
-
-/// Intersect the scene with a ray. Find any interstion if early_exit,
-/// otherwise find first intersection.
-inline intersection_point intersect_ray(
-    const scene* scn, const ray3f& ray, bool early_exit) {
-    auto isec = intersection_point();
-    if (!intersect_ray(
-            scn, ray, early_exit, isec.dist, isec.iid, isec.eid, isec.euv))
-        return {};
-    return isec;
-}
-
-/// Finds the closest element that overlaps a point within a given distance.
-inline bool overlap_point(const shape* shp, const vec3f& pos, float max_dist,
-    bool early_exit, float& dist, int& eid, vec4f& euv) {
-    auto iid = 0;
-    return overlap_bvh(
-        shp->bvh, pos, max_dist, early_exit, dist, iid, eid, euv);
-}
-
-/// Finds the closest element that overlaps a point within a given distance.
-inline bool overlap_point(const scene* scn, const vec3f& pos, float max_dist,
-    bool early_exit, float& dist, int& iid, int& eid, vec4f& euv) {
-    return overlap_bvh(
-        scn->bvh, pos, max_dist, early_exit, dist, iid, eid, euv);
-}
-
-#if 0
-/// Find the list of overlaps between instance bounds.
-inline void overlap_instance_bounds(const scene* scn1, const scene* scn2,
-    bool skip_duplicates, bool skip_self, vector<vec2i>& overlaps) {
-    overlaps.clear();
-    overlap_bvh_elems(scn1->bvh, scn2->bvh, skip_duplicates, skip_self,
-        overlaps, [scn1, scn2](int i1, int i2) {
-            return overlap_bbox(
-                scn1->instances[i1]->bbox, scn2->instances[i2]->bbox);
-        });
-}
-#endif
+/// Refits a scene BVH. Refit shapes if the map is not empty.
+void refit_bvh(
+    bvh_tree* bvh, const scene* scn, bool do_shapes, float def_radius = 0.001f);
 
 /// Add elements options
 struct add_elements_options {
