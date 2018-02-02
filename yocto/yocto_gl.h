@@ -2725,17 +2725,19 @@ using ray3 = ray<T, 3>;
 
 /// 3-dimension float bounding box
 using ray3f = ray3<float>;
-    
+
 /// Construct a ray using a default epsilon
-template<typename T, int N>
-inline ray<T, N> make_ray(const vec<T, N>& o, const vec<T, N>& d, T eps = 1e-4f) {
+template <typename T, int N>
+inline ray<T, N> make_ray(
+    const vec<T, N>& o, const vec<T, N>& d, T eps = 1e-4f) {
     return ray<T, N>{o, d, eps, flt_max};
 }
 
 /// Construct a ray segment using a default epsilon
-template<typename T, int N>
-inline ray<T, N> make_segment(const vec<T, N>& p1, const vec<T, N>& p2, T eps = 1e-4f) {
-    return ray<T, N>{p1, normalize(p2-p1), eps, length(p2-p1) - 2 * eps};
+template <typename T, int N>
+inline ray<T, N> make_segment(
+    const vec<T, N>& p1, const vec<T, N>& p2, T eps = 1e-4f) {
+    return ray<T, N>{p1, normalize(p2 - p1), eps, length(p2 - p1) - 2 * eps};
 }
 
 /// stream write
@@ -5875,37 +5877,67 @@ void save_test_scene(const string& filename, const test_scene_params& scn);
 // PATH TRACING SUPPORT FUNCTION
 // -----------------------------------------------------------------------------
 namespace ygl {
-    
-    /// Phong exponent to roughness. Public API, see above.
-    float specular_exponent_to_roughness(float n);
-    
-    /// Specular to fresnel eta. Public API, see above.
-    void specular_fresnel_from_ks(const vec3f& ks, vec3f& es, vec3f& esk);
-    
-    /// Compute the fresnel term for dielectrics. Implementation from
-    /// https://seblagarde.wordpress.com/2013/04/29/memo-on-fresnel-equations/
-    vec3f fresnel_dielectric(float cosw, const vec3f& eta_);
-    
-    /// Compute the fresnel term for metals. Implementation from
-    /// https://seblagarde.wordpress.com/2013/04/29/memo-on-fresnel-equations/
-    vec3f fresnel_metal(
-                        float cosw, const vec3f& eta, const vec3f& etak);
-    
-    /// Schlick approximation of Fresnel term
-    vec3f fresnel_schlick(const vec3f& ks, float cosw);
-    
-    /// Schlick approximation of Fresnel term weighted by roughness.
-    /// This is a hack, but works better than not doing it.
-    vec3f fresnel_schlick(const vec3f& ks, float cosw, float rs);
-    
-    /// Evaluates the GGX distribution and geometric term
-    float eval_ggx(float rs, float ndh, float ndi, float ndo);
-    
-    /// Sample the GGX distribution
-    vec3f sample_ggx(float rs, const vec2f& rn) ;
 
-    // Evaluates the GGX pdf
-    float sample_ggx_pdf(float rs, float ndh);
+/// Phong exponent to roughness. Public API, see above.
+float specular_exponent_to_roughness(float n);
+
+/// Specular to fresnel eta. Public API, see above.
+void specular_fresnel_from_ks(const vec3f& ks, vec3f& es, vec3f& esk);
+
+/// Compute the fresnel term for dielectrics. Implementation from
+/// https://seblagarde.wordpress.com/2013/04/29/memo-on-fresnel-equations/
+vec3f fresnel_dielectric(float cosw, const vec3f& eta_);
+
+/// Compute the fresnel term for metals. Implementation from
+/// https://seblagarde.wordpress.com/2013/04/29/memo-on-fresnel-equations/
+vec3f fresnel_metal(float cosw, const vec3f& eta, const vec3f& etak);
+
+/// Schlick approximation of Fresnel term
+vec3f fresnel_schlick(const vec3f& ks, float cosw);
+
+/// Schlick approximation of Fresnel term weighted by roughness.
+/// This is a hack, but works better than not doing it.
+vec3f fresnel_schlick(const vec3f& ks, float cosw, float rs);
+
+/// Evaluates the GGX distribution and geometric term
+float eval_ggx(float rs, float ndh, float ndi, float ndo);
+
+/// Sample the GGX distribution
+vec3f sample_ggx(float rs, const vec2f& rn);
+
+/// Evaluates the GGX pdf
+float sample_ggx_pdf(float rs, float ndh);
+
+/// triangle filter (public domain from stb_image_resize)
+inline float filter_triangle(float x) {
+    x = (float)fabs(x);
+    if (x <= 1.0f) return 1 - x;
+    return 0;
+}
+
+/// cubic filter (public domain from stb_image_resize)
+inline float filter_cubic(float x) {
+    x = (float)fabs(x);
+    if (x < 1.0f) return (4 + x * x * (3 * x - 6)) / 6;
+    if (x < 2.0f) return (8 + x * (-12 + x * (6 - x))) / 6;
+    return 0.0f;
+}
+
+/// catmull-rom filter (public domain from stb_image_resize)
+inline float filter_catmullrom(float x) {
+    x = (float)fabs(x);
+    if (x < 1.0f) return 1 - x * x * (2.5f - 1.5f * x);
+    if (x < 2.0f) return 2 - x * (4 + x * (0.5f * x - 2.5f));
+    return 0.0f;
+}
+
+/// mitchell filter (public domain from stb_image_resize)
+inline float filter_mitchell(float x) {
+    x = (float)fabs(x);
+    if (x < 1.0f) return (16 + x * x * (21 * x - 36)) / 18;
+    if (x < 2.0f) return (32 + x * (-60 + x * (36 - 7 * x))) / 18;
+    return 0.0f;
+}
 
 }  // namespace ygl
 
@@ -6032,12 +6064,35 @@ struct trace_params {
 
 // forward declaration
 struct thread_pool;
+struct trace_state;
+
+/// Trace pixel state. Handles image accumulation and random number generation
+/// for uniform and stratified sequences.
+struct trace_sampler {
+    rng_pcg32& rng;        // random number state
+    uint32_t pixel_hash;   // pixel hash
+    int s, d;              // sample and dimension indices
+    int ns, ns2;           // number of samples and its square root
+    trace_rng_type rtype;  // random number type
+};
+
+/// Trace shader function
+using trace_shader = vec3f (*)(trace_state* st, const ray3f& ray,
+    trace_sampler& smp, const trace_params& params, bool& hit);
+
+/// Trace filter function
+using trace_filter = float (*)(float);
 
 /// Trace state. Members are not part of the public API.
 struct trace_state {
     const scene* scn = nullptr;     // scene
     const camera* view = nullptr;   // view
     const bvh_tree* bvh = nullptr;  // bvh
+
+    const camera* cam = nullptr;    // current camera
+    trace_shader shader = nullptr;  // current trace shader
+    trace_filter filter = nullptr;  // current trace filter
+    int filter_size = 0;            // current filter size
 
     image4f img;                  // rendered image
     vector<vec4i> blocks;         // image blocks

@@ -47,7 +47,7 @@ struct app_state {
         if (state) delete state;
         if (scn) delete scn;
         if (view) delete view;
-        if(bvh) delete bvh;
+        if (bvh) delete bvh;
     }
 };
 

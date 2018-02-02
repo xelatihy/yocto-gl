@@ -118,7 +118,8 @@ bool update(app_state* app) {
         pparams.height = app->params.height / app->params.block_size;
         pparams.nsamples = 1;
         pparams.ftype = trace_filter_type::box;
-        auto preview_state = make_trace_state(app->scn, app->view, app->bvh, pparams);
+        auto preview_state =
+            make_trace_state(app->scn, app->view, app->bvh, pparams);
         trace_samples(preview_state, 1, pparams);
         resize_image(get_trace_image(preview_state),
             (image4f&)get_trace_image(app->state), resize_filter::box);
