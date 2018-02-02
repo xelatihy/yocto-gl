@@ -79,6 +79,7 @@
 // ## General
 //
 // - remove python operators
+// - move trace sharable code outside
 // - remove all internal namespaces
 //    - trace: better names
 //
@@ -14889,7 +14890,7 @@ inline bool draw_add_elem_widgets(gl_window* win, scene* scn, const string& lbl,
     return false;
 }
 
-inline bool draw_scene_widgets(gl_window* win, const string& lbl, scene* scn,
+bool draw_scene_widgets(gl_window* win, const string& lbl, scene* scn,
     void*& selection, const unordered_map<texture*, gl_texture>& gl_txt,
     test_scene_params* test_scn) {
     static auto test_scn_def = test_scene_params();
