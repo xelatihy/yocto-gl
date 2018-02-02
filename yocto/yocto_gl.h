@@ -7668,6 +7668,14 @@ inline void split_path(
     ext = path_extension(filename);
 }
 
+/// Convert from Windows to Unix/OsX path separator
+inline string path_convert_eparator(const string& path_) {
+    auto path = path_;
+    for (auto& c : path)
+        if (c == '\\') c = '/';
+    return path;
+}
+
 /// Really-minimal Python like string format. The implementation is not fast
 /// nor memory efficient. But it is good enough for some needs.
 inline string format(const string& fmt, const vector<string>& args) {
