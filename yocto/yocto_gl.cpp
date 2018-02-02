@@ -78,6 +78,7 @@
 //
 // ## Infrastructure
 //
+// - vec: min_element/min_element_index
 // - remove default environment
 // - animation
 //    - obj with nodes
@@ -2662,12 +2663,6 @@ inline obj_scene* load_obj(const string& filename, bool load_txt,
             parse_val(ss, env->matname);
             parse_val(ss, env->frame);
             asset->environments.push_back(env);
-        } else if (cmd == "i") {
-            auto ist = new obj_instance();
-            parse_val(ss, ist->name);
-            parse_val(ss, ist->objname);
-            parse_val(ss, ist->frame);
-            asset->instances.push_back(ist);
         } else if (cmd == "n") {
             auto nde = new obj_node();
             parse_val(ss, nde->name);
@@ -2920,17 +2915,6 @@ inline void save_obj(const string& filename, const obj_scene* asset,
         dump_val(fs, env->matname);
         dump_val(fs, " ");
         dump_val(fs, env->frame);
-        dump_val(fs, "\n");
-    }
-
-    // save instances
-    for (auto ist : asset->instances) {
-        dump_val(fs, "i ");
-        dump_val(fs, ist->name);
-        dump_val(fs, " ");
-        dump_val(fs, ist->objname);
-        dump_val(fs, " ");
-        dump_val(fs, ist->frame);
         dump_val(fs, "\n");
     }
 
@@ -5691,6 +5675,7 @@ inline scene* obj_to_scene(const obj_scene* obj, const load_options& opts) {
     }
 
     // convert cameras
+    auto cmap = unordered_map<string, camera*>{{"", nullptr}};
     for (auto ocam : obj->cameras) {
         auto cam = new camera();
         cam->name = ocam->name;
@@ -5701,10 +5686,12 @@ inline scene* obj_to_scene(const obj_scene* obj, const load_options& opts) {
         cam->focus = ocam->focus;
         cam->frame = ocam->frame;
         scn->cameras.push_back(cam);
+        cmap[cam->name] = cam;
     }
 
     // convert envs
     unordered_set<material*> env_mat;
+    auto emap = unordered_map<string, environment*>{{"", nullptr}};
     for (auto oenv : obj->environments) {
         auto env = new environment();
         env->name = oenv->name;
@@ -5717,6 +5704,7 @@ inline scene* obj_to_scene(const obj_scene* obj, const load_options& opts) {
         }
         env->frame = oenv->frame;
         scn->environments.push_back(env);
+        emap[env->name] = env;
     }
 
     // remove env materials
@@ -5728,15 +5716,55 @@ inline scene* obj_to_scene(const obj_scene* obj, const load_options& opts) {
         delete mat;
     }
 
-    // convert instances
-    for (auto oist : obj->instances) {
-        for (auto shp : omap[oist->objname]) {
-            auto ist = new instance();
-            ist->name = oist->name;
-            ist->shp = shp;
-            ist->frame = oist->frame;
-            scn->instances.push_back(ist);
+    if (obj->nodes.empty()) {
+        // instance cameras
+        // instance environments
+    } else {
+        // convert nodes
+        for (auto onde : obj->nodes) {
+            auto nde = new node();
+            nde->name = onde->name;
+            nde->cam = cmap.at(onde->camname);
+            if (!onde->objname.empty()) {
+                for (auto shp : omap.at(onde->objname)) {
+                    auto ist = new instance();
+                    ist->name = onde->name;
+                    ist->shp = shp;
+                    nde->ists.push_back(ist);
+                    scn->instances.push_back(ist);
+                }
+            }
+            nde->env = emap.at(onde->envname);
+            nde->translation = onde->translation;
+            nde->rotation = onde->rotation;
+            nde->scaling = onde->scaling;
+            nde->frame = onde->frame;
+            scn->nodes.push_back(nde);
         }
+
+        // set up parent pointers
+        for (auto nid = 0; nid < obj->nodes.size(); nid++) {
+            auto onde = obj->nodes[nid];
+            if(onde->parent.empty()) continue;
+            auto nde = scn->nodes[nid];
+            for (auto parent : scn->nodes) {
+                if (parent->name == onde->parent) {
+                    nde->parent = parent;
+                    break;
+                }
+            }
+        }
+    }
+    
+    // update transforms
+    update_transforms(scn);
+    
+    // remove hierarchy if necessary
+    if (!opts.preserve_hierarchy) {
+        for (auto nde : scn->nodes) delete nde;
+        scn->nodes.clear();
+        for (auto anm : scn->animations) delete anm;
+        scn->animations.clear();
     }
 
     // done
@@ -5847,6 +5875,7 @@ inline obj_scene* scene_to_obj(const scene* scn) {
     }
 
     // convert shapes
+    auto shapes = unordered_map<shape*, unique_ptr<obj_group>>();
     for (auto shp : scn->shapes) {
         auto offset = obj_vertex{(int)obj->pos.size(),
             (int)obj->texcoord.size(), (int)obj->norm.size(),
@@ -5856,10 +5885,8 @@ inline obj_scene* scene_to_obj(const scene* scn) {
         for (auto& v : shp->texcoord) obj->texcoord.push_back({v.x, v.y});
         for (auto& v : shp->color) obj->color.push_back({v.x, v.y, v.z, v.w});
         for (auto& v : shp->radius) obj->radius.push_back(v);
-        auto object = new obj_object();
-        object->name = shp->name;
-        object->groups.emplace_back();
-        auto group = &object->groups.back();
+        auto group = new obj_group();
+        group->groupname = shp->name;
         group->matname = (shp->mat) ? shp->mat->name : "";
         group->subdivision_level = shp->subdivision_level;
         group->subdivision_catmullclark = shp->subdivision_catmullclark;
@@ -5962,7 +5989,7 @@ inline obj_scene* scene_to_obj(const scene* scn) {
                 group->verts.push_back(vert);
             }
         }
-        obj->objects.emplace_back(object);
+        shapes[shp] = unique_ptr<obj_group>(group);
     }
 
     // convert cameras
@@ -5992,15 +6019,61 @@ inline obj_scene* scene_to_obj(const scene* scn) {
         obj->environments.push_back(oenv);
     }
 
-    // convert instances
-    for (auto ist : scn->instances) {
-        auto oist = new obj_instance();
-        oist->name = ist->name;
-        oist->objname = (ist->shp) ? ist->shp->name : "<undefined>";
-        oist->frame = ist->frame;
-        obj->instances.emplace_back(oist);
-    }
+    // convert hierarchy
+    if (obj->nodes.empty()) {
+        // meshes
+        for (auto shp : scn->shapes) {
+            auto omsh = new obj_object();
+            omsh->name = shp->name;
+            omsh->groups.push_back(*shapes.at(shp));
+            obj->objects.push_back(omsh);
+        }
 
+        // instances
+        for (auto ist : scn->instances) {
+            auto onde = new obj_node();
+            onde->name = ist->name;
+            onde->objname = (ist->shp) ? ist->shp->name : "<undefined>";
+            onde->frame = ist->frame;
+            obj->nodes.emplace_back(onde);
+        }
+    } else {
+        // meshes
+        auto meshes = map<vector<instance*>, obj_object*>();
+        for (auto nde : scn->nodes) {
+            if (nde->ists.empty()) continue;
+            if (contains(meshes, nde->ists)) continue;
+            auto omsh = new obj_object();
+            omsh->name = nde->ists.front()->name;
+            for (auto ist : nde->ists)
+                omsh->groups.push_back(*shapes.at(ist->shp));
+            meshes[nde->ists] = omsh;
+            obj->objects.push_back(omsh);
+        }
+
+        // nodes
+        for (auto nde : scn->nodes) {
+            auto onde = new obj_node();
+            onde->name = nde->name;
+            if (nde->cam) onde->camname = nde->cam->name;
+            if (!nde->ists.empty()) onde->objname = meshes.at(nde->ists)->name;
+            if (nde->env) onde->envname = nde->env->name;
+            onde->frame = to_mat(nde->frame);
+            onde->translation = nde->translation;
+            onde->rotation = nde->rotation;
+            onde->scaling = nde->scaling;
+            obj->nodes.push_back(onde);
+        }
+
+        // parent
+        for (auto idx = 0; idx < scn->nodes.size(); idx++) {
+            auto nde = scn->nodes.at(idx);
+            if (!nde->parent) continue;
+            auto onde = obj->nodes.at(idx);
+            onde->parent = nde->parent->name;
+        }
+    }
+    
     return obj;
 }
 
@@ -6705,7 +6778,7 @@ inline glTF* scene_to_gltf(
     };
 
     // convert meshes
-    auto shapes = unordered_map<shape*, glTFMeshPrimitive*>();
+    auto shapes = unordered_map<shape*, unique_ptr<glTFMeshPrimitive>>();
     for (auto shp : scn->shapes) {
         auto gbuffer = add_opt_buffer(shp->path);
         auto gprim = new glTFMeshPrimitive();
@@ -6775,7 +6848,7 @@ inline glTF* scene_to_gltf(
         } else {
             throw runtime_error("empty mesh");
         }
-        shapes[shp] = gprim;
+        shapes[shp] = unique_ptr<glTFMeshPrimitive>(gprim);
     }
 
     // hierarchy
@@ -6784,7 +6857,7 @@ inline glTF* scene_to_gltf(
         for (auto shp : scn->shapes) {
             auto gmsh = new glTFMesh();
             gmsh->name = shp->name;
-            gmsh->primitives.push_back(shapes.at(shp));
+            gmsh->primitives.push_back(new glTFMeshPrimitive(*shapes.at(shp)));
             gltf->meshes.push_back(gmsh);
         }
 
@@ -6825,7 +6898,7 @@ inline glTF* scene_to_gltf(
             auto gmsh = new glTFMesh();
             gmsh->name = nde->ists.front()->name;
             for (auto ist : nde->ists)
-                gmsh->primitives.push_back(shapes.at(ist->shp));
+                gmsh->primitives.push_back(new glTFMeshPrimitive(*shapes.at(ist->shp)));
             meshes[nde->ists] = (int)gltf->meshes.size();
             gltf->meshes.push_back(gmsh);
         }
