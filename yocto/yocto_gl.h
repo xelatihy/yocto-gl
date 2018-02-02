@@ -4197,120 +4197,44 @@ vector<T> facet_vert(const vector<T>& vert, const vector<int>& vmap);
 namespace ygl {
 
 /// Pick a point
-inline int sample_points(int npoints, float re) {
-    return clamp(0, npoints - 1, (int)(re * npoints));
-}
+int sample_points(int npoints, float re);
 
 /// Compute a distribution for sampling points uniformly
-inline vector<float> sample_points_cdf(int npoints) {
-    auto cdf = vector<float>(npoints);
-    for (auto i = 0; i < npoints; i++) cdf[i] = i + 1;
-    return cdf;
-}
+vector<float> sample_points_cdf(int npoints);
 
 /// Pick a point
-inline int sample_points(const vector<float>& cdf, float re) {
-    re = clamp(re * cdf.back(), 0.0f, cdf.back() - 0.00001f);
-    return (int)(std::upper_bound(cdf.begin(), cdf.end(), re) - cdf.begin());
-}
+int sample_points(const vector<float>& cdf, float re);
 
 /// Compute a distribution for sampling lines uniformly
-inline vector<float> sample_lines_cdf(
-    const vector<vec2i>& lines, const vector<vec3f>& pos) {
-    auto cdf = vector<float>(lines.size());
-    for (auto i = 0; i < lines.size(); i++)
-        cdf[i] = length(pos[lines[i].x] - pos[lines[i].y]);
-    for (auto i = 1; i < lines.size(); i++) cdf[i] += cdf[i - 1];
-    return cdf;
-}
+vector<float> sample_lines_cdf(
+    const vector<vec2i>& lines, const vector<vec3f>& pos);
 
 /// Pick a point on lines
-inline pair<int, vec2f> sample_lines(
-    const vector<float>& cdf, float re, float ruv) {
-    re = clamp(re * cdf.back(), 0.0f, cdf.back() - 0.00001f);
-    auto eid =
-        (int)(std::upper_bound(cdf.begin(), cdf.end(), re) - cdf.begin());
-    return {eid, {1 - ruv, ruv}};
-}
+pair<int, vec2f> sample_lines(const vector<float>& cdf, float re, float ruv);
 
 /// Compute a distribution for sampling triangle meshes uniformly
-inline vector<float> sample_triangles_cdf(
-    const vector<vec3i>& triangles, const vector<vec3f>& pos) {
-    auto cdf = vector<float>(triangles.size());
-    for (auto i = 0; i < triangles.size(); i++)
-        cdf[i] = triangle_area(
-            pos[triangles[i].x], pos[triangles[i].y], pos[triangles[i].z]);
-    for (auto i = 1; i < triangles.size(); i++) cdf[i] += cdf[i - 1];
-    return cdf;
-}
+vector<float> sample_triangles_cdf(
+    const vector<vec3i>& triangles, const vector<vec3f>& pos);
 
 /// Pick a point on a triangle mesh
-inline pair<int, vec3f> sample_triangles(
-    const vector<float>& cdf, float re, const vec2f& ruv) {
-    re = clamp(re * cdf.back(), 0.0f, cdf.back() - 0.00001f);
-    auto eid =
-        (int)(std::upper_bound(cdf.begin(), cdf.end(), re) - cdf.begin());
-    return {
-        eid, {sqrt(ruv.x) * (1 - ruv.y), 1 - sqrt(ruv.x), ruv.y * sqrt(ruv.x)}};
-}
+pair<int, vec3f> sample_triangles(
+    const vector<float>& cdf, float re, const vec2f& ruv);
 
 /// Compute a distribution for sampling quad meshes uniformly
-inline vector<float> sample_quads_cdf(
-    const vector<vec4i>& quads, const vector<vec3f>& pos) {
-    auto cdf = vector<float>(quads.size());
-    for (auto i = 0; i < quads.size(); i++)
-        cdf[i] = quad_area(
-            pos[quads[i].x], pos[quads[i].y], pos[quads[i].z], pos[quads[i].w]);
-    for (auto i = 1; i < quads.size(); i++) cdf[i] += cdf[i - 1];
-    return cdf;
-}
+vector<float> sample_quads_cdf(
+    const vector<vec4i>& quads, const vector<vec3f>& pos);
 
 /// Pick a point on a quad mesh
-inline pair<int, vec4f> sample_quads(
-    const vector<float>& cdf, float re, const vec2f& ruv) {
-    if (ruv.x < 0.5f) {
-        auto eid = 0;
-        auto euv = zero3f;
-        std::tie(eid, euv) = sample_triangles(cdf, re, {ruv.x * 2, ruv.y});
-        return {eid, {euv.x, euv.y, 0, euv.z}};
-    } else {
-        auto eid = 0;
-        auto euv = zero3f;
-        std::tie(eid, euv) =
-            sample_triangles(cdf, re, {(ruv.x - 0.5f) * 2, ruv.y});
-        return {eid, {0, euv.z, euv.x, euv.y}};
-    }
-}
+pair<int, vec4f> sample_quads(
+    const vector<float>& cdf, float re, const vec2f& ruv);
 
 /// Samples a set of points over a triangle mesh uniformly. The rng function
 /// takes the point index and returns vec3f numbers uniform directibuted in
 /// [0,1]^3. unorm and texcoord are optional.
-inline tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>>
-sample_triangles_points(const vector<vec3i>& triangles,
-    const vector<vec3f>& pos, const vector<vec3f>& norm,
-    const vector<vec2f>& texcoord, int npoints, uint64_t seed = 0) {
-    auto sampled_pos = vector<vec3f>(npoints);
-    auto sampled_norm = vector<vec3f>(norm.empty() ? 0 : npoints);
-    auto sampled_texcoord = vector<vec2f>(texcoord.empty() ? 0 : npoints);
-    auto cdf = sample_triangles_cdf(triangles, pos);
-    auto rng = init_rng(seed);
-    for (auto i = 0; i < npoints; i++) {
-        auto eid = 0;
-        auto euv = zero3f;
-        std::tie(eid, euv) = sample_triangles(
-            cdf, next_rand1f(rng), {next_rand1f(rng), next_rand1f(rng)});
-        auto t = triangles[eid];
-        sampled_pos[i] = pos[t.x] * euv.x + pos[t.y] * euv.y + pos[t.z] * euv.z;
-        if (!sampled_norm.empty())
-            sampled_norm[i] = normalize(
-                norm[t.x] * euv.x + norm[t.y] * euv.y + norm[t.z] * euv.z);
-        if (!sampled_texcoord.empty())
-            sampled_texcoord[i] = texcoord[t.x] * euv.x +
-                                  texcoord[t.y] * euv.y + texcoord[t.z] * euv.z;
-    }
-
-    return {sampled_pos, sampled_norm, sampled_texcoord};
-}
+tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>> sample_triangles_points(
+    const vector<vec3i>& triangles, const vector<vec3f>& pos,
+    const vector<vec3f>& norm, const vector<vec2f>& texcoord, int npoints,
+    uint64_t seed = 0);
 
 }  // namespace ygl
 
