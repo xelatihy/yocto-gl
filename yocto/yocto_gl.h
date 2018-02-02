@@ -5981,10 +5981,10 @@ struct thread_pool;
 
 /// Trace state. Members are not part of the public API.
 struct trace_state {
-    const scene* scn = nullptr;   // scene
-    const camera* view = nullptr; // view
-    const bvh_tree* bvh = nullptr;// bvh
-    
+    const scene* scn = nullptr;     // scene
+    const camera* view = nullptr;   // view
+    const bvh_tree* bvh = nullptr;  // bvh
+
     image4f img;                  // rendered image
     vector<vec4i> blocks;         // image blocks
     vector<rng_pcg32> rngs;       // random number generators
@@ -5995,8 +5995,8 @@ struct trace_state {
 
 /// Initialize a rendering state
 trace_state* make_trace_state(const scene* scn, const camera* view,
-                              const bvh_tree* bvh, const trace_params& params);
-    
+    const bvh_tree* bvh, const trace_params& params);
+
 /// Gets the computed trace image
 inline const image4f& get_trace_image(const trace_state* st) { return st->img; }
 
