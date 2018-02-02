@@ -5066,10 +5066,8 @@ struct shape {
     /// bounding box (needs to be updated explicitly)
     bbox3f bbox = invalid_bbox3f;
 
-    // clean
-    ~shape() {
-        if (bvh) delete bvh;
-    }
+    // cleanup
+    ~shape();
 };
 
 /// Shape instance.
@@ -5212,10 +5210,8 @@ struct animation {
     /// Binds keyframe values to nodes.
     vector<pair<keyframe*, node*>> targets;
 
-    /// Cleanup
-    animation() {
-        for (auto v : keyframes) delete v;
-    }
+    // Cleanup
+    ~animation();
 };
 
 /// Scene
@@ -5247,136 +5243,28 @@ struct scene {
     /// bounding box (needs to be updated explicitly)
     bbox3f bbox = invalid_bbox3f;
 
-    /// cleanup
-    ~scene() {
-        for (auto v : shapes)
-            if (v) delete v;
-        for (auto v : instances)
-            if (v) delete v;
-        for (auto v : materials)
-            if (v) delete v;
-        for (auto v : textures)
-            if (v) delete v;
-        for (auto v : cameras)
-            if (v) delete v;
-        for (auto v : environments)
-            if (v) delete v;
-        for (auto v : lights)
-            if (v) delete v;
-        for (auto v : nodes)
-            if (v) delete v;
-        for (auto v : animations)
-            if (v) delete v;
-        if (bvh) delete bvh;
-    }
+    // Cleanup
+    ~scene();
 };
 
-/// Shape value interpolated using barycentric coordinates
-template <typename T>
-inline T eval_barycentric(
-    const shape* shp, const vector<T>& vals, int eid, const vec4f& euv) {
-    if (vals.empty()) return T();
-    if (!shp->triangles.empty()) {
-        return eval_barycentric_triangle(
-            vals, shp->triangles[eid], vec3f{euv.x, euv.y, euv.z});
-    } else if (!shp->lines.empty()) {
-        return eval_barycentric_line(
-            vals, shp->lines[eid], vec2f{euv.x, euv.y});
-    } else if (!shp->points.empty()) {
-        return eval_barycentric_point(vals, shp->points[eid], euv.x);
-    } else if (!shp->quads.empty()) {
-        return eval_barycentric_quad(vals, shp->quads[eid], euv);
-    } else {
-        return vals[eid];  // points
-    }
-}
-
 /// Shape position interpolated using barycentric coordinates
-inline vec3f eval_pos(const shape* shp, int eid, const vec4f& euv) {
-    return eval_barycentric(shp, shp->pos, eid, euv);
-}
-
+vec3f eval_pos(const shape* shp, int eid, const vec4f& euv);
 /// Shape normal interpolated using barycentric coordinates
-inline vec3f eval_norm(const shape* shp, int eid, const vec4f& euv) {
-    return normalize(eval_barycentric(shp, shp->norm, eid, euv));
-}
-
+vec3f eval_norm(const shape* shp, int eid, const vec4f& euv);
 /// Shape texcoord interpolated using barycentric coordinates
-inline vec2f eval_texcoord(const shape* shp, int eid, const vec4f& euv) {
-    return eval_barycentric(shp, shp->texcoord, eid, euv);
-}
-
+vec2f eval_texcoord(const shape* shp, int eid, const vec4f& euv);
 /// Shape texcoord interpolated using barycentric coordinates
-inline vec4f eval_color(const shape* shp, int eid, const vec4f& euv) {
-    return eval_barycentric(shp, shp->color, eid, euv);
-}
-
+vec4f eval_color(const shape* shp, int eid, const vec4f& euv);
 /// Shape tangent space interpolated using barycentric coordinates
-inline vec4f eval_tangsp(const shape* shp, int eid, const vec4f& euv) {
-    return eval_barycentric(shp, shp->tangsp, eid, euv);
-}
-
+vec4f eval_tangsp(const shape* shp, int eid, const vec4f& euv);
 /// Instance position interpolated using barycentric coordinates
-inline vec3f eval_pos(const instance* ist, int eid, const vec4f& euv) {
-    return transform_point(
-        ist->frame, eval_barycentric(ist->shp, ist->shp->pos, eid, euv));
-}
-
+vec3f eval_pos(const instance* ist, int eid, const vec4f& euv);
 /// Instance normal interpolated using barycentric coordinates
-inline vec3f eval_norm(const instance* ist, int eid, const vec4f& euv) {
-    return transform_direction(ist->frame,
-        normalize(eval_barycentric(ist->shp, ist->shp->norm, eid, euv)));
-}
+vec3f eval_norm(const instance* ist, int eid, const vec4f& euv);
 
 /// Evaluate a texture
-inline vec4f eval_texture(const texture_info& info, const vec2f& texcoord,
-    bool srgb = true, const vec4f& def = {1, 1, 1, 1}) {
-    if (!info.txt) return def;
-
-    // get texture
-    auto txt = info.txt;
-    assert(txt->hdr || txt->ldr);
-
-    auto lookup = [&def, &txt, &srgb](int i, int j) {
-        if (txt->ldr)
-            return (srgb) ? srgb_to_linear(txt->ldr[{i, j}]) :
-                            byte_to_float(txt->ldr[{i, j}]);
-        else if (txt->hdr)
-            return txt->hdr[{i, j}];
-        else
-            return def;
-    };
-
-    // get image width/height
-    auto w = txt->width(), h = txt->height();
-
-    // get coordinates normalized for tiling
-    auto s = 0.0f, t = 0.0f;
-    if (!info.wrap_s) {
-        s = clamp(texcoord.x, 0.0f, 1.0f) * w;
-    } else {
-        s = std::fmod(texcoord.x, 1.0f) * w;
-        if (s < 0) s += w;
-    }
-    if (!info.wrap_t) {
-        t = clamp(texcoord.y, 0.0f, 1.0f) * h;
-    } else {
-        t = std::fmod(texcoord.y, 1.0f) * h;
-        if (t < 0) t += h;
-    }
-
-    // get image coordinates and residuals
-    auto i = clamp((int)s, 0, w - 1), j = clamp((int)t, 0, h - 1);
-    auto ii = (i + 1) % w, jj = (j + 1) % h;
-    auto u = s - i, v = t - j;
-
-    // nearest lookup
-    if (!info.linear) return lookup(i, j);
-
-    // handle interpolation
-    return lookup(i, j) * (1 - u) * (1 - v) + lookup(i, jj) * (1 - u) * v +
-           lookup(ii, j) * u * (1 - v) + lookup(ii, jj) * u * v;
-}
+vec4f eval_texture(const texture_info& info, const vec2f& texcoord,
+    bool srgb = true, const vec4f& def = {1, 1, 1, 1});
 
 /// Finds an element by name
 template <typename T>
@@ -5400,194 +5288,163 @@ inline T* add_named_elem(vector<T*>& elems, const string& name) {
 
 /// Subdivides shape elements. Apply subdivision surface rules if subdivide
 /// is true.
-inline void subdivide_shape_once(shape* shp, bool subdiv = false) {
-    if (!shp->lines.empty() || !shp->triangles.empty() || !shp->quads.empty()) {
-        vector<vec2i> edges;
-        vector<vec4i> faces;
-        tie(shp->lines, shp->triangles, shp->quads, edges, faces) =
-            subdivide_elems_linear(
-                shp->lines, shp->triangles, shp->quads, (int)shp->pos.size());
-        shp->pos = subdivide_vert_linear(shp->pos, edges, faces);
-        shp->norm = subdivide_vert_linear(shp->norm, edges, faces);
-        shp->texcoord = subdivide_vert_linear(shp->texcoord, edges, faces);
-        shp->color = subdivide_vert_linear(shp->color, edges, faces);
-        shp->radius = subdivide_vert_linear(shp->radius, edges, faces);
-        if (subdiv && !shp->quads.empty()) {
-            auto boundary = get_boundary_edges({}, {}, shp->quads);
-            shp->pos =
-                subdivide_vert_catmullclark(shp->quads, shp->pos, boundary, {});
-            shp->norm = subdivide_vert_catmullclark(
-                shp->quads, shp->norm, boundary, {});
-            shp->texcoord = subdivide_vert_catmullclark(
-                shp->quads, shp->texcoord, boundary, {});
-            shp->color = subdivide_vert_catmullclark(
-                shp->quads, shp->color, boundary, {});
-            shp->radius = subdivide_vert_catmullclark(
-                shp->quads, shp->radius, boundary, {});
-            shp->norm = compute_normals({}, {}, shp->quads, shp->pos);
-        }
-    } else if (!shp->quads_pos.empty()) {
-        vector<vec2i> _lines;
-        vector<vec3i> _triangles;
-        vector<vec2i> edges;
-        vector<vec4i> faces;
-        tie(_lines, _triangles, shp->quads_pos, edges, faces) =
-            subdivide_elems_linear({}, {}, shp->quads_pos, shp->pos.size());
-        shp->pos = subdivide_vert_linear(shp->pos, edges, faces);
-        tie(_lines, _triangles, shp->quads_norm, edges, faces) =
-            subdivide_elems_linear({}, {}, shp->quads_norm, shp->norm.size());
-        shp->norm = subdivide_vert_linear(shp->norm, edges, faces);
-        tie(_lines, _triangles, shp->quads_texcoord, edges, faces) =
-            subdivide_elems_linear(
-                {}, {}, shp->quads_texcoord, shp->texcoord.size());
-        shp->texcoord = subdivide_vert_linear(shp->texcoord, edges, faces);
-        if (subdiv) {
-            shp->pos = subdivide_vert_catmullclark(shp->quads_pos, shp->pos,
-                get_boundary_edges({}, {}, shp->quads_pos), {});
-            shp->norm = subdivide_vert_catmullclark(shp->quads_norm, shp->norm,
-                get_boundary_edges({}, {}, shp->quads_norm), {});
-            shp->texcoord =
-                subdivide_vert_catmullclark(shp->quads_texcoord, shp->texcoord,
-                    {}, get_boundary_verts({}, {}, shp->quads_texcoord));
-        }
-    } else if (!shp->beziers.empty()) {
-        vector<int> verts;
-        vector<vec4i> segments;
-        tie(shp->beziers, verts, segments) =
-            subdivide_bezier_recursive(shp->beziers, (int)shp->pos.size());
-        shp->pos = subdivide_vert_bezier(shp->pos, verts, segments);
-        shp->norm = subdivide_vert_bezier(shp->norm, verts, segments);
-        shp->texcoord = subdivide_vert_bezier(shp->texcoord, verts, segments);
-        shp->color = subdivide_vert_bezier(shp->color, verts, segments);
-        shp->radius = subdivide_vert_bezier(shp->radius, verts, segments);
-    }
-}
+void subdivide_shape_once(shape* shp, bool subdiv = false);
 
 /// Facet a shape. Supports only non-facevarying shapes
-inline void facet_shape(shape* shp, bool recompute_normals = true) {
-    if (!shp->lines.empty() || !shp->triangles.empty() || !shp->quads.empty()) {
-        vector<int> verts;
-        tie(shp->lines, shp->triangles, shp->quads, verts) =
-            facet_elems(shp->lines, shp->triangles, shp->quads);
-        shp->pos = facet_vert(shp->pos, verts);
-        shp->norm = facet_vert(shp->norm, verts);
-        shp->texcoord = facet_vert(shp->texcoord, verts);
-        shp->color = facet_vert(shp->color, verts);
-        shp->radius = facet_vert(shp->radius, verts);
-        if (recompute_normals) {
-            shp->norm = compute_normals(
-                shp->lines, shp->triangles, shp->quads, shp->pos);
-        }
-    }
-}
+void facet_shape(shape* shp, bool recompute_normals = true);
 
 /// Tesselate a shape into basic primitives
-inline void tesselate_shape(shape* shp, bool subdivide,
+void tesselate_shape(shape* shp, bool subdivide,
     bool facevarying_to_sharedvertex, bool quads_to_triangles,
-    bool bezier_to_lines) {
-    if (subdivide && shp->subdivision_level) {
-        for (auto l = 0; l < shp->subdivision_level; l++) {
-            subdivide_shape_once(shp, shp->subdivision_catmullclark);
-        }
-    }
-    if (facevarying_to_sharedvertex && !shp->quads_pos.empty()) {
-        std::tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
-            convert_face_varying(shp->quads_pos, shp->quads_norm,
-                shp->quads_texcoord, shp->pos, shp->norm, shp->texcoord);
-        shp->quads_pos = {};
-        shp->quads_norm = {};
-        shp->quads_texcoord = {};
-    }
-    if (quads_to_triangles && !shp->quads.empty()) {
-        shp->triangles = convert_quads_to_triangles(shp->quads);
-        shp->quads = {};
-    }
-    if (bezier_to_lines && !shp->beziers.empty()) {
-        shp->lines = convert_bezier_to_lines(shp->beziers);
-        shp->beziers = {};
-    }
-}
+    bool bezier_to_lines);
 
 /// Tesselate scene shapes and update pointers
-inline void tesselate_shapes(scene* scn, bool subdivide,
+void tesselate_shapes(scene* scn, bool subdivide,
     bool facevarying_to_sharedvertex, bool quads_to_triangles,
-    bool bezier_to_lines) {
-    for (auto shp : scn->shapes) {
-        tesselate_shape(shp, subdivide, facevarying_to_sharedvertex,
-            quads_to_triangles, bezier_to_lines);
-    }
-}
-
-/// Update animation transforms
-inline void update_transforms(animation* anm, float time) {
-    auto interpolate = [](keyframe_type type, const vector<float>& times,
-                           const auto& vals, float time) {
-        switch (type) {
-            case keyframe_type::step:
-                return eval_keyframed_step(times, vals, time);
-            case keyframe_type::linear:
-                return eval_keyframed_linear(times, vals, time);
-            case keyframe_type::catmull_rom: return vals.at(0);
-            case keyframe_type::bezier:
-                return eval_keyframed_bezier(times, vals, time);
-            default: throw runtime_error("should not have been here");
-        }
-        return vals.at(0);
-    };
-
-    for (auto kfr : anm->keyframes) {
-        if (!kfr->translation.empty()) {
-            auto val =
-                interpolate(kfr->type, kfr->times, kfr->translation, time);
-            for (auto target : anm->targets)
-                if (target.first == kfr) target.second->translation = val;
-        }
-        if (!kfr->rotation.empty()) {
-            auto val = interpolate(kfr->type, kfr->times, kfr->rotation, time);
-            for (auto target : anm->targets)
-                if (target.first == kfr) target.second->rotation = val;
-        }
-        if (!kfr->scaling.empty()) {
-            auto val = interpolate(kfr->type, kfr->times, kfr->scaling, time);
-            for (auto target : anm->targets)
-                if (target.first == kfr) target.second->scaling = val;
-        }
-    }
-}
+    bool bezier_to_lines);
 
 /// Update node transforms
-inline void update_transforms(
-    node* nde, const frame3f& parent = identity_frame3f) {
-    auto frame = parent * nde->frame * translation_frame3(nde->translation) *
-                 rotation_frame3(nde->rotation) * scaling_frame3(nde->scaling);
-    for (auto ist : nde->ists) ist->frame = frame;
-    if (nde->cam) nde->cam->frame = frame;
-    if (nde->env) nde->env->frame = frame;
-    for (auto child : nde->children_) update_transforms(child, frame);
-}
-
-/// Update node transforms
-inline void update_transforms(scene* scn, float time = 0) {
-    for (auto agr : scn->animations) update_transforms(agr, time);
-    for (auto nde : scn->nodes) nde->children_.clear();
-    for (auto nde : scn->nodes)
-        if (nde->parent) nde->parent->children_.push_back(nde);
-    for (auto nde : scn->nodes)
-        if (!nde->parent) update_transforms(nde);
-}
+void update_transforms(scene* scn, float time = 0);
 
 /// Compute animation range
-inline vec2f compute_animation_range(const scene* scn) {
-    if (scn->animations.empty()) return zero2f;
-    auto range = vec2f{+flt_max, -flt_max};
-    for (auto anm : scn->animations) {
-        for (auto kfr : anm->keyframes) {
-            range.x = min(range.x, kfr->times.front());
-            range.y = max(range.y, kfr->times.back());
-        }
-    }
-    return range;
+vec2f compute_animation_range(const scene* scn);
+
+/// Make a view camera either copying a given one or building a default one.
+/// Bounding boxes for the scene will be updated.
+camera* make_view_camera(scene* scn, int camera_id);
+
+/// Computes a shape bounding box (quick computation that ignores radius)
+void update_bounds(shape* shp);
+/// Updates the instance bounding box
+void update_bounds(instance* ist, bool do_shape = true);
+/// Updates the scene and scene's instances bounding boxes
+void update_bounds(scene* scn, bool do_shapes = true);
+
+/// Flatten scene instances into separate meshes.
+void flatten_instances(scene* scn);
+
+/// Initialize the lights
+void update_lights(
+    scene* scn, bool include_env = false, bool sampling_cdf = false);
+
+/// Print scene information (call update bounds bes before)
+void print_info(const scene* scn);
+
+/// Build a shape BVH
+void build_bvh(shape* shp, float def_radius = 0.001f, bool equalsize = true);
+
+/// Build a scene BVH
+void build_bvh(scene* scn, bool do_shapes = true, float def_radius = 0.001f,
+    bool equalsize = true);
+
+/// Refits a scene BVH
+void refit_bvh(shape* shp, float def_radius = 0.001f);
+
+/// Refits a scene BVH
+void refit_bvh(scene* scn, bool do_shapes = true, float def_radius = 0.001f);
+
+/// Intersect the shape with a ray. Find any interstion if early_exit,
+/// otherwise find first intersection.
+inline bool intersect_ray(const shape* shp, const ray3f& ray, bool early_exit,
+    float& ray_t, int& eid, vec4f& euv) {
+    auto iid = 0;
+    return intersect_bvh(shp->bvh, ray, early_exit, ray_t, iid, eid, euv);
 }
+
+/// Intersect the scene with a ray. Find any interstion if early_exit,
+/// otherwise find first intersection.
+inline bool intersect_ray(const scene* scn, const ray3f& ray, bool early_exit,
+    float& ray_t, int& iid, int& eid, vec4f& euv) {
+    return intersect_bvh(scn->bvh, ray, early_exit, ray_t, iid, eid, euv);
+}
+
+/// Surface point.
+struct intersection_point {
+    /// distance of the hit along the ray or from the point
+    float dist = 0;
+    /// instance index
+    int iid = -1;
+    /// shape element index
+    int eid = -1;
+    /// shape barycentric coordinates
+    vec4f euv = zero4f;
+
+    /// check if intersection is valid
+    operator bool() const { return eid >= 0; }
+};
+
+/// Intersect the scene with a ray. Find any interstion if early_exit,
+/// otherwise find first intersection.
+inline intersection_point intersect_ray(
+    const scene* scn, const ray3f& ray, bool early_exit) {
+    auto isec = intersection_point();
+    if (!intersect_ray(
+            scn, ray, early_exit, isec.dist, isec.iid, isec.eid, isec.euv))
+        return {};
+    return isec;
+}
+
+/// Finds the closest element that overlaps a point within a given distance.
+inline bool overlap_point(const shape* shp, const vec3f& pos, float max_dist,
+    bool early_exit, float& dist, int& eid, vec4f& euv) {
+    auto iid = 0;
+    return overlap_bvh(
+        shp->bvh, pos, max_dist, early_exit, dist, iid, eid, euv);
+}
+
+/// Finds the closest element that overlaps a point within a given distance.
+inline bool overlap_point(const scene* scn, const vec3f& pos, float max_dist,
+    bool early_exit, float& dist, int& iid, int& eid, vec4f& euv) {
+    return overlap_bvh(
+        scn->bvh, pos, max_dist, early_exit, dist, iid, eid, euv);
+}
+
+#if 0
+/// Find the list of overlaps between instance bounds.
+inline void overlap_instance_bounds(const scene* scn1, const scene* scn2,
+    bool skip_duplicates, bool skip_self, vector<vec2i>& overlaps) {
+    overlaps.clear();
+    overlap_bvh_elems(scn1->bvh, scn2->bvh, skip_duplicates, skip_self,
+        overlaps, [scn1, scn2](int i1, int i2) {
+            return overlap_bbox(
+                scn1->instances[i1]->bbox, scn2->instances[i2]->bbox);
+        });
+}
+#endif
+
+/// Add elements options
+struct add_elements_options {
+    /// Add missing normal
+    bool smooth_normals = true;
+    /// Add missing radius for points and lines (<=0 for no adding)
+    float pointline_radius = 0;
+    /// Add missing trangent space
+    bool tangent_space = true;
+    /// texture data
+    bool texture_data = true;
+    /// Add instances
+    bool shape_instances = true;
+    /// Add an empty default environment
+    bool default_environment = false;
+    /// Add default names
+    bool default_names = true;
+    /// Add default paths
+    bool default_paths = true;
+
+    /// initialize to no element
+    static add_elements_options none() {
+        auto opts = add_elements_options();
+        memset(&opts, 0, sizeof(opts));
+        return opts;
+    }
+};
+
+/// Add elements
+void add_elements(scene* scn, const add_elements_options& opts = {});
+
+/// Merge scene into one another. Note that the objects are _moved_ from
+/// merge_from to merged_into, so merge_from will be empty after this function.
+void merge_into(scene* merge_into, scene* merge_from);
 
 /// Loading options
 struct load_options {
@@ -5631,305 +5488,6 @@ struct save_options {
 /// Throws an exception if an error occurs.
 void save_scene(
     const string& filename, const scene* scn, const save_options& opts);
-
-/// Add elements options
-struct add_elements_options {
-    /// Add missing normal
-    bool smooth_normals = true;
-    /// Add missing radius for points and lines (<=0 for no adding)
-    float pointline_radius = 0;
-    /// Add missing trangent space
-    bool tangent_space = true;
-    /// texture data
-    bool texture_data = true;
-    /// Add instances
-    bool shape_instances = true;
-    /// Add an empty default environment
-    bool default_environment = false;
-    /// Add default names
-    bool default_names = true;
-    /// Add default paths
-    bool default_paths = true;
-
-    /// initialize to no element
-    static add_elements_options none() {
-        auto opts = add_elements_options();
-        memset(&opts, 0, sizeof(opts));
-        return opts;
-    }
-};
-
-/// Make a view camera either copying a given one or building a default one.
-/// Bounding boxes for the scene will be updated.
-camera* make_view_camera(scene* scn, int camera_id);
-
-/// Add elements
-void add_elements(scene* scn, const add_elements_options& opts = {});
-
-/// Merge scene into one another. Note that the objects are _moved_ from
-/// merge_from to merged_into, so merge_from will be empty after this function.
-void merge_into(scene* merge_into, scene* merge_from);
-
-/// Computes a shape bounding box (quick computation that ignores radius)
-inline void update_bounds(shape* shp) {
-    shp->bbox = invalid_bbox3f;
-    for (auto p : shp->pos) shp->bbox += vec3f(p);
-}
-
-/// Updates the instance bounding box
-inline void update_bounds(instance* ist, bool do_shape = true) {
-    if (do_shape) update_bounds(ist->shp);
-    ist->bbox = transform_bbox(ist->frame, ist->shp->bbox);
-}
-
-/// Updates the scene and scene's instances bounding boxes
-inline void update_bounds(scene* scn, bool do_shapes = true) {
-    if (do_shapes) {
-        for (auto shp : scn->shapes) update_bounds(shp);
-    }
-    scn->bbox = invalid_bbox3f;
-    if (!scn->instances.empty()) {
-        for (auto ist : scn->instances) {
-            update_bounds(ist, false);
-            scn->bbox += ist->bbox;
-        }
-    } else {
-        for (auto shp : scn->shapes) { scn->bbox += shp->bbox; }
-    }
-}
-
-/// Flatten scene instances into separate meshes.
-inline void flatten_instances(scene* scn) {
-    if (scn->instances.empty()) return;
-    auto shapes = scn->shapes;
-    scn->shapes.clear();
-    auto instances = scn->instances;
-    scn->instances.clear();
-    for (auto ist : instances) {
-        if (!ist->shp) continue;
-        auto xf = ist->xform();
-        auto nshp = new shape(*ist->shp);
-        for (auto& p : nshp->pos) p = transform_point(xf, p);
-        for (auto& n : nshp->norm) n = transform_direction(xf, n);
-        scn->shapes.push_back(nshp);
-    }
-    for (auto e : shapes) delete e;
-    for (auto e : instances) delete e;
-}
-
-/// Initialize the lights
-void update_lights(
-    scene* scn, bool include_env = false, bool sampling_cdf = false);
-
-/// Print scene information (call update bounds bes before)
-void print_info(const scene* scn);
-
-/// Build a shape BVH
-inline void build_bvh(
-    shape* shp, float def_radius = 0.001f, bool equalsize = true) {
-    if (!shp->points.empty()) {
-        shp->bvh = build_bvh(shp->points, {}, {}, {}, shp->pos, shp->radius,
-            def_radius, equalsize);
-    } else if (!shp->lines.empty()) {
-        shp->bvh = build_bvh({}, shp->lines, {}, {}, shp->pos, shp->radius,
-            def_radius, equalsize);
-    } else if (!shp->triangles.empty()) {
-        shp->bvh = build_bvh(
-            {}, {}, shp->triangles, {}, shp->pos, {}, def_radius, equalsize);
-    } else if (!shp->quads.empty()) {
-        shp->bvh = build_bvh(
-            {}, {}, {}, shp->quads, shp->pos, {}, def_radius, equalsize);
-    } else {
-        shp->bvh = build_bvh(
-            {}, {}, {}, {}, shp->pos, shp->radius, def_radius, equalsize);
-    }
-    shp->bbox = shp->bvh->nodes[0].bbox;
-}
-
-/// Build a scene BVH
-inline void build_bvh(scene* scn, bool do_shapes = true,
-    float def_radius = 0.001f, bool equalsize = true) {
-    // do shapes
-    if (do_shapes) {
-        for (auto shp : scn->shapes) build_bvh(shp, def_radius, equalsize);
-    }
-
-    // update instance bbox
-    for (auto ist : scn->instances)
-        ist->bbox = transform_bbox(ist->frame, ist->shp->bbox);
-
-    // tree bvh
-    auto smap = unordered_map<shape*, bvh_tree*>();
-    for (auto shp : scn->shapes) smap[shp] = shp->bvh;
-    auto ist_frames = vector<frame3f>();
-    auto ist_frames_inv = vector<frame3f>();
-    auto ist_bvh = vector<bvh_tree*>();
-    for (auto ist : scn->instances) {
-        ist_frames.push_back(ist->frame);
-        ist_frames_inv.push_back(inverse(ist->frame));
-        ist_bvh.push_back(smap.at(ist->shp));
-    }
-    scn->bvh = build_bvh(ist_frames, ist_frames_inv, ist_bvh, equalsize);
-}
-
-/// Refits a scene BVH
-inline void refit_bvh(shape* shp, float def_radius = 0.001f) {
-    if (!shp->points.empty()) {
-        refit_bvh(shp->bvh, shp->pos, shp->radius, def_radius);
-    } else if (!shp->lines.empty()) {
-        refit_bvh(shp->bvh, shp->pos, shp->radius, def_radius);
-    } else if (!shp->triangles.empty()) {
-        refit_bvh(shp->bvh, shp->pos, {}, def_radius);
-    } else if (!shp->quads.empty()) {
-        refit_bvh(shp->bvh, shp->pos, {}, def_radius);
-    } else {
-        refit_bvh(shp->bvh, shp->pos, shp->radius, def_radius);
-    }
-    shp->bbox = shp->bvh->nodes[0].bbox;
-}
-
-/// Refits a scene BVH
-inline void refit_bvh(
-    scene* scn, bool do_shapes = true, float def_radius = 0.001f) {
-    if (do_shapes) {
-        for (auto shp : scn->shapes) refit_bvh(shp, def_radius);
-    }
-
-    // update instance bbox
-    for (auto ist : scn->instances)
-        ist->bbox = transform_bbox(ist->frame, ist->shp->bbox);
-
-    // recompute bvh bounds
-    auto smap = unordered_map<shape*, bvh_tree*>();
-    for (auto shp : scn->shapes) smap[shp] = shp->bvh;
-    auto ist_frames = vector<frame3f>();
-    auto ist_frames_inv = vector<frame3f>();
-    for (auto ist : scn->instances) {
-        ist_frames.push_back(ist->frame);
-        ist_frames_inv.push_back(inverse(ist->frame));
-    }
-    refit_bvh(scn->bvh, ist_frames, ist_frames_inv);
-}
-
-/// Intersect the shape with a ray. Find any interstion if early_exit,
-/// otherwise find first intersection.
-///
-/// - Parameters:
-///     - scn: scene to intersect
-///     - ray: ray to be intersected
-///     - early_exit: whether to stop at the first found hit
-///     - ray_t: ray distance at intersection
-///     - eid: shape element index
-///     - euv: element barycentric coordinates
-/// - Returns:
-///     - whether it intersected
-inline bool intersect_ray(const shape* shp, const ray3f& ray, bool early_exit,
-    float& ray_t, int& eid, vec4f& euv) {
-    auto iid = 0;
-    return intersect_bvh(shp->bvh, ray, early_exit, ray_t, iid, eid, euv);
-}
-
-/// Intersect the scene with a ray. Find any interstion if early_exit,
-/// otherwise find first intersection.
-///
-/// - Parameters:
-///     - scn: scene to intersect
-///     - ray: ray to be intersected
-///     - early_exit: whether to stop at the first found hit
-///     - ray_t: ray distance at intersection
-///     - iid: instance index
-///     - eid: shape element index
-///     - euv: element barycentric coordinates
-/// - Returns:
-///     - whether it intersected
-inline bool intersect_ray(const scene* scn, const ray3f& ray, bool early_exit,
-    float& ray_t, int& iid, int& eid, vec4f& euv) {
-    return intersect_bvh(scn->bvh, ray, early_exit, ray_t, iid, eid, euv);
-}
-
-/// Surface point.
-struct intersection_point {
-    /// distance of the hit along the ray or from the point
-    float dist = 0;
-    /// instance index
-    int iid = -1;
-    /// shape element index
-    int eid = -1;
-    /// shape barycentric coordinates
-    vec4f euv = zero4f;
-
-    /// check if intersection is valid
-    operator bool() const { return eid >= 0; }
-};
-
-/// Intersect the scene with a ray. Find any interstion if early_exit,
-/// otherwise find first intersection.
-///
-/// - Parameters:
-///     - scn: scene to intersect
-///     - ray: ray to be intersected
-///     - early_exit: whether to stop at the first found hit
-/// - Returns:
-///     - intersection record
-inline intersection_point intersect_ray(
-    const scene* scn, const ray3f& ray, bool early_exit) {
-    auto isec = intersection_point();
-    if (!intersect_ray(
-            scn, ray, early_exit, isec.dist, isec.iid, isec.eid, isec.euv))
-        return {};
-    return isec;
-}
-
-/// Finds the closest element that overlaps a point within a given distance.
-///
-/// - Parameters:
-///     - scn: scene to intersect
-///     - pos: point position
-///     - max_dist: maximu valid distance
-///     - early_exit: whether to stop at the first found hit
-///     - dist: distance at intersection
-///     - eid: shape element index
-///     - euv: element barycentric coordinates
-/// - Returns:
-///     - whether it intersected
-inline bool overlap_point(const shape* shp, const vec3f& pos, float max_dist,
-    bool early_exit, float& dist, int& eid, vec4f& euv) {
-    auto iid = 0;
-    return overlap_bvh(
-        shp->bvh, pos, max_dist, early_exit, dist, iid, eid, euv);
-}
-
-/// Finds the closest element that overlaps a point within a given distance.
-///
-/// - Parameters:
-///     - scn: scene to intersect
-///     - pos: point position
-///     - max_dist: maximu valid distance
-///     - early_exit: whether to stop at the first found hit
-///     - dist: distance at intersection
-///     - iid: instance index
-///     - eid: shape element index
-///     - euv: element barycentric coordinates
-/// - Returns:
-///     - whether it intersected
-inline bool overlap_point(const scene* scn, const vec3f& pos, float max_dist,
-    bool early_exit, float& dist, int& iid, int& eid, vec4f& euv) {
-    return overlap_bvh(
-        scn->bvh, pos, max_dist, early_exit, dist, iid, eid, euv);
-}
-
-#if 0
-/// Find the list of overlaps between instance bounds.
-inline void overlap_instance_bounds(const scene* scn1, const scene* scn2,
-    bool skip_duplicates, bool skip_self, vector<vec2i>& overlaps) {
-    overlaps.clear();
-    overlap_bvh_elems(scn1->bvh, scn2->bvh, skip_duplicates, skip_self,
-        overlaps, [scn1, scn2](int i1, int i2) {
-            return overlap_bbox(
-                scn1->instances[i1]->bbox, scn2->instances[i2]->bbox);
-        });
-}
-#endif
 
 }  // namespace ygl
 
