@@ -3179,85 +3179,16 @@ inline mat<T, 4> compose_mat4(const vec<T, 3>& translation,
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-/// Turntable for UI navigation from a from/to/up parametrization of the
-/// camera.
-template <typename T>
-inline void camera_turntable(vec<T, 3>& from, vec<T, 3>& to, vec<T, 3>& up,
-    const vec<T, 3>& rotate, T dolly, const vec<T, 3>& pan) {
-    // rotate if necessary
-    if (rotate.x || rotate.y) {
-        auto z = normalize(to - from);
-        auto lz = length(to - from);
-        auto phi = atan2(z.z, z.x) + rotate.x;
-        auto theta = acos(z.y) + rotate.y;
-        theta = clamp(theta, 0.001f, pif - 0.001f);
-        auto nz = vec<T, 3>{sin(theta) * cos(phi) * lz, cos(theta) * lz,
-            sin(theta) * sin(phi) * lz};
-        from = to - nz;
-    }
+/// Turntable for UI navigation.
+void camera_turntable(vec3f& from, vec3f& to, vec3f& up, const vec3f& rotate,
+    float dolly, const vec2f& pan);
 
-    // dolly if necessary
-    if (dolly) {
-        auto z = normalize(to - from);
-        auto lz = max(0.001f, length(to - from) * (1 + dolly));
-        z *= lz;
-        from = to - z;
-    }
-
-    // pan if necessary
-    if (pan.x || pan.y) {
-        auto z = normalize(to - from);
-        auto x = normalize(cross(up, z));
-        auto y = normalize(cross(z, x));
-        auto t = vec<T, 3>{pan.x * x.x + pan.y * y.x, pan.x * x.y + pan.y * y.y,
-            pan.x * x.z + pan.y * y.z};
-        from += t;
-        to += t;
-    }
-}
-
-/// Turntable for UI navigation for a frame/distance parametrization of the
-/// camera.
-template <typename T>
-inline void camera_turntable(frame<T, 3>& frame, T& focus,
-    const vec<T, 2>& rotate, T dolly, const vec<T, 2>& pan) {
-    // rotate if necessary
-    if (rotate.x || rotate.y) {
-        auto phi = atan2(frame.z.z, frame.z.x) + rotate.x;
-        auto theta = acos(frame.z.y) + rotate.y;
-        theta = clamp(theta, 0.001f, pif - 0.001f);
-        auto new_z =
-            vec<T, 3>{sin(theta) * cos(phi), cos(theta), sin(theta) * sin(phi)};
-        auto new_center = frame.o - frame.z * focus;
-        auto new_o = new_center + new_z * focus;
-        frame = lookat_frame3(new_o, new_center, {0, 1, 0});
-        focus = length(new_o - new_center);
-    }
-
-    // pan if necessary
-    if (dolly) {
-        auto c = frame.o - frame.z * focus;
-        focus = max(focus + dolly, 0.001f);
-        frame.o = c + frame.z * focus;
-    }
-
-    // pan if necessary
-    if (pan.x || pan.y) { frame.o += frame.x * pan.x + frame.y * pan.y; }
-}
+/// Turntable for UI navigation.
+void camera_turntable(frame3f& frame, float& focus, const vec2f& rotate,
+    float dolly, const vec2f& pan);
 
 /// FPS camera for UI navigation for a frame parametrization.
-/// https://gamedev.stackexchange.com/questions/30644/how-to-keep-my-quaternion-using-fps-camera-from-tilting-and-messing-up
-template <typename T>
-inline void camera_fps(
-    frame<T, 3>& frame, const vec<T, 3>& transl, const vec<T, 2>& rotate) {
-    auto y = vec<T, 3>{0, 1, 0};
-    auto z = orthonormalize(frame.z, y);
-    auto x = cross(y, z);
-
-    frame.rot() = rotation_mat3(vec<T, 3>{1, 0, 0}, rotate.y) * frame.rot() *
-                  rotation_mat3(vec<T, 3>{0, 1, 0}, rotate.x);
-    frame.pos() += transl.x * x + transl.y * y + transl.z * z;
-}
+void camera_fps(frame3f& frame, const vec3f& transl, const vec2f& rotate);
 
 }  // namespace ygl
 
@@ -3594,84 +3525,62 @@ namespace ygl {
 /// Computes the i-th term of a permutation of l values keyed by p.
 /// From Correlated Multi-Jittered Sampling by Kensler @ Pixar
 inline uint32_t hash_permute(uint32_t i, uint32_t n, uint32_t key) {
+    // clang-format off
     uint32_t w = n - 1;
-    w |= w >> 1;
-    w |= w >> 2;
-    w |= w >> 4;
-    w |= w >> 8;
-    w |= w >> 16;
+    w |= w >> 1; w |= w >> 2; w |= w >> 4; w |= w >> 8; w |= w >> 16;
     do {
         i ^= key;
-        i *= 0xe170893du;
-        i ^= key >> 16;
-        i ^= (i & w) >> 4;
-        i ^= key >> 8;
-        i *= 0x0929eb3f;
-        i ^= key >> 23;
-        i ^= (i & w) >> 1;
-        i *= 1 | key >> 27;
-        i *= 0x6935fa69;
-        i ^= (i & w) >> 11;
-        i *= 0x74dcb303;
-        i ^= (i & w) >> 2;
-        i *= 0x9e501cc3;
-        i ^= (i & w) >> 2;
-        i *= 0xc860a3df;
-        i &= w;
-        i ^= i >> 5;
+        i *= 0xe170893du; i ^= key >> 16;
+        i ^= (i & w) >> 4; i ^= key >> 8;
+        i *= 0x0929eb3f; i ^= key >> 23;
+        i ^= (i & w) >> 1; i *= 1 | key >> 27;
+        i *= 0x6935fa69; i ^= (i & w) >> 11;
+        i *= 0x74dcb303; i ^= (i & w) >> 2;
+        i *= 0x9e501cc3; i ^= (i & w) >> 2;
+        i *= 0xc860a3df; i &= w; i ^= i >> 5;
     } while (i >= n);
     return (i + key) % n;
+    // clang-format on
 }
 
 /// Computes a float value by hashing i with a key p.
 /// From Correlated Multi-Jittered Sampling by Kensler @ Pixar
 inline float hash_randfloat(uint32_t i, uint32_t key) {
+    // clang-format off
     i ^= key;
-    i ^= i >> 17;
-    i ^= i >> 10;
-    i *= 0xb36534e5;
-    i ^= i >> 12;
-    i ^= i >> 21;
-    i *= 0x93fc4795;
-    i ^= 0xdf6e307f;
-    i ^= i >> 17;
-    i *= 1 | key >> 18;
+    i ^= i >> 17; i ^= i >> 10; i *= 0xb36534e5;
+    i ^= i >> 12; i ^= i >> 21; i *= 0x93fc4795;
+    i ^= 0xdf6e307f; i ^= i >> 17; i *= 1 | key >> 18;
     return i * (1.0f / 4294967808.0f);
+    // clang-format on
 }
 
 /// 32 bit integer hash. Public domain code.
 inline uint32_t hash_uint32(uint64_t a) {
-    a -= (a << 6);
-    a ^= (a >> 17);
-    a -= (a << 9);
-    a ^= (a << 4);
-    a -= (a << 3);
-    a ^= (a << 10);
-    a ^= (a >> 15);
+    // clang-format off
+    a -= (a << 6); a ^= (a >> 17); a -= (a << 9); a ^= (a << 4);
+    a -= (a << 3); a ^= (a << 10); a ^= (a >> 15);
     return a;
+    // clang-format on
 }
 
 /// 64 bit integer hash. Public domain code.
 inline uint64_t hash_uint64(uint64_t a) {
-    a = (~a) + (a << 21);  // a = (a << 21) - a - 1;
-    a ^= (a >> 24);
-    a += (a << 3) + (a << 8);  // a * 265
-    a ^= (a >> 14);
-    a += (a << 2) + (a << 4);  // a * 21
-    a ^= (a >> 28);
-    a += (a << 31);
+    // clang-format off
+    a = (~a) + (a << 21); a ^= (a >> 24);
+    a += (a << 3) + (a << 8); a ^= (a >> 14);
+    a += (a << 2) + (a << 4); a ^= (a >> 28); a += (a << 31);
     return a;
+    // clang-format on
 }
 
 /// 64-to-32 bit integer hash. Public domain code.
 inline uint32_t hash_uint64_32(uint64_t a) {
-    a = (~a) + (a << 18);  // a = (a << 18) - a - 1;
-    a ^= (a >> 31);
-    a *= 21;  // a = (a + (a << 2)) + (a << 4);
-    a ^= (a >> 11);
-    a += (a << 6);
-    a ^= (a >> 22);
+    // clang-format off
+    a = (~a) + (a << 18); a ^= (a >> 31); a *= 21;
+    a ^= (a >> 11); a += (a << 6); a ^= (a >> 22);
     return (uint32_t)a;
+    // clang-format on
 }
 
 /// Combines two 64 bit hashes as in boost::hash_combine
@@ -3714,8 +3623,8 @@ namespace ygl {
 
 // Implementation of Python-like range generator. Create it with the the
 // `range()` functions to use argument deduction.
-// clang-format off
 struct range_generator {
+    // clang-format off
     struct iterator {
         iterator(int pos, int step) : _pos(pos), _step(step) {}
         bool operator!=(const iterator& a) const { return _pos < a._pos; }
@@ -3728,8 +3637,8 @@ struct range_generator {
     iterator begin() const { return {_min, _step}; }
     iterator end() const { return {_max, _step}; }
     private: int _min, _max, _step;
+    // clang-format on
 };
-// clang-format on
 
 /// Python-like range
 inline range_generator range(int max) { return {0, max, 1}; }
@@ -3741,9 +3650,9 @@ inline range_generator range(int min, int max, int step = 1) {
 
 // Implemenetation of Python-like enumerate. Create it with the function
 // `enumerate()` to use argument deduction.
-// clang-format off
 template <typename T>
 struct enumerate_generator {
+    // clang-format off
     struct iterator {
         iterator(int pos, T* data) : _pos(pos), _data(data) {}
         bool operator!=(const iterator& a) const { return _pos < a._pos; }
@@ -3755,8 +3664,8 @@ struct enumerate_generator {
     iterator begin() const { return {0, _data}; }
     iterator end() const { return {_max, _data + _max}; }
     private: int _max; T* _data;
+    // clang-format on
 };
-// clang-format on
 
 /// Python-like range
 template <typename T>
@@ -3927,10 +3836,10 @@ inline float tetrahedron_volume(
     return dot(cross(v1 - v0, v2 - v0), v3 - v0) / 6;
 }
 
-// Triangle tangent and bitangent from uv (not othornormalized with themselfves
-// not the normal). Follows the definition in
-// http://www.terathon.com/code/tangent.html and
-// https://gist.github.com/aras-p/2843984
+/// Triangle tangent and bitangent from uv (not othornormalized with themselfves
+/// not the normal). Follows the definition in
+/// http://www.terathon.com/code/tangent.html and
+/// https://gist.github.com/aras-p/2843984
 inline pair<vec3f, vec3f> triangle_tangents_fromuv(const vec3f& v0,
     const vec3f& v1, const vec3f& v2, const vec2f& uv0, const vec2f& uv1,
     const vec2f& uv2) {
@@ -4039,35 +3948,33 @@ inline T eval_bernstein_derivative(T u, int i, int degree) {
 /// eval bezier
 template <typename T, typename T1>
 inline T eval_bezier_cubic(
-    const T& v0, const T& v1, const T& v2, const T& v3, T1 t) {
-    return v0 * eval_bernstein(t, 0, 3) + v1 * eval_bernstein(t, 1, 3) +
-           v2 * eval_bernstein(t, 2, 3) + v3 * eval_bernstein(t, 3, 3);
+    const T& v0, const T& v1, const T& v2, const T& v3, T1 u) {
+    return v0 * (1 - u) * (1 - u) * (1 - u) + v1 * 3 * u * (1 - u) * (1 - u) +
+           v2 * 3 * u * u * (1 - u) + v3 * u * u * u;
 }
 
 /// eval bezier
 template <typename T, typename T1>
-inline T eval_bezier_cubic(const vector<T>& vals, const vec4i& b, T1 t) {
+inline T eval_bezier_cubic(const vector<T>& vals, const vec4i& b, T1 u) {
     if (vals.empty()) return T();
-    return eval_bezier_cubic(vals[b.x], vals[b.y], vals[b.z], vals[b.w], t);
+    return eval_bezier_cubic(vals[b.x], vals[b.y], vals[b.z], vals[b.w], u);
 }
 
 /// eval bezier derivative
 template <typename T, typename T1>
 inline T eval_bezier_cubic_derivative(
-    const T& v0, const T& v1, const T& v2, const T& v3, T1 t) {
-    return v0 * eval_bernstein_derivative(t, 0, 3) +
-           v1 * eval_bernstein_derivative(t, 1, 3) +
-           v2 * eval_bernstein_derivative(t, 2, 3) +
-           v3 * eval_bernstein_derivative(t, 3, 3);
+    const T& v0, const T& v1, const T& v2, const T& v3, T1 u) {
+    return (v1 - v0) * 3 * (1 - u) * (1 - u) + (v2 - v1) * 6 * u * (1 - u) +
+           (v3 - v2) * 3 * u * u;
 }
 
 /// eval bezier derivative
 template <typename T, typename T1>
 inline T eval_bezier_cubic_derivative(
-    const vector<T>& vals, const vec4i& b, T1 t) {
+    const vector<T>& vals, const vec4i& b, T1 u) {
     if (vals.empty()) return T();
     return eval_bezier_cubic_derivative(
-        vals[b.x], vals[b.y], vals[b.z], vals[b.w], t);
+        vals[b.x], vals[b.y], vals[b.z], vals[b.w], u);
 }
 
 }  // namespace ygl
@@ -4150,672 +4057,137 @@ namespace ygl {
 /// Compute per-vertex normals/tangents for lines, triangles and quads with
 /// positions pos. Weighted indicated whether the normals/tangents are
 /// weighted by line length.
-inline vector<vec3f> compute_normals(const vector<vec2i>& lines,
+vector<vec3f> compute_normals(const vector<vec2i>& lines,
     const vector<vec3i>& triangles, const vector<vec4i>& quads,
-    const vector<vec3f>& pos, bool weighted = true) {
-    auto norm = vector<vec3f>(pos.size(), zero3f);
-    for (auto& l : lines) {
-        auto n = pos[l.y] - pos[l.x];
-        if (!weighted) n = normalize(n);
-        for (auto vid : l) norm[vid] += n;
-    }
-    for (auto& t : triangles) {
-        auto n = cross(pos[t.y] - pos[t.x], pos[t.z] - pos[t.x]);
-        if (!weighted) n = normalize(n);
-        for (auto vid : t) norm[vid] += n;
-    }
-    for (auto& q : quads) {
-        auto n = cross(pos[q.y] - pos[q.x], pos[q.w] - pos[q.x]) +
-                 cross(pos[q.w] - pos[q.z], pos[q.x] - pos[q.z]);
-        if (!weighted) n = normalize(n);
-        for (auto vid : q) norm[vid] += n;
-    }
-    for (auto& n : norm) n = normalize(n);
-    return norm;
-}
+    const vector<vec3f>& pos, bool weighted = true);
 
 /// Compute per-vertex tangent frame for triangle meshes.
 /// Tangent space is defined by a four component vector.
 /// The first three components are the tangent with respect to the U texcoord.
 /// The fourth component is the sign of the tangent wrt the V texcoord.
 /// Tangent frame is useful in normal mapping.
-inline vector<vec4f> compute_tangent_frames(const vector<vec3i>& triangles,
+vector<vec4f> compute_tangent_frames(const vector<vec3i>& triangles,
     const vector<vec3f>& pos, const vector<vec3f>& norm,
-    const vector<vec2f>& texcoord, bool weighted = true) {
-    auto tangu = vector<vec3f>(pos.size(), zero3f);
-    auto tangv = vector<vec3f>(pos.size(), zero3f);
-    for (auto& t : triangles) {
-        auto tutv = triangle_tangents_fromuv(pos[t.x], pos[t.y], pos[t.z],
-            texcoord[t.x], texcoord[t.y], texcoord[t.z]);
-        if (!weighted) tutv = {normalize(tutv.first), normalize(tutv.second)};
-        for (auto vid : t) tangu[vid] += tutv.first;
-        for (auto vid : t) tangv[vid] += tutv.second;
-    }
-    for (auto& t : tangu) t = normalize(t);
-    for (auto& t : tangv) t = normalize(t);
-    auto tangsp = vector<vec4f>(pos.size(), zero4f);
-    for (auto i = 0; i < pos.size(); i++) {
-        tangu[i] = orthonormalize(tangu[i], norm[i]);
-        auto s = (dot(cross(norm[i], tangu[i]), tangv[i]) < 0) ? -1.0f : 1.0f;
-        tangsp[i] = {tangu[i].x, tangu[i].y, tangu[i].z, s};
-    }
-    return tangsp;
-}
+    const vector<vec2f>& texcoord, bool weighted = true);
 
 /// Apply skinning
-inline void compute_skinning(const vector<vec3f>& pos,
-    const vector<vec3f>& norm, const vector<vec4f>& weights,
-    const vector<vec4i>& joints, const vector<mat4f>& xforms,
-    vector<vec3f>& skinned_pos, vector<vec3f>& skinned_norm) {
-    skinned_pos.resize(pos.size());
-    skinned_norm.resize(norm.size());
-    for (auto i = 0; i < pos.size(); i++) {
-        skinned_pos[i] =
-            transform_point(xforms[joints[i].x], pos[i]) * weights[i].x +
-            transform_point(xforms[joints[i].y], pos[i]) * weights[i].y +
-            transform_point(xforms[joints[i].z], pos[i]) * weights[i].z +
-            transform_point(xforms[joints[i].w], pos[i]) * weights[i].w;
-    }
-    for (auto i = 0; i < pos.size(); i++) {
-        skinned_norm[i] = normalize(
-            transform_direction(xforms[joints[i].x], norm[i]) * weights[i].x +
-            transform_direction(xforms[joints[i].y], norm[i]) * weights[i].y +
-            transform_direction(xforms[joints[i].z], norm[i]) * weights[i].z +
-            transform_direction(xforms[joints[i].w], norm[i]) * weights[i].w);
-    }
-}
+void compute_skinning(const vector<vec3f>& pos, const vector<vec3f>& norm,
+    const vector<vec4f>& weights, const vector<vec4i>& joints,
+    const vector<mat4f>& xforms, vector<vec3f>& skinned_pos,
+    vector<vec3f>& skinned_norm);
 
 /// Apply skinning
-inline void compute_skinning(const vector<vec3f>& pos,
-    const vector<vec3f>& norm, const vector<vec4f>& weights,
-    const vector<vec4i>& joints, const vector<frame3f>& xforms,
-    vector<vec3f>& skinned_pos, vector<vec3f>& skinned_norm) {
-    skinned_pos.resize(pos.size());
-    skinned_norm.resize(norm.size());
-    for (auto i = 0; i < pos.size(); i++) {
-        skinned_pos[i] =
-            transform_point(xforms[joints[i].x], pos[i]) * weights[i].x +
-            transform_point(xforms[joints[i].y], pos[i]) * weights[i].y +
-            transform_point(xforms[joints[i].z], pos[i]) * weights[i].z +
-            transform_point(xforms[joints[i].w], pos[i]) * weights[i].w;
-    }
-    for (auto i = 0; i < pos.size(); i++) {
-        skinned_norm[i] = normalize(
-            transform_direction(xforms[joints[i].x], norm[i]) * weights[i].x +
-            transform_direction(xforms[joints[i].y], norm[i]) * weights[i].y +
-            transform_direction(xforms[joints[i].z], norm[i]) * weights[i].z +
-            transform_direction(xforms[joints[i].w], norm[i]) * weights[i].w);
-    }
-}
+void compute_skinning(const vector<vec3f>& pos, const vector<vec3f>& norm,
+    const vector<vec4f>& weights, const vector<vec4i>& joints,
+    const vector<frame3f>& xforms, vector<vec3f>& skinned_pos,
+    vector<vec3f>& skinned_norm);
 
 /// Apply skinning as specified in Khronos glTF
-inline void compute_matrix_skinning(const vector<vec3f>& pos,
+void compute_matrix_skinning(const vector<vec3f>& pos,
     const vector<vec3f>& norm, const vector<vec4f>& weights,
     const vector<vec4i>& joints, const vector<mat4f>& xforms,
-    vector<vec3f>& skinned_pos, vector<vec3f>& skinned_norm) {
-    skinned_pos.resize(pos.size());
-    skinned_norm.resize(norm.size());
-    for (auto i = 0; i < pos.size(); i++) {
-        auto xform = xforms[joints[i].x] * weights[i].x +
-                     xforms[joints[i].y] * weights[i].y +
-                     xforms[joints[i].z] * weights[i].z +
-                     xforms[joints[i].w] * weights[i].w;
-        skinned_pos[i] = transform_point(xform, pos[i]);
-        skinned_norm[i] = normalize(transform_direction(xform, norm[i]));
-    }
-}
+    vector<vec3f>& skinned_pos, vector<vec3f>& skinned_norm);
 
 /// Create an array of edges.
-inline vector<vec2i> get_edges(const vector<vec2i>& lines,
-    const vector<vec3i>& triangles, const vector<vec4i>& quads) {
-    auto edges = vector<vec2i>();
-    auto eset = unordered_set<vec2i>();
-    for (auto e : lines) {
-        e = {min(e.x, e.y), max(e.x, e.y)};
-        if (!eset.insert(e).second) continue;
-        eset.insert({e.y, e.x});
-        edges += e;
-    }
-    for (auto& t : triangles) {
-        for (auto e : {vec2i{t.x, t.y}, vec2i{t.y, t.z}, vec2i{t.z, t.x}}) {
-            e = {min(e.x, e.y), max(e.x, e.y)};
-            if (!eset.insert(e).second) continue;
-            eset.insert({e.y, e.x});
-            edges += e;
-        }
-    }
-    for (auto& q : quads) {
-        for (auto e : {vec2i{q.x, q.y}, vec2i{q.y, q.z}, vec2i{q.z, q.w},
-                 vec2i{q.w, q.x}}) {
-            if (e.x == e.y) continue;
-            e = {min(e.x, e.y), max(e.x, e.y)};
-            if (!eset.insert(e).second) continue;
-            eset.insert({e.y, e.x});
-            edges += e;
-        }
-    }
-
-    return edges;
-}
+vector<vec2i> get_edges(const vector<vec2i>& lines,
+    const vector<vec3i>& triangles, const vector<vec4i>& quads);
 
 /// Create an array of boundary edges. Lines are always considered boundaries.
-inline vector<vec2i> get_boundary_edges(const vector<vec2i>& lines,
-    const vector<vec3i>& triangles, const vector<vec4i>& quads) {
-    auto ecount = unordered_map<vec2i, int>();
-
-    // lines are added manually later
-    for (auto l : lines) { ecount.insert({l, 2}); }
-    for (auto t : triangles) {
-        for (auto e : {vec2i{t.x, t.y}, vec2i{t.y, t.z}, vec2i{t.z, t.x}}) {
-            e = {min(e.x, e.y), max(e.x, e.y)};
-            auto ins = ecount.insert({e, 1});
-            if (!ins.second) ins.first->second += 1;
-        }
-    }
-    for (auto q : quads) {
-        for (auto e : {vec2i{q.x, q.y}, vec2i{q.y, q.z}, vec2i{q.z, q.w},
-                 vec2i{q.w, q.x}}) {
-            if (e.x == e.y) continue;
-            e = {min(e.x, e.y), max(e.x, e.y)};
-            auto ins = ecount.insert({e, 1});
-            if (!ins.second) ins.first->second += 1;
-        }
-    }
-
-    auto boundary = lines;
-    for (auto ec : ecount) {
-        if (ec.second > 1) continue;
-        boundary += ec.first;
-    }
-
-    return boundary;
-}
+vector<vec2i> get_boundary_edges(const vector<vec2i>& lines,
+    const vector<vec3i>& triangles, const vector<vec4i>& quads);
 
 /// Get a list of all unique vertices.
-inline vector<int> get_verts(const vector<vec2i>& lines,
-    const vector<vec3i>& triangles, const vector<vec4i>& quads) {
-    auto verts = vector<int>();
-    auto vset = unordered_set<int>();
-    for (auto l : lines)
-        for (auto vid : l)
-            if (vset.insert(vid).second) verts += vid;
-    for (auto t : triangles)
-        for (auto vid : t)
-            if (vset.insert(vid).second) verts += vid;
-    for (auto q : quads)
-        for (auto vid : q)
-            if (vset.insert(vid).second) verts += vid;
-    return verts;
-}
+vector<int> get_verts(const vector<vec2i>& lines,
+    const vector<vec3i>& triangles, const vector<vec4i>& quads);
 
 /// Create an array of boundary vertices. Lines are always considered
 /// boundaries.
-inline vector<int> get_boundary_verts(const vector<vec2i>& lines,
-    const vector<vec3i>& triangles, const vector<vec4i>& quads) {
-    return get_verts(get_boundary_edges(lines, triangles, quads), {}, {});
-}
+vector<int> get_boundary_verts(const vector<vec2i>& lines,
+    const vector<vec3i>& triangles, const vector<vec4i>& quads);
 
 /// Convert quads to triangles
-inline vector<vec3i> convert_quads_to_triangles(const vector<vec4i>& quads) {
-    auto triangles = vector<vec3i>();
-    triangles.reserve(quads.size() * 2);
-    for (auto& q : quads) {
-        triangles += {q.x, q.y, q.w};
-        if (q.z != q.w) triangles += {q.z, q.w, q.y};
-    }
-    return triangles;
-}
+vector<vec3i> convert_quads_to_triangles(const vector<vec4i>& quads);
 
 /// Convert quads to triangles with a diamond-like topology.
 /// Quads have to be consecutive one row after another.
-inline vector<vec3i> convert_quads_to_triangles(
-    const vector<vec4i>& quads, int row_length) {
-    auto triangles = vector<vec3i>();
-    triangles.reserve(quads.size() * 2);
-    for (auto& q : quads) {
-        triangles += {q.x, q.y, q.w};
-        if (q.z != q.w) triangles += {q.z, q.w, q.y};
-    }
-    return triangles;
-#if 0
-        triangles.resize(usteps * vsteps * 2);
-        for (auto j = 0; j < vsteps; j++) {
-            for (auto i = 0; i < usteps; i++) {
-                auto& f1 = triangles[(j * usteps + i) * 2 + 0];
-                auto& f2 = triangles[(j * usteps + i) * 2 + 1];
-                if ((i + j) % 2) {
-                    f1 = {vid(i, j), vid(i + 1, j), vid(i + 1, j + 1)};
-                    f2 = {vid(i + 1, j + 1), vid(i, j + 1), vid(i, j)};
-                } else {
-                    f1 = {vid(i, j), vid(i + 1, j), vid(i, j + 1)};
-                    f2 = {vid(i + 1, j + 1), vid(i, j + 1), vid(i + 1, j)};
-                }
-            }
-        }
-#endif
-    return triangles;
-}
+vector<vec3i> convert_quads_to_triangles(
+    const vector<vec4i>& quads, int row_length);
 
 /// Convert beziers to lines using 3 lines for each bezier.
-inline vector<vec2i> convert_bezier_to_lines(const vector<vec4i>& beziers) {
-    auto lines = vector<vec2i>();
-    lines.reserve(beziers.size() * 3);
-    for (auto& b : beziers) {
-        lines += {b.x, b.y};
-        lines += {b.y, b.z};
-        lines += {b.z, b.w};
-    }
-    return lines;
-}
+vector<vec2i> convert_bezier_to_lines(const vector<vec4i>& beziers);
 
 /// Convert face varying data to single primitives. Returns the quads indices
 /// and filled vectors for pos, norm and texcoord.
-inline tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
+tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
 convert_face_varying(const vector<vec4i>& quads_pos,
     const vector<vec4i>& quads_norm, const vector<vec4i>& quads_texcoord,
     const vector<vec3f>& pos, const vector<vec3f>& norm,
-    const vector<vec2f>& texcoord) {
-    // make faces unique
-    unordered_map<vec3i, int> vert_map;
-    auto quads = vector<vec4i>(quads_pos.size());
-    for (auto fid = 0; fid < quads_pos.size(); fid++) {
-        for (auto c = 0; c < 4; c++) {
-            auto v = vec3i{
-                quads_pos[fid][c],
-                (!quads_norm.empty()) ? quads_norm[fid][c] : -1,
-                (!quads_texcoord.empty()) ? quads_texcoord[fid][c] : -1,
-            };
-            if (vert_map.find(v) == vert_map.end()) {
-                auto s = (int)vert_map.size();
-                vert_map[v] = s;
-            }
-            quads[fid][c] = vert_map.at(v);
-        }
-    }
-
-    // fill vert data
-    auto qpos = vector<vec3f>();
-    if (!pos.empty()) {
-        qpos.resize(vert_map.size());
-        for (auto& kv : vert_map) { qpos[kv.second] = pos[kv.first.x]; }
-    }
-    auto qnorm = vector<vec3f>();
-    if (!norm.empty()) {
-        qnorm.resize(vert_map.size());
-        for (auto& kv : vert_map) { qnorm[kv.second] = norm[kv.first.y]; }
-    }
-    auto qtexcoord = vector<vec2f>();
-    if (!texcoord.empty()) {
-        qtexcoord.resize(vert_map.size());
-        for (auto& kv : vert_map) {
-            qtexcoord[kv.second] = texcoord[kv.first.z];
-        }
-    }
-
-    // done
-    return {quads, qpos, qnorm, qtexcoord};
-}
-
-// wrapper for implementation below
-inline float _subdivide_normalize(float x) { return x; }
-inline vec2f _subdivide_normalize(const vec2f& x) { return normalize(x); }
-inline vec3f _subdivide_normalize(const vec3f& x) { return normalize(x); }
-inline vec4f _subdivide_normalize(const vec4f& x) { return normalize(x); }
+    const vector<vec2f>& texcoord);
 
 /// Tesselate lines, triangles and quads by spolitting edges.
 /// Returns the tesselated elements and dictionaries for vertex calculations.
-inline tuple<vector<vec2i>, vector<vec3i>, vector<vec4i>, vector<vec2i>,
-    vector<vec4i>>
+tuple<vector<vec2i>, vector<vec3i>, vector<vec4i>, vector<vec2i>, vector<vec4i>>
 subdivide_elems_linear(const vector<vec2i>& lines,
-    const vector<vec3i>& triangles, const vector<vec4i>& quads, int nverts) {
-    if (!nverts) return {};
-    auto emap = unordered_map<vec2i, int>();
-    auto edges = vector<vec2i>();
-    for (auto e : lines) {
-        if (contains(emap, e)) continue;
-        emap[{e.x, e.y}] = nverts + (int)edges.size();
-        emap[{e.y, e.x}] = nverts + (int)edges.size();
-        edges += e;
-    }
-    for (auto& t : triangles) {
-        for (auto e : {vec2i{t.x, t.y}, vec2i{t.y, t.z}, vec2i{t.z, t.x}}) {
-            if (contains(emap, e)) continue;
-            emap[{e.x, e.y}] = nverts + (int)edges.size();
-            emap[{e.y, e.x}] = nverts + (int)edges.size();
-            edges += e;
-        }
-    }
-    for (auto& q : quads) {
-        for (auto e : {vec2i{q.x, q.y}, vec2i{q.y, q.z}, vec2i{q.z, q.w},
-                 vec2i{q.w, q.x}}) {
-            if (e.x == e.y) continue;
-            if (contains(emap, e)) continue;
-            emap[{e.x, e.y}] = nverts + (int)edges.size();
-            emap[{e.y, e.x}] = nverts + (int)edges.size();
-            edges += e;
-        }
-    }
+    const vector<vec3i>& triangles, const vector<vec4i>& quads, int nverts);
 
-    auto tlines = vector<vec2i>();
-    tlines.reserve(lines.size() * 2);
-    for (auto& l : lines) {
-        tlines += {l.x, emap.at(l)};
-        tlines += {emap.at(l), l.y};
-    }
-
-    auto ttriangles = vector<vec3i>();
-    ttriangles.reserve(triangles.size() * 4);
-    for (auto& t : triangles) {
-        ttriangles.push_back({t.x, emap.at({t.x, t.y}), emap.at({t.z, t.x})});
-        ttriangles.push_back({t.y, emap.at({t.y, t.z}), emap.at({t.x, t.y})});
-        ttriangles.push_back({t.z, emap.at({t.z, t.x}), emap.at({t.y, t.z})});
-        ttriangles.push_back(
-            {emap.at({t.x, t.y}), emap.at({t.y, t.z}), emap.at({t.z, t.x})});
-    }
-
-    auto tquads = vector<vec4i>();
-    tquads.reserve(quads.size() * 4);
-    for (auto fkv : enumerate(quads)) {
-        auto f = fkv.second;
-        auto fvert = nverts + (int)edges.size() + fkv.first;
-        if (f.z != f.w) {
-            tquads += {f.x, emap.at({f.x, f.y}), fvert, emap.at({f.w, f.x})};
-            tquads += {f.y, emap.at({f.y, f.z}), fvert, emap.at({f.x, f.y})};
-            tquads += {f.z, emap.at({f.z, f.w}), fvert, emap.at({f.y, f.z})};
-            tquads += {f.w, emap.at({f.w, f.x}), fvert, emap.at({f.z, f.w})};
-        } else {
-            tquads += {f.x, emap.at({f.x, f.y}), fvert, emap.at({f.z, f.x})};
-            tquads += {f.y, emap.at({f.y, f.z}), fvert, emap.at({f.x, f.y})};
-            tquads += {f.z, emap.at({f.z, f.x}), fvert, emap.at({f.y, f.z})};
-        }
-    }
-    tquads.shrink_to_fit();
-
-    return {tlines, ttriangles, tquads, edges, quads};
-}
-
-/// Subdivide vertex properties given the maps
+/// Subdivide vertex properties given the maps. This is instances for vecs
+/// and floats.
 template <typename T>
-inline vector<T> subdivide_vert_linear(const vector<T>& vert,
+vector<T> subdivide_vert_linear(const vector<T>& vert,
     const vector<vec2i>& edges, const vector<vec4i>& faces,
-    bool normalized = false) {
-    if (vert.empty()) return {};
-
-    auto tvert = vector<T>();
-    tvert.reserve(vert.size() + edges.size() + faces.size());
-
-    tvert += vert;
-    for (auto e : edges) tvert += (vert[e.x] + vert[e.y]) / 2;
-    for (auto f : faces) {
-        if (f.z != f.w)
-            tvert += (vert[f.x] + vert[f.y] + vert[f.z] + vert[f.w]) / 4;
-        else
-            tvert += (vert[f.x] + vert[f.y] + vert[f.z]) / 3;
-    }
-
-    if (normalized) {
-        for (auto& n : tvert) n = _subdivide_normalize(n);
-    }
-
-    return tvert;
-}
+    bool normalized = false);
 
 /// Performs the smoothing step of Catmull-Clark. Start with a tesselate quad
 /// mesh obtained with subdivide_elems_linear() and subdivide_vert_linear(). To
 /// handle open meshes with boundary, get the boundary from make_boundary_edge()
 /// and pass it as crease_lines. To fix the boundary entirely, just get the
-/// boundary vertices and pass it as creases.
+/// boundary vertices and pass it as creases. This is instances for vecs
+/// and floats.
 template <typename T>
-inline vector<T> subdivide_vert_catmullclark(const vector<vec4i>& quads,
+vector<T> subdivide_vert_catmullclark(const vector<vec4i>& quads,
     const vector<T>& vert, const vector<vec2i>& crease_tlines,
-    const vector<int>& crease_tpoints, bool normalized = false) {
-    if (quads.empty() || vert.empty()) return vert;
-
-    // define vertex valence ---------------------------
-    auto val = vector<int>(vert.size(), 2);
-    for (auto e : crease_tlines)
-        for (auto vid : e) val[vid] = 1;
-    for (auto vid : crease_tpoints) val[vid] = 0;
-
-    // averaging pass ----------------------------------
-    auto tvert = vector<T>(vert.size(), T());
-    auto count = vector<int>(vert.size(), 0);
-    for (auto p : crease_tpoints) {
-        auto c = vert[p];
-        if (val[p] == 0) tvert[p] += c;
-        if (val[p] == 0) count[p] += 1;
-    }
-    for (auto e : crease_tlines) {
-        auto c = (vert[e.x] + vert[e.y]) / 2.0f;
-        for (auto vid : e) {
-            if (val[vid] == 1) tvert[vid] += c;
-            if (val[vid] == 1) count[vid] += 1;
-        }
-    }
-    for (auto& f : quads) {
-        auto c = (vert[f.x] + vert[f.y] + vert[f.z] + vert[f.w]) / 4.0f;
-        for (auto vid : f) {
-            if (val[vid] == 2) tvert[vid] += c;
-            if (val[vid] == 2) count[vid] += 1;
-        }
-    }
-    for (auto i = 0; i < vert.size(); i++) { tvert[i] /= (float)count[i]; }
-
-    // correction pass ----------------------------------
-    // p = p + (avg_p - p) * (4/avg_count)
-    for (auto i = 0; i < vert.size(); i++) {
-        if (val[i] != 2) continue;
-        tvert[i] = vert[i] + (tvert[i] - vert[i]) * (4.0f / count[i]);
-    }
-
-    if (normalized) {
-        for (auto& v : tvert) v = _subdivide_normalize(v);
-    }
-
-    return tvert;
-}
+    const vector<int>& crease_tpoints, bool normalized = false);
 
 /// Subdivide bezier recursive by splitting each segment into two in the middle.
 /// Returns the tesselated elements and dictionaries for vertex calculations.
-inline tuple<vector<vec4i>, vector<int>, vector<vec4i>>
-subdivide_bezier_recursive(const vector<vec4i>& beziers, int nverts) {
-    if (!nverts) return {};
-    auto vmap = unordered_map<int, int>();
-    auto verts = vector<int>();
-    for (auto& b : beziers) {
-        if (!contains(vmap, b.x)) {
-            vmap[b.x] = verts.size();
-            verts += b.x;
-        }
-        if (!contains(vmap, b.w)) {
-            vmap[b.w] = verts.size();
-            verts += b.w;
-        }
-    }
-    auto tbeziers = vector<vec4i>();
-    tbeziers.reserve(beziers.size() * 2);
-    for (auto b_kv : enumerate(beziers)) {
-        auto b = b_kv.second;
-        auto bo = (int)verts.size() + b_kv.first * 5;
-        tbeziers += {vmap.at(b.x), bo + 0, bo + 1, bo + 2};
-        tbeziers += {bo + 2, bo + 3, bo + 4, vmap.at(b.w)};
-    }
-    return {tbeziers, verts, beziers};
-}
+tuple<vector<vec4i>, vector<int>, vector<vec4i>> subdivide_bezier_recursive(
+    const vector<vec4i>& beziers, int nverts);
 
-/// Subdivide vertex properties given the maps
+/// Subdivide vertex properties given the maps. This is instances for vecs
+/// and floats.
 template <typename T>
-inline vector<T> subdivide_vert_bezier(const vector<T>& vert,
-    const vector<int>& verts, const vector<vec4i>& segments,
-    bool normalized = false) {
-    if (vert.empty()) return {};
-
-    auto tvert = vector<T>();
-    tvert.reserve(verts.size() + segments.size() * 5);
-
-    for (auto v : verts) tvert += vert[v];
-    for (auto s : segments) {
-        tvert += vert[s.x] * (1.f / 2) + vert[s.y] * (1.f / 2);
-        tvert += vert[s.x] * (1.f / 4) + vert[s.y] * (1.f / 2) +
-                 vert[s.z] * (1.f / 4);
-        tvert += vert[s.x] * (1.f / 8) + vert[s.y] * (3.f / 8) +
-                 vert[s.z] * (3.f / 8) + vert[s.w] * (1.f / 8);
-        tvert += vert[s.y] * (1.f / 4) + vert[s.z] * (1.f / 2) +
-                 vert[s.w] * (1.f / 4);
-        tvert += vert[s.z] * (1.f / 2) + vert[s.w] * (1.f / 2);
-    }
-
-    if (normalized) {
-        for (auto& n : tvert) n = _subdivide_normalize(n);
-    }
-
-    return tvert;
-}
+vector<T> subdivide_vert_bezier(const vector<T>& vert, const vector<int>& verts,
+    const vector<vec4i>& segments, bool normalized = false);
 
 /// Generate a rectangular grid of usteps x vsteps uv values for parametric
 /// surface generation.
-inline tuple<vector<vec4i>, vector<vec2f>> make_uvquads(int usteps, int vsteps,
+tuple<vector<vec4i>, vector<vec2f>> make_uvquads(int usteps, int vsteps,
     bool uwrap = false, bool vwrap = false, bool vpole0 = false,
-    bool vpole1 = false) {
-    auto uvert = (uwrap) ? usteps : usteps + 1;
-    auto vvert = (vwrap) ? vsteps : vsteps + 1;
-    auto vid = [=](int i, int j) {
-        if (uwrap) i = i % usteps;
-        if (vwrap) j = j % vsteps;
-        return j * uvert + i;
-    };
-
-    auto uv = vector<vec2f>(uvert * vvert);
-    for (auto j = 0; j < vvert; j++) {
-        for (auto i = 0; i < uvert; i++) {
-            uv[vid(i, j)] = {i / (float)usteps, j / (float)vsteps};
-        }
-    }
-
-    auto quads = vector<vec4i>(usteps * vsteps);
-    for (auto j = 0; j < vsteps; j++) {
-        for (auto i = 0; i < usteps; i++) {
-            quads[j * usteps + i] = {
-                vid(i, j), vid(i + 1, j), vid(i + 1, j + 1), vid(i, j + 1)};
-        }
-    }
-
-    if (vpole0) {
-        if (vwrap) throw runtime_error("cannot have a pole with wrapping");
-        uv = vector<vec2f>(uv.begin() + uvert, uv.end());
-        uv.insert(uv.begin(), {0, 0});
-        for (auto& q : quads) {
-            for (auto& vid : q) { vid = (vid < usteps) ? 0 : vid - uvert + 1; }
-            if (q.x == 0 && q.y == 0) q = {q.z, q.w, q.x, q.y};
-        }
-    }
-
-    if (vpole1) {
-        if (vwrap) throw runtime_error("cannot have a pole with wrapping");
-        auto pid = (int)uv.size() - uvert;
-        uv = vector<vec2f>(uv.begin(), uv.end() - uvert);
-        uv.insert(uv.end(), {0, 1});
-        for (auto& q : quads) {
-            for (auto& vid : q) { vid = (vid < pid) ? vid : pid; }
-        }
-    }
-
-    return {quads, uv};
-}
+    bool vpole1 = false);
 
 /// Generate parametric num lines of usteps segments.
-inline tuple<vector<vec2i>, vector<vec2f>> make_uvlines(int num, int usteps) {
-    auto vid = [usteps](int i, int j) { return j * (usteps + 1) + i; };
-    auto uv = vector<vec2f>((usteps + 1) * num);
-    for (auto j = 0; j < num; j++) {
-        for (auto i = 0; i <= usteps; i++) {
-            uv[vid(i, j)] = {i / (float)usteps, j / (float)num};
-        }
-    }
-
-    auto lines = vector<vec2i>(usteps * num);
-    for (int j = 0; j < num; j++) {
-        for (int i = 0; i < usteps; i++) {
-            lines[j * usteps + i] = {vid(i, j), vid(i + 1, j)};
-        }
-    }
-
-    return {lines, uv};
-}
+tuple<vector<vec2i>, vector<vec2f>> make_uvlines(int num, int usteps);
 
 /// Generate a parametric point set. Mostly here for completeness.
-inline tuple<vector<int>, vector<vec2f>> make_uvpoints(int num) {
-    auto uv = vector<vec2f>(num);
-    for (auto i = 0; i < num; i++) { uv[i] = {i / (float)num, 0}; }
-
-    auto points = vector<int>(num);
-    for (auto i = 0; i < num; i++) points[i] = i;
-
-    return {points, uv};
-}
+tuple<vector<int>, vector<vec2f>> make_uvpoints(int num);
 
 /// Merge elements between shapes. The elements are merged by increasing the
 /// array size of the second array by the number of vertices of the first.
 /// Vertex data can then be concatenated successfully.
-inline tuple<vector<vec2i>, vector<vec3i>, vector<vec4i>> merge_elems(
-    int nverts, const vector<vec2i>& lines1, const vector<vec3i>& triangles1,
+tuple<vector<vec2i>, vector<vec3i>, vector<vec4i>> merge_elems(int nverts,
+    const vector<vec2i>& lines1, const vector<vec3i>& triangles1,
     const vector<vec4i>& quads1, const vector<vec2i>& lines2,
-    const vector<vec3i>& triangles2, const vector<vec4i>& quads2) {
-    auto lines = lines1 + lines2;
-    auto triangles = triangles1 + triangles2;
-    auto quads = quads1 + quads2;
-    for (auto i = lines1.size(); i < lines.size(); i++)
-        lines[i] += {nverts, nverts};
-    for (auto i = triangles1.size(); i < triangles.size(); i++)
-        triangles[i] += {nverts, nverts, nverts};
-    for (auto i = quads1.size(); i < quads.size(); i++)
-        quads[i] += {nverts, nverts, nverts, nverts};
-    return {lines, triangles, quads};
-}
+    const vector<vec3i>& triangles2, const vector<vec4i>& quads2);
 
 /// Unshare shape data by duplicating all vertex data for each element,
 /// giving a faceted look. Note that faceted tangents are not computed.
-inline tuple<vector<vec2i>, vector<vec3i>, vector<vec4i>, vector<int>>
-facet_elems(const vector<vec2i>& lines, const vector<vec3i>& triangles,
-    const vector<vec4i>& quads) {
-    auto verts = vector<int>();
-    auto nlines = vector<vec2i>();
-    for (auto l : lines) {
-        nlines.push_back({(int)verts.size(), (int)verts.size() + 1});
-        for (auto v : l) verts += v;
-    }
+tuple<vector<vec2i>, vector<vec3i>, vector<vec4i>, vector<int>> facet_elems(
+    const vector<vec2i>& lines, const vector<vec3i>& triangles,
+    const vector<vec4i>& quads);
 
-    auto ntriangles = vector<vec3i>();
-    for (auto t : triangles) {
-        ntriangles.push_back(
-            {(int)verts.size(), (int)verts.size() + 1, (int)verts.size() + 2});
-        for (auto v : t) verts += v;
-    }
-
-    auto nquads = vector<vec4i>();
-    for (auto q : quads) {
-        if (q.z != q.w) {
-            nquads.push_back({(int)verts.size(), (int)verts.size() + 1,
-                (int)verts.size() + 2, (int)verts.size() + 3});
-            for (auto v : q) verts += v;
-        } else {
-            nquads.push_back({(int)verts.size(), (int)verts.size() + 1,
-                (int)verts.size() + 2, (int)verts.size() + 2});
-            for (auto v : q.xyz()) verts += v;
-        }
-    }
-
-    return {nlines, ntriangles, nquads, verts};
-}
-
-/// Unshare vertices for faceting
+/// Unshare vertices for faceting. Instanced for vec and float types.
 template <typename T>
-inline vector<T> facet_vert(const vector<T>& vert, const vector<int>& vmap) {
-    if (vert.empty()) return vert;
-    auto tvert = vector<T>(vmap.size());
-    for (auto vkv : enumerate(vmap)) tvert[vkv.first] = vert[vkv.second];
-    return tvert;
-}
+vector<T> facet_vert(const vector<T>& vert, const vector<int>& vmap);
 
 }  // namespace ygl
 
@@ -4825,120 +4197,44 @@ inline vector<T> facet_vert(const vector<T>& vert, const vector<int>& vmap) {
 namespace ygl {
 
 /// Pick a point
-inline int sample_points(int npoints, float re) {
-    return clamp(0, npoints - 1, (int)(re * npoints));
-}
+int sample_points(int npoints, float re);
 
 /// Compute a distribution for sampling points uniformly
-inline vector<float> sample_points_cdf(int npoints) {
-    auto cdf = vector<float>(npoints);
-    for (auto i = 0; i < npoints; i++) cdf[i] = i + 1;
-    return cdf;
-}
+vector<float> sample_points_cdf(int npoints);
 
 /// Pick a point
-inline int sample_points(const vector<float>& cdf, float re) {
-    re = clamp(re * cdf.back(), 0.0f, cdf.back() - 0.00001f);
-    return (int)(std::upper_bound(cdf.begin(), cdf.end(), re) - cdf.begin());
-}
+int sample_points(const vector<float>& cdf, float re);
 
 /// Compute a distribution for sampling lines uniformly
-inline vector<float> sample_lines_cdf(
-    const vector<vec2i>& lines, const vector<vec3f>& pos) {
-    auto cdf = vector<float>(lines.size());
-    for (auto i = 0; i < lines.size(); i++)
-        cdf[i] = length(pos[lines[i].x] - pos[lines[i].y]);
-    for (auto i = 1; i < lines.size(); i++) cdf[i] += cdf[i - 1];
-    return cdf;
-}
+vector<float> sample_lines_cdf(
+    const vector<vec2i>& lines, const vector<vec3f>& pos);
 
 /// Pick a point on lines
-inline pair<int, vec2f> sample_lines(
-    const vector<float>& cdf, float re, float ruv) {
-    re = clamp(re * cdf.back(), 0.0f, cdf.back() - 0.00001f);
-    auto eid =
-        (int)(std::upper_bound(cdf.begin(), cdf.end(), re) - cdf.begin());
-    return {eid, {1 - ruv, ruv}};
-}
+pair<int, vec2f> sample_lines(const vector<float>& cdf, float re, float ruv);
 
 /// Compute a distribution for sampling triangle meshes uniformly
-inline vector<float> sample_triangles_cdf(
-    const vector<vec3i>& triangles, const vector<vec3f>& pos) {
-    auto cdf = vector<float>(triangles.size());
-    for (auto i = 0; i < triangles.size(); i++)
-        cdf[i] = triangle_area(
-            pos[triangles[i].x], pos[triangles[i].y], pos[triangles[i].z]);
-    for (auto i = 1; i < triangles.size(); i++) cdf[i] += cdf[i - 1];
-    return cdf;
-}
+vector<float> sample_triangles_cdf(
+    const vector<vec3i>& triangles, const vector<vec3f>& pos);
 
 /// Pick a point on a triangle mesh
-inline pair<int, vec3f> sample_triangles(
-    const vector<float>& cdf, float re, const vec2f& ruv) {
-    re = clamp(re * cdf.back(), 0.0f, cdf.back() - 0.00001f);
-    auto eid =
-        (int)(std::upper_bound(cdf.begin(), cdf.end(), re) - cdf.begin());
-    return {
-        eid, {sqrt(ruv.x) * (1 - ruv.y), 1 - sqrt(ruv.x), ruv.y * sqrt(ruv.x)}};
-}
+pair<int, vec3f> sample_triangles(
+    const vector<float>& cdf, float re, const vec2f& ruv);
 
 /// Compute a distribution for sampling quad meshes uniformly
-inline vector<float> sample_quads_cdf(
-    const vector<vec4i>& quads, const vector<vec3f>& pos) {
-    auto cdf = vector<float>(quads.size());
-    for (auto i = 0; i < quads.size(); i++)
-        cdf[i] = quad_area(
-            pos[quads[i].x], pos[quads[i].y], pos[quads[i].z], pos[quads[i].w]);
-    for (auto i = 1; i < quads.size(); i++) cdf[i] += cdf[i - 1];
-    return cdf;
-}
+vector<float> sample_quads_cdf(
+    const vector<vec4i>& quads, const vector<vec3f>& pos);
 
 /// Pick a point on a quad mesh
-inline pair<int, vec4f> sample_quads(
-    const vector<float>& cdf, float re, const vec2f& ruv) {
-    if (ruv.x < 0.5f) {
-        auto eid = 0;
-        auto euv = zero3f;
-        std::tie(eid, euv) = sample_triangles(cdf, re, {ruv.x * 2, ruv.y});
-        return {eid, {euv.x, euv.y, 0, euv.z}};
-    } else {
-        auto eid = 0;
-        auto euv = zero3f;
-        std::tie(eid, euv) =
-            sample_triangles(cdf, re, {(ruv.x - 0.5f) * 2, ruv.y});
-        return {eid, {0, euv.z, euv.x, euv.y}};
-    }
-}
+pair<int, vec4f> sample_quads(
+    const vector<float>& cdf, float re, const vec2f& ruv);
 
 /// Samples a set of points over a triangle mesh uniformly. The rng function
 /// takes the point index and returns vec3f numbers uniform directibuted in
 /// [0,1]^3. unorm and texcoord are optional.
-inline tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>>
-sample_triangles_points(const vector<vec3i>& triangles,
-    const vector<vec3f>& pos, const vector<vec3f>& norm,
-    const vector<vec2f>& texcoord, int npoints, uint64_t seed = 0) {
-    auto sampled_pos = vector<vec3f>(npoints);
-    auto sampled_norm = vector<vec3f>(norm.empty() ? 0 : npoints);
-    auto sampled_texcoord = vector<vec2f>(texcoord.empty() ? 0 : npoints);
-    auto cdf = sample_triangles_cdf(triangles, pos);
-    auto rng = init_rng(seed);
-    for (auto i = 0; i < npoints; i++) {
-        auto eid = 0;
-        auto euv = zero3f;
-        std::tie(eid, euv) = sample_triangles(
-            cdf, next_rand1f(rng), {next_rand1f(rng), next_rand1f(rng)});
-        auto t = triangles[eid];
-        sampled_pos[i] = pos[t.x] * euv.x + pos[t.y] * euv.y + pos[t.z] * euv.z;
-        if (!sampled_norm.empty())
-            sampled_norm[i] = normalize(
-                norm[t.x] * euv.x + norm[t.y] * euv.y + norm[t.z] * euv.z);
-        if (!sampled_texcoord.empty())
-            sampled_texcoord[i] = texcoord[t.x] * euv.x +
-                                  texcoord[t.y] * euv.y + texcoord[t.z] * euv.z;
-    }
-
-    return {sampled_pos, sampled_norm, sampled_texcoord};
-}
+tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>> sample_triangles_points(
+    const vector<vec3i>& triangles, const vector<vec3f>& pos,
+    const vector<vec3f>& norm, const vector<vec2f>& texcoord, int npoints,
+    uint64_t seed = 0);
 
 }  // namespace ygl
 
@@ -5220,157 +4516,18 @@ inline vec3f rgb_to_xyz(const vec3f& rgb) {
         0.0193339f * rgb.x + 0.1191920f * rgb.y + 0.9503041f * rgb.z};
 }
 
-#if 1
-/// Tone map with a fitted filmic curve.
-///
-/// Implementation from
-/// https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/
-inline float tonemap_filmic(float hdr) {
-    // rescale
-    auto x = hdr * 2.05f;
-    // fitted values
-    float a = 2.51f, b = 0.03f, c = 2.43f, d = 0.59f, e = 0.14f;
-    auto y = ((x * (a * x + b)) / (x * (c * x + d) + e));
-    return pow(clamp(y, 0.0f, 1.0f), 1 / 2.2f);
-}
-#else
-inline float tonemap_filmic(float x) {
-    auto y =
-        (x * (x * (x * (x * 2708.7142 + 6801.1525) + 1079.5474) + 1.1614649) -
-            0.00004139375) /
-        (x * (x * (x * (x * 983.38937 + 4132.0662) + 2881.6522) + 128.35911) +
-            1.0);
-    return (float)std::max(y, 0.0);
-}
-#endif
-
 /// Tone mapping HDR to LDR images.
-inline image4b tonemap_image(
-    const image4f& hdr, float exposure, float gamma, bool filmic = false) {
-    auto ldr = image4b(hdr.width(), hdr.height());
-    auto scale = pow(2.0f, exposure);
-    for (auto j = 0; j < hdr.height(); j++) {
-        for (auto i = 0; i < hdr.width(); i++) {
-            auto h = hdr[{i, j}];
-            h.xyz() *= scale;
-            if (filmic) {
-                h.xyz() = {tonemap_filmic(h.x), tonemap_filmic(h.y),
-                    tonemap_filmic(h.z)};
-            } else {
-                h.xyz() = {pow(h.x, 1 / gamma), pow(h.y, 1 / gamma),
-                    pow(h.z, 1 / gamma)};
-            }
-            ldr[{i, j}] = float_to_byte(h);
-        }
-    }
-    return ldr;
-}
+image4b tonemap_image(
+    const image4f& hdr, float exposure, float gamma, bool filmic = false);
 
 /// Image over operator
-inline void image_over(
-    vec4f* img, int width, int height, int nlayers, vec4f** layers) {
-    for (auto i = 0; i < width * height; i++) {
-        img[i] = {0, 0, 0, 0};
-        auto weight = 1.0f;
-        for (auto l = 0; l < nlayers; l++) {
-            img[i].x += layers[l][i].x * layers[l][i].w * weight;
-            img[i].y += layers[l][i].y * layers[l][i].w * weight;
-            img[i].z += layers[l][i].z * layers[l][i].w * weight;
-            img[i].w += layers[l][i].w * weight;
-            weight *= (1 - layers[l][i].w);
-        }
-        if (img[i].w) {
-            img[i].x /= img[i].w;
-            img[i].y /= img[i].w;
-            img[i].z /= img[i].w;
-        }
-    }
-}
+void image_over(vec4f* img, int width, int height, int nlayers, vec4f** layers);
 
 /// Image over operator
-inline void image_over(
-    vec4b* img, int width, int height, int nlayers, vec4b** layers) {
-    for (auto i = 0; i < width * height; i++) {
-        auto comp = zero4f;
-        auto weight = 1.0f;
-        for (auto l = 0; l < nlayers && weight > 0; l++) {
-            auto w = byte_to_float(layers[l][i].w);
-            comp.x += byte_to_float(layers[l][i].x) * w * weight;
-            comp.y += byte_to_float(layers[l][i].y) * w * weight;
-            comp.z += byte_to_float(layers[l][i].z) * w * weight;
-            comp.w += w * weight;
-            weight *= (1 - w);
-        }
-        if (comp.w) {
-            img[i].x = float_to_byte(comp.x / comp.w);
-            img[i].y = float_to_byte(comp.y / comp.w);
-            img[i].z = float_to_byte(comp.z / comp.w);
-            img[i].w = float_to_byte(comp.w);
-        } else {
-            img[i] = {0, 0, 0, 0};
-        }
-    }
-}
+void image_over(vec4b* img, int width, int height, int nlayers, vec4b** layers);
 
 /// Convert HSV to RGB
-///
-/// Implementatkion from
-/// http://stackoverflow.com/questions/3018313/algorithm-to-convert-rgb-to-hsv-and-hsv-to-rgb-in-range-0-255-for-both
-inline vec4b hsv_to_rgb(const vec4b& hsv) {
-    vec4b rgb = {0, 0, 0, hsv.w};
-    byte region, remainder, p, q, t;
-
-    byte h = hsv.x, s = hsv.y, v = hsv.z;
-
-    if (s == 0) {
-        rgb.x = v;
-        rgb.y = v;
-        rgb.z = v;
-        return rgb;
-    }
-
-    region = h / 43;
-    remainder = (h - (region * 43)) * 6;
-
-    p = (v * (255 - s)) >> 8;
-    q = (v * (255 - ((s * remainder) >> 8))) >> 8;
-    t = (v * (255 - ((s * (255 - remainder)) >> 8))) >> 8;
-
-    switch (region) {
-        case 0:
-            rgb.x = v;
-            rgb.y = t;
-            rgb.z = p;
-            break;
-        case 1:
-            rgb.x = q;
-            rgb.y = v;
-            rgb.z = p;
-            break;
-        case 2:
-            rgb.x = p;
-            rgb.y = v;
-            rgb.z = t;
-            break;
-        case 3:
-            rgb.x = p;
-            rgb.y = q;
-            rgb.z = v;
-            break;
-        case 4:
-            rgb.x = t;
-            rgb.y = p;
-            rgb.z = v;
-            break;
-        default:
-            rgb.x = v;
-            rgb.y = p;
-            rgb.z = q;
-            break;
-    }
-
-    return rgb;
-}
+vec4b hsv_to_rgb(const vec4b& hsv);
 
 }  // namespace ygl
 
@@ -5380,203 +4537,47 @@ inline vec4b hsv_to_rgb(const vec4b& hsv) {
 namespace ygl {
 
 /// Make a grid image
-inline image4b make_grid_image(int width, int height, int tile = 64,
+image4b make_grid_image(int width, int height, int tile = 64,
     const vec4b& c0 = {90, 90, 90, 255},
-    const vec4b& c1 = {128, 128, 128, 255}) {
-    image4b pixels(width, height);
-    for (int j = 0; j < width; j++) {
-        for (int i = 0; i < height; i++) {
-            auto c = i % tile == 0 || i % tile == tile - 1 || j % tile == 0 ||
-                     j % tile == tile - 1;
-            pixels.at(i, j) = (c) ? c0 : c1;
-        }
-    }
-    return pixels;
-}
+    const vec4b& c1 = {128, 128, 128, 255});
 
 /// Make a checkerboard image
-inline image4b make_checker_image(int width, int height, int tile = 64,
+image4b make_checker_image(int width, int height, int tile = 64,
     const vec4b& c0 = {90, 90, 90, 255},
-    const vec4b& c1 = {128, 128, 128, 255}) {
-    image4b pixels(width, height);
-    for (int j = 0; j < height; j++) {
-        for (int i = 0; i < width; i++) {
-            auto c = (i / tile + j / tile) % 2 == 0;
-            pixels.at(i, j) = (c) ? c0 : c1;
-        }
-    }
-    return pixels;
-}
+    const vec4b& c1 = {128, 128, 128, 255});
 
 /// Make an image with bumps and dimples.
-inline image4b make_bumpdimple_image(int width, int height, int tile = 64) {
-    image4b pixels(width, height);
-    for (int j = 0; j < height; j++) {
-        for (int i = 0; i < width; i++) {
-            auto c = (i / tile + j / tile) % 2 == 0;
-            auto ii = i % tile - tile / 2, jj = j % tile - tile / 2;
-            auto r =
-                sqrt(float(ii * ii + jj * jj)) / sqrt(float(tile * tile) / 4);
-            auto h = 0.5f;
-            if (r < 0.5f) { h += (c) ? (0.5f - r) : -(0.5f - r); }
-            auto g = float_to_byte(h);
-            pixels.at(i, j) = vec4b{g, g, g, 255};
-        }
-    }
-    return pixels;
-}
+image4b make_bumpdimple_image(int width, int height, int tile = 64);
 
 /// Make a uv colored grid
-inline image4b make_ramp_image(int width, int height, const vec4b& c0,
-    const vec4b& c1, bool srgb = false) {
-    image4b pixels(width, height);
-    for (int j = 0; j < height; j++) {
-        for (int i = 0; i < width; i++) {
-            auto u = (float)i / (float)width;
-            if (srgb) {
-                pixels.at(i, j) = linear_to_srgb(
-                    srgb_to_linear(c0) * (1 - u) + srgb_to_linear(c1) * u);
-            } else {
-                pixels.at(i, j) = float_to_byte(
-                    byte_to_float(c0) * (1 - u) + byte_to_float(c1) * u);
-            }
-        }
-    }
-    return pixels;
-}
+image4b make_ramp_image(
+    int width, int height, const vec4b& c0, const vec4b& c1, bool srgb = false);
 
 /// Make a gamma ramp image
-inline image4b make_gammaramp_image(int width, int height) {
-    image4b pixels(width, height);
-    for (int j = 0; j < height; j++) {
-        for (int i = 0; i < width; i++) {
-            auto u = j / float(height - 1);
-            if (i < width / 3) u = pow(u, 2.2f);
-            if (i > (width * 2) / 3) u = pow(u, 1 / 2.2f);
-            auto c = (unsigned char)(u * 255);
-            pixels.at(i, j) = {c, c, c, 255};
-        }
-    }
-    return pixels;
-}
+image4b make_gammaramp_image(int width, int height);
 
 /// Make a gamma ramp image
-inline image4f make_gammaramp_imagef(int width, int height) {
-    image4f pixels(width, height);
-    for (int j = 0; j < height; j++) {
-        for (int i = 0; i < width; i++) {
-            auto u = j / float(height - 1);
-            if (i < width / 3) u = pow(u, 2.2f);
-            if (i > (width * 2) / 3) u = pow(u, 1 / 2.2f);
-            pixels.at(i, j) = {u, u, u, 1};
-        }
-    }
-    return pixels;
-}
+image4f make_gammaramp_imagef(int width, int height);
 
 /// Make an image color with red/green in the [0,1] range. Helpful to visualize
 /// uv texture coordinate application.
-inline image4b make_uv_image(int width, int height) {
-    image4b pixels(width, height);
-    for (int j = 0; j < height; j++) {
-        for (int i = 0; i < width; i++) {
-            auto r = float_to_byte(i / (float)(width - 1));
-            auto g = float_to_byte(j / (float)(height - 1));
-            pixels.at(i, j) = vec4b{r, g, 0, 255};
-        }
-    }
-    return pixels;
-}
+image4b make_uv_image(int width, int height);
 
 /// Make a uv colored grid
-inline image4b make_uvgrid_image(
-    int width, int height, int tile = 64, bool colored = true) {
-    image4b pixels(width, height);
-    for (int j = 0; j < height; j++) {
-        for (int i = 0; i < width; i++) {
-            byte ph = 32 * (i / (height / 8));
-            byte pv = 128;
-            byte ps = 64 + 16 * (7 - j / (height / 8));
-            if (i % (tile / 2) && j % (tile / 2)) {
-                if ((i / tile + j / tile) % 2)
-                    pv += 16;
-                else
-                    pv -= 16;
-            } else {
-                pv = 196;
-                ps = 32;
-            }
-            pixels.at(i, j) = (colored) ? hsv_to_rgb({ph, ps, pv, 255}) :
-                                          vec4b{pv, pv, pv, 255};
-        }
-    }
-    return pixels;
-}
+image4b make_uvgrid_image(
+    int width, int height, int tile = 64, bool colored = true);
 
 /// Make a uv recusive colored grid
-inline image4b make_recuvgrid_image(
-    int width, int height, int tile = 64, bool colored = true) {
-    image4b pixels(width, height);
-    for (int j = 0; j < height; j++) {
-        for (int i = 0; i < width; i++) {
-            byte ph = 32 * (i / (height / 8));
-            byte pv = 128;
-            byte ps = 64 + 16 * (7 - j / (height / 8));
-            if (i % (tile / 2) && j % (tile / 2)) {
-                if ((i / tile + j / tile) % 2)
-                    pv += 16;
-                else
-                    pv -= 16;
-                if ((i / (tile / 4) + j / (tile / 4)) % 2)
-                    pv += 4;
-                else
-                    pv -= 4;
-                if ((i / (tile / 8) + j / (tile / 8)) % 2)
-                    pv += 1;
-                else
-                    pv -= 1;
-            } else {
-                pv = 196;
-                ps = 32;
-            }
-            pixels.at(i, j) = (colored) ? hsv_to_rgb({ph, ps, pv, 255}) :
-                                          vec4b{pv, pv, pv, 255};
-        }
-    }
-    return pixels;
-}
+image4b make_recuvgrid_image(
+    int width, int height, int tile = 64, bool colored = true);
 
 /// Comvert a bump map to a normal map.
-inline image4b bump_to_normal_map(const image4b& img, float scale = 1) {
-    image4b norm(img.width(), img.height());
-    for (int j = 0; j < img.height(); j++) {
-        for (int i = 0; i < img.width(); i++) {
-            auto i1 = (i + 1) % img.width(), j1 = (j + 1) % img.height();
-            auto p00 = img.at(i, j), p10 = img.at(i1, j), p01 = img.at(i, j1);
-            auto g00 = (float(p00.x) + float(p00.y) + float(p00.z)) / (3 * 255);
-            auto g01 = (float(p01.x) + float(p01.y) + float(p01.z)) / (3 * 255);
-            auto g10 = (float(p10.x) + float(p10.y) + float(p10.z)) / (3 * 255);
-            auto n = vec3f{scale * (g00 - g10), scale * (g00 - g01), 1.0f};
-            n = normalize(n) * 0.5f + vec3f{0.5f, 0.5f, 0.5f};
-            auto c =
-                vec4b{byte(n.x * 255), byte(n.y * 255), byte(n.z * 255), 255};
-            norm.at(i, j) = c;
-        }
-    }
-    return norm;
-}
+image4b bump_to_normal_map(const image4b& img, float scale = 1);
 
 /// Make a sunsky HDR model with sun at theta elevation in [0,pi/2], turbidity
 /// in [1.7,10] with or without sun.
 image4f make_sunsky_image(int res, float thetaSun, float turbidity = 3,
     bool has_sun = false, bool has_ground = true);
-
-/// Compute the revised Pelin noise function. Wrap provides a wrapping noise
-/// but must be power of two (wraps at 256 anyway). For octave based noise,
-/// good values are obtained with octaves=6 (numerber of noise calls),
-/// lacunarity=~2.0 (spacing between successive octaves: 2.0 for warpping
-/// output), gain=0.5 (relative weighting applied to each successive octave),
-/// offset=1.0 (used to invert the ridges).
 
 /// Make a noise image. Wrap works only if both resx and resy are powers of two.
 image4b make_noise_image(int resx, int resy, float scale = 1, bool wrap = true);
@@ -5640,15 +4641,8 @@ bool save_image(
     const string& filename, int width, int height, int ncomp, const byte* ldr);
 
 /// Save an HDR or LDR image with tonemapping based on filename
-inline bool save_image(const string& filename, const image4f& hdr,
-    float exposure, float gamma, bool filmic = false) {
-    if (is_hdr_filename(filename)) {
-        return save_image4f(filename, hdr);
-    } else {
-        auto ldr = tonemap_image(hdr, exposure, gamma, filmic);
-        return save_image4b(filename, ldr);
-    }
-}
+bool save_image(const string& filename, const image4f& hdr, float exposure,
+    float gamma, bool filmic = false);
 
 /// Filter for resizing
 enum struct resize_filter {
@@ -5699,162 +4693,20 @@ void resize_image(const image4b& img, image4b& res_img,
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-/// Intersect a ray with a point (approximate)
-///
-/// Parameters:
-/// - ray: ray origin and direction, parameter min, max range
-/// - p: point position
-/// - r: point radius
-///
-/// Out Parameters:
-/// - ray_t: ray parameter at the intersection point
-/// - euv: primitive uv ( {0,0} for points )
-///
-/// Returns:
-/// - whether the intersection occurred
-///
-/// Iplementation Notes:
-/// - out Parameters and only writtent o if an intersection occurs
-/// - algorithm finds the closest point on the ray segment to the point and
-///    test their distance with the point radius
-/// - based on http://geomalgorithms.com/a02-lines.html.
-inline bool intersect_point(
-    const ray3f& ray, const vec3f& p, float r, float& ray_t) {
-    // find parameter for line-point minimum distance
-    auto w = p - ray.o;
-    auto t = dot(w, ray.d) / dot(ray.d, ray.d);
+/// Intersect a ray with a point (approximate).
+/// Based on http://geomalgorithms.com/a02-lines.html.
+bool intersect_point(const ray3f& ray, const vec3f& p, float r, float& ray_t);
 
-    // exit if not within bounds
-    if (t < ray.tmin || t > ray.tmax) return false;
-
-    // test for line-point distance vs point radius
-    auto rp = ray.o + ray.d * t;
-    auto prp = p - rp;
-    if (dot(prp, prp) > r * r) return false;
-
-    // intersection occurred: set params and exit
-    ray_t = t;
-
-    return true;
-}
-
-/// Intersect a ray with a line
-///
-/// Parameters:
-/// - ray: ray origin and direction, parameter min, max range
-/// - v0, v1: line segment points
-/// - r0, r1: line segment radia
-///
-/// Out Parameters:
-/// - ray_t: ray parameter at the intersection point
-/// - euv: euv.x is the line parameter at the intersection ( euv.y is zero )
-///
-/// Returns:
-/// - whether the intersection occurred
-///
-/// Notes:
-/// - out Parameters and only writtent o if an intersection occurs
-/// - algorithm find the closest points on line and ray segment and test
-///   their distance with the line radius at that location
-/// - based on http://geomalgorithms.com/a05-intersect-1.html
-/// - based on http://geomalgorithms.com/a07-distance.html#
+/// Intersect a ray with a line (approximate).
+/// Based on http://geomalgorithms.com/a05-intersect-1.html and
+/// http://geomalgorithms.com/a07-distance.html#
 ///     dist3D_Segment_to_Segment
-inline bool intersect_line(const ray3f& ray, const vec3f& v0, const vec3f& v1,
-    float r0, float r1, float& ray_t, vec2f& euv) {
-    // setup intersection params
-    auto u = ray.d;
-    auto v = v1 - v0;
-    auto w = ray.o - v0;
-
-    // compute values to solve a linear system
-    auto a = dot(u, u);
-    auto b = dot(u, v);
-    auto c = dot(v, v);
-    auto d = dot(u, w);
-    auto e = dot(v, w);
-    auto det = a * c - b * b;
-
-    // check determinant and exit if lines are parallel
-    // (could use EPSILONS if desired)
-    if (det == 0) return false;
-
-    // compute Parameters on both ray and segment
-    auto t = (b * e - c * d) / det;
-    auto s = (a * e - b * d) / det;
-
-    // exit if not within bounds
-    if (t < ray.tmin || t > ray.tmax) return false;
-
-    // clamp segment param to segment corners
-    s = clamp(s, (float)0, (float)1);
-
-    // compute segment-segment distance on the closest points
-    auto p0 = ray.o + ray.d * t;
-    auto p1 = v0 + (v1 - v0) * s;
-    auto p01 = p0 - p1;
-
-    // check with the line radius at the same point
-    auto r = r0 * (1 - s) + r1 * s;
-    if (dot(p01, p01) > r * r) return false;
-
-    // intersection occurred: set params and exit
-    ray_t = t;
-    euv = {1 - s, s};
-
-    return true;
-}
+bool intersect_line(const ray3f& ray, const vec3f& v0, const vec3f& v1,
+    float r0, float r1, float& ray_t, vec2f& euv);
 
 /// Intersect a ray with a triangle
-///
-/// Parameters:
-/// - ray: ray origin and direction, parameter min, max range
-/// - v0, v1, v2: triangle vertices
-///
-/// Out Parameters:
-/// - ray_t: ray parameter at the intersection point
-/// - euv: baricentric coordinates of the intersection
-///
-/// Returns:
-/// - whether the intersection occurred
-///
-/// Notes:
-/// - out Parameters and only writtent o if an intersection occurs
-/// - algorithm based on Muller-Trombone intersection test
-inline bool intersect_triangle(const ray3f& ray, const vec3f& v0,
-    const vec3f& v1, const vec3f& v2, float& ray_t, vec3f& euv) {
-    // compute triangle edges
-    auto edge1 = v1 - v0;
-    auto edge2 = v2 - v0;
-
-    // compute determinant to solve a linear system
-    auto pvec = cross(ray.d, edge2);
-    auto det = dot(edge1, pvec);
-
-    // check determinant and exit if triangle and ray are parallel
-    // (could use EPSILONS if desired)
-    if (det == 0) return false;
-    auto inv_det = 1.0f / det;
-
-    // compute and check first bricentric coordinated
-    auto tvec = ray.o - v0;
-    auto u = dot(tvec, pvec) * inv_det;
-    if (u < 0 || u > 1) return false;
-
-    // compute and check second bricentric coordinated
-    auto qvec = cross(tvec, edge1);
-    auto v = dot(ray.d, qvec) * inv_det;
-    if (v < 0 || u + v > 1) return false;
-
-    // compute and check ray parameter
-    auto t = dot(edge2, qvec) * inv_det;
-    if (t < ray.tmin || t > ray.tmax) return false;
-
-    // intersection occurred: set params and exit
-    ray_t = t;
-    euv = {1 - u - v, u, v};
-
-    return true;
-}
+bool intersect_triangle(const ray3f& ray, const vec3f& v0, const vec3f& v1,
+    const vec3f& v2, float& ray_t, vec3f& euv);
 
 /// Intersect a ray with a quad represented as two triangles (0,1,3) and
 /// (2,3,1), with the uv coordinates of the second triangle corrected by u =
@@ -5862,153 +4714,24 @@ inline bool intersect_triangle(const ray3f& ray, const vec3f& v0,
 /// to 1. This is equivalent to Intel's Embree. The external user does not have
 /// to be concerned about the parametrization and can just use the euv as
 /// specified.
-///
-/// Parameters:
-/// - ray: ray origin and direction, parameter min, max range
-/// - v0, v1, v2, v3: quad vertices
-///
-/// Out Parameters:
-/// - ray_t: ray parameter at the intersection point
-/// - euv: baricentric coordinates of the intersection
-///
-/// Returns:
-/// - whether the intersection occurred
-inline bool intersect_quad(const ray3f& ray, const vec3f& v0, const vec3f& v1,
-    const vec3f& v2, const vec3f& v3, float& ray_t, vec4f& euv) {
-    auto hit = false;
-    auto tray = ray;
-    if (intersect_triangle(tray, v0, v1, v3, ray_t, (vec3f&)euv)) {
-        euv = {euv.x, euv.y, 0, euv.z};
-        tray.tmax = ray_t;
-        hit = true;
-    }
-    if (intersect_triangle(tray, v2, v3, v1, ray_t, (vec3f&)euv)) {
-        euv = {0, 1 - euv.y, euv.y + euv.z - 1, 1 - euv.z};
-        tray.tmax = ray_t;
-        hit = true;
-    }
-    return hit;
-}
+bool intersect_quad(const ray3f& ray, const vec3f& v0, const vec3f& v1,
+    const vec3f& v2, const vec3f& v3, float& ray_t, vec4f& euv);
 
 /// Intersect a ray with a tetrahedron. Note that we consider only
 /// intersection wiht the tetrahedra surface and discount intersction with
 /// the interior.
-///
-/// Parameters:
-/// - ray: ray to intersect with
-/// - v0, v1, v2: triangle vertices
-///
-/// Out Parameters:
-/// - ray_t: ray parameter at the intersection point
-/// - euv: baricentric coordinates of the intersection
-///
-/// Returns:
-/// - whether the intersection occurred
-///
-/// TODO: check order
-/// TODO: uv
-inline bool intersect_tetrahedron(const ray3f& ray_, const vec3f& v0,
-    const vec3f& v1, const vec3f& v2, const vec3f& v3, float& ray_t,
-    vec4f& euv) {
-    // check intersction for each face
-    auto hit = false;
-    auto ray = ray_;
-    auto tuv = zero3f;
-    if (intersect_triangle(ray, v0, v1, v2, ray_t, tuv)) {
-        hit = true;
-        ray.tmax = ray_t;
-    }
-    if (intersect_triangle(ray, v0, v1, v3, ray_t, tuv)) {
-        hit = true;
-        ray.tmax = ray_t;
-    }
-    if (intersect_triangle(ray, v0, v2, v3, ray_t, tuv)) {
-        hit = true;
-        ray.tmax = ray_t;
-    }
-    if (intersect_triangle(ray, v1, v2, v3, ray_t, tuv)) {
-        hit = true;
-        ray.tmax = ray_t;
-    }
-
-    return hit;
-}
+bool intersect_tetrahedron(const ray3f& ray_, const vec3f& v0, const vec3f& v1,
+    const vec3f& v2, const vec3f& v3, float& ray_t, vec4f& euv);
 
 /// Intersect a ray with a axis-aligned bounding box
-///
-/// Parameters:
-/// - ray: ray to intersect with
-/// - bbox: bounding box min/max bounds
-///
-/// Returns:
-/// - whether the intersection occurred
-inline bool intersect_check_bbox(const ray3f& ray, const bbox3f& bbox) {
-    // set up convenient pointers for looping over axes
-    auto tmin = ray.tmin, tmax = ray.tmax;
-
-    // for each axis, clip intersection against the bounding planes
-    for (int i = 0; i < 3; i++) {
-        // determine intersection ranges
-        auto invd = 1.0f / ray.d[i];
-        auto t0 = (bbox.min[i] - ray.o[i]) * invd;
-        auto t1 = (bbox.max[i] - ray.o[i]) * invd;
-        // flip based on range directions
-        if (invd < 0.0f) {
-            float a = t0;
-            t0 = t1;
-            t1 = a;
-        }
-        // clip intersection
-        tmin = t0 > tmin ? t0 : tmin;
-        tmax = t1 < tmax ? t1 : tmax;
-        // if intersection is empty, exit
-        if (tmin > tmax) return false;
-    }
-
-    // passed all planes, then intersection occurred
-    return true;
-}
-
-/// Min/max used in BVH traversal. Copied here since the traversal code
-/// relies on the specific behaviour wrt NaNs.
-static inline const float& _safemin(const float& a, const float& b) {
-    return (a < b) ? a : b;
-}
-/// Min/max used in BVH traversal. Copied here since the traversal code
-/// relies on the specific behaviour wrt NaNs.
-static inline const float& _safemax(const float& a, const float& b) {
-    return (a > b) ? a : b;
-}
+bool intersect_check_bbox(const ray3f& ray, const bbox3f& bbox);
 
 /// Intersect a ray with a axis-aligned bounding box
-///
-/// Parameters:
-/// - ray_o, ray_d: ray origin and direction
-/// - ray_tmin, ray_tmax: ray parameter min, max range
-/// - ray_dinv: ray inverse direction
-/// - ray_dsign: ray direction sign
-/// - bbox_min, bbox_max: bounding box min/max bounds
-///
-/// Returns:
-/// - whether the intersection occurred
-///
 /// Implementation Notes:
 /// - based on "Robust BVH Ray Traversal" by T. Ize published at
 /// http://jcgt.org/published/0002/02/02/paper.pdf
-inline bool intersect_check_bbox(const ray3f& ray, const vec3f& ray_dinv,
-    const vec3i& ray_dsign, const bbox3f& bbox_) {
-    auto bbox = &bbox_.min;
-    auto txmin = (bbox[ray_dsign.x].x - ray.o.x) * ray_dinv.x;
-    auto txmax = (bbox[1 - ray_dsign.x].x - ray.o.x) * ray_dinv.x;
-    auto tymin = (bbox[ray_dsign.y].y - ray.o.y) * ray_dinv.y;
-    auto tymax = (bbox[1 - ray_dsign.y].y - ray.o.y) * ray_dinv.y;
-    auto tzmin = (bbox[ray_dsign.z].z - ray.o.z) * ray_dinv.z;
-    auto tzmax = (bbox[1 - ray_dsign.z].z - ray.o.z) * ray_dinv.z;
-    auto tmin = _safemax(tzmin, _safemax(tymin, _safemax(txmin, ray.tmin)));
-    auto tmax = _safemin(tzmax, _safemin(tymax, _safemin(txmax, ray.tmax)));
-    tmax *= 1.00000024f;  // for double: 1.0000000000000004
-    return tmin <= tmax;
-}
+bool intersect_check_bbox(const ray3f& ray, const vec3f& ray_dinv,
+    const vec3i& ray_dsign, const bbox3f& bbox);
 
 }  // namespace ygl
 
@@ -6018,194 +4741,46 @@ inline bool intersect_check_bbox(const ray3f& ray, const vec3f& ray_dinv,
 namespace ygl {
 
 // TODO: documentation
-inline bool overlap_point(
-    const vec3f& pos, float dist_max, const vec3f& p, float r, float& dist) {
-    auto d2 = dot(pos - p, pos - p);
-    if (d2 > (dist_max + r) * (dist_max + r)) return false;
-    dist = sqrt(d2);
-    return true;
-}
+bool overlap_point(
+    const vec3f& pos, float dist_max, const vec3f& p, float r, float& dist);
 
 // TODO: documentation
-inline vec2f closestuv_line(
-    const vec3f& pos, const vec3f& v0, const vec3f& v1) {
-    auto ab = v1 - v0;
-    auto d = dot(ab, ab);
-    // Project c onto ab, computing parameterized position d(t) = a + t*(b –
-    // a)
-    auto u = dot(pos - v0, ab) / d;
-    u = clamp(u, (float)0, (float)1);
-    return {1 - u, u};
-}
+vec2f closestuv_line(const vec3f& pos, const vec3f& v0, const vec3f& v1);
 
 // TODO: documentation
-inline bool overlap_line(const vec3f& pos, float dist_max, const vec3f& v0,
-    const vec3f& v1, float r0, float r1, float& dist, vec2f& euv) {
-    auto uv = closestuv_line(pos, v0, v1);
-    // Compute projected position from the clamped t d = a + t * ab;
-    auto p = lerp(v0, v1, uv.y);
-    auto r = lerp(r0, r1, uv.y);
-    auto d2 = dot(pos - p, pos - p);
-    // check distance
-    if (d2 > (dist_max + r) * (dist_max + r)) return false;
-    // done
-    dist = sqrt(d2);
-    euv = uv;
-    return true;
-}
+bool overlap_line(const vec3f& pos, float dist_max, const vec3f& v0,
+    const vec3f& v1, float r0, float r1, float& dist, vec2f& euv);
 
 // TODO: documentation
 // this is a complicated test -> I probably prefer to use a sequence of test
 // (triangle body, and 3 edges)
-inline vec3f closestuv_triangle(
-    const vec3f& pos, const vec3f& v0, const vec3f& v1, const vec3f& v2) {
-    auto ab = v1 - v0;
-    auto ac = v2 - v0;
-    auto ap = pos - v0;
-
-    auto d1 = dot(ab, ap);
-    auto d2 = dot(ac, ap);
-
-    // corner and edge cases
-    if (d1 <= 0 && d2 <= 0) return {1, 0, 0};
-
-    auto bp = pos - v1;
-    auto d3 = dot(ab, bp);
-    auto d4 = dot(ac, bp);
-    if (d3 >= 0 && d4 <= d3) return {0, 1, 0};
-
-    auto vc = d1 * d4 - d3 * d2;
-    if ((vc <= 0) && (d1 >= 0) && (d3 <= 0))
-        return {1 - d1 / (d1 - d3), d1 / (d1 - d3), 0};
-
-    auto cp = pos - v2;
-    auto d5 = dot(ab, cp);
-    auto d6 = dot(ac, cp);
-    if (d6 >= 0 && d5 <= d6) return {0, 0, 1};
-
-    auto vb = d5 * d2 - d1 * d6;
-    if ((vb <= 0) && (d2 >= 0) && (d6 <= 0))
-        return {1 - d2 / (d2 - d6), 0, d2 / (d2 - d6)};
-
-    auto va = d3 * d6 - d5 * d4;
-    if ((va <= 0) && (d4 - d3 >= 0) && (d5 - d6 >= 0)) {
-        auto w = (d4 - d3) / ((d4 - d3) + (d5 - d6));
-        return {0, 1 - w, w};
-    }
-
-    // face case
-    auto denom = 1 / (va + vb + vc);
-    auto v = vb * denom;
-    auto w = vc * denom;
-    return {1 - v - w, v, w};
-}
+vec3f closestuv_triangle(
+    const vec3f& pos, const vec3f& v0, const vec3f& v1, const vec3f& v2);
 
 // TODO: documentation
-inline bool overlap_triangle(const vec3f& pos, float dist_max, const vec3f& v0,
+bool overlap_triangle(const vec3f& pos, float dist_max, const vec3f& v0,
     const vec3f& v1, const vec3f& v2, float r0, float r1, float r2, float& dist,
-    vec3f& euv) {
-    auto uv = closestuv_triangle(pos, v0, v1, v2);
-    auto p = v0 * uv.x + v1 * uv.y + v2 * uv.z;
-    auto r = r0 * uv.x + r1 * uv.y + r2 * uv.z;
-    auto dd = dot(p - pos, p - pos);
-    if (dd > (dist_max + r) * (dist_max + r)) return false;
-    dist = sqrt(dd);
-    euv = uv;
-    return true;
-}
+    vec3f& euv);
 
 // TODO: documentation
-inline bool overlap_quad(const vec3f& pos, float dist_max, const vec3f& v0,
+bool overlap_quad(const vec3f& pos, float dist_max, const vec3f& v0,
     const vec3f& v1, const vec3f& v2, const vec3f& v3, float r0, float r1,
-    float r2, float r3, float& dist, vec4f& euv) {
-    auto hit = false;
-    if (overlap_triangle(
-            pos, dist_max, v0, v1, v3, r0, r1, r3, dist, (vec3f&)euv)) {
-        euv = {euv.x, euv.y, 0, euv.z};
-        dist_max = dist;
-        hit = true;
-    }
-    if (overlap_triangle(
-            pos, dist_max, v2, v3, v1, r2, r3, r1, dist, (vec3f&)euv)) {
-        // dist_max = dist;
-        euv = {0, 1 - euv.y, euv.y + euv.z - 1, 1 - euv.z};
-        hit = true;
-    }
-    return hit;
-}
+    float r2, float r3, float& dist, vec4f& euv);
 
 // TODO: documentation
-inline bool overlap_tetrahedron(const vec3f& pos, const vec3f& v0,
-    const vec3f& v1, const vec3f& v2, const vec3f& v3, vec4f& euv) {
-    auto vol = dot(v3 - v0, cross(v3 - v1, v3 - v0));
-    if (vol == 0) return false;
-    auto u = dot(v3 - v0, cross(v3 - v1, v3 - v0)) / vol;
-    if (u < 0 || u > 1) return false;
-    auto v = dot(v3 - v0, cross(v3 - v1, v3 - v0)) / vol;
-    if (v < 0 || v > 1 || u + v > 1) return false;
-    auto w = dot(v3 - v0, cross(v3 - v1, v3 - v0)) / vol;
-    if (w < 0 || w > 1 || u + v + w > 1) return false;
-    euv = {u, v, w, 1 - u - v - w};
-    return true;
-}
+bool overlap_tetrahedron(const vec3f& pos, const vec3f& v0, const vec3f& v1,
+    const vec3f& v2, const vec3f& v3, vec4f& euv);
 
 // TODO: documentation
-inline bool overlap_tetrahedron(const vec3f& pos, float dist_max,
-    const vec3f& v0, const vec3f& v1, const vec3f& v2, const vec3f& v3,
-    float r0, float r1, float r2, float r3, float& dist, vec4f& euv) {
-    // check interior
-    if (overlap_tetrahedron(pos, v0, v1, v2, v3, euv)) {
-        dist = 0;
-        return true;
-    }
-
-    // check faces
-    auto hit = false;
-    auto tuv = zero3f;
-    if (overlap_triangle(pos, dist_max, v0, v1, v2, r0, r1, r2, dist, tuv)) {
-        hit = true;
-        dist_max = dist;
-    }
-    if (overlap_triangle(pos, dist_max, v0, v1, v3, r0, r1, r3, dist, tuv)) {
-        hit = true;
-        dist_max = dist;
-    }
-    if (overlap_triangle(pos, dist_max, v0, v2, v3, r0, r2, r3, dist, tuv)) {
-        hit = true;
-        dist_max = dist;
-    }
-    if (overlap_triangle(pos, dist_max, v1, v2, v3, r1, r2, r3, dist, tuv)) {
-        hit = true;
-        // dist_max = dist;
-    }
-
-    return hit;
-}
+bool overlap_tetrahedron(const vec3f& pos, float dist_max, const vec3f& v0,
+    const vec3f& v1, const vec3f& v2, const vec3f& v3, float r0, float r1,
+    float r2, float r3, float& dist, vec4f& euv);
 
 // TODO: documentation
-inline bool distance_check_bbox(
-    const vec3f& pos, float dist_max, const bbox3f& bbox) {
-    // computing distance
-    auto dd = 0.0f;
-
-    // For each axis count any excess distance outside box extents
-    for (int i = 0; i < 3; i++) {
-        auto v = pos[i];
-        if (v < bbox.min[i]) dd += (bbox.min[i] - v) * (bbox.min[i] - v);
-        if (v > bbox.max[i]) dd += (v - bbox.max[i]) * (v - bbox.max[i]);
-    }
-
-    // check distance
-    return dd < dist_max * dist_max;
-}
+bool distance_check_bbox(const vec3f& pos, float dist_max, const bbox3f& bbox);
 
 // TODO: doc
-inline bool overlap_bbox(const bbox3f& bbox1, const bbox3f& bbox2) {
-    if (bbox1.max.x < bbox2.min.x || bbox1.min.x > bbox2.max.x) return false;
-    if (bbox1.max.y < bbox2.min.y || bbox1.min.y > bbox2.max.y) return false;
-    if (bbox1.max.z < bbox2.min.z || bbox1.min.z > bbox2.max.z) return false;
-    return true;
-}
+bool overlap_bbox(const bbox3f& bbox1, const bbox3f& bbox2);
 
 }  // namespace ygl
 
@@ -6217,12 +4792,29 @@ namespace ygl {
 // number of primitives to avoid splitting on
 const int bvh_minprims = 4;
 
+/// Type of BVH node
+enum struct bvh_node_type : uint32_t {
+    /// internal
+    internal = 0,
+    /// points
+    point = 1,
+    /// lines
+    line = 2,
+    /// triangles
+    triangle = 3,
+    /// quads
+    quad = 4,
+    /// vertices
+    vertex = 8,
+    /// instances
+    instance = 16,
+};
+
 /// BVH tree node containing its bounds, indices to the BVH arrays of either
-/// sorted primitives or internal nodes, whether its a leaf or an internal node,
+/// sorted primitives or internal nodes, the node element type or internal node,
 /// and the split axis. Leaf and internal nodes are identical, except that
 /// indices refer to primitives for leaf nodes or other nodes for internal
 /// nodes. See bvh_tree for more details.
-///
 /// This is an internal data structure.
 struct bvh_node {
     /// bounding box
@@ -6231,8 +4823,8 @@ struct bvh_node {
     uint32_t start;
     /// number of primitives/nodes
     uint16_t count;
-    /// whether it is a leaf
-    uint8_t isleaf;
+    /// type of node
+    bvh_node_type type;
     /// slit axis
     uint8_t axis;
 };
@@ -6241,8 +4833,8 @@ struct bvh_node {
 /// indices instead of pointers, both for speed but also to simplify code.
 /// BVH nodes indices refer to either the node array, for internal nodes,
 /// or a primitive array, for leaf nodes. BVH trees may contain only one type
-/// of geometric primitive, like points, lines, triangle or shape other BVHs.
-/// To handle multiple primitive types and transformed primitices, build
+/// of geometric primitive, like points, lines, triangle or other BVHs.
+/// To handle multiple primitive types and transformed primitives, build
 /// a two-level hierarchy with the outer BVH, the scene BVH, containing inner
 /// BVHs, shape BVHs, each of which of a uniform primitive type.
 ///
@@ -6252,669 +4844,56 @@ struct bvh_tree {
     vector<bvh_node> nodes;
     /// sorted elements
     vector<int> sorted_prim;
+    /// element type
+    bvh_node_type type = bvh_node_type::internal;
+
+    /// positions for shape BVHs
+    vector<vec3f> pos;
+    /// radius for shape BVHs
+    vector<float> radius;
+    /// points for shape BVHs
+    vector<int> points;
+    /// lines for shape BVHs
+    vector<vec2i> lines;
+    /// triangles for shape BVHs
+    vector<vec3i> triangles;
+    /// quads for shape BVHs
+    vector<vec4i> quads;
+
+    /// instance frames for instance BVHs
+    vector<frame3f> ist_frames;
+    /// instance inverse frames for instance BVHs
+    vector<frame3f> ist_frames_inv;
+    /// instance BVHs
+    vector<bvh_tree*> ist_bvhs;
 };
 
-// Struct that pack a bounding box, its associate primitive index, and other
-// data for faster hierarchy build.
-// This is internal only and should not be used externally.
-struct bvh_bound_prim {
-    bbox3f bbox;   // bounding box
-    vec3f center;  // bounding box center (for faster sort)
-    int pid;       // primitive id
-};
+/// Build a shape BVH from a set of primitives.
+bvh_tree* build_bvh(const vector<int>& points, const vector<vec2i>& lines,
+    const vector<vec3i>& triangles, const vector<vec4i>& quads,
+    const vector<vec3f>& pos, const vector<float>& radius, float def_radius,
+    bool equalsize);
 
-// Comparison function for each axis
-struct bvh_bound_prim_comp {
-    int axis;
-    float middle;
-
-    bvh_bound_prim_comp(int a, float m = 0) : axis(a), middle(m) {}
-
-    bool operator()(const bvh_bound_prim& a, const bvh_bound_prim& b) const {
-        return a.center[axis] < b.center[axis];
-    }
-
-    bool operator()(const bvh_bound_prim& a) const {
-        return a.center[axis] < middle;
-    }
-};
-
-// Initializes the BVH node node that contains the primitives sorted_prims
-// from start to end, by either splitting it into two other nodes,
-// or initializing it as a leaf. When splitting, the heuristic heuristic is
-// used and nodes added sequentially in the preallocated nodes array and
-// the number of nodes nnodes is updated.
-inline void make_bvh_node(bvh_node* node, vector<bvh_node>& nodes,
-    bvh_bound_prim* sorted_prims, int start, int end, bool equalsize) {
-    // compute node bounds
-    node->bbox = invalid_bbox3f;
-    for (auto i = start; i < end; i++) node->bbox += sorted_prims[i].bbox;
-
-    // decide whether to create a leaf
-    if (end - start <= bvh_minprims) {
-        // makes a leaf node
-        node->isleaf = true;
-        node->start = start;
-        node->count = end - start;
-    } else {
-        // choose the split axis and position
-        // init to default values
-        auto axis = 0;
-        auto mid = (start + end) / 2;
-
-        // compute primintive bounds and size
-        auto centroid_bbox = invalid_bbox3f;
-        for (auto i = start; i < end; i++)
-            centroid_bbox += sorted_prims[i].center;
-        auto centroid_size = bbox_diagonal(centroid_bbox);
-
-        // check if it is not possible to split
-        if (centroid_size == zero3f) {
-            // we failed to split for some reasons
-            node->isleaf = true;
-            node->start = start;
-            node->count = end - start;
-        } else {
-            // split along largest
-            auto largest_axis = max_element(centroid_size).first;
-
-            // check heuristic
-            if (equalsize) {
-                // split the space in the middle along the largest axis
-                axis = largest_axis;
-                mid = (int)(std::partition(sorted_prims + start,
-                                sorted_prims + end,
-                                bvh_bound_prim_comp(largest_axis,
-                                    bbox_center(centroid_bbox)[largest_axis])) -
-                            sorted_prims);
-            } else {
-                // balanced tree split: find the largest axis of the bounding
-                // box and split along this one right in the middle
-                axis = largest_axis;
-                mid = (start + end) / 2;
-                std::nth_element(sorted_prims + start, sorted_prims + mid,
-                    sorted_prims + end, bvh_bound_prim_comp(largest_axis));
-            }
-
-            // check correctness
-            assert(axis >= 0 && mid > 0);
-            assert(mid > start && mid < end);
-
-            // makes an internal node
-            node->isleaf = false;
-            // perform the splits by preallocating the child nodes and recurring
-            node->axis = axis;
-            node->start = (int)nodes.size();
-            node->count = 2;
-            nodes.emplace_back();
-            nodes.emplace_back();
-            // build child nodes
-            make_bvh_node(&nodes[node->start], nodes, sorted_prims, start, mid,
-                equalsize);
-            make_bvh_node(&nodes[node->start + 1], nodes, sorted_prims, mid,
-                end, equalsize);
-        }
-    }
-}
-
-/// Build a BVH from a set of primitives.
-inline bvh_tree* build_bvh(
-    int nprims, bool equalsize, const function<bbox3f(int)>& elem_bbox) {
-    // allocate if needed
-    auto bvh = new bvh_tree();
-
-    // prepare prims
-    auto bound_prims = vector<bvh_bound_prim>(nprims);
-    for (auto i = 0; i < nprims; i++) {
-        bound_prims[i].pid = i;
-        bound_prims[i].bbox = elem_bbox(i);
-        bound_prims[i].center = bbox_center(bound_prims[i].bbox);
-    }
-
-    // clear bvh
-    bvh->nodes.clear();
-    bvh->sorted_prim.clear();
-
-    // allocate nodes (over-allocate now then shrink)
-    bvh->nodes.reserve(nprims * 2);
-
-    // start recursive splitting
-    bvh->nodes.emplace_back();
-    make_bvh_node(
-        &bvh->nodes[0], bvh->nodes, bound_prims.data(), 0, nprims, equalsize);
-
-    // shrink back
-    bvh->nodes.shrink_to_fit();
-
-    // init sorted element arrays
-    // for shared memory, stored pointer to the external data
-    // store the sorted primitive order for BVH walk
-    bvh->sorted_prim.resize(nprims);
-    for (int i = 0; i < nprims; i++) {
-        bvh->sorted_prim[i] = bound_prims[i].pid;
-    }
-
-    // done
-    return bvh;
-}
-
-/// Build a triangles BVH.
-inline bvh_tree* build_triangles_bvh(const vector<vec3i>& triangles,
-    const vector<vec3f>& pos, bool equal_size = true) {
-    return build_bvh(
-        (int)triangles.size(), equal_size, [&triangles, &pos](int eid) {
-            auto f = triangles[eid];
-            return triangle_bbox(pos[f.x], pos[f.y], pos[f.z]);
-        });
-}
-
-/// Build a quads BVH.
-inline bvh_tree* build_quads_bvh(const vector<vec4i>& quads,
-    const vector<vec3f>& pos, bool equal_size = true) {
-    return build_bvh((int)quads.size(), equal_size, [&quads, &pos](int eid) {
-        auto f = quads[eid];
-        return quad_bbox(pos[f.x], pos[f.y], pos[f.z], pos[f.w]);
-    });
-}
-
-/// Build a lines BVH.
-inline bvh_tree* build_lines_bvh(const vector<vec2i>& lines,
-    const vector<vec3f>& pos, const vector<float>& radius,
-    bool equal_size = true) {
-    return build_bvh(
-        (int)lines.size(), equal_size, [&lines, &pos, &radius](int eid) {
-            auto f = lines[eid];
-            return line_bbox(pos[f.x], pos[f.y], radius[f.x], radius[f.y]);
-        });
-}
-
-/// Build a points BVH.
-inline bvh_tree* build_points_bvh(const vector<int>& points,
-    const vector<vec3f>& pos, const vector<float>& radius,
-    bool equal_size = true) {
-    return build_bvh(
-        (int)points.size(), equal_size, [&points, &pos, &radius](int eid) {
-            auto f = points[eid];
-            return point_bbox(pos[f], radius[f]);
-        });
-}
-
-/// Build a points BVH.
-inline bvh_tree* build_points_bvh(const vector<vec3f>& pos,
-    const vector<float>& radius, bool equal_size = true) {
-    return build_bvh((int)pos.size(), equal_size, [&pos, &radius](int eid) {
-        auto r = (radius.empty()) ? 0.00001f : radius[eid];
-        return point_bbox(pos[eid], r);
-    });
-}
+/// Build a scene BVH from a set of shape instances.
+bvh_tree* build_bvh(const vector<frame3f>& frames,
+    const vector<frame3f>& frames_inv, const vector<bvh_tree*>& ist_bvhs,
+    bool equal_size);
 
 /// Recursively recomputes the node bounds for a shape bvh
-inline void refit_bvh(
-    bvh_tree* bvh, int nodeid, const function<bbox3f(int)>& elem_bbox) {
-    // refit
-    auto node = &bvh->nodes[nodeid];
-    node->bbox = invalid_bbox3f;
-    if (node->isleaf) {
-        for (auto i = 0; i < node->count; i++) {
-            auto idx = bvh->sorted_prim[node->start + i];
-            node->bbox += elem_bbox(idx);
-        }
-    } else {
-        for (auto i = 0; i < node->count; i++) {
-            auto idx = node->start + i;
-            refit_bvh(bvh, idx, elem_bbox);
-            node->bbox += bvh->nodes[idx].bbox;
-        }
-    }
-}
+void refit_bvh(bvh_tree* bvh, const vector<vec3f>& pos,
+    const vector<float>& radius, float def_radius);
 
-/// Refit triangles bvh
-inline void refit_triangles_bvh(
-    bvh_tree* bvh, const vec3i* triangles, const vec3f* pos) {
-    refit_bvh(bvh, 0, [triangles, pos](int eid) {
-        auto f = triangles[eid];
-        return triangle_bbox(pos[f.x], pos[f.y], pos[f.z]);
-    });
-}
-
-/// Refit triangles bvh
-inline void refit_triangles_bvh(
-    bvh_tree* bvh, const vector<vec3i>& triangles, const vector<vec3f>& pos) {
-    refit_triangles_bvh(bvh, triangles.data(), pos.data());
-}
-
-/// Refit quads bvh
-inline void refit_quads_bvh(
-    bvh_tree* bvh, const vec4i* quads, const vec3f* pos) {
-    refit_bvh(bvh, 0, [quads, pos](int eid) {
-        auto f = quads[eid];
-        return quad_bbox(pos[f.x], pos[f.y], pos[f.z], pos[f.w]);
-    });
-}
-
-/// Refit quads bvh
-inline void refit_quads_bvh(
-    bvh_tree* bvh, const vector<vec4i>& quads, const vector<vec3f>& pos) {
-    refit_quads_bvh(bvh, quads.data(), pos.data());
-}
-
-/// Refit lines bvh
-inline void refit_lines_bvh(
-    bvh_tree* bvh, const vec2i* lines, const vec3f* pos, const float* radius) {
-    refit_bvh(bvh, 0, [lines, pos, radius](int eid) {
-        auto f = lines[eid];
-        return line_bbox(pos[f.x], pos[f.y], radius[f.x], radius[f.y]);
-    });
-}
-
-/// Refit lines bvh
-inline void refit_lines_bvh(bvh_tree* bvh, const vector<vec2i>& lines,
-    const vector<vec3f>& pos, const vector<float>& radius) {
-    refit_lines_bvh(bvh, lines.data(), pos.data(), radius.data());
-}
-
-/// Refit points bvh
-inline void refit_points_bvh(
-    bvh_tree* bvh, const int* points, const vec3f* pos, const float* radius) {
-    refit_bvh(bvh, 0, [points, pos, radius](int eid) {
-        auto f = points[eid];
-        return point_bbox(pos[f], (radius) ? radius[f] : 0);
-    });
-}
-
-/// Refit points bvh
-inline void refit_points_bvh(bvh_tree* bvh, const vector<int>& points,
-    const vector<vec3f>& pos, const vector<float>& radius) {
-    refit_points_bvh(bvh, points.data(), pos.data(), radius.data());
-}
-/// Refit points bvh
-inline void refit_points_bvh(
-    bvh_tree* bvh, const vec3f* pos, const float* radius) {
-    refit_bvh(bvh, 0,
-        [pos, radius](int eid) { return point_bbox(pos[eid], radius[eid]); });
-}
-
-/// Refit lines bvh
-inline void refit_points_bvh(
-    bvh_tree* bvh, const vector<vec3f>& pos, const vector<float>& radius) {
-    refit_points_bvh(bvh, pos.data(), radius.data());
-}
+/// Recursively recomputes the node bounds for a scene bvh
+void refit_bvh(bvh_tree* bvh, const vector<frame3f>& frames,
+    const vector<frame3f>& frames_inv);
 
 /// Intersect ray with a bvh.
-inline bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray_,
-    bool early_exit, float& ray_t, int& eid,
-    const function<bool(int, const ray3f&, float&)>& intersect_elem) {
-    // node stack
-    int node_stack[64];
-    auto node_cur = 0;
-    node_stack[node_cur++] = 0;
-
-    // shared variables
-    auto hit = false;
-
-    // copy ray to modify it
-    auto ray = ray_;
-
-    // prepare ray for fast queries
-    auto ray_dinv = vec3f{1, 1, 1} / ray.d;
-    auto ray_dsign = vec3i{(ray_dinv.x < 0) ? 1 : 0, (ray_dinv.y < 0) ? 1 : 0,
-        (ray_dinv.z < 0) ? 1 : 0};
-    auto ray_reverse = array<bool, 4>{
-        {(bool)ray_dsign.x, (bool)ray_dsign.y, (bool)ray_dsign.z, false}};
-
-    // walking stack
-    while (node_cur) {
-        // grab node
-        auto node = bvh->nodes[node_stack[--node_cur]];
-
-        // intersect bbox
-        if (!intersect_check_bbox(ray, ray_dinv, ray_dsign, node.bbox))
-            continue;
-
-        // intersect node, switching based on node type
-        // for each type, iterate over the the primitive list
-        if (!node.isleaf) {
-            // for internal nodes, attempts to proceed along the
-            // split axis from smallest to largest nodes
-            if (ray_reverse[node.axis]) {
-                for (auto i = 0; i < node.count; i++) {
-                    auto idx = node.start + i;
-                    node_stack[node_cur++] = idx;
-                    assert(node_cur < 64);
-                }
-            } else {
-                for (auto i = node.count - 1; i >= 0; i--) {
-                    auto idx = node.start + i;
-                    node_stack[node_cur++] = idx;
-                    assert(node_cur < 64);
-                }
-            }
-        } else {
-            for (auto i = 0; i < node.count; i++) {
-                auto idx = bvh->sorted_prim[node.start + i];
-                if (intersect_elem(idx, ray, ray_t)) {
-                    hit = true;
-                    ray.tmax = ray_t;
-                    eid = idx;
-                    if (early_exit) return true;
-                }
-            }
-        }
-    }
-
-    return hit;
-}
+bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray, bool early_exit,
+    float& ray_t, int& iid, int& eid, vec4f& ew);
 
 /// Finds the closest element with a bvh.
-inline bool overlap_bvh(const bvh_tree* bvh, const vec3f& pos, float max_dist,
-    bool early_exit, float& dist, int& eid,
-    const function<bool(int, const vec3f&, float, float&)>& overlap_elem) {
-    // node stack
-    int node_stack[64];
-    auto node_cur = 0;
-    node_stack[node_cur++] = 0;
-
-    // hit
-    auto hit = false;
-
-    // walking stack
-    while (node_cur) {
-        // grab node
-        auto node = bvh->nodes[node_stack[--node_cur]];
-
-        // intersect bbox
-        if (!distance_check_bbox(pos, max_dist, node.bbox)) continue;
-
-        // intersect node, switching based on node type
-        // for each type, iterate over the the primitive list
-        if (!node.isleaf) {
-            // internal node
-            for (auto idx = node.start; idx < node.start + node.count; idx++) {
-                node_stack[node_cur++] = idx;
-                assert(node_cur < 64);
-            }
-        } else {
-            for (auto i = 0; i < node.count; i++) {
-                auto idx = bvh->sorted_prim[node.start + i];
-                if (overlap_elem(idx, pos, max_dist, dist)) {
-                    hit = true;
-                    max_dist = dist;
-                    eid = idx;
-                    if (early_exit) return true;
-                }
-            }
-        }
-    }
-
-    return hit;
-}
-
-/// Intersect a triangle BVH
-inline bool intersect_triangles_bvh(const bvh_tree* bvh, const vec3i* triangles,
-    const vec3f* pos, const ray3f& ray, bool early_exit, float& ray_t, int& eid,
-    vec3f& euv) {
-    return intersect_bvh(bvh, ray, early_exit, ray_t, eid,
-        [&triangles, &pos, &euv](int eid, const ray3f& ray, float& ray_t) {
-            const auto& f = triangles[eid];
-            return intersect_triangle(
-                ray, pos[f.x], pos[f.y], pos[f.z], ray_t, euv);
-        });
-}
-
-/// Intersect a triangle BVH
-inline bool intersect_triangles_bvh(const bvh_tree* bvh,
-    const vector<vec3i>& triangles, const vector<vec3f>& pos, const ray3f& ray,
-    bool early_exit, float& ray_t, int& eid, vec3f& euv) {
-    return intersect_triangles_bvh(
-        bvh, triangles.data(), pos.data(), ray, early_exit, ray_t, eid, euv);
-}
-
-/// Intersect a quad BVH
-inline bool intersect_quads_bvh(const bvh_tree* bvh, const vec4i* quads,
-    const vec3f* pos, const ray3f& ray, bool early_exit, float& ray_t, int& eid,
-    vec4f& euv) {
-    return intersect_bvh(bvh, ray, early_exit, ray_t, eid,
-        [&quads, &pos, &euv](int eid, const ray3f& ray, float& ray_t) {
-            const auto& f = quads[eid];
-            return intersect_quad(
-                ray, pos[f.x], pos[f.y], pos[f.z], pos[f.w], ray_t, euv);
-        });
-}
-
-/// Intersect a quad BVH
-inline bool intersect_quads_bvh(const bvh_tree* bvh, const vector<vec4i>& quads,
-    const vector<vec3f>& pos, const ray3f& ray, bool early_exit, float& ray_t,
-    int& eid, vec4f& euv) {
-    return intersect_quads_bvh(
-        bvh, quads.data(), pos.data(), ray, early_exit, ray_t, eid, euv);
-}
-
-/// Intersect a line BVH
-inline bool intersect_lines_bvh(const bvh_tree* bvh, const vec2i* lines,
-    const vec3f* pos, const float* radius, const ray3f& ray, bool early_exit,
-    float& ray_t, int& eid, vec2f& euv) {
-    return intersect_bvh(bvh, ray, early_exit, ray_t, eid,
-        [&lines, &pos, &radius, &euv](int eid, const ray3f& ray, float& ray_t) {
-            auto f = lines[eid];
-            return intersect_line(
-                ray, pos[f.x], pos[f.y], radius[f.x], radius[f.y], ray_t, euv);
-        });
-}
-
-/// Intersect a line BVH
-inline bool intersect_lines_bvh(const bvh_tree* bvh, const vector<vec2i>& lines,
-    const vector<vec3f>& pos, const vector<float>& radius, const ray3f& ray,
-    bool early_exit, float& ray_t, int& eid, vec2f& euv) {
-    return intersect_lines_bvh(bvh, lines.data(), pos.data(), radius.data(),
-        ray, early_exit, ray_t, eid, euv);
-}
-
-/// Intersect a point BVH
-inline bool intersect_points_bvh(const bvh_tree* bvh, const int* points,
-    const vec3f* pos, const float* radius, const ray3f& ray, bool early_exit,
-    float& ray_t, int& eid) {
-    return intersect_bvh(bvh, ray, early_exit, ray_t, eid,
-        [&points, &pos, &radius](int eid, const ray3f& ray, float& ray_t) {
-            auto f = points[eid];
-            return intersect_point(ray, pos[f], radius[f], ray_t);
-        });
-}
-
-/// Intersect a point BVH
-inline bool intersect_points_bvh(const bvh_tree* bvh, const vector<int>& points,
-    const vector<vec3f>& pos, const vector<float>& radius, const ray3f& ray,
-    bool early_exit, float& ray_t, int& eid) {
-    return intersect_points_bvh(bvh, points.data(), pos.data(), radius.data(),
-        ray, early_exit, ray_t, eid);
-}
-
-/// Intersect a point BVH
-inline bool intersect_points_bvh(const bvh_tree* bvh, const vec3f* pos,
-    const float* radius, const ray3f& ray, bool early_exit, float& ray_t,
-    int& eid) {
-    return intersect_bvh(bvh, ray, early_exit, ray_t, eid,
-        [&pos, &radius](int eid, const ray3f& ray, float& ray_t) {
-            return intersect_point(ray, pos[eid], radius[eid], ray_t);
-        });
-}
-
-/// Intersect a point BVH
-inline bool intersect_points_bvh(const bvh_tree* bvh, const vector<vec3f>& pos,
-    const vector<float>& radius, const ray3f& ray, bool early_exit,
-    float& ray_t, int& eid) {
-    return intersect_points_bvh(
-        bvh, pos.data(), radius.data(), ray, early_exit, ray_t, eid);
-}
-
-/// Intersect a triangle BVH
-inline bool overlap_triangles_bvh(const bvh_tree* bvh, const vec3i* triangles,
-    const vec3f* pos, const float* radius, const vec3f& pt, float max_dist,
-    bool early_exit, float& dist, int& eid, vec3f& euv) {
-    return overlap_bvh(bvh, pt, max_dist, early_exit, dist, eid,
-        [&triangles, &pos, &radius, &euv](
-            int eid, const vec3f& pt, float max_dist, float& dist) {
-            auto f = triangles[eid];
-            return overlap_triangle(pt, max_dist, pos[f.x], pos[f.y], pos[f.z],
-                (radius) ? radius[f.x] : 0, (radius) ? radius[f.y] : 0,
-                (radius) ? radius[f.z] : 0, dist, euv);
-        });
-}
-
-/// Intersect a triangle BVH
-inline bool overlap_triangles_bvh(const bvh_tree* bvh,
-    const vector<vec3i>& triangles, const vector<vec3f>& pos,
-    const vector<float>& radius, const vec3f& pt, float max_dist,
-    bool early_exit, float& dist, int& eid, vec3f& euv) {
-    return overlap_triangles_bvh(bvh, triangles.data(), pos.data(),
-        radius.data(), pt, max_dist, early_exit, dist, eid, euv);
-}
-
-/// Intersect a quad BVH
-inline bool overlap_quads_bvh(const bvh_tree* bvh, const vec4i* quads,
-    const vec3f* pos, const float* radius, const vec3f& pt, float max_dist,
-    bool early_exit, float& dist, int& eid, vec4f& euv) {
-    return overlap_bvh(bvh, pt, max_dist, early_exit, dist, eid,
-        [&quads, &pos, &radius, &euv](
-            int eid, const vec3f& pt, float max_dist, float& dist) {
-            auto f = quads[eid];
-            return overlap_quad(pt, max_dist, pos[f.x], pos[f.y], pos[f.z],
-                pos[f.w], (radius) ? radius[f.x] : 0,
-                (radius) ? radius[f.y] : 0, (radius) ? radius[f.z] : 0,
-                (radius) ? radius[f.w] : 0, dist, euv);
-        });
-}
-
-/// Intersect a quad BVH
-inline bool overlap_quads_bvh(const bvh_tree* bvh, const vector<vec4i>& quads,
-    const vector<vec3f>& pos, const vector<float>& radius, const vec3f& pt,
-    float max_dist, bool early_exit, float& dist, int& eid, vec4f& euv) {
-    return overlap_quads_bvh(bvh, quads.data(), pos.data(), radius.data(), pt,
-        max_dist, early_exit, dist, eid, euv);
-}
-
-/// Intersect a line BVH
-inline bool overlap_lines_bvh(const bvh_tree* bvh, const vec2i* lines,
-    const vec3f* pos, const float* radius, const vec3f& pt, float max_dist,
-    bool early_exit, float& dist, int& eid, vec2f& euv) {
-    return overlap_bvh(bvh, pt, max_dist, early_exit, dist, eid,
-        [&lines, &pos, &radius, &euv](
-            int eid, const vec3f& pt, float max_dist, float& dist) {
-            auto f = lines[eid];
-            return overlap_line(pt, max_dist, pos[f.x], pos[f.y],
-                (radius) ? radius[f.x] : 0, (radius) ? radius[f.y] : 0, dist,
-                euv);
-        });
-}
-
-/// Intersect a line BVH
-inline bool overlap_lines_bvh(const bvh_tree* bvh, const vector<vec2i>& lines,
-    const vector<vec3f>& pos, const vector<float>& radius, const vec3f& pt,
-    float max_dist, bool early_exit, float& dist, int& eid, vec2f& euv) {
-    return overlap_lines_bvh(bvh, lines.data(), pos.data(), radius.data(), pt,
-        max_dist, early_exit, dist, eid, euv);
-}
-
-/// Intersect a point BVH
-inline bool overlap_points_bvh(const bvh_tree* bvh, const int* points,
-    const vec3f* pos, const float* radius, const vec3f& pt, float max_dist,
-    bool early_exit, float& dist, int& eid) {
-    return overlap_bvh(bvh, pt, max_dist, early_exit, dist, eid,
-        [&points, &pos, &radius](
-            int eid, const vec3f& pt, float max_dist, float& dist) {
-            auto f = points[eid];
-            return overlap_point(
-                pt, max_dist, pos[f], (radius) ? radius[f] : 0, dist);
-        });
-}
-
-/// Intersect a point BVH
-inline bool overlap_points_bvh(const bvh_tree* bvh, const vector<int>& points,
-    const vector<vec3f>& pos, const vector<float>& radius, const vec3f& pt,
-    float max_dist, bool early_exit, float& dist, int& eid) {
-    return overlap_points_bvh(bvh, points.data(), pos.data(), radius.data(), pt,
-        max_dist, early_exit, dist, eid);
-}
-
-/// Intersect a point BVH
-inline bool overlap_points_bvh(const bvh_tree* bvh, const vec3f* pos,
-    const float* radius, const vec3f& pt, float max_dist, bool early_exit,
-    float& dist, int& eid) {
-    return overlap_bvh(bvh, pt, max_dist, early_exit, dist, eid,
-        [&pos, &radius](int eid, const vec3f& pt, float max_dist, float& dist) {
-            return overlap_point(pt, max_dist, pos[eid], radius[eid], dist);
-        });
-}
-
-/// Intersect a point BVH
-inline bool overlap_points_bvh(const bvh_tree* bvh, const vector<vec3f>& pos,
-    const vector<float>& radius, const vec3f& pt, float max_dist,
-    bool early_exit, float& dist, int& eid) {
-    return overlap_points_bvh(
-        bvh, pos.data(), radius.data(), pt, max_dist, early_exit, dist, eid);
-}
-
-/// Finds the overlap between BVH leaf nodes.
-template <typename OverlapElem>
-void overlap_bvh_elems(const bvh_tree* bvh1, const bvh_tree* bvh2,
-    bool skip_duplicates, bool skip_self, vector<vec2i>& overlaps,
-    const OverlapElem& overlap_elems) {
-    // node stack
-    vec2i node_stack[128];
-    auto node_cur = 0;
-    node_stack[node_cur++] = {0, 0};
-
-    // walking stack
-    while (node_cur) {
-        // grab node
-        auto node_idx = node_stack[--node_cur];
-        const auto node1 = bvh1->nodes[node_idx.x];
-        const auto node2 = bvh2->nodes[node_idx.y];
-
-        // intersect bbox
-        if (!overlap_bbox(node1.bbox, node2.bbox)) continue;
-
-        // check for leaves
-        if (node1.isleaf && node2.isleaf) {
-            // collide primitives
-            for (auto i1 = node1.start; i1 < node1.start + node1.count; i1++) {
-                for (auto i2 = node2.start; i2 < node2.start + node2.count;
-                     i2++) {
-                    auto idx1 = bvh1->sorted_prim[i1];
-                    auto idx2 = bvh2->sorted_prim[i2];
-                    if (skip_duplicates && idx1 > idx2) continue;
-                    if (skip_self && idx1 == idx2) continue;
-                    if (overlap_elems(idx1, idx2))
-                        overlaps.push_back({idx1, idx2});
-                }
-            }
-        } else {
-            // descend
-            if (node1.isleaf) {
-                for (auto idx2 = node2.start; idx2 < node2.start + node2.count;
-                     idx2++) {
-                    node_stack[node_cur++] = {node_idx.x, (int)idx2};
-                    assert(node_cur < 128);
-                }
-            } else if (node2.isleaf) {
-                for (auto idx1 = node1.start; idx1 < node1.start + node1.count;
-                     idx1++) {
-                    node_stack[node_cur++] = {(int)idx1, node_idx.y};
-                    assert(node_cur < 128);
-                }
-            } else {
-                for (auto idx2 = node2.start; idx2 < node2.start + node2.count;
-                     idx2++) {
-                    for (auto idx1 = node1.start;
-                         idx1 < node1.start + node1.count; idx1++) {
-                        node_stack[node_cur++] = {(int)idx1, (int)idx2};
-                        assert(node_cur < 128);
-                    }
-                }
-            }
-        }
-    }
-}
-
+bool overlap_bvh(const bvh_tree* bvh, const vec3f& pos, float max_dist,
+    bool early_exit, float& dist, int& iid, int& eid, vec4f& ew);
 }  // namespace ygl
 
 // -----------------------------------------------------------------------------
@@ -7087,10 +5066,8 @@ struct shape {
     /// bounding box (needs to be updated explicitly)
     bbox3f bbox = invalid_bbox3f;
 
-    // clean
-    ~shape() {
-        if (bvh) delete bvh;
-    }
+    // cleanup
+    ~shape();
 };
 
 /// Shape instance.
@@ -7233,10 +5210,8 @@ struct animation {
     /// Binds keyframe values to nodes.
     vector<pair<keyframe*, node*>> targets;
 
-    /// Cleanup
-    animation() {
-        for (auto v : keyframes) delete v;
-    }
+    // Cleanup
+    ~animation();
 };
 
 /// Scene
@@ -7268,136 +5243,28 @@ struct scene {
     /// bounding box (needs to be updated explicitly)
     bbox3f bbox = invalid_bbox3f;
 
-    /// cleanup
-    ~scene() {
-        for (auto v : shapes)
-            if (v) delete v;
-        for (auto v : instances)
-            if (v) delete v;
-        for (auto v : materials)
-            if (v) delete v;
-        for (auto v : textures)
-            if (v) delete v;
-        for (auto v : cameras)
-            if (v) delete v;
-        for (auto v : environments)
-            if (v) delete v;
-        for (auto v : lights)
-            if (v) delete v;
-        for (auto v : nodes)
-            if (v) delete v;
-        for (auto v : animations)
-            if (v) delete v;
-        if (bvh) delete bvh;
-    }
+    // Cleanup
+    ~scene();
 };
 
-/// Shape value interpolated using barycentric coordinates
-template <typename T>
-inline T eval_barycentric(
-    const shape* shp, const vector<T>& vals, int eid, const vec4f& euv) {
-    if (vals.empty()) return T();
-    if (!shp->triangles.empty()) {
-        return eval_barycentric_triangle(
-            vals, shp->triangles[eid], vec3f{euv.x, euv.y, euv.z});
-    } else if (!shp->lines.empty()) {
-        return eval_barycentric_line(
-            vals, shp->lines[eid], vec2f{euv.x, euv.y});
-    } else if (!shp->points.empty()) {
-        return eval_barycentric_point(vals, shp->points[eid], euv.x);
-    } else if (!shp->quads.empty()) {
-        return eval_barycentric_quad(vals, shp->quads[eid], euv);
-    } else {
-        return vals[eid];  // points
-    }
-}
-
 /// Shape position interpolated using barycentric coordinates
-inline vec3f eval_pos(const shape* shp, int eid, const vec4f& euv) {
-    return eval_barycentric(shp, shp->pos, eid, euv);
-}
-
+vec3f eval_pos(const shape* shp, int eid, const vec4f& euv);
 /// Shape normal interpolated using barycentric coordinates
-inline vec3f eval_norm(const shape* shp, int eid, const vec4f& euv) {
-    return normalize(eval_barycentric(shp, shp->norm, eid, euv));
-}
-
+vec3f eval_norm(const shape* shp, int eid, const vec4f& euv);
 /// Shape texcoord interpolated using barycentric coordinates
-inline vec2f eval_texcoord(const shape* shp, int eid, const vec4f& euv) {
-    return eval_barycentric(shp, shp->texcoord, eid, euv);
-}
-
+vec2f eval_texcoord(const shape* shp, int eid, const vec4f& euv);
 /// Shape texcoord interpolated using barycentric coordinates
-inline vec4f eval_color(const shape* shp, int eid, const vec4f& euv) {
-    return eval_barycentric(shp, shp->color, eid, euv);
-}
-
+vec4f eval_color(const shape* shp, int eid, const vec4f& euv);
 /// Shape tangent space interpolated using barycentric coordinates
-inline vec4f eval_tangsp(const shape* shp, int eid, const vec4f& euv) {
-    return eval_barycentric(shp, shp->tangsp, eid, euv);
-}
-
+vec4f eval_tangsp(const shape* shp, int eid, const vec4f& euv);
 /// Instance position interpolated using barycentric coordinates
-inline vec3f eval_pos(const instance* ist, int eid, const vec4f& euv) {
-    return transform_point(
-        ist->frame, eval_barycentric(ist->shp, ist->shp->pos, eid, euv));
-}
-
+vec3f eval_pos(const instance* ist, int eid, const vec4f& euv);
 /// Instance normal interpolated using barycentric coordinates
-inline vec3f eval_norm(const instance* ist, int eid, const vec4f& euv) {
-    return transform_direction(ist->frame,
-        normalize(eval_barycentric(ist->shp, ist->shp->norm, eid, euv)));
-}
+vec3f eval_norm(const instance* ist, int eid, const vec4f& euv);
 
 /// Evaluate a texture
-inline vec4f eval_texture(const texture_info& info, const vec2f& texcoord,
-    bool srgb = true, const vec4f& def = {1, 1, 1, 1}) {
-    if (!info.txt) return def;
-
-    // get texture
-    auto txt = info.txt;
-    assert(txt->hdr || txt->ldr);
-
-    auto lookup = [&def, &txt, &srgb](int i, int j) {
-        if (txt->ldr)
-            return (srgb) ? srgb_to_linear(txt->ldr[{i, j}]) :
-                            byte_to_float(txt->ldr[{i, j}]);
-        else if (txt->hdr)
-            return txt->hdr[{i, j}];
-        else
-            return def;
-    };
-
-    // get image width/height
-    auto w = txt->width(), h = txt->height();
-
-    // get coordinates normalized for tiling
-    auto s = 0.0f, t = 0.0f;
-    if (!info.wrap_s) {
-        s = clamp(texcoord.x, 0.0f, 1.0f) * w;
-    } else {
-        s = std::fmod(texcoord.x, 1.0f) * w;
-        if (s < 0) s += w;
-    }
-    if (!info.wrap_t) {
-        t = clamp(texcoord.y, 0.0f, 1.0f) * h;
-    } else {
-        t = std::fmod(texcoord.y, 1.0f) * h;
-        if (t < 0) t += h;
-    }
-
-    // get image coordinates and residuals
-    auto i = clamp((int)s, 0, w - 1), j = clamp((int)t, 0, h - 1);
-    auto ii = (i + 1) % w, jj = (j + 1) % h;
-    auto u = s - i, v = t - j;
-
-    // nearest lookup
-    if (!info.linear) return lookup(i, j);
-
-    // handle interpolation
-    return lookup(i, j) * (1 - u) * (1 - v) + lookup(i, jj) * (1 - u) * v +
-           lookup(ii, j) * u * (1 - v) + lookup(ii, jj) * u * v;
-}
+vec4f eval_texture(const texture_info& info, const vec2f& texcoord,
+    bool srgb = true, const vec4f& def = {1, 1, 1, 1});
 
 /// Finds an element by name
 template <typename T>
@@ -7421,194 +5288,163 @@ inline T* add_named_elem(vector<T*>& elems, const string& name) {
 
 /// Subdivides shape elements. Apply subdivision surface rules if subdivide
 /// is true.
-inline void subdivide_shape_once(shape* shp, bool subdiv = false) {
-    if (!shp->lines.empty() || !shp->triangles.empty() || !shp->quads.empty()) {
-        vector<vec2i> edges;
-        vector<vec4i> faces;
-        tie(shp->lines, shp->triangles, shp->quads, edges, faces) =
-            subdivide_elems_linear(
-                shp->lines, shp->triangles, shp->quads, (int)shp->pos.size());
-        shp->pos = subdivide_vert_linear(shp->pos, edges, faces);
-        shp->norm = subdivide_vert_linear(shp->norm, edges, faces);
-        shp->texcoord = subdivide_vert_linear(shp->texcoord, edges, faces);
-        shp->color = subdivide_vert_linear(shp->color, edges, faces);
-        shp->radius = subdivide_vert_linear(shp->radius, edges, faces);
-        if (subdiv && !shp->quads.empty()) {
-            auto boundary = get_boundary_edges({}, {}, shp->quads);
-            shp->pos =
-                subdivide_vert_catmullclark(shp->quads, shp->pos, boundary, {});
-            shp->norm = subdivide_vert_catmullclark(
-                shp->quads, shp->norm, boundary, {});
-            shp->texcoord = subdivide_vert_catmullclark(
-                shp->quads, shp->texcoord, boundary, {});
-            shp->color = subdivide_vert_catmullclark(
-                shp->quads, shp->color, boundary, {});
-            shp->radius = subdivide_vert_catmullclark(
-                shp->quads, shp->radius, boundary, {});
-            shp->norm = compute_normals({}, {}, shp->quads, shp->pos);
-        }
-    } else if (!shp->quads_pos.empty()) {
-        vector<vec2i> _lines;
-        vector<vec3i> _triangles;
-        vector<vec2i> edges;
-        vector<vec4i> faces;
-        tie(_lines, _triangles, shp->quads_pos, edges, faces) =
-            subdivide_elems_linear({}, {}, shp->quads_pos, shp->pos.size());
-        shp->pos = subdivide_vert_linear(shp->pos, edges, faces);
-        tie(_lines, _triangles, shp->quads_norm, edges, faces) =
-            subdivide_elems_linear({}, {}, shp->quads_norm, shp->norm.size());
-        shp->norm = subdivide_vert_linear(shp->norm, edges, faces);
-        tie(_lines, _triangles, shp->quads_texcoord, edges, faces) =
-            subdivide_elems_linear(
-                {}, {}, shp->quads_texcoord, shp->texcoord.size());
-        shp->texcoord = subdivide_vert_linear(shp->texcoord, edges, faces);
-        if (subdiv) {
-            shp->pos = subdivide_vert_catmullclark(shp->quads_pos, shp->pos,
-                get_boundary_edges({}, {}, shp->quads_pos), {});
-            shp->norm = subdivide_vert_catmullclark(shp->quads_norm, shp->norm,
-                get_boundary_edges({}, {}, shp->quads_norm), {});
-            shp->texcoord =
-                subdivide_vert_catmullclark(shp->quads_texcoord, shp->texcoord,
-                    {}, get_boundary_verts({}, {}, shp->quads_texcoord));
-        }
-    } else if (!shp->beziers.empty()) {
-        vector<int> verts;
-        vector<vec4i> segments;
-        tie(shp->beziers, verts, segments) =
-            subdivide_bezier_recursive(shp->beziers, (int)shp->pos.size());
-        shp->pos = subdivide_vert_bezier(shp->pos, verts, segments);
-        shp->norm = subdivide_vert_bezier(shp->norm, verts, segments);
-        shp->texcoord = subdivide_vert_bezier(shp->texcoord, verts, segments);
-        shp->color = subdivide_vert_bezier(shp->color, verts, segments);
-        shp->radius = subdivide_vert_bezier(shp->radius, verts, segments);
-    }
-}
+void subdivide_shape_once(shape* shp, bool subdiv = false);
 
 /// Facet a shape. Supports only non-facevarying shapes
-inline void facet_shape(shape* shp, bool recompute_normals = true) {
-    if (!shp->lines.empty() || !shp->triangles.empty() || !shp->quads.empty()) {
-        vector<int> verts;
-        tie(shp->lines, shp->triangles, shp->quads, verts) =
-            facet_elems(shp->lines, shp->triangles, shp->quads);
-        shp->pos = facet_vert(shp->pos, verts);
-        shp->norm = facet_vert(shp->norm, verts);
-        shp->texcoord = facet_vert(shp->texcoord, verts);
-        shp->color = facet_vert(shp->color, verts);
-        shp->radius = facet_vert(shp->radius, verts);
-        if (recompute_normals) {
-            shp->norm = compute_normals(
-                shp->lines, shp->triangles, shp->quads, shp->pos);
-        }
-    }
-}
+void facet_shape(shape* shp, bool recompute_normals = true);
 
 /// Tesselate a shape into basic primitives
-inline void tesselate_shape(shape* shp, bool subdivide,
+void tesselate_shape(shape* shp, bool subdivide,
     bool facevarying_to_sharedvertex, bool quads_to_triangles,
-    bool bezier_to_lines) {
-    if (subdivide && shp->subdivision_level) {
-        for (auto l = 0; l < shp->subdivision_level; l++) {
-            subdivide_shape_once(shp, shp->subdivision_catmullclark);
-        }
-    }
-    if (facevarying_to_sharedvertex && !shp->quads_pos.empty()) {
-        std::tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
-            convert_face_varying(shp->quads_pos, shp->quads_norm,
-                shp->quads_texcoord, shp->pos, shp->norm, shp->texcoord);
-        shp->quads_pos = {};
-        shp->quads_norm = {};
-        shp->quads_texcoord = {};
-    }
-    if (quads_to_triangles && !shp->quads.empty()) {
-        shp->triangles = convert_quads_to_triangles(shp->quads);
-        shp->quads = {};
-    }
-    if (bezier_to_lines && !shp->beziers.empty()) {
-        shp->lines = convert_bezier_to_lines(shp->beziers);
-        shp->beziers = {};
-    }
-}
+    bool bezier_to_lines);
 
 /// Tesselate scene shapes and update pointers
-inline void tesselate_shapes(scene* scn, bool subdivide,
+void tesselate_shapes(scene* scn, bool subdivide,
     bool facevarying_to_sharedvertex, bool quads_to_triangles,
-    bool bezier_to_lines) {
-    for (auto shp : scn->shapes) {
-        tesselate_shape(shp, subdivide, facevarying_to_sharedvertex,
-            quads_to_triangles, bezier_to_lines);
-    }
-}
-
-/// Update animation transforms
-inline void update_transforms(animation* anm, float time) {
-    auto interpolate = [](keyframe_type type, const vector<float>& times,
-                           const auto& vals, float time) {
-        switch (type) {
-            case keyframe_type::step:
-                return eval_keyframed_step(times, vals, time);
-            case keyframe_type::linear:
-                return eval_keyframed_linear(times, vals, time);
-            case keyframe_type::catmull_rom: return vals.at(0);
-            case keyframe_type::bezier:
-                return eval_keyframed_bezier(times, vals, time);
-            default: throw runtime_error("should not have been here");
-        }
-        return vals.at(0);
-    };
-
-    for (auto kfr : anm->keyframes) {
-        if (!kfr->translation.empty()) {
-            auto val =
-                interpolate(kfr->type, kfr->times, kfr->translation, time);
-            for (auto target : anm->targets)
-                if (target.first == kfr) target.second->translation = val;
-        }
-        if (!kfr->rotation.empty()) {
-            auto val = interpolate(kfr->type, kfr->times, kfr->rotation, time);
-            for (auto target : anm->targets)
-                if (target.first == kfr) target.second->rotation = val;
-        }
-        if (!kfr->scaling.empty()) {
-            auto val = interpolate(kfr->type, kfr->times, kfr->scaling, time);
-            for (auto target : anm->targets)
-                if (target.first == kfr) target.second->scaling = val;
-        }
-    }
-}
+    bool bezier_to_lines);
 
 /// Update node transforms
-inline void update_transforms(
-    node* nde, const frame3f& parent = identity_frame3f) {
-    auto frame = parent * nde->frame * translation_frame3(nde->translation) *
-                 rotation_frame3(nde->rotation) * scaling_frame3(nde->scaling);
-    for (auto ist : nde->ists) ist->frame = frame;
-    if (nde->cam) nde->cam->frame = frame;
-    if (nde->env) nde->env->frame = frame;
-    for (auto child : nde->children_) update_transforms(child, frame);
-}
-
-/// Update node transforms
-inline void update_transforms(scene* scn, float time = 0) {
-    for (auto agr : scn->animations) update_transforms(agr, time);
-    for (auto nde : scn->nodes) nde->children_.clear();
-    for (auto nde : scn->nodes)
-        if (nde->parent) nde->parent->children_.push_back(nde);
-    for (auto nde : scn->nodes)
-        if (!nde->parent) update_transforms(nde);
-}
+void update_transforms(scene* scn, float time = 0);
 
 /// Compute animation range
-inline vec2f compute_animation_range(const scene* scn) {
-    if (scn->animations.empty()) return zero2f;
-    auto range = vec2f{+flt_max, -flt_max};
-    for (auto anm : scn->animations) {
-        for (auto kfr : anm->keyframes) {
-            range.x = min(range.x, kfr->times.front());
-            range.y = max(range.y, kfr->times.back());
-        }
-    }
-    return range;
+vec2f compute_animation_range(const scene* scn);
+
+/// Make a view camera either copying a given one or building a default one.
+/// Bounding boxes for the scene will be updated.
+camera* make_view_camera(scene* scn, int camera_id);
+
+/// Computes a shape bounding box (quick computation that ignores radius)
+void update_bounds(shape* shp);
+/// Updates the instance bounding box
+void update_bounds(instance* ist, bool do_shape = true);
+/// Updates the scene and scene's instances bounding boxes
+void update_bounds(scene* scn, bool do_shapes = true);
+
+/// Flatten scene instances into separate meshes.
+void flatten_instances(scene* scn);
+
+/// Initialize the lights
+void update_lights(
+    scene* scn, bool include_env = false, bool sampling_cdf = false);
+
+/// Print scene information (call update bounds bes before)
+void print_info(const scene* scn);
+
+/// Build a shape BVH
+void build_bvh(shape* shp, float def_radius = 0.001f, bool equalsize = true);
+
+/// Build a scene BVH
+void build_bvh(scene* scn, bool do_shapes = true, float def_radius = 0.001f,
+    bool equalsize = true);
+
+/// Refits a scene BVH
+void refit_bvh(shape* shp, float def_radius = 0.001f);
+
+/// Refits a scene BVH
+void refit_bvh(scene* scn, bool do_shapes = true, float def_radius = 0.001f);
+
+/// Intersect the shape with a ray. Find any interstion if early_exit,
+/// otherwise find first intersection.
+inline bool intersect_ray(const shape* shp, const ray3f& ray, bool early_exit,
+    float& ray_t, int& eid, vec4f& euv) {
+    auto iid = 0;
+    return intersect_bvh(shp->bvh, ray, early_exit, ray_t, iid, eid, euv);
 }
+
+/// Intersect the scene with a ray. Find any interstion if early_exit,
+/// otherwise find first intersection.
+inline bool intersect_ray(const scene* scn, const ray3f& ray, bool early_exit,
+    float& ray_t, int& iid, int& eid, vec4f& euv) {
+    return intersect_bvh(scn->bvh, ray, early_exit, ray_t, iid, eid, euv);
+}
+
+/// Surface point.
+struct intersection_point {
+    /// distance of the hit along the ray or from the point
+    float dist = 0;
+    /// instance index
+    int iid = -1;
+    /// shape element index
+    int eid = -1;
+    /// shape barycentric coordinates
+    vec4f euv = zero4f;
+
+    /// check if intersection is valid
+    operator bool() const { return eid >= 0; }
+};
+
+/// Intersect the scene with a ray. Find any interstion if early_exit,
+/// otherwise find first intersection.
+inline intersection_point intersect_ray(
+    const scene* scn, const ray3f& ray, bool early_exit) {
+    auto isec = intersection_point();
+    if (!intersect_ray(
+            scn, ray, early_exit, isec.dist, isec.iid, isec.eid, isec.euv))
+        return {};
+    return isec;
+}
+
+/// Finds the closest element that overlaps a point within a given distance.
+inline bool overlap_point(const shape* shp, const vec3f& pos, float max_dist,
+    bool early_exit, float& dist, int& eid, vec4f& euv) {
+    auto iid = 0;
+    return overlap_bvh(
+        shp->bvh, pos, max_dist, early_exit, dist, iid, eid, euv);
+}
+
+/// Finds the closest element that overlaps a point within a given distance.
+inline bool overlap_point(const scene* scn, const vec3f& pos, float max_dist,
+    bool early_exit, float& dist, int& iid, int& eid, vec4f& euv) {
+    return overlap_bvh(
+        scn->bvh, pos, max_dist, early_exit, dist, iid, eid, euv);
+}
+
+#if 0
+/// Find the list of overlaps between instance bounds.
+inline void overlap_instance_bounds(const scene* scn1, const scene* scn2,
+    bool skip_duplicates, bool skip_self, vector<vec2i>& overlaps) {
+    overlaps.clear();
+    overlap_bvh_elems(scn1->bvh, scn2->bvh, skip_duplicates, skip_self,
+        overlaps, [scn1, scn2](int i1, int i2) {
+            return overlap_bbox(
+                scn1->instances[i1]->bbox, scn2->instances[i2]->bbox);
+        });
+}
+#endif
+
+/// Add elements options
+struct add_elements_options {
+    /// Add missing normal
+    bool smooth_normals = true;
+    /// Add missing radius for points and lines (<=0 for no adding)
+    float pointline_radius = 0;
+    /// Add missing trangent space
+    bool tangent_space = true;
+    /// texture data
+    bool texture_data = true;
+    /// Add instances
+    bool shape_instances = true;
+    /// Add an empty default environment
+    bool default_environment = false;
+    /// Add default names
+    bool default_names = true;
+    /// Add default paths
+    bool default_paths = true;
+
+    /// initialize to no element
+    static add_elements_options none() {
+        auto opts = add_elements_options();
+        memset(&opts, 0, sizeof(opts));
+        return opts;
+    }
+};
+
+/// Add elements
+void add_elements(scene* scn, const add_elements_options& opts = {});
+
+/// Merge scene into one another. Note that the objects are _moved_ from
+/// merge_from to merged_into, so merge_from will be empty after this function.
+void merge_into(scene* merge_into, scene* merge_from);
 
 /// Loading options
 struct load_options {
@@ -7652,388 +5488,6 @@ struct save_options {
 /// Throws an exception if an error occurs.
 void save_scene(
     const string& filename, const scene* scn, const save_options& opts);
-
-/// Add elements options
-struct add_elements_options {
-    /// Add missing normal
-    bool smooth_normals = true;
-    /// Add missing radius for points and lines (<=0 for no adding)
-    float pointline_radius = 0;
-    /// Add missing trangent space
-    bool tangent_space = true;
-    /// texture data
-    bool texture_data = true;
-    /// Add instances
-    bool shape_instances = true;
-    /// Add an empty default environment
-    bool default_environment = false;
-    /// Add default names
-    bool default_names = true;
-    /// Add default paths
-    bool default_paths = true;
-
-    /// initialize to no element
-    static add_elements_options none() {
-        auto opts = add_elements_options();
-        memset(&opts, 0, sizeof(opts));
-        return opts;
-    }
-};
-
-/// Make a view camera either copying a given one or building a default one.
-/// Bounding boxes for the scene will be updated.
-camera* make_view_camera(scene* scn, int camera_id);
-
-/// Add elements
-void add_elements(scene* scn, const add_elements_options& opts = {});
-
-/// Merge scene into one another. Note that the objects are _moved_ from
-/// merge_from to merged_into, so merge_from will be empty after this function.
-void merge_into(scene* merge_into, scene* merge_from);
-
-/// Computes a shape bounding box (quick computation that ignores radius)
-inline void update_bounds(shape* shp) {
-    shp->bbox = invalid_bbox3f;
-    for (auto p : shp->pos) shp->bbox += vec3f(p);
-}
-
-/// Updates the instance bounding box
-inline void update_bounds(instance* ist, bool do_shape = true) {
-    if (do_shape) update_bounds(ist->shp);
-    ist->bbox = transform_bbox(ist->frame, ist->shp->bbox);
-}
-
-/// Updates the scene and scene's instances bounding boxes
-inline void update_bounds(scene* scn, bool do_shapes = true) {
-    if (do_shapes) {
-        for (auto shp : scn->shapes) update_bounds(shp);
-    }
-    scn->bbox = invalid_bbox3f;
-    if (!scn->instances.empty()) {
-        for (auto ist : scn->instances) {
-            update_bounds(ist, false);
-            scn->bbox += ist->bbox;
-        }
-    } else {
-        for (auto shp : scn->shapes) { scn->bbox += shp->bbox; }
-    }
-}
-
-/// Flatten scene instances into separate meshes.
-inline void flatten_instances(scene* scn) {
-    if (scn->instances.empty()) return;
-    auto shapes = scn->shapes;
-    scn->shapes.clear();
-    auto instances = scn->instances;
-    scn->instances.clear();
-    for (auto ist : instances) {
-        if (!ist->shp) continue;
-        auto xf = ist->xform();
-        auto nshp = new shape(*ist->shp);
-        for (auto& p : nshp->pos) p = transform_point(xf, p);
-        for (auto& n : nshp->norm) n = transform_direction(xf, n);
-        scn->shapes.push_back(nshp);
-    }
-    for (auto e : shapes) delete e;
-    for (auto e : instances) delete e;
-}
-
-/// Initialize the lights
-void update_lights(
-    scene* scn, bool include_env = false, bool sampling_cdf = false);
-
-/// Print scene information (call update bounds bes before)
-void print_info(const scene* scn);
-
-/// Build a shape BVH
-inline void build_bvh(shape* shp, bool equalsize = true) {
-    if (!shp->points.empty()) {
-        shp->bvh =
-            build_points_bvh(shp->points, shp->pos, shp->radius, equalsize);
-    } else if (!shp->lines.empty()) {
-        shp->bvh =
-            build_lines_bvh(shp->lines, shp->pos, shp->radius, equalsize);
-    } else if (!shp->triangles.empty()) {
-        shp->bvh = build_triangles_bvh(shp->triangles, shp->pos, equalsize);
-    } else if (!shp->quads.empty()) {
-        shp->bvh = build_quads_bvh(shp->quads, shp->pos, equalsize);
-    } else {
-        shp->bvh = build_points_bvh(shp->pos, shp->radius, equalsize);
-    }
-    shp->bbox = shp->bvh->nodes[0].bbox;
-}
-
-/// Build a scene BVH
-inline void build_bvh(
-    scene* scn, bool equalsize = true, bool do_shapes = true) {
-    // do shapes
-    if (do_shapes) {
-        for (auto shp : scn->shapes) build_bvh(shp, equalsize);
-    }
-
-    // update instance bbox
-    for (auto ist : scn->instances)
-        ist->bbox = transform_bbox(ist->frame, ist->shp->bbox);
-
-    // tree bvh
-    scn->bvh = build_bvh((int)scn->instances.size(), equalsize,
-        [scn](int eid) { return scn->instances[eid]->bbox; });
-}
-
-/// Refits a scene BVH
-inline void refit_bvh(shape* shp) {
-    if (!shp->points.empty()) {
-        refit_points_bvh(shp->bvh, shp->points, shp->pos, shp->radius);
-    } else if (!shp->lines.empty()) {
-        refit_lines_bvh(shp->bvh, shp->lines, shp->pos, shp->radius);
-    } else if (!shp->triangles.empty()) {
-        refit_triangles_bvh(shp->bvh, shp->triangles, shp->pos);
-    } else if (!shp->quads.empty()) {
-        refit_quads_bvh(shp->bvh, shp->quads, shp->pos);
-    } else {
-        refit_points_bvh(shp->bvh, shp->pos, shp->radius);
-    }
-    shp->bbox = shp->bvh->nodes[0].bbox;
-}
-
-/// Refits a scene BVH
-inline void refit_bvh(scene* scn, bool do_shapes = true) {
-    if (do_shapes) {
-        for (auto shp : scn->shapes) refit_bvh(shp);
-    }
-
-    // update instance bbox
-    for (auto ist : scn->instances)
-        ist->bbox = transform_bbox(ist->frame, ist->shp->bbox);
-
-    // recompute bvh bounds
-    refit_bvh(
-        scn->bvh, 0, [scn](int eid) { return scn->instances[eid]->bbox; });
-}
-
-/// Intersect the shape with a ray. Find any interstion if early_exit,
-/// otherwise find first intersection.
-///
-/// - Parameters:
-///     - scn: scene to intersect
-///     - ray: ray to be intersected
-///     - early_exit: whether to stop at the first found hit
-///     - ray_t: ray distance at intersection
-///     - eid: shape element index
-///     - euv: element barycentric coordinates
-/// - Returns:
-///     - whether it intersected
-inline bool intersect_ray(const shape* shp, const ray3f& ray, bool early_exit,
-    float& ray_t, int& eid, vec4f& euv) {
-    // switch over shape type
-    if (!shp->triangles.empty()) {
-        if (intersect_triangles_bvh(shp->bvh, shp->triangles, shp->pos, ray,
-                early_exit, ray_t, eid, (vec3f&)euv)) {
-            euv = {euv.x, euv.y, euv.z, 0};
-            return true;
-        }
-    } else if (!shp->quads.empty()) {
-        if (intersect_quads_bvh(shp->bvh, shp->quads, shp->pos, ray, early_exit,
-                ray_t, eid, euv)) {
-            return true;
-        }
-    } else if (!shp->lines.empty()) {
-        if (intersect_lines_bvh(shp->bvh, shp->lines, shp->pos, shp->radius,
-                ray, early_exit, ray_t, eid, (vec2f&)euv)) {
-            euv = {euv.x, euv.y, 0, 0};
-            return true;
-        }
-    } else if (!shp->points.empty()) {
-        if (intersect_points_bvh(shp->bvh, shp->points, shp->pos, shp->radius,
-                ray, early_exit, ray_t, eid)) {
-            euv = {1, 0, 0, 0};
-            return true;
-        }
-    } else {
-        if (intersect_points_bvh(
-                shp->bvh, shp->pos, shp->radius, ray, early_exit, ray_t, eid)) {
-            euv = {1, 0, 0, 0};
-            return true;
-        }
-    }
-
-    return false;
-}
-
-/// Intersect the instance with a ray. Find any interstion if early_exit,
-/// otherwise find first intersection.
-///
-/// - Parameters:
-///     - scn: scene to intersect
-///     - ray: ray to be intersected
-///     - early_exit: whether to stop at the first found hit
-///     - ray_t: ray distance at intersection
-///     - eid: shape element index
-///     - euv: element barycentric coordinates
-/// - Returns:
-///     - whether it intersected
-inline bool intersect_ray(const instance* ist, const ray3f& ray,
-    bool early_exit, float& ray_t, int& eid, vec4f& euv) {
-    return intersect_ray(ist->shp, transform_ray_inverse(ist->frame, ray),
-        early_exit, ray_t, eid, euv);
-}
-
-/// Intersect the scene with a ray. Find any interstion if early_exit,
-/// otherwise find first intersection.
-///
-/// - Parameters:
-///     - scn: scene to intersect
-///     - ray: ray to be intersected
-///     - early_exit: whether to stop at the first found hit
-///     - ray_t: ray distance at intersection
-///     - iid: instance index
-///     - eid: shape element index
-///     - euv: element barycentric coordinates
-/// - Returns:
-///     - whether it intersected
-inline bool intersect_ray(const scene* scn, const ray3f& ray, bool early_exit,
-    float& ray_t, int& iid, int& eid, vec4f& euv) {
-    return intersect_bvh(scn->bvh, ray, early_exit, ray_t, iid,
-        [&eid, &euv, early_exit, scn](int iid, const ray3f& ray, float& ray_t) {
-            return intersect_ray(
-                scn->instances[iid], ray, early_exit, ray_t, eid, euv);
-        });
-}
-
-/// Surface point.
-struct intersection_point {
-    /// distance of the hit along the ray or from the point
-    float dist = 0;
-    /// instance index
-    int iid = -1;
-    /// shape element index
-    int eid = -1;
-    /// shape barycentric coordinates
-    vec4f euv = zero4f;
-
-    /// check if intersection is valid
-    operator bool() const { return eid >= 0; }
-};
-
-/// Intersect the scene with a ray. Find any interstion if early_exit,
-/// otherwise find first intersection.
-///
-/// - Parameters:
-///     - scn: scene to intersect
-///     - ray: ray to be intersected
-///     - early_exit: whether to stop at the first found hit
-/// - Returns:
-///     - intersection record
-inline intersection_point intersect_ray(
-    const scene* scn, const ray3f& ray, bool early_exit) {
-    auto isec = intersection_point();
-    if (!intersect_ray(
-            scn, ray, early_exit, isec.dist, isec.iid, isec.eid, isec.euv))
-        return {};
-    return isec;
-}
-
-/// Finds the closest element that overlaps a point within a given distance.
-///
-/// - Parameters:
-///     - scn: scene to intersect
-///     - pos: point position
-///     - max_dist: maximu valid distance
-///     - early_exit: whether to stop at the first found hit
-///     - dist: distance at intersection
-///     - eid: shape element index
-///     - euv: element barycentric coordinates
-/// - Returns:
-///     - whether it intersected
-inline bool overlap_point(const shape* shp, const vec3f& pos, float max_dist,
-    bool early_exit, float& dist, int& eid, vec4f& euv) {
-    // switch over shape type
-    if (!shp->triangles.empty()) {
-        if (overlap_triangles_bvh(shp->bvh, shp->triangles, shp->pos,
-                shp->radius, pos, max_dist, early_exit, dist, eid,
-                (vec3f&)euv)) {
-            euv = {euv.x, euv.y, euv.z, 0};
-            return true;
-        }
-    } else if (!shp->quads.empty()) {
-        if (overlap_quads_bvh(shp->bvh, shp->quads, shp->pos, shp->radius, pos,
-                max_dist, early_exit, dist, eid, euv)) {
-            return true;
-        }
-    } else if (!shp->lines.empty()) {
-        if (overlap_lines_bvh(shp->bvh, shp->lines, shp->pos, shp->radius, pos,
-                max_dist, early_exit, dist, eid, (vec2f&)euv)) {
-            euv = {euv.x, euv.y, 0, 0};
-            return true;
-        }
-    } else if (!shp->points.empty()) {
-        if (overlap_points_bvh(shp->bvh, shp->points, shp->pos, shp->radius,
-                pos, max_dist, early_exit, dist, eid)) {
-            euv = {1, 0, 0, 0};
-            return true;
-        }
-    } else {
-        if (overlap_points_bvh(shp->bvh, shp->pos, shp->radius, pos, max_dist,
-                early_exit, dist, eid)) {
-            euv = {1, 0, 0, 0};
-        }
-        return true;
-    }
-
-    return false;
-}
-
-/// Finds the closest element that overlaps a point within a given distance.
-///
-/// - Parameters:
-///     - scn: scene to intersect
-///     - pos: point position
-///     - max_dist: maximu valid distance
-///     - early_exit: whether to stop at the first found hit
-///     - dist: distance at intersection
-///     - eid: shape element index
-///     - euv: element barycentric coordinates
-/// - Returns:
-///     - whether it intersected
-inline bool overlap_point(const instance* ist, const vec3f& pos, float max_dist,
-    bool early_exit, float& dist, int& eid, vec4f& euv) {
-    return overlap_point(ist->shp, transform_point_inverse(ist->frame, pos),
-        max_dist, early_exit, dist, eid, euv);
-}
-
-/// Finds the closest element that overlaps a point within a given distance.
-///
-/// - Parameters:
-///     - scn: scene to intersect
-///     - pos: point position
-///     - max_dist: maximu valid distance
-///     - early_exit: whether to stop at the first found hit
-///     - dist: distance at intersection
-///     - iid: instance index
-///     - eid: shape element index
-///     - euv: element barycentric coordinates
-/// - Returns:
-///     - whether it intersected
-inline bool overlap_point(const scene* scn, const vec3f& pos, float max_dist,
-    bool early_exit, float& dist, int& iid, int& eid, vec4f& euv) {
-    return overlap_bvh(scn->bvh, pos, max_dist, early_exit, dist, iid,
-        [&eid, &euv, early_exit, scn](
-            int iid, const vec3f& pos, float max_dist, float& dist) {
-            return overlap_point(
-                scn->instances[iid], pos, max_dist, early_exit, dist, eid, euv);
-        });
-}
-
-/// Find the list of overlaps between instance bounds.
-inline void overlap_instance_bounds(const scene* scn1, const scene* scn2,
-    bool skip_duplicates, bool skip_self, vector<vec2i>& overlaps) {
-    overlaps.clear();
-    overlap_bvh_elems(scn1->bvh, scn2->bvh, skip_duplicates, skip_self,
-        overlaps, [scn1, scn2](int i1, int i2) {
-            return overlap_bbox(
-                scn1->instances[i1]->bbox, scn2->instances[i2]->bbox);
-        });
-}
 
 }  // namespace ygl
 
