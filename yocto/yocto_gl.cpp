@@ -2421,6 +2421,13 @@ bool overlap_bbox(const bbox3f& bbox1, const bbox3f& bbox2) {
 // IMPLEMENTATION FOR BVH
 // -----------------------------------------------------------------------------
 namespace ygl {
+    
+    // cleanup
+    bvh_tree::~bvh_tree() {
+        if(!own_shape_bvhs) return;
+        for(auto bvh : shape_bvhs) delete bvh;
+    }
+    
 // Struct that pack a bounding box, its associate primitive index, and other
 // data for faster hierarchy build.
 // This is internal only and should not be used externally.
@@ -2620,8 +2627,8 @@ bvh_tree* make_bvh(const vector<int>& points, const vector<vec2i>& lines,
 
 // Build a BVH from a set of shape instances.
 bvh_tree* make_bvh(const vector<frame3f>& frames,
-    const vector<frame3f>& frames_inv, const vector<bvh_tree*>& ist_bvhs,
-    bool equal_size) {
+    const vector<frame3f>& frames_inv, const vector<int>& ist_bvhs,
+    const vector<bvh_tree*>& shape_bvhs, bool own_shape_bvhs, bool equal_size) {
     // allocate the bvh
     auto bvh = new bvh_tree();
 
@@ -2629,13 +2636,16 @@ bvh_tree* make_bvh(const vector<frame3f>& frames,
     bvh->ist_frames = frames;
     bvh->ist_frames_inv = frames_inv;
     bvh->ist_bvhs = ist_bvhs;
+    bvh->shape_bvhs = shape_bvhs;
+    bvh->own_shape_bvhs = own_shape_bvhs;
 
     // get the number of primitives and the primitive type
     auto bboxes = vector<bbox3f>();
     bboxes.reserve(bvh->ist_bvhs.size());
     for (auto idx = 0; idx < bvh->ist_bvhs.size(); idx++) {
-        bboxes.push_back(transform_bbox(
-            bvh->ist_frames[idx], bvh->ist_bvhs[idx]->nodes[0].bbox));
+        auto sbvh = bvh->shape_bvhs[bvh->ist_bvhs[idx]];
+        bboxes.push_back(
+            transform_bbox(bvh->ist_frames[idx], sbvh->nodes[0].bbox));
     }
     bvh->type = bvh_node_type::instance;
 
@@ -2727,8 +2737,9 @@ void refit_bvh(bvh_tree* bvh, int nodeid) {
         case bvh_node_type::instance: {
             for (auto i = 0; i < node->count; i++) {
                 auto idx = bvh->sorted_prim[node->start + i];
-                node->bbox += transform_bbox(
-                    bvh->ist_frames[idx], bvh->ist_bvhs[idx]->nodes[0].bbox);
+                auto sbvh = bvh->shape_bvhs[bvh->ist_bvhs[idx]];
+                node->bbox +=
+                    transform_bbox(bvh->ist_frames[idx], sbvh->nodes[0].bbox);
             }
         } break;
     }
@@ -2875,7 +2886,8 @@ bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray_, bool early_exit,
             case bvh_node_type::instance: {
                 for (auto i = 0; i < node.count; i++) {
                     auto idx = bvh->sorted_prim[node.start + i];
-                    if (intersect_bvh(bvh->ist_bvhs[idx],
+                    auto sbvh = bvh->shape_bvhs[bvh->ist_bvhs[idx]];
+                    if (intersect_bvh(sbvh,
                             transform_ray(bvh->ist_frames_inv[idx], ray),
                             early_exit, ray_t, iid, eid, ew)) {
                         hit = true;
@@ -2995,7 +3007,8 @@ bool overlap_bvh(const bvh_tree* bvh, const vec3f& pos, float max_dist,
             case bvh_node_type::instance: {
                 for (auto i = 0; i < node.count; i++) {
                     auto idx = bvh->sorted_prim[node.start + i];
-                    if (overlap_bvh(bvh->ist_bvhs[idx],
+                    auto sbvh = bvh->shape_bvhs[bvh->ist_bvhs[idx]];
+                    if (overlap_bvh(sbvh,
                             transform_point(bvh->ist_frames_inv[idx], pos),
                             max_dist, early_exit, dist, iid, eid, ew)) {
                         hit = true;
@@ -3102,11 +3115,6 @@ intersection_point overlap_bvh(
 namespace ygl {
 
 // cleanup
-shape::~shape() {
-    if (bvh) delete bvh;
-}
-
-// cleanup
 animation::~animation() {
     for (auto v : keyframes) delete v;
 }
@@ -3122,7 +3130,6 @@ scene::~scene() {
     for (auto v : lights) delete v;
     for (auto v : nodes) delete v;
     for (auto v : animations) delete v;
-    if (bvh) delete bvh;
 }
 
 // Shape value interpolated using barycentric coordinates
@@ -3682,34 +3689,42 @@ bvh_tree* make_bvh(const shape* shp, float def_radius, bool equalsize) {
 }
 
 // Build a scene BVH
-bvh_tree* make_bvh(const scene* scn,
-    unordered_map<shape*, bvh_tree*>& shape_bvhs, float def_radius,
-    bool equalsize) {
+bvh_tree* make_bvh(const scene* scn, float def_radius, bool equalsize) {
     // do shapes
-    if (shape_bvhs.empty()) {
-        for (auto shp : scn->shapes)
-            shape_bvhs[shp] = make_bvh(shp, def_radius, equalsize);
+    auto shape_bvhs = vector<bvh_tree*>(scn->shapes.size());
+    auto smap = unordered_map<shape*, int>();
+    for (auto sid = 0; sid < scn->shapes.size(); sid++) {
+        auto shp = scn->shapes[sid];
+        smap[shp] = sid;
+        shape_bvhs[sid] = make_bvh(shp, def_radius, equalsize);
     }
 
     // tree bvh
-    auto ist_frames = vector<frame3f>();
-    auto ist_frames_inv = vector<frame3f>();
-    auto ist_bvh = vector<bvh_tree*>();
-    for (auto ist : scn->instances) {
-        ist_frames.push_back(ist->frame);
-        ist_frames_inv.push_back(inverse(ist->frame));
-        ist_bvh.push_back(shape_bvhs.at(ist->shp));
+    auto ist_frames = vector<frame3f>(scn->instances.size());
+    auto ist_frames_inv = vector<frame3f>(scn->instances.size());
+    auto ist_bvh = vector<int>(scn->instances.size());
+    for (auto iid = 0; iid < scn->instances.size(); iid++) {
+        auto ist = scn->instances[iid];
+        ist_frames[iid] = ist->frame;
+        ist_frames_inv[iid] = inverse(ist->frame);
+        ist_bvh[iid] = smap.at(ist->shp);
     }
-    return make_bvh(ist_frames, ist_frames_inv, ist_bvh, equalsize);
+    return make_bvh(ist_frames, ist_frames_inv, ist_bvh, shape_bvhs, true, equalsize);
 }
 
 // Refits a scene BVH
-void refit_bvh(bvh_tree* bvh, shape* shp, float def_radius) {
-    refit_bvh(shp->bvh, shp->pos, shp->radius, def_radius);
+void refit_bvh(bvh_tree* bvh, const shape* shp, float def_radius) {
+    refit_bvh(bvh, shp->pos, shp->radius, def_radius);
 }
 
 // Refits a scene BVH
-void refit_bvh(bvh_tree* bvh, scene* scn, float def_radius) {
+void refit_bvh(bvh_tree* bvh, const scene* scn, bool do_shapes, float def_radius) {
+    if (do_shapes) {
+        for (auto sid = 0; sid < scn->shapes.size(); sid++) {
+            refit_bvh(get_shape_bvhs(bvh).at(sid), scn->shapes[sid]->pos,
+                scn->shapes[sid]->radius, def_radius);
+        }
+    }
     auto ist_frames = vector<frame3f>();
     auto ist_frames_inv = vector<frame3f>();
     for (auto ist : scn->instances) {

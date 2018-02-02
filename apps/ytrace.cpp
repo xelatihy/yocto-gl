@@ -33,6 +33,7 @@ using namespace ygl;
 struct app_state {
     scene* scn = nullptr;
     camera* view = nullptr;
+    bvh_tree* bvh = nullptr;
     string filename;
     string imfilename;
     float exposure = 0, gamma = 2.2f;
@@ -46,6 +47,7 @@ struct app_state {
         if (state) delete state;
         if (scn) delete scn;
         if (view) delete view;
+        if(bvh) delete bvh;
     }
 };
 
@@ -118,7 +120,7 @@ int main(int argc, char* argv[]) {
 
     // build bvh
     log_info("building bvh");
-    make_bvh(app->scn);
+    app->bvh = make_bvh(app->scn);
 
     // init renderer
     log_info("initializing tracer");
@@ -144,7 +146,7 @@ int main(int argc, char* argv[]) {
                 app->gamma, app->filmic);
         }
         log_info("rendering sample {}/{}", cur_sample, app->params.nsamples);
-        trace_samples(app->state, app->scn, app->view, app->scn->bvh,
+        trace_samples(app->state, app->scn, app->view, app->bvh,
                       app->params.batch_size, app->params);
     }
     log_info("rendering done");

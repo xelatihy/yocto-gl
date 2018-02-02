@@ -33,6 +33,7 @@ using namespace ygl;
 struct app_state {
     scene* scn = nullptr;
     camera* view = nullptr;
+    bvh_tree* bvh = nullptr;
     string filename;
     string imfilename;
     bool scene_updated = false;
@@ -51,6 +52,7 @@ struct app_state {
         if (state) delete state;
         if (scn) delete scn;
         if (view) delete view;
+        if (bvh) delete bvh;
     }
 };
 
@@ -108,7 +110,7 @@ bool update(app_state* app) {
         app->rendering = false;
 
         // update BVH
-        if (app->update_bvh) refit_bvh(app->scn);
+        if (app->update_bvh) refit_bvh(app->bvh, app->scn, false);
 
         // render preview
         auto pparams = app->params;
@@ -117,7 +119,8 @@ bool update(app_state* app) {
         pparams.nsamples = 1;
         pparams.ftype = trace_filter_type::box;
         auto preview_state = make_trace_state(pparams);
-        trace_samples(preview_state, app->scn, app->view, app->scn->bvh, 1, pparams);
+        trace_samples(
+            preview_state, app->scn, app->view, app->bvh, 1, pparams);
         resize_image(get_trace_image(preview_state),
             (image4f&)get_trace_image(app->state), resize_filter::box);
         update_texture(app->trace_texture, get_trace_image(app->state));
@@ -125,7 +128,8 @@ bool update(app_state* app) {
 
         app->scene_updated = false;
     } else if (!app->rendering) {
-        trace_async_start(app->state, app->scn, app->view, app->scn->bvh, app->params);
+        trace_async_start(
+            app->state, app->scn, app->view, app->bvh, app->params);
         app->rendering = true;
     }
     return true;
@@ -233,7 +237,7 @@ int main(int argc, char* argv[]) {
 
     // build bvh
     log_info("building bvh");
-    make_bvh(app->scn);
+    app->bvh = make_bvh(app->scn);
 
     // init renderer
     log_info("initializing tracer");
