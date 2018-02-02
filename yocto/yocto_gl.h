@@ -6217,12 +6217,29 @@ namespace ygl {
 // number of primitives to avoid splitting on
 const int bvh_minprims = 4;
 
+/// Type of BVH node
+enum struct bvh_node_type : uint32_t {
+    /// internal
+    internal = 0,
+    /// points
+    point = 1,
+    /// lines
+    line = 2,
+    /// triangles
+    triangle = 3,
+    /// quads
+    quad = 4,
+    /// vertices
+    vertex = 8,
+    /// instances
+    instance = 16,
+};
+
 /// BVH tree node containing its bounds, indices to the BVH arrays of either
-/// sorted primitives or internal nodes, whether its a leaf or an internal node,
+/// sorted primitives or internal nodes, the node element type or internal node,
 /// and the split axis. Leaf and internal nodes are identical, except that
 /// indices refer to primitives for leaf nodes or other nodes for internal
 /// nodes. See bvh_tree for more details.
-///
 /// This is an internal data structure.
 struct bvh_node {
     /// bounding box
@@ -6231,8 +6248,8 @@ struct bvh_node {
     uint32_t start;
     /// number of primitives/nodes
     uint16_t count;
-    /// whether it is a leaf
-    uint8_t isleaf;
+    /// type of node
+    bvh_node_type type;
     /// slit axis
     uint8_t axis;
 };
@@ -6241,8 +6258,8 @@ struct bvh_node {
 /// indices instead of pointers, both for speed but also to simplify code.
 /// BVH nodes indices refer to either the node array, for internal nodes,
 /// or a primitive array, for leaf nodes. BVH trees may contain only one type
-/// of geometric primitive, like points, lines, triangle or shape other BVHs.
-/// To handle multiple primitive types and transformed primitices, build
+/// of geometric primitive, like points, lines, triangle or other BVHs.
+/// To handle multiple primitive types and transformed primitives, build
 /// a two-level hierarchy with the outer BVH, the scene BVH, containing inner
 /// BVHs, shape BVHs, each of which of a uniform primitive type.
 ///
@@ -6252,669 +6269,56 @@ struct bvh_tree {
     vector<bvh_node> nodes;
     /// sorted elements
     vector<int> sorted_prim;
+    /// element type
+    bvh_node_type type = bvh_node_type::internal;
+
+    /// positions for shape BVHs
+    vector<vec3f> pos;
+    /// radius for shape BVHs
+    vector<float> radius;
+    /// points for shape BVHs
+    vector<int> points;
+    /// lines for shape BVHs
+    vector<vec2i> lines;
+    /// triangles for shape BVHs
+    vector<vec3i> triangles;
+    /// quads for shape BVHs
+    vector<vec4i> quads;
+
+    /// instance frames for instance BVHs
+    vector<frame3f> ist_frames;
+    /// instance inverse frames for instance BVHs
+    vector<frame3f> ist_frames_inv;
+    /// instance BVHs
+    vector<bvh_tree*> ist_bvhs;
 };
 
-// Struct that pack a bounding box, its associate primitive index, and other
-// data for faster hierarchy build.
-// This is internal only and should not be used externally.
-struct bvh_bound_prim {
-    bbox3f bbox;   // bounding box
-    vec3f center;  // bounding box center (for faster sort)
-    int pid;       // primitive id
-};
+/// Build a shape BVH from a set of primitives.
+bvh_tree* build_bvh(const vector<int>& points, const vector<vec2i>& lines,
+    const vector<vec3i>& triangles, const vector<vec4i>& quads,
+    const vector<vec3f>& pos, const vector<float>& radius, float def_radius,
+    bool equalsize);
 
-// Comparison function for each axis
-struct bvh_bound_prim_comp {
-    int axis;
-    float middle;
-
-    bvh_bound_prim_comp(int a, float m = 0) : axis(a), middle(m) {}
-
-    bool operator()(const bvh_bound_prim& a, const bvh_bound_prim& b) const {
-        return a.center[axis] < b.center[axis];
-    }
-
-    bool operator()(const bvh_bound_prim& a) const {
-        return a.center[axis] < middle;
-    }
-};
-
-// Initializes the BVH node node that contains the primitives sorted_prims
-// from start to end, by either splitting it into two other nodes,
-// or initializing it as a leaf. When splitting, the heuristic heuristic is
-// used and nodes added sequentially in the preallocated nodes array and
-// the number of nodes nnodes is updated.
-inline void make_bvh_node(bvh_node* node, vector<bvh_node>& nodes,
-    bvh_bound_prim* sorted_prims, int start, int end, bool equalsize) {
-    // compute node bounds
-    node->bbox = invalid_bbox3f;
-    for (auto i = start; i < end; i++) node->bbox += sorted_prims[i].bbox;
-
-    // decide whether to create a leaf
-    if (end - start <= bvh_minprims) {
-        // makes a leaf node
-        node->isleaf = true;
-        node->start = start;
-        node->count = end - start;
-    } else {
-        // choose the split axis and position
-        // init to default values
-        auto axis = 0;
-        auto mid = (start + end) / 2;
-
-        // compute primintive bounds and size
-        auto centroid_bbox = invalid_bbox3f;
-        for (auto i = start; i < end; i++)
-            centroid_bbox += sorted_prims[i].center;
-        auto centroid_size = bbox_diagonal(centroid_bbox);
-
-        // check if it is not possible to split
-        if (centroid_size == zero3f) {
-            // we failed to split for some reasons
-            node->isleaf = true;
-            node->start = start;
-            node->count = end - start;
-        } else {
-            // split along largest
-            auto largest_axis = max_element(centroid_size).first;
-
-            // check heuristic
-            if (equalsize) {
-                // split the space in the middle along the largest axis
-                axis = largest_axis;
-                mid = (int)(std::partition(sorted_prims + start,
-                                sorted_prims + end,
-                                bvh_bound_prim_comp(largest_axis,
-                                    bbox_center(centroid_bbox)[largest_axis])) -
-                            sorted_prims);
-            } else {
-                // balanced tree split: find the largest axis of the bounding
-                // box and split along this one right in the middle
-                axis = largest_axis;
-                mid = (start + end) / 2;
-                std::nth_element(sorted_prims + start, sorted_prims + mid,
-                    sorted_prims + end, bvh_bound_prim_comp(largest_axis));
-            }
-
-            // check correctness
-            assert(axis >= 0 && mid > 0);
-            assert(mid > start && mid < end);
-
-            // makes an internal node
-            node->isleaf = false;
-            // perform the splits by preallocating the child nodes and recurring
-            node->axis = axis;
-            node->start = (int)nodes.size();
-            node->count = 2;
-            nodes.emplace_back();
-            nodes.emplace_back();
-            // build child nodes
-            make_bvh_node(&nodes[node->start], nodes, sorted_prims, start, mid,
-                equalsize);
-            make_bvh_node(&nodes[node->start + 1], nodes, sorted_prims, mid,
-                end, equalsize);
-        }
-    }
-}
-
-/// Build a BVH from a set of primitives.
-inline bvh_tree* build_bvh(
-    int nprims, bool equalsize, const function<bbox3f(int)>& elem_bbox) {
-    // allocate if needed
-    auto bvh = new bvh_tree();
-
-    // prepare prims
-    auto bound_prims = vector<bvh_bound_prim>(nprims);
-    for (auto i = 0; i < nprims; i++) {
-        bound_prims[i].pid = i;
-        bound_prims[i].bbox = elem_bbox(i);
-        bound_prims[i].center = bbox_center(bound_prims[i].bbox);
-    }
-
-    // clear bvh
-    bvh->nodes.clear();
-    bvh->sorted_prim.clear();
-
-    // allocate nodes (over-allocate now then shrink)
-    bvh->nodes.reserve(nprims * 2);
-
-    // start recursive splitting
-    bvh->nodes.emplace_back();
-    make_bvh_node(
-        &bvh->nodes[0], bvh->nodes, bound_prims.data(), 0, nprims, equalsize);
-
-    // shrink back
-    bvh->nodes.shrink_to_fit();
-
-    // init sorted element arrays
-    // for shared memory, stored pointer to the external data
-    // store the sorted primitive order for BVH walk
-    bvh->sorted_prim.resize(nprims);
-    for (int i = 0; i < nprims; i++) {
-        bvh->sorted_prim[i] = bound_prims[i].pid;
-    }
-
-    // done
-    return bvh;
-}
-
-/// Build a triangles BVH.
-inline bvh_tree* build_triangles_bvh(const vector<vec3i>& triangles,
-    const vector<vec3f>& pos, bool equal_size = true) {
-    return build_bvh(
-        (int)triangles.size(), equal_size, [&triangles, &pos](int eid) {
-            auto f = triangles[eid];
-            return triangle_bbox(pos[f.x], pos[f.y], pos[f.z]);
-        });
-}
-
-/// Build a quads BVH.
-inline bvh_tree* build_quads_bvh(const vector<vec4i>& quads,
-    const vector<vec3f>& pos, bool equal_size = true) {
-    return build_bvh((int)quads.size(), equal_size, [&quads, &pos](int eid) {
-        auto f = quads[eid];
-        return quad_bbox(pos[f.x], pos[f.y], pos[f.z], pos[f.w]);
-    });
-}
-
-/// Build a lines BVH.
-inline bvh_tree* build_lines_bvh(const vector<vec2i>& lines,
-    const vector<vec3f>& pos, const vector<float>& radius,
-    bool equal_size = true) {
-    return build_bvh(
-        (int)lines.size(), equal_size, [&lines, &pos, &radius](int eid) {
-            auto f = lines[eid];
-            return line_bbox(pos[f.x], pos[f.y], radius[f.x], radius[f.y]);
-        });
-}
-
-/// Build a points BVH.
-inline bvh_tree* build_points_bvh(const vector<int>& points,
-    const vector<vec3f>& pos, const vector<float>& radius,
-    bool equal_size = true) {
-    return build_bvh(
-        (int)points.size(), equal_size, [&points, &pos, &radius](int eid) {
-            auto f = points[eid];
-            return point_bbox(pos[f], radius[f]);
-        });
-}
-
-/// Build a points BVH.
-inline bvh_tree* build_points_bvh(const vector<vec3f>& pos,
-    const vector<float>& radius, bool equal_size = true) {
-    return build_bvh((int)pos.size(), equal_size, [&pos, &radius](int eid) {
-        auto r = (radius.empty()) ? 0.00001f : radius[eid];
-        return point_bbox(pos[eid], r);
-    });
-}
+/// Build a scene BVH from a set of shape instances.
+bvh_tree* build_bvh(const vector<frame3f>& frames,
+    const vector<frame3f>& frames_inv, const vector<bvh_tree*>& ist_bvhs,
+    bool equal_size);
 
 /// Recursively recomputes the node bounds for a shape bvh
-inline void refit_bvh(
-    bvh_tree* bvh, int nodeid, const function<bbox3f(int)>& elem_bbox) {
-    // refit
-    auto node = &bvh->nodes[nodeid];
-    node->bbox = invalid_bbox3f;
-    if (node->isleaf) {
-        for (auto i = 0; i < node->count; i++) {
-            auto idx = bvh->sorted_prim[node->start + i];
-            node->bbox += elem_bbox(idx);
-        }
-    } else {
-        for (auto i = 0; i < node->count; i++) {
-            auto idx = node->start + i;
-            refit_bvh(bvh, idx, elem_bbox);
-            node->bbox += bvh->nodes[idx].bbox;
-        }
-    }
-}
+void refit_bvh(bvh_tree* bvh, const vector<vec3f>& pos,
+    const vector<float>& radius, float def_radius);
 
-/// Refit triangles bvh
-inline void refit_triangles_bvh(
-    bvh_tree* bvh, const vec3i* triangles, const vec3f* pos) {
-    refit_bvh(bvh, 0, [triangles, pos](int eid) {
-        auto f = triangles[eid];
-        return triangle_bbox(pos[f.x], pos[f.y], pos[f.z]);
-    });
-}
-
-/// Refit triangles bvh
-inline void refit_triangles_bvh(
-    bvh_tree* bvh, const vector<vec3i>& triangles, const vector<vec3f>& pos) {
-    refit_triangles_bvh(bvh, triangles.data(), pos.data());
-}
-
-/// Refit quads bvh
-inline void refit_quads_bvh(
-    bvh_tree* bvh, const vec4i* quads, const vec3f* pos) {
-    refit_bvh(bvh, 0, [quads, pos](int eid) {
-        auto f = quads[eid];
-        return quad_bbox(pos[f.x], pos[f.y], pos[f.z], pos[f.w]);
-    });
-}
-
-/// Refit quads bvh
-inline void refit_quads_bvh(
-    bvh_tree* bvh, const vector<vec4i>& quads, const vector<vec3f>& pos) {
-    refit_quads_bvh(bvh, quads.data(), pos.data());
-}
-
-/// Refit lines bvh
-inline void refit_lines_bvh(
-    bvh_tree* bvh, const vec2i* lines, const vec3f* pos, const float* radius) {
-    refit_bvh(bvh, 0, [lines, pos, radius](int eid) {
-        auto f = lines[eid];
-        return line_bbox(pos[f.x], pos[f.y], radius[f.x], radius[f.y]);
-    });
-}
-
-/// Refit lines bvh
-inline void refit_lines_bvh(bvh_tree* bvh, const vector<vec2i>& lines,
-    const vector<vec3f>& pos, const vector<float>& radius) {
-    refit_lines_bvh(bvh, lines.data(), pos.data(), radius.data());
-}
-
-/// Refit points bvh
-inline void refit_points_bvh(
-    bvh_tree* bvh, const int* points, const vec3f* pos, const float* radius) {
-    refit_bvh(bvh, 0, [points, pos, radius](int eid) {
-        auto f = points[eid];
-        return point_bbox(pos[f], (radius) ? radius[f] : 0);
-    });
-}
-
-/// Refit points bvh
-inline void refit_points_bvh(bvh_tree* bvh, const vector<int>& points,
-    const vector<vec3f>& pos, const vector<float>& radius) {
-    refit_points_bvh(bvh, points.data(), pos.data(), radius.data());
-}
-/// Refit points bvh
-inline void refit_points_bvh(
-    bvh_tree* bvh, const vec3f* pos, const float* radius) {
-    refit_bvh(bvh, 0,
-        [pos, radius](int eid) { return point_bbox(pos[eid], radius[eid]); });
-}
-
-/// Refit lines bvh
-inline void refit_points_bvh(
-    bvh_tree* bvh, const vector<vec3f>& pos, const vector<float>& radius) {
-    refit_points_bvh(bvh, pos.data(), radius.data());
-}
+/// Recursively recomputes the node bounds for a scene bvh
+void refit_bvh(bvh_tree* bvh, const vector<frame3f>& frames,
+    const vector<frame3f>& frames_inv);
 
 /// Intersect ray with a bvh.
-inline bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray_,
-    bool early_exit, float& ray_t, int& eid,
-    const function<bool(int, const ray3f&, float&)>& intersect_elem) {
-    // node stack
-    int node_stack[64];
-    auto node_cur = 0;
-    node_stack[node_cur++] = 0;
-
-    // shared variables
-    auto hit = false;
-
-    // copy ray to modify it
-    auto ray = ray_;
-
-    // prepare ray for fast queries
-    auto ray_dinv = vec3f{1, 1, 1} / ray.d;
-    auto ray_dsign = vec3i{(ray_dinv.x < 0) ? 1 : 0, (ray_dinv.y < 0) ? 1 : 0,
-        (ray_dinv.z < 0) ? 1 : 0};
-    auto ray_reverse = array<bool, 4>{
-        {(bool)ray_dsign.x, (bool)ray_dsign.y, (bool)ray_dsign.z, false}};
-
-    // walking stack
-    while (node_cur) {
-        // grab node
-        auto node = bvh->nodes[node_stack[--node_cur]];
-
-        // intersect bbox
-        if (!intersect_check_bbox(ray, ray_dinv, ray_dsign, node.bbox))
-            continue;
-
-        // intersect node, switching based on node type
-        // for each type, iterate over the the primitive list
-        if (!node.isleaf) {
-            // for internal nodes, attempts to proceed along the
-            // split axis from smallest to largest nodes
-            if (ray_reverse[node.axis]) {
-                for (auto i = 0; i < node.count; i++) {
-                    auto idx = node.start + i;
-                    node_stack[node_cur++] = idx;
-                    assert(node_cur < 64);
-                }
-            } else {
-                for (auto i = node.count - 1; i >= 0; i--) {
-                    auto idx = node.start + i;
-                    node_stack[node_cur++] = idx;
-                    assert(node_cur < 64);
-                }
-            }
-        } else {
-            for (auto i = 0; i < node.count; i++) {
-                auto idx = bvh->sorted_prim[node.start + i];
-                if (intersect_elem(idx, ray, ray_t)) {
-                    hit = true;
-                    ray.tmax = ray_t;
-                    eid = idx;
-                    if (early_exit) return true;
-                }
-            }
-        }
-    }
-
-    return hit;
-}
+bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray, bool early_exit,
+    float& ray_t, int& iid, int& eid, vec4f& ew);
 
 /// Finds the closest element with a bvh.
-inline bool overlap_bvh(const bvh_tree* bvh, const vec3f& pos, float max_dist,
-    bool early_exit, float& dist, int& eid,
-    const function<bool(int, const vec3f&, float, float&)>& overlap_elem) {
-    // node stack
-    int node_stack[64];
-    auto node_cur = 0;
-    node_stack[node_cur++] = 0;
-
-    // hit
-    auto hit = false;
-
-    // walking stack
-    while (node_cur) {
-        // grab node
-        auto node = bvh->nodes[node_stack[--node_cur]];
-
-        // intersect bbox
-        if (!distance_check_bbox(pos, max_dist, node.bbox)) continue;
-
-        // intersect node, switching based on node type
-        // for each type, iterate over the the primitive list
-        if (!node.isleaf) {
-            // internal node
-            for (auto idx = node.start; idx < node.start + node.count; idx++) {
-                node_stack[node_cur++] = idx;
-                assert(node_cur < 64);
-            }
-        } else {
-            for (auto i = 0; i < node.count; i++) {
-                auto idx = bvh->sorted_prim[node.start + i];
-                if (overlap_elem(idx, pos, max_dist, dist)) {
-                    hit = true;
-                    max_dist = dist;
-                    eid = idx;
-                    if (early_exit) return true;
-                }
-            }
-        }
-    }
-
-    return hit;
-}
-
-/// Intersect a triangle BVH
-inline bool intersect_triangles_bvh(const bvh_tree* bvh, const vec3i* triangles,
-    const vec3f* pos, const ray3f& ray, bool early_exit, float& ray_t, int& eid,
-    vec3f& euv) {
-    return intersect_bvh(bvh, ray, early_exit, ray_t, eid,
-        [&triangles, &pos, &euv](int eid, const ray3f& ray, float& ray_t) {
-            const auto& f = triangles[eid];
-            return intersect_triangle(
-                ray, pos[f.x], pos[f.y], pos[f.z], ray_t, euv);
-        });
-}
-
-/// Intersect a triangle BVH
-inline bool intersect_triangles_bvh(const bvh_tree* bvh,
-    const vector<vec3i>& triangles, const vector<vec3f>& pos, const ray3f& ray,
-    bool early_exit, float& ray_t, int& eid, vec3f& euv) {
-    return intersect_triangles_bvh(
-        bvh, triangles.data(), pos.data(), ray, early_exit, ray_t, eid, euv);
-}
-
-/// Intersect a quad BVH
-inline bool intersect_quads_bvh(const bvh_tree* bvh, const vec4i* quads,
-    const vec3f* pos, const ray3f& ray, bool early_exit, float& ray_t, int& eid,
-    vec4f& euv) {
-    return intersect_bvh(bvh, ray, early_exit, ray_t, eid,
-        [&quads, &pos, &euv](int eid, const ray3f& ray, float& ray_t) {
-            const auto& f = quads[eid];
-            return intersect_quad(
-                ray, pos[f.x], pos[f.y], pos[f.z], pos[f.w], ray_t, euv);
-        });
-}
-
-/// Intersect a quad BVH
-inline bool intersect_quads_bvh(const bvh_tree* bvh, const vector<vec4i>& quads,
-    const vector<vec3f>& pos, const ray3f& ray, bool early_exit, float& ray_t,
-    int& eid, vec4f& euv) {
-    return intersect_quads_bvh(
-        bvh, quads.data(), pos.data(), ray, early_exit, ray_t, eid, euv);
-}
-
-/// Intersect a line BVH
-inline bool intersect_lines_bvh(const bvh_tree* bvh, const vec2i* lines,
-    const vec3f* pos, const float* radius, const ray3f& ray, bool early_exit,
-    float& ray_t, int& eid, vec2f& euv) {
-    return intersect_bvh(bvh, ray, early_exit, ray_t, eid,
-        [&lines, &pos, &radius, &euv](int eid, const ray3f& ray, float& ray_t) {
-            auto f = lines[eid];
-            return intersect_line(
-                ray, pos[f.x], pos[f.y], radius[f.x], radius[f.y], ray_t, euv);
-        });
-}
-
-/// Intersect a line BVH
-inline bool intersect_lines_bvh(const bvh_tree* bvh, const vector<vec2i>& lines,
-    const vector<vec3f>& pos, const vector<float>& radius, const ray3f& ray,
-    bool early_exit, float& ray_t, int& eid, vec2f& euv) {
-    return intersect_lines_bvh(bvh, lines.data(), pos.data(), radius.data(),
-        ray, early_exit, ray_t, eid, euv);
-}
-
-/// Intersect a point BVH
-inline bool intersect_points_bvh(const bvh_tree* bvh, const int* points,
-    const vec3f* pos, const float* radius, const ray3f& ray, bool early_exit,
-    float& ray_t, int& eid) {
-    return intersect_bvh(bvh, ray, early_exit, ray_t, eid,
-        [&points, &pos, &radius](int eid, const ray3f& ray, float& ray_t) {
-            auto f = points[eid];
-            return intersect_point(ray, pos[f], radius[f], ray_t);
-        });
-}
-
-/// Intersect a point BVH
-inline bool intersect_points_bvh(const bvh_tree* bvh, const vector<int>& points,
-    const vector<vec3f>& pos, const vector<float>& radius, const ray3f& ray,
-    bool early_exit, float& ray_t, int& eid) {
-    return intersect_points_bvh(bvh, points.data(), pos.data(), radius.data(),
-        ray, early_exit, ray_t, eid);
-}
-
-/// Intersect a point BVH
-inline bool intersect_points_bvh(const bvh_tree* bvh, const vec3f* pos,
-    const float* radius, const ray3f& ray, bool early_exit, float& ray_t,
-    int& eid) {
-    return intersect_bvh(bvh, ray, early_exit, ray_t, eid,
-        [&pos, &radius](int eid, const ray3f& ray, float& ray_t) {
-            return intersect_point(ray, pos[eid], radius[eid], ray_t);
-        });
-}
-
-/// Intersect a point BVH
-inline bool intersect_points_bvh(const bvh_tree* bvh, const vector<vec3f>& pos,
-    const vector<float>& radius, const ray3f& ray, bool early_exit,
-    float& ray_t, int& eid) {
-    return intersect_points_bvh(
-        bvh, pos.data(), radius.data(), ray, early_exit, ray_t, eid);
-}
-
-/// Intersect a triangle BVH
-inline bool overlap_triangles_bvh(const bvh_tree* bvh, const vec3i* triangles,
-    const vec3f* pos, const float* radius, const vec3f& pt, float max_dist,
-    bool early_exit, float& dist, int& eid, vec3f& euv) {
-    return overlap_bvh(bvh, pt, max_dist, early_exit, dist, eid,
-        [&triangles, &pos, &radius, &euv](
-            int eid, const vec3f& pt, float max_dist, float& dist) {
-            auto f = triangles[eid];
-            return overlap_triangle(pt, max_dist, pos[f.x], pos[f.y], pos[f.z],
-                (radius) ? radius[f.x] : 0, (radius) ? radius[f.y] : 0,
-                (radius) ? radius[f.z] : 0, dist, euv);
-        });
-}
-
-/// Intersect a triangle BVH
-inline bool overlap_triangles_bvh(const bvh_tree* bvh,
-    const vector<vec3i>& triangles, const vector<vec3f>& pos,
-    const vector<float>& radius, const vec3f& pt, float max_dist,
-    bool early_exit, float& dist, int& eid, vec3f& euv) {
-    return overlap_triangles_bvh(bvh, triangles.data(), pos.data(),
-        radius.data(), pt, max_dist, early_exit, dist, eid, euv);
-}
-
-/// Intersect a quad BVH
-inline bool overlap_quads_bvh(const bvh_tree* bvh, const vec4i* quads,
-    const vec3f* pos, const float* radius, const vec3f& pt, float max_dist,
-    bool early_exit, float& dist, int& eid, vec4f& euv) {
-    return overlap_bvh(bvh, pt, max_dist, early_exit, dist, eid,
-        [&quads, &pos, &radius, &euv](
-            int eid, const vec3f& pt, float max_dist, float& dist) {
-            auto f = quads[eid];
-            return overlap_quad(pt, max_dist, pos[f.x], pos[f.y], pos[f.z],
-                pos[f.w], (radius) ? radius[f.x] : 0,
-                (radius) ? radius[f.y] : 0, (radius) ? radius[f.z] : 0,
-                (radius) ? radius[f.w] : 0, dist, euv);
-        });
-}
-
-/// Intersect a quad BVH
-inline bool overlap_quads_bvh(const bvh_tree* bvh, const vector<vec4i>& quads,
-    const vector<vec3f>& pos, const vector<float>& radius, const vec3f& pt,
-    float max_dist, bool early_exit, float& dist, int& eid, vec4f& euv) {
-    return overlap_quads_bvh(bvh, quads.data(), pos.data(), radius.data(), pt,
-        max_dist, early_exit, dist, eid, euv);
-}
-
-/// Intersect a line BVH
-inline bool overlap_lines_bvh(const bvh_tree* bvh, const vec2i* lines,
-    const vec3f* pos, const float* radius, const vec3f& pt, float max_dist,
-    bool early_exit, float& dist, int& eid, vec2f& euv) {
-    return overlap_bvh(bvh, pt, max_dist, early_exit, dist, eid,
-        [&lines, &pos, &radius, &euv](
-            int eid, const vec3f& pt, float max_dist, float& dist) {
-            auto f = lines[eid];
-            return overlap_line(pt, max_dist, pos[f.x], pos[f.y],
-                (radius) ? radius[f.x] : 0, (radius) ? radius[f.y] : 0, dist,
-                euv);
-        });
-}
-
-/// Intersect a line BVH
-inline bool overlap_lines_bvh(const bvh_tree* bvh, const vector<vec2i>& lines,
-    const vector<vec3f>& pos, const vector<float>& radius, const vec3f& pt,
-    float max_dist, bool early_exit, float& dist, int& eid, vec2f& euv) {
-    return overlap_lines_bvh(bvh, lines.data(), pos.data(), radius.data(), pt,
-        max_dist, early_exit, dist, eid, euv);
-}
-
-/// Intersect a point BVH
-inline bool overlap_points_bvh(const bvh_tree* bvh, const int* points,
-    const vec3f* pos, const float* radius, const vec3f& pt, float max_dist,
-    bool early_exit, float& dist, int& eid) {
-    return overlap_bvh(bvh, pt, max_dist, early_exit, dist, eid,
-        [&points, &pos, &radius](
-            int eid, const vec3f& pt, float max_dist, float& dist) {
-            auto f = points[eid];
-            return overlap_point(
-                pt, max_dist, pos[f], (radius) ? radius[f] : 0, dist);
-        });
-}
-
-/// Intersect a point BVH
-inline bool overlap_points_bvh(const bvh_tree* bvh, const vector<int>& points,
-    const vector<vec3f>& pos, const vector<float>& radius, const vec3f& pt,
-    float max_dist, bool early_exit, float& dist, int& eid) {
-    return overlap_points_bvh(bvh, points.data(), pos.data(), radius.data(), pt,
-        max_dist, early_exit, dist, eid);
-}
-
-/// Intersect a point BVH
-inline bool overlap_points_bvh(const bvh_tree* bvh, const vec3f* pos,
-    const float* radius, const vec3f& pt, float max_dist, bool early_exit,
-    float& dist, int& eid) {
-    return overlap_bvh(bvh, pt, max_dist, early_exit, dist, eid,
-        [&pos, &radius](int eid, const vec3f& pt, float max_dist, float& dist) {
-            return overlap_point(pt, max_dist, pos[eid], radius[eid], dist);
-        });
-}
-
-/// Intersect a point BVH
-inline bool overlap_points_bvh(const bvh_tree* bvh, const vector<vec3f>& pos,
-    const vector<float>& radius, const vec3f& pt, float max_dist,
-    bool early_exit, float& dist, int& eid) {
-    return overlap_points_bvh(
-        bvh, pos.data(), radius.data(), pt, max_dist, early_exit, dist, eid);
-}
-
-/// Finds the overlap between BVH leaf nodes.
-template <typename OverlapElem>
-void overlap_bvh_elems(const bvh_tree* bvh1, const bvh_tree* bvh2,
-    bool skip_duplicates, bool skip_self, vector<vec2i>& overlaps,
-    const OverlapElem& overlap_elems) {
-    // node stack
-    vec2i node_stack[128];
-    auto node_cur = 0;
-    node_stack[node_cur++] = {0, 0};
-
-    // walking stack
-    while (node_cur) {
-        // grab node
-        auto node_idx = node_stack[--node_cur];
-        const auto node1 = bvh1->nodes[node_idx.x];
-        const auto node2 = bvh2->nodes[node_idx.y];
-
-        // intersect bbox
-        if (!overlap_bbox(node1.bbox, node2.bbox)) continue;
-
-        // check for leaves
-        if (node1.isleaf && node2.isleaf) {
-            // collide primitives
-            for (auto i1 = node1.start; i1 < node1.start + node1.count; i1++) {
-                for (auto i2 = node2.start; i2 < node2.start + node2.count;
-                     i2++) {
-                    auto idx1 = bvh1->sorted_prim[i1];
-                    auto idx2 = bvh2->sorted_prim[i2];
-                    if (skip_duplicates && idx1 > idx2) continue;
-                    if (skip_self && idx1 == idx2) continue;
-                    if (overlap_elems(idx1, idx2))
-                        overlaps.push_back({idx1, idx2});
-                }
-            }
-        } else {
-            // descend
-            if (node1.isleaf) {
-                for (auto idx2 = node2.start; idx2 < node2.start + node2.count;
-                     idx2++) {
-                    node_stack[node_cur++] = {node_idx.x, (int)idx2};
-                    assert(node_cur < 128);
-                }
-            } else if (node2.isleaf) {
-                for (auto idx1 = node1.start; idx1 < node1.start + node1.count;
-                     idx1++) {
-                    node_stack[node_cur++] = {(int)idx1, node_idx.y};
-                    assert(node_cur < 128);
-                }
-            } else {
-                for (auto idx2 = node2.start; idx2 < node2.start + node2.count;
-                     idx2++) {
-                    for (auto idx1 = node1.start;
-                         idx1 < node1.start + node1.count; idx1++) {
-                        node_stack[node_cur++] = {(int)idx1, (int)idx2};
-                        assert(node_cur < 128);
-                    }
-                }
-            }
-        }
-    }
-}
-
+bool overlap_bvh(const bvh_tree* bvh, const vec3f& pos, float max_dist,
+    bool early_exit, float& dist, int& iid, int& eid, vec4f& ew);
 }  // namespace ygl
 
 // -----------------------------------------------------------------------------
@@ -7746,29 +7150,33 @@ void update_lights(
 void print_info(const scene* scn);
 
 /// Build a shape BVH
-inline void build_bvh(shape* shp, bool equalsize = true) {
+inline void build_bvh(
+    shape* shp, float def_radius = 0.001f, bool equalsize = true) {
     if (!shp->points.empty()) {
-        shp->bvh =
-            build_points_bvh(shp->points, shp->pos, shp->radius, equalsize);
+        shp->bvh = build_bvh(shp->points, {}, {}, {}, shp->pos, shp->radius,
+            def_radius, equalsize);
     } else if (!shp->lines.empty()) {
-        shp->bvh =
-            build_lines_bvh(shp->lines, shp->pos, shp->radius, equalsize);
+        shp->bvh = build_bvh({}, shp->lines, {}, {}, shp->pos, shp->radius,
+            def_radius, equalsize);
     } else if (!shp->triangles.empty()) {
-        shp->bvh = build_triangles_bvh(shp->triangles, shp->pos, equalsize);
+        shp->bvh = build_bvh(
+            {}, {}, shp->triangles, {}, shp->pos, {}, def_radius, equalsize);
     } else if (!shp->quads.empty()) {
-        shp->bvh = build_quads_bvh(shp->quads, shp->pos, equalsize);
+        shp->bvh = build_bvh(
+            {}, {}, {}, shp->quads, shp->pos, {}, def_radius, equalsize);
     } else {
-        shp->bvh = build_points_bvh(shp->pos, shp->radius, equalsize);
+        shp->bvh = build_bvh(
+            {}, {}, {}, {}, shp->pos, shp->radius, def_radius, equalsize);
     }
     shp->bbox = shp->bvh->nodes[0].bbox;
 }
 
 /// Build a scene BVH
-inline void build_bvh(
-    scene* scn, bool equalsize = true, bool do_shapes = true) {
+inline void build_bvh(scene* scn, bool do_shapes = true,
+    float def_radius = 0.001f, bool equalsize = true) {
     // do shapes
     if (do_shapes) {
-        for (auto shp : scn->shapes) build_bvh(shp, equalsize);
+        for (auto shp : scn->shapes) build_bvh(shp, def_radius, equalsize);
     }
 
     // update instance bbox
@@ -7776,30 +7184,40 @@ inline void build_bvh(
         ist->bbox = transform_bbox(ist->frame, ist->shp->bbox);
 
     // tree bvh
-    scn->bvh = build_bvh((int)scn->instances.size(), equalsize,
-        [scn](int eid) { return scn->instances[eid]->bbox; });
+    auto smap = unordered_map<shape*, bvh_tree*>();
+    for (auto shp : scn->shapes) smap[shp] = shp->bvh;
+    auto ist_frames = vector<frame3f>();
+    auto ist_frames_inv = vector<frame3f>();
+    auto ist_bvh = vector<bvh_tree*>();
+    for (auto ist : scn->instances) {
+        ist_frames.push_back(ist->frame);
+        ist_frames_inv.push_back(inverse(ist->frame));
+        ist_bvh.push_back(smap.at(ist->shp));
+    }
+    scn->bvh = build_bvh(ist_frames, ist_frames_inv, ist_bvh, equalsize);
 }
 
 /// Refits a scene BVH
-inline void refit_bvh(shape* shp) {
+inline void refit_bvh(shape* shp, float def_radius = 0.001f) {
     if (!shp->points.empty()) {
-        refit_points_bvh(shp->bvh, shp->points, shp->pos, shp->radius);
+        refit_bvh(shp->bvh, shp->pos, shp->radius, def_radius);
     } else if (!shp->lines.empty()) {
-        refit_lines_bvh(shp->bvh, shp->lines, shp->pos, shp->radius);
+        refit_bvh(shp->bvh, shp->pos, shp->radius, def_radius);
     } else if (!shp->triangles.empty()) {
-        refit_triangles_bvh(shp->bvh, shp->triangles, shp->pos);
+        refit_bvh(shp->bvh, shp->pos, {}, def_radius);
     } else if (!shp->quads.empty()) {
-        refit_quads_bvh(shp->bvh, shp->quads, shp->pos);
+        refit_bvh(shp->bvh, shp->pos, {}, def_radius);
     } else {
-        refit_points_bvh(shp->bvh, shp->pos, shp->radius);
+        refit_bvh(shp->bvh, shp->pos, shp->radius, def_radius);
     }
     shp->bbox = shp->bvh->nodes[0].bbox;
 }
 
 /// Refits a scene BVH
-inline void refit_bvh(scene* scn, bool do_shapes = true) {
+inline void refit_bvh(
+    scene* scn, bool do_shapes = true, float def_radius = 0.001f) {
     if (do_shapes) {
-        for (auto shp : scn->shapes) refit_bvh(shp);
+        for (auto shp : scn->shapes) refit_bvh(shp, def_radius);
     }
 
     // update instance bbox
@@ -7807,8 +7225,15 @@ inline void refit_bvh(scene* scn, bool do_shapes = true) {
         ist->bbox = transform_bbox(ist->frame, ist->shp->bbox);
 
     // recompute bvh bounds
-    refit_bvh(
-        scn->bvh, 0, [scn](int eid) { return scn->instances[eid]->bbox; });
+    auto smap = unordered_map<shape*, bvh_tree*>();
+    for (auto shp : scn->shapes) smap[shp] = shp->bvh;
+    auto ist_frames = vector<frame3f>();
+    auto ist_frames_inv = vector<frame3f>();
+    for (auto ist : scn->instances) {
+        ist_frames.push_back(ist->frame);
+        ist_frames_inv.push_back(inverse(ist->frame));
+    }
+    refit_bvh(scn->bvh, ist_frames, ist_frames_inv);
 }
 
 /// Intersect the shape with a ray. Find any interstion if early_exit,
@@ -7825,57 +7250,8 @@ inline void refit_bvh(scene* scn, bool do_shapes = true) {
 ///     - whether it intersected
 inline bool intersect_ray(const shape* shp, const ray3f& ray, bool early_exit,
     float& ray_t, int& eid, vec4f& euv) {
-    // switch over shape type
-    if (!shp->triangles.empty()) {
-        if (intersect_triangles_bvh(shp->bvh, shp->triangles, shp->pos, ray,
-                early_exit, ray_t, eid, (vec3f&)euv)) {
-            euv = {euv.x, euv.y, euv.z, 0};
-            return true;
-        }
-    } else if (!shp->quads.empty()) {
-        if (intersect_quads_bvh(shp->bvh, shp->quads, shp->pos, ray, early_exit,
-                ray_t, eid, euv)) {
-            return true;
-        }
-    } else if (!shp->lines.empty()) {
-        if (intersect_lines_bvh(shp->bvh, shp->lines, shp->pos, shp->radius,
-                ray, early_exit, ray_t, eid, (vec2f&)euv)) {
-            euv = {euv.x, euv.y, 0, 0};
-            return true;
-        }
-    } else if (!shp->points.empty()) {
-        if (intersect_points_bvh(shp->bvh, shp->points, shp->pos, shp->radius,
-                ray, early_exit, ray_t, eid)) {
-            euv = {1, 0, 0, 0};
-            return true;
-        }
-    } else {
-        if (intersect_points_bvh(
-                shp->bvh, shp->pos, shp->radius, ray, early_exit, ray_t, eid)) {
-            euv = {1, 0, 0, 0};
-            return true;
-        }
-    }
-
-    return false;
-}
-
-/// Intersect the instance with a ray. Find any interstion if early_exit,
-/// otherwise find first intersection.
-///
-/// - Parameters:
-///     - scn: scene to intersect
-///     - ray: ray to be intersected
-///     - early_exit: whether to stop at the first found hit
-///     - ray_t: ray distance at intersection
-///     - eid: shape element index
-///     - euv: element barycentric coordinates
-/// - Returns:
-///     - whether it intersected
-inline bool intersect_ray(const instance* ist, const ray3f& ray,
-    bool early_exit, float& ray_t, int& eid, vec4f& euv) {
-    return intersect_ray(ist->shp, transform_ray_inverse(ist->frame, ray),
-        early_exit, ray_t, eid, euv);
+    auto iid = 0;
+    return intersect_bvh(shp->bvh, ray, early_exit, ray_t, iid, eid, euv);
 }
 
 /// Intersect the scene with a ray. Find any interstion if early_exit,
@@ -7893,11 +7269,7 @@ inline bool intersect_ray(const instance* ist, const ray3f& ray,
 ///     - whether it intersected
 inline bool intersect_ray(const scene* scn, const ray3f& ray, bool early_exit,
     float& ray_t, int& iid, int& eid, vec4f& euv) {
-    return intersect_bvh(scn->bvh, ray, early_exit, ray_t, iid,
-        [&eid, &euv, early_exit, scn](int iid, const ray3f& ray, float& ray_t) {
-            return intersect_ray(
-                scn->instances[iid], ray, early_exit, ray_t, eid, euv);
-        });
+    return intersect_bvh(scn->bvh, ray, early_exit, ray_t, iid, eid, euv);
 }
 
 /// Surface point.
@@ -7947,58 +7319,9 @@ inline intersection_point intersect_ray(
 ///     - whether it intersected
 inline bool overlap_point(const shape* shp, const vec3f& pos, float max_dist,
     bool early_exit, float& dist, int& eid, vec4f& euv) {
-    // switch over shape type
-    if (!shp->triangles.empty()) {
-        if (overlap_triangles_bvh(shp->bvh, shp->triangles, shp->pos,
-                shp->radius, pos, max_dist, early_exit, dist, eid,
-                (vec3f&)euv)) {
-            euv = {euv.x, euv.y, euv.z, 0};
-            return true;
-        }
-    } else if (!shp->quads.empty()) {
-        if (overlap_quads_bvh(shp->bvh, shp->quads, shp->pos, shp->radius, pos,
-                max_dist, early_exit, dist, eid, euv)) {
-            return true;
-        }
-    } else if (!shp->lines.empty()) {
-        if (overlap_lines_bvh(shp->bvh, shp->lines, shp->pos, shp->radius, pos,
-                max_dist, early_exit, dist, eid, (vec2f&)euv)) {
-            euv = {euv.x, euv.y, 0, 0};
-            return true;
-        }
-    } else if (!shp->points.empty()) {
-        if (overlap_points_bvh(shp->bvh, shp->points, shp->pos, shp->radius,
-                pos, max_dist, early_exit, dist, eid)) {
-            euv = {1, 0, 0, 0};
-            return true;
-        }
-    } else {
-        if (overlap_points_bvh(shp->bvh, shp->pos, shp->radius, pos, max_dist,
-                early_exit, dist, eid)) {
-            euv = {1, 0, 0, 0};
-        }
-        return true;
-    }
-
-    return false;
-}
-
-/// Finds the closest element that overlaps a point within a given distance.
-///
-/// - Parameters:
-///     - scn: scene to intersect
-///     - pos: point position
-///     - max_dist: maximu valid distance
-///     - early_exit: whether to stop at the first found hit
-///     - dist: distance at intersection
-///     - eid: shape element index
-///     - euv: element barycentric coordinates
-/// - Returns:
-///     - whether it intersected
-inline bool overlap_point(const instance* ist, const vec3f& pos, float max_dist,
-    bool early_exit, float& dist, int& eid, vec4f& euv) {
-    return overlap_point(ist->shp, transform_point_inverse(ist->frame, pos),
-        max_dist, early_exit, dist, eid, euv);
+    auto iid = 0;
+    return overlap_bvh(
+        shp->bvh, pos, max_dist, early_exit, dist, iid, eid, euv);
 }
 
 /// Finds the closest element that overlaps a point within a given distance.
@@ -8016,14 +7339,11 @@ inline bool overlap_point(const instance* ist, const vec3f& pos, float max_dist,
 ///     - whether it intersected
 inline bool overlap_point(const scene* scn, const vec3f& pos, float max_dist,
     bool early_exit, float& dist, int& iid, int& eid, vec4f& euv) {
-    return overlap_bvh(scn->bvh, pos, max_dist, early_exit, dist, iid,
-        [&eid, &euv, early_exit, scn](
-            int iid, const vec3f& pos, float max_dist, float& dist) {
-            return overlap_point(
-                scn->instances[iid], pos, max_dist, early_exit, dist, eid, euv);
-        });
+    return overlap_bvh(
+        scn->bvh, pos, max_dist, early_exit, dist, iid, eid, euv);
 }
 
+#if 0
 /// Find the list of overlaps between instance bounds.
 inline void overlap_instance_bounds(const scene* scn1, const scene* scn2,
     bool skip_duplicates, bool skip_self, vector<vec2i>& overlaps) {
@@ -8034,6 +7354,7 @@ inline void overlap_instance_bounds(const scene* scn1, const scene* scn2,
                 scn1->instances[i1]->bbox, scn2->instances[i2]->bbox);
         });
 }
+#endif
 
 }  // namespace ygl
 

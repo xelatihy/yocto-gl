@@ -76,6 +76,10 @@
 //
 // # Todo
 //
+// ## BVH
+//
+// - consider merging axis with internal
+//
 // ## Infrastructure
 //
 // - vec: min_element/min_element_index
@@ -731,6 +735,662 @@ image4b make_turbulence_image(int resx, int resy, float scale, float lacunarity,
     }
     return img;
 }
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION FOR BVH
+// -----------------------------------------------------------------------------
+namespace ygl {
+// Struct that pack a bounding box, its associate primitive index, and other
+// data for faster hierarchy build.
+// This is internal only and should not be used externally.
+struct bvh_bound_prim {
+    bbox3f bbox;   // bounding box
+    vec3f center;  // bounding box center (for faster sort)
+    int pid;       // primitive id
+};
+
+// Comparison function for each axis
+struct bvh_bound_prim_comp {
+    int axis;
+    float middle;
+
+    bvh_bound_prim_comp(int a, float m = 0) : axis(a), middle(m) {}
+
+    bool operator()(const bvh_bound_prim& a, const bvh_bound_prim& b) const {
+        return a.center[axis] < b.center[axis];
+    }
+
+    bool operator()(const bvh_bound_prim& a) const {
+        return a.center[axis] < middle;
+    }
+};
+
+// Initializes the BVH node node that contains the primitives sorted_prims
+// from start to end, by either splitting it into two other nodes,
+// or initializing it as a leaf. When splitting, the heuristic heuristic is
+// used and nodes added sequentially in the preallocated nodes array and
+// the number of nodes nnodes is updated.
+void make_bvh_node(bvh_tree* bvh, int nodeid, bvh_bound_prim* sorted_prims,
+    int start, int end, bool equalsize) {
+    // get node
+    auto node = &bvh->nodes.at(nodeid);
+    // compute node bounds
+    node->bbox = invalid_bbox3f;
+    for (auto i = start; i < end; i++) node->bbox += sorted_prims[i].bbox;
+
+    // decide whether to create a leaf
+    if (end - start <= bvh_minprims) {
+        // makes a leaf node
+        node->type = bvh->type;
+        node->start = start;
+        node->count = end - start;
+    } else {
+        // choose the split axis and position
+        // init to default values
+        auto axis = 0;
+        auto mid = (start + end) / 2;
+
+        // compute primintive bounds and size
+        auto centroid_bbox = invalid_bbox3f;
+        for (auto i = start; i < end; i++)
+            centroid_bbox += sorted_prims[i].center;
+        auto centroid_size = bbox_diagonal(centroid_bbox);
+
+        // check if it is not possible to split
+        if (centroid_size == zero3f) {
+            // we failed to split for some reasons
+            node->type = bvh->type;
+            node->start = start;
+            node->count = end - start;
+        } else {
+            // split along largest
+            auto largest_axis = max_element(centroid_size).first;
+
+            // check heuristic
+            if (equalsize) {
+                // split the space in the middle along the largest axis
+                axis = largest_axis;
+                mid = (int)(std::partition(sorted_prims + start,
+                                sorted_prims + end,
+                                bvh_bound_prim_comp(largest_axis,
+                                    bbox_center(centroid_bbox)[largest_axis])) -
+                            sorted_prims);
+            } else {
+                // balanced tree split: find the largest axis of the bounding
+                // box and split along this one right in the middle
+                axis = largest_axis;
+                mid = (start + end) / 2;
+                std::nth_element(sorted_prims + start, sorted_prims + mid,
+                    sorted_prims + end, bvh_bound_prim_comp(largest_axis));
+            }
+
+            // check correctness
+            assert(axis >= 0 && mid > 0);
+            assert(mid > start && mid < end);
+
+            // makes an internal node
+            node->type = bvh_node_type::internal;
+            // perform the splits by preallocating the child nodes and recurring
+            node->axis = axis;
+            node->start = (int)bvh->nodes.size();
+            node->count = 2;
+            bvh->nodes.emplace_back();
+            bvh->nodes.emplace_back();
+            // build child nodes
+            make_bvh_node(
+                bvh, node->start, sorted_prims, start, mid, equalsize);
+            make_bvh_node(
+                bvh, node->start + 1, sorted_prims, mid, end, equalsize);
+        }
+    }
+}
+
+// Build a BVH from a set of primitives.
+bvh_tree* build_bvh(const vector<int>& points, const vector<vec2i>& lines,
+    const vector<vec3i>& triangles, const vector<vec4i>& quads,
+    const vector<vec3f>& pos, const vector<float>& radius, float def_radius,
+    bool equalsize) {
+    // allocate the bvh
+    auto bvh = new bvh_tree();
+
+    // set values
+    bvh->points = points;
+    bvh->lines = lines;
+    bvh->triangles = triangles;
+    bvh->quads = quads;
+    bvh->pos = pos;
+    bvh->radius =
+        (radius.empty()) ? vector<float>(pos.size(), def_radius) : radius;
+
+    // get the number of primitives and the primitive type
+    auto bboxes = vector<bbox3f>();
+    if (!bvh->points.empty()) {
+        bboxes.reserve(points.size());
+        for (auto& p : bvh->points) {
+            bboxes.push_back(point_bbox(bvh->pos[p], bvh->radius[p]));
+        }
+        bvh->type = bvh_node_type::point;
+    } else if (!bvh->lines.empty()) {
+        bboxes.reserve(bvh->lines.size());
+        for (auto& l : bvh->lines) {
+            bboxes.push_back(line_bbox(bvh->pos[l.x], bvh->pos[l.y],
+                bvh->radius[l.x], bvh->radius[l.y]));
+        }
+        bvh->type = bvh_node_type::line;
+    } else if (!bvh->triangles.empty()) {
+        bboxes.reserve(bvh->triangles.size());
+        for (auto& t : bvh->triangles) {
+            bboxes.push_back(
+                triangle_bbox(bvh->pos[t.x], bvh->pos[t.y], bvh->pos[t.z]));
+        }
+        bvh->type = bvh_node_type::triangle;
+    } else if (!bvh->lines.empty()) {
+        bboxes.reserve(quads.size());
+        for (auto& q : bvh->quads) {
+            bboxes.push_back(quad_bbox(
+                bvh->pos[q.x], bvh->pos[q.y], bvh->pos[q.z], bvh->pos[q.w]));
+        }
+        bvh->type = bvh_node_type::quad;
+    } else if (!bvh->lines.empty()) {
+        bboxes.reserve(lines.size());
+        for (auto i = 0; i < bvh->pos.size(); i++) {
+            bboxes.push_back(point_bbox(bvh->pos[i], bvh->radius[i]));
+        }
+        bvh->type = bvh_node_type::vertex;
+    }
+
+    // create buonded primitived for sorting
+    auto bound_prims = vector<bvh_bound_prim>(bboxes.size());
+    for (auto i = 0; i < bboxes.size(); i++) {
+        bound_prims[i].pid = i;
+        bound_prims[i].bbox = bboxes[i];
+        bound_prims[i].center = bbox_center(bboxes[i]);
+    }
+
+    // clear bvh
+    bvh->nodes.clear();
+    bvh->sorted_prim.clear();
+
+    // allocate nodes (over-allocate now then shrink)
+    bvh->nodes.reserve(bound_prims.size() * 2);
+
+    // start recursive splitting
+    bvh->nodes.emplace_back();
+    make_bvh_node(
+        bvh, 0, bound_prims.data(), 0, (int)bound_prims.size(), equalsize);
+
+    // shrink back
+    bvh->nodes.shrink_to_fit();
+
+    // init sorted element arrays
+    // for shared memory, stored pointer to the external data
+    // store the sorted primitive order for BVH walk
+    bvh->sorted_prim.resize(bound_prims.size());
+    for (int i = 0; i < bound_prims.size(); i++) {
+        bvh->sorted_prim[i] = bound_prims[i].pid;
+    }
+
+    // done
+    return bvh;
+}
+
+// Build a BVH from a set of shape instances.
+bvh_tree* build_bvh(const vector<frame3f>& frames,
+    const vector<frame3f>& frames_inv, const vector<bvh_tree*>& ist_bvhs,
+    bool equal_size) {
+    // allocate the bvh
+    auto bvh = new bvh_tree();
+
+    // set values
+    bvh->ist_frames = frames;
+    bvh->ist_frames_inv = frames_inv;
+    bvh->ist_bvhs = ist_bvhs;
+
+    // get the number of primitives and the primitive type
+    auto bboxes = vector<bbox3f>();
+    bboxes.reserve(bvh->ist_bvhs.size());
+    for (auto idx = 0; idx < bvh->ist_bvhs.size(); idx++) {
+        bboxes.push_back(transform_bbox(
+            bvh->ist_frames[idx], bvh->ist_bvhs[idx]->nodes[0].bbox));
+    }
+    bvh->type = bvh_node_type::instance;
+
+    // create buonded primitived for sorting
+    auto bound_prims = vector<bvh_bound_prim>(bboxes.size());
+    for (auto i = 0; i < bboxes.size(); i++) {
+        bound_prims[i].pid = i;
+        bound_prims[i].bbox = bboxes[i];
+        bound_prims[i].center = bbox_center(bboxes[i]);
+    }
+
+    // clear bvh
+    bvh->nodes.clear();
+    bvh->sorted_prim.clear();
+
+    // allocate nodes (over-allocate now then shrink)
+    bvh->nodes.reserve(bound_prims.size() * 2);
+
+    // start recursive splitting
+    bvh->nodes.emplace_back();
+    make_bvh_node(
+        bvh, 0, bound_prims.data(), 0, (int)bound_prims.size(), equal_size);
+
+    // shrink back
+    bvh->nodes.shrink_to_fit();
+
+    // init sorted element arrays
+    // for shared memory, stored pointer to the external data
+    // store the sorted primitive order for BVH walk
+    bvh->sorted_prim.resize(bound_prims.size());
+    for (int i = 0; i < bound_prims.size(); i++) {
+        bvh->sorted_prim[i] = bound_prims[i].pid;
+    }
+
+    // done
+    return bvh;
+}
+
+// Recursively recomputes the node bounds for a shape bvh
+void refit_bvh(bvh_tree* bvh, int nodeid) {
+    // refit
+    auto node = &bvh->nodes[nodeid];
+    node->bbox = invalid_bbox3f;
+    switch (node->type) {
+        case bvh_node_type::internal: {
+            for (auto i = 0; i < node->count; i++) {
+                auto idx = node->start + i;
+                refit_bvh(bvh, idx);
+                node->bbox += bvh->nodes[idx].bbox;
+            }
+        } break;
+        case bvh_node_type::point: {
+            for (auto i = 0; i < node->count; i++) {
+                auto idx = bvh->sorted_prim[node->start + i];
+                auto& p = bvh->points[idx];
+                node->bbox += point_bbox(bvh->pos[p], bvh->radius[p]);
+            }
+        } break;
+        case bvh_node_type::line: {
+            for (auto i = 0; i < node->count; i++) {
+                auto idx = bvh->sorted_prim[node->start + i];
+                auto& l = bvh->lines[idx];
+                node->bbox += line_bbox(bvh->pos[l.x], bvh->pos[l.y],
+                    bvh->radius[l.x], bvh->radius[l.y]);
+            }
+        } break;
+        case bvh_node_type::triangle: {
+            for (auto i = 0; i < node->count; i++) {
+                auto idx = bvh->sorted_prim[node->start + i];
+                auto& t = bvh->triangles[idx];
+                node->bbox +=
+                    triangle_bbox(bvh->pos[t.x], bvh->pos[t.y], bvh->pos[t.z]);
+            }
+        } break;
+        case bvh_node_type::quad: {
+            for (auto i = 0; i < node->count; i++) {
+                auto idx = bvh->sorted_prim[node->start + i];
+                auto& q = bvh->quads[idx];
+                node->bbox += quad_bbox(
+                    bvh->pos[q.x], bvh->pos[q.y], bvh->pos[q.z], bvh->pos[q.w]);
+            }
+        } break;
+        case bvh_node_type::vertex: {
+            for (auto i = 0; i < node->count; i++) {
+                auto idx = bvh->sorted_prim[node->start + i];
+                node->bbox += point_bbox(bvh->pos[idx], bvh->radius[idx]);
+            }
+        } break;
+        case bvh_node_type::instance: {
+            for (auto i = 0; i < node->count; i++) {
+                auto idx = bvh->sorted_prim[node->start + i];
+                node->bbox += transform_bbox(
+                    bvh->ist_frames[idx], bvh->ist_bvhs[idx]->nodes[0].bbox);
+            }
+        } break;
+    }
+}
+
+// Recursively recomputes the node bounds for a shape bvh
+void refit_bvh(bvh_tree* bvh, const vector<vec3f>& pos,
+    const vector<float>& radius, float def_radius) {
+    // set values
+    bvh->pos = pos;
+    bvh->radius =
+        (radius.empty()) ? vector<float>(pos.size(), def_radius) : radius;
+
+    // refit
+    refit_bvh(bvh, 0);
+}
+
+// Recursively recomputes the node bounds for a scene bvh
+void refit_bvh(bvh_tree* bvh, const vector<frame3f>& frames,
+    const vector<frame3f>& frames_inv) {
+    // set values
+    bvh->ist_frames = frames;
+    bvh->ist_frames_inv = frames_inv;
+
+    // refit
+    refit_bvh(bvh, 0);
+}
+
+// Intersect ray with a bvh.
+bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray_, bool early_exit,
+    float& ray_t, int& iid, int& eid, vec4f& ew) {
+    // node stack
+    int node_stack[64];
+    auto node_cur = 0;
+    node_stack[node_cur++] = 0;
+
+    // shared variables
+    auto hit = false;
+
+    // copy ray to modify it
+    auto ray = ray_;
+
+    // prepare ray for fast queries
+    auto ray_dinv = vec3f{1, 1, 1} / ray.d;
+    auto ray_dsign = vec3i{(ray_dinv.x < 0) ? 1 : 0, (ray_dinv.y < 0) ? 1 : 0,
+        (ray_dinv.z < 0) ? 1 : 0};
+    auto ray_reverse = array<bool, 4>{
+        {(bool)ray_dsign.x, (bool)ray_dsign.y, (bool)ray_dsign.z, false}};
+
+    // walking stack
+    while (node_cur) {
+        // grab node
+        auto node = bvh->nodes[node_stack[--node_cur]];
+
+        // intersect bbox
+        if (!intersect_check_bbox(ray, ray_dinv, ray_dsign, node.bbox))
+            continue;
+
+        // intersect node, switching based on node type
+        // for each type, iterate over the the primitive list
+        switch (node.type) {
+            case bvh_node_type::internal: {
+                // for internal nodes, attempts to proceed along the
+                // split axis from smallest to largest nodes
+                if (ray_reverse[node.axis]) {
+                    for (auto i = 0; i < node.count; i++) {
+                        auto idx = node.start + i;
+                        node_stack[node_cur++] = idx;
+                        assert(node_cur < 64);
+                    }
+                } else {
+                    for (auto i = node.count - 1; i >= 0; i--) {
+                        auto idx = node.start + i;
+                        node_stack[node_cur++] = idx;
+                        assert(node_cur < 64);
+                    }
+                }
+            } break;
+            case bvh_node_type::point: {
+                for (auto i = 0; i < node.count; i++) {
+                    auto idx = bvh->sorted_prim[node.start + i];
+                    auto& p = bvh->points[idx];
+                    if (intersect_point(
+                            ray, bvh->pos[p], bvh->radius[p], ray_t)) {
+                        hit = true;
+                        ray.tmax = ray_t;
+                        eid = idx;
+                        ew = {1, 0, 0, 0};
+                    }
+                }
+            } break;
+            case bvh_node_type::line: {
+                for (auto i = 0; i < node.count; i++) {
+                    auto idx = bvh->sorted_prim[node.start + i];
+                    auto& l = bvh->lines[idx];
+                    if (intersect_line(ray, bvh->pos[l.x], bvh->pos[l.y],
+                            bvh->radius[l.x], bvh->radius[l.y], ray_t,
+                            (vec2f&)ew)) {
+                        hit = true;
+                        ray.tmax = ray_t;
+                        eid = idx;
+                        ew = {ew.x, ew.y, 0, 0};
+                    }
+                }
+            } break;
+            case bvh_node_type::triangle: {
+                for (auto i = 0; i < node.count; i++) {
+                    auto idx = bvh->sorted_prim[node.start + i];
+                    auto& t = bvh->triangles[idx];
+                    if (intersect_triangle(ray, bvh->pos[t.x], bvh->pos[t.y],
+                            bvh->pos[t.z], ray_t, (vec3f&)ew)) {
+                        hit = true;
+                        ray.tmax = ray_t;
+                        eid = idx;
+                        ew = {ew.x, ew.y, ew.z, 0};
+                    }
+                }
+            } break;
+            case bvh_node_type::quad: {
+                for (auto i = 0; i < node.count; i++) {
+                    auto idx = bvh->sorted_prim[node.start + i];
+                    auto& q = bvh->quads[idx];
+                    if (intersect_quad(ray, bvh->pos[q.x], bvh->pos[q.y],
+                            bvh->pos[q.z], bvh->pos[q.w], ray_t, ew)) {
+                        hit = true;
+                        ray.tmax = ray_t;
+                        eid = idx;
+                        ew = {ew.x, ew.y, ew.z, ew.w};
+                    }
+                }
+            } break;
+            case bvh_node_type::vertex: {
+                for (auto i = 0; i < node.count; i++) {
+                    auto idx = bvh->sorted_prim[node.start + i];
+                    if (intersect_point(
+                            ray, bvh->pos[idx], bvh->radius[idx], ray_t)) {
+                        hit = true;
+                        ray.tmax = ray_t;
+                        eid = idx;
+                        ew = {1, 0, 0, 0};
+                    }
+                }
+            } break;
+            case bvh_node_type::instance: {
+                for (auto i = 0; i < node.count; i++) {
+                    auto idx = bvh->sorted_prim[node.start + i];
+                    if (intersect_bvh(bvh->ist_bvhs[idx],
+                            transform_ray(bvh->ist_frames_inv[idx], ray),
+                            early_exit, ray_t, iid, eid, ew)) {
+                        hit = true;
+                        ray.tmax = ray_t;
+                        iid = idx;
+                    }
+                }
+            } break;
+        }
+
+        // check for early exit
+        if (early_exit && hit) return true;
+    }
+
+    return hit;
+}
+
+// Finds the closest element with a bvh.
+bool overlap_bvh(const bvh_tree* bvh, const vec3f& pos, float max_dist,
+    bool early_exit, float& dist, int& iid, int& eid, vec4f& ew) {
+    // node stack
+    int node_stack[64];
+    auto node_cur = 0;
+    node_stack[node_cur++] = 0;
+
+    // hit
+    auto hit = false;
+
+    // walking stack
+    while (node_cur) {
+        // grab node
+        auto node = bvh->nodes[node_stack[--node_cur]];
+
+        // intersect bbox
+        if (!distance_check_bbox(pos, max_dist, node.bbox)) continue;
+
+        // intersect node, switching based on node type
+        // for each type, iterate over the the primitive list
+        switch (node.type) {
+            case bvh_node_type::internal: {
+                // internal node
+                for (auto idx = node.start; idx < node.start + node.count;
+                     idx++) {
+                    node_stack[node_cur++] = idx;
+                    assert(node_cur < 64);
+                }
+            } break;
+            case bvh_node_type::point: {
+                for (auto i = 0; i < node.count; i++) {
+                    auto idx = bvh->sorted_prim[node.start + i];
+                    auto& p = bvh->points[idx];
+                    if (overlap_point(
+                            pos, max_dist, bvh->pos[p], bvh->radius[p], dist)) {
+                        hit = true;
+                        max_dist = dist;
+                        eid = idx;
+                        ew = {1, 0, 0, 0};
+                    }
+                }
+            } break;
+            case bvh_node_type::line: {
+                for (auto i = 0; i < node.count; i++) {
+                    auto idx = bvh->sorted_prim[node.start + i];
+                    auto& l = bvh->lines[idx];
+                    if (overlap_line(pos, max_dist, bvh->pos[l.x],
+                            bvh->pos[l.y], bvh->radius[l.x], bvh->radius[l.y],
+                            dist, (vec2f&)ew)) {
+                        hit = true;
+                        max_dist = dist;
+                        eid = idx;
+                        ew = {ew.x, ew.y, 0, 0};
+                    }
+                }
+            } break;
+            case bvh_node_type::triangle: {
+                for (auto i = 0; i < node.count; i++) {
+                    auto idx = bvh->sorted_prim[node.start + i];
+                    auto& t = bvh->triangles[idx];
+                    if (overlap_triangle(pos, max_dist, bvh->pos[t.x],
+                            bvh->pos[t.y], bvh->pos[t.z], bvh->radius[t.x],
+                            bvh->radius[t.y], bvh->radius[t.z], dist,
+                            (vec3f&)ew)) {
+                        hit = true;
+                        max_dist = dist;
+                        eid = idx;
+                        ew = {ew.x, ew.y, ew.z, 0};
+                    }
+                }
+            } break;
+            case bvh_node_type::quad: {
+                for (auto i = 0; i < node.count; i++) {
+                    auto idx = bvh->sorted_prim[node.start + i];
+                    auto& q = bvh->quads[idx];
+                    if (overlap_quad(pos, max_dist, bvh->pos[q.x],
+                            bvh->pos[q.y], bvh->pos[q.z], bvh->pos[q.w],
+                            bvh->radius[q.x], bvh->radius[q.y],
+                            bvh->radius[q.z], bvh->radius[q.w], dist, ew)) {
+                        hit = true;
+                        max_dist = dist;
+                        eid = idx;
+                        ew = {ew.x, ew.y, ew.z, ew.w};
+                    }
+                }
+            } break;
+            case bvh_node_type::vertex: {
+                for (auto i = 0; i < node.count; i++) {
+                    auto idx = bvh->sorted_prim[node.start + i];
+                    if (overlap_point(pos, max_dist, bvh->pos[idx],
+                            bvh->radius[idx], dist)) {
+                        hit = true;
+                        max_dist = dist;
+                        eid = idx;
+                        ew = {1, 0, 0, 0};
+                    }
+                }
+            } break;
+            case bvh_node_type::instance: {
+                for (auto i = 0; i < node.count; i++) {
+                    auto idx = bvh->sorted_prim[node.start + i];
+                    if (overlap_bvh(bvh->ist_bvhs[idx],
+                            transform_point(bvh->ist_frames_inv[idx], pos),
+                            max_dist, early_exit, dist, iid, eid, ew)) {
+                        hit = true;
+                        max_dist = dist;
+                        iid = idx;
+                    }
+                }
+            } break;
+        }
+    }
+
+    return hit;
+}
+
+#if 0
+    // Finds the overlap between BVH leaf nodes.
+    template <typename OverlapElem>
+    void overlap_bvh_elems(const bvh_tree* bvh1, const bvh_tree* bvh2,
+                           bool skip_duplicates, bool skip_self, vector<vec2i>& overlaps,
+                           const OverlapElem& overlap_elems) {
+        // node stack
+        vec2i node_stack[128];
+        auto node_cur = 0;
+        node_stack[node_cur++] = {0, 0};
+        
+        // walking stack
+        while (node_cur) {
+            // grab node
+            auto node_idx = node_stack[--node_cur];
+            const auto node1 = bvh1->nodes[node_idx.x];
+            const auto node2 = bvh2->nodes[node_idx.y];
+            
+            // intersect bbox
+            if (!overlap_bbox(node1.bbox, node2.bbox)) continue;
+            
+            // check for leaves
+            if (node1.isleaf && node2.isleaf) {
+                // collide primitives
+                for (auto i1 = node1.start; i1 < node1.start + node1.count; i1++) {
+                    for (auto i2 = node2.start; i2 < node2.start + node2.count;
+                         i2++) {
+                        auto idx1 = bvh1->sorted_prim[i1];
+                        auto idx2 = bvh2->sorted_prim[i2];
+                        if (skip_duplicates && idx1 > idx2) continue;
+                        if (skip_self && idx1 == idx2) continue;
+                        if (overlap_elems(idx1, idx2))
+                            overlaps.push_back({idx1, idx2});
+                    }
+                }
+            } else {
+                // descend
+                if (node1.isleaf) {
+                    for (auto idx2 = node2.start; idx2 < node2.start + node2.count;
+                         idx2++) {
+                        node_stack[node_cur++] = {node_idx.x, (int)idx2};
+                        assert(node_cur < 128);
+                    }
+                } else if (node2.isleaf) {
+                    for (auto idx1 = node1.start; idx1 < node1.start + node1.count;
+                         idx1++) {
+                        node_stack[node_cur++] = {(int)idx1, node_idx.y};
+                        assert(node_cur < 128);
+                    }
+                } else {
+                    for (auto idx2 = node2.start; idx2 < node2.start + node2.count;
+                         idx2++) {
+                        for (auto idx1 = node1.start;
+                             idx1 < node1.start + node1.count; idx1++) {
+                            node_stack[node_cur++] = {(int)idx1, (int)idx2};
+                            assert(node_cur < 128);
+                        }
+                    }
+                }
+            }
+        }
+    }
+#endif
 
 }  // namespace ygl
 
@@ -4583,7 +5243,7 @@ inline string _get_basename(const string& filename) {
         dirname.size(), filename.size() - dirname.size() - extension.size());
 }
 
-/// Encode in base64
+// Encode in base64
 inline string base64_encode(
     unsigned char const* bytes_to_encode, unsigned int in_len) {
     static const string base64_chars =
@@ -4630,7 +5290,7 @@ inline string base64_encode(
     return ret;
 }
 
-/// Decode from base64
+// Decode from base64
 inline string base64_decode(string const& encoded_string) {
     static const string base64_chars =
         "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -5745,7 +6405,7 @@ inline scene* obj_to_scene(const obj_scene* obj, const load_options& opts) {
         // set up parent pointers
         for (auto nid = 0; nid < obj->nodes.size(); nid++) {
             auto onde = obj->nodes[nid];
-            if(onde->parent.empty()) continue;
+            if (onde->parent.empty()) continue;
             auto nde = scn->nodes[nid];
             for (auto parent : scn->nodes) {
                 if (parent->name == onde->parent) {
@@ -5755,10 +6415,10 @@ inline scene* obj_to_scene(const obj_scene* obj, const load_options& opts) {
             }
         }
     }
-    
+
     // update transforms
     update_transforms(scn);
-    
+
     // remove hierarchy if necessary
     if (!opts.preserve_hierarchy) {
         for (auto nde : scn->nodes) delete nde;
@@ -6073,7 +6733,7 @@ inline obj_scene* scene_to_obj(const scene* scn) {
             onde->parent = nde->parent->name;
         }
     }
-    
+
     return obj;
 }
 
@@ -6898,7 +7558,8 @@ inline glTF* scene_to_gltf(
             auto gmsh = new glTFMesh();
             gmsh->name = nde->ists.front()->name;
             for (auto ist : nde->ists)
-                gmsh->primitives.push_back(new glTFMeshPrimitive(*shapes.at(ist->shp)));
+                gmsh->primitives.push_back(
+                    new glTFMeshPrimitive(*shapes.at(ist->shp)));
             meshes[nde->ists] = (int)gltf->meshes.size();
             gltf->meshes.push_back(gmsh);
         }
