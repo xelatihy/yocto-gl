@@ -233,7 +233,7 @@ int main(int argc, char* argv[]) {
 
     // build bvh
     log_info("building bvh");
-    build_bvh(app->scn);
+    make_bvh(app->scn);
 
     // init renderer
     log_info("initializing tracer");

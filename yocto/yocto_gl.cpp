@@ -2530,7 +2530,7 @@ void make_bvh_node(bvh_tree* bvh, int nodeid, bvh_bound_prim* sorted_prims,
 }
 
 // Build a BVH from a set of primitives.
-bvh_tree* build_bvh(const vector<int>& points, const vector<vec2i>& lines,
+bvh_tree* make_bvh(const vector<int>& points, const vector<vec2i>& lines,
     const vector<vec3i>& triangles, const vector<vec4i>& quads,
     const vector<vec3f>& pos, const vector<float>& radius, float def_radius,
     bool equalsize) {
@@ -2619,7 +2619,7 @@ bvh_tree* build_bvh(const vector<int>& points, const vector<vec2i>& lines,
 }
 
 // Build a BVH from a set of shape instances.
-bvh_tree* build_bvh(const vector<frame3f>& frames,
+bvh_tree* make_bvh(const vector<frame3f>& frames,
     const vector<frame3f>& frames_inv, const vector<bvh_tree*>& ist_bvhs,
     bool equal_size) {
     // allocate the bvh
@@ -3676,53 +3676,47 @@ void update_lights(scene* scn, bool include_env, bool sampling_cdf) {
 }
 
 // Build a shape BVH
-void build_bvh(shape* shp, float def_radius, bool equalsize) {
-    shp->bvh = build_bvh(shp->points, shp->lines, shp->triangles, shp->quads,
+bvh_tree* make_bvh(const shape* shp, float def_radius, bool equalsize) {
+    return make_bvh(shp->points, shp->lines, shp->triangles, shp->quads,
         shp->pos, shp->radius, def_radius, equalsize);
 }
 
 // Build a scene BVH
-void build_bvh(scene* scn, bool do_shapes, float def_radius, bool equalsize) {
+bvh_tree* make_bvh(const scene* scn,
+    unordered_map<shape*, bvh_tree*>& shape_bvhs, float def_radius,
+    bool equalsize) {
     // do shapes
-    if (do_shapes) {
-        for (auto shp : scn->shapes) build_bvh(shp, def_radius, equalsize);
+    if (shape_bvhs.empty()) {
+        for (auto shp : scn->shapes)
+            shape_bvhs[shp] = make_bvh(shp, def_radius, equalsize);
     }
 
     // tree bvh
-    auto smap = unordered_map<shape*, bvh_tree*>();
-    for (auto shp : scn->shapes) smap[shp] = shp->bvh;
     auto ist_frames = vector<frame3f>();
     auto ist_frames_inv = vector<frame3f>();
     auto ist_bvh = vector<bvh_tree*>();
     for (auto ist : scn->instances) {
         ist_frames.push_back(ist->frame);
         ist_frames_inv.push_back(inverse(ist->frame));
-        ist_bvh.push_back(smap.at(ist->shp));
+        ist_bvh.push_back(shape_bvhs.at(ist->shp));
     }
-    scn->bvh = build_bvh(ist_frames, ist_frames_inv, ist_bvh, equalsize);
+    return make_bvh(ist_frames, ist_frames_inv, ist_bvh, equalsize);
 }
 
 // Refits a scene BVH
-void refit_bvh(shape* shp, float def_radius) {
+void refit_bvh(bvh_tree* bvh, shape* shp, float def_radius) {
     refit_bvh(shp->bvh, shp->pos, shp->radius, def_radius);
 }
 
 // Refits a scene BVH
-void refit_bvh(scene* scn, bool do_shapes, float def_radius) {
-    if (do_shapes) {
-        for (auto shp : scn->shapes) refit_bvh(shp, def_radius);
-    }
-
-    // recompute bvh bounds
-    auto smap = unordered_map<shape*, bvh_tree*>();
-    for (auto shp : scn->shapes) smap[shp] = shp->bvh;
+void refit_bvh(bvh_tree* bvh, scene* scn, float def_radius) {
     auto ist_frames = vector<frame3f>();
     auto ist_frames_inv = vector<frame3f>();
     for (auto ist : scn->instances) {
         ist_frames.push_back(ist->frame);
         ist_frames_inv.push_back(inverse(ist->frame));
     }
-    refit_bvh(scn->bvh, ist_frames, ist_frames_inv);
+    refit_bvh(bvh, ist_frames, ist_frames_inv);
 }
 
 // Print scene info (call update bounds bes before)
@@ -7019,8 +7013,8 @@ void trace_block_filtered(const scene* scn, const camera* view,
     const bvh_tree* bvh, image4f& img, image4f& acc, image4f& weight,
     const vec4i& block, const vec2i& samples, vector<rng_pcg32>& rngs,
     std::mutex& image_mutex, const trace_params& params) {
-    _impl_trace::trace_block_filtered(
-        scn, view, bvh, img, acc, weight, block, samples, rngs, image_mutex, params);
+    _impl_trace::trace_block_filtered(scn, view, bvh, img, acc, weight, block,
+        samples, rngs, image_mutex, params);
 }
 
 // Trace the next samples in [samples_min, samples_max) range.
@@ -7054,9 +7048,10 @@ void trace_samples(trace_state* st, const scene* scn, const camera* view,
         } else {
             std::mutex image_mutex;
             for (auto idx = 0; idx < (int)st->blocks.size(); idx++) {
-                trace_block_filtered(scn, view, bvh, st->img, st->acc, st->weight,
-                    st->blocks[idx], {st->sample, st->sample + nsamples},
-                    st->rngs, image_mutex, params);
+                trace_block_filtered(scn, view, bvh, st->img, st->acc,
+                    st->weight, st->blocks[idx],
+                    {st->sample, st->sample + nsamples}, st->rngs, image_mutex,
+                    params);
             }
         }
     }
@@ -7070,10 +7065,10 @@ void trace_async_start(trace_state* st, const scene* scn, const camera* view,
     for (auto sample = 0; sample < params.nsamples; sample++) {
         for (auto& block : st->blocks) {
             auto is_last = (block == st->blocks.back());
-            run_async(
-                st->pool, [st, scn, view, bvh, block, &params, sample, is_last]() {
-                    trace_block(scn, view, bvh, st->img, block, {sample, sample + 1},
-                        st->rngs, params);
+            run_async(st->pool,
+                [st, scn, view, bvh, block, &params, sample, is_last]() {
+                    trace_block(scn, view, bvh, st->img, block,
+                        {sample, sample + 1}, st->rngs, params);
                     if (is_last) st->sample = sample;
                 });
         }

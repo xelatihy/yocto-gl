@@ -341,7 +341,7 @@
 /// lines and triangles accelerated by a two-level bounding volume
 /// hierarchy (BVH). Quad support is experimental.
 ///
-/// 1. build the bvh with `build_bvh()`
+/// 1. build the bvh with `make_bvh()`
 /// 2. perform ray-interseciton tests with `intersect_ray()`
 ///     - use early_exit=false if you want to know the closest hit point
 ///     - use early_exit=false if you only need to know whether there is a hit
@@ -383,7 +383,7 @@
 /// general (you can even more an arbitrary shape sun). For now only the first
 /// env is used.
 ///
-/// 1. build the ray-tracing acceleration structure with `build_bvh()`
+/// 1. build the ray-tracing acceleration structure with `make_bvh()`
 /// 2. prepare lights for rendering `update_lights()`
 /// 3. define rendering params with the `trace_params` structure
 /// 4. render blocks of samples with `trace_block()`
@@ -391,7 +391,7 @@
 /// The code can also run in fully asynchronous mode to preview images in a
 /// window.
 ///
-/// 1. build the ray-tracing acceleration structure with `build_bvh()`
+/// 1. build the ray-tracing acceleration structure with `make_bvh()`
 /// 2. prepare lights for rendering `update_lights()`
 /// 3. define rendering params with the `trace_params` structure
 /// 4. initialize the prograssive rendering buffers
@@ -4878,13 +4878,13 @@ struct bvh_tree {
 };
 
 /// Build a shape BVH from a set of primitives.
-bvh_tree* build_bvh(const vector<int>& points, const vector<vec2i>& lines,
+bvh_tree* make_bvh(const vector<int>& points, const vector<vec2i>& lines,
     const vector<vec3i>& triangles, const vector<vec4i>& quads,
     const vector<vec3f>& pos, const vector<float>& radius, float def_radius,
     bool equalsize);
 
 /// Build a scene BVH from a set of shape instances.
-bvh_tree* build_bvh(const vector<frame3f>& frames,
+bvh_tree* make_bvh(const vector<frame3f>& frames,
     const vector<frame3f>& frames_inv, const vector<bvh_tree*>& ist_bvhs,
     bool equal_size);
 
@@ -5353,17 +5353,18 @@ void update_lights(
 void print_info(const scene* scn);
 
 /// Build a shape BVH
-void build_bvh(shape* shp, float def_radius = 0.001f, bool equalsize = true);
+bvh_tree* make_bvh(
+    shape* shp, float def_radius = 0.001f, bool equalsize = true);
 
 /// Build a scene BVH
-void build_bvh(scene* scn, bool do_shapes = true, float def_radius = 0.001f,
-    bool equalsize = true);
+bvh_tree* make_bvh(scene* scn, unordered_map<shape*, bvh_tree*>& shapes_bvh,
+    float def_radius = 0.001f, bool equalsize = true);
 
 /// Refits a scene BVH
-void refit_bvh(shape* shp, float def_radius = 0.001f);
+void refit_bvh(bvh_tree* bvh, shape* shp, float def_radius = 0.001f);
 
 /// Refits a scene BVH
-void refit_bvh(scene* scn, bool do_shapes = true, float def_radius = 0.001f);
+void refit_bvh(bvh_tree* bvh, scene* scn, float def_radius = 0.001f);
 
 /// Intersect the shape with a ray. Find any interstion if early_exit,
 /// otherwise find first intersection.
@@ -6048,20 +6049,20 @@ inline const image4f& get_trace_image(const trace_state* st) { return st->img; }
 inline int get_trace_sample(const trace_state* st) { return st->sample; }
 
 /// Trace the next nsamples samples.
-void trace_samples(trace_state* st, const scene* scn, const camera* view, const bvh_tree* bvh,
-    int nsamples, const trace_params& params);
+void trace_samples(trace_state* st, const scene* scn, const camera* view,
+    const bvh_tree* bvh, int nsamples, const trace_params& params);
 
 /// Trace the whole image
-inline image4f trace_image(
-    const scene* scn, const camera* view, const bvh_tree* bvh,const trace_params& params) {
+inline image4f trace_image(const scene* scn, const camera* view,
+    const bvh_tree* bvh, const trace_params& params) {
     auto st = unique_ptr<trace_state>(make_trace_state(params));
     trace_samples(st.get(), scn, view, bvh, params.nsamples, params);
     return get_trace_image(st.get());
 }
 
 /// Starts an anyncrhounous renderer.
-void trace_async_start(trace_state* st, const scene* scn, const camera* view,const bvh_tree* bvh,
-    const trace_params& params);
+void trace_async_start(trace_state* st, const scene* scn, const camera* view,
+    const bvh_tree* bvh, const trace_params& params);
 
 /// Stop the asynchronous renderer.
 void trace_async_stop(trace_state* st);
