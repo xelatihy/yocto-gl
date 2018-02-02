@@ -78,20 +78,24 @@
 //
 // ## Infrastructure
 //
-// - build gl by default
-// - transforms in scene
-//     - node children in elem widgets
-//     - node children in test elem
-//     - node children in test elem widgets
+// - vec: min_element/min_element_index
+// - remove default environment
+// - animation
+//    - obj with nodes
 // - evaluate meshes with multiple shapes
 // - uniform serialization
 //    - consider simpler serialization code based on input flag
 //    - consider json archive model (use this to define to_son/from_from)
 // - lights in scene for viewers
 //    - do this only if necessary
+// - check rotation and decompoaition of rotations
+//    - see euclideanspace.com
 //
 // ## Trace
 //
+// - remove filtering support
+// - move piel sampling to trace_block and not in sampler
+// - handle missing environment
 // - envmap sampling
 // - sampler simplification
 //     https://lemire.me/blog/2017/09/18/visiting-all-values-in-an-array-exactly-once-in-random-order/
@@ -102,6 +106,7 @@
 //
 // - start in edit mode
 // - show edit scene
+// - animation support
 //
 // ## yITrace
 //
@@ -1977,9 +1982,10 @@ inline int get_filter_size(const trace_params& params) {
 }
 
 // Renders a block of pixels. Public API, see above.
-inline void trace_block(const scene* scn, image4f& img, int block_x,
-    int block_y, int block_width, int block_height, int samples_min,
-    int samples_max, vector<rng_pcg32>& rngs, const trace_params& params) {
+inline void trace_block(const scene* scn, const camera* view, image4f& img,
+    int block_x, int block_y, int block_width, int block_height,
+    int samples_min, int samples_max, vector<rng_pcg32>& rngs,
+    const trace_params& params) {
     auto cam = scn->cameras[params.camera_id];
     auto shade = get_shader(params);
     for (auto j = block_y; j < block_y + block_height; j++) {
@@ -2013,11 +2019,11 @@ inline void trace_block(const scene* scn, image4f& img, int block_x,
 }
 
 // Trace a block of samples
-inline void trace_block(const scene* scn, image4f& img, const vec2i& block_min,
-    const vec2i& block_max, int samples_min, int samples_max,
-    vector<rng_pcg32>& rngs, const trace_params& params) {
+inline void trace_block(const scene* scn, const camera* view, image4f& img,
+    const vec2i& block_min, const vec2i& block_max, int samples_min,
+    int samples_max, vector<rng_pcg32>& rngs, const trace_params& params) {
     auto shade = get_shader(params);
-    auto cam = scn->cameras[params.camera_id];
+    auto cam = (params.camera_id < 0) ? view : scn->cameras[params.camera_id];
     for (auto j = block_min.y; j < block_max.y; j++) {
         for (auto i = block_min.x; i < block_max.x; i++) {
             auto lp = zero4f;
@@ -2049,12 +2055,13 @@ inline void trace_block(const scene* scn, image4f& img, const vec2i& block_min,
 }
 
 // Trace a block of samples
-inline void trace_block_filtered(const scene* scn, image4f& img, image4f& acc,
-    image4f& weight, const vec2i& block_min, const vec2i& block_max,
-    int samples_min, int samples_max, vector<rng_pcg32>& rngs,
-    std::mutex& image_mutex, const trace_params& params) {
+inline void trace_block_filtered(const scene* scn, const camera* view,
+    image4f& img, image4f& acc, image4f& weight, const vec2i& block_min,
+    const vec2i& block_max, int samples_min, int samples_max,
+    vector<rng_pcg32>& rngs, std::mutex& image_mutex,
+    const trace_params& params) {
     auto shade = get_shader(params);
-    auto cam = scn->cameras[params.camera_id];
+    auto cam = (params.camera_id < 0) ? view : scn->cameras[params.camera_id];
     auto filter = get_filter(params);
     auto filter_size = get_filter_size(params);
     static constexpr const int pad = 2;
@@ -2128,55 +2135,57 @@ inline void trace_block_filtered(const scene* scn, image4f& img, image4f& acc,
 }  // namespace _impl_trace
 
 // Renders a block of samples
-void trace_block(const scene* scn, image4f& img, const vec2i& block_min,
-    const vec2i& block_max, int samples_min, int samples_max,
-    vector<rng_pcg32>& rngs, const trace_params& params) {
-    _impl_trace::trace_block(
-        scn, img, block_min, block_max, samples_min, samples_max, rngs, params);
+void trace_block(const scene* scn, const camera* view, image4f& img,
+    const vec2i& block_min, const vec2i& block_max, int samples_min,
+    int samples_max, vector<rng_pcg32>& rngs, const trace_params& params) {
+    _impl_trace::trace_block(scn, view, img, block_min, block_max, samples_min,
+        samples_max, rngs, params);
 }
 
 // Renders a filtered block of samples
-void trace_block_filtered(const scene* scn, image4f& img, image4f& acc,
-    image4f& weight, const vec2i& block_min, const vec2i& block_max,
-    int samples_min, int samples_max, vector<rng_pcg32>& rngs,
-    std::mutex& image_mutex, const trace_params& params) {
-    _impl_trace::trace_block_filtered(scn, img, acc, weight, block_min,
+void trace_block_filtered(const scene* scn, const camera* view, image4f& img,
+    image4f& acc, image4f& weight, const vec2i& block_min,
+    const vec2i& block_max, int samples_min, int samples_max,
+    vector<rng_pcg32>& rngs, std::mutex& image_mutex,
+    const trace_params& params) {
+    _impl_trace::trace_block_filtered(scn, view, img, acc, weight, block_min,
         block_max, samples_min, samples_max, rngs, image_mutex, params);
 }
 
 // Trace the next samples in [samples_min, samples_max) range.
 // Samples have to be traced consecutively.
-void trace_samples(trace_state* st, const scene* scn, int nsamples,
-    const trace_params& params) {
+void trace_samples(trace_state* st, const scene* scn, const camera* view,
+    int nsamples, const trace_params& params) {
     nsamples = min(nsamples, params.nsamples - st->sample);
     if (params.parallel) {
         if (params.ftype == trace_filter_type::box) {
-            parallel_for(
-                (int)st->blocks.size(), [st, scn, nsamples, &params](int idx) {
-                    trace_block(scn, st->img, st->blocks[idx].first,
+            parallel_for((int)st->blocks.size(),
+                [st, scn, view, nsamples, &params](int idx) {
+                    trace_block(scn, view, st->img, st->blocks[idx].first,
                         st->blocks[idx].second, st->sample,
                         st->sample + nsamples, st->rngs, params);
                 });
         } else {
             std::mutex image_mutex;
-            parallel_for((int)st->blocks.size(), [st, scn, nsamples, &params,
-                                                     &image_mutex](int idx) {
-                trace_block_filtered(scn, st->img, st->acc, st->weight,
-                    st->blocks[idx].first, st->blocks[idx].second, st->sample,
-                    st->sample + nsamples, st->rngs, image_mutex, params);
-            });
+            parallel_for((int)st->blocks.size(),
+                [st, scn, view, nsamples, &params, &image_mutex](int idx) {
+                    trace_block_filtered(scn, view, st->img, st->acc,
+                        st->weight, st->blocks[idx].first,
+                        st->blocks[idx].second, st->sample,
+                        st->sample + nsamples, st->rngs, image_mutex, params);
+                });
         }
     } else {
         if (params.ftype == trace_filter_type::box) {
             for (auto idx = 0; idx < (int)st->blocks.size(); idx++) {
-                trace_block(scn, st->img, st->blocks[idx].first,
+                trace_block(scn, view, st->img, st->blocks[idx].first,
                     st->blocks[idx].second, st->sample, st->sample + nsamples,
                     st->rngs, params);
             }
         } else {
             std::mutex image_mutex;
             for (auto idx = 0; idx < (int)st->blocks.size(); idx++) {
-                trace_block_filtered(scn, st->img, st->acc, st->weight,
+                trace_block_filtered(scn, view, st->img, st->acc, st->weight,
                     st->blocks[idx].first, st->blocks[idx].second, st->sample,
                     st->sample + nsamples, st->rngs, image_mutex, params);
             }
@@ -2186,17 +2195,18 @@ void trace_samples(trace_state* st, const scene* scn, int nsamples,
 }
 
 // Starts an anyncrhounous renderer.
-void trace_async_start(
-    trace_state* st, const scene* scn, const trace_params& params) {
+void trace_async_start(trace_state* st, const scene* scn, const camera* view,
+    const trace_params& params) {
     st->sample = 0;
     for (auto sample = 0; sample < params.nsamples; sample++) {
         for (auto& block : st->blocks) {
             auto is_last = (block == st->blocks.back());
-            run_async(st->pool, [st, scn, block, &params, sample, is_last]() {
-                trace_block(scn, st->img, block.first, block.second, sample,
-                    sample + 1, st->rngs, params);
-                if (is_last) st->sample = sample;
-            });
+            run_async(
+                st->pool, [st, scn, view, block, &params, sample, is_last]() {
+                    trace_block(scn, view, st->img, block.first, block.second,
+                        sample, sample + 1, st->rngs, params);
+                    if (is_last) st->sample = sample;
+                });
         }
     }
 }
@@ -2246,33 +2256,31 @@ inline void parse_val(stringstream& ss, T& v) {
 }
 
 // Parse a value
-inline void parse_val(stringstream& ss, vec2f& v) {
-    for (auto i = 0; i < 2; i++) parse_val(ss, v[i]);
-}
-// Parse a value
-inline void parse_val(stringstream& ss, vec3f& v) {
-    for (auto i = 0; i < 3; i++) parse_val(ss, v[i]);
-}
-// Parse a value
-inline void parse_val(stringstream& ss, vec4f& v) {
-    for (auto i = 0; i < 4; i++) parse_val(ss, v[i]);
+inline void parse_val(stringstream& ss, string& v) {
+    ss >> v;
+    if (v.length() == 0) return;
+    if ((v.front() == '"' && v.back() == '"') ||
+        (v.front() == '\'' && v.back() == '\'')) {
+        v = v.substr(1, v.length() - 2);
+        return;
+    }
 }
 
 // Parse a value
-inline void parse_val(stringstream& ss, vec2i& v) {
-    for (auto i = 0; i < 2; i++) parse_val(ss, v[i]);
-}
-// Parse a value
-inline void parse_val(stringstream& ss, vec3i& v) {
-    for (auto i = 0; i < 3; i++) parse_val(ss, v[i]);
-}
-// Parse a value
-inline void parse_val(stringstream& ss, vec4i& v) {
-    for (auto i = 0; i < 4; i++) parse_val(ss, v[i]);
+template <typename T, int N>
+inline void parse_val(stringstream& ss, vec<T, N>& v) {
+    for (auto i = 0; i < N; i++) parse_val(ss, v[i]);
 }
 
 // Parse a value
-inline void parse_val(stringstream& ss, frame3f& v) {
+template <typename T, int N>
+inline void parse_val(stringstream& ss, quat<T, N>& v) {
+    for (auto i = 0; i < N; i++) parse_val(ss, v[i]);
+}
+
+// Parse a value
+template <typename T>
+inline void parse_val(stringstream& ss, frame<T, 3>& v) {
     parse_val(ss, v.x);
     parse_val(ss, v.y);
     parse_val(ss, v.z);
@@ -2655,12 +2663,18 @@ inline obj_scene* load_obj(const string& filename, bool load_txt,
             parse_val(ss, env->matname);
             parse_val(ss, env->frame);
             asset->environments.push_back(env);
-        } else if (cmd == "i") {
-            auto ist = new obj_instance();
-            parse_val(ss, ist->name);
-            parse_val(ss, ist->objname);
-            parse_val(ss, ist->frame);
-            asset->instances.push_back(ist);
+        } else if (cmd == "n") {
+            auto nde = new obj_node();
+            parse_val(ss, nde->name);
+            parse_val(ss, nde->parent);
+            parse_val(ss, nde->camname);
+            parse_val(ss, nde->objname);
+            parse_val(ss, nde->envname);
+            parse_val(ss, nde->frame);
+            parse_val(ss, nde->translation);
+            parse_val(ss, nde->rotation);
+            parse_val(ss, nde->scaling);
+            asset->nodes.push_back(nde);
         } else {
             // unused
         }
@@ -2708,34 +2722,26 @@ inline void dump_val(fstream& fs, const T& v) {
 }
 
 // write to stream
-inline void dump_val(fstream& fs, const vec2f& v) {
-    dump_val(fs, v.x);
-    fs << ' ';
-    dump_val(fs, v.y);
+template <typename T, int N>
+inline void dump_val(fstream& fs, const vec<T, N>& v) {
+    for (auto i = 0; i < N; i++) {
+        if (i) fs << ' ';
+        dump_val(fs, v[i]);
+    }
 }
 
 // write to stream
-inline void dump_val(fstream& fs, const vec3f& v) {
-    dump_val(fs, v.x);
-    fs << ' ';
-    dump_val(fs, v.y);
-    fs << ' ';
-    dump_val(fs, v.z);
+template <typename T, int N>
+inline void dump_val(fstream& fs, const quat<T, N>& v) {
+    for (auto i = 0; i < N; i++) {
+        if (i) fs << ' ';
+        dump_val(fs, v[i]);
+    }
 }
 
 // write to stream
-inline void dump_val(fstream& fs, const vec4f& v) {
-    dump_val(fs, v.x);
-    fs << ' ';
-    dump_val(fs, v.y);
-    fs << ' ';
-    dump_val(fs, v.z);
-    fs << ' ';
-    dump_val(fs, v.w);
-}
-
-// write to stream
-inline void dump_val(fstream& fs, const frame3f& v) {
+template <typename T>
+inline void dump_val(fstream& fs, const frame<T, 3>& v) {
     dump_val(fs, v.x);
     fs << ' ';
     dump_val(fs, v.y);
@@ -2792,7 +2798,7 @@ inline void dump_objverts(
             }
         }
     }
-    dump_val(fs, '\n');
+    dump_val(fs, "\n");
 }
 
 // Save an MTL file
@@ -2898,7 +2904,7 @@ inline void save_obj(const string& filename, const obj_scene* asset,
         dump_val(fs, cam->focus);
         dump_val(fs, " ");
         dump_val(fs, cam->frame);
-        dump_val(fs, '\n');
+        dump_val(fs, "\n");
     }
 
     // save envs
@@ -2909,18 +2915,30 @@ inline void save_obj(const string& filename, const obj_scene* asset,
         dump_val(fs, env->matname);
         dump_val(fs, " ");
         dump_val(fs, env->frame);
-        dump_val(fs, '\n');
+        dump_val(fs, "\n");
     }
 
-    // save instances
-    for (auto ist : asset->instances) {
-        dump_val(fs, "i ");
-        dump_val(fs, ist->name);
+    // save nodes
+    for (auto nde : asset->nodes) {
+        dump_val(fs, "n ");
+        dump_val(fs, nde->name);
         dump_val(fs, " ");
-        dump_val(fs, ist->objname);
+        dump_val(fs, (nde->parent.empty()) ? string("\"\"") : nde->parent);
         dump_val(fs, " ");
-        dump_val(fs, ist->frame);
-        dump_val(fs, '\n');
+        dump_val(fs, (nde->camname.empty()) ? string("\"\"") : nde->camname);
+        dump_val(fs, " ");
+        dump_val(fs, (nde->objname.empty()) ? string("\"\"") : nde->objname);
+        dump_val(fs, " ");
+        dump_val(fs, (nde->envname.empty()) ? string("\"\"") : nde->envname);
+        dump_val(fs, " ");
+        dump_val(fs, nde->frame);
+        dump_val(fs, " ");
+        dump_val(fs, nde->translation);
+        dump_val(fs, " ");
+        dump_val(fs, nde->rotation);
+        dump_val(fs, " ");
+        dump_val(fs, nde->scaling);
+        dump_val(fs, "\n");
     }
 
     // save all vertex data
@@ -5657,6 +5675,7 @@ inline scene* obj_to_scene(const obj_scene* obj, const load_options& opts) {
     }
 
     // convert cameras
+    auto cmap = unordered_map<string, camera*>{{"", nullptr}};
     for (auto ocam : obj->cameras) {
         auto cam = new camera();
         cam->name = ocam->name;
@@ -5667,10 +5686,12 @@ inline scene* obj_to_scene(const obj_scene* obj, const load_options& opts) {
         cam->focus = ocam->focus;
         cam->frame = ocam->frame;
         scn->cameras.push_back(cam);
+        cmap[cam->name] = cam;
     }
 
     // convert envs
     unordered_set<material*> env_mat;
+    auto emap = unordered_map<string, environment*>{{"", nullptr}};
     for (auto oenv : obj->environments) {
         auto env = new environment();
         env->name = oenv->name;
@@ -5683,6 +5704,7 @@ inline scene* obj_to_scene(const obj_scene* obj, const load_options& opts) {
         }
         env->frame = oenv->frame;
         scn->environments.push_back(env);
+        emap[env->name] = env;
     }
 
     // remove env materials
@@ -5694,15 +5716,55 @@ inline scene* obj_to_scene(const obj_scene* obj, const load_options& opts) {
         delete mat;
     }
 
-    // convert instances
-    for (auto oist : obj->instances) {
-        for (auto shp : omap[oist->objname]) {
-            auto ist = new instance();
-            ist->name = oist->name;
-            ist->shp = shp;
-            ist->frame = oist->frame;
-            scn->instances.push_back(ist);
+    if (obj->nodes.empty()) {
+        // instance cameras
+        // instance environments
+    } else {
+        // convert nodes
+        for (auto onde : obj->nodes) {
+            auto nde = new node();
+            nde->name = onde->name;
+            nde->cam = cmap.at(onde->camname);
+            if (!onde->objname.empty()) {
+                for (auto shp : omap.at(onde->objname)) {
+                    auto ist = new instance();
+                    ist->name = onde->name;
+                    ist->shp = shp;
+                    nde->ists.push_back(ist);
+                    scn->instances.push_back(ist);
+                }
+            }
+            nde->env = emap.at(onde->envname);
+            nde->translation = onde->translation;
+            nde->rotation = onde->rotation;
+            nde->scaling = onde->scaling;
+            nde->frame = onde->frame;
+            scn->nodes.push_back(nde);
         }
+
+        // set up parent pointers
+        for (auto nid = 0; nid < obj->nodes.size(); nid++) {
+            auto onde = obj->nodes[nid];
+            if(onde->parent.empty()) continue;
+            auto nde = scn->nodes[nid];
+            for (auto parent : scn->nodes) {
+                if (parent->name == onde->parent) {
+                    nde->parent = parent;
+                    break;
+                }
+            }
+        }
+    }
+    
+    // update transforms
+    update_transforms(scn);
+    
+    // remove hierarchy if necessary
+    if (!opts.preserve_hierarchy) {
+        for (auto nde : scn->nodes) delete nde;
+        scn->nodes.clear();
+        for (auto anm : scn->animations) delete anm;
+        scn->animations.clear();
     }
 
     // done
@@ -5813,6 +5875,7 @@ inline obj_scene* scene_to_obj(const scene* scn) {
     }
 
     // convert shapes
+    auto shapes = unordered_map<shape*, unique_ptr<obj_group>>();
     for (auto shp : scn->shapes) {
         auto offset = obj_vertex{(int)obj->pos.size(),
             (int)obj->texcoord.size(), (int)obj->norm.size(),
@@ -5822,10 +5885,8 @@ inline obj_scene* scene_to_obj(const scene* scn) {
         for (auto& v : shp->texcoord) obj->texcoord.push_back({v.x, v.y});
         for (auto& v : shp->color) obj->color.push_back({v.x, v.y, v.z, v.w});
         for (auto& v : shp->radius) obj->radius.push_back(v);
-        auto object = new obj_object();
-        object->name = shp->name;
-        object->groups.emplace_back();
-        auto group = &object->groups.back();
+        auto group = new obj_group();
+        group->groupname = shp->name;
         group->matname = (shp->mat) ? shp->mat->name : "";
         group->subdivision_level = shp->subdivision_level;
         group->subdivision_catmullclark = shp->subdivision_catmullclark;
@@ -5928,7 +5989,7 @@ inline obj_scene* scene_to_obj(const scene* scn) {
                 group->verts.push_back(vert);
             }
         }
-        obj->objects.emplace_back(object);
+        shapes[shp] = unique_ptr<obj_group>(group);
     }
 
     // convert cameras
@@ -5958,15 +6019,61 @@ inline obj_scene* scene_to_obj(const scene* scn) {
         obj->environments.push_back(oenv);
     }
 
-    // convert instances
-    for (auto ist : scn->instances) {
-        auto oist = new obj_instance();
-        oist->name = ist->name;
-        oist->objname = (ist->shp) ? ist->shp->name : "<undefined>";
-        oist->frame = ist->frame;
-        obj->instances.emplace_back(oist);
-    }
+    // convert hierarchy
+    if (obj->nodes.empty()) {
+        // meshes
+        for (auto shp : scn->shapes) {
+            auto omsh = new obj_object();
+            omsh->name = shp->name;
+            omsh->groups.push_back(*shapes.at(shp));
+            obj->objects.push_back(omsh);
+        }
 
+        // instances
+        for (auto ist : scn->instances) {
+            auto onde = new obj_node();
+            onde->name = ist->name;
+            onde->objname = (ist->shp) ? ist->shp->name : "<undefined>";
+            onde->frame = ist->frame;
+            obj->nodes.emplace_back(onde);
+        }
+    } else {
+        // meshes
+        auto meshes = map<vector<instance*>, obj_object*>();
+        for (auto nde : scn->nodes) {
+            if (nde->ists.empty()) continue;
+            if (contains(meshes, nde->ists)) continue;
+            auto omsh = new obj_object();
+            omsh->name = nde->ists.front()->name;
+            for (auto ist : nde->ists)
+                omsh->groups.push_back(*shapes.at(ist->shp));
+            meshes[nde->ists] = omsh;
+            obj->objects.push_back(omsh);
+        }
+
+        // nodes
+        for (auto nde : scn->nodes) {
+            auto onde = new obj_node();
+            onde->name = nde->name;
+            if (nde->cam) onde->camname = nde->cam->name;
+            if (!nde->ists.empty()) onde->objname = meshes.at(nde->ists)->name;
+            if (nde->env) onde->envname = nde->env->name;
+            onde->frame = to_mat(nde->frame);
+            onde->translation = nde->translation;
+            onde->rotation = nde->rotation;
+            onde->scaling = nde->scaling;
+            obj->nodes.push_back(onde);
+        }
+
+        // parent
+        for (auto idx = 0; idx < scn->nodes.size(); idx++) {
+            auto nde = scn->nodes.at(idx);
+            if (!nde->parent) continue;
+            auto onde = obj->nodes.at(idx);
+            onde->parent = nde->parent->name;
+        }
+    }
+    
     return obj;
 }
 
@@ -5979,39 +6086,6 @@ inline void save_obj_scene(
 }
 
 #if YGL_GLTF
-
-// Instance gltf cameras and meshes
-inline node* gltf_node_to_instances(scene* scn, const vector<camera>& cameras,
-    const vector<vector<shape*>>& meshes, const glTF* gltf,
-    glTFid<glTFNode> nid, const mat4f& xf) {
-    auto gnde = gltf->get(nid);
-    auto xform = xf * node_transform(gnde);
-    auto nde = new node();
-    nde->frame = to_frame(xform);
-    scn->nodes.push_back(nde);
-    nde->name = gnde->name;
-    if (gnde->camera) {
-        auto cam = new camera(cameras[(int)gnde->camera]);
-        cam->frame = to_frame(xform);
-        nde->cam = cam;
-        scn->cameras.push_back(cam);
-    }
-    if (gnde->mesh) {
-        for (auto shp : meshes[(int)gnde->mesh]) {
-            auto ist = new instance();
-            ist->name = gnde->name;
-            ist->frame = to_frame(xform);
-            ist->shp = shp;
-            nde->ist = ist;
-            scn->instances.push_back(ist);
-        }
-    }
-    for (auto cid : gnde->children) {
-        nde->children.push_back(
-            gltf_node_to_instances(scn, cameras, meshes, gltf, cid, xform));
-    }
-    return nde;
-}
 
 // Flattens a gltf file into a flattened asset.
 inline scene* gltf_to_scene(const glTF* gltf, const load_options& opts) {
@@ -6314,31 +6388,142 @@ inline scene* gltf_to_scene(const glTF* gltf, const load_options& opts) {
         }
     }
 
-    // instance meshes and cameras
-    auto root = new node();
-    root->name = "root";
-    scn->nodes.push_back(root);
-    if (gltf->scene) {
-        for (auto nid : gltf->get(gltf->scene)->nodes) {
-            root->children.push_back(gltf_node_to_instances(
-                scn, cameras, meshes, gltf, nid, identity_mat4f));
+    // convert nodes
+    for (auto gnde : gltf->nodes) {
+        auto nde = new node();
+        nde->name = gnde->name;
+        if (gnde->camera) {
+            auto cam = new camera(cameras[(int)gnde->camera]);
+            nde->cam = cam;
+            scn->cameras.push_back(cam);
         }
-    } else if (!gltf->nodes.empty()) {
-        // set up node children and root nodes
-        auto is_root = vector<bool>(gltf->nodes.size(), true);
-        for (auto nid = 0; nid < gltf->nodes.size(); nid++) {
-            for (auto cid : gltf->get(glTFid<glTFNode>(nid))->children)
-                is_root[(int)cid] = false;
+        if (gnde->mesh) {
+            for (auto shp : meshes[(int)gnde->mesh]) {
+                auto ist = new instance();
+                ist->name = gnde->name;
+                ist->shp = shp;
+                nde->ists.push_back(ist);
+                scn->instances.push_back(ist);
+            }
+#if 0
+            for (auto shp : node->msh->shapes) {
+                if (node->morph_weights.size() < shp->morph_targets.size()) {
+                    node->morph_weights.resize(shp->morph_targets.size());
+                }
+            }
+#endif
         }
-        for (auto nid = 0; nid < gltf->nodes.size(); nid++) {
-            if (!is_root[nid]) continue;
-            root->children.push_back(gltf_node_to_instances(scn, cameras,
-                meshes, gltf, glTFid<glTFNode>(nid), identity_mat4f));
-        }
+        nde->translation = gnde->translation;
+        nde->rotation = gnde->rotation;
+        nde->scaling = gnde->scale;
+        nde->frame = to_frame(gnde->matrix);
+#if 0
+        nde->weights = gnde->weights;
+#endif
+        scn->nodes.push_back(nde);
     }
+
+    // set up parent pointers
+    for (auto nid = 0; nid < gltf->nodes.size(); nid++) {
+        auto gnde = gltf->nodes[nid];
+        auto nde = scn->nodes[nid];
+        for (auto cid : gnde->children) scn->nodes[(int)cid]->parent = nde;
+    }
+
+    // keyframe type conversion
+    static auto keyframe_types =
+        unordered_map<glTFAnimationSamplerInterpolation, keyframe_type>{
+            {glTFAnimationSamplerInterpolation::NotSet, keyframe_type::linear},
+            {glTFAnimationSamplerInterpolation::Linear, keyframe_type::linear},
+            {glTFAnimationSamplerInterpolation::Step, keyframe_type::step},
+            {glTFAnimationSamplerInterpolation::CubicSpline,
+                keyframe_type::bezier},
+            {glTFAnimationSamplerInterpolation::CatmullRomSpline,
+                keyframe_type::catmull_rom},
+        };
+
+    // convert animations
+    for (auto ganm : gltf->animations) {
+        auto anm = new animation();
+        anm->name = ganm->name;
+        auto sampler_map = unordered_map<vec2i, keyframe*>();
+        for (auto gchannel : ganm->channels) {
+            if (sampler_map.find({(int)gchannel->sampler,
+                    (int)gchannel->target->path}) == sampler_map.end()) {
+                auto gsampler = ganm->get(gchannel->sampler);
+                auto kfr = new keyframe();
+                auto input_view =
+                    accessor_view(gltf, gltf->get(gsampler->input));
+                kfr->times.resize(input_view.size());
+                for (auto i = 0; i < input_view.size(); i++)
+                    kfr->times[i] = input_view.get(i);
+                kfr->type = keyframe_types.at(gsampler->interpolation);
+                auto output_view =
+                    accessor_view(gltf, gltf->get(gsampler->output));
+                switch (gchannel->target->path) {
+                    case glTFAnimationChannelTargetPath::Translation: {
+                        kfr->translation.reserve(output_view.size());
+                        for (auto i = 0; i < output_view.size(); i++)
+                            kfr->translation.push_back(output_view.getv3f(i));
+                    } break;
+                    case glTFAnimationChannelTargetPath::Rotation: {
+                        kfr->rotation.reserve(output_view.size());
+                        for (auto i = 0; i < output_view.size(); i++)
+                            kfr->rotation.push_back(
+                                (quat4f)output_view.getv4f(i));
+                    } break;
+                    case glTFAnimationChannelTargetPath::Scale: {
+                        kfr->scaling.reserve(output_view.size());
+                        for (auto i = 0; i < output_view.size(); i++)
+                            kfr->scaling.push_back(output_view.getv3f(i));
+                    } break;
+                    case glTFAnimationChannelTargetPath::Weights: {
+                        // get a node that it refers to
+                        auto ncomp = 0;
+                        auto gnode = gltf->get(gchannel->target->node);
+                        auto gmesh = gltf->get(gnode->mesh);
+                        if (gmesh) {
+                            for (auto gshp : gmesh->primitives) {
+                                ncomp = max((int)gshp->targets.size(), ncomp);
+                            }
+                        }
+                        if (ncomp) {
+                            auto values = std::vector<float>();
+                            values.reserve(output_view.size());
+                            for (auto i = 0; i < output_view.size(); i++)
+                                values.push_back(output_view.get(i));
+                            kfr->weights.resize(values.size() / ncomp);
+                            for (auto i = 0; i < kfr->weights.size(); i++) {
+                                kfr->weights[i].resize(ncomp);
+                                for (auto j = 0; j < ncomp; j++)
+                                    kfr->weights[i][j] = values[i * ncomp + j];
+                            }
+                        }
+                    } break;
+                    default: {
+                        throw runtime_error("should not have gotten here");
+                    }
+                }
+                sampler_map[{
+                    (int)gchannel->sampler, (int)gchannel->target->path}] = kfr;
+                anm->keyframes.push_back(kfr);
+            }
+            anm->targets.push_back({sampler_map.at({(int)gchannel->sampler,
+                                        (int)gchannel->target->path}),
+                scn->nodes[(int)gchannel->target->node]});
+        }
+        scn->animations.push_back(anm);
+    }
+
+    // compute transforms
+    update_transforms(scn, 0);
+
+    // remove hierarchy if necessary
     if (!opts.preserve_hierarchy) {
         for (auto nde : scn->nodes) delete nde;
         scn->nodes.clear();
+        for (auto anm : scn->animations) delete anm;
+        scn->animations.clear();
     }
 
     return scn;
@@ -6593,10 +6778,9 @@ inline glTF* scene_to_gltf(
     };
 
     // convert meshes
+    auto shapes = unordered_map<shape*, unique_ptr<glTFMeshPrimitive>>();
     for (auto shp : scn->shapes) {
         auto gbuffer = add_opt_buffer(shp->path);
-        auto gmesh = new glTFMesh();
-        gmesh->name = shp->name;
         auto gprim = new glTFMeshPrimitive();
         gprim->material = glTFid<glTFMaterial>(index(scn->materials, shp->mat));
         if (!shp->pos.empty())
@@ -6664,12 +6848,19 @@ inline glTF* scene_to_gltf(
         } else {
             throw runtime_error("empty mesh");
         }
-        gmesh->primitives.push_back(gprim);
-        gltf->meshes.push_back(gmesh);
+        shapes[shp] = unique_ptr<glTFMeshPrimitive>(gprim);
     }
-    
+
     // hierarchy
-    if(scn->nodes.empty()) {
+    if (scn->nodes.empty()) {
+        // meshes
+        for (auto shp : scn->shapes) {
+            auto gmsh = new glTFMesh();
+            gmsh->name = shp->name;
+            gmsh->primitives.push_back(new glTFMeshPrimitive(*shapes.at(shp)));
+            gltf->meshes.push_back(gmsh);
+        }
+
         // instances
         for (auto ist : scn->instances) {
             auto gnode = new glTFNode();
@@ -6678,7 +6869,7 @@ inline glTF* scene_to_gltf(
             gnode->matrix = to_mat(ist->frame);
             gltf->nodes.push_back(gnode);
         }
-        
+
         // cameras
         for (auto cam : scn->cameras) {
             auto gnode = new glTFNode();
@@ -6687,7 +6878,7 @@ inline glTF* scene_to_gltf(
             gnode->matrix = to_mat(cam->frame);
             gltf->nodes.push_back(gnode);
         }
-        
+
         // scenes
         if (!gltf->nodes.empty()) {
             auto gscene = new glTFScene();
@@ -6699,38 +6890,139 @@ inline glTF* scene_to_gltf(
             gltf->scene = glTFid<glTFScene>(0);
         }
     } else {
-        // nopdes
-        for(auto nde : scn->nodes) {
+        // meshes
+        auto meshes = map<vector<instance*>, int>();
+        for (auto nde : scn->nodes) {
+            if (nde->ists.empty()) continue;
+            if (contains(meshes, nde->ists)) continue;
+            auto gmsh = new glTFMesh();
+            gmsh->name = nde->ists.front()->name;
+            for (auto ist : nde->ists)
+                gmsh->primitives.push_back(new glTFMeshPrimitive(*shapes.at(ist->shp)));
+            meshes[nde->ists] = (int)gltf->meshes.size();
+            gltf->meshes.push_back(gmsh);
+        }
+
+        // nodes
+        for (auto nde : scn->nodes) {
             auto gnode = new glTFNode();
             gnode->name = nde->name;
-            if(nde->cam) {
-                gnode->camera = glTFid<glTFCamera>(index(scn->cameras, nde->cam));
+            if (nde->cam) {
+                gnode->camera =
+                    glTFid<glTFCamera>(index(scn->cameras, nde->cam));
             }
-            if(nde->ist) {
-                gnode->mesh = glTFid<glTFMesh>(index(scn->shapes, nde->ist->shp));
+            if (!nde->ists.empty()) {
+                gnode->mesh = glTFid<glTFMesh>(meshes.at(nde->ists));
             }
             gnode->matrix = to_mat(nde->frame);
             gnode->translation = nde->translation;
             gnode->rotation = nde->rotation;
-            gnode->scale = nde->scale;
+            gnode->scale = nde->scaling;
             gltf->nodes.push_back(gnode);
         }
-        
+
         // children
-        for(auto idx = 0; idx < scn->nodes.size(); idx++) {
+        for (auto idx = 0; idx < scn->nodes.size(); idx++) {
             auto nde = scn->nodes.at(idx);
+            if (!nde->parent) continue;
+            auto gnde = gltf->nodes.at(index(scn->nodes, nde->parent));
+            gnde->children.push_back(glTFid<glTFNode>(idx));
+        }
+
+        // root nodes
+        auto is_root = vector<bool>(gltf->nodes.size(), true);
+        for (auto idx = 0; idx < gltf->nodes.size(); idx++) {
             auto gnde = gltf->nodes.at(idx);
-            for(auto child : nde->children) {
-                gnde->children.push_back(glTFid<glTFNode>(index(scn->nodes, child)));
+            for (auto idx1 = 0; idx1 < gnde->children.size(); idx1++) {
+                is_root[(int)gnde->children.at(idx1)] = false;
             }
         }
-                                        
-        // scene
+
+        // scene with root nodes
         auto gscene = new glTFScene();
         gscene->name = "scene";
-        gscene->nodes.push_back(glTFid<glTFNode>(0));
+        for (auto idx = 0; idx < gltf->nodes.size(); idx++) {
+            if (is_root[idx]) gscene->nodes.push_back(glTFid<glTFNode>(idx));
+        }
         gltf->scenes.push_back(gscene);
         gltf->scene = glTFid<glTFScene>(0);
+    }
+
+    // interpolation map
+    static const auto interpolation_map =
+        std::map<keyframe_type, glTFAnimationSamplerInterpolation>{
+            {keyframe_type::step, glTFAnimationSamplerInterpolation::Step},
+            {keyframe_type::linear, glTFAnimationSamplerInterpolation::Linear},
+            {keyframe_type::bezier,
+                glTFAnimationSamplerInterpolation::CubicSpline},
+            {keyframe_type::catmull_rom,
+                glTFAnimationSamplerInterpolation::CatmullRomSpline},
+        };
+
+    // animation
+    for (auto anm : scn->animations) {
+        auto ganm = new glTFAnimation();
+        ganm->name = anm->name;
+        auto gbuffer = add_opt_buffer(anm->path);
+        auto count = 0;
+        auto paths = unordered_map<keyframe*, glTFAnimationChannelTargetPath>();
+        for (auto kfr : anm->keyframes) {
+            auto aid = ganm->name + "_" + std::to_string(count++);
+            auto gsmp = new glTFAnimationSampler();
+            gsmp->input =
+                add_accessor(gbuffer, aid + "_time", glTFAccessorType::Scalar,
+                    glTFAccessorComponentType::Float, (int)kfr->times.size(),
+                    sizeof(float), kfr->times.data(), false);
+            auto path = glTFAnimationChannelTargetPath::NotSet;
+            if (!kfr->translation.empty()) {
+                gsmp->output = add_accessor(gbuffer, aid + "_translation",
+                    glTFAccessorType::Vec3, glTFAccessorComponentType::Float,
+                    (int)kfr->translation.size(), sizeof(vec3f),
+                    kfr->translation.data(), false);
+                path = glTFAnimationChannelTargetPath::Translation;
+            } else if (!kfr->rotation.empty()) {
+                gsmp->output = add_accessor(gbuffer, aid + "_rotation",
+                    glTFAccessorType::Vec4, glTFAccessorComponentType::Float,
+                    (int)kfr->rotation.size(), sizeof(vec4f),
+                    kfr->rotation.data(), false);
+                path = glTFAnimationChannelTargetPath::Rotation;
+            } else if (!kfr->scaling.empty()) {
+                gsmp->output = add_accessor(gbuffer, aid + "_scale",
+                    glTFAccessorType::Vec3, glTFAccessorComponentType::Float,
+                    (int)kfr->scaling.size(), sizeof(vec3f),
+                    kfr->scaling.data(), false);
+                path = glTFAnimationChannelTargetPath::Scale;
+            } else if (!kfr->weights.empty()) {
+                auto values = std::vector<float>();
+                values.reserve(kfr->weights.size() * kfr->weights[0].size());
+                for (auto i = 0; i < kfr->weights.size(); i++) {
+                    values.insert(values.end(), kfr->weights[i].begin(),
+                        kfr->weights[i].end());
+                }
+                gsmp->output = add_accessor(gbuffer, aid + "_weights",
+                    glTFAccessorType::Scalar, glTFAccessorComponentType::Float,
+                    (int)values.size(), sizeof(float), values.data(), false);
+                path = glTFAnimationChannelTargetPath::Weights;
+            } else {
+                throw runtime_error("should not have gotten here");
+            }
+            gsmp->interpolation = interpolation_map.at(kfr->type);
+            ganm->samplers.push_back(gsmp);
+            paths[kfr] = path;
+        }
+        for (auto target : anm->targets) {
+            auto kfr = target.first;
+            auto node = target.second;
+            auto gchan = new glTFAnimationChannel();
+            gchan->sampler =
+                glTFid<glTFAnimationSampler>{index(anm->keyframes, kfr)};
+            gchan->target = new glTFAnimationChannelTarget();
+            gchan->target->node = glTFid<glTFNode>{index(scn->nodes, node)};
+            gchan->target->path = paths.at(kfr);
+            ganm->channels.push_back(gchan);
+        }
+
+        gltf->animations.push_back(ganm);
     }
 
     // done
@@ -6949,7 +7241,17 @@ void add_elements(scene* scn, const add_elements_options& opts) {
         }
     }
 
-    if (opts.default_camera && scn->cameras.empty()) {
+    // default environment
+    if (opts.default_environment && scn->environments.empty()) {
+        auto env = new environment();
+        env->name = "default_environment";
+        scn->environments.push_back(env);
+    }
+}
+
+// Make a view camera either copying a given one or building a default one.
+camera* make_view_camera(scene* scn, int camera_id) {
+    if (scn->cameras.empty()) {
         update_bounds(scn);
         auto bbox = scn->bbox;
         auto bbox_center = (bbox.max + bbox.min) / 2.0f;
@@ -6968,14 +7270,10 @@ void add_elements(scene* scn, const add_elements_options& opts) {
         cam->yfov = 2 * atanf(0.5f);
         cam->aperture = 0;
         cam->focus = length(to - from);
-        scn->cameras.push_back(cam);
-    }
-
-    // default environment
-    if (opts.default_environment && scn->environments.empty()) {
-        auto env = new environment();
-        env->name = "default_environment";
-        scn->environments.push_back(env);
+        return cam;
+    } else {
+        camera_id = clamp(camera_id, 0, (int)scn->cameras.size());
+        return new camera(*scn->cameras[camera_id]);
     }
 }
 
@@ -8499,9 +8797,13 @@ void update_test_node(
     const scene* scn, node* nde, const test_node_params& tnde) {
     if (tnde.name == "") throw runtime_error("cannot use empty name");
     nde->name = tnde.name;
-    nde->frame = identity_frame3f;
+    nde->frame = tnde.frame;
+    nde->translation = tnde.translation;
+    nde->rotation = tnde.rotation;
+    nde->scaling = tnde.scaling;
     nde->cam = find_named_elem(scn->cameras, tnde.camera);
-    nde->ist = find_named_elem(scn->instances, tnde.instance);
+    auto ist = find_named_elem(scn->instances, tnde.instance);
+    nde->ists = (ist) ? vector<instance*>{ist} : vector<instance*>{};
     nde->env = find_named_elem(scn->environments, tnde.environment);
 }
 
@@ -8509,25 +8811,25 @@ void update_test_node(
 void update_test_animation(
     const scene* scn, animation* anm, const test_animation_params& tanm) {
     if (tanm.name == "") throw runtime_error("cannot use empty name");
-    if(anm->keyframes.size() != 1) {
-        for(auto v : anm->keyframes) delete v;
+    if (anm->keyframes.size() != 1) {
+        for (auto v : anm->keyframes) delete v;
         anm->keyframes.clear();
         anm->keyframes.push_back(new keyframe());
     }
     anm->name = tanm.name;
     auto kfr = anm->keyframes.front();
     kfr->name = tanm.name;
-    kfr->type = (tanm.bezier) ? keyframe_type::linear : keyframe_type::bezier;
+    kfr->type = (!tanm.bezier) ? keyframe_type::linear : keyframe_type::bezier;
     kfr->times = tanm.times;
     for (auto& v : kfr->times) v *= tanm.speed;
     kfr->translation = tanm.translation;
     kfr->rotation = tanm.rotation;
-    kfr->scale = tanm.scaling;
+    kfr->scaling = tanm.scaling;
     for (auto& v : kfr->translation) v *= tanm.scale;
-    for (auto& v : kfr->scale) v *= tanm.scale;
-    kfr->nodes.clear();
+    for (auto& v : kfr->scaling) v *= tanm.scale;
+    anm->targets.clear();
     for (auto& nde : tanm.nodes)
-        kfr->nodes.push_back(find_named_elem(scn->nodes, nde));
+        anm->targets.push_back({kfr, find_named_elem(scn->nodes, nde)});
 }
 
 // Update test elements
@@ -8565,7 +8867,8 @@ void update_test_scene(scene* scn, const test_scene_params& params,
         update_test_environment, refresh);
     update_test_scene_elem(
         scn, scn->nodes, params.nodes, update_test_node, refresh);
-    update_test_scene_elem(scn, scn->animations, params.animations, update_test_animation, refresh);
+    update_test_scene_elem(scn, scn->animations, params.animations,
+        update_test_animation, refresh);
 }
 
 // remove duplicate elems
@@ -8855,11 +9158,11 @@ unordered_map<string, test_animation_params>& test_animation_presets() {
         };
 
     presets["bounce"] = make_test_animation(
-        "bounce", false, {0, 1}, {{0, 0, 0}, {0, 1, 0}}, {}, {});
-    presets["scale"] = make_test_animation(
-        "scale", false, {0, 1}, {}, {}, {{1, 1, 1}, {0.1f, 0.1f, 0.1f}});
-    presets["rotation"] = make_test_animation("rotation", false, {0, 1}, {},
-        {{{0, 1, 0}, 0}, {{0, 1, 0}, 2 * pif}}, {});
+        "bounce", false, {0, 1, 2}, {{0, 0, 0}, {0, 1, 0}, {0, 0, 0}}, {}, {});
+    presets["scale"] = make_test_animation("scale", false, {0, 1, 2}, {}, {},
+        {{1, 1, 1}, {0.1f, 0.1f, 0.1f}, {1, 1, 1}});
+    presets["rotation"] = make_test_animation("rotation", false, {0, 1, 2}, {},
+        {{{0, 1, 0}, 0}, {{0, 1, 0}, pif}, {{0, 1, 0}, 0}}, {});
 
     return presets;
 }
@@ -8926,7 +9229,9 @@ unordered_map<string, test_scene_params>& test_scene_presets() {
     auto make_simple_scene = [&](const string& name,
                                  const vector<string>& shapes,
                                  const vector<string>& mats,
-                                 const string& lights, bool interior = false) {
+                                 const string& lights, bool interior = false,
+                                 bool nodes = false,
+                                 const vector<string>& animations = {}) {
         auto pos = vector<vec3f>{{-2.50f, 1, 0}, {0, 1, 0}, {+2.50f, 1, 0}};
         auto params = make_test_scene(name);
         params.cameras += test_camera_presets().at("cam3");
@@ -8951,9 +9256,14 @@ unordered_map<string, test_scene_params>& test_scene_presets() {
             params.shapes.back().name = name;
             params.shapes.back().material = mats[i];
             params.instances += make_test_instance(name, name, pos[i]);
-            if (interior)
+            if (interior) {
                 params.instances +=
                     make_test_instance(name + "i", "interior", pos[i]);
+            }
+            if (!animations.empty()) {
+                params.animations += test_animation_presets().at(animations[i]);
+                params.animations.back().nodes += name;
+            }
         }
         if (lights == "pointlights" || lights == "arealights" ||
             lights == "arealights1") {
@@ -8995,6 +9305,29 @@ unordered_map<string, test_scene_params>& test_scene_presets() {
             // env = add_test_environment(params,
             // test_environment_type::sky,
             //     lookat_frame3f({0, 1, 0}, {0, 1, 1}, {0, 1, 0}, true));
+        }
+        if (!animations.empty() || nodes) {
+            for (auto& cam : params.cameras) {
+                auto nde = test_node_params();
+                nde.name = cam.name;
+                nde.frame = lookat_frame3(cam.from, cam.to, vec3f{0, 1, 0});
+                nde.camera = cam.name;
+                params.nodes += nde;
+            }
+            for (auto& ist : params.instances) {
+                auto nde = test_node_params();
+                nde.name = ist.name;
+                nde.frame = ist.frame;
+                nde.instance = ist.name;
+                params.nodes += nde;
+            }
+            for (auto& env : params.environments) {
+                auto nde = test_node_params();
+                nde.name = env.name;
+                nde.frame = env.frame;
+                nde.environment = env.name;
+                params.nodes += nde;
+            }
         }
         return params;
     };
@@ -9074,6 +9407,12 @@ unordered_map<string, test_scene_params>& test_scene_presets() {
         {"flipcapsphere", "flipcapsphere", "flipcapsphere"},
         {"plastic_blue", "plastic_blue_bumped", "plastic_colored_bumped"},
         "pointlights");
+
+    // animated shapes
+    presets["animated_pl"] = make_simple_scene("animated_pl",
+        {"flipcapsphere", "spherecube", "spherizedcube"},
+        {"plastic_colored", "plastic_colored", "plastic_colored"},
+        "pointlights", false, true, {"bounce", "scale", "rotation"});
 
     // instances shared functions
     auto make_random_scene = [&](const string& name, const vec2i& num,
@@ -10792,18 +11131,17 @@ inline void draw_stdsurface_shape(gl_stdsurface_state* st, const shape* shp,
 
 // Display a scene
 void draw_stdsurface_scene(gl_stdsurface_state* st, const scene* scn,
-    const gl_stdsurface_params& params) {
+    const camera* view, const gl_stdsurface_params& params) {
     // begin frame
     gl_enable_depth_test(true);
     gl_enable_culling(params.cull_backface);
     gl_enable_wireframe(params.wireframe);
     gl_set_viewport({params.width, params.height});
 
-    auto cam = scn->cameras[params.camera_id];
-    mat4f camera_xform, camera_view, camera_proj;
-    camera_xform = to_mat(cam->frame);
-    camera_view = to_mat(inverse(cam->frame));
-    camera_proj = perspective_mat4(cam->yfov,
+    auto cam = (params.camera_id < 0) ? view : scn->cameras[params.camera_id];
+    auto camera_xform = to_mat(cam->frame);
+    auto camera_view = to_mat(inverse(cam->frame));
+    auto camera_proj = perspective_mat4(cam->yfov,
         (float)params.width / (float)params.height, cam->near, cam->far);
 
     begin_stdsurface_frame(st->prog, params.camera_lights, params.exposure,
@@ -11488,13 +11826,22 @@ inline void draw_tree_widgets(
     gl_window* win, const string& lbl, node* nde, void*& selection) {
     if (draw_tree_widget_begin(win, lbl + nde->name, selection, nde)) {
         if (nde->cam) draw_tree_widgets(win, "cam: ", nde->cam, selection);
-        if (nde->ist) draw_tree_widgets(win, "ist: ", nde->ist, selection);
+        for (auto idx = 0; idx < nde->ists.size(); idx++)
+            draw_tree_widgets(
+                win, "ist" + to_string(idx) + ": ", nde->ists[idx], selection);
         if (nde->env) draw_tree_widgets(win, "env: ", nde->env, selection);
-        for (auto idx = 0; idx < nde->children.size(); idx++) {
-            draw_tree_widgets(win, "", nde->children[idx], selection);
+        if (nde->parent)
+            draw_tree_widgets(win, "parent", nde->parent, selection);
+        for (auto idx = 0; idx < nde->children_.size(); idx++) {
+            draw_tree_widgets(win, "", nde->children_[idx], selection);
         }
         draw_tree_widget_end(win);
     }
+}
+
+inline void draw_tree_widgets(
+    gl_window* win, const string& lbl, animation* anm, void*& selection) {
+    draw_tree_widget_leaf(win, lbl + anm->name, selection, anm);
 }
 
 template <typename T>
@@ -11516,6 +11863,8 @@ inline void draw_tree_widgets(
     draw_scene_tree_widgets(
         win, lbl + "environments", scn->environments, selection);
     draw_scene_tree_widgets(win, lbl + "nodes", scn->nodes, selection);
+    draw_scene_tree_widgets(
+        win, lbl + "animations", scn->animations, selection);
 }
 
 inline bool draw_elem_widgets(gl_window* win, scene* scn, texture* txt,
@@ -11666,39 +12015,53 @@ inline bool draw_elem_widgets(gl_window* win, scene* scn, node* nde,
     for (auto ist : scn->instances) ist_names.push_back({ist->name, ist});
     auto env_names = vector<pair<string, environment*>>{{"<none>", nullptr}};
     for (auto env : scn->environments) env_names.push_back({env->name, env});
+    auto nde_names = vector<pair<string, node*>>{{"<none>", nullptr}};
+    for (auto nde : scn->nodes) nde_names.push_back({nde->name, nde});
 
     auto edited = vector<bool>();
     draw_separator_widget(win);
     draw_label_widget(win, "name", nde->name);
+    edited += draw_value_widget(win, "parent", nde->parent, nde_names);
     edited += draw_value_widget(win, "frame", nde->frame, -10, 10);
     edited += draw_value_widget(win, "camera", nde->cam, cam_names);
-    edited += draw_value_widget(win, "instance", nde->cam, cam_names);
+    for (auto idx = 0; idx < nde->ists.size(); idx++)
+        edited += draw_value_widget(
+            win, "instance " + to_string(idx), nde->ists[idx], ist_names);
     edited += draw_value_widget(win, "environment", nde->env, env_names);
+    for (auto idx = 0; idx < nde->children_.size(); idx++)
+        edited += draw_value_widget(
+            win, "child " + to_string(idx), nde->children_[idx], nde_names);
     return std::any_of(edited.begin(), edited.end(), [](auto x) { return x; });
 }
 
 inline bool draw_elem_widgets(gl_window* win, scene* scn, animation* anm,
-                              void*& selection, const unordered_map<texture*, gl_texture>& gl_txt) {
+    void*& selection, const unordered_map<texture*, gl_texture>& gl_txt) {
     auto nde_names = vector<pair<string, node*>>{{"<none>", nullptr}};
     for (auto nde : scn->nodes) nde_names.push_back({nde->name, nde});
-    
+
     auto edited = vector<bool>();
     draw_separator_widget(win);
     draw_label_widget(win, "name", anm->name);
-    for(auto kfr_kv : enumerate(anm->keyframes)) {
+    for (auto kfr_kv : enumerate(anm->keyframes)) {
         auto kfr = kfr_kv.second;
         auto ids = to_string(kfr_kv.first);
         edited += draw_value_widget(win, "name " + ids, kfr->name);
-        edited += draw_value_widget(win, "type " + ids, kfr->type, keyframe_type_names());
+        edited += draw_value_widget(
+            win, "type " + ids, kfr->type, keyframe_type_names());
         draw_label_widget(win, "times " + ids, kfr->times, true);
         draw_label_widget(win, "translation " + ids, kfr->translation, true);
         draw_label_widget(win, "rotation " + ids, kfr->rotation, true);
-        draw_label_widget(win, "scale " + ids, kfr->scale, true);
-        draw_label_widget(win, "nodes " + ids, kfr->nodes, true);
+        draw_label_widget(win, "scale " + ids, kfr->scaling, true);
+    }
+    for (auto target_kv : enumerate(anm->targets)) {
+        auto kfr = target_kv.second.first;
+        auto nde = target_kv.second.second;
+        auto ids = to_string(target_kv.first);
+        draw_label_widget(win, "target " + ids, kfr->name + " -> " + nde->name);
     }
     return std::any_of(edited.begin(), edited.end(), [](auto x) { return x; });
 }
-    
+
 inline bool draw_elem_widgets(gl_window* win, test_scene_params* scn,
     test_texture_params* txt, void*& selection,
     const unordered_map<texture*, gl_texture>& gl_txt) {
@@ -11786,30 +12149,36 @@ inline bool draw_elem_widgets(gl_window* win, test_scene_params* scn,
     edited += draw_value_widget(win, "name", nde->name);
     edited += draw_value_widget(win, "frame", nde->frame);
     edited += draw_value_widget(win, "camera", nde->camera);
+    edited += draw_value_widget(win, "parent", nde->parent);
     edited += draw_value_widget(win, "instance", nde->instance);
     edited += draw_value_widget(win, "environment", nde->environment);
     return std::any_of(edited.begin(), edited.end(), [](auto x) { return x; });
 }
 
 inline bool draw_elem_widgets(gl_window* win, test_scene_params* scn,
-                              test_animation_params* anm, void*& selection,
-                              const unordered_map<texture*, gl_texture>& gl_txt) {
+    test_animation_params* anm, void*& selection,
+    const unordered_map<texture*, gl_texture>& gl_txt) {
     auto edited = vector<bool>();
     draw_separator_widget(win);
     edited += draw_value_widget(win, "name", anm->name);
     edited += draw_value_widget(win, "bezier", anm->bezier);
     edited += draw_value_widget(win, "speed", anm->speed);
     edited += draw_value_widget(win, "scale", anm->scale);
-    for(auto idx = 0; idx < anm->times.size(); idx++)
-        edited += draw_value_widget(win, "time " + to_string(idx), anm->times[idx]);
-    for(auto idx = 0; idx < anm->translation.size(); idx++)
-        edited += draw_value_widget(win, "translation " + to_string(idx), anm->translation[idx]);
-    for(auto idx = 0; idx < anm->rotation.size(); idx++)
-        edited += draw_value_widget(win, "rotation " + to_string(idx), anm->rotation[idx]);
-    for(auto idx = 0; idx < anm->scaling.size(); idx++)
-        edited += draw_value_widget(win, "scaling " + to_string(idx), anm->scaling[idx]);
-    for(auto idx = 0; idx < anm->nodes.size(); idx++)
-        edited += draw_value_widget(win, "node " + to_string(idx), anm->nodes[idx]);
+    for (auto idx = 0; idx < anm->times.size(); idx++)
+        edited +=
+            draw_value_widget(win, "time " + to_string(idx), anm->times[idx]);
+    for (auto idx = 0; idx < anm->translation.size(); idx++)
+        edited += draw_value_widget(
+            win, "translation " + to_string(idx), anm->translation[idx]);
+    for (auto idx = 0; idx < anm->rotation.size(); idx++)
+        edited += draw_value_widget(
+            win, "rotation " + to_string(idx), anm->rotation[idx]);
+    for (auto idx = 0; idx < anm->scaling.size(); idx++)
+        edited += draw_value_widget(
+            win, "scaling " + to_string(idx), anm->scaling[idx]);
+    for (auto idx = 0; idx < anm->nodes.size(); idx++)
+        edited +=
+            draw_value_widget(win, "node " + to_string(idx), anm->nodes[idx]);
     return std::any_of(edited.begin(), edited.end(), [](auto x) { return x; });
 }
 
@@ -11904,7 +12273,7 @@ inline bool draw_scene_widgets(gl_window* win, const string& lbl, scene* scn,
             edited += draw_add_elem_widgets(win, scn, "env", scn->environments,
                 test_scn->environments, selection, update_test_environment);
             edited += draw_add_elem_widgets(win, scn, "anim", scn->animations,
-                                            test_scn->animations, selection, update_test_animation);
+                test_scn->animations, selection, update_test_animation);
         }
 
         auto test_scn_res = (test_scn) ? test_scn : &test_scn_def;
@@ -11923,8 +12292,9 @@ inline bool draw_scene_widgets(gl_window* win, const string& lbl, scene* scn,
             update_test_environment, gl_txt);
         edited += draw_selected_elem_widgets(win, scn, test_scn, scn->nodes,
             test_scn->nodes, selection, update_test_node, gl_txt);
-        edited += draw_selected_elem_widgets(win, scn, test_scn, scn->animations,
-                                             test_scn->animations, selection, update_test_animation, gl_txt);
+        edited +=
+            draw_selected_elem_widgets(win, scn, test_scn, scn->animations,
+                test_scn->animations, selection, update_test_animation, gl_txt);
         return std::any_of(
             edited.begin(), edited.end(), [](auto x) { return x; });
     } else

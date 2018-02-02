@@ -31,26 +31,21 @@ using namespace ygl;
 
 // Application state
 struct app_state {
-    // scene data
     scene* scn = nullptr;
-
-    // filenames
+    camera* view = nullptr;
     string filename;
     string imfilename;
-
-    // render
     float exposure = 0, gamma = 2.2f;
     bool filmic = false;
     vec4f background = {0, 0, 0, 0};
-
-    // trace
     trace_params params;
     bool save_progressive = false;
     trace_state* state = nullptr;
 
     ~app_state() {
-        if (scn) delete scn;
         if (state) delete state;
+        if (scn) delete scn;
+        if (view) delete view;
     }
 };
 
@@ -111,10 +106,16 @@ int main(int argc, char* argv[]) {
         log_fatal("cannot load scene {}", app->filename);
         return 1;
     }
+    
+    // add elements
     auto opts = add_elements_options();
     opts.pointline_radius = 0.001f;
     add_elements(app->scn, opts);
 
+    // view camera
+    app->view = make_view_camera(app->scn, app->params.camera_id);
+    app->params.camera_id = -1;
+    
     // build bvh
     log_info("building bvh");
     build_bvh(app->scn);
@@ -124,7 +125,9 @@ int main(int argc, char* argv[]) {
     update_lights(app->scn, true, true);
 
     // initialize rendering objects
-    auto cam = app->scn->cameras[app->params.camera_id];
+    auto cam = (app->params.camera_id < 0) ?
+            app->view :
+            app->scn->cameras[app->params.camera_id];
     app->params.width = (int)round(cam->aspect * app->params.height);
     app->state = make_trace_state(app->params);
 
@@ -141,8 +144,7 @@ int main(int argc, char* argv[]) {
                 app->gamma, app->filmic);
         }
         log_info("rendering sample {}/{}", cur_sample, app->params.nsamples);
-        trace_samples(
-            app->state, app->scn, app->params.batch_size, app->params);
+        trace_samples(app->state, app->scn, app->view, app->params.batch_size, app->params);
     }
     log_info("rendering done");
 

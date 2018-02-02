@@ -2298,10 +2298,10 @@ struct quat<T, 4> {
     quat(const vec<T, 3>& axis, T angle) : x{0}, y{0}, z{0}, w{1} {
         auto len = length(axis);
         if (len) {
-            x = cos(angle / 2) * axis.x / len;
-            y = cos(angle / 2) * axis.y / len;
-            z = cos(angle / 2) * axis.z / len;
-            w = sin(angle / 2);
+            x = sin(angle / 2) * axis.x / len;
+            y = sin(angle / 2) * axis.y / len;
+            z = sin(angle / 2) * axis.z / len;
+            w = cos(angle / 2);
         }
     }
     /// conversion to vec
@@ -2310,7 +2310,7 @@ struct quat<T, 4> {
     /// rotation axis
     vec<T, 3> axis() const { return normalize(vec<T, 3>{x, y, z}); }
     /// rotation angle
-    T angle() const { return atan2(length(vec<T, 3>{x, y, z}), w); }
+    T angle() const { return 2 * acos(w); }
 
     /// element access
     T& operator[](int i) { return (&x)[i]; }
@@ -2927,6 +2927,12 @@ inline frame<T, 3> rotation_frame3(const vec<T, 3>& axis, T angle) {
     return {rotation_mat3(axis, angle), {0, 0, 0}};
 }
 
+/// rotation frame
+template <typename T>
+inline frame<T, 3> rotation_frame3(const quat<T, 4>& rot) {
+    return {rotation_mat3(rot), {0, 0, 0}};
+}
+
 /// rotation matrix
 template <typename T>
 inline mat<T, 4> rotation_mat4(const mat<T, 3>& rot) {
@@ -2944,22 +2950,13 @@ inline mat<T, 4> rotation_mat4(const vec<T, 3>& axis, float angle) {
 /// quaternion axis-angle conversion
 template <typename T>
 inline vec<T, 4> rotation_axisangle4(const quat<T, 4>& a) {
-    auto axis = normalize(vec<T, 3>{a.x, a.y, a.z});
-    auto angle = acos(a.w) * 2;
-    return {axis.x, axis.y, axis.z, angle};
+    return {a.axis(), a.angle()};
 }
 
 /// axis-angle to quaternion
 template <typename T>
-inline quat<T, 4> rotation_quat4(const vec<T, 4>& axis_angle) {
-    auto axis = vec<T, 3>{axis_angle.x, axis_angle.y, axis_angle.z};
-    auto len = length(axis);
-    auto angle = atan2(len, axis_angle.w);
-    if (len)
-        axis /= len;
-    else
-        axis = {0, 0, 1};
-    return {axis.x, axis.y, axis.z, angle};
+inline quat<T, 4> rotation_quat4(const vec<T, 3>& axis, T angle) {
+    return quat<T, 4>(axis, angle);
 }
 
 /// quaterion to matrix conversion
@@ -4093,10 +4090,13 @@ inline T eval_keyframed_step(
 }
 
 // Implementation detail.
-inline vec3f eval_keyframed_lerp(const vec3f& a, const vec3f& b, float t) {
+template <typename T>
+inline T eval_keyframed_lerp(const T& a, const T& b, float t) {
     return lerp(a, b, t);
 }
-inline quat4f eval_keyframed_lerp(const quat4f& a, const quat4f& b, float t) {
+template <typename T>
+inline quat<T, 4> eval_keyframed_lerp(
+    const quat<T, 4>& a, const quat<T, 4>& b, float t) {
     return slerp(a, b, t);
 }
 
@@ -4107,10 +4107,37 @@ inline T eval_keyframed_linear(
     time = clamp(time, times.front(), times.back() - 0.001f);
     if (time <= times.front()) return vals.front();
     if (time >= times.back()) return vals.back();
-    auto idx = (int)(std::lower_bound(times.begin(), times.end(), time) -
+    auto idx = (int)(std::upper_bound(times.begin(), times.end(), time) -
                      times.begin());
-    return eval_keyframed_lerp(vals.at(idx), vals.at(idx + 1),
-        (time - times.at(idx)) / (times.at(idx + 1) - times.at(idx)));
+    return eval_keyframed_lerp(vals.at(idx - 1), vals.at(idx),
+        (time - times.at(idx - 1)) / (times.at(idx) - times.at(idx - 1)));
+}
+
+// Implementation detail.
+template <typename T>
+inline T eval_keyframed_cubic(
+    const T& a, const T& b, const T& c, const T& d, float t) {
+    return eval_bezier_cubic(a, b, c, d, t);
+}
+template <typename T>
+inline quat<T, 4> eval_keyframed_cubic(const quat<T, 4>& a, const quat<T, 4>& b,
+    const quat<T, 4>& c, const quat<T, 4>& d, float t) {
+    return normalize((quat4f)eval_keyframed_cubic(
+        (vec4f)a, (vec4f)b, (vec4f)c, (vec4f)d, t));
+}
+
+/// Evalautes a keyframed value using bezier interpolation
+template <typename T>
+inline T eval_keyframed_bezier(
+    const vector<float>& times, const vector<T>& vals, float time) {
+    time = clamp(time, times.front(), times.back() - 0.001f);
+    if (time <= times.front()) return vals.front();
+    if (time >= times.back()) return vals.back();
+    auto idx = (int)(std::upper_bound(times.begin(), times.end(), time) -
+                     times.begin());
+    return eval_keyframed_cubic(vals.at(idx - 3), vals.at(idx - 2),
+        vals.at(idx - 1), vals.at(idx),
+        (time - times.at(idx - 1)) / (times.at(idx) - times.at(idx - 1)));
 }
 
 }  // namespace ygl
@@ -7130,6 +7157,8 @@ struct light {
 struct node {
     /// name
     string name = "";
+    /// parent node
+    node* parent = nullptr;
     /// frame
     frame3f frame = identity_frame3f;
     /// translation
@@ -7137,15 +7166,19 @@ struct node {
     /// rotation
     quat4f rotation = {0, 0, 0, 1};
     /// scale
-    vec3f scale = {1, 1, 1};
+    vec3f scaling = {1, 1, 1};
+    /// Weights for morphing
+    std::vector<float> weights = {};
     /// node camera
     camera* cam = nullptr;
     /// node instance
-    instance* ist = nullptr;
+    vector<instance*> ists = {};
     /// node environment
     environment* env = nullptr;
+
+    // computed properties ---------------------------------
     /// child nodes
-    vector<node*> children = {};
+    vector<node*> children_ = {};
 };
 
 /// Keyframe type
@@ -7177,8 +7210,6 @@ struct keyframe {
     std::string name;
     /// Interpolation
     keyframe_type type = keyframe_type::linear;
-    /// Target nodes
-    std::vector<node*> nodes;
     /// Times
     std::vector<float> times;
     /// Translation
@@ -7186,9 +7217,9 @@ struct keyframe {
     /// Rotation
     std::vector<quat4f> rotation;
     /// Scale
-    std::vector<vec3f> scale;
+    std::vector<vec3f> scaling;
     /// Weights for morphing
-    std::vector<std::vector<float>> morph_weights;
+    std::vector<std::vector<float>> weights;
 };
 
 /// Animation made of multiple keyframed values
@@ -7199,6 +7230,8 @@ struct animation {
     std::string path = "";
     /// Keyframed values
     vector<keyframe*> keyframes;
+    /// Binds keyframe values to nodes.
+    vector<pair<keyframe*, node*>> targets;
 
     /// Cleanup
     animation() {
@@ -7224,7 +7257,7 @@ struct scene {
     /// light array
     vector<light*> lights = {};
 
-    /// node hierarchy (root is first node)
+    /// node hierarchy
     vector<node*> nodes = {};
     /// node animation
     vector<animation*> animations = {};
@@ -7516,7 +7549,8 @@ inline void update_transforms(animation* anm, float time) {
             case keyframe_type::linear:
                 return eval_keyframed_linear(times, vals, time);
             case keyframe_type::catmull_rom: return vals.at(0);
-            case keyframe_type::bezier: return vals.at(0);
+            case keyframe_type::bezier:
+                return eval_keyframed_bezier(times, vals, time);
             default: throw runtime_error("should not have been here");
         }
         return vals.at(0);
@@ -7526,15 +7560,18 @@ inline void update_transforms(animation* anm, float time) {
         if (!kfr->translation.empty()) {
             auto val =
                 interpolate(kfr->type, kfr->times, kfr->translation, time);
-            for (auto nde : kfr->nodes) nde->translation = val;
+            for (auto target : anm->targets)
+                if (target.first == kfr) target.second->translation = val;
         }
         if (!kfr->rotation.empty()) {
             auto val = interpolate(kfr->type, kfr->times, kfr->rotation, time);
-            for (auto nde : kfr->nodes) nde->rotation = val;
+            for (auto target : anm->targets)
+                if (target.first == kfr) target.second->rotation = val;
         }
-        if (!kfr->scale.empty()) {
-            auto val = interpolate(kfr->type, kfr->times, kfr->scale, time);
-            for (auto nde : kfr->nodes) nde->scale = val;
+        if (!kfr->scaling.empty()) {
+            auto val = interpolate(kfr->type, kfr->times, kfr->scaling, time);
+            for (auto target : anm->targets)
+                if (target.first == kfr) target.second->scaling = val;
         }
     }
 }
@@ -7542,17 +7579,35 @@ inline void update_transforms(animation* anm, float time) {
 /// Update node transforms
 inline void update_transforms(
     node* nde, const frame3f& parent = identity_frame3f) {
-    auto frame = parent * nde->frame;
-    if (nde->ist) nde->ist->frame = frame;
+    auto frame = parent * nde->frame * translation_frame3(nde->translation) *
+                 rotation_frame3(nde->rotation) * scaling_frame3(nde->scaling);
+    for (auto ist : nde->ists) ist->frame = frame;
     if (nde->cam) nde->cam->frame = frame;
     if (nde->env) nde->env->frame = frame;
-    for (auto child : nde->children) update_transforms(child, frame);
+    for (auto child : nde->children_) update_transforms(child, frame);
 }
 
 /// Update node transforms
 inline void update_transforms(scene* scn, float time = 0) {
     for (auto agr : scn->animations) update_transforms(agr, time);
-    if (!scn->nodes.empty()) update_transforms(scn->nodes[0]);
+    for (auto nde : scn->nodes) nde->children_.clear();
+    for (auto nde : scn->nodes)
+        if (nde->parent) nde->parent->children_.push_back(nde);
+    for (auto nde : scn->nodes)
+        if (!nde->parent) update_transforms(nde);
+}
+
+/// Compute animation range
+inline vec2f compute_animation_range(const scene* scn) {
+    if (scn->animations.empty()) return zero2f;
+    auto range = vec2f{+flt_max, -flt_max};
+    for (auto anm : scn->animations) {
+        for (auto kfr : anm->keyframes) {
+            range.x = min(range.x, kfr->times.front());
+            range.y = max(range.y, kfr->times.back());
+        }
+    }
+    return range;
 }
 
 /// Loading options
@@ -7610,8 +7665,6 @@ struct add_elements_options {
     bool texture_data = true;
     /// Add instances
     bool shape_instances = true;
-    /// Add default camera
-    bool default_camera = true;
     /// Add an empty default environment
     bool default_environment = false;
     /// Add default names
@@ -7626,6 +7679,10 @@ struct add_elements_options {
         return opts;
     }
 };
+
+/// Make a view camera either copying a given one or building a default one.
+/// Bounding boxes for the scene will be updated.
+camera* make_view_camera(scene* scn, int camera_id);
 
 /// Add elements
 void add_elements(scene* scn, const add_elements_options& opts = {});
@@ -8284,6 +8341,8 @@ unordered_map<string, test_environment_params>& test_environment_presets();
 struct test_node_params {
     /// Name (if not filled, assign a default one)
     string name = "";
+    /// Parent node
+    string parent = "";
     /// Camera
     string camera = "";
     /// Instance
@@ -8292,6 +8351,12 @@ struct test_node_params {
     string environment = "";
     /// Frame
     frame3f frame = identity_frame3f;
+    /// Translation
+    vec3f translation = {0, 0, 0};
+    /// Roation
+    quat4f rotation = {0, 0, 0, 1};
+    /// Scaling
+    vec3f scaling = {1, 1, 1};
 };
 
 /// Updates a test node, adding it to the scene if missing.
@@ -8461,8 +8526,8 @@ inline const vector<pair<string, trace_filter_type>>& trace_filter_names() {
 
 /// Rendering params
 struct trace_params {
-    /// camera id
-    int camera_id = 0;
+    /// camera id (-1 for default)
+    int camera_id = -1;
     /// image width
     int width = 360;
     /// image height
@@ -8522,19 +8587,20 @@ inline const image4f& get_trace_image(const trace_state* st) { return st->img; }
 inline int get_trace_sample(const trace_state* st) { return st->sample; }
 
 /// Trace the next nsamples samples.
-void trace_samples(trace_state* st, const scene* scn, int nsamples,
-    const trace_params& params);
+void trace_samples(trace_state* st, const scene* scn, const camera* view,
+    int nsamples, const trace_params& params);
 
 /// Trace the whole image
-inline image4f trace_image(const scene* scn, const trace_params& params) {
+inline image4f trace_image(
+    const scene* scn, const camera* view, const trace_params& params) {
     auto st = unique_ptr<trace_state>(make_trace_state(params));
-    trace_samples(st.get(), scn, params.nsamples, params);
+    trace_samples(st.get(), scn, view, params.nsamples, params);
     return get_trace_image(st.get());
 }
 
 /// Starts an anyncrhounous renderer.
-void trace_async_start(
-    trace_state* st, const scene* scn, const trace_params& params);
+void trace_async_start(trace_state* st, const scene* scn, const camera* view,
+    const trace_params& params);
 
 /// Stop the asynchronous renderer.
 void trace_async_stop(trace_state* st);
@@ -8755,14 +8821,26 @@ struct obj_environment {
     string matname;
 };
 
-/// Instance [extension]
-struct obj_instance {
-    /// instance name
+/// Node [extension]
+struct obj_node {
+    /// node name
     string name;
+    /// node parent
+    string parent;
+    /// camera
+    string camname;
+    /// object
+    string objname;
+    /// environment
+    string envname;
     /// transform frame (affine matrix)
     frame3f frame = identity_frame3f;
-    /// object name
-    string objname;
+    /// translation
+    vec3f translation = zero3f;
+    /// rotation
+    quat4f rotation = {0, 0, 0, 1};
+    /// scaling
+    vec3f scaling = {1, 1, 1};
 };
 
 /// OBJ asset
@@ -8790,8 +8868,8 @@ struct obj_scene {
     vector<obj_camera*> cameras;
     /// env maps [extension]
     vector<obj_environment*> environments;
-    /// instances [extension]
-    vector<obj_instance*> instances;
+    /// nodes [extension]
+    vector<obj_node*> nodes;
 
     /// cleanup
     ~obj_scene() {
@@ -8805,7 +8883,7 @@ struct obj_scene {
             if (v) delete v;
         for (auto v : environments)
             if (v) delete v;
-        for (auto v : instances)
+        for (auto v : nodes)
             if (v) delete v;
     }
 };
@@ -11990,8 +12068,8 @@ struct gl_stdsurface_state {
 
 /// Params for  gl_stdsurface_program drawing
 struct gl_stdsurface_params {
-    /// camera id
-    int camera_id = 0;
+    /// camera id (-1 for deafult)
+    int camera_id = -1;
     /// image width
     int width = 360;
     /// image height
@@ -12040,7 +12118,7 @@ void clear_stdsurface_state(gl_stdsurface_state* st, bool clear_program = true);
 
 /// Draw whole scene
 void draw_stdsurface_scene(gl_stdsurface_state* st, const scene* scn,
-    const gl_stdsurface_params& params);
+    const camera* view, const gl_stdsurface_params& params);
 
 }  // namespace ygl
 
@@ -12401,8 +12479,9 @@ inline void draw_imageinspect_widgets(gl_window* win, const string& lbl,
 
 /// Draws a widget that can selected the camera
 inline bool draw_camera_widget(
-    gl_window* win, const string& lbl, scene* scn, int& cam_idx) {
+    gl_window* win, const string& lbl, scene* scn, camera* view, int& cam_idx) {
     auto camera_names = vector<pair<string, int>>{};
+    camera_names.push_back({view->name, -1});
     auto idx = 0;
     for (auto cam : scn->cameras) camera_names.push_back({cam->name, idx++});
     return draw_value_widget(win, lbl, cam_idx, camera_names);
