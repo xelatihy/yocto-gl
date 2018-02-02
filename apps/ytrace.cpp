@@ -144,8 +144,8 @@ int main(int argc, char* argv[]) {
                 app->gamma, app->filmic);
         }
         log_info("rendering sample {}/{}", cur_sample, app->params.nsamples);
-        trace_samples(app->state, app->scn, app->view, app->params.batch_size,
-            app->params);
+        trace_samples(app->state, app->scn, app->view, app->scn->bvh,
+                      app->params.batch_size, app->params);
     }
     log_info("rendering done");
 
