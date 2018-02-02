@@ -8821,16 +8821,6 @@ struct obj_environment {
     string matname;
 };
 
-/// Instance [extension]
-struct obj_instance {
-    /// instance name
-    string name;
-    /// transform frame (affine matrix)
-    frame3f frame = identity_frame3f;
-    /// object name
-    string objname;
-};
-
 /// Node [extension]
 struct obj_node {
     /// node name
@@ -8878,8 +8868,6 @@ struct obj_scene {
     vector<obj_camera*> cameras;
     /// env maps [extension]
     vector<obj_environment*> environments;
-    /// instances [extension]
-    vector<obj_instance*> instances;
     /// nodes [extension]
     vector<obj_node*> nodes;
 
@@ -8894,8 +8882,6 @@ struct obj_scene {
         for (auto v : cameras)
             if (v) delete v;
         for (auto v : environments)
-            if (v) delete v;
-        for (auto v : instances)
             if (v) delete v;
         for (auto v : nodes)
             if (v) delete v;
