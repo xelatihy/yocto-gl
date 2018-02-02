@@ -106,7 +106,7 @@ int main(int argc, char* argv[]) {
         log_fatal("cannot load scene {}", app->filename);
         return 1;
     }
-    
+
     // add elements
     auto opts = add_elements_options();
     opts.pointline_radius = 0.001f;
@@ -115,7 +115,7 @@ int main(int argc, char* argv[]) {
     // view camera
     app->view = make_view_camera(app->scn, app->params.camera_id);
     app->params.camera_id = -1;
-    
+
     // build bvh
     log_info("building bvh");
     build_bvh(app->scn);
@@ -126,8 +126,8 @@ int main(int argc, char* argv[]) {
 
     // initialize rendering objects
     auto cam = (app->params.camera_id < 0) ?
-            app->view :
-            app->scn->cameras[app->params.camera_id];
+                   app->view :
+                   app->scn->cameras[app->params.camera_id];
     app->params.width = (int)round(cam->aspect * app->params.height);
     app->state = make_trace_state(app->params);
 
@@ -144,7 +144,8 @@ int main(int argc, char* argv[]) {
                 app->gamma, app->filmic);
         }
         log_info("rendering sample {}/{}", cur_sample, app->params.nsamples);
-        trace_samples(app->state, app->scn, app->view, app->params.batch_size, app->params);
+        trace_samples(app->state, app->scn, app->view, app->params.batch_size,
+            app->params);
     }
     log_info("rendering done");
 

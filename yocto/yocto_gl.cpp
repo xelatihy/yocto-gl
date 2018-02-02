@@ -76,6 +76,10 @@
 //
 // # Todo
 //
+// ## BVH
+//
+// - consider merging axis with internal
+//
 // ## Infrastructure
 //
 // - vec: min_element/min_element_index
@@ -144,6 +148,87 @@
 unsigned int imgui_extrafont_compressed_size();
 const unsigned int* imgui_extrafont_compressed_data();
 #endif
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION FOR UI UTILITIES
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// Turntable for UI navigation.
+void camera_turntable(vec3f& from, vec3f& to, vec3f& up, const vec3f& rotate,
+    float dolly, const vec2f& pan) {
+    // rotate if necessary
+    if (rotate.x || rotate.y) {
+        auto z = normalize(to - from);
+        auto lz = length(to - from);
+        auto phi = atan2(z.z, z.x) + rotate.x;
+        auto theta = acos(z.y) + rotate.y;
+        theta = clamp(theta, 0.001f, pif - 0.001f);
+        auto nz = vec3f{sin(theta) * cos(phi) * lz, cos(theta) * lz,
+            sin(theta) * sin(phi) * lz};
+        from = to - nz;
+    }
+
+    // dolly if necessary
+    if (dolly) {
+        auto z = normalize(to - from);
+        auto lz = max(0.001f, length(to - from) * (1 + dolly));
+        z *= lz;
+        from = to - z;
+    }
+
+    // pan if necessary
+    if (pan.x || pan.y) {
+        auto z = normalize(to - from);
+        auto x = normalize(cross(up, z));
+        auto y = normalize(cross(z, x));
+        auto t = vec3f{pan.x * x.x + pan.y * y.x, pan.x * x.y + pan.y * y.y,
+            pan.x * x.z + pan.y * y.z};
+        from += t;
+        to += t;
+    }
+}
+
+// Turntable for UI navigation.
+void camera_turntable(frame3f& frame, float& focus, const vec2f& rotate,
+    float dolly, const vec2f& pan) {
+    // rotate if necessary
+    if (rotate.x || rotate.y) {
+        auto phi = atan2(frame.z.z, frame.z.x) + rotate.x;
+        auto theta = acos(frame.z.y) + rotate.y;
+        theta = clamp(theta, 0.001f, pif - 0.001f);
+        auto new_z =
+            vec3f{sin(theta) * cos(phi), cos(theta), sin(theta) * sin(phi)};
+        auto new_center = frame.o - frame.z * focus;
+        auto new_o = new_center + new_z * focus;
+        frame = lookat_frame3(new_o, new_center, {0, 1, 0});
+        focus = length(new_o - new_center);
+    }
+
+    // pan if necessary
+    if (dolly) {
+        auto c = frame.o - frame.z * focus;
+        focus = max(focus + dolly, 0.001f);
+        frame.o = c + frame.z * focus;
+    }
+
+    // pan if necessary
+    if (pan.x || pan.y) { frame.o += frame.x * pan.x + frame.y * pan.y; }
+}
+
+// FPS camera for UI navigation for a frame parametrization.
+void camera_fps(frame3f& frame, const vec3f& transl, const vec2f& rotate) {
+    // https://gamedev.stackexchange.com/questions/30644/how-to-keep-my-quaternion-using-fps-camera-from-tilting-and-messing-up
+    auto y = vec3f{0, 1, 0};
+    auto z = orthonormalize(frame.z, y);
+    auto x = cross(y, z);
+
+    frame.rot() = rotation_mat3(vec3f{1, 0, 0}, rotate.y) * frame.rot() *
+                  rotation_mat3(vec3f{0, 1, 0}, rotate.x);
+    frame.pos() += transl.x * x + transl.y * y + transl.z * z;
+}
+
+}  // namespace ygl
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR PERLIN NOISE
@@ -380,6 +465,845 @@ float perlin_turbulence_noise(const vec3f& p, float lacunarity, float gain,
 }  // namespace ygl
 
 // -----------------------------------------------------------------------------
+// IMPLEMENTATION OF SHAPE UTILITIES
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// Compute per-vertex normals/tangents for lines, triangles and quads with
+// positions pos. Weighted indicated whether the normals/tangents are
+// weighted by line length.
+vector<vec3f> compute_normals(const vector<vec2i>& lines,
+    const vector<vec3i>& triangles, const vector<vec4i>& quads,
+    const vector<vec3f>& pos, bool weighted) {
+    auto norm = vector<vec3f>(pos.size(), zero3f);
+    for (auto& l : lines) {
+        auto n = pos[l.y] - pos[l.x];
+        if (!weighted) n = normalize(n);
+        for (auto vid : l) norm[vid] += n;
+    }
+    for (auto& t : triangles) {
+        auto n = cross(pos[t.y] - pos[t.x], pos[t.z] - pos[t.x]);
+        if (!weighted) n = normalize(n);
+        for (auto vid : t) norm[vid] += n;
+    }
+    for (auto& q : quads) {
+        auto n = cross(pos[q.y] - pos[q.x], pos[q.w] - pos[q.x]) +
+                 cross(pos[q.w] - pos[q.z], pos[q.x] - pos[q.z]);
+        if (!weighted) n = normalize(n);
+        for (auto vid : q) norm[vid] += n;
+    }
+    for (auto& n : norm) n = normalize(n);
+    return norm;
+}
+
+// Compute per-vertex tangent frame for triangle meshes.
+// Tangent space is defined by a four component vector.
+// The first three components are the tangent with respect to the U texcoord.
+// The fourth component is the sign of the tangent wrt the V texcoord.
+// Tangent frame is useful in normal mapping.
+vector<vec4f> compute_tangent_frames(const vector<vec3i>& triangles,
+    const vector<vec3f>& pos, const vector<vec3f>& norm,
+    const vector<vec2f>& texcoord, bool weighted) {
+    auto tangu = vector<vec3f>(pos.size(), zero3f);
+    auto tangv = vector<vec3f>(pos.size(), zero3f);
+    for (auto& t : triangles) {
+        auto tutv = triangle_tangents_fromuv(pos[t.x], pos[t.y], pos[t.z],
+            texcoord[t.x], texcoord[t.y], texcoord[t.z]);
+        if (!weighted) tutv = {normalize(tutv.first), normalize(tutv.second)};
+        for (auto vid : t) tangu[vid] += tutv.first;
+        for (auto vid : t) tangv[vid] += tutv.second;
+    }
+    for (auto& t : tangu) t = normalize(t);
+    for (auto& t : tangv) t = normalize(t);
+    auto tangsp = vector<vec4f>(pos.size(), zero4f);
+    for (auto i = 0; i < pos.size(); i++) {
+        tangu[i] = orthonormalize(tangu[i], norm[i]);
+        auto s = (dot(cross(norm[i], tangu[i]), tangv[i]) < 0) ? -1.0f : 1.0f;
+        tangsp[i] = {tangu[i].x, tangu[i].y, tangu[i].z, s};
+    }
+    return tangsp;
+}
+
+// Apply skinning
+void compute_skinning(const vector<vec3f>& pos, const vector<vec3f>& norm,
+    const vector<vec4f>& weights, const vector<vec4i>& joints,
+    const vector<mat4f>& xforms, vector<vec3f>& skinned_pos,
+    vector<vec3f>& skinned_norm) {
+    skinned_pos.resize(pos.size());
+    skinned_norm.resize(norm.size());
+    for (auto i = 0; i < pos.size(); i++) {
+        skinned_pos[i] =
+            transform_point(xforms[joints[i].x], pos[i]) * weights[i].x +
+            transform_point(xforms[joints[i].y], pos[i]) * weights[i].y +
+            transform_point(xforms[joints[i].z], pos[i]) * weights[i].z +
+            transform_point(xforms[joints[i].w], pos[i]) * weights[i].w;
+    }
+    for (auto i = 0; i < pos.size(); i++) {
+        skinned_norm[i] = normalize(
+            transform_direction(xforms[joints[i].x], norm[i]) * weights[i].x +
+            transform_direction(xforms[joints[i].y], norm[i]) * weights[i].y +
+            transform_direction(xforms[joints[i].z], norm[i]) * weights[i].z +
+            transform_direction(xforms[joints[i].w], norm[i]) * weights[i].w);
+    }
+}
+
+// Apply skinning
+void compute_skinning(const vector<vec3f>& pos, const vector<vec3f>& norm,
+    const vector<vec4f>& weights, const vector<vec4i>& joints,
+    const vector<frame3f>& xforms, vector<vec3f>& skinned_pos,
+    vector<vec3f>& skinned_norm) {
+    skinned_pos.resize(pos.size());
+    skinned_norm.resize(norm.size());
+    for (auto i = 0; i < pos.size(); i++) {
+        skinned_pos[i] =
+            transform_point(xforms[joints[i].x], pos[i]) * weights[i].x +
+            transform_point(xforms[joints[i].y], pos[i]) * weights[i].y +
+            transform_point(xforms[joints[i].z], pos[i]) * weights[i].z +
+            transform_point(xforms[joints[i].w], pos[i]) * weights[i].w;
+    }
+    for (auto i = 0; i < pos.size(); i++) {
+        skinned_norm[i] = normalize(
+            transform_direction(xforms[joints[i].x], norm[i]) * weights[i].x +
+            transform_direction(xforms[joints[i].y], norm[i]) * weights[i].y +
+            transform_direction(xforms[joints[i].z], norm[i]) * weights[i].z +
+            transform_direction(xforms[joints[i].w], norm[i]) * weights[i].w);
+    }
+}
+
+// Apply skinning as specified in Khronos glTF
+void compute_matrix_skinning(const vector<vec3f>& pos,
+    const vector<vec3f>& norm, const vector<vec4f>& weights,
+    const vector<vec4i>& joints, const vector<mat4f>& xforms,
+    vector<vec3f>& skinned_pos, vector<vec3f>& skinned_norm) {
+    skinned_pos.resize(pos.size());
+    skinned_norm.resize(norm.size());
+    for (auto i = 0; i < pos.size(); i++) {
+        auto xform = xforms[joints[i].x] * weights[i].x +
+                     xforms[joints[i].y] * weights[i].y +
+                     xforms[joints[i].z] * weights[i].z +
+                     xforms[joints[i].w] * weights[i].w;
+        skinned_pos[i] = transform_point(xform, pos[i]);
+        skinned_norm[i] = normalize(transform_direction(xform, norm[i]));
+    }
+}
+
+// Create an array of edges.
+vector<vec2i> get_edges(const vector<vec2i>& lines,
+    const vector<vec3i>& triangles, const vector<vec4i>& quads) {
+    auto edges = vector<vec2i>();
+    auto eset = unordered_set<vec2i>();
+    for (auto e : lines) {
+        e = {min(e.x, e.y), max(e.x, e.y)};
+        if (!eset.insert(e).second) continue;
+        eset.insert({e.y, e.x});
+        edges += e;
+    }
+    for (auto& t : triangles) {
+        for (auto e : {vec2i{t.x, t.y}, vec2i{t.y, t.z}, vec2i{t.z, t.x}}) {
+            e = {min(e.x, e.y), max(e.x, e.y)};
+            if (!eset.insert(e).second) continue;
+            eset.insert({e.y, e.x});
+            edges += e;
+        }
+    }
+    for (auto& q : quads) {
+        for (auto e : {vec2i{q.x, q.y}, vec2i{q.y, q.z}, vec2i{q.z, q.w},
+                 vec2i{q.w, q.x}}) {
+            if (e.x == e.y) continue;
+            e = {min(e.x, e.y), max(e.x, e.y)};
+            if (!eset.insert(e).second) continue;
+            eset.insert({e.y, e.x});
+            edges += e;
+        }
+    }
+
+    return edges;
+}
+
+// Create an array of boundary edges. Lines are always considered boundaries.
+vector<vec2i> get_boundary_edges(const vector<vec2i>& lines,
+    const vector<vec3i>& triangles, const vector<vec4i>& quads) {
+    auto ecount = unordered_map<vec2i, int>();
+
+    // lines are added manually later
+    for (auto l : lines) { ecount.insert({l, 2}); }
+    for (auto t : triangles) {
+        for (auto e : {vec2i{t.x, t.y}, vec2i{t.y, t.z}, vec2i{t.z, t.x}}) {
+            e = {min(e.x, e.y), max(e.x, e.y)};
+            auto ins = ecount.insert({e, 1});
+            if (!ins.second) ins.first->second += 1;
+        }
+    }
+    for (auto q : quads) {
+        for (auto e : {vec2i{q.x, q.y}, vec2i{q.y, q.z}, vec2i{q.z, q.w},
+                 vec2i{q.w, q.x}}) {
+            if (e.x == e.y) continue;
+            e = {min(e.x, e.y), max(e.x, e.y)};
+            auto ins = ecount.insert({e, 1});
+            if (!ins.second) ins.first->second += 1;
+        }
+    }
+
+    auto boundary = lines;
+    for (auto ec : ecount) {
+        if (ec.second > 1) continue;
+        boundary += ec.first;
+    }
+
+    return boundary;
+}
+
+// Get a list of all unique vertices.
+vector<int> get_verts(const vector<vec2i>& lines,
+    const vector<vec3i>& triangles, const vector<vec4i>& quads) {
+    auto verts = vector<int>();
+    auto vset = unordered_set<int>();
+    for (auto l : lines)
+        for (auto vid : l)
+            if (vset.insert(vid).second) verts += vid;
+    for (auto t : triangles)
+        for (auto vid : t)
+            if (vset.insert(vid).second) verts += vid;
+    for (auto q : quads)
+        for (auto vid : q)
+            if (vset.insert(vid).second) verts += vid;
+    return verts;
+}
+
+// Create an array of boundary vertices. Lines are always considered
+// boundaries.
+vector<int> get_boundary_verts(const vector<vec2i>& lines,
+    const vector<vec3i>& triangles, const vector<vec4i>& quads) {
+    return get_verts(get_boundary_edges(lines, triangles, quads), {}, {});
+}
+
+// Convert quads to triangles
+vector<vec3i> convert_quads_to_triangles(const vector<vec4i>& quads) {
+    auto triangles = vector<vec3i>();
+    triangles.reserve(quads.size() * 2);
+    for (auto& q : quads) {
+        triangles += {q.x, q.y, q.w};
+        if (q.z != q.w) triangles += {q.z, q.w, q.y};
+    }
+    return triangles;
+}
+
+// Convert quads to triangles with a diamond-like topology.
+// Quads have to be consecutive one row after another.
+vector<vec3i> convert_quads_to_triangles(
+    const vector<vec4i>& quads, int row_length) {
+    auto triangles = vector<vec3i>();
+    triangles.reserve(quads.size() * 2);
+    for (auto& q : quads) {
+        triangles += {q.x, q.y, q.w};
+        if (q.z != q.w) triangles += {q.z, q.w, q.y};
+    }
+    return triangles;
+#if 0
+        triangles.resize(usteps * vsteps * 2);
+        for (auto j = 0; j < vsteps; j++) {
+            for (auto i = 0; i < usteps; i++) {
+                auto& f1 = triangles[(j * usteps + i) * 2 + 0];
+                auto& f2 = triangles[(j * usteps + i) * 2 + 1];
+                if ((i + j) % 2) {
+                    f1 = {vid(i, j), vid(i + 1, j), vid(i + 1, j + 1)};
+                    f2 = {vid(i + 1, j + 1), vid(i, j + 1), vid(i, j)};
+                } else {
+                    f1 = {vid(i, j), vid(i + 1, j), vid(i, j + 1)};
+                    f2 = {vid(i + 1, j + 1), vid(i, j + 1), vid(i + 1, j)};
+                }
+            }
+        }
+#endif
+    return triangles;
+}
+
+// Convert beziers to lines using 3 lines for each bezier.
+vector<vec2i> convert_bezier_to_lines(const vector<vec4i>& beziers) {
+    auto lines = vector<vec2i>();
+    lines.reserve(beziers.size() * 3);
+    for (auto& b : beziers) {
+        lines += {b.x, b.y};
+        lines += {b.y, b.z};
+        lines += {b.z, b.w};
+    }
+    return lines;
+}
+
+// Convert face varying data to single primitives. Returns the quads indices
+// and filled vectors for pos, norm and texcoord.
+tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
+convert_face_varying(const vector<vec4i>& quads_pos,
+    const vector<vec4i>& quads_norm, const vector<vec4i>& quads_texcoord,
+    const vector<vec3f>& pos, const vector<vec3f>& norm,
+    const vector<vec2f>& texcoord) {
+    // make faces unique
+    unordered_map<vec3i, int> vert_map;
+    auto quads = vector<vec4i>(quads_pos.size());
+    for (auto fid = 0; fid < quads_pos.size(); fid++) {
+        for (auto c = 0; c < 4; c++) {
+            auto v = vec3i{
+                quads_pos[fid][c],
+                (!quads_norm.empty()) ? quads_norm[fid][c] : -1,
+                (!quads_texcoord.empty()) ? quads_texcoord[fid][c] : -1,
+            };
+            if (vert_map.find(v) == vert_map.end()) {
+                auto s = (int)vert_map.size();
+                vert_map[v] = s;
+            }
+            quads[fid][c] = vert_map.at(v);
+        }
+    }
+
+    // fill vert data
+    auto qpos = vector<vec3f>();
+    if (!pos.empty()) {
+        qpos.resize(vert_map.size());
+        for (auto& kv : vert_map) { qpos[kv.second] = pos[kv.first.x]; }
+    }
+    auto qnorm = vector<vec3f>();
+    if (!norm.empty()) {
+        qnorm.resize(vert_map.size());
+        for (auto& kv : vert_map) { qnorm[kv.second] = norm[kv.first.y]; }
+    }
+    auto qtexcoord = vector<vec2f>();
+    if (!texcoord.empty()) {
+        qtexcoord.resize(vert_map.size());
+        for (auto& kv : vert_map) {
+            qtexcoord[kv.second] = texcoord[kv.first.z];
+        }
+    }
+
+    // done
+    return {quads, qpos, qnorm, qtexcoord};
+}
+
+// wrapper for implementation below
+inline float _subdivide_normalize(float x) { return x; }
+inline vec2f _subdivide_normalize(const vec2f& x) { return normalize(x); }
+inline vec3f _subdivide_normalize(const vec3f& x) { return normalize(x); }
+inline vec4f _subdivide_normalize(const vec4f& x) { return normalize(x); }
+
+// Tesselate lines, triangles and quads by spolitting edges.
+// Returns the tesselated elements and dictionaries for vertex calculations.
+tuple<vector<vec2i>, vector<vec3i>, vector<vec4i>, vector<vec2i>, vector<vec4i>>
+subdivide_elems_linear(const vector<vec2i>& lines,
+    const vector<vec3i>& triangles, const vector<vec4i>& quads, int nverts) {
+    if (!nverts) return {};
+    auto emap = unordered_map<vec2i, int>();
+    auto edges = vector<vec2i>();
+    for (auto e : lines) {
+        if (contains(emap, e)) continue;
+        emap[{e.x, e.y}] = nverts + (int)edges.size();
+        emap[{e.y, e.x}] = nverts + (int)edges.size();
+        edges += e;
+    }
+    for (auto& t : triangles) {
+        for (auto e : {vec2i{t.x, t.y}, vec2i{t.y, t.z}, vec2i{t.z, t.x}}) {
+            if (contains(emap, e)) continue;
+            emap[{e.x, e.y}] = nverts + (int)edges.size();
+            emap[{e.y, e.x}] = nverts + (int)edges.size();
+            edges += e;
+        }
+    }
+    for (auto& q : quads) {
+        for (auto e : {vec2i{q.x, q.y}, vec2i{q.y, q.z}, vec2i{q.z, q.w},
+                 vec2i{q.w, q.x}}) {
+            if (e.x == e.y) continue;
+            if (contains(emap, e)) continue;
+            emap[{e.x, e.y}] = nverts + (int)edges.size();
+            emap[{e.y, e.x}] = nverts + (int)edges.size();
+            edges += e;
+        }
+    }
+
+    auto tlines = vector<vec2i>();
+    tlines.reserve(lines.size() * 2);
+    for (auto& l : lines) {
+        tlines += {l.x, emap.at(l)};
+        tlines += {emap.at(l), l.y};
+    }
+
+    auto ttriangles = vector<vec3i>();
+    ttriangles.reserve(triangles.size() * 4);
+    for (auto& t : triangles) {
+        ttriangles.push_back({t.x, emap.at({t.x, t.y}), emap.at({t.z, t.x})});
+        ttriangles.push_back({t.y, emap.at({t.y, t.z}), emap.at({t.x, t.y})});
+        ttriangles.push_back({t.z, emap.at({t.z, t.x}), emap.at({t.y, t.z})});
+        ttriangles.push_back(
+            {emap.at({t.x, t.y}), emap.at({t.y, t.z}), emap.at({t.z, t.x})});
+    }
+
+    auto tquads = vector<vec4i>();
+    tquads.reserve(quads.size() * 4);
+    for (auto fkv : enumerate(quads)) {
+        auto f = fkv.second;
+        auto fvert = nverts + (int)edges.size() + fkv.first;
+        if (f.z != f.w) {
+            tquads += {f.x, emap.at({f.x, f.y}), fvert, emap.at({f.w, f.x})};
+            tquads += {f.y, emap.at({f.y, f.z}), fvert, emap.at({f.x, f.y})};
+            tquads += {f.z, emap.at({f.z, f.w}), fvert, emap.at({f.y, f.z})};
+            tquads += {f.w, emap.at({f.w, f.x}), fvert, emap.at({f.z, f.w})};
+        } else {
+            tquads += {f.x, emap.at({f.x, f.y}), fvert, emap.at({f.z, f.x})};
+            tquads += {f.y, emap.at({f.y, f.z}), fvert, emap.at({f.x, f.y})};
+            tquads += {f.z, emap.at({f.z, f.x}), fvert, emap.at({f.y, f.z})};
+        }
+    }
+    tquads.shrink_to_fit();
+
+    return {tlines, ttriangles, tquads, edges, quads};
+}
+
+// Subdivide vertex properties given the maps
+template <typename T>
+vector<T> subdivide_vert_linear(const vector<T>& vert,
+    const vector<vec2i>& edges, const vector<vec4i>& faces, bool normalized) {
+    if (vert.empty()) return {};
+
+    auto tvert = vector<T>();
+    tvert.reserve(vert.size() + edges.size() + faces.size());
+
+    tvert += vert;
+    for (auto e : edges) tvert += (vert[e.x] + vert[e.y]) / 2;
+    for (auto f : faces) {
+        if (f.z != f.w)
+            tvert += (vert[f.x] + vert[f.y] + vert[f.z] + vert[f.w]) / 4;
+        else
+            tvert += (vert[f.x] + vert[f.y] + vert[f.z]) / 3;
+    }
+
+    if (normalized) {
+        for (auto& n : tvert) n = _subdivide_normalize(n);
+    }
+
+    return tvert;
+}
+
+// template instantiations
+template vector<float> subdivide_vert_linear(const vector<float>& vert,
+    const vector<vec2i>& edges, const vector<vec4i>& faces, bool normalized);
+template vector<vec2f> subdivide_vert_linear(const vector<vec2f>& vert,
+    const vector<vec2i>& edges, const vector<vec4i>& faces, bool normalized);
+template vector<vec3f> subdivide_vert_linear(const vector<vec3f>& vert,
+    const vector<vec2i>& edges, const vector<vec4i>& faces, bool normalized);
+template vector<vec4f> subdivide_vert_linear(const vector<vec4f>& vert,
+    const vector<vec2i>& edges, const vector<vec4i>& faces, bool normalized);
+
+// Performs the smoothing step of Catmull-Clark. Start with a tesselate quad
+// mesh obtained with subdivide_elems_linear() and subdivide_vert_linear(). To
+// handle open meshes with boundary, get the boundary from make_boundary_edge()
+// and pass it as crease_lines. To fix the boundary entirely, just get the
+// boundary vertices and pass it as creases.
+template <typename T>
+vector<T> subdivide_vert_catmullclark(const vector<vec4i>& quads,
+    const vector<T>& vert, const vector<vec2i>& crease_tlines,
+    const vector<int>& crease_tpoints, bool normalized) {
+    if (quads.empty() || vert.empty()) return vert;
+
+    // define vertex valence ---------------------------
+    auto val = vector<int>(vert.size(), 2);
+    for (auto e : crease_tlines)
+        for (auto vid : e) val[vid] = 1;
+    for (auto vid : crease_tpoints) val[vid] = 0;
+
+    // averaging pass ----------------------------------
+    auto tvert = vector<T>(vert.size(), T());
+    auto count = vector<int>(vert.size(), 0);
+    for (auto p : crease_tpoints) {
+        auto c = vert[p];
+        if (val[p] == 0) tvert[p] += c;
+        if (val[p] == 0) count[p] += 1;
+    }
+    for (auto e : crease_tlines) {
+        auto c = (vert[e.x] + vert[e.y]) / 2.0f;
+        for (auto vid : e) {
+            if (val[vid] == 1) tvert[vid] += c;
+            if (val[vid] == 1) count[vid] += 1;
+        }
+    }
+    for (auto& f : quads) {
+        auto c = (vert[f.x] + vert[f.y] + vert[f.z] + vert[f.w]) / 4.0f;
+        for (auto vid : f) {
+            if (val[vid] == 2) tvert[vid] += c;
+            if (val[vid] == 2) count[vid] += 1;
+        }
+    }
+    for (auto i = 0; i < vert.size(); i++) { tvert[i] /= (float)count[i]; }
+
+    // correction pass ----------------------------------
+    // p = p + (avg_p - p) * (4/avg_count)
+    for (auto i = 0; i < vert.size(); i++) {
+        if (val[i] != 2) continue;
+        tvert[i] = vert[i] + (tvert[i] - vert[i]) * (4.0f / count[i]);
+    }
+
+    if (normalized) {
+        for (auto& v : tvert) v = _subdivide_normalize(v);
+    }
+
+    return tvert;
+}
+
+// explicit instantiations
+template vector<float> subdivide_vert_catmullclark(const vector<vec4i>& quads,
+    const vector<float>& vert, const vector<vec2i>& crease_tlines,
+    const vector<int>& crease_tpoints, bool normalized);
+template vector<vec2f> subdivide_vert_catmullclark(const vector<vec4i>& quads,
+    const vector<vec2f>& vert, const vector<vec2i>& crease_tlines,
+    const vector<int>& crease_tpoints, bool normalized);
+template vector<vec3f> subdivide_vert_catmullclark(const vector<vec4i>& quads,
+    const vector<vec3f>& vert, const vector<vec2i>& crease_tlines,
+    const vector<int>& crease_tpoints, bool normalized);
+template vector<vec4f> subdivide_vert_catmullclark(const vector<vec4i>& quads,
+    const vector<vec4f>& vert, const vector<vec2i>& crease_tlines,
+    const vector<int>& crease_tpoints, bool normalized);
+
+// Subdivide bezier recursive by splitting each segment into two in the middle.
+// Returns the tesselated elements and dictionaries for vertex calculations.
+tuple<vector<vec4i>, vector<int>, vector<vec4i>> subdivide_bezier_recursive(
+    const vector<vec4i>& beziers, int nverts) {
+    if (!nverts) return {};
+    auto vmap = unordered_map<int, int>();
+    auto verts = vector<int>();
+    for (auto& b : beziers) {
+        if (!contains(vmap, b.x)) {
+            vmap[b.x] = verts.size();
+            verts += b.x;
+        }
+        if (!contains(vmap, b.w)) {
+            vmap[b.w] = verts.size();
+            verts += b.w;
+        }
+    }
+    auto tbeziers = vector<vec4i>();
+    tbeziers.reserve(beziers.size() * 2);
+    for (auto b_kv : enumerate(beziers)) {
+        auto b = b_kv.second;
+        auto bo = (int)verts.size() + b_kv.first * 5;
+        tbeziers += {vmap.at(b.x), bo + 0, bo + 1, bo + 2};
+        tbeziers += {bo + 2, bo + 3, bo + 4, vmap.at(b.w)};
+    }
+    return {tbeziers, verts, beziers};
+}
+
+// Subdivide vertex properties given the maps
+template <typename T>
+vector<T> subdivide_vert_bezier(const vector<T>& vert, const vector<int>& verts,
+    const vector<vec4i>& segments, bool normalized) {
+    if (vert.empty()) return {};
+
+    auto tvert = vector<T>();
+    tvert.reserve(verts.size() + segments.size() * 5);
+
+    for (auto v : verts) tvert += vert[v];
+    for (auto s : segments) {
+        tvert += vert[s.x] * (1.f / 2) + vert[s.y] * (1.f / 2);
+        tvert += vert[s.x] * (1.f / 4) + vert[s.y] * (1.f / 2) +
+                 vert[s.z] * (1.f / 4);
+        tvert += vert[s.x] * (1.f / 8) + vert[s.y] * (3.f / 8) +
+                 vert[s.z] * (3.f / 8) + vert[s.w] * (1.f / 8);
+        tvert += vert[s.y] * (1.f / 4) + vert[s.z] * (1.f / 2) +
+                 vert[s.w] * (1.f / 4);
+        tvert += vert[s.z] * (1.f / 2) + vert[s.w] * (1.f / 2);
+    }
+
+    if (normalized) {
+        for (auto& n : tvert) n = _subdivide_normalize(n);
+    }
+
+    return tvert;
+}
+
+// template instantiations
+template vector<float> subdivide_vert_bezier(const vector<float>& vert,
+    const vector<int>& verts, const vector<vec4i>& segments, bool normalized);
+template vector<vec2f> subdivide_vert_bezier(const vector<vec2f>& vert,
+    const vector<int>& verts, const vector<vec4i>& segments, bool normalized);
+template vector<vec3f> subdivide_vert_bezier(const vector<vec3f>& vert,
+    const vector<int>& verts, const vector<vec4i>& segments, bool normalized);
+template vector<vec4f> subdivide_vert_bezier(const vector<vec4f>& vert,
+    const vector<int>& verts, const vector<vec4i>& segments, bool normalized);
+
+// Generate a rectangular grid of usteps x vsteps uv values for parametric
+// surface generation.
+tuple<vector<vec4i>, vector<vec2f>> make_uvquads(
+    int usteps, int vsteps, bool uwrap, bool vwrap, bool vpole0, bool vpole1) {
+    auto uvert = (uwrap) ? usteps : usteps + 1;
+    auto vvert = (vwrap) ? vsteps : vsteps + 1;
+    auto vid = [=](int i, int j) {
+        if (uwrap) i = i % usteps;
+        if (vwrap) j = j % vsteps;
+        return j * uvert + i;
+    };
+
+    auto uv = vector<vec2f>(uvert * vvert);
+    for (auto j = 0; j < vvert; j++) {
+        for (auto i = 0; i < uvert; i++) {
+            uv[vid(i, j)] = {i / (float)usteps, j / (float)vsteps};
+        }
+    }
+
+    auto quads = vector<vec4i>(usteps * vsteps);
+    for (auto j = 0; j < vsteps; j++) {
+        for (auto i = 0; i < usteps; i++) {
+            quads[j * usteps + i] = {
+                vid(i, j), vid(i + 1, j), vid(i + 1, j + 1), vid(i, j + 1)};
+        }
+    }
+
+    if (vpole0) {
+        if (vwrap) throw runtime_error("cannot have a pole with wrapping");
+        uv = vector<vec2f>(uv.begin() + uvert, uv.end());
+        uv.insert(uv.begin(), {0, 0});
+        for (auto& q : quads) {
+            for (auto& vid : q) { vid = (vid < usteps) ? 0 : vid - uvert + 1; }
+            if (q.x == 0 && q.y == 0) q = {q.z, q.w, q.x, q.y};
+        }
+    }
+
+    if (vpole1) {
+        if (vwrap) throw runtime_error("cannot have a pole with wrapping");
+        auto pid = (int)uv.size() - uvert;
+        uv = vector<vec2f>(uv.begin(), uv.end() - uvert);
+        uv.insert(uv.end(), {0, 1});
+        for (auto& q : quads) {
+            for (auto& vid : q) { vid = (vid < pid) ? vid : pid; }
+        }
+    }
+
+    return {quads, uv};
+}
+
+// Generate parametric num lines of usteps segments.
+tuple<vector<vec2i>, vector<vec2f>> make_uvlines(int num, int usteps) {
+    auto vid = [usteps](int i, int j) { return j * (usteps + 1) + i; };
+    auto uv = vector<vec2f>((usteps + 1) * num);
+    for (auto j = 0; j < num; j++) {
+        for (auto i = 0; i <= usteps; i++) {
+            uv[vid(i, j)] = {i / (float)usteps, j / (float)num};
+        }
+    }
+
+    auto lines = vector<vec2i>(usteps * num);
+    for (int j = 0; j < num; j++) {
+        for (int i = 0; i < usteps; i++) {
+            lines[j * usteps + i] = {vid(i, j), vid(i + 1, j)};
+        }
+    }
+
+    return {lines, uv};
+}
+
+// Generate a parametric point set. Mostly here for completeness.
+tuple<vector<int>, vector<vec2f>> make_uvpoints(int num) {
+    auto uv = vector<vec2f>(num);
+    for (auto i = 0; i < num; i++) { uv[i] = {i / (float)num, 0}; }
+
+    auto points = vector<int>(num);
+    for (auto i = 0; i < num; i++) points[i] = i;
+
+    return {points, uv};
+}
+
+// Merge elements between shapes. The elements are merged by increasing the
+// array size of the second array by the number of vertices of the first.
+// Vertex data can then be concatenated successfully.
+tuple<vector<vec2i>, vector<vec3i>, vector<vec4i>> merge_elems(int nverts,
+    const vector<vec2i>& lines1, const vector<vec3i>& triangles1,
+    const vector<vec4i>& quads1, const vector<vec2i>& lines2,
+    const vector<vec3i>& triangles2, const vector<vec4i>& quads2) {
+    auto lines = lines1 + lines2;
+    auto triangles = triangles1 + triangles2;
+    auto quads = quads1 + quads2;
+    for (auto i = lines1.size(); i < lines.size(); i++)
+        lines[i] += {nverts, nverts};
+    for (auto i = triangles1.size(); i < triangles.size(); i++)
+        triangles[i] += {nverts, nverts, nverts};
+    for (auto i = quads1.size(); i < quads.size(); i++)
+        quads[i] += {nverts, nverts, nverts, nverts};
+    return {lines, triangles, quads};
+}
+
+// Unshare shape data by duplicating all vertex data for each element,
+// giving a faceted look. Note that faceted tangents are not computed.
+tuple<vector<vec2i>, vector<vec3i>, vector<vec4i>, vector<int>> facet_elems(
+    const vector<vec2i>& lines, const vector<vec3i>& triangles,
+    const vector<vec4i>& quads) {
+    auto verts = vector<int>();
+    auto nlines = vector<vec2i>();
+    for (auto l : lines) {
+        nlines.push_back({(int)verts.size(), (int)verts.size() + 1});
+        for (auto v : l) verts += v;
+    }
+
+    auto ntriangles = vector<vec3i>();
+    for (auto t : triangles) {
+        ntriangles.push_back(
+            {(int)verts.size(), (int)verts.size() + 1, (int)verts.size() + 2});
+        for (auto v : t) verts += v;
+    }
+
+    auto nquads = vector<vec4i>();
+    for (auto q : quads) {
+        if (q.z != q.w) {
+            nquads.push_back({(int)verts.size(), (int)verts.size() + 1,
+                (int)verts.size() + 2, (int)verts.size() + 3});
+            for (auto v : q) verts += v;
+        } else {
+            nquads.push_back({(int)verts.size(), (int)verts.size() + 1,
+                (int)verts.size() + 2, (int)verts.size() + 2});
+            for (auto v : q.xyz()) verts += v;
+        }
+    }
+
+    return {nlines, ntriangles, nquads, verts};
+}
+
+// Unshare vertices for faceting
+template <typename T>
+vector<T> facet_vert(const vector<T>& vert, const vector<int>& vmap) {
+    if (vert.empty()) return vert;
+    auto tvert = vector<T>(vmap.size());
+    for (auto vkv : enumerate(vmap)) tvert[vkv.first] = vert[vkv.second];
+    return tvert;
+}
+
+// instantations
+template vector<float> facet_vert<float>(
+    const vector<float>& vert, const vector<int>& vmap);
+template vector<vec2f> facet_vert<vec2f>(
+    const vector<vec2f>& vert, const vector<int>& vmap);
+template vector<vec3f> facet_vert<vec3f>(
+    const vector<vec3f>& vert, const vector<int>& vmap);
+template vector<vec4f> facet_vert<vec4f>(
+    const vector<vec4f>& vert, const vector<int>& vmap);
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION OF SHAPE SAMPLING
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// Pick a point
+int sample_points(int npoints, float re) {
+    return clamp(0, npoints - 1, (int)(re * npoints));
+}
+
+// Compute a distribution for sampling points uniformly
+vector<float> sample_points_cdf(int npoints) {
+    auto cdf = vector<float>(npoints);
+    for (auto i = 0; i < npoints; i++) cdf[i] = i + 1;
+    return cdf;
+}
+
+// Pick a point
+int sample_points(const vector<float>& cdf, float re) {
+    re = clamp(re * cdf.back(), 0.0f, cdf.back() - 0.00001f);
+    return (int)(std::upper_bound(cdf.begin(), cdf.end(), re) - cdf.begin());
+}
+
+// Compute a distribution for sampling lines uniformly
+vector<float> sample_lines_cdf(
+    const vector<vec2i>& lines, const vector<vec3f>& pos) {
+    auto cdf = vector<float>(lines.size());
+    for (auto i = 0; i < lines.size(); i++)
+        cdf[i] = length(pos[lines[i].x] - pos[lines[i].y]);
+    for (auto i = 1; i < lines.size(); i++) cdf[i] += cdf[i - 1];
+    return cdf;
+}
+
+// Pick a point on lines
+pair<int, vec2f> sample_lines(const vector<float>& cdf, float re, float ruv) {
+    re = clamp(re * cdf.back(), 0.0f, cdf.back() - 0.00001f);
+    auto eid =
+        (int)(std::upper_bound(cdf.begin(), cdf.end(), re) - cdf.begin());
+    return {eid, {1 - ruv, ruv}};
+}
+
+// Compute a distribution for sampling triangle meshes uniformly
+vector<float> sample_triangles_cdf(
+    const vector<vec3i>& triangles, const vector<vec3f>& pos) {
+    auto cdf = vector<float>(triangles.size());
+    for (auto i = 0; i < triangles.size(); i++)
+        cdf[i] = triangle_area(
+            pos[triangles[i].x], pos[triangles[i].y], pos[triangles[i].z]);
+    for (auto i = 1; i < triangles.size(); i++) cdf[i] += cdf[i - 1];
+    return cdf;
+}
+
+// Pick a point on a triangle mesh
+pair<int, vec3f> sample_triangles(
+    const vector<float>& cdf, float re, const vec2f& ruv) {
+    re = clamp(re * cdf.back(), 0.0f, cdf.back() - 0.00001f);
+    auto eid =
+        (int)(std::upper_bound(cdf.begin(), cdf.end(), re) - cdf.begin());
+    return {
+        eid, {sqrt(ruv.x) * (1 - ruv.y), 1 - sqrt(ruv.x), ruv.y * sqrt(ruv.x)}};
+}
+
+// Compute a distribution for sampling quad meshes uniformly
+vector<float> sample_quads_cdf(
+    const vector<vec4i>& quads, const vector<vec3f>& pos) {
+    auto cdf = vector<float>(quads.size());
+    for (auto i = 0; i < quads.size(); i++)
+        cdf[i] = quad_area(
+            pos[quads[i].x], pos[quads[i].y], pos[quads[i].z], pos[quads[i].w]);
+    for (auto i = 1; i < quads.size(); i++) cdf[i] += cdf[i - 1];
+    return cdf;
+}
+
+// Pick a point on a quad mesh
+pair<int, vec4f> sample_quads(
+    const vector<float>& cdf, float re, const vec2f& ruv) {
+    if (ruv.x < 0.5f) {
+        auto eid = 0;
+        auto euv = zero3f;
+        std::tie(eid, euv) = sample_triangles(cdf, re, {ruv.x * 2, ruv.y});
+        return {eid, {euv.x, euv.y, 0, euv.z}};
+    } else {
+        auto eid = 0;
+        auto euv = zero3f;
+        std::tie(eid, euv) =
+            sample_triangles(cdf, re, {(ruv.x - 0.5f) * 2, ruv.y});
+        return {eid, {0, euv.z, euv.x, euv.y}};
+    }
+}
+
+// Samples a set of points over a triangle mesh uniformly. The rng function
+// takes the point index and returns vec3f numbers uniform directibuted in
+// [0,1]^3. unorm and texcoord are optional.
+tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>> sample_triangles_points(
+    const vector<vec3i>& triangles, const vector<vec3f>& pos,
+    const vector<vec3f>& norm, const vector<vec2f>& texcoord, int npoints,
+    uint64_t seed) {
+    auto sampled_pos = vector<vec3f>(npoints);
+    auto sampled_norm = vector<vec3f>(norm.empty() ? 0 : npoints);
+    auto sampled_texcoord = vector<vec2f>(texcoord.empty() ? 0 : npoints);
+    auto cdf = sample_triangles_cdf(triangles, pos);
+    auto rng = init_rng(seed);
+    for (auto i = 0; i < npoints; i++) {
+        auto eid = 0;
+        auto euv = zero3f;
+        std::tie(eid, euv) = sample_triangles(
+            cdf, next_rand1f(rng), {next_rand1f(rng), next_rand1f(rng)});
+        auto t = triangles[eid];
+        sampled_pos[i] = pos[t.x] * euv.x + pos[t.y] * euv.y + pos[t.z] * euv.z;
+        if (!sampled_norm.empty())
+            sampled_norm[i] = normalize(
+                norm[t.x] * euv.x + norm[t.y] * euv.y + norm[t.z] * euv.z);
+        if (!sampled_texcoord.empty())
+            sampled_texcoord[i] = texcoord[t.x] * euv.x +
+                                  texcoord[t.y] * euv.y + texcoord[t.z] * euv.z;
+    }
+
+    return {sampled_pos, sampled_norm, sampled_texcoord};
+}
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR IMAGEIO
 // -----------------------------------------------------------------------------
 namespace ygl {
@@ -505,6 +1429,17 @@ bool save_image(
     }
 }
 
+// Save an HDR or LDR image with tonemapping based on filename
+bool save_image(const string& filename, const image4f& hdr, float exposure,
+    float gamma, bool filmic) {
+    if (is_hdr_filename(filename)) {
+        return save_image4f(filename, hdr);
+    } else {
+        auto ldr = tonemap_image(hdr, exposure, gamma, filmic);
+        return save_image4b(filename, ldr);
+    }
+}
+
 // Resize image.
 void resize_image(const image4f& img, image4f& res_img, resize_filter filter,
     resize_edge edge, bool premultiplied_alpha) {
@@ -562,9 +1497,350 @@ void resize_image(const image4b& img, image4b& res_img, resize_filter filter,
 }  // namespace ygl
 
 // -----------------------------------------------------------------------------
+// IMPLEMENTATION OF IMAGE OPERATIONS
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+#if 1
+// Tone map with a fitted filmic curve.
+//
+// Implementation from
+// https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/
+inline float tonemap_filmic(float hdr) {
+    // rescale
+    auto x = hdr * 2.05f;
+    // fitted values
+    float a = 2.51f, b = 0.03f, c = 2.43f, d = 0.59f, e = 0.14f;
+    auto y = ((x * (a * x + b)) / (x * (c * x + d) + e));
+    return pow(clamp(y, 0.0f, 1.0f), 1 / 2.2f);
+}
+#else
+inline float tonemap_filmic(float x) {
+    auto y =
+        (x * (x * (x * (x * 2708.7142 + 6801.1525) + 1079.5474) + 1.1614649) -
+            0.00004139375) /
+        (x * (x * (x * (x * 983.38937 + 4132.0662) + 2881.6522) + 128.35911) +
+            1.0);
+    return (float)std::max(y, 0.0);
+}
+#endif
+
+// Tone mapping HDR to LDR images.
+image4b tonemap_image(
+    const image4f& hdr, float exposure, float gamma, bool filmic) {
+    auto ldr = image4b(hdr.width(), hdr.height());
+    auto scale = pow(2.0f, exposure);
+    for (auto j = 0; j < hdr.height(); j++) {
+        for (auto i = 0; i < hdr.width(); i++) {
+            auto h = hdr[{i, j}];
+            h.xyz() *= scale;
+            if (filmic) {
+                h.xyz() = {tonemap_filmic(h.x), tonemap_filmic(h.y),
+                    tonemap_filmic(h.z)};
+            } else {
+                h.xyz() = {pow(h.x, 1 / gamma), pow(h.y, 1 / gamma),
+                    pow(h.z, 1 / gamma)};
+            }
+            ldr[{i, j}] = float_to_byte(h);
+        }
+    }
+    return ldr;
+}
+
+// Image over operator
+void image_over(
+    vec4f* img, int width, int height, int nlayers, vec4f** layers) {
+    for (auto i = 0; i < width * height; i++) {
+        img[i] = {0, 0, 0, 0};
+        auto weight = 1.0f;
+        for (auto l = 0; l < nlayers; l++) {
+            img[i].x += layers[l][i].x * layers[l][i].w * weight;
+            img[i].y += layers[l][i].y * layers[l][i].w * weight;
+            img[i].z += layers[l][i].z * layers[l][i].w * weight;
+            img[i].w += layers[l][i].w * weight;
+            weight *= (1 - layers[l][i].w);
+        }
+        if (img[i].w) {
+            img[i].x /= img[i].w;
+            img[i].y /= img[i].w;
+            img[i].z /= img[i].w;
+        }
+    }
+}
+
+// Image over operator
+void image_over(
+    vec4b* img, int width, int height, int nlayers, vec4b** layers) {
+    for (auto i = 0; i < width * height; i++) {
+        auto comp = zero4f;
+        auto weight = 1.0f;
+        for (auto l = 0; l < nlayers && weight > 0; l++) {
+            auto w = byte_to_float(layers[l][i].w);
+            comp.x += byte_to_float(layers[l][i].x) * w * weight;
+            comp.y += byte_to_float(layers[l][i].y) * w * weight;
+            comp.z += byte_to_float(layers[l][i].z) * w * weight;
+            comp.w += w * weight;
+            weight *= (1 - w);
+        }
+        if (comp.w) {
+            img[i].x = float_to_byte(comp.x / comp.w);
+            img[i].y = float_to_byte(comp.y / comp.w);
+            img[i].z = float_to_byte(comp.z / comp.w);
+            img[i].w = float_to_byte(comp.w);
+        } else {
+            img[i] = {0, 0, 0, 0};
+        }
+    }
+}
+
+// Convert HSV to RGB
+// Implementatkion from
+// http://stackoverflow.com/questions/3018313/algorithm-to-convert-rgb-to-hsv-and-hsv-to-rgb-in-range-0-255-for-both
+vec4b hsv_to_rgb(const vec4b& hsv) {
+    vec4b rgb = {0, 0, 0, hsv.w};
+    byte region, remainder, p, q, t;
+
+    byte h = hsv.x, s = hsv.y, v = hsv.z;
+
+    if (s == 0) {
+        rgb.x = v;
+        rgb.y = v;
+        rgb.z = v;
+        return rgb;
+    }
+
+    region = h / 43;
+    remainder = (h - (region * 43)) * 6;
+
+    p = (v * (255 - s)) >> 8;
+    q = (v * (255 - ((s * remainder) >> 8))) >> 8;
+    t = (v * (255 - ((s * (255 - remainder)) >> 8))) >> 8;
+
+    switch (region) {
+        case 0:
+            rgb.x = v;
+            rgb.y = t;
+            rgb.z = p;
+            break;
+        case 1:
+            rgb.x = q;
+            rgb.y = v;
+            rgb.z = p;
+            break;
+        case 2:
+            rgb.x = p;
+            rgb.y = v;
+            rgb.z = t;
+            break;
+        case 3:
+            rgb.x = p;
+            rgb.y = q;
+            rgb.z = v;
+            break;
+        case 4:
+            rgb.x = t;
+            rgb.y = p;
+            rgb.z = v;
+            break;
+        default:
+            rgb.x = v;
+            rgb.y = p;
+            rgb.z = q;
+            break;
+    }
+
+    return rgb;
+}
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR IMAGE EXAMPLES
 // -----------------------------------------------------------------------------
 namespace ygl {
+
+// Make a grid image
+image4b make_grid_image(
+    int width, int height, int tile, const vec4b& c0, const vec4b& c1) {
+    image4b pixels(width, height);
+    for (int j = 0; j < width; j++) {
+        for (int i = 0; i < height; i++) {
+            auto c = i % tile == 0 || i % tile == tile - 1 || j % tile == 0 ||
+                     j % tile == tile - 1;
+            pixels.at(i, j) = (c) ? c0 : c1;
+        }
+    }
+    return pixels;
+}
+
+// Make a checkerboard image
+image4b make_checker_image(
+    int width, int height, int tile, const vec4b& c0, const vec4b& c1) {
+    image4b pixels(width, height);
+    for (int j = 0; j < height; j++) {
+        for (int i = 0; i < width; i++) {
+            auto c = (i / tile + j / tile) % 2 == 0;
+            pixels.at(i, j) = (c) ? c0 : c1;
+        }
+    }
+    return pixels;
+}
+
+// Make an image with bumps and dimples.
+image4b make_bumpdimple_image(int width, int height, int tile) {
+    image4b pixels(width, height);
+    for (int j = 0; j < height; j++) {
+        for (int i = 0; i < width; i++) {
+            auto c = (i / tile + j / tile) % 2 == 0;
+            auto ii = i % tile - tile / 2, jj = j % tile - tile / 2;
+            auto r =
+                sqrt(float(ii * ii + jj * jj)) / sqrt(float(tile * tile) / 4);
+            auto h = 0.5f;
+            if (r < 0.5f) { h += (c) ? (0.5f - r) : -(0.5f - r); }
+            auto g = float_to_byte(h);
+            pixels.at(i, j) = vec4b{g, g, g, 255};
+        }
+    }
+    return pixels;
+}
+
+// Make a uv colored grid
+image4b make_ramp_image(
+    int width, int height, const vec4b& c0, const vec4b& c1, bool srgb) {
+    image4b pixels(width, height);
+    for (int j = 0; j < height; j++) {
+        for (int i = 0; i < width; i++) {
+            auto u = (float)i / (float)width;
+            if (srgb) {
+                pixels.at(i, j) = linear_to_srgb(
+                    srgb_to_linear(c0) * (1 - u) + srgb_to_linear(c1) * u);
+            } else {
+                pixels.at(i, j) = float_to_byte(
+                    byte_to_float(c0) * (1 - u) + byte_to_float(c1) * u);
+            }
+        }
+    }
+    return pixels;
+}
+
+// Make a gamma ramp image
+image4b make_gammaramp_image(int width, int height) {
+    image4b pixels(width, height);
+    for (int j = 0; j < height; j++) {
+        for (int i = 0; i < width; i++) {
+            auto u = j / float(height - 1);
+            if (i < width / 3) u = pow(u, 2.2f);
+            if (i > (width * 2) / 3) u = pow(u, 1 / 2.2f);
+            auto c = (unsigned char)(u * 255);
+            pixels.at(i, j) = {c, c, c, 255};
+        }
+    }
+    return pixels;
+}
+
+// Make a gamma ramp image
+image4f make_gammaramp_imagef(int width, int height) {
+    image4f pixels(width, height);
+    for (int j = 0; j < height; j++) {
+        for (int i = 0; i < width; i++) {
+            auto u = j / float(height - 1);
+            if (i < width / 3) u = pow(u, 2.2f);
+            if (i > (width * 2) / 3) u = pow(u, 1 / 2.2f);
+            pixels.at(i, j) = {u, u, u, 1};
+        }
+    }
+    return pixels;
+}
+
+// Make an image color with red/green in the [0,1] range. Helpful to visualize
+// uv texture coordinate application.
+image4b make_uv_image(int width, int height) {
+    image4b pixels(width, height);
+    for (int j = 0; j < height; j++) {
+        for (int i = 0; i < width; i++) {
+            auto r = float_to_byte(i / (float)(width - 1));
+            auto g = float_to_byte(j / (float)(height - 1));
+            pixels.at(i, j) = vec4b{r, g, 0, 255};
+        }
+    }
+    return pixels;
+}
+
+// Make a uv colored grid
+image4b make_uvgrid_image(int width, int height, int tile, bool colored) {
+    image4b pixels(width, height);
+    for (int j = 0; j < height; j++) {
+        for (int i = 0; i < width; i++) {
+            byte ph = 32 * (i / (height / 8));
+            byte pv = 128;
+            byte ps = 64 + 16 * (7 - j / (height / 8));
+            if (i % (tile / 2) && j % (tile / 2)) {
+                if ((i / tile + j / tile) % 2)
+                    pv += 16;
+                else
+                    pv -= 16;
+            } else {
+                pv = 196;
+                ps = 32;
+            }
+            pixels.at(i, j) = (colored) ? hsv_to_rgb({ph, ps, pv, 255}) :
+                                          vec4b{pv, pv, pv, 255};
+        }
+    }
+    return pixels;
+}
+
+// Make a uv recusive colored grid
+image4b make_recuvgrid_image(int width, int height, int tile, bool colored) {
+    image4b pixels(width, height);
+    for (int j = 0; j < height; j++) {
+        for (int i = 0; i < width; i++) {
+            byte ph = 32 * (i / (height / 8));
+            byte pv = 128;
+            byte ps = 64 + 16 * (7 - j / (height / 8));
+            if (i % (tile / 2) && j % (tile / 2)) {
+                if ((i / tile + j / tile) % 2)
+                    pv += 16;
+                else
+                    pv -= 16;
+                if ((i / (tile / 4) + j / (tile / 4)) % 2)
+                    pv += 4;
+                else
+                    pv -= 4;
+                if ((i / (tile / 8) + j / (tile / 8)) % 2)
+                    pv += 1;
+                else
+                    pv -= 1;
+            } else {
+                pv = 196;
+                ps = 32;
+            }
+            pixels.at(i, j) = (colored) ? hsv_to_rgb({ph, ps, pv, 255}) :
+                                          vec4b{pv, pv, pv, 255};
+        }
+    }
+    return pixels;
+}
+
+// Comvert a bump map to a normal map.
+image4b bump_to_normal_map(const image4b& img, float scale) {
+    image4b norm(img.width(), img.height());
+    for (int j = 0; j < img.height(); j++) {
+        for (int i = 0; i < img.width(); i++) {
+            auto i1 = (i + 1) % img.width(), j1 = (j + 1) % img.height();
+            auto p00 = img.at(i, j), p10 = img.at(i1, j), p01 = img.at(i, j1);
+            auto g00 = (float(p00.x) + float(p00.y) + float(p00.z)) / (3 * 255);
+            auto g01 = (float(p01.x) + float(p01.y) + float(p01.z)) / (3 * 255);
+            auto g10 = (float(p10.x) + float(p10.y) + float(p10.z)) / (3 * 255);
+            auto n = vec3f{scale * (g00 - g10), scale * (g00 - g01), 1.0f};
+            n = normalize(n) * 0.5f + vec3f{0.5f, 0.5f, 0.5f};
+            auto c =
+                vec4b{byte(n.x * 255), byte(n.y * 255), byte(n.z * 255), 255};
+            norm.at(i, j) = c;
+        }
+    }
+    return norm;
+}
 
 // Implementation of sunsky modified heavily from pbrt
 image4f make_sunsky_image(
@@ -730,6 +2006,3611 @@ image4b make_turbulence_image(int resx, int resy, float scale, float lacunarity,
         }
     }
     return img;
+}
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
+// IMPLEMENRTATION OF RAY-PRIMITIVE INTERSECTION FUNCTIONS
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// Intersect a ray with a point (approximate)
+bool intersect_point(const ray3f& ray, const vec3f& p, float r, float& ray_t) {
+    // find parameter for line-point minimum distance
+    auto w = p - ray.o;
+    auto t = dot(w, ray.d) / dot(ray.d, ray.d);
+
+    // exit if not within bounds
+    if (t < ray.tmin || t > ray.tmax) return false;
+
+    // test for line-point distance vs point radius
+    auto rp = ray.o + ray.d * t;
+    auto prp = p - rp;
+    if (dot(prp, prp) > r * r) return false;
+
+    // intersection occurred: set params and exit
+    ray_t = t;
+
+    return true;
+}
+
+// Intersect a ray with a line
+bool intersect_line(const ray3f& ray, const vec3f& v0, const vec3f& v1,
+    float r0, float r1, float& ray_t, vec2f& euv) {
+    // setup intersection params
+    auto u = ray.d;
+    auto v = v1 - v0;
+    auto w = ray.o - v0;
+
+    // compute values to solve a linear system
+    auto a = dot(u, u);
+    auto b = dot(u, v);
+    auto c = dot(v, v);
+    auto d = dot(u, w);
+    auto e = dot(v, w);
+    auto det = a * c - b * b;
+
+    // check determinant and exit if lines are parallel
+    // (could use EPSILONS if desired)
+    if (det == 0) return false;
+
+    // compute Parameters on both ray and segment
+    auto t = (b * e - c * d) / det;
+    auto s = (a * e - b * d) / det;
+
+    // exit if not within bounds
+    if (t < ray.tmin || t > ray.tmax) return false;
+
+    // clamp segment param to segment corners
+    s = clamp(s, (float)0, (float)1);
+
+    // compute segment-segment distance on the closest points
+    auto p0 = ray.o + ray.d * t;
+    auto p1 = v0 + (v1 - v0) * s;
+    auto p01 = p0 - p1;
+
+    // check with the line radius at the same point
+    auto r = r0 * (1 - s) + r1 * s;
+    if (dot(p01, p01) > r * r) return false;
+
+    // intersection occurred: set params and exit
+    ray_t = t;
+    euv = {1 - s, s};
+
+    return true;
+}
+
+// Intersect a ray with a triangle
+bool intersect_triangle(const ray3f& ray, const vec3f& v0, const vec3f& v1,
+    const vec3f& v2, float& ray_t, vec3f& euv) {
+    // compute triangle edges
+    auto edge1 = v1 - v0;
+    auto edge2 = v2 - v0;
+
+    // compute determinant to solve a linear system
+    auto pvec = cross(ray.d, edge2);
+    auto det = dot(edge1, pvec);
+
+    // check determinant and exit if triangle and ray are parallel
+    // (could use EPSILONS if desired)
+    if (det == 0) return false;
+    auto inv_det = 1.0f / det;
+
+    // compute and check first bricentric coordinated
+    auto tvec = ray.o - v0;
+    auto u = dot(tvec, pvec) * inv_det;
+    if (u < 0 || u > 1) return false;
+
+    // compute and check second bricentric coordinated
+    auto qvec = cross(tvec, edge1);
+    auto v = dot(ray.d, qvec) * inv_det;
+    if (v < 0 || u + v > 1) return false;
+
+    // compute and check ray parameter
+    auto t = dot(edge2, qvec) * inv_det;
+    if (t < ray.tmin || t > ray.tmax) return false;
+
+    // intersection occurred: set params and exit
+    ray_t = t;
+    euv = {1 - u - v, u, v};
+
+    return true;
+}
+
+// Intersect a ray with a quad.
+bool intersect_quad(const ray3f& ray, const vec3f& v0, const vec3f& v1,
+    const vec3f& v2, const vec3f& v3, float& ray_t, vec4f& euv) {
+    auto hit = false;
+    auto tray = ray;
+    if (intersect_triangle(tray, v0, v1, v3, ray_t, (vec3f&)euv)) {
+        euv = {euv.x, euv.y, 0, euv.z};
+        tray.tmax = ray_t;
+        hit = true;
+    }
+    if (intersect_triangle(tray, v2, v3, v1, ray_t, (vec3f&)euv)) {
+        euv = {0, 1 - euv.y, euv.y + euv.z - 1, 1 - euv.z};
+        tray.tmax = ray_t;
+        hit = true;
+    }
+    return hit;
+}
+
+// Intersect a ray with a tetrahedron.
+bool intersect_tetrahedron(const ray3f& ray_, const vec3f& v0, const vec3f& v1,
+    const vec3f& v2, const vec3f& v3, float& ray_t, vec4f& euv) {
+    // check intersction for each face
+    auto hit = false;
+    auto ray = ray_;
+    auto tuv = zero3f;
+    if (intersect_triangle(ray, v0, v1, v2, ray_t, tuv)) {
+        hit = true;
+        ray.tmax = ray_t;
+    }
+    if (intersect_triangle(ray, v0, v1, v3, ray_t, tuv)) {
+        hit = true;
+        ray.tmax = ray_t;
+    }
+    if (intersect_triangle(ray, v0, v2, v3, ray_t, tuv)) {
+        hit = true;
+        ray.tmax = ray_t;
+    }
+    if (intersect_triangle(ray, v1, v2, v3, ray_t, tuv)) {
+        hit = true;
+        ray.tmax = ray_t;
+    }
+
+    return hit;
+}
+
+// Intersect a ray with a axis-aligned bounding box
+bool intersect_check_bbox(const ray3f& ray, const bbox3f& bbox) {
+    // set up convenient pointers for looping over axes
+    auto tmin = ray.tmin, tmax = ray.tmax;
+
+    // for each axis, clip intersection against the bounding planes
+    for (int i = 0; i < 3; i++) {
+        // determine intersection ranges
+        auto invd = 1.0f / ray.d[i];
+        auto t0 = (bbox.min[i] - ray.o[i]) * invd;
+        auto t1 = (bbox.max[i] - ray.o[i]) * invd;
+        // flip based on range directions
+        if (invd < 0.0f) {
+            float a = t0;
+            t0 = t1;
+            t1 = a;
+        }
+        // clip intersection
+        tmin = t0 > tmin ? t0 : tmin;
+        tmax = t1 < tmax ? t1 : tmax;
+        // if intersection is empty, exit
+        if (tmin > tmax) return false;
+    }
+
+    // passed all planes, then intersection occurred
+    return true;
+}
+
+// Min/max used in BVH traversal. Copied here since the traversal code
+// relies on the specific behaviour wrt NaNs.
+static inline const float& _safemin(const float& a, const float& b) {
+    return (a < b) ? a : b;
+}
+// Min/max used in BVH traversal. Copied here since the traversal code
+// relies on the specific behaviour wrt NaNs.
+static inline const float& _safemax(const float& a, const float& b) {
+    return (a > b) ? a : b;
+}
+
+// Intersect a ray with a axis-aligned bounding box
+bool intersect_check_bbox(const ray3f& ray, const vec3f& ray_dinv,
+    const vec3i& ray_dsign, const bbox3f& bbox_) {
+    auto bbox = &bbox_.min;
+    auto txmin = (bbox[ray_dsign.x].x - ray.o.x) * ray_dinv.x;
+    auto txmax = (bbox[1 - ray_dsign.x].x - ray.o.x) * ray_dinv.x;
+    auto tymin = (bbox[ray_dsign.y].y - ray.o.y) * ray_dinv.y;
+    auto tymax = (bbox[1 - ray_dsign.y].y - ray.o.y) * ray_dinv.y;
+    auto tzmin = (bbox[ray_dsign.z].z - ray.o.z) * ray_dinv.z;
+    auto tzmax = (bbox[1 - ray_dsign.z].z - ray.o.z) * ray_dinv.z;
+    auto tmin = _safemax(tzmin, _safemax(tymin, _safemax(txmin, ray.tmin)));
+    auto tmax = _safemin(tzmax, _safemin(tymax, _safemin(txmax, ray.tmax)));
+    tmax *= 1.00000024f;  // for double: 1.0000000000000004
+    return tmin <= tmax;
+}
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
+// IMPLEMENRTATION OF POINT-PRIMITIVE DISTANCE FUNCTIONS
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// TODO: documentation
+bool overlap_point(
+    const vec3f& pos, float dist_max, const vec3f& p, float r, float& dist) {
+    auto d2 = dot(pos - p, pos - p);
+    if (d2 > (dist_max + r) * (dist_max + r)) return false;
+    dist = sqrt(d2);
+    return true;
+}
+
+// TODO: documentation
+vec2f closestuv_line(const vec3f& pos, const vec3f& v0, const vec3f& v1) {
+    auto ab = v1 - v0;
+    auto d = dot(ab, ab);
+    // Project c onto ab, computing parameterized position d(t) = a + t*(b –
+    // a)
+    auto u = dot(pos - v0, ab) / d;
+    u = clamp(u, (float)0, (float)1);
+    return {1 - u, u};
+}
+
+// TODO: documentation
+bool overlap_line(const vec3f& pos, float dist_max, const vec3f& v0,
+    const vec3f& v1, float r0, float r1, float& dist, vec2f& euv) {
+    auto uv = closestuv_line(pos, v0, v1);
+    // Compute projected position from the clamped t d = a + t * ab;
+    auto p = lerp(v0, v1, uv.y);
+    auto r = lerp(r0, r1, uv.y);
+    auto d2 = dot(pos - p, pos - p);
+    // check distance
+    if (d2 > (dist_max + r) * (dist_max + r)) return false;
+    // done
+    dist = sqrt(d2);
+    euv = uv;
+    return true;
+}
+
+// TODO: documentation
+// this is a complicated test -> I probably prefer to use a sequence of test
+// (triangle body, and 3 edges)
+vec3f closestuv_triangle(
+    const vec3f& pos, const vec3f& v0, const vec3f& v1, const vec3f& v2) {
+    auto ab = v1 - v0;
+    auto ac = v2 - v0;
+    auto ap = pos - v0;
+
+    auto d1 = dot(ab, ap);
+    auto d2 = dot(ac, ap);
+
+    // corner and edge cases
+    if (d1 <= 0 && d2 <= 0) return {1, 0, 0};
+
+    auto bp = pos - v1;
+    auto d3 = dot(ab, bp);
+    auto d4 = dot(ac, bp);
+    if (d3 >= 0 && d4 <= d3) return {0, 1, 0};
+
+    auto vc = d1 * d4 - d3 * d2;
+    if ((vc <= 0) && (d1 >= 0) && (d3 <= 0))
+        return {1 - d1 / (d1 - d3), d1 / (d1 - d3), 0};
+
+    auto cp = pos - v2;
+    auto d5 = dot(ab, cp);
+    auto d6 = dot(ac, cp);
+    if (d6 >= 0 && d5 <= d6) return {0, 0, 1};
+
+    auto vb = d5 * d2 - d1 * d6;
+    if ((vb <= 0) && (d2 >= 0) && (d6 <= 0))
+        return {1 - d2 / (d2 - d6), 0, d2 / (d2 - d6)};
+
+    auto va = d3 * d6 - d5 * d4;
+    if ((va <= 0) && (d4 - d3 >= 0) && (d5 - d6 >= 0)) {
+        auto w = (d4 - d3) / ((d4 - d3) + (d5 - d6));
+        return {0, 1 - w, w};
+    }
+
+    // face case
+    auto denom = 1 / (va + vb + vc);
+    auto v = vb * denom;
+    auto w = vc * denom;
+    return {1 - v - w, v, w};
+}
+
+// TODO: documentation
+bool overlap_triangle(const vec3f& pos, float dist_max, const vec3f& v0,
+    const vec3f& v1, const vec3f& v2, float r0, float r1, float r2, float& dist,
+    vec3f& euv) {
+    auto uv = closestuv_triangle(pos, v0, v1, v2);
+    auto p = v0 * uv.x + v1 * uv.y + v2 * uv.z;
+    auto r = r0 * uv.x + r1 * uv.y + r2 * uv.z;
+    auto dd = dot(p - pos, p - pos);
+    if (dd > (dist_max + r) * (dist_max + r)) return false;
+    dist = sqrt(dd);
+    euv = uv;
+    return true;
+}
+
+// TODO: documentation
+bool overlap_quad(const vec3f& pos, float dist_max, const vec3f& v0,
+    const vec3f& v1, const vec3f& v2, const vec3f& v3, float r0, float r1,
+    float r2, float r3, float& dist, vec4f& euv) {
+    auto hit = false;
+    if (overlap_triangle(
+            pos, dist_max, v0, v1, v3, r0, r1, r3, dist, (vec3f&)euv)) {
+        euv = {euv.x, euv.y, 0, euv.z};
+        dist_max = dist;
+        hit = true;
+    }
+    if (overlap_triangle(
+            pos, dist_max, v2, v3, v1, r2, r3, r1, dist, (vec3f&)euv)) {
+        // dist_max = dist;
+        euv = {0, 1 - euv.y, euv.y + euv.z - 1, 1 - euv.z};
+        hit = true;
+    }
+    return hit;
+}
+
+// TODO: documentation
+bool overlap_tetrahedron(const vec3f& pos, const vec3f& v0, const vec3f& v1,
+    const vec3f& v2, const vec3f& v3, vec4f& euv) {
+    auto vol = dot(v3 - v0, cross(v3 - v1, v3 - v0));
+    if (vol == 0) return false;
+    auto u = dot(v3 - v0, cross(v3 - v1, v3 - v0)) / vol;
+    if (u < 0 || u > 1) return false;
+    auto v = dot(v3 - v0, cross(v3 - v1, v3 - v0)) / vol;
+    if (v < 0 || v > 1 || u + v > 1) return false;
+    auto w = dot(v3 - v0, cross(v3 - v1, v3 - v0)) / vol;
+    if (w < 0 || w > 1 || u + v + w > 1) return false;
+    euv = {u, v, w, 1 - u - v - w};
+    return true;
+}
+
+// TODO: documentation
+bool overlap_tetrahedron(const vec3f& pos, float dist_max, const vec3f& v0,
+    const vec3f& v1, const vec3f& v2, const vec3f& v3, float r0, float r1,
+    float r2, float r3, float& dist, vec4f& euv) {
+    // check interior
+    if (overlap_tetrahedron(pos, v0, v1, v2, v3, euv)) {
+        dist = 0;
+        return true;
+    }
+
+    // check faces
+    auto hit = false;
+    auto tuv = zero3f;
+    if (overlap_triangle(pos, dist_max, v0, v1, v2, r0, r1, r2, dist, tuv)) {
+        hit = true;
+        dist_max = dist;
+    }
+    if (overlap_triangle(pos, dist_max, v0, v1, v3, r0, r1, r3, dist, tuv)) {
+        hit = true;
+        dist_max = dist;
+    }
+    if (overlap_triangle(pos, dist_max, v0, v2, v3, r0, r2, r3, dist, tuv)) {
+        hit = true;
+        dist_max = dist;
+    }
+    if (overlap_triangle(pos, dist_max, v1, v2, v3, r1, r2, r3, dist, tuv)) {
+        hit = true;
+        // dist_max = dist;
+    }
+
+    return hit;
+}
+
+// TODO: documentation
+bool distance_check_bbox(const vec3f& pos, float dist_max, const bbox3f& bbox) {
+    // computing distance
+    auto dd = 0.0f;
+
+    // For each axis count any excess distance outside box extents
+    for (int i = 0; i < 3; i++) {
+        auto v = pos[i];
+        if (v < bbox.min[i]) dd += (bbox.min[i] - v) * (bbox.min[i] - v);
+        if (v > bbox.max[i]) dd += (v - bbox.max[i]) * (v - bbox.max[i]);
+    }
+
+    // check distance
+    return dd < dist_max * dist_max;
+}
+
+// TODO: doc
+bool overlap_bbox(const bbox3f& bbox1, const bbox3f& bbox2) {
+    if (bbox1.max.x < bbox2.min.x || bbox1.min.x > bbox2.max.x) return false;
+    if (bbox1.max.y < bbox2.min.y || bbox1.min.y > bbox2.max.y) return false;
+    if (bbox1.max.z < bbox2.min.z || bbox1.min.z > bbox2.max.z) return false;
+    return true;
+}
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION FOR BVH
+// -----------------------------------------------------------------------------
+namespace ygl {
+// Struct that pack a bounding box, its associate primitive index, and other
+// data for faster hierarchy build.
+// This is internal only and should not be used externally.
+struct bvh_bound_prim {
+    bbox3f bbox;   // bounding box
+    vec3f center;  // bounding box center (for faster sort)
+    int pid;       // primitive id
+};
+
+// Comparison function for each axis
+struct bvh_bound_prim_comp {
+    int axis;
+    float middle;
+
+    bvh_bound_prim_comp(int a, float m = 0) : axis(a), middle(m) {}
+
+    bool operator()(const bvh_bound_prim& a, const bvh_bound_prim& b) const {
+        return a.center[axis] < b.center[axis];
+    }
+
+    bool operator()(const bvh_bound_prim& a) const {
+        return a.center[axis] < middle;
+    }
+};
+
+// Initializes the BVH node node that contains the primitives sorted_prims
+// from start to end, by either splitting it into two other nodes,
+// or initializing it as a leaf. When splitting, the heuristic heuristic is
+// used and nodes added sequentially in the preallocated nodes array and
+// the number of nodes nnodes is updated.
+void make_bvh_node(bvh_tree* bvh, int nodeid, bvh_bound_prim* sorted_prims,
+    int start, int end, bool equalsize) {
+    // get node
+    auto node = &bvh->nodes.at(nodeid);
+    // compute node bounds
+    node->bbox = invalid_bbox3f;
+    for (auto i = start; i < end; i++) node->bbox += sorted_prims[i].bbox;
+
+    // decide whether to create a leaf
+    if (end - start <= bvh_minprims) {
+        // makes a leaf node
+        node->type = bvh->type;
+        node->start = start;
+        node->count = end - start;
+    } else {
+        // choose the split axis and position
+        // init to default values
+        auto axis = 0;
+        auto mid = (start + end) / 2;
+
+        // compute primintive bounds and size
+        auto centroid_bbox = invalid_bbox3f;
+        for (auto i = start; i < end; i++)
+            centroid_bbox += sorted_prims[i].center;
+        auto centroid_size = bbox_diagonal(centroid_bbox);
+
+        // check if it is not possible to split
+        if (centroid_size == zero3f) {
+            // we failed to split for some reasons
+            node->type = bvh->type;
+            node->start = start;
+            node->count = end - start;
+        } else {
+            // split along largest
+            auto largest_axis = max_element(centroid_size).first;
+
+            // check heuristic
+            if (equalsize) {
+                // split the space in the middle along the largest axis
+                axis = largest_axis;
+                mid = (int)(std::partition(sorted_prims + start,
+                                sorted_prims + end,
+                                bvh_bound_prim_comp(largest_axis,
+                                    bbox_center(centroid_bbox)[largest_axis])) -
+                            sorted_prims);
+            } else {
+                // balanced tree split: find the largest axis of the bounding
+                // box and split along this one right in the middle
+                axis = largest_axis;
+                mid = (start + end) / 2;
+                std::nth_element(sorted_prims + start, sorted_prims + mid,
+                    sorted_prims + end, bvh_bound_prim_comp(largest_axis));
+            }
+
+            // check correctness
+            assert(axis >= 0 && mid > 0);
+            assert(mid > start && mid < end);
+
+            // makes an internal node
+            node->type = bvh_node_type::internal;
+            // perform the splits by preallocating the child nodes and recurring
+            node->axis = axis;
+            node->start = (int)bvh->nodes.size();
+            node->count = 2;
+            bvh->nodes.emplace_back();
+            bvh->nodes.emplace_back();
+            // build child nodes
+            make_bvh_node(
+                bvh, node->start, sorted_prims, start, mid, equalsize);
+            make_bvh_node(
+                bvh, node->start + 1, sorted_prims, mid, end, equalsize);
+        }
+    }
+}
+
+// Build a BVH from a set of primitives.
+bvh_tree* build_bvh(const vector<int>& points, const vector<vec2i>& lines,
+    const vector<vec3i>& triangles, const vector<vec4i>& quads,
+    const vector<vec3f>& pos, const vector<float>& radius, float def_radius,
+    bool equalsize) {
+    // allocate the bvh
+    auto bvh = new bvh_tree();
+
+    // set values
+    bvh->points = points;
+    bvh->lines = lines;
+    bvh->triangles = triangles;
+    bvh->quads = quads;
+    bvh->pos = pos;
+    bvh->radius =
+        (radius.empty()) ? vector<float>(pos.size(), def_radius) : radius;
+
+    // get the number of primitives and the primitive type
+    auto bboxes = vector<bbox3f>();
+    if (!bvh->points.empty()) {
+        bboxes.reserve(points.size());
+        for (auto& p : bvh->points) {
+            bboxes.push_back(point_bbox(bvh->pos[p], bvh->radius[p]));
+        }
+        bvh->type = bvh_node_type::point;
+    } else if (!bvh->lines.empty()) {
+        bboxes.reserve(bvh->lines.size());
+        for (auto& l : bvh->lines) {
+            bboxes.push_back(line_bbox(bvh->pos[l.x], bvh->pos[l.y],
+                bvh->radius[l.x], bvh->radius[l.y]));
+        }
+        bvh->type = bvh_node_type::line;
+    } else if (!bvh->triangles.empty()) {
+        bboxes.reserve(bvh->triangles.size());
+        for (auto& t : bvh->triangles) {
+            bboxes.push_back(
+                triangle_bbox(bvh->pos[t.x], bvh->pos[t.y], bvh->pos[t.z]));
+        }
+        bvh->type = bvh_node_type::triangle;
+    } else if (!bvh->lines.empty()) {
+        bboxes.reserve(quads.size());
+        for (auto& q : bvh->quads) {
+            bboxes.push_back(quad_bbox(
+                bvh->pos[q.x], bvh->pos[q.y], bvh->pos[q.z], bvh->pos[q.w]));
+        }
+        bvh->type = bvh_node_type::quad;
+    } else if (!bvh->lines.empty()) {
+        bboxes.reserve(lines.size());
+        for (auto i = 0; i < bvh->pos.size(); i++) {
+            bboxes.push_back(point_bbox(bvh->pos[i], bvh->radius[i]));
+        }
+        bvh->type = bvh_node_type::vertex;
+    }
+
+    // create buonded primitived for sorting
+    auto bound_prims = vector<bvh_bound_prim>(bboxes.size());
+    for (auto i = 0; i < bboxes.size(); i++) {
+        bound_prims[i].pid = i;
+        bound_prims[i].bbox = bboxes[i];
+        bound_prims[i].center = bbox_center(bboxes[i]);
+    }
+
+    // clear bvh
+    bvh->nodes.clear();
+    bvh->sorted_prim.clear();
+
+    // allocate nodes (over-allocate now then shrink)
+    bvh->nodes.reserve(bound_prims.size() * 2);
+
+    // start recursive splitting
+    bvh->nodes.emplace_back();
+    make_bvh_node(
+        bvh, 0, bound_prims.data(), 0, (int)bound_prims.size(), equalsize);
+
+    // shrink back
+    bvh->nodes.shrink_to_fit();
+
+    // init sorted element arrays
+    // for shared memory, stored pointer to the external data
+    // store the sorted primitive order for BVH walk
+    bvh->sorted_prim.resize(bound_prims.size());
+    for (int i = 0; i < bound_prims.size(); i++) {
+        bvh->sorted_prim[i] = bound_prims[i].pid;
+    }
+
+    // done
+    return bvh;
+}
+
+// Build a BVH from a set of shape instances.
+bvh_tree* build_bvh(const vector<frame3f>& frames,
+    const vector<frame3f>& frames_inv, const vector<bvh_tree*>& ist_bvhs,
+    bool equal_size) {
+    // allocate the bvh
+    auto bvh = new bvh_tree();
+
+    // set values
+    bvh->ist_frames = frames;
+    bvh->ist_frames_inv = frames_inv;
+    bvh->ist_bvhs = ist_bvhs;
+
+    // get the number of primitives and the primitive type
+    auto bboxes = vector<bbox3f>();
+    bboxes.reserve(bvh->ist_bvhs.size());
+    for (auto idx = 0; idx < bvh->ist_bvhs.size(); idx++) {
+        bboxes.push_back(transform_bbox(
+            bvh->ist_frames[idx], bvh->ist_bvhs[idx]->nodes[0].bbox));
+    }
+    bvh->type = bvh_node_type::instance;
+
+    // create buonded primitived for sorting
+    auto bound_prims = vector<bvh_bound_prim>(bboxes.size());
+    for (auto i = 0; i < bboxes.size(); i++) {
+        bound_prims[i].pid = i;
+        bound_prims[i].bbox = bboxes[i];
+        bound_prims[i].center = bbox_center(bboxes[i]);
+    }
+
+    // clear bvh
+    bvh->nodes.clear();
+    bvh->sorted_prim.clear();
+
+    // allocate nodes (over-allocate now then shrink)
+    bvh->nodes.reserve(bound_prims.size() * 2);
+
+    // start recursive splitting
+    bvh->nodes.emplace_back();
+    make_bvh_node(
+        bvh, 0, bound_prims.data(), 0, (int)bound_prims.size(), equal_size);
+
+    // shrink back
+    bvh->nodes.shrink_to_fit();
+
+    // init sorted element arrays
+    // for shared memory, stored pointer to the external data
+    // store the sorted primitive order for BVH walk
+    bvh->sorted_prim.resize(bound_prims.size());
+    for (int i = 0; i < bound_prims.size(); i++) {
+        bvh->sorted_prim[i] = bound_prims[i].pid;
+    }
+
+    // done
+    return bvh;
+}
+
+// Recursively recomputes the node bounds for a shape bvh
+void refit_bvh(bvh_tree* bvh, int nodeid) {
+    // refit
+    auto node = &bvh->nodes[nodeid];
+    node->bbox = invalid_bbox3f;
+    switch (node->type) {
+        case bvh_node_type::internal: {
+            for (auto i = 0; i < node->count; i++) {
+                auto idx = node->start + i;
+                refit_bvh(bvh, idx);
+                node->bbox += bvh->nodes[idx].bbox;
+            }
+        } break;
+        case bvh_node_type::point: {
+            for (auto i = 0; i < node->count; i++) {
+                auto idx = bvh->sorted_prim[node->start + i];
+                auto& p = bvh->points[idx];
+                node->bbox += point_bbox(bvh->pos[p], bvh->radius[p]);
+            }
+        } break;
+        case bvh_node_type::line: {
+            for (auto i = 0; i < node->count; i++) {
+                auto idx = bvh->sorted_prim[node->start + i];
+                auto& l = bvh->lines[idx];
+                node->bbox += line_bbox(bvh->pos[l.x], bvh->pos[l.y],
+                    bvh->radius[l.x], bvh->radius[l.y]);
+            }
+        } break;
+        case bvh_node_type::triangle: {
+            for (auto i = 0; i < node->count; i++) {
+                auto idx = bvh->sorted_prim[node->start + i];
+                auto& t = bvh->triangles[idx];
+                node->bbox +=
+                    triangle_bbox(bvh->pos[t.x], bvh->pos[t.y], bvh->pos[t.z]);
+            }
+        } break;
+        case bvh_node_type::quad: {
+            for (auto i = 0; i < node->count; i++) {
+                auto idx = bvh->sorted_prim[node->start + i];
+                auto& q = bvh->quads[idx];
+                node->bbox += quad_bbox(
+                    bvh->pos[q.x], bvh->pos[q.y], bvh->pos[q.z], bvh->pos[q.w]);
+            }
+        } break;
+        case bvh_node_type::vertex: {
+            for (auto i = 0; i < node->count; i++) {
+                auto idx = bvh->sorted_prim[node->start + i];
+                node->bbox += point_bbox(bvh->pos[idx], bvh->radius[idx]);
+            }
+        } break;
+        case bvh_node_type::instance: {
+            for (auto i = 0; i < node->count; i++) {
+                auto idx = bvh->sorted_prim[node->start + i];
+                node->bbox += transform_bbox(
+                    bvh->ist_frames[idx], bvh->ist_bvhs[idx]->nodes[0].bbox);
+            }
+        } break;
+    }
+}
+
+// Recursively recomputes the node bounds for a shape bvh
+void refit_bvh(bvh_tree* bvh, const vector<vec3f>& pos,
+    const vector<float>& radius, float def_radius) {
+    // set values
+    bvh->pos = pos;
+    bvh->radius =
+        (radius.empty()) ? vector<float>(pos.size(), def_radius) : radius;
+
+    // refit
+    refit_bvh(bvh, 0);
+}
+
+// Recursively recomputes the node bounds for a scene bvh
+void refit_bvh(bvh_tree* bvh, const vector<frame3f>& frames,
+    const vector<frame3f>& frames_inv) {
+    // set values
+    bvh->ist_frames = frames;
+    bvh->ist_frames_inv = frames_inv;
+
+    // refit
+    refit_bvh(bvh, 0);
+}
+
+// Intersect ray with a bvh.
+bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray_, bool early_exit,
+    float& ray_t, int& iid, int& eid, vec4f& ew) {
+    // node stack
+    int node_stack[64];
+    auto node_cur = 0;
+    node_stack[node_cur++] = 0;
+
+    // shared variables
+    auto hit = false;
+
+    // copy ray to modify it
+    auto ray = ray_;
+
+    // prepare ray for fast queries
+    auto ray_dinv = vec3f{1, 1, 1} / ray.d;
+    auto ray_dsign = vec3i{(ray_dinv.x < 0) ? 1 : 0, (ray_dinv.y < 0) ? 1 : 0,
+        (ray_dinv.z < 0) ? 1 : 0};
+    auto ray_reverse = array<bool, 4>{
+        {(bool)ray_dsign.x, (bool)ray_dsign.y, (bool)ray_dsign.z, false}};
+
+    // walking stack
+    while (node_cur) {
+        // grab node
+        auto node = bvh->nodes[node_stack[--node_cur]];
+
+        // intersect bbox
+        if (!intersect_check_bbox(ray, ray_dinv, ray_dsign, node.bbox))
+            continue;
+
+        // intersect node, switching based on node type
+        // for each type, iterate over the the primitive list
+        switch (node.type) {
+            case bvh_node_type::internal: {
+                // for internal nodes, attempts to proceed along the
+                // split axis from smallest to largest nodes
+                if (ray_reverse[node.axis]) {
+                    for (auto i = 0; i < node.count; i++) {
+                        auto idx = node.start + i;
+                        node_stack[node_cur++] = idx;
+                        assert(node_cur < 64);
+                    }
+                } else {
+                    for (auto i = node.count - 1; i >= 0; i--) {
+                        auto idx = node.start + i;
+                        node_stack[node_cur++] = idx;
+                        assert(node_cur < 64);
+                    }
+                }
+            } break;
+            case bvh_node_type::point: {
+                for (auto i = 0; i < node.count; i++) {
+                    auto idx = bvh->sorted_prim[node.start + i];
+                    auto& p = bvh->points[idx];
+                    if (intersect_point(
+                            ray, bvh->pos[p], bvh->radius[p], ray_t)) {
+                        hit = true;
+                        ray.tmax = ray_t;
+                        eid = idx;
+                        ew = {1, 0, 0, 0};
+                    }
+                }
+            } break;
+            case bvh_node_type::line: {
+                for (auto i = 0; i < node.count; i++) {
+                    auto idx = bvh->sorted_prim[node.start + i];
+                    auto& l = bvh->lines[idx];
+                    if (intersect_line(ray, bvh->pos[l.x], bvh->pos[l.y],
+                            bvh->radius[l.x], bvh->radius[l.y], ray_t,
+                            (vec2f&)ew)) {
+                        hit = true;
+                        ray.tmax = ray_t;
+                        eid = idx;
+                        ew = {ew.x, ew.y, 0, 0};
+                    }
+                }
+            } break;
+            case bvh_node_type::triangle: {
+                for (auto i = 0; i < node.count; i++) {
+                    auto idx = bvh->sorted_prim[node.start + i];
+                    auto& t = bvh->triangles[idx];
+                    if (intersect_triangle(ray, bvh->pos[t.x], bvh->pos[t.y],
+                            bvh->pos[t.z], ray_t, (vec3f&)ew)) {
+                        hit = true;
+                        ray.tmax = ray_t;
+                        eid = idx;
+                        ew = {ew.x, ew.y, ew.z, 0};
+                    }
+                }
+            } break;
+            case bvh_node_type::quad: {
+                for (auto i = 0; i < node.count; i++) {
+                    auto idx = bvh->sorted_prim[node.start + i];
+                    auto& q = bvh->quads[idx];
+                    if (intersect_quad(ray, bvh->pos[q.x], bvh->pos[q.y],
+                            bvh->pos[q.z], bvh->pos[q.w], ray_t, ew)) {
+                        hit = true;
+                        ray.tmax = ray_t;
+                        eid = idx;
+                        ew = {ew.x, ew.y, ew.z, ew.w};
+                    }
+                }
+            } break;
+            case bvh_node_type::vertex: {
+                for (auto i = 0; i < node.count; i++) {
+                    auto idx = bvh->sorted_prim[node.start + i];
+                    if (intersect_point(
+                            ray, bvh->pos[idx], bvh->radius[idx], ray_t)) {
+                        hit = true;
+                        ray.tmax = ray_t;
+                        eid = idx;
+                        ew = {1, 0, 0, 0};
+                    }
+                }
+            } break;
+            case bvh_node_type::instance: {
+                for (auto i = 0; i < node.count; i++) {
+                    auto idx = bvh->sorted_prim[node.start + i];
+                    if (intersect_bvh(bvh->ist_bvhs[idx],
+                            transform_ray(bvh->ist_frames_inv[idx], ray),
+                            early_exit, ray_t, iid, eid, ew)) {
+                        hit = true;
+                        ray.tmax = ray_t;
+                        iid = idx;
+                    }
+                }
+            } break;
+        }
+
+        // check for early exit
+        if (early_exit && hit) return true;
+    }
+
+    return hit;
+}
+
+// Finds the closest element with a bvh.
+bool overlap_bvh(const bvh_tree* bvh, const vec3f& pos, float max_dist,
+    bool early_exit, float& dist, int& iid, int& eid, vec4f& ew) {
+    // node stack
+    int node_stack[64];
+    auto node_cur = 0;
+    node_stack[node_cur++] = 0;
+
+    // hit
+    auto hit = false;
+
+    // walking stack
+    while (node_cur) {
+        // grab node
+        auto node = bvh->nodes[node_stack[--node_cur]];
+
+        // intersect bbox
+        if (!distance_check_bbox(pos, max_dist, node.bbox)) continue;
+
+        // intersect node, switching based on node type
+        // for each type, iterate over the the primitive list
+        switch (node.type) {
+            case bvh_node_type::internal: {
+                // internal node
+                for (auto idx = node.start; idx < node.start + node.count;
+                     idx++) {
+                    node_stack[node_cur++] = idx;
+                    assert(node_cur < 64);
+                }
+            } break;
+            case bvh_node_type::point: {
+                for (auto i = 0; i < node.count; i++) {
+                    auto idx = bvh->sorted_prim[node.start + i];
+                    auto& p = bvh->points[idx];
+                    if (overlap_point(
+                            pos, max_dist, bvh->pos[p], bvh->radius[p], dist)) {
+                        hit = true;
+                        max_dist = dist;
+                        eid = idx;
+                        ew = {1, 0, 0, 0};
+                    }
+                }
+            } break;
+            case bvh_node_type::line: {
+                for (auto i = 0; i < node.count; i++) {
+                    auto idx = bvh->sorted_prim[node.start + i];
+                    auto& l = bvh->lines[idx];
+                    if (overlap_line(pos, max_dist, bvh->pos[l.x],
+                            bvh->pos[l.y], bvh->radius[l.x], bvh->radius[l.y],
+                            dist, (vec2f&)ew)) {
+                        hit = true;
+                        max_dist = dist;
+                        eid = idx;
+                        ew = {ew.x, ew.y, 0, 0};
+                    }
+                }
+            } break;
+            case bvh_node_type::triangle: {
+                for (auto i = 0; i < node.count; i++) {
+                    auto idx = bvh->sorted_prim[node.start + i];
+                    auto& t = bvh->triangles[idx];
+                    if (overlap_triangle(pos, max_dist, bvh->pos[t.x],
+                            bvh->pos[t.y], bvh->pos[t.z], bvh->radius[t.x],
+                            bvh->radius[t.y], bvh->radius[t.z], dist,
+                            (vec3f&)ew)) {
+                        hit = true;
+                        max_dist = dist;
+                        eid = idx;
+                        ew = {ew.x, ew.y, ew.z, 0};
+                    }
+                }
+            } break;
+            case bvh_node_type::quad: {
+                for (auto i = 0; i < node.count; i++) {
+                    auto idx = bvh->sorted_prim[node.start + i];
+                    auto& q = bvh->quads[idx];
+                    if (overlap_quad(pos, max_dist, bvh->pos[q.x],
+                            bvh->pos[q.y], bvh->pos[q.z], bvh->pos[q.w],
+                            bvh->radius[q.x], bvh->radius[q.y],
+                            bvh->radius[q.z], bvh->radius[q.w], dist, ew)) {
+                        hit = true;
+                        max_dist = dist;
+                        eid = idx;
+                        ew = {ew.x, ew.y, ew.z, ew.w};
+                    }
+                }
+            } break;
+            case bvh_node_type::vertex: {
+                for (auto i = 0; i < node.count; i++) {
+                    auto idx = bvh->sorted_prim[node.start + i];
+                    if (overlap_point(pos, max_dist, bvh->pos[idx],
+                            bvh->radius[idx], dist)) {
+                        hit = true;
+                        max_dist = dist;
+                        eid = idx;
+                        ew = {1, 0, 0, 0};
+                    }
+                }
+            } break;
+            case bvh_node_type::instance: {
+                for (auto i = 0; i < node.count; i++) {
+                    auto idx = bvh->sorted_prim[node.start + i];
+                    if (overlap_bvh(bvh->ist_bvhs[idx],
+                            transform_point(bvh->ist_frames_inv[idx], pos),
+                            max_dist, early_exit, dist, iid, eid, ew)) {
+                        hit = true;
+                        max_dist = dist;
+                        iid = idx;
+                    }
+                }
+            } break;
+        }
+    }
+
+    return hit;
+}
+
+#if 0
+    // Finds the overlap between BVH leaf nodes.
+    template <typename OverlapElem>
+    void overlap_bvh_elems(const bvh_tree* bvh1, const bvh_tree* bvh2,
+                           bool skip_duplicates, bool skip_self, vector<vec2i>& overlaps,
+                           const OverlapElem& overlap_elems) {
+        // node stack
+        vec2i node_stack[128];
+        auto node_cur = 0;
+        node_stack[node_cur++] = {0, 0};
+
+        // walking stack
+        while (node_cur) {
+            // grab node
+            auto node_idx = node_stack[--node_cur];
+            const auto node1 = bvh1->nodes[node_idx.x];
+            const auto node2 = bvh2->nodes[node_idx.y];
+
+            // intersect bbox
+            if (!overlap_bbox(node1.bbox, node2.bbox)) continue;
+
+            // check for leaves
+            if (node1.isleaf && node2.isleaf) {
+                // collide primitives
+                for (auto i1 = node1.start; i1 < node1.start + node1.count; i1++) {
+                    for (auto i2 = node2.start; i2 < node2.start + node2.count;
+                         i2++) {
+                        auto idx1 = bvh1->sorted_prim[i1];
+                        auto idx2 = bvh2->sorted_prim[i2];
+                        if (skip_duplicates && idx1 > idx2) continue;
+                        if (skip_self && idx1 == idx2) continue;
+                        if (overlap_elems(idx1, idx2))
+                            overlaps.push_back({idx1, idx2});
+                    }
+                }
+            } else {
+                // descend
+                if (node1.isleaf) {
+                    for (auto idx2 = node2.start; idx2 < node2.start + node2.count;
+                         idx2++) {
+                        node_stack[node_cur++] = {node_idx.x, (int)idx2};
+                        assert(node_cur < 128);
+                    }
+                } else if (node2.isleaf) {
+                    for (auto idx1 = node1.start; idx1 < node1.start + node1.count;
+                         idx1++) {
+                        node_stack[node_cur++] = {(int)idx1, node_idx.y};
+                        assert(node_cur < 128);
+                    }
+                } else {
+                    for (auto idx2 = node2.start; idx2 < node2.start + node2.count;
+                         idx2++) {
+                        for (auto idx1 = node1.start;
+                             idx1 < node1.start + node1.count; idx1++) {
+                            node_stack[node_cur++] = {(int)idx1, (int)idx2};
+                            assert(node_cur < 128);
+                        }
+                    }
+                }
+            }
+        }
+    }
+#endif
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION FOR SIMPLE SCENE
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// cleanup
+shape::~shape() {
+    if (bvh) delete bvh;
+}
+
+// cleanup
+animation::~animation() {
+    for (auto v : keyframes) delete v;
+}
+
+// cleanup
+scene::~scene() {
+    for (auto v : shapes) delete v;
+    for (auto v : instances) delete v;
+    for (auto v : materials) delete v;
+    for (auto v : textures) delete v;
+    for (auto v : cameras) delete v;
+    for (auto v : environments) delete v;
+    for (auto v : lights) delete v;
+    for (auto v : nodes) delete v;
+    for (auto v : animations) delete v;
+    if (bvh) delete bvh;
+}
+
+// Shape value interpolated using barycentric coordinates
+template <typename T>
+T eval_barycentric(
+    const shape* shp, const vector<T>& vals, int eid, const vec4f& euv) {
+    if (vals.empty()) return T();
+    if (!shp->triangles.empty()) {
+        return eval_barycentric_triangle(
+            vals, shp->triangles[eid], vec3f{euv.x, euv.y, euv.z});
+    } else if (!shp->lines.empty()) {
+        return eval_barycentric_line(
+            vals, shp->lines[eid], vec2f{euv.x, euv.y});
+    } else if (!shp->points.empty()) {
+        return eval_barycentric_point(vals, shp->points[eid], euv.x);
+    } else if (!shp->quads.empty()) {
+        return eval_barycentric_quad(vals, shp->quads[eid], euv);
+    } else {
+        return vals[eid];  // points
+    }
+}
+
+// Shape position interpolated using barycentric coordinates
+vec3f eval_pos(const shape* shp, int eid, const vec4f& euv) {
+    return eval_barycentric(shp, shp->pos, eid, euv);
+}
+
+// Shape normal interpolated using barycentric coordinates
+vec3f eval_norm(const shape* shp, int eid, const vec4f& euv) {
+    return normalize(eval_barycentric(shp, shp->norm, eid, euv));
+}
+
+// Shape texcoord interpolated using barycentric coordinates
+vec2f eval_texcoord(const shape* shp, int eid, const vec4f& euv) {
+    return eval_barycentric(shp, shp->texcoord, eid, euv);
+}
+
+// Shape texcoord interpolated using barycentric coordinates
+vec4f eval_color(const shape* shp, int eid, const vec4f& euv) {
+    return eval_barycentric(shp, shp->color, eid, euv);
+}
+
+// Shape tangent space interpolated using barycentric coordinates
+vec4f eval_tangsp(const shape* shp, int eid, const vec4f& euv) {
+    return eval_barycentric(shp, shp->tangsp, eid, euv);
+}
+
+// Instance position interpolated using barycentric coordinates
+vec3f eval_pos(const instance* ist, int eid, const vec4f& euv) {
+    return transform_point(
+        ist->frame, eval_barycentric(ist->shp, ist->shp->pos, eid, euv));
+}
+
+// Instance normal interpolated using barycentric coordinates
+vec3f eval_norm(const instance* ist, int eid, const vec4f& euv) {
+    return transform_direction(ist->frame,
+        normalize(eval_barycentric(ist->shp, ist->shp->norm, eid, euv)));
+}
+
+// Evaluate a texture
+vec4f eval_texture(const texture_info& info, const vec2f& texcoord, bool srgb,
+    const vec4f& def) {
+    if (!info.txt) return def;
+
+    // get texture
+    auto txt = info.txt;
+    assert(txt->hdr || txt->ldr);
+
+    auto lookup = [&def, &txt, &srgb](int i, int j) {
+        if (txt->ldr)
+            return (srgb) ? srgb_to_linear(txt->ldr[{i, j}]) :
+                            byte_to_float(txt->ldr[{i, j}]);
+        else if (txt->hdr)
+            return txt->hdr[{i, j}];
+        else
+            return def;
+    };
+
+    // get image width/height
+    auto w = txt->width(), h = txt->height();
+
+    // get coordinates normalized for tiling
+    auto s = 0.0f, t = 0.0f;
+    if (!info.wrap_s) {
+        s = clamp(texcoord.x, 0.0f, 1.0f) * w;
+    } else {
+        s = std::fmod(texcoord.x, 1.0f) * w;
+        if (s < 0) s += w;
+    }
+    if (!info.wrap_t) {
+        t = clamp(texcoord.y, 0.0f, 1.0f) * h;
+    } else {
+        t = std::fmod(texcoord.y, 1.0f) * h;
+        if (t < 0) t += h;
+    }
+
+    // get image coordinates and residuals
+    auto i = clamp((int)s, 0, w - 1), j = clamp((int)t, 0, h - 1);
+    auto ii = (i + 1) % w, jj = (j + 1) % h;
+    auto u = s - i, v = t - j;
+
+    // nearest lookup
+    if (!info.linear) return lookup(i, j);
+
+    // handle interpolation
+    return lookup(i, j) * (1 - u) * (1 - v) + lookup(i, jj) * (1 - u) * v +
+           lookup(ii, j) * u * (1 - v) + lookup(ii, jj) * u * v;
+}
+
+// Subdivides shape elements.
+void subdivide_shape_once(shape* shp, bool subdiv) {
+    if (!shp->lines.empty() || !shp->triangles.empty() || !shp->quads.empty()) {
+        vector<vec2i> edges;
+        vector<vec4i> faces;
+        tie(shp->lines, shp->triangles, shp->quads, edges, faces) =
+            subdivide_elems_linear(
+                shp->lines, shp->triangles, shp->quads, (int)shp->pos.size());
+        shp->pos = subdivide_vert_linear(shp->pos, edges, faces);
+        shp->norm = subdivide_vert_linear(shp->norm, edges, faces);
+        shp->texcoord = subdivide_vert_linear(shp->texcoord, edges, faces);
+        shp->color = subdivide_vert_linear(shp->color, edges, faces);
+        shp->radius = subdivide_vert_linear(shp->radius, edges, faces);
+        if (subdiv && !shp->quads.empty()) {
+            auto boundary = get_boundary_edges({}, {}, shp->quads);
+            shp->pos =
+                subdivide_vert_catmullclark(shp->quads, shp->pos, boundary, {});
+            shp->norm = subdivide_vert_catmullclark(
+                shp->quads, shp->norm, boundary, {});
+            shp->texcoord = subdivide_vert_catmullclark(
+                shp->quads, shp->texcoord, boundary, {});
+            shp->color = subdivide_vert_catmullclark(
+                shp->quads, shp->color, boundary, {});
+            shp->radius = subdivide_vert_catmullclark(
+                shp->quads, shp->radius, boundary, {});
+            shp->norm = compute_normals({}, {}, shp->quads, shp->pos);
+        }
+    } else if (!shp->quads_pos.empty()) {
+        vector<vec2i> _lines;
+        vector<vec3i> _triangles;
+        vector<vec2i> edges;
+        vector<vec4i> faces;
+        tie(_lines, _triangles, shp->quads_pos, edges, faces) =
+            subdivide_elems_linear({}, {}, shp->quads_pos, shp->pos.size());
+        shp->pos = subdivide_vert_linear(shp->pos, edges, faces);
+        tie(_lines, _triangles, shp->quads_norm, edges, faces) =
+            subdivide_elems_linear({}, {}, shp->quads_norm, shp->norm.size());
+        shp->norm = subdivide_vert_linear(shp->norm, edges, faces);
+        tie(_lines, _triangles, shp->quads_texcoord, edges, faces) =
+            subdivide_elems_linear(
+                {}, {}, shp->quads_texcoord, shp->texcoord.size());
+        shp->texcoord = subdivide_vert_linear(shp->texcoord, edges, faces);
+        if (subdiv) {
+            shp->pos = subdivide_vert_catmullclark(shp->quads_pos, shp->pos,
+                get_boundary_edges({}, {}, shp->quads_pos), {});
+            shp->norm = subdivide_vert_catmullclark(shp->quads_norm, shp->norm,
+                get_boundary_edges({}, {}, shp->quads_norm), {});
+            shp->texcoord =
+                subdivide_vert_catmullclark(shp->quads_texcoord, shp->texcoord,
+                    {}, get_boundary_verts({}, {}, shp->quads_texcoord));
+        }
+    } else if (!shp->beziers.empty()) {
+        vector<int> verts;
+        vector<vec4i> segments;
+        tie(shp->beziers, verts, segments) =
+            subdivide_bezier_recursive(shp->beziers, (int)shp->pos.size());
+        shp->pos = subdivide_vert_bezier(shp->pos, verts, segments);
+        shp->norm = subdivide_vert_bezier(shp->norm, verts, segments);
+        shp->texcoord = subdivide_vert_bezier(shp->texcoord, verts, segments);
+        shp->color = subdivide_vert_bezier(shp->color, verts, segments);
+        shp->radius = subdivide_vert_bezier(shp->radius, verts, segments);
+    }
+}
+
+// Facet a shape. Supports only non-facevarying shapes
+void facet_shape(shape* shp, bool recompute_normals) {
+    if (!shp->lines.empty() || !shp->triangles.empty() || !shp->quads.empty()) {
+        vector<int> verts;
+        tie(shp->lines, shp->triangles, shp->quads, verts) =
+            facet_elems(shp->lines, shp->triangles, shp->quads);
+        shp->pos = facet_vert(shp->pos, verts);
+        shp->norm = facet_vert(shp->norm, verts);
+        shp->texcoord = facet_vert(shp->texcoord, verts);
+        shp->color = facet_vert(shp->color, verts);
+        shp->radius = facet_vert(shp->radius, verts);
+        if (recompute_normals) {
+            shp->norm = compute_normals(
+                shp->lines, shp->triangles, shp->quads, shp->pos);
+        }
+    }
+}
+
+// Tesselate a shape into basic primitives
+void tesselate_shape(shape* shp, bool subdivide,
+    bool facevarying_to_sharedvertex, bool quads_to_triangles,
+    bool bezier_to_lines) {
+    if (subdivide && shp->subdivision_level) {
+        for (auto l = 0; l < shp->subdivision_level; l++) {
+            subdivide_shape_once(shp, shp->subdivision_catmullclark);
+        }
+    }
+    if (facevarying_to_sharedvertex && !shp->quads_pos.empty()) {
+        std::tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
+            convert_face_varying(shp->quads_pos, shp->quads_norm,
+                shp->quads_texcoord, shp->pos, shp->norm, shp->texcoord);
+        shp->quads_pos = {};
+        shp->quads_norm = {};
+        shp->quads_texcoord = {};
+    }
+    if (quads_to_triangles && !shp->quads.empty()) {
+        shp->triangles = convert_quads_to_triangles(shp->quads);
+        shp->quads = {};
+    }
+    if (bezier_to_lines && !shp->beziers.empty()) {
+        shp->lines = convert_bezier_to_lines(shp->beziers);
+        shp->beziers = {};
+    }
+}
+
+// Tesselate scene shapes and update pointers
+void tesselate_shapes(scene* scn, bool subdivide,
+    bool facevarying_to_sharedvertex, bool quads_to_triangles,
+    bool bezier_to_lines) {
+    for (auto shp : scn->shapes) {
+        tesselate_shape(shp, subdivide, facevarying_to_sharedvertex,
+            quads_to_triangles, bezier_to_lines);
+    }
+}
+
+// Update animation transforms
+void update_transforms(animation* anm, float time) {
+    auto interpolate = [](keyframe_type type, const vector<float>& times,
+                           const auto& vals, float time) {
+        switch (type) {
+            case keyframe_type::step:
+                return eval_keyframed_step(times, vals, time);
+            case keyframe_type::linear:
+                return eval_keyframed_linear(times, vals, time);
+            case keyframe_type::catmull_rom: return vals.at(0);
+            case keyframe_type::bezier:
+                return eval_keyframed_bezier(times, vals, time);
+            default: throw runtime_error("should not have been here");
+        }
+        return vals.at(0);
+    };
+
+    for (auto kfr : anm->keyframes) {
+        if (!kfr->translation.empty()) {
+            auto val =
+                interpolate(kfr->type, kfr->times, kfr->translation, time);
+            for (auto target : anm->targets)
+                if (target.first == kfr) target.second->translation = val;
+        }
+        if (!kfr->rotation.empty()) {
+            auto val = interpolate(kfr->type, kfr->times, kfr->rotation, time);
+            for (auto target : anm->targets)
+                if (target.first == kfr) target.second->rotation = val;
+        }
+        if (!kfr->scaling.empty()) {
+            auto val = interpolate(kfr->type, kfr->times, kfr->scaling, time);
+            for (auto target : anm->targets)
+                if (target.first == kfr) target.second->scaling = val;
+        }
+    }
+}
+
+// Update node transforms
+void update_transforms(node* nde, const frame3f& parent = identity_frame3f) {
+    auto frame = parent * nde->frame * translation_frame3(nde->translation) *
+                 rotation_frame3(nde->rotation) * scaling_frame3(nde->scaling);
+    for (auto ist : nde->ists) ist->frame = frame;
+    if (nde->cam) nde->cam->frame = frame;
+    if (nde->env) nde->env->frame = frame;
+    for (auto child : nde->children_) update_transforms(child, frame);
+}
+
+// Update node transforms
+void update_transforms(scene* scn, float time) {
+    for (auto agr : scn->animations) update_transforms(agr, time);
+    for (auto nde : scn->nodes) nde->children_.clear();
+    for (auto nde : scn->nodes)
+        if (nde->parent) nde->parent->children_.push_back(nde);
+    for (auto nde : scn->nodes)
+        if (!nde->parent) update_transforms(nde);
+}
+
+// Compute animation range
+vec2f compute_animation_range(const scene* scn) {
+    if (scn->animations.empty()) return zero2f;
+    auto range = vec2f{+flt_max, -flt_max};
+    for (auto anm : scn->animations) {
+        for (auto kfr : anm->keyframes) {
+            range.x = min(range.x, kfr->times.front());
+            range.y = max(range.y, kfr->times.back());
+        }
+    }
+    return range;
+}
+
+// Add missing values and elements
+void add_elements(scene* scn, const add_elements_options& opts) {
+    if (opts.smooth_normals) {
+        for (auto shp : scn->shapes) {
+            if (!shp->norm.empty()) continue;
+            shp->norm.resize(shp->pos.size(), {0, 0, 1});
+            if (!shp->lines.empty() || !shp->triangles.empty() ||
+                !shp->quads.empty()) {
+                shp->norm = compute_normals(
+                    shp->lines, shp->triangles, shp->quads, shp->pos);
+            }
+            if (!shp->quads_pos.empty()) {
+                if (!shp->quads_norm.empty())
+                    throw runtime_error("bad normals");
+                shp->quads_norm = shp->quads_pos;
+                shp->norm = compute_normals({}, {}, shp->quads_pos, shp->pos);
+            }
+        }
+    }
+
+    if (opts.tangent_space) {
+        for (auto shp : scn->shapes) {
+            if (!shp->tangsp.empty() || shp->texcoord.empty() || !shp->mat ||
+                !(shp->mat->norm_txt.txt || shp->mat->bump_txt.txt))
+                continue;
+            if (!shp->triangles.empty()) {
+                shp->tangsp = compute_tangent_frames(
+                    shp->triangles, shp->pos, shp->norm, shp->texcoord);
+            } else if (!shp->quads.empty()) {
+                auto triangles = convert_quads_to_triangles(shp->quads);
+                shp->tangsp = compute_tangent_frames(
+                    triangles, shp->pos, shp->norm, shp->texcoord);
+            }
+        }
+    }
+
+    if (opts.pointline_radius > 0) {
+        for (auto shp : scn->shapes) {
+            if ((shp->points.empty() && shp->lines.empty()) ||
+                !shp->radius.empty())
+                continue;
+            shp->radius.resize(shp->pos.size(), opts.pointline_radius);
+        }
+    }
+
+    if (opts.texture_data) {
+        for (auto txt : scn->textures) {
+            if (!txt->hdr && !txt->ldr) {
+                printf("unable to load texture %s\n", txt->path.c_str());
+                txt->ldr = image4b(1, 1, {255, 255, 255, 255});
+            }
+        }
+    }
+
+    if (opts.shape_instances) {
+        if (!scn->instances.empty()) return;
+        for (auto shp : scn->shapes) {
+            auto ist = new instance();
+            ist->name = shp->name;
+            ist->shp = shp;
+            scn->instances.push_back(ist);
+        }
+    }
+
+    if (opts.default_names || opts.default_paths) {
+        auto cid = 0;
+        for (auto cam : scn->cameras) {
+            if (cam->name.empty())
+                cam->name = "unnamed_camera_" + std::to_string(cid);
+            cid++;
+        }
+
+        auto tid = 0;
+        for (auto txt : scn->textures) {
+            if (txt->name.empty())
+                txt->name = "unnamed_texture_" + std::to_string(tid);
+            tid++;
+        }
+
+        auto mid = 0;
+        for (auto mat : scn->materials) {
+            if (mat->name.empty())
+                mat->name = "unnamed_material_" + std::to_string(mid);
+            mid++;
+        }
+
+        auto sid = 0;
+        for (auto shp : scn->shapes) {
+            if (shp->name.empty())
+                shp->name = "unnamed_shape_" + std::to_string(sid);
+            sid++;
+        }
+
+        auto iid = 0;
+        for (auto ist : scn->instances) {
+            if (ist->name.empty())
+                ist->name = "unnamed_instance_" + std::to_string(iid);
+            iid++;
+        }
+
+        auto eid = 0;
+        for (auto env : scn->environments) {
+            if (env->name.empty())
+                env->name = "unnamed_environment_" + std::to_string(eid);
+            eid++;
+        }
+    }
+
+    if (opts.default_paths) {
+        for (auto txt : scn->textures) {
+            if (txt->path != "") continue;
+            txt->path = txt->name + ".png";
+        }
+        for (auto shp : scn->shapes) {
+            if (shp->path != "") continue;
+            shp->path = shp->name + ".bin";
+        }
+    }
+
+    // default environment
+    if (opts.default_environment && scn->environments.empty()) {
+        auto env = new environment();
+        env->name = "default_environment";
+        scn->environments.push_back(env);
+    }
+}
+
+// Make a view camera either copying a given one or building a default one.
+camera* make_view_camera(scene* scn, int camera_id) {
+    if (scn->cameras.empty()) {
+        update_bounds(scn);
+        auto bbox = scn->bbox;
+        auto bbox_center = (bbox.max + bbox.min) / 2.0f;
+        auto bbox_size = bbox.max - bbox.min;
+        auto bbox_msize = max(bbox_size[0], max(bbox_size[1], bbox_size[2]));
+        // set up camera
+        auto cam = new camera();
+        cam->name = "default_camera";
+        auto camera_dir = vec3f{1, 0.4f, 1};
+        auto from = camera_dir * bbox_msize + bbox_center;
+        auto to = bbox_center;
+        auto up = vec3f{0, 1, 0};
+        cam->frame = lookat_frame3(from, to, up);
+        cam->ortho = false;
+        cam->aspect = 16.0f / 9.0f;
+        cam->yfov = 2 * atanf(0.5f);
+        cam->aperture = 0;
+        cam->focus = length(to - from);
+        return cam;
+    } else {
+        camera_id = clamp(camera_id, 0, (int)scn->cameras.size());
+        return new camera(*scn->cameras[camera_id]);
+    }
+}
+
+// Merge scene into one another
+void merge_into(scene* merge_into, scene* merge_from) {
+    merge_into->cameras.insert(merge_from->cameras.begin(),
+        merge_from->cameras.end(), merge_into->cameras.end());
+    merge_from->cameras.clear();
+    merge_into->textures.insert(merge_from->textures.begin(),
+        merge_from->textures.end(), merge_into->textures.end());
+    merge_from->textures.clear();
+    merge_into->materials.insert(merge_from->materials.begin(),
+        merge_from->materials.end(), merge_into->materials.end());
+    merge_from->materials.clear();
+    merge_into->shapes.insert(merge_from->shapes.begin(),
+        merge_from->shapes.end(), merge_into->shapes.end());
+    merge_from->shapes.clear();
+    merge_into->instances.insert(merge_from->instances.begin(),
+        merge_from->instances.end(), merge_into->instances.end());
+    merge_from->instances.clear();
+    merge_into->environments.insert(merge_from->environments.begin(),
+        merge_from->environments.end(), merge_into->environments.end());
+    merge_from->environments.clear();
+}
+
+// Computes a shape bounding box (quick computation that ignores radius)
+void update_bounds(shape* shp) {
+    shp->bbox = invalid_bbox3f;
+    for (auto p : shp->pos) shp->bbox += vec3f(p);
+}
+
+// Updates the instance bounding box
+void update_bounds(instance* ist, bool do_shape) {
+    if (do_shape) update_bounds(ist->shp);
+    ist->bbox = transform_bbox(ist->frame, ist->shp->bbox);
+}
+
+// Updates the scene and scene's instances bounding boxes
+void update_bounds(scene* scn, bool do_shapes) {
+    if (do_shapes) {
+        for (auto shp : scn->shapes) update_bounds(shp);
+    }
+    scn->bbox = invalid_bbox3f;
+    if (!scn->instances.empty()) {
+        for (auto ist : scn->instances) {
+            update_bounds(ist, false);
+            scn->bbox += ist->bbox;
+        }
+    } else {
+        for (auto shp : scn->shapes) { scn->bbox += shp->bbox; }
+    }
+}
+
+// Flatten scene instances into separate meshes.
+void flatten_instances(scene* scn) {
+    if (scn->instances.empty()) return;
+    auto shapes = scn->shapes;
+    scn->shapes.clear();
+    auto instances = scn->instances;
+    scn->instances.clear();
+    for (auto ist : instances) {
+        if (!ist->shp) continue;
+        auto xf = ist->xform();
+        auto nshp = new shape(*ist->shp);
+        for (auto& p : nshp->pos) p = transform_point(xf, p);
+        for (auto& n : nshp->norm) n = transform_direction(xf, n);
+        scn->shapes.push_back(nshp);
+    }
+    for (auto e : shapes) delete e;
+    for (auto e : instances) delete e;
+}
+
+// Initialize the lights
+void update_lights(scene* scn, bool include_env, bool sampling_cdf) {
+    for (auto lgt : scn->lights) delete lgt;
+    scn->lights.clear();
+
+    for (auto ist : scn->instances) {
+        if (!ist->shp->mat) continue;
+        if (ist->shp->mat->ke == zero3f) continue;
+        auto lgt = new light();
+        lgt->ist = ist;
+        scn->lights.push_back(lgt);
+        if (!sampling_cdf) continue;
+        auto shp = ist->shp;
+        if (shp->elem_cdf.empty()) {
+            if (!shp->points.empty()) {
+                shp->elem_cdf = sample_points_cdf(shp->points.size());
+            } else if (!ist->shp->lines.empty()) {
+                shp->elem_cdf = sample_lines_cdf(shp->lines, shp->pos);
+            } else if (!shp->triangles.empty()) {
+                shp->elem_cdf = sample_triangles_cdf(shp->triangles, shp->pos);
+            }
+        }
+    }
+
+    for (auto env : scn->environments) {
+        if (!include_env) continue;
+        if (env->ke == zero3f) continue;
+        auto lgt = new light();
+        lgt->env = env;
+        scn->lights.push_back(lgt);
+    }
+}
+
+// Build a shape BVH
+void build_bvh(shape* shp, float def_radius, bool equalsize) {
+    if (!shp->points.empty()) {
+        shp->bvh = build_bvh(shp->points, {}, {}, {}, shp->pos, shp->radius,
+            def_radius, equalsize);
+    } else if (!shp->lines.empty()) {
+        shp->bvh = build_bvh({}, shp->lines, {}, {}, shp->pos, shp->radius,
+            def_radius, equalsize);
+    } else if (!shp->triangles.empty()) {
+        shp->bvh = build_bvh(
+            {}, {}, shp->triangles, {}, shp->pos, {}, def_radius, equalsize);
+    } else if (!shp->quads.empty()) {
+        shp->bvh = build_bvh(
+            {}, {}, {}, shp->quads, shp->pos, {}, def_radius, equalsize);
+    } else {
+        shp->bvh = build_bvh(
+            {}, {}, {}, {}, shp->pos, shp->radius, def_radius, equalsize);
+    }
+    shp->bbox = shp->bvh->nodes[0].bbox;
+}
+
+// Build a scene BVH
+void build_bvh(scene* scn, bool do_shapes, float def_radius, bool equalsize) {
+    // do shapes
+    if (do_shapes) {
+        for (auto shp : scn->shapes) build_bvh(shp, def_radius, equalsize);
+    }
+
+    // update instance bbox
+    for (auto ist : scn->instances)
+        ist->bbox = transform_bbox(ist->frame, ist->shp->bbox);
+
+    // tree bvh
+    auto smap = unordered_map<shape*, bvh_tree*>();
+    for (auto shp : scn->shapes) smap[shp] = shp->bvh;
+    auto ist_frames = vector<frame3f>();
+    auto ist_frames_inv = vector<frame3f>();
+    auto ist_bvh = vector<bvh_tree*>();
+    for (auto ist : scn->instances) {
+        ist_frames.push_back(ist->frame);
+        ist_frames_inv.push_back(inverse(ist->frame));
+        ist_bvh.push_back(smap.at(ist->shp));
+    }
+    scn->bvh = build_bvh(ist_frames, ist_frames_inv, ist_bvh, equalsize);
+}
+
+// Refits a scene BVH
+void refit_bvh(shape* shp, float def_radius) {
+    if (!shp->points.empty()) {
+        refit_bvh(shp->bvh, shp->pos, shp->radius, def_radius);
+    } else if (!shp->lines.empty()) {
+        refit_bvh(shp->bvh, shp->pos, shp->radius, def_radius);
+    } else if (!shp->triangles.empty()) {
+        refit_bvh(shp->bvh, shp->pos, {}, def_radius);
+    } else if (!shp->quads.empty()) {
+        refit_bvh(shp->bvh, shp->pos, {}, def_radius);
+    } else {
+        refit_bvh(shp->bvh, shp->pos, shp->radius, def_radius);
+    }
+    shp->bbox = shp->bvh->nodes[0].bbox;
+}
+
+// Refits a scene BVH
+void refit_bvh(scene* scn, bool do_shapes, float def_radius) {
+    if (do_shapes) {
+        for (auto shp : scn->shapes) refit_bvh(shp, def_radius);
+    }
+
+    // update instance bbox
+    for (auto ist : scn->instances)
+        ist->bbox = transform_bbox(ist->frame, ist->shp->bbox);
+
+    // recompute bvh bounds
+    auto smap = unordered_map<shape*, bvh_tree*>();
+    for (auto shp : scn->shapes) smap[shp] = shp->bvh;
+    auto ist_frames = vector<frame3f>();
+    auto ist_frames_inv = vector<frame3f>();
+    for (auto ist : scn->instances) {
+        ist_frames.push_back(ist->frame);
+        ist_frames_inv.push_back(inverse(ist->frame));
+    }
+    refit_bvh(scn->bvh, ist_frames, ist_frames_inv);
+}
+
+// Print scene info (call update bounds bes before)
+void print_info(const scene* scn) {
+    auto nverts = 0, nnorms = 0, ntexcoords = 0, npoints = 0, nlines = 0,
+         ntriangles = 0, nquads = 0;
+    for (auto shp : scn->shapes) {
+        nverts += shp->pos.size();
+        nnorms += shp->norm.size();
+        ntexcoords += shp->texcoord.size();
+        npoints += shp->points.size();
+        nlines += shp->lines.size();
+        ntriangles += shp->triangles.size();
+        nquads += shp->quads.size();
+    }
+
+    auto bbox = scn->bbox;
+    auto bboxc = vec3f{(bbox.max[0] + bbox.min[0]) / 2,
+        (bbox.max[1] + bbox.min[1]) / 2, (bbox.max[2] + bbox.min[2]) / 2};
+    auto bboxs = vec3f{bbox.max[0] - bbox.min[0], bbox.max[1] - bbox.min[1],
+        bbox.max[2] - bbox.min[2]};
+
+    printf("number of cameras:      %d\n", (int)scn->cameras.size());
+    printf("number of shapes:       %d\n", (int)scn->shapes.size());
+    printf("number of instances:    %d\n", (int)scn->instances.size());
+    printf("number of materials:    %d\n", (int)scn->materials.size());
+    printf("number of textures:     %d\n", (int)scn->textures.size());
+    printf("number of environments: %d\n", (int)scn->environments.size());
+    printf("number of vertices:     %d\n", nverts);
+    printf("number of normals:      %d\n", nnorms);
+    printf("number of texcoords:    %d\n", ntexcoords);
+    printf("number of points:       %d\n", npoints);
+    printf("number of lines:        %d\n", nlines);
+    printf("number of triangles:    %d\n", ntriangles);
+    printf("number of quads:        %d\n", nquads);
+    printf("\n");
+    printf("bbox min:    %g %g %g\n", bbox.min[0], bbox.min[1], bbox.min[2]);
+    printf("bbox max:    %g %g %g\n", bbox.max[0], bbox.max[1], bbox.max[2]);
+    printf("bbox center: %g %g %g\n", bboxc[0], bboxc[1], bboxc[2]);
+    printf("bbox size:   %g %g %g\n", bboxs[0], bboxs[1], bboxs[2]);
+    printf("\n");
+}
+
+// Flattens an scene
+scene* obj_to_scene(const obj_scene* obj, const load_options& opts) {
+    // clear scene
+    auto scn = new scene();
+
+    struct obj_vertex_hash {
+        std::hash<int> Th;
+        size_t operator()(const obj_vertex& vv) const {
+            auto v = (const int*)&vv;
+            size_t h = 0;
+            for (auto i = 0; i < sizeof(obj_vertex) / sizeof(int); i++) {
+                // embads hash_combine below
+                h ^= (Th(v[i]) + 0x9e3779b9 + (h << 6) + (h >> 2));
+            }
+            return h;
+        }
+    };
+
+    // convert textures
+    auto tmap = unordered_map<string, texture*>{{"", nullptr}};
+    for (auto otxt : obj->textures) {
+        auto txt = new texture();
+        txt->name = otxt->path;
+        txt->path = otxt->path;
+        if (!otxt->datab.empty()) {
+            txt->ldr = image4b(otxt->width, otxt->height);
+            for (auto j = 0; j < otxt->height; j++) {
+                for (auto i = 0; i < otxt->width; i++) {
+                    auto v = otxt->datab.data() +
+                             (otxt->width * j + i) * otxt->ncomp;
+                    switch (otxt->ncomp) {
+                        case 1:
+                            txt->ldr.at(i, j) = {v[0], v[0], v[0], 255};
+                            break;
+                        case 2: txt->ldr.at(i, j) = {v[0], v[1], 0, 255}; break;
+                        case 3:
+                            txt->ldr.at(i, j) = {v[0], v[1], v[2], 255};
+                            break;
+                        case 4:
+                            txt->ldr.at(i, j) = {v[0], v[1], v[2], v[3]};
+                            break;
+                        default: assert(false); break;
+                    }
+                }
+            }
+        } else if (!otxt->dataf.empty()) {
+            txt->hdr = image4f(otxt->width, otxt->height);
+            for (auto j = 0; j < otxt->height; j++) {
+                for (auto i = 0; i < otxt->width; i++) {
+                    auto v = otxt->dataf.data() +
+                             (otxt->width * j + i) * otxt->ncomp;
+                    switch (otxt->ncomp) {
+                        case 1:
+                            txt->hdr.at(i, j) = {v[0], v[0], v[0], 1};
+                            break;
+                        case 2: txt->hdr.at(i, j) = {v[0], v[1], 0, 1}; break;
+                        case 3:
+                            txt->hdr.at(i, j) = {v[0], v[1], v[2], 1};
+                            break;
+                        case 4:
+                            txt->hdr.at(i, j) = {v[0], v[1], v[2], v[3]};
+                            break;
+                        default: assert(false); break;
+                    }
+                }
+            }
+        }
+        scn->textures.push_back(txt);
+        tmap[txt->path] = txt;
+    }
+
+    auto add_texture = [&tmap](const obj_texture_info& oinfo) {
+        auto info = texture_info();
+        if (oinfo.path == "") return info;
+        info.txt = tmap.at(oinfo.path);
+        info.wrap_s = !oinfo.clamp;
+        info.wrap_t = !oinfo.clamp;
+        info.scale = oinfo.scale;
+        return info;
+    };
+
+    // convert materials and build textures
+    auto mmap = unordered_map<string, material*>{{"", nullptr}};
+    for (auto omat : obj->materials) {
+        auto mat = new material();
+        mat->name = omat->name;
+        mat->type = material_type::specular_roughness;
+        mat->ke = {omat->ke.x, omat->ke.y, omat->ke.z};
+        mat->kd = {omat->kd.x, omat->kd.y, omat->kd.z};
+        mat->ks = {omat->ks.x, omat->ks.y, omat->ks.z};
+        mat->kr = {omat->kr.x, omat->kr.y, omat->kr.z};
+        mat->kt = {omat->kt.x, omat->kt.y, omat->kt.z};
+        mat->rs = (omat->ns >= 1e6f) ? 0 : pow(2 / (omat->ns + 2), 1 / 4.0f);
+        mat->op = omat->op;
+        mat->ke_txt = add_texture(omat->ke_txt);
+        mat->kd_txt = add_texture(omat->kd_txt);
+        mat->ks_txt = add_texture(omat->ks_txt);
+        mat->kr_txt = add_texture(omat->kr_txt);
+        mat->kt_txt = add_texture(omat->kt_txt);
+        mat->rs_txt = add_texture(omat->ns_txt);
+        mat->norm_txt = add_texture(omat->norm_txt);
+        mat->bump_txt = add_texture(omat->bump_txt);
+        mat->disp_txt = add_texture(omat->disp_txt);
+        switch (omat->illum) {
+            case 0:  // Color on and Ambient off
+            case 1:  // Color on and Ambient on
+            case 2:  // Highlight on
+            case 3:  // Reflection on and Ray trace on
+                mat->op = 1;
+                mat->kt = {0, 0, 0};
+                break;
+            case 4:  // Transparency: Glass on
+                // Reflection: Ray trace on
+                break;
+            case 5:  // Reflection: Fresnel on and Ray trace on
+                mat->op = 1;
+                mat->kt = {0, 0, 0};
+                break;
+            case 6:  // Transparency: Refraction on
+                     // Reflection: Fresnel off and Ray trace on
+            case 7:  // Transparency: Refraction on
+                // Reflection: Fresnel on and Ray trace on
+                break;
+            case 8:  // Reflection on and Ray trace off
+                mat->op = 1;
+                mat->kt = {0, 0, 0};
+                break;
+            case 9:  // Transparency: Glass on
+                // Reflection: Ray trace off
+                break;
+        }
+        scn->materials.push_back(mat);
+        mmap[mat->name] = mat;
+    }
+
+    // convert meshes
+    auto omap = unordered_map<string, vector<shape*>>{{"", {}}};
+    for (auto omsh : obj->objects) {
+        omap[omsh->name] = {};
+        for (auto& oshp : omsh->groups) {
+            if (oshp.verts.empty()) continue;
+            if (oshp.elems.empty()) continue;
+
+            auto shp = new shape();
+            shp->name = omsh->name + oshp.groupname;
+            shp->mat = mmap[oshp.matname];
+            shp->subdivision_level = oshp.subdivision_level;
+            shp->subdivision_catmullclark = oshp.subdivision_catmullclark;
+
+            // check to see if this shuold be face-varying or flat quads
+            auto as_facevarying = false, as_quads = false;
+            if (opts.preserve_quads || opts.preserve_facevarying) {
+                auto m = 10000, M = -1;
+                for (auto& elem : oshp.elems) {
+                    if (elem.type != obj_element_type::face) {
+                        m = 2;
+                        break;
+                    } else {
+                        m = min(m, (int)elem.size);
+                        M = max(M, (int)elem.size);
+                    }
+                }
+                if (m >= 3 && M == 4) as_quads = opts.preserve_quads;
+                if (m >= 3 && M <= 4)
+                    as_facevarying = opts.preserve_facevarying;
+            }
+
+            // in case of facevarying, check if there is really a need for it
+            if (as_facevarying) {
+                auto need_facevarying = false;
+                for (auto& elem : oshp.elems) {
+                    for (auto i = elem.start; i < elem.start + elem.size; i++) {
+                        auto& v = oshp.verts[i];
+                        if (v.norm >= 0 && v.pos != v.norm)
+                            need_facevarying = true;
+                        if (v.texcoord >= 0 && v.pos != v.texcoord)
+                            need_facevarying = true;
+                        if (v.color >= 0) as_facevarying = false;
+                        if (v.radius >= 0) as_facevarying = false;
+                    }
+                    if (!as_facevarying) break;
+                }
+                as_facevarying = need_facevarying;
+            }
+
+            if (!as_facevarying) {
+                // insert all vertices
+                unordered_map<obj_vertex, int, obj_vertex_hash> vert_map;
+                vector<int> vert_ids;
+                for (auto& vert : oshp.verts) {
+                    if (vert_map.find(vert) == vert_map.end()) {
+                        auto s = (int)vert_map.size();
+                        vert_map[vert] = s;
+                    }
+                    vert_ids.push_back(vert_map.at(vert));
+                }
+
+                // convert elements
+                for (auto& elem : oshp.elems) {
+                    switch (elem.type) {
+                        case obj_element_type::point: {
+                            for (auto i = elem.start;
+                                 i < elem.start + elem.size; i++) {
+                                shp->points.push_back(vert_ids[i]);
+                            }
+                        } break;
+                        case obj_element_type::line: {
+                            for (auto i = elem.start;
+                                 i < elem.start + elem.size - 1; i++) {
+                                shp->lines.push_back(
+                                    {vert_ids[i], vert_ids[i + 1]});
+                            }
+                        } break;
+                        case obj_element_type::face: {
+                            if (as_quads) {
+                                shp->quads.push_back({vert_ids[elem.start + 0],
+                                    vert_ids[elem.start + 1],
+                                    vert_ids[elem.start + 2],
+                                    vert_ids[elem.start +
+                                             ((elem.size == 3) ? 2 : 3)]});
+                            } else if (elem.size == 3) {
+                                shp->triangles.push_back(
+                                    {vert_ids[elem.start + 0],
+                                        vert_ids[elem.start + 1],
+                                        vert_ids[elem.start + 2]});
+                            } else {
+                                for (auto i = elem.start + 2;
+                                     i < elem.start + elem.size; i++) {
+                                    shp->triangles.push_back(
+                                        {vert_ids[elem.start], vert_ids[i - 1],
+                                            vert_ids[i]});
+                                }
+                            }
+                        } break;
+                        case obj_element_type::bezier: {
+                            if ((elem.size - 1) % 3)
+                                throw runtime_error("bad obj bezier");
+                            for (auto i = elem.start + 1;
+                                 i < elem.start + elem.size; i += 3) {
+                                shp->beziers.push_back(
+                                    {vert_ids[i - 1], vert_ids[i],
+                                        vert_ids[i + 1], vert_ids[i + 2]});
+                            }
+                        } break;
+                        default: { assert(false); }
+                    }
+                }
+
+                // copy vertex data
+                auto v = oshp.verts[0];
+                if (v.pos >= 0) shp->pos.resize(vert_map.size());
+                if (v.texcoord >= 0) shp->texcoord.resize(vert_map.size());
+                if (v.norm >= 0) shp->norm.resize(vert_map.size());
+                if (v.color >= 0) shp->color.resize(vert_map.size());
+                if (v.radius >= 0) shp->radius.resize(vert_map.size());
+                for (auto& kv : vert_map) {
+                    if (v.pos >= 0 && kv.first.pos >= 0) {
+                        auto v = obj->pos[kv.first.pos];
+                        shp->pos[kv.second] = {v.x, v.y, v.z};
+                    }
+                    if (v.texcoord >= 0 && kv.first.texcoord >= 0) {
+                        auto v = obj->texcoord[kv.first.texcoord];
+                        shp->texcoord[kv.second] = {v.x, v.y};
+                    }
+                    if (v.norm >= 0 && kv.first.norm >= 0) {
+                        auto v = obj->norm[kv.first.norm];
+                        shp->norm[kv.second] = {v.x, v.y, v.z};
+                    }
+                    if (v.color >= 0 && kv.first.color >= 0) {
+                        auto v = obj->color[kv.first.color];
+                        shp->color[kv.second] = {v.x, v.y, v.z, v.w};
+                    }
+                    if (v.radius >= 0 && kv.first.radius >= 0) {
+                        shp->radius[kv.second] = obj->radius[kv.first.radius];
+                    }
+                }
+
+                // fix smoothing
+                if (!oshp.smoothing && opts.obj_facet_non_smooth) {
+                    auto faceted = new shape();
+                    faceted->name = shp->name;
+                    auto pidx = vector<int>();
+                    for (auto point : shp->points) {
+                        faceted->points.push_back((int)pidx.size());
+                        pidx.push_back(point);
+                    }
+                    for (auto line : shp->lines) {
+                        faceted->lines.push_back(
+                            {(int)pidx.size() + 0, (int)pidx.size() + 1});
+                        pidx.push_back(line.x);
+                        pidx.push_back(line.y);
+                    }
+                    for (auto triangle : shp->triangles) {
+                        faceted->triangles.push_back({(int)pidx.size() + 0,
+                            (int)pidx.size() + 1, (int)pidx.size() + 2});
+                        pidx.push_back(triangle.x);
+                        pidx.push_back(triangle.y);
+                        pidx.push_back(triangle.z);
+                    }
+                    for (auto idx : pidx) {
+                        if (!shp->pos.empty())
+                            faceted->pos.push_back(shp->pos[idx]);
+                        if (!shp->norm.empty())
+                            faceted->norm.push_back(shp->norm[idx]);
+                        if (!shp->texcoord.empty())
+                            faceted->texcoord.push_back(shp->texcoord[idx]);
+                        if (!shp->color.empty())
+                            faceted->color.push_back(shp->color[idx]);
+                        if (!shp->radius.empty())
+                            faceted->radius.push_back(shp->radius[idx]);
+                    }
+                    delete shp;
+                    shp = faceted;
+                }
+            } else {
+                // insert all vertices
+                unordered_map<int, int> pos_map, norm_map, texcoord_map;
+                vector<int> pos_ids, norm_ids, texcoord_ids;
+                for (auto& vert : oshp.verts) {
+                    if (vert.pos >= 0) {
+                        if (pos_map.find(vert.pos) == pos_map.end()) {
+                            auto s = (int)pos_map.size();
+                            pos_map[vert.pos] = s;
+                        }
+                        pos_ids.push_back(pos_map.at(vert.pos));
+                    } else {
+                        if (!pos_ids.empty())
+                            throw runtime_error("malformed obj");
+                    }
+                    if (vert.norm >= 0) {
+                        if (norm_map.find(vert.norm) == norm_map.end()) {
+                            auto s = (int)norm_map.size();
+                            norm_map[vert.norm] = s;
+                        }
+                        norm_ids.push_back(norm_map.at(vert.norm));
+                    } else {
+                        if (!norm_ids.empty())
+                            throw runtime_error("malformed obj");
+                    }
+                    if (vert.texcoord >= 0) {
+                        if (texcoord_map.find(vert.texcoord) ==
+                            texcoord_map.end()) {
+                            auto s = (int)texcoord_map.size();
+                            texcoord_map[vert.texcoord] = s;
+                        }
+                        texcoord_ids.push_back(texcoord_map.at(vert.texcoord));
+                    } else {
+                        if (!texcoord_ids.empty())
+                            throw runtime_error("malformed obj");
+                    }
+                }
+
+                // convert elements
+                for (auto& elem : oshp.elems) {
+                    if (elem.type != obj_element_type::face)
+                        throw runtime_error("malformed obj");
+                    if (elem.size < 3 || elem.size > 4)
+                        throw runtime_error("malformed obj");
+                    if (!pos_ids.empty()) {
+                        shp->quads_pos.push_back({pos_ids[elem.start + 0],
+                            pos_ids[elem.start + 1], pos_ids[elem.start + 2],
+                            pos_ids[elem.start + ((elem.size == 3) ? 2 : 3)]});
+                    }
+                    if (!texcoord_ids.empty()) {
+                        shp->quads_texcoord.push_back(
+                            {texcoord_ids[elem.start + 0],
+                                texcoord_ids[elem.start + 1],
+                                texcoord_ids[elem.start + 2],
+                                texcoord_ids[elem.start +
+                                             ((elem.size == 3) ? 2 : 3)]});
+                    }
+                    if (!norm_ids.empty()) {
+                        shp->quads_norm.push_back({norm_ids[elem.start + 0],
+                            norm_ids[elem.start + 1], norm_ids[elem.start + 2],
+                            norm_ids[elem.start + ((elem.size == 3) ? 2 : 3)]});
+                    }
+                }
+
+                // copy vertex data
+                shp->pos.resize(pos_map.size());
+                shp->texcoord.resize(texcoord_map.size());
+                shp->norm.resize(norm_map.size());
+                for (auto& kv : pos_map) {
+                    shp->pos[kv.second] = obj->pos[kv.first];
+                }
+                for (auto& kv : texcoord_map) {
+                    shp->texcoord[kv.second] = obj->texcoord[kv.first];
+                }
+                for (auto& kv : norm_map) {
+                    shp->norm[kv.second] = obj->norm[kv.first];
+                }
+
+                // fix smoothing
+                if (!oshp.smoothing && opts.obj_facet_non_smooth) {}
+            }
+            scn->shapes.push_back(shp);
+            omap[omsh->name].push_back(shp);
+        }
+    }
+
+    // convert cameras
+    auto cmap = unordered_map<string, camera*>{{"", nullptr}};
+    for (auto ocam : obj->cameras) {
+        auto cam = new camera();
+        cam->name = ocam->name;
+        cam->ortho = ocam->ortho;
+        cam->yfov = ocam->yfov;
+        cam->aspect = ocam->aspect;
+        cam->aperture = ocam->aperture;
+        cam->focus = ocam->focus;
+        cam->frame = ocam->frame;
+        scn->cameras.push_back(cam);
+        cmap[cam->name] = cam;
+    }
+
+    // convert envs
+    unordered_set<material*> env_mat;
+    auto emap = unordered_map<string, environment*>{{"", nullptr}};
+    for (auto oenv : obj->environments) {
+        auto env = new environment();
+        env->name = oenv->name;
+        for (auto mat : scn->materials) {
+            if (mat->name == oenv->matname) {
+                env->ke = mat->ke;
+                env->ke_txt = mat->ke_txt;
+                env_mat.insert(mat);
+            }
+        }
+        env->frame = oenv->frame;
+        scn->environments.push_back(env);
+        emap[env->name] = env;
+    }
+
+    // remove env materials
+    for (auto shp : scn->shapes) env_mat.erase(shp->mat);
+    for (auto mat : env_mat) {
+        auto end =
+            std::remove(scn->materials.begin(), scn->materials.end(), mat);
+        scn->materials.erase(end, scn->materials.end());
+        delete mat;
+    }
+
+    if (obj->nodes.empty()) {
+        // instance cameras
+        // instance environments
+    } else {
+        // convert nodes
+        for (auto onde : obj->nodes) {
+            auto nde = new node();
+            nde->name = onde->name;
+            nde->cam = cmap.at(onde->camname);
+            if (!onde->objname.empty()) {
+                for (auto shp : omap.at(onde->objname)) {
+                    auto ist = new instance();
+                    ist->name = onde->name;
+                    ist->shp = shp;
+                    nde->ists.push_back(ist);
+                    scn->instances.push_back(ist);
+                }
+            }
+            nde->env = emap.at(onde->envname);
+            nde->translation = onde->translation;
+            nde->rotation = onde->rotation;
+            nde->scaling = onde->scaling;
+            nde->frame = onde->frame;
+            scn->nodes.push_back(nde);
+        }
+
+        // set up parent pointers
+        for (auto nid = 0; nid < obj->nodes.size(); nid++) {
+            auto onde = obj->nodes[nid];
+            if (onde->parent.empty()) continue;
+            auto nde = scn->nodes[nid];
+            for (auto parent : scn->nodes) {
+                if (parent->name == onde->parent) {
+                    nde->parent = parent;
+                    break;
+                }
+            }
+        }
+    }
+
+    // update transforms
+    update_transforms(scn);
+
+    // remove hierarchy if necessary
+    if (!opts.preserve_hierarchy) {
+        for (auto nde : scn->nodes) delete nde;
+        scn->nodes.clear();
+        for (auto anm : scn->animations) delete anm;
+        scn->animations.clear();
+    }
+
+    // done
+    return scn;
+}
+
+// Load an obj scene
+scene* load_obj_scene(const string& filename, const load_options& opts) {
+    auto oscn = unique_ptr<obj_scene>(load_obj(filename, opts.load_textures,
+        opts.skip_missing, opts.obj_flip_texcoord, opts.obj_flip_tr));
+    auto scn = unique_ptr<scene>(obj_to_scene(oscn.get(), opts));
+    return scn.release();
+}
+
+// Save an scene
+obj_scene* scene_to_obj(const scene* scn) {
+    auto obj = new obj_scene();
+
+    auto add_texture = [](const texture_info& info, bool bump = false) {
+        auto oinfo = obj_texture_info();
+        if (!info.txt) return oinfo;
+        oinfo.path = info.txt->path;
+        oinfo.clamp = !info.wrap_s && !info.wrap_t;
+        if (bump) oinfo.scale = info.scale;
+        return oinfo;
+    };
+
+    // convert textures
+    for (auto txt : scn->textures) {
+        auto otxt = new obj_texture();
+        otxt->path = txt->path;
+        if (txt->hdr) {
+            otxt->width = txt->hdr.width();
+            otxt->height = txt->hdr.height();
+            otxt->ncomp = 4;
+            otxt->dataf.assign((float*)data(txt->hdr),
+                (float*)data(txt->hdr) +
+                    txt->hdr.width() * txt->hdr.height() * 4);
+        }
+        if (txt->ldr) {
+            otxt->width = txt->ldr.width();
+            otxt->height = txt->ldr.height();
+            otxt->ncomp = 4;
+            otxt->datab.assign((uint8_t*)data(txt->ldr),
+                (uint8_t*)data(txt->ldr) +
+                    txt->ldr.width() * txt->ldr.height() * 4);
+        }
+        obj->textures.push_back(otxt);
+    }
+
+    // convert materials
+    for (auto mat : scn->materials) {
+        auto omat = new obj_material();
+        omat->name = mat->name;
+        omat->ke = {mat->ke.x, mat->ke.y, mat->ke.z};
+        omat->ke_txt = add_texture(mat->ke_txt);
+        switch (mat->type) {
+            case material_type::specular_roughness: {
+                omat->kd = {mat->kd.x, mat->kd.y, mat->kd.z};
+                omat->ks = {mat->ks.x, mat->ks.y, mat->ks.z};
+                omat->kr = {mat->kr.x, mat->kr.y, mat->kr.z};
+                omat->kt = {mat->kt.x, mat->kt.y, mat->kt.z};
+                omat->ns = (mat->rs) ? 2 / pow(mat->rs, 4.0f) - 2 : 1e6;
+                omat->op = mat->op;
+                omat->kd_txt = add_texture(mat->kd_txt);
+                omat->ks_txt = add_texture(mat->ks_txt);
+                omat->kr_txt = add_texture(mat->kr_txt);
+                omat->kt_txt = add_texture(mat->kt_txt);
+            } break;
+            case material_type::metallic_roughness: {
+                if (mat->rs == 1 && mat->ks.x == 0) {
+                    omat->kd = mat->kd;
+                    omat->ks = {0, 0, 0};
+                    omat->ns = 1;
+                } else {
+                    auto kd = mat->kd * (1 - 0.04f) * (1 - mat->ks.x);
+                    auto ks = mat->kd * mat->ks.x +
+                              vec3f{0.04f, 0.04f, 0.04f} * (1 - mat->ks.x);
+                    omat->kd = {kd.x, kd.y, kd.z};
+                    omat->ks = {ks.x, ks.y, ks.z};
+                    omat->ns = (mat->rs) ? 2 / pow(mat->rs, 4.0f) - 2 : 1e6;
+                }
+                omat->op = mat->op;
+                if (mat->ks.x < 0.5f) {
+                    omat->kd_txt = add_texture(mat->kd_txt);
+                } else {
+                    omat->ks_txt = add_texture(mat->ks_txt);
+                }
+            } break;
+            case material_type::specular_glossiness: {
+                omat->kd = {mat->kd.x, mat->kd.y, mat->kd.z};
+                omat->ks = {mat->ks.x, mat->ks.y, mat->ks.z};
+                omat->ns = (mat->rs) ? 2 / pow(1 - mat->rs, 4.0f) - 2 : 1e6;
+                omat->op = mat->op;
+                omat->kd_txt = add_texture(mat->kd_txt);
+                omat->ks_txt = add_texture(mat->ks_txt);
+            } break;
+        }
+        omat->bump_txt = add_texture(mat->bump_txt, true);
+        omat->disp_txt = add_texture(mat->disp_txt, true);
+        omat->norm_txt = add_texture(mat->norm_txt, true);
+        if (mat->op < 1 || mat->kt != zero3f) {
+            omat->illum = 4;
+        } else {
+            omat->illum = 2;
+        }
+        obj->materials.push_back(omat);
+    }
+
+    // convert shapes
+    auto shapes = unordered_map<shape*, unique_ptr<obj_group>>();
+    for (auto shp : scn->shapes) {
+        auto offset = obj_vertex{(int)obj->pos.size(),
+            (int)obj->texcoord.size(), (int)obj->norm.size(),
+            (int)obj->color.size(), (int)obj->radius.size()};
+        for (auto& v : shp->pos) obj->pos.push_back({v.x, v.y, v.z});
+        for (auto& v : shp->norm) obj->norm.push_back({v.x, v.y, v.z});
+        for (auto& v : shp->texcoord) obj->texcoord.push_back({v.x, v.y});
+        for (auto& v : shp->color) obj->color.push_back({v.x, v.y, v.z, v.w});
+        for (auto& v : shp->radius) obj->radius.push_back(v);
+        auto group = new obj_group();
+        group->groupname = shp->name;
+        group->matname = (shp->mat) ? shp->mat->name : "";
+        group->subdivision_level = shp->subdivision_level;
+        group->subdivision_catmullclark = shp->subdivision_catmullclark;
+        for (auto point : shp->points) {
+            group->elems.push_back(
+                {(uint32_t)group->verts.size(), obj_element_type::point, 1});
+            auto vert = obj_vertex{-1, -1, -1, -1, -1};
+            if (!shp->pos.empty()) vert.pos = offset.pos + point;
+            if (!shp->texcoord.empty()) vert.texcoord = offset.texcoord + point;
+            if (!shp->norm.empty()) vert.norm = offset.norm + point;
+            if (!shp->color.empty()) vert.color = offset.color + point;
+            if (!shp->radius.empty()) vert.radius = offset.radius + point;
+            group->verts.push_back(vert);
+        }
+        for (auto line : shp->lines) {
+            group->elems.push_back(
+                {(uint32_t)group->verts.size(), obj_element_type::line, 2});
+            for (auto vid : line) {
+                auto vert = obj_vertex{-1, -1, -1, -1, -1};
+                if (!shp->pos.empty()) vert.pos = offset.pos + vid;
+                if (!shp->texcoord.empty())
+                    vert.texcoord = offset.texcoord + vid;
+                if (!shp->norm.empty()) vert.norm = offset.norm + vid;
+                if (!shp->color.empty()) vert.color = offset.color + vid;
+                if (!shp->radius.empty()) vert.radius = offset.radius + vid;
+                group->verts.push_back(vert);
+            }
+        }
+        for (auto triangle : shp->triangles) {
+            group->elems.push_back(
+                {(uint32_t)group->verts.size(), obj_element_type::face, 3});
+            for (auto vid : triangle) {
+                auto vert = obj_vertex{-1, -1, -1, -1, -1};
+                if (!shp->pos.empty()) vert.pos = offset.pos + vid;
+                if (!shp->texcoord.empty())
+                    vert.texcoord = offset.texcoord + vid;
+                if (!shp->norm.empty()) vert.norm = offset.norm + vid;
+                if (!shp->color.empty()) vert.color = offset.color + vid;
+                if (!shp->radius.empty()) vert.radius = offset.radius + vid;
+                group->verts.push_back(vert);
+            }
+        }
+        for (auto quad : shp->quads) {
+            group->elems.push_back(
+                {(uint32_t)group->verts.size(), obj_element_type::face,
+                    (uint16_t)((quad.z == quad.w) ? 3 : 4)});
+            if (group->elems.back().size == 3) {
+                for (auto vid : quad.xyz()) {
+                    auto vert = obj_vertex{-1, -1, -1, -1, -1};
+                    if (!shp->pos.empty()) vert.pos = offset.pos + vid;
+                    if (!shp->texcoord.empty())
+                        vert.texcoord = offset.texcoord + vid;
+                    if (!shp->norm.empty()) vert.norm = offset.norm + vid;
+                    if (!shp->color.empty()) vert.color = offset.color + vid;
+                    if (!shp->radius.empty()) vert.radius = offset.radius + vid;
+                    group->verts.push_back(vert);
+                }
+            } else {
+                for (auto vid : quad) {
+                    auto vert = obj_vertex{-1, -1, -1, -1, -1};
+                    if (!shp->pos.empty()) vert.pos = offset.pos + vid;
+                    if (!shp->texcoord.empty())
+                        vert.texcoord = offset.texcoord + vid;
+                    if (!shp->norm.empty()) vert.norm = offset.norm + vid;
+                    if (!shp->color.empty()) vert.color = offset.color + vid;
+                    if (!shp->radius.empty()) vert.radius = offset.radius + vid;
+                    group->verts.push_back(vert);
+                }
+            }
+        }
+        for (auto fid = 0; fid < shp->quads_pos.size(); fid++) {
+            group->elems.push_back(
+                {(uint32_t)group->verts.size(), obj_element_type::face, 4});
+            auto last_vid = -1;
+            for (auto i = 0; i < 4; i++) {
+                if (last_vid == shp->quads_pos[fid][i]) continue;
+                auto vert = obj_vertex{-1, -1, -1, -1, -1};
+                if (!shp->pos.empty() && !shp->quads_pos.empty())
+                    vert.pos = offset.pos + shp->quads_pos[fid][i];
+                if (!shp->texcoord.empty() && !shp->quads_texcoord.empty())
+                    vert.texcoord =
+                        offset.texcoord + shp->quads_texcoord[fid][i];
+                if (!shp->norm.empty() && !shp->quads_norm.empty())
+                    vert.norm = offset.norm + shp->quads_norm[fid][i];
+                group->verts.push_back(vert);
+                last_vid = shp->quads_pos[fid][i];
+            }
+        }
+        for (auto bezier : shp->beziers) {
+            group->elems.push_back(
+                {(uint32_t)group->verts.size(), obj_element_type::bezier, 4});
+            for (auto vid : bezier) {
+                auto vert = obj_vertex{-1, -1, -1, -1, -1};
+                if (!shp->pos.empty()) vert.pos = offset.pos + vid;
+                if (!shp->texcoord.empty())
+                    vert.texcoord = offset.texcoord + vid;
+                if (!shp->norm.empty()) vert.norm = offset.norm + vid;
+                if (!shp->color.empty()) vert.color = offset.color + vid;
+                if (!shp->radius.empty()) vert.radius = offset.radius + vid;
+                group->verts.push_back(vert);
+            }
+        }
+        shapes[shp] = unique_ptr<obj_group>(group);
+    }
+
+    // convert cameras
+    for (auto cam : scn->cameras) {
+        auto ocam = new obj_camera();
+        ocam->name = cam->name;
+        ocam->ortho = cam->ortho;
+        ocam->yfov = cam->yfov;
+        ocam->aspect = cam->aspect;
+        ocam->focus = cam->focus;
+        ocam->aperture = cam->aperture;
+        ocam->frame = cam->frame;
+        obj->cameras.push_back(ocam);
+    }
+
+    // convert envs
+    for (auto env : scn->environments) {
+        auto oenv = new obj_environment();
+        auto omat = new obj_material();
+        omat->name = env->name + "_mat";
+        omat->ke = env->ke;
+        omat->ke_txt = add_texture(env->ke_txt);
+        oenv->name = env->name;
+        oenv->matname = omat->name;
+        oenv->frame = env->frame;
+        obj->materials.push_back(omat);
+        obj->environments.push_back(oenv);
+    }
+
+    // convert hierarchy
+    if (obj->nodes.empty()) {
+        // meshes
+        for (auto shp : scn->shapes) {
+            auto omsh = new obj_object();
+            omsh->name = shp->name;
+            omsh->groups.push_back(*shapes.at(shp));
+            obj->objects.push_back(omsh);
+        }
+
+        // instances
+        for (auto ist : scn->instances) {
+            auto onde = new obj_node();
+            onde->name = ist->name;
+            onde->objname = (ist->shp) ? ist->shp->name : "<undefined>";
+            onde->frame = ist->frame;
+            obj->nodes.emplace_back(onde);
+        }
+    } else {
+        // meshes
+        auto meshes = map<vector<instance*>, obj_object*>();
+        for (auto nde : scn->nodes) {
+            if (nde->ists.empty()) continue;
+            if (contains(meshes, nde->ists)) continue;
+            auto omsh = new obj_object();
+            omsh->name = nde->ists.front()->name;
+            for (auto ist : nde->ists)
+                omsh->groups.push_back(*shapes.at(ist->shp));
+            meshes[nde->ists] = omsh;
+            obj->objects.push_back(omsh);
+        }
+
+        // nodes
+        for (auto nde : scn->nodes) {
+            auto onde = new obj_node();
+            onde->name = nde->name;
+            if (nde->cam) onde->camname = nde->cam->name;
+            if (!nde->ists.empty()) onde->objname = meshes.at(nde->ists)->name;
+            if (nde->env) onde->envname = nde->env->name;
+            onde->frame = to_mat(nde->frame);
+            onde->translation = nde->translation;
+            onde->rotation = nde->rotation;
+            onde->scaling = nde->scaling;
+            obj->nodes.push_back(onde);
+        }
+
+        // parent
+        for (auto idx = 0; idx < scn->nodes.size(); idx++) {
+            auto nde = scn->nodes.at(idx);
+            if (!nde->parent) continue;
+            auto onde = obj->nodes.at(idx);
+            onde->parent = nde->parent->name;
+        }
+    }
+
+    return obj;
+}
+
+// Save an obj scene
+void save_obj_scene(
+    const string& filename, const scene* scn, const save_options& opts) {
+    auto oscn = unique_ptr<obj_scene>(scene_to_obj(scn));
+    save_obj(filename, oscn.get(), opts.save_textures, opts.skip_missing,
+        opts.obj_flip_texcoord, opts.obj_flip_tr);
+}
+
+#if YGL_GLTF
+
+// Flattens a gltf file into a flattened asset.
+scene* gltf_to_scene(const glTF* gltf, const load_options& opts) {
+    // clear asset
+    auto scn = new scene();
+
+    // convert images
+    for (auto gtxt : gltf->images) {
+        auto txt = new texture();
+        txt->name = gtxt->name;
+        txt->path =
+            (startswith(gtxt->uri, "data:")) ? string("inlines") : gtxt->uri;
+        if (!gtxt->data.datab.empty()) {
+            txt->ldr = image4b(gtxt->data.width, gtxt->data.height);
+            for (auto j = 0; j < gtxt->data.height; j++) {
+                for (auto i = 0; i < gtxt->data.width; i++) {
+                    auto v = gtxt->data.datab.data() +
+                             (gtxt->data.width * j + i) * gtxt->data.ncomp;
+                    switch (gtxt->data.ncomp) {
+                        case 1:
+                            txt->ldr.at(i, j) = {v[0], v[0], v[0], 255};
+                            break;
+                        case 2: txt->ldr.at(i, j) = {v[0], v[1], 0, 255}; break;
+                        case 3:
+                            txt->ldr.at(i, j) = {v[0], v[1], v[2], 255};
+                            break;
+                        case 4:
+                            txt->ldr.at(i, j) = {v[0], v[1], v[2], v[3]};
+                            break;
+                        default: assert(false); break;
+                    }
+                }
+            }
+        } else if (!gtxt->data.dataf.empty()) {
+            txt->hdr = image4f(gtxt->data.width, gtxt->data.height);
+            for (auto j = 0; j < gtxt->data.height; j++) {
+                for (auto i = 0; i < gtxt->data.width; i++) {
+                    auto v = gtxt->data.dataf.data() +
+                             (gtxt->data.width * j + i) * gtxt->data.ncomp;
+                    switch (gtxt->data.ncomp) {
+                        case 1:
+                            txt->hdr.at(i, j) = {v[0], v[0], v[0], 1};
+                            break;
+                        case 2: txt->hdr.at(i, j) = {v[0], v[1], 0, 1}; break;
+                        case 3:
+                            txt->hdr.at(i, j) = {v[0], v[1], v[2], 1};
+                            break;
+                        case 4:
+                            txt->hdr.at(i, j) = {v[0], v[1], v[2], v[3]};
+                            break;
+                        default: assert(false); break;
+                    }
+                }
+            }
+        }
+        scn->textures.push_back(txt);
+    }
+
+    // add a texture
+    auto add_texture = [gltf, scn](glTFTextureInfo* ginfo, bool normal = false,
+                           bool occlusion = false) {
+        auto info = texture_info();
+        if (!ginfo) return info;
+        auto gtxt = gltf->get(ginfo->index);
+        if (!gtxt || !gtxt->source) return info;
+        auto txt = scn->textures.at((int)gtxt->source);
+        if (!txt) return info;
+        info.txt = scn->textures.at((int)gtxt->source);
+        auto gsmp = gltf->get(gtxt->sampler);
+        if (gsmp) {
+            info.linear = gsmp->magFilter != glTFSamplerMagFilter::Nearest;
+            info.mipmap = gsmp->minFilter != glTFSamplerMinFilter::Linear &&
+                          gsmp->minFilter != glTFSamplerMinFilter::Nearest;
+            info.wrap_s = gsmp->wrapS != glTFSamplerWrapS::ClampToEdge;
+            info.wrap_t = gsmp->wrapT != glTFSamplerWrapT::ClampToEdge;
+        }
+        if (normal) {
+            auto ninfo = (glTFMaterialNormalTextureInfo*)ginfo;
+            info.scale = ninfo->scale;
+        }
+        if (occlusion) {
+            auto ninfo = (glTFMaterialOcclusionTextureInfo*)ginfo;
+            info.scale = ninfo->strength;
+        }
+        return info;
+    };
+
+    // convert materials
+    for (auto gmat : gltf->materials) {
+        auto mat = new material();
+        mat->name = gmat->name;
+        mat->ke = gmat->emissiveFactor;
+        mat->ke_txt = add_texture(gmat->emissiveTexture);
+        if (gmat->pbrMetallicRoughness) {
+            mat->type = material_type::metallic_roughness;
+            auto gmr = gmat->pbrMetallicRoughness;
+            mat->kd = {gmr->baseColorFactor[0], gmr->baseColorFactor[1],
+                gmr->baseColorFactor[2]};
+            mat->op = gmr->baseColorFactor[3];
+            mat->ks = {
+                gmr->metallicFactor, gmr->metallicFactor, gmr->metallicFactor};
+            mat->rs = gmr->roughnessFactor;
+            mat->kd_txt = add_texture(gmr->baseColorTexture);
+            mat->ks_txt = add_texture(gmr->metallicRoughnessTexture);
+        }
+        if (gmat->pbrSpecularGlossiness) {
+            mat->type = material_type::specular_glossiness;
+            auto gsg = gmat->pbrSpecularGlossiness;
+            mat->kd = {gsg->diffuseFactor[0], gsg->diffuseFactor[1],
+                gsg->diffuseFactor[2]};
+            mat->op = gsg->diffuseFactor[3];
+            mat->ks = gsg->specularFactor;
+            mat->rs = gsg->glossinessFactor;
+            mat->kd_txt = add_texture(gsg->diffuseTexture);
+            mat->ks_txt = add_texture(gsg->specularGlossinessTexture);
+        }
+        mat->norm_txt = add_texture(gmat->normalTexture, true, false);
+        mat->occ_txt = add_texture(gmat->occlusionTexture, false, true);
+        mat->double_sided = gmat->doubleSided;
+        scn->materials.push_back(mat);
+    }
+
+    // convert meshes
+    auto meshes = vector<vector<shape*>>();
+    for (auto gmesh : gltf->meshes) {
+        meshes.push_back({});
+        // primitives
+        for (auto gprim : gmesh->primitives) {
+            auto shp = new shape();
+            if (gprim->material) {
+                shp->mat = scn->materials[(int)gprim->material];
+            }
+            // vertex data
+            for (auto gattr : gprim->attributes) {
+                auto semantic = gattr.first;
+                auto vals = accessor_view(gltf, gltf->get(gattr.second));
+                if (semantic == "POSITION") {
+                    shp->pos.reserve(vals.size());
+                    for (auto i = 0; i < vals.size(); i++)
+                        shp->pos.push_back(vals.getv3f(i));
+                } else if (semantic == "NORMAL") {
+                    shp->norm.reserve(vals.size());
+                    for (auto i = 0; i < vals.size(); i++)
+                        shp->norm.push_back(vals.getv3f(i));
+                } else if (semantic == "TEXCOORD" || semantic == "TEXCOORD_0") {
+                    shp->texcoord.reserve(vals.size());
+                    for (auto i = 0; i < vals.size(); i++)
+                        shp->texcoord.push_back(vals.getv2f(i));
+                } else if (semantic == "TEXCOORD_1") {
+                    shp->texcoord1.reserve(vals.size());
+                    for (auto i = 0; i < vals.size(); i++)
+                        shp->texcoord1.push_back(vals.getv2f(i));
+                } else if (semantic == "COLOR" || semantic == "COLOR_0") {
+                    shp->color.reserve(vals.size());
+                    for (auto i = 0; i < vals.size(); i++)
+                        shp->color.push_back(vals.getv4f(i, {0, 0, 0, 1}));
+                } else if (semantic == "TANGENT") {
+                    shp->tangsp.reserve(vals.size());
+                    for (auto i = 0; i < vals.size(); i++)
+                        shp->tangsp.push_back(vals.getv4f(i));
+                } else if (semantic == "RADIUS") {
+                    shp->radius.reserve(vals.size());
+                    for (auto i = 0; i < vals.size(); i++)
+                        shp->radius.push_back(vals.get(i, 0));
+                } else {
+                    // ignore
+                }
+            }
+            // indices
+            if (!gprim->indices) {
+                switch (gprim->mode) {
+                    case glTFMeshPrimitiveMode::Triangles: {
+                        shp->triangles.reserve(shp->pos.size() / 3);
+                        for (auto i = 0; i < shp->pos.size() / 3; i++) {
+                            shp->triangles.push_back(
+                                {i * 3 + 0, i * 3 + 1, i * 3 + 2});
+                        }
+                    } break;
+                    case glTFMeshPrimitiveMode::TriangleFan: {
+                        shp->triangles.reserve(shp->pos.size() - 2);
+                        for (auto i = 2; i < shp->pos.size(); i++) {
+                            shp->triangles.push_back({0, i - 1, i});
+                        }
+                    } break;
+                    case glTFMeshPrimitiveMode::TriangleStrip: {
+                        shp->triangles.reserve(shp->pos.size() - 2);
+                        for (auto i = 2; i < shp->pos.size(); i++) {
+                            shp->triangles.push_back({i - 2, i - 1, i});
+                        }
+                    } break;
+                    case glTFMeshPrimitiveMode::Lines: {
+                        shp->lines.reserve(shp->pos.size() / 2);
+                        for (auto i = 0; i < shp->pos.size() / 2; i++) {
+                            shp->lines.push_back({i * 2 + 0, i * 2 + 1});
+                        }
+                    } break;
+                    case glTFMeshPrimitiveMode::LineLoop: {
+                        shp->lines.reserve(shp->pos.size());
+                        for (auto i = 1; i < shp->pos.size(); i++) {
+                            shp->lines.push_back({i - 1, i});
+                        }
+                        shp->lines.back() = {(int)shp->pos.size() - 1, 0};
+                    } break;
+                    case glTFMeshPrimitiveMode::LineStrip: {
+                        shp->lines.reserve(shp->pos.size() - 1);
+                        for (auto i = 1; i < shp->pos.size(); i++) {
+                            shp->lines.push_back({i - 1, i});
+                        }
+                    } break;
+                    case glTFMeshPrimitiveMode::NotSet:
+                    case glTFMeshPrimitiveMode::Points: {
+                        shp->points.reserve(shp->pos.size());
+                        for (auto i = 0; i < shp->pos.size(); i++) {
+                            shp->points.push_back(i);
+                        }
+                    } break;
+                }
+            } else {
+                auto indices = accessor_view(gltf, gltf->get(gprim->indices));
+                switch (gprim->mode) {
+                    case glTFMeshPrimitiveMode::Triangles: {
+                        shp->triangles.reserve(indices.size());
+                        for (auto i = 0; i < indices.size() / 3; i++) {
+                            shp->triangles.push_back({indices.geti(i * 3 + 0),
+                                indices.geti(i * 3 + 1),
+                                indices.geti(i * 3 + 2)});
+                        }
+                    } break;
+                    case glTFMeshPrimitiveMode::TriangleFan: {
+                        shp->triangles.reserve(indices.size() - 2);
+                        for (auto i = 2; i < indices.size(); i++) {
+                            shp->triangles.push_back({indices.geti(0),
+                                indices.geti(i - 1), indices.geti(i)});
+                        }
+                    } break;
+                    case glTFMeshPrimitiveMode::TriangleStrip: {
+                        shp->triangles.reserve(indices.size() - 2);
+                        for (auto i = 2; i < indices.size(); i++) {
+                            shp->triangles.push_back({indices.geti(i - 2),
+                                indices.geti(i - 1), indices.geti(i)});
+                        }
+                    } break;
+                    case glTFMeshPrimitiveMode::Lines: {
+                        shp->lines.reserve(indices.size() / 2);
+                        for (auto i = 0; i < indices.size() / 2; i++) {
+                            shp->lines.push_back({indices.geti(i * 2 + 0),
+                                indices.geti(i * 2 + 1)});
+                        }
+                    } break;
+                    case glTFMeshPrimitiveMode::LineLoop: {
+                        shp->lines.reserve(indices.size());
+                        for (auto i = 1; i < indices.size(); i++) {
+                            shp->lines.push_back(
+                                {indices.geti(i - 1), indices.geti(i)});
+                        }
+                        shp->lines.back() = {
+                            indices.geti(indices.size() - 1), indices.geti(0)};
+                    } break;
+                    case glTFMeshPrimitiveMode::LineStrip: {
+                        shp->lines.reserve(indices.size() - 1);
+                        for (auto i = 1; i < indices.size(); i++) {
+                            shp->lines.push_back(
+                                {indices.geti(i - 1), indices.geti(i)});
+                        }
+                    } break;
+                    case glTFMeshPrimitiveMode::NotSet:
+                    case glTFMeshPrimitiveMode::Points: {
+                        shp->points.reserve(indices.size());
+                        for (auto i = 0; i < indices.size(); i++) {
+                            shp->points.push_back(indices.geti(i));
+                        }
+                    } break;
+                }
+            }
+            scn->shapes.push_back(shp);
+            meshes.back().push_back(shp);
+        }
+    }
+
+    // convert cameras
+    auto cameras = vector<camera>();
+    for (auto gcam : gltf->cameras) {
+        cameras.push_back({});
+        auto cam = &cameras.back();
+        cam->name = gcam->name;
+        cam->ortho = gcam->type == glTFCameraType::Orthographic;
+        if (cam->ortho) {
+            auto ortho = gcam->orthographic;
+            cam->yfov = ortho->ymag;
+            cam->aspect = ortho->xmag / ortho->ymag;
+            cam->near = ortho->znear;
+            cam->far = ortho->zfar;
+        } else {
+            auto persp = gcam->perspective;
+            cam->yfov = persp->yfov;
+            cam->aspect = persp->aspectRatio;
+            if (!cam->aspect) cam->aspect = 16.0f / 9.0f;
+            cam->near = persp->znear;
+            cam->far = persp->zfar;
+        }
+    }
+
+    // convert nodes
+    for (auto gnde : gltf->nodes) {
+        auto nde = new node();
+        nde->name = gnde->name;
+        if (gnde->camera) {
+            auto cam = new camera(cameras[(int)gnde->camera]);
+            nde->cam = cam;
+            scn->cameras.push_back(cam);
+        }
+        if (gnde->mesh) {
+            for (auto shp : meshes[(int)gnde->mesh]) {
+                auto ist = new instance();
+                ist->name = gnde->name;
+                ist->shp = shp;
+                nde->ists.push_back(ist);
+                scn->instances.push_back(ist);
+            }
+#if 0
+            for (auto shp : node->msh->shapes) {
+                if (node->morph_weights.size() < shp->morph_targets.size()) {
+                    node->morph_weights.resize(shp->morph_targets.size());
+                }
+            }
+#endif
+        }
+        nde->translation = gnde->translation;
+        nde->rotation = gnde->rotation;
+        nde->scaling = gnde->scale;
+        nde->frame = to_frame(gnde->matrix);
+#if 0
+        nde->weights = gnde->weights;
+#endif
+        scn->nodes.push_back(nde);
+    }
+
+    // set up parent pointers
+    for (auto nid = 0; nid < gltf->nodes.size(); nid++) {
+        auto gnde = gltf->nodes[nid];
+        auto nde = scn->nodes[nid];
+        for (auto cid : gnde->children) scn->nodes[(int)cid]->parent = nde;
+    }
+
+    // keyframe type conversion
+    static auto keyframe_types =
+        unordered_map<glTFAnimationSamplerInterpolation, keyframe_type>{
+            {glTFAnimationSamplerInterpolation::NotSet, keyframe_type::linear},
+            {glTFAnimationSamplerInterpolation::Linear, keyframe_type::linear},
+            {glTFAnimationSamplerInterpolation::Step, keyframe_type::step},
+            {glTFAnimationSamplerInterpolation::CubicSpline,
+                keyframe_type::bezier},
+            {glTFAnimationSamplerInterpolation::CatmullRomSpline,
+                keyframe_type::catmull_rom},
+        };
+
+    // convert animations
+    for (auto ganm : gltf->animations) {
+        auto anm = new animation();
+        anm->name = ganm->name;
+        auto sampler_map = unordered_map<vec2i, keyframe*>();
+        for (auto gchannel : ganm->channels) {
+            if (sampler_map.find({(int)gchannel->sampler,
+                    (int)gchannel->target->path}) == sampler_map.end()) {
+                auto gsampler = ganm->get(gchannel->sampler);
+                auto kfr = new keyframe();
+                auto input_view =
+                    accessor_view(gltf, gltf->get(gsampler->input));
+                kfr->times.resize(input_view.size());
+                for (auto i = 0; i < input_view.size(); i++)
+                    kfr->times[i] = input_view.get(i);
+                kfr->type = keyframe_types.at(gsampler->interpolation);
+                auto output_view =
+                    accessor_view(gltf, gltf->get(gsampler->output));
+                switch (gchannel->target->path) {
+                    case glTFAnimationChannelTargetPath::Translation: {
+                        kfr->translation.reserve(output_view.size());
+                        for (auto i = 0; i < output_view.size(); i++)
+                            kfr->translation.push_back(output_view.getv3f(i));
+                    } break;
+                    case glTFAnimationChannelTargetPath::Rotation: {
+                        kfr->rotation.reserve(output_view.size());
+                        for (auto i = 0; i < output_view.size(); i++)
+                            kfr->rotation.push_back(
+                                (quat4f)output_view.getv4f(i));
+                    } break;
+                    case glTFAnimationChannelTargetPath::Scale: {
+                        kfr->scaling.reserve(output_view.size());
+                        for (auto i = 0; i < output_view.size(); i++)
+                            kfr->scaling.push_back(output_view.getv3f(i));
+                    } break;
+                    case glTFAnimationChannelTargetPath::Weights: {
+                        // get a node that it refers to
+                        auto ncomp = 0;
+                        auto gnode = gltf->get(gchannel->target->node);
+                        auto gmesh = gltf->get(gnode->mesh);
+                        if (gmesh) {
+                            for (auto gshp : gmesh->primitives) {
+                                ncomp = max((int)gshp->targets.size(), ncomp);
+                            }
+                        }
+                        if (ncomp) {
+                            auto values = std::vector<float>();
+                            values.reserve(output_view.size());
+                            for (auto i = 0; i < output_view.size(); i++)
+                                values.push_back(output_view.get(i));
+                            kfr->weights.resize(values.size() / ncomp);
+                            for (auto i = 0; i < kfr->weights.size(); i++) {
+                                kfr->weights[i].resize(ncomp);
+                                for (auto j = 0; j < ncomp; j++)
+                                    kfr->weights[i][j] = values[i * ncomp + j];
+                            }
+                        }
+                    } break;
+                    default: {
+                        throw runtime_error("should not have gotten here");
+                    }
+                }
+                sampler_map[{
+                    (int)gchannel->sampler, (int)gchannel->target->path}] = kfr;
+                anm->keyframes.push_back(kfr);
+            }
+            anm->targets.push_back({sampler_map.at({(int)gchannel->sampler,
+                                        (int)gchannel->target->path}),
+                scn->nodes[(int)gchannel->target->node]});
+        }
+        scn->animations.push_back(anm);
+    }
+
+    // compute transforms
+    update_transforms(scn, 0);
+
+    // remove hierarchy if necessary
+    if (!opts.preserve_hierarchy) {
+        for (auto nde : scn->nodes) delete nde;
+        scn->nodes.clear();
+        for (auto anm : scn->animations) delete anm;
+        scn->animations.clear();
+    }
+
+    return scn;
+}
+
+// Load an gltf scene
+scene* load_gltf_scene(const string& filename, const load_options& opts) {
+    auto gscn = unique_ptr<glTF>(
+        load_gltf(filename, true, opts.load_textures, opts.skip_missing));
+    auto scn = unique_ptr<scene>(gltf_to_scene(gscn.get(), opts));
+    if (!scn) {
+        throw runtime_error("could not convert gltf scene");
+        return nullptr;
+    }
+    return scn.release();
+}
+
+// Unflattnes gltf
+glTF* scene_to_gltf(
+    const scene* scn, const string& buffer_uri, bool separate_buffers) {
+    auto gltf = unique_ptr<glTF>(new glTF());
+
+    // add asset info
+    gltf->asset = new glTFAsset();
+    gltf->asset->generator = "Yocto/gltf";
+    gltf->asset->version = "2.0";
+
+    // convert cameras
+    for (auto cam : scn->cameras) {
+        auto gcam = new glTFCamera();
+        gcam->name = cam->name;
+        gcam->type = (cam->ortho) ? glTFCameraType::Orthographic :
+                                    glTFCameraType::Perspective;
+        if (cam->ortho) {
+            auto ortho = new glTFCameraOrthographic();
+            ortho->ymag = cam->yfov;
+            ortho->xmag = cam->aspect * cam->yfov;
+            ortho->znear = cam->near;
+            ortho->znear = cam->far;
+            gcam->orthographic = ortho;
+        } else {
+            auto persp = new glTFCameraPerspective();
+            persp->yfov = cam->yfov;
+            persp->aspectRatio = cam->aspect;
+            persp->znear = cam->near;
+            persp->zfar = cam->far;
+            gcam->perspective = persp;
+        }
+        gltf->cameras.push_back(gcam);
+    }
+
+    // convert images
+    for (auto txt : scn->textures) {
+        auto gimg = new glTFImage();
+        gimg->uri = txt->path;
+        if (txt->hdr) {
+            gimg->data.width = txt->hdr.width();
+            gimg->data.height = txt->hdr.height();
+            gimg->data.ncomp = 4;
+            gimg->data.dataf.assign((float*)data(txt->hdr),
+                (float*)data(txt->hdr) +
+                    txt->hdr.width() * txt->hdr.height() * 4);
+        }
+        if (txt->ldr) {
+            gimg->data.width = txt->ldr.width();
+            gimg->data.height = txt->ldr.height();
+            gimg->data.ncomp = 4;
+            gimg->data.datab.assign((uint8_t*)data(txt->ldr),
+                (uint8_t*)data(txt->ldr) +
+                    txt->ldr.width() * txt->ldr.height() * 4);
+        }
+        gltf->images.push_back(gimg);
+    }
+
+    // index of an object
+    auto index = [](const auto& vec, auto* val) -> int {
+        auto pos = find(vec.begin(), vec.end(), val);
+        if (pos == vec.end()) return -1;
+        return (int)(pos - vec.begin());
+    };
+
+    // add a texture and sampler
+    auto add_texture = [&gltf, &index, scn](const texture_info& info,
+                           bool norm = false, bool occ = false) {
+        if (!info.txt) return (glTFTextureInfo*)nullptr;
+        auto gtxt = new glTFTexture();
+        gtxt->name = info.txt->name;
+        gtxt->source = glTFid<glTFImage>(index(scn->textures, info.txt));
+
+        // check if it is default
+        auto is_default =
+            info.wrap_s && info.wrap_t && info.linear && info.mipmap;
+
+        if (!is_default) {
+            auto gsmp = new glTFSampler();
+            gsmp->wrapS = (info.wrap_s) ? glTFSamplerWrapS::Repeat :
+                                          glTFSamplerWrapS::ClampToEdge;
+            gsmp->wrapT = (info.wrap_t) ? glTFSamplerWrapT::Repeat :
+                                          glTFSamplerWrapT::ClampToEdge;
+            gsmp->minFilter = (info.mipmap) ?
+                                  glTFSamplerMinFilter::LinearMipmapLinear :
+                                  glTFSamplerMinFilter::Nearest;
+            gsmp->magFilter = (info.linear) ? glTFSamplerMagFilter::Linear :
+                                              glTFSamplerMagFilter::Nearest;
+            gtxt->sampler = glTFid<glTFSampler>((int)gltf->samplers.size());
+            gltf->samplers.push_back(gsmp);
+        }
+        gltf->textures.push_back(gtxt);
+        if (norm) {
+            auto ginfo = new glTFMaterialNormalTextureInfo();
+            ginfo->index = glTFid<glTFTexture>{(int)gltf->textures.size() - 1};
+            ginfo->scale = info.scale;
+            return (glTFTextureInfo*)ginfo;
+        } else if (occ) {
+            auto ginfo = new glTFMaterialOcclusionTextureInfo();
+            ginfo->index = glTFid<glTFTexture>{(int)gltf->textures.size() - 1};
+            ginfo->strength = info.scale;
+            return (glTFTextureInfo*)ginfo;
+        } else {
+            auto ginfo = new glTFTextureInfo();
+            ginfo->index = glTFid<glTFTexture>{(int)gltf->textures.size() - 1};
+            return ginfo;
+        }
+    };
+
+    // convert materials
+    for (auto mat : scn->materials) {
+        auto gmat = new glTFMaterial();
+        gmat->name = mat->name;
+        gmat->emissiveFactor = mat->ke;
+        gmat->emissiveTexture = add_texture(mat->ke_txt);
+        switch (mat->type) {
+            case material_type::specular_roughness: {
+                gmat->pbrSpecularGlossiness =
+                    new glTFMaterialPbrSpecularGlossiness();
+                auto gsg = gmat->pbrSpecularGlossiness;
+                gsg->diffuseFactor = {
+                    mat->kd[0], mat->kd[1], mat->kd[2], mat->op};
+                gsg->specularFactor = mat->ks;
+                gsg->glossinessFactor = 1 - mat->rs;
+                gsg->diffuseTexture = add_texture(mat->kd_txt);
+                gsg->specularGlossinessTexture = add_texture(mat->ks_txt);
+            } break;
+            case material_type::metallic_roughness: {
+                gmat->pbrMetallicRoughness =
+                    new glTFMaterialPbrMetallicRoughness();
+                auto gmr = gmat->pbrMetallicRoughness;
+                gmr->baseColorFactor = {
+                    mat->kd.x, mat->kd.y, mat->kd.z, mat->op};
+                gmr->metallicFactor = mat->ks.x;
+                gmr->roughnessFactor = mat->rs;
+                gmr->baseColorTexture = add_texture(mat->kd_txt);
+                gmr->metallicRoughnessTexture = add_texture(mat->ks_txt);
+            } break;
+            case material_type::specular_glossiness: {
+                gmat->pbrSpecularGlossiness =
+                    new glTFMaterialPbrSpecularGlossiness();
+                auto gsg = gmat->pbrSpecularGlossiness;
+                gsg->diffuseFactor = {
+                    mat->kd[0], mat->kd[1], mat->kd[2], mat->op};
+                gsg->specularFactor = mat->ks;
+                gsg->glossinessFactor = mat->rs;
+                gsg->diffuseTexture = add_texture(mat->kd_txt);
+                gsg->specularGlossinessTexture = add_texture(mat->ks_txt);
+            } break;
+        }
+        gmat->normalTexture = (glTFMaterialNormalTextureInfo*)add_texture(
+            mat->norm_txt, true, false);
+        gmat->occlusionTexture = (glTFMaterialOcclusionTextureInfo*)add_texture(
+            mat->occ_txt, false, true);
+        gmat->doubleSided = mat->double_sided;
+        gltf->materials.push_back(gmat);
+    }
+
+    // add buffer
+    auto add_buffer = [&gltf](const string& buffer_uri) {
+        auto gbuffer = new glTFBuffer();
+        gltf->buffers.push_back(gbuffer);
+        gbuffer->uri = buffer_uri;
+        return gbuffer;
+    };
+
+    // init buffers
+    auto gbuffer_global = add_buffer(buffer_uri);
+
+    // add an optional buffer
+    auto add_opt_buffer = [&gbuffer_global, buffer_uri, &add_buffer,
+                              separate_buffers](const string& uri) {
+        if (separate_buffers && uri != "") {
+            return add_buffer(uri);
+        } else {
+            if (!gbuffer_global) gbuffer_global = add_buffer(buffer_uri);
+            return gbuffer_global;
+        }
+    };
+
+    // attribute handling
+    auto add_accessor = [&gltf, &index](glTFBuffer* gbuffer, const string& name,
+                            glTFAccessorType type,
+                            glTFAccessorComponentType ctype, int count,
+                            int csize, const void* data, bool save_min_max) {
+        gltf->bufferViews.push_back(new glTFBufferView());
+        auto bufferView = gltf->bufferViews.back();
+        bufferView->buffer = glTFid<glTFBuffer>(index(gltf->buffers, gbuffer));
+        bufferView->byteOffset = (int)gbuffer->data.size();
+        bufferView->byteStride = 0;
+        bufferView->byteLength = count * csize;
+        gbuffer->data.resize(gbuffer->data.size() + bufferView->byteLength);
+        gbuffer->byteLength += bufferView->byteLength;
+        auto ptr = gbuffer->data.data() + gbuffer->data.size() -
+                   bufferView->byteLength;
+        bufferView->target = glTFBufferViewTarget::ArrayBuffer;
+        memcpy(ptr, data, bufferView->byteLength);
+        gltf->accessors.push_back(new glTFAccessor());
+        auto accessor = gltf->accessors.back();
+        accessor->bufferView =
+            glTFid<glTFBufferView>((int)gltf->bufferViews.size() - 1);
+        accessor->byteOffset = 0;
+        accessor->componentType = ctype;
+        accessor->count = count;
+        accessor->type = type;
+        if (save_min_max && count &&
+            ctype == glTFAccessorComponentType::Float) {
+            switch (type) {
+                case glTFAccessorType::Scalar: {
+                    auto bbox = make_bbox(count, (vec1f*)data);
+                    accessor->min = {bbox.min.x};
+                    accessor->max = {bbox.max.x};
+                } break;
+                case glTFAccessorType::Vec2: {
+                    auto bbox = make_bbox(count, (vec2f*)data);
+                    accessor->min = {bbox.min.x, bbox.min.y};
+                    accessor->max = {bbox.max.x, bbox.max.y};
+                } break;
+                case glTFAccessorType::Vec3: {
+                    auto bbox = make_bbox(count, (vec3f*)data);
+                    accessor->min = {bbox.min.x, bbox.min.y, bbox.min.z};
+                    accessor->max = {bbox.max.x, bbox.max.y, bbox.max.z};
+                } break;
+                case glTFAccessorType::Vec4: {
+                    auto bbox = make_bbox(count, (vec4f*)data);
+                    accessor->min = {
+                        bbox.min.x, bbox.min.y, bbox.min.z, bbox.min.w};
+                    accessor->max = {
+                        bbox.max.x, bbox.max.y, bbox.max.z, bbox.max.w};
+                } break;
+                default: break;
+            }
+        }
+        return glTFid<glTFAccessor>((int)gltf->accessors.size() - 1);
+    };
+
+    // convert meshes
+    auto shapes = unordered_map<shape*, unique_ptr<glTFMeshPrimitive>>();
+    for (auto shp : scn->shapes) {
+        auto gbuffer = add_opt_buffer(shp->path);
+        auto gprim = new glTFMeshPrimitive();
+        gprim->material = glTFid<glTFMaterial>(index(scn->materials, shp->mat));
+        if (!shp->pos.empty())
+            gprim->attributes["POSITION"] =
+                add_accessor(gbuffer, shp->name + "_pos",
+                    glTFAccessorType::Vec3, glTFAccessorComponentType::Float,
+                    (int)shp->pos.size(), sizeof(vec3f), shp->pos.data(), true);
+        if (!shp->norm.empty())
+            gprim->attributes["NORMAL"] = add_accessor(gbuffer,
+                shp->name + "_norm", glTFAccessorType::Vec3,
+                glTFAccessorComponentType::Float, (int)shp->norm.size(),
+                sizeof(vec3f), shp->norm.data(), false);
+        if (!shp->texcoord.empty())
+            gprim->attributes["TEXCOORD_0"] = add_accessor(gbuffer,
+                shp->name + "_texcoord", glTFAccessorType::Vec2,
+                glTFAccessorComponentType::Float, (int)shp->texcoord.size(),
+                sizeof(vec2f), shp->texcoord.data(), false);
+        if (!shp->texcoord1.empty())
+            gprim->attributes["TEXCOORD_1"] = add_accessor(gbuffer,
+                shp->name + "_texcoord1", glTFAccessorType::Vec2,
+                glTFAccessorComponentType::Float, (int)shp->texcoord1.size(),
+                sizeof(vec2f), shp->texcoord1.data(), false);
+        if (!shp->color.empty())
+            gprim->attributes["COLOR_0"] = add_accessor(gbuffer,
+                shp->name + "_color", glTFAccessorType::Vec4,
+                glTFAccessorComponentType::Float, (int)shp->color.size(),
+                sizeof(vec4f), shp->color.data(), false);
+        if (!shp->radius.empty())
+            gprim->attributes["RADIUS"] = add_accessor(gbuffer,
+                shp->name + "_radius", glTFAccessorType::Scalar,
+                glTFAccessorComponentType::Float, (int)shp->radius.size(),
+                sizeof(float), shp->radius.data(), false);
+        // auto elem_as_uint = shp->pos.size() >
+        // numeric_limits<unsigned short>::max();
+        if (!shp->points.empty()) {
+            gprim->indices = add_accessor(gbuffer, shp->name + "_points",
+                glTFAccessorType::Scalar,
+                glTFAccessorComponentType::UnsignedInt, (int)shp->points.size(),
+                sizeof(int), (int*)shp->points.data(), false);
+            gprim->mode = glTFMeshPrimitiveMode::Points;
+        } else if (!shp->lines.empty()) {
+            gprim->indices = add_accessor(gbuffer, shp->name + "_lines",
+                glTFAccessorType::Scalar,
+                glTFAccessorComponentType::UnsignedInt,
+                (int)shp->lines.size() * 2, sizeof(int),
+                (int*)shp->lines.data(), false);
+            gprim->mode = glTFMeshPrimitiveMode::Lines;
+        } else if (!shp->triangles.empty()) {
+            gprim->indices = add_accessor(gbuffer, shp->name + "_triangles",
+                glTFAccessorType::Scalar,
+                glTFAccessorComponentType::UnsignedInt,
+                (int)shp->triangles.size() * 3, sizeof(int),
+                (int*)shp->triangles.data(), false);
+            gprim->mode = glTFMeshPrimitiveMode::Triangles;
+        } else if (!shp->quads.empty()) {
+            auto triangles = convert_quads_to_triangles(shp->quads);
+            gprim->indices = add_accessor(gbuffer, shp->name + "_quads",
+                glTFAccessorType::Scalar,
+                glTFAccessorComponentType::UnsignedInt,
+                (int)triangles.size() * 3, sizeof(int), (int*)triangles.data(),
+                false);
+            gprim->mode = glTFMeshPrimitiveMode::Triangles;
+        } else if (!shp->quads_pos.empty()) {
+            throw runtime_error("face varying not supported in glTF");
+        } else {
+            throw runtime_error("empty mesh");
+        }
+        shapes[shp] = unique_ptr<glTFMeshPrimitive>(gprim);
+    }
+
+    // hierarchy
+    if (scn->nodes.empty()) {
+        // meshes
+        for (auto shp : scn->shapes) {
+            auto gmsh = new glTFMesh();
+            gmsh->name = shp->name;
+            gmsh->primitives.push_back(new glTFMeshPrimitive(*shapes.at(shp)));
+            gltf->meshes.push_back(gmsh);
+        }
+
+        // instances
+        for (auto ist : scn->instances) {
+            auto gnode = new glTFNode();
+            gnode->name = ist->name;
+            gnode->mesh = glTFid<glTFMesh>(index(scn->shapes, ist->shp));
+            gnode->matrix = to_mat(ist->frame);
+            gltf->nodes.push_back(gnode);
+        }
+
+        // cameras
+        for (auto cam : scn->cameras) {
+            auto gnode = new glTFNode();
+            gnode->name = cam->name;
+            gnode->camera = glTFid<glTFCamera>(index(scn->cameras, cam));
+            gnode->matrix = to_mat(cam->frame);
+            gltf->nodes.push_back(gnode);
+        }
+
+        // scenes
+        if (!gltf->nodes.empty()) {
+            auto gscene = new glTFScene();
+            gscene->name = "scene";
+            for (auto i = 0; i < gltf->nodes.size(); i++) {
+                gscene->nodes.push_back(glTFid<glTFNode>(i));
+            }
+            gltf->scenes.push_back(gscene);
+            gltf->scene = glTFid<glTFScene>(0);
+        }
+    } else {
+        // meshes
+        auto meshes = map<vector<instance*>, int>();
+        for (auto nde : scn->nodes) {
+            if (nde->ists.empty()) continue;
+            if (contains(meshes, nde->ists)) continue;
+            auto gmsh = new glTFMesh();
+            gmsh->name = nde->ists.front()->name;
+            for (auto ist : nde->ists)
+                gmsh->primitives.push_back(
+                    new glTFMeshPrimitive(*shapes.at(ist->shp)));
+            meshes[nde->ists] = (int)gltf->meshes.size();
+            gltf->meshes.push_back(gmsh);
+        }
+
+        // nodes
+        for (auto nde : scn->nodes) {
+            auto gnode = new glTFNode();
+            gnode->name = nde->name;
+            if (nde->cam) {
+                gnode->camera =
+                    glTFid<glTFCamera>(index(scn->cameras, nde->cam));
+            }
+            if (!nde->ists.empty()) {
+                gnode->mesh = glTFid<glTFMesh>(meshes.at(nde->ists));
+            }
+            gnode->matrix = to_mat(nde->frame);
+            gnode->translation = nde->translation;
+            gnode->rotation = nde->rotation;
+            gnode->scale = nde->scaling;
+            gltf->nodes.push_back(gnode);
+        }
+
+        // children
+        for (auto idx = 0; idx < scn->nodes.size(); idx++) {
+            auto nde = scn->nodes.at(idx);
+            if (!nde->parent) continue;
+            auto gnde = gltf->nodes.at(index(scn->nodes, nde->parent));
+            gnde->children.push_back(glTFid<glTFNode>(idx));
+        }
+
+        // root nodes
+        auto is_root = vector<bool>(gltf->nodes.size(), true);
+        for (auto idx = 0; idx < gltf->nodes.size(); idx++) {
+            auto gnde = gltf->nodes.at(idx);
+            for (auto idx1 = 0; idx1 < gnde->children.size(); idx1++) {
+                is_root[(int)gnde->children.at(idx1)] = false;
+            }
+        }
+
+        // scene with root nodes
+        auto gscene = new glTFScene();
+        gscene->name = "scene";
+        for (auto idx = 0; idx < gltf->nodes.size(); idx++) {
+            if (is_root[idx]) gscene->nodes.push_back(glTFid<glTFNode>(idx));
+        }
+        gltf->scenes.push_back(gscene);
+        gltf->scene = glTFid<glTFScene>(0);
+    }
+
+    // interpolation map
+    static const auto interpolation_map =
+        std::map<keyframe_type, glTFAnimationSamplerInterpolation>{
+            {keyframe_type::step, glTFAnimationSamplerInterpolation::Step},
+            {keyframe_type::linear, glTFAnimationSamplerInterpolation::Linear},
+            {keyframe_type::bezier,
+                glTFAnimationSamplerInterpolation::CubicSpline},
+            {keyframe_type::catmull_rom,
+                glTFAnimationSamplerInterpolation::CatmullRomSpline},
+        };
+
+    // animation
+    for (auto anm : scn->animations) {
+        auto ganm = new glTFAnimation();
+        ganm->name = anm->name;
+        auto gbuffer = add_opt_buffer(anm->path);
+        auto count = 0;
+        auto paths = unordered_map<keyframe*, glTFAnimationChannelTargetPath>();
+        for (auto kfr : anm->keyframes) {
+            auto aid = ganm->name + "_" + std::to_string(count++);
+            auto gsmp = new glTFAnimationSampler();
+            gsmp->input =
+                add_accessor(gbuffer, aid + "_time", glTFAccessorType::Scalar,
+                    glTFAccessorComponentType::Float, (int)kfr->times.size(),
+                    sizeof(float), kfr->times.data(), false);
+            auto path = glTFAnimationChannelTargetPath::NotSet;
+            if (!kfr->translation.empty()) {
+                gsmp->output = add_accessor(gbuffer, aid + "_translation",
+                    glTFAccessorType::Vec3, glTFAccessorComponentType::Float,
+                    (int)kfr->translation.size(), sizeof(vec3f),
+                    kfr->translation.data(), false);
+                path = glTFAnimationChannelTargetPath::Translation;
+            } else if (!kfr->rotation.empty()) {
+                gsmp->output = add_accessor(gbuffer, aid + "_rotation",
+                    glTFAccessorType::Vec4, glTFAccessorComponentType::Float,
+                    (int)kfr->rotation.size(), sizeof(vec4f),
+                    kfr->rotation.data(), false);
+                path = glTFAnimationChannelTargetPath::Rotation;
+            } else if (!kfr->scaling.empty()) {
+                gsmp->output = add_accessor(gbuffer, aid + "_scale",
+                    glTFAccessorType::Vec3, glTFAccessorComponentType::Float,
+                    (int)kfr->scaling.size(), sizeof(vec3f),
+                    kfr->scaling.data(), false);
+                path = glTFAnimationChannelTargetPath::Scale;
+            } else if (!kfr->weights.empty()) {
+                auto values = std::vector<float>();
+                values.reserve(kfr->weights.size() * kfr->weights[0].size());
+                for (auto i = 0; i < kfr->weights.size(); i++) {
+                    values.insert(values.end(), kfr->weights[i].begin(),
+                        kfr->weights[i].end());
+                }
+                gsmp->output = add_accessor(gbuffer, aid + "_weights",
+                    glTFAccessorType::Scalar, glTFAccessorComponentType::Float,
+                    (int)values.size(), sizeof(float), values.data(), false);
+                path = glTFAnimationChannelTargetPath::Weights;
+            } else {
+                throw runtime_error("should not have gotten here");
+            }
+            gsmp->interpolation = interpolation_map.at(kfr->type);
+            ganm->samplers.push_back(gsmp);
+            paths[kfr] = path;
+        }
+        for (auto target : anm->targets) {
+            auto kfr = target.first;
+            auto node = target.second;
+            auto gchan = new glTFAnimationChannel();
+            gchan->sampler =
+                glTFid<glTFAnimationSampler>{index(anm->keyframes, kfr)};
+            gchan->target = new glTFAnimationChannelTarget();
+            gchan->target->node = glTFid<glTFNode>{index(scn->nodes, node)};
+            gchan->target->path = paths.at(kfr);
+            ganm->channels.push_back(gchan);
+        }
+
+        gltf->animations.push_back(ganm);
+    }
+
+    // done
+    return gltf.release();
+}
+
+// Save a gltf scene
+void save_gltf_scene(
+    const string& filename, const scene* scn, const save_options& opts) {
+    auto buffer_uri = path_basename(filename) + ".bin";
+    auto gscn = unique_ptr<glTF>(
+        scene_to_gltf(scn, buffer_uri, opts.gltf_separate_buffers));
+    save_gltf(filename, gscn.get(), true, opts.save_textures);
+}
+
+#endif
+
+#if YGL_SVG
+
+// Converts an svg scene
+scene* svg_to_scene(const svg_scene* sscn, const load_options& opts) {
+    auto scn = new scene();
+    auto sid = 0;
+    for (auto sshp : sscn->shapes) {
+        auto shp = new shape();
+        shp->name = "shape" + to_string(sid++);
+        for (auto spth : sshp->paths) {
+            auto o = (int)shp->pos.size();
+            for (auto p : spth->pos) shp->pos += {p.x, p.y, 0};
+            for (auto vid = 1; vid < spth->pos.size(); vid += 3)
+                shp->beziers +=
+                    {o + vid - 1, o + vid + 0, o + vid + 1, o + vid + 2};
+        }
+        scn->shapes += shp;
+    }
+    auto miny = flt_max, maxy = -flt_max;
+    for (auto shp : scn->shapes) {
+        for (auto& p : shp->pos) {
+            miny = min(miny, p.y);
+            maxy = max(maxy, p.y);
+        }
+    }
+    auto mdly = (maxy + miny) / 2;
+    for (auto shp : scn->shapes) {
+        for (auto& p : shp->pos) p.y = -(p.y - mdly) + mdly;
+    }
+    return scn;
+}
+
+// Load an svg scene
+scene* load_svg_scene(const string& filename, const load_options& opts) {
+    auto sscn = unique_ptr<svg_scene>(load_svg(filename));
+    auto scn = unique_ptr<scene>(svg_to_scene(sscn.get(), opts));
+    return scn.release();
+}
+
+#endif
+
+// Load a scene
+scene* load_scene(const string& filename, const load_options& opts) {
+    auto ext = path_extension(filename);
+    if (ext == ".obj" || ext == ".OBJ") return load_obj_scene(filename, opts);
+#if YGL_GLTF
+    if (ext == ".gltf" || ext == ".GLTF")
+        return load_gltf_scene(filename, opts);
+#endif
+#if YGL_SVG
+    if (ext == ".svg" || ext == ".SVG") return load_svg_scene(filename, opts);
+#endif
+    throw runtime_error("unsupported extension " + ext);
+    return nullptr;
+}
+
+// Save a scene
+void save_scene(
+    const string& filename, const scene* scn, const save_options& opts) {
+    auto ext = path_extension(filename);
+    if (ext == ".obj" || ext == ".OBJ")
+        return save_obj_scene(filename, scn, opts);
+#if YGL_GLTF
+    if (ext == ".gltf" || ext == ".GLTF")
+        return save_gltf_scene(filename, scn, opts);
+#endif
+    throw runtime_error("unsupported extension " + ext);
 }
 
 }  // namespace ygl
@@ -4583,7 +9464,7 @@ inline string _get_basename(const string& filename) {
         dirname.size(), filename.size() - dirname.size() - extension.size());
 }
 
-/// Encode in base64
+// Encode in base64
 inline string base64_encode(
     unsigned char const* bytes_to_encode, unsigned int in_len) {
     static const string base64_chars =
@@ -4630,7 +9511,7 @@ inline string base64_encode(
     return ret;
 }
 
-/// Decode from base64
+// Decode from base64
 inline string base64_decode(string const& encoded_string) {
     static const string base64_chars =
         "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -5266,2114 +10147,6 @@ void save_svg(const string& filename, const vector<svg_path>& paths) {
 }  // namespace ygl
 
 #endif
-
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION FOR SIMPLE SCENE
-// -----------------------------------------------------------------------------
-namespace ygl {
-
-namespace _impl_scn {
-
-// Flattens an scene
-inline scene* obj_to_scene(const obj_scene* obj, const load_options& opts) {
-    // clear scene
-    auto scn = new scene();
-
-    struct obj_vertex_hash {
-        std::hash<int> Th;
-        size_t operator()(const obj_vertex& vv) const {
-            auto v = (const int*)&vv;
-            size_t h = 0;
-            for (auto i = 0; i < sizeof(obj_vertex) / sizeof(int); i++) {
-                // embads hash_combine below
-                h ^= (Th(v[i]) + 0x9e3779b9 + (h << 6) + (h >> 2));
-            }
-            return h;
-        }
-    };
-
-    // convert textures
-    auto tmap = unordered_map<string, texture*>{{"", nullptr}};
-    for (auto otxt : obj->textures) {
-        auto txt = new texture();
-        txt->name = otxt->path;
-        txt->path = otxt->path;
-        if (!otxt->datab.empty()) {
-            txt->ldr = image4b(otxt->width, otxt->height);
-            for (auto j = 0; j < otxt->height; j++) {
-                for (auto i = 0; i < otxt->width; i++) {
-                    auto v = otxt->datab.data() +
-                             (otxt->width * j + i) * otxt->ncomp;
-                    switch (otxt->ncomp) {
-                        case 1:
-                            txt->ldr.at(i, j) = {v[0], v[0], v[0], 255};
-                            break;
-                        case 2: txt->ldr.at(i, j) = {v[0], v[1], 0, 255}; break;
-                        case 3:
-                            txt->ldr.at(i, j) = {v[0], v[1], v[2], 255};
-                            break;
-                        case 4:
-                            txt->ldr.at(i, j) = {v[0], v[1], v[2], v[3]};
-                            break;
-                        default: assert(false); break;
-                    }
-                }
-            }
-        } else if (!otxt->dataf.empty()) {
-            txt->hdr = image4f(otxt->width, otxt->height);
-            for (auto j = 0; j < otxt->height; j++) {
-                for (auto i = 0; i < otxt->width; i++) {
-                    auto v = otxt->dataf.data() +
-                             (otxt->width * j + i) * otxt->ncomp;
-                    switch (otxt->ncomp) {
-                        case 1:
-                            txt->hdr.at(i, j) = {v[0], v[0], v[0], 1};
-                            break;
-                        case 2: txt->hdr.at(i, j) = {v[0], v[1], 0, 1}; break;
-                        case 3:
-                            txt->hdr.at(i, j) = {v[0], v[1], v[2], 1};
-                            break;
-                        case 4:
-                            txt->hdr.at(i, j) = {v[0], v[1], v[2], v[3]};
-                            break;
-                        default: assert(false); break;
-                    }
-                }
-            }
-        }
-        scn->textures.push_back(txt);
-        tmap[txt->path] = txt;
-    }
-
-    auto add_texture = [&tmap](const obj_texture_info& oinfo) {
-        auto info = texture_info();
-        if (oinfo.path == "") return info;
-        info.txt = tmap.at(oinfo.path);
-        info.wrap_s = !oinfo.clamp;
-        info.wrap_t = !oinfo.clamp;
-        info.scale = oinfo.scale;
-        return info;
-    };
-
-    // convert materials and build textures
-    auto mmap = unordered_map<string, material*>{{"", nullptr}};
-    for (auto omat : obj->materials) {
-        auto mat = new material();
-        mat->name = omat->name;
-        mat->type = material_type::specular_roughness;
-        mat->ke = {omat->ke.x, omat->ke.y, omat->ke.z};
-        mat->kd = {omat->kd.x, omat->kd.y, omat->kd.z};
-        mat->ks = {omat->ks.x, omat->ks.y, omat->ks.z};
-        mat->kr = {omat->kr.x, omat->kr.y, omat->kr.z};
-        mat->kt = {omat->kt.x, omat->kt.y, omat->kt.z};
-        mat->rs = (omat->ns >= 1e6f) ? 0 : pow(2 / (omat->ns + 2), 1 / 4.0f);
-        mat->op = omat->op;
-        mat->ke_txt = add_texture(omat->ke_txt);
-        mat->kd_txt = add_texture(omat->kd_txt);
-        mat->ks_txt = add_texture(omat->ks_txt);
-        mat->kr_txt = add_texture(omat->kr_txt);
-        mat->kt_txt = add_texture(omat->kt_txt);
-        mat->rs_txt = add_texture(omat->ns_txt);
-        mat->norm_txt = add_texture(omat->norm_txt);
-        mat->bump_txt = add_texture(omat->bump_txt);
-        mat->disp_txt = add_texture(omat->disp_txt);
-        switch (omat->illum) {
-            case 0:  // Color on and Ambient off
-            case 1:  // Color on and Ambient on
-            case 2:  // Highlight on
-            case 3:  // Reflection on and Ray trace on
-                mat->op = 1;
-                mat->kt = {0, 0, 0};
-                break;
-            case 4:  // Transparency: Glass on
-                // Reflection: Ray trace on
-                break;
-            case 5:  // Reflection: Fresnel on and Ray trace on
-                mat->op = 1;
-                mat->kt = {0, 0, 0};
-                break;
-            case 6:  // Transparency: Refraction on
-                     // Reflection: Fresnel off and Ray trace on
-            case 7:  // Transparency: Refraction on
-                // Reflection: Fresnel on and Ray trace on
-                break;
-            case 8:  // Reflection on and Ray trace off
-                mat->op = 1;
-                mat->kt = {0, 0, 0};
-                break;
-            case 9:  // Transparency: Glass on
-                // Reflection: Ray trace off
-                break;
-        }
-        scn->materials.push_back(mat);
-        mmap[mat->name] = mat;
-    }
-
-    // convert meshes
-    auto omap = unordered_map<string, vector<shape*>>{{"", {}}};
-    for (auto omsh : obj->objects) {
-        omap[omsh->name] = {};
-        for (auto& oshp : omsh->groups) {
-            if (oshp.verts.empty()) continue;
-            if (oshp.elems.empty()) continue;
-
-            auto shp = new shape();
-            shp->name = omsh->name + oshp.groupname;
-            shp->mat = mmap[oshp.matname];
-            shp->subdivision_level = oshp.subdivision_level;
-            shp->subdivision_catmullclark = oshp.subdivision_catmullclark;
-
-            // check to see if this shuold be face-varying or flat quads
-            auto as_facevarying = false, as_quads = false;
-            if (opts.preserve_quads || opts.preserve_facevarying) {
-                auto m = 10000, M = -1;
-                for (auto& elem : oshp.elems) {
-                    if (elem.type != obj_element_type::face) {
-                        m = 2;
-                        break;
-                    } else {
-                        m = min(m, (int)elem.size);
-                        M = max(M, (int)elem.size);
-                    }
-                }
-                if (m >= 3 && M == 4) as_quads = opts.preserve_quads;
-                if (m >= 3 && M <= 4)
-                    as_facevarying = opts.preserve_facevarying;
-            }
-
-            // in case of facevarying, check if there is really a need for it
-            if (as_facevarying) {
-                auto need_facevarying = false;
-                for (auto& elem : oshp.elems) {
-                    for (auto i = elem.start; i < elem.start + elem.size; i++) {
-                        auto& v = oshp.verts[i];
-                        if (v.norm >= 0 && v.pos != v.norm)
-                            need_facevarying = true;
-                        if (v.texcoord >= 0 && v.pos != v.texcoord)
-                            need_facevarying = true;
-                        if (v.color >= 0) as_facevarying = false;
-                        if (v.radius >= 0) as_facevarying = false;
-                    }
-                    if (!as_facevarying) break;
-                }
-                as_facevarying = need_facevarying;
-            }
-
-            if (!as_facevarying) {
-                // insert all vertices
-                unordered_map<obj_vertex, int, obj_vertex_hash> vert_map;
-                vector<int> vert_ids;
-                for (auto& vert : oshp.verts) {
-                    if (vert_map.find(vert) == vert_map.end()) {
-                        auto s = (int)vert_map.size();
-                        vert_map[vert] = s;
-                    }
-                    vert_ids.push_back(vert_map.at(vert));
-                }
-
-                // convert elements
-                for (auto& elem : oshp.elems) {
-                    switch (elem.type) {
-                        case obj_element_type::point: {
-                            for (auto i = elem.start;
-                                 i < elem.start + elem.size; i++) {
-                                shp->points.push_back(vert_ids[i]);
-                            }
-                        } break;
-                        case obj_element_type::line: {
-                            for (auto i = elem.start;
-                                 i < elem.start + elem.size - 1; i++) {
-                                shp->lines.push_back(
-                                    {vert_ids[i], vert_ids[i + 1]});
-                            }
-                        } break;
-                        case obj_element_type::face: {
-                            if (as_quads) {
-                                shp->quads.push_back({vert_ids[elem.start + 0],
-                                    vert_ids[elem.start + 1],
-                                    vert_ids[elem.start + 2],
-                                    vert_ids[elem.start +
-                                             ((elem.size == 3) ? 2 : 3)]});
-                            } else if (elem.size == 3) {
-                                shp->triangles.push_back(
-                                    {vert_ids[elem.start + 0],
-                                        vert_ids[elem.start + 1],
-                                        vert_ids[elem.start + 2]});
-                            } else {
-                                for (auto i = elem.start + 2;
-                                     i < elem.start + elem.size; i++) {
-                                    shp->triangles.push_back(
-                                        {vert_ids[elem.start], vert_ids[i - 1],
-                                            vert_ids[i]});
-                                }
-                            }
-                        } break;
-                        case obj_element_type::bezier: {
-                            if ((elem.size - 1) % 3)
-                                throw runtime_error("bad obj bezier");
-                            for (auto i = elem.start + 1;
-                                 i < elem.start + elem.size; i += 3) {
-                                shp->beziers.push_back(
-                                    {vert_ids[i - 1], vert_ids[i],
-                                        vert_ids[i + 1], vert_ids[i + 2]});
-                            }
-                        } break;
-                        default: { assert(false); }
-                    }
-                }
-
-                // copy vertex data
-                auto v = oshp.verts[0];
-                if (v.pos >= 0) shp->pos.resize(vert_map.size());
-                if (v.texcoord >= 0) shp->texcoord.resize(vert_map.size());
-                if (v.norm >= 0) shp->norm.resize(vert_map.size());
-                if (v.color >= 0) shp->color.resize(vert_map.size());
-                if (v.radius >= 0) shp->radius.resize(vert_map.size());
-                for (auto& kv : vert_map) {
-                    if (v.pos >= 0 && kv.first.pos >= 0) {
-                        auto v = obj->pos[kv.first.pos];
-                        shp->pos[kv.second] = {v.x, v.y, v.z};
-                    }
-                    if (v.texcoord >= 0 && kv.first.texcoord >= 0) {
-                        auto v = obj->texcoord[kv.first.texcoord];
-                        shp->texcoord[kv.second] = {v.x, v.y};
-                    }
-                    if (v.norm >= 0 && kv.first.norm >= 0) {
-                        auto v = obj->norm[kv.first.norm];
-                        shp->norm[kv.second] = {v.x, v.y, v.z};
-                    }
-                    if (v.color >= 0 && kv.first.color >= 0) {
-                        auto v = obj->color[kv.first.color];
-                        shp->color[kv.second] = {v.x, v.y, v.z, v.w};
-                    }
-                    if (v.radius >= 0 && kv.first.radius >= 0) {
-                        shp->radius[kv.second] = obj->radius[kv.first.radius];
-                    }
-                }
-
-                // fix smoothing
-                if (!oshp.smoothing && opts.obj_facet_non_smooth) {
-                    auto faceted = new shape();
-                    faceted->name = shp->name;
-                    auto pidx = vector<int>();
-                    for (auto point : shp->points) {
-                        faceted->points.push_back((int)pidx.size());
-                        pidx.push_back(point);
-                    }
-                    for (auto line : shp->lines) {
-                        faceted->lines.push_back(
-                            {(int)pidx.size() + 0, (int)pidx.size() + 1});
-                        pidx.push_back(line.x);
-                        pidx.push_back(line.y);
-                    }
-                    for (auto triangle : shp->triangles) {
-                        faceted->triangles.push_back({(int)pidx.size() + 0,
-                            (int)pidx.size() + 1, (int)pidx.size() + 2});
-                        pidx.push_back(triangle.x);
-                        pidx.push_back(triangle.y);
-                        pidx.push_back(triangle.z);
-                    }
-                    for (auto idx : pidx) {
-                        if (!shp->pos.empty())
-                            faceted->pos.push_back(shp->pos[idx]);
-                        if (!shp->norm.empty())
-                            faceted->norm.push_back(shp->norm[idx]);
-                        if (!shp->texcoord.empty())
-                            faceted->texcoord.push_back(shp->texcoord[idx]);
-                        if (!shp->color.empty())
-                            faceted->color.push_back(shp->color[idx]);
-                        if (!shp->radius.empty())
-                            faceted->radius.push_back(shp->radius[idx]);
-                    }
-                    delete shp;
-                    shp = faceted;
-                }
-            } else {
-                // insert all vertices
-                unordered_map<int, int> pos_map, norm_map, texcoord_map;
-                vector<int> pos_ids, norm_ids, texcoord_ids;
-                for (auto& vert : oshp.verts) {
-                    if (vert.pos >= 0) {
-                        if (pos_map.find(vert.pos) == pos_map.end()) {
-                            auto s = (int)pos_map.size();
-                            pos_map[vert.pos] = s;
-                        }
-                        pos_ids.push_back(pos_map.at(vert.pos));
-                    } else {
-                        if (!pos_ids.empty())
-                            throw runtime_error("malformed obj");
-                    }
-                    if (vert.norm >= 0) {
-                        if (norm_map.find(vert.norm) == norm_map.end()) {
-                            auto s = (int)norm_map.size();
-                            norm_map[vert.norm] = s;
-                        }
-                        norm_ids.push_back(norm_map.at(vert.norm));
-                    } else {
-                        if (!norm_ids.empty())
-                            throw runtime_error("malformed obj");
-                    }
-                    if (vert.texcoord >= 0) {
-                        if (texcoord_map.find(vert.texcoord) ==
-                            texcoord_map.end()) {
-                            auto s = (int)texcoord_map.size();
-                            texcoord_map[vert.texcoord] = s;
-                        }
-                        texcoord_ids.push_back(texcoord_map.at(vert.texcoord));
-                    } else {
-                        if (!texcoord_ids.empty())
-                            throw runtime_error("malformed obj");
-                    }
-                }
-
-                // convert elements
-                for (auto& elem : oshp.elems) {
-                    if (elem.type != obj_element_type::face)
-                        throw runtime_error("malformed obj");
-                    if (elem.size < 3 || elem.size > 4)
-                        throw runtime_error("malformed obj");
-                    if (!pos_ids.empty()) {
-                        shp->quads_pos.push_back({pos_ids[elem.start + 0],
-                            pos_ids[elem.start + 1], pos_ids[elem.start + 2],
-                            pos_ids[elem.start + ((elem.size == 3) ? 2 : 3)]});
-                    }
-                    if (!texcoord_ids.empty()) {
-                        shp->quads_texcoord.push_back(
-                            {texcoord_ids[elem.start + 0],
-                                texcoord_ids[elem.start + 1],
-                                texcoord_ids[elem.start + 2],
-                                texcoord_ids[elem.start +
-                                             ((elem.size == 3) ? 2 : 3)]});
-                    }
-                    if (!norm_ids.empty()) {
-                        shp->quads_norm.push_back({norm_ids[elem.start + 0],
-                            norm_ids[elem.start + 1], norm_ids[elem.start + 2],
-                            norm_ids[elem.start + ((elem.size == 3) ? 2 : 3)]});
-                    }
-                }
-
-                // copy vertex data
-                shp->pos.resize(pos_map.size());
-                shp->texcoord.resize(texcoord_map.size());
-                shp->norm.resize(norm_map.size());
-                for (auto& kv : pos_map) {
-                    shp->pos[kv.second] = obj->pos[kv.first];
-                }
-                for (auto& kv : texcoord_map) {
-                    shp->texcoord[kv.second] = obj->texcoord[kv.first];
-                }
-                for (auto& kv : norm_map) {
-                    shp->norm[kv.second] = obj->norm[kv.first];
-                }
-
-                // fix smoothing
-                if (!oshp.smoothing && opts.obj_facet_non_smooth) {}
-            }
-            scn->shapes.push_back(shp);
-            omap[omsh->name].push_back(shp);
-        }
-    }
-
-    // convert cameras
-    auto cmap = unordered_map<string, camera*>{{"", nullptr}};
-    for (auto ocam : obj->cameras) {
-        auto cam = new camera();
-        cam->name = ocam->name;
-        cam->ortho = ocam->ortho;
-        cam->yfov = ocam->yfov;
-        cam->aspect = ocam->aspect;
-        cam->aperture = ocam->aperture;
-        cam->focus = ocam->focus;
-        cam->frame = ocam->frame;
-        scn->cameras.push_back(cam);
-        cmap[cam->name] = cam;
-    }
-
-    // convert envs
-    unordered_set<material*> env_mat;
-    auto emap = unordered_map<string, environment*>{{"", nullptr}};
-    for (auto oenv : obj->environments) {
-        auto env = new environment();
-        env->name = oenv->name;
-        for (auto mat : scn->materials) {
-            if (mat->name == oenv->matname) {
-                env->ke = mat->ke;
-                env->ke_txt = mat->ke_txt;
-                env_mat.insert(mat);
-            }
-        }
-        env->frame = oenv->frame;
-        scn->environments.push_back(env);
-        emap[env->name] = env;
-    }
-
-    // remove env materials
-    for (auto shp : scn->shapes) env_mat.erase(shp->mat);
-    for (auto mat : env_mat) {
-        auto end =
-            std::remove(scn->materials.begin(), scn->materials.end(), mat);
-        scn->materials.erase(end, scn->materials.end());
-        delete mat;
-    }
-
-    if (obj->nodes.empty()) {
-        // instance cameras
-        // instance environments
-    } else {
-        // convert nodes
-        for (auto onde : obj->nodes) {
-            auto nde = new node();
-            nde->name = onde->name;
-            nde->cam = cmap.at(onde->camname);
-            if (!onde->objname.empty()) {
-                for (auto shp : omap.at(onde->objname)) {
-                    auto ist = new instance();
-                    ist->name = onde->name;
-                    ist->shp = shp;
-                    nde->ists.push_back(ist);
-                    scn->instances.push_back(ist);
-                }
-            }
-            nde->env = emap.at(onde->envname);
-            nde->translation = onde->translation;
-            nde->rotation = onde->rotation;
-            nde->scaling = onde->scaling;
-            nde->frame = onde->frame;
-            scn->nodes.push_back(nde);
-        }
-
-        // set up parent pointers
-        for (auto nid = 0; nid < obj->nodes.size(); nid++) {
-            auto onde = obj->nodes[nid];
-            if(onde->parent.empty()) continue;
-            auto nde = scn->nodes[nid];
-            for (auto parent : scn->nodes) {
-                if (parent->name == onde->parent) {
-                    nde->parent = parent;
-                    break;
-                }
-            }
-        }
-    }
-    
-    // update transforms
-    update_transforms(scn);
-    
-    // remove hierarchy if necessary
-    if (!opts.preserve_hierarchy) {
-        for (auto nde : scn->nodes) delete nde;
-        scn->nodes.clear();
-        for (auto anm : scn->animations) delete anm;
-        scn->animations.clear();
-    }
-
-    // done
-    return scn;
-}
-
-// Load an obj scene
-inline scene* load_obj_scene(const string& filename, const load_options& opts) {
-    auto oscn = unique_ptr<obj_scene>(load_obj(filename, opts.load_textures,
-        opts.skip_missing, opts.obj_flip_texcoord, opts.obj_flip_tr));
-    auto scn = unique_ptr<scene>(obj_to_scene(oscn.get(), opts));
-    return scn.release();
-}
-
-// Save an scene
-inline obj_scene* scene_to_obj(const scene* scn) {
-    auto obj = new obj_scene();
-
-    auto add_texture = [](const texture_info& info, bool bump = false) {
-        auto oinfo = obj_texture_info();
-        if (!info.txt) return oinfo;
-        oinfo.path = info.txt->path;
-        oinfo.clamp = !info.wrap_s && !info.wrap_t;
-        if (bump) oinfo.scale = info.scale;
-        return oinfo;
-    };
-
-    // convert textures
-    for (auto txt : scn->textures) {
-        auto otxt = new obj_texture();
-        otxt->path = txt->path;
-        if (txt->hdr) {
-            otxt->width = txt->hdr.width();
-            otxt->height = txt->hdr.height();
-            otxt->ncomp = 4;
-            otxt->dataf.assign((float*)data(txt->hdr),
-                (float*)data(txt->hdr) +
-                    txt->hdr.width() * txt->hdr.height() * 4);
-        }
-        if (txt->ldr) {
-            otxt->width = txt->ldr.width();
-            otxt->height = txt->ldr.height();
-            otxt->ncomp = 4;
-            otxt->datab.assign((uint8_t*)data(txt->ldr),
-                (uint8_t*)data(txt->ldr) +
-                    txt->ldr.width() * txt->ldr.height() * 4);
-        }
-        obj->textures.push_back(otxt);
-    }
-
-    // convert materials
-    for (auto mat : scn->materials) {
-        auto omat = new obj_material();
-        omat->name = mat->name;
-        omat->ke = {mat->ke.x, mat->ke.y, mat->ke.z};
-        omat->ke_txt = add_texture(mat->ke_txt);
-        switch (mat->type) {
-            case material_type::specular_roughness: {
-                omat->kd = {mat->kd.x, mat->kd.y, mat->kd.z};
-                omat->ks = {mat->ks.x, mat->ks.y, mat->ks.z};
-                omat->kr = {mat->kr.x, mat->kr.y, mat->kr.z};
-                omat->kt = {mat->kt.x, mat->kt.y, mat->kt.z};
-                omat->ns = (mat->rs) ? 2 / pow(mat->rs, 4.0f) - 2 : 1e6;
-                omat->op = mat->op;
-                omat->kd_txt = add_texture(mat->kd_txt);
-                omat->ks_txt = add_texture(mat->ks_txt);
-                omat->kr_txt = add_texture(mat->kr_txt);
-                omat->kt_txt = add_texture(mat->kt_txt);
-            } break;
-            case material_type::metallic_roughness: {
-                if (mat->rs == 1 && mat->ks.x == 0) {
-                    omat->kd = mat->kd;
-                    omat->ks = {0, 0, 0};
-                    omat->ns = 1;
-                } else {
-                    auto kd = mat->kd * (1 - 0.04f) * (1 - mat->ks.x);
-                    auto ks = mat->kd * mat->ks.x +
-                              vec3f{0.04f, 0.04f, 0.04f} * (1 - mat->ks.x);
-                    omat->kd = {kd.x, kd.y, kd.z};
-                    omat->ks = {ks.x, ks.y, ks.z};
-                    omat->ns = (mat->rs) ? 2 / pow(mat->rs, 4.0f) - 2 : 1e6;
-                }
-                omat->op = mat->op;
-                if (mat->ks.x < 0.5f) {
-                    omat->kd_txt = add_texture(mat->kd_txt);
-                } else {
-                    omat->ks_txt = add_texture(mat->ks_txt);
-                }
-            } break;
-            case material_type::specular_glossiness: {
-                omat->kd = {mat->kd.x, mat->kd.y, mat->kd.z};
-                omat->ks = {mat->ks.x, mat->ks.y, mat->ks.z};
-                omat->ns = (mat->rs) ? 2 / pow(1 - mat->rs, 4.0f) - 2 : 1e6;
-                omat->op = mat->op;
-                omat->kd_txt = add_texture(mat->kd_txt);
-                omat->ks_txt = add_texture(mat->ks_txt);
-            } break;
-        }
-        omat->bump_txt = add_texture(mat->bump_txt, true);
-        omat->disp_txt = add_texture(mat->disp_txt, true);
-        omat->norm_txt = add_texture(mat->norm_txt, true);
-        if (mat->op < 1 || mat->kt != zero3f) {
-            omat->illum = 4;
-        } else {
-            omat->illum = 2;
-        }
-        obj->materials.push_back(omat);
-    }
-
-    // convert shapes
-    auto shapes = unordered_map<shape*, unique_ptr<obj_group>>();
-    for (auto shp : scn->shapes) {
-        auto offset = obj_vertex{(int)obj->pos.size(),
-            (int)obj->texcoord.size(), (int)obj->norm.size(),
-            (int)obj->color.size(), (int)obj->radius.size()};
-        for (auto& v : shp->pos) obj->pos.push_back({v.x, v.y, v.z});
-        for (auto& v : shp->norm) obj->norm.push_back({v.x, v.y, v.z});
-        for (auto& v : shp->texcoord) obj->texcoord.push_back({v.x, v.y});
-        for (auto& v : shp->color) obj->color.push_back({v.x, v.y, v.z, v.w});
-        for (auto& v : shp->radius) obj->radius.push_back(v);
-        auto group = new obj_group();
-        group->groupname = shp->name;
-        group->matname = (shp->mat) ? shp->mat->name : "";
-        group->subdivision_level = shp->subdivision_level;
-        group->subdivision_catmullclark = shp->subdivision_catmullclark;
-        for (auto point : shp->points) {
-            group->elems.push_back(
-                {(uint32_t)group->verts.size(), obj_element_type::point, 1});
-            auto vert = obj_vertex{-1, -1, -1, -1, -1};
-            if (!shp->pos.empty()) vert.pos = offset.pos + point;
-            if (!shp->texcoord.empty()) vert.texcoord = offset.texcoord + point;
-            if (!shp->norm.empty()) vert.norm = offset.norm + point;
-            if (!shp->color.empty()) vert.color = offset.color + point;
-            if (!shp->radius.empty()) vert.radius = offset.radius + point;
-            group->verts.push_back(vert);
-        }
-        for (auto line : shp->lines) {
-            group->elems.push_back(
-                {(uint32_t)group->verts.size(), obj_element_type::line, 2});
-            for (auto vid : line) {
-                auto vert = obj_vertex{-1, -1, -1, -1, -1};
-                if (!shp->pos.empty()) vert.pos = offset.pos + vid;
-                if (!shp->texcoord.empty())
-                    vert.texcoord = offset.texcoord + vid;
-                if (!shp->norm.empty()) vert.norm = offset.norm + vid;
-                if (!shp->color.empty()) vert.color = offset.color + vid;
-                if (!shp->radius.empty()) vert.radius = offset.radius + vid;
-                group->verts.push_back(vert);
-            }
-        }
-        for (auto triangle : shp->triangles) {
-            group->elems.push_back(
-                {(uint32_t)group->verts.size(), obj_element_type::face, 3});
-            for (auto vid : triangle) {
-                auto vert = obj_vertex{-1, -1, -1, -1, -1};
-                if (!shp->pos.empty()) vert.pos = offset.pos + vid;
-                if (!shp->texcoord.empty())
-                    vert.texcoord = offset.texcoord + vid;
-                if (!shp->norm.empty()) vert.norm = offset.norm + vid;
-                if (!shp->color.empty()) vert.color = offset.color + vid;
-                if (!shp->radius.empty()) vert.radius = offset.radius + vid;
-                group->verts.push_back(vert);
-            }
-        }
-        for (auto quad : shp->quads) {
-            group->elems.push_back(
-                {(uint32_t)group->verts.size(), obj_element_type::face,
-                    (uint16_t)((quad.z == quad.w) ? 3 : 4)});
-            if (group->elems.back().size == 3) {
-                for (auto vid : quad.xyz()) {
-                    auto vert = obj_vertex{-1, -1, -1, -1, -1};
-                    if (!shp->pos.empty()) vert.pos = offset.pos + vid;
-                    if (!shp->texcoord.empty())
-                        vert.texcoord = offset.texcoord + vid;
-                    if (!shp->norm.empty()) vert.norm = offset.norm + vid;
-                    if (!shp->color.empty()) vert.color = offset.color + vid;
-                    if (!shp->radius.empty()) vert.radius = offset.radius + vid;
-                    group->verts.push_back(vert);
-                }
-            } else {
-                for (auto vid : quad) {
-                    auto vert = obj_vertex{-1, -1, -1, -1, -1};
-                    if (!shp->pos.empty()) vert.pos = offset.pos + vid;
-                    if (!shp->texcoord.empty())
-                        vert.texcoord = offset.texcoord + vid;
-                    if (!shp->norm.empty()) vert.norm = offset.norm + vid;
-                    if (!shp->color.empty()) vert.color = offset.color + vid;
-                    if (!shp->radius.empty()) vert.radius = offset.radius + vid;
-                    group->verts.push_back(vert);
-                }
-            }
-        }
-        for (auto fid = 0; fid < shp->quads_pos.size(); fid++) {
-            group->elems.push_back(
-                {(uint32_t)group->verts.size(), obj_element_type::face, 4});
-            auto last_vid = -1;
-            for (auto i = 0; i < 4; i++) {
-                if (last_vid == shp->quads_pos[fid][i]) continue;
-                auto vert = obj_vertex{-1, -1, -1, -1, -1};
-                if (!shp->pos.empty() && !shp->quads_pos.empty())
-                    vert.pos = offset.pos + shp->quads_pos[fid][i];
-                if (!shp->texcoord.empty() && !shp->quads_texcoord.empty())
-                    vert.texcoord =
-                        offset.texcoord + shp->quads_texcoord[fid][i];
-                if (!shp->norm.empty() && !shp->quads_norm.empty())
-                    vert.norm = offset.norm + shp->quads_norm[fid][i];
-                group->verts.push_back(vert);
-                last_vid = shp->quads_pos[fid][i];
-            }
-        }
-        for (auto bezier : shp->beziers) {
-            group->elems.push_back(
-                {(uint32_t)group->verts.size(), obj_element_type::bezier, 4});
-            for (auto vid : bezier) {
-                auto vert = obj_vertex{-1, -1, -1, -1, -1};
-                if (!shp->pos.empty()) vert.pos = offset.pos + vid;
-                if (!shp->texcoord.empty())
-                    vert.texcoord = offset.texcoord + vid;
-                if (!shp->norm.empty()) vert.norm = offset.norm + vid;
-                if (!shp->color.empty()) vert.color = offset.color + vid;
-                if (!shp->radius.empty()) vert.radius = offset.radius + vid;
-                group->verts.push_back(vert);
-            }
-        }
-        shapes[shp] = unique_ptr<obj_group>(group);
-    }
-
-    // convert cameras
-    for (auto cam : scn->cameras) {
-        auto ocam = new obj_camera();
-        ocam->name = cam->name;
-        ocam->ortho = cam->ortho;
-        ocam->yfov = cam->yfov;
-        ocam->aspect = cam->aspect;
-        ocam->focus = cam->focus;
-        ocam->aperture = cam->aperture;
-        ocam->frame = cam->frame;
-        obj->cameras.push_back(ocam);
-    }
-
-    // convert envs
-    for (auto env : scn->environments) {
-        auto oenv = new obj_environment();
-        auto omat = new obj_material();
-        omat->name = env->name + "_mat";
-        omat->ke = env->ke;
-        omat->ke_txt = add_texture(env->ke_txt);
-        oenv->name = env->name;
-        oenv->matname = omat->name;
-        oenv->frame = env->frame;
-        obj->materials.push_back(omat);
-        obj->environments.push_back(oenv);
-    }
-
-    // convert hierarchy
-    if (obj->nodes.empty()) {
-        // meshes
-        for (auto shp : scn->shapes) {
-            auto omsh = new obj_object();
-            omsh->name = shp->name;
-            omsh->groups.push_back(*shapes.at(shp));
-            obj->objects.push_back(omsh);
-        }
-
-        // instances
-        for (auto ist : scn->instances) {
-            auto onde = new obj_node();
-            onde->name = ist->name;
-            onde->objname = (ist->shp) ? ist->shp->name : "<undefined>";
-            onde->frame = ist->frame;
-            obj->nodes.emplace_back(onde);
-        }
-    } else {
-        // meshes
-        auto meshes = map<vector<instance*>, obj_object*>();
-        for (auto nde : scn->nodes) {
-            if (nde->ists.empty()) continue;
-            if (contains(meshes, nde->ists)) continue;
-            auto omsh = new obj_object();
-            omsh->name = nde->ists.front()->name;
-            for (auto ist : nde->ists)
-                omsh->groups.push_back(*shapes.at(ist->shp));
-            meshes[nde->ists] = omsh;
-            obj->objects.push_back(omsh);
-        }
-
-        // nodes
-        for (auto nde : scn->nodes) {
-            auto onde = new obj_node();
-            onde->name = nde->name;
-            if (nde->cam) onde->camname = nde->cam->name;
-            if (!nde->ists.empty()) onde->objname = meshes.at(nde->ists)->name;
-            if (nde->env) onde->envname = nde->env->name;
-            onde->frame = to_mat(nde->frame);
-            onde->translation = nde->translation;
-            onde->rotation = nde->rotation;
-            onde->scaling = nde->scaling;
-            obj->nodes.push_back(onde);
-        }
-
-        // parent
-        for (auto idx = 0; idx < scn->nodes.size(); idx++) {
-            auto nde = scn->nodes.at(idx);
-            if (!nde->parent) continue;
-            auto onde = obj->nodes.at(idx);
-            onde->parent = nde->parent->name;
-        }
-    }
-    
-    return obj;
-}
-
-// Save an obj scene
-inline void save_obj_scene(
-    const string& filename, const scene* scn, const save_options& opts) {
-    auto oscn = unique_ptr<obj_scene>(scene_to_obj(scn));
-    save_obj(filename, oscn.get(), opts.save_textures, opts.skip_missing,
-        opts.obj_flip_texcoord, opts.obj_flip_tr);
-}
-
-#if YGL_GLTF
-
-// Flattens a gltf file into a flattened asset.
-inline scene* gltf_to_scene(const glTF* gltf, const load_options& opts) {
-    // clear asset
-    auto scn = new scene();
-
-    // convert images
-    for (auto gtxt : gltf->images) {
-        auto txt = new texture();
-        txt->name = gtxt->name;
-        txt->path =
-            (startswith(gtxt->uri, "data:")) ? string("inlines") : gtxt->uri;
-        if (!gtxt->data.datab.empty()) {
-            txt->ldr = image4b(gtxt->data.width, gtxt->data.height);
-            for (auto j = 0; j < gtxt->data.height; j++) {
-                for (auto i = 0; i < gtxt->data.width; i++) {
-                    auto v = gtxt->data.datab.data() +
-                             (gtxt->data.width * j + i) * gtxt->data.ncomp;
-                    switch (gtxt->data.ncomp) {
-                        case 1:
-                            txt->ldr.at(i, j) = {v[0], v[0], v[0], 255};
-                            break;
-                        case 2: txt->ldr.at(i, j) = {v[0], v[1], 0, 255}; break;
-                        case 3:
-                            txt->ldr.at(i, j) = {v[0], v[1], v[2], 255};
-                            break;
-                        case 4:
-                            txt->ldr.at(i, j) = {v[0], v[1], v[2], v[3]};
-                            break;
-                        default: assert(false); break;
-                    }
-                }
-            }
-        } else if (!gtxt->data.dataf.empty()) {
-            txt->hdr = image4f(gtxt->data.width, gtxt->data.height);
-            for (auto j = 0; j < gtxt->data.height; j++) {
-                for (auto i = 0; i < gtxt->data.width; i++) {
-                    auto v = gtxt->data.dataf.data() +
-                             (gtxt->data.width * j + i) * gtxt->data.ncomp;
-                    switch (gtxt->data.ncomp) {
-                        case 1:
-                            txt->hdr.at(i, j) = {v[0], v[0], v[0], 1};
-                            break;
-                        case 2: txt->hdr.at(i, j) = {v[0], v[1], 0, 1}; break;
-                        case 3:
-                            txt->hdr.at(i, j) = {v[0], v[1], v[2], 1};
-                            break;
-                        case 4:
-                            txt->hdr.at(i, j) = {v[0], v[1], v[2], v[3]};
-                            break;
-                        default: assert(false); break;
-                    }
-                }
-            }
-        }
-        scn->textures.push_back(txt);
-    }
-
-    // add a texture
-    auto add_texture = [gltf, scn](glTFTextureInfo* ginfo, bool normal = false,
-                           bool occlusion = false) {
-        auto info = texture_info();
-        if (!ginfo) return info;
-        auto gtxt = gltf->get(ginfo->index);
-        if (!gtxt || !gtxt->source) return info;
-        auto txt = scn->textures.at((int)gtxt->source);
-        if (!txt) return info;
-        info.txt = scn->textures.at((int)gtxt->source);
-        auto gsmp = gltf->get(gtxt->sampler);
-        if (gsmp) {
-            info.linear = gsmp->magFilter != glTFSamplerMagFilter::Nearest;
-            info.mipmap = gsmp->minFilter != glTFSamplerMinFilter::Linear &&
-                          gsmp->minFilter != glTFSamplerMinFilter::Nearest;
-            info.wrap_s = gsmp->wrapS != glTFSamplerWrapS::ClampToEdge;
-            info.wrap_t = gsmp->wrapT != glTFSamplerWrapT::ClampToEdge;
-        }
-        if (normal) {
-            auto ninfo = (glTFMaterialNormalTextureInfo*)ginfo;
-            info.scale = ninfo->scale;
-        }
-        if (occlusion) {
-            auto ninfo = (glTFMaterialOcclusionTextureInfo*)ginfo;
-            info.scale = ninfo->strength;
-        }
-        return info;
-    };
-
-    // convert materials
-    for (auto gmat : gltf->materials) {
-        auto mat = new material();
-        mat->name = gmat->name;
-        mat->ke = gmat->emissiveFactor;
-        mat->ke_txt = add_texture(gmat->emissiveTexture);
-        if (gmat->pbrMetallicRoughness) {
-            mat->type = material_type::metallic_roughness;
-            auto gmr = gmat->pbrMetallicRoughness;
-            mat->kd = {gmr->baseColorFactor[0], gmr->baseColorFactor[1],
-                gmr->baseColorFactor[2]};
-            mat->op = gmr->baseColorFactor[3];
-            mat->ks = {
-                gmr->metallicFactor, gmr->metallicFactor, gmr->metallicFactor};
-            mat->rs = gmr->roughnessFactor;
-            mat->kd_txt = add_texture(gmr->baseColorTexture);
-            mat->ks_txt = add_texture(gmr->metallicRoughnessTexture);
-        }
-        if (gmat->pbrSpecularGlossiness) {
-            mat->type = material_type::specular_glossiness;
-            auto gsg = gmat->pbrSpecularGlossiness;
-            mat->kd = {gsg->diffuseFactor[0], gsg->diffuseFactor[1],
-                gsg->diffuseFactor[2]};
-            mat->op = gsg->diffuseFactor[3];
-            mat->ks = gsg->specularFactor;
-            mat->rs = gsg->glossinessFactor;
-            mat->kd_txt = add_texture(gsg->diffuseTexture);
-            mat->ks_txt = add_texture(gsg->specularGlossinessTexture);
-        }
-        mat->norm_txt = add_texture(gmat->normalTexture, true, false);
-        mat->occ_txt = add_texture(gmat->occlusionTexture, false, true);
-        mat->double_sided = gmat->doubleSided;
-        scn->materials.push_back(mat);
-    }
-
-    // convert meshes
-    auto meshes = vector<vector<shape*>>();
-    for (auto gmesh : gltf->meshes) {
-        meshes.push_back({});
-        // primitives
-        for (auto gprim : gmesh->primitives) {
-            auto shp = new shape();
-            if (gprim->material) {
-                shp->mat = scn->materials[(int)gprim->material];
-            }
-            // vertex data
-            for (auto gattr : gprim->attributes) {
-                auto semantic = gattr.first;
-                auto vals = accessor_view(gltf, gltf->get(gattr.second));
-                if (semantic == "POSITION") {
-                    shp->pos.reserve(vals.size());
-                    for (auto i = 0; i < vals.size(); i++)
-                        shp->pos.push_back(vals.getv3f(i));
-                } else if (semantic == "NORMAL") {
-                    shp->norm.reserve(vals.size());
-                    for (auto i = 0; i < vals.size(); i++)
-                        shp->norm.push_back(vals.getv3f(i));
-                } else if (semantic == "TEXCOORD" || semantic == "TEXCOORD_0") {
-                    shp->texcoord.reserve(vals.size());
-                    for (auto i = 0; i < vals.size(); i++)
-                        shp->texcoord.push_back(vals.getv2f(i));
-                } else if (semantic == "TEXCOORD_1") {
-                    shp->texcoord1.reserve(vals.size());
-                    for (auto i = 0; i < vals.size(); i++)
-                        shp->texcoord1.push_back(vals.getv2f(i));
-                } else if (semantic == "COLOR" || semantic == "COLOR_0") {
-                    shp->color.reserve(vals.size());
-                    for (auto i = 0; i < vals.size(); i++)
-                        shp->color.push_back(vals.getv4f(i, {0, 0, 0, 1}));
-                } else if (semantic == "TANGENT") {
-                    shp->tangsp.reserve(vals.size());
-                    for (auto i = 0; i < vals.size(); i++)
-                        shp->tangsp.push_back(vals.getv4f(i));
-                } else if (semantic == "RADIUS") {
-                    shp->radius.reserve(vals.size());
-                    for (auto i = 0; i < vals.size(); i++)
-                        shp->radius.push_back(vals.get(i, 0));
-                } else {
-                    // ignore
-                }
-            }
-            // indices
-            if (!gprim->indices) {
-                switch (gprim->mode) {
-                    case glTFMeshPrimitiveMode::Triangles: {
-                        shp->triangles.reserve(shp->pos.size() / 3);
-                        for (auto i = 0; i < shp->pos.size() / 3; i++) {
-                            shp->triangles.push_back(
-                                {i * 3 + 0, i * 3 + 1, i * 3 + 2});
-                        }
-                    } break;
-                    case glTFMeshPrimitiveMode::TriangleFan: {
-                        shp->triangles.reserve(shp->pos.size() - 2);
-                        for (auto i = 2; i < shp->pos.size(); i++) {
-                            shp->triangles.push_back({0, i - 1, i});
-                        }
-                    } break;
-                    case glTFMeshPrimitiveMode::TriangleStrip: {
-                        shp->triangles.reserve(shp->pos.size() - 2);
-                        for (auto i = 2; i < shp->pos.size(); i++) {
-                            shp->triangles.push_back({i - 2, i - 1, i});
-                        }
-                    } break;
-                    case glTFMeshPrimitiveMode::Lines: {
-                        shp->lines.reserve(shp->pos.size() / 2);
-                        for (auto i = 0; i < shp->pos.size() / 2; i++) {
-                            shp->lines.push_back({i * 2 + 0, i * 2 + 1});
-                        }
-                    } break;
-                    case glTFMeshPrimitiveMode::LineLoop: {
-                        shp->lines.reserve(shp->pos.size());
-                        for (auto i = 1; i < shp->pos.size(); i++) {
-                            shp->lines.push_back({i - 1, i});
-                        }
-                        shp->lines.back() = {(int)shp->pos.size() - 1, 0};
-                    } break;
-                    case glTFMeshPrimitiveMode::LineStrip: {
-                        shp->lines.reserve(shp->pos.size() - 1);
-                        for (auto i = 1; i < shp->pos.size(); i++) {
-                            shp->lines.push_back({i - 1, i});
-                        }
-                    } break;
-                    case glTFMeshPrimitiveMode::NotSet:
-                    case glTFMeshPrimitiveMode::Points: {
-                        shp->points.reserve(shp->pos.size());
-                        for (auto i = 0; i < shp->pos.size(); i++) {
-                            shp->points.push_back(i);
-                        }
-                    } break;
-                }
-            } else {
-                auto indices = accessor_view(gltf, gltf->get(gprim->indices));
-                switch (gprim->mode) {
-                    case glTFMeshPrimitiveMode::Triangles: {
-                        shp->triangles.reserve(indices.size());
-                        for (auto i = 0; i < indices.size() / 3; i++) {
-                            shp->triangles.push_back({indices.geti(i * 3 + 0),
-                                indices.geti(i * 3 + 1),
-                                indices.geti(i * 3 + 2)});
-                        }
-                    } break;
-                    case glTFMeshPrimitiveMode::TriangleFan: {
-                        shp->triangles.reserve(indices.size() - 2);
-                        for (auto i = 2; i < indices.size(); i++) {
-                            shp->triangles.push_back({indices.geti(0),
-                                indices.geti(i - 1), indices.geti(i)});
-                        }
-                    } break;
-                    case glTFMeshPrimitiveMode::TriangleStrip: {
-                        shp->triangles.reserve(indices.size() - 2);
-                        for (auto i = 2; i < indices.size(); i++) {
-                            shp->triangles.push_back({indices.geti(i - 2),
-                                indices.geti(i - 1), indices.geti(i)});
-                        }
-                    } break;
-                    case glTFMeshPrimitiveMode::Lines: {
-                        shp->lines.reserve(indices.size() / 2);
-                        for (auto i = 0; i < indices.size() / 2; i++) {
-                            shp->lines.push_back({indices.geti(i * 2 + 0),
-                                indices.geti(i * 2 + 1)});
-                        }
-                    } break;
-                    case glTFMeshPrimitiveMode::LineLoop: {
-                        shp->lines.reserve(indices.size());
-                        for (auto i = 1; i < indices.size(); i++) {
-                            shp->lines.push_back(
-                                {indices.geti(i - 1), indices.geti(i)});
-                        }
-                        shp->lines.back() = {
-                            indices.geti(indices.size() - 1), indices.geti(0)};
-                    } break;
-                    case glTFMeshPrimitiveMode::LineStrip: {
-                        shp->lines.reserve(indices.size() - 1);
-                        for (auto i = 1; i < indices.size(); i++) {
-                            shp->lines.push_back(
-                                {indices.geti(i - 1), indices.geti(i)});
-                        }
-                    } break;
-                    case glTFMeshPrimitiveMode::NotSet:
-                    case glTFMeshPrimitiveMode::Points: {
-                        shp->points.reserve(indices.size());
-                        for (auto i = 0; i < indices.size(); i++) {
-                            shp->points.push_back(indices.geti(i));
-                        }
-                    } break;
-                }
-            }
-            scn->shapes.push_back(shp);
-            meshes.back().push_back(shp);
-        }
-    }
-
-    // convert cameras
-    auto cameras = vector<camera>();
-    for (auto gcam : gltf->cameras) {
-        cameras.push_back({});
-        auto cam = &cameras.back();
-        cam->name = gcam->name;
-        cam->ortho = gcam->type == glTFCameraType::Orthographic;
-        if (cam->ortho) {
-            auto ortho = gcam->orthographic;
-            cam->yfov = ortho->ymag;
-            cam->aspect = ortho->xmag / ortho->ymag;
-            cam->near = ortho->znear;
-            cam->far = ortho->zfar;
-        } else {
-            auto persp = gcam->perspective;
-            cam->yfov = persp->yfov;
-            cam->aspect = persp->aspectRatio;
-            if (!cam->aspect) cam->aspect = 16.0f / 9.0f;
-            cam->near = persp->znear;
-            cam->far = persp->zfar;
-        }
-    }
-
-    // convert nodes
-    for (auto gnde : gltf->nodes) {
-        auto nde = new node();
-        nde->name = gnde->name;
-        if (gnde->camera) {
-            auto cam = new camera(cameras[(int)gnde->camera]);
-            nde->cam = cam;
-            scn->cameras.push_back(cam);
-        }
-        if (gnde->mesh) {
-            for (auto shp : meshes[(int)gnde->mesh]) {
-                auto ist = new instance();
-                ist->name = gnde->name;
-                ist->shp = shp;
-                nde->ists.push_back(ist);
-                scn->instances.push_back(ist);
-            }
-#if 0
-            for (auto shp : node->msh->shapes) {
-                if (node->morph_weights.size() < shp->morph_targets.size()) {
-                    node->morph_weights.resize(shp->morph_targets.size());
-                }
-            }
-#endif
-        }
-        nde->translation = gnde->translation;
-        nde->rotation = gnde->rotation;
-        nde->scaling = gnde->scale;
-        nde->frame = to_frame(gnde->matrix);
-#if 0
-        nde->weights = gnde->weights;
-#endif
-        scn->nodes.push_back(nde);
-    }
-
-    // set up parent pointers
-    for (auto nid = 0; nid < gltf->nodes.size(); nid++) {
-        auto gnde = gltf->nodes[nid];
-        auto nde = scn->nodes[nid];
-        for (auto cid : gnde->children) scn->nodes[(int)cid]->parent = nde;
-    }
-
-    // keyframe type conversion
-    static auto keyframe_types =
-        unordered_map<glTFAnimationSamplerInterpolation, keyframe_type>{
-            {glTFAnimationSamplerInterpolation::NotSet, keyframe_type::linear},
-            {glTFAnimationSamplerInterpolation::Linear, keyframe_type::linear},
-            {glTFAnimationSamplerInterpolation::Step, keyframe_type::step},
-            {glTFAnimationSamplerInterpolation::CubicSpline,
-                keyframe_type::bezier},
-            {glTFAnimationSamplerInterpolation::CatmullRomSpline,
-                keyframe_type::catmull_rom},
-        };
-
-    // convert animations
-    for (auto ganm : gltf->animations) {
-        auto anm = new animation();
-        anm->name = ganm->name;
-        auto sampler_map = unordered_map<vec2i, keyframe*>();
-        for (auto gchannel : ganm->channels) {
-            if (sampler_map.find({(int)gchannel->sampler,
-                    (int)gchannel->target->path}) == sampler_map.end()) {
-                auto gsampler = ganm->get(gchannel->sampler);
-                auto kfr = new keyframe();
-                auto input_view =
-                    accessor_view(gltf, gltf->get(gsampler->input));
-                kfr->times.resize(input_view.size());
-                for (auto i = 0; i < input_view.size(); i++)
-                    kfr->times[i] = input_view.get(i);
-                kfr->type = keyframe_types.at(gsampler->interpolation);
-                auto output_view =
-                    accessor_view(gltf, gltf->get(gsampler->output));
-                switch (gchannel->target->path) {
-                    case glTFAnimationChannelTargetPath::Translation: {
-                        kfr->translation.reserve(output_view.size());
-                        for (auto i = 0; i < output_view.size(); i++)
-                            kfr->translation.push_back(output_view.getv3f(i));
-                    } break;
-                    case glTFAnimationChannelTargetPath::Rotation: {
-                        kfr->rotation.reserve(output_view.size());
-                        for (auto i = 0; i < output_view.size(); i++)
-                            kfr->rotation.push_back(
-                                (quat4f)output_view.getv4f(i));
-                    } break;
-                    case glTFAnimationChannelTargetPath::Scale: {
-                        kfr->scaling.reserve(output_view.size());
-                        for (auto i = 0; i < output_view.size(); i++)
-                            kfr->scaling.push_back(output_view.getv3f(i));
-                    } break;
-                    case glTFAnimationChannelTargetPath::Weights: {
-                        // get a node that it refers to
-                        auto ncomp = 0;
-                        auto gnode = gltf->get(gchannel->target->node);
-                        auto gmesh = gltf->get(gnode->mesh);
-                        if (gmesh) {
-                            for (auto gshp : gmesh->primitives) {
-                                ncomp = max((int)gshp->targets.size(), ncomp);
-                            }
-                        }
-                        if (ncomp) {
-                            auto values = std::vector<float>();
-                            values.reserve(output_view.size());
-                            for (auto i = 0; i < output_view.size(); i++)
-                                values.push_back(output_view.get(i));
-                            kfr->weights.resize(values.size() / ncomp);
-                            for (auto i = 0; i < kfr->weights.size(); i++) {
-                                kfr->weights[i].resize(ncomp);
-                                for (auto j = 0; j < ncomp; j++)
-                                    kfr->weights[i][j] = values[i * ncomp + j];
-                            }
-                        }
-                    } break;
-                    default: {
-                        throw runtime_error("should not have gotten here");
-                    }
-                }
-                sampler_map[{
-                    (int)gchannel->sampler, (int)gchannel->target->path}] = kfr;
-                anm->keyframes.push_back(kfr);
-            }
-            anm->targets.push_back({sampler_map.at({(int)gchannel->sampler,
-                                        (int)gchannel->target->path}),
-                scn->nodes[(int)gchannel->target->node]});
-        }
-        scn->animations.push_back(anm);
-    }
-
-    // compute transforms
-    update_transforms(scn, 0);
-
-    // remove hierarchy if necessary
-    if (!opts.preserve_hierarchy) {
-        for (auto nde : scn->nodes) delete nde;
-        scn->nodes.clear();
-        for (auto anm : scn->animations) delete anm;
-        scn->animations.clear();
-    }
-
-    return scn;
-}
-
-// Load an gltf scene
-inline scene* load_gltf_scene(
-    const string& filename, const load_options& opts) {
-    auto gscn = unique_ptr<glTF>(
-        load_gltf(filename, true, opts.load_textures, opts.skip_missing));
-    auto scn = unique_ptr<scene>(gltf_to_scene(gscn.get(), opts));
-    if (!scn) {
-        throw runtime_error("could not convert gltf scene");
-        return nullptr;
-    }
-    return scn.release();
-}
-
-// Unflattnes gltf
-inline glTF* scene_to_gltf(
-    const scene* scn, const string& buffer_uri, bool separate_buffers) {
-    auto gltf = unique_ptr<glTF>(new glTF());
-
-    // add asset info
-    gltf->asset = new glTFAsset();
-    gltf->asset->generator = "Yocto/gltf";
-    gltf->asset->version = "2.0";
-
-    // convert cameras
-    for (auto cam : scn->cameras) {
-        auto gcam = new glTFCamera();
-        gcam->name = cam->name;
-        gcam->type = (cam->ortho) ? glTFCameraType::Orthographic :
-                                    glTFCameraType::Perspective;
-        if (cam->ortho) {
-            auto ortho = new glTFCameraOrthographic();
-            ortho->ymag = cam->yfov;
-            ortho->xmag = cam->aspect * cam->yfov;
-            ortho->znear = cam->near;
-            ortho->znear = cam->far;
-            gcam->orthographic = ortho;
-        } else {
-            auto persp = new glTFCameraPerspective();
-            persp->yfov = cam->yfov;
-            persp->aspectRatio = cam->aspect;
-            persp->znear = cam->near;
-            persp->zfar = cam->far;
-            gcam->perspective = persp;
-        }
-        gltf->cameras.push_back(gcam);
-    }
-
-    // convert images
-    for (auto txt : scn->textures) {
-        auto gimg = new glTFImage();
-        gimg->uri = txt->path;
-        if (txt->hdr) {
-            gimg->data.width = txt->hdr.width();
-            gimg->data.height = txt->hdr.height();
-            gimg->data.ncomp = 4;
-            gimg->data.dataf.assign((float*)data(txt->hdr),
-                (float*)data(txt->hdr) +
-                    txt->hdr.width() * txt->hdr.height() * 4);
-        }
-        if (txt->ldr) {
-            gimg->data.width = txt->ldr.width();
-            gimg->data.height = txt->ldr.height();
-            gimg->data.ncomp = 4;
-            gimg->data.datab.assign((uint8_t*)data(txt->ldr),
-                (uint8_t*)data(txt->ldr) +
-                    txt->ldr.width() * txt->ldr.height() * 4);
-        }
-        gltf->images.push_back(gimg);
-    }
-
-    // index of an object
-    auto index = [](const auto& vec, auto* val) -> int {
-        auto pos = find(vec.begin(), vec.end(), val);
-        if (pos == vec.end()) return -1;
-        return (int)(pos - vec.begin());
-    };
-
-    // add a texture and sampler
-    auto add_texture = [&gltf, &index, scn](const texture_info& info,
-                           bool norm = false, bool occ = false) {
-        if (!info.txt) return (glTFTextureInfo*)nullptr;
-        auto gtxt = new glTFTexture();
-        gtxt->name = info.txt->name;
-        gtxt->source = glTFid<glTFImage>(index(scn->textures, info.txt));
-
-        // check if it is default
-        auto is_default =
-            info.wrap_s && info.wrap_t && info.linear && info.mipmap;
-
-        if (!is_default) {
-            auto gsmp = new glTFSampler();
-            gsmp->wrapS = (info.wrap_s) ? glTFSamplerWrapS::Repeat :
-                                          glTFSamplerWrapS::ClampToEdge;
-            gsmp->wrapT = (info.wrap_t) ? glTFSamplerWrapT::Repeat :
-                                          glTFSamplerWrapT::ClampToEdge;
-            gsmp->minFilter = (info.mipmap) ?
-                                  glTFSamplerMinFilter::LinearMipmapLinear :
-                                  glTFSamplerMinFilter::Nearest;
-            gsmp->magFilter = (info.linear) ? glTFSamplerMagFilter::Linear :
-                                              glTFSamplerMagFilter::Nearest;
-            gtxt->sampler = glTFid<glTFSampler>((int)gltf->samplers.size());
-            gltf->samplers.push_back(gsmp);
-        }
-        gltf->textures.push_back(gtxt);
-        if (norm) {
-            auto ginfo = new glTFMaterialNormalTextureInfo();
-            ginfo->index = glTFid<glTFTexture>{(int)gltf->textures.size() - 1};
-            ginfo->scale = info.scale;
-            return (glTFTextureInfo*)ginfo;
-        } else if (occ) {
-            auto ginfo = new glTFMaterialOcclusionTextureInfo();
-            ginfo->index = glTFid<glTFTexture>{(int)gltf->textures.size() - 1};
-            ginfo->strength = info.scale;
-            return (glTFTextureInfo*)ginfo;
-        } else {
-            auto ginfo = new glTFTextureInfo();
-            ginfo->index = glTFid<glTFTexture>{(int)gltf->textures.size() - 1};
-            return ginfo;
-        }
-    };
-
-    // convert materials
-    for (auto mat : scn->materials) {
-        auto gmat = new glTFMaterial();
-        gmat->name = mat->name;
-        gmat->emissiveFactor = mat->ke;
-        gmat->emissiveTexture = add_texture(mat->ke_txt);
-        switch (mat->type) {
-            case material_type::specular_roughness: {
-                gmat->pbrSpecularGlossiness =
-                    new glTFMaterialPbrSpecularGlossiness();
-                auto gsg = gmat->pbrSpecularGlossiness;
-                gsg->diffuseFactor = {
-                    mat->kd[0], mat->kd[1], mat->kd[2], mat->op};
-                gsg->specularFactor = mat->ks;
-                gsg->glossinessFactor = 1 - mat->rs;
-                gsg->diffuseTexture = add_texture(mat->kd_txt);
-                gsg->specularGlossinessTexture = add_texture(mat->ks_txt);
-            } break;
-            case material_type::metallic_roughness: {
-                gmat->pbrMetallicRoughness =
-                    new glTFMaterialPbrMetallicRoughness();
-                auto gmr = gmat->pbrMetallicRoughness;
-                gmr->baseColorFactor = {
-                    mat->kd.x, mat->kd.y, mat->kd.z, mat->op};
-                gmr->metallicFactor = mat->ks.x;
-                gmr->roughnessFactor = mat->rs;
-                gmr->baseColorTexture = add_texture(mat->kd_txt);
-                gmr->metallicRoughnessTexture = add_texture(mat->ks_txt);
-            } break;
-            case material_type::specular_glossiness: {
-                gmat->pbrSpecularGlossiness =
-                    new glTFMaterialPbrSpecularGlossiness();
-                auto gsg = gmat->pbrSpecularGlossiness;
-                gsg->diffuseFactor = {
-                    mat->kd[0], mat->kd[1], mat->kd[2], mat->op};
-                gsg->specularFactor = mat->ks;
-                gsg->glossinessFactor = mat->rs;
-                gsg->diffuseTexture = add_texture(mat->kd_txt);
-                gsg->specularGlossinessTexture = add_texture(mat->ks_txt);
-            } break;
-        }
-        gmat->normalTexture = (glTFMaterialNormalTextureInfo*)add_texture(
-            mat->norm_txt, true, false);
-        gmat->occlusionTexture = (glTFMaterialOcclusionTextureInfo*)add_texture(
-            mat->occ_txt, false, true);
-        gmat->doubleSided = mat->double_sided;
-        gltf->materials.push_back(gmat);
-    }
-
-    // add buffer
-    auto add_buffer = [&gltf](const string& buffer_uri) {
-        auto gbuffer = new glTFBuffer();
-        gltf->buffers.push_back(gbuffer);
-        gbuffer->uri = buffer_uri;
-        return gbuffer;
-    };
-
-    // init buffers
-    auto gbuffer_global = add_buffer(buffer_uri);
-
-    // add an optional buffer
-    auto add_opt_buffer = [&gbuffer_global, buffer_uri, &add_buffer,
-                              separate_buffers](const string& uri) {
-        if (separate_buffers && uri != "") {
-            return add_buffer(uri);
-        } else {
-            if (!gbuffer_global) gbuffer_global = add_buffer(buffer_uri);
-            return gbuffer_global;
-        }
-    };
-
-    // attribute handling
-    auto add_accessor = [&gltf, &index](glTFBuffer* gbuffer, const string& name,
-                            glTFAccessorType type,
-                            glTFAccessorComponentType ctype, int count,
-                            int csize, const void* data, bool save_min_max) {
-        gltf->bufferViews.push_back(new glTFBufferView());
-        auto bufferView = gltf->bufferViews.back();
-        bufferView->buffer = glTFid<glTFBuffer>(index(gltf->buffers, gbuffer));
-        bufferView->byteOffset = (int)gbuffer->data.size();
-        bufferView->byteStride = 0;
-        bufferView->byteLength = count * csize;
-        gbuffer->data.resize(gbuffer->data.size() + bufferView->byteLength);
-        gbuffer->byteLength += bufferView->byteLength;
-        auto ptr = gbuffer->data.data() + gbuffer->data.size() -
-                   bufferView->byteLength;
-        bufferView->target = glTFBufferViewTarget::ArrayBuffer;
-        memcpy(ptr, data, bufferView->byteLength);
-        gltf->accessors.push_back(new glTFAccessor());
-        auto accessor = gltf->accessors.back();
-        accessor->bufferView =
-            glTFid<glTFBufferView>((int)gltf->bufferViews.size() - 1);
-        accessor->byteOffset = 0;
-        accessor->componentType = ctype;
-        accessor->count = count;
-        accessor->type = type;
-        if (save_min_max && count &&
-            ctype == glTFAccessorComponentType::Float) {
-            switch (type) {
-                case glTFAccessorType::Scalar: {
-                    auto bbox = make_bbox(count, (vec1f*)data);
-                    accessor->min = {bbox.min.x};
-                    accessor->max = {bbox.max.x};
-                } break;
-                case glTFAccessorType::Vec2: {
-                    auto bbox = make_bbox(count, (vec2f*)data);
-                    accessor->min = {bbox.min.x, bbox.min.y};
-                    accessor->max = {bbox.max.x, bbox.max.y};
-                } break;
-                case glTFAccessorType::Vec3: {
-                    auto bbox = make_bbox(count, (vec3f*)data);
-                    accessor->min = {bbox.min.x, bbox.min.y, bbox.min.z};
-                    accessor->max = {bbox.max.x, bbox.max.y, bbox.max.z};
-                } break;
-                case glTFAccessorType::Vec4: {
-                    auto bbox = make_bbox(count, (vec4f*)data);
-                    accessor->min = {
-                        bbox.min.x, bbox.min.y, bbox.min.z, bbox.min.w};
-                    accessor->max = {
-                        bbox.max.x, bbox.max.y, bbox.max.z, bbox.max.w};
-                } break;
-                default: break;
-            }
-        }
-        return glTFid<glTFAccessor>((int)gltf->accessors.size() - 1);
-    };
-
-    // convert meshes
-    auto shapes = unordered_map<shape*, unique_ptr<glTFMeshPrimitive>>();
-    for (auto shp : scn->shapes) {
-        auto gbuffer = add_opt_buffer(shp->path);
-        auto gprim = new glTFMeshPrimitive();
-        gprim->material = glTFid<glTFMaterial>(index(scn->materials, shp->mat));
-        if (!shp->pos.empty())
-            gprim->attributes["POSITION"] =
-                add_accessor(gbuffer, shp->name + "_pos",
-                    glTFAccessorType::Vec3, glTFAccessorComponentType::Float,
-                    (int)shp->pos.size(), sizeof(vec3f), shp->pos.data(), true);
-        if (!shp->norm.empty())
-            gprim->attributes["NORMAL"] = add_accessor(gbuffer,
-                shp->name + "_norm", glTFAccessorType::Vec3,
-                glTFAccessorComponentType::Float, (int)shp->norm.size(),
-                sizeof(vec3f), shp->norm.data(), false);
-        if (!shp->texcoord.empty())
-            gprim->attributes["TEXCOORD_0"] = add_accessor(gbuffer,
-                shp->name + "_texcoord", glTFAccessorType::Vec2,
-                glTFAccessorComponentType::Float, (int)shp->texcoord.size(),
-                sizeof(vec2f), shp->texcoord.data(), false);
-        if (!shp->texcoord1.empty())
-            gprim->attributes["TEXCOORD_1"] = add_accessor(gbuffer,
-                shp->name + "_texcoord1", glTFAccessorType::Vec2,
-                glTFAccessorComponentType::Float, (int)shp->texcoord1.size(),
-                sizeof(vec2f), shp->texcoord1.data(), false);
-        if (!shp->color.empty())
-            gprim->attributes["COLOR_0"] = add_accessor(gbuffer,
-                shp->name + "_color", glTFAccessorType::Vec4,
-                glTFAccessorComponentType::Float, (int)shp->color.size(),
-                sizeof(vec4f), shp->color.data(), false);
-        if (!shp->radius.empty())
-            gprim->attributes["RADIUS"] = add_accessor(gbuffer,
-                shp->name + "_radius", glTFAccessorType::Scalar,
-                glTFAccessorComponentType::Float, (int)shp->radius.size(),
-                sizeof(float), shp->radius.data(), false);
-        // auto elem_as_uint = shp->pos.size() >
-        // numeric_limits<unsigned short>::max();
-        if (!shp->points.empty()) {
-            gprim->indices = add_accessor(gbuffer, shp->name + "_points",
-                glTFAccessorType::Scalar,
-                glTFAccessorComponentType::UnsignedInt, (int)shp->points.size(),
-                sizeof(int), (int*)shp->points.data(), false);
-            gprim->mode = glTFMeshPrimitiveMode::Points;
-        } else if (!shp->lines.empty()) {
-            gprim->indices = add_accessor(gbuffer, shp->name + "_lines",
-                glTFAccessorType::Scalar,
-                glTFAccessorComponentType::UnsignedInt,
-                (int)shp->lines.size() * 2, sizeof(int),
-                (int*)shp->lines.data(), false);
-            gprim->mode = glTFMeshPrimitiveMode::Lines;
-        } else if (!shp->triangles.empty()) {
-            gprim->indices = add_accessor(gbuffer, shp->name + "_triangles",
-                glTFAccessorType::Scalar,
-                glTFAccessorComponentType::UnsignedInt,
-                (int)shp->triangles.size() * 3, sizeof(int),
-                (int*)shp->triangles.data(), false);
-            gprim->mode = glTFMeshPrimitiveMode::Triangles;
-        } else if (!shp->quads.empty()) {
-            auto triangles = convert_quads_to_triangles(shp->quads);
-            gprim->indices = add_accessor(gbuffer, shp->name + "_quads",
-                glTFAccessorType::Scalar,
-                glTFAccessorComponentType::UnsignedInt,
-                (int)triangles.size() * 3, sizeof(int), (int*)triangles.data(),
-                false);
-            gprim->mode = glTFMeshPrimitiveMode::Triangles;
-        } else if (!shp->quads_pos.empty()) {
-            throw runtime_error("face varying not supported in glTF");
-        } else {
-            throw runtime_error("empty mesh");
-        }
-        shapes[shp] = unique_ptr<glTFMeshPrimitive>(gprim);
-    }
-
-    // hierarchy
-    if (scn->nodes.empty()) {
-        // meshes
-        for (auto shp : scn->shapes) {
-            auto gmsh = new glTFMesh();
-            gmsh->name = shp->name;
-            gmsh->primitives.push_back(new glTFMeshPrimitive(*shapes.at(shp)));
-            gltf->meshes.push_back(gmsh);
-        }
-
-        // instances
-        for (auto ist : scn->instances) {
-            auto gnode = new glTFNode();
-            gnode->name = ist->name;
-            gnode->mesh = glTFid<glTFMesh>(index(scn->shapes, ist->shp));
-            gnode->matrix = to_mat(ist->frame);
-            gltf->nodes.push_back(gnode);
-        }
-
-        // cameras
-        for (auto cam : scn->cameras) {
-            auto gnode = new glTFNode();
-            gnode->name = cam->name;
-            gnode->camera = glTFid<glTFCamera>(index(scn->cameras, cam));
-            gnode->matrix = to_mat(cam->frame);
-            gltf->nodes.push_back(gnode);
-        }
-
-        // scenes
-        if (!gltf->nodes.empty()) {
-            auto gscene = new glTFScene();
-            gscene->name = "scene";
-            for (auto i = 0; i < gltf->nodes.size(); i++) {
-                gscene->nodes.push_back(glTFid<glTFNode>(i));
-            }
-            gltf->scenes.push_back(gscene);
-            gltf->scene = glTFid<glTFScene>(0);
-        }
-    } else {
-        // meshes
-        auto meshes = map<vector<instance*>, int>();
-        for (auto nde : scn->nodes) {
-            if (nde->ists.empty()) continue;
-            if (contains(meshes, nde->ists)) continue;
-            auto gmsh = new glTFMesh();
-            gmsh->name = nde->ists.front()->name;
-            for (auto ist : nde->ists)
-                gmsh->primitives.push_back(new glTFMeshPrimitive(*shapes.at(ist->shp)));
-            meshes[nde->ists] = (int)gltf->meshes.size();
-            gltf->meshes.push_back(gmsh);
-        }
-
-        // nodes
-        for (auto nde : scn->nodes) {
-            auto gnode = new glTFNode();
-            gnode->name = nde->name;
-            if (nde->cam) {
-                gnode->camera =
-                    glTFid<glTFCamera>(index(scn->cameras, nde->cam));
-            }
-            if (!nde->ists.empty()) {
-                gnode->mesh = glTFid<glTFMesh>(meshes.at(nde->ists));
-            }
-            gnode->matrix = to_mat(nde->frame);
-            gnode->translation = nde->translation;
-            gnode->rotation = nde->rotation;
-            gnode->scale = nde->scaling;
-            gltf->nodes.push_back(gnode);
-        }
-
-        // children
-        for (auto idx = 0; idx < scn->nodes.size(); idx++) {
-            auto nde = scn->nodes.at(idx);
-            if (!nde->parent) continue;
-            auto gnde = gltf->nodes.at(index(scn->nodes, nde->parent));
-            gnde->children.push_back(glTFid<glTFNode>(idx));
-        }
-
-        // root nodes
-        auto is_root = vector<bool>(gltf->nodes.size(), true);
-        for (auto idx = 0; idx < gltf->nodes.size(); idx++) {
-            auto gnde = gltf->nodes.at(idx);
-            for (auto idx1 = 0; idx1 < gnde->children.size(); idx1++) {
-                is_root[(int)gnde->children.at(idx1)] = false;
-            }
-        }
-
-        // scene with root nodes
-        auto gscene = new glTFScene();
-        gscene->name = "scene";
-        for (auto idx = 0; idx < gltf->nodes.size(); idx++) {
-            if (is_root[idx]) gscene->nodes.push_back(glTFid<glTFNode>(idx));
-        }
-        gltf->scenes.push_back(gscene);
-        gltf->scene = glTFid<glTFScene>(0);
-    }
-
-    // interpolation map
-    static const auto interpolation_map =
-        std::map<keyframe_type, glTFAnimationSamplerInterpolation>{
-            {keyframe_type::step, glTFAnimationSamplerInterpolation::Step},
-            {keyframe_type::linear, glTFAnimationSamplerInterpolation::Linear},
-            {keyframe_type::bezier,
-                glTFAnimationSamplerInterpolation::CubicSpline},
-            {keyframe_type::catmull_rom,
-                glTFAnimationSamplerInterpolation::CatmullRomSpline},
-        };
-
-    // animation
-    for (auto anm : scn->animations) {
-        auto ganm = new glTFAnimation();
-        ganm->name = anm->name;
-        auto gbuffer = add_opt_buffer(anm->path);
-        auto count = 0;
-        auto paths = unordered_map<keyframe*, glTFAnimationChannelTargetPath>();
-        for (auto kfr : anm->keyframes) {
-            auto aid = ganm->name + "_" + std::to_string(count++);
-            auto gsmp = new glTFAnimationSampler();
-            gsmp->input =
-                add_accessor(gbuffer, aid + "_time", glTFAccessorType::Scalar,
-                    glTFAccessorComponentType::Float, (int)kfr->times.size(),
-                    sizeof(float), kfr->times.data(), false);
-            auto path = glTFAnimationChannelTargetPath::NotSet;
-            if (!kfr->translation.empty()) {
-                gsmp->output = add_accessor(gbuffer, aid + "_translation",
-                    glTFAccessorType::Vec3, glTFAccessorComponentType::Float,
-                    (int)kfr->translation.size(), sizeof(vec3f),
-                    kfr->translation.data(), false);
-                path = glTFAnimationChannelTargetPath::Translation;
-            } else if (!kfr->rotation.empty()) {
-                gsmp->output = add_accessor(gbuffer, aid + "_rotation",
-                    glTFAccessorType::Vec4, glTFAccessorComponentType::Float,
-                    (int)kfr->rotation.size(), sizeof(vec4f),
-                    kfr->rotation.data(), false);
-                path = glTFAnimationChannelTargetPath::Rotation;
-            } else if (!kfr->scaling.empty()) {
-                gsmp->output = add_accessor(gbuffer, aid + "_scale",
-                    glTFAccessorType::Vec3, glTFAccessorComponentType::Float,
-                    (int)kfr->scaling.size(), sizeof(vec3f),
-                    kfr->scaling.data(), false);
-                path = glTFAnimationChannelTargetPath::Scale;
-            } else if (!kfr->weights.empty()) {
-                auto values = std::vector<float>();
-                values.reserve(kfr->weights.size() * kfr->weights[0].size());
-                for (auto i = 0; i < kfr->weights.size(); i++) {
-                    values.insert(values.end(), kfr->weights[i].begin(),
-                        kfr->weights[i].end());
-                }
-                gsmp->output = add_accessor(gbuffer, aid + "_weights",
-                    glTFAccessorType::Scalar, glTFAccessorComponentType::Float,
-                    (int)values.size(), sizeof(float), values.data(), false);
-                path = glTFAnimationChannelTargetPath::Weights;
-            } else {
-                throw runtime_error("should not have gotten here");
-            }
-            gsmp->interpolation = interpolation_map.at(kfr->type);
-            ganm->samplers.push_back(gsmp);
-            paths[kfr] = path;
-        }
-        for (auto target : anm->targets) {
-            auto kfr = target.first;
-            auto node = target.second;
-            auto gchan = new glTFAnimationChannel();
-            gchan->sampler =
-                glTFid<glTFAnimationSampler>{index(anm->keyframes, kfr)};
-            gchan->target = new glTFAnimationChannelTarget();
-            gchan->target->node = glTFid<glTFNode>{index(scn->nodes, node)};
-            gchan->target->path = paths.at(kfr);
-            ganm->channels.push_back(gchan);
-        }
-
-        gltf->animations.push_back(ganm);
-    }
-
-    // done
-    return gltf.release();
-}
-
-// Save a gltf scene
-inline void save_gltf_scene(
-    const string& filename, const scene* scn, const save_options& opts) {
-    auto buffer_uri = path_basename(filename) + ".bin";
-    auto gscn = unique_ptr<glTF>(
-        scene_to_gltf(scn, buffer_uri, opts.gltf_separate_buffers));
-    save_gltf(filename, gscn.get(), true, opts.save_textures);
-}
-
-#endif
-
-#if YGL_SVG
-
-// Converts an svg scene
-inline scene* svg_to_scene(const svg_scene* sscn, const load_options& opts) {
-    auto scn = new scene();
-    auto sid = 0;
-    for (auto sshp : sscn->shapes) {
-        auto shp = new shape();
-        shp->name = "shape" + to_string(sid++);
-        for (auto spth : sshp->paths) {
-            auto o = (int)shp->pos.size();
-            for (auto p : spth->pos) shp->pos += {p.x, p.y, 0};
-            for (auto vid = 1; vid < spth->pos.size(); vid += 3)
-                shp->beziers +=
-                    {o + vid - 1, o + vid + 0, o + vid + 1, o + vid + 2};
-        }
-        scn->shapes += shp;
-    }
-    auto miny = flt_max, maxy = -flt_max;
-    for (auto shp : scn->shapes) {
-        for (auto& p : shp->pos) {
-            miny = min(miny, p.y);
-            maxy = max(maxy, p.y);
-        }
-    }
-    auto mdly = (maxy + miny) / 2;
-    for (auto shp : scn->shapes) {
-        for (auto& p : shp->pos) p.y = -(p.y - mdly) + mdly;
-    }
-    return scn;
-}
-
-// Load an svg scene
-inline scene* load_svg_scene(const string& filename, const load_options& opts) {
-    auto sscn = unique_ptr<svg_scene>(load_svg(filename));
-    auto scn = unique_ptr<scene>(svg_to_scene(sscn.get(), opts));
-    return scn.release();
-}
-
-#endif
-
-// Load a scene
-inline scene* load_scene(const string& filename, const load_options& opts) {
-    auto ext = path_extension(filename);
-    if (ext == ".obj" || ext == ".OBJ") return load_obj_scene(filename, opts);
-#if YGL_GLTF
-    if (ext == ".gltf" || ext == ".GLTF")
-        return load_gltf_scene(filename, opts);
-#endif
-#if YGL_SVG
-    if (ext == ".svg" || ext == ".SVG") return load_svg_scene(filename, opts);
-#endif
-    throw runtime_error("unsupported extension " + ext);
-    return nullptr;
-}
-
-// Save a scene
-inline void save_scene(
-    const string& filename, const scene* scn, const save_options& opts) {
-    auto ext = path_extension(filename);
-    if (ext == ".obj" || ext == ".OBJ")
-        return save_obj_scene(filename, scn, opts);
-#if YGL_GLTF
-    if (ext == ".gltf" || ext == ".GLTF")
-        return save_gltf_scene(filename, scn, opts);
-#endif
-    throw runtime_error("unsupported extension " + ext);
-}
-
-}  // namespace _impl_scn
-
-// Load a scene
-scene* load_scene(const string& filename, const load_options& opts) {
-    return _impl_scn::load_scene(filename, opts);
-}
-
-// Save a scene
-void save_scene(
-    const string& filename, const scene* scn, const save_options& opts) {
-    _impl_scn::save_scene(filename, scn, opts);
-}
-
-// Add missing values and elements
-void add_elements(scene* scn, const add_elements_options& opts) {
-    if (opts.smooth_normals) {
-        for (auto shp : scn->shapes) {
-            if (!shp->norm.empty()) continue;
-            shp->norm.resize(shp->pos.size(), {0, 0, 1});
-            if (!shp->lines.empty() || !shp->triangles.empty() ||
-                !shp->quads.empty()) {
-                shp->norm = compute_normals(
-                    shp->lines, shp->triangles, shp->quads, shp->pos);
-            }
-            if (!shp->quads_pos.empty()) {
-                if (!shp->quads_norm.empty())
-                    throw runtime_error("bad normals");
-                shp->quads_norm = shp->quads_pos;
-                shp->norm = compute_normals({}, {}, shp->quads_pos, shp->pos);
-            }
-        }
-    }
-
-    if (opts.tangent_space) {
-        for (auto shp : scn->shapes) {
-            if (!shp->tangsp.empty() || shp->texcoord.empty() || !shp->mat ||
-                !(shp->mat->norm_txt.txt || shp->mat->bump_txt.txt))
-                continue;
-            if (!shp->triangles.empty()) {
-                shp->tangsp = compute_tangent_frames(
-                    shp->triangles, shp->pos, shp->norm, shp->texcoord);
-            } else if (!shp->quads.empty()) {
-                auto triangles = convert_quads_to_triangles(shp->quads);
-                shp->tangsp = compute_tangent_frames(
-                    triangles, shp->pos, shp->norm, shp->texcoord);
-            }
-        }
-    }
-
-    if (opts.pointline_radius > 0) {
-        for (auto shp : scn->shapes) {
-            if ((shp->points.empty() && shp->lines.empty()) ||
-                !shp->radius.empty())
-                continue;
-            shp->radius.resize(shp->pos.size(), opts.pointline_radius);
-        }
-    }
-
-    if (opts.texture_data) {
-        for (auto txt : scn->textures) {
-            if (!txt->hdr && !txt->ldr) {
-                printf("unable to load texture %s\n", txt->path.c_str());
-                txt->ldr = image4b(1, 1, {255, 255, 255, 255});
-            }
-        }
-    }
-
-    if (opts.shape_instances) {
-        if (!scn->instances.empty()) return;
-        for (auto shp : scn->shapes) {
-            auto ist = new instance();
-            ist->name = shp->name;
-            ist->shp = shp;
-            scn->instances.push_back(ist);
-        }
-    }
-
-    if (opts.default_names || opts.default_paths) {
-        auto cid = 0;
-        for (auto cam : scn->cameras) {
-            if (cam->name.empty())
-                cam->name = "unnamed_camera_" + std::to_string(cid);
-            cid++;
-        }
-
-        auto tid = 0;
-        for (auto txt : scn->textures) {
-            if (txt->name.empty())
-                txt->name = "unnamed_texture_" + std::to_string(tid);
-            tid++;
-        }
-
-        auto mid = 0;
-        for (auto mat : scn->materials) {
-            if (mat->name.empty())
-                mat->name = "unnamed_material_" + std::to_string(mid);
-            mid++;
-        }
-
-        auto sid = 0;
-        for (auto shp : scn->shapes) {
-            if (shp->name.empty())
-                shp->name = "unnamed_shape_" + std::to_string(sid);
-            sid++;
-        }
-
-        auto iid = 0;
-        for (auto ist : scn->instances) {
-            if (ist->name.empty())
-                ist->name = "unnamed_instance_" + std::to_string(iid);
-            iid++;
-        }
-
-        auto eid = 0;
-        for (auto env : scn->environments) {
-            if (env->name.empty())
-                env->name = "unnamed_environment_" + std::to_string(eid);
-            eid++;
-        }
-    }
-
-    if (opts.default_paths) {
-        for (auto txt : scn->textures) {
-            if (txt->path != "") continue;
-            txt->path = txt->name + ".png";
-        }
-        for (auto shp : scn->shapes) {
-            if (shp->path != "") continue;
-            shp->path = shp->name + ".bin";
-        }
-    }
-
-    // default environment
-    if (opts.default_environment && scn->environments.empty()) {
-        auto env = new environment();
-        env->name = "default_environment";
-        scn->environments.push_back(env);
-    }
-}
-
-// Make a view camera either copying a given one or building a default one.
-camera* make_view_camera(scene* scn, int camera_id) {
-    if (scn->cameras.empty()) {
-        update_bounds(scn);
-        auto bbox = scn->bbox;
-        auto bbox_center = (bbox.max + bbox.min) / 2.0f;
-        auto bbox_size = bbox.max - bbox.min;
-        auto bbox_msize = max(bbox_size[0], max(bbox_size[1], bbox_size[2]));
-        // set up camera
-        auto cam = new camera();
-        cam->name = "default_camera";
-        auto camera_dir = vec3f{1, 0.4f, 1};
-        auto from = camera_dir * bbox_msize + bbox_center;
-        auto to = bbox_center;
-        auto up = vec3f{0, 1, 0};
-        cam->frame = lookat_frame3(from, to, up);
-        cam->ortho = false;
-        cam->aspect = 16.0f / 9.0f;
-        cam->yfov = 2 * atanf(0.5f);
-        cam->aperture = 0;
-        cam->focus = length(to - from);
-        return cam;
-    } else {
-        camera_id = clamp(camera_id, 0, (int)scn->cameras.size());
-        return new camera(*scn->cameras[camera_id]);
-    }
-}
-
-// Merge scene into one another
-void merge_into(scene* merge_into, scene* merge_from) {
-    merge_into->cameras.insert(merge_from->cameras.begin(),
-        merge_from->cameras.end(), merge_into->cameras.end());
-    merge_from->cameras.clear();
-    merge_into->textures.insert(merge_from->textures.begin(),
-        merge_from->textures.end(), merge_into->textures.end());
-    merge_from->textures.clear();
-    merge_into->materials.insert(merge_from->materials.begin(),
-        merge_from->materials.end(), merge_into->materials.end());
-    merge_from->materials.clear();
-    merge_into->shapes.insert(merge_from->shapes.begin(),
-        merge_from->shapes.end(), merge_into->shapes.end());
-    merge_from->shapes.clear();
-    merge_into->instances.insert(merge_from->instances.begin(),
-        merge_from->instances.end(), merge_into->instances.end());
-    merge_from->instances.clear();
-    merge_into->environments.insert(merge_from->environments.begin(),
-        merge_from->environments.end(), merge_into->environments.end());
-    merge_from->environments.clear();
-}
-
-// Initialize the lights
-void update_lights(scene* scn, bool include_env, bool sampling_cdf) {
-    for (auto lgt : scn->lights) delete lgt;
-    scn->lights.clear();
-
-    for (auto ist : scn->instances) {
-        if (!ist->shp->mat) continue;
-        if (ist->shp->mat->ke == zero3f) continue;
-        auto lgt = new light();
-        lgt->ist = ist;
-        scn->lights.push_back(lgt);
-        if (!sampling_cdf) continue;
-        auto shp = ist->shp;
-        if (shp->elem_cdf.empty()) {
-            if (!shp->points.empty()) {
-                shp->elem_cdf = sample_points_cdf(shp->points.size());
-            } else if (!ist->shp->lines.empty()) {
-                shp->elem_cdf = sample_lines_cdf(shp->lines, shp->pos);
-            } else if (!shp->triangles.empty()) {
-                shp->elem_cdf = sample_triangles_cdf(shp->triangles, shp->pos);
-            }
-        }
-    }
-
-    for (auto env : scn->environments) {
-        if (!include_env) continue;
-        if (env->ke == zero3f) continue;
-        auto lgt = new light();
-        lgt->env = env;
-        scn->lights.push_back(lgt);
-    }
-}
-
-// Print scene info (call update bounds bes before)
-void print_info(const scene* scn) {
-    auto nverts = 0, nnorms = 0, ntexcoords = 0, npoints = 0, nlines = 0,
-         ntriangles = 0, nquads = 0;
-    for (auto shp : scn->shapes) {
-        nverts += shp->pos.size();
-        nnorms += shp->norm.size();
-        ntexcoords += shp->texcoord.size();
-        npoints += shp->points.size();
-        nlines += shp->lines.size();
-        ntriangles += shp->triangles.size();
-        nquads += shp->quads.size();
-    }
-
-    auto bbox = scn->bbox;
-    auto bboxc = vec3f{(bbox.max[0] + bbox.min[0]) / 2,
-        (bbox.max[1] + bbox.min[1]) / 2, (bbox.max[2] + bbox.min[2]) / 2};
-    auto bboxs = vec3f{bbox.max[0] - bbox.min[0], bbox.max[1] - bbox.min[1],
-        bbox.max[2] - bbox.min[2]};
-
-    printf("number of cameras:      %d\n", (int)scn->cameras.size());
-    printf("number of shapes:       %d\n", (int)scn->shapes.size());
-    printf("number of instances:    %d\n", (int)scn->instances.size());
-    printf("number of materials:    %d\n", (int)scn->materials.size());
-    printf("number of textures:     %d\n", (int)scn->textures.size());
-    printf("number of environments: %d\n", (int)scn->environments.size());
-    printf("number of vertices:     %d\n", nverts);
-    printf("number of normals:      %d\n", nnorms);
-    printf("number of texcoords:    %d\n", ntexcoords);
-    printf("number of points:       %d\n", npoints);
-    printf("number of lines:        %d\n", nlines);
-    printf("number of triangles:    %d\n", ntriangles);
-    printf("number of quads:        %d\n", nquads);
-    printf("\n");
-    printf("bbox min:    %g %g %g\n", bbox.min[0], bbox.min[1], bbox.min[2]);
-    printf("bbox max:    %g %g %g\n", bbox.max[0], bbox.max[1], bbox.max[2]);
-    printf("bbox center: %g %g %g\n", bboxc[0], bboxc[1], bboxc[2]);
-    printf("bbox size:   %g %g %g\n", bboxs[0], bboxs[1], bboxs[2]);
-    printf("\n");
-}
-
-}  // namespace ygl
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR SHAPE EXAMPLES
