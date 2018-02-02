@@ -131,7 +131,7 @@ int main(int argc, char* argv[]) {
                    app->view :
                    app->scn->cameras[app->params.camera_id];
     app->params.width = (int)round(cam->aspect * app->params.height);
-    app->state = make_trace_state(app->params);
+    app->state = make_trace_state(app->scn, app->view, app->bvh, app->params);
 
     // render
     log_info("starting renderer");
@@ -146,8 +146,7 @@ int main(int argc, char* argv[]) {
                 app->gamma, app->filmic);
         }
         log_info("rendering sample {}/{}", cur_sample, app->params.nsamples);
-        trace_samples(app->state, app->scn, app->view, app->bvh,
-                      app->params.batch_size, app->params);
+        trace_samples(app->state, app->params.batch_size, app->params);
     }
     log_info("rendering done");
 

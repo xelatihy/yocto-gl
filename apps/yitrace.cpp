@@ -118,9 +118,8 @@ bool update(app_state* app) {
         pparams.height = app->params.height / app->params.block_size;
         pparams.nsamples = 1;
         pparams.ftype = trace_filter_type::box;
-        auto preview_state = make_trace_state(pparams);
-        trace_samples(
-            preview_state, app->scn, app->view, app->bvh, 1, pparams);
+        auto preview_state = make_trace_state(app->scn, app->view, app->bvh, pparams);
+        trace_samples(preview_state, 1, pparams);
         resize_image(get_trace_image(preview_state),
             (image4f&)get_trace_image(app->state), resize_filter::box);
         update_texture(app->trace_texture, get_trace_image(app->state));
@@ -128,8 +127,7 @@ bool update(app_state* app) {
 
         app->scene_updated = false;
     } else if (!app->rendering) {
-        trace_async_start(
-            app->state, app->scn, app->view, app->bvh, app->params);
+        trace_async_start(app->state, app->params);
         app->rendering = true;
     }
     return true;
@@ -255,7 +253,7 @@ int main(int argc, char* argv[]) {
                    app->view :
                    app->scn->cameras[app->params.camera_id];
     app->params.width = (int)round(cam->aspect * app->params.height);
-    app->state = make_trace_state(app->params);
+    app->state = make_trace_state(app->scn, app->view, app->bvh, app->params);
     app->scene_updated = true;
 
     // run interactive

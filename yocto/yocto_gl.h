@@ -5981,6 +5981,10 @@ struct thread_pool;
 
 /// Trace state. Members are not part of the public API.
 struct trace_state {
+    const scene* scn = nullptr;   // scene
+    const camera* view = nullptr; // view
+    const bvh_tree* bvh = nullptr;// bvh
+    
     image4f img;                  // rendered image
     vector<vec4i> blocks;         // image blocks
     vector<rng_pcg32> rngs;       // random number generators
@@ -5990,8 +5994,9 @@ struct trace_state {
 };
 
 /// Initialize a rendering state
-trace_state* make_trace_state(const trace_params& params);
-
+trace_state* make_trace_state(const scene* scn, const camera* view,
+                              const bvh_tree* bvh, const trace_params& params);
+    
 /// Gets the computed trace image
 inline const image4f& get_trace_image(const trace_state* st) { return st->img; }
 
@@ -5999,20 +6004,18 @@ inline const image4f& get_trace_image(const trace_state* st) { return st->img; }
 inline int get_trace_sample(const trace_state* st) { return st->sample; }
 
 /// Trace the next nsamples samples.
-void trace_samples(trace_state* st, const scene* scn, const camera* view,
-    const bvh_tree* bvh, int nsamples, const trace_params& params);
+void trace_samples(trace_state* st, int nsamples, const trace_params& params);
 
 /// Trace the whole image
 inline image4f trace_image(const scene* scn, const camera* view,
     const bvh_tree* bvh, const trace_params& params) {
-    auto st = unique_ptr<trace_state>(make_trace_state(params));
-    trace_samples(st.get(), scn, view, bvh, params.nsamples, params);
+    auto st = unique_ptr<trace_state>(make_trace_state(scn, view, bvh, params));
+    trace_samples(st.get(), params.nsamples, params);
     return get_trace_image(st.get());
 }
 
 /// Starts an anyncrhounous renderer.
-void trace_async_start(trace_state* st, const scene* scn, const camera* view,
-    const bvh_tree* bvh, const trace_params& params);
+void trace_async_start(trace_state* st, const trace_params& params);
 
 /// Stop the asynchronous renderer.
 void trace_async_stop(trace_state* st);
