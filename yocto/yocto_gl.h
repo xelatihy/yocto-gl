@@ -3179,85 +3179,16 @@ inline mat<T, 4> compose_mat4(const vec<T, 3>& translation,
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-/// Turntable for UI navigation from a from/to/up parametrization of the
-/// camera.
-template <typename T>
-inline void camera_turntable(vec<T, 3>& from, vec<T, 3>& to, vec<T, 3>& up,
-    const vec<T, 3>& rotate, T dolly, const vec<T, 3>& pan) {
-    // rotate if necessary
-    if (rotate.x || rotate.y) {
-        auto z = normalize(to - from);
-        auto lz = length(to - from);
-        auto phi = atan2(z.z, z.x) + rotate.x;
-        auto theta = acos(z.y) + rotate.y;
-        theta = clamp(theta, 0.001f, pif - 0.001f);
-        auto nz = vec<T, 3>{sin(theta) * cos(phi) * lz, cos(theta) * lz,
-            sin(theta) * sin(phi) * lz};
-        from = to - nz;
-    }
+/// Turntable for UI navigation.
+void camera_turntable(vec3f& from, vec3f& to, vec3f& up, const vec3f& rotate,
+    float dolly, const vec2f& pan);
 
-    // dolly if necessary
-    if (dolly) {
-        auto z = normalize(to - from);
-        auto lz = max(0.001f, length(to - from) * (1 + dolly));
-        z *= lz;
-        from = to - z;
-    }
-
-    // pan if necessary
-    if (pan.x || pan.y) {
-        auto z = normalize(to - from);
-        auto x = normalize(cross(up, z));
-        auto y = normalize(cross(z, x));
-        auto t = vec<T, 3>{pan.x * x.x + pan.y * y.x, pan.x * x.y + pan.y * y.y,
-            pan.x * x.z + pan.y * y.z};
-        from += t;
-        to += t;
-    }
-}
-
-/// Turntable for UI navigation for a frame/distance parametrization of the
-/// camera.
-template <typename T>
-inline void camera_turntable(frame<T, 3>& frame, T& focus,
-    const vec<T, 2>& rotate, T dolly, const vec<T, 2>& pan) {
-    // rotate if necessary
-    if (rotate.x || rotate.y) {
-        auto phi = atan2(frame.z.z, frame.z.x) + rotate.x;
-        auto theta = acos(frame.z.y) + rotate.y;
-        theta = clamp(theta, 0.001f, pif - 0.001f);
-        auto new_z =
-            vec<T, 3>{sin(theta) * cos(phi), cos(theta), sin(theta) * sin(phi)};
-        auto new_center = frame.o - frame.z * focus;
-        auto new_o = new_center + new_z * focus;
-        frame = lookat_frame3(new_o, new_center, {0, 1, 0});
-        focus = length(new_o - new_center);
-    }
-
-    // pan if necessary
-    if (dolly) {
-        auto c = frame.o - frame.z * focus;
-        focus = max(focus + dolly, 0.001f);
-        frame.o = c + frame.z * focus;
-    }
-
-    // pan if necessary
-    if (pan.x || pan.y) { frame.o += frame.x * pan.x + frame.y * pan.y; }
-}
+/// Turntable for UI navigation.
+void camera_turntable(frame3f& frame, float& focus, const vec2f& rotate,
+    float dolly, const vec2f& pan);
 
 /// FPS camera for UI navigation for a frame parametrization.
-/// https://gamedev.stackexchange.com/questions/30644/how-to-keep-my-quaternion-using-fps-camera-from-tilting-and-messing-up
-template <typename T>
-inline void camera_fps(
-    frame<T, 3>& frame, const vec<T, 3>& transl, const vec<T, 2>& rotate) {
-    auto y = vec<T, 3>{0, 1, 0};
-    auto z = orthonormalize(frame.z, y);
-    auto x = cross(y, z);
-
-    frame.rot() = rotation_mat3(vec<T, 3>{1, 0, 0}, rotate.y) * frame.rot() *
-                  rotation_mat3(vec<T, 3>{0, 1, 0}, rotate.x);
-    frame.pos() += transl.x * x + transl.y * y + transl.z * z;
-}
+void camera_fps(frame3f& frame, const vec3f& transl, const vec2f& rotate);
 
 }  // namespace ygl
 
@@ -3594,84 +3525,62 @@ namespace ygl {
 /// Computes the i-th term of a permutation of l values keyed by p.
 /// From Correlated Multi-Jittered Sampling by Kensler @ Pixar
 inline uint32_t hash_permute(uint32_t i, uint32_t n, uint32_t key) {
+    // clang-format off
     uint32_t w = n - 1;
-    w |= w >> 1;
-    w |= w >> 2;
-    w |= w >> 4;
-    w |= w >> 8;
-    w |= w >> 16;
+    w |= w >> 1; w |= w >> 2; w |= w >> 4; w |= w >> 8; w |= w >> 16;
     do {
         i ^= key;
-        i *= 0xe170893du;
-        i ^= key >> 16;
-        i ^= (i & w) >> 4;
-        i ^= key >> 8;
-        i *= 0x0929eb3f;
-        i ^= key >> 23;
-        i ^= (i & w) >> 1;
-        i *= 1 | key >> 27;
-        i *= 0x6935fa69;
-        i ^= (i & w) >> 11;
-        i *= 0x74dcb303;
-        i ^= (i & w) >> 2;
-        i *= 0x9e501cc3;
-        i ^= (i & w) >> 2;
-        i *= 0xc860a3df;
-        i &= w;
-        i ^= i >> 5;
+        i *= 0xe170893du; i ^= key >> 16;
+        i ^= (i & w) >> 4; i ^= key >> 8;
+        i *= 0x0929eb3f; i ^= key >> 23;
+        i ^= (i & w) >> 1; i *= 1 | key >> 27;
+        i *= 0x6935fa69; i ^= (i & w) >> 11;
+        i *= 0x74dcb303; i ^= (i & w) >> 2;
+        i *= 0x9e501cc3; i ^= (i & w) >> 2;
+        i *= 0xc860a3df; i &= w; i ^= i >> 5;
     } while (i >= n);
     return (i + key) % n;
+    // clang-format on
 }
 
 /// Computes a float value by hashing i with a key p.
 /// From Correlated Multi-Jittered Sampling by Kensler @ Pixar
 inline float hash_randfloat(uint32_t i, uint32_t key) {
+    // clang-format off
     i ^= key;
-    i ^= i >> 17;
-    i ^= i >> 10;
-    i *= 0xb36534e5;
-    i ^= i >> 12;
-    i ^= i >> 21;
-    i *= 0x93fc4795;
-    i ^= 0xdf6e307f;
-    i ^= i >> 17;
-    i *= 1 | key >> 18;
+    i ^= i >> 17; i ^= i >> 10; i *= 0xb36534e5;
+    i ^= i >> 12; i ^= i >> 21; i *= 0x93fc4795;
+    i ^= 0xdf6e307f; i ^= i >> 17; i *= 1 | key >> 18;
     return i * (1.0f / 4294967808.0f);
+    // clang-format on
 }
 
 /// 32 bit integer hash. Public domain code.
 inline uint32_t hash_uint32(uint64_t a) {
-    a -= (a << 6);
-    a ^= (a >> 17);
-    a -= (a << 9);
-    a ^= (a << 4);
-    a -= (a << 3);
-    a ^= (a << 10);
-    a ^= (a >> 15);
+    // clang-format off
+    a -= (a << 6); a ^= (a >> 17); a -= (a << 9); a ^= (a << 4);
+    a -= (a << 3); a ^= (a << 10); a ^= (a >> 15);
     return a;
+    // clang-format on
 }
 
 /// 64 bit integer hash. Public domain code.
 inline uint64_t hash_uint64(uint64_t a) {
-    a = (~a) + (a << 21);  // a = (a << 21) - a - 1;
-    a ^= (a >> 24);
-    a += (a << 3) + (a << 8);  // a * 265
-    a ^= (a >> 14);
-    a += (a << 2) + (a << 4);  // a * 21
-    a ^= (a >> 28);
-    a += (a << 31);
+    // clang-format off
+    a = (~a) + (a << 21); a ^= (a >> 24);
+    a += (a << 3) + (a << 8); a ^= (a >> 14);
+    a += (a << 2) + (a << 4); a ^= (a >> 28); a += (a << 31);
     return a;
+    // clang-format on
 }
 
 /// 64-to-32 bit integer hash. Public domain code.
 inline uint32_t hash_uint64_32(uint64_t a) {
-    a = (~a) + (a << 18);  // a = (a << 18) - a - 1;
-    a ^= (a >> 31);
-    a *= 21;  // a = (a + (a << 2)) + (a << 4);
-    a ^= (a >> 11);
-    a += (a << 6);
-    a ^= (a >> 22);
+    // clang-format off
+    a = (~a) + (a << 18); a ^= (a >> 31); a *= 21;
+    a ^= (a >> 11); a += (a << 6); a ^= (a >> 22);
     return (uint32_t)a;
+    // clang-format on
 }
 
 /// Combines two 64 bit hashes as in boost::hash_combine
@@ -3714,8 +3623,8 @@ namespace ygl {
 
 // Implementation of Python-like range generator. Create it with the the
 // `range()` functions to use argument deduction.
-// clang-format off
 struct range_generator {
+    // clang-format off
     struct iterator {
         iterator(int pos, int step) : _pos(pos), _step(step) {}
         bool operator!=(const iterator& a) const { return _pos < a._pos; }
@@ -3728,8 +3637,8 @@ struct range_generator {
     iterator begin() const { return {_min, _step}; }
     iterator end() const { return {_max, _step}; }
     private: int _min, _max, _step;
+    // clang-format on
 };
-// clang-format on
 
 /// Python-like range
 inline range_generator range(int max) { return {0, max, 1}; }
@@ -3741,9 +3650,9 @@ inline range_generator range(int min, int max, int step = 1) {
 
 // Implemenetation of Python-like enumerate. Create it with the function
 // `enumerate()` to use argument deduction.
-// clang-format off
 template <typename T>
 struct enumerate_generator {
+    // clang-format off
     struct iterator {
         iterator(int pos, T* data) : _pos(pos), _data(data) {}
         bool operator!=(const iterator& a) const { return _pos < a._pos; }
@@ -3755,8 +3664,8 @@ struct enumerate_generator {
     iterator begin() const { return {0, _data}; }
     iterator end() const { return {_max, _data + _max}; }
     private: int _max; T* _data;
+    // clang-format on
 };
-// clang-format on
 
 /// Python-like range
 template <typename T>
@@ -3927,10 +3836,10 @@ inline float tetrahedron_volume(
     return dot(cross(v1 - v0, v2 - v0), v3 - v0) / 6;
 }
 
-// Triangle tangent and bitangent from uv (not othornormalized with themselfves
-// not the normal). Follows the definition in
-// http://www.terathon.com/code/tangent.html and
-// https://gist.github.com/aras-p/2843984
+/// Triangle tangent and bitangent from uv (not othornormalized with themselfves
+/// not the normal). Follows the definition in
+/// http://www.terathon.com/code/tangent.html and
+/// https://gist.github.com/aras-p/2843984
 inline pair<vec3f, vec3f> triangle_tangents_fromuv(const vec3f& v0,
     const vec3f& v1, const vec3f& v2, const vec2f& uv0, const vec2f& uv1,
     const vec2f& uv2) {
@@ -4039,35 +3948,33 @@ inline T eval_bernstein_derivative(T u, int i, int degree) {
 /// eval bezier
 template <typename T, typename T1>
 inline T eval_bezier_cubic(
-    const T& v0, const T& v1, const T& v2, const T& v3, T1 t) {
-    return v0 * eval_bernstein(t, 0, 3) + v1 * eval_bernstein(t, 1, 3) +
-           v2 * eval_bernstein(t, 2, 3) + v3 * eval_bernstein(t, 3, 3);
+    const T& v0, const T& v1, const T& v2, const T& v3, T1 u) {
+    return v0 * (1 - u) * (1 - u) * (1 - u) + v1 * 3 * u * (1 - u) * (1 - u) +
+           v2 * 3 * u * u * (1 - u) + v3 * u * u * u;
 }
 
 /// eval bezier
 template <typename T, typename T1>
-inline T eval_bezier_cubic(const vector<T>& vals, const vec4i& b, T1 t) {
+inline T eval_bezier_cubic(const vector<T>& vals, const vec4i& b, T1 u) {
     if (vals.empty()) return T();
-    return eval_bezier_cubic(vals[b.x], vals[b.y], vals[b.z], vals[b.w], t);
+    return eval_bezier_cubic(vals[b.x], vals[b.y], vals[b.z], vals[b.w], u);
 }
 
 /// eval bezier derivative
 template <typename T, typename T1>
 inline T eval_bezier_cubic_derivative(
-    const T& v0, const T& v1, const T& v2, const T& v3, T1 t) {
-    return v0 * eval_bernstein_derivative(t, 0, 3) +
-           v1 * eval_bernstein_derivative(t, 1, 3) +
-           v2 * eval_bernstein_derivative(t, 2, 3) +
-           v3 * eval_bernstein_derivative(t, 3, 3);
+    const T& v0, const T& v1, const T& v2, const T& v3, T1 u) {
+    return (v1 - v0) * 3 * (1 - u) * (1 - u) + (v2 - v1) * 6 * u * (1 - u) +
+           (v3 - v2) * 3 * u * u;
 }
 
 /// eval bezier derivative
 template <typename T, typename T1>
 inline T eval_bezier_cubic_derivative(
-    const vector<T>& vals, const vec4i& b, T1 t) {
+    const vector<T>& vals, const vec4i& b, T1 u) {
     if (vals.empty()) return T();
     return eval_bezier_cubic_derivative(
-        vals[b.x], vals[b.y], vals[b.z], vals[b.w], t);
+        vals[b.x], vals[b.y], vals[b.z], vals[b.w], u);
 }
 
 }  // namespace ygl
@@ -4150,672 +4057,137 @@ namespace ygl {
 /// Compute per-vertex normals/tangents for lines, triangles and quads with
 /// positions pos. Weighted indicated whether the normals/tangents are
 /// weighted by line length.
-inline vector<vec3f> compute_normals(const vector<vec2i>& lines,
+vector<vec3f> compute_normals(const vector<vec2i>& lines,
     const vector<vec3i>& triangles, const vector<vec4i>& quads,
-    const vector<vec3f>& pos, bool weighted = true) {
-    auto norm = vector<vec3f>(pos.size(), zero3f);
-    for (auto& l : lines) {
-        auto n = pos[l.y] - pos[l.x];
-        if (!weighted) n = normalize(n);
-        for (auto vid : l) norm[vid] += n;
-    }
-    for (auto& t : triangles) {
-        auto n = cross(pos[t.y] - pos[t.x], pos[t.z] - pos[t.x]);
-        if (!weighted) n = normalize(n);
-        for (auto vid : t) norm[vid] += n;
-    }
-    for (auto& q : quads) {
-        auto n = cross(pos[q.y] - pos[q.x], pos[q.w] - pos[q.x]) +
-                 cross(pos[q.w] - pos[q.z], pos[q.x] - pos[q.z]);
-        if (!weighted) n = normalize(n);
-        for (auto vid : q) norm[vid] += n;
-    }
-    for (auto& n : norm) n = normalize(n);
-    return norm;
-}
+    const vector<vec3f>& pos, bool weighted = true);
 
 /// Compute per-vertex tangent frame for triangle meshes.
 /// Tangent space is defined by a four component vector.
 /// The first three components are the tangent with respect to the U texcoord.
 /// The fourth component is the sign of the tangent wrt the V texcoord.
 /// Tangent frame is useful in normal mapping.
-inline vector<vec4f> compute_tangent_frames(const vector<vec3i>& triangles,
+vector<vec4f> compute_tangent_frames(const vector<vec3i>& triangles,
     const vector<vec3f>& pos, const vector<vec3f>& norm,
-    const vector<vec2f>& texcoord, bool weighted = true) {
-    auto tangu = vector<vec3f>(pos.size(), zero3f);
-    auto tangv = vector<vec3f>(pos.size(), zero3f);
-    for (auto& t : triangles) {
-        auto tutv = triangle_tangents_fromuv(pos[t.x], pos[t.y], pos[t.z],
-            texcoord[t.x], texcoord[t.y], texcoord[t.z]);
-        if (!weighted) tutv = {normalize(tutv.first), normalize(tutv.second)};
-        for (auto vid : t) tangu[vid] += tutv.first;
-        for (auto vid : t) tangv[vid] += tutv.second;
-    }
-    for (auto& t : tangu) t = normalize(t);
-    for (auto& t : tangv) t = normalize(t);
-    auto tangsp = vector<vec4f>(pos.size(), zero4f);
-    for (auto i = 0; i < pos.size(); i++) {
-        tangu[i] = orthonormalize(tangu[i], norm[i]);
-        auto s = (dot(cross(norm[i], tangu[i]), tangv[i]) < 0) ? -1.0f : 1.0f;
-        tangsp[i] = {tangu[i].x, tangu[i].y, tangu[i].z, s};
-    }
-    return tangsp;
-}
+    const vector<vec2f>& texcoord, bool weighted = true);
 
 /// Apply skinning
-inline void compute_skinning(const vector<vec3f>& pos,
-    const vector<vec3f>& norm, const vector<vec4f>& weights,
-    const vector<vec4i>& joints, const vector<mat4f>& xforms,
-    vector<vec3f>& skinned_pos, vector<vec3f>& skinned_norm) {
-    skinned_pos.resize(pos.size());
-    skinned_norm.resize(norm.size());
-    for (auto i = 0; i < pos.size(); i++) {
-        skinned_pos[i] =
-            transform_point(xforms[joints[i].x], pos[i]) * weights[i].x +
-            transform_point(xforms[joints[i].y], pos[i]) * weights[i].y +
-            transform_point(xforms[joints[i].z], pos[i]) * weights[i].z +
-            transform_point(xforms[joints[i].w], pos[i]) * weights[i].w;
-    }
-    for (auto i = 0; i < pos.size(); i++) {
-        skinned_norm[i] = normalize(
-            transform_direction(xforms[joints[i].x], norm[i]) * weights[i].x +
-            transform_direction(xforms[joints[i].y], norm[i]) * weights[i].y +
-            transform_direction(xforms[joints[i].z], norm[i]) * weights[i].z +
-            transform_direction(xforms[joints[i].w], norm[i]) * weights[i].w);
-    }
-}
+void compute_skinning(const vector<vec3f>& pos, const vector<vec3f>& norm,
+    const vector<vec4f>& weights, const vector<vec4i>& joints,
+    const vector<mat4f>& xforms, vector<vec3f>& skinned_pos,
+    vector<vec3f>& skinned_norm);
 
 /// Apply skinning
-inline void compute_skinning(const vector<vec3f>& pos,
-    const vector<vec3f>& norm, const vector<vec4f>& weights,
-    const vector<vec4i>& joints, const vector<frame3f>& xforms,
-    vector<vec3f>& skinned_pos, vector<vec3f>& skinned_norm) {
-    skinned_pos.resize(pos.size());
-    skinned_norm.resize(norm.size());
-    for (auto i = 0; i < pos.size(); i++) {
-        skinned_pos[i] =
-            transform_point(xforms[joints[i].x], pos[i]) * weights[i].x +
-            transform_point(xforms[joints[i].y], pos[i]) * weights[i].y +
-            transform_point(xforms[joints[i].z], pos[i]) * weights[i].z +
-            transform_point(xforms[joints[i].w], pos[i]) * weights[i].w;
-    }
-    for (auto i = 0; i < pos.size(); i++) {
-        skinned_norm[i] = normalize(
-            transform_direction(xforms[joints[i].x], norm[i]) * weights[i].x +
-            transform_direction(xforms[joints[i].y], norm[i]) * weights[i].y +
-            transform_direction(xforms[joints[i].z], norm[i]) * weights[i].z +
-            transform_direction(xforms[joints[i].w], norm[i]) * weights[i].w);
-    }
-}
+void compute_skinning(const vector<vec3f>& pos, const vector<vec3f>& norm,
+    const vector<vec4f>& weights, const vector<vec4i>& joints,
+    const vector<frame3f>& xforms, vector<vec3f>& skinned_pos,
+    vector<vec3f>& skinned_norm);
 
 /// Apply skinning as specified in Khronos glTF
-inline void compute_matrix_skinning(const vector<vec3f>& pos,
+void compute_matrix_skinning(const vector<vec3f>& pos,
     const vector<vec3f>& norm, const vector<vec4f>& weights,
     const vector<vec4i>& joints, const vector<mat4f>& xforms,
-    vector<vec3f>& skinned_pos, vector<vec3f>& skinned_norm) {
-    skinned_pos.resize(pos.size());
-    skinned_norm.resize(norm.size());
-    for (auto i = 0; i < pos.size(); i++) {
-        auto xform = xforms[joints[i].x] * weights[i].x +
-                     xforms[joints[i].y] * weights[i].y +
-                     xforms[joints[i].z] * weights[i].z +
-                     xforms[joints[i].w] * weights[i].w;
-        skinned_pos[i] = transform_point(xform, pos[i]);
-        skinned_norm[i] = normalize(transform_direction(xform, norm[i]));
-    }
-}
+    vector<vec3f>& skinned_pos, vector<vec3f>& skinned_norm);
 
 /// Create an array of edges.
-inline vector<vec2i> get_edges(const vector<vec2i>& lines,
-    const vector<vec3i>& triangles, const vector<vec4i>& quads) {
-    auto edges = vector<vec2i>();
-    auto eset = unordered_set<vec2i>();
-    for (auto e : lines) {
-        e = {min(e.x, e.y), max(e.x, e.y)};
-        if (!eset.insert(e).second) continue;
-        eset.insert({e.y, e.x});
-        edges += e;
-    }
-    for (auto& t : triangles) {
-        for (auto e : {vec2i{t.x, t.y}, vec2i{t.y, t.z}, vec2i{t.z, t.x}}) {
-            e = {min(e.x, e.y), max(e.x, e.y)};
-            if (!eset.insert(e).second) continue;
-            eset.insert({e.y, e.x});
-            edges += e;
-        }
-    }
-    for (auto& q : quads) {
-        for (auto e : {vec2i{q.x, q.y}, vec2i{q.y, q.z}, vec2i{q.z, q.w},
-                 vec2i{q.w, q.x}}) {
-            if (e.x == e.y) continue;
-            e = {min(e.x, e.y), max(e.x, e.y)};
-            if (!eset.insert(e).second) continue;
-            eset.insert({e.y, e.x});
-            edges += e;
-        }
-    }
-
-    return edges;
-}
+vector<vec2i> get_edges(const vector<vec2i>& lines,
+    const vector<vec3i>& triangles, const vector<vec4i>& quads);
 
 /// Create an array of boundary edges. Lines are always considered boundaries.
-inline vector<vec2i> get_boundary_edges(const vector<vec2i>& lines,
-    const vector<vec3i>& triangles, const vector<vec4i>& quads) {
-    auto ecount = unordered_map<vec2i, int>();
-
-    // lines are added manually later
-    for (auto l : lines) { ecount.insert({l, 2}); }
-    for (auto t : triangles) {
-        for (auto e : {vec2i{t.x, t.y}, vec2i{t.y, t.z}, vec2i{t.z, t.x}}) {
-            e = {min(e.x, e.y), max(e.x, e.y)};
-            auto ins = ecount.insert({e, 1});
-            if (!ins.second) ins.first->second += 1;
-        }
-    }
-    for (auto q : quads) {
-        for (auto e : {vec2i{q.x, q.y}, vec2i{q.y, q.z}, vec2i{q.z, q.w},
-                 vec2i{q.w, q.x}}) {
-            if (e.x == e.y) continue;
-            e = {min(e.x, e.y), max(e.x, e.y)};
-            auto ins = ecount.insert({e, 1});
-            if (!ins.second) ins.first->second += 1;
-        }
-    }
-
-    auto boundary = lines;
-    for (auto ec : ecount) {
-        if (ec.second > 1) continue;
-        boundary += ec.first;
-    }
-
-    return boundary;
-}
+vector<vec2i> get_boundary_edges(const vector<vec2i>& lines,
+    const vector<vec3i>& triangles, const vector<vec4i>& quads);
 
 /// Get a list of all unique vertices.
-inline vector<int> get_verts(const vector<vec2i>& lines,
-    const vector<vec3i>& triangles, const vector<vec4i>& quads) {
-    auto verts = vector<int>();
-    auto vset = unordered_set<int>();
-    for (auto l : lines)
-        for (auto vid : l)
-            if (vset.insert(vid).second) verts += vid;
-    for (auto t : triangles)
-        for (auto vid : t)
-            if (vset.insert(vid).second) verts += vid;
-    for (auto q : quads)
-        for (auto vid : q)
-            if (vset.insert(vid).second) verts += vid;
-    return verts;
-}
+vector<int> get_verts(const vector<vec2i>& lines,
+    const vector<vec3i>& triangles, const vector<vec4i>& quads);
 
 /// Create an array of boundary vertices. Lines are always considered
 /// boundaries.
-inline vector<int> get_boundary_verts(const vector<vec2i>& lines,
-    const vector<vec3i>& triangles, const vector<vec4i>& quads) {
-    return get_verts(get_boundary_edges(lines, triangles, quads), {}, {});
-}
+vector<int> get_boundary_verts(const vector<vec2i>& lines,
+    const vector<vec3i>& triangles, const vector<vec4i>& quads);
 
 /// Convert quads to triangles
-inline vector<vec3i> convert_quads_to_triangles(const vector<vec4i>& quads) {
-    auto triangles = vector<vec3i>();
-    triangles.reserve(quads.size() * 2);
-    for (auto& q : quads) {
-        triangles += {q.x, q.y, q.w};
-        if (q.z != q.w) triangles += {q.z, q.w, q.y};
-    }
-    return triangles;
-}
+vector<vec3i> convert_quads_to_triangles(const vector<vec4i>& quads);
 
 /// Convert quads to triangles with a diamond-like topology.
 /// Quads have to be consecutive one row after another.
-inline vector<vec3i> convert_quads_to_triangles(
-    const vector<vec4i>& quads, int row_length) {
-    auto triangles = vector<vec3i>();
-    triangles.reserve(quads.size() * 2);
-    for (auto& q : quads) {
-        triangles += {q.x, q.y, q.w};
-        if (q.z != q.w) triangles += {q.z, q.w, q.y};
-    }
-    return triangles;
-#if 0
-        triangles.resize(usteps * vsteps * 2);
-        for (auto j = 0; j < vsteps; j++) {
-            for (auto i = 0; i < usteps; i++) {
-                auto& f1 = triangles[(j * usteps + i) * 2 + 0];
-                auto& f2 = triangles[(j * usteps + i) * 2 + 1];
-                if ((i + j) % 2) {
-                    f1 = {vid(i, j), vid(i + 1, j), vid(i + 1, j + 1)};
-                    f2 = {vid(i + 1, j + 1), vid(i, j + 1), vid(i, j)};
-                } else {
-                    f1 = {vid(i, j), vid(i + 1, j), vid(i, j + 1)};
-                    f2 = {vid(i + 1, j + 1), vid(i, j + 1), vid(i + 1, j)};
-                }
-            }
-        }
-#endif
-    return triangles;
-}
+vector<vec3i> convert_quads_to_triangles(
+    const vector<vec4i>& quads, int row_length);
 
 /// Convert beziers to lines using 3 lines for each bezier.
-inline vector<vec2i> convert_bezier_to_lines(const vector<vec4i>& beziers) {
-    auto lines = vector<vec2i>();
-    lines.reserve(beziers.size() * 3);
-    for (auto& b : beziers) {
-        lines += {b.x, b.y};
-        lines += {b.y, b.z};
-        lines += {b.z, b.w};
-    }
-    return lines;
-}
+vector<vec2i> convert_bezier_to_lines(const vector<vec4i>& beziers);
 
 /// Convert face varying data to single primitives. Returns the quads indices
 /// and filled vectors for pos, norm and texcoord.
-inline tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
+tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
 convert_face_varying(const vector<vec4i>& quads_pos,
     const vector<vec4i>& quads_norm, const vector<vec4i>& quads_texcoord,
     const vector<vec3f>& pos, const vector<vec3f>& norm,
-    const vector<vec2f>& texcoord) {
-    // make faces unique
-    unordered_map<vec3i, int> vert_map;
-    auto quads = vector<vec4i>(quads_pos.size());
-    for (auto fid = 0; fid < quads_pos.size(); fid++) {
-        for (auto c = 0; c < 4; c++) {
-            auto v = vec3i{
-                quads_pos[fid][c],
-                (!quads_norm.empty()) ? quads_norm[fid][c] : -1,
-                (!quads_texcoord.empty()) ? quads_texcoord[fid][c] : -1,
-            };
-            if (vert_map.find(v) == vert_map.end()) {
-                auto s = (int)vert_map.size();
-                vert_map[v] = s;
-            }
-            quads[fid][c] = vert_map.at(v);
-        }
-    }
-
-    // fill vert data
-    auto qpos = vector<vec3f>();
-    if (!pos.empty()) {
-        qpos.resize(vert_map.size());
-        for (auto& kv : vert_map) { qpos[kv.second] = pos[kv.first.x]; }
-    }
-    auto qnorm = vector<vec3f>();
-    if (!norm.empty()) {
-        qnorm.resize(vert_map.size());
-        for (auto& kv : vert_map) { qnorm[kv.second] = norm[kv.first.y]; }
-    }
-    auto qtexcoord = vector<vec2f>();
-    if (!texcoord.empty()) {
-        qtexcoord.resize(vert_map.size());
-        for (auto& kv : vert_map) {
-            qtexcoord[kv.second] = texcoord[kv.first.z];
-        }
-    }
-
-    // done
-    return {quads, qpos, qnorm, qtexcoord};
-}
-
-// wrapper for implementation below
-inline float _subdivide_normalize(float x) { return x; }
-inline vec2f _subdivide_normalize(const vec2f& x) { return normalize(x); }
-inline vec3f _subdivide_normalize(const vec3f& x) { return normalize(x); }
-inline vec4f _subdivide_normalize(const vec4f& x) { return normalize(x); }
+    const vector<vec2f>& texcoord);
 
 /// Tesselate lines, triangles and quads by spolitting edges.
 /// Returns the tesselated elements and dictionaries for vertex calculations.
-inline tuple<vector<vec2i>, vector<vec3i>, vector<vec4i>, vector<vec2i>,
-    vector<vec4i>>
+tuple<vector<vec2i>, vector<vec3i>, vector<vec4i>, vector<vec2i>, vector<vec4i>>
 subdivide_elems_linear(const vector<vec2i>& lines,
-    const vector<vec3i>& triangles, const vector<vec4i>& quads, int nverts) {
-    if (!nverts) return {};
-    auto emap = unordered_map<vec2i, int>();
-    auto edges = vector<vec2i>();
-    for (auto e : lines) {
-        if (contains(emap, e)) continue;
-        emap[{e.x, e.y}] = nverts + (int)edges.size();
-        emap[{e.y, e.x}] = nverts + (int)edges.size();
-        edges += e;
-    }
-    for (auto& t : triangles) {
-        for (auto e : {vec2i{t.x, t.y}, vec2i{t.y, t.z}, vec2i{t.z, t.x}}) {
-            if (contains(emap, e)) continue;
-            emap[{e.x, e.y}] = nverts + (int)edges.size();
-            emap[{e.y, e.x}] = nverts + (int)edges.size();
-            edges += e;
-        }
-    }
-    for (auto& q : quads) {
-        for (auto e : {vec2i{q.x, q.y}, vec2i{q.y, q.z}, vec2i{q.z, q.w},
-                 vec2i{q.w, q.x}}) {
-            if (e.x == e.y) continue;
-            if (contains(emap, e)) continue;
-            emap[{e.x, e.y}] = nverts + (int)edges.size();
-            emap[{e.y, e.x}] = nverts + (int)edges.size();
-            edges += e;
-        }
-    }
+    const vector<vec3i>& triangles, const vector<vec4i>& quads, int nverts);
 
-    auto tlines = vector<vec2i>();
-    tlines.reserve(lines.size() * 2);
-    for (auto& l : lines) {
-        tlines += {l.x, emap.at(l)};
-        tlines += {emap.at(l), l.y};
-    }
-
-    auto ttriangles = vector<vec3i>();
-    ttriangles.reserve(triangles.size() * 4);
-    for (auto& t : triangles) {
-        ttriangles.push_back({t.x, emap.at({t.x, t.y}), emap.at({t.z, t.x})});
-        ttriangles.push_back({t.y, emap.at({t.y, t.z}), emap.at({t.x, t.y})});
-        ttriangles.push_back({t.z, emap.at({t.z, t.x}), emap.at({t.y, t.z})});
-        ttriangles.push_back(
-            {emap.at({t.x, t.y}), emap.at({t.y, t.z}), emap.at({t.z, t.x})});
-    }
-
-    auto tquads = vector<vec4i>();
-    tquads.reserve(quads.size() * 4);
-    for (auto fkv : enumerate(quads)) {
-        auto f = fkv.second;
-        auto fvert = nverts + (int)edges.size() + fkv.first;
-        if (f.z != f.w) {
-            tquads += {f.x, emap.at({f.x, f.y}), fvert, emap.at({f.w, f.x})};
-            tquads += {f.y, emap.at({f.y, f.z}), fvert, emap.at({f.x, f.y})};
-            tquads += {f.z, emap.at({f.z, f.w}), fvert, emap.at({f.y, f.z})};
-            tquads += {f.w, emap.at({f.w, f.x}), fvert, emap.at({f.z, f.w})};
-        } else {
-            tquads += {f.x, emap.at({f.x, f.y}), fvert, emap.at({f.z, f.x})};
-            tquads += {f.y, emap.at({f.y, f.z}), fvert, emap.at({f.x, f.y})};
-            tquads += {f.z, emap.at({f.z, f.x}), fvert, emap.at({f.y, f.z})};
-        }
-    }
-    tquads.shrink_to_fit();
-
-    return {tlines, ttriangles, tquads, edges, quads};
-}
-
-/// Subdivide vertex properties given the maps
+/// Subdivide vertex properties given the maps. This is instances for vecs
+/// and floats.
 template <typename T>
-inline vector<T> subdivide_vert_linear(const vector<T>& vert,
+vector<T> subdivide_vert_linear(const vector<T>& vert,
     const vector<vec2i>& edges, const vector<vec4i>& faces,
-    bool normalized = false) {
-    if (vert.empty()) return {};
-
-    auto tvert = vector<T>();
-    tvert.reserve(vert.size() + edges.size() + faces.size());
-
-    tvert += vert;
-    for (auto e : edges) tvert += (vert[e.x] + vert[e.y]) / 2;
-    for (auto f : faces) {
-        if (f.z != f.w)
-            tvert += (vert[f.x] + vert[f.y] + vert[f.z] + vert[f.w]) / 4;
-        else
-            tvert += (vert[f.x] + vert[f.y] + vert[f.z]) / 3;
-    }
-
-    if (normalized) {
-        for (auto& n : tvert) n = _subdivide_normalize(n);
-    }
-
-    return tvert;
-}
+    bool normalized = false);
 
 /// Performs the smoothing step of Catmull-Clark. Start with a tesselate quad
 /// mesh obtained with subdivide_elems_linear() and subdivide_vert_linear(). To
 /// handle open meshes with boundary, get the boundary from make_boundary_edge()
 /// and pass it as crease_lines. To fix the boundary entirely, just get the
-/// boundary vertices and pass it as creases.
+/// boundary vertices and pass it as creases. This is instances for vecs
+/// and floats.
 template <typename T>
-inline vector<T> subdivide_vert_catmullclark(const vector<vec4i>& quads,
+vector<T> subdivide_vert_catmullclark(const vector<vec4i>& quads,
     const vector<T>& vert, const vector<vec2i>& crease_tlines,
-    const vector<int>& crease_tpoints, bool normalized = false) {
-    if (quads.empty() || vert.empty()) return vert;
-
-    // define vertex valence ---------------------------
-    auto val = vector<int>(vert.size(), 2);
-    for (auto e : crease_tlines)
-        for (auto vid : e) val[vid] = 1;
-    for (auto vid : crease_tpoints) val[vid] = 0;
-
-    // averaging pass ----------------------------------
-    auto tvert = vector<T>(vert.size(), T());
-    auto count = vector<int>(vert.size(), 0);
-    for (auto p : crease_tpoints) {
-        auto c = vert[p];
-        if (val[p] == 0) tvert[p] += c;
-        if (val[p] == 0) count[p] += 1;
-    }
-    for (auto e : crease_tlines) {
-        auto c = (vert[e.x] + vert[e.y]) / 2.0f;
-        for (auto vid : e) {
-            if (val[vid] == 1) tvert[vid] += c;
-            if (val[vid] == 1) count[vid] += 1;
-        }
-    }
-    for (auto& f : quads) {
-        auto c = (vert[f.x] + vert[f.y] + vert[f.z] + vert[f.w]) / 4.0f;
-        for (auto vid : f) {
-            if (val[vid] == 2) tvert[vid] += c;
-            if (val[vid] == 2) count[vid] += 1;
-        }
-    }
-    for (auto i = 0; i < vert.size(); i++) { tvert[i] /= (float)count[i]; }
-
-    // correction pass ----------------------------------
-    // p = p + (avg_p - p) * (4/avg_count)
-    for (auto i = 0; i < vert.size(); i++) {
-        if (val[i] != 2) continue;
-        tvert[i] = vert[i] + (tvert[i] - vert[i]) * (4.0f / count[i]);
-    }
-
-    if (normalized) {
-        for (auto& v : tvert) v = _subdivide_normalize(v);
-    }
-
-    return tvert;
-}
+    const vector<int>& crease_tpoints, bool normalized = false);
 
 /// Subdivide bezier recursive by splitting each segment into two in the middle.
 /// Returns the tesselated elements and dictionaries for vertex calculations.
-inline tuple<vector<vec4i>, vector<int>, vector<vec4i>>
-subdivide_bezier_recursive(const vector<vec4i>& beziers, int nverts) {
-    if (!nverts) return {};
-    auto vmap = unordered_map<int, int>();
-    auto verts = vector<int>();
-    for (auto& b : beziers) {
-        if (!contains(vmap, b.x)) {
-            vmap[b.x] = verts.size();
-            verts += b.x;
-        }
-        if (!contains(vmap, b.w)) {
-            vmap[b.w] = verts.size();
-            verts += b.w;
-        }
-    }
-    auto tbeziers = vector<vec4i>();
-    tbeziers.reserve(beziers.size() * 2);
-    for (auto b_kv : enumerate(beziers)) {
-        auto b = b_kv.second;
-        auto bo = (int)verts.size() + b_kv.first * 5;
-        tbeziers += {vmap.at(b.x), bo + 0, bo + 1, bo + 2};
-        tbeziers += {bo + 2, bo + 3, bo + 4, vmap.at(b.w)};
-    }
-    return {tbeziers, verts, beziers};
-}
+tuple<vector<vec4i>, vector<int>, vector<vec4i>> subdivide_bezier_recursive(
+    const vector<vec4i>& beziers, int nverts);
 
-/// Subdivide vertex properties given the maps
+/// Subdivide vertex properties given the maps. This is instances for vecs
+/// and floats.
 template <typename T>
-inline vector<T> subdivide_vert_bezier(const vector<T>& vert,
-    const vector<int>& verts, const vector<vec4i>& segments,
-    bool normalized = false) {
-    if (vert.empty()) return {};
-
-    auto tvert = vector<T>();
-    tvert.reserve(verts.size() + segments.size() * 5);
-
-    for (auto v : verts) tvert += vert[v];
-    for (auto s : segments) {
-        tvert += vert[s.x] * (1.f / 2) + vert[s.y] * (1.f / 2);
-        tvert += vert[s.x] * (1.f / 4) + vert[s.y] * (1.f / 2) +
-                 vert[s.z] * (1.f / 4);
-        tvert += vert[s.x] * (1.f / 8) + vert[s.y] * (3.f / 8) +
-                 vert[s.z] * (3.f / 8) + vert[s.w] * (1.f / 8);
-        tvert += vert[s.y] * (1.f / 4) + vert[s.z] * (1.f / 2) +
-                 vert[s.w] * (1.f / 4);
-        tvert += vert[s.z] * (1.f / 2) + vert[s.w] * (1.f / 2);
-    }
-
-    if (normalized) {
-        for (auto& n : tvert) n = _subdivide_normalize(n);
-    }
-
-    return tvert;
-}
+vector<T> subdivide_vert_bezier(const vector<T>& vert, const vector<int>& verts,
+    const vector<vec4i>& segments, bool normalized = false);
 
 /// Generate a rectangular grid of usteps x vsteps uv values for parametric
 /// surface generation.
-inline tuple<vector<vec4i>, vector<vec2f>> make_uvquads(int usteps, int vsteps,
+tuple<vector<vec4i>, vector<vec2f>> make_uvquads(int usteps, int vsteps,
     bool uwrap = false, bool vwrap = false, bool vpole0 = false,
-    bool vpole1 = false) {
-    auto uvert = (uwrap) ? usteps : usteps + 1;
-    auto vvert = (vwrap) ? vsteps : vsteps + 1;
-    auto vid = [=](int i, int j) {
-        if (uwrap) i = i % usteps;
-        if (vwrap) j = j % vsteps;
-        return j * uvert + i;
-    };
-
-    auto uv = vector<vec2f>(uvert * vvert);
-    for (auto j = 0; j < vvert; j++) {
-        for (auto i = 0; i < uvert; i++) {
-            uv[vid(i, j)] = {i / (float)usteps, j / (float)vsteps};
-        }
-    }
-
-    auto quads = vector<vec4i>(usteps * vsteps);
-    for (auto j = 0; j < vsteps; j++) {
-        for (auto i = 0; i < usteps; i++) {
-            quads[j * usteps + i] = {
-                vid(i, j), vid(i + 1, j), vid(i + 1, j + 1), vid(i, j + 1)};
-        }
-    }
-
-    if (vpole0) {
-        if (vwrap) throw runtime_error("cannot have a pole with wrapping");
-        uv = vector<vec2f>(uv.begin() + uvert, uv.end());
-        uv.insert(uv.begin(), {0, 0});
-        for (auto& q : quads) {
-            for (auto& vid : q) { vid = (vid < usteps) ? 0 : vid - uvert + 1; }
-            if (q.x == 0 && q.y == 0) q = {q.z, q.w, q.x, q.y};
-        }
-    }
-
-    if (vpole1) {
-        if (vwrap) throw runtime_error("cannot have a pole with wrapping");
-        auto pid = (int)uv.size() - uvert;
-        uv = vector<vec2f>(uv.begin(), uv.end() - uvert);
-        uv.insert(uv.end(), {0, 1});
-        for (auto& q : quads) {
-            for (auto& vid : q) { vid = (vid < pid) ? vid : pid; }
-        }
-    }
-
-    return {quads, uv};
-}
+    bool vpole1 = false);
 
 /// Generate parametric num lines of usteps segments.
-inline tuple<vector<vec2i>, vector<vec2f>> make_uvlines(int num, int usteps) {
-    auto vid = [usteps](int i, int j) { return j * (usteps + 1) + i; };
-    auto uv = vector<vec2f>((usteps + 1) * num);
-    for (auto j = 0; j < num; j++) {
-        for (auto i = 0; i <= usteps; i++) {
-            uv[vid(i, j)] = {i / (float)usteps, j / (float)num};
-        }
-    }
-
-    auto lines = vector<vec2i>(usteps * num);
-    for (int j = 0; j < num; j++) {
-        for (int i = 0; i < usteps; i++) {
-            lines[j * usteps + i] = {vid(i, j), vid(i + 1, j)};
-        }
-    }
-
-    return {lines, uv};
-}
+tuple<vector<vec2i>, vector<vec2f>> make_uvlines(int num, int usteps);
 
 /// Generate a parametric point set. Mostly here for completeness.
-inline tuple<vector<int>, vector<vec2f>> make_uvpoints(int num) {
-    auto uv = vector<vec2f>(num);
-    for (auto i = 0; i < num; i++) { uv[i] = {i / (float)num, 0}; }
-
-    auto points = vector<int>(num);
-    for (auto i = 0; i < num; i++) points[i] = i;
-
-    return {points, uv};
-}
+tuple<vector<int>, vector<vec2f>> make_uvpoints(int num);
 
 /// Merge elements between shapes. The elements are merged by increasing the
 /// array size of the second array by the number of vertices of the first.
 /// Vertex data can then be concatenated successfully.
-inline tuple<vector<vec2i>, vector<vec3i>, vector<vec4i>> merge_elems(
-    int nverts, const vector<vec2i>& lines1, const vector<vec3i>& triangles1,
+tuple<vector<vec2i>, vector<vec3i>, vector<vec4i>> merge_elems(int nverts,
+    const vector<vec2i>& lines1, const vector<vec3i>& triangles1,
     const vector<vec4i>& quads1, const vector<vec2i>& lines2,
-    const vector<vec3i>& triangles2, const vector<vec4i>& quads2) {
-    auto lines = lines1 + lines2;
-    auto triangles = triangles1 + triangles2;
-    auto quads = quads1 + quads2;
-    for (auto i = lines1.size(); i < lines.size(); i++)
-        lines[i] += {nverts, nverts};
-    for (auto i = triangles1.size(); i < triangles.size(); i++)
-        triangles[i] += {nverts, nverts, nverts};
-    for (auto i = quads1.size(); i < quads.size(); i++)
-        quads[i] += {nverts, nverts, nverts, nverts};
-    return {lines, triangles, quads};
-}
+    const vector<vec3i>& triangles2, const vector<vec4i>& quads2);
 
 /// Unshare shape data by duplicating all vertex data for each element,
 /// giving a faceted look. Note that faceted tangents are not computed.
-inline tuple<vector<vec2i>, vector<vec3i>, vector<vec4i>, vector<int>>
-facet_elems(const vector<vec2i>& lines, const vector<vec3i>& triangles,
-    const vector<vec4i>& quads) {
-    auto verts = vector<int>();
-    auto nlines = vector<vec2i>();
-    for (auto l : lines) {
-        nlines.push_back({(int)verts.size(), (int)verts.size() + 1});
-        for (auto v : l) verts += v;
-    }
+tuple<vector<vec2i>, vector<vec3i>, vector<vec4i>, vector<int>> facet_elems(
+    const vector<vec2i>& lines, const vector<vec3i>& triangles,
+    const vector<vec4i>& quads);
 
-    auto ntriangles = vector<vec3i>();
-    for (auto t : triangles) {
-        ntriangles.push_back(
-            {(int)verts.size(), (int)verts.size() + 1, (int)verts.size() + 2});
-        for (auto v : t) verts += v;
-    }
-
-    auto nquads = vector<vec4i>();
-    for (auto q : quads) {
-        if (q.z != q.w) {
-            nquads.push_back({(int)verts.size(), (int)verts.size() + 1,
-                (int)verts.size() + 2, (int)verts.size() + 3});
-            for (auto v : q) verts += v;
-        } else {
-            nquads.push_back({(int)verts.size(), (int)verts.size() + 1,
-                (int)verts.size() + 2, (int)verts.size() + 2});
-            for (auto v : q.xyz()) verts += v;
-        }
-    }
-
-    return {nlines, ntriangles, nquads, verts};
-}
-
-/// Unshare vertices for faceting
+/// Unshare vertices for faceting. Instanced for vec and float types.
 template <typename T>
-inline vector<T> facet_vert(const vector<T>& vert, const vector<int>& vmap) {
-    if (vert.empty()) return vert;
-    auto tvert = vector<T>(vmap.size());
-    for (auto vkv : enumerate(vmap)) tvert[vkv.first] = vert[vkv.second];
-    return tvert;
-}
+vector<T> facet_vert(const vector<T>& vert, const vector<int>& vmap);
 
 }  // namespace ygl
 
