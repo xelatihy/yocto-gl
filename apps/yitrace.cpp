@@ -31,37 +31,26 @@ using namespace ygl;
 
 // Application state
 struct app_state {
-    // scene data
     scene* scn = nullptr;
-
-    // filenames
+    camera* view = nullptr;
     string filename;
     string imfilename;
-
-    // ui
     bool scene_updated = false;
     bool update_bvh = false;
-
-    // navigation
     bool navigation_fps = false;
-
-    // trace
     trace_params params;
     bool save_progressive = false;
     trace_state* state = nullptr;
     bool rendering = false;
-
-    // image view
     gl_stdimage_params imparams = {};
     gl_texture trace_texture = {};
     gl_stdimage_program gl_prog = {};
-
-    // editing support
     void* selection = nullptr;
 
     ~app_state() {
         if (state) delete state;
         if (scn) delete scn;
+        if (view) delete view;
     }
 };
 
@@ -93,7 +82,7 @@ void draw(gl_window* win) {
             edited += draw_value_widget(
                 win, "filter type", app->params.ftype, trace_filter_names());
             edited += draw_camera_widget(
-                win, "camera", app->scn, app->params.camera_id);
+                win, "camera", app->scn, app->view, app->params.camera_id);
             edited += draw_value_widget(win, "update bvh", app->update_bvh);
             draw_value_widget(win, "fps", app->navigation_fps);
         }
@@ -128,7 +117,7 @@ bool update(app_state* app) {
         pparams.nsamples = 1;
         pparams.ftype = trace_filter_type::box;
         auto preview_state = make_trace_state(pparams);
-        trace_samples(preview_state, app->scn, 1, pparams);
+        trace_samples(preview_state, app->scn, app->view, 1, pparams);
         resize_image(get_trace_image(preview_state),
             (image4f&)get_trace_image(app->state), resize_filter::box);
         update_texture(app->trace_texture, get_trace_image(app->state));
@@ -136,7 +125,7 @@ bool update(app_state* app) {
 
         app->scene_updated = false;
     } else if (!app->rendering) {
-        trace_async_start(app->state, app->scn, app->params);
+        trace_async_start(app->state, app->scn, app->view, app->params);
         app->rendering = true;
     }
     return true;
@@ -160,9 +149,10 @@ void run_ui(app_state* app) {
     // loop
     while (!should_close(win)) {
         // handle mouse and keyboard for navigation
-        auto cam = app->scn->cameras[app->params.camera_id];
-        if (handle_camera_navigation(win, cam, app->navigation_fps))
-            app->scene_updated = true;
+        if (app->params.camera_id < 0) {
+            if (handle_camera_navigation(win, app->view, app->navigation_fps))
+                app->scene_updated = true;
+        }
 
         // draw
         draw(win);
@@ -184,7 +174,6 @@ int main(int argc, char* argv[]) {
     // parse command line
     auto parser =
         make_parser(argc, argv, "yitrace", "path trace images interactively");
-    app->params.camera_id = 0;
     app->save_progressive =
         parse_flag(parser, "--save-progressive", "", "save progressive images");
     app->params.rtype = parse_opt(parser, "--random", "", "random type",
@@ -232,7 +221,15 @@ int main(int argc, char* argv[]) {
     try {
         app->scn = load_scene(app->filename);
     } catch (exception e) { log_fatal("cannot load scene {}", app->filename); }
-    add_elements(app->scn);
+
+    // add elements
+    auto opts = add_elements_options();
+    opts.pointline_radius = 0.001f;
+    add_elements(app->scn, opts);
+
+    // view camera
+    app->view = make_view_camera(app->scn, app->params.camera_id);
+    app->params.camera_id = -1;
 
     // build bvh
     log_info("building bvh");
@@ -250,7 +247,9 @@ int main(int argc, char* argv[]) {
     }
 
     // initialize rendering objects
-    auto cam = app->scn->cameras[app->params.camera_id];
+    auto cam = (app->params.camera_id < 0) ?
+                   app->view :
+                   app->scn->cameras[app->params.camera_id];
     app->params.width = (int)round(cam->aspect * app->params.height);
     app->state = make_trace_state(app->params);
     app->scene_updated = true;
