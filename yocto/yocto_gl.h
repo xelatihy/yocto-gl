@@ -1553,7 +1553,7 @@ inline vec<T, N> clamplen(const vec<T, N>& x, T1 max) {
 
 /// index and valur of minimum vector element
 template <typename T, int N>
-inline pair<int, T> min_element(const vec<T, N>& a) {
+inline int min_element(const vec<T, N>& a) {
     auto v = numeric_limits<T>::max();
     auto pos = -1;
     for (auto i = 0; i < N; i++) {
@@ -1562,12 +1562,18 @@ inline pair<int, T> min_element(const vec<T, N>& a) {
             pos = i;
         }
     }
-    return {pos, v};
+    return pos;
 }
 
 /// index and value of the maximum vector element
 template <typename T, int N>
-inline pair<int, T> max_element(const vec<T, N>& a) {
+inline T min_element_value(const vec<T, N>& a) {
+    return a[min_element(a)];
+}
+
+/// index and value of the maximum vector element
+template <typename T, int N>
+inline int max_element(const vec<T, N>& a) {
     auto v = numeric_limits<T>::lowest();
     auto pos = -1;
     for (auto i = 0; i < N; i++) {
@@ -1576,7 +1582,13 @@ inline pair<int, T> max_element(const vec<T, N>& a) {
             pos = i;
         }
     }
-    return {pos, v};
+    return pos;
+}
+
+/// index and value of the maximum vector element
+template <typename T, int N>
+inline T max_element_value(const vec<T, N>& a) {
+    return a[max_element(a)];
 }
 
 /// Element-wise conversion
@@ -6020,12 +6032,12 @@ struct thread_pool;
 
 /// Trace state. Members are not part of the public API.
 struct trace_state {
-    image4f img;                        // rendered image
-    vector<pair<vec2i, vec2i>> blocks;  // image blocks
-    vector<rng_pcg32> rngs;             // random number generators
-    thread_pool* pool = nullptr;        // thread pool
-    int sample = 0;                     // current sample
-    image4f acc, weight;                // progressive rendering buffers
+    image4f img;                  // rendered image
+    vector<vec4i> blocks;         // image blocks
+    vector<rng_pcg32> rngs;       // random number generators
+    thread_pool* pool = nullptr;  // thread pool
+    int sample = 0;               // current sample
+    image4f acc, weight;          // progressive rendering buffers
 };
 
 /// Initialize a rendering state

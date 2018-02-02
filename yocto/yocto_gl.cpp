@@ -2486,7 +2486,7 @@ void make_bvh_node(bvh_tree* bvh, int nodeid, bvh_bound_prim* sorted_prims,
             node->count = end - start;
         } else {
             // split along largest
-            auto largest_axis = max_element(centroid_size).first;
+            auto largest_axis = max_element(centroid_size);
 
             // check heuristic
             if (equalsize) {
@@ -6022,8 +6022,8 @@ inline float weight_brdfcos(
     if (!fr) return 0;
 
     // probability of each lobe
-    auto kdw = max_element(fr.kd).second, ksw = max_element(fr.ks).second,
-         ktw = max_element(fr.kt).second;
+    auto kdw = max_element_value(fr.kd), ksw = max_element_value(fr.ks),
+         ktw = max_element_value(fr.kt);
     auto kaw = kdw + ksw + ktw;
     kdw /= kaw;
     ksw /= kaw;
@@ -6117,8 +6117,8 @@ inline tuple<vec3f, bool> sample_brdfcos(
     if (!fr) return {zero3f, false};
 
     // probability of each lobe
-    auto kdw = max_element(fr.kd).second, ksw = max_element(fr.ks).second,
-         ktw = max_element(fr.kt).second;
+    auto kdw = max_element_value(fr.kd), ksw = max_element_value(fr.ks),
+         ktw = max_element_value(fr.kt);
     auto kaw = kdw + ksw + ktw;
     kdw /= kaw;
     ksw /= kaw;
@@ -6546,7 +6546,7 @@ inline vec3f eval_li_pathtrace(const scene* scn, const ray3f& ray, sampler& smp,
 
         // roussian roulette
         if (bounce > 2) {
-            auto rrprob = 1.0f - min(max_element(pt.fr.rho()).second, 0.95f);
+            auto rrprob = 1.0f - min(max_element_value(pt.fr.rho()), 0.95f);
             if (sample_next1f(smp) < rrprob) break;
             weight *= 1 / (1 - rrprob);
         }
@@ -6592,7 +6592,7 @@ inline vec3f eval_li_pathtrace_nomis(const scene* scn, const ray3f& ray,
 
         // roussian roulette
         if (bounce > 2) {
-            auto rrprob = 1.0f - min(max_element(pt.fr.rho()).second, 0.95f);
+            auto rrprob = 1.0f - min(max_element_value(pt.fr.rho()), 0.95f);
             if (sample_next1f(smp) < rrprob) break;
             weight *= 1 / (1 - rrprob);
         }
@@ -6646,7 +6646,7 @@ inline vec3f eval_li_pathtrace_hack(const scene* scn, const ray3f& ray,
 
         // roussian roulette
         if (bounce > 2) {
-            auto rrprob = 1.0f - min(max_element(pt.fr.rho()).second, 0.95f);
+            auto rrprob = 1.0f - min(max_element_value(pt.fr.rho()), 0.95f);
             if (sample_next1f(smp) < rrprob) break;
             weight *= 1 / (1 - rrprob);
         }
@@ -6865,17 +6865,17 @@ inline int get_filter_size(const trace_params& params) {
     }
 }
 
+#if 0
 // Renders a block of pixels. Public API, see above.
-inline void trace_block(const scene* scn, const camera* view, image4f& img,
-    int block_x, int block_y, int block_width, int block_height,
-    int samples_min, int samples_max, vector<rng_pcg32>& rngs,
+void trace_block(const scene* scn, const camera* view, image4f& img,
+    const vec4i& block, const vec2i& samples, vector<rng_pcg32>& rngs,
     const trace_params& params) {
     auto cam = scn->cameras[params.camera_id];
     auto shade = get_shader(params);
-    for (auto j = block_y; j < block_y + block_height; j++) {
-        for (auto i = block_x; i < block_x + block_width; i++) {
+    for (auto j = block.y; j < block.y + block.w; j++) {
+        for (auto i = block.x; i < block.x + block.z; i++) {
             auto lp = zero4f;
-            for (auto s = samples_min; s < samples_max; s++) {
+            for (auto s = samples.x; s < samples.y; s++) {
                 auto smp = make_sampler(rngs[j * params.width + i], i, j, s,
                     params.nsamples, params.rtype);
                 auto rn = sample_next2f(smp);
@@ -6892,26 +6892,27 @@ inline void trace_block(const scene* scn, const camera* view, image4f& img,
                 if (params.pixel_clamp > 0) l = clamplen(l, params.pixel_clamp);
                 lp += {l, 1};
             }
-            if (samples_min) {
-                img[{i, j}] = (img[{i, j}] * (float)samples_min + lp) /
-                              (float)samples_max;
+            if (samples.x) {
+                img[{i, j}] =
+                    (img[{i, j}] * (float)samples.x + lp) / (float)samples.y;
             } else {
-                img[{i, j}] = lp / (float)samples_max;
+                img[{i, j}] = lp / (float)samples.y;
             }
         }
     }
 }
+#endif
 
 // Trace a block of samples
-inline void trace_block(const scene* scn, const camera* view, image4f& img,
-    const vec2i& block_min, const vec2i& block_max, int samples_min,
-    int samples_max, vector<rng_pcg32>& rngs, const trace_params& params) {
+void trace_block(const scene* scn, const camera* view, image4f& img,
+    const vec4i& block, const vec2i& samples, vector<rng_pcg32>& rngs,
+    const trace_params& params) {
     auto shade = get_shader(params);
     auto cam = (params.camera_id < 0) ? view : scn->cameras[params.camera_id];
-    for (auto j = block_min.y; j < block_max.y; j++) {
-        for (auto i = block_min.x; i < block_max.x; i++) {
+    for (auto j = block.y; j < block.w; j++) {
+        for (auto i = block.x; i < block.z; i++) {
             auto lp = zero4f;
-            for (auto s = samples_min; s < samples_max; s++) {
+            for (auto s = samples.x; s < samples.y; s++) {
                 auto smp = make_sampler(rngs[j * params.width + i], i, j, s,
                     params.nsamples, params.rtype);
                 auto rn = sample_next2f(smp);
@@ -6928,20 +6929,19 @@ inline void trace_block(const scene* scn, const camera* view, image4f& img,
                 if (params.pixel_clamp > 0) l = clamplen(l, params.pixel_clamp);
                 lp += {l, 1};
             }
-            if (samples_min) {
-                img[{i, j}] = (img[{i, j}] * (float)samples_min + lp) /
-                              (float)samples_max;
+            if (samples.x) {
+                img[{i, j}] =
+                    (img[{i, j}] * (float)samples.x + lp) / (float)samples.y;
             } else {
-                img[{i, j}] = lp / (float)samples_max;
+                img[{i, j}] = lp / (float)samples.y;
             }
         }
     }
 }
 
 // Trace a block of samples
-inline void trace_block_filtered(const scene* scn, const camera* view,
-    image4f& img, image4f& acc, image4f& weight, const vec2i& block_min,
-    const vec2i& block_max, int samples_min, int samples_max,
+void trace_block_filtered(const scene* scn, const camera* view, image4f& img,
+    image4f& acc, image4f& weight, const vec4i& block, const vec2i& samples,
     vector<rng_pcg32>& rngs, std::mutex& image_mutex,
     const trace_params& params) {
     auto shade = get_shader(params);
@@ -6949,14 +6949,13 @@ inline void trace_block_filtered(const scene* scn, const camera* view,
     auto filter = get_filter(params);
     auto filter_size = get_filter_size(params);
     static constexpr const int pad = 2;
-    auto block_size =
-        vec2i{block_max.x - block_min.x, block_max.y - block_min.y};
+    auto block_size = vec2i{block.z - block.x, block.w - block.y};
     auto acc_buffer = image4f(block_size.x + pad * 2, block_size.y + pad * 2);
     auto weight_buffer =
         image4f(block_size.x + pad * 2, block_size.y + pad * 2);
-    for (auto j = block_min.y; j < block_max.y; j++) {
-        for (auto i = block_min.x; i < block_max.x; i++) {
-            for (auto s = samples_min; s < samples_max; s++) {
+    for (auto j = block.y; j < block.w; j++) {
+        for (auto i = block.x; i < block.x; i++) {
+            for (auto s = samples.x; s < samples.y; s++) {
                 auto smp = make_sampler(rngs[j * params.width + i], i, j, s,
                     params.nsamples, params.rtype);
                 auto rn = sample_next2f(smp);
@@ -6972,11 +6971,11 @@ inline void trace_block_filtered(const scene* scn, const camera* view,
                 }
                 if (params.pixel_clamp > 0) l = clamplen(l, params.pixel_clamp);
                 if (params.ftype == trace_filter_type::box) {
-                    auto bi = i - block_min.x, bj = j - block_min.y;
+                    auto bi = i - block.x, bj = j - block.y;
                     acc_buffer[{bi + pad, bj + pad}] += {l, 1};
                     weight_buffer[{bi + pad, bj + pad}] += {1, 1, 1, 1};
                 } else {
-                    auto bi = i - block_min.x, bj = j - block_min.y;
+                    auto bi = i - block.x, bj = j - block.y;
                     for (auto fj = -filter_size; fj <= filter_size; fj++) {
                         for (auto fi = -filter_size; fi <= filter_size; fi++) {
                             auto w = filter(fi - uv.x + 0.5f) *
@@ -6992,9 +6991,9 @@ inline void trace_block_filtered(const scene* scn, const camera* view,
         }
     }
     if (params.ftype == trace_filter_type::box) {
-        for (auto j = block_min.y; j < block_max.y; j++) {
-            for (auto i = block_min.x; i < block_max.x; i++) {
-                auto bi = i - block_min.x, bj = j - block_min.y;
+        for (auto j = block.y; j < block.w; j++) {
+            for (auto i = block.x; i < block.z; i++) {
+                auto bi = i - block.x, bj = j - block.y;
                 acc[{i, j}] += acc_buffer[{bi + pad, bj + pad}];
                 weight[{i, j}] += weight_buffer[{bi + pad, bj + pad}];
                 img[{i, j}] = acc[{i, j}] / weight[{i, j}];
@@ -7003,11 +7002,11 @@ inline void trace_block_filtered(const scene* scn, const camera* view,
     } else {
         std::unique_lock<std::mutex> lock_guard(image_mutex);
         auto width = acc.width(), height = acc.height();
-        for (auto j = max(block_min.y - filter_size, 0);
-             j < min(block_max.y + filter_size, height); j++) {
-            for (auto i = max(block_min.x - filter_size, 0);
-                 i < min(block_max.x + filter_size, width); i++) {
-                auto bi = i - block_min.x, bj = j - block_min.y;
+        for (auto j = max(block.y - filter_size, 0);
+             j < min(block.w + filter_size, height); j++) {
+            for (auto i = max(block.x - filter_size, 0);
+                 i < min(block.z + filter_size, width); i++) {
+                auto bi = i - block.x, bj = j - block.y;
                 acc[{i, j}] += acc_buffer[{bi + pad, bj + pad}];
                 weight[{i, j}] += weight_buffer[{bi + pad, bj + pad}];
                 img[{i, j}] = acc[{i, j}] / weight[{i, j}];
@@ -7020,20 +7019,18 @@ inline void trace_block_filtered(const scene* scn, const camera* view,
 
 // Renders a block of samples
 void trace_block(const scene* scn, const camera* view, image4f& img,
-    const vec2i& block_min, const vec2i& block_max, int samples_min,
-    int samples_max, vector<rng_pcg32>& rngs, const trace_params& params) {
-    _impl_trace::trace_block(scn, view, img, block_min, block_max, samples_min,
-        samples_max, rngs, params);
+    const vec4i& block, const vec2i& samples, vector<rng_pcg32>& rngs,
+    const trace_params& params) {
+    _impl_trace::trace_block(scn, view, img, block, samples, rngs, params);
 }
 
 // Renders a filtered block of samples
 void trace_block_filtered(const scene* scn, const camera* view, image4f& img,
-    image4f& acc, image4f& weight, const vec2i& block_min,
-    const vec2i& block_max, int samples_min, int samples_max,
+    image4f& acc, image4f& weight, const vec4i& block, const vec2i& samples,
     vector<rng_pcg32>& rngs, std::mutex& image_mutex,
     const trace_params& params) {
-    _impl_trace::trace_block_filtered(scn, view, img, acc, weight, block_min,
-        block_max, samples_min, samples_max, rngs, image_mutex, params);
+    _impl_trace::trace_block_filtered(
+        scn, view, img, acc, weight, block, samples, rngs, image_mutex, params);
 }
 
 // Trace the next samples in [samples_min, samples_max) range.
@@ -7045,33 +7042,31 @@ void trace_samples(trace_state* st, const scene* scn, const camera* view,
         if (params.ftype == trace_filter_type::box) {
             parallel_for((int)st->blocks.size(),
                 [st, scn, view, nsamples, &params](int idx) {
-                    trace_block(scn, view, st->img, st->blocks[idx].first,
-                        st->blocks[idx].second, st->sample,
-                        st->sample + nsamples, st->rngs, params);
+                    trace_block(scn, view, st->img, st->blocks[idx],
+                        {st->sample, st->sample + nsamples}, st->rngs, params);
                 });
         } else {
             std::mutex image_mutex;
             parallel_for((int)st->blocks.size(),
                 [st, scn, view, nsamples, &params, &image_mutex](int idx) {
                     trace_block_filtered(scn, view, st->img, st->acc,
-                        st->weight, st->blocks[idx].first,
-                        st->blocks[idx].second, st->sample,
-                        st->sample + nsamples, st->rngs, image_mutex, params);
+                        st->weight, st->blocks[idx],
+                        {st->sample, st->sample + nsamples}, st->rngs,
+                        image_mutex, params);
                 });
         }
     } else {
         if (params.ftype == trace_filter_type::box) {
             for (auto idx = 0; idx < (int)st->blocks.size(); idx++) {
-                trace_block(scn, view, st->img, st->blocks[idx].first,
-                    st->blocks[idx].second, st->sample, st->sample + nsamples,
-                    st->rngs, params);
+                trace_block(scn, view, st->img, st->blocks[idx],
+                    {st->sample, st->sample + nsamples}, st->rngs, params);
             }
         } else {
             std::mutex image_mutex;
             for (auto idx = 0; idx < (int)st->blocks.size(); idx++) {
                 trace_block_filtered(scn, view, st->img, st->acc, st->weight,
-                    st->blocks[idx].first, st->blocks[idx].second, st->sample,
-                    st->sample + nsamples, st->rngs, image_mutex, params);
+                    st->blocks[idx], {st->sample, st->sample + nsamples},
+                    st->rngs, image_mutex, params);
             }
         }
     }
@@ -7087,8 +7082,8 @@ void trace_async_start(trace_state* st, const scene* scn, const camera* view,
             auto is_last = (block == st->blocks.back());
             run_async(
                 st->pool, [st, scn, view, block, &params, sample, is_last]() {
-                    trace_block(scn, view, st->img, block.first, block.second,
-                        sample, sample + 1, st->rngs, params);
+                    trace_block(scn, view, st->img, block, {sample, sample + 1},
+                        st->rngs, params);
                     if (is_last) st->sample = sample;
                 });
         }
@@ -7108,9 +7103,8 @@ trace_state* make_trace_state(const trace_params& params) {
     st->img = image4f(params.width, params.height);
     for (int j = 0; j < params.height; j += params.block_size) {
         for (int i = 0; i < params.width; i += params.block_size) {
-            st->blocks +=
-                {{i, j}, {min(i + params.block_size, params.width),
-                             min(j + params.block_size, params.height)}};
+            st->blocks += {i, j, min(i + params.block_size, params.width),
+                min(j + params.block_size, params.height)};
         }
     }
     for (auto idx : range(params.width * params.height)) {
@@ -14666,7 +14660,7 @@ inline bool draw_elem_widgets(gl_window* win, scene* scn, material* mat,
     draw_separator_widget(win);
     draw_label_widget(win, "name", mat->name);
     edited += draw_value_widget(win, "type", mat->type, material_type_names());
-    auto ke_l = max_element(mat->ke).second;
+    auto ke_l = max_element_value(mat->ke);
     auto ke_c = (ke_l) ? mat->ke / ke_l : zero3f;
     edited += draw_value_widget(win, "ke l", ke_l, 0, 100);
     edited += draw_color_widget(win, "ke", ke_c);
@@ -14774,7 +14768,7 @@ inline bool draw_elem_widgets(gl_window* win, scene* scn, environment* env,
     draw_separator_widget(win);
     draw_label_widget(win, "name", env->name);
     edited += draw_value_widget(win, "frame", env->frame, 0, 0);
-    auto ke_l = max_element(env->ke).second;
+    auto ke_l = max_element_value(env->ke);
     auto ke_c = (ke_l) ? env->ke / ke_l : zero3f;
     edited += draw_value_widget(win, "ke l", ke_l, 0, 100);
     edited += draw_color_widget(win, "ke", ke_c);
