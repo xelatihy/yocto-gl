@@ -5072,8 +5072,6 @@ struct shape {
     vector<float> elem_cdf;
     /// BVH
     bvh_tree* bvh = nullptr;
-    /// bounding box (needs to be updated explicitly)
-    bbox3f bbox = invalid_bbox3f;
 
     // cleanup
     ~shape();
@@ -5087,13 +5085,6 @@ struct instance {
     frame3f frame = identity_frame3f;
     /// shape instance
     shape* shp = nullptr;
-
-    // computed data --------------------------
-    /// bounding box (needs to be updated explicitly)
-    bbox3f bbox = invalid_bbox3f;
-
-    /// instance transform as matrix
-    mat4f xform() const { return to_mat(frame); }
 };
 
 /// Scene Camera
@@ -5249,8 +5240,6 @@ struct scene {
     // computed data --------------------------
     /// BVH
     bvh_tree* bvh = nullptr;
-    /// bounding box (needs to be updated explicitly)
-    bbox3f bbox = invalid_bbox3f;
 
     // Cleanup
     ~scene();
@@ -5320,14 +5309,14 @@ vec2f compute_animation_range(const scene* scn);
 
 /// Make a view camera either copying a given one or building a default one.
 /// Bounding boxes for the scene will be updated.
-camera* make_view_camera(scene* scn, int camera_id);
+camera* make_view_camera(const scene* scn, int camera_id);
 
 /// Computes a shape bounding box (quick computation that ignores radius)
-void update_bounds(shape* shp);
-/// Updates the instance bounding box
-void update_bounds(instance* ist, bool do_shape = true);
-/// Updates the scene and scene's instances bounding boxes
-void update_bounds(scene* scn, bool do_shapes = true);
+bbox3f compute_bounds(const shape* shp);
+/// Compute the instance bounding box
+bbox3f compute_bounds(const instance* ist);
+/// Compute the scene and scene's instances bounding boxes
+bbox3f compute_bounds(const scene* scn);
 
 /// Flatten scene instances into separate meshes.
 void flatten_instances(scene* scn);

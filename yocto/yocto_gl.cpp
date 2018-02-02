@@ -79,14 +79,16 @@
 // ## BVH
 //
 // - consider merging axis with internal
+// - make BVH fully contained
+// - add BVH and scene to trace state
 //
 // ## Infrastructure
 //
-// - vec: min_element/min_element_index
+// - remove bounding boxes from scene
+// - remove lights from scene
+//    - put in state for each algorithm
 // - remove default environment
-// - animation
-//    - obj with nodes
-// - evaluate meshes with multiple shapes
+// - meshes with multiple shapes
 // - uniform serialization
 //    - consider simpler serialization code based on input flag
 //    - consider json archive model (use this to define to_son/from_from)
@@ -3527,10 +3529,9 @@ void add_elements(scene* scn, const add_elements_options& opts) {
 }
 
 // Make a view camera either copying a given one or building a default one.
-camera* make_view_camera(scene* scn, int camera_id) {
+camera* make_view_camera(const scene* scn, int camera_id) {
     if (scn->cameras.empty()) {
-        update_bounds(scn);
-        auto bbox = scn->bbox;
+        auto bbox = compute_bounds(scn);
         auto bbox_center = (bbox.max + bbox.min) / 2.0f;
         auto bbox_size = bbox.max - bbox.min;
         auto bbox_msize = max(bbox_size[0], max(bbox_size[1], bbox_size[2]));
@@ -3577,31 +3578,29 @@ void merge_into(scene* merge_into, scene* merge_from) {
 }
 
 // Computes a shape bounding box (quick computation that ignores radius)
-void update_bounds(shape* shp) {
-    shp->bbox = invalid_bbox3f;
-    for (auto p : shp->pos) shp->bbox += vec3f(p);
+bbox3f compute_bounds(const shape* shp) {
+    auto bbox = invalid_bbox3f;
+    for (auto p : shp->pos) bbox += vec3f(p);
 }
 
 // Updates the instance bounding box
-void update_bounds(instance* ist, bool do_shape) {
-    if (do_shape) update_bounds(ist->shp);
-    ist->bbox = transform_bbox(ist->frame, ist->shp->bbox);
+bbox3f compute_bounds(const instance* ist) {
+    return transform_bbox(ist->frame, compute_bounds(ist->shp));
 }
 
 // Updates the scene and scene's instances bounding boxes
-void update_bounds(scene* scn, bool do_shapes) {
-    if (do_shapes) {
-        for (auto shp : scn->shapes) update_bounds(shp);
-    }
-    scn->bbox = invalid_bbox3f;
+bbox3f compute_bounds(const scene* scn) {
+    auto shape_bboxes = unordered_map<shape*, bbox3f>();
+    for (auto shp : scn->shapes) shape_bboxes[shp] = compute_bounds(shp);
+    auto bbox = invalid_bbox3f;
     if (!scn->instances.empty()) {
         for (auto ist : scn->instances) {
-            update_bounds(ist, false);
-            scn->bbox += ist->bbox;
+            bbox += transform_bbox(ist->frame, shape_bboxes.at(ist->shp));
         }
     } else {
-        for (auto shp : scn->shapes) { scn->bbox += shp->bbox; }
+        for (auto shp : scn->shapes) bbox += shape_bboxes.at(shp);
     }
+    return bbox;
 }
 
 // Flatten scene instances into separate meshes.
@@ -3613,10 +3612,9 @@ void flatten_instances(scene* scn) {
     scn->instances.clear();
     for (auto ist : instances) {
         if (!ist->shp) continue;
-        auto xf = ist->xform();
         auto nshp = new shape(*ist->shp);
-        for (auto& p : nshp->pos) p = transform_point(xf, p);
-        for (auto& n : nshp->norm) n = transform_direction(xf, n);
+        for (auto& p : nshp->pos) p = transform_point(ist->frame, p);
+        for (auto& n : nshp->norm) n = transform_direction(ist->frame, n);
         scn->shapes.push_back(nshp);
     }
     for (auto e : shapes) delete e;
@@ -3658,23 +3656,8 @@ void update_lights(scene* scn, bool include_env, bool sampling_cdf) {
 
 // Build a shape BVH
 void build_bvh(shape* shp, float def_radius, bool equalsize) {
-    if (!shp->points.empty()) {
-        shp->bvh = build_bvh(shp->points, {}, {}, {}, shp->pos, shp->radius,
-            def_radius, equalsize);
-    } else if (!shp->lines.empty()) {
-        shp->bvh = build_bvh({}, shp->lines, {}, {}, shp->pos, shp->radius,
-            def_radius, equalsize);
-    } else if (!shp->triangles.empty()) {
-        shp->bvh = build_bvh(
-            {}, {}, shp->triangles, {}, shp->pos, {}, def_radius, equalsize);
-    } else if (!shp->quads.empty()) {
-        shp->bvh = build_bvh(
-            {}, {}, {}, shp->quads, shp->pos, {}, def_radius, equalsize);
-    } else {
-        shp->bvh = build_bvh(
-            {}, {}, {}, {}, shp->pos, shp->radius, def_radius, equalsize);
-    }
-    shp->bbox = shp->bvh->nodes[0].bbox;
+    shp->bvh = build_bvh(shp->points, shp->lines, shp->triangles, shp->quads,
+        shp->pos, shp->radius, def_radius, equalsize);
 }
 
 // Build a scene BVH
@@ -3683,10 +3666,6 @@ void build_bvh(scene* scn, bool do_shapes, float def_radius, bool equalsize) {
     if (do_shapes) {
         for (auto shp : scn->shapes) build_bvh(shp, def_radius, equalsize);
     }
-
-    // update instance bbox
-    for (auto ist : scn->instances)
-        ist->bbox = transform_bbox(ist->frame, ist->shp->bbox);
 
     // tree bvh
     auto smap = unordered_map<shape*, bvh_tree*>();
@@ -3704,18 +3683,7 @@ void build_bvh(scene* scn, bool do_shapes, float def_radius, bool equalsize) {
 
 // Refits a scene BVH
 void refit_bvh(shape* shp, float def_radius) {
-    if (!shp->points.empty()) {
-        refit_bvh(shp->bvh, shp->pos, shp->radius, def_radius);
-    } else if (!shp->lines.empty()) {
-        refit_bvh(shp->bvh, shp->pos, shp->radius, def_radius);
-    } else if (!shp->triangles.empty()) {
-        refit_bvh(shp->bvh, shp->pos, {}, def_radius);
-    } else if (!shp->quads.empty()) {
-        refit_bvh(shp->bvh, shp->pos, {}, def_radius);
-    } else {
-        refit_bvh(shp->bvh, shp->pos, shp->radius, def_radius);
-    }
-    shp->bbox = shp->bvh->nodes[0].bbox;
+    refit_bvh(shp->bvh, shp->pos, shp->radius, def_radius);
 }
 
 // Refits a scene BVH
@@ -3723,10 +3691,6 @@ void refit_bvh(scene* scn, bool do_shapes, float def_radius) {
     if (do_shapes) {
         for (auto shp : scn->shapes) refit_bvh(shp, def_radius);
     }
-
-    // update instance bbox
-    for (auto ist : scn->instances)
-        ist->bbox = transform_bbox(ist->frame, ist->shp->bbox);
 
     // recompute bvh bounds
     auto smap = unordered_map<shape*, bvh_tree*>();
@@ -3754,7 +3718,7 @@ void print_info(const scene* scn) {
         nquads += shp->quads.size();
     }
 
-    auto bbox = scn->bbox;
+    auto bbox = compute_bounds(scn);
     auto bboxc = vec3f{(bbox.max[0] + bbox.min[0]) / 2,
         (bbox.max[1] + bbox.min[1]) / 2, (bbox.max[2] + bbox.min[2]) / 2};
     auto bboxs = vec3f{bbox.max[0] - bbox.min[0], bbox.max[1] - bbox.min[1],
@@ -13925,7 +13889,7 @@ void draw_stdsurface_scene(gl_stdsurface_state* st, const scene* scn,
 
     if (!scn->instances.empty()) {
         for (auto ist : scn->instances) {
-            draw_stdsurface_shape(st, ist->shp, ist->xform(),
+            draw_stdsurface_shape(st, ist->shp, to_mat(ist->frame),
                 (ist == params.highlighted || ist->shp == params.highlighted),
                 params);
         }
