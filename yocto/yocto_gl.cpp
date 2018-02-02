@@ -2444,6 +2444,9 @@ struct bvh_bound_prim_comp {
     }
 };
 
+// number of primitives to avoid splitting on
+const int bvh_minprims = 4;
+
 // Initializes the BVH node node that contains the primitives sorted_prims
 // from start to end, by either splitting it into two other nodes,
 // or initializing it as a leaf. When splitting, the heuristic heuristic is

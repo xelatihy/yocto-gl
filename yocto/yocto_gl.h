@@ -4789,9 +4789,6 @@ bool overlap_bbox(const bbox3f& bbox1, const bbox3f& bbox2);
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-// number of primitives to avoid splitting on
-const int bvh_minprims = 4;
-
 /// Type of BVH node
 enum struct bvh_node_type : uint32_t {
     /// internal
