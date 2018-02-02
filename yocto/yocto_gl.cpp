@@ -80,10 +80,7 @@
 //
 // - remove python operators
 // - remove all internal namespaces
-//    - scene
-//    - trace
-//    - obj
-//    - gltf
+//    - trace: better names
 //
 // ## Infrastructure
 //
@@ -242,7 +239,6 @@ void camera_fps(frame3f& frame, const vec3f& transl, const vec2f& rotate) {
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-namespace __impl_perlin {
 // clang-format off
 // not same permutation table as Perlin's reference to avoid copyright issues;
 // Perlin's table can be found at http://mrl.nyu.edu/~perlin/noise/
@@ -440,32 +436,29 @@ float stb_perlin_turbulence_noise3(float x, float y, float z, float lacunarity, 
 }
 // clang-format on
 
-}  // namespace __impl_perlin
-
 // adapeted  stb_perlin.h
 float perlin_noise(const vec3f& p, const vec3i& wrap) {
-    return __impl_perlin::stb_perlin_noise3(
-        p.x, p.y, p.z, wrap.x, wrap.y, wrap.z);
+    return stb_perlin_noise3(p.x, p.y, p.z, wrap.x, wrap.y, wrap.z);
 }
 
 // adapeted  stb_perlin.h
 float perlin_ridge_noise(const vec3f& p, float lacunarity, float gain,
     float offset, int octaves, const vec3i& wrap) {
-    return __impl_perlin::stb_perlin_ridge_noise3(p.x, p.y, p.z, lacunarity,
-        gain, offset, octaves, wrap.x, wrap.y, wrap.z);
+    return stb_perlin_ridge_noise3(p.x, p.y, p.z, lacunarity, gain, offset,
+        octaves, wrap.x, wrap.y, wrap.z);
 }
 
 // adapeted  stb_perlin.h
 float perlin_fbm_noise(const vec3f& p, float lacunarity, float gain,
     int octaves, const vec3i& wrap) {
-    return __impl_perlin::stb_perlin_fbm_noise3(
+    return stb_perlin_fbm_noise3(
         p.x, p.y, p.z, lacunarity, gain, octaves, wrap.x, wrap.y, wrap.z);
 }
 
 // adapeted  stb_perlin.h
 float perlin_turbulence_noise(const vec3f& p, float lacunarity, float gain,
     int octaves, const vec3i& wrap) {
-    return __impl_perlin::stb_perlin_turbulence_noise3(
+    return stb_perlin_turbulence_noise3(
         p.x, p.y, p.z, lacunarity, gain, octaves, wrap.x, wrap.y, wrap.z);
 }
 
@@ -3787,7 +3780,7 @@ scene* obj_to_scene(const obj_scene* obj, const load_options& opts) {
     // clear scene
     auto scn = new scene();
 
-    struct obj_vertex_hash {
+    struct obj_obj_vertex_hash {
         std::hash<int> Th;
         size_t operator()(const obj_vertex& vv) const {
             auto v = (const int*)&vv;
@@ -3969,7 +3962,7 @@ scene* obj_to_scene(const obj_scene* obj, const load_options& opts) {
 
             if (!as_facevarying) {
                 // insert all vertices
-                unordered_map<obj_vertex, int, obj_vertex_hash> vert_map;
+                unordered_map<obj_vertex, int, obj_obj_vertex_hash> vert_map;
                 vector<int> vert_ids;
                 for (auto& vert : oshp.verts) {
                     if (vert_map.find(vert) == vert_map.end()) {
@@ -5624,8 +5617,6 @@ void save_scene(
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-namespace _impl_trace {
-
 // Phong exponent to roughness. Public API, see above.
 inline float specular_exponent_to_roughness(float n) {
     return sqrtf(2 / (n + 2));
@@ -7019,22 +7010,6 @@ void trace_block_filtered(trace_state* st, const vec4i& block,
     }
 }
 
-}  // namespace _impl_trace
-
-// Renders a block of samples
-void trace_block(trace_state* st, const vec4i& block, const vec2i& samples,
-    vector<rng_pcg32>& rngs, const trace_params& params) {
-    _impl_trace::trace_block(st, block, samples, rngs, params);
-}
-
-// Renders a filtered block of samples
-void trace_block_filtered(trace_state* st, const vec4i& block,
-    const vec2i& samples, vector<rng_pcg32>& rngs, std::mutex& image_mutex,
-    const trace_params& params) {
-    _impl_trace::trace_block_filtered(
-        st, block, samples, rngs, image_mutex, params);
-}
-
 // Trace the next samples in [samples_min, samples_max) range.
 // Samples have to be traced consecutively.
 void trace_samples(trace_state* st, int nsamples, const trace_params& params) {
@@ -7126,16 +7101,14 @@ trace_state* make_trace_state(const scene* scn, const camera* view,
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-namespace _impl_obj {
-
 // Parse a value
 template <typename T>
-inline void parse_val(stringstream& ss, T& v) {
+inline void obj_parse_val(stringstream& ss, T& v) {
     ss >> v;
 }
 
 // Parse a value
-inline void parse_val(stringstream& ss, string& v) {
+inline void obj_parse_val(stringstream& ss, string& v) {
     ss >> v;
     if (v.length() == 0) return;
     if ((v.front() == '"' && v.back() == '"') ||
@@ -7147,23 +7120,23 @@ inline void parse_val(stringstream& ss, string& v) {
 
 // Parse a value
 template <typename T, int N>
-inline void parse_val(stringstream& ss, vec<T, N>& v) {
-    for (auto i = 0; i < N; i++) parse_val(ss, v[i]);
+inline void obj_parse_val(stringstream& ss, vec<T, N>& v) {
+    for (auto i = 0; i < N; i++) obj_parse_val(ss, v[i]);
 }
 
 // Parse a value
 template <typename T, int N>
-inline void parse_val(stringstream& ss, quat<T, N>& v) {
-    for (auto i = 0; i < N; i++) parse_val(ss, v[i]);
+inline void obj_parse_val(stringstream& ss, quat<T, N>& v) {
+    for (auto i = 0; i < N; i++) obj_parse_val(ss, v[i]);
 }
 
 // Parse a value
 template <typename T>
-inline void parse_val(stringstream& ss, frame<T, 3>& v) {
-    parse_val(ss, v.x);
-    parse_val(ss, v.y);
-    parse_val(ss, v.z);
-    parse_val(ss, v.o);
+inline void obj_parse_val(stringstream& ss, frame<T, 3>& v) {
+    obj_parse_val(ss, v.x);
+    obj_parse_val(ss, v.y);
+    obj_parse_val(ss, v.z);
+    obj_parse_val(ss, v.o);
 }
 
 // Parse texture options and name
@@ -7257,23 +7230,23 @@ inline vector<obj_material*> load_mtl(
         // possible token values
         if (cmd == "newmtl") {
             materials.push_back(new obj_material());
-            parse_val(ss, materials.back()->name);
+            obj_parse_val(ss, materials.back()->name);
         } else if (cmd == "illum") {
-            parse_val(ss, materials.back()->illum);
+            obj_parse_val(ss, materials.back()->illum);
         } else if (cmd == "Ke") {
-            parse_val(ss, materials.back()->ke);
+            obj_parse_val(ss, materials.back()->ke);
         } else if (cmd == "Ka") {
-            parse_val(ss, materials.back()->ka);
+            obj_parse_val(ss, materials.back()->ka);
         } else if (cmd == "Kd") {
-            parse_val(ss, materials.back()->kd);
+            obj_parse_val(ss, materials.back()->kd);
         } else if (cmd == "Ks") {
-            parse_val(ss, materials.back()->ks);
+            obj_parse_val(ss, materials.back()->ks);
         } else if (cmd == "Kr") {
-            parse_val(ss, materials.back()->kr);
+            obj_parse_val(ss, materials.back()->kr);
         } else if (cmd == "Kt" || cmd == "Tf") {
             auto vals = zero3f;
             auto ntok = 0;
-            while (ss) parse_val(ss, vals[ntok++]);
+            while (ss) obj_parse_val(ss, vals[ntok++]);
             if (ntok >= 3)
                 materials.back()->kt = vals;
             else
@@ -7281,17 +7254,17 @@ inline vector<obj_material*> load_mtl(
         } else if (cmd == "Tr") {
             auto vals = zero3f;
             auto ntok = 0;
-            while (ss) parse_val(ss, vals[ntok++]);
+            while (ss) obj_parse_val(ss, vals[ntok++]);
             if (ntok >= 3)
                 materials.back()->kt = vals;
             else
                 materials.back()->op = (flip_tr) ? 1 - vals.x : vals.x;
         } else if (cmd == "Ns") {
-            parse_val(ss, materials.back()->ns);
+            obj_parse_val(ss, materials.back()->ns);
         } else if (cmd == "d") {
-            parse_val(ss, materials.back()->op);
+            obj_parse_val(ss, materials.back()->op);
         } else if (cmd == "Ni") {
-            parse_val(ss, materials.back()->ior);
+            obj_parse_val(ss, materials.back()->ior);
         } else if (cmd == "map_Ke") {
             parse_texture(ss, materials.back()->ke_txt, textures, texture_set);
         } else if (cmd == "map_Ka") {
@@ -7323,7 +7296,7 @@ inline vector<obj_material*> load_mtl(
             // copy into strings
             while (ss) {
                 materials.back()->unknown_props[cmd].push_back({});
-                parse_val(ss, materials.back()->unknown_props[cmd].back());
+                obj_parse_val(ss, materials.back()->unknown_props[cmd].back());
             }
         }
     }
@@ -7359,12 +7332,12 @@ inline void load_textures(
 }
 
 // Parses an OBJ vertex list. Handles negative values.
-inline void parse_vertlist(
+inline void obj_parse_vertlist(
     stringstream& ss, vector<obj_vertex>& elems, const obj_vertex& vert_size) {
     elems.clear();
     while (true) {
         auto tok = string();
-        parse_val(ss, tok);
+        obj_parse_val(ss, tok);
         if (tok.empty()) break;
         auto toks = split(tok, "/");
         if (toks.empty()) break;
@@ -7420,76 +7393,76 @@ inline obj_scene* load_obj(const string& filename, bool load_txt,
         if (cmd == "v") {
             vert_size.pos += 1;
             asset->pos.push_back({});
-            parse_val(ss, asset->pos.back());
+            obj_parse_val(ss, asset->pos.back());
         } else if (cmd == "vn") {
             vert_size.norm += 1;
             asset->norm.push_back({});
-            parse_val(ss, asset->norm.back());
+            obj_parse_val(ss, asset->norm.back());
         } else if (cmd == "vt") {
             vert_size.texcoord += 1;
             asset->texcoord.push_back({});
-            parse_val(ss, asset->texcoord.back());
+            obj_parse_val(ss, asset->texcoord.back());
             if (flip_texcoord)
                 asset->texcoord.back().y = 1 - asset->texcoord.back().y;
         } else if (cmd == "vc") {
             vert_size.color += 1;
             asset->color.push_back({});
-            parse_val(ss, asset->color.back());
+            obj_parse_val(ss, asset->color.back());
         } else if (cmd == "vr") {
             vert_size.radius += 1;
             asset->radius.push_back({});
-            parse_val(ss, asset->radius.back());
+            obj_parse_val(ss, asset->radius.back());
         } else if (cmd == "f") {
-            parse_vertlist(ss, cur_elems, vert_size);
+            obj_parse_vertlist(ss, cur_elems, vert_size);
             auto& g = asset->objects.back()->groups.back();
             g.elems.push_back({(uint32_t)g.verts.size(), obj_element_type::face,
                 (uint16_t)cur_elems.size()});
             g.verts.insert(g.verts.end(), cur_elems.begin(), cur_elems.end());
         } else if (cmd == "l") {
-            parse_vertlist(ss, cur_elems, vert_size);
+            obj_parse_vertlist(ss, cur_elems, vert_size);
             auto& g = asset->objects.back()->groups.back();
             g.elems.push_back({(uint32_t)g.verts.size(), obj_element_type::line,
                 (uint16_t)cur_elems.size()});
             g.verts.insert(g.verts.end(), cur_elems.begin(), cur_elems.end());
         } else if (cmd == "p") {
-            parse_vertlist(ss, cur_elems, vert_size);
+            obj_parse_vertlist(ss, cur_elems, vert_size);
             auto& g = asset->objects.back()->groups.back();
             g.elems.push_back({(uint32_t)g.verts.size(),
                 obj_element_type::point, (uint16_t)cur_elems.size()});
             g.verts.insert(g.verts.end(), cur_elems.begin(), cur_elems.end());
         } else if (cmd == "b") {
-            parse_vertlist(ss, cur_elems, vert_size);
+            obj_parse_vertlist(ss, cur_elems, vert_size);
             auto& g = asset->objects.back()->groups.back();
             g.elems.push_back({(uint32_t)g.verts.size(),
                 obj_element_type::bezier, (uint16_t)cur_elems.size()});
             g.verts.insert(g.verts.end(), cur_elems.begin(), cur_elems.end());
         } else if (cmd == "t") {
-            parse_vertlist(ss, cur_elems, vert_size);
+            obj_parse_vertlist(ss, cur_elems, vert_size);
             auto& g = asset->objects.back()->groups.back();
             g.elems.push_back({(uint32_t)g.verts.size(),
                 obj_element_type::tetra, (uint16_t)cur_elems.size()});
             g.verts.insert(g.verts.end(), cur_elems.begin(), cur_elems.end());
         } else if (cmd == "o") {
             auto name = string();
-            parse_val(ss, name);
+            obj_parse_val(ss, name);
             asset->objects.push_back(new obj_object{name, {}});
             asset->objects.back()->groups.push_back({});
             asset->objects.back()->groups.back().matname = cur_matname;
         } else if (cmd == "usemtl") {
             auto name = string();
-            parse_val(ss, name);
+            obj_parse_val(ss, name);
             cur_matname = name;
             asset->objects.back()->groups.push_back({});
             asset->objects.back()->groups.back().matname = cur_matname;
         } else if (cmd == "g") {
             auto name = string();
-            parse_val(ss, name);
+            obj_parse_val(ss, name);
             asset->objects.back()->groups.push_back({});
             asset->objects.back()->groups.back().matname = cur_matname;
             asset->objects.back()->groups.back().groupname = name;
         } else if (cmd == "s") {
             auto name = string();
-            parse_val(ss, name);
+            obj_parse_val(ss, name);
             auto smoothing = (name == "on");
             if (asset->objects.back()->groups.empty()) {
                 asset->objects.back()->groups.push_back({});
@@ -7505,7 +7478,7 @@ inline obj_scene* load_obj(const string& filename, bool load_txt,
             }
         } else if (cmd == "sl") {
             auto subdiv = zero2i;
-            parse_val(ss, subdiv);
+            obj_parse_val(ss, subdiv);
             if (asset->objects.back()->groups.empty()) {
                 asset->objects.back()->groups.push_back({});
                 asset->objects.back()->groups.back().matname = cur_matname;
@@ -7515,7 +7488,7 @@ inline obj_scene* load_obj(const string& filename, bool load_txt,
                 (bool)subdiv.y;
         } else if (cmd == "mtllib") {
             auto name = string();
-            parse_val(ss, name);
+            obj_parse_val(ss, name);
             if (name != string("")) {
                 auto found = false;
                 for (auto lib : cur_mtllibs) {
@@ -7528,31 +7501,31 @@ inline obj_scene* load_obj(const string& filename, bool load_txt,
             }
         } else if (cmd == "c") {
             auto cam = new obj_camera();
-            parse_val(ss, cam->name);
-            parse_val(ss, cam->ortho);
-            parse_val(ss, cam->yfov);
-            parse_val(ss, cam->aspect);
-            parse_val(ss, cam->aperture);
-            parse_val(ss, cam->focus);
-            parse_val(ss, cam->frame);
+            obj_parse_val(ss, cam->name);
+            obj_parse_val(ss, cam->ortho);
+            obj_parse_val(ss, cam->yfov);
+            obj_parse_val(ss, cam->aspect);
+            obj_parse_val(ss, cam->aperture);
+            obj_parse_val(ss, cam->focus);
+            obj_parse_val(ss, cam->frame);
             asset->cameras.push_back(cam);
         } else if (cmd == "e") {
             auto env = new obj_environment();
-            parse_val(ss, env->name);
-            parse_val(ss, env->matname);
-            parse_val(ss, env->frame);
+            obj_parse_val(ss, env->name);
+            obj_parse_val(ss, env->matname);
+            obj_parse_val(ss, env->frame);
             asset->environments.push_back(env);
         } else if (cmd == "n") {
             auto nde = new obj_node();
-            parse_val(ss, nde->name);
-            parse_val(ss, nde->parent);
-            parse_val(ss, nde->camname);
-            parse_val(ss, nde->objname);
-            parse_val(ss, nde->envname);
-            parse_val(ss, nde->frame);
-            parse_val(ss, nde->translation);
-            parse_val(ss, nde->rotation);
-            parse_val(ss, nde->scaling);
+            obj_parse_val(ss, nde->name);
+            obj_parse_val(ss, nde->parent);
+            obj_parse_val(ss, nde->camname);
+            obj_parse_val(ss, nde->objname);
+            obj_parse_val(ss, nde->envname);
+            obj_parse_val(ss, nde->frame);
+            obj_parse_val(ss, nde->translation);
+            obj_parse_val(ss, nde->rotation);
+            obj_parse_val(ss, nde->scaling);
             asset->nodes.push_back(nde);
         } else {
             // unused
@@ -7596,71 +7569,71 @@ inline obj_scene* load_obj(const string& filename, bool load_txt,
 
 // write to stream
 template <typename T>
-inline void dump_val(fstream& fs, const T& v) {
+inline void obj_dump_val(fstream& fs, const T& v) {
     fs << v;
 }
 
 // write to stream
 template <typename T, int N>
-inline void dump_val(fstream& fs, const vec<T, N>& v) {
+inline void obj_dump_val(fstream& fs, const vec<T, N>& v) {
     for (auto i = 0; i < N; i++) {
         if (i) fs << ' ';
-        dump_val(fs, v[i]);
+        obj_dump_val(fs, v[i]);
     }
 }
 
 // write to stream
 template <typename T, int N>
-inline void dump_val(fstream& fs, const quat<T, N>& v) {
+inline void obj_dump_val(fstream& fs, const quat<T, N>& v) {
     for (auto i = 0; i < N; i++) {
         if (i) fs << ' ';
-        dump_val(fs, v[i]);
+        obj_dump_val(fs, v[i]);
     }
 }
 
 // write to stream
 template <typename T>
-inline void dump_val(fstream& fs, const frame<T, 3>& v) {
-    dump_val(fs, v.x);
+inline void obj_dump_val(fstream& fs, const frame<T, 3>& v) {
+    obj_dump_val(fs, v.x);
     fs << ' ';
-    dump_val(fs, v.y);
+    obj_dump_val(fs, v.y);
     fs << ' ';
-    dump_val(fs, v.z);
+    obj_dump_val(fs, v.z);
     fs << ' ';
-    dump_val(fs, v.o);
+    obj_dump_val(fs, v.o);
 }
 
 // write to stream
-inline void dump_val(fstream& fs, const obj_texture_info& v) {
+inline void obj_dump_val(fstream& fs, const obj_texture_info& v) {
     for (auto&& kv : v.unknown_props) {
-        dump_val(fs, kv.first + " ");
-        for (auto&& vv : kv.second) dump_val(fs, vv + " ");
+        obj_dump_val(fs, kv.first + " ");
+        for (auto&& vv : kv.second) obj_dump_val(fs, vv + " ");
     }
-    if (v.clamp) dump_val(fs, "-clamp on ");
-    dump_val(fs, v.path);
+    if (v.clamp) obj_dump_val(fs, "-clamp on ");
+    obj_dump_val(fs, v.path);
 }
 
 // write to stream
 template <typename T>
-inline void dump_named_val(fstream& fs, const string& name, const T& v) {
-    dump_val(fs, name);
+inline void obj_dump_named_val(fstream& fs, const string& name, const T& v) {
+    obj_dump_val(fs, name);
     fs << ' ';
-    dump_val(fs, v);
+    obj_dump_val(fs, v);
     fs << '\n';
 }
 
 // write to stream
 template <typename T>
-inline void dump_opt_val(
+inline void obj_dump_opt_val(
     fstream& fs, const string& name, const T& v, const T& def = {}) {
     if (v == def) return;
-    dump_named_val(fs, name, v);
+    obj_dump_named_val(fs, name, v);
 }
 
 // write an OBJ vertex triplet using only the indices that are active
-inline void dump_objverts(
+inline void obj_dump_objverts(
     fstream& fs, const char* str, int nv, const obj_vertex* verts) {
-    dump_val(fs, str);
+    obj_dump_val(fs, str);
     for (auto v = 0; v < nv; v++) {
         auto& vert = verts[v];
         auto vert_ptr = &vert.pos;
@@ -7670,14 +7643,14 @@ inline void dump_objverts(
         }
         for (auto i = 0; i < nto_write; i++) {
             if (vert_ptr[i] >= 0) {
-                dump_val(fs, ((i == 0) ? ' ' : '/'));
-                dump_val(fs, vert_ptr[i] + 1);
+                obj_dump_val(fs, ((i == 0) ? ' ' : '/'));
+                obj_dump_val(fs, vert_ptr[i] + 1);
             } else {
-                dump_val(fs, '/');
+                obj_dump_val(fs, '/');
             }
         }
     }
-    dump_val(fs, "\n");
+    obj_dump_val(fs, "\n");
 }
 
 // Save an MTL file
@@ -7690,38 +7663,38 @@ inline void save_mtl(const string& filename,
 
     // for each material, dump all the values
     for (auto mat : materials) {
-        dump_named_val(fs, "newmtl", mat->name);
-        dump_named_val(fs, "  illum", mat->illum);
-        dump_opt_val(fs, "  Ke", mat->ke);
-        dump_opt_val(fs, "  Ka", mat->ka);
-        dump_opt_val(fs, "  Kd", mat->kd);
-        dump_opt_val(fs, "  Ks", mat->ks);
-        dump_opt_val(fs, "  Kr", mat->kr);
-        dump_opt_val(fs, "  Tf", mat->kt);
-        dump_opt_val(fs, "  Ns", mat->ns, 0.0f);
-        dump_opt_val(fs, "  d", mat->op, 1.0f);
-        dump_opt_val(fs, "  Ni", mat->ior, 1.0f);
-        dump_opt_val(fs, "  map_Ke", mat->ke_txt);
-        dump_opt_val(fs, "  map_Ka", mat->ka_txt);
-        dump_opt_val(fs, "  map_Kd", mat->kd_txt);
-        dump_opt_val(fs, "  map_Ks", mat->ks_txt);
-        dump_opt_val(fs, "  map_Kr", mat->kr_txt);
-        dump_opt_val(fs, "  map_Kt", mat->kt_txt);
-        dump_opt_val(fs, "  map_Ns", mat->ns_txt);
-        dump_opt_val(fs, "  map_d", mat->op_txt);
-        dump_opt_val(fs, "  map_Ni", mat->ior_txt);
-        dump_opt_val(fs, "  map_bump", mat->bump_txt);
-        dump_opt_val(fs, "  map_disp", mat->disp_txt);
-        dump_opt_val(fs, "  map_norm", mat->norm_txt);
+        obj_dump_named_val(fs, "newmtl", mat->name);
+        obj_dump_named_val(fs, "  illum", mat->illum);
+        obj_dump_opt_val(fs, "  Ke", mat->ke);
+        obj_dump_opt_val(fs, "  Ka", mat->ka);
+        obj_dump_opt_val(fs, "  Kd", mat->kd);
+        obj_dump_opt_val(fs, "  Ks", mat->ks);
+        obj_dump_opt_val(fs, "  Kr", mat->kr);
+        obj_dump_opt_val(fs, "  Tf", mat->kt);
+        obj_dump_opt_val(fs, "  Ns", mat->ns, 0.0f);
+        obj_dump_opt_val(fs, "  d", mat->op, 1.0f);
+        obj_dump_opt_val(fs, "  Ni", mat->ior, 1.0f);
+        obj_dump_opt_val(fs, "  map_Ke", mat->ke_txt);
+        obj_dump_opt_val(fs, "  map_Ka", mat->ka_txt);
+        obj_dump_opt_val(fs, "  map_Kd", mat->kd_txt);
+        obj_dump_opt_val(fs, "  map_Ks", mat->ks_txt);
+        obj_dump_opt_val(fs, "  map_Kr", mat->kr_txt);
+        obj_dump_opt_val(fs, "  map_Kt", mat->kt_txt);
+        obj_dump_opt_val(fs, "  map_Ns", mat->ns_txt);
+        obj_dump_opt_val(fs, "  map_d", mat->op_txt);
+        obj_dump_opt_val(fs, "  map_Ni", mat->ior_txt);
+        obj_dump_opt_val(fs, "  map_bump", mat->bump_txt);
+        obj_dump_opt_val(fs, "  map_disp", mat->disp_txt);
+        obj_dump_opt_val(fs, "  map_norm", mat->norm_txt);
         for (auto&& kv : mat->unknown_props) {
-            dump_val(fs, kv.first);
+            obj_dump_val(fs, kv.first);
             for (auto&& v : kv.second) {
-                dump_val(fs, " ");
-                dump_val(fs, v);
+                obj_dump_val(fs, " ");
+                obj_dump_val(fs, v);
             }
-            dump_val(fs, "\n");
+            obj_dump_val(fs, "\n");
         }
-        dump_val(fs, "\n");
+        obj_dump_val(fs, "\n");
     }
 }
 
@@ -7764,73 +7737,76 @@ inline void save_obj(const string& filename, const obj_scene* asset,
     auto basename = filename.substr(dirname.length());
     basename = basename.substr(0, basename.length() - 4);
     if (!asset->materials.empty()) {
-        dump_named_val(fs, "mtllib", basename + ".mtl");
+        obj_dump_named_val(fs, "mtllib", basename + ".mtl");
     }
 
     // save cameras
     for (auto cam : asset->cameras) {
-        dump_val(fs, "c ");
-        dump_val(fs, cam->name);
-        dump_val(fs, " ");
-        dump_val(fs, cam->ortho);
-        dump_val(fs, " ");
-        dump_val(fs, cam->yfov);
-        dump_val(fs, " ");
-        dump_val(fs, cam->aspect);
-        dump_val(fs, " ");
-        dump_val(fs, cam->aperture);
-        dump_val(fs, " ");
-        dump_val(fs, cam->focus);
-        dump_val(fs, " ");
-        dump_val(fs, cam->frame);
-        dump_val(fs, "\n");
+        obj_dump_val(fs, "c ");
+        obj_dump_val(fs, cam->name);
+        obj_dump_val(fs, " ");
+        obj_dump_val(fs, cam->ortho);
+        obj_dump_val(fs, " ");
+        obj_dump_val(fs, cam->yfov);
+        obj_dump_val(fs, " ");
+        obj_dump_val(fs, cam->aspect);
+        obj_dump_val(fs, " ");
+        obj_dump_val(fs, cam->aperture);
+        obj_dump_val(fs, " ");
+        obj_dump_val(fs, cam->focus);
+        obj_dump_val(fs, " ");
+        obj_dump_val(fs, cam->frame);
+        obj_dump_val(fs, "\n");
     }
 
     // save envs
     for (auto env : asset->environments) {
-        dump_val(fs, "e ");
-        dump_val(fs, env->name);
-        dump_val(fs, " ");
-        dump_val(fs, env->matname);
-        dump_val(fs, " ");
-        dump_val(fs, env->frame);
-        dump_val(fs, "\n");
+        obj_dump_val(fs, "e ");
+        obj_dump_val(fs, env->name);
+        obj_dump_val(fs, " ");
+        obj_dump_val(fs, env->matname);
+        obj_dump_val(fs, " ");
+        obj_dump_val(fs, env->frame);
+        obj_dump_val(fs, "\n");
     }
 
     // save nodes
     for (auto nde : asset->nodes) {
-        dump_val(fs, "n ");
-        dump_val(fs, nde->name);
-        dump_val(fs, " ");
-        dump_val(fs, (nde->parent.empty()) ? string("\"\"") : nde->parent);
-        dump_val(fs, " ");
-        dump_val(fs, (nde->camname.empty()) ? string("\"\"") : nde->camname);
-        dump_val(fs, " ");
-        dump_val(fs, (nde->objname.empty()) ? string("\"\"") : nde->objname);
-        dump_val(fs, " ");
-        dump_val(fs, (nde->envname.empty()) ? string("\"\"") : nde->envname);
-        dump_val(fs, " ");
-        dump_val(fs, nde->frame);
-        dump_val(fs, " ");
-        dump_val(fs, nde->translation);
-        dump_val(fs, " ");
-        dump_val(fs, nde->rotation);
-        dump_val(fs, " ");
-        dump_val(fs, nde->scaling);
-        dump_val(fs, "\n");
+        obj_dump_val(fs, "n ");
+        obj_dump_val(fs, nde->name);
+        obj_dump_val(fs, " ");
+        obj_dump_val(fs, (nde->parent.empty()) ? string("\"\"") : nde->parent);
+        obj_dump_val(fs, " ");
+        obj_dump_val(
+            fs, (nde->camname.empty()) ? string("\"\"") : nde->camname);
+        obj_dump_val(fs, " ");
+        obj_dump_val(
+            fs, (nde->objname.empty()) ? string("\"\"") : nde->objname);
+        obj_dump_val(fs, " ");
+        obj_dump_val(
+            fs, (nde->envname.empty()) ? string("\"\"") : nde->envname);
+        obj_dump_val(fs, " ");
+        obj_dump_val(fs, nde->frame);
+        obj_dump_val(fs, " ");
+        obj_dump_val(fs, nde->translation);
+        obj_dump_val(fs, " ");
+        obj_dump_val(fs, nde->rotation);
+        obj_dump_val(fs, " ");
+        obj_dump_val(fs, nde->scaling);
+        obj_dump_val(fs, "\n");
     }
 
     // save all vertex data
-    for (auto& v : asset->pos) dump_named_val(fs, "v", v);
+    for (auto& v : asset->pos) obj_dump_named_val(fs, "v", v);
     if (flip_texcoord) {
         for (auto& v : asset->texcoord)
-            dump_named_val(fs, "vt", vec2f{v.x, 1 - v.y});
+            obj_dump_named_val(fs, "vt", vec2f{v.x, 1 - v.y});
     } else {
-        for (auto& v : asset->texcoord) dump_named_val(fs, "vt", v);
+        for (auto& v : asset->texcoord) obj_dump_named_val(fs, "vt", v);
     }
-    for (auto& v : asset->norm) dump_named_val(fs, "vn", v);
-    for (auto& v : asset->color) dump_named_val(fs, "vc", v);
-    for (auto& v : asset->radius) dump_named_val(fs, "vr", v);
+    for (auto& v : asset->norm) obj_dump_named_val(fs, "vn", v);
+    for (auto& v : asset->color) obj_dump_named_val(fs, "vc", v);
+    for (auto& v : asset->radius) obj_dump_named_val(fs, "vr", v);
 
     // save element data
     static auto elem_labels =
@@ -7838,15 +7814,15 @@ inline void save_obj(const string& filename, const obj_scene* asset,
             {obj_element_type::line, "l"}, {obj_element_type::face, "f"},
             {obj_element_type::bezier, "b"}, {obj_element_type::tetra, "t"}};
     for (auto object : asset->objects) {
-        dump_named_val(fs, "o", object->name);
+        obj_dump_named_val(fs, "o", object->name);
         for (auto& group : object->groups) {
-            dump_opt_val(fs, "usemtl", group.matname);
-            dump_opt_val(fs, "g", group.groupname);
-            if (!group.smoothing) dump_named_val(fs, "s", "off");
+            obj_dump_opt_val(fs, "usemtl", group.matname);
+            obj_dump_opt_val(fs, "g", group.groupname);
+            if (!group.smoothing) obj_dump_named_val(fs, "s", "off");
             if (group.subdivision_level) {
                 auto sl = vec2i{group.subdivision_level,
                     (group.subdivision_catmullclark) ? 1 : 0};
-                dump_named_val(fs, "sl", sl);
+                obj_dump_named_val(fs, "sl", sl);
             }
             for (auto elem : group.elems) {
                 auto lbl = "";
@@ -7858,7 +7834,7 @@ inline void save_obj(const string& filename, const obj_scene* asset,
                     case obj_element_type::tetra: lbl = "t"; break;
                     default: throw runtime_error("should not have gotten here");
                 }
-                dump_objverts(
+                obj_dump_objverts(
                     fs, lbl, elem.size, group.verts.data() + elem.start);
             }
         }
@@ -7873,7 +7849,7 @@ inline void save_obj(const string& filename, const obj_scene* asset,
 }
 
 // A hash function for vecs
-struct vertex_hash {
+struct obj_vertex_hash {
     std::hash<int> Th;
     size_t operator()(const obj_vertex& vv) const {
         auto v = (const int*)&vv;
@@ -7901,7 +7877,7 @@ inline obj_mesh* get_mesh(
         prim->matname = group.matname;
 
         // insert all vertices
-        unordered_map<obj_vertex, int, vertex_hash> vert_map;
+        unordered_map<obj_vertex, int, obj_vertex_hash> vert_map;
         vector<int> vert_ids;
         // vert_map.clear();
         // vert_ids.clear();
@@ -8032,28 +8008,6 @@ inline obj_mesh* get_mesh(
 
     // done
     return msh;
-}
-
-}  // namespace _impl_obj
-
-// Loads an OBJ
-obj_scene* load_obj(const string& filename, bool load_txt, bool skip_missing,
-    bool flip_texcoord, bool flip_tr) {
-    return _impl_obj::load_obj(
-        filename, load_txt, skip_missing, flip_texcoord, flip_tr);
-}
-
-// Save an OBJ
-void save_obj(const string& filename, const obj_scene* asset, bool save_txt,
-    bool skip_missing, bool flip_texcoord, bool flip_tr) {
-    _impl_obj::save_obj(
-        filename, asset, save_txt, skip_missing, flip_texcoord, flip_tr);
-}
-
-// Flattens an scene
-obj_mesh* get_mesh(
-    const obj_scene* model, const obj_object& oshape, bool facet_non_smooth) {
-    return _impl_obj::get_mesh(model, oshape, facet_non_smooth);
 }
 
 }  // namespace ygl
@@ -9437,31 +9391,6 @@ inline void serialize_to_json(const glTF& val, json& js) {
 }
 // #codegen end func
 
-namespace _impl_gltf {
-
-// Get directory name (including '/').
-inline string _get_dirname(const string& filename) {
-    auto pos = filename.rfind('/');
-    if (pos == string::npos) pos = filename.rfind('\\');
-    if (pos == string::npos) return "";
-    return filename.substr(0, pos + 1);
-}
-
-// Get extension name
-static inline string _get_extension(const string& filename) {
-    auto pos = filename.rfind(".");
-    if (pos == string::npos) return "";
-    return filename.substr(pos);
-}
-
-// Get base name.
-inline string _get_basename(const string& filename) {
-    auto dirname = _get_dirname(filename);
-    auto extension = _get_extension(filename);
-    return filename.substr(
-        dirname.size(), filename.size() - dirname.size() - extension.size());
-}
-
 // Encode in base64
 inline string base64_encode(
     unsigned char const* bytes_to_encode, unsigned int in_len) {
@@ -9564,14 +9493,6 @@ inline string base64_decode(string const& encoded_string) {
     return ret;
 }
 
-// Fix path
-inline string _fix_path(const string& path_) {
-    auto path = path_;
-    for (auto& c : path)
-        if (c == '\\') c = '/';
-    return path;
-}
-
 // Load buffer data.
 void load_buffers(glTF* gltf, const string& dirname, bool skip_missing) {
     for (auto buffer : gltf->buffers) {
@@ -9590,11 +9511,13 @@ void load_buffers(glTF* gltf, const string& dirname, bool skip_missing) {
                     vector<unsigned char>((unsigned char*)data.c_str(),
                         (unsigned char*)data.c_str() + data.length());
             } else {
-                buffer->data = load_binary(_fix_path(dirname + buffer->uri));
+                buffer->data =
+                    load_binary(path_convert_eparator(dirname + buffer->uri));
                 if (buffer->data.empty()) {
                     if (skip_missing) continue;
-                    throw runtime_error("could not load binary file " +
-                                        _fix_path(dirname + buffer->uri));
+                    throw runtime_error(
+                        "could not load binary file " +
+                        path_convert_eparator(dirname + buffer->uri));
                 }
             }
             if (buffer->byteLength != buffer->data.size()) {
@@ -9665,7 +9588,7 @@ void load_images(glTF* gltf, const string& dirname, bool skip_missing) {
                     image->data.ncomp);
             }
         } else {
-            filename = _fix_path(dirname + image->uri);
+            filename = path_convert_eparator(dirname + image->uri);
             if (is_hdr_filename(filename)) {
                 image->data.dataf = load_imagef(filename, image->data.width,
                     image->data.height, image->data.ncomp);
@@ -9708,7 +9631,7 @@ glTF* load_gltf(
     }
 
     // load external resources
-    auto dirname = _get_dirname(filename);
+    auto dirname = path_dirname(filename);
     if (load_bin) load_buffers(gltf.get(), dirname, skip_missing);
     if (load_image) load_images(gltf.get(), dirname, skip_missing);
 
@@ -9770,21 +9693,21 @@ void save_gltf(
     save_text(filename, js.dump(2));
 
     // save external resources
-    auto dirname = _get_dirname(filename);
+    auto dirname = path_dirname(filename);
     if (save_bin) save_buffers(gltf, dirname, false);
     if (save_image) save_images(gltf, dirname, false);
 }
 
 // reading shortcut
 template <typename T>
-inline void read(FILE* f, T* v, int count) {
+inline void gltf_fread(FILE* f, T* v, int count) {
     if (fread(v, sizeof(T), count, f) != count)
         throw runtime_error("could not read binary file");
 }
 
 // writing shortcut
 template <typename T>
-inline void fwrite(FILE* f, const T* v, int count) {
+inline void gltf_fwrite(FILE* f, const T* v, int count) {
     if (fwrite(v, sizeof(T), count, f) != count)
         runtime_error("could not write binary file");
 }
@@ -9801,18 +9724,18 @@ glTF* load_binary_gltf(
 
     // read magic
     uint32_t magic;
-    read(f, &magic, 1);
+    gltf_fread(f, &magic, 1);
     if (magic != 0x46546C67) throw runtime_error("corrupted glb format");
 
     // read version
     uint32_t version;
-    read(f, &version, 1);
+    gltf_fread(f, &version, 1);
     if (version != 1 && version != 2)
         throw runtime_error("unsupported glb version");
 
     // read length
     uint32_t length;
-    read(f, &length, 1);
+    gltf_fread(f, &length, 1);
 
     // data
     auto json_bytes = vector<char>();
@@ -9822,17 +9745,17 @@ glTF* load_binary_gltf(
     if (version == 1) {
         // read content length and format
         uint32_t json_length, json_format;
-        read(f, &json_length, 1);
-        read(f, &json_format, 1);
+        gltf_fread(f, &json_length, 1);
+        gltf_fread(f, &json_format, 1);
 
         // read json bytes
         json_bytes.resize(json_length);
-        read(f, json_bytes.data(), json_length);
+        gltf_fread(f, json_bytes.data(), json_length);
 
         // read buffer bytes
         if (load_bin) {
             buffer_bytes.resize(length - json_length - 20);
-            read(f, buffer_bytes.data(), (int)buffer_bytes.size());
+            gltf_fread(f, buffer_bytes.data(), (int)buffer_bytes.size());
             buffer_length = (int)buffer_bytes.size();
         }
     }
@@ -9840,8 +9763,8 @@ glTF* load_binary_gltf(
     if (version == 2) {
         // read content length and format
         uint32_t json_length, json_format;
-        read(f, &json_length, 1);
-        read(f, &json_format, 1);
+        gltf_fread(f, &json_length, 1);
+        gltf_fread(f, &json_format, 1);
         if (json_format != 0x4E4F534A) {
             throw runtime_error("corrupt binary format");
             return nullptr;
@@ -9849,19 +9772,19 @@ glTF* load_binary_gltf(
 
         // read json bytes
         json_bytes.resize(json_length);
-        read(f, json_bytes.data(), (int)json_bytes.size());
+        gltf_fread(f, json_bytes.data(), (int)json_bytes.size());
 
         // read content length and format
         uint32_t buffer_format;
-        read(f, &buffer_length, 1);
-        read(f, &buffer_format, 1);
+        gltf_fread(f, &buffer_length, 1);
+        gltf_fread(f, &buffer_format, 1);
         if (buffer_format != 0x004E4942)
             throw runtime_error("corrupt binary format");
 
         // read buffer bytes
         if (load_bin) {
             buffer_bytes.resize(buffer_length);
-            read(f, buffer_bytes.data(), (int)buffer_bytes.size());
+            gltf_fread(f, buffer_bytes.data(), (int)buffer_bytes.size());
         }
     }
 
@@ -9891,7 +9814,7 @@ glTF* load_binary_gltf(
     if (load_bin) { buffer->data = buffer_bytes; }
 
     // load external resources
-    auto dirname = _get_dirname(filename);
+    auto dirname = path_dirname(filename);
     if (load_bin) load_buffers(gltf.get(), dirname, skip_missing);
     if (load_image) load_images(gltf.get(), dirname, skip_missing);
 
@@ -9925,62 +9848,35 @@ void save_binary_gltf(
 
     // write header
     uint32_t magic = 0x46546C67;
-    fwrite(f, &magic, 1);
+    gltf_fwrite(f, &magic, 1);
     uint32_t version = 2;
-    fwrite(f, &version, 1);
+    gltf_fwrite(f, &version, 1);
     uint32_t length = 12 + 8 + json_length + 8 + buffer_length;
-    fwrite(f, &length, 1);
+    gltf_fwrite(f, &length, 1);
 
     // write json
     uint32_t json_type = 0x4E4F534A;
-    fwrite(f, &json_length, 1);
-    fwrite(f, &json_type, 1);
-    fwrite(f, js_str.data(), (int)json_length);
+    gltf_fwrite(f, &json_length, 1);
+    gltf_fwrite(f, &json_type, 1);
+    gltf_fwrite(f, js_str.data(), (int)json_length);
 
     if (save_bin) {
         uint32_t buffer_type = 0x004E4942;
-        fwrite(f, &buffer_length, 1);
-        fwrite(f, &buffer_type, 1);
-        fwrite(f, buffer->data.data(), (int)buffer->data.size());
+        gltf_fwrite(f, &buffer_length, 1);
+        gltf_fwrite(f, &buffer_type, 1);
+        gltf_fwrite(f, buffer->data.data(), (int)buffer->data.size());
         char pad = 0;
         for (auto i = 0; i < buffer_length - buffer->data.size(); i++)
-            fwrite(f, &pad, 1);
+            gltf_fwrite(f, &pad, 1);
     }
 
     // close
     fclose(f);
 
     // save external resources
-    auto dirname = _get_dirname(filename);
+    auto dirname = path_dirname(filename);
     if (save_bin) save_buffers(gltf, dirname, false);
     if (save_image) save_images(gltf, dirname, false);
-}
-
-}  // namespace _impl_gltf
-
-// Loads a gltf file from disk
-glTF* load_gltf(
-    const string& filename, bool load_bin, bool load_img, bool skip_missing) {
-    return _impl_gltf::load_gltf(filename, load_bin, load_img, skip_missing);
-}
-
-// Loads a binary gltf file from disk
-glTF* load_binary_gltf(
-    const string& filename, bool load_bin, bool load_img, bool skip_missing) {
-    return _impl_gltf::load_binary_gltf(
-        filename, load_bin, load_img, skip_missing);
-}
-
-// Saves a scene to disk
-void save_gltf(
-    const string& filename, const glTF* gltf, bool save_bin, bool save_images) {
-    _impl_gltf::save_gltf(filename, gltf, save_bin, save_images);
-}
-
-// Saves a scene to disk
-void save_binary_gltf(
-    const string& filename, const glTF* gltf, bool save_bin, bool save_images) {
-    _impl_gltf::save_binary_gltf(filename, gltf, save_bin, save_images);
 }
 
 accessor_view::accessor_view(const glTF* gltf, const glTFAccessor* accessor) {
@@ -10102,8 +9998,6 @@ int accessor_view::_ctype_size(glTFAccessorComponentType componentType) {
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-namespace _impl_svg {
-
 // Load SVG
 inline svg_scene* load_svg(const string& filename) {
     auto svg = nsvgParseFromFile(filename.c_str(), "mm", 96);
@@ -10128,18 +10022,6 @@ inline svg_scene* load_svg(const string& filename) {
 // Save SVG
 inline void save_svg(const string& filename, const vector<svg_path>& paths) {
     throw runtime_error("not implemented yet");
-}
-
-}  // namespace _impl_svg
-
-// Load SVG
-svg_scene* load_svg(const string& filename) {
-    return _impl_svg::load_svg(filename);
-}
-
-// Save SVG
-void save_svg(const string& filename, const vector<svg_path>& paths) {
-    return _impl_svg::save_svg(filename, paths);
 }
 
 }  // namespace ygl
@@ -14530,8 +14412,6 @@ void draw_tree_widget_color_end(gl_window* win) { ImGui::PopStyleColor(); }
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-namespace __impl_scn_widgets {
-
 inline void draw_tree_widgets(
     gl_window* win, const string& lbl, camera* cam, void*& selection) {
     draw_tree_widget_leaf(win, lbl + cam->name, selection, cam);
@@ -15215,15 +15095,6 @@ inline bool draw_scene_widgets(gl_window* win, const string& lbl, scene* scn,
             }
         }
 #endif
-
-}  // namespace __impl_scn_widgets
-
-bool draw_scene_widgets(gl_window* win, const string& lbl, scene* scn,
-    void*& selection, const unordered_map<texture*, gl_texture>& gl_txt,
-    test_scene_params* test_scn) {
-    return __impl_scn_widgets::draw_scene_widgets(
-        win, lbl, scn, selection, gl_txt, test_scn);
-}
 
 }  // namespace ygl
 
