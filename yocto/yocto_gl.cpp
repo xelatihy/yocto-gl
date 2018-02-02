@@ -79,9 +79,6 @@
 // ## General
 //
 // - remove python operators
-// - move trace sharable code outside
-// - remove all internal namespaces
-//    - trace: better names
 //
 // ## Infrastructure
 //
@@ -104,7 +101,7 @@
 //
 // ## Trace
 //
-// - move camera, filter and shader to state
+// - add pixel state
 // - remove filtering support
 // - move pixel sampling to trace_block and not in sampler
 // - handle missing environment
@@ -3247,7 +3244,7 @@ ray3f eval_camera_ray(const camera* cam, const vec2f& uv, const vec2f& luv) {
     auto q = vec3f{w * cam->focus * (uv.x - 0.5f),
         h * cam->focus * (uv.y - 0.5f), -cam->focus};
     return ray3f(transform_point(cam->frame, o),
-                 transform_direction(cam->frame, normalize(q - o)));
+        transform_direction(cam->frame, normalize(q - o)));
 }
 
 // Subdivides shape elements.
@@ -5630,124 +5627,121 @@ void save_scene(
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-    // Phong exponent to roughness. Public API, see above.
-    float specular_exponent_to_roughness(float n) {
-        return sqrtf(2 / (n + 2));
+// Phong exponent to roughness. Public API, see above.
+float specular_exponent_to_roughness(float n) { return sqrtf(2 / (n + 2)); }
+
+// Specular to fresnel eta. Public API, see above.
+void specular_fresnel_from_ks(const vec3f& ks, vec3f& es, vec3f& esk) {
+    es = {(1 + sqrt(ks.x)) / (1 - sqrt(ks.x)),
+        (1 + sqrt(ks.y)) / (1 - sqrt(ks.y)),
+        (1 + sqrt(ks.z)) / (1 - sqrt(ks.z))};
+    esk = {0, 0, 0};
+}
+
+// Compute the fresnel term for dielectrics. Implementation from
+// https://seblagarde.wordpress.com/2013/04/29/memo-on-fresnel-equations/
+vec3f fresnel_dielectric(float cosw, const vec3f& eta_) {
+    auto eta = eta_;
+    if (cosw < 0) {
+        eta = 1.0f / eta;
+        cosw = -cosw;
     }
-    
-    // Specular to fresnel eta. Public API, see above.
-    void specular_fresnel_from_ks(const vec3f& ks, vec3f& es, vec3f& esk) {
-        es = {(1 + sqrt(ks.x)) / (1 - sqrt(ks.x)),
-            (1 + sqrt(ks.y)) / (1 - sqrt(ks.y)),
-            (1 + sqrt(ks.z)) / (1 - sqrt(ks.z))};
-        esk = {0, 0, 0};
-    }
-    
-    // Compute the fresnel term for dielectrics. Implementation from
-    // https://seblagarde.wordpress.com/2013/04/29/memo-on-fresnel-equations/
-    vec3f fresnel_dielectric(float cosw, const vec3f& eta_) {
-        auto eta = eta_;
-        if (cosw < 0) {
-            eta = 1.0f / eta;
-            cosw = -cosw;
-        }
-        
-        auto sin2 = 1 - cosw * cosw;
-        auto eta2 = eta * eta;
-        
-        auto cos2t = vec3f{1, 1, 1} - sin2 / eta2;
-        if (cos2t.x < 0 || cos2t.y < 0 || cos2t.z < 0)
-            return vec3f{1, 1, 1};  // tir
-        
-        auto t0 = vec3f{sqrt(cos2t.x), sqrt(cos2t.y), sqrt(cos2t.z)};
-        auto t1 = eta * t0;
-        auto t2 = eta * cosw;
-        
-        auto rs = (vec3f{cosw, cosw, cosw} - t1) / (vec3f{cosw, cosw, cosw} + t1);
-        auto rp = (t0 - t2) / (t0 + t2);
-        
-        return (rs * rs + rp * rp) / 2.0f;
-    }
-    
-    // Compute the fresnel term for metals. Implementation from
-    // https://seblagarde.wordpress.com/2013/04/29/memo-on-fresnel-equations/
-    vec3f fresnel_metal(
-                                    float cosw, const vec3f& eta, const vec3f& etak) {
-        if (etak == zero3f) return fresnel_dielectric(cosw, eta);
-        
-        cosw = clamp(cosw, (float)-1, (float)1);
-        auto cos2 = cosw * cosw;
-        auto sin2 = clamp(1 - cos2, (float)0, (float)1);
-        auto eta2 = eta * eta;
-        auto etak2 = etak * etak;
-        
-        auto t0 = eta2 - etak2 - vec3f{sin2, sin2, sin2};
-        auto a2plusb2_2 = t0 * t0 + 4.0f * eta2 * etak2;
-        auto a2plusb2 =
+
+    auto sin2 = 1 - cosw * cosw;
+    auto eta2 = eta * eta;
+
+    auto cos2t = vec3f{1, 1, 1} - sin2 / eta2;
+    if (cos2t.x < 0 || cos2t.y < 0 || cos2t.z < 0)
+        return vec3f{1, 1, 1};  // tir
+
+    auto t0 = vec3f{sqrt(cos2t.x), sqrt(cos2t.y), sqrt(cos2t.z)};
+    auto t1 = eta * t0;
+    auto t2 = eta * cosw;
+
+    auto rs = (vec3f{cosw, cosw, cosw} - t1) / (vec3f{cosw, cosw, cosw} + t1);
+    auto rp = (t0 - t2) / (t0 + t2);
+
+    return (rs * rs + rp * rp) / 2.0f;
+}
+
+// Compute the fresnel term for metals. Implementation from
+// https://seblagarde.wordpress.com/2013/04/29/memo-on-fresnel-equations/
+vec3f fresnel_metal(float cosw, const vec3f& eta, const vec3f& etak) {
+    if (etak == zero3f) return fresnel_dielectric(cosw, eta);
+
+    cosw = clamp(cosw, (float)-1, (float)1);
+    auto cos2 = cosw * cosw;
+    auto sin2 = clamp(1 - cos2, (float)0, (float)1);
+    auto eta2 = eta * eta;
+    auto etak2 = etak * etak;
+
+    auto t0 = eta2 - etak2 - vec3f{sin2, sin2, sin2};
+    auto a2plusb2_2 = t0 * t0 + 4.0f * eta2 * etak2;
+    auto a2plusb2 =
         vec3f{sqrt(a2plusb2_2.x), sqrt(a2plusb2_2.y), sqrt(a2plusb2_2.z)};
-        auto t1 = a2plusb2 + vec3f{cos2, cos2, cos2};
-        auto a_2 = (a2plusb2 + t0) / 2.0f;
-        auto a = vec3f{sqrt(a_2.x), sqrt(a_2.y), sqrt(a_2.z)};
-        auto t2 = 2.0f * a * cosw;
-        auto rs = (t1 - t2) / (t1 + t2);
-        
-        auto t3 = vec3f{cos2, cos2, cos2} * a2plusb2 +
-        vec3f{sin2, sin2, sin2} * vec3f{sin2, sin2, sin2};
-        auto t4 = t2 * sin2;
-        auto rp = rs * (t3 - t4) / (t3 + t4);
-        
-        return (rp + rs) / 2.0f;
-    }
-    
-    // Schlick approximation of Fresnel term
-    vec3f fresnel_schlick(const vec3f& ks, float cosw) {
-        return ks +
-        (vec3f{1, 1, 1} - ks) * pow(clamp(1.0f - cosw, 0.0f, 1.0f), 5.0f);
-    }
-    
-    // Schlick approximation of Fresnel term weighted by roughness.
-    // This is a hack, but works better than not doing it.
-    vec3f fresnel_schlick(const vec3f& ks, float cosw, float rs) {
-        auto fks = fresnel_schlick(ks, cosw);
-        return lerp(ks, fks, rs);
-    }
-    
-    // Evaluates the GGX distribution and geometric term
-    float eval_ggx(float rs, float ndh, float ndi, float ndo) {
-        // evaluate GGX
-        auto alpha2 = rs * rs;
-        auto di = (ndh * ndh) * (alpha2 - 1) + 1;
-        auto d = alpha2 / (pif * di * di);
+    auto t1 = a2plusb2 + vec3f{cos2, cos2, cos2};
+    auto a_2 = (a2plusb2 + t0) / 2.0f;
+    auto a = vec3f{sqrt(a_2.x), sqrt(a_2.y), sqrt(a_2.z)};
+    auto t2 = 2.0f * a * cosw;
+    auto rs = (t1 - t2) / (t1 + t2);
+
+    auto t3 = vec3f{cos2, cos2, cos2} * a2plusb2 +
+              vec3f{sin2, sin2, sin2} * vec3f{sin2, sin2, sin2};
+    auto t4 = t2 * sin2;
+    auto rp = rs * (t3 - t4) / (t3 + t4);
+
+    return (rp + rs) / 2.0f;
+}
+
+// Schlick approximation of Fresnel term
+vec3f fresnel_schlick(const vec3f& ks, float cosw) {
+    return ks +
+           (vec3f{1, 1, 1} - ks) * pow(clamp(1.0f - cosw, 0.0f, 1.0f), 5.0f);
+}
+
+// Schlick approximation of Fresnel term weighted by roughness.
+// This is a hack, but works better than not doing it.
+vec3f fresnel_schlick(const vec3f& ks, float cosw, float rs) {
+    auto fks = fresnel_schlick(ks, cosw);
+    return lerp(ks, fks, rs);
+}
+
+// Evaluates the GGX distribution and geometric term
+float eval_ggx(float rs, float ndh, float ndi, float ndo) {
+    // evaluate GGX
+    auto alpha2 = rs * rs;
+    auto di = (ndh * ndh) * (alpha2 - 1) + 1;
+    auto d = alpha2 / (pif * di * di);
 #ifndef YGL_GGX_SMITH
-        auto lambda_o = (-1 + sqrt(1 + alpha2 * (1 - ndo * ndo) / (ndo * ndo))) / 2;
-        auto lambda_i = (-1 + sqrt(1 + alpha2 * (1 - ndi * ndi) / (ndi * ndi))) / 2;
-        auto g = 1 / (1 + lambda_o + lambda_i);
+    auto lambda_o = (-1 + sqrt(1 + alpha2 * (1 - ndo * ndo) / (ndo * ndo))) / 2;
+    auto lambda_i = (-1 + sqrt(1 + alpha2 * (1 - ndi * ndi) / (ndi * ndi))) / 2;
+    auto g = 1 / (1 + lambda_o + lambda_i);
 #else
-        auto go = (2 * ndo) / (ndo + sqrt(alpha2 + (1 - alpha2) * ndo * ndo));
-        auto gi = (2 * ndi) / (ndi + sqrt(alpha2 + (1 - alpha2) * ndi * ndi));
-        auto g = go * gi;
+    auto go = (2 * ndo) / (ndo + sqrt(alpha2 + (1 - alpha2) * ndo * ndo));
+    auto gi = (2 * ndi) / (ndi + sqrt(alpha2 + (1 - alpha2) * ndi * ndi));
+    auto g = go * gi;
 #endif
-        return d * g;
-    }
-    
-    // Evaluates the GGX pdf
-    float sample_ggx_pdf(float rs, float ndh) {
-        auto cos2 = ndh * ndh;
-        auto tan2 = (1 - cos2) / cos2;
-        auto alpha2 = rs * rs;
-        auto d = alpha2 / (pif * cos2 * cos2 * (alpha2 + tan2) * (alpha2 + tan2));
-        return d;
-    }
-    
-    // Sample the GGX distribution
-    vec3f sample_ggx(float rs, const vec2f& rn) {
-        auto tan2 = rs * rs * rn.y / (1 - rn.y);
-        auto rz = sqrt(1 / (tan2 + 1)), rr = sqrt(1 - rz * rz),
-        rphi = 2 * pif * rn.x;
-        // set to wh
-        auto wh_local = vec3f{rr * cos(rphi), rr * sin(rphi), rz};
-        return wh_local;
-    }
+    return d * g;
+}
+
+// Evaluates the GGX pdf
+float sample_ggx_pdf(float rs, float ndh) {
+    auto cos2 = ndh * ndh;
+    auto tan2 = (1 - cos2) / cos2;
+    auto alpha2 = rs * rs;
+    auto d = alpha2 / (pif * cos2 * cos2 * (alpha2 + tan2) * (alpha2 + tan2));
+    return d;
+}
+
+// Sample the GGX distribution
+vec3f sample_ggx(float rs, const vec2f& rn) {
+    auto tan2 = rs * rs * rn.y / (1 - rn.y);
+    auto rz = sqrt(1 / (tan2 + 1)), rr = sqrt(1 - rz * rz),
+         rphi = 2 * pif * rn.x;
+    // set to wh
+    auto wh_local = vec3f{rr * cos(rphi), rr * sin(rphi), rz};
+    return wh_local;
+}
 
 }  // namespace ygl
 
@@ -5755,16 +5749,6 @@ namespace ygl {
 // IMPLEMENTATION FOR PATH TRACING
 // -----------------------------------------------------------------------------
 namespace ygl {
-
-// Random number smp. Handles random number generation for stratified
-// sampling and correlated multi-jittered sampling.
-struct trace_sampler {
-    rng_pcg32& rng;        // random number state
-    uint32_t pixel_hash;   // pixel hash
-    int s, d;              // sample and dimension indices
-    int ns, ns2;           // number of samples and its square root
-    trace_rng_type rtype;  // random number type
-};
 
 // Initialize a smp ot type rtype for pixel i, j with ns total samples.
 //
@@ -5829,15 +5813,20 @@ inline int trace_next1i(trace_sampler& smp, int num) {
 }
 
 // Brdf type
-enum struct trace_brdf_type { none = 0, microfacet = 1, kajiya_kay = 2, point = 3 };
+enum struct trace_brdf_type {
+    none = 0,
+    microfacet = 1,
+    kajiya_kay = 2,
+    point = 3
+};
 
 // Brdf
 struct trace_brdf {
     trace_brdf_type type = trace_brdf_type::none;  // type
-    vec3f kd = {0, 0, 0};              // diffuse
-    vec3f ks = {0, 0, 0};              // specular
-    float rs = 0;                      // specular roughness
-    vec3f kt = {0, 0, 0};              // transmission (thin glass)
+    vec3f kd = {0, 0, 0};                          // diffuse
+    vec3f ks = {0, 0, 0};                          // specular
+    float rs = 0;                                  // specular roughness
+    vec3f kt = {0, 0, 0};                          // transmission (thin glass)
     operator bool() const { return type != trace_brdf_type::none; }
     vec3f rho() const { return kd + ks + kt; }
 };
@@ -5865,8 +5854,8 @@ struct trace_point {
     const environment* env = nullptr;  // environment
     frame3f frame = identity_frame3f;  // local frame
     vec3f wo = zero3f;                 // outgoing direction
-    trace_emission em = {};                  // emission
-    trace_brdf fr = {};                      // brdf
+    trace_emission em = {};            // emission
+    trace_brdf fr = {};                // brdf
 };
 
 // Evaluates emission.
@@ -5888,7 +5877,6 @@ inline vec3f trace_eval_emission(const trace_point& pt) {
     }
     return ke;
 }
-
 
 // Evaluates the BRDF scaled by the cosine of the incoming direction.
 //
@@ -6230,7 +6218,7 @@ inline trace_point trace_eval_point(
     const instance* ist, int eid, const vec4f& euv, const vec3f& wo) {
     // default material
     static auto def_material = (material*)nullptr;
-    if(!def_material) {
+    if (!def_material) {
         def_material = new material();
         def_material->kd = {0.2f, 0.2f, 0.2f};
         def_material->rs = 1;
@@ -6431,7 +6419,8 @@ inline trace_point trace_intersect_scene(trace_state* st, const ray3f& ray) {
 inline vec3f trace_eval_transmission(trace_state* st, const trace_point& pt,
     const trace_point& lpt, const trace_params& params) {
     if (params.shadow_notransmission) {
-        auto shadow_ray = (lpt.env) ? make_ray(pt.frame.o, -lpt.wo) : make_segment(pt.frame.o, lpt.frame.o);
+        auto shadow_ray = (lpt.env) ? make_ray(pt.frame.o, -lpt.wo) :
+                                      make_segment(pt.frame.o, lpt.frame.o);
         // auto shadow_ray = ray3f{pt.frame.o, -lpt.wo, 0.01f, flt_max};
         return (intersect_bvh(st->bvh, shadow_ray, true)) ? zero3f :
                                                             vec3f{1, 1, 1};
@@ -6439,7 +6428,8 @@ inline vec3f trace_eval_transmission(trace_state* st, const trace_point& pt,
         auto cpt = pt;
         auto weight = vec3f{1, 1, 1};
         for (auto bounce = 0; bounce < params.max_depth; bounce++) {
-            auto ray = (lpt.env) ? make_ray(cpt.frame.o, -lpt.wo) : make_segment(cpt.frame.o, lpt.frame.o);
+            auto ray = (lpt.env) ? make_ray(cpt.frame.o, -lpt.wo) :
+                                   make_segment(cpt.frame.o, lpt.frame.o);
             cpt = trace_intersect_scene(st, ray);
             if (!cpt.ist) break;
             weight *= cpt.fr.kt;
@@ -6498,7 +6488,8 @@ inline vec3f trace_path(trace_state* st, const ray3f& ray, trace_sampler& smp,
         auto bbc = trace_eval_brdfcos(pt, -bpt.wo, bdelta);
         auto bld = bke * bbc * bw;
         if (bld != zero3f) {
-            l += weight * bld * trace_weight_mis(bw, trace_weight_light(bpt, pt));
+            l += weight * bld *
+                 trace_weight_mis(bw, trace_weight_light(bpt, pt));
         }
 
         // skip recursion if path ends
@@ -6506,7 +6497,8 @@ inline vec3f trace_path(trace_state* st, const ray3f& ray, trace_sampler& smp,
         if (!bpt.fr) break;
 
         // continue path
-        weight *= trace_eval_brdfcos(pt, -bpt.wo) * trace_weight_brdfcos(pt, -bpt.wo);
+        weight *=
+            trace_eval_brdfcos(pt, -bpt.wo) * trace_weight_brdfcos(pt, -bpt.wo);
         if (weight == zero3f) break;
 
         // roussian roulette
@@ -6568,8 +6560,8 @@ inline vec3f trace_path_nomis(trace_state* st, const ray3f& ray,
         auto bdelta = false;
         std::tie(bwi, bdelta) =
             trace_sample_brdfcos(pt, trace_next1f(smp), trace_next2f(smp));
-        weight *=
-            trace_eval_brdfcos(pt, bwi, bdelta) * trace_weight_brdfcos(pt, bwi, bdelta);
+        weight *= trace_eval_brdfcos(pt, bwi, bdelta) *
+                  trace_weight_brdfcos(pt, bwi, bdelta);
         if (weight == zero3f) break;
 
         auto bpt = trace_intersect_scene(st, make_ray(pt.frame.o, bwi));
@@ -6623,8 +6615,8 @@ inline vec3f trace_path_hack(trace_state* st, const ray3f& ray,
         auto bdelta = false;
         std::tie(bwi, bdelta) =
             trace_sample_brdfcos(pt, trace_next1f(smp), trace_next2f(smp));
-        weight *=
-            trace_eval_brdfcos(pt, bwi, bdelta) * trace_weight_brdfcos(pt, bwi, bdelta);
+        weight *= trace_eval_brdfcos(pt, bwi, bdelta) *
+                  trace_weight_brdfcos(pt, bwi, bdelta);
         if (weight == zero3f) break;
 
         auto bpt = trace_intersect_scene(st, make_ray(pt.frame.o, bwi));
@@ -6713,8 +6705,8 @@ inline vec3f trace_eyelight(trace_state* st, const ray3f& ray, int bounce,
 }
 
 // Eyelight for quick previewing.
-inline vec3f trace_eyelight(trace_state* st, const ray3f& ray, trace_sampler& smp,
-    const trace_params& params, bool& hit) {
+inline vec3f trace_eyelight(trace_state* st, const ray3f& ray,
+    trace_sampler& smp, const trace_params& params, bool& hit) {
     return trace_eyelight(st, ray, 0, smp, params, hit);
 }
 
@@ -6755,100 +6747,21 @@ inline vec3f trace_debug_texcoord(trace_state* st, const ray3f& ray,
     return {texcoord.x, texcoord.y, 0};
 }
 
-// Shader function callback.
-using trace_shader = vec3f (*)(trace_state* st, const ray3f& ray, trace_sampler& smp,
-    const trace_params& params, bool& hit);
-
-// Get a shader function
-inline trace_shader trace_get_shader(const trace_params& params) {
-    switch (params.stype) {
-        case trace_shader_type::eyelight: return trace_eyelight;
-        case trace_shader_type::direct: return trace_direct;
-        case trace_shader_type::pathtrace: return trace_path;
-        case trace_shader_type::pathtrace_nomis: return trace_path_nomis;
-        case trace_shader_type::debug_albedo: return trace_debug_albedo;
-        case trace_shader_type::debug_normal: return trace_debug_normal;
-        case trace_shader_type::debug_texcoord: return trace_debug_texcoord;
-        default: return nullptr;
-    }
-}
-
-// triangle filter (public domain from stb_image_resize)
-inline float trace_filter_triangle(float x) {
-    x = (float)fabs(x);
-    if (x <= 1.0f) return 1 - x;
-    return 0;
-}
-
-// cubic filter (public domain from stb_image_resize)
-inline float trace_filter_cubic(float x) {
-    x = (float)fabs(x);
-    if (x < 1.0f) return (4 + x * x * (3 * x - 6)) / 6;
-    if (x < 2.0f) return (8 + x * (-12 + x * (6 - x))) / 6;
-    return 0.0f;
-}
-
-// catmull-rom filter (public domain from stb_image_resize)
-inline float trace_filter_catmullrom(float x) {
-    x = (float)fabs(x);
-    if (x < 1.0f) return 1 - x * x * (2.5f - 1.5f * x);
-    if (x < 2.0f) return 2 - x * (4 + x * (0.5f * x - 2.5f));
-    return 0.0f;
-}
-
-// mitchell filter (public domain from stb_image_resize)
-inline float trace_filter_mitchell(float x) {
-    x = (float)fabs(x);
-    if (x < 1.0f) return (16 + x * x * (21 * x - 36)) / 18;
-    if (x < 2.0f) return (32 + x * (-60 + x * (36 - 7 * x))) / 18;
-    return 0.0f;
-}
-
-// filter function
-using trace_filter = float (*)(float);
-
-// Get a filter function
-inline trace_filter trace_get_filter(const trace_params& params) {
-    switch (params.ftype) {
-        case trace_filter_type::box: return nullptr;
-        case trace_filter_type::triangle: return trace_filter_triangle;
-        case trace_filter_type::cubic: return trace_filter_cubic;
-        case trace_filter_type::catmull_rom: return trace_filter_catmullrom;
-        case trace_filter_type::mitchell: return trace_filter_mitchell;
-        default: return nullptr;
-    }
-}
-
-// Get a filter size
-inline int trace_filter_size(const trace_params& params) {
-    switch (params.ftype) {
-        case trace_filter_type::box: return 0;
-        case trace_filter_type::triangle: return 1;
-        case trace_filter_type::cubic:
-        case trace_filter_type::catmull_rom:
-        case trace_filter_type::mitchell: return 2;
-        default: return 0;
-    }
-}
-
 // Trace a block of samples
 void trace_block(trace_state* st, const vec4i& block, const vec2i& samples,
     vector<rng_pcg32>& rngs, const trace_params& params) {
-    auto shade = trace_get_shader(params);
-    auto cam =
-        (params.camera_id < 0) ? st->view : st->scn->cameras[params.camera_id];
     for (auto j = block.y; j < block.w; j++) {
         for (auto i = block.x; i < block.z; i++) {
             auto lp = zero4f;
             for (auto s = samples.x; s < samples.y; s++) {
-                auto smp = make_trace_sampler(rngs[j * params.width + i], i, j, s,
-                    params.nsamples, params.rtype);
+                auto smp = make_trace_sampler(rngs[j * params.width + i], i, j,
+                    s, params.nsamples, params.rtype);
                 auto rn = trace_next2f(smp);
                 auto uv = vec2f{
                     (i + rn.x) / params.width, 1 - (j + rn.y) / params.height};
-                auto ray = eval_camera_ray(cam, uv, trace_next2f(smp));
+                auto ray = eval_camera_ray(st->cam, uv, trace_next2f(smp));
                 bool hit = false;
-                auto l = shade(st, ray, smp, params, hit);
+                auto l = st->shader(st, ray, smp, params, hit);
                 if (!hit && params.envmap_invisible) continue;
                 if (!isfinite(l.x) || !isfinite(l.y) || !isfinite(l.z)) {
                     log_error("NaN detected");
@@ -6871,11 +6784,6 @@ void trace_block(trace_state* st, const vec4i& block, const vec2i& samples,
 void trace_block_filtered(trace_state* st, const vec4i& block,
     const vec2i& samples, vector<rng_pcg32>& rngs, std::mutex& image_mutex,
     const trace_params& params) {
-    auto shade = trace_get_shader(params);
-    auto cam =
-        (params.camera_id < 0) ? st->view : st->scn->cameras[params.camera_id];
-    auto filter = trace_get_filter(params);
-    auto filter_size = trace_filter_size(params);
     static constexpr const int pad = 2;
     auto block_size = vec2i{block.z - block.x, block.w - block.y};
     auto acc_buffer = image4f(block_size.x + pad * 2, block_size.y + pad * 2);
@@ -6884,14 +6792,14 @@ void trace_block_filtered(trace_state* st, const vec4i& block,
     for (auto j = block.y; j < block.w; j++) {
         for (auto i = block.x; i < block.x; i++) {
             for (auto s = samples.x; s < samples.y; s++) {
-                auto smp = make_trace_sampler(rngs[j * params.width + i], i, j, s,
-                    params.nsamples, params.rtype);
+                auto smp = make_trace_sampler(rngs[j * params.width + i], i, j,
+                    s, params.nsamples, params.rtype);
                 auto rn = trace_next2f(smp);
                 auto uv = vec2f{
                     (i + rn.x) / params.width, 1 - (j + rn.y) / params.height};
-                auto ray = eval_camera_ray(cam, uv, trace_next2f(smp));
+                auto ray = eval_camera_ray(st->cam, uv, trace_next2f(smp));
                 auto hit = false;
-                auto l = shade(st, ray, smp, params, hit);
+                auto l = st->shader(st, ray, smp, params, hit);
                 if (!hit && params.envmap_invisible) continue;
                 if (!isfinite(l.x) || !isfinite(l.y) || !isfinite(l.z)) {
                     log_error("NaN detected");
@@ -6904,10 +6812,12 @@ void trace_block_filtered(trace_state* st, const vec4i& block,
                     weight_buffer[{bi + pad, bj + pad}] += {1, 1, 1, 1};
                 } else {
                     auto bi = i - block.x, bj = j - block.y;
-                    for (auto fj = -filter_size; fj <= filter_size; fj++) {
-                        for (auto fi = -filter_size; fi <= filter_size; fi++) {
-                            auto w = filter(fi - uv.x + 0.5f) *
-                                     filter(fj - uv.y + 0.5f);
+                    for (auto fj = -st->filter_size; fj <= st->filter_size;
+                         fj++) {
+                        for (auto fi = -st->filter_size; fi <= st->filter_size;
+                             fi++) {
+                            auto w = st->filter(fi - uv.x + 0.5f) *
+                                     st->filter(fj - uv.y + 0.5f);
                             acc_buffer[{bi + fi + pad, bj + fj + pad}] +=
                                 {l * w, w};
                             weight_buffer[{bi + fi + pad, bj + fj + pad}] +=
@@ -6930,10 +6840,10 @@ void trace_block_filtered(trace_state* st, const vec4i& block,
     } else {
         std::unique_lock<std::mutex> lock_guard(image_mutex);
         auto width = st->acc.width(), height = st->acc.height();
-        for (auto j = max(block.y - filter_size, 0);
-             j < min(block.w + filter_size, height); j++) {
-            for (auto i = max(block.x - filter_size, 0);
-                 i < min(block.z + filter_size, width); i++) {
+        for (auto j = max(block.y - st->filter_size, 0);
+             j < min(block.w + st->filter_size, height); j++) {
+            for (auto i = max(block.x - st->filter_size, 0);
+                 i < min(block.z + st->filter_size, width); i++) {
                 auto bi = i - block.x, bj = j - block.y;
                 st->acc[{i, j}] += acc_buffer[{bi + pad, bj + pad}];
                 st->weight[{i, j}] += weight_buffer[{bi + pad, bj + pad}];
@@ -6981,9 +6891,43 @@ void trace_samples(trace_state* st, int nsamples, const trace_params& params) {
     st->sample += nsamples;
 }
 
+// map to convert trace samplers
+static auto trace_shaders = unordered_map<trace_shader_type, trace_shader>{
+    {trace_shader_type::eyelight, trace_eyelight},
+    {trace_shader_type::direct, trace_direct},
+    {trace_shader_type::pathtrace, trace_path},
+    {trace_shader_type::pathtrace_nomis, trace_path_nomis},
+    {trace_shader_type::debug_albedo, trace_debug_albedo},
+    {trace_shader_type::debug_normal, trace_debug_normal},
+    {trace_shader_type::debug_texcoord, trace_debug_texcoord},
+};
+
+// map to convert trace filters
+static auto trace_filters = unordered_map<trace_filter_type, trace_filter>{
+    {trace_filter_type::box, (trace_filter) nullptr},
+    {trace_filter_type::triangle, filter_triangle},
+    {trace_filter_type::cubic, filter_cubic},
+    {trace_filter_type::catmull_rom, filter_catmullrom},
+    {trace_filter_type::mitchell, filter_mitchell},
+};
+
+// map to convert trace filters
+static auto trace_filter_sizes = unordered_map<trace_filter_type, int>{
+    {trace_filter_type::box, 0},
+    {trace_filter_type::triangle, 1},
+    {trace_filter_type::cubic, 2},
+    {trace_filter_type::catmull_rom, 2},
+    {trace_filter_type::mitchell, 2},
+};
+
 // Starts an anyncrhounous renderer.
 void trace_async_start(trace_state* st, const trace_params& params) {
     st->sample = 0;
+    st->cam =
+        (params.camera_id < 0) ? st->view : st->scn->cameras[params.camera_id];
+    st->shader = trace_shaders.at(params.stype);
+    st->filter = nullptr;
+    st->filter_size = 0;
     for (auto sample = 0; sample < params.nsamples; sample++) {
         for (auto& block : st->blocks) {
             auto is_last = (block == st->blocks.back());
@@ -7006,9 +6950,18 @@ void trace_async_stop(trace_state* st) {
 trace_state* make_trace_state(const scene* scn, const camera* view,
     const bvh_tree* bvh, const trace_params& params) {
     auto st = new trace_state();
+
     st->scn = scn;
     st->view = view;
     st->bvh = bvh;
+
+    st->sample = 0;
+    st->cam =
+        (params.camera_id < 0) ? st->view : st->scn->cameras[params.camera_id];
+    st->shader = trace_shaders.at(params.stype);
+    st->filter = trace_filters.at(params.ftype);
+    st->filter_size = trace_filter_sizes.at(params.ftype);
+
     st->img = image4f(params.width, params.height);
     for (int j = 0; j < params.height; j += params.block_size) {
         for (int i = 0; i < params.width; i += params.block_size) {
