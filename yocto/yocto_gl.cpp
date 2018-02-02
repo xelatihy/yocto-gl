@@ -76,15 +76,12 @@
 //
 // # Todo
 //
-// ## BVH
+// ## General
 //
-// - consider merging axis with internal
-// - make BVH fully contained
-// - add BVH and scene to trace state
+// - remove python operators
 //
 // ## Infrastructure
 //
-// - remove bounding boxes from scene
 // - remove lights from scene
 //    - put in state for each algorithm
 // - remove default environment
@@ -97,8 +94,14 @@
 // - check rotation and decompoaition of rotations
 //    - see euclideanspace.com
 //
+// ## BVH
+//
+// - consider merging axis with internal
+// - simplify build node
+//
 // ## Trace
 //
+// - add BVH and scene to trace state
 // - remove filtering support
 // - move piel sampling to trace_block and not in sampler
 // - handle missing environment
@@ -107,17 +110,14 @@
 //     https://lemire.me/blog/2017/09/18/visiting-all-values-in-an-array-exactly-once-in-random-order/
 //     https://lemire.me/blog/2017/09/26/benchmarking-algorithms-to-visit-all-values-in-an-array-in-random-order/
 // - look at simpler denoiser
+// - yitrace: check editing
+// - yitrace: consider update
 //
-// ## yView
+// ## Shade
 //
+// - light in state
 // - start in edit mode
 // - show edit scene
-// - animation support
-//
-// ## yITrace
-//
-// - check editing
-// - consider update
 //
 
 #include "yocto_gl.h"
