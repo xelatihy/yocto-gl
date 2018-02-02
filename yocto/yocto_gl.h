@@ -2725,6 +2725,18 @@ using ray3 = ray<T, 3>;
 
 /// 3-dimension float bounding box
 using ray3f = ray3<float>;
+    
+/// Construct a ray using a default epsilon
+template<typename T, int N>
+inline ray<T, N> make_ray(const vec<T, N>& o, const vec<T, N>& d, T eps = 1e-4f) {
+    return ray<T, N>{o, d, eps, flt_max};
+}
+
+/// Construct a ray segment using a default epsilon
+template<typename T, int N>
+inline ray<T, N> make_segment(const vec<T, N>& p1, const vec<T, N>& p2, T eps = 1e-4f) {
+    return ray<T, N>{p1, normalize(p2-p1), eps, length(p2-p1) - 2 * eps};
+}
 
 /// stream write
 template <typename T>
@@ -5291,6 +5303,10 @@ vec3f eval_norm(const instance* ist, int eid, const vec4f& euv);
 vec4f eval_texture(const texture_info& info, const vec2f& texcoord,
     bool srgb = true, const vec4f& def = {1, 1, 1, 1});
 
+/// Generates a ray from a camera for image plane coordinate uv and the
+/// lens coordinates luv.
+ray3f eval_camera_ray(const camera* cam, const vec2f& uv, const vec2f& luv);
+
 /// Finds an element by name
 template <typename T>
 inline T* find_named_elem(const vector<T*>& elems, const string& name) {
@@ -5852,6 +5868,44 @@ test_scene_params load_test_scene(const string& filename);
 
 /// Save test scene
 void save_test_scene(const string& filename, const test_scene_params& scn);
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
+// PATH TRACING SUPPORT FUNCTION
+// -----------------------------------------------------------------------------
+namespace ygl {
+    
+    /// Phong exponent to roughness. Public API, see above.
+    float specular_exponent_to_roughness(float n);
+    
+    /// Specular to fresnel eta. Public API, see above.
+    void specular_fresnel_from_ks(const vec3f& ks, vec3f& es, vec3f& esk);
+    
+    /// Compute the fresnel term for dielectrics. Implementation from
+    /// https://seblagarde.wordpress.com/2013/04/29/memo-on-fresnel-equations/
+    vec3f fresnel_dielectric(float cosw, const vec3f& eta_);
+    
+    /// Compute the fresnel term for metals. Implementation from
+    /// https://seblagarde.wordpress.com/2013/04/29/memo-on-fresnel-equations/
+    vec3f fresnel_metal(
+                        float cosw, const vec3f& eta, const vec3f& etak);
+    
+    /// Schlick approximation of Fresnel term
+    vec3f fresnel_schlick(const vec3f& ks, float cosw);
+    
+    /// Schlick approximation of Fresnel term weighted by roughness.
+    /// This is a hack, but works better than not doing it.
+    vec3f fresnel_schlick(const vec3f& ks, float cosw, float rs);
+    
+    /// Evaluates the GGX distribution and geometric term
+    float eval_ggx(float rs, float ndh, float ndi, float ndo);
+    
+    /// Sample the GGX distribution
+    vec3f sample_ggx(float rs, const vec2f& rn) ;
+
+    // Evaluates the GGX pdf
+    float sample_ggx_pdf(float rs, float ndh);
 
 }  // namespace ygl
 

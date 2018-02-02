@@ -3238,6 +3238,18 @@ vec4f eval_texture(const texture_info& info, const vec2f& texcoord, bool srgb,
            lookup(ii, j) * u * (1 - v) + lookup(ii, jj) * u * v;
 }
 
+// Generates a ray from a camera for image plane coordinate uv and the
+// lens coordinates luv.
+ray3f eval_camera_ray(const camera* cam, const vec2f& uv, const vec2f& luv) {
+    auto h = 2 * tan(cam->yfov / 2);
+    auto w = h * cam->aspect;
+    auto o = vec3f{luv.x * cam->aperture, luv.y * cam->aperture, 0};
+    auto q = vec3f{w * cam->focus * (uv.x - 0.5f),
+        h * cam->focus * (uv.y - 0.5f), -cam->focus};
+    return ray3f(transform_point(cam->frame, o),
+                 transform_direction(cam->frame, normalize(q - o)));
+}
+
 // Subdivides shape elements.
 void subdivide_shape_once(shape* shp, bool subdiv) {
     if (!shp->lines.empty() || !shp->triangles.empty() || !shp->quads.empty()) {
@@ -5614,22 +5626,135 @@ void save_scene(
 }  // namespace ygl
 
 // -----------------------------------------------------------------------------
-// IMPLEMENTATION FOR PATH TRACE
+// IMPLEMENTATION FOR PATH TRACING SUPPORT FUNCTION
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-// Phong exponent to roughness. Public API, see above.
-inline float specular_exponent_to_roughness(float n) {
-    return sqrtf(2 / (n + 2));
-}
+    // Phong exponent to roughness. Public API, see above.
+    float specular_exponent_to_roughness(float n) {
+        return sqrtf(2 / (n + 2));
+    }
+    
+    // Specular to fresnel eta. Public API, see above.
+    void specular_fresnel_from_ks(const vec3f& ks, vec3f& es, vec3f& esk) {
+        es = {(1 + sqrt(ks.x)) / (1 - sqrt(ks.x)),
+            (1 + sqrt(ks.y)) / (1 - sqrt(ks.y)),
+            (1 + sqrt(ks.z)) / (1 - sqrt(ks.z))};
+        esk = {0, 0, 0};
+    }
+    
+    // Compute the fresnel term for dielectrics. Implementation from
+    // https://seblagarde.wordpress.com/2013/04/29/memo-on-fresnel-equations/
+    vec3f fresnel_dielectric(float cosw, const vec3f& eta_) {
+        auto eta = eta_;
+        if (cosw < 0) {
+            eta = 1.0f / eta;
+            cosw = -cosw;
+        }
+        
+        auto sin2 = 1 - cosw * cosw;
+        auto eta2 = eta * eta;
+        
+        auto cos2t = vec3f{1, 1, 1} - sin2 / eta2;
+        if (cos2t.x < 0 || cos2t.y < 0 || cos2t.z < 0)
+            return vec3f{1, 1, 1};  // tir
+        
+        auto t0 = vec3f{sqrt(cos2t.x), sqrt(cos2t.y), sqrt(cos2t.z)};
+        auto t1 = eta * t0;
+        auto t2 = eta * cosw;
+        
+        auto rs = (vec3f{cosw, cosw, cosw} - t1) / (vec3f{cosw, cosw, cosw} + t1);
+        auto rp = (t0 - t2) / (t0 + t2);
+        
+        return (rs * rs + rp * rp) / 2.0f;
+    }
+    
+    // Compute the fresnel term for metals. Implementation from
+    // https://seblagarde.wordpress.com/2013/04/29/memo-on-fresnel-equations/
+    vec3f fresnel_metal(
+                                    float cosw, const vec3f& eta, const vec3f& etak) {
+        if (etak == zero3f) return fresnel_dielectric(cosw, eta);
+        
+        cosw = clamp(cosw, (float)-1, (float)1);
+        auto cos2 = cosw * cosw;
+        auto sin2 = clamp(1 - cos2, (float)0, (float)1);
+        auto eta2 = eta * eta;
+        auto etak2 = etak * etak;
+        
+        auto t0 = eta2 - etak2 - vec3f{sin2, sin2, sin2};
+        auto a2plusb2_2 = t0 * t0 + 4.0f * eta2 * etak2;
+        auto a2plusb2 =
+        vec3f{sqrt(a2plusb2_2.x), sqrt(a2plusb2_2.y), sqrt(a2plusb2_2.z)};
+        auto t1 = a2plusb2 + vec3f{cos2, cos2, cos2};
+        auto a_2 = (a2plusb2 + t0) / 2.0f;
+        auto a = vec3f{sqrt(a_2.x), sqrt(a_2.y), sqrt(a_2.z)};
+        auto t2 = 2.0f * a * cosw;
+        auto rs = (t1 - t2) / (t1 + t2);
+        
+        auto t3 = vec3f{cos2, cos2, cos2} * a2plusb2 +
+        vec3f{sin2, sin2, sin2} * vec3f{sin2, sin2, sin2};
+        auto t4 = t2 * sin2;
+        auto rp = rs * (t3 - t4) / (t3 + t4);
+        
+        return (rp + rs) / 2.0f;
+    }
+    
+    // Schlick approximation of Fresnel term
+    vec3f fresnel_schlick(const vec3f& ks, float cosw) {
+        return ks +
+        (vec3f{1, 1, 1} - ks) * pow(clamp(1.0f - cosw, 0.0f, 1.0f), 5.0f);
+    }
+    
+    // Schlick approximation of Fresnel term weighted by roughness.
+    // This is a hack, but works better than not doing it.
+    vec3f fresnel_schlick(const vec3f& ks, float cosw, float rs) {
+        auto fks = fresnel_schlick(ks, cosw);
+        return lerp(ks, fks, rs);
+    }
+    
+    // Evaluates the GGX distribution and geometric term
+    float eval_ggx(float rs, float ndh, float ndi, float ndo) {
+        // evaluate GGX
+        auto alpha2 = rs * rs;
+        auto di = (ndh * ndh) * (alpha2 - 1) + 1;
+        auto d = alpha2 / (pif * di * di);
+#ifndef YGL_GGX_SMITH
+        auto lambda_o = (-1 + sqrt(1 + alpha2 * (1 - ndo * ndo) / (ndo * ndo))) / 2;
+        auto lambda_i = (-1 + sqrt(1 + alpha2 * (1 - ndi * ndi) / (ndi * ndi))) / 2;
+        auto g = 1 / (1 + lambda_o + lambda_i);
+#else
+        auto go = (2 * ndo) / (ndo + sqrt(alpha2 + (1 - alpha2) * ndo * ndo));
+        auto gi = (2 * ndi) / (ndi + sqrt(alpha2 + (1 - alpha2) * ndi * ndi));
+        auto g = go * gi;
+#endif
+        return d * g;
+    }
+    
+    // Evaluates the GGX pdf
+    float sample_ggx_pdf(float rs, float ndh) {
+        auto cos2 = ndh * ndh;
+        auto tan2 = (1 - cos2) / cos2;
+        auto alpha2 = rs * rs;
+        auto d = alpha2 / (pif * cos2 * cos2 * (alpha2 + tan2) * (alpha2 + tan2));
+        return d;
+    }
+    
+    // Sample the GGX distribution
+    vec3f sample_ggx(float rs, const vec2f& rn) {
+        auto tan2 = rs * rs * rn.y / (1 - rn.y);
+        auto rz = sqrt(1 / (tan2 + 1)), rr = sqrt(1 - rz * rz),
+        rphi = 2 * pif * rn.x;
+        // set to wh
+        auto wh_local = vec3f{rr * cos(rphi), rr * sin(rphi), rz};
+        return wh_local;
+    }
 
-// Specular to fresnel eta. Public API, see above.
-inline void specular_fresnel_from_ks(const vec3f& ks, vec3f& es, vec3f& esk) {
-    es = {(1 + sqrt(ks.x)) / (1 - sqrt(ks.x)),
-        (1 + sqrt(ks.y)) / (1 - sqrt(ks.y)),
-        (1 + sqrt(ks.z)) / (1 - sqrt(ks.z))};
-    esk = {0, 0, 0};
-}
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION FOR PATH TRACING
+// -----------------------------------------------------------------------------
+namespace ygl {
 
 // Random number smp. Handles random number generation for stratified
 // sampling and correlated multi-jittered sampling.
@@ -5744,18 +5869,6 @@ struct trace_point {
     trace_brdf fr = {};                      // brdf
 };
 
-// Generates a ray ray_o, ray_d from a camera cam for image plane coordinate
-// uv and the lens coordinates luv.
-inline ray3f trace_eval_camera(const camera* cam, const vec2f& uv, const vec2f& luv) {
-    auto h = 2 * tan(cam->yfov / 2);
-    auto w = h * cam->aspect;
-    auto o = vec3f{luv.x * cam->aperture, luv.y * cam->aperture, 0};
-    auto q = vec3f{w * cam->focus * (uv.x - 0.5f),
-        h * cam->focus * (uv.y - 0.5f), -cam->focus};
-    return ray3f(transform_point(cam->frame, o),
-        transform_direction(cam->frame, normalize(q - o)));
-}
-
 // Evaluates emission.
 inline vec3f trace_eval_emission(const trace_point& pt) {
     auto& em = pt.em;
@@ -5776,111 +5889,6 @@ inline vec3f trace_eval_emission(const trace_point& pt) {
     return ke;
 }
 
-// Compute the fresnel term for dielectrics. Implementation from
-// https://seblagarde.wordpress.com/2013/04/29/memo-on-fresnel-equations/
-inline vec3f eval_fresnel_dielectric(float cosw, const vec3f& eta_) {
-    auto eta = eta_;
-    if (cosw < 0) {
-        eta = 1.0f / eta;
-        cosw = -cosw;
-    }
-
-    auto sin2 = 1 - cosw * cosw;
-    auto eta2 = eta * eta;
-
-    auto cos2t = vec3f{1, 1, 1} - sin2 / eta2;
-    if (cos2t.x < 0 || cos2t.y < 0 || cos2t.z < 0)
-        return vec3f{1, 1, 1};  // tir
-
-    auto t0 = vec3f{sqrt(cos2t.x), sqrt(cos2t.y), sqrt(cos2t.z)};
-    auto t1 = eta * t0;
-    auto t2 = eta * cosw;
-
-    auto rs = (vec3f{cosw, cosw, cosw} - t1) / (vec3f{cosw, cosw, cosw} + t1);
-    auto rp = (t0 - t2) / (t0 + t2);
-
-    return (rs * rs + rp * rp) / 2.0f;
-}
-
-// Compute the fresnel term for metals. Implementation from
-// https://seblagarde.wordpress.com/2013/04/29/memo-on-fresnel-equations/
-inline vec3f eval_fresnel_metal(
-    float cosw, const vec3f& eta, const vec3f& etak) {
-    if (etak == zero3f) return eval_fresnel_dielectric(cosw, eta);
-
-    cosw = clamp(cosw, (float)-1, (float)1);
-    auto cos2 = cosw * cosw;
-    auto sin2 = clamp(1 - cos2, (float)0, (float)1);
-    auto eta2 = eta * eta;
-    auto etak2 = etak * etak;
-
-    auto t0 = eta2 - etak2 - vec3f{sin2, sin2, sin2};
-    auto a2plusb2_2 = t0 * t0 + 4.0f * eta2 * etak2;
-    auto a2plusb2 =
-        vec3f{sqrt(a2plusb2_2.x), sqrt(a2plusb2_2.y), sqrt(a2plusb2_2.z)};
-    auto t1 = a2plusb2 + vec3f{cos2, cos2, cos2};
-    auto a_2 = (a2plusb2 + t0) / 2.0f;
-    auto a = vec3f{sqrt(a_2.x), sqrt(a_2.y), sqrt(a_2.z)};
-    auto t2 = 2.0f * a * cosw;
-    auto rs = (t1 - t2) / (t1 + t2);
-
-    auto t3 = vec3f{cos2, cos2, cos2} * a2plusb2 +
-              vec3f{sin2, sin2, sin2} * vec3f{sin2, sin2, sin2};
-    auto t4 = t2 * sin2;
-    auto rp = rs * (t3 - t4) / (t3 + t4);
-
-    return (rp + rs) / 2.0f;
-}
-
-// Schlick approximation of Fresnel term
-inline vec3f eval_fresnel_schlick(const vec3f& ks, float cosw) {
-    return ks +
-           (vec3f{1, 1, 1} - ks) * pow(clamp(1.0f - cosw, 0.0f, 1.0f), 5.0f);
-}
-
-// Schlick approximation of Fresnel term weighted by roughness.
-// This is a hack, but works better than not doing it.
-inline vec3f eval_fresnel_schlick(const vec3f& ks, float cosw, float rs) {
-    auto fks = eval_fresnel_schlick(ks, cosw);
-    return lerp(ks, fks, rs);
-}
-
-// Evaluates the GGX distribution and geometric term
-inline float eval_ggx(float rs, float ndh, float ndi, float ndo) {
-    // evaluate GGX
-    auto alpha2 = rs * rs;
-    auto di = (ndh * ndh) * (alpha2 - 1) + 1;
-    auto d = alpha2 / (pif * di * di);
-#ifndef YGL_GGX_SMITH
-    auto lambda_o = (-1 + sqrt(1 + alpha2 * (1 - ndo * ndo) / (ndo * ndo))) / 2;
-    auto lambda_i = (-1 + sqrt(1 + alpha2 * (1 - ndi * ndi) / (ndi * ndi))) / 2;
-    auto g = 1 / (1 + lambda_o + lambda_i);
-#else
-    auto go = (2 * ndo) / (ndo + sqrt(alpha2 + (1 - alpha2) * ndo * ndo));
-    auto gi = (2 * ndi) / (ndi + sqrt(alpha2 + (1 - alpha2) * ndi * ndi));
-    auto g = go * gi;
-#endif
-    return d * g;
-}
-
-// Evaluates the GGX pdf
-inline float pdf_ggx(float rs, float ndh) {
-    auto cos2 = ndh * ndh;
-    auto tan2 = (1 - cos2) / cos2;
-    auto alpha2 = rs * rs;
-    auto d = alpha2 / (pif * cos2 * cos2 * (alpha2 + tan2) * (alpha2 + tan2));
-    return d;
-}
-
-// Sample the GGX distribution
-inline vec3f sample_ggx(float rs, const vec2f& rn) {
-    auto tan2 = rs * rs * rn.y / (1 - rn.y);
-    auto rz = sqrt(1 / (tan2 + 1)), rr = sqrt(1 - rz * rz),
-         rphi = 2 * pif * rn.x;
-    // set to wh
-    auto wh_local = vec3f{rr * cos(rphi), rr * sin(rphi), rz};
-    return wh_local;
-}
 
 // Evaluates the BRDF scaled by the cosine of the incoming direction.
 //
@@ -5926,7 +5934,7 @@ inline vec3f trace_eval_brdfcos(
 
                 // handle fresnel
                 auto odh = clamp(dot(wo, wh), 0.0f, 1.0f);
-                auto ks = eval_fresnel_schlick(fr.ks, odh, fr.rs);
+                auto ks = fresnel_schlick(fr.ks, odh, fr.rs);
 
                 // sum up
                 brdfcos += ks * ndi * dg / (4 * ndi * ndo);
@@ -5935,7 +5943,7 @@ inline vec3f trace_eval_brdfcos(
             // specular term (mirror)
             if (fr.ks != zero3f && ndi > 0 && ndo > 0 && !fr.rs && delta) {
                 // handle fresnel
-                auto ks = eval_fresnel_schlick(fr.ks, ndo, fr.rs);
+                auto ks = fresnel_schlick(fr.ks, ndo, fr.rs);
 
                 // sum up
                 brdfcos += ks;
@@ -6029,7 +6037,7 @@ inline float trace_weight_brdfcos(
             // specular term (GGX)
             if (ksw && ndo > 0 && ndi > 0 && ndh > 0 && fr.rs) {
                 // probability proportional to d adjusted by wh projection
-                auto d = pdf_ggx(fr.rs, ndh);
+                auto d = sample_ggx_pdf(fr.rs, ndh);
                 auto hdo = dot(wo, wh);
                 pdf += ksw * d / (4 * hdo);
             }
@@ -6404,31 +6412,6 @@ inline trace_point trace_sample_light(
     }
 }
 
-// Offsets a ray origin to avoid self-intersection.
-inline ray3f trace_offset_ray(
-    const trace_point& pt, const vec3f& w, const trace_params& params) {
-    if (dot(w, pt.frame.z) > 0) {
-        return ray3f(
-            pt.frame.o + pt.frame.z * params.ray_eps, w, params.ray_eps);
-    } else {
-        return ray3f(
-            pt.frame.o - pt.frame.z * params.ray_eps, w, params.ray_eps);
-    }
-}
-
-// Offsets a ray origin to avoid self-intersection.
-inline ray3f trace_offset_ray(
-    const trace_point& pt, const trace_point& pt2, const trace_params& params) {
-    auto ray_dist = (!pt2.env) ? length(pt.frame.o - pt2.frame.o) : flt_max;
-    if (dot(-pt2.wo, pt.frame.z) > 0) {
-        return ray3f(pt.frame.o + pt.frame.z * params.ray_eps, -pt2.wo,
-            params.ray_eps, ray_dist - 2 * params.ray_eps);
-    } else {
-        return ray3f(pt.frame.o - pt.frame.z * params.ray_eps, -pt2.wo,
-            params.ray_eps, ray_dist - 2 * params.ray_eps);
-    }
-}
-
 // Intersects a ray with the scn and return the point (or env
 // point).
 inline trace_point trace_intersect_scene(trace_state* st, const ray3f& ray) {
@@ -6448,7 +6431,7 @@ inline trace_point trace_intersect_scene(trace_state* st, const ray3f& ray) {
 inline vec3f trace_eval_transmission(trace_state* st, const trace_point& pt,
     const trace_point& lpt, const trace_params& params) {
     if (params.shadow_notransmission) {
-        auto shadow_ray = trace_offset_ray(pt, lpt, params);
+        auto shadow_ray = (lpt.env) ? make_ray(pt.frame.o, -lpt.wo) : make_segment(pt.frame.o, lpt.frame.o);
         // auto shadow_ray = ray3f{pt.frame.o, -lpt.wo, 0.01f, flt_max};
         return (intersect_bvh(st->bvh, shadow_ray, true)) ? zero3f :
                                                             vec3f{1, 1, 1};
@@ -6456,7 +6439,8 @@ inline vec3f trace_eval_transmission(trace_state* st, const trace_point& pt,
         auto cpt = pt;
         auto weight = vec3f{1, 1, 1};
         for (auto bounce = 0; bounce < params.max_depth; bounce++) {
-            cpt = trace_intersect_scene(st, trace_offset_ray(cpt, lpt, params));
+            auto ray = (lpt.env) ? make_ray(cpt.frame.o, -lpt.wo) : make_segment(cpt.frame.o, lpt.frame.o);
+            cpt = trace_intersect_scene(st, ray);
             if (!cpt.ist) break;
             weight *= cpt.fr.kt;
             if (weight == zero3f) break;
@@ -6508,7 +6492,7 @@ inline vec3f trace_path(trace_state* st, const ray3f& ray, trace_sampler& smp,
         auto bdelta = false;
         std::tie(bwi, bdelta) =
             trace_sample_brdfcos(pt, trace_next1f(smp), trace_next2f(smp));
-        auto bpt = trace_intersect_scene(st, trace_offset_ray(pt, bwi, params));
+        auto bpt = trace_intersect_scene(st, make_ray(pt.frame.o, bwi));
         auto bw = trace_weight_brdfcos(pt, -bpt.wo, bdelta);
         auto bke = trace_eval_emission(bpt);
         auto bbc = trace_eval_brdfcos(pt, -bpt.wo, bdelta);
@@ -6588,7 +6572,7 @@ inline vec3f trace_path_nomis(trace_state* st, const ray3f& ray,
             trace_eval_brdfcos(pt, bwi, bdelta) * trace_weight_brdfcos(pt, bwi, bdelta);
         if (weight == zero3f) break;
 
-        auto bpt = trace_intersect_scene(st, trace_offset_ray(pt, bwi, params));
+        auto bpt = trace_intersect_scene(st, make_ray(pt.frame.o, bwi));
         emission = false;
         if (!bpt.fr) break;
 
@@ -6643,7 +6627,7 @@ inline vec3f trace_path_hack(trace_state* st, const ray3f& ray,
             trace_eval_brdfcos(pt, bwi, bdelta) * trace_weight_brdfcos(pt, bwi, bdelta);
         if (weight == zero3f) break;
 
-        auto bpt = trace_intersect_scene(st, trace_offset_ray(pt, bwi, params));
+        auto bpt = trace_intersect_scene(st, make_ray(pt.frame.o, bwi));
         if (!bpt.fr) break;
 
         // continue path
@@ -6683,13 +6667,13 @@ inline vec3f trace_direct(trace_state* st, const ray3f& ray, int bounce,
     // reflection
     if (pt.fr.ks != zero3f && !pt.fr.rs) {
         auto wi = reflect(pt.wo, pt.frame.z);
-        auto ray = trace_offset_ray(pt, wi, params);
+        auto ray = make_ray(pt.frame.o, wi);
         l += pt.fr.ks * trace_direct(st, ray, bounce + 1, smp, params, hit);
     }
 
     // opacity
     if (pt.fr.kt != zero3f) {
-        auto ray = trace_offset_ray(pt, -pt.wo, params);
+        auto ray = make_ray(pt.frame.o, -pt.wo);
         l += pt.fr.kt * trace_direct(st, ray, bounce + 1, smp, params, hit);
     }
 
@@ -6720,7 +6704,7 @@ inline vec3f trace_eyelight(trace_state* st, const ray3f& ray, int bounce,
     // opacity
     if (bounce >= params.max_depth) return l;
     if (pt.fr.kt != zero3f) {
-        auto ray = trace_offset_ray(pt, -pt.wo, params);
+        auto ray = make_ray(pt.frame.o, -pt.wo);
         l += pt.fr.kt * trace_eyelight(st, ray, bounce + 1, smp, params, hit);
     }
 
@@ -6862,7 +6846,7 @@ void trace_block(trace_state* st, const vec4i& block, const vec2i& samples,
                 auto rn = trace_next2f(smp);
                 auto uv = vec2f{
                     (i + rn.x) / params.width, 1 - (j + rn.y) / params.height};
-                auto ray = trace_eval_camera(cam, uv, trace_next2f(smp));
+                auto ray = eval_camera_ray(cam, uv, trace_next2f(smp));
                 bool hit = false;
                 auto l = shade(st, ray, smp, params, hit);
                 if (!hit && params.envmap_invisible) continue;
@@ -6905,7 +6889,7 @@ void trace_block_filtered(trace_state* st, const vec4i& block,
                 auto rn = trace_next2f(smp);
                 auto uv = vec2f{
                     (i + rn.x) / params.width, 1 - (j + rn.y) / params.height};
-                auto ray = trace_eval_camera(cam, uv, trace_next2f(smp));
+                auto ray = eval_camera_ray(cam, uv, trace_next2f(smp));
                 auto hit = false;
                 auto l = shade(st, ray, smp, params, hit);
                 if (!hit && params.envmap_invisible) continue;
