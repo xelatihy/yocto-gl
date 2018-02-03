@@ -3424,7 +3424,7 @@ inline void rng_shuffle(rng_pcg32& rng, T* vals, int num) {
 /// Random shuffle of a sequence.
 template <typename T>
 inline void rng_shuffle(rng_pcg32& rng, vector<T>& vals) {
-    shuffle(rng, vals.data(), vals.size());
+    rng_shuffle(rng, vals.data(), vals.size());
 }
 
 /// Equality operator
