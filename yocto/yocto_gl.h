@@ -6033,18 +6033,14 @@ struct trace_pixel {
 };
 
 /// Trace shader function
-using trace_shader = vec3f (*)(trace_state* st, const ray3f& ray,
-    trace_pixel& pxl, const trace_params& params, bool& hit);
+using trace_shader = vec3f (*)(const scene* scn, const bvh_tree* bvh,
+    const ray3f& ray, trace_pixel& pxl, const trace_params& params, bool& hit);
 
 /// Trace filter function
 using trace_filter = float (*)(float);
 
 /// Trace state. Members are not part of the public API.
 struct trace_state {
-    const scene* scn = nullptr;     // scene
-    const camera* view = nullptr;   // view
-    const bvh_tree* bvh = nullptr;  // bvh
-
     image4f img;                // rendered image
     image<trace_pixel> pixels;  // trace pixels
 
@@ -6053,8 +6049,7 @@ struct trace_state {
 };
 
 /// Initialize a rendering state
-trace_state* make_trace_state(const scene* scn, const camera* view,
-    const bvh_tree* bvh, const trace_params& params);
+trace_state* make_trace_state(const trace_params& params);
 
 /// Gets the computed trace image
 inline const image4f& get_trace_image(const trace_state* st) { return st->img; }
@@ -6065,22 +6060,25 @@ inline int get_trace_sample(const trace_state* st) {
 }
 
 /// Trace the next nsamples samples.
-void trace_samples(trace_state* st, int nsamples, const trace_params& params);
+void trace_samples(trace_state* st, const scene* scn, const camera* cam,
+    const bvh_tree* bvh, int nsamples, const trace_params& params);
 
 /// Trace the next nsamples samples with image filtering.
-void trace_samples_filtered(
-    trace_state* st, int nsamples, const trace_params& params);
+void trace_samples_filtered(trace_state* st, const scene* scn,
+    const camera* cam, const bvh_tree* bvh, int nsamples,
+    const trace_params& params);
 
 /// Trace the whole image
-inline image4f trace_image(const scene* scn, const camera* view,
+inline image4f trace_image(const scene* scn, const camera* cam,
     const bvh_tree* bvh, const trace_params& params) {
-    auto st = unique_ptr<trace_state>(make_trace_state(scn, view, bvh, params));
-    trace_samples(st.get(), params.nsamples, params);
+    auto st = unique_ptr<trace_state>(make_trace_state(params));
+    trace_samples(st.get(), scn, cam, bvh, params.nsamples, params);
     return get_trace_image(st.get());
 }
 
 /// Starts an anyncrhounous renderer.
-void trace_async_start(trace_state* st, const trace_params& params);
+void trace_async_start(trace_state* st, const scene* scn, const camera* cam,
+                       const bvh_tree* bvh, const trace_params& params);
 
 /// Stop the asynchronous renderer.
 void trace_async_stop(trace_state* st);

@@ -6390,35 +6390,35 @@ inline trace_point trace_sample_light(
 
 // Intersects a ray with the scn and return the point (or env
 // point).
-inline trace_point trace_intersect_scene(trace_state* st, const ray3f& ray) {
+inline trace_point trace_intersect_scene(
+    const scene* scn, const bvh_tree* bvh, const ray3f& ray) {
     auto iid = 0, eid = 0;
     auto euv = zero4f;
     auto ray_t = 0.0f;
-    if (intersect_bvh(st->bvh, ray, false, ray_t, iid, eid, euv)) {
-        return trace_eval_point(st->scn->instances[iid], eid, euv, -ray.d);
-    } else if (!st->scn->environments.empty()) {
-        return trace_eval_point(st->scn->environments[0], -ray.d);
+    if (intersect_bvh(bvh, ray, false, ray_t, iid, eid, euv)) {
+        return trace_eval_point(scn->instances[iid], eid, euv, -ray.d);
+    } else if (!scn->environments.empty()) {
+        return trace_eval_point(scn->environments[0], -ray.d);
     } else {
         return {};
     }
 }
 
 // Test occlusion
-inline vec3f trace_eval_transmission(trace_state* st, const trace_point& pt,
-    const trace_point& lpt, const trace_params& params) {
+inline vec3f trace_eval_transmission(const scene* scn, const bvh_tree* bvh,
+    const trace_point& pt, const trace_point& lpt, const trace_params& params) {
     if (params.shadow_notransmission) {
         auto shadow_ray = (lpt.env) ? make_ray(pt.frame.o, -lpt.wo) :
                                       make_segment(pt.frame.o, lpt.frame.o);
         // auto shadow_ray = ray3f{pt.frame.o, -lpt.wo, 0.01f, flt_max};
-        return (intersect_bvh(st->bvh, shadow_ray, true)) ? zero3f :
-                                                            vec3f{1, 1, 1};
+        return (intersect_bvh(bvh, shadow_ray, true)) ? zero3f : vec3f{1, 1, 1};
     } else {
         auto cpt = pt;
         auto weight = vec3f{1, 1, 1};
         for (auto bounce = 0; bounce < params.max_depth; bounce++) {
             auto ray = (lpt.env) ? make_ray(cpt.frame.o, -lpt.wo) :
                                    make_segment(cpt.frame.o, lpt.frame.o);
-            cpt = trace_intersect_scene(st, ray);
+            cpt = trace_intersect_scene(scn, bvh, ray);
             if (!cpt.ist) break;
             weight *= cpt.fr.kt;
             if (weight == zero3f) break;
@@ -6434,15 +6434,15 @@ inline float trace_weight_mis(float w0, float w1) {
 }
 
 // Recursive path tracing.
-inline vec3f trace_path(trace_state* st, const ray3f& ray, trace_pixel& pxl,
-    const trace_params& params, bool& hit) {
+inline vec3f trace_path(const scene* scn, const bvh_tree* bvh, const ray3f& ray,
+    trace_pixel& pxl, const trace_params& params, bool& hit) {
     // intersection
-    auto pt = trace_intersect_scene(st, ray);
+    auto pt = trace_intersect_scene(scn, bvh, ray);
     hit = pt.ist;
 
     // emission
     auto l = trace_eval_emission(pt);
-    if (!pt.fr || st->scn->lights.empty()) return l;
+    if (!pt.fr || scn->lights.empty()) return l;
 
     // trace path
     auto weight = vec3f{1, 1, 1};
@@ -6452,16 +6452,16 @@ inline vec3f trace_path(trace_state* st, const ray3f& ray, trace_pixel& pxl,
         if (emission) l += weight * trace_eval_emission(pt);
 
         // direct – light
-        auto lgt =
-            st->scn->lights[trace_next1i(pxl, (int)st->scn->lights.size())];
+        auto lgt = scn->lights[trace_next1i(pxl, (int)scn->lights.size())];
         auto lpt =
             trace_sample_light(lgt, pt, trace_next1f(pxl), trace_next2f(pxl));
-        auto lw = trace_weight_light(lpt, pt) * (float)st->scn->lights.size();
+        auto lw = trace_weight_light(lpt, pt) * (float)scn->lights.size();
         auto lke = trace_eval_emission(lpt);
         auto lbc = trace_eval_brdfcos(pt, -lpt.wo);
         auto lld = lke * lbc * lw;
         if (lld != zero3f) {
-            l += weight * lld * trace_eval_transmission(st, pt, lpt, params) *
+            l += weight * lld *
+                 trace_eval_transmission(scn, bvh, pt, lpt, params) *
                  trace_weight_mis(lw, trace_weight_brdfcos(pt, -lpt.wo));
         }
 
@@ -6470,7 +6470,7 @@ inline vec3f trace_path(trace_state* st, const ray3f& ray, trace_pixel& pxl,
         auto bdelta = false;
         std::tie(bwi, bdelta) =
             trace_sample_brdfcos(pt, trace_next1f(pxl), trace_next2f(pxl));
-        auto bpt = trace_intersect_scene(st, make_ray(pt.frame.o, bwi));
+        auto bpt = trace_intersect_scene(scn, bvh, make_ray(pt.frame.o, bwi));
         auto bw = trace_weight_brdfcos(pt, -bpt.wo, bdelta);
         auto bke = trace_eval_emission(bpt);
         auto bbc = trace_eval_brdfcos(pt, -bpt.wo, bdelta);
@@ -6505,10 +6505,10 @@ inline vec3f trace_path(trace_state* st, const ray3f& ray, trace_pixel& pxl,
 }
 
 // Recursive path tracing.
-inline vec3f trace_path_nomis(trace_state* st, const ray3f& ray,
-    trace_pixel& pxl, const trace_params& params, bool& hit) {
+inline vec3f trace_path_nomis(const scene* scn, const bvh_tree* bvh,
+    const ray3f& ray, trace_pixel& pxl, const trace_params& params, bool& hit) {
     // intersection
-    auto pt = trace_intersect_scene(st, ray);
+    auto pt = trace_intersect_scene(scn, bvh, ray);
     hit = pt.ist;
 
     // emission
@@ -6523,14 +6523,14 @@ inline vec3f trace_path_nomis(trace_state* st, const ray3f& ray,
         if (emission) l += weight * trace_eval_emission(pt);
 
         // direct
-        auto lgt =
-            st->scn->lights[trace_next1i(pxl, (int)st->scn->lights.size())];
+        auto lgt = scn->lights[trace_next1i(pxl, (int)scn->lights.size())];
         auto lpt =
             trace_sample_light(lgt, pt, trace_next1f(pxl), trace_next2f(pxl));
         auto ld = trace_eval_emission(lpt) * trace_eval_brdfcos(pt, -lpt.wo) *
-                  trace_weight_light(lpt, pt) * (float)st->scn->lights.size();
+                  trace_weight_light(lpt, pt) * (float)scn->lights.size();
         if (ld != zero3f) {
-            l += weight * ld * trace_eval_transmission(st, pt, lpt, params);
+            l += weight * ld *
+                 trace_eval_transmission(scn, bvh, pt, lpt, params);
         }
 
         // skip recursion if path ends
@@ -6552,7 +6552,7 @@ inline vec3f trace_path_nomis(trace_state* st, const ray3f& ray,
                   trace_weight_brdfcos(pt, bwi, bdelta);
         if (weight == zero3f) break;
 
-        auto bpt = trace_intersect_scene(st, make_ray(pt.frame.o, bwi));
+        auto bpt = trace_intersect_scene(scn, bvh, make_ray(pt.frame.o, bwi));
         emission = false;
         if (!bpt.fr) break;
 
@@ -6564,28 +6564,28 @@ inline vec3f trace_path_nomis(trace_state* st, const ray3f& ray,
 }
 
 // Recursive path tracing.
-inline vec3f trace_path_hack(trace_state* st, const ray3f& ray,
-    trace_pixel& pxl, const trace_params& params, bool& hit) {
+inline vec3f trace_path_hack(const scene* scn, const bvh_tree* bvh,
+    const ray3f& ray, trace_pixel& pxl, const trace_params& params, bool& hit) {
     // intersection
-    auto pt = trace_intersect_scene(st, ray);
+    auto pt = trace_intersect_scene(scn, bvh, ray);
     hit = pt.ist;
 
     // emission
     auto l = trace_eval_emission(pt);
-    if (!pt.fr || st->scn->lights.empty()) return l;
+    if (!pt.fr || scn->lights.empty()) return l;
 
     // trace path
     auto weight = vec3f{1, 1, 1};
     for (auto bounce = 0; bounce < params.max_depth; bounce++) {
         // direct
-        auto lgt =
-            st->scn->lights[trace_next1i(pxl, (int)st->scn->lights.size())];
+        auto lgt = scn->lights[trace_next1i(pxl, (int)scn->lights.size())];
         auto lpt =
             trace_sample_light(lgt, pt, trace_next1f(pxl), trace_next2f(pxl));
         auto ld = trace_eval_emission(lpt) * trace_eval_brdfcos(pt, -lpt.wo) *
-                  trace_weight_light(lpt, pt) * (float)st->scn->lights.size();
+                  trace_weight_light(lpt, pt) * (float)scn->lights.size();
         if (ld != zero3f) {
-            l += weight * ld * trace_eval_transmission(st, pt, lpt, params);
+            l += weight * ld *
+                 trace_eval_transmission(scn, bvh, pt, lpt, params);
         }
 
         // skip recursion if path ends
@@ -6607,7 +6607,7 @@ inline vec3f trace_path_hack(trace_state* st, const ray3f& ray,
                   trace_weight_brdfcos(pt, bwi, bdelta);
         if (weight == zero3f) break;
 
-        auto bpt = trace_intersect_scene(st, make_ray(pt.frame.o, bwi));
+        auto bpt = trace_intersect_scene(scn, bvh, make_ray(pt.frame.o, bwi));
         if (!bpt.fr) break;
 
         // continue path
@@ -6618,27 +6618,28 @@ inline vec3f trace_path_hack(trace_state* st, const ray3f& ray,
 }
 
 // Direct illumination.
-inline vec3f trace_direct(trace_state* st, const ray3f& ray, int bounce,
-    trace_pixel& pxl, const trace_params& params, bool& hit) {
+inline vec3f trace_direct(const scene* scn, const bvh_tree* bvh,
+    const ray3f& ray, int bounce, trace_pixel& pxl, const trace_params& params,
+    bool& hit) {
     // intersection
-    auto pt = trace_intersect_scene(st, ray);
+    auto pt = trace_intersect_scene(scn, bvh, ray);
     if (!bounce) hit = pt.ist;
 
     // emission
     auto l = trace_eval_emission(pt);
-    if (!pt.fr || st->scn->lights.empty()) return l;
+    if (!pt.fr || scn->lights.empty()) return l;
 
     // ambient
     l += params.ambient * pt.fr.rho();
 
     // direct
-    for (auto& lgt : st->scn->lights) {
+    for (auto& lgt : scn->lights) {
         auto lpt =
             trace_sample_light(lgt, pt, trace_next1f(pxl), trace_next2f(pxl));
         auto ld = trace_eval_emission(lpt) * trace_eval_brdfcos(pt, -lpt.wo) *
                   trace_weight_light(lpt, pt);
         if (ld == zero3f) continue;
-        l += ld * trace_eval_transmission(st, pt, lpt, params);
+        l += ld * trace_eval_transmission(scn, bvh, pt, lpt, params);
     }
 
     // exit if needed
@@ -6648,13 +6649,15 @@ inline vec3f trace_direct(trace_state* st, const ray3f& ray, int bounce,
     if (pt.fr.ks != zero3f && !pt.fr.rs) {
         auto wi = reflect(pt.wo, pt.frame.z);
         auto ray = make_ray(pt.frame.o, wi);
-        l += pt.fr.ks * trace_direct(st, ray, bounce + 1, pxl, params, hit);
+        l += pt.fr.ks *
+             trace_direct(scn, bvh, ray, bounce + 1, pxl, params, hit);
     }
 
     // opacity
     if (pt.fr.kt != zero3f) {
         auto ray = make_ray(pt.frame.o, -pt.wo);
-        l += pt.fr.kt * trace_direct(st, ray, bounce + 1, pxl, params, hit);
+        l += pt.fr.kt *
+             trace_direct(scn, bvh, ray, bounce + 1, pxl, params, hit);
     }
 
     // done
@@ -6662,16 +6665,17 @@ inline vec3f trace_direct(trace_state* st, const ray3f& ray, int bounce,
 }
 
 // Direct illumination.
-inline vec3f trace_direct(trace_state* st, const ray3f& ray, trace_pixel& pxl,
-    const trace_params& params, bool& hit) {
-    return trace_direct(st, ray, 0, pxl, params, hit);
+inline vec3f trace_direct(const scene* scn, const bvh_tree* bvh,
+    const ray3f& ray, trace_pixel& pxl, const trace_params& params, bool& hit) {
+    return trace_direct(scn, bvh, ray, 0, pxl, params, hit);
 }
 
 // Eyelight for quick previewing.
-inline vec3f trace_eyelight(trace_state* st, const ray3f& ray, int bounce,
-    trace_pixel& pxl, const trace_params& params, bool& hit) {
+inline vec3f trace_eyelight(const scene* scn, const bvh_tree* bvh,
+    const ray3f& ray, int bounce, trace_pixel& pxl, const trace_params& params,
+    bool& hit) {
     // intersection
-    auto pt = trace_intersect_scene(st, ray);
+    auto pt = trace_intersect_scene(scn, bvh, ray);
     if (!bounce) hit = pt.ist;
 
     // emission
@@ -6685,7 +6689,8 @@ inline vec3f trace_eyelight(trace_state* st, const ray3f& ray, int bounce,
     if (bounce >= params.max_depth) return l;
     if (pt.fr.kt != zero3f) {
         auto ray = make_ray(pt.frame.o, -pt.wo);
-        l += pt.fr.kt * trace_eyelight(st, ray, bounce + 1, pxl, params, hit);
+        l += pt.fr.kt *
+             trace_eyelight(scn, bvh, ray, bounce + 1, pxl, params, hit);
     }
 
     // done
@@ -6693,51 +6698,51 @@ inline vec3f trace_eyelight(trace_state* st, const ray3f& ray, int bounce,
 }
 
 // Eyelight for quick previewing.
-inline vec3f trace_eyelight(trace_state* st, const ray3f& ray, trace_pixel& pxl,
-    const trace_params& params, bool& hit) {
-    return trace_eyelight(st, ray, 0, pxl, params, hit);
+inline vec3f trace_eyelight(const scene* scn, const bvh_tree* bvh,
+    const ray3f& ray, trace_pixel& pxl, const trace_params& params, bool& hit) {
+    return trace_eyelight(scn, bvh, ray, 0, pxl, params, hit);
 }
 
 // Debug previewing.
-inline vec3f trace_debug_normal(trace_state* st, const ray3f& ray,
-    trace_pixel& pxl, const trace_params& params, bool& hit) {
+inline vec3f trace_debug_normal(const scene* scn, const bvh_tree* bvh,
+    const ray3f& ray, trace_pixel& pxl, const trace_params& params, bool& hit) {
     // intersection
-    auto isec = intersect_bvh(st->bvh, ray, false);
+    auto isec = intersect_bvh(bvh, ray, false);
     hit = (bool)isec;
     if (!hit) return {0, 0, 0};
 
     // texcoord
-    auto norm = eval_norm(st->scn->instances[isec.iid], isec.eid, isec.euv);
+    auto norm = eval_norm(scn->instances[isec.iid], isec.eid, isec.euv);
     return norm * 0.5f + vec3f{0.5f, 0.5f, 0.5f};
 }
 
 // Debug previewing.
-inline vec3f trace_debug_albedo(trace_state* st, const ray3f& ray,
-    trace_pixel& pxl, const trace_params& params, bool& hit) {
+inline vec3f trace_debug_albedo(const scene* scn, const bvh_tree* bvh,
+    const ray3f& ray, trace_pixel& pxl, const trace_params& params, bool& hit) {
     // intersection
-    auto pt = trace_intersect_scene(st, ray);
+    auto pt = trace_intersect_scene(scn, bvh, ray);
     hit = pt.ist;
 
     return pt.fr.rho();
 }
 
 // Debug previewing.
-inline vec3f trace_debug_texcoord(trace_state* st, const ray3f& ray,
-    trace_pixel& pxl, const trace_params& params, bool& hit) {
+inline vec3f trace_debug_texcoord(const scene* scn, const bvh_tree* bvh,
+    const ray3f& ray, trace_pixel& pxl, const trace_params& params, bool& hit) {
     // intersection
-    auto isec = intersect_bvh(st->bvh, ray, false);
+    auto isec = intersect_bvh(bvh, ray, false);
     hit = (bool)isec;
     if (!hit) return {0, 0, 0};
 
     // texcoord
     auto texcoord =
-        eval_texcoord(st->scn->instances[isec.iid]->shp, isec.eid, isec.euv);
+        eval_texcoord(scn->instances[isec.iid]->shp, isec.eid, isec.euv);
     return {texcoord.x, texcoord.y, 0};
 }
 
 // Trace a single sample
-void trace_sample(trace_state* st, const camera* cam, trace_pixel& pxl,
-    trace_shader shader, const trace_params& params) {
+void trace_sample(const scene* scn, const camera* cam, const bvh_tree* bvh,
+    trace_pixel& pxl, trace_shader shader, const trace_params& params) {
     pxl.sample += 1;
     pxl.dimension = 0;
     auto crn = trace_next2f(pxl);
@@ -6746,7 +6751,7 @@ void trace_sample(trace_state* st, const camera* cam, trace_pixel& pxl,
         (pxl.i + crn.x) / params.width, 1 - (pxl.j + crn.y) / params.height};
     auto ray = eval_camera_ray(cam, uv, lrn);
     bool hit = false;
-    auto l = shader(st, ray, pxl, params, hit);
+    auto l = shader(scn, bvh, ray, pxl, params, hit);
     if (!hit && params.envmap_invisible) return;
     if (!isfinite(l.x) || !isfinite(l.y) || !isfinite(l.z)) {
         log_error("NaN detected");
@@ -6754,7 +6759,6 @@ void trace_sample(trace_state* st, const camera* cam, trace_pixel& pxl,
     }
     if (params.pixel_clamp > 0) l = clamplen(l, params.pixel_clamp);
     pxl.acc += {l, 1};
-    st->img.at(pxl.i, pxl.j) = pxl.acc / pxl.sample;
 }
 
 // map to convert trace samplers
@@ -6787,25 +6791,24 @@ static auto trace_filter_sizes = unordered_map<trace_filter_type, int>{
 };
 
 // Trace the next nsamples.
-void trace_samples(trace_state* st, int nsamples, const trace_params& params) {
+void trace_samples(trace_state* st, const scene* scn, const camera* cam,
+    const bvh_tree* bvh, int nsamples, const trace_params& params) {
     nsamples = min(nsamples, params.nsamples - get_trace_sample(st));
-    auto cam =
-        (params.camera_id < 0) ? st->view : st->scn->cameras[params.camera_id];
     auto shader = trace_shaders.at(params.stype);
     if (params.parallel) {
         auto nthreads = std::thread::hardware_concurrency();
         for (auto tid = 0; tid < std::thread::hardware_concurrency(); tid++) {
-            st->threads.push_back(std::thread(
-                [st, cam, shader, tid, nsamples, nthreads, params]() {
-                    for (auto j = tid; j < params.height; j += nthreads) {
-                        for (auto i = 0; i < params.width; i++) {
-                            auto& pxl = st->pixels.at(i, j);
-                            for (auto s = 0; s < nsamples; s++) {
-                                trace_sample(st, cam, pxl, shader, params);
-                            }
-                        }
+            st->threads.push_back(std::thread([st, scn, cam, bvh, shader, tid, nsamples,
+                                                  nthreads, params]() {
+                for (auto j = tid; j < params.height; j += nthreads) {
+                    for (auto i = 0; i < params.width; i++) {
+                        auto& pxl = st->pixels.at(i, j);
+                        for (auto s = 0; s < nsamples; s++)
+                            trace_sample(scn, cam, bvh, pxl, shader, params);
+                        st->img.at(i, j) = pxl.acc / pxl.sample;
                     }
-                }));
+                }
+            }));
         }
         for (auto& t : st->threads) t.join();
         st->threads.clear();
@@ -6814,18 +6817,19 @@ void trace_samples(trace_state* st, int nsamples, const trace_params& params) {
         for (auto j = 0; j < params.height; j++) {
             for (auto i = 0; i < params.width; i++) {
                 auto& pxl = st->pixels.at(i, j);
-                for (auto s = 0; s < params.nsamples; s++) {
-                    trace_sample(st, cam, pxl, shader, params);
-                }
+                for (auto s = 0; s < params.nsamples; s++)
+                    trace_sample(scn, cam, bvh, pxl, shader, params);
+                st->img.at(i, j) = pxl.acc / pxl.sample;
             }
         }
     }
 }
 
 // Trace a filtered sample of samples
-void trace_sample_filtered(trace_state* st, const camera* cam, trace_pixel& pxl,
-    trace_shader shader, trace_filter filter, int filter_size,
-    std::mutex& image_mutex, const trace_params& params) {
+void trace_sample_filtered(const scene* scn, const camera* cam,
+    const bvh_tree* bvh, trace_pixel& pxl, trace_shader shader,
+    trace_filter filter, int filter_size, std::mutex& image_mutex,
+    const trace_params& params) {
     pxl.sample += 1;
     pxl.dimension = 0;
     auto crn = trace_next2f(pxl);
@@ -6834,7 +6838,7 @@ void trace_sample_filtered(trace_state* st, const camera* cam, trace_pixel& pxl,
         (pxl.i + crn.x) / params.width, 1 - (pxl.j + crn.y) / params.height};
     auto ray = eval_camera_ray(cam, uv, lrn);
     auto hit = false;
-    auto l = shader(st, ray, pxl, params, hit);
+    auto l = shader(scn, bvh, ray, pxl, params, hit);
     if (!hit && params.envmap_invisible) return;
     if (!isfinite(l.x) || !isfinite(l.y) || !isfinite(l.z)) {
         log_error("NaN detected");
@@ -6844,7 +6848,6 @@ void trace_sample_filtered(trace_state* st, const camera* cam, trace_pixel& pxl,
     if (params.ftype == trace_filter_type::box) {
         pxl.acc += {l, 1};
         pxl.weight += 1;
-        st->img.at(pxl.i, pxl.j) = pxl.acc / pxl.weight;
     } else {
         std::lock_guard<std::mutex> lock(image_mutex);
         for (auto fj = max(0, pxl.j - filter_size);
@@ -6855,18 +6858,16 @@ void trace_sample_filtered(trace_state* st, const camera* cam, trace_pixel& pxl,
                          filter((fj - pxl.j) - uv.y + 0.5f);
                 pxl.acc += {l * w, w};
                 pxl.weight += w;
-                st->img.at(fi, fj) = pxl.acc / pxl.weight;
             }
         }
     }
 }
 
 // Trace the next nsamples.
-void trace_samples_filtered(
-    trace_state* st, int nsamples, const trace_params& params) {
+void trace_samples_filtered(trace_state* st, const scene* scn,
+    const camera* cam, const bvh_tree* bvh, int nsamples,
+    const trace_params& params) {
     nsamples = min(nsamples, params.nsamples - get_trace_sample(st));
-    auto cam =
-        (params.camera_id < 0) ? st->view : st->scn->cameras[params.camera_id];
     auto shader = trace_shaders.at(params.stype);
     auto filter = trace_filters.at(params.ftype);
     auto filter_size = trace_filter_sizes.at(params.ftype);
@@ -6874,15 +6875,15 @@ void trace_samples_filtered(
     if (params.parallel) {
         auto nthreads = std::thread::hardware_concurrency();
         for (auto tid = 0; tid < std::thread::hardware_concurrency(); tid++) {
-            st->threads.push_back(
-                std::thread([st, cam, shader, filter, filter_size, tid,
-                                nsamples, nthreads, &image_mutex, params]() {
+            st->threads.push_back(std::thread(
+                [=, &image_mutex]() {
                     for (auto j = tid; j < params.height; j += nthreads) {
                         for (auto i = 0; i < params.width; i++) {
                             auto& pxl = st->pixels.at(i, j);
                             for (auto s = 0; s < nsamples; s++) {
-                                trace_sample_filtered(st, cam, pxl, shader,
-                                    filter, filter_size, image_mutex, params);
+                                trace_sample_filtered(scn, cam, bvh, pxl,
+                                    shader, filter, filter_size, image_mutex,
+                                    params);
                             }
                         }
                     }
@@ -6895,19 +6896,23 @@ void trace_samples_filtered(
             for (auto i = 0; i < params.width; i++) {
                 auto& pxl = st->pixels.at(i, j);
                 for (auto s = 0; s < params.nsamples; s++) {
-                    trace_sample_filtered(st, cam, pxl, shader, filter,
+                    trace_sample_filtered(scn, cam, bvh, pxl, shader, filter,
                         filter_size, image_mutex, params);
                 }
             }
         }
     }
+    for (auto j = 0; j < params.height; j++) {
+        for (auto i = 0; i < params.width; i++) {
+            st->img.at(i, j) =
+                st->pixels.at(i, j).acc / st->pixels.at(i, j).weight;
+        }
+    }
 }
 
 // Starts an anyncrhounous renderer.
-void trace_async_start(trace_state* st, const trace_params& params) {
-    auto cam =
-        (params.camera_id < 0) ? st->view : st->scn->cameras[params.camera_id];
-
+void trace_async_start(trace_state* st, const scene* scn, const camera* cam,
+    const bvh_tree* bvh, const trace_params& params) {
     for (auto j = 0; j < params.height; j++) {
         for (auto i = 0; i < params.width; i++) {
             st->pixels.at(i, j) = {zero4f,
@@ -6918,14 +6923,15 @@ void trace_async_start(trace_state* st, const trace_params& params) {
 
     auto nthreads = std::thread::hardware_concurrency();
     for (auto tid = 0; tid < std::thread::hardware_concurrency(); tid++) {
-        st->threads.push_back(std::thread([st, cam, tid, nthreads, params]() {
+        st->threads.push_back(std::thread([=]() {
             auto shader = trace_shaders.at(params.stype);
             for (auto s = 0; s < params.nsamples; s++) {
                 for (auto j = tid; j < params.height; j += nthreads) {
                     for (auto i = 0; i < params.width; i++) {
                         if (st->thread_stop) return;
                         auto& pxl = st->pixels.at(i, j);
-                        trace_sample(st, cam, pxl, shader, params);
+                        trace_sample(scn, cam, bvh, pxl, shader, params);
+                        st->img.at(i, j) = pxl.acc / pxl.sample;
                     }
                 }
             }
@@ -6942,13 +6948,8 @@ void trace_async_stop(trace_state* st) {
 }
 
 // Initialize a rendering state
-trace_state* make_trace_state(const scene* scn, const camera* view,
-    const bvh_tree* bvh, const trace_params& params) {
+trace_state* make_trace_state(const trace_params& params) {
     auto st = new trace_state();
-
-    st->scn = scn;
-    st->view = view;
-    st->bvh = bvh;
 
     st->img = image4f(params.width, params.height);
     st->pixels = image<trace_pixel>(params.width, params.height);
