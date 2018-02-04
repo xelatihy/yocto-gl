@@ -6770,82 +6770,58 @@ void trace_block(trace_state* st, const vec4i& block, int nsamples,
     }
 }
 
-// Trace a block of samples
-void trace_block_filtered(trace_state* st, const vec4i& block, int nsamples,
+// Trace a filtered sample of samples
+void trace_sample_filtered(trace_state* st, trace_pixel& pxl,
     std::mutex& image_mutex, const trace_params& params) {
-    static constexpr const int pad = 2;
-    auto block_size = vec2i{block.z - block.x, block.w - block.y};
-    auto acc_buffer = image4f(block_size.x + pad * 2, block_size.y + pad * 2);
-    auto weight_buffer =
-        image4f(block_size.x + pad * 2, block_size.y + pad * 2);
-    for (auto j = block.y; j < block.w; j++) {
-        for (auto i = block.x; i < block.x; i++) {
-            auto& pxl = st->pixels.at(i, j);
-            for (auto s = 0; s < nsamples; s++) {
-                pxl.sample += 1;
-                pxl.dimension = 0;
-                auto crn = trace_next2f(pxl);
-                auto lrn = trace_next2f(pxl);
-                auto uv = vec2f{(i + crn.x) / params.width,
-                    1 - (j + crn.y) / params.height};
-                auto ray = eval_camera_ray(st->cam, uv, lrn);
-                auto hit = false;
-                auto l = st->shader(st, ray, pxl, params, hit);
-                if (!hit && params.envmap_invisible) continue;
-                if (!isfinite(l.x) || !isfinite(l.y) || !isfinite(l.z)) {
-                    log_error("NaN detected");
-                    continue;
-                }
-                if (params.pixel_clamp > 0) l = clamplen(l, params.pixel_clamp);
-                if (params.ftype == trace_filter_type::box) {
-                    auto bi = i - block.x, bj = j - block.y;
-                    acc_buffer[{bi + pad, bj + pad}] += {l, 1};
-                    weight_buffer[{bi + pad, bj + pad}] += {1, 1, 1, 1};
-                } else {
-                    auto bi = i - block.x, bj = j - block.y;
-                    for (auto fj = -st->filter_size; fj <= st->filter_size;
-                         fj++) {
-                        for (auto fi = -st->filter_size; fi <= st->filter_size;
-                             fi++) {
-                            auto w = st->filter(fi - uv.x + 0.5f) *
-                                     st->filter(fj - uv.y + 0.5f);
-                            acc_buffer[{bi + fi + pad, bj + fj + pad}] +=
-                                {l * w, w};
-                            weight_buffer[{bi + fi + pad, bj + fj + pad}] +=
-                                {w, w, w, w};
-                        }
-                    }
-                }
-            }
-        }
+    pxl.sample += 1;
+    pxl.dimension = 0;
+    auto crn = trace_next2f(pxl);
+    auto lrn = trace_next2f(pxl);
+    auto uv = vec2f{
+        (pxl.i + crn.x) / params.width, 1 - (pxl.j + crn.y) / params.height};
+    auto ray = eval_camera_ray(st->cam, uv, lrn);
+    auto hit = false;
+    auto l = st->shader(st, ray, pxl, params, hit);
+    if (!hit && params.envmap_invisible) return;
+    if (!isfinite(l.x) || !isfinite(l.y) || !isfinite(l.z)) {
+        log_error("NaN detected");
+        return;
     }
+    if (params.pixel_clamp > 0) l = clamplen(l, params.pixel_clamp);
     if (params.ftype == trace_filter_type::box) {
-        for (auto j = block.y; j < block.w; j++) {
-            for (auto i = block.x; i < block.z; i++) {
-                auto bi = i - block.x, bj = j - block.y;
-                st->acc[{i, j}] += acc_buffer[{bi + pad, bj + pad}];
-                st->weight[{i, j}] += weight_buffer[{bi + pad, bj + pad}];
-                st->img[{i, j}] = st->acc[{i, j}] / st->weight[{i, j}];
-            }
-        }
+        pxl.acc += {l, 1};
+        pxl.weight += 1;
+        st->img.at(pxl.i, pxl.j) = pxl.acc / pxl.weight;
     } else {
-        std::unique_lock<std::mutex> lock_guard(image_mutex);
-        auto width = st->acc.width(), height = st->acc.height();
-        for (auto j = max(block.y - st->filter_size, 0);
-             j < min(block.w + st->filter_size, height); j++) {
-            for (auto i = max(block.x - st->filter_size, 0);
-                 i < min(block.z + st->filter_size, width); i++) {
-                auto bi = i - block.x, bj = j - block.y;
-                st->acc[{i, j}] += acc_buffer[{bi + pad, bj + pad}];
-                st->weight[{i, j}] += weight_buffer[{bi + pad, bj + pad}];
-                st->img[{i, j}] = st->acc[{i, j}] / st->weight[{i, j}];
+        std::lock_guard<std::mutex> lock(image_mutex);
+        for (auto fj = max(0, pxl.j - st->filter_size);
+             fj <= min(params.height - 1, pxl.j + st->filter_size); fj++) {
+            for (auto fi = max(0, pxl.i - st->filter_size);
+                 fi <= min(params.width - 1, pxl.i + st->filter_size); fi++) {
+                auto w = st->filter((fi - pxl.i) - uv.x + 0.5f) *
+                         st->filter((fj - pxl.j) - uv.y + 0.5f);
+                pxl.acc += {l * w, w};
+                pxl.weight += w;
+                st->img.at(fi, fj) = pxl.acc / pxl.weight;
             }
         }
     }
 }
 
-// Trace the next samples in [samples_min, samples_max) range.
-// Samples have to be traced consecutively.
+// Trace a block of samples
+void trace_block_filtered(trace_state* st, const vec4i& block, int nsamples,
+    std::mutex& image_mutex, const trace_params& params) {
+    for (auto j = block.y; j < block.w; j++) {
+        for (auto i = block.x; i < block.x; i++) {
+            auto& pxl = st->pixels.at(i, j);
+            for (auto s = 0; s < nsamples; s++) {
+                trace_sample_filtered(st, pxl, image_mutex, params);
+            }
+        }
+    }
+}
+
+// Trace the next nsamples.
 void trace_samples(trace_state* st, int nsamples, const trace_params& params) {
     nsamples = min(nsamples, params.nsamples - get_trace_sample(st));
     if (params.parallel) {
@@ -6912,7 +6888,7 @@ void trace_async_start(trace_state* st, const trace_params& params) {
         for (auto i = 0; i < params.width; i++) {
             st->pixels.at(i, j) = {zero4f,
                 init_rng(params.seed, (j * params.width + i) * 2 + 1), i, j, 0,
-                0, params.nsamples, params.rtype};
+                0, 0, params.nsamples, params.rtype};
         }
     }
 
@@ -6959,7 +6935,7 @@ trace_state* make_trace_state(const scene* scn, const camera* view,
         for (auto i = 0; i < params.width; i++) {
             st->pixels.at(i, j) = {zero4f,
                 init_rng(params.seed, (j * params.width + i) * 2 + 1), i, j, 0,
-                0, params.nsamples, params.rtype};
+                0, 0, params.nsamples, params.rtype};
         }
     }
 
