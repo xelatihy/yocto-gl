@@ -47,15 +47,10 @@ struct shape_vbo {
 
 // OpenGL state
 struct shade_state {
-    // shade state
     ygl::gl_stdsurface_program prog = {};
     std::map<void*, ygl::gl_texture> txt;
     std::map<void*, shape_vbo> vbo;
-
-    // lights
-    std::vector<ygl::vec3f> lights_pos;
-    std::vector<ygl::vec3f> lights_ke;
-    std::vector<ygl::gl_ltype> lights_ltype;
+    ygl::gl_lights lights;
 };
 
 // Application state
@@ -196,9 +191,9 @@ inline bool load_scene(
 // Init shading
 inline void update_shade_lights(
     shade_state* st, const ygl::gltf_scene_group* scn) {
-    st->lights_pos.clear();
-    st->lights_ke.clear();
-    st->lights_ltype.clear();
+    st->lights.pos.clear();
+    st->lights.ke.clear();
+    st->lights.type.clear();
 
     auto instances = ygl::get_mesh_nodes(scn->default_scene);
 
@@ -209,11 +204,11 @@ inline void update_shade_lights(
                 auto mat = shp->mat;
                 if (mat->emission == ygl::zero3f) continue;
                 for (auto p : shp->points) {
-                    if (st->lights_pos.size() >= 16) break;
-                    st->lights_pos.push_back(ygl::transform_point(
+                    if (st->lights.pos.size() >= 16) break;
+                    st->lights.pos.push_back(ygl::transform_point(
                         ygl::mat4f(ist->xform()), shp->pos[p]));
-                    st->lights_ke.push_back(mat->emission);
-                    st->lights_ltype.push_back(ygl::gl_ltype::point);
+                    st->lights.ke.push_back(mat->emission);
+                    st->lights.type.push_back(ygl::gl_light_type::point);
                 }
             }
         }
@@ -224,10 +219,10 @@ inline void update_shade_lights(
                 auto mat = shp->mat;
                 if (mat->emission == ygl::zero3f) continue;
                 for (auto p : shp->points) {
-                    if (st->lights_pos.size() >= 16) break;
-                    st->lights_pos.push_back(shp->pos[p]);
-                    st->lights_ke.push_back(mat->emission);
-                    st->lights_ltype.push_back(ygl::gl_ltype::point);
+                    if (st->lights.pos.size() >= 16) break;
+                    st->lights.pos.push_back(shp->pos[p]);
+                    st->lights.ke.push_back(mat->emission);
+                    st->lights.type.push_back(ygl::gl_light_type::point);
                 }
             }
         }
@@ -310,9 +305,9 @@ inline void shade_mesh(const ygl::gltf_mesh* msh, const ygl::gltf_skin* sk,
     for (auto shp : msh->shapes) {
         begin_stdsurface_shape(st->prog, xform);
 
-        auto etype = ygl::gl_etype::triangle;
-        if (!shp->lines.empty()) etype = ygl::gl_etype::line;
-        if (!shp->points.empty()) etype = ygl::gl_etype::point;
+        auto etype = ygl::gl_elem_type::triangle;
+        if (!shp->lines.empty()) etype = ygl::gl_elem_type::line;
+        if (!shp->points.empty()) etype = ygl::gl_elem_type::point;
 
         set_stdsurface_highlight(
             st->prog, (highlighted) ? ygl::vec4f{1, 1, 0, 1} : ygl::zero4f);
@@ -462,9 +457,7 @@ inline void shade_scene(const ygl::gltf_scene_group* scns, shade_state* st,
 
     if (!camera_lights) {
         update_shade_lights(st, scns);
-        set_stdsurface_lights(st->prog, amb, (int)st->lights_pos.size(),
-            st->lights_pos.data(), st->lights_ke.data(),
-            st->lights_ltype.data());
+        set_stdsurface_lights(st->prog, amb, st->lights);
     }
 
     auto instances = ygl::get_mesh_nodes(scns->default_scene);
@@ -1068,7 +1061,7 @@ void shade_draw(ygl::gl_window* win) {
     draw_scene(win);
     draw_widgets(win);
     swap_buffers(win);
-    if (scn->shstate->lights_pos.empty()) scn->camera_lights = true;
+    if (scn->shstate->lights.pos.empty()) scn->camera_lights = true;
 }
 
 bool update(app_state* scn) {

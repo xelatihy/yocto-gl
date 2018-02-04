@@ -12441,7 +12441,7 @@ void gl_read_imagef(float* pixels, int w, int h, int nc) {
 }  // namespace ygl
 
 // -----------------------------------------------------------------------------
-// TEXTURE FUNCTIONS
+// IMPLEMENTATION OF OPENGL TEXTURE FUNCTIONS
 // -----------------------------------------------------------------------------
 namespace ygl {
 
@@ -12520,9 +12520,12 @@ void clear_texture(gl_texture& txt) {
     assert(gl_check_error());
 }
 
+}  // namespace ygl
+
 // -----------------------------------------------------------------------------
-// VERTEX ARRAY BUFFER
+// IMPLEMENTATION OF OPENGL VERTEX ARRAY BUFFER
 // -----------------------------------------------------------------------------
+namespace ygl {
 
 // Updates the buffer with new data.
 void _update_vertex_buffer(gl_vertex_buffer& buf, int n, int nc,
@@ -12583,9 +12586,12 @@ void clear_vertex_buffer(gl_vertex_buffer& buf) {
     assert(gl_check_error());
 }
 
+}  // namespace ygl
+
 // -----------------------------------------------------------------------------
-// VERTEX ELEMENTS BUFFER
+// IMPLEMENTATION OF OPENGL VERTEX ELEMENTS BUFFER
 // -----------------------------------------------------------------------------
+namespace ygl {
 
 // Updates the buffer bid with new data.
 void _update_element_buffer(
@@ -12643,9 +12649,13 @@ void clear_element_buffer(gl_element_buffer& buf) {
     assert(gl_check_error());
 }
 
+}  // namespace ygl
+
 // -----------------------------------------------------------------------------
-// PROGRAM FUNCTIONS
+// IMPLEMENTATION OF OPENGL PROGRAM FUNCTIONS
 // -----------------------------------------------------------------------------
+namespace ygl {
+
 // Creates and OpenGL program from vertex and fragment code. Returns the
 // program id. Optionally return vertex and fragment shader ids. A VAO is
 // created.
@@ -12965,6 +12975,151 @@ void unbind_program(const gl_program& prog) {
     assert(gl_check_error());
 }
 
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION OF SCENE SHADER FUNCTIONS
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// Clear fl_stdsurface_program state
+void clear_shape(gl_shape& shp) {
+    clear_vertex_buffer(shp.pos);
+    clear_vertex_buffer(shp.norm);
+    clear_vertex_buffer(shp.texcoord);
+    clear_vertex_buffer(shp.color);
+    clear_vertex_buffer(shp.tangsp);
+    clear_element_buffer(shp.points);
+    clear_element_buffer(shp.lines);
+    clear_element_buffer(shp.triangles);
+    clear_element_buffer(shp.quads);
+    clear_element_buffer(shp.edges);
+}
+
+// Clear scene textures on the GPU.
+void clear_textures(unordered_map<texture*, gl_texture>& gtextures) {
+    for (auto& kv : gtextures) clear_texture(kv.second);
+    gtextures.clear();
+}
+
+// Clear scene shapes on the GPU.
+void clear_shapes(unordered_map<shape*, gl_shape>& gshapes) {
+    for (auto& kv : gshapes) clear_shape(kv.second);
+    gshapes.clear();
+}
+
+// Init shading
+void update_textures(const scene* scn,
+    unordered_map<texture*, gl_texture>& gtextures,
+    const unordered_set<texture*>& refresh, bool clear) {
+    if (clear) clear_textures(gtextures);
+    for (auto txt : scn->textures) {
+        if (gtextures.find(txt) == gtextures.end()) {
+            gtextures[txt] = gl_texture();
+        } else {
+            if (refresh.find(txt) == refresh.end()) continue;
+        }
+        auto& gtxt = gtextures.at(txt);
+        if (txt->hdr) {
+            update_texture(gtxt, txt->hdr, true, true, true);
+        } else if (txt->ldr) {
+            update_texture(gtxt, txt->ldr, true, true, true);
+        } else
+            assert(false);
+    }
+}
+
+// Init shading
+void update_shapes(const scene* scn, unordered_map<shape*, gl_shape>& gshapes,
+    const unordered_set<shape*>& refresh, bool clear) {
+    if (clear) clear_shapes(gshapes);
+    for (auto shp : scn->shapes) {
+        if (gshapes.find(shp) == gshapes.end()) {
+            gshapes[shp] = gl_shape();
+        } else {
+            if (refresh.find(shp) == refresh.end()) continue;
+        }
+        auto& gshp = gshapes.at(shp);
+        if (!shp->quads_pos.empty()) {
+            auto pos = vector<vec3f>();
+            auto norm = vector<vec3f>();
+            auto texcoord = vector<vec2f>();
+            auto quads = vector<vec4i>();
+            tie(quads, pos, norm, texcoord) =
+                convert_face_varying(shp->quads_pos, shp->quads_norm,
+                    shp->quads_texcoord, shp->pos, shp->norm, shp->texcoord);
+            update_vertex_buffer(gshp.pos, pos);
+            update_vertex_buffer(gshp.norm, norm);
+            update_vertex_buffer(gshp.texcoord, texcoord);
+            update_element_buffer(
+                gshp.quads, convert_quads_to_triangles(quads));
+            update_element_buffer(gshp.edges, get_edges({}, {}, shp->quads));
+            update_vertex_buffer(gshp.color, vector<vec4f>{});
+            update_vertex_buffer(gshp.tangsp, vector<vec4f>{});
+        } else {
+            update_vertex_buffer(gshp.pos, shp->pos);
+            update_vertex_buffer(gshp.norm, shp->norm);
+            update_vertex_buffer(gshp.texcoord, shp->texcoord);
+            update_vertex_buffer(gshp.color, shp->color);
+            update_vertex_buffer(gshp.tangsp, shp->tangsp);
+            update_element_buffer(gshp.points, shp->points);
+            update_element_buffer(gshp.lines, shp->lines);
+            update_element_buffer(gshp.triangles, shp->triangles);
+            update_element_buffer(
+                gshp.quads, convert_quads_to_triangles(shp->quads));
+            update_element_buffer(
+                gshp.beziers, convert_bezier_to_lines(shp->beziers));
+            update_element_buffer(
+                gshp.edges, get_edges({}, shp->triangles, shp->quads));
+        }
+    }
+}
+
+// Initialize stdsurface lights
+gl_lights make_gl_lights(const scene* scn) {
+    auto lights = gl_lights();
+    for (auto ist : scn->instances) {
+        if (!ist->shp) continue;
+        if (!ist->shp->mat) continue;
+        if (ist->shp->mat->ke == zero3f) continue;
+        if (lights.pos.size() >= 16) break;
+        if (!ist->shp->points.empty()) {
+            for (auto p : ist->shp->points) {
+                if (lights.pos.size() >= 16) break;
+                lights.pos += transform_point(ist->frame, ist->shp->pos[p]);
+                lights.ke += ist->shp->mat->ke;
+                lights.type += gl_light_type::point;
+            }
+        } else {
+            auto bbox = make_bbox(ist->shp->pos.size(), ist->shp->pos.data());
+            auto pos = bbox_center(bbox);
+            auto area = 0.0f;
+            for (auto l : ist->shp->lines)
+                area += line_length(ist->shp->pos[l.x], ist->shp->pos[l.y]);
+            for (auto t : ist->shp->triangles)
+                area += triangle_area(
+                    ist->shp->pos[t.x], ist->shp->pos[t.y], ist->shp->pos[t.z]);
+            for (auto t : ist->shp->quads)
+                area += quad_area(ist->shp->pos[t.x], ist->shp->pos[t.y],
+                    ist->shp->pos[t.z], ist->shp->pos[t.w]);
+            auto ke = ist->shp->mat->ke * area;
+            if (lights.pos.size() < 16) {
+                lights.pos += transform_point(ist->frame, pos);
+                lights.ke += ke;
+                lights.type += gl_light_type::point;
+            }
+        }
+    }
+    return lights;
+}
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION FOR OPRNGL IMAGE SHADER FUNCTIONS
+// -----------------------------------------------------------------------------
+namespace ygl {
+
 // Initialize the program. Call with true only after the GL is initialized.
 gl_stdimage_program make_stdimage_program() {
     string _header =
@@ -13050,6 +13205,13 @@ gl_stdimage_program make_stdimage_program() {
     prog._ebo = make_element_buffer(vector<vec3i>{{0, 1, 2}, {0, 2, 3}}, false);
     return prog;
 }
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION FOR OPRNGL STANDARD SURFACE SHADER FUNCTIONS
+// -----------------------------------------------------------------------------
+namespace ygl {
 
 // Initialize a standard shader. Call with true only after the gl has
 // been initialized
@@ -13479,196 +13641,69 @@ gl_stdsurface_program make_stdsurface_program() {
     return prog;
 }
 
-// Initialize gl_stdsurface_program draw state
-gl_stdsurface_state* make_stdsurface_state() {
-    auto st = new gl_stdsurface_state();
-    if (!is_program_valid(st->prog)) st->prog = make_stdsurface_program();
-    st->txt[nullptr] = {};
-    return st;
-}
-
-// Clear fl_stdsurface_program state
-void clear_stdsurface_state(gl_stdsurface_state* st, bool clear_program) {
-    for (auto& txt_kv : st->txt) {
-        auto& txt = txt_kv.second;
-        clear_texture(txt);
-    }
-    st->txt.clear();
-    for (auto& vbo_kv : st->vbo) {
-        auto& vbo = vbo_kv.second;
-        clear_vertex_buffer(vbo.pos);
-        clear_vertex_buffer(vbo.norm);
-        clear_vertex_buffer(vbo.texcoord);
-        clear_vertex_buffer(vbo.color);
-        clear_vertex_buffer(vbo.tangsp);
-        clear_element_buffer(vbo.points);
-        clear_element_buffer(vbo.lines);
-        clear_element_buffer(vbo.triangles);
-        clear_element_buffer(vbo.quads);
-        clear_element_buffer(vbo.edges);
-    }
-    st->vbo.clear();
-    if (clear_program) st->vbo.clear();
-}
-
-// Initialize stdsurface lights
-gl_stdsurface_lights make_stdsurface_lights(const scene* scn) {
-    auto lights = gl_stdsurface_lights();
-    for (auto ist : scn->instances) {
-        if (!ist->shp) continue;
-        if (!ist->shp->mat) continue;
-        if (ist->shp->mat->ke == zero3f) continue;
-        if (lights.pos.size() >= 16) break;
-        if (!ist->shp->points.empty()) {
-            for (auto p : ist->shp->points) {
-                if (lights.pos.size() >= 16) break;
-                lights.pos += transform_point(ist->frame, ist->shp->pos[p]);
-                lights.ke += ist->shp->mat->ke;
-                lights.ltype += gl_ltype::point;
-            }
-        } else {
-            auto bbox = make_bbox(ist->shp->pos.size(), ist->shp->pos.data());
-            auto pos = bbox_center(bbox);
-            auto area = 0.0f;
-            for (auto l : ist->shp->lines)
-                area += line_length(ist->shp->pos[l.x], ist->shp->pos[l.y]);
-            for (auto t : ist->shp->triangles)
-                area += triangle_area(
-                    ist->shp->pos[t.x], ist->shp->pos[t.y], ist->shp->pos[t.z]);
-            for (auto t : ist->shp->quads)
-                area += quad_area(ist->shp->pos[t.x], ist->shp->pos[t.y],
-                    ist->shp->pos[t.z], ist->shp->pos[t.w]);
-            auto ke = ist->shp->mat->ke * area;
-            if (lights.pos.size() < 16) {
-                lights.pos += transform_point(ist->frame, pos);
-                lights.ke += ke;
-                lights.ltype += gl_ltype::point;
-            }
-        }
-    }
-    return lights;
-}
-
-// Init shading
-void update_stdsurface_state(gl_stdsurface_state* st, const scene* scn,
-    const gl_stdsurface_params& params, const unordered_set<void*>& refresh) {
-    // update textures -----------------------------------------------------
-    for (auto txt : scn->textures) {
-        if (st->txt.find(txt) == st->txt.end()) {
-            st->txt[txt] = gl_texture();
-        } else {
-            if (refresh.find(txt) == refresh.end()) continue;
-        }
-        if (txt->hdr) {
-            update_texture(st->txt[txt], txt->hdr, true, true, true);
-        } else if (txt->ldr) {
-            update_texture(st->txt[txt], txt->ldr, true, true, true);
-        } else
-            assert(false);
-    }
-
-    // refresh vbos --------------------------------------------------------
-    for (auto shp : scn->shapes) {
-        if (st->vbo.find(shp) == st->vbo.end()) {
-            st->vbo[shp] = gl_stdsurface_vbo();
-        } else {
-            if (refresh.find(shp) == refresh.end()) continue;
-        }
-        if (!shp->quads_pos.empty()) {
-            auto pos = vector<vec3f>();
-            auto norm = vector<vec3f>();
-            auto texcoord = vector<vec2f>();
-            auto quads = vector<vec4i>();
-            tie(quads, pos, norm, texcoord) =
-                convert_face_varying(shp->quads_pos, shp->quads_norm,
-                    shp->quads_texcoord, shp->pos, shp->norm, shp->texcoord);
-            update_vertex_buffer(st->vbo[shp].pos, pos);
-            update_vertex_buffer(st->vbo[shp].norm, norm);
-            update_vertex_buffer(st->vbo[shp].texcoord, texcoord);
-            update_element_buffer(
-                st->vbo[shp].quads, convert_quads_to_triangles(quads));
-            update_element_buffer(
-                st->vbo[shp].edges, get_edges({}, {}, shp->quads));
-            update_vertex_buffer(st->vbo[shp].color, vector<vec4f>{});
-            update_vertex_buffer(st->vbo[shp].tangsp, vector<vec4f>{});
-        } else {
-            update_vertex_buffer(st->vbo[shp].pos, shp->pos);
-            update_vertex_buffer(st->vbo[shp].norm, shp->norm);
-            update_vertex_buffer(st->vbo[shp].texcoord, shp->texcoord);
-            update_vertex_buffer(st->vbo[shp].color, shp->color);
-            update_vertex_buffer(st->vbo[shp].tangsp, shp->tangsp);
-            update_element_buffer(st->vbo[shp].points, shp->points);
-            update_element_buffer(st->vbo[shp].lines, shp->lines);
-            update_element_buffer(st->vbo[shp].triangles, shp->triangles);
-            update_element_buffer(
-                st->vbo[shp].quads, convert_quads_to_triangles(shp->quads));
-            update_element_buffer(
-                st->vbo[shp].beziers, convert_bezier_to_lines(shp->beziers));
-            update_element_buffer(
-                st->vbo[shp].edges, get_edges({}, shp->triangles, shp->quads));
-        }
-    }
-}
-
 // Draw a shape
-inline void draw_stdsurface_shape(gl_stdsurface_state* st, const shape* shp,
-    const mat4f& xform, bool highlighted, const gl_stdsurface_params& params) {
+inline void draw_stdsurface_shape(const shape* shp, const mat4f& xform,
+    bool highlighted, gl_stdsurface_program& prog,
+    unordered_map<shape*, gl_shape>& shapes,
+    unordered_map<texture*, gl_texture>& textures,
+    const gl_stdsurface_params& params) {
     static auto default_material = material();
     default_material.kd = {0.2f, 0.2f, 0.2f};
 
-    begin_stdsurface_shape(st->prog, xform);
+    begin_stdsurface_shape(prog, xform);
 
-    auto etype = gl_etype::triangle;
-    if (!shp->lines.empty()) etype = gl_etype::line;
-    if (!shp->points.empty()) etype = gl_etype::point;
+    auto etype = gl_elem_type::triangle;
+    if (!shp->lines.empty()) etype = gl_elem_type::line;
+    if (!shp->points.empty()) etype = gl_elem_type::point;
 
-    auto txt = [&st](texture_info& info) -> gl_texture_info {
+    auto txt = [&textures](texture_info& info) -> gl_texture_info {
         if (!info.txt) return {};
-        return st->txt.at(info.txt);
+        return textures.at(info.txt);
     };
 
     auto mat = (shp->mat) ? shp->mat : &default_material;
-    set_stdsurface_material(st->prog, mat->type, etype, mat->ke, mat->kd,
-        mat->ks, mat->rs, mat->op, txt(mat->ke_txt), txt(mat->kd_txt),
-        txt(mat->ks_txt), txt(mat->rs_txt), txt(mat->norm_txt),
-        txt(mat->occ_txt), false, mat->double_sided, params.cutout);
+    set_stdsurface_material(prog, mat->type, etype, mat->ke, mat->kd, mat->ks,
+        mat->rs, mat->op, txt(mat->ke_txt), txt(mat->kd_txt), txt(mat->ks_txt),
+        txt(mat->rs_txt), txt(mat->norm_txt), txt(mat->occ_txt), false,
+        mat->double_sided, params.cutout);
 
-    auto& vbo = st->vbo.at((shape*)shp);
+    auto& gshp = shapes.at((shape*)shp);
     set_stdsurface_vert(
-        st->prog, vbo.pos, vbo.norm, vbo.texcoord, vbo.color, vbo.tangsp);
+        prog, gshp.pos, gshp.norm, gshp.texcoord, gshp.color, gshp.tangsp);
 
-    draw_elems(vbo.points);
-    draw_elems(vbo.lines);
-    draw_elems(vbo.triangles);
-    draw_elems(vbo.quads);
-    draw_elems(vbo.beziers);
+    draw_elems(gshp.points);
+    draw_elems(gshp.lines);
+    draw_elems(gshp.triangles);
+    draw_elems(gshp.quads);
+    draw_elems(gshp.beziers);
 
     if ((params.edges && !params.wireframe) || highlighted) {
         gl_enable_culling(false);
-        set_stdsurface_constmaterial(st->prog,
+        set_stdsurface_constmaterial(prog,
             (highlighted) ? params.highlight_color : params.edge_color,
             (highlighted) ? 1 : mat->op);
-        set_stdsurface_normaloffset(st->prog, params.edge_offset);
-        draw_elems(vbo.edges);
+        set_stdsurface_normaloffset(prog, params.edge_offset);
+        draw_elems(gshp.edges);
         gl_enable_culling(params.cull_backface);
     }
 
     if (highlighted && false) {
-        set_stdsurface_constmaterial(st->prog, params.highlight_color, 1);
-        set_stdsurface_normaloffset(st->prog, params.edge_offset);
-        draw_elems(vbo.points);
-        draw_elems(vbo.lines);
-        draw_elems(vbo.triangles);
-        draw_elems(vbo.quads);
-        draw_elems(vbo.beziers);
+        set_stdsurface_constmaterial(prog, params.highlight_color, 1);
+        set_stdsurface_normaloffset(prog, params.edge_offset);
+        draw_elems(gshp.points);
+        draw_elems(gshp.lines);
+        draw_elems(gshp.triangles);
+        draw_elems(gshp.quads);
+        draw_elems(gshp.beziers);
     }
 
-    end_stdsurface_shape(st->prog);
+    end_stdsurface_shape(prog);
 }
 
 // Display a scene
-void draw_stdsurface_scene(gl_stdsurface_state* st, const scene* scn,
-    const camera* view, const gl_stdsurface_lights& lights,
+void draw_stdsurface_scene(const scene* scn, const camera* view,
+    gl_stdsurface_program& prog, unordered_map<shape*, gl_shape>& shapes,
+    unordered_map<texture*, gl_texture>& textures, const gl_lights& lights,
     const gl_stdsurface_params& params) {
     // begin frame
     gl_enable_depth_test(true);
@@ -13682,28 +13717,27 @@ void draw_stdsurface_scene(gl_stdsurface_state* st, const scene* scn,
     auto camera_proj = perspective_mat4(cam->yfov,
         (float)params.width / (float)params.height, cam->near, cam->far);
 
-    begin_stdsurface_frame(st->prog, params.camera_lights, params.exposure,
+    begin_stdsurface_frame(prog, params.camera_lights, params.exposure,
         params.gamma, params.filmic, camera_xform, camera_view, camera_proj);
 
     if (!params.camera_lights) {
-        set_stdsurface_lights(st->prog, params.ambient, (int)lights.pos.size(),
-            lights.pos.data(), lights.ke.data(), lights.ltype.data());
+        set_stdsurface_lights(prog, params.ambient, lights);
     }
 
     if (!scn->instances.empty()) {
         for (auto ist : scn->instances) {
-            draw_stdsurface_shape(st, ist->shp, to_mat(ist->frame),
+            draw_stdsurface_shape(ist->shp, to_mat(ist->frame),
                 (ist == params.highlighted || ist->shp == params.highlighted),
-                params);
+                prog, shapes, textures, params);
         }
     } else {
         for (auto shp : scn->shapes) {
-            draw_stdsurface_shape(
-                st, shp, identity_mat4f, shp == params.highlighted, params);
+            draw_stdsurface_shape(shp, identity_mat4f,
+                shp == params.highlighted, prog, shapes, textures, params);
         }
     }
 
-    end_stdsurface_frame(st->prog);
+    end_stdsurface_frame(prog);
     gl_enable_wireframe(false);
 }
 
