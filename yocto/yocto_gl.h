@@ -5228,9 +5228,6 @@ struct scene {
     /// environment array
     vector<environment*> environments = {};
 
-    /// light array
-    vector<light*> lights = {};
-
     /// node hierarchy
     vector<node*> nodes = {};
     /// node animation
@@ -5319,10 +5316,6 @@ bbox3f compute_bounds(const scene* scn);
 
 /// Flatten scene instances into separate meshes.
 void flatten_instances(scene* scn);
-
-/// Initialize the lights
-void update_lights(
-    scene* scn, bool include_env = false, bool sampling_cdf = false);
 
 /// Print scene information (call update bounds bes before)
 void print_info(const scene* scn);
@@ -6017,44 +6010,68 @@ struct trace_params {
 };
 
 /// Trace pixel state. Handles image accumulation and random number generation
-/// for uniform and stratified sequences.
+/// for uniform and stratified sequences. The members are not part of the
+/// the public API.
 struct trace_pixel {
-    vec4f acc = zero4f;           // pixel accumulated radiance and coverage
-    rng_pcg32 rng = rng_pcg32();  // random number state
-    int i = 0, j = 0;             // pixel coordinates
-    int sample = 0;               // number of samples computed
-    int dimension = 0;            // current dimension
-    float weight = 0;             // pixel weight for filtering
-    int nsamples = 0;             // total number of samples
-    trace_rng_type rtype = trace_rng_type::uniform;  // random number type
+    /// pixel accumulated radiance and coverage
+    vec4f acc = zero4f;
+    /// random number state
+    rng_pcg32 rng = rng_pcg32();
+    /// pixel coordinates
+    int i = 0, j = 0;
+    /// number of samples computed
+    int sample = 0;
+    /// current dimension
+    int dimension = 0;
+    /// pixel weight for filtering
+    float weight = 0;
+    /// total number of samples
+    int nsamples = 0;
+    /// random number type
+    trace_rng_type rtype = trace_rng_type::uniform;
+};
+
+/// Trace lights. Handles sampling of illumination. The members are not part of
+/// the the public API.
+struct trace_light {
+    // Instance pointer for instance lights
+    const instance* ist = nullptr;
+    // Environment pointer for environment lights
+    const environment* env = nullptr;
 };
 
 /// Initialize the rendering pixels
 image<trace_pixel> make_trace_pixels(const trace_params& params);
 
+/// Initialize trace lights
+vector<trace_light*> make_trace_lights(const scene* scn);
+
 /// Trace the next nsamples samples.
 void trace_samples(const scene* scn, const camera* cam, const bvh_tree* bvh,
-    image4f& img, image<trace_pixel>& pixels, int nsamples,
-    const trace_params& params);
+    const vector<trace_light*>& lights, image4f& img,
+    image<trace_pixel>& pixels, int nsamples, const trace_params& params);
 
 /// Trace the next nsamples samples with image filtering.
 void trace_samples_filtered(const scene* scn, const camera* cam,
-    const bvh_tree* bvh, image4f& img, image<trace_pixel>& pixels, int nsamples,
-    const trace_params& params);
+    const bvh_tree* bvh, const vector<trace_light*>& lights, image4f& img,
+    image<trace_pixel>& pixels, int nsamples, const trace_params& params);
 
 /// Trace the whole image
 inline image4f trace_image(const scene* scn, const camera* cam,
     const bvh_tree* bvh, const trace_params& params) {
     auto img = image4f(params.width, params.height);
     auto pixels = make_trace_pixels(params);
-    trace_samples(scn, cam, bvh, img, pixels, params.nsamples, params);
+    auto lights = make_trace_lights(scn);
+    trace_samples(scn, cam, bvh, lights, img, pixels, params.nsamples, params);
+    for (auto v : lights) delete v;
     return img;
 }
 
 /// Starts an anyncrhounous renderer.
 void trace_async_start(const scene* scn, const camera* cam, const bvh_tree* bvh,
-    image4f& img, image<trace_pixel>& pixels, vector<std::thread>& threads,
-    bool& stop_flag, const trace_params& params);
+    const vector<trace_light*>& lights, image4f& img,
+    image<trace_pixel>& pixels, vector<std::thread>& threads, bool& stop_flag,
+    const trace_params& params);
 
 /// Stop the asynchronous renderer.
 void trace_async_stop(vector<std::thread>& threads, bool& stop_flag);
@@ -9110,7 +9127,7 @@ inline void end_stdsurface_frame(gl_stdsurface_program& prog) {
 /// Set num lights with position pos, color ke, type ltype. Also set the
 /// ambient illumination amb.
 inline void set_stdsurface_lights(gl_stdsurface_program& prog, const vec3f& amb,
-    int num, vec3f* pos, vec3f* ke, gl_ltype* type) {
+    int num, const vec3f* pos, const vec3f* ke, const gl_ltype* type) {
     static auto amb_id =
         get_program_uniform_location(prog._prog, "lighting.amb");
     static auto lnum_id =
@@ -9369,9 +9386,13 @@ struct gl_stdsurface_state {
     gl_stdsurface_program prog = {};               // gl program
     unordered_map<texture*, gl_texture> txt;       // gl textures
     unordered_map<shape*, gl_stdsurface_vbo> vbo;  // mesh vbos
-    vector<vec3f> lights_pos;                      // light position
-    vector<vec3f> lights_ke;                       // light intensity
-    vector<gl_ltype> lights_ltype;                 // light type
+};
+
+/// State object to store lights for stdsurface rendering
+struct gl_stdsurface_lights {
+    vector<vec3f> pos;       // light position
+    vector<vec3f> ke;        // light intensity
+    vector<gl_ltype> ltype;  // light type
 };
 
 /// Params for  gl_stdsurface_program drawing
@@ -9421,12 +9442,16 @@ void update_stdsurface_state(gl_stdsurface_state* st, const scene* scn,
     const gl_stdsurface_params& params,
     const unordered_set<void*>& refresh = {});
 
+/// Initialize stdsurface lights
+gl_stdsurface_lights make_stdsurface_lights(const scene* scn);
+
 /// Clear gl_stdsurface_program draw state
 void clear_stdsurface_state(gl_stdsurface_state* st, bool clear_program = true);
 
 /// Draw whole scene
 void draw_stdsurface_scene(gl_stdsurface_state* st, const scene* scn,
-    const camera* view, const gl_stdsurface_params& params);
+    const camera* cam, const gl_stdsurface_lights& lights,
+    const gl_stdsurface_params& params);
 
 }  // namespace ygl
 

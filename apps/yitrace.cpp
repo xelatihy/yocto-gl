@@ -38,6 +38,7 @@ struct app_state {
     string imfilename;
     image4f img;
     image<trace_pixel> pixels;
+    vector<trace_light*> lights;
     trace_params params;
     vector<std::thread> async_threads;
     bool async_stop = false;
@@ -126,7 +127,7 @@ bool update(app_state* app) {
         auto preview_pixels = make_trace_pixels(pparams);
         auto preview_img = image4f(pparams.width, pparams.height);
         trace_samples(
-            app->scn, cam, app->bvh, preview_img, preview_pixels, 1, pparams);
+            app->scn, cam, app->bvh, app->lights, preview_img, preview_pixels, 1, pparams);
         resize_image(preview_img, app->img, resize_filter::box);
         update_texture(app->trace_texture, app->img);
 
@@ -135,7 +136,7 @@ bool update(app_state* app) {
         auto cam = (app->params.camera_id < 0) ?
                        app->view :
                        app->scn->cameras[app->params.camera_id];
-        trace_async_start(app->scn, cam, app->bvh, app->img, app->pixels,
+        trace_async_start(app->scn, cam, app->bvh, app->lights, app->img, app->pixels,
             app->async_threads, app->async_stop, app->params);
         app->rendering = true;
     }
@@ -247,10 +248,10 @@ int main(int argc, char* argv[]) {
 
     // init renderer
     log_info("initializing tracer");
-    update_lights(app->scn, true, true);
+    app->lights = make_trace_lights(app->scn);
 
     // fix renderer type if no lights
-    if (app->scn->lights.empty() &&
+    if (app->lights.empty() &&
         app->params.stype != trace_shader_type::eyelight) {
         log_info("no lights presents, switching to eyelight shader");
         app->params.stype = trace_shader_type::eyelight;

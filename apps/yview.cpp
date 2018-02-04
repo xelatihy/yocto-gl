@@ -38,6 +38,7 @@ struct app_state {
     string outfilename;
     gl_stdsurface_params shparams = {};
     gl_stdsurface_state* shstate = nullptr;
+    gl_stdsurface_lights lights;
     bool navigation_fps = false;
     void* selection = nullptr;
     test_scene_params edit_params;
@@ -61,16 +62,16 @@ inline void draw(gl_window* win) {
     app->shparams.height = framebuffer_size.y;
 
     update_transforms(app->scn, app->time);
-    update_lights(app->scn, false, false);
+    app->lights = make_stdsurface_lights(app->scn);
     update_stdsurface_state(app->shstate, app->scn, app->shparams);
-    if (app->shstate->lights_pos.empty()) app->shparams.camera_lights = true;
+    if (app->lights.pos.empty()) app->shparams.camera_lights = true;
 
     app->shparams.highlighted = app->selection;
 
     gl_clear_buffers(app->shparams.background);
     gl_enable_depth_test(true);
     gl_enable_culling(app->shparams.cull_backface);
-    draw_stdsurface_scene(app->shstate, app->scn, app->view, app->shparams);
+    draw_stdsurface_scene(app->shstate, app->scn, app->view, app->lights, app->shparams);
 
     if (begin_widgets(win, "yview")) {
         if (draw_header_widget(win, "file")) {
@@ -225,8 +226,8 @@ int main(int argc, char* argv[]) {
     app->time_range = compute_animation_range(app->scn);
     app->time = app->time_range.x;
 
-    // light
-    update_lights(app->scn, false, false);
+    // lights
+    app->lights = make_stdsurface_lights(app->scn);
 
     // run ui
     auto cam = (app->shparams.camera_id < 0) ?
