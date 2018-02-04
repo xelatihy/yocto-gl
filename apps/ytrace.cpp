@@ -39,6 +39,7 @@ struct app_state {
     image4f img;
     image<trace_pixel> pixels;
     trace_params params;
+    vector<trace_light*> lights;
     float exposure = 0, gamma = 2.2f;
     bool filmic = false;
     vec4f background = {0, 0, 0, 0};
@@ -124,7 +125,7 @@ int main(int argc, char* argv[]) {
 
     // init renderer
     log_info("initializing tracer");
-    update_lights(app->scn, true, true);
+    app->lights = make_trace_lights(app->scn);
 
     // initialize rendering objects
     auto cam = (app->params.camera_id < 0) ?
@@ -147,7 +148,7 @@ int main(int argc, char* argv[]) {
                 imfilename, app->img, app->exposure, app->gamma, app->filmic);
         }
         log_info("rendering sample {}/{}", cur_sample, app->params.nsamples);
-        trace_samples(app->scn, cam, app->bvh, app->img, app->pixels,
+        trace_samples(app->scn, cam, app->bvh, app->lights, app->img, app->pixels,
             app->params.batch_size, app->params);
     }
     log_info("rendering done");
