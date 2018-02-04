@@ -6068,17 +6068,19 @@ struct trace_state;
 
 /// Trace pixel state. Handles image accumulation and random number generation
 /// for uniform and stratified sequences.
-struct trace_sampler {
-    rng_pcg32& rng;        // random number state
-    uint32_t pixel_hash;   // pixel hash
-    int s, d;              // sample and dimension indices
-    int ns, ns2;           // number of samples and its square root
-    trace_rng_type rtype;  // random number type
+struct trace_pixel {
+    vec4f acc = zero4f;           // pixel accumulated radiance and coverage
+    rng_pcg32 rng = rng_pcg32();  // random number state
+    int i = 0, j = 0;             // pixel coordinates
+    int sample = 0;               // number of samples computed
+    int dimension = 0;            // current dimension
+    int nsamples = 0;             // total number of samples
+    trace_rng_type rtype = trace_rng_type::uniform;  // random number type
 };
 
 /// Trace shader function
 using trace_shader = vec3f (*)(trace_state* st, const ray3f& ray,
-    trace_sampler& smp, const trace_params& params, bool& hit);
+    trace_pixel& pxl, const trace_params& params, bool& hit);
 
 /// Trace filter function
 using trace_filter = float (*)(float);
@@ -6094,9 +6096,10 @@ struct trace_state {
     trace_filter filter = nullptr;  // current trace filter
     int filter_size = 0;            // current filter size
 
-    image4f img;                  // rendered image
+    image4f img;                // rendered image
+    image<trace_pixel> pixels;  // trace pixels
+
     vector<vec4i> blocks;         // image blocks
-    vector<rng_pcg32> rngs;       // random number generators
     thread_pool* pool = nullptr;  // thread pool
     int sample = 0;               // current sample
     image4f acc, weight;          // progressive rendering buffers
@@ -6110,7 +6113,9 @@ trace_state* make_trace_state(const scene* scn, const camera* view,
 inline const image4f& get_trace_image(const trace_state* st) { return st->img; }
 
 /// Gets the current trace sample
-inline int get_trace_sample(const trace_state* st) { return st->sample; }
+inline int get_trace_sample(const trace_state* st) {
+    return st->pixels.at(0, 0).sample;
+}
 
 /// Trace the next nsamples samples.
 void trace_samples(trace_state* st, int nsamples, const trace_params& params);
