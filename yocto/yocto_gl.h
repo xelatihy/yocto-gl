@@ -6045,11 +6045,6 @@ struct trace_state {
     const camera* view = nullptr;   // view
     const bvh_tree* bvh = nullptr;  // bvh
 
-    const camera* cam = nullptr;    // current camera
-    trace_shader shader = nullptr;  // current trace shader
-    trace_filter filter = nullptr;  // current trace filter
-    int filter_size = 0;            // current filter size
-
     image4f img;                // rendered image
     image<trace_pixel> pixels;  // trace pixels
 
@@ -6071,6 +6066,10 @@ inline int get_trace_sample(const trace_state* st) {
 
 /// Trace the next nsamples samples.
 void trace_samples(trace_state* st, int nsamples, const trace_params& params);
+
+/// Trace the next nsamples samples with image filtering.
+void trace_samples_filtered(
+    trace_state* st, int nsamples, const trace_params& params);
 
 /// Trace the whole image
 inline image4f trace_image(const scene* scn, const camera* view,
