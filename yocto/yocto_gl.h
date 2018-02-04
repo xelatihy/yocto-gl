@@ -6100,9 +6100,8 @@ struct trace_state {
     image4f img;                // rendered image
     image<trace_pixel> pixels;  // trace pixels
 
-    vector<vec4i> blocks;         // image blocks
-    thread_pool* pool = nullptr;  // thread pool
-    image4f acc, weight;          // progressive rendering buffers
+    vector<std::thread> threads;  // parall threads
+    bool thread_stop = false;     // thread stop flag
 };
 
 /// Initialize a rendering state
