@@ -28,7 +28,7 @@
 /// - Python-like iterators, string, path and container operations
 /// - utilities to load and save entire text and binary files
 /// - immediate mode command line parser
-/// - simple logger and thread pool
+/// - simple logger
 /// - path tracer supporting surfaces and hairs, GGX and MIS
 /// - support for loading and saving Wavefront OBJ and Khronos glTF
 /// - support for loading Bezier curves from SVG
@@ -41,7 +41,7 @@
 /// ## Credits
 ///
 /// This library includes code from the PCG random number generator,
-/// the LLVM thread pool, boost hash_combine, Pixar multijittered sampling,
+/// boost hash_combine, Pixar multijittered sampling,
 /// code from "Real-Time Collision Detection" by Christer Ericson, base64
 /// encode/decode by René Nyffenegger and public domain code from
 /// github.com/sgorsten/linalg, gist.github.com/badboy/6267743 and
@@ -544,11 +544,7 @@
 ///     3. write log messages with `log_msg()` and its variants
 ///     4. you can also use a global default logger with the free functions
 ///        `log_XXX()`
-/// 5. thead pool for concurrent execution (waiting the standard to catch up):
-///     1. either create a `thread_pool` or use the global one
-///     2. run tasks in parallel `parallel_for()`
-///     3. run tasks asynchronously `async()`
-/// 6. timer for simple access to `std::chrono`:
+/// 5. timer for simple access to `std::chrono`:
 ///     1. create a `timer`
 ///     2. start and stop the clock with `start()` and `stop()`
 ///     3. get time with `elapsed_time()`
@@ -628,48 +624,6 @@
 // licensed as follows
 // *Really* minimal PCG32 code / (c) 2014 M.E. O'Neill / pcg-random.org
 // Licensed under Apache License 2.0 (NO WARRANTY, etc. see website)
-//
-//
-// LICENSE OF INCLUDED SOFTWARE for ThreadPool code from LLVM code base
-//
-// Copyright (c) 2003-2016 University of Illinois at Urbana-Champaign.
-// All rights reserved.
-//
-// Developed by:
-//
-//     LLVM Team
-//
-//     University of Illinois at Urbana-Champaign
-//
-//     http://llvm.org
-//
-// Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
-// with the Software without restriction, including without limitation the
-// rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
-// sell copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
-//
-//     * Redistributions of source code must retain the above copyright notice,
-//       this list of conditions and the following disclaimers.
-//
-//     * Redistributions in binary form must reproduce the above copyright
-//     notice,
-//       this list of conditions and the following disclaimers in the
-//       documentation and/or other materials provided with the distribution.
-//
-//     * Neither the names of the LLVM Team, University of Illinois at
-//       Urbana-Champaign, nor the names of its contributors may be used to
-//       endorse or promote products derived from this Software without specific
-//       prior written permission.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
-// CONTRIBUTORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS WITH
-// THE SOFTWARE.
 //
 //
 // LICENSE OF INCLUDED CODE FOR BASE64 (base64.h, base64.cpp)
@@ -6063,7 +6017,6 @@ struct trace_params {
 };
 
 // forward declaration
-struct thread_pool;
 struct trace_state;
 
 /// Trace pixel state. Handles image accumulation and random number generation
@@ -8359,160 +8312,6 @@ inline void log_error(const string& msg, const Args&... args) {
 template <typename... Args>
 inline void log_fatal(const string& msg, const Args&... args) {
     log_fatal(get_default_logger(), msg, args...);
-}
-
-}  // namespace ygl
-
-// -----------------------------------------------------------------------------
-// THREAD POOL
-// -----------------------------------------------------------------------------
-namespace ygl {
-
-/// Thread pool for concurrency. This code is derived from LLVM ThreadPool
-struct thread_pool {
-    // initialize the thread pool
-    thread_pool(int nthreads = std::thread::hardware_concurrency())
-        : _working_threads(0), _stop_flag(false) {
-        _threads.reserve(nthreads);
-        for (auto tid = 0; tid < nthreads; tid++) {
-            _threads.emplace_back([this] { _thread_proc(); });
-        }
-    }
-
-    // cleanup
-    ~thread_pool() {
-        {
-            std::unique_lock<std::mutex> lock_guard(_queue_lock);
-            _stop_flag = true;
-        }
-        _queue_condition.notify_all();
-        for (auto& Worker : _threads) Worker.join();
-    }
-
-    // empty the queue
-    void _clear_pool() {
-        {
-            std::unique_lock<std::mutex> lock_guard(_queue_lock);
-            _tasks.clear();
-        }
-        _queue_condition.notify_all();
-    }
-
-    // schedule an asynchronous taks
-    std::shared_future<void> _run_async(std::function<void()> task) {
-        // Wrap the Task in a packaged_task to return a future object.
-        std::packaged_task<void()> packaged_task(std::move(task));
-        auto future = packaged_task.get_future();
-        {
-            std::unique_lock<std::mutex> lock_guard(_queue_lock);
-            assert(!_stop_flag &&
-                   "Queuing a thread during ThreadPool destruction");
-            _tasks.push_back(std::move(packaged_task));
-        }
-        _queue_condition.notify_one();
-        return future.share();
-    }
-
-    // wait for all tasks to finish
-    void _wait() {
-        std::unique_lock<std::mutex> lock_guard(_completion_lock);
-        _completion_condition.wait(
-            lock_guard, [&] { return _tasks.empty() && !_working_threads; });
-    }
-
-    // parallel for
-    void _parallel_for(int count, const function<void(int idx)>& task) {
-        for (auto idx = 0; idx < count; idx++) {
-            _run_async([&task, idx]() { task(idx); });
-        }
-        _wait();
-    }
-
-    // implementation -------------------------------------------------
-    void _thread_proc() {
-        while (true) {
-            std::packaged_task<void()> task;
-            {
-                std::unique_lock<std::mutex> lock_guard(_queue_lock);
-                _queue_condition.wait(
-                    lock_guard, [&] { return _stop_flag || !_tasks.empty(); });
-
-                if (_stop_flag && _tasks.empty()) return;
-
-                {
-                    _working_threads++;
-                    std::unique_lock<std::mutex> lock_guard(_completion_lock);
-                }
-                task = std::move(_tasks.front());
-                _tasks.pop_front();
-            }
-
-            task();
-
-            {
-                std::unique_lock<std::mutex> lock_guard(_completion_lock);
-                _working_threads--;
-            }
-
-            _completion_condition.notify_all();
-        }
-    }
-
-    vector<std::thread> _threads;
-    std::deque<std::packaged_task<void()>> _tasks;
-    std::mutex _queue_lock;
-    std::condition_variable _queue_condition;
-    std::mutex _completion_lock;
-    std::condition_variable _completion_condition;
-    std::atomic<unsigned> _working_threads;
-    bool _stop_flag = false;
-};
-
-/// Makes a thread pool
-inline thread_pool* make_pool(
-    int nthreads = std::thread::hardware_concurrency()) {
-    return new thread_pool(nthreads);
-}
-
-/// Runs a task asynchronously onto the global thread pool
-inline std::shared_future<void> run_async(
-    thread_pool* pool, const function<void()>& task) {
-    return pool->_run_async(task);
-}
-
-/// Wait for all jobs to finish on the global thread pool
-inline void wait_pool(thread_pool* pool) { pool->_wait(); }
-
-/// Clear all jobs on the global thread pool
-inline void clear_pool(thread_pool* pool) { pool->_clear_pool(); }
-
-/// Parallel for implementation on the global thread pool
-inline void parallel_for(
-    thread_pool* pool, int count, const function<void(int idx)>& task) {
-    pool->_parallel_for(count, task);
-}
-
-/// Global pool
-inline thread_pool* get_global_pool() {
-    static auto pool = (thread_pool*)nullptr;
-    if (!pool) pool = new thread_pool();
-    return pool;
-}
-
-/// Runs a task asynchronously onto the global thread pool
-inline std::shared_future<void> run_async(const function<void()>& task) {
-    return run_async(get_global_pool(), task);
-}
-
-/// Wait for all jobs to finish on the global thread pool
-inline void wait_pool() { wait_pool(get_global_pool()); }
-
-/// Clear all jobs on the global thread pool
-inline void clear_pool() { clear_pool(get_global_pool()); }
-
-/// Parallel for implementation on the global thread pool
-inline void parallel_for(int count, const function<void(int idx)>& task) {
-    parallel_for(get_global_pool(), count, task);
 }
 
 }  // namespace ygl

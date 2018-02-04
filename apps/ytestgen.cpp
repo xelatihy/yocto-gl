@@ -49,15 +49,16 @@ void rmdir(const string& dir) {
 
 void save_test_scene(const string& sname, const string& basedir) {
     auto dirname = basedir + "/" + sname + "/";
-    printf("generating %s scenes ...\n", sname.c_str());
     try {
         mkdir(dirname);
         auto test_scn = (sname == "cornell_box") ?
                             test_scene_params() :
                             test_scene_presets().at(sname);
+        printf("generating %s scenes ...\n", sname.c_str());
         auto scn = (sname == "cornell_box") ?
                        make_cornell_box_scene() :
                        make_test_scene(test_scene_presets().at(sname));
+        printf("saving %s scenes ...\n", sname.c_str());
         if (sname == "textures") {
             for (auto txt : scn->textures) {
                 if (txt->hdr) save_image4f(dirname + txt->path, txt->hdr);
@@ -120,8 +121,12 @@ int main(int argc, char* argv[]) {
     } else if (no_parallel) {
         for (auto scn : scene_names) save_test_scene(scn, dirname);
     } else {
-        parallel_for(scene_names.size(), [&scene_names, dirname](int idx) {
-            save_test_scene(scene_names[idx], dirname);
-        });
+        auto threads = vector<std::thread>();
+        for (auto scene_name : scene_names) {
+            threads.push_back(std::thread([scene_name, dirname]() {
+                save_test_scene(scene_name, dirname);
+            }));
+        }
+        for (auto& t : threads) t.join();
     }
 }
