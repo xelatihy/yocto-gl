@@ -15,6 +15,7 @@ and released under the MIT license. Features include:
 - normal and tangent computation for meshes and lines
 - generation of tesselated meshes
 - mesh refinement with linear tesselation and Catmull-Cark subdivision
+- keyframed animation, skinning and morphing
 - random number generation via PCG32
 - simple image data structure and a few image operations
 - simple scene format
@@ -26,7 +27,7 @@ and released under the MIT license. Features include:
 - Python-like iterators, string, path and container operations
 - utilities to load and save entire text and binary files
 - immediate mode command line parser
-- simple logger and thread pool
+- simple logger
 - path tracer supporting surfaces and hairs, GGX and MIS
 - support for loading and saving Wavefront OBJ and Khronos glTF
 - support for loading Bezier curves from SVG
@@ -39,7 +40,7 @@ with tag "v0.0.1" in this repository.
 ## Credits
 
 This library includes code from the PCG random number generator,
-the LLVM thread pool, boost hash_combine, Pixar multijittered sampling,
+boost hash_combine, Pixar multijittered sampling,
 code from "Real-Time Collision Detection" by Christer Ericson, base64
 encode/decode by René Nyffenegger and public domain code from
 github.com/sgorsten/linalg, gist.github.com/badboy/6267743 and
@@ -96,11 +97,11 @@ be disabled by defining YGL_SVG to 0 before including this file.
 
 OpenGL utilities include the OpenGL libaries, use GLEW on Windows/Linux,
 GLFW for windows handling and Dear ImGui for UI support.
-Since OpenGL is quite onerous and hard to link, its support is disabled by
-default. You can enable it by defining YGL_OPENGL to 1 before including
-this file. If you use any of the OpenGL calls, make sure to properly link to
-the OpenGL libraries on your system. For ImGUI, build with the libraries
-`imgui.cpp`, `imgui_draw.cpp`, `imgui_impl_glfw_gl3.cpp`.
+Since OpenGL is quite onerous and hard to link, its support can be disabled
+by defining YGL_OPENGL to 1 before including this file. If you use any of
+the OpenGL calls, make sure to properly link to the OpenGL libraries on
+your system. For ImGUI, build with the libraries `imgui.cpp`,
+`imgui_draw.cpp`, `imgui_impl_glfw_gl3.cpp`.
 
 
 ## Example Applications
@@ -252,6 +253,17 @@ manipulation useful to support scene viewing and path tracing.
 17. example shapes: `make_cube()`, `make_uvsphere()`, `make_uvhemisphere()`,
     `make_uvquad()`, `make_uvcube()`, `make_fvcube()`, `make_hair()`,
     `make_suzanne()`
+
+
+### Animation utilities
+
+The library contains a few function to help with typical animation
+manipulation useful to support scene viewing.
+
+1. evaluate keyframed values with step, linear and bezier interpolation with
+   `eval_keyframed_step()`, `eval_keyframed_linear()`,
+   `eval_keyframed_bezier()`
+2. mesh skinning with `compute_matrix_skinning()`
 
 
 ### Image and color
@@ -531,11 +543,7 @@ manipulating files.
     3. write log messages with `log_msg()` and its variants
     4. you can also use a global default logger with the free functions
        `log_XXX()`
-5. thead pool for concurrent execution (waiting the standard to catch up):
-    1. either create a `thread_pool` or use the global one
-    2. run tasks in parallel `parallel_for()`
-    3. run tasks asynchronously `async()`
-6. timer for simple access to `std::chrono`:
+5. timer for simple access to `std::chrono`:
     1. create a `timer`
     2. start and stop the clock with `start()` and `stop()`
     3. get time with `elapsed_time()`
