@@ -78,13 +78,11 @@
 //
 // ## Next
 //
-// - remove elem cdf from shape
-//    - put in lights for trace
-//    - make lights a structure instead of a vector
-//    - make light not a pointer
-// - move shape CDF in lights
 // - move pixel sampling to trace_block and not in sampler
-// - remove stdprogram state
+// - sample lights using trace_lights
+// - sample background to sum all environments
+// - remove default environment
+// - handle missing environment in trace
 //
 // ## General
 //
@@ -92,7 +90,6 @@
 //
 // ## Infrastructure
 //
-// - remove default environment
 // - meshes with multiple shapes
 // - uniform serialization
 //    - consider simpler serialization code based on input flag
@@ -109,9 +106,6 @@
 //
 // ## Trace
 //
-// - sample lights using trace_lights
-// - sample background to sum all environments
-// - handle missing environment
 // - envmap sampling
 // - sampler simplification
 //     https://lemire.me/blog/2017/09/18/visiting-all-values-in-an-array-exactly-once-in-random-order/
