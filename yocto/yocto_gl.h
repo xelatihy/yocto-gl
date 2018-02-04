@@ -6101,7 +6101,6 @@ struct trace_state {
 
     vector<vec4i> blocks;         // image blocks
     thread_pool* pool = nullptr;  // thread pool
-    int sample = 0;               // current sample
     image4f acc, weight;          // progressive rendering buffers
 };
 
