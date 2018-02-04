@@ -109,6 +109,8 @@
 //
 // ## Trace
 //
+// - sample lights using trace_lights
+// - sample background to sum all environments
 // - handle missing environment
 // - envmap sampling
 // - sampler simplification
