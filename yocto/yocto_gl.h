@@ -9031,7 +9031,7 @@ struct gl_shape {
 /// Clear shape
 void clear_shape(gl_shape& shp);
 
-/// Initialize stdsurface lights
+/// Initialize gl lights
 gl_lights make_gl_lights(const scene* scn);
 
 /// Clear scene textures on the GPU.
@@ -9158,108 +9158,33 @@ inline bool is_program_valid(const gl_stdsurface_program& prog) {
 /// Starts a frame by setting exposure/gamma values, camera transforms and
 /// projection. Sets also whether to use full shading or a quick eyelight
 /// preview.
-inline void begin_stdsurface_frame(gl_stdsurface_program& prog,
-    bool shade_eyelight, float tonemap_exposure, float tonemap_gamma,
-    bool tonemap_filmic, const mat4f& camera_xform,
-    const mat4f& camera_xform_inv, const mat4f& camera_proj) {
-    static auto eyelight_id =
-        get_program_uniform_location(prog._prog, "lighting.eyelight");
-    static auto exposure_id =
-        get_program_uniform_location(prog._prog, "tonemap.exposure");
-    static auto gamma_id =
-        get_program_uniform_location(prog._prog, "tonemap.gamma");
-    static auto filmic_id =
-        get_program_uniform_location(prog._prog, "tonemap.filmic");
-    static auto xform_id =
-        get_program_uniform_location(prog._prog, "camera.xform");
-    static auto xform_inv_id =
-        get_program_uniform_location(prog._prog, "camera.xform_inv");
-    static auto proj_id =
-        get_program_uniform_location(prog._prog, "camera.proj");
-    assert(gl_check_error());
-    bind_program(prog._prog);
-    set_program_uniform(prog._prog, eyelight_id, shade_eyelight);
-    set_program_uniform(prog._prog, exposure_id, tonemap_exposure);
-    set_program_uniform(prog._prog, gamma_id, tonemap_gamma);
-    set_program_uniform(prog._prog, filmic_id, tonemap_filmic);
-    set_program_uniform(prog._prog, xform_id, camera_xform);
-    set_program_uniform(prog._prog, xform_inv_id, camera_xform_inv);
-    set_program_uniform(prog._prog, proj_id, camera_proj);
-    assert(gl_check_error());
-}
+void begin_stdsurface_frame(gl_stdsurface_program& prog, bool shade_eyelight,
+    float tonemap_exposure, float tonemap_gamma, bool tonemap_filmic,
+    const mat4f& camera_xform, const mat4f& camera_xform_inv,
+    const mat4f& camera_proj);
 
 /// Ends a frame.
-inline void end_stdsurface_frame(gl_stdsurface_program& prog) {
-    assert(gl_check_error());
-    unbind_program(prog._prog);
-    //    glBindVertexArray(0);
-    //    glUseProgram(0);
-    assert(gl_check_error());
-}
+void end_stdsurface_frame(gl_stdsurface_program& prog);
 
 /// Set num lights with position pos, color ke, type ltype. Also set the
 /// ambient illumination amb.
-inline void set_stdsurface_lights(
-    gl_stdsurface_program& prog, const vec3f& amb, const gl_lights& lights) {
-    static auto amb_id =
-        get_program_uniform_location(prog._prog, "lighting.amb");
-    static auto lnum_id =
-        get_program_uniform_location(prog._prog, "lighting.lnum");
-    static auto lpos_id =
-        get_program_uniform_location(prog._prog, "lighting.lpos");
-    static auto lke_id =
-        get_program_uniform_location(prog._prog, "lighting.lke");
-    static auto ltype_id =
-        get_program_uniform_location(prog._prog, "lighting.ltype");
-    assert(gl_check_error());
-    set_program_uniform(prog._prog, amb_id, amb);
-    set_program_uniform(prog._prog, lnum_id, (int)lights.pos.size());
-    set_program_uniform(
-        prog._prog, lpos_id, lights.pos.data(), (int)lights.pos.size());
-    set_program_uniform(
-        prog._prog, lke_id, lights.ke.data(), (int)lights.pos.size());
-    set_program_uniform(
-        prog._prog, ltype_id, (int*)lights.type.data(), (int)lights.pos.size());
-    assert(gl_check_error());
-}
+void set_stdsurface_lights(
+    gl_stdsurface_program& prog, const vec3f& amb, const gl_lights& lights);
 
 /// Begins drawing a shape with transform xform.
-inline void begin_stdsurface_shape(
-    gl_stdsurface_program& prog, const mat4f& xform, float normal_offset = 0) {
-    static auto xform_id =
-        get_program_uniform_location(prog._prog, "shape_xform");
-    static auto normal_offset_id =
-        get_program_uniform_location(prog._prog, "shape_normal_offset");
-    assert(gl_check_error());
-    set_program_uniform(prog._prog, xform_id, xform);
-    set_program_uniform(prog._prog, normal_offset_id, normal_offset);
-    assert(gl_check_error());
-}
+void begin_stdsurface_shape(
+    gl_stdsurface_program& prog, const mat4f& xform, float normal_offset = 0);
 
 /// End shade drawing.
-inline void end_stdsurface_shape(gl_stdsurface_program& prog) {
-    assert(gl_check_error());
-    for (int i = 0; i < 16; i++) unbind_vertex_buffer(i);
-    assert(gl_check_error());
-}
+void end_stdsurface_shape(gl_stdsurface_program& prog);
 
 /// Sets normal offset.
-inline void set_stdsurface_normaloffset(
-    gl_stdsurface_program& prog, float normal_offset) {
-    static auto normal_offset_id =
-        get_program_uniform_location(prog._prog, "shape_normal_offset");
-    assert(gl_check_error());
-    set_program_uniform(prog._prog, normal_offset_id, normal_offset);
-    assert(gl_check_error());
-}
+void set_stdsurface_normaloffset(
+    gl_stdsurface_program& prog, float normal_offset);
 
 /// Set the object as highlighted.
-inline void set_stdsurface_highlight(
-    gl_stdsurface_program& prog, const vec4f& highlight) {
-    static auto highlight_id =
-        get_program_uniform_location(prog._prog, "highlight");
-    set_program_uniform(prog._prog, highlight_id, highlight);
-}
+void set_stdsurface_highlight(
+    gl_stdsurface_program& prog, const vec4f& highlight);
 
 /// Set material values with emission ke, diffuse kd, specular ks and
 /// specular roughness rs, opacity op. Indicates textures ids with the
@@ -9267,177 +9192,37 @@ inline void set_stdsurface_highlight(
 /// maps. Works for points/lines/triangles (diffuse for points,
 /// Kajiya-Kay for lines, GGX/Phong for triangles).
 /// Material type matches the scene material type.
-inline void set_stdsurface_material(gl_stdsurface_program& prog,
-    material_type type, gl_elem_type etype, const vec3f& ke, const vec3f& kd,
-    const vec3f& ks, float rs, float op, const gl_texture_info& ke_txt,
+void set_stdsurface_material(gl_stdsurface_program& prog, material_type type,
+    gl_elem_type etype, const vec3f& ke, const vec3f& kd, const vec3f& ks,
+    float rs, float op, const gl_texture_info& ke_txt,
     const gl_texture_info& kd_txt, const gl_texture_info& ks_txt,
     const gl_texture_info& rs_txt, const gl_texture_info& norm_txt,
     const gl_texture_info& occ_txt, bool use_phong, bool double_sided,
-    bool alpha_cutout) {
-    static auto mtype_id =
-        get_program_uniform_location(prog._prog, "material.type");
-    static auto etype_id =
-        get_program_uniform_location(prog._prog, "material.etype");
-    static auto ke_id = get_program_uniform_location(prog._prog, "material.ke");
-    static auto kd_id = get_program_uniform_location(prog._prog, "material.kd");
-    static auto ks_id = get_program_uniform_location(prog._prog, "material.ks");
-    static auto rs_id = get_program_uniform_location(prog._prog, "material.rs");
-    static auto op_id = get_program_uniform_location(prog._prog, "material.op");
-    static auto ke_txt_id =
-        get_program_uniform_location(prog._prog, "material.txt_ke");
-    static auto ke_txt_on_id =
-        get_program_uniform_location(prog._prog, "material.txt_ke_on");
-    static auto kd_txt_id =
-        get_program_uniform_location(prog._prog, "material.txt_kd");
-    static auto kd_txt_on_id =
-        get_program_uniform_location(prog._prog, "material.txt_kd_on");
-    static auto ks_txt_id =
-        get_program_uniform_location(prog._prog, "material.txt_ks");
-    static auto ks_txt_on_id =
-        get_program_uniform_location(prog._prog, "material.txt_ks_on");
-    static auto rs_txt_id =
-        get_program_uniform_location(prog._prog, "material.txt_rs");
-    static auto rs_txt_on_id =
-        get_program_uniform_location(prog._prog, "material.txt_rs_on");
-    static auto norm_txt_id =
-        get_program_uniform_location(prog._prog, "material.txt_norm");
-    static auto norm_txt_on_id =
-        get_program_uniform_location(prog._prog, "material.txt_norm_on");
-    static auto occ_txt_id =
-        get_program_uniform_location(prog._prog, "material.txt_occ");
-    static auto occ_txt_on_id =
-        get_program_uniform_location(prog._prog, "material.txt_occ_on");
-    static auto norm_scale_id =
-        get_program_uniform_location(prog._prog, "material.norm_scale");
-    static auto occ_scale_id =
-        get_program_uniform_location(prog._prog, "material.occ_scale");
-    static auto use_phong_id =
-        get_program_uniform_location(prog._prog, "material.use_phong");
-    static auto double_sided_id =
-        get_program_uniform_location(prog._prog, "material.double_sided");
-    static auto alpha_cutout_id =
-        get_program_uniform_location(prog._prog, "material.alpha_cutout");
-
-    static auto mtypes = unordered_map<material_type, int>{
-        {material_type::specular_roughness, 1},
-        {material_type::metallic_roughness, 2},
-        {material_type::specular_glossiness, 3}};
-
-    assert(gl_check_error());
-    set_program_uniform(prog._prog, mtype_id, mtypes.at(type));
-    set_program_uniform(prog._prog, etype_id, (int)etype);
-    set_program_uniform(prog._prog, ke_id, ke);
-    set_program_uniform(prog._prog, kd_id, kd);
-    set_program_uniform(prog._prog, ks_id, ks);
-    set_program_uniform(prog._prog, rs_id, rs);
-    set_program_uniform(prog._prog, op_id, op);
-    set_program_uniform_texture(prog._prog, ke_txt_id, ke_txt_on_id, ke_txt, 0);
-    set_program_uniform_texture(prog._prog, kd_txt_id, kd_txt_on_id, kd_txt, 1);
-    set_program_uniform_texture(prog._prog, ks_txt_id, ks_txt_on_id, ks_txt, 2);
-    set_program_uniform_texture(prog._prog, rs_txt_id, rs_txt_on_id, rs_txt, 3);
-    set_program_uniform_texture(
-        prog._prog, norm_txt_id, norm_txt_on_id, norm_txt, 4);
-    set_program_uniform_texture(
-        prog._prog, occ_txt_id, occ_txt_on_id, occ_txt, 5);
-    set_program_uniform(prog._prog, norm_scale_id, norm_txt.scale);
-    set_program_uniform(prog._prog, occ_scale_id, occ_txt.scale);
-    set_program_uniform(prog._prog, use_phong_id, use_phong);
-    set_program_uniform(prog._prog, double_sided_id, double_sided);
-    set_program_uniform(prog._prog, alpha_cutout_id, alpha_cutout);
-    assert(gl_check_error());
-}
+    bool alpha_cutout);
 
 /// Set constant material values with emission ke.
-inline void set_stdsurface_constmaterial(
-    gl_stdsurface_program& prog, const vec3f& ke, float op) {
-    static auto mtype_id =
-        get_program_uniform_location(prog._prog, "material.type");
-    static auto etype_id =
-        get_program_uniform_location(prog._prog, "material.etype");
-    static auto ke_id = get_program_uniform_location(prog._prog, "material.ke");
-    static auto op_id = get_program_uniform_location(prog._prog, "material.op");
-
-    assert(gl_check_error());
-    set_program_uniform(prog._prog, mtype_id, 0);
-    set_program_uniform(prog._prog, etype_id, 0);
-    set_program_uniform(prog._prog, ke_id, ke);
-    set_program_uniform(prog._prog, op_id, op);
-    assert(gl_check_error());
-}
+void set_stdsurface_constmaterial(
+    gl_stdsurface_program& prog, const vec3f& ke, float op);
 
 /// Set vertex data with buffers for position pos, normals norm, texture
 /// coordinates texcoord, per-vertex color color and tangent space tangsp.
-inline void set_stdsurface_vert(gl_stdsurface_program& prog,
+void set_stdsurface_vert(gl_stdsurface_program& prog,
     const gl_vertex_buffer& pos, const gl_vertex_buffer& norm,
     const gl_vertex_buffer& texcoord, const gl_vertex_buffer& color,
-    const gl_vertex_buffer& tangsp) {
-    static auto pos_id = get_program_attrib_location(prog._prog, "vert_pos");
-    static auto norm_id = get_program_attrib_location(prog._prog, "vert_norm");
-    static auto texcoord_id =
-        get_program_attrib_location(prog._prog, "vert_texcoord");
-    static auto color_id =
-        get_program_attrib_location(prog._prog, "vert_color");
-    static auto tangsp_id =
-        get_program_attrib_location(prog._prog, "vert_tangsp");
-    assert(gl_check_error());
-    set_program_vertattr(prog._prog, pos_id, pos, zero3f);
-    set_program_vertattr(prog._prog, norm_id, norm, zero3f);
-    set_program_vertattr(prog._prog, texcoord_id, texcoord, zero2f);
-    set_program_vertattr(prog._prog, color_id, color, vec4f{1, 1, 1, 1});
-    set_program_vertattr(prog._prog, tangsp_id, tangsp, zero4f);
-    assert(gl_check_error());
-}
+    const gl_vertex_buffer& tangsp);
 
 /// Set vertex data with buffers for skinning.
-inline void set_stdsurface_vert_skinning(gl_stdsurface_program& prog,
+void set_stdsurface_vert_skinning(gl_stdsurface_program& prog,
     const gl_vertex_buffer& weights, const gl_vertex_buffer& joints,
-    int nxforms, const mat4f* xforms) {
-    static auto type_id = get_program_uniform_location(prog._prog, "skin_type");
-    static auto xforms_id =
-        get_program_uniform_location(prog._prog, "skin_xforms");
-    static auto weights_id =
-        get_program_attrib_location(prog._prog, "vert_skin_weights");
-    static auto joints_id =
-        get_program_attrib_location(prog._prog, "vert_skin_joints");
-    int type = 1;
-    set_program_uniform(prog._prog, type_id, type);
-    set_program_uniform(prog._prog, xforms_id, xforms, min(nxforms, 32));
-    set_program_vertattr(prog._prog, weights_id, weights, zero4f);
-    set_program_vertattr(prog._prog, joints_id, joints, zero4f);
-}
+    int nxforms, const mat4f* xforms);
 
 /// Set vertex data with buffers for skinning.
-inline void set_stdsurface_vert_gltf_skinning(gl_stdsurface_program& prog,
+void set_stdsurface_vert_gltf_skinning(gl_stdsurface_program& prog,
     const gl_vertex_buffer& weights, const gl_vertex_buffer& joints,
-    int nxforms, const mat4f* xforms) {
-    static auto type_id = get_program_uniform_location(prog._prog, "skin_type");
-    static auto xforms_id =
-        get_program_uniform_location(prog._prog, "skin_xforms");
-    static auto weights_id =
-        get_program_attrib_location(prog._prog, "vert_skin_weights");
-    static auto joints_id =
-        get_program_attrib_location(prog._prog, "vert_skin_joints");
-    int type = 2;
-    set_program_uniform(prog._prog, type_id, type);
-    set_program_uniform(prog._prog, xforms_id, xforms, min(nxforms, 32));
-    set_program_vertattr(prog._prog, weights_id, weights, zero4f);
-    set_program_vertattr(prog._prog, joints_id, joints, zero4f);
-}
+    int nxforms, const mat4f* xforms);
 
 /// Disables vertex skinning.
-inline void set_stdsurface_vert_skinning_off(gl_stdsurface_program& prog) {
-    static auto type_id = get_program_uniform_location(prog._prog, "skin_type");
-    // static auto xforms_id = get_program_uniform_location(prog._prog,
-    // "skin_xforms");
-    static auto weights_id =
-        get_program_attrib_location(prog._prog, "vert_skin_weights");
-    static auto joints_id =
-        get_program_attrib_location(prog._prog, "vert_skin_joints");
-    int type = 0;
-    set_program_uniform(prog._prog, type_id, type);
-    set_program_vertattr(prog._prog, weights_id, {}, zero4f);
-    set_program_vertattr(prog._prog, joints_id, {}, zero4f);
-}
+void set_stdsurface_vert_skinning_off(gl_stdsurface_program& prog);
 
 /// Params for  gl_stdsurface_program drawing
 struct gl_stdsurface_params {
