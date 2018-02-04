@@ -6016,9 +6016,6 @@ struct trace_params {
     int batch_size = 16;
 };
 
-// forward declaration
-struct trace_state;
-
 /// Trace pixel state. Handles image accumulation and random number generation
 /// for uniform and stratified sequences.
 struct trace_pixel {
@@ -6032,56 +6029,35 @@ struct trace_pixel {
     trace_rng_type rtype = trace_rng_type::uniform;  // random number type
 };
 
-/// Trace shader function
-using trace_shader = vec3f (*)(const scene* scn, const bvh_tree* bvh,
-    const ray3f& ray, trace_pixel& pxl, const trace_params& params, bool& hit);
-
-/// Trace filter function
-using trace_filter = float (*)(float);
-
-/// Trace state. Members are not part of the public API.
-struct trace_state {
-    image4f img;                // rendered image
-    image<trace_pixel> pixels;  // trace pixels
-
-    vector<std::thread> threads;  // parall threads
-    bool thread_stop = false;     // thread stop flag
-};
-
-/// Initialize a rendering state
-trace_state* make_trace_state(const trace_params& params);
-
-/// Gets the computed trace image
-inline const image4f& get_trace_image(const trace_state* st) { return st->img; }
-
-/// Gets the current trace sample
-inline int get_trace_sample(const trace_state* st) {
-    return st->pixels.at(0, 0).sample;
-}
+/// Initialize the rendering pixels
+image<trace_pixel> make_trace_pixels(const trace_params& params);
 
 /// Trace the next nsamples samples.
-void trace_samples(trace_state* st, const scene* scn, const camera* cam,
-    const bvh_tree* bvh, int nsamples, const trace_params& params);
+void trace_samples(const scene* scn, const camera* cam, const bvh_tree* bvh,
+    image4f& img, image<trace_pixel>& pixels, int nsamples,
+    const trace_params& params);
 
 /// Trace the next nsamples samples with image filtering.
-void trace_samples_filtered(trace_state* st, const scene* scn,
-    const camera* cam, const bvh_tree* bvh, int nsamples,
+void trace_samples_filtered(const scene* scn, const camera* cam,
+    const bvh_tree* bvh, image4f& img, image<trace_pixel>& pixels, int nsamples,
     const trace_params& params);
 
 /// Trace the whole image
 inline image4f trace_image(const scene* scn, const camera* cam,
     const bvh_tree* bvh, const trace_params& params) {
-    auto st = unique_ptr<trace_state>(make_trace_state(params));
-    trace_samples(st.get(), scn, cam, bvh, params.nsamples, params);
-    return get_trace_image(st.get());
+    auto img = image4f(params.width, params.height);
+    auto pixels = make_trace_pixels(params);
+    trace_samples(scn, cam, bvh, img, pixels, params.nsamples, params);
+    return img;
 }
 
 /// Starts an anyncrhounous renderer.
-void trace_async_start(trace_state* st, const scene* scn, const camera* cam,
-                       const bvh_tree* bvh, const trace_params& params);
+void trace_async_start(const scene* scn, const camera* cam, const bvh_tree* bvh,
+    image4f& img, image<trace_pixel>& pixels, vector<std::thread>& threads,
+    bool& stop_flag, const trace_params& params);
 
 /// Stop the asynchronous renderer.
-void trace_async_stop(trace_state* st);
+void trace_async_stop(vector<std::thread>& threads, bool& stop_flag);
 
 }  // namespace ygl
 

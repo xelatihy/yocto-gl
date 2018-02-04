@@ -36,12 +36,15 @@ struct app_state {
     bvh_tree* bvh = nullptr;
     string filename;
     string imfilename;
+    image4f img;
+    image<trace_pixel> pixels;
+    trace_params params;
+    vector<std::thread> async_threads;
+    bool async_stop = false;
     bool scene_updated = false;
     bool update_bvh = false;
     bool navigation_fps = false;
-    trace_params params;
     bool save_progressive = false;
-    trace_state* state = nullptr;
     bool rendering = false;
     gl_stdimage_params imparams = {};
     gl_texture trace_texture = {};
@@ -49,7 +52,6 @@ struct app_state {
     void* selection = nullptr;
 
     ~app_state() {
-        if (state) delete state;
         if (scn) delete scn;
         if (view) delete view;
         if (bvh) delete bvh;
@@ -60,7 +62,7 @@ void draw(gl_window* win) {
     auto app = (app_state*)get_user_pointer(win);
 
     // update texture
-    update_texture(app->trace_texture, get_trace_image(app->state));
+    update_texture(app->trace_texture, app->img);
 
     // draw image
     auto window_size = get_window_size(win);
@@ -74,7 +76,7 @@ void draw(gl_window* win) {
         draw_label_widget(win, "scene", app->filename);
         draw_label_widget(
             win, "size", "{} x {}", app->params.width, app->params.height);
-        draw_label_widget(win, "sample", get_trace_sample(app->state));
+        draw_label_widget(win, "sample", app->pixels.at(0, 0).sample);
         if (draw_header_widget(win, "trace")) {
             draw_value_widget(win, "samples", app->params.nsamples, 1, 4096, 1);
             edited += draw_value_widget(
@@ -90,8 +92,8 @@ void draw(gl_window* win) {
         }
         if (draw_header_widget(win, "image")) {
             draw_imageview_widgets(win, "", app->imparams);
-            draw_imageinspect_widgets(win, "", get_trace_image(app->state), {},
-                get_mouse_posf(win), app->imparams);
+            draw_imageinspect_widgets(
+                win, "", app->img, {}, get_mouse_posf(win), app->imparams);
         }
         edited +=
             draw_scene_widgets(win, "scene", app->scn, app->selection, {});
@@ -106,7 +108,7 @@ void draw(gl_window* win) {
 
 bool update(app_state* app) {
     if (app->scene_updated) {
-        trace_async_stop(app->state);
+        trace_async_stop(app->async_threads, app->async_stop);
         app->rendering = false;
 
         // update BVH
@@ -118,18 +120,23 @@ bool update(app_state* app) {
         pparams.height = app->params.height / app->params.block_size;
         pparams.nsamples = 1;
         pparams.ftype = trace_filter_type::box;
-        auto cam = (app->params.camera_id < 0) ? app->view : app->scn->cameras[app->params.camera_id];
-        auto preview_state = make_trace_state(pparams);
-        trace_samples(preview_state, app->scn, cam, app->bvh, 1, pparams);
-        resize_image(get_trace_image(preview_state),
-            (image4f&)get_trace_image(app->state), resize_filter::box);
-        update_texture(app->trace_texture, get_trace_image(app->state));
-        delete preview_state;
+        auto cam = (app->params.camera_id < 0) ?
+                       app->view :
+                       app->scn->cameras[app->params.camera_id];
+        auto preview_pixels = make_trace_pixels(pparams);
+        auto preview_img = image4f(pparams.width, pparams.height);
+        trace_samples(
+            app->scn, cam, app->bvh, preview_img, preview_pixels, 1, pparams);
+        resize_image(preview_img, app->img, resize_filter::box);
+        update_texture(app->trace_texture, app->img);
 
         app->scene_updated = false;
     } else if (!app->rendering) {
-        auto cam = (app->params.camera_id < 0) ? app->view : app->scn->cameras[app->params.camera_id];
-        trace_async_start(app->state, app->scn, cam, app->bvh, app->params);
+        auto cam = (app->params.camera_id < 0) ?
+                       app->view :
+                       app->scn->cameras[app->params.camera_id];
+        trace_async_start(app->scn, cam, app->bvh, app->img, app->pixels,
+            app->async_threads, app->async_stop, app->params);
         app->rendering = true;
     }
     return true;
@@ -144,8 +151,7 @@ void run_ui(app_state* app) {
 
     // load textures
     app->gl_prog = make_stdimage_program();
-    app->trace_texture =
-        make_texture(get_trace_image(app->state), false, false, true);
+    app->trace_texture = make_texture(app->img, false, false, true);
 
     // init widget
     init_widgets(win);
@@ -255,14 +261,15 @@ int main(int argc, char* argv[]) {
                    app->view :
                    app->scn->cameras[app->params.camera_id];
     app->params.width = (int)round(cam->aspect * app->params.height);
-    app->state = make_trace_state(app->params);
+    app->img = image4f(app->params.width, app->params.height);
+    app->pixels = make_trace_pixels(app->params);
     app->scene_updated = true;
 
     // run interactive
     run_ui(app);
 
     // cleanup
-    trace_async_stop(app->state);
+    trace_async_stop(app->async_threads, app->async_stop);
     delete app;
 
     // done
