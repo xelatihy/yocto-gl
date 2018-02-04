@@ -6736,17 +6736,17 @@ inline vec3f trace_debug_texcoord(trace_state* st, const ray3f& ray,
 }
 
 // Trace a single sample
-void trace_sample(
-    trace_state* st, trace_pixel& pxl, const trace_params& params) {
+void trace_sample(trace_state* st, const camera* cam, trace_pixel& pxl,
+    trace_shader shader, const trace_params& params) {
     pxl.sample += 1;
     pxl.dimension = 0;
     auto crn = trace_next2f(pxl);
     auto lrn = trace_next2f(pxl);
     auto uv = vec2f{
         (pxl.i + crn.x) / params.width, 1 - (pxl.j + crn.y) / params.height};
-    auto ray = eval_camera_ray(st->cam, uv, lrn);
+    auto ray = eval_camera_ray(cam, uv, lrn);
     bool hit = false;
-    auto l = st->shader(st, ray, pxl, params, hit);
+    auto l = shader(st, ray, pxl, params, hit);
     if (!hit && params.envmap_invisible) return;
     if (!isfinite(l.x) || !isfinite(l.y) || !isfinite(l.z)) {
         log_error("NaN detected");
@@ -6755,102 +6755,6 @@ void trace_sample(
     if (params.pixel_clamp > 0) l = clamplen(l, params.pixel_clamp);
     pxl.acc += {l, 1};
     st->img.at(pxl.i, pxl.j) = pxl.acc / pxl.sample;
-}
-
-// Trace a block of samples
-void trace_block(trace_state* st, const vec4i& block, int nsamples,
-    const trace_params& params) {
-    for (auto j = block.y; j < block.w; j++) {
-        for (auto i = block.x; i < block.z; i++) {
-            auto& pxl = st->pixels.at(i, j);
-            for (auto s = 0; s < nsamples; s++) {
-                trace_sample(st, pxl, params);
-            }
-        }
-    }
-}
-
-// Trace a filtered sample of samples
-void trace_sample_filtered(trace_state* st, trace_pixel& pxl,
-    std::mutex& image_mutex, const trace_params& params) {
-    pxl.sample += 1;
-    pxl.dimension = 0;
-    auto crn = trace_next2f(pxl);
-    auto lrn = trace_next2f(pxl);
-    auto uv = vec2f{
-        (pxl.i + crn.x) / params.width, 1 - (pxl.j + crn.y) / params.height};
-    auto ray = eval_camera_ray(st->cam, uv, lrn);
-    auto hit = false;
-    auto l = st->shader(st, ray, pxl, params, hit);
-    if (!hit && params.envmap_invisible) return;
-    if (!isfinite(l.x) || !isfinite(l.y) || !isfinite(l.z)) {
-        log_error("NaN detected");
-        return;
-    }
-    if (params.pixel_clamp > 0) l = clamplen(l, params.pixel_clamp);
-    if (params.ftype == trace_filter_type::box) {
-        pxl.acc += {l, 1};
-        pxl.weight += 1;
-        st->img.at(pxl.i, pxl.j) = pxl.acc / pxl.weight;
-    } else {
-        std::lock_guard<std::mutex> lock(image_mutex);
-        for (auto fj = max(0, pxl.j - st->filter_size);
-             fj <= min(params.height - 1, pxl.j + st->filter_size); fj++) {
-            for (auto fi = max(0, pxl.i - st->filter_size);
-                 fi <= min(params.width - 1, pxl.i + st->filter_size); fi++) {
-                auto w = st->filter((fi - pxl.i) - uv.x + 0.5f) *
-                         st->filter((fj - pxl.j) - uv.y + 0.5f);
-                pxl.acc += {l * w, w};
-                pxl.weight += w;
-                st->img.at(fi, fj) = pxl.acc / pxl.weight;
-            }
-        }
-    }
-}
-
-// Trace a block of samples
-void trace_block_filtered(trace_state* st, const vec4i& block, int nsamples,
-    std::mutex& image_mutex, const trace_params& params) {
-    for (auto j = block.y; j < block.w; j++) {
-        for (auto i = block.x; i < block.x; i++) {
-            auto& pxl = st->pixels.at(i, j);
-            for (auto s = 0; s < nsamples; s++) {
-                trace_sample_filtered(st, pxl, image_mutex, params);
-            }
-        }
-    }
-}
-
-// Trace the next nsamples.
-void trace_samples(trace_state* st, int nsamples, const trace_params& params) {
-    nsamples = min(nsamples, params.nsamples - get_trace_sample(st));
-    if (params.parallel) {
-        auto nthreads = std::thread::hardware_concurrency();
-        for (auto tid = 0; tid < std::thread::hardware_concurrency(); tid++) {
-            st->threads.push_back(
-                std::thread([st, tid, nsamples, nthreads, params]() {
-                    for (auto j = tid; j < params.height; j += nthreads) {
-                        for (auto i = 0; i < params.width; i++) {
-                            auto& pxl = st->pixels.at(i, j);
-                            for (auto s = 0; s < nsamples; s++) {
-                                trace_sample(st, pxl, params);
-                            }
-                        }
-                    }
-                }));
-        }
-        for (auto& t : st->threads) t.join();
-        st->threads.clear();
-    } else {
-        for (auto j = 0; j < params.height; j++) {
-            for (auto i = 0; i < params.width; i++) {
-                auto& pxl = st->pixels.at(i, j);
-                for (auto s = 0; s < params.nsamples; s++) {
-                    trace_sample(st, pxl, params);
-                }
-            }
-        }
-    }
 }
 
 // map to convert trace samplers
@@ -6882,8 +6786,128 @@ static auto trace_filter_sizes = unordered_map<trace_filter_type, int>{
     {trace_filter_type::mitchell, 2},
 };
 
+// Trace the next nsamples.
+void trace_samples(trace_state* st, int nsamples, const trace_params& params) {
+    nsamples = min(nsamples, params.nsamples - get_trace_sample(st));
+    auto cam =
+        (params.camera_id < 0) ? st->view : st->scn->cameras[params.camera_id];
+    auto shader = trace_shaders.at(params.stype);
+    if (params.parallel) {
+        auto nthreads = std::thread::hardware_concurrency();
+        for (auto tid = 0; tid < std::thread::hardware_concurrency(); tid++) {
+            st->threads.push_back(std::thread(
+                [st, cam, shader, tid, nsamples, nthreads, params]() {
+                    for (auto j = tid; j < params.height; j += nthreads) {
+                        for (auto i = 0; i < params.width; i++) {
+                            auto& pxl = st->pixels.at(i, j);
+                            for (auto s = 0; s < nsamples; s++) {
+                                trace_sample(st, cam, pxl, shader, params);
+                            }
+                        }
+                    }
+                }));
+        }
+        for (auto& t : st->threads) t.join();
+        st->threads.clear();
+    } else {
+        auto shader = trace_shaders.at(params.stype);
+        for (auto j = 0; j < params.height; j++) {
+            for (auto i = 0; i < params.width; i++) {
+                auto& pxl = st->pixels.at(i, j);
+                for (auto s = 0; s < params.nsamples; s++) {
+                    trace_sample(st, cam, pxl, shader, params);
+                }
+            }
+        }
+    }
+}
+
+// Trace a filtered sample of samples
+void trace_sample_filtered(trace_state* st, const camera* cam, trace_pixel& pxl,
+    trace_shader shader, trace_filter filter, int filter_size,
+    std::mutex& image_mutex, const trace_params& params) {
+    pxl.sample += 1;
+    pxl.dimension = 0;
+    auto crn = trace_next2f(pxl);
+    auto lrn = trace_next2f(pxl);
+    auto uv = vec2f{
+        (pxl.i + crn.x) / params.width, 1 - (pxl.j + crn.y) / params.height};
+    auto ray = eval_camera_ray(cam, uv, lrn);
+    auto hit = false;
+    auto l = shader(st, ray, pxl, params, hit);
+    if (!hit && params.envmap_invisible) return;
+    if (!isfinite(l.x) || !isfinite(l.y) || !isfinite(l.z)) {
+        log_error("NaN detected");
+        return;
+    }
+    if (params.pixel_clamp > 0) l = clamplen(l, params.pixel_clamp);
+    if (params.ftype == trace_filter_type::box) {
+        pxl.acc += {l, 1};
+        pxl.weight += 1;
+        st->img.at(pxl.i, pxl.j) = pxl.acc / pxl.weight;
+    } else {
+        std::lock_guard<std::mutex> lock(image_mutex);
+        for (auto fj = max(0, pxl.j - filter_size);
+             fj <= min(params.height - 1, pxl.j + filter_size); fj++) {
+            for (auto fi = max(0, pxl.i - filter_size);
+                 fi <= min(params.width - 1, pxl.i + filter_size); fi++) {
+                auto w = filter((fi - pxl.i) - uv.x + 0.5f) *
+                         filter((fj - pxl.j) - uv.y + 0.5f);
+                pxl.acc += {l * w, w};
+                pxl.weight += w;
+                st->img.at(fi, fj) = pxl.acc / pxl.weight;
+            }
+        }
+    }
+}
+
+// Trace the next nsamples.
+void trace_samples_filtered(
+    trace_state* st, int nsamples, const trace_params& params) {
+    nsamples = min(nsamples, params.nsamples - get_trace_sample(st));
+    auto cam =
+        (params.camera_id < 0) ? st->view : st->scn->cameras[params.camera_id];
+    auto shader = trace_shaders.at(params.stype);
+    auto filter = trace_filters.at(params.ftype);
+    auto filter_size = trace_filter_sizes.at(params.ftype);
+    std::mutex image_mutex;
+    if (params.parallel) {
+        auto nthreads = std::thread::hardware_concurrency();
+        for (auto tid = 0; tid < std::thread::hardware_concurrency(); tid++) {
+            st->threads.push_back(
+                std::thread([st, cam, shader, filter, filter_size, tid,
+                                nsamples, nthreads, &image_mutex, params]() {
+                    for (auto j = tid; j < params.height; j += nthreads) {
+                        for (auto i = 0; i < params.width; i++) {
+                            auto& pxl = st->pixels.at(i, j);
+                            for (auto s = 0; s < nsamples; s++) {
+                                trace_sample_filtered(st, cam, pxl, shader,
+                                    filter, filter_size, image_mutex, params);
+                            }
+                        }
+                    }
+                }));
+        }
+        for (auto& t : st->threads) t.join();
+        st->threads.clear();
+    } else {
+        for (auto j = 0; j < params.height; j++) {
+            for (auto i = 0; i < params.width; i++) {
+                auto& pxl = st->pixels.at(i, j);
+                for (auto s = 0; s < params.nsamples; s++) {
+                    trace_sample_filtered(st, cam, pxl, shader, filter,
+                        filter_size, image_mutex, params);
+                }
+            }
+        }
+    }
+}
+
 // Starts an anyncrhounous renderer.
 void trace_async_start(trace_state* st, const trace_params& params) {
+    auto cam =
+        (params.camera_id < 0) ? st->view : st->scn->cameras[params.camera_id];
+
     for (auto j = 0; j < params.height; j++) {
         for (auto i = 0; i < params.width; i++) {
             st->pixels.at(i, j) = {zero4f,
@@ -6892,21 +6916,16 @@ void trace_async_start(trace_state* st, const trace_params& params) {
         }
     }
 
-    st->cam =
-        (params.camera_id < 0) ? st->view : st->scn->cameras[params.camera_id];
-    st->shader = trace_shaders.at(params.stype);
-    st->filter = nullptr;
-    st->filter_size = 0;
-
     auto nthreads = std::thread::hardware_concurrency();
     for (auto tid = 0; tid < std::thread::hardware_concurrency(); tid++) {
-        st->threads.push_back(std::thread([st, tid, nthreads, params]() {
+        st->threads.push_back(std::thread([st, cam, tid, nthreads, params]() {
+            auto shader = trace_shaders.at(params.stype);
             for (auto s = 0; s < params.nsamples; s++) {
                 for (auto j = tid; j < params.height; j += nthreads) {
                     for (auto i = 0; i < params.width; i++) {
                         if (st->thread_stop) return;
                         auto& pxl = st->pixels.at(i, j);
-                        trace_sample(st, pxl, params);
+                        trace_sample(st, cam, pxl, shader, params);
                     }
                 }
             }
@@ -6930,12 +6949,6 @@ trace_state* make_trace_state(const scene* scn, const camera* view,
     st->scn = scn;
     st->view = view;
     st->bvh = bvh;
-
-    st->cam =
-        (params.camera_id < 0) ? st->view : st->scn->cameras[params.camera_id];
-    st->shader = trace_shaders.at(params.stype);
-    st->filter = trace_filters.at(params.ftype);
-    st->filter_size = trace_filter_sizes.at(params.ftype);
 
     st->img = image4f(params.width, params.height);
     st->pixels = image<trace_pixel>(params.width, params.height);
