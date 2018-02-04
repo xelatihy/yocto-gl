@@ -6825,29 +6825,29 @@ void trace_block_filtered(trace_state* st, const vec4i& block, int nsamples,
 void trace_samples(trace_state* st, int nsamples, const trace_params& params) {
     nsamples = min(nsamples, params.nsamples - get_trace_sample(st));
     if (params.parallel) {
-        if (params.ftype == trace_filter_type::box) {
-            parallel_for(
-                (int)st->blocks.size(), [st, nsamples, &params](int idx) {
-                    trace_block(st, st->blocks[idx], nsamples, params);
-                });
-        } else {
-            std::mutex image_mutex;
-            parallel_for((int)st->blocks.size(),
-                [st, nsamples, &params, &image_mutex](int idx) {
-                    trace_block_filtered(
-                        st, st->blocks[idx], nsamples, image_mutex, params);
-                });
+        auto nthreads = std::thread::hardware_concurrency();
+        for (auto tid = 0; tid < std::thread::hardware_concurrency(); tid++) {
+            st->threads.push_back(
+                std::thread([st, tid, nsamples, nthreads, params]() {
+                    for (auto j = tid; j < params.height; j += nthreads) {
+                        for (auto i = 0; i < params.width; i++) {
+                            auto& pxl = st->pixels.at(i, j);
+                            for (auto s = 0; s < nsamples; s++) {
+                                trace_sample(st, pxl, params);
+                            }
+                        }
+                    }
+                }));
         }
+        for (auto& t : st->threads) t.join();
+        st->threads.clear();
     } else {
-        if (params.ftype == trace_filter_type::box) {
-            for (auto idx = 0; idx < (int)st->blocks.size(); idx++) {
-                trace_block(st, st->blocks[idx], nsamples, params);
-            }
-        } else {
-            std::mutex image_mutex;
-            for (auto idx = 0; idx < (int)st->blocks.size(); idx++) {
-                trace_block_filtered(
-                    st, st->blocks[idx], nsamples, image_mutex, params);
+        for (auto j = 0; j < params.height; j++) {
+            for (auto i = 0; i < params.width; i++) {
+                auto& pxl = st->pixels.at(i, j);
+                for (auto s = 0; s < params.nsamples; s++) {
+                    trace_sample(st, pxl, params);
+                }
             }
         }
     }
@@ -6898,20 +6898,28 @@ void trace_async_start(trace_state* st, const trace_params& params) {
     st->filter = nullptr;
     st->filter_size = 0;
 
-    for (auto sample = 0; sample < params.nsamples; sample++) {
-        for (auto& block : st->blocks) {
-            run_async(st->pool, [st, block, &params, sample]() {
-                trace_block(st, block, 1, params);
-            });
-        }
+    auto nthreads = std::thread::hardware_concurrency();
+    for (auto tid = 0; tid < std::thread::hardware_concurrency(); tid++) {
+        st->threads.push_back(std::thread([st, tid, nthreads, params]() {
+            for (auto s = 0; s < params.nsamples; s++) {
+                for (auto j = tid; j < params.height; j += nthreads) {
+                    for (auto i = 0; i < params.width; i++) {
+                        if (st->thread_stop) return;
+                        auto& pxl = st->pixels.at(i, j);
+                        trace_sample(st, pxl, params);
+                    }
+                }
+            }
+        }));
     }
 }
 
 // Stop the asynchronous renderer.
 void trace_async_stop(trace_state* st) {
-    if (!st->pool) return;
-    clear_pool(st->pool);
-    wait_pool(st->pool);
+    st->thread_stop = true;
+    for (auto& t : st->threads) t.join();
+    st->threads.clear();
+    st->thread_stop = false;
 }
 
 // Initialize a rendering state
@@ -6938,18 +6946,6 @@ trace_state* make_trace_state(const scene* scn, const camera* view,
                 0, 0, params.nsamples, params.rtype};
         }
     }
-
-    for (int j = 0; j < params.height; j += params.block_size) {
-        for (int i = 0; i < params.width; i += params.block_size) {
-            st->blocks += {i, j, min(i + params.block_size, params.width),
-                min(j + params.block_size, params.height)};
-        }
-    }
-    if (params.ftype != trace_filter_type::box) {
-        st->acc = image4f(params.width, params.height);
-        st->weight = image4f(params.width, params.height);
-    }
-    if (params.parallel) st->pool = new thread_pool();
     return st;
 }
 
