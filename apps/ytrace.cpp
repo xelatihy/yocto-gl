@@ -39,7 +39,7 @@ struct app_state {
     image4f img;
     image<trace_pixel> pixels;
     trace_params params;
-    vector<trace_light*> lights;
+    trace_lights lights;
     float exposure = 0, gamma = 2.2f;
     bool filmic = false;
     vec4f background = {0, 0, 0, 0};
