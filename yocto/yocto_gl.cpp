@@ -6735,6 +6735,28 @@ inline vec3f trace_debug_texcoord(trace_state* st, const ray3f& ray,
     return {texcoord.x, texcoord.y, 0};
 }
 
+// Trace a single sample
+void trace_sample(
+    trace_state* st, trace_pixel& pxl, const trace_params& params) {
+    pxl.sample += 1;
+    pxl.dimension = 0;
+    auto crn = trace_next2f(pxl);
+    auto lrn = trace_next2f(pxl);
+    auto uv = vec2f{
+        (pxl.i + crn.x) / params.width, 1 - (pxl.j + crn.y) / params.height};
+    auto ray = eval_camera_ray(st->cam, uv, lrn);
+    bool hit = false;
+    auto l = st->shader(st, ray, pxl, params, hit);
+    if (!hit && params.envmap_invisible) return;
+    if (!isfinite(l.x) || !isfinite(l.y) || !isfinite(l.z)) {
+        log_error("NaN detected");
+        return;
+    }
+    if (params.pixel_clamp > 0) l = clamplen(l, params.pixel_clamp);
+    pxl.acc += {l, 1};
+    st->img.at(pxl.i, pxl.j) = pxl.acc / pxl.sample;
+}
+
 // Trace a block of samples
 void trace_block(trace_state* st, const vec4i& block, int nsamples,
     const trace_params& params) {
@@ -6742,24 +6764,8 @@ void trace_block(trace_state* st, const vec4i& block, int nsamples,
         for (auto i = block.x; i < block.z; i++) {
             auto& pxl = st->pixels.at(i, j);
             for (auto s = 0; s < nsamples; s++) {
-                pxl.sample += 1;
-                pxl.dimension = 0;
-                auto crn = trace_next2f(pxl);
-                auto lrn = trace_next2f(pxl);
-                auto uv = vec2f{(i + crn.x) / params.width,
-                    1 - (j + crn.y) / params.height};
-                auto ray = eval_camera_ray(st->cam, uv, lrn);
-                bool hit = false;
-                auto l = st->shader(st, ray, pxl, params, hit);
-                if (!hit && params.envmap_invisible) continue;
-                if (!isfinite(l.x) || !isfinite(l.y) || !isfinite(l.z)) {
-                    log_error("NaN detected");
-                    continue;
-                }
-                if (params.pixel_clamp > 0) l = clamplen(l, params.pixel_clamp);
-                pxl.acc += {l, 1};
+                trace_sample(st, pxl, params);
             }
-            st->img[{i, j}] = pxl.acc / pxl.sample;
         }
     }
 }
@@ -6841,7 +6847,7 @@ void trace_block_filtered(trace_state* st, const vec4i& block, int nsamples,
 // Trace the next samples in [samples_min, samples_max) range.
 // Samples have to be traced consecutively.
 void trace_samples(trace_state* st, int nsamples, const trace_params& params) {
-    nsamples = min(nsamples, params.nsamples - st->sample);
+    nsamples = min(nsamples, params.nsamples - get_trace_sample(st));
     if (params.parallel) {
         if (params.ftype == trace_filter_type::box) {
             parallel_for(
@@ -6869,7 +6875,6 @@ void trace_samples(trace_state* st, int nsamples, const trace_params& params) {
             }
         }
     }
-    st->sample += nsamples;
 }
 
 // map to convert trace samplers
@@ -6919,10 +6924,8 @@ void trace_async_start(trace_state* st, const trace_params& params) {
 
     for (auto sample = 0; sample < params.nsamples; sample++) {
         for (auto& block : st->blocks) {
-            auto is_last = (block == st->blocks.back());
-            run_async(st->pool, [st, block, &params, sample, is_last]() {
+            run_async(st->pool, [st, block, &params, sample]() {
                 trace_block(st, block, 1, params);
-                if (is_last) st->sample = sample;
             });
         }
     }
