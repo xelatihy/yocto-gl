@@ -6074,6 +6074,7 @@ struct trace_pixel {
     int i = 0, j = 0;             // pixel coordinates
     int sample = 0;               // number of samples computed
     int dimension = 0;            // current dimension
+    float weight = 0;             // pixel weight for filtering
     int nsamples = 0;             // total number of samples
     trace_rng_type rtype = trace_rng_type::uniform;  // random number type
 };
