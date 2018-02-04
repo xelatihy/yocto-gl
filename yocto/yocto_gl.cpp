@@ -5750,32 +5750,19 @@ vec3f sample_ggx(float rs, const vec2f& rn) {
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-// Initialize a smp ot type rtype for pixel i, j with ns total samples.
-//
-// Implementation Notes: we use hash functions to scramble the pixel ids
-// to avoid introducing unwanted correlation between pixels. These should not
-// around according to the RNG documentaion, but we still found bad cases.
-// Scrambling avoids it.
-trace_sampler make_trace_sampler(
-    rng_pcg32& rng, int i, int j, int s, int ns, trace_rng_type rtype) {
-    // we use various hashes to scramble the pixel values
-    return {rng, hash_uint32((uint32_t)(j + 1) << 16 | (uint32_t)(i + 1)), s, 0,
-        ns, (int)round(sqrt((float)ns)), rtype};
-}
-
 // Generates a 1-dimensional sample.
-float trace_next1f(trace_sampler& smp) {
-    switch (smp.rtype) {
+float trace_next1f(trace_pixel& pxl) {
+    switch (pxl.rtype) {
         case trace_rng_type::uniform: {
-            return clamp(next_rand1f(smp.rng), 0.0f, 1 - flt_eps);
+            return clamp(next_rand1f(pxl.rng), 0.0f, 1 - flt_eps);
         } break;
         case trace_rng_type::stratified: {
-            smp.d += 1;
-            auto p = hash_uint64_32(
-                (uint64_t)smp.pixel_hash | (uint64_t)smp.d << 32);
-            auto s = hash_permute(smp.s, smp.ns, p);
+            auto p = hash_uint64_32((uint64_t)pxl.i | (uint64_t)pxl.j << 16 |
+                                    (uint64_t)pxl.dimension << 32);
+            auto s = hash_permute(pxl.sample, pxl.nsamples, p);
+            pxl.dimension += 1;
             return clamp(
-                (s + next_rand1f(smp.rng)) / smp.ns, 0.0f, 1 - flt_eps);
+                (s + next_rand1f(pxl.rng)) / pxl.nsamples, 0.0f, 1 - flt_eps);
         } break;
         default: {
             assert(false);
@@ -5785,19 +5772,20 @@ float trace_next1f(trace_sampler& smp) {
 }
 
 // Generates a 2-dimensional sample.
-vec2f trace_next2f(trace_sampler& smp) {
-    switch (smp.rtype) {
+vec2f trace_next2f(trace_pixel& pxl) {
+    switch (pxl.rtype) {
         case trace_rng_type::uniform: {
-            return {next_rand1f(smp.rng), next_rand1f(smp.rng)};
+            return {next_rand1f(pxl.rng), next_rand1f(pxl.rng)};
         } break;
         case trace_rng_type::stratified: {
-            smp.d += 2;
-            auto p = hash_uint64_32(
-                (uint64_t)smp.pixel_hash | (uint64_t)smp.d << 32);
-            auto s = hash_permute(smp.s, smp.ns, p);
-            return {clamp((s % smp.ns2 + next_rand1f(smp.rng)) / smp.ns2, 0.0f,
-                        1 - flt_eps),
-                clamp((s / smp.ns2 + next_rand1f(smp.rng)) / smp.ns2, 0.0f,
+            auto p = hash_uint64_32((uint64_t)pxl.i | (uint64_t)pxl.j << 16 |
+                                    (uint64_t)pxl.dimension << 32);
+            auto s = hash_permute(pxl.sample, pxl.nsamples, p);
+            auto nsamples2 = (int)round(sqrt(pxl.nsamples));
+            pxl.dimension += 2;
+            return {clamp((s % nsamples2 + next_rand1f(pxl.rng)) / nsamples2,
+                        0.0f, 1 - flt_eps),
+                clamp((s / nsamples2 + next_rand1f(pxl.rng)) / nsamples2, 0.0f,
                     1 - flt_eps)};
         } break;
         default: {
@@ -5808,8 +5796,8 @@ vec2f trace_next2f(trace_sampler& smp) {
 }
 
 // Creates a 1-dimensional sample in [0,num-1]
-inline int trace_next1i(trace_sampler& smp, int num) {
-    return clamp(int(trace_next1f(smp) * num), 0, num - 1);
+inline int trace_next1i(trace_pixel& pxl, int num) {
+    return clamp(int(trace_next1f(pxl) * num), 0, num - 1);
 }
 
 // Brdf type
@@ -6446,7 +6434,7 @@ inline float trace_weight_mis(float w0, float w1) {
 }
 
 // Recursive path tracing.
-inline vec3f trace_path(trace_state* st, const ray3f& ray, trace_sampler& smp,
+inline vec3f trace_path(trace_state* st, const ray3f& ray, trace_pixel& pxl,
     const trace_params& params, bool& hit) {
     // intersection
     auto pt = trace_intersect_scene(st, ray);
@@ -6465,9 +6453,9 @@ inline vec3f trace_path(trace_state* st, const ray3f& ray, trace_sampler& smp,
 
         // direct – light
         auto lgt =
-            st->scn->lights[trace_next1i(smp, (int)st->scn->lights.size())];
+            st->scn->lights[trace_next1i(pxl, (int)st->scn->lights.size())];
         auto lpt =
-            trace_sample_light(lgt, pt, trace_next1f(smp), trace_next2f(smp));
+            trace_sample_light(lgt, pt, trace_next1f(pxl), trace_next2f(pxl));
         auto lw = trace_weight_light(lpt, pt) * (float)st->scn->lights.size();
         auto lke = trace_eval_emission(lpt);
         auto lbc = trace_eval_brdfcos(pt, -lpt.wo);
@@ -6481,7 +6469,7 @@ inline vec3f trace_path(trace_state* st, const ray3f& ray, trace_sampler& smp,
         auto bwi = zero3f;
         auto bdelta = false;
         std::tie(bwi, bdelta) =
-            trace_sample_brdfcos(pt, trace_next1f(smp), trace_next2f(smp));
+            trace_sample_brdfcos(pt, trace_next1f(pxl), trace_next2f(pxl));
         auto bpt = trace_intersect_scene(st, make_ray(pt.frame.o, bwi));
         auto bw = trace_weight_brdfcos(pt, -bpt.wo, bdelta);
         auto bke = trace_eval_emission(bpt);
@@ -6504,7 +6492,7 @@ inline vec3f trace_path(trace_state* st, const ray3f& ray, trace_sampler& smp,
         // roussian roulette
         if (bounce > 2) {
             auto rrprob = 1.0f - min(max_element_value(pt.fr.rho()), 0.95f);
-            if (trace_next1f(smp) < rrprob) break;
+            if (trace_next1f(pxl) < rrprob) break;
             weight *= 1 / (1 - rrprob);
         }
 
@@ -6518,7 +6506,7 @@ inline vec3f trace_path(trace_state* st, const ray3f& ray, trace_sampler& smp,
 
 // Recursive path tracing.
 inline vec3f trace_path_nomis(trace_state* st, const ray3f& ray,
-    trace_sampler& smp, const trace_params& params, bool& hit) {
+    trace_pixel& pxl, const trace_params& params, bool& hit) {
     // intersection
     auto pt = trace_intersect_scene(st, ray);
     hit = pt.ist;
@@ -6536,9 +6524,9 @@ inline vec3f trace_path_nomis(trace_state* st, const ray3f& ray,
 
         // direct
         auto lgt =
-            st->scn->lights[trace_next1i(smp, (int)st->scn->lights.size())];
+            st->scn->lights[trace_next1i(pxl, (int)st->scn->lights.size())];
         auto lpt =
-            trace_sample_light(lgt, pt, trace_next1f(smp), trace_next2f(smp));
+            trace_sample_light(lgt, pt, trace_next1f(pxl), trace_next2f(pxl));
         auto ld = trace_eval_emission(lpt) * trace_eval_brdfcos(pt, -lpt.wo) *
                   trace_weight_light(lpt, pt) * (float)st->scn->lights.size();
         if (ld != zero3f) {
@@ -6551,7 +6539,7 @@ inline vec3f trace_path_nomis(trace_state* st, const ray3f& ray,
         // roussian roulette
         if (bounce > 2) {
             auto rrprob = 1.0f - min(max_element_value(pt.fr.rho()), 0.95f);
-            if (trace_next1f(smp) < rrprob) break;
+            if (trace_next1f(pxl) < rrprob) break;
             weight *= 1 / (1 - rrprob);
         }
 
@@ -6559,7 +6547,7 @@ inline vec3f trace_path_nomis(trace_state* st, const ray3f& ray,
         auto bwi = zero3f;
         auto bdelta = false;
         std::tie(bwi, bdelta) =
-            trace_sample_brdfcos(pt, trace_next1f(smp), trace_next2f(smp));
+            trace_sample_brdfcos(pt, trace_next1f(pxl), trace_next2f(pxl));
         weight *= trace_eval_brdfcos(pt, bwi, bdelta) *
                   trace_weight_brdfcos(pt, bwi, bdelta);
         if (weight == zero3f) break;
@@ -6577,7 +6565,7 @@ inline vec3f trace_path_nomis(trace_state* st, const ray3f& ray,
 
 // Recursive path tracing.
 inline vec3f trace_path_hack(trace_state* st, const ray3f& ray,
-    trace_sampler& smp, const trace_params& params, bool& hit) {
+    trace_pixel& pxl, const trace_params& params, bool& hit) {
     // intersection
     auto pt = trace_intersect_scene(st, ray);
     hit = pt.ist;
@@ -6591,9 +6579,9 @@ inline vec3f trace_path_hack(trace_state* st, const ray3f& ray,
     for (auto bounce = 0; bounce < params.max_depth; bounce++) {
         // direct
         auto lgt =
-            st->scn->lights[trace_next1i(smp, (int)st->scn->lights.size())];
+            st->scn->lights[trace_next1i(pxl, (int)st->scn->lights.size())];
         auto lpt =
-            trace_sample_light(lgt, pt, trace_next1f(smp), trace_next2f(smp));
+            trace_sample_light(lgt, pt, trace_next1f(pxl), trace_next2f(pxl));
         auto ld = trace_eval_emission(lpt) * trace_eval_brdfcos(pt, -lpt.wo) *
                   trace_weight_light(lpt, pt) * (float)st->scn->lights.size();
         if (ld != zero3f) {
@@ -6606,7 +6594,7 @@ inline vec3f trace_path_hack(trace_state* st, const ray3f& ray,
         // roussian roulette
         if (bounce > 2) {
             auto rrprob = 1.0f - min(max_element_value(pt.fr.rho()), 0.95f);
-            if (trace_next1f(smp) < rrprob) break;
+            if (trace_next1f(pxl) < rrprob) break;
             weight *= 1 / (1 - rrprob);
         }
 
@@ -6614,7 +6602,7 @@ inline vec3f trace_path_hack(trace_state* st, const ray3f& ray,
         auto bwi = zero3f;
         auto bdelta = false;
         std::tie(bwi, bdelta) =
-            trace_sample_brdfcos(pt, trace_next1f(smp), trace_next2f(smp));
+            trace_sample_brdfcos(pt, trace_next1f(pxl), trace_next2f(pxl));
         weight *= trace_eval_brdfcos(pt, bwi, bdelta) *
                   trace_weight_brdfcos(pt, bwi, bdelta);
         if (weight == zero3f) break;
@@ -6631,7 +6619,7 @@ inline vec3f trace_path_hack(trace_state* st, const ray3f& ray,
 
 // Direct illumination.
 inline vec3f trace_direct(trace_state* st, const ray3f& ray, int bounce,
-    trace_sampler& smp, const trace_params& params, bool& hit) {
+    trace_pixel& pxl, const trace_params& params, bool& hit) {
     // intersection
     auto pt = trace_intersect_scene(st, ray);
     if (!bounce) hit = pt.ist;
@@ -6646,7 +6634,7 @@ inline vec3f trace_direct(trace_state* st, const ray3f& ray, int bounce,
     // direct
     for (auto& lgt : st->scn->lights) {
         auto lpt =
-            trace_sample_light(lgt, pt, trace_next1f(smp), trace_next2f(smp));
+            trace_sample_light(lgt, pt, trace_next1f(pxl), trace_next2f(pxl));
         auto ld = trace_eval_emission(lpt) * trace_eval_brdfcos(pt, -lpt.wo) *
                   trace_weight_light(lpt, pt);
         if (ld == zero3f) continue;
@@ -6660,13 +6648,13 @@ inline vec3f trace_direct(trace_state* st, const ray3f& ray, int bounce,
     if (pt.fr.ks != zero3f && !pt.fr.rs) {
         auto wi = reflect(pt.wo, pt.frame.z);
         auto ray = make_ray(pt.frame.o, wi);
-        l += pt.fr.ks * trace_direct(st, ray, bounce + 1, smp, params, hit);
+        l += pt.fr.ks * trace_direct(st, ray, bounce + 1, pxl, params, hit);
     }
 
     // opacity
     if (pt.fr.kt != zero3f) {
         auto ray = make_ray(pt.frame.o, -pt.wo);
-        l += pt.fr.kt * trace_direct(st, ray, bounce + 1, smp, params, hit);
+        l += pt.fr.kt * trace_direct(st, ray, bounce + 1, pxl, params, hit);
     }
 
     // done
@@ -6674,14 +6662,14 @@ inline vec3f trace_direct(trace_state* st, const ray3f& ray, int bounce,
 }
 
 // Direct illumination.
-inline vec3f trace_direct(trace_state* st, const ray3f& ray, trace_sampler& smp,
+inline vec3f trace_direct(trace_state* st, const ray3f& ray, trace_pixel& pxl,
     const trace_params& params, bool& hit) {
-    return trace_direct(st, ray, 0, smp, params, hit);
+    return trace_direct(st, ray, 0, pxl, params, hit);
 }
 
 // Eyelight for quick previewing.
 inline vec3f trace_eyelight(trace_state* st, const ray3f& ray, int bounce,
-    trace_sampler& smp, const trace_params& params, bool& hit) {
+    trace_pixel& pxl, const trace_params& params, bool& hit) {
     // intersection
     auto pt = trace_intersect_scene(st, ray);
     if (!bounce) hit = pt.ist;
@@ -6697,7 +6685,7 @@ inline vec3f trace_eyelight(trace_state* st, const ray3f& ray, int bounce,
     if (bounce >= params.max_depth) return l;
     if (pt.fr.kt != zero3f) {
         auto ray = make_ray(pt.frame.o, -pt.wo);
-        l += pt.fr.kt * trace_eyelight(st, ray, bounce + 1, smp, params, hit);
+        l += pt.fr.kt * trace_eyelight(st, ray, bounce + 1, pxl, params, hit);
     }
 
     // done
@@ -6705,14 +6693,14 @@ inline vec3f trace_eyelight(trace_state* st, const ray3f& ray, int bounce,
 }
 
 // Eyelight for quick previewing.
-inline vec3f trace_eyelight(trace_state* st, const ray3f& ray,
-    trace_sampler& smp, const trace_params& params, bool& hit) {
-    return trace_eyelight(st, ray, 0, smp, params, hit);
+inline vec3f trace_eyelight(trace_state* st, const ray3f& ray, trace_pixel& pxl,
+    const trace_params& params, bool& hit) {
+    return trace_eyelight(st, ray, 0, pxl, params, hit);
 }
 
 // Debug previewing.
 inline vec3f trace_debug_normal(trace_state* st, const ray3f& ray,
-    trace_sampler& smp, const trace_params& params, bool& hit) {
+    trace_pixel& pxl, const trace_params& params, bool& hit) {
     // intersection
     auto isec = intersect_bvh(st->bvh, ray, false);
     hit = (bool)isec;
@@ -6725,7 +6713,7 @@ inline vec3f trace_debug_normal(trace_state* st, const ray3f& ray,
 
 // Debug previewing.
 inline vec3f trace_debug_albedo(trace_state* st, const ray3f& ray,
-    trace_sampler& smp, const trace_params& params, bool& hit) {
+    trace_pixel& pxl, const trace_params& params, bool& hit) {
     // intersection
     auto pt = trace_intersect_scene(st, ray);
     hit = pt.ist;
@@ -6735,7 +6723,7 @@ inline vec3f trace_debug_albedo(trace_state* st, const ray3f& ray,
 
 // Debug previewing.
 inline vec3f trace_debug_texcoord(trace_state* st, const ray3f& ray,
-    trace_sampler& smp, const trace_params& params, bool& hit) {
+    trace_pixel& pxl, const trace_params& params, bool& hit) {
     // intersection
     auto isec = intersect_bvh(st->bvh, ray, false);
     hit = (bool)isec;
@@ -6748,42 +6736,37 @@ inline vec3f trace_debug_texcoord(trace_state* st, const ray3f& ray,
 }
 
 // Trace a block of samples
-void trace_block(trace_state* st, const vec4i& block, const vec2i& samples,
-    vector<rng_pcg32>& rngs, const trace_params& params) {
+void trace_block(trace_state* st, const vec4i& block, int nsamples,
+    const trace_params& params) {
     for (auto j = block.y; j < block.w; j++) {
         for (auto i = block.x; i < block.z; i++) {
-            auto lp = zero4f;
-            for (auto s = samples.x; s < samples.y; s++) {
-                auto smp = make_trace_sampler(rngs[j * params.width + i], i, j,
-                    s, params.nsamples, params.rtype);
-                auto rn = trace_next2f(smp);
-                auto uv = vec2f{
-                    (i + rn.x) / params.width, 1 - (j + rn.y) / params.height};
-                auto ray = eval_camera_ray(st->cam, uv, trace_next2f(smp));
+            auto& pxl = st->pixels.at(i, j);
+            for (auto s = 0; s < nsamples; s++) {
+                pxl.sample += 1;
+                pxl.dimension = 0;
+                auto crn = trace_next2f(pxl);
+                auto lrn = trace_next2f(pxl);
+                auto uv = vec2f{(i + crn.x) / params.width,
+                    1 - (j + crn.y) / params.height};
+                auto ray = eval_camera_ray(st->cam, uv, lrn);
                 bool hit = false;
-                auto l = st->shader(st, ray, smp, params, hit);
+                auto l = st->shader(st, ray, pxl, params, hit);
                 if (!hit && params.envmap_invisible) continue;
                 if (!isfinite(l.x) || !isfinite(l.y) || !isfinite(l.z)) {
                     log_error("NaN detected");
                     continue;
                 }
                 if (params.pixel_clamp > 0) l = clamplen(l, params.pixel_clamp);
-                lp += {l, 1};
+                pxl.acc += {l, 1};
             }
-            if (samples.x) {
-                st->img[{i, j}] = (st->img[{i, j}] * (float)samples.x + lp) /
-                                  (float)samples.y;
-            } else {
-                st->img[{i, j}] = lp / (float)samples.y;
-            }
+            st->img[{i, j}] = pxl.acc / pxl.sample;
         }
     }
 }
 
 // Trace a block of samples
-void trace_block_filtered(trace_state* st, const vec4i& block,
-    const vec2i& samples, vector<rng_pcg32>& rngs, std::mutex& image_mutex,
-    const trace_params& params) {
+void trace_block_filtered(trace_state* st, const vec4i& block, int nsamples,
+    std::mutex& image_mutex, const trace_params& params) {
     static constexpr const int pad = 2;
     auto block_size = vec2i{block.z - block.x, block.w - block.y};
     auto acc_buffer = image4f(block_size.x + pad * 2, block_size.y + pad * 2);
@@ -6791,15 +6774,17 @@ void trace_block_filtered(trace_state* st, const vec4i& block,
         image4f(block_size.x + pad * 2, block_size.y + pad * 2);
     for (auto j = block.y; j < block.w; j++) {
         for (auto i = block.x; i < block.x; i++) {
-            for (auto s = samples.x; s < samples.y; s++) {
-                auto smp = make_trace_sampler(rngs[j * params.width + i], i, j,
-                    s, params.nsamples, params.rtype);
-                auto rn = trace_next2f(smp);
-                auto uv = vec2f{
-                    (i + rn.x) / params.width, 1 - (j + rn.y) / params.height};
-                auto ray = eval_camera_ray(st->cam, uv, trace_next2f(smp));
+            auto& pxl = st->pixels.at(i, j);
+            for (auto s = 0; s < nsamples; s++) {
+                pxl.sample += 1;
+                pxl.dimension = 0;
+                auto crn = trace_next2f(pxl);
+                auto lrn = trace_next2f(pxl);
+                auto uv = vec2f{(i + crn.x) / params.width,
+                    1 - (j + crn.y) / params.height};
+                auto ray = eval_camera_ray(st->cam, uv, lrn);
                 auto hit = false;
-                auto l = st->shader(st, ray, smp, params, hit);
+                auto l = st->shader(st, ray, pxl, params, hit);
                 if (!hit && params.envmap_invisible) continue;
                 if (!isfinite(l.x) || !isfinite(l.y) || !isfinite(l.z)) {
                     log_error("NaN detected");
@@ -6861,30 +6846,26 @@ void trace_samples(trace_state* st, int nsamples, const trace_params& params) {
         if (params.ftype == trace_filter_type::box) {
             parallel_for(
                 (int)st->blocks.size(), [st, nsamples, &params](int idx) {
-                    trace_block(st, st->blocks[idx],
-                        {st->sample, st->sample + nsamples}, st->rngs, params);
+                    trace_block(st, st->blocks[idx], nsamples, params);
                 });
         } else {
             std::mutex image_mutex;
             parallel_for((int)st->blocks.size(),
                 [st, nsamples, &params, &image_mutex](int idx) {
-                    trace_block_filtered(st, st->blocks[idx],
-                        {st->sample, st->sample + nsamples}, st->rngs,
-                        image_mutex, params);
+                    trace_block_filtered(
+                        st, st->blocks[idx], nsamples, image_mutex, params);
                 });
         }
     } else {
         if (params.ftype == trace_filter_type::box) {
             for (auto idx = 0; idx < (int)st->blocks.size(); idx++) {
-                trace_block(st, st->blocks[idx],
-                    {st->sample, st->sample + nsamples}, st->rngs, params);
+                trace_block(st, st->blocks[idx], nsamples, params);
             }
         } else {
             std::mutex image_mutex;
             for (auto idx = 0; idx < (int)st->blocks.size(); idx++) {
-                trace_block_filtered(st, st->blocks[idx],
-                    {st->sample, st->sample + nsamples}, st->rngs, image_mutex,
-                    params);
+                trace_block_filtered(
+                    st, st->blocks[idx], nsamples, image_mutex, params);
             }
         }
     }
@@ -6922,17 +6903,25 @@ static auto trace_filter_sizes = unordered_map<trace_filter_type, int>{
 
 // Starts an anyncrhounous renderer.
 void trace_async_start(trace_state* st, const trace_params& params) {
-    st->sample = 0;
+    for (auto j = 0; j < params.height; j++) {
+        for (auto i = 0; i < params.width; i++) {
+            st->pixels.at(i, j) = {zero4f,
+                init_rng(params.seed, (j * params.width + i) * 2 + 1), i, j, 0,
+                0, params.nsamples, params.rtype};
+        }
+    }
+
     st->cam =
         (params.camera_id < 0) ? st->view : st->scn->cameras[params.camera_id];
     st->shader = trace_shaders.at(params.stype);
     st->filter = nullptr;
     st->filter_size = 0;
+
     for (auto sample = 0; sample < params.nsamples; sample++) {
         for (auto& block : st->blocks) {
             auto is_last = (block == st->blocks.back());
             run_async(st->pool, [st, block, &params, sample, is_last]() {
-                trace_block(st, block, {sample, sample + 1}, st->rngs, params);
+                trace_block(st, block, 1, params);
                 if (is_last) st->sample = sample;
             });
         }
@@ -6955,7 +6944,6 @@ trace_state* make_trace_state(const scene* scn, const camera* view,
     st->view = view;
     st->bvh = bvh;
 
-    st->sample = 0;
     st->cam =
         (params.camera_id < 0) ? st->view : st->scn->cameras[params.camera_id];
     st->shader = trace_shaders.at(params.stype);
@@ -6963,14 +6951,20 @@ trace_state* make_trace_state(const scene* scn, const camera* view,
     st->filter_size = trace_filter_sizes.at(params.ftype);
 
     st->img = image4f(params.width, params.height);
+    st->pixels = image<trace_pixel>(params.width, params.height);
+    for (auto j = 0; j < params.height; j++) {
+        for (auto i = 0; i < params.width; i++) {
+            st->pixels.at(i, j) = {zero4f,
+                init_rng(params.seed, (j * params.width + i) * 2 + 1), i, j, 0,
+                0, params.nsamples, params.rtype};
+        }
+    }
+
     for (int j = 0; j < params.height; j += params.block_size) {
         for (int i = 0; i < params.width; i += params.block_size) {
             st->blocks += {i, j, min(i + params.block_size, params.width),
                 min(j + params.block_size, params.height)};
         }
-    }
-    for (auto idx : range(params.width * params.height)) {
-        st->rngs += init_rng(params.seed, idx * 2 + 1);
     }
     if (params.ftype != trace_filter_type::box) {
         st->acc = image4f(params.width, params.height);
