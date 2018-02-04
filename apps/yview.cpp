@@ -36,9 +36,11 @@ struct app_state {
     string filename;
     string imfilename;
     string outfilename;
-    gl_stdsurface_params shparams = {};
-    gl_stdsurface_state* shstate = nullptr;
-    gl_stdsurface_lights lights;
+    gl_stdsurface_params params = {};
+    gl_stdsurface_program prog;
+    unordered_map<texture*, gl_texture> textures;
+    unordered_map<shape*, gl_shape> shapes;
+    gl_lights lights;
     bool navigation_fps = false;
     void* selection = nullptr;
     test_scene_params edit_params;
@@ -47,7 +49,6 @@ struct app_state {
     bool animate = false;
 
     ~app_state() {
-        if (shstate) delete shstate;
         if (scn) delete scn;
         if (view) delete view;
     }
@@ -58,21 +59,22 @@ inline void draw(gl_window* win) {
     auto app = (app_state*)get_user_pointer(win);
 
     auto framebuffer_size = get_framebuffer_size(win);
-    app->shparams.width = framebuffer_size.x;
-    app->shparams.height = framebuffer_size.y;
+    app->params.width = framebuffer_size.x;
+    app->params.height = framebuffer_size.y;
 
     update_transforms(app->scn, app->time);
-    app->lights = make_stdsurface_lights(app->scn);
-    update_stdsurface_state(app->shstate, app->scn, app->shparams);
-    if (app->lights.pos.empty()) app->shparams.camera_lights = true;
+    app->lights = make_gl_lights(app->scn);
+    update_textures(app->scn, app->textures);
+    update_shapes(app->scn, app->shapes);
+    if (app->lights.pos.empty()) app->params.camera_lights = true;
 
-    app->shparams.highlighted = app->selection;
+    app->params.highlighted = app->selection;
 
-    gl_clear_buffers(app->shparams.background);
+    gl_clear_buffers(app->params.background);
     gl_enable_depth_test(true);
-    gl_enable_culling(app->shparams.cull_backface);
-    draw_stdsurface_scene(
-        app->shstate, app->scn, app->view, app->lights, app->shparams);
+    gl_enable_culling(app->params.cull_backface);
+    draw_stdsurface_scene(app->scn, app->view, app->prog, app->shapes,
+        app->textures, app->lights, app->params);
 
     if (begin_widgets(win, "yview")) {
         if (draw_header_widget(win, "file")) {
@@ -81,17 +83,15 @@ inline void draw(gl_window* win) {
                 app->edit_params = test_scene_presets().at("plane_al");
                 delete app->scn;
                 app->scn = new scene();
-                clear_stdsurface_state(app->shstate, false);
                 update_test_scene(app->scn, app->edit_params);
-                update_stdsurface_state(
-                    app->shstate, app->scn, app->shparams, {});
+                update_textures(app->scn, app->textures, {}, true);
+                update_shapes(app->scn, app->shapes, {}, true);
             }
             draw_continue_widget(win);
             if (draw_button_widget(win, "load")) {
                 app->scn = load_scene(app->filename, {});
-                clear_stdsurface_state(app->shstate, false);
-                update_stdsurface_state(
-                    app->shstate, app->scn, app->shparams, {});
+                update_textures(app->scn, app->textures, {}, true);
+                update_shapes(app->scn, app->shapes, {}, true);
             }
             draw_continue_widget(win);
             if (draw_button_widget(win, "save")) {
@@ -105,16 +105,16 @@ inline void draw(gl_window* win) {
         }
         if (draw_header_widget(win, "view")) {
             draw_camera_widget(
-                win, "camera", app->scn, app->view, app->shparams.camera_id);
-            draw_value_widget(win, "wire", app->shparams.wireframe);
+                win, "camera", app->scn, app->view, app->params.camera_id);
+            draw_value_widget(win, "wire", app->params.wireframe);
             draw_continue_widget(win);
-            draw_value_widget(win, "edges", app->shparams.edges);
+            draw_value_widget(win, "edges", app->params.edges);
             draw_continue_widget(win);
-            draw_value_widget(win, "cutout", app->shparams.cutout);
+            draw_value_widget(win, "cutout", app->params.cutout);
             draw_continue_widget(win);
             draw_value_widget(win, "fps", app->navigation_fps);
-            draw_tonemap_widgets(win, "", app->shparams.exposure,
-                app->shparams.gamma, app->shparams.filmic);
+            draw_tonemap_widgets(win, "", app->params.exposure,
+                app->params.gamma, app->params.filmic);
             if (app->time_range != zero2f) {
                 draw_value_widget(win, "time", app->time, app->time_range.x,
                     app->time_range.y);
@@ -122,9 +122,10 @@ inline void draw(gl_window* win) {
             }
         }
         if (draw_scene_widgets(win, "scene", app->scn, app->selection,
-                app->shstate->txt, &app->edit_params)) {
-            update_stdsurface_state(
-                app->shstate, app->scn, app->shparams, {app->selection});
+                app->textures, &app->edit_params)) {
+            update_textures(
+                app->scn, app->textures, {(texture*)app->selection});
+            update_shapes(app->scn, app->shapes, {(shape*)app->selection});
         }
     }
     end_widgets(win);
@@ -135,13 +136,14 @@ inline void draw(gl_window* win) {
 // run ui loop
 void run_ui(app_state* app) {
     // window
-    auto win = make_window(app->shparams.width, app->shparams.height,
-        "yview | " + app->filename, app);
+    auto win = make_window(
+        app->params.width, app->params.height, "yview | " + app->filename, app);
     set_window_callbacks(win, nullptr, nullptr, draw);
 
     // load textures and vbos
-    app->shstate = make_stdsurface_state();
-    update_stdsurface_state(app->shstate, app->scn, app->shparams);
+    app->prog = make_stdsurface_program();
+    update_textures(app->scn, app->textures);
+    update_shapes(app->scn, app->shapes);
 
     // init widget
     init_widgets(win);
@@ -149,7 +151,7 @@ void run_ui(app_state* app) {
     // loop
     while (!should_close(win)) {
         // handle mouse and keyboard for navigation
-        if (app->shparams.camera_id < 0) {
+        if (app->params.camera_id < 0) {
             handle_camera_navigation(win, app->view, app->navigation_fps);
         }
 
@@ -176,17 +178,17 @@ int main(int argc, char* argv[]) {
 
     // parse command line
     auto parser = make_parser(argc, argv, "yview", "views scenes inteactively");
-    app->shparams.exposure =
+    app->params.exposure =
         parse_opt(parser, "--exposure", "-e", "hdr image exposure", 0.0f);
-    app->shparams.gamma =
+    app->params.gamma =
         parse_opt(parser, "--gamma", "-g", "hdr image gamma", 2.2f);
-    app->shparams.filmic =
+    app->params.filmic =
         parse_flag(parser, "--filmic", "-F", "hdr filmic output");
-    app->shparams.height =
+    app->params.height =
         parse_opt(parser, "--resolution", "-r", "image resolution", 540);
     auto amb = parse_opt(parser, "--ambient", "", "ambient factor", 0.0f);
-    app->shparams.ambient = {amb, amb, amb};
-    app->shparams.camera_lights =
+    app->params.ambient = {amb, amb, amb};
+    app->params.camera_lights =
         parse_flag(parser, "--camera-lights", "-c", "enable camera lights");
     auto log_filename = parse_opt(parser, "--log", "", "log to disk", ""s);
     if (log_filename != "") add_file_stream(log_filename, true);
@@ -220,21 +222,21 @@ int main(int argc, char* argv[]) {
     add_elements(app->scn);
 
     // view camera
-    app->view = make_view_camera(app->scn, app->shparams.camera_id);
-    app->shparams.camera_id = -1;
+    app->view = make_view_camera(app->scn, app->params.camera_id);
+    app->params.camera_id = -1;
 
     // animation
     app->time_range = compute_animation_range(app->scn);
     app->time = app->time_range.x;
 
     // lights
-    app->lights = make_stdsurface_lights(app->scn);
+    app->lights = make_gl_lights(app->scn);
 
     // run ui
-    auto cam = (app->shparams.camera_id < 0) ?
+    auto cam = (app->params.camera_id < 0) ?
                    app->view :
-                   app->scn->cameras[app->shparams.camera_id];
-    app->shparams.width = (int)round(cam->aspect * app->shparams.height);
+                   app->scn->cameras[app->params.camera_id];
+    app->params.width = (int)round(cam->aspect * app->params.height);
     run_ui(app);
 
     // clear

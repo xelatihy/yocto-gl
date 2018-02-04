@@ -8360,24 +8360,29 @@ struct timer {
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-/// Shape types
-enum struct gl_etype : int {
+/// Shape element types
+enum struct gl_elem_type : int {
     /// points
     point = 1,
     /// lines
     line = 2,
     /// triangles
-    triangle = 3,
-    /// quads
-    quad = 4,
+    triangle = 3
 };
 
 /// Light types
-enum struct gl_ltype : int {
+enum struct gl_light_type : int {
     /// point lights
     point = 0,
     /// directional lights
     directional = 1,
+};
+
+/// State object to store lights for light rendering
+struct gl_lights {
+    vector<vec3f> pos;           // light position
+    vector<vec3f> ke;            // light intensity
+    vector<gl_light_type> type;  // light type
 };
 
 /// Checks for GL error and then prints
@@ -8417,9 +8422,12 @@ void gl_set_viewport(const vec2i& v);
 // This is a public API. See above for documentation.
 void gl_read_imagef(float* pixels, int w, int h, int nc);
 
+}  // namespace ygl
+
 // -----------------------------------------------------------------------------
-// TEXTURE FUNCTIONS
+// OPENGL TEXTURE FUNCTIONS
 // -----------------------------------------------------------------------------
+namespace ygl {
 
 /// Opengl texture object
 struct gl_texture {
@@ -8571,9 +8579,12 @@ struct gl_texture_info {
     gl_texture_info(const gl_texture& tid) : txt(tid) {}
 };
 
+}  // namespace ygl
+
 // -----------------------------------------------------------------------------
-// VERTEX ARRAY BUFFER
+// OPENGL VERTEX ARRAY BUFFER
 // -----------------------------------------------------------------------------
+namespace ygl {
 
 /// OpenGL vertex/element buffer
 struct gl_vertex_buffer {
@@ -8689,9 +8700,12 @@ inline bool is_vertex_buffer_valid(const gl_vertex_buffer& buf) {
 /// Destroys the buffer
 void clear_vertex_buffer(gl_vertex_buffer& buf);
 
+}  // namespace ygl
+
 // -----------------------------------------------------------------------------
-// VERTEX ELEMENTS BUFFER
+// OPENGL VERTEX ELEMENTS BUFFER
 // -----------------------------------------------------------------------------
+namespace ygl {
 
 /// OpenGL vertex/element buffer
 struct gl_element_buffer {
@@ -8766,9 +8780,12 @@ inline bool is_element_buffer_valid(const gl_element_buffer& buf) {
 /// Destroys the buffer
 void clear_element_buffer(gl_element_buffer& buf);
 
+}  // namespace ygl
+
 // -----------------------------------------------------------------------------
-// PROGRAM FUNCTIONS
+// OPENGL PROGRAM FUNCTIONS
 // -----------------------------------------------------------------------------
+namespace ygl {
 
 /// OpenGL program
 struct gl_program {
@@ -8988,9 +9005,56 @@ void bind_program(const gl_program& prog);
 /// Unbind a program
 void unbind_program(const gl_program& prog);
 
+}  // namespace ygl
+
 // -----------------------------------------------------------------------------
-// IMAGE SHADER FUNCTIONS
+// OPENGL SCENE SHADER FUNCTIONS
 // -----------------------------------------------------------------------------
+namespace ygl {
+
+/// Vertex buffers for scene drawing. Members are not part of the public API.
+struct gl_shape {
+    gl_vertex_buffer pos = {};         // position
+    gl_vertex_buffer norm = {};        // normals
+    gl_vertex_buffer texcoord = {};    // texcoord
+    gl_vertex_buffer texcoord1 = {};   // texcoord (sond version)
+    gl_vertex_buffer color = {};       // color
+    gl_vertex_buffer tangsp = {};      // tangent space
+    gl_element_buffer points = {};     // point elements
+    gl_element_buffer lines = {};      // line elements
+    gl_element_buffer triangles = {};  // triangle elements
+    gl_element_buffer quads = {};      // quad elements (as 2 triangles)
+    gl_element_buffer beziers = {};    // bezier elements (as 3 lines)
+    gl_element_buffer edges = {};      // edge elements
+};
+
+/// Clear shape
+void clear_shape(gl_shape& shp);
+
+/// Initialize stdsurface lights
+gl_lights make_gl_lights(const scene* scn);
+
+/// Clear scene textures on the GPU.
+void clear_textures(unordered_map<texture*, gl_texture>& textures);
+
+/// Clear scene shapes on the GPU.
+void clear_shapes(unordered_map<shape*, gl_shape>& shapes);
+
+/// Update scene textures on the GPU.
+void update_textures(const scene* scn,
+    unordered_map<texture*, gl_texture>& textures,
+    const unordered_set<texture*>& refresh = {}, bool clear = false);
+
+/// Update scene shapes on the GPU.
+void update_shapes(const scene* scn, unordered_map<shape*, gl_shape>& shapes,
+    const unordered_set<shape*>& refresh = {}, bool clear = false);
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
+// OPENGL IMAGE SHADER FUNCTIONS
+// -----------------------------------------------------------------------------
+namespace ygl {
 
 /// A shader for displaying images
 struct gl_stdimage_program {
@@ -9071,7 +9135,7 @@ inline void draw_image(gl_stdimage_program& prog, const gl_texture& txt,
 }
 
 // -----------------------------------------------------------------------------
-// STANDARD SHADER FUNCTIONS
+// OPENGL STANDARD SURFACE SHADER FUNCTIONS
 // -----------------------------------------------------------------------------
 
 /// Shade with a physically-based standard shader based on Phong/GGX.
@@ -9135,8 +9199,8 @@ inline void end_stdsurface_frame(gl_stdsurface_program& prog) {
 
 /// Set num lights with position pos, color ke, type ltype. Also set the
 /// ambient illumination amb.
-inline void set_stdsurface_lights(gl_stdsurface_program& prog, const vec3f& amb,
-    int num, const vec3f* pos, const vec3f* ke, const gl_ltype* type) {
+inline void set_stdsurface_lights(
+    gl_stdsurface_program& prog, const vec3f& amb, const gl_lights& lights) {
     static auto amb_id =
         get_program_uniform_location(prog._prog, "lighting.amb");
     static auto lnum_id =
@@ -9149,10 +9213,13 @@ inline void set_stdsurface_lights(gl_stdsurface_program& prog, const vec3f& amb,
         get_program_uniform_location(prog._prog, "lighting.ltype");
     assert(gl_check_error());
     set_program_uniform(prog._prog, amb_id, amb);
-    set_program_uniform(prog._prog, lnum_id, num);
-    set_program_uniform(prog._prog, lpos_id, pos, num);
-    set_program_uniform(prog._prog, lke_id, ke, num);
-    set_program_uniform(prog._prog, ltype_id, (int*)type, num);
+    set_program_uniform(prog._prog, lnum_id, (int)lights.pos.size());
+    set_program_uniform(
+        prog._prog, lpos_id, lights.pos.data(), (int)lights.pos.size());
+    set_program_uniform(
+        prog._prog, lke_id, lights.ke.data(), (int)lights.pos.size());
+    set_program_uniform(
+        prog._prog, ltype_id, (int*)lights.type.data(), (int)lights.pos.size());
     assert(gl_check_error());
 }
 
@@ -9201,7 +9268,7 @@ inline void set_stdsurface_highlight(
 /// Kajiya-Kay for lines, GGX/Phong for triangles).
 /// Material type matches the scene material type.
 inline void set_stdsurface_material(gl_stdsurface_program& prog,
-    material_type type, gl_etype etype, const vec3f& ke, const vec3f& kd,
+    material_type type, gl_elem_type etype, const vec3f& ke, const vec3f& kd,
     const vec3f& ks, float rs, float op, const gl_texture_info& ke_txt,
     const gl_texture_info& kd_txt, const gl_texture_info& ks_txt,
     const gl_texture_info& rs_txt, const gl_texture_info& norm_txt,
@@ -9372,38 +9439,6 @@ inline void set_stdsurface_vert_skinning_off(gl_stdsurface_program& prog) {
     set_program_vertattr(prog._prog, joints_id, {}, zero4f);
 }
 
-// Vertex buffers for gl_stdsurface_program drawing. This is not part of the
-// public API.
-struct gl_stdsurface_vbo {
-    gl_vertex_buffer pos = {};         // position
-    gl_vertex_buffer norm = {};        // normals
-    gl_vertex_buffer texcoord = {};    // texcoord
-    gl_vertex_buffer texcoord1 = {};   // texcoord (sond version)
-    gl_vertex_buffer color = {};       // color
-    gl_vertex_buffer tangsp = {};      // tangent space
-    gl_element_buffer points = {};     // point elements
-    gl_element_buffer lines = {};      // line elements
-    gl_element_buffer triangles = {};  // triangle elements
-    gl_element_buffer quads = {};      // quad elements (as 2 triangles)
-    gl_element_buffer beziers = {};    // bezier elements (as 3 lines)
-    gl_element_buffer edges = {};      // edge elements
-};
-
-/// State object for gl_stdsurface_program drawing. Members are not part of the
-/// public API.
-struct gl_stdsurface_state {
-    gl_stdsurface_program prog = {};               // gl program
-    unordered_map<texture*, gl_texture> txt;       // gl textures
-    unordered_map<shape*, gl_stdsurface_vbo> vbo;  // mesh vbos
-};
-
-/// State object to store lights for stdsurface rendering
-struct gl_stdsurface_lights {
-    vector<vec3f> pos;       // light position
-    vector<vec3f> ke;        // light intensity
-    vector<gl_ltype> ltype;  // light type
-};
-
 /// Params for  gl_stdsurface_program drawing
 struct gl_stdsurface_params {
     /// camera id (-1 for deafult)
@@ -9442,24 +9477,10 @@ struct gl_stdsurface_params {
     bool cull_backface = true;
 };
 
-/// Initialize gl_stdsurface_program draw state
-gl_stdsurface_state* make_stdsurface_state();
-
-/// Update gl_stdsurface_program draw state. This updates stdsurface meshes
-/// and textures on the GPU.
-void update_stdsurface_state(gl_stdsurface_state* st, const scene* scn,
-    const gl_stdsurface_params& params,
-    const unordered_set<void*>& refresh = {});
-
-/// Initialize stdsurface lights
-gl_stdsurface_lights make_stdsurface_lights(const scene* scn);
-
-/// Clear gl_stdsurface_program draw state
-void clear_stdsurface_state(gl_stdsurface_state* st, bool clear_program = true);
-
 /// Draw whole scene
-void draw_stdsurface_scene(gl_stdsurface_state* st, const scene* scn,
-    const camera* cam, const gl_stdsurface_lights& lights,
+void draw_stdsurface_scene(const scene* scn, const camera* cam,
+    gl_stdsurface_program& prog, unordered_map<shape*, gl_shape>& shapes,
+    unordered_map<texture*, gl_texture>& textures, const gl_lights& lights,
     const gl_stdsurface_params& params);
 
 }  // namespace ygl
