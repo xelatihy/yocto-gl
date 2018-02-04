@@ -80,15 +80,15 @@ void draw(gl_window* win) {
         draw_label_widget(win, "sample", app->pixels.at(0, 0).sample);
         if (draw_header_widget(win, "trace")) {
             draw_value_widget(win, "samples", app->params.nsamples, 1, 4096, 1);
-            edited += draw_value_widget(
-                win, "shader type", app->params.stype, trace_shader_names());
-            edited += draw_value_widget(
-                win, "random type", app->params.rtype, trace_rng_names());
-            edited += draw_value_widget(
-                win, "filter type", app->params.ftype, trace_filter_names());
-            edited += draw_camera_widget(
-                win, "camera", app->scn, app->view, app->params.camera_id);
-            edited += draw_value_widget(win, "update bvh", app->update_bvh);
+            edited.push_back(draw_value_widget(
+                win, "shader type", app->params.stype, trace_shader_names()));
+            edited.push_back(draw_value_widget(
+                win, "random type", app->params.rtype, trace_rng_names()));
+            edited.push_back(draw_value_widget(
+                win, "filter type", app->params.ftype, trace_filter_names()));
+            edited.push_back(draw_camera_widget(
+                win, "camera", app->scn, app->view, app->params.camera_id));
+            edited.push_back(draw_value_widget(win, "update bvh", app->update_bvh));
             draw_value_widget(win, "fps", app->navigation_fps);
         }
         if (draw_header_widget(win, "image")) {
@@ -96,8 +96,8 @@ void draw(gl_window* win) {
             draw_imageinspect_widgets(
                 win, "", app->img, {}, get_mouse_posf(win), app->imparams);
         }
-        edited +=
-            draw_scene_widgets(win, "scene", app->scn, app->selection, {});
+        edited.push_back(
+            draw_scene_widgets(win, "scene", app->scn, app->selection, {}));
     }
     end_widgets(win);
     app->scene_updated =

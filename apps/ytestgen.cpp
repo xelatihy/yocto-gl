@@ -67,7 +67,7 @@ void save_test_scene(const string& sname, const string& basedir) {
         } else if (sname == "shapes") {
             for (auto shp : scn->shapes) {
                 auto sscn = new scene();
-                sscn->shapes += shp;
+                sscn->shapes.push_back(shp);
                 auto mat = shp->mat;
                 shp->mat = nullptr;
                 auto shp_name = partition(shp->name, "_")[0];
@@ -96,7 +96,7 @@ void save_test_scene(const string& sname, const string& basedir) {
 int main(int argc, char* argv[]) {
     // put together scene names
     auto scene_names = vector<string>{"cornell_box"};
-    for (auto& kv : test_scene_presets()) scene_names += kv.first;
+    for (auto& kv : test_scene_presets()) scene_names.push_back(kv.first);
 
     // command line params
     auto parser = make_parser(argc, argv, "ytestgen", "make tests");
