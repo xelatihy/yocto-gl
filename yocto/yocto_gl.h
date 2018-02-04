@@ -3659,54 +3659,18 @@ inline enumerate_generator<T> enumerate(vector<T>& vv) {
     return {(int)vv.size(), vv.data()};
 }
 
-/// Append an element to a vector
-template <typename T>
-inline vector<T> operator+(const vector<T>& v, const T& vv) {
-    auto vc = vector<T>();
-    vc.reserve(v.size() + 1);
-    vc.insert(vc.end(), v.begin(), v.end());
-    vc.push_back(vv);
-    return vc;
-}
-
-/// Append an element to a vector
-template <typename T>
-inline vector<T>& operator+=(vector<T>& v, const T& vv) {
-    v.push_back(vv);
-    return v;
-}
-
-/// Append an element to a vector
-template <typename T, typename ET>
-inline vector<T> operator+(const vector<T>& v, const ET& vv) {
-    auto vc = vector<T>();
-    vc.reserve(v.size() + 1);
-    vc.insert(vc.end(), v.begin(), v.end());
-    vc.push_back(vv);
-    return vc;
-}
-
-/// Append an element to a vector
-template <typename T, typename ET>
-inline vector<T>& operator+=(vector<T>& v, const ET& vv) {
-    v.push_back(vv);
-    return v;
-}
-
 /// Append a vector to a vector
 template <typename T>
-inline vector<T> operator+(const vector<T>& v, const vector<T>& vv) {
-    auto vc = vector<T>();
-    vc.reserve(v.size() + vv.size());
-    vc.insert(vc.end(), v.begin(), v.end());
-    vc.insert(vc.end(), vv.begin(), vv.end());
-    return vc;
-}
-
-/// Append a vector to a vector
-template <typename T>
-inline vector<T>& operator+=(vector<T>& v, const vector<T>& vv) {
+inline void append(vector<T>& v, const vector<T>& vv) {
     v.insert(v.end(), vv.begin(), vv.end());
+}
+
+/// Append two vectors
+template <typename T>
+inline vector<T> join(const vector<T>& a, const vector<T>& b) {
+    auto v = vector<T>();
+    append(v, a);
+    append(v, b);
     return v;
 }
 
