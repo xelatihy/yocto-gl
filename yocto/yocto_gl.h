@@ -5070,10 +5070,6 @@ struct shape {
     int subdivision_level = 0;
     /// whether to use Catmull-Clark subdivision
     bool subdivision_catmullclark = false;
-
-    // computed data --------------------------
-    /// element CDF for sampling
-    vector<float> elem_cdf;
 };
 
 /// Shape instance.
@@ -6031,29 +6027,44 @@ struct trace_pixel {
     trace_rng_type rtype = trace_rng_type::uniform;
 };
 
-/// Trace lights. Handles sampling of illumination. The members are not part of
+/// Trace light as either instances or environments. The members are not part of
 /// the the public API.
 struct trace_light {
-    // Instance pointer for instance lights
+    /// Instance pointer for instance lights
     const instance* ist = nullptr;
-    // Environment pointer for environment lights
+    /// Environment pointer for environment lights
     const environment* env = nullptr;
+};
+
+/// Trace lights. Handles sampling of illumination. The members are not part of
+/// the the public API.
+struct trace_lights {
+    /// Shape instances
+    vector<trace_light> lights;
+    /// Shape cdf
+    unordered_map<shape*, vector<float>> shape_cdfs;
+    /// Shape areas
+    unordered_map<shape*, float> shape_areas;
+    /// whether it is empty
+    bool empty() const { return lights.empty(); }
+    /// number of lights
+    int size() const { return (int)lights.size(); }
 };
 
 /// Initialize the rendering pixels
 image<trace_pixel> make_trace_pixels(const trace_params& params);
 
 /// Initialize trace lights
-vector<trace_light*> make_trace_lights(const scene* scn);
+trace_lights make_trace_lights(const scene* scn);
 
 /// Trace the next nsamples samples.
 void trace_samples(const scene* scn, const camera* cam, const bvh_tree* bvh,
-    const vector<trace_light*>& lights, image4f& img,
-    image<trace_pixel>& pixels, int nsamples, const trace_params& params);
+    const trace_lights& lights, image4f& img, image<trace_pixel>& pixels,
+    int nsamples, const trace_params& params);
 
 /// Trace the next nsamples samples with image filtering.
 void trace_samples_filtered(const scene* scn, const camera* cam,
-    const bvh_tree* bvh, const vector<trace_light*>& lights, image4f& img,
+    const bvh_tree* bvh, const trace_lights& lights, image4f& img,
     image<trace_pixel>& pixels, int nsamples, const trace_params& params);
 
 /// Trace the whole image
@@ -6063,13 +6074,12 @@ inline image4f trace_image(const scene* scn, const camera* cam,
     auto pixels = make_trace_pixels(params);
     auto lights = make_trace_lights(scn);
     trace_samples(scn, cam, bvh, lights, img, pixels, params.nsamples, params);
-    for (auto v : lights) delete v;
     return img;
 }
 
 /// Starts an anyncrhounous renderer.
 void trace_async_start(const scene* scn, const camera* cam, const bvh_tree* bvh,
-    const vector<trace_light*>& lights, image4f& img,
+    const trace_lights& lights, image4f& img,
     image<trace_pixel>& pixels, vector<std::thread>& threads, bool& stop_flag,
     const trace_params& params);
 

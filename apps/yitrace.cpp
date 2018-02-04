@@ -38,7 +38,7 @@ struct app_state {
     string imfilename;
     image4f img;
     image<trace_pixel> pixels;
-    vector<trace_light*> lights;
+    trace_lights lights;
     trace_params params;
     vector<std::thread> async_threads;
     bool async_stop = false;
