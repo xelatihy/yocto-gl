@@ -36,15 +36,15 @@ struct app_state {
     bvh_tree* bvh = nullptr;
     string filename;
     string imfilename;
+    image4f img;
+    image<trace_pixel> pixels;
+    trace_params params;
     float exposure = 0, gamma = 2.2f;
     bool filmic = false;
     vec4f background = {0, 0, 0, 0};
-    trace_params params;
     bool save_progressive = false;
-    trace_state* state = nullptr;
 
     ~app_state() {
-        if (state) delete state;
         if (scn) delete scn;
         if (view) delete view;
         if (bvh) delete bvh;
@@ -131,7 +131,8 @@ int main(int argc, char* argv[]) {
                    app->view :
                    app->scn->cameras[app->params.camera_id];
     app->params.width = (int)round(cam->aspect * app->params.height);
-    app->state = make_trace_state(app->params);
+    app->img = image4f(app->params.width, app->params.height);
+    app->pixels = make_trace_pixels(app->params);
 
     // render
     log_info("starting renderer");
@@ -142,18 +143,19 @@ int main(int argc, char* argv[]) {
                 path_basename(app->imfilename), cur_sample,
                 path_extension(app->imfilename));
             log_info("saving image {}", imfilename);
-            save_image(imfilename, get_trace_image(app->state), app->exposure,
-                app->gamma, app->filmic);
+            save_image(
+                imfilename, app->img, app->exposure, app->gamma, app->filmic);
         }
         log_info("rendering sample {}/{}", cur_sample, app->params.nsamples);
-        trace_samples(app->state, app->scn, cam, app->bvh, app->params.batch_size, app->params);
+        trace_samples(app->scn, cam, app->bvh, app->img, app->pixels,
+            app->params.batch_size, app->params);
     }
     log_info("rendering done");
 
     // save image
     log_info("saving image {}", app->imfilename);
-    save_image(app->imfilename, get_trace_image(app->state), app->exposure,
-        app->gamma, app->filmic);
+    save_image(
+        app->imfilename, app->img, app->exposure, app->gamma, app->filmic);
 
     // cleanup
     delete app;
