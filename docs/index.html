@@ -33,6 +33,7 @@ and released under the MIT license. Features include:</p>
 <li>normal and tangent computation for meshes and lines</li>
 <li>generation of tesselated meshes</li>
 <li>mesh refinement with linear tesselation and Catmull-Cark subdivision</li>
+<li>keyframed animation, skinning and morphing</li>
 <li>random number generation via PCG32</li>
 <li>simple image data structure and a few image operations</li>
 <li>simple scene format</li>
@@ -44,7 +45,7 @@ and released under the MIT license. Features include:</p>
 <li>Python-like iterators, string, path and container operations</li>
 <li>utilities to load and save entire text and binary files</li>
 <li>immediate mode command line parser</li>
-<li>simple logger and thread pool</li>
+<li>simple logger</li>
 <li>path tracer supporting surfaces and hairs, GGX and MIS</li>
 <li>support for loading and saving Wavefront OBJ and Khronos glTF</li>
 <li>support for loading Bezier curves from SVG</li>
@@ -55,7 +56,7 @@ and released under the MIT license. Features include:</p>
 with tag "v0.0.1" in this repository.</p>
 <h2>Credits</h2>
 <p>This library includes code from the PCG random number generator,
-the LLVM thread pool, boost hash_combine, Pixar multijittered sampling,
+boost hash_combine, Pixar multijittered sampling,
 code from "Real-Time Collision Detection" by Christer Ericson, base64
 encode/decode by René Nyffenegger and public domain code from
 github.com/sgorsten/linalg, gist.github.com/badboy/6267743 and
@@ -100,11 +101,11 @@ be disabled by defining YGL_GLTF to 0 before including this file.</p>
 be disabled by defining YGL_SVG to 0 before including this file.</p>
 <p>OpenGL utilities include the OpenGL libaries, use GLEW on Windows/Linux,
 GLFW for windows handling and Dear ImGui for UI support.
-Since OpenGL is quite onerous and hard to link, its support is disabled by
-default. You can enable it by defining YGL_OPENGL to 1 before including
-this file. If you use any of the OpenGL calls, make sure to properly link to
-the OpenGL libraries on your system. For ImGUI, build with the libraries
-<code>imgui.cpp</code>, <code>imgui_draw.cpp</code>, <code>imgui_impl_glfw_gl3.cpp</code>.</p>
+Since OpenGL is quite onerous and hard to link, its support can be disabled
+by defining YGL_OPENGL to 1 before including this file. If you use any of
+the OpenGL calls, make sure to properly link to the OpenGL libraries on
+your system. For ImGUI, build with the libraries <code>imgui.cpp</code>,
+<code>imgui_draw.cpp</code>, <code>imgui_impl_glfw_gl3.cpp</code>.</p>
 <h2>Example Applications</h2>
 <p>You can see Yocto/GL in action in the following applications written to
 test the library:</p>
@@ -234,6 +235,15 @@ manipulation useful to support scene viewing and path tracing.</p>
 <li>example shapes: <code>make_cube()</code>, <code>make_uvsphere()</code>, <code>make_uvhemisphere()</code>,
     <code>make_uvquad()</code>, <code>make_uvcube()</code>, <code>make_fvcube()</code>, <code>make_hair()</code>,
     <code>make_suzanne()</code></li>
+</ol>
+<h3>Animation utilities</h3>
+<p>The library contains a few function to help with typical animation
+manipulation useful to support scene viewing.</p>
+<ol>
+<li>evaluate keyframed values with step, linear and bezier interpolation with
+   <code>eval_keyframed_step()</code>, <code>eval_keyframed_linear()</code>,
+   <code>eval_keyframed_bezier()</code></li>
+<li>mesh skinning with <code>compute_matrix_skinning()</code></li>
 </ol>
 <h3>Image and color</h3>
 <p>Imags are stored with the <code>image</code> templated structure. The two most used
@@ -502,12 +512,6 @@ manipulating files.</p>
 <li>write log messages with <code>log_msg()</code> and its variants</li>
 <li>you can also use a global default logger with the free functions
    <code>log_XXX()</code></li>
-</ol>
-</li>
-<li>thead pool for concurrent execution (waiting the standard to catch up):<ol>
-<li>either create a <code>thread_pool</code> or use the global one</li>
-<li>run tasks in parallel <code>parallel_for()</code></li>
-<li>run tasks asynchronously <code>async()</code></li>
 </ol>
 </li>
 <li>timer for simple access to <code>std::chrono</code>:<ol>

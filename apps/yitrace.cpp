@@ -126,8 +126,8 @@ bool update(app_state* app) {
                        app->scn->cameras[app->params.camera_id];
         auto preview_pixels = make_trace_pixels(pparams);
         auto preview_img = image4f(pparams.width, pparams.height);
-        trace_samples(
-            app->scn, cam, app->bvh, app->lights, preview_img, preview_pixels, 1, pparams);
+        trace_samples(app->scn, cam, app->bvh, app->lights, preview_img,
+            preview_pixels, 1, pparams);
         resize_image(preview_img, app->img, resize_filter::box);
         update_texture(app->trace_texture, app->img);
 
@@ -136,8 +136,8 @@ bool update(app_state* app) {
         auto cam = (app->params.camera_id < 0) ?
                        app->view :
                        app->scn->cameras[app->params.camera_id];
-        trace_async_start(app->scn, cam, app->bvh, app->lights, app->img, app->pixels,
-            app->async_threads, app->async_stop, app->params);
+        trace_async_start(app->scn, cam, app->bvh, app->lights, app->img,
+            app->pixels, app->async_threads, app->async_stop, app->params);
         app->rendering = true;
     }
     return true;

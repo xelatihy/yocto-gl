@@ -15,6 +15,7 @@ and released under the MIT license. Features include:
 - normal and tangent computation for meshes and lines
 - generation of tesselated meshes
 - mesh refinement with linear tesselation and Catmull-Cark subdivision
+- keyframed animation, skinning and morphing
 - random number generation via PCG32
 - simple image data structure and a few image operations
 - simple scene format
@@ -26,7 +27,7 @@ and released under the MIT license. Features include:
 - Python-like iterators, string, path and container operations
 - utilities to load and save entire text and binary files
 - immediate mode command line parser
-- simple logger and thread pool
+- simple logger
 - path tracer supporting surfaces and hairs, GGX and MIS
 - support for loading and saving Wavefront OBJ and Khronos glTF
 - support for loading Bezier curves from SVG
@@ -39,7 +40,7 @@ with tag "v0.0.1" in this repository.
 ## Credits
 
 This library includes code from the PCG random number generator,
-the LLVM thread pool, boost hash_combine, Pixar multijittered sampling,
+boost hash_combine, Pixar multijittered sampling,
 code from "Real-Time Collision Detection" by Christer Ericson, base64
 encode/decode by René Nyffenegger and public domain code from
 github.com/sgorsten/linalg, gist.github.com/badboy/6267743 and
@@ -96,11 +97,11 @@ be disabled by defining YGL_SVG to 0 before including this file.
 
 OpenGL utilities include the OpenGL libaries, use GLEW on Windows/Linux,
 GLFW for windows handling and Dear ImGui for UI support.
-Since OpenGL is quite onerous and hard to link, its support is disabled by
-default. You can enable it by defining YGL_OPENGL to 1 before including
-this file. If you use any of the OpenGL calls, make sure to properly link to
-the OpenGL libraries on your system. For ImGUI, build with the libraries
-`imgui.cpp`, `imgui_draw.cpp`, `imgui_impl_glfw_gl3.cpp`.
+Since OpenGL is quite onerous and hard to link, its support can be disabled
+by defining YGL_OPENGL to 1 before including this file. If you use any of
+the OpenGL calls, make sure to properly link to the OpenGL libraries on
+your system. For ImGUI, build with the libraries `imgui.cpp`,
+`imgui_draw.cpp`, `imgui_impl_glfw_gl3.cpp`.
 
 
 ## Example Applications
@@ -252,6 +253,17 @@ manipulation useful to support scene viewing and path tracing.
 17. example shapes: `make_cube()`, `make_uvsphere()`, `make_uvhemisphere()`,
     `make_uvquad()`, `make_uvcube()`, `make_fvcube()`, `make_hair()`,
     `make_suzanne()`
+
+
+### Animation utilities
+
+The library contains a few function to help with typical animation
+manipulation useful to support scene viewing.
+
+1. evaluate keyframed values with step, linear and bezier interpolation with
+   `eval_keyframed_step()`, `eval_keyframed_linear()`,
+   `eval_keyframed_bezier()`
+2. mesh skinning with `compute_matrix_skinning()`
 
 
 ### Image and color
@@ -531,11 +543,7 @@ manipulating files.
     3. write log messages with `log_msg()` and its variants
     4. you can also use a global default logger with the free functions
        `log_XXX()`
-5. thead pool for concurrent execution (waiting the standard to catch up):
-    1. either create a `thread_pool` or use the global one
-    2. run tasks in parallel `parallel_for()`
-    3. run tasks asynchronously `async()`
-6. timer for simple access to `std::chrono`:
+5. timer for simple access to `std::chrono`:
     1. create a `timer`
     2. start and stop the clock with `start()` and `stop()`
     3. get time with `elapsed_time()`
@@ -2092,16 +2100,34 @@ clamp the length of a vector
 
 ~~~ .cpp
 template <typename T, int N>
-inline pair<int, T> min_element(const vec<T, N>& a);
+inline int min_element(const vec<T, N>& a);
 ~~~
 
 index and valur of minimum vector element
+
+#### Function min_element_value()
+
+~~~ .cpp
+template <typename T, int N>
+inline T min_element_value(const vec<T, N>& a);
+~~~
+
+index and value of the maximum vector element
 
 #### Function max_element()
 
 ~~~ .cpp
 template <typename T, int N>
-inline pair<int, T> max_element(const vec<T, N>& a);
+inline int max_element(const vec<T, N>& a);
+~~~
+
+index and value of the maximum vector element
+
+#### Function max_element_value()
+
+~~~ .cpp
+template <typename T, int N>
+inline T max_element_value(const vec<T, N>& a);
 ~~~
 
 index and value of the maximum vector element
@@ -3012,7 +3038,10 @@ template <typename T>
 struct quat<T, 4> {
     quat(); 
     explicit quat(const vec<T, 4>& vv); 
+    quat(const vec<T, 3>& axis, T angle); 
     explicit operator vec<T, 4>() const; 
+    vec<T, 3> axis() const; 
+    T angle() const; 
     T& operator[](int i); 
     const T& operator[](int i) const; 
     T x;
@@ -3028,7 +3057,10 @@ Quaterions are xi + yj + zk + w.
 - Members:
     - quat():      default constructor
     - quat():      conversion from vec
+    - quat():      conversion from axis-angle
     - operator 4>():      conversion to vec
+    - axis():      rotation axis
+    - angle():      rotation angle
     - operator[]():      element access
     - operator[]():      element access
     - x:      data
@@ -3615,6 +3647,26 @@ using ray3f = ray3<float>;
 
 3-dimension float bounding box
 
+#### Function make_ray()
+
+~~~ .cpp
+template <typename T, int N>
+inline ray<T, N> make_ray(
+    const vec<T, N>& o, const vec<T, N>& d, T eps = 1e-4f);
+~~~
+
+Construct a ray using a default epsilon
+
+#### Function make_segment()
+
+~~~ .cpp
+template <typename T, int N>
+inline ray<T, N> make_segment(
+    const vec<T, N>& p1, const vec<T, N>& p2, T eps = 1e-4f);
+~~~
+
+Construct a ray segment using a default epsilon
+
 #### Function operator < <()
 
 ~~~ .cpp
@@ -3835,6 +3887,15 @@ inline frame<T, 3> rotation_frame3(const vec<T, 3>& axis, T angle);
 
 rotation frame
 
+#### Function rotation_frame3()
+
+~~~ .cpp
+template <typename T>
+inline frame<T, 3> rotation_frame3(const quat<T, 4>& rot);
+~~~
+
+rotation frame
+
 #### Function rotation_mat4()
 
 ~~~ .cpp
@@ -3866,7 +3927,7 @@ quaternion axis-angle conversion
 
 ~~~ .cpp
 template <typename T>
-inline quat<T, 4> rotation_quat4(const vec<T, 4>& axis_angle);
+inline quat<T, 4> rotation_quat4(const vec<T, 3>& axis, T angle);
 ~~~
 
 axis-angle to quaternion
@@ -4028,35 +4089,28 @@ Assumes there is no shear and the matrix is affine.
 #### Function camera_turntable()
 
 ~~~ .cpp
-template <typename T>
-inline void camera_turntable(vec<T, 3>& from, vec<T, 3>& to, vec<T, 3>& up,
-    const vec<T, 3>& rotate, T dolly, const vec<T, 3>& pan);
+void camera_turntable(vec3f& from, vec3f& to, vec3f& up, const vec3f& rotate,
+    float dolly, const vec2f& pan);
 ~~~
 
-Turntable for UI navigation from a from/to/up parametrization of the
-camera.
+Turntable for UI navigation.
 
 #### Function camera_turntable()
 
 ~~~ .cpp
-template <typename T>
-inline void camera_turntable(frame<T, 3>& frame, T& focus,
-    const vec<T, 2>& rotate, T dolly, const vec<T, 2>& pan);
+void camera_turntable(frame3f& frame, float& focus, const vec2f& rotate,
+    float dolly, const vec2f& pan);
 ~~~
 
-Turntable for UI navigation for a frame/distance parametrization of the
-camera.
+Turntable for UI navigation.
 
 #### Function camera_fps()
 
 ~~~ .cpp
-template <typename T>
-inline void camera_fps(
-    frame<T, 3>& frame, const vec<T, 3>& transl, const vec<T, 2>& rotate);
+void camera_fps(frame3f& frame, const vec3f& transl, const vec2f& rotate);
 ~~~
 
 FPS camera for UI navigation for a frame parametrization.
-https://gamedev.stackexchange.com/questions/30644/how-to-keep-my-quaternion-using-fps-camera-from-tilting-and-messing-up
 
 #### Struct rng_pcg32
 
@@ -4690,6 +4744,19 @@ inline float tetrahedron_volume(
 
 tetrahedron volume
 
+#### Function triangle_tangents_fromuv()
+
+~~~ .cpp
+inline pair<vec3f, vec3f> triangle_tangents_fromuv(const vec3f& v0,
+    const vec3f& v1, const vec3f& v2, const vec2f& uv0, const vec2f& uv1,
+    const vec2f& uv2);
+~~~
+
+Triangle tangent and bitangent from uv (not othornormalized with themselfves
+not the normal). Follows the definition in
+http://www.terathon.com/code/tangent.html and
+https://gist.github.com/aras-p/2843984
+
 #### Function eval_barycentric_point()
 
 ~~~ .cpp
@@ -4762,7 +4829,7 @@ bernstein polynomials (for Bezier)
 ~~~ .cpp
 template <typename T, typename T1>
 inline T eval_bezier_cubic(
-    const T& v0, const T& v1, const T& v2, const T& v3, T1 t);
+    const T& v0, const T& v1, const T& v2, const T& v3, T1 u);
 ~~~
 
 eval bezier
@@ -4771,7 +4838,7 @@ eval bezier
 
 ~~~ .cpp
 template <typename T, typename T1>
-inline T eval_bezier_cubic(const vector<T>& vals, const vec4i& b, T1 t);
+inline T eval_bezier_cubic(const vector<T>& vals, const vec4i& b, T1 u);
 ~~~
 
 eval bezier
@@ -4781,7 +4848,7 @@ eval bezier
 ~~~ .cpp
 template <typename T, typename T1>
 inline T eval_bezier_cubic_derivative(
-    const T& v0, const T& v1, const T& v2, const T& v3, T1 t);
+    const T& v0, const T& v1, const T& v2, const T& v3, T1 u);
 ~~~
 
 eval bezier derivative
@@ -4791,15 +4858,45 @@ eval bezier derivative
 ~~~ .cpp
 template <typename T, typename T1>
 inline T eval_bezier_cubic_derivative(
-    const vector<T>& vals, const vec4i& b, T1 t);
+    const vector<T>& vals, const vec4i& b, T1 u);
 ~~~
 
 eval bezier derivative
 
+#### Function eval_keyframed_step()
+
+~~~ .cpp
+template <typename T>
+inline T eval_keyframed_step(
+    const vector<float>& times, const vector<T>& vals, float time);
+~~~
+
+Evalautes a keyframed value using step interpolation
+
+#### Function eval_keyframed_linear()
+
+~~~ .cpp
+template <typename T>
+inline T eval_keyframed_linear(
+    const vector<float>& times, const vector<T>& vals, float time);
+~~~
+
+Evalautes a keyframed value using linear interpolation
+
+#### Function eval_keyframed_bezier()
+
+~~~ .cpp
+template <typename T>
+inline T eval_keyframed_bezier(
+    const vector<float>& times, const vector<T>& vals, float time);
+~~~
+
+Evalautes a keyframed value using bezier interpolation
+
 #### Function compute_normals()
 
 ~~~ .cpp
-inline vector<vec3f> compute_normals(const vector<vec2i>& lines,
+vector<vec3f> compute_normals(const vector<vec2i>& lines,
     const vector<vec3i>& triangles, const vector<vec4i>& quads,
     const vector<vec3f>& pos, bool weighted = true);
 ~~~
@@ -4811,7 +4908,7 @@ weighted by line length.
 #### Function compute_tangent_frames()
 
 ~~~ .cpp
-inline vector<vec4f> compute_tangent_frames(const vector<vec3i>& triangles,
+vector<vec4f> compute_tangent_frames(const vector<vec3i>& triangles,
     const vector<vec3f>& pos, const vector<vec3f>& norm,
     const vector<vec2f>& texcoord, bool weighted = true);
 ~~~
@@ -4825,10 +4922,10 @@ Tangent frame is useful in normal mapping.
 #### Function compute_skinning()
 
 ~~~ .cpp
-inline void compute_skinning(const vector<vec3f>& pos,
-    const vector<vec3f>& norm, const vector<vec4f>& weights,
-    const vector<vec4i>& joints, const vector<mat4f>& xforms,
-    vector<vec3f>& skinned_pos, vector<vec3f>& skinned_norm);
+void compute_skinning(const vector<vec3f>& pos, const vector<vec3f>& norm,
+    const vector<vec4f>& weights, const vector<vec4i>& joints,
+    const vector<mat4f>& xforms, vector<vec3f>& skinned_pos,
+    vector<vec3f>& skinned_norm);
 ~~~
 
 Apply skinning
@@ -4836,10 +4933,10 @@ Apply skinning
 #### Function compute_skinning()
 
 ~~~ .cpp
-inline void compute_skinning(const vector<vec3f>& pos,
-    const vector<vec3f>& norm, const vector<vec4f>& weights,
-    const vector<vec4i>& joints, const vector<frame3f>& xforms,
-    vector<vec3f>& skinned_pos, vector<vec3f>& skinned_norm);
+void compute_skinning(const vector<vec3f>& pos, const vector<vec3f>& norm,
+    const vector<vec4f>& weights, const vector<vec4i>& joints,
+    const vector<frame3f>& xforms, vector<vec3f>& skinned_pos,
+    vector<vec3f>& skinned_norm);
 ~~~
 
 Apply skinning
@@ -4847,7 +4944,7 @@ Apply skinning
 #### Function compute_matrix_skinning()
 
 ~~~ .cpp
-inline void compute_matrix_skinning(const vector<vec3f>& pos,
+void compute_matrix_skinning(const vector<vec3f>& pos,
     const vector<vec3f>& norm, const vector<vec4f>& weights,
     const vector<vec4i>& joints, const vector<mat4f>& xforms,
     vector<vec3f>& skinned_pos, vector<vec3f>& skinned_norm);
@@ -4858,7 +4955,7 @@ Apply skinning as specified in Khronos glTF
 #### Function get_edges()
 
 ~~~ .cpp
-inline vector<vec2i> get_edges(const vector<vec2i>& lines,
+vector<vec2i> get_edges(const vector<vec2i>& lines,
     const vector<vec3i>& triangles, const vector<vec4i>& quads);
 ~~~
 
@@ -4867,7 +4964,7 @@ Create an array of edges.
 #### Function get_boundary_edges()
 
 ~~~ .cpp
-inline vector<vec2i> get_boundary_edges(const vector<vec2i>& lines,
+vector<vec2i> get_boundary_edges(const vector<vec2i>& lines,
     const vector<vec3i>& triangles, const vector<vec4i>& quads);
 ~~~
 
@@ -4876,7 +4973,7 @@ Create an array of boundary edges. Lines are always considered boundaries.
 #### Function get_verts()
 
 ~~~ .cpp
-inline vector<int> get_verts(const vector<vec2i>& lines,
+vector<int> get_verts(const vector<vec2i>& lines,
     const vector<vec3i>& triangles, const vector<vec4i>& quads);
 ~~~
 
@@ -4885,7 +4982,7 @@ Get a list of all unique vertices.
 #### Function get_boundary_verts()
 
 ~~~ .cpp
-inline vector<int> get_boundary_verts(const vector<vec2i>& lines,
+vector<int> get_boundary_verts(const vector<vec2i>& lines,
     const vector<vec3i>& triangles, const vector<vec4i>& quads);
 ~~~
 
@@ -4895,7 +4992,7 @@ boundaries.
 #### Function convert_quads_to_triangles()
 
 ~~~ .cpp
-inline vector<vec3i> convert_quads_to_triangles(const vector<vec4i>& quads);
+vector<vec3i> convert_quads_to_triangles(const vector<vec4i>& quads);
 ~~~
 
 Convert quads to triangles
@@ -4903,7 +5000,7 @@ Convert quads to triangles
 #### Function convert_quads_to_triangles()
 
 ~~~ .cpp
-inline vector<vec3i> convert_quads_to_triangles(
+vector<vec3i> convert_quads_to_triangles(
     const vector<vec4i>& quads, int row_length);
 ~~~
 
@@ -4913,7 +5010,7 @@ Quads have to be consecutive one row after another.
 #### Function convert_bezier_to_lines()
 
 ~~~ .cpp
-inline vector<vec2i> convert_bezier_to_lines(const vector<vec4i>& beziers);
+vector<vec2i> convert_bezier_to_lines(const vector<vec4i>& beziers);
 ~~~
 
 Convert beziers to lines using 3 lines for each bezier.
@@ -4921,7 +5018,7 @@ Convert beziers to lines using 3 lines for each bezier.
 #### Function convert_face_varying()
 
 ~~~ .cpp
-inline tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
+tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
 convert_face_varying(const vector<vec4i>& quads_pos,
     const vector<vec4i>& quads_norm, const vector<vec4i>& quads_texcoord,
     const vector<vec3f>& pos, const vector<vec3f>& norm,
@@ -4934,8 +5031,7 @@ and filled vectors for pos, norm and texcoord.
 #### Function subdivide_elems_linear()
 
 ~~~ .cpp
-inline tuple<vector<vec2i>, vector<vec3i>, vector<vec4i>, vector<vec2i>,
-    vector<vec4i>>
+tuple<vector<vec2i>, vector<vec3i>, vector<vec4i>, vector<vec2i>, vector<vec4i>>
 subdivide_elems_linear(const vector<vec2i>& lines,
     const vector<vec3i>& triangles, const vector<vec4i>& quads, int nverts);
 ~~~
@@ -4947,18 +5043,19 @@ Returns the tesselated elements and dictionaries for vertex calculations.
 
 ~~~ .cpp
 template <typename T>
-inline vector<T> subdivide_vert_linear(const vector<T>& vert,
+vector<T> subdivide_vert_linear(const vector<T>& vert,
     const vector<vec2i>& edges, const vector<vec4i>& faces,
     bool normalized = false);
 ~~~
 
-Subdivide vertex properties given the maps
+Subdivide vertex properties given the maps. This is instances for vecs
+and floats.
 
 #### Function subdivide_vert_catmullclark()
 
 ~~~ .cpp
 template <typename T>
-inline vector<T> subdivide_vert_catmullclark(const vector<vec4i>& quads,
+vector<T> subdivide_vert_catmullclark(const vector<vec4i>& quads,
     const vector<T>& vert, const vector<vec2i>& crease_tlines,
     const vector<int>& crease_tpoints, bool normalized = false);
 ~~~
@@ -4967,13 +5064,14 @@ Performs the smoothing step of Catmull-Clark. Start with a tesselate quad
 mesh obtained with subdivide_elems_linear() and subdivide_vert_linear(). To
 handle open meshes with boundary, get the boundary from make_boundary_edge()
 and pass it as crease_lines. To fix the boundary entirely, just get the
-boundary vertices and pass it as creases.
+boundary vertices and pass it as creases. This is instances for vecs
+and floats.
 
 #### Function subdivide_bezier_recursive()
 
 ~~~ .cpp
-inline tuple<vector<vec4i>, vector<int>, vector<vec4i>>
-subdivide_bezier_recursive(const vector<vec4i>& beziers, int nverts);
+tuple<vector<vec4i>, vector<int>, vector<vec4i>> subdivide_bezier_recursive(
+    const vector<vec4i>& beziers, int nverts);
 ~~~
 
 Subdivide bezier recursive by splitting each segment into two in the middle.
@@ -4983,17 +5081,17 @@ Returns the tesselated elements and dictionaries for vertex calculations.
 
 ~~~ .cpp
 template <typename T>
-inline vector<T> subdivide_vert_bezier(const vector<T>& vert,
-    const vector<int>& verts, const vector<vec4i>& segments,
-    bool normalized = false);
+vector<T> subdivide_vert_bezier(const vector<T>& vert, const vector<int>& verts,
+    const vector<vec4i>& segments, bool normalized = false);
 ~~~
 
-Subdivide vertex properties given the maps
+Subdivide vertex properties given the maps. This is instances for vecs
+and floats.
 
 #### Function make_uvquads()
 
 ~~~ .cpp
-inline tuple<vector<vec4i>, vector<vec2f>> make_uvquads(int usteps, int vsteps,
+tuple<vector<vec4i>, vector<vec2f>> make_uvquads(int usteps, int vsteps,
     bool uwrap = false, bool vwrap = false, bool vpole0 = false,
     bool vpole1 = false);
 ~~~
@@ -5004,7 +5102,7 @@ surface generation.
 #### Function make_uvlines()
 
 ~~~ .cpp
-inline tuple<vector<vec2i>, vector<vec2f>> make_uvlines(int num, int usteps);
+tuple<vector<vec2i>, vector<vec2f>> make_uvlines(int num, int usteps);
 ~~~
 
 Generate parametric num lines of usteps segments.
@@ -5012,7 +5110,7 @@ Generate parametric num lines of usteps segments.
 #### Function make_uvpoints()
 
 ~~~ .cpp
-inline tuple<vector<int>, vector<vec2f>> make_uvpoints(int num);
+tuple<vector<int>, vector<vec2f>> make_uvpoints(int num);
 ~~~
 
 Generate a parametric point set. Mostly here for completeness.
@@ -5020,8 +5118,8 @@ Generate a parametric point set. Mostly here for completeness.
 #### Function merge_elems()
 
 ~~~ .cpp
-inline tuple<vector<vec2i>, vector<vec3i>, vector<vec4i>> merge_elems(
-    int nverts, const vector<vec2i>& lines1, const vector<vec3i>& triangles1,
+tuple<vector<vec2i>, vector<vec3i>, vector<vec4i>> merge_elems(int nverts,
+    const vector<vec2i>& lines1, const vector<vec3i>& triangles1,
     const vector<vec4i>& quads1, const vector<vec2i>& lines2,
     const vector<vec3i>& triangles2, const vector<vec4i>& quads2);
 ~~~
@@ -5033,8 +5131,8 @@ Vertex data can then be concatenated successfully.
 #### Function facet_elems()
 
 ~~~ .cpp
-inline tuple<vector<vec2i>, vector<vec3i>, vector<vec4i>, vector<int>>
-facet_elems(const vector<vec2i>& lines, const vector<vec3i>& triangles,
+tuple<vector<vec2i>, vector<vec3i>, vector<vec4i>, vector<int>> facet_elems(
+    const vector<vec2i>& lines, const vector<vec3i>& triangles,
     const vector<vec4i>& quads);
 ~~~
 
@@ -5045,15 +5143,15 @@ giving a faceted look. Note that faceted tangents are not computed.
 
 ~~~ .cpp
 template <typename T>
-inline vector<T> facet_vert(const vector<T>& vert, const vector<int>& vmap);
+vector<T> facet_vert(const vector<T>& vert, const vector<int>& vmap);
 ~~~
 
-Unshare vertices for faceting
+Unshare vertices for faceting. Instanced for vec and float types.
 
 #### Function sample_points()
 
 ~~~ .cpp
-inline int sample_points(int npoints, float re);
+int sample_points(int npoints, float re);
 ~~~
 
 Pick a point
@@ -5061,7 +5159,7 @@ Pick a point
 #### Function sample_points_cdf()
 
 ~~~ .cpp
-inline vector<float> sample_points_cdf(int npoints);
+vector<float> sample_points_cdf(int npoints);
 ~~~
 
 Compute a distribution for sampling points uniformly
@@ -5069,7 +5167,7 @@ Compute a distribution for sampling points uniformly
 #### Function sample_points()
 
 ~~~ .cpp
-inline int sample_points(const vector<float>& cdf, float re);
+int sample_points(const vector<float>& cdf, float re);
 ~~~
 
 Pick a point
@@ -5077,7 +5175,7 @@ Pick a point
 #### Function sample_lines_cdf()
 
 ~~~ .cpp
-inline vector<float> sample_lines_cdf(
+vector<float> sample_lines_cdf(
     const vector<vec2i>& lines, const vector<vec3f>& pos);
 ~~~
 
@@ -5086,8 +5184,7 @@ Compute a distribution for sampling lines uniformly
 #### Function sample_lines()
 
 ~~~ .cpp
-inline pair<int, vec2f> sample_lines(
-    const vector<float>& cdf, float re, float ruv);
+pair<int, vec2f> sample_lines(const vector<float>& cdf, float re, float ruv);
 ~~~
 
 Pick a point on lines
@@ -5095,7 +5192,7 @@ Pick a point on lines
 #### Function sample_triangles_cdf()
 
 ~~~ .cpp
-inline vector<float> sample_triangles_cdf(
+vector<float> sample_triangles_cdf(
     const vector<vec3i>& triangles, const vector<vec3f>& pos);
 ~~~
 
@@ -5104,7 +5201,7 @@ Compute a distribution for sampling triangle meshes uniformly
 #### Function sample_triangles()
 
 ~~~ .cpp
-inline pair<int, vec3f> sample_triangles(
+pair<int, vec3f> sample_triangles(
     const vector<float>& cdf, float re, const vec2f& ruv);
 ~~~
 
@@ -5113,7 +5210,7 @@ Pick a point on a triangle mesh
 #### Function sample_quads_cdf()
 
 ~~~ .cpp
-inline vector<float> sample_quads_cdf(
+vector<float> sample_quads_cdf(
     const vector<vec4i>& quads, const vector<vec3f>& pos);
 ~~~
 
@@ -5122,7 +5219,7 @@ Compute a distribution for sampling quad meshes uniformly
 #### Function sample_quads()
 
 ~~~ .cpp
-inline pair<int, vec4f> sample_quads(
+pair<int, vec4f> sample_quads(
     const vector<float>& cdf, float re, const vec2f& ruv);
 ~~~
 
@@ -5131,10 +5228,10 @@ Pick a point on a quad mesh
 #### Function sample_triangles_points()
 
 ~~~ .cpp
-inline tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>>
-sample_triangles_points(const vector<vec3i>& triangles,
-    const vector<vec3f>& pos, const vector<vec3f>& norm,
-    const vector<vec2f>& texcoord, int npoints, uint64_t seed = 0);
+tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>> sample_triangles_points(
+    const vector<vec3i>& triangles, const vector<vec3f>& pos,
+    const vector<vec3f>& norm, const vector<vec2f>& texcoord, int npoints,
+    uint64_t seed = 0);
 ~~~
 
 Samples a set of points over a triangle mesh uniformly. The rng function
@@ -5557,21 +5654,10 @@ inline vec3f rgb_to_xyz(const vec3f& rgb);
 
 Convert between CIE XYZ and RGB
 
-#### Function tonemap_filmic()
-
-~~~ .cpp
-inline float tonemap_filmic(float hdr);
-~~~
-
-Tone map with a fitted filmic curve.
-
-Implementation from
-https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/
-
 #### Function tonemap_image()
 
 ~~~ .cpp
-inline image4b tonemap_image(
+image4b tonemap_image(
     const image4f& hdr, float exposure, float gamma, bool filmic = false);
 ~~~
 
@@ -5580,8 +5666,7 @@ Tone mapping HDR to LDR images.
 #### Function image_over()
 
 ~~~ .cpp
-inline void image_over(
-    vec4f* img, int width, int height, int nlayers, vec4f** layers);
+void image_over(vec4f* img, int width, int height, int nlayers, vec4f** layers);
 ~~~
 
 Image over operator
@@ -5589,8 +5674,7 @@ Image over operator
 #### Function image_over()
 
 ~~~ .cpp
-inline void image_over(
-    vec4b* img, int width, int height, int nlayers, vec4b** layers);
+void image_over(vec4b* img, int width, int height, int nlayers, vec4b** layers);
 ~~~
 
 Image over operator
@@ -5598,18 +5682,15 @@ Image over operator
 #### Function hsv_to_rgb()
 
 ~~~ .cpp
-inline vec4b hsv_to_rgb(const vec4b& hsv);
+vec4b hsv_to_rgb(const vec4b& hsv);
 ~~~
 
 Convert HSV to RGB
 
-Implementatkion from
-http://stackoverflow.com/questions/3018313/algorithm-to-convert-rgb-to-hsv-and-hsv-to-rgb-in-range-0-255-for-both
-
 #### Function make_grid_image()
 
 ~~~ .cpp
-inline image4b make_grid_image(int width, int height, int tile = 64,
+image4b make_grid_image(int width, int height, int tile = 64,
     const vec4b& c0 =;
 ~~~
 
@@ -5618,7 +5699,7 @@ Make a grid image
 #### Function make_checker_image()
 
 ~~~ .cpp
-inline image4b make_checker_image(int width, int height, int tile = 64,
+image4b make_checker_image(int width, int height, int tile = 64,
     const vec4b& c0 =;
 ~~~
 
@@ -5627,7 +5708,7 @@ Make a checkerboard image
 #### Function make_bumpdimple_image()
 
 ~~~ .cpp
-inline image4b make_bumpdimple_image(int width, int height, int tile = 64);
+image4b make_bumpdimple_image(int width, int height, int tile = 64);
 ~~~
 
 Make an image with bumps and dimples.
@@ -5635,8 +5716,8 @@ Make an image with bumps and dimples.
 #### Function make_ramp_image()
 
 ~~~ .cpp
-inline image4b make_ramp_image(int width, int height, const vec4b& c0,
-    const vec4b& c1, bool srgb = false);
+image4b make_ramp_image(
+    int width, int height, const vec4b& c0, const vec4b& c1, bool srgb = false);
 ~~~
 
 Make a uv colored grid
@@ -5644,7 +5725,7 @@ Make a uv colored grid
 #### Function make_gammaramp_image()
 
 ~~~ .cpp
-inline image4b make_gammaramp_image(int width, int height);
+image4b make_gammaramp_image(int width, int height);
 ~~~
 
 Make a gamma ramp image
@@ -5652,7 +5733,7 @@ Make a gamma ramp image
 #### Function make_gammaramp_imagef()
 
 ~~~ .cpp
-inline image4f make_gammaramp_imagef(int width, int height);
+image4f make_gammaramp_imagef(int width, int height);
 ~~~
 
 Make a gamma ramp image
@@ -5660,7 +5741,7 @@ Make a gamma ramp image
 #### Function make_uv_image()
 
 ~~~ .cpp
-inline image4b make_uv_image(int width, int height);
+image4b make_uv_image(int width, int height);
 ~~~
 
 Make an image color with red/green in the [0,1] range. Helpful to visualize
@@ -5669,7 +5750,7 @@ uv texture coordinate application.
 #### Function make_uvgrid_image()
 
 ~~~ .cpp
-inline image4b make_uvgrid_image(
+image4b make_uvgrid_image(
     int width, int height, int tile = 64, bool colored = true);
 ~~~
 
@@ -5678,7 +5759,7 @@ Make a uv colored grid
 #### Function make_recuvgrid_image()
 
 ~~~ .cpp
-inline image4b make_recuvgrid_image(
+image4b make_recuvgrid_image(
     int width, int height, int tile = 64, bool colored = true);
 ~~~
 
@@ -5687,7 +5768,7 @@ Make a uv recusive colored grid
 #### Function bump_to_normal_map()
 
 ~~~ .cpp
-inline image4b bump_to_normal_map(const image4b& img, float scale = 1);
+image4b bump_to_normal_map(const image4b& img, float scale = 1);
 ~~~
 
 Comvert a bump map to a normal map.
@@ -5705,16 +5786,9 @@ in [1.7,10] with or without sun.
 #### Function make_noise_image()
 
 ~~~ .cpp
-
 image4b make_noise_image(int resx, int resy, float scale = 1, bool wrap = true);
 ~~~
 
-Compute the revised Pelin noise function. Wrap provides a wrapping noise
-but must be power of two (wraps at 256 anyway). For octave based noise,
-good values are obtained with octaves=6 (numerber of noise calls),
-lacunarity=~2.0 (spacing between successive octaves: 2.0 for warpping
-output), gain=0.5 (relative weighting applied to each successive octave),
-offset=1.0 (used to invert the ridges).
 Make a noise image. Wrap works only if both resx and resy are powers of two.
 
 #### Function make_fbm_image()
@@ -5842,8 +5916,8 @@ Saves an image
 #### Function save_image()
 
 ~~~ .cpp
-inline bool save_image(const string& filename, const image4f& hdr,
-    float exposure, float gamma, bool filmic = false);
+bool save_image(const string& filename, const image4f& hdr, float exposure,
+    float gamma, bool filmic = false);
 ~~~
 
 Save an HDR or LDR image with tonemapping based on filename
@@ -5919,87 +5993,37 @@ Resize image.
 #### Function intersect_point()
 
 ~~~ .cpp
-inline bool intersect_point(
-    const ray3f& ray, const vec3f& p, float r, float& ray_t);
+bool intersect_point(const ray3f& ray, const vec3f& p, float r, float& ray_t);
 ~~~
 
-Intersect a ray with a point (approximate)
-
-Parameters:
-- ray: ray origin and direction, parameter min, max range
-- p: point position
-- r: point radius
-
-Out Parameters:
-- ray_t: ray parameter at the intersection point
-- euv: primitive uv ( {0,0} for points )
-
-Returns:
-- whether the intersection occurred
-
-Iplementation Notes:
-- out Parameters and only writtent o if an intersection occurs
-- algorithm finds the closest point on the ray segment to the point and
-   test their distance with the point radius
-- based on http://geomalgorithms.com/a02-lines.html.
+Intersect a ray with a point (approximate).
+Based on http://geomalgorithms.com/a02-lines.html.
 
 #### Function intersect_line()
 
 ~~~ .cpp
-inline bool intersect_line(const ray3f& ray, const vec3f& v0, const vec3f& v1,
+bool intersect_line(const ray3f& ray, const vec3f& v0, const vec3f& v1,
     float r0, float r1, float& ray_t, vec2f& euv);
 ~~~
 
-Intersect a ray with a line
-
-Parameters:
-- ray: ray origin and direction, parameter min, max range
-- v0, v1: line segment points
-- r0, r1: line segment radia
-
-Out Parameters:
-- ray_t: ray parameter at the intersection point
-- euv: euv.x is the line parameter at the intersection ( euv.y is zero )
-
-Returns:
-- whether the intersection occurred
-
-Notes:
-- out Parameters and only writtent o if an intersection occurs
-- algorithm find the closest points on line and ray segment and test
-  their distance with the line radius at that location
-- based on http://geomalgorithms.com/a05-intersect-1.html
-- based on http://geomalgorithms.com/a07-distance.html#
+Intersect a ray with a line (approximate).
+Based on http://geomalgorithms.com/a05-intersect-1.html and
+http://geomalgorithms.com/a07-distance.html#
     dist3D_Segment_to_Segment
 
 #### Function intersect_triangle()
 
 ~~~ .cpp
-inline bool intersect_triangle(const ray3f& ray, const vec3f& v0,
-    const vec3f& v1, const vec3f& v2, float& ray_t, vec3f& euv);
+bool intersect_triangle(const ray3f& ray, const vec3f& v0, const vec3f& v1,
+    const vec3f& v2, float& ray_t, vec3f& euv);
 ~~~
 
 Intersect a ray with a triangle
 
-Parameters:
-- ray: ray origin and direction, parameter min, max range
-- v0, v1, v2: triangle vertices
-
-Out Parameters:
-- ray_t: ray parameter at the intersection point
-- euv: baricentric coordinates of the intersection
-
-Returns:
-- whether the intersection occurred
-
-Notes:
-- out Parameters and only writtent o if an intersection occurs
-- algorithm based on Muller-Trombone intersection test
-
 #### Function intersect_quad()
 
 ~~~ .cpp
-inline bool intersect_quad(const ray3f& ray, const vec3f& v0, const vec3f& v1,
+bool intersect_quad(const ray3f& ray, const vec3f& v0, const vec3f& v1,
     const vec3f& v2, const vec3f& v3, float& ray_t, vec4f& euv);
 ~~~
 
@@ -6010,98 +6034,62 @@ to 1. This is equivalent to Intel's Embree. The external user does not have
 to be concerned about the parametrization and can just use the euv as
 specified.
 
-Parameters:
-- ray: ray origin and direction, parameter min, max range
-- v0, v1, v2, v3: quad vertices
-
-Out Parameters:
-- ray_t: ray parameter at the intersection point
-- euv: baricentric coordinates of the intersection
-
-Returns:
-- whether the intersection occurred
-
 #### Function intersect_tetrahedron()
 
 ~~~ .cpp
-inline bool intersect_tetrahedron(const ray3f& ray_, const vec3f& v0,
-    const vec3f& v1, const vec3f& v2, const vec3f& v3, float& ray_t,
-    vec4f& euv);
+bool intersect_tetrahedron(const ray3f& ray_, const vec3f& v0, const vec3f& v1,
+    const vec3f& v2, const vec3f& v3, float& ray_t, vec4f& euv);
 ~~~
 
 Intersect a ray with a tetrahedron. Note that we consider only
 intersection wiht the tetrahedra surface and discount intersction with
 the interior.
 
-Parameters:
-- ray: ray to intersect with
-- v0, v1, v2: triangle vertices
-
-Out Parameters:
-- ray_t: ray parameter at the intersection point
-- euv: baricentric coordinates of the intersection
-
-Returns:
-- whether the intersection occurred
-
-TODO: check order
-TODO: uv
-
 #### Function intersect_check_bbox()
 
 ~~~ .cpp
-inline bool intersect_check_bbox(const ray3f& ray, const bbox3f& bbox);
+bool intersect_check_bbox(const ray3f& ray, const bbox3f& bbox);
 ~~~
 
 Intersect a ray with a axis-aligned bounding box
 
-Parameters:
-- ray: ray to intersect with
-- bbox: bounding box min/max bounds
-
-Returns:
-- whether the intersection occurred
-
-#### Function _safemin()
-
-~~~ .cpp
-static inline const float& _safemin(const float& a, const float& b);
-~~~
-
-Min/max used in BVH traversal. Copied here since the traversal code
-relies on the specific behaviour wrt NaNs.
-
-#### Function _safemax()
-
-~~~ .cpp
-static inline const float& _safemax(const float& a, const float& b);
-~~~
-
-Min/max used in BVH traversal. Copied here since the traversal code
-relies on the specific behaviour wrt NaNs.
-
 #### Function intersect_check_bbox()
 
 ~~~ .cpp
-inline bool intersect_check_bbox(const ray3f& ray, const vec3f& ray_dinv,
-    const vec3i& ray_dsign, const bbox3f& bbox_);
+bool intersect_check_bbox(const ray3f& ray, const vec3f& ray_dinv,
+    const vec3i& ray_dsign, const bbox3f& bbox);
 ~~~
 
 Intersect a ray with a axis-aligned bounding box
-
-Parameters:
-- ray_o, ray_d: ray origin and direction
-- ray_tmin, ray_tmax: ray parameter min, max range
-- ray_dinv: ray inverse direction
-- ray_dsign: ray direction sign
-- bbox_min, bbox_max: bounding box min/max bounds
-
-Returns:
-- whether the intersection occurred
-
 Implementation Notes:
 - based on "Robust BVH Ray Traversal" by T. Ize published at
 http://jcgt.org/published/0002/02/02/paper.pdf
+
+#### Enum bvh_node_type : uint32_t
+
+~~~ .cpp
+enum struct bvh_node_type : uint32_t {
+    internal = 0,
+    point = 1,
+    line = 2,
+    triangle = 3,
+    quad = 4,
+    vertex = 8,
+    instance = 16,
+}
+~~~
+
+Type of BVH node
+
+- Values:
+    - internal:      internal
+    - point:      points
+    - line:      lines
+    - triangle:      triangles
+    - quad:      quads
+    - vertex:      vertices
+    - instance:      instances
+
 
 #### Struct bvh_node
 
@@ -6110,24 +6098,23 @@ struct bvh_node {
     bbox3f bbox;
     uint32_t start;
     uint16_t count;
-    uint8_t isleaf;
+    bvh_node_type type;
     uint8_t axis;
 }
 ~~~
 
 BVH tree node containing its bounds, indices to the BVH arrays of either
-sorted primitives or internal nodes, whether its a leaf or an internal node,
+sorted primitives or internal nodes, the node element type or internal node,
 and the split axis. Leaf and internal nodes are identical, except that
 indices refer to primitives for leaf nodes or other nodes for internal
 nodes. See bvh_tree for more details.
-
 This is an internal data structure.
 
 - Members:
     - bbox:      bounding box
     - start:      index to the first sorted primitive/node
     - count:      number of primitives/nodes
-    - isleaf:      whether it is a leaf
+    - type:      type of node
     - axis:      slit axis
 
 
@@ -6137,6 +6124,18 @@ This is an internal data structure.
 struct bvh_tree {
     vector<bvh_node> nodes;
     vector<int> sorted_prim;
+    bvh_node_type type = bvh_node_type::internal;
+    vector<vec3f> pos;
+    vector<float> radius;
+    vector<int> points;
+    vector<vec2i> lines;
+    vector<vec3i> triangles;
+    vector<vec4i> quads;
+    vector<frame3f> ist_frames;
+    vector<frame3f> ist_frames_inv;
+    vector<int> ist_bvhs;
+    vector<bvh_tree*> shape_bvhs;
+    bool own_shape_bvhs = false;
 }
 ~~~
 
@@ -6144,8 +6143,8 @@ BVH tree, stored as a node array. The tree structure is encoded using array
 indices instead of pointers, both for speed but also to simplify code.
 BVH nodes indices refer to either the node array, for internal nodes,
 or a primitive array, for leaf nodes. BVH trees may contain only one type
-of geometric primitive, like points, lines, triangle or shape other BVHs.
-To handle multiple primitive types and transformed primitices, build
+of geometric primitive, like points, lines, triangle or other BVHs.
+To handle multiple primitive types and transformed primitives, build
 a two-level hierarchy with the outer BVH, the scene BVH, containing inner
 BVHs, shape BVHs, each of which of a uniform primitive type.
 
@@ -6154,169 +6153,72 @@ This is an internal data structure.
 - Members:
     - nodes:      sorted array of internal nodes
     - sorted_prim:      sorted elements
+    - type:      element type
+    - pos:      positions for shape BVHs
+    - radius:      radius for shape BVHs
+    - points:      points for shape BVHs
+    - lines:      lines for shape BVHs
+    - triangles:      triangles for shape BVHs
+    - quads:      quads for shape BVHs
+    - ist_frames:      instance frames for instance BVHs
+    - ist_frames_inv:      instance inverse frames for instance BVHs
+    - ist_bvhs:      instance BVHs
+    - shape_bvhs:      shape BVHs
+    - own_shape_bvhs:      whether it owns the memory of the shape BVHs
 
 
 #### Function make_bvh()
 
 ~~~ .cpp
-inline bvh_tree* make_bvh(
-    int nprims, bool equalsize, const function<bbox3f(int)>& elem_bbox);
+bvh_tree* make_bvh(const vector<int>& points, const vector<vec2i>& lines,
+    const vector<vec3i>& triangles, const vector<vec4i>& quads,
+    const vector<vec3f>& pos, const vector<float>& radius, float def_radius,
+    bool equalsize);
 ~~~
 
-Build a BVH from a set of primitives.
+Build a shape BVH from a set of primitives.
 
-#### Function build_triangles_bvh()
+#### Function make_bvh()
 
 ~~~ .cpp
-inline bvh_tree* build_triangles_bvh(const vector<vec3i>& triangles,
-    const vector<vec3f>& pos, bool equal_size = true);
+bvh_tree* make_bvh(const vector<frame3f>& frames,
+    const vector<frame3f>& frames_inv, const vector<int>& ist_bvhs,
+    const vector<bvh_tree*>& shape_bvhs, bool own_shape_bvhs, bool equal_size);
 ~~~
 
-Build a triangles BVH.
+Build a scene BVH from a set of shape instances.
 
-#### Function build_quads_bvh()
+#### Function get_shape_bvhs()
 
 ~~~ .cpp
-inline bvh_tree* build_quads_bvh(const vector<vec4i>& quads,
-    const vector<vec3f>& pos, bool equal_size = true);
+inline const vector<bvh_tree*>& get_shape_bvhs(const bvh_tree* bvh);
 ~~~
 
-Build a quads BVH.
-
-#### Function build_lines_bvh()
-
-~~~ .cpp
-inline bvh_tree* build_lines_bvh(const vector<vec2i>& lines,
-    const vector<vec3f>& pos, const vector<float>& radius,
-    bool equal_size = true);
-~~~
-
-Build a lines BVH.
-
-#### Function build_points_bvh()
-
-~~~ .cpp
-inline bvh_tree* build_points_bvh(const vector<int>& points,
-    const vector<vec3f>& pos, const vector<float>& radius,
-    bool equal_size = true);
-~~~
-
-Build a points BVH.
-
-#### Function build_points_bvh()
-
-~~~ .cpp
-inline bvh_tree* build_points_bvh(const vector<vec3f>& pos,
-    const vector<float>& radius, bool equal_size = true);
-~~~
-
-Build a points BVH.
+Grab the shape BVHs
 
 #### Function refit_bvh()
 
 ~~~ .cpp
-inline void refit_bvh(
-    bvh_tree* bvh, int nodeid, const function<bbox3f(int)>& elem_bbox);
+void refit_bvh(bvh_tree* bvh, const vector<vec3f>& pos,
+    const vector<float>& radius, float def_radius);
 ~~~
 
 Recursively recomputes the node bounds for a shape bvh
 
-#### Function refit_triangles_bvh()
+#### Function refit_bvh()
 
 ~~~ .cpp
-inline void refit_triangles_bvh(
-    bvh_tree* bvh, const vec3i* triangles, const vec3f* pos);
+void refit_bvh(bvh_tree* bvh, const vector<frame3f>& frames,
+    const vector<frame3f>& frames_inv);
 ~~~
 
-Refit triangles bvh
-
-#### Function refit_triangles_bvh()
-
-~~~ .cpp
-inline void refit_triangles_bvh(
-    bvh_tree* bvh, const vector<vec3i>& triangles, const vector<vec3f>& pos);
-~~~
-
-Refit triangles bvh
-
-#### Function refit_quads_bvh()
-
-~~~ .cpp
-inline void refit_quads_bvh(
-    bvh_tree* bvh, const vec4i* quads, const vec3f* pos);
-~~~
-
-Refit quads bvh
-
-#### Function refit_quads_bvh()
-
-~~~ .cpp
-inline void refit_quads_bvh(
-    bvh_tree* bvh, const vector<vec4i>& quads, const vector<vec3f>& pos);
-~~~
-
-Refit quads bvh
-
-#### Function refit_lines_bvh()
-
-~~~ .cpp
-inline void refit_lines_bvh(
-    bvh_tree* bvh, const vec2i* lines, const vec3f* pos, const float* radius);
-~~~
-
-Refit lines bvh
-
-#### Function refit_lines_bvh()
-
-~~~ .cpp
-inline void refit_lines_bvh(bvh_tree* bvh, const vector<vec2i>& lines,
-    const vector<vec3f>& pos, const vector<float>& radius);
-~~~
-
-Refit lines bvh
-
-#### Function refit_points_bvh()
-
-~~~ .cpp
-inline void refit_points_bvh(
-    bvh_tree* bvh, const int* points, const vec3f* pos, const float* radius);
-~~~
-
-Refit points bvh
-
-#### Function refit_points_bvh()
-
-~~~ .cpp
-inline void refit_points_bvh(bvh_tree* bvh, const vector<int>& points,
-    const vector<vec3f>& pos, const vector<float>& radius);
-~~~
-
-Refit points bvh
-
-#### Function refit_points_bvh()
-
-~~~ .cpp
-inline void refit_points_bvh(
-    bvh_tree* bvh, const vec3f* pos, const float* radius);
-~~~
-
-Refit points bvh
-
-#### Function refit_points_bvh()
-
-~~~ .cpp
-inline void refit_points_bvh(
-    bvh_tree* bvh, const vector<vec3f>& pos, const vector<float>& radius);
-~~~
-
-Refit lines bvh
+Recursively recomputes the node bounds for a scene bvh
 
 #### Function intersect_bvh()
 
 ~~~ .cpp
-inline bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray_,
-    bool early_exit, float& ray_t, int& eid,
-    const function<bool(int, const ray3f&, float&)>& intersect_elem);
+bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray, bool early_exit,
+    float& ray_t, int& iid, int& eid, vec4f& ew);
 ~~~
 
 Intersect ray with a bvh.
@@ -6324,233 +6226,60 @@ Intersect ray with a bvh.
 #### Function overlap_bvh()
 
 ~~~ .cpp
-inline bool overlap_bvh(const bvh_tree* bvh, const vec3f& pos, float max_dist,
-    bool early_exit, float& dist, int& eid,
-    const function<bool(int, const vec3f&, float, float&)>& overlap_elem);
+bool overlap_bvh(const bvh_tree* bvh, const vec3f& pos, float max_dist,
+    bool early_exit, float& dist, int& iid, int& eid, vec4f& ew);
 ~~~
 
 Finds the closest element with a bvh.
 
-#### Function intersect_triangles_bvh()
+#### Struct intersection_point
 
 ~~~ .cpp
-inline bool intersect_triangles_bvh(const bvh_tree* bvh, const vec3i* triangles,
-    const vec3f* pos, const ray3f& ray, bool early_exit, float& ray_t, int& eid,
-    vec3f& euv);
+struct intersection_point {
+    float dist = 0;
+    int iid = -1;
+    int eid = -1;
+    vec4f euv = zero4f;
+    operator bool() const; 
+}
 ~~~
 
-Intersect a triangle BVH
+Intersection point
 
-#### Function intersect_triangles_bvh()
+- Members:
+    - dist:      distance of the hit along the ray or from the point
+    - iid:      instance index
+    - eid:      shape element index
+    - euv:      shape barycentric coordinates
+    - operator bool():      check if intersection is valid
+
+
+#### Function intersect_bvh()
 
 ~~~ .cpp
-inline bool intersect_triangles_bvh(const bvh_tree* bvh,
-    const vector<vec3i>& triangles, const vector<vec3f>& pos, const ray3f& ray,
-    bool early_exit, float& ray_t, int& eid, vec3f& euv);
+intersection_point intersect_bvh(
+    const bvh_tree* bvh, const ray3f& ray, bool early_exit);
 ~~~
 
-Intersect a triangle BVH
+Intersect ray with a bvh (convenience wrapper).
 
-#### Function intersect_quads_bvh()
+#### Function overlap_bvh()
 
 ~~~ .cpp
-inline bool intersect_quads_bvh(const bvh_tree* bvh, const vec4i* quads,
-    const vec3f* pos, const ray3f& ray, bool early_exit, float& ray_t, int& eid,
-    vec4f& euv);
+intersection_point overlap_bvh(
+    const bvh_tree* bvh, const vec3f& pos, float max_dist, bool early_exit);
 ~~~
 
-Intersect a quad BVH
-
-#### Function intersect_quads_bvh()
-
-~~~ .cpp
-inline bool intersect_quads_bvh(const bvh_tree* bvh, const vector<vec4i>& quads,
-    const vector<vec3f>& pos, const ray3f& ray, bool early_exit, float& ray_t,
-    int& eid, vec4f& euv);
-~~~
-
-Intersect a quad BVH
-
-#### Function intersect_lines_bvh()
-
-~~~ .cpp
-inline bool intersect_lines_bvh(const bvh_tree* bvh, const vec2i* lines,
-    const vec3f* pos, const float* radius, const ray3f& ray, bool early_exit,
-    float& ray_t, int& eid, vec2f& euv);
-~~~
-
-Intersect a line BVH
-
-#### Function intersect_lines_bvh()
-
-~~~ .cpp
-inline bool intersect_lines_bvh(const bvh_tree* bvh, const vector<vec2i>& lines,
-    const vector<vec3f>& pos, const vector<float>& radius, const ray3f& ray,
-    bool early_exit, float& ray_t, int& eid, vec2f& euv);
-~~~
-
-Intersect a line BVH
-
-#### Function intersect_points_bvh()
-
-~~~ .cpp
-inline bool intersect_points_bvh(const bvh_tree* bvh, const int* points,
-    const vec3f* pos, const float* radius, const ray3f& ray, bool early_exit,
-    float& ray_t, int& eid);
-~~~
-
-Intersect a point BVH
-
-#### Function intersect_points_bvh()
-
-~~~ .cpp
-inline bool intersect_points_bvh(const bvh_tree* bvh, const vector<int>& points,
-    const vector<vec3f>& pos, const vector<float>& radius, const ray3f& ray,
-    bool early_exit, float& ray_t, int& eid);
-~~~
-
-Intersect a point BVH
-
-#### Function intersect_points_bvh()
-
-~~~ .cpp
-inline bool intersect_points_bvh(const bvh_tree* bvh, const vec3f* pos,
-    const float* radius, const ray3f& ray, bool early_exit, float& ray_t,
-    int& eid);
-~~~
-
-Intersect a point BVH
-
-#### Function intersect_points_bvh()
-
-~~~ .cpp
-inline bool intersect_points_bvh(const bvh_tree* bvh, const vector<vec3f>& pos,
-    const vector<float>& radius, const ray3f& ray, bool early_exit,
-    float& ray_t, int& eid);
-~~~
-
-Intersect a point BVH
-
-#### Function overlap_triangles_bvh()
-
-~~~ .cpp
-inline bool overlap_triangles_bvh(const bvh_tree* bvh, const vec3i* triangles,
-    const vec3f* pos, const float* radius, const vec3f& pt, float max_dist,
-    bool early_exit, float& dist, int& eid, vec3f& euv);
-~~~
-
-Intersect a triangle BVH
-
-#### Function overlap_triangles_bvh()
-
-~~~ .cpp
-inline bool overlap_triangles_bvh(const bvh_tree* bvh,
-    const vector<vec3i>& triangles, const vector<vec3f>& pos,
-    const vector<float>& radius, const vec3f& pt, float max_dist,
-    bool early_exit, float& dist, int& eid, vec3f& euv);
-~~~
-
-Intersect a triangle BVH
-
-#### Function overlap_quads_bvh()
-
-~~~ .cpp
-inline bool overlap_quads_bvh(const bvh_tree* bvh, const vec4i* quads,
-    const vec3f* pos, const float* radius, const vec3f& pt, float max_dist,
-    bool early_exit, float& dist, int& eid, vec4f& euv);
-~~~
-
-Intersect a quad BVH
-
-#### Function overlap_quads_bvh()
-
-~~~ .cpp
-inline bool overlap_quads_bvh(const bvh_tree* bvh, const vector<vec4i>& quads,
-    const vector<vec3f>& pos, const vector<float>& radius, const vec3f& pt,
-    float max_dist, bool early_exit, float& dist, int& eid, vec4f& euv);
-~~~
-
-Intersect a quad BVH
-
-#### Function overlap_lines_bvh()
-
-~~~ .cpp
-inline bool overlap_lines_bvh(const bvh_tree* bvh, const vec2i* lines,
-    const vec3f* pos, const float* radius, const vec3f& pt, float max_dist,
-    bool early_exit, float& dist, int& eid, vec2f& euv);
-~~~
-
-Intersect a line BVH
-
-#### Function overlap_lines_bvh()
-
-~~~ .cpp
-inline bool overlap_lines_bvh(const bvh_tree* bvh, const vector<vec2i>& lines,
-    const vector<vec3f>& pos, const vector<float>& radius, const vec3f& pt,
-    float max_dist, bool early_exit, float& dist, int& eid, vec2f& euv);
-~~~
-
-Intersect a line BVH
-
-#### Function overlap_points_bvh()
-
-~~~ .cpp
-inline bool overlap_points_bvh(const bvh_tree* bvh, const int* points,
-    const vec3f* pos, const float* radius, const vec3f& pt, float max_dist,
-    bool early_exit, float& dist, int& eid);
-~~~
-
-Intersect a point BVH
-
-#### Function overlap_points_bvh()
-
-~~~ .cpp
-inline bool overlap_points_bvh(const bvh_tree* bvh, const vector<int>& points,
-    const vector<vec3f>& pos, const vector<float>& radius, const vec3f& pt,
-    float max_dist, bool early_exit, float& dist, int& eid);
-~~~
-
-Intersect a point BVH
-
-#### Function overlap_points_bvh()
-
-~~~ .cpp
-inline bool overlap_points_bvh(const bvh_tree* bvh, const vec3f* pos,
-    const float* radius, const vec3f& pt, float max_dist, bool early_exit,
-    float& dist, int& eid);
-~~~
-
-Intersect a point BVH
-
-#### Function overlap_points_bvh()
-
-~~~ .cpp
-inline bool overlap_points_bvh(const bvh_tree* bvh, const vector<vec3f>& pos,
-    const vector<float>& radius, const vec3f& pt, float max_dist,
-    bool early_exit, float& dist, int& eid);
-~~~
-
-Intersect a point BVH
-
-#### Function overlap_bvh_elems()
-
-~~~ .cpp
-template <typename OverlapElem>
-void overlap_bvh_elems(const bvh_tree* bvh1, const bvh_tree* bvh2,
-    bool skip_duplicates, bool skip_self, vector<vec2i>& overlaps,
-    const OverlapElem& overlap_elems);
-~~~
-
-Finds the overlap between BVH leaf nodes.
+Finds the closest element with a bvh (convenience wrapper).
 
 #### Struct texture
 
 ~~~ .cpp
 struct texture {
-    string name;
-    string path;
-    image4b ldr;
-    image4f hdr;
+    string name = "";
+    string path = "";
+    image4b ldr = {};
+    image4f hdr = {};
     bool empty() const; 
     bool is_ldr() const; 
     bool is_hdr() const; 
@@ -6617,13 +6346,21 @@ Material type
     - specular_glossiness:      Diffuse and specular material (specular-glossness in glTF)
 
 
+#### Function material_type_names()
+
+~~~ .cpp
+inline vector<pair<string, material_type>>& material_type_names();
+~~~
+
+Name for material type enum
+
 #### Struct material
 
 ~~~ .cpp
 struct material {
-    string name;
+    string name = "";
     bool double_sided = false;
-    material_type mtype = material_type::specular_roughness;
+    material_type type = material_type::specular_roughness;
     vec3f ke = {0, 0, 0};
     vec3f kd = {0, 0, 0};
     vec3f ks = {0, 0, 0};
@@ -6649,7 +6386,7 @@ Scene Material
 - Members:
     - name:      material name
     - double_sided:      double-sided rendering
-    - mtype:      material type
+    - type:      material type
     - ke:      emission color
     - kd:      diffuse color / base color
     - ks:      specular color / metallic factor
@@ -6693,9 +6430,6 @@ struct shape {
     vector<vec4f> tangsp;
     int subdivision_level = 0;
     bool subdivision_catmullclark = false;
-    vector<float> elem_cdf;
-    bvh_tree* bvh = nullptr;
-    bbox3f bbox = invalid_bbox3f;
 }
 ~~~
 
@@ -6723,9 +6457,6 @@ May contain only one of the points/lines/triangles/quads.
     - tangsp:      per-vertex tangent space (4 float)
     - subdivision_level:      number of times to subdivide
     - subdivision_catmullclark:      whether to use Catmull-Clark subdivision
-    - elem_cdf:      element CDF for sampling
-    - bvh:      BVH
-    - bbox:      bounding box (needs to be updated explicitly)
 
 
 #### Struct instance
@@ -6734,8 +6465,6 @@ May contain only one of the points/lines/triangles/quads.
 struct instance {
     frame3f frame = identity_frame3f;
     shape* shp = nullptr;
-    bbox3f bbox = invalid_bbox3f;
-    mat4f xform() const; 
 }
 ~~~
 
@@ -6744,15 +6473,13 @@ Shape instance.
 - Members:
     - frame:      transform frame
     - shp:      shape instance
-    - bbox:      bounding box (needs to be updated explicitly)
-    - xform():      instance transform as matrix
 
 
 #### Struct camera
 
 ~~~ .cpp
 struct camera {
-    string name;
+    string name = "";
     frame3f frame = identity_frame3f;
     bool ortho = false;
     float yfov = 2;
@@ -6782,7 +6509,7 @@ Scene Camera
 
 ~~~ .cpp
 struct environment {
-    string name;
+    string name = "";
     frame3f frame = identity_frame3f;
     vec3f ke = {0, 0, 0};
     texture_info ke_txt = {};
@@ -6815,20 +6542,126 @@ This is only used internally to avoid looping over all objects every time.
     - env:      environment
 
 
+#### Struct node
+
+~~~ .cpp
+struct node {
+    string name = "";
+    node* parent = nullptr;
+    frame3f frame = identity_frame3f;
+    vec3f translation = zero3f;
+    quat4f rotation = {0, 0, 0, 1};
+    vec3f scaling = {1, 1, 1};
+    std::vector<float> weights = {};
+    camera* cam = nullptr;
+    vector<instance*> ists = {};
+    environment* env = nullptr;
+    vector<node*> children_ = {};
+}
+~~~
+
+Node hierarchy
+
+- Members:
+    - name:      name
+    - parent:      parent node
+    - frame:      frame
+    - translation:      translation
+    - rotation:      rotation
+    - scaling:      scale
+    - weights:      Weights for morphing
+    - cam:      node camera
+    - ists:      node instance
+    - env:      node environment
+    - children_:      child nodes
+
+
+#### Enum keyframe_type
+
+~~~ .cpp
+enum struct keyframe_type {
+    linear = 0,
+    step = 1,
+    catmull_rom = 2,
+    bezier = 3,
+}
+~~~
+
+Keyframe type
+
+- Values:
+    - linear:      linear
+    - step:      step function
+    - catmull_rom:      catmull-rom spline
+    - bezier:      cubic bezier spline
+
+
+#### Function keyframe_type_names()
+
+~~~ .cpp
+inline vector<pair<string, keyframe_type>>& keyframe_type_names();
+~~~
+
+Name for keyframe type enum
+
+#### Struct keyframe
+
+~~~ .cpp
+struct keyframe {
+    std::string name;
+    keyframe_type type = keyframe_type::linear;
+    std::vector<float> times;
+    std::vector<vec3f> translation;
+    std::vector<quat4f> rotation;
+    std::vector<vec3f> scaling;
+    std::vector<std::vector<float>> weights;
+}
+~~~
+
+Keyframe data.
+
+- Members:
+    - name:      Name
+    - type:      Interpolation
+    - times:      Times
+    - translation:      Translation
+    - rotation:      Rotation
+    - scaling:      Scale
+    - weights:      Weights for morphing
+
+
+#### Struct animation
+
+~~~ .cpp
+struct animation {
+    std::string name;
+    std::string path = "";
+    vector<keyframe*> keyframes;
+    vector<pair<keyframe*, node*>> targets;
+}
+~~~
+
+Animation made of multiple keyframed values
+
+- Members:
+    - name:      Name
+    - path:      path (only used when writing files on disk with glTF)
+    - keyframes:      Keyframed values
+    - targets:      Binds keyframe values to nodes.
+
+
 #### Struct scene
 
 ~~~ .cpp
 struct scene {
-    vector<shape*> shapes;
-    vector<instance*> instances;
-    vector<material*> materials;
-    vector<texture*> textures;
-    vector<camera*> cameras;
-    vector<environment*> environments;
-    vector<light*> lights;
-    bvh_tree* bvh = nullptr;
-    bbox3f bbox = invalid_bbox3f;
-    ~scene(); 
+    vector<shape*> shapes = {};
+    vector<instance*> instances = {};
+    vector<material*> materials = {};
+    vector<texture*> textures = {};
+    vector<camera*> cameras = {};
+    vector<environment*> environments = {};
+    vector<node*> nodes = {};
+    vector<animation*> animations = {};
 }
 ~~~
 
@@ -6841,26 +6674,14 @@ Scene
     - textures:      texture array
     - cameras:      camera array
     - environments:      environment array
-    - lights:      light array
-    - bvh:      BVH
-    - bbox:      bounding box (needs to be updated explicitly)
-    - ~scene():      cleanup
+    - nodes:      node hierarchy
+    - animations:      node animation
 
-
-#### Function eval_barycentric()
-
-~~~ .cpp
-template <typename T>
-inline T eval_barycentric(
-    const shape* shp, const vector<T>& vals, int eid, const vec4f& euv);
-~~~
-
-Shape value interpolated using barycentric coordinates
 
 #### Function eval_pos()
 
 ~~~ .cpp
-inline vec3f eval_pos(const shape* shp, int eid, const vec4f& euv);
+vec3f eval_pos(const shape* shp, int eid, const vec4f& euv);
 ~~~
 
 Shape position interpolated using barycentric coordinates
@@ -6868,7 +6689,7 @@ Shape position interpolated using barycentric coordinates
 #### Function eval_norm()
 
 ~~~ .cpp
-inline vec3f eval_norm(const shape* shp, int eid, const vec4f& euv);
+vec3f eval_norm(const shape* shp, int eid, const vec4f& euv);
 ~~~
 
 Shape normal interpolated using barycentric coordinates
@@ -6876,7 +6697,7 @@ Shape normal interpolated using barycentric coordinates
 #### Function eval_texcoord()
 
 ~~~ .cpp
-inline vec2f eval_texcoord(const shape* shp, int eid, const vec4f& euv);
+vec2f eval_texcoord(const shape* shp, int eid, const vec4f& euv);
 ~~~
 
 Shape texcoord interpolated using barycentric coordinates
@@ -6884,7 +6705,7 @@ Shape texcoord interpolated using barycentric coordinates
 #### Function eval_color()
 
 ~~~ .cpp
-inline vec4f eval_color(const shape* shp, int eid, const vec4f& euv);
+vec4f eval_color(const shape* shp, int eid, const vec4f& euv);
 ~~~
 
 Shape texcoord interpolated using barycentric coordinates
@@ -6892,7 +6713,7 @@ Shape texcoord interpolated using barycentric coordinates
 #### Function eval_tangsp()
 
 ~~~ .cpp
-inline vec4f eval_tangsp(const shape* shp, int eid, const vec4f& euv);
+vec4f eval_tangsp(const shape* shp, int eid, const vec4f& euv);
 ~~~
 
 Shape tangent space interpolated using barycentric coordinates
@@ -6900,7 +6721,7 @@ Shape tangent space interpolated using barycentric coordinates
 #### Function eval_pos()
 
 ~~~ .cpp
-inline vec3f eval_pos(const instance* ist, int eid, const vec4f& euv);
+vec3f eval_pos(const instance* ist, int eid, const vec4f& euv);
 ~~~
 
 Instance position interpolated using barycentric coordinates
@@ -6908,7 +6729,7 @@ Instance position interpolated using barycentric coordinates
 #### Function eval_norm()
 
 ~~~ .cpp
-inline vec3f eval_norm(const instance* ist, int eid, const vec4f& euv);
+vec3f eval_norm(const instance* ist, int eid, const vec4f& euv);
 ~~~
 
 Instance normal interpolated using barycentric coordinates
@@ -6916,64 +6737,34 @@ Instance normal interpolated using barycentric coordinates
 #### Function eval_texture()
 
 ~~~ .cpp
-inline vec4f eval_texture(const texture_info& info, const vec2f& texcoord,
+vec4f eval_texture(const texture_info& info, const vec2f& texcoord,
     bool srgb = true, const vec4f& def =;
 ~~~
 
 Evaluate a texture
 
-#### Function add_named_shape()
+#### Function eval_camera_ray()
 
 ~~~ .cpp
-inline shape* add_named_shape(scene* scn, const string& name);
+ray3f eval_camera_ray(const camera* cam, const vec2f& uv, const vec2f& luv);
 ~~~
 
-Add a named shape, only if not already added
+Generates a ray from a camera for image plane coordinate uv and the
+lens coordinates luv.
 
-#### Function add_named_material()
+#### Function find_named_elem()
 
 ~~~ .cpp
-inline material* add_named_material(scene* scn, const string& name);
+template <typename T>
+inline T* find_named_elem(const vector<T*>& elems, const string& name);
 ~~~
 
-Add a named material, only if not already added
-
-#### Function add_named_texture()
-
-~~~ .cpp
-inline texture* add_named_texture(scene* scn, const string& name);
-~~~
-
-Add a named texture, only if not already added
-
-#### Function add_named_camera()
-
-~~~ .cpp
-inline camera* add_named_camera(scene* scn, const string& name);
-~~~
-
-Add a named camera, only if not already added
-
-#### Function add_named_environment()
-
-~~~ .cpp
-inline environment* add_named_environment(scene* scn, const string& name);
-~~~
-
-Add a named material, only if not already added
-
-#### Function add_named_instance()
-
-~~~ .cpp
-inline instance* add_named_instance(scene* scn, const string& name);
-~~~
-
-Add a named material, only if not already added
+Finds an element by name
 
 #### Function subdivide_shape_once()
 
 ~~~ .cpp
-inline void subdivide_shape_once(shape* shp, bool subdiv = false);
+void subdivide_shape_once(shape* shp, bool subdiv = false);
 ~~~
 
 Subdivides shape elements. Apply subdivision surface rules if subdivide
@@ -6982,7 +6773,7 @@ is true.
 #### Function facet_shape()
 
 ~~~ .cpp
-inline void facet_shape(shape* shp, bool recompute_normals = true);
+void facet_shape(shape* shp, bool recompute_normals = true);
 ~~~
 
 Facet a shape. Supports only non-facevarying shapes
@@ -6990,7 +6781,7 @@ Facet a shape. Supports only non-facevarying shapes
 #### Function tesselate_shape()
 
 ~~~ .cpp
-inline void tesselate_shape(shape* shp, bool subdivide,
+void tesselate_shape(shape* shp, bool subdivide,
     bool facevarying_to_sharedvertex, bool quads_to_triangles,
     bool bezier_to_lines);
 ~~~
@@ -7000,12 +6791,159 @@ Tesselate a shape into basic primitives
 #### Function tesselate_shapes()
 
 ~~~ .cpp
-inline void tesselate_shapes(scene* scn, bool subdivide,
+void tesselate_shapes(scene* scn, bool subdivide,
     bool facevarying_to_sharedvertex, bool quads_to_triangles,
     bool bezier_to_lines);
 ~~~
 
 Tesselate scene shapes and update pointers
+
+#### Function update_transforms()
+
+~~~ .cpp
+void update_transforms(scene* scn, float time = 0);
+~~~
+
+Update node transforms
+
+#### Function compute_animation_range()
+
+~~~ .cpp
+vec2f compute_animation_range(const scene* scn);
+~~~
+
+Compute animation range
+
+#### Function make_view_camera()
+
+~~~ .cpp
+camera* make_view_camera(const scene* scn, int camera_id);
+~~~
+
+Make a view camera either copying a given one or building a default one.
+Bounding boxes for the scene will be updated.
+
+#### Function compute_bounds()
+
+~~~ .cpp
+bbox3f compute_bounds(const shape* shp);
+~~~
+
+Computes a shape bounding box (quick computation that ignores radius)
+
+#### Function compute_bounds()
+
+~~~ .cpp
+bbox3f compute_bounds(const instance* ist);
+~~~
+
+Compute the instance bounding box
+
+#### Function compute_bounds()
+
+~~~ .cpp
+bbox3f compute_bounds(const scene* scn);
+~~~
+
+Compute the scene and scene's instances bounding boxes
+
+#### Function flatten_instances()
+
+~~~ .cpp
+void flatten_instances(scene* scn);
+~~~
+
+Flatten scene instances into separate meshes.
+
+#### Function print_info()
+
+~~~ .cpp
+void print_info(const scene* scn);
+~~~
+
+Print scene information (call update bounds bes before)
+
+#### Function make_bvh()
+
+~~~ .cpp
+bvh_tree* make_bvh(
+    const shape* shp, float def_radius = 0.001f, bool equalsize = true);
+~~~
+
+Build a shape BVH
+
+#### Function make_bvh()
+
+~~~ .cpp
+bvh_tree* make_bvh(
+    const scene* scn, float def_radius = 0.001f, bool equalsize = true);
+~~~
+
+Build a scene BVH. Compute shape bvhs if the map is empty.
+
+#### Function refit_bvh()
+
+~~~ .cpp
+void refit_bvh(bvh_tree* bvh, const shape* shp, float def_radius = 0.001f);
+~~~
+
+Refits a scene BVH
+
+#### Function refit_bvh()
+
+~~~ .cpp
+void refit_bvh(
+    bvh_tree* bvh, const scene* scn, bool do_shapes, float def_radius = 0.001f);
+~~~
+
+Refits a scene BVH. Refit shapes if the map is not empty.
+
+#### Struct add_elements_options
+
+~~~ .cpp
+struct add_elements_options {
+    bool smooth_normals = true;
+    float pointline_radius = 0;
+    bool tangent_space = true;
+    bool texture_data = true;
+    bool shape_instances = true;
+    bool default_environment = false;
+    bool default_names = true;
+    bool default_paths = true;
+    static add_elements_options none(); 
+}
+~~~
+
+Add elements options
+
+- Members:
+    - smooth_normals:      Add missing normal
+    - pointline_radius:      Add missing radius for points and lines (<=0 for no adding)
+    - tangent_space:      Add missing trangent space
+    - texture_data:      texture data
+    - shape_instances:      Add instances
+    - default_environment:      Add an empty default environment
+    - default_names:      Add default names
+    - default_paths:      Add default paths
+    - none():      initialize to no element
+
+
+#### Function add_elements()
+
+~~~ .cpp
+void add_elements(scene* scn, const add_elements_options& opts =;
+~~~
+
+Add elements
+
+#### Function merge_into()
+
+~~~ .cpp
+void merge_into(scene* merge_into, scene* merge_from);
+~~~
+
+Merge scene into one another. Note that the objects are _moved_ from
+merge_from to merged_into, so merge_from will be empty after this function.
 
 #### Struct load_options
 
@@ -7018,6 +6956,7 @@ struct load_options {
     bool obj_flip_tr = true;
     bool preserve_quads = false;
     bool preserve_facevarying = false;
+    bool preserve_hierarchy = false;
 }
 ~~~
 
@@ -7031,6 +6970,7 @@ Loading options
     - obj_flip_tr:      Whether to flip tr in OBJ
     - preserve_quads:      whether to preserve quads
     - preserve_facevarying:      whether to preserve face-varying faces
+    - preserve_hierarchy:      whether to preserve node hierarchy
 
 
 #### Function load_scene()
@@ -7073,307 +7013,6 @@ void save_scene(
 
 Saves a scene. For now OBJ and glTF are supported.
 Throws an exception if an error occurs.
-
-#### Struct add_elements_options
-
-~~~ .cpp
-struct add_elements_options {
-    bool smooth_normals = true;
-    float pointline_radius = 0;
-    bool tangent_space = true;
-    bool texture_data = true;
-    bool shape_instances = true;
-    bool default_camera = true;
-    bool default_environment = false;
-    bool default_names = true;
-    bool default_paths = true;
-    static add_elements_options none(); 
-}
-~~~
-
-Add elements options
-
-- Members:
-    - smooth_normals:      Add missing normal
-    - pointline_radius:      Add missing radius for points and lines (<=0 for no adding)
-    - tangent_space:      Add missing trangent space
-    - texture_data:      texture data
-    - shape_instances:      Add instances
-    - default_camera:      Add default camera
-    - default_environment:      Add an empty default environment
-    - default_names:      Add default names
-    - default_paths:      Add default paths
-    - none():      initialize to no element
-
-
-#### Function add_elements()
-
-~~~ .cpp
-void add_elements(scene* scn, const add_elements_options& opts =;
-~~~
-
-Add elements
-
-#### Function merge_into()
-
-~~~ .cpp
-void merge_into(scene* merge_into, scene* merge_from);
-~~~
-
-Merge scene into one another. Note that the objects are _moved_ from
-merge_from to merged_into, so merge_from will be empty after this function.
-
-#### Function update_bounds()
-
-~~~ .cpp
-inline void update_bounds(shape* shp);
-~~~
-
-Computes a shape bounding box (quick computation that ignores radius)
-
-#### Function update_bounds()
-
-~~~ .cpp
-inline void update_bounds(instance* ist, bool do_shape = true);
-~~~
-
-Updates the instance bounding box
-
-#### Function update_bounds()
-
-~~~ .cpp
-inline void update_bounds(scene* scn, bool do_shapes = true);
-~~~
-
-Updates the scene and scene's instances bounding boxes
-
-#### Function flatten_instances()
-
-~~~ .cpp
-inline void flatten_instances(scene* scn);
-~~~
-
-Flatten scene instances into separate meshes.
-
-#### Function update_lights()
-
-~~~ .cpp
-void update_lights(
-    scene* scn, bool include_env = false, bool sampling_cdf = false);
-~~~
-
-Initialize the lights
-
-#### Function print_info()
-
-~~~ .cpp
-void print_info(const scene* scn);
-~~~
-
-Print scene information (call update bounds bes before)
-
-#### Function make_bvh()
-
-~~~ .cpp
-inline void make_bvh(shape* shp, bool equalsize = true);
-~~~
-
-Build a shape BVH
-
-#### Function make_bvh()
-
-~~~ .cpp
-inline void make_bvh(
-    scene* scn, bool equalsize = true, bool do_shapes = true);
-~~~
-
-Build a scene BVH
-
-#### Function refit_bvh()
-
-~~~ .cpp
-inline void refit_bvh(shape* shp);
-~~~
-
-Refits a scene BVH
-
-#### Function refit_bvh()
-
-~~~ .cpp
-inline void refit_bvh(scene* scn, bool do_shapes = true);
-~~~
-
-Refits a scene BVH
-
-#### Function intersect_ray()
-
-~~~ .cpp
-inline bool intersect_ray(const shape* shp, const ray3f& ray, bool early_exit,
-    float& ray_t, int& eid, vec4f& euv);
-~~~
-
-Intersect the shape with a ray. Find any interstion if early_exit,
-otherwise find first intersection.
-
-- Parameters:
-    - scn: scene to intersect
-    - ray: ray to be intersected
-    - early_exit: whether to stop at the first found hit
-    - ray_t: ray distance at intersection
-    - eid: shape element index
-    - euv: element barycentric coordinates
-- Returns:
-    - whether it intersected
-
-#### Function intersect_ray()
-
-~~~ .cpp
-inline bool intersect_ray(const instance* ist, const ray3f& ray,
-    bool early_exit, float& ray_t, int& eid, vec4f& euv);
-~~~
-
-Intersect the instance with a ray. Find any interstion if early_exit,
-otherwise find first intersection.
-
-- Parameters:
-    - scn: scene to intersect
-    - ray: ray to be intersected
-    - early_exit: whether to stop at the first found hit
-    - ray_t: ray distance at intersection
-    - eid: shape element index
-    - euv: element barycentric coordinates
-- Returns:
-    - whether it intersected
-
-#### Function intersect_ray()
-
-~~~ .cpp
-inline bool intersect_ray(const scene* scn, const ray3f& ray, bool early_exit,
-    float& ray_t, int& iid, int& eid, vec4f& euv);
-~~~
-
-Intersect the scene with a ray. Find any interstion if early_exit,
-otherwise find first intersection.
-
-- Parameters:
-    - scn: scene to intersect
-    - ray: ray to be intersected
-    - early_exit: whether to stop at the first found hit
-    - ray_t: ray distance at intersection
-    - iid: instance index
-    - eid: shape element index
-    - euv: element barycentric coordinates
-- Returns:
-    - whether it intersected
-
-#### Struct intersection_point
-
-~~~ .cpp
-struct intersection_point {
-    float dist = 0;
-    int iid = -1;
-    int eid = -1;
-    vec4f euv = zero4f;
-    operator bool() const; 
-}
-~~~
-
-Surface point.
-
-- Members:
-    - dist:      distance of the hit along the ray or from the point
-    - iid:      instance index
-    - eid:      shape element index
-    - euv:      shape barycentric coordinates
-    - operator bool():      check if intersection is valid
-
-
-#### Function intersect_ray()
-
-~~~ .cpp
-inline intersection_point intersect_ray(
-    const scene* scn, const ray3f& ray, bool early_exit);
-~~~
-
-Intersect the scene with a ray. Find any interstion if early_exit,
-otherwise find first intersection.
-
-- Parameters:
-    - scn: scene to intersect
-    - ray: ray to be intersected
-    - early_exit: whether to stop at the first found hit
-- Returns:
-    - intersection record
-
-#### Function overlap_point()
-
-~~~ .cpp
-inline bool overlap_point(const shape* shp, const vec3f& pos, float max_dist,
-    bool early_exit, float& dist, int& eid, vec4f& euv);
-~~~
-
-Finds the closest element that overlaps a point within a given distance.
-
-- Parameters:
-    - scn: scene to intersect
-    - pos: point position
-    - max_dist: maximu valid distance
-    - early_exit: whether to stop at the first found hit
-    - dist: distance at intersection
-    - eid: shape element index
-    - euv: element barycentric coordinates
-- Returns:
-    - whether it intersected
-
-#### Function overlap_point()
-
-~~~ .cpp
-inline bool overlap_point(const instance* ist, const vec3f& pos, float max_dist,
-    bool early_exit, float& dist, int& eid, vec4f& euv);
-~~~
-
-Finds the closest element that overlaps a point within a given distance.
-
-- Parameters:
-    - scn: scene to intersect
-    - pos: point position
-    - max_dist: maximu valid distance
-    - early_exit: whether to stop at the first found hit
-    - dist: distance at intersection
-    - eid: shape element index
-    - euv: element barycentric coordinates
-- Returns:
-    - whether it intersected
-
-#### Function overlap_point()
-
-~~~ .cpp
-inline bool overlap_point(const scene* scn, const vec3f& pos, float max_dist,
-    bool early_exit, float& dist, int& iid, int& eid, vec4f& euv);
-~~~
-
-Finds the closest element that overlaps a point within a given distance.
-
-- Parameters:
-    - scn: scene to intersect
-    - pos: point position
-    - max_dist: maximu valid distance
-    - early_exit: whether to stop at the first found hit
-    - dist: distance at intersection
-    - iid: instance index
-    - eid: shape element index
-    - euv: element barycentric coordinates
-- Returns:
-    - whether it intersected
-
-#### Function overlap_instance_bounds()
-
-~~~ .cpp
-inline void overlap_instance_bounds(const scene* scn1, const scene* scn2,
-    bool skip_duplicates, bool skip_self, vector<vec2i>& overlaps);
-~~~
-
-Find the list of overlaps between instance bounds.
 
 #### Function make_cornell_box_scene()
 
@@ -7773,6 +7412,100 @@ unordered_map<string, test_environment_params>& test_environment_presets();
 
 Test environment presets
 
+#### Struct test_node_params
+
+~~~ .cpp
+struct test_node_params {
+    string name = "";
+    string parent = "";
+    string camera = "";
+    string instance = "";
+    string environment = "";
+    frame3f frame = identity_frame3f;
+    vec3f translation = {0, 0, 0};
+    quat4f rotation = {0, 0, 0, 1};
+    vec3f scaling = {1, 1, 1};
+}
+~~~
+
+Test node parameters
+
+- Members:
+    - name:      Name (if not filled, assign a default one)
+    - parent:      Parent node
+    - camera:      Camera
+    - instance:      Instance
+    - environment:      Environment
+    - frame:      Frame
+    - translation:      Translation
+    - rotation:      Roation
+    - scaling:      Scaling
+
+
+#### Function update_test_node()
+
+~~~ .cpp
+void update_test_node(
+    const scene* scn, node* nde, const test_node_params& tndr);
+~~~
+
+Updates a test node, adding it to the scene if missing.
+
+#### Function test_node_presets()
+
+~~~ .cpp
+unordered_map<string, test_node_params>& test_node_presets();
+~~~
+
+Test nodes presets
+
+#### Struct test_animation_params
+
+~~~ .cpp
+struct test_animation_params {
+    string name = "";
+    bool bezier = false;
+    float speed = 1;
+    float scale = 1;
+    vector<float> times = {};
+    vector<vec3f> translation = {};
+    vector<quat4f> rotation = {};
+    vector<vec3f> scaling = {};
+    vector<string> nodes = {};
+}
+~~~
+
+Test animation parameters
+
+- Members:
+    - name:      Name (if not filled, assign a default one)
+    - bezier:      Linear or bezier
+    - speed:      Animation speed
+    - scale:      Animation scale
+    - times:      Keyframes times
+    - translation:      Translation keyframes
+    - rotation:      Rotation keyframes
+    - scaling:      Scale keyframes
+    - nodes:      Environment
+
+
+#### Function update_test_animation()
+
+~~~ .cpp
+void update_test_animation(
+    const scene* scn, animation* anm, const test_animation_params& tndr);
+~~~
+
+Updates a test node, adding it to the scene if missing.
+
+#### Function test_node_presets()
+
+~~~ .cpp
+unordered_map<string, test_node_params>& test_node_presets();
+~~~
+
+Test nodes presets
+
 #### Struct test_scene_params
 
 ~~~ .cpp
@@ -7784,6 +7517,8 @@ struct test_scene_params {
     vector<test_shape_params> shapes;
     vector<test_instance_params> instances;
     vector<test_environment_params> environments;
+    vector<test_node_params> nodes;
+    vector<test_animation_params> animations;
 }
 ~~~
 
@@ -7797,6 +7532,8 @@ Test scene
     - shapes:      shapes
     - instances:      instances
     - environments:      envieonmennts
+    - nodes:      nodes
+    - animations:      animations
 
 
 #### Function update_test_scene()
@@ -7848,6 +7585,113 @@ void save_test_scene(const string& filename, const test_scene_params& scn);
 ~~~
 
 Save test scene
+
+#### Function specular_exponent_to_roughness()
+
+~~~ .cpp
+float specular_exponent_to_roughness(float n);
+~~~
+
+Phong exponent to roughness. Public API, see above.
+
+#### Function specular_fresnel_from_ks()
+
+~~~ .cpp
+void specular_fresnel_from_ks(const vec3f& ks, vec3f& es, vec3f& esk);
+~~~
+
+Specular to fresnel eta. Public API, see above.
+
+#### Function fresnel_dielectric()
+
+~~~ .cpp
+vec3f fresnel_dielectric(float cosw, const vec3f& eta_);
+~~~
+
+Compute the fresnel term for dielectrics. Implementation from
+https://seblagarde.wordpress.com/2013/04/29/memo-on-fresnel-equations/
+
+#### Function fresnel_metal()
+
+~~~ .cpp
+vec3f fresnel_metal(float cosw, const vec3f& eta, const vec3f& etak);
+~~~
+
+Compute the fresnel term for metals. Implementation from
+https://seblagarde.wordpress.com/2013/04/29/memo-on-fresnel-equations/
+
+#### Function fresnel_schlick()
+
+~~~ .cpp
+vec3f fresnel_schlick(const vec3f& ks, float cosw);
+~~~
+
+Schlick approximation of Fresnel term
+
+#### Function fresnel_schlick()
+
+~~~ .cpp
+vec3f fresnel_schlick(const vec3f& ks, float cosw, float rs);
+~~~
+
+Schlick approximation of Fresnel term weighted by roughness.
+This is a hack, but works better than not doing it.
+
+#### Function eval_ggx()
+
+~~~ .cpp
+float eval_ggx(float rs, float ndh, float ndi, float ndo);
+~~~
+
+Evaluates the GGX distribution and geometric term
+
+#### Function sample_ggx()
+
+~~~ .cpp
+vec3f sample_ggx(float rs, const vec2f& rn);
+~~~
+
+Sample the GGX distribution
+
+#### Function sample_ggx_pdf()
+
+~~~ .cpp
+float sample_ggx_pdf(float rs, float ndh);
+~~~
+
+Evaluates the GGX pdf
+
+#### Function filter_triangle()
+
+~~~ .cpp
+inline float filter_triangle(float x);
+~~~
+
+triangle filter (public domain from stb_image_resize)
+
+#### Function filter_cubic()
+
+~~~ .cpp
+inline float filter_cubic(float x);
+~~~
+
+cubic filter (public domain from stb_image_resize)
+
+#### Function filter_catmullrom()
+
+~~~ .cpp
+inline float filter_catmullrom(float x);
+~~~
+
+catmull-rom filter (public domain from stb_image_resize)
+
+#### Function filter_mitchell()
+
+~~~ .cpp
+inline float filter_mitchell(float x);
+~~~
+
+mitchell filter (public domain from stb_image_resize)
 
 #### Enum trace_shader_type
 
@@ -7942,7 +7786,7 @@ Names for enumeration
 
 ~~~ .cpp
 struct trace_params {
-    int camera_id = 0;
+    int camera_id = -1;
     int width = 360;
     int height = 360;
     int nsamples = 256;
@@ -7966,7 +7810,7 @@ struct trace_params {
 Rendering params
 
 - Members:
-    - camera_id:      camera id
+    - camera_id:      camera id (-1 for default)
     - width:      image width
     - height:      image height
     - nsamples:      number of samples
@@ -7986,51 +7830,117 @@ Rendering params
     - batch_size:      batch size for progressive rendering
 
 
-#### Struct trace_state
+#### Struct trace_pixel
 
 ~~~ .cpp
-struct trace_state {
+struct trace_pixel {
+    vec4f acc = zero4f;
+    rng_pcg32 rng = rng_pcg32();
+    int i = 0, j = 0;
+    int sample = 0;
+    int dimension = 0;
+    float weight = 0;
+    int nsamples = 0;
+    trace_rng_type rtype = trace_rng_type::uniform;
+}
 ~~~
 
-Trace state. Members are not part of the public API.
+Trace pixel state. Handles image accumulation and random number generation
+for uniform and stratified sequences. The members are not part of the
+the public API.
 
-#### Function make_trace_state()
+- Members:
+    - acc:      pixel accumulated radiance and coverage
+    - rng:      random number state
+    - i:      pixel coordinates
+    - sample:      number of samples computed
+    - dimension:      current dimension
+    - weight:      pixel weight for filtering
+    - nsamples:      total number of samples
+    - rtype:      random number type
+
+
+#### Struct trace_light
 
 ~~~ .cpp
-trace_state* make_trace_state(const trace_params& params);
+struct trace_light {
+    const instance* ist = nullptr;
+    const environment* env = nullptr;
+}
 ~~~
 
-Initialize a rendering state
+Trace light as either instances or environments. The members are not part of
+the the public API.
 
-#### Function get_trace_image()
+- Members:
+    - ist:      Instance pointer for instance lights
+    - env:      Environment pointer for environment lights
+
+
+#### Struct trace_lights
 
 ~~~ .cpp
-inline const image4f& get_trace_image(const trace_state* st);
+struct trace_lights {
+    vector<trace_light> lights;
+    unordered_map<shape*, vector<float>> shape_cdfs;
+    unordered_map<shape*, float> shape_areas;
+    bool empty() const; 
+    int size() const; 
+}
 ~~~
 
-Gets the computed trace image
+Trace lights. Handles sampling of illumination. The members are not part of
+the the public API.
 
-#### Function get_trace_sample()
+- Members:
+    - lights:      Shape instances
+    - shape_cdfs:      Shape cdf
+    - shape_areas:      Shape areas
+    - empty():      whether it is empty
+    - size():      number of lights
+
+
+#### Function make_trace_pixels()
 
 ~~~ .cpp
-inline int get_trace_sample(const trace_state* st);
+image<trace_pixel> make_trace_pixels(const trace_params& params);
 ~~~
 
-Gets the current trace sample
+Initialize the rendering pixels
+
+#### Function make_trace_lights()
+
+~~~ .cpp
+trace_lights make_trace_lights(const scene* scn);
+~~~
+
+Initialize trace lights
 
 #### Function trace_samples()
 
 ~~~ .cpp
-void trace_samples(trace_state* st, const scene* scn, int nsamples,
-    const trace_params& params);
+void trace_samples(const scene* scn, const camera* cam, const bvh_tree* bvh,
+    const trace_lights& lights, image4f& img, image<trace_pixel>& pixels,
+    int nsamples, const trace_params& params);
 ~~~
 
 Trace the next nsamples samples.
 
+#### Function trace_samples_filtered()
+
+~~~ .cpp
+void trace_samples_filtered(const scene* scn, const camera* cam,
+    const bvh_tree* bvh, const trace_lights& lights, image4f& img,
+    image<trace_pixel>& pixels, int nsamples, const trace_params& params);
+~~~
+
+Trace the next nsamples samples with image filtering.
+
 #### Function trace_image()
 
 ~~~ .cpp
-inline image4f trace_image(const scene* scn, const trace_params& params);
+inline image4f trace_image(const scene* scn, const camera* cam,
+    const bvh_tree* bvh, const trace_params& params);
 ~~~
 
 Trace the whole image
@@ -8038,8 +7948,9 @@ Trace the whole image
 #### Function trace_async_start()
 
 ~~~ .cpp
-void trace_async_start(
-    trace_state* st, const scene* scn, const trace_params& params);
+void trace_async_start(const scene* scn, const camera* cam, const bvh_tree* bvh,
+    const trace_lights& lights, image4f& img, image<trace_pixel>& pixels,
+    vector<std::thread>& threads, bool& stop_flag, const trace_params& params);
 ~~~
 
 Starts an anyncrhounous renderer.
@@ -8047,7 +7958,7 @@ Starts an anyncrhounous renderer.
 #### Function trace_async_stop()
 
 ~~~ .cpp
-void trace_async_stop(trace_state* st);
+void trace_async_stop(vector<std::thread>& threads, bool& stop_flag);
 ~~~
 
 Stop the asynchronous renderer.
@@ -8306,22 +8217,34 @@ Environment [extension]
     - matname:      material name
 
 
-#### Struct obj_instance
+#### Struct obj_node
 
 ~~~ .cpp
-struct obj_instance {
+struct obj_node {
     string name;
-    frame3f frame = identity_frame3f;
+    string parent;
+    string camname;
     string objname;
+    string envname;
+    frame3f frame = identity_frame3f;
+    vec3f translation = zero3f;
+    quat4f rotation = {0, 0, 0, 1};
+    vec3f scaling = {1, 1, 1};
 }
 ~~~
 
-Instance [extension]
+Node [extension]
 
 - Members:
-    - name:      instance name
+    - name:      node name
+    - parent:      node parent
+    - camname:      camera
+    - objname:      object
+    - envname:      environment
     - frame:      transform frame (affine matrix)
-    - objname:      object name
+    - translation:      translation
+    - rotation:      rotation
+    - scaling:      scaling
 
 
 #### Struct obj_scene
@@ -8338,7 +8261,7 @@ struct obj_scene {
     vector<obj_texture*> textures;
     vector<obj_camera*> cameras;
     vector<obj_environment*> environments;
-    vector<obj_instance*> instances;
+    vector<obj_node*> nodes;
     ~obj_scene(); 
 }
 ~~~
@@ -8356,7 +8279,7 @@ OBJ asset
     - textures:      textures
     - cameras:      cameras [extension]
     - environments:      env maps [extension]
-    - instances:      instances [extension]
+    - nodes:      nodes [extension]
     - ~obj_scene():      cleanup
 
 
@@ -9797,6 +9720,14 @@ inline void split_path(
 
 Splits a path calling the above functions.
 
+#### Function path_convert_eparator()
+
+~~~ .cpp
+inline string path_convert_eparator(const string& path_);
+~~~
+
+Convert from Windows to Unix/OsX path separator
+
 #### Function format()
 
 ~~~ .cpp
@@ -10065,97 +9996,6 @@ inline void log_fatal(const string& msg, const Args&... args);
 ~~~
 
 Logs a message to the default loggers
-
-#### Struct thread_pool
-
-~~~ .cpp
-struct thread_pool {
-~~~
-
-Thread pool for concurrency. This code is derived from LLVM ThreadPool
-
-#### Function make_pool()
-
-~~~ .cpp
-inline thread_pool* make_pool(
-    int nthreads = std::thread::hardware_concurrency());
-~~~
-
-Makes a thread pool
-
-#### Function run_async()
-
-~~~ .cpp
-inline std::shared_future<void> run_async(
-    thread_pool* pool, const function<void()>& task);
-~~~
-
-Runs a task asynchronously onto the global thread pool
-
-#### Function wait_pool()
-
-~~~ .cpp
-inline void wait_pool(thread_pool* pool);
-~~~
-
-Wait for all jobs to finish on the global thread pool
-
-#### Function clear_pool()
-
-~~~ .cpp
-inline void clear_pool(thread_pool* pool);
-~~~
-
-Clear all jobs on the global thread pool
-
-#### Function parallel_for()
-
-~~~ .cpp
-inline void parallel_for(
-    thread_pool* pool, int count, const function<void(int idx)>& task);
-~~~
-
-Parallel for implementation on the global thread pool
-
-#### Function get_global_pool()
-
-~~~ .cpp
-inline thread_pool* get_global_pool();
-~~~
-
-Global pool
-
-#### Function run_async()
-
-~~~ .cpp
-inline std::shared_future<void> run_async(const function<void()>& task);
-~~~
-
-Runs a task asynchronously onto the global thread pool
-
-#### Function wait_pool()
-
-~~~ .cpp
-inline void wait_pool();
-~~~
-
-Wait for all jobs to finish on the global thread pool
-
-#### Function clear_pool()
-
-~~~ .cpp
-inline void clear_pool();
-~~~
-
-Clear all jobs on the global thread pool
-
-#### Function parallel_for()
-
-~~~ .cpp
-inline void parallel_for(int count, const function<void(int idx)>& task);
-~~~
-
-Parallel for implementation on the global thread pool
 
 #### Struct timer
 
@@ -11209,7 +11049,7 @@ Ends a frame.
 
 ~~~ .cpp
 inline void set_stdsurface_lights(gl_stdsurface_program& prog, const vec3f& amb,
-    int num, vec3f* pos, vec3f* ke, gl_ltype* type);
+    int num, const vec3f* pos, const vec3f* ke, const gl_ltype* type);
 ~~~
 
 Set num lights with position pos, color ke, type ltype. Also set the
@@ -11254,7 +11094,7 @@ Set the object as highlighted.
 
 ~~~ .cpp
 inline void set_stdsurface_material(gl_stdsurface_program& prog,
-    material_type mtype, gl_etype etype, const vec3f& ke, const vec3f& kd,
+    material_type type, gl_etype etype, const vec3f& ke, const vec3f& kd,
     const vec3f& ks, float rs, float op, const gl_texture_info& ke_txt,
     const gl_texture_info& kd_txt, const gl_texture_info& ks_txt,
     const gl_texture_info& rs_txt, const gl_texture_info& norm_txt,
@@ -11327,11 +11167,19 @@ struct gl_stdsurface_state {
 State object for gl_stdsurface_program drawing. Members are not part of the
 public API.
 
+#### Struct gl_stdsurface_lights
+
+~~~ .cpp
+struct gl_stdsurface_lights {
+~~~
+
+State object to store lights for stdsurface rendering
+
 #### Struct gl_stdsurface_params
 
 ~~~ .cpp
 struct gl_stdsurface_params {
-    int camera_id = 0;
+    int camera_id = -1;
     int width = 360;
     int height = 360;
     float exposure = 0;
@@ -11354,7 +11202,7 @@ struct gl_stdsurface_params {
 Params for  gl_stdsurface_program drawing
 
 - Members:
-    - camera_id:      camera id
+    - camera_id:      camera id (-1 for deafult)
     - width:      image width
     - height:      image height
     - exposure:      image exposure
@@ -11392,6 +11240,14 @@ void update_stdsurface_state(gl_stdsurface_state* st, const scene* scn,
 Update gl_stdsurface_program draw state. This updates stdsurface meshes
 and textures on the GPU.
 
+#### Function make_stdsurface_lights()
+
+~~~ .cpp
+gl_stdsurface_lights make_stdsurface_lights(const scene* scn);
+~~~
+
+Initialize stdsurface lights
+
 #### Function clear_stdsurface_state()
 
 ~~~ .cpp
@@ -11404,6 +11260,7 @@ Clear gl_stdsurface_program draw state
 
 ~~~ .cpp
 void draw_stdsurface_scene(gl_stdsurface_state* st, const scene* scn,
+    const camera* cam, const gl_stdsurface_lights& lights,
     const gl_stdsurface_params& params);
 ~~~
 
@@ -11684,6 +11541,16 @@ Label widget
 ~~~ .cpp
 template <typename T>
 inline void draw_label_widget(gl_window* win, const string& lbl, const T& val);
+~~~
+
+Label widget
+
+#### Function draw_label_widget()
+
+~~~ .cpp
+template <typename T>
+inline void draw_label_widget(gl_window* win, const string& lbl,
+    const vector<T>& vals, bool skip_empty = false);
 ~~~
 
 Label widget
@@ -12041,7 +11908,7 @@ Image inspection widgets
 
 ~~~ .cpp
 inline bool draw_camera_widget(
-    gl_window* win, const string& lbl, scene* scn, int& cam_idx);
+    gl_window* win, const string& lbl, scene* scn, camera* view, int& cam_idx);
 ~~~
 
 Draws a widget that can selected the camera

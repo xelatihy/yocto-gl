@@ -6079,9 +6079,8 @@ inline image4f trace_image(const scene* scn, const camera* cam,
 
 /// Starts an anyncrhounous renderer.
 void trace_async_start(const scene* scn, const camera* cam, const bvh_tree* bvh,
-    const trace_lights& lights, image4f& img,
-    image<trace_pixel>& pixels, vector<std::thread>& threads, bool& stop_flag,
-    const trace_params& params);
+    const trace_lights& lights, image4f& img, image<trace_pixel>& pixels,
+    vector<std::thread>& threads, bool& stop_flag, const trace_params& params);
 
 /// Stop the asynchronous renderer.
 void trace_async_stop(vector<std::thread>& threads, bool& stop_flag);

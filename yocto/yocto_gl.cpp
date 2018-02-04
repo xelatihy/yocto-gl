@@ -6297,8 +6297,8 @@ inline trace_point trace_eval_point(
 }
 
 // Sample weight for a light point.
-inline float trace_weight_light(const trace_lights& lights,
-                                const trace_point& lpt, const trace_point& pt) {
+inline float trace_weight_light(
+    const trace_lights& lights, const trace_point& lpt, const trace_point& pt) {
     if (!lpt.em) return 0;
     // support only one lobe for now
     switch (lpt.em.type) {
@@ -6335,12 +6335,14 @@ inline trace_point trace_sample_light(const trace_lights& lights,
             eid = sample_points(lights.shape_cdfs.at(lgt.ist->shp), rne);
             euv = {1, 0, 0, 0};
         } else if (!lgt.ist->shp->lines.empty()) {
-            std::tie(eid, (vec2f&)euv) = sample_lines(lights.shape_cdfs.at(lgt.ist->shp), rne, rn.x);
+            std::tie(eid, (vec2f&)euv) =
+                sample_lines(lights.shape_cdfs.at(lgt.ist->shp), rne, rn.x);
         } else if (!lgt.ist->shp->triangles.empty()) {
             std::tie(eid, (vec3f&)euv) =
                 sample_triangles(lights.shape_cdfs.at(lgt.ist->shp), rne, rn);
         } else if (!lgt.ist->shp->quads.empty()) {
-            std::tie(eid, (vec4f&)euv) = sample_quads(lights.shape_cdfs.at(lgt.ist->shp), rne, rn);
+            std::tie(eid, (vec4f&)euv) =
+                sample_quads(lights.shape_cdfs.at(lgt.ist->shp), rne, rn);
         } else {
             assert(false);
         }
@@ -6426,8 +6428,8 @@ inline vec3f trace_path(const scene* scn, const bvh_tree* bvh,
 
         // direct – light
         auto lgt = lights.lights[trace_next1i(pxl, (int)lights.size())];
-        auto lpt =
-            trace_sample_light(lights, lgt, pt, trace_next1f(pxl), trace_next2f(pxl));
+        auto lpt = trace_sample_light(
+            lights, lgt, pt, trace_next1f(pxl), trace_next2f(pxl));
         auto lw = trace_weight_light(lights, lpt, pt) * (float)lights.size();
         auto lke = trace_eval_emission(lpt);
         auto lbc = trace_eval_brdfcos(pt, -lpt.wo);
@@ -6498,8 +6500,8 @@ inline vec3f trace_path_nomis(const scene* scn, const bvh_tree* bvh,
 
         // direct
         auto& lgt = lights.lights[trace_next1i(pxl, (int)lights.size())];
-        auto lpt =
-            trace_sample_light(lights, lgt, pt, trace_next1f(pxl), trace_next2f(pxl));
+        auto lpt = trace_sample_light(
+            lights, lgt, pt, trace_next1f(pxl), trace_next2f(pxl));
         auto ld = trace_eval_emission(lpt) * trace_eval_brdfcos(pt, -lpt.wo) *
                   trace_weight_light(lights, lpt, pt) * (float)lights.size();
         if (ld != zero3f) {
@@ -6554,8 +6556,8 @@ inline vec3f trace_path_hack(const scene* scn, const bvh_tree* bvh,
     for (auto bounce = 0; bounce < params.max_depth; bounce++) {
         // direct
         auto& lgt = lights.lights[trace_next1i(pxl, (int)lights.size())];
-        auto lpt =
-            trace_sample_light(lights, lgt, pt, trace_next1f(pxl), trace_next2f(pxl));
+        auto lpt = trace_sample_light(
+            lights, lgt, pt, trace_next1f(pxl), trace_next2f(pxl));
         auto ld = trace_eval_emission(lpt) * trace_eval_brdfcos(pt, -lpt.wo) *
                   trace_weight_light(lights, lpt, pt) * (float)lights.size();
         if (ld != zero3f) {
@@ -6609,8 +6611,8 @@ inline vec3f trace_direct(const scene* scn, const bvh_tree* bvh,
 
     // direct
     for (auto& lgt : lights.lights) {
-        auto lpt =
-            trace_sample_light(lights, lgt, pt, trace_next1f(pxl), trace_next2f(pxl));
+        auto lpt = trace_sample_light(
+            lights, lgt, pt, trace_next1f(pxl), trace_next2f(pxl));
         auto ld = trace_eval_emission(lpt) * trace_eval_brdfcos(pt, -lpt.wo) *
                   trace_weight_light(lights, lpt, pt);
         if (ld == zero3f) continue;
@@ -6940,11 +6942,14 @@ trace_lights make_trace_lights(const scene* scn) {
         lights.lights.push_back({ist, nullptr});
         if (!contains(lights.shape_cdfs, ist->shp)) {
             if (!ist->shp->points.empty()) {
-                lights.shape_cdfs[ist->shp] = sample_points_cdf(ist->shp->points.size());
+                lights.shape_cdfs[ist->shp] =
+                    sample_points_cdf(ist->shp->points.size());
             } else if (!ist->shp->lines.empty()) {
-                lights.shape_cdfs[ist->shp] = sample_lines_cdf(ist->shp->lines, ist->shp->pos);
+                lights.shape_cdfs[ist->shp] =
+                    sample_lines_cdf(ist->shp->lines, ist->shp->pos);
             } else if (!ist->shp->triangles.empty()) {
-                lights.shape_cdfs[ist->shp] = sample_triangles_cdf(ist->shp->triangles, ist->shp->pos);
+                lights.shape_cdfs[ist->shp] =
+                    sample_triangles_cdf(ist->shp->triangles, ist->shp->pos);
             }
             lights.shape_areas[ist->shp] = lights.shape_cdfs[ist->shp].back();
         }

@@ -148,8 +148,8 @@ int main(int argc, char* argv[]) {
                 imfilename, app->img, app->exposure, app->gamma, app->filmic);
         }
         log_info("rendering sample {}/{}", cur_sample, app->params.nsamples);
-        trace_samples(app->scn, cam, app->bvh, app->lights, app->img, app->pixels,
-            app->params.batch_size, app->params);
+        trace_samples(app->scn, cam, app->bvh, app->lights, app->img,
+            app->pixels, app->params.batch_size, app->params);
     }
     log_info("rendering done");
 
