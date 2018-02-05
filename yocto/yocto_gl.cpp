@@ -79,11 +79,8 @@
 // ## Next
 //
 // - simplify trace_point
-//     - envpoint from uv
-//     - envpoint pos and norm
 //     - double sided in material functions
 // - sample background to sum all environments
-// - sample lights using trace_lights
 // - remove default environment
 // - handle missing environment in trace
 //
@@ -3564,13 +3561,6 @@ void add_elements(scene* scn, const add_elements_options& opts) {
             shp->path = shp->name + ".bin";
         }
     }
-
-    // default environment
-    if (opts.default_environment && scn->environments.empty()) {
-        auto env = new environment();
-        env->name = "default_environment";
-        scn->environments.push_back(env);
-    }
 }
 
 // Make a view camera either copying a given one or building a default one.
@@ -6122,7 +6112,7 @@ inline trace_point trace_eval_point(const environment* env, const vec3f& wo) {
     pt.ke = env->ke;
     if (env->ke_txt) {
         auto w = transform_direction_inverse(env->frame, -wo);
-        auto theta = acos(clamp(w.y, (float)-1, (float)1));
+        auto theta = acos(clamp(w.y, -1.0f, 1.0f));
         auto phi = atan2(w.z, w.x);
         auto texcoord = vec2f{0.5f + phi / (2 * pif), theta / pif};
         pt.ke *= eval_texture(env->ke_txt, texcoord).xyz();
@@ -6265,6 +6255,12 @@ inline float trace_weight_light(
     return 0;
 }
 
+// Sample weight for a light point.
+inline float trace_weight_lights(
+    const trace_lights& lights, const trace_point& lpt, const trace_point& pt) {
+    return lights.lights.size() * trace_weight_light(lights, lpt, pt);
+}
+
 // Picks a point on a light.
 inline trace_point trace_sample_light(const trace_lights& lights,
     const trace_light& lgt, const trace_point& pt, float rne, const vec2f& rn) {
@@ -6290,12 +6286,20 @@ inline trace_point trace_sample_light(const trace_lights& lights,
     }
     if (lgt.env) {
         auto z = -1 + 2 * rn.y;
-        auto rr = sqrt(clamp(1 - z * z, (float)0, (float)1));
+        auto rr = sqrt(clamp(1 - z * z, 0.0f, 1.0f));
         auto phi = 2 * pif * rn.x;
         auto wo = vec3f{cos(phi) * rr, z, sin(phi) * rr};
         return trace_eval_point(lgt.env, wo);
     }
     return {};
+}
+
+// Picks a point on a light.
+inline trace_point trace_sample_lights(const trace_lights& lights,
+    const trace_point& pt, float rnl, float rne, const vec2f& ruv) {
+    auto& lgt = lights.lights.at(
+        clamp((int)(rnl * lights.lights.size()), 0, (int)lights.lights.size()));
+    return trace_sample_light(lights, lgt, pt, rne, ruv);
 }
 
 // Intersects a ray with the scn and return the point (or env

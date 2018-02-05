@@ -5296,8 +5296,6 @@ struct add_elements_options {
     bool texture_data = true;
     /// Add instances
     bool shape_instances = true;
-    /// Add an empty default environment
-    bool default_environment = false;
     /// Add default names
     bool default_names = true;
     /// Add default paths
