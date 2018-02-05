@@ -78,23 +78,20 @@
 //
 // ## Next
 //
-// - interior shapes generation in procedural
+// - uniform serialization
+//    - consider simpler serialization code based on input flag
+//    - consider json archive model (use this to define to_son/from_from)
 // - update documentation
 // - BUG: hair look in yitrace
 // - simplify trace_point
 //     - double sided in material functions
+// - simplify trace_light
+//     - maybe include shape directly?
+// - remove background from point?
 // - sample background to sum all environments
-//
-// ## General
-//
-// - remove python operators
 //
 // ## Infrastructure
 //
-// - meshes with multiple shapes
-// - uniform serialization
-//    - consider simpler serialization code based on input flag
-//    - consider json archive model (use this to define to_son/from_from)
 // - check rotation and decompoaition of rotations
 //    - see euclideanspace.com
 //
