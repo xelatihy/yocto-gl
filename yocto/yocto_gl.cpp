@@ -3119,7 +3119,7 @@ intersection_point overlap_bvh(
 namespace ygl {
 
 // cleanup
-animation::~animation() {
+animation_group::~animation_group() {
     for (auto v : keyframes) delete v;
 }
 
@@ -3374,7 +3374,7 @@ void tesselate_shapes(scene* scn, bool subdivide,
 }
 
 // Update animation transforms
-void update_transforms(animation* anm, float time) {
+void update_transforms(animation_group* ang, float time) {
     auto interpolate = [](keyframe_type type, const vector<float>& times,
                            const auto& vals, float time) {
         switch (type) {
@@ -3390,21 +3390,21 @@ void update_transforms(animation* anm, float time) {
         return vals.at(0);
     };
 
-    for (auto kfr : anm->keyframes) {
+    for (auto kfr : ang->keyframes) {
         if (!kfr->translation.empty()) {
             auto val =
                 interpolate(kfr->type, kfr->times, kfr->translation, time);
-            for (auto target : anm->targets)
+            for (auto target : ang->targets)
                 if (target.first == kfr) target.second->translation = val;
         }
         if (!kfr->rotation.empty()) {
             auto val = interpolate(kfr->type, kfr->times, kfr->rotation, time);
-            for (auto target : anm->targets)
+            for (auto target : ang->targets)
                 if (target.first == kfr) target.second->rotation = val;
         }
         if (!kfr->scaling.empty()) {
             auto val = interpolate(kfr->type, kfr->times, kfr->scaling, time);
-            for (auto target : anm->targets)
+            for (auto target : ang->targets)
                 if (target.first == kfr) target.second->scaling = val;
         }
     }
@@ -4913,8 +4913,8 @@ scene* gltf_to_scene(const glTF* gltf, const load_options& opts) {
 
     // convert animations
     for (auto ganm : gltf->animations) {
-        auto anm = new animation();
-        anm->name = ganm->name;
+        auto ang = new animation_group();
+        ang->name = ganm->name;
         auto sampler_map = unordered_map<vec2i, keyframe*>();
         for (auto gchannel : ganm->channels) {
             if (sampler_map.find({(int)gchannel->sampler,
@@ -4975,13 +4975,13 @@ scene* gltf_to_scene(const glTF* gltf, const load_options& opts) {
                 }
                 sampler_map[{
                     (int)gchannel->sampler, (int)gchannel->target->path}] = kfr;
-                anm->keyframes.push_back(kfr);
+                ang->keyframes.push_back(kfr);
             }
-            anm->targets.push_back({sampler_map.at({(int)gchannel->sampler,
+            ang->targets.push_back({sampler_map.at({(int)gchannel->sampler,
                                         (int)gchannel->target->path}),
                 scn->nodes[(int)gchannel->target->node]});
         }
-        scn->animations.push_back(anm);
+        scn->animations.push_back(ang);
     }
 
     // compute transforms
@@ -11273,15 +11273,15 @@ void update_test_node(
 
 // Makes/updates a test animation
 void update_test_animation(
-    const scene* scn, animation* anm, const test_animation_params& tanm) {
+    const scene* scn, animation_group* ang, const test_animation_params& tanm) {
     if (tanm.name == "") throw runtime_error("cannot use empty name");
-    if (anm->keyframes.size() != 1) {
-        for (auto v : anm->keyframes) delete v;
-        anm->keyframes.clear();
-        anm->keyframes.push_back(new keyframe());
+    if (ang->keyframes.size() != 1) {
+        for (auto v : ang->keyframes) delete v;
+        ang->keyframes.clear();
+        ang->keyframes.push_back(new keyframe());
     }
-    anm->name = tanm.name;
-    auto kfr = anm->keyframes.front();
+    ang->name = tanm.name;
+    auto kfr = ang->keyframes.front();
     kfr->name = tanm.name;
     kfr->type = (!tanm.bezier) ? keyframe_type::linear : keyframe_type::bezier;
     kfr->times = tanm.times;
@@ -11291,9 +11291,9 @@ void update_test_animation(
     kfr->scaling = tanm.scaling;
     for (auto& v : kfr->translation) v *= tanm.scale;
     for (auto& v : kfr->scaling) v *= tanm.scale;
-    anm->targets.clear();
+    ang->targets.clear();
     for (auto& nde : tanm.nodes)
-        anm->targets.push_back({kfr, find_named_elem(scn->nodes, nde)});
+        ang->targets.push_back({kfr, find_named_elem(scn->nodes, nde)});
 }
 
 // Update test elements
@@ -14631,8 +14631,8 @@ inline void draw_tree_widgets(
 }
 
 inline void draw_tree_widgets(
-    gl_window* win, const string& lbl, animation* anm, void*& selection) {
-    draw_tree_widget_leaf(win, lbl + anm->name, selection, anm);
+    gl_window* win, const string& lbl, animation_group* ang, void*& selection) {
+    draw_tree_widget_leaf(win, lbl + ang->name, selection, ang);
 }
 
 template <typename T>
@@ -14835,16 +14835,16 @@ inline bool draw_elem_widgets(gl_window* win, scene* scn, node* nde,
     return std::any_of(edited.begin(), edited.end(), [](auto x) { return x; });
 }
 
-inline bool draw_elem_widgets(gl_window* win, scene* scn, animation* anm,
+inline bool draw_elem_widgets(gl_window* win, scene* scn, animation_group* ang,
     void*& selection, const unordered_map<texture*, gl_texture>& gl_txt) {
     auto nde_names = vector<pair<string, node*>>{{"<none>", nullptr}};
     for (auto nde : scn->nodes) nde_names.push_back({nde->name, nde});
 
     auto edited = vector<bool>();
     draw_separator_widget(win);
-    draw_label_widget(win, "name", anm->name);
-    for (auto kid = 0; kid < anm->keyframes.size(); kid++) {
-        auto kfr = anm->keyframes[kid];
+    draw_label_widget(win, "name", ang->name);
+    for (auto kid = 0; kid < ang->keyframes.size(); kid++) {
+        auto kfr = ang->keyframes[kid];
         auto ids = to_string(kid);
         edited.push_back(draw_value_widget(win, "name " + ids, kfr->name));
         edited.push_back(draw_value_widget(
@@ -14854,9 +14854,9 @@ inline bool draw_elem_widgets(gl_window* win, scene* scn, animation* anm,
         draw_label_widget(win, "rotation " + ids, kfr->rotation, true);
         draw_label_widget(win, "scale " + ids, kfr->scaling, true);
     }
-    for (auto tid = 0; tid < anm->targets.size(); tid++) {
-        auto kfr = anm->targets[tid].first;
-        auto nde = anm->targets[tid].second;
+    for (auto tid = 0; tid < ang->targets.size(); tid++) {
+        auto kfr = ang->targets[tid].first;
+        auto nde = ang->targets[tid].second;
         auto ids = to_string(tid);
         draw_label_widget(win, "target " + ids, kfr->name + " -> " + nde->name);
     }

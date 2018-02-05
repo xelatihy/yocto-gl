@@ -5069,15 +5069,6 @@ struct environment {
     texture_info ke_txt = {};
 };
 
-/// Light, either an instance or an environment.
-/// This is only used internally to avoid looping over all objects every time.
-struct light {
-    /// instance
-    instance* ist = nullptr;
-    /// environment
-    environment* env = nullptr;
-};
-
 /// Node hierarchy
 struct node {
     /// name
@@ -5148,7 +5139,7 @@ struct keyframe {
 };
 
 /// Animation made of multiple keyframed values
-struct animation {
+struct animation_group {
     /// Name
     std::string name;
     /// path (only used when writing files on disk with glTF)
@@ -5159,7 +5150,7 @@ struct animation {
     vector<pair<keyframe*, node*>> targets;
 
     // Cleanup
-    ~animation();
+    ~animation_group();
 };
 
 /// Scene
@@ -5180,7 +5171,7 @@ struct scene {
     /// node hierarchy
     vector<node*> nodes = {};
     /// node animation
-    vector<animation*> animations = {};
+    vector<animation_group*> animations = {};
 
     // Cleanup
     ~scene();
@@ -5714,7 +5705,7 @@ struct test_animation_params {
 
 /// Updates a test node, adding it to the scene if missing.
 void update_test_animation(
-    const scene* scn, animation* anm, const test_animation_params& tndr);
+    const scene* scn, animation_group* anm, const test_animation_params& tndr);
 
 /// Test nodes presets
 unordered_map<string, test_node_params>& test_node_presets();
