@@ -5121,7 +5121,7 @@ inline vector<pair<string, keyframe_type>>& keyframe_type_names() {
 }
 
 /// Keyframe data.
-struct keyframe {
+struct animation {
     /// Name
     std::string name;
     /// Interpolation
@@ -5145,9 +5145,9 @@ struct animation_group {
     /// path (only used when writing files on disk with glTF)
     std::string path = "";
     /// Keyframed values
-    vector<keyframe*> keyframes;
+    vector<animation*> animations;
     /// Binds keyframe values to nodes.
-    vector<pair<keyframe*, node*>> targets;
+    vector<pair<animation*, node*>> targets;
 
     // Cleanup
     ~animation_group();
