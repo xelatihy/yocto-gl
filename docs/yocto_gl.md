@@ -24,7 +24,7 @@ and released under the MIT license. Features include:
 - procedural sun and sky HDR
 - procedural Perlin noise
 - BVH for intersection and closest point query
-- Python-like iterators, string, path and container operations
+- Python-like string, path and container operations
 - utilities to load and save entire text and binary files
 - immediate mode command line parser
 - simple logger
@@ -203,17 +203,6 @@ functions targeting path tracing and shape generations.
    `sample_hemisphere_cospower()`. `sample_disk()`. `sample_cylinder()`.
    `sample_triangle()`. For each warp, you can compute the PDF with
    `sample_xxx_pdf()`.
-
-
-### Python-like container operations and iterators
-
-To make the code more readable, we adopt Python-like iterations and
-container operations extensively throughout Yocto/GL. These operations
-are mostly for internal use but could also be used externally.
-
-1. Python iterators with `range()` and `enumerate()`
-2. Python operators for containers: support for + and += for `std::vector`
-3. Check for containment with `contains`  similarly to `in` in Python
 
 
 ### Shape Utilities
@@ -4515,93 +4504,57 @@ float perlin_turbulence_noise(const vec3f& p, float lacunarity = 2.0f,
 
 Fractal turbulence noise - see perlin_noise() for params.
 
-#### Function range()
+#### Function range_()
 
 ~~~ .cpp
-inline range_generator range(int max);
+inline range_generator range_(int max);
 ~~~
 
 Python-like range
 
-#### Function range()
+#### Function range_()
 
 ~~~ .cpp
-inline range_generator range(int min, int max, int step = 1);
+inline range_generator range_(int min, int max, int step = 1);
 ~~~
 
 Python-like range
 
-#### Function enumerate()
+#### Function enumerate_()
 
 ~~~ .cpp
 template <typename T>
-inline enumerate_generator<const T> enumerate(const vector<T>& vv);
+inline enumerate_generator<const T> enumerate_(const vector<T>& vv);
 ~~~
 
 Python-like range
 
-#### Function enumerate()
+#### Function enumerate_()
 
 ~~~ .cpp
 template <typename T>
-inline enumerate_generator<T> enumerate(vector<T>& vv);
+inline enumerate_generator<T> enumerate_(vector<T>& vv);
 ~~~
 
 Python-like range
 
-#### Function operator+()
+#### Function append()
 
 ~~~ .cpp
 template <typename T>
-inline vector<T> operator+(const vector<T>& v, const T& vv);
-~~~
-
-Append an element to a vector
-
-#### Function operator+=()
-
-~~~ .cpp
-template <typename T>
-inline vector<T>& operator+=(vector<T>& v, const T& vv);
-~~~
-
-Append an element to a vector
-
-#### Function operator+()
-
-~~~ .cpp
-template <typename T, typename ET>
-inline vector<T> operator+(const vector<T>& v, const ET& vv);
-~~~
-
-Append an element to a vector
-
-#### Function operator+=()
-
-~~~ .cpp
-template <typename T, typename ET>
-inline vector<T>& operator+=(vector<T>& v, const ET& vv);
-~~~
-
-Append an element to a vector
-
-#### Function operator+()
-
-~~~ .cpp
-template <typename T>
-inline vector<T> operator+(const vector<T>& v, const vector<T>& vv);
+inline void append(vector<T>& v, const vector<T>& vv);
 ~~~
 
 Append a vector to a vector
 
-#### Function operator+=()
+#### Function join()
 
 ~~~ .cpp
 template <typename T>
-inline vector<T>& operator+=(vector<T>& v, const vector<T>& vv);
+inline vector<T> join(const vector<T>& a, const vector<T>& b);
 ~~~
 
-Append a vector to a vector
+Append two vectors
 
 #### Function get_key()
 
@@ -10017,30 +9970,29 @@ A simple wrapper for std::chrono.
     - elapsed():      elapsed time
 
 
-#### Enum gl_etype : int
+#### Enum gl_elem_type : int
 
 ~~~ .cpp
-enum struct gl_etype : int {
+enum struct gl_elem_type : int {
     point = 1,
     line = 2,
-    triangle = 3,
-    quad = 4,
+    triangle = 3
+
 }
 ~~~
 
-Shape types
+Shape element types
 
 - Values:
     - point:      points
     - line:      lines
     - triangle:      triangles
-    - quad:      quads
 
 
-#### Enum gl_ltype : int
+#### Enum gl_light_type : int
 
 ~~~ .cpp
-enum struct gl_ltype : int {
+enum struct gl_light_type : int {
     point = 0,
     directional = 1,
 }
@@ -10052,6 +10004,14 @@ Light types
     - point:      point lights
     - directional:      directional lights
 
+
+#### Struct gl_lights
+
+~~~ .cpp
+struct gl_lights {
+~~~
+
+State object to store lights for light rendering
 
 #### Function gl_check_error()
 
@@ -10925,6 +10885,65 @@ void unbind_program(const gl_program& prog);
 
 Unbind a program
 
+#### Struct gl_shape
+
+~~~ .cpp
+struct gl_shape {
+~~~
+
+Vertex buffers for scene drawing. Members are not part of the public API.
+
+#### Function clear_shape()
+
+~~~ .cpp
+void clear_shape(gl_shape& shp);
+~~~
+
+Clear shape
+
+#### Function make_gl_lights()
+
+~~~ .cpp
+gl_lights make_gl_lights(const scene* scn);
+~~~
+
+Initialize gl lights
+
+#### Function clear_textures()
+
+~~~ .cpp
+void clear_textures(unordered_map<texture*, gl_texture>& textures);
+~~~
+
+Clear scene textures on the GPU.
+
+#### Function clear_shapes()
+
+~~~ .cpp
+void clear_shapes(unordered_map<shape*, gl_shape>& shapes);
+~~~
+
+Clear scene shapes on the GPU.
+
+#### Function update_textures()
+
+~~~ .cpp
+void update_textures(const scene* scn,
+    unordered_map<texture*, gl_texture>& textures,
+    const unordered_set<texture*>& refresh =;
+~~~
+
+Update scene textures on the GPU.
+
+#### Function update_shapes()
+
+~~~ .cpp
+void update_shapes(const scene* scn, unordered_map<shape*, gl_shape>& shapes,
+    const unordered_set<shape*>& refresh =;
+~~~
+
+Update scene shapes on the GPU.
+
 #### Struct gl_stdimage_program
 
 ~~~ .cpp
@@ -11027,10 +11046,10 @@ Check if the program is valid
 #### Function begin_stdsurface_frame()
 
 ~~~ .cpp
-inline void begin_stdsurface_frame(gl_stdsurface_program& prog,
-    bool shade_eyelight, float tonemap_exposure, float tonemap_gamma,
-    bool tonemap_filmic, const mat4f& camera_xform,
-    const mat4f& camera_xform_inv, const mat4f& camera_proj);
+void begin_stdsurface_frame(gl_stdsurface_program& prog, bool shade_eyelight,
+    float tonemap_exposure, float tonemap_gamma, bool tonemap_filmic,
+    const mat4f& camera_xform, const mat4f& camera_xform_inv,
+    const mat4f& camera_proj);
 ~~~
 
 Starts a frame by setting exposure/gamma values, camera transforms and
@@ -11040,7 +11059,7 @@ preview.
 #### Function end_stdsurface_frame()
 
 ~~~ .cpp
-inline void end_stdsurface_frame(gl_stdsurface_program& prog);
+void end_stdsurface_frame(gl_stdsurface_program& prog);
 ~~~
 
 Ends a frame.
@@ -11048,8 +11067,8 @@ Ends a frame.
 #### Function set_stdsurface_lights()
 
 ~~~ .cpp
-inline void set_stdsurface_lights(gl_stdsurface_program& prog, const vec3f& amb,
-    int num, const vec3f* pos, const vec3f* ke, const gl_ltype* type);
+void set_stdsurface_lights(
+    gl_stdsurface_program& prog, const vec3f& amb, const gl_lights& lights);
 ~~~
 
 Set num lights with position pos, color ke, type ltype. Also set the
@@ -11058,7 +11077,7 @@ ambient illumination amb.
 #### Function begin_stdsurface_shape()
 
 ~~~ .cpp
-inline void begin_stdsurface_shape(
+void begin_stdsurface_shape(
     gl_stdsurface_program& prog, const mat4f& xform, float normal_offset = 0);
 ~~~
 
@@ -11067,7 +11086,7 @@ Begins drawing a shape with transform xform.
 #### Function end_stdsurface_shape()
 
 ~~~ .cpp
-inline void end_stdsurface_shape(gl_stdsurface_program& prog);
+void end_stdsurface_shape(gl_stdsurface_program& prog);
 ~~~
 
 End shade drawing.
@@ -11075,7 +11094,7 @@ End shade drawing.
 #### Function set_stdsurface_normaloffset()
 
 ~~~ .cpp
-inline void set_stdsurface_normaloffset(
+void set_stdsurface_normaloffset(
     gl_stdsurface_program& prog, float normal_offset);
 ~~~
 
@@ -11084,7 +11103,7 @@ Sets normal offset.
 #### Function set_stdsurface_highlight()
 
 ~~~ .cpp
-inline void set_stdsurface_highlight(
+void set_stdsurface_highlight(
     gl_stdsurface_program& prog, const vec4f& highlight);
 ~~~
 
@@ -11093,9 +11112,9 @@ Set the object as highlighted.
 #### Function set_stdsurface_material()
 
 ~~~ .cpp
-inline void set_stdsurface_material(gl_stdsurface_program& prog,
-    material_type type, gl_etype etype, const vec3f& ke, const vec3f& kd,
-    const vec3f& ks, float rs, float op, const gl_texture_info& ke_txt,
+void set_stdsurface_material(gl_stdsurface_program& prog, material_type type,
+    gl_elem_type etype, const vec3f& ke, const vec3f& kd, const vec3f& ks,
+    float rs, float op, const gl_texture_info& ke_txt,
     const gl_texture_info& kd_txt, const gl_texture_info& ks_txt,
     const gl_texture_info& rs_txt, const gl_texture_info& norm_txt,
     const gl_texture_info& occ_txt, bool use_phong, bool double_sided,
@@ -11112,7 +11131,7 @@ Material type matches the scene material type.
 #### Function set_stdsurface_constmaterial()
 
 ~~~ .cpp
-inline void set_stdsurface_constmaterial(
+void set_stdsurface_constmaterial(
     gl_stdsurface_program& prog, const vec3f& ke, float op);
 ~~~
 
@@ -11121,7 +11140,7 @@ Set constant material values with emission ke.
 #### Function set_stdsurface_vert()
 
 ~~~ .cpp
-inline void set_stdsurface_vert(gl_stdsurface_program& prog,
+void set_stdsurface_vert(gl_stdsurface_program& prog,
     const gl_vertex_buffer& pos, const gl_vertex_buffer& norm,
     const gl_vertex_buffer& texcoord, const gl_vertex_buffer& color,
     const gl_vertex_buffer& tangsp);
@@ -11133,7 +11152,7 @@ coordinates texcoord, per-vertex color color and tangent space tangsp.
 #### Function set_stdsurface_vert_skinning()
 
 ~~~ .cpp
-inline void set_stdsurface_vert_skinning(gl_stdsurface_program& prog,
+void set_stdsurface_vert_skinning(gl_stdsurface_program& prog,
     const gl_vertex_buffer& weights, const gl_vertex_buffer& joints,
     int nxforms, const mat4f* xforms);
 ~~~
@@ -11143,7 +11162,7 @@ Set vertex data with buffers for skinning.
 #### Function set_stdsurface_vert_gltf_skinning()
 
 ~~~ .cpp
-inline void set_stdsurface_vert_gltf_skinning(gl_stdsurface_program& prog,
+void set_stdsurface_vert_gltf_skinning(gl_stdsurface_program& prog,
     const gl_vertex_buffer& weights, const gl_vertex_buffer& joints,
     int nxforms, const mat4f* xforms);
 ~~~
@@ -11153,27 +11172,10 @@ Set vertex data with buffers for skinning.
 #### Function set_stdsurface_vert_skinning_off()
 
 ~~~ .cpp
-inline void set_stdsurface_vert_skinning_off(gl_stdsurface_program& prog);
+void set_stdsurface_vert_skinning_off(gl_stdsurface_program& prog);
 ~~~
 
 Disables vertex skinning.
-
-#### Struct gl_stdsurface_state
-
-~~~ .cpp
-struct gl_stdsurface_state {
-~~~
-
-State object for gl_stdsurface_program drawing. Members are not part of the
-public API.
-
-#### Struct gl_stdsurface_lights
-
-~~~ .cpp
-struct gl_stdsurface_lights {
-~~~
-
-State object to store lights for stdsurface rendering
 
 #### Struct gl_stdsurface_params
 
@@ -11221,46 +11223,12 @@ Params for  gl_stdsurface_program drawing
     - cull_backface:      cull back back
 
 
-#### Function make_stdsurface_state()
-
-~~~ .cpp
-gl_stdsurface_state* make_stdsurface_state();
-~~~
-
-Initialize gl_stdsurface_program draw state
-
-#### Function update_stdsurface_state()
-
-~~~ .cpp
-void update_stdsurface_state(gl_stdsurface_state* st, const scene* scn,
-    const gl_stdsurface_params& params,
-    const unordered_set<void*>& refresh =;
-~~~
-
-Update gl_stdsurface_program draw state. This updates stdsurface meshes
-and textures on the GPU.
-
-#### Function make_stdsurface_lights()
-
-~~~ .cpp
-gl_stdsurface_lights make_stdsurface_lights(const scene* scn);
-~~~
-
-Initialize stdsurface lights
-
-#### Function clear_stdsurface_state()
-
-~~~ .cpp
-void clear_stdsurface_state(gl_stdsurface_state* st, bool clear_program = true);
-~~~
-
-Clear gl_stdsurface_program draw state
-
 #### Function draw_stdsurface_scene()
 
 ~~~ .cpp
-void draw_stdsurface_scene(gl_stdsurface_state* st, const scene* scn,
-    const camera* cam, const gl_stdsurface_lights& lights,
+void draw_stdsurface_scene(const scene* scn, const camera* cam,
+    gl_stdsurface_program& prog, unordered_map<shape*, gl_shape>& shapes,
+    unordered_map<texture*, gl_texture>& textures, const gl_lights& lights,
     const gl_stdsurface_params& params);
 ~~~
 

@@ -88,7 +88,8 @@ void draw(gl_window* win) {
                 win, "filter type", app->params.ftype, trace_filter_names()));
             edited.push_back(draw_camera_widget(
                 win, "camera", app->scn, app->view, app->params.camera_id));
-            edited.push_back(draw_value_widget(win, "update bvh", app->update_bvh));
+            edited.push_back(
+                draw_value_widget(win, "update bvh", app->update_bvh));
             draw_value_widget(win, "fps", app->navigation_fps);
         }
         if (draw_header_widget(win, "image")) {

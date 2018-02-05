@@ -25,7 +25,7 @@
 /// - procedural sun and sky HDR
 /// - procedural Perlin noise
 /// - BVH for intersection and closest point query
-/// - Python-like iterators, string, path and container operations
+/// - Python-like string, path and container operations
 /// - utilities to load and save entire text and binary files
 /// - immediate mode command line parser
 /// - simple logger
@@ -204,17 +204,6 @@
 ///    `sample_hemisphere_cospower()`. `sample_disk()`. `sample_cylinder()`.
 ///    `sample_triangle()`. For each warp, you can compute the PDF with
 ///    `sample_xxx_pdf()`.
-///
-///
-/// ### Python-like container operations and iterators
-///
-/// To make the code more readable, we adopt Python-like iterations and
-/// container operations extensively throughout Yocto/GL. These operations
-/// are mostly for internal use but could also be used externally.
-///
-/// 1. Python iterators with `range()` and `enumerate()`
-/// 2. Python operators for containers: support for + and += for `std::vector`
-/// 3. Check for containment with `contains`  similarly to `in` in Python
 ///
 ///
 /// ### Shape Utilities
@@ -3621,10 +3610,10 @@ struct range_generator {
 };
 
 /// Python-like range
-inline range_generator range(int max) { return {0, max, 1}; }
+inline range_generator range_(int max) { return {0, max, 1}; }
 
 /// Python-like range
-inline range_generator range(int min, int max, int step = 1) {
+inline range_generator range_(int min, int max, int step = 1) {
     return {min, max, step};
 }
 
@@ -3649,13 +3638,13 @@ struct enumerate_generator {
 
 /// Python-like range
 template <typename T>
-inline enumerate_generator<const T> enumerate(const vector<T>& vv) {
+inline enumerate_generator<const T> enumerate_(const vector<T>& vv) {
     return {(int)vv.size(), vv.data()};
 }
 
 /// Python-like range
 template <typename T>
-inline enumerate_generator<T> enumerate(vector<T>& vv) {
+inline enumerate_generator<T> enumerate_(vector<T>& vv) {
     return {(int)vv.size(), vv.data()};
 }
 

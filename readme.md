@@ -24,7 +24,7 @@ and released under the MIT license. Features include:
 - procedural sun and sky HDR
 - procedural Perlin noise
 - BVH for intersection and closest point query
-- Python-like iterators, string, path and container operations
+- Python-like string, path and container operations
 - utilities to load and save entire text and binary files
 - immediate mode command line parser
 - simple logger
@@ -203,17 +203,6 @@ functions targeting path tracing and shape generations.
    `sample_hemisphere_cospower()`. `sample_disk()`. `sample_cylinder()`.
    `sample_triangle()`. For each warp, you can compute the PDF with
    `sample_xxx_pdf()`.
-
-
-### Python-like container operations and iterators
-
-To make the code more readable, we adopt Python-like iterations and
-container operations extensively throughout Yocto/GL. These operations
-are mostly for internal use but could also be used externally.
-
-1. Python iterators with `range()` and `enumerate()`
-2. Python operators for containers: support for + and += for `std::vector`
-3. Check for containment with `contains`  similarly to `in` in Python
 
 
 ### Shape Utilities
