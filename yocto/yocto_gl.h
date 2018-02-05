@@ -5192,8 +5192,10 @@ vec3f eval_pos(const shape* shp, int eid, const vec4f& euv);
 vec3f eval_norm(const shape* shp, int eid, const vec4f& euv);
 /// Shape texcoord interpolated using barycentric coordinates
 vec2f eval_texcoord(const shape* shp, int eid, const vec4f& euv);
-/// Shape texcoord interpolated using barycentric coordinates
+/// Shape color interpolated using barycentric coordinates
 vec4f eval_color(const shape* shp, int eid, const vec4f& euv);
+/// Shape radius interpolated using barycentric coordinates
+float eval_radius(const shape* shp, int eid, const vec4f& euv);
 /// Shape tangent space interpolated using barycentric coordinates
 vec4f eval_tangsp(const shape* shp, int eid, const vec4f& euv);
 /// Instance position interpolated using barycentric coordinates

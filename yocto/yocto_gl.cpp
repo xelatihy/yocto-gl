@@ -78,11 +78,10 @@
 //
 // ## Next
 //
+// - BUG: hair look in yitrace
 // - simplify trace_point
 //     - double sided in material functions
 // - sample background to sum all environments
-// - remove default environment
-// - handle missing environment in trace
 //
 // ## General
 //
@@ -94,8 +93,6 @@
 // - uniform serialization
 //    - consider simpler serialization code based on input flag
 //    - consider json archive model (use this to define to_son/from_from)
-// - lights in scene for viewers
-//    - do this only if necessary
 // - check rotation and decompoaition of rotations
 //    - see euclideanspace.com
 //
@@ -106,6 +103,9 @@
 //
 // ## Trace
 //
+// - lines seems wrong
+// - lines epsilon in ray generation
+// - add make_offset_ray functions
 // - envmap sampling
 // - sampler simplification
 //     https://lemire.me/blog/2017/09/18/visiting-all-values-in-an-array-exactly-once-in-random-order/
@@ -3137,9 +3137,9 @@ scene::~scene() {
 
 // Shape value interpolated using barycentric coordinates
 template <typename T>
-T eval_barycentric(
-    const shape* shp, const vector<T>& vals, int eid, const vec4f& euv) {
-    if (vals.empty()) return T();
+T eval_barycentric(const shape* shp, const vector<T>& vals, int eid,
+    const vec4f& euv, const T& def) {
+    if (vals.empty()) return def;
     if (!shp->triangles.empty()) {
         return eval_barycentric_triangle(
             vals, shp->triangles[eid], vec3f{euv.x, euv.y, euv.z});
@@ -3157,39 +3157,39 @@ T eval_barycentric(
 
 // Shape position interpolated using barycentric coordinates
 vec3f eval_pos(const shape* shp, int eid, const vec4f& euv) {
-    return eval_barycentric(shp, shp->pos, eid, euv);
+    return eval_barycentric(shp, shp->pos, eid, euv, {0, 0, 0});
 }
-
 // Shape normal interpolated using barycentric coordinates
 vec3f eval_norm(const shape* shp, int eid, const vec4f& euv) {
-    return normalize(eval_barycentric(shp, shp->norm, eid, euv));
+    return normalize(eval_barycentric(shp, shp->norm, eid, euv, {0, 0, 1}));
 }
-
 // Shape texcoord interpolated using barycentric coordinates
 vec2f eval_texcoord(const shape* shp, int eid, const vec4f& euv) {
-    return eval_barycentric(shp, shp->texcoord, eid, euv);
+    return eval_barycentric(shp, shp->texcoord, eid, euv, {0, 0});
 }
-
-// Shape texcoord interpolated using barycentric coordinates
+// Shape color interpolated using barycentric coordinates
 vec4f eval_color(const shape* shp, int eid, const vec4f& euv) {
-    return eval_barycentric(shp, shp->color, eid, euv);
+    return eval_barycentric(shp, shp->color, eid, euv, {1, 1, 1, 1});
 }
-
+// Shape radius interpolated using barycentric coordinates
+float eval_radius(const shape* shp, int eid, const vec4f& euv) {
+    return eval_barycentric(shp, shp->radius, eid, euv, 0.0f);
+}
 // Shape tangent space interpolated using barycentric coordinates
 vec4f eval_tangsp(const shape* shp, int eid, const vec4f& euv) {
-    return eval_barycentric(shp, shp->tangsp, eid, euv);
+    return eval_barycentric(shp, shp->tangsp, eid, euv, {0, 0, 0, 1});
 }
 
 // Instance position interpolated using barycentric coordinates
 vec3f eval_pos(const instance* ist, int eid, const vec4f& euv) {
-    return transform_point(
-        ist->frame, eval_barycentric(ist->shp, ist->shp->pos, eid, euv));
+    return transform_point(ist->frame,
+        eval_barycentric(ist->shp, ist->shp->pos, eid, euv, {0, 0, 0}));
 }
-
 // Instance normal interpolated using barycentric coordinates
 vec3f eval_norm(const instance* ist, int eid, const vec4f& euv) {
     return transform_direction(ist->frame,
-        normalize(eval_barycentric(ist->shp, ist->shp->norm, eid, euv)));
+        normalize(
+            eval_barycentric(ist->shp, ist->shp->norm, eid, euv, {0, 0, 1})));
 }
 
 // Evaluate a texture
