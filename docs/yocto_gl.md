@@ -6661,7 +6661,15 @@ Shape texcoord interpolated using barycentric coordinates
 vec4f eval_color(const shape* shp, int eid, const vec4f& euv);
 ~~~
 
-Shape texcoord interpolated using barycentric coordinates
+Shape color interpolated using barycentric coordinates
+
+#### Function eval_radius()
+
+~~~ .cpp
+float eval_radius(const shape* shp, int eid, const vec4f& euv);
+~~~
+
+Shape radius interpolated using barycentric coordinates
 
 #### Function eval_tangsp()
 
@@ -6856,11 +6864,9 @@ Refits a scene BVH. Refit shapes if the map is not empty.
 ~~~ .cpp
 struct add_elements_options {
     bool smooth_normals = true;
-    float pointline_radius = 0;
     bool tangent_space = true;
     bool texture_data = true;
     bool shape_instances = true;
-    bool default_environment = false;
     bool default_names = true;
     bool default_paths = true;
     static add_elements_options none(); 
@@ -6871,11 +6877,9 @@ Add elements options
 
 - Members:
     - smooth_normals:      Add missing normal
-    - pointline_radius:      Add missing radius for points and lines (<=0 for no adding)
     - tangent_space:      Add missing trangent space
     - texture_data:      texture data
     - shape_instances:      Add instances
-    - default_environment:      Add an empty default environment
     - default_names:      Add default names
     - default_paths:      Add default paths
     - none():      initialize to no element
@@ -7793,8 +7797,6 @@ struct trace_pixel {
     int sample = 0;
     int dimension = 0;
     float weight = 0;
-    int nsamples = 0;
-    trace_rng_type rtype = trace_rng_type::uniform;
 }
 ~~~
 
@@ -7809,8 +7811,6 @@ the public API.
     - sample:      number of samples computed
     - dimension:      current dimension
     - weight:      pixel weight for filtering
-    - nsamples:      total number of samples
-    - rtype:      random number type
 
 
 #### Struct trace_light
