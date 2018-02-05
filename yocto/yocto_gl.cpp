@@ -3120,7 +3120,7 @@ namespace ygl {
 
 // cleanup
 animation_group::~animation_group() {
-    for (auto v : keyframes) delete v;
+    for (auto v : animations) delete v;
 }
 
 // cleanup
@@ -3390,22 +3390,22 @@ void update_transforms(animation_group* ang, float time) {
         return vals.at(0);
     };
 
-    for (auto kfr : ang->keyframes) {
-        if (!kfr->translation.empty()) {
+    for (auto anm : ang->animations) {
+        if (!anm->translation.empty()) {
             auto val =
-                interpolate(kfr->type, kfr->times, kfr->translation, time);
+                interpolate(anm->type, anm->times, anm->translation, time);
             for (auto target : ang->targets)
-                if (target.first == kfr) target.second->translation = val;
+                if (target.first == anm) target.second->translation = val;
         }
-        if (!kfr->rotation.empty()) {
-            auto val = interpolate(kfr->type, kfr->times, kfr->rotation, time);
+        if (!anm->rotation.empty()) {
+            auto val = interpolate(anm->type, anm->times, anm->rotation, time);
             for (auto target : ang->targets)
-                if (target.first == kfr) target.second->rotation = val;
+                if (target.first == anm) target.second->rotation = val;
         }
-        if (!kfr->scaling.empty()) {
-            auto val = interpolate(kfr->type, kfr->times, kfr->scaling, time);
+        if (!anm->scaling.empty()) {
+            auto val = interpolate(anm->type, anm->times, anm->scaling, time);
             for (auto target : ang->targets)
-                if (target.first == kfr) target.second->scaling = val;
+                if (target.first == anm) target.second->scaling = val;
         }
     }
 }
@@ -3434,10 +3434,10 @@ void update_transforms(scene* scn, float time) {
 vec2f compute_animation_range(const scene* scn) {
     if (scn->animations.empty()) return zero2f;
     auto range = vec2f{+flt_max, -flt_max};
-    for (auto anm : scn->animations) {
-        for (auto kfr : anm->keyframes) {
-            range.x = min(range.x, kfr->times.front());
-            range.y = max(range.y, kfr->times.back());
+    for (auto ang : scn->animations) {
+        for (auto anm : ang->animations) {
+            range.x = min(range.x, anm->times.front());
+            range.y = max(range.y, anm->times.back());
         }
     }
     return range;
@@ -4915,36 +4915,36 @@ scene* gltf_to_scene(const glTF* gltf, const load_options& opts) {
     for (auto ganm : gltf->animations) {
         auto ang = new animation_group();
         ang->name = ganm->name;
-        auto sampler_map = unordered_map<vec2i, keyframe*>();
+        auto sampler_map = unordered_map<vec2i, animation*>();
         for (auto gchannel : ganm->channels) {
             if (sampler_map.find({(int)gchannel->sampler,
                     (int)gchannel->target->path}) == sampler_map.end()) {
                 auto gsampler = ganm->get(gchannel->sampler);
-                auto kfr = new keyframe();
+                auto anm = new animation();
                 auto input_view =
                     accessor_view(gltf, gltf->get(gsampler->input));
-                kfr->times.resize(input_view.size());
+                anm->times.resize(input_view.size());
                 for (auto i = 0; i < input_view.size(); i++)
-                    kfr->times[i] = input_view.get(i);
-                kfr->type = keyframe_types.at(gsampler->interpolation);
+                    anm->times[i] = input_view.get(i);
+                anm->type = keyframe_types.at(gsampler->interpolation);
                 auto output_view =
                     accessor_view(gltf, gltf->get(gsampler->output));
                 switch (gchannel->target->path) {
                     case glTFAnimationChannelTargetPath::Translation: {
-                        kfr->translation.reserve(output_view.size());
+                        anm->translation.reserve(output_view.size());
                         for (auto i = 0; i < output_view.size(); i++)
-                            kfr->translation.push_back(output_view.getv3f(i));
+                            anm->translation.push_back(output_view.getv3f(i));
                     } break;
                     case glTFAnimationChannelTargetPath::Rotation: {
-                        kfr->rotation.reserve(output_view.size());
+                        anm->rotation.reserve(output_view.size());
                         for (auto i = 0; i < output_view.size(); i++)
-                            kfr->rotation.push_back(
+                            anm->rotation.push_back(
                                 (quat4f)output_view.getv4f(i));
                     } break;
                     case glTFAnimationChannelTargetPath::Scale: {
-                        kfr->scaling.reserve(output_view.size());
+                        anm->scaling.reserve(output_view.size());
                         for (auto i = 0; i < output_view.size(); i++)
-                            kfr->scaling.push_back(output_view.getv3f(i));
+                            anm->scaling.push_back(output_view.getv3f(i));
                     } break;
                     case glTFAnimationChannelTargetPath::Weights: {
                         // get a node that it refers to
@@ -4961,11 +4961,11 @@ scene* gltf_to_scene(const glTF* gltf, const load_options& opts) {
                             values.reserve(output_view.size());
                             for (auto i = 0; i < output_view.size(); i++)
                                 values.push_back(output_view.get(i));
-                            kfr->weights.resize(values.size() / ncomp);
-                            for (auto i = 0; i < kfr->weights.size(); i++) {
-                                kfr->weights[i].resize(ncomp);
+                            anm->weights.resize(values.size() / ncomp);
+                            for (auto i = 0; i < anm->weights.size(); i++) {
+                                anm->weights[i].resize(ncomp);
                                 for (auto j = 0; j < ncomp; j++)
-                                    kfr->weights[i][j] = values[i * ncomp + j];
+                                    anm->weights[i][j] = values[i * ncomp + j];
                             }
                         }
                     } break;
@@ -4974,8 +4974,8 @@ scene* gltf_to_scene(const glTF* gltf, const load_options& opts) {
                     }
                 }
                 sampler_map[{
-                    (int)gchannel->sampler, (int)gchannel->target->path}] = kfr;
-                ang->keyframes.push_back(kfr);
+                    (int)gchannel->sampler, (int)gchannel->target->path}] = anm;
+                ang->animations.push_back(anm);
             }
             ang->targets.push_back({sampler_map.at({(int)gchannel->sampler,
                                         (int)gchannel->target->path}),
@@ -5429,44 +5429,45 @@ glTF* scene_to_gltf(
         };
 
     // animation
-    for (auto anm : scn->animations) {
+    for (auto ang : scn->animations) {
         auto ganm = new glTFAnimation();
-        ganm->name = anm->name;
-        auto gbuffer = add_opt_buffer(anm->path);
+        ganm->name = ang->name;
+        auto gbuffer = add_opt_buffer(ang->path);
         auto count = 0;
-        auto paths = unordered_map<keyframe*, glTFAnimationChannelTargetPath>();
-        for (auto kfr : anm->keyframes) {
+        auto paths =
+            unordered_map<animation*, glTFAnimationChannelTargetPath>();
+        for (auto anm : ang->animations) {
             auto aid = ganm->name + "_" + std::to_string(count++);
             auto gsmp = new glTFAnimationSampler();
             gsmp->input =
                 add_accessor(gbuffer, aid + "_time", glTFAccessorType::Scalar,
-                    glTFAccessorComponentType::Float, (int)kfr->times.size(),
-                    sizeof(float), kfr->times.data(), false);
+                    glTFAccessorComponentType::Float, (int)anm->times.size(),
+                    sizeof(float), anm->times.data(), false);
             auto path = glTFAnimationChannelTargetPath::NotSet;
-            if (!kfr->translation.empty()) {
+            if (!anm->translation.empty()) {
                 gsmp->output = add_accessor(gbuffer, aid + "_translation",
                     glTFAccessorType::Vec3, glTFAccessorComponentType::Float,
-                    (int)kfr->translation.size(), sizeof(vec3f),
-                    kfr->translation.data(), false);
+                    (int)anm->translation.size(), sizeof(vec3f),
+                    anm->translation.data(), false);
                 path = glTFAnimationChannelTargetPath::Translation;
-            } else if (!kfr->rotation.empty()) {
+            } else if (!anm->rotation.empty()) {
                 gsmp->output = add_accessor(gbuffer, aid + "_rotation",
                     glTFAccessorType::Vec4, glTFAccessorComponentType::Float,
-                    (int)kfr->rotation.size(), sizeof(vec4f),
-                    kfr->rotation.data(), false);
+                    (int)anm->rotation.size(), sizeof(vec4f),
+                    anm->rotation.data(), false);
                 path = glTFAnimationChannelTargetPath::Rotation;
-            } else if (!kfr->scaling.empty()) {
+            } else if (!anm->scaling.empty()) {
                 gsmp->output = add_accessor(gbuffer, aid + "_scale",
                     glTFAccessorType::Vec3, glTFAccessorComponentType::Float,
-                    (int)kfr->scaling.size(), sizeof(vec3f),
-                    kfr->scaling.data(), false);
+                    (int)anm->scaling.size(), sizeof(vec3f),
+                    anm->scaling.data(), false);
                 path = glTFAnimationChannelTargetPath::Scale;
-            } else if (!kfr->weights.empty()) {
+            } else if (!anm->weights.empty()) {
                 auto values = std::vector<float>();
-                values.reserve(kfr->weights.size() * kfr->weights[0].size());
-                for (auto i = 0; i < kfr->weights.size(); i++) {
-                    values.insert(values.end(), kfr->weights[i].begin(),
-                        kfr->weights[i].end());
+                values.reserve(anm->weights.size() * anm->weights[0].size());
+                for (auto i = 0; i < anm->weights.size(); i++) {
+                    values.insert(values.end(), anm->weights[i].begin(),
+                        anm->weights[i].end());
                 }
                 gsmp->output = add_accessor(gbuffer, aid + "_weights",
                     glTFAccessorType::Scalar, glTFAccessorComponentType::Float,
@@ -5475,16 +5476,16 @@ glTF* scene_to_gltf(
             } else {
                 throw runtime_error("should not have gotten here");
             }
-            gsmp->interpolation = interpolation_map.at(kfr->type);
+            gsmp->interpolation = interpolation_map.at(anm->type);
             ganm->samplers.push_back(gsmp);
-            paths[kfr] = path;
+            paths[anm] = path;
         }
-        for (auto target : anm->targets) {
+        for (auto target : ang->targets) {
             auto kfr = target.first;
             auto node = target.second;
             auto gchan = new glTFAnimationChannel();
             gchan->sampler =
-                glTFid<glTFAnimationSampler>{index(anm->keyframes, kfr)};
+                glTFid<glTFAnimationSampler>{index(ang->animations, kfr)};
             gchan->target = new glTFAnimationChannelTarget();
             gchan->target->node = glTFid<glTFNode>{index(scn->nodes, node)};
             gchan->target->path = paths.at(kfr);
@@ -11275,25 +11276,25 @@ void update_test_node(
 void update_test_animation(
     const scene* scn, animation_group* ang, const test_animation_params& tanm) {
     if (tanm.name == "") throw runtime_error("cannot use empty name");
-    if (ang->keyframes.size() != 1) {
-        for (auto v : ang->keyframes) delete v;
-        ang->keyframes.clear();
-        ang->keyframes.push_back(new keyframe());
+    if (ang->animations.size() != 1) {
+        for (auto v : ang->animations) delete v;
+        ang->animations.clear();
+        ang->animations.push_back(new animation());
     }
     ang->name = tanm.name;
-    auto kfr = ang->keyframes.front();
-    kfr->name = tanm.name;
-    kfr->type = (!tanm.bezier) ? keyframe_type::linear : keyframe_type::bezier;
-    kfr->times = tanm.times;
-    for (auto& v : kfr->times) v *= tanm.speed;
-    kfr->translation = tanm.translation;
-    kfr->rotation = tanm.rotation;
-    kfr->scaling = tanm.scaling;
-    for (auto& v : kfr->translation) v *= tanm.scale;
-    for (auto& v : kfr->scaling) v *= tanm.scale;
+    auto anm = ang->animations.front();
+    anm->name = tanm.name;
+    anm->type = (!tanm.bezier) ? keyframe_type::linear : keyframe_type::bezier;
+    anm->times = tanm.times;
+    for (auto& v : anm->times) v *= tanm.speed;
+    anm->translation = tanm.translation;
+    anm->rotation = tanm.rotation;
+    anm->scaling = tanm.scaling;
+    for (auto& v : anm->translation) v *= tanm.scale;
+    for (auto& v : anm->scaling) v *= tanm.scale;
     ang->targets.clear();
     for (auto& nde : tanm.nodes)
-        ang->targets.push_back({kfr, find_named_elem(scn->nodes, nde)});
+        ang->targets.push_back({anm, find_named_elem(scn->nodes, nde)});
 }
 
 // Update test elements
@@ -14843,22 +14844,22 @@ inline bool draw_elem_widgets(gl_window* win, scene* scn, animation_group* ang,
     auto edited = vector<bool>();
     draw_separator_widget(win);
     draw_label_widget(win, "name", ang->name);
-    for (auto kid = 0; kid < ang->keyframes.size(); kid++) {
-        auto kfr = ang->keyframes[kid];
-        auto ids = to_string(kid);
-        edited.push_back(draw_value_widget(win, "name " + ids, kfr->name));
+    for (auto aid = 0; aid < ang->animations.size(); aid++) {
+        auto anm = ang->animations[aid];
+        auto ids = to_string(aid);
+        edited.push_back(draw_value_widget(win, "name " + ids, anm->name));
         edited.push_back(draw_value_widget(
-            win, "type " + ids, kfr->type, keyframe_type_names()));
-        draw_label_widget(win, "times " + ids, kfr->times, true);
-        draw_label_widget(win, "translation " + ids, kfr->translation, true);
-        draw_label_widget(win, "rotation " + ids, kfr->rotation, true);
-        draw_label_widget(win, "scale " + ids, kfr->scaling, true);
+            win, "type " + ids, anm->type, keyframe_type_names()));
+        draw_label_widget(win, "times " + ids, anm->times, true);
+        draw_label_widget(win, "translation " + ids, anm->translation, true);
+        draw_label_widget(win, "rotation " + ids, anm->rotation, true);
+        draw_label_widget(win, "scale " + ids, anm->scaling, true);
     }
     for (auto tid = 0; tid < ang->targets.size(); tid++) {
-        auto kfr = ang->targets[tid].first;
+        auto anm = ang->targets[tid].first;
         auto nde = ang->targets[tid].second;
         auto ids = to_string(tid);
-        draw_label_widget(win, "target " + ids, kfr->name + " -> " + nde->name);
+        draw_label_widget(win, "target " + ids, anm->name + " -> " + nde->name);
     }
     return std::any_of(edited.begin(), edited.end(), [](auto x) { return x; });
 }
