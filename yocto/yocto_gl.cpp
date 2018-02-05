@@ -78,6 +78,8 @@
 //
 // ## Next
 //
+// - interior shapes generation in procedural
+// - update documentation
 // - BUG: hair look in yitrace
 // - simplify trace_point
 //     - double sided in material functions
@@ -4385,7 +4387,6 @@ obj_scene* scene_to_obj(const scene* scn) {
     }
 
     // convert shapes
-    auto shapes = unordered_map<shape*, unique_ptr<obj_group>>();
     for (auto sgr : scn->shapes) {
         auto oobj = new obj_object();
         oobj->name = sgr->name;
@@ -4510,6 +4511,7 @@ obj_scene* scene_to_obj(const scene* scn) {
                 }
             }
         }
+        obj->objects.push_back(oobj);
     }
 
     // convert cameras
@@ -5393,7 +5395,7 @@ glTF* scene_to_gltf(
                 gnode->camera =
                     glTFid<glTFCamera>(index(scn->cameras, nde->cam));
             }
-            if (!nde->ist) {
+            if (nde->ist) {
                 gnode->mesh =
                     glTFid<glTFMesh>(index(scn->shapes, nde->ist->shp));
             }
@@ -11100,31 +11102,39 @@ void update_test_material(
 void update_test_shape(
     const scene* scn, shape_group* sgr, const test_shape_params& tshp) {
     if (tshp.name == "") throw runtime_error("cannot use empty name");
-    if (sgr->shapes.size() != 1) {
+    auto nshapes = 1;
+    if (tshp.type == test_shape_type::matball ||
+        tshp.type == test_shape_type::hairball)
+        nshapes = 2;
+    if (sgr->shapes.size() != nshapes) {
         for (auto v : sgr->shapes) delete v;
         sgr->shapes.clear();
-        sgr->shapes.push_back(new shape());
+        for (auto sid = 0; sid < nshapes; sid++)
+            sgr->shapes.push_back(new shape());
     }
 
     sgr->name = tshp.name;
-    auto shp = sgr->shapes.front();
-    shp->name = tshp.name;
-    shp->mat = find_named_elem(scn->materials, tshp.material);
-    shp->pos = {};
-    shp->norm = {};
-    shp->texcoord = {};
-    shp->texcoord1 = {};
-    shp->color = {};
-    shp->radius = {};
-    shp->tangsp = {};
-    shp->points = {};
-    shp->lines = {};
-    shp->triangles = {};
-    shp->quads = {};
-    shp->quads_pos = {};
-    shp->quads_norm = {};
-    shp->quads_texcoord = {};
+    auto sid = 0;
+    for (auto shp : sgr->shapes) {
+        shp->name = tshp.name + ((sid > 0) ? to_string(sid++) : string(""));
+        shp->mat = find_named_elem(scn->materials, tshp.material);
+        shp->pos = {};
+        shp->norm = {};
+        shp->texcoord = {};
+        shp->texcoord1 = {};
+        shp->color = {};
+        shp->radius = {};
+        shp->tangsp = {};
+        shp->points = {};
+        shp->lines = {};
+        shp->triangles = {};
+        shp->quads = {};
+        shp->quads_pos = {};
+        shp->quads_norm = {};
+        shp->quads_texcoord = {};
+    }
 
+    auto shp = sgr->shapes.front();
     switch (tshp.type) {
         case test_shape_type::floor: {
             tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
@@ -11187,6 +11197,11 @@ void update_test_shape(
             tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
                 make_uvflipcapsphere(
                     (tshp.tesselation < 0) ? 5 : tshp.tesselation, 0.75f);
+            auto shp1 = sgr->shapes.at(1);
+            tie(shp1->quads, shp1->pos, shp1->norm, shp1->texcoord) =
+                make_uvsphere((tshp.tesselation < 0) ? 5 : tshp.tesselation);
+            for (auto& p : shp1->pos) p *= 0.8f;
+            shp1->mat = find_named_elem(scn->materials, tshp.interior);
         } break;
         case test_shape_type::point: {
             shp->points.push_back(0);
@@ -11208,15 +11223,16 @@ void update_test_shape(
             }
         } break;
         case test_shape_type::hairball: {
+            auto shp1 = sgr->shapes.at(1);
+            tie(shp1->quads, shp1->pos, shp1->norm, shp1->texcoord) =
+                make_uvspherecube(5);
+            shp1->mat = find_named_elem(scn->materials, tshp.interior);
             auto nhairs = (tshp.num < 0) ? 65536 : tshp.num;
             // auto radius = (tshp.radius < 0) ? vec2f{0.001f, 0.0001f} :
             //                                   vec2f{tshp.radius, 0.0001f};
-            tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
-                make_uvspherecube(5);
             tie(shp->lines, shp->pos, shp->norm, shp->texcoord, shp->radius) =
-                make_hair(nhairs, 2, {}, shp->quads, shp->pos, shp->norm,
-                    shp->texcoord, tshp.hair_params);
-            shp->quads.clear();
+                make_hair(nhairs, 2, {}, shp1->quads, shp1->pos, shp1->norm,
+                    shp1->texcoord, tshp.hair_params);
         } break;
         case test_shape_type::beziercircle: {
             tie(shp->beziers, shp->pos) = make_bezier_circle();
@@ -11714,8 +11730,7 @@ unordered_map<string, test_scene_params>& test_scene_presets() {
     auto make_simple_scene = [&](const string& name,
                                  const vector<string>& shapes,
                                  const vector<string>& mats,
-                                 const string& lights, bool interior = false,
-                                 bool nodes = false,
+                                 const string& lights, bool nodes = false,
                                  const vector<string>& animations = {}) {
         auto pos = vector<vec3f>{{-2.50f, 1, 0}, {0, 1, 0}, {+2.50f, 1, 0}};
         auto params = make_test_scene(name);
@@ -11728,25 +11743,19 @@ unordered_map<string, test_scene_params>& test_scene_presets() {
         params.shapes.back().material = params.materials.back().name;
         params.instances.push_back(
             make_test_instance("floor", "floor", {0, 0, 0}));
-        if (interior) {
-            params.materials.push_back(
-                test_material_presets().at("matte_gray"));
-            params.shapes.push_back(test_shape_presets().at("sphere"));
-            params.shapes.back().name = "interior";
-            params.shapes.back().material = "matte_gray";
-            params.shapes.back().scale = 0.8f;
-        }
         for (auto i = 0; i < shapes.size(); i++) {
             auto name = "obj" + to_string(i + 1);
             params.materials.push_back(test_material_presets().at(mats[i]));
             params.shapes.push_back(test_shape_presets().at(shapes[i]));
             params.shapes.back().name = name;
             params.shapes.back().material = mats[i];
-            params.instances.push_back(make_test_instance(name, name, pos[i]));
-            if (interior) {
-                params.instances.push_back(
-                    make_test_instance(name + "i", "interior", pos[i]));
+            if (params.shapes.back().type == test_shape_type::hairball ||
+                params.shapes.back().type == test_shape_type::matball) {
+                params.materials.push_back(
+                    test_material_presets().at("matte_gray"));
+                params.shapes.back().interior = "matte_gray";
             }
+            params.instances.push_back(make_test_instance(name, name, pos[i]));
             if (!animations.empty()) {
                 params.animations.push_back(
                     test_animation_presets().at(animations[i]));
@@ -11859,7 +11868,7 @@ unordered_map<string, test_scene_params>& test_scene_presets() {
     // lines shapes
     presets["lines_al"] =
         make_simple_scene("lines_al", {"hairball1", "hairball2", "hairball3"},
-            {"matte_gray", "matte_gray", "matte_gray"}, "arealights", true);
+            {"matte_gray", "matte_gray", "matte_gray"}, "arealights");
 
     // subdiv shapes
     presets["subdiv_al"] =
@@ -11871,17 +11880,17 @@ unordered_map<string, test_scene_params>& test_scene_presets() {
         make_simple_scene("plastics_al", {"matball", "matball", "matball"},
             {"matte_green", "plastic_green", "plastic_colored"}, "arealights",
             true);
-    presets["plastics_el"] = make_simple_scene("plastics_el",
-        {"matball", "matball", "matball"},
-        {"matte_green", "plastic_green", "plastic_colored"}, "envlights", true);
+    presets["plastics_el"] =
+        make_simple_scene("plastics_el", {"matball", "matball", "matball"},
+            {"matte_green", "plastic_green", "plastic_colored"}, "envlights");
 
     // metals shapes
     presets["metals_al"] =
         make_simple_scene("metals_al", {"matball", "matball", "matball"},
-            {"gold_rough", "gold_sharp", "silver_sharp"}, "arealights", true);
+            {"gold_rough", "gold_sharp", "silver_sharp"}, "arealights");
     presets["metals_el"] =
         make_simple_scene("metals_el", {"matball", "matball", "matball"},
-            {"gold_rough", "gold_sharp", "silver_sharp"}, "envlights", true);
+            {"gold_rough", "gold_sharp", "silver_sharp"}, "envlights");
 
     // tesselation shapes
     presets["tesselation_pl"] = make_simple_scene("tesselation_pl",
@@ -11903,7 +11912,7 @@ unordered_map<string, test_scene_params>& test_scene_presets() {
     presets["animated_pl"] = make_simple_scene("animated_pl",
         {"flipcapsphere", "spherecube", "spherizedcube"},
         {"plastic_colored", "plastic_colored", "plastic_colored"},
-        "pointlights", false, true, {"bounce", "scale", "rotation"});
+        "pointlights", true, {"bounce", "scale", "rotation"});
 
     // instances shared functions
     auto make_random_scene = [&](const string& name, const vec2i& num,
