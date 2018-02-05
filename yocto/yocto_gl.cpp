@@ -7856,11 +7856,17 @@ inline void serialize_from_json(int& val, const json& js) {
     val = js;
 }
 
+// Converts int to json.
+inline void serialize_to_json(int val, json& js) { js = val; }
+
 // Parse float function.
 inline void serialize_from_json(float& val, const json& js) {
     if (!js.is_number()) throw runtime_error("number expected");
     val = js;
 }
+
+// Converts float to json.
+inline void serialize_to_json(float val, json& js) { js = val; }
 
 // Parse bool function.
 inline void serialize_from_json(bool& val, const json& js) {
@@ -7868,14 +7874,23 @@ inline void serialize_from_json(bool& val, const json& js) {
     val = js;
 }
 
+// Converts bool to json.
+inline void serialize_to_json(bool val, json& js) { js = val; }
+
 // Parse std::string function.
 inline void serialize_from_json(string& val, const json& js) {
     if (!js.is_string()) throw runtime_error("string expected");
     val = js;
 }
 
+// Converts string to json.
+inline void serialize_to_json(const string& val, json& js) { js = val; }
+
 // Parse json function.
 inline void serialize_from_json(json& val, const json& js) { val = js; }
+
+// Converts json to json.
+inline void serialize_to_json(const json& val, json& js) { js = val; }
 
 // Parse support function.
 template <typename T>
@@ -7887,6 +7902,17 @@ inline void serialize_from_json(T*& val, const json& js) {
     if (!js.is_object()) throw runtime_error("object expected");
     if (!val) val = new T();
     serialize_from_json(*val, js);
+}
+
+// Dump support function.
+template <typename T>
+inline void serialize_to_json(const T* val, json& js) {
+    if (!val) {
+        js = nullptr;
+        return;
+    }
+    if (!js.is_object()) js = json::object();
+    serialize_to_json(*val, js);
 }
 
 // Parse support function.
@@ -7902,6 +7928,28 @@ inline void serialize_from_json(vector<T>& vals, const json& js) {
     }
 }
 
+// Dump support function.
+template <typename T>
+inline void serialize_to_json(const vector<T>& vals, json& js) {
+    js = json::array();
+    for (auto i = 0; i < vals.size(); i++) serialize_to_json(vals[i], js[i]);
+}
+
+// Parse support function.
+template <typename T, size_t N>
+inline void serialize_from_json(array<T, N>& vals, const json& js) {
+    if (!js.is_array()) throw runtime_error("array expected");
+    if (N != js.size()) throw runtime_error("wrong array size");
+    for (auto i = 0; i < N; i++) serialize_from_json(vals[i], js.at(i));
+}
+
+// Dump support function.
+template <typename T, size_t N>
+inline void serialize_to_json(const array<T, N>& vals, json& js) {
+    js = json::array();
+    for (auto i = 0; i < N; i++) serialize_to_json(vals[i], js[i]);
+}
+
 // Parse support function.
 template <typename T>
 inline void serialize_from_json(map<string, T>& vals, const json& js) {
@@ -7911,12 +7959,11 @@ inline void serialize_from_json(map<string, T>& vals, const json& js) {
     }
 }
 
-// Parse support function.
-template <typename T, size_t N>
-inline void serialize_from_json(array<T, N>& vals, const json& js) {
-    if (!js.is_array()) throw runtime_error("array expected");
-    if (N != js.size()) throw runtime_error("wrong array size");
-    for (auto i = 0; i < N; i++) serialize_from_json(vals[i], js.at(i));
+// Dump support function.
+template <typename T>
+inline void serialize_to_json(const map<string, T>& vals, json& js) {
+    js = json::object();
+    for (auto& kv : vals) serialize_to_json(kv.second, js[kv.first]);
 }
 
 // Parse support function.
@@ -7936,103 +7983,6 @@ inline void serialize_from_json(
     if (!found) throw runtime_error("bad enum value");
 }
 
-// Parse support function.
-inline void serialize_from_json(vec2f& vals, const json& js) {
-    serialize_from_json((array<float, 2>&)vals, js);
-}
-
-// Parse support function.
-inline void serialize_from_json(vec3f& vals, const json& js) {
-    serialize_from_json((array<float, 3>&)vals, js);
-}
-
-// Parse support function.
-inline void serialize_from_json(vec4f& vals, const json& js) {
-    serialize_from_json((array<float, 4>&)vals, js);
-}
-
-// Parse support function.
-inline void serialize_from_json(quat4f& vals, const json& js) {
-    serialize_from_json((array<float, 4>&)vals, js);
-}
-
-// Parse support function.
-inline void serialize_from_json(mat4f& vals, const json& js) {
-    serialize_from_json((array<float, 16>&)vals, js);
-}
-
-// Parse support function.
-inline void serialize_from_json(frame3f& vals, const json& js) {
-    serialize_from_json((array<float, 12>&)vals, js);
-}
-
-// Parse support function.
-inline void serialize_from_json_obj(const json& js) {
-    if (!js.is_object()) throw runtime_error("object expected");
-}
-
-// Parse support function.
-template <typename T>
-inline void serialize_from_json_attr(T& val, const json& js, const char* name,
-    bool required = true, const T& def = {}) {
-    if (required) {
-        if (!js.count(name)) throw runtime_error("missing value");
-        serialize_from_json(val, js.at(name));
-    } else {
-        if (!js.count(name))
-            val = def;
-        else
-            serialize_from_json(val, js.at(name));
-    }
-}
-
-// Converts int to json.
-inline void serialize_to_json(int val, json& js) { js = val; }
-
-// Converts float to json.
-inline void serialize_to_json(float val, json& js) { js = val; }
-
-// Converts bool to json.
-inline void serialize_to_json(bool val, json& js) { js = val; }
-
-// Converts string to json.
-inline void serialize_to_json(const string& val, json& js) { js = val; }
-
-// Converts json to json.
-inline void serialize_to_json(const json& val, json& js) { js = val; }
-
-// Dump support function.
-template <typename T>
-inline void serialize_to_json(const T* val, json& js) {
-    if (!val) {
-        js = nullptr;
-        return;
-    }
-    if (!js.is_object()) js = json::object();
-    serialize_to_json(*val, js);
-}
-
-// Dump support function.
-template <typename T, size_t N>
-inline void serialize_to_json(const array<T, N>& vals, json& js) {
-    js = json::array();
-    for (auto i = 0; i < N; i++) serialize_to_json(vals[i], js[i]);
-}
-
-// Dump support function.
-template <typename T>
-inline void serialize_to_json(const vector<T>& vals, json& js) {
-    js = json::array();
-    for (auto i = 0; i < vals.size(); i++) serialize_to_json(vals[i], js[i]);
-}
-
-// Dump support function.
-template <typename T>
-inline void serialize_to_json(const map<string, T>& vals, json& js) {
-    js = json::object();
-    for (auto& kv : vals) serialize_to_json(kv.second, js[kv.first]);
-}
-
 // Dump support function.
 template <typename T, typename T1>
 inline void serialize_to_json(
@@ -8050,39 +8000,77 @@ inline void serialize_to_json(
     serialize_to_json(v, js);
 }
 
-// Dump support function.
-inline void serialize_to_json(const vec2f& vals, json& js) {
-    serialize_to_json((const array<float, 2>&)vals, js);
+// Parse support function.
+template <typename T, int N>
+inline void serialize_from_json(vec<T, N>& vals, const json& js) {
+    serialize_from_json((array<T, N>&)vals, js);
 }
 
 // Dump support function.
-inline void serialize_to_json(const vec3f& vals, json& js) {
-    serialize_to_json((const array<float, 3>&)vals, js);
+template <typename T, int N>
+inline void serialize_to_json(const vec<T, N>& vals, json& js) {
+    serialize_to_json((const array<T, N>&)vals, js);
+}
+
+// Parse support function.
+template <typename T, int N>
+inline void serialize_from_json(quat<T, N>& vals, const json& js) {
+    serialize_from_json((array<T, N>&)vals, js);
 }
 
 // Dump support function.
-inline void serialize_to_json(const vec4f& vals, json& js) {
-    serialize_to_json((const array<float, 4>&)vals, js);
+template <typename T, int N>
+inline void serialize_to_json(const quat<T, N>& vals, json& js) {
+    serialize_to_json((const array<T, N>&)vals, js);
+}
+
+// Parse support function.
+template <typename T, int N>
+inline void serialize_from_json(mat<T, N>& vals, const json& js) {
+    serialize_from_json((array<T, N * N>&)vals, js);
 }
 
 // Dump support function.
-inline void serialize_to_json(const quat4f& vals, json& js) {
-    serialize_to_json((const array<float, 4>&)vals, js);
+template <typename T, int N>
+inline void serialize_to_json(const mat<T, N>& vals, json& js) {
+    serialize_to_json((const array<T, N * N>&)vals, js);
+}
+
+// Parse support function.
+template <typename T, int N>
+inline void serialize_from_json(frame<T, N>& vals, const json& js) {
+    serialize_from_json((array<T, N*(N + 1)>&)vals, js);
 }
 
 // Dump support function.
-inline void serialize_to_json(const mat4f& vals, json& js) {
-    serialize_to_json((const array<float, 16>&)vals, js);
+template <typename T, int N>
+inline void serialize_to_json(const frame<T, N>& vals, json& js) {
+    serialize_to_json((const array<T, N*(N + 1)>&)vals, js);
 }
 
-// Dump support function.
-inline void serialize_to_json(const frame3f& vals, json& js) {
-    serialize_to_json((const array<float, 12>&)vals, js);
+// Parse support function.
+inline void serialize_from_json_obj(const json& js) {
+    if (!js.is_object()) throw runtime_error("object expected");
 }
 
 // Dump support function.
 inline void serialize_to_json_obj(json& js) {
     if (!js.is_object()) js = json::object();
+}
+
+// Parse support function.
+template <typename T>
+inline void serialize_from_json_attr(T& val, const json& js, const char* name,
+    bool required = true, const T& def = {}) {
+    if (required) {
+        if (!js.count(name)) throw runtime_error("missing value");
+        serialize_from_json(val, js.at(name));
+    } else {
+        if (!js.count(name))
+            val = def;
+        else
+            serialize_from_json(val, js.at(name));
+    }
 }
 
 // Dump support function.
