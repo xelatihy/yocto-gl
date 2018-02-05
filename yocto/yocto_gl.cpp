@@ -8000,41 +8000,25 @@ inline void serialize(
 // Parse support function.
 template <typename T, int N>
 inline void serialize(vec<T, N>& vals, json& js, bool reading) {
-    if (reading) {
-        serialize((array<T, N>&)vals, js, reading);
-    } else {
-        serialize((const array<T, N>&)vals, js, reading);
-    }
+    serialize((array<T, N>&)vals, js, reading);
 }
 
 // Parse support function.
 template <typename T, int N>
 inline void serialize(quat<T, N>& vals, json& js, bool reading) {
-    if (reading) {
-        serialize((array<T, N>&)vals, js, reading);
-    } else {
-        serialize((const array<T, N>&)vals, js, reading);
-    }
+    serialize((array<T, N>&)vals, js, reading);
 }
 
 // Parse support function.
 template <typename T, int N>
 inline void serialize(mat<T, N>& vals, json& js, bool reading) {
-    if (reading) {
-        serialize((array<T, N * N>&)vals, js, reading);
-    } else {
-        serialize((const array<T, N * N>&)vals, js, reading);
-    }
+    serialize((array<T, N * N>&)vals, js, reading);
 }
 
 // Parse support function.
 template <typename T, int N>
 inline void serialize(frame<T, N>& vals, json& js, bool reading) {
-    if (reading) {
-        serialize((array<T, N*(N + 1)>&)vals, js, reading);
-    } else {
-        serialize((const array<T, N*(N + 1)>&)vals, js, reading);
-    }
+    serialize((array<T, N*(N + 1)>&)vals, js, reading);
 }
 
 // Parse support function.
@@ -8086,566 +8070,6 @@ inline void serialize_attr(vector<T>& val, json& js, const char* name,
 
 // #codegen begin func ---------------------------------------------------------
 
-// Parse id function.
-template <typename T>
-inline void serialize_from_json(glTFid<T>& val, const json& js) {
-    if (!js.is_number_integer()) throw runtime_error("int expected");
-    val = glTFid<T>((int)js);
-}
-
-// Parses a glTFProperty object
-inline void serialize_from_json(glTFProperty& val, const json& js) {
-    if (!js.is_object()) throw runtime_error("object expected");
-#if YGL_GLTFJSON
-    if (js.count("extensions"))
-        serialize_from_json(val.extensions, js.at("extensions"));
-    if (js.count("extras")) serialize_from_json(val.extras, js.at("extras"));
-#endif
-}
-
-// Parses a glTFChildOfRootProperty object
-inline void serialize_from_json(glTFChildOfRootProperty& val, const json& js) {
-    static auto def = glTFChildOfRootProperty();
-    serialize_from_json_obj(js);
-    serialize_from_json((glTFProperty&)val, js);
-    serialize_from_json_attr(val.name, js, "name", false, def.name);
-}
-// Parse a glTFAccessorSparseIndicesComponentType enum
-inline void serialize_from_json(
-    glTFAccessorSparseIndicesComponentType& val, const json& js) {
-    static vector<pair<int, glTFAccessorSparseIndicesComponentType>> table = {
-        {5121, glTFAccessorSparseIndicesComponentType::UnsignedByte},
-        {5123, glTFAccessorSparseIndicesComponentType::UnsignedShort},
-        {5125, glTFAccessorSparseIndicesComponentType::UnsignedInt},
-    };
-    serialize_from_json(val, js, table);
-}
-
-// Parses a glTFAccessorSparseIndices object
-inline void serialize_from_json(
-    glTFAccessorSparseIndices& val, const json& js) {
-    static auto def = glTFAccessorSparseIndices();
-    serialize_from_json_obj(js);
-    serialize_from_json((glTFProperty&)val, js);
-    serialize_from_json_attr(
-        val.bufferView, js, "bufferView", true, def.bufferView);
-    serialize_from_json_attr(
-        val.byteOffset, js, "byteOffset", false, def.byteOffset);
-    serialize_from_json_attr(
-        val.componentType, js, "componentType", true, def.componentType);
-}
-
-// Parses a glTFAccessorSparseValues object
-inline void serialize_from_json(glTFAccessorSparseValues& val, const json& js) {
-    static auto def = glTFAccessorSparseValues();
-    serialize_from_json_obj(js);
-    serialize_from_json((glTFProperty&)val, js);
-    serialize_from_json_attr(
-        val.bufferView, js, "bufferView", true, def.bufferView);
-    serialize_from_json_attr(
-        val.byteOffset, js, "byteOffset", false, def.byteOffset);
-}
-
-// Parses a glTFAccessorSparse object
-inline void serialize_from_json(glTFAccessorSparse& val, const json& js) {
-    static auto def = glTFAccessorSparse();
-    serialize_from_json_obj(js);
-    serialize_from_json((glTFProperty&)val, js);
-    serialize_from_json_attr(val.count, js, "count", true, def.count);
-    serialize_from_json_attr(val.indices, js, "indices", true, def.indices);
-    serialize_from_json_attr(val.values, js, "values", true, def.values);
-}
-// Parse a glTFAccessorComponentType enum
-inline void serialize_from_json(
-    glTFAccessorComponentType& val, const json& js) {
-    static vector<pair<int, glTFAccessorComponentType>> table = {
-        {5120, glTFAccessorComponentType::Byte},
-        {5121, glTFAccessorComponentType::UnsignedByte},
-        {5122, glTFAccessorComponentType::Short},
-        {5123, glTFAccessorComponentType::UnsignedShort},
-        {5125, glTFAccessorComponentType::UnsignedInt},
-        {5126, glTFAccessorComponentType::Float},
-    };
-    serialize_from_json(val, js, table);
-}
-
-// Parse a glTFAccessorType enum
-inline void serialize_from_json(glTFAccessorType& val, const json& js) {
-    static vector<pair<string, glTFAccessorType>> table = {
-        {"SCALAR", glTFAccessorType::Scalar},
-        {"VEC2", glTFAccessorType::Vec2},
-        {"VEC3", glTFAccessorType::Vec3},
-        {"VEC4", glTFAccessorType::Vec4},
-        {"MAT2", glTFAccessorType::Mat2},
-        {"MAT3", glTFAccessorType::Mat3},
-        {"MAT4", glTFAccessorType::Mat4},
-    };
-    serialize_from_json(val, js, table);
-}
-
-// Parses a glTFAccessor object
-inline void serialize_from_json(glTFAccessor& val, const json& js) {
-    static auto def = glTFAccessor();
-    serialize_from_json_obj(js);
-    serialize_from_json((glTFChildOfRootProperty&)val, js);
-    serialize_from_json_attr(
-        val.bufferView, js, "bufferView", false, def.bufferView);
-    serialize_from_json_attr(
-        val.byteOffset, js, "byteOffset", false, def.byteOffset);
-    serialize_from_json_attr(
-        val.componentType, js, "componentType", true, def.componentType);
-    serialize_from_json_attr(
-        val.normalized, js, "normalized", false, def.normalized);
-    serialize_from_json_attr(val.count, js, "count", true, def.count);
-    serialize_from_json_attr(val.type, js, "type", true, def.type);
-    serialize_from_json_attr(val.max, js, "max", false, def.max);
-    serialize_from_json_attr(val.min, js, "min", false, def.min);
-    serialize_from_json_attr(val.sparse, js, "sparse", false, def.sparse);
-}
-// Parse a glTFAnimationChannelTargetPath enum
-inline void serialize_from_json(
-    glTFAnimationChannelTargetPath& val, const json& js) {
-    static vector<pair<string, glTFAnimationChannelTargetPath>> table = {
-        {"translation", glTFAnimationChannelTargetPath::Translation},
-        {"rotation", glTFAnimationChannelTargetPath::Rotation},
-        {"scale", glTFAnimationChannelTargetPath::Scale},
-        {"weights", glTFAnimationChannelTargetPath::Weights},
-    };
-    serialize_from_json(val, js, table);
-}
-
-// Parses a glTFAnimationChannelTarget object
-inline void serialize_from_json(
-    glTFAnimationChannelTarget& val, const json& js) {
-    static auto def = glTFAnimationChannelTarget();
-    serialize_from_json_obj(js);
-    serialize_from_json((glTFProperty&)val, js);
-    serialize_from_json_attr(val.node, js, "node", true, def.node);
-    serialize_from_json_attr(val.path, js, "path", true, def.path);
-}
-
-// Parses a glTFAnimationChannel object
-inline void serialize_from_json(glTFAnimationChannel& val, const json& js) {
-    static auto def = glTFAnimationChannel();
-    serialize_from_json_obj(js);
-    serialize_from_json((glTFProperty&)val, js);
-    serialize_from_json_attr(val.sampler, js, "sampler", true, def.sampler);
-    serialize_from_json_attr(val.target, js, "target", true, def.target);
-}
-// Parse a glTFAnimationSamplerInterpolation enum
-inline void serialize_from_json(
-    glTFAnimationSamplerInterpolation& val, const json& js) {
-    static vector<pair<string, glTFAnimationSamplerInterpolation>> table = {
-        {"LINEAR", glTFAnimationSamplerInterpolation::Linear},
-        {"STEP", glTFAnimationSamplerInterpolation::Step},
-        {"CATMULLROMSPLINE",
-            glTFAnimationSamplerInterpolation::CatmullRomSpline},
-        {"CUBICSPLINE", glTFAnimationSamplerInterpolation::CubicSpline},
-    };
-    serialize_from_json(val, js, table);
-}
-
-// Parses a glTFAnimationSampler object
-inline void serialize_from_json(glTFAnimationSampler& val, const json& js) {
-    static auto def = glTFAnimationSampler();
-    serialize_from_json_obj(js);
-    serialize_from_json((glTFProperty&)val, js);
-    serialize_from_json_attr(val.input, js, "input", true, def.input);
-    serialize_from_json_attr(
-        val.interpolation, js, "interpolation", false, def.interpolation);
-    serialize_from_json_attr(val.output, js, "output", true, def.output);
-}
-
-// Parses a glTFAnimation object
-inline void serialize_from_json(glTFAnimation& val, const json& js) {
-    static auto def = glTFAnimation();
-    serialize_from_json_obj(js);
-    serialize_from_json((glTFChildOfRootProperty&)val, js);
-    serialize_from_json_attr(val.channels, js, "channels", true, def.channels);
-    serialize_from_json_attr(val.samplers, js, "samplers", true, def.samplers);
-}
-
-// Parses a glTFAsset object
-inline void serialize_from_json(glTFAsset& val, const json& js) {
-    static auto def = glTFAsset();
-    serialize_from_json_obj(js);
-    serialize_from_json((glTFProperty&)val, js);
-    serialize_from_json_attr(
-        val.copyright, js, "copyright", false, def.copyright);
-    serialize_from_json_attr(
-        val.generator, js, "generator", false, def.generator);
-    serialize_from_json_attr(val.version, js, "version", true, def.version);
-    serialize_from_json_attr(
-        val.minVersion, js, "minVersion", false, def.minVersion);
-}
-
-// Parses a glTFBuffer object
-inline void serialize_from_json(glTFBuffer& val, const json& js) {
-    static auto def = glTFBuffer();
-    serialize_from_json_obj(js);
-    serialize_from_json((glTFChildOfRootProperty&)val, js);
-    serialize_from_json_attr(val.uri, js, "uri", false, def.uri);
-    serialize_from_json_attr(
-        val.byteLength, js, "byteLength", true, def.byteLength);
-}
-// Parse a glTFBufferViewTarget enum
-inline void serialize_from_json(glTFBufferViewTarget& val, const json& js) {
-    static vector<pair<int, glTFBufferViewTarget>> table = {
-        {34962, glTFBufferViewTarget::ArrayBuffer},
-        {34963, glTFBufferViewTarget::ElementArrayBuffer},
-    };
-    serialize_from_json(val, js, table);
-}
-
-// Parses a glTFBufferView object
-inline void serialize_from_json(glTFBufferView& val, const json& js) {
-    static auto def = glTFBufferView();
-    serialize_from_json_obj(js);
-    serialize_from_json((glTFChildOfRootProperty&)val, js);
-    serialize_from_json_attr(val.buffer, js, "buffer", true, def.buffer);
-    serialize_from_json_attr(
-        val.byteOffset, js, "byteOffset", false, def.byteOffset);
-    serialize_from_json_attr(
-        val.byteLength, js, "byteLength", true, def.byteLength);
-    serialize_from_json_attr(
-        val.byteStride, js, "byteStride", false, def.byteStride);
-    serialize_from_json_attr(val.target, js, "target", false, def.target);
-}
-
-// Parses a glTFCameraOrthographic object
-inline void serialize_from_json(glTFCameraOrthographic& val, const json& js) {
-    static auto def = glTFCameraOrthographic();
-    serialize_from_json_obj(js);
-    serialize_from_json((glTFProperty&)val, js);
-    serialize_from_json_attr(val.xmag, js, "xmag", true, def.xmag);
-    serialize_from_json_attr(val.ymag, js, "ymag", true, def.ymag);
-    serialize_from_json_attr(val.zfar, js, "zfar", true, def.zfar);
-    serialize_from_json_attr(val.znear, js, "znear", true, def.znear);
-}
-
-// Parses a glTFCameraPerspective object
-inline void serialize_from_json(glTFCameraPerspective& val, const json& js) {
-    static auto def = glTFCameraPerspective();
-    serialize_from_json_obj(js);
-    serialize_from_json((glTFProperty&)val, js);
-    serialize_from_json_attr(
-        val.aspectRatio, js, "aspectRatio", false, def.aspectRatio);
-    serialize_from_json_attr(val.yfov, js, "yfov", true, def.yfov);
-    serialize_from_json_attr(val.zfar, js, "zfar", false, def.zfar);
-    serialize_from_json_attr(val.znear, js, "znear", true, def.znear);
-}
-// Parse a glTFCameraType enum
-inline void serialize_from_json(glTFCameraType& val, const json& js) {
-    static vector<pair<string, glTFCameraType>> table = {
-        {"perspective", glTFCameraType::Perspective},
-        {"orthographic", glTFCameraType::Orthographic},
-    };
-    serialize_from_json(val, js, table);
-}
-
-// Parses a glTFCamera object
-inline void serialize_from_json(glTFCamera& val, const json& js) {
-    static auto def = glTFCamera();
-    serialize_from_json_obj(js);
-    serialize_from_json((glTFChildOfRootProperty&)val, js);
-    serialize_from_json_attr(
-        val.orthographic, js, "orthographic", false, def.orthographic);
-    serialize_from_json_attr(
-        val.perspective, js, "perspective", false, def.perspective);
-    serialize_from_json_attr(val.type, js, "type", true, def.type);
-}
-// Parse a glTFImageMimeType enum
-inline void serialize_from_json(glTFImageMimeType& val, const json& js) {
-    static vector<pair<string, glTFImageMimeType>> table = {
-        {"image/jpeg", glTFImageMimeType::ImageJpeg},
-        {"image/png", glTFImageMimeType::ImagePng},
-    };
-    serialize_from_json(val, js, table);
-}
-
-// Parses a glTFImage object
-inline void serialize_from_json(glTFImage& val, const json& js) {
-    static auto def = glTFImage();
-    serialize_from_json_obj(js);
-    serialize_from_json((glTFChildOfRootProperty&)val, js);
-    serialize_from_json_attr(val.uri, js, "uri", false, def.uri);
-    serialize_from_json_attr(val.mimeType, js, "mimeType", false, def.mimeType);
-    serialize_from_json_attr(
-        val.bufferView, js, "bufferView", false, def.bufferView);
-}
-
-// Parses a glTFTextureInfo object
-inline void serialize_from_json(glTFTextureInfo& val, const json& js) {
-    static auto def = glTFTextureInfo();
-    serialize_from_json_obj(js);
-    serialize_from_json((glTFProperty&)val, js);
-    serialize_from_json_attr(val.index, js, "index", true, def.index);
-    serialize_from_json_attr(val.texCoord, js, "texCoord", false, def.texCoord);
-}
-
-// Parses a glTFTexture object
-inline void serialize_from_json(glTFTexture& val, const json& js) {
-    static auto def = glTFTexture();
-    serialize_from_json_obj(js);
-    serialize_from_json((glTFChildOfRootProperty&)val, js);
-    serialize_from_json_attr(val.sampler, js, "sampler", false, def.sampler);
-    serialize_from_json_attr(val.source, js, "source", false, def.source);
-}
-
-// Parses a glTFMaterialNormalTextureInfo object
-inline void serialize_from_json(
-    glTFMaterialNormalTextureInfo& val, const json& js) {
-    static auto def = glTFMaterialNormalTextureInfo();
-    serialize_from_json_obj(js);
-    serialize_from_json((glTFTextureInfo&)val, js);
-    serialize_from_json_attr(val.scale, js, "scale", false, def.scale);
-}
-
-// Parses a glTFMaterialOcclusionTextureInfo object
-inline void serialize_from_json(
-    glTFMaterialOcclusionTextureInfo& val, const json& js) {
-    static auto def = glTFMaterialOcclusionTextureInfo();
-    serialize_from_json_obj(js);
-    serialize_from_json((glTFTextureInfo&)val, js);
-    serialize_from_json_attr(val.strength, js, "strength", false, def.strength);
-}
-
-// Parses a glTFMaterialPbrMetallicRoughness object
-inline void serialize_from_json(
-    glTFMaterialPbrMetallicRoughness& val, const json& js) {
-    static auto def = glTFMaterialPbrMetallicRoughness();
-    serialize_from_json_obj(js);
-    serialize_from_json((glTFProperty&)val, js);
-    serialize_from_json_attr(
-        val.baseColorFactor, js, "baseColorFactor", false, def.baseColorFactor);
-    serialize_from_json_attr(val.baseColorTexture, js, "baseColorTexture",
-        false, def.baseColorTexture);
-    serialize_from_json_attr(
-        val.metallicFactor, js, "metallicFactor", false, def.metallicFactor);
-    serialize_from_json_attr(
-        val.roughnessFactor, js, "roughnessFactor", false, def.roughnessFactor);
-    serialize_from_json_attr(val.metallicRoughnessTexture, js,
-        "metallicRoughnessTexture", false, def.metallicRoughnessTexture);
-}
-
-// Parses a glTFMaterialPbrSpecularGlossiness object
-inline void serialize_from_json(
-    glTFMaterialPbrSpecularGlossiness& val, const json& js) {
-    static auto def = glTFMaterialPbrSpecularGlossiness();
-    serialize_from_json_obj(js);
-    serialize_from_json((glTFProperty&)val, js);
-    serialize_from_json_attr(
-        val.diffuseFactor, js, "diffuseFactor", false, def.diffuseFactor);
-    serialize_from_json_attr(
-        val.diffuseTexture, js, "diffuseTexture", false, def.diffuseTexture);
-    serialize_from_json_attr(
-        val.specularFactor, js, "specularFactor", false, def.specularFactor);
-    serialize_from_json_attr(val.glossinessFactor, js, "glossinessFactor",
-        false, def.glossinessFactor);
-    serialize_from_json_attr(val.specularGlossinessTexture, js,
-        "specularGlossinessTexture", false, def.specularGlossinessTexture);
-}
-// Parse a glTFMaterialAlphaMode enum
-inline void serialize_from_json(glTFMaterialAlphaMode& val, const json& js) {
-    static vector<pair<string, glTFMaterialAlphaMode>> table = {
-        {"OPAQUE", glTFMaterialAlphaMode::Opaque},
-        {"MASK", glTFMaterialAlphaMode::Mask},
-        {"BLEND", glTFMaterialAlphaMode::Blend},
-    };
-    serialize_from_json(val, js, table);
-}
-
-// Parses a glTFMaterial object
-inline void serialize_from_json(glTFMaterial& val, const json& js) {
-    static auto def = glTFMaterial();
-    serialize_from_json_obj(js);
-    serialize_from_json((glTFChildOfRootProperty&)val, js);
-    serialize_from_json_attr(val.pbrMetallicRoughness, js,
-        "pbrMetallicRoughness", false, def.pbrMetallicRoughness);
-    serialize_from_json_attr(
-        val.normalTexture, js, "normalTexture", false, def.normalTexture);
-    serialize_from_json_attr(val.occlusionTexture, js, "occlusionTexture",
-        false, def.occlusionTexture);
-    serialize_from_json_attr(
-        val.emissiveTexture, js, "emissiveTexture", false, def.emissiveTexture);
-    serialize_from_json_attr(
-        val.emissiveFactor, js, "emissiveFactor", false, def.emissiveFactor);
-    serialize_from_json_attr(
-        val.alphaMode, js, "alphaMode", false, def.alphaMode);
-    serialize_from_json_attr(
-        val.alphaCutoff, js, "alphaCutoff", false, def.alphaCutoff);
-    serialize_from_json_attr(
-        val.doubleSided, js, "doubleSided", false, def.doubleSided);
-    if (js.count("extensions")) {
-        auto& js_ext = js["extensions"];
-        serialize_from_json_attr(val.pbrSpecularGlossiness, js_ext,
-            "KHR_materials_pbrSpecularGlossiness", false,
-            def.pbrSpecularGlossiness);
-    }
-}
-// Parse a glTFMeshPrimitiveMode enum
-inline void serialize_from_json(glTFMeshPrimitiveMode& val, const json& js) {
-    static vector<pair<int, glTFMeshPrimitiveMode>> table = {
-        {0, glTFMeshPrimitiveMode::Points},
-        {1, glTFMeshPrimitiveMode::Lines},
-        {2, glTFMeshPrimitiveMode::LineLoop},
-        {3, glTFMeshPrimitiveMode::LineStrip},
-        {4, glTFMeshPrimitiveMode::Triangles},
-        {5, glTFMeshPrimitiveMode::TriangleStrip},
-        {6, glTFMeshPrimitiveMode::TriangleFan},
-    };
-    serialize_from_json(val, js, table);
-}
-
-// Parses a glTFMeshPrimitive object
-inline void serialize_from_json(glTFMeshPrimitive& val, const json& js) {
-    static auto def = glTFMeshPrimitive();
-    serialize_from_json_obj(js);
-    serialize_from_json((glTFProperty&)val, js);
-    serialize_from_json_attr(
-        val.attributes, js, "attributes", true, def.attributes);
-    serialize_from_json_attr(val.indices, js, "indices", false, def.indices);
-    serialize_from_json_attr(val.material, js, "material", false, def.material);
-    serialize_from_json_attr(val.mode, js, "mode", false, def.mode);
-    serialize_from_json_attr(val.targets, js, "targets", false, def.targets);
-}
-
-// Parses a glTFMesh object
-inline void serialize_from_json(glTFMesh& val, const json& js) {
-    static auto def = glTFMesh();
-    serialize_from_json_obj(js);
-    serialize_from_json((glTFChildOfRootProperty&)val, js);
-    serialize_from_json_attr(
-        val.primitives, js, "primitives", true, def.primitives);
-    serialize_from_json_attr(val.weights, js, "weights", false, def.weights);
-}
-
-// Parses a glTFNode object
-inline void serialize_from_json(glTFNode& val, const json& js) {
-    static auto def = glTFNode();
-    serialize_from_json_obj(js);
-    serialize_from_json((glTFChildOfRootProperty&)val, js);
-    serialize_from_json_attr(val.camera, js, "camera", false, def.camera);
-    serialize_from_json_attr(val.children, js, "children", false, def.children);
-    serialize_from_json_attr(val.skin, js, "skin", false, def.skin);
-    serialize_from_json_attr(val.matrix, js, "matrix", false, def.matrix);
-    serialize_from_json_attr(val.mesh, js, "mesh", false, def.mesh);
-    serialize_from_json_attr(val.rotation, js, "rotation", false, def.rotation);
-    serialize_from_json_attr(val.scale, js, "scale", false, def.scale);
-    serialize_from_json_attr(
-        val.translation, js, "translation", false, def.translation);
-    serialize_from_json_attr(val.weights, js, "weights", false, def.weights);
-}
-// Parse a glTFSamplerMagFilter enum
-inline void serialize_from_json(glTFSamplerMagFilter& val, const json& js) {
-    static vector<pair<int, glTFSamplerMagFilter>> table = {
-        {9728, glTFSamplerMagFilter::Nearest},
-        {9729, glTFSamplerMagFilter::Linear},
-    };
-    serialize_from_json(val, js, table);
-}
-
-// Parse a glTFSamplerMinFilter enum
-inline void serialize_from_json(glTFSamplerMinFilter& val, const json& js) {
-    static vector<pair<int, glTFSamplerMinFilter>> table = {
-        {9728, glTFSamplerMinFilter::Nearest},
-        {9729, glTFSamplerMinFilter::Linear},
-        {9984, glTFSamplerMinFilter::NearestMipmapNearest},
-        {9985, glTFSamplerMinFilter::LinearMipmapNearest},
-        {9986, glTFSamplerMinFilter::NearestMipmapLinear},
-        {9987, glTFSamplerMinFilter::LinearMipmapLinear},
-    };
-    serialize_from_json(val, js, table);
-}
-
-// Parse a glTFSamplerWrapS enum
-inline void serialize_from_json(glTFSamplerWrapS& val, const json& js) {
-    static vector<pair<int, glTFSamplerWrapS>> table = {
-        {33071, glTFSamplerWrapS::ClampToEdge},
-        {33648, glTFSamplerWrapS::MirroredRepeat},
-        {10497, glTFSamplerWrapS::Repeat},
-    };
-    serialize_from_json(val, js, table);
-}
-
-// Parse a glTFSamplerWrapT enum
-inline void serialize_from_json(glTFSamplerWrapT& val, const json& js) {
-    static vector<pair<int, glTFSamplerWrapT>> table = {
-        {33071, glTFSamplerWrapT::ClampToEdge},
-        {33648, glTFSamplerWrapT::MirroredRepeat},
-        {10497, glTFSamplerWrapT::Repeat},
-    };
-    serialize_from_json(val, js, table);
-}
-
-// Parses a glTFSampler object
-inline void serialize_from_json(glTFSampler& val, const json& js) {
-    static auto def = glTFSampler();
-    serialize_from_json_obj(js);
-    serialize_from_json((glTFChildOfRootProperty&)val, js);
-    serialize_from_json_attr(
-        val.magFilter, js, "magFilter", false, def.magFilter);
-    serialize_from_json_attr(
-        val.minFilter, js, "minFilter", false, def.minFilter);
-    serialize_from_json_attr(val.wrapS, js, "wrapS", false, def.wrapS);
-    serialize_from_json_attr(val.wrapT, js, "wrapT", false, def.wrapT);
-}
-
-// Parses a glTFScene object
-inline void serialize_from_json(glTFScene& val, const json& js) {
-    static auto def = glTFScene();
-    serialize_from_json_obj(js);
-    serialize_from_json((glTFChildOfRootProperty&)val, js);
-    serialize_from_json_attr(val.nodes, js, "nodes", false, def.nodes);
-}
-
-// Parses a glTFSkin object
-inline void serialize_from_json(glTFSkin& val, const json& js) {
-    static auto def = glTFSkin();
-    serialize_from_json_obj(js);
-    serialize_from_json((glTFChildOfRootProperty&)val, js);
-    serialize_from_json_attr(val.inverseBindMatrices, js, "inverseBindMatrices",
-        false, def.inverseBindMatrices);
-    serialize_from_json_attr(val.skeleton, js, "skeleton", false, def.skeleton);
-    serialize_from_json_attr(val.joints, js, "joints", true, def.joints);
-}
-
-// Parses a glTF object
-inline void serialize_from_json(glTF& val, const json& js) {
-    static auto def = glTF();
-    serialize_from_json_obj(js);
-    serialize_from_json((glTFProperty&)val, js);
-    serialize_from_json_attr(
-        val.extensionsUsed, js, "extensionsUsed", false, def.extensionsUsed);
-    serialize_from_json_attr(val.extensionsRequired, js, "extensionsRequired",
-        false, def.extensionsRequired);
-    serialize_from_json_attr(
-        val.accessors, js, "accessors", false, def.accessors);
-    serialize_from_json_attr(
-        val.animations, js, "animations", false, def.animations);
-    serialize_from_json_attr(val.asset, js, "asset", true, def.asset);
-    serialize_from_json_attr(val.buffers, js, "buffers", false, def.buffers);
-    serialize_from_json_attr(
-        val.bufferViews, js, "bufferViews", false, def.bufferViews);
-    serialize_from_json_attr(val.cameras, js, "cameras", false, def.cameras);
-    serialize_from_json_attr(val.images, js, "images", false, def.images);
-    serialize_from_json_attr(
-        val.materials, js, "materials", false, def.materials);
-    serialize_from_json_attr(val.meshes, js, "meshes", false, def.meshes);
-    serialize_from_json_attr(val.nodes, js, "nodes", false, def.nodes);
-    serialize_from_json_attr(val.samplers, js, "samplers", false, def.samplers);
-    serialize_from_json_attr(val.scene, js, "scene", false, def.scene);
-    serialize_from_json_attr(val.scenes, js, "scenes", false, def.scenes);
-    serialize_from_json_attr(val.skins, js, "skins", false, def.skins);
-    serialize_from_json_attr(val.textures, js, "textures", false, def.textures);
-}
-
-// Converts glTFid to json.
-template <typename T>
-inline void serialize_to_json(const glTFid<T>& val, json& js) {
-    js = (int)val;
-}
-
 // Check for default value
 template <typename T>
 inline bool operator==(const glTFid<T>& a, const glTFid<T>& b) {
@@ -8658,69 +8082,89 @@ inline bool operator!=(const glTFid<T>& a, const glTFid<T>& b) {
     return (int)a != (int)b;
 }
 
-// Converts a glTFProperty object to JSON
-inline void serialize_to_json(const glTFProperty& val, json& js) {
-    if (!js.is_object()) js = json::object();
-#if YGL_GLTFJSON
-    if (!val.extensions.empty())
-        serialize_to_json(val.extensions, js["extensions"]);
-    if (!val.extras.is_null()) dump_attr(val.extras, "extras", js);
-#endif
+// Parse id function.
+template <typename T>
+inline void serialize(glTFid<T>& val, json& js, bool reading) {
+    if (reading) {
+        if (!js.is_number_integer()) throw runtime_error("int expected");
+        val = glTFid<T>((int)js);
+    } else {
+        js = (int)val;
+    }
 }
 
-// Converts a glTFChildOfRootProperty object to JSON
-inline void serialize_to_json(const glTFChildOfRootProperty& val, json& js) {
-    static auto def = glTFChildOfRootProperty();
-    serialize_to_json_obj(js);
-    serialize_to_json((const glTFProperty&)val, js);
-    serialize_to_json_attr(val.name, js, "name", false, def.name);
+// Parses a glTFProperty object
+inline void serialize(glTFProperty& val, json& js, bool reading) {
+    if (reading) {
+        if (!js.is_object()) throw runtime_error("object expected");
+#if YGL_GLTFJSON
+        if (js.count("extensions"))
+            serialize(val.extensions, js.at("extensions"), reading);
+        if (js.count("extras")) serialize(val.extras, js.at("extras"), reading);
+#endif
+    } else {
+        if (!js.is_object()) js = json::object();
+#if YGL_GLTFJSON
+        if (!val.extensions.empty())
+            serialize(val.extensions, js["extensions"], reading);
+        if (!val.extras.is_null()) serialize(val.extras, js["extras"], reading);
+#endif
+    }
 }
-// Converts a glTFAccessorSparseIndicesComponentType enum to JSON
-inline void serialize_to_json(
-    const glTFAccessorSparseIndicesComponentType& val, json& js) {
+
+// Parses a glTFChildOfRootProperty object
+inline void serialize(glTFChildOfRootProperty& val, json& js, bool reading) {
+    static auto def = glTFChildOfRootProperty();
+    serialize_obj(js, reading);
+    serialize((glTFProperty&)val, js, reading);
+    serialize_attr(val.name, js, "name", reading, false, def.name);
+}
+// Parse a glTFAccessorSparseIndicesComponentType enum
+inline void serialize(
+    glTFAccessorSparseIndicesComponentType& val, json& js, bool reading) {
     static vector<pair<int, glTFAccessorSparseIndicesComponentType>> table = {
         {5121, glTFAccessorSparseIndicesComponentType::UnsignedByte},
         {5123, glTFAccessorSparseIndicesComponentType::UnsignedShort},
         {5125, glTFAccessorSparseIndicesComponentType::UnsignedInt},
     };
-    serialize_to_json(val, js, table);
+    serialize(val, js, reading, table);
 }
 
-// Converts a glTFAccessorSparseIndices object to JSON
-inline void serialize_to_json(const glTFAccessorSparseIndices& val, json& js) {
+// Parses a glTFAccessorSparseIndices object
+inline void serialize(glTFAccessorSparseIndices& val, json& js, bool reading) {
     static auto def = glTFAccessorSparseIndices();
-    serialize_to_json_obj(js);
-    serialize_to_json((const glTFProperty&)val, js);
-    serialize_to_json_attr(
-        val.bufferView, js, "bufferView", true, def.bufferView);
-    serialize_to_json_attr(
-        val.byteOffset, js, "byteOffset", false, def.byteOffset);
-    serialize_to_json_attr(
-        val.componentType, js, "componentType", true, def.componentType);
+    serialize_obj(js, reading);
+    serialize((glTFProperty&)val, js, reading);
+    serialize_attr(
+        val.bufferView, js, "bufferView", reading, true, def.bufferView);
+    serialize_attr(
+        val.byteOffset, js, "byteOffset", reading, false, def.byteOffset);
+    serialize_attr(val.componentType, js, "componentType", reading, true,
+        def.componentType);
 }
 
-// Converts a glTFAccessorSparseValues object to JSON
-inline void serialize_to_json(const glTFAccessorSparseValues& val, json& js) {
+// Parses a glTFAccessorSparseValues object
+inline void serialize(glTFAccessorSparseValues& val, json& js, bool reading) {
     static auto def = glTFAccessorSparseValues();
-    serialize_to_json_obj(js);
-    serialize_to_json((const glTFProperty&)val, js);
-    serialize_to_json_attr(
-        val.bufferView, js, "bufferView", true, def.bufferView);
-    serialize_to_json_attr(
-        val.byteOffset, js, "byteOffset", false, def.byteOffset);
+    serialize_obj(js, reading);
+    serialize((glTFProperty&)val, js, reading);
+    serialize_attr(
+        val.bufferView, js, "bufferView", reading, true, def.bufferView);
+    serialize_attr(
+        val.byteOffset, js, "byteOffset", reading, false, def.byteOffset);
 }
 
-// Converts a glTFAccessorSparse object to JSON
-inline void serialize_to_json(const glTFAccessorSparse& val, json& js) {
+// Parses a glTFAccessorSparse object
+inline void serialize(glTFAccessorSparse& val, json& js, bool reading) {
     static auto def = glTFAccessorSparse();
-    serialize_to_json_obj(js);
-    serialize_to_json((const glTFProperty&)val, js);
-    serialize_to_json_attr(val.count, js, "count", true, def.count);
-    serialize_to_json_attr(val.indices, js, "indices", true, def.indices);
-    serialize_to_json_attr(val.values, js, "values", true, def.values);
+    serialize_obj(js, reading);
+    serialize((glTFProperty&)val, js, reading);
+    serialize_attr(val.count, js, "count", reading, true, def.count);
+    serialize_attr(val.indices, js, "indices", reading, true, def.indices);
+    serialize_attr(val.values, js, "values", reading, true, def.values);
 }
-// Converts a glTFAccessorComponentType enum to JSON
-inline void serialize_to_json(const glTFAccessorComponentType& val, json& js) {
+// Parse a glTFAccessorComponentType enum
+inline void serialize(glTFAccessorComponentType& val, json& js, bool reading) {
     static vector<pair<int, glTFAccessorComponentType>> table = {
         {5120, glTFAccessorComponentType::Byte},
         {5121, glTFAccessorComponentType::UnsignedByte},
@@ -8729,11 +8173,11 @@ inline void serialize_to_json(const glTFAccessorComponentType& val, json& js) {
         {5125, glTFAccessorComponentType::UnsignedInt},
         {5126, glTFAccessorComponentType::Float},
     };
-    serialize_to_json(val, js, table);
+    serialize(val, js, reading, table);
 }
 
-// Converts a glTFAccessorType enum to JSON
-inline void serialize_to_json(const glTFAccessorType& val, json& js) {
+// Parse a glTFAccessorType enum
+inline void serialize(glTFAccessorType& val, json& js, bool reading) {
     static vector<pair<string, glTFAccessorType>> table = {
         {"SCALAR", glTFAccessorType::Scalar},
         {"VEC2", glTFAccessorType::Vec2},
@@ -8743,60 +8187,60 @@ inline void serialize_to_json(const glTFAccessorType& val, json& js) {
         {"MAT3", glTFAccessorType::Mat3},
         {"MAT4", glTFAccessorType::Mat4},
     };
-    serialize_to_json(val, js, table);
+    serialize(val, js, reading, table);
 }
 
-// Converts a glTFAccessor object to JSON
-inline void serialize_to_json(const glTFAccessor& val, json& js) {
+// Parses a glTFAccessor object
+inline void serialize(glTFAccessor& val, json& js, bool reading) {
     static auto def = glTFAccessor();
-    serialize_to_json_obj(js);
-    serialize_to_json((const glTFChildOfRootProperty&)val, js);
-    serialize_to_json_attr(
-        val.bufferView, js, "bufferView", false, def.bufferView);
-    serialize_to_json_attr(
-        val.byteOffset, js, "byteOffset", false, def.byteOffset);
-    serialize_to_json_attr(
-        val.componentType, js, "componentType", true, def.componentType);
-    serialize_to_json_attr(
-        val.normalized, js, "normalized", false, def.normalized);
-    serialize_to_json_attr(val.count, js, "count", true, def.count);
-    serialize_to_json_attr(val.type, js, "type", true, def.type);
-    serialize_to_json_attr(val.max, js, "max", false, def.max);
-    serialize_to_json_attr(val.min, js, "min", false, def.min);
-    serialize_to_json_attr(val.sparse, js, "sparse", false, def.sparse);
+    serialize_obj(js, reading);
+    serialize((glTFChildOfRootProperty&)val, js, reading);
+    serialize_attr(
+        val.bufferView, js, "bufferView", reading, false, def.bufferView);
+    serialize_attr(
+        val.byteOffset, js, "byteOffset", reading, false, def.byteOffset);
+    serialize_attr(val.componentType, js, "componentType", reading, true,
+        def.componentType);
+    serialize_attr(
+        val.normalized, js, "normalized", reading, false, def.normalized);
+    serialize_attr(val.count, js, "count", reading, true, def.count);
+    serialize_attr(val.type, js, "type", reading, true, def.type);
+    serialize_attr(val.max, js, "max", reading, false, def.max);
+    serialize_attr(val.min, js, "min", reading, false, def.min);
+    serialize_attr(val.sparse, js, "sparse", reading, false, def.sparse);
 }
-// Converts a glTFAnimationChannelTargetPath enum to JSON
-inline void serialize_to_json(
-    const glTFAnimationChannelTargetPath& val, json& js) {
+// Parse a glTFAnimationChannelTargetPath enum
+inline void serialize(
+    glTFAnimationChannelTargetPath& val, json& js, bool reading) {
     static vector<pair<string, glTFAnimationChannelTargetPath>> table = {
         {"translation", glTFAnimationChannelTargetPath::Translation},
         {"rotation", glTFAnimationChannelTargetPath::Rotation},
         {"scale", glTFAnimationChannelTargetPath::Scale},
         {"weights", glTFAnimationChannelTargetPath::Weights},
     };
-    serialize_to_json(val, js, table);
+    serialize(val, js, reading, table);
 }
 
-// Converts a glTFAnimationChannelTarget object to JSON
-inline void serialize_to_json(const glTFAnimationChannelTarget& val, json& js) {
+// Parses a glTFAnimationChannelTarget object
+inline void serialize(glTFAnimationChannelTarget& val, json& js, bool reading) {
     static auto def = glTFAnimationChannelTarget();
-    serialize_to_json_obj(js);
-    serialize_to_json((const glTFProperty&)val, js);
-    serialize_to_json_attr(val.node, js, "node", true, def.node);
-    serialize_to_json_attr(val.path, js, "path", true, def.path);
+    serialize_obj(js, reading);
+    serialize((glTFProperty&)val, js, reading);
+    serialize_attr(val.node, js, "node", reading, true, def.node);
+    serialize_attr(val.path, js, "path", reading, true, def.path);
 }
 
-// Converts a glTFAnimationChannel object to JSON
-inline void serialize_to_json(const glTFAnimationChannel& val, json& js) {
+// Parses a glTFAnimationChannel object
+inline void serialize(glTFAnimationChannel& val, json& js, bool reading) {
     static auto def = glTFAnimationChannel();
-    serialize_to_json_obj(js);
-    serialize_to_json((const glTFProperty&)val, js);
-    serialize_to_json_attr(val.sampler, js, "sampler", true, def.sampler);
-    serialize_to_json_attr(val.target, js, "target", true, def.target);
+    serialize_obj(js, reading);
+    serialize((glTFProperty&)val, js, reading);
+    serialize_attr(val.sampler, js, "sampler", reading, true, def.sampler);
+    serialize_attr(val.target, js, "target", reading, true, def.target);
 }
-// Converts a glTFAnimationSamplerInterpolation enum to JSON
-inline void serialize_to_json(
-    const glTFAnimationSamplerInterpolation& val, json& js) {
+// Parse a glTFAnimationSamplerInterpolation enum
+inline void serialize(
+    glTFAnimationSamplerInterpolation& val, json& js, bool reading) {
     static vector<pair<string, glTFAnimationSamplerInterpolation>> table = {
         {"LINEAR", glTFAnimationSamplerInterpolation::Linear},
         {"STEP", glTFAnimationSamplerInterpolation::Step},
@@ -8804,250 +8248,259 @@ inline void serialize_to_json(
             glTFAnimationSamplerInterpolation::CatmullRomSpline},
         {"CUBICSPLINE", glTFAnimationSamplerInterpolation::CubicSpline},
     };
-    serialize_to_json(val, js, table);
+    serialize(val, js, reading, table);
 }
 
-// Converts a glTFAnimationSampler object to JSON
-inline void serialize_to_json(const glTFAnimationSampler& val, json& js) {
+// Parses a glTFAnimationSampler object
+inline void serialize(glTFAnimationSampler& val, json& js, bool reading) {
     static auto def = glTFAnimationSampler();
-    serialize_to_json_obj(js);
-    serialize_to_json((const glTFProperty&)val, js);
-    serialize_to_json_attr(val.input, js, "input", true, def.input);
-    serialize_to_json_attr(
-        val.interpolation, js, "interpolation", false, def.interpolation);
-    serialize_to_json_attr(val.output, js, "output", true, def.output);
+    serialize_obj(js, reading);
+    serialize((glTFProperty&)val, js, reading);
+    serialize_attr(val.input, js, "input", reading, true, def.input);
+    serialize_attr(val.interpolation, js, "interpolation", reading, false,
+        def.interpolation);
+    serialize_attr(val.output, js, "output", reading, true, def.output);
 }
 
-// Converts a glTFAnimation object to JSON
-inline void serialize_to_json(const glTFAnimation& val, json& js) {
+// Parses a glTFAnimation object
+inline void serialize(glTFAnimation& val, json& js, bool reading) {
     static auto def = glTFAnimation();
-    serialize_to_json_obj(js);
-    serialize_to_json((const glTFChildOfRootProperty&)val, js);
-    serialize_to_json_attr(val.channels, js, "channels", true, def.channels);
-    serialize_to_json_attr(val.samplers, js, "samplers", true, def.samplers);
+    serialize_obj(js, reading);
+    serialize((glTFChildOfRootProperty&)val, js, reading);
+    serialize_attr(val.channels, js, "channels", reading, true, def.channels);
+    serialize_attr(val.samplers, js, "samplers", reading, true, def.samplers);
 }
 
-// Converts a glTFAsset object to JSON
-inline void serialize_to_json(const glTFAsset& val, json& js) {
+// Parses a glTFAsset object
+inline void serialize(glTFAsset& val, json& js, bool reading) {
     static auto def = glTFAsset();
-    serialize_to_json_obj(js);
-    serialize_to_json((const glTFProperty&)val, js);
-    serialize_to_json_attr(
-        val.copyright, js, "copyright", false, def.copyright);
-    serialize_to_json_attr(
-        val.generator, js, "generator", false, def.generator);
-    serialize_to_json_attr(val.version, js, "version", true, def.version);
-    serialize_to_json_attr(
-        val.minVersion, js, "minVersion", false, def.minVersion);
+    serialize_obj(js, reading);
+    serialize((glTFProperty&)val, js, reading);
+    serialize_attr(
+        val.copyright, js, "copyright", reading, false, def.copyright);
+    serialize_attr(
+        val.generator, js, "generator", reading, false, def.generator);
+    serialize_attr(val.version, js, "version", reading, true, def.version);
+    serialize_attr(
+        val.minVersion, js, "minVersion", reading, false, def.minVersion);
 }
 
-// Converts a glTFBuffer object to JSON
-inline void serialize_to_json(const glTFBuffer& val, json& js) {
+// Parses a glTFBuffer object
+inline void serialize(glTFBuffer& val, json& js, bool reading) {
     static auto def = glTFBuffer();
-    serialize_to_json_obj(js);
-    serialize_to_json((const glTFChildOfRootProperty&)val, js);
-    serialize_to_json_attr(val.uri, js, "uri", false, def.uri);
-    serialize_to_json_attr(
-        val.byteLength, js, "byteLength", true, def.byteLength);
+    serialize_obj(js, reading);
+    serialize((glTFChildOfRootProperty&)val, js, reading);
+    serialize_attr(val.uri, js, "uri", reading, false, def.uri);
+    serialize_attr(
+        val.byteLength, js, "byteLength", reading, true, def.byteLength);
 }
-// Converts a glTFBufferViewTarget enum to JSON
-inline void serialize_to_json(const glTFBufferViewTarget& val, json& js) {
+// Parse a glTFBufferViewTarget enum
+inline void serialize(glTFBufferViewTarget& val, json& js, bool reading) {
     static vector<pair<int, glTFBufferViewTarget>> table = {
         {34962, glTFBufferViewTarget::ArrayBuffer},
         {34963, glTFBufferViewTarget::ElementArrayBuffer},
     };
-    serialize_to_json(val, js, table);
+    serialize(val, js, reading, table);
 }
 
-// Converts a glTFBufferView object to JSON
-inline void serialize_to_json(const glTFBufferView& val, json& js) {
+// Parses a glTFBufferView object
+inline void serialize(glTFBufferView& val, json& js, bool reading) {
     static auto def = glTFBufferView();
-    serialize_to_json_obj(js);
-    serialize_to_json((const glTFChildOfRootProperty&)val, js);
-    serialize_to_json_attr(val.buffer, js, "buffer", true, def.buffer);
-    serialize_to_json_attr(
-        val.byteOffset, js, "byteOffset", false, def.byteOffset);
-    serialize_to_json_attr(
-        val.byteLength, js, "byteLength", true, def.byteLength);
-    serialize_to_json_attr(
-        val.byteStride, js, "byteStride", false, def.byteStride);
-    serialize_to_json_attr(val.target, js, "target", false, def.target);
+    serialize_obj(js, reading);
+    serialize((glTFChildOfRootProperty&)val, js, reading);
+    serialize_attr(val.buffer, js, "buffer", reading, true, def.buffer);
+    serialize_attr(
+        val.byteOffset, js, "byteOffset", reading, false, def.byteOffset);
+    serialize_attr(
+        val.byteLength, js, "byteLength", reading, true, def.byteLength);
+    serialize_attr(
+        val.byteStride, js, "byteStride", reading, false, def.byteStride);
+    serialize_attr(val.target, js, "target", reading, false, def.target);
 }
 
-// Converts a glTFCameraOrthographic object to JSON
-inline void serialize_to_json(const glTFCameraOrthographic& val, json& js) {
+// Parses a glTFCameraOrthographic object
+inline void serialize(glTFCameraOrthographic& val, json& js, bool reading) {
     static auto def = glTFCameraOrthographic();
-    serialize_to_json_obj(js);
-    serialize_to_json((const glTFProperty&)val, js);
-    serialize_to_json_attr(val.xmag, js, "xmag", true, def.xmag);
-    serialize_to_json_attr(val.ymag, js, "ymag", true, def.ymag);
-    serialize_to_json_attr(val.zfar, js, "zfar", true, def.zfar);
-    serialize_to_json_attr(val.znear, js, "znear", true, def.znear);
+    serialize_obj(js, reading);
+    serialize((glTFProperty&)val, js, reading);
+    serialize_attr(val.xmag, js, "xmag", reading, true, def.xmag);
+    serialize_attr(val.ymag, js, "ymag", reading, true, def.ymag);
+    serialize_attr(val.zfar, js, "zfar", reading, true, def.zfar);
+    serialize_attr(val.znear, js, "znear", reading, true, def.znear);
 }
 
-// Converts a glTFCameraPerspective object to JSON
-inline void serialize_to_json(const glTFCameraPerspective& val, json& js) {
+// Parses a glTFCameraPerspective object
+inline void serialize(glTFCameraPerspective& val, json& js, bool reading) {
     static auto def = glTFCameraPerspective();
-    serialize_to_json_obj(js);
-    serialize_to_json((const glTFProperty&)val, js);
-    serialize_to_json_attr(
-        val.aspectRatio, js, "aspectRatio", false, def.aspectRatio);
-    serialize_to_json_attr(val.yfov, js, "yfov", true, def.yfov);
-    serialize_to_json_attr(val.zfar, js, "zfar", false, def.zfar);
-    serialize_to_json_attr(val.znear, js, "znear", true, def.znear);
+    serialize_obj(js, reading);
+    serialize((glTFProperty&)val, js, reading);
+    serialize_attr(
+        val.aspectRatio, js, "aspectRatio", reading, false, def.aspectRatio);
+    serialize_attr(val.yfov, js, "yfov", reading, true, def.yfov);
+    serialize_attr(val.zfar, js, "zfar", reading, false, def.zfar);
+    serialize_attr(val.znear, js, "znear", reading, true, def.znear);
 }
-// Converts a glTFCameraType enum to JSON
-inline void serialize_to_json(const glTFCameraType& val, json& js) {
+// Parse a glTFCameraType enum
+inline void serialize(glTFCameraType& val, json& js, bool reading) {
     static vector<pair<string, glTFCameraType>> table = {
         {"perspective", glTFCameraType::Perspective},
         {"orthographic", glTFCameraType::Orthographic},
     };
-    serialize_to_json(val, js, table);
+    serialize(val, js, reading, table);
 }
 
-// Converts a glTFCamera object to JSON
-inline void serialize_to_json(const glTFCamera& val, json& js) {
+// Parses a glTFCamera object
+inline void serialize(glTFCamera& val, json& js, bool reading) {
     static auto def = glTFCamera();
-    serialize_to_json_obj(js);
-    serialize_to_json((const glTFChildOfRootProperty&)val, js);
-    serialize_to_json_attr(
-        val.orthographic, js, "orthographic", false, def.orthographic);
-    serialize_to_json_attr(
-        val.perspective, js, "perspective", false, def.perspective);
-    serialize_to_json_attr(val.type, js, "type", true, def.type);
+    serialize_obj(js, reading);
+    serialize((glTFChildOfRootProperty&)val, js, reading);
+    serialize_attr(
+        val.orthographic, js, "orthographic", reading, false, def.orthographic);
+    serialize_attr(
+        val.perspective, js, "perspective", reading, false, def.perspective);
+    serialize_attr(val.type, js, "type", reading, true, def.type);
 }
-// Converts a glTFImageMimeType enum to JSON
-inline void serialize_to_json(const glTFImageMimeType& val, json& js) {
+// Parse a glTFImageMimeType enum
+inline void serialize(glTFImageMimeType& val, json& js, bool reading) {
     static vector<pair<string, glTFImageMimeType>> table = {
         {"image/jpeg", glTFImageMimeType::ImageJpeg},
         {"image/png", glTFImageMimeType::ImagePng},
     };
-    serialize_to_json(val, js, table);
+    serialize(val, js, reading, table);
 }
 
-// Converts a glTFImage object to JSON
-inline void serialize_to_json(const glTFImage& val, json& js) {
+// Parses a glTFImage object
+inline void serialize(glTFImage& val, json& js, bool reading) {
     static auto def = glTFImage();
-    serialize_to_json_obj(js);
-    serialize_to_json((const glTFChildOfRootProperty&)val, js);
-    serialize_to_json_attr(val.uri, js, "uri", false, def.uri);
-    serialize_to_json_attr(val.mimeType, js, "mimeType", false, def.mimeType);
-    serialize_to_json_attr(
-        val.bufferView, js, "bufferView", false, def.bufferView);
+    serialize_obj(js, reading);
+    serialize((glTFChildOfRootProperty&)val, js, reading);
+    serialize_attr(val.uri, js, "uri", reading, false, def.uri);
+    serialize_attr(val.mimeType, js, "mimeType", reading, false, def.mimeType);
+    serialize_attr(
+        val.bufferView, js, "bufferView", reading, false, def.bufferView);
 }
 
-// Converts a glTFTextureInfo object to JSON
-inline void serialize_to_json(const glTFTextureInfo& val, json& js) {
+// Parses a glTFTextureInfo object
+inline void serialize(glTFTextureInfo& val, json& js, bool reading) {
     static auto def = glTFTextureInfo();
-    serialize_to_json_obj(js);
-    serialize_to_json((const glTFProperty&)val, js);
-    serialize_to_json_attr(val.index, js, "index", true, def.index);
-    serialize_to_json_attr(val.texCoord, js, "texCoord", false, def.texCoord);
+    serialize_obj(js, reading);
+    serialize((glTFProperty&)val, js, reading);
+    serialize_attr(val.index, js, "index", reading, true, def.index);
+    serialize_attr(val.texCoord, js, "texCoord", reading, false, def.texCoord);
 }
 
-// Converts a glTFTexture object to JSON
-inline void serialize_to_json(const glTFTexture& val, json& js) {
+// Parses a glTFTexture object
+inline void serialize(glTFTexture& val, json& js, bool reading) {
     static auto def = glTFTexture();
-    serialize_to_json_obj(js);
-    serialize_to_json((const glTFChildOfRootProperty&)val, js);
-    serialize_to_json_attr(val.sampler, js, "sampler", false, def.sampler);
-    serialize_to_json_attr(val.source, js, "source", false, def.source);
+    serialize_obj(js, reading);
+    serialize((glTFChildOfRootProperty&)val, js, reading);
+    serialize_attr(val.sampler, js, "sampler", reading, false, def.sampler);
+    serialize_attr(val.source, js, "source", reading, false, def.source);
 }
 
-// Converts a glTFMaterialNormalTextureInfo object to JSON
-inline void serialize_to_json(
-    const glTFMaterialNormalTextureInfo& val, json& js) {
+// Parses a glTFMaterialNormalTextureInfo object
+inline void serialize(
+    glTFMaterialNormalTextureInfo& val, json& js, bool reading) {
     static auto def = glTFMaterialNormalTextureInfo();
-    serialize_to_json_obj(js);
-    serialize_to_json((const glTFTextureInfo&)val, js);
-    serialize_to_json_attr(val.scale, js, "scale", false, def.scale);
+    serialize_obj(js, reading);
+    serialize((glTFTextureInfo&)val, js, reading);
+    serialize_attr(val.scale, js, "scale", reading, false, def.scale);
 }
 
-// Converts a glTFMaterialOcclusionTextureInfo object to JSON
-inline void serialize_to_json(
-    const glTFMaterialOcclusionTextureInfo& val, json& js) {
+// Parses a glTFMaterialOcclusionTextureInfo object
+inline void serialize(
+    glTFMaterialOcclusionTextureInfo& val, json& js, bool reading) {
     static auto def = glTFMaterialOcclusionTextureInfo();
-    serialize_to_json_obj(js);
-    serialize_to_json((const glTFTextureInfo&)val, js);
-    serialize_to_json_attr(val.strength, js, "strength", false, def.strength);
+    serialize_obj(js, reading);
+    serialize((glTFTextureInfo&)val, js, reading);
+    serialize_attr(val.strength, js, "strength", reading, false, def.strength);
 }
 
-// Converts a glTFMaterialPbrMetallicRoughness object to JSON
-inline void serialize_to_json(
-    const glTFMaterialPbrMetallicRoughness& val, json& js) {
+// Parses a glTFMaterialPbrMetallicRoughness object
+inline void serialize(
+    glTFMaterialPbrMetallicRoughness& val, json& js, bool reading) {
     static auto def = glTFMaterialPbrMetallicRoughness();
-    serialize_to_json_obj(js);
-    serialize_to_json((const glTFProperty&)val, js);
-    serialize_to_json_attr(
-        val.baseColorFactor, js, "baseColorFactor", false, def.baseColorFactor);
-    serialize_to_json_attr(val.baseColorTexture, js, "baseColorTexture", false,
+    serialize_obj(js, reading);
+    serialize((glTFProperty&)val, js, reading);
+    serialize_attr(val.baseColorFactor, js, "baseColorFactor", reading, false,
+        def.baseColorFactor);
+    serialize_attr(val.baseColorTexture, js, "baseColorTexture", reading, false,
         def.baseColorTexture);
-    serialize_to_json_attr(
-        val.metallicFactor, js, "metallicFactor", false, def.metallicFactor);
-    serialize_to_json_attr(
-        val.roughnessFactor, js, "roughnessFactor", false, def.roughnessFactor);
-    serialize_to_json_attr(val.metallicRoughnessTexture, js,
-        "metallicRoughnessTexture", false, def.metallicRoughnessTexture);
+    serialize_attr(val.metallicFactor, js, "metallicFactor", reading, false,
+        def.metallicFactor);
+    serialize_attr(val.roughnessFactor, js, "roughnessFactor", reading, false,
+        def.roughnessFactor);
+    serialize_attr(val.metallicRoughnessTexture, js, "metallicRoughnessTexture",
+        reading, false, def.metallicRoughnessTexture);
 }
 
-// Converts a glTFMaterialPbrSpecularGlossiness object to JSON
-inline void serialize_to_json(
-    const glTFMaterialPbrSpecularGlossiness& val, json& js) {
+// Parses a glTFMaterialPbrSpecularGlossiness object
+inline void serialize(
+    glTFMaterialPbrSpecularGlossiness& val, json& js, bool reading) {
     static auto def = glTFMaterialPbrSpecularGlossiness();
-    serialize_to_json_obj(js);
-    serialize_to_json((const glTFProperty&)val, js);
-    serialize_to_json_attr(
-        val.diffuseFactor, js, "diffuseFactor", false, def.diffuseFactor);
-    serialize_to_json_attr(
-        val.diffuseTexture, js, "diffuseTexture", false, def.diffuseTexture);
-    serialize_to_json_attr(
-        val.specularFactor, js, "specularFactor", false, def.specularFactor);
-    serialize_to_json_attr(val.glossinessFactor, js, "glossinessFactor", false,
+    serialize_obj(js, reading);
+    serialize((glTFProperty&)val, js, reading);
+    serialize_attr(val.diffuseFactor, js, "diffuseFactor", reading, false,
+        def.diffuseFactor);
+    serialize_attr(val.diffuseTexture, js, "diffuseTexture", reading, false,
+        def.diffuseTexture);
+    serialize_attr(val.specularFactor, js, "specularFactor", reading, false,
+        def.specularFactor);
+    serialize_attr(val.glossinessFactor, js, "glossinessFactor", reading, false,
         def.glossinessFactor);
-    serialize_to_json_attr(val.specularGlossinessTexture, js,
-        "specularGlossinessTexture", false, def.specularGlossinessTexture);
+    serialize_attr(val.specularGlossinessTexture, js,
+        "specularGlossinessTexture", reading, false,
+        def.specularGlossinessTexture);
 }
-// Converts a glTFMaterialAlphaMode enum to JSON
-inline void serialize_to_json(const glTFMaterialAlphaMode& val, json& js) {
+// Parse a glTFMaterialAlphaMode enum
+inline void serialize(glTFMaterialAlphaMode& val, json& js, bool reading) {
     static vector<pair<string, glTFMaterialAlphaMode>> table = {
         {"OPAQUE", glTFMaterialAlphaMode::Opaque},
         {"MASK", glTFMaterialAlphaMode::Mask},
         {"BLEND", glTFMaterialAlphaMode::Blend},
     };
-    serialize_to_json(val, js, table);
+    serialize(val, js, reading, table);
 }
 
-// Converts a glTFMaterial object to JSON
-inline void serialize_to_json(const glTFMaterial& val, json& js) {
+// Parses a glTFMaterial object
+inline void serialize(glTFMaterial& val, json& js, bool reading) {
     static auto def = glTFMaterial();
-    serialize_to_json_obj(js);
-    serialize_to_json((const glTFChildOfRootProperty&)val, js);
-    serialize_to_json_attr(val.pbrMetallicRoughness, js, "pbrMetallicRoughness",
-        false, def.pbrMetallicRoughness);
-    serialize_to_json_attr(
-        val.normalTexture, js, "normalTexture", false, def.normalTexture);
-    serialize_to_json_attr(val.occlusionTexture, js, "occlusionTexture", false,
+    serialize_obj(js, reading);
+    serialize((glTFChildOfRootProperty&)val, js, reading);
+    serialize_attr(val.pbrMetallicRoughness, js, "pbrMetallicRoughness",
+        reading, false, def.pbrMetallicRoughness);
+    serialize_attr(val.normalTexture, js, "normalTexture", reading, false,
+        def.normalTexture);
+    serialize_attr(val.occlusionTexture, js, "occlusionTexture", reading, false,
         def.occlusionTexture);
-    serialize_to_json_attr(
-        val.emissiveTexture, js, "emissiveTexture", false, def.emissiveTexture);
-    serialize_to_json_attr(
-        val.emissiveFactor, js, "emissiveFactor", false, def.emissiveFactor);
-    serialize_to_json_attr(
-        val.alphaMode, js, "alphaMode", false, def.alphaMode);
-    serialize_to_json_attr(
-        val.alphaCutoff, js, "alphaCutoff", false, def.alphaCutoff);
-    serialize_to_json_attr(
-        val.doubleSided, js, "doubleSided", false, def.doubleSided);
-
-    if (val.pbrSpecularGlossiness != nullptr) {
-        auto& js_ext = js["extensions"];
-        serialize_to_json_attr(val.pbrSpecularGlossiness, js_ext,
-            "KHR_materials_pbrSpecularGlossiness", false,
-            def.pbrSpecularGlossiness);
+    serialize_attr(val.emissiveTexture, js, "emissiveTexture", reading, false,
+        def.emissiveTexture);
+    serialize_attr(val.emissiveFactor, js, "emissiveFactor", reading, false,
+        def.emissiveFactor);
+    serialize_attr(
+        val.alphaMode, js, "alphaMode", reading, false, def.alphaMode);
+    serialize_attr(
+        val.alphaCutoff, js, "alphaCutoff", reading, false, def.alphaCutoff);
+    serialize_attr(
+        val.doubleSided, js, "doubleSided", reading, false, def.doubleSided);
+    if (reading) {
+        if (js.count("extensions")) {
+            auto& js_ext = js["extensions"];
+            serialize_attr(val.pbrSpecularGlossiness, js_ext,
+                "KHR_materials_pbrSpecularGlossiness", reading, false,
+                def.pbrSpecularGlossiness);
+        }
+    } else {
+        if (val.pbrSpecularGlossiness != nullptr) {
+            auto& js_ext = js["extensions"];
+            serialize_attr(val.pbrSpecularGlossiness, js_ext,
+                "KHR_materials_pbrSpecularGlossiness", reading, false,
+                def.pbrSpecularGlossiness);
+        }
     }
 }
-// Converts a glTFMeshPrimitiveMode enum to JSON
-inline void serialize_to_json(const glTFMeshPrimitiveMode& val, json& js) {
+// Parse a glTFMeshPrimitiveMode enum
+inline void serialize(glTFMeshPrimitiveMode& val, json& js, bool reading) {
     static vector<pair<int, glTFMeshPrimitiveMode>> table = {
         {0, glTFMeshPrimitiveMode::Points},
         {1, glTFMeshPrimitiveMode::Lines},
@@ -9057,59 +8510,59 @@ inline void serialize_to_json(const glTFMeshPrimitiveMode& val, json& js) {
         {5, glTFMeshPrimitiveMode::TriangleStrip},
         {6, glTFMeshPrimitiveMode::TriangleFan},
     };
-    serialize_to_json(val, js, table);
+    serialize(val, js, reading, table);
 }
 
-// Converts a glTFMeshPrimitive object to JSON
-inline void serialize_to_json(const glTFMeshPrimitive& val, json& js) {
+// Parses a glTFMeshPrimitive object
+inline void serialize(glTFMeshPrimitive& val, json& js, bool reading) {
     static auto def = glTFMeshPrimitive();
-    serialize_to_json_obj(js);
-    serialize_to_json((const glTFProperty&)val, js);
-    serialize_to_json_attr(
-        val.attributes, js, "attributes", true, def.attributes);
-    serialize_to_json_attr(val.indices, js, "indices", false, def.indices);
-    serialize_to_json_attr(val.material, js, "material", false, def.material);
-    serialize_to_json_attr(val.mode, js, "mode", false, def.mode);
-    serialize_to_json_attr(val.targets, js, "targets", false, def.targets);
+    serialize_obj(js, reading);
+    serialize((glTFProperty&)val, js, reading);
+    serialize_attr(
+        val.attributes, js, "attributes", reading, true, def.attributes);
+    serialize_attr(val.indices, js, "indices", reading, false, def.indices);
+    serialize_attr(val.material, js, "material", reading, false, def.material);
+    serialize_attr(val.mode, js, "mode", reading, false, def.mode);
+    serialize_attr(val.targets, js, "targets", reading, false, def.targets);
 }
 
-// Converts a glTFMesh object to JSON
-inline void serialize_to_json(const glTFMesh& val, json& js) {
+// Parses a glTFMesh object
+inline void serialize(glTFMesh& val, json& js, bool reading) {
     static auto def = glTFMesh();
-    serialize_to_json_obj(js);
-    serialize_to_json((const glTFChildOfRootProperty&)val, js);
-    serialize_to_json_attr(
-        val.primitives, js, "primitives", true, def.primitives);
-    serialize_to_json_attr(val.weights, js, "weights", false, def.weights);
+    serialize_obj(js, reading);
+    serialize((glTFChildOfRootProperty&)val, js, reading);
+    serialize_attr(
+        val.primitives, js, "primitives", reading, true, def.primitives);
+    serialize_attr(val.weights, js, "weights", reading, false, def.weights);
 }
 
-// Converts a glTFNode object to JSON
-inline void serialize_to_json(const glTFNode& val, json& js) {
+// Parses a glTFNode object
+inline void serialize(glTFNode& val, json& js, bool reading) {
     static auto def = glTFNode();
-    serialize_to_json_obj(js);
-    serialize_to_json((const glTFChildOfRootProperty&)val, js);
-    serialize_to_json_attr(val.camera, js, "camera", false, def.camera);
-    serialize_to_json_attr(val.children, js, "children", false, def.children);
-    serialize_to_json_attr(val.skin, js, "skin", false, def.skin);
-    serialize_to_json_attr(val.matrix, js, "matrix", false, def.matrix);
-    serialize_to_json_attr(val.mesh, js, "mesh", false, def.mesh);
-    serialize_to_json_attr(val.rotation, js, "rotation", false, def.rotation);
-    serialize_to_json_attr(val.scale, js, "scale", false, def.scale);
-    serialize_to_json_attr(
-        val.translation, js, "translation", false, def.translation);
-    serialize_to_json_attr(val.weights, js, "weights", false, def.weights);
+    serialize_obj(js, reading);
+    serialize((glTFChildOfRootProperty&)val, js, reading);
+    serialize_attr(val.camera, js, "camera", reading, false, def.camera);
+    serialize_attr(val.children, js, "children", reading, false, def.children);
+    serialize_attr(val.skin, js, "skin", reading, false, def.skin);
+    serialize_attr(val.matrix, js, "matrix", reading, false, def.matrix);
+    serialize_attr(val.mesh, js, "mesh", reading, false, def.mesh);
+    serialize_attr(val.rotation, js, "rotation", reading, false, def.rotation);
+    serialize_attr(val.scale, js, "scale", reading, false, def.scale);
+    serialize_attr(
+        val.translation, js, "translation", reading, false, def.translation);
+    serialize_attr(val.weights, js, "weights", reading, false, def.weights);
 }
-// Converts a glTFSamplerMagFilter enum to JSON
-inline void serialize_to_json(const glTFSamplerMagFilter& val, json& js) {
+// Parse a glTFSamplerMagFilter enum
+inline void serialize(glTFSamplerMagFilter& val, json& js, bool reading) {
     static vector<pair<int, glTFSamplerMagFilter>> table = {
         {9728, glTFSamplerMagFilter::Nearest},
         {9729, glTFSamplerMagFilter::Linear},
     };
-    serialize_to_json(val, js, table);
+    serialize(val, js, reading, table);
 }
 
-// Converts a glTFSamplerMinFilter enum to JSON
-inline void serialize_to_json(const glTFSamplerMinFilter& val, json& js) {
+// Parse a glTFSamplerMinFilter enum
+inline void serialize(glTFSamplerMinFilter& val, json& js, bool reading) {
     static vector<pair<int, glTFSamplerMinFilter>> table = {
         {9728, glTFSamplerMinFilter::Nearest},
         {9729, glTFSamplerMinFilter::Linear},
@@ -9118,90 +8571,91 @@ inline void serialize_to_json(const glTFSamplerMinFilter& val, json& js) {
         {9986, glTFSamplerMinFilter::NearestMipmapLinear},
         {9987, glTFSamplerMinFilter::LinearMipmapLinear},
     };
-    serialize_to_json(val, js, table);
+    serialize(val, js, reading, table);
 }
 
-// Converts a glTFSamplerWrapS enum to JSON
-inline void serialize_to_json(const glTFSamplerWrapS& val, json& js) {
+// Parse a glTFSamplerWrapS enum
+inline void serialize(glTFSamplerWrapS& val, json& js, bool reading) {
     static vector<pair<int, glTFSamplerWrapS>> table = {
         {33071, glTFSamplerWrapS::ClampToEdge},
         {33648, glTFSamplerWrapS::MirroredRepeat},
         {10497, glTFSamplerWrapS::Repeat},
     };
-    serialize_to_json(val, js, table);
+    serialize(val, js, reading, table);
 }
 
-// Converts a glTFSamplerWrapT enum to JSON
-inline void serialize_to_json(const glTFSamplerWrapT& val, json& js) {
+// Parse a glTFSamplerWrapT enum
+inline void serialize(glTFSamplerWrapT& val, json& js, bool reading) {
     static vector<pair<int, glTFSamplerWrapT>> table = {
         {33071, glTFSamplerWrapT::ClampToEdge},
         {33648, glTFSamplerWrapT::MirroredRepeat},
         {10497, glTFSamplerWrapT::Repeat},
     };
-    serialize_to_json(val, js, table);
+    serialize(val, js, reading, table);
 }
 
-// Converts a glTFSampler object to JSON
-inline void serialize_to_json(const glTFSampler& val, json& js) {
+// Parses a glTFSampler object
+inline void serialize(glTFSampler& val, json& js, bool reading) {
     static auto def = glTFSampler();
-    serialize_to_json_obj(js);
-    serialize_to_json((const glTFChildOfRootProperty&)val, js);
-    serialize_to_json_attr(
-        val.magFilter, js, "magFilter", false, def.magFilter);
-    serialize_to_json_attr(
-        val.minFilter, js, "minFilter", false, def.minFilter);
-    serialize_to_json_attr(val.wrapS, js, "wrapS", false, def.wrapS);
-    serialize_to_json_attr(val.wrapT, js, "wrapT", false, def.wrapT);
+    serialize_obj(js, reading);
+    serialize((glTFChildOfRootProperty&)val, js, reading);
+    serialize_attr(
+        val.magFilter, js, "magFilter", reading, false, def.magFilter);
+    serialize_attr(
+        val.minFilter, js, "minFilter", reading, false, def.minFilter);
+    serialize_attr(val.wrapS, js, "wrapS", reading, false, def.wrapS);
+    serialize_attr(val.wrapT, js, "wrapT", reading, false, def.wrapT);
 }
 
-// Converts a glTFScene object to JSON
-inline void serialize_to_json(const glTFScene& val, json& js) {
+// Parses a glTFScene object
+inline void serialize(glTFScene& val, json& js, bool reading) {
     static auto def = glTFScene();
-    serialize_to_json_obj(js);
-    serialize_to_json((const glTFChildOfRootProperty&)val, js);
-    serialize_to_json_attr(val.nodes, js, "nodes", false, def.nodes);
+    serialize_obj(js, reading);
+    serialize((glTFChildOfRootProperty&)val, js, reading);
+    serialize_attr(val.nodes, js, "nodes", reading, false, def.nodes);
 }
 
-// Converts a glTFSkin object to JSON
-inline void serialize_to_json(const glTFSkin& val, json& js) {
+// Parses a glTFSkin object
+inline void serialize(glTFSkin& val, json& js, bool reading) {
     static auto def = glTFSkin();
-    serialize_to_json_obj(js);
-    serialize_to_json((const glTFChildOfRootProperty&)val, js);
-    serialize_to_json_attr(val.inverseBindMatrices, js, "inverseBindMatrices",
+    serialize_obj(js, reading);
+    serialize((glTFChildOfRootProperty&)val, js, reading);
+    serialize_attr(val.inverseBindMatrices, js, "inverseBindMatrices", reading,
         false, def.inverseBindMatrices);
-    serialize_to_json_attr(val.skeleton, js, "skeleton", false, def.skeleton);
-    serialize_to_json_attr(val.joints, js, "joints", true, def.joints);
+    serialize_attr(val.skeleton, js, "skeleton", reading, false, def.skeleton);
+    serialize_attr(val.joints, js, "joints", reading, true, def.joints);
 }
 
-// Converts a glTF object to JSON
-inline void serialize_to_json(const glTF& val, json& js) {
+// Parses a glTF object
+inline void serialize(glTF& val, json& js, bool reading) {
     static auto def = glTF();
-    serialize_to_json_obj(js);
-    serialize_to_json((const glTFProperty&)val, js);
-    serialize_to_json_attr(
-        val.extensionsUsed, js, "extensionsUsed", false, def.extensionsUsed);
-    serialize_to_json_attr(val.extensionsRequired, js, "extensionsRequired",
+    serialize_obj(js, reading);
+    serialize((glTFProperty&)val, js, reading);
+    serialize_attr(val.extensionsUsed, js, "extensionsUsed", reading, false,
+        def.extensionsUsed);
+    serialize_attr(val.extensionsRequired, js, "extensionsRequired", reading,
         false, def.extensionsRequired);
-    serialize_to_json_attr(
-        val.accessors, js, "accessors", false, def.accessors);
-    serialize_to_json_attr(
-        val.animations, js, "animations", false, def.animations);
-    serialize_to_json_attr(val.asset, js, "asset", true, def.asset);
-    serialize_to_json_attr(val.buffers, js, "buffers", false, def.buffers);
-    serialize_to_json_attr(
-        val.bufferViews, js, "bufferViews", false, def.bufferViews);
-    serialize_to_json_attr(val.cameras, js, "cameras", false, def.cameras);
-    serialize_to_json_attr(val.images, js, "images", false, def.images);
-    serialize_to_json_attr(
-        val.materials, js, "materials", false, def.materials);
-    serialize_to_json_attr(val.meshes, js, "meshes", false, def.meshes);
-    serialize_to_json_attr(val.nodes, js, "nodes", false, def.nodes);
-    serialize_to_json_attr(val.samplers, js, "samplers", false, def.samplers);
-    serialize_to_json_attr(val.scene, js, "scene", false, def.scene);
-    serialize_to_json_attr(val.scenes, js, "scenes", false, def.scenes);
-    serialize_to_json_attr(val.skins, js, "skins", false, def.skins);
-    serialize_to_json_attr(val.textures, js, "textures", false, def.textures);
+    serialize_attr(
+        val.accessors, js, "accessors", reading, false, def.accessors);
+    serialize_attr(
+        val.animations, js, "animations", reading, false, def.animations);
+    serialize_attr(val.asset, js, "asset", reading, true, def.asset);
+    serialize_attr(val.buffers, js, "buffers", reading, false, def.buffers);
+    serialize_attr(
+        val.bufferViews, js, "bufferViews", reading, false, def.bufferViews);
+    serialize_attr(val.cameras, js, "cameras", reading, false, def.cameras);
+    serialize_attr(val.images, js, "images", reading, false, def.images);
+    serialize_attr(
+        val.materials, js, "materials", reading, false, def.materials);
+    serialize_attr(val.meshes, js, "meshes", reading, false, def.meshes);
+    serialize_attr(val.nodes, js, "nodes", reading, false, def.nodes);
+    serialize_attr(val.samplers, js, "samplers", reading, false, def.samplers);
+    serialize_attr(val.scene, js, "scene", reading, false, def.scene);
+    serialize_attr(val.scenes, js, "scenes", reading, false, def.scenes);
+    serialize_attr(val.skins, js, "skins", reading, false, def.skins);
+    serialize_attr(val.textures, js, "textures", reading, false, def.textures);
 }
+
 // #codegen end func
 
 // Encode in base64
@@ -9438,7 +8892,7 @@ glTF* load_gltf(
     // parse json
     auto gltf_ = gltf.get();
     try {
-        serialize_from_json(gltf_, js);
+        serialize(gltf_, js, true);
     } catch (const exception& e) {
         throw runtime_error("error parsing gltf " + string(e.what()));
     }
@@ -9500,7 +8954,7 @@ void save_gltf(
     const string& filename, const glTF* gltf, bool save_bin, bool save_image) {
     // dumps json
     auto js = json();
-    serialize_to_json(gltf, js);
+    serialize((glTF*&)gltf, js, false);
 
     // save json
     save_text(filename, js.dump(2));
@@ -9614,7 +9068,7 @@ glTF* load_binary_gltf(
     // parse json
     auto gltf_ = gltf.get();
     try {
-        serialize_from_json(gltf_, js);
+        serialize(gltf_, js, true);
     } catch (const exception& e) {
         throw runtime_error("cannot parse gltf json " + string(e.what()));
         return nullptr;
@@ -9647,7 +9101,7 @@ void save_binary_gltf(
 
     // dumps json
     auto js = json();
-    serialize_to_json(gltf, js);
+    serialize((glTF*&)gltf, js, false);
 
     // fix string
     auto js_str = js.dump(2);
@@ -11991,231 +11445,117 @@ unordered_map<string, test_scene_params>& test_scene_presets() {
 }
 
 // Parses a test_camera object
-inline void serialize_from_json(test_camera_params& val, const json& js) {
+inline void serialize(test_camera_params& val, json& js, bool reading) {
     static auto def = test_camera_params();
-    serialize_from_json_obj(js);
-    serialize_from_json_attr(val.name, js, "name");
-    serialize_from_json_attr(val.from, js, "from");
-    serialize_from_json_attr(val.to, js, "to");
-    serialize_from_json_attr(val.yfov, js, "yfov");
-    serialize_from_json_attr(val.aspect, js, "aspect");
+    serialize_obj(js, reading);
+    serialize_attr(val.name, js, "name", reading);
+    serialize_attr(val.from, js, "from", reading);
+    serialize_attr(val.to, js, "to", reading);
+    serialize_attr(val.yfov, js, "yfov", reading);
+    serialize_attr(val.aspect, js, "aspect", reading);
 }
 
 // Parses a test_camera object
-inline void serialize_from_json(test_texture_type& val, const json& js) {
-    serialize_from_json(val, js, test_texture_names());
+inline void serialize(test_texture_type& val, json& js, bool reading) {
+    serialize(val, js, reading, test_texture_names());
 }
 
 // Parses a test_camera object
-inline void serialize_from_json(test_texture_params& val, const json& js) {
+inline void serialize(test_texture_params& val, json& js, bool reading) {
     static auto def = test_texture_params();
-    serialize_from_json_obj(js);
-    serialize_from_json_attr(val.name, js, "name");
-    serialize_from_json_attr(val.type, js, "type");
-    serialize_from_json_attr(val.resolution, js, "resolution");
-    serialize_from_json_attr(
-        val.tile_size, js, "tile_size", false, def.tile_size);
-    serialize_from_json_attr(
-        val.noise_scale, js, "noise_scale", false, def.noise_scale);
-    serialize_from_json_attr(
-        val.sky_sunangle, js, "sky_sunangle", false, def.sky_sunangle);
-    serialize_from_json_attr(
-        val.bump_to_normal, js, "bump_to_normal", false, def.bump_to_normal);
-    serialize_from_json_attr(
-        val.bump_scale, js, "bump_scale", false, def.bump_scale);
+    serialize_obj(js, reading);
+    serialize_attr(val.name, js, "name", reading);
+    serialize_attr(val.type, js, "type", reading);
+    serialize_attr(val.resolution, js, "resolution", reading);
+    serialize_attr(
+        val.tile_size, js, "tile_size", reading, false, def.tile_size);
+    serialize_attr(
+        val.noise_scale, js, "noise_scale", reading, false, def.noise_scale);
+    serialize_attr(
+        val.sky_sunangle, js, "sky_sunangle", reading, false, def.sky_sunangle);
+    serialize_attr(val.bump_to_normal, js, "bump_to_normal", reading, false,
+        def.bump_to_normal);
+    serialize_attr(
+        val.bump_scale, js, "bump_scale", reading, false, def.bump_scale);
 }
 
 // Parses a test_camera object
-inline void serialize_from_json(test_material_type& val, const json& js) {
-    serialize_from_json(val, js, test_material_names());
+inline void serialize(test_material_type& val, json& js, bool reading) {
+    serialize(val, js, reading, test_material_names());
 }
 
 // Parses a test_camera object
-inline void serialize_from_json(test_material_params& val, const json& js) {
+inline void serialize(test_material_params& val, json& js, bool reading) {
     static auto def = test_material_params();
-    serialize_from_json_obj(js);
-    serialize_from_json_attr(val.name, js, "name");
-    serialize_from_json_attr(val.type, js, "type");
-    serialize_from_json_attr(val.emission, js, "emission", false, def.emission);
-    serialize_from_json_attr(val.color, js, "color", false, def.color);
-    serialize_from_json_attr(val.opacity, js, "opacity", false, def.opacity);
-    serialize_from_json_attr(
-        val.roughness, js, "roughness", false, def.roughness);
-    serialize_from_json_attr(val.texture, js, "texture", false, def.texture);
-    serialize_from_json_attr(val.normal, js, "normal", false, def.normal);
+    serialize_obj(js, reading);
+    serialize_attr(val.name, js, "name", reading);
+    serialize_attr(val.type, js, "type", reading);
+    serialize_attr(val.emission, js, "emission", reading, false, def.emission);
+    serialize_attr(val.color, js, "color", reading, false, def.color);
+    serialize_attr(val.opacity, js, "opacity", reading, false, def.opacity);
+    serialize_attr(
+        val.roughness, js, "roughness", reading, false, def.roughness);
+    serialize_attr(val.texture, js, "texture", reading, false, def.texture);
+    serialize_attr(val.normal, js, "normal", reading, false, def.normal);
 }
 
 // Parses a test_camera object
-inline void serialize_from_json(test_shape_type& val, const json& js) {
-    serialize_from_json(val, js, test_shape_names());
+inline void serialize(test_shape_type& val, json& js, bool reading) {
+    serialize(val, js, reading, test_shape_names());
 }
 
 // Parses a test_camera object
-inline void serialize_from_json(test_shape_params& val, const json& js) {
+inline void serialize(test_shape_params& val, json& js, bool reading) {
     static auto def = test_shape_params();
-    serialize_from_json_obj(js);
-    serialize_from_json_attr(val.name, js, "name");
-    serialize_from_json_attr(val.type, js, "type");
-    serialize_from_json_attr(val.material, js, "material", false, def.material);
-    serialize_from_json_attr(
-        val.tesselation, js, "tesselation", false, def.tesselation);
-    serialize_from_json_attr(
-        val.subdivision, js, "subdivision", false, def.subdivision);
-    serialize_from_json_attr(val.scale, js, "scale", false, def.scale);
-    serialize_from_json_attr(val.radius, js, "radius", false, def.radius);
-    serialize_from_json_attr(val.faceted, js, "faceted", false, def.faceted);
-    serialize_from_json_attr(val.num, js, "num", false, def.num);
+    serialize_obj(js, reading);
+    serialize_attr(val.name, js, "name", reading);
+    serialize_attr(val.type, js, "type", reading);
+    serialize_attr(val.material, js, "material", reading, false, def.material);
+    serialize_attr(
+        val.tesselation, js, "tesselation", reading, false, def.tesselation);
+    serialize_attr(
+        val.subdivision, js, "subdivision", reading, false, def.subdivision);
+    serialize_attr(val.scale, js, "scale", reading, false, def.scale);
+    serialize_attr(val.radius, js, "radius", reading, false, def.radius);
+    serialize_attr(val.faceted, js, "faceted", reading, false, def.faceted);
+    serialize_attr(val.num, js, "num", reading, false, def.num);
     // TODO: hair parameters
 }
 
 // Parses a test_camera object
-inline void serialize_from_json(test_instance_params& val, const json& js) {
+inline void serialize(test_instance_params& val, json& js, bool reading) {
     static auto def = test_instance_params();
-    serialize_from_json_obj(js);
-    serialize_from_json_attr(val.name, js, "name");
-    serialize_from_json_attr(val.shape, js, "shape");
-    serialize_from_json_attr(val.frame, js, "frame", false, def.frame);
-    serialize_from_json_attr(val.rotation, js, "rotation", false, def.rotation);
+    serialize_obj(js, reading);
+    serialize_attr(val.name, js, "name", reading);
+    serialize_attr(val.shape, js, "shape", reading);
+    serialize_attr(val.frame, js, "frame", reading, false, def.frame);
+    serialize_attr(val.rotation, js, "rotation", reading, false, def.rotation);
 }
 
 // Parses a test_camera object
-inline void serialize_from_json(test_environment_params& val, const json& js) {
+inline void serialize(test_environment_params& val, json& js, bool reading) {
     static auto def = test_environment_params();
-    serialize_from_json_obj(js);
-    serialize_from_json_attr(val.name, js, "name");
-    serialize_from_json_attr(val.emission, js, "emission", false, def.emission);
-    serialize_from_json_attr(val.color, js, "color", false, def.color);
-    serialize_from_json_attr(val.texture, js, "texture", false, def.texture);
-    serialize_from_json_attr(val.frame, js, "frame", false, def.frame);
-    serialize_from_json_attr(val.rotation, js, "rotation", false, def.rotation);
+    serialize_obj(js, reading);
+    serialize_attr(val.name, js, "name", reading);
+    serialize_attr(val.emission, js, "emission", reading, false, def.emission);
+    serialize_attr(val.color, js, "color", reading, false, def.color);
+    serialize_attr(val.texture, js, "texture", reading, false, def.texture);
+    serialize_attr(val.frame, js, "frame", reading, false, def.frame);
+    serialize_attr(val.rotation, js, "rotation", reading, false, def.rotation);
 }
 
 // Parses a test_camera object
-inline void serialize_from_json(test_scene_params& val, const json& js) {
+inline void serialize(test_scene_params& val, json& js, bool reading) {
     static auto def = test_scene_params();
-    serialize_from_json_obj(js);
-    serialize_from_json_attr(val.name, js, "name", false, def.name);
-    serialize_from_json_attr(val.cameras, js, "cameras", false, def.cameras);
-    serialize_from_json_attr(val.textures, js, "textures", false, def.textures);
-    serialize_from_json_attr(
-        val.materials, js, "materials", false, def.materials);
-    serialize_from_json_attr(val.shapes, js, "shapes", false, def.shapes);
-    serialize_from_json_attr(
-        val.environments, js, "environments", false, def.environments);
-}
-
-// Converts a test_camera object to JSON
-inline void serialize_to_json(const test_camera_params& val, json& js) {
-    static auto def = test_camera_params();
-    serialize_to_json_obj(js);
-    serialize_to_json_attr(val.name, js, "name");
-    serialize_to_json_attr(val.from, js, "from");
-    serialize_to_json_attr(val.to, js, "to");
-    serialize_to_json_attr(val.yfov, js, "yfov");
-    serialize_to_json_attr(val.aspect, js, "aspect");
-}
-
-// Converts a test_camera object to JSON
-inline void serialize_to_json(const test_texture_type& val, json& js) {
-    serialize_to_json(val, js, test_texture_names());
-}
-
-// Converts a test_camera object to JSON
-inline void serialize_to_json(const test_texture_params& val, json& js) {
-    static auto def = test_texture_params();
-    serialize_to_json_obj(js);
-    serialize_to_json_attr(val.name, js, "name");
-    serialize_to_json_attr(val.type, js, "type");
-    serialize_to_json_attr(val.resolution, js, "resolution");
-    serialize_to_json_attr(
-        val.tile_size, js, "tile_size", false, def.tile_size);
-    serialize_to_json_attr(
-        val.noise_scale, js, "noise_scale", false, def.noise_scale);
-    serialize_to_json_attr(
-        val.sky_sunangle, js, "sky_sunangle", false, def.sky_sunangle);
-    serialize_to_json_attr(
-        val.bump_to_normal, js, "bump_to_normal", false, def.bump_to_normal);
-    serialize_to_json_attr(
-        val.bump_scale, js, "bump_scale", false, def.bump_scale);
-}
-
-// Converts a test_camera object to JSON
-inline void serialize_to_json(const test_material_type& val, json& js) {
-    serialize_to_json(val, js, test_material_names());
-}
-
-// Converts a test_camera object to JSON
-inline void serialize_to_json(const test_material_params& val, json& js) {
-    static auto def = test_material_params();
-    serialize_to_json_obj(js);
-    serialize_to_json_attr(val.name, js, "name");
-    serialize_to_json_attr(val.type, js, "type");
-    serialize_to_json_attr(val.emission, js, "emission", false, def.emission);
-    serialize_to_json_attr(val.color, js, "color", false, def.color);
-    serialize_to_json_attr(val.opacity, js, "opacity", false, def.opacity);
-    serialize_to_json_attr(
-        val.roughness, js, "roughness", false, def.roughness);
-    serialize_to_json_attr(val.texture, js, "texture", false, def.texture);
-    serialize_to_json_attr(val.normal, js, "normal", false, def.normal);
-}
-
-// Parses a test_camera object
-inline void serialize_to_json(const test_shape_type& val, json& js) {
-    serialize_to_json(val, js, test_shape_names());
-}
-
-// Parses a test_camera object
-inline void serialize_to_json(const test_shape_params& val, json& js) {
-    static auto def = test_shape_params();
-    serialize_to_json_obj(js);
-    serialize_to_json_attr(val.name, js, "name");
-    serialize_to_json_attr(val.type, js, "type");
-    serialize_to_json_attr(val.material, js, "material", false, def.material);
-    serialize_to_json_attr(
-        val.tesselation, js, "tesselation", false, def.tesselation);
-    serialize_to_json_attr(
-        val.subdivision, js, "subdivision", false, def.subdivision);
-    serialize_to_json_attr(val.scale, js, "scale", false, def.scale);
-    serialize_to_json_attr(val.radius, js, "radius", false, def.radius);
-    serialize_to_json_attr(val.faceted, js, "faceted", false, def.faceted);
-    serialize_to_json_attr(val.num, js, "num", false, def.num);
-    // TODO: hair parameters
-}
-
-// Parses a test_camera object
-inline void serialize_to_json(const test_instance_params& val, json& js) {
-    static auto def = test_instance_params();
-    serialize_to_json_obj(js);
-    serialize_to_json_attr(val.name, js, "name");
-    serialize_to_json_attr(val.shape, js, "shape");
-    serialize_to_json_attr(val.frame, js, "frame", false, def.frame);
-    serialize_to_json_attr(val.rotation, js, "rotation", false, def.rotation);
-}
-
-// Parses a test_camera object
-inline void serialize_to_json(const test_environment_params& val, json& js) {
-    static auto def = test_environment_params();
-    serialize_to_json_obj(js);
-    serialize_to_json_attr(val.name, js, "name");
-    serialize_to_json_attr(val.emission, js, "emission", false, def.emission);
-    serialize_to_json_attr(val.color, js, "color", false, def.color);
-    serialize_to_json_attr(val.texture, js, "texture", false, def.texture);
-    serialize_to_json_attr(val.frame, js, "frame", false, def.frame);
-    serialize_to_json_attr(val.rotation, js, "rotation", false, def.rotation);
-}
-
-// Parses a test_camera object
-inline void serialize_to_json(const test_scene_params& val, json& js) {
-    static auto def = test_scene_params();
-    serialize_to_json_obj(js);
-    serialize_to_json_attr(val.name, js, "name", false, ""s);
-    serialize_to_json_attr(val.cameras, js, "cameras", false, def.cameras);
-    serialize_to_json_attr(val.textures, js, "textures", false, def.textures);
-    serialize_to_json_attr(
-        val.materials, js, "materials", false, def.materials);
-    serialize_to_json_attr(val.shapes, js, "shapes", false, def.shapes);
-    serialize_to_json_attr(
-        val.environments, js, "environments", false, def.environments);
+    serialize_obj(js, reading);
+    serialize_attr(val.name, js, "name", reading, false, def.name);
+    serialize_attr(val.cameras, js, "cameras", reading, false, def.cameras);
+    serialize_attr(val.textures, js, "textures", reading, false, def.textures);
+    serialize_attr(
+        val.materials, js, "materials", reading, false, def.materials);
+    serialize_attr(val.shapes, js, "shapes", reading, false, def.shapes);
+    serialize_attr(
+        val.environments, js, "environments", reading, false, def.environments);
 }
 
 // Load test scene
@@ -12234,7 +11574,7 @@ test_scene_params load_test_scene(const string& filename) {
     // clear data
     auto scn = test_scene_params();
     try {
-        serialize_from_json(scn, js);
+        serialize(scn, js, true);
     } catch (const exception& e) {
         throw runtime_error("error parsing test scene " + string(e.what()));
     }
@@ -12246,7 +11586,7 @@ test_scene_params load_test_scene(const string& filename) {
 // Save test scene
 void save_test_scene(const string& filename, const test_scene_params& scn) {
     auto js = json();
-    serialize_to_json(scn, js);
+    serialize((test_scene_params&)scn, js, false);
     save_text(filename, js.dump(2));
 }
 
