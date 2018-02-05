@@ -78,8 +78,12 @@
 //
 // ## Next
 //
-// - sample lights using trace_lights
 // - simplify trace_point
+//     - remove wo
+//     - envpoint from uv
+//     - envpoint pos and norm
+//     - double sided in material functions
+// - sample lights using trace_lights
 // - sample background to sum all environments
 // - remove default environment
 // - handle missing environment in trace
@@ -5796,14 +5800,13 @@ struct trace_point {
     vec3f pos = zero3f;                // pos
     vec3f norm = {0, 0, 1};            // norm
     vec2f texcoord = zero2f;           // texcoord
-    vec3f wo = zero3f;                 // outgoing direction
     vec3f ke = zero3f;                 // emission
     trace_brdf fr = {};                // brdf
 };
 
 // Evaluates emission.
-inline vec3f trace_eval_emission(const trace_point& pt) {
-    if (pt.ist && !pt.ist->shp->triangles.empty() && dot(pt.norm, pt.wo) <= 0)
+inline vec3f trace_eval_emission(const trace_point& pt, const vec3f& wo) {
+    if (pt.ist && !pt.ist->shp->triangles.empty() && dot(pt.norm, wo) <= 0)
         return zero3f;
     return pt.ke;
 }
@@ -5818,12 +5821,11 @@ inline vec3f trace_eval_emission(const trace_point& pt) {
 // https://www.cs.cornell.edu/~srm/publications/EGSR07-btdf.pdf
 // - uses Kajiya-Kay for hair
 // - uses a hack for points
-inline vec3f trace_eval_brdfcos(
-    const trace_point& pt, const vec3f& wi, bool delta = false) {
+inline vec3f trace_eval_brdfcos(const trace_point& pt, const vec3f& wo,
+    const vec3f& wi, bool delta = false) {
     // grab variables
     auto& fr = pt.fr;
     auto& wn = pt.norm;
-    auto& wo = pt.wo;
 
     // exit if not needed
     if (!fr) return zero3f;
@@ -5919,12 +5921,11 @@ inline vec3f trace_eval_brdfcos(
 }
 
 // Compute the weight for sampling the BRDF
-inline float trace_weight_brdfcos(
-    const trace_point& pt, const vec3f& wi, bool delta = false) {
+inline float trace_weight_brdfcos(const trace_point& pt, const vec3f& wo,
+    const vec3f& wi, bool delta = false) {
     // grab variables
     auto& fr = pt.fr;
     auto& wn = pt.norm;
-    auto& wo = pt.wo;
 
     // skip if no component
     if (!fr) return 0;
@@ -6014,11 +6015,10 @@ inline vec3f refract(const vec3f& w, const vec3f& n, float eta) {
 
 // Picks a direction based on the BRDF
 inline tuple<vec3f, bool> trace_sample_brdfcos(
-    const trace_point& pt, float rnl, const vec2f& rn) {
+    const trace_point& pt, const vec3f& wo, float rnl, const vec2f& rn) {
     // grab variables
     auto& fr = pt.fr;
     auto& wn = pt.norm;
-    auto& wo = pt.wo;
 
     // skip if no component
     if (!fr) return {zero3f, false};
@@ -6118,7 +6118,6 @@ inline tuple<vec3f, bool> trace_sample_brdfcos(
 inline trace_point trace_eval_point(const environment* env, const vec3f& wo) {
     auto pt = trace_point();
     pt.env = env;
-    pt.wo = wo;
     pt.ke = env->ke;
     if (env->ke_txt) {
         auto w = transform_direction_inverse(env->frame, -wo);
@@ -6149,7 +6148,6 @@ inline trace_point trace_eval_point(
     // set shape data
     auto pt = trace_point();
     pt.ist = ist;
-    pt.wo = wo;
     pt.pos = eval_pos(ist->shp, eid, euv);
     pt.norm = eval_norm(ist->shp, eid, euv);
     pt.texcoord = eval_texcoord(ist->shp, eid, euv);
@@ -6172,7 +6170,7 @@ inline trace_point trace_eval_point(
     pt.norm = transform_direction(ist->frame, pt.norm);
 
     // correct for double sided
-    if (mat->double_sided && dot(pt.norm, pt.wo) < 0) pt.norm = -pt.norm;
+    if (mat->double_sided && dot(pt.norm, wo) < 0) pt.norm = -pt.norm;
 
     // handle color
     auto kx_scale = vec4f{1, 1, 1, 1};
@@ -6249,22 +6247,21 @@ inline trace_point trace_eval_point(
 // Sample weight for a light point.
 inline float trace_weight_light(
     const trace_lights& lights, const trace_point& lpt, const trace_point& pt) {
-    if (lpt.ke == zero3f) return 0;
-    if (lpt.ist && !lpt.ist->shp->triangles.empty()) {
-        auto d = length(lpt.pos - pt.pos);
-        return lights.shape_areas.at(lpt.ist->shp) *
-               abs(dot(lpt.norm, lpt.wo)) / (d * d);
-    } else if (lpt.ist && !lpt.ist->shp->lines.empty()) {
-        // TODO: fixme
-        return 0;
-    } else if (lpt.ist && !lpt.ist->shp->points.empty()) {
-        auto d = length(lpt.pos - pt.pos);
-        return lights.shape_areas.at(lpt.ist->shp) / (d * d);
-    } else if (lpt.env) {
-        return 4 * pif;
-    } else {
-        throw runtime_error("should not have gotten here");
+    if (lpt.ist) {
+        auto dist = length(lpt.pos - pt.pos);
+        if (!lpt.ist->shp->triangles.empty()) {
+            return lights.shape_areas.at(lpt.ist->shp) *
+                   abs(dot(lpt.norm, normalize(lpt.pos - pt.pos))) /
+                   (dist * dist);
+        } else if (lpt.ist && !lpt.ist->shp->lines.empty()) {
+            // TODO: fixme
+            return 0;
+        } else if (lpt.ist && !lpt.ist->shp->points.empty()) {
+            return lights.shape_areas.at(lpt.ist->shp) / (dist * dist);
+        }
     }
+    if (lpt.env) { return 4 * pif; }
+    return 0;
 }
 
 // Picks a point on a light.
@@ -6288,20 +6285,16 @@ inline trace_point trace_sample_light(const trace_lights& lights,
         } else {
             assert(false);
         }
-        auto lpt = trace_eval_point(lgt.ist, eid, euv, zero3f);
-        lpt.wo = normalize(pt.pos - lpt.pos);
-        return lpt;
-    } else if (lgt.env) {
+        return trace_eval_point(lgt.ist, eid, euv, zero3f);
+    }
+    if (lgt.env) {
         auto z = -1 + 2 * rn.y;
         auto rr = sqrt(clamp(1 - z * z, (float)0, (float)1));
         auto phi = 2 * pif * rn.x;
         auto wo = vec3f{cos(phi) * rr, z, sin(phi) * rr};
-        auto lpt = trace_eval_point(lgt.env, wo);
-        return lpt;
-    } else {
-        assert(false);
-        return {};
+        return trace_eval_point(lgt.env, wo);
     }
+    return {};
 }
 
 // Intersects a ray with the scn and return the point (or env
@@ -6324,16 +6317,13 @@ inline trace_point trace_intersect_scene(
 inline vec3f trace_eval_transmission(const scene* scn, const bvh_tree* bvh,
     const trace_point& pt, const trace_point& lpt, const trace_params& params) {
     if (params.shadow_notransmission) {
-        auto shadow_ray = (lpt.env) ? make_ray(pt.pos, -lpt.wo) :
-                                      make_segment(pt.pos, lpt.pos);
-        // auto shadow_ray = ray3f{pt.frame.o, -lpt.wo, 0.01f, flt_max};
-        return (intersect_bvh(bvh, shadow_ray, true)) ? zero3f : vec3f{1, 1, 1};
+        auto ray = make_segment(pt.pos, lpt.pos);
+        return (intersect_bvh(bvh, ray, true)) ? zero3f : vec3f{1, 1, 1};
     } else {
         auto cpt = pt;
         auto weight = vec3f{1, 1, 1};
         for (auto bounce = 0; bounce < params.max_depth; bounce++) {
-            auto ray = (lpt.env) ? make_ray(cpt.pos, -lpt.wo) :
-                                   make_segment(cpt.pos, lpt.pos);
+            auto ray = make_segment(cpt.pos, lpt.pos);
             cpt = trace_intersect_scene(scn, bvh, ray);
             if (!cpt.ist) break;
             weight *= cpt.fr.kt;
@@ -6351,11 +6341,13 @@ inline float trace_weight_mis(float w0, float w1) {
 
 // Recursive path tracing.
 inline vec3f trace_path(const scene* scn, const bvh_tree* bvh,
-    const trace_lights& lights, const trace_point& pt_, trace_pixel& pxl,
-    const trace_params& params) {
-    // emission
+    const trace_lights& lights, const trace_point& pt_, const vec3f& wo_,
+    trace_pixel& pxl, const trace_params& params) {
     auto pt = pt_;
-    auto l = trace_eval_emission(pt);
+    auto wo = wo_;
+
+    // emission
+    auto l = trace_eval_emission(pt, wo);
     if (!pt.fr || lights.empty()) return l;
 
     // trace path
@@ -6363,7 +6355,7 @@ inline vec3f trace_path(const scene* scn, const bvh_tree* bvh,
     auto emission = false;
     for (auto bounce = 0; bounce < params.max_depth; bounce++) {
         // emission
-        if (emission) l += weight * trace_eval_emission(pt);
+        if (emission) l += weight * trace_eval_emission(pt, wo);
 
         // direct – light
         auto rll = trace_next1f(pxl, params.rtype, params.nsamples);
@@ -6372,13 +6364,14 @@ inline vec3f trace_path(const scene* scn, const bvh_tree* bvh,
         auto& lgt = lights.lights[(int)(rll * lights.lights.size())];
         auto lpt = trace_sample_light(lights, lgt, pt, rle, rluv);
         auto lw = trace_weight_light(lights, lpt, pt) * (float)lights.size();
-        auto lke = trace_eval_emission(lpt);
-        auto lbc = trace_eval_brdfcos(pt, -lpt.wo);
+        auto lwi = normalize(lpt.pos - pt.pos);
+        auto lke = trace_eval_emission(lpt, -lwi);
+        auto lbc = trace_eval_brdfcos(pt, wo, lwi);
         auto lld = lke * lbc * lw;
         if (lld != zero3f) {
             l += weight * lld *
                  trace_eval_transmission(scn, bvh, pt, lpt, params) *
-                 trace_weight_mis(lw, trace_weight_brdfcos(pt, -lpt.wo));
+                 trace_weight_mis(lw, trace_weight_brdfcos(pt, wo, lwi));
         }
 
         // direct – brdf
@@ -6386,11 +6379,11 @@ inline vec3f trace_path(const scene* scn, const bvh_tree* bvh,
         auto rbuv = trace_next2f(pxl, params.rtype, params.nsamples);
         auto bwi = zero3f;
         auto bdelta = false;
-        std::tie(bwi, bdelta) = trace_sample_brdfcos(pt, rbl, rbuv);
+        std::tie(bwi, bdelta) = trace_sample_brdfcos(pt, wo, rbl, rbuv);
         auto bpt = trace_intersect_scene(scn, bvh, make_ray(pt.pos, bwi));
-        auto bw = trace_weight_brdfcos(pt, -bpt.wo, bdelta);
-        auto bke = trace_eval_emission(bpt);
-        auto bbc = trace_eval_brdfcos(pt, -bpt.wo, bdelta);
+        auto bw = trace_weight_brdfcos(pt, wo, bwi, bdelta);
+        auto bke = trace_eval_emission(bpt, -bwi);
+        auto bbc = trace_eval_brdfcos(pt, wo, bwi, bdelta);
         auto bld = bke * bbc * bw;
         if (bld != zero3f) {
             l += weight * bld *
@@ -6403,7 +6396,7 @@ inline vec3f trace_path(const scene* scn, const bvh_tree* bvh,
 
         // continue path
         weight *=
-            trace_eval_brdfcos(pt, -bpt.wo) * trace_weight_brdfcos(pt, -bpt.wo);
+            trace_eval_brdfcos(pt, wo, bwi) * trace_weight_brdfcos(pt, wo, bwi);
         if (weight == zero3f) break;
 
         // roussian roulette
@@ -6416,6 +6409,7 @@ inline vec3f trace_path(const scene* scn, const bvh_tree* bvh,
 
         // continue path
         pt = bpt;
+        wo = -bwi;
         emission = false;
     }
 
@@ -6424,11 +6418,13 @@ inline vec3f trace_path(const scene* scn, const bvh_tree* bvh,
 
 // Recursive path tracing.
 inline vec3f trace_path_nomis(const scene* scn, const bvh_tree* bvh,
-    const trace_lights& lights, const trace_point& pt_, trace_pixel& pxl,
-    const trace_params& params) {
+    const trace_lights& lights, const trace_point& pt_, const vec3f& wo_,
+    trace_pixel& pxl, const trace_params& params) {
     // emission
     auto pt = pt_;
-    auto l = trace_eval_emission(pt);
+    auto wo = wo_;
+
+    auto l = trace_eval_emission(pt, wo);
     if (!pt.fr || lights.empty()) return l;
 
     // trace path
@@ -6436,7 +6432,7 @@ inline vec3f trace_path_nomis(const scene* scn, const bvh_tree* bvh,
     auto emission = false;
     for (auto bounce = 0; bounce < params.max_depth; bounce++) {
         // emission
-        if (emission) l += weight * trace_eval_emission(pt);
+        if (emission) l += weight * trace_eval_emission(pt, wo);
 
         // direct
         auto rll = trace_next1f(pxl, params.rtype, params.nsamples);
@@ -6444,7 +6440,9 @@ inline vec3f trace_path_nomis(const scene* scn, const bvh_tree* bvh,
         auto rluv = trace_next2f(pxl, params.rtype, params.nsamples);
         auto& lgt = lights.lights[(int)(rll * lights.lights.size())];
         auto lpt = trace_sample_light(lights, lgt, pt, rle, rluv);
-        auto ld = trace_eval_emission(lpt) * trace_eval_brdfcos(pt, -lpt.wo) *
+        auto lwi = normalize(lpt.pos - pt.pos);
+        auto ld = trace_eval_emission(lpt, -lwi) *
+                  trace_eval_brdfcos(pt, wo, lwi) *
                   trace_weight_light(lights, lpt, pt) * (float)lights.size();
         if (ld != zero3f) {
             l += weight * ld *
@@ -6467,9 +6465,9 @@ inline vec3f trace_path_nomis(const scene* scn, const bvh_tree* bvh,
         auto rbuv = trace_next2f(pxl, params.rtype, params.nsamples);
         auto bwi = zero3f;
         auto bdelta = false;
-        std::tie(bwi, bdelta) = trace_sample_brdfcos(pt, rbl, rbuv);
-        weight *= trace_eval_brdfcos(pt, bwi, bdelta) *
-                  trace_weight_brdfcos(pt, bwi, bdelta);
+        std::tie(bwi, bdelta) = trace_sample_brdfcos(pt, wo, rbl, rbuv);
+        weight *= trace_eval_brdfcos(pt, wo, bwi, bdelta) *
+                  trace_weight_brdfcos(pt, wo, bwi, bdelta);
         if (weight == zero3f) break;
 
         auto bpt = trace_intersect_scene(scn, bvh, make_ray(pt.pos, bwi));
@@ -6478,6 +6476,7 @@ inline vec3f trace_path_nomis(const scene* scn, const bvh_tree* bvh,
 
         // continue path
         pt = bpt;
+        wo = -bwi;
     }
 
     return l;
@@ -6485,11 +6484,13 @@ inline vec3f trace_path_nomis(const scene* scn, const bvh_tree* bvh,
 
 // Recursive path tracing.
 inline vec3f trace_path_hack(const scene* scn, const bvh_tree* bvh,
-    const trace_lights& lights, const trace_point& pt_, trace_pixel& pxl,
-    const trace_params& params) {
-    // emission
+    const trace_lights& lights, const trace_point& pt_, const vec3f& wo_,
+    trace_pixel& pxl, const trace_params& params) {
     auto pt = pt_;
-    auto l = trace_eval_emission(pt);
+    auto wo = wo_;
+
+    // emission
+    auto l = trace_eval_emission(pt, wo);
     if (!pt.fr || lights.empty()) return l;
 
     // trace path
@@ -6501,7 +6502,9 @@ inline vec3f trace_path_hack(const scene* scn, const bvh_tree* bvh,
         auto rluv = trace_next2f(pxl, params.rtype, params.nsamples);
         auto& lgt = lights.lights[(int)(rll * lights.lights.size())];
         auto lpt = trace_sample_light(lights, lgt, pt, rle, rluv);
-        auto ld = trace_eval_emission(lpt) * trace_eval_brdfcos(pt, -lpt.wo) *
+        auto lwi = normalize(lpt.pos - pt.pos);
+        auto ld = trace_eval_emission(lpt, -lwi) *
+                  trace_eval_brdfcos(pt, wo, -lwi) *
                   trace_weight_light(lights, lpt, pt) * (float)lights.size();
         if (ld != zero3f) {
             l += weight * ld *
@@ -6522,11 +6525,11 @@ inline vec3f trace_path_hack(const scene* scn, const bvh_tree* bvh,
         // continue path
         auto bwi = zero3f;
         auto bdelta = false;
-        std::tie(bwi, bdelta) = trace_sample_brdfcos(pt,
+        std::tie(bwi, bdelta) = trace_sample_brdfcos(pt, wo,
             trace_next1f(pxl, params.rtype, params.nsamples),
             trace_next2f(pxl, params.rtype, params.nsamples));
-        weight *= trace_eval_brdfcos(pt, bwi, bdelta) *
-                  trace_weight_brdfcos(pt, bwi, bdelta);
+        weight *= trace_eval_brdfcos(pt, wo, bwi, bdelta) *
+                  trace_weight_brdfcos(pt, wo, bwi, bdelta);
         if (weight == zero3f) break;
 
         auto bpt = trace_intersect_scene(scn, bvh, make_ray(pt.pos, bwi));
@@ -6534,6 +6537,7 @@ inline vec3f trace_path_hack(const scene* scn, const bvh_tree* bvh,
 
         // continue path
         pt = bpt;
+        wo = -bwi;
     }
 
     return l;
@@ -6541,10 +6545,10 @@ inline vec3f trace_path_hack(const scene* scn, const bvh_tree* bvh,
 
 // Direct illumination.
 inline vec3f trace_direct(const scene* scn, const bvh_tree* bvh,
-    const trace_lights& lights, const trace_point& pt, int bounce,
-    trace_pixel& pxl, const trace_params& params) {
+    const trace_lights& lights, const trace_point& pt, const vec3f& wo,
+    int bounce, trace_pixel& pxl, const trace_params& params) {
     // emission
-    auto l = trace_eval_emission(pt);
+    auto l = trace_eval_emission(pt, wo);
     if (!pt.fr) return l;
 
     // ambient
@@ -6555,7 +6559,9 @@ inline vec3f trace_direct(const scene* scn, const bvh_tree* bvh,
         auto rle = trace_next1f(pxl, params.rtype, params.nsamples);
         auto rluv = trace_next2f(pxl, params.rtype, params.nsamples);
         auto lpt = trace_sample_light(lights, lgt, pt, rle, rluv);
-        auto ld = trace_eval_emission(lpt) * trace_eval_brdfcos(pt, -lpt.wo) *
+        auto lwi = normalize(lpt.pos - pt.pos);
+        auto ld = trace_eval_emission(lpt, -lwi) *
+                  trace_eval_brdfcos(pt, wo, lwi) *
                   trace_weight_light(lights, lpt, pt);
         if (ld == zero3f) continue;
         l += ld * trace_eval_transmission(scn, bvh, pt, lpt, params);
@@ -6566,17 +6572,17 @@ inline vec3f trace_direct(const scene* scn, const bvh_tree* bvh,
 
     // reflection
     if (pt.fr.ks != zero3f && !pt.fr.rs) {
-        auto wi = reflect(pt.wo, pt.norm);
+        auto wi = reflect(wo, pt.norm);
         auto rpt = trace_intersect_scene(scn, bvh, make_ray(pt.pos, wi));
         l += pt.fr.ks *
-             trace_direct(scn, bvh, lights, rpt, bounce + 1, pxl, params);
+             trace_direct(scn, bvh, lights, rpt, -wi, bounce + 1, pxl, params);
     }
 
     // opacity
     if (pt.fr.kt != zero3f) {
-        auto opt = trace_intersect_scene(scn, bvh, make_ray(pt.pos, -pt.wo));
+        auto opt = trace_intersect_scene(scn, bvh, make_ray(pt.pos, -wo));
         l += pt.fr.kt *
-             trace_direct(scn, bvh, lights, opt, bounce + 1, pxl, params);
+             trace_direct(scn, bvh, lights, opt, wo, bounce + 1, pxl, params);
     }
 
     // done
@@ -6585,28 +6591,28 @@ inline vec3f trace_direct(const scene* scn, const bvh_tree* bvh,
 
 // Direct illumination.
 inline vec3f trace_direct(const scene* scn, const bvh_tree* bvh,
-    const trace_lights& lights, const trace_point& pt, trace_pixel& pxl,
-    const trace_params& params) {
-    return trace_direct(scn, bvh, lights, pt, 0, pxl, params);
+    const trace_lights& lights, const trace_point& pt, const vec3f& wo,
+    trace_pixel& pxl, const trace_params& params) {
+    return trace_direct(scn, bvh, lights, pt, wo, 0, pxl, params);
 }
 
 // Eyelight for quick previewing.
 inline vec3f trace_eyelight(const scene* scn, const bvh_tree* bvh,
-    const trace_lights& lights, const trace_point& pt, int bounce,
-    trace_pixel& pxl, const trace_params& params) {
+    const trace_lights& lights, const trace_point& pt, const vec3f& wo,
+    int bounce, trace_pixel& pxl, const trace_params& params) {
     // emission
-    auto l = trace_eval_emission(pt);
+    auto l = trace_eval_emission(pt, wo);
     if (!pt.fr) return l;
 
     // brdf*light
-    l += trace_eval_brdfcos(pt, pt.wo) * pif;
+    l += trace_eval_brdfcos(pt, wo, wo) * pif;
 
     // opacity
     if (bounce >= params.max_depth) return l;
     if (pt.fr.kt != zero3f) {
-        auto opt = trace_intersect_scene(scn, bvh, make_ray(pt.pos, -pt.wo));
+        auto opt = trace_intersect_scene(scn, bvh, make_ray(pt.pos, -wo));
         l += pt.fr.kt *
-             trace_eyelight(scn, bvh, lights, opt, bounce + 1, pxl, params);
+             trace_eyelight(scn, bvh, lights, opt, wo, bounce + 1, pxl, params);
     }
 
     // done
@@ -6615,36 +6621,36 @@ inline vec3f trace_eyelight(const scene* scn, const bvh_tree* bvh,
 
 // Eyelight for quick previewing.
 inline vec3f trace_eyelight(const scene* scn, const bvh_tree* bvh,
-    const trace_lights& lights, const trace_point& pt, trace_pixel& pxl,
-    const trace_params& params) {
-    return trace_eyelight(scn, bvh, lights, pt, 0, pxl, params);
+    const trace_lights& lights, const trace_point& pt, const vec3f& wo,
+    trace_pixel& pxl, const trace_params& params) {
+    return trace_eyelight(scn, bvh, lights, pt, wo, 0, pxl, params);
 }
 
 // Debug previewing.
 inline vec3f trace_debug_normal(const scene* scn, const bvh_tree* bvh,
-    const trace_lights& lights, const trace_point& pt, trace_pixel& pxl,
-    const trace_params& params) {
+    const trace_lights& lights, const trace_point& pt, const vec3f& wo,
+    trace_pixel& pxl, const trace_params& params) {
     return pt.norm * 0.5f + vec3f{0.5f, 0.5f, 0.5f};
 }
 
 // Debug previewing.
 inline vec3f trace_debug_albedo(const scene* scn, const bvh_tree* bvh,
-    const trace_lights& lights, const trace_point& pt, trace_pixel& pxl,
-    const trace_params& params) {
+    const trace_lights& lights, const trace_point& pt, const vec3f& wo,
+    trace_pixel& pxl, const trace_params& params) {
     return pt.fr.rho();
 }
 
 // Debug previewing.
 inline vec3f trace_debug_texcoord(const scene* scn, const bvh_tree* bvh,
-    const trace_lights& lights, const trace_point& pt, trace_pixel& pxl,
-    const trace_params& params) {
+    const trace_lights& lights, const trace_point& pt, const vec3f& wo,
+    trace_pixel& pxl, const trace_params& params) {
     return {pt.texcoord.x, pt.texcoord.y, 0};
 }
 
 // Trace shader function
 using trace_shader = vec3f (*)(const scene* scn, const bvh_tree* bvh,
-    const trace_lights& lights, const trace_point& pt, trace_pixel& pxl,
-    const trace_params& params);
+    const trace_lights& lights, const trace_point& pt, const vec3f& wo,
+    trace_pixel& pxl, const trace_params& params);
 
 // Trace filter function
 using trace_filter = float (*)(float);
@@ -6691,7 +6697,7 @@ void trace_sample(const scene* scn, const camera* cam, const bvh_tree* bvh,
     auto ray = eval_camera_ray(cam, uv, lrn);
     auto pt = trace_intersect_scene(scn, bvh, ray);
     if (!pt.ist && params.envmap_invisible) return;
-    auto l = shader(scn, bvh, lights, pt, pxl, params);
+    auto l = shader(scn, bvh, lights, pt, -ray.d, pxl, params);
     if (!isfinite(l.x) || !isfinite(l.y) || !isfinite(l.z)) {
         log_error("NaN detected");
         return;
@@ -6750,7 +6756,7 @@ void trace_sample_filtered(const scene* scn, const camera* cam,
     auto ray = eval_camera_ray(cam, uv, lrn);
     auto pt = trace_intersect_scene(scn, bvh, ray);
     if (!pt.ist && params.envmap_invisible) return;
-    auto l = shader(scn, bvh, lights, pt, pxl, params);
+    auto l = shader(scn, bvh, lights, pt, -ray.d, pxl, params);
     if (!isfinite(l.x) || !isfinite(l.y) || !isfinite(l.z)) {
         log_error("NaN detected");
         return;
