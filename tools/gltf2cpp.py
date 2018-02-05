@@ -52,57 +52,6 @@ struct {{name}} {{#base}}: {{base}}{{/base}} {
 '''
 
 parse_func = '''
-// Parse id function.
-template <typename T>
-inline void serialize_from_json(glTFid<T>& val, const json& js) {
-    if (!js.is_number_integer()) throw runtime_error("int expected");
-    val = glTFid<T>((int)js);
-}
-
-// Parses a glTFProperty object
-inline void serialize_from_json(glTFProperty& val, const json& js) {
-    if (!js.is_object()) throw runtime_error("object expected");
-#if YGL_GLTFJSON
-    if(js.count("extensions")) serialize_from_json(val.extensions, js.at("extensions"));
-    if(js.count("extras")) serialize_from_json(val.extras, js.at("extras"));
-#endif
-}
-'''
-
-parse_fmt = '''
-{{#types}}
-{{#enums}}
-// Parse a {{name}} enum
-inline void serialize_from_json({{name}}& val, const json& js) {
-    static vector<pair<{{item}}, {{name}}>> table = { {{#values}} { {{enum}}, {{name}}::{{label}} },{{/values}} };
-    serialize_from_json(val, js, table);
-}
-
-{{/enums}}
-
-// Parses a {{name}} object
-inline void serialize_from_json({{name}}& val, const json& js) {
-    static auto def = {{name}}();
-    serialize_from_json_obj(js);
-    {{#base}}serialize_from_json(({{base}}&)val, js);{{/base}}
-    {{#properties}}{{^extension}}serialize_from_json_attr(val.{{name}}, js, "{{name}}", {{#required}}true{{/required}}{{^required}}false{{/required}}, def.{{name}});{{/extension}}{{/properties}}
-    {{#has_extensions}}
-    if (js.count("extensions")) {
-        auto& js_ext = js["extensions"];
-        {{#properties}}{{#extension}}serialize_from_json_attr(val.{{name}}, js_ext, "{{extension}}", false, def.{{name}});{{/extension}}{{/properties}}
-    }
-    {{/has_extensions}}
-}
-{{/types}}
-'''
-
-dump_func = '''
-// Converts glTFid to json.
-template <typename T>
-inline void serialize_to_json(const glTFid<T>& val, json& js) {
-    js = (int)val;
-}
-
 // Check for default value
 template <typename T>
 inline bool operator==(const glTFid<T>& a, const glTFid<T>& b) {
@@ -115,40 +64,67 @@ inline bool operator!=(const glTFid<T>& a, const glTFid<T>& b) {
     return (int)a != (int)b;
 }
 
-// Converts a glTFProperty object to JSON
-inline void serialize_to_json(const glTFProperty& val, json& js) {
-    if (!js.is_object()) js = json::object();
-#if YGL_GLTFJSON
-    if (!val.extensions.empty()) serialize_to_json(val.extensions, js["extensions"]);
-    if (!val.extras.is_null()) dump_attr(val.extras, "extras", js);
-#endif
+// Parse id function.
+template <typename T>
+inline void serialize(glTFid<T>& val, json& js, bool reading) {
+    if(reading) {
+        if (!js.is_number_integer()) throw runtime_error("int expected");
+        val = glTFid<T>((int)js);
+    } else {
+        js = (int)val;
+    }
 }
 
+// Parses a glTFProperty object
+inline void serialize(glTFProperty& val, json& js, bool reading) {
+    if(reading) {
+        if (!js.is_object()) throw runtime_error("object expected");
+#if YGL_GLTFJSON
+        if(js.count("extensions")) serialize_from_json(val.extensions, js.at("extensions"));
+        if(js.count("extras")) serialize_from_json(val.extras, js.at("extras"));
+#endif
+    } else {
+        if (!js.is_object()) js = json::object();
+ #if YGL_GLTFJSON
+        if (!val.extensions.empty()) serialize_to_json(val.extensions, js["extensions"]);
+        if (!val.extras.is_null()) dump_attr(val.extras, "extras", js);
+ #endif
+    }
+}
 '''
 
-dump_fmt = '''
+parse_fmt = '''
 {{#types}}
 {{#enums}}
-// Converts a {{name}} enum to JSON
-inline void serialize_to_json(const {{name}}& val, json& js) {
+// Parse a {{name}} enum
+inline void serialize({{name}}& val, json& js, bool reading) {
     static vector<pair<{{item}}, {{name}}>> table = { {{#values}} { {{enum}}, {{name}}::{{label}} },{{/values}} };
-    serialize_to_json(val, js, table);
+    serialize_from_json(val, js, reading, table);
 }
 
 {{/enums}}
 
-// Converts a {{name}} object to JSON
-inline void serialize_to_json(const {{name}}& val, json& js) {
+// Parses a {{name}} object
+inline void serialize({{name}}& val, const json& js, bool reading) {
     static auto def = {{name}}();
-    serialize_to_json_obj(js);
-    {{#base}}serialize_to_json((const {{base}}&)val, js);{{/base}}
-    {{#properties}}{{^extension}}serialize_to_json_attr(val.{{name}}, js, "{{name}}", {{#required}}true{{/required}}{{^required}}false{{/required}}, def.{{name}});{{/extension}}{{/properties}}
+    serialize_obj(js, reading);
+    {{#base}}serialize(({{base}}&)val, js, reading);{{/base}}
+    {{#properties}}{{^extension}}serialize_attr(val.{{name}}, js, "{{name}}", reading, {{#required}}true{{/required}}{{^required}}false{{/required}}, def.{{name}});{{/extension}}{{/properties}}
+    if(reading) {
+        {{#has_extensions}}
+        if (js.count("extensions")) {
+            auto& js_ext = js["extensions"];
+            {{#properties}}{{#extension}}serialize_attr(val.{{name}}, js_ext, "{{extension}}", reading, false, def.{{name}});{{/extension}}{{/properties}}
+        }
+        {{/has_extensions}}
+    } else {
     {{#properties}}{{#extension}}
     if ({{def_check}}) {
         auto& js_ext = js["extensions"];
-        serialize_to_json_attr(val.{{name}}, js_ext, "{{extension}}",  {{#required}}true{{/required}}{{^required}}false{{/required}}, def.{{name}});
+        serialize_attr(val.{{name}}, js_ext, "{{extension}}", reading, false, def.{{name}});
     }
     {{/extension}}{{/properties}}
+    }
 }
 {{/types}}
 '''
@@ -268,8 +244,6 @@ funcs = ''
 funcs += parse_func + '\n\n';
 funcs += mustache.render(parse_fmt, {'types': schemas})
 funcs += '\n\n';
-funcs += dump_func + '\n\n';
-funcs += mustache.render(dump_fmt, {'types': schemas})
 
 # substitute
 substitute('yocto/yocto_gl.h', types, 'type')
