@@ -5814,16 +5814,12 @@ inline vec3f trace_eval_emission(const trace_point& pt, const vec3f& wo) {
 }
 
 // Evaluates the BRDF scaled by the cosine of the incoming direction.
-//
-// Implementation notes:
 // - ggx from [Heitz 2014] and [Walter 2007] and [Lagarde 2014]
 // "Understanding the Masking-Shadowing Function in Microfacet-Based BRDFs"
 // http://jcgt.org/published/0003/02/03/
 // - "Microfacet Models for Refraction through Rough Surfaces" EGSR 07
 // https://www.cs.cornell.edu/~srm/publications/EGSR07-btdf.pdf
-// - uses Kajiya-Kay for hair
-// - uses a hack for points
-inline vec3f trace_eval_brdfcos(const trace_point& pt, const vec3f& wo,
+inline vec3f trace_eval_ggx_brdfcos(const trace_point& pt, const vec3f& wo,
     const vec3f& wi, bool delta = false) {
     // grab variables
     auto& fr = pt.fr;
@@ -5834,86 +5830,41 @@ inline vec3f trace_eval_brdfcos(const trace_point& pt, const vec3f& wo,
 
     // accumulate brdfcos for each lobe
     auto brdfcos = zero3f;
-    switch (fr.type) {
-        // reflection terms
-        case trace_brdf_type::microfacet: {
-            // compute wh
-            auto wh = normalize(wo + wi);
 
-            // compute dot products
-            auto ndo = dot(wn, wo), ndi = dot(wn, wi),
-                 ndh = clamp(dot(wh, wn), (float)-1, (float)1);
+    // compute wh
+    auto wh = normalize(wo + wi);
 
-            // diffuse term
-            if (fr.kd != zero3f && ndi > 0 && ndo > 0) {
-                brdfcos += fr.kd * ndi / pif;
-            }
+    // compute dot products
+    auto ndo = dot(wn, wo), ndi = dot(wn, wi),
+         ndh = clamp(dot(wh, wn), (float)-1, (float)1);
 
-            // specular term (GGX)
-            if (fr.ks != zero3f && ndi > 0 && ndo > 0 && ndh > 0 && fr.rs) {
-                // microfacet term
-                auto dg = eval_ggx(fr.rs, ndh, ndi, ndo);
+    // diffuse term
+    if (fr.kd != zero3f && ndi > 0 && ndo > 0) { brdfcos += fr.kd * ndi / pif; }
 
-                // handle fresnel
-                auto odh = clamp(dot(wo, wh), 0.0f, 1.0f);
-                auto ks = fresnel_schlick(fr.ks, odh, fr.rs);
+    // specular term (GGX)
+    if (fr.ks != zero3f && ndi > 0 && ndo > 0 && ndh > 0 && fr.rs) {
+        // microfacet term
+        auto dg = eval_ggx(fr.rs, ndh, ndi, ndo);
 
-                // sum up
-                brdfcos += ks * ndi * dg / (4 * ndi * ndo);
-            }
+        // handle fresnel
+        auto odh = clamp(dot(wo, wh), 0.0f, 1.0f);
+        auto ks = fresnel_schlick(fr.ks, odh, fr.rs);
 
-            // specular term (mirror)
-            if (fr.ks != zero3f && ndi > 0 && ndo > 0 && !fr.rs && delta) {
-                // handle fresnel
-                auto ks = fresnel_schlick(fr.ks, ndo, fr.rs);
-
-                // sum up
-                brdfcos += ks;
-            }
-
-            // transmission hack
-            if (fr.kt != zero3f && wo == -wi) brdfcos += fr.kt;
-        } break;
-        // hair (Kajiya-Kay)
-        case trace_brdf_type::kajiya_kay: {
-            // compute wh
-            auto wh = normalize(wo + wi);
-
-            // compute dot products
-            auto ndo = dot(wn, wo), ndi = dot(wn, wi),
-                 ndh = clamp(dot(wh, wn), (float)0, (float)1);
-
-            // take sines
-            auto so = sqrt(clamp(1 - ndo * ndo, (float)0, (float)1)),
-                 si = sqrt(clamp(1 - ndi * ndi, (float)0, (float)1)),
-                 sh = sqrt(clamp(1 - ndh * ndh, (float)0, (float)1));
-
-            // diffuse term (Kajiya-Kay)
-            if (fr.kd != zero3f && si > 0 && so > 0) {
-                brdfcos += fr.kd * si / pif;
-            }
-
-            // specular term (Kajiya-Kay)
-            if (fr.ks != zero3f && si > 0 && so > 0 && sh > 0) {
-                auto ns = 2 / (fr.rs * fr.rs) - 2;
-                auto d = (ns + 2) * pow(sh, ns) / (2 + pif);
-                brdfcos += fr.ks * si * d / (4.0f * si * so);
-            }
-
-            // transmission hack
-            if (fr.kt != zero3f && wo == -wi) brdfcos += fr.kt;
-        } break;
-        // points
-        case trace_brdf_type::point: {
-            // diffuse term
-            auto ido = dot(wo, wi);
-            brdfcos += fr.kd * (2 * ido + 1) / (2 * pif);
-
-            // transmission hack
-            if (fr.kt != zero3f && wo == -wi) brdfcos += fr.kt;
-        } break;
-        default: assert(false); break;
+        // sum up
+        brdfcos += ks * ndi * dg / (4 * ndi * ndo);
     }
+
+    // specular term (mirror)
+    if (fr.ks != zero3f && ndi > 0 && ndo > 0 && !fr.rs && delta) {
+        // handle fresnel
+        auto ks = fresnel_schlick(fr.ks, ndo, fr.rs);
+
+        // sum up
+        brdfcos += ks;
+    }
+
+    // transmission hack
+    if (fr.kt != zero3f && wo == -wi) brdfcos += fr.kt;
 
     // check
     assert(isfinite(brdfcos.x) && isfinite(brdfcos.y) && isfinite(brdfcos.z));
@@ -5922,8 +5873,97 @@ inline vec3f trace_eval_brdfcos(const trace_point& pt, const vec3f& wo,
     return brdfcos;
 }
 
+// Evaluates the BRDF scaled by the cosine of the incoming direction.
+// - uses Kajiya-Kay for hair
+inline vec3f trace_eval_kajiyakay_brdfcos(const trace_point& pt,
+    const vec3f& wo, const vec3f& wi, bool delta = false) {
+    // grab variables
+    auto& fr = pt.fr;
+    auto& wn = pt.norm;
+
+    // exit if not needed
+    if (!fr) return zero3f;
+
+    // accumulate brdfcos for each lobe
+    auto brdfcos = zero3f;
+
+    // compute wh
+    auto wh = normalize(wo + wi);
+
+    // compute dot products
+    auto ndo = dot(wn, wo), ndi = dot(wn, wi),
+         ndh = clamp(dot(wh, wn), (float)0, (float)1);
+
+    // take sines
+    auto so = sqrt(clamp(1 - ndo * ndo, (float)0, (float)1)),
+         si = sqrt(clamp(1 - ndi * ndi, (float)0, (float)1)),
+         sh = sqrt(clamp(1 - ndh * ndh, (float)0, (float)1));
+
+    // diffuse term (Kajiya-Kay)
+    if (fr.kd != zero3f && si > 0 && so > 0) { brdfcos += fr.kd * si / pif; }
+
+    // specular term (Kajiya-Kay)
+    if (fr.ks != zero3f && si > 0 && so > 0 && sh > 0) {
+        auto ns = 2 / (fr.rs * fr.rs) - 2;
+        auto d = (ns + 2) * pow(sh, ns) / (2 + pif);
+        brdfcos += fr.ks * si * d / (4.0f * si * so);
+    }
+
+    // transmission hack
+    if (fr.kt != zero3f && wo == -wi) brdfcos += fr.kt;
+
+    // check
+    assert(isfinite(brdfcos.x) && isfinite(brdfcos.y) && isfinite(brdfcos.z));
+
+    // done
+    return brdfcos;
+}
+
+// Evaluates the BRDF scaled by the cosine of the incoming direction.
+// - uses a hack for points
+inline vec3f trace_eval_point_brdfcos(const trace_point& pt, const vec3f& wo,
+    const vec3f& wi, bool delta = false) {
+    // grab variables
+    auto& fr = pt.fr;
+
+    // exit if not needed
+    if (!fr) return zero3f;
+
+    // accumulate brdfcos for each lobe
+    auto brdfcos = zero3f;
+
+    // diffuse term
+    auto ido = dot(wo, wi);
+    brdfcos += fr.kd * (2 * ido + 1) / (2 * pif);
+
+    // transmission hack
+    if (fr.kt != zero3f && wo == -wi) brdfcos += fr.kt;
+
+    // check
+    assert(isfinite(brdfcos.x) && isfinite(brdfcos.y) && isfinite(brdfcos.z));
+
+    // done
+    return brdfcos;
+}
+
+// Evaluates the BRDF scaled by the cosine of the incoming direction.
+inline vec3f trace_eval_brdfcos(const trace_point& pt, const vec3f& wo,
+    const vec3f& wi, bool delta = false) {
+    if (!pt.fr) return zero3f;
+    switch (pt.fr.type) {
+        case trace_brdf_type::microfacet:
+            return trace_eval_ggx_brdfcos(pt, wo, wi, delta);
+        case trace_brdf_type::kajiya_kay:
+            return trace_eval_kajiyakay_brdfcos(pt, wo, wi, delta);
+        case trace_brdf_type::point:
+            return trace_eval_point_brdfcos(pt, wo, wi, delta);
+        default: return zero3f;
+    }
+    return zero3f;
+}
+
 // Compute the weight for sampling the BRDF
-inline float trace_weight_brdfcos(const trace_point& pt, const vec3f& wo,
+inline float trace_weight_ggx_brdfcos(const trace_point& pt, const vec3f& wo,
     const vec3f& wi, bool delta = false) {
     // grab variables
     auto& fr = pt.fr;
@@ -5942,55 +5982,35 @@ inline float trace_weight_brdfcos(const trace_point& pt, const vec3f& wo,
 
     // accumulate the probability over all lobes
     auto pdf = 0.0f;
-    // sample the lobe
-    switch (fr.type) {
-        // reflection term
-        case trace_brdf_type::microfacet: {
-            // compute wh
-            auto wh = normalize(wi + wo);
 
-            // compute dot products
-            auto ndo = dot(wn, wo), ndi = dot(wn, wi), ndh = dot(wn, wh);
+    // compute wh
+    auto wh = normalize(wi + wo);
 
-            // diffuse term (hemipherical cosine probability)
-            if (kdw && ndo > 0 && ndi > 0) { pdf += kdw * ndi / pif; }
+    // compute dot products
+    auto ndo = dot(wn, wo), ndi = dot(wn, wi), ndh = dot(wn, wh);
 
-            // specular term (GGX)
-            if (ksw && ndo > 0 && ndi > 0 && ndh > 0 && fr.rs) {
-                // probability proportional to d adjusted by wh projection
-                auto d = sample_ggx_pdf(fr.rs, ndh);
-                auto hdo = dot(wo, wh);
-                pdf += ksw * d / (4 * hdo);
-            }
+    // diffuse term (hemipherical cosine probability)
+    if (kdw && ndo > 0 && ndi > 0) { pdf += kdw * ndi / pif; }
 
-            // specular term (mirror)
-            if (ksw && ndo > 0 && ndi > 0 && !fr.rs && delta) {
-                // probability proportional to d adjusted by wh projection
-                pdf += ksw;
-            }
-
-            // transmission hack
-            if (ktw && wi == -wo) pdf += ktw;
-
-            // check
-            assert(isfinite(pdf));
-        } break;
-        // hair (Kajiya-Kay)
-        case trace_brdf_type::kajiya_kay: {
-            // diffuse and specular
-            pdf += (kdw + ksw) * 4 * pif;
-            // transmission hack
-            if (wi == -wo) pdf += ktw;
-        } break;
-        // point
-        case trace_brdf_type::point: {
-            // diffuse and specular
-            pdf += (kdw + ksw) * 4 * pif;
-            // transmission hack
-            if (wi == -wo) pdf += ktw;
-        } break;
-        default: assert(false); break;
+    // specular term (GGX)
+    if (ksw && ndo > 0 && ndi > 0 && ndh > 0 && fr.rs) {
+        // probability proportional to d adjusted by wh projection
+        auto d = sample_ggx_pdf(fr.rs, ndh);
+        auto hdo = dot(wo, wh);
+        pdf += ksw * d / (4 * hdo);
     }
+
+    // specular term (mirror)
+    if (ksw && ndo > 0 && ndi > 0 && !fr.rs && delta) {
+        // probability proportional to d adjusted by wh projection
+        pdf += ksw;
+    }
+
+    // transmission hack
+    if (ktw && wi == -wo) pdf += ktw;
+
+    // check
+    assert(isfinite(pdf));
 
     // check for missed pdf
     if (!pdf) return 0;
@@ -6002,8 +6022,93 @@ inline float trace_weight_brdfcos(const trace_point& pt, const vec3f& wo,
     return 1 / pdf;
 }
 
+// Compute the weight for sampling the BRDF
+inline float trace_weight_kajiyakay_brdfcos(const trace_point& pt,
+    const vec3f& wo, const vec3f& wi, bool delta = false) {
+    // grab variables
+    auto& fr = pt.fr;
+
+    // skip if no component
+    if (!fr) return 0;
+
+    // probability of each lobe
+    auto kdw = max_element_value(fr.kd), ksw = max_element_value(fr.ks),
+         ktw = max_element_value(fr.kt);
+    auto kaw = kdw + ksw + ktw;
+    kdw /= kaw;
+    ksw /= kaw;
+    ktw /= kaw;
+
+    // accumulate the probability over all lobes
+    auto pdf = 0.0f;
+
+    // diffuse and specular
+    pdf += (kdw + ksw) * 4 * pif;
+    // transmission hack
+    if (wi == -wo) pdf += ktw;
+
+    // check for missed pdf
+    if (!pdf) return 0;
+
+    // check
+    assert(isfinite(pdf));
+
+    // done
+    return 1 / pdf;
+}
+
+// Compute the weight for sampling the BRDF
+inline float trace_weight_point_brdfcos(const trace_point& pt, const vec3f& wo,
+    const vec3f& wi, bool delta = false) {
+    // grab variables
+    auto& fr = pt.fr;
+
+    // skip if no component
+    if (!fr) return 0;
+
+    // probability of each lobe
+    auto kdw = max_element_value(fr.kd), ksw = max_element_value(fr.ks),
+         ktw = max_element_value(fr.kt);
+    auto kaw = kdw + ksw + ktw;
+    kdw /= kaw;
+    ksw /= kaw;
+    ktw /= kaw;
+
+    // accumulate the probability over all lobes
+    auto pdf = 0.0f;
+
+    // diffuse and specular
+    pdf += (kdw + ksw) * 4 * pif;
+    // transmission hack
+    if (wi == -wo) pdf += ktw;
+
+    // check for missed pdf
+    if (!pdf) return 0;
+
+    // check
+    assert(isfinite(pdf));
+
+    // done
+    return 1 / pdf;
+}
+
+// Compute the weight for sampling the BRDF
+inline float trace_weight_brdfcos(const trace_point& pt, const vec3f& wo,
+    const vec3f& wi, bool delta = false) {
+    if (!pt.fr) return 0;
+    switch (pt.fr.type) {
+        case trace_brdf_type::microfacet:
+            return trace_weight_ggx_brdfcos(pt, wo, wi, delta);
+        case trace_brdf_type::kajiya_kay:
+            return trace_weight_kajiyakay_brdfcos(pt, wo, wi, delta);
+        case trace_brdf_type::point:
+            return trace_weight_point_brdfcos(pt, wo, wi, delta);
+        default: return 0;
+    }
+}
+
 // Picks a direction based on the BRDF
-inline tuple<vec3f, bool> trace_sample_brdfcos(
+inline tuple<vec3f, bool> trace_sample_ggx_brdfcos(
     const trace_point& pt, const vec3f& wo, float rnl, const vec2f& rn) {
     // grab variables
     auto& fr = pt.fr;
@@ -6023,83 +6128,133 @@ inline tuple<vec3f, bool> trace_sample_brdfcos(
     // frame
     auto fp = make_frame_fromz(pt.pos, pt.norm);
 
-    // sample selected lobe
-    switch (fr.type) {
-        // reflection term
-        case trace_brdf_type::microfacet: {
-            // compute cosine
-            auto ndo = dot(wn, wo);
+    // compute cosine
+    auto ndo = dot(wn, wo);
 
-            // check to make sure we are above the surface
-            if (ndo <= 0) return {zero3f, false};
+    // check to make sure we are above the surface
+    if (ndo <= 0) return {zero3f, false};
 
-            // sample according to diffuse
-            if (rnl < kdw) {
-                // sample wi with hemispherical cosine distribution
-                auto rz = sqrtf(rn.y), rr = sqrtf(1 - rz * rz),
-                     rphi = 2 * pif * rn.x;
-                // set to wi
-                auto wi_local = vec3f{rr * cosf(rphi), rr * sinf(rphi), rz};
-                return {transform_direction(fp, wi_local), false};
-            }
-            // sample according to specular GGX
-            else if (rnl < kdw + ksw && fr.rs) {
-                // sample wh with ggx distribution
-                auto wh_local = sample_ggx(fr.rs, rn);
-                auto wh = transform_direction(fp, wh_local);
-                // compute wi
-                return {normalize(wh * 2.0f * dot(wo, wh) - wo), false};
-            }
-            // sample according to specular mirror
-            else if (rnl < kdw + ksw && !fr.rs) {
-                // compute wi
-                return {normalize(wn * 2.0f * dot(wo, wn) - wo), true};
-            }
-            // transmission hack
-            else if (rnl < kdw + ksw + ktw) {
-                // continue ray direction
-                return {-wo, true};
-            } else
-                assert(false);
-        } break;
-        // hair (Kajiya-Kay)
-        case trace_brdf_type::kajiya_kay: {
-            // diffuse and specular
-            if (rnl < kdw + ksw) {
-                // sample wi with uniform spherical distribution
-                auto rz = 2 * rn.y - 1, rr = sqrtf(1 - rz * rz),
-                     rphi = 2 * pif * rn.x;
-                auto wi_local = vec3f{rr * cosf(rphi), rr * sinf(rphi), rz};
-                return {transform_direction(fp, wi_local), false};
-            }
-            // transmission hack
-            else if (rnl < kdw + ksw + ktw) {
-                // continue ray direction
-                return {-wo, true};
-            } else
-                assert(false);
-        } break;
-        // diffuse term point
-        case trace_brdf_type::point: {
-            // diffuse and specular
-            if (rnl < kdw + ksw) {
-                // sample wi with uniform spherical distribution
-                auto rz = 2 * rn.y - 1, rr = sqrtf(1 - rz * rz),
-                     rphi = 2 * pif * rn.x;
-                auto wi_local = vec3f{rr * cosf(rphi), rr * sinf(rphi), rz};
-                return {transform_direction(fp, wi_local), false};
-            }
-            // transmission hack
-            else if (rnl < kdw + ksw + ktw) {
-                // continue ray direction
-                return {-wo, true};
-            } else
-                assert(false);
-        } break;
-        default: assert(false); break;
+    // sample according to diffuse
+    if (rnl < kdw) {
+        // sample wi with hemispherical cosine distribution
+        auto rz = sqrtf(rn.y), rr = sqrtf(1 - rz * rz), rphi = 2 * pif * rn.x;
+        // set to wi
+        auto wi_local = vec3f{rr * cosf(rphi), rr * sinf(rphi), rz};
+        return {transform_direction(fp, wi_local), false};
     }
+    // sample according to specular GGX
+    else if (rnl < kdw + ksw && fr.rs) {
+        // sample wh with ggx distribution
+        auto wh_local = sample_ggx(fr.rs, rn);
+        auto wh = transform_direction(fp, wh_local);
+        // compute wi
+        return {normalize(wh * 2.0f * dot(wo, wh) - wo), false};
+    }
+    // sample according to specular mirror
+    else if (rnl < kdw + ksw && !fr.rs) {
+        // compute wi
+        return {normalize(wn * 2.0f * dot(wo, wn) - wo), true};
+    }
+    // transmission hack
+    else if (rnl < kdw + ksw + ktw) {
+        // continue ray direction
+        return {-wo, true};
+    } else
+        assert(false);
 
     // done
+    return {zero3f, false};
+}
+
+// Picks a direction based on the BRDF
+inline tuple<vec3f, bool> trace_sample_kajiyakay_brdfcos(
+    const trace_point& pt, const vec3f& wo, float rnl, const vec2f& rn) {
+    // grab variables
+    auto& fr = pt.fr;
+
+    // skip if no component
+    if (!fr) return {zero3f, false};
+
+    // probability of each lobe
+    auto kdw = max_element_value(fr.kd), ksw = max_element_value(fr.ks),
+         ktw = max_element_value(fr.kt);
+    auto kaw = kdw + ksw + ktw;
+    kdw /= kaw;
+    ksw /= kaw;
+    ktw /= kaw;
+
+    // frame
+    auto fp = make_frame_fromz(pt.pos, pt.norm);
+
+    // diffuse and specular
+    if (rnl < kdw + ksw) {
+        // sample wi with uniform spherical distribution
+        auto rz = 2 * rn.y - 1, rr = sqrtf(1 - rz * rz), rphi = 2 * pif * rn.x;
+        auto wi_local = vec3f{rr * cosf(rphi), rr * sinf(rphi), rz};
+        return {transform_direction(fp, wi_local), false};
+    }
+    // transmission hack
+    else if (rnl < kdw + ksw + ktw) {
+        // continue ray direction
+        return {-wo, true};
+    } else
+        assert(false);
+
+    // done
+    return {zero3f, false};
+}
+
+// Picks a direction based on the BRDF
+inline tuple<vec3f, bool> trace_sample_point_brdfcos(
+    const trace_point& pt, const vec3f& wo, float rnl, const vec2f& rn) {
+    // grab variables
+    auto& fr = pt.fr;
+
+    // skip if no component
+    if (!fr) return {zero3f, false};
+
+    // probability of each lobe
+    auto kdw = max_element_value(fr.kd), ksw = max_element_value(fr.ks),
+         ktw = max_element_value(fr.kt);
+    auto kaw = kdw + ksw + ktw;
+    kdw /= kaw;
+    ksw /= kaw;
+    ktw /= kaw;
+
+    // frame
+    auto fp = make_frame_fromz(pt.pos, pt.norm);
+
+    // diffuse and specular
+    if (rnl < kdw + ksw) {
+        // sample wi with uniform spherical distribution
+        auto rz = 2 * rn.y - 1, rr = sqrtf(1 - rz * rz), rphi = 2 * pif * rn.x;
+        auto wi_local = vec3f{rr * cosf(rphi), rr * sinf(rphi), rz};
+        return {transform_direction(fp, wi_local), false};
+    }
+    // transmission hack
+    else if (rnl < kdw + ksw + ktw) {
+        // continue ray direction
+        return {-wo, true};
+    } else
+        assert(false);
+
+    // done
+    return {zero3f, false};
+}
+
+// Picks a direction based on the BRDF
+inline tuple<vec3f, bool> trace_sample_brdfcos(
+    const trace_point& pt, const vec3f& wo, float rnl, const vec2f& rn) {
+    if (!pt.fr) return {zero3f, false};
+    switch (pt.fr.type) {
+        case trace_brdf_type::microfacet:
+            return trace_sample_ggx_brdfcos(pt, wo, rnl, rn);
+        case trace_brdf_type::kajiya_kay:
+            return trace_sample_kajiyakay_brdfcos(pt, wo, rnl, rn);
+        case trace_brdf_type::point:
+            return trace_sample_point_brdfcos(pt, wo, rnl, rn);
+        default: return {zero3f, false};
+    }
     return {zero3f, false};
 }
 
