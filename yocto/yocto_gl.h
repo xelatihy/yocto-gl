@@ -5974,10 +5974,6 @@ struct trace_pixel {
     int dimension = 0;
     /// pixel weight for filtering
     float weight = 0;
-    /// total number of samples
-    int nsamples = 0;
-    /// random number type
-    trace_rng_type rtype = trace_rng_type::uniform;
 };
 
 /// Trace light as either instances or environments. The members are not part of
