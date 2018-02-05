@@ -6084,9 +6084,9 @@ struct bvh_tree {
     vector<vec2i> lines;
     vector<vec3i> triangles;
     vector<vec4i> quads;
+    vector<vec3i> ist_ids;
     vector<frame3f> ist_frames;
     vector<frame3f> ist_frames_inv;
-    vector<int> ist_bvhs;
     vector<bvh_tree*> shape_bvhs;
     bool own_shape_bvhs = false;
 }
@@ -6113,9 +6113,9 @@ This is an internal data structure.
     - lines:      lines for shape BVHs
     - triangles:      triangles for shape BVHs
     - quads:      quads for shape BVHs
+    - ist_ids:      instance ids (iid, sid, shape bvh index)
     - ist_frames:      instance frames for instance BVHs
     - ist_frames_inv:      instance inverse frames for instance BVHs
-    - ist_bvhs:      instance BVHs
     - shape_bvhs:      shape BVHs
     - own_shape_bvhs:      whether it owns the memory of the shape BVHs
 
@@ -6134,9 +6134,9 @@ Build a shape BVH from a set of primitives.
 #### Function make_bvh()
 
 ~~~ .cpp
-bvh_tree* make_bvh(const vector<frame3f>& frames,
-    const vector<frame3f>& frames_inv, const vector<int>& ist_bvhs,
-    const vector<bvh_tree*>& shape_bvhs, bool own_shape_bvhs, bool equal_size);
+bvh_tree* make_bvh(const vector<vec3i>& ids, const vector<frame3f>& frames,
+    const vector<frame3f>& frames_inv, const vector<bvh_tree*>& shape_bvhs,
+    bool own_shape_bvhs, bool equal_size);
 ~~~
 
 Build a scene BVH from a set of shape instances.
@@ -6171,7 +6171,7 @@ Recursively recomputes the node bounds for a scene bvh
 
 ~~~ .cpp
 bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray, bool early_exit,
-    float& ray_t, int& iid, int& eid, vec4f& ew);
+    float& ray_t, int& iid, int& sid, int& eid, vec4f& ew);
 ~~~
 
 Intersect ray with a bvh.
@@ -6180,7 +6180,7 @@ Intersect ray with a bvh.
 
 ~~~ .cpp
 bool overlap_bvh(const bvh_tree* bvh, const vec3f& pos, float max_dist,
-    bool early_exit, float& dist, int& iid, int& eid, vec4f& ew);
+    bool early_exit, float& dist, int& iid, int& sid, int& eid, vec4f& ew);
 ~~~
 
 Finds the closest element with a bvh.
@@ -6191,6 +6191,7 @@ Finds the closest element with a bvh.
 struct intersection_point {
     float dist = 0;
     int iid = -1;
+    int sid = -1;
     int eid = -1;
     vec4f euv = zero4f;
     operator bool() const; 
@@ -6202,6 +6203,7 @@ Intersection point
 - Members:
     - dist:      distance of the hit along the ray or from the point
     - iid:      instance index
+    - sid:      shape index
     - eid:      shape element index
     - euv:      shape barycentric coordinates
     - operator bool():      check if intersection is valid
@@ -6364,7 +6366,6 @@ Scene Material
 ~~~ .cpp
 struct shape {
     string name = "";
-    string path = "";
     material* mat = nullptr;
     vector<int> points;
     vector<vec2i> lines;
@@ -6391,7 +6392,6 @@ May contain only one of the points/lines/triangles/quads.
 
 - Members:
     - name:      shape name
-    - path:      path (used for saving in glTF)
     - mat:      shape material
     - points:      points
     - lines:      lines
@@ -6412,12 +6412,32 @@ May contain only one of the points/lines/triangles/quads.
     - subdivision_catmullclark:      whether to use Catmull-Clark subdivision
 
 
+#### Struct shape_group
+
+~~~ .cpp
+struct shape_group {
+    string name = "";
+    string path = "";
+    vector<shape*> shapes;
+    ~shape_group(); 
+}
+~~~
+
+Group of shapes.
+
+- Members:
+    - name:      shape name
+    - path:      path (used for saving in glTF)
+    - shapes:      shapes
+    - ~shape_group():      cleanup
+
+
 #### Struct instance
 
 ~~~ .cpp
 struct instance {
     frame3f frame = identity_frame3f;
-    shape* shp = nullptr;
+    shape_group* shp = nullptr;
 }
 ~~~
 
@@ -6478,23 +6498,6 @@ Envinonment map
     - ke_txt:      emission texture
 
 
-#### Struct light
-
-~~~ .cpp
-struct light {
-    instance* ist = nullptr;
-    environment* env = nullptr;
-}
-~~~
-
-Light, either an instance or an environment.
-This is only used internally to avoid looping over all objects every time.
-
-- Members:
-    - ist:      instance
-    - env:      environment
-
-
 #### Struct node
 
 ~~~ .cpp
@@ -6507,7 +6510,7 @@ struct node {
     vec3f scaling = {1, 1, 1};
     std::vector<float> weights = {};
     camera* cam = nullptr;
-    vector<instance*> ists = {};
+    instance* ist = nullptr;
     environment* env = nullptr;
     vector<node*> children_ = {};
 }
@@ -6524,7 +6527,7 @@ Node hierarchy
     - scaling:      scale
     - weights:      Weights for morphing
     - cam:      node camera
-    - ists:      node instance
+    - ist:      node instance
     - env:      node environment
     - children_:      child nodes
 
@@ -6557,10 +6560,10 @@ inline vector<pair<string, keyframe_type>>& keyframe_type_names();
 
 Name for keyframe type enum
 
-#### Struct keyframe
+#### Struct animation
 
 ~~~ .cpp
-struct keyframe {
+struct animation {
     std::string name;
     keyframe_type type = keyframe_type::linear;
     std::vector<float> times;
@@ -6583,14 +6586,14 @@ Keyframe data.
     - weights:      Weights for morphing
 
 
-#### Struct animation
+#### Struct animation_group
 
 ~~~ .cpp
-struct animation {
+struct animation_group {
     std::string name;
     std::string path = "";
-    vector<keyframe*> keyframes;
-    vector<pair<keyframe*, node*>> targets;
+    vector<animation*> animations;
+    vector<pair<animation*, node*>> targets;
 }
 ~~~
 
@@ -6599,7 +6602,7 @@ Animation made of multiple keyframed values
 - Members:
     - name:      Name
     - path:      path (only used when writing files on disk with glTF)
-    - keyframes:      Keyframed values
+    - animations:      Keyframed values
     - targets:      Binds keyframe values to nodes.
 
 
@@ -6607,14 +6610,14 @@ Animation made of multiple keyframed values
 
 ~~~ .cpp
 struct scene {
-    vector<shape*> shapes = {};
+    vector<shape_group*> shapes = {};
     vector<instance*> instances = {};
     vector<material*> materials = {};
     vector<texture*> textures = {};
     vector<camera*> cameras = {};
     vector<environment*> environments = {};
     vector<node*> nodes = {};
-    vector<animation*> animations = {};
+    vector<animation_group*> animations = {};
 }
 ~~~
 
@@ -6682,7 +6685,7 @@ Shape tangent space interpolated using barycentric coordinates
 #### Function eval_pos()
 
 ~~~ .cpp
-vec3f eval_pos(const instance* ist, int eid, const vec4f& euv);
+vec3f eval_pos(const instance* ist, int sid, int eid, const vec4f& euv);
 ~~~
 
 Instance position interpolated using barycentric coordinates
@@ -6690,7 +6693,7 @@ Instance position interpolated using barycentric coordinates
 #### Function eval_norm()
 
 ~~~ .cpp
-vec3f eval_norm(const instance* ist, int eid, const vec4f& euv);
+vec3f eval_norm(const instance* ist, int sid, int eid, const vec4f& euv);
 ~~~
 
 Instance normal interpolated using barycentric coordinates
@@ -6791,14 +6794,6 @@ bbox3f compute_bounds(const shape* shp);
 ~~~
 
 Computes a shape bounding box (quick computation that ignores radius)
-
-#### Function compute_bounds()
-
-~~~ .cpp
-bbox3f compute_bounds(const instance* ist);
-~~~
-
-Compute the instance bounding box
 
 #### Function compute_bounds()
 
@@ -7450,7 +7445,7 @@ Test animation parameters
 
 ~~~ .cpp
 void update_test_animation(
-    const scene* scn, animation* anm, const test_animation_params& tndr);
+    const scene* scn, animation_group* anm, const test_animation_params& tndr);
 ~~~
 
 Updates a test node, adding it to the scene if missing.
@@ -7835,8 +7830,8 @@ the the public API.
 ~~~ .cpp
 struct trace_lights {
     vector<trace_light> lights;
-    unordered_map<shape*, vector<float>> shape_cdfs;
-    unordered_map<shape*, float> shape_areas;
+    unordered_map<const shape*, vector<float>> shape_cdfs;
+    unordered_map<const shape*, float> shape_areas;
     bool empty() const; 
     int size() const; 
 }

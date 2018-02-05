@@ -85,13 +85,13 @@ inline void draw(gl_window* win) {
                 app->scn = new scene();
                 update_test_scene(app->scn, app->edit_params);
                 update_textures(app->scn, app->textures, {}, true);
-                update_shapes(app->scn, app->shapes, {}, true);
+                update_shapes(app->scn, app->shapes, {}, {}, true);
             }
             draw_continue_widget(win);
             if (draw_button_widget(win, "load")) {
                 app->scn = load_scene(app->filename, {});
                 update_textures(app->scn, app->textures, {}, true);
-                update_shapes(app->scn, app->shapes, {}, true);
+                update_shapes(app->scn, app->shapes, {}, {}, true);
             }
             draw_continue_widget(win);
             if (draw_button_widget(win, "save")) {
@@ -125,7 +125,8 @@ inline void draw(gl_window* win) {
                 app->textures, &app->edit_params)) {
             update_textures(
                 app->scn, app->textures, {(texture*)app->selection});
-            update_shapes(app->scn, app->shapes, {(shape*)app->selection});
+            update_shapes(app->scn, app->shapes, {(shape*)app->selection},
+                {(shape_group*)app->selection});
         }
     }
     end_widgets(win);

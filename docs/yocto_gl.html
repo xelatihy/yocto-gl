@@ -4948,9 +4948,9 @@ This is an internal data structure.</p>
     <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2i</span><span class="o">&gt;</span> <span class="n">lines</span><span class="p">;</span>
     <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;</span> <span class="n">triangles</span><span class="p">;</span>
     <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span> <span class="n">quads</span><span class="p">;</span>
+    <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;</span> <span class="n">ist_ids</span><span class="p">;</span>
     <span class="n">vector</span><span class="o">&lt;</span><span class="n">frame3f</span><span class="o">&gt;</span> <span class="n">ist_frames</span><span class="p">;</span>
     <span class="n">vector</span><span class="o">&lt;</span><span class="n">frame3f</span><span class="o">&gt;</span> <span class="n">ist_frames_inv</span><span class="p">;</span>
-    <span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">ist_bvhs</span><span class="p">;</span>
     <span class="n">vector</span><span class="o">&lt;</span><span class="n">bvh_tree</span><span class="o">*&gt;</span> <span class="n">shape_bvhs</span><span class="p">;</span>
     <span class="kt">bool</span> <span class="n">own_shape_bvhs</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
 <span class="p">}</span>
@@ -4977,9 +4977,9 @@ BVHs, shape BVHs, each of which of a uniform primitive type.</p>
 <li>lines:      lines for shape BVHs</li>
 <li>triangles:      triangles for shape BVHs</li>
 <li>quads:      quads for shape BVHs</li>
+<li>ist_ids:      instance ids (iid, sid, shape bvh index)</li>
 <li>ist_frames:      instance frames for instance BVHs</li>
 <li>ist_frames_inv:      instance inverse frames for instance BVHs</li>
-<li>ist_bvhs:      instance BVHs</li>
 <li>shape_bvhs:      shape BVHs</li>
 <li>own_shape_bvhs:      whether it owns the memory of the shape BVHs</li>
 </ul>
@@ -4995,9 +4995,9 @@ BVHs, shape BVHs, each of which of a uniform primitive type.</p>
 
 <p>Build a shape BVH from a set of primitives.</p>
 <h4>Function make_bvh()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">bvh_tree</span><span class="o">*</span> <span class="nf">make_bvh</span><span class="p">(</span><span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">frame3f</span><span class="o">&gt;&amp;</span> <span class="n">frames</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">frame3f</span><span class="o">&gt;&amp;</span> <span class="n">frames_inv</span><span class="p">,</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;&amp;</span> <span class="n">ist_bvhs</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">bvh_tree</span><span class="o">*&gt;&amp;</span> <span class="n">shape_bvhs</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">own_shape_bvhs</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">equal_size</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="n">bvh_tree</span><span class="o">*</span> <span class="nf">make_bvh</span><span class="p">(</span><span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;&amp;</span> <span class="n">ids</span><span class="p">,</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">frame3f</span><span class="o">&gt;&amp;</span> <span class="n">frames</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">frame3f</span><span class="o">&gt;&amp;</span> <span class="n">frames_inv</span><span class="p">,</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">bvh_tree</span><span class="o">*&gt;&amp;</span> <span class="n">shape_bvhs</span><span class="p">,</span>
+    <span class="kt">bool</span> <span class="n">own_shape_bvhs</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">equal_size</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -5024,14 +5024,14 @@ BVHs, shape BVHs, each of which of a uniform primitive type.</p>
 <p>Recursively recomputes the node bounds for a scene bvh</p>
 <h4>Function intersect_bvh()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">intersect_bvh</span><span class="p">(</span><span class="k">const</span> <span class="n">bvh_tree</span><span class="o">*</span> <span class="n">bvh</span><span class="p">,</span> <span class="k">const</span> <span class="n">ray3f</span><span class="o">&amp;</span> <span class="n">ray</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">early_exit</span><span class="p">,</span>
-    <span class="kt">float</span><span class="o">&amp;</span> <span class="n">ray_t</span><span class="p">,</span> <span class="kt">int</span><span class="o">&amp;</span> <span class="n">iid</span><span class="p">,</span> <span class="kt">int</span><span class="o">&amp;</span> <span class="n">eid</span><span class="p">,</span> <span class="n">vec4f</span><span class="o">&amp;</span> <span class="n">ew</span><span class="p">);</span>
+    <span class="kt">float</span><span class="o">&amp;</span> <span class="n">ray_t</span><span class="p">,</span> <span class="kt">int</span><span class="o">&amp;</span> <span class="n">iid</span><span class="p">,</span> <span class="kt">int</span><span class="o">&amp;</span> <span class="n">sid</span><span class="p">,</span> <span class="kt">int</span><span class="o">&amp;</span> <span class="n">eid</span><span class="p">,</span> <span class="n">vec4f</span><span class="o">&amp;</span> <span class="n">ew</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Intersect ray with a bvh.</p>
 <h4>Function overlap_bvh()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">overlap_bvh</span><span class="p">(</span><span class="k">const</span> <span class="n">bvh_tree</span><span class="o">*</span> <span class="n">bvh</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">pos</span><span class="p">,</span> <span class="kt">float</span> <span class="n">max_dist</span><span class="p">,</span>
-    <span class="kt">bool</span> <span class="n">early_exit</span><span class="p">,</span> <span class="kt">float</span><span class="o">&amp;</span> <span class="n">dist</span><span class="p">,</span> <span class="kt">int</span><span class="o">&amp;</span> <span class="n">iid</span><span class="p">,</span> <span class="kt">int</span><span class="o">&amp;</span> <span class="n">eid</span><span class="p">,</span> <span class="n">vec4f</span><span class="o">&amp;</span> <span class="n">ew</span><span class="p">);</span>
+    <span class="kt">bool</span> <span class="n">early_exit</span><span class="p">,</span> <span class="kt">float</span><span class="o">&amp;</span> <span class="n">dist</span><span class="p">,</span> <span class="kt">int</span><span class="o">&amp;</span> <span class="n">iid</span><span class="p">,</span> <span class="kt">int</span><span class="o">&amp;</span> <span class="n">sid</span><span class="p">,</span> <span class="kt">int</span><span class="o">&amp;</span> <span class="n">eid</span><span class="p">,</span> <span class="n">vec4f</span><span class="o">&amp;</span> <span class="n">ew</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -5040,6 +5040,7 @@ BVHs, shape BVHs, each of which of a uniform primitive type.</p>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">intersection_point</span> <span class="p">{</span>
     <span class="kt">float</span> <span class="n">dist</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
     <span class="kt">int</span> <span class="n">iid</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">sid</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
     <span class="kt">int</span> <span class="n">eid</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
     <span class="n">vec4f</span> <span class="n">euv</span> <span class="o">=</span> <span class="n">zero4f</span><span class="p">;</span>
     <span class="k">operator</span> <span class="nf">bool</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span> 
@@ -5052,6 +5053,7 @@ BVHs, shape BVHs, each of which of a uniform primitive type.</p>
 <li>Members:<ul>
 <li>dist:      distance of the hit along the ray or from the point</li>
 <li>iid:      instance index</li>
+<li>sid:      shape index</li>
 <li>eid:      shape element index</li>
 <li>euv:      shape barycentric coordinates</li>
 <li>operator bool():      check if intersection is valid</li>
@@ -5207,7 +5209,6 @@ BVHs, shape BVHs, each of which of a uniform primitive type.</p>
 <h4>Struct shape</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">shape</span> <span class="p">{</span>
     <span class="n">string</span> <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
-    <span class="n">string</span> <span class="n">path</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
     <span class="n">material</span><span class="o">*</span> <span class="n">mat</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
     <span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">points</span><span class="p">;</span>
     <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2i</span><span class="o">&gt;</span> <span class="n">lines</span><span class="p">;</span>
@@ -5235,7 +5236,6 @@ May contain only one of the points/lines/triangles/quads.</p>
 <ul>
 <li>Members:<ul>
 <li>name:      shape name</li>
-<li>path:      path (used for saving in glTF)</li>
 <li>mat:      shape material</li>
 <li>points:      points</li>
 <li>lines:      lines</li>
@@ -5257,10 +5257,30 @@ May contain only one of the points/lines/triangles/quads.</p>
 </ul>
 </li>
 </ul>
+<h4>Struct shape_group</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">shape_group</span> <span class="p">{</span>
+    <span class="n">string</span> <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
+    <span class="n">string</span> <span class="n">path</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
+    <span class="n">vector</span><span class="o">&lt;</span><span class="n">shape</span><span class="o">*&gt;</span> <span class="n">shapes</span><span class="p">;</span>
+    <span class="o">~</span><span class="n">shape_group</span><span class="p">();</span> 
+<span class="p">}</span>
+</code></pre></div>
+
+
+<p>Group of shapes.</p>
+<ul>
+<li>Members:<ul>
+<li>name:      shape name</li>
+<li>path:      path (used for saving in glTF)</li>
+<li>shapes:      shapes</li>
+<li>~shape_group():      cleanup</li>
+</ul>
+</li>
+</ul>
 <h4>Struct instance</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">instance</span> <span class="p">{</span>
     <span class="n">frame3f</span> <span class="n">frame</span> <span class="o">=</span> <span class="n">identity_frame3f</span><span class="p">;</span>
-    <span class="n">shape</span><span class="o">*</span> <span class="n">shp</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+    <span class="n">shape_group</span><span class="o">*</span> <span class="n">shp</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
 <span class="p">}</span>
 </code></pre></div>
 
@@ -5323,23 +5343,6 @@ May contain only one of the points/lines/triangles/quads.</p>
 </ul>
 </li>
 </ul>
-<h4>Struct light</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">light</span> <span class="p">{</span>
-    <span class="n">instance</span><span class="o">*</span> <span class="n">ist</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
-    <span class="n">environment</span><span class="o">*</span> <span class="n">env</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
-<span class="p">}</span>
-</code></pre></div>
-
-
-<p>Light, either an instance or an environment.
-This is only used internally to avoid looping over all objects every time.</p>
-<ul>
-<li>Members:<ul>
-<li>ist:      instance</li>
-<li>env:      environment</li>
-</ul>
-</li>
-</ul>
 <h4>Struct node</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">node</span> <span class="p">{</span>
     <span class="n">string</span> <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
@@ -5350,7 +5353,7 @@ This is only used internally to avoid looping over all objects every time.</p>
     <span class="n">vec3f</span> <span class="n">scaling</span> <span class="o">=</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">};</span>
     <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;</span> <span class="n">weights</span> <span class="o">=</span> <span class="p">{};</span>
     <span class="n">camera</span><span class="o">*</span> <span class="n">cam</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
-    <span class="n">vector</span><span class="o">&lt;</span><span class="n">instance</span><span class="o">*&gt;</span> <span class="n">ists</span> <span class="o">=</span> <span class="p">{};</span>
+    <span class="n">instance</span><span class="o">*</span> <span class="n">ist</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
     <span class="n">environment</span><span class="o">*</span> <span class="n">env</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
     <span class="n">vector</span><span class="o">&lt;</span><span class="n">node</span><span class="o">*&gt;</span> <span class="n">children_</span> <span class="o">=</span> <span class="p">{};</span>
 <span class="p">}</span>
@@ -5368,7 +5371,7 @@ This is only used internally to avoid looping over all objects every time.</p>
 <li>scaling:      scale</li>
 <li>weights:      Weights for morphing</li>
 <li>cam:      node camera</li>
-<li>ists:      node instance</li>
+<li>ist:      node instance</li>
 <li>env:      node environment</li>
 <li>children_:      child nodes</li>
 </ul>
@@ -5400,8 +5403,8 @@ This is only used internally to avoid looping over all objects every time.</p>
 
 
 <p>Name for keyframe type enum</p>
-<h4>Struct keyframe</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">keyframe</span> <span class="p">{</span>
+<h4>Struct animation</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">animation</span> <span class="p">{</span>
     <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">name</span><span class="p">;</span>
     <span class="n">keyframe_type</span> <span class="n">type</span> <span class="o">=</span> <span class="n">keyframe_type</span><span class="o">::</span><span class="n">linear</span><span class="p">;</span>
     <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;</span> <span class="n">times</span><span class="p">;</span>
@@ -5426,12 +5429,12 @@ This is only used internally to avoid looping over all objects every time.</p>
 </ul>
 </li>
 </ul>
-<h4>Struct animation</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">animation</span> <span class="p">{</span>
+<h4>Struct animation_group</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">animation_group</span> <span class="p">{</span>
     <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">name</span><span class="p">;</span>
     <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">path</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
-    <span class="n">vector</span><span class="o">&lt;</span><span class="n">keyframe</span><span class="o">*&gt;</span> <span class="n">keyframes</span><span class="p">;</span>
-    <span class="n">vector</span><span class="o">&lt;</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">keyframe</span><span class="o">*</span><span class="p">,</span> <span class="n">node</span><span class="o">*&gt;&gt;</span> <span class="n">targets</span><span class="p">;</span>
+    <span class="n">vector</span><span class="o">&lt;</span><span class="n">animation</span><span class="o">*&gt;</span> <span class="n">animations</span><span class="p">;</span>
+    <span class="n">vector</span><span class="o">&lt;</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">animation</span><span class="o">*</span><span class="p">,</span> <span class="n">node</span><span class="o">*&gt;&gt;</span> <span class="n">targets</span><span class="p">;</span>
 <span class="p">}</span>
 </code></pre></div>
 
@@ -5441,21 +5444,21 @@ This is only used internally to avoid looping over all objects every time.</p>
 <li>Members:<ul>
 <li>name:      Name</li>
 <li>path:      path (only used when writing files on disk with glTF)</li>
-<li>keyframes:      Keyframed values</li>
+<li>animations:      Keyframed values</li>
 <li>targets:      Binds keyframe values to nodes.</li>
 </ul>
 </li>
 </ul>
 <h4>Struct scene</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">scene</span> <span class="p">{</span>
-    <span class="n">vector</span><span class="o">&lt;</span><span class="n">shape</span><span class="o">*&gt;</span> <span class="n">shapes</span> <span class="o">=</span> <span class="p">{};</span>
+    <span class="n">vector</span><span class="o">&lt;</span><span class="n">shape_group</span><span class="o">*&gt;</span> <span class="n">shapes</span> <span class="o">=</span> <span class="p">{};</span>
     <span class="n">vector</span><span class="o">&lt;</span><span class="n">instance</span><span class="o">*&gt;</span> <span class="n">instances</span> <span class="o">=</span> <span class="p">{};</span>
     <span class="n">vector</span><span class="o">&lt;</span><span class="n">material</span><span class="o">*&gt;</span> <span class="n">materials</span> <span class="o">=</span> <span class="p">{};</span>
     <span class="n">vector</span><span class="o">&lt;</span><span class="n">texture</span><span class="o">*&gt;</span> <span class="n">textures</span> <span class="o">=</span> <span class="p">{};</span>
     <span class="n">vector</span><span class="o">&lt;</span><span class="n">camera</span><span class="o">*&gt;</span> <span class="n">cameras</span> <span class="o">=</span> <span class="p">{};</span>
     <span class="n">vector</span><span class="o">&lt;</span><span class="n">environment</span><span class="o">*&gt;</span> <span class="n">environments</span> <span class="o">=</span> <span class="p">{};</span>
     <span class="n">vector</span><span class="o">&lt;</span><span class="n">node</span><span class="o">*&gt;</span> <span class="n">nodes</span> <span class="o">=</span> <span class="p">{};</span>
-    <span class="n">vector</span><span class="o">&lt;</span><span class="n">animation</span><span class="o">*&gt;</span> <span class="n">animations</span> <span class="o">=</span> <span class="p">{};</span>
+    <span class="n">vector</span><span class="o">&lt;</span><span class="n">animation_group</span><span class="o">*&gt;</span> <span class="n">animations</span> <span class="o">=</span> <span class="p">{};</span>
 <span class="p">}</span>
 </code></pre></div>
 
@@ -5511,13 +5514,13 @@ This is only used internally to avoid looping over all objects every time.</p>
 
 <p>Shape tangent space interpolated using barycentric coordinates</p>
 <h4>Function eval_pos()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">vec3f</span> <span class="nf">eval_pos</span><span class="p">(</span><span class="k">const</span> <span class="n">instance</span><span class="o">*</span> <span class="n">ist</span><span class="p">,</span> <span class="kt">int</span> <span class="n">eid</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec4f</span><span class="o">&amp;</span> <span class="n">euv</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="n">vec3f</span> <span class="nf">eval_pos</span><span class="p">(</span><span class="k">const</span> <span class="n">instance</span><span class="o">*</span> <span class="n">ist</span><span class="p">,</span> <span class="kt">int</span> <span class="n">sid</span><span class="p">,</span> <span class="kt">int</span> <span class="n">eid</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec4f</span><span class="o">&amp;</span> <span class="n">euv</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Instance position interpolated using barycentric coordinates</p>
 <h4>Function eval_norm()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">vec3f</span> <span class="nf">eval_norm</span><span class="p">(</span><span class="k">const</span> <span class="n">instance</span><span class="o">*</span> <span class="n">ist</span><span class="p">,</span> <span class="kt">int</span> <span class="n">eid</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec4f</span><span class="o">&amp;</span> <span class="n">euv</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="n">vec3f</span> <span class="nf">eval_norm</span><span class="p">(</span><span class="k">const</span> <span class="n">instance</span><span class="o">*</span> <span class="n">ist</span><span class="p">,</span> <span class="kt">int</span> <span class="n">sid</span><span class="p">,</span> <span class="kt">int</span> <span class="n">eid</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec4f</span><span class="o">&amp;</span> <span class="n">euv</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -5597,12 +5600,6 @@ Bounding boxes for the scene will be updated.</p>
 
 
 <p>Computes a shape bounding box (quick computation that ignores radius)</p>
-<h4>Function compute_bounds()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">bbox3f</span> <span class="nf">compute_bounds</span><span class="p">(</span><span class="k">const</span> <span class="n">instance</span><span class="o">*</span> <span class="n">ist</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Compute the instance bounding box</p>
 <h4>Function compute_bounds()</h4>
 <div class="codehilite"><pre><code><span></span><span class="n">bbox3f</span> <span class="nf">compute_bounds</span><span class="p">(</span><span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">);</span>
 </code></pre></div>
@@ -6193,7 +6190,7 @@ Throws an exception if an error occurs.</p>
 </ul>
 <h4>Function update_test_animation()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">update_test_animation</span><span class="p">(</span>
-    <span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="n">animation</span><span class="o">*</span> <span class="n">anm</span><span class="p">,</span> <span class="k">const</span> <span class="n">test_animation_params</span><span class="o">&amp;</span> <span class="n">tndr</span><span class="p">);</span>
+    <span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="n">animation_group</span><span class="o">*</span> <span class="n">anm</span><span class="p">,</span> <span class="k">const</span> <span class="n">test_animation_params</span><span class="o">&amp;</span> <span class="n">tndr</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -6530,8 +6527,8 @@ the the public API.</p>
 <h4>Struct trace_lights</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">trace_lights</span> <span class="p">{</span>
     <span class="n">vector</span><span class="o">&lt;</span><span class="n">trace_light</span><span class="o">&gt;</span> <span class="n">lights</span><span class="p">;</span>
-    <span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">shape</span><span class="o">*</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;&gt;</span> <span class="n">shape_cdfs</span><span class="p">;</span>
-    <span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">shape</span><span class="o">*</span><span class="p">,</span> <span class="kt">float</span><span class="o">&gt;</span> <span class="n">shape_areas</span><span class="p">;</span>
+    <span class="n">unordered_map</span><span class="o">&lt;</span><span class="k">const</span> <span class="n">shape</span><span class="o">*</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;&gt;</span> <span class="n">shape_cdfs</span><span class="p">;</span>
+    <span class="n">unordered_map</span><span class="o">&lt;</span><span class="k">const</span> <span class="n">shape</span><span class="o">*</span><span class="p">,</span> <span class="kt">float</span><span class="o">&gt;</span> <span class="n">shape_areas</span><span class="p">;</span>
     <span class="kt">bool</span> <span class="nf">empty</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span> 
     <span class="kt">int</span> <span class="nf">size</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span> 
 <span class="p">}</span>
