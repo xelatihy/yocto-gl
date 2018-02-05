@@ -80,17 +80,18 @@ inline void serialize(glTFProperty& val, json& js, bool reading) {
     if(reading) {
         if (!js.is_object()) throw runtime_error("object expected");
 #if YGL_GLTFJSON
-        if(js.count("extensions")) serialize_from_json(val.extensions, js.at("extensions"));
-        if(js.count("extras")) serialize_from_json(val.extras, js.at("extras"));
+        if(js.count("extensions")) serialize(val.extensions, js.at("extensions"), reading);
+        if(js.count("extras")) serialize(val.extras, js.at("extras"), reading);
 #endif
     } else {
         if (!js.is_object()) js = json::object();
  #if YGL_GLTFJSON
-        if (!val.extensions.empty()) serialize_to_json(val.extensions, js["extensions"]);
-        if (!val.extras.is_null()) dump_attr(val.extras, "extras", js);
+        if (!val.extensions.empty()) serialize(val.extensions, js["extensions"], reading);
+        if (!val.extras.is_null()) serialize(val.extras, js["extras"], reading);
  #endif
     }
 }
+
 '''
 
 parse_fmt = '''
@@ -99,24 +100,23 @@ parse_fmt = '''
 // Parse a {{name}} enum
 inline void serialize({{name}}& val, json& js, bool reading) {
     static vector<pair<{{item}}, {{name}}>> table = { {{#values}} { {{enum}}, {{name}}::{{label}} },{{/values}} };
-    serialize_from_json(val, js, reading, table);
+    serialize(val, js, reading, table);
 }
 
 {{/enums}}
 
 // Parses a {{name}} object
-inline void serialize({{name}}& val, const json& js, bool reading) {
+inline void serialize({{name}}& val, json& js, bool reading) {
     static auto def = {{name}}();
     serialize_obj(js, reading);
     {{#base}}serialize(({{base}}&)val, js, reading);{{/base}}
     {{#properties}}{{^extension}}serialize_attr(val.{{name}}, js, "{{name}}", reading, {{#required}}true{{/required}}{{^required}}false{{/required}}, def.{{name}});{{/extension}}{{/properties}}
+    {{#has_extensions}}
     if(reading) {
-        {{#has_extensions}}
         if (js.count("extensions")) {
             auto& js_ext = js["extensions"];
             {{#properties}}{{#extension}}serialize_attr(val.{{name}}, js_ext, "{{extension}}", reading, false, def.{{name}});{{/extension}}{{/properties}}
         }
-        {{/has_extensions}}
     } else {
     {{#properties}}{{#extension}}
     if ({{def_check}}) {
@@ -125,6 +125,7 @@ inline void serialize({{name}}& val, const json& js, bool reading) {
     }
     {{/extension}}{{/properties}}
     }
+    {{/has_extensions}}
 }
 {{/types}}
 '''
