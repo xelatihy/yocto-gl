@@ -78,7 +78,6 @@
 //
 // ## Next
 //
-// - add environment test
 // - simplify trace_point
 //     - envpoint from uv
 //     - envpoint pos and norm
@@ -6118,6 +6117,8 @@ inline tuple<vec3f, bool> trace_sample_brdfcos(
 inline trace_point trace_eval_point(const environment* env, const vec3f& wo) {
     auto pt = trace_point();
     pt.env = env;
+    pt.pos = wo * flt_max;
+    pt.norm = -wo;
     pt.ke = env->ke;
     if (env->ke_txt) {
         auto w = transform_direction_inverse(env->frame, -wo);
