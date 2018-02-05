@@ -5775,25 +5775,6 @@ vec2f trace_next2f(trace_pixel& pxl, trace_rng_type type, int nsamples) {
     }
 }
 
-// Brdf type
-enum struct trace_brdf_type {
-    none = 0,
-    microfacet = 1,
-    kajiya_kay = 2,
-    point = 3
-};
-
-// Brdf
-struct trace_brdf {
-    trace_brdf_type type = trace_brdf_type::none;  // type
-    vec3f kd = {0, 0, 0};                          // diffuse
-    vec3f ks = {0, 0, 0};                          // specular
-    float rs = 0;                                  // specular roughness
-    vec3f kt = {0, 0, 0};                          // transmission (thin glass)
-    operator bool() const { return type != trace_brdf_type::none; }
-    vec3f rho() const { return kd + ks + kt; }
-};
-
 // Surface point with geometry and material data. Supports point on envmap too.
 // This is the key data manipulated in the path tracer.
 struct trace_point {
@@ -5803,7 +5784,12 @@ struct trace_point {
     vec3f norm = {0, 0, 1};            // norm
     vec2f texcoord = zero2f;           // texcoord
     vec3f ke = zero3f;                 // emission
-    trace_brdf fr = {};                // brdf
+    vec3f kd = {0, 0, 0};              // diffuse
+    vec3f ks = {0, 0, 0};              // specular
+    float rs = 0;                      // specular roughness
+    vec3f kt = {0, 0, 0};              // transmission (thin glass)
+    bool has_brdf() const { return shp && kd + ks + kt != zero3f; }
+    vec3f rho() const { return kd + ks + kt; }
 };
 
 // Evaluates emission.
@@ -5821,14 +5807,8 @@ inline vec3f trace_eval_emission(const trace_point& pt, const vec3f& wo) {
 // https://www.cs.cornell.edu/~srm/publications/EGSR07-btdf.pdf
 inline vec3f trace_eval_ggx_brdfcos(const trace_point& pt, const vec3f& wo,
     const vec3f& wi, bool delta = false) {
-    // grab variables
-    auto& fr = pt.fr;
+    if (!pt.has_brdf()) return zero3f;
     auto& wn = pt.norm;
-
-    // exit if not needed
-    if (!fr) return zero3f;
-
-    // accumulate brdfcos for each lobe
     auto brdfcos = zero3f;
 
     // compute wh
@@ -5839,32 +5819,32 @@ inline vec3f trace_eval_ggx_brdfcos(const trace_point& pt, const vec3f& wo,
          ndh = clamp(dot(wh, wn), (float)-1, (float)1);
 
     // diffuse term
-    if (fr.kd != zero3f && ndi > 0 && ndo > 0) { brdfcos += fr.kd * ndi / pif; }
+    if (pt.kd != zero3f && ndi > 0 && ndo > 0) brdfcos += pt.kd * ndi / pif;
 
     // specular term (GGX)
-    if (fr.ks != zero3f && ndi > 0 && ndo > 0 && ndh > 0 && fr.rs) {
+    if (pt.ks != zero3f && ndi > 0 && ndo > 0 && ndh > 0 && pt.rs) {
         // microfacet term
-        auto dg = eval_ggx(fr.rs, ndh, ndi, ndo);
+        auto dg = eval_ggx(pt.rs, ndh, ndi, ndo);
 
         // handle fresnel
         auto odh = clamp(dot(wo, wh), 0.0f, 1.0f);
-        auto ks = fresnel_schlick(fr.ks, odh, fr.rs);
+        auto ks = fresnel_schlick(pt.ks, odh, pt.rs);
 
         // sum up
         brdfcos += ks * ndi * dg / (4 * ndi * ndo);
     }
 
     // specular term (mirror)
-    if (fr.ks != zero3f && ndi > 0 && ndo > 0 && !fr.rs && delta) {
+    if (pt.ks != zero3f && ndi > 0 && ndo > 0 && !pt.rs && delta) {
         // handle fresnel
-        auto ks = fresnel_schlick(fr.ks, ndo, fr.rs);
+        auto ks = fresnel_schlick(pt.ks, ndo, pt.rs);
 
         // sum up
         brdfcos += ks;
     }
 
     // transmission hack
-    if (fr.kt != zero3f && wo == -wi) brdfcos += fr.kt;
+    if (pt.kt != zero3f && wo == -wi) brdfcos += pt.kt;
 
     // check
     assert(isfinite(brdfcos.x) && isfinite(brdfcos.y) && isfinite(brdfcos.z));
@@ -5877,14 +5857,8 @@ inline vec3f trace_eval_ggx_brdfcos(const trace_point& pt, const vec3f& wo,
 // - uses Kajiya-Kay for hair
 inline vec3f trace_eval_kajiyakay_brdfcos(const trace_point& pt,
     const vec3f& wo, const vec3f& wi, bool delta = false) {
-    // grab variables
-    auto& fr = pt.fr;
+    if (!pt.has_brdf()) return zero3f;
     auto& wn = pt.norm;
-
-    // exit if not needed
-    if (!fr) return zero3f;
-
-    // accumulate brdfcos for each lobe
     auto brdfcos = zero3f;
 
     // compute wh
@@ -5900,17 +5874,17 @@ inline vec3f trace_eval_kajiyakay_brdfcos(const trace_point& pt,
          sh = sqrt(clamp(1 - ndh * ndh, (float)0, (float)1));
 
     // diffuse term (Kajiya-Kay)
-    if (fr.kd != zero3f && si > 0 && so > 0) { brdfcos += fr.kd * si / pif; }
+    if (pt.kd != zero3f && si > 0 && so > 0) brdfcos += pt.kd * si / pif;
 
     // specular term (Kajiya-Kay)
-    if (fr.ks != zero3f && si > 0 && so > 0 && sh > 0) {
-        auto ns = 2 / (fr.rs * fr.rs) - 2;
+    if (pt.ks != zero3f && si > 0 && so > 0 && sh > 0) {
+        auto ns = 2 / (pt.rs * pt.rs) - 2;
         auto d = (ns + 2) * pow(sh, ns) / (2 + pif);
-        brdfcos += fr.ks * si * d / (4.0f * si * so);
+        brdfcos += pt.ks * si * d / (4.0f * si * so);
     }
 
     // transmission hack
-    if (fr.kt != zero3f && wo == -wi) brdfcos += fr.kt;
+    if (pt.kt != zero3f && wo == -wi) brdfcos += pt.kt;
 
     // check
     assert(isfinite(brdfcos.x) && isfinite(brdfcos.y) && isfinite(brdfcos.z));
@@ -5923,21 +5897,15 @@ inline vec3f trace_eval_kajiyakay_brdfcos(const trace_point& pt,
 // - uses a hack for points
 inline vec3f trace_eval_point_brdfcos(const trace_point& pt, const vec3f& wo,
     const vec3f& wi, bool delta = false) {
-    // grab variables
-    auto& fr = pt.fr;
-
-    // exit if not needed
-    if (!fr) return zero3f;
-
-    // accumulate brdfcos for each lobe
+    if (!pt.has_brdf()) return zero3f;
     auto brdfcos = zero3f;
 
     // diffuse term
     auto ido = dot(wo, wi);
-    brdfcos += fr.kd * (2 * ido + 1) / (2 * pif);
+    brdfcos += pt.kd * (2 * ido + 1) / (2 * pif);
 
     // transmission hack
-    if (fr.kt != zero3f && wo == -wi) brdfcos += fr.kt;
+    if (pt.kt != zero3f && wo == -wi) brdfcos += pt.kt;
 
     // check
     assert(isfinite(brdfcos.x) && isfinite(brdfcos.y) && isfinite(brdfcos.z));
@@ -5949,32 +5917,26 @@ inline vec3f trace_eval_point_brdfcos(const trace_point& pt, const vec3f& wo,
 // Evaluates the BRDF scaled by the cosine of the incoming direction.
 inline vec3f trace_eval_brdfcos(const trace_point& pt, const vec3f& wo,
     const vec3f& wi, bool delta = false) {
-    if (!pt.fr) return zero3f;
-    switch (pt.fr.type) {
-        case trace_brdf_type::microfacet:
-            return trace_eval_ggx_brdfcos(pt, wo, wi, delta);
-        case trace_brdf_type::kajiya_kay:
-            return trace_eval_kajiyakay_brdfcos(pt, wo, wi, delta);
-        case trace_brdf_type::point:
-            return trace_eval_point_brdfcos(pt, wo, wi, delta);
-        default: return zero3f;
-    }
-    return zero3f;
+    if (!pt.has_brdf()) return zero3f;
+    if (!pt.shp->triangles.empty())
+        return trace_eval_ggx_brdfcos(pt, wo, wi, delta);
+    else if (!pt.shp->lines.empty())
+        return trace_eval_kajiyakay_brdfcos(pt, wo, wi, delta);
+    else if (!pt.shp->points.empty())
+        return trace_eval_point_brdfcos(pt, wo, wi, delta);
+    else
+        return zero3f;
 }
 
 // Compute the weight for sampling the BRDF
 inline float trace_weight_ggx_brdfcos(const trace_point& pt, const vec3f& wo,
     const vec3f& wi, bool delta = false) {
-    // grab variables
-    auto& fr = pt.fr;
+    if (!pt.has_brdf()) return 0;
     auto& wn = pt.norm;
 
-    // skip if no component
-    if (!fr) return 0;
-
     // probability of each lobe
-    auto kdw = max_element_value(fr.kd), ksw = max_element_value(fr.ks),
-         ktw = max_element_value(fr.kt);
+    auto kdw = max_element_value(pt.kd), ksw = max_element_value(pt.ks),
+         ktw = max_element_value(pt.kt);
     auto kaw = kdw + ksw + ktw;
     kdw /= kaw;
     ksw /= kaw;
@@ -5993,15 +5955,15 @@ inline float trace_weight_ggx_brdfcos(const trace_point& pt, const vec3f& wo,
     if (kdw && ndo > 0 && ndi > 0) { pdf += kdw * ndi / pif; }
 
     // specular term (GGX)
-    if (ksw && ndo > 0 && ndi > 0 && ndh > 0 && fr.rs) {
+    if (ksw && ndo > 0 && ndi > 0 && ndh > 0 && pt.rs) {
         // probability proportional to d adjusted by wh projection
-        auto d = sample_ggx_pdf(fr.rs, ndh);
+        auto d = sample_ggx_pdf(pt.rs, ndh);
         auto hdo = dot(wo, wh);
         pdf += ksw * d / (4 * hdo);
     }
 
     // specular term (mirror)
-    if (ksw && ndo > 0 && ndi > 0 && !fr.rs && delta) {
+    if (ksw && ndo > 0 && ndi > 0 && !pt.rs && delta) {
         // probability proportional to d adjusted by wh projection
         pdf += ksw;
     }
@@ -6025,15 +5987,11 @@ inline float trace_weight_ggx_brdfcos(const trace_point& pt, const vec3f& wo,
 // Compute the weight for sampling the BRDF
 inline float trace_weight_kajiyakay_brdfcos(const trace_point& pt,
     const vec3f& wo, const vec3f& wi, bool delta = false) {
-    // grab variables
-    auto& fr = pt.fr;
-
-    // skip if no component
-    if (!fr) return 0;
+    if (!pt.has_brdf()) return 0;
 
     // probability of each lobe
-    auto kdw = max_element_value(fr.kd), ksw = max_element_value(fr.ks),
-         ktw = max_element_value(fr.kt);
+    auto kdw = max_element_value(pt.kd), ksw = max_element_value(pt.ks),
+         ktw = max_element_value(pt.kt);
     auto kaw = kdw + ksw + ktw;
     kdw /= kaw;
     ksw /= kaw;
@@ -6060,15 +6018,11 @@ inline float trace_weight_kajiyakay_brdfcos(const trace_point& pt,
 // Compute the weight for sampling the BRDF
 inline float trace_weight_point_brdfcos(const trace_point& pt, const vec3f& wo,
     const vec3f& wi, bool delta = false) {
-    // grab variables
-    auto& fr = pt.fr;
-
-    // skip if no component
-    if (!fr) return 0;
+    if (!pt.has_brdf()) return 0;
 
     // probability of each lobe
-    auto kdw = max_element_value(fr.kd), ksw = max_element_value(fr.ks),
-         ktw = max_element_value(fr.kt);
+    auto kdw = max_element_value(pt.kd), ksw = max_element_value(pt.ks),
+         ktw = max_element_value(pt.kt);
     auto kaw = kdw + ksw + ktw;
     kdw /= kaw;
     ksw /= kaw;
@@ -6095,31 +6049,26 @@ inline float trace_weight_point_brdfcos(const trace_point& pt, const vec3f& wo,
 // Compute the weight for sampling the BRDF
 inline float trace_weight_brdfcos(const trace_point& pt, const vec3f& wo,
     const vec3f& wi, bool delta = false) {
-    if (!pt.fr) return 0;
-    switch (pt.fr.type) {
-        case trace_brdf_type::microfacet:
-            return trace_weight_ggx_brdfcos(pt, wo, wi, delta);
-        case trace_brdf_type::kajiya_kay:
-            return trace_weight_kajiyakay_brdfcos(pt, wo, wi, delta);
-        case trace_brdf_type::point:
-            return trace_weight_point_brdfcos(pt, wo, wi, delta);
-        default: return 0;
-    }
+    if (!pt.has_brdf()) return 0;
+    if (!pt.shp->triangles.empty())
+        return trace_weight_ggx_brdfcos(pt, wo, wi, delta);
+    else if (!pt.shp->lines.empty())
+        return trace_weight_kajiyakay_brdfcos(pt, wo, wi, delta);
+    else if (!pt.shp->points.empty())
+        return trace_weight_point_brdfcos(pt, wo, wi, delta);
+    else
+        return 0;
 }
 
 // Picks a direction based on the BRDF
 inline tuple<vec3f, bool> trace_sample_ggx_brdfcos(
     const trace_point& pt, const vec3f& wo, float rnl, const vec2f& rn) {
-    // grab variables
-    auto& fr = pt.fr;
+    if (!pt.has_brdf()) return {zero3f, false};
     auto& wn = pt.norm;
 
-    // skip if no component
-    if (!fr) return {zero3f, false};
-
     // probability of each lobe
-    auto kdw = max_element_value(fr.kd), ksw = max_element_value(fr.ks),
-         ktw = max_element_value(fr.kt);
+    auto kdw = max_element_value(pt.kd), ksw = max_element_value(pt.ks),
+         ktw = max_element_value(pt.kt);
     auto kaw = kdw + ksw + ktw;
     kdw /= kaw;
     ksw /= kaw;
@@ -6143,15 +6092,15 @@ inline tuple<vec3f, bool> trace_sample_ggx_brdfcos(
         return {transform_direction(fp, wi_local), false};
     }
     // sample according to specular GGX
-    else if (rnl < kdw + ksw && fr.rs) {
+    else if (rnl < kdw + ksw && pt.rs) {
         // sample wh with ggx distribution
-        auto wh_local = sample_ggx(fr.rs, rn);
+        auto wh_local = sample_ggx(pt.rs, rn);
         auto wh = transform_direction(fp, wh_local);
         // compute wi
         return {normalize(wh * 2.0f * dot(wo, wh) - wo), false};
     }
     // sample according to specular mirror
-    else if (rnl < kdw + ksw && !fr.rs) {
+    else if (rnl < kdw + ksw && !pt.rs) {
         // compute wi
         return {normalize(wn * 2.0f * dot(wo, wn) - wo), true};
     }
@@ -6169,15 +6118,11 @@ inline tuple<vec3f, bool> trace_sample_ggx_brdfcos(
 // Picks a direction based on the BRDF
 inline tuple<vec3f, bool> trace_sample_kajiyakay_brdfcos(
     const trace_point& pt, const vec3f& wo, float rnl, const vec2f& rn) {
-    // grab variables
-    auto& fr = pt.fr;
-
-    // skip if no component
-    if (!fr) return {zero3f, false};
+    if (!pt.has_brdf()) return {zero3f, false};
 
     // probability of each lobe
-    auto kdw = max_element_value(fr.kd), ksw = max_element_value(fr.ks),
-         ktw = max_element_value(fr.kt);
+    auto kdw = max_element_value(pt.kd), ksw = max_element_value(pt.ks),
+         ktw = max_element_value(pt.kt);
     auto kaw = kdw + ksw + ktw;
     kdw /= kaw;
     ksw /= kaw;
@@ -6207,15 +6152,11 @@ inline tuple<vec3f, bool> trace_sample_kajiyakay_brdfcos(
 // Picks a direction based on the BRDF
 inline tuple<vec3f, bool> trace_sample_point_brdfcos(
     const trace_point& pt, const vec3f& wo, float rnl, const vec2f& rn) {
-    // grab variables
-    auto& fr = pt.fr;
-
-    // skip if no component
-    if (!fr) return {zero3f, false};
+    if (!pt.has_brdf()) return {zero3f, false};
 
     // probability of each lobe
-    auto kdw = max_element_value(fr.kd), ksw = max_element_value(fr.ks),
-         ktw = max_element_value(fr.kt);
+    auto kdw = max_element_value(pt.kd), ksw = max_element_value(pt.ks),
+         ktw = max_element_value(pt.kt);
     auto kaw = kdw + ksw + ktw;
     kdw /= kaw;
     ksw /= kaw;
@@ -6245,17 +6186,15 @@ inline tuple<vec3f, bool> trace_sample_point_brdfcos(
 // Picks a direction based on the BRDF
 inline tuple<vec3f, bool> trace_sample_brdfcos(
     const trace_point& pt, const vec3f& wo, float rnl, const vec2f& rn) {
-    if (!pt.fr) return {zero3f, false};
-    switch (pt.fr.type) {
-        case trace_brdf_type::microfacet:
-            return trace_sample_ggx_brdfcos(pt, wo, rnl, rn);
-        case trace_brdf_type::kajiya_kay:
-            return trace_sample_kajiyakay_brdfcos(pt, wo, rnl, rn);
-        case trace_brdf_type::point:
-            return trace_sample_point_brdfcos(pt, wo, rnl, rn);
-        default: return {zero3f, false};
-    }
-    return {zero3f, false};
+    if (!pt.has_brdf()) return {zero3f, false};
+    if (!pt.shp->triangles.empty())
+        return trace_sample_ggx_brdfcos(pt, wo, rnl, rn);
+    else if (!pt.shp->lines.empty())
+        return trace_sample_kajiyakay_brdfcos(pt, wo, rnl, rn);
+    else if (!pt.shp->points.empty())
+        return trace_sample_point_brdfcos(pt, wo, rnl, rn);
+    else
+        return {zero3f, false};
 }
 
 // Create a point for an environment map. Resolves material with textures.
@@ -6364,24 +6303,11 @@ inline trace_point trace_eval_point(
     // TODO: fix emission for opacity
 
     // set up final values
-    pt.fr.kd = kd.xyz() * kd.w;
-    pt.fr.ks =
-        (ks.xyz() != zero3f && ks.w < 0.9999f) ? ks.xyz() * kd.w : zero3f;
-    pt.fr.rs = (ks.xyz() != zero3f && ks.w < 0.9999f) ? ks.w * ks.w : 0;
-    pt.fr.kt = {1 - kd.w, 1 - kd.w, 1 - kd.w};
-    if (kt.xyz() != zero3f) pt.fr.kt *= kt.xyz();
-
-    // setup brdf and emission
-    if (!pt.shp->points.empty()) {
-        if (kd.xyz() != zero3f || ks.xyz() != zero3f || kt.xyz() != zero3f)
-            pt.fr.type = trace_brdf_type::point;
-    } else if (!pt.shp->lines.empty()) {
-        if (kd.xyz() != zero3f || ks.xyz() != zero3f || kt.xyz() != zero3f)
-            pt.fr.type = trace_brdf_type::kajiya_kay;
-    } else if (!pt.shp->triangles.empty()) {
-        if (kd.xyz() != zero3f || ks.xyz() != zero3f || kt.xyz() != zero3f)
-            pt.fr.type = trace_brdf_type::microfacet;
-    }
+    pt.kd = kd.xyz() * kd.w;
+    pt.ks = (ks.xyz() != zero3f && ks.w < 0.9999f) ? ks.xyz() * kd.w : zero3f;
+    pt.rs = (ks.xyz() != zero3f && ks.w < 0.9999f) ? ks.w * ks.w : 0;
+    pt.kt = {1 - kd.w, 1 - kd.w, 1 - kd.w};
+    if (kt.xyz() != zero3f) pt.kt *= kt.xyz();
 
     // done
     return pt;
@@ -6484,7 +6410,7 @@ inline vec3f trace_eval_transmission(const scene* scn, const bvh_tree* bvh,
             auto ray = make_segment(cpt.pos, lpt.pos);
             cpt = trace_intersect_scene(scn, bvh, ray);
             if (!cpt.shp) break;
-            weight *= cpt.fr.kt;
+            weight *= cpt.kt;
             if (weight == zero3f) break;
         }
         return weight;
@@ -6506,7 +6432,7 @@ inline vec3f trace_path(const scene* scn, const bvh_tree* bvh,
 
     // emission
     auto l = trace_eval_emission(pt, wo);
-    if (!pt.fr || lights.empty()) return l;
+    if (!pt.has_brdf() || lights.empty()) return l;
 
     // trace path
     auto weight = vec3f{1, 1, 1};
@@ -6550,7 +6476,7 @@ inline vec3f trace_path(const scene* scn, const bvh_tree* bvh,
 
         // skip recursion if path ends
         if (bounce == params.max_depth - 1) break;
-        if (!bpt.fr) break;
+        if (!bpt.has_brdf()) break;
 
         // continue path
         weight *=
@@ -6559,7 +6485,7 @@ inline vec3f trace_path(const scene* scn, const bvh_tree* bvh,
 
         // roussian roulette
         if (bounce > 2) {
-            auto rrprob = 1.0f - min(max_element_value(pt.fr.rho()), 0.95f);
+            auto rrprob = 1.0f - min(max_element_value(pt.rho()), 0.95f);
             if (trace_next1f(pxl, params.rtype, params.nsamples) < rrprob)
                 break;
             weight *= 1 / (1 - rrprob);
@@ -6583,7 +6509,7 @@ inline vec3f trace_path_nomis(const scene* scn, const bvh_tree* bvh,
     auto wo = wo_;
 
     auto l = trace_eval_emission(pt, wo);
-    if (!pt.fr || lights.empty()) return l;
+    if (!pt.has_brdf() || lights.empty()) return l;
 
     // trace path
     auto weight = vec3f{1, 1, 1};
@@ -6612,7 +6538,7 @@ inline vec3f trace_path_nomis(const scene* scn, const bvh_tree* bvh,
 
         // roussian roulette
         if (bounce > 2) {
-            auto rrprob = 1.0f - min(max_element_value(pt.fr.rho()), 0.95f);
+            auto rrprob = 1.0f - min(max_element_value(pt.rho()), 0.95f);
             if (trace_next1f(pxl, params.rtype, params.nsamples) < rrprob)
                 break;
             weight *= 1 / (1 - rrprob);
@@ -6630,7 +6556,7 @@ inline vec3f trace_path_nomis(const scene* scn, const bvh_tree* bvh,
 
         auto bpt = trace_intersect_scene(scn, bvh, make_ray(pt.pos, bwi));
         emission = false;
-        if (!bpt.fr) break;
+        if (!bpt.has_brdf()) break;
 
         // continue path
         pt = bpt;
@@ -6649,7 +6575,7 @@ inline vec3f trace_path_hack(const scene* scn, const bvh_tree* bvh,
 
     // emission
     auto l = trace_eval_emission(pt, wo);
-    if (!pt.fr || lights.empty()) return l;
+    if (!pt.has_brdf() || lights.empty()) return l;
 
     // trace path
     auto weight = vec3f{1, 1, 1};
@@ -6674,7 +6600,7 @@ inline vec3f trace_path_hack(const scene* scn, const bvh_tree* bvh,
 
         // roussian roulette
         if (bounce > 2) {
-            auto rrprob = 1.0f - min(max_element_value(pt.fr.rho()), 0.95f);
+            auto rrprob = 1.0f - min(max_element_value(pt.rho()), 0.95f);
             if (trace_next1f(pxl, params.rtype, params.nsamples) < rrprob)
                 break;
             weight *= 1 / (1 - rrprob);
@@ -6691,7 +6617,7 @@ inline vec3f trace_path_hack(const scene* scn, const bvh_tree* bvh,
         if (weight == zero3f) break;
 
         auto bpt = trace_intersect_scene(scn, bvh, make_ray(pt.pos, bwi));
-        if (!bpt.fr) break;
+        if (!bpt.has_brdf()) break;
 
         // continue path
         pt = bpt;
@@ -6707,10 +6633,10 @@ inline vec3f trace_direct(const scene* scn, const bvh_tree* bvh,
     int bounce, trace_pixel& pxl, const trace_params& params) {
     // emission
     auto l = trace_eval_emission(pt, wo);
-    if (!pt.fr) return l;
+    if (!pt.has_brdf()) return l;
 
     // ambient
-    l += params.ambient * pt.fr.rho();
+    l += params.ambient * pt.rho();
 
     // direct
     for (auto& lgt : lights.lights) {
@@ -6729,17 +6655,17 @@ inline vec3f trace_direct(const scene* scn, const bvh_tree* bvh,
     if (bounce >= params.max_depth) return l;
 
     // reflection
-    if (pt.fr.ks != zero3f && !pt.fr.rs) {
+    if (pt.ks != zero3f && !pt.rs) {
         auto wi = reflect(wo, pt.norm);
         auto rpt = trace_intersect_scene(scn, bvh, make_ray(pt.pos, wi));
-        l += pt.fr.ks *
+        l += pt.ks *
              trace_direct(scn, bvh, lights, rpt, -wi, bounce + 1, pxl, params);
     }
 
     // opacity
-    if (pt.fr.kt != zero3f) {
+    if (pt.kt != zero3f) {
         auto opt = trace_intersect_scene(scn, bvh, make_ray(pt.pos, -wo));
-        l += pt.fr.kt *
+        l += pt.kt *
              trace_direct(scn, bvh, lights, opt, wo, bounce + 1, pxl, params);
     }
 
@@ -6760,16 +6686,16 @@ inline vec3f trace_eyelight(const scene* scn, const bvh_tree* bvh,
     int bounce, trace_pixel& pxl, const trace_params& params) {
     // emission
     auto l = trace_eval_emission(pt, wo);
-    if (!pt.fr) return l;
+    if (!pt.has_brdf()) return l;
 
     // brdf*light
     l += trace_eval_brdfcos(pt, wo, wo) * pif;
 
     // opacity
     if (bounce >= params.max_depth) return l;
-    if (pt.fr.kt != zero3f) {
+    if (pt.kt != zero3f) {
         auto opt = trace_intersect_scene(scn, bvh, make_ray(pt.pos, -wo));
-        l += pt.fr.kt *
+        l += pt.kt *
              trace_eyelight(scn, bvh, lights, opt, wo, bounce + 1, pxl, params);
     }
 
@@ -6795,7 +6721,7 @@ inline vec3f trace_debug_normal(const scene* scn, const bvh_tree* bvh,
 inline vec3f trace_debug_albedo(const scene* scn, const bvh_tree* bvh,
     const trace_lights& lights, const trace_point& pt, const vec3f& wo,
     trace_pixel& pxl, const trace_params& params) {
-    return pt.fr.rho();
+    return pt.rho();
 }
 
 // Debug previewing.
