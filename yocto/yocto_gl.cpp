@@ -6002,19 +6002,6 @@ inline float trace_weight_brdfcos(const trace_point& pt, const vec3f& wo,
     return 1 / pdf;
 }
 
-// reflected vector
-inline vec3f reflect(const vec3f& w, const vec3f& n) {
-    return -w + 2 * dot(n, w) * n;
-}
-
-// refracted vector
-inline vec3f refract(const vec3f& w, const vec3f& n, float eta) {
-    // auto k = 1.0 - eta * eta * (1.0 - dot(n, w) * dot(n, w));
-    auto k = 1 - eta * eta * max(0.0f, 1 - dot(n, w) * dot(n, w));
-    if (k < 0) return zero3f;  // tir
-    return -w * eta + (eta * dot(n, w) - sqrt(k)) * n;
-}
-
 // Picks a direction based on the BRDF
 inline tuple<vec3f, bool> trace_sample_brdfcos(
     const trace_point& pt, const vec3f& wo, float rnl, const vec2f& rn) {

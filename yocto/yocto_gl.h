@@ -1471,6 +1471,21 @@ inline vec<T, 3> orthonormalize(const vec<T, 3>& a, const vec<T, 3>& b) {
     return normalize(a - b * dot(a, b));
 }
 
+/// reflected vector
+template <typename T>
+inline vec<T, 3> reflect(const vec<T, 3>& w, const vec<T, 3>& n) {
+    return -w + 2 * dot(n, w) * n;
+}
+
+/// refracted vector
+template <typename T>
+inline vec<T, 3> refract(const vec<T, 3>& w, const vec<T, 3>& n, T eta) {
+    // auto k = 1.0 - eta * eta * (1.0 - dot(n, w) * dot(n, w));
+    auto k = 1 - eta * eta * max((T)0, 1 - dot(n, w) * dot(n, w));
+    if (k < 0) return zero3f;  // tir
+    return -w * eta + (eta * dot(n, w) - sqrt(k)) * n;
+}
+
 /// vector component-wise clamp
 template <typename T, typename T1>
 inline vec<T, 2> clamp(const vec<T, 2>& x, T1 min, T1 max) {
