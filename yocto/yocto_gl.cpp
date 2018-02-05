@@ -78,13 +78,13 @@
 //
 // ## Next
 //
+// - add environment test
 // - simplify trace_point
-//     - remove wo
 //     - envpoint from uv
 //     - envpoint pos and norm
 //     - double sided in material functions
-// - sample lights using trace_lights
 // - sample background to sum all environments
+// - sample lights using trace_lights
 // - remove default environment
 // - handle missing environment in trace
 //
@@ -11018,7 +11018,7 @@ void update_test_texture(
     }
 
     if (txt->ldr) txt->path = ttxt.name + ".png";
-    if (txt->hdr) txt->path = ttxt.name + ".sky";
+    if (txt->hdr) txt->path = ttxt.name + ".hdr";
 }
 
 // Makes/updates a test material
@@ -11599,8 +11599,8 @@ unordered_map<string, test_environment_params>& test_environment_presets() {
     };
 
     presets["const"] = make_test_environment("const", "");
-    presets["sky1"] = make_test_environment("sky1", "");
-    presets["sky2"] = make_test_environment("sky2", "");
+    presets["sky1"] = make_test_environment("sky1", "sky1");
+    presets["sky2"] = make_test_environment("sky2", "sky2");
 
     return presets;
 }
@@ -11774,9 +11774,11 @@ unordered_map<string, test_scene_params>& test_scene_presets() {
             }
         }
         if (lights == "envlights") {
-            // env = add_test_environment(params,
-            // test_environment_type::sky,
-            //     lookat_frame3f({0, 1, 0}, {0, 1, 1}, {0, 1, 0}, true));
+            params.environments.push_back(
+                test_environment_presets().at("sky1"));
+            params.environments.back().frame =
+                lookat_frame3(pos[1], pos[1] + vec3f{0, 0, 1}, {0, 1, 0}, true);
+            params.textures.push_back(test_texture_presets().at("sky1"));
         }
         if (!animations.empty() || nodes) {
             for (auto& cam : params.cameras) {
