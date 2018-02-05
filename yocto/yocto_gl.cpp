@@ -78,7 +78,6 @@
 //
 // ## Next
 //
-// - move pixel sampling to trace_block and not in sampler
 // - sample lights using trace_lights
 // - simplify trace_point
 // - sample background to sum all environments
@@ -5815,18 +5814,19 @@ struct trace_emission {
 struct trace_point {
     const instance* ist = nullptr;     // instance
     const environment* env = nullptr;  // environment
-    frame3f frame = identity_frame3f;  // local frame
+    vec3f pos = zero3f;                // pos
+    vec3f norm = {0, 0, 1};            // norm
+    vec2f texcoord = zero2f;           // texcoord
     vec3f wo = zero3f;                 // outgoing direction
     trace_emission em = {};            // emission
     trace_brdf fr = {};                // brdf
-    vec2f texcoord = zero2f;           // texcoord
 };
 
 // Evaluates emission.
 inline vec3f trace_eval_emission(const trace_point& pt) {
     auto& em = pt.em;
     auto& wo = pt.wo;
-    auto& wn = pt.frame.z;
+    auto& wn = pt.norm;
 
     if (!em) return zero3f;
     auto ke = zero3f;
@@ -5856,7 +5856,7 @@ inline vec3f trace_eval_brdfcos(
     const trace_point& pt, const vec3f& wi, bool delta = false) {
     // grab variables
     auto& fr = pt.fr;
-    auto& wn = pt.frame.z;
+    auto& wn = pt.norm;
     auto& wo = pt.wo;
 
     // exit if not needed
@@ -5957,7 +5957,7 @@ inline float trace_weight_brdfcos(
     const trace_point& pt, const vec3f& wi, bool delta = false) {
     // grab variables
     auto& fr = pt.fr;
-    auto& wn = pt.frame.z;
+    auto& wn = pt.norm;
     auto& wo = pt.wo;
 
     // skip if no component
@@ -6051,8 +6051,7 @@ inline tuple<vec3f, bool> trace_sample_brdfcos(
     const trace_point& pt, float rnl, const vec2f& rn) {
     // grab variables
     auto& fr = pt.fr;
-    auto& wn = pt.frame.z;
-    auto& fp = pt.frame;
+    auto& wn = pt.norm;
     auto& wo = pt.wo;
 
     // skip if no component
@@ -6065,6 +6064,9 @@ inline tuple<vec3f, bool> trace_sample_brdfcos(
     kdw /= kaw;
     ksw /= kaw;
     ktw /= kaw;
+
+    // frame
+    auto fp = make_frame_fromz(pt.pos, pt.norm);
 
     // sample selected lobe
     switch (fr.type) {
@@ -6188,53 +6190,46 @@ inline trace_point trace_eval_point(
         def_material->rs = 1;
     }
 
-    // set shape data
-    auto pt = trace_point();
-
-    // instance
-    pt.ist = ist;
-
-    // direction
-    pt.wo = wo;
-
     // shortcuts
     auto shp = ist->shp;
     auto mat = ist->shp->mat;
     if (!mat) mat = def_material;
 
-    // compute points and weights
-    auto pos = eval_pos(ist->shp, eid, euv);
-    auto norm = eval_norm(ist->shp, eid, euv);
-    auto texcoord = eval_texcoord(ist->shp, eid, euv);
-    auto color = eval_color(ist->shp, eid, euv);
+    // set shape data
+    auto pt = trace_point();
+    pt.ist = ist;
+    pt.wo = wo;
+    pt.pos = eval_pos(ist->shp, eid, euv);
+    pt.norm = eval_norm(ist->shp, eid, euv);
+    pt.texcoord = eval_texcoord(ist->shp, eid, euv);
 
     // handle normal map
     if (mat->norm_txt) {
         auto tangsp = eval_tangsp(ist->shp, eid, euv);
-        auto txt = eval_texture(mat->norm_txt, texcoord, false).xyz() * 2.0f -
-                   vec3f{1, 1, 1};
+        auto txt =
+            eval_texture(mat->norm_txt, pt.texcoord, false).xyz() * 2.0f -
+            vec3f{1, 1, 1};
         auto ntxt = normalize(vec3f{txt.x, -txt.y, txt.z});
-        auto frame =
-            make_frame_fromzx({0, 0, 0}, norm, {tangsp.x, tangsp.y, tangsp.z});
+        auto frame = make_frame_fromzx(
+            {0, 0, 0}, pt.norm, {tangsp.x, tangsp.y, tangsp.z});
         frame.y *= tangsp.w;
-        norm = transform_direction(frame, ntxt);
+        pt.norm = transform_direction(frame, ntxt);
     }
 
-    // correct for double sided
-    if (mat->double_sided && dot(norm, wo) < 0) norm = -norm;
+    // move to world coordinates
+    pt.pos = transform_point(ist->frame, pt.pos);
+    pt.norm = transform_direction(ist->frame, pt.norm);
 
-    // creating frame
-    pt.frame = make_frame_fromz(transform_point(ist->frame, pos),
-        transform_direction(ist->frame, norm));
-    pt.texcoord = texcoord;
+    // correct for double sided
+    if (mat->double_sided && dot(pt.norm, pt.wo) < 0) pt.norm = -pt.norm;
 
     // handle color
     auto kx_scale = vec4f{1, 1, 1, 1};
-    if (!shp->color.empty()) kx_scale *= color;
+    if (!shp->color.empty()) kx_scale *= eval_color(ist->shp, eid, euv);
 
     // handle occlusion
     if (mat->occ_txt)
-        kx_scale.xyz() *= eval_texture(mat->occ_txt, texcoord).xyz();
+        kx_scale.xyz() *= eval_texture(mat->occ_txt, pt.texcoord).xyz();
 
     // sample emission
     auto ke = mat->ke * kx_scale.xyz();
@@ -6244,18 +6239,18 @@ inline trace_point trace_eval_point(
     switch (mat->type) {
         case material_type::specular_roughness: {
             kd = vec4f{mat->kd, mat->op} * kx_scale *
-                 eval_texture(mat->kd_txt, texcoord);
+                 eval_texture(mat->kd_txt, pt.texcoord);
             ks = vec4f{mat->ks, mat->rs} * vec4f{kx_scale.xyz(), 1} *
-                 eval_texture(mat->ks_txt, texcoord);
+                 eval_texture(mat->ks_txt, pt.texcoord);
             kt = vec4f{mat->kt, mat->rs} * vec4f{kx_scale.xyz(), 1} *
-                 eval_texture(mat->kt_txt, texcoord);
+                 eval_texture(mat->kt_txt, pt.texcoord);
         } break;
         case material_type::metallic_roughness: {
             auto kb = vec4f{mat->kd, mat->op} * kx_scale *
-                      eval_texture(mat->kd_txt, texcoord);
+                      eval_texture(mat->kd_txt, pt.texcoord);
             auto km = vec2f{mat->ks.x, mat->rs};
             if (mat->ks_txt) {
-                auto ks_txt = eval_texture(mat->ks_txt, texcoord);
+                auto ks_txt = eval_texture(mat->ks_txt, pt.texcoord);
                 km.x *= ks_txt.y;
                 km.y *= ks_txt.z;
             }
@@ -6266,9 +6261,9 @@ inline trace_point trace_eval_point(
         } break;
         case material_type::specular_glossiness: {
             kd = vec4f{mat->kd, mat->op} * kx_scale *
-                 eval_texture(mat->kd_txt, texcoord);
+                 eval_texture(mat->kd_txt, pt.texcoord);
             ks = vec4f{mat->ks, mat->rs} * vec4f{kx_scale.xyz(), 1} *
-                 eval_texture(mat->ks_txt, texcoord);
+                 eval_texture(mat->ks_txt, pt.texcoord);
             ks.w = 1 - ks.w;  // glossiness -> roughness
         } break;
     }
@@ -6311,7 +6306,7 @@ inline float trace_weight_light(
             return 4 * pif;
         } break;
         case trace_emission_type::point: {
-            auto d = length(lpt.frame.o - pt.frame.o);
+            auto d = length(lpt.pos - pt.pos);
             return lights.shape_areas.at(lpt.ist->shp) / (d * d);
         } break;
         case trace_emission_type::line: {
@@ -6319,9 +6314,9 @@ inline float trace_weight_light(
             return 0;
         } break;
         case trace_emission_type::diffuse: {
-            auto d = length(lpt.frame.o - pt.frame.o);
+            auto d = length(lpt.pos - pt.pos);
             return lights.shape_areas.at(lpt.ist->shp) *
-                   abs(dot(lpt.frame.z, lpt.wo)) / (d * d);
+                   abs(dot(lpt.norm, lpt.wo)) / (d * d);
         } break;
         default: {
             assert(false);
@@ -6352,7 +6347,7 @@ inline trace_point trace_sample_light(const trace_lights& lights,
             assert(false);
         }
         auto lpt = trace_eval_point(lgt.ist, eid, euv, zero3f);
-        lpt.wo = normalize(pt.frame.o - lpt.frame.o);
+        lpt.wo = normalize(pt.pos - lpt.pos);
         return lpt;
     } else if (lgt.env) {
         auto z = -1 + 2 * rn.y;
@@ -6387,16 +6382,16 @@ inline trace_point trace_intersect_scene(
 inline vec3f trace_eval_transmission(const scene* scn, const bvh_tree* bvh,
     const trace_point& pt, const trace_point& lpt, const trace_params& params) {
     if (params.shadow_notransmission) {
-        auto shadow_ray = (lpt.env) ? make_ray(pt.frame.o, -lpt.wo) :
-                                      make_segment(pt.frame.o, lpt.frame.o);
+        auto shadow_ray = (lpt.env) ? make_ray(pt.pos, -lpt.wo) :
+                                      make_segment(pt.pos, lpt.pos);
         // auto shadow_ray = ray3f{pt.frame.o, -lpt.wo, 0.01f, flt_max};
         return (intersect_bvh(bvh, shadow_ray, true)) ? zero3f : vec3f{1, 1, 1};
     } else {
         auto cpt = pt;
         auto weight = vec3f{1, 1, 1};
         for (auto bounce = 0; bounce < params.max_depth; bounce++) {
-            auto ray = (lpt.env) ? make_ray(cpt.frame.o, -lpt.wo) :
-                                   make_segment(cpt.frame.o, lpt.frame.o);
+            auto ray = (lpt.env) ? make_ray(cpt.pos, -lpt.wo) :
+                                   make_segment(cpt.pos, lpt.pos);
             cpt = trace_intersect_scene(scn, bvh, ray);
             if (!cpt.ist) break;
             weight *= cpt.fr.kt;
@@ -6447,7 +6442,7 @@ inline vec3f trace_path(const scene* scn, const bvh_tree* bvh,
         auto bdelta = false;
         std::tie(bwi, bdelta) =
             trace_sample_brdfcos(pt, trace_next1f(pxl), trace_next2f(pxl));
-        auto bpt = trace_intersect_scene(scn, bvh, make_ray(pt.frame.o, bwi));
+        auto bpt = trace_intersect_scene(scn, bvh, make_ray(pt.pos, bwi));
         auto bw = trace_weight_brdfcos(pt, -bpt.wo, bdelta);
         auto bke = trace_eval_emission(bpt);
         auto bbc = trace_eval_brdfcos(pt, -bpt.wo, bdelta);
@@ -6527,7 +6522,7 @@ inline vec3f trace_path_nomis(const scene* scn, const bvh_tree* bvh,
                   trace_weight_brdfcos(pt, bwi, bdelta);
         if (weight == zero3f) break;
 
-        auto bpt = trace_intersect_scene(scn, bvh, make_ray(pt.frame.o, bwi));
+        auto bpt = trace_intersect_scene(scn, bvh, make_ray(pt.pos, bwi));
         emission = false;
         if (!bpt.fr) break;
 
@@ -6580,7 +6575,7 @@ inline vec3f trace_path_hack(const scene* scn, const bvh_tree* bvh,
                   trace_weight_brdfcos(pt, bwi, bdelta);
         if (weight == zero3f) break;
 
-        auto bpt = trace_intersect_scene(scn, bvh, make_ray(pt.frame.o, bwi));
+        auto bpt = trace_intersect_scene(scn, bvh, make_ray(pt.pos, bwi));
         if (!bpt.fr) break;
 
         // continue path
@@ -6616,16 +6611,15 @@ inline vec3f trace_direct(const scene* scn, const bvh_tree* bvh,
 
     // reflection
     if (pt.fr.ks != zero3f && !pt.fr.rs) {
-        auto wi = reflect(pt.wo, pt.frame.z);
-        auto rpt = trace_intersect_scene(scn, bvh, make_ray(pt.frame.o, wi));
+        auto wi = reflect(pt.wo, pt.norm);
+        auto rpt = trace_intersect_scene(scn, bvh, make_ray(pt.pos, wi));
         l += pt.fr.ks *
              trace_direct(scn, bvh, lights, rpt, bounce + 1, pxl, params);
     }
 
     // opacity
     if (pt.fr.kt != zero3f) {
-        auto opt =
-            trace_intersect_scene(scn, bvh, make_ray(pt.frame.o, -pt.wo));
+        auto opt = trace_intersect_scene(scn, bvh, make_ray(pt.pos, -pt.wo));
         l += pt.fr.kt *
              trace_direct(scn, bvh, lights, opt, bounce + 1, pxl, params);
     }
@@ -6655,8 +6649,7 @@ inline vec3f trace_eyelight(const scene* scn, const bvh_tree* bvh,
     // opacity
     if (bounce >= params.max_depth) return l;
     if (pt.fr.kt != zero3f) {
-        auto opt =
-            trace_intersect_scene(scn, bvh, make_ray(pt.frame.o, -pt.wo));
+        auto opt = trace_intersect_scene(scn, bvh, make_ray(pt.pos, -pt.wo));
         l += pt.fr.kt *
              trace_eyelight(scn, bvh, lights, opt, bounce + 1, pxl, params);
     }
@@ -6676,8 +6669,7 @@ inline vec3f trace_eyelight(const scene* scn, const bvh_tree* bvh,
 inline vec3f trace_debug_normal(const scene* scn, const bvh_tree* bvh,
     const trace_lights& lights, const trace_point& pt, trace_pixel& pxl,
     const trace_params& params) {
-    auto norm = pt.frame.z;
-    return norm * 0.5f + vec3f{0.5f, 0.5f, 0.5f};
+    return pt.norm * 0.5f + vec3f{0.5f, 0.5f, 0.5f};
 }
 
 // Debug previewing.
@@ -11232,8 +11224,8 @@ void update_test_shape(
         } break;
         case test_shape_type::hairball: {
             auto nhairs = (tshp.num < 0) ? 65536 : tshp.num;
-            auto radius = (tshp.radius < 0) ? vec2f{0.001f, 0.0001f} :
-                                              vec2f{tshp.radius, 0.0001f};
+            // auto radius = (tshp.radius < 0) ? vec2f{0.001f, 0.0001f} :
+            //                                   vec2f{tshp.radius, 0.0001f};
             tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
                 make_uvspherecube(5);
             tie(shp->lines, shp->pos, shp->norm, shp->texcoord, shp->radius) =
