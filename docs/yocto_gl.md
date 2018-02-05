@@ -7244,6 +7244,7 @@ struct test_shape_params {
     string name = "";
     test_shape_type type = test_shape_type::sphere;
     string material = "";
+    string interior = "";
     int tesselation = -1;
     int subdivision = 0;
     float scale = 1;
@@ -7260,6 +7261,7 @@ Test shape parameters
     - name:      Shape name (if not filled, assign a default based on type)
     - type:      Shape type
     - material:      Material name
+    - interior:      Interior material name
     - tesselation:      Level of shape tesselatation (-1 for default)
     - subdivision:      Level of shape tesselation for subdivision surfaces
     - scale:      Shape scale
