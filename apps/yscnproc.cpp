@@ -142,30 +142,38 @@ int main(int argc, char** argv) {
 
     // process geometry
     if (scale != 1.0f) {
-        for (auto shp : scn->shapes) {
-            for (auto& p : shp->pos) p *= scale;
+        for (auto sgr : scn->shapes) {
+            for (auto shp : sgr->shapes) {
+                for (auto& p : shp->pos) p *= scale;
+            }
         }
     }
 
     if (flipyz) {
-        for (auto shp : scn->shapes) {
-            for (auto& p : shp->pos) swap(p.y, p.z);
-            for (auto& n : shp->norm) swap(n.y, n.z);
+        for (auto sgr : scn->shapes) {
+            for (auto shp : sgr->shapes) {
+                for (auto& p : shp->pos) swap(p.y, p.z);
+                for (auto& n : shp->norm) swap(n.y, n.z);
+            }
         }
     }
 
     if (tesselation) {
-        for (auto shp : scn->shapes) {
-            for (auto l = 0; l < tesselation; l++) {
-                subdivide_shape_once(shp);
+        for (auto sgr : scn->shapes) {
+            for (auto shp : sgr->shapes) {
+                for (auto l = 0; l < tesselation; l++) {
+                    subdivide_shape_once(shp);
+                }
             }
         }
     }
 
     if (subdiv) {
-        for (auto shp : scn->shapes) {
-            for (auto l = 0; l < subdiv; l++) {
-                subdivide_shape_once(shp, true);
+        for (auto sgr : scn->shapes) {
+            for (auto shp : sgr->shapes) {
+                for (auto l = 0; l < subdiv; l++) {
+                    subdivide_shape_once(shp, true);
+                }
             }
         }
     }

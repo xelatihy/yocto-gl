@@ -65,22 +65,26 @@ void save_test_scene(const string& sname, const string& basedir) {
                 if (txt->ldr) save_image4b(dirname + txt->path, txt->ldr);
             }
         } else if (sname == "shapes") {
-            for (auto shp : scn->shapes) {
+            for (auto sgr : scn->shapes) {
                 auto sscn = new scene();
-                sscn->shapes.push_back(shp);
-                auto mat = shp->mat;
-                shp->mat = nullptr;
-                auto shp_name = partition(shp->name, "_")[0];
+                auto ssgr = new shape_group();
+                ssgr->name = sgr->name;
+                for (auto shp : sgr->shapes) {
+                    auto sshp = new shape(*shp);
+                    sshp->mat = nullptr;
+                    ssgr->shapes.push_back(sshp);
+                }
+                sscn->shapes.push_back(ssgr);
+                auto shp_name = partition(sgr->name, "_")[0];
                 auto opts = save_options();
                 save_scene(dirname + shp_name + ".obj", sscn, opts);
-                shp->mat = mat;
-                sscn->shapes.clear();
                 delete sscn;
             }
         } else {
             auto facevarying = false;
-            for (auto shp : scn->shapes)
-                facevarying = facevarying || !shp->quads_pos.empty();
+            for (auto sgr : scn->shapes)
+                for (auto shp : sgr->shapes)
+                    facevarying = facevarying || !shp->quads_pos.empty();
 
             auto opts = save_options();
             opts.save_textures = true;
