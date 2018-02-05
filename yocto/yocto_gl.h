@@ -5288,8 +5288,6 @@ void refit_bvh(
 struct add_elements_options {
     /// Add missing normal
     bool smooth_normals = true;
-    /// Add missing radius for points and lines (<=0 for no adding)
-    float pointline_radius = 0;
     /// Add missing trangent space
     bool tangent_space = true;
     /// texture data

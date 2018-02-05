@@ -3479,15 +3479,6 @@ void add_elements(scene* scn, const add_elements_options& opts) {
         }
     }
 
-    if (opts.pointline_radius > 0) {
-        for (auto shp : scn->shapes) {
-            if ((shp->points.empty() && shp->lines.empty()) ||
-                !shp->radius.empty())
-                continue;
-            shp->radius.resize(shp->pos.size(), opts.pointline_radius);
-        }
-    }
-
     if (opts.texture_data) {
         for (auto txt : scn->textures) {
             if (!txt->hdr && !txt->ldr) {

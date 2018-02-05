@@ -112,7 +112,6 @@ int main(int argc, char* argv[]) {
 
     // add elements
     auto opts = add_elements_options();
-    opts.pointline_radius = 0.001f;
     add_elements(app->scn, opts);
 
     // view camera
