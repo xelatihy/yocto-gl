@@ -4790,12 +4790,12 @@ struct bvh_tree {
     /// quads for shape BVHs
     vector<vec4i> quads;
 
+    /// instance ids (iid, sid, shape bvh index)
+    vector<vec3i> ist_ids;
     /// instance frames for instance BVHs
     vector<frame3f> ist_frames;
     /// instance inverse frames for instance BVHs
     vector<frame3f> ist_frames_inv;
-    /// instance BVHs
-    vector<int> ist_bvhs;
     /// shape BVHs
     vector<bvh_tree*> shape_bvhs;
     /// whether it owns the memory of the shape BVHs
@@ -4812,9 +4812,9 @@ bvh_tree* make_bvh(const vector<int>& points, const vector<vec2i>& lines,
     bool equalsize);
 
 /// Build a scene BVH from a set of shape instances.
-bvh_tree* make_bvh(const vector<frame3f>& frames,
-    const vector<frame3f>& frames_inv, const vector<int>& ist_bvhs,
-    const vector<bvh_tree*>& shape_bvhs, bool own_shape_bvhs, bool equal_size);
+bvh_tree* make_bvh(const vector<vec3i>& ids, const vector<frame3f>& frames,
+    const vector<frame3f>& frames_inv, const vector<bvh_tree*>& shape_bvhs,
+    bool own_shape_bvhs, bool equal_size);
 
 /// Grab the shape BVHs
 inline const vector<bvh_tree*>& get_shape_bvhs(const bvh_tree* bvh) {
@@ -4831,11 +4831,11 @@ void refit_bvh(bvh_tree* bvh, const vector<frame3f>& frames,
 
 /// Intersect ray with a bvh.
 bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray, bool early_exit,
-    float& ray_t, int& iid, int& eid, vec4f& ew);
+    float& ray_t, int& iid, int& sid, int& eid, vec4f& ew);
 
 /// Finds the closest element with a bvh.
 bool overlap_bvh(const bvh_tree* bvh, const vec3f& pos, float max_dist,
-    bool early_exit, float& dist, int& iid, int& eid, vec4f& ew);
+    bool early_exit, float& dist, int& iid, int& sid, int& eid, vec4f& ew);
 
 /// Intersection point
 struct intersection_point {
@@ -4843,6 +4843,8 @@ struct intersection_point {
     float dist = 0;
     /// instance index
     int iid = -1;
+    /// shape index
+    int sid = -1;
     /// shape element index
     int eid = -1;
     /// shape barycentric coordinates
@@ -4979,8 +4981,6 @@ struct material {
 struct shape {
     /// shape name
     string name = "";
-    /// path (used for saving in glTF)
-    string path = "";
     /// shape material
     material* mat = nullptr;
 
@@ -5025,6 +5025,19 @@ struct shape {
     bool subdivision_catmullclark = false;
 };
 
+/// Group of shapes.
+struct shape_group {
+    /// shape name
+    string name = "";
+    /// path (used for saving in glTF)
+    string path = "";
+    /// shapes
+    vector<shape*> shapes;
+
+    /// cleanup
+    ~shape_group();
+};
+
 /// Shape instance.
 struct instance {
     // name
@@ -5032,7 +5045,7 @@ struct instance {
     /// transform frame
     frame3f frame = identity_frame3f;
     /// shape instance
-    shape* shp = nullptr;
+    shape_group* shp = nullptr;
 };
 
 /// Scene Camera
@@ -5088,7 +5101,7 @@ struct node {
     /// node camera
     camera* cam = nullptr;
     /// node instance
-    vector<instance*> ists = {};
+    instance* ist = nullptr;
     /// node environment
     environment* env = nullptr;
 
@@ -5156,7 +5169,7 @@ struct animation_group {
 /// Scene
 struct scene {
     /// shape array
-    vector<shape*> shapes = {};
+    vector<shape_group*> shapes = {};
     /// instance array
     vector<instance*> instances = {};
     /// material array
@@ -5190,9 +5203,9 @@ float eval_radius(const shape* shp, int eid, const vec4f& euv);
 /// Shape tangent space interpolated using barycentric coordinates
 vec4f eval_tangsp(const shape* shp, int eid, const vec4f& euv);
 /// Instance position interpolated using barycentric coordinates
-vec3f eval_pos(const instance* ist, int eid, const vec4f& euv);
+vec3f eval_pos(const instance* ist, int sid, int eid, const vec4f& euv);
 /// Instance normal interpolated using barycentric coordinates
-vec3f eval_norm(const instance* ist, int eid, const vec4f& euv);
+vec3f eval_norm(const instance* ist, int sid, int eid, const vec4f& euv);
 
 /// Evaluate a texture
 vec4f eval_texture(const texture_info& info, const vec2f& texcoord,
@@ -5251,8 +5264,6 @@ camera* make_view_camera(const scene* scn, int camera_id);
 
 /// Computes a shape bounding box (quick computation that ignores radius)
 bbox3f compute_bounds(const shape* shp);
-/// Compute the instance bounding box
-bbox3f compute_bounds(const instance* ist);
 /// Compute the scene and scene's instances bounding boxes
 bbox3f compute_bounds(const scene* scn);
 
@@ -5980,9 +5991,9 @@ struct trace_lights {
     /// Shape instances
     vector<trace_light> lights;
     /// Shape cdf
-    unordered_map<shape*, vector<float>> shape_cdfs;
+    unordered_map<const shape*, vector<float>> shape_cdfs;
     /// Shape areas
-    unordered_map<shape*, float> shape_areas;
+    unordered_map<const shape*, float> shape_areas;
     /// whether it is empty
     bool empty() const { return lights.empty(); }
     /// number of lights
@@ -8985,7 +8996,8 @@ void update_textures(const scene* scn,
 
 /// Update scene shapes on the GPU.
 void update_shapes(const scene* scn, unordered_map<shape*, gl_shape>& shapes,
-    const unordered_set<shape*>& refresh = {}, bool clear = false);
+    const unordered_set<shape*>& refresh = {},
+    const unordered_set<shape_group*>& refreshg = {}, bool clear = false);
 
 }  // namespace ygl
 
