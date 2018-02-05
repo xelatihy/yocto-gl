@@ -6941,7 +6941,9 @@ trace_lights make_trace_lights(const scene* scn) {
     for (auto ist : scn->instances) {
         if (!ist->shp->mat) continue;
         if (ist->shp->mat->ke == zero3f) continue;
-        lights.lights.push_back(trace_light{ist, (environment*)nullptr});
+        auto lgt = trace_light();
+        lgt.ist = ist;
+        lights.lights.push_back(lgt);
         if (!contains(lights.shape_cdfs, ist->shp)) {
             if (!ist->shp->points.empty()) {
                 lights.shape_cdfs[ist->shp] =
@@ -6959,7 +6961,9 @@ trace_lights make_trace_lights(const scene* scn) {
 
     for (auto env : scn->environments) {
         if (env->ke == zero3f) continue;
-        lights.lights.push_back(trace_light{(instance*)nullptr, env});
+        auto lgt = trace_light();
+        lgt.env = env;
+        lights.lights.push_back(lgt);
     }
 
     return lights;
@@ -6970,9 +6974,11 @@ image<trace_pixel> make_trace_pixels(const trace_params& params) {
     auto pixels = image<trace_pixel>(params.width, params.height);
     for (auto j = 0; j < params.height; j++) {
         for (auto i = 0; i < params.width; i++) {
-            pixels.at(i, j) = trace_pixel{zero4f,
-                init_rng(params.seed, (j * params.width + i) * 2 + 1), i, j, 0,
-                0, 0, params.nsamples, params.rtype};
+            auto pxl = trace_pixel();
+            pxl.i = i;
+            pxl.j = j;
+            pxl.rng = init_rng(params.seed, (j * params.width + i) * 2 + 1);
+            pixels.at(i, j) = pxl;
         }
     }
     return pixels;
