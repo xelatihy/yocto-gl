@@ -5598,6 +5598,8 @@ struct test_shape_params {
     test_shape_type type = test_shape_type::sphere;
     /// Material name
     string material = "";
+    /// Interior material name
+    string interior = "";
     /// Level of shape tesselatation (-1 for default)
     int tesselation = -1;
     /// Level of shape tesselation for subdivision surfaces
