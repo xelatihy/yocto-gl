@@ -42,7 +42,7 @@ and released under the MIT license. Features include:</p>
 <li>procedural sun and sky HDR</li>
 <li>procedural Perlin noise</li>
 <li>BVH for intersection and closest point query</li>
-<li>Python-like iterators, string, path and container operations</li>
+<li>Python-like string, path and container operations</li>
 <li>utilities to load and save entire text and binary files</li>
 <li>immediate mode command line parser</li>
 <li>simple logger</li>
@@ -189,15 +189,6 @@ functions targeting path tracing and shape generations.</p>
    <code>sample_hemisphere_cospower()</code>. <code>sample_disk()</code>. <code>sample_cylinder()</code>.
    <code>sample_triangle()</code>. For each warp, you can compute the PDF with
    <code>sample_xxx_pdf()</code>.</li>
-</ol>
-<h3>Python-like container operations and iterators</h3>
-<p>To make the code more readable, we adopt Python-like iterations and
-container operations extensively throughout Yocto/GL. These operations
-are mostly for internal use but could also be used externally.</p>
-<ol>
-<li>Python iterators with <code>range()</code> and <code>enumerate()</code></li>
-<li>Python operators for containers: support for + and += for <code>std::vector</code></li>
-<li>Check for containment with <code>contains</code>  similarly to <code>in</code> in Python</li>
 </ol>
 <h3>Shape Utilities</h3>
 <p>The library contains a few function to help with typically geometry
@@ -3673,74 +3664,46 @@ offset=1.0 (used to invert the ridges).</p>
 
 
 <p>Fractal turbulence noise - see perlin_noise() for params.</p>
-<h4>Function range()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">range_generator</span> <span class="nf">range</span><span class="p">(</span><span class="kt">int</span> <span class="n">max</span><span class="p">);</span>
+<h4>Function range_()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">range_generator</span> <span class="nf">range_</span><span class="p">(</span><span class="kt">int</span> <span class="n">max</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Python-like range</p>
-<h4>Function range()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">range_generator</span> <span class="nf">range</span><span class="p">(</span><span class="kt">int</span> <span class="n">min</span><span class="p">,</span> <span class="kt">int</span> <span class="n">max</span><span class="p">,</span> <span class="kt">int</span> <span class="n">step</span> <span class="o">=</span> <span class="mi">1</span><span class="p">);</span>
+<h4>Function range_()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">range_generator</span> <span class="nf">range_</span><span class="p">(</span><span class="kt">int</span> <span class="n">min</span><span class="p">,</span> <span class="kt">int</span> <span class="n">max</span><span class="p">,</span> <span class="kt">int</span> <span class="n">step</span> <span class="o">=</span> <span class="mi">1</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Python-like range</p>
-<h4>Function enumerate()</h4>
+<h4>Function enumerate_()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="n">enumerate_generator</span><span class="o">&lt;</span><span class="k">const</span> <span class="n">T</span><span class="o">&gt;</span> <span class="n">enumerate</span><span class="p">(</span><span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">vv</span><span class="p">);</span>
+<span class="kr">inline</span> <span class="n">enumerate_generator</span><span class="o">&lt;</span><span class="k">const</span> <span class="n">T</span><span class="o">&gt;</span> <span class="n">enumerate_</span><span class="p">(</span><span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">vv</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Python-like range</p>
-<h4>Function enumerate()</h4>
+<h4>Function enumerate_()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="n">enumerate_generator</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="n">enumerate</span><span class="p">(</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">vv</span><span class="p">);</span>
+<span class="kr">inline</span> <span class="n">enumerate_generator</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="n">enumerate_</span><span class="p">(</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">vv</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Python-like range</p>
-<h4>Function operator+()</h4>
+<h4>Function append()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="k">operator</span><span class="o">+</span><span class="p">(</span><span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">v</span><span class="p">,</span> <span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">vv</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Append an element to a vector</p>
-<h4>Function operator+=()</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="k">operator</span><span class="o">+=</span><span class="p">(</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">v</span><span class="p">,</span> <span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">vv</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Append an element to a vector</p>
-<h4>Function operator+()</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="k">typename</span> <span class="n">ET</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="k">operator</span><span class="o">+</span><span class="p">(</span><span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">v</span><span class="p">,</span> <span class="k">const</span> <span class="n">ET</span><span class="o">&amp;</span> <span class="n">vv</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Append an element to a vector</p>
-<h4>Function operator+=()</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="k">typename</span> <span class="n">ET</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="k">operator</span><span class="o">+=</span><span class="p">(</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">v</span><span class="p">,</span> <span class="k">const</span> <span class="n">ET</span><span class="o">&amp;</span> <span class="n">vv</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Append an element to a vector</p>
-<h4>Function operator+()</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="k">operator</span><span class="o">+</span><span class="p">(</span><span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">v</span><span class="p">,</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">vv</span><span class="p">);</span>
+<span class="kr">inline</span> <span class="kt">void</span> <span class="n">append</span><span class="p">(</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">v</span><span class="p">,</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">vv</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Append a vector to a vector</p>
-<h4>Function operator+=()</h4>
+<h4>Function join()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="k">operator</span><span class="o">+=</span><span class="p">(</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">v</span><span class="p">,</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">vv</span><span class="p">);</span>
+<span class="kr">inline</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="n">join</span><span class="p">(</span><span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">,</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">b</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Append a vector to a vector</p>
+<p>Append two vectors</p>
 <h4>Function get_key()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">K</span><span class="p">,</span> <span class="k">typename</span> <span class="n">V</span><span class="o">&gt;</span>
 <span class="kr">inline</span> <span class="n">K</span> <span class="n">get_key</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">K</span><span class="p">,</span> <span class="n">V</span><span class="o">&gt;&gt;&amp;</span> <span class="n">kvs</span><span class="p">,</span> <span class="k">const</span> <span class="n">V</span><span class="o">&amp;</span> <span class="n">v</span><span class="p">);</span>
@@ -8599,28 +8562,27 @@ By default a non-verbose stdout logger is creater.</p>
 </ul>
 </li>
 </ul>
-<h4>Enum gl_etype : int</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">enum</span> <span class="k">struct</span> <span class="nl">gl_etype</span> <span class="p">:</span> <span class="kt">int</span> <span class="p">{</span>
+<h4>Enum gl_elem_type : int</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">enum</span> <span class="k">struct</span> <span class="nl">gl_elem_type</span> <span class="p">:</span> <span class="kt">int</span> <span class="p">{</span>
     <span class="n">point</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
     <span class="n">line</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
-    <span class="n">triangle</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span>
-    <span class="n">quad</span> <span class="o">=</span> <span class="mi">4</span><span class="p">,</span>
+    <span class="n">triangle</span> <span class="o">=</span> <span class="mi">3</span>
+
 <span class="p">}</span>
 </code></pre></div>
 
 
-<p>Shape types</p>
+<p>Shape element types</p>
 <ul>
 <li>Values:<ul>
 <li>point:      points</li>
 <li>line:      lines</li>
 <li>triangle:      triangles</li>
-<li>quad:      quads</li>
 </ul>
 </li>
 </ul>
-<h4>Enum gl_ltype : int</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">enum</span> <span class="k">struct</span> <span class="nl">gl_ltype</span> <span class="p">:</span> <span class="kt">int</span> <span class="p">{</span>
+<h4>Enum gl_light_type : int</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">enum</span> <span class="k">struct</span> <span class="nl">gl_light_type</span> <span class="p">:</span> <span class="kt">int</span> <span class="p">{</span>
     <span class="n">point</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
     <span class="n">directional</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
 <span class="p">}</span>
@@ -8635,6 +8597,12 @@ By default a non-verbose stdout logger is creater.</p>
 </ul>
 </li>
 </ul>
+<h4>Struct gl_lights</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">gl_lights</span> <span class="p">{</span>
+</code></pre></div>
+
+
+<p>State object to store lights for light rendering</p>
 <h4>Function gl_check_error()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">gl_check_error</span><span class="p">(</span><span class="kt">bool</span> <span class="n">print</span> <span class="o">=</span> <span class="nb">true</span><span class="p">);</span>
 </code></pre></div>
@@ -9329,6 +9297,51 @@ is either a buffer bid or a single value def
 
 
 <p>Unbind a program</p>
+<h4>Struct gl_shape</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">gl_shape</span> <span class="p">{</span>
+</code></pre></div>
+
+
+<p>Vertex buffers for scene drawing. Members are not part of the public API.</p>
+<h4>Function clear_shape()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">clear_shape</span><span class="p">(</span><span class="n">gl_shape</span><span class="o">&amp;</span> <span class="n">shp</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Clear shape</p>
+<h4>Function make_gl_lights()</h4>
+<div class="codehilite"><pre><code><span></span><span class="n">gl_lights</span> <span class="nf">make_gl_lights</span><span class="p">(</span><span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Initialize gl lights</p>
+<h4>Function clear_textures()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">clear_textures</span><span class="p">(</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">texture</span><span class="o">*</span><span class="p">,</span> <span class="n">gl_texture</span><span class="o">&gt;&amp;</span> <span class="n">textures</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Clear scene textures on the GPU.</p>
+<h4>Function clear_shapes()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">clear_shapes</span><span class="p">(</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">shape</span><span class="o">*</span><span class="p">,</span> <span class="n">gl_shape</span><span class="o">&gt;&amp;</span> <span class="n">shapes</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Clear scene shapes on the GPU.</p>
+<h4>Function update_textures()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="n">update_textures</span><span class="p">(</span><span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span>
+    <span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">texture</span><span class="o">*</span><span class="p">,</span> <span class="n">gl_texture</span><span class="o">&gt;&amp;</span> <span class="n">textures</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">unordered_set</span><span class="o">&lt;</span><span class="n">texture</span><span class="o">*&gt;&amp;</span> <span class="n">refresh</span> <span class="o">=</span><span class="p">;</span>
+</code></pre></div>
+
+
+<p>Update scene textures on the GPU.</p>
+<h4>Function update_shapes()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="n">update_shapes</span><span class="p">(</span><span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">shape</span><span class="o">*</span><span class="p">,</span> <span class="n">gl_shape</span><span class="o">&gt;&amp;</span> <span class="n">shapes</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">unordered_set</span><span class="o">&lt;</span><span class="n">shape</span><span class="o">*&gt;&amp;</span> <span class="n">refresh</span> <span class="o">=</span><span class="p">;</span>
+</code></pre></div>
+
+
+<p>Update scene shapes on the GPU.</p>
 <h4>Struct gl_stdimage_program</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">gl_stdimage_program</span> <span class="p">{</span>
 </code></pre></div>
@@ -9413,10 +9426,10 @@ been initialized</p>
 
 <p>Check if the program is valid</p>
 <h4>Function begin_stdsurface_frame()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">begin_stdsurface_frame</span><span class="p">(</span><span class="n">gl_stdsurface_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span>
-    <span class="kt">bool</span> <span class="n">shade_eyelight</span><span class="p">,</span> <span class="kt">float</span> <span class="n">tonemap_exposure</span><span class="p">,</span> <span class="kt">float</span> <span class="n">tonemap_gamma</span><span class="p">,</span>
-    <span class="kt">bool</span> <span class="n">tonemap_filmic</span><span class="p">,</span> <span class="k">const</span> <span class="n">mat4f</span><span class="o">&amp;</span> <span class="n">camera_xform</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">mat4f</span><span class="o">&amp;</span> <span class="n">camera_xform_inv</span><span class="p">,</span> <span class="k">const</span> <span class="n">mat4f</span><span class="o">&amp;</span> <span class="n">camera_proj</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">begin_stdsurface_frame</span><span class="p">(</span><span class="n">gl_stdsurface_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">shade_eyelight</span><span class="p">,</span>
+    <span class="kt">float</span> <span class="n">tonemap_exposure</span><span class="p">,</span> <span class="kt">float</span> <span class="n">tonemap_gamma</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">tonemap_filmic</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">mat4f</span><span class="o">&amp;</span> <span class="n">camera_xform</span><span class="p">,</span> <span class="k">const</span> <span class="n">mat4f</span><span class="o">&amp;</span> <span class="n">camera_xform_inv</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">mat4f</span><span class="o">&amp;</span> <span class="n">camera_proj</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -9424,50 +9437,50 @@ been initialized</p>
 projection. Sets also whether to use full shading or a quick eyelight
 preview.</p>
 <h4>Function end_stdsurface_frame()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">end_stdsurface_frame</span><span class="p">(</span><span class="n">gl_stdsurface_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">end_stdsurface_frame</span><span class="p">(</span><span class="n">gl_stdsurface_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Ends a frame.</p>
 <h4>Function set_stdsurface_lights()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">set_stdsurface_lights</span><span class="p">(</span><span class="n">gl_stdsurface_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">amb</span><span class="p">,</span>
-    <span class="kt">int</span> <span class="n">num</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec3f</span><span class="o">*</span> <span class="n">pos</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec3f</span><span class="o">*</span> <span class="n">ke</span><span class="p">,</span> <span class="k">const</span> <span class="n">gl_ltype</span><span class="o">*</span> <span class="n">type</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_stdsurface_lights</span><span class="p">(</span>
+    <span class="n">gl_stdsurface_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">amb</span><span class="p">,</span> <span class="k">const</span> <span class="n">gl_lights</span><span class="o">&amp;</span> <span class="n">lights</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Set num lights with position pos, color ke, type ltype. Also set the
 ambient illumination amb.</p>
 <h4>Function begin_stdsurface_shape()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">begin_stdsurface_shape</span><span class="p">(</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">begin_stdsurface_shape</span><span class="p">(</span>
     <span class="n">gl_stdsurface_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">mat4f</span><span class="o">&amp;</span> <span class="n">xform</span><span class="p">,</span> <span class="kt">float</span> <span class="n">normal_offset</span> <span class="o">=</span> <span class="mi">0</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Begins drawing a shape with transform xform.</p>
 <h4>Function end_stdsurface_shape()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">end_stdsurface_shape</span><span class="p">(</span><span class="n">gl_stdsurface_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">end_stdsurface_shape</span><span class="p">(</span><span class="n">gl_stdsurface_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>End shade drawing.</p>
 <h4>Function set_stdsurface_normaloffset()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">set_stdsurface_normaloffset</span><span class="p">(</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_stdsurface_normaloffset</span><span class="p">(</span>
     <span class="n">gl_stdsurface_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="kt">float</span> <span class="n">normal_offset</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Sets normal offset.</p>
 <h4>Function set_stdsurface_highlight()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">set_stdsurface_highlight</span><span class="p">(</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_stdsurface_highlight</span><span class="p">(</span>
     <span class="n">gl_stdsurface_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec4f</span><span class="o">&amp;</span> <span class="n">highlight</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Set the object as highlighted.</p>
 <h4>Function set_stdsurface_material()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">set_stdsurface_material</span><span class="p">(</span><span class="n">gl_stdsurface_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span>
-    <span class="n">material_type</span> <span class="n">type</span><span class="p">,</span> <span class="n">gl_etype</span> <span class="n">etype</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">ke</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">kd</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">ks</span><span class="p">,</span> <span class="kt">float</span> <span class="n">rs</span><span class="p">,</span> <span class="kt">float</span> <span class="n">op</span><span class="p">,</span> <span class="k">const</span> <span class="n">gl_texture_info</span><span class="o">&amp;</span> <span class="n">ke_txt</span><span class="p">,</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_stdsurface_material</span><span class="p">(</span><span class="n">gl_stdsurface_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="n">material_type</span> <span class="n">type</span><span class="p">,</span>
+    <span class="n">gl_elem_type</span> <span class="n">etype</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">ke</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">kd</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">ks</span><span class="p">,</span>
+    <span class="kt">float</span> <span class="n">rs</span><span class="p">,</span> <span class="kt">float</span> <span class="n">op</span><span class="p">,</span> <span class="k">const</span> <span class="n">gl_texture_info</span><span class="o">&amp;</span> <span class="n">ke_txt</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">gl_texture_info</span><span class="o">&amp;</span> <span class="n">kd_txt</span><span class="p">,</span> <span class="k">const</span> <span class="n">gl_texture_info</span><span class="o">&amp;</span> <span class="n">ks_txt</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">gl_texture_info</span><span class="o">&amp;</span> <span class="n">rs_txt</span><span class="p">,</span> <span class="k">const</span> <span class="n">gl_texture_info</span><span class="o">&amp;</span> <span class="n">norm_txt</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">gl_texture_info</span><span class="o">&amp;</span> <span class="n">occ_txt</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">use_phong</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">double_sided</span><span class="p">,</span>
@@ -9482,14 +9495,14 @@ maps. Works for points/lines/triangles (diffuse for points,
 Kajiya-Kay for lines, GGX/Phong for triangles).
 Material type matches the scene material type.</p>
 <h4>Function set_stdsurface_constmaterial()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">set_stdsurface_constmaterial</span><span class="p">(</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_stdsurface_constmaterial</span><span class="p">(</span>
     <span class="n">gl_stdsurface_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">ke</span><span class="p">,</span> <span class="kt">float</span> <span class="n">op</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Set constant material values with emission ke.</p>
 <h4>Function set_stdsurface_vert()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">set_stdsurface_vert</span><span class="p">(</span><span class="n">gl_stdsurface_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_stdsurface_vert</span><span class="p">(</span><span class="n">gl_stdsurface_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">gl_vertex_buffer</span><span class="o">&amp;</span> <span class="n">pos</span><span class="p">,</span> <span class="k">const</span> <span class="n">gl_vertex_buffer</span><span class="o">&amp;</span> <span class="n">norm</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">gl_vertex_buffer</span><span class="o">&amp;</span> <span class="n">texcoord</span><span class="p">,</span> <span class="k">const</span> <span class="n">gl_vertex_buffer</span><span class="o">&amp;</span> <span class="n">color</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">gl_vertex_buffer</span><span class="o">&amp;</span> <span class="n">tangsp</span><span class="p">);</span>
@@ -9499,7 +9512,7 @@ Material type matches the scene material type.</p>
 <p>Set vertex data with buffers for position pos, normals norm, texture
 coordinates texcoord, per-vertex color color and tangent space tangsp.</p>
 <h4>Function set_stdsurface_vert_skinning()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">set_stdsurface_vert_skinning</span><span class="p">(</span><span class="n">gl_stdsurface_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_stdsurface_vert_skinning</span><span class="p">(</span><span class="n">gl_stdsurface_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">gl_vertex_buffer</span><span class="o">&amp;</span> <span class="n">weights</span><span class="p">,</span> <span class="k">const</span> <span class="n">gl_vertex_buffer</span><span class="o">&amp;</span> <span class="n">joints</span><span class="p">,</span>
     <span class="kt">int</span> <span class="n">nxforms</span><span class="p">,</span> <span class="k">const</span> <span class="n">mat4f</span><span class="o">*</span> <span class="n">xforms</span><span class="p">);</span>
 </code></pre></div>
@@ -9507,7 +9520,7 @@ coordinates texcoord, per-vertex color color and tangent space tangsp.</p>
 
 <p>Set vertex data with buffers for skinning.</p>
 <h4>Function set_stdsurface_vert_gltf_skinning()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">set_stdsurface_vert_gltf_skinning</span><span class="p">(</span><span class="n">gl_stdsurface_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_stdsurface_vert_gltf_skinning</span><span class="p">(</span><span class="n">gl_stdsurface_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">gl_vertex_buffer</span><span class="o">&amp;</span> <span class="n">weights</span><span class="p">,</span> <span class="k">const</span> <span class="n">gl_vertex_buffer</span><span class="o">&amp;</span> <span class="n">joints</span><span class="p">,</span>
     <span class="kt">int</span> <span class="n">nxforms</span><span class="p">,</span> <span class="k">const</span> <span class="n">mat4f</span><span class="o">*</span> <span class="n">xforms</span><span class="p">);</span>
 </code></pre></div>
@@ -9515,24 +9528,11 @@ coordinates texcoord, per-vertex color color and tangent space tangsp.</p>
 
 <p>Set vertex data with buffers for skinning.</p>
 <h4>Function set_stdsurface_vert_skinning_off()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">set_stdsurface_vert_skinning_off</span><span class="p">(</span><span class="n">gl_stdsurface_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">set_stdsurface_vert_skinning_off</span><span class="p">(</span><span class="n">gl_stdsurface_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Disables vertex skinning.</p>
-<h4>Struct gl_stdsurface_state</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">gl_stdsurface_state</span> <span class="p">{</span>
-</code></pre></div>
-
-
-<p>State object for gl_stdsurface_program drawing. Members are not part of the
-public API.</p>
-<h4>Struct gl_stdsurface_lights</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">gl_stdsurface_lights</span> <span class="p">{</span>
-</code></pre></div>
-
-
-<p>State object to store lights for stdsurface rendering</p>
 <h4>Struct gl_stdsurface_params</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">gl_stdsurface_params</span> <span class="p">{</span>
     <span class="kt">int</span> <span class="n">camera_id</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
@@ -9579,36 +9579,10 @@ public API.</p>
 </ul>
 </li>
 </ul>
-<h4>Function make_stdsurface_state()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">gl_stdsurface_state</span><span class="o">*</span> <span class="nf">make_stdsurface_state</span><span class="p">();</span>
-</code></pre></div>
-
-
-<p>Initialize gl_stdsurface_program draw state</p>
-<h4>Function update_stdsurface_state()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="n">update_stdsurface_state</span><span class="p">(</span><span class="n">gl_stdsurface_state</span><span class="o">*</span> <span class="n">st</span><span class="p">,</span> <span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">gl_stdsurface_params</span><span class="o">&amp;</span> <span class="n">params</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">unordered_set</span><span class="o">&lt;</span><span class="kt">void</span><span class="o">*&gt;&amp;</span> <span class="n">refresh</span> <span class="o">=</span><span class="p">;</span>
-</code></pre></div>
-
-
-<p>Update gl_stdsurface_program draw state. This updates stdsurface meshes
-and textures on the GPU.</p>
-<h4>Function make_stdsurface_lights()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">gl_stdsurface_lights</span> <span class="nf">make_stdsurface_lights</span><span class="p">(</span><span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Initialize stdsurface lights</p>
-<h4>Function clear_stdsurface_state()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">clear_stdsurface_state</span><span class="p">(</span><span class="n">gl_stdsurface_state</span><span class="o">*</span> <span class="n">st</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">clear_program</span> <span class="o">=</span> <span class="nb">true</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Clear gl_stdsurface_program draw state</p>
 <h4>Function draw_stdsurface_scene()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">draw_stdsurface_scene</span><span class="p">(</span><span class="n">gl_stdsurface_state</span><span class="o">*</span> <span class="n">st</span><span class="p">,</span> <span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">camera</span><span class="o">*</span> <span class="n">cam</span><span class="p">,</span> <span class="k">const</span> <span class="n">gl_stdsurface_lights</span><span class="o">&amp;</span> <span class="n">lights</span><span class="p">,</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">draw_stdsurface_scene</span><span class="p">(</span><span class="k">const</span> <span class="n">scene</span><span class="o">*</span> <span class="n">scn</span><span class="p">,</span> <span class="k">const</span> <span class="n">camera</span><span class="o">*</span> <span class="n">cam</span><span class="p">,</span>
+    <span class="n">gl_stdsurface_program</span><span class="o">&amp;</span> <span class="n">prog</span><span class="p">,</span> <span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">shape</span><span class="o">*</span><span class="p">,</span> <span class="n">gl_shape</span><span class="o">&gt;&amp;</span> <span class="n">shapes</span><span class="p">,</span>
+    <span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">texture</span><span class="o">*</span><span class="p">,</span> <span class="n">gl_texture</span><span class="o">&gt;&amp;</span> <span class="n">textures</span><span class="p">,</span> <span class="k">const</span> <span class="n">gl_lights</span><span class="o">&amp;</span> <span class="n">lights</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">gl_stdsurface_params</span><span class="o">&amp;</span> <span class="n">params</span><span class="p">);</span>
 </code></pre></div>
 
