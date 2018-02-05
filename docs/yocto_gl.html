@@ -5497,7 +5497,13 @@ This is only used internally to avoid looping over all objects every time.</p>
 </code></pre></div>
 
 
-<p>Shape texcoord interpolated using barycentric coordinates</p>
+<p>Shape color interpolated using barycentric coordinates</p>
+<h4>Function eval_radius()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">float</span> <span class="nf">eval_radius</span><span class="p">(</span><span class="k">const</span> <span class="n">shape</span><span class="o">*</span> <span class="n">shp</span><span class="p">,</span> <span class="kt">int</span> <span class="n">eid</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec4f</span><span class="o">&amp;</span> <span class="n">euv</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Shape radius interpolated using barycentric coordinates</p>
 <h4>Function eval_tangsp()</h4>
 <div class="codehilite"><pre><code><span></span><span class="n">vec4f</span> <span class="nf">eval_tangsp</span><span class="p">(</span><span class="k">const</span> <span class="n">shape</span><span class="o">*</span> <span class="n">shp</span><span class="p">,</span> <span class="kt">int</span> <span class="n">eid</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec4f</span><span class="o">&amp;</span> <span class="n">euv</span><span class="p">);</span>
 </code></pre></div>
@@ -5645,11 +5651,9 @@ Bounding boxes for the scene will be updated.</p>
 <h4>Struct add_elements_options</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">add_elements_options</span> <span class="p">{</span>
     <span class="kt">bool</span> <span class="n">smooth_normals</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
-    <span class="kt">float</span> <span class="n">pointline_radius</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
     <span class="kt">bool</span> <span class="n">tangent_space</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
     <span class="kt">bool</span> <span class="n">texture_data</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
     <span class="kt">bool</span> <span class="n">shape_instances</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
-    <span class="kt">bool</span> <span class="n">default_environment</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
     <span class="kt">bool</span> <span class="n">default_names</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
     <span class="kt">bool</span> <span class="n">default_paths</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
     <span class="k">static</span> <span class="n">add_elements_options</span> <span class="nf">none</span><span class="p">();</span> 
@@ -5661,11 +5665,9 @@ Bounding boxes for the scene will be updated.</p>
 <ul>
 <li>Members:<ul>
 <li>smooth_normals:      Add missing normal</li>
-<li>pointline_radius:      Add missing radius for points and lines (&lt;=0 for no adding)</li>
 <li>tangent_space:      Add missing trangent space</li>
 <li>texture_data:      texture data</li>
 <li>shape_instances:      Add instances</li>
-<li>default_environment:      Add an empty default environment</li>
 <li>default_names:      Add default names</li>
 <li>default_paths:      Add default paths</li>
 <li>none():      initialize to no element</li>
@@ -6490,8 +6492,6 @@ This is a hack, but works better than not doing it.</p>
     <span class="kt">int</span> <span class="n">sample</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
     <span class="kt">int</span> <span class="n">dimension</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
     <span class="kt">float</span> <span class="n">weight</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
-    <span class="kt">int</span> <span class="n">nsamples</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
-    <span class="n">trace_rng_type</span> <span class="n">rtype</span> <span class="o">=</span> <span class="n">trace_rng_type</span><span class="o">::</span><span class="n">uniform</span><span class="p">;</span>
 <span class="p">}</span>
 </code></pre></div>
 
@@ -6507,8 +6507,6 @@ the public API.</p>
 <li>sample:      number of samples computed</li>
 <li>dimension:      current dimension</li>
 <li>weight:      pixel weight for filtering</li>
-<li>nsamples:      total number of samples</li>
-<li>rtype:      random number type</li>
 </ul>
 </li>
 </ul>
