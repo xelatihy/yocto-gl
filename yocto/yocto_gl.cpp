@@ -2465,10 +2465,11 @@ const int bvh_minprims = 4;
 // or initializing it as a leaf. When splitting, the heuristic heuristic is
 // used and nodes added sequentially in the preallocated nodes array and
 // the number of nodes nnodes is updated.
-void make_bvh_node(bvh_tree* bvh, int nodeid, bvh_bound_prim* sorted_prims,
-    int start, int end, bool equalsize) {
+void make_bvh_node(vector<bvh_node>& nodes, int nodeid,
+    bvh_bound_prim* sorted_prims, int start, int end, bvh_node_type type,
+    bool equal_size) {
     // get node
-    auto node = &bvh->nodes.at(nodeid);
+    auto node = &nodes.at(nodeid);
     // compute node bounds
     node->bbox = invalid_bbox3f;
     for (auto i = start; i < end; i++) node->bbox += sorted_prims[i].bbox;
@@ -2476,7 +2477,7 @@ void make_bvh_node(bvh_tree* bvh, int nodeid, bvh_bound_prim* sorted_prims,
     // decide whether to create a leaf
     if (end - start <= bvh_minprims) {
         // makes a leaf node
-        node->type = bvh->type;
+        node->type = type;
         node->start = start;
         node->count = end - start;
     } else {
@@ -2494,7 +2495,7 @@ void make_bvh_node(bvh_tree* bvh, int nodeid, bvh_bound_prim* sorted_prims,
         // check if it is not possible to split
         if (centroid_size == zero3f) {
             // we failed to split for some reasons
-            node->type = bvh->type;
+            node->type = type;
             node->start = start;
             node->count = end - start;
         } else {
@@ -2502,7 +2503,7 @@ void make_bvh_node(bvh_tree* bvh, int nodeid, bvh_bound_prim* sorted_prims,
             auto largest_axis = max_element(centroid_size);
 
             // check heuristic
-            if (equalsize) {
+            if (equal_size) {
                 // split the space in the middle along the largest axis
                 axis = largest_axis;
                 mid = (int)(std::partition(sorted_prims + start,
@@ -2527,17 +2528,55 @@ void make_bvh_node(bvh_tree* bvh, int nodeid, bvh_bound_prim* sorted_prims,
             node->type = bvh_node_type::internal;
             // perform the splits by preallocating the child nodes and recurring
             node->axis = axis;
-            node->start = (int)bvh->nodes.size();
+            node->start = (int)nodes.size();
             node->count = 2;
-            bvh->nodes.emplace_back();
-            bvh->nodes.emplace_back();
+            nodes.emplace_back();
+            nodes.emplace_back();
             // build child nodes
             make_bvh_node(
-                bvh, node->start, sorted_prims, start, mid, equalsize);
-            make_bvh_node(
-                bvh, node->start + 1, sorted_prims, mid, end, equalsize);
+                nodes, node->start, sorted_prims, start, mid, type, equal_size);
+            make_bvh_node(nodes, node->start + 1, sorted_prims, mid, end, type,
+                equal_size);
         }
     }
+}
+
+// Build a BVH node list and sorted primitive array
+tuple<vector<bvh_node>, vector<int>> make_bvh_nodes(
+    const vector<bbox3f>& bboxes, bvh_node_type type, bool equal_size) {
+    // create buonded primitived for sorting
+    auto bound_prims = vector<bvh_bound_prim>(bboxes.size());
+    for (auto i = 0; i < bboxes.size(); i++) {
+        bound_prims[i].pid = i;
+        bound_prims[i].bbox = bboxes[i];
+        bound_prims[i].center = bbox_center(bboxes[i]);
+    }
+
+    // clear bvh
+    auto nodes = vector<bvh_node>();
+    auto sorted_prim = vector<int>();
+
+    // allocate nodes (over-allocate now then shrink)
+    nodes.reserve(bound_prims.size() * 2);
+
+    // start recursive splitting
+    nodes.emplace_back();
+    make_bvh_node(nodes, 0, bound_prims.data(), 0, (int)bound_prims.size(),
+        type, equal_size);
+
+    // shrink back
+    nodes.shrink_to_fit();
+
+    // init sorted element arrays
+    // for shared memory, stored pointer to the external data
+    // store the sorted primitive order for BVH walk
+    sorted_prim.resize(bound_prims.size());
+    for (int i = 0; i < bound_prims.size(); i++) {
+        sorted_prim[i] = bound_prims[i].pid;
+    }
+
+    // done
+    return {nodes, sorted_prim};
 }
 
 // Build a BVH from a set of primitives.
@@ -2594,36 +2633,9 @@ bvh_tree* make_bvh(const vector<int>& points, const vector<vec2i>& lines,
         bvh->type = bvh_node_type::vertex;
     }
 
-    // create buonded primitived for sorting
-    auto bound_prims = vector<bvh_bound_prim>(bboxes.size());
-    for (auto i = 0; i < bboxes.size(); i++) {
-        bound_prims[i].pid = i;
-        bound_prims[i].bbox = bboxes[i];
-        bound_prims[i].center = bbox_center(bboxes[i]);
-    }
-
-    // clear bvh
-    bvh->nodes.clear();
-    bvh->sorted_prim.clear();
-
-    // allocate nodes (over-allocate now then shrink)
-    bvh->nodes.reserve(bound_prims.size() * 2);
-
-    // start recursive splitting
-    bvh->nodes.emplace_back();
-    make_bvh_node(
-        bvh, 0, bound_prims.data(), 0, (int)bound_prims.size(), equalsize);
-
-    // shrink back
-    bvh->nodes.shrink_to_fit();
-
-    // init sorted element arrays
-    // for shared memory, stored pointer to the external data
-    // store the sorted primitive order for BVH walk
-    bvh->sorted_prim.resize(bound_prims.size());
-    for (int i = 0; i < bound_prims.size(); i++) {
-        bvh->sorted_prim[i] = bound_prims[i].pid;
-    }
+    // make node bvh
+    tie(bvh->nodes, bvh->sorted_prim) =
+        make_bvh_nodes(bboxes, bvh->type, equalsize);
 
     // done
     return bvh;
@@ -2653,36 +2665,9 @@ bvh_tree* make_bvh(const vector<vec3i>& ids, const vector<frame3f>& frames,
     }
     bvh->type = bvh_node_type::instance;
 
-    // create buonded primitived for sorting
-    auto bound_prims = vector<bvh_bound_prim>(bboxes.size());
-    for (auto i = 0; i < bboxes.size(); i++) {
-        bound_prims[i].pid = i;
-        bound_prims[i].bbox = bboxes[i];
-        bound_prims[i].center = bbox_center(bboxes[i]);
-    }
-
-    // clear bvh
-    bvh->nodes.clear();
-    bvh->sorted_prim.clear();
-
-    // allocate nodes (over-allocate now then shrink)
-    bvh->nodes.reserve(bound_prims.size() * 2);
-
-    // start recursive splitting
-    bvh->nodes.emplace_back();
-    make_bvh_node(
-        bvh, 0, bound_prims.data(), 0, (int)bound_prims.size(), equal_size);
-
-    // shrink back
-    bvh->nodes.shrink_to_fit();
-
-    // init sorted element arrays
-    // for shared memory, stored pointer to the external data
-    // store the sorted primitive order for BVH walk
-    bvh->sorted_prim.resize(bound_prims.size());
-    for (int i = 0; i < bound_prims.size(); i++) {
-        bvh->sorted_prim[i] = bound_prims[i].pid;
-    }
+    // make node bvh
+    tie(bvh->nodes, bvh->sorted_prim) =
+        make_bvh_nodes(bboxes, bvh->type, equal_size);
 
     // done
     return bvh;
