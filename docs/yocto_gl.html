@@ -1705,6 +1705,20 @@ specializations for small fixed sized vectors.</p>
 
 
 <p>orthonormalize two vectors</p>
+<h4>Function reflect()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;</span> <span class="n">reflect</span><span class="p">(</span><span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">w</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">n</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>reflected vector</p>
+<h4>Function refract()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;</span> <span class="n">refract</span><span class="p">(</span><span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">w</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">n</span><span class="p">,</span> <span class="n">T</span> <span class="n">eta</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>refracted vector</p>
 <h4>Function clamp()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="k">typename</span> <span class="n">T1</span><span class="o">&gt;</span>
 <span class="kr">inline</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">2</span><span class="o">&gt;</span> <span class="n">clamp</span><span class="p">(</span><span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">2</span><span class="o">&gt;&amp;</span> <span class="n">x</span><span class="p">,</span> <span class="n">T1</span> <span class="n">min</span><span class="p">,</span> <span class="n">T1</span> <span class="n">max</span><span class="p">);</span>
@@ -4937,6 +4951,29 @@ This is an internal data structure.</p>
 </ul>
 </li>
 </ul>
+<h4>Struct bvh_instance</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">bvh_instance</span> <span class="p">{</span>
+    <span class="n">frame3f</span> <span class="n">frame</span> <span class="o">=</span> <span class="n">identity_frame3f</span><span class="p">;</span>
+    <span class="n">frame3f</span> <span class="n">frame_inv</span> <span class="o">=</span> <span class="n">identity_frame3f</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">iid</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">sid</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="n">bvh_tree</span><span class="o">*</span> <span class="n">bvh</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div>
+
+
+<p>Shape instance for two-level BVH.
+This is an internal data structure.</p>
+<ul>
+<li>Members:<ul>
+<li>frame:      frame</li>
+<li>frame_inv:      frame inverse</li>
+<li>iid:      instance id to be returned</li>
+<li>sid:      shape id to be returned</li>
+<li>bvh:      shape bvh</li>
+</ul>
+</li>
+</ul>
 <h4>Struct bvh_tree</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">bvh_tree</span> <span class="p">{</span>
     <span class="n">vector</span><span class="o">&lt;</span><span class="n">bvh_node</span><span class="o">&gt;</span> <span class="n">nodes</span><span class="p">;</span>
@@ -4948,9 +4985,7 @@ This is an internal data structure.</p>
     <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2i</span><span class="o">&gt;</span> <span class="n">lines</span><span class="p">;</span>
     <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;</span> <span class="n">triangles</span><span class="p">;</span>
     <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span> <span class="n">quads</span><span class="p">;</span>
-    <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;</span> <span class="n">ist_ids</span><span class="p">;</span>
-    <span class="n">vector</span><span class="o">&lt;</span><span class="n">frame3f</span><span class="o">&gt;</span> <span class="n">ist_frames</span><span class="p">;</span>
-    <span class="n">vector</span><span class="o">&lt;</span><span class="n">frame3f</span><span class="o">&gt;</span> <span class="n">ist_frames_inv</span><span class="p">;</span>
+    <span class="n">vector</span><span class="o">&lt;</span><span class="n">bvh_instance</span><span class="o">&gt;</span> <span class="n">instances</span><span class="p">;</span>
     <span class="n">vector</span><span class="o">&lt;</span><span class="n">bvh_tree</span><span class="o">*&gt;</span> <span class="n">shape_bvhs</span><span class="p">;</span>
     <span class="kt">bool</span> <span class="n">own_shape_bvhs</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
 <span class="p">}</span>
@@ -4977,9 +5012,7 @@ BVHs, shape BVHs, each of which of a uniform primitive type.</p>
 <li>lines:      lines for shape BVHs</li>
 <li>triangles:      triangles for shape BVHs</li>
 <li>quads:      quads for shape BVHs</li>
-<li>ist_ids:      instance ids (iid, sid, shape bvh index)</li>
-<li>ist_frames:      instance frames for instance BVHs</li>
-<li>ist_frames_inv:      instance inverse frames for instance BVHs</li>
+<li>instances:      instance ids (iid, sid, shape bvh index)</li>
 <li>shape_bvhs:      shape BVHs</li>
 <li>own_shape_bvhs:      whether it owns the memory of the shape BVHs</li>
 </ul>
@@ -4995,9 +5028,8 @@ BVHs, shape BVHs, each of which of a uniform primitive type.</p>
 
 <p>Build a shape BVH from a set of primitives.</p>
 <h4>Function make_bvh()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">bvh_tree</span><span class="o">*</span> <span class="nf">make_bvh</span><span class="p">(</span><span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;&amp;</span> <span class="n">ids</span><span class="p">,</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">frame3f</span><span class="o">&gt;&amp;</span> <span class="n">frames</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">frame3f</span><span class="o">&gt;&amp;</span> <span class="n">frames_inv</span><span class="p">,</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">bvh_tree</span><span class="o">*&gt;&amp;</span> <span class="n">shape_bvhs</span><span class="p">,</span>
-    <span class="kt">bool</span> <span class="n">own_shape_bvhs</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">equal_size</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="n">bvh_tree</span><span class="o">*</span> <span class="nf">make_bvh</span><span class="p">(</span><span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">bvh_instance</span><span class="o">&gt;&amp;</span> <span class="n">instances</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">bvh_tree</span><span class="o">*&gt;&amp;</span> <span class="n">shape_bvhs</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">own_shape_bvhs</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">equal_size</span><span class="p">);</span>
 </code></pre></div>
 
 
