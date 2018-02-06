@@ -11672,42 +11672,50 @@ bool draw_color_widget(gl_window* win, const string& lbl, vec3f& val);
 
 Color widget
 
+#### Function draw_combo_begin()
+
+~~~ .cpp
+bool draw_combo_begin(gl_window* win, const string& lbl, const string& label);
+~~~
+
+Combo widget
+
+#### Function draw_combo_item()
+
+~~~ .cpp
+bool draw_combo_item(
+    gl_window* win, const string& label, int idx, bool selected);
+~~~
+
+Combo widget
+
+#### Function draw_combo_end()
+
+~~~ .cpp
+void draw_combo_end(gl_window* win);
+~~~
+
+Combo widget
+
 #### Function draw_value_widget()
 
 ~~~ .cpp
-bool draw_value_widget(gl_window* win, const string& lbl, string& val,
+template <typename T, typename T1>
+inline bool draw_value_widget(gl_window* win, const string& lbl, T& val,
+    const vector<T1>& vals, const function<T(const T1&)>& value_func,
+    const function<string(const T1&)>& label_func);
+~~~
+
+Combo widget
+
+#### Function draw_value_widget()
+
+~~~ .cpp
+inline bool draw_value_widget(gl_window* win, const string& lbl, string& val,
     const vector<string>& labels);
 ~~~
 
-Enum widget
-
-#### Function draw_value_widget()
-
-~~~ .cpp
-bool draw_value_widget(gl_window* win, const string& lbl, int& val,
-    const vector<pair<string, int>>& labels);
-~~~
-
-Enum widget
-
-#### Function draw_value_widget()
-
-~~~ .cpp
-bool draw_value_widget(gl_window* win, const string& lbl, void*& val,
-    const vector<pair<string, void*>>& labels);
-~~~
-
-Enum widget
-
-#### Function draw_value_widget()
-
-~~~ .cpp
-template <typename T>
-inline bool draw_value_widget(gl_window* win, const string& lbl, T*& val,
-    const vector<pair<string, T*>>& labels);
-~~~
-
-Enum widget
+Combo widget
 
 #### Function draw_value_widget()
 
@@ -11717,7 +11725,7 @@ inline bool draw_value_widget(gl_window* win, const string& lbl, T& val,
     const vector<pair<string, T>>& labels);
 ~~~
 
-Enum widget
+Combo widget
 
 #### Function draw_value_widget()
 

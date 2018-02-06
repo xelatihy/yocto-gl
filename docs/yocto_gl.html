@@ -9926,35 +9926,41 @@ coordinates texcoord, per-vertex color color and tangent space tangsp.</p>
 
 
 <p>Color widget</p>
+<h4>Function draw_combo_begin()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">draw_combo_begin</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span> <span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">label</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Combo widget</p>
+<h4>Function draw_combo_item()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">draw_combo_item</span><span class="p">(</span>
+    <span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">label</span><span class="p">,</span> <span class="kt">int</span> <span class="n">idx</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">selected</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Combo widget</p>
+<h4>Function draw_combo_end()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">draw_combo_end</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Combo widget</p>
 <h4>Function draw_value_widget()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">draw_value_widget</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="k">typename</span> <span class="n">T1</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">bool</span> <span class="n">draw_value_widget</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">T1</span><span class="o">&gt;&amp;</span> <span class="n">vals</span><span class="p">,</span> <span class="k">const</span> <span class="n">function</span><span class="o">&lt;</span><span class="n">T</span><span class="p">(</span><span class="k">const</span> <span class="n">T1</span><span class="o">&amp;</span><span class="p">)</span><span class="o">&gt;&amp;</span> <span class="n">value_func</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">function</span><span class="o">&lt;</span><span class="n">string</span><span class="p">(</span><span class="k">const</span> <span class="n">T1</span><span class="o">&amp;</span><span class="p">)</span><span class="o">&gt;&amp;</span> <span class="n">label_func</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Combo widget</p>
+<h4>Function draw_value_widget()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">draw_value_widget</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">string</span><span class="o">&gt;&amp;</span> <span class="n">labels</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>Enum widget</p>
-<h4>Function draw_value_widget()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">draw_value_widget</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span> <span class="kt">int</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">string</span><span class="p">,</span> <span class="kt">int</span><span class="o">&gt;&gt;&amp;</span> <span class="n">labels</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Enum widget</p>
-<h4>Function draw_value_widget()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">draw_value_widget</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span> <span class="kt">void</span><span class="o">*&amp;</span> <span class="n">val</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">string</span><span class="p">,</span> <span class="kt">void</span><span class="o">*&gt;&gt;&amp;</span> <span class="n">labels</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Enum widget</p>
-<h4>Function draw_value_widget()</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="kt">bool</span> <span class="n">draw_value_widget</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span> <span class="n">T</span><span class="o">*&amp;</span> <span class="n">val</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">string</span><span class="p">,</span> <span class="n">T</span><span class="o">*&gt;&gt;&amp;</span> <span class="n">labels</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Enum widget</p>
+<p>Combo widget</p>
 <h4>Function draw_value_widget()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
 <span class="kr">inline</span> <span class="kt">bool</span> <span class="n">draw_value_widget</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span>
@@ -9962,7 +9968,7 @@ coordinates texcoord, per-vertex color color and tangent space tangsp.</p>
 </code></pre></div>
 
 
-<p>Enum widget</p>
+<p>Combo widget</p>
 <h4>Function draw_value_widget()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">draw_value_widget</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span> <span class="kt">bool</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">);</span>
 </code></pre></div>
