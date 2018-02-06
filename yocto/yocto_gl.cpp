@@ -2432,14 +2432,6 @@ bvh_tree::~bvh_tree() {
     for (auto bvh : shape_bvhs) delete bvh;
 }
 
-// Struct that pack a bounding box, its associate primitive index, and other
-// data for faster hierarchy build.
-// This is internal only and should not be used externally.
-struct bvh_bound_prim {
-    bbox3f bbox;  // bounding box
-    int pid;      // primitive id
-};
-
 // number of primitives to avoid splitting on
 const int bvh_minprims = 4;
 
