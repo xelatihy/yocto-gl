@@ -2440,22 +2440,6 @@ struct bvh_bound_prim {
     int pid;      // primitive id
 };
 
-// Comparison function for each axis
-struct bvh_bound_prim_comp {
-    int axis;
-    float middle;
-
-    bvh_bound_prim_comp(int a, float m = 0) : axis(a), middle(m) {}
-
-    bool operator()(const bvh_bound_prim& a, const bvh_bound_prim& b) const {
-        return bbox_center(a.bbox)[axis] < bbox_center(b.bbox)[axis];
-    }
-
-    bool operator()(const bvh_bound_prim& a) const {
-        return bbox_center(a.bbox)[axis] < middle;
-    }
-};
-
 // number of primitives to avoid splitting on
 const int bvh_minprims = 4;
 
@@ -2505,10 +2489,12 @@ void make_bvh_node(vector<bvh_node>& nodes, int nodeid,
             if (equal_size) {
                 // split the space in the middle along the largest axis
                 axis = largest_axis;
+                auto middle = bbox_center(centroid_bbox)[largest_axis];
                 mid = (int)(std::partition(sorted_prims + start,
                                 sorted_prims + end,
-                                bvh_bound_prim_comp(largest_axis,
-                                    bbox_center(centroid_bbox)[largest_axis])) -
+                                [axis, middle](auto& a) {
+                                    return bbox_center(a.bbox)[axis] < middle;
+                                }) -
                             sorted_prims);
             } else {
                 // balanced tree split: find the largest axis of the bounding
@@ -2516,7 +2502,10 @@ void make_bvh_node(vector<bvh_node>& nodes, int nodeid,
                 axis = largest_axis;
                 mid = (start + end) / 2;
                 std::nth_element(sorted_prims + start, sorted_prims + mid,
-                    sorted_prims + end, bvh_bound_prim_comp(largest_axis));
+                    sorted_prims + end, [axis](auto& a, auto& b) {
+                        return bbox_center(a.bbox)[axis] <
+                               bbox_center(b.bbox)[axis];
+                    });
             }
 
             // check correctness
