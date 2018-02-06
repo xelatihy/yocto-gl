@@ -79,9 +79,12 @@
 // ## Next
 //
 // - update documentation
+// - update BVH documentation
 //
-// - BVH simplify build functions
+// - BVH simplify build functions: can we avoid preallocating nodes?
 // - BVH: maybe put axis with internal
+//
+// - tesselation functions using stencils
 //
 // - BUG: hair look in yitrace
 // - simplify trace_point
