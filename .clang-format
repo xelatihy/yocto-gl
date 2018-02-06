@@ -8,11 +8,16 @@ ColumnLimit:     80
 
 AlignAfterOpenBracket: DontAlign
 
+AllowAllParametersOfDeclarationOnNextLine: false
+
 AllowShortBlocksOnASingleLine: true
 AllowShortCaseLabelsOnASingleLine: true
 AllowShortFunctionsOnASingleLine: All
 AllowShortIfStatementsOnASingleLine: true
 AllowShortLoopsOnASingleLine: true
+
+BinPackArguments: true
+BinPackParameters: true
 
 BreakBeforeBinaryOperators: None
 BreakBeforeTernaryOperators: false
@@ -23,9 +28,9 @@ PointerAlignment: Left
 
 IndentWrappedFunctionNames: false
 
-PenaltyBreakBeforeFirstCallParameter: 1000000000
+PenaltyBreakBeforeFirstCallParameter: 1000
 PenaltyBreakComment: 300
 PenaltyBreakFirstLessLess: 120
-PenaltyBreakString: 1000
-PenaltyExcessCharacter: 1000000
+PenaltyBreakString: 500
+PenaltyExcessCharacter: 1000
 PenaltyReturnTypeOnItsOwnLine: 200
