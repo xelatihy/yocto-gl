@@ -6138,7 +6138,7 @@ float trace_weight_light(
         } else if (!lpt.shp->lines.empty()) {
             // TODO: fixme
             return 0;
-        } else if (lpt.shp->points.empty()) {
+        } else if (!lpt.shp->points.empty()) {
             return area / (dist * dist);
         }
     }
