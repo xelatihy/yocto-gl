@@ -2049,6 +2049,24 @@ inline vec<T, 3> orthonormalize(const vec<T, 3>& a, const vec<T, 3>& b);
 
 orthonormalize two vectors
 
+#### Function reflect()
+
+~~~ .cpp
+template <typename T>
+inline vec<T, 3> reflect(const vec<T, 3>& w, const vec<T, 3>& n);
+~~~
+
+reflected vector
+
+#### Function refract()
+
+~~~ .cpp
+template <typename T>
+inline vec<T, 3> refract(const vec<T, 3>& w, const vec<T, 3>& n, T eta);
+~~~
+
+refracted vector
+
 #### Function clamp()
 
 ~~~ .cpp
@@ -6071,6 +6089,29 @@ This is an internal data structure.
     - axis:      slit axis
 
 
+#### Struct bvh_instance
+
+~~~ .cpp
+struct bvh_instance {
+    frame3f frame = identity_frame3f;
+    frame3f frame_inv = identity_frame3f;
+    int iid = 0;
+    int sid = 0;
+    bvh_tree* bvh = nullptr;
+}
+~~~
+
+Shape instance for two-level BVH.
+This is an internal data structure.
+
+- Members:
+    - frame:      frame
+    - frame_inv:      frame inverse
+    - iid:      instance id to be returned
+    - sid:      shape id to be returned
+    - bvh:      shape bvh
+
+
 #### Struct bvh_tree
 
 ~~~ .cpp
@@ -6084,9 +6125,7 @@ struct bvh_tree {
     vector<vec2i> lines;
     vector<vec3i> triangles;
     vector<vec4i> quads;
-    vector<vec3i> ist_ids;
-    vector<frame3f> ist_frames;
-    vector<frame3f> ist_frames_inv;
+    vector<bvh_instance> instances;
     vector<bvh_tree*> shape_bvhs;
     bool own_shape_bvhs = false;
 }
@@ -6113,9 +6152,7 @@ This is an internal data structure.
     - lines:      lines for shape BVHs
     - triangles:      triangles for shape BVHs
     - quads:      quads for shape BVHs
-    - ist_ids:      instance ids (iid, sid, shape bvh index)
-    - ist_frames:      instance frames for instance BVHs
-    - ist_frames_inv:      instance inverse frames for instance BVHs
+    - instances:      instance ids (iid, sid, shape bvh index)
     - shape_bvhs:      shape BVHs
     - own_shape_bvhs:      whether it owns the memory of the shape BVHs
 
@@ -6134,9 +6171,8 @@ Build a shape BVH from a set of primitives.
 #### Function make_bvh()
 
 ~~~ .cpp
-bvh_tree* make_bvh(const vector<vec3i>& ids, const vector<frame3f>& frames,
-    const vector<frame3f>& frames_inv, const vector<bvh_tree*>& shape_bvhs,
-    bool own_shape_bvhs, bool equal_size);
+bvh_tree* make_bvh(const vector<bvh_instance>& instances,
+    const vector<bvh_tree*>& shape_bvhs, bool own_shape_bvhs, bool equal_size);
 ~~~
 
 Build a scene BVH from a set of shape instances.
