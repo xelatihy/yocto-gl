@@ -2559,44 +2559,36 @@ void make_bvh_nodes(bvh_tree* bvh, bool equal_size) {
     // get the number of primitives and the primitive type
     auto bboxes = vector<bbox3f>();
     if (!bvh->points.empty()) {
-        bboxes.reserve(bvh->points.size());
         for (auto& p : bvh->points) {
             bboxes.push_back(point_bbox(bvh->pos[p], bvh->radius[p]));
         }
         bvh->type = bvh_node_type::point;
     } else if (!bvh->lines.empty()) {
-        bboxes.reserve(bvh->lines.size());
         for (auto& l : bvh->lines) {
             bboxes.push_back(line_bbox(bvh->pos[l.x], bvh->pos[l.y],
                 bvh->radius[l.x], bvh->radius[l.y]));
         }
         bvh->type = bvh_node_type::line;
     } else if (!bvh->triangles.empty()) {
-        bboxes.reserve(bvh->triangles.size());
         for (auto& t : bvh->triangles) {
             bboxes.push_back(
                 triangle_bbox(bvh->pos[t.x], bvh->pos[t.y], bvh->pos[t.z]));
         }
         bvh->type = bvh_node_type::triangle;
     } else if (!bvh->quads.empty()) {
-        bboxes.reserve(bvh->quads.size());
         for (auto& q : bvh->quads) {
             bboxes.push_back(quad_bbox(
                 bvh->pos[q.x], bvh->pos[q.y], bvh->pos[q.z], bvh->pos[q.w]));
         }
         bvh->type = bvh_node_type::quad;
     } else if (!bvh->pos.empty()) {
-        bboxes.reserve(bvh->pos.size());
         for (auto i = 0; i < bvh->pos.size(); i++) {
             bboxes.push_back(point_bbox(bvh->pos[i], bvh->radius[i]));
         }
         bvh->type = bvh_node_type::vertex;
-    } else if (!bvh->ist_ids.empty()) {
-        bboxes.reserve(bvh->ist_ids.size());
-        for (auto idx = 0; idx < bvh->ist_ids.size(); idx++) {
-            auto sbvh = bvh->shape_bvhs[bvh->ist_ids[idx].z];
-            bboxes.push_back(
-                transform_bbox(bvh->ist_frames[idx], sbvh->nodes[0].bbox));
+    } else if (!bvh->instances.empty()) {
+        for (auto& ist : bvh->instances) {
+            bboxes.push_back(transform_bbox(ist.frame, ist.bvh->nodes[0].bbox));
         }
         bvh->type = bvh_node_type::instance;
     }
@@ -2631,16 +2623,13 @@ bvh_tree* make_bvh(const vector<int>& points, const vector<vec2i>& lines,
 }
 
 // Build a BVH from a set of shape instances.
-bvh_tree* make_bvh(const vector<vec3i>& ids, const vector<frame3f>& frames,
-    const vector<frame3f>& frames_inv, const vector<bvh_tree*>& shape_bvhs,
-    bool own_shape_bvhs, bool equal_size) {
+bvh_tree* make_bvh(const vector<bvh_instance>& instances,
+    const vector<bvh_tree*>& shape_bvhs, bool own_shape_bvhs, bool equal_size) {
     // allocate the bvh
     auto bvh = new bvh_tree();
 
     // set values
-    bvh->ist_ids = ids;
-    bvh->ist_frames = frames;
-    bvh->ist_frames_inv = frames_inv;
+    bvh->instances = instances;
     bvh->shape_bvhs = shape_bvhs;
     bvh->own_shape_bvhs = own_shape_bvhs;
 
@@ -2704,9 +2693,8 @@ void refit_bvh(bvh_tree* bvh, int nodeid) {
         case bvh_node_type::instance: {
             for (auto i = 0; i < node->count; i++) {
                 auto idx = bvh->sorted_prim[node->start + i];
-                auto sbvh = bvh->shape_bvhs[bvh->ist_ids[idx].z];
-                node->bbox +=
-                    transform_bbox(bvh->ist_frames[idx], sbvh->nodes[0].bbox);
+                auto& ist = bvh->instances[idx];
+                node->bbox += transform_bbox(ist.frame, ist.bvh->nodes[0].bbox);
             }
         } break;
     }
@@ -2715,23 +2703,19 @@ void refit_bvh(bvh_tree* bvh, int nodeid) {
 // Recursively recomputes the node bounds for a shape bvh
 void refit_bvh(bvh_tree* bvh, const vector<vec3f>& pos,
     const vector<float>& radius, float def_radius) {
-    // set values
     bvh->pos = pos;
     bvh->radius =
         (radius.empty()) ? vector<float>(pos.size(), def_radius) : radius;
-
-    // refit
     refit_bvh(bvh, 0);
 }
 
 // Recursively recomputes the node bounds for a scene bvh
 void refit_bvh(bvh_tree* bvh, const vector<frame3f>& frames,
     const vector<frame3f>& frames_inv) {
-    // set values
-    bvh->ist_frames = frames;
-    bvh->ist_frames_inv = frames_inv;
-
-    // refit
+    for (auto i = 0; i < frames.size(); i++) {
+        bvh->instances[i].frame = frames[i];
+        bvh->instances[i].frame_inv = frames_inv[i];
+    }
     refit_bvh(bvh, 0);
 }
 
@@ -2853,15 +2837,14 @@ bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray_, bool early_exit,
             case bvh_node_type::instance: {
                 for (auto i = 0; i < node.count; i++) {
                     auto idx = bvh->sorted_prim[node.start + i];
-                    auto ids = bvh->ist_ids[idx];
-                    auto sbvh = bvh->shape_bvhs[ids.z];
-                    if (intersect_bvh(sbvh,
-                            transform_ray(bvh->ist_frames_inv[idx], ray),
-                            early_exit, ray_t, iid, sid, eid, ew)) {
+                    auto& ist = bvh->instances[idx];
+                    if (intersect_bvh(ist.bvh,
+                            transform_ray(ist.frame_inv, ray), early_exit,
+                            ray_t, iid, sid, eid, ew)) {
                         hit = true;
                         ray.tmax = ray_t;
-                        iid = ids.x;
-                        sid = ids.y;
+                        iid = ist.iid;
+                        sid = ist.sid;
                     }
                 }
             } break;
@@ -2976,15 +2959,14 @@ bool overlap_bvh(const bvh_tree* bvh, const vec3f& pos, float max_dist,
             case bvh_node_type::instance: {
                 for (auto i = 0; i < node.count; i++) {
                     auto idx = bvh->sorted_prim[node.start + i];
-                    auto ids = bvh->ist_ids[idx];
-                    auto sbvh = bvh->shape_bvhs[ids.z];
-                    if (overlap_bvh(sbvh,
-                            transform_point(bvh->ist_frames_inv[idx], pos),
-                            max_dist, early_exit, dist, iid, sid, eid, ew)) {
+                    auto& ist = bvh->instances[idx];
+                    if (overlap_bvh(ist.bvh,
+                            transform_point(ist.frame_inv, pos), max_dist,
+                            early_exit, dist, iid, sid, eid, ew)) {
                         hit = true;
                         max_dist = dist;
-                        iid = ids.x;
-                        sid = ids.y;
+                        iid = ist.iid;
+                        sid = ist.sid;
                     }
                 }
             } break;
@@ -3652,30 +3634,29 @@ bvh_tree* make_bvh(const shape* shp, float def_radius, bool equalsize) {
 bvh_tree* make_bvh(const scene* scn, float def_radius, bool equalsize) {
     // do shapes
     auto shape_bvhs = vector<bvh_tree*>();
-    auto smap = unordered_map<shape*, int>();
+    auto smap = unordered_map<shape*, bvh_tree*>();
     for (auto sgr : scn->shapes) {
         for (auto shp : sgr->shapes) {
-            smap[shp] = (int)shape_bvhs.size();
             shape_bvhs.push_back(make_bvh(shp, def_radius, equalsize));
+            smap[shp] = shape_bvhs.back();
         }
     }
 
     // tree bvh
-    auto ist_ids = vector<vec3i>();
-    auto ist_frames = vector<frame3f>();
-    auto ist_frames_inv = vector<frame3f>();
-    auto ist_bvh = vector<int>();
+    auto bists = vector<bvh_instance>();
     for (auto iid = 0; iid < scn->instances.size(); iid++) {
         auto ist = scn->instances[iid];
         for (auto sid = 0; sid < ist->shp->shapes.size(); sid++) {
-            auto shp = ist->shp->shapes.at(sid);
-            ist_ids.push_back({iid, sid, smap.at(shp)});
-            ist_frames.push_back(ist->frame);
-            ist_frames_inv.push_back(inverse(ist->frame));
+            auto bist = bvh_instance();
+            bist.frame = ist->frame;
+            bist.frame_inv = inverse(ist->frame);
+            bist.iid = iid;
+            bist.sid = sid;
+            bist.bvh = smap.at(ist->shp->shapes.at(sid));
+            bists.push_back(bist);
         }
     }
-    return make_bvh(
-        ist_ids, ist_frames, ist_frames_inv, shape_bvhs, true, equalsize);
+    return make_bvh(bists, shape_bvhs, true, equalsize);
 }
 
 // Refits a scene BVH
