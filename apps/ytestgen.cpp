@@ -33,7 +33,10 @@ void mkdir(const string& dir) {
 #ifndef _MSC_VER
     system(("mkdir -p " + dir).c_str());
 #else
-    system(("mkdir " + dir).c_str());
+    auto fdir = dir;
+    for (auto& c : fdir)
+        if (c == '/') c = '\\';
+    system(("mkdir " + fdir).c_str());
 #endif
 }
 
