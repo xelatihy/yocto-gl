@@ -13554,12 +13554,13 @@ bool draw_value_widget(gl_window* win, const string& lbl, bool& val) {
 }
 
 // Combo widget
-bool draw_combo_begin(gl_window* win, const string& lbl, const string& label) {
+bool draw_combo_widget_begin(
+    gl_window* win, const string& lbl, const string& label) {
     return ImGui::BeginCombo(lbl.c_str(), label.c_str());
 }
 
 // Combo widget
-bool draw_combo_item(
+bool draw_combo_widget_item(
     gl_window* win, const string& label, int idx, bool selected) {
     ImGui::PushID((void*)(intptr_t)idx);
     auto clicked = ImGui::Selectable(label.c_str(), selected);
@@ -13569,7 +13570,7 @@ bool draw_combo_item(
 }
 
 // Combo widget
-void draw_combo_end(gl_window* win) { ImGui::EndCombo(); }
+void draw_combo_widget_end(gl_window* win) { ImGui::EndCombo(); }
 
 // Button widget
 bool draw_button_widget(gl_window* win, const string& lbl) {
@@ -13819,9 +13820,6 @@ bool draw_elem_widgets(gl_window* win, scene* scn, texture* txt,
 
 bool draw_elem_widgets(gl_window* win, scene* scn, material* mat,
     void*& selection, const unordered_map<texture*, gl_texture>& gl_txt) {
-    auto txt_names = vector<pair<string, texture*>>{{"<none>", nullptr}};
-    for (auto txt : scn->textures) txt_names.push_back({txt->path, txt});
-
     auto edited = vector<bool>();
     draw_separator_widget(win);
     draw_label_widget(win, "name", mat->name);
@@ -13837,10 +13835,10 @@ bool draw_elem_widgets(gl_window* win, scene* scn, material* mat,
     edited.push_back(draw_color_widget(win, "kt", mat->kt));
     edited.push_back(draw_value_widget(win, "rs", mat->rs));
 
-    auto txt_widget = [&txt_names](gl_window* win, const string& lbl,
+    auto txt_widget = [scn](gl_window* win, const string& lbl,
                           texture_info& info) {
         auto edited = vector<bool>();
-        edited.push_back(draw_value_widget(win, lbl, info.txt, txt_names));
+        edited.push_back(draw_value_widget(win, lbl, info.txt, scn->textures));
         if (info.txt) {
             edited.push_back(
                 draw_value_widget(win, lbl + " wrap_s", info.wrap_s));
@@ -13866,9 +13864,6 @@ bool draw_elem_widgets(gl_window* win, scene* scn, material* mat,
 
 bool draw_elem_widgets(gl_window* win, scene* scn, shape_group* sgr,
     void*& selection, const unordered_map<texture*, gl_texture>& gl_txt) {
-    auto mat_names = vector<pair<string, material*>>{{"<none>", nullptr}};
-    for (auto mat : scn->materials) mat_names.push_back({mat->name, mat});
-
     auto edited = vector<bool>();
     draw_separator_widget(win);
     draw_label_widget(win, "name", sgr->name);
@@ -13877,7 +13872,7 @@ bool draw_elem_widgets(gl_window* win, scene* scn, shape_group* sgr,
         auto ids = " " + to_string(sid);
         draw_label_widget(win, "name" + ids, shp->name);
         edited.push_back(
-            draw_value_widget(win, "material" + ids, shp->mat, mat_names));
+            draw_value_widget(win, "material" + ids, shp->mat, scn->materials));
         draw_label_widget(win, "pos" + ids, shp->pos, true);
         draw_label_widget(win, "norm" + ids, shp->norm, true);
         draw_label_widget(win, "texcoord" + ids, shp->texcoord, true);
@@ -13912,26 +13907,20 @@ bool draw_elem_widgets(gl_window* win, scene* scn, camera* cam,
 
 bool draw_elem_widgets(gl_window* win, scene* scn, instance* ist,
     void*& selection, const unordered_map<texture*, gl_texture>& gl_txt) {
-    auto shp_names = vector<pair<string, shape_group*>>{{"<none>", nullptr}};
-    for (auto shp : scn->shapes) shp_names.push_back({shp->name, shp});
-
     auto edited = vector<bool>();
     draw_separator_widget(win);
     draw_label_widget(win, "name", ist->name);
     edited.push_back(draw_value_widget(win, "frame", ist->frame, -10, 10));
-    edited.push_back(draw_value_widget(win, "shape", ist->shp, shp_names));
+    edited.push_back(draw_value_widget(win, "shape", ist->shp, scn->shapes));
     return std::any_of(edited.begin(), edited.end(), [](auto x) { return x; });
 }
 
 bool draw_elem_widgets(gl_window* win, scene* scn, environment* env,
     void*& selection, const unordered_map<texture*, gl_texture>& gl_txt) {
-    auto txt_names = vector<pair<string, texture*>>{{"<none>", nullptr}};
-    for (auto txt : scn->textures) txt_names.push_back({txt->path, txt});
-
-    auto txt_widget = [&txt_names](gl_window* win, const string& lbl,
+    auto txt_widget = [scn](gl_window* win, const string& lbl,
                           texture_info& info) {
         auto edited = vector<bool>();
-        edited.push_back(draw_value_widget(win, lbl, info.txt, txt_names));
+        edited.push_back(draw_value_widget(win, lbl, info.txt, scn->textures));
         if (info.txt) {
             edited.push_back(
                 draw_value_widget(win, lbl + " wrap_s", info.wrap_s));
@@ -13961,35 +13950,24 @@ bool draw_elem_widgets(gl_window* win, scene* scn, environment* env,
 
 bool draw_elem_widgets(gl_window* win, scene* scn, node* nde, void*& selection,
     const unordered_map<texture*, gl_texture>& gl_txt) {
-    auto cam_names = vector<pair<string, camera*>>{{"<none>", nullptr}};
-    for (auto cam : scn->cameras) cam_names.push_back({cam->name, cam});
-    auto ist_names = vector<pair<string, instance*>>{{"<none>", nullptr}};
-    for (auto ist : scn->instances) ist_names.push_back({ist->name, ist});
-    auto env_names = vector<pair<string, environment*>>{{"<none>", nullptr}};
-    for (auto env : scn->environments) env_names.push_back({env->name, env});
-    auto nde_names = vector<pair<string, node*>>{{"<none>", nullptr}};
-    for (auto nde : scn->nodes) nde_names.push_back({nde->name, nde});
-
     auto edited = vector<bool>();
     draw_separator_widget(win);
     draw_label_widget(win, "name", nde->name);
-    edited.push_back(draw_value_widget(win, "parent", nde->parent, nde_names));
+    edited.push_back(draw_value_widget(win, "parent", nde->parent, scn->nodes));
     edited.push_back(draw_value_widget(win, "frame", nde->frame, -10, 10));
-    edited.push_back(draw_value_widget(win, "camera", nde->cam, cam_names));
-    edited.push_back(draw_value_widget(win, "instance", nde->ist, ist_names));
+    edited.push_back(draw_value_widget(win, "camera", nde->cam, scn->cameras));
     edited.push_back(
-        draw_value_widget(win, "environment", nde->env, env_names));
+        draw_value_widget(win, "instance", nde->ist, scn->instances));
+    edited.push_back(
+        draw_value_widget(win, "environment", nde->env, scn->environments));
     for (auto idx = 0; idx < nde->children_.size(); idx++)
         edited.push_back(draw_value_widget(
-            win, "child " + to_string(idx), nde->children_[idx], nde_names));
+            win, "child " + to_string(idx), nde->children_[idx], scn->nodes));
     return std::any_of(edited.begin(), edited.end(), [](auto x) { return x; });
 }
 
 bool draw_elem_widgets(gl_window* win, scene* scn, animation_group* agr,
     void*& selection, const unordered_map<texture*, gl_texture>& gl_txt) {
-    auto nde_names = vector<pair<string, node*>>{{"<none>", nullptr}};
-    for (auto nde : scn->nodes) nde_names.push_back({nde->name, nde});
-
     auto edited = vector<bool>();
     draw_separator_widget(win);
     draw_label_widget(win, "name", agr->name);
@@ -14269,155 +14247,6 @@ bool draw_scene_widgets(gl_window* win, const string& lbl, scene* scn,
         return false;
 }
 
-#if 0
-        void draw_edit_widgets(gl_window* win, scene* scn,
-            void*&  selection, const yshade_state* state) {
-            static auto shape_names =
-                vector<pair<string, int>>{{"cube", 0}, {"sphere", 1}};
-            static auto shape_type = 0;
-            static char txt_filename[1024] = "grid.png";
-
-            auto selected_ist = (instance*)nullptr;
-            auto selected_shp = (shape*)nullptr;
-            auto selected_cam = (camera*)nullptr;
-            auto selected_txt = (texture*)nullptr;
-            auto selected_mat = (material*)nullptr;
-
-            if (*selection) {
-                for (auto ptr : scn->instances)
-                    if (ptr == *selection) selected_node = ptr;
-                for (auto ptr : scn->scenes)
-                    if (ptr == *selection) selected_scene = ptr;
-                for (auto ptr : scn->meshes)
-                    if (ptr == *selection) selected_mesh = ptr;
-                for (auto ptr : scn->cameras)
-                    if (ptr == *selection) selected_cam = ptr;
-                for (auto ptr : scn->materials)
-                    if (ptr == *selection) selected_mat = ptr;
-                for (auto ptr : scn->textures)
-                    if (ptr == *selection) selected_txt = ptr;
-            }
-
-            static auto auto_parent = true;
-            draw_value_widget(win, "set parent from selection", &auto_parent);
-
-            if (draw_button_widget(win, "add mesh")) {
-                static auto count = 0;
-                auto mesh = new ygltf::mesh();
-                mesh->name = "<new mesh " + to_string(count++) + ">";
-                auto shp = new ygltf::shape();
-                mesh->shapes.push_back(shp);
-                shp->name = "<new shape " + to_string(count - 1) + ">";
-                switch (shape_type) {
-                    case 0: {
-                        make_uvcube(
-                            1, 1, shp->triangles, shp->pos, shp->norm, shp->texcoord);
-                    } break;
-                    case 1: {
-                        make_uvsphere(
-                            1, 1, shp->triangles, shp->pos, shp->norm, shp->texcoord);
-                    } break;
-                }
-                if (auto_parent && selected_node) selected_node->msh = mesh;
-                gscn->meshes.push_back(mesh);
-                *selection = mesh;
-            }
-            draw_value_widget(win, "shape type", &shape_type, shape_names);
-
-            if (draw_button_widget(win, "add camera")) {
-                static auto count = 0;
-                auto cam = new ygltf::camera();
-                cam->name = "<new camera " + to_string(count++) + ">";
-                if (auto_parent && selected_node) selected_node->cam = cam;
-                gscn->cameras.push_back(cam);
-                *selection = cam;
-            }
-
-            if (draw_button_widget(win, "add node")) {
-                static auto count = 0;
-                auto node = new ygltf::node();
-                node->name = "<new node " + to_string(count++) + ">";
-                if (auto_parent && selected_node)
-                    selected_node->children.push_back(node);
-                gscn->nodes.push_back(node);
-                *selection = node;
-            }
-
-            if (draw_button_widget(win, "add texture")) {
-                static auto count = 0;
-                auto txt = new ygltf::texture();
-                txt->name = "<new texture " + to_string(count++) + ">";
-                txt->path = txt_filename;
-                auto scn = (app_state*)get_user_pointer(win,);
-                auto dirname = yu::path::get_dirname(scn->filename);
-                try {
-                    if (yimg::is_hdr_filename(txt->path)) {
-                        txt->hdr = yimg::load_image4f(dirname + txt->path);
-                    } else {
-                        txt->ldr = yimg::load_image4b(dirname + txt->path);
-                    }
-                } catch (...) { txt->ldr = image4b(1, 1, {255, 255, 255, 255}); }
-                gscn->textures.push_back(txt);
-                *selection = txt;
-            }
-            draw_text_widget(win, "texture", txt_filename, sizeof(txt_filename));
-
-            if (draw_button_widget(win, "delete")) {
-                if (selected_cam) {
-                    for (auto node : gscn->nodes)
-                        if (node->cam == selected_cam) node->cam = nullptr;
-                    remove(gscn->cameras, selected_cam);
-                    delete selected_cam;
-                    *selection = nullptr;
-                }
-                if (selected_mesh) {
-                    for (auto node : gscn->nodes)
-                        if (node->msh == selected_mesh) node->msh = nullptr;
-                    remove(gscn->meshes, selected_mesh);
-                    delete selected_mesh;
-                    *selection = nullptr;
-                }
-                if (selected_mat) {
-                    for (auto mesh : gscn->meshes)
-                        for (auto shp : mesh->shapes)
-                            if (shp->mat == selected_mat) shp->mat = nullptr;
-                    remove(gscn->materials, selected_mat);
-                    delete selected_mat;
-                    *selection = nullptr;
-                }
-                if (selected_txt) {
-                    for (auto mat : gscn->materials) {
-                        if (mat->emission_txt == selected_txt)
-                            mat->emission_txt = nullptr;
-                        if (mat->normal_txt == selected_txt) mat->normal_txt = nullptr;
-                        if (mat->occlusion_txt == selected_txt)
-                            mat->occlusion_txt = nullptr;
-                        if (mat->metallic_roughness) {
-                            if (mat->metallic_roughness->base_txt == selected_txt)
-                                mat->metallic_roughness->base_txt = nullptr;
-                            if (mat->metallic_roughness->metallic_txt == selected_txt)
-                                mat->metallic_roughness->metallic_txt = nullptr;
-                        }
-                        if (mat->specular_glossiness) {
-                            if (mat->specular_glossiness->diffuse_txt == selected_txt)
-                                mat->specular_glossiness->diffuse_txt = nullptr;
-                            if (mat->specular_glossiness->specular_txt == selected_txt)
-                                mat->specular_glossiness->specular_txt = nullptr;
-                        }
-                    }
-                    remove(gscn->textures, selected_txt);
-                    delete selected_txt;
-                    *selection = nullptr;
-                }
-            }
-        }
-#endif
-
 }  // namespace ygl
 
-#endif
-
-// HACK to avoid compilation with MSVC2015 without dirtying code
-#ifdef constexpr
-#undef constexpr
 #endif

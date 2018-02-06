@@ -9468,12 +9468,22 @@ bool draw_color_widget(gl_window* win, const string& lbl, vec4b& val);
 bool draw_color_widget(gl_window* win, const string& lbl, vec3f& val);
 
 /// Combo widget
-bool draw_combo_begin(gl_window* win, const string& lbl, const string& label);
+bool draw_combo_widget_begin(
+    gl_window* win, const string& lbl, const string& label);
 /// Combo widget
-bool draw_combo_item(
+bool draw_combo_widget_item(
     gl_window* win, const string& label, int idx, bool selected);
 /// Combo widget
-void draw_combo_end(gl_window* win);
+void draw_combo_widget_end(gl_window* win);
+
+/// Combo widget
+template <typename T>
+bool draw_combo_widget_item(
+    gl_window* win, const string& label, int idx, T& val, const T& item) {
+    auto selected = draw_combo_widget_item(win, label, idx, val == item);
+    if (selected) val = item;
+    return selected;
+}
 
 /// Combo widget
 template <typename T, typename T1>
@@ -9483,34 +9493,62 @@ inline bool draw_value_widget(gl_window* win, const string& lbl, T& val,
     auto label = string();
     for (auto& v : vals)
         if (value_func(v) == val) label = label_func(v);
-    if (!draw_combo_begin(win, lbl, label)) return false;
+    if (!draw_combo_widget_begin(win, lbl, label)) return false;
     auto changed = false;
     for (auto i = 0; i < vals.size(); i++) {
         auto selected = val == value_func(vals[i]);
-        if (draw_combo_item(win, label_func(vals[i]), i, selected)) {
+        if (draw_combo_widget_item(win, label_func(vals[i]), i, selected)) {
             val = value_func(vals[i]);
             changed = true;
         }
     }
-    draw_combo_end(win);
+    draw_combo_widget_end(win);
     return changed;
 }
 
 /// Combo widget
 inline bool draw_value_widget(gl_window* win, const string& lbl, string& val,
     const vector<string>& labels) {
-    return draw_value_widget<string, string>(win, lbl, val, labels,
-        [](const string& v) -> string { return v; },
-        [](const string& v) -> string { return v; });
+    if (!draw_combo_widget_begin(win, lbl, val)) return false;
+    auto old_val = val;
+    for (auto i = 0; i < labels.size(); i++) {
+        draw_combo_widget_item(win, labels[i], i, val, labels[i]);
+    }
+    draw_combo_widget_end(win);
+    return val != old_val;
 }
 
 /// Combo widget
 template <typename T>
 inline bool draw_value_widget(gl_window* win, const string& lbl, T& val,
     const vector<pair<string, T>>& labels) {
-    return draw_value_widget<T, pair<string, T>>(win, lbl, val, labels,
-        [](const pair<string, T>& v) -> T { return v.second; },
-        [](const pair<string, T>& v) -> string { return v.first; });
+    auto label = string();
+    for (auto& kv : labels)
+        if (kv.second == val) label = kv.first;
+    if (!draw_combo_widget_begin(win, lbl, label)) return false;
+    auto old_val = val;
+    for (auto i = 0; i < labels.size(); i++) {
+        draw_combo_widget_item(win, labels[i].first, i, val, labels[i].second);
+    }
+    draw_combo_widget_end(win);
+    return val != old_val;
+}
+
+/// Combo widget
+template <typename T>
+inline bool draw_value_widget(gl_window* win, const string& lbl, T*& val,
+    const vector<T*>& vals, bool extra = true, T* extra_val = nullptr) {
+    if (!draw_combo_widget_begin(win, lbl, (val) ? val->name : "<none>"))
+        return false;
+    auto old_val = val;
+    if (extra)
+        draw_combo_widget_item(
+            win, (extra_val) ? extra_val->name : "<none>", -1, val, extra_val);
+    for (auto i = 0; i < vals.size(); i++) {
+        draw_combo_widget_item(win, vals[i]->name, i, val, vals[i]);
+    }
+    draw_combo_widget_end(win);
+    return val != old_val;
 }
 
 /// Bool widget
