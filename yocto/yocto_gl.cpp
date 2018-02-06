@@ -2443,19 +2443,18 @@ const int bvh_minprims = 4;
 void make_bvh_node(vector<bvh_node>& nodes, int nodeid,
     vector<int>& sorted_prims, int start, int end, const vector<bbox3f>& bboxes,
     bvh_node_type type, bool equal_size) {
-    // get node
-    auto node = &nodes.at(nodeid);
     // compute node bounds
-    node->bbox = invalid_bbox3f;
-    for (auto i = start; i < end; i++) node->bbox += bboxes[sorted_prims[i]];
+    auto& node = nodes.at(nodeid);
+    node.bbox = invalid_bbox3f;
+    for (auto i = start; i < end; i++) node.bbox += bboxes[sorted_prims[i]];
 
-    // decide whether to create a leaf
-    if (end - start <= bvh_minprims) {
-        // makes a leaf node
-        node->type = type;
-        node->start = start;
-        node->count = end - start;
-    } else {
+    // initialize as a leaf
+    node.type = type;
+    node.start = start;
+    node.count = end - start;
+
+    // try to split into two children
+    if (end - start > bvh_minprims) {
         // choose the split axis and position
         // init to default values
         auto axis = 0;
@@ -2468,12 +2467,7 @@ void make_bvh_node(vector<bvh_node>& nodes, int nodeid,
         auto centroid_size = bbox_diagonal(centroid_bbox);
 
         // check if it is not possible to split
-        if (centroid_size == zero3f) {
-            // we failed to split for some reasons
-            node->type = type;
-            node->start = start;
-            node->count = end - start;
-        } else {
+        if (centroid_size != zero3f) {
             // split along largest
             auto largest_axis = max_element(centroid_size);
 
@@ -2507,18 +2501,18 @@ void make_bvh_node(vector<bvh_node>& nodes, int nodeid,
             assert(mid > start && mid < end);
 
             // makes an internal node
-            node->type = bvh_node_type::internal;
+            node.type = bvh_node_type::internal;
             // perform the splits by preallocating the child nodes and recurring
-            node->axis = axis;
-            node->start = (int)nodes.size();
-            node->count = 2;
+            node.axis = axis;
+            node.start = (int)nodes.size();
+            node.count = 2;
             nodes.emplace_back();
             nodes.emplace_back();
             // build child nodes
-            make_bvh_node(nodes, node->start, sorted_prims, start, mid, bboxes,
+            make_bvh_node(nodes, node.start, sorted_prims, start, mid, bboxes,
                 type, equal_size);
-            make_bvh_node(nodes, node->start + 1, sorted_prims, mid, end,
-                bboxes, type, equal_size);
+            make_bvh_node(nodes, node.start + 1, sorted_prims, mid, end, bboxes,
+                type, equal_size);
         }
     }
 }
@@ -2649,52 +2643,52 @@ bvh_tree* make_bvh(const vector<bvh_instance>& instances,
 // Recursively recomputes the node bounds for a shape bvh
 void refit_bvh(bvh_tree* bvh, int nodeid) {
     // refit
-    auto node = &bvh->nodes[nodeid];
-    node->bbox = invalid_bbox3f;
-    switch (node->type) {
+    auto& node = bvh->nodes[nodeid];
+    node.bbox = invalid_bbox3f;
+    switch (node.type) {
         case bvh_node_type::internal: {
-            for (auto i = node->start; i < node->start + node->count; i++) {
+            for (auto i = node.start; i < node.start + node.count; i++) {
                 refit_bvh(bvh, i);
-                node->bbox += bvh->nodes[i].bbox;
+                node.bbox += bvh->nodes[i].bbox;
             }
         } break;
         case bvh_node_type::point: {
-            for (auto i = node->start; i < node->start + node->count; i++) {
+            for (auto i = node.start; i < node.start + node.count; i++) {
                 auto& p = bvh->points[i];
-                node->bbox += point_bbox(bvh->pos[p], bvh->radius[p]);
+                node.bbox += point_bbox(bvh->pos[p], bvh->radius[p]);
             }
         } break;
         case bvh_node_type::line: {
-            for (auto i = node->start; i < node->start + node->count; i++) {
+            for (auto i = node.start; i < node.start + node.count; i++) {
                 auto& l = bvh->lines[i];
-                node->bbox += line_bbox(bvh->pos[l.x], bvh->pos[l.y],
+                node.bbox += line_bbox(bvh->pos[l.x], bvh->pos[l.y],
                     bvh->radius[l.x], bvh->radius[l.y]);
             }
         } break;
         case bvh_node_type::triangle: {
-            for (auto i = node->start; i < node->start + node->count; i++) {
+            for (auto i = node.start; i < node.start + node.count; i++) {
                 auto& t = bvh->triangles[i];
-                node->bbox +=
+                node.bbox +=
                     triangle_bbox(bvh->pos[t.x], bvh->pos[t.y], bvh->pos[t.z]);
             }
         } break;
         case bvh_node_type::quad: {
-            for (auto i = node->start; i < node->start + node->count; i++) {
+            for (auto i = node.start; i < node.start + node.count; i++) {
                 auto& q = bvh->quads[i];
-                node->bbox += quad_bbox(
+                node.bbox += quad_bbox(
                     bvh->pos[q.x], bvh->pos[q.y], bvh->pos[q.z], bvh->pos[q.w]);
             }
         } break;
         case bvh_node_type::vertex: {
-            for (auto i = node->start; i < node->start + node->count; i++) {
+            for (auto i = node.start; i < node.start + node.count; i++) {
                 auto idx = bvh->sorted_prim[i];
-                node->bbox += point_bbox(bvh->pos[idx], bvh->radius[idx]);
+                node.bbox += point_bbox(bvh->pos[idx], bvh->radius[idx]);
             }
         } break;
         case bvh_node_type::instance: {
-            for (auto i = node->start; i < node->start + node->count; i++) {
+            for (auto i = node.start; i < node.start + node.count; i++) {
                 auto& ist = bvh->instances[i];
-                node->bbox += transform_bbox(ist.frame, ist.bvh->nodes[0].bbox);
+                node.bbox += transform_bbox(ist.frame, ist.bvh->nodes[0].bbox);
             }
         } break;
     }
