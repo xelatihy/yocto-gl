@@ -2579,27 +2579,12 @@ tuple<vector<bvh_node>, vector<int>> make_bvh_nodes(
     return {nodes, sorted_prim};
 }
 
-// Build a BVH from a set of primitives.
-bvh_tree* make_bvh(const vector<int>& points, const vector<vec2i>& lines,
-    const vector<vec3i>& triangles, const vector<vec4i>& quads,
-    const vector<vec3f>& pos, const vector<float>& radius, float def_radius,
-    bool equalsize) {
-    // allocate the bvh
-    auto bvh = new bvh_tree();
-
-    // set values
-    bvh->points = points;
-    bvh->lines = lines;
-    bvh->triangles = triangles;
-    bvh->quads = quads;
-    bvh->pos = pos;
-    bvh->radius =
-        (radius.empty()) ? vector<float>(pos.size(), def_radius) : radius;
-
+// Build a BVH from the data already set
+void make_bvh_nodes(bvh_tree* bvh, bool equal_size) {
     // get the number of primitives and the primitive type
     auto bboxes = vector<bbox3f>();
     if (!bvh->points.empty()) {
-        bboxes.reserve(points.size());
+        bboxes.reserve(bvh->points.size());
         for (auto& p : bvh->points) {
             bboxes.push_back(point_bbox(bvh->pos[p], bvh->radius[p]));
         }
@@ -2618,24 +2603,53 @@ bvh_tree* make_bvh(const vector<int>& points, const vector<vec2i>& lines,
                 triangle_bbox(bvh->pos[t.x], bvh->pos[t.y], bvh->pos[t.z]));
         }
         bvh->type = bvh_node_type::triangle;
-    } else if (!bvh->lines.empty()) {
-        bboxes.reserve(quads.size());
+    } else if (!bvh->quads.empty()) {
+        bboxes.reserve(bvh->quads.size());
         for (auto& q : bvh->quads) {
             bboxes.push_back(quad_bbox(
                 bvh->pos[q.x], bvh->pos[q.y], bvh->pos[q.z], bvh->pos[q.w]));
         }
         bvh->type = bvh_node_type::quad;
-    } else if (!bvh->lines.empty()) {
-        bboxes.reserve(lines.size());
+    } else if (!bvh->pos.empty()) {
+        bboxes.reserve(bvh->pos.size());
         for (auto i = 0; i < bvh->pos.size(); i++) {
             bboxes.push_back(point_bbox(bvh->pos[i], bvh->radius[i]));
         }
         bvh->type = bvh_node_type::vertex;
+    } else if (!bvh->ist_ids.empty()) {
+        bboxes.reserve(bvh->ist_ids.size());
+        for (auto idx = 0; idx < bvh->ist_ids.size(); idx++) {
+            auto sbvh = bvh->shape_bvhs[bvh->ist_ids[idx].z];
+            bboxes.push_back(
+                transform_bbox(bvh->ist_frames[idx], sbvh->nodes[0].bbox));
+        }
+        bvh->type = bvh_node_type::instance;
     }
 
     // make node bvh
     tie(bvh->nodes, bvh->sorted_prim) =
-        make_bvh_nodes(bboxes, bvh->type, equalsize);
+        make_bvh_nodes(bboxes, bvh->type, equal_size);
+}
+
+// Build a BVH from a set of primitives.
+bvh_tree* make_bvh(const vector<int>& points, const vector<vec2i>& lines,
+    const vector<vec3i>& triangles, const vector<vec4i>& quads,
+    const vector<vec3f>& pos, const vector<float>& radius, float def_radius,
+    bool equal_size) {
+    // allocate the bvh
+    auto bvh = new bvh_tree();
+
+    // set values
+    bvh->points = points;
+    bvh->lines = lines;
+    bvh->triangles = triangles;
+    bvh->quads = quads;
+    bvh->pos = pos;
+    bvh->radius =
+        (radius.empty()) ? vector<float>(pos.size(), def_radius) : radius;
+
+    // make bvh nodes
+    make_bvh_nodes(bvh, equal_size);
 
     // done
     return bvh;
@@ -2655,19 +2669,8 @@ bvh_tree* make_bvh(const vector<vec3i>& ids, const vector<frame3f>& frames,
     bvh->shape_bvhs = shape_bvhs;
     bvh->own_shape_bvhs = own_shape_bvhs;
 
-    // get the number of primitives and the primitive type
-    auto bboxes = vector<bbox3f>();
-    bboxes.reserve(bvh->ist_ids.size());
-    for (auto idx = 0; idx < bvh->ist_ids.size(); idx++) {
-        auto sbvh = bvh->shape_bvhs[bvh->ist_ids[idx].z];
-        bboxes.push_back(
-            transform_bbox(bvh->ist_frames[idx], sbvh->nodes[0].bbox));
-    }
-    bvh->type = bvh_node_type::instance;
-
-    // make node bvh
-    tie(bvh->nodes, bvh->sorted_prim) =
-        make_bvh_nodes(bboxes, bvh->type, equal_size);
+    // make bvh nodes
+    make_bvh_nodes(bvh, equal_size);
 
     // done
     return bvh;
