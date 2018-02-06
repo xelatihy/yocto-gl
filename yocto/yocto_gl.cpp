@@ -2436,9 +2436,8 @@ bvh_tree::~bvh_tree() {
 // data for faster hierarchy build.
 // This is internal only and should not be used externally.
 struct bvh_bound_prim {
-    bbox3f bbox;   // bounding box
-    vec3f center;  // bounding box center (for faster sort)
-    int pid;       // primitive id
+    bbox3f bbox;  // bounding box
+    int pid;      // primitive id
 };
 
 // Comparison function for each axis
@@ -2449,11 +2448,11 @@ struct bvh_bound_prim_comp {
     bvh_bound_prim_comp(int a, float m = 0) : axis(a), middle(m) {}
 
     bool operator()(const bvh_bound_prim& a, const bvh_bound_prim& b) const {
-        return a.center[axis] < b.center[axis];
+        return bbox_center(a.bbox)[axis] < bbox_center(b.bbox)[axis];
     }
 
     bool operator()(const bvh_bound_prim& a) const {
-        return a.center[axis] < middle;
+        return bbox_center(a.bbox)[axis] < middle;
     }
 };
 
@@ -2489,7 +2488,7 @@ void make_bvh_node(vector<bvh_node>& nodes, int nodeid,
         // compute primintive bounds and size
         auto centroid_bbox = invalid_bbox3f;
         for (auto i = start; i < end; i++)
-            centroid_bbox += sorted_prims[i].center;
+            centroid_bbox += bbox_center(sorted_prims[i].bbox);
         auto centroid_size = bbox_diagonal(centroid_bbox);
 
         // check if it is not possible to split
@@ -2549,7 +2548,6 @@ tuple<vector<bvh_node>, vector<int>> make_bvh_nodes(
     for (auto i = 0; i < bboxes.size(); i++) {
         bound_prims[i].pid = i;
         bound_prims[i].bbox = bboxes[i];
-        bound_prims[i].center = bbox_center(bboxes[i]);
     }
 
     // clear bvh
