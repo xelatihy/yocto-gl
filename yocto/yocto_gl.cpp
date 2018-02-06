@@ -11266,6 +11266,9 @@ unordered_map<string, test_scene_params>& test_scene_presets() {
             preset.textures.push_back(test_texture_presets().at(txt));
     }
 
+    // remove duplicates
+    for (auto& kv : presets) remove_duplicates(kv.second);
+
     return presets;
 }
 
