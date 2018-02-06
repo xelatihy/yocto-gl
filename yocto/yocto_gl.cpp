@@ -2534,21 +2534,13 @@ void make_bvh_node(vector<bvh_node>& nodes, int nodeid,
 // Build a BVH node list and sorted primitive array
 tuple<vector<bvh_node>, vector<int>> make_bvh_nodes(
     const vector<bbox3f>& bboxes, bvh_node_type type, bool equal_size) {
-    // create buonded primitived for sorting
-    auto bound_prims = vector<bvh_bound_prim>(bboxes.size());
-    for (auto i = 0; i < bboxes.size(); i++) {
-        bound_prims[i].pid = i;
-        bound_prims[i].bbox = bboxes[i];
-    }
-
-    // clear bvh
-    auto nodes = vector<bvh_node>();
-    auto sorted_prim = vector<int>();
-    sorted_prim = vector<int>(bboxes.size());
+    // create an array of primitives to sort
+    auto sorted_prim = vector<int>(bboxes.size());
     for (auto i = 0; i < bboxes.size(); i++) sorted_prim[i] = i;
 
     // allocate nodes (over-allocate now then shrink)
-    nodes.reserve(bound_prims.size() * 2);
+    auto nodes = vector<bvh_node>();
+    nodes.reserve(sorted_prim.size() * 2);
 
     // start recursive splitting
     nodes.emplace_back();
@@ -2557,14 +2549,6 @@ tuple<vector<bvh_node>, vector<int>> make_bvh_nodes(
 
     // shrink back
     nodes.shrink_to_fit();
-
-    // init sorted element arrays
-    // for shared memory, stored pointer to the external data
-    // store the sorted primitive order for BVH walk
-    // sorted_prim.resize(bound_prims.size());
-    // for (int i = 0; i < bound_prims.size(); i++) {
-    //     sorted_prim[i] = bound_prims[i].pid;
-    // }
 
     // done
     return {nodes, sorted_prim};
