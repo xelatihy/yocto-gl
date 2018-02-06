@@ -3651,13 +3651,12 @@ bvh_tree* make_bvh(const shape* shp, float def_radius, bool equalsize) {
 // Build a scene BVH
 bvh_tree* make_bvh(const scene* scn, float def_radius, bool equalsize) {
     // do shapes
-    auto shape_bvhs = vector<bvh_tree*>(scn->shapes.size());
+    auto shape_bvhs = vector<bvh_tree*>();
     auto smap = unordered_map<shape*, int>();
     for (auto sgr : scn->shapes) {
         for (auto shp : sgr->shapes) {
-            auto sid = (int)smap.size();
-            smap[shp] = sid;
-            shape_bvhs[sid] = make_bvh(shp, def_radius, equalsize);
+            smap[shp] = (int)shape_bvhs.size();
+            shape_bvhs.push_back(make_bvh(shp, def_radius, equalsize));
         }
     }
 
