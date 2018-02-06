@@ -54,19 +54,19 @@ struct {{name}} {{#base}}: {{base}}{{/base}} {
 parse_func = '''
 // Check for default value
 template <typename T>
-inline bool operator==(const glTFid<T>& a, const glTFid<T>& b) {
+bool operator==(const glTFid<T>& a, const glTFid<T>& b) {
     return (int)a == (int)b;
 }
 
 // Check for default value
 template <typename T>
-inline bool operator!=(const glTFid<T>& a, const glTFid<T>& b) {
+bool operator!=(const glTFid<T>& a, const glTFid<T>& b) {
     return (int)a != (int)b;
 }
 
 // Parse id function.
 template <typename T>
-inline void serialize(glTFid<T>& val, json& js, bool reading) {
+void serialize(glTFid<T>& val, json& js, bool reading) {
     if(reading) {
         if (!js.is_number_integer()) throw runtime_error("int expected");
         val = glTFid<T>((int)js);
@@ -76,7 +76,7 @@ inline void serialize(glTFid<T>& val, json& js, bool reading) {
 }
 
 // Parses a glTFProperty object
-inline void serialize(glTFProperty& val, json& js, bool reading) {
+void serialize(glTFProperty& val, json& js, bool reading) {
     if(reading) {
         if (!js.is_object()) throw runtime_error("object expected");
 #if YGL_GLTFJSON
@@ -98,7 +98,7 @@ parse_fmt = '''
 {{#types}}
 {{#enums}}
 // Parse a {{name}} enum
-inline void serialize({{name}}& val, json& js, bool reading) {
+void serialize({{name}}& val, json& js, bool reading) {
     static vector<pair<{{item}}, {{name}}>> table = { {{#values}} { {{enum}}, {{name}}::{{label}} },{{/values}} };
     serialize(val, js, reading, table);
 }
@@ -106,7 +106,7 @@ inline void serialize({{name}}& val, json& js, bool reading) {
 {{/enums}}
 
 // Parses a {{name}} object
-inline void serialize({{name}}& val, json& js, bool reading) {
+void serialize({{name}}& val, json& js, bool reading) {
     static auto def = {{name}}();
     serialize_obj(js, reading);
     {{#base}}serialize(({{base}}&)val, js, reading);{{/base}}

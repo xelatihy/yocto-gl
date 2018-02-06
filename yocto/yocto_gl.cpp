@@ -78,8 +78,11 @@
 //
 // ## Next
 //
-// - simplify brdf functions
 // - update documentation
+//
+// - BVH simplify build functions
+// - BVH: maybe put axis with internal
+//
 // - BUG: hair look in yitrace
 // - simplify trace_point
 //     - double sided in material functions
@@ -87,27 +90,27 @@
 //     - maybe include shape directly?
 // - remove background from point?
 // - sample background to sum all environments
+// - lines seems wrong
+// - lines epsilon in ray generation
+// - add make_offset_ray functions
+// - envmap sampling
+// - sobol and cmjs
+//
+// ## Simple denoiser
+//
+// - joint bilateral denoiser
+// - non-local means denoiser
 //
 // ## Infrastructure
 //
 // - check rotation and decompoaition of rotations
 //    - see euclideanspace.com
 //
-// ## BVH
-//
-// - consider merging axis with internal
-// - simplify build node
-//
 // ## Trace
 //
-// - lines seems wrong
-// - lines epsilon in ray generation
-// - add make_offset_ray functions
-// - envmap sampling
 // - sampler simplification
 //     https://lemire.me/blog/2017/09/18/visiting-all-values-in-an-array-exactly-once-in-random-order/
 //     https://lemire.me/blog/2017/09/26/benchmarking-algorithms-to-visit-all-values-in-an-array-in-random-order/
-// - look at simpler denoiser
 // - yitrace: check editing
 // - yitrace: consider update
 //
@@ -5798,7 +5801,7 @@ struct trace_point {
 };
 
 // Evaluates emission.
-inline vec3f trace_eval_emission(const trace_point& pt, const vec3f& wo) {
+vec3f trace_eval_emission(const trace_point& pt, const vec3f& wo) {
     if (pt.shp && !pt.shp->triangles.empty() && dot(pt.norm, wo) <= 0)
         return zero3f;
     return pt.ke;
@@ -5810,7 +5813,7 @@ inline vec3f trace_eval_emission(const trace_point& pt, const vec3f& wo) {
 // http://jcgt.org/published/0003/02/03/
 // - "Microfacet Models for Refraction through Rough Surfaces" EGSR 07
 // https://www.cs.cornell.edu/~srm/publications/EGSR07-btdf.pdf
-inline vec3f trace_eval_ggx_brdfcos(const trace_point& pt, const vec3f& wo,
+vec3f trace_eval_ggx_brdfcos(const trace_point& pt, const vec3f& wo,
     const vec3f& wi, bool delta = false) {
     auto brdfcos = zero3f;
     auto wh = normalize(wo + wi);
@@ -5839,8 +5842,8 @@ inline vec3f trace_eval_ggx_brdfcos(const trace_point& pt, const vec3f& wo,
 
 // Evaluates the BRDF scaled by the cosine of the incoming direction.
 // - uses Kajiya-Kay for hair
-inline vec3f trace_eval_kajiyakay_brdfcos(const trace_point& pt,
-    const vec3f& wo, const vec3f& wi, bool delta = false) {
+vec3f trace_eval_kajiyakay_brdfcos(const trace_point& pt, const vec3f& wo,
+    const vec3f& wi, bool delta = false) {
     auto brdfcos = zero3f;
     auto wh = normalize(wo + wi);
 
@@ -5866,7 +5869,7 @@ inline vec3f trace_eval_kajiyakay_brdfcos(const trace_point& pt,
 
 // Evaluates the BRDF scaled by the cosine of the incoming direction.
 // - uses a hack for points
-inline vec3f trace_eval_point_brdfcos(const trace_point& pt, const vec3f& wo,
+vec3f trace_eval_point_brdfcos(const trace_point& pt, const vec3f& wo,
     const vec3f& wi, bool delta = false) {
     auto brdfcos = zero3f;
 
@@ -5879,7 +5882,7 @@ inline vec3f trace_eval_point_brdfcos(const trace_point& pt, const vec3f& wo,
 }
 
 // Evaluates the BRDF scaled by the cosine of the incoming direction.
-inline vec3f trace_eval_brdfcos(const trace_point& pt, const vec3f& wo,
+vec3f trace_eval_brdfcos(const trace_point& pt, const vec3f& wo,
     const vec3f& wi, bool delta = false) {
     if (!pt.has_brdf()) return zero3f;
     if (!pt.shp->triangles.empty())
@@ -5893,7 +5896,7 @@ inline vec3f trace_eval_brdfcos(const trace_point& pt, const vec3f& wo,
 }
 
 // Compute the weight for sampling the BRDF
-inline float trace_weight_ggx_brdfcos(const trace_point& pt, const vec3f& wo,
+float trace_weight_ggx_brdfcos(const trace_point& pt, const vec3f& wo,
     const vec3f& wi, bool delta = false) {
     auto weights = pt.brdf_weights();
     auto wh = normalize(wi + wo);
@@ -5917,21 +5920,7 @@ inline float trace_weight_ggx_brdfcos(const trace_point& pt, const vec3f& wo,
 }
 
 // Compute the weight for sampling the BRDF
-inline float trace_weight_kajiyakay_brdfcos(const trace_point& pt,
-    const vec3f& wo, const vec3f& wi, bool delta = false) {
-    auto weights = pt.brdf_weights();
-
-    auto pdf = 0.0f;
-    pdf += (weights.x + weights.y) * 4 * pif;
-    if (wi == -wo) pdf += weights.z;
-
-    assert(isfinite(pdf));
-    if (!pdf) return 0;
-    return 1 / pdf;
-}
-
-// Compute the weight for sampling the BRDF
-inline float trace_weight_point_brdfcos(const trace_point& pt, const vec3f& wo,
+float trace_weight_kajiyakay_brdfcos(const trace_point& pt, const vec3f& wo,
     const vec3f& wi, bool delta = false) {
     auto weights = pt.brdf_weights();
 
@@ -5945,7 +5934,21 @@ inline float trace_weight_point_brdfcos(const trace_point& pt, const vec3f& wo,
 }
 
 // Compute the weight for sampling the BRDF
-inline float trace_weight_brdfcos(const trace_point& pt, const vec3f& wo,
+float trace_weight_point_brdfcos(const trace_point& pt, const vec3f& wo,
+    const vec3f& wi, bool delta = false) {
+    auto weights = pt.brdf_weights();
+
+    auto pdf = 0.0f;
+    pdf += (weights.x + weights.y) * 4 * pif;
+    if (wi == -wo) pdf += weights.z;
+
+    assert(isfinite(pdf));
+    if (!pdf) return 0;
+    return 1 / pdf;
+}
+
+// Compute the weight for sampling the BRDF
+float trace_weight_brdfcos(const trace_point& pt, const vec3f& wo,
     const vec3f& wi, bool delta = false) {
     if (!pt.has_brdf()) return 0;
     if (!pt.shp->triangles.empty())
@@ -5959,7 +5962,7 @@ inline float trace_weight_brdfcos(const trace_point& pt, const vec3f& wo,
 }
 
 // Picks a direction based on the BRDF
-inline tuple<vec3f, bool> trace_sample_ggx_brdfcos(
+tuple<vec3f, bool> trace_sample_ggx_brdfcos(
     const trace_point& pt, const vec3f& wo, float rnl, const vec2f& rn) {
     auto weights = pt.brdf_weights();
     auto ndo = dot(pt.norm, wo);
@@ -5993,7 +5996,7 @@ inline tuple<vec3f, bool> trace_sample_ggx_brdfcos(
 }
 
 // Picks a direction based on the BRDF
-inline tuple<vec3f, bool> trace_sample_kajiyakay_brdfcos(
+tuple<vec3f, bool> trace_sample_kajiyakay_brdfcos(
     const trace_point& pt, const vec3f& wo, float rnl, const vec2f& rn) {
     auto weights = pt.brdf_weights();
     // diffuse and specular: samnple a uniform spherical direction
@@ -6012,7 +6015,7 @@ inline tuple<vec3f, bool> trace_sample_kajiyakay_brdfcos(
 }
 
 // Picks a direction based on the BRDF
-inline tuple<vec3f, bool> trace_sample_point_brdfcos(
+tuple<vec3f, bool> trace_sample_point_brdfcos(
     const trace_point& pt, const vec3f& wo, float rnl, const vec2f& rn) {
     auto weights = pt.brdf_weights();
     // diffuse and specular: samnple a uniform spherical direction
@@ -6032,7 +6035,7 @@ inline tuple<vec3f, bool> trace_sample_point_brdfcos(
 }
 
 // Picks a direction based on the BRDF
-inline tuple<vec3f, bool> trace_sample_brdfcos(
+tuple<vec3f, bool> trace_sample_brdfcos(
     const trace_point& pt, const vec3f& wo, float rnl, const vec2f& rn) {
     if (!pt.has_brdf()) return {zero3f, false};
     if (!pt.shp->triangles.empty())
@@ -6046,7 +6049,7 @@ inline tuple<vec3f, bool> trace_sample_brdfcos(
 }
 
 // Create a point for an environment map. Resolves material with textures.
-inline trace_point trace_eval_point(const environment* env, const vec3f& wo) {
+trace_point trace_eval_point(const environment* env, const vec3f& wo) {
     auto pt = trace_point();
     pt.env = env;
     pt.pos = wo * flt_max;
@@ -6063,7 +6066,7 @@ inline trace_point trace_eval_point(const environment* env, const vec3f& wo) {
 }
 
 // Create a point for a shape. Resolves geometry and material with textures.
-inline trace_point trace_eval_point(
+trace_point trace_eval_point(
     const instance* ist, int sid, int eid, const vec4f& euv, const vec3f& wo) {
     // default material
     static auto def_material = (material*)nullptr;
@@ -6162,7 +6165,7 @@ inline trace_point trace_eval_point(
 }
 
 // Sample weight for a light point.
-inline float trace_weight_light(
+float trace_weight_light(
     const trace_lights& lights, const trace_point& lpt, const trace_point& pt) {
     if (lpt.shp) {
         auto dist = length(lpt.pos - pt.pos);
@@ -6182,13 +6185,13 @@ inline float trace_weight_light(
 }
 
 // Sample weight for a light point.
-inline float trace_weight_lights(
+float trace_weight_lights(
     const trace_lights& lights, const trace_point& lpt, const trace_point& pt) {
     return lights.lights.size() * trace_weight_light(lights, lpt, pt);
 }
 
 // Picks a point on a light.
-inline trace_point trace_sample_light(const trace_lights& lights,
+trace_point trace_sample_light(const trace_lights& lights,
     const trace_light& lgt, const trace_point& pt, float rne, const vec2f& rn) {
     if (lgt.ist) {
         auto shp = lgt.ist->shp->shapes.at(0);
@@ -6222,7 +6225,7 @@ inline trace_point trace_sample_light(const trace_lights& lights,
 }
 
 // Picks a point on a light.
-inline trace_point trace_sample_lights(const trace_lights& lights,
+trace_point trace_sample_lights(const trace_lights& lights,
     const trace_point& pt, float rnl, float rne, const vec2f& ruv) {
     auto& lgt = lights.lights.at(
         clamp((int)(rnl * lights.lights.size()), 0, (int)lights.lights.size()));
@@ -6231,7 +6234,7 @@ inline trace_point trace_sample_lights(const trace_lights& lights,
 
 // Intersects a ray with the scn and return the point (or env
 // point).
-inline trace_point trace_intersect_scene(
+trace_point trace_intersect_scene(
     const scene* scn, const bvh_tree* bvh, const ray3f& ray) {
     auto iid = 0, sid = 0, eid = 0;
     auto euv = zero4f;
@@ -6246,7 +6249,7 @@ inline trace_point trace_intersect_scene(
 }
 
 // Test occlusion
-inline vec3f trace_eval_transmission(const scene* scn, const bvh_tree* bvh,
+vec3f trace_eval_transmission(const scene* scn, const bvh_tree* bvh,
     const trace_point& pt, const trace_point& lpt, const trace_params& params) {
     if (params.shadow_notransmission) {
         auto ray = make_segment(pt.pos, lpt.pos);
@@ -6266,13 +6269,13 @@ inline vec3f trace_eval_transmission(const scene* scn, const bvh_tree* bvh,
 }
 
 // Mis weight
-inline float trace_weight_mis(float w0, float w1) {
+float trace_weight_mis(float w0, float w1) {
     if (!w0 || !w1) return 1;
     return (1 / w0) / (1 / w0 + 1 / w1);
 }
 
 // Recursive path tracing.
-inline vec3f trace_path(const scene* scn, const bvh_tree* bvh,
+vec3f trace_path(const scene* scn, const bvh_tree* bvh,
     const trace_lights& lights, const trace_point& pt_, const vec3f& wo_,
     trace_pixel& pxl, const trace_params& params) {
     auto pt = pt_;
@@ -6349,7 +6352,7 @@ inline vec3f trace_path(const scene* scn, const bvh_tree* bvh,
 }
 
 // Recursive path tracing.
-inline vec3f trace_path_nomis(const scene* scn, const bvh_tree* bvh,
+vec3f trace_path_nomis(const scene* scn, const bvh_tree* bvh,
     const trace_lights& lights, const trace_point& pt_, const vec3f& wo_,
     trace_pixel& pxl, const trace_params& params) {
     // emission
@@ -6415,7 +6418,7 @@ inline vec3f trace_path_nomis(const scene* scn, const bvh_tree* bvh,
 }
 
 // Recursive path tracing.
-inline vec3f trace_path_hack(const scene* scn, const bvh_tree* bvh,
+vec3f trace_path_hack(const scene* scn, const bvh_tree* bvh,
     const trace_lights& lights, const trace_point& pt_, const vec3f& wo_,
     trace_pixel& pxl, const trace_params& params) {
     auto pt = pt_;
@@ -6476,7 +6479,7 @@ inline vec3f trace_path_hack(const scene* scn, const bvh_tree* bvh,
 }
 
 // Direct illumination.
-inline vec3f trace_direct(const scene* scn, const bvh_tree* bvh,
+vec3f trace_direct(const scene* scn, const bvh_tree* bvh,
     const trace_lights& lights, const trace_point& pt, const vec3f& wo,
     int bounce, trace_pixel& pxl, const trace_params& params) {
     // emission
@@ -6522,14 +6525,14 @@ inline vec3f trace_direct(const scene* scn, const bvh_tree* bvh,
 }
 
 // Direct illumination.
-inline vec3f trace_direct(const scene* scn, const bvh_tree* bvh,
+vec3f trace_direct(const scene* scn, const bvh_tree* bvh,
     const trace_lights& lights, const trace_point& pt, const vec3f& wo,
     trace_pixel& pxl, const trace_params& params) {
     return trace_direct(scn, bvh, lights, pt, wo, 0, pxl, params);
 }
 
 // Eyelight for quick previewing.
-inline vec3f trace_eyelight(const scene* scn, const bvh_tree* bvh,
+vec3f trace_eyelight(const scene* scn, const bvh_tree* bvh,
     const trace_lights& lights, const trace_point& pt, const vec3f& wo,
     int bounce, trace_pixel& pxl, const trace_params& params) {
     // emission
@@ -6552,28 +6555,28 @@ inline vec3f trace_eyelight(const scene* scn, const bvh_tree* bvh,
 }
 
 // Eyelight for quick previewing.
-inline vec3f trace_eyelight(const scene* scn, const bvh_tree* bvh,
+vec3f trace_eyelight(const scene* scn, const bvh_tree* bvh,
     const trace_lights& lights, const trace_point& pt, const vec3f& wo,
     trace_pixel& pxl, const trace_params& params) {
     return trace_eyelight(scn, bvh, lights, pt, wo, 0, pxl, params);
 }
 
 // Debug previewing.
-inline vec3f trace_debug_normal(const scene* scn, const bvh_tree* bvh,
+vec3f trace_debug_normal(const scene* scn, const bvh_tree* bvh,
     const trace_lights& lights, const trace_point& pt, const vec3f& wo,
     trace_pixel& pxl, const trace_params& params) {
     return pt.norm * 0.5f + vec3f{0.5f, 0.5f, 0.5f};
 }
 
 // Debug previewing.
-inline vec3f trace_debug_albedo(const scene* scn, const bvh_tree* bvh,
+vec3f trace_debug_albedo(const scene* scn, const bvh_tree* bvh,
     const trace_lights& lights, const trace_point& pt, const vec3f& wo,
     trace_pixel& pxl, const trace_params& params) {
     return pt.rho();
 }
 
 // Debug previewing.
-inline vec3f trace_debug_texcoord(const scene* scn, const bvh_tree* bvh,
+vec3f trace_debug_texcoord(const scene* scn, const bvh_tree* bvh,
     const trace_lights& lights, const trace_point& pt, const vec3f& wo,
     trace_pixel& pxl, const trace_params& params) {
     return {pt.texcoord.x, pt.texcoord.y, 0};
@@ -6941,7 +6944,7 @@ inline void parse_texture(stringstream& ss, obj_texture_info& info,
 }
 
 // Load MTL
-inline vector<obj_material*> load_mtl(
+vector<obj_material*> load_mtl(
     const string& filename, bool flip_tr, vector<string>& textures) {
     // clear materials
     auto materials = vector<obj_material*>();
@@ -7053,8 +7056,7 @@ inline vector<obj_material*> load_mtl(
 }
 
 // Loads textures for an scene.
-inline void load_textures(
-    obj_scene* asset, const string& dirname, bool skip_missing) {
+void load_textures(obj_scene* asset, const string& dirname, bool skip_missing) {
     for (auto txt : asset->textures) {
         auto filename = dirname + txt->path;
         for (auto& c : filename)
@@ -7098,8 +7100,8 @@ inline void obj_parse_vertlist(
 }
 
 // Loads an OBJ
-inline obj_scene* load_obj(const string& filename, bool load_txt,
-    bool skip_missing, bool flip_texcoord, bool flip_tr) {
+obj_scene* load_obj(const string& filename, bool load_txt, bool skip_missing,
+    bool flip_texcoord, bool flip_tr) {
     // clear obj
     auto asset = unique_ptr<obj_scene>(new obj_scene());
 
@@ -7398,8 +7400,8 @@ inline void obj_dump_objverts(
 }
 
 // Save an MTL file
-inline void save_mtl(const string& filename,
-    const vector<obj_material*>& materials, bool flip_tr) {
+void save_mtl(const string& filename, const vector<obj_material*>& materials,
+    bool flip_tr) {
     // open file
     auto fs = fstream(filename, ios_base::out);
     if (!fs) throw runtime_error("cannot open filename " + filename);
@@ -7443,7 +7445,7 @@ inline void save_mtl(const string& filename,
 }
 
 // Loads textures for an scene.
-inline void save_textures(
+void save_textures(
     const obj_scene* asset, const string& dirname, bool skip_missing) {
     for (auto txt : asset->textures) {
         if (txt->datab.empty() && txt->dataf.empty()) continue;
@@ -7469,8 +7471,8 @@ inline void save_textures(
 }
 
 // Save an OBJ
-inline void save_obj(const string& filename, const obj_scene* asset,
-    bool save_txt, bool skip_missing, bool flip_texcoord, bool flip_tr) {
+void save_obj(const string& filename, const obj_scene* asset, bool save_txt,
+    bool skip_missing, bool flip_texcoord, bool flip_tr) {
     // open file
     auto fs = fstream(filename, ios_base::out);
     if (!fs) throw runtime_error("cannot open filename " + filename);
@@ -7607,7 +7609,7 @@ struct obj_vertex_hash {
 };
 
 // Flattens an scene
-inline obj_mesh* get_mesh(
+obj_mesh* get_mesh(
     const obj_scene* model, const obj_object& oshape, bool facet_non_smooth) {
     // convert meshes
     auto msh = new obj_mesh();
@@ -7767,7 +7769,7 @@ namespace ygl {
 using json = nlohmann::json;
 
 // Parse int function.
-inline void serialize(int& val, json& js, bool reading) {
+void serialize(int& val, json& js, bool reading) {
     if (reading) {
         if (!js.is_number_integer()) throw runtime_error("integer expected");
         val = js;
@@ -7777,7 +7779,7 @@ inline void serialize(int& val, json& js, bool reading) {
 }
 
 // Parse float function.
-inline void serialize(float& val, json& js, bool reading) {
+void serialize(float& val, json& js, bool reading) {
     if (reading) {
         if (!js.is_number()) throw runtime_error("number expected");
         val = js;
@@ -7787,7 +7789,7 @@ inline void serialize(float& val, json& js, bool reading) {
 }
 
 // Parse bool function.
-inline void serialize(bool& val, json& js, bool reading) {
+void serialize(bool& val, json& js, bool reading) {
     if (reading) {
         if (!js.is_boolean()) throw runtime_error("bool expected");
         val = js;
@@ -7797,7 +7799,7 @@ inline void serialize(bool& val, json& js, bool reading) {
 }
 
 // Parse std::string function.
-inline void serialize(string& val, json& js, bool reading) {
+void serialize(string& val, json& js, bool reading) {
     if (reading) {
         if (!js.is_string()) throw runtime_error("string expected");
         val = js;
@@ -7807,7 +7809,7 @@ inline void serialize(string& val, json& js, bool reading) {
 }
 
 // Parse json function.
-inline void serialize(json& val, json& js, bool reading) {
+void serialize(json& val, json& js, bool reading) {
     if (reading) {
         val = js;
     } else {
@@ -7817,7 +7819,7 @@ inline void serialize(json& val, json& js, bool reading) {
 
 // Parse support function.
 template <typename T>
-inline void serialize(T*& val, json& js, bool reading) {
+void serialize(T*& val, json& js, bool reading) {
     if (reading) {
         if (js.is_null()) {
             val = nullptr;
@@ -7838,7 +7840,7 @@ inline void serialize(T*& val, json& js, bool reading) {
 
 // Parse support function.
 template <typename T>
-inline void serialize(vector<T>& vals, json& js, bool reading) {
+void serialize(vector<T>& vals, json& js, bool reading) {
     if (reading) {
         if (!js.is_array()) throw runtime_error("array expected");
         vals.resize(js.size());
@@ -7857,7 +7859,7 @@ inline void serialize(vector<T>& vals, json& js, bool reading) {
 
 // Parse support function.
 template <typename T, size_t N>
-inline void serialize(array<T, N>& vals, json& js, bool reading) {
+void serialize(array<T, N>& vals, json& js, bool reading) {
     if (reading) {
         if (!js.is_array()) throw runtime_error("array expected");
         if (N != js.size()) throw runtime_error("wrong array size");
@@ -7870,7 +7872,7 @@ inline void serialize(array<T, N>& vals, json& js, bool reading) {
 
 // Parse support function.
 template <typename T>
-inline void serialize(map<string, T>& vals, json& js, bool reading) {
+void serialize(map<string, T>& vals, json& js, bool reading) {
     if (reading) {
         if (!js.is_object()) throw runtime_error("object expected");
         for (auto kv = js.begin(); kv != js.end(); ++kv) {
@@ -7884,7 +7886,7 @@ inline void serialize(map<string, T>& vals, json& js, bool reading) {
 
 // Parse support function.
 template <typename T, typename T1>
-inline void serialize(
+void serialize(
     T& val, json& js, bool reading, const vector<pair<T1, T>>& table) {
     if (reading) {
         auto v = T1();
@@ -7915,30 +7917,30 @@ inline void serialize(
 
 // Parse support function.
 template <typename T, int N>
-inline void serialize(vec<T, N>& vals, json& js, bool reading) {
+void serialize(vec<T, N>& vals, json& js, bool reading) {
     serialize((array<T, N>&)vals, js, reading);
 }
 
 // Parse support function.
 template <typename T, int N>
-inline void serialize(quat<T, N>& vals, json& js, bool reading) {
+void serialize(quat<T, N>& vals, json& js, bool reading) {
     serialize((array<T, N>&)vals, js, reading);
 }
 
 // Parse support function.
 template <typename T, int N>
-inline void serialize(mat<T, N>& vals, json& js, bool reading) {
+void serialize(mat<T, N>& vals, json& js, bool reading) {
     serialize((array<T, N * N>&)vals, js, reading);
 }
 
 // Parse support function.
 template <typename T, int N>
-inline void serialize(frame<T, N>& vals, json& js, bool reading) {
+void serialize(frame<T, N>& vals, json& js, bool reading) {
     serialize((array<T, N*(N + 1)>&)vals, js, reading);
 }
 
 // Parse support function.
-inline void serialize_obj(json& js, bool reading) {
+void serialize_obj(json& js, bool reading) {
     if (reading) {
         if (!js.is_object()) throw runtime_error("object expected");
     } else {
@@ -7948,7 +7950,7 @@ inline void serialize_obj(json& js, bool reading) {
 
 // Parse support function.
 template <typename T>
-inline void serialize_attr(T& val, json& js, const char* name, bool reading,
+void serialize_attr(T& val, json& js, const char* name, bool reading,
     bool required = true, const T& def = {}) {
     if (reading) {
         if (required) {
@@ -7967,8 +7969,8 @@ inline void serialize_attr(T& val, json& js, const char* name, bool reading,
 
 // Dump support function.
 template <typename T>
-inline void serialize_attr(vector<T>& val, json& js, const char* name,
-    bool reading, bool required = true, const vector<T>& def = {}) {
+void serialize_attr(vector<T>& val, json& js, const char* name, bool reading,
+    bool required = true, const vector<T>& def = {}) {
     if (reading) {
         if (required) {
             if (!js.count(name)) throw runtime_error("missing value");
@@ -7988,19 +7990,19 @@ inline void serialize_attr(vector<T>& val, json& js, const char* name,
 
 // Check for default value
 template <typename T>
-inline bool operator==(const glTFid<T>& a, const glTFid<T>& b) {
+bool operator==(const glTFid<T>& a, const glTFid<T>& b) {
     return (int)a == (int)b;
 }
 
 // Check for default value
 template <typename T>
-inline bool operator!=(const glTFid<T>& a, const glTFid<T>& b) {
+bool operator!=(const glTFid<T>& a, const glTFid<T>& b) {
     return (int)a != (int)b;
 }
 
 // Parse id function.
 template <typename T>
-inline void serialize(glTFid<T>& val, json& js, bool reading) {
+void serialize(glTFid<T>& val, json& js, bool reading) {
     if (reading) {
         if (!js.is_number_integer()) throw runtime_error("int expected");
         val = glTFid<T>((int)js);
@@ -8010,7 +8012,7 @@ inline void serialize(glTFid<T>& val, json& js, bool reading) {
 }
 
 // Parses a glTFProperty object
-inline void serialize(glTFProperty& val, json& js, bool reading) {
+void serialize(glTFProperty& val, json& js, bool reading) {
     if (reading) {
         if (!js.is_object()) throw runtime_error("object expected");
 #if YGL_GLTFJSON
@@ -8029,14 +8031,14 @@ inline void serialize(glTFProperty& val, json& js, bool reading) {
 }
 
 // Parses a glTFChildOfRootProperty object
-inline void serialize(glTFChildOfRootProperty& val, json& js, bool reading) {
+void serialize(glTFChildOfRootProperty& val, json& js, bool reading) {
     static auto def = glTFChildOfRootProperty();
     serialize_obj(js, reading);
     serialize((glTFProperty&)val, js, reading);
     serialize_attr(val.name, js, "name", reading, false, def.name);
 }
 // Parse a glTFAccessorSparseIndicesComponentType enum
-inline void serialize(
+void serialize(
     glTFAccessorSparseIndicesComponentType& val, json& js, bool reading) {
     static vector<pair<int, glTFAccessorSparseIndicesComponentType>> table = {
         {5121, glTFAccessorSparseIndicesComponentType::UnsignedByte},
@@ -8047,7 +8049,7 @@ inline void serialize(
 }
 
 // Parses a glTFAccessorSparseIndices object
-inline void serialize(glTFAccessorSparseIndices& val, json& js, bool reading) {
+void serialize(glTFAccessorSparseIndices& val, json& js, bool reading) {
     static auto def = glTFAccessorSparseIndices();
     serialize_obj(js, reading);
     serialize((glTFProperty&)val, js, reading);
@@ -8060,7 +8062,7 @@ inline void serialize(glTFAccessorSparseIndices& val, json& js, bool reading) {
 }
 
 // Parses a glTFAccessorSparseValues object
-inline void serialize(glTFAccessorSparseValues& val, json& js, bool reading) {
+void serialize(glTFAccessorSparseValues& val, json& js, bool reading) {
     static auto def = glTFAccessorSparseValues();
     serialize_obj(js, reading);
     serialize((glTFProperty&)val, js, reading);
@@ -8071,7 +8073,7 @@ inline void serialize(glTFAccessorSparseValues& val, json& js, bool reading) {
 }
 
 // Parses a glTFAccessorSparse object
-inline void serialize(glTFAccessorSparse& val, json& js, bool reading) {
+void serialize(glTFAccessorSparse& val, json& js, bool reading) {
     static auto def = glTFAccessorSparse();
     serialize_obj(js, reading);
     serialize((glTFProperty&)val, js, reading);
@@ -8080,7 +8082,7 @@ inline void serialize(glTFAccessorSparse& val, json& js, bool reading) {
     serialize_attr(val.values, js, "values", reading, true, def.values);
 }
 // Parse a glTFAccessorComponentType enum
-inline void serialize(glTFAccessorComponentType& val, json& js, bool reading) {
+void serialize(glTFAccessorComponentType& val, json& js, bool reading) {
     static vector<pair<int, glTFAccessorComponentType>> table = {
         {5120, glTFAccessorComponentType::Byte},
         {5121, glTFAccessorComponentType::UnsignedByte},
@@ -8093,7 +8095,7 @@ inline void serialize(glTFAccessorComponentType& val, json& js, bool reading) {
 }
 
 // Parse a glTFAccessorType enum
-inline void serialize(glTFAccessorType& val, json& js, bool reading) {
+void serialize(glTFAccessorType& val, json& js, bool reading) {
     static vector<pair<string, glTFAccessorType>> table = {
         {"SCALAR", glTFAccessorType::Scalar},
         {"VEC2", glTFAccessorType::Vec2},
@@ -8107,7 +8109,7 @@ inline void serialize(glTFAccessorType& val, json& js, bool reading) {
 }
 
 // Parses a glTFAccessor object
-inline void serialize(glTFAccessor& val, json& js, bool reading) {
+void serialize(glTFAccessor& val, json& js, bool reading) {
     static auto def = glTFAccessor();
     serialize_obj(js, reading);
     serialize((glTFChildOfRootProperty&)val, js, reading);
@@ -8126,8 +8128,7 @@ inline void serialize(glTFAccessor& val, json& js, bool reading) {
     serialize_attr(val.sparse, js, "sparse", reading, false, def.sparse);
 }
 // Parse a glTFAnimationChannelTargetPath enum
-inline void serialize(
-    glTFAnimationChannelTargetPath& val, json& js, bool reading) {
+void serialize(glTFAnimationChannelTargetPath& val, json& js, bool reading) {
     static vector<pair<string, glTFAnimationChannelTargetPath>> table = {
         {"translation", glTFAnimationChannelTargetPath::Translation},
         {"rotation", glTFAnimationChannelTargetPath::Rotation},
@@ -8138,7 +8139,7 @@ inline void serialize(
 }
 
 // Parses a glTFAnimationChannelTarget object
-inline void serialize(glTFAnimationChannelTarget& val, json& js, bool reading) {
+void serialize(glTFAnimationChannelTarget& val, json& js, bool reading) {
     static auto def = glTFAnimationChannelTarget();
     serialize_obj(js, reading);
     serialize((glTFProperty&)val, js, reading);
@@ -8147,7 +8148,7 @@ inline void serialize(glTFAnimationChannelTarget& val, json& js, bool reading) {
 }
 
 // Parses a glTFAnimationChannel object
-inline void serialize(glTFAnimationChannel& val, json& js, bool reading) {
+void serialize(glTFAnimationChannel& val, json& js, bool reading) {
     static auto def = glTFAnimationChannel();
     serialize_obj(js, reading);
     serialize((glTFProperty&)val, js, reading);
@@ -8155,8 +8156,7 @@ inline void serialize(glTFAnimationChannel& val, json& js, bool reading) {
     serialize_attr(val.target, js, "target", reading, true, def.target);
 }
 // Parse a glTFAnimationSamplerInterpolation enum
-inline void serialize(
-    glTFAnimationSamplerInterpolation& val, json& js, bool reading) {
+void serialize(glTFAnimationSamplerInterpolation& val, json& js, bool reading) {
     static vector<pair<string, glTFAnimationSamplerInterpolation>> table = {
         {"LINEAR", glTFAnimationSamplerInterpolation::Linear},
         {"STEP", glTFAnimationSamplerInterpolation::Step},
@@ -8168,7 +8168,7 @@ inline void serialize(
 }
 
 // Parses a glTFAnimationSampler object
-inline void serialize(glTFAnimationSampler& val, json& js, bool reading) {
+void serialize(glTFAnimationSampler& val, json& js, bool reading) {
     static auto def = glTFAnimationSampler();
     serialize_obj(js, reading);
     serialize((glTFProperty&)val, js, reading);
@@ -8179,7 +8179,7 @@ inline void serialize(glTFAnimationSampler& val, json& js, bool reading) {
 }
 
 // Parses a glTFAnimation object
-inline void serialize(glTFAnimation& val, json& js, bool reading) {
+void serialize(glTFAnimation& val, json& js, bool reading) {
     static auto def = glTFAnimation();
     serialize_obj(js, reading);
     serialize((glTFChildOfRootProperty&)val, js, reading);
@@ -8188,7 +8188,7 @@ inline void serialize(glTFAnimation& val, json& js, bool reading) {
 }
 
 // Parses a glTFAsset object
-inline void serialize(glTFAsset& val, json& js, bool reading) {
+void serialize(glTFAsset& val, json& js, bool reading) {
     static auto def = glTFAsset();
     serialize_obj(js, reading);
     serialize((glTFProperty&)val, js, reading);
@@ -8202,7 +8202,7 @@ inline void serialize(glTFAsset& val, json& js, bool reading) {
 }
 
 // Parses a glTFBuffer object
-inline void serialize(glTFBuffer& val, json& js, bool reading) {
+void serialize(glTFBuffer& val, json& js, bool reading) {
     static auto def = glTFBuffer();
     serialize_obj(js, reading);
     serialize((glTFChildOfRootProperty&)val, js, reading);
@@ -8211,7 +8211,7 @@ inline void serialize(glTFBuffer& val, json& js, bool reading) {
         val.byteLength, js, "byteLength", reading, true, def.byteLength);
 }
 // Parse a glTFBufferViewTarget enum
-inline void serialize(glTFBufferViewTarget& val, json& js, bool reading) {
+void serialize(glTFBufferViewTarget& val, json& js, bool reading) {
     static vector<pair<int, glTFBufferViewTarget>> table = {
         {34962, glTFBufferViewTarget::ArrayBuffer},
         {34963, glTFBufferViewTarget::ElementArrayBuffer},
@@ -8220,7 +8220,7 @@ inline void serialize(glTFBufferViewTarget& val, json& js, bool reading) {
 }
 
 // Parses a glTFBufferView object
-inline void serialize(glTFBufferView& val, json& js, bool reading) {
+void serialize(glTFBufferView& val, json& js, bool reading) {
     static auto def = glTFBufferView();
     serialize_obj(js, reading);
     serialize((glTFChildOfRootProperty&)val, js, reading);
@@ -8235,7 +8235,7 @@ inline void serialize(glTFBufferView& val, json& js, bool reading) {
 }
 
 // Parses a glTFCameraOrthographic object
-inline void serialize(glTFCameraOrthographic& val, json& js, bool reading) {
+void serialize(glTFCameraOrthographic& val, json& js, bool reading) {
     static auto def = glTFCameraOrthographic();
     serialize_obj(js, reading);
     serialize((glTFProperty&)val, js, reading);
@@ -8246,7 +8246,7 @@ inline void serialize(glTFCameraOrthographic& val, json& js, bool reading) {
 }
 
 // Parses a glTFCameraPerspective object
-inline void serialize(glTFCameraPerspective& val, json& js, bool reading) {
+void serialize(glTFCameraPerspective& val, json& js, bool reading) {
     static auto def = glTFCameraPerspective();
     serialize_obj(js, reading);
     serialize((glTFProperty&)val, js, reading);
@@ -8257,7 +8257,7 @@ inline void serialize(glTFCameraPerspective& val, json& js, bool reading) {
     serialize_attr(val.znear, js, "znear", reading, true, def.znear);
 }
 // Parse a glTFCameraType enum
-inline void serialize(glTFCameraType& val, json& js, bool reading) {
+void serialize(glTFCameraType& val, json& js, bool reading) {
     static vector<pair<string, glTFCameraType>> table = {
         {"perspective", glTFCameraType::Perspective},
         {"orthographic", glTFCameraType::Orthographic},
@@ -8266,7 +8266,7 @@ inline void serialize(glTFCameraType& val, json& js, bool reading) {
 }
 
 // Parses a glTFCamera object
-inline void serialize(glTFCamera& val, json& js, bool reading) {
+void serialize(glTFCamera& val, json& js, bool reading) {
     static auto def = glTFCamera();
     serialize_obj(js, reading);
     serialize((glTFChildOfRootProperty&)val, js, reading);
@@ -8277,7 +8277,7 @@ inline void serialize(glTFCamera& val, json& js, bool reading) {
     serialize_attr(val.type, js, "type", reading, true, def.type);
 }
 // Parse a glTFImageMimeType enum
-inline void serialize(glTFImageMimeType& val, json& js, bool reading) {
+void serialize(glTFImageMimeType& val, json& js, bool reading) {
     static vector<pair<string, glTFImageMimeType>> table = {
         {"image/jpeg", glTFImageMimeType::ImageJpeg},
         {"image/png", glTFImageMimeType::ImagePng},
@@ -8286,7 +8286,7 @@ inline void serialize(glTFImageMimeType& val, json& js, bool reading) {
 }
 
 // Parses a glTFImage object
-inline void serialize(glTFImage& val, json& js, bool reading) {
+void serialize(glTFImage& val, json& js, bool reading) {
     static auto def = glTFImage();
     serialize_obj(js, reading);
     serialize((glTFChildOfRootProperty&)val, js, reading);
@@ -8297,7 +8297,7 @@ inline void serialize(glTFImage& val, json& js, bool reading) {
 }
 
 // Parses a glTFTextureInfo object
-inline void serialize(glTFTextureInfo& val, json& js, bool reading) {
+void serialize(glTFTextureInfo& val, json& js, bool reading) {
     static auto def = glTFTextureInfo();
     serialize_obj(js, reading);
     serialize((glTFProperty&)val, js, reading);
@@ -8306,7 +8306,7 @@ inline void serialize(glTFTextureInfo& val, json& js, bool reading) {
 }
 
 // Parses a glTFTexture object
-inline void serialize(glTFTexture& val, json& js, bool reading) {
+void serialize(glTFTexture& val, json& js, bool reading) {
     static auto def = glTFTexture();
     serialize_obj(js, reading);
     serialize((glTFChildOfRootProperty&)val, js, reading);
@@ -8315,8 +8315,7 @@ inline void serialize(glTFTexture& val, json& js, bool reading) {
 }
 
 // Parses a glTFMaterialNormalTextureInfo object
-inline void serialize(
-    glTFMaterialNormalTextureInfo& val, json& js, bool reading) {
+void serialize(glTFMaterialNormalTextureInfo& val, json& js, bool reading) {
     static auto def = glTFMaterialNormalTextureInfo();
     serialize_obj(js, reading);
     serialize((glTFTextureInfo&)val, js, reading);
@@ -8324,8 +8323,7 @@ inline void serialize(
 }
 
 // Parses a glTFMaterialOcclusionTextureInfo object
-inline void serialize(
-    glTFMaterialOcclusionTextureInfo& val, json& js, bool reading) {
+void serialize(glTFMaterialOcclusionTextureInfo& val, json& js, bool reading) {
     static auto def = glTFMaterialOcclusionTextureInfo();
     serialize_obj(js, reading);
     serialize((glTFTextureInfo&)val, js, reading);
@@ -8333,8 +8331,7 @@ inline void serialize(
 }
 
 // Parses a glTFMaterialPbrMetallicRoughness object
-inline void serialize(
-    glTFMaterialPbrMetallicRoughness& val, json& js, bool reading) {
+void serialize(glTFMaterialPbrMetallicRoughness& val, json& js, bool reading) {
     static auto def = glTFMaterialPbrMetallicRoughness();
     serialize_obj(js, reading);
     serialize((glTFProperty&)val, js, reading);
@@ -8351,8 +8348,7 @@ inline void serialize(
 }
 
 // Parses a glTFMaterialPbrSpecularGlossiness object
-inline void serialize(
-    glTFMaterialPbrSpecularGlossiness& val, json& js, bool reading) {
+void serialize(glTFMaterialPbrSpecularGlossiness& val, json& js, bool reading) {
     static auto def = glTFMaterialPbrSpecularGlossiness();
     serialize_obj(js, reading);
     serialize((glTFProperty&)val, js, reading);
@@ -8369,7 +8365,7 @@ inline void serialize(
         def.specularGlossinessTexture);
 }
 // Parse a glTFMaterialAlphaMode enum
-inline void serialize(glTFMaterialAlphaMode& val, json& js, bool reading) {
+void serialize(glTFMaterialAlphaMode& val, json& js, bool reading) {
     static vector<pair<string, glTFMaterialAlphaMode>> table = {
         {"OPAQUE", glTFMaterialAlphaMode::Opaque},
         {"MASK", glTFMaterialAlphaMode::Mask},
@@ -8379,7 +8375,7 @@ inline void serialize(glTFMaterialAlphaMode& val, json& js, bool reading) {
 }
 
 // Parses a glTFMaterial object
-inline void serialize(glTFMaterial& val, json& js, bool reading) {
+void serialize(glTFMaterial& val, json& js, bool reading) {
     static auto def = glTFMaterial();
     serialize_obj(js, reading);
     serialize((glTFChildOfRootProperty&)val, js, reading);
@@ -8416,7 +8412,7 @@ inline void serialize(glTFMaterial& val, json& js, bool reading) {
     }
 }
 // Parse a glTFMeshPrimitiveMode enum
-inline void serialize(glTFMeshPrimitiveMode& val, json& js, bool reading) {
+void serialize(glTFMeshPrimitiveMode& val, json& js, bool reading) {
     static vector<pair<int, glTFMeshPrimitiveMode>> table = {
         {0, glTFMeshPrimitiveMode::Points},
         {1, glTFMeshPrimitiveMode::Lines},
@@ -8430,7 +8426,7 @@ inline void serialize(glTFMeshPrimitiveMode& val, json& js, bool reading) {
 }
 
 // Parses a glTFMeshPrimitive object
-inline void serialize(glTFMeshPrimitive& val, json& js, bool reading) {
+void serialize(glTFMeshPrimitive& val, json& js, bool reading) {
     static auto def = glTFMeshPrimitive();
     serialize_obj(js, reading);
     serialize((glTFProperty&)val, js, reading);
@@ -8443,7 +8439,7 @@ inline void serialize(glTFMeshPrimitive& val, json& js, bool reading) {
 }
 
 // Parses a glTFMesh object
-inline void serialize(glTFMesh& val, json& js, bool reading) {
+void serialize(glTFMesh& val, json& js, bool reading) {
     static auto def = glTFMesh();
     serialize_obj(js, reading);
     serialize((glTFChildOfRootProperty&)val, js, reading);
@@ -8453,7 +8449,7 @@ inline void serialize(glTFMesh& val, json& js, bool reading) {
 }
 
 // Parses a glTFNode object
-inline void serialize(glTFNode& val, json& js, bool reading) {
+void serialize(glTFNode& val, json& js, bool reading) {
     static auto def = glTFNode();
     serialize_obj(js, reading);
     serialize((glTFChildOfRootProperty&)val, js, reading);
@@ -8469,7 +8465,7 @@ inline void serialize(glTFNode& val, json& js, bool reading) {
     serialize_attr(val.weights, js, "weights", reading, false, def.weights);
 }
 // Parse a glTFSamplerMagFilter enum
-inline void serialize(glTFSamplerMagFilter& val, json& js, bool reading) {
+void serialize(glTFSamplerMagFilter& val, json& js, bool reading) {
     static vector<pair<int, glTFSamplerMagFilter>> table = {
         {9728, glTFSamplerMagFilter::Nearest},
         {9729, glTFSamplerMagFilter::Linear},
@@ -8478,7 +8474,7 @@ inline void serialize(glTFSamplerMagFilter& val, json& js, bool reading) {
 }
 
 // Parse a glTFSamplerMinFilter enum
-inline void serialize(glTFSamplerMinFilter& val, json& js, bool reading) {
+void serialize(glTFSamplerMinFilter& val, json& js, bool reading) {
     static vector<pair<int, glTFSamplerMinFilter>> table = {
         {9728, glTFSamplerMinFilter::Nearest},
         {9729, glTFSamplerMinFilter::Linear},
@@ -8491,7 +8487,7 @@ inline void serialize(glTFSamplerMinFilter& val, json& js, bool reading) {
 }
 
 // Parse a glTFSamplerWrapS enum
-inline void serialize(glTFSamplerWrapS& val, json& js, bool reading) {
+void serialize(glTFSamplerWrapS& val, json& js, bool reading) {
     static vector<pair<int, glTFSamplerWrapS>> table = {
         {33071, glTFSamplerWrapS::ClampToEdge},
         {33648, glTFSamplerWrapS::MirroredRepeat},
@@ -8501,7 +8497,7 @@ inline void serialize(glTFSamplerWrapS& val, json& js, bool reading) {
 }
 
 // Parse a glTFSamplerWrapT enum
-inline void serialize(glTFSamplerWrapT& val, json& js, bool reading) {
+void serialize(glTFSamplerWrapT& val, json& js, bool reading) {
     static vector<pair<int, glTFSamplerWrapT>> table = {
         {33071, glTFSamplerWrapT::ClampToEdge},
         {33648, glTFSamplerWrapT::MirroredRepeat},
@@ -8511,7 +8507,7 @@ inline void serialize(glTFSamplerWrapT& val, json& js, bool reading) {
 }
 
 // Parses a glTFSampler object
-inline void serialize(glTFSampler& val, json& js, bool reading) {
+void serialize(glTFSampler& val, json& js, bool reading) {
     static auto def = glTFSampler();
     serialize_obj(js, reading);
     serialize((glTFChildOfRootProperty&)val, js, reading);
@@ -8524,7 +8520,7 @@ inline void serialize(glTFSampler& val, json& js, bool reading) {
 }
 
 // Parses a glTFScene object
-inline void serialize(glTFScene& val, json& js, bool reading) {
+void serialize(glTFScene& val, json& js, bool reading) {
     static auto def = glTFScene();
     serialize_obj(js, reading);
     serialize((glTFChildOfRootProperty&)val, js, reading);
@@ -8532,7 +8528,7 @@ inline void serialize(glTFScene& val, json& js, bool reading) {
 }
 
 // Parses a glTFSkin object
-inline void serialize(glTFSkin& val, json& js, bool reading) {
+void serialize(glTFSkin& val, json& js, bool reading) {
     static auto def = glTFSkin();
     serialize_obj(js, reading);
     serialize((glTFChildOfRootProperty&)val, js, reading);
@@ -8543,7 +8539,7 @@ inline void serialize(glTFSkin& val, json& js, bool reading) {
 }
 
 // Parses a glTF object
-inline void serialize(glTF& val, json& js, bool reading) {
+void serialize(glTF& val, json& js, bool reading) {
     static auto def = glTF();
     serialize_obj(js, reading);
     serialize((glTFProperty&)val, js, reading);
@@ -8575,7 +8571,7 @@ inline void serialize(glTF& val, json& js, bool reading) {
 // #codegen end func
 
 // Encode in base64
-inline string base64_encode(
+string base64_encode(
     unsigned char const* bytes_to_encode, unsigned int in_len) {
     static const string base64_chars =
         "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -8622,7 +8618,7 @@ inline string base64_encode(
 }
 
 // Decode from base64
-inline string base64_decode(string const& encoded_string) {
+string base64_decode(string const& encoded_string) {
     static const string base64_chars =
         "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
         "abcdefghijklmnopqrstuvwxyz"
@@ -8883,14 +8879,14 @@ void save_gltf(
 
 // reading shortcut
 template <typename T>
-inline void gltf_fread(FILE* f, T* v, int count) {
+void gltf_fread(FILE* f, T* v, int count) {
     if (fread(v, sizeof(T), count, f) != count)
         throw runtime_error("could not read binary file");
 }
 
 // writing shortcut
 template <typename T>
-inline void gltf_fwrite(FILE* f, const T* v, int count) {
+void gltf_fwrite(FILE* f, const T* v, int count) {
     if (fwrite(v, sizeof(T), count, f) != count)
         runtime_error("could not write binary file");
 }
@@ -9182,7 +9178,7 @@ int accessor_view::_ctype_size(glTFAccessorComponentType componentType) {
 namespace ygl {
 
 // Load SVG
-inline svg_scene* load_svg(const string& filename) {
+svg_scene* load_svg(const string& filename) {
     auto svg = nsvgParseFromFile(filename.c_str(), "mm", 96);
     if (!svg) throw runtime_error("cannot load SVG");
     auto scn = new svg_scene();
@@ -9203,7 +9199,7 @@ inline svg_scene* load_svg(const string& filename) {
 }
 
 // Save SVG
-inline void save_svg(const string& filename, const vector<svg_path>& paths) {
+void save_svg(const string& filename, const vector<svg_path>& paths) {
     throw runtime_error("not implemented yet");
 }
 
@@ -10209,7 +10205,7 @@ scene* make_cornell_box_scene() {
 //
 // Make standard shape. Public API described above.
 //
-inline tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
+tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
 make_uvhollowcutsphere(int tesselation, float radius) {
     auto quads = vector<vec4i>();
     auto pos = vector<vec3f>();
@@ -10266,7 +10262,7 @@ make_uvhollowcutsphere(int tesselation, float radius) {
 //
 // Make standard shape. Public API described above.
 //
-inline tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
+tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
 make_uvhollowcutsphere1(int tesselation, float radius) {
     auto quads = vector<vec4i>();
     auto pos = vector<vec3f>();
@@ -10687,7 +10683,7 @@ void update_test_animation(
 
 // Update test elements
 template <typename T, typename T1>
-inline void update_test_scene_elem(scene* scn, vector<T*>& elems,
+void update_test_scene_elem(scene* scn, vector<T*>& elems,
     const vector<T1>& telems, void (*update)(const scene*, T*, const T1&),
     const unordered_set<void*>& refresh) {
     auto emap = unordered_map<string, T*>();
@@ -10726,7 +10722,7 @@ void update_test_scene(scene* scn, const test_scene_params& params,
 
 // remove duplicate elems
 template <typename T>
-inline void remove_duplicate_elems(vector<T>& telems) {
+void remove_duplicate_elems(vector<T>& telems) {
     auto names = unordered_set<string>();
     for (auto& elem : telems) names.insert(elem.name);
     if (names.size() == telems.size()) return;
@@ -11361,7 +11357,7 @@ unordered_map<string, test_scene_params>& test_scene_presets() {
 }
 
 // Parses a test_camera object
-inline void serialize(test_camera_params& val, json& js, bool reading) {
+void serialize(test_camera_params& val, json& js, bool reading) {
     static auto def = test_camera_params();
     serialize_obj(js, reading);
     serialize_attr(val.name, js, "name", reading);
@@ -11372,12 +11368,12 @@ inline void serialize(test_camera_params& val, json& js, bool reading) {
 }
 
 // Parses a test_camera object
-inline void serialize(test_texture_type& val, json& js, bool reading) {
+void serialize(test_texture_type& val, json& js, bool reading) {
     serialize(val, js, reading, test_texture_names());
 }
 
 // Parses a test_camera object
-inline void serialize(test_texture_params& val, json& js, bool reading) {
+void serialize(test_texture_params& val, json& js, bool reading) {
     static auto def = test_texture_params();
     serialize_obj(js, reading);
     serialize_attr(val.name, js, "name", reading);
@@ -11396,12 +11392,12 @@ inline void serialize(test_texture_params& val, json& js, bool reading) {
 }
 
 // Parses a test_camera object
-inline void serialize(test_material_type& val, json& js, bool reading) {
+void serialize(test_material_type& val, json& js, bool reading) {
     serialize(val, js, reading, test_material_names());
 }
 
 // Parses a test_camera object
-inline void serialize(test_material_params& val, json& js, bool reading) {
+void serialize(test_material_params& val, json& js, bool reading) {
     static auto def = test_material_params();
     serialize_obj(js, reading);
     serialize_attr(val.name, js, "name", reading);
@@ -11416,12 +11412,12 @@ inline void serialize(test_material_params& val, json& js, bool reading) {
 }
 
 // Parses a test_camera object
-inline void serialize(test_shape_type& val, json& js, bool reading) {
+void serialize(test_shape_type& val, json& js, bool reading) {
     serialize(val, js, reading, test_shape_names());
 }
 
 // Parses a test_camera object
-inline void serialize(test_shape_params& val, json& js, bool reading) {
+void serialize(test_shape_params& val, json& js, bool reading) {
     static auto def = test_shape_params();
     serialize_obj(js, reading);
     serialize_attr(val.name, js, "name", reading);
@@ -11439,7 +11435,7 @@ inline void serialize(test_shape_params& val, json& js, bool reading) {
 }
 
 // Parses a test_camera object
-inline void serialize(test_instance_params& val, json& js, bool reading) {
+void serialize(test_instance_params& val, json& js, bool reading) {
     static auto def = test_instance_params();
     serialize_obj(js, reading);
     serialize_attr(val.name, js, "name", reading);
@@ -11449,7 +11445,7 @@ inline void serialize(test_instance_params& val, json& js, bool reading) {
 }
 
 // Parses a test_camera object
-inline void serialize(test_environment_params& val, json& js, bool reading) {
+void serialize(test_environment_params& val, json& js, bool reading) {
     static auto def = test_environment_params();
     serialize_obj(js, reading);
     serialize_attr(val.name, js, "name", reading);
@@ -11461,7 +11457,7 @@ inline void serialize(test_environment_params& val, json& js, bool reading) {
 }
 
 // Parses a test_camera object
-inline void serialize(test_scene_params& val, json& js, bool reading) {
+void serialize(test_scene_params& val, json& js, bool reading) {
     static auto def = test_scene_params();
     serialize_obj(js, reading);
     serialize_attr(val.name, js, "name", reading, false, def.name);
@@ -13245,12 +13241,12 @@ void draw_stdsurface_scene(const scene* scn, const camera* view,
 }
 
 // Support
-inline void _glfw_error_cb(int error, const char* description) {
+void _glfw_error_cb(int error, const char* description) {
     printf("GLFW error: %s\n", description);
 }
 
 // Support
-inline void _glfw_text_cb(GLFWwindow* gwin, unsigned key) {
+void _glfw_text_cb(GLFWwindow* gwin, unsigned key) {
     auto win = (gl_window*)glfwGetWindowUserPointer(gwin);
     if (win->_widget_enabled) {
         ImGui_ImplGlfwGL3_CharCallback(win->_gwin, key);
@@ -13259,7 +13255,7 @@ inline void _glfw_text_cb(GLFWwindow* gwin, unsigned key) {
 }
 
 // Support
-inline void _glfw_key_cb(
+void _glfw_key_cb(
     GLFWwindow* gwin, int key, int scancode, int action, int mods) {
     auto win = (gl_window*)glfwGetWindowUserPointer(gwin);
     if (win->_widget_enabled) {
@@ -13268,7 +13264,7 @@ inline void _glfw_key_cb(
 }
 
 // Support
-inline void _glfw_mouse_cb(GLFWwindow* gwin, int button, int action, int mods) {
+void _glfw_mouse_cb(GLFWwindow* gwin, int button, int action, int mods) {
     auto win = (gl_window*)glfwGetWindowUserPointer(gwin);
     if (win->_widget_enabled) {
         ImGui_ImplGlfwGL3_MouseButtonCallback(win->_gwin, button, action, mods);
@@ -13277,7 +13273,7 @@ inline void _glfw_mouse_cb(GLFWwindow* gwin, int button, int action, int mods) {
 }
 
 // Support
-inline void _glfw_scroll_cb(GLFWwindow* gwin, double xoffset, double yoffset) {
+void _glfw_scroll_cb(GLFWwindow* gwin, double xoffset, double yoffset) {
     auto win = (gl_window*)glfwGetWindowUserPointer(gwin);
     if (win->_widget_enabled) {
         ImGui_ImplGlfwGL3_ScrollCallback(win->_gwin, xoffset, yoffset);
@@ -13285,7 +13281,7 @@ inline void _glfw_scroll_cb(GLFWwindow* gwin, double xoffset, double yoffset) {
 }
 
 // Support
-inline void _glfw_refresh_cb(GLFWwindow* gwin) {
+void _glfw_refresh_cb(GLFWwindow* gwin) {
     auto win = (gl_window*)glfwGetWindowUserPointer(gwin);
     if (win->_refresh_cb) win->_refresh_cb(win);
 }
@@ -13640,21 +13636,21 @@ bool draw_color_widget(gl_window* win, const string& lbl, vec4b& val) {
 }
 
 // Support
-inline bool _enum_widget_labels_ptr(void* data, int idx, const char** out) {
+bool _enum_widget_labels_ptr(void* data, int idx, const char** out) {
     auto labels = (vector<pair<string, int>>*)data;
     *out = labels->at(idx).first.c_str();
     return true;
 }
 
 // Support
-inline bool _enum_widget_labels_int(void* data, int idx, const char** out) {
+bool _enum_widget_labels_int(void* data, int idx, const char** out) {
     auto labels = (vector<pair<string, int>>*)data;
     *out = labels->at(idx).first.c_str();
     return true;
 }
 
 // Support
-inline bool _enum_widget_labels_str(void* data, int idx, const char** out) {
+bool _enum_widget_labels_str(void* data, int idx, const char** out) {
     auto labels = (vector<string>*)data;
     *out = labels->at(idx).c_str();
     return true;
@@ -13833,22 +13829,22 @@ void draw_tree_widget_color_end(gl_window* win) { ImGui::PopStyleColor(); }
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-inline void draw_tree_widgets(
+void draw_tree_widgets(
     gl_window* win, const string& lbl, camera* cam, void*& selection) {
     draw_tree_widget_leaf(win, lbl + cam->name, selection, cam);
 }
 
-inline void draw_tree_widgets(
+void draw_tree_widgets(
     gl_window* win, const string& lbl, texture* txt, void*& selection) {
     draw_tree_widget_leaf(win, lbl + txt->path, selection, txt);
 }
 
-inline void draw_tree_widgets(
+void draw_tree_widgets(
     gl_window* win, const string& lbl, texture_info* info, void*& selection) {
     draw_tree_widgets(win, lbl, info->txt, selection);
 }
 
-inline void draw_tree_widgets(
+void draw_tree_widgets(
     gl_window* win, const string& lbl, material* mat, void*& selection) {
     if (draw_tree_widget_begin(win, lbl + mat->name, selection, mat)) {
         if (mat->ke_txt.txt)
@@ -13869,7 +13865,7 @@ inline void draw_tree_widgets(
     }
 }
 
-inline void draw_tree_widgets(
+void draw_tree_widgets(
     gl_window* win, const string& lbl, shape_group* sgr, void*& selection) {
     if (draw_tree_widget_begin(win, lbl + sgr->name, selection, sgr)) {
         for (auto shp : sgr->shapes) {
@@ -13879,7 +13875,7 @@ inline void draw_tree_widgets(
     }
 }
 
-inline void draw_tree_widgets(
+void draw_tree_widgets(
     gl_window* win, const string& lbl, instance* ist, void*& selection) {
     if (draw_tree_widget_begin(win, lbl + ist->name, selection, ist)) {
         if (ist->shp) draw_tree_widgets(win, "shp: ", ist->shp, selection);
@@ -13887,7 +13883,7 @@ inline void draw_tree_widgets(
     }
 }
 
-inline void draw_tree_widgets(
+void draw_tree_widgets(
     gl_window* win, const string& lbl, environment* env, void*& selection) {
     if (draw_tree_widget_begin(win, lbl + env->name, selection, env)) {
         if (env->ke_txt.txt)
@@ -13896,7 +13892,7 @@ inline void draw_tree_widgets(
     }
 }
 
-inline void draw_tree_widgets(
+void draw_tree_widgets(
     gl_window* win, const string& lbl, node* nde, void*& selection) {
     if (draw_tree_widget_begin(win, lbl + nde->name, selection, nde)) {
         if (nde->cam) draw_tree_widgets(win, "cam: ", nde->cam, selection);
@@ -13911,13 +13907,13 @@ inline void draw_tree_widgets(
     }
 }
 
-inline void draw_tree_widgets(
+void draw_tree_widgets(
     gl_window* win, const string& lbl, animation_group* agr, void*& selection) {
     draw_tree_widget_leaf(win, lbl + agr->name, selection, agr);
 }
 
 template <typename T>
-inline void draw_scene_tree_widgets(gl_window* win, const string& lbl,
+void draw_scene_tree_widgets(gl_window* win, const string& lbl,
     const vector<T*>& elems, void*& selection) {
     if (draw_tree_widget_begin(win, lbl)) {
         for (auto elem : elems) draw_tree_widgets(win, "", elem, selection);
@@ -13925,7 +13921,7 @@ inline void draw_scene_tree_widgets(gl_window* win, const string& lbl,
     }
 }
 
-inline void draw_tree_widgets(
+void draw_tree_widgets(
     gl_window* win, const string& lbl, scene* scn, void*& selection) {
     draw_scene_tree_widgets(win, lbl + "cameras", scn->cameras, selection);
     draw_scene_tree_widgets(win, lbl + "textures", scn->textures, selection);
@@ -13939,7 +13935,7 @@ inline void draw_tree_widgets(
         win, lbl + "animations", scn->animations, selection);
 }
 
-inline bool draw_elem_widgets(gl_window* win, scene* scn, texture* txt,
+bool draw_elem_widgets(gl_window* win, scene* scn, texture* txt,
     void*& selection, const unordered_map<texture*, gl_texture>& gl_txt) {
     draw_separator_widget(win);
     draw_label_widget(win, "path", txt->path);
@@ -13953,7 +13949,7 @@ inline bool draw_elem_widgets(gl_window* win, scene* scn, texture* txt,
     return false;
 }
 
-inline bool draw_elem_widgets(gl_window* win, scene* scn, material* mat,
+bool draw_elem_widgets(gl_window* win, scene* scn, material* mat,
     void*& selection, const unordered_map<texture*, gl_texture>& gl_txt) {
     auto txt_names = vector<pair<string, texture*>>{{"<none>", nullptr}};
     for (auto txt : scn->textures) txt_names.push_back({txt->path, txt});
@@ -14000,7 +13996,7 @@ inline bool draw_elem_widgets(gl_window* win, scene* scn, material* mat,
     return std::any_of(edited.begin(), edited.end(), [](auto x) { return x; });
 }
 
-inline bool draw_elem_widgets(gl_window* win, scene* scn, shape_group* sgr,
+bool draw_elem_widgets(gl_window* win, scene* scn, shape_group* sgr,
     void*& selection, const unordered_map<texture*, gl_texture>& gl_txt) {
     auto mat_names = vector<pair<string, material*>>{{"<none>", nullptr}};
     for (auto mat : scn->materials) mat_names.push_back({mat->name, mat});
@@ -14033,7 +14029,7 @@ inline bool draw_elem_widgets(gl_window* win, scene* scn, shape_group* sgr,
     return std::any_of(edited.begin(), edited.end(), [](auto x) { return x; });
 }
 
-inline bool draw_elem_widgets(gl_window* win, scene* scn, camera* cam,
+bool draw_elem_widgets(gl_window* win, scene* scn, camera* cam,
     void*& selection, const unordered_map<texture*, gl_texture>& gl_txt) {
     auto edited = vector<bool>();
     draw_separator_widget(win);
@@ -14046,7 +14042,7 @@ inline bool draw_elem_widgets(gl_window* win, scene* scn, camera* cam,
     return std::any_of(edited.begin(), edited.end(), [](auto x) { return x; });
 }
 
-inline bool draw_elem_widgets(gl_window* win, scene* scn, instance* ist,
+bool draw_elem_widgets(gl_window* win, scene* scn, instance* ist,
     void*& selection, const unordered_map<texture*, gl_texture>& gl_txt) {
     auto shp_names = vector<pair<string, shape_group*>>{{"<none>", nullptr}};
     for (auto shp : scn->shapes) shp_names.push_back({shp->name, shp});
@@ -14059,7 +14055,7 @@ inline bool draw_elem_widgets(gl_window* win, scene* scn, instance* ist,
     return std::any_of(edited.begin(), edited.end(), [](auto x) { return x; });
 }
 
-inline bool draw_elem_widgets(gl_window* win, scene* scn, environment* env,
+bool draw_elem_widgets(gl_window* win, scene* scn, environment* env,
     void*& selection, const unordered_map<texture*, gl_texture>& gl_txt) {
     auto txt_names = vector<pair<string, texture*>>{{"<none>", nullptr}};
     for (auto txt : scn->textures) txt_names.push_back({txt->path, txt});
@@ -14095,8 +14091,8 @@ inline bool draw_elem_widgets(gl_window* win, scene* scn, environment* env,
     return std::any_of(edited.begin(), edited.end(), [](auto x) { return x; });
 }
 
-inline bool draw_elem_widgets(gl_window* win, scene* scn, node* nde,
-    void*& selection, const unordered_map<texture*, gl_texture>& gl_txt) {
+bool draw_elem_widgets(gl_window* win, scene* scn, node* nde, void*& selection,
+    const unordered_map<texture*, gl_texture>& gl_txt) {
     auto cam_names = vector<pair<string, camera*>>{{"<none>", nullptr}};
     for (auto cam : scn->cameras) cam_names.push_back({cam->name, cam});
     auto ist_names = vector<pair<string, instance*>>{{"<none>", nullptr}};
@@ -14121,7 +14117,7 @@ inline bool draw_elem_widgets(gl_window* win, scene* scn, node* nde,
     return std::any_of(edited.begin(), edited.end(), [](auto x) { return x; });
 }
 
-inline bool draw_elem_widgets(gl_window* win, scene* scn, animation_group* agr,
+bool draw_elem_widgets(gl_window* win, scene* scn, animation_group* agr,
     void*& selection, const unordered_map<texture*, gl_texture>& gl_txt) {
     auto nde_names = vector<pair<string, node*>>{{"<none>", nullptr}};
     for (auto nde : scn->nodes) nde_names.push_back({nde->name, nde});
@@ -14149,7 +14145,7 @@ inline bool draw_elem_widgets(gl_window* win, scene* scn, animation_group* agr,
     return std::any_of(edited.begin(), edited.end(), [](auto x) { return x; });
 }
 
-inline bool draw_elem_widgets(gl_window* win, test_scene_params* scn,
+bool draw_elem_widgets(gl_window* win, test_scene_params* scn,
     test_texture_params* txt, void*& selection,
     const unordered_map<texture*, gl_texture>& gl_txt) {
     draw_separator_widget(win);
@@ -14170,7 +14166,7 @@ inline bool draw_elem_widgets(gl_window* win, test_scene_params* scn,
     return false;
 }
 
-inline bool draw_elem_widgets(gl_window* win, test_scene_params* scn,
+bool draw_elem_widgets(gl_window* win, test_scene_params* scn,
     test_material_params* mat, void*& selection,
     const unordered_map<texture*, gl_texture>& gl_txt) {
     auto edited = vector<bool>();
@@ -14186,7 +14182,7 @@ inline bool draw_elem_widgets(gl_window* win, test_scene_params* scn,
     return std::any_of(edited.begin(), edited.end(), [](auto x) { return x; });
 }
 
-inline bool draw_elem_widgets(gl_window* win, test_scene_params* scn,
+bool draw_elem_widgets(gl_window* win, test_scene_params* scn,
     test_shape_params* shp, void*& selection,
     const unordered_map<texture*, gl_texture>& gl_txt) {
     auto edited = vector<bool>();
@@ -14208,7 +14204,7 @@ inline bool draw_elem_widgets(gl_window* win, test_scene_params* scn,
     return std::any_of(edited.begin(), edited.end(), [](auto x) { return x; });
 }
 
-inline bool draw_elem_widgets(gl_window* win, test_scene_params* scn,
+bool draw_elem_widgets(gl_window* win, test_scene_params* scn,
     test_camera_params* cam, void*& selection,
     const unordered_map<texture*, gl_texture>& gl_txt) {
     auto edited = vector<bool>();
@@ -14221,7 +14217,7 @@ inline bool draw_elem_widgets(gl_window* win, test_scene_params* scn,
     return std::any_of(edited.begin(), edited.end(), [](auto x) { return x; });
 }
 
-inline bool draw_elem_widgets(gl_window* win, test_scene_params* scn,
+bool draw_elem_widgets(gl_window* win, test_scene_params* scn,
     test_environment_params* env, void*& selection,
     const unordered_map<texture*, gl_texture>& gl_txt) {
     auto edited = vector<bool>();
@@ -14234,7 +14230,7 @@ inline bool draw_elem_widgets(gl_window* win, test_scene_params* scn,
     return std::any_of(edited.begin(), edited.end(), [](auto x) { return x; });
 }
 
-inline bool draw_elem_widgets(gl_window* win, test_scene_params* scn,
+bool draw_elem_widgets(gl_window* win, test_scene_params* scn,
     test_node_params* nde, void*& selection,
     const unordered_map<texture*, gl_texture>& gl_txt) {
     auto edited = vector<bool>();
@@ -14248,7 +14244,7 @@ inline bool draw_elem_widgets(gl_window* win, test_scene_params* scn,
     return std::any_of(edited.begin(), edited.end(), [](auto x) { return x; });
 }
 
-inline bool draw_elem_widgets(gl_window* win, test_scene_params* scn,
+bool draw_elem_widgets(gl_window* win, test_scene_params* scn,
     test_animation_params* anm, void*& selection,
     const unordered_map<texture*, gl_texture>& gl_txt) {
     auto edited = vector<bool>();
@@ -14275,7 +14271,7 @@ inline bool draw_elem_widgets(gl_window* win, test_scene_params* scn,
     return std::any_of(edited.begin(), edited.end(), [](auto x) { return x; });
 }
 
-inline bool draw_elem_widgets(gl_window* win, test_scene_params* scn,
+bool draw_elem_widgets(gl_window* win, test_scene_params* scn,
     test_instance_params* ist, void*& selection,
     const unordered_map<texture*, gl_texture>& gl_txt) {
     auto edited = vector<bool>();
@@ -14287,7 +14283,7 @@ inline bool draw_elem_widgets(gl_window* win, test_scene_params* scn,
 }
 
 template <typename T, typename T1>
-inline bool draw_selected_elem_widgets(gl_window* win, scene* scn,
+bool draw_selected_elem_widgets(gl_window* win, scene* scn,
     test_scene_params* test_scn, const vector<T*>& elems,
     vector<T1>& test_elems, void*& selection,
     void (*update_test_elem)(const scene*, T*, const T1&),
@@ -14313,7 +14309,7 @@ inline bool draw_selected_elem_widgets(gl_window* win, scene* scn,
 }
 
 template <typename T, typename T1>
-inline bool draw_add_elem_widgets(gl_window* win, scene* scn, const string& lbl,
+bool draw_add_elem_widgets(gl_window* win, scene* scn, const string& lbl,
     vector<T*>& elems, vector<T1>& test_elems, void*& selection,
     void (*update_test_elem)(const scene*, T*, const T1&)) {
     static auto count = 0;
@@ -14406,7 +14402,7 @@ bool draw_scene_widgets(gl_window* win, const string& lbl, scene* scn,
 }
 
 #if 0
-        inline void draw_edit_widgets(gl_window* win, scene* scn,
+        void draw_edit_widgets(gl_window* win, scene* scn,
             void*&  selection, const yshade_state* state) {
             static auto shape_names =
                 vector<pair<string, int>>{{"cube", 0}, {"sphere", 1}};
