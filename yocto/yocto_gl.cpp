@@ -13548,73 +13548,28 @@ bool draw_color_widget(gl_window* win, const string& lbl, vec4b& val) {
     return false;
 }
 
-// Support
-bool _enum_widget_labels_ptr(void* data, int idx, const char** out) {
-    auto labels = (vector<pair<string, int>>*)data;
-    *out = labels->at(idx).first.c_str();
-    return true;
-}
-
-// Support
-bool _enum_widget_labels_int(void* data, int idx, const char** out) {
-    auto labels = (vector<pair<string, int>>*)data;
-    *out = labels->at(idx).first.c_str();
-    return true;
-}
-
-// Support
-bool _enum_widget_labels_str(void* data, int idx, const char** out) {
-    auto labels = (vector<string>*)data;
-    *out = labels->at(idx).c_str();
-    return true;
-}
-
-// Value widget
-bool draw_value_widget(gl_window* win, const string& lbl, string& val,
-    const vector<string>& labels) {
-    auto cur = -1;
-    for (auto idx = 0; idx < labels.size(); idx++) {
-        if (labels[idx] == val) cur = idx;
-    }
-    assert(cur >= 0);
-    auto ok = ImGui::Combo(lbl.c_str(), &cur, _enum_widget_labels_str,
-        (void*)&labels, (int)labels.size());
-    val = labels[cur];
-    return ok;
-}
-
-// Value widget
-bool draw_value_widget(gl_window* win, const string& lbl, int& val,
-    const vector<pair<string, int>>& labels) {
-    auto cur = -1;
-    for (auto idx = 0; idx < labels.size(); idx++) {
-        if (labels[idx].second == val) cur = idx;
-    }
-    assert(cur >= 0);
-    auto ok = ImGui::Combo(lbl.c_str(), &cur, _enum_widget_labels_int,
-        (void*)&labels, (int)labels.size());
-    val = labels[cur].second;
-    return ok;
-}
-
-// Value widget
-bool draw_value_widget(gl_window* win, const string& lbl, void*& val,
-    const vector<pair<string, void*>>& labels) {
-    auto cur = -1;
-    for (auto idx = 0; idx < labels.size(); idx++) {
-        if (labels[idx].second == val) cur = idx;
-    }
-    assert(cur >= 0);
-    auto ok = ImGui::Combo(lbl.c_str(), &cur, _enum_widget_labels_int,
-        (void*)&labels, (int)labels.size());
-    val = labels[cur].second;
-    return ok;
-}
-
 // Bool widget
 bool draw_value_widget(gl_window* win, const string& lbl, bool& val) {
     return ImGui::Checkbox(lbl.c_str(), &val);
 }
+
+// Combo widget
+bool draw_combo_begin(gl_window* win, const string& lbl, const string& label) {
+    return ImGui::BeginCombo(lbl.c_str(), label.c_str());
+}
+
+// Combo widget
+bool draw_combo_item(
+    gl_window* win, const string& label, int idx, bool selected) {
+    ImGui::PushID((void*)(intptr_t)idx);
+    auto clicked = ImGui::Selectable(label.c_str(), selected);
+    if (selected) ImGui::SetItemDefaultFocus();
+    ImGui::PopID();
+    return clicked;
+}
+
+// Combo widget
+void draw_combo_end(gl_window* win) { ImGui::EndCombo(); }
 
 // Button widget
 bool draw_button_widget(gl_window* win, const string& lbl) {

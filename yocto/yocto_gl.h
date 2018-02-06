@@ -9467,32 +9467,50 @@ bool draw_color_widget(gl_window* win, const string& lbl, vec4b& val);
 /// Color widget
 bool draw_color_widget(gl_window* win, const string& lbl, vec3f& val);
 
-/// Enum widget
-bool draw_value_widget(gl_window* win, const string& lbl, string& val,
-    const vector<string>& labels);
+/// Combo widget
+bool draw_combo_begin(gl_window* win, const string& lbl, const string& label);
+/// Combo widget
+bool draw_combo_item(
+    gl_window* win, const string& label, int idx, bool selected);
+/// Combo widget
+void draw_combo_end(gl_window* win);
 
-/// Enum widget
-bool draw_value_widget(gl_window* win, const string& lbl, int& val,
-    const vector<pair<string, int>>& labels);
-
-/// Enum widget
-bool draw_value_widget(gl_window* win, const string& lbl, void*& val,
-    const vector<pair<string, void*>>& labels);
-
-/// Enum widget
-template <typename T>
-inline bool draw_value_widget(gl_window* win, const string& lbl, T*& val,
-    const vector<pair<string, T*>>& labels) {
-    return draw_value_widget(
-        win, lbl, (void*&)val, (const vector<pair<string, void*>>&)labels);
+/// Combo widget
+template <typename T, typename T1>
+inline bool draw_value_widget(gl_window* win, const string& lbl, T& val,
+    const vector<T1>& vals, const function<T(const T1&)>& value_func,
+    const function<string(const T1&)>& label_func) {
+    auto label = string();
+    for (auto& v : vals)
+        if (value_func(v) == val) label = label_func(v);
+    if (!draw_combo_begin(win, lbl, label)) return false;
+    auto changed = false;
+    for (auto i = 0; i < vals.size(); i++) {
+        auto selected = val == value_func(vals[i]);
+        if (draw_combo_item(win, label_func(vals[i]), i, selected)) {
+            val = value_func(vals[i]);
+            changed = true;
+        }
+    }
+    draw_combo_end(win);
+    return changed;
 }
 
-/// Enum widget
+/// Combo widget
+inline bool draw_value_widget(gl_window* win, const string& lbl, string& val,
+    const vector<string>& labels) {
+    return draw_value_widget<string, string>(win, lbl, val, labels,
+        [](const string& v) -> string { return v; },
+        [](const string& v) -> string { return v; });
+}
+
+/// Combo widget
 template <typename T>
 inline bool draw_value_widget(gl_window* win, const string& lbl, T& val,
     const vector<pair<string, T>>& labels) {
-    return draw_value_widget(
-        win, lbl, (int&)val, (const vector<pair<string, int>>&)labels);
+    return draw_value_widget<T, pair<string, T>>(win, lbl, val, labels,
+        [](const pair<string, T>& v) -> T { return v.second; },
+        [](const pair<string, T>& v) -> string { return v.first; });
 }
 
 /// Bool widget

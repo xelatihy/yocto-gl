@@ -56,7 +56,7 @@ def docs():
     os.system('./tools/cpp2doc.py')
 
 @run.command()
-@click.argument('msg', required=False, default='')
+@click.argument('msg', required=True, default='')
 def commit(msg=''):
     os.system('./tools/build.py format')
     os.system('./tools/build.py docs')
