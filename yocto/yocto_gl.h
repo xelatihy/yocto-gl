@@ -3378,13 +3378,13 @@ inline void rng_shuffle(rng_pcg32& rng, T* vals, int num) {
     // Draw uniformly distributed permutation and permute the
     // given STL container
     for (auto i = num - 1; i > 0; --i)
-        swap(vals[i], vals[next_rand1i(rng, (uint32_t)(i - 1))]);
+        swap(vals[i], vals[next_rand1i(rng, (uint32_t)i)]);
 }
 
 /// Random shuffle of a sequence.
 template <typename T>
 inline void rng_shuffle(rng_pcg32& rng, vector<T>& vals) {
-    shuffle(rng, vals.data(), vals.size());
+    rng_shuffle(rng, vals.data(), vals.size());
 }
 
 /// Equality operator
@@ -4774,6 +4774,24 @@ struct bvh_node {
     uint8_t axis;
 };
 
+// forward declaration
+struct bvh_tree;
+
+/// Shape instance for two-level BVH.
+/// This is an internal data structure.
+struct bvh_instance {
+    /// frame
+    frame3f frame = identity_frame3f;
+    /// frame inverse
+    frame3f frame_inv = identity_frame3f;
+    /// instance id to be returned
+    int iid = 0;
+    /// shape id to be returned
+    int sid = 0;
+    /// shape bvh
+    bvh_tree* bvh = nullptr;
+};
+
 /// BVH tree, stored as a node array. The tree structure is encoded using array
 /// indices instead of pointers, both for speed but also to simplify code.
 /// BVH nodes indices refer to either the node array, for internal nodes,
@@ -4806,11 +4824,7 @@ struct bvh_tree {
     vector<vec4i> quads;
 
     /// instance ids (iid, sid, shape bvh index)
-    vector<vec3i> ist_ids;
-    /// instance frames for instance BVHs
-    vector<frame3f> ist_frames;
-    /// instance inverse frames for instance BVHs
-    vector<frame3f> ist_frames_inv;
+    vector<bvh_instance> instances;
     /// shape BVHs
     vector<bvh_tree*> shape_bvhs;
     /// whether it owns the memory of the shape BVHs
@@ -4827,9 +4841,8 @@ bvh_tree* make_bvh(const vector<int>& points, const vector<vec2i>& lines,
     bool equalsize);
 
 /// Build a scene BVH from a set of shape instances.
-bvh_tree* make_bvh(const vector<vec3i>& ids, const vector<frame3f>& frames,
-    const vector<frame3f>& frames_inv, const vector<bvh_tree*>& shape_bvhs,
-    bool own_shape_bvhs, bool equal_size);
+bvh_tree* make_bvh(const vector<bvh_instance>& instances,
+    const vector<bvh_tree*>& shape_bvhs, bool own_shape_bvhs, bool equal_size);
 
 /// Grab the shape BVHs
 inline const vector<bvh_tree*>& get_shape_bvhs(const bvh_tree* bvh) {
