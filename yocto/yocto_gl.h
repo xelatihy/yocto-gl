@@ -3378,7 +3378,7 @@ inline void rng_shuffle(rng_pcg32& rng, T* vals, int num) {
     // Draw uniformly distributed permutation and permute the
     // given STL container
     for (auto i = num - 1; i > 0; --i)
-        swap(vals[i], vals[next_rand1i(rng, (uint32_t)(i - 1))]);
+        swap(vals[i], vals[next_rand1i(rng, (uint32_t)i)]);
 }
 
 /// Random shuffle of a sequence.
