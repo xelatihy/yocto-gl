@@ -2449,13 +2449,13 @@ const int bvh_minprims = 4;
 // used and nodes added sequentially in the preallocated nodes array and
 // the number of nodes nnodes is updated.
 void make_bvh_node(vector<bvh_node>& nodes, int nodeid,
-    bvh_bound_prim* sorted_prims, int start, int end, bvh_node_type type,
-    bool equal_size) {
+    vector<int>& sorted_prims, int start, int end, const vector<bbox3f>& bboxes,
+    bvh_node_type type, bool equal_size) {
     // get node
     auto node = &nodes.at(nodeid);
     // compute node bounds
     node->bbox = invalid_bbox3f;
-    for (auto i = start; i < end; i++) node->bbox += sorted_prims[i].bbox;
+    for (auto i = start; i < end; i++) node->bbox += bboxes[sorted_prims[i]];
 
     // decide whether to create a leaf
     if (end - start <= bvh_minprims) {
@@ -2472,7 +2472,7 @@ void make_bvh_node(vector<bvh_node>& nodes, int nodeid,
         // compute primintive bounds and size
         auto centroid_bbox = invalid_bbox3f;
         for (auto i = start; i < end; i++)
-            centroid_bbox += bbox_center(sorted_prims[i].bbox);
+            centroid_bbox += bbox_center(bboxes[sorted_prims[i]]);
         auto centroid_size = bbox_diagonal(centroid_bbox);
 
         // check if it is not possible to split
@@ -2490,21 +2490,23 @@ void make_bvh_node(vector<bvh_node>& nodes, int nodeid,
                 // split the space in the middle along the largest axis
                 axis = largest_axis;
                 auto middle = bbox_center(centroid_bbox)[largest_axis];
-                mid = (int)(std::partition(sorted_prims + start,
-                                sorted_prims + end,
-                                [axis, middle](auto& a) {
-                                    return bbox_center(a.bbox)[axis] < middle;
-                                }) -
-                            sorted_prims);
+                mid =
+                    (int)(std::partition(sorted_prims.data() + start,
+                              sorted_prims.data() + end,
+                              [axis, middle, &bboxes](auto& a) {
+                                  return bbox_center(bboxes[a])[axis] < middle;
+                              }) -
+                          sorted_prims.data());
             } else {
                 // balanced tree split: find the largest axis of the bounding
                 // box and split along this one right in the middle
                 axis = largest_axis;
                 mid = (start + end) / 2;
-                std::nth_element(sorted_prims + start, sorted_prims + mid,
-                    sorted_prims + end, [axis](auto& a, auto& b) {
-                        return bbox_center(a.bbox)[axis] <
-                               bbox_center(b.bbox)[axis];
+                std::nth_element(sorted_prims.data() + start,
+                    sorted_prims.data() + mid, sorted_prims.data() + end,
+                    [axis, &bboxes](auto& a, auto& b) {
+                        return bbox_center(bboxes[a])[axis] <
+                               bbox_center(bboxes[b])[axis];
                     });
             }
 
@@ -2521,10 +2523,10 @@ void make_bvh_node(vector<bvh_node>& nodes, int nodeid,
             nodes.emplace_back();
             nodes.emplace_back();
             // build child nodes
-            make_bvh_node(
-                nodes, node->start, sorted_prims, start, mid, type, equal_size);
-            make_bvh_node(nodes, node->start + 1, sorted_prims, mid, end, type,
-                equal_size);
+            make_bvh_node(nodes, node->start, sorted_prims, start, mid, bboxes,
+                type, equal_size);
+            make_bvh_node(nodes, node->start + 1, sorted_prims, mid, end,
+                bboxes, type, equal_size);
         }
     }
 }
@@ -2542,13 +2544,15 @@ tuple<vector<bvh_node>, vector<int>> make_bvh_nodes(
     // clear bvh
     auto nodes = vector<bvh_node>();
     auto sorted_prim = vector<int>();
+    sorted_prim = vector<int>(bboxes.size());
+    for (auto i = 0; i < bboxes.size(); i++) sorted_prim[i] = i;
 
     // allocate nodes (over-allocate now then shrink)
     nodes.reserve(bound_prims.size() * 2);
 
     // start recursive splitting
     nodes.emplace_back();
-    make_bvh_node(nodes, 0, bound_prims.data(), 0, (int)bound_prims.size(),
+    make_bvh_node(nodes, 0, sorted_prim, 0, (int)sorted_prim.size(), bboxes,
         type, equal_size);
 
     // shrink back
@@ -2557,10 +2561,10 @@ tuple<vector<bvh_node>, vector<int>> make_bvh_nodes(
     // init sorted element arrays
     // for shared memory, stored pointer to the external data
     // store the sorted primitive order for BVH walk
-    sorted_prim.resize(bound_prims.size());
-    for (int i = 0; i < bound_prims.size(); i++) {
-        sorted_prim[i] = bound_prims[i].pid;
-    }
+    // sorted_prim.resize(bound_prims.size());
+    // for (int i = 0; i < bound_prims.size(); i++) {
+    //     sorted_prim[i] = bound_prims[i].pid;
+    // }
 
     // done
     return {nodes, sorted_prim};
