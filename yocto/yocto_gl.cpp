@@ -214,7 +214,7 @@ void camera_turntable(frame3f& frame, float& focus, const vec2f& rotate,
     // pan if necessary
     if (dolly) {
         auto c = frame.o - frame.z * focus;
-        focus = max(focus + dolly, 0.001f);
+        focus = max(focus * (1 + dolly), 0.001f);
         frame.o = c + frame.z * focus;
     }
 
