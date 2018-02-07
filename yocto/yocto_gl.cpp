@@ -5834,7 +5834,7 @@ float weight_ggx_brdfcos(const trace_point& pt, const vec3f& wo,
         }
         if (!pt.rs && delta) pdf += weights.y;
     }
-    if (wi == -wo) pdf += weights.z;
+    if (wi == -wo && delta) pdf += weights.z;
 
     assert(isfinite(pdf));
     if (!pdf) return 0;
@@ -5847,8 +5847,8 @@ float weight_kajiyakay_brdfcos(const trace_point& pt, const vec3f& wo,
     auto weights = pt.brdf_weights();
 
     auto pdf = 0.0f;
-    pdf += (weights.x + weights.y) * 4 * pif;
-    if (wi == -wo) pdf += weights.z;
+    pdf += (weights.x + weights.y) / (4 * pif);
+    if (wi == -wo && delta) pdf += weights.z;
 
     assert(isfinite(pdf));
     if (!pdf) return 0;
@@ -5861,8 +5861,8 @@ float weight_point_brdfcos(const trace_point& pt, const vec3f& wo,
     auto weights = pt.brdf_weights();
 
     auto pdf = 0.0f;
-    pdf += (weights.x + weights.y) * 4 * pif;
-    if (wi == -wo) pdf += weights.z;
+    pdf += (weights.x + weights.y) / (4 * pif);
+    if (wi == -wo && delta) pdf += weights.z;
 
     assert(isfinite(pdf));
     if (!pdf) return 0;
