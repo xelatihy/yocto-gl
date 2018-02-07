@@ -89,6 +89,7 @@
 // - BUG: hair look in yitrace
 // - simplify trace_point
 //     - double sided in material functions
+//     - opacity in material functions
 // - simplify trace_light
 //     - maybe include shape directly?
 // - remove background from point?
@@ -160,7 +161,7 @@ const unsigned int* imgui_extrafont_compressed_data();
 namespace ygl {
 
 // Turntable for UI navigation.
-void camera_turntable(vec3f& from, vec3f& to, vec3f& up, const vec3f& rotate,
+void camera_turntable(vec3f& from, vec3f& to, vec3f& up, const vec2f& rotate,
     float dolly, const vec2f& pan) {
     // rotate if necessary
     if (rotate.x || rotate.y) {
@@ -198,7 +199,7 @@ void camera_turntable(vec3f& from, vec3f& to, vec3f& up, const vec3f& rotate,
 void camera_turntable(frame3f& frame, float& focus, const vec2f& rotate,
     float dolly, const vec2f& pan) {
     // rotate if necessary
-    if (rotate.x || rotate.y) {
+    if (rotate != zero2f) {
         auto phi = atan2(frame.z.z, frame.z.x) + rotate.x;
         auto theta = acos(frame.z.y) + rotate.y;
         theta = clamp(theta, 0.001f, pif - 0.001f);

@@ -3164,7 +3164,7 @@ inline mat<T, 4> compose_mat4(const vec<T, 3>& translation,
 namespace ygl {
 
 /// Turntable for UI navigation.
-void camera_turntable(vec3f& from, vec3f& to, vec3f& up, const vec3f& rotate,
+void camera_turntable(vec3f& from, vec3f& to, vec3f& up, const vec2f& rotate,
     float dolly, const vec2f& pan);
 
 /// Turntable for UI navigation.
