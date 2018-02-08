@@ -86,12 +86,6 @@
 //     - cleanup sampling in ray tracing
 //     - create distributions
 //     - make lights with single shapes in trace
-// - cleanup interpolation functions
-//     - choose a proper name for them (lerp, bilerp, tlerp?)
-//     - or call them all lerp, but given them differnt inputs
-//     - decide if splitting geometry ones from generic ones (in which case do
-//     not include triangle)
-//     - decide where to put them
 // - check quaterion sum and scalar product
 //
 // - trace: add hack for radius in offsetting rays
