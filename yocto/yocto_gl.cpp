@@ -81,7 +81,6 @@
 // - update documentation
 // - update BVH documentation
 //
-// - std::tie -> tie
 // - cleanup sampling functions everywhere
 //     - probably removing sample_points/lines/triangles
 //     - cleanup sampling in ray tracing
@@ -90,7 +89,10 @@
 // - cleanup interpolation functions
 //     - choose a proper name for them (lerp, bilerp, tlerp?)
 //     - or call them all lerp, but given them differnt inputs
-//     - make special functions for shape elements
+//     - decide if splitting geometry ones from generic ones (in which case do
+//     not include triangle)
+//     - decide where to put them
+// - check quaterion sum and scalar product
 //
 // - trace: add hack for radius in offsetting rays
 //
@@ -1262,8 +1264,7 @@ pair<int, vec2f> sample_triangles(
     re = clamp(re * cdf.back(), 0.0f, cdf.back() - 0.00001f);
     auto eid =
         (int)(std::upper_bound(cdf.begin(), cdf.end(), re) - cdf.begin());
-    return {
-        eid, {1 - sqrt(ruv.x), ruv.y * sqrt(ruv.x)}};
+    return {eid, {1 - sqrt(ruv.x), ruv.y * sqrt(ruv.x)}};
 }
 
 // Compute a distribution for sampling quad meshes uniformly
@@ -1282,7 +1283,7 @@ pair<int, vec2f> sample_quads(
     const vector<float>& cdf, float re, const vec2f& ruv) {
     re = clamp(re * cdf.back(), 0.0f, cdf.back() - 0.00001f);
     auto eid =
-    (int)(std::upper_bound(cdf.begin(), cdf.end(), re) - cdf.begin());
+        (int)(std::upper_bound(cdf.begin(), cdf.end(), re) - cdf.begin());
     return {eid, ruv};
 }
 
@@ -1301,14 +1302,17 @@ tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>> sample_triangles_points(
     for (auto i = 0; i < npoints; i++) {
         auto eid = 0;
         auto euv = zero2f;
-        std::tie(eid, euv) = sample_triangles(
+        tie(eid, euv) = sample_triangles(
             cdf, next_rand1f(rng), {next_rand1f(rng), next_rand1f(rng)});
         auto t = triangles[eid];
-        sampled_pos[i] = interpolate_triangle(pos[t.x], pos[t.y], pos[t.z], euv);
+        sampled_pos[i] =
+            interpolate_triangle(pos[t.x], pos[t.y], pos[t.z], euv);
         if (!sampled_norm.empty())
-            sampled_norm[i] = normalize(interpolate_triangle(norm[t.x], norm[t.y], norm[t.z], euv));
+            sampled_norm[i] = normalize(
+                interpolate_triangle(norm[t.x], norm[t.y], norm[t.z], euv));
         if (!sampled_texcoord.empty())
-            sampled_texcoord[i] = interpolate_triangle(texcoord[t.x], texcoord[t.y], texcoord[t.z], euv);
+            sampled_texcoord[i] = interpolate_triangle(
+                texcoord[t.x], texcoord[t.y], texcoord[t.z], euv);
     }
 
     return {sampled_pos, sampled_norm, sampled_texcoord};
@@ -2296,8 +2300,7 @@ vec2f closestuv_triangle(
     if (d3 >= 0 && d4 <= d3) return {1, 0};
 
     auto vc = d1 * d4 - d3 * d2;
-    if ((vc <= 0) && (d1 >= 0) && (d3 <= 0))
-        return {d1 / (d1 - d3), 0};
+    if ((vc <= 0) && (d1 >= 0) && (d3 <= 0)) return {d1 / (d1 - d3), 0};
 
     auto cp = pos - v2;
     auto d5 = dot(ab, cp);
@@ -2305,8 +2308,7 @@ vec2f closestuv_triangle(
     if (d6 >= 0 && d5 <= d6) return {0, 1};
 
     auto vb = d5 * d2 - d1 * d6;
-    if ((vb <= 0) && (d2 >= 0) && (d6 <= 0))
-        return {0, d2 / (d2 - d6)};
+    if ((vb <= 0) && (d2 >= 0) && (d6 <= 0)) return {0, d2 / (d2 - d6)};
 
     auto va = d3 * d6 - d5 * d4;
     if ((va <= 0) && (d4 - d3 >= 0) && (d5 - d6 >= 0)) {
@@ -2340,13 +2342,11 @@ bool overlap_quad(const vec3f& pos, float dist_max, const vec3f& v0,
     const vec3f& v1, const vec3f& v2, const vec3f& v3, float r0, float r1,
     float r2, float r3, float& dist, vec2f& euv) {
     auto hit = false;
-    if (overlap_triangle(
-            pos, dist_max, v0, v1, v3, r0, r1, r3, dist, euv)) {
+    if (overlap_triangle(pos, dist_max, v0, v1, v3, r0, r1, r3, dist, euv)) {
         dist_max = dist;
         hit = true;
     }
-    if (overlap_triangle(
-            pos, dist_max, v2, v3, v1, r2, r3, r1, dist, euv)) {
+    if (overlap_triangle(pos, dist_max, v2, v3, v1, r2, r3, r1, dist, euv)) {
         // dist_max = dist;
         euv = {1 - euv.x, 1 - euv.y};
         hit = true;
@@ -2901,8 +2901,7 @@ bool overlap_bvh(const bvh_tree* bvh, const vec3f& pos, float max_dist,
                     auto& t = bvh->triangles[i];
                     if (overlap_triangle(pos, max_dist, bvh->pos[t.x],
                             bvh->pos[t.y], bvh->pos[t.z], bvh->radius[t.x],
-                            bvh->radius[t.y], bvh->radius[t.z], dist,
-                            euv)) {
+                            bvh->radius[t.y], bvh->radius[t.z], dist, euv)) {
                         hit = true;
                         max_dist = dist;
                         eid = bvh->sorted_prim[i];
@@ -3068,8 +3067,8 @@ scene::~scene() {
 
 // Shape value interpolated using barycentric coordinates
 template <typename T>
-T eval_elem(const shape* shp, const vector<T>& vals, int eid,
-    const vec2f& euv, const T& def) {
+T eval_elem(const shape* shp, const vector<T>& vals, int eid, const vec2f& euv,
+    const T& def) {
     if (vals.empty()) return def;
     if (!shp->triangles.empty()) {
         return interpolate_triangle(vals, shp->triangles[eid], euv);
@@ -3118,8 +3117,8 @@ vec3f eval_pos(const instance* ist, int sid, int eid, const vec2f& euv) {
 // Instance normal interpolated using barycentric coordinates
 vec3f eval_norm(const instance* ist, int sid, int eid, const vec2f& euv) {
     auto shp = ist->shp->shapes.at(sid);
-    return transform_direction(ist->frame,
-        normalize(eval_elem(shp, shp->norm, eid, euv, {0, 0, 1})));
+    return transform_direction(
+        ist->frame, normalize(eval_elem(shp, shp->norm, eid, euv, {0, 0, 1})));
 }
 
 // Evaluate a texture
@@ -3276,7 +3275,7 @@ void tesselate_shape(shape* shp, bool subdivide,
         }
     }
     if (facevarying_to_sharedvertex && !shp->quads_pos.empty()) {
-        std::tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
+        tie(shp->quads, shp->pos, shp->norm, shp->texcoord) =
             convert_face_varying(shp->quads_pos, shp->quads_norm,
                 shp->quads_texcoord, shp->pos, shp->norm, shp->texcoord);
         shp->quads_pos = {};
@@ -6117,10 +6116,10 @@ trace_point sample_light(const trace_lights& lights, const trace_light& lgt,
         auto eid = 0;
         auto euv = zero2f;
         if (!shp->triangles.empty()) {
-            std::tie(eid, euv) = sample_triangles(cdf, rel, ruv);
-        } else if(!shp->lines.empty()) {
-            std::tie(eid, (float&)euv) = sample_lines(cdf, rel, ruv.x);
-        } else if(!shp->lines.empty()) {
+            tie(eid, euv) = sample_triangles(cdf, rel, ruv);
+        } else if (!shp->lines.empty()) {
+            tie(eid, (float&)euv) = sample_lines(cdf, rel, ruv.x);
+        } else if (!shp->lines.empty()) {
             eid = sample_points(cdf, rel);
         }
         return eval_point(lgt.ist, 0, eid, euv, zero3f);
@@ -6224,7 +6223,7 @@ vec3f trace_path(const scene* scn, const bvh_tree* bvh,
         auto rbuv = sample_next2f(pxl, params.rtype, params.nsamples);
         auto bwi = zero3f;
         auto bdelta = false;
-        std::tie(bwi, bdelta) = sample_brdfcos(pt, wo, rbl, rbuv);
+        tie(bwi, bdelta) = sample_brdfcos(pt, wo, rbl, rbuv);
         auto bpt = intersect_scene(scn, bvh, make_ray(pt.pos, bwi));
         auto bw = weight_brdfcos(pt, wo, bwi, bdelta);
         auto bke = eval_emission(bpt, -bwi);
@@ -6306,7 +6305,7 @@ vec3f trace_path_nomis(const scene* scn, const bvh_tree* bvh,
         auto rbuv = sample_next2f(pxl, params.rtype, params.nsamples);
         auto bwi = zero3f;
         auto bdelta = false;
-        std::tie(bwi, bdelta) = sample_brdfcos(pt, wo, rbl, rbuv);
+        tie(bwi, bdelta) = sample_brdfcos(pt, wo, rbl, rbuv);
         weight *= eval_brdfcos(pt, wo, bwi, bdelta) *
                   weight_brdfcos(pt, wo, bwi, bdelta);
         if (weight == zero3f) break;
@@ -6364,7 +6363,7 @@ vec3f trace_path_hack(const scene* scn, const bvh_tree* bvh,
         // continue path
         auto bwi = zero3f;
         auto bdelta = false;
-        std::tie(bwi, bdelta) = sample_brdfcos(pt, wo,
+        tie(bwi, bdelta) = sample_brdfcos(pt, wo,
             sample_next1f(pxl, params.rtype, params.nsamples),
             sample_next2f(pxl, params.rtype, params.nsamples));
         weight *= eval_brdfcos(pt, wo, bwi, bdelta) *
