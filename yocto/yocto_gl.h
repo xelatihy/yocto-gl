@@ -912,12 +912,6 @@ inline float bilerp(
     return a * (1 - u) * (1 - v) + b * u * (1 - v) + c * u * v +
            d * (1 - u) * v;
 }
-/// Triangle barycentric interpolation. Parameters (u,v) are defined wrt
-/// the axes (b-a) and (c-a).
-template <typename T, typename T1>
-inline float tlerp(const T& a, const T& b, const T& c, T1 u, T1 v) {
-    return a * (1 - u - v) + b * u + c * v;
-}
 
 /// Integer power of two
 inline int pow2(int x) { return 1 << x; }
