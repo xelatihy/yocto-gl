@@ -10906,7 +10906,10 @@ unordered_map<string, test_animation_params>& test_animation_presets() {
     presets["scale"] = make_test_animation("scale", false, {0, 1, 2}, {}, {},
         {{1, 1, 1}, {0.1f, 0.1f, 0.1f}, {1, 1, 1}});
     presets["rotation"] = make_test_animation("rotation", false, {0, 1, 2}, {},
-        {{{0, 1, 0}, 0}, {{0, 1, 0}, pif}, {{0, 1, 0}, 0}}, {});
+        {rotation_quat4<float>({0, 1, 0}, 0),
+            rotation_quat4<float>({0, 1, 0}, pif),
+            rotation_quat4<float>({0, 1, 0}, 0)},
+        {});
 
     return presets;
 }

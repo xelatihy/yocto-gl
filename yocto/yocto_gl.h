@@ -2246,6 +2246,9 @@ struct quat<T, 4> {
     quat(T x, T y, T z, T w) : x{x}, y{y}, z{z}, w{w} {}
     /// conversion from vec
     explicit quat(const vec<T, 4>& vv) : x{vv.x}, y{vv.y}, z{vv.z}, w{vv.w} {}
+    /// conversion to vec
+    explicit operator vec<T, 4>() const { return {x, y, z, w}; }
+#if 0
     /// conversion from axis-angle
     quat(const vec<T, 3>& axis, T angle) : x{0}, y{0}, z{0}, w{1} {
         auto len = length(axis);
@@ -2256,13 +2259,12 @@ struct quat<T, 4> {
             w = cos(angle / 2);
         }
     }
-    /// conversion to vec
-    explicit operator vec<T, 4>() const { return {x, y, z, w}; }
 
     /// rotation axis
     vec<T, 3> axis() const { return normalize(vec<T, 3>{x, y, z}); }
     /// rotation angle
     T angle() const { return 2 * acos(w); }
+#endif
 
     /// element access
     T& operator[](int i) { return (&x)[i]; }
@@ -2908,20 +2910,24 @@ inline mat<T, 4> rotation_mat4(const mat<T, 3>& rot) {
 
 /// rotation matrix
 template <typename T>
-inline mat<T, 4> rotation_mat4(const vec<T, 3>& axis, float angle) {
+inline mat<T, 4> rotation_mat4(const vec<T, 3>& axis, T angle) {
     return rotation_mat4(rotation_frame3(axis, angle).rot());
 }
 
 /// quaternion axis-angle conversion
 template <typename T>
-inline vec<T, 4> rotation_axisangle4(const quat<T, 4>& a) {
-    return {a.axis(), a.angle()};
+inline pair<vec<T, 4>, T> rotation_axisangle4(const quat<T, 4>& a) {
+    return {normalize(vec<T, 3>{a.x, a.y, a.z}), 2 * acos(a.w)};
 }
 
 /// axis-angle to quaternion
 template <typename T>
 inline quat<T, 4> rotation_quat4(const vec<T, 3>& axis, T angle) {
-    return quat<T, 4>(axis, angle);
+    auto len = length(axis);
+    if (!len) return {0, 0, 0, 1};
+    return quat<T, 4>{sin(angle / 2) * axis.x / len,
+        sin(angle / 2) * axis.y / len, sin(angle / 2) * axis.z / len,
+        cos(angle / 2)};
 }
 
 /// quaterion to matrix conversion
