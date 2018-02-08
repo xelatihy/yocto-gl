@@ -832,6 +832,8 @@ using std::getline;
 using std::to_string;
 /// cout object for printing
 using std::cout;
+/// tie function for tuple usage
+using std::tie;
 
 // makes literals available
 using namespace std::literals;
@@ -866,10 +868,12 @@ const auto int_max = numeric_limits<int>::max();
 const auto int_min = numeric_limits<int>::min();
 
 /// Safe minimum value.
-template<typename T>
-inline T min(T x, T y) { return (x < y) ? x : y; }
+template <typename T>
+inline T min(T x, T y) {
+    return (x < y) ? x : y;
+}
 /// Safe minimum value.
-template<typename T>
+template <typename T>
 inline T min(initializer_list<T> vs) {
     auto m = int_max;
     for (auto v : vs) m = min(m, v);
@@ -877,10 +881,12 @@ inline T min(initializer_list<T> vs) {
 }
 
 /// Safe maximum value.
-template<typename T>
-inline T max(T x, T y) { return (x > y) ? x : y; }
+template <typename T>
+inline T max(T x, T y) {
+    return (x > y) ? x : y;
+}
 /// Safe maximum value.
-template<typename T>
+template <typename T>
 inline T max(initializer_list<T> vs) {
     auto m = int_min;
     for (auto v : vs) m = max(m, v);
@@ -888,15 +894,29 @@ inline T max(initializer_list<T> vs) {
 }
 
 /// Clamp a value between a minimum and a maximum.
-template<typename T>
-inline T clamp(T x, T min_, T max_) { return min(max(x, min_), max_); }
+template <typename T>
+inline T clamp(T x, T min_, T max_) {
+    return min(max(x, min_), max_);
+}
 
 /// Linear interpolation.
-inline float lerp(float a, float b, float u) { return a + (b - a) * u; }
-/// bilinear interpolation
-inline float bilerp(float aa, float ba, float ab, float bb, float u, float v) {
-    return aa * (1 - u) * (1 - v) + ba * u * (1 - v) + ab * (1 - u) * v +
-           bb * u * v;
+template <typename T, typename T1>
+inline T lerp(const T& a, const T& b, T1 u) {
+    return a * (1 - u) + b * u;
+}
+/// Bilinear interpolation. Order is specified like quads counter-clockwise,
+/// so a,b,c,d correspond to parameters (0,0), (0,1), (1,1), (0,1)
+template <typename T, typename T1>
+inline float bilerp(
+    const T& a, const T& b, const T& c, const T& d, T1 u, T1 v) {
+    return a * (1 - u) * (1 - v) + b * u * (1 - v) + c * u * v +
+           d * (1 - u) * v;
+}
+/// Triangle barycentric interpolation. Parameters (u,v) are defined wrt
+/// the axes (b-a) and (c-a).
+template <typename T, typename T1>
+inline float tlerp(const T& a, const T& b, const T& c, T1 u, T1 v) {
+    return a * (1 - u - v) + b * u + c * v;
 }
 
 /// Integer power of two
@@ -1416,24 +1436,7 @@ template <typename T>
 inline T angle(const vec<T, 3>& a, const vec<T, 3>& b) {
     return uangle(normalize(a), normalize(b));
 }
-/// vector linear interpolation
-template <typename T, int N, typename T1>
-inline vec<T, N> lerp(const vec<T, N>& a, const vec<T, N>& b, T1 u) {
-    return a * (1 - u) + b * u;
-}
-/// vector bilinear interpolation
-template <typename T, int N, typename T1>
-inline vec<T, N> bilerp(const vec<T, N>& aa, const vec<T, N>& ba,
-    const vec<T, N>& ab, const vec<T, N>& bb, T1 u, T1 v) {
-    return aa * (1 - u) * (1 - v) + ba * u * (1 - v) + ab * (1 - u) * v +
-           bb * u * v;
-}
 
-/// vector normalized linear interpolation
-template <typename T, int N, typename T1>
-inline vec<T, N> nlerp(const vec<T, N>& a, const vec<T, N>& b, T1 u) {
-    return normalize(lerp(a, b, u));
-}
 /// vector spherical linear interpolation (vectors have to be normalized)
 template <typename T, int N, typename T1>
 inline vec<T, N> slerp(const vec<T, N>& a, const vec<T, N>& b, T1 u) {
@@ -2378,13 +2381,6 @@ inline quat<T, 4> normalize(const quat<T, 4>& v) {
     auto l = length(vec<T, 4>{v.x, v.y, v.z, v.w});
     if (!l) return {0, 0, 0, 1};
     return {v.x / l, v.y / l, v.z / l, v.w / l};
-}
-
-/// quaterion normalized linear interpolation
-template <typename T, typename T1>
-inline quat<T, 4> nlerp(const quat<T, 4>& a, const quat<T, 4>& b, T1 t) {
-    return (quat<T, 4>)nlerp(vec<T, 4>(a),
-        dot(vec<T, 4>(a), vec<T, 4>(b)) < 0 ? -vec<T, 4>(b) : vec<T, 4>(b), t);
 }
 
 /// quaterion spherical linear interpolation
@@ -3483,7 +3479,7 @@ inline int sample_index(int size, float r) {
 
 /// pdf for index with uniform distribution
 inline float sample_index_pdf(int size) { return 1.0f / size; }
-    
+
 /// sample a discrete distribution
 inline int sample_discrete_cdf(float r, const vector<float>& cdf) {
     r = clamp(r, 0.0f, 0.9999f);
@@ -3824,20 +3820,23 @@ inline T interpolate_line(const vector<T>& vals, const vec2i& l, T1 u) {
 
 /// Triangle interpolation using (v1-v0) and (v2-v0) as u and v directions.
 template <typename T, typename T1>
-inline T interpolate_triangle(const T& v0, const T& v1, const T& v2, const vec<T1, 2>& uv) {
+inline T interpolate_triangle(
+    const T& v0, const T& v1, const T& v2, const vec<T1, 2>& uv) {
     return v0 * (1 - uv.x - uv.y) + v1 * uv.x + v2 * uv.y;
 }
 
 /// Triangle interpolation using (v1-v0) and (v2-v0) as u and v directions.
 template <typename T, typename T1>
-inline T interpolate_triangle(const vector<T>& vals, const vec3i& t, const vec<T1, 2>& uv) {
+inline T interpolate_triangle(
+    const vector<T>& vals, const vec3i& t, const vec<T1, 2>& uv) {
     if (vals.empty()) return T();
     return vals[t.x] * (1 - uv.x - uv.y) + vals[t.y] * uv.x + vals[t.z] * uv.y;
 }
 
 /// quad interpolation based on the two-triangle representation
 template <typename T, typename T1>
-inline T interpolate_quad(const vector<T>& vals, const vec4i& t, const vec<T1, 2>& uv) {
+inline T interpolate_quad(
+    const vector<T>& vals, const vec4i& t, const vec<T1, 2>& uv) {
     if (vals.empty()) return T();
     return vals[t.x] * (1 - uv.x) * (1 - uv.y) + vals[t.y] * uv.x * (1 - uv.y) +
            vals[t.z] * uv.x * uv.y + vals[t.w] * (1 - uv.x) * uv.y;
@@ -3886,7 +3885,8 @@ inline T eval_bernstein_derivative(T u, int i, int degree) {
 
 /// eval bezier
 template <typename T, typename T1>
-inline T interpolate_bezier(const T& v0, const T& v1, const T& v2, const T& v3, T1 u) {
+inline T interpolate_bezier(
+    const T& v0, const T& v1, const T& v2, const T& v3, T1 u) {
     return v0 * (1 - u) * (1 - u) * (1 - u) + v1 * 3 * u * (1 - u) * (1 - u) +
            v2 * 3 * u * u * (1 - u) + v3 * u * u * u;
 }
@@ -3908,7 +3908,8 @@ inline T interpolate_bezier_derivative(
 
 /// eval bezier derivative
 template <typename T, typename T1>
-inline T interpolate_bezier_derivative(const vector<T>& vals, const vec4i& b, T1 u) {
+inline T interpolate_bezier_derivative(
+    const vector<T>& vals, const vec4i& b, T1 u) {
     if (vals.empty()) return T();
     return interpolate_bezier_derivative(
         vals[b.x], vals[b.y], vals[b.z], vals[b.w], u);
