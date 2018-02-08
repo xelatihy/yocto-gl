@@ -86,7 +86,6 @@
 //     - cleanup sampling in ray tracing
 //     - create distributions
 //     - make lights with single shapes in trace
-// - check quaterion sum and scalar product
 //
 // - trace: add hack for radius in offsetting rays
 //

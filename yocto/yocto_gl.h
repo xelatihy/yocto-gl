@@ -2339,22 +2339,28 @@ inline bool operator!=(const quat<T, 4>& a, const quat<T, 4>& b) {
 
 /// quaterion multiply
 template <typename T>
+inline quat<T, 4> operator+(const quat<T, 4>& a, const quat<T, 4>& b) {
+    return {a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w};
+}
+
+/// quaterion multiply
+template <typename T, typename T1>
+inline quat<T, 4> operator*(const quat<T, 4>& a, T1 b) {
+    return {a.x * b, a.y * b, a.z * b, a.w * b};
+}
+/// quaterion division
+template <typename T, typename T1>
+inline quat<T, 4> operator/(const quat<T, 4>& a, T1 b) {
+    return {a.x / b, a.y / b, a.z / b, a.w / b};
+}
+
+/// quaterion multiply
+template <typename T>
 inline quat<T, 4> operator*(const quat<T, 4>& a, const quat<T, 4>& b) {
     return {a.x * b.w + a.w * b.x + a.y * b.w - a.z * b.y,
         a.y * b.w + a.w * b.y + a.z * b.x - a.x * b.z,
         a.z * b.w + a.w * b.z + a.x * b.y - a.y * b.x,
         a.w * b.w - a.x * b.x - a.y * b.y - a.z * b.z};
-}
-
-/// quaterion multiply
-template <typename T, typename T1>
-inline quat<T, 4> operator*(const quat<T, 4>& a, float b) {
-    return {a.x * b, a.y * b, a.z * b, a.w * b};
-}
-/// quaterion division
-template <typename T>
-inline quat<T, 4> operator/(const quat<T, 4>& a, float b) {
-    return {a.x / b, a.y / b, a.z / b, a.w / b};
 }
 
 /// quaterion conjugate
@@ -3961,8 +3967,7 @@ inline T eval_keyframed_cubic(
 template <typename T>
 inline quat<T, 4> eval_keyframed_cubic(const quat<T, 4>& a, const quat<T, 4>& b,
     const quat<T, 4>& c, const quat<T, 4>& d, float t) {
-    return normalize(
-        (quat4f)interpolate_bezier((vec4f)a, (vec4f)b, (vec4f)c, (vec4f)d, t));
+    return normalize(interpolate_bezier(a, b, c, d, t));
 }
 
 /// Evalautes a keyframed value using bezier interpolation
