@@ -81,6 +81,19 @@
 // - update documentation
 // - update BVH documentation
 //
+// - std::tie -> tie
+// - cleanup sampling functions everywhere
+//     - probably removing sample_points/lines/triangles
+//     - cleanup sampling in ray tracing
+//     - create distributions
+//     - make lights with single shapes in trace
+// - cleanup interpolation functions
+//     - choose a proper name for them (lerp, bilerp, tlerp?)
+//     - or call them all lerp, but given them differnt inputs
+//     - make special functions for shape elements
+//
+// - trace: add hack for radius in offsetting rays
+//
 // - BVH simplify build functions: can we avoid preallocating nodes?
 // - BVH: maybe put axis with internal
 //
@@ -1225,11 +1238,11 @@ vector<float> sample_lines_cdf(
 }
 
 // Pick a point on lines
-pair<int, vec2f> sample_lines(const vector<float>& cdf, float re, float ruv) {
+pair<int, float> sample_lines(const vector<float>& cdf, float re, float ruv) {
     re = clamp(re * cdf.back(), 0.0f, cdf.back() - 0.00001f);
     auto eid =
         (int)(std::upper_bound(cdf.begin(), cdf.end(), re) - cdf.begin());
-    return {eid, {1 - ruv, ruv}};
+    return {eid, ruv};
 }
 
 // Compute a distribution for sampling triangle meshes uniformly
@@ -1244,13 +1257,13 @@ vector<float> sample_triangles_cdf(
 }
 
 // Pick a point on a triangle mesh
-pair<int, vec3f> sample_triangles(
+pair<int, vec2f> sample_triangles(
     const vector<float>& cdf, float re, const vec2f& ruv) {
     re = clamp(re * cdf.back(), 0.0f, cdf.back() - 0.00001f);
     auto eid =
         (int)(std::upper_bound(cdf.begin(), cdf.end(), re) - cdf.begin());
     return {
-        eid, {sqrt(ruv.x) * (1 - ruv.y), 1 - sqrt(ruv.x), ruv.y * sqrt(ruv.x)}};
+        eid, {1 - sqrt(ruv.x), ruv.y * sqrt(ruv.x)}};
 }
 
 // Compute a distribution for sampling quad meshes uniformly
@@ -1265,20 +1278,12 @@ vector<float> sample_quads_cdf(
 }
 
 // Pick a point on a quad mesh
-pair<int, vec4f> sample_quads(
+pair<int, vec2f> sample_quads(
     const vector<float>& cdf, float re, const vec2f& ruv) {
-    if (ruv.x < 0.5f) {
-        auto eid = 0;
-        auto euv = zero3f;
-        std::tie(eid, euv) = sample_triangles(cdf, re, {ruv.x * 2, ruv.y});
-        return {eid, {euv.x, euv.y, 0, euv.z}};
-    } else {
-        auto eid = 0;
-        auto euv = zero3f;
-        std::tie(eid, euv) =
-            sample_triangles(cdf, re, {(ruv.x - 0.5f) * 2, ruv.y});
-        return {eid, {0, euv.z, euv.x, euv.y}};
-    }
+    re = clamp(re * cdf.back(), 0.0f, cdf.back() - 0.00001f);
+    auto eid =
+    (int)(std::upper_bound(cdf.begin(), cdf.end(), re) - cdf.begin());
+    return {eid, ruv};
 }
 
 // Samples a set of points over a triangle mesh uniformly. The rng function
@@ -1295,17 +1300,15 @@ tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>> sample_triangles_points(
     auto rng = init_rng(seed);
     for (auto i = 0; i < npoints; i++) {
         auto eid = 0;
-        auto euv = zero3f;
+        auto euv = zero2f;
         std::tie(eid, euv) = sample_triangles(
             cdf, next_rand1f(rng), {next_rand1f(rng), next_rand1f(rng)});
         auto t = triangles[eid];
-        sampled_pos[i] = pos[t.x] * euv.x + pos[t.y] * euv.y + pos[t.z] * euv.z;
+        sampled_pos[i] = interpolate_triangle(pos[t.x], pos[t.y], pos[t.z], euv);
         if (!sampled_norm.empty())
-            sampled_norm[i] = normalize(
-                norm[t.x] * euv.x + norm[t.y] * euv.y + norm[t.z] * euv.z);
+            sampled_norm[i] = normalize(interpolate_triangle(norm[t.x], norm[t.y], norm[t.z], euv));
         if (!sampled_texcoord.empty())
-            sampled_texcoord[i] = texcoord[t.x] * euv.x +
-                                  texcoord[t.y] * euv.y + texcoord[t.z] * euv.z;
+            sampled_texcoord[i] = interpolate_triangle(texcoord[t.x], texcoord[t.y], texcoord[t.z], euv);
     }
 
     return {sampled_pos, sampled_norm, sampled_texcoord};
@@ -2081,19 +2084,20 @@ bool intersect_line(const ray3f& ray, const vec3f& v0, const vec3f& v1,
     auto p01 = p0 - p1;
 
     // check with the line radius at the same point
+    auto d2 = dot(p01, p01);
     auto r = r0 * (1 - s) + r1 * s;
-    if (dot(p01, p01) > r * r) return false;
+    if (d2 > r * r) return false;
 
     // intersection occurred: set params and exit
     ray_t = t;
-    euv = {1 - s, s};
+    euv = {s, sqrt(d2) / r};
 
     return true;
 }
 
 // Intersect a ray with a triangle
 bool intersect_triangle(const ray3f& ray, const vec3f& v0, const vec3f& v1,
-    const vec3f& v2, float& ray_t, vec3f& euv) {
+    const vec3f& v2, float& ray_t, vec2f& euv) {
     // compute triangle edges
     auto edge1 = v1 - v0;
     auto edge2 = v2 - v0;
@@ -2123,23 +2127,22 @@ bool intersect_triangle(const ray3f& ray, const vec3f& v0, const vec3f& v1,
 
     // intersection occurred: set params and exit
     ray_t = t;
-    euv = {1 - u - v, u, v};
+    euv = {u, v};
 
     return true;
 }
 
 // Intersect a ray with a quad.
 bool intersect_quad(const ray3f& ray, const vec3f& v0, const vec3f& v1,
-    const vec3f& v2, const vec3f& v3, float& ray_t, vec4f& euv) {
+    const vec3f& v2, const vec3f& v3, float& ray_t, vec2f& euv) {
     auto hit = false;
     auto tray = ray;
-    if (intersect_triangle(tray, v0, v1, v3, ray_t, (vec3f&)euv)) {
-        euv = {euv.x, euv.y, 0, euv.z};
+    if (intersect_triangle(tray, v0, v1, v3, ray_t, euv)) {
         tray.tmax = ray_t;
         hit = true;
     }
-    if (intersect_triangle(tray, v2, v3, v1, ray_t, (vec3f&)euv)) {
-        euv = {0, 1 - euv.y, euv.y + euv.z - 1, 1 - euv.z};
+    if (intersect_triangle(tray, v2, v3, v1, ray_t, euv)) {
+        euv = {1 - euv.x, 1 - euv.y};
         tray.tmax = ray_t;
         hit = true;
     }
@@ -2152,7 +2155,8 @@ bool intersect_tetrahedron(const ray3f& ray_, const vec3f& v0, const vec3f& v1,
     // check intersction for each face
     auto hit = false;
     auto ray = ray_;
-    auto tuv = zero3f;
+    auto tuv = zero2f;
+    // TODO: fix uvs
     if (intersect_triangle(ray, v0, v1, v2, ray_t, tuv)) {
         hit = true;
         ray.tmax = ray_t;
@@ -2245,36 +2249,36 @@ bool overlap_point(
 }
 
 // TODO: documentation
-vec2f closestuv_line(const vec3f& pos, const vec3f& v0, const vec3f& v1) {
+float closestuv_line(const vec3f& pos, const vec3f& v0, const vec3f& v1) {
     auto ab = v1 - v0;
     auto d = dot(ab, ab);
     // Project c onto ab, computing parameterized position d(t) = a + t*(b –
     // a)
     auto u = dot(pos - v0, ab) / d;
     u = clamp(u, (float)0, (float)1);
-    return {1 - u, u};
+    return u;
 }
 
 // TODO: documentation
 bool overlap_line(const vec3f& pos, float dist_max, const vec3f& v0,
     const vec3f& v1, float r0, float r1, float& dist, vec2f& euv) {
-    auto uv = closestuv_line(pos, v0, v1);
+    auto u = closestuv_line(pos, v0, v1);
     // Compute projected position from the clamped t d = a + t * ab;
-    auto p = lerp(v0, v1, uv.y);
-    auto r = lerp(r0, r1, uv.y);
+    auto p = lerp(v0, v1, u);
+    auto r = lerp(r0, r1, u);
     auto d2 = dot(pos - p, pos - p);
     // check distance
     if (d2 > (dist_max + r) * (dist_max + r)) return false;
     // done
     dist = sqrt(d2);
-    euv = uv;
+    euv = {u, 0};
     return true;
 }
 
 // TODO: documentation
 // this is a complicated test -> I probably prefer to use a sequence of test
 // (triangle body, and 3 edges)
-vec3f closestuv_triangle(
+vec2f closestuv_triangle(
     const vec3f& pos, const vec3f& v0, const vec3f& v1, const vec3f& v2) {
     auto ab = v1 - v0;
     auto ac = v2 - v0;
@@ -2284,46 +2288,46 @@ vec3f closestuv_triangle(
     auto d2 = dot(ac, ap);
 
     // corner and edge cases
-    if (d1 <= 0 && d2 <= 0) return {1, 0, 0};
+    if (d1 <= 0 && d2 <= 0) return {0, 0};
 
     auto bp = pos - v1;
     auto d3 = dot(ab, bp);
     auto d4 = dot(ac, bp);
-    if (d3 >= 0 && d4 <= d3) return {0, 1, 0};
+    if (d3 >= 0 && d4 <= d3) return {1, 0};
 
     auto vc = d1 * d4 - d3 * d2;
     if ((vc <= 0) && (d1 >= 0) && (d3 <= 0))
-        return {1 - d1 / (d1 - d3), d1 / (d1 - d3), 0};
+        return {d1 / (d1 - d3), 0};
 
     auto cp = pos - v2;
     auto d5 = dot(ab, cp);
     auto d6 = dot(ac, cp);
-    if (d6 >= 0 && d5 <= d6) return {0, 0, 1};
+    if (d6 >= 0 && d5 <= d6) return {0, 1};
 
     auto vb = d5 * d2 - d1 * d6;
     if ((vb <= 0) && (d2 >= 0) && (d6 <= 0))
-        return {1 - d2 / (d2 - d6), 0, d2 / (d2 - d6)};
+        return {0, d2 / (d2 - d6)};
 
     auto va = d3 * d6 - d5 * d4;
     if ((va <= 0) && (d4 - d3 >= 0) && (d5 - d6 >= 0)) {
         auto w = (d4 - d3) / ((d4 - d3) + (d5 - d6));
-        return {0, 1 - w, w};
+        return {1 - w, w};
     }
 
     // face case
     auto denom = 1 / (va + vb + vc);
-    auto v = vb * denom;
-    auto w = vc * denom;
-    return {1 - v - w, v, w};
+    auto u = vb * denom;
+    auto v = vc * denom;
+    return {u, v};
 }
 
 // TODO: documentation
 bool overlap_triangle(const vec3f& pos, float dist_max, const vec3f& v0,
     const vec3f& v1, const vec3f& v2, float r0, float r1, float r2, float& dist,
-    vec3f& euv) {
+    vec2f& euv) {
     auto uv = closestuv_triangle(pos, v0, v1, v2);
-    auto p = v0 * uv.x + v1 * uv.y + v2 * uv.z;
-    auto r = r0 * uv.x + r1 * uv.y + r2 * uv.z;
+    auto p = interpolate_triangle(v0, v1, v2, uv);
+    auto r = interpolate_triangle(r0, r1, r2, uv);
     auto dd = dot(p - pos, p - pos);
     if (dd > (dist_max + r) * (dist_max + r)) return false;
     dist = sqrt(dd);
@@ -2334,18 +2338,17 @@ bool overlap_triangle(const vec3f& pos, float dist_max, const vec3f& v0,
 // TODO: documentation
 bool overlap_quad(const vec3f& pos, float dist_max, const vec3f& v0,
     const vec3f& v1, const vec3f& v2, const vec3f& v3, float r0, float r1,
-    float r2, float r3, float& dist, vec4f& euv) {
+    float r2, float r3, float& dist, vec2f& euv) {
     auto hit = false;
     if (overlap_triangle(
-            pos, dist_max, v0, v1, v3, r0, r1, r3, dist, (vec3f&)euv)) {
-        euv = {euv.x, euv.y, 0, euv.z};
+            pos, dist_max, v0, v1, v3, r0, r1, r3, dist, euv)) {
         dist_max = dist;
         hit = true;
     }
     if (overlap_triangle(
-            pos, dist_max, v2, v3, v1, r2, r3, r1, dist, (vec3f&)euv)) {
+            pos, dist_max, v2, v3, v1, r2, r3, r1, dist, euv)) {
         // dist_max = dist;
-        euv = {0, 1 - euv.y, euv.y + euv.z - 1, 1 - euv.z};
+        euv = {1 - euv.x, 1 - euv.y};
         hit = true;
     }
     return hit;
@@ -2354,6 +2357,7 @@ bool overlap_quad(const vec3f& pos, float dist_max, const vec3f& v0,
 // TODO: documentation
 bool overlap_tetrahedron(const vec3f& pos, const vec3f& v0, const vec3f& v1,
     const vec3f& v2, const vec3f& v3, vec4f& euv) {
+    // TODO: fix uv
     auto vol = dot(v3 - v0, cross(v3 - v1, v3 - v0));
     if (vol == 0) return false;
     auto u = dot(v3 - v0, cross(v3 - v1, v3 - v0)) / vol;
@@ -2370,6 +2374,7 @@ bool overlap_tetrahedron(const vec3f& pos, const vec3f& v0, const vec3f& v1,
 bool overlap_tetrahedron(const vec3f& pos, float dist_max, const vec3f& v0,
     const vec3f& v1, const vec3f& v2, const vec3f& v3, float r0, float r1,
     float r2, float r3, float& dist, vec4f& euv) {
+    // TODO: FIX UVs
     // check interior
     if (overlap_tetrahedron(pos, v0, v1, v2, v3, euv)) {
         dist = 0;
@@ -2378,7 +2383,7 @@ bool overlap_tetrahedron(const vec3f& pos, float dist_max, const vec3f& v0,
 
     // check faces
     auto hit = false;
-    auto tuv = zero3f;
+    auto tuv = zero2f;
     if (overlap_triangle(pos, dist_max, v0, v1, v2, r0, r1, r2, dist, tuv)) {
         hit = true;
         dist_max = dist;
@@ -2719,7 +2724,7 @@ void refit_bvh(bvh_tree* bvh, const vector<frame3f>& frames,
 
 // Intersect ray with a bvh.
 bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray_, bool early_exit,
-    float& ray_t, int& iid, int& sid, int& eid, vec4f& ew) {
+    float& ray_t, int& iid, int& sid, int& eid, vec2f& euv) {
     // node stack
     int node_stack[128];
     auto node_cur = 0;
@@ -2769,7 +2774,7 @@ bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray_, bool early_exit,
                         hit = true;
                         ray.tmax = ray_t;
                         eid = bvh->sorted_prim[i];
-                        ew = {1, 0, 0, 0};
+                        euv = {1, 0};
                     }
                 }
             } break;
@@ -2777,12 +2782,10 @@ bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray_, bool early_exit,
                 for (auto i = node.start; i < node.start + node.count; i++) {
                     auto& l = bvh->lines[i];
                     if (intersect_line(ray, bvh->pos[l.x], bvh->pos[l.y],
-                            bvh->radius[l.x], bvh->radius[l.y], ray_t,
-                            (vec2f&)ew)) {
+                            bvh->radius[l.x], bvh->radius[l.y], ray_t, euv)) {
                         hit = true;
                         ray.tmax = ray_t;
                         eid = bvh->sorted_prim[i];
-                        ew = {ew.x, ew.y, 0, 0};
                     }
                 }
             } break;
@@ -2790,11 +2793,10 @@ bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray_, bool early_exit,
                 for (auto i = node.start; i < node.start + node.count; i++) {
                     auto& t = bvh->triangles[i];
                     if (intersect_triangle(ray, bvh->pos[t.x], bvh->pos[t.y],
-                            bvh->pos[t.z], ray_t, (vec3f&)ew)) {
+                            bvh->pos[t.z], ray_t, euv)) {
                         hit = true;
                         ray.tmax = ray_t;
                         eid = bvh->sorted_prim[i];
-                        ew = {ew.x, ew.y, ew.z, 0};
                     }
                 }
             } break;
@@ -2802,11 +2804,10 @@ bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray_, bool early_exit,
                 for (auto i = node.start; i < node.start + node.count; i++) {
                     auto& q = bvh->quads[i];
                     if (intersect_quad(ray, bvh->pos[q.x], bvh->pos[q.y],
-                            bvh->pos[q.z], bvh->pos[q.w], ray_t, ew)) {
+                            bvh->pos[q.z], bvh->pos[q.w], ray_t, euv)) {
                         hit = true;
                         ray.tmax = ray_t;
                         eid = bvh->sorted_prim[i];
-                        ew = {ew.x, ew.y, ew.z, ew.w};
                     }
                 }
             } break;
@@ -2818,7 +2819,7 @@ bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray_, bool early_exit,
                         hit = true;
                         ray.tmax = ray_t;
                         eid = idx;
-                        ew = {1, 0, 0, 0};
+                        euv = {1, 0};
                     }
                 }
             } break;
@@ -2827,7 +2828,7 @@ bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray_, bool early_exit,
                     auto& ist = bvh->instances[i];
                     if (intersect_bvh(ist.bvh,
                             transform_ray(ist.frame_inv, ray), early_exit,
-                            ray_t, iid, sid, eid, ew)) {
+                            ray_t, iid, sid, eid, euv)) {
                         hit = true;
                         ray.tmax = ray_t;
                         iid = ist.iid;
@@ -2846,7 +2847,7 @@ bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray_, bool early_exit,
 
 // Finds the closest element with a bvh.
 bool overlap_bvh(const bvh_tree* bvh, const vec3f& pos, float max_dist,
-    bool early_exit, float& dist, int& iid, int& sid, int& eid, vec4f& ew) {
+    bool early_exit, float& dist, int& iid, int& sid, int& eid, vec2f& euv) {
     // node stack
     int node_stack[64];
     auto node_cur = 0;
@@ -2879,7 +2880,7 @@ bool overlap_bvh(const bvh_tree* bvh, const vec3f& pos, float max_dist,
                         hit = true;
                         max_dist = dist;
                         eid = bvh->sorted_prim[i];
-                        ew = {1, 0, 0, 0};
+                        euv = {1, 0};
                     }
                 }
             } break;
@@ -2888,11 +2889,10 @@ bool overlap_bvh(const bvh_tree* bvh, const vec3f& pos, float max_dist,
                     auto& l = bvh->lines[i];
                     if (overlap_line(pos, max_dist, bvh->pos[l.x],
                             bvh->pos[l.y], bvh->radius[l.x], bvh->radius[l.y],
-                            dist, (vec2f&)ew)) {
+                            dist, euv)) {
                         hit = true;
                         max_dist = dist;
                         eid = bvh->sorted_prim[i];
-                        ew = {ew.x, ew.y, 0, 0};
                     }
                 }
             } break;
@@ -2902,11 +2902,10 @@ bool overlap_bvh(const bvh_tree* bvh, const vec3f& pos, float max_dist,
                     if (overlap_triangle(pos, max_dist, bvh->pos[t.x],
                             bvh->pos[t.y], bvh->pos[t.z], bvh->radius[t.x],
                             bvh->radius[t.y], bvh->radius[t.z], dist,
-                            (vec3f&)ew)) {
+                            euv)) {
                         hit = true;
                         max_dist = dist;
                         eid = bvh->sorted_prim[i];
-                        ew = {ew.x, ew.y, ew.z, 0};
                     }
                 }
             } break;
@@ -2916,11 +2915,10 @@ bool overlap_bvh(const bvh_tree* bvh, const vec3f& pos, float max_dist,
                     if (overlap_quad(pos, max_dist, bvh->pos[q.x],
                             bvh->pos[q.y], bvh->pos[q.z], bvh->pos[q.w],
                             bvh->radius[q.x], bvh->radius[q.y],
-                            bvh->radius[q.z], bvh->radius[q.w], dist, ew)) {
+                            bvh->radius[q.z], bvh->radius[q.w], dist, euv)) {
                         hit = true;
                         max_dist = dist;
                         eid = bvh->sorted_prim[i];
-                        ew = {ew.x, ew.y, ew.z, ew.w};
                     }
                 }
             } break;
@@ -2932,7 +2930,7 @@ bool overlap_bvh(const bvh_tree* bvh, const vec3f& pos, float max_dist,
                         hit = true;
                         max_dist = dist;
                         eid = idx;
-                        ew = {1, 0, 0, 0};
+                        euv = {1, 0};
                     }
                 }
             } break;
@@ -2941,7 +2939,7 @@ bool overlap_bvh(const bvh_tree* bvh, const vec3f& pos, float max_dist,
                     auto& ist = bvh->instances[i];
                     if (overlap_bvh(ist.bvh,
                             transform_point(ist.frame_inv, pos), max_dist,
-                            early_exit, dist, iid, sid, eid, ew)) {
+                            early_exit, dist, iid, sid, eid, euv)) {
                         hit = true;
                         max_dist = dist;
                         iid = ist.iid;
@@ -3070,60 +3068,58 @@ scene::~scene() {
 
 // Shape value interpolated using barycentric coordinates
 template <typename T>
-T eval_barycentric(const shape* shp, const vector<T>& vals, int eid,
-    const vec4f& euv, const T& def) {
+T eval_elem(const shape* shp, const vector<T>& vals, int eid,
+    const vec2f& euv, const T& def) {
     if (vals.empty()) return def;
     if (!shp->triangles.empty()) {
-        return eval_barycentric_triangle(
-            vals, shp->triangles[eid], vec3f{euv.x, euv.y, euv.z});
+        return interpolate_triangle(vals, shp->triangles[eid], euv);
     } else if (!shp->lines.empty()) {
-        return eval_barycentric_line(
-            vals, shp->lines[eid], vec2f{euv.x, euv.y});
+        return interpolate_line(vals, shp->lines[eid], euv.x);
     } else if (!shp->points.empty()) {
-        return eval_barycentric_point(vals, shp->points[eid], euv.x);
+        return interpolate_point(vals, shp->points[eid]);
     } else if (!shp->quads.empty()) {
-        return eval_barycentric_quad(vals, shp->quads[eid], euv);
+        return interpolate_quad(vals, shp->quads[eid], euv);
     } else {
         return vals[eid];  // points
     }
 }
 
 // Shape position interpolated using barycentric coordinates
-vec3f eval_pos(const shape* shp, int eid, const vec4f& euv) {
-    return eval_barycentric(shp, shp->pos, eid, euv, {0, 0, 0});
+vec3f eval_pos(const shape* shp, int eid, const vec2f& euv) {
+    return eval_elem(shp, shp->pos, eid, euv, {0, 0, 0});
 }
 // Shape normal interpolated using barycentric coordinates
-vec3f eval_norm(const shape* shp, int eid, const vec4f& euv) {
-    return normalize(eval_barycentric(shp, shp->norm, eid, euv, {0, 0, 1}));
+vec3f eval_norm(const shape* shp, int eid, const vec2f& euv) {
+    return normalize(eval_elem(shp, shp->norm, eid, euv, {0, 0, 1}));
 }
 // Shape texcoord interpolated using barycentric coordinates
-vec2f eval_texcoord(const shape* shp, int eid, const vec4f& euv) {
-    return eval_barycentric(shp, shp->texcoord, eid, euv, {0, 0});
+vec2f eval_texcoord(const shape* shp, int eid, const vec2f& euv) {
+    return eval_elem(shp, shp->texcoord, eid, euv, {0, 0});
 }
 // Shape color interpolated using barycentric coordinates
-vec4f eval_color(const shape* shp, int eid, const vec4f& euv) {
-    return eval_barycentric(shp, shp->color, eid, euv, {1, 1, 1, 1});
+vec4f eval_color(const shape* shp, int eid, const vec2f& euv) {
+    return eval_elem(shp, shp->color, eid, euv, {1, 1, 1, 1});
 }
 // Shape radius interpolated using barycentric coordinates
-float eval_radius(const shape* shp, int eid, const vec4f& euv) {
-    return eval_barycentric(shp, shp->radius, eid, euv, 0.0f);
+float eval_radius(const shape* shp, int eid, const vec2f& euv) {
+    return eval_elem(shp, shp->radius, eid, euv, 0.0f);
 }
 // Shape tangent space interpolated using barycentric coordinates
-vec4f eval_tangsp(const shape* shp, int eid, const vec4f& euv) {
-    return eval_barycentric(shp, shp->tangsp, eid, euv, {0, 0, 0, 1});
+vec4f eval_tangsp(const shape* shp, int eid, const vec2f& euv) {
+    return eval_elem(shp, shp->tangsp, eid, euv, {0, 0, 0, 1});
 }
 
 // Instance position interpolated using barycentric coordinates
-vec3f eval_pos(const instance* ist, int sid, int eid, const vec4f& euv) {
+vec3f eval_pos(const instance* ist, int sid, int eid, const vec2f& euv) {
     auto shp = ist->shp->shapes.at(sid);
     return transform_point(
-        ist->frame, eval_barycentric(shp, shp->pos, eid, euv, {0, 0, 0}));
+        ist->frame, eval_elem(shp, shp->pos, eid, euv, {0, 0, 0}));
 }
 // Instance normal interpolated using barycentric coordinates
-vec3f eval_norm(const instance* ist, int sid, int eid, const vec4f& euv) {
+vec3f eval_norm(const instance* ist, int sid, int eid, const vec2f& euv) {
     auto shp = ist->shp->shapes.at(sid);
     return transform_direction(ist->frame,
-        normalize(eval_barycentric(shp, shp->norm, eid, euv, {0, 0, 1})));
+        normalize(eval_elem(shp, shp->norm, eid, euv, {0, 0, 1})));
 }
 
 // Evaluate a texture
@@ -5989,7 +5985,7 @@ trace_point eval_point(const environment* env, const vec3f& wo) {
 
 // Create a point for a shape. Resolves geometry and material with textures.
 trace_point eval_point(
-    const instance* ist, int sid, int eid, const vec4f& euv, const vec3f& wo) {
+    const instance* ist, int sid, int eid, const vec2f& euv, const vec3f& wo) {
     // default material
     static auto def_material = (material*)nullptr;
     if (!def_material) {
@@ -6114,32 +6110,25 @@ float weight_lights(
 
 // Picks a point on a light.
 trace_point sample_light(const trace_lights& lights, const trace_light& lgt,
-    const trace_point& pt, float rne, const vec2f& rn) {
+    const trace_point& pt, float rel, const vec2f& ruv) {
     if (lgt.ist) {
         auto shp = lgt.ist->shp->shapes.at(0);
+        auto& cdf = lights.shape_cdfs.at(shp);
         auto eid = 0;
-        auto euv = zero4f;
-        if (!shp->points.empty()) {
-            eid = sample_points(lights.shape_cdfs.at(shp), rne);
-            euv = {1, 0, 0, 0};
-        } else if (!shp->lines.empty()) {
-            std::tie(eid, (vec2f&)euv) =
-                sample_lines(lights.shape_cdfs.at(shp), rne, rn.x);
-        } else if (!shp->triangles.empty()) {
-            std::tie(eid, (vec3f&)euv) =
-                sample_triangles(lights.shape_cdfs.at(shp), rne, rn);
-        } else if (!shp->quads.empty()) {
-            std::tie(eid, (vec4f&)euv) =
-                sample_quads(lights.shape_cdfs.at(shp), rne, rn);
-        } else {
-            assert(false);
+        auto euv = zero2f;
+        if (!shp->triangles.empty()) {
+            std::tie(eid, euv) = sample_triangles(cdf, rel, ruv);
+        } else if(!shp->lines.empty()) {
+            std::tie(eid, (float&)euv) = sample_lines(cdf, rel, ruv.x);
+        } else if(!shp->lines.empty()) {
+            eid = sample_points(cdf, rel);
         }
         return eval_point(lgt.ist, 0, eid, euv, zero3f);
     }
     if (lgt.env) {
-        auto z = -1 + 2 * rn.y;
+        auto z = -1 + 2 * ruv.y;
         auto rr = sqrt(clamp(1 - z * z, 0.0f, 1.0f));
-        auto phi = 2 * pif * rn.x;
+        auto phi = 2 * pif * ruv.x;
         auto wo = vec3f{cos(phi) * rr, z, sin(phi) * rr};
         return eval_point(lgt.env, wo);
     }
@@ -6159,7 +6148,7 @@ trace_point sample_lights(const trace_lights& lights, const trace_point& pt,
 trace_point intersect_scene(
     const scene* scn, const bvh_tree* bvh, const ray3f& ray) {
     auto iid = 0, sid = 0, eid = 0;
-    auto euv = zero4f;
+    auto euv = zero2f;
     auto ray_t = 0.0f;
     if (intersect_bvh(bvh, ray, false, ray_t, iid, sid, eid, euv)) {
         return eval_point(scn->instances[iid], sid, eid, euv, -ray.d);

@@ -212,10 +212,10 @@
 /// manipulation useful to support scene viewing and path tracing.
 ///
 /// 1. compute line tangents, and triangle and quad areas and normals
-/// 2. compute barycentric interpolation with `eval_barycentric_line()`,
-///    `eval_barycentric_triangle()` and `eval_barycentric_quad()`
-/// 3. evaluate Bezier curve and derivatives with `eval_bezier_cubic()` and
-///    `eval_bezier_cubic_derivative()`
+/// 2. interpolate values over primitives with `eval_line()`,
+///    `eval_triangle()` and `eval_quad()`
+/// 3. evaluate Bezier curves and derivatives with `eval_bezier()` and
+///    `eval_bezier_derivative()`
 /// 4. compute smooth normals and tangents with `compute_normals()`
 /// 5. compute tangent frames from texture coordinates with
 ///    `compute_tangent_space()`
@@ -866,52 +866,37 @@ const auto int_max = numeric_limits<int>::max();
 const auto int_min = numeric_limits<int>::min();
 
 /// Safe minimum value.
-inline int min(int x, int y) { return (x < y) ? x : y; }
+template<typename T>
+inline T min(T x, T y) { return (x < y) ? x : y; }
 /// Safe minimum value.
-inline float min(float x, float y) { return (x < y) ? x : y; }
-/// Safe minimum value.
-inline int min(initializer_list<int> vs) {
+template<typename T>
+inline T min(initializer_list<T> vs) {
     auto m = int_max;
     for (auto v : vs) m = min(m, v);
     return m;
 }
-/// Safe minimum value.
-inline float min(initializer_list<float> vs) {
-    auto m = flt_max;
-    for (auto v : vs) m = min(m, v);
-    return m;
-}
 
 /// Safe maximum value.
-inline int max(int x, int y) { return (x > y) ? x : y; }
+template<typename T>
+inline T max(T x, T y) { return (x > y) ? x : y; }
 /// Safe maximum value.
-inline float max(float x, float y) { return (x > y) ? x : y; }
-/// Safe maximum value.
-inline int max(initializer_list<int> vs) {
+template<typename T>
+inline T max(initializer_list<T> vs) {
     auto m = int_min;
     for (auto v : vs) m = max(m, v);
     return m;
 }
-/// Safe maximum value.
-inline float max(initializer_list<float> vs) {
-    auto m = flt_min;
-    for (auto v : vs) m = max(m, v);
-    return m;
-}
 
 /// Clamp a value between a minimum and a maximum.
-inline int clamp(int x, int min_, int max_) { return min(max(x, min_), max_); }
-/// Clamp a value between a minimum and a maximum.
-inline float clamp(float x, float min_, float max_) {
-    return min(max(x, min_), max_);
-}
+template<typename T>
+inline T clamp(T x, T min_, T max_) { return min(max(x, min_), max_); }
 
 /// Linear interpolation.
-inline float lerp(float a, float b, float t) { return a + (b - a) * t; }
+inline float lerp(float a, float b, float u) { return a + (b - a) * u; }
 /// bilinear interpolation
-inline float bilerp(float aa, float ba, float ab, float bb, float s, float t) {
-    return aa * (1 - s) * (1 - t) + ba * s * (1 - t) + ab * (1 - s) * t +
-           bb * s * t;
+inline float bilerp(float aa, float ba, float ab, float bb, float u, float v) {
+    return aa * (1 - u) * (1 - v) + ba * u * (1 - v) + ab * (1 - u) * v +
+           bb * u * v;
 }
 
 /// Integer power of two
@@ -1433,29 +1418,29 @@ inline T angle(const vec<T, 3>& a, const vec<T, 3>& b) {
 }
 /// vector linear interpolation
 template <typename T, int N, typename T1>
-inline vec<T, N> lerp(const vec<T, N>& a, const vec<T, N>& b, T1 t) {
-    return a * (1 - t) + b * t;
+inline vec<T, N> lerp(const vec<T, N>& a, const vec<T, N>& b, T1 u) {
+    return a * (1 - u) + b * u;
 }
 /// vector bilinear interpolation
 template <typename T, int N, typename T1>
 inline vec<T, N> bilerp(const vec<T, N>& aa, const vec<T, N>& ba,
-    const vec<T, N>& ab, const vec<T, N>& bb, T1 s, T1 t) {
-    return aa * (1 - s) * (1 - t) + ba * s * (1 - t) + ab * (1 - s) * t +
-           bb * s * t;
+    const vec<T, N>& ab, const vec<T, N>& bb, T1 u, T1 v) {
+    return aa * (1 - u) * (1 - v) + ba * u * (1 - v) + ab * (1 - u) * v +
+           bb * u * v;
 }
 
 /// vector normalized linear interpolation
 template <typename T, int N, typename T1>
-inline vec<T, N> nlerp(const vec<T, N>& a, const vec<T, N>& b, T1 t) {
-    return normalize(lerp(a, b, t));
+inline vec<T, N> nlerp(const vec<T, N>& a, const vec<T, N>& b, T1 u) {
+    return normalize(lerp(a, b, u));
 }
 /// vector spherical linear interpolation (vectors have to be normalized)
 template <typename T, int N, typename T1>
-inline vec<T, N> slerp(const vec<T, N>& a, const vec<T, N>& b, T1 t) {
+inline vec<T, N> slerp(const vec<T, N>& a, const vec<T, N>& b, T1 u) {
     auto th = uangle(a, b);
     return th == 0 ?
                a :
-               a * (sin(th * (1 - t)) / sin(th)) + b * (sin(th * t) / sin(th));
+               a * (sin(th * (1 - u)) / sin(th)) + b * (sin(th * u) / sin(th));
 }
 
 /// orthogonal vector
@@ -3442,7 +3427,7 @@ inline float sample_hemisphere_cosine_pdf(const vec3f& w) {
 }
 
 /// hemispherical direction with cosine power distribution
-inline vec3f sample_hemisphere_cospower(const vec2f& ruv, float n) {
+inline vec3f sample_hemisphere_cospower(float n, const vec2f& ruv) {
     auto z = pow(ruv.y, 1 / (n + 1));
     auto r = sqrt(1 - z * z);
     auto phi = 2 * pif * ruv.x;
@@ -3450,7 +3435,7 @@ inline vec3f sample_hemisphere_cospower(const vec2f& ruv, float n) {
 }
 
 /// pdf for hemispherical direction with cosine power distribution
-inline float sample_hemisphere_cospower_pdf(const vec3f& w, float n) {
+inline float sample_hemisphere_cospower_pdf(float n, const vec3f& w) {
     return (w.z <= 0) ? 0 : pow(w.z, n) * (n + 1) / (2 * pif);
 }
 
@@ -3480,7 +3465,7 @@ inline vec2f sample_triangle(const vec2f& ruv) {
 
 /// uniform triangle
 inline vec3f sample_triangle(
-    const vec2f& ruv, const vec3f& v0, const vec3f& v1, const vec3f& v2) {
+    const vec3f& v0, const vec3f& v1, const vec3f& v2, const vec2f& ruv) {
     auto uv = sample_triangle(ruv);
     return v0 * (1 - uv.x - uv.y) + v1 * uv.x + v2 * uv.y;
 }
@@ -3492,12 +3477,18 @@ inline float sample_triangle_pdf(
 }
 
 /// index with uniform distribution
-inline int sample_index(float r, int size) {
+inline int sample_index(int size, float r) {
     return clamp((int)(r * size), 0, size - 1);
 }
 
 /// pdf for index with uniform distribution
 inline float sample_index_pdf(int size) { return 1.0f / size; }
+    
+/// sample a discrete distribution
+inline int sample_discrete_cdf(float r, const vector<float>& cdf) {
+    r = clamp(r, 0.0f, 0.9999f);
+    return (int)(std::upper_bound(cdf.begin(), cdf.end(), r) - cdf.begin());
+}
 
 }  // namespace ygl
 
@@ -3811,45 +3802,45 @@ inline pair<vec3f, vec3f> triangle_tangents_fromuv(const vec3f& v0,
     }
 }
 
-/// line barycentric interpolation
-template <typename T, typename T1>
-inline T eval_barycentric_point(const vector<T>& vals, const int& p, T1 w) {
+/// Point interpolation. Here only for completeness.
+template <typename T>
+inline T interpolate_point(const vector<T>& vals, int p) {
     if (vals.empty()) return T();
-    return vals[p] * w;
+    return vals[p];
 }
 
-/// line barycentric interpolation
+/// Line interpolation. Same as lerp.
 template <typename T, typename T1>
-inline T eval_barycentric_line(
-    const vector<T>& vals, const vec2i& l, const vec<T1, 2>& w) {
-    if (vals.empty()) return T();
-    return vals[l.x] * w.x + vals[l.y] * w.y;
+inline T interpolate_line(const T& v0, const T& v1, const T1 u) {
+    return v0 * (1 - u) + v1 * u;
 }
 
-/// triangle barycentric interpolation
+/// Line interpolation. Same as lerp.
 template <typename T, typename T1>
-inline T eval_barycentric_triangle(
-    const vector<T>& vals, const vec3i& t, const vec<T1, 3>& w) {
+inline T interpolate_line(const vector<T>& vals, const vec2i& l, T1 u) {
     if (vals.empty()) return T();
-    return vals[t.x] * w.x + vals[t.y] * w.y + vals[t.z] * w.z;
+    return vals[l.x] * (1 - u) + vals[l.y] * u;
 }
 
-/// tetrahedron barycentric interpolation
+/// Triangle interpolation using (v1-v0) and (v2-v0) as u and v directions.
 template <typename T, typename T1>
-inline T eval_barycentric_tetra(
-    const vector<T>& vals, const vec4i& t, const vec<T1, 4>& w) {
+inline T interpolate_triangle(const T& v0, const T& v1, const T& v2, const vec<T1, 2>& uv) {
+    return v0 * (1 - uv.x - uv.y) + v1 * uv.x + v2 * uv.y;
+}
+
+/// Triangle interpolation using (v1-v0) and (v2-v0) as u and v directions.
+template <typename T, typename T1>
+inline T interpolate_triangle(const vector<T>& vals, const vec3i& t, const vec<T1, 2>& uv) {
     if (vals.empty()) return T();
-    return vals[t.x] * w.x + vals[t.y] * w.y + vals[t.z] * w.z +
-           vals[t.w] * w.w;
+    return vals[t.x] * (1 - uv.x - uv.y) + vals[t.y] * uv.x + vals[t.z] * uv.y;
 }
 
 /// quad interpolation based on the two-triangle representation
 template <typename T, typename T1>
-inline T eval_barycentric_quad(
-    const vector<T>& vals, const vec4i& t, const vec<T1, 4>& w) {
+inline T interpolate_quad(const vector<T>& vals, const vec4i& t, const vec<T1, 2>& uv) {
     if (vals.empty()) return T();
-    return vals[t.x] * w.x + vals[t.y] * w.y + vals[t.z] * w.z +
-           vals[t.w] * w.w;
+    return vals[t.x] * (1 - uv.x) * (1 - uv.y) + vals[t.y] * uv.x * (1 - uv.y) +
+           vals[t.z] * uv.x * uv.y + vals[t.w] * (1 - uv.x) * uv.y;
 }
 
 /// bernstein polynomials (for Bezier)
@@ -3895,22 +3886,21 @@ inline T eval_bernstein_derivative(T u, int i, int degree) {
 
 /// eval bezier
 template <typename T, typename T1>
-inline T eval_bezier_cubic(
-    const T& v0, const T& v1, const T& v2, const T& v3, T1 u) {
+inline T interpolate_bezier(const T& v0, const T& v1, const T& v2, const T& v3, T1 u) {
     return v0 * (1 - u) * (1 - u) * (1 - u) + v1 * 3 * u * (1 - u) * (1 - u) +
            v2 * 3 * u * u * (1 - u) + v3 * u * u * u;
 }
 
 /// eval bezier
 template <typename T, typename T1>
-inline T eval_bezier_cubic(const vector<T>& vals, const vec4i& b, T1 u) {
+inline T interpolate_bezier(const vector<T>& vals, const vec4i& b, T1 u) {
     if (vals.empty()) return T();
-    return eval_bezier_cubic(vals[b.x], vals[b.y], vals[b.z], vals[b.w], u);
+    return eval_bezier(vals[b.x], vals[b.y], vals[b.z], vals[b.w], u);
 }
 
 /// eval bezier derivative
 template <typename T, typename T1>
-inline T eval_bezier_cubic_derivative(
+inline T interpolate_bezier_derivative(
     const T& v0, const T& v1, const T& v2, const T& v3, T1 u) {
     return (v1 - v0) * 3 * (1 - u) * (1 - u) + (v2 - v1) * 6 * u * (1 - u) +
            (v3 - v2) * 3 * u * u;
@@ -3918,10 +3908,9 @@ inline T eval_bezier_cubic_derivative(
 
 /// eval bezier derivative
 template <typename T, typename T1>
-inline T eval_bezier_cubic_derivative(
-    const vector<T>& vals, const vec4i& b, T1 u) {
+inline T interpolate_bezier_derivative(const vector<T>& vals, const vec4i& b, T1 u) {
     if (vals.empty()) return T();
-    return eval_bezier_cubic_derivative(
+    return interpolate_bezier_derivative(
         vals[b.x], vals[b.y], vals[b.z], vals[b.w], u);
 }
 
@@ -3972,13 +3961,13 @@ inline T eval_keyframed_linear(
 template <typename T>
 inline T eval_keyframed_cubic(
     const T& a, const T& b, const T& c, const T& d, float t) {
-    return eval_bezier_cubic(a, b, c, d, t);
+    return interpolate_bezier(a, b, c, d, t);
 }
 template <typename T>
 inline quat<T, 4> eval_keyframed_cubic(const quat<T, 4>& a, const quat<T, 4>& b,
     const quat<T, 4>& c, const quat<T, 4>& d, float t) {
-    return normalize((quat4f)eval_keyframed_cubic(
-        (vec4f)a, (vec4f)b, (vec4f)c, (vec4f)d, t));
+    return normalize(
+        (quat4f)interpolate_bezier((vec4f)a, (vec4f)b, (vec4f)c, (vec4f)d, t));
 }
 
 /// Evalautes a keyframed value using bezier interpolation
@@ -4158,14 +4147,14 @@ vector<float> sample_lines_cdf(
     const vector<vec2i>& lines, const vector<vec3f>& pos);
 
 /// Pick a point on lines
-pair<int, vec2f> sample_lines(const vector<float>& cdf, float re, float ruv);
+pair<int, float> sample_lines(const vector<float>& cdf, float re, float ru);
 
 /// Compute a distribution for sampling triangle meshes uniformly
 vector<float> sample_triangles_cdf(
     const vector<vec3i>& triangles, const vector<vec3f>& pos);
 
 /// Pick a point on a triangle mesh
-pair<int, vec3f> sample_triangles(
+pair<int, vec2f> sample_triangles(
     const vector<float>& cdf, float re, const vec2f& ruv);
 
 /// Compute a distribution for sampling quad meshes uniformly
@@ -4173,7 +4162,7 @@ vector<float> sample_quads_cdf(
     const vector<vec4i>& quads, const vector<vec3f>& pos);
 
 /// Pick a point on a quad mesh
-pair<int, vec4f> sample_quads(
+pair<int, vec2f> sample_quads(
     const vector<float>& cdf, float re, const vec2f& ruv);
 
 /// Samples a set of points over a triangle mesh uniformly. The rng function
@@ -4654,7 +4643,7 @@ bool intersect_line(const ray3f& ray, const vec3f& v0, const vec3f& v1,
 
 /// Intersect a ray with a triangle
 bool intersect_triangle(const ray3f& ray, const vec3f& v0, const vec3f& v1,
-    const vec3f& v2, float& ray_t, vec3f& euv);
+    const vec3f& v2, float& ray_t, vec2f& euv);
 
 /// Intersect a ray with a quad represented as two triangles (0,1,3) and
 /// (2,3,1), with the uv coordinates of the second triangle corrected by u =
@@ -4663,13 +4652,7 @@ bool intersect_triangle(const ray3f& ray, const vec3f& v0, const vec3f& v1,
 /// to be concerned about the parametrization and can just use the euv as
 /// specified.
 bool intersect_quad(const ray3f& ray, const vec3f& v0, const vec3f& v1,
-    const vec3f& v2, const vec3f& v3, float& ray_t, vec4f& euv);
-
-/// Intersect a ray with a tetrahedron. Note that we consider only
-/// intersection wiht the tetrahedra surface and discount intersction with
-/// the interior.
-bool intersect_tetrahedron(const ray3f& ray_, const vec3f& v0, const vec3f& v1,
-    const vec3f& v2, const vec3f& v3, float& ray_t, vec4f& euv);
+    const vec3f& v2, const vec3f& v3, float& ray_t, vec2f& euv);
 
 /// Intersect a ray with a axis-aligned bounding box
 bool intersect_check_bbox(const ray3f& ray, const bbox3f& bbox);
@@ -4693,7 +4676,7 @@ bool overlap_point(
     const vec3f& pos, float dist_max, const vec3f& p, float r, float& dist);
 
 // TODO: documentation
-vec2f closestuv_line(const vec3f& pos, const vec3f& v0, const vec3f& v1);
+float closestuv_line(const vec3f& pos, const vec3f& v0, const vec3f& v1);
 
 // TODO: documentation
 bool overlap_line(const vec3f& pos, float dist_max, const vec3f& v0,
@@ -4702,27 +4685,18 @@ bool overlap_line(const vec3f& pos, float dist_max, const vec3f& v0,
 // TODO: documentation
 // this is a complicated test -> I probably prefer to use a sequence of test
 // (triangle body, and 3 edges)
-vec3f closestuv_triangle(
+vec2f closestuv_triangle(
     const vec3f& pos, const vec3f& v0, const vec3f& v1, const vec3f& v2);
 
 // TODO: documentation
 bool overlap_triangle(const vec3f& pos, float dist_max, const vec3f& v0,
     const vec3f& v1, const vec3f& v2, float r0, float r1, float r2, float& dist,
-    vec3f& euv);
+    vec2f& euv);
 
 // TODO: documentation
 bool overlap_quad(const vec3f& pos, float dist_max, const vec3f& v0,
     const vec3f& v1, const vec3f& v2, const vec3f& v3, float r0, float r1,
-    float r2, float r3, float& dist, vec4f& euv);
-
-// TODO: documentation
-bool overlap_tetrahedron(const vec3f& pos, const vec3f& v0, const vec3f& v1,
-    const vec3f& v2, const vec3f& v3, vec4f& euv);
-
-// TODO: documentation
-bool overlap_tetrahedron(const vec3f& pos, float dist_max, const vec3f& v0,
-    const vec3f& v1, const vec3f& v2, const vec3f& v3, float r0, float r1,
-    float r2, float r3, float& dist, vec4f& euv);
+    float r2, float r3, float& dist, vec2f& euv);
 
 // TODO: documentation
 bool distance_check_bbox(const vec3f& pos, float dist_max, const bbox3f& bbox);
@@ -4859,11 +4833,11 @@ void refit_bvh(bvh_tree* bvh, const vector<frame3f>& frames,
 
 /// Intersect ray with a bvh.
 bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray, bool early_exit,
-    float& ray_t, int& iid, int& sid, int& eid, vec4f& ew);
+    float& ray_t, int& iid, int& sid, int& eid, vec2f& euv);
 
 /// Finds the closest element with a bvh.
 bool overlap_bvh(const bvh_tree* bvh, const vec3f& pos, float max_dist,
-    bool early_exit, float& dist, int& iid, int& sid, int& eid, vec4f& ew);
+    bool early_exit, float& dist, int& iid, int& sid, int& eid, vec2f& euv);
 
 /// Intersection point
 struct intersection_point {
@@ -4876,7 +4850,7 @@ struct intersection_point {
     /// shape element index
     int eid = -1;
     /// shape barycentric coordinates
-    vec4f euv = zero4f;
+    vec2f euv = zero2f;
 
     /// check if intersection is valid
     operator bool() const { return eid >= 0; }
@@ -5219,21 +5193,21 @@ struct scene {
 };
 
 /// Shape position interpolated using barycentric coordinates
-vec3f eval_pos(const shape* shp, int eid, const vec4f& euv);
+vec3f eval_pos(const shape* shp, int eid, const vec2f& euv);
 /// Shape normal interpolated using barycentric coordinates
-vec3f eval_norm(const shape* shp, int eid, const vec4f& euv);
+vec3f eval_norm(const shape* shp, int eid, const vec2f& euv);
 /// Shape texcoord interpolated using barycentric coordinates
-vec2f eval_texcoord(const shape* shp, int eid, const vec4f& euv);
+vec2f eval_texcoord(const shape* shp, int eid, const vec2f& euv);
 /// Shape color interpolated using barycentric coordinates
-vec4f eval_color(const shape* shp, int eid, const vec4f& euv);
+vec4f eval_color(const shape* shp, int eid, const vec2f& euv);
 /// Shape radius interpolated using barycentric coordinates
-float eval_radius(const shape* shp, int eid, const vec4f& euv);
+float eval_radius(const shape* shp, int eid, const vec2f& euv);
 /// Shape tangent space interpolated using barycentric coordinates
-vec4f eval_tangsp(const shape* shp, int eid, const vec4f& euv);
+vec4f eval_tangsp(const shape* shp, int eid, const vec2f& euv);
 /// Instance position interpolated using barycentric coordinates
-vec3f eval_pos(const instance* ist, int sid, int eid, const vec4f& euv);
+vec3f eval_pos(const instance* ist, int sid, int eid, const vec2f& euv);
 /// Instance normal interpolated using barycentric coordinates
-vec3f eval_norm(const instance* ist, int sid, int eid, const vec4f& euv);
+vec3f eval_norm(const instance* ist, int sid, int eid, const vec2f& euv);
 
 /// Evaluate a texture
 vec4f eval_texture(const texture_info& info, const vec2f& texcoord,
