@@ -2248,23 +2248,6 @@ struct quat<T, 4> {
     explicit quat(const vec<T, 4>& vv) : x{vv.x}, y{vv.y}, z{vv.z}, w{vv.w} {}
     /// conversion to vec
     explicit operator vec<T, 4>() const { return {x, y, z, w}; }
-#if 0
-    /// conversion from axis-angle
-    quat(const vec<T, 3>& axis, T angle) : x{0}, y{0}, z{0}, w{1} {
-        auto len = length(axis);
-        if (len) {
-            x = sin(angle / 2) * axis.x / len;
-            y = sin(angle / 2) * axis.y / len;
-            z = sin(angle / 2) * axis.z / len;
-            w = cos(angle / 2);
-        }
-    }
-
-    /// rotation axis
-    vec<T, 3> axis() const { return normalize(vec<T, 3>{x, y, z}); }
-    /// rotation angle
-    T angle() const { return 2 * acos(w); }
-#endif
 
     /// element access
     T& operator[](int i) { return (&x)[i]; }
