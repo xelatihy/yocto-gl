@@ -3804,40 +3804,40 @@ inline pair<vec3f, vec3f> triangle_tangents_fromuv(const vec3f& v0,
 
 /// Point interpolation. Here only for completeness.
 template <typename T>
-inline T eval_point(const vector<T>& vals, int p) {
+inline T interpolate_point(const vector<T>& vals, int p) {
     if (vals.empty()) return T();
     return vals[p];
 }
 
 /// Line interpolation. Same as lerp.
 template <typename T, typename T1>
-inline T eval_line(const T& v0, const T& v1, const T1 u) {
+inline T interpolate_line(const T& v0, const T& v1, const T1 u) {
     return v0 * (1 - u) + v1 * u;
 }
 
 /// Line interpolation. Same as lerp.
 template <typename T, typename T1>
-inline T eval_line(const vector<T>& vals, const vec2i& l, T1 u) {
+inline T interpolate_line(const vector<T>& vals, const vec2i& l, T1 u) {
     if (vals.empty()) return T();
     return vals[l.x] * (1 - u) + vals[l.y] * u;
 }
 
 /// Triangle interpolation using (v1-v0) and (v2-v0) as u and v directions.
 template <typename T, typename T1>
-inline T eval_triangle(const T& v0, const T& v1, const T& v2, const vec<T1, 2>& uv) {
+inline T interpolate_triangle(const T& v0, const T& v1, const T& v2, const vec<T1, 2>& uv) {
     return v0 * (1 - uv.x - uv.y) + v1 * uv.x + v2 * uv.y;
 }
 
 /// Triangle interpolation using (v1-v0) and (v2-v0) as u and v directions.
 template <typename T, typename T1>
-inline T eval_triangle(const vector<T>& vals, const vec3i& t, const vec<T1, 2>& uv) {
+inline T interpolate_triangle(const vector<T>& vals, const vec3i& t, const vec<T1, 2>& uv) {
     if (vals.empty()) return T();
     return vals[t.x] * (1 - uv.x - uv.y) + vals[t.y] * uv.x + vals[t.z] * uv.y;
 }
 
 /// quad interpolation based on the two-triangle representation
 template <typename T, typename T1>
-inline T eval_quad(const vector<T>& vals, const vec4i& t, const vec<T1, 2>& uv) {
+inline T interpolate_quad(const vector<T>& vals, const vec4i& t, const vec<T1, 2>& uv) {
     if (vals.empty()) return T();
     return vals[t.x] * (1 - uv.x) * (1 - uv.y) + vals[t.y] * uv.x * (1 - uv.y) +
            vals[t.z] * uv.x * uv.y + vals[t.w] * (1 - uv.x) * uv.y;
@@ -3886,21 +3886,21 @@ inline T eval_bernstein_derivative(T u, int i, int degree) {
 
 /// eval bezier
 template <typename T, typename T1>
-inline T eval_bezier(const T& v0, const T& v1, const T& v2, const T& v3, T1 u) {
+inline T interpolate_bezier(const T& v0, const T& v1, const T& v2, const T& v3, T1 u) {
     return v0 * (1 - u) * (1 - u) * (1 - u) + v1 * 3 * u * (1 - u) * (1 - u) +
            v2 * 3 * u * u * (1 - u) + v3 * u * u * u;
 }
 
 /// eval bezier
 template <typename T, typename T1>
-inline T eval_bezier(const vector<T>& vals, const vec4i& b, T1 u) {
+inline T interpolate_bezier(const vector<T>& vals, const vec4i& b, T1 u) {
     if (vals.empty()) return T();
     return eval_bezier(vals[b.x], vals[b.y], vals[b.z], vals[b.w], u);
 }
 
 /// eval bezier derivative
 template <typename T, typename T1>
-inline T eval_bezier_derivative(
+inline T interpolate_bezier_derivative(
     const T& v0, const T& v1, const T& v2, const T& v3, T1 u) {
     return (v1 - v0) * 3 * (1 - u) * (1 - u) + (v2 - v1) * 6 * u * (1 - u) +
            (v3 - v2) * 3 * u * u;
@@ -3908,9 +3908,9 @@ inline T eval_bezier_derivative(
 
 /// eval bezier derivative
 template <typename T, typename T1>
-inline T eval_bezier_derivative(const vector<T>& vals, const vec4i& b, T1 u) {
+inline T interpolate_bezier_derivative(const vector<T>& vals, const vec4i& b, T1 u) {
     if (vals.empty()) return T();
-    return eval_bezier_derivative(
+    return interpolate_bezier_derivative(
         vals[b.x], vals[b.y], vals[b.z], vals[b.w], u);
 }
 
@@ -3961,13 +3961,13 @@ inline T eval_keyframed_linear(
 template <typename T>
 inline T eval_keyframed_cubic(
     const T& a, const T& b, const T& c, const T& d, float t) {
-    return eval_bezier(a, b, c, d, t);
+    return interpolate_bezier(a, b, c, d, t);
 }
 template <typename T>
 inline quat<T, 4> eval_keyframed_cubic(const quat<T, 4>& a, const quat<T, 4>& b,
     const quat<T, 4>& c, const quat<T, 4>& d, float t) {
     return normalize(
-        (quat4f)eval_bezier((vec4f)a, (vec4f)b, (vec4f)c, (vec4f)d, t));
+        (quat4f)interpolate_bezier((vec4f)a, (vec4f)b, (vec4f)c, (vec4f)d, t));
 }
 
 /// Evalautes a keyframed value using bezier interpolation

@@ -87,6 +87,12 @@
 //     - cleanup sampling in ray tracing
 //     - create distributions
 //     - make lights with single shapes in trace
+// - cleanup interpolation functions
+//     - choose a proper name for them (lerp, bilerp, tlerp?)
+//     - or call them all lerp, but given them differnt inputs
+//     - make special functions for shape elements
+//
+// - trace: add hack for radius in offsetting rays
 //
 // - BVH simplify build functions: can we avoid preallocating nodes?
 // - BVH: maybe put axis with internal
@@ -1298,11 +1304,11 @@ tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>> sample_triangles_points(
         std::tie(eid, euv) = sample_triangles(
             cdf, next_rand1f(rng), {next_rand1f(rng), next_rand1f(rng)});
         auto t = triangles[eid];
-        sampled_pos[i] = eval_triangle(pos[t.x], pos[t.y], pos[t.z], euv);
+        sampled_pos[i] = interpolate_triangle(pos[t.x], pos[t.y], pos[t.z], euv);
         if (!sampled_norm.empty())
-            sampled_norm[i] = normalize(eval_triangle(norm[t.x], norm[t.y], norm[t.z], euv));
+            sampled_norm[i] = normalize(interpolate_triangle(norm[t.x], norm[t.y], norm[t.z], euv));
         if (!sampled_texcoord.empty())
-            sampled_texcoord[i] = eval_triangle(texcoord[t.x], texcoord[t.y], texcoord[t.z], euv);
+            sampled_texcoord[i] = interpolate_triangle(texcoord[t.x], texcoord[t.y], texcoord[t.z], euv);
     }
 
     return {sampled_pos, sampled_norm, sampled_texcoord};
@@ -2320,8 +2326,8 @@ bool overlap_triangle(const vec3f& pos, float dist_max, const vec3f& v0,
     const vec3f& v1, const vec3f& v2, float r0, float r1, float r2, float& dist,
     vec2f& euv) {
     auto uv = closestuv_triangle(pos, v0, v1, v2);
-    auto p = eval_triangle(v0, v1, v2, uv);
-    auto r = eval_triangle(r0, r1, r2, uv);
+    auto p = interpolate_triangle(v0, v1, v2, uv);
+    auto r = interpolate_triangle(r0, r1, r2, uv);
     auto dd = dot(p - pos, p - pos);
     if (dd > (dist_max + r) * (dist_max + r)) return false;
     dist = sqrt(dd);
@@ -3066,13 +3072,13 @@ T eval_elem(const shape* shp, const vector<T>& vals, int eid,
     const vec2f& euv, const T& def) {
     if (vals.empty()) return def;
     if (!shp->triangles.empty()) {
-        return eval_triangle(vals, shp->triangles[eid], euv);
+        return interpolate_triangle(vals, shp->triangles[eid], euv);
     } else if (!shp->lines.empty()) {
-        return eval_line(vals, shp->lines[eid], euv.x);
+        return interpolate_line(vals, shp->lines[eid], euv.x);
     } else if (!shp->points.empty()) {
-        return eval_point(vals, shp->points[eid]);
+        return interpolate_point(vals, shp->points[eid]);
     } else if (!shp->quads.empty()) {
-        return eval_quad(vals, shp->quads[eid], euv);
+        return interpolate_quad(vals, shp->quads[eid], euv);
     } else {
         return vals[eid];  // points
     }
