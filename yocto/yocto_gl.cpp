@@ -7177,56 +7177,41 @@ obj_scene* load_obj(const string& filename, bool load_txt, bool skip_missing,
 }
 
 // write to stream
-template <typename T>
-inline void obj_dump_val(fstream& fs, const T& v) {
-    fs << v;
-}
+inline void obj_dump_val(fstream& fs, int v) { fs << v; }
+inline void obj_dump_val(fstream& fs, float v) { fs << v; }
+inline void obj_dump_val(fstream& fs, bool v) { fs << v; }
+inline void obj_dump_val(fstream& fs, char v) { fs << v; }
+inline void obj_dump_val(fstream& fs, const string& v) { fs << v; }
+inline void obj_dump_val(fstream& fs, const char* v) { fs << v; }
 
 // write to stream
-template <typename T, int N>
-inline void obj_dump_val(fstream& fs, const vec<T, N>& v) {
-    for (auto i = 0; i < N; i++) {
-        if (i) fs << ' ';
-        obj_dump_val(fs, v[i]);
-    }
+inline void obj_dump_val(fstream& fs, const vec2f& v) {
+    fs << v.x << ' ' << v.y;
 }
-
-// write to stream
-template <typename T, int N>
-inline void obj_dump_val(fstream& fs, const quat<T, N>& v) {
-    for (auto i = 0; i < N; i++) {
-        if (i) fs << ' ';
-        obj_dump_val(fs, v[i]);
-    }
+inline void obj_dump_val(fstream& fs, const vec3f& v) {
+    fs << v.x << ' ' << v.y << ' ' << v.z;
 }
-
-// write to stream
-template <typename T>
-inline void obj_dump_val(fstream& fs, const frame<T, 3>& v) {
-    obj_dump_val(fs, v.x);
-    fs << ' ';
-    obj_dump_val(fs, v.y);
-    fs << ' ';
-    obj_dump_val(fs, v.z);
-    fs << ' ';
-    obj_dump_val(fs, v.o);
+inline void obj_dump_val(fstream& fs, const vec4f& v) {
+    fs << v.x << ' ' << v.y << ' ' << v.z << ' ' << v.w;
+}
+inline void obj_dump_val(fstream& fs, const frame3f& v) {
+    fs << v.x << ' ' << v.y << ' ' << v.z << ' ' << v.o;
 }
 
 // write to stream
 inline void obj_dump_val(fstream& fs, const obj_texture_info& v) {
     for (auto&& kv : v.unknown_props) {
-        obj_dump_val(fs, kv.first + " ");
-        for (auto&& vv : kv.second) obj_dump_val(fs, vv + " ");
+        fs << kv.first << ' ';
+        for (auto&& vv : kv.second) fs << vv << ' ';
     }
-    if (v.clamp) obj_dump_val(fs, "-clamp on ");
-    obj_dump_val(fs, v.path);
+    if (v.clamp) fs << "-clamp on ";
+    fs << v.path;
 }
 
 // write to stream
 template <typename T>
 inline void obj_dump_named_val(fstream& fs, const string& name, const T& v) {
-    obj_dump_val(fs, name);
-    fs << ' ';
+    fs << name << ' ';
     obj_dump_val(fs, v);
     fs << '\n';
 }
@@ -7242,7 +7227,7 @@ inline void obj_dump_opt_val(
 // write an OBJ vertex triplet using only the indices that are active
 inline void obj_dump_objverts(
     fstream& fs, const char* str, int nv, const obj_vertex* verts) {
-    obj_dump_val(fs, str);
+    fs << str;
     for (auto v = 0; v < nv; v++) {
         auto& vert = verts[v];
         auto vert_ptr = &vert.pos;
@@ -7252,14 +7237,14 @@ inline void obj_dump_objverts(
         }
         for (auto i = 0; i < nto_write; i++) {
             if (vert_ptr[i] >= 0) {
-                obj_dump_val(fs, ((i == 0) ? ' ' : '/'));
-                obj_dump_val(fs, vert_ptr[i] + 1);
+                fs << ((i == 0) ? ' ' : '/');
+                fs << vert_ptr[i] + 1;
             } else {
-                obj_dump_val(fs, '/');
+                fs << '/';
             }
         }
     }
-    obj_dump_val(fs, "\n");
+    fs << '\n';
 }
 
 // Save an MTL file
@@ -7296,14 +7281,11 @@ void save_mtl(const string& filename, const vector<obj_material*>& materials,
         obj_dump_opt_val(fs, "  map_disp", mat->disp_txt);
         obj_dump_opt_val(fs, "  map_norm", mat->norm_txt);
         for (auto&& kv : mat->unknown_props) {
-            obj_dump_val(fs, kv.first);
-            for (auto&& v : kv.second) {
-                obj_dump_val(fs, " ");
-                obj_dump_val(fs, v);
-            }
-            obj_dump_val(fs, "\n");
+            obj_dump_val(fs, kv.first + " ");
+            for (auto&& v : kv.second) obj_dump_val(fs, v + " ");
+            fs << "\n";
         }
-        obj_dump_val(fs, "\n");
+        fs << "\n";
     }
 }
 
@@ -7352,57 +7334,38 @@ void save_obj(const string& filename, const obj_scene* asset, bool save_txt,
     // save cameras
     for (auto cam : asset->cameras) {
         obj_dump_val(fs, "c ");
-        obj_dump_val(fs, cam->name);
-        obj_dump_val(fs, " ");
-        obj_dump_val(fs, cam->ortho);
-        obj_dump_val(fs, " ");
-        obj_dump_val(fs, cam->yfov);
-        obj_dump_val(fs, " ");
-        obj_dump_val(fs, cam->aspect);
-        obj_dump_val(fs, " ");
-        obj_dump_val(fs, cam->aperture);
-        obj_dump_val(fs, " ");
-        obj_dump_val(fs, cam->focus);
-        obj_dump_val(fs, " ");
-        obj_dump_val(fs, cam->frame);
-        obj_dump_val(fs, "\n");
+        obj_dump_val(fs, cam->name); fs << ' ';
+        obj_dump_val(fs, cam->ortho); fs << ' ';
+        obj_dump_val(fs, cam->yfov); fs << ' ';
+        obj_dump_val(fs, cam->aspect); fs << ' ';
+        obj_dump_val(fs, cam->aperture); fs << ' ';
+        obj_dump_val(fs, cam->focus); fs << ' ';
+        obj_dump_val(fs, cam->frame); fs << ' ';
+        fs << '\n';
     }
 
     // save envs
     for (auto env : asset->environments) {
         obj_dump_val(fs, "e ");
-        obj_dump_val(fs, env->name);
-        obj_dump_val(fs, " ");
-        obj_dump_val(fs, env->matname);
-        obj_dump_val(fs, " ");
-        obj_dump_val(fs, env->frame);
-        obj_dump_val(fs, "\n");
+        obj_dump_val(fs, env->name); fs << ' ';
+        obj_dump_val(fs, env->matname); fs << ' ';
+        obj_dump_val(fs, env->frame); fs << ' ';
+        fs << '\n';
     }
 
     // save nodes
     for (auto nde : asset->nodes) {
         obj_dump_val(fs, "n ");
-        obj_dump_val(fs, nde->name);
-        obj_dump_val(fs, " ");
-        obj_dump_val(fs, (nde->parent.empty()) ? string("\"\"") : nde->parent);
-        obj_dump_val(fs, " ");
-        obj_dump_val(
-            fs, (nde->camname.empty()) ? string("\"\"") : nde->camname);
-        obj_dump_val(fs, " ");
-        obj_dump_val(
-            fs, (nde->objname.empty()) ? string("\"\"") : nde->objname);
-        obj_dump_val(fs, " ");
-        obj_dump_val(
-            fs, (nde->envname.empty()) ? string("\"\"") : nde->envname);
-        obj_dump_val(fs, " ");
-        obj_dump_val(fs, nde->frame);
-        obj_dump_val(fs, " ");
-        obj_dump_val(fs, nde->translation);
-        obj_dump_val(fs, " ");
-        obj_dump_val(fs, nde->rotation);
-        obj_dump_val(fs, " ");
-        obj_dump_val(fs, nde->scaling);
-        obj_dump_val(fs, "\n");
+        obj_dump_val(fs, nde->name);        fs << ' ';
+        obj_dump_val(fs, (nde->parent.empty()) ? "\"\""s : nde->parent);         fs << ' ';
+        obj_dump_val(fs, (nde->camname.empty()) ? "\"\""s : nde->camname);fs << ' ';
+        obj_dump_val(fs, (nde->objname.empty()) ? "\"\""s : nde->objname);fs << ' ';
+        obj_dump_val(fs, (nde->envname.empty()) ? "\"\""s : nde->envname);fs << ' ';
+        obj_dump_val(fs, nde->frame);fs << '\n';
+        obj_dump_val(fs, nde->translation);fs << '\n';
+        obj_dump_val(fs, (vec4f)nde->rotation);fs << '\n';
+        obj_dump_val(fs, nde->scaling);fs << '\n';
+        fs << '\n';
     }
 
     // save all vertex data
@@ -7429,9 +7392,10 @@ void save_obj(const string& filename, const obj_scene* asset, bool save_txt,
             obj_dump_opt_val(fs, "g", group.groupname);
             if (!group.smoothing) obj_dump_named_val(fs, "s", "off");
             if (group.subdivision_level) {
-                auto sl = vec2i{group.subdivision_level,
-                    (group.subdivision_catmullclark) ? 1 : 0};
-                obj_dump_named_val(fs, "sl", sl);
+                obj_dump_val(fs, "sl ");
+                obj_dump_val(fs, group.subdivision_level);
+                obj_dump_val(fs, group.subdivision_catmullclark);
+                fs << '\n';
             }
             for (auto elem : group.elems) {
                 auto lbl = "";
