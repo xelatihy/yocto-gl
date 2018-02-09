@@ -6108,15 +6108,14 @@ struct obj_group {
     string groupname;
     /// smoothing
     bool smoothing = true;
-    /// number of times to subdivide
-    int subdivision_level = 0;
-    /// whether to use Catmull-Clark subdivision
-    bool subdivision_catmullclark = false;
 
     /// element vertices
     vector<obj_vertex> verts;
     /// element faces
     vector<obj_element> elems;
+
+    /// the rest of the properties [extension]
+    unordered_map<string, vector<string>> props;
 };
 
 /// Obj object
@@ -6125,6 +6124,9 @@ struct obj_object {
     string name;
     /// element groups
     vector<obj_group*> groups;
+
+    /// the rest of the properties [extension]
+    unordered_map<string, vector<string>> props;
 
     /// cleanup
     ~obj_object();
@@ -6138,16 +6140,15 @@ struct obj_texture_info {
     bool clamp = false;
     /// the scale for bump and displacement
     float scale = 1;
-    /// the rest of the unknown properties
-    unordered_map<string, vector<string>> unknown_props;
+    /// the rest of the properties
+    unordered_map<string, vector<string>> props;
 };
 
 // comparison for texture info
 inline bool operator==(const obj_texture_info& a, const obj_texture_info& b) {
     if (a.path.empty() && b.path.empty()) return true;
     if (a.path != b.path) return false;
-    return a.clamp == b.clamp && a.scale == b.scale &&
-           a.unknown_props == b.unknown_props;
+    return a.clamp == b.clamp && a.scale == b.scale && a.props == b.props;
 }
 
 /// OBJ texture. Texture data is loaded only if desired.
@@ -6218,8 +6219,8 @@ struct obj_material {
     /// normal map texture
     obj_texture_info norm_txt;
 
-    /// unknown string props
-    unordered_map<string, vector<string>> unknown_props;
+    /// the rest of the properties
+    unordered_map<string, vector<string>> props;
 };
 
 /// Camera [extension]
