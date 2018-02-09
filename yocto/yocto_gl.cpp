@@ -6699,83 +6699,23 @@ image<trace_pixel> make_trace_pixels(const trace_params& params) {
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-// Parse a string value
-inline string obj_parse_string(stringstream& ss) {
-    auto v = string();
-    ss >> v;
-    if (v.length() == 0) return v;
-    if ((v.front() == '"' && v.back() == '"') ||
-        (v.front() == '\'' && v.back() == '\'')) {
-        v = v.substr(1, v.length() - 2);
-        return v;
-    }
-    return v;
-}
-
-// Parse a bool value
-inline bool obj_parse_bool(stringstream& ss) {
-    bool v = 0.0f;
-    ss >> v;
-    return v;
-}
-
-// Parse a float value
-inline float obj_parse_float(stringstream& ss) {
-    auto v = 0.0f;
-    ss >> v;
-    return v;
-}
-
-// Parse an int value
-inline int obj_parse_int(stringstream& ss) {
-    auto v = 0;
-    ss >> v;
-    return v;
-}
-
-// Parse an vec value
-inline vec2f obj_parse_vec2f(stringstream& ss) {
-    auto v = zero2f;
-    ss >> v.x >> v.y;
-    return v;
-}
-
-// Parse an vec value
-inline vec3f obj_parse_vec3f(stringstream& ss) {
-    auto v = zero3f;
-    ss >> v.x >> v.y >> v.z;
-    return v;
-}
-
-// Parse an vec value
-inline vec4f obj_parse_vec4f(stringstream& ss) {
-    auto v = zero4f;
-    ss >> v.x >> v.y >> v.z >> v.w;
-    return v;
-}
-
-// Parse a value
-inline frame3f obj_parse_frame3f(stringstream& ss) {
-    auto v = identity_frame3f;
-    for (auto i = 0; i < 12; i++) ss >> ((float*)(&v))[i];
-    return v;
-}
-
 // Parse texture options and name
-inline obj_texture_info obj_parse_texture(stringstream& ss, bool bump = false) {
+istream& operator>>(istream& is, obj_texture_info& info) {
+    // initialize
+    info = obj_texture_info();
+    
     // get tokens
     auto tokens = vector<string>();
-    while (ss) {
+    while (is) {
         auto s = string();
-        ss >> s;
+        is >> s;
         if (!s.empty()) tokens.push_back(s);
     }
 
     // exit if no tokens
-    if (tokens.empty()) return {};
+    if (tokens.empty()) return is;
 
     // texture name
-    auto info = obj_texture_info();
     info.path = tokens.back();
     for (auto& c : info.path)
         if (c == '\\') c = '/';
@@ -6808,9 +6748,8 @@ inline obj_texture_info obj_parse_texture(stringstream& ss, bool bump = false) {
         info.scale = std::atof(bm_str.c_str());
         info.unknown_props.erase("-bm");
     }
-
-    // done
-    return info;
+    
+    return is;
 }
 
 // Load MTL
@@ -6845,64 +6784,65 @@ vector<obj_material*> load_mtl(
         if (cmd == "newmtl") {
             materials.push_back(new obj_material());
             mat = materials.back();
-            mat->name = obj_parse_string(ss);
+            ss >> mat->name;
         } else if (cmd == "illum") {
-            mat->illum = obj_parse_int(ss);
+            ss >> mat->illum;
         } else if (cmd == "Ke") {
-            mat->ke = obj_parse_vec3f(ss);
+            ss >> mat->ke;
         } else if (cmd == "Ka") {
-            mat->ka = obj_parse_vec3f(ss);
+            ss >> mat->ka;
         } else if (cmd == "Kd") {
-            mat->kd = obj_parse_vec3f(ss);
+            ss >> mat->kd;
         } else if (cmd == "Ks") {
-            mat->ks = obj_parse_vec3f(ss);
+            ss >> mat->ks;
         } else if (cmd == "Kr") {
-            mat->kr = obj_parse_vec3f(ss);
+            ss >> mat->kr;
         } else if (cmd == "Kt" || cmd == "Tf") {
             auto ntok = 0;
-            while (ss && ntok < 3) mat->kt[ntok++] = obj_parse_float(ss);
+            while (ss && ntok < 3) ss >> mat->kt[ntok++];
             if (ntok < 3) mat->kt = {mat->kt.x, mat->kt.x, mat->kt.x};
         } else if (cmd == "Tr") {
             auto ntok = 0;
-            while (ss) mat->kt[ntok++] = obj_parse_float(ss);
+            while (ss) ss >> mat->kt[ntok++];
             if (ntok < 3) {
                 materials.back()->op = (flip_tr) ? 1 - mat->kt.x : mat->kt.x;
                 mat->kt = {0, 0, 0};
             }
         } else if (cmd == "Ns") {
-            mat->ns = obj_parse_float(ss);
+            ss >> mat->ns;
         } else if (cmd == "d") {
-            mat->op = obj_parse_float(ss);
+            ss >> mat->op;
         } else if (cmd == "Ni") {
-            mat->ior = obj_parse_float(ss);
+            ss >> mat->ior;
         } else if (cmd == "map_Ke") {
-            mat->ke_txt = obj_parse_texture(ss);
+            ss >> mat->ke_txt;
         } else if (cmd == "map_Ka") {
-            mat->ka_txt = obj_parse_texture(ss);
+            ss >> mat->ka_txt;
         } else if (cmd == "map_Kd") {
-            mat->kd_txt = obj_parse_texture(ss);
+            ss >> mat->kd_txt;
         } else if (cmd == "map_Ks") {
-            mat->ks_txt = obj_parse_texture(ss);
+            ss >> mat->ks_txt;
         } else if (cmd == "map_Kr") {
-            mat->kr_txt = obj_parse_texture(ss);
+            ss >> mat->kr_txt;
         } else if (cmd == "map_Tr") {
-            mat->kt_txt = obj_parse_texture(ss);
+            ss >> mat->kt_txt;
         } else if (cmd == "map_Ns") {
-            mat->ns_txt = obj_parse_texture(ss);
+            ss >> mat->ns_txt;
         } else if (cmd == "map_d") {
-            mat->op_txt = obj_parse_texture(ss);
+            ss >> mat->op_txt;
         } else if (cmd == "map_Ni") {
-            mat->ior_txt = obj_parse_texture(ss);
+            ss >> mat->ior_txt;
         } else if (cmd == "map_bump" || cmd == "bump") {
-            mat->bump_txt = obj_parse_texture(ss);
+            ss >> mat->bump_txt;
         } else if (cmd == "map_disp" || cmd == "disp") {
-            mat->disp_txt = obj_parse_texture(ss);
+            ss >> mat->disp_txt;
         } else if (cmd == "map_norm" || cmd == "norm") {
-            mat->norm_txt = obj_parse_texture(ss);
+            ss >> mat->norm_txt;
         } else {
             // copy into strings
             while (ss) {
-                mat->unknown_props[cmd].push_back(obj_parse_string(ss));
+                mat->unknown_props[cmd].push_back("");
+                ss >> mat->unknown_props[cmd].back();
             }
         }
     }
@@ -7015,7 +6955,8 @@ obj_scene* load_obj(const string& filename, bool load_txt, bool skip_missing,
         // prepare to parse
         linenum += 1;
         auto ss = stringstream(line);
-        auto cmd = obj_parse_string(ss);
+        auto cmd = string();
+        ss >> cmd;
 
         // skip empty and comments
         if (cmd.empty() || cmd[0] == '#') continue;
@@ -7023,21 +6964,26 @@ obj_scene* load_obj(const string& filename, bool load_txt, bool skip_missing,
         // possible token values
         if (cmd == "v") {
             vert_size.pos += 1;
-            asset->pos.push_back(obj_parse_vec3f(ss));
+            asset->pos.push_back(zero3f);
+            ss >> asset->pos.back();
         } else if (cmd == "vn") {
             vert_size.norm += 1;
-            asset->norm.push_back(obj_parse_vec3f(ss));
+            asset->norm.push_back(zero3f);
+            ss >> asset->norm.back();
         } else if (cmd == "vt") {
             vert_size.texcoord += 1;
-            asset->texcoord.push_back(obj_parse_vec2f(ss));
+            asset->texcoord.push_back(zero2f);
+            ss >> asset->texcoord.back();
             if (flip_texcoord)
                 asset->texcoord.back().y = 1 - asset->texcoord.back().y;
         } else if (cmd == "vc") {
             vert_size.color += 1;
-            asset->color.push_back(obj_parse_vec4f(ss));
+            asset->color.push_back(zero4f);
+            ss >> asset->color.back();
         } else if (cmd == "vr") {
             vert_size.radius += 1;
-            asset->radius.push_back(obj_parse_float(ss));
+            asset->radius.push_back(0);
+            ss >> asset->radius.back();
         } else if (cmd == "f") {
             auto elems = obj_parse_vertlist(ss, vert_size);
             group->elems.push_back({(uint32_t)group->verts.size(),
@@ -7064,26 +7010,25 @@ obj_scene* load_obj(const string& filename, bool load_txt, bool skip_missing,
                 obj_element_type::tetra, (uint16_t)elems.size()});
             group->verts.insert(group->verts.end(), elems.begin(), elems.end());
         } else if (cmd == "o") {
-            auto name = obj_parse_string(ss);
             asset->objects.push_back(new obj_object());
             object = asset->objects.back();
-            object->name = name;
+            ss >> object->name;
             object->groups.push_back(obj_group());
             group = &object->groups.back();
             group->matname = matname;
         } else if (cmd == "usemtl") {
-            matname = obj_parse_string(ss);
+            ss >> matname;
             object->groups.push_back(obj_group());
             group = &object->groups.back();
             group->matname = matname;
         } else if (cmd == "g") {
-            auto name = obj_parse_string(ss);
             object->groups.push_back(obj_group());
             group = &object->groups.back();
+            ss >> group->groupname;
             group->matname = matname;
-            group->groupname = name;
         } else if (cmd == "s") {
-            auto name = obj_parse_string(ss);
+            auto name = string();
+            ss >> name;
             auto smoothing = (name == "on");
             if (group->smoothing != smoothing) {
                 auto gname = group->groupname;
@@ -7094,10 +7039,11 @@ obj_scene* load_obj(const string& filename, bool load_txt, bool skip_missing,
                 group->smoothing = smoothing;
             }
         } else if (cmd == "sl") {
-            group->subdivision_level = obj_parse_int(ss);
-            group->subdivision_catmullclark = obj_parse_bool(ss);
+            ss >> group->subdivision_level;
+            ss >> group->subdivision_catmullclark;
         } else if (cmd == "mtllib") {
-            auto name = obj_parse_string(ss);
+            auto name = string();
+            ss >> name;
             if (name != string("")) {
                 auto found = false;
                 for (auto lib : mtllibs) {
@@ -7110,31 +7056,35 @@ obj_scene* load_obj(const string& filename, bool load_txt, bool skip_missing,
             }
         } else if (cmd == "c") {
             auto cam = new obj_camera();
-            cam->name = obj_parse_string(ss);
-            cam->ortho = obj_parse_bool(ss);
-            cam->yfov = obj_parse_float(ss);
-            cam->aspect = obj_parse_float(ss);
-            cam->aperture = obj_parse_float(ss);
-            cam->focus = obj_parse_float(ss);
-            cam->frame = obj_parse_frame3f(ss);
+            ss >> cam->name;
+            ss >> cam->ortho;
+            ss >> cam->yfov;
+            ss >> cam->aspect;
+            ss >> cam->aperture;
+            ss >> cam->focus;
+            ss >> cam->frame;
             asset->cameras.push_back(cam);
         } else if (cmd == "e") {
             auto env = new obj_environment();
-            env->name = obj_parse_string(ss);
-            env->matname = obj_parse_string(ss);
-            env->frame = obj_parse_frame3f(ss);
+            ss >> env->name;
+            ss >> env->matname;
+            ss >> env->frame;
             asset->environments.push_back(env);
         } else if (cmd == "n") {
             auto nde = new obj_node();
-            nde->name = obj_parse_string(ss);
-            nde->parent = obj_parse_string(ss);
-            nde->camname = obj_parse_string(ss);
-            nde->objname = obj_parse_string(ss);
-            nde->envname = obj_parse_string(ss);
-            nde->frame = obj_parse_frame3f(ss);
-            nde->translation = obj_parse_vec3f(ss);
-            nde->rotation = (quat4f)obj_parse_vec4f(ss);
-            nde->scaling = obj_parse_vec3f(ss);
+            ss >> nde->name;
+            ss >> nde->parent;
+            ss >> nde->camname;
+            ss >> nde->objname;
+            ss >> nde->envname;
+            ss >> nde->frame;
+            ss >> nde->translation;
+            ss >> nde->rotation;
+            ss >> nde->scaling;
+            if(nde->parent == "\"\"") nde->parent = "";
+            if(nde->camname == "\"\"") nde->camname = "";
+            if(nde->objname == "\"\"") nde->objname = "";
+            if(nde->envname == "\"\"") nde->envname = "";
             asset->nodes.push_back(nde);
         } else {
             // unused
