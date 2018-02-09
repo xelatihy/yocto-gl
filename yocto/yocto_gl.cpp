@@ -3812,21 +3812,21 @@ scene* obj_to_scene(const obj_scene* obj, const load_options& opts) {
     for (auto omsh : obj->objects) {
         auto sgr = new shape_group();
         sgr->name = omsh->name;
-        for (auto& oshp : omsh->groups) {
-            if (oshp.verts.empty()) continue;
-            if (oshp.elems.empty()) continue;
+        for (auto oshp : omsh->groups) {
+            if (oshp->verts.empty()) continue;
+            if (oshp->elems.empty()) continue;
 
             auto shp = new shape();
-            shp->name = oshp.groupname;
-            shp->mat = mmap[oshp.matname];
-            shp->subdivision_level = oshp.subdivision_level;
-            shp->subdivision_catmullclark = oshp.subdivision_catmullclark;
+            shp->name = oshp->groupname;
+            shp->mat = mmap[oshp->matname];
+            shp->subdivision_level = oshp->subdivision_level;
+            shp->subdivision_catmullclark = oshp->subdivision_catmullclark;
 
             // check to see if this shuold be face-varying or flat quads
             auto as_facevarying = false, as_quads = false;
             if (opts.preserve_quads || opts.preserve_facevarying) {
                 auto face_max = 0;
-                for (auto& elem : oshp.elems) {
+                for (auto& elem : oshp->elems) {
                     if (elem.type != obj_element_type::face) {
                         face_max = 0;
                         break;
@@ -3839,10 +3839,10 @@ scene* obj_to_scene(const obj_scene* obj, const load_options& opts) {
                 // in case of facevarying, check if there is really need for it
                 if (as_facevarying) {
                     auto need_facevarying = false;
-                    for (auto& elem : oshp.elems) {
+                    for (auto& elem : oshp->elems) {
                         for (auto i = elem.start; i < elem.start + elem.size;
                              i++) {
-                            auto& v = oshp.verts[i];
+                            auto& v = oshp->verts[i];
                             if ((v.norm >= 0 && v.pos != v.norm) ||
                                 (v.texcoord >= 0 && v.pos != v.texcoord) ||
                                 (v.norm >= 0 && v.texcoord >= 0 &&
@@ -3861,7 +3861,7 @@ scene* obj_to_scene(const obj_scene* obj, const load_options& opts) {
                 // insert all vertices
                 unordered_map<obj_vertex, int, obj_vertex_hash> vert_map;
                 vector<int> vert_ids;
-                for (auto& vert : oshp.verts) {
+                for (auto& vert : oshp->verts) {
                     if (vert_map.find(vert) == vert_map.end()) {
                         auto s = (int)vert_map.size();
                         vert_map[vert] = s;
@@ -3870,7 +3870,7 @@ scene* obj_to_scene(const obj_scene* obj, const load_options& opts) {
                 }
 
                 // convert elements
-                for (auto& elem : oshp.elems) {
+                for (auto& elem : oshp->elems) {
                     switch (elem.type) {
                         case obj_element_type::point: {
                             for (auto i = elem.start;
@@ -3922,7 +3922,7 @@ scene* obj_to_scene(const obj_scene* obj, const load_options& opts) {
                 }
 
                 // copy vertex data
-                auto v = oshp.verts[0];
+                auto v = oshp->verts[0];
                 if (v.pos >= 0) shp->pos.resize(vert_map.size());
                 if (v.texcoord >= 0) shp->texcoord.resize(vert_map.size());
                 if (v.norm >= 0) shp->norm.resize(vert_map.size());
@@ -3944,7 +3944,7 @@ scene* obj_to_scene(const obj_scene* obj, const load_options& opts) {
                 }
 
                 // fix smoothing
-                if (!oshp.smoothing && opts.obj_facet_non_smooth) {
+                if (!oshp->smoothing && opts.obj_facet_non_smooth) {
                     auto faceted = new shape();
                     faceted->name = shp->name;
                     auto pidx = vector<int>();
@@ -3984,7 +3984,7 @@ scene* obj_to_scene(const obj_scene* obj, const load_options& opts) {
                 // insert all vertices
                 unordered_map<int, int> pos_map, norm_map, texcoord_map;
                 vector<int> pos_ids, norm_ids, texcoord_ids;
-                for (auto& vert : oshp.verts) {
+                for (auto& vert : oshp->verts) {
                     if (vert.pos >= 0) {
                         if (pos_map.find(vert.pos) == pos_map.end()) {
                             auto s = (int)pos_map.size();
@@ -4019,7 +4019,7 @@ scene* obj_to_scene(const obj_scene* obj, const load_options& opts) {
                 }
 
                 // convert elements
-                for (auto& elem : oshp.elems) {
+                for (auto elem : oshp->elems) {
                     if (elem.size == 4) {
                         if (!pos_ids.empty()) {
                             shp->quads_pos.push_back({pos_ids[elem.start + 0],
@@ -4082,7 +4082,7 @@ scene* obj_to_scene(const obj_scene* obj, const load_options& opts) {
                 }
 
                 // fix smoothing
-                if (!oshp.smoothing && opts.obj_facet_non_smooth) {}
+                if (!oshp->smoothing && opts.obj_facet_non_smooth) {}
             }
             sgr->shapes.push_back(shp);
         }
@@ -4300,8 +4300,7 @@ obj_scene* scene_to_obj(const scene* scn) {
             for (auto& v : shp->color)
                 obj->color.push_back({v.x, v.y, v.z, v.w});
             for (auto& v : shp->radius) obj->radius.push_back(v);
-            oobj->groups.push_back({});
-            auto group = &oobj->groups.back();
+            auto group = new obj_group();
             group->groupname = shp->name;
             group->matname = (shp->mat) ? shp->mat->name : "";
             group->subdivision_level = shp->subdivision_level;
@@ -4410,6 +4409,7 @@ obj_scene* scene_to_obj(const scene* scn) {
                     group->verts.push_back(vert);
                 }
             }
+            oobj->groups.push_back(group);
         }
         obj->objects.push_back(oobj);
     }
@@ -6699,6 +6699,27 @@ image<trace_pixel> make_trace_pixels(const trace_params& params) {
 // -----------------------------------------------------------------------------
 namespace ygl {
 
+// cleanup
+obj_object::~obj_object() {
+    for (auto v : groups) delete v;
+}
+
+// cleanup
+obj_scene::~obj_scene() {
+    for (auto v : objects)
+        if (v) delete v;
+    for (auto v : materials)
+        if (v) delete v;
+    for (auto v : textures)
+        if (v) delete v;
+    for (auto v : cameras)
+        if (v) delete v;
+    for (auto v : environments)
+        if (v) delete v;
+    for (auto v : nodes)
+        if (v) delete v;
+}
+
 // Parse texture options and name
 istream& operator>>(istream& is, obj_texture_info& info) {
     // initialize
@@ -6914,13 +6935,13 @@ obj_scene* load_obj(const string& filename, bool load_txt, bool skip_missing,
 
     // initializing obj
     asset->objects.push_back(new obj_object());
-    asset->objects.back()->groups.push_back({});
+    asset->objects.back()->groups.push_back(new obj_group());
 
     // current parsing value
     auto matname = string();
     auto mtllibs = vector<string>();
     auto object = asset->objects.back();
-    auto group = &object->groups.back();
+    auto group = object->groups.back();
     auto elems = vector<obj_vertex>();
 
     // keep track of array lengths
@@ -6991,17 +7012,17 @@ obj_scene* load_obj(const string& filename, bool load_txt, bool skip_missing,
             asset->objects.push_back(new obj_object());
             object = asset->objects.back();
             ss >> object->name;
-            object->groups.push_back(obj_group());
-            group = &object->groups.back();
+            object->groups.push_back(new obj_group());
+            group = object->groups.back();
             group->matname = matname;
         } else if (cmd == "usemtl") {
             ss >> matname;
-            object->groups.push_back(obj_group());
-            group = &object->groups.back();
+            object->groups.push_back(new obj_group());
+            group = object->groups.back();
             group->matname = matname;
         } else if (cmd == "g") {
-            object->groups.push_back(obj_group());
-            group = &object->groups.back();
+            object->groups.push_back(new obj_group());
+            group = object->groups.back();
             ss >> group->groupname;
             group->matname = matname;
         } else if (cmd == "s") {
@@ -7010,8 +7031,8 @@ obj_scene* load_obj(const string& filename, bool load_txt, bool skip_missing,
             auto smoothing = (name == "on");
             if (group->smoothing != smoothing) {
                 auto gname = group->groupname;
-                object->groups.push_back(obj_group());
-                group = &object->groups.back();
+                object->groups.push_back(new obj_group());
+                group = object->groups.back();
                 group->matname = matname;
                 group->groupname = gname;
                 group->smoothing = smoothing;
@@ -7047,14 +7068,17 @@ obj_scene* load_obj(const string& filename, bool load_txt, bool skip_missing,
     }
 
     // cleanup unused
-    for (auto o : asset->objects) {
+    for (auto& o : asset->objects) {
+        for(auto& g : o->groups) {
+            if(g->verts.empty()) { delete g; g = nullptr; }
+        }
         auto end = std::remove_if(o->groups.begin(), o->groups.end(),
-            [](const obj_group& x) { return x.verts.empty(); });
+            [](const obj_group* x) { return !x; });
         o->groups.erase(end, o->groups.end());
+        if(o->groups.empty()) { delete o; o = nullptr; }
     }
-    // TODO: possible memory leak
     auto end = std::remove_if(asset->objects.begin(), asset->objects.end(),
-        [](const obj_object* x) { return x->groups.empty(); });
+        [](const obj_object* x) { return !x; });
     asset->objects.erase(end, asset->objects.end());
 
     // parse materials
@@ -7238,18 +7262,19 @@ void save_obj(const string& filename, const obj_scene* asset, bool save_txt,
         {obj_element_type::face, "f"}, {obj_element_type::bezier, "b"}};
     for (auto object : asset->objects) {
         fs << "o " << object->name << '\n';
-        for (auto& group : object->groups) {
-            if (!group.matname.empty())
-                fs << "usemtl " << group.matname << '\n';
-            if (!group.groupname.empty()) fs << "g " << group.groupname << '\n';
-            if (!group.smoothing) fs << "s off" << '\n';
-            if (group.subdivision_level)
-                fs << "sl " << group.subdivision_level
-                   << group.subdivision_catmullclark << '\n';
-            for (auto elem : group.elems) {
+        for (auto group : object->groups) {
+            if (!group->matname.empty())
+                fs << "usemtl " << group->matname << '\n';
+            if (!group->groupname.empty())
+                fs << "g " << group->groupname << '\n';
+            if (!group->smoothing) fs << "s off" << '\n';
+            if (group->subdivision_level)
+                fs << "sl " << group->subdivision_level
+                   << group->subdivision_catmullclark << '\n';
+            for (auto elem : group->elems) {
                 fs << elem_labels.at(elem.type) << ' ';
                 for (auto i = elem.start; i < elem.start + elem.size; i++)
-                    fs << group.verts[i] << ' ';
+                    fs << group->verts[i] << ' ';
                 fs << '\n';
             }
         }
@@ -7261,160 +7286,6 @@ void save_obj(const string& filename, const obj_scene* asset, bool save_txt,
 
     // save textures
     if (save_txt) save_textures(asset, dirname, skip_missing);
-}
-
-// A hash function for vecs
-struct obj_vertex_hash {
-    std::hash<int> Th;
-    size_t operator()(const obj_vertex& vv) const {
-        auto v = (const int*)&vv;
-        size_t h = 0;
-        for (auto i = 0; i < sizeof(obj_vertex) / sizeof(int); i++) {
-            // embads hash_combine below
-            h ^= (Th(v[i]) + 0x9e3779b9 + (h << 6) + (h >> 2));
-        }
-        return h;
-    }
-};
-
-// Flattens an scene
-obj_mesh* get_mesh(
-    const obj_scene* model, const obj_object& oshape, bool facet_non_smooth) {
-    // convert meshes
-    auto msh = new obj_mesh();
-    msh->name = oshape.name;
-    for (auto& group : oshape.groups) {
-        if (group.verts.empty()) continue;
-        if (group.elems.empty()) continue;
-        msh->shapes.emplace_back();
-        auto prim = &msh->shapes.back();
-        prim->name = group.groupname;
-        prim->matname = group.matname;
-
-        // insert all vertices
-        unordered_map<obj_vertex, int, obj_vertex_hash> vert_map;
-        vector<int> vert_ids;
-        // vert_map.clear();
-        // vert_ids.clear();
-        for (auto& vert : group.verts) {
-            if (vert_map.find(vert) == vert_map.end()) {
-                // split in two to avoid undefined behaviour
-                auto size = (int)vert_map.size();
-                vert_map[vert] = size;
-            }
-            vert_ids.push_back(vert_map.at(vert));
-        }
-
-        // convert elements
-        for (auto& elem : group.elems) {
-            switch (elem.type) {
-                case obj_element_type::point: {
-                    for (auto i = elem.start; i < elem.start + elem.size; i++) {
-                        prim->points.push_back(vert_ids[i]);
-                    }
-                } break;
-                case obj_element_type::line: {
-                    for (auto i = elem.start; i < elem.start + elem.size - 1;
-                         i++) {
-                        prim->lines.push_back({vert_ids[i], vert_ids[i + 1]});
-                    }
-                } break;
-                case obj_element_type::face: {
-                    for (auto i = elem.start + 2; i < elem.start + elem.size;
-                         i++) {
-                        prim->triangles.push_back({vert_ids[elem.start],
-                            vert_ids[i - 1], vert_ids[i]});
-                    }
-                } break;
-                case obj_element_type::bezier: {
-                    if ((elem.size - 1) % 3)
-                        throw runtime_error("bad obj bezier");
-                    for (auto i = elem.start + 1; i < elem.start + elem.size;
-                         i += 3) {
-                        prim->bezier.push_back({vert_ids[i - 1], vert_ids[i],
-                            vert_ids[i + 1], vert_ids[i + 2]});
-                    }
-                } break;
-                default: { assert(false); }
-            }
-        }
-
-        // check for errors
-        // copy vertex data
-        auto v = group.verts[0];
-        if (v.pos >= 0) prim->pos.resize(vert_map.size());
-        if (v.texcoord >= 0) prim->texcoord.resize(vert_map.size());
-        if (v.norm >= 0) prim->norm.resize(vert_map.size());
-        if (v.color >= 0) prim->color.resize(vert_map.size());
-        if (v.radius >= 0) prim->radius.resize(vert_map.size());
-        for (auto& kv : vert_map) {
-            if (v.pos >= 0 && kv.first.pos >= 0) {
-                prim->pos[kv.second] = model->pos[kv.first.pos];
-            }
-            if (v.texcoord >= 0 && kv.first.texcoord >= 0) {
-                prim->texcoord[kv.second] = model->texcoord[kv.first.texcoord];
-            }
-            if (v.norm >= 0 && kv.first.norm >= 0) {
-                prim->norm[kv.second] = model->norm[kv.first.norm];
-            }
-            if (v.color >= 0 && kv.first.color >= 0) {
-                prim->color[kv.second] = model->color[kv.first.color];
-            }
-            if (v.radius >= 0 && kv.first.radius >= 0) {
-                prim->radius[kv.second] = model->radius[kv.first.radius];
-            }
-        }
-
-        // fix smoothing
-        if (!group.smoothing && facet_non_smooth) {
-            auto faceted_ = obj_shape();
-            auto faceted = &faceted_;
-            faceted->name = prim->name;
-            faceted->matname = prim->matname;
-            auto pidx = vector<int>();
-            for (auto point : prim->points) {
-                faceted->points.push_back((int)pidx.size());
-                pidx.push_back(point);
-            }
-            for (auto line : prim->lines) {
-                faceted->lines.push_back(
-                    {(int)pidx.size() + 0, (int)pidx.size() + 1});
-                pidx.push_back(line.x);
-                pidx.push_back(line.y);
-            }
-            for (auto triangle : prim->triangles) {
-                faceted->triangles.push_back({(int)pidx.size() + 0,
-                    (int)pidx.size() + 1, (int)pidx.size() + 2});
-                pidx.push_back(triangle.x);
-                pidx.push_back(triangle.y);
-                pidx.push_back(triangle.z);
-            }
-            for (auto tetra : prim->tetras) {
-                faceted->tetras.push_back(
-                    {(int)pidx.size() + 0, (int)pidx.size() + 1,
-                        (int)pidx.size() + 2, (int)pidx.size() + 3});
-                pidx.push_back(tetra.x);
-                pidx.push_back(tetra.y);
-                pidx.push_back(tetra.z);
-                pidx.push_back(tetra.w);
-            }
-            for (auto idx : pidx) {
-                if (!prim->pos.empty()) faceted->pos.push_back(prim->pos[idx]);
-                if (!prim->norm.empty())
-                    faceted->norm.push_back(prim->norm[idx]);
-                if (!prim->texcoord.empty())
-                    faceted->texcoord.push_back(prim->texcoord[idx]);
-                if (!prim->color.empty())
-                    faceted->color.push_back(prim->color[idx]);
-                if (!prim->radius.empty())
-                    faceted->radius.push_back(prim->radius[idx]);
-            }
-            *prim = *faceted;
-        }
-    }
-
-    // done
-    return msh;
 }
 
 }  // namespace ygl
