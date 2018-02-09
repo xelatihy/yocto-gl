@@ -230,7 +230,7 @@ def make_toc(md, about_page, api_page, github_page, twitter_page):
     toc = ''
     nmd = ''
     num = 0
-    toc += '[Yocto/GL](' + about_page + ') [![](github-logo.png)](' + github_page + ') + [![](twitter-logo.png)](' + twitter_page + ')\n\n'
+    toc += '[Yocto/GL](' + about_page + ') [![](images/github-logo.png)](' + github_page + ') + [![](images/twitter-logo.png)](' + twitter_page + ')\n\n'
     for line in md.splitlines():
         if line.startswith('# ') or line.startswith('## ') or  line.startswith('### '):
             link = 'toc' + str(num)
