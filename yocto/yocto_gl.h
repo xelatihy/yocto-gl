@@ -2211,7 +2211,7 @@ inline frame<T, 3> inverse(const frame<T, 3>& a) {
 /// stream write
 template <typename T, int N>
 inline ostream& operator<<(ostream& os, const frame<T, N>& a) {
-    for (auto i = 0; i < N; i++) {
+    for (auto i = 0; i < N + 1; i++) {
         if (i) os << ' ';
         os << data(a)[i];
     }
@@ -2220,7 +2220,7 @@ inline ostream& operator<<(ostream& os, const frame<T, N>& a) {
 /// stream read
 template <typename T, int N>
 inline istream& operator>>(istream& is, frame<T, N>& a) {
-    for (auto i = 0; i < N; i++) is >> data(a)[i];
+    for (auto i = 0; i < N + 1; i++) is >> data(a)[i];
     return is;
 }
 
@@ -6088,8 +6088,6 @@ enum struct obj_element_type : uint16_t {
     face = 3,
     /// bezier segments
     bezier = 4,
-    /// tetrahedrons
-    tetra = 5,
 };
 
 /// Element vertex indices
@@ -6104,34 +6102,34 @@ struct obj_element {
 
 /// Element group
 struct obj_group {
-    // group data ---------------------------
     /// material name
     string matname;
     /// group name
     string groupname;
     /// smoothing
     bool smoothing = true;
-    /// number of times to subdivide
-    int subdivision_level = 0;
-    /// whether to use Catmull-Clark subdivision
-    bool subdivision_catmullclark = false;
 
-    // element data -------------------------
     /// element vertices
     vector<obj_vertex> verts;
     /// element faces
     vector<obj_element> elems;
+
+    /// the rest of the properties [extension]
+    unordered_map<string, vector<string>> props;
 };
 
 /// Obj object
 struct obj_object {
-    // object data --------------------------
     /// object name
     string name;
-
-    // element data -------------------------
     /// element groups
-    vector<obj_group> groups;
+    vector<obj_group*> groups;
+
+    /// the rest of the properties [extension]
+    unordered_map<string, vector<string>> props;
+
+    /// cleanup
+    ~obj_object();
 };
 
 /// Texture information for OBJ
@@ -6142,16 +6140,15 @@ struct obj_texture_info {
     bool clamp = false;
     /// the scale for bump and displacement
     float scale = 1;
-    /// the rest of the unknown properties
-    unordered_map<string, vector<string>> unknown_props;
+    /// the rest of the properties
+    unordered_map<string, vector<string>> props;
 };
 
 // comparison for texture info
 inline bool operator==(const obj_texture_info& a, const obj_texture_info& b) {
     if (a.path.empty() && b.path.empty()) return true;
     if (a.path != b.path) return false;
-    return a.clamp == b.clamp && a.scale == b.scale &&
-           a.unknown_props == b.unknown_props;
+    return a.clamp == b.clamp && a.scale == b.scale && a.props == b.props;
 }
 
 /// OBJ texture. Texture data is loaded only if desired.
@@ -6173,13 +6170,11 @@ struct obj_texture {
 
 /// OBJ material
 struct obj_material {
-    // whole material data ------------------
     /// material name
     string name;
     /// MTL illum mode
     int illum = 0;
 
-    // color information --------------------
     /// emission color
     vec3f ke = {0, 0, 0};
     /// ambient color
@@ -6199,7 +6194,6 @@ struct obj_material {
     /// opacity
     float op = 1;
 
-    // texture names for the above properties
     /// emission texture
     obj_texture_info ke_txt;
     /// ambient texture
@@ -6225,9 +6219,8 @@ struct obj_material {
     /// normal map texture
     obj_texture_info norm_txt;
 
-    // unknown properties ---------------------
-    /// unknown string props
-    unordered_map<string, vector<string>> unknown_props;
+    /// the rest of the properties
+    unordered_map<string, vector<string>> props;
 };
 
 /// Camera [extension]
@@ -6280,9 +6273,8 @@ struct obj_node {
     vec3f scaling = {1, 1, 1};
 };
 
-/// OBJ asset
+/// OBJ scene
 struct obj_scene {
-    // vertex data -------------------------
     /// vertex positions
     vector<vec3f> pos;
     /// vertex normals
@@ -6294,7 +6286,6 @@ struct obj_scene {
     /// vertex radius [extension]
     vector<float> radius;
 
-    // scene objects -----------------------
     /// objects
     vector<obj_object*> objects;
     /// materials
@@ -6309,20 +6300,7 @@ struct obj_scene {
     vector<obj_node*> nodes;
 
     /// cleanup
-    ~obj_scene() {
-        for (auto v : objects)
-            if (v) delete v;
-        for (auto v : materials)
-            if (v) delete v;
-        for (auto v : textures)
-            if (v) delete v;
-        for (auto v : cameras)
-            if (v) delete v;
-        for (auto v : environments)
-            if (v) delete v;
-        for (auto v : nodes)
-            if (v) delete v;
-    }
+    ~obj_scene();
 };
 
 /// Load OBJ
@@ -6352,53 +6330,6 @@ obj_scene* load_obj(const string& filename, bool load_textures = false,
 void save_obj(const string& filename, const obj_scene* model,
     bool save_textures = false, bool skip_missing = false,
     bool flip_texcoord = true, bool flip_tr = true);
-
-/// Shape. May contain only one of the points/lines/triangles.
-struct obj_shape {
-    /// name of the group that enclosed it
-    string name = "";
-    /// name of the material
-    string matname = "";
-
-    // shape elements -------------------------
-    /// points
-    vector<int> points;
-    /// lines
-    vector<vec2i> lines;
-    /// triangles
-    vector<vec3i> triangles;
-    /// bezier
-    vector<vec4i> bezier;
-    /// tetrahedrons
-    vector<vec4i> tetras;
-
-    // vertex data ----------------------------
-    /// per-vertex position (3 float)
-    vector<vec3f> pos;
-    /// per-vertex normals (3 float)
-    vector<vec3f> norm;
-    /// per-vertex texcoord (2 float)
-    vector<vec2f> texcoord;
-    /// [extension] per-vertex color (4 float)
-    vector<vec4f> color;
-    /// [extension] per-vertex radius (1 float)
-    vector<float> radius;
-};
-
-/// Mesh
-struct obj_mesh {
-    // name
-    string name;
-    /// primitives
-    vector<obj_shape> shapes;
-
-    /// cleanup
-    ~obj_mesh();
-};
-
-/// Gets a mesh from an OBJ object.
-obj_mesh* get_mesh(
-    const obj_scene* model, const obj_object& oobj, bool facet_non_smooth);
 
 }  // namespace ygl
 
