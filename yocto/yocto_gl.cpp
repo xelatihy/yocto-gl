@@ -81,7 +81,7 @@
 // - update documentation
 // - update BVH documentation
 //
-// ## trace
+// ## Trace
 //
 // - distributions:
 //     - move to binary function
@@ -125,18 +125,10 @@
 // - check rotation and decompoaition of rotations
 //    - see euclideanspace.com
 //
-// ## Trace
+// ## Apps
 //
-// - sampler simplification
-//     https://lemire.me/blog/2017/09/18/visiting-all-values-in-an-array-exactly-once-in-random-order/
-//     https://lemire.me/blog/2017/09/26/benchmarking-algorithms-to-visit-all-values-in-an-array-in-random-order/
 // - yitrace: check editing
 // - yitrace: consider update
-//
-// ## Shade
-//
-// - start in edit mode
-// - show edit scene
 //
 
 #include "yocto_gl.h"
