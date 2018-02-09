@@ -6962,9 +6962,9 @@ void load_textures(obj_scene* asset, const string& dirname, bool skip_missing) {
 }
 
 // Parses an OBJ vertex list. Handles negative values.
-inline void obj_parse_vertlist(
-    stringstream& ss, vector<obj_vertex>& elems, const obj_vertex& vert_size) {
-    elems.clear();
+inline vector<obj_vertex> obj_parse_vertlist(
+    stringstream& ss, const obj_vertex& vert_size) {
+    auto elems = vector<obj_vertex>();
     while (true) {
         auto tok = string();
         ss >> tok;
@@ -6981,6 +6981,7 @@ inline void obj_parse_vertlist(
         }
         elems.push_back(v);
     }
+    return elems;
 }
 
 // Loads an OBJ
@@ -6998,10 +6999,11 @@ obj_scene* load_obj(const string& filename, bool load_txt, bool skip_missing,
     asset->objects.push_back(new obj_object());
     asset->objects.back()->groups.push_back({});
 
-    // allocate buffers to avoid re-allocing
-    auto cur_elems = vector<obj_vertex>();
-    auto cur_matname = string();
-    auto cur_mtllibs = vector<string>();
+    // current parsing value
+    auto matname = string();
+    auto mtllibs = vector<string>();
+    auto object = asset->objects.back();
+    auto group = &object->groups.back();
 
     // keep track of array lengths
     auto vert_size = obj_vertex{0, 0, 0, 0, 0};
@@ -7013,8 +7015,7 @@ obj_scene* load_obj(const string& filename, bool load_txt, bool skip_missing,
         // prepare to parse
         linenum += 1;
         auto ss = stringstream(line);
-        auto cmd = string();
-        ss >> cmd;
+        auto cmd = obj_parse_string(ss);
 
         // skip empty and comments
         if (cmd.empty() || cmd[0] == '#') continue;
@@ -7038,87 +7039,74 @@ obj_scene* load_obj(const string& filename, bool load_txt, bool skip_missing,
             vert_size.radius += 1;
             asset->radius.push_back(obj_parse_float(ss));
         } else if (cmd == "f") {
-            obj_parse_vertlist(ss, cur_elems, vert_size);
-            auto& g = asset->objects.back()->groups.back();
-            g.elems.push_back({(uint32_t)g.verts.size(), obj_element_type::face,
-                (uint16_t)cur_elems.size()});
-            g.verts.insert(g.verts.end(), cur_elems.begin(), cur_elems.end());
+            auto elems = obj_parse_vertlist(ss, vert_size);
+            group->elems.push_back({(uint32_t)group->verts.size(),
+                obj_element_type::face, (uint16_t)elems.size()});
+            group->verts.insert(group->verts.end(), elems.begin(), elems.end());
         } else if (cmd == "l") {
-            obj_parse_vertlist(ss, cur_elems, vert_size);
-            auto& g = asset->objects.back()->groups.back();
-            g.elems.push_back({(uint32_t)g.verts.size(), obj_element_type::line,
-                (uint16_t)cur_elems.size()});
-            g.verts.insert(g.verts.end(), cur_elems.begin(), cur_elems.end());
+            auto elems = obj_parse_vertlist(ss, vert_size);
+            group->elems.push_back({(uint32_t)group->verts.size(),
+                obj_element_type::line, (uint16_t)elems.size()});
+            group->verts.insert(group->verts.end(), elems.begin(), elems.end());
         } else if (cmd == "p") {
-            obj_parse_vertlist(ss, cur_elems, vert_size);
-            auto& g = asset->objects.back()->groups.back();
-            g.elems.push_back({(uint32_t)g.verts.size(),
-                obj_element_type::point, (uint16_t)cur_elems.size()});
-            g.verts.insert(g.verts.end(), cur_elems.begin(), cur_elems.end());
+            auto elems = obj_parse_vertlist(ss, vert_size);
+            group->elems.push_back({(uint32_t)group->verts.size(),
+                obj_element_type::point, (uint16_t)elems.size()});
+            group->verts.insert(group->verts.end(), elems.begin(), elems.end());
         } else if (cmd == "b") {
-            obj_parse_vertlist(ss, cur_elems, vert_size);
-            auto& g = asset->objects.back()->groups.back();
-            g.elems.push_back({(uint32_t)g.verts.size(),
-                obj_element_type::bezier, (uint16_t)cur_elems.size()});
-            g.verts.insert(g.verts.end(), cur_elems.begin(), cur_elems.end());
+            auto elems = obj_parse_vertlist(ss, vert_size);
+            group->elems.push_back({(uint32_t)group->verts.size(),
+                obj_element_type::bezier, (uint16_t)elems.size()});
+            group->verts.insert(group->verts.end(), elems.begin(), elems.end());
         } else if (cmd == "t") {
-            obj_parse_vertlist(ss, cur_elems, vert_size);
-            auto& g = asset->objects.back()->groups.back();
-            g.elems.push_back({(uint32_t)g.verts.size(),
-                obj_element_type::tetra, (uint16_t)cur_elems.size()});
-            g.verts.insert(g.verts.end(), cur_elems.begin(), cur_elems.end());
+            auto elems = obj_parse_vertlist(ss, vert_size);
+            group->elems.push_back({(uint32_t)group->verts.size(),
+                obj_element_type::tetra, (uint16_t)elems.size()});
+            group->verts.insert(group->verts.end(), elems.begin(), elems.end());
         } else if (cmd == "o") {
             auto name = obj_parse_string(ss);
-            asset->objects.push_back(new obj_object{name, {}});
-            asset->objects.back()->groups.push_back({});
-            asset->objects.back()->groups.back().matname = cur_matname;
+            asset->objects.push_back(new obj_object());
+            object = asset->objects.back();
+            object->name = name;
+            object->groups.push_back(obj_group());
+            group = &object->groups.back();
+            group->matname = matname;
         } else if (cmd == "usemtl") {
-            auto name = obj_parse_string(ss);
-            cur_matname = name;
-            asset->objects.back()->groups.push_back({});
-            asset->objects.back()->groups.back().matname = cur_matname;
+            matname = obj_parse_string(ss);
+            object->groups.push_back(obj_group());
+            group = &object->groups.back();
+            group->matname = matname;
         } else if (cmd == "g") {
             auto name = obj_parse_string(ss);
-            asset->objects.back()->groups.push_back({});
-            asset->objects.back()->groups.back().matname = cur_matname;
-            asset->objects.back()->groups.back().groupname = name;
+            object->groups.push_back(obj_group());
+            group = &object->groups.back();
+            group->matname = matname;
+            group->groupname = name;
         } else if (cmd == "s") {
             auto name = obj_parse_string(ss);
             auto smoothing = (name == "on");
-            if (asset->objects.back()->groups.empty()) {
-                asset->objects.back()->groups.push_back({});
-                asset->objects.back()->groups.back().matname = cur_matname;
-                asset->objects.back()->groups.back().smoothing = smoothing;
-            } else if (asset->objects.back()->groups.back().smoothing !=
-                       smoothing) {
-                auto gname = asset->objects.back()->groups.back().groupname;
-                asset->objects.back()->groups.push_back({});
-                asset->objects.back()->groups.back().matname = cur_matname;
-                asset->objects.back()->groups.back().groupname = gname;
-                asset->objects.back()->groups.back().smoothing = smoothing;
+            if (group->smoothing != smoothing) {
+                auto gname = group->groupname;
+                object->groups.push_back(obj_group());
+                group = &object->groups.back();
+                group->matname = matname;
+                group->groupname = gname;
+                group->smoothing = smoothing;
             }
         } else if (cmd == "sl") {
-            auto subdiv = zero2i;
-            subdiv.x = obj_parse_int(ss);
-            subdiv.y = obj_parse_int(ss);
-            if (asset->objects.back()->groups.empty()) {
-                asset->objects.back()->groups.push_back({});
-                asset->objects.back()->groups.back().matname = cur_matname;
-            }
-            asset->objects.back()->groups.back().subdivision_level = subdiv.x;
-            asset->objects.back()->groups.back().subdivision_catmullclark =
-                (bool)subdiv.y;
+            group->subdivision_level = obj_parse_int(ss);
+            group->subdivision_catmullclark = obj_parse_bool(ss);
         } else if (cmd == "mtllib") {
             auto name = obj_parse_string(ss);
             if (name != string("")) {
                 auto found = false;
-                for (auto lib : cur_mtllibs) {
+                for (auto lib : mtllibs) {
                     if (lib == name) {
                         found = true;
                         break;
                     }
                 }
-                if (!found) cur_mtllibs.push_back(name);
+                if (!found) mtllibs.push_back(name);
             }
         } else if (cmd == "c") {
             auto cam = new obj_camera();
@@ -7167,7 +7155,7 @@ obj_scene* load_obj(const string& filename, bool load_txt, bool skip_missing,
     // parse materials
     auto dirname = path_dirname(filename);
     unordered_set<string> texture_set;
-    for (auto mtllib : cur_mtllibs) {
+    for (auto mtllib : mtllibs) {
         auto mtlname = dirname + mtllib;
         vector<string> textures;
         auto materials = load_mtl(mtlname, flip_tr, textures);
