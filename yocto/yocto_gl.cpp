@@ -78,8 +78,17 @@
 //
 // ## Next
 //
+// - quads in obj
+// - facevarying in obj
+//
 // - update documentation
 // - update BVH documentation
+//
+// - distribution:
+//     - use my own search function
+//     - move to binary function
+//     - consider adding an object
+//     - add a distribution for lights
 //
 // - cleanup sampling functions everywhere
 //     - probably removing sample_points/lines/triangles
@@ -3721,47 +3730,11 @@ scene* obj_to_scene(const obj_scene* obj, const load_options& opts) {
         txt->name = otxt->path;
         txt->path = otxt->path;
         if (!otxt->datab.empty()) {
-            txt->ldr = image4b(otxt->width, otxt->height);
-            for (auto j = 0; j < otxt->height; j++) {
-                for (auto i = 0; i < otxt->width; i++) {
-                    auto v = otxt->datab.data() +
-                             (otxt->width * j + i) * otxt->ncomp;
-                    switch (otxt->ncomp) {
-                        case 1:
-                            txt->ldr.at(i, j) = {v[0], v[0], v[0], 255};
-                            break;
-                        case 2: txt->ldr.at(i, j) = {v[0], v[1], 0, 255}; break;
-                        case 3:
-                            txt->ldr.at(i, j) = {v[0], v[1], v[2], 255};
-                            break;
-                        case 4:
-                            txt->ldr.at(i, j) = {v[0], v[1], v[2], v[3]};
-                            break;
-                        default: assert(false); break;
-                    }
-                }
-            }
+            txt->ldr = make_image(otxt->width, otxt->height, otxt->ncomp,
+                otxt->datab.data(), vec4b{0, 0, 0, 255});
         } else if (!otxt->dataf.empty()) {
-            txt->hdr = image4f(otxt->width, otxt->height);
-            for (auto j = 0; j < otxt->height; j++) {
-                for (auto i = 0; i < otxt->width; i++) {
-                    auto v = otxt->dataf.data() +
-                             (otxt->width * j + i) * otxt->ncomp;
-                    switch (otxt->ncomp) {
-                        case 1:
-                            txt->hdr.at(i, j) = {v[0], v[0], v[0], 1};
-                            break;
-                        case 2: txt->hdr.at(i, j) = {v[0], v[1], 0, 1}; break;
-                        case 3:
-                            txt->hdr.at(i, j) = {v[0], v[1], v[2], 1};
-                            break;
-                        case 4:
-                            txt->hdr.at(i, j) = {v[0], v[1], v[2], v[3]};
-                            break;
-                        default: assert(false); break;
-                    }
-                }
-            }
+            txt->hdr = make_image(otxt->width, otxt->height, otxt->ncomp,
+                otxt->dataf.data(), vec4f{0, 0, 0, 1});
         }
         scn->textures.push_back(txt);
         tmap[txt->path] = txt;
@@ -3783,11 +3756,11 @@ scene* obj_to_scene(const obj_scene* obj, const load_options& opts) {
         auto mat = new material();
         mat->name = omat->name;
         mat->type = material_type::specular_roughness;
-        mat->ke = {omat->ke.x, omat->ke.y, omat->ke.z};
-        mat->kd = {omat->kd.x, omat->kd.y, omat->kd.z};
-        mat->ks = {omat->ks.x, omat->ks.y, omat->ks.z};
-        mat->kr = {omat->kr.x, omat->kr.y, omat->kr.z};
-        mat->kt = {omat->kt.x, omat->kt.y, omat->kt.z};
+        mat->ke = omat->ke;
+        mat->kd = omat->kd;
+        mat->ks = omat->ks;
+        mat->kr = omat->kr;
+        mat->kt = omat->kt;
         mat->rs = (omat->ns >= 1e6f) ? 0 : pow(2 / (omat->ns + 2), 1 / 4.0f);
         mat->op = omat->op;
         mat->ke_txt = add_texture(omat->ke_txt);
@@ -4506,47 +4479,11 @@ scene* gltf_to_scene(const glTF* gltf, const load_options& opts) {
         txt->path =
             (startswith(gtxt->uri, "data:")) ? string("inlines") : gtxt->uri;
         if (!gtxt->data.datab.empty()) {
-            txt->ldr = image4b(gtxt->data.width, gtxt->data.height);
-            for (auto j = 0; j < gtxt->data.height; j++) {
-                for (auto i = 0; i < gtxt->data.width; i++) {
-                    auto v = gtxt->data.datab.data() +
-                             (gtxt->data.width * j + i) * gtxt->data.ncomp;
-                    switch (gtxt->data.ncomp) {
-                        case 1:
-                            txt->ldr.at(i, j) = {v[0], v[0], v[0], 255};
-                            break;
-                        case 2: txt->ldr.at(i, j) = {v[0], v[1], 0, 255}; break;
-                        case 3:
-                            txt->ldr.at(i, j) = {v[0], v[1], v[2], 255};
-                            break;
-                        case 4:
-                            txt->ldr.at(i, j) = {v[0], v[1], v[2], v[3]};
-                            break;
-                        default: assert(false); break;
-                    }
-                }
-            }
+            txt->ldr = make_image(gtxt->data.width, gtxt->data.height,
+                gtxt->data.ncomp, gtxt->data.datab.data(), vec4b{0, 0, 0, 255});
         } else if (!gtxt->data.dataf.empty()) {
-            txt->hdr = image4f(gtxt->data.width, gtxt->data.height);
-            for (auto j = 0; j < gtxt->data.height; j++) {
-                for (auto i = 0; i < gtxt->data.width; i++) {
-                    auto v = gtxt->data.dataf.data() +
-                             (gtxt->data.width * j + i) * gtxt->data.ncomp;
-                    switch (gtxt->data.ncomp) {
-                        case 1:
-                            txt->hdr.at(i, j) = {v[0], v[0], v[0], 1};
-                            break;
-                        case 2: txt->hdr.at(i, j) = {v[0], v[1], 0, 1}; break;
-                        case 3:
-                            txt->hdr.at(i, j) = {v[0], v[1], v[2], 1};
-                            break;
-                        case 4:
-                            txt->hdr.at(i, j) = {v[0], v[1], v[2], v[3]};
-                            break;
-                        default: assert(false); break;
-                    }
-                }
-            }
+            txt->hdr = make_image(gtxt->data.width, gtxt->data.height,
+                gtxt->data.ncomp, gtxt->data.dataf.data(), vec4f{0, 0, 0, 1});
         }
         scn->textures.push_back(txt);
     }

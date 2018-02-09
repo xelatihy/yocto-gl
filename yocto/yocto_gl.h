@@ -3470,7 +3470,7 @@ inline int sample_index(int size, float r) {
 inline float sample_index_pdf(int size) { return 1.0f / size; }
 
 /// sample a discrete distribution
-inline int sample_discrete_cdf(float r, const vector<float>& cdf) {
+inline int sample_discrete_cdf(const vector<float>& cdf, float r) {
     r = clamp(r, 0.0f, 0.9999f);
     return (int)(std::upper_bound(cdf.begin(), cdf.end(), r) - cdf.begin());
 }
@@ -4381,6 +4381,21 @@ template <typename T>
 inline image<T> make_image(int w, int h, T* vals) {
     auto img = image<T>(w, h);
     for (auto idx = 0; idx < w * h; idx++) img.pixels[idx] = vals[idx];
+    return img;
+}
+
+/// Create a 4 channel image with the given number of channels
+template <typename T>
+inline image<vec<T, 4>> make_image(
+    int w, int h, int nc, const T* vals, const vec<T, 4>& def) {
+    auto img = image<vec<T, 4>>(w, h);
+    for (auto j = 0; j < h; j++) {
+        for (auto i = 0; i < w; i++) {
+            auto pixel = vals + (j * w + i) * nc;
+            img.at(i, j) = def;
+            for (auto c = 0; c < nc; c++) img.at(i, j)[c] = pixel[c];
+        }
+    }
     return img;
 }
 
