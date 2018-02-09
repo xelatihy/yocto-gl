@@ -6102,7 +6102,6 @@ struct obj_element {
 
 /// Element group
 struct obj_group {
-    // group data ---------------------------
     /// material name
     string matname;
     /// group name
@@ -6114,7 +6113,6 @@ struct obj_group {
     /// whether to use Catmull-Clark subdivision
     bool subdivision_catmullclark = false;
 
-    // element data -------------------------
     /// element vertices
     vector<obj_vertex> verts;
     /// element faces
@@ -6123,13 +6121,13 @@ struct obj_group {
 
 /// Obj object
 struct obj_object {
-    // object data --------------------------
     /// object name
     string name;
-
-    // element data -------------------------
     /// element groups
-    vector<obj_group> groups;
+    vector<obj_group*> groups;
+
+    /// cleanup
+    ~obj_object();
 };
 
 /// Texture information for OBJ
@@ -6171,13 +6169,11 @@ struct obj_texture {
 
 /// OBJ material
 struct obj_material {
-    // whole material data ------------------
     /// material name
     string name;
     /// MTL illum mode
     int illum = 0;
 
-    // color information --------------------
     /// emission color
     vec3f ke = {0, 0, 0};
     /// ambient color
@@ -6197,7 +6193,6 @@ struct obj_material {
     /// opacity
     float op = 1;
 
-    // texture names for the above properties
     /// emission texture
     obj_texture_info ke_txt;
     /// ambient texture
@@ -6223,7 +6218,6 @@ struct obj_material {
     /// normal map texture
     obj_texture_info norm_txt;
 
-    // unknown properties ---------------------
     /// unknown string props
     unordered_map<string, vector<string>> unknown_props;
 };
@@ -6278,9 +6272,8 @@ struct obj_node {
     vec3f scaling = {1, 1, 1};
 };
 
-/// OBJ asset
+/// OBJ scene
 struct obj_scene {
-    // vertex data -------------------------
     /// vertex positions
     vector<vec3f> pos;
     /// vertex normals
@@ -6292,7 +6285,6 @@ struct obj_scene {
     /// vertex radius [extension]
     vector<float> radius;
 
-    // scene objects -----------------------
     /// objects
     vector<obj_object*> objects;
     /// materials
@@ -6307,20 +6299,7 @@ struct obj_scene {
     vector<obj_node*> nodes;
 
     /// cleanup
-    ~obj_scene() {
-        for (auto v : objects)
-            if (v) delete v;
-        for (auto v : materials)
-            if (v) delete v;
-        for (auto v : textures)
-            if (v) delete v;
-        for (auto v : cameras)
-            if (v) delete v;
-        for (auto v : environments)
-            if (v) delete v;
-        for (auto v : nodes)
-            if (v) delete v;
-    }
+    ~obj_scene();
 };
 
 /// Load OBJ
@@ -6350,53 +6329,6 @@ obj_scene* load_obj(const string& filename, bool load_textures = false,
 void save_obj(const string& filename, const obj_scene* model,
     bool save_textures = false, bool skip_missing = false,
     bool flip_texcoord = true, bool flip_tr = true);
-
-/// Shape. May contain only one of the points/lines/triangles.
-struct obj_shape {
-    /// name of the group that enclosed it
-    string name = "";
-    /// name of the material
-    string matname = "";
-
-    // shape elements -------------------------
-    /// points
-    vector<int> points;
-    /// lines
-    vector<vec2i> lines;
-    /// triangles
-    vector<vec3i> triangles;
-    /// bezier
-    vector<vec4i> bezier;
-    /// tetrahedrons
-    vector<vec4i> tetras;
-
-    // vertex data ----------------------------
-    /// per-vertex position (3 float)
-    vector<vec3f> pos;
-    /// per-vertex normals (3 float)
-    vector<vec3f> norm;
-    /// per-vertex texcoord (2 float)
-    vector<vec2f> texcoord;
-    /// [extension] per-vertex color (4 float)
-    vector<vec4f> color;
-    /// [extension] per-vertex radius (1 float)
-    vector<float> radius;
-};
-
-/// Mesh
-struct obj_mesh {
-    // name
-    string name;
-    /// primitives
-    vector<obj_shape> shapes;
-
-    /// cleanup
-    ~obj_mesh();
-};
-
-/// Gets a mesh from an OBJ object.
-obj_mesh* get_mesh(
-    const obj_scene* model, const obj_object& oobj, bool facet_non_smooth);
 
 }  // namespace ygl
 
