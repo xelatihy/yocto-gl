@@ -28,6 +28,9 @@ header {
     width: 240px;
     background: #fafafa;
     border-right: 1px solid rgba(0,0,0,0.07);
+    font-family: "Lato", sans-serif;
+    font-size: 16px;
+    color: #888888;
 }
 
 article {
@@ -40,22 +43,35 @@ article {
     padding: 24px;
 }
 
-  nav a {
+ nav a {
     font-family: "Lato", sans-serif;
     font-size: 12px;
     color: white;
     background: black;
     padding: 6px;
     vertical-align: middle;
-    text-transform: uppercase; }
+    text-transform: uppercase;
+}
 
-  nav img {
-    height: 28px;
+header p {
+    text-align: center;
+}
+
+header ul {
     padding: 0;
-    margin: 0;
-    border: 0;
-    vertical-align: middle;
-    display: inline-block; }
+}
+
+header li {
+    list-style: none;
+}
+
+header a {
+    color: #888888;
+}
+
+header a:hover {
+    color: black;
+}
 
 p {
   margin: 24px 0;
