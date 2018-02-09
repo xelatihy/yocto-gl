@@ -6716,6 +6716,47 @@ inline void obj_parse_val(stringstream& ss, string& v) {
     }
 }
 
+// Parse a string value
+inline string obj_parse_string(stringstream& ss) {
+    auto v = string();
+    ss >> v;
+    if (v.length() == 0) return v;
+    if ((v.front() == '"' && v.back() == '"') ||
+        (v.front() == '\'' && v.back() == '\'')) {
+        v = v.substr(1, v.length() - 2);
+        return v;
+    }
+    return v;
+}
+
+// Parse a float value
+inline float obj_parse_float(stringstream& ss) {
+    auto v = 0.0f;
+    ss >> v;
+    return v;
+}
+
+// Parse an int value
+inline int obj_parse_int(stringstream& ss) {
+    auto v = 0;
+    ss >> v;
+    return v;
+}
+
+// Parse an vec value
+inline vec2f obj_parse_vec2f(stringstream& ss) {
+    auto v = zero2f;
+    ss >> v.x >> v.y;
+    return v;
+}
+
+// Parse an vec value
+inline vec3f obj_parse_vec3f(stringstream& ss) {
+    auto v = zero3f;
+    ss >> v.x >> v.y >> v.z;
+    return v;
+}
+
 // Parse a value
 template <typename T, int N>
 inline void obj_parse_val(stringstream& ss, vec<T, N>& v) {
@@ -6738,9 +6779,7 @@ inline void obj_parse_val(stringstream& ss, frame<T, 3>& v) {
 }
 
 // Parse texture options and name
-inline void parse_texture(stringstream& ss, obj_texture_info& info,
-    vector<string>& textures, unordered_set<string>& texture_set,
-    bool bump = false) {
+inline obj_texture_info obj_parse_texture(stringstream& ss, bool bump = false) {
     // get tokens
     auto tokens = vector<string>();
     while (ss) {
@@ -6750,9 +6789,10 @@ inline void parse_texture(stringstream& ss, obj_texture_info& info,
     }
 
     // exit if no tokens
-    if (tokens.empty()) return;
+    if (tokens.empty()) return {};
 
     // texture name
+    auto info = obj_texture_info();
     info.path = tokens.back();
     for (auto& c : info.path)
         if (c == '\\') c = '/';
@@ -6785,13 +6825,9 @@ inline void parse_texture(stringstream& ss, obj_texture_info& info,
         info.scale = std::atof(bm_str.c_str());
         info.unknown_props.erase("-bm");
     }
-
-    // insert texture
-    if (!info.path.empty() &&
-        texture_set.find(info.path) == texture_set.end()) {
-        textures.push_back(info.path);
-        texture_set.insert(info.path);
-    }
+    
+    // done
+    return info;
 }
 
 // Load MTL
@@ -6800,10 +6836,6 @@ vector<obj_material*> load_mtl(
     // clear materials
     auto materials = vector<obj_material*>();
 
-    // clear textures
-    textures.clear();
-    auto texture_set = unordered_set<string>();
-
     // open file
     auto fs = fstream(filename, ios_base::in);
     if (!fs) throw runtime_error("cannot open filename " + filename);
@@ -6811,6 +6843,7 @@ vector<obj_material*> load_mtl(
 
     // add a material preemptively to avoid crashes
     materials.push_back(new obj_material());
+    auto mat = materials.back();
 
     // read the file line by line
     string line;
@@ -6828,68 +6861,61 @@ vector<obj_material*> load_mtl(
         // possible token values
         if (cmd == "newmtl") {
             materials.push_back(new obj_material());
-            obj_parse_val(ss, materials.back()->name);
+            mat = materials.back();
+            mat->name = obj_parse_string(ss);
         } else if (cmd == "illum") {
-            obj_parse_val(ss, materials.back()->illum);
+            mat->illum = obj_parse_int(ss);
         } else if (cmd == "Ke") {
-            obj_parse_val(ss, materials.back()->ke);
+            mat->ke = obj_parse_vec3f(ss);
         } else if (cmd == "Ka") {
-            obj_parse_val(ss, materials.back()->ka);
+            mat->ka = obj_parse_vec3f(ss);
         } else if (cmd == "Kd") {
-            obj_parse_val(ss, materials.back()->kd);
+            mat->kd = obj_parse_vec3f(ss);
         } else if (cmd == "Ks") {
-            obj_parse_val(ss, materials.back()->ks);
+            mat->ks = obj_parse_vec3f(ss);
         } else if (cmd == "Kr") {
-            obj_parse_val(ss, materials.back()->kr);
+            mat->kr = obj_parse_vec3f(ss);
         } else if (cmd == "Kt" || cmd == "Tf") {
-            auto vals = zero3f;
             auto ntok = 0;
-            while (ss) obj_parse_val(ss, vals[ntok++]);
-            if (ntok >= 3)
-                materials.back()->kt = vals;
-            else
-                materials.back()->kt = {vals.x, vals.x, vals.x};
+            while (ss && ntok < 3) mat->kt[ntok++] = obj_parse_float(ss);
+            if(ntok < 3) mat->kt = {mat->kt.x, mat->kt.x, mat->kt.x};
         } else if (cmd == "Tr") {
-            auto vals = zero3f;
             auto ntok = 0;
-            while (ss) obj_parse_val(ss, vals[ntok++]);
-            if (ntok >= 3)
-                materials.back()->kt = vals;
-            else
-                materials.back()->op = (flip_tr) ? 1 - vals.x : vals.x;
+            while (ss) mat->kt[ntok++] = obj_parse_float(ss);
+            if (ntok < 3) {
+                materials.back()->op = (flip_tr) ? 1 - mat->kt.x : mat->kt.x;
+                mat->kt = {0,0,0};
+            }
         } else if (cmd == "Ns") {
-            obj_parse_val(ss, materials.back()->ns);
+            mat->ns = obj_parse_float(ss);
         } else if (cmd == "d") {
-            obj_parse_val(ss, materials.back()->op);
+            mat->op = obj_parse_float(ss);
         } else if (cmd == "Ni") {
-            obj_parse_val(ss, materials.back()->ior);
+            mat->ior = obj_parse_float(ss);
         } else if (cmd == "map_Ke") {
-            parse_texture(ss, materials.back()->ke_txt, textures, texture_set);
+            mat->ke_txt = obj_parse_texture(ss);
         } else if (cmd == "map_Ka") {
-            parse_texture(ss, materials.back()->ka_txt, textures, texture_set);
+            mat->ka_txt = obj_parse_texture(ss);
         } else if (cmd == "map_Kd") {
-            parse_texture(ss, materials.back()->kd_txt, textures, texture_set);
+            mat->kd_txt = obj_parse_texture(ss);
         } else if (cmd == "map_Ks") {
-            parse_texture(ss, materials.back()->ks_txt, textures, texture_set);
+            mat->ks_txt = obj_parse_texture(ss);
         } else if (cmd == "map_Kr") {
-            parse_texture(ss, materials.back()->kr_txt, textures, texture_set);
+            mat->kr_txt = obj_parse_texture(ss);
         } else if (cmd == "map_Tr") {
-            parse_texture(ss, materials.back()->kt_txt, textures, texture_set);
+            mat->kt_txt = obj_parse_texture(ss);
         } else if (cmd == "map_Ns") {
-            parse_texture(ss, materials.back()->ns_txt, textures, texture_set);
+            mat->ns_txt = obj_parse_texture(ss);
         } else if (cmd == "map_d") {
-            parse_texture(ss, materials.back()->op_txt, textures, texture_set);
+            mat->op_txt = obj_parse_texture(ss);
         } else if (cmd == "map_Ni") {
-            parse_texture(ss, materials.back()->ior_txt, textures, texture_set);
+            mat->ior_txt = obj_parse_texture(ss);
         } else if (cmd == "map_bump" || cmd == "bump") {
-            parse_texture(
-                ss, materials.back()->bump_txt, textures, texture_set);
+            mat->bump_txt = obj_parse_texture(ss);
         } else if (cmd == "map_disp" || cmd == "disp") {
-            parse_texture(
-                ss, materials.back()->disp_txt, textures, texture_set);
+            mat->disp_txt = obj_parse_texture(ss);
         } else if (cmd == "map_norm" || cmd == "norm") {
-            parse_texture(
-                ss, materials.back()->norm_txt, textures, texture_set);
+            mat->norm_txt = obj_parse_texture(ss);
         } else {
             // copy into strings
             while (ss) {
@@ -6901,6 +6927,31 @@ vector<obj_material*> load_mtl(
 
     // remove first fake material
     materials.erase(materials.begin());
+    
+    // create texture array
+    textures = {};
+    auto texture_set = unordered_set<string>();
+    auto add_texture = [&texture_set, &textures](const obj_texture_info& info) {
+        if(info.path == "") return;
+        if(texture_set.find(info.path) != texture_set.end()) return;
+        texture_set.insert(info.path);
+        textures.push_back(info.path);
+    };
+    for(auto mat : materials) {
+        add_texture(mat->ke_txt);
+        add_texture(mat->ka_txt);
+        add_texture(mat->kd_txt);
+        add_texture(mat->ks_txt);
+        add_texture(mat->kr_txt);
+        add_texture(mat->kt_txt);
+        add_texture(mat->ns_txt);
+        add_texture(mat->op_txt);
+        add_texture(mat->ior_txt);
+        add_texture(mat->bump_txt);
+        add_texture(mat->bump_txt);
+        add_texture(mat->disp_txt);
+        add_texture(mat->norm_txt);
+    }
 
     // done
     return materials;
