@@ -2211,7 +2211,7 @@ inline frame<T, 3> inverse(const frame<T, 3>& a) {
 /// stream write
 template <typename T, int N>
 inline ostream& operator<<(ostream& os, const frame<T, N>& a) {
-    for (auto i = 0; i < N; i++) {
+    for (auto i = 0; i < N + 1; i++) {
         if (i) os << ' ';
         os << data(a)[i];
     }
@@ -2220,7 +2220,7 @@ inline ostream& operator<<(ostream& os, const frame<T, N>& a) {
 /// stream read
 template <typename T, int N>
 inline istream& operator>>(istream& is, frame<T, N>& a) {
-    for (auto i = 0; i < N; i++) is >> data(a)[i];
+    for (auto i = 0; i < N + 1; i++) is >> data(a)[i];
     return is;
 }
 
