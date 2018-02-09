@@ -211,10 +211,10 @@ The library contains a few function to help with typically geometry
 manipulation useful to support scene viewing and path tracing.
 
 1. compute line tangents, and triangle and quad areas and normals
-2. compute barycentric interpolation with `eval_barycentric_line()`,
-   `eval_barycentric_triangle()` and `eval_barycentric_quad()`
-3. evaluate Bezier curve and derivatives with `eval_bezier_cubic()` and
-   `eval_bezier_cubic_derivative()`
+2. interpolate values over primitives with `eval_line()`,
+   `eval_triangle()` and `eval_quad()`
+3. evaluate Bezier curves and derivatives with `eval_bezier()` and
+   `eval_bezier_derivative()`
 4. compute smooth normals and tangents with `compute_normals()`
 5. compute tangent frames from texture coordinates with
    `compute_tangent_space()`

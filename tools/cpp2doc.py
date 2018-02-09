@@ -18,7 +18,21 @@ def make_doc(cpp, first_only=False):
     first = True
     indented = False
     enum_last = False
-    for line in cpp.splitlines(True):
+    lines = cpp.splitlines(True)
+    nlines = []
+    groupname = ''
+    for line in lines:
+        if '/// @name' in line:
+            groupname = line.replace('/// @name','').strip().replace(' ','_')
+            nlines += [ '/// Group ' + groupname + '\n' ]
+        elif '/// @{' in line:
+            nlines += [ '__group__ ' + groupname + '{ \n' ]
+        elif '/// @}' in line:
+            pass
+        else:
+            nlines += [ line ]
+    lines = nlines
+    for line in lines:
         if cur_item:
             if '///' in line:
                 cur_item.comment += line
@@ -76,6 +90,12 @@ def make_doc(cpp, first_only=False):
                 main_namespace = item.name
             else:
                 item.name = main_namespace + "::" + item.name
+            item.decl = ""
+            item.comment = clean_comment(item.comment)
+        elif "__group__" in item.decl:
+            item.type = "Group"
+            item.name = item.decl
+            item.name = item.name.replace("__group__ ", "").replace("{", "").replace("_", " ").strip()
             item.decl = ""
             item.comment = clean_comment(item.comment)
         elif "using " in item.decl:
@@ -160,10 +180,15 @@ def make_doc(cpp, first_only=False):
     md = ''
     first = True
     for item in items:
+        if item.type == 'Group':
+            md += '### '
+            md += item.name
+            md += '\n\n'
+            continue
         if item.name != "":
             md += "#### "
             md += item.type + " "
-            md += item.name.replace("<", " <").replace(">", " \\>")
+            md += item.name.replace('<','<').replace('>','\\>')
             # md += item.name
             md += "\n\n"
         if item.decl != "":
