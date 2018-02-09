@@ -1208,22 +1208,11 @@ template vector<vec4f> facet_vert<vec4f>(
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-// Pick a point
-int sample_points(int npoints, float re) {
-    return clamp(0, npoints - 1, (int)(re * npoints));
-}
-
 // Compute a distribution for sampling points uniformly
 vector<float> sample_points_cdf(int npoints) {
     auto cdf = vector<float>(npoints);
     for (auto i = 0; i < npoints; i++) cdf[i] = i + 1;
     return cdf;
-}
-
-// Pick a point
-int sample_points(const vector<float>& cdf, float re) {
-    re = clamp(re * cdf.back(), 0.0f, cdf.back() - 0.00001f);
-    return (int)(std::upper_bound(cdf.begin(), cdf.end(), re) - cdf.begin());
 }
 
 // Compute a distribution for sampling lines uniformly
@@ -1234,14 +1223,6 @@ vector<float> sample_lines_cdf(
         cdf[i] = length(pos[lines[i].x] - pos[lines[i].y]);
     for (auto i = 1; i < lines.size(); i++) cdf[i] += cdf[i - 1];
     return cdf;
-}
-
-// Pick a point on lines
-pair<int, float> sample_lines(const vector<float>& cdf, float re, float ruv) {
-    re = clamp(re * cdf.back(), 0.0f, cdf.back() - 0.00001f);
-    auto eid =
-        (int)(std::upper_bound(cdf.begin(), cdf.end(), re) - cdf.begin());
-    return {eid, ruv};
 }
 
 // Compute a distribution for sampling triangle meshes uniformly
@@ -1255,15 +1236,6 @@ vector<float> sample_triangles_cdf(
     return cdf;
 }
 
-// Pick a point on a triangle mesh
-pair<int, vec2f> sample_triangles(
-    const vector<float>& cdf, float re, const vec2f& ruv) {
-    re = clamp(re * cdf.back(), 0.0f, cdf.back() - 0.00001f);
-    auto eid =
-        (int)(std::upper_bound(cdf.begin(), cdf.end(), re) - cdf.begin());
-    return {eid, {1 - sqrt(ruv.x), ruv.y * sqrt(ruv.x)}};
-}
-
 // Compute a distribution for sampling quad meshes uniformly
 vector<float> sample_quads_cdf(
     const vector<vec4i>& quads, const vector<vec3f>& pos) {
@@ -1273,15 +1245,6 @@ vector<float> sample_quads_cdf(
             pos[quads[i].x], pos[quads[i].y], pos[quads[i].z], pos[quads[i].w]);
     for (auto i = 1; i < quads.size(); i++) cdf[i] += cdf[i - 1];
     return cdf;
-}
-
-// Pick a point on a quad mesh
-pair<int, vec2f> sample_quads(
-    const vector<float>& cdf, float re, const vec2f& ruv) {
-    re = clamp(re * cdf.back(), 0.0f, cdf.back() - 0.00001f);
-    auto eid =
-        (int)(std::upper_bound(cdf.begin(), cdf.end(), re) - cdf.begin());
-    return {eid, ruv};
 }
 
 // Samples a set of points over a triangle mesh uniformly. The rng function
