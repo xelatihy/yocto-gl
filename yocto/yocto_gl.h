@@ -3469,10 +3469,20 @@ inline int sample_index(int size, float r) {
 /// pdf for index with uniform distribution
 inline float sample_index_pdf(int size) { return 1.0f / size; }
 
-/// sample a discrete distribution
-inline int sample_discrete_cdf(const vector<float>& cdf, float r) {
-    r = clamp(r, 0.0f, 0.9999f);
-    return (int)(std::upper_bound(cdf.begin(), cdf.end(), r) - cdf.begin());
+/// sample a discrete distribution represented by its cdf
+inline int sample_discrete(const vector<float>& cdf, float r) {
+    // todo: implement binary search better
+    r = clamp(r * cdf.back(), 0.0f, cdf.back() - 0.00001f);
+    for (auto i = 1; i < cdf.size(); i++) {
+        if (cdf[i] > r) return i - 1;
+    }
+    return (int)cdf.size() - 1;
+}
+
+/// sample a discrete distribution represented by its cdf
+inline float sample_discrete_pdf(const vector<float>& cdf, int idx) {
+    if (idx == 0) return cdf.at(0);
+    return cdf.at(idx) - cdf.at(idx - 1);
 }
 
 }  // namespace ygl
@@ -4123,36 +4133,47 @@ vector<T> facet_vert(const vector<T>& vert, const vector<int>& vmap);
 namespace ygl {
 
 /// Pick a point
-int sample_points(int npoints, float re);
+inline int sample_points(int npoints, float re) {
+    return sample_index(npoints, re);
+}
 
 /// Compute a distribution for sampling points uniformly
 vector<float> sample_points_cdf(int npoints);
 
 /// Pick a point
-int sample_points(const vector<float>& cdf, float re);
+inline int sample_points(const vector<float>& cdf, float re) {
+    return sample_discrete(cdf, re);
+}
 
 /// Compute a distribution for sampling lines uniformly
 vector<float> sample_lines_cdf(
     const vector<vec2i>& lines, const vector<vec3f>& pos);
 
 /// Pick a point on lines
-pair<int, float> sample_lines(const vector<float>& cdf, float re, float ru);
+inline pair<int, float> sample_lines(
+    const vector<float>& cdf, float re, float ru) {
+    return {sample_discrete(cdf, re), ru};
+}
 
 /// Compute a distribution for sampling triangle meshes uniformly
 vector<float> sample_triangles_cdf(
     const vector<vec3i>& triangles, const vector<vec3f>& pos);
 
 /// Pick a point on a triangle mesh
-pair<int, vec2f> sample_triangles(
-    const vector<float>& cdf, float re, const vec2f& ruv);
+inline pair<int, vec2f> sample_triangles(
+    const vector<float>& cdf, float re, const vec2f& ruv) {
+    return {sample_discrete(cdf, re), sample_triangle(ruv)};
+}
 
 /// Compute a distribution for sampling quad meshes uniformly
 vector<float> sample_quads_cdf(
     const vector<vec4i>& quads, const vector<vec3f>& pos);
 
 /// Pick a point on a quad mesh
-pair<int, vec2f> sample_quads(
-    const vector<float>& cdf, float re, const vec2f& ruv);
+inline pair<int, vec2f> sample_quads(
+    const vector<float>& cdf, float re, const vec2f& ruv) {
+    return {sample_discrete(cdf, re), ruv};
+}
 
 /// Samples a set of points over a triangle mesh uniformly. The rng function
 /// takes the point index and returns vec3f numbers uniform directibuted in
