@@ -213,7 +213,6 @@ template = '''
     </head>
     <body>
     <header>
-        <p><a href="index.html">Yocto/GL</a></p>
         <!-- a href="index.html">about</a -->
         <!-- a href="yocto_gl.html">api</a -->
         <!-- a href="https://github.com/xelatihy/yocto-gl">github</a -->
@@ -227,27 +226,36 @@ template = '''
     </html>
 '''
 
-def make_toc(md):
+def make_toc(md, about_page, api_page):
     toc = ''
     nmd = ''
     num = 0
+    toc += '[Yocto/GL](' + about_page + ')\n\n'
     for line in md.splitlines():
-        if line.startswith('## ') or  line.startswith('### '):
+        if line.startswith('# ') or line.startswith('## ') or  line.startswith('### '):
             link = 'toc' + str(num)
             num += 1
             if  line.startswith('### '):
                 toc += '    - '
             else:
                 toc += '- '
-            toc += '[' + line[3:] + '](#' + link + ')' + '\n'
+            if line.startswith('# '):
+                title = 'About'
+            else:
+                title = line[3:]
+            toc += '[' + title + '](#' + link + ')' + '\n'
+            if 'API ' in title:
+                nmd += '<a id="api"></a>\n\n'
             nmd += '<a id="' + link + '"></a>\n\n'
             nmd += line + '\n'
         else:
             nmd += line + '\n'
+    if api_page:
+        toc += '- [API Documentation](' + api_page + '#api)\n'
     return toc, nmd
 
-def make_html(md):
-    toc, md = make_toc(md)
+def make_html(md, about_page, api_page):
+    toc, md = make_toc(md, about_page, api_page)
     import markdown, glob
     html = markdown.markdown(md, ['markdown.extensions.extra',
                      'markdown.extensions.codehilite'],
@@ -272,7 +280,7 @@ def make_html(md):
 for filename in ["yocto/yocto_gl.h", "yocto/yocto_gltf.h"]:
     with open(filename) as f: cpp = f.read()
     md = make_doc(cpp)
-    html = make_html(md)
+    html = make_html(md, 'index.html', 'yocto_gl.html')
     filename_md = filename.replace(".h", ".md").replace("yocto/", "docs/")
     with open(filename_md, 'wt') as f: f.write(md)
     filename_html = filename_md.replace(".md", ".html")
@@ -281,7 +289,7 @@ for filename in ["yocto/yocto_gl.h", "yocto/yocto_gltf.h"]:
 for filename in ["yocto/yocto_gl.h"]:
     with open(filename) as f: cpp = f.read()
     md = make_doc(cpp, True)
-    html = make_html(md)
+    html = make_html(md, 'index.html', 'yocto_gl.html')
     filename_md = filename.replace(".h", ".md").replace("yocto/", "docs/")
     with open('readme.md', 'wt') as f: f.write(md)
     with open('docs/index.html', 'wt') as f: f.write(html)
