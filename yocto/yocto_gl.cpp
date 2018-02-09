@@ -100,7 +100,6 @@
 //
 // - tesselation functions using stencils
 //
-// - BUG: hair look in yitrace
 // - simplify trace_point
 //     - double sided in material functions
 //     - opacity in material functions
@@ -108,7 +107,6 @@
 //     - maybe include shape directly?
 // - remove background from point?
 // - sample background to sum all environments
-// - lines seems wrong
 // - lines epsilon in ray generation
 // - add make_offset_ray functions
 // - envmap sampling
