@@ -78,8 +78,11 @@
 //
 // ## Next
 //
-// - quads in obj
-// - facevarying in obj
+// - obj cleanup
+//     - material/object/group properties
+//     - group properties
+//     - quads in obj
+//     - facevarying in obj
 //
 // - update documentation
 // - update BVH documentation
@@ -3710,7 +3713,7 @@ scene* obj_to_scene(const obj_scene* obj, const load_options& opts) {
     // clear scene
     auto scn = new scene();
 
-    struct obj_obj_vertex_hash {
+    struct obj_vertex_hash {
         std::hash<int> Th;
         size_t operator()(const obj_vertex& vv) const {
             auto v = (const int*)&vv;
@@ -3822,42 +3825,41 @@ scene* obj_to_scene(const obj_scene* obj, const load_options& opts) {
             // check to see if this shuold be face-varying or flat quads
             auto as_facevarying = false, as_quads = false;
             if (opts.preserve_quads || opts.preserve_facevarying) {
-                auto m = 10000, M = -1;
+                auto face_max = 0;
                 for (auto& elem : oshp.elems) {
                     if (elem.type != obj_element_type::face) {
-                        m = 2;
+                        face_max = 0;
                         break;
                     } else {
-                        m = min(m, (int)elem.size);
-                        M = max(M, (int)elem.size);
+                        face_max = max(face_max, (int)elem.size);
                     }
                 }
-                if (m >= 3 && M == 4) as_quads = opts.preserve_quads;
-                if (m >= 3 && M <= 4)
-                    as_facevarying = opts.preserve_facevarying;
-            }
-
-            // in case of facevarying, check if there is really a need for it
-            if (as_facevarying) {
-                auto need_facevarying = false;
-                for (auto& elem : oshp.elems) {
-                    for (auto i = elem.start; i < elem.start + elem.size; i++) {
-                        auto& v = oshp.verts[i];
-                        if (v.norm >= 0 && v.pos != v.norm)
-                            need_facevarying = true;
-                        if (v.texcoord >= 0 && v.pos != v.texcoord)
-                            need_facevarying = true;
-                        if (v.color >= 0) as_facevarying = false;
-                        if (v.radius >= 0) as_facevarying = false;
+                as_quads = opts.preserve_quads && face_max > 3;
+                as_facevarying = opts.preserve_facevarying && face_max > 2;
+                // in case of facevarying, check if there is really need for it
+                if (as_facevarying) {
+                    auto need_facevarying = false;
+                    for (auto& elem : oshp.elems) {
+                        for (auto i = elem.start; i < elem.start + elem.size;
+                             i++) {
+                            auto& v = oshp.verts[i];
+                            if ((v.norm >= 0 && v.pos != v.norm) ||
+                                (v.texcoord >= 0 && v.pos != v.texcoord) ||
+                                (v.norm >= 0 && v.texcoord >= 0 &&
+                                    v.norm != v.texcoord))
+                                need_facevarying = true;
+                            if (v.color >= 0 || v.radius >= 0)
+                                as_facevarying = false;
+                        }
+                        if (!as_facevarying) break;
                     }
-                    if (!as_facevarying) break;
+                    as_facevarying = need_facevarying;
                 }
-                as_facevarying = need_facevarying;
             }
 
             if (!as_facevarying) {
                 // insert all vertices
-                unordered_map<obj_vertex, int, obj_obj_vertex_hash> vert_map;
+                unordered_map<obj_vertex, int, obj_vertex_hash> vert_map;
                 vector<int> vert_ids;
                 for (auto& vert : oshp.verts) {
                     if (vert_map.find(vert) == vert_map.end()) {
@@ -3884,17 +3886,18 @@ scene* obj_to_scene(const obj_scene* obj, const load_options& opts) {
                             }
                         } break;
                         case obj_element_type::face: {
-                            if (as_quads) {
+                            if (as_quads && elem.size == 4) {
                                 shp->quads.push_back({vert_ids[elem.start + 0],
                                     vert_ids[elem.start + 1],
                                     vert_ids[elem.start + 2],
-                                    vert_ids[elem.start +
-                                             ((elem.size == 3) ? 2 : 3)]});
-                            } else if (elem.size == 3) {
-                                shp->triangles.push_back(
-                                    {vert_ids[elem.start + 0],
-                                        vert_ids[elem.start + 1],
-                                        vert_ids[elem.start + 2]});
+                                    vert_ids[elem.start + 3]});
+                            } else if (as_quads && elem.size != 4) {
+                                for (auto i = elem.start + 2;
+                                     i < elem.start + elem.size; i++) {
+                                    shp->quads.push_back(
+                                        {vert_ids[elem.start], vert_ids[i - 1],
+                                            vert_ids[i], vert_ids[i]});
+                                }
                             } else {
                                 for (auto i = elem.start + 2;
                                      i < elem.start + elem.size; i++) {
@@ -3926,25 +3929,18 @@ scene* obj_to_scene(const obj_scene* obj, const load_options& opts) {
                 if (v.color >= 0) shp->color.resize(vert_map.size());
                 if (v.radius >= 0) shp->radius.resize(vert_map.size());
                 for (auto& kv : vert_map) {
-                    if (v.pos >= 0 && kv.first.pos >= 0) {
-                        auto v = obj->pos[kv.first.pos];
-                        shp->pos[kv.second] = {v.x, v.y, v.z};
-                    }
-                    if (v.texcoord >= 0 && kv.first.texcoord >= 0) {
-                        auto v = obj->texcoord[kv.first.texcoord];
-                        shp->texcoord[kv.second] = {v.x, v.y};
-                    }
-                    if (v.norm >= 0 && kv.first.norm >= 0) {
-                        auto v = obj->norm[kv.first.norm];
-                        shp->norm[kv.second] = {v.x, v.y, v.z};
-                    }
-                    if (v.color >= 0 && kv.first.color >= 0) {
-                        auto v = obj->color[kv.first.color];
-                        shp->color[kv.second] = {v.x, v.y, v.z, v.w};
-                    }
-                    if (v.radius >= 0 && kv.first.radius >= 0) {
-                        shp->radius[kv.second] = obj->radius[kv.first.radius];
-                    }
+                    auto idx = kv.second;
+                    auto vert = kv.first;
+                    if (v.pos >= 0 && vert.pos >= 0)
+                        shp->pos[idx] = obj->pos[vert.pos];
+                    if (v.texcoord >= 0 && vert.texcoord >= 0)
+                        shp->texcoord[idx] = obj->texcoord[vert.texcoord];
+                    if (v.norm >= 0 && vert.norm >= 0)
+                        shp->norm[idx] = obj->norm[vert.norm];
+                    if (v.color >= 0 && vert.color >= 0)
+                        shp->color[idx] = obj->color[vert.color];
+                    if (v.radius >= 0 && vert.radius >= 0)
+                        shp->radius[idx] = obj->radius[vert.radius];
                 }
 
                 // fix smoothing
@@ -4024,27 +4020,50 @@ scene* obj_to_scene(const obj_scene* obj, const load_options& opts) {
 
                 // convert elements
                 for (auto& elem : oshp.elems) {
-                    if (elem.type != obj_element_type::face)
-                        throw runtime_error("malformed obj");
-                    if (elem.size < 3 || elem.size > 4)
-                        throw runtime_error("malformed obj");
-                    if (!pos_ids.empty()) {
-                        shp->quads_pos.push_back({pos_ids[elem.start + 0],
-                            pos_ids[elem.start + 1], pos_ids[elem.start + 2],
-                            pos_ids[elem.start + ((elem.size == 3) ? 2 : 3)]});
-                    }
-                    if (!texcoord_ids.empty()) {
-                        shp->quads_texcoord.push_back(
-                            {texcoord_ids[elem.start + 0],
-                                texcoord_ids[elem.start + 1],
-                                texcoord_ids[elem.start + 2],
-                                texcoord_ids[elem.start +
-                                             ((elem.size == 3) ? 2 : 3)]});
-                    }
-                    if (!norm_ids.empty()) {
-                        shp->quads_norm.push_back({norm_ids[elem.start + 0],
-                            norm_ids[elem.start + 1], norm_ids[elem.start + 2],
-                            norm_ids[elem.start + ((elem.size == 3) ? 2 : 3)]});
+                    if (elem.size == 4) {
+                        if (!pos_ids.empty()) {
+                            shp->quads_pos.push_back({pos_ids[elem.start + 0],
+                                pos_ids[elem.start + 1],
+                                pos_ids[elem.start + 2],
+                                pos_ids[elem.start + 3]});
+                        }
+                        if (!texcoord_ids.empty()) {
+                            shp->quads_texcoord.push_back(
+                                {texcoord_ids[elem.start + 0],
+                                    texcoord_ids[elem.start + 1],
+                                    texcoord_ids[elem.start + 2],
+                                    texcoord_ids[elem.start + 3]});
+                        }
+                        if (!norm_ids.empty()) {
+                            shp->quads_norm.push_back({norm_ids[elem.start + 0],
+                                norm_ids[elem.start + 1],
+                                norm_ids[elem.start + 2],
+                                norm_ids[elem.start + 3]});
+                        }
+                    } else {
+                        if (!pos_ids.empty()) {
+                            for (auto i = elem.start + 2;
+                                 i < elem.start + elem.size; i++) {
+                                shp->quads_pos.push_back({pos_ids[elem.start],
+                                    pos_ids[i - 1], pos_ids[i], pos_ids[i]});
+                            }
+                        }
+                        if (!texcoord_ids.empty()) {
+                            for (auto i = elem.start + 2;
+                                 i < elem.start + elem.size; i++) {
+                                shp->quads_texcoord.push_back(
+                                    {texcoord_ids[elem.start],
+                                        texcoord_ids[i - 1], texcoord_ids[i],
+                                        texcoord_ids[i]});
+                            }
+                        }
+                        if (!norm_ids.empty()) {
+                            for (auto i = elem.start + 2;
+                                 i < elem.start + elem.size; i++) {
+                                shp->quads_norm.push_back({norm_ids[elem.start],
+                                    norm_ids[i - 1], norm_ids[i], norm_ids[i]});
+                            }
+                        }
                     }
                 }
 
