@@ -213,12 +213,11 @@ template = '''
     </head>
     <body>
     <header>
-        <nav>
-            <img src="images/logo_white.png">
-            <a href="index.html">about</a>
-            <a href="yocto_gl.html">api</a>
-            <a href="https://github.com/xelatihy/yocto-gl">github</a>
-        </nav>
+        <p><a href="index.html">Yocto/GL</a></p>
+        <!-- a href="index.html">about</a -->
+        <!-- a href="yocto_gl.html">api</a -->
+        <!-- a href="https://github.com/xelatihy/yocto-gl">github</a -->
+        $toc$
     </header>
     <article>
     $body$
@@ -228,9 +227,32 @@ template = '''
     </html>
 '''
 
+def make_toc(md):
+    toc = ''
+    nmd = ''
+    num = 0
+    for line in md.splitlines():
+        if line.startswith('## ') or  line.startswith('### '):
+            link = 'toc' + str(num)
+            num += 1
+            if  line.startswith('### '):
+                toc += '    - '
+            else:
+                toc += '- '
+            toc += '[' + line[3:] + '](#' + link + ')' + '\n'
+            nmd += '<a id="' + link + '"></a>\n\n'
+            nmd += line + '\n'
+        else:
+            nmd += line + '\n'
+    return toc, nmd
+
 def make_html(md):
+    toc, md = make_toc(md)
     import markdown, glob
     html = markdown.markdown(md, ['markdown.extensions.extra',
+                     'markdown.extensions.codehilite'],
+                     output_format='html5')
+    htmltoc = markdown.markdown(toc, ['markdown.extensions.extra',
                      'markdown.extensions.codehilite'],
                      output_format='html5')
     html = html.replace('<pre>', '<pre><code>')
@@ -239,11 +261,12 @@ def make_html(md):
         link = link.replace('docs/','')
         hlink = link.replace('.md', '.html')
         html = html.replace(link, hlink)
+        htmltoc = htmltoc.replace(link, hlink)
     while '<p><img' in html:
         before, _, remainder = html.partition('<p><img')
         middle, _, after = remainder.partition('</p>')
         html = before + '<figure><img' + middle + '</figure>' + after
-    html = template.replace('$body$', html)
+    html = template.replace('$body$', html).replace('$toc$', htmltoc)
     return html
 
 for filename in ["yocto/yocto_gl.h", "yocto/yocto_gltf.h"]:

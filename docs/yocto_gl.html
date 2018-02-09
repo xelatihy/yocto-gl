@@ -9,12 +9,87 @@
     </head>
     <body>
     <header>
-        <nav>
-            <img src="images/logo_white.png">
-            <a href="index.html">about</a>
-            <a href="yocto_gl.html">api</a>
-            <a href="https://github.com/xelatihy/yocto-gl">github</a>
-        </nav>
+        <p><a href="index.html">Yocto/GL</a></p>
+        <!-- a href="index.html">about</a -->
+        <!-- a href="yocto_gl.html">api</a -->
+        <!-- a href="https://github.com/xelatihy/yocto-gl">github</a -->
+        <ul>
+<li><a href="#toc0">Credits</a></li>
+<li><a href="#toc1">Design Considerations</a></li>
+<li><a href="#toc2">Compilation</a></li>
+<li><a href="#toc3">Example Applications</a></li>
+<li><a href="#toc4">Usage</a><ul>
+<li><a href="#toc5"> Small Vectors and Matrices, Frames, Bounding Boxes and Transforms</a></li>
+<li><a href="#toc6"> Random Number Generation, Noise, Hashing and Monte Carlo support</a></li>
+<li><a href="#toc7"> Shape Utilities</a></li>
+<li><a href="#toc8"> Animation utilities</a></li>
+<li><a href="#toc9"> Image and color</a></li>
+<li><a href="#toc10"> Ray Intersection and Point Overlap Queries</a></li>
+<li><a href="#toc11"> Simple scene</a></li>
+<li><a href="#toc12"> Pathtracing</a></li>
+<li><a href="#toc13"> Wavefront OBJ</a></li>
+<li><a href="#toc14"> Khronos glTF</a></li>
+<li><a href="#toc15"> OpenGL support</a></li>
+<li><a href="#toc16"> Other Utilities</a></li>
+<li><a href="#toc17"> Command Line Parsing</a></li>
+</ul>
+</li>
+<li><a href="#toc18">History</a></li>
+<li><a href="#toc19">API Documentation</a><ul>
+<li><a href="#toc20"> Imported math functions</a></li>
+<li><a href="#toc21"> Imported containers and related functions</a></li>
+<li><a href="#toc22"> Basic typedefs, math constants and functions</a></li>
+<li><a href="#toc23"> Fixed-size vectors</a></li>
+<li><a href="#toc24"> Fixed-size matrices</a></li>
+<li><a href="#toc25"> Rigid-body frames</a></li>
+<li><a href="#toc26"> Quaternions</a></li>
+<li><a href="#toc27"> Axis-aligned bounding boxes</a></li>
+<li><a href="#toc28"> Primitice bounding boxes</a></li>
+<li><a href="#toc29"> Rays</a></li>
+<li><a href="#toc30"> Transforms</a></li>
+<li><a href="#toc31"> User interface utilities</a></li>
+<li><a href="#toc32"> Random number generation</a></li>
+<li><a href="#toc33"> Monte Carlo sampling</a></li>
+<li><a href="#toc34"> Hashing</a></li>
+<li><a href="#toc35"> Perlin noise</a></li>
+<li><a href="#toc36"> Python-like iterators</a></li>
+<li><a href="#toc37"> Container operations</a></li>
+<li><a href="#toc38"> Geometry utilities</a></li>
+<li><a href="#toc39"> Animation utilities</a></li>
+<li><a href="#toc40"> Shape utilities</a></li>
+<li><a href="#toc41"> Shape sampling</a></li>
+<li><a href="#toc42"> Example shapes</a></li>
+<li><a href="#toc43"> Image containers</a></li>
+<li><a href="#toc44"> Image operations</a></li>
+<li><a href="#toc45"> Example images</a></li>
+<li><a href="#toc46"> Image loading and saving</a></li>
+<li><a href="#toc47"> Ray-primitive intersection</a></li>
+<li><a href="#toc48"> Point-primitive overlap</a></li>
+<li><a href="#toc49"> Bounding volume hierarchy</a></li>
+<li><a href="#toc50"> Simple scene</a></li>
+<li><a href="#toc51"> Example scenes</a></li>
+<li><a href="#toc52"> Path-tracing support</a></li>
+<li><a href="#toc53"> Path tracing</a></li>
+<li><a href="#toc54"> Wavefront OBJ</a></li>
+<li><a href="#toc55"> Khronos glTF</a></li>
+<li><a href="#toc56"> Svg</a></li>
+<li><a href="#toc57"> String, path and file functions</a></li>
+<li><a href="#toc58"> File loading and saving</a></li>
+<li><a href="#toc59"> Immediate-mode command line parser</a></li>
+<li><a href="#toc60"> Simple logging</a></li>
+<li><a href="#toc61"> Simple timer</a></li>
+<li><a href="#toc62"> OpenGL utilities</a></li>
+<li><a href="#toc63"> OpenGL vertex array buffers</a></li>
+<li><a href="#toc64"> OpenGL element array buffers</a></li>
+<li><a href="#toc65"> OpenGL programs</a></li>
+<li><a href="#toc66"> OpenGL scene shader support</a></li>
+<li><a href="#toc67"> OpenGL image shader</a></li>
+<li><a href="#toc68"> OpenGL surface shader</a></li>
+<li><a href="#toc69"> OpenGL window</a></li>
+<li><a href="#toc70"> OpenGL widgets</a></li>
+</ul>
+</li>
+</ul>
     </header>
     <article>
     <h1>Yocto/GL: Tiny C++ Library for Physically-based Graphics</h1>
@@ -54,6 +129,7 @@ and released under the MIT license. Features include:</p>
 </ul>
 <p>The current version is 0.1.0. You can access the previous multi-file version
 with tag "v0.0.1" in this repository.</p>
+<p><a id="toc0"></a></p>
 <h2>Credits</h2>
 <p>This library includes code from the PCG random number generator,
 boost hash_combine, Pixar multijittered sampling,
@@ -68,6 +144,7 @@ flatten this namespace into yours if this is a concern.</p>
 <p>For most components of the library, the use should be relatively easy to
 understand if you are familiar with 3d computer graphics. For more complex
 components, we follow the usage below.</p>
+<p><a id="toc1"></a></p>
 <h2>Design Considerations</h2>
 <p>Yocto/GL tries to follow a simple programming model inspired by C but with
 heavy use of operator overloading for math readability. We attempt tp make
@@ -85,6 +162,7 @@ standard library rather than using the <code>std::name</code> pattern. We found 
 this improves consistency, especially when using math functions, is
 significantly more readable when using templates and allows to to more
 easily switch STL implementation if desired.</p>
+<p><a id="toc2"></a></p>
 <h2>Compilation</h2>
 <p>Yocto/GL is written in C++14, with compilation supported on C++11, and
 compiles on OSX (clang from Xcode 9+), Linux (gcc 6+, clang 4+)
@@ -106,6 +184,7 @@ by defining YGL_OPENGL to 1 before including this file. If you use any of
 the OpenGL calls, make sure to properly link to the OpenGL libraries on
 your system. For ImGUI, build with the libraries <code>imgui.cpp</code>,
 <code>imgui_draw.cpp</code>, <code>imgui_impl_glfw_gl3.cpp</code>.</p>
+<p><a id="toc3"></a></p>
 <h2>Example Applications</h2>
 <p>You can see Yocto/GL in action in the following applications written to
 test the library:</p>
@@ -124,6 +203,7 @@ test the library:</p>
 scenes are crated with the test generator.</p>
 <figure><img alt="Yocto/GL" src="images/shapes.png"></figure>
 <figure><img alt="Yocto/GL" src="images/lines.png"></figure>
+<p><a id="toc4"></a></p>
 <h2>Usage</h2>
 <p>To use the library simply include this file and setup the compilation
 option as described above.
@@ -131,6 +211,7 @@ All library features are documented at the definition and should be
 relatively easy to use if you are familiar with writing graphics code.
 You can find the extracted documentation at <code>yocto_gl.html</code>.
 Here we give an overview of some of the main features.</p>
+<p><a id="toc5"></a></p>
 <h3>Small Vectors and Matrices, Frames, Bounding Boxes and Transforms</h3>
 <p>We provide common operations for small vectors and matrices typically used
 in graphics. In particular, we support 2-4 dimensional vectors of arbitrary
@@ -161,6 +242,7 @@ vectors and directions (<code>trasform_point()</code>, <code>trasform_vector()</
 constructed from basic translation, rotation and scaling, e.g. with
 <code>translation_mat4f()</code> or <code>translation_frame3f()</code> repsectively, etc. For
 rotation we support axis-angle and quaternions, with slerp.</p>
+<p><a id="toc6"></a></p>
 <h3>Random Number Generation, Noise, Hashing and Monte Carlo support</h3>
 <p>This library supportds many facitlities helpful in writing sampling
 functions targeting path tracing and shape generations.</p>
@@ -190,6 +272,7 @@ functions targeting path tracing and shape generations.</p>
    <code>sample_triangle()</code>. For each warp, you can compute the PDF with
    <code>sample_xxx_pdf()</code>.</li>
 </ol>
+<p><a id="toc7"></a></p>
 <h3>Shape Utilities</h3>
 <p>The library contains a few function to help with typically geometry
 manipulation useful to support scene viewing and path tracing.</p>
@@ -227,6 +310,7 @@ manipulation useful to support scene viewing and path tracing.</p>
     <code>make_uvquad()</code>, <code>make_uvcube()</code>, <code>make_fvcube()</code>, <code>make_hair()</code>,
     <code>make_suzanne()</code></li>
 </ol>
+<p><a id="toc8"></a></p>
 <h3>Animation utilities</h3>
 <p>The library contains a few function to help with typical animation
 manipulation useful to support scene viewing.</p>
@@ -236,6 +320,7 @@ manipulation useful to support scene viewing.</p>
    <code>eval_keyframed_bezier()</code></li>
 <li>mesh skinning with <code>compute_matrix_skinning()</code></li>
 </ol>
+<p><a id="toc9"></a></p>
 <h3>Image and color</h3>
 <p>Imags are stored with the <code>image</code> templated structure. The two most used
 image types are 4-byte per pixel sRGB images <code>image4b</code>, or 4-float per
@@ -259,6 +344,7 @@ pixel HDR images <code>image4f</code>.</p>
    <code>save_image4b()</code>, <code>save_image4f()</code></li>
 <li>image resizing with <code>resize_image()</code></li>
 </ol>
+<p><a id="toc10"></a></p>
 <h3>Ray Intersection and Point Overlap Queries</h3>
 <p>We support ray-scene intersection for points, lines and triangles
 accelerated by a simple BVH data structure.  Our BVH is written for minimal
@@ -276,6 +362,7 @@ the use of Intel's Embree as a fast alternative.</p>
   <code>overlap_bvh()</code> and provide them with proper callbacks</li>
 <li>we also experimentally support quads with the <code>xxx_quads_xxx()</code> functions</li>
 </ol>
+<p><a id="toc11"></a></p>
 <h3>Simple scene</h3>
 <p>We support a simple scene model used to quickly write demos that lets you
 load/save Wavefront OBJ and Khronos glTF and perform several simple scene
@@ -327,6 +414,7 @@ hierarchy (BVH). Quad support is experimental.</p>
 v2,v3,v1, with the u/v coordinates of the second triangle corrected as 1-u
 and 1-v to produce a quad parametrization where u and v go from 0 to 1. This
 is equivalent to Intel's Embree.</p>
+<p><a id="toc12"></a></p>
 <h3>Pathtracing</h3>
 <p>We supply a path tracer implementation with support for textured mesh
 lights, GGX/Phong materials, environment mapping. The interface supports
@@ -359,6 +447,7 @@ window.</p>
 <li>start the progressive renderer with <code>trace_async_start()</code></li>
 <li>stop the progressive renderer with <code>trace_async_stop()</code></li>
 </ol>
+<p><a id="toc13"></a></p>
 <h3>Wavefront OBJ</h3>
 <p>Wavefront OBJ/MTL loader and writer with support for points,
 lines, triangles and general polygons and all materials properties.
@@ -394,6 +483,7 @@ similar to other single file libraries:
 <li>use get_shape() to get a flattened shape version that contains only
    triangles, lines or points</li>
 </ol>
+<p><a id="toc14"></a></p>
 <h3>Khronos glTF</h3>
 <p>Khronos GLTF loader and writer for Khronos glTF format. Supports
 all the glTF spec and the Khronos extensions. All parsing and writing code
@@ -427,6 +517,7 @@ this can used to access the scene data with <code>glTF::get&lt;T&gt;(index)</cod
 <li>look at the <code>glTFXXX</code> data structures for access to individual elements</li>
 <li>save glTF back to disk with <code>save_gltf()</code></li>
 </ol>
+<p><a id="toc15"></a></p>
 <h3>OpenGL support</h3>
 <p>We include a set of utilities to draw on screen with OpenGL 3.3, manage
 windows with GLFW and draw immediate-mode widgets with ImGui.</p>
@@ -482,6 +573,7 @@ windows with GLFW and draw immediate-mode widgets with ImGui.</p>
 </ul>
 </li>
 </ol>
+<p><a id="toc16"></a></p>
 <h3>Other Utilities</h3>
 <p>We include additional utilities for writing command line applications and
 manipulating files.</p>
@@ -512,6 +604,7 @@ manipulating files.</p>
 </ol>
 </li>
 </ol>
+<p><a id="toc17"></a></p>
 <h3>Command Line Parsing</h3>
 <p>The library includes a simple command line parser that parses commands in
 immediate mode, i.e. when an option is declared. The parser supports options
@@ -551,6 +644,7 @@ and user end.</p>
    subcommands by just branching the command line code based on a read
    argument without any need for complex syntax</li>
 </ol>
+<p><a id="toc18"></a></p>
 <h2>History</h2>
 <p>Here we mark only major features added to the library. Small refactorings
 and bug fixes are reported here.</p>
@@ -558,7 +652,9 @@ and bug fixes are reported here.</p>
 <li>v 0.2.0: various bug fixes and improvement to OpenGL drawing and widgets</li>
 <li>v 0.1.0: initial release after refactoring</li>
 </ul>
+<p><a id="toc19"></a></p>
 <h2>API Documentation</h2>
+<p><a id="toc20"></a></p>
 <h3>Imported math functions</h3>
 <h4>Function Alias sqrt()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">using</span> <span class="n">std</span><span class="o">::</span><span class="n">sqrt</span><span class="p">;</span>
@@ -668,6 +764,7 @@ and bug fixes are reported here.</p>
 
 
 <p>isfinate</p>
+<p><a id="toc21"></a></p>
 <h3>Imported containers and related functions</h3>
 <h4>Function Alias string()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">using</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">;</span>
@@ -827,6 +924,7 @@ and bug fixes are reported here.</p>
 
 
 <p>tie function for tuple usage</p>
+<p><a id="toc22"></a></p>
 <h3>Basic typedefs, math constants and functions</h3>
 <h4>Typedef byte</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">using</span> <span class="n">byte</span> <span class="o">=</span> <span class="kt">unsigned</span> <span class="kt">char</span><span class="p">;</span>
@@ -957,6 +1055,7 @@ so a,b,c,d correspond to parameters (0,0), (0,1), (1,1), (0,1)</p>
 
 
 <p>Safe byte to float conversion</p>
+<p><a id="toc23"></a></p>
 <h3>Fixed-size vectors</h3>
 <h4>Struct vec</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="kt">int</span> <span class="n">N</span><span class="o">&gt;</span>
@@ -1787,6 +1886,7 @@ specializations for small fixed sized vectors.</p>
 
 
 <p>Hash functor for vector for use with unordered_map</p>
+<p><a id="toc24"></a></p>
 <h3>Fixed-size matrices</h3>
 <h4>Struct mat</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="kt">int</span> <span class="n">N</span><span class="o">&gt;</span>
@@ -2279,6 +2379,7 @@ Colums access via operator[].</p>
 
 
 <p>stream read</p>
+<p><a id="toc25"></a></p>
 <h3>Rigid-body frames</h3>
 <h4>Struct frame</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="kt">int</span> <span class="n">N</span><span class="o">&gt;</span>
@@ -2465,6 +2566,7 @@ Access rotation and position with pos() and rot().</p>
 
 
 <p>stream read</p>
+<p><a id="toc26"></a></p>
 <h3>Quaternions</h3>
 <h4>Struct quat</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="kt">int</span> <span class="n">N</span><span class="o">&gt;</span>
@@ -2658,6 +2760,7 @@ Quaterions are xi + yj + zk + w.</p>
 
 
 <p>stream read</p>
+<p><a id="toc27"></a></p>
 <h3>Axis-aligned bounding boxes</h3>
 <h4>Struct bbox</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="kt">int</span> <span class="n">N</span><span class="o">&gt;</span>
@@ -2879,6 +2982,7 @@ Quaterions are xi + yj + zk + w.</p>
 
 
 <p>stream read</p>
+<p><a id="toc28"></a></p>
 <h3>Primitice bounding boxes</h3>
 <h4>Function point_bbox()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="k">typename</span> <span class="n">T1</span><span class="o">&gt;</span>
@@ -2919,6 +3023,7 @@ Quaterions are xi + yj + zk + w.</p>
 
 
 <p>Tetrahedron bounds</p>
+<p><a id="toc29"></a></p>
 <h3>Rays</h3>
 <h4>Struct ray</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="kt">int</span> <span class="n">N</span><span class="o">&gt;</span>
@@ -2999,6 +3104,7 @@ specializations for small fixed sized rays.</p>
 
 
 <p>stream read</p>
+<p><a id="toc30"></a></p>
 <h3>Transforms</h3>
 <h4>Function transform_point()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
@@ -3315,6 +3421,7 @@ Assumes there is no shear and the matrix is affine.</p>
 
 <p>Decompose an affine matrix into translation, rotation, scale.
 Assumes there is no shear and the matrix is affine.</p>
+<p><a id="toc31"></a></p>
 <h3>User interface utilities</h3>
 <h4>Function camera_turntable()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">camera_turntable</span><span class="p">(</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">from</span><span class="p">,</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">to</span><span class="p">,</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">up</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec2f</span><span class="o">&amp;</span> <span class="n">rotate</span><span class="p">,</span>
@@ -3336,6 +3443,7 @@ Assumes there is no shear and the matrix is affine.</p>
 
 
 <p>FPS camera for UI navigation for a frame parametrization.</p>
+<p><a id="toc32"></a></p>
 <h3>Random number generation</h3>
 <h4>Struct rng_pcg32</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">rng_pcg32</span> <span class="p">{</span>
@@ -3473,6 +3581,7 @@ better than float that uses 23.</p>
 
 
 <p>Inequality operator</p>
+<p><a id="toc33"></a></p>
 <h3>Monte Carlo sampling</h3>
 <h4>Function sample_hemisphere()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">vec3f</span> <span class="nf">sample_hemisphere</span><span class="p">(</span><span class="k">const</span> <span class="n">vec2f</span><span class="o">&amp;</span> <span class="n">ruv</span><span class="p">);</span>
@@ -3590,6 +3699,7 @@ better than float that uses 23.</p>
 
 
 <p>sample a discrete distribution represented by its cdf</p>
+<p><a id="toc34"></a></p>
 <h3>Hashing</h3>
 <h4>Function hash_permute()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">uint32_t</span> <span class="nf">hash_permute</span><span class="p">(</span><span class="kt">uint32_t</span> <span class="n">i</span><span class="p">,</span> <span class="kt">uint32_t</span> <span class="n">n</span><span class="p">,</span> <span class="kt">uint32_t</span> <span class="n">key</span><span class="p">);</span>
@@ -3629,6 +3739,7 @@ From Correlated Multi-Jittered Sampling by Kensler @ Pixar</p>
 
 
 <p>Combines two 64 bit hashes as in boost::hash_combine</p>
+<p><a id="toc35"></a></p>
 <h3>Perlin noise</h3>
 <h4>Function perlin_noise()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kt">float</span> <span class="nf">perlin_noise</span><span class="p">(</span><span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">p</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec3i</span><span class="o">&amp;</span> <span class="n">wrap</span> <span class="o">=</span> <span class="n">zero3i</span><span class="p">);</span>
@@ -3663,6 +3774,7 @@ offset=1.0 (used to invert the ridges).</p>
 
 
 <p>Fractal turbulence noise - see perlin_noise() for params.</p>
+<p><a id="toc36"></a></p>
 <h3>Python-like iterators</h3>
 <h4>Function range_()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">range_generator</span> <span class="nf">range_</span><span class="p">(</span><span class="kt">int</span> <span class="n">max</span><span class="p">);</span>
@@ -3690,6 +3802,7 @@ offset=1.0 (used to invert the ridges).</p>
 
 
 <p>Python-like range</p>
+<p><a id="toc37"></a></p>
 <h3>Container operations</h3>
 <h4>Function append()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
@@ -3775,6 +3888,7 @@ offset=1.0 (used to invert the ridges).</p>
 
 
 <p>Checks if a containers contains a value</p>
+<p><a id="toc38"></a></p>
 <h3>Geometry utilities</h3>
 <h4>Function line_tangent()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">vec3f</span> <span class="nf">line_tangent</span><span class="p">(</span><span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">v0</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">v1</span><span class="p">);</span>
@@ -3916,6 +4030,7 @@ https://gist.github.com/aras-p/2843984</p>
 
 
 <p>eval bezier derivative</p>
+<p><a id="toc39"></a></p>
 <h3>Animation utilities</h3>
 <h4>Function eval_keyframed_step()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
@@ -3941,6 +4056,7 @@ https://gist.github.com/aras-p/2843984</p>
 
 
 <p>Evalautes a keyframed value using bezier interpolation</p>
+<p><a id="toc40"></a></p>
 <h3>Shape utilities</h3>
 <h4>Function compute_normals()</h4>
 <div class="codehilite"><pre><code><span></span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span> <span class="n">compute_normals</span><span class="p">(</span><span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2i</span><span class="o">&gt;&amp;</span> <span class="n">lines</span><span class="p">,</span>
@@ -4149,6 +4265,7 @@ giving a faceted look. Note that faceted tangents are not computed.</p>
 
 
 <p>Unshare vertices for faceting. Instanced for vec and float types.</p>
+<p><a id="toc41"></a></p>
 <h3>Shape sampling</h3>
 <h4>Function sample_points()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">int</span> <span class="nf">sample_points</span><span class="p">(</span><span class="kt">int</span> <span class="n">npoints</span><span class="p">,</span> <span class="kt">float</span> <span class="n">re</span><span class="p">);</span>
@@ -4221,6 +4338,7 @@ giving a faceted look. Note that faceted tangents are not computed.</p>
 <p>Samples a set of points over a triangle mesh uniformly. The rng function
 takes the point index and returns vec3f numbers uniform directibuted in
 [0,1]^3. unorm and texcoord are optional.</p>
+<p><a id="toc42"></a></p>
 <h3>Example shapes</h3>
 <h4>Function make_sphere()</h4>
 <div class="codehilite"><pre><code><span></span><span class="n">tuple</span><span class="o">&lt;</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&gt;</span> <span class="n">make_sphere</span><span class="p">(</span><span class="kt">int</span> <span class="n">tesselation</span><span class="p">);</span>
@@ -4406,6 +4524,7 @@ texcoord.</p>
 
 
 <p>Make a hair ball around a shape. Returns lines, pos, norm, texcoord, radius.</p>
+<p><a id="toc43"></a></p>
 <h3>Image containers</h3>
 <h4>Struct image</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
@@ -4527,6 +4646,7 @@ texcoord.</p>
 
 
 <p>Create a 4 channel image with the given number of channels</p>
+<p><a id="toc44"></a></p>
 <h3>Image operations</h3>
 <h4>Function srgb_to_linear()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">vec3f</span> <span class="nf">srgb_to_linear</span><span class="p">(</span><span class="k">const</span> <span class="n">vec3b</span><span class="o">&amp;</span> <span class="n">srgb</span><span class="p">);</span>
@@ -4601,6 +4721,7 @@ texcoord.</p>
 
 
 <p>Convert HSV to RGB</p>
+<p><a id="toc45"></a></p>
 <h3>Example images</h3>
 <h4>Function make_grid_image()</h4>
 <div class="codehilite"><pre><code><span></span><span class="n">image4b</span> <span class="n">make_grid_image</span><span class="p">(</span><span class="kt">int</span> <span class="n">width</span><span class="p">,</span> <span class="kt">int</span> <span class="n">height</span><span class="p">,</span> <span class="kt">int</span> <span class="n">tile</span> <span class="o">=</span> <span class="mi">64</span><span class="p">,</span>
@@ -4704,6 +4825,7 @@ in [1.7,10] with or without sun.</p>
 
 
 <p>Make a noise image. Wrap works only if both resx and resy are powers of two.</p>
+<p><a id="toc46"></a></p>
 <h3>Image loading and saving</h3>
 <h4>Function is_hdr_filename()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">is_hdr_filename</span><span class="p">(</span><span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">);</span>
@@ -4848,6 +4970,7 @@ in [1.7,10] with or without sun.</p>
 
 
 <p>Resize image.</p>
+<p><a id="toc47"></a></p>
 <h3>Ray-primitive intersection</h3>
 <h4>Function intersect_point()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">intersect_point</span><span class="p">(</span><span class="k">const</span> <span class="n">ray3f</span><span class="o">&amp;</span> <span class="n">ray</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">p</span><span class="p">,</span> <span class="kt">float</span> <span class="n">r</span><span class="p">,</span> <span class="kt">float</span><span class="o">&amp;</span> <span class="n">ray_t</span><span class="p">);</span>
@@ -4901,7 +5024,9 @@ specified.</p>
 Implementation Notes:
 - based on "Robust BVH Ray Traversal" by T. Ize published at
 http://jcgt.org/published/0002/02/02/paper.pdf</p>
+<p><a id="toc48"></a></p>
 <h3>Point-primitive overlap</h3>
+<p><a id="toc49"></a></p>
 <h3>Bounding volume hierarchy</h3>
 <h4>Enum bvh_node_type : uint32_t</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">enum</span> <span class="k">struct</span> <span class="nl">bvh_node_type</span> <span class="p">:</span> <span class="kt">uint32_t</span> <span class="p">{</span>
@@ -5111,6 +5236,7 @@ BVHs, shape BVHs, each of which of a uniform primitive type.</p>
 
 
 <p>Finds the closest element with a bvh (convenience wrapper).</p>
+<p><a id="toc50"></a></p>
 <h3>Simple scene</h3>
 <h4>Struct texture</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">texture</span> <span class="p">{</span>
@@ -5787,6 +5913,7 @@ Throws an exception if an error occurs.</p>
 
 <p>Saves a scene. For now OBJ and glTF are supported.
 Throws an exception if an error occurs.</p>
+<p><a id="toc51"></a></p>
 <h3>Example scenes</h3>
 <h4>Function make_cornell_box_scene()</h4>
 <div class="codehilite"><pre><code><span></span><span class="n">scene</span><span class="o">*</span> <span class="nf">make_cornell_box_scene</span><span class="p">();</span>
@@ -6310,6 +6437,7 @@ now). A new scene is returned if it was not already created.</p>
 
 
 <p>Save test scene</p>
+<p><a id="toc52"></a></p>
 <h3>Path-tracing support</h3>
 <h4>Function specular_exponent_to_roughness()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kt">float</span> <span class="nf">specular_exponent_to_roughness</span><span class="p">(</span><span class="kt">float</span> <span class="n">n</span><span class="p">);</span>
@@ -6392,6 +6520,7 @@ This is a hack, but works better than not doing it.</p>
 
 
 <p>mitchell filter (public domain from stb_image_resize)</p>
+<p><a id="toc53"></a></p>
 <h3>Path tracing</h3>
 <h4>Enum trace_shader_type</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">enum</span> <span class="k">struct</span> <span class="n">trace_shader_type</span> <span class="p">{</span>
@@ -6639,6 +6768,7 @@ the the public API.</p>
 
 
 <p>Stop the asynchronous renderer.</p>
+<p><a id="toc54"></a></p>
 <h3>Wavefront OBJ</h3>
 <h4>Struct obj_vertex</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">obj_vertex</span> <span class="p">{</span>
@@ -7004,6 +7134,7 @@ the the public API.</p>
 </ul>
 </li>
 </ul>
+<p><a id="toc55"></a></p>
 <h3>Khronos glTF</h3>
 <h4>Typedef buffer_data</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">using</span> <span class="n">buffer_data</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="kt">unsigned</span> <span class="kt">char</span><span class="o">&gt;</span><span class="p">;</span>
@@ -8095,6 +8226,7 @@ not be present.</p>
 </ul>
 </li>
 </ul>
+<p><a id="toc56"></a></p>
 <h3>Svg</h3>
 <h4>Struct svg_path</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">svg_path</span> <span class="p">{</span>
@@ -8154,6 +8286,7 @@ not be present.</p>
 
 
 <p>Save SVG</p>
+<p><a id="toc57"></a></p>
 <h3>String, path and file functions</h3>
 <h4>Function startswith()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">startswith</span><span class="p">(</span><span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">str</span><span class="p">,</span> <span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">substr</span><span class="p">);</span>
@@ -8335,6 +8468,7 @@ is not fast nor memory efficient. But it is good enough for some needs.</p>
 
 
 <p>Wrapper for the above function that prints to stdout with endline.</p>
+<p><a id="toc58"></a></p>
 <h3>File loading and saving</h3>
 <h4>Function load_binary()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">vector</span><span class="o">&lt;</span><span class="kt">unsigned</span> <span class="kt">char</span><span class="o">&gt;</span> <span class="n">load_binary</span><span class="p">(</span><span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">);</span>
@@ -8361,6 +8495,7 @@ is not fast nor memory efficient. But it is good enough for some needs.</p>
 
 
 <p>Saves a string to a text file.</p>
+<p><a id="toc59"></a></p>
 <h3>Immediate-mode command line parser</h3>
 <h4>Struct cmdline_parser</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">cmdline_parser</span><span class="p">;</span>
@@ -8419,6 +8554,7 @@ is not fast nor memory efficient. But it is good enough for some needs.</p>
 
 
 <p>initialize the command line</p>
+<p><a id="toc60"></a></p>
 <h3>Simple logging</h3>
 <h4>Struct logger</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">logger</span> <span class="p">{</span>
@@ -8528,6 +8664,7 @@ By default a non-verbose stdout logger is creater.</p>
 
 
 <p>Logs a message to the default loggers</p>
+<p><a id="toc61"></a></p>
 <h3>Simple timer</h3>
 <h4>Struct timer</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">timer</span> <span class="p">{</span>
@@ -8549,6 +8686,7 @@ By default a non-verbose stdout logger is creater.</p>
 </ul>
 </li>
 </ul>
+<p><a id="toc62"></a></p>
 <h3>OpenGL utilities</h3>
 <h4>Enum gl_elem_type : int</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">enum</span> <span class="k">struct</span> <span class="nl">gl_elem_type</span> <span class="p">:</span> <span class="kt">int</span> <span class="p">{</span>
@@ -8828,6 +8966,7 @@ Internally use float if as_float and filtering if filter.</p>
 </ul>
 </li>
 </ul>
+<p><a id="toc63"></a></p>
 <h3>OpenGL vertex array buffers</h3>
 <h4>Struct gl_vertex_buffer</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">gl_vertex_buffer</span> <span class="p">{</span>
@@ -8950,6 +9089,7 @@ update_vertex_buffer().</p>
 
 
 <p>Destroys the buffer</p>
+<p><a id="toc64"></a></p>
 <h3>OpenGL element array buffers</h3>
 <h4>Struct gl_element_buffer</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">gl_element_buffer</span> <span class="p">{</span>
@@ -9025,6 +9165,7 @@ update_velement_buffer().</p>
 
 
 <p>Destroys the buffer</p>
+<p><a id="toc65"></a></p>
 <h3>OpenGL programs</h3>
 <h4>Struct gl_program</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">gl_program</span> <span class="p">{</span>
@@ -9288,6 +9429,7 @@ is either a buffer bid or a single value def
 
 
 <p>Unbind a program</p>
+<p><a id="toc66"></a></p>
 <h3>OpenGL scene shader support</h3>
 <h4>Struct gl_shape</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">gl_shape</span> <span class="p">{</span>
@@ -9334,6 +9476,7 @@ is either a buffer bid or a single value def
 
 
 <p>Update scene shapes on the GPU.</p>
+<p><a id="toc67"></a></p>
 <h3>OpenGL image shader</h3>
 <h4>Struct gl_stdimage_program</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">gl_stdimage_program</span> <span class="p">{</span>
@@ -9397,6 +9540,7 @@ params together for the above functions.</p>
 
 
 <p>As above but includes an exposure/gamma correction.</p>
+<p><a id="toc68"></a></p>
 <h3>OpenGL surface shader</h3>
 <h4>Struct gl_stdsurface_program</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">gl_stdsurface_program</span> <span class="p">{</span>
@@ -9582,6 +9726,7 @@ coordinates texcoord, per-vertex color color and tangent space tangsp.</p>
 
 
 <p>Draw whole scene</p>
+<p><a id="toc69"></a></p>
 <h3>OpenGL window</h3>
 <h4>Function void()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">typedef</span> <span class="nf">void</span> <span class="p">(</span><span class="o">*</span><span class="n">gl_text_callback</span><span class="p">)(</span><span class="n">gl_window</span><span class="o">*</span><span class="p">,</span> <span class="kt">unsigned</span> <span class="kt">int</span><span class="p">);</span>
@@ -9724,6 +9869,7 @@ coordinates texcoord, per-vertex color color and tangent space tangsp.</p>
 
 
 <p>Handle camera navigation.</p>
+<p><a id="toc70"></a></p>
 <h3>OpenGL widgets</h3>
 <h4>Function init_widgets()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">init_widgets</span><span class="p">(</span>

@@ -9,12 +9,15 @@
     </head>
     <body>
     <header>
-        <nav>
-            <img src="images/logo_white.png">
-            <a href="index.html">about</a>
-            <a href="yocto_gl.html">api</a>
-            <a href="https://github.com/xelatihy/yocto-gl">github</a>
-        </nav>
+        <p><a href="index.html">Yocto/GL</a></p>
+        <!-- a href="index.html">about</a -->
+        <!-- a href="yocto_gl.html">api</a -->
+        <!-- a href="https://github.com/xelatihy/yocto-gl">github</a -->
+        <ul>
+<li><a href="#toc0">Usage</a></li>
+<li><a href="#toc1">History</a></li>
+<li><a href="#toc2">API Documentation</a></li>
+</ul>
     </header>
     <article>
     <h1>Yocto/glTF: High-level glTF support for Yocto/GL</h1>
@@ -27,6 +30,7 @@ all the intricacies of the format.</p>
 (waiting for the spec to be updated); (2) spline based animation is not
 fully implemented yet (waiting for official demo models).</p>
 <p>This library depends on <code>yocto_gl.h</code> and its dependencies.</p>
+<p><a id="toc0"></a></p>
 <h2>Usage</h2>
 <ol>
 <li>load a group of scens with <code>load_scenes()</code></li>
@@ -42,10 +46,12 @@ fully implemented yet (waiting for official demo models).</p>
 <li>use <code>save_scenes()</code> to write the data to disk</li>
 <li>use <code>convert_to_specgloss()</code> to convert materials to spec-gloss</li>
 </ol>
+<p><a id="toc1"></a></p>
 <h2>History</h2>
 <ul>
 <li>v 0.1.0: initial release after refactoring</li>
 </ul>
+<p><a id="toc2"></a></p>
 <h2>API Documentation</h2>
 <h4>Struct gltf_camera</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">gltf_camera</span> <span class="p">{</span>
