@@ -213,12 +213,10 @@ template = '''
     </head>
     <body>
     <header>
-        <nav>
-            <img src="images/logo_white.png">
-            <a href="index.html">about</a>
-            <a href="yocto_gl.html">api</a>
-            <a href="https://github.com/xelatihy/yocto-gl">github</a>
-        </nav>
+        <!-- a href="index.html">about</a -->
+        <!-- a href="yocto_gl.html">api</a -->
+        <!-- a href="https://github.com/xelatihy/yocto-gl">github</a -->
+        $toc$
     </header>
     <article>
     $body$
@@ -228,9 +226,41 @@ template = '''
     </html>
 '''
 
-def make_html(md):
+def make_toc(md, about_page, api_page, github_page, twitter_page):
+    toc = ''
+    nmd = ''
+    num = 0
+    toc += '[Yocto/GL](' + about_page + ') [![](github-logo.png)](' + github_page + ') + [![](twitter-logo.png)](' + twitter_page + ')\n\n'
+    for line in md.splitlines():
+        if line.startswith('# ') or line.startswith('## ') or  line.startswith('### '):
+            link = 'toc' + str(num)
+            num += 1
+            if  line.startswith('### '):
+                toc += '    - '
+            else:
+                toc += '- '
+            if line.startswith('# '):
+                title = 'About'
+            else:
+                title = line[3:]
+            toc += '[' + title + '](#' + link + ')' + '\n'
+            if 'API ' in title:
+                nmd += '<a id="api"></a>\n\n'
+            nmd += '<a id="' + link + '"></a>\n\n'
+            nmd += line + '\n'
+        else:
+            nmd += line + '\n'
+    if api_page:
+        toc += '- [API Documentation](' + api_page + '#api)\n'
+    return toc, nmd
+
+def make_html(md, about_page, api_page, github_page, twitter_page):
+    toc, md = make_toc(md, about_page, api_page, github_page, twitter_page)
     import markdown, glob
     html = markdown.markdown(md, ['markdown.extensions.extra',
+                     'markdown.extensions.codehilite'],
+                     output_format='html5')
+    htmltoc = markdown.markdown(toc, ['markdown.extensions.extra',
                      'markdown.extensions.codehilite'],
                      output_format='html5')
     html = html.replace('<pre>', '<pre><code>')
@@ -239,17 +269,19 @@ def make_html(md):
         link = link.replace('docs/','')
         hlink = link.replace('.md', '.html')
         html = html.replace(link, hlink)
+        htmltoc = htmltoc.replace(link, hlink)
     while '<p><img' in html:
         before, _, remainder = html.partition('<p><img')
         middle, _, after = remainder.partition('</p>')
         html = before + '<figure><img' + middle + '</figure>' + after
-    html = template.replace('$body$', html)
+    html = template.replace('$body$', html).replace('$toc$', htmltoc)
     return html
 
 for filename in ["yocto/yocto_gl.h", "yocto/yocto_gltf.h"]:
+    twitter_link = 'https://twitter.com/intent/tweet?text=Check%20out&url=https%3A%2F%2Fgoo.gl%2FYvQvBr&hashtags=yocto-gl&via=xelatihy'
     with open(filename) as f: cpp = f.read()
     md = make_doc(cpp)
-    html = make_html(md)
+    html = make_html(md, 'index.html', 'yocto_gl.html', 'https://github.com/xelatihy/yocto-gl', twitter_link)
     filename_md = filename.replace(".h", ".md").replace("yocto/", "docs/")
     with open(filename_md, 'wt') as f: f.write(md)
     filename_html = filename_md.replace(".md", ".html")
@@ -258,7 +290,7 @@ for filename in ["yocto/yocto_gl.h", "yocto/yocto_gltf.h"]:
 for filename in ["yocto/yocto_gl.h"]:
     with open(filename) as f: cpp = f.read()
     md = make_doc(cpp, True)
-    html = make_html(md)
+    html = make_html(md, 'index.html', 'yocto_gl.html', 'https://github.com/xelatihy/yocto-gl', twitter_link)
     filename_md = filename.replace(".h", ".md").replace("yocto/", "docs/")
     with open('readme.md', 'wt') as f: f.write(md)
     with open('docs/index.html', 'wt') as f: f.write(html)

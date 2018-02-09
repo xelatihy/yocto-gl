@@ -9,15 +9,39 @@
     </head>
     <body>
     <header>
-        <nav>
-            <img src="images/logo_white.png">
-            <a href="index.html">about</a>
-            <a href="yocto_gl.html">api</a>
-            <a href="https://github.com/xelatihy/yocto-gl">github</a>
-        </nav>
+        <!-- a href="index.html">about</a -->
+        <!-- a href="yocto_gl.html">api</a -->
+        <!-- a href="https://github.com/xelatihy/yocto-gl">github</a -->
+        <p><a href="index.html">Yocto/GL</a> <a href="https://github.com/xelatihy/yocto-gl"><img alt="" src="github-logo.png"></a> + <a href="https://twitter.com/intent/tweet?text=Check%20out&amp;url=https%3A%2F%2Fgoo.gl%2FYvQvBr&amp;hashtags=yocto-gl&amp;via=xelatihy"><img alt="" src="twitter-logo.png"></a></p>
+<ul>
+<li><a href="#toc0">About</a></li>
+<li><a href="#toc1">Credits</a></li>
+<li><a href="#toc2">Design Considerations</a></li>
+<li><a href="#toc3">Compilation</a></li>
+<li><a href="#toc4">Example Applications</a></li>
+<li><a href="#toc5">Usage</a><ul>
+<li><a href="#toc6"> Small Vectors and Matrices, Frames, Bounding Boxes and Transforms</a></li>
+<li><a href="#toc7"> Random Number Generation, Noise, Hashing and Monte Carlo support</a></li>
+<li><a href="#toc8"> Shape Utilities</a></li>
+<li><a href="#toc9"> Animation utilities</a></li>
+<li><a href="#toc10"> Image and color</a></li>
+<li><a href="#toc11"> Ray Intersection and Point Overlap Queries</a></li>
+<li><a href="#toc12"> Simple scene</a></li>
+<li><a href="#toc13"> Pathtracing</a></li>
+<li><a href="#toc14"> Wavefront OBJ</a></li>
+<li><a href="#toc15"> Khronos glTF</a></li>
+<li><a href="#toc16"> OpenGL support</a></li>
+<li><a href="#toc17"> Other Utilities</a></li>
+<li><a href="#toc18"> Command Line Parsing</a></li>
+</ul>
+</li>
+<li><a href="#toc19">History</a></li>
+<li><a href="yocto_gl.html#api">API Documentation</a></li>
+</ul>
     </header>
     <article>
-    <h1>Yocto/GL: Tiny C++ Library for Physically-based Graphics</h1>
+    <p><a id="toc0"></a></p>
+<h1>Yocto/GL: Tiny C++ Library for Physically-based Graphics</h1>
 <p>Yocto/GL is a collection utiliies for building physically-based graphics
 algorithms implemented as a two-file library (<code>yocto_gl.h</code>, <code>yocto_gl.cpp</code>),
 and released under the MIT license. Features include:</p>
@@ -54,6 +78,7 @@ and released under the MIT license. Features include:</p>
 </ul>
 <p>The current version is 0.1.0. You can access the previous multi-file version
 with tag "v0.0.1" in this repository.</p>
+<p><a id="toc1"></a></p>
 <h2>Credits</h2>
 <p>This library includes code from the PCG random number generator,
 boost hash_combine, Pixar multijittered sampling,
@@ -68,6 +93,7 @@ flatten this namespace into yours if this is a concern.</p>
 <p>For most components of the library, the use should be relatively easy to
 understand if you are familiar with 3d computer graphics. For more complex
 components, we follow the usage below.</p>
+<p><a id="toc2"></a></p>
 <h2>Design Considerations</h2>
 <p>Yocto/GL tries to follow a simple programming model inspired by C but with
 heavy use of operator overloading for math readability. We attempt tp make
@@ -85,6 +111,7 @@ standard library rather than using the <code>std::name</code> pattern. We found 
 this improves consistency, especially when using math functions, is
 significantly more readable when using templates and allows to to more
 easily switch STL implementation if desired.</p>
+<p><a id="toc3"></a></p>
 <h2>Compilation</h2>
 <p>Yocto/GL is written in C++14, with compilation supported on C++11, and
 compiles on OSX (clang from Xcode 9+), Linux (gcc 6+, clang 4+)
@@ -106,6 +133,7 @@ by defining YGL_OPENGL to 1 before including this file. If you use any of
 the OpenGL calls, make sure to properly link to the OpenGL libraries on
 your system. For ImGUI, build with the libraries <code>imgui.cpp</code>,
 <code>imgui_draw.cpp</code>, <code>imgui_impl_glfw_gl3.cpp</code>.</p>
+<p><a id="toc4"></a></p>
 <h2>Example Applications</h2>
 <p>You can see Yocto/GL in action in the following applications written to
 test the library:</p>
@@ -124,6 +152,7 @@ test the library:</p>
 scenes are crated with the test generator.</p>
 <figure><img alt="Yocto/GL" src="images/shapes.png"></figure>
 <figure><img alt="Yocto/GL" src="images/lines.png"></figure>
+<p><a id="toc5"></a></p>
 <h2>Usage</h2>
 <p>To use the library simply include this file and setup the compilation
 option as described above.
@@ -131,6 +160,7 @@ All library features are documented at the definition and should be
 relatively easy to use if you are familiar with writing graphics code.
 You can find the extracted documentation at <code>yocto_gl.html</code>.
 Here we give an overview of some of the main features.</p>
+<p><a id="toc6"></a></p>
 <h3>Small Vectors and Matrices, Frames, Bounding Boxes and Transforms</h3>
 <p>We provide common operations for small vectors and matrices typically used
 in graphics. In particular, we support 2-4 dimensional vectors of arbitrary
@@ -161,6 +191,7 @@ vectors and directions (<code>trasform_point()</code>, <code>trasform_vector()</
 constructed from basic translation, rotation and scaling, e.g. with
 <code>translation_mat4f()</code> or <code>translation_frame3f()</code> repsectively, etc. For
 rotation we support axis-angle and quaternions, with slerp.</p>
+<p><a id="toc7"></a></p>
 <h3>Random Number Generation, Noise, Hashing and Monte Carlo support</h3>
 <p>This library supportds many facitlities helpful in writing sampling
 functions targeting path tracing and shape generations.</p>
@@ -190,6 +221,7 @@ functions targeting path tracing and shape generations.</p>
    <code>sample_triangle()</code>. For each warp, you can compute the PDF with
    <code>sample_xxx_pdf()</code>.</li>
 </ol>
+<p><a id="toc8"></a></p>
 <h3>Shape Utilities</h3>
 <p>The library contains a few function to help with typically geometry
 manipulation useful to support scene viewing and path tracing.</p>
@@ -227,6 +259,7 @@ manipulation useful to support scene viewing and path tracing.</p>
     <code>make_uvquad()</code>, <code>make_uvcube()</code>, <code>make_fvcube()</code>, <code>make_hair()</code>,
     <code>make_suzanne()</code></li>
 </ol>
+<p><a id="toc9"></a></p>
 <h3>Animation utilities</h3>
 <p>The library contains a few function to help with typical animation
 manipulation useful to support scene viewing.</p>
@@ -236,6 +269,7 @@ manipulation useful to support scene viewing.</p>
    <code>eval_keyframed_bezier()</code></li>
 <li>mesh skinning with <code>compute_matrix_skinning()</code></li>
 </ol>
+<p><a id="toc10"></a></p>
 <h3>Image and color</h3>
 <p>Imags are stored with the <code>image</code> templated structure. The two most used
 image types are 4-byte per pixel sRGB images <code>image4b</code>, or 4-float per
@@ -259,6 +293,7 @@ pixel HDR images <code>image4f</code>.</p>
    <code>save_image4b()</code>, <code>save_image4f()</code></li>
 <li>image resizing with <code>resize_image()</code></li>
 </ol>
+<p><a id="toc11"></a></p>
 <h3>Ray Intersection and Point Overlap Queries</h3>
 <p>We support ray-scene intersection for points, lines and triangles
 accelerated by a simple BVH data structure.  Our BVH is written for minimal
@@ -276,6 +311,7 @@ the use of Intel's Embree as a fast alternative.</p>
   <code>overlap_bvh()</code> and provide them with proper callbacks</li>
 <li>we also experimentally support quads with the <code>xxx_quads_xxx()</code> functions</li>
 </ol>
+<p><a id="toc12"></a></p>
 <h3>Simple scene</h3>
 <p>We support a simple scene model used to quickly write demos that lets you
 load/save Wavefront OBJ and Khronos glTF and perform several simple scene
@@ -327,6 +363,7 @@ hierarchy (BVH). Quad support is experimental.</p>
 v2,v3,v1, with the u/v coordinates of the second triangle corrected as 1-u
 and 1-v to produce a quad parametrization where u and v go from 0 to 1. This
 is equivalent to Intel's Embree.</p>
+<p><a id="toc13"></a></p>
 <h3>Pathtracing</h3>
 <p>We supply a path tracer implementation with support for textured mesh
 lights, GGX/Phong materials, environment mapping. The interface supports
@@ -359,6 +396,7 @@ window.</p>
 <li>start the progressive renderer with <code>trace_async_start()</code></li>
 <li>stop the progressive renderer with <code>trace_async_stop()</code></li>
 </ol>
+<p><a id="toc14"></a></p>
 <h3>Wavefront OBJ</h3>
 <p>Wavefront OBJ/MTL loader and writer with support for points,
 lines, triangles and general polygons and all materials properties.
@@ -394,6 +432,7 @@ similar to other single file libraries:
 <li>use get_shape() to get a flattened shape version that contains only
    triangles, lines or points</li>
 </ol>
+<p><a id="toc15"></a></p>
 <h3>Khronos glTF</h3>
 <p>Khronos GLTF loader and writer for Khronos glTF format. Supports
 all the glTF spec and the Khronos extensions. All parsing and writing code
@@ -427,6 +466,7 @@ this can used to access the scene data with <code>glTF::get&lt;T&gt;(index)</cod
 <li>look at the <code>glTFXXX</code> data structures for access to individual elements</li>
 <li>save glTF back to disk with <code>save_gltf()</code></li>
 </ol>
+<p><a id="toc16"></a></p>
 <h3>OpenGL support</h3>
 <p>We include a set of utilities to draw on screen with OpenGL 3.3, manage
 windows with GLFW and draw immediate-mode widgets with ImGui.</p>
@@ -482,6 +522,7 @@ windows with GLFW and draw immediate-mode widgets with ImGui.</p>
 </ul>
 </li>
 </ol>
+<p><a id="toc17"></a></p>
 <h3>Other Utilities</h3>
 <p>We include additional utilities for writing command line applications and
 manipulating files.</p>
@@ -512,6 +553,7 @@ manipulating files.</p>
 </ol>
 </li>
 </ol>
+<p><a id="toc18"></a></p>
 <h3>Command Line Parsing</h3>
 <p>The library includes a simple command line parser that parses commands in
 immediate mode, i.e. when an option is declared. The parser supports options
@@ -551,6 +593,7 @@ and user end.</p>
    subcommands by just branching the command line code based on a read
    argument without any need for complex syntax</li>
 </ol>
+<p><a id="toc19"></a></p>
 <h2>History</h2>
 <p>Here we mark only major features added to the library. Small refactorings
 and bug fixes are reported here.</p>
