@@ -6949,6 +6949,11 @@ obj_scene* load_obj(const string& filename, bool load_txt, bool skip_missing,
     // keep track of array lengths
     auto vert_size = obj_vertex{0, 0, 0, 0, 0};
 
+    // elem type map
+    static auto elem_type_map = unordered_map<string, obj_element_type>{
+        {"f", obj_element_type::face}, {"l", obj_element_type::line},
+        {"p", obj_element_type::point}, {"b", obj_element_type::bezier}};
+
     // read the file line by line
     string line;
     auto linenum = 0;
@@ -6979,36 +6984,17 @@ obj_scene* load_obj(const string& filename, bool load_txt, bool skip_missing,
                 asset->texcoord.back().y = 1 - asset->texcoord.back().y;
         } else if (cmd == "vc") {
             vert_size.color += 1;
-            asset->color.push_back(zero4f);
+            asset->color.push_back(vec4f{0, 0, 0, 1});
             ss >> asset->color.back();
         } else if (cmd == "vr") {
             vert_size.radius += 1;
             asset->radius.push_back(0);
             ss >> asset->radius.back();
-        } else if (cmd == "f") {
+        } else if (cmd == "f" || cmd == "l" || cmd == "p" || cmd == "b") {
+            elems.clear();
             obj_parse_vertlist(ss, elems, vert_size);
             group->elems.push_back({(uint32_t)group->verts.size(),
-                obj_element_type::face, (uint16_t)elems.size()});
-            group->verts.insert(group->verts.end(), elems.begin(), elems.end());
-        } else if (cmd == "l") {
-            obj_parse_vertlist(ss, elems, vert_size);
-            group->elems.push_back({(uint32_t)group->verts.size(),
-                obj_element_type::line, (uint16_t)elems.size()});
-            group->verts.insert(group->verts.end(), elems.begin(), elems.end());
-        } else if (cmd == "p") {
-            obj_parse_vertlist(ss, elems, vert_size);
-            group->elems.push_back({(uint32_t)group->verts.size(),
-                obj_element_type::point, (uint16_t)elems.size()});
-            group->verts.insert(group->verts.end(), elems.begin(), elems.end());
-        } else if (cmd == "b") {
-            obj_parse_vertlist(ss, elems, vert_size);
-            group->elems.push_back({(uint32_t)group->verts.size(),
-                obj_element_type::bezier, (uint16_t)elems.size()});
-            group->verts.insert(group->verts.end(), elems.begin(), elems.end());
-        } else if (cmd == "t") {
-            obj_parse_vertlist(ss, elems, vert_size);
-            group->elems.push_back({(uint32_t)group->verts.size(),
-                obj_element_type::tetra, (uint16_t)elems.size()});
+                elem_type_map.at(cmd), (uint16_t)elems.size()});
             group->verts.insert(group->verts.end(), elems.begin(), elems.end());
         } else if (cmd == "o") {
             asset->objects.push_back(new obj_object());
@@ -7043,45 +7029,22 @@ obj_scene* load_obj(const string& filename, bool load_txt, bool skip_missing,
             ss >> group->subdivision_level;
             ss >> group->subdivision_catmullclark;
         } else if (cmd == "mtllib") {
-            auto name = string();
-            ss >> name;
-            if (name != string("")) {
-                auto found = false;
-                for (auto lib : mtllibs) {
-                    if (lib == name) {
-                        found = true;
-                        break;
-                    }
-                }
-                if (!found) mtllibs.push_back(name);
-            }
+            mtllibs.push_back("");
+            ss >> mtllibs.back();
         } else if (cmd == "c") {
             auto cam = new obj_camera();
-            ss >> cam->name;
-            ss >> cam->ortho;
-            ss >> cam->yfov;
-            ss >> cam->aspect;
-            ss >> cam->aperture;
-            ss >> cam->focus;
-            ss >> cam->frame;
+            ss >> cam->name >> cam->ortho >> cam->yfov >> cam->aspect >>
+                cam->aperture >> cam->focus >> cam->frame;
             asset->cameras.push_back(cam);
         } else if (cmd == "e") {
             auto env = new obj_environment();
-            ss >> env->name;
-            ss >> env->matname;
-            ss >> env->frame;
+            ss >> env->name >> env->matname >> env->frame;
             asset->environments.push_back(env);
         } else if (cmd == "n") {
             auto nde = new obj_node();
-            ss >> nde->name;
-            ss >> nde->parent;
-            ss >> nde->camname;
-            ss >> nde->objname;
-            ss >> nde->envname;
-            ss >> nde->frame;
-            ss >> nde->translation;
-            ss >> nde->rotation;
-            ss >> nde->scaling;
+            ss >> nde->name >> nde->parent >> nde->camname >> nde->objname >>
+                nde->envname >> nde->frame >> nde->translation >>
+                nde->rotation >> nde->scaling;
             if (nde->parent == "\"\"") nde->parent = "";
             if (nde->camname == "\"\"") nde->camname = "";
             if (nde->objname == "\"\"") nde->objname = "";
@@ -7104,6 +7067,8 @@ obj_scene* load_obj(const string& filename, bool load_txt, bool skip_missing,
     asset->objects.erase(end, asset->objects.end());
 
     // parse materials
+    auto mtllibs_set = unordered_set<string>(mtllibs.begin(), mtllibs.end());
+    mtllibs = vector<string>{mtllibs_set.begin(), mtllibs_set.end()};
     auto dirname = path_dirname(filename);
     unordered_set<string> texture_set;
     for (auto mtllib : mtllibs) {
@@ -7146,12 +7111,8 @@ inline ostream& operator<<(ostream& os, const obj_vertex& vert) {
         if (vert_ptr[i] >= 0) nto_write = i + 1;
     }
     for (auto i = 0; i < nto_write; i++) {
-        if (vert_ptr[i] >= 0) {
-            os << ((i == 0) ? ' ' : '/');
-            os << vert_ptr[i] + 1;
-        } else {
-            os << '/';
-        }
+        if (i) os << '/';
+        if (vert_ptr[i] >= 0) os << vert_ptr[i] + 1;
     }
     return os;
 }
@@ -7296,16 +7257,7 @@ void save_obj(const string& filename, const obj_scene* asset, bool save_txt,
                 fs << "sl " << group.subdivision_level
                    << group.subdivision_catmullclark << '\n';
             for (auto elem : group.elems) {
-                auto lbl = "";
-                switch (elem.type) {
-                    case obj_element_type::point: lbl = "p"; break;
-                    case obj_element_type::line: lbl = "l"; break;
-                    case obj_element_type::face: lbl = "f"; break;
-                    case obj_element_type::bezier: lbl = "b"; break;
-                    case obj_element_type::tetra: lbl = "t"; break;
-                    default: throw runtime_error("should not have gotten here");
-                }
-                fs << lbl << ' ';
+                fs << elem_labels.at(elem.type) << ' ';
                 for (auto i = elem.start; i < elem.start + elem.size; i++)
                     fs << group.verts[i] << ' ';
                 fs << '\n';
