@@ -54,7 +54,7 @@ article {
 }
 
 header p {
-    text-align: center;
+    font-size: 18px;
 }
 
 header ul {
@@ -69,8 +69,21 @@ header a {
     color: #888888;
 }
 
+header img {
+    opacity: 0.5;
+    display: inline;
+    border: none;
+    height: 24px;
+    float: right;
+}
+
 header a:hover {
     color: black;
+}
+
+header a:hover img {
+    color: black;
+    opacity: 1;
 }
 
 p {

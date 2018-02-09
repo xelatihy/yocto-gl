@@ -226,11 +226,11 @@ template = '''
     </html>
 '''
 
-def make_toc(md, about_page, api_page):
+def make_toc(md, about_page, api_page, github_page, twitter_page):
     toc = ''
     nmd = ''
     num = 0
-    toc += '[Yocto/GL](' + about_page + ')\n\n'
+    toc += '[Yocto/GL](' + about_page + ') [![](github-logo.png)](' + github_page + ') + [![](twitter-logo.png)](' + twitter_page + ')\n\n'
     for line in md.splitlines():
         if line.startswith('# ') or line.startswith('## ') or  line.startswith('### '):
             link = 'toc' + str(num)
@@ -254,8 +254,8 @@ def make_toc(md, about_page, api_page):
         toc += '- [API Documentation](' + api_page + '#api)\n'
     return toc, nmd
 
-def make_html(md, about_page, api_page):
-    toc, md = make_toc(md, about_page, api_page)
+def make_html(md, about_page, api_page, github_page, twitter_page):
+    toc, md = make_toc(md, about_page, api_page, github_page, twitter_page)
     import markdown, glob
     html = markdown.markdown(md, ['markdown.extensions.extra',
                      'markdown.extensions.codehilite'],
@@ -278,9 +278,10 @@ def make_html(md, about_page, api_page):
     return html
 
 for filename in ["yocto/yocto_gl.h", "yocto/yocto_gltf.h"]:
+    twitter_link = 'https://twitter.com/intent/tweet?text=Check%20out&url=https%3A%2F%2Fgoo.gl%2FYvQvBr&hashtags=yocto-gl&via=xelatihy'
     with open(filename) as f: cpp = f.read()
     md = make_doc(cpp)
-    html = make_html(md, 'index.html', 'yocto_gl.html')
+    html = make_html(md, 'index.html', 'yocto_gl.html', 'https://github.com/xelatihy/yocto-gl', twitter_link)
     filename_md = filename.replace(".h", ".md").replace("yocto/", "docs/")
     with open(filename_md, 'wt') as f: f.write(md)
     filename_html = filename_md.replace(".md", ".html")
@@ -289,7 +290,7 @@ for filename in ["yocto/yocto_gl.h", "yocto/yocto_gltf.h"]:
 for filename in ["yocto/yocto_gl.h"]:
     with open(filename) as f: cpp = f.read()
     md = make_doc(cpp, True)
-    html = make_html(md, 'index.html', 'yocto_gl.html')
+    html = make_html(md, 'index.html', 'yocto_gl.html', 'https://github.com/xelatihy/yocto-gl', twitter_link)
     filename_md = filename.replace(".h", ".md").replace("yocto/", "docs/")
     with open('readme.md', 'wt') as f: f.write(md)
     with open('docs/index.html', 'wt') as f: f.write(html)
