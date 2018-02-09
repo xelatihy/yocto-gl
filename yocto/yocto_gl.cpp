@@ -3819,8 +3819,11 @@ scene* obj_to_scene(const obj_scene* obj, const load_options& opts) {
             auto shp = new shape();
             shp->name = oshp->groupname;
             shp->mat = mmap[oshp->matname];
-            shp->subdivision_level = oshp->subdivision_level;
-            shp->subdivision_catmullclark = oshp->subdivision_catmullclark;
+            if (oshp->props.find("subdivision") != oshp->props.end()) {
+                auto& prop = oshp->props.at("subdivision");
+                shp->subdivision_level = atoi(prop.at(0).c_str());
+                shp->subdivision_catmullclark = (bool)atoi(prop.at(0).c_str());
+            }
 
             // check to see if this shuold be face-varying or flat quads
             auto as_facevarying = false, as_quads = false;
@@ -4303,8 +4306,10 @@ obj_scene* scene_to_obj(const scene* scn) {
             auto group = new obj_group();
             group->groupname = shp->name;
             group->matname = (shp->mat) ? shp->mat->name : "";
-            group->subdivision_level = shp->subdivision_level;
-            group->subdivision_catmullclark = shp->subdivision_catmullclark;
+            if (shp->subdivision_level) {
+                group->props["submission"] = {to_string(shp->subdivision_level),
+                    to_string(shp->subdivision_catmullclark)};
+            }
             for (auto point : shp->points) {
                 group->elems.push_back({(uint32_t)group->verts.size(),
                     obj_element_type::point, 1});
@@ -6747,27 +6752,27 @@ istream& operator>>(istream& is, obj_texture_info& info) {
         if (tok == tokens.back()) break;
         if (tok[0] == '-') {
             last = tok;
-            info.unknown_props[last] = {};
+            info.props[last] = {};
         } else {
-            info.unknown_props[last].push_back(tok);
+            info.props[last].push_back(tok);
         }
     }
 
     // clamp
-    if (info.unknown_props.find("-clamp") != info.unknown_props.end() &&
-        info.unknown_props.at("-clamp").size() > 0) {
-        auto& clamp_vec = info.unknown_props.at("-clamp");
+    if (info.props.find("-clamp") != info.props.end() &&
+        info.props.at("-clamp").size() > 0) {
+        auto& clamp_vec = info.props.at("-clamp");
         auto clamp_str = (clamp_vec.empty()) ? "" : clamp_vec.front();
         info.clamp = clamp_str == "on" || clamp_str == "1";
-        info.unknown_props.erase("-clamp");
+        info.props.erase("-clamp");
     }
 
-    if (info.unknown_props.find("-bm") != info.unknown_props.end() &&
-        info.unknown_props.at("-bm").size() > 0) {
-        auto& bm_vec = info.unknown_props.at("-bm");
+    if (info.props.find("-bm") != info.props.end() &&
+        info.props.at("-bm").size() > 0) {
+        auto& bm_vec = info.props.at("-bm");
         auto bm_str = (bm_vec.empty()) ? "" : bm_vec.front();
         info.scale = std::atof(bm_str.c_str());
-        info.unknown_props.erase("-bm");
+        info.props.erase("-bm");
     }
 
     return is;
@@ -6862,8 +6867,8 @@ vector<obj_material*> load_mtl(
         } else {
             // copy into strings
             while (ss) {
-                mat->unknown_props[cmd].push_back("");
-                ss >> mat->unknown_props[cmd].back();
+                mat->props[cmd].push_back("");
+                ss >> mat->props[cmd].back();
             }
         }
     }
@@ -7037,9 +7042,24 @@ obj_scene* load_obj(const string& filename, bool load_txt, bool skip_missing,
                 group->groupname = gname;
                 group->smoothing = smoothing;
             }
-        } else if (cmd == "sl") {
-            ss >> group->subdivision_level;
-            ss >> group->subdivision_catmullclark;
+        } else if (cmd == "gp") {
+            auto name = string();
+            ss >> name;
+            while (true) {
+                auto tok = string();
+                ss >> tok;
+                if (tok.empty()) break;
+                group->props[name].push_back(tok);
+            }
+        } else if (cmd == "op") {
+            auto name = string();
+            ss >> name;
+            while (true) {
+                auto tok = string();
+                ss >> tok;
+                if (tok.empty()) break;
+                object->props[name].push_back(tok);
+            }
         } else if (cmd == "mtllib") {
             mtllibs.push_back("");
             ss >> mtllibs.back();
@@ -7069,13 +7089,19 @@ obj_scene* load_obj(const string& filename, bool load_txt, bool skip_missing,
 
     // cleanup unused
     for (auto& o : asset->objects) {
-        for(auto& g : o->groups) {
-            if(g->verts.empty()) { delete g; g = nullptr; }
+        for (auto& g : o->groups) {
+            if (g->verts.empty()) {
+                delete g;
+                g = nullptr;
+            }
         }
         auto end = std::remove_if(o->groups.begin(), o->groups.end(),
             [](const obj_group* x) { return !x; });
         o->groups.erase(end, o->groups.end());
-        if(o->groups.empty()) { delete o; o = nullptr; }
+        if (o->groups.empty()) {
+            delete o;
+            o = nullptr;
+        }
     }
     auto end = std::remove_if(asset->objects.begin(), asset->objects.end(),
         [](const obj_object* x) { return !x; });
@@ -7109,7 +7135,7 @@ obj_scene* load_obj(const string& filename, bool load_txt, bool skip_missing,
 
 // write to stream
 inline ostream& operator<<(ostream& os, const obj_texture_info& v) {
-    for (auto&& kv : v.unknown_props) {
+    for (auto&& kv : v.props) {
         os << kv.first << ' ';
         for (auto&& vv : kv.second) os << vv << ' ';
     }
@@ -7169,7 +7195,7 @@ void save_mtl(const string& filename, const vector<obj_material*>& materials,
             fs << "  map_disp " << mat->disp_txt << '\n';
         if (mat->norm_txt.path != "")
             fs << "  map_norm " << mat->norm_txt << '\n';
-        for (auto&& kv : mat->unknown_props) {
+        for (auto&& kv : mat->props) {
             fs << "  " << kv.first;
             for (auto&& v : kv.second) fs << " " << v;
             fs << '\n';
@@ -7262,15 +7288,22 @@ void save_obj(const string& filename, const obj_scene* asset, bool save_txt,
         {obj_element_type::face, "f"}, {obj_element_type::bezier, "b"}};
     for (auto object : asset->objects) {
         fs << "o " << object->name << '\n';
+        for (auto& kv : object->props) {
+            fs << "op " << kv.first;
+            for (auto& v : kv.second) fs << ' ' << v;
+            fs << '\n';
+        }
         for (auto group : object->groups) {
             if (!group->matname.empty())
                 fs << "usemtl " << group->matname << '\n';
             if (!group->groupname.empty())
                 fs << "g " << group->groupname << '\n';
             if (!group->smoothing) fs << "s off" << '\n';
-            if (group->subdivision_level)
-                fs << "sl " << group->subdivision_level
-                   << group->subdivision_catmullclark << '\n';
+            for (auto& kv : group->props) {
+                fs << "gp " << kv.first;
+                for (auto& v : kv.second) fs << ' ' << v;
+                fs << '\n';
+            }
             for (auto elem : group->elems) {
                 fs << elem_labels.at(elem.type) << ' ';
                 for (auto i = elem.start; i < elem.start + elem.size; i++)
