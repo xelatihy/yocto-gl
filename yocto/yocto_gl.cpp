@@ -6703,7 +6703,7 @@ namespace ygl {
 istream& operator>>(istream& is, obj_texture_info& info) {
     // initialize
     info = obj_texture_info();
-    
+
     // get tokens
     auto tokens = vector<string>();
     while (is) {
@@ -6748,7 +6748,7 @@ istream& operator>>(istream& is, obj_texture_info& info) {
         info.scale = std::atof(bm_str.c_str());
         info.unknown_props.erase("-bm");
     }
-    
+
     return is;
 }
 
@@ -7082,10 +7082,10 @@ obj_scene* load_obj(const string& filename, bool load_txt, bool skip_missing,
             ss >> nde->translation;
             ss >> nde->rotation;
             ss >> nde->scaling;
-            if(nde->parent == "\"\"") nde->parent = "";
-            if(nde->camname == "\"\"") nde->camname = "";
-            if(nde->objname == "\"\"") nde->objname = "";
-            if(nde->envname == "\"\"") nde->envname = "";
+            if (nde->parent == "\"\"") nde->parent = "";
+            if (nde->camname == "\"\"") nde->camname = "";
+            if (nde->objname == "\"\"") nde->objname = "";
+            if (nde->envname == "\"\"") nde->envname = "";
             asset->nodes.push_back(nde);
         } else {
             // unused
@@ -7128,74 +7128,32 @@ obj_scene* load_obj(const string& filename, bool load_txt, bool skip_missing,
 }
 
 // write to stream
-inline void obj_dump_val(fstream& fs, int v) { fs << v; }
-inline void obj_dump_val(fstream& fs, float v) { fs << v; }
-inline void obj_dump_val(fstream& fs, bool v) { fs << v; }
-inline void obj_dump_val(fstream& fs, char v) { fs << v; }
-inline void obj_dump_val(fstream& fs, const string& v) { fs << v; }
-inline void obj_dump_val(fstream& fs, const char* v) { fs << v; }
-
-// write to stream
-inline void obj_dump_val(fstream& fs, const vec2f& v) {
-    fs << v.x << ' ' << v.y;
-}
-inline void obj_dump_val(fstream& fs, const vec3f& v) {
-    fs << v.x << ' ' << v.y << ' ' << v.z;
-}
-inline void obj_dump_val(fstream& fs, const vec4f& v) {
-    fs << v.x << ' ' << v.y << ' ' << v.z << ' ' << v.w;
-}
-inline void obj_dump_val(fstream& fs, const frame3f& v) {
-    fs << v.x << ' ' << v.y << ' ' << v.z << ' ' << v.o;
-}
-
-// write to stream
-inline void obj_dump_val(fstream& fs, const obj_texture_info& v) {
+inline ostream& operator<<(ostream& os, const obj_texture_info& v) {
     for (auto&& kv : v.unknown_props) {
-        fs << kv.first << ' ';
-        for (auto&& vv : kv.second) fs << vv << ' ';
+        os << kv.first << ' ';
+        for (auto&& vv : kv.second) os << vv << ' ';
     }
-    if (v.clamp) fs << "-clamp on ";
-    fs << v.path;
+    if (v.clamp) os << "-clamp on ";
+    os << v.path;
+    return os;
 }
 
-// write to stream
-template <typename T>
-inline void obj_dump_named_val(fstream& fs, const string& name, const T& v) {
-    fs << name << ' ';
-    obj_dump_val(fs, v);
-    fs << '\n';
-}
-
-// write to stream
-template <typename T>
-inline void obj_dump_opt_val(
-    fstream& fs, const string& name, const T& v, const T& def = {}) {
-    if (v == def) return;
-    obj_dump_named_val(fs, name, v);
-}
-
-// write an OBJ vertex triplet using only the indices that are active
-inline void obj_dump_objverts(
-    fstream& fs, const char* str, int nv, const obj_vertex* verts) {
-    fs << str;
-    for (auto v = 0; v < nv; v++) {
-        auto& vert = verts[v];
-        auto vert_ptr = &vert.pos;
-        auto nto_write = 0;
-        for (auto i = 0; i < 5; i++) {
-            if (vert_ptr[i] >= 0) nto_write = i + 1;
-        }
-        for (auto i = 0; i < nto_write; i++) {
-            if (vert_ptr[i] >= 0) {
-                fs << ((i == 0) ? ' ' : '/');
-                fs << vert_ptr[i] + 1;
-            } else {
-                fs << '/';
-            }
+// write an OBJ vertex using only the indices that are active
+inline ostream& operator<<(ostream& os, const obj_vertex& vert) {
+    auto vert_ptr = &vert.pos;
+    auto nto_write = 0;
+    for (auto i = 0; i < 5; i++) {
+        if (vert_ptr[i] >= 0) nto_write = i + 1;
+    }
+    for (auto i = 0; i < nto_write; i++) {
+        if (vert_ptr[i] >= 0) {
+            os << ((i == 0) ? ' ' : '/');
+            os << vert_ptr[i] + 1;
+        } else {
+            os << '/';
         }
     }
-    fs << '\n';
+    return os;
 }
 
 // Save an MTL file
@@ -7208,35 +7166,39 @@ void save_mtl(const string& filename, const vector<obj_material*>& materials,
 
     // for each material, dump all the values
     for (auto mat : materials) {
-        obj_dump_named_val(fs, "newmtl", mat->name);
-        obj_dump_named_val(fs, "  illum", mat->illum);
-        obj_dump_opt_val(fs, "  Ke", mat->ke);
-        obj_dump_opt_val(fs, "  Ka", mat->ka);
-        obj_dump_opt_val(fs, "  Kd", mat->kd);
-        obj_dump_opt_val(fs, "  Ks", mat->ks);
-        obj_dump_opt_val(fs, "  Kr", mat->kr);
-        obj_dump_opt_val(fs, "  Tf", mat->kt);
-        obj_dump_opt_val(fs, "  Ns", mat->ns, 0.0f);
-        obj_dump_opt_val(fs, "  d", mat->op, 1.0f);
-        obj_dump_opt_val(fs, "  Ni", mat->ior, 1.0f);
-        obj_dump_opt_val(fs, "  map_Ke", mat->ke_txt);
-        obj_dump_opt_val(fs, "  map_Ka", mat->ka_txt);
-        obj_dump_opt_val(fs, "  map_Kd", mat->kd_txt);
-        obj_dump_opt_val(fs, "  map_Ks", mat->ks_txt);
-        obj_dump_opt_val(fs, "  map_Kr", mat->kr_txt);
-        obj_dump_opt_val(fs, "  map_Kt", mat->kt_txt);
-        obj_dump_opt_val(fs, "  map_Ns", mat->ns_txt);
-        obj_dump_opt_val(fs, "  map_d", mat->op_txt);
-        obj_dump_opt_val(fs, "  map_Ni", mat->ior_txt);
-        obj_dump_opt_val(fs, "  map_bump", mat->bump_txt);
-        obj_dump_opt_val(fs, "  map_disp", mat->disp_txt);
-        obj_dump_opt_val(fs, "  map_norm", mat->norm_txt);
+        fs << "newmtl " << mat->name << '\n';
+        fs << "  illum " << mat->illum << '\n';
+        if (mat->ke != zero3f) fs << "  Ke " << mat->ke << '\n';
+        if (mat->ka != zero3f) fs << "  Ka " << mat->ka << '\n';
+        if (mat->kd != zero3f) fs << "  Kd " << mat->kd << '\n';
+        if (mat->ks != zero3f) fs << "  Ks " << mat->ks << '\n';
+        if (mat->kr != zero3f) fs << "  Kr " << mat->kr << '\n';
+        if (mat->kt != zero3f) fs << "  Kt " << mat->kt << '\n';
+        if (mat->kt != zero3f) fs << "  Tf " << mat->kt << '\n';
+        if (mat->ns != 0.0f) fs << "  Ns " << mat->ns << '\n';
+        if (mat->op != 1.0f) fs << "  d " << mat->op << '\n';
+        if (mat->ior != 0.0f) fs << "  Ni " << mat->ior << '\n';
+        if (mat->ke_txt.path != "") fs << "  map_Ke " << mat->ke_txt << '\n';
+        if (mat->ka_txt.path != "") fs << "  map_Ka " << mat->ka_txt << '\n';
+        if (mat->kd_txt.path != "") fs << "  map_Kd " << mat->kd_txt << '\n';
+        if (mat->ks_txt.path != "") fs << "  map_Ks " << mat->ks_txt << '\n';
+        if (mat->kr_txt.path != "") fs << "  map_Kr " << mat->kr_txt << '\n';
+        if (mat->kt_txt.path != "") fs << "  map_Kt " << mat->kt_txt << '\n';
+        if (mat->ns_txt.path != "") fs << "  map_Ns " << mat->ns_txt << '\n';
+        if (mat->op_txt.path != "") fs << "  map_d  " << mat->op_txt << '\n';
+        if (mat->ior_txt.path != "") fs << "  map_Ni " << mat->ior_txt << '\n';
+        if (mat->bump_txt.path != "")
+            fs << "  map_bump " << mat->bump_txt << '\n';
+        if (mat->disp_txt.path != "")
+            fs << "  map_disp " << mat->disp_txt << '\n';
+        if (mat->norm_txt.path != "")
+            fs << "  map_norm " << mat->norm_txt << '\n';
         for (auto&& kv : mat->unknown_props) {
-            obj_dump_val(fs, kv.first + " ");
-            for (auto&& v : kv.second) obj_dump_val(fs, v + " ");
-            fs << "\n";
+            fs << "  " << kv.first;
+            for (auto&& v : kv.second) fs << " " << v;
+            fs << '\n';
         }
-        fs << "\n";
+        fs << '\n';
     }
 }
 
@@ -7279,57 +7241,44 @@ void save_obj(const string& filename, const obj_scene* asset, bool save_txt,
     auto basename = filename.substr(dirname.length());
     basename = basename.substr(0, basename.length() - 4);
     if (!asset->materials.empty()) {
-        obj_dump_named_val(fs, "mtllib", basename + ".mtl");
+        fs << "mtllib " << basename << ".mtl" << '\n';
     }
 
     // save cameras
     for (auto cam : asset->cameras) {
-        obj_dump_val(fs, "c ");
-        obj_dump_val(fs, cam->name); fs << ' ';
-        obj_dump_val(fs, cam->ortho); fs << ' ';
-        obj_dump_val(fs, cam->yfov); fs << ' ';
-        obj_dump_val(fs, cam->aspect); fs << ' ';
-        obj_dump_val(fs, cam->aperture); fs << ' ';
-        obj_dump_val(fs, cam->focus); fs << ' ';
-        obj_dump_val(fs, cam->frame); fs << ' ';
-        fs << '\n';
+        fs << "c " << ' ' << cam->name << ' ' << cam->ortho << ' ' << cam->yfov
+           << ' ' << cam->aspect << ' ' << cam->aperture << ' ' << cam->focus
+           << ' ' << cam->frame << '\n';
     }
 
     // save envs
     for (auto env : asset->environments) {
-        obj_dump_val(fs, "e ");
-        obj_dump_val(fs, env->name); fs << ' ';
-        obj_dump_val(fs, env->matname); fs << ' ';
-        obj_dump_val(fs, env->frame); fs << ' ';
-        fs << '\n';
+        fs << "e " << env->name << ' ' << env->matname << ' ' << env->frame
+           << '\n';
     }
 
     // save nodes
     for (auto nde : asset->nodes) {
-        obj_dump_val(fs, "n ");
-        obj_dump_val(fs, nde->name);        fs << ' ';
-        obj_dump_val(fs, (nde->parent.empty()) ? "\"\""s : nde->parent);         fs << ' ';
-        obj_dump_val(fs, (nde->camname.empty()) ? "\"\""s : nde->camname);fs << ' ';
-        obj_dump_val(fs, (nde->objname.empty()) ? "\"\""s : nde->objname);fs << ' ';
-        obj_dump_val(fs, (nde->envname.empty()) ? "\"\""s : nde->envname);fs << ' ';
-        obj_dump_val(fs, nde->frame);fs << '\n';
-        obj_dump_val(fs, nde->translation);fs << '\n';
-        obj_dump_val(fs, (vec4f)nde->rotation);fs << '\n';
-        obj_dump_val(fs, nde->scaling);fs << '\n';
-        fs << '\n';
+        fs << "n " << nde->name << ' '
+           << ((nde->parent.empty()) ? "\"\""s : nde->parent) << ' '
+           << ((nde->camname.empty()) ? "\"\""s : nde->camname) << ' '
+           << ((nde->objname.empty()) ? "\"\""s : nde->objname) << ' '
+           << ((nde->envname.empty()) ? "\"\""s : nde->envname) << ' '
+           << nde->frame << ' ' << nde->translation << ' ' << nde->rotation
+           << ' ' << nde->scaling << '\n';
     }
 
     // save all vertex data
-    for (auto& v : asset->pos) obj_dump_named_val(fs, "v", v);
+    for (auto& v : asset->pos) fs << "v " << v << '\n';
     if (flip_texcoord) {
         for (auto& v : asset->texcoord)
-            obj_dump_named_val(fs, "vt", vec2f{v.x, 1 - v.y});
+            fs << "vt " << vec2f{v.x, 1 - v.y} << '\n';
     } else {
-        for (auto& v : asset->texcoord) obj_dump_named_val(fs, "vt", v);
+        for (auto& v : asset->texcoord) fs << "vt " << v << '\n';
     }
-    for (auto& v : asset->norm) obj_dump_named_val(fs, "vn", v);
-    for (auto& v : asset->color) obj_dump_named_val(fs, "vc", v);
-    for (auto& v : asset->radius) obj_dump_named_val(fs, "vr", v);
+    for (auto& v : asset->norm) fs << "vn " << v << '\n';
+    for (auto& v : asset->color) fs << "vc " << v << '\n';
+    for (auto& v : asset->radius) fs << "vr " << v << '\n';
 
     // save element data
     static auto elem_labels =
@@ -7337,17 +7286,15 @@ void save_obj(const string& filename, const obj_scene* asset, bool save_txt,
             {obj_element_type::line, "l"}, {obj_element_type::face, "f"},
             {obj_element_type::bezier, "b"}, {obj_element_type::tetra, "t"}};
     for (auto object : asset->objects) {
-        obj_dump_named_val(fs, "o", object->name);
+        fs << "o " << object->name << '\n';
         for (auto& group : object->groups) {
-            obj_dump_opt_val(fs, "usemtl", group.matname);
-            obj_dump_opt_val(fs, "g", group.groupname);
-            if (!group.smoothing) obj_dump_named_val(fs, "s", "off");
-            if (group.subdivision_level) {
-                obj_dump_val(fs, "sl ");
-                obj_dump_val(fs, group.subdivision_level);
-                obj_dump_val(fs, group.subdivision_catmullclark);
-                fs << '\n';
-            }
+            if (!group.matname.empty())
+                fs << "usemtl " << group.matname << '\n';
+            if (!group.groupname.empty()) fs << "g " << group.groupname << '\n';
+            if (!group.smoothing) fs << "s off" << '\n';
+            if (group.subdivision_level)
+                fs << "sl " << group.subdivision_level
+                   << group.subdivision_catmullclark << '\n';
             for (auto elem : group.elems) {
                 auto lbl = "";
                 switch (elem.type) {
@@ -7358,8 +7305,10 @@ void save_obj(const string& filename, const obj_scene* asset, bool save_txt,
                     case obj_element_type::tetra: lbl = "t"; break;
                     default: throw runtime_error("should not have gotten here");
                 }
-                obj_dump_objverts(
-                    fs, lbl, elem.size, group.verts.data() + elem.start);
+                fs << lbl << ' ';
+                for (auto i = elem.start; i < elem.start + elem.size; i++)
+                    fs << group.verts[i] << ' ';
+                fs << '\n';
             }
         }
     }
