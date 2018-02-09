@@ -195,10 +195,10 @@ functions targeting path tracing and shape generations.</p>
 manipulation useful to support scene viewing and path tracing.</p>
 <ol>
 <li>compute line tangents, and triangle and quad areas and normals</li>
-<li>compute barycentric interpolation with <code>eval_barycentric_line()</code>,
-   <code>eval_barycentric_triangle()</code> and <code>eval_barycentric_quad()</code></li>
-<li>evaluate Bezier curve and derivatives with <code>eval_bezier_cubic()</code> and
-   <code>eval_bezier_cubic_derivative()</code></li>
+<li>interpolate values over primitives with <code>eval_line()</code>,
+   <code>eval_triangle()</code> and <code>eval_quad()</code></li>
+<li>evaluate Bezier curves and derivatives with <code>eval_bezier()</code> and
+   <code>eval_bezier_derivative()</code></li>
 <li>compute smooth normals and tangents with <code>compute_normals()</code></li>
 <li>compute tangent frames from texture coordinates with
    <code>compute_tangent_space()</code></li>

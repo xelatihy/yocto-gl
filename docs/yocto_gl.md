@@ -211,10 +211,10 @@ The library contains a few function to help with typically geometry
 manipulation useful to support scene viewing and path tracing.
 
 1. compute line tangents, and triangle and quad areas and normals
-2. compute barycentric interpolation with `eval_barycentric_line()`,
-   `eval_barycentric_triangle()` and `eval_barycentric_quad()`
-3. evaluate Bezier curve and derivatives with `eval_bezier_cubic()` and
-   `eval_bezier_cubic_derivative()`
+2. interpolate values over primitives with `eval_line()`,
+   `eval_triangle()` and `eval_quad()`
+3. evaluate Bezier curves and derivatives with `eval_bezier()` and
+   `eval_bezier_derivative()`
 4. compute smooth normals and tangents with `compute_normals()`
 5. compute tangent frames from texture coordinates with
    `compute_tangent_space()`
@@ -583,6 +583,8 @@ and bug fixes are reported here.
 
 ## API Documentation
 
+### Imported math functions
+
 #### Function Alias sqrt()
 
 ~~~ .cpp
@@ -726,6 +728,8 @@ using std::isfinite;
 ~~~
 
 isfinate
+
+### Imported containers and related functions
 
 #### Function Alias string()
 
@@ -931,6 +935,16 @@ using std::cout;
 
 cout object for printing
 
+#### Function Alias tie()
+
+~~~ .cpp
+using std::tie;
+~~~
+
+tie function for tuple usage
+
+### Basic typedefs, math constants and functions
+
 #### Typedef byte
 
 ~~~ .cpp
@@ -1006,7 +1020,8 @@ shortcat for int min value
 #### Function min()
 
 ~~~ .cpp
-inline int min(int x, int y);
+template <typename T>
+inline T min(T x, T y);
 ~~~
 
 Safe minimum value.
@@ -1014,23 +1029,8 @@ Safe minimum value.
 #### Function min()
 
 ~~~ .cpp
-inline float min(float x, float y);
-~~~
-
-Safe minimum value.
-
-#### Function min()
-
-~~~ .cpp
-inline int min(initializer_list<int> vs);
-~~~
-
-Safe minimum value.
-
-#### Function min()
-
-~~~ .cpp
-inline float min(initializer_list<float> vs);
+template <typename T>
+inline T min(initializer_list<T> vs);
 ~~~
 
 Safe minimum value.
@@ -1038,7 +1038,8 @@ Safe minimum value.
 #### Function max()
 
 ~~~ .cpp
-inline int max(int x, int y);
+template <typename T>
+inline T max(T x, T y);
 ~~~
 
 Safe maximum value.
@@ -1046,23 +1047,8 @@ Safe maximum value.
 #### Function max()
 
 ~~~ .cpp
-inline float max(float x, float y);
-~~~
-
-Safe maximum value.
-
-#### Function max()
-
-~~~ .cpp
-inline int max(initializer_list<int> vs);
-~~~
-
-Safe maximum value.
-
-#### Function max()
-
-~~~ .cpp
-inline float max(initializer_list<float> vs);
+template <typename T>
+inline T max(initializer_list<T> vs);
 ~~~
 
 Safe maximum value.
@@ -1070,15 +1056,8 @@ Safe maximum value.
 #### Function clamp()
 
 ~~~ .cpp
-inline int clamp(int x, int min_, int max_);
-~~~
-
-Clamp a value between a minimum and a maximum.
-
-#### Function clamp()
-
-~~~ .cpp
-inline float clamp(float x, float min_, float max_);
+template <typename T>
+inline T clamp(T x, T min_, T max_);
 ~~~
 
 Clamp a value between a minimum and a maximum.
@@ -1086,7 +1065,8 @@ Clamp a value between a minimum and a maximum.
 #### Function lerp()
 
 ~~~ .cpp
-inline float lerp(float a, float b, float t);
+template <typename T, typename T1>
+inline T lerp(const T& a, const T& b, T1 u);
 ~~~
 
 Linear interpolation.
@@ -1094,10 +1074,13 @@ Linear interpolation.
 #### Function bilerp()
 
 ~~~ .cpp
-inline float bilerp(float aa, float ba, float ab, float bb, float s, float t);
+template <typename T, typename T1>
+inline float bilerp(
+    const T& a, const T& b, const T& c, const T& d, T1 u, T1 v);
 ~~~
 
-bilinear interpolation
+Bilinear interpolation. Order is specified like quads counter-clockwise,
+so a,b,c,d correspond to parameters (0,0), (0,1), (1,1), (0,1)
 
 #### Function pow2()
 
@@ -1131,6 +1114,8 @@ inline float byte_to_float(byte x);
 
 Safe byte to float conversion
 
+### Fixed-size vectors
+
 #### Struct vec
 
 ~~~ .cpp
@@ -1141,7 +1126,7 @@ struct vec;
 Generic vector of N elements. This is used only to define template
 specializations for small fixed sized vectors.
 
-#### Struct vec <T, 1 \>
+#### Struct vec<T, 1\>
 
 ~~~ .cpp
 template <typename T>
@@ -1164,7 +1149,7 @@ Vector of 1 element. Defined only for completeness.
     - x:      element data
 
 
-#### Struct vec <T, 2 \>
+#### Struct vec<T, 2\>
 
 ~~~ .cpp
 template <typename T>
@@ -1191,7 +1176,7 @@ Vector of 2 elements.
     - y:      element data
 
 
-#### Struct vec <T, 3 \>
+#### Struct vec<T, 3\>
 
 ~~~ .cpp
 template <typename T>
@@ -1220,7 +1205,7 @@ Vector of 3 elements.
     - z:      element data
 
 
-#### Struct vec <T, 4 \>
+#### Struct vec<T, 4\>
 
 ~~~ .cpp
 template <typename T>
@@ -1553,7 +1538,7 @@ inline bool operator!=(const vec<T, 4>& a, const vec<T, 4>& b);
 
 vector operator !=
 
-#### Function operator <()
+#### Function operator<()
 
 ~~~ .cpp
 template <typename T>
@@ -1562,7 +1547,7 @@ inline bool operator<(const vec<T, 2>& a, const vec<T, 2>& b);
 
 vector operator < (lexicographic order - useful for map)
 
-#### Function operator <()
+#### Function operator<()
 
 ~~~ .cpp
 template <typename T>
@@ -1571,7 +1556,7 @@ inline bool operator<(const vec<T, 3>& a, const vec<T, 3>& b);
 
 vector operator < (lexicographic order - useful for map)
 
-#### Function operator <()
+#### Function operator<()
 
 ~~~ .cpp
 template <typename T>
@@ -1994,39 +1979,11 @@ inline T angle(const vec<T, 3>& a, const vec<T, 3>& b);
 
 angle between vectors
 
-#### Function lerp()
-
-~~~ .cpp
-template <typename T, int N, typename T1>
-inline vec<T, N> lerp(const vec<T, N>& a, const vec<T, N>& b, T1 t);
-~~~
-
-vector linear interpolation
-
-#### Function bilerp()
-
-~~~ .cpp
-template <typename T, int N, typename T1>
-inline vec<T, N> bilerp(const vec<T, N>& aa, const vec<T, N>& ba,
-    const vec<T, N>& ab, const vec<T, N>& bb, T1 s, T1 t);
-~~~
-
-vector bilinear interpolation
-
-#### Function nlerp()
-
-~~~ .cpp
-template <typename T, int N, typename T1>
-inline vec<T, N> nlerp(const vec<T, N>& a, const vec<T, N>& b, T1 t);
-~~~
-
-vector normalized linear interpolation
-
 #### Function slerp()
 
 ~~~ .cpp
 template <typename T, int N, typename T1>
-inline vec<T, N> slerp(const vec<T, N>& a, const vec<T, N>& b, T1 t);
+inline vec<T, N> slerp(const vec<T, N>& a, const vec<T, N>& b, T1 u);
 ~~~
 
 vector spherical linear interpolation (vectors have to be normalized)
@@ -2171,7 +2128,7 @@ inline vec4f byte_to_float(const vec4b& a);
 
 Element-wise conversion
 
-#### Function operator < <()
+#### Function operator<<()
 
 ~~~ .cpp
 template <typename T, int N>
@@ -2180,7 +2137,7 @@ inline ostream& operator<<(ostream& os, const vec<T, N>& a);
 
 stream write
 
-#### Function operator \> \>()
+#### Function operator\>\>()
 
 ~~~ .cpp
 template <typename T, int N>
@@ -2189,7 +2146,7 @@ inline istream& operator>>(istream& is, vec<T, N>& a);
 
 stream read
 
-#### Struct hash <ygl::vec <T, N \> \>
+#### Struct hash<ygl::vec<T, N\>\>
 
 ~~~ .cpp
 template <typename T, int N>
@@ -2197,6 +2154,8 @@ struct hash<ygl::vec<T, N>> {
 ~~~
 
 Hash functor for vector for use with unordered_map
+
+### Fixed-size matrices
 
 #### Struct mat
 
@@ -2208,7 +2167,7 @@ struct mat;
 Generic matrix of NxN elements. This is used only to define template
 specializations for small fixed sized matrices.
 
-#### Struct mat <T, 2 \>
+#### Struct mat<T, 2\>
 
 ~~~ .cpp
 template <typename T>
@@ -2236,7 +2195,7 @@ Colums access via operator[].
     - y:      element data
 
 
-#### Struct mat <T, 3 \>
+#### Struct mat<T, 3\>
 
 ~~~ .cpp
 template <typename T>
@@ -2266,7 +2225,7 @@ Colums access via operator[].
     - z:      element data
 
 
-#### Struct mat <T, 4 \>
+#### Struct mat<T, 4\>
 
 ~~~ .cpp
 template <typename T>
@@ -2787,7 +2746,7 @@ inline mat<T, N> inverse(const mat<T, N>& a);
 
 matrix inverse (uses adjugate and determinant)
 
-#### Function operator < <()
+#### Function operator<<()
 
 ~~~ .cpp
 template <typename T, int N>
@@ -2796,7 +2755,7 @@ inline ostream& operator<<(ostream& os, const mat<T, N>& a);
 
 stream write
 
-#### Function operator \> \>()
+#### Function operator\>\>()
 
 ~~~ .cpp
 template <typename T, int N>
@@ -2804,6 +2763,8 @@ inline istream& operator>>(istream& is, mat<T, N>& a);
 ~~~
 
 stream read
+
+### Rigid-body frames
 
 #### Struct frame
 
@@ -2815,7 +2776,7 @@ struct frame;
 Generic frame of N elements. This is used only to define template
 specializations for small fixed sized frames.
 
-#### Struct frame <T, 3 \>
+#### Struct frame<T, 3\>
 
 ~~~ .cpp
 template <typename T>
@@ -3010,7 +2971,7 @@ inline frame<T, 3> inverse(const frame<T, 3>& a);
 
 frame inverse (equivalent to rigid affine inverse)
 
-#### Function operator < <()
+#### Function operator<<()
 
 ~~~ .cpp
 template <typename T, int N>
@@ -3019,7 +2980,7 @@ inline ostream& operator<<(ostream& os, const frame<T, N>& a);
 
 stream write
 
-#### Function operator \> \>()
+#### Function operator\>\>()
 
 ~~~ .cpp
 template <typename T, int N>
@@ -3027,6 +2988,8 @@ inline istream& operator>>(istream& is, frame<T, N>& a);
 ~~~
 
 stream read
+
+### Quaternions
 
 #### Struct quat
 
@@ -3038,17 +3001,14 @@ struct quat;
 Generic quaternion of N elements. This is used only to define template
 specializations for small fixed sized quaternions.
 
-#### Struct quat <T, 4 \>
+#### Struct quat<T, 4\>
 
 ~~~ .cpp
 template <typename T>
 struct quat<T, 4> {
     quat(); 
     explicit quat(const vec<T, 4>& vv); 
-    quat(const vec<T, 3>& axis, T angle); 
     explicit operator vec<T, 4>() const; 
-    vec<T, 3> axis() const; 
-    T angle() const; 
     T& operator[](int i); 
     const T& operator[](int i) const; 
     T x;
@@ -3064,10 +3024,7 @@ Quaterions are xi + yj + zk + w.
 - Members:
     - quat():      default constructor
     - quat():      conversion from vec
-    - quat():      conversion from axis-angle
     - operator 4>():      conversion to vec
-    - axis():      rotation axis
-    - angle():      rotation angle
     - operator[]():      element access
     - operator[]():      element access
     - x:      data
@@ -3182,11 +3139,11 @@ inline bool operator!=(const quat<T, 4>& a, const quat<T, 4>& b);
 
 vector operator !=
 
-#### Function operator*()
+#### Function operator+()
 
 ~~~ .cpp
 template <typename T>
-inline quat<T, 4> operator*(const quat<T, 4>& a, const quat<T, 4>& b);
+inline quat<T, 4> operator+(const quat<T, 4>& a, const quat<T, 4>& b);
 ~~~
 
 quaterion multiply
@@ -3195,7 +3152,7 @@ quaterion multiply
 
 ~~~ .cpp
 template <typename T, typename T1>
-inline quat<T, 4> operator*(const quat<T, 4>& a, float b);
+inline quat<T, 4> operator*(const quat<T, 4>& a, T1 b);
 ~~~
 
 quaterion multiply
@@ -3203,11 +3160,20 @@ quaterion multiply
 #### Function operator/()
 
 ~~~ .cpp
-template <typename T>
-inline quat<T, 4> operator/(const quat<T, 4>& a, float b);
+template <typename T, typename T1>
+inline quat<T, 4> operator/(const quat<T, 4>& a, T1 b);
 ~~~
 
 quaterion division
+
+#### Function operator*()
+
+~~~ .cpp
+template <typename T>
+inline quat<T, 4> operator*(const quat<T, 4>& a, const quat<T, 4>& b);
+~~~
+
+quaterion multiply
 
 #### Function conjugate()
 
@@ -3236,15 +3202,6 @@ inline quat<T, 4> normalize(const quat<T, 4>& v);
 
 quaterion inverse
 
-#### Function nlerp()
-
-~~~ .cpp
-template <typename T, typename T1>
-inline quat<T, 4> nlerp(const quat<T, 4>& a, const quat<T, 4>& b, T1 t);
-~~~
-
-quaterion normalized linear interpolation
-
 #### Function slerp()
 
 ~~~ .cpp
@@ -3254,7 +3211,7 @@ inline quat<T, 4> slerp(const quat<T, 4>& a, const quat<T, 4>& b, T1 t);
 
 quaterion spherical linear interpolation
 
-#### Function operator < <()
+#### Function operator<<()
 
 ~~~ .cpp
 template <typename T, int N>
@@ -3263,7 +3220,7 @@ inline ostream& operator<<(ostream& os, const quat<T, N>& a);
 
 stream write
 
-#### Function operator \> \>()
+#### Function operator\>\>()
 
 ~~~ .cpp
 template <typename T, int N>
@@ -3271,6 +3228,8 @@ inline istream& operator>>(istream& is, quat<T, N>& a);
 ~~~
 
 stream read
+
+### Axis-aligned bounding boxes
 
 #### Struct bbox
 
@@ -3532,7 +3491,7 @@ inline bbox<T, N> make_bbox(const initializer_list<vec<T, N>>& v);
 
 initialize a bonding box from a list of points
 
-#### Function operator < <()
+#### Function operator<<()
 
 ~~~ .cpp
 template <typename T, int N>
@@ -3541,7 +3500,7 @@ inline ostream& operator<<(ostream& os, const bbox<T, N>& a);
 
 stream write
 
-#### Function operator \> \>()
+#### Function operator\>\>()
 
 ~~~ .cpp
 template <typename T, int N>
@@ -3549,6 +3508,8 @@ inline istream& operator>>(istream& is, bbox<T, N>& a);
 ~~~
 
 stream read
+
+### Primitice bounding boxes
 
 #### Function point_bbox()
 
@@ -3599,6 +3560,8 @@ inline bbox<T, 3> tetrahedron_bbox(const vec<T, 3>& v0, const vec<T, 3>& v1,
 
 Tetrahedron bounds
 
+### Rays
+
 #### Struct ray
 
 ~~~ .cpp
@@ -3609,7 +3572,7 @@ struct ray;
 Generic ray of N elements. This is used only to define template
 specializations for small fixed sized rays.
 
-#### Struct ray <T, 3 \>
+#### Struct ray<T, 3\>
 
 ~~~ .cpp
 template <typename T>
@@ -3636,7 +3599,7 @@ Rays with origin, direction and min/max t value.
     - tmax:      maximum distance
 
 
-#### Typedef template  <typename T \>
+#### Typedef template <typename T\>
 ray3
 
 ~~~ .cpp
@@ -3674,7 +3637,7 @@ inline ray<T, N> make_segment(
 
 Construct a ray segment using a default epsilon
 
-#### Function operator < <()
+#### Function operator<<()
 
 ~~~ .cpp
 template <typename T>
@@ -3683,7 +3646,7 @@ inline ostream& operator<<(ostream& os, const ray3<T>& a);
 
 stream write
 
-#### Function operator \> \>()
+#### Function operator\>\>()
 
 ~~~ .cpp
 template <typename T>
@@ -3691,6 +3654,8 @@ inline istream& operator>>(istream& is, ray3<T>& a);
 ~~~
 
 stream read
+
+### Transforms
 
 #### Function transform_point()
 
@@ -3916,7 +3881,7 @@ rotation matrix
 
 ~~~ .cpp
 template <typename T>
-inline mat<T, 4> rotation_mat4(const vec<T, 3>& axis, float angle);
+inline mat<T, 4> rotation_mat4(const vec<T, 3>& axis, T angle);
 ~~~
 
 rotation matrix
@@ -3925,7 +3890,7 @@ rotation matrix
 
 ~~~ .cpp
 template <typename T>
-inline vec<T, 4> rotation_axisangle4(const quat<T, 4>& a);
+inline pair<vec<T, 4>, T> rotation_axisangle4(const quat<T, 4>& a);
 ~~~
 
 quaternion axis-angle conversion
@@ -4093,10 +4058,12 @@ inline mat<T, 4> compose_mat4(const vec<T, 3>& translation,
 Decompose an affine matrix into translation, rotation, scale.
 Assumes there is no shear and the matrix is affine.
 
+### User interface utilities
+
 #### Function camera_turntable()
 
 ~~~ .cpp
-void camera_turntable(vec3f& from, vec3f& to, vec3f& up, const vec3f& rotate,
+void camera_turntable(vec3f& from, vec3f& to, vec3f& up, const vec2f& rotate,
     float dolly, const vec2f& pan);
 ~~~
 
@@ -4118,6 +4085,8 @@ void camera_fps(frame3f& frame, const vec3f& transl, const vec2f& rotate);
 ~~~
 
 FPS camera for UI navigation for a frame parametrization.
+
+### Random number generation
 
 #### Struct rng_pcg32
 
@@ -4293,6 +4262,8 @@ inline bool operator!=(const rng_pcg32& a, const rng_pcg32& b);
 
 Inequality operator
 
+### Monte Carlo sampling
+
 #### Function sample_hemisphere()
 
 ~~~ .cpp
@@ -4344,7 +4315,7 @@ pdf for hemispherical direction with cosine distribution
 #### Function sample_hemisphere_cospower()
 
 ~~~ .cpp
-inline vec3f sample_hemisphere_cospower(const vec2f& ruv, float n);
+inline vec3f sample_hemisphere_cospower(float n, const vec2f& ruv);
 ~~~
 
 hemispherical direction with cosine power distribution
@@ -4352,7 +4323,7 @@ hemispherical direction with cosine power distribution
 #### Function sample_hemisphere_cospower_pdf()
 
 ~~~ .cpp
-inline float sample_hemisphere_cospower_pdf(const vec3f& w, float n);
+inline float sample_hemisphere_cospower_pdf(float n, const vec3f& w);
 ~~~
 
 pdf for hemispherical direction with cosine power distribution
@@ -4401,7 +4372,7 @@ uniform triangle
 
 ~~~ .cpp
 inline vec3f sample_triangle(
-    const vec2f& ruv, const vec3f& v0, const vec3f& v1, const vec3f& v2);
+    const vec3f& v0, const vec3f& v1, const vec3f& v2, const vec2f& ruv);
 ~~~
 
 uniform triangle
@@ -4418,7 +4389,7 @@ pdf for uniform triangle (triangle area)
 #### Function sample_index()
 
 ~~~ .cpp
-inline int sample_index(float r, int size);
+inline int sample_index(int size, float r);
 ~~~
 
 index with uniform distribution
@@ -4430,6 +4401,24 @@ inline float sample_index_pdf(int size);
 ~~~
 
 pdf for index with uniform distribution
+
+#### Function sample_discrete()
+
+~~~ .cpp
+inline int sample_discrete(const vector<float>& cdf, float r);
+~~~
+
+sample a discrete distribution represented by its cdf
+
+#### Function sample_discrete_pdf()
+
+~~~ .cpp
+inline float sample_discrete_pdf(const vector<float>& cdf, int idx);
+~~~
+
+sample a discrete distribution represented by its cdf
+
+### Hashing
 
 #### Function hash_permute()
 
@@ -4481,6 +4470,8 @@ inline size_t hash_combine(size_t a, size_t b);
 
 Combines two 64 bit hashes as in boost::hash_combine
 
+### Perlin noise
+
 #### Function perlin_noise()
 
 ~~~ .cpp
@@ -4522,6 +4513,8 @@ float perlin_turbulence_noise(const vec3f& p, float lacunarity = 2.0f,
 
 Fractal turbulence noise - see perlin_noise() for params.
 
+### Python-like iterators
+
 #### Function range_()
 
 ~~~ .cpp
@@ -4555,6 +4548,8 @@ inline enumerate_generator<T> enumerate_(vector<T>& vv);
 ~~~
 
 Python-like range
+
+### Container operations
 
 #### Function append()
 
@@ -4664,6 +4659,8 @@ inline bool contains(const unordered_set<K, V>& v, const K1& vv);
 
 Checks if a containers contains a value
 
+### Geometry utilities
+
 #### Function line_tangent()
 
 ~~~ .cpp
@@ -4728,51 +4725,59 @@ not the normal). Follows the definition in
 http://www.terathon.com/code/tangent.html and
 https://gist.github.com/aras-p/2843984
 
-#### Function eval_barycentric_point()
+#### Function interpolate_point()
 
 ~~~ .cpp
-template <typename T, typename T1>
-inline T eval_barycentric_point(const vector<T>& vals, const int& p, T1 w);
+template <typename T>
+inline T interpolate_point(const vector<T>& vals, int p);
 ~~~
 
-line barycentric interpolation
+Point interpolation. Here only for completeness.
 
-#### Function eval_barycentric_line()
+#### Function interpolate_line()
 
 ~~~ .cpp
 template <typename T, typename T1>
-inline T eval_barycentric_line(
-    const vector<T>& vals, const vec2i& l, const vec<T1, 2>& w);
+inline T interpolate_line(const T& v0, const T& v1, const T1 u);
 ~~~
 
-line barycentric interpolation
+Line interpolation. Same as lerp.
 
-#### Function eval_barycentric_triangle()
+#### Function interpolate_line()
 
 ~~~ .cpp
 template <typename T, typename T1>
-inline T eval_barycentric_triangle(
-    const vector<T>& vals, const vec3i& t, const vec<T1, 3>& w);
+inline T interpolate_line(const vector<T>& vals, const vec2i& l, T1 u);
 ~~~
 
-triangle barycentric interpolation
+Line interpolation. Same as lerp.
 
-#### Function eval_barycentric_tetra()
+#### Function interpolate_triangle()
 
 ~~~ .cpp
 template <typename T, typename T1>
-inline T eval_barycentric_tetra(
-    const vector<T>& vals, const vec4i& t, const vec<T1, 4>& w);
+inline T interpolate_triangle(
+    const T& v0, const T& v1, const T& v2, const vec<T1, 2>& uv);
 ~~~
 
-tetrahedron barycentric interpolation
+Triangle interpolation using (v1-v0) and (v2-v0) as u and v directions.
 
-#### Function eval_barycentric_quad()
+#### Function interpolate_triangle()
 
 ~~~ .cpp
 template <typename T, typename T1>
-inline T eval_barycentric_quad(
-    const vector<T>& vals, const vec4i& t, const vec<T1, 4>& w);
+inline T interpolate_triangle(
+    const vector<T>& vals, const vec3i& t, const vec<T1, 2>& uv);
+~~~
+
+Triangle interpolation using (v1-v0) and (v2-v0) as u and v directions.
+
+#### Function interpolate_quad()
+
+~~~ .cpp
+template <typename T, typename T1>
+inline T interpolate_quad(
+    const vector<T>& vals, const vec4i& t, const vec<T1, 2>& uv);
 ~~~
 
 quad interpolation based on the two-triangle representation
@@ -4795,44 +4800,46 @@ inline T eval_bernstein_derivative(T u, int i, int degree);
 
 bernstein polynomials (for Bezier)
 
-#### Function eval_bezier_cubic()
+#### Function interpolate_bezier()
 
 ~~~ .cpp
 template <typename T, typename T1>
-inline T eval_bezier_cubic(
+inline T interpolate_bezier(
     const T& v0, const T& v1, const T& v2, const T& v3, T1 u);
 ~~~
 
 eval bezier
 
-#### Function eval_bezier_cubic()
+#### Function interpolate_bezier()
 
 ~~~ .cpp
 template <typename T, typename T1>
-inline T eval_bezier_cubic(const vector<T>& vals, const vec4i& b, T1 u);
+inline T interpolate_bezier(const vector<T>& vals, const vec4i& b, T1 u);
 ~~~
 
 eval bezier
 
-#### Function eval_bezier_cubic_derivative()
+#### Function interpolate_bezier_derivative()
 
 ~~~ .cpp
 template <typename T, typename T1>
-inline T eval_bezier_cubic_derivative(
+inline T interpolate_bezier_derivative(
     const T& v0, const T& v1, const T& v2, const T& v3, T1 u);
 ~~~
 
 eval bezier derivative
 
-#### Function eval_bezier_cubic_derivative()
+#### Function interpolate_bezier_derivative()
 
 ~~~ .cpp
 template <typename T, typename T1>
-inline T eval_bezier_cubic_derivative(
+inline T interpolate_bezier_derivative(
     const vector<T>& vals, const vec4i& b, T1 u);
 ~~~
 
 eval bezier derivative
+
+### Animation utilities
 
 #### Function eval_keyframed_step()
 
@@ -4863,6 +4870,8 @@ inline T eval_keyframed_bezier(
 ~~~
 
 Evalautes a keyframed value using bezier interpolation
+
+### Shape utilities
 
 #### Function compute_normals()
 
@@ -5119,10 +5128,12 @@ vector<T> facet_vert(const vector<T>& vert, const vector<int>& vmap);
 
 Unshare vertices for faceting. Instanced for vec and float types.
 
+### Shape sampling
+
 #### Function sample_points()
 
 ~~~ .cpp
-int sample_points(int npoints, float re);
+inline int sample_points(int npoints, float re);
 ~~~
 
 Pick a point
@@ -5138,7 +5149,7 @@ Compute a distribution for sampling points uniformly
 #### Function sample_points()
 
 ~~~ .cpp
-int sample_points(const vector<float>& cdf, float re);
+inline int sample_points(const vector<float>& cdf, float re);
 ~~~
 
 Pick a point
@@ -5155,7 +5166,8 @@ Compute a distribution for sampling lines uniformly
 #### Function sample_lines()
 
 ~~~ .cpp
-pair<int, vec2f> sample_lines(const vector<float>& cdf, float re, float ruv);
+inline pair<int, float> sample_lines(
+    const vector<float>& cdf, float re, float ru);
 ~~~
 
 Pick a point on lines
@@ -5172,7 +5184,7 @@ Compute a distribution for sampling triangle meshes uniformly
 #### Function sample_triangles()
 
 ~~~ .cpp
-pair<int, vec3f> sample_triangles(
+inline pair<int, vec2f> sample_triangles(
     const vector<float>& cdf, float re, const vec2f& ruv);
 ~~~
 
@@ -5190,7 +5202,7 @@ Compute a distribution for sampling quad meshes uniformly
 #### Function sample_quads()
 
 ~~~ .cpp
-pair<int, vec4f> sample_quads(
+inline pair<int, vec2f> sample_quads(
     const vector<float>& cdf, float re, const vec2f& ruv);
 ~~~
 
@@ -5208,6 +5220,8 @@ tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>> sample_triangles_points(
 Samples a set of points over a triangle mesh uniformly. The rng function
 takes the point index and returns vec3f numbers uniform directibuted in
 [0,1]^3. unorm and texcoord are optional.
+
+### Example shapes
 
 #### Function make_sphere()
 
@@ -5427,6 +5441,8 @@ make_hair(int num, int tesselation, const vector<vec3i>& striangles,
 
 Make a hair ball around a shape. Returns lines, pos, norm, texcoord, radius.
 
+### Image containers
+
 #### Struct image
 
 ~~~ .cpp
@@ -5561,6 +5577,18 @@ inline image<T> make_image(int w, int h, T* vals);
 
 Create an image with values stored in an array in scanliine order.
 
+#### Function make_image()
+
+~~~ .cpp
+template <typename T>
+inline image<vec<T, 4>> make_image(
+    int w, int h, int nc, const T* vals, const vec<T, 4>& def);
+~~~
+
+Create a 4 channel image with the given number of channels
+
+### Image operations
+
 #### Function srgb_to_linear()
 
 ~~~ .cpp
@@ -5657,6 +5685,8 @@ vec4b hsv_to_rgb(const vec4b& hsv);
 ~~~
 
 Convert HSV to RGB
+
+### Example images
 
 #### Function make_grid_image()
 
@@ -5789,6 +5819,8 @@ image4b make_turbulence_image(int resx, int resy, float scale = 1,
 ~~~
 
 Make a noise image. Wrap works only if both resx and resy are powers of two.
+
+### Image loading and saving
 
 #### Function is_hdr_filename()
 
@@ -5961,6 +5993,8 @@ void resize_image(const image4b& img, image4b& res_img,
 
 Resize image.
 
+### Ray-primitive intersection
+
 #### Function intersect_point()
 
 ~~~ .cpp
@@ -5986,7 +6020,7 @@ http://geomalgorithms.com/a07-distance.html#
 
 ~~~ .cpp
 bool intersect_triangle(const ray3f& ray, const vec3f& v0, const vec3f& v1,
-    const vec3f& v2, float& ray_t, vec3f& euv);
+    const vec3f& v2, float& ray_t, vec2f& euv);
 ~~~
 
 Intersect a ray with a triangle
@@ -5995,7 +6029,7 @@ Intersect a ray with a triangle
 
 ~~~ .cpp
 bool intersect_quad(const ray3f& ray, const vec3f& v0, const vec3f& v1,
-    const vec3f& v2, const vec3f& v3, float& ray_t, vec4f& euv);
+    const vec3f& v2, const vec3f& v3, float& ray_t, vec2f& euv);
 ~~~
 
 Intersect a ray with a quad represented as two triangles (0,1,3) and
@@ -6004,17 +6038,6 @@ Intersect a ray with a quad represented as two triangles (0,1,3) and
 to 1. This is equivalent to Intel's Embree. The external user does not have
 to be concerned about the parametrization and can just use the euv as
 specified.
-
-#### Function intersect_tetrahedron()
-
-~~~ .cpp
-bool intersect_tetrahedron(const ray3f& ray_, const vec3f& v0, const vec3f& v1,
-    const vec3f& v2, const vec3f& v3, float& ray_t, vec4f& euv);
-~~~
-
-Intersect a ray with a tetrahedron. Note that we consider only
-intersection wiht the tetrahedra surface and discount intersction with
-the interior.
 
 #### Function intersect_check_bbox()
 
@@ -6035,6 +6058,10 @@ Intersect a ray with a axis-aligned bounding box
 Implementation Notes:
 - based on "Robust BVH Ray Traversal" by T. Ize published at
 http://jcgt.org/published/0002/02/02/paper.pdf
+
+### Point-primitive overlap
+
+### Bounding volume hierarchy
 
 #### Enum bvh_node_type : uint32_t
 
@@ -6207,7 +6234,7 @@ Recursively recomputes the node bounds for a scene bvh
 
 ~~~ .cpp
 bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray, bool early_exit,
-    float& ray_t, int& iid, int& sid, int& eid, vec4f& ew);
+    float& ray_t, int& iid, int& sid, int& eid, vec2f& euv);
 ~~~
 
 Intersect ray with a bvh.
@@ -6216,7 +6243,7 @@ Intersect ray with a bvh.
 
 ~~~ .cpp
 bool overlap_bvh(const bvh_tree* bvh, const vec3f& pos, float max_dist,
-    bool early_exit, float& dist, int& iid, int& sid, int& eid, vec4f& ew);
+    bool early_exit, float& dist, int& iid, int& sid, int& eid, vec2f& euv);
 ~~~
 
 Finds the closest element with a bvh.
@@ -6229,7 +6256,7 @@ struct intersection_point {
     int iid = -1;
     int sid = -1;
     int eid = -1;
-    vec4f euv = zero4f;
+    vec2f euv = zero2f;
     operator bool() const; 
 }
 ~~~
@@ -6262,6 +6289,8 @@ intersection_point overlap_bvh(
 ~~~
 
 Finds the closest element with a bvh (convenience wrapper).
+
+### Simple scene
 
 #### Struct texture
 
@@ -6565,7 +6594,7 @@ Node hierarchy
     - cam:      node camera
     - ist:      node instance
     - env:      node environment
-    - children_:      child nodes
+    - children_:      child nodes (computed value)
 
 
 #### Enum keyframe_type
@@ -6673,7 +6702,7 @@ Scene
 #### Function eval_pos()
 
 ~~~ .cpp
-vec3f eval_pos(const shape* shp, int eid, const vec4f& euv);
+vec3f eval_pos(const shape* shp, int eid, const vec2f& euv);
 ~~~
 
 Shape position interpolated using barycentric coordinates
@@ -6681,7 +6710,7 @@ Shape position interpolated using barycentric coordinates
 #### Function eval_norm()
 
 ~~~ .cpp
-vec3f eval_norm(const shape* shp, int eid, const vec4f& euv);
+vec3f eval_norm(const shape* shp, int eid, const vec2f& euv);
 ~~~
 
 Shape normal interpolated using barycentric coordinates
@@ -6689,7 +6718,7 @@ Shape normal interpolated using barycentric coordinates
 #### Function eval_texcoord()
 
 ~~~ .cpp
-vec2f eval_texcoord(const shape* shp, int eid, const vec4f& euv);
+vec2f eval_texcoord(const shape* shp, int eid, const vec2f& euv);
 ~~~
 
 Shape texcoord interpolated using barycentric coordinates
@@ -6697,7 +6726,7 @@ Shape texcoord interpolated using barycentric coordinates
 #### Function eval_color()
 
 ~~~ .cpp
-vec4f eval_color(const shape* shp, int eid, const vec4f& euv);
+vec4f eval_color(const shape* shp, int eid, const vec2f& euv);
 ~~~
 
 Shape color interpolated using barycentric coordinates
@@ -6705,7 +6734,7 @@ Shape color interpolated using barycentric coordinates
 #### Function eval_radius()
 
 ~~~ .cpp
-float eval_radius(const shape* shp, int eid, const vec4f& euv);
+float eval_radius(const shape* shp, int eid, const vec2f& euv);
 ~~~
 
 Shape radius interpolated using barycentric coordinates
@@ -6713,7 +6742,7 @@ Shape radius interpolated using barycentric coordinates
 #### Function eval_tangsp()
 
 ~~~ .cpp
-vec4f eval_tangsp(const shape* shp, int eid, const vec4f& euv);
+vec4f eval_tangsp(const shape* shp, int eid, const vec2f& euv);
 ~~~
 
 Shape tangent space interpolated using barycentric coordinates
@@ -6721,7 +6750,7 @@ Shape tangent space interpolated using barycentric coordinates
 #### Function eval_pos()
 
 ~~~ .cpp
-vec3f eval_pos(const instance* ist, int sid, int eid, const vec4f& euv);
+vec3f eval_pos(const instance* ist, int sid, int eid, const vec2f& euv);
 ~~~
 
 Instance position interpolated using barycentric coordinates
@@ -6729,7 +6758,7 @@ Instance position interpolated using barycentric coordinates
 #### Function eval_norm()
 
 ~~~ .cpp
-vec3f eval_norm(const instance* ist, int sid, int eid, const vec4f& euv);
+vec3f eval_norm(const instance* ist, int sid, int eid, const vec2f& euv);
 ~~~
 
 Instance normal interpolated using barycentric coordinates
@@ -7001,6 +7030,8 @@ void save_scene(
 
 Saves a scene. For now OBJ and glTF are supported.
 Throws an exception if an error occurs.
+
+### Example scenes
 
 #### Function make_cornell_box_scene()
 
@@ -7576,6 +7607,8 @@ void save_test_scene(const string& filename, const test_scene_params& scn);
 
 Save test scene
 
+### Path-tracing support
+
 #### Function specular_exponent_to_roughness()
 
 ~~~ .cpp
@@ -7682,6 +7715,8 @@ inline float filter_mitchell(float x);
 ~~~
 
 mitchell filter (public domain from stb_image_resize)
+
+### Path tracing
 
 #### Enum trace_shader_type
 
@@ -7949,6 +7984,8 @@ void trace_async_stop(vector<std::thread>& threads, bool& stop_flag);
 
 Stop the asynchronous renderer.
 
+### Wavefront OBJ
+
 #### Struct obj_vertex
 
 ~~~ .cpp
@@ -7981,7 +8018,6 @@ enum struct obj_element_type : uint16_t {
     line = 2,
     face = 3,
     bezier = 4,
-    tetra = 5,
 }
 ~~~
 
@@ -7992,7 +8028,6 @@ element type
     - line:      polylines
     - face:      polygon faces
     - bezier:      bezier segments
-    - tetra:      tetrahedrons
 
 
 #### Struct obj_element
@@ -8020,10 +8055,9 @@ struct obj_group {
     string matname;
     string groupname;
     bool smoothing = true;
-    int subdivision_level = 0;
-    bool subdivision_catmullclark = false;
     vector<obj_vertex> verts;
     vector<obj_element> elems;
+    unordered_map<string, vector<string>> props;
 }
 ~~~
 
@@ -8033,10 +8067,9 @@ Element group
     - matname:      material name
     - groupname:      group name
     - smoothing:      smoothing
-    - subdivision_level:      number of times to subdivide
-    - subdivision_catmullclark:      whether to use Catmull-Clark subdivision
     - verts:      element vertices
     - elems:      element faces
+    - props:      the rest of the properties [extension]
 
 
 #### Struct obj_object
@@ -8044,7 +8077,9 @@ Element group
 ~~~ .cpp
 struct obj_object {
     string name;
-    vector<obj_group> groups;
+    vector<obj_group*> groups;
+    unordered_map<string, vector<string>> props;
+    ~obj_object(); 
 }
 ~~~
 
@@ -8053,6 +8088,8 @@ Obj object
 - Members:
     - name:      object name
     - groups:      element groups
+    - props:      the rest of the properties [extension]
+    - ~obj_object():      cleanup
 
 
 #### Struct obj_texture_info
@@ -8062,7 +8099,7 @@ struct obj_texture_info {
     string path = "";
     bool clamp = false;
     float scale = 1;
-    unordered_map<string, vector<string>> unknown_props;
+    unordered_map<string, vector<string>> props;
 }
 ~~~
 
@@ -8072,7 +8109,7 @@ Texture information for OBJ
     - path:      the texture path
     - clamp:      whether to clamp tp th edge
     - scale:      the scale for bump and displacement
-    - unknown_props:      the rest of the unknown properties
+    - props:      the rest of the properties
 
 
 #### Struct obj_texture
@@ -8126,7 +8163,7 @@ struct obj_material {
     obj_texture_info bump_txt;
     obj_texture_info disp_txt;
     obj_texture_info norm_txt;
-    unordered_map<string, vector<string>> unknown_props;
+    unordered_map<string, vector<string>> props;
 }
 ~~~
 
@@ -8156,7 +8193,7 @@ OBJ material
     - bump_txt:      bump map texture (heighfield)
     - disp_txt:      displacement map texture (heighfield)
     - norm_txt:      normal map texture
-    - unknown_props:      unknown string props
+    - props:      the rest of the properties
 
 
 #### Struct obj_camera
@@ -8252,7 +8289,7 @@ struct obj_scene {
 }
 ~~~
 
-OBJ asset
+OBJ scene
 
 - Members:
     - pos:      vertex positions
@@ -8307,66 +8344,7 @@ Save OBJ
 - Returns:
     - whether an error occurred
 
-#### Struct obj_shape
-
-~~~ .cpp
-struct obj_shape {
-    string name = "";
-    string matname = "";
-    vector<int> points;
-    vector<vec2i> lines;
-    vector<vec3i> triangles;
-    vector<vec4i> bezier;
-    vector<vec4i> tetras;
-    vector<vec3f> pos;
-    vector<vec3f> norm;
-    vector<vec2f> texcoord;
-    vector<vec4f> color;
-    vector<float> radius;
-}
-~~~
-
-Shape. May contain only one of the points/lines/triangles.
-
-- Members:
-    - name:      name of the group that enclosed it
-    - matname:      name of the material
-    - points:      points
-    - lines:      lines
-    - triangles:      triangles
-    - bezier:      bezier
-    - tetras:      tetrahedrons
-    - pos:      per-vertex position (3 float)
-    - norm:      per-vertex normals (3 float)
-    - texcoord:      per-vertex texcoord (2 float)
-    - color:      [extension] per-vertex color (4 float)
-    - radius:      [extension] per-vertex radius (1 float)
-
-
-#### Struct obj_mesh
-
-~~~ .cpp
-struct obj_mesh {
-    vector<obj_shape> shapes;
-    ~obj_mesh(); 
-}
-~~~
-
-Mesh
-
-- Members:
-    - shapes:      primitives
-    - ~obj_mesh():      cleanup
-
-
-#### Function get_mesh()
-
-~~~ .cpp
-obj_mesh* get_mesh(
-    const obj_scene* model, const obj_object& oobj, bool facet_non_smooth);
-~~~
-
-Gets a mesh from an OBJ object.
+### Khronos glTF
 
 #### Typedef buffer_data
 
@@ -9454,6 +9432,8 @@ A view for gltf array buffers that allows for typed access.
     - geti():      get the c-th component of the idx-th element as integer
 
 
+### Svg
+
 #### Struct svg_path
 
 ~~~ .cpp
@@ -9515,6 +9495,8 @@ void save_svg(const string& filename, const svg_scene* svg);
 ~~~
 
 Save SVG
+
+### String, path and file functions
 
 #### Function startswith()
 
@@ -9752,6 +9734,8 @@ inline void println(const string& fmt, const Args&... args);
 
 Wrapper for the above function that prints to stdout with endline.
 
+### File loading and saving
+
 #### Function load_binary()
 
 ~~~ .cpp
@@ -9784,6 +9768,8 @@ inline void save_text(const string& filename, const string& str);
 ~~~
 
 Saves a string to a text file.
+
+### Immediate-mode command line parser
 
 #### Struct cmdline_parser
 
@@ -9857,6 +9843,8 @@ inline cmdline_parser make_parser(
 ~~~
 
 initialize the command line
+
+### Simple logging
 
 #### Struct logger
 
@@ -9983,6 +9971,8 @@ inline void log_fatal(const string& msg, const Args&... args);
 
 Logs a message to the default loggers
 
+### Simple timer
+
 #### Struct timer
 
 ~~~ .cpp
@@ -10002,6 +9992,8 @@ A simple wrapper for std::chrono.
     - stop():      stops a timer
     - elapsed():      elapsed time
 
+
+### OpenGL utilities
 
 #### Enum gl_elem_type : int
 
@@ -10333,6 +10325,8 @@ Texture information for parameter setting.
     - gl_texture_info():      constructor from texture id only
 
 
+### OpenGL vertex array buffers
+
 #### Struct gl_vertex_buffer
 
 ~~~ .cpp
@@ -10490,6 +10484,8 @@ void clear_vertex_buffer(gl_vertex_buffer& buf);
 
 Destroys the buffer
 
+### OpenGL element array buffers
+
 #### Struct gl_element_buffer
 
 ~~~ .cpp
@@ -10585,6 +10581,8 @@ void clear_element_buffer(gl_element_buffer& buf);
 ~~~
 
 Destroys the buffer
+
+### OpenGL programs
 
 #### Struct gl_program
 
@@ -10918,6 +10916,8 @@ void unbind_program(const gl_program& prog);
 
 Unbind a program
 
+### OpenGL scene shader support
+
 #### Struct gl_shape
 
 ~~~ .cpp
@@ -10976,6 +10976,8 @@ void update_shapes(const scene* scn, unordered_map<shape*, gl_shape>& shapes,
 ~~~
 
 Update scene shapes on the GPU.
+
+### OpenGL image shader
 
 #### Struct gl_stdimage_program
 
@@ -11048,6 +11050,8 @@ inline void draw_image(gl_stdimage_program& prog, const gl_texture& txt,
 ~~~
 
 As above but includes an exposure/gamma correction.
+
+### OpenGL surface shader
 
 #### Struct gl_stdsurface_program
 
@@ -11267,6 +11271,8 @@ void draw_stdsurface_scene(const scene* scn, const camera* cam,
 
 Draw whole scene
 
+### OpenGL window
+
 #### Function void()
 
 ~~~ .cpp
@@ -11453,6 +11459,8 @@ bool handle_camera_navigation(gl_window* win, camera* cam, bool navigation_fps);
 ~~~
 
 Handle camera navigation.
+
+### OpenGL widgets
 
 #### Function init_widgets()
 
@@ -11672,27 +11680,38 @@ bool draw_color_widget(gl_window* win, const string& lbl, vec3f& val);
 
 Color widget
 
-#### Function draw_combo_begin()
+#### Function draw_combo_widget_begin()
 
 ~~~ .cpp
-bool draw_combo_begin(gl_window* win, const string& lbl, const string& label);
+bool draw_combo_widget_begin(
+    gl_window* win, const string& lbl, const string& label);
 ~~~
 
 Combo widget
 
-#### Function draw_combo_item()
+#### Function draw_combo_widget_item()
 
 ~~~ .cpp
-bool draw_combo_item(
+bool draw_combo_widget_item(
     gl_window* win, const string& label, int idx, bool selected);
 ~~~
 
 Combo widget
 
-#### Function draw_combo_end()
+#### Function draw_combo_widget_end()
 
 ~~~ .cpp
-void draw_combo_end(gl_window* win);
+void draw_combo_widget_end(gl_window* win);
+~~~
+
+Combo widget
+
+#### Function draw_combo_widget_item()
+
+~~~ .cpp
+template <typename T>
+bool draw_combo_widget_item(
+    gl_window* win, const string& label, int idx, T& val, const T& item);
 ~~~
 
 Combo widget
@@ -11723,6 +11742,16 @@ Combo widget
 template <typename T>
 inline bool draw_value_widget(gl_window* win, const string& lbl, T& val,
     const vector<pair<string, T>>& labels);
+~~~
+
+Combo widget
+
+#### Function draw_value_widget()
+
+~~~ .cpp
+template <typename T>
+inline bool draw_value_widget(gl_window* win, const string& lbl, T*& val,
+    const vector<T*>& vals, bool extra = true, T* extra_val = nullptr);
 ~~~
 
 Combo widget

@@ -195,10 +195,10 @@ functions targeting path tracing and shape generations.</p>
 manipulation useful to support scene viewing and path tracing.</p>
 <ol>
 <li>compute line tangents, and triangle and quad areas and normals</li>
-<li>compute barycentric interpolation with <code>eval_barycentric_line()</code>,
-   <code>eval_barycentric_triangle()</code> and <code>eval_barycentric_quad()</code></li>
-<li>evaluate Bezier curve and derivatives with <code>eval_bezier_cubic()</code> and
-   <code>eval_bezier_cubic_derivative()</code></li>
+<li>interpolate values over primitives with <code>eval_line()</code>,
+   <code>eval_triangle()</code> and <code>eval_quad()</code></li>
+<li>evaluate Bezier curves and derivatives with <code>eval_bezier()</code> and
+   <code>eval_bezier_derivative()</code></li>
 <li>compute smooth normals and tangents with <code>compute_normals()</code></li>
 <li>compute tangent frames from texture coordinates with
    <code>compute_tangent_space()</code></li>
@@ -559,6 +559,7 @@ and bug fixes are reported here.</p>
 <li>v 0.1.0: initial release after refactoring</li>
 </ul>
 <h2>API Documentation</h2>
+<h3>Imported math functions</h3>
 <h4>Function Alias sqrt()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">using</span> <span class="n">std</span><span class="o">::</span><span class="n">sqrt</span><span class="p">;</span>
 </code></pre></div>
@@ -667,6 +668,7 @@ and bug fixes are reported here.</p>
 
 
 <p>isfinate</p>
+<h3>Imported containers and related functions</h3>
 <h4>Function Alias string()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">using</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">;</span>
 </code></pre></div>
@@ -819,6 +821,13 @@ and bug fixes are reported here.</p>
 
 
 <p>cout object for printing</p>
+<h4>Function Alias tie()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">using</span> <span class="n">std</span><span class="o">::</span><span class="n">tie</span><span class="p">;</span>
+</code></pre></div>
+
+
+<p>tie function for tuple usage</p>
+<h3>Basic typedefs, math constants and functions</h3>
 <h4>Typedef byte</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">using</span> <span class="n">byte</span> <span class="o">=</span> <span class="kt">unsigned</span> <span class="kt">char</span><span class="p">;</span>
 </code></pre></div>
@@ -874,77 +883,56 @@ and bug fixes are reported here.</p>
 
 <p>shortcat for int min value</p>
 <h4>Function min()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">int</span> <span class="nf">min</span><span class="p">(</span><span class="kt">int</span> <span class="n">x</span><span class="p">,</span> <span class="kt">int</span> <span class="n">y</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="n">T</span> <span class="n">min</span><span class="p">(</span><span class="n">T</span> <span class="n">x</span><span class="p">,</span> <span class="n">T</span> <span class="n">y</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Safe minimum value.</p>
 <h4>Function min()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">float</span> <span class="nf">min</span><span class="p">(</span><span class="kt">float</span> <span class="n">x</span><span class="p">,</span> <span class="kt">float</span> <span class="n">y</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Safe minimum value.</p>
-<h4>Function min()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">int</span> <span class="nf">min</span><span class="p">(</span><span class="n">initializer_list</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">vs</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Safe minimum value.</p>
-<h4>Function min()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">float</span> <span class="nf">min</span><span class="p">(</span><span class="n">initializer_list</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;</span> <span class="n">vs</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="n">T</span> <span class="n">min</span><span class="p">(</span><span class="n">initializer_list</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="n">vs</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Safe minimum value.</p>
 <h4>Function max()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">int</span> <span class="nf">max</span><span class="p">(</span><span class="kt">int</span> <span class="n">x</span><span class="p">,</span> <span class="kt">int</span> <span class="n">y</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="n">T</span> <span class="n">max</span><span class="p">(</span><span class="n">T</span> <span class="n">x</span><span class="p">,</span> <span class="n">T</span> <span class="n">y</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Safe maximum value.</p>
 <h4>Function max()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">float</span> <span class="nf">max</span><span class="p">(</span><span class="kt">float</span> <span class="n">x</span><span class="p">,</span> <span class="kt">float</span> <span class="n">y</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Safe maximum value.</p>
-<h4>Function max()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">int</span> <span class="nf">max</span><span class="p">(</span><span class="n">initializer_list</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">vs</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Safe maximum value.</p>
-<h4>Function max()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">float</span> <span class="nf">max</span><span class="p">(</span><span class="n">initializer_list</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;</span> <span class="n">vs</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="n">T</span> <span class="n">max</span><span class="p">(</span><span class="n">initializer_list</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span> <span class="n">vs</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Safe maximum value.</p>
 <h4>Function clamp()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">int</span> <span class="nf">clamp</span><span class="p">(</span><span class="kt">int</span> <span class="n">x</span><span class="p">,</span> <span class="kt">int</span> <span class="n">min_</span><span class="p">,</span> <span class="kt">int</span> <span class="n">max_</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Clamp a value between a minimum and a maximum.</p>
-<h4>Function clamp()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">float</span> <span class="nf">clamp</span><span class="p">(</span><span class="kt">float</span> <span class="n">x</span><span class="p">,</span> <span class="kt">float</span> <span class="n">min_</span><span class="p">,</span> <span class="kt">float</span> <span class="n">max_</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="n">T</span> <span class="n">clamp</span><span class="p">(</span><span class="n">T</span> <span class="n">x</span><span class="p">,</span> <span class="n">T</span> <span class="n">min_</span><span class="p">,</span> <span class="n">T</span> <span class="n">max_</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Clamp a value between a minimum and a maximum.</p>
 <h4>Function lerp()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">float</span> <span class="nf">lerp</span><span class="p">(</span><span class="kt">float</span> <span class="n">a</span><span class="p">,</span> <span class="kt">float</span> <span class="n">b</span><span class="p">,</span> <span class="kt">float</span> <span class="n">t</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="k">typename</span> <span class="n">T1</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="n">T</span> <span class="n">lerp</span><span class="p">(</span><span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">a</span><span class="p">,</span> <span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">b</span><span class="p">,</span> <span class="n">T1</span> <span class="n">u</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Linear interpolation.</p>
 <h4>Function bilerp()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">float</span> <span class="nf">bilerp</span><span class="p">(</span><span class="kt">float</span> <span class="n">aa</span><span class="p">,</span> <span class="kt">float</span> <span class="n">ba</span><span class="p">,</span> <span class="kt">float</span> <span class="n">ab</span><span class="p">,</span> <span class="kt">float</span> <span class="n">bb</span><span class="p">,</span> <span class="kt">float</span> <span class="n">s</span><span class="p">,</span> <span class="kt">float</span> <span class="n">t</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="k">typename</span> <span class="n">T1</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">float</span> <span class="n">bilerp</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">a</span><span class="p">,</span> <span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">b</span><span class="p">,</span> <span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">c</span><span class="p">,</span> <span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">d</span><span class="p">,</span> <span class="n">T1</span> <span class="n">u</span><span class="p">,</span> <span class="n">T1</span> <span class="n">v</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>bilinear interpolation</p>
+<p>Bilinear interpolation. Order is specified like quads counter-clockwise,
+so a,b,c,d correspond to parameters (0,0), (0,1), (1,1), (0,1)</p>
 <h4>Function pow2()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">int</span> <span class="nf">pow2</span><span class="p">(</span><span class="kt">int</span> <span class="n">x</span><span class="p">);</span>
 </code></pre></div>
@@ -969,6 +957,7 @@ and bug fixes are reported here.</p>
 
 
 <p>Safe byte to float conversion</p>
+<h3>Fixed-size vectors</h3>
 <h4>Struct vec</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="kt">int</span> <span class="n">N</span><span class="o">&gt;</span>
 <span class="k">struct</span> <span class="n">vec</span><span class="p">;</span>
@@ -977,7 +966,7 @@ and bug fixes are reported here.</p>
 
 <p>Generic vector of N elements. This is used only to define template
 specializations for small fixed sized vectors.</p>
-<h4>Struct vec &lt;T, 1 ></h4>
+<h4>Struct vec&lt;T, 1></h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
 <span class="k">struct</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">1</span><span class="o">&gt;</span> <span class="p">{</span>
     <span class="n">vec</span><span class="p">();</span> 
@@ -1000,7 +989,7 @@ specializations for small fixed sized vectors.</p>
 </ul>
 </li>
 </ul>
-<h4>Struct vec &lt;T, 2 ></h4>
+<h4>Struct vec&lt;T, 2></h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
 <span class="k">struct</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">2</span><span class="o">&gt;</span> <span class="p">{</span>
     <span class="n">vec</span><span class="p">();</span> 
@@ -1027,7 +1016,7 @@ specializations for small fixed sized vectors.</p>
 </ul>
 </li>
 </ul>
-<h4>Struct vec &lt;T, 3 ></h4>
+<h4>Struct vec&lt;T, 3></h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
 <span class="k">struct</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;</span> <span class="p">{</span>
     <span class="n">vec</span><span class="p">();</span> 
@@ -1056,7 +1045,7 @@ specializations for small fixed sized vectors.</p>
 </ul>
 </li>
 </ul>
-<h4>Struct vec &lt;T, 4 ></h4>
+<h4>Struct vec&lt;T, 4></h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
 <span class="k">struct</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;</span> <span class="p">{</span>
     <span class="n">vec</span><span class="p">();</span> 
@@ -1319,21 +1308,21 @@ specializations for small fixed sized vectors.</p>
 
 
 <p>vector operator !=</p>
-<h4>Function operator &lt;()</h4>
+<h4>Function operator&lt;()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
 <span class="kr">inline</span> <span class="kt">bool</span> <span class="k">operator</span><span class="o">&lt;</span><span class="p">(</span><span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">2</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">2</span><span class="o">&gt;&amp;</span> <span class="n">b</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>vector operator &lt; (lexicographic order - useful for map)</p>
-<h4>Function operator &lt;()</h4>
+<h4>Function operator&lt;()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
 <span class="kr">inline</span> <span class="kt">bool</span> <span class="k">operator</span><span class="o">&lt;</span><span class="p">(</span><span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">b</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>vector operator &lt; (lexicographic order - useful for map)</p>
-<h4>Function operator &lt;()</h4>
+<h4>Function operator&lt;()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
 <span class="kr">inline</span> <span class="kt">bool</span> <span class="k">operator</span><span class="o">&lt;</span><span class="p">(</span><span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;&amp;</span> <span class="n">b</span><span class="p">);</span>
 </code></pre></div>
@@ -1662,31 +1651,9 @@ specializations for small fixed sized vectors.</p>
 
 
 <p>angle between vectors</p>
-<h4>Function lerp()</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="kt">int</span> <span class="n">N</span><span class="p">,</span> <span class="k">typename</span> <span class="n">T1</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;</span> <span class="n">lerp</span><span class="p">(</span><span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">b</span><span class="p">,</span> <span class="n">T1</span> <span class="n">t</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>vector linear interpolation</p>
-<h4>Function bilerp()</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="kt">int</span> <span class="n">N</span><span class="p">,</span> <span class="k">typename</span> <span class="n">T1</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;</span> <span class="n">bilerp</span><span class="p">(</span><span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">aa</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">ba</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">ab</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">bb</span><span class="p">,</span> <span class="n">T1</span> <span class="n">s</span><span class="p">,</span> <span class="n">T1</span> <span class="n">t</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>vector bilinear interpolation</p>
-<h4>Function nlerp()</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="kt">int</span> <span class="n">N</span><span class="p">,</span> <span class="k">typename</span> <span class="n">T1</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;</span> <span class="n">nlerp</span><span class="p">(</span><span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">b</span><span class="p">,</span> <span class="n">T1</span> <span class="n">t</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>vector normalized linear interpolation</p>
 <h4>Function slerp()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="kt">int</span> <span class="n">N</span><span class="p">,</span> <span class="k">typename</span> <span class="n">T1</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;</span> <span class="n">slerp</span><span class="p">(</span><span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">b</span><span class="p">,</span> <span class="n">T1</span> <span class="n">t</span><span class="p">);</span>
+<span class="kr">inline</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;</span> <span class="n">slerp</span><span class="p">(</span><span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">b</span><span class="p">,</span> <span class="n">T1</span> <span class="n">u</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -1799,27 +1766,28 @@ specializations for small fixed sized vectors.</p>
 
 
 <p>Element-wise conversion</p>
-<h4>Function operator &lt; &lt;()</h4>
+<h4>Function operator&lt;&lt;()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="kt">int</span> <span class="n">N</span><span class="o">&gt;</span>
 <span class="kr">inline</span> <span class="n">ostream</span><span class="o">&amp;</span> <span class="k">operator</span><span class="o">&lt;&lt;</span><span class="p">(</span><span class="n">ostream</span><span class="o">&amp;</span> <span class="n">os</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>stream write</p>
-<h4>Function operator > >()</h4>
+<h4>Function operator>>()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="kt">int</span> <span class="n">N</span><span class="o">&gt;</span>
 <span class="kr">inline</span> <span class="n">istream</span><span class="o">&amp;</span> <span class="k">operator</span><span class="o">&gt;&gt;</span><span class="p">(</span><span class="n">istream</span><span class="o">&amp;</span> <span class="n">is</span><span class="p">,</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>stream read</p>
-<h4>Struct hash &lt;ygl::vec &lt;T, N > ></h4>
+<h4>Struct hash&lt;ygl::vec&lt;T, N>></h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="kt">int</span> <span class="n">N</span><span class="o">&gt;</span>
 <span class="k">struct</span> <span class="n">hash</span><span class="o">&lt;</span><span class="n">ygl</span><span class="o">::</span><span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&gt;</span> <span class="p">{</span>
 </code></pre></div>
 
 
 <p>Hash functor for vector for use with unordered_map</p>
+<h3>Fixed-size matrices</h3>
 <h4>Struct mat</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="kt">int</span> <span class="n">N</span><span class="o">&gt;</span>
 <span class="k">struct</span> <span class="n">mat</span><span class="p">;</span>
@@ -1828,7 +1796,7 @@ specializations for small fixed sized vectors.</p>
 
 <p>Generic matrix of NxN elements. This is used only to define template
 specializations for small fixed sized matrices.</p>
-<h4>Struct mat &lt;T, 2 ></h4>
+<h4>Struct mat&lt;T, 2></h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
 <span class="k">struct</span> <span class="n">mat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">2</span><span class="o">&gt;</span> <span class="p">{</span>
     <span class="n">mat</span><span class="p">();</span> 
@@ -1856,7 +1824,7 @@ Colums access via operator[].</p>
 </ul>
 </li>
 </ul>
-<h4>Struct mat &lt;T, 3 ></h4>
+<h4>Struct mat&lt;T, 3></h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
 <span class="k">struct</span> <span class="n">mat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;</span> <span class="p">{</span>
     <span class="n">mat</span><span class="p">();</span> 
@@ -1886,7 +1854,7 @@ Colums access via operator[].</p>
 </ul>
 </li>
 </ul>
-<h4>Struct mat &lt;T, 4 ></h4>
+<h4>Struct mat&lt;T, 4></h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
 <span class="k">struct</span> <span class="n">mat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;</span> <span class="p">{</span>
     <span class="n">mat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;</span><span class="p">();</span> 
@@ -2297,20 +2265,21 @@ Colums access via operator[].</p>
 
 
 <p>matrix inverse (uses adjugate and determinant)</p>
-<h4>Function operator &lt; &lt;()</h4>
+<h4>Function operator&lt;&lt;()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="kt">int</span> <span class="n">N</span><span class="o">&gt;</span>
 <span class="kr">inline</span> <span class="n">ostream</span><span class="o">&amp;</span> <span class="k">operator</span><span class="o">&lt;&lt;</span><span class="p">(</span><span class="n">ostream</span><span class="o">&amp;</span> <span class="n">os</span><span class="p">,</span> <span class="k">const</span> <span class="n">mat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>stream write</p>
-<h4>Function operator > >()</h4>
+<h4>Function operator>>()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="kt">int</span> <span class="n">N</span><span class="o">&gt;</span>
 <span class="kr">inline</span> <span class="n">istream</span><span class="o">&amp;</span> <span class="k">operator</span><span class="o">&gt;&gt;</span><span class="p">(</span><span class="n">istream</span><span class="o">&amp;</span> <span class="n">is</span><span class="p">,</span> <span class="n">mat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>stream read</p>
+<h3>Rigid-body frames</h3>
 <h4>Struct frame</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="kt">int</span> <span class="n">N</span><span class="o">&gt;</span>
 <span class="k">struct</span> <span class="n">frame</span><span class="p">;</span>
@@ -2319,7 +2288,7 @@ Colums access via operator[].</p>
 
 <p>Generic frame of N elements. This is used only to define template
 specializations for small fixed sized frames.</p>
-<h4>Struct frame &lt;T, 3 ></h4>
+<h4>Struct frame&lt;T, 3></h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
 <span class="k">struct</span> <span class="n">frame</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;</span> <span class="p">{</span>
     <span class="k">static</span> <span class="k">const</span> <span class="kt">int</span> <span class="n">N</span> <span class="o">=</span> <span class="mi">3</span><span class="p">;</span>
@@ -2482,20 +2451,21 @@ Access rotation and position with pos() and rot().</p>
 
 
 <p>frame inverse (equivalent to rigid affine inverse)</p>
-<h4>Function operator &lt; &lt;()</h4>
+<h4>Function operator&lt;&lt;()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="kt">int</span> <span class="n">N</span><span class="o">&gt;</span>
 <span class="kr">inline</span> <span class="n">ostream</span><span class="o">&amp;</span> <span class="k">operator</span><span class="o">&lt;&lt;</span><span class="p">(</span><span class="n">ostream</span><span class="o">&amp;</span> <span class="n">os</span><span class="p">,</span> <span class="k">const</span> <span class="n">frame</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>stream write</p>
-<h4>Function operator > >()</h4>
+<h4>Function operator>>()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="kt">int</span> <span class="n">N</span><span class="o">&gt;</span>
 <span class="kr">inline</span> <span class="n">istream</span><span class="o">&amp;</span> <span class="k">operator</span><span class="o">&gt;&gt;</span><span class="p">(</span><span class="n">istream</span><span class="o">&amp;</span> <span class="n">is</span><span class="p">,</span> <span class="n">frame</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>stream read</p>
+<h3>Quaternions</h3>
 <h4>Struct quat</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="kt">int</span> <span class="n">N</span><span class="o">&gt;</span>
 <span class="k">struct</span> <span class="n">quat</span><span class="p">;</span>
@@ -2504,15 +2474,12 @@ Access rotation and position with pos() and rot().</p>
 
 <p>Generic quaternion of N elements. This is used only to define template
 specializations for small fixed sized quaternions.</p>
-<h4>Struct quat &lt;T, 4 ></h4>
+<h4>Struct quat&lt;T, 4></h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
 <span class="k">struct</span> <span class="n">quat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;</span> <span class="p">{</span>
     <span class="n">quat</span><span class="p">();</span> 
     <span class="k">explicit</span> <span class="nf">quat</span><span class="p">(</span><span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;&amp;</span> <span class="n">vv</span><span class="p">);</span> 
-    <span class="n">quat</span><span class="p">(</span><span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">axis</span><span class="p">,</span> <span class="n">T</span> <span class="n">angle</span><span class="p">);</span> 
     <span class="k">explicit</span> <span class="k">operator</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span> 
-    <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;</span> <span class="n">axis</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span> 
-    <span class="n">T</span> <span class="nf">angle</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span> 
     <span class="n">T</span><span class="o">&amp;</span> <span class="k">operator</span><span class="p">[](</span><span class="kt">int</span> <span class="n">i</span><span class="p">);</span> 
     <span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="k">operator</span><span class="p">[](</span><span class="kt">int</span> <span class="n">i</span><span class="p">)</span> <span class="k">const</span><span class="p">;</span> 
     <span class="n">T</span> <span class="n">x</span><span class="p">;</span>
@@ -2529,10 +2496,7 @@ Quaterions are xi + yj + zk + w.</p>
 <li>Members:<ul>
 <li>quat():      default constructor</li>
 <li>quat():      conversion from vec</li>
-<li>quat():      conversion from axis-angle</li>
 <li>operator 4&gt;():      conversion to vec</li>
-<li>axis():      rotation axis</li>
-<li>angle():      rotation angle</li>
 <li>operator<a href=""></a>:      element access</li>
 <li>operator<a href=""></a>:      element access</li>
 <li>x:      data</li>
@@ -2624,6 +2588,27 @@ Quaterions are xi + yj + zk + w.</p>
 
 
 <p>vector operator !=</p>
+<h4>Function operator+()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="n">quat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;</span> <span class="k">operator</span><span class="o">+</span><span class="p">(</span><span class="k">const</span> <span class="n">quat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">,</span> <span class="k">const</span> <span class="n">quat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;&amp;</span> <span class="n">b</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>quaterion multiply</p>
+<h4>Function operator*()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="k">typename</span> <span class="n">T1</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="n">quat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;</span> <span class="k">operator</span><span class="o">*</span><span class="p">(</span><span class="k">const</span> <span class="n">quat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">,</span> <span class="n">T1</span> <span class="n">b</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>quaterion multiply</p>
+<h4>Function operator/()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="k">typename</span> <span class="n">T1</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="n">quat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;</span> <span class="k">operator</span><span class="o">/</span><span class="p">(</span><span class="k">const</span> <span class="n">quat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">,</span> <span class="n">T1</span> <span class="n">b</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>quaterion division</p>
 <h4>Function operator*()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
 <span class="kr">inline</span> <span class="n">quat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;</span> <span class="k">operator</span><span class="o">*</span><span class="p">(</span><span class="k">const</span> <span class="n">quat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">,</span> <span class="k">const</span> <span class="n">quat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;&amp;</span> <span class="n">b</span><span class="p">);</span>
@@ -2631,20 +2616,6 @@ Quaterions are xi + yj + zk + w.</p>
 
 
 <p>quaterion multiply</p>
-<h4>Function operator*()</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="k">typename</span> <span class="n">T1</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="n">quat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;</span> <span class="k">operator</span><span class="o">*</span><span class="p">(</span><span class="k">const</span> <span class="n">quat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">,</span> <span class="kt">float</span> <span class="n">b</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>quaterion multiply</p>
-<h4>Function operator/()</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="n">quat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;</span> <span class="k">operator</span><span class="o">/</span><span class="p">(</span><span class="k">const</span> <span class="n">quat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">,</span> <span class="kt">float</span> <span class="n">b</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>quaterion division</p>
 <h4>Function conjugate()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
 <span class="kr">inline</span> <span class="n">quat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;</span> <span class="n">conjugate</span><span class="p">(</span><span class="k">const</span> <span class="n">quat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;&amp;</span> <span class="n">v</span><span class="p">);</span>
@@ -2666,13 +2637,6 @@ Quaterions are xi + yj + zk + w.</p>
 
 
 <p>quaterion inverse</p>
-<h4>Function nlerp()</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="k">typename</span> <span class="n">T1</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="n">quat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;</span> <span class="n">nlerp</span><span class="p">(</span><span class="k">const</span> <span class="n">quat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">,</span> <span class="k">const</span> <span class="n">quat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;&amp;</span> <span class="n">b</span><span class="p">,</span> <span class="n">T1</span> <span class="n">t</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>quaterion normalized linear interpolation</p>
 <h4>Function slerp()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="k">typename</span> <span class="n">T1</span><span class="o">&gt;</span>
 <span class="kr">inline</span> <span class="n">quat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;</span> <span class="n">slerp</span><span class="p">(</span><span class="k">const</span> <span class="n">quat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">,</span> <span class="k">const</span> <span class="n">quat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;&amp;</span> <span class="n">b</span><span class="p">,</span> <span class="n">T1</span> <span class="n">t</span><span class="p">);</span>
@@ -2680,20 +2644,21 @@ Quaterions are xi + yj + zk + w.</p>
 
 
 <p>quaterion spherical linear interpolation</p>
-<h4>Function operator &lt; &lt;()</h4>
+<h4>Function operator&lt;&lt;()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="kt">int</span> <span class="n">N</span><span class="o">&gt;</span>
 <span class="kr">inline</span> <span class="n">ostream</span><span class="o">&amp;</span> <span class="k">operator</span><span class="o">&lt;&lt;</span><span class="p">(</span><span class="n">ostream</span><span class="o">&amp;</span> <span class="n">os</span><span class="p">,</span> <span class="k">const</span> <span class="n">quat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>stream write</p>
-<h4>Function operator > >()</h4>
+<h4>Function operator>>()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="kt">int</span> <span class="n">N</span><span class="o">&gt;</span>
 <span class="kr">inline</span> <span class="n">istream</span><span class="o">&amp;</span> <span class="k">operator</span><span class="o">&gt;&gt;</span><span class="p">(</span><span class="n">istream</span><span class="o">&amp;</span> <span class="n">is</span><span class="p">,</span> <span class="n">quat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>stream read</p>
+<h3>Axis-aligned bounding boxes</h3>
 <h4>Struct bbox</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="kt">int</span> <span class="n">N</span><span class="o">&gt;</span>
 <span class="k">struct</span> <span class="n">bbox</span> <span class="p">{</span>
@@ -2900,20 +2865,21 @@ Quaterions are xi + yj + zk + w.</p>
 
 
 <p>initialize a bonding box from a list of points</p>
-<h4>Function operator &lt; &lt;()</h4>
+<h4>Function operator&lt;&lt;()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="kt">int</span> <span class="n">N</span><span class="o">&gt;</span>
 <span class="kr">inline</span> <span class="n">ostream</span><span class="o">&amp;</span> <span class="k">operator</span><span class="o">&lt;&lt;</span><span class="p">(</span><span class="n">ostream</span><span class="o">&amp;</span> <span class="n">os</span><span class="p">,</span> <span class="k">const</span> <span class="n">bbox</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>stream write</p>
-<h4>Function operator > >()</h4>
+<h4>Function operator>>()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="kt">int</span> <span class="n">N</span><span class="o">&gt;</span>
 <span class="kr">inline</span> <span class="n">istream</span><span class="o">&amp;</span> <span class="k">operator</span><span class="o">&gt;&gt;</span><span class="p">(</span><span class="n">istream</span><span class="o">&amp;</span> <span class="n">is</span><span class="p">,</span> <span class="n">bbox</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="n">N</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>stream read</p>
+<h3>Primitice bounding boxes</h3>
 <h4>Function point_bbox()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="k">typename</span> <span class="n">T1</span><span class="o">&gt;</span>
 <span class="kr">inline</span> <span class="n">bbox</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;</span> <span class="n">point_bbox</span><span class="p">(</span><span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">p</span><span class="p">,</span> <span class="n">T1</span> <span class="n">r</span> <span class="o">=</span> <span class="mi">0</span><span class="p">);</span>
@@ -2953,6 +2919,7 @@ Quaterions are xi + yj + zk + w.</p>
 
 
 <p>Tetrahedron bounds</p>
+<h3>Rays</h3>
 <h4>Struct ray</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="kt">int</span> <span class="n">N</span><span class="o">&gt;</span>
 <span class="k">struct</span> <span class="n">ray</span><span class="p">;</span>
@@ -2961,7 +2928,7 @@ Quaterions are xi + yj + zk + w.</p>
 
 <p>Generic ray of N elements. This is used only to define template
 specializations for small fixed sized rays.</p>
-<h4>Struct ray &lt;T, 3 ></h4>
+<h4>Struct ray&lt;T, 3></h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
 <span class="k">struct</span> <span class="n">ray</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;</span> <span class="p">{</span>
     <span class="k">static</span> <span class="k">const</span> <span class="kt">int</span> <span class="n">N</span> <span class="o">=</span> <span class="mi">3</span><span class="p">;</span>
@@ -2988,7 +2955,7 @@ specializations for small fixed sized rays.</p>
 </ul>
 </li>
 </ul>
-<h4>Typedef template  &lt;typename T ></h4>
+<h4>Typedef template &lt;typename T></h4>
 <p>ray3</p>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
 <span class="k">using</span> <span class="n">ray3</span> <span class="o">=</span> <span class="n">ray</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;</span><span class="p">;</span>
@@ -3018,20 +2985,21 @@ specializations for small fixed sized rays.</p>
 
 
 <p>Construct a ray segment using a default epsilon</p>
-<h4>Function operator &lt; &lt;()</h4>
+<h4>Function operator&lt;&lt;()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
 <span class="kr">inline</span> <span class="n">ostream</span><span class="o">&amp;</span> <span class="k">operator</span><span class="o">&lt;&lt;</span><span class="p">(</span><span class="n">ostream</span><span class="o">&amp;</span> <span class="n">os</span><span class="p">,</span> <span class="k">const</span> <span class="n">ray3</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>stream write</p>
-<h4>Function operator > >()</h4>
+<h4>Function operator>>()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
 <span class="kr">inline</span> <span class="n">istream</span><span class="o">&amp;</span> <span class="k">operator</span><span class="o">&gt;&gt;</span><span class="p">(</span><span class="n">istream</span><span class="o">&amp;</span> <span class="n">is</span><span class="p">,</span> <span class="n">ray3</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>stream read</p>
+<h3>Transforms</h3>
 <h4>Function transform_point()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
 <span class="kr">inline</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;</span> <span class="n">transform_point</span><span class="p">(</span><span class="k">const</span> <span class="n">mat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">b</span><span class="p">);</span>
@@ -3206,14 +3174,14 @@ specializations for small fixed sized rays.</p>
 <p>rotation matrix</p>
 <h4>Function rotation_mat4()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="n">mat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;</span> <span class="n">rotation_mat4</span><span class="p">(</span><span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">axis</span><span class="p">,</span> <span class="kt">float</span> <span class="n">angle</span><span class="p">);</span>
+<span class="kr">inline</span> <span class="n">mat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;</span> <span class="n">rotation_mat4</span><span class="p">(</span><span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">axis</span><span class="p">,</span> <span class="n">T</span> <span class="n">angle</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>rotation matrix</p>
 <h4>Function rotation_axisangle4()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;</span> <span class="n">rotation_axisangle4</span><span class="p">(</span><span class="k">const</span> <span class="n">quat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">);</span>
+<span class="kr">inline</span> <span class="n">pair</span><span class="o">&lt;</span><span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">T</span><span class="o">&gt;</span> <span class="n">rotation_axisangle4</span><span class="p">(</span><span class="k">const</span> <span class="n">quat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;&amp;</span> <span class="n">a</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -3347,8 +3315,9 @@ Assumes there is no shear and the matrix is affine.</p>
 
 <p>Decompose an affine matrix into translation, rotation, scale.
 Assumes there is no shear and the matrix is affine.</p>
+<h3>User interface utilities</h3>
 <h4>Function camera_turntable()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">camera_turntable</span><span class="p">(</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">from</span><span class="p">,</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">to</span><span class="p">,</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">up</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">rotate</span><span class="p">,</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">camera_turntable</span><span class="p">(</span><span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">from</span><span class="p">,</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">to</span><span class="p">,</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">up</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec2f</span><span class="o">&amp;</span> <span class="n">rotate</span><span class="p">,</span>
     <span class="kt">float</span> <span class="n">dolly</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec2f</span><span class="o">&amp;</span> <span class="n">pan</span><span class="p">);</span>
 </code></pre></div>
 
@@ -3367,6 +3336,7 @@ Assumes there is no shear and the matrix is affine.</p>
 
 
 <p>FPS camera for UI navigation for a frame parametrization.</p>
+<h3>Random number generation</h3>
 <h4>Struct rng_pcg32</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">rng_pcg32</span> <span class="p">{</span>
     <span class="kt">uint64_t</span> <span class="n">state</span> <span class="o">=</span> <span class="mh">0x853c49e6748fea9bULL</span><span class="p">;</span>
@@ -3503,6 +3473,7 @@ better than float that uses 23.</p>
 
 
 <p>Inequality operator</p>
+<h3>Monte Carlo sampling</h3>
 <h4>Function sample_hemisphere()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">vec3f</span> <span class="nf">sample_hemisphere</span><span class="p">(</span><span class="k">const</span> <span class="n">vec2f</span><span class="o">&amp;</span> <span class="n">ruv</span><span class="p">);</span>
 </code></pre></div>
@@ -3540,13 +3511,13 @@ better than float that uses 23.</p>
 
 <p>pdf for hemispherical direction with cosine distribution</p>
 <h4>Function sample_hemisphere_cospower()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">vec3f</span> <span class="nf">sample_hemisphere_cospower</span><span class="p">(</span><span class="k">const</span> <span class="n">vec2f</span><span class="o">&amp;</span> <span class="n">ruv</span><span class="p">,</span> <span class="kt">float</span> <span class="n">n</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">vec3f</span> <span class="nf">sample_hemisphere_cospower</span><span class="p">(</span><span class="kt">float</span> <span class="n">n</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec2f</span><span class="o">&amp;</span> <span class="n">ruv</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>hemispherical direction with cosine power distribution</p>
 <h4>Function sample_hemisphere_cospower_pdf()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">float</span> <span class="nf">sample_hemisphere_cospower_pdf</span><span class="p">(</span><span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">w</span><span class="p">,</span> <span class="kt">float</span> <span class="n">n</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">float</span> <span class="nf">sample_hemisphere_cospower_pdf</span><span class="p">(</span><span class="kt">float</span> <span class="n">n</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">w</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -3583,7 +3554,7 @@ better than float that uses 23.</p>
 <p>uniform triangle</p>
 <h4>Function sample_triangle()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">vec3f</span> <span class="nf">sample_triangle</span><span class="p">(</span>
-    <span class="k">const</span> <span class="n">vec2f</span><span class="o">&amp;</span> <span class="n">ruv</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">v0</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">v1</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">v2</span><span class="p">);</span>
+    <span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">v0</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">v1</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">v2</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec2f</span><span class="o">&amp;</span> <span class="n">ruv</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -3596,7 +3567,7 @@ better than float that uses 23.</p>
 
 <p>pdf for uniform triangle (triangle area)</p>
 <h4>Function sample_index()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">int</span> <span class="nf">sample_index</span><span class="p">(</span><span class="kt">float</span> <span class="n">r</span><span class="p">,</span> <span class="kt">int</span> <span class="n">size</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">int</span> <span class="nf">sample_index</span><span class="p">(</span><span class="kt">int</span> <span class="n">size</span><span class="p">,</span> <span class="kt">float</span> <span class="n">r</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -3607,6 +3578,19 @@ better than float that uses 23.</p>
 
 
 <p>pdf for index with uniform distribution</p>
+<h4>Function sample_discrete()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">int</span> <span class="nf">sample_discrete</span><span class="p">(</span><span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;&amp;</span> <span class="n">cdf</span><span class="p">,</span> <span class="kt">float</span> <span class="n">r</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>sample a discrete distribution represented by its cdf</p>
+<h4>Function sample_discrete_pdf()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">float</span> <span class="nf">sample_discrete_pdf</span><span class="p">(</span><span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;&amp;</span> <span class="n">cdf</span><span class="p">,</span> <span class="kt">int</span> <span class="n">idx</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>sample a discrete distribution represented by its cdf</p>
+<h3>Hashing</h3>
 <h4>Function hash_permute()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">uint32_t</span> <span class="nf">hash_permute</span><span class="p">(</span><span class="kt">uint32_t</span> <span class="n">i</span><span class="p">,</span> <span class="kt">uint32_t</span> <span class="n">n</span><span class="p">,</span> <span class="kt">uint32_t</span> <span class="n">key</span><span class="p">);</span>
 </code></pre></div>
@@ -3645,6 +3629,7 @@ From Correlated Multi-Jittered Sampling by Kensler @ Pixar</p>
 
 
 <p>Combines two 64 bit hashes as in boost::hash_combine</p>
+<h3>Perlin noise</h3>
 <h4>Function perlin_noise()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kt">float</span> <span class="nf">perlin_noise</span><span class="p">(</span><span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">p</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec3i</span><span class="o">&amp;</span> <span class="n">wrap</span> <span class="o">=</span> <span class="n">zero3i</span><span class="p">);</span>
 </code></pre></div>
@@ -3678,6 +3663,7 @@ offset=1.0 (used to invert the ridges).</p>
 
 
 <p>Fractal turbulence noise - see perlin_noise() for params.</p>
+<h3>Python-like iterators</h3>
 <h4>Function range_()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">range_generator</span> <span class="nf">range_</span><span class="p">(</span><span class="kt">int</span> <span class="n">max</span><span class="p">);</span>
 </code></pre></div>
@@ -3704,6 +3690,7 @@ offset=1.0 (used to invert the ridges).</p>
 
 
 <p>Python-like range</p>
+<h3>Container operations</h3>
 <h4>Function append()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
 <span class="kr">inline</span> <span class="kt">void</span> <span class="n">append</span><span class="p">(</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">v</span><span class="p">,</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">vv</span><span class="p">);</span>
@@ -3788,6 +3775,7 @@ offset=1.0 (used to invert the ridges).</p>
 
 
 <p>Checks if a containers contains a value</p>
+<h3>Geometry utilities</h3>
 <h4>Function line_tangent()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">vec3f</span> <span class="nf">line_tangent</span><span class="p">(</span><span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">v0</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">v1</span><span class="p">);</span>
 </code></pre></div>
@@ -3838,41 +3826,47 @@ offset=1.0 (used to invert the ridges).</p>
 not the normal). Follows the definition in
 http://www.terathon.com/code/tangent.html and
 https://gist.github.com/aras-p/2843984</p>
-<h4>Function eval_barycentric_point()</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="k">typename</span> <span class="n">T1</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="n">T</span> <span class="n">eval_barycentric_point</span><span class="p">(</span><span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">vals</span><span class="p">,</span> <span class="k">const</span> <span class="kt">int</span><span class="o">&amp;</span> <span class="n">p</span><span class="p">,</span> <span class="n">T1</span> <span class="n">w</span><span class="p">);</span>
+<h4>Function interpolate_point()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="n">T</span> <span class="n">interpolate_point</span><span class="p">(</span><span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">vals</span><span class="p">,</span> <span class="kt">int</span> <span class="n">p</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>line barycentric interpolation</p>
-<h4>Function eval_barycentric_line()</h4>
+<p>Point interpolation. Here only for completeness.</p>
+<h4>Function interpolate_line()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="k">typename</span> <span class="n">T1</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="n">T</span> <span class="n">eval_barycentric_line</span><span class="p">(</span>
-    <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">vals</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec2i</span><span class="o">&amp;</span> <span class="n">l</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T1</span><span class="p">,</span> <span class="mi">2</span><span class="o">&gt;&amp;</span> <span class="n">w</span><span class="p">);</span>
+<span class="kr">inline</span> <span class="n">T</span> <span class="n">interpolate_line</span><span class="p">(</span><span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">v0</span><span class="p">,</span> <span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">v1</span><span class="p">,</span> <span class="k">const</span> <span class="n">T1</span> <span class="n">u</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>line barycentric interpolation</p>
-<h4>Function eval_barycentric_triangle()</h4>
+<p>Line interpolation. Same as lerp.</p>
+<h4>Function interpolate_line()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="k">typename</span> <span class="n">T1</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="n">T</span> <span class="n">eval_barycentric_triangle</span><span class="p">(</span>
-    <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">vals</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec3i</span><span class="o">&amp;</span> <span class="n">t</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T1</span><span class="p">,</span> <span class="mi">3</span><span class="o">&gt;&amp;</span> <span class="n">w</span><span class="p">);</span>
+<span class="kr">inline</span> <span class="n">T</span> <span class="n">interpolate_line</span><span class="p">(</span><span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">vals</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec2i</span><span class="o">&amp;</span> <span class="n">l</span><span class="p">,</span> <span class="n">T1</span> <span class="n">u</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>triangle barycentric interpolation</p>
-<h4>Function eval_barycentric_tetra()</h4>
+<p>Line interpolation. Same as lerp.</p>
+<h4>Function interpolate_triangle()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="k">typename</span> <span class="n">T1</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="n">T</span> <span class="n">eval_barycentric_tetra</span><span class="p">(</span>
-    <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">vals</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec4i</span><span class="o">&amp;</span> <span class="n">t</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T1</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;&amp;</span> <span class="n">w</span><span class="p">);</span>
+<span class="kr">inline</span> <span class="n">T</span> <span class="n">interpolate_triangle</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">v0</span><span class="p">,</span> <span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">v1</span><span class="p">,</span> <span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">v2</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T1</span><span class="p">,</span> <span class="mi">2</span><span class="o">&gt;&amp;</span> <span class="n">uv</span><span class="p">);</span>
 </code></pre></div>
 
 
-<p>tetrahedron barycentric interpolation</p>
-<h4>Function eval_barycentric_quad()</h4>
+<p>Triangle interpolation using (v1-v0) and (v2-v0) as u and v directions.</p>
+<h4>Function interpolate_triangle()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="k">typename</span> <span class="n">T1</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="n">T</span> <span class="n">eval_barycentric_quad</span><span class="p">(</span>
-    <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">vals</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec4i</span><span class="o">&amp;</span> <span class="n">t</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T1</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;&amp;</span> <span class="n">w</span><span class="p">);</span>
+<span class="kr">inline</span> <span class="n">T</span> <span class="n">interpolate_triangle</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">vals</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec3i</span><span class="o">&amp;</span> <span class="n">t</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T1</span><span class="p">,</span> <span class="mi">2</span><span class="o">&gt;&amp;</span> <span class="n">uv</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Triangle interpolation using (v1-v0) and (v2-v0) as u and v directions.</p>
+<h4>Function interpolate_quad()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="k">typename</span> <span class="n">T1</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="n">T</span> <span class="n">interpolate_quad</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">vals</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec4i</span><span class="o">&amp;</span> <span class="n">t</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T1</span><span class="p">,</span> <span class="mi">2</span><span class="o">&gt;&amp;</span> <span class="n">uv</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -3891,37 +3885,38 @@ https://gist.github.com/aras-p/2843984</p>
 
 
 <p>bernstein polynomials (for Bezier)</p>
-<h4>Function eval_bezier_cubic()</h4>
+<h4>Function interpolate_bezier()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="k">typename</span> <span class="n">T1</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="n">T</span> <span class="n">eval_bezier_cubic</span><span class="p">(</span>
+<span class="kr">inline</span> <span class="n">T</span> <span class="n">interpolate_bezier</span><span class="p">(</span>
     <span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">v0</span><span class="p">,</span> <span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">v1</span><span class="p">,</span> <span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">v2</span><span class="p">,</span> <span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">v3</span><span class="p">,</span> <span class="n">T1</span> <span class="n">u</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>eval bezier</p>
-<h4>Function eval_bezier_cubic()</h4>
+<h4>Function interpolate_bezier()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="k">typename</span> <span class="n">T1</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="n">T</span> <span class="n">eval_bezier_cubic</span><span class="p">(</span><span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">vals</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec4i</span><span class="o">&amp;</span> <span class="n">b</span><span class="p">,</span> <span class="n">T1</span> <span class="n">u</span><span class="p">);</span>
+<span class="kr">inline</span> <span class="n">T</span> <span class="n">interpolate_bezier</span><span class="p">(</span><span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">vals</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec4i</span><span class="o">&amp;</span> <span class="n">b</span><span class="p">,</span> <span class="n">T1</span> <span class="n">u</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>eval bezier</p>
-<h4>Function eval_bezier_cubic_derivative()</h4>
+<h4>Function interpolate_bezier_derivative()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="k">typename</span> <span class="n">T1</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="n">T</span> <span class="n">eval_bezier_cubic_derivative</span><span class="p">(</span>
+<span class="kr">inline</span> <span class="n">T</span> <span class="n">interpolate_bezier_derivative</span><span class="p">(</span>
     <span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">v0</span><span class="p">,</span> <span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">v1</span><span class="p">,</span> <span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">v2</span><span class="p">,</span> <span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">v3</span><span class="p">,</span> <span class="n">T1</span> <span class="n">u</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>eval bezier derivative</p>
-<h4>Function eval_bezier_cubic_derivative()</h4>
+<h4>Function interpolate_bezier_derivative()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="p">,</span> <span class="k">typename</span> <span class="n">T1</span><span class="o">&gt;</span>
-<span class="kr">inline</span> <span class="n">T</span> <span class="n">eval_bezier_cubic_derivative</span><span class="p">(</span>
+<span class="kr">inline</span> <span class="n">T</span> <span class="n">interpolate_bezier_derivative</span><span class="p">(</span>
     <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;&amp;</span> <span class="n">vals</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec4i</span><span class="o">&amp;</span> <span class="n">b</span><span class="p">,</span> <span class="n">T1</span> <span class="n">u</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>eval bezier derivative</p>
+<h3>Animation utilities</h3>
 <h4>Function eval_keyframed_step()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
 <span class="kr">inline</span> <span class="n">T</span> <span class="n">eval_keyframed_step</span><span class="p">(</span>
@@ -3946,6 +3941,7 @@ https://gist.github.com/aras-p/2843984</p>
 
 
 <p>Evalautes a keyframed value using bezier interpolation</p>
+<h3>Shape utilities</h3>
 <h4>Function compute_normals()</h4>
 <div class="codehilite"><pre><code><span></span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span> <span class="n">compute_normals</span><span class="p">(</span><span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2i</span><span class="o">&gt;&amp;</span> <span class="n">lines</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;&amp;</span> <span class="n">triangles</span><span class="p">,</span> <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;&amp;</span> <span class="n">quads</span><span class="p">,</span>
@@ -4153,8 +4149,9 @@ giving a faceted look. Note that faceted tangents are not computed.</p>
 
 
 <p>Unshare vertices for faceting. Instanced for vec and float types.</p>
+<h3>Shape sampling</h3>
 <h4>Function sample_points()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">int</span> <span class="nf">sample_points</span><span class="p">(</span><span class="kt">int</span> <span class="n">npoints</span><span class="p">,</span> <span class="kt">float</span> <span class="n">re</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">int</span> <span class="nf">sample_points</span><span class="p">(</span><span class="kt">int</span> <span class="n">npoints</span><span class="p">,</span> <span class="kt">float</span> <span class="n">re</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -4166,7 +4163,7 @@ giving a faceted look. Note that faceted tangents are not computed.</p>
 
 <p>Compute a distribution for sampling points uniformly</p>
 <h4>Function sample_points()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">int</span> <span class="nf">sample_points</span><span class="p">(</span><span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;&amp;</span> <span class="n">cdf</span><span class="p">,</span> <span class="kt">float</span> <span class="n">re</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">int</span> <span class="nf">sample_points</span><span class="p">(</span><span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;&amp;</span> <span class="n">cdf</span><span class="p">,</span> <span class="kt">float</span> <span class="n">re</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -4179,7 +4176,8 @@ giving a faceted look. Note that faceted tangents are not computed.</p>
 
 <p>Compute a distribution for sampling lines uniformly</p>
 <h4>Function sample_lines()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">pair</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span> <span class="n">vec2f</span><span class="o">&gt;</span> <span class="n">sample_lines</span><span class="p">(</span><span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;&amp;</span> <span class="n">cdf</span><span class="p">,</span> <span class="kt">float</span> <span class="n">re</span><span class="p">,</span> <span class="kt">float</span> <span class="n">ruv</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">pair</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span> <span class="kt">float</span><span class="o">&gt;</span> <span class="n">sample_lines</span><span class="p">(</span>
+    <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;&amp;</span> <span class="n">cdf</span><span class="p">,</span> <span class="kt">float</span> <span class="n">re</span><span class="p">,</span> <span class="kt">float</span> <span class="n">ru</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -4192,7 +4190,7 @@ giving a faceted look. Note that faceted tangents are not computed.</p>
 
 <p>Compute a distribution for sampling triangle meshes uniformly</p>
 <h4>Function sample_triangles()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">pair</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span> <span class="n">vec3f</span><span class="o">&gt;</span> <span class="n">sample_triangles</span><span class="p">(</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">pair</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span> <span class="n">vec2f</span><span class="o">&gt;</span> <span class="n">sample_triangles</span><span class="p">(</span>
     <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;&amp;</span> <span class="n">cdf</span><span class="p">,</span> <span class="kt">float</span> <span class="n">re</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec2f</span><span class="o">&amp;</span> <span class="n">ruv</span><span class="p">);</span>
 </code></pre></div>
 
@@ -4206,7 +4204,7 @@ giving a faceted look. Note that faceted tangents are not computed.</p>
 
 <p>Compute a distribution for sampling quad meshes uniformly</p>
 <h4>Function sample_quads()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">pair</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span> <span class="n">vec4f</span><span class="o">&gt;</span> <span class="n">sample_quads</span><span class="p">(</span>
+<div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">pair</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span> <span class="n">vec2f</span><span class="o">&gt;</span> <span class="n">sample_quads</span><span class="p">(</span>
     <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;&amp;</span> <span class="n">cdf</span><span class="p">,</span> <span class="kt">float</span> <span class="n">re</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec2f</span><span class="o">&amp;</span> <span class="n">ruv</span><span class="p">);</span>
 </code></pre></div>
 
@@ -4223,6 +4221,7 @@ giving a faceted look. Note that faceted tangents are not computed.</p>
 <p>Samples a set of points over a triangle mesh uniformly. The rng function
 takes the point index and returns vec3f numbers uniform directibuted in
 [0,1]^3. unorm and texcoord are optional.</p>
+<h3>Example shapes</h3>
 <h4>Function make_sphere()</h4>
 <div class="codehilite"><pre><code><span></span><span class="n">tuple</span><span class="o">&lt;</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;&gt;</span> <span class="n">make_sphere</span><span class="p">(</span><span class="kt">int</span> <span class="n">tesselation</span><span class="p">);</span>
 </code></pre></div>
@@ -4407,6 +4406,7 @@ texcoord.</p>
 
 
 <p>Make a hair ball around a shape. Returns lines, pos, norm, texcoord, radius.</p>
+<h3>Image containers</h3>
 <h4>Struct image</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
 <span class="k">struct</span> <span class="n">image</span> <span class="p">{</span>
@@ -4519,6 +4519,15 @@ texcoord.</p>
 
 
 <p>Create an image with values stored in an array in scanliine order.</p>
+<h4>Function make_image()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="n">image</span><span class="o">&lt;</span><span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;&gt;</span> <span class="n">make_image</span><span class="p">(</span>
+    <span class="kt">int</span> <span class="n">w</span><span class="p">,</span> <span class="kt">int</span> <span class="n">h</span><span class="p">,</span> <span class="kt">int</span> <span class="n">nc</span><span class="p">,</span> <span class="k">const</span> <span class="n">T</span><span class="o">*</span> <span class="n">vals</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;&amp;</span> <span class="n">def</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Create a 4 channel image with the given number of channels</p>
+<h3>Image operations</h3>
 <h4>Function srgb_to_linear()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">vec3f</span> <span class="nf">srgb_to_linear</span><span class="p">(</span><span class="k">const</span> <span class="n">vec3b</span><span class="o">&amp;</span> <span class="n">srgb</span><span class="p">);</span>
 </code></pre></div>
@@ -4592,6 +4601,7 @@ texcoord.</p>
 
 
 <p>Convert HSV to RGB</p>
+<h3>Example images</h3>
 <h4>Function make_grid_image()</h4>
 <div class="codehilite"><pre><code><span></span><span class="n">image4b</span> <span class="n">make_grid_image</span><span class="p">(</span><span class="kt">int</span> <span class="n">width</span><span class="p">,</span> <span class="kt">int</span> <span class="n">height</span><span class="p">,</span> <span class="kt">int</span> <span class="n">tile</span> <span class="o">=</span> <span class="mi">64</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">vec4b</span><span class="o">&amp;</span> <span class="n">c0</span> <span class="o">=</span><span class="p">;</span>
@@ -4694,6 +4704,7 @@ in [1.7,10] with or without sun.</p>
 
 
 <p>Make a noise image. Wrap works only if both resx and resy are powers of two.</p>
+<h3>Image loading and saving</h3>
 <h4>Function is_hdr_filename()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">is_hdr_filename</span><span class="p">(</span><span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">);</span>
 </code></pre></div>
@@ -4837,6 +4848,7 @@ in [1.7,10] with or without sun.</p>
 
 
 <p>Resize image.</p>
+<h3>Ray-primitive intersection</h3>
 <h4>Function intersect_point()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">intersect_point</span><span class="p">(</span><span class="k">const</span> <span class="n">ray3f</span><span class="o">&amp;</span> <span class="n">ray</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">p</span><span class="p">,</span> <span class="kt">float</span> <span class="n">r</span><span class="p">,</span> <span class="kt">float</span><span class="o">&amp;</span> <span class="n">ray_t</span><span class="p">);</span>
 </code></pre></div>
@@ -4856,14 +4868,14 @@ http://geomalgorithms.com/a07-distance.html#
     dist3D_Segment_to_Segment</p>
 <h4>Function intersect_triangle()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">intersect_triangle</span><span class="p">(</span><span class="k">const</span> <span class="n">ray3f</span><span class="o">&amp;</span> <span class="n">ray</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">v0</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">v1</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">v2</span><span class="p">,</span> <span class="kt">float</span><span class="o">&amp;</span> <span class="n">ray_t</span><span class="p">,</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">euv</span><span class="p">);</span>
+    <span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">v2</span><span class="p">,</span> <span class="kt">float</span><span class="o">&amp;</span> <span class="n">ray_t</span><span class="p">,</span> <span class="n">vec2f</span><span class="o">&amp;</span> <span class="n">euv</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Intersect a ray with a triangle</p>
 <h4>Function intersect_quad()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">intersect_quad</span><span class="p">(</span><span class="k">const</span> <span class="n">ray3f</span><span class="o">&amp;</span> <span class="n">ray</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">v0</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">v1</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">v2</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">v3</span><span class="p">,</span> <span class="kt">float</span><span class="o">&amp;</span> <span class="n">ray_t</span><span class="p">,</span> <span class="n">vec4f</span><span class="o">&amp;</span> <span class="n">euv</span><span class="p">);</span>
+    <span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">v2</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">v3</span><span class="p">,</span> <span class="kt">float</span><span class="o">&amp;</span> <span class="n">ray_t</span><span class="p">,</span> <span class="n">vec2f</span><span class="o">&amp;</span> <span class="n">euv</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -4873,15 +4885,6 @@ http://geomalgorithms.com/a07-distance.html#
 to 1. This is equivalent to Intel's Embree. The external user does not have
 to be concerned about the parametrization and can just use the euv as
 specified.</p>
-<h4>Function intersect_tetrahedron()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">intersect_tetrahedron</span><span class="p">(</span><span class="k">const</span> <span class="n">ray3f</span><span class="o">&amp;</span> <span class="n">ray_</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">v0</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">v1</span><span class="p">,</span>
-    <span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">v2</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">v3</span><span class="p">,</span> <span class="kt">float</span><span class="o">&amp;</span> <span class="n">ray_t</span><span class="p">,</span> <span class="n">vec4f</span><span class="o">&amp;</span> <span class="n">euv</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Intersect a ray with a tetrahedron. Note that we consider only
-intersection wiht the tetrahedra surface and discount intersction with
-the interior.</p>
 <h4>Function intersect_check_bbox()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">intersect_check_bbox</span><span class="p">(</span><span class="k">const</span> <span class="n">ray3f</span><span class="o">&amp;</span> <span class="n">ray</span><span class="p">,</span> <span class="k">const</span> <span class="n">bbox3f</span><span class="o">&amp;</span> <span class="n">bbox</span><span class="p">);</span>
 </code></pre></div>
@@ -4898,6 +4901,8 @@ the interior.</p>
 Implementation Notes:
 - based on "Robust BVH Ray Traversal" by T. Ize published at
 http://jcgt.org/published/0002/02/02/paper.pdf</p>
+<h3>Point-primitive overlap</h3>
+<h3>Bounding volume hierarchy</h3>
 <h4>Enum bvh_node_type : uint32_t</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">enum</span> <span class="k">struct</span> <span class="nl">bvh_node_type</span> <span class="p">:</span> <span class="kt">uint32_t</span> <span class="p">{</span>
     <span class="n">internal</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
@@ -5056,14 +5061,14 @@ BVHs, shape BVHs, each of which of a uniform primitive type.</p>
 <p>Recursively recomputes the node bounds for a scene bvh</p>
 <h4>Function intersect_bvh()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">intersect_bvh</span><span class="p">(</span><span class="k">const</span> <span class="n">bvh_tree</span><span class="o">*</span> <span class="n">bvh</span><span class="p">,</span> <span class="k">const</span> <span class="n">ray3f</span><span class="o">&amp;</span> <span class="n">ray</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">early_exit</span><span class="p">,</span>
-    <span class="kt">float</span><span class="o">&amp;</span> <span class="n">ray_t</span><span class="p">,</span> <span class="kt">int</span><span class="o">&amp;</span> <span class="n">iid</span><span class="p">,</span> <span class="kt">int</span><span class="o">&amp;</span> <span class="n">sid</span><span class="p">,</span> <span class="kt">int</span><span class="o">&amp;</span> <span class="n">eid</span><span class="p">,</span> <span class="n">vec4f</span><span class="o">&amp;</span> <span class="n">ew</span><span class="p">);</span>
+    <span class="kt">float</span><span class="o">&amp;</span> <span class="n">ray_t</span><span class="p">,</span> <span class="kt">int</span><span class="o">&amp;</span> <span class="n">iid</span><span class="p">,</span> <span class="kt">int</span><span class="o">&amp;</span> <span class="n">sid</span><span class="p">,</span> <span class="kt">int</span><span class="o">&amp;</span> <span class="n">eid</span><span class="p">,</span> <span class="n">vec2f</span><span class="o">&amp;</span> <span class="n">euv</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Intersect ray with a bvh.</p>
 <h4>Function overlap_bvh()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">overlap_bvh</span><span class="p">(</span><span class="k">const</span> <span class="n">bvh_tree</span><span class="o">*</span> <span class="n">bvh</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec3f</span><span class="o">&amp;</span> <span class="n">pos</span><span class="p">,</span> <span class="kt">float</span> <span class="n">max_dist</span><span class="p">,</span>
-    <span class="kt">bool</span> <span class="n">early_exit</span><span class="p">,</span> <span class="kt">float</span><span class="o">&amp;</span> <span class="n">dist</span><span class="p">,</span> <span class="kt">int</span><span class="o">&amp;</span> <span class="n">iid</span><span class="p">,</span> <span class="kt">int</span><span class="o">&amp;</span> <span class="n">sid</span><span class="p">,</span> <span class="kt">int</span><span class="o">&amp;</span> <span class="n">eid</span><span class="p">,</span> <span class="n">vec4f</span><span class="o">&amp;</span> <span class="n">ew</span><span class="p">);</span>
+    <span class="kt">bool</span> <span class="n">early_exit</span><span class="p">,</span> <span class="kt">float</span><span class="o">&amp;</span> <span class="n">dist</span><span class="p">,</span> <span class="kt">int</span><span class="o">&amp;</span> <span class="n">iid</span><span class="p">,</span> <span class="kt">int</span><span class="o">&amp;</span> <span class="n">sid</span><span class="p">,</span> <span class="kt">int</span><span class="o">&amp;</span> <span class="n">eid</span><span class="p">,</span> <span class="n">vec2f</span><span class="o">&amp;</span> <span class="n">euv</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -5074,7 +5079,7 @@ BVHs, shape BVHs, each of which of a uniform primitive type.</p>
     <span class="kt">int</span> <span class="n">iid</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
     <span class="kt">int</span> <span class="n">sid</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
     <span class="kt">int</span> <span class="n">eid</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
-    <span class="n">vec4f</span> <span class="n">euv</span> <span class="o">=</span> <span class="n">zero4f</span><span class="p">;</span>
+    <span class="n">vec2f</span> <span class="n">euv</span> <span class="o">=</span> <span class="n">zero2f</span><span class="p">;</span>
     <span class="k">operator</span> <span class="nf">bool</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span> 
 <span class="p">}</span>
 </code></pre></div>
@@ -5106,6 +5111,7 @@ BVHs, shape BVHs, each of which of a uniform primitive type.</p>
 
 
 <p>Finds the closest element with a bvh (convenience wrapper).</p>
+<h3>Simple scene</h3>
 <h4>Struct texture</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">texture</span> <span class="p">{</span>
     <span class="n">string</span> <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
@@ -5405,7 +5411,7 @@ May contain only one of the points/lines/triangles/quads.</p>
 <li>cam:      node camera</li>
 <li>ist:      node instance</li>
 <li>env:      node environment</li>
-<li>children_:      child nodes</li>
+<li>children_:      child nodes (computed value)</li>
 </ul>
 </li>
 </ul>
@@ -5510,49 +5516,49 @@ May contain only one of the points/lines/triangles/quads.</p>
 </li>
 </ul>
 <h4>Function eval_pos()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">vec3f</span> <span class="nf">eval_pos</span><span class="p">(</span><span class="k">const</span> <span class="n">shape</span><span class="o">*</span> <span class="n">shp</span><span class="p">,</span> <span class="kt">int</span> <span class="n">eid</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec4f</span><span class="o">&amp;</span> <span class="n">euv</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="n">vec3f</span> <span class="nf">eval_pos</span><span class="p">(</span><span class="k">const</span> <span class="n">shape</span><span class="o">*</span> <span class="n">shp</span><span class="p">,</span> <span class="kt">int</span> <span class="n">eid</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec2f</span><span class="o">&amp;</span> <span class="n">euv</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Shape position interpolated using barycentric coordinates</p>
 <h4>Function eval_norm()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">vec3f</span> <span class="nf">eval_norm</span><span class="p">(</span><span class="k">const</span> <span class="n">shape</span><span class="o">*</span> <span class="n">shp</span><span class="p">,</span> <span class="kt">int</span> <span class="n">eid</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec4f</span><span class="o">&amp;</span> <span class="n">euv</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="n">vec3f</span> <span class="nf">eval_norm</span><span class="p">(</span><span class="k">const</span> <span class="n">shape</span><span class="o">*</span> <span class="n">shp</span><span class="p">,</span> <span class="kt">int</span> <span class="n">eid</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec2f</span><span class="o">&amp;</span> <span class="n">euv</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Shape normal interpolated using barycentric coordinates</p>
 <h4>Function eval_texcoord()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">vec2f</span> <span class="nf">eval_texcoord</span><span class="p">(</span><span class="k">const</span> <span class="n">shape</span><span class="o">*</span> <span class="n">shp</span><span class="p">,</span> <span class="kt">int</span> <span class="n">eid</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec4f</span><span class="o">&amp;</span> <span class="n">euv</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="n">vec2f</span> <span class="nf">eval_texcoord</span><span class="p">(</span><span class="k">const</span> <span class="n">shape</span><span class="o">*</span> <span class="n">shp</span><span class="p">,</span> <span class="kt">int</span> <span class="n">eid</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec2f</span><span class="o">&amp;</span> <span class="n">euv</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Shape texcoord interpolated using barycentric coordinates</p>
 <h4>Function eval_color()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">vec4f</span> <span class="nf">eval_color</span><span class="p">(</span><span class="k">const</span> <span class="n">shape</span><span class="o">*</span> <span class="n">shp</span><span class="p">,</span> <span class="kt">int</span> <span class="n">eid</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec4f</span><span class="o">&amp;</span> <span class="n">euv</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="n">vec4f</span> <span class="nf">eval_color</span><span class="p">(</span><span class="k">const</span> <span class="n">shape</span><span class="o">*</span> <span class="n">shp</span><span class="p">,</span> <span class="kt">int</span> <span class="n">eid</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec2f</span><span class="o">&amp;</span> <span class="n">euv</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Shape color interpolated using barycentric coordinates</p>
 <h4>Function eval_radius()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">float</span> <span class="nf">eval_radius</span><span class="p">(</span><span class="k">const</span> <span class="n">shape</span><span class="o">*</span> <span class="n">shp</span><span class="p">,</span> <span class="kt">int</span> <span class="n">eid</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec4f</span><span class="o">&amp;</span> <span class="n">euv</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="kt">float</span> <span class="nf">eval_radius</span><span class="p">(</span><span class="k">const</span> <span class="n">shape</span><span class="o">*</span> <span class="n">shp</span><span class="p">,</span> <span class="kt">int</span> <span class="n">eid</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec2f</span><span class="o">&amp;</span> <span class="n">euv</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Shape radius interpolated using barycentric coordinates</p>
 <h4>Function eval_tangsp()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">vec4f</span> <span class="nf">eval_tangsp</span><span class="p">(</span><span class="k">const</span> <span class="n">shape</span><span class="o">*</span> <span class="n">shp</span><span class="p">,</span> <span class="kt">int</span> <span class="n">eid</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec4f</span><span class="o">&amp;</span> <span class="n">euv</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="n">vec4f</span> <span class="nf">eval_tangsp</span><span class="p">(</span><span class="k">const</span> <span class="n">shape</span><span class="o">*</span> <span class="n">shp</span><span class="p">,</span> <span class="kt">int</span> <span class="n">eid</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec2f</span><span class="o">&amp;</span> <span class="n">euv</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Shape tangent space interpolated using barycentric coordinates</p>
 <h4>Function eval_pos()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">vec3f</span> <span class="nf">eval_pos</span><span class="p">(</span><span class="k">const</span> <span class="n">instance</span><span class="o">*</span> <span class="n">ist</span><span class="p">,</span> <span class="kt">int</span> <span class="n">sid</span><span class="p">,</span> <span class="kt">int</span> <span class="n">eid</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec4f</span><span class="o">&amp;</span> <span class="n">euv</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="n">vec3f</span> <span class="nf">eval_pos</span><span class="p">(</span><span class="k">const</span> <span class="n">instance</span><span class="o">*</span> <span class="n">ist</span><span class="p">,</span> <span class="kt">int</span> <span class="n">sid</span><span class="p">,</span> <span class="kt">int</span> <span class="n">eid</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec2f</span><span class="o">&amp;</span> <span class="n">euv</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Instance position interpolated using barycentric coordinates</p>
 <h4>Function eval_norm()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">vec3f</span> <span class="nf">eval_norm</span><span class="p">(</span><span class="k">const</span> <span class="n">instance</span><span class="o">*</span> <span class="n">ist</span><span class="p">,</span> <span class="kt">int</span> <span class="n">sid</span><span class="p">,</span> <span class="kt">int</span> <span class="n">eid</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec4f</span><span class="o">&amp;</span> <span class="n">euv</span><span class="p">);</span>
+<div class="codehilite"><pre><code><span></span><span class="n">vec3f</span> <span class="nf">eval_norm</span><span class="p">(</span><span class="k">const</span> <span class="n">instance</span><span class="o">*</span> <span class="n">ist</span><span class="p">,</span> <span class="kt">int</span> <span class="n">sid</span><span class="p">,</span> <span class="kt">int</span> <span class="n">eid</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec2f</span><span class="o">&amp;</span> <span class="n">euv</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -5781,6 +5787,7 @@ Throws an exception if an error occurs.</p>
 
 <p>Saves a scene. For now OBJ and glTF are supported.
 Throws an exception if an error occurs.</p>
+<h3>Example scenes</h3>
 <h4>Function make_cornell_box_scene()</h4>
 <div class="codehilite"><pre><code><span></span><span class="n">scene</span><span class="o">*</span> <span class="nf">make_cornell_box_scene</span><span class="p">();</span>
 </code></pre></div>
@@ -6303,6 +6310,7 @@ now). A new scene is returned if it was not already created.</p>
 
 
 <p>Save test scene</p>
+<h3>Path-tracing support</h3>
 <h4>Function specular_exponent_to_roughness()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kt">float</span> <span class="nf">specular_exponent_to_roughness</span><span class="p">(</span><span class="kt">float</span> <span class="n">n</span><span class="p">);</span>
 </code></pre></div>
@@ -6384,6 +6392,7 @@ This is a hack, but works better than not doing it.</p>
 
 
 <p>mitchell filter (public domain from stb_image_resize)</p>
+<h3>Path tracing</h3>
 <h4>Enum trace_shader_type</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">enum</span> <span class="k">struct</span> <span class="n">trace_shader_type</span> <span class="p">{</span>
     <span class="n">pathtrace</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
@@ -6630,6 +6639,7 @@ the the public API.</p>
 
 
 <p>Stop the asynchronous renderer.</p>
+<h3>Wavefront OBJ</h3>
 <h4>Struct obj_vertex</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">obj_vertex</span> <span class="p">{</span>
     <span class="kt">int</span> <span class="n">pos</span><span class="p">;</span>
@@ -6660,7 +6670,6 @@ the the public API.</p>
     <span class="n">line</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
     <span class="n">face</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span>
     <span class="n">bezier</span> <span class="o">=</span> <span class="mi">4</span><span class="p">,</span>
-    <span class="n">tetra</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span>
 <span class="p">}</span>
 </code></pre></div>
 
@@ -6672,7 +6681,6 @@ the the public API.</p>
 <li>line:      polylines</li>
 <li>face:      polygon faces</li>
 <li>bezier:      bezier segments</li>
-<li>tetra:      tetrahedrons</li>
 </ul>
 </li>
 </ul>
@@ -6699,10 +6707,9 @@ the the public API.</p>
     <span class="n">string</span> <span class="n">matname</span><span class="p">;</span>
     <span class="n">string</span> <span class="n">groupname</span><span class="p">;</span>
     <span class="kt">bool</span> <span class="n">smoothing</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
-    <span class="kt">int</span> <span class="n">subdivision_level</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
-    <span class="kt">bool</span> <span class="n">subdivision_catmullclark</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
     <span class="n">vector</span><span class="o">&lt;</span><span class="n">obj_vertex</span><span class="o">&gt;</span> <span class="n">verts</span><span class="p">;</span>
     <span class="n">vector</span><span class="o">&lt;</span><span class="n">obj_element</span><span class="o">&gt;</span> <span class="n">elems</span><span class="p">;</span>
+    <span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">string</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">string</span><span class="o">&gt;&gt;</span> <span class="n">props</span><span class="p">;</span>
 <span class="p">}</span>
 </code></pre></div>
 
@@ -6713,17 +6720,18 @@ the the public API.</p>
 <li>matname:      material name</li>
 <li>groupname:      group name</li>
 <li>smoothing:      smoothing</li>
-<li>subdivision_level:      number of times to subdivide</li>
-<li>subdivision_catmullclark:      whether to use Catmull-Clark subdivision</li>
 <li>verts:      element vertices</li>
 <li>elems:      element faces</li>
+<li>props:      the rest of the properties [extension]</li>
 </ul>
 </li>
 </ul>
 <h4>Struct obj_object</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">obj_object</span> <span class="p">{</span>
     <span class="n">string</span> <span class="n">name</span><span class="p">;</span>
-    <span class="n">vector</span><span class="o">&lt;</span><span class="n">obj_group</span><span class="o">&gt;</span> <span class="n">groups</span><span class="p">;</span>
+    <span class="n">vector</span><span class="o">&lt;</span><span class="n">obj_group</span><span class="o">*&gt;</span> <span class="n">groups</span><span class="p">;</span>
+    <span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">string</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">string</span><span class="o">&gt;&gt;</span> <span class="n">props</span><span class="p">;</span>
+    <span class="o">~</span><span class="n">obj_object</span><span class="p">();</span> 
 <span class="p">}</span>
 </code></pre></div>
 
@@ -6733,6 +6741,8 @@ the the public API.</p>
 <li>Members:<ul>
 <li>name:      object name</li>
 <li>groups:      element groups</li>
+<li>props:      the rest of the properties [extension]</li>
+<li>~obj_object():      cleanup</li>
 </ul>
 </li>
 </ul>
@@ -6741,7 +6751,7 @@ the the public API.</p>
     <span class="n">string</span> <span class="n">path</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
     <span class="kt">bool</span> <span class="n">clamp</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
     <span class="kt">float</span> <span class="n">scale</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
-    <span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">string</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">string</span><span class="o">&gt;&gt;</span> <span class="n">unknown_props</span><span class="p">;</span>
+    <span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">string</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">string</span><span class="o">&gt;&gt;</span> <span class="n">props</span><span class="p">;</span>
 <span class="p">}</span>
 </code></pre></div>
 
@@ -6752,7 +6762,7 @@ the the public API.</p>
 <li>path:      the texture path</li>
 <li>clamp:      whether to clamp tp th edge</li>
 <li>scale:      the scale for bump and displacement</li>
-<li>unknown_props:      the rest of the unknown properties</li>
+<li>props:      the rest of the properties</li>
 </ul>
 </li>
 </ul>
@@ -6805,7 +6815,7 @@ the the public API.</p>
     <span class="n">obj_texture_info</span> <span class="n">bump_txt</span><span class="p">;</span>
     <span class="n">obj_texture_info</span> <span class="n">disp_txt</span><span class="p">;</span>
     <span class="n">obj_texture_info</span> <span class="n">norm_txt</span><span class="p">;</span>
-    <span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">string</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">string</span><span class="o">&gt;&gt;</span> <span class="n">unknown_props</span><span class="p">;</span>
+    <span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">string</span><span class="p">,</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">string</span><span class="o">&gt;&gt;</span> <span class="n">props</span><span class="p">;</span>
 <span class="p">}</span>
 </code></pre></div>
 
@@ -6836,7 +6846,7 @@ the the public API.</p>
 <li>bump_txt:      bump map texture (heighfield)</li>
 <li>disp_txt:      displacement map texture (heighfield)</li>
 <li>norm_txt:      normal map texture</li>
-<li>unknown_props:      unknown string props</li>
+<li>props:      the rest of the properties</li>
 </ul>
 </li>
 </ul>
@@ -6932,7 +6942,7 @@ the the public API.</p>
 </code></pre></div>
 
 
-<p>OBJ asset</p>
+<p>OBJ scene</p>
 <ul>
 <li>Members:<ul>
 <li>pos:      vertex positions</li>
@@ -6994,65 +7004,7 @@ the the public API.</p>
 </ul>
 </li>
 </ul>
-<h4>Struct obj_shape</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">obj_shape</span> <span class="p">{</span>
-    <span class="n">string</span> <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
-    <span class="n">string</span> <span class="n">matname</span> <span class="o">=</span> <span class="s">&quot;&quot;</span><span class="p">;</span>
-    <span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">points</span><span class="p">;</span>
-    <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2i</span><span class="o">&gt;</span> <span class="n">lines</span><span class="p">;</span>
-    <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3i</span><span class="o">&gt;</span> <span class="n">triangles</span><span class="p">;</span>
-    <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span> <span class="n">bezier</span><span class="p">;</span>
-    <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4i</span><span class="o">&gt;</span> <span class="n">tetras</span><span class="p">;</span>
-    <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span> <span class="n">pos</span><span class="p">;</span>
-    <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec3f</span><span class="o">&gt;</span> <span class="n">norm</span><span class="p">;</span>
-    <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;</span> <span class="n">texcoord</span><span class="p">;</span>
-    <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec4f</span><span class="o">&gt;</span> <span class="n">color</span><span class="p">;</span>
-    <span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;</span> <span class="n">radius</span><span class="p">;</span>
-<span class="p">}</span>
-</code></pre></div>
-
-
-<p>Shape. May contain only one of the points/lines/triangles.</p>
-<ul>
-<li>Members:<ul>
-<li>name:      name of the group that enclosed it</li>
-<li>matname:      name of the material</li>
-<li>points:      points</li>
-<li>lines:      lines</li>
-<li>triangles:      triangles</li>
-<li>bezier:      bezier</li>
-<li>tetras:      tetrahedrons</li>
-<li>pos:      per-vertex position (3 float)</li>
-<li>norm:      per-vertex normals (3 float)</li>
-<li>texcoord:      per-vertex texcoord (2 float)</li>
-<li>color:      [extension] per-vertex color (4 float)</li>
-<li>radius:      [extension] per-vertex radius (1 float)</li>
-</ul>
-</li>
-</ul>
-<h4>Struct obj_mesh</h4>
-<div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">obj_mesh</span> <span class="p">{</span>
-    <span class="n">vector</span><span class="o">&lt;</span><span class="n">obj_shape</span><span class="o">&gt;</span> <span class="n">shapes</span><span class="p">;</span>
-    <span class="o">~</span><span class="n">obj_mesh</span><span class="p">();</span> 
-<span class="p">}</span>
-</code></pre></div>
-
-
-<p>Mesh</p>
-<ul>
-<li>Members:<ul>
-<li>shapes:      primitives</li>
-<li>~obj_mesh():      cleanup</li>
-</ul>
-</li>
-</ul>
-<h4>Function get_mesh()</h4>
-<div class="codehilite"><pre><code><span></span><span class="n">obj_mesh</span><span class="o">*</span> <span class="nf">get_mesh</span><span class="p">(</span>
-    <span class="k">const</span> <span class="n">obj_scene</span><span class="o">*</span> <span class="n">model</span><span class="p">,</span> <span class="k">const</span> <span class="n">obj_object</span><span class="o">&amp;</span> <span class="n">oobj</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">facet_non_smooth</span><span class="p">);</span>
-</code></pre></div>
-
-
-<p>Gets a mesh from an OBJ object.</p>
+<h3>Khronos glTF</h3>
 <h4>Typedef buffer_data</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">using</span> <span class="n">buffer_data</span> <span class="o">=</span> <span class="n">vector</span><span class="o">&lt;</span><span class="kt">unsigned</span> <span class="kt">char</span><span class="o">&gt;</span><span class="p">;</span>
 </code></pre></div>
@@ -8143,6 +8095,7 @@ not be present.</p>
 </ul>
 </li>
 </ul>
+<h3>Svg</h3>
 <h4>Struct svg_path</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">svg_path</span> <span class="p">{</span>
     <span class="n">vector</span><span class="o">&lt;</span><span class="n">vec2f</span><span class="o">&gt;</span> <span class="n">pos</span><span class="p">;</span>
@@ -8201,6 +8154,7 @@ not be present.</p>
 
 
 <p>Save SVG</p>
+<h3>String, path and file functions</h3>
 <h4>Function startswith()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="kt">bool</span> <span class="nf">startswith</span><span class="p">(</span><span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">str</span><span class="p">,</span> <span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">substr</span><span class="p">);</span>
 </code></pre></div>
@@ -8381,6 +8335,7 @@ is not fast nor memory efficient. But it is good enough for some needs.</p>
 
 
 <p>Wrapper for the above function that prints to stdout with endline.</p>
+<h3>File loading and saving</h3>
 <h4>Function load_binary()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kr">inline</span> <span class="n">vector</span><span class="o">&lt;</span><span class="kt">unsigned</span> <span class="kt">char</span><span class="o">&gt;</span> <span class="n">load_binary</span><span class="p">(</span><span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">filename</span><span class="p">);</span>
 </code></pre></div>
@@ -8406,6 +8361,7 @@ is not fast nor memory efficient. But it is good enough for some needs.</p>
 
 
 <p>Saves a string to a text file.</p>
+<h3>Immediate-mode command line parser</h3>
 <h4>Struct cmdline_parser</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">cmdline_parser</span><span class="p">;</span>
 </code></pre></div>
@@ -8463,6 +8419,7 @@ is not fast nor memory efficient. But it is good enough for some needs.</p>
 
 
 <p>initialize the command line</p>
+<h3>Simple logging</h3>
 <h4>Struct logger</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">logger</span> <span class="p">{</span>
     <span class="kt">bool</span> <span class="n">_verbose</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
@@ -8571,6 +8528,7 @@ By default a non-verbose stdout logger is creater.</p>
 
 
 <p>Logs a message to the default loggers</p>
+<h3>Simple timer</h3>
 <h4>Struct timer</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">timer</span> <span class="p">{</span>
     <span class="n">timer</span><span class="p">(</span><span class="kt">bool</span> <span class="n">autostart</span> <span class="o">=</span> <span class="nb">true</span><span class="p">);</span> 
@@ -8591,6 +8549,7 @@ By default a non-verbose stdout logger is creater.</p>
 </ul>
 </li>
 </ul>
+<h3>OpenGL utilities</h3>
 <h4>Enum gl_elem_type : int</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">enum</span> <span class="k">struct</span> <span class="nl">gl_elem_type</span> <span class="p">:</span> <span class="kt">int</span> <span class="p">{</span>
     <span class="n">point</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
@@ -8869,6 +8828,7 @@ Internally use float if as_float and filtering if filter.</p>
 </ul>
 </li>
 </ul>
+<h3>OpenGL vertex array buffers</h3>
 <h4>Struct gl_vertex_buffer</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">gl_vertex_buffer</span> <span class="p">{</span>
 </code></pre></div>
@@ -8990,6 +8950,7 @@ update_vertex_buffer().</p>
 
 
 <p>Destroys the buffer</p>
+<h3>OpenGL element array buffers</h3>
 <h4>Struct gl_element_buffer</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">gl_element_buffer</span> <span class="p">{</span>
 </code></pre></div>
@@ -9064,6 +9025,7 @@ update_velement_buffer().</p>
 
 
 <p>Destroys the buffer</p>
+<h3>OpenGL programs</h3>
 <h4>Struct gl_program</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">gl_program</span> <span class="p">{</span>
 </code></pre></div>
@@ -9326,6 +9288,7 @@ is either a buffer bid or a single value def
 
 
 <p>Unbind a program</p>
+<h3>OpenGL scene shader support</h3>
 <h4>Struct gl_shape</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">gl_shape</span> <span class="p">{</span>
 </code></pre></div>
@@ -9371,6 +9334,7 @@ is either a buffer bid or a single value def
 
 
 <p>Update scene shapes on the GPU.</p>
+<h3>OpenGL image shader</h3>
 <h4>Struct gl_stdimage_program</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">gl_stdimage_program</span> <span class="p">{</span>
 </code></pre></div>
@@ -9433,6 +9397,7 @@ params together for the above functions.</p>
 
 
 <p>As above but includes an exposure/gamma correction.</p>
+<h3>OpenGL surface shader</h3>
 <h4>Struct gl_stdsurface_program</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">struct</span> <span class="n">gl_stdsurface_program</span> <span class="p">{</span>
 </code></pre></div>
@@ -9617,6 +9582,7 @@ coordinates texcoord, per-vertex color color and tangent space tangsp.</p>
 
 
 <p>Draw whole scene</p>
+<h3>OpenGL window</h3>
 <h4>Function void()</h4>
 <div class="codehilite"><pre><code><span></span><span class="k">typedef</span> <span class="nf">void</span> <span class="p">(</span><span class="o">*</span><span class="n">gl_text_callback</span><span class="p">)(</span><span class="n">gl_window</span><span class="o">*</span><span class="p">,</span> <span class="kt">unsigned</span> <span class="kt">int</span><span class="p">);</span>
 </code></pre></div>
@@ -9758,6 +9724,7 @@ coordinates texcoord, per-vertex color color and tangent space tangsp.</p>
 
 
 <p>Handle camera navigation.</p>
+<h3>OpenGL widgets</h3>
 <h4>Function init_widgets()</h4>
 <div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">init_widgets</span><span class="p">(</span>
     <span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">light_style</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">extra_font</span> <span class="o">=</span> <span class="nb">true</span><span class="p">);</span>
@@ -9926,21 +9893,30 @@ coordinates texcoord, per-vertex color color and tangent space tangsp.</p>
 
 
 <p>Color widget</p>
-<h4>Function draw_combo_begin()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">draw_combo_begin</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span> <span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">label</span><span class="p">);</span>
+<h4>Function draw_combo_widget_begin()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">draw_combo_widget_begin</span><span class="p">(</span>
+    <span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span> <span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">label</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Combo widget</p>
-<h4>Function draw_combo_item()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">draw_combo_item</span><span class="p">(</span>
+<h4>Function draw_combo_widget_item()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">bool</span> <span class="nf">draw_combo_widget_item</span><span class="p">(</span>
     <span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">label</span><span class="p">,</span> <span class="kt">int</span> <span class="n">idx</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">selected</span><span class="p">);</span>
 </code></pre></div>
 
 
 <p>Combo widget</p>
-<h4>Function draw_combo_end()</h4>
-<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">draw_combo_end</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">);</span>
+<h4>Function draw_combo_widget_end()</h4>
+<div class="codehilite"><pre><code><span></span><span class="kt">void</span> <span class="nf">draw_combo_widget_end</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Combo widget</p>
+<h4>Function draw_combo_widget_item()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+<span class="kt">bool</span> <span class="n">draw_combo_widget_item</span><span class="p">(</span>
+    <span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">label</span><span class="p">,</span> <span class="kt">int</span> <span class="n">idx</span><span class="p">,</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span> <span class="k">const</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">item</span><span class="p">);</span>
 </code></pre></div>
 
 
@@ -9965,6 +9941,14 @@ coordinates texcoord, per-vertex color color and tangent space tangsp.</p>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
 <span class="kr">inline</span> <span class="kt">bool</span> <span class="n">draw_value_widget</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span> <span class="n">T</span><span class="o">&amp;</span> <span class="n">val</span><span class="p">,</span>
     <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">string</span><span class="p">,</span> <span class="n">T</span><span class="o">&gt;&gt;&amp;</span> <span class="n">labels</span><span class="p">);</span>
+</code></pre></div>
+
+
+<p>Combo widget</p>
+<h4>Function draw_value_widget()</h4>
+<div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
+<span class="kr">inline</span> <span class="kt">bool</span> <span class="n">draw_value_widget</span><span class="p">(</span><span class="n">gl_window</span><span class="o">*</span> <span class="n">win</span><span class="p">,</span> <span class="k">const</span> <span class="n">string</span><span class="o">&amp;</span> <span class="n">lbl</span><span class="p">,</span> <span class="n">T</span><span class="o">*&amp;</span> <span class="n">val</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">vector</span><span class="o">&lt;</span><span class="n">T</span><span class="o">*&gt;&amp;</span> <span class="n">vals</span><span class="p">,</span> <span class="kt">bool</span> <span class="n">extra</span> <span class="o">=</span> <span class="nb">true</span><span class="p">,</span> <span class="n">T</span><span class="o">*</span> <span class="n">extra_val</span> <span class="o">=</span> <span class="k">nullptr</span><span class="p">);</span>
 </code></pre></div>
 
 
