@@ -6088,8 +6088,6 @@ enum struct obj_element_type : uint16_t {
     face = 3,
     /// bezier segments
     bezier = 4,
-    /// tetrahedrons
-    tetra = 5,
 };
 
 /// Element vertex indices

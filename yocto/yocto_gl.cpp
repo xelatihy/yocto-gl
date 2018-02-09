@@ -6901,29 +6901,6 @@ void load_textures(obj_scene* asset, const string& dirname, bool skip_missing) {
     }
 }
 
-// Parses an OBJ vertex list. Handles negative values.
-inline istream& obj_parse_vertlist(
-    istream& is, vector<obj_vertex>& verts, const obj_vertex& vert_size) {
-    verts.clear();
-    while (true) {
-        auto tok = string();
-        is >> tok;
-        if (tok.empty()) break;
-        auto toks = split(tok, "/");
-        if (toks.empty()) break;
-        auto vert = obj_vertex{-1, -1, -1, -1, -1};
-        auto v = &vert.pos;
-        auto vs = &vert_size.pos;
-        for (auto i = 0; i < min(5, (int)toks.size()); i++) {
-            if (toks[i] == "") continue;
-            v[i] = (int)atoi(toks[i].c_str());
-            v[i] = (v[i] < 0) ? vs[i] + v[i] : v[i] - 1;
-        }
-        verts.push_back(vert);
-    }
-    return is;
-}
-
 // Loads an OBJ
 obj_scene* load_obj(const string& filename, bool load_txt, bool skip_missing,
     bool flip_texcoord, bool flip_tr) {
@@ -6991,11 +6968,25 @@ obj_scene* load_obj(const string& filename, bool load_txt, bool skip_missing,
             asset->radius.push_back(0);
             ss >> asset->radius.back();
         } else if (cmd == "f" || cmd == "l" || cmd == "p" || cmd == "b") {
-            elems.clear();
-            obj_parse_vertlist(ss, elems, vert_size);
-            group->elems.push_back({(uint32_t)group->verts.size(),
-                elem_type_map.at(cmd), (uint16_t)elems.size()});
-            group->verts.insert(group->verts.end(), elems.begin(), elems.end());
+            group->elems.push_back(
+                {(uint32_t)group->verts.size(), elem_type_map.at(cmd), 0});
+            while (true) {
+                auto tok = string();
+                ss >> tok;
+                if (tok.empty()) break;
+                auto toks = split(tok, "/");
+                if (toks.empty()) break;
+                auto vert = obj_vertex{-1, -1, -1, -1, -1};
+                auto v = &vert.pos;
+                auto vs = &vert_size.pos;
+                for (auto i = 0; i < min(5, (int)toks.size()); i++) {
+                    if (toks[i].empty()) continue;
+                    v[i] = (int)atoi(toks[i].c_str());
+                    v[i] = (v[i] < 0) ? vs[i] + v[i] : v[i] - 1;
+                }
+                group->verts.push_back(vert);
+                group->elems.back().size += 1;
+            }
         } else if (cmd == "o") {
             asset->objects.push_back(new obj_object());
             object = asset->objects.back();
@@ -7242,10 +7233,9 @@ void save_obj(const string& filename, const obj_scene* asset, bool save_txt,
     for (auto& v : asset->radius) fs << "vr " << v << '\n';
 
     // save element data
-    static auto elem_labels =
-        unordered_map<obj_element_type, string>{{obj_element_type::point, "p"},
-            {obj_element_type::line, "l"}, {obj_element_type::face, "f"},
-            {obj_element_type::bezier, "b"}, {obj_element_type::tetra, "t"}};
+    static auto elem_labels = unordered_map<obj_element_type, string>{
+        {obj_element_type::point, "p"}, {obj_element_type::line, "l"},
+        {obj_element_type::face, "f"}, {obj_element_type::bezier, "b"}};
     for (auto object : asset->objects) {
         fs << "o " << object->name << '\n';
         for (auto& group : object->groups) {
@@ -7343,14 +7333,6 @@ obj_mesh* get_mesh(
                          i += 3) {
                         prim->bezier.push_back({vert_ids[i - 1], vert_ids[i],
                             vert_ids[i + 1], vert_ids[i + 2]});
-                    }
-                } break;
-                case obj_element_type::tetra: {
-                    for (auto i = elem.start; i < elem.start + elem.size;
-                         i += 4) {
-                        if (i + 3 >= vert_ids.size()) continue;
-                        prim->tetras.push_back({vert_ids[i], vert_ids[i + 1],
-                            vert_ids[i + 2], vert_ids[i + 3]});
                     }
                 } break;
                 default: { assert(false); }
