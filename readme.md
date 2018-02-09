@@ -59,35 +59,38 @@ components, we follow the usage below.
 ## Design Considerations
 
 Yocto/GL tries to follow a simple programming model inspired by C but with
-heavy use of operator overloading for math readability. We attempt tp make
-the code weasy to use rather than as performant as possible. The APIs
-attempt to make using the code as little error prone as possible, sometimes
-at the price of some slowdown. We adopt a functional style and only rarely
-use classes and methods. Using a function style makes the code easier to
-extend, more explicit in the requirements, and easier to write
-parallel-friendly APIs. I guess you could call this "data-driven
-programming". We use templates very little now, after a major refactoring,
-to improve error reporting, reduce compilation times and make the codebase
-more accessible to beginners. This lead to a small increase in copied code
-that we deem ok at this time. Finally, we often import symbols from the
-standard library rather than using the `std::name` pattern. We found that
-this improves consistency, especially when using math functions, is
-significantly more readable when using templates and allows to to more
-easily switch STL implementation if desired.
+heavy use of operator overloading for math readability. We attempt to make
+the code easy to use use rather than as performant as possible.
+We adopt a functional style and only rarely use classes and methods.
+Using a function style makes the code easier to extend, more explicit in
+the function requirements, and easier to write parallel-friendly APIs.
+I guess you could call this "data-driven programming".
+
+The use of templates in Yocto was the reason for many refactorings, going
+from no template to heavy templates use. At this time, templates are used
+in the basic types to make the codebase shorter and reduce bugs,
+at the price of accessibility for beginners. The truth is that modern C++,
+a tenant of Yocto, is heavily templated anyway, so being able to read
+template code is necessary no matter how Yocto does things.
+
+Finally, we often import symbols from the standard library rather than
+using the `std::name` pattern. We found that this improves consistency
+when using math functions, and is more readable with templates. We realize
+this is not stardard, but the imports are hidden within the ygl namespace,
+so library users do not have to be concern about it.
 
 
 ## Compilation
 
-Yocto/GL is written in C++14, with compilation supported on C++11, and
-compiles on OSX (clang from Xcode 9+), Linux (gcc 6+, clang 4+)
-and Windows (MSVC 2017).
+Yocto/GL is written in C++14 and compiles on OSX (clang from Xcode 9+),
+Linux (gcc 6+, clang 4+) and Windows (MSVC 2015, MSVC 2017).
 
 For image loading and saving, Yocto/GL depends on `stb_image.h`,
 `stb_image_write.h`, `stb_image_resize.h` and `tinyexr.h`. These features
 can be disabled by defining YGL_IMAGEIO to 0 before including this file.
 If these features are useful, then the implementation files need to
 included in the manner described by the respective libraries. To simplify
-builds, we provice a file that builds these libraries, `stb_image.cpp`.
+builds, we provide a file that builds these libraries, `stb_image.cpp`.
 
 To support Khronos glTF, Yocto/GL depends on `json.hpp`. This feature can
 be disabled by defining YGL_GLTF to 0 before including this file.
@@ -132,7 +135,7 @@ scenes are crated with the test generator.
 
 To use the library simply include this file and setup the compilation
 option as described above.
-All library features are documented at the definition and should be
+All library features are documented at their definition and should be
 relatively easy to use if you are familiar with writing graphics code.
 You can find the extracted documentation at `yocto_gl.md`.
 Here we give an overview of some of the main features.
