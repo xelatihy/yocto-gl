@@ -81,25 +81,17 @@
 // - update documentation
 // - update BVH documentation
 //
-// - distribution:
-//     - use my own search function
+// ## trace
+//
+// - distributions:
 //     - move to binary function
 //     - consider adding an object
 //     - add a distribution for lights
-//
 // - cleanup sampling functions everywhere
 //     - probably removing sample_points/lines/triangles
 //     - cleanup sampling in ray tracing
-//     - create distributions
 //     - make lights with single shapes in trace
-//
-// - trace: add hack for radius in offsetting rays
-//
-// - BVH simplify build functions: can we avoid preallocating nodes?
-// - BVH: maybe put axis with internal
-//
-// - tesselation functions using stencils
-//
+// - add radius in offsetting rays
 // - simplify trace_point
 //     - double sided in material functions
 //     - opacity in material functions
@@ -107,10 +99,21 @@
 //     - maybe include shape directly?
 // - remove background from point?
 // - sample background to sum all environments
-// - lines epsilon in ray generation
-// - add make_offset_ray functions
 // - envmap sampling
 // - sobol and cmjs
+//
+// ## BVH
+//
+// - simplify build functions: can we avoid preallocating nodes?
+// - maybe put axis with internal
+// - simplify partition and nth_element function
+//
+// ## Tesselation
+//
+// - tesselation functions using stencils
+// - cleanup tesselation in shape
+//     - remove tesselate once
+//     - tesselation uses only internal levels
 //
 // ## Simple denoiser
 //
