@@ -78,12 +78,6 @@
 //
 // ## Next
 //
-// - obj cleanup
-//     - material/object/group properties
-//     - group properties
-//     - quads in obj
-//     - facevarying in obj
-//
 // - update documentation
 // - update BVH documentation
 //
