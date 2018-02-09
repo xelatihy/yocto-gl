@@ -6901,27 +6901,27 @@ void load_textures(obj_scene* asset, const string& dirname, bool skip_missing) {
     }
 }
 
-// Parses an OBJ vertex list.
-inline istream& obj_parse_vertlist(istream& is, vector<obj_vertex>& verts,
-                                   const obj_vertex& vert_size) {
-    verts.clear();
+// Parses an OBJ vertex list. Handles negative values.
+inline vector<obj_vertex> obj_parse_vertlist(
+    stringstream& ss, const obj_vertex& vert_size) {
+    auto elems = vector<obj_vertex>();
     while (true) {
         auto tok = string();
-        is >> tok;
+        ss >> tok;
         if (tok.empty()) break;
         auto toks = split(tok, "/");
         if (toks.empty()) break;
-        auto v = array<int, 5>{-1, -1, -1, -1, -1};
-        auto vs = array<int, 5>{vert_size.pos, vert_size.texcoord,
-            vert_size.norm, vert_size.color, vert_size.radius};
-        for(auto i = 0; i < min(5, (int)toks.size()); i ++) {
-            if(toks[i] == "") continue;
-            v[i] = atoi(toks[0].c_str());
-            v[i] = (v[i] < 0) ? vs[i] + v[i] : v[i] + 1;
+        auto v = obj_vertex{-1, -1, -1, -1, -1};
+        for (auto i = 0; i < min(5, (int)toks.size()); i++) {
+            if (toks[i] == "") continue;
+            ((int*)&v)[i] = (int)atoi(toks[i].c_str());
+            ((int*)&v)[i] = (((int*)&v)[i] < 0) ?
+                                ((int*)&vert_size)[i] + ((int*)&v)[i] :
+                                ((int*)&v)[i] - 1;
         }
-        verts.push_back(obj_vertex(v[0],v[1],v[2],v[3],v[4]));
+        elems.push_back(v);
     }
-    return is;
+    return elems;
 }
 
 // Loads an OBJ
@@ -6944,7 +6944,6 @@ obj_scene* load_obj(const string& filename, bool load_txt, bool skip_missing,
     auto mtllibs = vector<string>();
     auto object = asset->objects.back();
     auto group = &object->groups.back();
-    auto elems = vector<obj_vertex>();
 
     // keep track of array lengths
     auto vert_size = obj_vertex{0, 0, 0, 0, 0};
@@ -6986,27 +6985,27 @@ obj_scene* load_obj(const string& filename, bool load_txt, bool skip_missing,
             asset->radius.push_back(0);
             ss >> asset->radius.back();
         } else if (cmd == "f") {
-            obj_parse_vertlist(ss, elems, vert_size);
+            auto elems = obj_parse_vertlist(ss, vert_size);
             group->elems.push_back({(uint32_t)group->verts.size(),
                 obj_element_type::face, (uint16_t)elems.size()});
             group->verts.insert(group->verts.end(), elems.begin(), elems.end());
         } else if (cmd == "l") {
-            obj_parse_vertlist(ss, elems, vert_size);
+            auto elems = obj_parse_vertlist(ss, vert_size);
             group->elems.push_back({(uint32_t)group->verts.size(),
                 obj_element_type::line, (uint16_t)elems.size()});
             group->verts.insert(group->verts.end(), elems.begin(), elems.end());
         } else if (cmd == "p") {
-            obj_parse_vertlist(ss, elems, vert_size);
+            auto elems = obj_parse_vertlist(ss, vert_size);
             group->elems.push_back({(uint32_t)group->verts.size(),
                 obj_element_type::point, (uint16_t)elems.size()});
             group->verts.insert(group->verts.end(), elems.begin(), elems.end());
         } else if (cmd == "b") {
-            obj_parse_vertlist(ss, elems, vert_size);
+            auto elems = obj_parse_vertlist(ss, vert_size);
             group->elems.push_back({(uint32_t)group->verts.size(),
                 obj_element_type::bezier, (uint16_t)elems.size()});
             group->verts.insert(group->verts.end(), elems.begin(), elems.end());
         } else if (cmd == "t") {
-            obj_parse_vertlist(ss, elems, vert_size);
+            auto elems = obj_parse_vertlist(ss, vert_size);
             group->elems.push_back({(uint32_t)group->verts.size(),
                 obj_element_type::tetra, (uint16_t)elems.size()});
             group->verts.insert(group->verts.end(), elems.begin(), elems.end());
