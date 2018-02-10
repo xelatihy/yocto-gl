@@ -1936,9 +1936,9 @@ Colums access via operator[].</p>
 <h4>Struct mat&lt;T, 4></h4>
 <div class="codehilite"><pre><code><span></span><span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="n">T</span><span class="o">&gt;</span>
 <span class="k">struct</span> <span class="n">mat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;</span> <span class="p">{</span>
-    <span class="n">mat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;</span><span class="p">();</span> 
-    <span class="k">explicit</span> <span class="n">mat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;</span><span class="p">(</span><span class="kt">float</span> <span class="n">vv</span><span class="p">);</span> 
-    <span class="n">mat</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;</span><span class="p">(</span><span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;&amp;</span> <span class="n">x</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;&amp;</span> <span class="n">y</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;&amp;</span> <span class="n">z</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;&amp;</span> <span class="n">w</span><span class="p">);</span> 
+    <span class="n">mat</span><span class="p">();</span> 
+    <span class="k">explicit</span> <span class="nf">mat</span><span class="p">(</span><span class="kt">float</span> <span class="n">vv</span><span class="p">);</span> 
+    <span class="n">mat</span><span class="p">(</span><span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;&amp;</span> <span class="n">x</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;&amp;</span> <span class="n">y</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;&amp;</span> <span class="n">z</span><span class="p">,</span> <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;&amp;</span> <span class="n">w</span><span class="p">);</span> 
     <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;&amp;</span> <span class="k">operator</span><span class="p">[](</span><span class="kt">int</span> <span class="n">i</span><span class="p">);</span> 
     <span class="k">const</span> <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;&amp;</span> <span class="k">operator</span><span class="p">[](</span><span class="kt">int</span> <span class="n">i</span><span class="p">)</span> <span class="k">const</span><span class="p">;</span> 
     <span class="n">vec</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span> <span class="mi">4</span><span class="o">&gt;</span> <span class="n">x</span><span class="p">;</span>
@@ -1953,9 +1953,9 @@ Colums access via operator[].</p>
 Colums access via operator[].</p>
 <ul>
 <li>Members:<ul>
-<li>4&gt;():      Default constructor. Initializes to identity matrix.</li>
-<li>4&gt;():      Constructs a matrix with the given diagonal.</li>
-<li>4&gt;():      Constructs a matrix from its columns.</li>
+<li>mat():      Default constructor. Initializes to identity matrix.</li>
+<li>mat():      Constructs a matrix with the given diagonal.</li>
+<li>mat():      Constructs a matrix from its columns.</li>
 <li>operator<a href=""></a>:      Column access.</li>
 <li>operator<a href=""></a>:      Column access.</li>
 <li>x:      Column data.</li>
