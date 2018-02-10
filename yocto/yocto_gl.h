@@ -1660,12 +1660,12 @@ struct mat<T, 3> {
 template <typename T>
 struct mat<T, 4> {
     /// Default constructor. Initializes to identity matrix.
-    mat<T, 4>() : x{1, 0, 0, 0}, y{0, 1, 0, 0}, z{0, 0, 1, 0}, w{0, 0, 0, 1} {}
+    mat() : x{1, 0, 0, 0}, y{0, 1, 0, 0}, z{0, 0, 1, 0}, w{0, 0, 0, 1} {}
     /// Constructs a matrix with the given diagonal.
-    explicit mat<T, 4>(float vv)
+    explicit mat(float vv)
         : x{vv, 0, 0, 0}, y{0, vv, 0, 0}, z{0, 0, vv, 0}, w{0, 0, 0, vv} {}
     /// Constructs a matrix from its columns.
-    mat<T, 4>(const vec<T, 4>& x, const vec<T, 4>& y, const vec<T, 4>& z,
+    mat(const vec<T, 4>& x, const vec<T, 4>& y, const vec<T, 4>& z,
         const vec<T, 4>& w)
         : x(x), y(y), z(z), w(w) {}
 
