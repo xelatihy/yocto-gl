@@ -793,62 +793,62 @@ namespace ygl {
 /// @name Imported containers and related functions
 /// @{
 
-/// string
+/// String
 using std::string;
-/// vector
+/// Vector
 using std::vector;
-/// array
+/// Array
 using std::array;
-/// map
+/// Map
 using std::map;
-/// set
+/// Set
 using std::set;
-/// unordered map
+/// Unordered map
 using std::unordered_map;
-/// unordered set
+/// Unordered set
 using std::unordered_set;
-/// pair
+/// Pair
 using std::pair;
-/// tuple
+/// Tuple
 using std::tuple;
-/// unique pointer
+/// Unique pointer
 using std::unique_ptr;
-/// function
+/// Function
 using std::function;
-/// string literals
+/// String literals
 using namespace std::string_literals;
-/// numeric limits
+/// Numeric limits
 using std::numeric_limits;
-/// initializer list
+/// Initializer list
 using std::initializer_list;
-/// output stream
+/// Output stream
 using std::ostream;
-/// input stream
+/// Input stream
 using std::istream;
-/// string stream
+/// String stream
 using std::stringstream;
-/// file stream
+/// File stream
 using std::fstream;
-/// runtime error
+/// Runtime error
 using std::runtime_error;
-/// exception
+/// Exception
 using std::exception;
-/// ios base
+/// Ios base
 using std::ios_base;
-/// find algorithms
+/// Find algorithm
 using std::find;
-/// swap algorithms
+/// Swap algorithm
 using std::swap;
-/// get line from streams
+/// Get line from streams
 using std::getline;
-/// convert to string
+/// Convert to string
 using std::to_string;
-/// cout object for printing
+/// Cout object for printing
 using std::cout;
-/// tie function for tuple usage
+/// Tie function for tuple usage
 using std::tie;
 
-// makes literals available
+/// Makes literals available
 using namespace std::literals;
 
 /// @}
@@ -863,26 +863,26 @@ namespace ygl {
 /// @name Basic typedefs, math constants and functions
 /// @{
 
-/// convenient typedef for bytes
+/// Convenient typedef for bytes.
 using byte = unsigned char;
 
-/// convenient typedef for bytes
+/// Convenient typedef for unsigned ints.
 using uint = unsigned int;
 
-/// pi (float)
+/// Pi (float)
 const auto pif = 3.14159265f;
-/// pi (double)
+/// Pi (double)
 const auto pi = 3.1415926535897932384626433832795;
 
-/// shortcat for float max value
+/// Shortcat for float max value.
 const auto flt_max = numeric_limits<float>::max();
-/// shortcat for float min value
+/// Shortcat for float min value.
 const auto flt_min = numeric_limits<float>::lowest();
-/// shortcat for float epsilon
+/// Shortcat for float epsilon.
 const auto flt_eps = numeric_limits<float>::epsilon();
-/// shortcat for int max value
+/// Shortcat for int max value.
 const auto int_max = numeric_limits<int>::max();
-/// shortcat for int min value
+/// Shortcat for int min value.
 const auto int_min = numeric_limits<int>::min();
 
 /// Safe minimum value.
@@ -903,6 +903,7 @@ template <typename T>
 inline T max(T x, T y) {
     return (x > y) ? x : y;
 }
+
 /// Safe maximum value.
 template <typename T>
 inline T max(initializer_list<T> vs) {
@@ -922,8 +923,9 @@ template <typename T, typename T1>
 inline T lerp(const T& a, const T& b, T1 u) {
     return a * (1 - u) + b * u;
 }
+
 /// Bilinear interpolation. Order is specified like quads counter-clockwise,
-/// so a,b,c,d correspond to parameters (0,0), (0,1), (1,1), (0,1)
+/// so a,b,c,d correspond to parameters (0,0), (0,1), (1,1), (0,1).
 template <typename T, typename T1>
 inline float bilerp(
     const T& a, const T& b, const T& c, const T& d, T1 u, T1 v) {
@@ -931,20 +933,21 @@ inline float bilerp(
            d * (1 - u) * v;
 }
 
-/// Integer power of two
+/// Integer power of two.
 inline int pow2(int x) { return 1 << x; }
 
-/// Fast floor
+/// Fast floor.
 inline int fastfloor(float x) {
     auto xi = (int)x;
     return (x < xi) ? xi - 1 : xi;
 }
-/// Safe float to byte conversion
+
+/// Safe float to byte conversion.
 inline byte float_to_byte(float x) {
     return (byte)max(0, min(int(x * 256), 255));
 }
 
-/// Safe byte to float conversion
+/// Safe byte to float conversion.
 inline float byte_to_float(byte x) { return (float)x / 255.0f; }
 
 /// @}
@@ -967,79 +970,79 @@ struct vec;
 /// Vector of 1 element. Defined only for completeness.
 template <typename T>
 struct vec<T, 1> {
-    /// default constructor
+    /// Default constructor
     vec() : x{0} {}
-    /// element constructor
+    /// Element constructor
     vec(T x) : x{x} {}
 
-    /// element access
+    /// Element access
     T& operator[](int i) { return (&x)[i]; }
-    /// element access
+    /// Element access
     const T& operator[](int i) const { return (&x)[i]; }
 
-    /// element data
+    /// Element data
     T x;
 };
 
 /// Vector of 2 elements.
 template <typename T>
 struct vec<T, 2> {
-    /// default constructor
+    /// Default constructor
     vec() : x{0}, y{0} {}
-    /// element constructor
+    /// Element constructor
     explicit vec(T vv) : x(vv), y(vv) {}
-    /// element constructor
+    /// Element constructor
     vec(T x, T y) : x{x}, y{y} {}
 
-    /// element access
+    /// Element access
     T& operator[](int i) { return (&x)[i]; }
-    /// element access
+    /// Element access
     const T& operator[](int i) const { return (&x)[i]; }
 
-    /// element data
+    /// Element data
     T x;
-    /// element data
+    /// Element data
     T y;
 };
 
 /// Vector of 3 elements.
 template <typename T>
 struct vec<T, 3> {
-    /// default constructor
+    /// Default constructor
     vec() : x{0}, y{0}, z{0} {}
-    /// element constructor
+    /// Element constructor
     explicit vec(T vv) : x(vv), y(vv), z(vv) {}
-    /// element constructor
+    /// Element constructor
     vec(T x, T y, T z) : x{x}, y{y}, z{z} {}
 
-    /// element access
+    /// Element access
     T& operator[](int i) { return (&x)[i]; }
-    /// element access
+    /// Element access
     const T& operator[](int i) const { return (&x)[i]; }
 
-    /// element data
+    /// Element data
     T x;
-    /// element data
+    /// Element data
     T y;
-    /// element data
+    /// Element data
     T z;
 };
 
 /// Vector of 4 elements.
 template <typename T>
 struct vec<T, 4> {
-    /// default constructor
+    /// Default constructor
     vec() : x{0}, y{0}, z{0}, w{0} {}
-    /// element constructor
+    /// Element constructor
     explicit vec(T vv) : x(vv), y(vv), z(vv), w(vv) {}
-    /// element constructor
+    /// Element constructor
     vec(T x, T y, T z, T w) : x{x}, y{y}, z{z}, w{w} {}
     /// constructor from smaller vector
     vec(const vec<T, 3>& xyz, T w) : x{xyz.x}, y{xyz.y}, z{xyz.z}, w{w} {}
 
-    /// element access
+    /// Element access
     T& operator[](int i) { return (&x)[i]; }
-    /// element access
+    /// Element access
     const T& operator[](int i) const { return (&x)[i]; }
 
     /// access xyz components
@@ -1047,13 +1050,13 @@ struct vec<T, 4> {
     /// access xyz components
     const vec<T, 3>& xyz() const { return *(vec<T, 3>*)&x; }
 
-    /// element data
+    /// Element data
     T x;
-    /// element data
+    /// Element data
     T y;
-    /// element data
+    /// Element data
     T z;
-    /// element data
+    /// Element data
     T w;
 };
 
@@ -1097,92 +1100,92 @@ const auto zero4i = vec4i();
 /// 4-dimensional byte zero vector
 const auto zero4b = vec4b();
 
-/// iteration support
+/// Iteration support.
 template <typename T, int N>
 inline T* begin(vec<T, N>& a) {
     return &a.x;
 }
-/// iteration support
+/// Iteration support.
 template <typename T, int N>
 inline const T* begin(const vec<T, N>& a) {
     return &a.x;
 }
-/// iteration support
+/// Iteration support.
 template <typename T, int N>
 inline T* end(vec<T, N>& a) {
     return &a.x + N;
 }
-/// iteration support
+/// Iteration support.
 template <typename T, int N>
 inline const T* end(const vec<T, N>& a) {
     return &a.x + N;
 }
-/// vector data access
+/// Vector data access.
 template <typename T, int N>
 inline T* data(vec<T, N>& a) {
     return &a.x;
 }
-/// vector data access
+/// Vector data access.
 template <typename T, int N>
 inline const T* data(const vec<T, N>& a) {
     return &a.x;
 }
-/// vector size
+/// Vector size.
 template <typename T, int N>
 inline int size(vec<T, N>& a) {
     return N;
 }
-/// vector empty
+/// Vector empty.
 template <typename T, int N>
 inline bool empty(vec<T, N>& a) {
     return false;
 }
 
-/// vector operator ==
+/// Vector operator ==.
 template <typename T>
 inline bool operator==(const vec<T, 1>& a, const vec<T, 1>& b) {
     return a.x == b.x;
 }
-/// vector operator !=
+/// Vector operator !=.
 template <typename T>
 inline bool operator!=(const vec<T, 1>& a, const vec<T, 1>& b) {
     return a.x != b.x;
 }
 
-/// vector operator ==
+/// Vector operator ==.
 template <typename T>
 inline bool operator==(const vec<T, 2>& a, const vec<T, 2>& b) {
     return a.x == b.x && a.y == b.y;
 }
-/// vector operator !=
+/// Vector operator !=.
 template <typename T>
 inline bool operator!=(const vec<T, 2>& a, const vec<T, 2>& b) {
     return a.x != b.x || a.y != b.y;
 }
 
-/// vector operator ==
+/// Vector operator ==.
 template <typename T>
 inline bool operator==(const vec<T, 3>& a, const vec<T, 3>& b) {
     return a.x == b.x && a.y == b.y && a.z == b.z;
 }
-/// vector operator !=
+/// Vector operator !=.
 template <typename T>
 inline bool operator!=(const vec<T, 3>& a, const vec<T, 3>& b) {
     return a.x != b.x || a.y != b.y || a.z != b.z;
 }
 
-/// vector operator ==
+/// Vector operator ==.
 template <typename T>
 inline bool operator==(const vec<T, 4>& a, const vec<T, 4>& b) {
     return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
 }
-/// vector operator !=
+/// Vector operator !=.
 template <typename T>
 inline bool operator!=(const vec<T, 4>& a, const vec<T, 4>& b) {
     return a.x != b.x || a.y != b.y || a.z != b.z || a.w != b.w;
 }
 
-/// vector operator < (lexicographic order - useful for map)
+/// Vector operator < (lexicographic order - useful for map).
 template <typename T>
 inline bool operator<(const vec<T, 2>& a, const vec<T, 2>& b) {
     for (auto i = 0; i < 2; i++) {
@@ -1191,7 +1194,7 @@ inline bool operator<(const vec<T, 2>& a, const vec<T, 2>& b) {
     }
     return false;
 }
-/// vector operator < (lexicographic order - useful for map)
+/// Vector operator < (lexicographic order - useful for map).
 template <typename T>
 inline bool operator<(const vec<T, 3>& a, const vec<T, 3>& b) {
     for (auto i = 0; i < 3; i++) {
@@ -1200,7 +1203,7 @@ inline bool operator<(const vec<T, 3>& a, const vec<T, 3>& b) {
     }
     return false;
 }
-/// vector operator < (lexicographic order - useful for map)
+/// Vector operator < (lexicographic order - useful for map).
 template <typename T>
 inline bool operator<(const vec<T, 4>& a, const vec<T, 4>& b) {
     for (auto i = 0; i < 4; i++) {
@@ -1210,185 +1213,185 @@ inline bool operator<(const vec<T, 4>& a, const vec<T, 4>& b) {
     return false;
 }
 
-/// vector operator +
+/// Vector operator +.
 template <typename T>
 inline vec<T, 2> operator+(const vec<T, 2>& a) {
     return a;
 }
-/// vector operator -
+/// Vector operator -.
 template <typename T>
 inline vec<T, 2> operator-(const vec<T, 2>& a) {
     return {-a.x, -a.y};
 }
-/// vector operator +
+/// Vector operator +.
 template <typename T>
 inline vec<T, 2> operator+(const vec<T, 2>& a, const vec<T, 2>& b) {
     return {a.x + b.x, a.y + b.y};
 }
-/// vector operator -
+/// Vector operator -.
 template <typename T>
 inline vec<T, 2> operator-(const vec<T, 2>& a, const vec<T, 2>& b) {
     return {a.x - b.x, a.y - b.y};
 }
-/// vector operator *
+/// Vector operator *.
 template <typename T>
 inline vec<T, 2> operator*(const vec<T, 2>& a, const vec<T, 2>& b) {
     return {a.x * b.x, a.y * b.y};
 }
-/// vector operator *
+/// Vector operator *.
 template <typename T, typename T1>
 inline vec<T, 2> operator*(const vec<T, 2>& a, T1 b) {
     return {a.x * b, a.y * b};
 }
-/// vector operator *
+/// Vector operator *.
 template <typename T>
 inline vec<T, 2> operator*(float a, const vec<T, 2>& b) {
     return {a * b.x, a * b.y};
 }
-/// vector operator /
+/// Vector operator /.
 template <typename T>
 inline vec<T, 2> operator/(const vec<T, 2>& a, const vec<T, 2>& b) {
     return {a.x / b.x, a.y / b.y};
 }
-/// vector operator /
+/// Vector operator /.
 template <typename T, typename T1>
 inline vec<T, 2> operator/(const vec<T, 2>& a, T1 b) {
     return {a.x / b, a.y / b};
 }
-/// vector operator /
+/// Vector operator /.
 template <typename T, typename T1>
 inline vec<T, 2> operator/(T1 a, const vec<T, 2>& b) {
     return {a / b.x, a / b.y};
 }
 
-/// vector operator +
+/// Vector operator +.
 template <typename T>
 inline vec<T, 3> operator+(const vec<T, 3>& a) {
     return a;
 }
-/// vector operator -
+/// Vector operator -.
 template <typename T>
 inline vec<T, 3> operator-(const vec<T, 3>& a) {
     return {-a.x, -a.y, -a.z};
 }
-/// vector operator +
+/// Vector operator +.
 template <typename T>
 inline vec<T, 3> operator+(const vec<T, 3>& a, const vec<T, 3>& b) {
     return {a.x + b.x, a.y + b.y, a.z + b.z};
 }
-/// vector operator -
+/// Vector operator -.
 template <typename T>
 inline vec<T, 3> operator-(const vec<T, 3>& a, const vec<T, 3>& b) {
     return {a.x - b.x, a.y - b.y, a.z - b.z};
 }
-/// vector operator *
+/// Vector operator *.
 template <typename T>
 inline vec<T, 3> operator*(const vec<T, 3>& a, const vec<T, 3>& b) {
     return {a.x * b.x, a.y * b.y, a.z * b.z};
 }
-/// vector operator *
+/// Vector operator *.
 template <typename T, typename T1>
 inline vec<T, 3> operator*(const vec<T, 3>& a, T1 b) {
     return {a.x * b, a.y * b, a.z * b};
 }
-/// vector operator *
+/// Vector operator *.
 template <typename T, typename T1>
 inline vec<T, 3> operator*(T1 a, const vec<T, 3>& b) {
     return {a * b.x, a * b.y, a * b.z};
 }
-/// vector operator /
+/// Vector operator /.
 template <typename T>
 inline vec<T, 3> operator/(const vec<T, 3>& a, const vec<T, 3>& b) {
     return {a.x / b.x, a.y / b.y, a.z / b.z};
 }
-/// vector operator /
+/// Vector operator /.
 template <typename T, typename T1>
 inline vec<T, 3> operator/(const vec<T, 3>& a, T1 b) {
     return {a.x / b, a.y / b, a.z / b};
 }
-/// vector operator /
+/// Vector operator /.
 template <typename T, typename T1>
 inline vec<T, 3> operator/(T1 a, const vec<T, 3>& b) {
     return {a / b.x, a / b.y, a / b.z};
 }
 
-/// vector operator +
+/// Vector operator +.
 template <typename T>
 inline vec<T, 4> operator+(const vec<T, 4>& a) {
     return a;
 }
-/// vector operator -
+/// Vector operator -.
 template <typename T>
 inline vec<T, 4> operator-(const vec<T, 4>& a) {
     return {-a.x, -a.y, -a.z, -a.w};
 }
-/// vector operator +
+/// Vector operator +.
 template <typename T>
 inline vec<T, 4> operator+(const vec<T, 4>& a, const vec<T, 4>& b) {
     return {a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w};
 }
-/// vector operator -
+/// Vector operator -.
 template <typename T>
 inline vec<T, 4> operator-(const vec<T, 4>& a, const vec<T, 4>& b) {
     return {a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w};
 }
-/// vector operator *
+/// Vector operator *.
 template <typename T>
 inline vec<T, 4> operator*(const vec<T, 4>& a, const vec<T, 4>& b) {
     return {a.x * b.x, a.y * b.y, a.z * b.z, a.w * b.w};
 }
-/// vector operator *
+/// Vector operator *.
 template <typename T>
 inline vec<T, 4> operator*(const vec<T, 4>& a, float b) {
     return {a.x * b, a.y * b, a.z * b, a.w * b};
 }
-/// vector operator *
+/// Vector operator *.
 template <typename T>
 inline vec<T, 4> operator*(float a, const vec<T, 4>& b) {
     return {a * b.x, a * b.y, a * b.z, a * b.w};
 }
-/// vector operator /
+/// Vector operator /.
 template <typename T>
 inline vec<T, 4> operator/(const vec<T, 4>& a, const vec<T, 4>& b) {
     return {a.x / b.x, a.y / b.y, a.z / b.z, a.w / b.w};
 }
-/// vector operator /
+/// Vector operator /.
 template <typename T, typename T1>
 inline vec<T, 4> operator/(const vec<T, 4>& a, T1 b) {
     return {a.x / b, a.y / b, a.z / b, a.w / b};
 }
-/// vector operator /
+/// Vector operator /.
 template <typename T, typename T1>
 inline vec<T, 4> operator/(T1 a, const vec<T, 4>& b) {
     return {a / b.x, a / b.y, a / b.z, a / b.w};
 }
 
-/// vector operator +=
+/// Vector operator +=.
 template <typename T, int N>
 inline vec<T, N>& operator+=(vec<T, N>& a, const vec<T, N>& b) {
     return a = a + b;
 }
-/// vector operator -=
+/// Vector operator -=.
 template <typename T, int N>
 inline vec<T, N>& operator-=(vec<T, 2>& a, const vec<T, N>& b) {
     return a = a - b;
 }
-/// vector operator *=
+/// Vector operator *=.
 template <typename T, int N>
 inline vec<T, N>& operator*=(vec<T, N>& a, const vec<T, N>& b) {
     return a = a * b;
 }
-/// vector operator *=
+/// Vector operator *=.
 template <typename T, int N, typename T1>
 inline vec<T, N>& operator*=(vec<T, N>& a, T1 b) {
     return a = a * b;
 }
-/// vector operator /=
+/// Vector operator /=.
 template <typename T, int N>
 inline vec<T, N>& operator/=(vec<T, N>& a, const vec<T, N>& b) {
     return a = a / b;
 }
-/// vector operator /=
+/// Vector operator /=.
 template <typename T, int N, typename T1>
 inline vec<T, N>& operator/=(vec<T, N>& a, T1 b) {
     return a = a / b;
@@ -1573,7 +1576,7 @@ inline vec4f byte_to_float(const vec4b& a) {
         byte_to_float(a.w)};
 }
 
-/// stream write
+/// Stream write.
 template <typename T, int N>
 inline ostream& operator<<(ostream& os, const vec<T, N>& a) {
     for (auto i = 0; i < N; i++) {
@@ -1583,7 +1586,7 @@ inline ostream& operator<<(ostream& os, const vec<T, N>& a) {
     return os;
 }
 
-/// stream read
+/// Stream read.
 template <typename T, int N>
 inline istream& operator>>(istream& is, vec<T, N>& a) {
     for (auto i = 0; i < N; i++) is >> data(a)[i];
@@ -1629,21 +1632,21 @@ struct mat;
 /// Colums access via operator[].
 template <typename T>
 struct mat<T, 2> {
-    /// default constructor
+    /// Default constructor
     mat() : x{1, 0}, y{0, 1} {}
     /// diagonal constructor
     explicit mat(T vv) : x{vv, 0}, y{0, vv} {}
     /// list constructor
     mat(const vec<T, 2>& x, const vec<T, 2>& y) : x(x), y(y) {}
 
-    /// element access
+    /// Element access
     vec<T, 2>& operator[](int i) { return (&x)[i]; }
-    /// element access
+    /// Element access
     const vec<T, 2>& operator[](int i) const { return (&x)[i]; }
 
-    /// element data
+    /// Element data
     vec<T, 2> x;
-    /// element data
+    /// Element data
     vec<T, 2> y;
 };
 
@@ -1651,7 +1654,7 @@ struct mat<T, 2> {
 /// Colums access via operator[].
 template <typename T>
 struct mat<T, 3> {
-    /// default constructor
+    /// Default constructor
     mat() : x{1, 0, 0}, y{0, 1, 0}, z{0, 0, 1} {}
     /// diagonal constructor
     explicit mat(T vv) : x{vv, 0, 0}, y{0, vv, 0}, z{0, 0, vv} {}
@@ -1659,16 +1662,16 @@ struct mat<T, 3> {
     mat(const vec<T, 3>& x, const vec<T, 3>& y, const vec<T, 3>& z)
         : x(x), y(y), z(z) {}
 
-    /// element access
+    /// Element access
     vec<T, 3>& operator[](int i) { return (&x)[i]; }
-    /// element access
+    /// Element access
     const vec<T, 3>& operator[](int i) const { return (&x)[i]; }
 
-    /// element data
+    /// Element data
     vec<T, 3> x;
-    /// element data
+    /// Element data
     vec<T, 3> y;
-    /// element data
+    /// Element data
     vec<T, 3> z;
 };
 
@@ -1676,7 +1679,7 @@ struct mat<T, 3> {
 /// Colums access via operator[].
 template <typename T>
 struct mat<T, 4> {
-    /// default constructor
+    /// Default constructor
     mat<T, 4>() : x{1, 0, 0, 0}, y{0, 1, 0, 0}, z{0, 0, 1, 0}, w{0, 0, 0, 1} {}
     /// diagonal constructor
     explicit mat<T, 4>(float vv)
@@ -1686,18 +1689,18 @@ struct mat<T, 4> {
         const vec<T, 4>& w)
         : x(x), y(y), z(z), w(w) {}
 
-    /// element access
+    /// Element access
     vec<T, 4>& operator[](int i) { return (&x)[i]; }
-    /// element access
+    /// Element access
     const vec<T, 4>& operator[](int i) const { return (&x)[i]; }
 
-    /// element data
+    /// Element data
     vec<T, 4> x;
-    /// element data
+    /// Element data
     vec<T, 4> y;
-    /// element data
+    /// Element data
     vec<T, 4> z;
-    /// element data
+    /// Element data
     vec<T, 4> w;
 };
 
@@ -1715,22 +1718,22 @@ const auto identity_mat3f = mat3f();
 /// 4-dimensional float identity matrix
 const auto identity_mat4f = mat4f();
 
-/// matrix iteration support
+/// matrix Iteration support.
 template <typename T, int N>
 inline vec<T, N>* begin(mat<T, N>& m) {
     return &(m.x);
 }
-/// matrix iteration support
+/// matrix Iteration support.
 template <typename T, int N>
 inline vec<T, N>* end(mat<T, N>& m) {
     return &(m.x) + N;
 }
-/// matrix iteration support
+/// matrix Iteration support.
 template <typename T, int N>
 inline const vec<T, N>* begin(const mat<T, N>& m) {
     return &(m.x);
 }
-/// matrix iteration support
+/// matrix Iteration support.
 template <typename T, int N>
 inline const vec<T, N>* end(const mat<T, N>& m) {
     return &(m.x) + N;
@@ -2044,7 +2047,7 @@ inline mat<T, N> inverse(const mat<T, N>& a) {
     return adjugate(a) / determinant(a);
 }
 
-/// stream write
+/// Stream write.
 template <typename T, int N>
 inline ostream& operator<<(ostream& os, const mat<T, N>& a) {
     for (auto i = 0; i < N; i++) {
@@ -2053,7 +2056,7 @@ inline ostream& operator<<(ostream& os, const mat<T, N>& a) {
     }
     return os;
 }
-/// stream read
+/// Stream read.
 template <typename T, int N>
 inline istream& operator>>(istream& is, mat<T, N>& a) {
     for (auto i = 0; i < N; i++) is >> data(a)[i];
@@ -2088,15 +2091,15 @@ struct frame<T, 3> {
     /// size
     static const int N = 3;
 
-    /// default constructor
+    /// Default constructor
     frame() : x{1, 0, 0}, y{0, 1, 0}, z{0, 0, 1}, o{0, 0, 0} {}
 
-    /// element constructor
+    /// Element constructor
     frame(const vec<T, 3>& x, const vec<T, 3>& y, const vec<T, 3>& z,
         const vec<T, 3>& o)
         : x(x), y(y), z(z), o(o) {}
 
-    /// element constructor
+    /// Element constructor
     frame(const mat<T, 3>& m, const vec<T, 3>& t)
         : x(m.x), y(m.y), z(m.z), o(t) {}
 
@@ -2107,9 +2110,9 @@ struct frame<T, 3> {
         , z(m.z.x, m.z.y, m.z.z)
         , o(m.w.x, m.w.y, m.w.z) {}
 
-    /// element access
+    /// Element access
     vec<T, 3>& operator[](int i) { return (&x)[i]; }
-    /// element access
+    /// Element access
     const vec<T, 3>& operator[](int i) const { return (&x)[i]; }
 
     /// data access
@@ -2127,13 +2130,13 @@ struct frame<T, 3> {
     /// access rotation
     const mat<T, 3>& rot() const { return *(mat<T, 3>*)(&x); }
 
-    /// element data
+    /// Element data
     vec<T, 3> x;
-    /// element data
+    /// Element data
     vec<T, 3> y;
-    /// element data
+    /// Element data
     vec<T, 3> z;
-    /// element data
+    /// Element data
     vec<T, 3> o;
 };
 
@@ -2144,22 +2147,22 @@ using frame3f = frame<float, 3>;
 const auto identity_frame3f =
     frame3f{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}};
 
-/// iteration support
+/// Iteration support.
 template <typename T, int N>
 inline vec<T, N>* begin(frame<T, N>& a) {
     return &a.x;
 }
-/// iteration support
+/// Iteration support.
 template <typename T, int N>
 inline const vec<T, N>* begin(const frame<T, N>& a) {
     return &a.x;
 }
-/// iteration support
+/// Iteration support.
 template <typename T, int N>
 inline vec<T, N>* end(frame<T, N>& a) {
     return &a.x + 4;
 }
-/// iteration support
+/// Iteration support.
 template <typename T, int N>
 inline const vec<T, N>* end(const frame<T, N>& a) {
     return &a.x + 4;
@@ -2217,7 +2220,7 @@ inline frame<T, 3> to_frame(const mat<T, 4>& a) {
         {a.w.x, a.w.y, a.w.z}};
 }
 
-/// vector operator ==
+/// Vector operator ==.
 template <typename T>
 inline bool operator==(const frame<T, 3>& a, const frame<T, 3>& b) {
     return a.x == b.x && a.y == b.y && a.z == b.z && a.o == b.o;
@@ -2241,7 +2244,7 @@ inline frame<T, 3> inverse(const frame<T, 3>& a) {
     return {minv, -(minv * a.pos())};
 }
 
-/// stream write
+/// Stream write.
 template <typename T, int N>
 inline ostream& operator<<(ostream& os, const frame<T, N>& a) {
     for (auto i = 0; i < N + 1; i++) {
@@ -2250,7 +2253,7 @@ inline ostream& operator<<(ostream& os, const frame<T, N>& a) {
     }
     return os;
 }
-/// stream read
+/// Stream read.
 template <typename T, int N>
 inline istream& operator>>(istream& is, frame<T, N>& a) {
     for (auto i = 0; i < N + 1; i++) is >> data(a)[i];
@@ -2278,7 +2281,7 @@ struct quat;
 /// Quaterions are xi + yj + zk + w.
 template <typename T>
 struct quat<T, 4> {
-    /// default constructor
+    /// Default constructor
     quat() : x{0}, y{0}, z{0}, w{1} {}
     // list constructor
     quat(T x, T y, T z, T w) : x{x}, y{y}, z{z}, w{w} {}
@@ -2287,9 +2290,9 @@ struct quat<T, 4> {
     /// conversion to vec
     explicit operator vec<T, 4>() const { return {x, y, z, w}; }
 
-    /// element access
+    /// Element access
     T& operator[](int i) { return (&x)[i]; }
-    /// element access
+    /// Element access
     const T& operator[](int i) const { return (&x)[i]; }
 
     /// data
@@ -2308,76 +2311,76 @@ using quat4f = quat<float, 4>;
 /// float identity quaterion
 const auto identity_quat4f = quat4f{0, 0, 0, 1};
 
-/// iteration support
+/// Iteration support.
 template <typename T, int N>
 inline T* begin(quat<T, N>& a) {
     return &a.x;
 }
-/// iteration support
+/// Iteration support.
 template <typename T, int N>
 inline const T* begin(const quat<T, N>& a) {
     return &a.x;
 }
-/// iteration support
+/// Iteration support.
 template <typename T, int N>
 inline T* end(quat<T, N>& a) {
     return &a.x + N;
 }
-/// iteration support
+/// Iteration support.
 template <typename T, int N>
 inline const T* end(const quat<T, N>& a) {
     return &a.x + N;
 }
-/// vector data access
+/// Quaternion data access.
 template <typename T, int N>
 inline T* data(quat<T, N>& a) {
     return &a.x;
 }
-/// vector data access
+/// Quaternion data access.
 template <typename T, int N>
 inline const T* data(const quat<T, N>& a) {
     return &a.x;
 }
-/// vector size
+/// Quaternion size.
 template <typename T, int N>
 inline int size(quat<T, N>& a) {
     return N;
 }
-/// vector empty
+/// Quaternion empty.
 template <typename T, int N>
 inline bool empty(quat<T, N>& a) {
     return false;
 }
 
-/// vector operator ==
+/// Quaternion operator ==.
 template <typename T>
 inline bool operator==(const quat<T, 4>& a, const quat<T, 4>& b) {
     return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
 }
-/// vector operator !=
+/// Quaternion operator !=.
 template <typename T>
 inline bool operator!=(const quat<T, 4>& a, const quat<T, 4>& b) {
     return !(a == b);
 }
 
-/// quaterion multiply
+/// Quaternion operator +.
 template <typename T>
 inline quat<T, 4> operator+(const quat<T, 4>& a, const quat<T, 4>& b) {
     return {a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w};
 }
 
-/// quaterion multiply
+/// Quaternion operator *.
 template <typename T, typename T1>
 inline quat<T, 4> operator*(const quat<T, 4>& a, T1 b) {
     return {a.x * b, a.y * b, a.z * b, a.w * b};
 }
-/// quaterion division
+/// Quaternion operator /.
 template <typename T, typename T1>
 inline quat<T, 4> operator/(const quat<T, 4>& a, T1 b) {
     return {a.x / b, a.y / b, a.z / b, a.w / b};
 }
 
-/// quaterion multiply
+/// Quaternion product.
 template <typename T>
 inline quat<T, 4> operator*(const quat<T, 4>& a, const quat<T, 4>& b) {
     return {a.x * b.w + a.w * b.x + a.y * b.w - a.z * b.y,
@@ -2386,19 +2389,19 @@ inline quat<T, 4> operator*(const quat<T, 4>& a, const quat<T, 4>& b) {
         a.w * b.w - a.x * b.x - a.y * b.y - a.z * b.z};
 }
 
-/// quaterion conjugate
+/// Quaternion conjugate.
 template <typename T>
 inline quat<T, 4> conjugate(const quat<T, 4>& v) {
     return {-v.x, -v.y, -v.z, v.w};
 }
 
-/// quaterion inverse
+/// Quaternion inverse.
 template <typename T>
 inline quat<T, 4> inverse(const quat<T, 4>& v) {
     return conjugate(v) / dot(vec<T, 4>(v), vec<T, 4>(v));
 }
 
-/// quaterion inverse
+/// Quaternion normalize.
 template <typename T>
 inline quat<T, 4> normalize(const quat<T, 4>& v) {
     auto l = length(vec<T, 4>{v.x, v.y, v.z, v.w});
@@ -2406,14 +2409,14 @@ inline quat<T, 4> normalize(const quat<T, 4>& v) {
     return {v.x / l, v.y / l, v.z / l, v.w / l};
 }
 
-/// quaterion spherical linear interpolation
+/// Quaternion spherical linear interpolation.
 template <typename T, typename T1>
 inline quat<T, 4> slerp(const quat<T, 4>& a, const quat<T, 4>& b, T1 t) {
     return (quat<T, 4>)slerp(vec<T, 4>(a),
         dot(vec<T, 4>(a), vec<T, 4>(b)) < 0 ? -vec<T, 4>(b) : vec<T, 4>(b), t);
 }
 
-/// stream write
+/// Stream write.
 template <typename T, int N>
 inline ostream& operator<<(ostream& os, const quat<T, N>& a) {
     for (auto i = 0; i < N; i++) {
@@ -2422,7 +2425,7 @@ inline ostream& operator<<(ostream& os, const quat<T, N>& a) {
     }
     return os;
 }
-/// stream read
+/// Stream read.
 template <typename T, int N>
 inline istream& operator>>(istream& is, quat<T, N>& a) {
     for (auto i = 0; i < N; i++) is >> data(a)[i];
@@ -2444,19 +2447,19 @@ namespace ygl {
 /// Axis aligned bounding box represented as a min/max vector pair.
 template <typename T, int N>
 struct bbox {
-    /// initializes an invalid bbox
+    /// Initializes an invalid bbox.
     bbox() : min{flt_max}, max{flt_min} {}
-    /// list constructor
+    /// Element constructor with min/max values.
     bbox(const vec<T, N>& m, const vec<T, N>& M) : min{m}, max{M} {}
 
-    /// element access
+    /// Element access.
     vec<T, N>& operator[](int i) { return (&min)[i]; }
-    /// element access
+    /// Element access.
     const vec<T, N>& operator[](int i) const { return (&min)[i]; }
 
-    /// element data
+    /// Minimum bounds.
     vec<T, N> min;
-    /// element data
+    /// Maximum bounds.
     vec<T, N> max;
 };
 
@@ -2478,51 +2481,51 @@ const auto invalid_bbox3f = bbox3f();
 /// 4-dimensional float empty bbox
 const auto invalid_bbox4f = bbox4f();
 
-/// bbox operator ==
+/// Bounding box operator ==.
 template <typename T, int N>
 inline bool operator==(const bbox<T, N>& a, const bbox<T, N>& b) {
     return a.min == b.min && a.max == b.max;
 }
-/// bbox operator !=
+/// Bounding box operator !=.
 template <typename T, int N>
 inline bool operator!=(const bbox<T, N>& a, const bbox<T, N>& b) {
     return a.min != b.min || a.max != b.max;
 }
 
-/// computes the center of a bbox
+/// Bounding box center.
 template <typename T, int N>
 inline vec<T, N> bbox_center(const bbox<T, N>& a) {
     return (a.min + a.max) / 2;
 }
-/// computes the diagonal of a bbox
+/// Bounding box diagonal (size).
 template <typename T, int N>
 inline vec<T, N> bbox_diagonal(const bbox<T, N>& a) {
     return a.max - a.min;
 }
 
-/// expands a bounding box with a point
+/// Expands a bounding box with a point.
 template <typename T>
 inline bbox<T, 1> expand(const bbox<T, 1>& a, T b) {
     return {{min(a.min.x, b)}, {max(a.max.x, b)}};
 }
-/// expands a bounding box with a point
+/// Expands a bounding box with a point.
 template <typename T>
 inline bbox<T, 1> expand(const bbox<T, 1>& a, const vec<T, 1>& b) {
     return {{min(a.min.x, b.x)}, {max(a.max.x, b.x)}};
 }
-/// expands a bounding box with a point
+/// Expands a bounding box with a point.
 template <typename T>
 inline bbox<T, 2> expand(const bbox<T, 2>& a, const vec<T, 2>& b) {
     return {{min(a.min.x, b.x), min(a.min.y, b.y)},
         {max(a.max.x, b.x), max(a.max.y, b.y)}};
 }
-/// expands a bounding box with a point
+/// Expands a bounding box with a point.
 template <typename T>
 inline bbox<T, 3> expand(const bbox<T, 3>& a, const vec<T, 3>& b) {
     return {{min(a.min.x, b.x), min(a.min.y, b.y), min(a.min.z, b.z)},
         {max(a.max.x, b.x), max(a.max.y, b.y), max(a.max.z, b.z)}};
 }
-/// expands a bounding box with a point
+/// Expands a bounding box with a point.
 template <typename T>
 inline bbox<T, 4> expand(const bbox<T, 4>& a, const vec<T, 4>& b) {
     return {{min(a.min.x, b.x), min(a.min.y, b.y), min(a.min.z, b.z),
@@ -2531,25 +2534,25 @@ inline bbox<T, 4> expand(const bbox<T, 4>& a, const vec<T, 4>& b) {
             max(a.max.w, b.w)}};
 }
 
-/// expands a bounding box with a bounding box
+/// Expands a bounding box with a bounding box.
 template <typename T>
 inline bbox<T, 1> expand(const bbox<T, 1>& a, const bbox<T, 1>& b) {
     return {min(a.min, b.min), max(a.max, b.max)};
 }
-/// expands a bounding box with a bounding box
+/// Expands a bounding box with a bounding box.
 template <typename T>
 inline bbox<T, 2> expand(const bbox<T, 2>& a, const bbox<T, 2>& b) {
     return {{min(a.min.x, b.min.x), min(a.min.y, b.min.y)},
         {max(a.max.x, b.max.x), max(a.max.y, b.max.y)}};
 }
-/// expands a bounding box with a bounding box
+/// Expands a bounding box with a bounding box.
 template <typename T>
 inline bbox<T, 3> expand(const bbox<T, 3>& a, const bbox<T, 3>& b) {
     return {
         {min(a.min.x, b.min.x), min(a.min.y, b.min.y), min(a.min.z, b.min.z)},
         {max(a.max.x, b.max.x), max(a.max.y, b.max.y), max(a.max.z, b.max.z)}};
 }
-/// expands a bounding box with a bounding box
+/// Expands a bounding box with a bounding box.
 template <typename T>
 inline bbox<T, 4> expand(const bbox<T, 4>& a, const bbox<T, 4>& b) {
     return {{min(a.min.x, b.min.x), min(a.min.y, b.min.y),
@@ -2558,14 +2561,14 @@ inline bbox<T, 4> expand(const bbox<T, 4>& a, const bbox<T, 4>& b) {
             max(a.max.w, b.max.w)}};
 }
 
-/// check if a bounding box contains a point
+/// Check if a bounding box contains a point.
 template <typename T, int N>
 inline bool contains(const bbox<T, N>& a, const vec<T, N>& b) {
     for (auto i = 0; i < N; i++)
         if (a.min[i] > b[i] || a.max[i] < b[i]) return false;
     return true;
 }
-/// check if a bounding box contains a bounding box
+/// Check if a bounding box contains a bounding box.
 template <typename T, int N>
 inline bool contains(const bbox<T, 3>& a, const bbox<T, 3>& b) {
     for (auto i = 0; i < N; i++)
@@ -2573,25 +2576,25 @@ inline bool contains(const bbox<T, 3>& a, const bbox<T, 3>& b) {
     return true;
 }
 
-/// assign to expand()
+/// Expands a bounding box with a point.
 template <typename T, int N>
 inline bbox<T, N>& operator+=(bbox<T, N>& a, const vec<T, N>& b) {
     return a = expand(a, b);
 }
-/// assign to expand()
+/// Expands a bounding box with a bounding box.
 template <typename T, int N>
 inline bbox<T, N>& operator+=(bbox<T, N>& a, const bbox<T, N>& b) {
     return a = expand(a, b);
 }
 
-/// initialize a bonding box from a list of points
+/// Initialize a bonding box from a list of points.
 template <typename T, int N>
 inline bbox<T, N> make_bbox(int count, const vec<T, N>* v) {
     auto a = bbox<T, N>();
     for (auto j = 0; j < count; j++) a += v[j];
     return a;
 }
-/// initialize a bonding box from a list of points
+/// Initialize a bonding box from a list of points.
 template <typename T, int N>
 inline bbox<T, N> make_bbox(const initializer_list<vec<T, N>>& v) {
     auto a = bbox<T, N>();
@@ -2599,12 +2602,12 @@ inline bbox<T, N> make_bbox(const initializer_list<vec<T, N>>& v) {
     return a;
 }
 
-/// stream write
+/// Stream write.
 template <typename T, int N>
 inline ostream& operator<<(ostream& os, const bbox<T, N>& a) {
     return os << a.min << ' ' << a.max;
 }
-/// stream read
+/// Stream read.
 template <typename T, int N>
 inline istream& operator>>(istream& is, bbox<T, N>& a) {
     return is >> a.min >> a.max;
@@ -2680,7 +2683,7 @@ struct ray<T, 3> {
     /// size
     static const int N = 3;
 
-    /// default constructor
+    /// Default constructor
     ray() : o{0, 0, 0}, d{0, 0, 1}, tmin{0}, tmax{flt_max} {}
     /// initializes a ray from its elements
     ray(const vec<T, 3>& o, const vec<T, 3>& d, T tmin = 0, T tmax = flt_max)
@@ -2717,13 +2720,13 @@ inline ray<T, N> make_segment(
     return ray<T, N>{p1, normalize(p2 - p1), eps, length(p2 - p1) - 2 * eps};
 }
 
-/// stream write
+/// Stream write.
 template <typename T>
 inline ostream& operator<<(ostream& os, const ray3<T>& a) {
     os << a.o << ' ' << a.d << ' ' << a.tmin << ' ' << a.tmax;
     return os;
 }
-/// stream read
+/// Stream read.
 template <typename T>
 inline istream& operator>>(istream& is, ray3<T>& a) {
     is >> a.o >> a.d >> a.tmin >> a.tmax;
@@ -4461,19 +4464,19 @@ struct image {
     /// check for empty
     explicit operator bool() const { return _w != 0 && _h != 0; }
 
-    /// element access
+    /// Element access
     T& operator[](const vec2i& ij) { return pixels[ij.y * _w + ij.x]; }
-    /// element access
+    /// Element access
     const T& operator[](const vec2i& ij) const {
         return pixels[ij.y * _w + ij.x];
     }
-    /// element access
+    /// Element access
     T& at(const vec2i& ij) { return pixels.at(ij.y * _w + ij.x); }
-    /// element access
+    /// Element access
     const T& at(const vec2i& ij) const { return pixels.at(ij.y * _w + ij.x); }
-    /// element access
+    /// Element access
     T& at(int i, int j) { return pixels.at(j * _w + i); }
-    /// element access
+    /// Element access
     const T& at(int i, int j) const { return pixels.at(j * _w + i); }
 
     int _w, _h;
@@ -4485,32 +4488,32 @@ using image4f = image<vec4f>;
 /// LDR image
 using image4b = image<vec4b>;
 
-/// iteration support
+/// Iteration support.
 template <typename T>
 inline T* begin(image<T>& a) {
     return a.pixels.data();
 }
-/// iteration support
+/// Iteration support.
 template <typename T>
 inline const T* begin(const image<T>& a) {
     return a.pixels.data();
 }
-/// iteration support
+/// Iteration support.
 template <typename T>
 inline T* end(image<T>& a) {
     return a.pixels.data() + a.width() * a.height();
 }
-/// iteration support
+/// Iteration support.
 template <typename T>
 inline const T* end(const image<T>& a) {
     return a.pixels.data() + a.width() * a.height();
 }
-/// vector data access
+/// Vector data access.
 template <typename T>
 inline T* data(image<T>& a) {
     return a.pixels.data();
 }
-/// vector data access
+/// Vector data access.
 template <typename T>
 inline const T* data(const image<T>& a) {
     return a.pixels.data();
@@ -8701,7 +8704,7 @@ struct gl_texture_info {
     /// filter mode
     gl_texture_filter filter_min = gl_texture_filter::not_set;
 
-    /// default constructor
+    /// Default constructor
     gl_texture_info() {}
     /// constructor from texture id only
     gl_texture_info(const gl_texture& tid) : txt(tid) {}
