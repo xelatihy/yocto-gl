@@ -393,11 +393,9 @@ inline void shade_mesh(const ygl::gltf_mesh* msh, const ygl::gltf_skin* sk,
 
             assert(ygl::gl_check_error());
             ygl::gl_line_width(2);
-            ygl::gl_enable_edges(true);
             draw_elems(vbo.points);
             draw_elems(vbo.lines);
             draw_elems(vbo.triangles);
-            ygl::gl_enable_edges(false);
             ygl::gl_line_width(1);
             assert(ygl::gl_check_error());
         }
@@ -1022,10 +1020,6 @@ void parse_cmdline(app_state* scene, int argc, char** argv, const char* name,
         parser, "--split-shapes", "", "split meshes into single shapes", false);
     scene->add_spec_gloss = parse_flag(
         parser, "--add-spec-gloss", "", "add spec-gloss to gltf", false);
-
-    // logging
-    auto log_filename = parse_opt(parser, "--log", "", "log to disk", ""s);
-    if (log_filename != "") ygl::add_file_stream(log_filename, true);
 
     // params
     scene->imfilename =

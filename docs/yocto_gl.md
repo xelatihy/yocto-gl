@@ -1,6 +1,6 @@
 # Yocto/GL: Tiny C++ Library for Physically-based Graphics
 
-Yocto/GL is a collection utiliies for building physically-based graphics
+Yocto/GL is a collection utilities for building physically-based graphics
 algorithms implemented as a two-file library (`yocto_gl.h`, `yocto_gl.cpp`),
 and released under the MIT license. Features include:
 
@@ -47,7 +47,7 @@ github.com/sgorsten/linalg, gist.github.com/badboy/6267743 and
 github.com/nothings/stb_perlin.h.
 
 This library imports many symbols from std for three reasons: avoid
-verbosity , esnuring better conventions when calling math functions and
+verbosity , ensuring better conventions when calling math functions and
 allowing easy overriding of std containers if desired. Just do not
 flatten this namespace into yours if this is a concern.
 
@@ -73,10 +73,14 @@ at the price of accessibility for beginners. The truth is that modern C++,
 a tenant of Yocto, is heavily templated anyway, so being able to read
 template code is necessary no matter how Yocto does things.
 
+We make use of exception for error reporting. This makes the code
+much cleaner and more in line with the expectation of most other programming
+languages.
+
 Finally, we often import symbols from the standard library rather than
 using the `std::name` pattern. We found that this improves consistency
 when using math functions, and is more readable with templates. We realize
-this is not stardard, but the imports are hidden within the ygl namespace,
+this is not standard, but the imports are hidden within the ygl namespace,
 so library users do not have to be concern about it.
 
 
@@ -98,7 +102,7 @@ be disabled by defining YGL_GLTF to 0 before including this file.
 To support SVG, Yocto/GL depends on `nanosvg.h`. This feature can
 be disabled by defining YGL_SVG to 0 before including this file.
 
-OpenGL utilities include the OpenGL libaries, use GLEW on Windows/Linux,
+OpenGL utilities include the OpenGL libraries, use GLEW on Windows/Linux,
 GLFW for windows handling and Dear ImGui for UI support.
 Since OpenGL is quite onerous and hard to link, its support can be disabled
 by defining YGL_OPENGL to 1 before including this file. If you use any of
@@ -123,7 +127,7 @@ test the library:
 You can build the example applications using CMake with
     `mkdir build; cd build; cmake ..; cmake --build`
 
-Here are two images rendered with the buildin path tracer, where the
+Here are two images rendered with the builtin path tracer, where the
 scenes are crated with the test generator.
 
 ![Yocto/GL](images/shapes.png)
@@ -151,14 +155,14 @@ in graphics. In particular, we support 2-4 dimensional vectors of arbitrary
 many of them are well-defined only for float types.
 
 We support 2-4 dimensional generic matrices `mat<T, 2>`, `mat<T, 3>`,
-`mat<T, 4>`, with matrix-matrix and matrix-vector products, trasposes and
+`mat<T, 4>`, with matrix-matrix and matrix-vector products, transposes and
 inverses. Matrices are stored in column-major ordered and are accessed and
 constructed by column.
 
 To represent transformations, most of the library facilities prefer the use
-cooordinate frames, aka rigid transforms, represented as `frame<T, 3>`.
-The structure store three coodinate axis and the frame origin. This is
-equivalenent to a rigid transform written as a column-major affine
+coordinate frames, aka rigid transforms, represented as `frame<T, 3>`.
+The structure store three coordinate axis and the frame origin. This is
+equivalent to a rigid transform written as a column-major affine
 matrix. Transform operations are better behaved with this representation.
 
 We represent coordinate bounds with axis-aligned bounding boxes in 1-4
@@ -175,13 +179,13 @@ vectors and directions (`trasform_point()`, `trasform_vector()`,
 `trasform_direction()`). For frames we also the support inverse operations
 (`transform_xxx_inverse()`). Transform matrices and frames can be
 constructed from basic translation, rotation and scaling, e.g. with
-`translation_mat4f()` or `translation_frame3f()` repsectively, etc. For
+`translation_mat4f()` or `translation_frame3f()` respectively, etc. For
 rotation we support axis-angle and quaternions, with slerp.
 
 
 ### Random Number Generation, Noise, Hashing and Monte Carlo support
 
-This library supportds many facitlities helpful in writing sampling
+This library supports many facilities helpful in writing sampling
 functions targeting path tracing and shape generations.
 
 1. Random number generation with PCG32:
@@ -193,7 +197,7 @@ functions targeting path tracing and shape generations.
        `next_rand1f()`, `next_rand2f()`, `next_rand3f()`, `next_rand1d()`
     6. you can skip random numbers with `advance_rng()` and get the skipped
        length with `rng_distance()`
-    7. generate random shaffled sequences with `rng_shuffle()`
+    7. generate random shuffled sequences with `rng_shuffle()`
 2. Perlin noise: `perlin_noise()` to generate Perlin noise with optional
    wrapping, with fractal variations `perlin_ridge_noise()`,
    `perlin_fbm_noise()`, `perlin_turbulence_noise()`
@@ -240,7 +244,7 @@ manipulation useful to support scene viewing and path tracing.
     `subdivide_quads_linear()`
 15. Catmull-Clark subdivision surface with `subdivide_vert_catmullclark()`
     with support for edge and vertex creasing
-16. subdvide Bezier with `subdivide_bezier_recursive()` and
+16. subdivide Bezier with `subdivide_bezier_recursive()` and
     `subdivide_vert_bezier()`
 17. example shapes: `make_cube()`, `make_uvsphere()`, `make_uvhemisphere()`,
     `make_uvquad()`, `make_uvcube()`, `make_fvcube()`, `make_hair()`,
@@ -260,7 +264,7 @@ manipulation useful to support scene viewing.
 
 ### Image and color
 
-Imags are stored with the `image` templated structure. The two most used
+Images are stored with the `image` templated structure. The two most used
 image types are 4-byte per pixel sRGB images `image4b`, or 4-float per
 pixel HDR images `image4f`.
 
@@ -313,11 +317,11 @@ collections of points, lines, triangles and quads. Each shape may contain
 only one element type. Shapes are organized into a scene by creating shape
 instances, each its own transform. Materials are specified like in glTF and
 include emission, base-metallic and diffuse-specular parametrization,
-normal, occlusion and displacement mapping. Finally, the scene containes
-caemras and environement maps. Quad support in shapes is experimental and
+normal, occlusion and displacement mapping. Finally, the scene containers
+cameras and environment maps. Quad support in shapes is experimental and
 mostly supported for loading and saving.
 
-For low-level access to OBJ/glTF formats, you are best accssing the formats
+For low-level access to OBJ/glTF formats, you are best accessing the formats
 directly with Yocto/Obj and Yocto/glTF. This components provides a
 simplified high-level access to each format which is sufficient for most
 applications and tuned for quick creating viewers, renderers and simulators.
@@ -385,7 +389,7 @@ window.
 1. build the ray-tracing acceleration structure with `make_bvh()`
 2. prepare lights for rendering `update_lights()`
 3. define rendering params with the `trace_params` structure
-4. initialize the prograssive rendering buffers
+4. initialize the progressive rendering buffers
 5. start the progressive renderer with `trace_async_start()`
 7. stop the progressive renderer with `trace_async_stop()`
 
@@ -405,7 +409,7 @@ that, use the option to flip textures coordinates on either saving or
 loading. By default texture coordinates are flipped since this seems
 the convention found on test cases collected on the web. The value Tr
 has similar problems, since its relation to opacity is software specific.
-Again we let the user chose the convension and set the default to the
+Again we let the user chose the conversion and set the default to the
 one found on the web.
 
 In the high level interface, shapes are indexed meshes and are described
@@ -416,7 +420,7 @@ current GPU rendering / path tracing algorithms, we adopt a simplification
 similar to other single file libraries:
 1. vertex indices are unique, as in OpenGL and al standard indexed triangle
   meshes data structures, and not OBJ triplets; YOCTO_OBJ ensures that no
-  vertex dusplication happens thought for same triplets
+  vertex duplication happens thought for same triplets
 2. we split shapes on changes to groups and materials, instead of keeping
   per-face group/material data; this makes the data usable right away in
   a GPU viewer; this is not a major limitation if we accept the previous
@@ -442,7 +446,7 @@ it depends on `stb_image.h`, `stb_image_write.h`, `stb_image_resize.h` and
 
 The library provides a low  level interface that is a direct
 C++ translation of the glTF schemas and should be used if one wants
-complete control over the fromat or an application wants to have their
+complete control over the format or an application wants to have their
 own scene code added. A higher-level interface is provided by the scene
 or by `yocto_gltf.h`.
 
@@ -451,15 +455,15 @@ languages in mind. We attempt to match the glTF low-level interface
 to C++ as best as it can. Since the code is generated from the schema, we
 follow glTF naming conventions and typing quite well. To simplify adoption
 and keep the API relatively simple we use vector as arrays and use
-pointers to reference to all glTF objects. While this makes it less effcient
-than it might have been, glTF heavy use of optional values makes this
-necessary. At the same time, we do not keep track of set/unset values
-for basic types (int, float, bool) as a compromise for efficieny.
+pointers to reference to all glTF objects. While this makes it less
+efficient than it might have been, glTF heavy use of optional values makes
+this necessary. At the same time, we do not keep track of set/unset values
+for basic types (int, float, bool) as a compromise for efficiency.
 
 glTF uses integer indices to access objects.
-While writing code ourselves we found that we add signiicant problems
-since we would use an index to access the wriong type of scene objects.
-For this reasons, we use an explit index `glTFid<T>` that can only access
+While writing code ourselves we found that we add significant problems
+since we would use an index to access the wrong type of scene objects.
+For this reasons, we use an explicit index `glTFid<T>` that can only access
 an object of type T. Internally this is just the same old glTF index. But
 this can used to access the scene data with `glTF::get<T>(index)`.
 
@@ -475,14 +479,14 @@ windows with GLFW and draw immediate-mode widgets with ImGui.
 
 1. texture and buffer objects with `gl_texture` and `gl_buffer`
     - create textures/buffers with appropriate constructors
-    - check validity wiht `is_valid()`
+    - check validity with `is_valid()`
     - update textures/buffers with `update()` functions
     - delete textures/buffers with `clear()`
     - bind/unbind textures/buffers with `bind()`/`unbind()`
     - draw elements with `gl_buffer::draw_elems()`
 2. program objects with `gl_program`
     - program creation with constructor
-    - check validity wiht `is_valid()`
+    - check validity with `is_valid()`
     - delete with `clear()`
     - uniforms with `set_program_uniform()`
     - vertex attrib with `set_program_vertattr()`
@@ -490,7 +494,7 @@ windows with GLFW and draw immediate-mode widgets with ImGui.
 3. image viewing with `gl_stdimage_program`, with support for tone mapping.
 4. draw surfaces and hair with GGX/Kayjia-Kay with `gl_stdsurface_program`
     - initialize the program with constructor
-    - check validity wiht `is_valid()`
+    - check validity with `is_valid()`
     - start/end each frame with `begin_frame()`, `end_frame()`
     - define lights with `set_lights()`
     - start/end each shape with `begin_shape()`, `end_shape()`
@@ -507,7 +511,7 @@ windows with GLFW and draw immediate-mode widgets with ImGui.
     - create with constructor
     - delete with `clear()`
     - set callbacks with `set_callbacks()`
-    - includes carious utiliies to query window, mouse and keyboard
+    - includes carious utilities to query window, mouse and keyboard
 8. immediate mode widgets using ImGui
     - init with `init_widget()`
     - use the various widget calls to draw the widget and handle events
@@ -518,7 +522,8 @@ windows with GLFW and draw immediate-mode widgets with ImGui.
 We include additional utilities for writing command line applications and
 manipulating files.
 
-1. Python-like string opeations: `startswith()`, `endswith()`, `contains()`,
+1. Python-like string operations: `startswith()`, `endswith()`,
+`contains()`,
    `splitlines()`, `partition()`, `split()`, `splitlines()`, `strip()`,
    `rstrip()`, `lstrip()`, `join()`, `lower()`, `upper()`, `isspace()`,
    `replace()`
@@ -567,7 +572,7 @@ and user end.
     - supports types as above
     - for general use `arg = parse_arg<type>()`
     - to parse all remaining values use `args = parse_arga<type>(...)`
-4. end cmdline parsing with `check_parsing()` to check for unsued values,
+4. end cmdline parsing with `check_parsing()` to check for unused values,
    missing arguments
 5. to check for error use `should_exit()` and to print the message use
    `get_message()`
@@ -579,8 +584,9 @@ and user end.
 ## History
 
 Here we mark only major features added to the library. Small refactorings
-and bug fixes are reported here.
+and bug fixes are not reported here.
 
+- v 0.3.0: templated types, animation and objects in scene, api cleanups
 - v 0.2.0: various bug fixes and improvement to OpenGL drawing and widgets
 - v 0.1.0: initial release after refactoring
 
@@ -594,7 +600,7 @@ and bug fixes are reported here.
 using std::sqrt;
 ~~~
 
-sqrt
+Square root.
 
 #### Function Alias pow()
 
@@ -602,7 +608,7 @@ sqrt
 using std::pow;
 ~~~
 
-pow
+Power.
 
 #### Function Alias exp()
 
@@ -610,7 +616,7 @@ pow
 using std::exp;
 ~~~
 
-pow
+Exponential.
 
 #### Function Alias log()
 
@@ -618,7 +624,7 @@ pow
 using std::log;
 ~~~
 
-log
+Logarithm.
 
 #### Function Alias log10()
 
@@ -626,7 +632,7 @@ log
 using std::log10;
 ~~~
 
-log10
+Logarithm.
 
 #### Function Alias sin()
 
@@ -634,7 +640,7 @@ log10
 using std::sin;
 ~~~
 
-sin
+Sine.
 
 #### Function Alias cos()
 
@@ -642,7 +648,7 @@ sin
 using std::cos;
 ~~~
 
-cos
+Cosine.
 
 #### Function Alias tan()
 
@@ -650,7 +656,7 @@ cos
 using std::tan;
 ~~~
 
-tan
+Tangent.
 
 #### Function Alias asin()
 
@@ -658,7 +664,7 @@ tan
 using std::asin;
 ~~~
 
-asin
+Arc sine.
 
 #### Function Alias acos()
 
@@ -666,7 +672,7 @@ asin
 using std::acos;
 ~~~
 
-acos
+Arc cosine.
 
 #### Function Alias atan()
 
@@ -674,7 +680,7 @@ acos
 using std::atan;
 ~~~
 
-atan
+Arc tangent.
 
 #### Function Alias atan2()
 
@@ -682,7 +688,7 @@ atan
 using std::atan2;
 ~~~
 
-atan2
+Arc tangent.
 
 #### Function Alias abs()
 
@@ -690,7 +696,7 @@ atan2
 using std::abs;
 ~~~
 
-absolute value
+Absolute value.
 
 #### Function Alias fabs()
 
@@ -698,7 +704,7 @@ absolute value
 using std::fabs;
 ~~~
 
-floating point absolute value
+Floating point absolute value.
 
 #### Function Alias floor()
 
@@ -706,7 +712,7 @@ floating point absolute value
 using std::floor;
 ~~~
 
-floor
+Floor.
 
 #### Function Alias ceil()
 
@@ -714,7 +720,7 @@ floor
 using std::ceil;
 ~~~
 
-ceil
+Ceil.
 
 #### Function Alias round()
 
@@ -722,7 +728,7 @@ ceil
 using std::round;
 ~~~
 
-round
+Round.
 
 #### Function Alias isfinite()
 
@@ -730,7 +736,7 @@ round
 using std::isfinite;
 ~~~
 
-isfinate
+Check if a value is finite.
 
 ### Imported containers and related functions
 
@@ -740,7 +746,7 @@ isfinate
 using std::string;
 ~~~
 
-string
+String.
 
 #### Function Alias vector()
 
@@ -748,7 +754,7 @@ string
 using std::vector;
 ~~~
 
-vector
+Vector.
 
 #### Function Alias array()
 
@@ -756,7 +762,7 @@ vector
 using std::array;
 ~~~
 
-array
+Array.
 
 #### Function Alias map()
 
@@ -764,7 +770,7 @@ array
 using std::map;
 ~~~
 
-map
+Map.
 
 #### Function Alias set()
 
@@ -772,7 +778,7 @@ map
 using std::set;
 ~~~
 
-set
+Set.
 
 #### Function Alias unordered_map()
 
@@ -780,7 +786,7 @@ set
 using std::unordered_map;
 ~~~
 
-unordered map
+Unordered map.
 
 #### Function Alias unordered_set()
 
@@ -788,7 +794,7 @@ unordered map
 using std::unordered_set;
 ~~~
 
-unordered set
+Unordered set.
 
 #### Function Alias pair()
 
@@ -796,7 +802,7 @@ unordered set
 using std::pair;
 ~~~
 
-pair
+Pair.
 
 #### Function Alias tuple()
 
@@ -804,7 +810,7 @@ pair
 using std::tuple;
 ~~~
 
-tuple
+Tuple.
 
 #### Function Alias unique_ptr()
 
@@ -812,7 +818,7 @@ tuple
 using std::unique_ptr;
 ~~~
 
-unique pointer
+Unique pointer.
 
 #### Function Alias function()
 
@@ -820,11 +826,11 @@ unique pointer
 using std::function;
 ~~~
 
-function
+Function.
 
 #### Namespace using std::string_literals;
 
-string literals
+String literals.
 
 #### Function Alias numeric_limits()
 
@@ -832,7 +838,7 @@ string literals
 using std::numeric_limits;
 ~~~
 
-numeric limits
+Numeric limits.
 
 #### Function Alias initializer_list()
 
@@ -840,7 +846,7 @@ numeric limits
 using std::initializer_list;
 ~~~
 
-initializer list
+Initializer list.
 
 #### Function Alias ostream()
 
@@ -848,7 +854,7 @@ initializer list
 using std::ostream;
 ~~~
 
-output stream
+Output stream.
 
 #### Function Alias istream()
 
@@ -856,7 +862,7 @@ output stream
 using std::istream;
 ~~~
 
-input stream
+Input stream.
 
 #### Function Alias stringstream()
 
@@ -864,7 +870,7 @@ input stream
 using std::stringstream;
 ~~~
 
-string stream
+String stream.
 
 #### Function Alias fstream()
 
@@ -872,7 +878,7 @@ string stream
 using std::fstream;
 ~~~
 
-file stream
+File stream.
 
 #### Function Alias runtime_error()
 
@@ -880,7 +886,7 @@ file stream
 using std::runtime_error;
 ~~~
 
-runtime error
+Runtime error.
 
 #### Function Alias exception()
 
@@ -888,7 +894,7 @@ runtime error
 using std::exception;
 ~~~
 
-exception
+Exception.
 
 #### Function Alias ios_base()
 
@@ -896,7 +902,7 @@ exception
 using std::ios_base;
 ~~~
 
-ios base
+Ios base.
 
 #### Function Alias find()
 
@@ -904,7 +910,7 @@ ios base
 using std::find;
 ~~~
 
-find algorithms
+Find algorithm.
 
 #### Function Alias swap()
 
@@ -912,7 +918,7 @@ find algorithms
 using std::swap;
 ~~~
 
-swap algorithms
+Swap algorithm.
 
 #### Function Alias getline()
 
@@ -920,7 +926,7 @@ swap algorithms
 using std::getline;
 ~~~
 
-get line from streams
+Get line from streams.
 
 #### Function Alias to_string()
 
@@ -928,7 +934,7 @@ get line from streams
 using std::to_string;
 ~~~
 
-convert to string
+Convert to string.
 
 #### Function Alias cout()
 
@@ -936,7 +942,7 @@ convert to string
 using std::cout;
 ~~~
 
-cout object for printing
+Cout object for printing.
 
 #### Function Alias tie()
 
@@ -944,7 +950,11 @@ cout object for printing
 using std::tie;
 ~~~
 
-tie function for tuple usage
+Tie function for tuple usage.
+
+#### Namespace using std::string_literals;::using std::literals;
+
+Makes literals available
 
 ### Basic typedefs, math constants and functions
 
@@ -954,7 +964,7 @@ tie function for tuple usage
 using byte = unsigned char;
 ~~~
 
-convenient typedef for bytes
+Convenient typedef for bytes.
 
 #### Typedef uint
 
@@ -962,7 +972,7 @@ convenient typedef for bytes
 using uint = unsigned int;
 ~~~
 
-convenient typedef for bytes
+Convenient typedef for unsigned ints.
 
 #### Constant pif
 
@@ -970,7 +980,7 @@ convenient typedef for bytes
 const auto pif = 3.14159265f;
 ~~~
 
-pi (float)
+Pi (float).
 
 #### Constant pi
 
@@ -978,7 +988,7 @@ pi (float)
 const auto pi = 3.1415926535897932384626433832795;
 ~~~
 
-pi (double)
+Pi (double).
 
 #### Constant flt_max
 
@@ -986,7 +996,7 @@ pi (double)
 const auto flt_max = numeric_limits<float>::max();
 ~~~
 
-shortcat for float max value
+Shortcat for float max value.
 
 #### Constant flt_min
 
@@ -994,7 +1004,7 @@ shortcat for float max value
 const auto flt_min = numeric_limits<float>::lowest();
 ~~~
 
-shortcat for float min value
+Shortcat for float min value.
 
 #### Constant flt_eps
 
@@ -1002,7 +1012,7 @@ shortcat for float min value
 const auto flt_eps = numeric_limits<float>::epsilon();
 ~~~
 
-shortcat for float epsilon
+Shortcat for float epsilon.
 
 #### Constant int_max
 
@@ -1010,7 +1020,7 @@ shortcat for float epsilon
 const auto int_max = numeric_limits<int>::max();
 ~~~
 
-shortcat for int max value
+Shortcat for int max value.
 
 #### Constant int_min
 
@@ -1018,7 +1028,7 @@ shortcat for int max value
 const auto int_min = numeric_limits<int>::min();
 ~~~
 
-shortcat for int min value
+Shortcat for int min value.
 
 #### Function min()
 
@@ -1083,7 +1093,7 @@ inline float bilerp(
 ~~~
 
 Bilinear interpolation. Order is specified like quads counter-clockwise,
-so a,b,c,d correspond to parameters (0,0), (0,1), (1,1), (0,1)
+so a,b,c,d correspond to parameters (0,0), (0,1), (1,1), (0,1).
 
 #### Function pow2()
 
@@ -1091,7 +1101,7 @@ so a,b,c,d correspond to parameters (0,0), (0,1), (1,1), (0,1)
 inline int pow2(int x);
 ~~~
 
-Integer power of two
+Integer power of two.
 
 #### Function fastfloor()
 
@@ -1099,7 +1109,7 @@ Integer power of two
 inline int fastfloor(float x);
 ~~~
 
-Fast floor
+Fast floor.
 
 #### Function float_to_byte()
 
@@ -1107,7 +1117,7 @@ Fast floor
 inline byte float_to_byte(float x);
 ~~~
 
-Safe float to byte conversion
+Safe float to byte conversion.
 
 #### Function byte_to_float()
 
@@ -1115,7 +1125,7 @@ Safe float to byte conversion
 inline float byte_to_float(byte x);
 ~~~
 
-Safe byte to float conversion
+Safe byte to float conversion.
 
 ### Fixed-size vectors
 
@@ -1145,11 +1155,11 @@ struct vec<T, 1> {
 Vector of 1 element. Defined only for completeness.
 
 - Members:
-    - vec():      default constructor
-    - vec():      element constructor
-    - operator[]():      element access
-    - operator[]():      element access
-    - x:      element data
+    - vec():      Default constructor. Initializes to zeros.
+    - vec():      Element constructor.
+    - operator[]():      Element access.
+    - operator[]():      Element access.
+    - x:      Element data.
 
 
 #### Struct vec<T, 2\>
@@ -1170,13 +1180,13 @@ struct vec<T, 2> {
 Vector of 2 elements.
 
 - Members:
-    - vec():      default constructor
-    - vec():      element constructor
-    - vec():      element constructor
-    - operator[]():      element access
-    - operator[]():      element access
-    - x:      element data
-    - y:      element data
+    - vec():      Default constructor. Initializes to zeros.
+    - vec():      Element constructor.
+    - vec():      Element constructor.
+    - operator[]():      Element access.
+    - operator[]():      Element access.
+    - x:      Element data.
+    - y:      Element data.
 
 
 #### Struct vec<T, 3\>
@@ -1198,14 +1208,14 @@ struct vec<T, 3> {
 Vector of 3 elements.
 
 - Members:
-    - vec():      default constructor
-    - vec():      element constructor
-    - vec():      element constructor
-    - operator[]():      element access
-    - operator[]():      element access
-    - x:      element data
-    - y:      element data
-    - z:      element data
+    - vec():      Default constructor. Initializes to zeros.
+    - vec():      Element constructor
+    - vec():      Element constructor
+    - operator[]():      Element access
+    - operator[]():      Element access
+    - x:      Element data
+    - y:      Element data
+    - z:      Element data
 
 
 #### Struct vec<T, 4\>
@@ -1231,18 +1241,18 @@ struct vec<T, 4> {
 Vector of 4 elements.
 
 - Members:
-    - vec():      default constructor
-    - vec():      element constructor
-    - vec():      element constructor
-    - vec():      constructor from smaller vector
-    - operator[]():      element access
-    - operator[]():      element access
-    - xyz():      access xyz components
-    - xyz():      access xyz components
-    - x:      element data
-    - y:      element data
-    - z:      element data
-    - w:      element data
+    - vec():      Default constructor.  Initializes to zeros.
+    - vec():      Element constructor.
+    - vec():      Element constructor.
+    - vec():      Constructor from smaller vector.
+    - operator[]():      Element access.
+    - operator[]():      Element access.
+    - xyz():      Access xyz components.
+    - xyz():      Access xyz components.
+    - x:      Element data.
+    - y:      Element data.
+    - z:      Element data.
+    - w:      Element data.
 
 
 #### Typedef vec1f
@@ -1251,7 +1261,7 @@ Vector of 4 elements.
 using vec1f = vec<float, 1>;
 ~~~
 
-1-dimension float vector
+1-dimensional float vector.
 
 #### Typedef vec2f
 
@@ -1259,7 +1269,7 @@ using vec1f = vec<float, 1>;
 using vec2f = vec<float, 2>;
 ~~~
 
-2-dimension float vector
+2-dimensional float vector.
 
 #### Typedef vec3f
 
@@ -1267,7 +1277,7 @@ using vec2f = vec<float, 2>;
 using vec3f = vec<float, 3>;
 ~~~
 
-3-dimension float vector
+3-dimensional float vector
 
 #### Typedef vec4f
 
@@ -1275,7 +1285,7 @@ using vec3f = vec<float, 3>;
 using vec4f = vec<float, 4>;
 ~~~
 
-4-dimension float vector
+4-dimensional float vector
 
 #### Typedef vec1i
 
@@ -1283,7 +1293,7 @@ using vec4f = vec<float, 4>;
 using vec1i = vec<int, 1>;
 ~~~
 
-1-dimension int vector
+1-dimensional int vector.
 
 #### Typedef vec2i
 
@@ -1291,7 +1301,7 @@ using vec1i = vec<int, 1>;
 using vec2i = vec<int, 2>;
 ~~~
 
-2-dimension int vector
+2-dimensional int vector.
 
 #### Typedef vec3i
 
@@ -1299,7 +1309,7 @@ using vec2i = vec<int, 2>;
 using vec3i = vec<int, 3>;
 ~~~
 
-3-dimension int vector
+3-dimensional int vector.
 
 #### Typedef vec4i
 
@@ -1307,15 +1317,7 @@ using vec3i = vec<int, 3>;
 using vec4i = vec<int, 4>;
 ~~~
 
-4-dimension int vector
-
-#### Typedef vec3b
-
-~~~ .cpp
-using vec3b = vec<byte, 3>;
-~~~
-
-3-dimension byte vector
+4-dimensional int vector.
 
 #### Typedef vec4b
 
@@ -1323,7 +1325,7 @@ using vec3b = vec<byte, 3>;
 using vec4b = vec<byte, 4>;
 ~~~
 
-4-dimension byte vector
+4-dimensional byte vector.
 
 #### Constant zero1f
 
@@ -1331,7 +1333,7 @@ using vec4b = vec<byte, 4>;
 const auto zero1f = vec1f();
 ~~~
 
-1-dimensional float zero vector
+1-dimensional float zero vector.
 
 #### Constant zero2f
 
@@ -1339,7 +1341,7 @@ const auto zero1f = vec1f();
 const auto zero2f = vec2f();
 ~~~
 
-2-dimensional float zero vector
+2-dimensional float zero vector.
 
 #### Constant zero3f
 
@@ -1347,7 +1349,7 @@ const auto zero2f = vec2f();
 const auto zero3f = vec3f();
 ~~~
 
-3-dimensional float zero vector
+3-dimensional float zero vector.
 
 #### Constant zero4f
 
@@ -1355,7 +1357,7 @@ const auto zero3f = vec3f();
 const auto zero4f = vec4f();
 ~~~
 
-4-dimensional float zero vector
+4-dimensional float zero vector.
 
 #### Constant zero1i
 
@@ -1363,7 +1365,7 @@ const auto zero4f = vec4f();
 const auto zero1i = vec1i();
 ~~~
 
-1-dimensional int zero vector
+1-dimensional int zero vector.
 
 #### Constant zero2i
 
@@ -1371,7 +1373,7 @@ const auto zero1i = vec1i();
 const auto zero2i = vec2i();
 ~~~
 
-2-dimensional int zero vector
+2-dimensional int zero vector.
 
 #### Constant zero3i
 
@@ -1379,7 +1381,7 @@ const auto zero2i = vec2i();
 const auto zero3i = vec3i();
 ~~~
 
-3-dimensional int zero vector
+3-dimensional int zero vector.
 
 #### Constant zero4i
 
@@ -1387,7 +1389,7 @@ const auto zero3i = vec3i();
 const auto zero4i = vec4i();
 ~~~
 
-4-dimensional int zero vector
+4-dimensional int zero vector.
 
 #### Constant zero4b
 
@@ -1395,7 +1397,7 @@ const auto zero4i = vec4i();
 const auto zero4b = vec4b();
 ~~~
 
-4-dimensional byte zero vector
+4-dimensional byte zero vector.
 
 #### Function begin()
 
@@ -1404,7 +1406,7 @@ template <typename T, int N>
 inline T* begin(vec<T, N>& a);
 ~~~
 
-iteration support
+Element iteration.
 
 #### Function begin()
 
@@ -1413,7 +1415,7 @@ template <typename T, int N>
 inline const T* begin(const vec<T, N>& a);
 ~~~
 
-iteration support
+Element iteration.
 
 #### Function end()
 
@@ -1422,7 +1424,7 @@ template <typename T, int N>
 inline T* end(vec<T, N>& a);
 ~~~
 
-iteration support
+Element iteration.
 
 #### Function end()
 
@@ -1431,7 +1433,7 @@ template <typename T, int N>
 inline const T* end(const vec<T, N>& a);
 ~~~
 
-iteration support
+Element iteration.
 
 #### Function data()
 
@@ -1440,7 +1442,7 @@ template <typename T, int N>
 inline T* data(vec<T, N>& a);
 ~~~
 
-vector data access
+Element access.
 
 #### Function data()
 
@@ -1449,7 +1451,7 @@ template <typename T, int N>
 inline const T* data(const vec<T, N>& a);
 ~~~
 
-vector data access
+Element access.
 
 #### Function size()
 
@@ -1458,7 +1460,7 @@ template <typename T, int N>
 inline int size(vec<T, N>& a);
 ~~~
 
-vector size
+Number of elements.
 
 #### Function empty()
 
@@ -1467,7 +1469,7 @@ template <typename T, int N>
 inline bool empty(vec<T, N>& a);
 ~~~
 
-vector empty
+Empty check (always false for useful for templated code).
 
 #### Function operator==()
 
@@ -1476,7 +1478,7 @@ template <typename T>
 inline bool operator==(const vec<T, 1>& a, const vec<T, 1>& b);
 ~~~
 
-vector operator ==
+Vector equality.
 
 #### Function operator!=()
 
@@ -1485,7 +1487,7 @@ template <typename T>
 inline bool operator!=(const vec<T, 1>& a, const vec<T, 1>& b);
 ~~~
 
-vector operator !=
+Vector inequality.
 
 #### Function operator==()
 
@@ -1494,7 +1496,7 @@ template <typename T>
 inline bool operator==(const vec<T, 2>& a, const vec<T, 2>& b);
 ~~~
 
-vector operator ==
+Vector equality.
 
 #### Function operator!=()
 
@@ -1503,7 +1505,7 @@ template <typename T>
 inline bool operator!=(const vec<T, 2>& a, const vec<T, 2>& b);
 ~~~
 
-vector operator !=
+Vector inequality.
 
 #### Function operator==()
 
@@ -1512,7 +1514,7 @@ template <typename T>
 inline bool operator==(const vec<T, 3>& a, const vec<T, 3>& b);
 ~~~
 
-vector operator ==
+Vector equality.
 
 #### Function operator!=()
 
@@ -1521,7 +1523,7 @@ template <typename T>
 inline bool operator!=(const vec<T, 3>& a, const vec<T, 3>& b);
 ~~~
 
-vector operator !=
+Vector inequality.
 
 #### Function operator==()
 
@@ -1530,7 +1532,7 @@ template <typename T>
 inline bool operator==(const vec<T, 4>& a, const vec<T, 4>& b);
 ~~~
 
-vector operator ==
+Vector equality.
 
 #### Function operator!=()
 
@@ -1539,7 +1541,7 @@ template <typename T>
 inline bool operator!=(const vec<T, 4>& a, const vec<T, 4>& b);
 ~~~
 
-vector operator !=
+Vector inequality.
 
 #### Function operator<()
 
@@ -1548,7 +1550,7 @@ template <typename T>
 inline bool operator<(const vec<T, 2>& a, const vec<T, 2>& b);
 ~~~
 
-vector operator < (lexicographic order - useful for map)
+Vector comparison using lexicographic order, useful for map.
 
 #### Function operator<()
 
@@ -1557,7 +1559,7 @@ template <typename T>
 inline bool operator<(const vec<T, 3>& a, const vec<T, 3>& b);
 ~~~
 
-vector operator < (lexicographic order - useful for map)
+Vector comparison using lexicographic order, useful for map.
 
 #### Function operator<()
 
@@ -1566,7 +1568,7 @@ template <typename T>
 inline bool operator<(const vec<T, 4>& a, const vec<T, 4>& b);
 ~~~
 
-vector operator < (lexicographic order - useful for map)
+Vector comparison using lexicographic order, useful for map.
 
 #### Function operator+()
 
@@ -1575,7 +1577,7 @@ template <typename T>
 inline vec<T, 2> operator+(const vec<T, 2>& a);
 ~~~
 
-vector operator +
+Vector unary plus (for completeness).
 
 #### Function operator-()
 
@@ -1584,7 +1586,7 @@ template <typename T>
 inline vec<T, 2> operator-(const vec<T, 2>& a);
 ~~~
 
-vector operator -
+Vector negation.
 
 #### Function operator+()
 
@@ -1593,7 +1595,7 @@ template <typename T>
 inline vec<T, 2> operator+(const vec<T, 2>& a, const vec<T, 2>& b);
 ~~~
 
-vector operator +
+Vector sum.
 
 #### Function operator-()
 
@@ -1602,7 +1604,7 @@ template <typename T>
 inline vec<T, 2> operator-(const vec<T, 2>& a, const vec<T, 2>& b);
 ~~~
 
-vector operator -
+Vector difference.
 
 #### Function operator*()
 
@@ -1611,7 +1613,7 @@ template <typename T>
 inline vec<T, 2> operator*(const vec<T, 2>& a, const vec<T, 2>& b);
 ~~~
 
-vector operator *
+Vector scalar product.
 
 #### Function operator*()
 
@@ -1620,7 +1622,7 @@ template <typename T, typename T1>
 inline vec<T, 2> operator*(const vec<T, 2>& a, T1 b);
 ~~~
 
-vector operator *
+Vector scalar product.
 
 #### Function operator*()
 
@@ -1629,7 +1631,7 @@ template <typename T>
 inline vec<T, 2> operator*(float a, const vec<T, 2>& b);
 ~~~
 
-vector operator *
+Vector scalar product.
 
 #### Function operator/()
 
@@ -1638,7 +1640,7 @@ template <typename T>
 inline vec<T, 2> operator/(const vec<T, 2>& a, const vec<T, 2>& b);
 ~~~
 
-vector operator /
+Vector scalar division.
 
 #### Function operator/()
 
@@ -1647,7 +1649,7 @@ template <typename T, typename T1>
 inline vec<T, 2> operator/(const vec<T, 2>& a, T1 b);
 ~~~
 
-vector operator /
+Vector scalar division.
 
 #### Function operator/()
 
@@ -1656,7 +1658,7 @@ template <typename T, typename T1>
 inline vec<T, 2> operator/(T1 a, const vec<T, 2>& b);
 ~~~
 
-vector operator /
+Vector scalar division.
 
 #### Function operator+()
 
@@ -1665,7 +1667,7 @@ template <typename T>
 inline vec<T, 3> operator+(const vec<T, 3>& a);
 ~~~
 
-vector operator +
+Vector unary plus (for completeness).
 
 #### Function operator-()
 
@@ -1674,7 +1676,7 @@ template <typename T>
 inline vec<T, 3> operator-(const vec<T, 3>& a);
 ~~~
 
-vector operator -
+Vector negation.
 
 #### Function operator+()
 
@@ -1683,7 +1685,7 @@ template <typename T>
 inline vec<T, 3> operator+(const vec<T, 3>& a, const vec<T, 3>& b);
 ~~~
 
-vector operator +
+Vector sum.
 
 #### Function operator-()
 
@@ -1692,7 +1694,7 @@ template <typename T>
 inline vec<T, 3> operator-(const vec<T, 3>& a, const vec<T, 3>& b);
 ~~~
 
-vector operator -
+Vector operator -.
 
 #### Function operator*()
 
@@ -1701,7 +1703,7 @@ template <typename T>
 inline vec<T, 3> operator*(const vec<T, 3>& a, const vec<T, 3>& b);
 ~~~
 
-vector operator *
+Vector scalar product.
 
 #### Function operator*()
 
@@ -1710,7 +1712,7 @@ template <typename T, typename T1>
 inline vec<T, 3> operator*(const vec<T, 3>& a, T1 b);
 ~~~
 
-vector operator *
+Vector scalar product.
 
 #### Function operator*()
 
@@ -1719,7 +1721,7 @@ template <typename T, typename T1>
 inline vec<T, 3> operator*(T1 a, const vec<T, 3>& b);
 ~~~
 
-vector operator *
+Vector scalar product.
 
 #### Function operator/()
 
@@ -1728,7 +1730,7 @@ template <typename T>
 inline vec<T, 3> operator/(const vec<T, 3>& a, const vec<T, 3>& b);
 ~~~
 
-vector operator /
+Vector scalar division.
 
 #### Function operator/()
 
@@ -1737,7 +1739,7 @@ template <typename T, typename T1>
 inline vec<T, 3> operator/(const vec<T, 3>& a, T1 b);
 ~~~
 
-vector operator /
+Vector scalar division.
 
 #### Function operator/()
 
@@ -1746,7 +1748,7 @@ template <typename T, typename T1>
 inline vec<T, 3> operator/(T1 a, const vec<T, 3>& b);
 ~~~
 
-vector operator /
+Vector scalar division.
 
 #### Function operator+()
 
@@ -1755,7 +1757,7 @@ template <typename T>
 inline vec<T, 4> operator+(const vec<T, 4>& a);
 ~~~
 
-vector operator +
+Vector unary plus (for completeness).
 
 #### Function operator-()
 
@@ -1764,7 +1766,7 @@ template <typename T>
 inline vec<T, 4> operator-(const vec<T, 4>& a);
 ~~~
 
-vector operator -
+Vector negation.
 
 #### Function operator+()
 
@@ -1773,7 +1775,7 @@ template <typename T>
 inline vec<T, 4> operator+(const vec<T, 4>& a, const vec<T, 4>& b);
 ~~~
 
-vector operator +
+Vector sum.
 
 #### Function operator-()
 
@@ -1782,7 +1784,7 @@ template <typename T>
 inline vec<T, 4> operator-(const vec<T, 4>& a, const vec<T, 4>& b);
 ~~~
 
-vector operator -
+Vector difference.
 
 #### Function operator*()
 
@@ -1791,7 +1793,7 @@ template <typename T>
 inline vec<T, 4> operator*(const vec<T, 4>& a, const vec<T, 4>& b);
 ~~~
 
-vector operator *
+Vector scalar product.
 
 #### Function operator*()
 
@@ -1800,7 +1802,7 @@ template <typename T>
 inline vec<T, 4> operator*(const vec<T, 4>& a, float b);
 ~~~
 
-vector operator *
+Vector scalar product.
 
 #### Function operator*()
 
@@ -1809,7 +1811,7 @@ template <typename T>
 inline vec<T, 4> operator*(float a, const vec<T, 4>& b);
 ~~~
 
-vector operator *
+Vector scalar product.
 
 #### Function operator/()
 
@@ -1818,7 +1820,7 @@ template <typename T>
 inline vec<T, 4> operator/(const vec<T, 4>& a, const vec<T, 4>& b);
 ~~~
 
-vector operator /
+Vector scalar division.
 
 #### Function operator/()
 
@@ -1827,7 +1829,7 @@ template <typename T, typename T1>
 inline vec<T, 4> operator/(const vec<T, 4>& a, T1 b);
 ~~~
 
-vector operator /
+Vector scalar division.
 
 #### Function operator/()
 
@@ -1836,7 +1838,7 @@ template <typename T, typename T1>
 inline vec<T, 4> operator/(T1 a, const vec<T, 4>& b);
 ~~~
 
-vector operator /
+Vector scalar division.
 
 #### Function operator+=()
 
@@ -1845,7 +1847,7 @@ template <typename T, int N>
 inline vec<T, N>& operator+=(vec<T, N>& a, const vec<T, N>& b);
 ~~~
 
-vector operator +=
+Vector assignment.
 
 #### Function operator-=()
 
@@ -1854,7 +1856,7 @@ template <typename T, int N>
 inline vec<T, N>& operator-=(vec<T, 2>& a, const vec<T, N>& b);
 ~~~
 
-vector operator -=
+Vector assignment.
 
 #### Function operator*=()
 
@@ -1863,7 +1865,7 @@ template <typename T, int N>
 inline vec<T, N>& operator*=(vec<T, N>& a, const vec<T, N>& b);
 ~~~
 
-vector operator *=
+Vector assignment.
 
 #### Function operator*=()
 
@@ -1872,7 +1874,7 @@ template <typename T, int N, typename T1>
 inline vec<T, N>& operator*=(vec<T, N>& a, T1 b);
 ~~~
 
-vector operator *=
+Vector assignment.
 
 #### Function operator/=()
 
@@ -1881,7 +1883,7 @@ template <typename T, int N>
 inline vec<T, N>& operator/=(vec<T, N>& a, const vec<T, N>& b);
 ~~~
 
-vector operator /=
+Vector assignment.
 
 #### Function operator/=()
 
@@ -1890,7 +1892,7 @@ template <typename T, int N, typename T1>
 inline vec<T, N>& operator/=(vec<T, N>& a, T1 b);
 ~~~
 
-vector operator /=
+Vector assignment.
 
 #### Function dot()
 
@@ -1899,7 +1901,7 @@ template <typename T>
 inline T dot(const vec<T, 2>& a, const vec<T, 2>& b);
 ~~~
 
-vector dot product
+Vector dot product.
 
 #### Function dot()
 
@@ -1908,7 +1910,7 @@ template <typename T>
 inline T dot(const vec<T, 3>& a, const vec<T, 3>& b);
 ~~~
 
-vector dot product
+Vector dot product.
 
 #### Function dot()
 
@@ -1917,7 +1919,7 @@ template <typename T>
 inline T dot(const vec<T, 4>& a, const vec<T, 4>& b);
 ~~~
 
-vector dot product
+Vector dot product.
 
 #### Function cross()
 
@@ -1926,7 +1928,7 @@ template <typename T>
 inline T cross(const vec<T, 2>& a, const vec<T, 2>& b);
 ~~~
 
-vector cross product
+Vector cross product.
 
 #### Function cross()
 
@@ -1935,7 +1937,7 @@ template <typename T>
 inline vec<T, 3> cross(const vec<T, 3>& a, const vec<T, 3>& b);
 ~~~
 
-vector cross product
+Vector cross product.
 
 #### Function length()
 
@@ -1944,7 +1946,7 @@ template <typename T, int N>
 inline T length(const vec<T, N>& a);
 ~~~
 
-vector length
+Vector length.
 
 #### Function normalize()
 
@@ -1953,34 +1955,16 @@ template <typename T, int N>
 inline vec<T, N> normalize(const vec<T, N>& a);
 ~~~
 
-vector normalization
-
-#### Function uangle()
-
-~~~ .cpp
-template <typename T>
-inline T uangle(const vec<T, 3>& a, const vec<T, 3>& b);
-~~~
-
-angle between normalized vectors
-
-#### Function uangle()
-
-~~~ .cpp
-template <typename T>
-inline T uangle(const vec<T, 4>& a, const vec<T, 4>& b);
-~~~
-
-angle between normalized vectors
+Vector normalization.
 
 #### Function angle()
 
 ~~~ .cpp
-template <typename T>
-inline T angle(const vec<T, 3>& a, const vec<T, 3>& b);
+template <typename T, int N>
+inline T angle(const vec<T, N>& a, const vec<T, N>& b);
 ~~~
 
-angle between vectors
+Angle between vectors.
 
 #### Function slerp()
 
@@ -1989,7 +1973,7 @@ template <typename T, int N, typename T1>
 inline vec<T, N> slerp(const vec<T, N>& a, const vec<T, N>& b, T1 u);
 ~~~
 
-vector spherical linear interpolation (vectors have to be normalized)
+Vector spherical linear interpolation (vectors have to be normalized).
 
 #### Function orthogonal()
 
@@ -1998,7 +1982,7 @@ template <typename T>
 inline vec<T, 3> orthogonal(const vec<T, 3>& v);
 ~~~
 
-orthogonal vector
+Orthogonal vector.
 
 #### Function orthonormalize()
 
@@ -2007,7 +1991,7 @@ template <typename T>
 inline vec<T, 3> orthonormalize(const vec<T, 3>& a, const vec<T, 3>& b);
 ~~~
 
-orthonormalize two vectors
+Orthonormalize two vectors.
 
 #### Function reflect()
 
@@ -2016,7 +2000,7 @@ template <typename T>
 inline vec<T, 3> reflect(const vec<T, 3>& w, const vec<T, 3>& n);
 ~~~
 
-reflected vector
+Reflected vector.
 
 #### Function refract()
 
@@ -2025,7 +2009,7 @@ template <typename T>
 inline vec<T, 3> refract(const vec<T, 3>& w, const vec<T, 3>& n, T eta);
 ~~~
 
-refracted vector
+Refracted vector.
 
 #### Function clamp()
 
@@ -2034,7 +2018,7 @@ template <typename T, typename T1>
 inline vec<T, 2> clamp(const vec<T, 2>& x, T1 min, T1 max);
 ~~~
 
-vector component-wise clamp
+Component-wise clamp.
 
 #### Function clamp()
 
@@ -2043,7 +2027,7 @@ template <typename T, typename T1>
 inline vec<T, 3> clamp(const vec<T, 3>& x, T1 min, T1 max);
 ~~~
 
-vector component-wise clamp
+Component-wise clamp.
 
 #### Function clamp()
 
@@ -2052,7 +2036,7 @@ template <typename T, typename T1>
 inline vec<T, 4> clamp(const vec<T, 4>& x, T1 min, T1 max);
 ~~~
 
-vector component-wise clamp
+Component-wise clamp.
 
 #### Function clamplen()
 
@@ -2061,7 +2045,7 @@ template <typename T, int N, typename T1>
 inline vec<T, N> clamplen(const vec<T, N>& x, T1 max);
 ~~~
 
-clamp the length of a vector
+Clamp a vector to a maximum length.
 
 #### Function min_element()
 
@@ -2070,7 +2054,7 @@ template <typename T, int N>
 inline int min_element(const vec<T, N>& a);
 ~~~
 
-index and valur of minimum vector element
+Index of minimum element.
 
 #### Function min_element_value()
 
@@ -2079,7 +2063,7 @@ template <typename T, int N>
 inline T min_element_value(const vec<T, N>& a);
 ~~~
 
-index and value of the maximum vector element
+Value of minimum element.
 
 #### Function max_element()
 
@@ -2088,7 +2072,7 @@ template <typename T, int N>
 inline int max_element(const vec<T, N>& a);
 ~~~
 
-index and value of the maximum vector element
+Index of maximum element.
 
 #### Function max_element_value()
 
@@ -2097,23 +2081,7 @@ template <typename T, int N>
 inline T max_element_value(const vec<T, N>& a);
 ~~~
 
-index and value of the maximum vector element
-
-#### Function float_to_byte()
-
-~~~ .cpp
-inline vec3b float_to_byte(const vec3f& a);
-~~~
-
-Element-wise conversion
-
-#### Function byte_to_float()
-
-~~~ .cpp
-inline vec3f byte_to_float(const vec3b& a);
-~~~
-
-Element-wise conversion
+Value of maximum element.
 
 #### Function float_to_byte()
 
@@ -2121,7 +2089,7 @@ Element-wise conversion
 inline vec4b float_to_byte(const vec4f& a);
 ~~~
 
-Element-wise conversion
+Element-wise float to byte conversion.
 
 #### Function byte_to_float()
 
@@ -2129,7 +2097,7 @@ Element-wise conversion
 inline vec4f byte_to_float(const vec4b& a);
 ~~~
 
-Element-wise conversion
+Element-wise byte to float conversion.
 
 #### Function operator<<()
 
@@ -2138,7 +2106,7 @@ template <typename T, int N>
 inline ostream& operator<<(ostream& os, const vec<T, N>& a);
 ~~~
 
-stream write
+Stream write.
 
 #### Function operator\>\>()
 
@@ -2147,7 +2115,7 @@ template <typename T, int N>
 inline istream& operator>>(istream& is, vec<T, N>& a);
 ~~~
 
-stream read
+Stream read.
 
 #### Struct hash<ygl::vec<T, N\>\>
 
@@ -2168,7 +2136,7 @@ struct mat;
 ~~~
 
 Generic matrix of NxN elements. This is used only to define template
-specializations for small fixed sized matrices.
+specializations for small fixed-sized matrices.
 
 #### Struct mat<T, 2\>
 
@@ -2185,17 +2153,16 @@ struct mat<T, 2> {
 }
 ~~~
 
-Matrix of 2x2 elements stored in column major format.
-Colums access via operator[].
+Matrix of 2x2 elements stored in column-major format.
 
 - Members:
-    - mat():      default constructor
-    - mat():      diagonal constructor
-    - mat():      list constructor
-    - operator[]():      element access
-    - operator[]():      element access
-    - x:      element data
-    - y:      element data
+    - mat():      Default constructor. Initializes to identity matrix.
+    - mat():      Constructs a matrix with the given diagonal.
+    - mat():      Constructs a matrix from its columns.
+    - operator[]():      Column access.
+    - operator[]():      Column access.
+    - x:      Column data.
+    - y:      Column data.
 
 
 #### Struct mat<T, 3\>
@@ -2218,14 +2185,14 @@ Matrix of 3x3 elements stored in column major format.
 Colums access via operator[].
 
 - Members:
-    - mat():      default constructor
-    - mat():      diagonal constructor
-    - mat():      list constructor
-    - operator[]():      element access
-    - operator[]():      element access
-    - x:      element data
-    - y:      element data
-    - z:      element data
+    - mat():      Default constructor. Initializes to identity matrix.
+    - mat():      Constructs a matrix with the given diagonal.
+    - mat():      Constructs a matrix from its columns.
+    - operator[]():      Column access.
+    - operator[]():      Column access.
+    - x:      Column data.
+    - y:      Column data.
+    - z:      Column data.
 
 
 #### Struct mat<T, 4\>
@@ -2249,15 +2216,15 @@ Matrix of 4x4 elements stored in column major format.
 Colums access via operator[].
 
 - Members:
-    - 4>():      default constructor
-    - 4>():      diagonal constructor
-    - 4>():      list constructor
-    - operator[]():      element access
-    - operator[]():      element access
-    - x:      element data
-    - y:      element data
-    - z:      element data
-    - w:      element data
+    - 4>():      Default constructor. Initializes to identity matrix.
+    - 4>():      Constructs a matrix with the given diagonal.
+    - 4>():      Constructs a matrix from its columns.
+    - operator[]():      Column access.
+    - operator[]():      Column access.
+    - x:      Column data.
+    - y:      Column data.
+    - z:      Column data.
+    - w:      Column data.
 
 
 #### Typedef mat2f
@@ -2266,7 +2233,7 @@ Colums access via operator[].
 using mat2f = mat<float, 2>;
 ~~~
 
-2-dimension float matrix
+2-dimensional float matrix.
 
 #### Typedef mat3f
 
@@ -2274,7 +2241,7 @@ using mat2f = mat<float, 2>;
 using mat3f = mat<float, 3>;
 ~~~
 
-3-dimension float matrix
+3-dimensional float matrix.
 
 #### Typedef mat4f
 
@@ -2282,7 +2249,7 @@ using mat3f = mat<float, 3>;
 using mat4f = mat<float, 4>;
 ~~~
 
-4-dimension float matrix
+4-dimensional float matrix.
 
 #### Constant identity_mat2f
 
@@ -2290,7 +2257,7 @@ using mat4f = mat<float, 4>;
 const auto identity_mat2f = mat2f();
 ~~~
 
-2-dimensional float identity matrix
+2-dimensional float identity matrix.
 
 #### Constant identity_mat3f
 
@@ -2298,7 +2265,7 @@ const auto identity_mat2f = mat2f();
 const auto identity_mat3f = mat3f();
 ~~~
 
-3-dimensional float identity matrix
+3-dimensional float identity matrix.
 
 #### Constant identity_mat4f
 
@@ -2306,7 +2273,7 @@ const auto identity_mat3f = mat3f();
 const auto identity_mat4f = mat4f();
 ~~~
 
-4-dimensional float identity matrix
+4-dimensional float identity matrix.
 
 #### Function begin()
 
@@ -2315,7 +2282,7 @@ template <typename T, int N>
 inline vec<T, N>* begin(mat<T, N>& m);
 ~~~
 
-matrix iteration support
+Column iteration.
 
 #### Function end()
 
@@ -2324,7 +2291,7 @@ template <typename T, int N>
 inline vec<T, N>* end(mat<T, N>& m);
 ~~~
 
-matrix iteration support
+Column iteration.
 
 #### Function begin()
 
@@ -2333,7 +2300,7 @@ template <typename T, int N>
 inline const vec<T, N>* begin(const mat<T, N>& m);
 ~~~
 
-matrix iteration support
+Column iteration.
 
 #### Function end()
 
@@ -2342,7 +2309,7 @@ template <typename T, int N>
 inline const vec<T, N>* end(const mat<T, N>& m);
 ~~~
 
-matrix iteration support
+Column iteration.
 
 #### Function data()
 
@@ -2351,7 +2318,7 @@ template <typename T, int N>
 inline vec<T, N>* data(mat<T, N>& m);
 ~~~
 
-matrix data access
+Column access.
 
 #### Function data()
 
@@ -2360,7 +2327,7 @@ template <typename T, int N>
 inline const vec<T, N>* data(const mat<T, N>& m);
 ~~~
 
-matrix data access
+Column access.
 
 #### Function size()
 
@@ -2369,7 +2336,7 @@ template <typename T, int N>
 inline int size(mat<T, N>& a);
 ~~~
 
-matrix size
+Number of columns.
 
 #### Function empty()
 
@@ -2378,7 +2345,7 @@ template <typename T, int N>
 inline bool empty(mat<T, N>& a);
 ~~~
 
-vector empty
+Empty check (always false for useful for templated code).
 
 #### Function operator==()
 
@@ -2387,7 +2354,7 @@ template <typename T>
 inline bool operator==(const mat<T, 2>& a, const mat<T, 2>& b);
 ~~~
 
-matrix operator ==
+Matrix equality.
 
 #### Function operator!=()
 
@@ -2396,7 +2363,7 @@ template <typename T>
 inline bool operator!=(const mat<T, 2>& a, const mat<T, 2>& b);
 ~~~
 
-matrix operator !=
+Matrix inequality.
 
 #### Function operator==()
 
@@ -2405,7 +2372,7 @@ template <typename T>
 inline bool operator==(const mat<T, 3>& a, const mat<T, 3>& b);
 ~~~
 
-matrix operator ==
+Matrix equality.
 
 #### Function operator!=()
 
@@ -2414,7 +2381,7 @@ template <typename T>
 inline bool operator!=(const mat<T, 3>& a, const mat<T, 3>& b);
 ~~~
 
-matrix operator !=
+Matrix inequality.
 
 #### Function operator==()
 
@@ -2423,7 +2390,7 @@ template <typename T>
 inline bool operator==(const mat<T, 4>& a, const mat<T, 4>& b);
 ~~~
 
-matrix operator ==
+Matrix equality.
 
 #### Function operator!=()
 
@@ -2432,7 +2399,7 @@ template <typename T>
 inline bool operator!=(const mat<T, 4>& a, const mat<T, 4>& b);
 ~~~
 
-matrix operator !=
+Matrix inequality.
 
 #### Function operator+()
 
@@ -2441,25 +2408,7 @@ template <typename T>
 inline mat<T, 2> operator+(const mat<T, 2>& a, const mat<T, 2>& b);
 ~~~
 
-matrix operator +
-
-#### Function operator+()
-
-~~~ .cpp
-template <typename T>
-inline mat<T, 3> operator+(const mat<T, 3>& a, const mat<T, 3>& b);
-~~~
-
-matrix operator +
-
-#### Function operator+()
-
-~~~ .cpp
-template <typename T>
-inline mat<T, 4> operator+(const mat<T, 4>& a, const mat<T, 4>& b);
-~~~
-
-matrix operator +
+Matrix sum.
 
 #### Function operator*()
 
@@ -2468,7 +2417,7 @@ template <typename T, typename T1>
 inline mat<T, 2> operator*(const mat<T, 2>& a, T1 b);
 ~~~
 
-matrix scalar multiply
+Matrix scalar product.
 
 #### Function operator/()
 
@@ -2477,7 +2426,7 @@ template <typename T, typename T1>
 inline mat<T, 2> operator/(const mat<T, 2>& a, T1 b);
 ~~~
 
-matrix scalar division
+matrix scalar division.
 
 #### Function operator*()
 
@@ -2486,7 +2435,7 @@ template <typename T>
 inline vec<T, 2> operator*(const mat<T, 2>& a, const vec<T, 2>& b);
 ~~~
 
-matrix-vector right multiply
+Matrix-vector product.
 
 #### Function operator*()
 
@@ -2495,7 +2444,7 @@ template <typename T>
 inline vec<T, 2> operator*(const vec<T, 2>& a, const mat<T, 2>& b);
 ~~~
 
-matrix-vector left multiply
+Matrix-vector product.
 
 #### Function operator*()
 
@@ -2504,7 +2453,16 @@ template <typename T>
 inline mat<T, 2> operator*(const mat<T, 2>& a, const mat<T, 2>& b);
 ~~~
 
-matrix-matrix multiply
+Matrix-matrix product.
+
+#### Function operator+()
+
+~~~ .cpp
+template <typename T>
+inline mat<T, 3> operator+(const mat<T, 3>& a, const mat<T, 3>& b);
+~~~
+
+Matrix sum.
 
 #### Function operator*()
 
@@ -2513,7 +2471,7 @@ template <typename T, typename T1>
 inline mat<T, 3> operator*(const mat<T, 3>& a, T1 b);
 ~~~
 
-matrix scalar multiply
+Matrix scalar product.
 
 #### Function operator/()
 
@@ -2522,25 +2480,7 @@ template <typename T, typename T1>
 inline mat<T, 3> operator/(const mat<T, 3>& a, T1 b);
 ~~~
 
-matrix scalar division
-
-#### Function operator*()
-
-~~~ .cpp
-template <typename T, typename T1>
-inline mat<T, 4> operator*(const mat<T, 4>& a, T1 b);
-~~~
-
-matrix scalar multiply
-
-#### Function operator/()
-
-~~~ .cpp
-template <typename T, typename T1>
-inline mat<T, 4> operator/(const mat<T, 4>& a, T1 b);
-~~~
-
-matrix scalar division
+Matrix scalar division.
 
 #### Function operator*()
 
@@ -2549,7 +2489,7 @@ template <typename T>
 inline vec<T, 3> operator*(const mat<T, 3>& a, const vec<T, 3>& b);
 ~~~
 
-matrix-vector right multiply
+Matrix-vector product.
 
 #### Function operator*()
 
@@ -2558,7 +2498,7 @@ template <typename T>
 inline vec<T, 3> operator*(const vec<T, 3>& a, const mat<T, 3>& b);
 ~~~
 
-matrix-vector left multiply
+Matrix-vector product.
 
 #### Function operator*()
 
@@ -2567,7 +2507,34 @@ template <typename T>
 inline mat<T, 3> operator*(const mat<T, 3>& a, const mat<T, 3>& b);
 ~~~
 
-matrix-matrix multiply
+Matrix-matrix product.
+
+#### Function operator+()
+
+~~~ .cpp
+template <typename T>
+inline mat<T, 4> operator+(const mat<T, 4>& a, const mat<T, 4>& b);
+~~~
+
+Matrix sum.
+
+#### Function operator*()
+
+~~~ .cpp
+template <typename T, typename T1>
+inline mat<T, 4> operator*(const mat<T, 4>& a, T1 b);
+~~~
+
+Matrix scalar product.
+
+#### Function operator/()
+
+~~~ .cpp
+template <typename T, typename T1>
+inline mat<T, 4> operator/(const mat<T, 4>& a, T1 b);
+~~~
+
+Matrix scalar division.
 
 #### Function operator*()
 
@@ -2576,7 +2543,7 @@ template <typename T>
 inline vec<T, 4> operator*(const mat<T, 4>& a, const vec<T, 4>& b);
 ~~~
 
-matrix-vector right multiply
+Matrix-vector product.
 
 #### Function operator*()
 
@@ -2585,7 +2552,7 @@ template <typename T>
 inline vec<T, 4> operator*(const vec<T, 4>& a, const mat<T, 4>& b);
 ~~~
 
-matrix-vector left multiply
+Matrix-vector product.
 
 #### Function operator*()
 
@@ -2594,7 +2561,7 @@ template <typename T>
 inline mat<T, 4> operator*(const mat<T, 4>& a, const mat<T, 4>& b);
 ~~~
 
-matrix-matrix multiply
+Matrix-matrix product.
 
 #### Function operator+=()
 
@@ -2603,7 +2570,7 @@ template <typename T, int N>
 inline mat<T, N>& operator+=(mat<T, N>& a, const mat<T, N>& b);
 ~~~
 
-matrix sum assignment
+Matrix assignment.
 
 #### Function operator*=()
 
@@ -2612,7 +2579,7 @@ template <typename T, int N>
 inline mat<T, N>& operator*=(mat<T, N>& a, const mat<T, N>& b);
 ~~~
 
-matrix-matrix multiply assignment
+Matrix assignment.
 
 #### Function operator*=()
 
@@ -2621,7 +2588,7 @@ template <typename T, int N, typename T1>
 inline mat<T, N>& operator*=(mat<T, N>& a, T1 b);
 ~~~
 
-matrix scaling assignment
+Matrix assignment.
 
 #### Function operator/=()
 
@@ -2630,7 +2597,7 @@ template <typename T, int N, typename T1>
 inline mat<T, N>& operator/=(mat<T, N>& a, T1 b);
 ~~~
 
-matrix scaling assignment
+Matrix assignment.
 
 #### Function mat_diagonal()
 
@@ -2639,7 +2606,7 @@ template <typename T>
 inline vec<T, 2> mat_diagonal(const mat<T, 2>& a);
 ~~~
 
-matrix diagonal
+Matrix diagonal.
 
 #### Function mat_diagonal()
 
@@ -2648,7 +2615,7 @@ template <typename T>
 inline vec<T, 3> mat_diagonal(const mat<T, 3>& a);
 ~~~
 
-matrix diagonal
+Matrix diagonal.
 
 #### Function mat_diagonal()
 
@@ -2657,7 +2624,7 @@ template <typename T>
 inline vec<T, 4> mat_diagonal(const mat<T, 4>& a);
 ~~~
 
-matrix diagonal
+Matrix diagonal.
 
 #### Function transpose()
 
@@ -2666,7 +2633,7 @@ template <typename T>
 inline mat<T, 2> transpose(const mat<T, 2>& a);
 ~~~
 
-matrix transpose
+Matrix transpose.
 
 #### Function transpose()
 
@@ -2675,7 +2642,7 @@ template <typename T>
 inline mat<T, 3> transpose(const mat<T, 3>& a);
 ~~~
 
-matrix transpose
+Matrix transpose.
 
 #### Function transpose()
 
@@ -2684,7 +2651,7 @@ template <typename T>
 inline mat<T, 4> transpose(const mat<T, 4>& a);
 ~~~
 
-matrix transpose
+Matrix transpose.
 
 #### Function adjugate()
 
@@ -2693,7 +2660,7 @@ template <typename T>
 inline mat<T, 2> adjugate(const mat<T, 2>& a);
 ~~~
 
-matrix adjugate
+Matrix adjugate.
 
 #### Function adjugate()
 
@@ -2702,7 +2669,7 @@ template <typename T>
 inline mat<T, 3> adjugate(const mat<T, 3>& a);
 ~~~
 
-matrix adjugate
+Matrix adjugate.
 
 #### Function adjugate()
 
@@ -2711,7 +2678,7 @@ template <typename T>
 inline mat<T, 4> adjugate(const mat<T, 4>& a);
 ~~~
 
-matrix adjugate
+Matrix adjugate.
 
 #### Function determinant()
 
@@ -2720,7 +2687,7 @@ template <typename T>
 inline T determinant(const mat<T, 2>& a);
 ~~~
 
-matrix determinant
+Matrix determinant.
 
 #### Function determinant()
 
@@ -2729,7 +2696,7 @@ template <typename T>
 inline T determinant(const mat<T, 3>& a);
 ~~~
 
-matrix determinant
+Matrix determinant.
 
 #### Function determinant()
 
@@ -2738,7 +2705,7 @@ template <typename T>
 inline T determinant(const mat<T, 4>& a);
 ~~~
 
-matrix determinant
+Matrix determinant.
 
 #### Function inverse()
 
@@ -2747,7 +2714,7 @@ template <typename T, int N>
 inline mat<T, N> inverse(const mat<T, N>& a);
 ~~~
 
-matrix inverse (uses adjugate and determinant)
+Matrix inverse.
 
 #### Function operator<<()
 
@@ -2756,7 +2723,7 @@ template <typename T, int N>
 inline ostream& operator<<(ostream& os, const mat<T, N>& a);
 ~~~
 
-stream write
+Stream write.
 
 #### Function operator\>\>()
 
@@ -2765,7 +2732,7 @@ template <typename T, int N>
 inline istream& operator>>(istream& is, mat<T, N>& a);
 ~~~
 
-stream read
+Stream read.
 
 ### Rigid-body frames
 
@@ -2784,15 +2751,12 @@ specializations for small fixed sized frames.
 ~~~ .cpp
 template <typename T>
 struct frame<T, 3> {
-    static const int N = 3;
     frame(); 
     frame(const vec<T, 3>& x, const vec<T, 3>& y, const vec<T, 3>& z, const vec<T, 3>& o); 
     frame(const mat<T, 3>& m, const vec<T, 3>& t); 
     frame(const mat<T, 4>& m); 
     vec<T, 3>& operator[](int i); 
     const vec<T, 3>& operator[](int i) const; 
-    vec<T, 3>* data(); 
-    const vec<T, 3>* data() const; 
     vec<T, 3>& pos(); 
     const vec<T, 3>& pos() const; 
     mat<T, 3>& rot(); 
@@ -2812,23 +2776,20 @@ the translation as the (N+1)-th column. Colums access via operator[].
 Access rotation and position with pos() and rot().
 
 - Members:
-    - N:      size
-    - frame():      default constructor
-    - frame():      element constructor
-    - frame():      element constructor
-    - frame():      conversion from matrix (assumes the matrix is a frame, so dangerous!)
-    - operator[]():      element access
-    - operator[]():      element access
-    - data():      data access
-    - data():      data access
-    - pos():      access position
-    - pos():      access position
-    - rot():      access rotation
-    - rot():      access rotation
-    - x:      element data
-    - y:      element data
-    - z:      element data
-    - o:      element data
+    - frame():      Default constructor. Initializes to the identity frame.
+    - frame():      Basic and origin constructor. Equavalent to columns of affine matrix.
+    - frame():      Rotation and traslation constructor.
+    - frame():      conversion from matrix. Assumes the matrix is affine, so use with care.
+    - operator[]():      Element/column access
+    - operator[]():      Element/column access
+    - pos():      Frame origin.
+    - pos():      Frame origin.
+    - rot():      Frame rotation
+    - rot():      Frame rotation
+    - x:      Axes and origin data
+    - y:      Axes and origin data
+    - z:      Axes and origin data
+    - o:      Axes and origin data
 
 
 #### Typedef frame3f
@@ -2837,7 +2798,7 @@ Access rotation and position with pos() and rot().
 using frame3f = frame<float, 3>;
 ~~~
 
-3-dimension float frame
+3-dimensional float frame.
 
 #### Constant identity_frame3f
 
@@ -2846,7 +2807,7 @@ const auto identity_frame3f =
     frame3f{ {1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0} };
 ~~~
 
-indentity frame
+Indentity frame.
 
 #### Function begin()
 
@@ -2855,7 +2816,7 @@ template <typename T, int N>
 inline vec<T, N>* begin(frame<T, N>& a);
 ~~~
 
-iteration support
+Element/column iteration.
 
 #### Function begin()
 
@@ -2864,7 +2825,7 @@ template <typename T, int N>
 inline const vec<T, N>* begin(const frame<T, N>& a);
 ~~~
 
-iteration support
+Element/column iteration.
 
 #### Function end()
 
@@ -2873,7 +2834,7 @@ template <typename T, int N>
 inline vec<T, N>* end(frame<T, N>& a);
 ~~~
 
-iteration support
+Element/column iteration.
 
 #### Function end()
 
@@ -2882,7 +2843,7 @@ template <typename T, int N>
 inline const vec<T, N>* end(const frame<T, N>& a);
 ~~~
 
-iteration support
+Element/column iteration.
 
 #### Function data()
 
@@ -2891,7 +2852,7 @@ template <typename T, int N>
 inline vec<T, N>* data(frame<T, N>& a);
 ~~~
 
-data access
+Element/column access.
 
 #### Function data()
 
@@ -2900,7 +2861,7 @@ template <typename T, int N>
 inline const vec<T, N>* data(const frame<T, N>& a);
 ~~~
 
-data access
+Element/column access.
 
 #### Function size()
 
@@ -2909,7 +2870,7 @@ template <typename T, int N>
 inline int size(frame<T, N>& a);
 ~~~
 
-frame size
+Number of columns in the underlying affine matrix.
 
 #### Function empty()
 
@@ -2918,7 +2879,7 @@ template <typename T, int N>
 inline bool empty(frame<T, N>& a);
 ~~~
 
-vector empty
+Empty check (always false for useful for templated code).
 
 #### Function to_mat()
 
@@ -2927,7 +2888,7 @@ template <typename T>
 inline mat<T, 4> to_mat(const frame<T, 3>& a);
 ~~~
 
-frame to matrix conversion
+Frame to matrix conversion.
 
 #### Function to_frame()
 
@@ -2936,7 +2897,7 @@ template <typename T>
 inline frame<T, 3> to_frame(const mat<T, 4>& a);
 ~~~
 
-matrix to frame conversion
+Matrix to frame conversion.
 
 #### Function operator==()
 
@@ -2945,7 +2906,7 @@ template <typename T>
 inline bool operator==(const frame<T, 3>& a, const frame<T, 3>& b);
 ~~~
 
-vector operator ==
+Frame equality.
 
 #### Function operator!=()
 
@@ -2954,7 +2915,7 @@ template <typename T>
 inline bool operator!=(const frame<T, 3>& a, const frame<T, 3>& b);
 ~~~
 
-vector operator !=
+Frame inequality.
 
 #### Function operator*()
 
@@ -2963,7 +2924,7 @@ template <typename T>
 inline frame<T, 3> operator*(const frame<T, 3>& a, const frame<T, 3>& b);
 ~~~
 
-frame composition (equivalent to affine matrix multiply)
+Frame composition, equivalent to affine matrix product.
 
 #### Function inverse()
 
@@ -2972,7 +2933,7 @@ template <typename T>
 inline frame<T, 3> inverse(const frame<T, 3>& a);
 ~~~
 
-frame inverse (equivalent to rigid affine inverse)
+Frame inverse, equivalent to rigid affine inverse.
 
 #### Function operator<<()
 
@@ -2981,7 +2942,7 @@ template <typename T, int N>
 inline ostream& operator<<(ostream& os, const frame<T, N>& a);
 ~~~
 
-stream write
+Stream write.
 
 #### Function operator\>\>()
 
@@ -2990,7 +2951,7 @@ template <typename T, int N>
 inline istream& operator>>(istream& is, frame<T, N>& a);
 ~~~
 
-stream read
+Stream read.
 
 ### Quaternions
 
@@ -3021,19 +2982,20 @@ struct quat<T, 4> {
 }
 ~~~
 
-Quaternions implemented as a vec<T,4>. Data access via operator[].
-Quaterions are xi + yj + zk + w.
+Quaternions implemented as 4-dimensional vector as xi + yj + zk + w.
+Element access via operator[]. The cosde here assume the use as unit
+quaternions for rotations.
 
 - Members:
-    - quat():      default constructor
-    - quat():      conversion from vec
-    - operator 4>():      conversion to vec
-    - operator[]():      element access
-    - operator[]():      element access
-    - x:      data
-    - y:      data
-    - z:      data
-    - w:      data
+    - quat():      Default constructor. Initializes to identity rotation.
+    - quat():      Conversion from vec.
+    - operator 4>():      Conversion to vec.
+    - operator[]():      Element access.
+    - operator[]():      Element access.
+    - x:      Element data.
+    - y:      Element data.
+    - z:      Element data.
+    - w:      Element data.
 
 
 #### Typedef quat4f
@@ -3042,7 +3004,7 @@ Quaterions are xi + yj + zk + w.
 using quat4f = quat<float, 4>;
 ~~~
 
-4-dimension float quaternion
+4-dimensional float quaternion.
 
 #### Constant identity_quat4f
 
@@ -3050,7 +3012,7 @@ using quat4f = quat<float, 4>;
 const auto identity_quat4f = quat4f{0, 0, 0, 1};
 ~~~
 
-float identity quaterion
+Float identity quaternion.
 
 #### Function begin()
 
@@ -3059,7 +3021,7 @@ template <typename T, int N>
 inline T* begin(quat<T, N>& a);
 ~~~
 
-iteration support
+Element iteration.
 
 #### Function begin()
 
@@ -3068,7 +3030,7 @@ template <typename T, int N>
 inline const T* begin(const quat<T, N>& a);
 ~~~
 
-iteration support
+Element iteration.
 
 #### Function end()
 
@@ -3077,7 +3039,7 @@ template <typename T, int N>
 inline T* end(quat<T, N>& a);
 ~~~
 
-iteration support
+Element iteration.
 
 #### Function end()
 
@@ -3086,7 +3048,7 @@ template <typename T, int N>
 inline const T* end(const quat<T, N>& a);
 ~~~
 
-iteration support
+Element iteration.
 
 #### Function data()
 
@@ -3095,7 +3057,7 @@ template <typename T, int N>
 inline T* data(quat<T, N>& a);
 ~~~
 
-vector data access
+Element access.
 
 #### Function data()
 
@@ -3104,7 +3066,7 @@ template <typename T, int N>
 inline const T* data(const quat<T, N>& a);
 ~~~
 
-vector data access
+Element access.
 
 #### Function size()
 
@@ -3113,7 +3075,7 @@ template <typename T, int N>
 inline int size(quat<T, N>& a);
 ~~~
 
-vector size
+Number of elements.
 
 #### Function empty()
 
@@ -3122,7 +3084,7 @@ template <typename T, int N>
 inline bool empty(quat<T, N>& a);
 ~~~
 
-vector empty
+Empty check (always false for useful for templated code).
 
 #### Function operator==()
 
@@ -3131,7 +3093,7 @@ template <typename T>
 inline bool operator==(const quat<T, 4>& a, const quat<T, 4>& b);
 ~~~
 
-vector operator ==
+Quaternion equality.
 
 #### Function operator!=()
 
@@ -3140,7 +3102,7 @@ template <typename T>
 inline bool operator!=(const quat<T, 4>& a, const quat<T, 4>& b);
 ~~~
 
-vector operator !=
+Quaternion inequality.
 
 #### Function operator+()
 
@@ -3149,7 +3111,7 @@ template <typename T>
 inline quat<T, 4> operator+(const quat<T, 4>& a, const quat<T, 4>& b);
 ~~~
 
-quaterion multiply
+Quaternion sum.
 
 #### Function operator*()
 
@@ -3158,7 +3120,7 @@ template <typename T, typename T1>
 inline quat<T, 4> operator*(const quat<T, 4>& a, T1 b);
 ~~~
 
-quaterion multiply
+Quaternion scalar product.
 
 #### Function operator/()
 
@@ -3167,7 +3129,7 @@ template <typename T, typename T1>
 inline quat<T, 4> operator/(const quat<T, 4>& a, T1 b);
 ~~~
 
-quaterion division
+Quaternion scalar division.
 
 #### Function operator*()
 
@@ -3176,7 +3138,7 @@ template <typename T>
 inline quat<T, 4> operator*(const quat<T, 4>& a, const quat<T, 4>& b);
 ~~~
 
-quaterion multiply
+Quaternion product.
 
 #### Function conjugate()
 
@@ -3185,7 +3147,7 @@ template <typename T>
 inline quat<T, 4> conjugate(const quat<T, 4>& v);
 ~~~
 
-quaterion conjugate
+Quaternion conjugate.
 
 #### Function inverse()
 
@@ -3194,7 +3156,7 @@ template <typename T>
 inline quat<T, 4> inverse(const quat<T, 4>& v);
 ~~~
 
-quaterion inverse
+Quaternion inverse.
 
 #### Function normalize()
 
@@ -3203,7 +3165,7 @@ template <typename T>
 inline quat<T, 4> normalize(const quat<T, 4>& v);
 ~~~
 
-quaterion inverse
+Quaternion normalization.
 
 #### Function slerp()
 
@@ -3212,7 +3174,7 @@ template <typename T, typename T1>
 inline quat<T, 4> slerp(const quat<T, 4>& a, const quat<T, 4>& b, T1 t);
 ~~~
 
-quaterion spherical linear interpolation
+Quaternion spherical linear interpolation.
 
 #### Function operator<<()
 
@@ -3221,7 +3183,7 @@ template <typename T, int N>
 inline ostream& operator<<(ostream& os, const quat<T, N>& a);
 ~~~
 
-stream write
+Stream write.
 
 #### Function operator\>\>()
 
@@ -3230,7 +3192,7 @@ template <typename T, int N>
 inline istream& operator>>(istream& is, quat<T, N>& a);
 ~~~
 
-stream read
+Stream read.
 
 ### Axis-aligned bounding boxes
 
@@ -3248,15 +3210,15 @@ struct bbox {
 }
 ~~~
 
-Axis aligned bounding box represented as a min/max vector pair.
+Axis aligned bounding box represented as a min/max vector pairs.
 
 - Members:
-    - bbox():      initializes an invalid bbox
-    - bbox():      list constructor
-    - operator[]():      element access
-    - operator[]():      element access
-    - min:      element data
-    - max:      element data
+    - bbox():      Initializes an invalid bbox.
+    - bbox():      Element constructor with min/max values.
+    - operator[]():      Element access.
+    - operator[]():      Element access.
+    - min:      Minimum bounds.
+    - max:      Maximum bounds.
 
 
 #### Typedef bbox1f
@@ -3265,7 +3227,7 @@ Axis aligned bounding box represented as a min/max vector pair.
 using bbox1f = bbox<float, 1>;
 ~~~
 
-1-dimension float bounding box
+1-dimensional float bounding box.
 
 #### Typedef bbox2f
 
@@ -3273,7 +3235,7 @@ using bbox1f = bbox<float, 1>;
 using bbox2f = bbox<float, 2>;
 ~~~
 
-2-dimension float bounding box
+2-dimensional float bounding box.
 
 #### Typedef bbox3f
 
@@ -3281,7 +3243,7 @@ using bbox2f = bbox<float, 2>;
 using bbox3f = bbox<float, 3>;
 ~~~
 
-3-dimension float bounding box
+3-dimensional float bounding box.
 
 #### Typedef bbox4f
 
@@ -3289,7 +3251,7 @@ using bbox3f = bbox<float, 3>;
 using bbox4f = bbox<float, 4>;
 ~~~
 
-4-dimension float bounding box
+4-dimensional float bounding box.
 
 #### Constant invalid_bbox1f
 
@@ -3297,7 +3259,7 @@ using bbox4f = bbox<float, 4>;
 const auto invalid_bbox1f = bbox1f();
 ~~~
 
-1-dimensional float empty bbox
+1-dimensional float empty bbox.
 
 #### Constant invalid_bbox2f
 
@@ -3305,7 +3267,7 @@ const auto invalid_bbox1f = bbox1f();
 const auto invalid_bbox2f = bbox2f();
 ~~~
 
-2-dimensional float empty bbox
+2-dimensional float empty bbox.
 
 #### Constant invalid_bbox3f
 
@@ -3313,7 +3275,7 @@ const auto invalid_bbox2f = bbox2f();
 const auto invalid_bbox3f = bbox3f();
 ~~~
 
-3-dimensional float empty bbox
+3-dimensional float empty bbox.
 
 #### Constant invalid_bbox4f
 
@@ -3321,7 +3283,7 @@ const auto invalid_bbox3f = bbox3f();
 const auto invalid_bbox4f = bbox4f();
 ~~~
 
-4-dimensional float empty bbox
+4-dimensional float empty bbox.
 
 #### Function operator==()
 
@@ -3330,7 +3292,7 @@ template <typename T, int N>
 inline bool operator==(const bbox<T, N>& a, const bbox<T, N>& b);
 ~~~
 
-bbox operator ==
+Bounding box equality.
 
 #### Function operator!=()
 
@@ -3339,7 +3301,7 @@ template <typename T, int N>
 inline bool operator!=(const bbox<T, N>& a, const bbox<T, N>& b);
 ~~~
 
-bbox operator !=
+Bounding box inequality.
 
 #### Function bbox_center()
 
@@ -3348,7 +3310,7 @@ template <typename T, int N>
 inline vec<T, N> bbox_center(const bbox<T, N>& a);
 ~~~
 
-computes the center of a bbox
+Bounding box center.
 
 #### Function bbox_diagonal()
 
@@ -3357,7 +3319,7 @@ template <typename T, int N>
 inline vec<T, N> bbox_diagonal(const bbox<T, N>& a);
 ~~~
 
-computes the diagonal of a bbox
+Bounding box diagonal.
 
 #### Function expand()
 
@@ -3366,7 +3328,7 @@ template <typename T>
 inline bbox<T, 1> expand(const bbox<T, 1>& a, T b);
 ~~~
 
-expands a bounding box with a point
+Expands a bounding box with a point.
 
 #### Function expand()
 
@@ -3375,7 +3337,7 @@ template <typename T>
 inline bbox<T, 1> expand(const bbox<T, 1>& a, const vec<T, 1>& b);
 ~~~
 
-expands a bounding box with a point
+Expands a bounding box with a point.
 
 #### Function expand()
 
@@ -3384,7 +3346,7 @@ template <typename T>
 inline bbox<T, 2> expand(const bbox<T, 2>& a, const vec<T, 2>& b);
 ~~~
 
-expands a bounding box with a point
+Expands a bounding box with a point.
 
 #### Function expand()
 
@@ -3393,7 +3355,7 @@ template <typename T>
 inline bbox<T, 3> expand(const bbox<T, 3>& a, const vec<T, 3>& b);
 ~~~
 
-expands a bounding box with a point
+Expands a bounding box with a point.
 
 #### Function expand()
 
@@ -3402,7 +3364,7 @@ template <typename T>
 inline bbox<T, 4> expand(const bbox<T, 4>& a, const vec<T, 4>& b);
 ~~~
 
-expands a bounding box with a point
+Expands a bounding box with a point.
 
 #### Function expand()
 
@@ -3411,7 +3373,7 @@ template <typename T>
 inline bbox<T, 1> expand(const bbox<T, 1>& a, const bbox<T, 1>& b);
 ~~~
 
-expands a bounding box with a bounding box
+Expands a bounding box with a bounding box.
 
 #### Function expand()
 
@@ -3420,7 +3382,7 @@ template <typename T>
 inline bbox<T, 2> expand(const bbox<T, 2>& a, const bbox<T, 2>& b);
 ~~~
 
-expands a bounding box with a bounding box
+Expands a bounding box with a bounding box.
 
 #### Function expand()
 
@@ -3429,7 +3391,7 @@ template <typename T>
 inline bbox<T, 3> expand(const bbox<T, 3>& a, const bbox<T, 3>& b);
 ~~~
 
-expands a bounding box with a bounding box
+Expands a bounding box with a bounding box.
 
 #### Function expand()
 
@@ -3438,7 +3400,7 @@ template <typename T>
 inline bbox<T, 4> expand(const bbox<T, 4>& a, const bbox<T, 4>& b);
 ~~~
 
-expands a bounding box with a bounding box
+Expands a bounding box with a bounding box.
 
 #### Function contains()
 
@@ -3447,7 +3409,7 @@ template <typename T, int N>
 inline bool contains(const bbox<T, N>& a, const vec<T, N>& b);
 ~~~
 
-check if a bounding box contains a point
+Check if a bounding box contains a point.
 
 #### Function contains()
 
@@ -3456,7 +3418,7 @@ template <typename T, int N>
 inline bool contains(const bbox<T, 3>& a, const bbox<T, 3>& b);
 ~~~
 
-check if a bounding box contains a bounding box
+Check if a bounding box contains a bounding box.
 
 #### Function operator+=()
 
@@ -3465,7 +3427,7 @@ template <typename T, int N>
 inline bbox<T, N>& operator+=(bbox<T, N>& a, const vec<T, N>& b);
 ~~~
 
-assign to expand()
+Expands a bounding box with a point.
 
 #### Function operator+=()
 
@@ -3474,7 +3436,7 @@ template <typename T, int N>
 inline bbox<T, N>& operator+=(bbox<T, N>& a, const bbox<T, N>& b);
 ~~~
 
-assign to expand()
+Expands a bounding box with a bounding box.
 
 #### Function make_bbox()
 
@@ -3483,7 +3445,7 @@ template <typename T, int N>
 inline bbox<T, N> make_bbox(int count, const vec<T, N>* v);
 ~~~
 
-initialize a bonding box from a list of points
+Initialize a bonding box from a list of points.
 
 #### Function make_bbox()
 
@@ -3492,7 +3454,25 @@ template <typename T, int N>
 inline bbox<T, N> make_bbox(const initializer_list<vec<T, N>>& v);
 ~~~
 
-initialize a bonding box from a list of points
+Initialize a bonding box from a list of points.
+
+#### Function bbox_corners()
+
+~~~ .cpp
+template <typename T>
+inline array<vec<T, 2>, 4> bbox_corners(const bbox<T, 2>& a);
+~~~
+
+Computes the corners of a bounding boxes.
+
+#### Function bbox_corners()
+
+~~~ .cpp
+template <typename T>
+inline array<vec<T, 3>, 8> bbox_corners(const bbox<T, 3>& a);
+~~~
+
+Computes the corners of a bounding boxes.
 
 #### Function operator<<()
 
@@ -3501,7 +3481,7 @@ template <typename T, int N>
 inline ostream& operator<<(ostream& os, const bbox<T, N>& a);
 ~~~
 
-stream write
+Stream write.
 
 #### Function operator\>\>()
 
@@ -3510,9 +3490,9 @@ template <typename T, int N>
 inline istream& operator>>(istream& is, bbox<T, N>& a);
 ~~~
 
-stream read
+Stream read.
 
-### Primitice bounding boxes
+### Primitive bounding boxes
 
 #### Function point_bbox()
 
@@ -3521,7 +3501,7 @@ template <typename T, typename T1>
 inline bbox<T, 3> point_bbox(const vec<T, 3>& p, T1 r = 0);
 ~~~
 
-Point bounds
+Point bounds.
 
 #### Function line_bbox()
 
@@ -3531,7 +3511,7 @@ inline bbox<T, 3> line_bbox(
     const vec<T, 3>& v0, const vec<T, 3>& v1, T1 r0 = 0, T1 r1 = 0);
 ~~~
 
-Line bounds
+Line bounds.
 
 #### Function triangle_bbox()
 
@@ -3541,7 +3521,7 @@ inline bbox<T, 3> triangle_bbox(
     const vec<T, 3>& v0, const vec<T, 3>& v1, const vec<T, 3>& v2);
 ~~~
 
-Triangle bounds
+Triangle bounds.
 
 #### Function quad_bbox()
 
@@ -3551,7 +3531,7 @@ inline bbox<T, 3> quad_bbox(const vec<T, 3>& v0, const vec<T, 3>& v1,
     const vec<T, 3>& v2, const vec<T, 3>& v3);
 ~~~
 
-Quad bounds
+Quad bounds.
 
 #### Function tetrahedron_bbox()
 
@@ -3561,7 +3541,7 @@ inline bbox<T, 3> tetrahedron_bbox(const vec<T, 3>& v0, const vec<T, 3>& v1,
     const vec<T, 3>& v2, const vec<T, 3>& v3);
 ~~~
 
-Tetrahedron bounds
+Tetrahedron bounds.
 
 ### Rays
 
@@ -3569,56 +3549,51 @@ Tetrahedron bounds
 
 ~~~ .cpp
 template <typename T, int N>
-struct ray;
-~~~
-
-Generic ray of N elements. This is used only to define template
-specializations for small fixed sized rays.
-
-#### Struct ray<T, 3\>
-
-~~~ .cpp
-template <typename T>
-struct ray<T, 3> {
-    static const int N = 3;
+struct ray {
     ray(); 
-    ray(const vec<T, 3>& o, const vec<T, 3>& d, T tmin = 0, T tmax = flt_max); 
-    vec<T, 3> o;
-    vec<T, 3> d;
+    ray(const vec<T, N>& o, const vec<T, N>& d, T tmin = 0, T tmax = flt_max); 
+    vec<T, N> o;
+    vec<T, N> d;
     T tmin;
     T tmax;
 }
 ~~~
 
-Rays with origin, direction and min/max t value.
+Rays with origin, direction and min/max t value. Origin and directions are
+of N-elements.
 
 - Members:
-    - N:      size
-    - ray():      default constructor
-    - ray():      initializes a ray from its elements
+    - ray():      Default constructor. Initializes to an invalid ray.
+    - ray():      Initializes a ray from its elements.
     - o:      origin
     - d:      direction
     - tmin:      minimum distance
     - tmax:      maximum distance
 
 
-#### Typedef template <typename T\>
-ray3
+#### Typedef ray2f
 
 ~~~ .cpp
-template <typename T>
-using ray3 = ray<T, 3>;
+using ray2f = ray<float, 2>;
 ~~~
 
-Shortcut for rays of 3 element
+2-dimensional float ray.
 
 #### Typedef ray3f
 
 ~~~ .cpp
-using ray3f = ray3<float>;
+using ray3f = ray<float, 3>;
 ~~~
 
-3-dimension float bounding box
+3-dimensional float ray.
+
+#### Typedef ray4f
+
+~~~ .cpp
+using ray4f = ray<float, 4>;
+~~~
+
+4-dimensional float ray.
 
 #### Function make_ray()
 
@@ -3628,7 +3603,7 @@ inline ray<T, N> make_ray(
     const vec<T, N>& o, const vec<T, N>& d, T eps = 1e-4f);
 ~~~
 
-Construct a ray using a default epsilon
+Construct a ray using a default epsilon.
 
 #### Function make_segment()
 
@@ -3638,27 +3613,36 @@ inline ray<T, N> make_segment(
     const vec<T, N>& p1, const vec<T, N>& p2, T eps = 1e-4f);
 ~~~
 
-Construct a ray segment using a default epsilon
+Construct a ray segment using a default epsilon.
 
 #### Function operator<<()
 
 ~~~ .cpp
-template <typename T>
-inline ostream& operator<<(ostream& os, const ray3<T>& a);
+template <typename T, int N>
+inline ostream& operator<<(ostream& os, const ray<T, N>& a);
 ~~~
 
-stream write
+Stream write.
 
 #### Function operator\>\>()
 
 ~~~ .cpp
-template <typename T>
-inline istream& operator>>(istream& is, ray3<T>& a);
+template <typename T, int N>
+inline istream& operator>>(istream& is, ray<T, N>& a);
 ~~~
 
-stream read
+Stream read.
 
 ### Transforms
+
+#### Function transform_point()
+
+~~~ .cpp
+template <typename T>
+inline vec<T, 2> transform_point(const mat<T, 3>& a, const vec<T, 2>& b);
+~~~
+
+Transforms a point by a matrix.
 
 #### Function transform_point()
 
@@ -3667,7 +3651,16 @@ template <typename T>
 inline vec<T, 3> transform_point(const mat<T, 4>& a, const vec<T, 3>& b);
 ~~~
 
-transforms a point by a matrix
+Transforms a point by a matrix.
+
+#### Function transform_vector()
+
+~~~ .cpp
+template <typename T>
+inline vec<T, 2> transform_vector(const mat<T, 3>& a, const vec<T, 2>& b);
+~~~
+
+Transforms a vector by a matrix.
 
 #### Function transform_vector()
 
@@ -3676,16 +3669,44 @@ template <typename T>
 inline vec<T, 3> transform_vector(const mat<T, 4>& a, const vec<T, 3>& b);
 ~~~
 
-transforms a vector by a matrix
+Transforms a vector by a matrix.
 
 #### Function transform_direction()
 
 ~~~ .cpp
-template <typename T>
-inline vec<T, 3> transform_direction(const mat<T, 4>& a, const vec<T, 3>& b);
+template <typename T, int N>
+inline vec<T, N> transform_direction(
+    const mat<T, N + 1>& a, const vec<T, N>& b);
 ~~~
 
-transforms a direction by a matrix
+Transforms a direction by a matrix.
+
+#### Function transform_ray()
+
+~~~ .cpp
+template <typename T, int N>
+inline ray<T, N> transform_ray(const mat<T, N + 1>& a, const ray<T, N>& b);
+~~~
+
+Transforms a ray by a matrix, leaving the direction not normalized.
+
+#### Function transform_bbox()
+
+~~~ .cpp
+template <typename T, int N>
+inline bbox<T, N> transform_bbox(const mat<T, N + 1>& a, const bbox<T, N>& b);
+~~~
+
+transforms a bbox by a matrix
+
+#### Function transform_point()
+
+~~~ .cpp
+template <typename T>
+inline vec<T, 2> transform_point(const frame<T, 2>& a, const vec<T, 2>& b);
+~~~
+
+Transforms a point by a frame, i.e. an affine transform.
 
 #### Function transform_point()
 
@@ -3694,7 +3715,16 @@ template <typename T>
 inline vec<T, 3> transform_point(const frame<T, 3>& a, const vec<T, 3>& b);
 ~~~
 
-transforms a point by a frame (rigid affine transform)
+Transforms a point by a frame, i.e. an affine transform.
+
+#### Function transform_vector()
+
+~~~ .cpp
+template <typename T>
+inline vec<T, 2> transform_vector(const frame<T, 2>& a, const vec<T, 2>& b);
+~~~
+
+Transforms a vector by a frame, i.e. an affine transform.
 
 #### Function transform_vector()
 
@@ -3703,25 +3733,62 @@ template <typename T>
 inline vec<T, 3> transform_vector(const frame<T, 3>& a, const vec<T, 3>& b);
 ~~~
 
-transforms a vector by a frame (rigid affine transform)
+Transforms a vector by a frame, i.e. an affine transform.
 
 #### Function transform_direction()
 
 ~~~ .cpp
-template <typename T>
-inline vec<T, 3> transform_direction(const frame<T, 3>& a, const vec<T, 3>& b);
+template <typename T, int N>
+inline vec<T, N> transform_direction(const frame<T, N>& a, const vec<T, N>& b);
 ~~~
 
-transforms a direction by a frame (rigid affine transform)
+Transforms a direction by a frame, i.e. an affine transform.
 
 #### Function transform_frame()
 
 ~~~ .cpp
-template <typename T>
-inline frame<T, 3> transform_frame(const frame<T, 3>& a, const frame<T, 3>& b);
+template <typename T, int N>
+inline frame<T, N> transform_frame(const frame<T, N>& a, const frame<T, N>& b);
 ~~~
 
-transforms a frame by a frame (rigid affine transform)
+Transforms a frame by a frame, i.e. an affine transform.
+
+#### Function transform_ray()
+
+~~~ .cpp
+template <typename T, int N>
+inline ray<T, N> transform_ray(const frame<T, 3>& a, const ray<T, N>& b);
+~~~
+
+Transforms a ray by a frame, i.e. an affine transform.
+
+#### Function transform_bbox()
+
+~~~ .cpp
+template <typename T, int N>
+inline bbox<T, N> transform_bbox(const frame<T, N>& a, const bbox<T, N>& b);
+~~~
+
+Transforms a bbox by a frame, i.e. an affine transform.
+
+#### Function transform_bbox()
+
+~~~ .cpp
+template <typename T>
+inline bbox<T, 3> transform_bbox(const frame<T, 3>& a, const bbox<T, 3>& b);
+~~~
+
+Transforms a bbox by a frame, i.e. an affine transform.
+
+#### Function transform_point_inverse()
+
+~~~ .cpp
+template <typename T>
+inline vec<T, 2> transform_point_inverse(
+    const frame<T, 2>& a, const vec<T, 2>& b);
+~~~
+
+Inverse transforms a point by a frame, assuming a rigid transform.
 
 #### Function transform_point_inverse()
 
@@ -3731,7 +3798,17 @@ inline vec<T, 3> transform_point_inverse(
     const frame<T, 3>& a, const vec<T, 3>& b);
 ~~~
 
-inverse transforms a point by a frame (rigid affine transform)
+Inverse transforms a point by a frame, assuming a rigid transform.
+
+#### Function transform_vector_inverse()
+
+~~~ .cpp
+template <typename T>
+inline vec<T, 2> transform_vector_inverse(
+    const frame<T, 2>& a, const vec<T, 2>& b);
+~~~
+
+Inverse transforms a vector by a frame, assuming a rigid transform.
 
 #### Function transform_vector_inverse()
 
@@ -3741,72 +3818,37 @@ inline vec<T, 3> transform_vector_inverse(
     const frame<T, 3>& a, const vec<T, 3>& b);
 ~~~
 
-inverse transforms a vector by a frame (rigid affine transform)
+Inverse transforms a vector by a frame, assuming a rigid transform.
 
 #### Function transform_direction_inverse()
 
 ~~~ .cpp
-template <typename T>
-inline vec<T, 3> transform_direction_inverse(
-    const frame<T, 3>& a, const vec<T, 3>& b);
+template <typename T, int N>
+inline vec<T, N> transform_direction_inverse(
+    const frame<T, N>& a, const vec<T, N>& b);
 ~~~
 
-inverse transforms a direction by a frame (rigid affine transform)
-
-#### Function transform_ray()
-
-~~~ .cpp
-template <typename T>
-inline ray3<T> transform_ray(const mat<T, 4>& a, const ray3<T>& b);
-~~~
-
-transforms a ray by a matrix (direction is not normalized after)
-
-#### Function transform_bbox()
-
-~~~ .cpp
-template <typename T>
-inline bbox<T, 3> transform_bbox(const mat<T, 4>& a, const bbox<T, 3>& b);
-~~~
-
-transforms a bbox by a matrix
-
-#### Function transform_ray()
-
-~~~ .cpp
-template <typename T>
-inline ray3<T> transform_ray(const frame<T, 3>& a, const ray3<T>& b);
-~~~
-
-transforms a ray by a frame (rigid affine transform)
-
-#### Function transform_bbox()
-
-~~~ .cpp
-template <typename T>
-inline bbox<T, 3> transform_bbox(const frame<T, 3>& a, const bbox<T, 3>& b);
-~~~
-
-transforms a bbox by a frame (rigid affine transform)
+Inverse transforms a direction by a frame, assuming a rigid transform.
 
 #### Function transform_ray_inverse()
 
 ~~~ .cpp
-template <typename T>
-inline ray3<T> transform_ray_inverse(const frame<T, 3>& a, const ray3<T>& b);
+template <typename T, int N>
+inline ray<T, N> transform_ray_inverse(
+    const frame<T, N>& a, const ray<T, N>& b);
 ~~~
 
-inverse transforms a ray by a frame (rigid affine transform)
+Inverse transforms a direction by a frame, assuming a rigid transform.
 
 #### Function transform_bbox_inverse()
 
 ~~~ .cpp
-template <typename T>
-inline bbox<T, 3> transform_bbox_inverse(
-    const frame<T, 3>& a, const bbox<T, 3>& b);
+template <typename T, int N>
+inline bbox<T, N> transform_bbox_inverse(
+    const frame<T, N>& a, const bbox<T, N>& b);
 ~~~
 
-inverse transforms a bbox by a frame (rigid affine transform)
+Inverse transforms a bbox by a frame, assuming a rigid transform.
 
 #### Function rotation_mat3()
 
@@ -3815,7 +3857,7 @@ template <typename T, typename T1>
 inline mat<T, 3> rotation_mat3(const vec<T, 3>& axis, T1 angle);
 ~~~
 
-rotation matrix from axis-angle
+Rotation matrix from axis-angle.
 
 #### Function translation_frame3()
 
@@ -3824,7 +3866,7 @@ template <typename T>
 inline frame<T, 3> translation_frame3(const vec<T, 3>& a);
 ~~~
 
-translation frame
+Translation affine transform.
 
 #### Function translation_mat4()
 
@@ -3833,7 +3875,7 @@ template <typename T>
 inline mat<T, 4> translation_mat4(const vec<T, 3>& a);
 ~~~
 
-translation matrix
+Translation matrix.
 
 #### Function scaling_frame3()
 
@@ -3842,7 +3884,7 @@ template <typename T>
 inline frame<T, 3> scaling_frame3(const vec<T, 3>& a);
 ~~~
 
-scaling frame (this is not rigid and here for symmatry of API)
+Scaling affine transform; this is not rigid and here for symmatry of API.
 
 #### Function scaling_mat4()
 
@@ -3851,7 +3893,7 @@ template <typename T>
 inline mat<T, 4> scaling_mat4(const vec<T, 3>& a);
 ~~~
 
-scaling matrix
+Scaling matrix.
 
 #### Function rotation_frame3()
 
@@ -3860,7 +3902,7 @@ template <typename T>
 inline frame<T, 3> rotation_frame3(const vec<T, 3>& axis, T angle);
 ~~~
 
-rotation frame
+Rotation affine transform.
 
 #### Function rotation_frame3()
 
@@ -3869,7 +3911,7 @@ template <typename T>
 inline frame<T, 3> rotation_frame3(const quat<T, 4>& rot);
 ~~~
 
-rotation frame
+Rotation affine transform.
 
 #### Function rotation_mat4()
 
@@ -3878,7 +3920,7 @@ template <typename T>
 inline mat<T, 4> rotation_mat4(const mat<T, 3>& rot);
 ~~~
 
-rotation matrix
+Rotation matrix.
 
 #### Function rotation_mat4()
 
@@ -3887,7 +3929,7 @@ template <typename T>
 inline mat<T, 4> rotation_mat4(const vec<T, 3>& axis, T angle);
 ~~~
 
-rotation matrix
+Rotation matrix.
 
 #### Function rotation_axisangle4()
 
@@ -3896,7 +3938,7 @@ template <typename T>
 inline pair<vec<T, 4>, T> rotation_axisangle4(const quat<T, 4>& a);
 ~~~
 
-quaternion axis-angle conversion
+Quaternion axis-angle conversion.
 
 #### Function rotation_quat4()
 
@@ -3905,7 +3947,7 @@ template <typename T>
 inline quat<T, 4> rotation_quat4(const vec<T, 3>& axis, T angle);
 ~~~
 
-axis-angle to quaternion
+Axis-angle to quaternion conversion.
 
 #### Function rotation_mat3()
 
@@ -3914,7 +3956,7 @@ template <typename T>
 inline mat<T, 3> rotation_mat3(const quat<T, 4>& v);
 ~~~
 
-quaterion to matrix conversion
+Quaterion to matrix conversion.
 
 #### Function rotation_mat4()
 
@@ -3923,7 +3965,7 @@ template <typename T>
 inline mat<T, 4> rotation_mat4(const quat<T, 4>& v);
 ~~~
 
-rotation matrix
+Quaternion to rotation matrix conversion.
 
 #### Function rotation_quat4()
 
@@ -3932,7 +3974,7 @@ template <typename T>
 inline quat<T, 4> rotation_quat4(const mat<T, 3>& m_);
 ~~~
 
-matrix to quaternion
+Rotation matrix to quaternion conversion.
 
 #### Function lookat_frame3()
 
@@ -3942,7 +3984,7 @@ inline frame<T, 3> lookat_frame3(const vec<T, 3>& eye, const vec<T, 3>& center,
     const vec<T, 3>& up, bool inv_xz = false);
 ~~~
 
-OpenGL lookat frame
+OpenGL lookat frame. Z-axis can be inverted with inv_xz.
 
 #### Function lookat_mat4()
 
@@ -3952,7 +3994,7 @@ inline mat<T, 4> lookat_mat4(
     const vec<T, 3>& eye, const vec<T, 3>& center, const vec<T, 3>& up);
 ~~~
 
-OpenGL lookat matrix
+OpenGL lookat matrix.
 
 #### Function frustum_mat4()
 
@@ -3961,7 +4003,7 @@ template <typename T>
 inline mat<T, 4> frustum_mat4(T l, T r, T b, T t, T n, T f);
 ~~~
 
-OpenGL frustum matrix
+OpenGL frustum matrix.
 
 #### Function ortho_mat4()
 
@@ -3970,7 +4012,7 @@ template <typename T>
 inline mat<T, 4> ortho_mat4(T l, T r, T b, T t, T n, T f);
 ~~~
 
-OpenGL orthographic matrix
+OpenGL orthographic matrix.
 
 #### Function ortho2d_mat4()
 
@@ -3979,7 +4021,7 @@ template <typename T>
 inline mat<T, 4> ortho2d_mat4(T left, T right, T bottom, T top);
 ~~~
 
-OpenGL orthographic 2D matrix
+OpenGL orthographic 2D matrix.
 
 #### Function ortho_mat4()
 
@@ -3988,7 +4030,7 @@ template <typename T>
 inline mat<T, 4> ortho_mat4(T xmag, T ymag, T near, T far);
 ~~~
 
-OpenGL/GLTF orthographic matrix
+OpenGL orthographic matrix.
 
 #### Function perspective_mat4()
 
@@ -3997,7 +4039,7 @@ template <typename T>
 inline mat<T, 4> perspective_mat4(T fovy, T aspect, T near, T far);
 ~~~
 
-OpenGL/GLTF perspective matrix
+OpenGL perspective matrix.
 
 #### Function perspective_mat4()
 
@@ -4006,7 +4048,7 @@ template <typename T>
 inline mat<T, 4> perspective_mat4(T fovy, T aspect, T near);
 ~~~
 
-OpenGL/GLTF infinite perspective matrix
+OpenGL infinite perspective matrix.
 
 #### Function decompose_mat4()
 
@@ -4026,7 +4068,7 @@ template <typename T>
 inline quat<T, 4> to_quat4(const mat<T, 3>& a);
 ~~~
 
-Convert a rotation matrix to a quaternion
+Convert a rotation matrix to a quaternion.
 
 #### Function decompose_mat4()
 
@@ -4087,7 +4129,7 @@ Turntable for UI navigation.
 void camera_fps(frame3f& frame, const vec3f& transl, const vec2f& rotate);
 ~~~
 
-FPS camera for UI navigation for a frame parametrization.
+FPS camera for UI navigation.
 
 ### Random number generation
 
@@ -4101,8 +4143,7 @@ struct rng_pcg32 {
 ~~~
 
 PCG random numbers. A family of random number generators that supports
-multiple sequences. In our code, we allocate one sequence for each sample.
-PCG32 from http://www.pcg-random.org/
+multiple sequences. From http://www.pcg-random.org/
 
 - Members:
     - state:      RNG state.
@@ -4115,7 +4156,7 @@ PCG32 from http://www.pcg-random.org/
 inline uint32_t advance_rng(rng_pcg32& rng);
 ~~~
 
-Next random number
+Next random number.
 
 #### Function advance_rng()
 
@@ -4220,7 +4261,7 @@ better than float that uses 23.
 inline int64_t rng_distance(const rng_pcg32& a, const rng_pcg32& b);
 ~~~
 
-Distance between random number generators
+Distance between random number generators.
 
 #### Function rng_shuffle()
 
@@ -4255,7 +4296,7 @@ Random shuffle of a sequence.
 inline bool operator==(const rng_pcg32& a, const rng_pcg32& b);
 ~~~
 
-Equality operator
+Random number generator equality.
 
 #### Function operator!=()
 
@@ -4263,7 +4304,7 @@ Equality operator
 inline bool operator!=(const rng_pcg32& a, const rng_pcg32& b);
 ~~~
 
-Inequality operator
+Random number generator inequality.
 
 ### Monte Carlo sampling
 
@@ -4273,7 +4314,7 @@ Inequality operator
 inline vec3f sample_hemisphere(const vec2f& ruv);
 ~~~
 
-sample hemispherical direction with uniform distribution
+Sample an hemispherical direction with uniform distribution.
 
 #### Function sample_hemisphere_pdf()
 
@@ -4281,7 +4322,7 @@ sample hemispherical direction with uniform distribution
 inline float sample_hemisphere_pdf(const vec3f& w);
 ~~~
 
-pdf for hemispherical direction with uniform distribution
+Pdf for uniform hemispherical direction.
 
 #### Function sample_sphere()
 
@@ -4289,7 +4330,7 @@ pdf for hemispherical direction with uniform distribution
 inline vec3f sample_sphere(const vec2f& ruv);
 ~~~
 
-spherical direction with uniform distribution
+Sample a spherical direction with uniform distribution.
 
 #### Function sample_sphere_pdf()
 
@@ -4297,7 +4338,7 @@ spherical direction with uniform distribution
 inline float sample_sphere_pdf(const vec3f& w);
 ~~~
 
-pdf for spherical direction with uniform distribution
+Pdf for uniform spherical direction.
 
 #### Function sample_hemisphere_cosine()
 
@@ -4305,7 +4346,7 @@ pdf for spherical direction with uniform distribution
 inline vec3f sample_hemisphere_cosine(const vec2f& ruv);
 ~~~
 
-hemispherical direction with cosine distribution
+Sample an hemispherical direction with cosine distribution.
 
 #### Function sample_hemisphere_cosine_pdf()
 
@@ -4313,7 +4354,7 @@ hemispherical direction with cosine distribution
 inline float sample_hemisphere_cosine_pdf(const vec3f& w);
 ~~~
 
-pdf for hemispherical direction with cosine distribution
+Pdf for cosine hemispherical direction.
 
 #### Function sample_hemisphere_cospower()
 
@@ -4321,7 +4362,7 @@ pdf for hemispherical direction with cosine distribution
 inline vec3f sample_hemisphere_cospower(float n, const vec2f& ruv);
 ~~~
 
-hemispherical direction with cosine power distribution
+Sample an hemispherical direction with cosine power distribution.
 
 #### Function sample_hemisphere_cospower_pdf()
 
@@ -4329,7 +4370,7 @@ hemispherical direction with cosine power distribution
 inline float sample_hemisphere_cospower_pdf(float n, const vec3f& w);
 ~~~
 
-pdf for hemispherical direction with cosine power distribution
+Pdf for cosine power hemispherical direction.
 
 #### Function sample_disk()
 
@@ -4337,7 +4378,7 @@ pdf for hemispherical direction with cosine power distribution
 inline vec3f sample_disk(const vec2f& ruv);
 ~~~
 
-uniform disk
+Sample a point uniformly on a disk.
 
 #### Function sample_disk_pdf()
 
@@ -4345,7 +4386,7 @@ uniform disk
 inline float sample_disk_pdf();
 ~~~
 
-pdf for uniform disk
+Pdf for uniform disk sampling.
 
 #### Function sample_cylinder()
 
@@ -4353,7 +4394,7 @@ pdf for uniform disk
 inline vec3f sample_cylinder(const vec2f& ruv);
 ~~~
 
-uniform cylinder
+Sample a point uniformly on a cylinder, without caps.
 
 #### Function sample_cylinder_pdf()
 
@@ -4361,7 +4402,7 @@ uniform cylinder
 inline float sample_cylinder_pdf();
 ~~~
 
-pdf for uniform cylinder
+Pdf for uniform cylinder sampling.
 
 #### Function sample_triangle()
 
@@ -4369,7 +4410,7 @@ pdf for uniform cylinder
 inline vec2f sample_triangle(const vec2f& ruv);
 ~~~
 
-uniform triangle
+Sample a point uniformly on a triangle.
 
 #### Function sample_triangle()
 
@@ -4378,7 +4419,7 @@ inline vec3f sample_triangle(
     const vec3f& v0, const vec3f& v1, const vec3f& v2, const vec2f& ruv);
 ~~~
 
-uniform triangle
+Sample a point uniformly on a triangle.
 
 #### Function sample_triangle_pdf()
 
@@ -4387,7 +4428,7 @@ inline float sample_triangle_pdf(
     const vec3f& v0, const vec3f& v1, const vec3f& v2);
 ~~~
 
-pdf for uniform triangle (triangle area)
+Pdf for uniform triangle sampling, i.e. triangle area.
 
 #### Function sample_index()
 
@@ -4395,7 +4436,7 @@ pdf for uniform triangle (triangle area)
 inline int sample_index(int size, float r);
 ~~~
 
-index with uniform distribution
+Sample an index with uniform distribution.
 
 #### Function sample_index_pdf()
 
@@ -4403,7 +4444,7 @@ index with uniform distribution
 inline float sample_index_pdf(int size);
 ~~~
 
-pdf for index with uniform distribution
+Pdf for uniform index sampling.
 
 #### Function sample_discrete()
 
@@ -4411,7 +4452,7 @@ pdf for index with uniform distribution
 inline int sample_discrete(const vector<float>& cdf, float r);
 ~~~
 
-sample a discrete distribution represented by its cdf
+Sample a discrete distribution represented by its cdf.
 
 #### Function sample_discrete_pdf()
 
@@ -4419,23 +4460,23 @@ sample a discrete distribution represented by its cdf
 inline float sample_discrete_pdf(const vector<float>& cdf, int idx);
 ~~~
 
-sample a discrete distribution represented by its cdf
+Pdf for uniform discrete distribution sampling.
 
 ### Hashing
 
-#### Function hash_permute()
+#### Function cmjs_permute()
 
 ~~~ .cpp
-inline uint32_t hash_permute(uint32_t i, uint32_t n, uint32_t key);
+inline uint32_t cmjs_permute(uint32_t i, uint32_t n, uint32_t key);
 ~~~
 
 Computes the i-th term of a permutation of l values keyed by p.
 From Correlated Multi-Jittered Sampling by Kensler @ Pixar
 
-#### Function hash_randfloat()
+#### Function cmjs_randfloat()
 
 ~~~ .cpp
-inline float hash_randfloat(uint32_t i, uint32_t key);
+inline float cmjs_randfloat(uint32_t i, uint32_t key);
 ~~~
 
 Computes a float value by hashing i with a key p.
@@ -4471,7 +4512,7 @@ inline uint32_t hash_uint64_32(uint64_t a);
 inline size_t hash_combine(size_t a, size_t b);
 ~~~
 
-Combines two 64 bit hashes as in boost::hash_combine
+Combines two 64 bit hashes as in boost::hash_combine.
 
 ### Perlin noise
 
@@ -4496,7 +4537,7 @@ float perlin_ridge_noise(const vec3f& p, float lacunarity = 2.0f,
     const vec3i& wrap = zero3i);
 ~~~
 
-Ridge noise function
+Ridge noise function. See perlin_noise() for params.
 
 #### Function perlin_fbm_noise()
 
@@ -4505,7 +4546,7 @@ float perlin_fbm_noise(const vec3f& p, float lacunarity = 2.0f,
     float gain = 0.5f, int octaves = 6, const vec3i& wrap = zero3i);
 ~~~
 
-Fractal brownian motion noise - see perlin_noise() for params.
+Fractal brownian motion noise. See perlin_noise() for params.
 
 #### Function perlin_turbulence_noise()
 
@@ -4514,43 +4555,62 @@ float perlin_turbulence_noise(const vec3f& p, float lacunarity = 2.0f,
     float gain = 0.5f, int octaves = 6, const vec3i& wrap = zero3i);
 ~~~
 
-Fractal turbulence noise - see perlin_noise() for params.
+Fractal turbulence noise. See perlin_noise() for params.
 
 ### Python-like iterators
 
-#### Function range_()
+#### Struct range_generator
 
 ~~~ .cpp
-inline range_generator range_(int max);
+struct range_generator {
 ~~~
 
-Python-like range
+Implementation of Python-like range generator. Create it with the the
+`range()` functions to use argument deduction.
 
-#### Function range_()
+#### Function range()
 
 ~~~ .cpp
-inline range_generator range_(int min, int max, int step = 1);
+inline range_generator range(int max);
 ~~~
 
-Python-like range
+Python-like range ierator.
 
-#### Function enumerate_()
+#### Function range()
+
+~~~ .cpp
+inline range_generator range(int min, int max, int step = 1);
+~~~
+
+Python-like range ierator.
+
+#### Struct enumerate_generator
 
 ~~~ .cpp
 template <typename T>
-inline enumerate_generator<const T> enumerate_(const vector<T>& vv);
+struct enumerate_generator {
 ~~~
 
-Python-like range
+Implemenetation of Python-like enumerate. Create it with the function
+`enumerate()` to use argument deduction.
 
-#### Function enumerate_()
+#### Function enumerate()
 
 ~~~ .cpp
 template <typename T>
-inline enumerate_generator<T> enumerate_(vector<T>& vv);
+inline enumerate_generator<const T> enumerate(const vector<T>& vv);
 ~~~
 
-Python-like range
+Python-like enumerate.
+
+#### Function enumerate()
+
+~~~ .cpp
+template <typename T>
+inline enumerate_generator<T> enumerate(vector<T>& vv);
+~~~
+
+Python-like enumerate.
 
 ### Container operations
 
@@ -4561,7 +4621,7 @@ template <typename T>
 inline void append(vector<T>& v, const vector<T>& vv);
 ~~~
 
-Append a vector to a vector
+Append a vector to a vector.
 
 #### Function join()
 
@@ -4570,7 +4630,7 @@ template <typename T>
 inline vector<T> join(const vector<T>& a, const vector<T>& b);
 ~~~
 
-Append two vectors
+Append two vectors.
 
 #### Function get_key()
 
@@ -4579,7 +4639,7 @@ template <typename K, typename V>
 inline K get_key(const std::vector<pair<K, V>>& kvs, const V& v);
 ~~~
 
-Get a key
+Get a key from a list of key-value pairs and its value.
 
 #### Function get_value()
 
@@ -4588,16 +4648,37 @@ template <typename K, typename V>
 inline V get_value(const std::vector<pair<K, V>>& kvs, const K& k);
 ~~~
 
-Get a value
+Get a value from a list of key-value pairs and its key.
 
-#### Function find_idx()
+#### Function find()
 
 ~~~ .cpp
 template <typename T>
-inline int find_idx(const vector<T>& v, const T& vv);
+inline int find(const vector<T>& v, const T& vv);
 ~~~
 
-Find a value in an array
+Find the position of a value in an array. Returns -1 if not found.
+Wrapper for std::find().
+
+#### Function upper_bound()
+
+~~~ .cpp
+template <typename T>
+inline int upper_bound(const vector<T>& v, const T& vv);
+~~~
+
+Find the first array value that is greater than the argument.
+Assumes that the array is sorted. Wrapper for std::upper_bound().
+
+#### Function lower_bound()
+
+~~~ .cpp
+template <typename T>
+inline int lower_bound(const vector<T>& v, const T& vv);
+~~~
+
+Find the first array value smaller that is greater or equal to the argument.
+Assumes that the array is sorted. Wrapper for std::lower_bound().
 
 #### Function contains()
 
@@ -4606,7 +4687,7 @@ template <typename T>
 inline bool contains(const vector<T>& v, const T& vv);
 ~~~
 
-Checks if a containers contains a value
+Checks if a containers contains a value.
 
 #### Function contains()
 
@@ -4615,7 +4696,7 @@ template <typename K, typename V>
 inline bool contains(const map<K, V>& v, const K& vv);
 ~~~
 
-Checks if a containers contains a value
+Checks if a containers contains a value.
 
 #### Function contains()
 
@@ -4624,7 +4705,7 @@ template <typename K, typename V>
 inline bool contains(const unordered_map<K, V>& v, const K& vv);
 ~~~
 
-Checks if a containers contains a value
+Checks if a containers contains a value.
 
 #### Function contains()
 
@@ -4633,7 +4714,7 @@ template <typename K, typename V>
 inline bool contains(const set<K, V>& v, const K& vv);
 ~~~
 
-Checks if a containers contains a value
+Checks if a containers contains a value.
 
 #### Function contains()
 
@@ -4642,7 +4723,7 @@ template <typename K, typename V>
 inline bool contains(const unordered_set<K, V>& v, const K& vv);
 ~~~
 
-Checks if a containers contains a value
+Checks if a containers contains a value.
 
 #### Function contains()
 
@@ -4651,7 +4732,7 @@ template <typename K, typename V, typename K1>
 inline bool contains(const unordered_map<K, V>& v, const K1& vv);
 ~~~
 
-Checks if a containers contains a value
+Checks if a containers contains a value.
 
 #### Function contains()
 
@@ -4660,7 +4741,7 @@ template <typename K, typename V, typename K1>
 inline bool contains(const unordered_set<K, V>& v, const K1& vv);
 ~~~
 
-Checks if a containers contains a value
+Checks if a containers contains a value.
 
 ### Geometry utilities
 
@@ -4670,7 +4751,7 @@ Checks if a containers contains a value
 inline vec3f line_tangent(const vec3f& v0, const vec3f& v1);
 ~~~
 
-line tangent
+Line tangent.
 
 #### Function line_length()
 
@@ -4678,7 +4759,7 @@ line tangent
 inline float line_length(const vec3f& v0, const vec3f& v1);
 ~~~
 
-line length
+Line length.
 
 #### Function triangle_normal()
 
@@ -4687,7 +4768,7 @@ inline vec3f triangle_normal(
     const vec3f& v0, const vec3f& v1, const vec3f& v2);
 ~~~
 
-triangle normal
+Triangle normal.
 
 #### Function triangle_area()
 
@@ -4695,7 +4776,16 @@ triangle normal
 inline float triangle_area(const vec3f& v0, const vec3f& v1, const vec3f& v2);
 ~~~
 
-triangle area
+Triangle area.
+
+#### Function quad_normal()
+
+~~~ .cpp
+inline vec3f quad_normal(
+    const vec3f& v0, const vec3f& v1, const vec3f& v2, const vec3f& v3);
+~~~
+
+Quad normal.
 
 #### Function quad_area()
 
@@ -4704,7 +4794,7 @@ inline float quad_area(
     const vec3f& v0, const vec3f& v1, const vec3f& v2, const vec3f& v3);
 ~~~
 
-quad area
+Quad area.
 
 #### Function tetrahedron_volume()
 
@@ -4735,7 +4825,7 @@ template <typename T>
 inline T interpolate_point(const vector<T>& vals, int p);
 ~~~
 
-Point interpolation. Here only for completeness.
+Copies of point value. Here only for completeness.
 
 #### Function interpolate_line()
 
@@ -4744,7 +4834,7 @@ template <typename T, typename T1>
 inline T interpolate_line(const T& v0, const T& v1, const T1 u);
 ~~~
 
-Line interpolation. Same as lerp.
+Interpolates values over a line parametrized from a to b by u. Same as lerp.
 
 #### Function interpolate_line()
 
@@ -4753,7 +4843,7 @@ template <typename T, typename T1>
 inline T interpolate_line(const vector<T>& vals, const vec2i& l, T1 u);
 ~~~
 
-Line interpolation. Same as lerp.
+Interpolates values over lines parametrized from a to b by u. Same as lerp.
 
 #### Function interpolate_triangle()
 
@@ -4763,7 +4853,8 @@ inline T interpolate_triangle(
     const T& v0, const T& v1, const T& v2, const vec<T1, 2>& uv);
 ~~~
 
-Triangle interpolation using (v1-v0) and (v2-v0) as u and v directions.
+Interpolates values over a triangle parametrized by u and v along the
+(v1-v0) and (v2-v0) directions. Same as barycentric interpolation.
 
 #### Function interpolate_triangle()
 
@@ -4773,7 +4864,19 @@ inline T interpolate_triangle(
     const vector<T>& vals, const vec3i& t, const vec<T1, 2>& uv);
 ~~~
 
-Triangle interpolation using (v1-v0) and (v2-v0) as u and v directions.
+Interpolates values over triangles parametrized by u and v along the
+(v1-v0) and (v2-v0) directions. Same as barycentric interpolation.
+
+#### Function interpolate_triangle()
+
+~~~ .cpp
+template <typename T, typename T1>
+inline T interpolate_triangle(
+    const T& v0, const T& v1, const T& v2, const T& v3, const vec<T1, 2>& uv);
+~~~
+
+Interpolates values over a quad parametrized by u and v along the
+(v1-v0) and (v2-v1) directions. Same as bilear interpolation.
 
 #### Function interpolate_quad()
 
@@ -4783,7 +4886,8 @@ inline T interpolate_quad(
     const vector<T>& vals, const vec4i& t, const vec<T1, 2>& uv);
 ~~~
 
-quad interpolation based on the two-triangle representation
+Interpolates values over quads parametrized by u and v along the
+(v1-v0) and (v2-v1) direction. Same as bilear interpolation.
 
 #### Function eval_bernstein()
 
@@ -4792,7 +4896,7 @@ template <typename T>
 inline T eval_bernstein(T u, int i, int degree);
 ~~~
 
-bernstein polynomials (for Bezier)
+Evaluates the i-th Bernstein polynomial of degree degree at u.
 
 #### Function eval_bernstein_derivative()
 
@@ -4801,7 +4905,7 @@ template <typename T>
 inline T eval_bernstein_derivative(T u, int i, int degree);
 ~~~
 
-bernstein polynomials (for Bezier)
+Evaluates the derivative of i-th Bernstein polynomial of degree degree at u.
 
 #### Function interpolate_bezier()
 
@@ -4811,7 +4915,7 @@ inline T interpolate_bezier(
     const T& v0, const T& v1, const T& v2, const T& v3, T1 u);
 ~~~
 
-eval bezier
+Interpolates values along a cubic Bezier segment parametrized by u.
 
 #### Function interpolate_bezier()
 
@@ -4820,7 +4924,7 @@ template <typename T, typename T1>
 inline T interpolate_bezier(const vector<T>& vals, const vec4i& b, T1 u);
 ~~~
 
-eval bezier
+Interpolates values along cubic Bezier segments parametrized by u.
 
 #### Function interpolate_bezier_derivative()
 
@@ -4830,7 +4934,7 @@ inline T interpolate_bezier_derivative(
     const T& v0, const T& v1, const T& v2, const T& v3, T1 u);
 ~~~
 
-eval bezier derivative
+Computes the derivative of a cubic Bezier segment parametrized by u.
 
 #### Function interpolate_bezier_derivative()
 
@@ -4840,7 +4944,7 @@ inline T interpolate_bezier_derivative(
     const vector<T>& vals, const vec4i& b, T1 u);
 ~~~
 
-eval bezier derivative
+Computes the derivative of a cubic Bezier segments parametrized by u.
 
 ### Animation utilities
 
@@ -4852,7 +4956,7 @@ inline T eval_keyframed_step(
     const vector<float>& times, const vector<T>& vals, float time);
 ~~~
 
-Evalautes a keyframed value using step interpolation
+Evalautes a keyframed value using step interpolation.
 
 #### Function eval_keyframed_linear()
 
@@ -4862,7 +4966,7 @@ inline T eval_keyframed_linear(
     const vector<float>& times, const vector<T>& vals, float time);
 ~~~
 
-Evalautes a keyframed value using linear interpolation
+Evalautes a keyframed value using linear interpolation.
 
 #### Function eval_keyframed_bezier()
 
@@ -4872,7 +4976,7 @@ inline T eval_keyframed_bezier(
     const vector<float>& times, const vector<T>& vals, float time);
 ~~~
 
-Evalautes a keyframed value using bezier interpolation
+Evalautes a keyframed value using Bezier interpolation.
 
 ### Shape utilities
 
@@ -4886,7 +4990,7 @@ vector<vec3f> compute_normals(const vector<vec2i>& lines,
 
 Compute per-vertex normals/tangents for lines, triangles and quads with
 positions pos. Weighted indicated whether the normals/tangents are
-weighted by line length.
+weighted by length/area.
 
 #### Function compute_tangent_frames()
 
@@ -4896,10 +5000,10 @@ vector<vec4f> compute_tangent_frames(const vector<vec3i>& triangles,
     const vector<vec2f>& texcoord, bool weighted = true);
 ~~~
 
-Compute per-vertex tangent frame for triangle meshes.
+Compute per-vertex tangent frames for triangle meshes.
 Tangent space is defined by a four component vector.
-The first three components are the tangent with respect to the U texcoord.
-The fourth component is the sign of the tangent wrt the V texcoord.
+The first three components are the tangent with respect to the u texcoord.
+The fourth component is the sign of the tangent wrt the v texcoord.
 Tangent frame is useful in normal mapping.
 
 #### Function compute_skinning()
@@ -4911,7 +5015,7 @@ void compute_skinning(const vector<vec3f>& pos, const vector<vec3f>& norm,
     vector<vec3f>& skinned_norm);
 ~~~
 
-Apply skinning
+Apply skinning to vertex position and normals.
 
 #### Function compute_skinning()
 
@@ -4922,7 +5026,7 @@ void compute_skinning(const vector<vec3f>& pos, const vector<vec3f>& norm,
     vector<vec3f>& skinned_norm);
 ~~~
 
-Apply skinning
+Apply skinning.
 
 #### Function compute_matrix_skinning()
 
@@ -4933,7 +5037,7 @@ void compute_matrix_skinning(const vector<vec3f>& pos,
     vector<vec3f>& skinned_pos, vector<vec3f>& skinned_norm);
 ~~~
 
-Apply skinning as specified in Khronos glTF
+Apply skinning as specified in Khronos glTF.
 
 #### Function get_edges()
 
@@ -5008,7 +5112,7 @@ convert_face_varying(const vector<vec4i>& quads_pos,
     const vector<vec2f>& texcoord);
 ~~~
 
-Convert face varying data to single primitives. Returns the quads indices
+Convert face-varying data to single primitives. Returns the quads indices
 and filled vectors for pos, norm and texcoord.
 
 #### Function subdivide_elems_linear()
@@ -5019,8 +5123,9 @@ subdivide_elems_linear(const vector<vec2i>& lines,
     const vector<vec3i>& triangles, const vector<vec4i>& quads, int nverts);
 ~~~
 
-Tesselate lines, triangles and quads by spolitting edges.
-Returns the tesselated elements and dictionaries for vertex calculations.
+Tesselate lines, triangles and quads by splitting edges and faces for quads.
+Returns the tesselated elements and edge and face array for vertex
+calculations.
 
 #### Function subdivide_vert_linear()
 
@@ -5031,8 +5136,8 @@ vector<T> subdivide_vert_linear(const vector<T>& vert,
     bool normalized = false);
 ~~~
 
-Subdivide vertex properties given the maps. This is instances for vecs
-and floats.
+Subdivide vertex properties for edges and faces. This is implemented for
+vecs and floats.
 
 #### Function subdivide_vert_catmullclark()
 
@@ -5047,7 +5152,7 @@ Performs the smoothing step of Catmull-Clark. Start with a tesselate quad
 mesh obtained with subdivide_elems_linear() and subdivide_vert_linear(). To
 handle open meshes with boundary, get the boundary from make_boundary_edge()
 and pass it as crease_lines. To fix the boundary entirely, just get the
-boundary vertices and pass it as creases. This is instances for vecs
+boundary vertices and pass it as creases. This is implemented for vecs
 and floats.
 
 #### Function subdivide_bezier_recursive()
@@ -5057,8 +5162,9 @@ tuple<vector<vec4i>, vector<int>, vector<vec4i>> subdivide_bezier_recursive(
     const vector<vec4i>& beziers, int nverts);
 ~~~
 
-Subdivide bezier recursive by splitting each segment into two in the middle.
-Returns the tesselated elements and dictionaries for vertex calculations.
+Subdivide Bezier segments recursively by splitting each segment into two
+in the middle. Returns the tesselated elements and dictionaries for vertex
+calculations.
 
 #### Function subdivide_vert_bezier()
 
@@ -5068,8 +5174,8 @@ vector<T> subdivide_vert_bezier(const vector<T>& vert, const vector<int>& verts,
     const vector<vec4i>& segments, bool normalized = false);
 ~~~
 
-Subdivide vertex properties given the maps. This is instances for vecs
-and floats.
+Subdivide vertex properties for Bezier subdivision. This is implemente for
+vecs and floats.
 
 #### Function make_uvquads()
 
@@ -5080,7 +5186,7 @@ tuple<vector<vec4i>, vector<vec2f>> make_uvquads(int usteps, int vsteps,
 ~~~
 
 Generate a rectangular grid of usteps x vsteps uv values for parametric
-surface generation.
+surface generation. Values cam wrap and have poles.
 
 #### Function make_uvlines()
 
@@ -5121,6 +5227,7 @@ tuple<vector<vec2i>, vector<vec3i>, vector<vec4i>, vector<int>> facet_elems(
 
 Unshare shape data by duplicating all vertex data for each element,
 giving a faceted look. Note that faceted tangents are not computed.
+Returns the indices to copy from.
 
 #### Function facet_vert()
 
@@ -5129,7 +5236,7 @@ template <typename T>
 vector<T> facet_vert(const vector<T>& vert, const vector<int>& vmap);
 ~~~
 
-Unshare vertices for faceting. Instanced for vec and float types.
+Unshare vertices for faceting. This is implemented for vec and float types.
 
 ### Shape sampling
 
@@ -5139,7 +5246,7 @@ Unshare vertices for faceting. Instanced for vec and float types.
 inline int sample_points(int npoints, float re);
 ~~~
 
-Pick a point
+Pick a point.
 
 #### Function sample_points_cdf()
 
@@ -5147,7 +5254,7 @@ Pick a point
 vector<float> sample_points_cdf(int npoints);
 ~~~
 
-Compute a distribution for sampling points uniformly
+Compute a distribution for sampling points uniformly.
 
 #### Function sample_points()
 
@@ -5155,7 +5262,7 @@ Compute a distribution for sampling points uniformly
 inline int sample_points(const vector<float>& cdf, float re);
 ~~~
 
-Pick a point
+Pick a point uniformly.
 
 #### Function sample_lines_cdf()
 
@@ -5164,7 +5271,7 @@ vector<float> sample_lines_cdf(
     const vector<vec2i>& lines, const vector<vec3f>& pos);
 ~~~
 
-Compute a distribution for sampling lines uniformly
+Compute a distribution for sampling lines uniformly.
 
 #### Function sample_lines()
 
@@ -5173,7 +5280,7 @@ inline pair<int, float> sample_lines(
     const vector<float>& cdf, float re, float ru);
 ~~~
 
-Pick a point on lines
+Pick a point on lines uniformly.
 
 #### Function sample_triangles_cdf()
 
@@ -5182,7 +5289,7 @@ vector<float> sample_triangles_cdf(
     const vector<vec3i>& triangles, const vector<vec3f>& pos);
 ~~~
 
-Compute a distribution for sampling triangle meshes uniformly
+Compute a distribution for sampling triangle meshes uniformly.
 
 #### Function sample_triangles()
 
@@ -5191,7 +5298,7 @@ inline pair<int, vec2f> sample_triangles(
     const vector<float>& cdf, float re, const vec2f& ruv);
 ~~~
 
-Pick a point on a triangle mesh
+Pick a point on a triangle mesh uniformly.
 
 #### Function sample_quads_cdf()
 
@@ -5200,7 +5307,7 @@ vector<float> sample_quads_cdf(
     const vector<vec4i>& quads, const vector<vec3f>& pos);
 ~~~
 
-Compute a distribution for sampling quad meshes uniformly
+Compute a distribution for sampling quad meshes uniformly.
 
 #### Function sample_quads()
 
@@ -5209,7 +5316,7 @@ inline pair<int, vec2f> sample_quads(
     const vector<float>& cdf, float re, const vec2f& ruv);
 ~~~
 
-Pick a point on a quad mesh
+Pick a point on a quad mesh uniformly.
 
 #### Function sample_triangles_points()
 
@@ -5220,9 +5327,8 @@ tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>> sample_triangles_points(
     uint64_t seed = 0);
 ~~~
 
-Samples a set of points over a triangle mesh uniformly. The rng function
-takes the point index and returns vec3f numbers uniform directibuted in
-[0,1]^3. unorm and texcoord are optional.
+Samples a set of points over a triangle mesh uniformly. Returns pos, norm
+and tecoord of the sampled points.
 
 ### Example shapes
 
@@ -5316,8 +5422,7 @@ tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_uvcube(
     int tesselation);
 ~~~
 
-Make a cube with uv. This is not watertight. Returns quads, pos, norm,
-texcoord.
+Make a cube. This is not watertight. Returns quads, pos, norm, texcoord.
 
 #### Function make_uvspherecube()
 
@@ -5346,8 +5451,8 @@ tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
 make_uvflipcapsphere(int tesselation, float z, bool flipped = false);
 ~~~
 
-Make a flipped sphere. This is not watertight. Returns quads, pos, norm,
-texcoord.
+Make a sphere with caps flipped. This is not watertight. Returns quads, pos,
+norm, texcoord.
 
 #### Function make_uvcutsphere()
 
@@ -5379,16 +5484,16 @@ struct make_seashell_params {
 Make seashell params
 
 - Members:
-    - spiral_revolutions:      spiral revolutions
-    - spiral_angle:      spiral angle (alpha) [0,pi]
-    - enlarging_angle:      enlarging revolutions (beta) [0,2pi]
-    - spiral_aperture:      spiral aperture (A) [0,inf]
-    - ellipse_axis:      ellipse axis (a,b) [0,inf]
-    - curve_rotation:      curve rotatation (psi, Omega, mu) [0,2pi]
-    - nodules_num:      number of nodules (N) [0,ing]
-    - nodule_length:      length of nodules along curve and spiral (W1,W2) [0,inf]
-    - nodule_height:      height of nodules (L) [0,inf]
-    - nodule_pos:      position of nodules (P) [0,inf]
+    - spiral_revolutions:      Spiral revolutions.
+    - spiral_angle:      Spiral angle (alpha) in [0,pi].
+    - enlarging_angle:      Enlarging revolutions (beta) in [0,2pi].
+    - spiral_aperture:      Spiral aperture (A) in [0,inf].
+    - ellipse_axis:      Ellipse axis (a,b) in [0,inf].
+    - curve_rotation:      Curve rotatation (psi, Omega, mu) in [0,2pi].
+    - nodules_num:      Number of nodules (N) in [0,ing].
+    - nodule_length:      Length of nodules along curve and spiral (W1,W2) in [0,inf].
+    - nodule_height:      Height of nodules (L) in [0,inf].
+    - nodule_pos:      Position of nodules (P) in [0,inf].
 
 
 #### Function make_uvseashell()
@@ -5452,7 +5557,7 @@ Make a hair ball around a shape. Returns lines, pos, norm, texcoord, radius.
 template <typename T>
 struct image {
     image(); 
-    image(int w, int h, const T& v =; 
+    image(int width, int height, const T& val =; 
     int width() const; 
     int height() const; 
     bool empty() const; 
@@ -5463,10 +5568,12 @@ struct image {
     const T& at(const vec2i& ij) const; 
     T& at(int i, int j); 
     const T& at(int i, int j) const; 
+    int w, h;
+    vector<T> pixels;
 }
 ~~~
 
-Generic image container
+Generic image container. Access pixels with at() or operator [].
 
 - Members:
     - image():      empty image constructor
@@ -5475,12 +5582,14 @@ Generic image container
     - height():      height
     - empty():      check for empty
     - operator bool():      check for empty
-    - operator[]():      element access
-    - operator[]():      element access
-    - at():      element access
-    - at():      element access
-    - at():      element access
-    - at():      element access
+    - operator[]():      Element access
+    - operator[]():      Element access
+    - at():      Element access
+    - at():      Element access
+    - at():      Element access
+    - at():      Element access
+    - h:      Width and height [private].
+    - pixels:      Pixels [private].
 
 
 #### Typedef image4f
@@ -5506,7 +5615,7 @@ template <typename T>
 inline T* begin(image<T>& a);
 ~~~
 
-iteration support
+Pixel iteration.
 
 #### Function begin()
 
@@ -5515,7 +5624,7 @@ template <typename T>
 inline const T* begin(const image<T>& a);
 ~~~
 
-iteration support
+Pixel iteration.
 
 #### Function end()
 
@@ -5524,7 +5633,7 @@ template <typename T>
 inline T* end(image<T>& a);
 ~~~
 
-iteration support
+Pixel iteration.
 
 #### Function end()
 
@@ -5533,7 +5642,7 @@ template <typename T>
 inline const T* end(const image<T>& a);
 ~~~
 
-iteration support
+Pixel iteration.
 
 #### Function data()
 
@@ -5542,7 +5651,7 @@ template <typename T>
 inline T* data(image<T>& a);
 ~~~
 
-vector data access
+Pixel access.
 
 #### Function data()
 
@@ -5551,7 +5660,7 @@ template <typename T>
 inline const T* data(const image<T>& a);
 ~~~
 
-vector data access
+Pixel access.
 
 #### Function size()
 
@@ -5560,7 +5669,7 @@ template <typename T>
 inline int size(image<T>& a);
 ~~~
 
-vector size
+Number of pixels.
 
 #### Function empty()
 
@@ -5569,13 +5678,13 @@ template <typename T>
 inline bool empty(image<T>& a);
 ~~~
 
-vector empty
+Chech if an image is empty.
 
 #### Function make_image()
 
 ~~~ .cpp
 template <typename T>
-inline image<T> make_image(int w, int h, T* vals);
+inline image<T> make_image(int width, int height, T* vals);
 ~~~
 
 Create an image with values stored in an array in scanliine order.
@@ -5595,26 +5704,10 @@ Create a 4 channel image with the given number of channels
 #### Function srgb_to_linear()
 
 ~~~ .cpp
-inline vec3f srgb_to_linear(const vec3b& srgb);
-~~~
-
-Approximate conversion from srgb.
-
-#### Function srgb_to_linear()
-
-~~~ .cpp
 inline vec4f srgb_to_linear(const vec4b& srgb);
 ~~~
 
 Approximate conversion from srgb.
-
-#### Function linear_to_srgb()
-
-~~~ .cpp
-inline vec3b linear_to_srgb(const vec3f& lin);
-~~~
-
-Approximate conversion to srgb.
 
 #### Function linear_to_srgb()
 
@@ -5671,7 +5764,7 @@ Tone mapping HDR to LDR images.
 void image_over(vec4f* img, int width, int height, int nlayers, vec4f** layers);
 ~~~
 
-Image over operator
+Image over operator.
 
 #### Function image_over()
 
@@ -5679,7 +5772,7 @@ Image over operator
 void image_over(vec4b* img, int width, int height, int nlayers, vec4b** layers);
 ~~~
 
-Image over operator
+Image over operator.
 
 #### Function hsv_to_rgb()
 
@@ -5687,7 +5780,7 @@ Image over operator
 vec4b hsv_to_rgb(const vec4b& hsv);
 ~~~
 
-Convert HSV to RGB
+Converts HSV to RGB.
 
 ### Example images
 
@@ -5698,7 +5791,7 @@ image4b make_grid_image(int width, int height, int tile = 64,
     const vec4b& c0 =;
 ~~~
 
-Make a grid image
+Make a grid image.
 
 #### Function make_checker_image()
 
@@ -5707,7 +5800,7 @@ image4b make_checker_image(int width, int height, int tile = 64,
     const vec4b& c0 =;
 ~~~
 
-Make a checkerboard image
+Make a checkerboard image.
 
 #### Function make_bumpdimple_image()
 
@@ -5724,7 +5817,7 @@ image4b make_ramp_image(
     int width, int height, const vec4b& c0, const vec4b& c1, bool srgb = false);
 ~~~
 
-Make a uv colored grid
+Make a uv colored grid.
 
 #### Function make_gammaramp_image()
 
@@ -5732,7 +5825,7 @@ Make a uv colored grid
 image4b make_gammaramp_image(int width, int height);
 ~~~
 
-Make a gamma ramp image
+Make a gamma ramp image.
 
 #### Function make_gammaramp_imagef()
 
@@ -5740,7 +5833,7 @@ Make a gamma ramp image
 image4f make_gammaramp_imagef(int width, int height);
 ~~~
 
-Make a gamma ramp image
+Make a gamma ramp image.
 
 #### Function make_uv_image()
 
@@ -5758,7 +5851,7 @@ image4b make_uvgrid_image(
     int width, int height, int tile = 64, bool colored = true);
 ~~~
 
-Make a uv colored grid
+Make a uv colored grid.
 
 #### Function make_recuvgrid_image()
 
@@ -5767,7 +5860,7 @@ image4b make_recuvgrid_image(
     int width, int height, int tile = 64, bool colored = true);
 ~~~
 
-Make a uv recusive colored grid
+Make a uv recusive colored grid.
 
 #### Function bump_to_normal_map()
 
@@ -5831,7 +5924,7 @@ Make a noise image. Wrap works only if both resx and resy are powers of two.
 bool is_hdr_filename(const string& filename);
 ~~~
 
-Check if an image is HDR based on filename
+Check if an image is HDR based on filename.
 
 #### Function load_image4b()
 
@@ -5839,7 +5932,7 @@ Check if an image is HDR based on filename
 image4b load_image4b(const string& filename);
 ~~~
 
-Loads an ldr image.
+Loads a 4 channel ldr image.
 
 #### Function load_image4f()
 
@@ -5847,7 +5940,7 @@ Loads an ldr image.
 image4f load_image4f(const string& filename);
 ~~~
 
-Loads an hdr image.
+Loads a 4 channel hdr image.
 
 #### Function save_image4b()
 
@@ -5855,7 +5948,7 @@ Loads an hdr image.
 bool save_image4b(const string& filename, const image4b& img);
 ~~~
 
-Saves an ldr image.
+Saves a 4 channel ldr image.
 
 #### Function save_image4f()
 
@@ -5863,7 +5956,7 @@ Saves an ldr image.
 bool save_image4f(const string& filename, const image4f& img);
 ~~~
 
-Saves an hdr image.
+Saves a 4 channel hdr image.
 
 #### Function load_imagef()
 
@@ -5872,7 +5965,7 @@ vector<float> load_imagef(
     const string& filename, int& width, int& height, int& ncomp);
 ~~~
 
-Loads an image
+Loads an image with variable number of channels.
 
 #### Function load_image()
 
@@ -5881,7 +5974,7 @@ vector<byte> load_image(
     const string& filename, int& width, int& height, int& ncomp);
 ~~~
 
-Loads an image
+Loads an image with variable number of channels.
 
 #### Function load_imagef_from_memory()
 
@@ -5890,7 +5983,7 @@ vector<float> load_imagef_from_memory(const string& filename, const byte* data,
     int length, int& width, int& height, int& ncomp);
 ~~~
 
-Loads an image from memory.
+Loads an image from memory with variable number of channels.
 
 #### Function load_image_from_memory()
 
@@ -5899,7 +5992,7 @@ vector<byte> load_image_from_memory(const string& filename, const byte* data,
     int length, int& width, int& height, int& ncomp);
 ~~~
 
-Loads an image from memory.
+Loads an image from memory with variable number of channels.
 
 #### Function save_imagef()
 
@@ -5908,7 +6001,7 @@ bool save_imagef(
     const string& filename, int width, int height, int ncomp, const float* hdr);
 ~~~
 
-Saves an image
+Saves an image with variable number of channels.
 
 #### Function save_image()
 
@@ -5917,7 +6010,7 @@ bool save_image(
     const string& filename, int width, int height, int ncomp, const byte* ldr);
 ~~~
 
-Saves an image
+Saves an image with variable number of channels.
 
 #### Function save_image()
 
@@ -5926,7 +6019,7 @@ bool save_image(const string& filename, const image4f& hdr, float exposure,
     float gamma, bool filmic = false);
 ~~~
 
-Save an HDR or LDR image with tonemapping based on filename
+Save a 4 channel HDR or LDR image with tonemapping based on filename.
 
 #### Enum resize_filter
 
@@ -5942,7 +6035,7 @@ enum struct resize_filter {
 }
 ~~~
 
-Filter for resizing
+Filter type for resizing.
 
 - Values:
     - def:      default
@@ -5966,7 +6059,7 @@ enum struct resize_edge {
 }
 ~~~
 
-Edge mode for resizing
+Edge mode for resizing.
 
 - Values:
     - def:      default
@@ -5984,7 +6077,7 @@ void resize_image(const image4f& img, image4f& res_img,
     resize_edge edge = resize_edge::def, bool premultiplied_alpha = false);
 ~~~
 
-Resize image.
+Resize an image.
 
 #### Function resize_image()
 
@@ -5994,7 +6087,7 @@ void resize_image(const image4b& img, image4b& res_img,
     resize_edge edge = resize_edge::def, bool premultiplied_alpha = false);
 ~~~
 
-Resize image.
+Resize an image.
 
 ### Ray-primitive intersection
 
@@ -6026,7 +6119,7 @@ bool intersect_triangle(const ray3f& ray, const vec3f& v0, const vec3f& v1,
     const vec3f& v2, float& ray_t, vec2f& euv);
 ~~~
 
-Intersect a ray with a triangle
+Intersect a ray with a triangle.
 
 #### Function intersect_quad()
 
@@ -6038,31 +6131,99 @@ bool intersect_quad(const ray3f& ray, const vec3f& v0, const vec3f& v1,
 Intersect a ray with a quad represented as two triangles (0,1,3) and
 (2,3,1), with the uv coordinates of the second triangle corrected by u =
 1-u' and v = 1-v' to produce a quad parametrization where u and v go from 0
-to 1. This is equivalent to Intel's Embree. The external user does not have
-to be concerned about the parametrization and can just use the euv as
-specified.
+to 1. This is equivalent to Intel's Embree.
 
-#### Function intersect_check_bbox()
+#### Function intersect_bbox()
 
 ~~~ .cpp
-bool intersect_check_bbox(const ray3f& ray, const bbox3f& bbox);
+bool intersect_bbox(const ray3f& ray, const bbox3f& bbox);
 ~~~
 
-Intersect a ray with a axis-aligned bounding box
+Intersect a ray with a axis-aligned bounding box.
 
-#### Function intersect_check_bbox()
+#### Function intersect_bbox()
 
 ~~~ .cpp
-bool intersect_check_bbox(const ray3f& ray, const vec3f& ray_dinv,
+bool intersect_bbox(const ray3f& ray, const vec3f& ray_dinv,
     const vec3i& ray_dsign, const bbox3f& bbox);
 ~~~
 
-Intersect a ray with a axis-aligned bounding box
-Implementation Notes:
-- based on "Robust BVH Ray Traversal" by T. Ize published at
+Intersect a ray with a axis-aligned bounding box, implemented as
+"Robust BVH Ray Traversal" by T. Ize published at
 http://jcgt.org/published/0002/02/02/paper.pdf
 
 ### Point-primitive overlap
+
+#### Function overlap_point()
+
+~~~ .cpp
+bool overlap_point(
+    const vec3f& pos, float dist_max, const vec3f& v0, float r0, float& dist);
+~~~
+
+Check if a point overlaps a position within a max distance.
+
+#### Function closestuv_line()
+
+~~~ .cpp
+float closestuv_line(const vec3f& pos, const vec3f& v0, const vec3f& v1);
+~~~
+
+Find closest line point to a position.
+
+#### Function overlap_line()
+
+~~~ .cpp
+bool overlap_line(const vec3f& pos, float dist_max, const vec3f& v0,
+    const vec3f& v1, float r0, float r1, float& dist, vec2f& euv);
+~~~
+
+Check if a line overlaps a position within a max distance.
+
+#### Function closestuv_triangle()
+
+~~~ .cpp
+vec2f closestuv_triangle(
+    const vec3f& pos, const vec3f& v0, const vec3f& v1, const vec3f& v2);
+~~~
+
+Find closest triangle point to a position.
+
+#### Function overlap_triangle()
+
+~~~ .cpp
+bool overlap_triangle(const vec3f& pos, float dist_max, const vec3f& v0,
+    const vec3f& v1, const vec3f& v2, float r0, float r1, float r2, float& dist,
+    vec2f& euv);
+~~~
+
+Check if a triangle overlaps a position within a max distance.
+
+#### Function overlap_quad()
+
+~~~ .cpp
+bool overlap_quad(const vec3f& pos, float dist_max, const vec3f& v0,
+    const vec3f& v1, const vec3f& v2, const vec3f& v3, float r0, float r1,
+    float r2, float r3, float& dist, vec2f& euv);
+~~~
+
+Check if a quad overlaps a position within a max distance.
+
+#### Function overlap_bbox()
+
+~~~ .cpp
+bool overlap_bbox(const vec3f& pos, float dist_max, const bbox3f& bbox);
+~~~
+
+Check if a bouning box overlaps a position within a max distance.
+
+#### Function overlap_bbox()
+
+~~~ .cpp
+bool overlap_bbox(const bbox3f& bbox1, const bbox3f& bbox2);
+~~~
+
+Check if two bouning boxes overlap.
 
 ### Bounding volume hierarchy
 
@@ -6080,16 +6241,16 @@ enum struct bvh_node_type : uint32_t {
 }
 ~~~
 
-Type of BVH node
+Type of BVH node.
 
 - Values:
-    - internal:      internal
-    - point:      points
-    - line:      lines
-    - triangle:      triangles
-    - quad:      quads
-    - vertex:      vertices
-    - instance:      instances
+    - internal:      Internal.
+    - point:      Points.
+    - line:      Lines.
+    - triangle:      Triangles.
+    - quad:      Quads.
+    - vertex:      Vertices.
+    - instance:      Instances.
 
 
 #### Struct bvh_node
@@ -6105,18 +6266,18 @@ struct bvh_node {
 ~~~
 
 BVH tree node containing its bounds, indices to the BVH arrays of either
-sorted primitives or internal nodes, the node element type or internal node,
+sorted primitives or internal nodes, the node element type,
 and the split axis. Leaf and internal nodes are identical, except that
 indices refer to primitives for leaf nodes or other nodes for internal
 nodes. See bvh_tree for more details.
 This is an internal data structure.
 
 - Members:
-    - bbox:      bounding box
-    - start:      index to the first sorted primitive/node
-    - count:      number of primitives/nodes
-    - type:      type of node
-    - axis:      slit axis
+    - bbox:      Bounding box.
+    - start:      Index to the first sorted primitive/node.
+    - count:      Number of primitives/nodes.
+    - type:      Type of node.
+    - axis:      Slit axis for internal nodes.
 
 
 #### Struct bvh_instance
@@ -6135,11 +6296,11 @@ Shape instance for two-level BVH.
 This is an internal data structure.
 
 - Members:
-    - frame:      frame
-    - frame_inv:      frame inverse
-    - iid:      instance id to be returned
-    - sid:      shape id to be returned
-    - bvh:      shape bvh
+    - frame:      Frame.
+    - frame_inv:      Frame inverse.
+    - iid:      Instance id to be returned.
+    - sid:      Shape id to be returned.
+    - bvh:      Shape bvh.
 
 
 #### Struct bvh_tree
@@ -6158,6 +6319,7 @@ struct bvh_tree {
     vector<bvh_instance> instances;
     vector<bvh_tree*> shape_bvhs;
     bool own_shape_bvhs = false;
+    ~bvh_tree(); 
 }
 ~~~
 
@@ -6165,26 +6327,26 @@ BVH tree, stored as a node array. The tree structure is encoded using array
 indices instead of pointers, both for speed but also to simplify code.
 BVH nodes indices refer to either the node array, for internal nodes,
 or a primitive array, for leaf nodes. BVH trees may contain only one type
-of geometric primitive, like points, lines, triangle or other BVHs.
-To handle multiple primitive types and transformed primitives, build
+of geometric primitive, like points, lines, triangle or instances of other
+BVHs. To handle multiple primitive types and transformed primitives, build
 a two-level hierarchy with the outer BVH, the scene BVH, containing inner
 BVHs, shape BVHs, each of which of a uniform primitive type.
-
 This is an internal data structure.
 
 - Members:
-    - nodes:      sorted array of internal nodes
-    - sorted_prim:      sorted elements
-    - type:      element type
-    - pos:      positions for shape BVHs
-    - radius:      radius for shape BVHs
-    - points:      points for shape BVHs
-    - lines:      lines for shape BVHs
-    - triangles:      triangles for shape BVHs
-    - quads:      quads for shape BVHs
-    - instances:      instance ids (iid, sid, shape bvh index)
-    - shape_bvhs:      shape BVHs
-    - own_shape_bvhs:      whether it owns the memory of the shape BVHs
+    - nodes:      Sorted array of internal nodes.
+    - sorted_prim:      Sorted array of elements.
+    - type:      Leaf element type.
+    - pos:      Positions for shape BVHs.
+    - radius:      Radius for shape BVHs.
+    - points:      Points for shape BVHs.
+    - lines:      Lines for shape BVHs.
+    - triangles:      Triangles for shape BVHs.
+    - quads:      Quads for shape BVHs.
+    - instances:      Instance ids (iid, sid, shape bvh index).
+    - shape_bvhs:      Shape BVHs.
+    - own_shape_bvhs:      Whether it owns the memory of the shape BVHs.
+    - ~bvh_tree():      Cleanup.
 
 
 #### Function make_bvh()
@@ -6222,7 +6384,7 @@ void refit_bvh(bvh_tree* bvh, const vector<vec3f>& pos,
     const vector<float>& radius, float def_radius);
 ~~~
 
-Recursively recomputes the node bounds for a shape bvh
+Update the node bounds for a shape bvh.
 
 #### Function refit_bvh()
 
@@ -6231,25 +6393,32 @@ void refit_bvh(bvh_tree* bvh, const vector<frame3f>& frames,
     const vector<frame3f>& frames_inv);
 ~~~
 
-Recursively recomputes the node bounds for a scene bvh
+Update the node bounds for a scene bvh
 
 #### Function intersect_bvh()
 
 ~~~ .cpp
-bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray, bool early_exit,
+bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray, bool find_any,
     float& ray_t, int& iid, int& sid, int& eid, vec2f& euv);
 ~~~
 
-Intersect ray with a bvh.
+Intersect ray with a bvh returning either the first or any intersection
+depending on `find_any`. Returns the ray distance `ray_t`, the instance
+id `iid`, the shape id `sid`, the shape element index `eid` and the
+shape barycentric coordinates `euv`.
 
 #### Function overlap_bvh()
 
 ~~~ .cpp
 bool overlap_bvh(const bvh_tree* bvh, const vec3f& pos, float max_dist,
-    bool early_exit, float& dist, int& iid, int& sid, int& eid, vec2f& euv);
+    bool find_any, float& dist, int& iid, int& sid, int& eid, vec2f& euv);
 ~~~
 
-Finds the closest element with a bvh.
+Find a shape element that overlaps a point within a given distance
+`max_dist`, returning either the closest or any overlap depending on
+`find_any`. Returns the point distance `dist`, the instance id `iid`, the
+shape id `sid`, the shape element index `eid` and the shape barycentric
+coordinates `euv`.
 
 #### Struct intersection_point
 
@@ -6264,15 +6433,15 @@ struct intersection_point {
 }
 ~~~
 
-Intersection point
+Intersection point.
 
 - Members:
-    - dist:      distance of the hit along the ray or from the point
-    - iid:      instance index
-    - sid:      shape index
-    - eid:      shape element index
-    - euv:      shape barycentric coordinates
-    - operator bool():      check if intersection is valid
+    - dist:      Distance of the hit along the ray or from the point.
+    - iid:      Instance index.
+    - sid:      Shape index.
+    - eid:      Shape element index.
+    - euv:      Shape barycentric coordinates.
+    - operator bool():      Check if intersection is valid.
 
 
 #### Function intersect_bvh()
@@ -6282,7 +6451,7 @@ intersection_point intersect_bvh(
     const bvh_tree* bvh, const ray3f& ray, bool early_exit);
 ~~~
 
-Intersect ray with a bvh (convenience wrapper).
+Intersect a ray with a bvh (convenience wrapper).
 
 #### Function overlap_bvh()
 
@@ -6311,18 +6480,18 @@ struct texture {
 }
 ~~~
 
-Scene Texture
+Texture containing either an LDR or HDR image.
 
 - Members:
-    - name:      name
-    - path:      path
-    - ldr:      if loaded, ldr image
-    - hdr:      if loaded, hdr image
-    - empty():      if loaded, whether it is empty
-    - is_ldr():      if loaded, whether it is ldr
-    - is_hdr():      if loaded, whether it is hdr
-    - width():      if loaded, get texture width
-    - height():      if loaded, get texture height
+    - name:      Name.
+    - path:      Path.
+    - ldr:      If loaded, ldr image.
+    - hdr:      If loaded, hdr image.
+    - empty():      If loaded, whether it is empty.
+    - is_ldr():      If loaded, whether it is ldr.
+    - is_hdr():      If loaded, whether it is hdr.
+    - width():      If loaded, get texture width.
+    - height():      If loaded, get texture height.
 
 
 #### Struct texture_info
@@ -6339,16 +6508,16 @@ struct texture_info {
 }
 ~~~
 
-Scene Texture Additional Information
+Texture information to use for lookup.
 
 - Members:
-    - txt:      texture pointer
-    - wrap_s:      wrap s coordinate
-    - wrap_t:      wrap t coordinate
-    - linear:      linear interpolation
-    - mipmap:      mipmaping
-    - scale:      texture strength (occlusion and normal)
-    - operator bool():      check whether the texture if present
+    - txt:      Texture pointer.
+    - wrap_s:      Wrap s coordinate.
+    - wrap_t:      Wrap t coordinate.
+    - linear:      Linear interpolation.
+    - mipmap:      Mipmaping.
+    - scale:      Texture strength (occlusion and normal).
+    - operator bool():      Check whether the texture is present.
 
 
 #### Enum material_type
@@ -6361,12 +6530,12 @@ enum struct material_type {
 }
 ~~~
 
-Material type
+Material type.
 
 - Values:
-    - specular_roughness:      Microfacet material type (OBJ)
-    - metallic_roughness:      Base and metallic material (metallic-roughness in glTF)
-    - specular_glossiness:      Diffuse and specular material (specular-glossness in glTF)
+    - specular_roughness:      Microfacet material type (OBJ).
+    - metallic_roughness:      Base and metallic material (metallic-roughness in glTF).
+    - specular_glossiness:      Diffuse and specular material (specular-glossness in glTF).
 
 
 #### Function material_type_names()
@@ -6375,7 +6544,7 @@ Material type
 inline vector<pair<string, material_type>>& material_type_names();
 ~~~
 
-Name for material type enum
+Names for `material_type` enum.
 
 #### Struct material
 
@@ -6404,29 +6573,29 @@ struct material {
 }
 ~~~
 
-Scene Material
+Material for surfaces, lines and triangles.
 
 - Members:
-    - name:      material name
-    - double_sided:      double-sided rendering
-    - type:      material type
-    - ke:      emission color
-    - kd:      diffuse color / base color
-    - ks:      specular color / metallic factor
-    - kr:      clear coat reflection
-    - kt:      transmission color
-    - rs:      roughness
-    - op:      opacity
-    - ke_txt:      emission texture
-    - kd_txt:      diffuse texture
-    - ks_txt:      specular texture
-    - kr_txt:      reflection texture
-    - kt_txt:      transmission texture
-    - rs_txt:      roughness texture
-    - bump_txt:      bump map texture (heighfield)
-    - disp_txt:      displacement map texture (heighfield)
-    - norm_txt:      normal texture
-    - occ_txt:      occlusion texture
+    - name:      Name.
+    - double_sided:      Double-sided rendering.
+    - type:      Material type.
+    - ke:      Emission color.
+    - kd:      Diffuse color / base color.
+    - ks:      Specular color / metallic factor.
+    - kr:      Clear coat reflection.
+    - kt:      Transmission color.
+    - rs:      Roughness.
+    - op:      Opacity.
+    - ke_txt:      Emission texture.
+    - kd_txt:      Diffuse texture.
+    - ks_txt:      Specular texture.
+    - kr_txt:      Clear coat reflection texture.
+    - kt_txt:      Transmission texture.
+    - rs_txt:      Roughness texture.
+    - bump_txt:      Bump map texture (heighfield).
+    - disp_txt:      Displacement map texture (heighfield).
+    - norm_txt:      Normal texture.
+    - occ_txt:      Occlusion texture.
 
 
 #### Struct shape
@@ -6459,25 +6628,25 @@ Shape data represented as an indexed array.
 May contain only one of the points/lines/triangles/quads.
 
 - Members:
-    - name:      shape name
-    - mat:      shape material
-    - points:      points
-    - lines:      lines
-    - triangles:      triangles
-    - quads:      quads
-    - quads_pos:      face-varying indices for position
-    - quads_norm:      face-varying indices for normal
-    - quads_texcoord:      face-varying indices for texcoord
-    - beziers:      bezier
-    - pos:      per-vertex position (3 float)
-    - norm:      per-vertex normals (3 float)
-    - texcoord:      per-vertex texcoord (2 float)
-    - texcoord1:      per-vertex second texcoord (2 float)
-    - color:      per-vertex color (4 float)
-    - radius:      per-vertex radius (1 float)
-    - tangsp:      per-vertex tangent space (4 float)
-    - subdivision_level:      number of times to subdivide
-    - subdivision_catmullclark:      whether to use Catmull-Clark subdivision
+    - name:      Name.
+    - mat:      Material.
+    - points:      Points.
+    - lines:      Lines.
+    - triangles:      Triangles.
+    - quads:      Quads.
+    - quads_pos:      Face-varying indices for position.
+    - quads_norm:      Face-varying indices for normal.
+    - quads_texcoord:      Face-varying indices for texcoord.
+    - beziers:      Bezier.
+    - pos:      Vertex position.
+    - norm:      Vertex normals.
+    - texcoord:      Vertex texcoord.
+    - texcoord1:      Vertex second texcoord.
+    - color:      Vertex color.
+    - radius:      per-vertex radius.
+    - tangsp:      Vertex tangent space.
+    - subdivision_level:      Number of times to subdivide.
+    - subdivision_catmullclark:      Whether to use Catmull-Clark subdivision.
 
 
 #### Struct shape_group
@@ -6494,10 +6663,10 @@ struct shape_group {
 Group of shapes.
 
 - Members:
-    - name:      shape name
-    - path:      path (used for saving in glTF)
-    - shapes:      shapes
-    - ~shape_group():      cleanup
+    - name:      Name.
+    - path:      Path used for saving in glTF.
+    - shapes:      Shapes.
+    - ~shape_group():      Cleanup.
 
 
 #### Struct instance
@@ -6512,8 +6681,8 @@ struct instance {
 Shape instance.
 
 - Members:
-    - frame:      transform frame
-    - shp:      shape instance
+    - frame:      Transform frame.
+    - shp:      Shape instance.
 
 
 #### Struct camera
@@ -6532,18 +6701,18 @@ struct camera {
 }
 ~~~
 
-Scene Camera
+Camera.
 
 - Members:
-    - name:      name
-    - frame:      transform frame
-    - ortho:      ortho cam
-    - yfov:      vertical field of view
-    - aspect:      aspect ratio
-    - focus:      focus distance
-    - aperture:      lens aperture
-    - near:      near plane distance
-    - far:      far plane distance
+    - name:      Name.
+    - frame:      Transform frame.
+    - ortho:      Orthographic camera.
+    - yfov:      Vertical field of view.
+    - aspect:      Aspect ratio.
+    - focus:      Focus distance.
+    - aperture:      Lens aperture.
+    - near:      Near plane distance.
+    - far:      Far plane distance.
 
 
 #### Struct environment
@@ -6557,13 +6726,13 @@ struct environment {
 }
 ~~~
 
-Envinonment map
+Envinonment map.
 
 - Members:
-    - name:      name
-    - frame:      transform frame
-    - ke:      emission coefficient
-    - ke_txt:      emission texture
+    - name:      Name.
+    - frame:      Transform frame.
+    - ke:      Emission coefficient.
+    - ke_txt:      Emission texture.
 
 
 #### Struct node
@@ -6584,20 +6753,20 @@ struct node {
 }
 ~~~
 
-Node hierarchy
+Node in a transform hierarchy.
 
 - Members:
-    - name:      name
-    - parent:      parent node
-    - frame:      frame
-    - translation:      translation
-    - rotation:      rotation
-    - scaling:      scale
-    - weights:      Weights for morphing
-    - cam:      node camera
-    - ist:      node instance
-    - env:      node environment
-    - children_:      child nodes (computed value)
+    - name:      Name.
+    - parent:      Parent node.
+    - frame:      Transform frame.
+    - translation:      Translation.
+    - rotation:      Rotation.
+    - scaling:      Scaling.
+    - weights:      Weights for morphing.
+    - cam:      Camera the node points to.
+    - ist:      Instance the node points to.
+    - env:      Environment the node points to.
+    - children_:      Child nodes. This is a computed value only stored for convenience.
 
 
 #### Enum keyframe_type
@@ -6611,13 +6780,13 @@ enum struct keyframe_type {
 }
 ~~~
 
-Keyframe type
+Keyframe type.
 
 - Values:
-    - linear:      linear
-    - step:      step function
-    - catmull_rom:      catmull-rom spline
-    - bezier:      cubic bezier spline
+    - linear:      Linear interpolation.
+    - step:      Step function.
+    - catmull_rom:      Catmull-Rom interpolation.
+    - bezier:      Cubic Bezier interpolation.
 
 
 #### Function keyframe_type_names()
@@ -6626,7 +6795,7 @@ Keyframe type
 inline vector<pair<string, keyframe_type>>& keyframe_type_names();
 ~~~
 
-Name for keyframe type enum
+Names for `keyframe_type` enum.
 
 #### Struct animation
 
@@ -6645,13 +6814,13 @@ struct animation {
 Keyframe data.
 
 - Members:
-    - name:      Name
-    - type:      Interpolation
-    - times:      Times
-    - translation:      Translation
-    - rotation:      Rotation
-    - scaling:      Scale
-    - weights:      Weights for morphing
+    - name:      Name.
+    - type:      Interpolation.
+    - times:      Times.
+    - translation:      Translation.
+    - rotation:      Rotation.
+    - scaling:      Scaling.
+    - weights:      Weights for morphing.
 
 
 #### Struct animation_group
@@ -6665,12 +6834,12 @@ struct animation_group {
 }
 ~~~
 
-Animation made of multiple keyframed values
+Animation made of multiple keyframed values.
 
 - Members:
-    - name:      Name
-    - path:      path (only used when writing files on disk with glTF)
-    - animations:      Keyframed values
+    - name:      Name.
+    - path:      Path  used when writing files on disk with glTF.
+    - animations:      Keyframed values.
     - targets:      Binds keyframe values to nodes.
 
 
@@ -6689,17 +6858,24 @@ struct scene {
 }
 ~~~
 
-Scene
+Scene comprised an array of objects whose memory is owened by the scene.
+All members are optional, but different algorithm might require different
+data to be laoded. Scene objects (camera, instances, environments) have
+transforms defined internally. A scene can optionally contain a
+node hierarchy where each node might point to a camera, instance or
+environment. In that case, the element transforms are computed from
+the hierarchy. Animation is also optional, with keyframe data that
+updates node transformations only if defined.
 
 - Members:
-    - shapes:      shape array
-    - instances:      instance array
-    - materials:      material array
-    - textures:      texture array
-    - cameras:      camera array
-    - environments:      environment array
-    - nodes:      node hierarchy
-    - animations:      node animation
+    - shapes:      Shapes.
+    - instances:      Shape instances.
+    - materials:      Materials.
+    - textures:      Textures.
+    - cameras:      Cameras.
+    - environments:      Environments.
+    - nodes:      Node hierarchy.
+    - animations:      Node animations.
 
 
 #### Function eval_pos()
@@ -6708,7 +6884,7 @@ Scene
 vec3f eval_pos(const shape* shp, int eid, const vec2f& euv);
 ~~~
 
-Shape position interpolated using barycentric coordinates
+Shape position interpolated using barycentric coordinates.
 
 #### Function eval_norm()
 
@@ -6716,7 +6892,7 @@ Shape position interpolated using barycentric coordinates
 vec3f eval_norm(const shape* shp, int eid, const vec2f& euv);
 ~~~
 
-Shape normal interpolated using barycentric coordinates
+Shape normal interpolated using barycentric coordinates.
 
 #### Function eval_texcoord()
 
@@ -6724,7 +6900,7 @@ Shape normal interpolated using barycentric coordinates
 vec2f eval_texcoord(const shape* shp, int eid, const vec2f& euv);
 ~~~
 
-Shape texcoord interpolated using barycentric coordinates
+Shape texcoord interpolated using barycentric coordinates.
 
 #### Function eval_color()
 
@@ -6732,7 +6908,7 @@ Shape texcoord interpolated using barycentric coordinates
 vec4f eval_color(const shape* shp, int eid, const vec2f& euv);
 ~~~
 
-Shape color interpolated using barycentric coordinates
+Shape color interpolated using barycentric coordinates.
 
 #### Function eval_radius()
 
@@ -6740,7 +6916,7 @@ Shape color interpolated using barycentric coordinates
 float eval_radius(const shape* shp, int eid, const vec2f& euv);
 ~~~
 
-Shape radius interpolated using barycentric coordinates
+Shape radius interpolated using barycentric coordinates.
 
 #### Function eval_tangsp()
 
@@ -6748,7 +6924,7 @@ Shape radius interpolated using barycentric coordinates
 vec4f eval_tangsp(const shape* shp, int eid, const vec2f& euv);
 ~~~
 
-Shape tangent space interpolated using barycentric coordinates
+Shape tangent space interpolated using barycentric coordinates.
 
 #### Function eval_pos()
 
@@ -6756,7 +6932,7 @@ Shape tangent space interpolated using barycentric coordinates
 vec3f eval_pos(const instance* ist, int sid, int eid, const vec2f& euv);
 ~~~
 
-Instance position interpolated using barycentric coordinates
+Instance position interpolated using barycentric coordinates.
 
 #### Function eval_norm()
 
@@ -6764,7 +6940,7 @@ Instance position interpolated using barycentric coordinates
 vec3f eval_norm(const instance* ist, int sid, int eid, const vec2f& euv);
 ~~~
 
-Instance normal interpolated using barycentric coordinates
+Instance normal interpolated using barycentric coordinates.
 
 #### Function eval_texture()
 
@@ -6773,7 +6949,7 @@ vec4f eval_texture(const texture_info& info, const vec2f& texcoord,
     bool srgb = true, const vec4f& def =;
 ~~~
 
-Evaluate a texture
+Evaluate a texture.
 
 #### Function eval_camera_ray()
 
@@ -6791,7 +6967,7 @@ template <typename T>
 inline T* find_named_elem(const vector<T*>& elems, const string& name);
 ~~~
 
-Finds an element by name
+Finds an element by name.
 
 #### Function subdivide_shape_once()
 
@@ -6808,7 +6984,7 @@ is true.
 void facet_shape(shape* shp, bool recompute_normals = true);
 ~~~
 
-Facet a shape. Supports only non-facevarying shapes
+Facet a shape. Supports only non-facevarying shapes.
 
 #### Function tesselate_shape()
 
@@ -6818,7 +6994,7 @@ void tesselate_shape(shape* shp, bool subdivide,
     bool bezier_to_lines);
 ~~~
 
-Tesselate a shape into basic primitives
+Tesselate a shape into basic primitives.
 
 #### Function tesselate_shapes()
 
@@ -6828,7 +7004,7 @@ void tesselate_shapes(scene* scn, bool subdivide,
     bool bezier_to_lines);
 ~~~
 
-Tesselate scene shapes and update pointers
+Tesselate scene shapes.
 
 #### Function update_transforms()
 
@@ -6836,7 +7012,7 @@ Tesselate scene shapes and update pointers
 void update_transforms(scene* scn, float time = 0);
 ~~~
 
-Update node transforms
+Update node transforms.
 
 #### Function compute_animation_range()
 
@@ -6844,7 +7020,7 @@ Update node transforms
 vec2f compute_animation_range(const scene* scn);
 ~~~
 
-Compute animation range
+Compute animation range.
 
 #### Function make_view_camera()
 
@@ -6853,7 +7029,6 @@ camera* make_view_camera(const scene* scn, int camera_id);
 ~~~
 
 Make a view camera either copying a given one or building a default one.
-Bounding boxes for the scene will be updated.
 
 #### Function compute_bounds()
 
@@ -6861,7 +7036,7 @@ Bounding boxes for the scene will be updated.
 bbox3f compute_bounds(const shape* shp);
 ~~~
 
-Computes a shape bounding box (quick computation that ignores radius)
+Computes a shape bounding box using a quick computation that ignores radius.
 
 #### Function compute_bounds()
 
@@ -6869,7 +7044,7 @@ Computes a shape bounding box (quick computation that ignores radius)
 bbox3f compute_bounds(const scene* scn);
 ~~~
 
-Compute the scene and scene's instances bounding boxes
+Compute a scene bounding box.
 
 #### Function flatten_instances()
 
@@ -6877,7 +7052,7 @@ Compute the scene and scene's instances bounding boxes
 void flatten_instances(scene* scn);
 ~~~
 
-Flatten scene instances into separate meshes.
+Flatten scene instances into separate shapes.
 
 #### Function print_info()
 
@@ -6885,7 +7060,7 @@ Flatten scene instances into separate meshes.
 void print_info(const scene* scn);
 ~~~
 
-Print scene information (call update bounds bes before)
+Print scene information.
 
 #### Function make_bvh()
 
@@ -6894,7 +7069,7 @@ bvh_tree* make_bvh(
     const shape* shp, float def_radius = 0.001f, bool equalsize = true);
 ~~~
 
-Build a shape BVH
+Build a shape BVH.
 
 #### Function make_bvh()
 
@@ -6903,7 +7078,7 @@ bvh_tree* make_bvh(
     const scene* scn, float def_radius = 0.001f, bool equalsize = true);
 ~~~
 
-Build a scene BVH. Compute shape bvhs if the map is empty.
+Build a scene BVH.
 
 #### Function refit_bvh()
 
@@ -6911,7 +7086,7 @@ Build a scene BVH. Compute shape bvhs if the map is empty.
 void refit_bvh(bvh_tree* bvh, const shape* shp, float def_radius = 0.001f);
 ~~~
 
-Refits a scene BVH
+Refits a scene BVH.
 
 #### Function refit_bvh()
 
@@ -6920,7 +7095,7 @@ void refit_bvh(
     bvh_tree* bvh, const scene* scn, bool do_shapes, float def_radius = 0.001f);
 ~~~
 
-Refits a scene BVH. Refit shapes if the map is not empty.
+Refits a scene BVH.
 
 #### Struct add_elements_options
 
@@ -6936,16 +7111,16 @@ struct add_elements_options {
 }
 ~~~
 
-Add elements options
+Add elements options.
 
 - Members:
-    - smooth_normals:      Add missing normal
-    - tangent_space:      Add missing trangent space
-    - texture_data:      texture data
-    - shape_instances:      Add instances
-    - default_names:      Add default names
-    - default_paths:      Add default paths
-    - none():      initialize to no element
+    - smooth_normals:      Add missing normal.
+    - tangent_space:      Add missing trangent space.
+    - texture_data:      Add empty texture data.
+    - shape_instances:      Add instances.
+    - default_names:      Add default names.
+    - default_paths:      Add default paths.
+    - none():      Initialize to no elements.
 
 
 #### Function add_elements()
@@ -6980,17 +7155,17 @@ struct load_options {
 }
 ~~~
 
-Loading options
+Loading options.
 
 - Members:
-    - load_textures:      Whether to load textures
-    - skip_missing:      Skip missing files without giving and error
-    - obj_flip_texcoord:      Whether to flip the v coordinate in OBJ
-    - obj_facet_non_smooth:      Duplicate vertices if smoothing off in OBJ
-    - obj_flip_tr:      Whether to flip tr in OBJ
-    - preserve_quads:      whether to preserve quads
-    - preserve_facevarying:      whether to preserve face-varying faces
-    - preserve_hierarchy:      whether to preserve node hierarchy
+    - load_textures:      Whether to load textures.
+    - skip_missing:      Skip missing files without giving and error.
+    - obj_flip_texcoord:      Whether to flip the v coordinate in OBJ.
+    - obj_facet_non_smooth:      Duplicate vertices if smoothing off in OBJ.
+    - obj_flip_tr:      Whether to flip tr in OBJ.
+    - preserve_quads:      Whether to preserve quads.
+    - preserve_facevarying:      Whether to preserve face-varying faces.
+    - preserve_hierarchy:      Whether to preserve node hierarchy.
 
 
 #### Function load_scene()
@@ -7014,14 +7189,14 @@ struct save_options {
 }
 ~~~
 
-Save options
+Save options.
 
 - Members:
-    - save_textures:      Whether to save textures
-    - skip_missing:      Skip missing files without giving and error
-    - obj_flip_texcoord:      Whether to flip the v coordinate in OBJ
-    - obj_flip_tr:      Whether to flip tr in OBJ
-    - gltf_separate_buffers:      Whether to use separate buffers in gltf
+    - save_textures:      Whether to save textures.
+    - skip_missing:      Skip missing files without giving and error.
+    - obj_flip_texcoord:      Whether to flip the v coordinate in OBJ.
+    - obj_flip_tr:      Whether to flip tr in OBJ.
+    - gltf_separate_buffers:      Whether to use separate buffers in gltf.
 
 
 #### Function save_scene()
@@ -7032,7 +7207,6 @@ void save_scene(
 ~~~
 
 Saves a scene. For now OBJ and glTF are supported.
-Throws an exception if an error occurs.
 
 ### Example scenes
 
@@ -7042,7 +7216,7 @@ Throws an exception if an error occurs.
 scene* make_cornell_box_scene();
 ~~~
 
-Makes the Cornell Box scene
+Makes the Cornell Box scene.
 
 #### Struct test_camera_params
 
@@ -7056,14 +7230,14 @@ struct test_camera_params {
 }
 ~~~
 
-Test camera parameters
+Test camera parameters.
 
 - Members:
-    - name:      Name (if not filled, assign a default one)
-    - from:      From
-    - to:      To
-    - yfov:      Fov
-    - aspect:      Aspect
+    - name:      Name.
+    - from:      From point.
+    - to:      To point.
+    - yfov:      Field of view.
+    - aspect:      Aspect ratio.
 
 
 #### Function update_test_camera()
@@ -7073,7 +7247,7 @@ void update_test_camera(
     const scene* scn, camera* cam, const test_camera_params& tcam);
 ~~~
 
-Updates a test instance, adding it to the scene if missing.
+Updates a test camera.
 
 #### Function test_camera_presets()
 
@@ -7081,7 +7255,7 @@ Updates a test instance, adding it to the scene if missing.
 unordered_map<string, test_camera_params>& test_camera_presets();
 ~~~
 
-Test camera presets
+Test camera presets.
 
 #### Enum test_texture_type
 
@@ -7104,23 +7278,23 @@ enum struct test_texture_type {
 }
 ~~~
 
-Test texture type
+Test texture type.
 
 - Values:
-    - none:      None (empty texture)
-    - grid:      Grid image
-    - checker:      Checker image
-    - colored:      Colored checker image
-    - rcolored:      Detailed colored checker image
-    - bump:      Bump and dimple imahe
-    - uv:      Uv debug image
-    - gamma:      Gamma ramp
-    - noise:      Perlin noise image
-    - ridge:      Perlin ridge image
-    - fbm:      Perlin fbm image
-    - turbulence:      Perlin turbulence image
-    - gammaf:      Gamma ramp (HDR)
-    - sky:      Sky (HDR)
+    - none:      None (empty texture).
+    - grid:      Grid image.
+    - checker:      Checker image.
+    - colored:      Colored checker image.
+    - rcolored:      Detailed colored checker image.
+    - bump:      Bump and dimple imahe.
+    - uv:      Uv debug image.
+    - gamma:      Gamma ramp.
+    - noise:      Perlin noise image.
+    - ridge:      Perlin ridge image.
+    - fbm:      Perlin fbm image.
+    - turbulence:      Perlin turbulence image.
+    - gammaf:      Gamma ramp (HDR).
+    - sky:      Sky (HDR).
 
 
 #### Function test_texture_names()
@@ -7129,7 +7303,7 @@ Test texture type
 inline vector<pair<string, test_texture_type>>& test_texture_names();
 ~~~
 
-Name for test texture enum
+Name for `test_texture` enum.
 
 #### Struct test_texture_params
 
@@ -7146,17 +7320,17 @@ struct test_texture_params {
 }
 ~~~
 
-Test texture parameters
+Test texture parameters.
 
 - Members:
-    - name:      Name (if not filled, assign a default based on type)
-    - type:      Type
-    - resolution:      Resolution
-    - tile_size:      Tile size for grid-like textures
-    - noise_scale:      Noise scale for noise-like textures
-    - sky_sunangle:      Sun angle for sunsky-like textures
-    - bump_to_normal:      Convert to normal map
-    - bump_scale:      Bump to normal scale
+    - name:      Name.
+    - type:      Type.
+    - resolution:      Resolution.
+    - tile_size:      Tile size for grid-like textures.
+    - noise_scale:      Noise scale for noise-like textures.
+    - sky_sunangle:      Sun angle for sunsky-like textures.
+    - bump_to_normal:      Convert to normal map.
+    - bump_scale:      Bump to normal scale.
 
 
 #### Function update_test_texture()
@@ -7174,7 +7348,7 @@ Updates a test texture.
 unordered_map<string, test_texture_params>& test_texture_presets();
 ~~~
 
-Test texture presets
+Test texture presets.
 
 #### Enum test_material_type
 
@@ -7189,15 +7363,15 @@ enum struct test_material_type {
 }
 ~~~
 
-Test material type
+Test material type.
 
 - Values:
-    - none:      None (empty material)
-    - emission:      Emission
-    - matte:      Matte (diffuse)
-    - plastic:      Plastic
-    - metal:      Matetal
-    - transparent:      Transparent (diffuse with opacity)
+    - none:      None (empty material).
+    - emission:      Emission.
+    - matte:      Matte (diffuse).
+    - plastic:      Plastic.
+    - metal:      Matetal.
+    - transparent:      Transparent (diffuse with opacity).
 
 
 #### Function test_material_names()
@@ -7206,7 +7380,7 @@ Test material type
 inline vector<pair<string, test_material_type>>& test_material_names();
 ~~~
 
-Name for test shape enum
+Name for `test_shape` enum.
 
 #### Struct test_material_params
 
@@ -7223,17 +7397,17 @@ struct test_material_params {
 }
 ~~~
 
-Test material parameters
+Test material parameters.
 
 - Members:
-    - name:      Name (if not filled, assign a default based on type)
-    - type:      Type
-    - emission:      Emission strenght
-    - color:      Base color
-    - opacity:      Opacity (only for supported materials)
-    - roughness:      Roughness
-    - texture:      Base texture
-    - normal:      Normal map
+    - name:      Name.
+    - type:      Type.
+    - emission:      Emission strenght.
+    - color:      Base color.
+    - opacity:      Opacity (only for supported materials).
+    - roughness:      Roughness.
+    - texture:      Base texture.
+    - normal:      Normal map.
 
 
 #### Function update_test_material()
@@ -7251,7 +7425,7 @@ Updates a test material.
 unordered_map<string, test_material_params>& test_material_presets();
 ~~~
 
-Test material presets
+Test material presets.
 
 #### Enum test_shape_type
 
@@ -7277,26 +7451,26 @@ enum struct test_shape_type {
 }
 ~~~
 
-Test shape type
+Test shape type.
 
 - Values:
-    - floor:      Floor (shared vertex, 20x20 size)
-    - quad:      Quad (shared vertex)
-    - cube:      Cube (shared vertex, not watertight)
-    - sphere:      Sphere (shared vertex, not watertight)
-    - spherecube:      Sphere with cube uvs (shared vertex, not watertight)
-    - spherizedcube:      Spherized cube (shared vertex, not watertight)
-    - geosphere:      Geodesic sphere (shared vertex, watertight, no texcoord)
-    - flipcapsphere:      Sphere with flipped cap (shared vertex, not watertight)
-    - suzanne:      Suzanne (shared vertex, no texcoord)
-    - cubep:      Position-only cube (shared vertex)
-    - fvcube:      Face-varying cube (shared vertex)
-    - fvsphere:      Face-varying sphere (shared vertex)
-    - matball:      Matball (shared vertex, not watertight)
-    - point:      Single point
-    - pointscube:      Random points in a cube
-    - hairball:      Random lines on a sphere
-    - beziercircle:      Bezier circle
+    - floor:      Floor (shared vertex, 20x20 size).
+    - quad:      Quad (shared vertex).
+    - cube:      Cube (shared vertex, not watertight).
+    - sphere:      Sphere (shared vertex, not watertight).
+    - spherecube:      Sphere with cube uvs (shared vertex, not watertight).
+    - spherizedcube:      Spherized cube (shared vertex, not watertight).
+    - geosphere:      Geodesic sphere (shared vertex, watertight, no texcoord).
+    - flipcapsphere:      Sphere with flipped cap (shared vertex, not watertight).
+    - suzanne:      Suzanne (shared vertex, no texcoord).
+    - cubep:      Position-only cube (shared vertex).
+    - fvcube:      Face-varying cube (shared vertex).
+    - fvsphere:      Face-varying sphere (shared vertex).
+    - matball:      Matball (shared vertex, not watertight).
+    - point:      Single point.
+    - pointscube:      Random points in a cube.
+    - hairball:      Random lines on a sphere.
+    - beziercircle:      Bezier circle.
 
 
 #### Function test_shape_names()
@@ -7305,7 +7479,7 @@ Test shape type
 inline vector<pair<string, test_shape_type>>& test_shape_names();
 ~~~
 
-Name for test shape enum
+Name for `test_shape` enum.
 
 #### Struct test_shape_params
 
@@ -7325,20 +7499,20 @@ struct test_shape_params {
 }
 ~~~
 
-Test shape parameters
+Test shape parameters.
 
 - Members:
-    - name:      Shape name (if not filled, assign a default based on type)
-    - type:      Shape type
-    - material:      Material name
-    - interior:      Interior material name
-    - tesselation:      Level of shape tesselatation (-1 for default)
-    - subdivision:      Level of shape tesselation for subdivision surfaces
-    - scale:      Shape scale
+    - name:      Shape name (if not filled, assign a default based on type).
+    - type:      Shape type.
+    - material:      Material name.
+    - interior:      Interior material name.
+    - tesselation:      Level of shape tesselatation (-1 for default).
+    - subdivision:      Level of shape tesselation for subdivision surfaces.
+    - scale:      Shape scale.
     - radius:      Radius for points and lines.
-    - faceted:      Faceted shape
-    - num:      Number of elements for points and lines (-1 for default)
-    - hair_params:      Hair generation params
+    - faceted:      Faceted shape.
+    - num:      Number of elements for points and lines (-1 for default).
+    - hair_params:      Hair generation params.
 
 
 #### Function update_test_shape()
@@ -7356,7 +7530,7 @@ Updates a test shape, adding it to the scene if missing.
 unordered_map<string, test_shape_params>& test_shape_presets();
 ~~~
 
-Test shape presets
+Test shape presets.
 
 #### Struct test_instance_params
 
@@ -7369,13 +7543,13 @@ struct test_instance_params {
 }
 ~~~
 
-Test instance parameters
+Test instance parameters.
 
 - Members:
-    - name:      Name (if not filled, assign a default one)
-    - shape:      Shape name
-    - frame:      Base frame
-    - rotation:      Rotation in Euler angles
+    - name:      Name (if not filled, assign a default one).
+    - shape:      Shape name.
+    - frame:      Base frame.
+    - rotation:      Rotation in Euler angles.
 
 
 #### Function update_test_instance()
@@ -7385,7 +7559,7 @@ void update_test_instance(
     const scene* scn, instance* ist, const test_instance_params& tist);
 ~~~
 
-Updates a test instance, adding it to the scene if missing.
+Updates a test instance.
 
 #### Function test_instance_presets()
 
@@ -7393,7 +7567,7 @@ Updates a test instance, adding it to the scene if missing.
 unordered_map<string, test_instance_params>& test_instance_presets();
 ~~~
 
-Test instance presets
+Test instance presets.
 
 #### Struct test_environment_params
 
@@ -7408,15 +7582,15 @@ struct test_environment_params {
 }
 ~~~
 
-Test environment parameters
+Test environment parameters.
 
 - Members:
-    - name:      Name (if not filled, assign a default one)
-    - emission:      Emission strenght
-    - color:      Emission color
-    - texture:      Emission texture
-    - frame:      Frame
-    - rotation:      Rotation around y axis
+    - name:      Name.
+    - emission:      Emission strenght.
+    - color:      Emission color.
+    - texture:      Emission texture.
+    - frame:      Frame.
+    - rotation:      Rotation around y axis.
 
 
 #### Function update_test_environment()
@@ -7426,7 +7600,7 @@ void update_test_environment(
     const scene* scn, environment* env, const test_environment_params& tenv);
 ~~~
 
-Updates a test instance, adding it to the scene if missing.
+Updates a test instance.
 
 #### Function test_environment_presets()
 
@@ -7434,7 +7608,7 @@ Updates a test instance, adding it to the scene if missing.
 unordered_map<string, test_environment_params>& test_environment_presets();
 ~~~
 
-Test environment presets
+Test environment presets.
 
 #### Struct test_node_params
 
@@ -7452,18 +7626,18 @@ struct test_node_params {
 }
 ~~~
 
-Test node parameters
+Test node parameters.
 
 - Members:
-    - name:      Name (if not filled, assign a default one)
-    - parent:      Parent node
-    - camera:      Camera
-    - instance:      Instance
-    - environment:      Environment
-    - frame:      Frame
-    - translation:      Translation
-    - rotation:      Roation
-    - scaling:      Scaling
+    - name:      Name.
+    - parent:      Parent node.
+    - camera:      Camera.
+    - instance:      Instance.
+    - environment:      Environment.
+    - frame:      Frame.
+    - translation:      Translation.
+    - rotation:      Roation.
+    - scaling:      Scaling.
 
 
 #### Function update_test_node()
@@ -7473,7 +7647,7 @@ void update_test_node(
     const scene* scn, node* nde, const test_node_params& tndr);
 ~~~
 
-Updates a test node, adding it to the scene if missing.
+Updates a test node.
 
 #### Function test_node_presets()
 
@@ -7481,7 +7655,7 @@ Updates a test node, adding it to the scene if missing.
 unordered_map<string, test_node_params>& test_node_presets();
 ~~~
 
-Test nodes presets
+Test nodes presets.
 
 #### Struct test_animation_params
 
@@ -7499,18 +7673,18 @@ struct test_animation_params {
 }
 ~~~
 
-Test animation parameters
+Test animation parameters.
 
 - Members:
-    - name:      Name (if not filled, assign a default one)
-    - bezier:      Linear or bezier
-    - speed:      Animation speed
-    - scale:      Animation scale
-    - times:      Keyframes times
-    - translation:      Translation keyframes
-    - rotation:      Rotation keyframes
-    - scaling:      Scale keyframes
-    - nodes:      Environment
+    - name:      Name.
+    - bezier:      Linear or bezier.
+    - speed:      Animation speed.
+    - scale:      Animation scale.
+    - times:      Keyframes times.
+    - translation:      Translation keyframes.
+    - rotation:      Rotation keyframes.
+    - scaling:      Scale keyframes.
+    - nodes:      Environment.
 
 
 #### Function update_test_animation()
@@ -7520,7 +7694,7 @@ void update_test_animation(
     const scene* scn, animation_group* anm, const test_animation_params& tndr);
 ~~~
 
-Updates a test node, adding it to the scene if missing.
+Updates a test node.
 
 #### Function test_node_presets()
 
@@ -7528,7 +7702,7 @@ Updates a test node, adding it to the scene if missing.
 unordered_map<string, test_node_params>& test_node_presets();
 ~~~
 
-Test nodes presets
+Test nodes presets.
 
 #### Struct test_scene_params
 
@@ -7546,18 +7720,18 @@ struct test_scene_params {
 }
 ~~~
 
-Test scene
+Test scene.
 
 - Members:
-    - name:      name
-    - cameras:      camers
-    - textures:      textures
-    - materials:      materials
-    - shapes:      shapes
-    - instances:      instances
-    - environments:      envieonmennts
-    - nodes:      nodes
-    - animations:      animations
+    - name:      Name.
+    - cameras:      Cameras.
+    - textures:      Textures.
+    - materials:      Materials.
+    - shapes:      Shapes.
+    - instances:      Instances.
+    - environments:      Environmennts.
+    - nodes:      Nodes.
+    - animations:      Animations.
 
 
 #### Function update_test_scene()
@@ -7567,8 +7741,8 @@ void update_test_scene(scene* scn, const test_scene_params& tscn,
     const unordered_set<void*>& refresh =;
 ~~~
 
-Updates a test scene, adding missing objects. Objects are only added (for
-now). A new scene is returned if it was not already created.
+Updates a test scene, adding missing objects. Objects are only added and
+never removed.
 
 #### Function make_test_scene()
 
@@ -7576,7 +7750,7 @@ now). A new scene is returned if it was not already created.
 inline scene* make_test_scene(const test_scene_params& tscn);
 ~~~
 
-Makes a test scene. Convenience wrapper around update_test_scene().
+Makes a test scene. Convenience wrapper around `update_test_scene()`.
 
 #### Function test_scene_presets()
 
@@ -7584,7 +7758,7 @@ Makes a test scene. Convenience wrapper around update_test_scene().
 unordered_map<string, test_scene_params>& test_scene_presets();
 ~~~
 
-Test scene presets
+Test scene presets.
 
 #### Function remove_duplicates()
 
@@ -7592,7 +7766,7 @@ Test scene presets
 void remove_duplicates(test_scene_params& tscn);
 ~~~
 
-Remove duplicates based on name
+Remove duplicates based on name.
 
 #### Function load_test_scene()
 
@@ -7600,7 +7774,7 @@ Remove duplicates based on name
 test_scene_params load_test_scene(const string& filename);
 ~~~
 
-Load test scene
+Load test scene.
 
 #### Function save_test_scene()
 
@@ -7608,7 +7782,7 @@ Load test scene
 void save_test_scene(const string& filename, const test_scene_params& scn);
 ~~~
 
-Save test scene
+Save test scene.
 
 ### Path-tracing support
 
@@ -7618,7 +7792,7 @@ Save test scene
 float specular_exponent_to_roughness(float n);
 ~~~
 
-Phong exponent to roughness. Public API, see above.
+Phong exponent to roughness.
 
 #### Function specular_fresnel_from_ks()
 
@@ -7626,7 +7800,7 @@ Phong exponent to roughness. Public API, see above.
 void specular_fresnel_from_ks(const vec3f& ks, vec3f& es, vec3f& esk);
 ~~~
 
-Specular to fresnel eta. Public API, see above.
+Specular to fresnel eta.
 
 #### Function fresnel_dielectric()
 
@@ -7652,7 +7826,7 @@ https://seblagarde.wordpress.com/2013/04/29/memo-on-fresnel-equations/
 vec3f fresnel_schlick(const vec3f& ks, float cosw);
 ~~~
 
-Schlick approximation of Fresnel term
+Schlick approximation of Fresnel term.
 
 #### Function fresnel_schlick()
 
@@ -7669,7 +7843,7 @@ This is a hack, but works better than not doing it.
 float eval_ggx(float rs, float ndh, float ndi, float ndo);
 ~~~
 
-Evaluates the GGX distribution and geometric term
+Evaluates the GGX distribution and geometric term.
 
 #### Function sample_ggx()
 
@@ -7677,7 +7851,7 @@ Evaluates the GGX distribution and geometric term
 vec3f sample_ggx(float rs, const vec2f& rn);
 ~~~
 
-Sample the GGX distribution
+Sample the GGX distribution.
 
 #### Function sample_ggx_pdf()
 
@@ -7685,7 +7859,7 @@ Sample the GGX distribution
 float sample_ggx_pdf(float rs, float ndh);
 ~~~
 
-Evaluates the GGX pdf
+Evaluates the GGX pdf.
 
 #### Function filter_triangle()
 
@@ -7693,7 +7867,7 @@ Evaluates the GGX pdf
 inline float filter_triangle(float x);
 ~~~
 
-triangle filter (public domain from stb_image_resize)
+Triangle filter. Ppublic domain from stb_image_resize.
 
 #### Function filter_cubic()
 
@@ -7701,7 +7875,7 @@ triangle filter (public domain from stb_image_resize)
 inline float filter_cubic(float x);
 ~~~
 
-cubic filter (public domain from stb_image_resize)
+Cubic filter. Ppublic domain from stb_image_resize.
 
 #### Function filter_catmullrom()
 
@@ -7709,7 +7883,7 @@ cubic filter (public domain from stb_image_resize)
 inline float filter_catmullrom(float x);
 ~~~
 
-catmull-rom filter (public domain from stb_image_resize)
+Catmull-rom filter. Ppublic domain from stb_image_resize.
 
 #### Function filter_mitchell()
 
@@ -7717,7 +7891,7 @@ catmull-rom filter (public domain from stb_image_resize)
 inline float filter_mitchell(float x);
 ~~~
 
-mitchell filter (public domain from stb_image_resize)
+Mitchell filter. Ppublic domain from stb_image_resize.
 
 ### Path tracing
 
@@ -7735,16 +7909,16 @@ enum struct trace_shader_type {
 }
 ~~~
 
-Type of rendering algorithm (shader)
+Type of rendering algorithm.
 
 - Values:
-    - pathtrace:      pathtrace
-    - eyelight:      eye hight for quick previews
-    - direct:      direct illumination
-    - pathtrace_nomis:      pathtrace without MIS (usedful ony for debugging)
-    - debug_normal:      debug normal
-    - debug_albedo:      debug albedo
-    - debug_texcoord:      debug texcoord
+    - pathtrace:      Pathtrace.
+    - eyelight:      Eye light for quick previews.
+    - direct:      Direct illumination.
+    - pathtrace_nomis:      Pathtrace without MIS, usedful ony for debugging.
+    - debug_normal:      Debug normal.
+    - debug_albedo:      Debug albedo.
+    - debug_texcoord:      Debug texcoord.
 
 
 #### Function trace_shader_names()
@@ -7753,7 +7927,7 @@ Type of rendering algorithm (shader)
 inline const vector<pair<string, trace_shader_type>>& trace_shader_names();
 ~~~
 
-Names for enumeration
+Names for `trace_shader_type` enum.
 
 #### Enum trace_rng_type
 
@@ -7764,11 +7938,11 @@ enum struct trace_rng_type {
 }
 ~~~
 
-Random number generator type
+Random number generator type.
 
 - Values:
-    - uniform:      uniform random numbers
-    - stratified:      stratified random numbers
+    - uniform:      Uniform random numbers.
+    - stratified:      Stratified random numbers.
 
 
 #### Function trace_rng_names()
@@ -7777,7 +7951,7 @@ Random number generator type
 inline const vector<pair<string, trace_rng_type>>& trace_rng_names();
 ~~~
 
-Names for enumeration
+Names for `trace_rng_type` enum.
 
 #### Enum trace_filter_type
 
@@ -7792,14 +7966,14 @@ enum struct trace_filter_type {
 }
 ~~~
 
-Filter type
+Filter type.
 
 - Values:
-    - box:      box filter
-    - triangle:      hat filter
-    - cubic:      cubic spline
-    - catmull_rom:      Catmull-Rom spline
-    - mitchell:      Mitchell-Netrevalli
+    - box:      Box filter.
+    - triangle:      Hat filter.
+    - cubic:      Cubic spline.
+    - catmull_rom:      Catmull-Rom spline.
+    - mitchell:      Mitchell-Netrevalli.
 
 
 #### Function trace_filter_names()
@@ -7808,7 +7982,7 @@ Filter type
 inline const vector<pair<string, trace_filter_type>>& trace_filter_names();
 ~~~
 
-Names for enumeration
+Names for `trace_filter_type` enum.
 
 #### Struct trace_params
 
@@ -7835,27 +8009,27 @@ struct trace_params {
 }
 ~~~
 
-Rendering params
+Rendering params.
 
 - Members:
-    - camera_id:      camera id (-1 for default)
-    - width:      image width
-    - height:      image height
-    - nsamples:      number of samples
-    - stype:      sampler type
-    - shadow_notransmission:      wheter to test transmission in shadows
-    - rtype:      random number generation type
-    - ftype:      filter type
-    - ambient:      ambient lighting
-    - envmap_invisible:      view environment map
-    - min_depth:      minimum ray depth
-    - max_depth:      maximum ray depth
-    - pixel_clamp:      final pixel clamping
-    - ray_eps:      ray intersection epsilon
-    - parallel:      parallel execution
-    - seed:      seed for the random number generators
-    - block_size:      block size for parallel batches (probably leave it as is)
-    - batch_size:      batch size for progressive rendering
+    - camera_id:      Camera id (-1 for default).
+    - width:      Image width.
+    - height:      Image height.
+    - nsamples:      Number of samples.
+    - stype:      Sampler type.
+    - shadow_notransmission:      Wheter to test transmission in shadows.
+    - rtype:      Random number generation type.
+    - ftype:      Filter type.
+    - ambient:      Ambient lighting.
+    - envmap_invisible:      View environment map.
+    - min_depth:      Minimum ray depth.
+    - max_depth:      Maximum ray depth.
+    - pixel_clamp:      Final pixel clamping.
+    - ray_eps:      Ray intersection epsilon.
+    - parallel:      Parallel execution.
+    - seed:      Seed for the random number generators.
+    - block_size:      Block size for parallel batches (probably leave it as is).
+    - batch_size:      Batch size for progressive rendering.
 
 
 #### Struct trace_pixel
@@ -7876,12 +8050,12 @@ for uniform and stratified sequences. The members are not part of the
 the public API.
 
 - Members:
-    - acc:      pixel accumulated radiance and coverage
-    - rng:      random number state
-    - i:      pixel coordinates
-    - sample:      number of samples computed
-    - dimension:      current dimension
-    - weight:      pixel weight for filtering
+    - acc:      Accumulated radiance and coverage.
+    - rng:      Random number state.
+    - i:      Pixel coordinates.
+    - sample:      Number of samples computed.
+    - dimension:      Current dimension.
+    - weight:      Pixel weight for filtering.
 
 
 #### Struct trace_light
@@ -7897,8 +8071,8 @@ Trace light as either instances or environments. The members are not part of
 the the public API.
 
 - Members:
-    - ist:      Instance pointer for instance lights
-    - env:      Environment pointer for environment lights
+    - ist:      Instance pointer for instance lights.
+    - env:      Environment pointer for environment lights.
 
 
 #### Struct trace_lights
@@ -7917,11 +8091,11 @@ Trace lights. Handles sampling of illumination. The members are not part of
 the the public API.
 
 - Members:
-    - lights:      Shape instances
-    - shape_cdfs:      Shape cdf
-    - shape_areas:      Shape areas
-    - empty():      whether it is empty
-    - size():      number of lights
+    - lights:      Shape instances.
+    - shape_cdfs:      Shape cdfs.
+    - shape_areas:      Shape areas.
+    - empty():      Check whether there are any lights.
+    - size():      Number of lights.
 
 
 #### Function make_trace_pixels()
@@ -7930,7 +8104,7 @@ the the public API.
 image<trace_pixel> make_trace_pixels(const trace_params& params);
 ~~~
 
-Initialize the rendering pixels
+Initialize trace pixels.
 
 #### Function make_trace_lights()
 
@@ -7938,7 +8112,7 @@ Initialize the rendering pixels
 trace_lights make_trace_lights(const scene* scn);
 ~~~
 
-Initialize trace lights
+Initialize trace lights.
 
 #### Function trace_samples()
 
@@ -7948,7 +8122,7 @@ void trace_samples(const scene* scn, const camera* cam, const bvh_tree* bvh,
     int nsamples, const trace_params& params);
 ~~~
 
-Trace the next nsamples samples.
+Trace the next `nsamples` samples.
 
 #### Function trace_samples_filtered()
 
@@ -7958,7 +8132,7 @@ void trace_samples_filtered(const scene* scn, const camera* cam,
     image<trace_pixel>& pixels, int nsamples, const trace_params& params);
 ~~~
 
-Trace the next nsamples samples with image filtering.
+Trace the next `nsamples` samples with image filtering.
 
 #### Function trace_image()
 
@@ -7967,7 +8141,7 @@ inline image4f trace_image(const scene* scn, const camera* cam,
     const bvh_tree* bvh, const trace_params& params);
 ~~~
 
-Trace the whole image
+Trace the whole image.
 
 #### Function trace_async_start()
 
@@ -8002,15 +8176,15 @@ struct obj_vertex {
 }
 ~~~
 
-Face vertex
+Obj face vertex.
 
 - Members:
-    - pos:      position
-    - texcoord:      texcoord
-    - norm:      normal
-    - color:      color [extension]
-    - radius:      radius [extension]
-    - obj_vertex():      Constructor (copies members initializing missing ones to -1)
+    - pos:      Position.
+    - texcoord:      Texcoord.
+    - norm:      Normal.
+    - color:      Color [extension].
+    - radius:      Radius [extension].
+    - obj_vertex():      Element constructor. Initializes all non-specified members as -1.
 
 
 #### Enum obj_element_type : uint16_t
@@ -8024,13 +8198,13 @@ enum struct obj_element_type : uint16_t {
 }
 ~~~
 
-element type
+Obj element type.
 
 - Values:
-    - point:      lists of points
-    - line:      polylines
-    - face:      polygon faces
-    - bezier:      bezier segments
+    - point:      List of points.
+    - line:      Polyline.
+    - face:      Polygon face.
+    - bezier:      Bezier segments.
 
 
 #### Struct obj_element
@@ -8043,12 +8217,12 @@ struct obj_element {
 }
 ~~~
 
-Element vertex indices
+Obj element vertex indices.
 
 - Members:
-    - start:      starting vertex index
-    - type:      element type
-    - size:      number of vertices
+    - start:      Starting vertex index.
+    - type:      Element type.
+    - size:      Number of vertices.
 
 
 #### Struct obj_group
@@ -8064,15 +8238,15 @@ struct obj_group {
 }
 ~~~
 
-Element group
+Obj element group.
 
 - Members:
-    - matname:      material name
-    - groupname:      group name
-    - smoothing:      smoothing
-    - verts:      element vertices
-    - elems:      element faces
-    - props:      the rest of the properties [extension]
+    - matname:      Material name.
+    - groupname:      Group name.
+    - smoothing:      Smoothing.
+    - verts:      Element vertices.
+    - elems:      Element faces.
+    - props:      Properties not explicitly handled [extension].
 
 
 #### Struct obj_object
@@ -8086,13 +8260,13 @@ struct obj_object {
 }
 ~~~
 
-Obj object
+Obj object.
 
 - Members:
-    - name:      object name
-    - groups:      element groups
-    - props:      the rest of the properties [extension]
-    - ~obj_object():      cleanup
+    - name:      Name.
+    - groups:      Element groups.
+    - props:      Properties not explicitly handled [extension].
+    - ~obj_object():      Cleanup.
 
 
 #### Struct obj_texture_info
@@ -8106,13 +8280,13 @@ struct obj_texture_info {
 }
 ~~~
 
-Texture information for OBJ
+Obj texture information.
 
 - Members:
-    - path:      the texture path
-    - clamp:      whether to clamp tp th edge
-    - scale:      the scale for bump and displacement
-    - props:      the rest of the properties
+    - path:      File path.
+    - clamp:      Whether to clamp to the edge.
+    - scale:      Scale for bump and displacement.
+    - props:      Properties not explicitly handled.
 
 
 #### Struct obj_texture
@@ -8128,15 +8302,15 @@ struct obj_texture {
 }
 ~~~
 
-OBJ texture. Texture data is loaded only if desired.
+Obj texture. Texture data is loaded only if desired.
 
 - Members:
-    - path:      texture path
-    - width:      Width
-    - height:      Height
-    - ncomp:      Number of Channels
-    - datab:      Buffer data for 8-bit images
-    - dataf:      Buffer data for float images
+    - path:      File path.
+    - width:      Width.
+    - height:      Height.
+    - ncomp:      Number of Channels.
+    - datab:      Buffer data for LDR images.
+    - dataf:      Buffer data for HDR images.
 
 
 #### Struct obj_material
@@ -8170,33 +8344,33 @@ struct obj_material {
 }
 ~~~
 
-OBJ material
+Obj material.
 
 - Members:
-    - name:      material name
-    - illum:      MTL illum mode
-    - ke:      emission color
-    - ka:      ambient color
-    - kd:      diffuse color
-    - ks:      specular color
-    - kr:      reflection color
-    - kt:      transmision color
-    - ns:      phong exponent for ks
-    - ior:      index of refraction
-    - op:      opacity
-    - ke_txt:      emission texture
-    - ka_txt:      ambient texture
-    - kd_txt:      diffuse texture
-    - ks_txt:      specular texture
-    - kr_txt:      reflection texture
-    - kt_txt:      transmission texture
-    - ns_txt:      specular exponent texture
-    - op_txt:      opacity texture
-    - ior_txt:      index of refraction
-    - bump_txt:      bump map texture (heighfield)
-    - disp_txt:      displacement map texture (heighfield)
-    - norm_txt:      normal map texture
-    - props:      the rest of the properties
+    - name:      Name.
+    - illum:      MTL illum mode.
+    - ke:      Emission color.
+    - ka:      Ambient color.
+    - kd:      Diffuse color.
+    - ks:      Specular color.
+    - kr:      Reflection color.
+    - kt:      Transmision color.
+    - ns:      Phong exponent for ks.
+    - ior:      Index of refraction.
+    - op:      Opacity.
+    - ke_txt:      Emission texture.
+    - ka_txt:      Ambient texture.
+    - kd_txt:      Diffuse texture.
+    - ks_txt:      Specular texture.
+    - kr_txt:      Reflection texture.
+    - kt_txt:      Transmission texture.
+    - ns_txt:      Specular exponent texture.
+    - op_txt:      Opacity texture.
+    - ior_txt:      Index of refraction.
+    - bump_txt:      Bump map texture (heighfield).
+    - disp_txt:      Displacement map texture (heighfield).
+    - norm_txt:      Normal map texture.
+    - props:      Properties not explicitly handled.
 
 
 #### Struct obj_camera
@@ -8213,16 +8387,16 @@ struct obj_camera {
 }
 ~~~
 
-Camera [extension]
+Obj camera [extension].
 
 - Members:
-    - name:      camera name
-    - frame:      transform frame (affine matrix)
-    - ortho:      orthografic camera
-    - yfov:      vertical field of view
-    - aspect:      aspect ratio
-    - aperture:      lens aperture
-    - focus:      focus distance
+    - name:      Camera name.
+    - frame:      Transform frame (affine matrix).
+    - ortho:      Orthografic camera.
+    - yfov:      Vertical field of view.
+    - aspect:      Aspect ratio.
+    - aperture:      Lens aperture.
+    - focus:      Focus distance.
 
 
 #### Struct obj_environment
@@ -8235,12 +8409,12 @@ struct obj_environment {
 }
 ~~~
 
-Environment [extension]
+Obj environment [extension].
 
 - Members:
-    - name:      environment name
-    - frame:      transform frame (affine matrix)
-    - matname:      material name
+    - name:      Environment name.
+    - frame:      Transform frame (affine matrix).
+    - matname:      Material name.
 
 
 #### Struct obj_node
@@ -8259,18 +8433,18 @@ struct obj_node {
 }
 ~~~
 
-Node [extension]
+Obj node [extension].
 
 - Members:
-    - name:      node name
-    - parent:      node parent
-    - camname:      camera
-    - objname:      object
-    - envname:      environment
-    - frame:      transform frame (affine matrix)
-    - translation:      translation
-    - rotation:      rotation
-    - scaling:      scaling
+    - name:      Node name.
+    - parent:      Node parent.
+    - camname:      Camera name.
+    - objname:      Instance name.
+    - envname:      Environment name.
+    - frame:      Transform frame (affine matrix).
+    - translation:      Translation.
+    - rotation:      Rotation.
+    - scaling:      Scaling.
 
 
 #### Struct obj_scene
@@ -8292,21 +8466,21 @@ struct obj_scene {
 }
 ~~~
 
-OBJ scene
+Obj scene.
 
 - Members:
-    - pos:      vertex positions
-    - norm:      vertex normals
-    - texcoord:      vertex texcoord
-    - color:      vertex color [extension]
-    - radius:      vertex radius [extension]
-    - objects:      objects
-    - materials:      materials
-    - textures:      textures
-    - cameras:      cameras [extension]
-    - environments:      env maps [extension]
-    - nodes:      nodes [extension]
-    - ~obj_scene():      cleanup
+    - pos:      Vertex positions.
+    - norm:      Vertex normals.
+    - texcoord:      Vertex texcoord.
+    - color:      Vertex color [extension].
+    - radius:      Vertex radius [extension].
+    - objects:      Objects.
+    - materials:      Materials.
+    - textures:      Textures.
+    - cameras:      Cameras [extension].
+    - environments:      Environments [extension].
+    - nodes:      Nodes [extension].
+    - ~obj_scene():      Cleanup.
 
 
 #### Function load_obj()
@@ -8316,16 +8490,10 @@ obj_scene* load_obj(const string& filename, bool load_textures = false,
     bool skip_missing = false, bool flip_texcoord = true, bool flip_tr = true);
 ~~~
 
-Load OBJ
-
-- Parameters:
-    - filename: filename
-    - load_texture: whether to load textures
-    - skip_missing: whether to skip missing files
-    - flip_texcoord: whether to flip the v coordinate
-    - flip_tr: whether to flip the Tr value
-- Return:
-    - obj (nullptr on error)
+Load an OBJ from file `filename`. Load textures if `load_textures` is true,
+and report errors only if `skip_missing` is false.
+Texture coordinates and material Tr are flipped if `flip_texcoord` and
+`flip_tp` are respectively true.
 
 #### Function save_obj()
 
@@ -8335,17 +8503,10 @@ void save_obj(const string& filename, const obj_scene* model,
     bool flip_texcoord = true, bool flip_tr = true);
 ~~~
 
-Save OBJ
-
-- Parameters:
-    - filename: filename
-    - model: obj data to save
-    - save_textures: whether to save textures
-    - skip_missing: whether to skip missing files
-    - flip_texcoord: whether to flip the v coordinate
-    - flip_tr: whether to flip the Tr value
-- Returns:
-    - whether an error occurred
+Save an OBJ to file `filename`. Save textures if `save_textures` is true,
+and report errors only if `skip_missing` is false.
+Texture coordinates and material Tr are flipped if `flip_texcoord` and
+`flip_tp` are respectively true.
 
 ### Khronos glTF
 
@@ -8372,11 +8533,11 @@ struct image_data {
 Generic image data.
 
 - Members:
-    - width:      Width
-    - height:      Height
-    - ncomp:      Number of Channels
-    - datab:      Buffer data for 8-bit images
-    - dataf:      Buffer data for float images
+    - width:      Width.
+    - height:      Height.
+    - ncomp:      Number of Channels.
+    - datab:      Buffer data for 8-bit images.
+    - dataf:      Buffer data for float images.
 
 
 #### Struct glTFid
@@ -8392,14 +8553,14 @@ struct glTFid {
 }
 ~~~
 
-glTFid
+Id for glTF references.
 
 - Members:
-    - glTFid():      defaoult constructor to an invalid id
-    - glTFid():      explicit conversion from integer
-    - operator int():      explicit convcersion to integer
-    - is_valid():      check if it is valid
-    - operator bool():      check if it is valid
+    - glTFid():      Defaoult constructor to an invalid id.
+    - glTFid():      Explicit conversion from integer.
+    - operator int():      Explicit convcersion to integer.
+    - is_valid():      Check if it is valid.
+    - operator bool():      Check if it is valid.
 
 
 #### Struct glTFProperty
@@ -8411,7 +8572,7 @@ struct glTFProperty {
 }
 ~~~
 
-Generic glTF object
+Generic glTF object.
 
 - Members:
     - extensions:      Extensions.
@@ -9335,14 +9496,9 @@ glTF* load_gltf(const string& filename, bool load_bin = true,
     bool load_img = false, bool skip_missing = false);
 ~~~
 
-Loads a gltf file from disk
-
-- Parameters:
-    - filename: scene filename
-    - load_bin/load_img: load binary data
-    - skip_missing: do not throw an exception if a file is missing
-- Returns:
-    - gltf data loaded (nullptr on error)
+Load a gltf file `filename` from disk. Load binaries and images only if
+`load_bin` and `load_img` are true, reporting errors only if `skip_missing`
+is false.
 
 #### Function load_binary_gltf()
 
@@ -9351,41 +9507,29 @@ glTF* load_binary_gltf(const string& filename, bool load_bin = true,
     bool load_img = false, bool skip_missing = false);
 ~~~
 
-Loads a binary gltf file from disk
-
-- Parameters:
-    - filename: scene filename
-    - other params as above
-- Returns:
-    - gltf data loaded (nullptr on error)
+Load a binary gltf file `filename` from disk. Load binaries and images only
+if `load_bin` and `load_img` are true, reporting errors only if
+`skip_missing` is false.
 
 #### Function save_gltf()
 
 ~~~ .cpp
 void save_gltf(const string& filename, const glTF* gltf, bool save_bin = true,
-    bool save_images = false);
+    bool save_img = false);
 ~~~
 
-Saves a scene to disk
-
-- Parameters:
-    - filename: scene filename
-    - gltf: data to save
-    - save_bin/save_images: save binary data
+Save a gltf file `filename` to disk. Save binaries and images only if
+`save_bin` and `save_img` are true.
 
 #### Function save_binary_gltf()
 
 ~~~ .cpp
 void save_binary_gltf(const string& filename, const glTF* gltf,
-    bool save_bin = true, bool save_images = false);
+    bool save_bin = true, bool save_img = false);
 ~~~
 
-Saves a scene to disk
-
-- Parameters:
-    - filename: scene filename
-    - gltf: data to save
-    - save_bin/save_images: save binary data
+Save a gltf file `filename` to disk. Save binaries and images only if
+`save_bin` and `save_img` are true.
 
 #### Function node_transform()
 
@@ -9419,20 +9563,20 @@ struct accessor_view {
 A view for gltf array buffers that allows for typed access.
 
 - Members:
-    - accessor_view():      construct a view from an accessor
-    - size():      number of elements in the view
-    - count():      number of elements in the view
-    - ncomp():      number of components per element
-    - valid():      check whether the view is valid
-    - getv2f():      get the idx-th element of fixed length width default values
-    - getv3f():      get the idx-th element of fixed length width default values
-    - getv4f():      get the idx-th element of fixed length width default values
-    - getm4f():      get the idx-th element of fixed length as a matrix
-    - get():      get the c-th component of the idx-th element
-    - getv2i():      get the idx-th element as integer with fixed length
-    - getv3i():      get the idx-th element as integer with fixed length
-    - getv4i():      get the idx-th element as integer with fixed length
-    - geti():      get the c-th component of the idx-th element as integer
+    - accessor_view():      Construct a view from an accessor.
+    - size():      Number of elements in the view.
+    - count():      Number of elements in the view
+    - ncomp():      Number of components per element
+    - valid():      Check whether the view is valid.
+    - getv2f():      Get the idx-th element of fixed length width default values.
+    - getv3f():      Get the idx-th element of fixed length width default values.
+    - getv4f():      Get the idx-th element of fixed length width default values.
+    - getm4f():      Get the idx-th element of fixed length as a matrix.
+    - get():      Get the c-th component of the idx-th element.
+    - getv2i():      Get the idx-th element as integer with fixed length.
+    - getv3i():      Get the idx-th element as integer with fixed length.
+    - getv4i():      Get the idx-th element as integer with fixed length.
+    - geti():      Get the c-th component of the idx-th element as integer.
 
 
 ### Svg
@@ -9445,10 +9589,10 @@ struct svg_path {
 }
 ~~~
 
-Svg path
+Svg path.
 
 - Members:
-    - pos:      Path vertices
+    - pos:      Path vertices.
 
 
 #### Struct svg_shape
@@ -9460,11 +9604,11 @@ struct svg_shape {
 }
 ~~~
 
-Svg shape
+Svg shape.
 
 - Members:
-    - paths:      Paths
-    - ~svg_shape():      Cleanup
+    - paths:      Paths.
+    - ~svg_shape():      Cleanup.
 
 
 #### Struct svg_scene
@@ -9476,11 +9620,11 @@ struct svg_scene {
 }
 ~~~
 
-Svg scene
+Svg scene.
 
 - Members:
     - shapes:      Shapes
-    - ~svg_scene():      Cleanup
+    - ~svg_scene():      Cleanup.
 
 
 #### Function load_svg()
@@ -9489,7 +9633,7 @@ Svg scene
 svg_scene* load_svg(const string& filename);
 ~~~
 
-Load SVG
+Load an SVG.
 
 #### Function save_svg()
 
@@ -9497,7 +9641,7 @@ Load SVG
 void save_svg(const string& filename, const svg_scene* svg);
 ~~~
 
-Save SVG
+Save an SVG.
 
 ### String, path and file functions
 
@@ -9788,7 +9932,7 @@ Immediate mode command line parser (opaque type)
 struct cmdline_parser {
 ~~~
 
-Immediate mode command line parser
+Immediate mode command line parser. Members are not part of the public API.
 
 #### Function should_exit()
 
@@ -9796,7 +9940,7 @@ Immediate mode command line parser
 inline bool should_exit(cmdline_parser& parser);
 ~~~
 
-check unused arguments
+Check unused arguments.
 
 #### Function get_usage()
 
@@ -9804,7 +9948,7 @@ check unused arguments
 inline string get_usage(const cmdline_parser& parser);
 ~~~
 
-returns the usage string
+Returns the usage string.
 
 #### Function parse_flag()
 
@@ -9814,7 +9958,7 @@ inline bool parse_flag(cmdline_parser& parser, const string& name,
     bool req = false);
 ~~~
 
-parse a flag from the command line
+Pase a flag from the command line.
 
 #### Function parse_opt()
 
@@ -9824,7 +9968,7 @@ inline T parse_opt(cmdline_parser& parser, const string& name,
     const string& flag, const string& help, const T& def =;
 ~~~
 
-parse an option from the command line
+Pase an option from the command line.
 
 #### Function parse_opt()
 
@@ -9836,7 +9980,7 @@ inline T parse_opt(cmdline_parser& parser, const string& name,
     const vector<T>& choices =;
 ~~~
 
-parse an enum option from the command line
+Parse an enum option from the command line.
 
 #### Function make_parser()
 
@@ -9845,7 +9989,7 @@ inline cmdline_parser make_parser(
     int argc, char** argv, const string& prog, const string& help);
 ~~~
 
-initialize the command line
+Initialize a command line parser.
 
 ### Simple logging
 
@@ -9859,8 +10003,8 @@ struct logger {
 }
 ~~~
 
-Logger object. A logger can output messages to multiple streams.
-Use add streams commands for it.
+Logger object. A logger can output messages to console an a file.
+Members are not part of the public API.
 
 - Members:
     - _verbose:      whether to output verbose
@@ -9871,28 +10015,12 @@ Use add streams commands for it.
 #### Function make_logger()
 
 ~~~ .cpp
-inline logger* make_logger(bool console = true, bool verbose = true);
+inline logger* make_logger(const string& filename = "", bool console = true,
+    bool verbose = true, bool file_append = true);
 ~~~
 
-Make a logger with an optional console stream and a verbosity level
-
-#### Function add_file_stream()
-
-~~~ .cpp
-inline void add_file_stream(logger* lgr, const string& filename, bool append);
-~~~
-
-Add a file stream to a logger.
-
-- Parameters:
-    - lgr: logger
-    - filename: filename
-    - append: append or write open mode for file logger
-    - short_message: whether to use a short message version
-    - output_level: output level
-    - flush_level: output level
-- Returns:
-    - true if ok
+Make a logger with an optional console stream, an optional file stram
+and the specified verbosity level.
 
 #### Function get_default_logger()
 
@@ -9900,8 +10028,7 @@ Add a file stream to a logger.
 inline logger* get_default_logger();
 ~~~
 
-Get default logger.
-By default a non-verbose stdout logger is creater.
+Get the default logger.
 
 #### Function log_info()
 
@@ -9910,7 +10037,7 @@ template <typename... Args>
 inline void log_info(logger* lgr, const string& msg, const Args&... args);
 ~~~
 
-Log a info message
+Log an info message.
 
 #### Function log_warning()
 
@@ -9919,7 +10046,7 @@ template <typename... Args>
 inline void log_warning(logger* lgr, const string& msg, const Args&... args);
 ~~~
 
-Log a info message
+Log an info message.
 
 #### Function log_error()
 
@@ -9928,7 +10055,7 @@ template <typename... Args>
 inline void log_error(logger* lgr, const string& msg, const Args&... args);
 ~~~
 
-Log an error message
+Log an error message.
 
 #### Function log_fatal()
 
@@ -9937,15 +10064,7 @@ template <typename... Args>
 inline void log_fatal(logger* lgr, const string& msg, const Args&... args);
 ~~~
 
-Log a fatal message and exit
-
-#### Function add_file_stream()
-
-~~~ .cpp
-inline void add_file_stream(const string& filename, bool append);
-~~~
-
-Adds a file stream to the default logger
+Log a fatal message and exit.
 
 #### Function log_info()
 
@@ -9954,7 +10073,7 @@ template <typename... Args>
 inline void log_info(const string& msg, const Args&... args);
 ~~~
 
-Logs a message to the default loggers
+Logs a message to the default loggers.
 
 #### Function log_error()
 
@@ -9963,7 +10082,7 @@ template <typename... Args>
 inline void log_error(const string& msg, const Args&... args);
 ~~~
 
-Logs a message to the default loggers
+Logs a message to the default loggers.
 
 #### Function log_fatal()
 
@@ -9972,7 +10091,7 @@ template <typename... Args>
 inline void log_fatal(const string& msg, const Args&... args);
 ~~~
 
-Logs a message to the default loggers
+Logs a message to the default loggers.
 
 ### Simple timer
 
@@ -9990,10 +10109,10 @@ struct timer {
 A simple wrapper for std::chrono.
 
 - Members:
-    - timer():      initialize a timer and start it if necessary
-    - start():      start a timer
-    - stop():      stops a timer
-    - elapsed():      elapsed time
+    - timer():      Initialize a timer and start it if necessary.
+    - start():      Start a timer.
+    - stop():      Stops a timer.
+    - elapsed():      Elapsed time.
 
 
 ### OpenGL utilities
@@ -10009,12 +10128,12 @@ enum struct gl_elem_type : int {
 }
 ~~~
 
-Shape element types
+OpenGL shape element types.
 
 - Values:
-    - point:      points
-    - line:      lines
-    - triangle:      triangles
+    - point:      Points.
+    - line:      Lines.
+    - triangle:      Triangles.
 
 
 #### Enum gl_light_type : int
@@ -10026,20 +10145,30 @@ enum struct gl_light_type : int {
 }
 ~~~
 
-Light types
+OpenGL light types.
 
 - Values:
-    - point:      point lights
-    - directional:      directional lights
+    - point:      Point lights.
+    - directional:      Directional lights.
 
 
 #### Struct gl_lights
 
 ~~~ .cpp
 struct gl_lights {
+    vector<vec3f> pos;
+    vector<vec3f> ke;
+    vector<gl_light_type> type;
+}
 ~~~
 
-State object to store lights for light rendering
+OpenGL lights
+
+- Members:
+    - pos:      light positions.
+    - ke:      Light intensities.
+    - type:      Light types.
+
 
 #### Function gl_check_error()
 
@@ -10047,7 +10176,7 @@ State object to store lights for light rendering
 bool gl_check_error(bool print = true);
 ~~~
 
-Checks for GL error and then prints
+Checks for GL error and then prints.
 
 #### Function gl_clear_buffers()
 
@@ -10055,7 +10184,7 @@ Checks for GL error and then prints
 void gl_clear_buffers(const vec4f& background =;
 ~~~
 
-Clear window
+Clear window.
 
 #### Function gl_enable_depth_test()
 
@@ -10063,7 +10192,7 @@ Clear window
 void gl_enable_depth_test(bool enabled);
 ~~~
 
-Enable/disable depth test
+Enable/disable depth test.
 
 #### Function gl_enable_culling()
 
@@ -10071,7 +10200,7 @@ Enable/disable depth test
 void gl_enable_culling(bool enabled, bool front = false, bool back = true);
 ~~~
 
-Enable/disable culling
+Enable/disable culling.
 
 #### Function gl_enable_wireframe()
 
@@ -10079,16 +10208,7 @@ Enable/disable culling
 void gl_enable_wireframe(bool enabled);
 ~~~
 
-Enable/disable wireframe
-
-#### Function gl_enable_edges()
-
-~~~ .cpp
-void gl_enable_edges(bool enabled, float tolerance = 0.9999f);
-~~~
-
-Enable/disable edges. Attempts to avoid z-fighting but the method is not
-robust.
+Enable/disable wireframe.
 
 #### Function gl_enable_blending()
 
@@ -10096,7 +10216,7 @@ robust.
 void gl_enable_blending(bool enabled);
 ~~~
 
-Enable/disable blending
+Enable/disable blending.
 
 #### Function gl_set_blend_over()
 
@@ -10104,7 +10224,7 @@ Enable/disable blending
 void gl_set_blend_over();
 ~~~
 
-Set blending to over operator
+Set blending to over operator.
 
 #### Function gl_line_width()
 
@@ -10112,7 +10232,7 @@ Set blending to over operator
 void gl_line_width(float w);
 ~~~
 
-Line width
+Line width.
 
 #### Function gl_set_viewport()
 
@@ -10120,7 +10240,7 @@ Line width
 void gl_set_viewport(const vec4i& v);
 ~~~
 
-Set viewport
+Set viewport.
 
 #### Function gl_set_viewport()
 
@@ -10128,7 +10248,15 @@ Set viewport
 void gl_set_viewport(const vec2i& v);
 ~~~
 
-Set viewport
+Set viewport.
+
+#### Function gl_read_imagef()
+
+~~~ .cpp
+void gl_read_imagef(float* pixels, int w, int h, int nc);
+~~~
+
+Reads an image from the the framebuffer.
 
 #### Struct gl_texture
 
@@ -10136,7 +10264,7 @@ Set viewport
 struct gl_texture {
 ~~~
 
-Opengl texture object
+OpenGL texture object. Members are not part of the public API.
 
 #### Function update_texture()
 
@@ -10218,7 +10346,7 @@ Creates a texture from an image. Convenience wrapper to update_texture().
 void bind_texture(const gl_texture& txt, uint unit);
 ~~~
 
-Binds a texture to a texture unit
+Binds a texture to a texture unit.
 
 #### Function unbind_texture()
 
@@ -10226,7 +10354,7 @@ Binds a texture to a texture unit
 void unbind_texture(const gl_texture& txt, uint unit);
 ~~~
 
-Unbinds
+Unbinds a texture.
 
 #### Function get_texture_id()
 
@@ -10234,7 +10362,7 @@ Unbinds
 inline uint get_texture_id(const gl_texture& txt);
 ~~~
 
-Get id
+Get texture id.
 
 #### Function is_texture_valid()
 
@@ -10242,7 +10370,7 @@ Get id
 inline bool is_texture_valid(const gl_texture& txt);
 ~~~
 
-Check if defined
+Check if defined.
 
 #### Function clear_texture()
 
@@ -10263,13 +10391,13 @@ enum struct gl_texture_wrap {
 }
 ~~~
 
-Wrap values for texture
+Wrap values for OpenGL texture.
 
 - Values:
-    - not_set:      not set
-    - repeat:      repeat
-    - clamp:      clamp to edge
-    - mirror:      mirror
+    - not_set:      Not set.
+    - repeat:      Repeat.
+    - clamp:      Clamp to edge.
+    - mirror:      Mirror.
 
 
 #### Enum gl_texture_filter
@@ -10286,16 +10414,16 @@ enum struct gl_texture_filter {
 }
 ~~~
 
-Filter values for texture
+Filter values for OpenGL texture.
 
 - Values:
-    - not_set:      not set
-    - linear:      linear
-    - nearest:      nearest
-    - linear_mipmap_linear:      mip-mapping
-    - nearest_mipmap_nearest:      mip-mapping
-    - linear_mipmap_nearest:      mip-mapping
-    - nearest_mipmap_linear:      mip-mapping
+    - not_set:      Not set.
+    - linear:      Linear.
+    - nearest:      Nearest.
+    - linear_mipmap_linear:      Mip-mapping.
+    - nearest_mipmap_nearest:      Mip-mapping.
+    - linear_mipmap_nearest:      Mip-mapping.
+    - nearest_mipmap_linear:      Mip-mapping.
 
 
 #### Struct gl_texture_info
@@ -10314,18 +10442,18 @@ struct gl_texture_info {
 }
 ~~~
 
-Texture information for parameter setting.
+OpenGL texture parameters.
 
 - Members:
-    - txt:      texture
-    - texcoord:      texture coordinate set
-    - scale:      texture strength/scale (used by some models)
-    - wrap_s:      wrap mode
-    - wrap_t:      wrap mode
-    - filter_mag:      filter mode
-    - filter_min:      filter mode
-    - gl_texture_info():      default constructor
-    - gl_texture_info():      constructor from texture id only
+    - txt:      Texture.
+    - texcoord:      Texture coordinate set.
+    - scale:      Texture strength/scale (used by some models).
+    - wrap_s:      Wrap s mode.
+    - wrap_t:      Wrap t mode
+    - filter_mag:      Filter mag mode.
+    - filter_min:      Filter min mode.
+    - gl_texture_info():      Default constructor.
+    - gl_texture_info():      Constructor from texture id only.
 
 
 ### OpenGL vertex array buffers
@@ -10336,7 +10464,7 @@ Texture information for parameter setting.
 struct gl_vertex_buffer {
 ~~~
 
-OpenGL vertex/element buffer
+OpenGL vertex/element buffer. Members are not part of the public API.
 
 #### Function update_vertex_buffer()
 
@@ -10363,7 +10491,7 @@ inline void update_vertex_buffer(
     gl_vertex_buffer& buf, const vector<float>& values, bool dynamic = false);
 ~~~
 
-Updates the bufferwith new data.
+Updates the buffer with new data.
 
 #### Function update_vertex_buffer()
 
@@ -10372,7 +10500,7 @@ inline void update_vertex_buffer(
     gl_vertex_buffer& buf, const vector<vec2f>& values, bool dynamic = false);
 ~~~
 
-Updates the bufferwith new data.
+Updates the buffer with new data.
 
 #### Function update_vertex_buffer()
 
@@ -10381,7 +10509,7 @@ inline void update_vertex_buffer(
     gl_vertex_buffer& buf, const vector<vec3f>& values, bool dynamic = false);
 ~~~
 
-Updates the bufferwith new data.
+Updates the buffer with new data.
 
 #### Function update_vertex_buffer()
 
@@ -10390,7 +10518,7 @@ inline void update_vertex_buffer(
     gl_vertex_buffer& buf, const vector<vec4f>& values, bool dynamic = false);
 ~~~
 
-Updates the bufferwith new data.
+Updates the buffer with new data.
 
 #### Function update_vertex_buffer()
 
@@ -10399,7 +10527,7 @@ inline void update_vertex_buffer(
     gl_vertex_buffer& buf, const vector<int>& values, bool dynamic = false);
 ~~~
 
-Updates the bufferwith new data.
+Updates the buffer with new data.
 
 #### Function update_vertex_buffer()
 
@@ -10408,7 +10536,7 @@ inline void update_vertex_buffer(
     gl_vertex_buffer& buf, const vector<vec2i>& values, bool dynamic = false);
 ~~~
 
-Updates the bufferwith new data.
+Updates the buffer with new data.
 
 #### Function update_vertex_buffer()
 
@@ -10417,7 +10545,7 @@ inline void update_vertex_buffer(
     gl_vertex_buffer& buf, const vector<vec3i>& values, bool dynamic = false);
 ~~~
 
-Updates the bufferwith new data.
+Updates the buffer with new data.
 
 #### Function update_vertex_buffer()
 
@@ -10436,8 +10564,7 @@ inline gl_vertex_buffer make_vertex_buffer(
     const vector<T>& values, bool dynamic = false);
 ~~~
 
-Make a buffer with new data. A convenience wrapper to
-update_vertex_buffer().
+Make a buffer with new data.
 
 #### Function bind_vertex_buffer()
 
@@ -10445,7 +10572,7 @@ update_vertex_buffer().
 void bind_vertex_buffer(const gl_vertex_buffer& buf, uint vattr);
 ~~~
 
-Bind the buffer at a particular attribute location
+Bind the buffer at a particular attribute location.
 
 #### Function unbind_vertex_buffer()
 
@@ -10453,7 +10580,7 @@ Bind the buffer at a particular attribute location
 void unbind_vertex_buffer(const gl_vertex_buffer& buf, uint vattr);
 ~~~
 
-Unbind the buffer
+Unbind the buffer.
 
 #### Function unbind_vertex_buffer()
 
@@ -10461,7 +10588,7 @@ Unbind the buffer
 void unbind_vertex_buffer(uint vattr);
 ~~~
 
-Unbind the buffer
+Unbind the buffer.
 
 #### Function get_vertex_buffer_id()
 
@@ -10469,7 +10596,7 @@ Unbind the buffer
 inline uint get_vertex_buffer_id(const gl_vertex_buffer& buf);
 ~~~
 
-Get id
+Get buffer id.
 
 #### Function is_vertex_buffer_valid()
 
@@ -10477,7 +10604,7 @@ Get id
 inline bool is_vertex_buffer_valid(const gl_vertex_buffer& buf);
 ~~~
 
-Check if defined
+Check if defined.
 
 #### Function clear_vertex_buffer()
 
@@ -10485,7 +10612,7 @@ Check if defined
 void clear_vertex_buffer(gl_vertex_buffer& buf);
 ~~~
 
-Destroys the buffer
+Destroys the buffer.
 
 ### OpenGL element array buffers
 
@@ -10493,9 +10620,19 @@ Destroys the buffer
 
 ~~~ .cpp
 struct gl_element_buffer {
+    uint bid = 0;
+    int num = 0;
+    int ncomp = 0;
+}
 ~~~
 
-OpenGL vertex/element buffer
+OpenGL element array buffer. Members are not part of the public API.
+
+- Members:
+    - bid:      Buffer id.
+    - num:      Number of elements.
+    - ncomp:      Number of components.
+
 
 #### Function update_element_buffer()
 
@@ -10522,7 +10659,7 @@ inline void update_element_buffer(
     gl_element_buffer& buf, const vector<vec2i>& values, bool dynamic = false);
 ~~~
 
-Updates the bufferwith new data.
+Updates the buffer with new data.
 
 #### Function update_element_buffer()
 
@@ -10531,7 +10668,7 @@ inline void update_element_buffer(
     gl_element_buffer& buf, const vector<vec3i>& values, bool dynamic = false);
 ~~~
 
-Updates the bufferwith new data.
+Updates the buffer with new data.
 
 #### Function update_element_buffer()
 
@@ -10540,7 +10677,7 @@ inline void update_element_buffer(
     gl_element_buffer& buf, const vector<vec4i>& values, bool dynamic = false);
 ~~~
 
-Updates the bufferwith new data.
+Updates the buffer with new data.
 
 #### Function make_element_buffer()
 
@@ -10550,8 +10687,7 @@ inline gl_element_buffer make_element_buffer(
     const vector<T>& values, bool dynamic = false);
 ~~~
 
-Make a buffer with new data. A convenience wrapper to
-update_velement_buffer().
+Make a buffer with new data.
 
 #### Function draw_elems()
 
@@ -10591,9 +10727,21 @@ Destroys the buffer
 
 ~~~ .cpp
 struct gl_program {
+    uint pid = 0;
+    uint vid = 0;
+    uint fid = 0;
+    uint vao = 0;
+}
 ~~~
 
-OpenGL program
+OpenGL program. Members are not part of the public API.
+
+- Members:
+    - pid:      Program id.
+    - vid:      Vertex shader id.
+    - fid:      Fragment shader id.
+    - vao:      Vertex array object.
+
 
 #### Function make_program()
 
@@ -10601,9 +10749,7 @@ OpenGL program
 gl_program make_program(const string& vertex, const string& fragment);
 ~~~
 
-Creates and OpenGL program from vertex and fragment code. Returns the
-program id. Optionally return vertex and fragment shader ids. A VAO is
-created.
+Creates an OpenGL program from vertex and fragment code.
 
 #### Function clear_program()
 
@@ -10611,7 +10757,7 @@ created.
 void clear_program(gl_program& prog);
 ~~~
 
-Destroys the program pid and optionally the sahders vid and fid.
+Destroys the program.
 
 #### Function get_program_uniform_location()
 
@@ -10619,7 +10765,7 @@ Destroys the program pid and optionally the sahders vid and fid.
 int get_program_uniform_location(const gl_program& prog, const string& name);
 ~~~
 
-Get uniform location (simple GL wrapper that avoids GL includes)
+Get uniform location.
 
 #### Function get_program_attrib_location()
 
@@ -10627,7 +10773,7 @@ Get uniform location (simple GL wrapper that avoids GL includes)
 int get_program_attrib_location(const gl_program& prog, const string& name);
 ~~~
 
-Get uniform location (simple GL wrapper that avoids GL includes)
+Get attribute location.
 
 #### Function get_program_uniforms_names()
 
@@ -10635,7 +10781,7 @@ Get uniform location (simple GL wrapper that avoids GL includes)
 vector<pair<string, int>> get_program_uniforms_names(const gl_program& prog);
 ~~~
 
-Get the names of all uniforms
+Get the names of all uniforms.
 
 #### Function get_program_attributes_names()
 
@@ -10643,7 +10789,7 @@ Get the names of all uniforms
 vector<pair<string, int>> get_program_attributes_names(const gl_program& prog);
 ~~~
 
-Get the names of all attributes
+Get the names of all attributes.
 
 #### Function set_program_uniform()
 
@@ -10652,9 +10798,8 @@ bool set_program_uniform(
     gl_program& prog, int pos, const int* val, int ncomp, int count);
 ~~~
 
-Set uniform integer values val for program pid and variable loc.
-The values have nc number of components (1-4) and count elements
-(for arrays).
+Set uniform integer values `val` for program `prog` and variable `pos`.
+The values have `nc` number of components (1-4) and `count` elements.
 
 #### Function set_program_uniform()
 
@@ -10663,9 +10808,8 @@ bool set_program_uniform(
     gl_program& prog, int pos, const float* val, int ncomp, int count);
 ~~~
 
-Set uniform float values val for program pid and variable var.
-The values have nc number of components (1-4) and count elements
-(for arrays).
+Set uniform float values `val` for program `prog` and variable `pos`.
+The values have `nc` number of components (1-4) and `count` elements.
 
 #### Function set_program_uniform()
 
@@ -10673,7 +10817,7 @@ The values have nc number of components (1-4) and count elements
 inline bool set_program_uniform(gl_program& prog, int var, bool val);
 ~~~
 
-Set uniform float values val for program pid and variable var.
+Set uniform value.
 
 #### Function set_program_uniform()
 
@@ -10681,7 +10825,7 @@ Set uniform float values val for program pid and variable var.
 inline bool set_program_uniform(gl_program& prog, int var, int val);
 ~~~
 
-Set uniform float values val for program pid and variable var.
+Set uniform value.
 
 #### Function set_program_uniform()
 
@@ -10689,7 +10833,7 @@ Set uniform float values val for program pid and variable var.
 inline bool set_program_uniform(gl_program& prog, int var, float val);
 ~~~
 
-Set uniform float values val for program pid and variable var.
+Set uniform value.
 
 #### Function set_program_uniform()
 
@@ -10699,7 +10843,7 @@ inline bool set_program_uniform(
     gl_program& prog, int var, const vec<T, N>& val);
 ~~~
 
-Set uniform float values val for program pid and variable var.
+Set uniform value.
 
 #### Function set_program_uniform()
 
@@ -10709,7 +10853,7 @@ inline bool set_program_uniform(
     gl_program& prog, int var, const mat<T, 4>& val);
 ~~~
 
-Set uniform float values val for program pid and variable var.
+Set uniform value.
 
 #### Function set_program_uniform()
 
@@ -10719,7 +10863,7 @@ inline bool set_program_uniform(
     gl_program& prog, int var, const frame<T, 3>& val);
 ~~~
 
-Set uniform float values val for program pid and variable var.
+Set uniform value.
 
 #### Function set_program_uniform()
 
@@ -10728,7 +10872,7 @@ inline bool set_program_uniform(
     gl_program& prog, int var, const int* val, int num);
 ~~~
 
-Set uniform float values val for program pid and variable var.
+Set uniform array.
 
 #### Function set_program_uniform()
 
@@ -10737,7 +10881,7 @@ inline bool set_program_uniform(
     gl_program& prog, int var, const float* val, int num);
 ~~~
 
-Set uniform float values val for program pid and variable var.
+Set uniform array.
 
 #### Function set_program_uniform()
 
@@ -10747,7 +10891,7 @@ inline bool set_program_uniform(
     gl_program& prog, int var, const vec<T, N>* val, int num);
 ~~~
 
-Set uniform float values val for program pid and variable var.
+Set uniform array.
 
 #### Function set_program_uniform()
 
@@ -10757,7 +10901,7 @@ inline bool set_program_uniform(
     gl_program& prog, int var, const mat<T, 4>* val, int num);
 ~~~
 
-Set uniform float values val for program pid and variable var.
+Set uniform array.
 
 #### Function set_program_uniform()
 
@@ -10767,7 +10911,7 @@ inline bool set_program_uniform(
     gl_program& prog, int var, const frame<T, 3>* val, int num);
 ~~~
 
-Set uniform float values val for program pid and variable var.
+Set uniform array.
 
 #### Function set_program_uniform()
 
@@ -10777,7 +10921,7 @@ inline bool set_program_uniform(
     gl_program& prog, const string& var, const T& val);
 ~~~
 
-Set uniform float values val for program pid and variable var.
+Set uniform value for names variable.
 
 #### Function set_program_uniform()
 
@@ -10787,7 +10931,7 @@ inline bool set_program_uniform(
     gl_program& prog, const string& var, const T* val, int num);
 ~~~
 
-Set uniform float values val for program pid and variable var.
+Set uniform array for names variable.
 
 #### Function set_program_uniform_texture()
 
@@ -10796,8 +10940,7 @@ bool set_program_uniform_texture(
     gl_program& prog, int pos, const gl_texture_info& tinfo, uint tunit);
 ~~~
 
-Set uniform texture id tid and unit tunit for program pid and variable
-var.
+Set uniform texture.
 
 #### Function set_program_uniform_texture()
 
@@ -10806,9 +10949,7 @@ inline bool set_program_uniform_texture(gl_program& prog, int var, int varon,
     const gl_texture_info& tinfo, uint tunit);
 ~~~
 
-Set uniform texture id tid and unit tunit for program pid and variable
-var. Optionally sets the int variable varon to 0/1 whether the texture
-is enable on not.
+Set uniform texture with an additionasl texture enable flags.
 
 #### Function set_program_uniform_texture()
 
@@ -10817,8 +10958,7 @@ inline bool set_program_uniform_texture(gl_program& prog, const string& var,
     const gl_texture_info& tinfo, uint tunit);
 ~~~
 
-Set uniform texture id tid and unit tunit for program pid and variable
-var.
+Set uniform texture.
 
 #### Function set_program_uniform_texture()
 
@@ -10827,9 +10967,7 @@ inline bool set_program_uniform_texture(gl_program& prog, const string& var,
     const string& varon, const gl_texture_info& tinfo, uint tunit);
 ~~~
 
-Set uniform texture id tid and unit tunit for program pid and variable
-var. Optionally sets the int variable varon to 0/1 whether the texture
-is enable on not.
+Set uniform texture with an additionasl texture enable flags.
 
 #### Function set_program_vertattr()
 
@@ -10838,8 +10976,8 @@ bool set_program_vertattr(
     gl_program& prog, int pos, const float* value, int nc);
 ~~~
 
-Sets a constant value for a vertex attribute for program pid and
-variable var. The attribute has nc components.
+Sets a constant `value` of `nc` components for the vertex attribute at
+`pos` location.
 
 #### Function set_program_vertattr()
 
@@ -10847,8 +10985,8 @@ variable var. The attribute has nc components.
 bool set_program_vertattr(gl_program& prog, int pos, const int* value, int nc);
 ~~~
 
-Sets a constant value for a vertex attribute for program pid and
-variable var. The attribute has nc components.
+Sets a constant `value` of `nc` components for the vertex attribute at
+`pos` location.
 
 #### Function set_program_vertattr()
 
@@ -10857,8 +10995,7 @@ bool set_program_vertattr(
     gl_program& prog, const string& var, const gl_vertex_buffer& buf);
 ~~~
 
-Sets a vartex attribute for program pid and variable var to the buffer
-bid. The attribute has nc components and per-vertex values values.
+Binds a buffer to a vertex attribute.
 
 #### Function set_program_vertattr()
 
@@ -10867,9 +11004,8 @@ bool set_program_vertattr(gl_program& prog, int pos,
     const gl_vertex_buffer& buf, int nc, const float* def);
 ~~~
 
-Sets a vartex attribute for program pid and variable var. The attribute
-has nc components and either buffer bid or a single value def
-(if bid is zero). Convenience wrapper to above functions.
+Binds a buffer to a vertex attribute, or a constant value if the buffer is
+empty.
 
 #### Function set_program_vertattr()
 
@@ -10879,9 +11015,7 @@ inline bool set_program_vertattr(gl_program& prog, int var,
     const gl_vertex_buffer& buf, const vec<T, N>& def);
 ~~~
 
-Sets a vartex attribute for program pid and variable var. The attribute
-is either a buffer bid or a single value def
-(if bid is zero). Convenience wrapper to above functions.
+Binds a buffer or constant to a vertex attribute.
 
 #### Function set_program_vertattr()
 
@@ -10891,9 +11025,7 @@ inline bool set_program_vertattr(gl_program& prog, const string& var,
     const gl_vertex_buffer& buf, const vec<T, N>& def);
 ~~~
 
-Sets a vartex attribute for program pid and variable var. The attribute
-is either a buffer bid or a single value def
-(if bid is zero). Convenience wrapper to above functions.
+Binds a buffer or constant to a vertex attribute.
 
 #### Function is_program_valid()
 
@@ -10901,7 +11033,7 @@ is either a buffer bid or a single value def
 inline bool is_program_valid(const gl_program& prog);
 ~~~
 
-Check whether it is valid
+Check whether the program is valid.
 
 #### Function bind_program()
 
@@ -10909,7 +11041,7 @@ Check whether it is valid
 void bind_program(const gl_program& prog);
 ~~~
 
-Binds a program
+Binds a program.
 
 #### Function unbind_program()
 
@@ -10917,7 +11049,7 @@ Binds a program
 void unbind_program(const gl_program& prog);
 ~~~
 
-Unbind a program
+Unbind a program.
 
 ### OpenGL scene shader support
 
@@ -10935,7 +11067,7 @@ Vertex buffers for scene drawing. Members are not part of the public API.
 void clear_shape(gl_shape& shp);
 ~~~
 
-Clear shape
+Clear shape.
 
 #### Function make_gl_lights()
 
@@ -10943,7 +11075,7 @@ Clear shape
 gl_lights make_gl_lights(const scene* scn);
 ~~~
 
-Initialize gl lights
+Initialize gl lights.
 
 #### Function clear_textures()
 
@@ -10986,9 +11118,17 @@ Update scene shapes on the GPU.
 
 ~~~ .cpp
 struct gl_stdimage_program {
+    gl_program prog = {};
+    gl_vertex_buffer vbo = {};
+}
 ~~~
 
-A shader for displaying images
+A shader for displaying images.  Members are not part of the public API.
+
+- Members:
+    - prog:      Program.
+    - vbo:      Vertex array.
+
 
 #### Function make_stdimage_program()
 
@@ -10996,17 +11136,17 @@ A shader for displaying images
 gl_stdimage_program make_stdimage_program();
 ~~~
 
-Initialize the program. Call with true only after the GL is initialized.
+Initialize a stdimage program.
 
 #### Function draw_image()
 
 ~~~ .cpp
-inline void draw_image(gl_stdimage_program& prog, const gl_texture& txt,
+void draw_image(gl_stdimage_program& prog, const gl_texture& txt,
     const vec2i& win_size, const vec2f& offset, float zoom, float exposure,
     float gamma, bool filmic);
 ~~~
 
-As above but includes an exposure/gamma correction.
+Draws an image texture the stdimage program.
 
 #### Function draw_image()
 
@@ -11015,8 +11155,7 @@ inline void draw_image(gl_stdimage_program& prog, const gl_texture& txt,
     const vec2i& win_size, const vec2f& offset, float zoom);
 ~~~
 
-Draw an texture tid of size img_w, img_h on a window of size win_w,
-win_h with top-left corner at ox, oy with a zoom zoom.
+Draws an image texture the stdimage program.
 
 #### Struct gl_stdimage_params
 
@@ -11032,17 +11171,16 @@ struct gl_stdimage_params {
 }
 ~~~
 
-Params for  gl_stdimage_program drawing. This is just a way to pack all
-params together for the above functions.
+Params for stdimage drawing.
 
 - Members:
-    - win_size:      window size
-    - offset:      image offset
-    - zoom:      image zoom
-    - exposure:      tonemap exposure
-    - gamma:      tonemap gamma
-    - filmic:      tonemap filmic
-    - background:      image background
+    - win_size:      Window size.
+    - offset:      Image offset.
+    - zoom:      Image zoom.
+    - exposure:      Tonemap exposure.
+    - gamma:      Tonemap gamma.
+    - filmic:      Tonemap filmic.
+    - background:      Image background.
 
 
 #### Function draw_image()
@@ -11052,7 +11190,7 @@ inline void draw_image(gl_stdimage_program& prog, const gl_texture& txt,
     const gl_stdimage_params& params, bool clear_background = true);
 ~~~
 
-As above but includes an exposure/gamma correction.
+Draws an image texture the stdimage program.
 
 ### OpenGL surface shader
 
@@ -11060,11 +11198,16 @@ As above but includes an exposure/gamma correction.
 
 ~~~ .cpp
 struct gl_stdsurface_program {
+    gl_program prog = {};
+}
 ~~~
 
-Shade with a physically-based standard shader based on Phong/GGX.
-Filmic tone mapping from
-https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/
+Program to shade surfaces with a physically-based standard shader based on
+Phong/GGX. Members are not part of public API.
+
+- Members:
+    - prog:      Program.
+
 
 #### Function make_stdsurface_program()
 
@@ -11072,8 +11215,7 @@ https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/
 gl_stdsurface_program make_stdsurface_program();
 ~~~
 
-Initialize a standard shader. Call with true only after the gl has
-been initialized
+Initialize a stdsurface shader.
 
 #### Function is_program_valid()
 
@@ -11081,7 +11223,7 @@ been initialized
 inline bool is_program_valid(const gl_stdsurface_program& prog);
 ~~~
 
-Check if the program is valid
+Check if the program is valid.
 
 #### Function begin_stdsurface_frame()
 
@@ -11093,7 +11235,7 @@ void begin_stdsurface_frame(gl_stdsurface_program& prog, bool shade_eyelight,
 ~~~
 
 Starts a frame by setting exposure/gamma values, camera transforms and
-projection. Sets also whether to use full shading or a quick eyelight
+projection. Sets also whether to use full shading or a quick eye light
 preview.
 
 #### Function end_stdsurface_frame()
@@ -11111,8 +11253,7 @@ void set_stdsurface_lights(
     gl_stdsurface_program& prog, const vec3f& amb, const gl_lights& lights);
 ~~~
 
-Set num lights with position pos, color ke, type ltype. Also set the
-ambient illumination amb.
+Set shading lights and ambient.
 
 #### Function begin_stdsurface_shape()
 
@@ -11121,7 +11262,7 @@ void begin_stdsurface_shape(
     gl_stdsurface_program& prog, const mat4f& xform, float normal_offset = 0);
 ~~~
 
-Begins drawing a shape with transform xform.
+Begins drawing a shape with transform `xform`.
 
 #### Function end_stdsurface_shape()
 
@@ -11161,12 +11302,12 @@ void set_stdsurface_material(gl_stdsurface_program& prog, material_type type,
     bool alpha_cutout);
 ~~~
 
-Set material values with emission ke, diffuse kd, specular ks and
-specular roughness rs, opacity op. Indicates textures ids with the
-correspoinding XXX_txt variables. Sets also normal and occlusion
-maps. Works for points/lines/triangles (diffuse for points,
-Kajiya-Kay for lines, GGX/Phong for triangles).
-Material type matches the scene material type.
+Set material values with emission `ke`, diffuse `kd`, specular `ks` and
+specular roughness `rs`, opacity `op`. Indicates textures ids with the
+correspoinding `XXX_txt` variables. Sets also normal and occlusion
+maps. Works for points/lines/triangles indicated by `etype`, (diffuse for
+points, Kajiya-Kay for lines, GGX/Phong for triangles). Material `type`
+matches the scene material type.
 
 #### Function set_stdsurface_constmaterial()
 
@@ -11175,7 +11316,7 @@ void set_stdsurface_constmaterial(
     gl_stdsurface_program& prog, const vec3f& ke, float op);
 ~~~
 
-Set constant material values with emission ke.
+Set constant material with emission `ke` and opacity `op`.
 
 #### Function set_stdsurface_vert()
 
@@ -11241,26 +11382,26 @@ struct gl_stdsurface_params {
 }
 ~~~
 
-Params for  gl_stdsurface_program drawing
+Params for stdsurface drawing.
 
 - Members:
-    - camera_id:      camera id (-1 for deafult)
-    - width:      image width
-    - height:      image height
-    - exposure:      image exposure
-    - gamma:      image gamma
-    - filmic:      image filmic tonemapping
-    - wireframe:      draw as wireframe
-    - edges:      draw with overlaid edges
-    - edge_offset:      offset for edges
-    - cutout:      draw with an alpha cutout for binary transparency
-    - camera_lights:      camera light mode
-    - background:      window background
-    - ambient:      ambient illumination
-    - highlighted:      highlighted object
-    - highlight_color:      highlight color
-    - edge_color:      edge color
-    - cull_backface:      cull back back
+    - camera_id:      Camera id (-1 for deafult).
+    - width:      Image width.
+    - height:      Image height.
+    - exposure:      Image exposure.
+    - gamma:      Image gamma.
+    - filmic:      Image filmic tonemapping.
+    - wireframe:      Draw as wireframe.
+    - edges:      Draw with overlaid edges
+    - edge_offset:      Offset for edges.
+    - cutout:      Draw with an alpha cutout for binary transparency.
+    - camera_lights:      Camera light mode.
+    - background:      Window background.
+    - ambient:      Ambient illumination.
+    - highlighted:      Highlighted object.
+    - highlight_color:      Highlight color.
+    - edge_color:      Edge color.
+    - cull_backface:      Cull back face.
 
 
 #### Function draw_stdsurface_scene()
@@ -11272,7 +11413,7 @@ void draw_stdsurface_scene(const scene* scn, const camera* cam,
     const gl_stdsurface_params& params);
 ~~~
 
-Draw whole scene
+Draw scene with stdsurface program.
 
 ### OpenGL window
 
@@ -11282,7 +11423,7 @@ Draw whole scene
 typedef void (*gl_text_callback)(gl_window*, unsigned int);
 ~~~
 
-Text callback
+Text callback.
 
 #### Function void()
 
@@ -11290,7 +11431,7 @@ Text callback
 typedef void (*gl_mouse_callback)(gl_window*, int button, bool press, int mods);
 ~~~
 
-Mouse callback
+Mouse callback.
 
 #### Function void()
 
@@ -11298,7 +11439,7 @@ Mouse callback
 typedef void (*gl_refresh_callback)(gl_window*);
 ~~~
 
-Window refresh callback
+Window refresh callback.
 
 #### Struct gl_window
 
@@ -11306,7 +11447,7 @@ Window refresh callback
 struct gl_window {
 ~~~
 
-Window
+OpenGL window. Members are not part of the public API.
 
 #### Function make_window()
 
@@ -11315,7 +11456,7 @@ gl_window* make_window(
     int width, int height, const string& title, void* user_pointer = nullptr);
 ~~~
 
-Initialize gl_window
+Initialize a window.
 
 #### Function set_window_callbacks()
 
@@ -11324,7 +11465,7 @@ void set_window_callbacks(gl_window* win, gl_text_callback text_cb,
     gl_mouse_callback mouse_cb, gl_refresh_callback refresh_cb);
 ~~~
 
-Set gl_window callbacks
+Set window callbacks.
 
 #### Function clear_window()
 
@@ -11332,7 +11473,7 @@ Set gl_window callbacks
 void clear_window(gl_window* win);
 ~~~
 
-Clear gl_window
+Clear window.
 
 #### Function get_user_pointer()
 
@@ -11340,7 +11481,7 @@ Clear gl_window
 inline void* get_user_pointer(gl_window* win);
 ~~~
 
-Gets the user poiner
+Gets the user poiner.
 
 #### Function set_window_title()
 
@@ -11348,7 +11489,7 @@ Gets the user poiner
 void set_window_title(gl_window* win, const string& title);
 ~~~
 
-Set gl_window title
+Set window title.
 
 #### Function wait_events()
 
@@ -11382,6 +11523,30 @@ bool should_close(gl_window* win);
 
 Should close
 
+#### Function get_window_size()
+
+~~~ .cpp
+vec2i get_window_size(gl_window* win);
+~~~
+
+Window size
+
+#### Function get_framebuffer_size()
+
+~~~ .cpp
+vec2i get_framebuffer_size(gl_window* win);
+~~~
+
+Framebuffer size
+
+#### Function get_widget_size()
+
+~~~ .cpp
+inline int get_widget_size(gl_window* win);
+~~~
+
+Widgets
+
 #### Function get_mouse_button()
 
 ~~~ .cpp
@@ -11406,14 +11571,6 @@ vec2f get_mouse_posf(gl_window* win);
 
 Mouse position
 
-#### Function get_window_size()
-
-~~~ .cpp
-vec2i get_window_size(gl_window* win);
-~~~
-
-Window size
-
 #### Function get_key()
 
 ~~~ .cpp
@@ -11421,22 +11578,6 @@ bool get_key(gl_window* win, int key);
 ~~~
 
 Check if a key is pressed (not all keys are supported)
-
-#### Function get_framebuffer_size()
-
-~~~ .cpp
-vec2i get_framebuffer_size(gl_window* win);
-~~~
-
-Framebuffer size
-
-#### Function get_widget_size()
-
-~~~ .cpp
-inline int get_widget_size(gl_window* win);
-~~~
-
-Widgets
 
 #### Function get_screenshot()
 
@@ -11472,7 +11613,7 @@ void init_widgets(
     gl_window* win, bool light_style = false, bool extra_font = true);
 ~~~
 
-Initialize widgets
+Initialize widgets.
 
 #### Function begin_widgets()
 
@@ -11480,7 +11621,7 @@ Initialize widgets
 bool begin_widgets(gl_window* win, const string& title);
 ~~~
 
-Begin draw widget
+Begin draw widgets.
 
 #### Function end_widgets()
 
@@ -11488,7 +11629,7 @@ Begin draw widget
 void end_widgets(gl_window* win);
 ~~~
 
-End draw widget
+End draw widgets.
 
 #### Function get_widget_active()
 
@@ -11496,7 +11637,7 @@ End draw widget
 bool get_widget_active(gl_window* win);
 ~~~
 
-Whether widget are active
+Whether widgets are active.
 
 #### Function draw_separator_widget()
 
@@ -11504,7 +11645,7 @@ Whether widget are active
 void draw_separator_widget(gl_window* win);
 ~~~
 
-Horizontal separator
+Horizontal separator.
 
 #### Function draw_indent_widget_begin()
 
@@ -11512,7 +11653,7 @@ Horizontal separator
 void draw_indent_widget_begin(gl_window* win);
 ~~~
 
-Indent widget
+Indent widget.
 
 #### Function draw_indent_widget_end()
 
@@ -11520,7 +11661,7 @@ Indent widget
 void draw_indent_widget_end(gl_window* win);
 ~~~
 
-Indent widget
+Indent widget.
 
 #### Function draw_continue_widget()
 
@@ -11528,7 +11669,7 @@ Indent widget
 void draw_continue_widget(gl_window* win);
 ~~~
 
-Continue line with next widget
+Continue line with next widget.
 
 #### Function draw_label_widget()
 
@@ -11536,7 +11677,7 @@ Continue line with next widget
 void draw_label_widget(gl_window* win, const string& lbl, const string& msg);
 ~~~
 
-Label widget
+Label widget.
 
 #### Function draw_label_widget()
 
@@ -11546,7 +11687,7 @@ inline void draw_label_widget(
     gl_window* win, const string& lbl, const string& fmt, const Args&... args);
 ~~~
 
-Label widget
+Label widget.
 
 #### Function draw_label_widget()
 
@@ -11555,7 +11696,7 @@ template <typename T>
 inline void draw_label_widget(gl_window* win, const string& lbl, const T& val);
 ~~~
 
-Label widget
+Label widget.
 
 #### Function draw_label_widget()
 
@@ -11565,7 +11706,15 @@ inline void draw_label_widget(gl_window* win, const string& lbl,
     const vector<T>& vals, bool skip_empty = false);
 ~~~
 
-Label widget
+Label widget.
+
+#### Function draw_value_widget()
+
+~~~ .cpp
+bool draw_value_widget(gl_window* win, const string& lbl, bool& val);
+~~~
+
+Value widget
 
 #### Function draw_value_widget()
 
@@ -11573,7 +11722,7 @@ Label widget
 bool draw_value_widget(gl_window* win, const string& lbl, string& str);
 ~~~
 
-Value widget
+Value widget.
 
 #### Function draw_value_widget()
 
@@ -11582,7 +11731,7 @@ bool draw_value_widget(gl_window* win, const string& lbl, int* val, int ncomp,
     int min = 0, int max = 1, int incr = 1);
 ~~~
 
-Value widget
+Value widget.
 
 #### Function draw_value_widget()
 
@@ -11591,7 +11740,7 @@ bool draw_value_widget(gl_window* win, const string& lbl, float* val, int ncomp,
     float min = 0, float max = 1, float incr = 1);
 ~~~
 
-Value widget
+Value widget.
 
 #### Function draw_value_widget()
 
@@ -11600,7 +11749,7 @@ inline bool draw_value_widget(gl_window* win, const string& lbl, int& val,
     int min = 0, int max = 1, int incr = 1);
 ~~~
 
-Value widget
+Value widget.
 
 #### Function draw_value_widget()
 
@@ -11609,7 +11758,7 @@ inline bool draw_value_widget(gl_window* win, const string& lbl, float& val,
     float min = 0, float max = 1, float incr = 1);
 ~~~
 
-Value widget
+Value widget.
 
 #### Function draw_value_widget()
 
@@ -11619,7 +11768,7 @@ inline bool draw_value_widget(gl_window* win, const string& lbl,
     vec<int, N>& val, int min = 0, int max = 1, int incr = 1);
 ~~~
 
-Value widget
+Value widget.
 
 #### Function draw_value_widget()
 
@@ -11629,7 +11778,7 @@ inline bool draw_value_widget(gl_window* win, const string& lbl,
     vec<float, N>& val, float min = 0, float max = 1, float incr = 0.01f);
 ~~~
 
-Value widget
+Value widget.
 
 #### Function draw_value_widget()
 
@@ -11638,7 +11787,7 @@ inline bool draw_value_widget(gl_window* win, const string& lbl,
     mat<float, 4>& val, float min = 0, float max = 1, float incr = 0.01f);
 ~~~
 
-Slider widget
+Value widget.
 
 #### Function draw_value_widget()
 
@@ -11647,7 +11796,7 @@ inline bool draw_value_widget(gl_window* win, const string& lbl,
     frame<float, 3>& val, float min = -1, float max = 1, float incr = 1);
 ~~~
 
-Slider widget
+Value widget.
 
 #### Function draw_value_widget()
 
@@ -11657,7 +11806,7 @@ inline bool draw_value_widget(
     gl_window* win, const string& lbl, quat<T, N>& val, float incr = 1);
 ~~~
 
-Slider widget
+Value widget.
 
 #### Function draw_color_widget()
 
@@ -11665,7 +11814,7 @@ Slider widget
 bool draw_color_widget(gl_window* win, const string& lbl, vec4f& val);
 ~~~
 
-Color widget
+Color widget.
 
 #### Function draw_color_widget()
 
@@ -11673,7 +11822,7 @@ Color widget
 bool draw_color_widget(gl_window* win, const string& lbl, vec4b& val);
 ~~~
 
-Color widget
+Color widget.
 
 #### Function draw_color_widget()
 
@@ -11681,7 +11830,7 @@ Color widget
 bool draw_color_widget(gl_window* win, const string& lbl, vec3f& val);
 ~~~
 
-Color widget
+Color widget.
 
 #### Function draw_combo_widget_begin()
 
@@ -11690,7 +11839,7 @@ bool draw_combo_widget_begin(
     gl_window* win, const string& lbl, const string& label);
 ~~~
 
-Combo widget
+Combo widget.
 
 #### Function draw_combo_widget_item()
 
@@ -11699,7 +11848,7 @@ bool draw_combo_widget_item(
     gl_window* win, const string& label, int idx, bool selected);
 ~~~
 
-Combo widget
+Combo widget.
 
 #### Function draw_combo_widget_end()
 
@@ -11707,7 +11856,7 @@ Combo widget
 void draw_combo_widget_end(gl_window* win);
 ~~~
 
-Combo widget
+Combo widget.
 
 #### Function draw_combo_widget_item()
 
@@ -11717,7 +11866,7 @@ bool draw_combo_widget_item(
     gl_window* win, const string& label, int idx, T& val, const T& item);
 ~~~
 
-Combo widget
+Combo widget.
 
 #### Function draw_value_widget()
 
@@ -11728,7 +11877,7 @@ inline bool draw_value_widget(gl_window* win, const string& lbl, T& val,
     const function<string(const T1&)>& label_func);
 ~~~
 
-Combo widget
+Combo widget.
 
 #### Function draw_value_widget()
 
@@ -11737,7 +11886,7 @@ inline bool draw_value_widget(gl_window* win, const string& lbl, string& val,
     const vector<string>& labels);
 ~~~
 
-Combo widget
+Combo widget.
 
 #### Function draw_value_widget()
 
@@ -11747,7 +11896,7 @@ inline bool draw_value_widget(gl_window* win, const string& lbl, T& val,
     const vector<pair<string, T>>& labels);
 ~~~
 
-Combo widget
+Combo widget.
 
 #### Function draw_value_widget()
 
@@ -11759,21 +11908,13 @@ inline bool draw_value_widget(gl_window* win, const string& lbl, T*& val,
 
 Combo widget
 
-#### Function draw_value_widget()
-
-~~~ .cpp
-bool draw_value_widget(gl_window* win, const string& lbl, bool& val);
-~~~
-
-Bool widget
-
 #### Function draw_button_widget()
 
 ~~~ .cpp
 bool draw_button_widget(gl_window* win, const string& lbl);
 ~~~
 
-Button widget
+Button widget.
 
 #### Function draw_header_widget()
 
@@ -11781,7 +11922,7 @@ Button widget
 bool draw_header_widget(gl_window* win, const string& lbl);
 ~~~
 
-Collapsible header
+Collapsible header widget.
 
 #### Function draw_tree_widget_begin()
 
@@ -11789,7 +11930,7 @@ Collapsible header
 bool draw_tree_widget_begin(gl_window* win, const string& lbl);
 ~~~
 
-Start tree node
+Start tree widget.
 
 #### Function draw_tree_widget_end()
 
@@ -11797,7 +11938,7 @@ Start tree node
 void draw_tree_widget_end(gl_window* win);
 ~~~
 
-Collapsible header
+End tree widget.
 
 #### Function draw_tree_widget_begin()
 
@@ -11806,7 +11947,7 @@ bool draw_tree_widget_begin(
     gl_window* win, const string& lbl, void*& selection, void* content);
 ~~~
 
-Start selectable tree node
+Start selectable tree node widget.
 
 #### Function draw_tree_widget_begin()
 
@@ -11815,7 +11956,7 @@ bool draw_tree_widget_begin(gl_window* win, const string& lbl, void*& selection,
     void* content, const vec4f& col);
 ~~~
 
-Start selectable tree node
+Start selectable tree node widget.
 
 #### Function draw_tree_widget_end()
 
@@ -11823,7 +11964,7 @@ Start selectable tree node
 void draw_tree_widget_end(gl_window* win, void* content);
 ~~~
 
-End selectable tree node
+End selectable tree node widget.
 
 #### Function draw_tree_widget_leaf()
 
@@ -11832,7 +11973,7 @@ void draw_tree_widget_leaf(
     gl_window* win, const string& lbl, void*& selection, void* content);
 ~~~
 
-Selectable tree leaf node
+Selectable tree leaf nodewidget.
 
 #### Function draw_tree_widget_leaf()
 
@@ -11841,7 +11982,23 @@ void draw_tree_widget_leaf(gl_window* win, const string& lbl, void*& selection,
     void* content, const vec4f& col);
 ~~~
 
-Selectable tree leaf node
+Selectable tree leaf node widget.
+
+#### Function draw_tree_widget_color_begin()
+
+~~~ .cpp
+void draw_tree_widget_color_begin(gl_window* win, const vec4f& color);
+~~~
+
+Text color widget.
+
+#### Function draw_tree_widget_color_end()
+
+~~~ .cpp
+void draw_tree_widget_color_end(gl_window* win);
+~~~
+
+Text color widget.
 
 #### Function draw_image_widget()
 
@@ -11850,7 +12007,7 @@ void draw_image_widget(
     gl_window* win, int tid, const vec2i& size, const vec2i& imsize);
 ~~~
 
-Image widget
+Image widget.
 
 #### Function draw_scroll_widget_begin()
 
@@ -11859,7 +12016,7 @@ void draw_scroll_widget_begin(
     gl_window* win, const string& lbl, int height, bool border);
 ~~~
 
-Scroll region
+Scroll region widget.
 
 #### Function draw_scroll_widget_end()
 
@@ -11867,7 +12024,7 @@ Scroll region
 void draw_scroll_widget_end(gl_window* win);
 ~~~
 
-Scroll region
+Scroll region widget.
 
 #### Function draw_scroll_widget_here()
 
@@ -11875,7 +12032,7 @@ Scroll region
 void draw_scroll_widget_here(gl_window* win);
 ~~~
 
-Scroll region
+Scroll region widget.
 
 #### Function draw_groupid_widget_begin()
 
@@ -11883,7 +12040,7 @@ Scroll region
 void draw_groupid_widget_begin(gl_window* win, int gid);
 ~~~
 
-Group ids
+Group ids widget.
 
 #### Function draw_groupid_widget_begin()
 
@@ -11891,7 +12048,7 @@ Group ids
 void draw_groupid_widget_begin(gl_window* win, void* gid);
 ~~~
 
-Group ids
+Group ids widget.
 
 #### Function draw_groupid_widget_end()
 
@@ -11899,23 +12056,7 @@ Group ids
 void draw_groupid_widget_end(gl_window* win);
 ~~~
 
-Group ids
-
-#### Function draw_tree_widget_color_begin()
-
-~~~ .cpp
-void draw_tree_widget_color_begin(gl_window* win, const vec4f& color);
-~~~
-
-Text color
-
-#### Function draw_tree_widget_color_end()
-
-~~~ .cpp
-void draw_tree_widget_color_end(gl_window* win);
-~~~
-
-Text color
+Group ids widget.
 
 #### Function draw_tonemap_widgets()
 
@@ -11924,7 +12065,7 @@ inline void draw_tonemap_widgets(gl_window* win, const string& lbl,
     float& exposure, float& gamma, bool& filmic);
 ~~~
 
-Tonemapping widgets
+Tonemapping widgets.
 
 #### Function draw_imageview_widgets()
 
@@ -11933,7 +12074,7 @@ inline void draw_imageview_widgets(gl_window* win, const string& lbl,
     gl_stdimage_params& params, bool show_tonemap = true);
 ~~~
 
-Image view widgets
+Image view widgets.
 
 #### Function draw_imageinspect_widgets()
 
@@ -11943,7 +12084,7 @@ inline void draw_imageinspect_widgets(gl_window* win, const string& lbl,
     const gl_stdimage_params& params);
 ~~~
 
-Image inspection widgets
+Image inspection widgets.
 
 #### Function draw_camera_widget()
 
@@ -11952,7 +12093,7 @@ inline bool draw_camera_widget(
     gl_window* win, const string& lbl, scene* scn, camera* view, int& cam_idx);
 ~~~
 
-Draws a widget that can selected the camera
+Draws a widget that can selected the camera.
 
 #### Function draw_scene_widgets()
 

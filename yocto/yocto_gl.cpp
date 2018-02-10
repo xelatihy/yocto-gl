@@ -80,6 +80,20 @@
 //
 // - update documentation
 // - update BVH documentation
+// - update glTF generates documentation.
+// - move cmdline implementation.
+// - consider removing add_elements
+// - consider merging load/save options.
+// - consider uniforming texture info.
+// - remove widget size.
+// - move combo widget implementation.
+// - transforms
+//    - use only transform -> frame
+//    - can always to combined with to_mat
+//    - make it clear how to do quaternion conversion
+// - check ranom shuffle
+// - check random number generation for float/double
+// - visitors
 //
 // ## Trace
 //
@@ -2678,7 +2692,7 @@ void refit_bvh(bvh_tree* bvh, const vector<frame3f>& frames,
 }
 
 // Intersect ray with a bvh.
-bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray_, bool early_exit,
+bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray_, bool find_any,
     float& ray_t, int& iid, int& sid, int& eid, vec2f& euv) {
     // node stack
     int node_stack[128];
@@ -2782,8 +2796,8 @@ bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray_, bool early_exit,
                 for (auto i = node.start; i < node.start + node.count; i++) {
                     auto& ist = bvh->instances[i];
                     if (intersect_bvh(ist.bvh,
-                            transform_ray(ist.frame_inv, ray), early_exit,
-                            ray_t, iid, sid, eid, euv)) {
+                            transform_ray(ist.frame_inv, ray), find_any, ray_t,
+                            iid, sid, eid, euv)) {
                         hit = true;
                         ray.tmax = ray_t;
                         iid = ist.iid;
@@ -2794,7 +2808,7 @@ bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray_, bool early_exit,
         }
 
         // check for early exit
-        if (early_exit && hit) return true;
+        if (find_any && hit) return true;
     }
 
     return hit;
@@ -2802,7 +2816,7 @@ bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray_, bool early_exit,
 
 // Finds the closest element with a bvh.
 bool overlap_bvh(const bvh_tree* bvh, const vec3f& pos, float max_dist,
-    bool early_exit, float& dist, int& iid, int& sid, int& eid, vec2f& euv) {
+    bool find_any, float& dist, int& iid, int& sid, int& eid, vec2f& euv) {
     // node stack
     int node_stack[64];
     auto node_cur = 0;
@@ -2893,7 +2907,7 @@ bool overlap_bvh(const bvh_tree* bvh, const vec3f& pos, float max_dist,
                     auto& ist = bvh->instances[i];
                     if (overlap_bvh(ist.bvh,
                             transform_point(ist.frame_inv, pos), max_dist,
-                            early_exit, dist, iid, sid, eid, euv)) {
+                            find_any, dist, iid, sid, eid, euv)) {
                         hit = true;
                         max_dist = dist;
                         iid = ist.iid;
@@ -2902,6 +2916,9 @@ bool overlap_bvh(const bvh_tree* bvh, const vec3f& pos, float max_dist,
                 }
             } break;
         }
+
+        // check for early exit
+        if (find_any && hit) return true;
     }
 
     return hit;
@@ -2909,9 +2926,9 @@ bool overlap_bvh(const bvh_tree* bvh, const vec3f& pos, float max_dist,
 
 // Intersect ray with a bvh (convenience wrapper).
 intersection_point intersect_bvh(
-    const bvh_tree* bvh, const ray3f& ray, bool early_exit) {
+    const bvh_tree* bvh, const ray3f& ray, bool find_any) {
     auto isec = intersection_point();
-    if (!intersect_bvh(bvh, ray, early_exit, isec.dist, isec.iid, isec.sid,
+    if (!intersect_bvh(bvh, ray, find_any, isec.dist, isec.iid, isec.sid,
             isec.eid, isec.euv))
         return {};
     return isec;
@@ -2919,9 +2936,9 @@ intersection_point intersect_bvh(
 
 // Finds the closest element with a bvh (convenience wrapper).
 intersection_point overlap_bvh(
-    const bvh_tree* bvh, const vec3f& pos, float max_dist, bool early_exit) {
+    const bvh_tree* bvh, const vec3f& pos, float max_dist, bool find_any) {
     auto isec = intersection_point();
-    if (!overlap_bvh(bvh, pos, max_dist, early_exit, isec.dist, isec.iid,
+    if (!overlap_bvh(bvh, pos, max_dist, find_any, isec.dist, isec.iid,
             isec.sid, isec.eid, isec.euv))
         return {};
     return isec;
@@ -5561,7 +5578,7 @@ float sample_next1f(trace_pixel& pxl, trace_rng_type type, int nsamples) {
         case trace_rng_type::stratified: {
             auto p = hash_uint64_32((uint64_t)pxl.i | (uint64_t)pxl.j << 16 |
                                     (uint64_t)pxl.dimension << 32);
-            auto s = hash_permute(pxl.sample, nsamples, p);
+            auto s = cmjs_permute(pxl.sample, nsamples, p);
             pxl.dimension += 1;
             return clamp(
                 (s + next_rand1f(pxl.rng)) / nsamples, 0.0f, 1 - flt_eps);
@@ -5582,7 +5599,7 @@ vec2f sample_next2f(trace_pixel& pxl, trace_rng_type type, int nsamples) {
         case trace_rng_type::stratified: {
             auto p = hash_uint64_32((uint64_t)pxl.i | (uint64_t)pxl.j << 16 |
                                     (uint64_t)pxl.dimension << 32);
-            auto s = hash_permute(pxl.sample, nsamples, p);
+            auto s = cmjs_permute(pxl.sample, nsamples, p);
             auto nsamples2 = (int)round(sqrt(nsamples));
             pxl.dimension += 2;
             return {clamp((s % nsamples2 + next_rand1f(pxl.rng)) / nsamples2,
@@ -11099,20 +11116,6 @@ void gl_enable_wireframe(bool enabled) {
     assert(gl_check_error());
 }
 
-// Enable/disable edges. Attempts to avoid z-fighting but the method is not
-// robust.
-void gl_enable_edges(bool enabled, float tolerance) {
-    assert(gl_check_error());
-    if (enabled) {
-        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-        glDepthRange(0, tolerance);
-    } else {
-        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-        glDepthRange(0, 1);
-    }
-    assert(gl_check_error());
-}
-
 // Enable/disable blending
 void gl_enable_blending(bool enabled) {
     assert(gl_check_error());
@@ -11170,17 +11173,17 @@ namespace ygl {
 // Implementation of update_texture.
 void _update_texture(gl_texture& txt, int w, int h, int nc, const void* pixels,
     bool floats, bool linear, bool mipmap, bool as_float, bool as_srgb) {
-    auto refresh = !txt._tid || txt._width != w || txt._height != h ||
-                   txt._ncomp != nc || txt._float != as_float ||
-                   txt._srgb != as_srgb || txt._mipmap != mipmap ||
-                   txt._linear != linear;
-    txt._width = w;
-    txt._height = h;
-    txt._ncomp = nc;
-    txt._float = as_float;
-    txt._srgb = as_srgb;
-    txt._mipmap = mipmap;
-    txt._linear = linear;
+    auto refresh = !txt.tid || txt.width != w || txt.height != h ||
+                   txt.ncomp != nc || txt.as_float != as_float ||
+                   txt.as_srgb != as_srgb || txt.mipmap != mipmap ||
+                   txt.linear != linear;
+    txt.width = w;
+    txt.height = h;
+    txt.ncomp = nc;
+    txt.as_float = as_float;
+    txt.as_srgb = as_srgb;
+    txt.mipmap = mipmap;
+    txt.linear = linear;
     assert(!as_srgb || !as_float);
     assert(gl_check_error());
     if (w * h) {
@@ -11190,8 +11193,8 @@ void _update_texture(gl_texture& txt, int w, int h, int nc, const void* pixels,
         int* formats =
             (as_float) ? formats_f : ((as_srgb) ? formats_sub : formats_ub);
         assert(gl_check_error());
-        if (!txt._tid) glGenTextures(1, &txt._tid);
-        glBindTexture(GL_TEXTURE_2D, txt._tid);
+        if (!txt.tid) glGenTextures(1, &txt.tid);
+        glBindTexture(GL_TEXTURE_2D, txt.tid);
         if (refresh) {
             glTexImage2D(GL_TEXTURE_2D, 0, formats[nc - 1], w, h, 0,
                 formats_ub[nc - 1], (floats) ? GL_FLOAT : GL_UNSIGNED_BYTE,
@@ -11212,10 +11215,10 @@ void _update_texture(gl_texture& txt, int w, int h, int nc, const void* pixels,
         }
         glBindTexture(GL_TEXTURE_2D, 0);
     } else {
-        if (txt._tid) {
-            glBindTexture(GL_TEXTURE_2D, txt._tid);
-            glDeleteTextures(1, &txt._tid);
-            txt._tid = 0;
+        if (txt.tid) {
+            glBindTexture(GL_TEXTURE_2D, txt.tid);
+            glDeleteTextures(1, &txt.tid);
+            txt.tid = 0;
             glBindTexture(GL_TEXTURE_2D, 0);
         }
     }
@@ -11225,7 +11228,7 @@ void _update_texture(gl_texture& txt, int w, int h, int nc, const void* pixels,
 // Binds a texture to a texture unit
 void bind_texture(const gl_texture& txt, uint unit) {
     glActiveTexture(GL_TEXTURE0 + unit);
-    glBindTexture(GL_TEXTURE_2D, txt._tid);
+    glBindTexture(GL_TEXTURE_2D, txt.tid);
 }
 
 // Unbinds
@@ -11237,8 +11240,8 @@ void unbind_texture(const gl_texture& txt, uint unit) {
 // Destroys the texture tid.
 void clear_texture(gl_texture& txt) {
     assert(gl_check_error());
-    glDeleteTextures(1, &txt._tid);
-    txt._tid = 0;
+    glDeleteTextures(1, &txt.tid);
+    txt.tid = 0;
     assert(gl_check_error());
 }
 
@@ -11253,31 +11256,31 @@ namespace ygl {
 void _update_vertex_buffer(gl_vertex_buffer& buf, int n, int nc,
     const void* values, bool as_float, bool dynamic) {
     auto resize =
-        !buf._bid || n * nc != buf._num * buf._ncomp || as_float != buf._float;
-    buf._num = n;
-    buf._ncomp = nc;
-    buf._float = as_float;
+        !buf.bid || n * nc != buf.num * buf.ncomp || as_float != buf.as_float;
+    buf.num = n;
+    buf.ncomp = nc;
+    buf.as_float = as_float;
     assert(gl_check_error());
     if (n) {
-        if (!buf._bid) glGenBuffers(1, &buf._bid);
-        glBindBuffer(GL_ARRAY_BUFFER, buf._bid);
+        if (!buf.bid) glGenBuffers(1, &buf.bid);
+        glBindBuffer(GL_ARRAY_BUFFER, buf.bid);
         if (resize) {
             glBufferData(GL_ARRAY_BUFFER,
-                buf._num * buf._ncomp *
+                buf.num * buf.ncomp *
                     ((as_float) ? sizeof(float) : sizeof(int)),
                 values, (dynamic) ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
         } else {
             glBufferSubData(GL_ARRAY_BUFFER, 0,
-                buf._num * buf._ncomp *
+                buf.num * buf.ncomp *
                     ((as_float) ? sizeof(float) : sizeof(int)),
                 values);
         }
         glBindBuffer(GL_ARRAY_BUFFER, 0);
     } else {
-        if (buf._bid) {
-            glBindBuffer(GL_ARRAY_BUFFER, buf._bid);
-            glDeleteBuffers(1, &buf._bid);
-            buf._bid = 0;
+        if (buf.bid) {
+            glBindBuffer(GL_ARRAY_BUFFER, buf.bid);
+            glDeleteBuffers(1, &buf.bid);
+            buf.bid = 0;
             glBindBuffer(GL_ARRAY_BUFFER, 0);
         }
     }
@@ -11287,8 +11290,8 @@ void _update_vertex_buffer(gl_vertex_buffer& buf, int n, int nc,
 // Bind the buffer at a particular attribute location
 void bind_vertex_buffer(const gl_vertex_buffer& buf, uint vattr) {
     glEnableVertexAttribArray(vattr);
-    glBindBuffer(GL_ARRAY_BUFFER, buf._bid);
-    glVertexAttribPointer(vattr, buf._ncomp, GL_FLOAT, false, 0, 0);
+    glBindBuffer(GL_ARRAY_BUFFER, buf.bid);
+    glVertexAttribPointer(vattr, buf.ncomp, GL_FLOAT, false, 0, 0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
@@ -11303,8 +11306,8 @@ void unbind_vertex_buffer(uint vattr) { glDisableVertexAttribArray(vattr); }
 // Destroys the buffer
 void clear_vertex_buffer(gl_vertex_buffer& buf) {
     assert(gl_check_error());
-    glDeleteBuffers(1, &buf._bid);
-    buf._bid = 0;
+    glDeleteBuffers(1, &buf.bid);
+    buf.bid = 0;
     assert(gl_check_error());
 }
 
@@ -11318,27 +11321,27 @@ namespace ygl {
 // Updates the buffer bid with new data.
 void _update_element_buffer(
     gl_element_buffer& buf, int n, int nc, const int* values, bool dynamic) {
-    auto resize = !buf._bid || n * nc != buf._num * buf._ncomp;
-    buf._num = n;
-    buf._ncomp = nc;
+    auto resize = !buf.bid || n * nc != buf.num * buf.ncomp;
+    buf.num = n;
+    buf.ncomp = nc;
     assert(gl_check_error());
     if (n) {
-        if (!buf._bid) glGenBuffers(1, &buf._bid);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buf._bid);
+        if (!buf.bid) glGenBuffers(1, &buf.bid);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buf.bid);
         if (resize) {
             glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-                buf._num * buf._ncomp * sizeof(int), values,
+                buf.num * buf.ncomp * sizeof(int), values,
                 (dynamic) ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
         } else {
             glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0,
-                buf._num * buf._ncomp * sizeof(int), values);
+                buf.num * buf.ncomp * sizeof(int), values);
         }
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     } else {
-        if (buf._bid) {
-            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buf._bid);
-            glDeleteBuffers(1, &buf._bid);
-            buf._bid = 0;
+        if (buf.bid) {
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buf.bid);
+            glDeleteBuffers(1, &buf.bid);
+            buf.bid = 0;
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
         }
     }
@@ -11347,18 +11350,18 @@ void _update_element_buffer(
 
 // Draws elements.
 void draw_elems(const gl_element_buffer& buf) {
-    if (!buf._bid) return;
+    if (!buf.bid) return;
     assert(gl_check_error());
     int mode = 0;
-    switch (buf._ncomp) {
+    switch (buf.ncomp) {
         case 1: mode = GL_POINTS; break;
         case 2: mode = GL_LINES; break;
         case 3: mode = GL_TRIANGLES; break;
         case 4: mode = GL_QUADS; break;
         default: assert(false);
     };
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buf._bid);
-    glDrawElements(mode, buf._ncomp * buf._num, GL_UNSIGNED_INT, 0);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buf.bid);
+    glDrawElements(mode, buf.ncomp * buf.num, GL_UNSIGNED_INT, 0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     assert(gl_check_error());
 }
@@ -11366,8 +11369,8 @@ void draw_elems(const gl_element_buffer& buf) {
 // Destroys the buffer
 void clear_element_buffer(gl_element_buffer& buf) {
     assert(gl_check_error());
-    glDeleteBuffers(1, &buf._bid);
-    buf._bid = 0;
+    glDeleteBuffers(1, &buf.bid);
+    buf.bid = 0;
     assert(gl_check_error());
 }
 
@@ -11385,51 +11388,51 @@ gl_program make_program(const string& vertex, const string& fragment) {
     auto prog = gl_program();
 
     assert(gl_check_error());
-    glGenVertexArrays(1, &prog._vao);
-    glBindVertexArray(prog._vao);
+    glGenVertexArrays(1, &prog.vao);
+    glBindVertexArray(prog.vao);
     assert(gl_check_error());
 
     int errflags;
     char errbuf[10000];
 
     // create vertex
-    prog._vid = glCreateShader(GL_VERTEX_SHADER);
+    prog.vid = glCreateShader(GL_VERTEX_SHADER);
     const char* vertex_str = vertex.c_str();
-    glShaderSource(prog._vid, 1, &vertex_str, NULL);
-    glCompileShader(prog._vid);
-    glGetShaderiv(prog._vid, GL_COMPILE_STATUS, &errflags);
+    glShaderSource(prog.vid, 1, &vertex_str, NULL);
+    glCompileShader(prog.vid);
+    glGetShaderiv(prog.vid, GL_COMPILE_STATUS, &errflags);
     if (!errflags) {
-        glGetShaderInfoLog(prog._vid, 10000, 0, errbuf);
+        glGetShaderInfoLog(prog.vid, 10000, 0, errbuf);
         throw runtime_error(string("shader not compiled\n\n") + errbuf);
     }
     assert(glGetError() == GL_NO_ERROR);
 
     // create fragment
-    prog._fid = glCreateShader(GL_FRAGMENT_SHADER);
+    prog.fid = glCreateShader(GL_FRAGMENT_SHADER);
     const char* fragment_str = fragment.c_str();
-    glShaderSource(prog._fid, 1, &fragment_str, NULL);
-    glCompileShader(prog._fid);
-    glGetShaderiv(prog._fid, GL_COMPILE_STATUS, &errflags);
+    glShaderSource(prog.fid, 1, &fragment_str, NULL);
+    glCompileShader(prog.fid);
+    glGetShaderiv(prog.fid, GL_COMPILE_STATUS, &errflags);
     if (!errflags) {
-        glGetShaderInfoLog(prog._fid, 10000, 0, errbuf);
+        glGetShaderInfoLog(prog.fid, 10000, 0, errbuf);
         throw runtime_error(string("shader not compiled\n\n") + errbuf);
     }
     assert(glGetError() == GL_NO_ERROR);
 
     // create program
-    prog._pid = glCreateProgram();
-    glAttachShader(prog._pid, prog._vid);
-    glAttachShader(prog._pid, prog._fid);
-    glLinkProgram(prog._pid);
-    glValidateProgram(prog._pid);
-    glGetProgramiv(prog._pid, GL_LINK_STATUS, &errflags);
+    prog.pid = glCreateProgram();
+    glAttachShader(prog.pid, prog.vid);
+    glAttachShader(prog.pid, prog.fid);
+    glLinkProgram(prog.pid);
+    glValidateProgram(prog.pid);
+    glGetProgramiv(prog.pid, GL_LINK_STATUS, &errflags);
     if (!errflags) {
-        glGetProgramInfoLog(prog._pid, 10000, 0, errbuf);
+        glGetProgramInfoLog(prog.pid, 10000, 0, errbuf);
         throw runtime_error(string("program not linked\n\n") + errbuf);
     }
-    glGetProgramiv(prog._pid, GL_VALIDATE_STATUS, &errflags);
+    glGetProgramiv(prog.pid, GL_VALIDATE_STATUS, &errflags);
     if (!errflags) {
-        glGetProgramInfoLog(prog._pid, 10000, 0, errbuf);
+        glGetProgramInfoLog(prog.pid, 10000, 0, errbuf);
         throw runtime_error(string("program not linked\n\n") + errbuf);
     }
     assert(gl_check_error());
@@ -11443,30 +11446,30 @@ gl_program make_program(const string& vertex, const string& fragment) {
 // Destroys the program pid and optionally the sahders vid and fid.
 void clear_program(gl_program& prog) {
     assert(gl_check_error());
-    glDetachShader(prog._pid, prog._vid);
-    glDeleteShader(prog._vid);
-    prog._vid = 0;
-    glDetachShader(prog._pid, prog._fid);
-    glDeleteShader(prog._fid);
-    prog._fid = 0;
-    glDeleteProgram(prog._pid);
-    prog._pid = 0;
-    glDeleteVertexArrays(1, &prog._vao);
-    prog._vao = 0;
+    glDetachShader(prog.pid, prog.vid);
+    glDeleteShader(prog.vid);
+    prog.vid = 0;
+    glDetachShader(prog.pid, prog.fid);
+    glDeleteShader(prog.fid);
+    prog.fid = 0;
+    glDeleteProgram(prog.pid);
+    prog.pid = 0;
+    glDeleteVertexArrays(1, &prog.vao);
+    prog.vao = 0;
     assert(gl_check_error());
 }
 
 // Get uniform location (simple GL wrapper that avoids GL includes)
 int get_program_uniform_location(const gl_program& prog, const string& name) {
     assert(gl_check_error());
-    return glGetUniformLocation(prog._pid, name.c_str());
+    return glGetUniformLocation(prog.pid, name.c_str());
     assert(gl_check_error());
 }
 
 // Get uniform location (simple GL wrapper that avoids GL includes)
 int get_program_attrib_location(const gl_program& prog, const string& name) {
     assert(gl_check_error());
-    return glGetAttribLocation(prog._pid, name.c_str());
+    return glGetAttribLocation(prog.pid, name.c_str());
     assert(gl_check_error());
 }
 
@@ -11474,18 +11477,18 @@ int get_program_attrib_location(const gl_program& prog, const string& name) {
 vector<pair<string, int>> get_program_uniforms_names(const gl_program& prog) {
     auto num = 0;
     assert(gl_check_error());
-    glGetProgramiv(prog._pid, GL_ACTIVE_UNIFORMS, &num);
+    glGetProgramiv(prog.pid, GL_ACTIVE_UNIFORMS, &num);
     assert(gl_check_error());
     auto names = vector<pair<string, int>>();
     for (auto i = 0; i < num; i++) {
         char name[4096];
         auto size = 0, length = 0;
         GLenum type;
-        glGetActiveUniform(prog._pid, i, 4096, &length, &size, &type, name);
+        glGetActiveUniform(prog.pid, i, 4096, &length, &size, &type, name);
         if (length > 3 && name[length - 1] == ']' && name[length - 2] == '0' &&
             name[length - 3] == '[')
             name[length - 3] = 0;
-        auto loc = glGetUniformLocation(prog._pid, name);
+        auto loc = glGetUniformLocation(prog.pid, name);
         if (loc < 0) continue;
         names.push_back({name, loc});
         assert(gl_check_error());
@@ -11497,15 +11500,15 @@ vector<pair<string, int>> get_program_uniforms_names(const gl_program& prog) {
 vector<pair<string, int>> get_program_attributes_names(const gl_program& prog) {
     auto num = 0;
     assert(gl_check_error());
-    glGetProgramiv(prog._pid, GL_ACTIVE_ATTRIBUTES, &num);
+    glGetProgramiv(prog.pid, GL_ACTIVE_ATTRIBUTES, &num);
     assert(gl_check_error());
     auto names = vector<pair<string, int>>();
     for (auto i = 0; i < num; i++) {
         char name[4096];
         auto size = 0;
         GLenum type;
-        glGetActiveAttrib(prog._pid, i, 4096, nullptr, &size, &type, name);
-        auto loc = glGetAttribLocation(prog._pid, name);
+        glGetActiveAttrib(prog.pid, i, 4096, nullptr, &size, &type, name);
+        auto loc = glGetAttribLocation(prog.pid, name);
         if (loc < 0) continue;
         names.push_back({name, loc});
         assert(gl_check_error());
@@ -11636,7 +11639,7 @@ bool set_program_vertattr(gl_program& prog, int pos, const int* value, int nc) {
 bool set_program_vertattr(
     gl_program& prog, const string& var, const gl_vertex_buffer& buf) {
     assert(gl_check_error());
-    int pos = glGetAttribLocation(prog._pid, var.c_str());
+    int pos = glGetAttribLocation(prog.pid, var.c_str());
     if (pos < 0) return false;
     if (is_vertex_buffer_valid(buf)) {
         glEnableVertexAttribArray(pos);
@@ -11683,9 +11686,9 @@ bool set_program_vertattr(gl_program& prog, int pos,
 // Binds a program
 void bind_program(const gl_program& prog) {
     assert(gl_check_error());
-    if (!prog._pid) return;
-    glBindVertexArray(prog._vao);
-    glUseProgram(prog._pid);
+    if (!prog.pid) return;
+    glBindVertexArray(prog.vao);
+    glUseProgram(prog.pid);
     assert(gl_check_error());
 }
 
@@ -11928,13 +11931,44 @@ gl_stdimage_program make_stdimage_program() {
         )";
 
     auto prog = gl_stdimage_program();
-    prog._prog =
+    prog.prog =
         make_program(_header + _vert, _header + _frag_tonemap + _frag_main);
 
-    prog._vbo = make_vertex_buffer(
+    prog.vbo = make_vertex_buffer(
         vector<vec2f>{{0, 0}, {0, 1}, {1, 1}, {1, 0}}, false);
-    prog._ebo = make_element_buffer(vector<vec3i>{{0, 1, 2}, {0, 2, 3}}, false);
+    prog.ebo = make_element_buffer(vector<vec3i>{{0, 1, 2}, {0, 2, 3}}, false);
     return prog;
+}
+
+// Draws the stdimage program.
+void draw_image(gl_stdimage_program& prog, const gl_texture& txt,
+    const vec2i& win_size, const vec2f& offset, float zoom, float exposure,
+    float gamma, bool filmic) {
+    assert(is_texture_valid(txt));
+
+    bind_program(prog.prog);
+
+    gl_enable_blending(true);
+    gl_set_blend_over();
+
+    bind_texture(txt, 0);
+    set_program_uniform(prog.prog, "zoom", zoom);
+    set_program_uniform(
+        prog.prog, "win_size", vec2f{(float)win_size.x, (float)win_size.y});
+    set_program_uniform(prog.prog, "offset", offset);
+    set_program_uniform(prog.prog, "tonemap.filmic", filmic);
+    set_program_uniform(prog.prog, "tonemap.exposure", exposure);
+    set_program_uniform(prog.prog, "tonemap.gamma", gamma);
+    set_program_uniform_texture(prog.prog, "img", txt, 0);
+
+    set_program_vertattr(prog.prog, "vert_texcoord", prog.vbo, vec2f{0, 0});
+    draw_elems(prog.ebo);
+
+    unbind_program(prog.prog);
+
+    gl_enable_blending(false);
+
+    assert(gl_check_error());
 }
 
 }  // namespace ygl
@@ -12365,7 +12399,7 @@ gl_stdsurface_program make_stdsurface_program() {
 
     assert(gl_check_error());
     auto prog = gl_stdsurface_program();
-    prog._prog = make_program(_vert_header + _vert_skinning + _vert_main,
+    prog.prog = make_program(_vert_header + _vert_skinning + _vert_main,
         _frag_header + _frag_tonemap + _frag_lighting + _frag_brdf +
             _frag_material + _frag_main);
     assert(gl_check_error());
@@ -12380,35 +12414,35 @@ void begin_stdsurface_frame(gl_stdsurface_program& prog, bool shade_eyelight,
     const mat4f& camera_xform, const mat4f& camera_xform_inv,
     const mat4f& camera_proj) {
     static auto eyelight_id =
-        get_program_uniform_location(prog._prog, "lighting.eyelight");
+        get_program_uniform_location(prog.prog, "lighting.eyelight");
     static auto exposure_id =
-        get_program_uniform_location(prog._prog, "tonemap.exposure");
+        get_program_uniform_location(prog.prog, "tonemap.exposure");
     static auto gamma_id =
-        get_program_uniform_location(prog._prog, "tonemap.gamma");
+        get_program_uniform_location(prog.prog, "tonemap.gamma");
     static auto filmic_id =
-        get_program_uniform_location(prog._prog, "tonemap.filmic");
+        get_program_uniform_location(prog.prog, "tonemap.filmic");
     static auto xform_id =
-        get_program_uniform_location(prog._prog, "camera.xform");
+        get_program_uniform_location(prog.prog, "camera.xform");
     static auto xform_inv_id =
-        get_program_uniform_location(prog._prog, "camera.xform_inv");
+        get_program_uniform_location(prog.prog, "camera.xform_inv");
     static auto proj_id =
-        get_program_uniform_location(prog._prog, "camera.proj");
+        get_program_uniform_location(prog.prog, "camera.proj");
     assert(gl_check_error());
-    bind_program(prog._prog);
-    set_program_uniform(prog._prog, eyelight_id, shade_eyelight);
-    set_program_uniform(prog._prog, exposure_id, tonemap_exposure);
-    set_program_uniform(prog._prog, gamma_id, tonemap_gamma);
-    set_program_uniform(prog._prog, filmic_id, tonemap_filmic);
-    set_program_uniform(prog._prog, xform_id, camera_xform);
-    set_program_uniform(prog._prog, xform_inv_id, camera_xform_inv);
-    set_program_uniform(prog._prog, proj_id, camera_proj);
+    bind_program(prog.prog);
+    set_program_uniform(prog.prog, eyelight_id, shade_eyelight);
+    set_program_uniform(prog.prog, exposure_id, tonemap_exposure);
+    set_program_uniform(prog.prog, gamma_id, tonemap_gamma);
+    set_program_uniform(prog.prog, filmic_id, tonemap_filmic);
+    set_program_uniform(prog.prog, xform_id, camera_xform);
+    set_program_uniform(prog.prog, xform_inv_id, camera_xform_inv);
+    set_program_uniform(prog.prog, proj_id, camera_proj);
     assert(gl_check_error());
 }
 
 // Ends a frame.
 void end_stdsurface_frame(gl_stdsurface_program& prog) {
     assert(gl_check_error());
-    unbind_program(prog._prog);
+    unbind_program(prog.prog);
     //    glBindVertexArray(0);
     //    glUseProgram(0);
     assert(gl_check_error());
@@ -12419,24 +12453,24 @@ void end_stdsurface_frame(gl_stdsurface_program& prog) {
 void set_stdsurface_lights(
     gl_stdsurface_program& prog, const vec3f& amb, const gl_lights& lights) {
     static auto amb_id =
-        get_program_uniform_location(prog._prog, "lighting.amb");
+        get_program_uniform_location(prog.prog, "lighting.amb");
     static auto lnum_id =
-        get_program_uniform_location(prog._prog, "lighting.lnum");
+        get_program_uniform_location(prog.prog, "lighting.lnum");
     static auto lpos_id =
-        get_program_uniform_location(prog._prog, "lighting.lpos");
+        get_program_uniform_location(prog.prog, "lighting.lpos");
     static auto lke_id =
-        get_program_uniform_location(prog._prog, "lighting.lke");
+        get_program_uniform_location(prog.prog, "lighting.lke");
     static auto ltype_id =
-        get_program_uniform_location(prog._prog, "lighting.ltype");
+        get_program_uniform_location(prog.prog, "lighting.ltype");
     assert(gl_check_error());
-    set_program_uniform(prog._prog, amb_id, amb);
-    set_program_uniform(prog._prog, lnum_id, (int)lights.pos.size());
+    set_program_uniform(prog.prog, amb_id, amb);
+    set_program_uniform(prog.prog, lnum_id, (int)lights.pos.size());
     set_program_uniform(
-        prog._prog, lpos_id, lights.pos.data(), (int)lights.pos.size());
+        prog.prog, lpos_id, lights.pos.data(), (int)lights.pos.size());
     set_program_uniform(
-        prog._prog, lke_id, lights.ke.data(), (int)lights.pos.size());
+        prog.prog, lke_id, lights.ke.data(), (int)lights.pos.size());
     set_program_uniform(
-        prog._prog, ltype_id, (int*)lights.type.data(), (int)lights.pos.size());
+        prog.prog, ltype_id, (int*)lights.type.data(), (int)lights.pos.size());
     assert(gl_check_error());
 }
 
@@ -12444,12 +12478,12 @@ void set_stdsurface_lights(
 void begin_stdsurface_shape(
     gl_stdsurface_program& prog, const mat4f& xform, float normal_offset) {
     static auto xform_id =
-        get_program_uniform_location(prog._prog, "shape_xform");
+        get_program_uniform_location(prog.prog, "shape_xform");
     static auto normal_offset_id =
-        get_program_uniform_location(prog._prog, "shape_normal_offset");
+        get_program_uniform_location(prog.prog, "shape_normal_offset");
     assert(gl_check_error());
-    set_program_uniform(prog._prog, xform_id, xform);
-    set_program_uniform(prog._prog, normal_offset_id, normal_offset);
+    set_program_uniform(prog.prog, xform_id, xform);
+    set_program_uniform(prog.prog, normal_offset_id, normal_offset);
     assert(gl_check_error());
 }
 
@@ -12464,9 +12498,9 @@ void end_stdsurface_shape(gl_stdsurface_program& prog) {
 void set_stdsurface_normaloffset(
     gl_stdsurface_program& prog, float normal_offset) {
     static auto normal_offset_id =
-        get_program_uniform_location(prog._prog, "shape_normal_offset");
+        get_program_uniform_location(prog.prog, "shape_normal_offset");
     assert(gl_check_error());
-    set_program_uniform(prog._prog, normal_offset_id, normal_offset);
+    set_program_uniform(prog.prog, normal_offset_id, normal_offset);
     assert(gl_check_error());
 }
 
@@ -12474,8 +12508,8 @@ void set_stdsurface_normaloffset(
 void set_stdsurface_highlight(
     gl_stdsurface_program& prog, const vec4f& highlight) {
     static auto highlight_id =
-        get_program_uniform_location(prog._prog, "highlight");
-    set_program_uniform(prog._prog, highlight_id, highlight);
+        get_program_uniform_location(prog.prog, "highlight");
+    set_program_uniform(prog.prog, highlight_id, highlight);
 }
 
 // Set material values with emission ke, diffuse kd, specular ks and
@@ -12492,48 +12526,48 @@ void set_stdsurface_material(gl_stdsurface_program& prog, material_type type,
     const gl_texture_info& occ_txt, bool use_phong, bool double_sided,
     bool alpha_cutout) {
     static auto mtype_id =
-        get_program_uniform_location(prog._prog, "material.type");
+        get_program_uniform_location(prog.prog, "material.type");
     static auto etype_id =
-        get_program_uniform_location(prog._prog, "material.etype");
-    static auto ke_id = get_program_uniform_location(prog._prog, "material.ke");
-    static auto kd_id = get_program_uniform_location(prog._prog, "material.kd");
-    static auto ks_id = get_program_uniform_location(prog._prog, "material.ks");
-    static auto rs_id = get_program_uniform_location(prog._prog, "material.rs");
-    static auto op_id = get_program_uniform_location(prog._prog, "material.op");
+        get_program_uniform_location(prog.prog, "material.etype");
+    static auto ke_id = get_program_uniform_location(prog.prog, "material.ke");
+    static auto kd_id = get_program_uniform_location(prog.prog, "material.kd");
+    static auto ks_id = get_program_uniform_location(prog.prog, "material.ks");
+    static auto rs_id = get_program_uniform_location(prog.prog, "material.rs");
+    static auto op_id = get_program_uniform_location(prog.prog, "material.op");
     static auto ke_txt_id =
-        get_program_uniform_location(prog._prog, "material.txt_ke");
+        get_program_uniform_location(prog.prog, "material.txt_ke");
     static auto ke_txt_on_id =
-        get_program_uniform_location(prog._prog, "material.txt_ke_on");
+        get_program_uniform_location(prog.prog, "material.txt_ke_on");
     static auto kd_txt_id =
-        get_program_uniform_location(prog._prog, "material.txt_kd");
+        get_program_uniform_location(prog.prog, "material.txt_kd");
     static auto kd_txt_on_id =
-        get_program_uniform_location(prog._prog, "material.txt_kd_on");
+        get_program_uniform_location(prog.prog, "material.txt_kd_on");
     static auto ks_txt_id =
-        get_program_uniform_location(prog._prog, "material.txt_ks");
+        get_program_uniform_location(prog.prog, "material.txt_ks");
     static auto ks_txt_on_id =
-        get_program_uniform_location(prog._prog, "material.txt_ks_on");
+        get_program_uniform_location(prog.prog, "material.txt_ks_on");
     static auto rs_txt_id =
-        get_program_uniform_location(prog._prog, "material.txt_rs");
+        get_program_uniform_location(prog.prog, "material.txt_rs");
     static auto rs_txt_on_id =
-        get_program_uniform_location(prog._prog, "material.txt_rs_on");
+        get_program_uniform_location(prog.prog, "material.txt_rs_on");
     static auto norm_txt_id =
-        get_program_uniform_location(prog._prog, "material.txt_norm");
+        get_program_uniform_location(prog.prog, "material.txt_norm");
     static auto norm_txt_on_id =
-        get_program_uniform_location(prog._prog, "material.txt_norm_on");
+        get_program_uniform_location(prog.prog, "material.txt_norm_on");
     static auto occ_txt_id =
-        get_program_uniform_location(prog._prog, "material.txt_occ");
+        get_program_uniform_location(prog.prog, "material.txt_occ");
     static auto occ_txt_on_id =
-        get_program_uniform_location(prog._prog, "material.txt_occ_on");
+        get_program_uniform_location(prog.prog, "material.txt_occ_on");
     static auto norm_scale_id =
-        get_program_uniform_location(prog._prog, "material.norm_scale");
+        get_program_uniform_location(prog.prog, "material.norm_scale");
     static auto occ_scale_id =
-        get_program_uniform_location(prog._prog, "material.occ_scale");
+        get_program_uniform_location(prog.prog, "material.occ_scale");
     static auto use_phong_id =
-        get_program_uniform_location(prog._prog, "material.use_phong");
+        get_program_uniform_location(prog.prog, "material.use_phong");
     static auto double_sided_id =
-        get_program_uniform_location(prog._prog, "material.double_sided");
+        get_program_uniform_location(prog.prog, "material.double_sided");
     static auto alpha_cutout_id =
-        get_program_uniform_location(prog._prog, "material.alpha_cutout");
+        get_program_uniform_location(prog.prog, "material.alpha_cutout");
 
     static auto mtypes = unordered_map<material_type, int>{
         {material_type::specular_roughness, 1},
@@ -12541,26 +12575,26 @@ void set_stdsurface_material(gl_stdsurface_program& prog, material_type type,
         {material_type::specular_glossiness, 3}};
 
     assert(gl_check_error());
-    set_program_uniform(prog._prog, mtype_id, mtypes.at(type));
-    set_program_uniform(prog._prog, etype_id, (int)etype);
-    set_program_uniform(prog._prog, ke_id, ke);
-    set_program_uniform(prog._prog, kd_id, kd);
-    set_program_uniform(prog._prog, ks_id, ks);
-    set_program_uniform(prog._prog, rs_id, rs);
-    set_program_uniform(prog._prog, op_id, op);
-    set_program_uniform_texture(prog._prog, ke_txt_id, ke_txt_on_id, ke_txt, 0);
-    set_program_uniform_texture(prog._prog, kd_txt_id, kd_txt_on_id, kd_txt, 1);
-    set_program_uniform_texture(prog._prog, ks_txt_id, ks_txt_on_id, ks_txt, 2);
-    set_program_uniform_texture(prog._prog, rs_txt_id, rs_txt_on_id, rs_txt, 3);
+    set_program_uniform(prog.prog, mtype_id, mtypes.at(type));
+    set_program_uniform(prog.prog, etype_id, (int)etype);
+    set_program_uniform(prog.prog, ke_id, ke);
+    set_program_uniform(prog.prog, kd_id, kd);
+    set_program_uniform(prog.prog, ks_id, ks);
+    set_program_uniform(prog.prog, rs_id, rs);
+    set_program_uniform(prog.prog, op_id, op);
+    set_program_uniform_texture(prog.prog, ke_txt_id, ke_txt_on_id, ke_txt, 0);
+    set_program_uniform_texture(prog.prog, kd_txt_id, kd_txt_on_id, kd_txt, 1);
+    set_program_uniform_texture(prog.prog, ks_txt_id, ks_txt_on_id, ks_txt, 2);
+    set_program_uniform_texture(prog.prog, rs_txt_id, rs_txt_on_id, rs_txt, 3);
     set_program_uniform_texture(
-        prog._prog, norm_txt_id, norm_txt_on_id, norm_txt, 4);
+        prog.prog, norm_txt_id, norm_txt_on_id, norm_txt, 4);
     set_program_uniform_texture(
-        prog._prog, occ_txt_id, occ_txt_on_id, occ_txt, 5);
-    set_program_uniform(prog._prog, norm_scale_id, norm_txt.scale);
-    set_program_uniform(prog._prog, occ_scale_id, occ_txt.scale);
-    set_program_uniform(prog._prog, use_phong_id, use_phong);
-    set_program_uniform(prog._prog, double_sided_id, double_sided);
-    set_program_uniform(prog._prog, alpha_cutout_id, alpha_cutout);
+        prog.prog, occ_txt_id, occ_txt_on_id, occ_txt, 5);
+    set_program_uniform(prog.prog, norm_scale_id, norm_txt.scale);
+    set_program_uniform(prog.prog, occ_scale_id, occ_txt.scale);
+    set_program_uniform(prog.prog, use_phong_id, use_phong);
+    set_program_uniform(prog.prog, double_sided_id, double_sided);
+    set_program_uniform(prog.prog, alpha_cutout_id, alpha_cutout);
     assert(gl_check_error());
 }
 
@@ -12568,17 +12602,17 @@ void set_stdsurface_material(gl_stdsurface_program& prog, material_type type,
 void set_stdsurface_constmaterial(
     gl_stdsurface_program& prog, const vec3f& ke, float op) {
     static auto mtype_id =
-        get_program_uniform_location(prog._prog, "material.type");
+        get_program_uniform_location(prog.prog, "material.type");
     static auto etype_id =
-        get_program_uniform_location(prog._prog, "material.etype");
-    static auto ke_id = get_program_uniform_location(prog._prog, "material.ke");
-    static auto op_id = get_program_uniform_location(prog._prog, "material.op");
+        get_program_uniform_location(prog.prog, "material.etype");
+    static auto ke_id = get_program_uniform_location(prog.prog, "material.ke");
+    static auto op_id = get_program_uniform_location(prog.prog, "material.op");
 
     assert(gl_check_error());
-    set_program_uniform(prog._prog, mtype_id, 0);
-    set_program_uniform(prog._prog, etype_id, 0);
-    set_program_uniform(prog._prog, ke_id, ke);
-    set_program_uniform(prog._prog, op_id, op);
+    set_program_uniform(prog.prog, mtype_id, 0);
+    set_program_uniform(prog.prog, etype_id, 0);
+    set_program_uniform(prog.prog, ke_id, ke);
+    set_program_uniform(prog.prog, op_id, op);
     assert(gl_check_error());
 }
 
@@ -12588,20 +12622,19 @@ void set_stdsurface_vert(gl_stdsurface_program& prog,
     const gl_vertex_buffer& pos, const gl_vertex_buffer& norm,
     const gl_vertex_buffer& texcoord, const gl_vertex_buffer& color,
     const gl_vertex_buffer& tangsp) {
-    static auto pos_id = get_program_attrib_location(prog._prog, "vert_pos");
-    static auto norm_id = get_program_attrib_location(prog._prog, "vert_norm");
+    static auto pos_id = get_program_attrib_location(prog.prog, "vert_pos");
+    static auto norm_id = get_program_attrib_location(prog.prog, "vert_norm");
     static auto texcoord_id =
-        get_program_attrib_location(prog._prog, "vert_texcoord");
-    static auto color_id =
-        get_program_attrib_location(prog._prog, "vert_color");
+        get_program_attrib_location(prog.prog, "vert_texcoord");
+    static auto color_id = get_program_attrib_location(prog.prog, "vert_color");
     static auto tangsp_id =
-        get_program_attrib_location(prog._prog, "vert_tangsp");
+        get_program_attrib_location(prog.prog, "vert_tangsp");
     assert(gl_check_error());
-    set_program_vertattr(prog._prog, pos_id, pos, zero3f);
-    set_program_vertattr(prog._prog, norm_id, norm, zero3f);
-    set_program_vertattr(prog._prog, texcoord_id, texcoord, zero2f);
-    set_program_vertattr(prog._prog, color_id, color, vec4f{1, 1, 1, 1});
-    set_program_vertattr(prog._prog, tangsp_id, tangsp, zero4f);
+    set_program_vertattr(prog.prog, pos_id, pos, zero3f);
+    set_program_vertattr(prog.prog, norm_id, norm, zero3f);
+    set_program_vertattr(prog.prog, texcoord_id, texcoord, zero2f);
+    set_program_vertattr(prog.prog, color_id, color, vec4f{1, 1, 1, 1});
+    set_program_vertattr(prog.prog, tangsp_id, tangsp, zero4f);
     assert(gl_check_error());
 }
 
@@ -12609,51 +12642,51 @@ void set_stdsurface_vert(gl_stdsurface_program& prog,
 void set_stdsurface_vert_skinning(gl_stdsurface_program& prog,
     const gl_vertex_buffer& weights, const gl_vertex_buffer& joints,
     int nxforms, const mat4f* xforms) {
-    static auto type_id = get_program_uniform_location(prog._prog, "skin_type");
+    static auto type_id = get_program_uniform_location(prog.prog, "skin_type");
     static auto xforms_id =
-        get_program_uniform_location(prog._prog, "skin_xforms");
+        get_program_uniform_location(prog.prog, "skin_xforms");
     static auto weights_id =
-        get_program_attrib_location(prog._prog, "vert_skin_weights");
+        get_program_attrib_location(prog.prog, "vert_skin_weights");
     static auto joints_id =
-        get_program_attrib_location(prog._prog, "vert_skin_joints");
+        get_program_attrib_location(prog.prog, "vert_skin_joints");
     int type = 1;
-    set_program_uniform(prog._prog, type_id, type);
-    set_program_uniform(prog._prog, xforms_id, xforms, min(nxforms, 32));
-    set_program_vertattr(prog._prog, weights_id, weights, zero4f);
-    set_program_vertattr(prog._prog, joints_id, joints, zero4f);
+    set_program_uniform(prog.prog, type_id, type);
+    set_program_uniform(prog.prog, xforms_id, xforms, min(nxforms, 32));
+    set_program_vertattr(prog.prog, weights_id, weights, zero4f);
+    set_program_vertattr(prog.prog, joints_id, joints, zero4f);
 }
 
 // Set vertex data with buffers for skinning.
 void set_stdsurface_vert_gltf_skinning(gl_stdsurface_program& prog,
     const gl_vertex_buffer& weights, const gl_vertex_buffer& joints,
     int nxforms, const mat4f* xforms) {
-    static auto type_id = get_program_uniform_location(prog._prog, "skin_type");
+    static auto type_id = get_program_uniform_location(prog.prog, "skin_type");
     static auto xforms_id =
-        get_program_uniform_location(prog._prog, "skin_xforms");
+        get_program_uniform_location(prog.prog, "skin_xforms");
     static auto weights_id =
-        get_program_attrib_location(prog._prog, "vert_skin_weights");
+        get_program_attrib_location(prog.prog, "vert_skin_weights");
     static auto joints_id =
-        get_program_attrib_location(prog._prog, "vert_skin_joints");
+        get_program_attrib_location(prog.prog, "vert_skin_joints");
     int type = 2;
-    set_program_uniform(prog._prog, type_id, type);
-    set_program_uniform(prog._prog, xforms_id, xforms, min(nxforms, 32));
-    set_program_vertattr(prog._prog, weights_id, weights, zero4f);
-    set_program_vertattr(prog._prog, joints_id, joints, zero4f);
+    set_program_uniform(prog.prog, type_id, type);
+    set_program_uniform(prog.prog, xforms_id, xforms, min(nxforms, 32));
+    set_program_vertattr(prog.prog, weights_id, weights, zero4f);
+    set_program_vertattr(prog.prog, joints_id, joints, zero4f);
 }
 
 // Disables vertex skinning.
 void set_stdsurface_vert_skinning_off(gl_stdsurface_program& prog) {
-    static auto type_id = get_program_uniform_location(prog._prog, "skin_type");
-    // static auto xforms_id = get_program_uniform_location(prog._prog,
+    static auto type_id = get_program_uniform_location(prog.prog, "skin_type");
+    // static auto xforms_id = get_program_uniform_location(prog.prog,
     // "skin_xforms");
     static auto weights_id =
-        get_program_attrib_location(prog._prog, "vert_skin_weights");
+        get_program_attrib_location(prog.prog, "vert_skin_weights");
     static auto joints_id =
-        get_program_attrib_location(prog._prog, "vert_skin_joints");
+        get_program_attrib_location(prog.prog, "vert_skin_joints");
     int type = 0;
-    set_program_uniform(prog._prog, type_id, type);
-    set_program_vertattr(prog._prog, weights_id, {}, zero4f);
-    set_program_vertattr(prog._prog, joints_id, {}, zero4f);
+    set_program_uniform(prog.prog, type_id, type);
+    set_program_vertattr(prog.prog, weights_id, {}, zero4f);
+    set_program_vertattr(prog.prog, joints_id, {}, zero4f);
 }
 
 // Draw a shape
@@ -12769,42 +12802,40 @@ void _glfw_error_cb(int error, const char* description) {
 // Support
 void _glfw_text_cb(GLFWwindow* gwin, unsigned key) {
     auto win = (gl_window*)glfwGetWindowUserPointer(gwin);
-    if (win->_widget_enabled) {
-        ImGui_ImplGlfwGL3_CharCallback(win->_gwin, key);
-    }
-    if (win->_text_cb) win->_text_cb(win, key);
+    if (win->widget_enabled) { ImGui_ImplGlfwGL3_CharCallback(win->gwin, key); }
+    if (win->text_cb) win->text_cb(win, key);
 }
 
 // Support
 void _glfw_key_cb(
     GLFWwindow* gwin, int key, int scancode, int action, int mods) {
     auto win = (gl_window*)glfwGetWindowUserPointer(gwin);
-    if (win->_widget_enabled) {
-        ImGui_ImplGlfwGL3_KeyCallback(win->_gwin, key, scancode, action, mods);
+    if (win->widget_enabled) {
+        ImGui_ImplGlfwGL3_KeyCallback(win->gwin, key, scancode, action, mods);
     }
 }
 
 // Support
 void _glfw_mouse_cb(GLFWwindow* gwin, int button, int action, int mods) {
     auto win = (gl_window*)glfwGetWindowUserPointer(gwin);
-    if (win->_widget_enabled) {
-        ImGui_ImplGlfwGL3_MouseButtonCallback(win->_gwin, button, action, mods);
+    if (win->widget_enabled) {
+        ImGui_ImplGlfwGL3_MouseButtonCallback(win->gwin, button, action, mods);
     }
-    if (win->_mouse_cb) win->_mouse_cb(win, button, action == GLFW_PRESS, mods);
+    if (win->mouse_cb) win->mouse_cb(win, button, action == GLFW_PRESS, mods);
 }
 
 // Support
 void _glfw_scroll_cb(GLFWwindow* gwin, double xoffset, double yoffset) {
     auto win = (gl_window*)glfwGetWindowUserPointer(gwin);
-    if (win->_widget_enabled) {
-        ImGui_ImplGlfwGL3_ScrollCallback(win->_gwin, xoffset, yoffset);
+    if (win->widget_enabled) {
+        ImGui_ImplGlfwGL3_ScrollCallback(win->gwin, xoffset, yoffset);
     }
 }
 
 // Support
 void _glfw_refresh_cb(GLFWwindow* gwin) {
     auto win = (gl_window*)glfwGetWindowUserPointer(gwin);
-    if (win->_refresh_cb) win->_refresh_cb(win);
+    if (win->refresh_cb) win->refresh_cb(win);
 }
 
 // Initialize gl_window
@@ -12812,7 +12843,7 @@ gl_window* make_window(
     int width, int height, const string& title, void* user_pointer) {
     auto win = new gl_window();
     // gl_window
-    win->_user_pointer = user_pointer;
+    win->user_pointer = user_pointer;
 
     // gl_window
     if (!glfwInit()) throw runtime_error("cannot open gl_window");
@@ -12825,18 +12856,18 @@ gl_window* make_window(
 #endif
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-    win->_gwin = glfwCreateWindow(width, height, title.c_str(), 0, 0);
-    glfwMakeContextCurrent(win->_gwin);
-    glfwSetWindowUserPointer(win->_gwin, win);
+    win->gwin = glfwCreateWindow(width, height, title.c_str(), 0, 0);
+    glfwMakeContextCurrent(win->gwin);
+    glfwSetWindowUserPointer(win->gwin, win);
 
     glfwSetErrorCallback(_glfw_error_cb);
 
-    glfwSetCharCallback(win->_gwin, _glfw_text_cb);
-    glfwSetKeyCallback(win->_gwin, _glfw_key_cb);
-    glfwSetMouseButtonCallback(win->_gwin, _glfw_mouse_cb);
-    glfwSetScrollCallback(win->_gwin, _glfw_scroll_cb);
+    glfwSetCharCallback(win->gwin, _glfw_text_cb);
+    glfwSetKeyCallback(win->gwin, _glfw_key_cb);
+    glfwSetMouseButtonCallback(win->gwin, _glfw_mouse_cb);
+    glfwSetScrollCallback(win->gwin, _glfw_scroll_cb);
 
-    glfwSetWindowRefreshCallback(win->_gwin, _glfw_refresh_cb);
+    glfwSetWindowRefreshCallback(win->gwin, _glfw_refresh_cb);
 
 // init gl extensions
 #ifndef __APPLE__
@@ -12848,28 +12879,28 @@ gl_window* make_window(
 // Set gl_window callbacks
 void set_window_callbacks(gl_window* win, gl_text_callback text_cb,
     gl_mouse_callback mouse_cb, gl_refresh_callback refresh_cb) {
-    win->_text_cb = text_cb;
-    win->_mouse_cb = mouse_cb;
-    win->_refresh_cb = refresh_cb;
-    if (win->_text_cb) glfwSetCharCallback(win->_gwin, _glfw_text_cb);
+    win->text_cb = text_cb;
+    win->mouse_cb = mouse_cb;
+    win->refresh_cb = refresh_cb;
+    if (win->text_cb) glfwSetCharCallback(win->gwin, _glfw_text_cb);
 }
 
 // Clear gl_window
 void clear_window(gl_window* win) {
-    if (win->_gwin) {
-        glfwDestroyWindow(win->_gwin);
+    if (win->gwin) {
+        glfwDestroyWindow(win->gwin);
         glfwTerminate();
-        win->_gwin = nullptr;
+        win->gwin = nullptr;
     }
-    if (win->_widget_enabled) {
+    if (win->widget_enabled) {
         ImGui_ImplGlfwGL3_Shutdown();
-        win->_widget_enabled = false;
+        win->widget_enabled = false;
     }
 }
 
 // Set gl_window title
 void set_window_title(gl_window* win, const string& title) {
-    glfwSetWindowTitle(win->_gwin, title.c_str());
+    glfwSetWindowTitle(win->gwin, title.c_str());
 }
 
 // Wait events
@@ -12879,19 +12910,19 @@ void wait_events(gl_window* win) { glfwWaitEvents(); }
 void poll_events(gl_window* win) { glfwPollEvents(); }
 
 // Swap buffers
-void swap_buffers(gl_window* win) { glfwSwapBuffers(win->_gwin); }
+void swap_buffers(gl_window* win) { glfwSwapBuffers(win->gwin); }
 
 // Should close
-bool should_close(gl_window* win) { return glfwWindowShouldClose(win->_gwin); }
+bool should_close(gl_window* win) { return glfwWindowShouldClose(win->gwin); }
 
 // Mouse button
 int get_mouse_button(gl_window* win) {
     auto mouse1 =
-        glfwGetMouseButton(win->_gwin, GLFW_MOUSE_BUTTON_1) == GLFW_PRESS;
+        glfwGetMouseButton(win->gwin, GLFW_MOUSE_BUTTON_1) == GLFW_PRESS;
     auto mouse2 =
-        glfwGetMouseButton(win->_gwin, GLFW_MOUSE_BUTTON_2) == GLFW_PRESS;
+        glfwGetMouseButton(win->gwin, GLFW_MOUSE_BUTTON_2) == GLFW_PRESS;
     auto mouse3 =
-        glfwGetMouseButton(win->_gwin, GLFW_MOUSE_BUTTON_3) == GLFW_PRESS;
+        glfwGetMouseButton(win->gwin, GLFW_MOUSE_BUTTON_3) == GLFW_PRESS;
     if (mouse1) return 1;
     if (mouse2) return 2;
     if (mouse3) return 3;
@@ -12916,34 +12947,34 @@ int get_mouse_button(gl_window* win) {
 // Mouse position
 vec2i get_mouse_pos(gl_window* win) {
     double x, y;
-    glfwGetCursorPos(win->_gwin, &x, &y);
+    glfwGetCursorPos(win->gwin, &x, &y);
     return {(int)x, (int)y};
 }
 
 // Mouse position
 vec2f get_mouse_posf(gl_window* win) {
     double x, y;
-    glfwGetCursorPos(win->_gwin, &x, &y);
+    glfwGetCursorPos(win->gwin, &x, &y);
     return {(float)x, (float)y};
 }
 
 // Window size
 vec2i get_window_size(gl_window* win) {
     auto ret = vec2i{0, 0};
-    glfwGetWindowSize(win->_gwin, &ret.x, &ret.y);
+    glfwGetWindowSize(win->gwin, &ret.x, &ret.y);
     return ret;
 }
 
 // Check if a key is pressed (not all keys are supported)
 bool get_key(gl_window* win, int key) {
     key = std::toupper(key);
-    return glfwGetKey(win->_gwin, key) == GLFW_PRESS;
+    return glfwGetKey(win->gwin, key) == GLFW_PRESS;
 }
 
 // Framebuffer size
 vec2i get_framebuffer_size(gl_window* win) {
     auto ret = vec2i{0, 0};
-    glfwGetFramebufferSize(win->_gwin, &ret.x, &ret.y);
+    glfwGetFramebufferSize(win->gwin, &ret.x, &ret.y);
     return ret;
 }
 
@@ -13029,12 +13060,12 @@ bool handle_camera_navigation(
 
 // Initialize widgets
 void init_widgets(gl_window* win, bool light_style, bool alt_font) {
-    ImGui_ImplGlfwGL3_Init(win->_gwin, false);
+    ImGui_ImplGlfwGL3_Init(win->gwin, false);
     ImGui::GetStyle().WindowRounding = 0;
     ImGui::GetIO().IniFilename = nullptr;
     ImGui::SetNextWindowPos({0, 0});
     auto size = get_window_size(win);
-    ImGui::SetNextWindowSize({(float)win->_widget_width, (float)size[1]});
+    ImGui::SetNextWindowSize({(float)win->widget_width, (float)size[1]});
     if (light_style) ImGui::StyleColorsLight();
     if (alt_font) {
         ImGuiIO& io = ImGui::GetIO();
@@ -13045,22 +13076,22 @@ void init_widgets(gl_window* win, bool light_style, bool alt_font) {
         ImGuiIO& io = ImGui::GetIO();
         io.Fonts->AddFontDefault();
     }
-    win->_widget_enabled = true;
+    win->widget_enabled = true;
 }
 
 // Begin draw widget
 bool begin_widgets(gl_window* win, const string& title) {
     static bool first_time = true;
     ImGui_ImplGlfwGL3_NewFrame();
-    // ImGui::SetNextWindowSize({(float)win->_widget_width, (float)size[1]});
-    // ImGui::SetNextWindowPos({(float)(size[0] - win->_widget_width),
+    // ImGui::SetNextWindowSize({(float)win->widget_width, (float)size[1]});
+    // ImGui::SetNextWindowPos({(float)(size[0] - win->widget_width),
     // (float)0});
     // auto flags = ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize;
     // ImGui::Begin(title.c_str(), nullptr, flags);
     if (first_time) {
         ImGui::SetNextWindowPos({0, 0});
         auto size = get_window_size(win);
-        ImGui::SetNextWindowSize({(float)win->_widget_width, (float)size[1]});
+        ImGui::SetNextWindowSize({(float)win->widget_width, (float)size[1]});
         ImGui::SetNextWindowCollapsed(true);
         first_time = false;
     }
@@ -13078,7 +13109,7 @@ void end_widgets(gl_window* win) {
 
 // Whether widget are active
 bool get_widget_active(gl_window* win) {
-    if (!win->_widget_enabled) return false;
+    if (!win->widget_enabled) return false;
     auto io = &ImGui::GetIO();
     return io->WantTextInput || io->WantCaptureMouse || io->WantCaptureKeyboard;
 }
