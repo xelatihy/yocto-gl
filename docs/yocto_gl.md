@@ -594,7 +594,7 @@ and bug fixes are not reported here.
 
 ### Imported math functions
 
-#### Function Alias sqrt()
+#### Import sqrt
 
 ~~~ .cpp
 using std::sqrt;
@@ -602,7 +602,7 @@ using std::sqrt;
 
 Square root.
 
-#### Function Alias pow()
+#### Import pow
 
 ~~~ .cpp
 using std::pow;
@@ -610,7 +610,7 @@ using std::pow;
 
 Power.
 
-#### Function Alias exp()
+#### Import exp
 
 ~~~ .cpp
 using std::exp;
@@ -618,7 +618,7 @@ using std::exp;
 
 Exponential.
 
-#### Function Alias log()
+#### Import log
 
 ~~~ .cpp
 using std::log;
@@ -626,7 +626,7 @@ using std::log;
 
 Logarithm.
 
-#### Function Alias log10()
+#### Import log10
 
 ~~~ .cpp
 using std::log10;
@@ -634,7 +634,7 @@ using std::log10;
 
 Logarithm.
 
-#### Function Alias sin()
+#### Import sin
 
 ~~~ .cpp
 using std::sin;
@@ -642,7 +642,7 @@ using std::sin;
 
 Sine.
 
-#### Function Alias cos()
+#### Import cos
 
 ~~~ .cpp
 using std::cos;
@@ -650,7 +650,7 @@ using std::cos;
 
 Cosine.
 
-#### Function Alias tan()
+#### Import tan
 
 ~~~ .cpp
 using std::tan;
@@ -658,7 +658,7 @@ using std::tan;
 
 Tangent.
 
-#### Function Alias asin()
+#### Import asin
 
 ~~~ .cpp
 using std::asin;
@@ -666,7 +666,7 @@ using std::asin;
 
 Arc sine.
 
-#### Function Alias acos()
+#### Import acos
 
 ~~~ .cpp
 using std::acos;
@@ -674,7 +674,7 @@ using std::acos;
 
 Arc cosine.
 
-#### Function Alias atan()
+#### Import atan
 
 ~~~ .cpp
 using std::atan;
@@ -682,7 +682,7 @@ using std::atan;
 
 Arc tangent.
 
-#### Function Alias atan2()
+#### Import atan2
 
 ~~~ .cpp
 using std::atan2;
@@ -690,7 +690,7 @@ using std::atan2;
 
 Arc tangent.
 
-#### Function Alias abs()
+#### Import abs
 
 ~~~ .cpp
 using std::abs;
@@ -698,7 +698,7 @@ using std::abs;
 
 Absolute value.
 
-#### Function Alias fabs()
+#### Import fabs
 
 ~~~ .cpp
 using std::fabs;
@@ -706,7 +706,7 @@ using std::fabs;
 
 Floating point absolute value.
 
-#### Function Alias floor()
+#### Import floor
 
 ~~~ .cpp
 using std::floor;
@@ -714,7 +714,7 @@ using std::floor;
 
 Floor.
 
-#### Function Alias ceil()
+#### Import ceil
 
 ~~~ .cpp
 using std::ceil;
@@ -722,7 +722,7 @@ using std::ceil;
 
 Ceil.
 
-#### Function Alias round()
+#### Import round
 
 ~~~ .cpp
 using std::round;
@@ -730,7 +730,7 @@ using std::round;
 
 Round.
 
-#### Function Alias isfinite()
+#### Import isfinite
 
 ~~~ .cpp
 using std::isfinite;
@@ -740,7 +740,7 @@ Check if a value is finite.
 
 ### Imported containers and related functions
 
-#### Function Alias string()
+#### Import string
 
 ~~~ .cpp
 using std::string;
@@ -748,7 +748,7 @@ using std::string;
 
 String.
 
-#### Function Alias vector()
+#### Import vector
 
 ~~~ .cpp
 using std::vector;
@@ -756,7 +756,7 @@ using std::vector;
 
 Vector.
 
-#### Function Alias array()
+#### Import array
 
 ~~~ .cpp
 using std::array;
@@ -764,7 +764,7 @@ using std::array;
 
 Array.
 
-#### Function Alias map()
+#### Import map
 
 ~~~ .cpp
 using std::map;
@@ -772,7 +772,7 @@ using std::map;
 
 Map.
 
-#### Function Alias set()
+#### Import set
 
 ~~~ .cpp
 using std::set;
@@ -780,7 +780,7 @@ using std::set;
 
 Set.
 
-#### Function Alias unordered_map()
+#### Import unordered_map
 
 ~~~ .cpp
 using std::unordered_map;
@@ -788,7 +788,7 @@ using std::unordered_map;
 
 Unordered map.
 
-#### Function Alias unordered_set()
+#### Import unordered_set
 
 ~~~ .cpp
 using std::unordered_set;
@@ -796,7 +796,7 @@ using std::unordered_set;
 
 Unordered set.
 
-#### Function Alias pair()
+#### Import pair
 
 ~~~ .cpp
 using std::pair;
@@ -804,7 +804,7 @@ using std::pair;
 
 Pair.
 
-#### Function Alias tuple()
+#### Import tuple
 
 ~~~ .cpp
 using std::tuple;
@@ -812,7 +812,7 @@ using std::tuple;
 
 Tuple.
 
-#### Function Alias unique_ptr()
+#### Import unique_ptr
 
 ~~~ .cpp
 using std::unique_ptr;
@@ -820,7 +820,7 @@ using std::unique_ptr;
 
 Unique pointer.
 
-#### Function Alias function()
+#### Import function
 
 ~~~ .cpp
 using std::function;
@@ -832,7 +832,7 @@ Function.
 
 String literals.
 
-#### Function Alias numeric_limits()
+#### Import numeric_limits
 
 ~~~ .cpp
 using std::numeric_limits;
@@ -840,7 +840,7 @@ using std::numeric_limits;
 
 Numeric limits.
 
-#### Function Alias initializer_list()
+#### Import initializer_list
 
 ~~~ .cpp
 using std::initializer_list;
@@ -848,7 +848,7 @@ using std::initializer_list;
 
 Initializer list.
 
-#### Function Alias ostream()
+#### Import ostream
 
 ~~~ .cpp
 using std::ostream;
@@ -856,7 +856,7 @@ using std::ostream;
 
 Output stream.
 
-#### Function Alias istream()
+#### Import istream
 
 ~~~ .cpp
 using std::istream;
@@ -864,7 +864,7 @@ using std::istream;
 
 Input stream.
 
-#### Function Alias stringstream()
+#### Import stringstream
 
 ~~~ .cpp
 using std::stringstream;
@@ -872,7 +872,7 @@ using std::stringstream;
 
 String stream.
 
-#### Function Alias fstream()
+#### Import fstream
 
 ~~~ .cpp
 using std::fstream;
@@ -880,7 +880,7 @@ using std::fstream;
 
 File stream.
 
-#### Function Alias runtime_error()
+#### Import runtime_error
 
 ~~~ .cpp
 using std::runtime_error;
@@ -888,7 +888,7 @@ using std::runtime_error;
 
 Runtime error.
 
-#### Function Alias exception()
+#### Import exception
 
 ~~~ .cpp
 using std::exception;
@@ -896,7 +896,7 @@ using std::exception;
 
 Exception.
 
-#### Function Alias ios_base()
+#### Import ios_base
 
 ~~~ .cpp
 using std::ios_base;
@@ -904,7 +904,7 @@ using std::ios_base;
 
 Ios base.
 
-#### Function Alias find()
+#### Import find
 
 ~~~ .cpp
 using std::find;
@@ -912,7 +912,7 @@ using std::find;
 
 Find algorithm.
 
-#### Function Alias swap()
+#### Import swap
 
 ~~~ .cpp
 using std::swap;
@@ -920,7 +920,7 @@ using std::swap;
 
 Swap algorithm.
 
-#### Function Alias getline()
+#### Import getline
 
 ~~~ .cpp
 using std::getline;
@@ -928,7 +928,7 @@ using std::getline;
 
 Get line from streams.
 
-#### Function Alias to_string()
+#### Import to_string
 
 ~~~ .cpp
 using std::to_string;
@@ -936,7 +936,7 @@ using std::to_string;
 
 Convert to string.
 
-#### Function Alias cout()
+#### Import cout
 
 ~~~ .cpp
 using std::cout;
@@ -944,7 +944,7 @@ using std::cout;
 
 Cout object for printing.
 
-#### Function Alias tie()
+#### Import tie
 
 ~~~ .cpp
 using std::tie;

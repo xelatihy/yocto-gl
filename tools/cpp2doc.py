@@ -105,8 +105,8 @@ def make_doc(cpp, first_only=False):
                 item.name = item.name.partition(" = ")[0].replace("using ", "").strip()
                 item.comment = clean_comment(item.comment)
             else:
-                item.type = "Function Alias"
-                item.name = item.decl.partition("::")[2].replace(";", "").strip() + "()"
+                item.type = "Import"
+                item.name = item.decl.partition("::")[2].replace(";", "").strip()
                 item.comment = clean_comment(item.comment)
         elif 'enum ' in item.decl:
             item.type = "Enum"
