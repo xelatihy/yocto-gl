@@ -191,8 +191,6 @@ int main(int argc, char* argv[]) {
     app->params.ambient = {amb, amb, amb};
     app->params.camera_lights =
         parse_flag(parser, "--camera-lights", "-c", "enable camera lights");
-    auto log_filename = parse_opt(parser, "--log", "", "log to disk", ""s);
-    if (log_filename != "") add_file_stream(log_filename, true);
     auto preserve_quads =
         parse_flag(parser, "--preserve-quads", "-q", "preserve quads on load");
     auto preserve_facevarying = parse_flag(

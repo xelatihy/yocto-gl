@@ -1,6 +1,6 @@
 # Yocto/GL: Tiny C++ Library for Physically-based Graphics
 
-Yocto/GL is a collection utiliies for building physically-based graphics
+Yocto/GL is a collection utilities for building physically-based graphics
 algorithms implemented as a two-file library (`yocto_gl.h`, `yocto_gl.cpp`),
 and released under the MIT license. Features include:
 
@@ -47,7 +47,7 @@ github.com/sgorsten/linalg, gist.github.com/badboy/6267743 and
 github.com/nothings/stb_perlin.h.
 
 This library imports many symbols from std for three reasons: avoid
-verbosity , esnuring better conventions when calling math functions and
+verbosity , ensuring better conventions when calling math functions and
 allowing easy overriding of std containers if desired. Just do not
 flatten this namespace into yours if this is a concern.
 
@@ -73,10 +73,14 @@ at the price of accessibility for beginners. The truth is that modern C++,
 a tenant of Yocto, is heavily templated anyway, so being able to read
 template code is necessary no matter how Yocto does things.
 
+We make use of exception for error reporting. This makes the code
+much cleaner and more in line with the expectation of most other programming
+languages.
+
 Finally, we often import symbols from the standard library rather than
 using the `std::name` pattern. We found that this improves consistency
 when using math functions, and is more readable with templates. We realize
-this is not stardard, but the imports are hidden within the ygl namespace,
+this is not standard, but the imports are hidden within the ygl namespace,
 so library users do not have to be concern about it.
 
 
@@ -98,7 +102,7 @@ be disabled by defining YGL_GLTF to 0 before including this file.
 To support SVG, Yocto/GL depends on `nanosvg.h`. This feature can
 be disabled by defining YGL_SVG to 0 before including this file.
 
-OpenGL utilities include the OpenGL libaries, use GLEW on Windows/Linux,
+OpenGL utilities include the OpenGL libraries, use GLEW on Windows/Linux,
 GLFW for windows handling and Dear ImGui for UI support.
 Since OpenGL is quite onerous and hard to link, its support can be disabled
 by defining YGL_OPENGL to 1 before including this file. If you use any of
@@ -123,7 +127,7 @@ test the library:
 You can build the example applications using CMake with
     `mkdir build; cd build; cmake ..; cmake --build`
 
-Here are two images rendered with the buildin path tracer, where the
+Here are two images rendered with the builtin path tracer, where the
 scenes are crated with the test generator.
 
 ![Yocto/GL](images/shapes.png)
@@ -151,14 +155,14 @@ in graphics. In particular, we support 2-4 dimensional vectors of arbitrary
 many of them are well-defined only for float types.
 
 We support 2-4 dimensional generic matrices `mat<T, 2>`, `mat<T, 3>`,
-`mat<T, 4>`, with matrix-matrix and matrix-vector products, trasposes and
+`mat<T, 4>`, with matrix-matrix and matrix-vector products, transposes and
 inverses. Matrices are stored in column-major ordered and are accessed and
 constructed by column.
 
 To represent transformations, most of the library facilities prefer the use
-cooordinate frames, aka rigid transforms, represented as `frame<T, 3>`.
-The structure store three coodinate axis and the frame origin. This is
-equivalenent to a rigid transform written as a column-major affine
+coordinate frames, aka rigid transforms, represented as `frame<T, 3>`.
+The structure store three coordinate axis and the frame origin. This is
+equivalent to a rigid transform written as a column-major affine
 matrix. Transform operations are better behaved with this representation.
 
 We represent coordinate bounds with axis-aligned bounding boxes in 1-4
@@ -175,13 +179,13 @@ vectors and directions (`trasform_point()`, `trasform_vector()`,
 `trasform_direction()`). For frames we also the support inverse operations
 (`transform_xxx_inverse()`). Transform matrices and frames can be
 constructed from basic translation, rotation and scaling, e.g. with
-`translation_mat4f()` or `translation_frame3f()` repsectively, etc. For
+`translation_mat4f()` or `translation_frame3f()` respectively, etc. For
 rotation we support axis-angle and quaternions, with slerp.
 
 
 ### Random Number Generation, Noise, Hashing and Monte Carlo support
 
-This library supportds many facitlities helpful in writing sampling
+This library supports many facilities helpful in writing sampling
 functions targeting path tracing and shape generations.
 
 1. Random number generation with PCG32:
@@ -193,7 +197,7 @@ functions targeting path tracing and shape generations.
        `next_rand1f()`, `next_rand2f()`, `next_rand3f()`, `next_rand1d()`
     6. you can skip random numbers with `advance_rng()` and get the skipped
        length with `rng_distance()`
-    7. generate random shaffled sequences with `rng_shuffle()`
+    7. generate random shuffled sequences with `rng_shuffle()`
 2. Perlin noise: `perlin_noise()` to generate Perlin noise with optional
    wrapping, with fractal variations `perlin_ridge_noise()`,
    `perlin_fbm_noise()`, `perlin_turbulence_noise()`
@@ -240,7 +244,7 @@ manipulation useful to support scene viewing and path tracing.
     `subdivide_quads_linear()`
 15. Catmull-Clark subdivision surface with `subdivide_vert_catmullclark()`
     with support for edge and vertex creasing
-16. subdvide Bezier with `subdivide_bezier_recursive()` and
+16. subdivide Bezier with `subdivide_bezier_recursive()` and
     `subdivide_vert_bezier()`
 17. example shapes: `make_cube()`, `make_uvsphere()`, `make_uvhemisphere()`,
     `make_uvquad()`, `make_uvcube()`, `make_fvcube()`, `make_hair()`,
@@ -260,7 +264,7 @@ manipulation useful to support scene viewing.
 
 ### Image and color
 
-Imags are stored with the `image` templated structure. The two most used
+Images are stored with the `image` templated structure. The two most used
 image types are 4-byte per pixel sRGB images `image4b`, or 4-float per
 pixel HDR images `image4f`.
 
@@ -313,11 +317,11 @@ collections of points, lines, triangles and quads. Each shape may contain
 only one element type. Shapes are organized into a scene by creating shape
 instances, each its own transform. Materials are specified like in glTF and
 include emission, base-metallic and diffuse-specular parametrization,
-normal, occlusion and displacement mapping. Finally, the scene containes
-caemras and environement maps. Quad support in shapes is experimental and
+normal, occlusion and displacement mapping. Finally, the scene containers
+cameras and environment maps. Quad support in shapes is experimental and
 mostly supported for loading and saving.
 
-For low-level access to OBJ/glTF formats, you are best accssing the formats
+For low-level access to OBJ/glTF formats, you are best accessing the formats
 directly with Yocto/Obj and Yocto/glTF. This components provides a
 simplified high-level access to each format which is sufficient for most
 applications and tuned for quick creating viewers, renderers and simulators.
@@ -385,7 +389,7 @@ window.
 1. build the ray-tracing acceleration structure with `make_bvh()`
 2. prepare lights for rendering `update_lights()`
 3. define rendering params with the `trace_params` structure
-4. initialize the prograssive rendering buffers
+4. initialize the progressive rendering buffers
 5. start the progressive renderer with `trace_async_start()`
 7. stop the progressive renderer with `trace_async_stop()`
 
@@ -405,7 +409,7 @@ that, use the option to flip textures coordinates on either saving or
 loading. By default texture coordinates are flipped since this seems
 the convention found on test cases collected on the web. The value Tr
 has similar problems, since its relation to opacity is software specific.
-Again we let the user chose the convension and set the default to the
+Again we let the user chose the conversion and set the default to the
 one found on the web.
 
 In the high level interface, shapes are indexed meshes and are described
@@ -416,7 +420,7 @@ current GPU rendering / path tracing algorithms, we adopt a simplification
 similar to other single file libraries:
 1. vertex indices are unique, as in OpenGL and al standard indexed triangle
   meshes data structures, and not OBJ triplets; YOCTO_OBJ ensures that no
-  vertex dusplication happens thought for same triplets
+  vertex duplication happens thought for same triplets
 2. we split shapes on changes to groups and materials, instead of keeping
   per-face group/material data; this makes the data usable right away in
   a GPU viewer; this is not a major limitation if we accept the previous
@@ -442,7 +446,7 @@ it depends on `stb_image.h`, `stb_image_write.h`, `stb_image_resize.h` and
 
 The library provides a low  level interface that is a direct
 C++ translation of the glTF schemas and should be used if one wants
-complete control over the fromat or an application wants to have their
+complete control over the format or an application wants to have their
 own scene code added. A higher-level interface is provided by the scene
 or by `yocto_gltf.h`.
 
@@ -451,15 +455,15 @@ languages in mind. We attempt to match the glTF low-level interface
 to C++ as best as it can. Since the code is generated from the schema, we
 follow glTF naming conventions and typing quite well. To simplify adoption
 and keep the API relatively simple we use vector as arrays and use
-pointers to reference to all glTF objects. While this makes it less effcient
-than it might have been, glTF heavy use of optional values makes this
-necessary. At the same time, we do not keep track of set/unset values
-for basic types (int, float, bool) as a compromise for efficieny.
+pointers to reference to all glTF objects. While this makes it less
+efficient than it might have been, glTF heavy use of optional values makes
+this necessary. At the same time, we do not keep track of set/unset values
+for basic types (int, float, bool) as a compromise for efficiency.
 
 glTF uses integer indices to access objects.
-While writing code ourselves we found that we add signiicant problems
-since we would use an index to access the wriong type of scene objects.
-For this reasons, we use an explit index `glTFid<T>` that can only access
+While writing code ourselves we found that we add significant problems
+since we would use an index to access the wrong type of scene objects.
+For this reasons, we use an explicit index `glTFid<T>` that can only access
 an object of type T. Internally this is just the same old glTF index. But
 this can used to access the scene data with `glTF::get<T>(index)`.
 
@@ -475,14 +479,14 @@ windows with GLFW and draw immediate-mode widgets with ImGui.
 
 1. texture and buffer objects with `gl_texture` and `gl_buffer`
     - create textures/buffers with appropriate constructors
-    - check validity wiht `is_valid()`
+    - check validity with `is_valid()`
     - update textures/buffers with `update()` functions
     - delete textures/buffers with `clear()`
     - bind/unbind textures/buffers with `bind()`/`unbind()`
     - draw elements with `gl_buffer::draw_elems()`
 2. program objects with `gl_program`
     - program creation with constructor
-    - check validity wiht `is_valid()`
+    - check validity with `is_valid()`
     - delete with `clear()`
     - uniforms with `set_program_uniform()`
     - vertex attrib with `set_program_vertattr()`
@@ -490,7 +494,7 @@ windows with GLFW and draw immediate-mode widgets with ImGui.
 3. image viewing with `gl_stdimage_program`, with support for tone mapping.
 4. draw surfaces and hair with GGX/Kayjia-Kay with `gl_stdsurface_program`
     - initialize the program with constructor
-    - check validity wiht `is_valid()`
+    - check validity with `is_valid()`
     - start/end each frame with `begin_frame()`, `end_frame()`
     - define lights with `set_lights()`
     - start/end each shape with `begin_shape()`, `end_shape()`
@@ -507,7 +511,7 @@ windows with GLFW and draw immediate-mode widgets with ImGui.
     - create with constructor
     - delete with `clear()`
     - set callbacks with `set_callbacks()`
-    - includes carious utiliies to query window, mouse and keyboard
+    - includes carious utilities to query window, mouse and keyboard
 8. immediate mode widgets using ImGui
     - init with `init_widget()`
     - use the various widget calls to draw the widget and handle events
@@ -518,7 +522,8 @@ windows with GLFW and draw immediate-mode widgets with ImGui.
 We include additional utilities for writing command line applications and
 manipulating files.
 
-1. Python-like string opeations: `startswith()`, `endswith()`, `contains()`,
+1. Python-like string operations: `startswith()`, `endswith()`,
+`contains()`,
    `splitlines()`, `partition()`, `split()`, `splitlines()`, `strip()`,
    `rstrip()`, `lstrip()`, `join()`, `lower()`, `upper()`, `isspace()`,
    `replace()`
@@ -567,7 +572,7 @@ and user end.
     - supports types as above
     - for general use `arg = parse_arg<type>()`
     - to parse all remaining values use `args = parse_arga<type>(...)`
-4. end cmdline parsing with `check_parsing()` to check for unsued values,
+4. end cmdline parsing with `check_parsing()` to check for unused values,
    missing arguments
 5. to check for error use `should_exit()` and to print the message use
    `get_message()`
@@ -579,8 +584,9 @@ and user end.
 ## History
 
 Here we mark only major features added to the library. Small refactorings
-and bug fixes are reported here.
+and bug fixes are not reported here.
 
+- v 0.3.0: templated types, animation and objects in scene, api cleanups
 - v 0.2.0: various bug fixes and improvement to OpenGL drawing and widgets
 - v 0.1.0: initial release after refactoring
 

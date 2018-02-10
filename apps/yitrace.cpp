@@ -218,8 +218,6 @@ int main(int argc, char* argv[]) {
         parse_flag(parser, "--camera-lights", "-c", "enable camera lights");
     app->params.ambient = {amb, amb, amb};
     if (camera_lights) { app->params.stype = trace_shader_type::eyelight; }
-    auto log_filename = parse_opt(parser, "--log", "", "log to disk", ""s);
-    if (log_filename != "") add_file_stream(log_filename, true);
     app->imfilename =
         parse_opt(parser, "--output-image", "-o", "image filename", "out.hdr"s);
     app->filename = parse_arg(parser, "scene", "scene filename", ""s);
